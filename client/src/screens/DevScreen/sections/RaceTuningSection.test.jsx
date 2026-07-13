@@ -124,9 +124,10 @@ describe('RaceTuningSection — renders all 8 blocks', () => {
     expect(screen.getByLabelText('Start Spread Range')).toBeTruthy();
   });
 
-  it('renders Block 3: Row Start with summary', () => {
+  it('renders Block 3: Start (Row Start) with summary', () => {
     render(<RaceTuningSection />);
-    expect(screen.getByText('Row Start')).toBeTruthy();
+    // Stage-5b-iii: the Row Start controls now live under the "Start" card (dramaturgical reorder).
+    expect(screen.getByText('Start')).toBeTruthy();
     expect(screen.getByTestId('row-start-summary')).toBeTruthy();
   });
 

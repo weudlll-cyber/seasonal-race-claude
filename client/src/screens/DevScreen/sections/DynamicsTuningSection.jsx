@@ -30,7 +30,7 @@ import {
   DEFAULT_FRAME_TIMING_CONFIG,
 } from '../../../modules/frameTimingConfig.js';
 import { InfoTooltip } from '../../../components/InfoTooltip/index.js';
-import { SubCard } from './SubCard.jsx';
+import { SubCard, SubHeading } from './SubCard.jsx';
 import s from '../DevScreen.module.css';
 
 const RACE_PLAN_TIMING_WARNING_STYLE = {
@@ -198,13 +198,90 @@ const DynamicsTuningSection = forwardRef(function DynamicsTuningSection(_, ref) 
         </p>
       )}
 
-      {/* ── Block 1: Speed Range ── */}
+      {/* ══ DevScreen order: race timeline — global/technical first, then phases in temporal order ══ */}
+
+      {/* ── Section 1: Frame Timing (global/technical — nothing to do with the race itself) ── */}
       <SubCard
-        title="Speed Range"
-        onReset={resetSpeedRange}
-        resetTestId="reset-speed-range"
-        subtitle="The slowest and fastest base speeds racers can have. At the start of each race, every racer gets a random base speed somewhere in this range. A wider range creates more dramatic differences between racers — clear leaders and stragglers. A narrower range keeps races close and competitive."
+        title="Frame Timing"
+        onReset={resetFrameTiming}
+        resetTestId="reset-frame-timing"
+        subtitle="Controls how browser frame-time variation is smoothed before being applied to camera movement and visual effects. Physics is always fixed at 16ms steps and is not affected by this setting."
       >
+        <div className={s.formGrid}>
+          <div className={s.formGroup}>
+            <label
+              className={s.label}
+              style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}
+            >
+              dt-Smoothing (EMA-Alpha)
+              <InfoTooltip text="Smooths browser frame-time variation for camera and effects. 0.0 = no smoothing (raw dt used directly). 0.95 = very strong smoothing. Higher = smoother camera but slower response to real frame-rate changes. Physics is unaffected — it always runs in fixed 16 ms steps. Takes effect on the next race start." />
+            </label>
+            <input
+              type="number"
+              className={s.input}
+              min={0}
+              max={0.95}
+              step={0.01}
+              value={frameTimingConfig.dtSmoothingAlpha}
+              onChange={(e) => {
+                const v = Number(e.target.value);
+                if (v >= 0 && v <= 0.95) setFrameTiming('dtSmoothingAlpha', v);
+              }}
+            />
+          </div>
+        </div>
+        <div
+          style={{
+            marginTop: '0.75rem',
+            padding: '0.75rem',
+            background: '#0d0d0f',
+            borderRadius: 'var(--radius)',
+          }}
+        >
+          <p style={{ fontSize: '0.82rem', color: 'var(--color-muted)' }}>
+            Current alpha:{' '}
+            <strong style={{ color: 'var(--color-accent)' }}>
+              {frameTimingConfig.dtSmoothingAlpha.toFixed(2)}
+            </strong>
+            {'  ·  '}
+            {frameTimingConfig.dtSmoothingAlpha === 0
+              ? 'No smoothing — raw frame dt used directly'
+              : frameTimingConfig.dtSmoothingAlpha < 0.5
+                ? 'Light smoothing — fast response'
+                : frameTimingConfig.dtSmoothingAlpha < 0.8
+                  ? 'Moderate smoothing — balanced (recommended)'
+                  : 'Strong smoothing — very stable camera, slow adaptation'}
+          </p>
+        </div>
+        <div style={{ marginTop: '0.75rem' }}>
+          <label
+            className={s.label}
+            style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', margin: 0 }}
+          >
+            <input
+              type="checkbox"
+              aria-label="Render Interpolation"
+              checked={frameTimingConfig.renderInterpolation ?? true}
+              onChange={(e) => setFrameTiming('renderInterpolation', e.target.checked)}
+              style={{ cursor: 'pointer' }}
+            />
+            Render Interpolation
+            <InfoTooltip text="Smooths sprite and camera movement between physics steps. Eliminates rhythmic jitter at variable browser frame rates. Off = pre-interpolation behavior (comparison mode). Takes effect immediately." />
+          </label>
+        </div>
+      </SubCard>
+
+      {/* ── Section 2: Speed (Speed Range + Speed Re-Roll) ── */}
+      <SubCard
+        title="Speed"
+        subtitle="Each racer's base speed and how it is re-rolled during the race."
+      >
+        <SubHeading
+          label="Speed Range"
+          note="The slowest and fastest base speeds racers can have. At the start of each race, every racer gets a random base speed somewhere in this range. A wider range creates more dramatic differences between racers — clear leaders and stragglers. A narrower range keeps races close and competitive."
+          onReset={resetSpeedRange}
+          resetTestId="reset-speed-range"
+        />
         <div className={s.formGrid}>
           <div className={s.formGroup}>
             <label
@@ -292,107 +369,12 @@ const DynamicsTuningSection = forwardRef(function DynamicsTuningSection(_, ref) 
             </p>
           )}
         </div>
-      </SubCard>
-
-      {/* ── Block 3: Row Start ── */}
-      <SubCard
-        title="Row Start"
-        onReset={resetRowStart}
-        resetTestId="reset-row-start"
-        subtitle="With many racers, they don't all fit in one starting row — they line up in multiple rows, like cars at a Grand Prix. This block controls the row spacing, how many racers fit per row, and how to compensate back-row racers so they aren't doomed by their starting position."
-      >
-        <div className={s.formGrid}>
-          <div className={s.formGroup}>
-            <label
-              className={s.label}
-              style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}
-            >
-              Row Gap Multiplier
-              <InfoTooltip text="How much space is between starting rows. Higher = rows further apart, more spread out start. Lower = rows tightly packed, more compact start." />
-            </label>
-            <input
-              type="number"
-              className={s.input}
-              aria-label="Row Gap Multiplier"
-              min={0.5}
-              max={4.0}
-              step={0.1}
-              value={rowConfig.rowGapMultiplier}
-              onChange={(e) => {
-                const v = Number(e.target.value);
-                if (v >= 0.5 && v <= 4.0) setRow('rowGapMultiplier', v);
-              }}
-            />
-          </div>
-          <div className={s.formGroup}>
-            <label
-              className={s.label}
-              style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}
-            >
-              Speed Bonus Factor
-              <InfoTooltip text="How much extra speed is given to back-row racers to compensate for starting further back. 1.0 = full compensation, they have a fair chance. 0 = no compensation, front row has a big advantage." />
-            </label>
-            <input
-              type="number"
-              className={s.input}
-              aria-label="Speed Bonus Factor"
-              min={0.0}
-              max={2.0}
-              step={0.1}
-              value={rowConfig.speedBonusFactor}
-              onChange={(e) => {
-                const v = Number(e.target.value);
-                if (v >= 0 && v <= 2.0) setRow('speedBonusFactor', v);
-              }}
-            />
-          </div>
-          <div className={s.formGroup}>
-            <label
-              className={s.label}
-              style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}
-            >
-              Max Capacity Factor
-              <InfoTooltip text="How wide the starting rows are — controls how many racers fit in each row before adding another row. Higher = wider rows, fewer rows total. Lower = narrower rows, more rows." />
-            </label>
-            <input
-              type="number"
-              className={s.input}
-              aria-label="Max Capacity Factor"
-              min={0.1}
-              max={0.6}
-              step={0.05}
-              value={rowConfig.maxCapacityFactor}
-              onChange={(e) => {
-                const v = Number(e.target.value);
-                if (v >= 0.1 && v <= 0.6) setRow('maxCapacityFactor', v);
-              }}
-            />
-          </div>
-        </div>
-        <p
-          data-testid="row-start-summary"
-          style={{ fontSize: '0.82rem', color: 'var(--color-muted)', marginTop: '0.5rem' }}
-        >
-          Racers per row auto-computed from track geometry · gap{' '}
-          <strong>{rowConfig.rowGapMultiplier}×</strong> sprite size ·{' '}
-          <strong>
-            {rowConfig.speedBonusFactor === 1.0
-              ? 'full'
-              : rowConfig.speedBonusFactor === 0
-                ? 'no'
-                : `${Math.round(rowConfig.speedBonusFactor * 100)}%`}
-          </strong>{' '}
-          speed compensation.
-        </p>
-      </SubCard>
-
-      {/* ── Block 4: Speed Re-Roll ── */}
-      <SubCard
-        title="Speed Re-Roll"
-        onReset={resetSpeedReRoll}
-        resetTestId="reset-speed-reroll"
-        subtitle="During a race, each racer's speed gets re-rolled periodically — meaning their speed changes from time to time, creating dramatic shifts. This is what makes leads change and prevents predictable outcomes. Without this, the fastest racer at the start would just stay in front the whole race."
-      >
+        <SubHeading
+          label="Speed Re-Roll"
+          note="During a race, each racer's speed gets re-rolled periodically — meaning their speed changes from time to time, creating dramatic shifts. This is what makes leads change and prevents predictable outcomes. Without this, the fastest racer at the start would just stay in front the whole race."
+          onReset={resetSpeedReRoll}
+          resetTestId="reset-speed-reroll"
+        />
         <div className={s.formGrid}>
           <div className={s.formGroup}>
             <label
@@ -544,13 +526,17 @@ const DynamicsTuningSection = forwardRef(function DynamicsTuningSection(_, ref) 
         </div>
       </SubCard>
 
-      {/* ── Block 4b: Race Plan Bonus + Timing ── */}
+      {/* ── Section 3: Bonus (Race Plan Bonus + Phase-Split Bonuses) ── */}
       <SubCard
-        title="Race Plan Bonus"
-        onReset={resetRacePlanBonus}
-        resetTestId="reset-race-plan-bonus"
-        subtitle="Scales the Race Plan area bonuses and controls the timing of the bonus fade and P-controller window."
+        title="Bonus"
+        subtitle="The Race-Plan area bonuses and their per-phase (EARLY / POST) gating."
       >
+        <SubHeading
+          label="Race Plan Bonus"
+          note="Scales the Race Plan area bonuses and controls the timing of the bonus fade and P-controller window."
+          onReset={resetRacePlanBonus}
+          resetTestId="reset-race-plan-bonus"
+        />
         <div className={s.formGrid}>
           <div className={s.formGroup}>
             <label
@@ -751,9 +737,182 @@ const DynamicsTuningSection = forwardRef(function DynamicsTuningSection(_, ref) 
           </strong>
           {'→100%'}
         </p>
+        <SubHeading
+          label="Phase-Split Bonuses"
+          note="Gates the area bonus (target-band speed nudge) and the start-row catch-up bonus by race phase — EARLY (chaos) and POST — via the master switch below (it also gates the PULK-phase area/row bonuses, which live in the PULK Phase section). Area strengths are in the same units as the Race Plan bonus multiplier (2.0 = full, 0 = off); row strengths are fractions (1 = full, 0 = off). Shipped: EARLY + POST full."
+          onReset={resetPhaseSplit}
+          resetTestId="reset-phase-split"
+        />
+        <div style={{ marginBottom: '0.75rem' }}>
+          <label
+            className={s.label}
+            style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', margin: 0 }}
+          >
+            <input
+              type="checkbox"
+              aria-label="Phase-Split Bonuses Enabled"
+              checked={dynamicsConfig.phaseSplitBonusEnabled ?? false}
+              onChange={(e) => setDynamics('phaseSplitBonusEnabled', e.target.checked)}
+              style={{ cursor: 'pointer' }}
+            />
+            Enable phase-split bonuses
+            <InfoTooltip text="When off, the area + row bonuses run at full strength the whole race. When on, their strength follows the per-phase values below. ON = shipped." />
+          </label>
+        </div>
+        <div className={s.formGrid}>
+          {[
+            {
+              key: 'areaBonusEarly',
+              label: 'Area bonus — EARLY',
+              min: 0,
+              max: 3,
+              step: 0.5,
+              tip: 'Area-bonus strength in the EARLY (chaos) phase, before PULK. 1.0 = shipped.',
+            },
+            {
+              key: 'areaBonusPost',
+              label: 'Area bonus — POST',
+              min: 0,
+              max: 3,
+              step: 0.5,
+              tip: 'Area-bonus strength after PULK, into the OUTCOME window. 1.0 = shipped. (The PULK-phase area bonus lives in the PULK Phase section.)',
+            },
+            {
+              key: 'rowBonusEarly',
+              label: 'Row bonus — EARLY',
+              min: 0,
+              max: 1,
+              step: 0.1,
+              tip: 'Start-row catch-up bonus fraction in the EARLY phase. 1 = full (shipped).',
+            },
+            {
+              key: 'rowBonusPost',
+              label: 'Row bonus — POST',
+              min: 0,
+              max: 1,
+              step: 0.1,
+              tip: 'Start-row catch-up bonus fraction after PULK. 1 = full (shipped).',
+            },
+          ].map(({ key, label, min, max, step, tip }) => (
+            <div className={s.formGroup} key={key}>
+              <label
+                className={s.label}
+                style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}
+              >
+                {label}
+                <InfoTooltip text={tip} />
+              </label>
+              <input
+                type="number"
+                className={s.input}
+                aria-label={label}
+                min={min}
+                max={max}
+                step={step}
+                value={dynamicsConfig[key] ?? DEFAULT_RACE_DYNAMICS_CONFIG[key]}
+                onChange={(e) => {
+                  const v = Number(e.target.value);
+                  if (isFinite(v) && v >= min && v <= max) setDynamics(key, v);
+                }}
+              />
+            </div>
+          ))}
+        </div>
       </SubCard>
 
-      {/* ── Block 4d: PULK Phase — the one place for the PULK-phase contest (5 owner-chosen controls) ── */}
+      {/* ── Section 4: Start (the race's starting grid) ── */}
+      <SubCard
+        title="Start"
+        onReset={resetRowStart}
+        resetTestId="reset-row-start"
+        subtitle="With many racers, they don't all fit in one starting row — they line up in multiple rows, like cars at a Grand Prix. This block controls the row spacing, how many racers fit per row, and how to compensate back-row racers so they aren't doomed by their starting position."
+      >
+        <div className={s.formGrid}>
+          <div className={s.formGroup}>
+            <label
+              className={s.label}
+              style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}
+            >
+              Row Gap Multiplier
+              <InfoTooltip text="How much space is between starting rows. Higher = rows further apart, more spread out start. Lower = rows tightly packed, more compact start." />
+            </label>
+            <input
+              type="number"
+              className={s.input}
+              aria-label="Row Gap Multiplier"
+              min={0.5}
+              max={4.0}
+              step={0.1}
+              value={rowConfig.rowGapMultiplier}
+              onChange={(e) => {
+                const v = Number(e.target.value);
+                if (v >= 0.5 && v <= 4.0) setRow('rowGapMultiplier', v);
+              }}
+            />
+          </div>
+          <div className={s.formGroup}>
+            <label
+              className={s.label}
+              style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}
+            >
+              Speed Bonus Factor
+              <InfoTooltip text="How much extra speed is given to back-row racers to compensate for starting further back. 1.0 = full compensation, they have a fair chance. 0 = no compensation, front row has a big advantage." />
+            </label>
+            <input
+              type="number"
+              className={s.input}
+              aria-label="Speed Bonus Factor"
+              min={0.0}
+              max={2.0}
+              step={0.1}
+              value={rowConfig.speedBonusFactor}
+              onChange={(e) => {
+                const v = Number(e.target.value);
+                if (v >= 0 && v <= 2.0) setRow('speedBonusFactor', v);
+              }}
+            />
+          </div>
+          <div className={s.formGroup}>
+            <label
+              className={s.label}
+              style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}
+            >
+              Max Capacity Factor
+              <InfoTooltip text="How wide the starting rows are — controls how many racers fit in each row before adding another row. Higher = wider rows, fewer rows total. Lower = narrower rows, more rows." />
+            </label>
+            <input
+              type="number"
+              className={s.input}
+              aria-label="Max Capacity Factor"
+              min={0.1}
+              max={0.6}
+              step={0.05}
+              value={rowConfig.maxCapacityFactor}
+              onChange={(e) => {
+                const v = Number(e.target.value);
+                if (v >= 0.1 && v <= 0.6) setRow('maxCapacityFactor', v);
+              }}
+            />
+          </div>
+        </div>
+        <p
+          data-testid="row-start-summary"
+          style={{ fontSize: '0.82rem', color: 'var(--color-muted)', marginTop: '0.5rem' }}
+        >
+          Racers per row auto-computed from track geometry · gap{' '}
+          <strong>{rowConfig.rowGapMultiplier}×</strong> sprite size ·{' '}
+          <strong>
+            {rowConfig.speedBonusFactor === 1.0
+              ? 'full'
+              : rowConfig.speedBonusFactor === 0
+                ? 'no'
+                : `${Math.round(rowConfig.speedBonusFactor * 100)}%`}
+          </strong>{' '}
+          speed compensation.
+        </p>
+      </SubCard>
+
+      {/* ── Section 5: PULK Phase — the 5 rotation controls + the PULK bonuses (Weg B, one card) ── */}
       <SubCard
         title="PULK Phase"
         onReset={resetPulk}
@@ -827,99 +986,12 @@ const DynamicsTuningSection = forwardRef(function DynamicsTuningSection(_, ref) 
             </div>
           ))}
         </div>
-      </SubCard>
-
-      {/* ── Block 4e: Phase-Split Bonuses ── */}
-      <SubCard
-        title="Phase-Split Bonuses"
-        onReset={resetPhaseSplit}
-        resetTestId="reset-phase-split"
-        subtitle="Gates the area bonus (target-band speed nudge) and the start-row catch-up bonus by race phase — EARLY (chaos) and POST — via the master switch below (it also gates the PULK-phase bonuses, which live in the PULK-phase bonuses section). Area strengths are in the same units as the Race Plan bonus multiplier (2.0 = full, 0 = off); row strengths are fractions (1 = full, 0 = off). Shipped: EARLY + POST full."
-      >
-        <div style={{ marginBottom: '0.75rem' }}>
-          <label
-            className={s.label}
-            style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', margin: 0 }}
-          >
-            <input
-              type="checkbox"
-              aria-label="Phase-Split Bonuses Enabled"
-              checked={dynamicsConfig.phaseSplitBonusEnabled ?? false}
-              onChange={(e) => setDynamics('phaseSplitBonusEnabled', e.target.checked)}
-              style={{ cursor: 'pointer' }}
-            />
-            Enable phase-split bonuses
-            <InfoTooltip text="When off, the area + row bonuses run at full strength the whole race. When on, their strength follows the per-phase values below. ON = shipped." />
-          </label>
-        </div>
-        <div className={s.formGrid}>
-          {[
-            {
-              key: 'areaBonusEarly',
-              label: 'Area bonus — EARLY',
-              min: 0,
-              max: 3,
-              step: 0.5,
-              tip: 'Area-bonus strength in the EARLY (chaos) phase, before PULK. 1.0 = shipped.',
-            },
-            {
-              key: 'areaBonusPost',
-              label: 'Area bonus — POST',
-              min: 0,
-              max: 3,
-              step: 0.5,
-              tip: 'Area-bonus strength after PULK, into the OUTCOME window. 1.0 = shipped. (The PULK-phase area bonus lives in the PULK-phase bonuses section.)',
-            },
-            {
-              key: 'rowBonusEarly',
-              label: 'Row bonus — EARLY',
-              min: 0,
-              max: 1,
-              step: 0.1,
-              tip: 'Start-row catch-up bonus fraction in the EARLY phase. 1 = full (shipped).',
-            },
-            {
-              key: 'rowBonusPost',
-              label: 'Row bonus — POST',
-              min: 0,
-              max: 1,
-              step: 0.1,
-              tip: 'Start-row catch-up bonus fraction after PULK. 1 = full (shipped).',
-            },
-          ].map(({ key, label, min, max, step, tip }) => (
-            <div className={s.formGroup} key={key}>
-              <label
-                className={s.label}
-                style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}
-              >
-                {label}
-                <InfoTooltip text={tip} />
-              </label>
-              <input
-                type="number"
-                className={s.input}
-                aria-label={label}
-                min={min}
-                max={max}
-                step={step}
-                value={dynamicsConfig[key] ?? DEFAULT_RACE_DYNAMICS_CONFIG[key]}
-                onChange={(e) => {
-                  const v = Number(e.target.value);
-                  if (isFinite(v) && v >= min && v <= max) setDynamics(key, v);
-                }}
-              />
-            </div>
-          ))}
-        </div>
-      </SubCard>
-
-      {/* ── Block 4f: PULK-phase bonuses & cohesion (own subsystem — not the rotation) ── */}
-      <SubCard
-        title="PULK-phase bonuses"
-        onReset={resetPulkBonuses}
-        resetTestId="reset-pulk-bonuses"
-        subtitle="Phase-split bonuses + cohesion bias that act ONLY inside the PULK window [0.25, PULK end]. Separate from the lead rotation (PULK Phase section above): the area/row bonuses are gated by the Phase-Split master switch; the cohesion bias pulls the pulk racers' re-roll draws toward the pack centroid. All ship flat (bonuses 0, bias 2.0) for the shipped PULK."
-      >
+        <SubHeading
+          label="PULK bonuses"
+          note="Phase-split bonuses + cohesion bias that act ONLY inside the PULK window [0.25, PULK end]. The area/row bonuses are gated by the Phase-Split master switch in the Bonus section above; the cohesion bias pulls the pulk racers’ re-roll draws toward the pack centroid. All ship flat (bonuses 0, bias 2.0) for the shipped PULK."
+          onReset={resetPulkBonuses}
+          resetTestId="reset-pulk-bonuses"
+        />
         <div className={s.formGrid}>
           <div className={s.formGroup}>
             <label
@@ -987,77 +1059,6 @@ const DynamicsTuningSection = forwardRef(function DynamicsTuningSection(_, ref) 
               }}
             />
           </div>
-        </div>
-      </SubCard>
-
-      {/* ── Block 10: Frame Timing ── */}
-      <SubCard
-        title="Frame Timing"
-        onReset={resetFrameTiming}
-        resetTestId="reset-frame-timing"
-        subtitle="Controls how browser frame-time variation is smoothed before being applied to camera movement and visual effects. Physics is always fixed at 16ms steps and is not affected by this setting."
-      >
-        <div className={s.formGrid}>
-          <div className={s.formGroup}>
-            <label
-              className={s.label}
-              style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}
-            >
-              dt-Smoothing (EMA-Alpha)
-              <InfoTooltip text="Smooths browser frame-time variation for camera and effects. 0.0 = no smoothing (raw dt used directly). 0.95 = very strong smoothing. Higher = smoother camera but slower response to real frame-rate changes. Physics is unaffected — it always runs in fixed 16 ms steps. Takes effect on the next race start." />
-            </label>
-            <input
-              type="number"
-              className={s.input}
-              min={0}
-              max={0.95}
-              step={0.01}
-              value={frameTimingConfig.dtSmoothingAlpha}
-              onChange={(e) => {
-                const v = Number(e.target.value);
-                if (v >= 0 && v <= 0.95) setFrameTiming('dtSmoothingAlpha', v);
-              }}
-            />
-          </div>
-        </div>
-        <div
-          style={{
-            marginTop: '0.75rem',
-            padding: '0.75rem',
-            background: '#0d0d0f',
-            borderRadius: 'var(--radius)',
-          }}
-        >
-          <p style={{ fontSize: '0.82rem', color: 'var(--color-muted)' }}>
-            Current alpha:{' '}
-            <strong style={{ color: 'var(--color-accent)' }}>
-              {frameTimingConfig.dtSmoothingAlpha.toFixed(2)}
-            </strong>
-            {'  ·  '}
-            {frameTimingConfig.dtSmoothingAlpha === 0
-              ? 'No smoothing — raw frame dt used directly'
-              : frameTimingConfig.dtSmoothingAlpha < 0.5
-                ? 'Light smoothing — fast response'
-                : frameTimingConfig.dtSmoothingAlpha < 0.8
-                  ? 'Moderate smoothing — balanced (recommended)'
-                  : 'Strong smoothing — very stable camera, slow adaptation'}
-          </p>
-        </div>
-        <div style={{ marginTop: '0.75rem' }}>
-          <label
-            className={s.label}
-            style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', margin: 0 }}
-          >
-            <input
-              type="checkbox"
-              aria-label="Render Interpolation"
-              checked={frameTimingConfig.renderInterpolation ?? true}
-              onChange={(e) => setFrameTiming('renderInterpolation', e.target.checked)}
-              style={{ cursor: 'pointer' }}
-            />
-            Render Interpolation
-            <InfoTooltip text="Smooths sprite and camera movement between physics steps. Eliminates rhythmic jitter at variable browser frame rates. Off = pre-interpolation behavior (comparison mode). Takes effect immediately." />
-          </label>
         </div>
       </SubCard>
     </>
