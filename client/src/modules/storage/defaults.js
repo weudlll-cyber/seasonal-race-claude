@@ -352,24 +352,14 @@ export const DEFAULT_RACE_DYNAMICS_CONFIG = {
   governorDirectorFallbackMaxCount: 2, // max simultaneous fall-backs (count varies over time)
   governorDirectorFallbackUntilPosition: 12, // brake the faller until it drops PAST this rank, then release
   governorDirectorFallbackProtectMs: 2500, // ms a released faller is NOT eligible as a catch-up target
-  // PulkRaceDirector (v4-composable PULK-scoped GROUP contest + forced lead-rotation) — SWEEP/opt-in,
-  // default OFF → shipped game unchanged. When ON (and v4 ON) it runs the SAME group-director mechanism
-  // (applyGovernor, pulkOnly mode) inside [pulkStart, pulkEnd) while heroes run their curves (heroes
-  // excluded). Contest STRENGTHS reuse the existing governorDirector* knobs (brake/boost/frontPool/
-  // maxParallelBoosts/fallback) — no duplicate values. The ONLY new knob is the rotation cap below.
-  pulkRaceDirectorEnabled: false,
-  // N1 forced lead-rotation cap: max ms any one racer may hold live P1 inside the PULK window before it
-  // is demoted (via the director's fall-back machinery), handing P1 to the next challenger. Lower =
-  // faster lead rotation / more distinct P1 holders. Only acts when pulkRaceDirectorEnabled + v4.
-  pulkRaceMaxLeadHoldMs: 2000,
-  // ── PulkLeadRotation (successor to the PulkRaceDirector core loop) — SWEEP/opt-in, default OFF →
+  // ── PulkLeadRotation (the PULK-phase lead-rotation core loop) — SWEEP/opt-in, default OFF →
   // shipped game unchanged. When ON (and v4 ON) it COMPLETES lead changes inside [pulkStart, pulkEnd):
   // 1–2 attacker slots boost the current live P2/P3 UNTIL it takes the lead, a permanent outsider slot
   // brings fresh blood from deeper in the field, and the dethroned leader is braked (distance-based)
   // until it has fallen `dropDepthLengths` behind — the depth lever. Contest STRENGTHS reuse the
   // existing governorDirector* knobs (leaderBrake/challengerBoost/pullStrength/frontPool + the
   // maxEffect/maxStep/ceiling envelope) — no duplicated values. Only the four keys below are new.
-  // NOTE: PulkLeadRotation and PulkRaceDirector both write governorMult — enable only ONE at a time.
+  // NOTE: PulkLeadRotation and the classic reactive director both write governorMult — enable only ONE.
   pulkLeadRotationEnabled: true,
   pulkLeadRotationAttackerSlots: 2, // parallel attacker slots (1–2)
   pulkLeadRotationDropDepthLengths: 8, // ex-leader brake release depth (racer lengths); the depth lever

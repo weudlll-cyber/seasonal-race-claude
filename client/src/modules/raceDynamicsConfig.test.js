@@ -86,11 +86,9 @@ describe('DEFAULT_RACE_DYNAMICS_CONFIG', () => {
       rowBonusPost: 1,
       // Reopened PULK (feat/pulk-reopen).
       racePlanPulkStart: 0.25,
-      // STAGE-1 CLEANUP 2026-07-13: the M1 front-contest flag + the M2 cohesion-spring config keys were
-      // removed — snapshot re-baselined to the surviving keys (intended removal, not a regression).
-      // PulkRaceDirector.
-      pulkRaceDirectorEnabled: false,
-      pulkRaceMaxLeadHoldMs: 2000,
+      // STAGE-1/2 CLEANUP 2026-07-13: the M1 front-contest flag, the M2 cohesion-spring keys, and the
+      // predecessor PULK race-director's two keys (enable + lead-hold cap) were removed — snapshot
+      // re-baselined to the surviving keys (intended removal, not a regression).
       // PulkLeadRotation (successor core loop).
       pulkLeadRotationEnabled: true, // DEFAULT-FLIP 2026-07-13
       pulkLeadRotationAttackerSlots: 2,

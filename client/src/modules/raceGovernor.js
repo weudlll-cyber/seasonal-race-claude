@@ -198,15 +198,9 @@ function pickFromFront(live, seed, ev, pool, excluded) {
  * @param {object} cfg  director knobs (see defaults.js governorDirector*).
  */
 export function applyGovernor(racers, finishT, phase, phaseCtx, cfg) {
-  // PulkRaceDirector mode (cfg.pulkOnly): the SAME group-contest mechanism, but active ONLY in the
-  // live PULK phase — the lower bound is raised to pulkStart (PRE_PULK/TRANSITION excluded) so it does
-  // not touch the chaos start. Default (pulkOnly falsy) = the classic PRE_PULK|PULK|TRANSITION window,
-  // byte-identical. The phase-weight fade still zeroes it by pulkEnd (governorPhaseWeight), so under
-  // the reopened PULK it contributes exactly 1.0 outside [pulkStart, pulkEnd).
-  const activePhase =
-    cfg && cfg.pulkOnly
-      ? phase === 'PULK'
-      : phase === 'PRE_PULK' || phase === 'PULK' || phase === 'TRANSITION';
+  // The reactive director is active PRE_PULK | PULK | TRANSITION; the phase-weight fade
+  // (governorPhaseWeight) zeroes it by pulkEnd, so it contributes exactly 1.0 outside that window.
+  const activePhase = phase === 'PRE_PULK' || phase === 'PULK' || phase === 'TRANSITION';
   const directorOn = !!(cfg && cfg.directorEnabled);
 
   // Structural OUTCOME/FINAL-off or director-off -> pin exactly 1.0.
@@ -267,10 +261,6 @@ export function applyGovernor(racers, finishT, phase, phaseCtx, cfg) {
   const fallbackMaxCount = Math.max(0, Math.round(cfg.directorFallbackMaxCount ?? 2));
   const fallbackUntilPos = cfg.directorFallbackUntilPosition ?? 12;
   const fallbackProtectMs = cfg.directorFallbackProtectMs ?? 2500;
-  // N1 — FORCED LEAD-ROTATION cap (PulkRaceDirector). No single racer may hold live P1 longer than
-  // maxLeadHoldMs; once exceeded it is pushed into a fall-back slot (below), handing P1 to the next
-  // live challenger. 0 = off (the classic path never sets it → inert, byte-identical).
-  const maxLeadHoldMs = cfg.maxLeadHoldMs ?? 0;
 
   // Settling: stop STARTING new catch-up/fall-back events this far (progress) before the fade,
   // so the field is already relaxing by corrStart. In-flight events keep fading via w.
@@ -301,13 +291,6 @@ export function applyGovernor(racers, finishT, phase, phaseCtx, cfg) {
     dirState.prevLeader = leaderIndex;
   }
 
-  // N1 lead-hold timer: track when the CURRENT live P1 took the lead. Resets whenever P1 changes hands
-  // (per-racer hold time = currentMs - p1HoldStartMs). Independent of lingerMs so N1 works standalone.
-  if (maxLeadHoldMs > 0 && leaderIndex !== dirState.p1Holder) {
-    dirState.p1Holder = leaderIndex;
-    dirState.p1HoldStartMs = currentMs;
-  }
-
   const activeBoost = new Set(); // idx currently boosting (catch-up)
   const activeFall = new Set(); // idx currently braked (fall-back)
   // "busy" = already held by any slot; recomputed cheaply from the slot arrays.
@@ -333,25 +316,14 @@ export function applyGovernor(racers, finishT, phase, phaseCtx, cfg) {
         }
       }
       if (sl.idx < 0 && !noNewPicks) {
-        // N1 — FORCED LEAD-ROTATION: if the live P1 has held the lead longer than maxLeadHoldMs, demote
-        // IT (bypassing pickFromFront, which excludes the leader) so the lead rotates. Otherwise pick a
-        // normal faller from the front group (ranks 2..fallbackFromPool, leader excluded). Same slot,
-        // same brake, same release machinery — only the TRIGGER (leader over-hold) is new.
-        const leaderOverHeld =
-          maxLeadHoldMs > 0 && currentMs - (dirState.p1HoldStartMs ?? currentMs) > maxLeadHoldMs;
-        const pick =
-          leaderOverHeld && !isBusy(leaderIndex)
-            ? leaderIndex
-            : pickFromFront(live, seed, dirState.ev, fallbackFromPool, (idx) => isBusy(idx));
+        // Pick a faller from the front group (ranks 2..fallbackFromPool, leader excluded).
+        const pick = pickFromFront(live, seed, dirState.ev, fallbackFromPool, (idx) => isBusy(idx));
         dirState.ev++;
         if (pick >= 0) {
           sl.idx = pick;
           sl.untilMs = currentMs + dirUniform(seed, dirState.ev, boostDurMin, boostDurMax);
           dirState.ev++;
           activeFall.add(pick);
-          // Reset the hold timer on a forced demotion so the freshly-demoted racer is not re-picked
-          // before a new leader emerges.
-          if (pick === leaderIndex) dirState.p1HoldStartMs = currentMs;
         }
       }
     }
@@ -474,8 +446,8 @@ export function directorReachable(
 }
 
 /**
- * PulkLeadRotation (SWEEP/opt-in, flag-gated; default OFF → not called → byte-identical). The successor
- * to the PulkRaceDirector core loop — it COMPLETES lead changes instead of herding the front:
+ * PulkLeadRotation (SWEEP/opt-in, flag-gated; default OFF → not called → byte-identical). It COMPLETES
+ * lead changes instead of herding the front:
  *   • ATTACKER slots (1–2): boost the current live P2 (and P3) UNTIL it becomes live P1 — success is
  *     "took the lead", not "caught up" and not a fixed duration. When it succeeds it leaves the P2 slot,
  *     so the slot boosts the NEW P2 — the queue advances for free (no snapshot/round roster).

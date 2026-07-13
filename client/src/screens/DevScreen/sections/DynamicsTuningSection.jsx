@@ -185,14 +185,6 @@ const DynamicsTuningSection = forwardRef(function DynamicsTuningSection(_, ref) 
     }));
   }
 
-  function resetPulkRaceDirector() {
-    setDynamicsConfig((prev) => ({
-      ...prev,
-      pulkRaceDirectorEnabled: DEFAULT_RACE_DYNAMICS_CONFIG.pulkRaceDirectorEnabled,
-      pulkRaceMaxLeadHoldMs: DEFAULT_RACE_DYNAMICS_CONFIG.pulkRaceMaxLeadHoldMs,
-    }));
-  }
-
   function resetPulkLeadRotation() {
     setDynamicsConfig((prev) => ({
       ...prev,
@@ -1424,57 +1416,7 @@ const DynamicsTuningSection = forwardRef(function DynamicsTuningSection(_, ref) 
         </div>
       </SubCard>
 
-      {/* ── Block 4g: PULK Race Director (v4-composable group contest + forced lead-rotation) ── */}
-      <SubCard
-        title="PULK Race Director"
-        onReset={resetPulkRaceDirector}
-        resetTestId="reset-pulk-race-director"
-        subtitle="Makes the PULK phase look like a real race: runs the group contest-director (parallel catch-ups, fall-backs, linger) among the NATURAL non-hero leaders ONLY inside the PULK window, WHILE the v4 heroes run their curves. OUTCOME still sorts everyone to their bands afterward, so fairness is unaffected. Requires hero choreography (v4) ON. Contest strengths come from the Director section above; the only knob here is the lead-rotation cap. Default OFF."
-      >
-        <div style={{ marginBottom: '0.75rem' }}>
-          <label
-            className={s.label}
-            style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', margin: 0 }}
-          >
-            <input
-              type="checkbox"
-              aria-label="PULK Race Director Enabled"
-              checked={dynamicsConfig.pulkRaceDirectorEnabled ?? false}
-              onChange={(e) => setDynamics('pulkRaceDirectorEnabled', e.target.checked)}
-              style={{ cursor: 'pointer' }}
-            />
-            Enable PULK Race Director
-            <InfoTooltip text="Runs the group contest-director inside the PULK window [pulkStart, pulkEnd) under v4 — a real multi-racer front fight among the non-hero pack. OFF = the dead PULK front (one leader). Acts ONLY in PULK; OUTCOME still owns fairness." />
-          </label>
-        </div>
-        <div className={s.formGroup}>
-          <label
-            className={s.label}
-            style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}
-          >
-            Max lead hold (ms)
-            <InfoTooltip text="Forced lead-rotation cap: the longest any single racer may hold P1 inside the PULK window before it is demoted (via the director's fall-back) and the lead passes to the next challenger. Lower = the lead changes hands more often / more distinct leaders. Acts ONLY inside the PULK window. 2000 ms default." />
-          </label>
-          <input
-            type="number"
-            className={s.input}
-            aria-label="PULK Race Max Lead Hold Ms"
-            min={200}
-            max={10000}
-            step={100}
-            value={
-              dynamicsConfig.pulkRaceMaxLeadHoldMs ??
-              DEFAULT_RACE_DYNAMICS_CONFIG.pulkRaceMaxLeadHoldMs
-            }
-            onChange={(e) => {
-              const v = Number(e.target.value);
-              if (isFinite(v) && v >= 200 && v <= 10000) setDynamics('pulkRaceMaxLeadHoldMs', v);
-            }}
-          />
-        </div>
-      </SubCard>
-
-      {/* ── Block 4h: PULK Lead Rotation (successor to the PulkRaceDirector core loop) ── */}
+      {/* ── Block 4g: PULK Lead Rotation (the PULK-phase lead-rotation core loop) ── */}
       <SubCard
         title="PULK Lead Rotation"
         onReset={resetPulkLeadRotation}

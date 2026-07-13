@@ -255,11 +255,7 @@ const DYNAMICS_OVERRIDES = {
   governorDirectorFallbackMaxCount:   Number(argVal('governorDirectorFallbackMaxCount',   String(DEFAULT_RACE_DYNAMICS_CONFIG.governorDirectorFallbackMaxCount))),
   governorDirectorFallbackUntilPosition: Number(argVal('governorDirectorFallbackUntilPosition', String(DEFAULT_RACE_DYNAMICS_CONFIG.governorDirectorFallbackUntilPosition))),
   governorDirectorFallbackProtectMs:  Number(argVal('governorDirectorFallbackProtectMs',  String(DEFAULT_RACE_DYNAMICS_CONFIG.governorDirectorFallbackProtectMs))),
-  // M1 (PULK front contest) + M2 (pack cohesion spring) — SWEEP-ONLY flags; default OFF → byte-identical.
-  // PulkRaceDirector (v4-composable PULK group contest + N1 lead-rotation). Default OFF.
-  pulkRaceDirectorEnabled:  argVal('pulkRaceDirectorEnabled',  String(DEFAULT_RACE_DYNAMICS_CONFIG.pulkRaceDirectorEnabled)) === 'true',
-  pulkRaceMaxLeadHoldMs:    Number(argVal('pulkRaceMaxLeadHoldMs', String(DEFAULT_RACE_DYNAMICS_CONFIG.pulkRaceMaxLeadHoldMs))),
-  // PulkLeadRotation (successor core loop). Default OFF.
+  // PulkLeadRotation (the PULK-phase lead-rotation core loop). Default OFF.
   pulkLeadRotationEnabled:  argVal('pulkLeadRotationEnabled',  String(DEFAULT_RACE_DYNAMICS_CONFIG.pulkLeadRotationEnabled)) === 'true',
   pulkLeadRotationAttackerSlots: Number(argVal('pulkLeadRotationAttackerSlots', String(DEFAULT_RACE_DYNAMICS_CONFIG.pulkLeadRotationAttackerSlots))),
   pulkLeadRotationDropDepthLengths: Number(argVal('pulkLeadRotationDropDepthLengths', String(DEFAULT_RACE_DYNAMICS_CONFIG.pulkLeadRotationDropDepthLengths))),
@@ -926,17 +922,9 @@ export function runSingleRace({
     };
     const govFractions = racePlanController?.getPhaseFractions?.() ?? null;
     const govSeed = racePlanController?.seed ?? 0;
-    // ── PulkRaceDirector — the SAME group-director (applyGovernor), PULK-scoped + composed with v4 +
-    // N1 forced lead-rotation. Default OFF → not called → unchanged. Reuses govCfg's strength knobs
-    // (one source); only directorEnabled/pulkOnly/maxLeadHoldMs are overridden. v4 only.
-    const pulkRaceDirectorOn =
-      !!racePlanController && (dynamicsConfig.pulkRaceDirectorEnabled ?? false) && DIRECTOR_V4_ENABLED;
-    const pulkRaceCfg = { ...govCfg, directorEnabled: true, pulkOnly: true,
-      maxLeadHoldMs: dynamicsConfig.pulkRaceMaxLeadHoldMs ?? 2000 };
-    // ── PulkLeadRotation (successor). Default OFF → not called → unchanged. Reuses govCfg's strength
-    // knobs (leaderBrake/challengerBoost/pullStrength/frontPool + envelope); only the four rotation
-    // keys + minHold are new. v4 only. ONE governorMult writer at a time (enable only one of M1 /
-    // PulkRaceDirector / PulkLeadRotation).
+    // ── PulkLeadRotation. Default OFF → not called → unchanged. Reuses govCfg's strength knobs
+    // (leaderBrake/challengerBoost/pullStrength/frontPool + envelope); only the four rotation keys +
+    // minHold are new. v4 only. ONE governorMult writer at a time (the classic director / PulkLeadRotation).
     const pulkLeadRotationOn =
       !!racePlanController && (dynamicsConfig.pulkLeadRotationEnabled ?? false) && DIRECTOR_V4_ENABLED;
     const pulkLeadRotCfg = {
@@ -1194,22 +1182,10 @@ export function runSingleRace({
       }
 
       const govPhase =
-        (governorEnabled || pulkRaceDirectorOn) ? racePlanController.getPhase(raceTs, raceProgress) : null;
+        governorEnabled ? racePlanController.getPhase(raceTs, raceProgress) : null;
       // Field median for the READ-ONLY field-shape telemetry below (the director mechanism uses
       // the live rank sort + gap-to-leader, not the median).
       const govMedianT = governorEnabled ? simMedianT(racers) : null;
-
-      // ── PulkRaceDirector — the SAME applyGovernor, PULK-scoped (pulkOnly) + N1, run UNDER v4 ──
-      // (default OFF → skipped). Its own dirState-driven governorMult; heroes stay 1.0; fades by pulkEnd.
-      if (pulkRaceDirectorOn && govFractions) {
-        applyGovernor(
-          racers,
-          finishT,
-          govPhase,
-          { progress: raceProgress, pulkEndFrac: govFractions.pulkEndFrac, corrStartFrac: govFractions.corrStartFrac, seed: govSeed, pathLengthPx, meanBodyLen: govMeanBodyLen, isOpen, currentMs: raceTs, dirState },
-          pulkRaceCfg
-        );
-      }
 
       // ── PulkLeadRotation — until-P1 attackers + outsider + distance ex-leader brake (default OFF → skipped) ──
       if (pulkLeadRotationOn && govFractions) {

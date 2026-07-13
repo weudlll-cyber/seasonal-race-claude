@@ -2,7 +2,7 @@
 // File:        GovernorDiagHUD.jsx
 // Path:        client/src/screens/RaceScreen/GovernorDiagHUD.jsx
 // Project:     RaceArena
-// Description: Director diagnostics overlay for the DevPanel (classic director OR PulkRaceDirector).
+// Description: Director diagnostics overlay for the DevPanel (reactive director / PULK lead-rotation).
 //              Shows, live: (1) the RESOLVED phase + progress in EVERY phase (incl. OUTCOME), plus the
 //              director-active state + fade window (w) while active; (2) leader→2nd gap + field spread
 //              in racer-lengths; and (3) the FRONT GROUP — the front ~6 live racers, each with gap to
@@ -73,8 +73,8 @@ function buildView(diag, state) {
   const meanBodyLen = diag.meanBodyLen ?? 0;
   const lenScale = lenScaleFrom(pathLengthPx, meanBodyLen); // arc-fraction → racer-lengths (shared)
   const heroRoles = diag.heroRoles ?? null; // index → role (null until heroes cast)
-  // Active-phase check MIRRORS applyGovernor: pulkOnly (PulkRaceDirector) is active only in PULK; the
-  // classic director is active PRE_PULK|PULK|TRANSITION. Outside that the director contributes 1.0.
+  // Active-phase check: a pulkOnly cfg (the PULK lead-rotation display) is scoped to PULK; the reactive
+  // director is active PRE_PULK|PULK|TRANSITION. Outside that the director contributes 1.0.
   const activePhase = cfg.pulkOnly
     ? diag.phase === 'PULK'
     : diag.phase === 'PRE_PULK' || diag.phase === 'PULK' || diag.phase === 'TRANSITION';

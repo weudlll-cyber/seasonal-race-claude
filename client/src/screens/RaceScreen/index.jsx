@@ -750,13 +750,6 @@ export default function RaceScreen() {
       racePlanEnabled &&
       (dynamicsConfig.governorDirectorEnabled ?? false) &&
       !(dynamicsConfig.directorV4Enabled ?? false);
-    // PulkRaceDirector: the group-director composed WITH v4 (opt-in, default OFF → skipped). Runs the
-    // SAME applyGovernor in pulkOnly mode with the N1 rotation cap. Contest strengths reuse govCfg's
-    // knobs (built below); only directorEnabled/pulkOnly/maxLeadHoldMs are overridden — one source.
-    const pulkRaceDirectorOn =
-      racePlanEnabled &&
-      (dynamicsConfig.pulkRaceDirectorEnabled ?? false) &&
-      (dynamicsConfig.directorV4Enabled ?? false);
     // PulkLeadRotation: the successor core loop (opt-in, default OFF → skipped). Strengths reuse the
     // governorDirector* knobs; only the four rotation keys + minHold are new. v4 only.
     const pulkLeadRotationOn =
@@ -793,14 +786,6 @@ export default function RaceScreen() {
       directorFallbackMaxCount: dynamicsConfig.governorDirectorFallbackMaxCount ?? 2,
       directorFallbackUntilPosition: dynamicsConfig.governorDirectorFallbackUntilPosition ?? 12,
       directorFallbackProtectMs: dynamicsConfig.governorDirectorFallbackProtectMs ?? 2500,
-    };
-    // PulkRaceDirector config: the SAME group-director knobs (govCfg), PULK-scoped + N1 rotation cap.
-    // Only directorEnabled/pulkOnly/maxLeadHoldMs differ; every strength is reused from govCfg.
-    const pulkRaceCfg = {
-      ...govCfg,
-      directorEnabled: true,
-      pulkOnly: true,
-      maxLeadHoldMs: dynamicsConfig.pulkRaceMaxLeadHoldMs ?? 2000,
     };
     // PulkLeadRotation config: reuse govCfg's strength knobs; add the rotation-specific keys.
     const pulkLeadRotCfg = {
@@ -1084,28 +1069,6 @@ export default function RaceScreen() {
             ? racePlanController.getPhase(physicsTs, st.raceProgress)
             : null;
 
-          // ── PulkRaceDirector — the SAME applyGovernor, PULK-scoped (pulkOnly) + N1, run UNDER v4 ──
-          // (default OFF → skipped → race unchanged). Heroes stay governorMult 1.0; fades by pulkEnd.
-          if (pulkRaceDirectorOn && govFractions) {
-            applyGovernor(
-              st.racers,
-              st.finishT,
-              govPhase,
-              {
-                progress: st.raceProgress,
-                pulkEndFrac: govFractions.pulkEndFrac,
-                corrStartFrac: govFractions.corrStartFrac,
-                seed: govSeed,
-                pathLengthPx,
-                meanBodyLen: govMeanBodyLen,
-                isOpen: isOpenTrack,
-                currentMs: physicsTs,
-                dirState,
-              },
-              pulkRaceCfg
-            );
-          }
-
           // ── PulkLeadRotation — until-P1 attackers + outsider + distance ex-leader brake (default OFF → skipped) ──
           if (pulkLeadRotationOn && govFractions) {
             applyPulkLeadRotation(
@@ -1148,18 +1111,16 @@ export default function RaceScreen() {
           }
 
           // ── GovernorDiagHUD snapshot — ONE write site, EVERY frame a plan runs, independent of
-          // which director (if any) is active. cfg reflects the ACTIVE director (PulkRaceDirector, the
-          // old reactive director, or a directorEnabled:false stub in OUTCOME/off) so the HUD always
-          // reads the truth. Read-only; touches nothing but the diag ref. heroRoles = the retained
+          // which director (if any) is active. cfg reflects the ACTIVE mechanism (PulkLeadRotation, the
+          // reactive director, or a directorEnabled:false stub in OUTCOME/off) so the HUD always reads
+          // the truth. Read-only; touches nothing but the diag ref. heroRoles = the retained
           // index→role map (diagnostics-only; null until heroes are cast).
           if (racePlanController && govFractions) {
             const diagCfg = pulkLeadRotationOn
               ? { directorEnabled: true, pulkOnly: true } // lead-rotation: PULK-scoped, active in PULK
-              : pulkRaceDirectorOn
-                ? pulkRaceCfg
-                : directorEnabled
-                  ? govCfg
-                  : { directorEnabled: false };
+              : directorEnabled
+                ? govCfg
+                : { directorEnabled: false };
             governorDiagRef.current = {
               cfg: diagCfg,
               phase: govPhase,
