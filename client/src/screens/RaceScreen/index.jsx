@@ -738,24 +738,8 @@ export default function RaceScreen() {
     // controller (live boundaries, single source). maxEffect + maxStepPerFrame are the shared
     // realism envelope (±12% clamp + slew) the director rides.
     // PulkLeadRotation: THE pulk-phase mechanism, unconditional (within its [pulkStart, pulkEnd) window).
+    // Reads only pulk* config keys — its own realism envelope + strength knobs (no borrowed variables).
     const pulkLeadRotationOn = racePlanEnabled;
-    // Shared strength knobs the rotation reads (Stage-5b re-home targets — still governorDirector*).
-    const govCfg = {
-      maxEffect: dynamicsConfig.governorMaxEffect ?? 0.12,
-      maxStepPerFrame: dynamicsConfig.governorMaxStepPerFrame ?? 0.01,
-      directorLeaderBrake: dynamicsConfig.governorDirectorLeaderBrake ?? 0,
-      directorChallengerBoost: dynamicsConfig.governorDirectorChallengerBoost ?? 0,
-      directorFrontPool: dynamicsConfig.governorDirectorFrontPool ?? 8,
-      directorCeilingCap:
-        (dynamicsConfig.governorDirectorCeilingCap ?? false)
-          ? computeDirectorCeiling(
-              BASE_SPEED_MAX,
-              BASE_SPEED_MEAN,
-              dynamicsConfig.governorDirectorBoostHeadroom ?? 0
-            )
-          : 0,
-    };
-    // PulkLeadRotation config: reuse govCfg's strength knobs; add the rotation-specific keys.
     const pulkLeadRotCfg = {
       enabled: pulkLeadRotationOn,
       attackerSlots: dynamicsConfig.pulkLeadRotationAttackerSlots ?? 2,
@@ -763,12 +747,19 @@ export default function RaceScreen() {
       outsiderMaxReachLengths: dynamicsConfig.pulkLeadRotationOutsiderMaxReachLengths ?? 15,
       deadlockTimeoutMs: dynamicsConfig.pulkLeadRotationDeadlockTimeoutMs ?? 12000,
       minHoldMs: dynamicsConfig.pulkLeadRotationMinHoldMs ?? 750,
-      frontPool: govCfg.directorFrontPool,
-      leaderBrake: govCfg.directorLeaderBrake,
-      challengerBoost: govCfg.directorChallengerBoost,
-      maxEffect: govCfg.maxEffect,
-      maxStepPerFrame: govCfg.maxStepPerFrame,
-      ceilingCap: govCfg.directorCeilingCap,
+      frontPool: dynamicsConfig.pulkFrontPool ?? 8,
+      leaderBrake: dynamicsConfig.pulkLeaderBrake ?? 0,
+      challengerBoost: dynamicsConfig.pulkChallengerBoost ?? 0,
+      maxEffect: dynamicsConfig.pulkEnvelopeMaxEffect ?? 0.12,
+      maxStepPerFrame: dynamicsConfig.pulkEnvelopeMaxStepPerFrame ?? 0.01,
+      ceilingCap:
+        (dynamicsConfig.pulkCeilingCap ?? false)
+          ? computeDirectorCeiling(
+              BASE_SPEED_MAX,
+              BASE_SPEED_MEAN,
+              dynamicsConfig.pulkBoostHeadroom ?? 0
+            )
+          : 0,
     };
     const govFractions = racePlanController?.getPhaseFractions?.() ?? null;
     const govSeed = racePlanController?.seed ?? 0;

@@ -12,12 +12,15 @@ import { DEFAULT_RACE_DYNAMICS_CONFIG } from './storage/defaults.js';
 
 export { DEFAULT_RACE_DYNAMICS_CONFIG };
 
-// ── Stored-key carry-over: the directorV4* → choreo* rename (Stage 5a). Single source of truth.
-// A raceDynamicsConfig persisted BEFORE the rename carries its customized VALUES over to the new
-// choreo* keys; the old keys are then dropped. Migrated values flow through the SAME validation
-// below (under their new key/range) — the migration never bypasses validation and never touches any
-// key outside this map, so no removed mechanism can be resurrected.
-export const CHOREO_KEY_MIGRATION = {
+// ── Stored-key carry-over: the PULK-cleanup renames. Single source of truth for EVERY rename stage.
+// A raceDynamicsConfig persisted BEFORE a rename carries its customized VALUES over to the new key;
+// the old key is then dropped. Migrated values flow through the SAME validation below (under their
+// new key/range) — the migration never bypasses validation and never touches any key outside this
+// map, so no removed mechanism can be resurrected.
+//   Stage 5a: directorV4* → choreo* (the "v4" fossil → Race Choreography).
+//   Stage 5b-i: the borrowed governorDirector*/governor* strengths → the pulk* namespace.
+export const RENAMED_KEY_MIGRATION = {
+  // Stage 5a
   directorV4Intensity: 'choreoIntensity',
   directorV4PackBandStrictness: 'choreoPackBandStrictness',
   directorV4SuppressChaosBonusB1: 'choreoSuppressChaosBonusB1',
@@ -27,13 +30,21 @@ export const CHOREO_KEY_MIGRATION = {
   directorV4ResolveB4: 'choreoResolveB4',
   directorV4ResolveB5: 'choreoResolveB5',
   directorV4OutcomeStart: 'choreoOutcomeStart',
+  // Stage 5b-i (re-home: the pulk phase now owns its strengths + realism envelope)
+  governorDirectorLeaderBrake: 'pulkLeaderBrake',
+  governorDirectorChallengerBoost: 'pulkChallengerBoost',
+  governorDirectorFrontPool: 'pulkFrontPool',
+  governorDirectorBoostHeadroom: 'pulkBoostHeadroom',
+  governorDirectorCeilingCap: 'pulkCeilingCap',
+  governorMaxEffect: 'pulkEnvelopeMaxEffect',
+  governorMaxStepPerFrame: 'pulkEnvelopeMaxStepPerFrame',
 };
 
 // Copy-on-write: never mutate the caller's object. An old key carries over ONLY if the new key is
 // not already present (an explicit new value wins), then the old key is removed.
-function migrateChoreoKeys(stored) {
+function migrateRenamedKeys(stored) {
   let out = stored;
-  for (const [oldKey, newKey] of Object.entries(CHOREO_KEY_MIGRATION)) {
+  for (const [oldKey, newKey] of Object.entries(RENAMED_KEY_MIGRATION)) {
     if (!Object.prototype.hasOwnProperty.call(out, oldKey)) continue;
     if (out === stored) out = { ...stored };
     if (!Object.prototype.hasOwnProperty.call(out, newKey)) out[newKey] = out[oldKey];
@@ -45,7 +56,7 @@ function migrateChoreoKeys(stored) {
 export function loadRaceDynamicsConfig() {
   const rawStored = storageGet(KEYS.RACE_DYNAMICS_CONFIG);
   if (!rawStored || typeof rawStored !== 'object') return { ...DEFAULT_RACE_DYNAMICS_CONFIG };
-  const stored = migrateChoreoKeys(rawStored);
+  const stored = migrateRenamedKeys(rawStored);
   const merged = { ...DEFAULT_RACE_DYNAMICS_CONFIG, ...stored };
   if (
     merged.reRollVariationPercent <= 0 ||
@@ -57,23 +68,23 @@ export function loadRaceDynamicsConfig() {
     merged.trajectoryTransitionDuration <= 0 ||
     typeof merged.pulkBiasGain !== 'number' ||
     merged.pulkBiasGain < 0 ||
-    // Director realism envelope (shared ±maxEffect clamp + slew): same whole-object-reject
-    // pattern; bounds are validation limits, fallbacks come from DEFAULT_RACE_DYNAMICS_CONFIG.
-    typeof merged.governorMaxEffect !== 'number' ||
-    merged.governorMaxEffect < 0 ||
-    merged.governorMaxEffect > 0.5 ||
-    typeof merged.governorMaxStepPerFrame !== 'number' ||
-    merged.governorMaxStepPerFrame <= 0 ||
-    // Shared director contest STRENGTHS (rides the realism envelope): same whole-object-reject pattern.
-    typeof merged.governorDirectorLeaderBrake !== 'number' ||
-    merged.governorDirectorLeaderBrake < 0 ||
-    typeof merged.governorDirectorChallengerBoost !== 'number' ||
-    merged.governorDirectorChallengerBoost < 0 ||
-    typeof merged.governorDirectorFrontPool !== 'number' ||
-    merged.governorDirectorFrontPool < 0 ||
-    typeof merged.governorDirectorCeilingCap !== 'boolean' ||
-    typeof merged.governorDirectorBoostHeadroom !== 'number' ||
-    merged.governorDirectorBoostHeadroom < 0 ||
+    // Pulk realism envelope (±maxEffect clamp + slew): same whole-object-reject pattern; bounds are
+    // validation limits, fallbacks come from DEFAULT_RACE_DYNAMICS_CONFIG.
+    typeof merged.pulkEnvelopeMaxEffect !== 'number' ||
+    merged.pulkEnvelopeMaxEffect < 0 ||
+    merged.pulkEnvelopeMaxEffect > 0.5 ||
+    typeof merged.pulkEnvelopeMaxStepPerFrame !== 'number' ||
+    merged.pulkEnvelopeMaxStepPerFrame <= 0 ||
+    // Pulk contest STRENGTHS (ride the realism envelope): same whole-object-reject pattern.
+    typeof merged.pulkLeaderBrake !== 'number' ||
+    merged.pulkLeaderBrake < 0 ||
+    typeof merged.pulkChallengerBoost !== 'number' ||
+    merged.pulkChallengerBoost < 0 ||
+    typeof merged.pulkFrontPool !== 'number' ||
+    merged.pulkFrontPool < 0 ||
+    typeof merged.pulkCeilingCap !== 'boolean' ||
+    typeof merged.pulkBoostHeadroom !== 'number' ||
+    merged.pulkBoostHeadroom < 0 ||
     typeof merged.choreoSuppressChaosBonusB1 !== 'boolean' ||
     typeof merged.choreoIntensity !== 'number' ||
     merged.choreoIntensity < 0 ||

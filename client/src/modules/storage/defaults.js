@@ -280,26 +280,26 @@ export const DEFAULT_RACE_DYNAMICS_CONFIG = {
   // nudged toward the pulk centroid by this gain × normalised gap, so the field stays together
   // (the always-on cohesion mechanism). 0 = no cohesion; higher = tighter pack. 2.0 = shipped.
   pulkBiasGain: 2.0,
-  // ── Pre-OUTCOME contest-injector "director" — SHIPPED ON (winning PULK-action) ──────
-  // A rank-BLIND rotating spotlight (raceGovernor.js) that stages a front contest before OUTCOME
-  // via r.governorMult. maxEffect + maxStepPerFrame are the shared REALISM ENVELOPE (±12% clamp +
-  // per-frame slew) every director shape rides; the phase-weight fade takes governorMult to
-  // exactly 1.0 by OUTCOME so the finish order (fairness) is untouched. Lives here (the shared
+  // ── PULK-phase contest director (applyPulkLeadRotation, raceGovernor.js) — SHIPPED ON ──────
+  // A rank-BLIND lead rotation that stages a front contest inside the PULK window via r.governorMult.
+  // pulkEnvelopeMaxEffect + pulkEnvelopeMaxStepPerFrame are the PULK phase's OWN REALISM ENVELOPE
+  // (±12% clamp + per-frame slew) every contest term rides; the phase-weight fade takes governorMult
+  // to exactly 1.0 by OUTCOME so the finish order (fairness) is untouched. Lives here (the shared
   // persisted dynamics config the physics reads) so DevScreen and the future SetupScreen bind the
   // SAME keys — single source, no second copy.
-  governorMaxEffect: 0.12, // outer clamp on |governorMult−1| — the realism guarantee (±12%)
-  governorMaxStepPerFrame: 0.01, // slew limit on per-step governorMult change → smooth speed, no jump
-  // SHIPPED shared contest STRENGTHS (governorDirector* namespace): the realism-bounded speed knobs
-  // the PULK-phase director (applyPulkLeadRotation, raceGovernor.js) rides. Rank-blind (position +
-  // seed only, never targetRank), faded to nothing by OUTCOME so the finish order (fairness) is
-  // delegated to the OUTCOME controller + the naturalness ceiling-cap. DevScreen-tunable.
-  governorDirectorLeaderBrake: 0.1, // brake on the live leader (≤ 0.15)
-  governorDirectorChallengerBoost: 0.06, // forward boost cap on a catching challenger toward the leader
-  governorDirectorCeilingCap: true, // cap a boosted racer's resulting speed at the natural band max
-  // Additive headroom (speed-factor points) ABOVE the natural band max for the director ceiling: lets
+  pulkEnvelopeMaxEffect: 0.12, // outer clamp on |governorMult−1| — the realism guarantee (±12%)
+  pulkEnvelopeMaxStepPerFrame: 0.01, // slew limit on per-step governorMult change → smooth speed, no jump
+  // SHIPPED pulk contest STRENGTHS (pulk* namespace): the realism-bounded speed knobs the PULK-phase
+  // lead rotation rides. Rank-blind (position + seed only, never targetRank), faded to nothing by
+  // OUTCOME so the finish order (fairness) is delegated to the OUTCOME controller + the naturalness
+  // ceiling-cap. DevScreen-tunable.
+  pulkLeaderBrake: 0.1, // brake on the live leader (≤ 0.15)
+  pulkChallengerBoost: 0.06, // forward boost cap on a catching challenger toward the leader
+  pulkCeilingCap: true, // cap a boosted racer's resulting speed at the natural band max
+  // Additive headroom (speed-factor points) ABOVE the natural band max for the pulk ceiling: lets
   // a boosted challenger burst past the fastest natural racer (revives the otherwise cap-eaten boost).
   // 0 = shipped baseline (cap = band max, byte-identical). Hard-clamped to +20% (NATURALNESS_CEILING).
-  governorDirectorBoostHeadroom: 0.1,
+  pulkBoostHeadroom: 0.1,
   // Hero choreography (UNCONDITIONAL): designated hero racers are steered along hand-authored
   // position-over-time curves by the trajectory controller from the choreo start; the rest is unchanged.
   // Choreo drama intensity (0..1, the future Action-slider backing) + the loose-pack bandStrictness
@@ -326,14 +326,14 @@ export const DEFAULT_RACE_DYNAMICS_CONFIG = {
   // the PULK window [racePlanPulkStart, this] and hands OUTCOME off later. Range 0.25–0.55.
   // Surfaced by the DevScreen "PULK end / OUTCOME begins" control.
   choreoOutcomeStart: 0.5,
-  // Front-group pool: front N on-track positions (leader excluded) the director draws challengers from.
-  governorDirectorFrontPool: 8,
+  // Front-group pool: front N on-track positions (leader excluded) the lead rotation draws challengers from.
+  pulkFrontPool: 8,
   // ── PulkLeadRotation — THE pulk-phase mechanism (UNCONDITIONAL). It COMPLETES lead changes inside
   // [pulkStart, pulkEnd): 1–2 attacker slots boost the current live P2/P3 UNTIL it takes the lead, a
   // permanent outsider slot brings fresh blood from deeper in the field, and the dethroned leader is
   // braked (distance-based) until it has fallen `dropDepthLengths` behind — the depth lever. Contest
-  // STRENGTHS reuse the existing governorDirector* knobs (leaderBrake/challengerBoost/frontPool +
-  // the maxEffect/maxStep/ceiling envelope) — no duplicated values.
+  // STRENGTHS are the pulk* knobs above (pulkLeaderBrake/pulkChallengerBoost/pulkFrontPool + the
+  // pulkEnvelope*/pulkCeilingCap envelope) — no duplicated values.
   pulkLeadRotationAttackerSlots: 2, // parallel attacker slots (1–2)
   pulkLeadRotationDropDepthLengths: 8, // ex-leader brake release depth (racer lengths); the depth lever
   pulkLeadRotationOutsiderMaxReachLengths: 15, // outsider reachability cap (racer lengths)

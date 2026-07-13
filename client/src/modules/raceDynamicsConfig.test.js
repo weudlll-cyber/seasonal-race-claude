@@ -42,19 +42,20 @@ describe('DEFAULT_RACE_DYNAMICS_CONFIG', () => {
       racePlanCorridorEnd: 1.0,
       racePlanMinDurationSec: 30,
       pulkBiasGain: 2.0,
-      governorMaxEffect: 0.12,
-      governorMaxStepPerFrame: 0.01,
+      pulkEnvelopeMaxEffect: 0.12,
+      pulkEnvelopeMaxStepPerFrame: 0.01,
       // SHIPPED DEFAULT: the shared PULK-director contest strengths (rides the realism envelope).
-      governorDirectorLeaderBrake: 0.1,
-      governorDirectorChallengerBoost: 0.06,
-      governorDirectorCeilingCap: true,
+      pulkLeaderBrake: 0.1,
+      pulkChallengerBoost: 0.06,
+      pulkCeilingCap: true,
       // DEFAULT-FLIP 2026-07-13: shipped world moved to the swept + eye-tested world (OutcomeStart 0.5,
       // boostHeadroom 0.10, dropDepth 8). STAGE-3 CLEANUP: the choreoEnabled + pulkLeadRotationEnabled
       // toggles were REMOVED — choreography + rotation are now unconditional. STAGE-4 CLEANUP: the classic
       // reactive director + its knobs were REMOVED — only the shared strengths survive. STAGE-5a RENAME:
-      // the directorV4* keys were renamed to choreo* (behavior-identical) — snapshot re-baselined to the
-      // new key names (same values, same ranges); stored old keys carry over via CHOREO_KEY_MIGRATION.
-      governorDirectorBoostHeadroom: 0.1,
+      // directorV4* → choreo* (behavior-identical). STAGE-5b-i RE-HOME: the borrowed governorDirector*/
+      // governor* strengths + envelope were re-homed to the pulk* namespace (same values, same ranges) —
+      // snapshot re-baselined to the new key names; stored old keys carry over via RENAMED_KEY_MIGRATION.
+      pulkBoostHeadroom: 0.1,
       choreoSuppressChaosBonusB1: false,
       choreoIntensity: 0.6,
       choreoPackBandStrictness: 0.5,
@@ -64,7 +65,7 @@ describe('DEFAULT_RACE_DYNAMICS_CONFIG', () => {
       choreoResolveB4: 0.65,
       choreoResolveB5: 0.6,
       choreoOutcomeStart: 0.5, // DEFAULT-FLIP 2026-07-13 (reopened PULK [0.25,0.5))
-      governorDirectorFrontPool: 8,
+      pulkFrontPool: 8,
       phaseSplitBonusEnabled: true,
       areaBonusEarly: 1.0,
       areaBonusPulk: 0,
@@ -88,7 +89,7 @@ describe('DEFAULT_RACE_DYNAMICS_CONFIG', () => {
 
   it('all numeric defaults are positive; PULK-phase bonuses default 0 (off during PULK)', () => {
     // The winning phase-split turns the area/row bonuses OFF during the PULK window (0 is valid).
-    const offAtZero = new Set(['areaBonusPulk', 'rowBonusPulk', 'governorDirectorBoostHeadroom']);
+    const offAtZero = new Set(['areaBonusPulk', 'rowBonusPulk', 'pulkBoostHeadroom']);
     for (const [key, val] of Object.entries(DEFAULT_RACE_DYNAMICS_CONFIG)) {
       if (typeof val !== 'number') continue;
       if (offAtZero.has(key)) expect(val).toBeGreaterThanOrEqual(0);
@@ -144,20 +145,20 @@ describe('loadRaceDynamicsConfig', () => {
     expect(loadRaceDynamicsConfig()).toEqual(DEFAULT_RACE_DYNAMICS_CONFIG);
   });
 
-  it('returns defaults when governorDirectorBoostHeadroom is negative', () => {
+  it('returns defaults when pulkBoostHeadroom is negative', () => {
     storageGet.mockReturnValue({
       ...DEFAULT_RACE_DYNAMICS_CONFIG,
-      governorDirectorBoostHeadroom: -0.05,
+      pulkBoostHeadroom: -0.05,
     });
     expect(loadRaceDynamicsConfig()).toEqual(DEFAULT_RACE_DYNAMICS_CONFIG);
   });
 
-  it('accepts a positive governorDirectorBoostHeadroom', () => {
+  it('accepts a positive pulkBoostHeadroom', () => {
     storageGet.mockReturnValue({
       ...DEFAULT_RACE_DYNAMICS_CONFIG,
-      governorDirectorBoostHeadroom: 0.05,
+      pulkBoostHeadroom: 0.05,
     });
-    expect(loadRaceDynamicsConfig().governorDirectorBoostHeadroom).toBe(0.05);
+    expect(loadRaceDynamicsConfig().pulkBoostHeadroom).toBe(0.05);
   });
 
   it('returns defaults when choreoIntensity is out of [0,1]', () => {
@@ -247,6 +248,46 @@ describe('loadRaceDynamicsConfig — directorV4* → choreo* carry-over migratio
 
   it('a migrated value is still validated under the new key/range (no bypass)', () => {
     storageGet.mockReturnValue({ directorV4Intensity: 1.5 }); // out of [0,1] under choreoIntensity
+    expect(loadRaceDynamicsConfig()).toEqual(DEFAULT_RACE_DYNAMICS_CONFIG); // whole-object reject
+  });
+});
+
+// ── Stage-5b-i re-home carry-over: the borrowed governorDirector*/governor* strength + envelope keys
+// carry their VALUES over to the re-homed pulk* keys; the old keys are then inert. Same migration. ──
+describe('loadRaceDynamicsConfig — governorDirector*/governor* → pulk* re-home carry-over', () => {
+  it('carries customized old strength + envelope key VALUES over to the new pulk* keys', () => {
+    storageGet.mockReturnValue({
+      governorDirectorLeaderBrake: 0.13,
+      governorDirectorChallengerBoost: 0.07,
+      governorDirectorFrontPool: 10,
+      governorDirectorBoostHeadroom: 0.05,
+      governorDirectorCeilingCap: false,
+      governorMaxEffect: 0.1,
+      governorMaxStepPerFrame: 0.02,
+    });
+    const cfg = loadRaceDynamicsConfig();
+    expect(cfg.pulkLeaderBrake).toBe(0.13);
+    expect(cfg.pulkChallengerBoost).toBe(0.07);
+    expect(cfg.pulkFrontPool).toBe(10);
+    expect(cfg.pulkBoostHeadroom).toBe(0.05);
+    expect(cfg.pulkCeilingCap).toBe(false);
+    expect(cfg.pulkEnvelopeMaxEffect).toBe(0.1);
+    expect(cfg.pulkEnvelopeMaxStepPerFrame).toBe(0.02);
+    // old keys dropped (inert)
+    expect(cfg.governorDirectorLeaderBrake).toBeUndefined();
+    expect(cfg.governorMaxEffect).toBeUndefined();
+    expect(cfg.governorMaxStepPerFrame).toBeUndefined();
+  });
+
+  it('an explicit new pulk* key wins over an old key present alongside it', () => {
+    storageGet.mockReturnValue({ governorMaxEffect: 0.1, pulkEnvelopeMaxEffect: 0.2 });
+    const cfg = loadRaceDynamicsConfig();
+    expect(cfg.pulkEnvelopeMaxEffect).toBe(0.2);
+    expect(cfg.governorMaxEffect).toBeUndefined();
+  });
+
+  it('a re-homed value is still validated under the new key/range (no bypass)', () => {
+    storageGet.mockReturnValue({ governorMaxEffect: 0.9 }); // out of [0,0.5] under pulkEnvelopeMaxEffect
     expect(loadRaceDynamicsConfig()).toEqual(DEFAULT_RACE_DYNAMICS_CONFIG); // whole-object reject
   });
 });

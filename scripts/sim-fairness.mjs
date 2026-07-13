@@ -36,8 +36,8 @@
 //                        Stage-5b re-targets it to the rotation strengths. Unset → no-op.
 //
 //   Contest strengths (read-only sweep knobs; the PulkLeadRotation mechanism reads these):
-//     --governorDirectorLeaderBrake=<0..0.15>      brake on the instantaneous leader (P1).
-//     --governorDirectorChallengerBoost=<0..0.12>  forward boost cap on featured challengers toward
+//     --pulkLeaderBrake=<0..0.15>      brake on the instantaneous leader (P1).
+//     --pulkChallengerBoost=<0..0.12>  forward boost cap on featured challengers toward
 //                                                  the leader.
 //     --bonusMult=<x>   areaBonus (Race-Plan band bonus) strength multiplier — the fairness knob.
 //                       2.0 = shipped (+6% B1), 1.0 = half, 0 = off. Swept to trade corrP1 vs band-reach.
@@ -220,17 +220,16 @@ const DYNAMICS_OVERRIDES = {
   reRollIntervalDivisor:         Number(argVal('reRollIntervalDivisor',      String(DEFAULT_RACE_DYNAMICS_CONFIG.reRollIntervalDivisor))),
   reRollLastPositionPercent:     Number(argVal('reRollLastPositionPercent',  String(DEFAULT_RACE_DYNAMICS_CONFIG.reRollLastPositionPercent))),
   trajectoryTransitionDuration:  Number(argVal('trajectoryTransitionDuration', String(DEFAULT_RACE_DYNAMICS_CONFIG.trajectoryTransitionDuration))),
-  // Director realism envelope (shared ±maxEffect clamp + slew) — same shared-default + argVal
-  // pattern (no drift).
-  governorMaxEffect:  Number(argVal('governorMaxEffect',    String(DEFAULT_RACE_DYNAMICS_CONFIG.governorMaxEffect))),
-  governorMaxStepPerFrame: Number(argVal('governorMaxStepPerFrame', String(DEFAULT_RACE_DYNAMICS_CONFIG.governorMaxStepPerFrame))),
-  // Contest strengths the rotation reads (Stage-5b re-home targets — still governorDirector*).
-  governorDirectorLeaderBrake:     Number(argVal('governorDirectorLeaderBrake',     String(DEFAULT_RACE_DYNAMICS_CONFIG.governorDirectorLeaderBrake))),
-  governorDirectorChallengerBoost: Number(argVal('governorDirectorChallengerBoost', String(DEFAULT_RACE_DYNAMICS_CONFIG.governorDirectorChallengerBoost))),
-  governorDirectorFrontPool:        Number(argVal('governorDirectorFrontPool',        String(DEFAULT_RACE_DYNAMICS_CONFIG.governorDirectorFrontPool))),
-  governorDirectorCeilingCap:       argVal('governorDirectorCeilingCap', String(DEFAULT_RACE_DYNAMICS_CONFIG.governorDirectorCeilingCap)) === 'true',
-  // Additive boost-headroom above the natural band max for the director ceiling (0 = shipped baseline).
-  governorDirectorBoostHeadroom:    Number(argVal('governorDirectorBoostHeadroom', String(DEFAULT_RACE_DYNAMICS_CONFIG.governorDirectorBoostHeadroom))),
+  // Pulk realism envelope (±maxEffect clamp + slew) — same shared-default + argVal pattern (no drift).
+  pulkEnvelopeMaxEffect:  Number(argVal('pulkEnvelopeMaxEffect',    String(DEFAULT_RACE_DYNAMICS_CONFIG.pulkEnvelopeMaxEffect))),
+  pulkEnvelopeMaxStepPerFrame: Number(argVal('pulkEnvelopeMaxStepPerFrame', String(DEFAULT_RACE_DYNAMICS_CONFIG.pulkEnvelopeMaxStepPerFrame))),
+  // Pulk contest strengths the lead rotation reads (pulk* namespace).
+  pulkLeaderBrake:     Number(argVal('pulkLeaderBrake',     String(DEFAULT_RACE_DYNAMICS_CONFIG.pulkLeaderBrake))),
+  pulkChallengerBoost: Number(argVal('pulkChallengerBoost', String(DEFAULT_RACE_DYNAMICS_CONFIG.pulkChallengerBoost))),
+  pulkFrontPool:        Number(argVal('pulkFrontPool',        String(DEFAULT_RACE_DYNAMICS_CONFIG.pulkFrontPool))),
+  pulkCeilingCap:       argVal('pulkCeilingCap', String(DEFAULT_RACE_DYNAMICS_CONFIG.pulkCeilingCap)) === 'true',
+  // Additive boost-headroom above the natural band max for the pulk ceiling (0 = shipped baseline).
+  pulkBoostHeadroom:    Number(argVal('pulkBoostHeadroom', String(DEFAULT_RACE_DYNAMICS_CONFIG.pulkBoostHeadroom))),
   // PulkLeadRotation (the PULK-phase lead-rotation core loop). Default OFF.
   pulkLeadRotationAttackerSlots: Number(argVal('pulkLeadRotationAttackerSlots', String(DEFAULT_RACE_DYNAMICS_CONFIG.pulkLeadRotationAttackerSlots))),
   pulkLeadRotationDropDepthLengths: Number(argVal('pulkLeadRotationDropDepthLengths', String(DEFAULT_RACE_DYNAMICS_CONFIG.pulkLeadRotationDropDepthLengths))),
@@ -850,11 +849,11 @@ export function runSingleRace({
 
     // ── PULK-phase contest director — parity with the browser ─────────────────────
     // Phase fractions + seed come from the controller (live boundaries, single source).
-    // maxEffect + maxStepPerFrame are the shared realism envelope (±clamp + slew).
+    // pulkEnvelopeMaxEffect + pulkEnvelopeMaxStepPerFrame are the pulk realism envelope (±clamp + slew).
     const govFractions = racePlanController?.getPhaseFractions?.() ?? null;
-    // ── PulkLeadRotation (the sole PULK director; runs whenever a plan controller exists). Reuses the
-    // shared strength knobs (leaderBrake/challengerBoost/frontPool + envelope); the four rotation keys +
-    // minHold are its own. ONE governorMult writer.
+    // ── PulkLeadRotation (the sole PULK director; runs whenever a plan controller exists). Reads its own
+    // pulk* strength knobs (pulkLeaderBrake/pulkChallengerBoost/pulkFrontPool + the pulkEnvelope*/
+    // pulkCeilingCap envelope); the four rotation keys + minHold are its own. ONE governorMult writer.
     const pulkLeadRotationOn = !!racePlanController;
     const pulkLeadRotCfg = {
       enabled: pulkLeadRotationOn,
@@ -863,13 +862,13 @@ export function runSingleRace({
       outsiderMaxReachLengths: dynamicsConfig.pulkLeadRotationOutsiderMaxReachLengths ?? 15,
       deadlockTimeoutMs: dynamicsConfig.pulkLeadRotationDeadlockTimeoutMs ?? 12000,
       minHoldMs: dynamicsConfig.pulkLeadRotationMinHoldMs ?? 750,
-      frontPool: dynamicsConfig.governorDirectorFrontPool ?? 8,
-      leaderBrake: dynamicsConfig.governorDirectorLeaderBrake ?? 0,
-      challengerBoost: dynamicsConfig.governorDirectorChallengerBoost ?? 0,
-      maxEffect: dynamicsConfig.governorMaxEffect ?? 0.12,
-      maxStepPerFrame: dynamicsConfig.governorMaxStepPerFrame ?? 0.01,
-      ceilingCap: (dynamicsConfig.governorDirectorCeilingCap ?? false)
-        ? computeDirectorCeiling(BASE_SPEED_MAX, BASE_SPEED_MEAN, dynamicsConfig.governorDirectorBoostHeadroom ?? 0)
+      frontPool: dynamicsConfig.pulkFrontPool ?? 8,
+      leaderBrake: dynamicsConfig.pulkLeaderBrake ?? 0,
+      challengerBoost: dynamicsConfig.pulkChallengerBoost ?? 0,
+      maxEffect: dynamicsConfig.pulkEnvelopeMaxEffect ?? 0.12,
+      maxStepPerFrame: dynamicsConfig.pulkEnvelopeMaxStepPerFrame ?? 0.01,
+      ceilingCap: (dynamicsConfig.pulkCeilingCap ?? false)
+        ? computeDirectorCeiling(BASE_SPEED_MAX, BASE_SPEED_MEAN, dynamicsConfig.pulkBoostHeadroom ?? 0)
         : 0,
     };
     // Phase-split MECHANIC boundaries follow the LIVE plan phase fractions (single source: the

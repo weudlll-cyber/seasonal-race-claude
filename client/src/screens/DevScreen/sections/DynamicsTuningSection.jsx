@@ -128,13 +128,13 @@ const DynamicsTuningSection = forwardRef(function DynamicsTuningSection(_, ref) 
   function resetGovernor() {
     setDynamicsConfig((prev) => ({
       ...prev,
-      governorMaxEffect: DEFAULT_RACE_DYNAMICS_CONFIG.governorMaxEffect,
-      governorMaxStepPerFrame: DEFAULT_RACE_DYNAMICS_CONFIG.governorMaxStepPerFrame,
-      governorDirectorLeaderBrake: DEFAULT_RACE_DYNAMICS_CONFIG.governorDirectorLeaderBrake,
-      governorDirectorChallengerBoost: DEFAULT_RACE_DYNAMICS_CONFIG.governorDirectorChallengerBoost,
-      governorDirectorFrontPool: DEFAULT_RACE_DYNAMICS_CONFIG.governorDirectorFrontPool,
-      governorDirectorCeilingCap: DEFAULT_RACE_DYNAMICS_CONFIG.governorDirectorCeilingCap,
-      governorDirectorBoostHeadroom: DEFAULT_RACE_DYNAMICS_CONFIG.governorDirectorBoostHeadroom,
+      pulkEnvelopeMaxEffect: DEFAULT_RACE_DYNAMICS_CONFIG.pulkEnvelopeMaxEffect,
+      pulkEnvelopeMaxStepPerFrame: DEFAULT_RACE_DYNAMICS_CONFIG.pulkEnvelopeMaxStepPerFrame,
+      pulkLeaderBrake: DEFAULT_RACE_DYNAMICS_CONFIG.pulkLeaderBrake,
+      pulkChallengerBoost: DEFAULT_RACE_DYNAMICS_CONFIG.pulkChallengerBoost,
+      pulkFrontPool: DEFAULT_RACE_DYNAMICS_CONFIG.pulkFrontPool,
+      pulkCeilingCap: DEFAULT_RACE_DYNAMICS_CONFIG.pulkCeilingCap,
+      pulkBoostHeadroom: DEFAULT_RACE_DYNAMICS_CONFIG.pulkBoostHeadroom,
     }));
   }
 
@@ -767,17 +767,17 @@ const DynamicsTuningSection = forwardRef(function DynamicsTuningSection(_, ref) 
         </p>
       </SubCard>
 
-      {/* ── Block 4d: Shared PULK-director contest strengths + realism envelope ── */}
+      {/* ── Block 4d: PULK contest strengths + realism envelope (pulk* namespace) ── */}
       <SubCard
-        title="Director contest strengths (PULK)"
+        title="PULK contest strengths"
         onReset={resetGovernor}
         resetTestId="reset-governor"
-        subtitle="The realism-bounded speed knobs the PULK-phase director (lead rotation) rides: a leader brake, a challenger boost cap, and the front-group pool. Faded to nothing before OUTCOME so the finish order (fairness) is delegated to the OUTCOME controller + the ceiling cap. Max effect + max step per frame are the shared realism envelope (±clamp + slew) every term rides."
+        subtitle="The realism-bounded speed knobs the PULK-phase lead rotation rides: a leader brake, a challenger boost cap, and the front-group pool. Faded to nothing before OUTCOME so the finish order (fairness) is delegated to the OUTCOME controller + the ceiling cap. Max effect + max step per frame are the pulk realism envelope (±clamp + slew) every term rides."
       >
         <div className={s.formGrid}>
           {[
             {
-              key: 'governorMaxEffect',
+              key: 'pulkEnvelopeMaxEffect',
               label: 'Max effect (±)',
               min: 0.02,
               max: 0.2,
@@ -785,7 +785,7 @@ const DynamicsTuningSection = forwardRef(function DynamicsTuningSection(_, ref) 
               tip: 'Outer clamp on the per-racer speed effect — the realism guarantee (±). The director never exceeds this.',
             },
             {
-              key: 'governorMaxStepPerFrame',
+              key: 'pulkEnvelopeMaxStepPerFrame',
               label: 'Max step / frame',
               min: 0.001,
               max: 0.05,
@@ -793,7 +793,7 @@ const DynamicsTuningSection = forwardRef(function DynamicsTuningSection(_, ref) 
               tip: 'Slew limit: how fast governorMult may change per step. Lower = smoother speed changes.',
             },
             {
-              key: 'governorDirectorLeaderBrake',
+              key: 'pulkLeaderBrake',
               label: 'Leader brake',
               min: 0,
               max: 0.15,
@@ -801,7 +801,7 @@ const DynamicsTuningSection = forwardRef(function DynamicsTuningSection(_, ref) 
               tip: 'How hard the live leader is slowed so a chaser can close. Only slows; never speeds anyone up. 0.10 = shipped.',
             },
             {
-              key: 'governorDirectorChallengerBoost',
+              key: 'pulkChallengerBoost',
               label: 'Challenger boost (cap)',
               min: 0,
               max: 0.12,
@@ -809,7 +809,7 @@ const DynamicsTuningSection = forwardRef(function DynamicsTuningSection(_, ref) 
               tip: 'Maximum forward boost given to a catching challenger to close on the leader (capped by max effect). 0.06 = shipped.',
             },
             {
-              key: 'governorDirectorBoostHeadroom',
+              key: 'pulkBoostHeadroom',
               label: 'Boost headroom (pts above natural)',
               min: 0,
               max: 0.15,
@@ -817,7 +817,7 @@ const DynamicsTuningSection = forwardRef(function DynamicsTuningSection(_, ref) 
               tip: 'How much faster than the fastest natural racer a boosted challenger may go. 0 = capped at the field; higher = catch-ups can burst forward. Auto-limited so total speed stays within ±20%. 0 = shipped.',
             },
             {
-              key: 'governorDirectorFrontPool',
+              key: 'pulkFrontPool',
               label: 'Front-group pool (N)',
               min: 1,
               max: 30,
@@ -856,9 +856,9 @@ const DynamicsTuningSection = forwardRef(function DynamicsTuningSection(_, ref) 
           >
             <input
               type="checkbox"
-              aria-label="Director Ceiling Cap"
-              checked={dynamicsConfig.governorDirectorCeilingCap ?? false}
-              onChange={(e) => setDynamics('governorDirectorCeilingCap', e.target.checked)}
+              aria-label="Pulk Ceiling Cap"
+              checked={dynamicsConfig.pulkCeilingCap ?? false}
+              onChange={(e) => setDynamics('pulkCeilingCap', e.target.checked)}
               style={{ cursor: 'pointer' }}
             />
             Naturalness ceiling cap
@@ -1214,7 +1214,7 @@ const DynamicsTuningSection = forwardRef(function DynamicsTuningSection(_, ref) 
         title="PULK Lead Rotation"
         onReset={resetPulkLeadRotation}
         resetTestId="reset-pulk-lead-rotation"
-        subtitle="THE pulk-phase mechanism (always on): instead of herding the front it COMPLETES lead changes. Inside the PULK window, 1–2 attacker slots boost the current live P2/P3 UNTIL it takes the lead, a permanent outsider slot brings a fresh racer up from deeper in the field, and the dethroned leader is braked until it has fallen the drop-depth behind. A fresh P1 is guaranteed 750 ms before it can be re-passed (no flicker). Strengths come from the Director section above; the four knobs here shape the rotation."
+        subtitle="THE pulk-phase mechanism (always on): instead of herding the front it COMPLETES lead changes. Inside the PULK window, 1–2 attacker slots boost the current live P2/P3 UNTIL it takes the lead, a permanent outsider slot brings a fresh racer up from deeper in the field, and the dethroned leader is braked until it has fallen the drop-depth behind. A fresh P1 is guaranteed 750 ms before it can be re-passed (no flicker). Strengths come from the PULK contest strengths section above; the four knobs here shape the rotation."
       >
         <div className={s.formGrid}>
           {[
