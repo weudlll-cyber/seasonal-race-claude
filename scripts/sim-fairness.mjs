@@ -209,7 +209,7 @@ const RP_CORRIDOR_END         = Number(argVal('corridorEnd',        String(DEFAU
 const RP_PULK_BIAS_GAIN       = Number(argVal('pulkBiasGain',       String(DEFAULT_RACE_DYNAMICS_CONFIG.pulkBiasGain)));
 // v4 hero choreography — master flag + drama intensity + loose-pack bandStrictness. Passed into
 // createRacePlan (flag OFF → byte-identical; the intensity/strictness only apply when ON).
-const DIRECTOR_V4_ENABLED     = argVal('directorV4Enabled', String(DEFAULT_RACE_DYNAMICS_CONFIG.directorV4Enabled)) === 'true';
+const DIRECTOR_V4_ENABLED     = true; // choreography is UNCONDITIONAL (de-flagged S3); classic gates below are now statically false (Stage-4 removal)
 // Stage 1 spoiler switch (parity with racePlanner/index.jsx). Default off → the shipped default.
 const DIRECTOR_V4_SUPPRESS_CHAOS_BONUS_B1 = argVal('directorV4SuppressChaosBonusB1', String(DEFAULT_RACE_DYNAMICS_CONFIG.directorV4SuppressChaosBonusB1)) === 'true';
 const DIRECTOR_V4_INTENSITY   = Number(argVal('directorV4Intensity', String(DEFAULT_RACE_DYNAMICS_CONFIG.directorV4Intensity)));
@@ -256,7 +256,6 @@ const DYNAMICS_OVERRIDES = {
   governorDirectorFallbackUntilPosition: Number(argVal('governorDirectorFallbackUntilPosition', String(DEFAULT_RACE_DYNAMICS_CONFIG.governorDirectorFallbackUntilPosition))),
   governorDirectorFallbackProtectMs:  Number(argVal('governorDirectorFallbackProtectMs',  String(DEFAULT_RACE_DYNAMICS_CONFIG.governorDirectorFallbackProtectMs))),
   // PulkLeadRotation (the PULK-phase lead-rotation core loop). Default OFF.
-  pulkLeadRotationEnabled:  argVal('pulkLeadRotationEnabled',  String(DEFAULT_RACE_DYNAMICS_CONFIG.pulkLeadRotationEnabled)) === 'true',
   pulkLeadRotationAttackerSlots: Number(argVal('pulkLeadRotationAttackerSlots', String(DEFAULT_RACE_DYNAMICS_CONFIG.pulkLeadRotationAttackerSlots))),
   pulkLeadRotationDropDepthLengths: Number(argVal('pulkLeadRotationDropDepthLengths', String(DEFAULT_RACE_DYNAMICS_CONFIG.pulkLeadRotationDropDepthLengths))),
   pulkLeadRotationOutsiderMaxReachLengths: Number(argVal('pulkLeadRotationOutsiderMaxReachLengths', String(DEFAULT_RACE_DYNAMICS_CONFIG.pulkLeadRotationOutsiderMaxReachLengths))),
@@ -925,8 +924,7 @@ export function runSingleRace({
     // ── PulkLeadRotation. Default OFF → not called → unchanged. Reuses govCfg's strength knobs
     // (leaderBrake/challengerBoost/pullStrength/frontPool + envelope); only the four rotation keys +
     // minHold are new. v4 only. ONE governorMult writer at a time (the classic director / PulkLeadRotation).
-    const pulkLeadRotationOn =
-      !!racePlanController && (dynamicsConfig.pulkLeadRotationEnabled ?? false) && DIRECTOR_V4_ENABLED;
+    const pulkLeadRotationOn = !!racePlanController;
     const pulkLeadRotCfg = {
       enabled: pulkLeadRotationOn,
       attackerSlots: dynamicsConfig.pulkLeadRotationAttackerSlots ?? 2,
@@ -2837,7 +2835,6 @@ if (isMain) {
               corridorStart:           RP_CORRIDOR_START,
               corridorEnd:             RP_CORRIDOR_END,
               pulkBiasGain:            RP_PULK_BIAS_GAIN,
-              directorV4Enabled:       DIRECTOR_V4_ENABLED,
               directorV4SuppressChaosBonusB1: DIRECTOR_V4_SUPPRESS_CHAOS_BONUS_B1,
               directorV4Intensity:     DIRECTOR_V4_INTENSITY,
               directorV4PackBandStrictness: DIRECTOR_V4_PACK_BAND_STRICTNESS,
@@ -3442,7 +3439,7 @@ if (isMain) {
       meta: {
         world: WORLD_STAMP,
         track: TRACK_FILTER, racer: RACER_FILTER, dur: DUR_FILTER, races: N_RACES, seed: GLOBAL_SEED,
-        directorV4Enabled: DIRECTOR_V4_ENABLED, directorV4Intensity: DIRECTOR_V4_INTENSITY,
+        directorV4Intensity: DIRECTOR_V4_INTENSITY,
         directorV4OutcomeStart: DIRECTOR_V4_OUTCOME_START, directorV4ReleaseProgress: DIRECTOR_V4_RELEASE_PROGRESS,
         directorV4PackBandStrictness: DIRECTOR_V4_PACK_BAND_STRICTNESS, bonusMult: BONUS_MULT,
         governorDirectorEnabled: DYNAMICS_OVERRIDES.governorDirectorEnabled, pulkBiasGain: RP_PULK_BIAS_GAIN,

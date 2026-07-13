@@ -307,13 +307,10 @@ export const DEFAULT_RACE_DYNAMICS_CONFIG = {
   // a boosted challenger burst past the fastest natural racer (revives the otherwise cap-eaten boost).
   // 0 = shipped baseline (cap = band max, byte-identical). Hard-clamped to +20% (NATURALNESS_CEILING).
   governorDirectorBoostHeadroom: 0.1,
-  // v4 choreography (flag-gated, default OFF → whole v4 path is dead code, byte-identical to today).
-  // When ON, one designated hero racer is steered along a hand-authored position-over-time curve by
-  // the existing trajectory controller from the choreo start; everything else is unchanged.
-  directorV4Enabled: true,
-  // v4 drama intensity (0..1, the future Action-slider backing) and the loose-pack bandStrictness
-  // that lets heroes weave through when v4 is ON (the pack runs at this strictness; heroes track
-  // their curve exactly). Both only take effect when directorV4Enabled — off → byte-identical.
+  // Hero choreography (UNCONDITIONAL): designated hero racers are steered along hand-authored
+  // position-over-time curves by the trajectory controller from the choreo start; the rest is unchanged.
+  // v4 drama intensity (0..1, the future Action-slider backing) + the loose-pack bandStrictness that
+  // lets heroes weave through (the pack runs at this strictness; heroes track their curve exactly).
   directorV4Intensity: 0.6,
   directorV4PackBandStrictness: 0.5,
   // Stage 1 spoiler switch (default OFF): when v4 is ON, suppress the B1-target pool's CHAOS areaBonus
@@ -352,15 +349,12 @@ export const DEFAULT_RACE_DYNAMICS_CONFIG = {
   governorDirectorFallbackMaxCount: 2, // max simultaneous fall-backs (count varies over time)
   governorDirectorFallbackUntilPosition: 12, // brake the faller until it drops PAST this rank, then release
   governorDirectorFallbackProtectMs: 2500, // ms a released faller is NOT eligible as a catch-up target
-  // ── PulkLeadRotation (the PULK-phase lead-rotation core loop) — SWEEP/opt-in, default OFF →
-  // shipped game unchanged. When ON (and v4 ON) it COMPLETES lead changes inside [pulkStart, pulkEnd):
-  // 1–2 attacker slots boost the current live P2/P3 UNTIL it takes the lead, a permanent outsider slot
-  // brings fresh blood from deeper in the field, and the dethroned leader is braked (distance-based)
-  // until it has fallen `dropDepthLengths` behind — the depth lever. Contest STRENGTHS reuse the
-  // existing governorDirector* knobs (leaderBrake/challengerBoost/pullStrength/frontPool + the
-  // maxEffect/maxStep/ceiling envelope) — no duplicated values. Only the four keys below are new.
-  // NOTE: PulkLeadRotation and the classic reactive director both write governorMult — enable only ONE.
-  pulkLeadRotationEnabled: true,
+  // ── PulkLeadRotation — THE pulk-phase mechanism (UNCONDITIONAL). It COMPLETES lead changes inside
+  // [pulkStart, pulkEnd): 1–2 attacker slots boost the current live P2/P3 UNTIL it takes the lead, a
+  // permanent outsider slot brings fresh blood from deeper in the field, and the dethroned leader is
+  // braked (distance-based) until it has fallen `dropDepthLengths` behind — the depth lever. Contest
+  // STRENGTHS reuse the existing governorDirector* knobs (leaderBrake/challengerBoost/pullStrength/
+  // frontPool + the maxEffect/maxStep/ceiling envelope) — no duplicated values.
   pulkLeadRotationAttackerSlots: 2, // parallel attacker slots (1–2)
   pulkLeadRotationDropDepthLengths: 8, // ex-leader brake release depth (racer lengths); the depth lever
   pulkLeadRotationOutsiderMaxReachLengths: 15, // outsider reachability cap (racer lengths)

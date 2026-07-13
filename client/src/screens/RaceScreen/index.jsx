@@ -711,7 +711,6 @@ export default function RaceScreen() {
           corridorStart: dynamicsConfig.racePlanCorridorStart ?? 0.55,
           corridorEnd: dynamicsConfig.racePlanCorridorEnd ?? 1.0,
           pulkBiasGain: dynamicsConfig.pulkBiasGain ?? 2.0,
-          directorV4Enabled: dynamicsConfig.directorV4Enabled ?? false,
           directorV4Intensity: dynamicsConfig.directorV4Intensity ?? 0.6,
           directorV4PackBandStrictness: dynamicsConfig.directorV4PackBandStrictness ?? 0.5,
           directorV4ReleaseProgress: dynamicsConfig.directorV4ReleaseProgress ?? 0.97,
@@ -742,20 +741,13 @@ export default function RaceScreen() {
     // Built once per race from the shared dynamics config. Phase fractions come from the
     // controller (live boundaries, single source). maxEffect + maxStepPerFrame are the shared
     // realism envelope (±12% clamp + slew) the director rides.
-    // v4 COUPLING (Stage 1, C-1): under the v4 choreographed director the pack is steered ONLY by the
-    // loose OUTCOME band-steering — the reactive governor is forced OFF so v4 does not run beside a
-    // second, unmeasured pack-steering force (every frozen Phase A/B cell measured governor OFF). The
-    // governor CODE is untouched: v4-OFF keeps the shipped reactive director as the fallback (byte-identical).
-    const directorEnabled =
-      racePlanEnabled &&
-      (dynamicsConfig.governorDirectorEnabled ?? false) &&
-      !(dynamicsConfig.directorV4Enabled ?? false);
-    // PulkLeadRotation: the successor core loop (opt-in, default OFF → skipped). Strengths reuse the
-    // governorDirector* knobs; only the four rotation keys + minHold are new. v4 only.
-    const pulkLeadRotationOn =
-      racePlanEnabled &&
-      (dynamicsConfig.pulkLeadRotationEnabled ?? false) &&
-      (dynamicsConfig.directorV4Enabled ?? false);
+    // STAGE-4 REMOVE: the classic reactive director is now statically dead. Choreography is
+    // unconditional, so its former gate (governorDirectorEnabled && !v4) can never be true. Kept as a
+    // const false so the (dead) applyGovernor call + govCfg below still compile until Stage 4 deletes
+    // the whole classic path (governorDirectorEnabled + the catch-up / fall-back / linger machinery).
+    const directorEnabled = false;
+    // PulkLeadRotation: THE pulk-phase mechanism, unconditional (within its [pulkStart, pulkEnd) window).
+    const pulkLeadRotationOn = racePlanEnabled;
     const govCfg = {
       maxEffect: dynamicsConfig.governorMaxEffect ?? 0.12,
       maxStepPerFrame: dynamicsConfig.governorMaxStepPerFrame ?? 0.01,

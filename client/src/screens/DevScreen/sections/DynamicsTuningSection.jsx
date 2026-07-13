@@ -188,7 +188,6 @@ const DynamicsTuningSection = forwardRef(function DynamicsTuningSection(_, ref) 
   function resetPulkLeadRotation() {
     setDynamicsConfig((prev) => ({
       ...prev,
-      pulkLeadRotationEnabled: DEFAULT_RACE_DYNAMICS_CONFIG.pulkLeadRotationEnabled,
       pulkLeadRotationAttackerSlots: DEFAULT_RACE_DYNAMICS_CONFIG.pulkLeadRotationAttackerSlots,
       pulkLeadRotationDropDepthLengths:
         DEFAULT_RACE_DYNAMICS_CONFIG.pulkLeadRotationDropDepthLengths,
@@ -1058,7 +1057,6 @@ const DynamicsTuningSection = forwardRef(function DynamicsTuningSection(_, ref) 
       <SubCard
         title="Hero Choreography (v4)"
         onReset={() => {
-          setDynamics('directorV4Enabled', DEFAULT_RACE_DYNAMICS_CONFIG.directorV4Enabled);
           setDynamics('directorV4Intensity', DEFAULT_RACE_DYNAMICS_CONFIG.directorV4Intensity);
           setDynamics(
             'directorV4PackBandStrictness',
@@ -1075,24 +1073,8 @@ const DynamicsTuningSection = forwardRef(function DynamicsTuningSection(_, ref) 
           // directorV4OutcomeStart (PULK end) now lives in the PULK group — reset by resetPulk.
         }}
         resetTestId="reset-v4"
-        subtitle="Experimental choreographed director: at ~25% race progress a generator casts 2–4 hero racers that follow authored position-curves (comebacks, duels, a charge to the line) for dramatic BUT fair finishes; the rest of the field runs normally. OFF = the proven reactive Director above (identical behaviour)."
+        subtitle="Hero choreography (always on): at ~25% race progress a generator casts 2–4 hero racers that follow authored position-curves (comebacks, duels, a charge to the line) for dramatic BUT fair finishes; the rest of the field runs normally. The knobs below tune it."
       >
-        <div style={{ marginBottom: '0.75rem' }}>
-          <label
-            className={s.label}
-            style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', margin: 0 }}
-          >
-            <input
-              type="checkbox"
-              aria-label="Director V4 Enabled"
-              checked={dynamicsConfig.directorV4Enabled ?? false}
-              onChange={(e) => setDynamics('directorV4Enabled', e.target.checked)}
-              style={{ cursor: 'pointer' }}
-            />
-            Enable hero choreography (v4)
-            <InfoTooltip text="Master switch for the choreographed hero director (v4). OFF = the proven reactive director (identical to before). ON = 2–4 hero racers follow authored curves for dramatic, fair finishes." />
-          </label>
-        </div>
         <div className={s.formGrid}>
           <div className={s.formGroup}>
             <label
@@ -1421,24 +1403,8 @@ const DynamicsTuningSection = forwardRef(function DynamicsTuningSection(_, ref) 
         title="PULK Lead Rotation"
         onReset={resetPulkLeadRotation}
         resetTestId="reset-pulk-lead-rotation"
-        subtitle="Successor to the PULK Race Director: instead of herding the front it COMPLETES lead changes. Inside the PULK window, 1–2 attacker slots boost the current live P2/P3 UNTIL it takes the lead, a permanent outsider slot brings a fresh racer up from deeper in the field, and the dethroned leader is braked until it has fallen the drop-depth behind. A fresh P1 is guaranteed 750 ms before it can be re-passed (no flicker). Requires hero choreography (v4) ON. Strengths come from the Director section above; the four knobs here shape the rotation. Enable only ONE of M1 / PULK Race Director / Lead Rotation. Default OFF."
+        subtitle="THE pulk-phase mechanism (always on): instead of herding the front it COMPLETES lead changes. Inside the PULK window, 1–2 attacker slots boost the current live P2/P3 UNTIL it takes the lead, a permanent outsider slot brings a fresh racer up from deeper in the field, and the dethroned leader is braked until it has fallen the drop-depth behind. A fresh P1 is guaranteed 750 ms before it can be re-passed (no flicker). Strengths come from the Director section above; the four knobs here shape the rotation."
       >
-        <div style={{ marginBottom: '0.75rem' }}>
-          <label
-            className={s.label}
-            style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', margin: 0 }}
-          >
-            <input
-              type="checkbox"
-              aria-label="PULK Lead Rotation Enabled"
-              checked={dynamicsConfig.pulkLeadRotationEnabled ?? false}
-              onChange={(e) => setDynamics('pulkLeadRotationEnabled', e.target.checked)}
-              style={{ cursor: 'pointer' }}
-            />
-            Enable PULK Lead Rotation
-            <InfoTooltip text="Runs the until-P1 lead-rotation contest inside [pulkStart, pulkEnd) under v4. OFF = the dead PULK front. Acts ONLY in PULK; OUTCOME still owns fairness." />
-          </label>
-        </div>
         <div className={s.formGrid}>
           {[
             {

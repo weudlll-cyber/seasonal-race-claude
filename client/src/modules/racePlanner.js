@@ -142,13 +142,11 @@ export function createRacePlan(racers, finishT, targetDurationMs, config = {}, s
   // reactive path's steer-from-0.25. Raising it reopens the PULK window [pulkStart, pulkEnd] and moves
   // OUTCOME with it. The clamp chain below keeps pulkStart <= pulkEnd <= corridorStart <= corridorEnd.
   // Single source: every downstream phase read (getPhase, the engine's + sim's areaBonus phase-split
-  // via getPhaseFractions) inherits these fractions — no duplicated phase math. v4-OFF: untouched → the
-  // reactive 0.5/0.55 structure and byte-identical race.
-  if (config.directorV4Enabled) {
-    const v4PulkEnd = config.directorV4OutcomeStart ?? 0.25;
-    phaseFractions.pulkEnd = v4PulkEnd;
-    phaseFractions.corridorStart = v4PulkEnd;
-  }
+  // via getPhaseFractions) inherits these fractions — no duplicated phase math. Choreography is
+  // UNCONDITIONAL: PULK ends at directorV4OutcomeStart and OUTCOME steers from there (one boundary).
+  const v4PulkEnd = config.directorV4OutcomeStart ?? 0.25;
+  phaseFractions.pulkEnd = v4PulkEnd;
+  phaseFractions.corridorStart = v4PulkEnd;
 
   // Phase-boundary hardening (Stage A): keep the boundaries ordered the way the ordered
   // getPhase branches below assume — pulkStart <= pulkEnd <= corridorStart <= corridorEnd —
@@ -268,12 +266,12 @@ export function createRacePlan(racers, finishT, targetDurationMs, config = {}, s
     _areaBonusEarly: config.areaBonusEarly ?? config.bonusStrengthMultiplier ?? 1.0,
     _areaBonusPulk: config.areaBonusPulk ?? config.bonusStrengthMultiplier ?? 1.0,
     _areaBonusPost: config.areaBonusPost ?? config.bonusStrengthMultiplier ?? 1.0,
-    // ── v4 hero choreography (flag-gated; _v4Enabled=false → controller path byte-identical) ──
+    // ── Hero choreography (UNCONDITIONAL; _v4Enabled is always true) ──────────────────────────────
     // The GENERATOR runs ONCE at the post-chaos boundary (~pulkStart) inside update(), on the ACTUAL
     // field state, and casts 2–4 heroes with anchored curves. These fields hold its inputs + the
     // mutable result (filled in-place by update()). _v4PackBandStrictness loosens the PACK so heroes
     // can weave through (heroes themselves always track their curve exactly).
-    _v4Enabled: !!config.directorV4Enabled,
+    _v4Enabled: true,
     _v4Intensity: config.directorV4Intensity ?? 0.6,
     _v4PackBandStrictness: config.directorV4PackBandStrictness ?? 0.5,
     // Stage 1 spoiler switch (default OFF): suppress the B1-target pool's CHAOS areaBonus so the future

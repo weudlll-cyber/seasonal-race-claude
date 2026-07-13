@@ -99,16 +99,28 @@ describe('createRacePlan', () => {
     }
   });
 
-  it('exposes correct phase fractions (defaults)', () => {
-    const plan = createRacePlan(BASE_RACERS, FINISH_T, TARGET_DUR_MS, {}, BASE_SEED);
+  it('exposes correct phase fractions (reopened PULK, OutcomeStart 0.5)', () => {
+    const plan = createRacePlan(
+      BASE_RACERS,
+      FINISH_T,
+      TARGET_DUR_MS,
+      { directorV4OutcomeStart: 0.5 },
+      BASE_SEED
+    );
     expect(plan.phaseFractions.pulkStart).toBe(0.25);
     expect(plan.phaseFractions.pulkEnd).toBe(0.5);
-    expect(plan.phaseFractions.transitionEnd).toBe(0.75);
+    expect(plan.phaseFractions.corridorStart).toBe(0.5); // choreography collapse: corridorStart := pulkEnd
     expect(plan.phaseFractions.corridorEnd).toBe(1.0);
   });
 
   it('absolute phase times are derived from targetDurationMs', () => {
-    const plan = createRacePlan(BASE_RACERS, FINISH_T, TARGET_DUR_MS, {}, BASE_SEED);
+    const plan = createRacePlan(
+      BASE_RACERS,
+      FINISH_T,
+      TARGET_DUR_MS,
+      { directorV4OutcomeStart: 0.5 },
+      BASE_SEED
+    );
     expect(plan._phases.pulkStart).toBeCloseTo(0.25 * TARGET_DUR_MS, 0);
     expect(plan._phases.pulkEnd).toBeCloseTo(0.5 * TARGET_DUR_MS, 0);
   });
@@ -147,26 +159,14 @@ describe('createRacePlan', () => {
   });
 });
 
-// ── v4 PHASE COLLAPSE (Step 5): OUTCOME begins at the chaos boundary; PULK collapsed, v4-off intact ──
-describe('createRacePlan — v4 phase collapse', () => {
-  it('v4-OFF: phase structure is the reactive default (pulkEnd 0.5 / corridorStart 0.55), untouched', () => {
+// ── PHASE COLLAPSE: OUTCOME begins where PULK ends (choreography is unconditional) ──
+describe('createRacePlan — phase collapse', () => {
+  it('default outcome-start: PULK collapses — pulkEnd == corridorStart == 0.25 (OUTCOME from the chaos boundary)', () => {
     const plan = createRacePlan(
       BASE_RACERS,
       FINISH_T,
       TARGET_DUR_MS,
-      { directorV4Enabled: false, corridorStart: 0.55 },
-      BASE_SEED
-    );
-    expect(plan.phaseFractions.pulkEnd).toBe(0.5);
-    expect(plan.phaseFractions.corridorStart).toBe(0.55);
-  });
-
-  it('v4-ON (default outcome-start): PULK collapses — pulkEnd == corridorStart == 0.25 (OUTCOME from the chaos boundary)', () => {
-    const plan = createRacePlan(
-      BASE_RACERS,
-      FINISH_T,
-      TARGET_DUR_MS,
-      { directorV4Enabled: true, corridorStart: 0.55 }, // corridorStart shortcut is OVERRIDDEN by the v4 collapse
+      { corridorStart: 0.55 }, // corridorStart shortcut is OVERRIDDEN by the choreography collapse
       BASE_SEED
     );
     expect(plan.phaseFractions.corridorStart).toBe(0.25);
@@ -174,28 +174,16 @@ describe('createRacePlan — v4 phase collapse', () => {
     expect(plan.phaseFractions.pulkStart).toBe(0.25); // zero-width PULK + TRANSITION = the two-phase model
   });
 
-  it('v4-ON honours a custom directorV4OutcomeStart (owner sweet-spot control)', () => {
+  it('honours a custom directorV4OutcomeStart (owner sweet-spot control)', () => {
     const plan = createRacePlan(
       BASE_RACERS,
       FINISH_T,
       TARGET_DUR_MS,
-      { directorV4Enabled: true, directorV4OutcomeStart: 0.35 },
+      { directorV4OutcomeStart: 0.35 },
       BASE_SEED
     );
     expect(plan.phaseFractions.corridorStart).toBe(0.35);
     expect(plan.phaseFractions.pulkEnd).toBe(0.35);
-  });
-
-  it('under v4 the controller reports OUTCOME already at 0.30 (steering live); v4-off is still pre-OUTCOME there', () => {
-    const on = createTrajectoryController(
-      createRacePlan(BASE_RACERS, FINISH_T, TARGET_DUR_MS, { directorV4Enabled: true }, BASE_SEED)
-    );
-    const off = createTrajectoryController(
-      createRacePlan(BASE_RACERS, FINISH_T, TARGET_DUR_MS, { directorV4Enabled: false }, BASE_SEED)
-    );
-    // phaseProgress 0.30: v4 collapsed OUTCOME-start 0.25 → OUTCOME; reactive start 0.55 → not yet.
-    expect(on.getPhase(0.3 * TARGET_DUR_MS, 0.3)).toBe('OUTCOME');
-    expect(off.getPhase(0.3 * TARGET_DUR_MS, 0.3)).not.toBe('OUTCOME');
   });
 
   it('the earlier OUTCOME steers the pack LOOSE, not rank-locked (pack strictness < 1.0)', () => {
@@ -203,7 +191,7 @@ describe('createRacePlan — v4 phase collapse', () => {
       BASE_RACERS,
       FINISH_T,
       TARGET_DUR_MS,
-      { directorV4Enabled: true, directorV4PackBandStrictness: 0.5 },
+      { directorV4PackBandStrictness: 0.5 },
       BASE_SEED
     );
     // Collapsing OUTCOME earlier must NOT exact-rank-lock the pack — heroes need weaving room (A4).
@@ -219,7 +207,7 @@ describe('createRacePlan — v4 phase collapse', () => {
       BASE_RACERS,
       FINISH_T,
       TARGET_DUR_MS,
-      { directorV4Enabled: true, pulkStart: 0.2, directorV4OutcomeStart: 0.5 },
+      { pulkStart: 0.2, directorV4OutcomeStart: 0.5 },
       BASE_SEED
     );
     expect(plan.phaseFractions.pulkStart).toBe(0.2);
@@ -234,23 +222,23 @@ describe('createRacePlan — v4 phase collapse', () => {
     for (let p = 0; p <= 1.0; p += 0.02) expect(ctrl.getPhase(0, p)).not.toBe('TRANSITION');
   });
 
-  it('pulkStart shortcut threads into phaseFractions and is clamp-hardened (v4-OFF)', () => {
+  it('pulkStart shortcut threads into phaseFractions and is clamp-hardened', () => {
     const plan = createRacePlan(
       BASE_RACERS,
       FINISH_T,
       TARGET_DUR_MS,
-      { pulkStart: 0.1 },
+      { pulkStart: 0.1, directorV4OutcomeStart: 0.5 },
       BASE_SEED
     );
     expect(plan.phaseFractions.pulkStart).toBe(0.1);
-    expect(plan.phaseFractions.pulkEnd).toBe(0.5); // reactive default preserved
+    expect(plan.phaseFractions.pulkEnd).toBe(0.5);
     // A pulkStart past corridorEnd is anchored to [0, corridorEnd] and pulls pulkEnd/corridorStart up
     // — ordered, never inverted.
     const plan2 = createRacePlan(
       BASE_RACERS,
       FINISH_T,
       TARGET_DUR_MS,
-      { pulkStart: 1.5 },
+      { pulkStart: 1.5, directorV4OutcomeStart: 0.5 },
       BASE_SEED
     );
     expect(plan2.phaseFractions.pulkStart).toBe(1.0); // clamped to corridorEnd
@@ -464,13 +452,7 @@ describe('createTrajectoryController — v4 areaBonus instant cut', () => {
   const fracOf = (plan) => plan._phases.pulkStart / plan._targetDurationMs;
 
   it('keeps full areaBonus during CHAOS (before the chaos boundary)', () => {
-    const plan = createRacePlan(
-      BASE_RACERS,
-      FINISH_T,
-      TARGET_DUR_MS,
-      { directorV4Enabled: true },
-      BASE_SEED
-    );
+    const plan = createRacePlan(BASE_RACERS, FINISH_T, TARGET_DUR_MS, {}, BASE_SEED);
     const racers = v4Racers();
     createTrajectoryController(plan).update(racers, 1000, fracOf(plan) - 0.05);
     for (const r of racers)
@@ -478,13 +460,7 @@ describe('createTrajectoryController — v4 areaBonus instant cut', () => {
   });
 
   it('INSTANT-cuts areaBonus to 1.0 for EVERY racer from the chaos boundary (no fade)', () => {
-    const plan = createRacePlan(
-      BASE_RACERS,
-      FINISH_T,
-      TARGET_DUR_MS,
-      { directorV4Enabled: true },
-      BASE_SEED
-    );
+    const plan = createRacePlan(BASE_RACERS, FINISH_T, TARGET_DUR_MS, {}, BASE_SEED);
     const racers = v4Racers();
     const p = fracOf(plan) + 0.01;
     createTrajectoryController(plan).update(racers, TARGET_DUR_MS * p, p);
@@ -496,16 +472,10 @@ describe('createTrajectoryController — v4 areaBonus instant cut', () => {
       BASE_RACERS,
       FINISH_T,
       TARGET_DUR_MS,
-      { directorV4Enabled: true, directorV4SuppressChaosBonusB1: true },
+      { directorV4SuppressChaosBonusB1: true },
       BASE_SEED
     );
-    const off = createRacePlan(
-      BASE_RACERS,
-      FINISH_T,
-      TARGET_DUR_MS,
-      { directorV4Enabled: true },
-      BASE_SEED
-    );
+    const off = createRacePlan(BASE_RACERS, FINISH_T, TARGET_DUR_MS, {}, BASE_SEED);
     const rOn = v4Racers();
     const rOff = v4Racers();
     createTrajectoryController(on).update(rOn, 1000, fracOf(on) - 0.05);
@@ -550,16 +520,6 @@ describe('createTrajectoryController — areaBonusMult', () => {
     const ctrl = createTrajectoryController(plan);
     const racers = makeRacers();
     ctrl.update(racers, plan._phases.pulkStart - 1000); // before PULK
-    for (const r of racers) {
-      const expected = plan._racerAreaBonus.get(r.index) ?? 1.0;
-      expect(r.areaBonusMult).toBeCloseTo(expected, 5);
-    }
-  });
-
-  it('sets full areaBonusMult in TRANSITION phase', () => {
-    const ctrl = createTrajectoryController(plan);
-    const racers = makeRacers();
-    ctrl.update(racers, plan._phases.transEnd - 1000); // just before OUTCOME
     for (const r of racers) {
       const expected = plan._racerAreaBonus.get(r.index) ?? 1.0;
       expect(r.areaBonusMult).toBeCloseTo(expected, 5);
@@ -648,6 +608,7 @@ describe('createTrajectoryController — areaBonus phase-split', () => {
     areaBonusEarly: 1.0,
     areaBonusPulk: 0,
     areaBonusPost: 1.0,
+    directorV4OutcomeStart: 0.5, // reopened PULK [0.25,0.5) (the shipped world; choreography unconditional)
   };
 
   function makeSplitRacers() {
@@ -688,13 +649,10 @@ describe('createTrajectoryController — areaBonus phase-split', () => {
     for (const r of racers) expect(r.areaBonusMult).toBeCloseTo(1.0, 6);
   });
 
-  it('POST phase (pre-fade): scale = areaBonusPost / refStrength = 0.5', () => {
-    const plan = createRacePlan(BASE_RACERS, FINISH_T, TARGET_DUR_MS, SPLIT_CFG, BASE_SEED);
-    const ctrl = createTrajectoryController(plan);
-    const racers = makeSplitRacers();
-    ctrl.update(racers, 0.6 * TARGET_DUR_MS, 0.6); // 0.5 ≤ progress < transEnd 0.75 → no fade yet
-    expectSplit(plan, racers, 1.0 / 2.0);
-  });
+  // NOTE: under unconditional choreography the areaBonus is instant-cut to 1.0 from the chaos boundary
+  // (pulkStart), so the POST-phase scale is never applied (POST → 1.0). The retired v4-OFF "POST
+  // pre-fade scale" + "zero-width PULK POST split" tests were removed with that world. EARLY (chaos)
+  // scale + the PULK cut remain covered above.
 
   it('phaseSplitBonusEnabled = false → no rescale (raw controller value, byte-identical)', () => {
     const plan = createRacePlan(
@@ -720,46 +678,33 @@ describe('createTrajectoryController — areaBonus phase-split', () => {
       if (tr > 25 && tr <= 40) expect(r.areaBonusMult).toBeCloseTo(1.0, 6);
     }
   });
-
-  it('zero-width PULK (pulkStart == pulkEnd): clean EARLY/POST split, no NaN', () => {
-    const plan = createRacePlan(
-      BASE_RACERS,
-      FINISH_T,
-      TARGET_DUR_MS,
-      { ...SPLIT_CFG, phaseFractions: { pulkStart: 0.25, pulkEnd: 0.25 } },
-      BASE_SEED
-    );
-    const ctrl = createTrajectoryController(plan);
-    // Below the collapsed boundary → EARLY.
-    const early = makeSplitRacers();
-    ctrl.update(early, 0.1 * TARGET_DUR_MS, 0.1);
-    expectSplit(plan, early, 1.0 / 2.0);
-    // At/above the boundary → POST (PULK window is empty), finite, correct scale.
-    const post = makeSplitRacers();
-    ctrl.update(post, 0.6 * TARGET_DUR_MS, 0.6);
-    for (const r of post) expect(Number.isFinite(r.areaBonusMult)).toBe(true);
-    expectSplit(plan, post, 1.0 / 2.0);
-  });
 });
 
 // ── createTrajectoryController — phase transitions ────────────────────────────
 
 describe('createTrajectoryController — getPhase', () => {
-  it('returns correct phases for all time ranges (default: corrStart=0.55 < transEnd=0.75)', () => {
-    const plan = createRacePlan(BASE_RACERS, FINISH_T, TARGET_DUR_MS, {}, BASE_SEED);
+  it('returns correct phases for all time ranges (collapse: OUTCOME begins at pulkEnd, no TRANSITION)', () => {
+    const plan = createRacePlan(
+      BASE_RACERS,
+      FINISH_T,
+      TARGET_DUR_MS,
+      { directorV4OutcomeStart: 0.5 },
+      BASE_SEED
+    );
     const ctrl = createTrajectoryController(plan);
-    const { pulkStart, pulkEnd, corrStart, corrEnd } = plan._phases;
+    const { pulkStart, pulkEnd, corrEnd } = plan._phases;
 
     expect(ctrl.getPhase(0)).toBe('PRE_PULK');
     expect(ctrl.getPhase(pulkStart - 1)).toBe('PRE_PULK');
     expect(ctrl.getPhase(pulkStart)).toBe('PULK');
     expect(ctrl.getPhase(pulkEnd - 1)).toBe('PULK');
-    expect(ctrl.getPhase(pulkEnd)).toBe('TRANSITION');
-    expect(ctrl.getPhase(corrStart - 1)).toBe('TRANSITION');
-    expect(ctrl.getPhase(corrStart)).toBe('OUTCOME');
+    expect(ctrl.getPhase(pulkEnd)).toBe('OUTCOME'); // OUTCOME begins exactly at pulkEnd (corridorStart := pulkEnd)
     expect(ctrl.getPhase(corrEnd - 1)).toBe('OUTCOME');
     expect(ctrl.getPhase(corrEnd)).toBe('FINAL');
     expect(ctrl.getPhase(corrEnd + 10_000)).toBe('FINAL');
+    // TRANSITION never appears (zero-width span).
+    for (let t = 0; t <= corrEnd; t += corrEnd / 50)
+      expect(ctrl.getPhase(t)).not.toBe('TRANSITION');
   });
 });
 
@@ -772,10 +717,10 @@ describe('createRacePlan — phase-boundary hardening', () => {
       BASE_RACERS,
       FINISH_T,
       TARGET_DUR_MS,
-      { corridorStart: 0.4 },
+      { corridorStart: 0.4, directorV4OutcomeStart: 0.5 },
       BASE_SEED
     );
-    expect(plan.phaseFractions.corridorStart).toBe(0.5); // clamped up to pulkEnd
+    expect(plan.phaseFractions.corridorStart).toBe(0.5); // choreography collapse: corridorStart := pulkEnd
     expect(plan.phaseFractions.pulkEnd).toBe(0.5);
 
     // Ordered, no inversion: PRE_PULK → PULK → (zero-span TRANSITION) → OUTCOME → FINAL.
@@ -793,7 +738,7 @@ describe('createRacePlan — phase-boundary hardening', () => {
       BASE_RACERS,
       FINISH_T,
       TARGET_DUR_MS,
-      { corridorStart: 0.5 },
+      { corridorStart: 0.5, directorV4OutcomeStart: 0.5 },
       BASE_SEED
     );
     expect(plan.phaseFractions.corridorStart).toBe(0.5);
@@ -810,21 +755,27 @@ describe('createRacePlan — phase-boundary hardening', () => {
     expect(ctrl.getPhase(0, 0.5)).toBe('OUTCOME');
   });
 
-  it('(c) well-ordered config is unchanged (regression guard: default fractions byte-identical)', () => {
-    const plan = createRacePlan(BASE_RACERS, FINISH_T, TARGET_DUR_MS, {}, BASE_SEED);
+  it('(c) the choreography collapse sets corridorStart := pulkEnd, overriding any passed corridorStart', () => {
+    const plan = createRacePlan(
+      BASE_RACERS,
+      FINISH_T,
+      TARGET_DUR_MS,
+      { directorV4OutcomeStart: 0.5 },
+      BASE_SEED
+    );
     expect(plan.phaseFractions.pulkStart).toBe(0.25);
     expect(plan.phaseFractions.pulkEnd).toBe(0.5);
-    expect(plan.phaseFractions.corridorStart).toBe(0.55);
+    expect(plan.phaseFractions.corridorStart).toBe(0.5); // := pulkEnd (collapse)
     expect(plan.phaseFractions.corridorEnd).toBe(1.0);
-    // A well-ordered non-default corridorStart passes through untouched.
+    // A passed corridorStart is OVERRIDDEN by the collapse (never passed through).
     const plan2 = createRacePlan(
       BASE_RACERS,
       FINISH_T,
       TARGET_DUR_MS,
-      { corridorStart: 0.7 },
+      { corridorStart: 0.7, directorV4OutcomeStart: 0.5 },
       BASE_SEED
     );
-    expect(plan2.phaseFractions.corridorStart).toBe(0.7);
+    expect(plan2.phaseFractions.corridorStart).toBe(0.5); // collapse wins over the passed 0.7
     expect(plan2.phaseFractions.pulkEnd).toBe(0.5);
   });
 });
@@ -832,13 +783,19 @@ describe('createRacePlan — phase-boundary hardening', () => {
 // ── Leader-progress phase clock (C0) ──────────────────────────────────────────
 
 describe('createTrajectoryController — leader-progress phase clock', () => {
-  // Defaults: pulkStart=0.25, pulkEnd=0.5, corridorStart=0.55, corridorEnd=1.0.
+  // Unconditional choreography (OutcomeStart 0.5): pulkStart=0.25, pulkEnd=0.5, corridorStart=0.5 (:=pulkEnd), corridorEnd=1.0.
   it('getPhase selects by fraction when phaseProgress is supplied (elapsedMs ignored)', () => {
-    const plan = createRacePlan(BASE_RACERS, FINISH_T, TARGET_DUR_MS, {}, BASE_SEED);
+    const plan = createRacePlan(
+      BASE_RACERS,
+      FINISH_T,
+      TARGET_DUR_MS,
+      { directorV4OutcomeStart: 0.5 },
+      BASE_SEED
+    );
     const ctrl = createTrajectoryController(plan);
 
     // elapsedMs=0 would be PRE_PULK on the legacy path; phaseProgress drives the result instead.
-    expect(ctrl.getPhase(0, 0.6)).toBe('OUTCOME'); // 0.55 <= 0.6 < 1.0
+    expect(ctrl.getPhase(0, 0.6)).toBe('OUTCOME'); // 0.5 <= 0.6 < 1.0
     expect(ctrl.getPhase(0, 0.3)).toBe('PULK'); // 0.25 <= 0.3 < 0.5
     expect(ctrl.getPhase(0, 0.1)).toBe('PRE_PULK'); // < 0.25
     expect(ctrl.getPhase(0, 0.97)).toBe('OUTCOME'); // corridorEnd=1.0 → P-controller active until the line
@@ -846,17 +803,21 @@ describe('createTrajectoryController — leader-progress phase clock', () => {
   });
 
   it('honours phase boundaries as fractions [0,1]', () => {
-    const plan = createRacePlan(BASE_RACERS, FINISH_T, TARGET_DUR_MS, {}, BASE_SEED);
+    const plan = createRacePlan(
+      BASE_RACERS,
+      FINISH_T,
+      TARGET_DUR_MS,
+      { directorV4OutcomeStart: 0.5 },
+      BASE_SEED
+    );
     const ctrl = createTrajectoryController(plan);
     // Fraction boundaries are single-sourced from the absolute ms phases.
     const pulkStart = plan._phases.pulkStart / TARGET_DUR_MS;
     const pulkEnd = plan._phases.pulkEnd / TARGET_DUR_MS;
-    const corrStart = plan._phases.corrStart / TARGET_DUR_MS;
     const corrEnd = plan._phases.corrEnd / TARGET_DUR_MS;
     expect(ctrl.getPhase(0, pulkStart - 0.001)).toBe('PRE_PULK');
     expect(ctrl.getPhase(0, pulkStart)).toBe('PULK');
-    expect(ctrl.getPhase(0, pulkEnd)).toBe('TRANSITION');
-    expect(ctrl.getPhase(0, corrStart)).toBe('OUTCOME');
+    expect(ctrl.getPhase(0, pulkEnd)).toBe('OUTCOME'); // collapse: OUTCOME begins at pulkEnd (corridorStart := pulkEnd)
     expect(ctrl.getPhase(0, corrEnd)).toBe('FINAL');
   });
 
@@ -884,7 +845,7 @@ describe('createTrajectoryController — leader-progress phase clock', () => {
       BASE_RACERS,
       FINISH_T,
       TARGET_DUR_MS,
-      { postStartHoldMs: holdMs },
+      { postStartHoldMs: holdMs, directorV4OutcomeStart: 0.5 },
       BASE_SEED
     );
     const ctrl = createTrajectoryController(plan);
@@ -896,7 +857,13 @@ describe('createTrajectoryController — leader-progress phase clock', () => {
   });
 
   it('computePulkBiasedTarget gates on phaseProgress when supplied', () => {
-    const plan = createRacePlan(BASE_RACERS, FINISH_T, TARGET_DUR_MS, {}, BASE_SEED);
+    const plan = createRacePlan(
+      BASE_RACERS,
+      FINISH_T,
+      TARGET_DUR_MS,
+      { directorV4OutcomeStart: 0.5 },
+      BASE_SEED
+    );
     const ctrl = createTrajectoryController(plan);
     const racers = makeRacers(70, 14);
     const pulkIdx = plan.pulkRacerIds[0];
@@ -963,7 +930,14 @@ describe('createTrajectoryController — computePulkBiasedTarget', () => {
   let plan, ctrl, racers;
 
   beforeEach(() => {
-    plan = createRacePlan(BASE_RACERS, FINISH_T, TARGET_DUR_MS, {}, BASE_SEED);
+    // OutcomeStart 0.5 → a real PULK window [0.25, 0.5) so the bias path is exercisable.
+    plan = createRacePlan(
+      BASE_RACERS,
+      FINISH_T,
+      TARGET_DUR_MS,
+      { directorV4OutcomeStart: 0.5 },
+      BASE_SEED
+    );
     ctrl = createTrajectoryController(plan);
     racers = BASE_RACERS.map((r) => ({ ...r, t: 0.3, finished: false }));
   });
@@ -1067,14 +1041,27 @@ describe('createTrajectoryController — collectTelemetry', () => {
 // ── Timing parameters: corridorStart, corridorEnd, bonusTransitionEnd ─────────
 
 describe('createRacePlan — timing parameter defaults', () => {
-  it('corridorStart defaults to 0.55 in phaseFractions', () => {
-    const plan = createRacePlan(BASE_RACERS, FINISH_T, TARGET_DUR_MS, {}, BASE_SEED);
-    expect(plan.phaseFractions.corridorStart).toBe(0.55);
+  it('corridorStart := pulkEnd (choreography collapse): follows directorV4OutcomeStart', () => {
+    const plan = createRacePlan(
+      BASE_RACERS,
+      FINISH_T,
+      TARGET_DUR_MS,
+      { directorV4OutcomeStart: 0.5 },
+      BASE_SEED
+    );
+    expect(plan.phaseFractions.corridorStart).toBe(0.5);
+    expect(plan.phaseFractions.corridorStart).toBe(plan.phaseFractions.pulkEnd);
   });
 
-  it('_phases.corrStart defaults to 0.55 × targetDurationMs', () => {
-    const plan = createRacePlan(BASE_RACERS, FINISH_T, TARGET_DUR_MS, {}, BASE_SEED);
-    expect(plan._phases.corrStart).toBeCloseTo(0.55 * TARGET_DUR_MS, 0);
+  it('_phases.corrStart := pulkEnd × targetDurationMs (collapse)', () => {
+    const plan = createRacePlan(
+      BASE_RACERS,
+      FINISH_T,
+      TARGET_DUR_MS,
+      { directorV4OutcomeStart: 0.5 },
+      BASE_SEED
+    );
+    expect(plan._phases.corrStart).toBeCloseTo(0.5 * TARGET_DUR_MS, 0);
   });
 
   it('_phases.corrEnd defaults to 1.0 × targetDurationMs', () => {
@@ -1089,17 +1076,9 @@ describe('createRacePlan — timing parameter defaults', () => {
 });
 
 describe('createRacePlan — top-level timing shortcuts', () => {
-  it('corridorStart config override is stored in phaseFractions', () => {
-    const plan = createRacePlan(
-      BASE_RACERS,
-      FINISH_T,
-      TARGET_DUR_MS,
-      { corridorStart: 0.75 },
-      BASE_SEED
-    );
-    expect(plan.phaseFractions.corridorStart).toBe(0.75);
-    expect(plan._phases.corrStart).toBeCloseTo(0.75 * TARGET_DUR_MS, 0);
-  });
+  // NOTE: a corridorStart config override is no longer honored — the choreography collapse sets
+  // corridorStart := pulkEnd unconditionally (see the "phase collapse" + "phase-boundary hardening"
+  // suites). Only corridorEnd / bonusTransitionEnd remain independent shortcuts.
 
   it('corridorEnd config override is stored in phaseFractions and _phases', () => {
     const plan = createRacePlan(
@@ -1136,24 +1115,12 @@ describe('createRacePlan — top-level timing shortcuts', () => {
     expect(plan._areaBonusFadeDuration).toBe(3000);
   });
 
-  it('bonusTransitionEnd and corridorStart can differ independently', () => {
+  it('corridorStart (:= pulkEnd) > corridorEnd is clamped to corridorEnd (constraint enforcement)', () => {
     const plan = createRacePlan(
       BASE_RACERS,
       FINISH_T,
       TARGET_DUR_MS,
-      { bonusTransitionEnd: 0.5, corridorStart: 0.75 },
-      BASE_SEED
-    );
-    expect(plan._phases.transEnd).toBeCloseTo(0.5 * TARGET_DUR_MS, 0);
-    expect(plan._phases.corrStart).toBeCloseTo(0.75 * TARGET_DUR_MS, 0);
-  });
-
-  it('corridorStart > corridorEnd is clamped to corridorEnd (constraint enforcement)', () => {
-    const plan = createRacePlan(
-      BASE_RACERS,
-      FINISH_T,
-      TARGET_DUR_MS,
-      { corridorStart: 0.99, corridorEnd: 0.8 },
+      { directorV4OutcomeStart: 0.99, corridorEnd: 0.8 }, // collapse: corridorStart := pulkEnd 0.99 → clamp to 0.8
       BASE_SEED
     );
     expect(plan.phaseFractions.corridorStart).toBe(0.8);
@@ -1259,83 +1226,6 @@ describe('createTrajectoryController — corridorStart gates P-controller', () =
     expect(ctrl.getPhase(corrEnd)).toBe('FINAL');
   });
 
-  it('getPhase returns TRANSITION between corrStart boundary and corrStart', () => {
-    const plan = createRacePlan(
-      BASE_RACERS,
-      FINISH_T,
-      TARGET_DUR_MS,
-      { corridorStart: 0.7 },
-      BASE_SEED
-    );
-    const ctrl = createTrajectoryController(plan);
-    const { corrStart } = plan._phases;
-    expect(ctrl.getPhase(corrStart - 1)).toBe('TRANSITION');
-  });
-});
-
-describe('createTrajectoryController — bonusTransitionEnd independent from corridorStart', () => {
-  it('areaBonusMult fades at transEnd even when corridorStart is later', () => {
-    const plan = createRacePlan(
-      BASE_RACERS,
-      FINISH_T,
-      TARGET_DUR_MS,
-      { bonusTransitionEnd: 0.5, corridorStart: 0.75 },
-      BASE_SEED
-    );
-    const ctrl = createTrajectoryController(plan);
-
-    const racers = BASE_RACERS.map((r) => ({
-      ...r,
-      t: 0.5,
-      finished: false,
-      avoidanceActive: false,
-      trajectoryMult: 1.0,
-      trajectoryMultTarget: 1.0,
-      trajectoryMultPrev: 1.0,
-      trajectoryMultTransStart: 0,
-      areaBonusMult: 1.0,
-    }));
-
-    // Just before bonusTransitionEnd (50%) → full bonus
-    ctrl.update(racers, plan._phases.transEnd - 100);
-    for (const r of racers) {
-      const expected = plan._racerAreaBonus.get(r.index) ?? 1.0;
-      expect(r.areaBonusMult).toBeCloseTo(expected, 4);
-    }
-
-    // After full fade (transEnd + fadeDuration) → 1.0
-    ctrl.update(racers, plan._phases.transEnd + plan._areaBonusFadeDuration + 100);
-    for (const r of racers) expect(r.areaBonusMult).toBeCloseTo(1.0, 4);
-  });
-
-  it('areaBonusMult still full between bonusTransitionEnd (50%) and corridorStart (75%)', () => {
-    const plan = createRacePlan(
-      BASE_RACERS,
-      FINISH_T,
-      TARGET_DUR_MS,
-      { bonusTransitionEnd: 0.5, corridorStart: 0.75 },
-      BASE_SEED
-    );
-    const ctrl = createTrajectoryController(plan);
-
-    const racers = BASE_RACERS.map((r) => ({
-      ...r,
-      t: 0.5,
-      finished: false,
-      avoidanceActive: false,
-      trajectoryMult: 1.0,
-      trajectoryMultTarget: 1.0,
-      trajectoryMultPrev: 1.0,
-      trajectoryMultTransStart: 0,
-      areaBonusMult: 1.0,
-    }));
-
-    // In the gap zone (60% = between 50% fade-done and 75% corrStart) → bonus faded, P-ctrl off
-    const midGap = plan._phases.transEnd + plan._areaBonusFadeDuration + 1000;
-    ctrl.update(racers, midGap);
-    // areaBonusMult should be 1.0 (fully faded)
-    for (const r of racers) expect(r.areaBonusMult).toBeCloseTo(1.0, 4);
-    // trajectoryMultTarget should be 1.0 (P-ctrl not yet active)
-    for (const r of racers) expect(r.trajectoryMultTarget).toBe(1.0);
-  });
+  // NOTE: the TRANSITION phase no longer exists (choreography collapse: corridorStart := pulkEnd),
+  // so the former "TRANSITION between the transEnd boundary and corrStart" test was removed with it.
 });

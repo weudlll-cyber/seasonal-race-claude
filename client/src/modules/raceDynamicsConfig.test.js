@@ -52,11 +52,10 @@ describe('DEFAULT_RACE_DYNAMICS_CONFIG', () => {
       governorDirectorChallengerBoost: 0.06,
       governorDirectorLingerBrake: 0.6,
       governorDirectorCeilingCap: true,
-      // DEFAULT-FLIP 2026-07-13: shipped world moved to the swept + eye-tested v4 world (v4 ON,
-      // OutcomeStart 0.5, boostHeadroom 0.10, PulkLeadRotation ON, dropDepth 8). Re-baselined to the
-      // new defaults — intended default-flip, not a regression. See pre/backup default-flip-v4-world.
+      // DEFAULT-FLIP 2026-07-13: shipped world moved to the swept + eye-tested world (OutcomeStart 0.5,
+      // boostHeadroom 0.10, dropDepth 8). STAGE-3 CLEANUP: the directorV4Enabled + pulkLeadRotationEnabled
+      // toggles were REMOVED — choreography + rotation are now unconditional. Re-baselined to survivors.
       governorDirectorBoostHeadroom: 0.1,
-      directorV4Enabled: true,
       directorV4SuppressChaosBonusB1: false,
       directorV4Intensity: 0.6,
       directorV4PackBandStrictness: 0.5,
@@ -86,11 +85,10 @@ describe('DEFAULT_RACE_DYNAMICS_CONFIG', () => {
       rowBonusPost: 1,
       // Reopened PULK (feat/pulk-reopen).
       racePlanPulkStart: 0.25,
-      // STAGE-1/2 CLEANUP 2026-07-13: the M1 front-contest flag, the M2 cohesion-spring keys, and the
-      // predecessor PULK race-director's two keys (enable + lead-hold cap) were removed — snapshot
-      // re-baselined to the surviving keys (intended removal, not a regression).
-      // PulkLeadRotation (successor core loop).
-      pulkLeadRotationEnabled: true, // DEFAULT-FLIP 2026-07-13
+      // STAGE-1/2/3 CLEANUP 2026-07-13: removed the M1 front-contest flag, the M2 cohesion-spring keys,
+      // the predecessor PULK race-director's two keys, and (S3 de-flag) the directorV4Enabled +
+      // pulkLeadRotationEnabled toggles — snapshot re-baselined to the surviving keys (intended).
+      // PulkLeadRotation (unconditional).
       pulkLeadRotationAttackerSlots: 2,
       pulkLeadRotationDropDepthLengths: 8, // DEFAULT-FLIP 2026-07-13 (D8 = fairness-safe depth)
       pulkLeadRotationOutsiderMaxReachLengths: 15,
@@ -171,16 +169,6 @@ describe('loadRaceDynamicsConfig', () => {
       governorDirectorBoostHeadroom: 0.05,
     });
     expect(loadRaceDynamicsConfig().governorDirectorBoostHeadroom).toBe(0.05);
-  });
-
-  it('returns defaults when directorV4Enabled is not a boolean', () => {
-    storageGet.mockReturnValue({ ...DEFAULT_RACE_DYNAMICS_CONFIG, directorV4Enabled: 'yes' });
-    expect(loadRaceDynamicsConfig()).toEqual(DEFAULT_RACE_DYNAMICS_CONFIG);
-  });
-
-  it('accepts directorV4Enabled=true', () => {
-    storageGet.mockReturnValue({ ...DEFAULT_RACE_DYNAMICS_CONFIG, directorV4Enabled: true });
-    expect(loadRaceDynamicsConfig().directorV4Enabled).toBe(true);
   });
 
   it('returns defaults when directorV4Intensity is out of [0,1]', () => {

@@ -16,7 +16,7 @@ const baseWorld = {
   durationSec: 60,
   seed: 1,
   configs: {
-    raceDynamicsConfig: { directorV4Enabled: false, directorV4Intensity: 0.6 },
+    raceDynamicsConfig: { directorV4Intensity: 0.6 },
     raceBehaviorConfig: { startSpreadRange: 0.6 },
   },
   racerTypeOverrides: {},
