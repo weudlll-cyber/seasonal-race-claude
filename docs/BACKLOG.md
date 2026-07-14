@@ -317,6 +317,9 @@ Additionally: Space (Custom Track) already present.
   - LOD or similar strategies for 100 racers
 - **D8** — Full racer config editor: coats edit UI, all fields, sprite swap UI.
   Builds on override pattern (B-7).
+  ⏳ **PARTIAL (2026-07-14 audit):** basic racer editing already shipped — `RacerManager.jsx`
+  (list / create / delete) + `RacerEditModal.jsx` (per-field tuning overrides → localStorage/server).
+  Still open for the "full" editor: the coats-edit UI and the sprite-swap UI.
 
 ### Phase B (Wiring Gaps + UX Improvements)
 
