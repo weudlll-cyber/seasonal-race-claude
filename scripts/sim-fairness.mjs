@@ -47,7 +47,7 @@
 //   <out>/fairness-report.md   — human-readable Markdown report
 // ============================================================
 
-import { readFileSync, mkdirSync, writeFileSync, existsSync } from 'fs';
+import { readFileSync, mkdirSync, writeFileSync, existsSync, readdirSync } from 'fs';
 import { join, dirname, isAbsolute } from 'path';
 import { fileURLToPath } from 'url';
 
@@ -78,6 +78,7 @@ import {
 // Stage 0: the ONE shared source for the exported-world schema + hash + simulatability. Imported here
 // AND by the browser DevScreen export, so a hash produced in the browser matches one recomputed here.
 import { WORLD_SCHEMA_VERSION, hashWorld, unsimulatableReasons, worldStamp } from '../client/src/modules/raceConfigWorld.js';
+import { perTrackReport, renderMarkdown as renderComebackMarkdown } from './sim/observers/comeback-reality.mjs';
 import { computeEffectiveBrakeFactor } from '../client/src/modules/raceBehaviorConfig.js';
 import { advanceRacerT } from '../client/src/modules/raceStep.js';
 import { createRacePlan, createTrajectoryController, BAND_EDGES } from '../client/src/modules/racePlanner.js';
@@ -309,6 +310,11 @@ const gmRaces             = [];   // per-race gap-space observations (filled onl
 // runner that reads only hero-map.json, to avoid heavy concurrent writes into the OneDrive-synced
 // tree. Read-only measurement runs only; a normal run (flag absent) is unchanged.
 const SKIP_MAIN_OUTPUT    = argv.includes('--skip-main-output');
+// COMEBACK-REALITY (read-only, --comeback-reality): reuses the --hero-map per-race observations to
+// measure whether hero-cast COMEBACKERS actually climb near their authored finalRank, and how reliably
+// the designation points at real climbing. Requires --hero-map. Writes a separate, uncommitted report
+// dir (results/comeback-reality-sweep-<date>/). Adds zero per-frame work; pure post-race aggregation.
+const COMEBACK_REALITY    = argv.includes('--comeback-reality');
 
 // PULK-action-2: ceiling-capped challenger boost (naturalness). '0' = off (byte-identical additive boost);
 // the shared director strengths (leaderBrake / challengerBoost / frontPool / ceilingCap + the
@@ -3283,6 +3289,39 @@ if (isMain) {
     console.log(`[hero-map] → ${heroMapPath} | bandReach=${bandReach != null ? (bandReach * 100).toFixed(1) + '%' : 'n/a'} startRowUnfair=${startRowUnfair} realOvertakes=${heroAgg.realOvertakesMean ?? 'n/a'} netGain=${heroAgg.placesGainedNetMean ?? 'n/a'} heroes/race=${heroAgg.heroesPerRace ?? 'n/a'} shortfall=${heroAgg.shortfallRate ?? 'n/a'}`);
   }
 
+
+  // ── Comeback-reality output (--comeback-reality; requires --hero-map) ───────
+  // Reuses this run's heroMapRaces (per-race hero observations). Groups by track, writes one
+  // comeback-<trackId>.json per track into results/comeback-reality-sweep-<date>/ (accumulates across
+  // per-track invocations), then re-aggregates ALL comeback-*.json there into report.md + detail.json.
+  if (COMEBACK_REALITY) {
+    if (!HERO_MAP) {
+      console.warn('[comeback-reality] requires --hero-map (no hero observations collected) — skipping.');
+    } else {
+      const byTrack = new Map();
+      for (const rr of heroMapRaces) {
+        if (!byTrack.has(rr.trackId)) byTrack.set(rr.trackId, []);
+        byTrack.get(rr.trackId).push(rr);
+      }
+      const date = new Date().toISOString().slice(0, 10); // YYYY-MM-DD (stable across a same-day sweep)
+      const cbDir = join(ROOT, 'results', `comeback-reality-sweep-${date}`);
+      mkdirSync(cbDir, { recursive: true });
+      for (const [trackId, races] of byTrack) {
+        const isOpen = races[0]?.isOpen ?? null;
+        const rep = perTrackReport(trackId, isOpen, races);
+        writeFileSync(join(cbDir, `comeback-${trackId}.json`), JSON.stringify({ ...rep, _races: races }, null, 2));
+      }
+      // Re-aggregate every per-track file in the dir (open first, then track id).
+      const perTrack = readdirSync(cbDir)
+        .filter((f) => f.startsWith('comeback-') && f.endsWith('.json'))
+        .map((f) => JSON.parse(readFileSync(join(cbDir, f), 'utf8')))
+        .sort((a, b) => (a.isOpen === b.isOpen ? a.trackId.localeCompare(b.trackId) : a.isOpen ? -1 : 1));
+      const meta = { date, seed: GLOBAL_SEED, racesPerTrack: N_RACES, racer: RACER_FILTER, dur: DUR_FILTER, world: WORLD_STAMP?.worldHash ?? 'unknown' };
+      writeFileSync(join(cbDir, 'report.md'), renderComebackMarkdown(perTrack, meta));
+      writeFileSync(join(cbDir, 'detail.json'), JSON.stringify({ meta, perTrack: perTrack.map(({ _races, ...t }) => t) }, null, 2));
+      console.log(`[comeback-reality] → ${cbDir} | tracks=${perTrack.length}`);
+    }
+  }
 
   // ── Breakaway causal diagnostic output (--breakaway-diag) ───────────────────
   // Self-contained: only runs when the flag is on. Raw aggregates → results/breakaway-diag/

@@ -743,6 +743,50 @@ experiments (baseline / controller-off comparisons).
 
 ---
 
+## Comeback Reality Measurement (`--comeback-reality`)
+
+**Observer:** `scripts/sim/observers/comeback-reality.mjs` (pure functions, read-only, POST-RACE).
+**Flag:** `--comeback-reality` — **requires `--hero-map`** (it reuses the per-race hero observations; adds
+zero per-frame work, so a run without the flag is byte-identical). A run writes an **uncommitted** report
+dir `results/comeback-reality-sweep-<date>/` (`report.md` + `detail.json` + one `comeback-<track>.json`
+per track; per-track files accumulate across per-track invocations and re-aggregate each run).
+
+**Purpose.** Empirical check behind camera-foresight **B4**: does a hero cast as a **comebacker** actually
+climb close to its authored `finalRank`, and is the designation a reliable pointer to real climbing? A
+comebacker is a hero whose anchor rank is behind its target by more than `ROLE_MARGIN_RANKS` (reused from
+`hero-adherence.mjs` — one source; rank 1 = front, so it must CLIMB).
+
+**Per-comebacker metrics** (rank 1 = front, lower is better):
+- `climbPlanned` = `anchorRank − targetRank` (how far it was authored to climb).
+- `climbAchieved` = `max(0, anchorRank − finalRank)` (how far it really climbed).
+- `targetReached` = `finalRank ≤ targetRank` (landed at or better than target).
+- `rankDeltaToTarget` = `finalRank − targetRank` (0 = exact, − = over-achieved, + = short).
+- `climbFracOfPlan` = `climbAchieved / climbPlanned`.
+- `nearTarget` = `|rankDeltaToTarget| ≤ 3`.
+
+**Aggregates** (`summarizeComebacker`): means of the above + `targetReachRate`, `nearTargetRate`, and an
+achieved/planned-climb histogram. **Reliability** (`reliabilityStats`, per race): does the designated
+comebacker rank as the top / top-3 climber, and did ≥1 comebacker realise ≥50% of its planned climb.
+
+**Scope caveat (honest).** `heroObs` records only the cast (heroes), so the reliability "top climber"
+ranking is **among the cast**, not against the full field — a full-field comparison would need per-racer
+anchor ranks the sim does not collect (adding that would enlarge the byte-identity surface). Read the
+reliability rates as "within the cast".
+
+**Interpretation / acceptance (for the B4 go/no-go).** Plan is *sound* if comebacker `finalRank` lands
+within mean ±2–3 of `targetRank` (|Δ→target| ≥ 5 ⇒ unreliable); designation is *reliable* if the comebacker
+is a top-3 climber (in the cast) in ≥60% of races. Note the top-3-in-cast bar is near-trivial for a 2–4
+hero cast — read the stronger `topClimberRate` (rank-1 in the cast) in `detail.json` alongside it.
+
+**Standard run** (one invocation per track with its surface-compatible default racer, since `--track` is
+single-valued and a forced `--racer` errors on surface-incompatible tracks):
+```
+node scripts/sim-fairness.mjs --track=<id> --racer=<trackDefault> --dur=60 --races=50 --seed=1 \
+     --hero-map --comeback-reality --skip-main-output
+```
+
+---
+
 ## 2026-07-10 — INFRA update (sim-trust): current state of the sim
 
 This document was the most stale; the items below correct it against source.
