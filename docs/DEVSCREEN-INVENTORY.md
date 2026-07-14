@@ -10,8 +10,10 @@ key + testId are the durable identifiers.
 
 > Choreography is now **unconditional** — there is no enable toggle. The old "Director" section (the
 > `governorDirector*` / `governorMax*` controls) and the separate "Hero choreography (v4)" section
-> (`directorV4*`) are **gone**. Their persisted values migrate into the `pulk*` / `choreo*` namespace via
-> `RENAMED_KEY_MIGRATION` in `raceDynamicsConfig.js`; only the five PULK-phase controls below remain as UI.
+> (`directorV4*`) are **gone**, along with the `RENAMED_KEY_MIGRATION` shim that once carried their
+> persisted values into the `pulk*` / `choreo*` namespace (removed in `b4e1aba` — stale configs now fall
+> back to defaults). Only the five PULK-phase controls below remain as UI. See
+> [RACE-ACTION.md](RACE-ACTION.md#8-configuration-knobs) for the live knobs.
 
 ---
 
@@ -153,6 +155,6 @@ surfaced by no control — pinned to their tuned defaults. They are intentional,
 - The separate **"Hero choreography (v4)"** section and all `directorV4*` keys.
 - Any choreography **enable toggle** — choreography is unconditional now.
 
-Persisted user values under the old keys are carried forward (not resurrected as controls) by
-`RENAMED_KEY_MIGRATION` in `client/src/modules/raceDynamicsConfig.js`: `directorV4*` → `choreo*`,
-`governorDirector*` / `governorMax*` → `pulk*`.
+The `RENAMED_KEY_MIGRATION` shim that once carried persisted values under the old keys forward
+(`directorV4*` → `choreo*`, `governorDirector*` / `governorMax*` → `pulk*`) was **removed** (commit
+`b4e1aba`); a stale config holding any of those old keys now falls back to defaults rather than migrating.

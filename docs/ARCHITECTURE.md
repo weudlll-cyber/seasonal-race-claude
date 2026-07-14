@@ -520,6 +520,8 @@ Config (`storage/defaults.js`): `choreoIntensity` (0.6), `choreoOutcomeStart` (0
 
 Config (`storage/defaults.js`): `pulkLeaderBrake` (0.1), `pulkChallengerBoost` (0.06), `pulkFrontPool` (8), `pulkBoostHeadroom` (0.1), `pulkCeilingCap` (true), `pulkEnvelopeMaxEffect` (0.12), `pulkEnvelopeMaxStepPerFrame` (0.01), and the `pulkLeadRotation*` sub-knobs: `AttackerSlots` (2), `DropDepthLengths` (8), `OutsiderMaxReachLengths` (15), `DeadlockTimeoutMs` (12000), `MinHoldMs` (750).
 
+For the conceptual, history-free narrative of this mechanism see [RACE-ACTION.md](RACE-ACTION.md#5-pulkleadrotation--non-hero-front-action).
+
 ### Sim parity + measurement
 
 `scripts/sim-fairness.mjs` runs the identical `createTrajectoryController` + `applyPulkLeadRotation` code path (single shared source, the same pattern the t-update `advanceRacerT` uses) so sim and browser stay byte-identical; `scripts/fingerprint-default.mjs` is the byte-identity gate. See [SIM.md](SIM.md) for the metric fields and the pinned calibration case.

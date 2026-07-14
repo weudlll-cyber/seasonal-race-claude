@@ -164,17 +164,14 @@ and `pulkEnvelopeMaxStepPerFrame` 0.01 (per-frame slew); rotation internals
 `pulkLeadRotationOutsiderMaxReachLengths` 15, `pulkLeadRotationDeadlockTimeoutMs` 12000,
 `pulkLeadRotationMinHoldMs` 750.
 
-## Config-key renames (raceDynamicsConfig.js `RENAMED_KEY_MIGRATION`)
+## Config-key renames (RETIRED)
 
-A persisted config from before the PULK cleanup migrates its VALUES to the current keys, then drops the
-old key (raceDynamicsConfig.js:22-54). The mappings: `directorV4*` → `choreo*` (Intensity,
-PackBandStrictness, SuppressChaosBonusB1, ReleaseProgress, ResolveB2..B5, OutcomeStart); the borrowed
-`governorDirector*` / `governor*` strengths → the `pulk*` namespace
-(`…LeaderBrake` → `pulkLeaderBrake`, `…ChallengerBoost` → `pulkChallengerBoost`,
-`…FrontPool` → `pulkFrontPool`, `…BoostHeadroom` → `pulkBoostHeadroom`,
-`…CeilingCap` → `pulkCeilingCap`, `governorMaxEffect` → `pulkEnvelopeMaxEffect`,
-`governorMaxStepPerFrame` → `pulkEnvelopeMaxStepPerFrame`). These are the ONLY current keys; the old names
-exist solely as migration inputs, never as live mechanisms.
+The `RENAMED_KEY_MIGRATION` shim that once carried a pre-cleanup config's VALUES to the current keys was
+**removed** (commit `b4e1aba`): single-player with localStorage cleared between runs, so there is no
+persisted pre-rename config to migrate. A stale blob still holding old keys now simply fails validation and
+falls back to defaults (graceful + intended). The current canonical keys are the `choreo*` and `pulk*`
+names above; the old `directorV4*` / `governorDirector*` / `governor*` names are gone entirely — not even
+as migration inputs. For the live knobs see [RACE-ACTION.md](RACE-ACTION.md#8-configuration-knobs).
 
 ---
 

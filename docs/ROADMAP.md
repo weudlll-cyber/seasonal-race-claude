@@ -423,7 +423,8 @@ This "reactive governor/director" direction was replaced by the **choreo hero-ch
 rebuild, and the classic reactive director (tail-lift + contest-injector, `governorDirectorEnabled`,
 `DIRECTOR_SEED_XOR`, `applyGovernor`) was **removed entirely** in THE GREAT PULK CLEANUP (Stages 1–6).
 The commits below are kept as history; none of the governor/director knobs, streams, or the
-governor-value Action-sweep survive. For the current world see ARCHITECTURE.md / PHASE-CONTRACT.md.
+governor-value Action-sweep survive. For the current world see [RACE-ACTION.md](RACE-ACTION.md)
+(conceptual reference), ARCHITECTURE.md, and PHASE-CONTRACT.md.
 
 The pivot: the pre-OUTCOME governor is **no longer a field-order limiter**. It is a **RACE DIRECTOR** staging an exciting, *unpredictable-but-fair* front — lead changes you cannot read the result from — while the true finishing order is still imposed **after** the fade by the OUTCOME controller. Core realisation: **a limiter can only bound a gap; it cannot create a contest** (see LESSONS 160). The eventual winner stays **decorrelated** from early front-running. Anchor: `d9c9cd3` = tag `stable/pre-governor-04jul` (surge + rubber-band intact, no governor). All default **OFF**.
 
