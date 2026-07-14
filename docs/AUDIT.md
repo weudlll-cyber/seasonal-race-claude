@@ -965,12 +965,13 @@ provably not re-run (d11-smoke asserted a stale `draftingBoost` `1.1` vs the shi
 Retirement also cleared the stale `d11-smoke` `1.1` assertion and the English-rule violations (German
 prose in `d10-ux-verification` and `vre-4-ux-verification`) flagged during the audit.
 
-**Remaining e2e: 8 specs (7 LIVE / 1 UNCERTAIN)** — guarding foundational integration concerns:
+**Remaining e2e: 7 specs (all LIVE)** — guarding foundational integration concerns:
 pathLengthPx-on-save persistence (`b1617-smoke`), adaptive-zoom math (`camera-polish-ux-verification`),
 localStorage↔engine round-trip (`d11-ux-verification`), racer-override→localStorage (`d355-smoke`),
-lap-selector UX (`d9-smoke`), world-dimension migration (`fix-list-tracks-world-dimensions`),
-surface-class master-detail flow (`vre-2-ux-verification`), and the perf baseline
-(`perf-reality-check`, UNCERTAIN — pending an owner keep/supersede call).
+lap-selector UX (`d9-smoke`), world-dimension migration (`fix-list-tracks-world-dimensions`), and the
+surface-class master-detail flow (`vre-2-ux-verification`). (The perf baseline `perf-reality-check`,
+initially UNCERTAIN, was superseded and deleted in the follow-up close-out, along with its two dedicated
+`playwright.perf-dev/prod.config.js` files.)
 
 Default-behaviour fingerprint `fa4e3796e1e5f1a5` unchanged (e2e deletion touches no runtime); the unit
 suite is unaffected (e2e excluded from vitest). Per-spec verdicts + reasoning: `results/audit-e2e-queue.json`.
