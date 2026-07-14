@@ -146,7 +146,7 @@ describe('SurfaceClassManager — list rendering', () => {
   it('renders + New Surface Class button', () => {
     mockHook([DEFAULT_CLASS]);
     render(<SurfaceClassManager />);
-    expect(screen.getByRole('button', { name: /New Surface Class/i })).toBeDefined();
+    expect(screen.getByRole('button', { name: /New Surface Class/i })).toBeInTheDocument();
   });
 });
 
@@ -156,7 +156,7 @@ describe('SurfaceClassManager — class selection', () => {
   it('auto-selects first class on mount — label input is populated', () => {
     mockHook([DEFAULT_CLASS, CUSTOM_CLASS]);
     render(<SurfaceClassManager />);
-    expect(screen.getByDisplayValue('Mud')).toBeDefined();
+    expect(screen.getByDisplayValue('Mud')).toHaveValue('Mud');
   });
 
   it('clicking a second class populates the editor with that class', () => {
@@ -166,7 +166,7 @@ describe('SurfaceClassManager — class selection', () => {
       .getAllByRole('button')
       .find((b) => b.getAttribute('aria-pressed') === 'false' && b.textContent.includes('Lava'));
     fireEvent.click(lavaBtn);
-    expect(screen.getByDisplayValue('Lava')).toBeDefined();
+    expect(screen.getByDisplayValue('Lava')).toHaveValue('Lava');
   });
 
   it('selected class button has aria-pressed=true', () => {
@@ -203,7 +203,7 @@ describe('SurfaceClassManager — generator switch', () => {
     fireEvent.change(screen.getByRole('combobox', { name: /Generator type/i }), {
       target: { value: 'line' },
     });
-    expect(screen.getByLabelText('Thickness')).toBeDefined();
+    expect(screen.getByLabelText('Thickness')).toBeInTheDocument();
   });
 
   it('switching generator resets config to new generator defaults', () => {
@@ -212,7 +212,7 @@ describe('SurfaceClassManager — generator switch', () => {
     fireEvent.change(screen.getByRole('combobox', { name: /Generator type/i }), {
       target: { value: 'cloud' },
     });
-    expect(screen.getByLabelText('Start Size')).toBeDefined();
+    expect(screen.getByLabelText('Start Size')).toBeInTheDocument();
   });
 });
 
@@ -260,8 +260,8 @@ describe('SurfaceClassManager — Save existing class', () => {
       fireEvent.click(screen.getByRole('button', { name: /Save surface class/i }));
     });
 
-    expect(screen.getByRole('alert')).toBeDefined();
-    expect(screen.getByText(/Connection refused/i)).toBeDefined();
+    expect(screen.getByRole('alert')).toHaveTextContent(/Connection refused/i);
+    expect(screen.getByText(/Connection refused/i)).toBeInTheDocument();
   });
 });
 
@@ -272,7 +272,7 @@ describe('SurfaceClassManager — New class flow', () => {
     mockHook([DEFAULT_CLASS]);
     render(<SurfaceClassManager />);
     fireEvent.click(screen.getByRole('button', { name: /New Surface Class/i }));
-    expect(screen.getByText('New Surface Class')).toBeDefined();
+    expect(screen.getByText('New Surface Class')).toBeInTheDocument();
   });
 
   it('new-class form has no ID input field — ID is auto-generated', () => {
@@ -320,9 +320,9 @@ describe('SurfaceClassManager — New class flow', () => {
     mockHook([DEFAULT_CLASS]);
     render(<SurfaceClassManager />);
     fireEvent.click(screen.getByRole('button', { name: /New Surface Class/i }));
-    expect(screen.getByText('New Surface Class')).toBeDefined();
+    expect(screen.getByText('New Surface Class')).toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: /Cancel/i }));
-    expect(screen.getByDisplayValue('Mud')).toBeDefined();
+    expect(screen.getByDisplayValue('Mud')).toHaveValue('Mud');
   });
 });
 
@@ -332,7 +332,7 @@ describe('SurfaceClassManager — Delete (custom class)', () => {
   it('Delete button is visible for custom class', () => {
     mockHook([CUSTOM_CLASS]);
     render(<SurfaceClassManager />);
-    expect(screen.getByRole('button', { name: /Delete surface class/i })).toBeDefined();
+    expect(screen.getByRole('button', { name: /Delete surface class/i })).toBeInTheDocument();
   });
 
   it('Delete button is NOT visible for code-default class', () => {
@@ -380,7 +380,7 @@ describe('SurfaceClassManager — Reset-to-Default lifecycle', () => {
   it('Reset-to-Default button is visible for modified default', () => {
     mockHook([OVERRIDE_CLASS]);
     render(<SurfaceClassManager />);
-    expect(screen.getByRole('button', { name: /Reset to default/i })).toBeDefined();
+    expect(screen.getByRole('button', { name: /Reset to default/i })).toBeInTheDocument();
   });
 
   it('Reset-to-Default button is NOT visible for code-default class', () => {
@@ -409,14 +409,14 @@ describe('SurfaceClassManager — Reset-to-Default lifecycle', () => {
     render(<SurfaceClassManager />);
 
     // Override is auto-selected — editor shows 'Super Mud'
-    expect(screen.getByDisplayValue('Super Mud')).toBeDefined();
+    expect(screen.getByDisplayValue('Super Mud')).toHaveValue('Super Mud');
 
     await act(async () => {
       fireEvent.click(screen.getByRole('button', { name: /Reset to default/i }));
     });
 
     // After reset, openClass is called with registry code-default → label reverts to 'Mud'
-    expect(screen.getByDisplayValue('Mud')).toBeDefined();
+    expect(screen.getByDisplayValue('Mud')).toHaveValue('Mud');
   });
 
   it('Default-Override lifecycle: Default → save override → shows Modified → reset → DELETE called', async () => {
