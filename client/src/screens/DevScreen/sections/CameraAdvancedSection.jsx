@@ -790,6 +790,31 @@ function CameraAdvancedSection() {
           track ≥ 60 s only). Outcome phase activates internally above the leader-progress
           threshold, independent of the external flag from RaceScreen.
         </p>
+        <label
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: '0.6rem',
+            cursor: 'pointer',
+            fontSize: '0.88rem',
+            marginBottom: '0.4rem',
+          }}
+        >
+          <input
+            type="checkbox"
+            data-testid="camera-foresight-enabled"
+            checked={config.cameraForesight ?? false}
+            onChange={(e) => set('cameraForesight', e.target.checked)}
+          />
+          <span style={{ fontWeight: 600 }}>
+            Camera Foresight (B4a) — pre-arm the authored comebacker
+          </span>
+          <InfoTooltip text="Pre-arms the designated comebacker near its authored peak beat so the reactive comeback gate confirms and cuts earlier — catching the PULK build-up it currently misses (the primed racer is evaluated even before OUTCOME). Reality bar unchanged: no real rank-gain, no cut. OFF = today's camera exactly." />
+        </label>
+        <p style={{ fontSize: '0.75rem', color: 'var(--color-muted)', marginBottom: '0.75rem' }}>
+          Pre-arms the authored comebacker so the camera picks up the climb earlier (incl. PULK).
+          The reactive gate still decides every cut — OFF = camera unchanged.
+        </p>
         <div style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem' }}>
           <SliderRow
             label="Focal smooth TC"
