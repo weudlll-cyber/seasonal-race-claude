@@ -368,11 +368,11 @@ to the server with one-time client migration. All hashes verified against git lo
 - **D6a** — Racers loaded from server (async) + ready loading-gate + unknown-id diagnostic — `5d75d12` (2026-06-15)
 - **D6b** — Racers server-side create/update/delete via racerApi + sprite upload + registry-clear-on-reload — `d22ecee` (2026-06-15)
 
-## Phase R — Lateral Physics Redesign & Race-Action Controller ✅ Mostly complete (June 2026)
+## Phase R — Lateral Physics Redesign & Race-Action Controller ✅ Complete — shipped to master (July 2026)
 
 The `feat/race-action` arc. Stable anchor: `stable/pre-overlap-closed-20jun` (= `712f334`).
 Every entry below verified against `git log` / `git tag` (hash + date + scope). HEAD at time of
-writing: `9cfa953` (2026-06-30). **Master-merge of `feat/race-action` is still pending.**
+writing: `9cfa953` (2026-06-30). **Update 2026-07-14: this arc has since shipped to master — see the Status note below.**
 
 **R.0 — Sim/browser fairness parity + overlap-escape experiments (2026-06-19/20)**
 - B0 — sim rename `bereichsBonusMult → areaBonusMult` for browser parity — `1683716` (2026-06-19)
@@ -414,9 +414,13 @@ writing: `9cfa953` (2026-06-30). **Master-merge of `feat/race-action` is still p
 - Controller-on-closed phase timing — design-reviewed and confirmed correct: phases run on the leader-progress clock (`raceProgress = leaderT/finishT`), so they are independent of `targetDuration`/`closedSsf`. The mechanism dates to C0 (`14f3c6f`); no new fix required.
 - Sim determinism — verified empirically (2026-06-30) as no longer an issue; likely a side-effect of Commit A (`bc68c37`) removing the legacy force layers. No specific fix commit to cite.
 
-**Open (not yet complete):**
-- **Re-Gate** all four closed tracks on `9cfa953` (clean browser-faithful config) — in progress.
-- **Master-merge** of `feat/race-action` into `master` — pending (master frozen at `ab71825`).
+**Status (2026-07-14): race-action phase complete and shipped.** The `feat/race-action` arc merged to
+`master` (fast-forward `e1d5a2b`, tag `v1-race-action-merged`); master is now at `361a8cd` (e2e
+DEAD_IN_SPIRIT retirement + cohesion observer preserved). Choreography + PulkLeadRotation are live.
+Stable anchors: `stable/pre-overlap-closed-20jun` (`712f334`, pre-race-action state),
+`race-action-complete` (`e1d5a2b`, phase endpoint), `v1-race-action-merged` (`e1d5a2b`, master merge).
+
+**Still open:** Re-Gate all four closed tracks on `9cfa953` (clean browser-faithful config).
 
 **R.7 — Governor vision-pivot: the race-action director (July 2026)** — ⚠️ **SUPERSEDED / HISTORICAL.**
 This "reactive governor/director" direction was replaced by the **choreo hero-choreography + PulkLeadRotation**

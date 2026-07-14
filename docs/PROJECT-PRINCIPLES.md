@@ -93,6 +93,16 @@ current realisation of this goal.
 
 ---
 
+## Shipped Phases
+
+**Race-action phase shipped 2026-07-14 (commits `e1d5a2b` / `361a8cd`).** Choreography (hero curve
+casting + min-jerk interpolation) + PulkLeadRotation (non-hero front action via attacker / settle-brake /
+outsider slots) + the fairness gate (band-reach ≥70% + 0 Holm-unfair start rows) are now live on master.
+See [RACE-ACTION.md](RACE-ACTION.md) for the shipped mechanism description. E2E acceptance specs retired
+(14 DEAD_IN_SPIRIT removed, `361a8cd`); 8 LIVE/UNCERTAIN specs remain for active regression coverage.
+
+---
+
 ## Application Conventions
 
 ### Tag Lifecycle Convention

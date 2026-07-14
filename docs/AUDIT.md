@@ -943,3 +943,34 @@ All files pass `prettier --check`. No formatting issues.
 | ~~**Q-19 — TrackEditor.effects.test.jsx flaky**~~ | ✅ fixed PR #55 | Root cause: `fetch` stub from `trackLoader.test.js` leaked via `vi.unstubAllGlobals()` fix. | — |
 | **TEST-RaceScreen** — 0 unit tests for RaceScreen | MEDIUM | Canvas + rAF in jsdom requires extensive mock infrastructure | Camera phase: deliver minimal integration tests |
 | **Orphaned geometries** — Track-Delete leaves orphaned geometry cache entries in localStorage and (after TLH-1) no geometry cleanup in backend | LOW | Explicitly accepted in TLH concept: geometries are expensive, loss is irreversible. Orphaned entries use no measurable memory and cause no errors. | Optional: "Clean up orphaned geometries" as a UI action in a later cleanup sprint. No immediate action required. |
+
+---
+
+## 2026-07-14 — E2E Specs Retirement (test-audit close-out)
+
+**Auditor:** weudlll@gmail.com / Claude Opus 4.8
+**Scope:** client e2e (`client/e2e/`)
+**Commit:** `361a8cd`
+
+The test audit identified **14 e2e specs as DEAD_IN_SPIRIT** — milestone delivery-acceptance/smoke
+gates whose features are shipped, stable, and already unit-covered, which are excluded from the routine
+gate (`vitest.config.js` excludes `e2e/**`; they run only via manual `playwright test`) and were
+provably not re-run (d11-smoke asserted a stale `draftingBoost` `1.1` vs the shipped `1.04`, undetected).
+
+**Retired (deleted, 152 tests):** `b-wave-smoke`, `camera-polish-smoke`, `d10-smoke`,
+`d10-ux-verification`, `d11-smoke`, `d3-5-5-ux-verification`, `d7c-smoke`, `quick-test-autofill-smoke`,
+`vre-2-smoke`, `vre-3-smoke`, `vre-3-ux-verification`, `vre-4-smoke`, `vre-4-ux-verification`,
+`vre-followup-track-lights`.
+
+Retirement also cleared the stale `d11-smoke` `1.1` assertion and the English-rule violations (German
+prose in `d10-ux-verification` and `vre-4-ux-verification`) flagged during the audit.
+
+**Remaining e2e: 8 specs (7 LIVE / 1 UNCERTAIN)** — guarding foundational integration concerns:
+pathLengthPx-on-save persistence (`b1617-smoke`), adaptive-zoom math (`camera-polish-ux-verification`),
+localStorage↔engine round-trip (`d11-ux-verification`), racer-override→localStorage (`d355-smoke`),
+lap-selector UX (`d9-smoke`), world-dimension migration (`fix-list-tracks-world-dimensions`),
+surface-class master-detail flow (`vre-2-ux-verification`), and the perf baseline
+(`perf-reality-check`, UNCERTAIN — pending an owner keep/supersede call).
+
+Default-behaviour fingerprint `fa4e3796e1e5f1a5` unchanged (e2e deletion touches no runtime); the unit
+suite is unaffected (e2e excluded from vitest). Per-spec verdicts + reasoning: `results/audit-e2e-queue.json`.
