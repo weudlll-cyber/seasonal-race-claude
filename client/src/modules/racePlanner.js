@@ -530,6 +530,10 @@ export function createTrajectoryController(racePlan) {
         // produced — ONE source, populated here beside _heroCurves. Diagnostics-only (GovernorDiagHUD);
         // never recomputed, never read by physics.
         plan._heroRoles = new Map(gen.curves.map((c) => [c.index, c.role]));
+        // B4a camera-foresight: retain the FULL authored cameraPlan (all heroes + roles + beat timing)
+        // the generator already emits — ONE source, populated here beside _heroCurves/_heroRoles, never
+        // recomputed, never read by physics. Consumed by the CameraDirector as a foresight PRIOR only.
+        plan._cameraPlan = gen.cameraPlan ?? null;
         for (const r of racers) r.isHeroChoreographed = plan._heroCurves.has(r.index);
         plan._choreoGenerated = true;
       } else {
@@ -707,6 +711,8 @@ export function createTrajectoryController(racePlan) {
     getPhaseFractions,
     // Diagnostics-only: the retained index→role map (null until heroes are cast). Read by GovernorDiagHUD.
     getHeroRoles: () => plan._heroRoles ?? null,
+    // B4a: the full authored cameraPlan (null until heroes are cast). Delivered to the CameraDirector.
+    getCameraPlan: () => plan._cameraPlan ?? null,
     collectTelemetry,
     seed: plan.seed,
   };
