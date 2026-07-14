@@ -75,7 +75,7 @@ seasonal-race-claude/
 │       │   │   └── (All 20 built-in types are SpriteRacerType instances — D3.5.x migration complete; CarRacerType replaced by BuggyRacerType)
 │       │   ├── storage/            # localStorage helpers (useStorage, KEYS)
 
-│       │   ├── surface-effects/    # Visual Racer Effects system (planned — VRE-1+)
+│       │   ├── surface-effects/    # Visual Racer Effects system (shipped — VRE-1..4, surface classes live)
 │       │   │   ├── index.js              # listSurfaceClasses / getSurfaceClass / getSurfaceClassApi
 │       │   │   ├── defaultClasses.js     # 9 default Surface Class definitions (code constants)
 │       │   │   ├── surfaceClassApi.js    # GET/POST/PUT/DELETE /api/surface-classes
