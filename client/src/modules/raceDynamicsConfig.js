@@ -12,51 +12,16 @@ import { DEFAULT_RACE_DYNAMICS_CONFIG } from './storage/defaults.js';
 
 export { DEFAULT_RACE_DYNAMICS_CONFIG };
 
-// ── Stored-key carry-over: the PULK-cleanup renames. Single source of truth for EVERY rename stage.
-// A raceDynamicsConfig persisted BEFORE a rename carries its customized VALUES over to the new key;
-// the old key is then dropped. Migrated values flow through the SAME validation below (under their
-// new key/range) — the migration never bypasses validation and never touches any key outside this
-// map, so no removed mechanism can be resurrected.
-//   Stage 5a: directorV4* → choreo* (the "v4" fossil → Race Choreography).
-//   Stage 5b-i: the borrowed governorDirector*/governor* strengths → the pulk* namespace.
-export const RENAMED_KEY_MIGRATION = {
-  // Stage 5a
-  directorV4Intensity: 'choreoIntensity',
-  directorV4PackBandStrictness: 'choreoPackBandStrictness',
-  directorV4SuppressChaosBonusB1: 'choreoSuppressChaosBonusB1',
-  directorV4ReleaseProgress: 'choreoReleaseProgress',
-  directorV4ResolveB2: 'choreoResolveB2',
-  directorV4ResolveB3: 'choreoResolveB3',
-  directorV4ResolveB4: 'choreoResolveB4',
-  directorV4ResolveB5: 'choreoResolveB5',
-  directorV4OutcomeStart: 'choreoOutcomeStart',
-  // Stage 5b-i (re-home: the pulk phase now owns its strengths + realism envelope)
-  governorDirectorLeaderBrake: 'pulkLeaderBrake',
-  governorDirectorChallengerBoost: 'pulkChallengerBoost',
-  governorDirectorFrontPool: 'pulkFrontPool',
-  governorDirectorBoostHeadroom: 'pulkBoostHeadroom',
-  governorDirectorCeilingCap: 'pulkCeilingCap',
-  governorMaxEffect: 'pulkEnvelopeMaxEffect',
-  governorMaxStepPerFrame: 'pulkEnvelopeMaxStepPerFrame',
-};
-
-// Copy-on-write: never mutate the caller's object. An old key carries over ONLY if the new key is
-// not already present (an explicit new value wins), then the old key is removed.
-function migrateRenamedKeys(stored) {
-  let out = stored;
-  for (const [oldKey, newKey] of Object.entries(RENAMED_KEY_MIGRATION)) {
-    if (!Object.prototype.hasOwnProperty.call(out, oldKey)) continue;
-    if (out === stored) out = { ...stored };
-    if (!Object.prototype.hasOwnProperty.call(out, newKey)) out[newKey] = out[oldKey];
-    delete out[oldKey];
-  }
-  return out;
-}
+// ── Stored-key carry-over: RETIRED. The PULK-cleanup rename shim (RENAMED_KEY_MIGRATION +
+// migrateRenamedKeys, Stage-5a directorV4*→choreo* and Stage-5b-i governor*→pulk*) was removed:
+// single-player with localStorage cleared between runs, so there is no persisted pre-rename config to
+// carry over. A stale blob still holding old keys now simply fails validation and falls back to
+// defaults (graceful + intended).
 
 export function loadRaceDynamicsConfig() {
   const rawStored = storageGet(KEYS.RACE_DYNAMICS_CONFIG);
   if (!rawStored || typeof rawStored !== 'object') return { ...DEFAULT_RACE_DYNAMICS_CONFIG };
-  const stored = migrateRenamedKeys(rawStored);
+  const stored = rawStored;
   const merged = { ...DEFAULT_RACE_DYNAMICS_CONFIG, ...stored };
   if (
     merged.reRollVariationPercent <= 0 ||

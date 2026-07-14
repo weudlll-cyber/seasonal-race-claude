@@ -221,73 +221,7 @@ describe('saveRaceDynamicsConfig', () => {
   });
 });
 
-// ── Stage-5a rename carry-over: a config persisted with the old directorV4* keys carries its VALUES
-// over to the new choreo* keys (owner's carry-over decision), then the old keys are inert. ──
-describe('loadRaceDynamicsConfig — directorV4* → choreo* carry-over migration', () => {
-  it('carries a customized old key VALUE over to the new choreo* key', () => {
-    storageGet.mockReturnValue({ directorV4Intensity: 0.8, directorV4OutcomeStart: 0.45 });
-    const cfg = loadRaceDynamicsConfig();
-    expect(cfg.choreoIntensity).toBe(0.8); // value preserved under the new key
-    expect(cfg.choreoOutcomeStart).toBe(0.45);
-    expect(cfg.directorV4Intensity).toBeUndefined(); // old key dropped (inert)
-    expect(cfg.directorV4OutcomeStart).toBeUndefined();
-  });
-
-  it('a stored config with NO old keys is unaffected', () => {
-    storageGet.mockReturnValue({ choreoIntensity: 0.3 });
-    const cfg = loadRaceDynamicsConfig();
-    expect(cfg.choreoIntensity).toBe(0.3);
-  });
-
-  it('an explicit new key wins over an old key present alongside it', () => {
-    storageGet.mockReturnValue({ directorV4Intensity: 0.8, choreoIntensity: 0.2 });
-    const cfg = loadRaceDynamicsConfig();
-    expect(cfg.choreoIntensity).toBe(0.2); // the new value is not overwritten by the old
-    expect(cfg.directorV4Intensity).toBeUndefined();
-  });
-
-  it('a migrated value is still validated under the new key/range (no bypass)', () => {
-    storageGet.mockReturnValue({ directorV4Intensity: 1.5 }); // out of [0,1] under choreoIntensity
-    expect(loadRaceDynamicsConfig()).toEqual(DEFAULT_RACE_DYNAMICS_CONFIG); // whole-object reject
-  });
-});
-
-// ── Stage-5b-i re-home carry-over: the borrowed governorDirector*/governor* strength + envelope keys
-// carry their VALUES over to the re-homed pulk* keys; the old keys are then inert. Same migration. ──
-describe('loadRaceDynamicsConfig — governorDirector*/governor* → pulk* re-home carry-over', () => {
-  it('carries customized old strength + envelope key VALUES over to the new pulk* keys', () => {
-    storageGet.mockReturnValue({
-      governorDirectorLeaderBrake: 0.13,
-      governorDirectorChallengerBoost: 0.07,
-      governorDirectorFrontPool: 10,
-      governorDirectorBoostHeadroom: 0.05,
-      governorDirectorCeilingCap: false,
-      governorMaxEffect: 0.1,
-      governorMaxStepPerFrame: 0.02,
-    });
-    const cfg = loadRaceDynamicsConfig();
-    expect(cfg.pulkLeaderBrake).toBe(0.13);
-    expect(cfg.pulkChallengerBoost).toBe(0.07);
-    expect(cfg.pulkFrontPool).toBe(10);
-    expect(cfg.pulkBoostHeadroom).toBe(0.05);
-    expect(cfg.pulkCeilingCap).toBe(false);
-    expect(cfg.pulkEnvelopeMaxEffect).toBe(0.1);
-    expect(cfg.pulkEnvelopeMaxStepPerFrame).toBe(0.02);
-    // old keys dropped (inert)
-    expect(cfg.governorDirectorLeaderBrake).toBeUndefined();
-    expect(cfg.governorMaxEffect).toBeUndefined();
-    expect(cfg.governorMaxStepPerFrame).toBeUndefined();
-  });
-
-  it('an explicit new pulk* key wins over an old key present alongside it', () => {
-    storageGet.mockReturnValue({ governorMaxEffect: 0.1, pulkEnvelopeMaxEffect: 0.2 });
-    const cfg = loadRaceDynamicsConfig();
-    expect(cfg.pulkEnvelopeMaxEffect).toBe(0.2);
-    expect(cfg.governorMaxEffect).toBeUndefined();
-  });
-
-  it('a re-homed value is still validated under the new key/range (no bypass)', () => {
-    storageGet.mockReturnValue({ governorMaxEffect: 0.9 }); // out of [0,0.5] under pulkEnvelopeMaxEffect
-    expect(loadRaceDynamicsConfig()).toEqual(DEFAULT_RACE_DYNAMICS_CONFIG); // whole-object reject
-  });
-});
+// ── Stored-key carry-over migration RETIRED (single-player, localStorage cleared between runs). The
+// directorV4*→choreo* (Stage-5a) and governorDirector*/governor*→pulk* (Stage-5b-i) carry-over tests
+// were removed with the RENAMED_KEY_MIGRATION shim. A stale blob with old keys now fails validation
+// and falls back to defaults — covered by the general invalid-config → defaults behaviour above. ──
