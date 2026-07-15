@@ -79,6 +79,7 @@ import {
 // AND by the browser DevScreen export, so a hash produced in the browser matches one recomputed here.
 import { WORLD_SCHEMA_VERSION, hashWorld, unsimulatableReasons, worldStamp } from '../client/src/modules/raceConfigWorld.js';
 import { perTrackReport, renderMarkdown as renderComebackMarkdown } from './sim/observers/comeback-reality.mjs';
+import { perTrackReport as lbbPerTrackReport, renderMarkdown as renderLbbMarkdown } from './sim/observers/look-before-brake.mjs';
 import { computeEffectiveBrakeFactor } from '../client/src/modules/raceBehaviorConfig.js';
 import { advanceRacerT } from '../client/src/modules/raceStep.js';
 import { createRacePlan, createTrajectoryController, BAND_EDGES } from '../client/src/modules/racePlanner.js';
@@ -315,6 +316,13 @@ const SKIP_MAIN_OUTPUT    = argv.includes('--skip-main-output');
 // the designation points at real climbing. Requires --hero-map. Writes a separate, uncommitted report
 // dir (results/comeback-reality-sweep-<date>/). Adds zero per-frame work; pure post-race aggregation.
 const COMEBACK_REALITY    = argv.includes('--comeback-reality');
+// LBB-DIAG (read-only, --lbb-diag): instruments the look-before-brake decision point. For every brake-zone
+// entry the gate evaluates, the sim pushes one raw record (gate values only, no re-derivation); the observer
+// attributes the FIRST blocking condition post-race and counts windowEmpty + brakeThenDodge. Independent of
+// --hero-map. Fully flag-gated → a no-flag run does zero extra work and is byte-identical (fingerprint gate).
+// Writes results/lbb-diag-<date>/ (report.md + detail.json). See docs/SIM.md "Look-Before-Brake Diagnostics".
+const LBB_DIAG            = argv.includes('--lbb-diag');
+const lbbRaces            = [];   // per-race look-before-brake decision records (filled only when LBB_DIAG)
 
 // PULK-action-2: ceiling-capped challenger boost (naturalness). '0' = off (byte-identical additive boost);
 // the shared director strengths (leaderBrake / challengerBoost / frontPool / ceilingCap + the
@@ -546,6 +554,7 @@ export function runSingleRace({
   racerTargetRankMap = null,   // plan._racerTargetRank; lets the diag name the peak-gap leader's target rank
   heroMap = false,             // --hero-map: record per-hero climb-feasibility signals (read-only)
   gapMetrics = false,          // --gap-metrics: record gap-space (time-behind-leader) signals (read-only)
+  lbbDiag = false,             // --lbb-diag: record look-before-brake gate decisions (read-only)
 }) {
   const savedRandom = Math.random;
   if (seed > 0) Math.random = makePRNG(seed);
@@ -555,6 +564,9 @@ export function runSingleRace({
     const BASE_SPEED_MAX  = BASE_SPEED_MAX_OVR;
     const BASE_SPEED_MEAN = (BASE_SPEED_MIN + BASE_SPEED_MAX) / 2;
     const behaviorConfig  = { ...DEFAULT_RACE_BEHAVIOR_CONFIG, ...behaviorConfigOverrides };
+    // LBB-DIAG: transient read-only flag on this race's config (never persisted, never in defaults) so
+    // applyRacerBehavior emits look-before-brake records. Absent on any non-diag run → byte-identical.
+    if (lbbDiag) behaviorConfig.lbbDiag = true;
     const rowConfig       = { ...DEFAULT_ROW_LAYOUT_CONFIG };
     const dynamicsConfig  = { ...DEFAULT_RACE_DYNAMICS_CONFIG, ...DYNAMICS_OVERRIDES };
 
@@ -838,8 +850,23 @@ export function runSingleRace({
     let natPulkWasActive = false;
     let natPulkTriggersInWindow = 0, natPulkTriggersOutOfWindow = 0;
 
-    // frameHook support: reusable Map cleared before each applyRacerBehavior call
-    const _frameDiagOut = frameHook ? new Map() : null;
+    // ── LBB-DIAG accumulator (--lbb-diag; read-only) ─────────────────────────
+    // The look-before-brake hook drains diagOut.get('lbb') each frame, tagging every record with a
+    // per-race frame index (contiguous frames = one encounter, used by the brakeThenDodge detector).
+    const _lbbDecisions = lbbDiag ? [] : null;
+    let _lbbFrameIdx = 0;
+    const _lbbHook = lbbDiag
+      ? (_raceTs, diagOut) => {
+          const recs = diagOut.get('lbb');
+          if (recs) for (const rec of recs) _lbbDecisions.push({ frame: _lbbFrameIdx, ...rec });
+          _lbbFrameIdx++;
+        }
+      : null;
+
+    // frameHook support: reusable Map cleared before each applyRacerBehavior call. The effective hook is
+    // the caller's frameHook if given, else the internal LBB hook (only one is ever active per run).
+    const _frameHook = frameHook ?? _lbbHook;
+    const _frameDiagOut = _frameHook ? new Map() : null;
 
     // ── Breakaway causal diagnostic state (--breakaway-diag; read-only) ───────
     // bkGapBins: one snapshot per 5% progress bin (leader gap to median + to 2nd).
@@ -1538,9 +1565,9 @@ export function runSingleRace({
         diagPrevAvoidance = racers.map((r) => r.avoidanceActive);
       }
       computePositions();
-      if (frameHook) _frameDiagOut.clear();
+      if (_frameHook) _frameDiagOut.clear();
       applyRacerBehavior(racers, behaviorConfig, { currentTs: raceTs }, _frameDiagOut);
-      if (frameHook) frameHook(raceTs, _frameDiagOut, racers);
+      if (_frameHook) _frameHook(raceTs, _frameDiagOut, racers);
       // Lite stats: always-on, low-overhead per-frame counters
       {
         for (let ri = 0; ri < racers.length; ri++) {
@@ -2039,6 +2066,9 @@ export function runSingleRace({
         };
       });
     }
+
+    // ── LBB-DIAG results — attached ONLY when --lbb-diag (else results unchanged) ──
+    if (lbbDiag) results.lbbDecisions = _lbbDecisions;
 
     // ── GAP-METRICS results — attached ONLY when --gap-metrics (else results unchanged) ──
     // RAW distributions only. deadRaceFlag / visibleComeback use the PROPOSED thresholds, which
@@ -2746,6 +2776,7 @@ if (isMain) {
             racerTargetRankMap: raceSollRankMap,
             heroMap:            HERO_MAP,
             gapMetrics:         GAP_METRICS,
+            lbbDiag:            LBB_DIAG,
           });
           // HERO-MAP (--hero-map): stash this race's per-hero observations, tagged with combo meta.
           if (HERO_MAP && result.heroObs) {
@@ -2754,6 +2785,10 @@ if (isMain) {
           // GAP-METRICS (--gap-metrics): stash this race's gap-space observations, tagged with combo meta.
           if (GAP_METRICS && result.gapMetrics) {
             gmRaces.push({ trackId, racerType, durationSec, seed, raceIdx, isOpen, gapMetrics: result.gapMetrics });
+          }
+          // LBB-DIAG (--lbb-diag): stash this race's look-before-brake decision records, tagged with combo meta.
+          if (LBB_DIAG && result.lbbDecisions) {
+            lbbRaces.push({ trackId, racerType, durationSec, seed, raceIdx, isOpen, decisions: result.lbbDecisions });
           }
           // Step 1: fair-chance placement metrics (requires race-plan target ranks)
           if (raceSollRankMap) {
@@ -3320,6 +3355,40 @@ if (isMain) {
       writeFileSync(join(cbDir, 'report.md'), renderComebackMarkdown(perTrack, meta));
       writeFileSync(join(cbDir, 'detail.json'), JSON.stringify({ meta, perTrack: perTrack.map(({ _races, ...t }) => t) }, null, 2));
       console.log(`[comeback-reality] → ${cbDir} | tracks=${perTrack.length}`);
+    }
+  }
+
+  // ── Look-before-brake diagnostics output (--lbb-diag) ───────────────────────
+  // Groups this run's lbbRaces by track, writes one lbb-<trackId>.json per track into
+  // results/lbb-diag-<date>/ (accumulates across per-track invocations), then re-aggregates ALL
+  // lbb-*.json there into report.md + detail.json. Raw per-decision records are NOT persisted —
+  // only the observer's per-track aggregates (attribution shares, windowEmpty, brakeThenDodge).
+  if (LBB_DIAG) {
+    if (!lbbRaces.length) {
+      console.warn('[lbb-diag] no look-before-brake decisions recorded — skipping.');
+    } else {
+      const byTrack = new Map();
+      for (const rr of lbbRaces) {
+        if (!byTrack.has(rr.trackId)) byTrack.set(rr.trackId, []);
+        byTrack.get(rr.trackId).push(rr);
+      }
+      const date = new Date().toISOString().slice(0, 10); // YYYY-MM-DD (stable across a same-day sweep)
+      const lbbDir = join(ROOT, 'results', `lbb-diag-${date}`);
+      mkdirSync(lbbDir, { recursive: true });
+      for (const [trackId, races] of byTrack) {
+        const isOpen = races[0]?.isOpen ?? null;
+        const rep = lbbPerTrackReport(trackId, isOpen, races);
+        writeFileSync(join(lbbDir, `lbb-${trackId}.json`), JSON.stringify(rep, null, 2));
+      }
+      // Re-aggregate every per-track file in the dir (open first, then track id).
+      const perTrack = readdirSync(lbbDir)
+        .filter((f) => f.startsWith('lbb-') && f.endsWith('.json'))
+        .map((f) => JSON.parse(readFileSync(join(lbbDir, f), 'utf8')))
+        .sort((a, b) => (a.isOpen === b.isOpen ? a.trackId.localeCompare(b.trackId) : a.isOpen ? -1 : 1));
+      const meta = { date, seed: GLOBAL_SEED, racesPerTrack: N_RACES, racer: RACER_FILTER, dur: DUR_FILTER, world: WORLD_STAMP?.worldHash ?? 'unknown' };
+      writeFileSync(join(lbbDir, 'report.md'), renderLbbMarkdown(perTrack, meta));
+      writeFileSync(join(lbbDir, 'detail.json'), JSON.stringify({ meta, perTrack }, null, 2));
+      console.log(`[lbb-diag] → ${lbbDir} | tracks=${perTrack.length}`);
     }
   }
 

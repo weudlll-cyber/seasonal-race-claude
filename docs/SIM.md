@@ -787,6 +787,57 @@ node scripts/sim-fairness.mjs --track=<id> --racer=<trackDefault> --dur=60 --rac
 
 ---
 
+## Look-Before-Brake Diagnostics (`--lbb-diag`)
+
+**Observer:** `scripts/sim/observers/look-before-brake.mjs` (pure functions, read-only, POST-RACE).
+**Flag:** `--lbb-diag` — independent of `--hero-map`. Fully flag-gated: a run without it is byte-identical
+(fingerprint `fa4e3796e1e5f1a5` unchanged) and does zero extra per-frame work. A run writes an
+**uncommitted** report dir `results/lbb-diag-<date>/` (`report.md` + `detail.json` + one `lbb-<track>.json`
+per track; per-track files accumulate across per-track invocations and re-aggregate each run).
+
+**Purpose.** Owner eye-test: with a free lane available the trailer BRAKES instead of dodging, then after a
+short brake accelerates into that same lane anyway. This measures WHICH condition blocks the dodge, in
+numbers — a pure observation pass, no fix and no behaviour change.
+
+**Mechanism (source of truth: the "Look before you brake" block in `client/src/modules/raceBehavior.js`
+— not restated here).** A pair enters the brake zone when it is same-lane (`|dY| < brakeSameLaneY`) AND
+`dT < dynamicBrakeT`. Only inside that zone does the gate evaluate, in this order; the **FIRST** failing
+condition is what blocked, and the sim records one raw decision record per brake-zone entry (the gate's OWN
+values — `dT`, `dTStart`, `dynamicBrakeT`, `dir`, `vLatToward`, `tLat` — never re-derived):
+
+1. `dT > dTStart` — longitudinal room to start the sidestep in time → **`blockedRoom`**
+2. `slowerLeaderOk || heroPass` — a real overtake (leader meaningfully slower) or a choreo hero → **`blockedSlower`**
+3. `dir !== 0` — a genuinely free side exists (`chooseFreeLaneDir`) → **`blockedNoFreeSide`**
+4. `vLatToward >= 0` — trailer not drifting toward the leader's side → **`blockedDrift`**
+5. all four pass ⇒ **`dodged`** (the brake was suppressed, `takeFreeLane`).
+
+**`windowEmpty`** (`dTStart >= dynamicBrakeT`): the dodge window was empty **by construction** — `dTStart`
+is at or past the brake-zone edge, so no `dT` inside the zone can satisfy condition 1. It is tallied
+**independently** (a decision is counted as both `blockedRoom` and `windowEmpty`) to separate "impossible by
+construction" from a near-miss. For `blockedRoom` the report also gives the **`roomShortfall`** (`dTStart −
+dT`, median + p90) and **`tLat`** (steps to clear sideways): a small shortfall ⇒ tune lateral speed / margins;
+a large one ⇒ the window is a fiction. `blockedNoFreeSide` is split into **`noRoomOnTrack`** (the target
+leaves the track on both sides) vs **`trafficBothSides`** (an in-bounds side is occupied) using `isSideFree`'s
+own out-of-bounds test.
+
+**`brakeThenDodge` — the Owner's complaint as a number.** Within one continuous encounter (same trailer +
+same leader, consecutive frames) the trailer BRAKES on some frames and then DODGES past the same leader,
+WITHOUT ever being blocked by traffic (`blockedNoFreeSide`) in between. The report gives the count and the
+median number of braked frames before the dodge. A high count ⇒ the brake was provably pointless there.
+
+**How to read it.** High `blockedRoom` + high `windowEmpty` ⇒ the window is a fiction (lateral-speed tuning
+alone cannot open it). High `blockedRoom` + LOW `windowEmpty` + small `roomShortfall` ⇒ a near-miss that
+margin tuning could close. High `blockedNoFreeSide/traffic` ⇒ the brake is genuinely traffic-forced. High
+`brakeThenDodge` ⇒ pointless brakes.
+
+**Standard run** (one invocation per track with its surface-compatible default racer):
+```
+node scripts/sim-fairness.mjs --track=<id> --racer=<trackDefault> --dur=60 --races=50 --seed=1 \
+     --lbb-diag --skip-main-output
+```
+
+---
+
 ## 2026-07-10 — INFRA update (sim-trust): current state of the sim
 
 This document was the most stale; the items below correct it against source.

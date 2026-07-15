@@ -373,8 +373,12 @@ function pairForwardSpeeds(trailer, leader, config) {
  * @param {{ currentTs: number }|undefined} priorityExtras
  *   Optional. Carries the race clock (currentTs) used solely by the hard-separation
  *   warmup ramp. When omitted (legacy/test callers), the ramp runs at full strength.
+ * @param {Map|undefined} diagOut
+ *   Optional read-only diagnostics sink (sim only). When present AND config.lbbDiag === true, one raw
+ *   look-before-brake decision record per brake-zone entry is pushed under key 'lbb'. Never read by
+ *   the physics; guarded so it is byte-identical (and zero-cost) when off (--lbb-diag, see docs/SIM.md).
  */
-export function applyRacerBehavior(racers, config, priorityExtras) {
+export function applyRacerBehavior(racers, config, priorityExtras, diagOut) {
   if (!config.enabled) {
     for (const r of racers) {
       r.avoidanceActive = false;
@@ -385,6 +389,15 @@ export function applyRacerBehavior(racers, config, priorityExtras) {
 
   const active = racers.filter((r) => !r.finished);
   for (const r of active) r.draftingBoostActive = false;
+
+  // LBB-DIAG (read-only, --lbb-diag): a fresh per-frame sink for look-before-brake decision records.
+  // Off by default (diagOut null OR config.lbbDiag not set) → the whole feature is inert and byte-identical.
+  const lbbDiag = diagOut != null && config.lbbDiag === true;
+  let lbbSink = null;
+  if (lbbDiag) {
+    lbbSink = [];
+    diagOut.set('lbb', lbbSink);
+  }
 
   // Clear + repopulate pre-allocated module-level structures (no per-step allocation).
   _speedBrakeSet.clear();
@@ -524,12 +537,31 @@ export function applyRacerBehavior(racers, config, priorityExtras) {
           // isHeroChoreographed is falsy when choreo is off → the gate is byte-identical to today.
           const heroPass = trailer.isHeroChoreographed === true;
 
+          // LBB-DIAG (read-only): captured as the gate resolves; null while the gate short-circuits
+          // before computing them. Never influences a decision.
+          let lbbDir = null;
+          let lbbVLatToward = null;
+          let lbbNoRoomBothSides = null;
+
           if (dT > dTStart && (slowerLeaderOk || heroPass)) {
             const dir = chooseFreeLaneDir(trailer, leader, active, lbHalfSpan, lbTHalf, lbCap);
             // (c) achieved progress: do not suppress while diverging from the chosen side
             // (physicalYVelocity is last frame's post-damping value — parity-safe). Frame-1
             // velocity ≈ 0 passes; a negative (toward-leader) velocity re-engages the brake.
             const vLatToward = (trailer.physicalYVelocity ?? 0) * dir;
+            if (lbbDiag) {
+              lbbDir = dir;
+              lbbVLatToward = vLatToward;
+              if (dir === 0) {
+                // Split the "no free side" reason using isSideFree's OWN out-of-bounds test
+                // (targetY = trailer.physicalY ± lbHalfSpan vs ±lbCap — same variables the gate used):
+                // both target sides off-track ⇒ no room on track; otherwise an in-bounds side is occupied.
+                const tgtL = trailer.physicalY - lbHalfSpan;
+                const tgtR = trailer.physicalY + lbHalfSpan;
+                lbbNoRoomBothSides =
+                  (tgtL < -lbCap || tgtL > lbCap) && (tgtR < -lbCap || tgtR > lbCap);
+              }
+            }
             if (dir !== 0 && vLatToward >= 0) {
               takeFreeLane = true;
               // Record this pass for the trailer. Nearest leader (lowest dT) wins so a
@@ -548,6 +580,25 @@ export function applyRacerBehavior(racers, config, priorityExtras) {
                 });
               }
             }
+          }
+
+          // LBB-DIAG (read-only): one record per brake-zone entry the gate evaluated. All values are the
+          // gate's OWN (no re-derivation); the observer attributes the FIRST blocking condition post-race.
+          if (lbbDiag) {
+            lbbSink.push({
+              trailerIndex: trailer.index,
+              leaderIndex: leader.index,
+              dT,
+              dTStart,
+              dynamicBrakeT,
+              tLat,
+              slowerLeaderOk,
+              heroPass,
+              dir: lbbDir,
+              vLatToward: lbbVLatToward,
+              noRoomBothSides: lbbNoRoomBothSides,
+              takeFreeLane,
+            });
           }
         }
 
