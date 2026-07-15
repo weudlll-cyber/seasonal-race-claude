@@ -15,6 +15,10 @@ import {
   attributeDecision,
   summarizeDecisions,
   detectBrakeThenDodge,
+  encounterOutcome,
+  emptyAccumulator,
+  accumulateRace,
+  finalizeAccumulator,
 } from './look-before-brake.mjs';
 
 // A record where every gate condition PASSES (dodged). dynamicBrakeT > dTStart so windowEmpty is false,
@@ -36,6 +40,12 @@ function passingRec(over = {}) {
     frame: 0,
     ...over,
   };
+}
+
+// A BRAKED record: like passingRec but takeFreeLane === false (as real records are whenever the gate did
+// NOT pass all four conditions). Use for any frame that is meant to be a brake, not a dodge.
+function brakeRec(over = {}) {
+  return passingRec({ takeFreeLane: false, ...over });
 }
 
 test('all four conditions pass → dodged', () => {
@@ -160,4 +170,74 @@ test('brakeThenDodge: different leaders are separate encounters', () => {
     passingRec({ frame: 11, leaderIndex: 3 }),                            // dodge vs L3
   ];
   assert.equal(detectBrakeThenDodge(decisions).length, 0);
+});
+
+// ── LBB-DIAG-2: encounter-level attribution ────────────────────────────────────────────────────────
+
+test('(a) encounter with no dT > dTStart record → noWindowEver, windowFrames 0', () => {
+  const enc = [
+    brakeRec({ frame: 10, dT: 0.005, dTStart: 0.01 }),
+    brakeRec({ frame: 11, dT: 0.006, dTStart: 0.01 }),
+  ];
+  const eo = encounterOutcome(enc);
+  assert.equal(eo.outcome, 'noWindowEver');
+  assert.equal(eo.windowFrames, 0);
+  assert.equal(eo.dodged, false);
+  // entryGap = dTStart − dT at first record = 0.01 − 0.005 = 0.005 (> 0 ⇒ entered below the window).
+  assert.ok(Math.abs(eo.entryGap - 0.005) < 1e-9);
+});
+
+test('(b) encounter whose first window frame fails the slower-leader test → blockedSlower', () => {
+  // Frame 10 has a window (dT > dTStart) but the leader is not slower and it is no hero → (b) fails first.
+  const enc = [
+    brakeRec({ frame: 10, dT: 0.02, dTStart: 0.01, slowerLeaderOk: false, heroPass: false }),
+    brakeRec({ frame: 11, dT: 0.005, dTStart: 0.01 }), // later brake (room) — must not override the label
+  ];
+  const eo = encounterOutcome(enc);
+  assert.equal(eo.outcome, 'blockedSlower');
+  assert.equal(eo.windowFrames, 1);
+});
+
+test('(c) an encounter containing any takeFreeLane record → dodged, regardless of earlier blocked frames', () => {
+  const enc = [
+    brakeRec({ frame: 10, vLatToward: -0.2 }),         // blockedDrift (window frame, drifting)
+    brakeRec({ frame: 11, dT: 0.005, dTStart: 0.01 }), // brake (room)
+    passingRec({ frame: 12 }),                          // takeFreeLane === true
+  ];
+  assert.equal(encounterOutcome(enc).outcome, 'dodged');
+});
+
+test('(d) brakeThenDodge cross-tab: window frames appear only AFTER the braked frames → noWindowBeforeDodge', () => {
+  // Frames 10-11 brake with NO window (dT <= dTStart); frame 12 dodges. All pre-dodge records had no
+  // window, so windowBeforeDodge === 0 → the brake opened the gap the dodge then used.
+  const decisions = [
+    brakeRec({ frame: 10, dT: 0.005, dTStart: 0.01 }),
+    brakeRec({ frame: 11, dT: 0.006, dTStart: 0.01 }),
+    passingRec({ frame: 12 }), // dodge (a passingRec has dT 0.02 > dTStart 0.01)
+  ];
+  const btd = detectBrakeThenDodge(decisions);
+  assert.equal(btd.length, 1);
+  assert.equal(btd[0].windowBeforeDodge, 0);
+  // The accumulator surfaces it as the cross-tab share.
+  const acc = emptyAccumulator();
+  accumulateRace(acc, decisions);
+  const fin = finalizeAccumulator(acc);
+  assert.equal(fin.brakeThenDodge.count, 1);
+  assert.equal(fin.brakeThenDodge.noWindowBeforeDodge, 1);
+  assert.equal(fin.brakeThenDodge.noWindowBeforeDodgeShare, 1);
+  // And the encounter label for that run is 'dodged' (it contained a takeFreeLane).
+  assert.equal(fin.encounter.encounters, 1);
+  assert.equal(fin.encounter.counts.dodged, 1);
+});
+
+test('brakeThenDodge cross-tab: a window that existed BEFORE the dodge is NOT noWindowBeforeDodge', () => {
+  // Frame 10 already has a window (dT > dTStart) but is blocked by drift; frame 11 dodges. The window
+  // pre-existed the dodge → windowBeforeDodge === 1, so it does NOT count as brake-opened.
+  const decisions = [
+    brakeRec({ frame: 10, dT: 0.02, dTStart: 0.01, vLatToward: -0.2 }), // window frame, blockedDrift
+    passingRec({ frame: 11 }),                                          // dodge
+  ];
+  const btd = detectBrakeThenDodge(decisions);
+  assert.equal(btd.length, 1);
+  assert.equal(btd[0].windowBeforeDodge, 1);
 });

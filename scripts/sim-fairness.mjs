@@ -3381,7 +3381,7 @@ if (isMain) {
       mkdirSync(lbbDir, { recursive: true });
       for (const [trackId, e] of lbbAccByTrack) {
         const fin = lbbFinalizeAccumulator(e.acc);
-        const rep = { trackId, isOpen: e.isOpen, nRaces: e.nRaces, summary: fin.summary, brakeThenDodge: fin.brakeThenDodge };
+        const rep = { trackId, isOpen: e.isOpen, nRaces: e.nRaces, summary: fin.summary, encounter: fin.encounter, brakeThenDodge: fin.brakeThenDodge };
         writeFileSync(join(lbbDir, `lbb-${trackId}.json`), JSON.stringify(rep, null, 2));
       }
       // Re-aggregate every per-track file in the dir (open first, then track id).

@@ -811,24 +811,50 @@ values — `dT`, `dTStart`, `dynamicBrakeT`, `dir`, `vLatToward`, `tLat` — nev
 4. `vLatToward >= 0` — trailer not drifting toward the leader's side → **`blockedDrift`**
 5. all four pass ⇒ **`dodged`** (the brake was suppressed, `takeFreeLane`).
 
-**`windowEmpty`** (`dTStart >= dynamicBrakeT`): the dodge window was empty **by construction** — `dTStart`
-is at or past the brake-zone edge, so no `dT` inside the zone can satisfy condition 1. It is tallied
-**independently** (a decision is counted as both `blockedRoom` and `windowEmpty`) to separate "impossible by
-construction" from a near-miss. For `blockedRoom` the report also gives the **`roomShortfall`** (`dTStart −
-dT`, median + p90) and **`tLat`** (steps to clear sideways): a small shortfall ⇒ tune lateral speed / margins;
-a large one ⇒ the window is a fiction. `blockedNoFreeSide` is split into **`noRoomOnTrack`** (the target
-leaves the track on both sides) vs **`trafficBothSides`** (an in-bounds side is occupied) using `isSideFree`'s
-own out-of-bounds test.
+**`windowEmpty`** (`dTStart >= dynamicBrakeT`): a per-frame flag tallied **independently** of the blocking
+reason (a decision can be both `blockedRoom` and `windowEmpty`). It flags that the window does not even
+**exist geometrically** — but note this is a weaker test than usability (see the caveat below): a geometric
+window one frame wide is not `windowEmpty` yet is useless. Use `windowFrames` (section B) for usability.
 
-**`brakeThenDodge` — the Owner's complaint as a number.** Within one continuous encounter (same trailer +
-same leader, consecutive frames) the trailer BRAKES on some frames and then DODGES past the same leader,
-WITHOUT ever being blocked by traffic (`blockedNoFreeSide`) in between. The report gives the count and the
-median number of braked frames before the dodge. A high count ⇒ the brake was provably pointless there.
+### Two units — do not confuse them (report sections A and B)
 
-**How to read it.** High `blockedRoom` + high `windowEmpty` ⇒ the window is a fiction (lateral-speed tuning
-alone cannot open it). High `blockedRoom` + LOW `windowEmpty` + small `roomShortfall` ⇒ a near-miss that
-margin tuning could close. High `blockedNoFreeSide/traffic` ⇒ the brake is genuinely traffic-forced. High
-`brakeThenDodge` ⇒ pointless brakes.
+**Section A is per pair-FRAME and TIME-WEIGHTED — NOT an encounter rate.** The per-frame shares (`dodged`,
+`blockedRoom`, …) count pair-frames. A brake keeps the trailer same-lane behind the leader for many frames
+(many records); a successful dodge moves it laterally out of the same-lane filter and stops producing records
+almost at once (≈1 record). So braking is over-weighted **by construction**. Read section A as "share of
+braked *time*", never as "share of encounters". Likewise **`windowEmpty` tests only whether the window
+EXISTS geometrically** (`dTStart < dynamicBrakeT`), not whether it is wide enough to use — a window the
+trailer crosses in half a frame is "non-empty" and useless. The usability measure is `windowFrames` (below).
+
+**Section B is per ENCOUNTER — these shares ARE comparable to each other.** An encounter is one same-pair
+contiguous run (same splitter as `brakeThenDodge`). Each gets exactly one label:
+- `dodged` — the encounter contained ≥1 `takeFreeLane` record.
+- **`noWindowEver` (the headline)** — the trailer never got a single frame with `dT > dTStart`: the pair
+  became same-lane already too close, so the window was **unreachable in practice**.
+- otherwise the FIRST blocking condition on the encounter's **first window frame** (`blockedSlower` /
+  `blockedNoFreeSide` / `blockedDrift`; never `blockedRoom` — a window frame passed room by definition),
+  via the same per-record classifier (one attribution source).
+
+Section B also reports, for encounters that had a window, **`windowFrames`** med/p90 (the empirical window
+WIDTH in frames — median 1–2 ⇒ a technicality even where it exists) and **`entryGap`** med/p90 (`dTStart −
+dT` at the first frame — how far below the window the pair becomes same-lane; negative ⇒ entered inside it).
+
+The decisive split: **high `noWindowEver`** ⇒ the pair becomes same-lane too late, the window is unreachable
+⇒ the lever is looking EARLIER (zone / geometry). **Low `noWindowEver` but low `dodged`** ⇒ the trailer had
+its chance and something else stopped it ⇒ the lever is `maxLateralSpeedPerStep` / the `dTStart` margins.
+
+**`brakeThenDodge` — the Owner's complaint as a number (section C).** Within one encounter the trailer BRAKES
+on some frames and then DODGES past the same leader, WITHOUT ever being blocked by traffic
+(`blockedNoFreeSide`) in between. The report gives the count and the median braked frames before the dodge.
+The **causal cross-tab `noWindowBeforeDodge`** = of those, the share with NO usable window frame
+(`dT > dTStart`) before the first dodge — i.e. the BRAKE itself opened the gap the dodge then used. A high
+share is direct proof of the complaint.
+
+**How to read the per-frame (section A) blockedRoom detail.** For `blockedRoom` the report gives the
+**`roomShortfall`** (`dTStart − dT`, median + p90) and **`tLat`** (steps to clear sideways): a small shortfall
+⇒ tune lateral speed / margins; a large one ⇒ the window is a fiction. `blockedNoFreeSide` is split into
+**`noRoomOnTrack`** (the target leaves the track on both sides) vs **`trafficBothSides`** (an in-bounds side
+is occupied) using `isSideFree`'s own out-of-bounds test.
 
 **Standard run** (one invocation per track with its surface-compatible default racer):
 ```
