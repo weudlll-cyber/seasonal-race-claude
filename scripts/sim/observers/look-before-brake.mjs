@@ -65,53 +65,108 @@ function median(arr) {
   const m = Math.floor(s.length / 2);
   return +(s.length % 2 ? s[m] : (s[m - 1] + s[m]) / 2).toFixed(6);
 }
-function quantile(arr, q) {
-  if (!arr.length) return null;
-  const s = [...arr].sort((a, b) => a - b);
-  const idx = Math.min(s.length - 1, Math.max(0, Math.round(q * (s.length - 1))));
-  return +s[idx].toFixed(6);
-}
 function share(n, d) {
   return d > 0 ? +(n / d).toFixed(4) : null;
 }
 
-// summarizeDecisions(decisions): flat outcome tallies + shares + windowEmpty + blockedRoom aggregates.
-export function summarizeDecisions(decisions) {
-  const tally = { dodged: 0, blockedRoom: 0, blockedSlower: 0, blockedNoFreeSide: 0, blockedDrift: 0 };
-  let windowEmpty = 0;
-  let noRoomOnTrack = 0;
-  let trafficBothSides = 0;
-  const roomShortfalls = [];
-  const roomTLats = [];
+// ── Bounded value histogram (value → count) ─────────────────────────────────────────────────────────
+// A sweep produces tens of millions of blockedRoom decisions; holding every roomShortfall / tLat value
+// (or every raw record) blows the heap. Instead we fold each value into a count histogram keyed by its
+// 6-dp-rounded value. tLat is near-constant per track (a body-geometry ratio) → a handful of keys;
+// roomShortfall spans a small range → a few thousand keys at most. Quantiles use nearest-rank over the
+// weighted distribution (exact to the 6-dp bin).
+function histPush(hist, value) {
+  if (value == null || !Number.isFinite(value)) return;
+  const key = +value.toFixed(6);
+  hist.set(key, (hist.get(key) ?? 0) + 1);
+}
+function histQuantile(hist, q) {
+  if (hist.size === 0) return null;
+  const keys = [...hist.keys()].sort((a, b) => a - b);
+  let total = 0;
+  for (const k of keys) total += hist.get(k);
+  const rank = Math.min(total - 1, Math.max(0, Math.round(q * (total - 1)))); // 0-indexed nearest-rank
+  let cum = 0;
+  for (const k of keys) {
+    cum += hist.get(k);
+    if (cum > rank) return k;
+  }
+  return keys[keys.length - 1];
+}
+
+// ── Streaming accumulator (bounded memory) ──────────────────────────────────────────────────────────
+// The harness folds one race at a time and discards the raw records, so peak memory is one race, not the
+// whole sweep. accumulateRace / finalizeAccumulator share attributeDecision + detectBrakeThenDodge with
+// the array-path summarizeDecisions below (one attribution source, no drift).
+export function emptyAccumulator() {
+  return {
+    decisions: 0,
+    counts: { dodged: 0, blockedRoom: 0, blockedSlower: 0, blockedNoFreeSide: 0, blockedDrift: 0 },
+    windowEmpty: 0,
+    noRoomOnTrack: 0,
+    trafficBothSides: 0,
+    roomShortfallHist: new Map(),
+    tLatHist: new Map(),
+    btdCount: 0, // brakeThenDodge encounter count
+    btdBrakedFrames: [], // braked-frames-before-dodge per encounter (small: ~thousands per track)
+  };
+}
+
+// accumulateRace(acc, decisions): fold ONE race's raw decision records into acc, then drop the records.
+export function accumulateRace(acc, decisions) {
   for (const d of decisions) {
+    acc.decisions++;
     const a = attributeDecision(d);
-    tally[a.outcome]++;
-    if (a.windowEmpty) windowEmpty++;
+    acc.counts[a.outcome]++;
+    if (a.windowEmpty) acc.windowEmpty++;
     if (a.outcome === 'blockedNoFreeSide') {
-      if (a.noFreeSideKind === 'noRoomOnTrack') noRoomOnTrack++;
-      else trafficBothSides++;
+      if (a.noFreeSideKind === 'noRoomOnTrack') acc.noRoomOnTrack++;
+      else acc.trafficBothSides++;
     }
     if (a.outcome === 'blockedRoom') {
-      if (a.roomShortfall != null) roomShortfalls.push(a.roomShortfall);
-      if (a.tLat != null && Number.isFinite(a.tLat)) roomTLats.push(a.tLat);
+      histPush(acc.roomShortfallHist, a.roomShortfall);
+      histPush(acc.tLatHist, a.tLat);
     }
   }
-  const n = decisions.length;
+  // brakeThenDodge is per-race (encounters live within a race's contiguous frames).
+  for (const e of detectBrakeThenDodge(decisions)) {
+    acc.btdCount++;
+    acc.btdBrakedFrames.push(e.brakedBeforeDodge);
+  }
+}
+
+// finalizeAccumulator(acc): collapse into the same summary shape summarizeDecisions returns, plus btd.
+export function finalizeAccumulator(acc) {
+  const n = acc.decisions;
   const shares = {};
-  for (const o of OUTCOMES) shares[o] = share(tally[o], n);
+  for (const o of OUTCOMES) shares[o] = share(acc.counts[o], n);
   return {
-    decisions: n,
-    counts: { ...tally },
-    shares,
-    windowEmpty,
-    windowEmptyShare: share(windowEmpty, n),
-    noRoomOnTrack,
-    trafficBothSides,
-    roomShortfallMedian: median(roomShortfalls),
-    roomShortfallP90: quantile(roomShortfalls, 0.9),
-    tLatMedian: median(roomTLats),
-    tLatP90: quantile(roomTLats, 0.9),
+    summary: {
+      decisions: n,
+      counts: { ...acc.counts },
+      shares,
+      windowEmpty: acc.windowEmpty,
+      windowEmptyShare: share(acc.windowEmpty, n),
+      noRoomOnTrack: acc.noRoomOnTrack,
+      trafficBothSides: acc.trafficBothSides,
+      roomShortfallMedian: histQuantile(acc.roomShortfallHist, 0.5),
+      roomShortfallP90: histQuantile(acc.roomShortfallHist, 0.9),
+      tLatMedian: histQuantile(acc.tLatHist, 0.5),
+      tLatP90: histQuantile(acc.tLatHist, 0.9),
+    },
+    brakeThenDodge: {
+      count: acc.btdCount,
+      medianBrakedFrames: median(acc.btdBrakedFrames),
+    },
   };
+}
+
+// summarizeDecisions(decisions): array-path flat summary (exact quantiles). Used by unit tests and small
+// runs; the sweep uses the streaming accumulator above. Both attribute through attributeDecision.
+export function summarizeDecisions(decisions) {
+  const acc = emptyAccumulator();
+  accumulateRace(acc, decisions);
+  return finalizeAccumulator(acc).summary;
 }
 
 // ── brakeThenDodge: the smoking gun ────────────────────────────────────────────────────────────────
@@ -160,18 +215,17 @@ export function detectBrakeThenDodge(decisions) {
 
 // ── Per-track report ────────────────────────────────────────────────────────────────────────────────
 // races = [{ decisions:[...] }, ...] (one entry per race, each with its own per-race frame numbering).
+// Folds through the same streaming accumulator the harness uses (bounded memory, one attribution source).
 export function perTrackReport(trackId, isOpen, races) {
-  const flat = (races ?? []).flatMap((rr) => rr.decisions ?? []);
-  const encounters = (races ?? []).flatMap((rr) => detectBrakeThenDodge(rr.decisions ?? []));
+  const acc = emptyAccumulator();
+  for (const rr of races ?? []) accumulateRace(acc, rr.decisions ?? []);
+  const fin = finalizeAccumulator(acc);
   return {
     trackId,
     isOpen,
     nRaces: (races ?? []).length,
-    summary: summarizeDecisions(flat),
-    brakeThenDodge: {
-      count: encounters.length,
-      medianBrakedFrames: median(encounters.map((e) => e.brakedBeforeDodge)),
-    },
+    summary: fin.summary,
+    brakeThenDodge: fin.brakeThenDodge,
   };
 }
 

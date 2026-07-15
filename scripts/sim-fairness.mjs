@@ -79,7 +79,7 @@ import {
 // AND by the browser DevScreen export, so a hash produced in the browser matches one recomputed here.
 import { WORLD_SCHEMA_VERSION, hashWorld, unsimulatableReasons, worldStamp } from '../client/src/modules/raceConfigWorld.js';
 import { perTrackReport, renderMarkdown as renderComebackMarkdown } from './sim/observers/comeback-reality.mjs';
-import { perTrackReport as lbbPerTrackReport, renderMarkdown as renderLbbMarkdown } from './sim/observers/look-before-brake.mjs';
+import { emptyAccumulator as lbbEmptyAccumulator, accumulateRace as lbbAccumulateRace, finalizeAccumulator as lbbFinalizeAccumulator, renderMarkdown as renderLbbMarkdown } from './sim/observers/look-before-brake.mjs';
 import { computeEffectiveBrakeFactor } from '../client/src/modules/raceBehaviorConfig.js';
 import { advanceRacerT } from '../client/src/modules/raceStep.js';
 import { createRacePlan, createTrajectoryController, BAND_EDGES } from '../client/src/modules/racePlanner.js';
@@ -322,7 +322,9 @@ const COMEBACK_REALITY    = argv.includes('--comeback-reality');
 // --hero-map. Fully flag-gated → a no-flag run does zero extra work and is byte-identical (fingerprint gate).
 // Writes results/lbb-diag-<date>/ (report.md + detail.json). See docs/SIM.md "Look-Before-Brake Diagnostics".
 const LBB_DIAG            = argv.includes('--lbb-diag');
-const lbbRaces            = [];   // per-race look-before-brake decision records (filled only when LBB_DIAG)
+// Streaming per-track accumulators (bounded memory): each race is folded and its raw records dropped, so a
+// 50-race sweep never holds tens of millions of decision records at once. trackId → { isOpen, nRaces, acc }.
+const lbbAccByTrack      = new Map();
 
 // PULK-action-2: ceiling-capped challenger boost (naturalness). '0' = off (byte-identical additive boost);
 // the shared director strengths (leaderBrake / challengerBoost / frontPool / ceilingCap + the
@@ -2786,9 +2788,16 @@ if (isMain) {
           if (GAP_METRICS && result.gapMetrics) {
             gmRaces.push({ trackId, racerType, durationSec, seed, raceIdx, isOpen, gapMetrics: result.gapMetrics });
           }
-          // LBB-DIAG (--lbb-diag): stash this race's look-before-brake decision records, tagged with combo meta.
+          // LBB-DIAG (--lbb-diag): fold this race's look-before-brake decisions into the per-track
+          // accumulator, then drop the raw records (bounded memory — see lbbAccByTrack).
           if (LBB_DIAG && result.lbbDecisions) {
-            lbbRaces.push({ trackId, racerType, durationSec, seed, raceIdx, isOpen, decisions: result.lbbDecisions });
+            let e = lbbAccByTrack.get(trackId);
+            if (!e) {
+              e = { isOpen, nRaces: 0, acc: lbbEmptyAccumulator() };
+              lbbAccByTrack.set(trackId, e);
+            }
+            lbbAccumulateRace(e.acc, result.lbbDecisions);
+            e.nRaces++;
           }
           // Step 1: fair-chance placement metrics (requires race-plan target ranks)
           if (raceSollRankMap) {
@@ -3359,25 +3368,20 @@ if (isMain) {
   }
 
   // ── Look-before-brake diagnostics output (--lbb-diag) ───────────────────────
-  // Groups this run's lbbRaces by track, writes one lbb-<trackId>.json per track into
+  // Finalizes this run's per-track accumulators, writes one lbb-<trackId>.json per track into
   // results/lbb-diag-<date>/ (accumulates across per-track invocations), then re-aggregates ALL
   // lbb-*.json there into report.md + detail.json. Raw per-decision records are NOT persisted —
   // only the observer's per-track aggregates (attribution shares, windowEmpty, brakeThenDodge).
   if (LBB_DIAG) {
-    if (!lbbRaces.length) {
+    if (!lbbAccByTrack.size) {
       console.warn('[lbb-diag] no look-before-brake decisions recorded — skipping.');
     } else {
-      const byTrack = new Map();
-      for (const rr of lbbRaces) {
-        if (!byTrack.has(rr.trackId)) byTrack.set(rr.trackId, []);
-        byTrack.get(rr.trackId).push(rr);
-      }
       const date = new Date().toISOString().slice(0, 10); // YYYY-MM-DD (stable across a same-day sweep)
       const lbbDir = join(ROOT, 'results', `lbb-diag-${date}`);
       mkdirSync(lbbDir, { recursive: true });
-      for (const [trackId, races] of byTrack) {
-        const isOpen = races[0]?.isOpen ?? null;
-        const rep = lbbPerTrackReport(trackId, isOpen, races);
+      for (const [trackId, e] of lbbAccByTrack) {
+        const fin = lbbFinalizeAccumulator(e.acc);
+        const rep = { trackId, isOpen: e.isOpen, nRaces: e.nRaces, summary: fin.summary, brakeThenDodge: fin.brakeThenDodge };
         writeFileSync(join(lbbDir, `lbb-${trackId}.json`), JSON.stringify(rep, null, 2));
       }
       // Re-aggregate every per-track file in the dir (open first, then track id).

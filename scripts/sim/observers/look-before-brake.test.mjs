@@ -107,9 +107,11 @@ test('summarizeDecisions tallies outcomes, shares, windowEmpty and blockedRoom a
   assert.equal(s.windowEmpty, 1); // only the one blockedRoom with dTStart >= dynamicBrakeT
   assert.equal(s.noRoomOnTrack, 1);
   assert.equal(s.trafficBothSides, 1);
-  // roomShortfalls = {0.005, 0.01} → median 0.0075; tLats over blockedRoom = {4, 6} → median 5.
-  assert.ok(Math.abs(s.roomShortfallMedian - 0.0075) < 1e-9);
-  assert.equal(s.tLatMedian, 5);
+  // roomShortfalls = {0.005, 0.01}; nearest-rank median (q=0.5 over the 6-dp histogram) → 0.01.
+  // tLats over blockedRoom = {4, 6} → nearest-rank median → 6.
+  assert.equal(s.roomShortfallMedian, 0.01);
+  assert.equal(s.tLatMedian, 6);
+  assert.equal(s.roomShortfallP90, 0.01); // p90 of the two-value set → the upper bin
   assert.equal(s.shares.dodged, 0.1429); // 1/7 rounded to 4 dp by the observer
 });
 
