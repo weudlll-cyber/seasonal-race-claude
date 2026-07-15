@@ -49,6 +49,7 @@
 
 import { readFileSync, mkdirSync, writeFileSync, existsSync, readdirSync } from 'fs';
 import { join, dirname, isAbsolute } from 'path';
+import { Worker } from 'worker_threads';
 import { fileURLToPath } from 'url';
 
 const __filename = fileURLToPath(import.meta.url);
@@ -322,6 +323,11 @@ const COMEBACK_REALITY    = argv.includes('--comeback-reality');
 // --hero-map. Fully flag-gated → a no-flag run does zero extra work and is byte-identical (fingerprint gate).
 // Writes results/lbb-diag-<date>/ (report.md + detail.json). See docs/SIM.md "Look-Before-Brake Diagnostics".
 const LBB_DIAG            = argv.includes('--lbb-diag');
+// --jobs=<n>: parallelise the per-combo race loop across a worker_threads pool of size n. Default 1 =
+// today's serial path, byte-identical. Opt-in only. Races are independently seeded and share no state
+// across the boundary (raceBehavior.js module state is per-worker); results are folded in ascending
+// raceIdx order, never completion order, so nothing downstream observes scheduling. See PART C.
+const JOBS               = Math.max(1, parseInt(argVal('jobs', '1'), 10) || 1);
 // Streaming per-track accumulators (bounded memory): each race is folded and its raw records dropped, so a
 // 50-race sweep never holds tens of millions of decision records at once. trackId → { isOpen, nRaces, acc }.
 const lbbAccByTrack      = new Map();
@@ -2541,6 +2547,139 @@ function runFairnessSelfCheck() {
 //    rowLayoutConfig as arguments (formerly module globals).
 
 
+// ── Single-race routine (THE one source; called by BOTH the serial loop and the --jobs worker) ─────
+// Runs race `raceIdx` of a combo and returns its raw result plus the per-race plan data the folding step
+// needs. Reads the module-level CLI-derived constants (BONUS_MULT / CHOREO_* / …), which are identical in
+// the main process and in a worker that replays the same argv — so the worker and the serial path execute
+// byte-for-byte the same physics. `ctx` carries the per-combo values (shape rebuilt in the worker from the
+// serializable track JSON). No aggregation, no I/O here: those stay on the main thread.
+export function runRaceForCombo(ctx, raceIdx) {
+  const {
+    shape, pathLengthPx, geometricTrackWidth, isOpen, speedMultiplier, displaySize,
+    bodyFillX, bodyFillY, finishT, durationSec, nRacersForCombo, comboRowAssignments,
+  } = ctx;
+  // seed=0 → non-deterministic (exploration); seed>0 → reproducible batch. IDENTICAL formula to before.
+  const seed = GLOBAL_SEED > 0 ? (GLOBAL_SEED - 1) * N_RACES + raceIdx + 1 : 0;
+  let racePlanController = null;
+  let raceSollRankMap = null;
+  const b1Indices = new Set();
+  if (RACE_PLAN_ACTIVE) {
+    const planRacers = comboRowAssignments.map((a) => ({ index: a.racerIndex, startRowIndex: a.rowIndex }));
+    const plan = createRacePlan(planRacers, finishT, durationSec * 1000, {
+      bonusStrengthMultiplier: BONUS_MULT,
+      phaseSplitBonusEnabled:  PHASE_SPLIT_BONUS_ENABLED,
+      areaBonusEarly:          AREA_BONUS_EARLY,
+      areaBonusPulk:           AREA_BONUS_PULK,
+      areaBonusPost:           AREA_BONUS_POST,
+      pulkStart:               RP_PULK_START,
+      bonusTransitionEnd:      RP_BONUS_TRANSITION_END,
+      bonusFadeDuration:       RP_BONUS_FADE_MS,
+      corridorStart:           RP_CORRIDOR_START,
+      corridorEnd:             RP_CORRIDOR_END,
+      pulkBiasGain:            RP_PULK_BIAS_GAIN,
+      choreoSuppressChaosBonusB1: CHOREO_SUPPRESS_CHAOS_BONUS_B1,
+      choreoIntensity:     CHOREO_INTENSITY,
+      choreoPackBandStrictness: CHOREO_PACK_BAND_STRICTNESS,
+      choreoReleaseProgress: CHOREO_RELEASE_PROGRESS,
+      choreoResolveB2:     CHOREO_RESOLVE_B2,
+      choreoResolveB3:     CHOREO_RESOLVE_B3,
+      choreoResolveB4:     CHOREO_RESOLVE_B4,
+      choreoResolveB5:     CHOREO_RESOLVE_B5,
+      choreoOutcomeStart:  CHOREO_OUTCOME_START,
+    }, seed);
+    racePlanController = createTrajectoryController(plan);
+    raceSollRankMap = plan._racerTargetRank;
+    if (COMEBACK_ANALYSIS) {
+      for (const [idx, sr] of raceSollRankMap) {
+        if (sr <= 5) b1Indices.add(idx);
+      }
+    }
+  }
+  const result = runSingleRace({
+    shape,
+    pathLengthPx,
+    geometricTrackWidth,
+    isOpen,
+    speedMultiplier,
+    displaySize,
+    bodyFillX,
+    bodyFillY,
+    finishT,
+    targetSeconds: durationSec,
+    seed,
+    nRacers: nRacersForCombo,
+    diagnosticMode: DIAG_MODE,
+    behaviorConfigOverrides: {
+      isOpen,
+      ...(WARMUP_MS_OVERRIDE !== null ? { avoidanceWarmupMs: WARMUP_MS_OVERRIDE } : {}),
+      ...BEHAVIOR_OVERRIDE,
+    },
+    racePlanController,
+    comebackAnalysisConfig: COMEBACK_ANALYSIS && RACE_PLAN_ACTIVE
+      ? { b1Indices, minPositions: CB_MIN_POSITIONS, windowSec: CB_WINDOW_SEC, endgameThresh: CB_ENDGAME_THRESH }
+      : null,
+    breakawayDiag:      BREAKAWAY_DIAG,
+    frontAction:        FRONT_ACTION,
+    racerTargetRankMap: raceSollRankMap,
+    heroMap:            HERO_MAP,
+    gapMetrics:         GAP_METRICS,
+    lbbDiag:            LBB_DIAG,
+  });
+  return { result, seed, raceSollRankMap, b1Indices };
+}
+
+// `result` is an ARRAY with extra own properties (heroObs / lbbDecisions / naturalness / …). structuredClone
+// (used by postMessage) clones an array's ELEMENTS but DROPS its non-index own properties, so a worker must
+// pack them explicitly. Generic (any current/future attached prop survives), so the two paths can't drift.
+export function packResultArray(result) {
+  const rows = Array.from(result);
+  const props = {};
+  for (const k of Object.keys(result)) if (!/^\d+$/.test(k)) props[k] = result[k];
+  return { rows, props };
+}
+export function unpackResultArray(packed) {
+  const result = packed.rows;
+  Object.assign(result, packed.props);
+  return result;
+}
+
+// Run one combo's N races across a worker_threads pool, returning an array of { result, seed,
+// raceSollRankMap, b1Indices } in ASCENDING raceIdx order (never completion order). Each worker replays the
+// same CLI argv (so its module constants match exactly) and rebuilds the non-serializable EditorShape from
+// the combo's track JSON. Aggregation stays on the caller (main thread).
+async function runComboRacesParallel(comboCtx, nRaces, jobs) {
+  const workerPath = new URL('./sim/sim-race-worker.mjs', import.meta.url);
+  const { shape, ...comboData } = comboCtx; // drop the class-instance shape; the worker rebuilds it
+  const cliArgs = process.argv.slice(2);    // replay to workers so GLOBAL_SEED / CHOREO_* / … all match
+  const poolSize = Math.min(jobs, nRaces);
+  const results = new Array(nRaces);
+  let nextIdx = 0;
+  let done = 0;
+  return await new Promise((resolve, reject) => {
+    const workers = [];
+    const dispatch = (w) => { if (nextIdx < nRaces) w.postMessage({ raceIdx: nextIdx++ }); };
+    for (let i = 0; i < poolSize; i++) {
+      const w = new Worker(workerPath, { argv: cliArgs, workerData: { comboData } });
+      w.on('message', (msg) => {
+        results[msg.raceIdx] = {
+          result: unpackResultArray(msg.packed),
+          seed: msg.seed,
+          raceSollRankMap: msg.raceSollRankMap,
+          b1Indices: msg.b1Indices,
+        };
+        if (++done === nRaces) {
+          Promise.all(workers.map((x) => x.terminate())).then(() => resolve(results), reject);
+        } else {
+          dispatch(w);
+        }
+      });
+      w.on('error', reject);
+      workers.push(w);
+      dispatch(w);
+    }
+  });
+}
+
 // ── Main ──────────────────────────────────────────────────────────────────────
 const isMain =
   typeof process !== 'undefined' &&
@@ -2707,79 +2846,22 @@ if (isMain) {
 
         const raceResults   = [];
         const mixingQuotas  = [];
+        // Per-combo context bundle for runRaceForCombo (the ONE race routine). `shape` is a class instance
+        // rebuilt in workers from the serializable `track`; comboRowLayout.assignments is the deterministic
+        // start-row layout computed once above. Everything else is plain data.
+        const comboCtx = {
+          shape, track, pathLengthPx, geometricTrackWidth, isOpen, speedMultiplier, displaySize,
+          bodyFillX, bodyFillY, finishT, durationSec, nRacersForCombo,
+          comboRowAssignments: comboRowLayout.assignments,
+        };
+        // --jobs>1: run this combo's races across a worker pool; results return in ascending raceIdx order,
+        // so the fold below is byte-identical to serial. --jobs=1: no workers, plain in-order calls.
+        const parallelOuts = JOBS > 1
+          ? await runComboRacesParallel(comboCtx, N_RACES, JOBS)
+          : null;
         for (let raceIdx = 0; raceIdx < N_RACES; raceIdx++) {
-          // seed=0 → non-deterministic (exploration); seed>0 → reproducible batch
-          const seed = GLOBAL_SEED > 0 ? (GLOBAL_SEED - 1) * N_RACES + raceIdx + 1 : 0;
-          // Phase-3A: create Race Plan + TrajectoryController for this race when active
-          let racePlanController = null;
-          let raceSollRankMap = null;
-          let b1Indices = new Set();
-          if (RACE_PLAN_ACTIVE) {
-            const planRacers = comboRowLayout.assignments.map(
-              (a) => ({ index: a.racerIndex, startRowIndex: a.rowIndex })
-            );
-            const plan = createRacePlan(planRacers, finishT, durationSec * 1000, {
-              bonusStrengthMultiplier: BONUS_MULT,
-              // areaBonus phase-split (INFRA 5A): threaded into the plan so the shared controller
-              // applies the rescale from ONE source (browser + sim), from the shipped dynamics config.
-              phaseSplitBonusEnabled:  PHASE_SPLIT_BONUS_ENABLED,
-              areaBonusEarly:          AREA_BONUS_EARLY,
-              areaBonusPulk:           AREA_BONUS_PULK,
-              areaBonusPost:           AREA_BONUS_POST,
-              pulkStart:               RP_PULK_START,
-              bonusTransitionEnd:      RP_BONUS_TRANSITION_END,
-              bonusFadeDuration:       RP_BONUS_FADE_MS,
-              corridorStart:           RP_CORRIDOR_START,
-              corridorEnd:             RP_CORRIDOR_END,
-              pulkBiasGain:            RP_PULK_BIAS_GAIN,
-              choreoSuppressChaosBonusB1: CHOREO_SUPPRESS_CHAOS_BONUS_B1,
-              choreoIntensity:     CHOREO_INTENSITY,
-              choreoPackBandStrictness: CHOREO_PACK_BAND_STRICTNESS,
-              choreoReleaseProgress: CHOREO_RELEASE_PROGRESS,
-              choreoResolveB2:     CHOREO_RESOLVE_B2,
-              choreoResolveB3:     CHOREO_RESOLVE_B3,
-              choreoResolveB4:     CHOREO_RESOLVE_B4,
-              choreoResolveB5:     CHOREO_RESOLVE_B5,
-              choreoOutcomeStart:  CHOREO_OUTCOME_START,
-            }, seed);
-            racePlanController = createTrajectoryController(plan);
-            raceSollRankMap = plan._racerTargetRank;
-            if (COMEBACK_ANALYSIS) {
-              for (const [idx, sr] of raceSollRankMap) {
-                if (sr <= 5) b1Indices.add(idx);
-              }
-            }
-          }
-          const result = runSingleRace({
-            shape,
-            pathLengthPx,
-            geometricTrackWidth,
-            isOpen,
-            speedMultiplier,
-            displaySize,
-            bodyFillX,
-            bodyFillY,
-            finishT,
-            targetSeconds: durationSec,
-            seed,
-            nRacers: nRacersForCombo,
-            diagnosticMode: DIAG_MODE,
-            behaviorConfigOverrides: {
-              isOpen,
-              ...(WARMUP_MS_OVERRIDE !== null ? { avoidanceWarmupMs: WARMUP_MS_OVERRIDE } : {}),
-              ...BEHAVIOR_OVERRIDE,
-            },
-            racePlanController,
-            comebackAnalysisConfig: COMEBACK_ANALYSIS && RACE_PLAN_ACTIVE
-              ? { b1Indices, minPositions: CB_MIN_POSITIONS, windowSec: CB_WINDOW_SEC, endgameThresh: CB_ENDGAME_THRESH }
-              : null,
-            breakawayDiag:      BREAKAWAY_DIAG,
-            frontAction:        FRONT_ACTION,
-            racerTargetRankMap: raceSollRankMap,
-            heroMap:            HERO_MAP,
-            gapMetrics:         GAP_METRICS,
-            lbbDiag:            LBB_DIAG,
-          });
+          const { result, seed, raceSollRankMap, b1Indices } =
+            parallelOuts ? parallelOuts[raceIdx] : runRaceForCombo(comboCtx, raceIdx);
           // HERO-MAP (--hero-map): stash this race's per-hero observations, tagged with combo meta.
           if (HERO_MAP && result.heroObs) {
             heroMapRaces.push({ trackId, racerType, durationSec, seed, raceIdx, isOpen, heroObs: result.heroObs });
