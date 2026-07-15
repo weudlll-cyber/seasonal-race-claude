@@ -187,15 +187,17 @@ test('(a) encounter with no dT > dTStart record → noWindowEver, windowFrames 0
   assert.ok(Math.abs(eo.entryGap - 0.005) < 1e-9);
 });
 
-test('(b) encounter whose first window frame fails the slower-leader test → blockedSlower', () => {
+test('(b) encounter whose first window frame fails the slower-leader test → blockedSlower (neverFaster)', () => {
   // Frame 10 has a window (dT > dTStart) but the leader is not slower and it is no hero → (b) fails first.
+  // Both frames are never-faster, so the encounter stays plain blockedSlower (not blockedSlowerAtFirstWindow).
   const enc = [
     brakeRec({ frame: 10, dT: 0.02, dTStart: 0.01, slowerLeaderOk: false, heroPass: false }),
-    brakeRec({ frame: 11, dT: 0.005, dTStart: 0.01 }), // later brake (room) — must not override the label
+    brakeRec({ frame: 11, dT: 0.005, dTStart: 0.01, slowerLeaderOk: false, heroPass: false }), // later brake (room)
   ];
   const eo = encounterOutcome(enc);
   assert.equal(eo.outcome, 'blockedSlower');
   assert.equal(eo.windowFrames, 1);
+  assert.equal(eo.everFaster, false);
 });
 
 test('(c) an encounter containing any takeFreeLane record → dodged, regardless of earlier blocked frames', () => {
@@ -240,4 +242,86 @@ test('brakeThenDodge cross-tab: a window that existed BEFORE the dodge is NOT no
   const btd = detectBrakeThenDodge(decisions);
   assert.equal(btd.length, 1);
   assert.equal(btd[0].windowBeforeDodge, 1);
+});
+
+// ── LBB-DIAG-3: real-overtake intent (everFaster) + blockedSlowerAtFirstWindow + pre-dodge attribution ──
+
+test('(a) no slowerLeaderOk and no heroPass frame → everFaster === false', () => {
+  const enc = [
+    brakeRec({ frame: 10, slowerLeaderOk: false, heroPass: false, dT: 0.005, dTStart: 0.01 }),
+    brakeRec({ frame: 11, slowerLeaderOk: false, heroPass: false, dT: 0.006, dTStart: 0.01 }),
+  ];
+  assert.equal(encounterOutcome(enc).everFaster, false);
+});
+
+test('(b) heroPass on one frame alone → everFaster === true', () => {
+  const enc = [
+    brakeRec({ frame: 10, slowerLeaderOk: false, heroPass: false, dT: 0.005, dTStart: 0.01 }),
+    brakeRec({ frame: 11, slowerLeaderOk: false, heroPass: true, dT: 0.006, dTStart: 0.01 }),
+  ];
+  assert.equal(encounterOutcome(enc).everFaster, true);
+});
+
+test('(c) first window frame fails slower-leader but the encounter is everFaster → blockedSlowerAtFirstWindow', () => {
+  const enc = [
+    // First window frame: slower-leader fails → base label blockedSlower.
+    brakeRec({ frame: 10, slowerLeaderOk: false, heroPass: false, dT: 0.02, dTStart: 0.01 }),
+    // A later window frame where the trailer WAS faster (slowerLeaderOk true) but drifted → everFaster true.
+    brakeRec({ frame: 11, slowerLeaderOk: true, vLatToward: -0.2, dT: 0.02, dTStart: 0.01 }),
+  ];
+  const eo = encounterOutcome(enc);
+  assert.equal(eo.everFaster, true);
+  assert.equal(eo.outcome, 'blockedSlowerAtFirstWindow');
+  // A neverFaster version of the same first frame keeps the plain blockedSlower label.
+  const encNever = [
+    brakeRec({ frame: 10, slowerLeaderOk: false, heroPass: false, dT: 0.02, dTStart: 0.01 }),
+    brakeRec({ frame: 11, slowerLeaderOk: false, heroPass: false, vLatToward: -0.2, dT: 0.02, dTStart: 0.01 }),
+  ];
+  assert.equal(encounterOutcome(encNever).outcome, 'blockedSlower');
+});
+
+test('(d) brakeThenDodge pre-dodge window frames are attributed with the existing classifier', () => {
+  const decisions = [
+    brakeRec({ frame: 10, slowerLeaderOk: false, heroPass: false, dT: 0.02, dTStart: 0.01 }), // window, blockedSlower
+    brakeRec({ frame: 11, vLatToward: -0.2, dT: 0.02, dTStart: 0.01 }),                        // window, blockedDrift
+    passingRec({ frame: 12 }),                                                                 // dodge
+  ];
+  const btd = detectBrakeThenDodge(decisions);
+  assert.equal(btd.length, 1);
+  assert.equal(btd[0].windowBeforeDodge, 2);
+  assert.deepEqual(btd[0].preDodgeWindowAttrib, { blockedSlower: 1, blockedNoFreeSide: 0, blockedDrift: 1 });
+  // The accumulator surfaces the same as shares (noFreeSide is 0 by construction).
+  const acc = emptyAccumulator();
+  accumulateRace(acc, decisions);
+  const p = finalizeAccumulator(acc).brakeThenDodge.preDodgeWindow;
+  assert.deepEqual(p.counts, { blockedSlower: 1, blockedNoFreeSide: 0, blockedDrift: 1 });
+  assert.equal(p.shares.blockedSlower, 0.5);
+  assert.equal(p.shares.blockedDrift, 0.5);
+});
+
+test('run-2 encounter labels reproduce: blockedSlower splits into blockedSlower + blockedSlowerAtFirstWindow', () => {
+  // Two everFaster "first-window-slower" encounters + one neverFaster: run-2 would have counted all three
+  // as blockedSlower; now two are blockedSlowerAtFirstWindow and one stays blockedSlower — sum preserved.
+  const mkEver = (base) => [
+    brakeRec({ frame: base, slowerLeaderOk: false, heroPass: false, dT: 0.02, dTStart: 0.01 }),
+    brakeRec({ frame: base + 1, slowerLeaderOk: true, vLatToward: -0.2, dT: 0.02, dTStart: 0.01 }),
+  ];
+  const mkNever = (base) => [
+    brakeRec({ frame: base, slowerLeaderOk: false, heroPass: false, dT: 0.02, dTStart: 0.01 }),
+    brakeRec({ frame: base + 1, slowerLeaderOk: false, heroPass: false, vLatToward: -0.2, dT: 0.02, dTStart: 0.01 }),
+  ];
+  // Distinct leader indices so each is its own encounter.
+  const decisions = [
+    ...mkEver(10).map((r) => ({ ...r, leaderIndex: 2 })),
+    ...mkEver(10).map((r) => ({ ...r, leaderIndex: 3 })),
+    ...mkNever(10).map((r) => ({ ...r, leaderIndex: 4 })),
+  ];
+  const fin = finalizeAccumulator((() => { const a = emptyAccumulator(); accumulateRace(a, decisions); return a; })());
+  const c = fin.encounter.counts;
+  assert.equal(c.blockedSlowerAtFirstWindow, 2);
+  assert.equal(c.blockedSlower, 1);
+  assert.equal(c.blockedSlower + c.blockedSlowerAtFirstWindow, 3); // == run-2's blockedSlower
+  // Intent split: the two everFaster in the everFaster block, the one neverFaster in the other.
+  assert.equal(fin.encounter.byIntent.everFaster.counts.blockedSlowerAtFirstWindow, 2);
+  assert.equal(fin.encounter.byIntent.neverFaster.counts.blockedSlower, 1);
 });

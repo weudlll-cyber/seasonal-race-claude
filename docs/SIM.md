@@ -839,16 +839,36 @@ Section B also reports, for encounters that had a window, **`windowFrames`** med
 WIDTH in frames — median 1–2 ⇒ a technicality even where it exists) and **`entryGap`** med/p90 (`dTStart −
 dT` at the first frame — how far below the window the pair becomes same-lane; negative ⇒ entered inside it).
 
-The decisive split: **high `noWindowEver`** ⇒ the pair becomes same-lane too late, the window is unreachable
-⇒ the lever is looking EARLIER (zone / geometry). **Low `noWindowEver` but low `dodged`** ⇒ the trailer had
-its chance and something else stopped it ⇒ the lever is `maxLateralSpeedPerStep` / the `dTStart` margins.
+**The section B breakdown is meaningless without real-overtake intent, so section B2 splits it by
+`everFaster`.** `noWindowEver` is assigned BEFORE any speed test, so it mixes "the trailer wanted to
+overtake and never got a window" (the actual problem) with "the trailer was never faster anyway, so there
+was nothing to do" (irrelevant) — contaminated in one direction. And the blocked label is read from the
+**first window frame only**, so `blockedSlower` absorbs causes that appeared later — contaminated in the
+opposite direction. **`everFaster`** = `slowerLeaderOk` OR `heroPass` on ≥1 frame of the encounter
+(the gate's own real-overtake test; a choreographed hero is meant to pass on a marginal margin). Only the
+**`everFaster`** block is the addressable population; **`neverFaster`** encounters are the gate correctly
+declining to weave around same-speed traffic. Read `noWindowEver` and the blocked labels ONLY within the
+`everFaster` block.
+
+To make the first-window-frame snapshot bias visible instead of hidden, the label
+**`blockedSlowerAtFirstWindow`** is used INSTEAD of `blockedSlower` when the encounter had a window, its
+first window frame failed the slower-leader test, BUT the encounter is `everFaster` (the trailer WAS faster
+on some other frame — the snapshot mislabelled it). `blockedSlower` then means only "never faster at all".
+Every other label's definition is unchanged, so runs 1–2 reproduce: run-2's `blockedSlower` =
+`blockedSlower` + `blockedSlowerAtFirstWindow`.
+
+The decisive split: **high `everFaster` `noWindowEver`** ⇒ real overtakes that never got a window ⇒ the lever
+is looking EARLIER (zone / geometry). **Low `everFaster` `noWindowEver` but low `everFaster` `dodged`** ⇒ it
+had room and intent and still did not pass ⇒ the lever is `maxLateralSpeedPerStep` / the `dTStart` margins.
 
 **`brakeThenDodge` — the Owner's complaint as a number (section C).** Within one encounter the trailer BRAKES
 on some frames and then DODGES past the same leader, WITHOUT ever being blocked by traffic
 (`blockedNoFreeSide`) in between. The report gives the count and the median braked frames before the dodge.
 The **causal cross-tab `noWindowBeforeDodge`** = of those, the share with NO usable window frame
-(`dT > dTStart`) before the first dodge — i.e. the BRAKE itself opened the gap the dodge then used. A high
-share is direct proof of the complaint.
+(`dT > dTStart`) before the first dodge — i.e. the BRAKE itself opened the gap the dodge then used. Its
+complement is the majority (run 2: 81–87%) where a window ALREADY existed before the brake: for those the
+report attributes the **pre-dodge window frames** with the per-record classifier (`slower` / `drift`;
+`noFreeSide` is 0 by construction) — what made the racer brake while it already had the room to pass.
 
 **How to read the per-frame (section A) blockedRoom detail.** For `blockedRoom` the report gives the
 **`roomShortfall`** (`dTStart − dT`, median + p90) and **`tLat`** (steps to clear sideways): a small shortfall

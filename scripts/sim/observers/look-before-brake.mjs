@@ -100,7 +100,12 @@ function histQuantile(hist, q) {
 // the array-path summarizeDecisions below (one attribution source, no drift). Two UNITS live here and are
 // labelled apart everywhere: per pair-FRAME (time-weighted — a brake lingers same-lane for many frames, a
 // dodge exits the same-lane filter at once) and per ENCOUNTER (one label per same-pair contiguous run).
-const ENC_OUTCOMES = ['dodged', 'noWindowEver', 'blockedSlower', 'blockedNoFreeSide', 'blockedDrift'];
+// ENC_OUTCOMES (LBB-DIAG-3): blockedSlowerAtFirstWindow is a REFINEMENT of run-2's blockedSlower — the
+// everFaster subset where the FIRST window frame happened to fail the slower-leader test. run-2's
+// blockedSlower count is therefore reproducible as blockedSlower + blockedSlowerAtFirstWindow; the other
+// four labels are byte-unchanged.
+const ENC_OUTCOMES = ['dodged', 'noWindowEver', 'blockedSlower', 'blockedSlowerAtFirstWindow', 'blockedNoFreeSide', 'blockedDrift'];
+const emptyEncCounts = () => ({ dodged: 0, noWindowEver: 0, blockedSlower: 0, blockedSlowerAtFirstWindow: 0, blockedNoFreeSide: 0, blockedDrift: 0 });
 
 export function emptyAccumulator() {
   return {
@@ -114,13 +119,21 @@ export function emptyAccumulator() {
     tLatHist: new Map(),
     // ── per ENCOUNTER (one label each) ──
     encounters: 0,
-    encCounts: { dodged: 0, noWindowEver: 0, blockedSlower: 0, blockedNoFreeSide: 0, blockedDrift: 0 },
+    encCounts: emptyEncCounts(),
     windowFramesHist: new Map(), // only encounters with windowFrames >= 1
     entryGapHist: new Map(),
+    // ── per ENCOUNTER split by real-overtake intent (everFaster = slowerLeaderOk|heroPass on ≥1 frame) ──
+    encEverFaster: 0,
+    encNeverFaster: 0,
+    encCountsEver: emptyEncCounts(),
+    encCountsNever: emptyEncCounts(),
     // ── brakeThenDodge (encounter-level) + the causal cross-tab ──
     btdCount: 0, // brakeThenDodge encounter count
     btdBrakedFrames: [], // braked-frames-before-dodge per encounter (small: ~thousands per track)
     btdNoWindowBeforeDodge: 0, // of those, how many had NO usable window frame before the first dodge
+    // Pre-dodge WINDOW frames of brakeThenDodge encounters, attributed by the per-record classifier: why
+    // did the racer brake while it already had the room (a window) — and the intent — to pass?
+    btdPreDodgeWindowAttrib: { blockedSlower: 0, blockedNoFreeSide: 0, blockedDrift: 0 },
   };
 }
 
@@ -146,6 +159,9 @@ export function accumulateRace(acc, decisions) {
     const eo = encounterOutcome(enc);
     acc.encounters++;
     acc.encCounts[eo.outcome]++;
+    // Split the SAME breakdown by real-overtake intent — only the everFaster population is addressable.
+    if (eo.everFaster) { acc.encEverFaster++; acc.encCountsEver[eo.outcome]++; }
+    else { acc.encNeverFaster++; acc.encCountsNever[eo.outcome]++; }
     if (eo.windowFrames >= 1) histPush(acc.windowFramesHist, eo.windowFrames);
     histPush(acc.entryGapHist, eo.entryGap);
     const btd = brakeThenDodgeOfEncounter(enc);
@@ -153,6 +169,9 @@ export function accumulateRace(acc, decisions) {
       acc.btdCount++;
       acc.btdBrakedFrames.push(btd.brakedBeforeDodge);
       if (btd.windowBeforeDodge === 0) acc.btdNoWindowBeforeDodge++;
+      acc.btdPreDodgeWindowAttrib.blockedSlower += btd.preDodgeWindowAttrib.blockedSlower;
+      acc.btdPreDodgeWindowAttrib.blockedNoFreeSide += btd.preDodgeWindowAttrib.blockedNoFreeSide;
+      acc.btdPreDodgeWindowAttrib.blockedDrift += btd.preDodgeWindowAttrib.blockedDrift;
     }
   }
 }
@@ -180,6 +199,11 @@ export function finalizeAccumulator(acc) {
       const E = acc.encounters;
       const encShares = {};
       for (const o of ENC_OUTCOMES) encShares[o] = share(acc.encCounts[o], E);
+      const intentBlock = (n, counts) => {
+        const sh = {};
+        for (const o of ENC_OUTCOMES) sh[o] = share(counts[o], n);
+        return { encounters: n, counts: { ...counts }, shares: sh };
+      };
       return {
         encounters: E,
         counts: { ...acc.encCounts },
@@ -191,6 +215,12 @@ export function finalizeAccumulator(acc) {
         // entryGap = dTStart − dT at the encounter's first record (negative ⇒ entered already in-window).
         entryGapMedian: histQuantile(acc.entryGapHist, 0.5),
         entryGapP90: histQuantile(acc.entryGapHist, 0.9),
+        // Same breakdown split by real-overtake intent. ONLY everFaster is the addressable population;
+        // neverFaster is the gate correctly declining to weave around same-speed traffic.
+        byIntent: {
+          everFaster: intentBlock(acc.encEverFaster, acc.encCountsEver),
+          neverFaster: intentBlock(acc.encNeverFaster, acc.encCountsNever),
+        },
       };
     })(),
     brakeThenDodge: {
@@ -200,6 +230,21 @@ export function finalizeAccumulator(acc) {
       // the first dodge — i.e. the brake itself opened the gap the dodge then used.
       noWindowBeforeDodge: acc.btdNoWindowBeforeDodge,
       noWindowBeforeDodgeShare: share(acc.btdNoWindowBeforeDodge, acc.btdCount),
+      // The other side of run-2's finding: in the MAJORITY of confirmed false brakes a window already
+      // existed before the brake — so what made it brake with room (and intent) in hand? Attribute those
+      // pre-dodge window frames. (noFreeSide is 0 by construction: traffic anywhere pre-dodge disqualifies.)
+      preDodgeWindow: (() => {
+        const a = acc.btdPreDodgeWindowAttrib;
+        const tot = a.blockedSlower + a.blockedNoFreeSide + a.blockedDrift;
+        return {
+          counts: { ...a },
+          shares: {
+            blockedSlower: share(a.blockedSlower, tot),
+            blockedNoFreeSide: share(a.blockedNoFreeSide, tot),
+            blockedDrift: share(a.blockedDrift, tot),
+          },
+        };
+      })(),
     },
   };
 }
@@ -252,12 +297,18 @@ export function groupEncounters(decisions) {
 //                  geometric existence that windowEmpty tested).
 //   dodged       — the encounter contained ≥1 takeFreeLane record.
 //   entryGap     — dTStart − dT at the FIRST record (negative ⇒ became same-lane already inside the window).
+//   everFaster   — slowerLeaderOk OR heroPass on ≥1 frame: a real overtake was genuinely on the table.
+//                  neverFaster encounters are the gate correctly declining to weave around same-speed traffic.
 //   outcome      — dodged | noWindowEver (never a usable frame) | else the FIRST blocking condition on the
 //                  FIRST window frame, via the per-record classifier (never blockedRoom — a window frame
-//                  passed room by definition — and never dodged, since the encounter is not dodged).
+//                  passed room by definition — and never dodged, since the encounter is not dodged). When
+//                  that first-window label is blockedSlower BUT the encounter is everFaster, it is relabelled
+//                  blockedSlowerAtFirstWindow — the trailer WAS faster elsewhere, so the first-frame snapshot
+//                  mislabels it. blockedSlower then means only "never faster at all" (an honest decline).
 export function encounterOutcome(enc) {
   const dodged = enc.some((r) => r.takeFreeLane === true);
   const windowFrames = enc.reduce((n, r) => n + (r.dT > r.dTStart ? 1 : 0), 0);
+  const everFaster = enc.some((r) => r.slowerLeaderOk === true || r.heroPass === true);
   const first = enc[0];
   const entryGap = first.dTStart - first.dT;
   let outcome;
@@ -267,14 +318,20 @@ export function encounterOutcome(enc) {
     outcome = 'noWindowEver';
   } else {
     const firstWindow = enc.find((r) => r.dT > r.dTStart);
-    outcome = attributeDecision(firstWindow).outcome; // blockedSlower | blockedNoFreeSide | blockedDrift
+    const base = attributeDecision(firstWindow).outcome; // blockedSlower | blockedNoFreeSide | blockedDrift
+    outcome = base === 'blockedSlower' && everFaster ? 'blockedSlowerAtFirstWindow' : base;
   }
-  return { outcome, windowFrames, dodged, entryGap };
+  return { outcome, windowFrames, dodged, entryGap, everFaster };
 }
 
 // brakeThenDodgeOfEncounter(enc): null unless the trailer braked (never traffic-blocked) and then dodged
-// the same leader. Returns { brakedBeforeDodge, windowBeforeDodge } — windowBeforeDodge = how many of the
-// pre-dodge records already had a usable window (dT > dTStart); 0 ⇒ the brake opened the gap the dodge used.
+// the same leader. Returns:
+//   brakedBeforeDodge  — braked frames before the first dodge.
+//   windowBeforeDodge  — how many of the pre-dodge records already had a usable window (dT > dTStart);
+//                        0 ⇒ the brake opened the gap the dodge then used.
+//   preDodgeWindowAttrib — the per-record classifier's label for EACH pre-dodge window frame: why did it
+//                        brake while it already had the room? (blockedNoFreeSide is 0 by construction — a
+//                        traffic block anywhere before the dodge disqualifies the encounter above.)
 function brakeThenDodgeOfEncounter(enc) {
   const attrs = enc.map(attributeDecision);
   const firstDodge = attrs.findIndex((a) => a.outcome === 'dodged');
@@ -283,8 +340,16 @@ function brakeThenDodgeOfEncounter(enc) {
   if (brakedBefore.length === 0) return null; // dodged immediately after entering — not the pattern
   // "without ever having been blocked by traffic in between": no traffic block before the dodge.
   if (brakedBefore.some((a) => a.outcome === 'blockedNoFreeSide')) return null;
-  const windowBeforeDodge = enc.slice(0, firstDodge).reduce((n, r) => n + (r.dT > r.dTStart ? 1 : 0), 0);
-  return { brakedBeforeDodge: brakedBefore.length, windowBeforeDodge };
+  let windowBeforeDodge = 0;
+  const preDodgeWindowAttrib = { blockedSlower: 0, blockedNoFreeSide: 0, blockedDrift: 0 };
+  for (let i = 0; i < firstDodge; i++) {
+    if (enc[i].dT > enc[i].dTStart) {
+      windowBeforeDodge++;
+      const lab = attrs[i].outcome; // window frame ⇒ blockedSlower | blockedNoFreeSide | blockedDrift
+      if (lab in preDodgeWindowAttrib) preDodgeWindowAttrib[lab]++;
+    }
+  }
+  return { brakedBeforeDodge: brakedBefore.length, windowBeforeDodge, preDodgeWindowAttrib };
 }
 
 // detectBrakeThenDodge(decisions): decisions of ONE race → the brakeThenDodge encounters (thin wrapper
@@ -370,11 +435,32 @@ export function renderMarkdown(perTrack, meta = {}) {
   L.push('> had one (median 1–2 ⇒ a technicality even where it exists). **`entryGap`** = dTStart − dT at the first');
   L.push('> frame (how far below the window the pair becomes same-lane; negative ⇒ entered inside it).');
   L.push('');
-  L.push('| Track | encounters | dodged | noWindowEver | blockedSlower | blockedNoFreeSide | blockedDrift | windowFrames med / p90 | entryGap med / p90 |');
-  L.push('|---|---:|---:|---:|---:|---:|---:|---:|---:|');
+  L.push('> **`blockedSlowerAtFirstWindow`** = would be blockedSlower by the first-window-frame snapshot, but the');
+  L.push('> encounter WAS faster on another frame (`everFaster`) — the snapshot mislabelled it. `blockedSlower` here');
+  L.push('> means only "never faster at all". (run-2 `blockedSlower` = these two columns summed.)');
+  L.push('');
+  L.push('| Track | encounters | dodged | noWindowEver | blockedSlower | slower@1stWin | blockedNoFreeSide | blockedDrift | windowFrames med / p90 | entryGap med / p90 |');
+  L.push('|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|');
   for (const t of perTrack) {
     const e = t.encounter;
-    L.push(`| ${t.trackId} | ${e.encounters} | ${fmtPct(e.shares.dodged)} | ${fmtPct(e.shares.noWindowEver)} | ${fmtPct(e.shares.blockedSlower)} | ${fmtPct(e.shares.blockedNoFreeSide)} | ${fmtPct(e.shares.blockedDrift)} | ${fmtNum(e.windowFramesMedian)} / ${fmtNum(e.windowFramesP90)} | ${fmtNum(e.entryGapMedian)} / ${fmtNum(e.entryGapP90)} |`);
+    L.push(`| ${t.trackId} | ${e.encounters} | ${fmtPct(e.shares.dodged)} | ${fmtPct(e.shares.noWindowEver)} | ${fmtPct(e.shares.blockedSlower)} | ${fmtPct(e.shares.blockedSlowerAtFirstWindow)} | ${fmtPct(e.shares.blockedNoFreeSide)} | ${fmtPct(e.shares.blockedDrift)} | ${fmtNum(e.windowFramesMedian)} / ${fmtNum(e.windowFramesP90)} | ${fmtNum(e.entryGapMedian)} / ${fmtNum(e.entryGapP90)} |`);
+  }
+  L.push('');
+  L.push('## B2. Per ENCOUNTER split by REAL OVERTAKE INTENT (everFaster) — the addressable population');
+  L.push('');
+  L.push('> `everFaster` = `slowerLeaderOk` OR `heroPass` on ≥1 frame: a real overtake was genuinely on the table.');
+  L.push('> **Only the everFaster block is addressable** — `neverFaster` encounters are the gate correctly declining');
+  L.push('> to weave around same-speed traffic. Without this split section B is meaningless: `noWindowEver` mixes');
+  L.push('> "wanted to pass but never got a window" with "was never faster anyway", contaminated in opposite');
+  L.push('> directions. Each block has its OWN denominator.');
+  L.push('');
+  L.push('| Track | intent | encounters | dodged | noWindowEver | blockedSlower | slower@1stWin | blockedNoFreeSide | blockedDrift |');
+  L.push('|---|---|---:|---:|---:|---:|---:|---:|---:|');
+  for (const t of perTrack) {
+    for (const [key, label] of [['everFaster', 'everFaster'], ['neverFaster', 'neverFaster']]) {
+      const g = t.encounter.byIntent[key];
+      L.push(`| ${t.trackId} | ${label} | ${g.encounters} | ${fmtPct(g.shares.dodged)} | ${fmtPct(g.shares.noWindowEver)} | ${fmtPct(g.shares.blockedSlower)} | ${fmtPct(g.shares.blockedSlowerAtFirstWindow)} | ${fmtPct(g.shares.blockedNoFreeSide)} | ${fmtPct(g.shares.blockedDrift)} |`);
+    }
   }
   L.push('');
   L.push('## C. Smoking gun — brakeThenDodge and its causal cross-tab');
@@ -391,11 +477,26 @@ export function renderMarkdown(perTrack, meta = {}) {
     L.push(`| ${t.trackId} | ${b.count} | ${fmtNum(b.medianBrakedFrames)} | ${b.noWindowBeforeDodge} | ${fmtPct(b.noWindowBeforeDodgeShare)} |`);
   }
   L.push('');
+  L.push('> **Pre-dodge WINDOW frames** — run-2 found a window already existed before the brake in the MAJORITY of');
+  L.push('> these confirmed false brakes, so room was not the blocker. This attributes those pre-dodge window frames:');
+  L.push('> what made the racer brake while it already had the room to pass? (`noFreeSide` is 0 by construction — a');
+  L.push('> traffic block anywhere before the dodge disqualifies the encounter.)');
+  L.push('');
+  L.push('| Track | preDodge window frames | blockedSlower | blockedNoFreeSide | blockedDrift |');
+  L.push('|---|---:|---:|---:|---:|');
+  for (const t of perTrack) {
+    const p = t.brakeThenDodge.preDodgeWindow;
+    const tot = p.counts.blockedSlower + p.counts.blockedNoFreeSide + p.counts.blockedDrift;
+    L.push(`| ${t.trackId} | ${tot} | ${fmtPct(p.shares.blockedSlower)} | ${fmtPct(p.shares.blockedNoFreeSide)} | ${fmtPct(p.shares.blockedDrift)} |`);
+  }
+  L.push('');
   L.push('## How to read it');
-  L.push('- **High `noWindowEver` (section B)** ⇒ the pair becomes same-lane already too close; the window is unreachable in practice ⇒ the lever is looking EARLIER (zone / geometry), not lateral speed.');
-  L.push('- **Low `noWindowEver` but low `dodged`** ⇒ the trailer HAD its chance and something else stopped it ⇒ the lever is `maxLateralSpeedPerStep` / the dTStart margins.');
-  L.push('- **`windowFrames` median 1–2** ⇒ even where a window exists it is a technicality.');
-  L.push('- **High `noWindowBeforeDodge` (section C)** ⇒ the brake bought the room the dodge needed — the complaint, proven.');
+  L.push('- **Section B2 is the one that answers the fix question.** Read `noWindowEver` and the blocked labels ONLY within the `everFaster` block — that is the population where an overtake was actually on the table.');
+  L.push('- **High everFaster `noWindowEver`** ⇒ real overtakes that never got a window ⇒ the lever is looking EARLIER (zone / geometry).');
+  L.push('- **Low everFaster `noWindowEver` but low everFaster `dodged`** ⇒ it HAD room and intent and still did not pass ⇒ the lever is `maxLateralSpeedPerStep` / the dTStart margins.');
+  L.push('- **`slower@1stWin` large** ⇒ much of run-2\'s "blockedSlower" was a first-window-frame snapshot artefact, not a genuine same-speed decline.');
+  L.push('- **`neverFaster` encounters are NOT a problem** — the gate correctly declines to weave around same-speed traffic.');
+  L.push('- **Section C pre-dodge window** ⇒ for the false brakes the Owner sees, whether the brake opened the gap (`noWindowBeforeDodge`) or it braked with room already in hand (and why: slower/drift).');
   L.push('- Section A shares are TIME-WEIGHTED and must not be compared as encounter rates (see the note there).');
   L.push('');
   return L.join('\n');
