@@ -681,6 +681,7 @@ export default function RaceScreen() {
     const racePlanSeed = raceData.racePlanSeed ?? 0;
     let racePlanController = null;
     let rpPlanInfo = null;
+    let cameraPlanDelivered = false; // B4a: deliver the authored cameraPlan once, mid-race (heroes cast then)
     const speedRings = new Map();
     if (racePlanEnabled) {
       const planRacers = g.current.racers.map((r) => ({
@@ -989,6 +990,15 @@ export default function RaceScreen() {
 
           // Controller-Pass: rank racers by current t, write trajectoryMultTarget on each.
           if (racePlanController) racePlanController.update(st.racers, physicsTs, st.raceProgress);
+          // B4a: deliver the authored cameraPlan to the CameraDirector once it exists (heroes are cast
+          // mid-race, so it is null at race start). Camera-only; the pre-arm path is flag-gated in the Director.
+          if (racePlanController && !cameraPlanDelivered) {
+            const cp = racePlanController.getCameraPlan?.();
+            if (cp) {
+              camDirRef.current?.setCameraPlan(cp);
+              cameraPlanDelivered = true;
+            }
+          }
 
           // ── trajectoryMult easeInOutCubic transition (mirrors spreadFactor pattern) ──
           if (racePlanController) {
