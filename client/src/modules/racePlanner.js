@@ -530,9 +530,11 @@ export function createTrajectoryController(racePlan) {
         // produced — ONE source, populated here beside _heroCurves. Diagnostics-only (GovernorDiagHUD);
         // never recomputed, never read by physics.
         plan._heroRoles = new Map(gen.curves.map((c) => [c.index, c.role]));
-        // B4a camera-foresight: retain the FULL authored cameraPlan (all heroes + roles + beat timing)
+        // B4a foresight pipeline: retain the FULL authored cameraPlan (all heroes + roles + beat timing)
         // the generator already emits — ONE source, populated here beside _heroCurves/_heroRoles, never
-        // recomputed, never read by physics. Consumed by the CameraDirector as a foresight PRIOR only.
+        // recomputed, never read by physics. Delivered to the CameraDirector (setCameraPlan) but currently
+        // UNCONSUMED — kept as the prerequisite channel for the planned B4b faller shot, because b1Indices
+        // (targetRank ≤ 5) structurally cannot carry a faller (targetRank > 5).
         plan._cameraPlan = gen.cameraPlan ?? null;
         for (const r of racers) r.isHeroChoreographed = plan._heroCurves.has(r.index);
         plan._choreoGenerated = true;

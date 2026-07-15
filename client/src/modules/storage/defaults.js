@@ -212,7 +212,6 @@ export const DEFAULT_CAMERA_CONFIG = {
   // top-2 group shot with slow-motion instead of the single-winner drama pulse. Camera-only,
   // reuses the BATTLE arc-midpoint pan + group spriteScale and the render-loop slow-motion path.
   // photoFinishEnabled=false reproduces the classic single-winner finish exactly.
-  cameraForesight: false, // B4a: OFF = camera byte-identical; ON = pre-arm the authored comebacker (camera-only, not in world hash)
   photoFinishEnabled: true, // master switch for the photo-finish group shot
   photoFinishCloseThresholdT: 0.03, // max lap-normalized |t| gap between the top-2 finishers to count as "close" (same unit family as battlePulkThresholdT)
   photoFinishSlowmoFactor: 0.5, // physics slow-motion factor during the photo-finish shot (1.0 = normal, 0.5 = half speed)

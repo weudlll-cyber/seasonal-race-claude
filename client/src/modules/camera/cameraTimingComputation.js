@@ -262,9 +262,6 @@ export function computeTimingFromConfig(config) {
   const finishOverviewLookbackPx = config?.finishOverviewLookbackPx ?? 300;
   // Photo-Finish (15a): top-2 close-finish group shot. Camera-only; slow-motion factor is read
   // in the RaceScreen render loop (not a director tunable).
-  // B4a camera-foresight (default OFF): master switch for the CameraDirector consuming the authored
-  // cameraPlan to PRE-ARM the designated comebacker. Camera-only; never touches physics or the world hash.
-  const cameraForesight = config?.cameraForesight ?? false;
   const photoFinishEnabled = config?.photoFinishEnabled ?? true;
   const photoFinishCloseThresholdT = config?.photoFinishCloseThresholdT ?? 0.03;
   const photoFinishLeadProgress = config?.photoFinishLeadProgress ?? 0.97;
@@ -347,7 +344,6 @@ export function computeTimingFromConfig(config) {
     finishOverviewZoomOutDurationMs,
     finishPauseMs,
     finishOverviewLookbackPx,
-    cameraForesight,
     photoFinishEnabled,
     photoFinishCloseThresholdT,
     photoFinishLeadProgress,

@@ -37,11 +37,6 @@ const _BATTLE_PULK_THRESHOLD_T = BATTLE_PULK_THRESHOLD_T;
 const _BATTLE_MIN_DURATION_MS = 3000; // fallback: minimum ms BATTLE stays after entry
 const _FINISH_DRAMA_DURATION = 1500; // ms of LEADER_ZOOM on winner before OVERVIEW
 const _POST_START_HOLD_MS = 7000; // ms of forced LEADER after start phase (no BATTLE during this window)
-// ── B4a camera-foresight pre-arm tuning (all inert unless cameraForesight is ON) ────────────────
-const PRE_ARM_LEAD = 0.05; // begin the pre-arm window this much progress BEFORE the authored peak beat
-const PRE_ARM_PAD = 0.05; // keep it open this much progress AFTER the authored resolve beat
-const PRE_ARM_MIN_GAIN = 1; // time-bar: the primed racer may confirm on a smaller REAL gain (≥1 place),
-// so the shot commits earlier — the reality bar (a real gain must occur) is unchanged
 const _BATTLE_COOLDOWN_MS = 8000; // ms after leaving BATTLE before BATTLE can re-trigger
 const _BATTLE_MAX_DURATION = 6000; // ms BATTLE can hold before forced transition
 const _MIN_STATE_HOLD_MS = 5000; // minimum ms any state is held before _transition() fires
@@ -215,15 +210,10 @@ export class CameraDirector {
     // Camera lock for the current COMEBACK_ZOOM episode.
     this._comebackLockedRacer = null;
     this._comebackLockedRacerIndex = null;
-    // ── B4a camera-foresight (flag-gated; default OFF ⇒ every field below is inert) ──────────────
-    this._cameraForesight = false; // set from config (t.cameraForesight)
-    this._cameraPlan = null; // full authored plan { b1Indices, heroes:[{index,role,finalRank,beats}] }
-    this._primedComebackerIndex = null; // the designated comebacker to pre-arm (null = none)
-    this._primedPeakProgress = null; // its authored peak-beat progress (pre-arm window centre)
-    this._primedResolveProgress = null; // its authored resolve-beat progress (pre-arm window end)
-    this._preArmWindowActive = false; // inside the pre-arm window this frame (edge-tracking for the counter)
-    this._preArmFires = 0; // diag: pre-arms that led to a CONFIRMED comeback cut
-    this._preArmWindowsEntered = 0; // diag: pre-arm windows entered (unresolved = entered − fires)
+    // B4a foresight pipeline (Part 1): the full authored cameraPlan is STORED here (delivered mid-race by
+    // RaceScreen.setCameraPlan). Deliberately UNCONSUMED for now — b1Indices (targetRank ≤ 5) structurally
+    // cannot carry a faller (targetRank > 5), so this is the prerequisite channel for the B4b faller shot.
+    this._cameraPlan = null;
     // Cached per-frame values for getComebackDiagData() — updated every update() call.
     this._diagLeaderProgress = 0;
     this._diagIsExternalOutcomePhase = false;
@@ -432,8 +422,6 @@ export class CameraDirector {
     this._outcomePhaseThreshold = t.outcomePhaseThreshold;
     this._comebackMinStartGap = t.comebackMinStartGap;
     this._comebackMaxCurrentRankPct = t.comebackMaxCurrentRankPct;
-    this._cameraForesight = t.cameraForesight ?? false; // B4a: default OFF ⇒ pre-arm path never runs
-
     this._leadChangeMinGap = t.leadChangeMinGap;
     this._leadChangeDebounceMs = t.leadChangeDebounceMs;
     this._leadChangeMinDuration = t.leadChangeMinDuration;
@@ -512,55 +500,18 @@ export class CameraDirector {
     this._rankHistory = new Map(); // clear stale history on every race start
     this._comebackLockedRacer = null;
     this._comebackLockedRacerIndex = null;
-    // B4a: race-start reset of foresight state + diag counters. cameraPlan is usually null here (heroes
-    // are cast mid-race); the RaceScreen delivers it later via setCameraPlan() once it exists.
-    this._preArmFires = 0;
-    this._preArmWindowsEntered = 0;
-    this._setCameraPlanInternal(cameraPlan);
+    // B4a Part 1: store the authored plan (usually null here — heroes are cast mid-race, so the
+    // RaceScreen delivers it later via setCameraPlan()). Stored only; nothing consumes it yet (B4b).
+    this._cameraPlan = cameraPlan ?? null;
   }
 
   /**
    * Deliver the authored cameraPlan mid-race (after heroes are cast), WITHOUT resetting rank history.
-   * The RaceScreen calls it once, when the plan first becomes available.
+   * The RaceScreen calls it once, when the plan first becomes available. Stored only (B4b will consume it).
    * @param {object|null} cameraPlan  { b1Indices, heroes:[{index,role,finalRank,beats}] }
    */
   setCameraPlan(cameraPlan) {
-    this._setCameraPlanInternal(cameraPlan);
-  }
-
-  /**
-   * Store the plan and derive the designated comebacker to pre-arm (role === 'comebacker'; if more than
-   * one, the best-authored finisher by finalRank — anchorRank is not carried in cameraPlan, so this is the
-   * closest available "most-prominent-comeback" proxy). Extracts its peak/resolve beat progress fractions.
-   * Pure bookkeeping; changes NO camera decision unless cameraForesight is ON.
-   */
-  _setCameraPlanInternal(cameraPlan) {
     this._cameraPlan = cameraPlan ?? null;
-    this._primedComebackerIndex = null;
-    this._primedPeakProgress = null;
-    this._primedResolveProgress = null;
-    this._preArmWindowActive = false;
-    const heroes = cameraPlan?.heroes;
-    if (!Array.isArray(heroes)) return;
-    const comebackers = heroes.filter((h) => h.role === 'comebacker');
-    if (comebackers.length === 0) return;
-    const chosen = comebackers.slice().sort((a, b) => (a.finalRank ?? 99) - (b.finalRank ?? 99))[0];
-    this._primedComebackerIndex = chosen.index;
-    const beats = Array.isArray(chosen.beats) ? chosen.beats : [];
-    const peaks = beats.filter((b) => b.event === 'peak').map((b) => b.progress);
-    const resolves = beats.filter((b) => b.event === 'resolve').map((b) => b.progress);
-    this._primedPeakProgress = peaks.length ? Math.min(...peaks) : null;
-    this._primedResolveProgress = resolves.length ? Math.max(...resolves) : null;
-  }
-
-  /** B4a diagnostics (for the eye-test HUD / failure budget): pre-arm activity for this race. */
-  getForesightDiag() {
-    return {
-      primedComebacker: this._primedComebackerIndex,
-      preArmFires: this._preArmFires,
-      preArmWindowsEntered: this._preArmWindowsEntered,
-      preArmUnresolved: Math.max(0, this._preArmWindowsEntered - this._preArmFires),
-    };
   }
 
   /**
@@ -571,18 +522,13 @@ export class CameraDirector {
    * @param {number} ts  Current rAF timestamp in ms.
    */
   _updateRankHistory(racers, ts) {
-    // B4a: also track the primed comebacker's rank so the pre-arm can evaluate it even if it is not a
-    // final-band-1 racer. Flag-gated: OFF ⇒ the tracked set is exactly this._b1Indices (byte-identical).
-    const tracking = this._b1Indices ? new Set(this._b1Indices) : new Set();
-    if (this._cameraForesight && this._primedComebackerIndex != null)
-      tracking.add(this._primedComebackerIndex);
-    if (tracking.size === 0) return;
+    if (!this._b1Indices || this._b1Indices.size === 0) return;
     const windowMs = (this._comebackWindowSec ?? 5) * 1000;
     const pruneMs = windowMs + 2000; // 2 s extra buffer so window-start comparison always finds an entry
     const sorted = [...racers].sort((a, b) => b.t - a.t);
     for (let i = 0; i < sorted.length; i++) {
       const r = sorted[i];
-      if (!tracking.has(r.index)) continue;
+      if (!this._b1Indices.has(r.index)) continue;
       let hist = this._rankHistory.get(r.index);
       if (!hist) {
         hist = [];
@@ -602,22 +548,16 @@ export class CameraDirector {
    * @param {number} ts  Current timestamp in ms.
    * @returns {object|null}
    */
-  _detectComebackRacer(racers, ts, primed = null) {
-    // Default (reactive) path: iterate the final-band-1 set with the global minGain — unchanged.
-    // B4a pre-arm path: when `primed` is given, evaluate ONLY that racer with a lowered TIME-bar minGain;
-    // the REALITY bar is unchanged — a real rank-gain (from behind; same start-gap + current-rank filters)
-    // must still occur. No cut on authored intent alone.
-    const indices = primed?.index != null ? [primed.index] : [...(this._b1Indices ?? [])];
-    if (indices.length === 0) return null;
-    const defaultMinGain = this._comebackMinPositionsGained ?? 3;
+  _detectComebackRacer(racers, ts) {
+    if (!this._b1Indices || this._b1Indices.size === 0) return null;
+    const minGain = this._comebackMinPositionsGained ?? 3;
     const windowMs = (this._comebackWindowSec ?? 5) * 1000;
     const cutoff = ts - windowMs;
     const sorted = [...racers].sort((a, b) => b.t - a.t);
     const currentRankByIndex = new Map(sorted.map((r, i) => [r.index, i + 1]));
     let bestRacer = null;
     let bestGain = -1;
-    for (const idx of indices) {
-      const minGain = primed?.index === idx ? primed.minGain : defaultMinGain;
+    for (const idx of this._b1Indices) {
       const currentRank = currentRankByIndex.get(idx);
       if (currentRank == null) continue; // finished or absent
       const hist = this._rankHistory.get(idx);
@@ -1182,43 +1122,6 @@ export class CameraDirector {
             reason: `comeback: ${_comebackRacer.name ?? _comebackRacer.index} gained ≥${this._comebackMinPositionsGained} positions`,
             data: { comebackRacer: _comebackRacer },
           });
-        }
-      }
-
-      // B4a foresight pre-arm (flag-gated): the AUTHORED comebacker may be evaluated DURING its peak
-      // window (incl. PULK, before OUTCOME) with a lowered TIME-bar minGain, so the reactive gate confirms
-      // + cuts EARLIER, catching opening moves the OUTCOME-only path misses. The reactive gain gate stays
-      // the SOLE authority: no real gain ⇒ no cut. Only runs when cameraForesight is ON.
-      if (
-        !_comebackRacer &&
-        this._cameraForesight &&
-        comebackCooledDown &&
-        this._primedComebackerIndex != null &&
-        this._primedPeakProgress != null
-      ) {
-        const lo = this._primedPeakProgress - PRE_ARM_LEAD;
-        const hi = (this._primedResolveProgress ?? this._primedPeakProgress) + PRE_ARM_PAD;
-        if (leaderProgress >= lo && leaderProgress <= hi) {
-          if (!this._preArmWindowActive) {
-            this._preArmWindowActive = true;
-            this._preArmWindowsEntered++; // diag: a pre-arm window opened (unresolved unless it fires)
-          }
-          const primed = this._detectComebackRacer(racers, ts, {
-            index: this._primedComebackerIndex,
-            minGain: PRE_ARM_MIN_GAIN,
-          });
-          if (primed) {
-            _comebackRacer = primed;
-            this._preArmFires++;
-            candidates.push({
-              state: CAM_STATE.COMEBACK_ZOOM,
-              weight: this._comebackWeight,
-              reason: `comeback(pre-armed): ${primed.name ?? primed.index}`,
-              data: { comebackRacer: primed, preArmed: true },
-            });
-          }
-        } else {
-          this._preArmWindowActive = false;
         }
       }
 
