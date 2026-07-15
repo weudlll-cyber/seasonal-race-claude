@@ -554,6 +554,160 @@ describe('CameraDirector — §5.3 attention hierarchy', () => {
   });
 });
 
+// ── CameraDirector — B4b: comeback candidate = cast comebacker (plan-primary, b1 fallback) ─────────
+//
+// The comeback shot used to scan ALL of b1Indices (targetRank ≤ 5 — which includes the sovereign-leads)
+// and take whoever gained the most ranks. A sovereign-lead that dips and recovers reads as a big gain
+// and could win that scan. B4b makes the cast comebacker (heroes with role 'comebacker') the primary
+// candidate set, with the b1 scan kept as the fallback. The reality filters are untouched.
+
+describe('CameraDirector — B4b comeback candidate = cast comebacker', () => {
+  // 10-racer field. Sorted by t desc → rank. Racer index 2 sits at rank 3, racer index 1 at rank 5.
+  const buildField = () => [
+    { index: 0, t: 0.99, x: 0, y: 0, finished: false }, // rank 1
+    { index: 5, t: 0.98, x: 0, y: 0, finished: false }, // rank 2
+    { index: 2, t: 0.97, x: 0, y: 0, finished: false }, // rank 3  ← b1 "noise" (sovereign that dipped)
+    { index: 6, t: 0.96, x: 0, y: 0, finished: false }, // rank 4
+    { index: 1, t: 0.95, x: 0, y: 0, finished: false }, // rank 5  ← cast comebacker
+    { index: 7, t: 0.94, x: 0, y: 0, finished: false }, // rank 6
+    { index: 8, t: 0.93, x: 0, y: 0, finished: false }, // rank 7
+    { index: 9, t: 0.92, x: 0, y: 0, finished: false }, // rank 8
+    { index: 3, t: 0.91, x: 0, y: 0, finished: false }, // rank 9
+    { index: 4, t: 0.9, x: 0, y: 0, finished: false }, // rank 10
+  ];
+  const nowTs = 20000;
+
+  // Seed rank history so BOTH racer 1 (gain 3) and racer 2 (gain 5) pass every reality filter, and
+  // racer 2 has the LARGER gain — so a blind b1 scan would prefer racer 2 over the cast comebacker.
+  const seedHistory = (cd, { r1StartRank = 8, r2StartRank = 8 } = {}) => {
+    const cutoffPlus = nowTs - cd._comebackWindowSec * 1000 + 100;
+    cd._rankHistory.set(1, [
+      { ts: cutoffPlus, rank: r1StartRank },
+      { ts: nowTs - 100, rank: 5 },
+    ]);
+    cd._rankHistory.set(2, [
+      { ts: cutoffPlus, rank: r2StartRank },
+      { ts: nowTs - 100, rank: 3 },
+    ]);
+  };
+
+  const planWithComebacker = {
+    b1Indices: new Set([1, 2]),
+    heroes: [
+      { index: 1, role: 'comebacker', finalRank: 4, beats: [] },
+      { index: 2, role: 'sovereign-lead', finalRank: 1, beats: [] },
+    ],
+  };
+  const planWithoutComebacker = {
+    b1Indices: new Set([1, 2]),
+    heroes: [{ index: 2, role: 'sovereign-lead', finalRank: 1, beats: [] }],
+  };
+
+  it('(a) plan WITH a comebacker → only cast comebackers are evaluated (cast racer, not the bigger b1 gainer)', () => {
+    const cd = new CameraDirector();
+    cd.updateRacePlan(new Set([1, 2]));
+    cd.setCameraPlan(planWithComebacker);
+    expect([...cd._castComebackerIndices]).toEqual([1]);
+    seedHistory(cd);
+    const best = cd._detectComebackRacer(buildField(), nowTs);
+    expect(best).not.toBeNull();
+    // Racer 2 gained more ranks (5 vs 3) but is not the cast comebacker → racer 1 wins.
+    expect(best.index).toBe(1);
+  });
+
+  it('(b) plan WITHOUT a comebacker → b1 scan runs exactly as today (largest real gain wins)', () => {
+    const cd = new CameraDirector();
+    cd.updateRacePlan(new Set([1, 2]));
+    cd.setCameraPlan(planWithoutComebacker);
+    expect(cd._castComebackerIndices).toBeNull();
+    seedHistory(cd);
+    const best = cd._detectComebackRacer(buildField(), nowTs);
+    expect(best).not.toBeNull();
+    expect(best.index).toBe(2); // b1 scan → largest gain
+  });
+
+  it('(c) no plan → b1 scan runs exactly as today (largest real gain wins)', () => {
+    const cd = new CameraDirector();
+    cd.updateRacePlan(new Set([1, 2])); // race plan on, but no cameraPlan delivered
+    expect(cd._castComebackerIndices).toBeNull();
+    seedHistory(cd);
+    const best = cd._detectComebackRacer(buildField(), nowTs);
+    expect(best).not.toBeNull();
+    expect(best.index).toBe(2); // b1 scan → largest gain
+  });
+
+  // ── Reality filters unchanged in the plan-primary path ──────────────────────────────────────────
+  // The plan changes only WHO is watched, never WHEN we believe it: every gate still gates.
+
+  it('min-gain bar unchanged: a cast comebacker below comebackMinPositionsGained yields NO cut', () => {
+    const cd = new CameraDirector();
+    cd.updateRacePlan(new Set([1, 2]));
+    cd.setCameraPlan(planWithComebacker);
+    // Racer 1 (the only cast comebacker) starts at rank 6 → gain = 6-5 = 1 < minGain (2).
+    // Racer 2 has a valid gain but is NOT a cast comebacker → excluded → no fallback to it.
+    seedHistory(cd, { r1StartRank: 6 });
+    expect(cd._detectComebackRacer(buildField(), nowTs)).toBeNull();
+  });
+
+  it('start-gap filter unchanged: a cast comebacker starting too far forward yields NO cut', () => {
+    const cd = new CameraDirector();
+    cd.updateRacePlan(new Set([1]));
+    cd.setCameraPlan({
+      b1Indices: new Set([1]),
+      heroes: [{ index: 1, role: 'comebacker', beats: [] }],
+    });
+    // Racer 1 is at current rank 5 (field). Start rank 7 → gain 2 (≥ min), but startGapNorm above the
+    // 0.4 default; drop start rank to 3 → startGapNorm (3-1)/9 = 0.22 < 0.4 → filtered. gain 3-5 = -2 also
+    // fails, so use a field where racer 1 is near the front to isolate the start-gap gate.
+    const nearFront = [
+      { index: 0, t: 0.99, x: 0, y: 0, finished: false }, // rank 1
+      { index: 1, t: 0.98, x: 0, y: 0, finished: false }, // rank 2  ← cast comebacker
+      { index: 2, t: 0.97, x: 0, y: 0, finished: false },
+      { index: 3, t: 0.96, x: 0, y: 0, finished: false },
+      { index: 4, t: 0.95, x: 0, y: 0, finished: false },
+      { index: 5, t: 0.94, x: 0, y: 0, finished: false },
+      { index: 6, t: 0.93, x: 0, y: 0, finished: false },
+      { index: 7, t: 0.92, x: 0, y: 0, finished: false },
+      { index: 8, t: 0.91, x: 0, y: 0, finished: false },
+      { index: 9, t: 0.9, x: 0, y: 0, finished: false },
+    ];
+    // start rank 4 → gain 4-2 = 2 (≥ min), startGapNorm (4-1)/9 = 0.33 < 0.4 → filtered out.
+    cd._rankHistory.set(1, [
+      { ts: nowTs - cd._comebackWindowSec * 1000 + 100, rank: 4 },
+      { ts: nowTs - 100, rank: 2 },
+    ]);
+    expect(cd._detectComebackRacer(nearFront, nowTs)).toBeNull();
+  });
+
+  it('current-rank filter unchanged: a cast comebacker already at the very front yields NO cut', () => {
+    const cd = new CameraDirector();
+    cd.updateRacePlan(new Set([1]));
+    cd.setCameraPlan({
+      b1Indices: new Set([1]),
+      heroes: [{ index: 1, role: 'comebacker', beats: [] }],
+    });
+    const atFront = [
+      { index: 1, t: 0.99, x: 0, y: 0, finished: false }, // rank 1  ← cast comebacker, now leading
+      { index: 0, t: 0.98, x: 0, y: 0, finished: false },
+      { index: 2, t: 0.97, x: 0, y: 0, finished: false },
+      { index: 3, t: 0.96, x: 0, y: 0, finished: false },
+      { index: 4, t: 0.95, x: 0, y: 0, finished: false },
+      { index: 5, t: 0.94, x: 0, y: 0, finished: false },
+      { index: 6, t: 0.93, x: 0, y: 0, finished: false },
+      { index: 7, t: 0.92, x: 0, y: 0, finished: false },
+      { index: 8, t: 0.91, x: 0, y: 0, finished: false },
+      { index: 9, t: 0.9, x: 0, y: 0, finished: false },
+    ];
+    // start rank 6 → gain 6-1 = 5 (≥ min), startGapNorm (6-1)/9 = 0.56 ≥ 0.4 (passes start-gap), but
+    // currentRankNorm (1-1)/9 = 0 < 0.1 default → current-rank gate filters it out.
+    cd._rankHistory.set(1, [
+      { ts: nowTs - cd._comebackWindowSec * 1000 + 100, rank: 6 },
+      { ts: nowTs - 100, rank: 1 },
+    ]);
+    expect(cd._detectComebackRacer(atFront, nowTs)).toBeNull();
+  });
+});
+
 // ── CameraDirector — §5.4 trigger extensions ─────────────────────────────────
 
 describe('CameraDirector — §5.4 trigger extensions', () => {

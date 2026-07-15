@@ -210,10 +210,15 @@ export class CameraDirector {
     // Camera lock for the current COMEBACK_ZOOM episode.
     this._comebackLockedRacer = null;
     this._comebackLockedRacerIndex = null;
-    // B4a foresight pipeline (Part 1): the full authored cameraPlan is STORED here (delivered mid-race by
-    // RaceScreen.setCameraPlan). Deliberately UNCONSUMED for now — b1Indices (targetRank ≤ 5) structurally
-    // cannot carry a faller (targetRank > 5), so this is the prerequisite channel for the B4b faller shot.
+    // Foresight pipeline: the full authored cameraPlan is STORED here (delivered mid-race by
+    // RaceScreen.setCameraPlan). Consumed by _deriveCastComebackers() → _castComebackerIndices, which
+    // supplies _detectComebackRacer's primary candidate list (B4b).
     this._cameraPlan = null;
+    // Cast comebacker set: the heroes cast with role 'comebacker' (Set<racerIndex>). Derived ONCE from
+    // _cameraPlan whenever the plan is (re)stored — never per frame. Null/empty when the plan has no
+    // comebacker (assigned winner starts up front ⇒ cast 'sovereign-lead') or no plan is present; in that
+    // case _detectComebackRacer falls back to the b1Indices scan.
+    this._castComebackerIndices = null;
     // Cached per-frame values for getComebackDiagData() — updated every update() call.
     this._diagLeaderProgress = 0;
     this._diagIsExternalOutcomePhase = false;
@@ -500,18 +505,38 @@ export class CameraDirector {
     this._rankHistory = new Map(); // clear stale history on every race start
     this._comebackLockedRacer = null;
     this._comebackLockedRacerIndex = null;
-    // B4a Part 1: store the authored plan (usually null here — heroes are cast mid-race, so the
-    // RaceScreen delivers it later via setCameraPlan()). Stored only; nothing consumes it yet (B4b).
+    // Store the authored plan (usually null here — heroes are cast mid-race, so the RaceScreen
+    // delivers it later via setCameraPlan()).
     this._cameraPlan = cameraPlan ?? null;
+    this._deriveCastComebackers();
   }
 
   /**
    * Deliver the authored cameraPlan mid-race (after heroes are cast), WITHOUT resetting rank history.
-   * The RaceScreen calls it once, when the plan first becomes available. Stored only (B4b will consume it).
+   * The RaceScreen calls it once, when the plan first becomes available.
    * @param {object|null} cameraPlan  { b1Indices, heroes:[{index,role,finalRank,beats}] }
    */
   setCameraPlan(cameraPlan) {
     this._cameraPlan = cameraPlan ?? null;
+    this._deriveCastComebackers();
+  }
+
+  /**
+   * Derive the cast comebacker set from the stored cameraPlan — the heroes cast with role 'comebacker'.
+   * Called ONCE whenever the plan is (re)stored, never per frame. Sets _castComebackerIndices to null when
+   * the plan is absent or names no comebacker, so _detectComebackRacer falls back to the b1Indices scan.
+   */
+  _deriveCastComebackers() {
+    const heroes = this._cameraPlan?.heroes;
+    if (!Array.isArray(heroes)) {
+      this._castComebackerIndices = null;
+      return;
+    }
+    const set = new Set();
+    for (const h of heroes) {
+      if (h && h.role === 'comebacker' && Number.isInteger(h.index)) set.add(h.index);
+    }
+    this._castComebackerIndices = set.size > 0 ? set : null;
   }
 
   /**
@@ -557,7 +582,14 @@ export class CameraDirector {
     const currentRankByIndex = new Map(sorted.map((r, i) => [r.index, i + 1]));
     let bestRacer = null;
     let bestGain = -1;
-    for (const idx of this._b1Indices) {
+    // Primary candidates: the cast comebacker set (the race actually names who comes back). Fallback:
+    // the full b1Indices scan, used when the plan has no comebacker or no plan was delivered. Every cast
+    // comebacker is drawn from the B1 pool (targetRank ≤ 5 = b1Indices), so it is already rank-tracked.
+    const candidates =
+      this._castComebackerIndices && this._castComebackerIndices.size > 0
+        ? this._castComebackerIndices
+        : this._b1Indices;
+    for (const idx of candidates) {
       const currentRank = currentRankByIndex.get(idx);
       if (currentRank == null) continue; // finished or absent
       const hist = this._rankHistory.get(idx);
