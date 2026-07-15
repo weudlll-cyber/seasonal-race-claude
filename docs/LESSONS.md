@@ -2826,3 +2826,27 @@ sorting both shape gap size, overlapping temporally), there is no servo-free reg
 Only ~37–45% of over-wide holes were servo-driven — the dice still have a real job (the rest are
 drift/brake holes), but any tuning must account for the other actuator's interference rather than
 pretend it can be isolated.
+
+## Lesson 174 — A Hero's `peakRank` Is Not the Peak of the Story
+For a comebacker the cast sets `peakRank` = its DEEP post-chaos rank (identical to its anchor rank);
+`finalRank` is the front cluster. So the curve HOLDS deep until the `peak` beat and only THEN climbs to
+`resolve`. The "peak" beat is the START of the comeback, not its climax. Reading the name instead of the
+casting cost two confidently wrong claims in one session (first "the climb is in PULK", then an
+over-correction to "the climb is all in OUTCOME"); the truth — the climb SPANS PULK→OUTCOME — only
+appeared after running the generator's own `feasibleTiming` on real values. Beat semantics must be read
+at the casting site, never inferred from the beat's name.
+
+## Lesson 175 — The Camera Has One Lens: Foresight Does Not Create Screen Time
+Giving the director perfect advance knowledge of a comebacker changed nothing visible, because the
+resulting shot still had to win a weighted candidate contest it loses (comeback 0.6 vs battle 0.8).
+Camera work is zero-sum allocation: to show something earlier, something else must be given up. Before
+building any new "the camera should notice X sooner" mechanism, first ask what X would have to displace —
+and whether that trade is wanted.
+
+## Lesson 176 — Justify the Work with the Reason That Survives Measurement
+The per-frame comeback scan "obviously" looked wasteful (a full array copy + sort every frame, times
+three). Measured: ~0.02 ms against a ~17 ms render frame — 0.1% of budget, ~900× cheaper than rendering.
+The change (plan identity instead of a b1 scan) was still right, but for a completely different reason:
+it shows the RIGHT racer instead of the noisiest one. A correct change with a false rationale invites the
+next person to "optimise" the wrong axis. Also: two independent concept reviews argued the plan-vs-reality
+question to a standstill; a 200-race measurement settled it in one run.
