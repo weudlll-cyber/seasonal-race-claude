@@ -454,25 +454,27 @@ export function applyRacerBehavior(racers, config, priorityExtras) {
         // isSideFree geometry the overlap resolver uses). If a side is free AND the brake
         // can still be re-engaged in time should the trailer fail to clear, commit to that
         // side EARLY and pass at speed — do NOT brake. Non-penetration is STRUCTURAL, not
-        // delegated to the hard-separation backstop; it is guaranteed by four couplings,
-        // all keyed on parity-safe (t, physicalY, per-step speed) fields only:
-        //   (a) isSideFree is re-evaluated every frame — the instant a third racer closes
-        //       the lane, dir → 0 and the exact brake path below re-engages.
-        //   (b) LAG-SAFE LONGITUDINAL RE-ENGAGE (the NO-GO fix). The physics loop applies
-        //       the brake one frame late (index.jsx: avoidanceActive/brakeMatchFactor are
-        //       read on the step AFTER they are written). So suppression is only safe while
-        //       there is enough longitudinal lead that, after the unbraked lag frame(s), a
-        //       re-engaged brake still prevents contact. The required lead scales with the
-        //       WORST-CASE per-step closing rate vClose (trailer unbraked vs leader at least
-        //       at its brake floor): dT must exceed lbTHalf + lagFrames × vClose. Because
-        //       one unbraked lag frame closes by ≤ vClose < lagFrames × vClose, the gap
-        //       stays above lbTHalf until the brake bites — overlap cannot occur. The fixed
-        //       ×multiplier margin stays as a floor for slow/near-speed pairs.
-        //   (c) ACHIEVED lateral progress: suppression additionally requires the trailer is
-        //       not moving toward the leader's side (losing clearance). Measured from the
-        //       trailer's own lateral velocity — "free this frame" is not enough.
-        //   (d) Only pass a genuinely SLOWER leader (a real overtake), so racers do not
-        //       weave around same-speed traffic (gated by requireSlowerLeader).
+        // delegated to the hard-separation backstop; it is guaranteed by three conditions,
+        // enumerated here in the SAME order the gate evaluates them, all keyed on parity-safe
+        // (t, physicalY, per-step speed) fields only:
+        //   (a) LAG-SAFE LONGITUDINAL RE-ENGAGE (the NO-GO fix) — the SOLE non-penetration
+        //       guarantee. The physics loop applies the brake one frame late (index.jsx:
+        //       avoidanceActive/brakeMatchFactor are read on the step AFTER they are
+        //       written). So suppression is only safe while there is enough longitudinal
+        //       lead that, after the unbraked lag frame(s), a re-engaged brake still prevents
+        //       contact. The required lead scales with the WORST-CASE per-step closing rate
+        //       vClose (trailer unbraked vs leader at least at its brake floor): dT must
+        //       exceed lbTHalf + lagFrames × vClose. Because one unbraked lag frame closes by
+        //       ≤ vClose < lagFrames × vClose, the gap stays above lbTHalf until the brake
+        //       bites — overlap cannot occur. The fixed ×multiplier margin stays as a floor
+        //       for slow/near-speed pairs.
+        //   (b) Only pass a genuinely SLOWER leader (a real overtake), so racers do not weave
+        //       around same-speed traffic (gated by requireSlowerLeader); a choreo hero may
+        //       pass on a marginal margin. This is a WHEN-to-attempt precondition, not a
+        //       penetration guard.
+        //   (c) isSideFree is re-evaluated every frame — the instant a third racer closes the
+        //       lane, dir → 0 and the exact brake path below re-engages. Re-checked every
+        //       frame alongside (a), so a lane that closes mid-pass re-engages the brake.
         // The hard-separation pass remains ONLY as a last-resort catch, never the guarantee.
         let takeFreeLane = false;
         if (config.lookBeforeBrakeEnabled !== false && trackWidth > 0 && pathLength > 0) {
@@ -507,7 +509,7 @@ export function applyRacerBehavior(racers, config, priorityExtras) {
           const tLat = vLatMax > 0 ? lbHalfSpan / vLatMax : Infinity;
           const dTStart = Math.max(safeReengageT, lbTHalf + vClose * (tLat + lagFrames));
 
-          // (d) real-overtake precondition: trailer must be meaningfully faster (raw speeds).
+          // (b) real-overtake precondition: trailer must be meaningfully faster (raw speeds).
           // Uses the DEDICATED lookBeforeBrakeMinDifferential (decoupled from brake-to-match's
           // speedMatchMinDifferential); falls back to speedMatchMinDifferential then 0.005 so a
           // config predating this knob is byte-identical to the old shared-threshold behaviour.
@@ -525,12 +527,14 @@ export function applyRacerBehavior(racers, config, priorityExtras) {
           const heroPass = trailer.isHeroChoreographed === true;
 
           if (dT > dTStart && (slowerLeaderOk || heroPass)) {
+            // (c) a genuinely free side (dir !== 0). Non-penetration rests on (a)'s lag-safe
+            // margin and this per-frame free-side re-check, NOT on the trailer's current
+            // lateral velocity: the pass spring that moves it toward the free side is applied
+            // only AFTER this gate passes, so an "already drifting the right way" precondition
+            // gated on last frame's ambient velocity (removed) blocked real overtakes without
+            // adding safety — the margin is the sole protector (see the NO-GO tests).
             const dir = chooseFreeLaneDir(trailer, leader, active, lbHalfSpan, lbTHalf, lbCap);
-            // (c) achieved progress: do not suppress while diverging from the chosen side
-            // (physicalYVelocity is last frame's post-damping value — parity-safe). Frame-1
-            // velocity ≈ 0 passes; a negative (toward-leader) velocity re-engages the brake.
-            const vLatToward = (trailer.physicalYVelocity ?? 0) * dir;
-            if (dir !== 0 && vLatToward >= 0) {
+            if (dir !== 0) {
               takeFreeLane = true;
               // Record this pass for the trailer. Nearest leader (lowest dT) wins so a
               // trailer sandwiched between two leaders steers around the closer one.
