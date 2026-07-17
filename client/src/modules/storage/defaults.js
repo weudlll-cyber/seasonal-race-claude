@@ -323,9 +323,10 @@ export const DEFAULT_RACE_DYNAMICS_CONFIG = {
   // band-steering) begins here — one boundary, no TRANSITION phase (corridorStart := this in
   // racePlanner.js). At the default 0.25 (== racePlanPulkStart) PULK is zero-width and the field is
   // steered from the chaos→choreo boundary, byte-identical to the shipped behaviour; raising it reopens
-  // the PULK window [racePlanPulkStart, this] and hands OUTCOME off later. Range 0.25–0.55.
+  // the PULK window [racePlanPulkStart, this] and hands OUTCOME off later. Range 0.25–0.60.
   // Surfaced by the DevScreen "PULK end / OUTCOME begins" control.
-  choreoOutcomeStart: 0.5,
+  // 0.6 shipped 2026-07-17 (SWEEP 2: +51% PULK action vs 0.5, band-reach gate still held on 3/4 tracks).
+  choreoOutcomeStart: 0.6,
   // Front-group pool: front N on-track positions (leader excluded) the lead rotation draws challengers from.
   pulkFrontPool: 8,
   // ── PulkLeadRotation — THE pulk-phase mechanism (UNCONDITIONAL). It COMPLETES lead changes inside

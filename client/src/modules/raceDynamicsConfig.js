@@ -66,7 +66,7 @@ export function loadRaceDynamicsConfig() {
     ].some((v) => typeof v !== 'number' || v <= 0 || v > 1) ||
     typeof merged.choreoOutcomeStart !== 'number' ||
     merged.choreoOutcomeStart < 0.25 ||
-    merged.choreoOutcomeStart > 0.55
+    merged.choreoOutcomeStart > 0.6
   ) {
     return { ...DEFAULT_RACE_DYNAMICS_CONFIG };
   }

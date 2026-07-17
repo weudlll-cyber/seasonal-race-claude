@@ -64,7 +64,7 @@ describe('DEFAULT_RACE_DYNAMICS_CONFIG', () => {
       choreoResolveB3: 0.7,
       choreoResolveB4: 0.65,
       choreoResolveB5: 0.6,
-      choreoOutcomeStart: 0.5, // DEFAULT-FLIP 2026-07-13 (reopened PULK [0.25,0.5))
+      choreoOutcomeStart: 0.6, // 0.6 shipped 2026-07-17 (SWEEP 2: later PULK end; valid range widened to [0.25,0.60])
       pulkFrontPool: 8,
       phaseSplitBonusEnabled: true,
       areaBonusEarly: 1.0,
@@ -181,10 +181,10 @@ describe('loadRaceDynamicsConfig', () => {
     expect(loadRaceDynamicsConfig()).toEqual(DEFAULT_RACE_DYNAMICS_CONFIG);
   });
 
-  it('returns defaults when choreoOutcomeStart is out of [0.25, 0.55]', () => {
+  it('returns defaults when choreoOutcomeStart is out of [0.25, 0.60]', () => {
     storageGet.mockReturnValue({ ...DEFAULT_RACE_DYNAMICS_CONFIG, choreoOutcomeStart: 0.2 });
     expect(loadRaceDynamicsConfig()).toEqual(DEFAULT_RACE_DYNAMICS_CONFIG);
-    storageGet.mockReturnValue({ ...DEFAULT_RACE_DYNAMICS_CONFIG, choreoOutcomeStart: 0.6 });
+    storageGet.mockReturnValue({ ...DEFAULT_RACE_DYNAMICS_CONFIG, choreoOutcomeStart: 0.7 });
     expect(loadRaceDynamicsConfig()).toEqual(DEFAULT_RACE_DYNAMICS_CONFIG);
   });
 
