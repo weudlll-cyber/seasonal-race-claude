@@ -73,7 +73,7 @@ describe('DEFAULT_RACE_DYNAMICS_CONFIG', () => {
       rowBonusEarly: 1,
       rowBonusPulk: 0,
       rowBonusPost: 1,
-      enableRowEnvSmooth: false,
+      enableRowEnvSmooth: true,
       // Reopened PULK (feat/pulk-reopen).
       racePlanPulkStart: 0.25,
       // STAGE-1/2/3 CLEANUP 2026-07-13: removed the M1 front-contest flag, the M2 cohesion-spring keys,
