@@ -759,6 +759,22 @@ const DynamicsTuningSection = forwardRef(function DynamicsTuningSection(_, ref) 
             <InfoTooltip text="When off, the area + row bonuses run at full strength the whole race. When on, their strength follows the per-phase values below. ON = shipped." />
           </label>
         </div>
+        <div style={{ marginBottom: '0.75rem' }}>
+          <label
+            className={s.label}
+            style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', margin: 0 }}
+          >
+            <input
+              type="checkbox"
+              aria-label="rowEnvSmooth"
+              checked={dynamicsConfig.enableRowEnvSmooth ?? false}
+              onChange={(e) => setDynamics('enableRowEnvSmooth', e.target.checked)}
+              style={{ cursor: 'pointer' }}
+            />
+            rowEnvSmooth (OUTCOME 0.60)
+            <InfoTooltip text="Ease the start-row speed step at the PULK→OUTCOME boundary (0.60) over 1s (easeInOutCubic) instead of an instant jump. Visual polish only (~0.5–1.5% on back rows); measured fairness-neutral. OFF = shipped (instant)." />
+          </label>
+        </div>
         <div className={s.formGrid}>
           {[
             {
