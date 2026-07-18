@@ -2850,3 +2850,19 @@ The change (plan identity instead of a b1 scan) was still right, but for a compl
 it shows the RIGHT racer instead of the noisiest one. A correct change with a false rationale invites the
 next person to "optimise" the wrong axis. Also: two independent concept reviews argued the plan-vs-reality
 question to a standstill; a 200-race measurement settled it in one run.
+
+## Lesson 177 — Distributed Smoothers Are Load-Bearing, Not Redundant Abstraction
+Three separate smoothers exist in the per-frame speed path — `governorMult` slew (1%/frame), `trajectoryMult`
+easeInOutCubic (1s), `spreadFactor` easeInOutCubic (3s). They *look* like fragmentation begging to be unified
+into one global acceleration cap. Measured: removing all three and replacing them with a single 0.5%/frame
+cap on the final speed cost **−5pp B2 and −9pp B3 band-reach** (4 tracks × 100 races), with no action gain, at
+every cap value tested (so it was the *removal* that hurt, not the cap tightness). Each smoother smooths a
+DIFFERENT quantity at a DIFFERENT timescale — governor reaction, servo *target* transition, re-roll *luck*
+change — and the rank servo specifically needs its target to move gradually to steer accurately; a cap on the
+*final* speed does not substitute for smoothing the *inputs*. Corollary confirmed the same session: band-reach
+is **endpoint-determined** (the servo drives to the assigned target rank over the OUTCOME window), so levers
+that only reshape the mid-race trajectory — band-resolve checkpoints, a speed-change cap — cannot move it
+(band-checkpoint proportionalization: +0.3pp = noise). Before "unifying" or "cleaning up" apparent duplication
+in a control loop, measure what each piece is load-bearing for; fragmentation that survives a removal test is
+intentional. (The one genuinely-safe cosmetic smoothing from the same investigation — easing the ~1% rowEnvMult
+step at the boundary — held fairness because it is a tiny, isolated input, not a load-bearing one.)

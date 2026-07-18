@@ -50,7 +50,7 @@ import {
 } from '../../modules/camera/lapUtils.js';
 import { loadBaseSpeedConfig } from '../../modules/baseSpeedConfig.js';
 import { computeRaceBaseSpeed } from '../../modules/raceBaseSpeed.js';
-import { computeRowEnvMult, advanceRacerT } from '../../modules/raceStep.js';
+import { computeRowEnvMult, computeRowEnvSmoothed, advanceRacerT } from '../../modules/raceStep.js';
 import {
   loadRaceBehaviorConfig,
   computeEffectiveBrakeFactor,
@@ -772,6 +772,7 @@ export default function RaceScreen() {
     const rowBonusEarly = dynamicsConfig.rowBonusEarly ?? 1;
     const rowBonusPulk = dynamicsConfig.rowBonusPulk ?? 1;
     const rowBonusPost = dynamicsConfig.rowBonusPost ?? 1;
+    const enableRowEnvSmooth = dynamicsConfig.enableRowEnvSmooth ?? false;
     // Phase-split boundaries follow the LIVE plan phase fractions (single source: the controller),
     // NOT hardcoded literals — so if the owner moves the PULK phase the bonuses follow it. Defaults
     // (pulkStart 0.25 / pulkEnd 0.5) are unchanged, so this is byte-identical to the pinned values.
@@ -787,6 +788,7 @@ export default function RaceScreen() {
       early: rowBonusEarly,
       pulk: rowBonusPulk,
       post: rowBonusPost,
+      smooth: enableRowEnvSmooth, // ease the rowEnvMult step over 1s (default false = instant)
     };
     // Per-race director state. applyPulkLeadRotation lazily attaches its own leadRot sub-state
     // (brakeSet / attacker slots / outsider / cooldowns) on first call; nothing else is needed here.
@@ -1125,7 +1127,12 @@ export default function RaceScreen() {
             // PULK-action: start-row bonus phase envelope (parity with sim; default 1.0 = no-op). baseSpeed
             // bakes in the FULL speedBonusMult; rowEnvMult corrects it to the phase strength s (EARLY/PULK/
             // POST): effective speedBonusMult = 1 + rawRowBonus·s → envMult = (1+rawRowBonus·s)/(1+rawRowBonus).
-            const rowEnvMult = computeRowEnvMult(r.rawRowBonus, st.raceProgress, rowPhaseCfg);
+            const rowEnvTarget = computeRowEnvMult(r.rawRowBonus, st.raceProgress, rowPhaseCfg);
+            // Opt-in: ease the rowEnvMult step over 1s (default off → target, byte-identical). Used for
+            // BOTH the t-advance (passed as f.rowEnvMult) and the vt velocity factor below (one value).
+            const rowEnvMult = rowPhaseCfg.smooth
+              ? computeRowEnvSmoothed(r, rowEnvTarget, physicsTs)
+              : rowEnvTarget;
             if (!r.finished) {
               // Shared per-frame advance (modules/raceStep.js). dt defaults to 1.0
               // (FIXED_DT/16) — the fixed timestep, kept explicit in the shared function.
@@ -1135,6 +1142,7 @@ export default function RaceScreen() {
                 raceProgress: st.raceProgress,
                 finishT: st.finishT,
                 phase: rowPhaseCfg,
+                rowEnvMult,
               });
             } else {
               // Run-out: finished racers keep moving but decay to a stop

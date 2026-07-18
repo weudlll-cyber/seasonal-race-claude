@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { computeRowEnvMult, advanceRacerT } from './raceStep.js';
+import { computeRowEnvMult, computeRowEnvSmoothed, advanceRacerT } from './raceStep.js';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // These tests pin the shared t-update to the EXACT expression the browser ran
@@ -250,5 +250,50 @@ describe('advanceRacerT reproduces the browser expression bit-for-bit', () => {
       });
       expect(got).toBe(99.9995);
     });
+  });
+});
+
+describe('computeRowEnvSmoothed', () => {
+  it('first call returns the target and never NaNs before a transition (regression)', () => {
+    const r = {};
+    expect(computeRowEnvSmoothed(r, 0.99, 0)).toBe(0.99);
+    // Repeated calls with an UNCHANGED target (before any boundary step) must stay finite. Regression:
+    // an unarmed transition once read an undefined `_rowEnvFrom` and produced NaN → bad t → crash.
+    for (let ts = 16; ts <= 320; ts += 16) {
+      const v = computeRowEnvSmoothed(r, 0.99, ts);
+      expect(Number.isFinite(v)).toBe(true);
+      expect(v).toBe(0.99);
+    }
+  });
+
+  it('eases from old to new over 1s when the target steps', () => {
+    const r = {};
+    computeRowEnvSmoothed(r, 0.99, 0); // init at 0.99
+    computeRowEnvSmoothed(r, 0.99, 100); // hold
+    expect(computeRowEnvSmoothed(r, 1.0, 200)).toBeCloseTo(0.99, 10); // step arms; el=0 → from
+    const mid = computeRowEnvSmoothed(r, 1.0, 700); // el=500ms → between
+    expect(mid).toBeGreaterThan(0.99);
+    expect(mid).toBeLessThan(1.0);
+    expect(computeRowEnvSmoothed(r, 1.0, 1200)).toBe(1.0); // el=1000ms ≥ dur → target
+  });
+});
+
+describe('advanceRacerT rowEnvMult override', () => {
+  const racer = { t: 0, baseSpeed: 0.001, trajectoryMult: 1, areaBonusMult: 1, rawRowBonus: 0.01 };
+  const phase = { enabled: true, chaosEndFrac: 0.25, pulkEndFrac: 0.6, early: 1, pulk: 0, post: 1 };
+  const base = { boost: 1, brake: 1, raceProgress: 0.4, finishT: 10, dt: 1, phase };
+  it('uses f.rowEnvMult when provided (not the internal step)', () => {
+    // In PULK (0.4) the internal rowEnvMult = 1/(1+b) < 1, so the override 1.0 advances further.
+    expect(advanceRacerT(racer, { ...base, rowEnvMult: 1.0 })).toBeGreaterThan(
+      advanceRacerT(racer, base)
+    );
+  });
+  it('omitting rowEnvMult is byte-identical to passing the computed value', () => {
+    const a = advanceRacerT(racer, base);
+    const b = advanceRacerT(racer, {
+      ...base,
+      rowEnvMult: computeRowEnvMult(racer.rawRowBonus, 0.4, phase),
+    });
+    expect(a).toBe(b);
   });
 });

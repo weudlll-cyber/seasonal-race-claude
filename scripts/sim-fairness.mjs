@@ -80,7 +80,7 @@ import {
 import { WORLD_SCHEMA_VERSION, hashWorld, unsimulatableReasons, worldStamp } from '../client/src/modules/raceConfigWorld.js';
 import { perTrackReport, renderMarkdown as renderComebackMarkdown } from './sim/observers/comeback-reality.mjs';
 import { computeEffectiveBrakeFactor } from '../client/src/modules/raceBehaviorConfig.js';
-import { advanceRacerT } from '../client/src/modules/raceStep.js';
+import { advanceRacerT, computeRowEnvMult, computeRowEnvSmoothed } from '../client/src/modules/raceStep.js';
 import { createRacePlan, createTrajectoryController, BAND_EDGES } from '../client/src/modules/racePlanner.js';
 import { computeFairnessStats, computeZoneSuccessRate, bandIntegrityOK, computeExtendedFairnessStats, spearman, chiSqPValue } from './sim/observers/fairness-stats.mjs';
 import { buildReport, printDiagnosticReport, printComebackReport, fmtPct } from './sim/observers/report.mjs';
@@ -231,6 +231,9 @@ const DYNAMICS_OVERRIDES = {
   pulkCeilingCap:       argVal('pulkCeilingCap', String(DEFAULT_RACE_DYNAMICS_CONFIG.pulkCeilingCap)) === 'true',
   // Additive boost-headroom above the natural band max for the pulk ceiling (0 = shipped baseline).
   pulkBoostHeadroom:    Number(argVal('pulkBoostHeadroom', String(DEFAULT_RACE_DYNAMICS_CONFIG.pulkBoostHeadroom))),
+  // Ease the rowEnvMult step at the PULK->OUTCOME boundary (1s easeInOutCubic). Default false = instant
+  // (byte-identical). --enableRowEnvSmooth=true exercises the SHARED raceStep.js smoothing for the re-gate.
+  enableRowEnvSmooth:  argVal('enableRowEnvSmooth', String(DEFAULT_RACE_DYNAMICS_CONFIG.enableRowEnvSmooth ?? false)) === 'true',
   // PulkLeadRotation (the PULK-phase lead-rotation core loop). Default OFF.
   pulkLeadRotationAttackerSlots: Number(argVal('pulkLeadRotationAttackerSlots', String(DEFAULT_RACE_DYNAMICS_CONFIG.pulkLeadRotationAttackerSlots))),
   pulkLeadRotationDropDepthLengths: Number(argVal('pulkLeadRotationDropDepthLengths', String(DEFAULT_RACE_DYNAMICS_CONFIG.pulkLeadRotationDropDepthLengths))),
@@ -894,6 +897,7 @@ export function runSingleRace({
       early: dynamicsConfig.rowBonusEarly ?? 1,
       pulk:  dynamicsConfig.rowBonusPulk  ?? 1,
       post:  dynamicsConfig.rowBonusPost  ?? 1,
+      smooth: dynamicsConfig.enableRowEnvSmooth ?? false, // ease the step over 1s (default false = instant)
     };
     // Per-race director state. applyPulkLeadRotation lazily attaches its own leadRot sub-state on
     // first call; nothing else is needed here (parity with the browser dirState shape).
@@ -1334,6 +1338,11 @@ export function runSingleRace({
           // Shared per-frame advance (client/src/modules/raceStep.js) — the SAME function the
           // browser calls. It computes the start-row phase envelope (rowEnvMult) from the live
           // plan fractions and applies the finish clamp. dt = DT/16 = 16/16 = 1.0 (fixed timestep).
+          // Opt-in rowEnvMult smoothing (shared raceStep.js): default off → target, byte-identical.
+          const rowEnvTarget = computeRowEnvMult(r.rawRowBonus, raceProgress, rowPhaseCfg);
+          const rowEnvMult = rowPhaseCfg.smooth
+            ? computeRowEnvSmoothed(r, rowEnvTarget, raceTs)
+            : rowEnvTarget;
           r.t = advanceRacerT(r, {
             boost,
             brake,
@@ -1341,6 +1350,7 @@ export function runSingleRace({
             finishT,
             dt: DT / 16,
             phase: rowPhaseCfg,
+            rowEnvMult,
           });
         }
       }

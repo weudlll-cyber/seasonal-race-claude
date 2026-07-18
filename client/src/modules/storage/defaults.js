@@ -350,6 +350,11 @@ export const DEFAULT_RACE_DYNAMICS_CONFIG = {
   rowBonusEarly: 1,
   rowBonusPulk: 0,
   rowBonusPost: 1,
+  // Ease the rowEnvMult step at the PULK->OUTCOME boundary over 1s (easeInOutCubic, like
+  // trajectoryMult) instead of jumping instantly. Visual polish only — the step is ~0.5-1.5%
+  // on back rows; sim sweep (SLEW vs EASING, 4 tracks x 100 races) confirmed both fairness-neutral
+  // (B1/B2 within 0.6pp, Holm 0). Default false = instant (current behavior, byte-identical).
+  enableRowEnvSmooth: false,
 };
 
 export const DEFAULT_FRAME_TIMING_CONFIG = {

@@ -29,6 +29,8 @@
 // never advances past the finish line by more than an epsilon.
 // ============================================================
 
+import { easeInOutCubic } from '../utils/mathUtils.js';
+
 /**
  * Start-row speed-bonus phase envelope for one racer at one frame. Pure.
  * Single source of truth for the formula — the browser's `vt` velocity factor
@@ -55,6 +57,47 @@ export function computeRowEnvMult(rawRowBonus, raceProgress, phase) {
 }
 
 /**
+ * Eased rowEnvMult for one racer. Smooths the rowEnvMult STEP at a phase boundary
+ * (the PULK→OUTCOME kink) over `durMs` with easeInOutCubic — the SAME easing pattern
+ * trajectoryMult already uses in both callers. Stateful: stashes private
+ * _rowEnvSm/_rowEnvFrom/_rowEnvTransStart/_rowEnvTgtPrev on the racer and re-arms a
+ * transition whenever the target steps. OPT-IN: the caller only calls this when its
+ * phase config has `smooth === true`; when off, the caller passes the raw
+ * computeRowEnvMult value and these fields are never touched → byte-identical.
+ *
+ * @param {object} racer  the racer (mutated: private _rowEnv* fields only)
+ * @param {number} target the instantaneous computeRowEnvMult value to ease toward
+ * @param {number} nowMs  the frame clock (browser physicsTs / sim raceTs)
+ * @param {number} durMs  transition duration in ms (default 1000 = 1s, like trajectoryMult)
+ * @returns {number} the eased multiplier
+ */
+export function computeRowEnvSmoothed(racer, target, nowMs, durMs = 1000) {
+  if (racer._rowEnvSm === undefined) {
+    racer._rowEnvSm = target;
+    racer._rowEnvTgtPrev = target;
+    return target;
+  }
+  if (target !== racer._rowEnvTgtPrev) {
+    racer._rowEnvFrom = racer._rowEnvSm;
+    racer._rowEnvTransStart = nowMs;
+    racer._rowEnvTgtPrev = target;
+  }
+  // No transition armed yet (target unchanged since init) → hold at target. Guards against reading an
+  // undefined `_rowEnvFrom` (which would NaN the multiplier) before the first boundary step.
+  if (racer._rowEnvTransStart === undefined) {
+    racer._rowEnvSm = target;
+    return target;
+  }
+  const el = nowMs - racer._rowEnvTransStart;
+  const sm =
+    el < durMs
+      ? racer._rowEnvFrom + (target - racer._rowEnvFrom) * easeInOutCubic(el / durMs)
+      : target;
+  racer._rowEnvSm = sm;
+  return sm;
+}
+
+/**
  * Advance one racer's t by a single frame. Pure — reads the racer's per-frame
  * factors and returns the new t; writes nothing.
  *
@@ -71,7 +114,12 @@ export function computeRowEnvMult(rawRowBonus, raceProgress, phase) {
  */
 export function advanceRacerT(racer, f) {
   const dt = f.dt ?? 1.0;
-  const rowEnvMult = computeRowEnvMult(racer.rawRowBonus, f.raceProgress, f.phase);
+  // `f.rowEnvMult` is an optional pre-computed override (the caller may have eased it via
+  // computeRowEnvSmoothed). Absent → compute the raw step here, exactly as before (byte-identical).
+  const rowEnvMult =
+    f.rowEnvMult !== undefined
+      ? f.rowEnvMult
+      : computeRowEnvMult(racer.rawRowBonus, f.raceProgress, f.phase);
   const advanced =
     racer.t +
     racer.baseSpeed *
