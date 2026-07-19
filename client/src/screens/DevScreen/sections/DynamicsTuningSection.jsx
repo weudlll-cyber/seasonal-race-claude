@@ -137,6 +137,9 @@ const DynamicsTuningSection = forwardRef(function DynamicsTuningSection(_, ref) 
       pulkLeadRotationDropDepthLengths:
         DEFAULT_RACE_DYNAMICS_CONFIG.pulkLeadRotationDropDepthLengths,
       choreoIntensity: DEFAULT_RACE_DYNAMICS_CONFIG.choreoIntensity,
+      b2AttackHeroes: DEFAULT_RACE_DYNAMICS_CONFIG.b2AttackHeroes,
+      packReleaseEnabled: DEFAULT_RACE_DYNAMICS_CONFIG.packReleaseEnabled,
+      packReSteerThreshold: DEFAULT_RACE_DYNAMICS_CONFIG.packReSteerThreshold,
     }));
   }
 
@@ -977,6 +980,22 @@ const DynamicsTuningSection = forwardRef(function DynamicsTuningSection(_, ref) 
               step: 0.05,
               tip: 'Overall drama intensity of the hero choreography curves. Low = calm; high = deeper comebacks, more duels, later reveals. Auto-clamped per race so it can never break fairness. 0.6 = shipped.',
             },
+            {
+              key: 'b2AttackHeroes',
+              label: 'B2-attacker count (0–5)',
+              min: 0,
+              max: 5,
+              step: 1,
+              tip: 'Number of B2-attacker heroes cast per race. Each climbs to ~rank 5 mid-race, then falls back and is freed on band re-entry (band-arrival), reordering freely in B2. 0 = OFF (shipped, byte-identical). Sim: count=3 ≈ +20% top-5 OUTCOME action with B1/B2 band-reach ≥70% and no Holm regression.',
+            },
+            {
+              key: 'packReSteerThreshold',
+              label: 'Pack re-steer threshold (0.5–3.0)',
+              min: 0.5,
+              max: 3.0,
+              step: 0.1,
+              tip: 'Pack-release ONLY (checkbox below): how far (ranks) a released pack racer may drift past its band edge before the servo re-engages (strictness 1) to steer it back. Integer bandError ⇒ 0.5 ≈ re-steer at ≥1 rank out, 1.5 ≈ ≥2 ranks. Larger = more freedom, more endgame leak. 1.0 = default.',
+            },
           ].map(({ key, label, min, max, step, tip }) => (
             <div className={s.formGroup} key={key}>
               <label
@@ -1001,6 +1020,21 @@ const DynamicsTuningSection = forwardRef(function DynamicsTuningSection(_, ref) 
               />
             </div>
           ))}
+          <div className={s.formGroup}>
+            <label
+              className={s.label}
+              style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}
+            >
+              <input
+                type="checkbox"
+                checked={dynamicsConfig.packReleaseEnabled ?? false}
+                onChange={(e) => setDynamics('packReleaseEnabled', e.target.checked)}
+                data-testid="pack-release-toggle"
+              />
+              Pack release (eye-test)
+              <InfoTooltip text="Pack-only strictness release: non-hero pack racers run FREE (strictness 0) inside their band, re-steered only when they drift past the threshold above. Sim: +15% top-5 action but BREAKS B2 band-reach on Luger Hill + Searound (endgame edge-leak, 92% of leaks after progress 0.90) — dominated by B2-attackers, kept for comparison. Default OFF (byte-identical)." />
+            </label>
+          </div>
         </div>
         <SubHeading
           label="PULK bonuses"

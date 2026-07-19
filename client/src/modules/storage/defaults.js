@@ -327,6 +327,35 @@ export const DEFAULT_RACE_DYNAMICS_CONFIG = {
   // Surfaced by the DevScreen "PULK end / OUTCOME begins" control.
   // 0.6 shipped 2026-07-17 (SWEEP 2: +51% PULK action vs 0.5, band-reach gate still held on 3/4 tracks).
   choreoOutcomeStart: 0.6,
+  // ── Pack-only strictness release with spatial hysteresis (OUTCOME action lever; default OFF) ──────
+  // When ON, a NON-hero (pack) racer that is inside its target band has its servo strictness dropped to
+  // 0 so it roams freely (natural speed, no rank pinning); once it drifts more than packReSteerThreshold
+  // ranks past the band edge the strictness snaps to 1 (full pinning) and drags it back, releasing again
+  // only after it is fully inside the band. The release↔re-steer gap is the anti-flicker guard (no time
+  // cooldown). Heroes are untouched. OFF → byte-identical to the shipped servo. Read in racePlanner.js.
+  packReleaseEnabled: false,
+  packReSteerThreshold: 1.0,
+  // ── B2-attacker "Attack & Fall" (OUTCOME front-action lever; SHIPPED ON at count 3) ─────────────────
+  // Cast N additional heroes from FRONT-post-chaos B2-finishers that climb to b2AttackPeakRank (mandatory
+  // choreography), then are RELEASED to free reorder the moment they fall back inside B2 (band-arrival).
+  // SHIPPED 2026-07-20: count=3, peak=5, band-arrival — the sim-validated winner (+21% top-5 OUTCOME action
+  // vs the no-attacker floor, with B1/B2 band-reach ≥70% on all tracks and Holm at the pre-existing 2/4
+  // baseline, no regression). count=0 restores the pre-feature game (byte-identical). Under band-arrival
+  // b2AttackFinalRank only shapes the fall slope (release triggers at B2 re-entry regardless). Read in
+  // heroCurveGenerator.js (casting) + racePlanner.js (servo).
+  b2AttackHeroes: 3,
+  b2AttackPeakRank: 5,
+  b2AttackFinalRank: 7,
+  b2AttackProgress: { start: 0.4, end: 0.7 },
+  b2AttackResolveProgress: 0.85,
+  // Release model for attackers: false = fixed-final (steer to b2AttackFinalRank, releases with margin);
+  // true = band-arrival (free the moment it re-enters B2). Sim A/B: band-arrival ties fixed-final on
+  // fairness and is simpler (no finalRank knob), so it is the chosen model. Harmless when count=0
+  // (no attackers → the servo branch never reads it), so the shipped default stays byte-identical.
+  b2AttackBandArrival: true,
+  // Universal band-arrival (V1 experiment): free B1-heroes + normal pack racers (strictness 0) once inside
+  // their assigned band; re-steer the moment they leave. B2-attackers keep their own release. Default OFF.
+  universalBandArrival: false,
   // Front-group pool: front N on-track positions (leader excluded) the lead rotation draws challengers from.
   pulkFrontPool: 8,
   // ── PulkLeadRotation — THE pulk-phase mechanism (UNCONDITIONAL). It COMPLETES lead changes inside

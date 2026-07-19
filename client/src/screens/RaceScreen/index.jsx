@@ -716,6 +716,20 @@ export default function RaceScreen() {
           choreoResolveB4: dynamicsConfig.choreoResolveB4 ?? 0.65,
           choreoResolveB5: dynamicsConfig.choreoResolveB5 ?? 0.6,
           choreoOutcomeStart: dynamicsConfig.choreoOutcomeStart ?? 0.25,
+          // Pack-only strictness release (eye-test / shelved). Threaded so the DevScreen toggle reaches the
+          // plan. Fallbacks mirror DEFAULT_RACE_DYNAMICS_CONFIG. OFF → pack runs the 0.5 baseline (identical).
+          packReleaseEnabled: dynamicsConfig.packReleaseEnabled ?? false,
+          packReSteerThreshold: dynamicsConfig.packReSteerThreshold ?? 1.0,
+          // B2-attacker "Attack & Fall" (band-arrival release). Threaded so the DevScreen count slider
+          // actually reaches the plan. Fallbacks mirror DEFAULT_RACE_DYNAMICS_CONFIG. count 0 → no
+          // attackers cast → byte-identical to the pre-feature behaviour.
+          b2AttackHeroes: dynamicsConfig.b2AttackHeroes ?? 0,
+          b2AttackPeakRank: dynamicsConfig.b2AttackPeakRank ?? 5,
+          b2AttackFinalRank: dynamicsConfig.b2AttackFinalRank ?? 10,
+          b2AttackProgress: dynamicsConfig.b2AttackProgress ?? { start: 0.4, end: 0.7 },
+          b2AttackResolveProgress: dynamicsConfig.b2AttackResolveProgress ?? 0.85,
+          b2AttackBandArrival: dynamicsConfig.b2AttackBandArrival ?? true,
+          universalBandArrival: dynamicsConfig.universalBandArrival ?? false,
         },
         racePlanSeed
       );
@@ -1617,7 +1631,8 @@ export default function RaceScreen() {
         frameDisplayScale,
         frameEffZoom,
         renderAlpha,
-        frameTimingConfig.renderInterpolation
+        frameTimingConfig.renderInterpolation,
+        cameraConfigRef.current.highlightHeroes ?? false
       );
       drawBattleDiagMarkers(
         ctx,

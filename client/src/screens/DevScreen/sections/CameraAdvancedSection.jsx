@@ -306,6 +306,20 @@ function CameraAdvancedSection() {
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+      {/* ── 0. Eye-test hero highlight (render-time diagnostic; default OFF, no effect on races) ── */}
+      <div className={s.card}>
+        <SectionHeading>0 · Eye-test</SectionHeading>
+        <label className={s.label} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+          <input
+            type="checkbox"
+            checked={config.highlightHeroes ?? false}
+            onChange={(e) => set('highlightHeroes', e.target.checked)}
+            data-testid="highlight-heroes-toggle"
+          />
+          Highlight heroes — <span style={{ color: '#34c759' }}>green ring = normal hero</span>,{' '}
+          <span style={{ color: '#ff3b30' }}>red ring = B2-attacker</span>
+        </label>
+      </div>
       {/* ── 1. Start & Post-Start ── */}
       <div className={s.card}>
         <SectionHeading>1 · Start &amp; Post-Start</SectionHeading>

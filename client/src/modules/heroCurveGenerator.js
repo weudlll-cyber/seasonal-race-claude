@@ -73,6 +73,18 @@ export const GENERATOR_CONFIG = {
   // Intensity → drama (each endpoint a monotone function of intensity 0..1).
   reveal: { at0: 0.6, at1: 0.9 }, // resolveProgress: later reveal at higher intensity
   peakDepthFrac: { at0: 0.15, at1: 0.55 }, // comeback/hold depth as a fraction of the field
+  // ── B2-attacker "Attack & Fall" (default OFF: b2AttackHeroes 0 → no attackers cast → byte-identical) ──
+  // Cast b2AttackHeroes ADDITIONAL heroes (beyond the nHeroes budget) from FRONT-post-chaos B2-finishers.
+  // Each climbs to b2AttackPeakRank (mandatory choreography), then the curve steers it DOWN to
+  // b2AttackFinalRank (a specific B2 rank = the orchestrated-fall length knob), after which the servo
+  // RELEASES it to pack-like free reorder (racePlanner: Track-to-FinalRank, then Free). They bypass the
+  // standard B2 0.80 resolve checkpoint — the orchestrated fall may run until b2AttackResolveProgress
+  // (hero-privilege), leaving [resolve, 1.0] as the free window. Peak timing jittered in b2AttackProgress.
+  b2AttackHeroes: 0,
+  b2AttackPeakRank: 5,
+  b2AttackFinalRank: 10,
+  b2AttackProgress: { start: 0.4, end: 0.7 },
+  b2AttackResolveProgress: 0.85,
 };
 
 // ── Band helpers (derived from the shared BAND_EDGES constant — single source for the edges) ────
@@ -192,6 +204,30 @@ export function feasibleTiming(
     ap + span1 + 0.03,
     resolveProgress - 0.03
   );
+  return { peakProgress, resolveProgress };
+}
+
+// ── B2-attacker timing: place the mandatory climb (anchor→peak) + the orchestrated fall (peak→finalRank)
+// so both stay within the density rank-rate AND complete by b2AttackResolveProgress — the BYPASSED, later
+// checkpoint (hero-privilege; the standard B2 0.80 resolve does not apply). Peak timing is drawn from the
+// config window, clamped feasible. `idx` varies the jitter per attacker so two attackers don't peak in
+// lockstep. null = infeasible (climb+fall can't fit the runway). ─────────────────────────────────────
+export function attackerTiming(anchorRank, peakRank, finalRank, maxRankRate, config, seed, idx) {
+  const ap = config.anchorProgress;
+  const bc = config.b2AttackResolveProgress ?? 0.85;
+  if (maxRankRate <= 0) return null;
+  const span1 = (config.minJerkPeakFactor * Math.abs(anchorRank - peakRank)) / maxRankRate;
+  const span2 = (config.minJerkPeakFactor * Math.abs(peakRank - finalRank)) / maxRankRate;
+  if (ap + span1 + span2 + 0.06 > bc) return null; // climb + orchestrated fall can't fit before checkpoint
+  const win = config.b2AttackProgress ?? { start: 0.4, end: 0.7 };
+  const j = mulberry32((((seed >>> 0) ^ 0xa77ac4) + idx * 0x9e3779b9) >>> 0)();
+  let peakProgress = win.start + (win.end - win.start) * j;
+  peakProgress = clamp(
+    peakProgress,
+    ap + span1 + 0.03,
+    Math.max(ap + span1 + 0.03, bc - span2 - 0.03)
+  );
+  const resolveProgress = clamp(peakProgress + span2 + 0.03, peakProgress + 0.03, bc);
   return { peakProgress, resolveProgress };
 }
 
@@ -422,6 +458,49 @@ export function castHeroes(
     if (addSolo(p.index, p.rank > cr ? 'comebacker' : 'sovereign-lead', cr, peakRank)) b1Cluster++;
   }
 
+  // ── B2-ATTACKER "Attack & Fall" (ADDITIONAL heroes, beyond the nHeroes budget; OFF via b2AttackHeroes 0) ──
+  // FRONT-post-chaos B2-finishers climb to b2AttackPeakRank, then the curve steers them down to
+  // b2AttackFinalRank (the orchestrated-fall length). Front-first because only a SMALL climb-to-peak stays
+  // feasible — a mid/back B2 racer can't reach a deep peak and fall back within the runway. attackerTiming
+  // + racerFeasibility enforce the full climb+fall feasibility, so infeasible candidates are skipped, not
+  // cast unfair. These are cast AFTER (and independently of) the nHeroes cap — a separate attacker budget.
+  const nAttack = config.b2AttackHeroes ?? 0;
+  if (nAttack > 0) {
+    const peakRank = clamp(Math.round(config.b2AttackPeakRank ?? 5), 1, n);
+    const [b2Lo, b2Hi] = bandBounds(1); // B2 rank bounds
+    const finalRank = clamp(Math.round(config.b2AttackFinalRank ?? 10), b2Lo, Math.min(b2Hi, n));
+    const b2Front = postChaos
+      .filter((p) => !used.has(p.index) && bandOfRank(finalRanks.get(p.index)) === 1)
+      .sort((a, b) => a.rank - b.rank); // front-post-chaos first (smallest, feasible, climb)
+    let nCast = 0;
+    for (const p of b2Front) {
+      if (nCast >= nAttack) break;
+      const feas = racerFeasibility(p, postChaos, finishT, config);
+      if (peakRank < feas.bestRank) continue; // can't climb to the intended peak
+      if (finalRank > feas.worstRank) continue; // can't reach the intended fall depth
+      const timing = attackerTiming(
+        p.rank,
+        peakRank,
+        finalRank,
+        feas.maxRankRate,
+        config,
+        seed,
+        nCast
+      );
+      if (!timing) continue;
+      cast.push({
+        index: p.index,
+        role: 'attacker-b2',
+        finalRank,
+        peakRank,
+        params: { peakRank, finalRank, ...timing },
+        maxRankRate: feas.maxRankRate,
+      });
+      used.add(p.index);
+      nCast++;
+    }
+  }
+
   return cast;
 }
 
@@ -477,7 +556,11 @@ export function generateHeroCurves({
     );
     // Never emit a curve that violates a generation-time constraint (feasibility / positive budget).
     if (!checkFeasible(anchored, member.maxRankRate)) continue;
-    if (!checkPositiveBudget(anchored, member.maxRankRate, config)) continue;
+    // Positive-budget (in-band by the band's resolve checkpoint) applies to standard heroes. B2-attackers
+    // BYPASS it by design (hero-privilege: their orchestrated fall resolves later, at b2AttackResolveProgress,
+    // and the servo re-steer — not the checkpoint — keeps the endpoint in B2). So skip it for that role.
+    if (member.role !== 'attacker-b2' && !checkPositiveBudget(anchored, member.maxRankRate, config))
+      continue;
     // HOLE GUARD (A5): reject a curve that would open a field gap the projected pack can't fill.
     // Gradual falls + the loose pack are the primary continuity; this drops the offending hero.
     const trial = [...curves, { index: member.index, curve: anchored }];
@@ -491,7 +574,15 @@ export function generateHeroCurves({
       )
     )
       continue;
-    curves.push({ index: member.index, role: member.role, curve: anchored });
+    curves.push({
+      index: member.index,
+      role: member.role,
+      curve: anchored,
+      // B2-attacker servo needs these at runtime (peak-reached tracking + release-at-finalRank latch).
+      ...(member.role === 'attacker-b2'
+        ? { peakRank: member.peakRank, finalRank: member.finalRank }
+        : {}),
+    });
   }
 
   const cameraPlan = buildCameraPlan(cast, curves, finalRanks);

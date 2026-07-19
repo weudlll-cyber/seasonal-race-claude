@@ -85,6 +85,17 @@ describe('DEFAULT_RACE_DYNAMICS_CONFIG', () => {
       pulkLeadRotationOutsiderMaxReachLengths: 15,
       pulkLeadRotationDeadlockTimeoutMs: 12000,
       pulkLeadRotationMinHoldMs: 750,
+      // Pack-only strictness release (OUTCOME action lever; default OFF, sim-only experiment).
+      packReleaseEnabled: false,
+      packReSteerThreshold: 1.0,
+      // B2-attacker "Attack & Fall" (band-arrival release). SHIPPED ON at count=3 (validated winner).
+      b2AttackHeroes: 3,
+      b2AttackPeakRank: 5,
+      b2AttackFinalRank: 7,
+      b2AttackProgress: { start: 0.4, end: 0.7 },
+      b2AttackResolveProgress: 0.85,
+      b2AttackBandArrival: true,
+      universalBandArrival: false,
     });
   });
 

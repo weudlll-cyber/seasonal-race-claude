@@ -212,6 +212,22 @@ const CHOREO_RESOLVE_B3 = Number(argVal('choreoResolveB3', String(DEFAULT_RACE_D
 const CHOREO_RESOLVE_B4 = Number(argVal('choreoResolveB4', String(DEFAULT_RACE_DYNAMICS_CONFIG.choreoResolveB4)));
 const CHOREO_RESOLVE_B5 = Number(argVal('choreoResolveB5', String(DEFAULT_RACE_DYNAMICS_CONFIG.choreoResolveB5)));
 const CHOREO_OUTCOME_START = Number(argVal('choreoOutcomeStart', String(DEFAULT_RACE_DYNAMICS_CONFIG.choreoOutcomeStart)));
+// Pack-only strictness release with spatial hysteresis (parity with racePlanner/defaults). OFF →
+// byte-identical to the shipped servo (proven via fingerprint-default). Threaded into createRacePlan.
+const PACK_RELEASE_ENABLED = argVal('pack-release', String(DEFAULT_RACE_DYNAMICS_CONFIG.packReleaseEnabled)) === 'true';
+const PACK_RESTEER_THRESHOLD = Number(argVal('pack-resteer-threshold', String(DEFAULT_RACE_DYNAMICS_CONFIG.packReSteerThreshold)));
+// B2-attacker "Attack & Fall" (parity with racePlanner/heroCurveGenerator/defaults). OFF (heroes 0) →
+// byte-identical (proven via fingerprint-default). Threaded into createRacePlan → the hero generator.
+const B2_ATTACK_HEROES = Number(argVal('b2-attack-heroes', String(DEFAULT_RACE_DYNAMICS_CONFIG.b2AttackHeroes)));
+const B2_ATTACK_PEAK_RANK = Number(argVal('b2-attack-peak-rank', String(DEFAULT_RACE_DYNAMICS_CONFIG.b2AttackPeakRank)));
+const B2_ATTACK_FINAL_RANK = Number(argVal('b2-attack-final-rank', String(DEFAULT_RACE_DYNAMICS_CONFIG.b2AttackFinalRank)));
+const B2_ATTACK_PROGRESS_START = Number(argVal('b2-attack-progress-start', String(DEFAULT_RACE_DYNAMICS_CONFIG.b2AttackProgress.start)));
+const B2_ATTACK_PROGRESS_END = Number(argVal('b2-attack-progress-end', String(DEFAULT_RACE_DYNAMICS_CONFIG.b2AttackProgress.end)));
+const B2_ATTACK_RESOLVE_PROGRESS = Number(argVal('b2-attack-resolve-progress', String(DEFAULT_RACE_DYNAMICS_CONFIG.b2AttackResolveProgress)));
+const B2_ATTACK_BAND_ARRIVAL = argVal('b2-attack-band-arrival', String(DEFAULT_RACE_DYNAMICS_CONFIG.b2AttackBandArrival)) === 'true';
+const UNIVERSAL_BAND_ARRIVAL = argVal('universal-band-arrival', String(DEFAULT_RACE_DYNAMICS_CONFIG.universalBandArrival)) === 'true';
+// B2-leak trace (read-only diagnostic): adds b2LastInside to rawData rows. No-flag → byte-identical.
+const B2_TRACE = argv.includes('--b2-trace');
 // reRoll / trajectory dynamics overrides — same shared-default + argVal pattern. Lets a sweep
 // test DevScreen-tuned (localStorage-only) values WITHOUT changing the shared defaults.js.
 // Defaults read from DEFAULT_RACE_DYNAMICS_CONFIG → no drift; spread into dynamicsConfig below.
@@ -1010,6 +1026,20 @@ export function runSingleRace({
     // pulkStart / pulkEnd; each stays null until its crossing. Per-race (reset by this per-race scope).
     let rlStartSnap = null, rlEndSnap = null;
 
+    // ── OUTCOME rank-change observer (UNCONDITIONAL; read-only) ─────────────────
+    // The primary signal for the pack-release experiment: how much reordering happens in the OUTCOME
+    // phase. Per OUTCOME frame we count adjacent rank-order swaps vs the previous OUTCOME frame (same
+    // reshuffle-volume definition as amSwaps, but OUTCOME-gated). ocTotalSwaps = all adjacent swaps;
+    // ocTop5Swaps = swaps where BOTH racers of the pair are currently in the top 5 (front action).
+    // Read-only: it only reads live ranks, never touches physics → cannot change the fingerprint hash
+    // (that hashes finish order, not naturalness). Cost: one sort per OUTCOME frame, negligible.
+    let ocPrevRank = null; // Map(index → rank) from the previous OUTCOME frame
+    let ocTotalSwaps = 0, ocTop5Swaps = 0, ocFrames = 0;
+    // B2-leak trace (--b2-trace): per B2-TARGET racer, the LAST OUTCOME progress it sat inside B2
+    // (ranks 6-15). For racers that MISS B2 at the finish, a high lastInside ⇒ late exit (timing/runway);
+    // a low lastInside ⇒ early exit the re-steer never re-caught (authority). Read-only.
+    const b2LastInside = new Map(); // index → last raceProgress inside B2
+
     while (finishedCount < nRacers && raceTs < maxTime) {
       raceTs += DT;
 
@@ -1301,6 +1331,36 @@ export function runSingleRace({
           }
           ring.buf[ring.idx % TM_RING_SIZE] = r.trajectoryMult;
           ring.idx++;
+        }
+      }
+
+      // ── OUTCOME rank-change accumulation (read-only; the experiment's primary action signal) ──
+      if (racePlanController && racePlanController.getPhase(raceTs, raceProgress) === 'OUTCOME') {
+        const order = racers
+          .filter((r) => !r.finished)
+          .sort((a, b) => (b.t !== a.t ? b.t - a.t : a.index - b.index)); // rank 1 = leader
+        const n = order.length;
+        if (n > 1) {
+          ocFrames++;
+          if (ocPrevRank) {
+            for (let i = 0; i < n - 1; i++) {
+              const a = ocPrevRank.get(order[i].index);
+              const b = ocPrevRank.get(order[i + 1].index);
+              if (a !== undefined && b !== undefined && a > b) {
+                ocTotalSwaps++;
+                if (i <= 3) ocTop5Swaps++; // pair (rank i+1, rank i+2): both ≤ 5 ⇔ i ≤ 3
+              }
+            }
+          }
+          ocPrevRank = new Map(order.map((r, i) => [r.index, i + 1]));
+          // B2-leak trace: record last progress each B2-TARGET racer sat inside B2 (ranks 6-15).
+          if (racerTargetRankMap) {
+            for (let i = 0; i < n; i++) {
+              const idx = order[i].index;
+              const tr = racerTargetRankMap.get(idx);
+              if (tr >= 6 && tr <= 15 && i + 1 >= 6 && i + 1 <= 15) b2LastInside.set(idx, raceProgress);
+            }
+          }
         }
       }
 
@@ -1954,11 +2014,16 @@ export function runSingleRace({
       // Δ5s oscillation: max trajectoryMult swing over any 5s window during OUTCOME
       tmDelta5sMax,
       tmOscillatingCount,
+      // OUTCOME rank-change (pack-release experiment primary signal); per-race totals over OUTCOME.
+      outcomeTop5Swaps: ocTop5Swaps,
+      outcomeTotalSwaps: ocTotalSwaps,
+      outcomeFrames: ocFrames,
     };
     results.physicalDurationS   = Math.max(...racers.map((r) => r.finishTime ?? 0));
     results.avgRerollsPerRacer  = racers.reduce((s, r) => s + r.rerollCount, 0) / racers.length;
     // outcomeReached: true if at least one racer crossed the finish line (race didn't time out)
     results.outcomeReached = finishedCount > 0;
+    results.b2LastInside = b2LastInside; // B2-leak trace: index → last OUTCOME progress inside B2
 
     // Phase-3B: COMEBACK analysis result
     if (cbCfg) {
@@ -2719,6 +2784,15 @@ if (isMain) {
               choreoResolveB4:     CHOREO_RESOLVE_B4,
               choreoResolveB5:     CHOREO_RESOLVE_B5,
               choreoOutcomeStart:  CHOREO_OUTCOME_START,
+              packReleaseEnabled:  PACK_RELEASE_ENABLED,
+              packReSteerThreshold: PACK_RESTEER_THRESHOLD,
+              b2AttackHeroes:      B2_ATTACK_HEROES,
+              b2AttackPeakRank:    B2_ATTACK_PEAK_RANK,
+              b2AttackFinalRank:   B2_ATTACK_FINAL_RANK,
+              b2AttackProgress:    { start: B2_ATTACK_PROGRESS_START, end: B2_ATTACK_PROGRESS_END },
+              b2AttackResolveProgress: B2_ATTACK_RESOLVE_PROGRESS,
+              b2AttackBandArrival: B2_ATTACK_BAND_ARRIVAL,
+              universalBandArrival: UNIVERSAL_BAND_ARRIVAL,
             }, seed);
             racePlanController = createTrajectoryController(plan);
             raceSollRankMap = plan._racerTargetRank;
@@ -2819,6 +2893,8 @@ if (isMain) {
               raceIdx,
               sollRank,
               sollBereich,
+              // B2-leak trace field: only added under --b2-trace, so no-flag rawData stays byte-identical.
+              ...(B2_TRACE ? { b2LastInside: result.b2LastInside?.get(r.racerIndex) ?? -1 } : {}),
               ...r,
             });
           }
@@ -2829,6 +2905,11 @@ if (isMain) {
           ? mixingQuotas.reduce((s, v) => s + v, 0) / mixingQuotas.length
           : null;
         // Aggregate naturalness metrics over all races in this combo
+        // Pack-release OUTCOME rank-change: keep mean AND std across races (the spec asks for both).
+        const _ocTop5  = raceResults.map((r) => r.naturalness?.outcomeTop5Swaps ?? 0);
+        const _ocTotal = raceResults.map((r) => r.naturalness?.outcomeTotalSwaps ?? 0);
+        const _amean = (a) => (a.length ? a.reduce((s, v) => s + v, 0) / a.length : 0);
+        const _astd  = (a) => { if (a.length < 2) return 0; const m = _amean(a); return Math.sqrt(a.reduce((s, v) => s + (v - m) ** 2, 0) / (a.length - 1)); };
         const avgNaturalness = raceResults.length > 0 ? {
           meanJerk:               raceResults.reduce((s, r) => s + (r.naturalness?.meanJerk ?? 0), 0) / raceResults.length,
           maxJerkSpike:           Math.max(...raceResults.map((r) => r.naturalness?.maxJerkSpike ?? 0)),
@@ -2848,6 +2929,18 @@ if (isMain) {
           racersBlockedInOutcome: raceResults.reduce((s, r) => s + (r.naturalness?.racersBlockedInOutcome ?? 0), 0) / raceResults.length,
           tmDelta5sMax:           Math.max(...raceResults.map((r) => r.naturalness?.tmDelta5sMax ?? 0)),
           tmOscillatingCount:     raceResults.reduce((s, r) => s + (r.naturalness?.tmOscillatingCount ?? 0), 0) / raceResults.length,
+          // Pack-release experiment: OUTCOME rank-change (mean+std) + servo release diagnostics.
+          outcomeTop5SwapsMean:   _amean(_ocTop5),
+          outcomeTop5SwapsStd:    _astd(_ocTop5),
+          outcomeTotalSwapsMean:  _amean(_ocTotal),
+          outcomeTotalSwapsStd:   _astd(_ocTotal),
+          packReleaseEvents:      raceResults.reduce((s, r) => s + (r.naturalness?.packReleaseEvents ?? 0), 0) / raceResults.length,
+          packReSteerEvents:      raceResults.reduce((s, r) => s + (r.naturalness?.packReSteerEvents ?? 0), 0) / raceResults.length,
+          packReleasedFrameFraction: raceResults.reduce((s, r) => s + (r.naturalness?.packReleasedFrameFraction ?? 0), 0) / raceResults.length,
+          // B2-attacker: per-race means of cast count / peak-reached count / freed (completed) count.
+          attackerCast:           raceResults.reduce((s, r) => s + (r.naturalness?.attackerCast ?? 0), 0) / raceResults.length,
+          attackerPeakReached:    raceResults.reduce((s, r) => s + (r.naturalness?.attackerPeakReached ?? 0), 0) / raceResults.length,
+          attackerFreed:          raceResults.reduce((s, r) => s + (r.naturalness?.attackerFreed ?? 0), 0) / raceResults.length,
           overlapRate:             raceResults.reduce((s, r) => s + (r.liteOverlapRate ?? 0), 0) / raceResults.length,
           honestOverlapRate:       raceResults.reduce((s, r) => s + (r.honestOverlapRate ?? 0), 0) / raceResults.length,
           passThroughCount:        raceResults.reduce((s, r) => s + (r.passThroughCount ?? 0), 0) / raceResults.length,

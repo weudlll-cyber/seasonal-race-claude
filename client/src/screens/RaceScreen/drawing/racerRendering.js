@@ -78,7 +78,8 @@ export function drawRacers(
   effectiveScale,
   ezoom,
   renderAlpha,
-  interpolationEnabled
+  interpolationEnabled,
+  highlightHeroes = false
 ) {
   const leader = st.racers.reduce((a, b) => (b.t > a.t ? b : a));
   const inv = 1 / ezoom;
@@ -123,6 +124,20 @@ export function drawRacers(
       effectiveScale,
       rIsComeback
     );
+    // Eye-test hero highlight (DevScreen → Camera Advanced → "Highlight heroes"). A colored ring:
+    // green = normal choreographed hero (B1 comebacker/sovereign/faller), red = B2-attacker. OFF = no ring.
+    if (highlightHeroes && r.isHeroChoreographed) {
+      ctx.save();
+      ctx.globalAlpha = dimAlpha;
+      ctx.strokeStyle = r.isAttackerB2 ? '#ff3b30' : '#34c759';
+      ctx.lineWidth = 3 * inv;
+      ctx.shadowColor = ctx.strokeStyle;
+      ctx.shadowBlur = 8 * inv;
+      ctx.beginPath();
+      ctx.arc(renderX, renderY, effectiveScale * 1.2, 0, Math.PI * 2);
+      ctx.stroke();
+      ctx.restore();
+    }
     if (tagSet.has(r) || rIsComeback) {
       const tagName = showRpStartRowCfg
         ? r.name + ' (R' + (assignmentByRacer.get(r.index)?.rowIndex ?? 0) + ')'

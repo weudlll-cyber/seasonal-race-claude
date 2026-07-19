@@ -293,6 +293,31 @@ export function createRacePlan(racers, finishT, targetDurationMs, config = {}, s
     _choreoGenerated: false,
     _choreoPrevRanks: null, // one-frame-earlier ranks, for the jerk-anchor velocities
     _choreoPrevProgress: null,
+    // ── Pack-only strictness release with spatial hysteresis (flag-gated; default OFF) ──────────────
+    // When a NON-hero (pack) racer is inside its target band the servo strictness drops to 0 so it
+    // roams freely (error collapses to bandError, which is 0 inside the band → natural speed). When it
+    // drifts more than _packReSteerThreshold ranks past the band edge the strictness snaps to 1 (full
+    // rank pinning) until it is fully back inside (bandError == 0), then releases again. The release↔
+    // re-steer gap IS the anti-flicker guard — there is NO time cooldown. Heroes are untouched (they
+    // keep strictness 1.0 + their authored curves + the 0.97 B1-release). packReleaseEnabled false →
+    // the servo strictness stays the shipped value → byte-identical to the pre-feature behaviour.
+    _packReleaseEnabled: !!config.packReleaseEnabled,
+    _packReSteerThreshold: config.packReSteerThreshold ?? 1.0,
+    // ── B2-attacker "Attack & Fall" (default OFF: b2AttackHeroes 0 → generator casts none → byte-identical) ──
+    // Threaded into the hero-curve generator (which casts the attackers) AND read by the servo below, which
+    // runs the Track-to-FinalRank-then-Free logic for role 'attacker-b2'. See heroCurveGenerator.js.
+    _b2AttackHeroes: config.b2AttackHeroes ?? 0,
+    _b2AttackPeakRank: config.b2AttackPeakRank ?? 5,
+    _b2AttackFinalRank: config.b2AttackFinalRank ?? 10,
+    _b2AttackProgress: config.b2AttackProgress ?? { start: 0.4, end: 0.7 },
+    _b2AttackResolveProgress: config.b2AttackResolveProgress ?? 0.85,
+    // Release model: false = fixed-final (steer to finalRank, with margin); true = band-arrival (free on
+    // band re-entry = the edge, no margin). Default false → current shipped behaviour.
+    _b2AttackBandArrival: !!config.b2AttackBandArrival,
+    // Universal band-arrival (V1 experiment): free B1-heroes + normal pack inside their assigned band.
+    // B2-attackers are unaffected (own release). Default false → byte-identical.
+    _universalBandArrival: !!config.universalBandArrival,
+    _attackerParams: null, // Map index → {peakRank, finalRank}, populated by update() at cast time
   };
 }
 
@@ -344,6 +369,21 @@ export function createTrajectoryController(racePlan) {
   let _bidirectionalBoostCount = 0;
   let _bidirectionalBrakeCount = 0;
   let _racersBlockedCount = 0;
+  // Pack-release hysteresis state + diagnostics (closure-scoped ⇒ resets per race automatically,
+  // since createTrajectoryController runs once per race). Keyed by r.index — survives the spread-copy
+  // that would break an object-identity compare. Absent the flag these stay untouched (feature OFF).
+  const _packReleased = new Map(); // index → boolean: currently in the released (strictness 0) state
+  let _packReleaseEvents = 0; // count of steering→released transitions (a racer arrived in-band)
+  let _packReSteerEvents = 0; // count of released→steering transitions (a racer drifted out)
+  let _packReleasedFrames = 0; // pack-racer-frames spent released (strictness 0)
+  let _packSteerFrames = 0; // pack-racer-frames spent re-steering under the feature (strictness 1)
+  // B2-attacker "Attack & Fall" state (closure-scoped ⇒ per-race). _attackerMinRank tracks the best
+  // (lowest) live rank each attacker has REACHED (peak-tracking); _attackerFreed latches once it has
+  // climbed to its peak AND been steered down to its finalRank in-band (then it joins the pack-release
+  // hysteresis via _packReleased). _attackerFreeEvents counts freeings (diagnostic).
+  const _attackerMinRank = new Map(); // index → best (lowest) live rank reached so far
+  const _attackerFreed = new Map(); // index → boolean: has completed climb+orchestrated-fall → free
+  let _attackerFreeEvents = 0;
   // Wall-clock ms at which the areaBonus fade actually began (set on first trigger).
   // Closure-scoped per race (createTrajectoryController runs once per race), so it resets
   // automatically — no manual reset needed. Anchors the real-time fade ramp at the trigger
@@ -523,9 +563,22 @@ export function createTrajectoryController(racePlan) {
             anchorProgress: pulkStartFrac,
             releaseProgress: plan._choreoReleaseProgress,
             bandResolve: plan._choreoBandResolve,
+            // B2-attacker "Attack & Fall" params (default OFF: b2AttackHeroes 0 → no attackers → byte-identical).
+            b2AttackHeroes: plan._b2AttackHeroes,
+            b2AttackPeakRank: plan._b2AttackPeakRank,
+            b2AttackFinalRank: plan._b2AttackFinalRank,
+            b2AttackProgress: plan._b2AttackProgress,
+            b2AttackResolveProgress: plan._b2AttackResolveProgress,
           },
         });
         plan._heroCurves = new Map(gen.curves.map((c) => [c.index, c.curve]));
+        // B2-attacker runtime params (peakRank + finalRank), for the servo's Track-to-FinalRank-then-Free
+        // logic. Only attacker-b2 curves carry them; empty map when the feature is OFF.
+        plan._attackerParams = new Map(
+          gen.curves
+            .filter((c) => c.role === 'attacker-b2')
+            .map((c) => [c.index, { peakRank: c.peakRank, finalRank: c.finalRank }])
+        );
         // Retain the authored ROLE (sovereign-lead / comebacker / faller) the generator already
         // produced — ONE source, populated here beside _heroCurves. Diagnostics-only (GovernorDiagHUD);
         // never recomputed, never read by physics.
@@ -536,7 +589,12 @@ export function createTrajectoryController(racePlan) {
         // UNCONSUMED — kept as the prerequisite channel for the planned B4b faller shot, because b1Indices
         // (targetRank ≤ 5) structurally cannot carry a faller (targetRank > 5).
         plan._cameraPlan = gen.cameraPlan ?? null;
-        for (const r of racers) r.isHeroChoreographed = plan._heroCurves.has(r.index);
+        for (const r of racers) {
+          r.isHeroChoreographed = plan._heroCurves.has(r.index);
+          // Diagnostics-only tag for the eye-test hero-highlight (render-time). Read-only; never read by
+          // physics. False for everyone when no attackers are cast → byte-identical.
+          r.isAttackerB2 = plan._attackerParams ? plan._attackerParams.has(r.index) : false;
+        }
         plan._choreoGenerated = true;
       } else {
         plan._choreoPrevRanks = new Map(active.map((r, i) => [r.index, i + 1]));
@@ -577,14 +635,6 @@ export function createTrajectoryController(racePlan) {
         : isHero
           ? sampleHeroCurve(heroCurve, phaseProgress)
           : (plan._racerTargetRank.get(r.index) ?? currentRank);
-      // Heroes track their curve EXACTLY (strictness 1.0); the pack runs looser under choreo so heroes
-      // can weave through. choreo-off → strictness == the shipped bandStrictness (1.0) → byte-identical.
-      const strictness = isHero
-        ? 1.0
-        : plan._choreoEnabled
-          ? plan._choreoPackBandStrictness
-          : bandStrictness;
-
       // positive rankError = racer currently ranked worse than target → boost
       const rankError = currentRank - targetRank;
       // Band bounds computed once — used for both steering blend and corridor telemetry.
@@ -596,6 +646,88 @@ export function createTrajectoryController(racePlan) {
           : currentRank > areaHi
             ? currentRank - areaHi
             : 0;
+      // Heroes track their curve EXACTLY (strictness 1.0); the pack runs looser under choreo so heroes
+      // can weave through. choreo-off → strictness == the shipped bandStrictness (1.0) → byte-identical.
+      let strictness = isHero
+        ? 1.0
+        : plan._choreoEnabled
+          ? plan._choreoPackBandStrictness
+          : bandStrictness;
+      // B2-attacker "Attack & Fall" (Track-to-FinalRank, then Free). While NOT yet freed the attacker
+      // tracks its curve at strictness 1.0 — the mandatory climb to peakRank, then the orchestrated fall
+      // that the curve steers down to finalRank. It FREES once it has (a) reached its peak (best live rank
+      // ≤ peakRank) AND (b) been steered down to finalRank in-band; from then it joins the pack-release
+      // spatial hysteresis (free inside band, re-steer > threshold ranks outside). Independent of
+      // packReleaseEnabled (the attacker's own feature). No resolve-checkpoint constraint (hero-privilege).
+      const atkParams =
+        isHero && plan._attackerParams ? plan._attackerParams.get(r.index) : undefined;
+      if (atkParams) {
+        const mr = Math.min(_attackerMinRank.get(r.index) ?? Infinity, currentRank);
+        _attackerMinRank.set(r.index, mr);
+        let freed = _attackerFreed.get(r.index) ?? false;
+        if (!freed) {
+          // Orchestrated phase: strictness stays 1.0 (already set above) → tracks the curve target exactly.
+          const peakReached = mr <= atkParams.peakRank;
+          // Release condition. Fixed-final (default): steer all the way to finalRank (1+ rank INSIDE the
+          // band, with margin) before freeing. Band-arrival (_b2AttackBandArrival): free the MOMENT the
+          // racer re-enters its band on the way down (bandError 0 ⇒ the top edge, since it falls from the
+          // peak above the band) — no margin. The diagnosis predicts band-arrival leaks more (edge release).
+          if (
+            peakReached &&
+            bandError === 0 &&
+            (plan._b2AttackBandArrival || currentRank >= atkParams.finalRank)
+          ) {
+            freed = true;
+            _attackerFreed.set(r.index, true);
+            _packReleased.set(r.index, true); // enter the free phase RELEASED (strictness 0)
+            _attackerFreeEvents++;
+          }
+        }
+        if (freed) {
+          let released = _packReleased.get(r.index) ?? true;
+          if (!released && bandError === 0) {
+            released = true;
+            _packReleaseEvents++;
+          } else if (released && Math.abs(bandError) > plan._packReSteerThreshold) {
+            released = false;
+            _packReSteerEvents++;
+          }
+          _packReleased.set(r.index, released);
+          strictness = released ? 0 : 1;
+          if (released) _packReleasedFrames++;
+          else _packSteerFrames++;
+        }
+        // not-yet-freed → strictness remains 1.0 (curve tracking); nothing else to do.
+      } else if (plan._universalBandArrival) {
+        // Universal band-arrival (V1 experiment): B1-heroes AND normal pack racers run FREE (strictness 0)
+        // once inside their FIXED assigned band, and are re-steered (strictness 1) the moment they leave it.
+        // The band comes from the racer's ASSIGNED target rank (getAreaBounds of _racerTargetRank), NOT the
+        // moving hero-curve target — so a climbing hero counts as "arrived" only when it truly reaches its
+        // band. B2-attackers keep their own release (atkParams branch above). OFF → skipped → byte-identical.
+        const assignedRank = plan._racerTargetRank.get(r.index) ?? currentRank;
+        const [aLo, aHi] = getAreaBounds(assignedRank);
+        strictness = currentRank >= aLo && currentRank <= aHi ? 0 : 1.0;
+      } else if (plan._packReleaseEnabled && !isHero) {
+        // Pack-only strictness release (spatial hysteresis, flag-gated; heroes excluded). Inside the band
+        // (bandError == 0) the pack racer releases → strictness 0 → error collapses to bandError (0), so it
+        // runs at natural speed and reorders freely. Once it drifts MORE than _packReSteerThreshold ranks
+        // past the band edge it snaps to full pinning (strictness 1) and is dragged back; it only releases
+        // again after returning fully inside (bandError == 0). The release↔re-steer gap is the sole anti-
+        // flicker guard — there is no time cooldown. Only reachable in OUTCOME for the pack (pre-OUTCOME
+        // non-heroes early-return above), so the release is naturally confined to the OUTCOME phase.
+        let released = _packReleased.get(r.index) ?? false;
+        if (!released && bandError === 0) {
+          released = true;
+          _packReleaseEvents++;
+        } else if (released && Math.abs(bandError) > plan._packReSteerThreshold) {
+          released = false;
+          _packReSteerEvents++;
+        }
+        _packReleased.set(r.index, released);
+        strictness = released ? 0 : 1;
+        if (released) _packReleasedFrames++;
+        else _packSteerFrames++;
+      }
       // Blended error: strictness=1.0 ≡ rankError (exact); <1.0 steers toward the band edge (loose pack).
       const error = strictness * rankError + (1 - strictness) * bandError;
       const noise = (rng() - 0.5) * 2 * plan._stochasticNoise;
@@ -671,6 +803,15 @@ export function createTrajectoryController(racePlan) {
    * @returns {object} telemetry snapshot
    */
   function collectTelemetry() {
+    // B2-attacker per-race aggregates: how many were cast, and how many actually reached their peak rank
+    // (casting-yield + peak-reached diagnostics — a null action result is ambiguous without them).
+    const _atkCast = plan._attackerParams ? plan._attackerParams.size : 0;
+    let _atkPeak = 0;
+    if (plan._attackerParams) {
+      for (const [idx, prm] of plan._attackerParams) {
+        if ((_attackerMinRank.get(idx) ?? Infinity) <= prm.peakRank) _atkPeak++;
+      }
+    }
     const tel = {
       winnerBlockedFractionInOutcome:
         _winnerStepCount > 0 ? _winnerBlockedInOutcome / _winnerStepCount : 0,
@@ -684,6 +825,18 @@ export function createTrajectoryController(racePlan) {
       bidirectionalBrakeFraction:
         _racerStepCount > 0 ? _bidirectionalBrakeCount / _racerStepCount : 0,
       racersBlockedInOutcome: _racerStepCount > 0 ? _racersBlockedCount / _racerStepCount : 0,
+      // Pack-release diagnostics (0 when the feature is OFF — no transitions ever fire).
+      packReleaseEvents: _packReleaseEvents,
+      packReSteerEvents: _packReSteerEvents,
+      packReleasedFrameFraction:
+        _packReleasedFrames + _packSteerFrames > 0
+          ? _packReleasedFrames / (_packReleasedFrames + _packSteerFrames)
+          : 0,
+      // B2-attacker diagnostics (0 when OFF): cast count, how many reached peak, how many completed the
+      // climb+fall and freed (= reached finalRank in-band). yield=cast/target, peak-rate=peak/cast.
+      attackerCast: _atkCast,
+      attackerPeakReached: _atkPeak,
+      attackerFreed: _attackerFreeEvents,
     };
     _winnerBlockedInOutcome = 0;
     _winnerStepCount = 0;
@@ -696,6 +849,14 @@ export function createTrajectoryController(racePlan) {
     _bidirectionalBoostCount = 0;
     _bidirectionalBrakeCount = 0;
     _racersBlockedCount = 0;
+    _packReleaseEvents = 0;
+    _packReSteerEvents = 0;
+    _packReleasedFrames = 0;
+    _packSteerFrames = 0;
+    _packReleased.clear();
+    _attackerMinRank.clear();
+    _attackerFreed.clear();
+    _attackerFreeEvents = 0;
     return tel;
   }
 
