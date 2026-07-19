@@ -820,3 +820,12 @@ Items deferred from Racer Editor Phase 1+2 (merged 2026-05-28).
   cohesion; a fairness item in its own right.
 - **PHOTO_FINISH DevScreen accordion** — to be added.
 - **Hero-count as a DevScreen range** — expose the 2–4 hero count as a tunable range.
+
+### Re-apply --jobs parallelism cleanly (perf)
+worker_threads parallelism for the sweep race loop (~5x speedup at jobs=8). Originally on
+`diag/look-before-brake` commit `0c20f9b`, but a clean cherry-pick isn't possible — master's per-race
+body diverged (3 extra observers: COMEBACK_ANALYSIS, HERO_MAP, GAP_METRICS), making it a ~1-2h manual
+core-loop refactor with fingerprint + observer-parity gates. Deferred as nice-to-have (2026-07-19).
+When re-applied: extract `runRaceForCombo`, split run/fold for all observers, add worker + pool, gate on
+`--jobs=1` fingerprint parity (`4ec8e64dd2641ad3`) AND serial-vs-parallel observer parity (hero-map /
+gap-metrics / comeback). Keep `diag/look-before-brake` (holds `0c20f9b`) until then.
