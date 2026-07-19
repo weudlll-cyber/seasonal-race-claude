@@ -231,9 +231,9 @@ const DYNAMICS_OVERRIDES = {
   pulkCeilingCap:       argVal('pulkCeilingCap', String(DEFAULT_RACE_DYNAMICS_CONFIG.pulkCeilingCap)) === 'true',
   // Additive boost-headroom above the natural band max for the pulk ceiling (0 = shipped baseline).
   pulkBoostHeadroom:    Number(argVal('pulkBoostHeadroom', String(DEFAULT_RACE_DYNAMICS_CONFIG.pulkBoostHeadroom))),
-  // Ease the rowEnvMult step at the PULK->OUTCOME boundary (1s easeInOutCubic). Default false = instant
-  // (byte-identical). --enableRowEnvSmooth=true exercises the SHARED raceStep.js smoothing for the re-gate.
-  enableRowEnvSmooth:  argVal('enableRowEnvSmooth', String(DEFAULT_RACE_DYNAMICS_CONFIG.enableRowEnvSmooth ?? false)) === 'true',
+  // Ease the rowEnvMult step at the PULK->OUTCOME boundary (1s easeInOutCubic). Default TRUE = eased
+  // (shipped 2026-07-19). --enableRowEnvSmooth=false forces the old instant step (byte-identical to pre-flip).
+  enableRowEnvSmooth:  argVal('enableRowEnvSmooth', String(DEFAULT_RACE_DYNAMICS_CONFIG.enableRowEnvSmooth ?? true)) === 'true',
   // PulkLeadRotation (the PULK-phase lead-rotation core loop). Default OFF.
   pulkLeadRotationAttackerSlots: Number(argVal('pulkLeadRotationAttackerSlots', String(DEFAULT_RACE_DYNAMICS_CONFIG.pulkLeadRotationAttackerSlots))),
   pulkLeadRotationDropDepthLengths: Number(argVal('pulkLeadRotationDropDepthLengths', String(DEFAULT_RACE_DYNAMICS_CONFIG.pulkLeadRotationDropDepthLengths))),
