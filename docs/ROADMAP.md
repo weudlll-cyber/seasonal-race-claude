@@ -545,3 +545,25 @@ controls + pinned internals (Stage 5b), not on the removed governor knobs.
   ≤ 5, `:407-408`). These are known casting defects, not constraints.
 - **Next:** field cohesion (`docs/CONCEPT-COHESION.md`) → then the casting rework → then the traffic
   malus. Cohesion is documentation-only today; nothing is implemented.
+
+## 2026-07-20 — status update (B2-Heroes shipped: OUTCOME front-action)
+
+- **Done — B2-attacker "Attack & Fall" heroes SHIPPED ON** (`v-b2-heroes-complete` = master `8bf54ca`,
+  pushed to origin). Extra choreographed heroes cast from front-post-chaos B2-finishers that climb to
+  ~rank 5 mid-race then fall back and free-reorder in B2 (**band-arrival** release). Shipped
+  `b2AttackHeroes=3, peak=5, final=7, band-arrival` — **+21% top-5 OUTCOME action** vs the no-attacker
+  floor, B1/B2 band-reach ≥70% on all four tracks, Holm at the pre-existing 2/4 baseline. `count=0` is
+  byte-identical (`4ec8e64…`); the new count=3 default fingerprint is `72c3360fb75225ef`. 3-phase
+  validation + owner eye-test PASS; tests 3203/3203. Detail in BACKLOG.md and ARCHITECTURE.md §(a.1);
+  reports under `exp-b2-attack-results/`.
+- **Principle proven — action lives in ORCHESTRATION, not liberation.** Steering racers along authored
+  curves CREATES top-5 churn; freeing them (strictness 0 inside band) SETTLES the field and reduces
+  action. Validated 3 ways: B2-attackers +21% (scripted); the shelved `packReleaseEnabled` breaks B2
+  band-reach via an endgame edge-leak (free); the shelved `universalBandArrival` −6% action (free).
+  **Future front-action features should AUTHOR scenarios (curves/casting), not liberate constraints
+  (release the servo).** (This also resolves the older "Paused: no hero steered to rank 1" note above —
+  B2-attackers author front-of-field drama by casting toward rank ~5, still no steered rank-1 winner.)
+- **Still open, deferred — E3 (deep-band OUTCOME climb-capacity / servo authority).** No longer blocked
+  by the B2-Heroes work, but deferred pending an owner decision on drama-at-leader vs. deep-band reach
+  (they want opposite servo tuning). The B2 per-hero intensity budget, the Re-Gate on `9cfa953`, and the
+  `--jobs` sweep parallelism all remain open as before.
