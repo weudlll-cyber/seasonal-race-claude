@@ -842,17 +842,33 @@ branch.
 
 ## 2026-07-20 — added (runaway baseline + cleanup)
 
-### Runaway phase — Distance Leash + Late Challenger 🔜 *(flag-gated exploration; new)*
+### Runaway phase — Distance Leash (active) + Late Challenger (deferred) 🔜 *(flag-gated; decided 2026-07-20)*
 Baseline established: **runawayWinnerRate = 23.5%** overall (open 18% / closed 28–30%) via the
 `--runaway-parade` observer (`scripts/sim/observers/runaway-parade.mjs`, baseline in
 `exp-runaway-leader-results/`). **Goal:** keep the leader catchable without breaking fairness. **Key
 constraint (Lesson 179):** the decisive lead forms **before progress 0.90** — a ≥3-length lead at 0.90
-converted to an unchallenged win in ~94/99 races — so a late leash that only engages after 0.90 arrives
-too late; contest the gap EARLIER (PULK / choreo→OUTCOME boundary) or stop it forming. **Approach:**
-flag-gated (default OFF, byte-identical off), e.g. a distance-leash on a runaway leader and/or a late
-challenger cast. **Success metric:** lower runawayWinnerRate vs the 23.5% baseline while band-reach ≥70%
-and 0 Holm-unfair start rows hold. Measure with the runaway-parade observer; verify determinism per sweep.
-Per Lesson 178, prefer AUTHORING a challenger over LIBERATING the leader's constraints.
+converted to an unchallenged win in ~94/99 races — so a leash that only engages after 0.90 arrives too
+late; contest the gap EARLIER. **Concept + two independent reviews + decision:**
+`reports/proposals/RUNAWAY-CONCEPT.md` (+ `CONCEPT-REVIEW-CC-RUNAWAY.md`, `CONCEPT-REVIEW-COPILOT-RUNAWAY.md`).
+
+**ACTIVE — Mechanism A: Front-Cluster Distance Leash (BUILD, modified).** The load-bearing, gap-space
+mechanism (the metric lives in gap-space; the servo is rank-space and length-blind today). Design:
+**leash on the current rank-1 racer (hero or not); leader-only PROPORTIONAL gap-brake with hysteresis;
+reuse the 1 s `trajectoryMult` slew; window [0.6, ~0.92]; B1 floor; shared length scale via
+`raceLengths.js` threaded parity-safe into `update()` and both callers** (`index.jsx`, `sim-fairness.mjs`).
+Flag-gated (`frontLeash*`), default OFF → byte-identical. This is the next build step.
+
+**DEFERRED — Mechanism B: Late Challenger.** Reactive form REJECTED (fights the once-per-race,
+boundary-anchored generator; near-empty feasibility budget that late; rank-space curves can't express
+"within ~1 length"). Unconditional-closer form DEFERRED. **Re-entry condition:** revisit ONLY if
+measurement after A ships shows the front present in RANK but still not contesting in LENGTH at the line.
+
+**Success metrics:** runawayWinnerRate 23.5% → <10% (no track >15%); top-5 action ≥ baseline;
+paradeFinishRate ≤ 2%; B1/B2 band-reach ≥70%, Holm ≤2/4; flags OFF → fingerprint `72c3360fb75225ef`.
+*(Casting-yield criterion dropped for A — A casts nothing and no `castingYield` metric exists; it
+re-applies only if B is ever built. Note: leash brake authority is −15% / minMult 0.85, not "+10%".)*
+Measure with the runaway-parade observer + `exp-runaway-leader` on the f40a7a6 seeds; determinism per sweep.
+Per Lesson 178, AUTHOR the contest (leash the leader), don't LIBERATE constraints.
 
 ### Parade-finish — observe only 🔍 *(no action)*
 `paradeFinishRate = 2%` baseline, and when it happens the leading group is genuinely paced (internal speed
