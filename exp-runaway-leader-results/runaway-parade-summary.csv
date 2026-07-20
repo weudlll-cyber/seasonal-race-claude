@@ -1,0 +1,6 @@
+track,type,N,runawayWinnerRate,runawayWinners,paradeFinishRate,paradeFinishes,gap090_mean,gap090_p50,gap090_p90,gap090_max,gap090_geLead,paradeGrp_mean,paradeGrp_2,paradeGrp_3,paradeGrp_4,paradeGrp_5plus,paradeSpeedSpread_mean,paradeSpeedSpread_max
+luger-hill,open,100,0.18,18,0.01,1,1.6499,1.207,3.9112,5.9952,18,2,1,0,0,0,0.0255,0.0255
+mountainstreet,open,100,0.18,18,0.03,3,1.9391,1.4437,4.2523,9.8387,20,2.3333,2,1,0,0,0.0262,0.0537
+searound,closed,100,0.3,30,0.01,1,2.6307,1.3467,6.9279,10.5846,31,2,1,0,0,0,0.0405,0.0405
+dirt-oval,closed,100,0.28,28,0.03,3,2.6117,1.4994,6.2603,14.3109,30,2.3333,2,1,0,0,0.0598,0.1009
+OVERALL,all,400,0.235,94,0.02,8,2.2079,1.3691,5.1211,14.3109,99,2.25,6,2,0,0,0.0405,0.1009

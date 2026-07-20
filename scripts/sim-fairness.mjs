@@ -96,6 +96,7 @@ import {
   PROPOSED_THRESHOLDS as GM_THRESHOLDS,
 } from './sim/observers/gap-metrics.mjs';
 import { maxLinkGapLengths, makeHeldOvertakeTracker, fullSpreadLengths, framesOverThresholdShare, GAP_THRESHOLD_LENGTHS, leaderSnapshot, RUNAWAY_LARGE_LENGTHS } from './sim/observers/pulk-contest.mjs';
+import { RUNAWAY_PARADE_DEFAULTS } from './sim/observers/runaway-parade.mjs';
 import { applyPulkLeadRotation, arcT, computeDirectorCeiling } from '../client/src/modules/raceGovernor.js';
 import { lenScaleFrom, arcLengths, meanDrawnBodyLen } from '../client/src/modules/raceLengths.js';
 
@@ -325,6 +326,14 @@ const heroMapRaces        = [];   // per-race hero observations (filled only whe
 // byte-identical. RAW distributions only — X/Y/Z await the owner's calibration (see gap-metrics.mjs).
 const GAP_METRICS         = argv.includes('--gap-metrics');
 const gmRaces             = [];   // per-race gap-space observations (filled only when GAP_METRICS)
+// RUNAWAY-PARADE (read-only, --runaway-parade): baseline measurement of two dead-endgame phenomena —
+// RUNAWAY_WINNER (leader >= 3L clear at progress 0.90, wins, never challenged in [0.90,1.0]) and
+// PARADE_FINISH (a side-by-side leading group >= 2 detached >= 3L from the field). Collects the RAW
+// per-race record (leader identity + lead at 0.90, min lead across the window, the finish-snapshot
+// front gaps, per-racer final-window speed); the classifiers live in sim/observers/runaway-parade.mjs.
+// Fully flag-gated → a no-flag run does zero extra work and is byte-identical.
+const RUNAWAY_PARADE      = argv.includes('--runaway-parade');
+const rpRaces             = [];   // per-race runaway/parade raw records (filled only when RUNAWAY_PARADE)
 // --skip-main-output: skip writing the large fairness-data.json + fairness-report.md. For a batch
 // runner that reads only hero-map.json, to avoid heavy concurrent writes into the OneDrive-synced
 // tree. Read-only measurement runs only; a normal run (flag absent) is unchanged.
@@ -565,6 +574,7 @@ export function runSingleRace({
   racerTargetRankMap = null,   // plan._racerTargetRank; lets the diag name the peak-gap leader's target rank
   heroMap = false,             // --hero-map: record per-hero climb-feasibility signals (read-only)
   gapMetrics = false,          // --gap-metrics: record gap-space (time-behind-leader) signals (read-only)
+  runawayParade = false,       // --runaway-parade: record runaway-winner / parade-finish raw signals (read-only)
 }) {
   const savedRandom = Math.random;
   if (seed > 0) Math.random = makePRNG(seed);
@@ -978,6 +988,23 @@ export function runSingleRace({
     // 0.25 = the choreo/chaos boundary — the earliest "is the field already strung out?" snapshot.
     const GM_CPS = [0.25, 0.5, 0.75, 0.9];          // sample checkpoints (leader progress)
     let gmNextCp = 0;
+    // ── RUNAWAY-PARADE per-race state (read-only; only allocated when --runaway-parade) ──
+    // Collects the RAW signals the two classifiers (sim/observers/runaway-parade.mjs) consume. All
+    // gaps in RACER LENGTHS (arcT × govLenScale). One-shot captures at progress 0.90 (leader identity
+    // + lead), at 0.95 (final-window speed baseline) and at the leader-crossing instant (finish
+    // snapshot front gaps); a running MIN of the 0.90-leader's lead over the field across [0.90, its
+    // own finish] (the "never challenged" signal). Never mutates race state.
+    const RP_WINDOW_START = RUNAWAY_PARADE_DEFAULTS.windowStart;             // 0.90
+    const RP_SPEED_START  = 1 - RUNAWAY_PARADE_DEFAULTS.speedWindow;         // 0.95
+    const rp = runawayParade ? {
+      leaderIdxAt090:      null,       // frontmost LIVE racer at the first frame >= windowStart
+      leaderGapP2At090Len: null,       // its lead over P2 at that frame (lengths)
+      minLeadFrom090Len:   Infinity,   // MIN lead over the field across [windowStart, its own finish]
+      t095ByIndex:         null,       // per-racer t at the first frame >= (1 - speedWindow)
+      ts095:               null,       // raceTs at that frame
+      line:                null,       // finish snapshot { order:[idx], gaps:[len] } at leader-crossing
+      speed095ByIndex:     null,       // per-racer avg speed over [~0.95, line] (relative-spread source)
+    } : null;
     const HM_CEIL  = 1.09;                 // servo ceiling (maxMult 1.10) — parity with smWinnerCeilSteps
     const HM_LAT   = V4_LATERAL_PROXIMITY; // lateral proximity for a REAL overtake (0.3) — parity with physical_overtake
     const hmBandOf = (rank) => {
@@ -1925,6 +1952,66 @@ export function runSingleRace({
         }
       }
 
+      // ── RUNAWAY-PARADE per-frame observer (--runaway-parade; read-only) ──────
+      // Runs after Pass-2 (r.t final for the frame) and BEFORE the finish check, so the leader-crossing
+      // frame is sampled at pre-finish positions (matching the gap-metrics at-the-line convention).
+      // Never mutates race state.
+      if (rp && govLenScale > 0) {
+        // (1) One-shot at windowStart: the frontmost LIVE racer's identity + its lead over P2 (lengths).
+        if (rp.leaderIdxAt090 === null && raceProgress >= RP_WINDOW_START) {
+          const live = racers.filter((r) => !r.finished).sort((a, b) => (b.t - a.t) || (a.index - b.index));
+          if (live.length >= 2) {
+            rp.leaderIdxAt090 = live[0].index;
+            rp.leaderGapP2At090Len = +(arcT(live[0].t, live[1].t, isOpen) * govLenScale).toFixed(4);
+          } else if (live.length === 1) {
+            rp.leaderIdxAt090 = live[0].index;
+            rp.leaderGapP2At090Len = Infinity; // lone survivor — trivially uncontested
+          }
+        }
+        // (2) Challenge window [windowStart, 1.0]: running MIN lead of the 0.90-leader over the WHOLE
+        // field, only while that racer is still on track (its finish seals the win). SIGNED in lengths:
+        // the arc gap when it leads, 0 when the field has drawn level or passed it (= challenged).
+        if (rp.leaderIdxAt090 !== null && rp.leaderIdxAt090 >= 0 && raceProgress >= RP_WINDOW_START) {
+          const leaderR = racers.find((r) => r.index === rp.leaderIdxAt090);
+          if (leaderR && !leaderR.finished) {
+            let bestOtherT = -Infinity;
+            for (const r of racers) if (r.index !== leaderR.index && r.t > bestOtherT) bestOtherT = r.t;
+            const lead = bestOtherT >= leaderR.t ? 0 : arcT(leaderR.t, bestOtherT, isOpen) * govLenScale;
+            if (lead < rp.minLeadFrom090Len) rp.minLeadFrom090Len = lead;
+          }
+        }
+        // (3) One-shot at (1 - speedWindow): per-racer position baseline for the final-window speed.
+        if (!rp.t095ByIndex && raceProgress >= RP_SPEED_START) {
+          rp.t095ByIndex = {};
+          for (const r of racers) rp.t095ByIndex[r.index] = r.t;
+          rp.ts095 = raceTs;
+        }
+        // (4) One-shot finish snapshot at the leader-crossing instant: front consecutive gaps (lengths)
+        // over the full field order + each racer's average speed over the final window (relative-spread
+        // source). Includes racers crossing THIS frame (still !finished here) at their pre-finish t.
+        if (!rp.line && finishT > 0) {
+          let leaderMaxT = -Infinity;
+          for (const r of racers) if (r.t > leaderMaxT) leaderMaxT = r.t;
+          if (leaderMaxT >= finishT) {
+            const order = [...racers].sort((a, b) => (b.t - a.t) || (a.index - b.index));
+            const gaps = [];
+            for (let i = 0; i < order.length - 1; i++) {
+              gaps.push(+(arcT(order[i].t, order[i + 1].t, isOpen) * govLenScale).toFixed(4));
+            }
+            rp.line = { order: order.map((r) => r.index), gaps };
+            const speed095ByIndex = {};
+            if (rp.t095ByIndex && rp.ts095 != null && raceTs > rp.ts095) {
+              const dtSec = (raceTs - rp.ts095) / 1000;
+              for (const r of racers) {
+                const t0 = rp.t095ByIndex[r.index];
+                if (t0 != null) speed095ByIndex[r.index] = +(((r.t - t0) / dtSec)).toFixed(6);
+              }
+            }
+            rp.speed095ByIndex = speed095ByIndex;
+          }
+        }
+      }
+
       // Finish check
       for (const r of racers) {
         if (!r.finished && r.t >= finishT) {
@@ -2180,6 +2267,23 @@ export function runSingleRace({
         top5SpreadLineSec: +line.top5Spread.toFixed(4),
         checkpoints: gmCheckpoints,
         perRacer,
+      };
+    }
+
+    // ── RUNAWAY-PARADE raw record — attached ONLY when --runaway-parade (else results unchanged) ──
+    // The classifiers (sim/observers/runaway-parade.mjs) turn this into the two booleans downstream.
+    if (runawayParade && rp) {
+      const finalRankByIndex = {};
+      for (const r of racers) finalRankByIndex[r.index] = r.finishRank;
+      results.runawayParade = {
+        lenScale:            +govLenScale.toFixed(4),
+        leaderIdxAt090:      rp.leaderIdxAt090,
+        // Infinity (lone survivor) is not JSON-representable → emit null (classifier treats it as "not clear").
+        leaderGapP2At090Len: isFinite(rp.leaderGapP2At090Len) ? rp.leaderGapP2At090Len : null,
+        minLeadFrom090Len:   isFinite(rp.minLeadFrom090Len) ? +rp.minLeadFrom090Len.toFixed(4) : null,
+        line:                rp.line,            // { order, gaps } or null (race timed out before any finish)
+        speed095ByIndex:     rp.speed095ByIndex, // { idx: speed } or null
+        finalRankByIndex,
       };
     }
 
@@ -2830,6 +2934,7 @@ if (isMain) {
             racerTargetRankMap: raceSollRankMap,
             heroMap:            HERO_MAP,
             gapMetrics:         GAP_METRICS,
+            runawayParade:      RUNAWAY_PARADE,
           });
           // HERO-MAP (--hero-map): stash this race's per-hero observations, tagged with combo meta.
           if (HERO_MAP && result.heroObs) {
@@ -2838,6 +2943,10 @@ if (isMain) {
           // GAP-METRICS (--gap-metrics): stash this race's gap-space observations, tagged with combo meta.
           if (GAP_METRICS && result.gapMetrics) {
             gmRaces.push({ trackId, racerType, durationSec, seed, raceIdx, isOpen, gapMetrics: result.gapMetrics });
+          }
+          // RUNAWAY-PARADE (--runaway-parade): stash this race's raw record, tagged with combo meta.
+          if (RUNAWAY_PARADE && result.runawayParade) {
+            rpRaces.push({ trackId, racerType, durationSec, seed, raceIdx, isOpen, runawayParade: result.runawayParade });
           }
           // Step 1: fair-chance placement metrics (requires race-plan target ranks)
           if (raceSollRankMap) {
@@ -3570,6 +3679,23 @@ if (isMain) {
         `dead=${g.deadRaceFlag ? 'YES' : 'no '}(${(g.deadRaceFinalThirdOverFrac * 100).toFixed(0)}%) frontOver=${(g.frontGapFinalThirdOverFrac * 100).toFixed(0)}%  comebacks=${comebacks}`
       );
     }
+  }
+
+  // ── RUNAWAY-PARADE raw output (--runaway-parade) → OUT_DIR/runaway-parade.json ──
+  // RAW per-race records only (the two booleans are derived downstream by the classifier module, so the
+  // definitions stay in ONE place). A no-flag run writes nothing and is byte-identical.
+  if (RUNAWAY_PARADE) {
+    const rpPath = join(OUT_DIR, 'runaway-parade.json');
+    writeFileSync(rpPath, JSON.stringify({
+      meta: {
+        label: DIAG_LABEL, nRaces: N_RACES, seed: GLOBAL_SEED,
+        note: 'RUNAWAY-WINNER & PARADE-FINISH raw per-race records (read-only baseline measurement). '
+            + 'Booleans derived by scripts/sim/observers/runaway-parade.mjs classifyRace().',
+        thresholds: RUNAWAY_PARADE_DEFAULTS,
+      },
+      races: rpRaces,
+    }, null, 2));
+    console.log(`\n=== Runaway/Parade (${DIAG_LABEL}) ===  → ${rpPath}  (${rpRaces.length} races)`);
   }
 
 
