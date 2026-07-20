@@ -477,6 +477,205 @@ if (argv.includes('--formation-diag')) {
 }
 
 // ════════════════════════════════════════════════════════════════════════════════
+// OVERNIGHT CONFIRMATION (--gapreroll-confirm) — ALL 10 tracks, N=200, 60s, default racers.
+// 3 arms run SEQUENTIALLY (V0 → SYM-1.5-s075 → SYM-1.5-s10) with STOP gates between; measurement only
+// (feature frozen at master b1f6617). Includes the paired per-seed conversion analysis (pure
+// post-processing of the runaway-parade record — no sim/observer changes needed).
+// ════════════════════════════════════════════════════════════════════════════════
+if (argv.includes('--gapreroll-confirm')) {
+  const OUT_C = join(OUT_ABS, 'confirm-n200');
+  mkdirSync(OUT_C, { recursive: true });
+  mkdirSync(TMP_ABS, { recursive: true });
+  const ALL10 = ['dirt-oval', 'river-run', 'space-sprint', 'garden-path', 'city-circuit', 'luger-hill', 'ice-track', 'mountainstreet', 'searound', 'seatrack'];
+  const TRK = (ONLY ? [ONLY] : ALL10).map((id) => { const s = trackSeed(id); return { id, racer: s.defaultRacerTypeId, closed: !!s.closed }; });
+  const KNOWN = { 'luger-hill': 18, 'mountainstreet': 18, 'searound': 30, 'dirt-oval': 28 }; // baseline first-100-seed counts
+  const med = (a) => (a.length ? percentile(a, 0.5) : 0);
+  const q = (a, p) => (a.length ? percentile(a, p) : 0);
+  const zoneIdxOf = (rank) => { for (let i = 0; i < BAND_EDGES.length; i++) if (rank <= BAND_EDGES[i]) return i; return BAND_EDGES.length; };
+  const bandReach = (rawData, b) => { const rows = (rawData || []).filter((r) => r.sollBereich === b); return rows.length ? rows.filter((r) => zoneIdxOf(r.finalRank) === b - 1).length / rows.length : null; };
+  const ARMS = [
+    { name: 'V0', gr: false },
+    { name: 'SYM-1.5-s075', gr: true, mode: 'symmetric', G: 1.5, s: 0.75 },
+    { name: 'SYM-1.5-s10', gr: true, mode: 'symmetric', G: 1.5, s: 1.0 },
+  ];
+  const store = {}; // store[arm][track] = { agg, bySeed: {seed: record} }
+
+  async function runArmTrack(arm, track) {
+    const outAbs = join(TMP_ABS, `${arm.name}__${track.id}`);
+    const args = ['scripts/sim-fairness.mjs', `--track=${track.id}`, `--racer=${track.racer}`,
+      `--seed=${SEED}`, `--races=${RACES}`, `--dur=${DUR}`, '--runaway-parade', '--hero-map', `--out=${toSimOut(outAbs)}`];
+    if (arm.gr) args.push(`--gapRerollThresholdLengths=${arm.G}`, `--gapRerollMode=${arm.mode}`, `--gapRerollStrength=${arm.s}`);
+    await pExecFile(process.execPath, args, { cwd: ROOT, maxBuffer: 512 * 1024 * 1024 });
+    const rp = JSON.parse(readFileSync(join(outAbs, 'runaway-parade.json'), 'utf8'));
+    const fd = JSON.parse(readFileSync(join(outAbs, 'fairness-data.json'), 'utf8'));
+    let hm = {}; try { hm = JSON.parse(readFileSync(join(outAbs, 'hero-map.json'), 'utf8')); } catch { /* opt */ }
+    const bySeed = {};
+    let runaway = 0, parade = 0; const within3All = [];
+    for (const rec of rp.races) {
+      const c = classifyRace(rec.runawayParade, D);
+      const rpr = rec.runawayParade;
+      bySeed[rec.seed] = { runaway: c.runawayWinner, parade: c.paradeFinish, within3: rpr.within3P1At090, gap090: rpr.leaderGapP2At090Len, leaderIdx: rpr.leaderIdxAt090, finalRank: rpr.finalRankByIndex };
+      if (c.runawayWinner) runaway++; if (c.paradeFinish) parade++; within3All.push(rpr.within3P1At090 ?? 0);
+    }
+    const nat = (fd.results || [])[0]?.avgNaturalness || {};
+    return {
+      bySeed,
+      agg: { arm: arm.name, track: track.id, type: track.closed ? 'closed' : 'open', n: rp.races.length,
+        runaway, parade, runawayRate: runaway / rp.races.length, paradeRate: parade / rp.races.length,
+        within3Med: med(within3All), b1: bandReach(fd.rawData, 1), b2: bandReach(fd.rawData, 2),
+        holmUnfair: hm.fairness?.startRowUnfair ?? null, top5Action: nat.outcomeTop5SwapsMean ?? null,
+        gapWindowRolls: nat.gapWindowRolls ?? null, gapBiasedRolls: nat.gapBiasedRolls ?? null, gapLeaderDutyCycle: nat.gapLeaderDutyCycle ?? null },
+    };
+  }
+
+  async function runArm(arm) {
+    store[arm.name] = {};
+    const jobs = [...TRK]; let nx = 0, dn = 0;
+    async function w() { while (nx < jobs.length) { const i = nx++; const r = await runArmTrack(arm, jobs[i]); store[arm.name][jobs[i].id] = r; dn++; console.log(`  ${arm.name.padEnd(13)} [${dn}/${jobs.length}] ${jobs[i].id.padEnd(15)} runaway=${r.agg.runaway}/${r.agg.n} winRolls=${r.agg.gapWindowRolls != null ? r.agg.gapWindowRolls.toFixed(0) : '-'}`); } }
+    await Promise.all(Array.from({ length: Math.min(JOBS, jobs.length) }, w));
+  }
+
+  const t0 = Date.now();
+  console.log(`\n=== gapreroll-confirm === ${ARMS.length} arms × ${TRK.length} tracks × N=${RACES} (seed=${SEED}), jobs=${JOBS}`);
+
+  // ── A1: V0, then STOP GATE 1 (first-100-seed continuity on the 4 known tracks) ──
+  await runArm(ARMS[0]);
+  const knownPresent = Object.keys(KNOWN).filter((k) => TRK.some((t) => t.id === k));
+  if (knownPresent.length === 4 && RACES >= 100) {
+    const fails = [];
+    for (const k of knownPresent) {
+      const bs = store.V0[k].bySeed;
+      let sub = 0; for (let s = 1; s <= 100; s++) if (bs[s]?.runaway) sub++;
+      if (sub !== KNOWN[k]) fails.push(`${k}: first-100 runaway ${sub} (baseline ${KNOWN[k]})`);
+    }
+    if (fails.length) {
+      writeFileSync(join(OUT_C, 'SUMMARY.md'), `# Confirmation STOPPED — continuity gate failed after A1 (V0)\n\nV0's first-100-seed subset must reproduce the baseline EXACTLY. It did not — comparison basis broken; A2/A3 NOT run.\n\n${fails.map((f) => `- ${f}`).join('\n')}\n`);
+      console.error('\n❌ STOP GATE 1 FAILED:\n' + fails.map((f) => '  ' + f).join('\n'));
+      process.exit(1);
+    }
+    console.log('  STOP gate 1 PASSED (V0 first-100-seed = baseline on all 4 known tracks).');
+  } else {
+    console.log(`  STOP gate 1 SKIPPED (only ${knownPresent.length}/4 known tracks in this run).`);
+  }
+
+  // ── A2: SYM-1.5-s075, then STOP GATE 2 (window rolls > 0 on all tracks) ──
+  await runArm(ARMS[1]);
+  const zeroWin = TRK.filter((t) => (store['SYM-1.5-s075'][t.id].agg.gapWindowRolls ?? 0) <= 0).map((t) => t.id);
+  if (zeroWin.length) {
+    writeFileSync(join(OUT_C, 'SUMMARY.md'), `# Confirmation STOPPED — window-eligible rolls still 0 (A2)\n\nThe closed-track regression: A2 must have window-eligible rolls > 0 on ALL tracks. Still 0 on: ${zeroWin.join(', ')}. A3 NOT run.\n`);
+    console.error(`\n❌ STOP GATE 2 FAILED: window rolls 0 on ${zeroWin.join(', ')}`);
+    process.exit(1);
+  }
+  console.log('  STOP gate 2 PASSED (window rolls > 0 on all tracks in A2).');
+
+  // ── A3: SYM-1.5-s10 ──
+  await runArm(ARMS[2]);
+
+  // ── Per-(arm,track) race CSVs (determinism re-run target) + aggregate CSV ──
+  const RCOLS = ['arm', 'track', 'seed', 'runaway', 'parade', 'within3', 'gap090', 'leaderIdx'];
+  for (const arm of ARMS) for (const t of TRK) {
+    const bs = store[arm.name][t.id].bySeed;
+    const rows = Object.keys(bs).map(Number).sort((a, b) => a - b).map((s) => ({ arm: arm.name, track: t.id, seed: s, runaway: bs[s].runaway ? 1 : 0, parade: bs[s].parade ? 1 : 0, within3: bs[s].within3 ?? '', gap090: bs[s].gap090 ?? '', leaderIdx: bs[s].leaderIdx ?? '' }));
+    writeFileSync(join(OUT_C, `races-${arm.name}-${t.id}.csv`), [RCOLS.join(','), ...rows.map((r) => RCOLS.map((c) => (typeof r[c] === 'number' ? +Number(r[c]).toFixed(4) : r[c])).join(','))].join('\n') + '\n');
+  }
+  const ACOLS = ['arm', 'track', 'type', 'n', 'runaway', 'runawayRate', 'paradeRate', 'within3Med', 'b1', 'b2', 'holmUnfair', 'top5Action', 'gapWindowRolls', 'gapBiasedRolls', 'gapLeaderDutyCycle'];
+  const aggRows = ARMS.flatMap((a) => TRK.map((t) => store[a.name][t.id].agg));
+  writeFileSync(join(OUT_C, 'per-arm-track.csv'), [ACOLS.join(','), ...aggRows.map((r) => ACOLS.map((c) => (r[c] == null ? '' : typeof r[c] === 'number' ? +r[c].toFixed(4) : r[c])).join(','))].join('\n') + '\n');
+
+  // ── Per-arm aggregate (overall + PASS/FAIL) ──
+  const armAgg = (name) => {
+    const ar = TRK.map((t) => store[name][t.id].agg);
+    const N = ar.reduce((s, r) => s + r.n, 0), runaway = ar.reduce((s, r) => s + r.runaway, 0), parade = ar.reduce((s, r) => s + r.parade, 0);
+    return { name, N, runawayRate: runaway / N, maxTrack: Math.max(...ar.map((r) => r.runawayRate)),
+      paradeRate: parade / N, b1min: Math.min(...ar.map((r) => r.b1 ?? 0)), b2min: Math.min(...ar.map((r) => r.b2 ?? 0)),
+      holmTracks: ar.filter((r) => (r.holmUnfair ?? 0) > 0).length, action: mean(ar.map((r) => r.top5Action ?? 0)),
+      biased: mean(ar.map((r) => r.gapBiasedRolls ?? 0)), duty: mean(ar.map((r) => r.gapLeaderDutyCycle ?? 0)), within3Med: med(ar.map((r) => r.within3Med)),
+      perTrack: Object.fromEntries(ar.map((r) => [r.track, r.runawayRate])) };
+  };
+  const AA = ARMS.map((a) => armAgg(a.name));
+  const v0a = AA[0];
+  for (const a of AA) { a.actionDelta = v0a.action ? a.action - v0a.action : 0; a.pass = a.runawayRate < 0.10 && a.maxTrack <= 0.15 && a.paradeRate <= 0.02 && a.actionDelta >= 0 && a.b1min >= 0.70 && a.b2min >= 0.70 && a.holmTracks <= 2; }
+
+  // ── PAIRED per-seed conversion analysis (V0 runaways → A2/A3) ──
+  const pairArm = (name) => {
+    const perTrack = {}; const all = { conv: 0, tot: 0, w3: [], escWin: 0, escTop3: 0, escDrop: 0, resid: 0, residV0Gap: [], residArmGap: [] };
+    for (const t of TRK) {
+      const v0bs = store.V0[t.id].bySeed, abs = store[name][t.id].bySeed;
+      const pt = { conv: 0, tot: 0, w3: [], escWin: 0, escTop3: 0, escDrop: 0, resid: 0, residV0Gap: [], residArmGap: [] };
+      for (const s of Object.keys(v0bs).map(Number)) {
+        if (!v0bs[s].runaway) continue; // only V0-runaway pairs
+        pt.tot++; all.tot++;
+        const ar = abs[s];
+        if (!ar.runaway) { // converted
+          pt.conv++; all.conv++;
+          if (ar.within3 != null) { pt.w3.push(ar.within3); all.w3.push(ar.within3); }
+          const escRank = ar.finalRank?.[v0bs[s].leaderIdx]; // former escapee's finish in the arm
+          if (escRank === 1) { pt.escWin++; all.escWin++; } else if (escRank != null && escRank <= 3) { pt.escTop3++; all.escTop3++; } else { pt.escDrop++; all.escDrop++; }
+        } else { // residual
+          pt.resid++; all.resid++;
+          if (v0bs[s].gap090 != null) pt.residV0Gap.push(v0bs[s].gap090), all.residV0Gap.push(v0bs[s].gap090);
+          if (ar.gap090 != null) pt.residArmGap.push(ar.gap090), all.residArmGap.push(ar.gap090);
+        }
+      }
+      perTrack[t.id] = pt;
+    }
+    return { perTrack, all };
+  };
+  const paired = { 'SYM-1.5-s075': pairArm('SYM-1.5-s075'), 'SYM-1.5-s10': pairArm('SYM-1.5-s10') };
+
+  // ── SUMMARY.md ──
+  const pctS = (x) => (100 * x).toFixed(1) + '%';
+  const md = [];
+  md.push('# Gap-Cap Re-Roll — Overnight Confirmation (ALL 10 tracks, N=200, 60s)');
+  md.push('');
+  md.push(`Measurement only, feature frozen at master ${'`'}b1f6617${'`'}. All 10 tracks (default racer each), N=${RACES}, seed set 1–${RACES} (paired), scheduled rolls only. STOP gates PASSED: V0 first-100-seed = baseline on the 4 known tracks; window-eligible rolls > 0 on all 10 tracks in A2. Facts only — the arm decision is the owner's.`);
+  md.push('');
+  md.push('## Gate table (across ALL 10 tracks)');
+  md.push('runaway <10% overall AND ≤15% every track AND parade ≤2% AND action Δ ≥ 0 AND B1&B2 ≥70% every track AND Holm ≤2/4.');
+  md.push('| arm | runaway | max track | parade | action Δ | B1min | B2min | Holm | within3 med | biased | duty | PASS |');
+  md.push('|---|---|---|---|---|---|---|---|---|---|---|---|');
+  for (const a of AA) md.push(`| ${a.name} | ${pctS(a.runawayRate)} | ${pctS(a.maxTrack)} | ${pctS(a.paradeRate)} | ${(a.actionDelta >= 0 ? '+' : '') + a.actionDelta.toFixed(2)} | ${pctS(a.b1min)} | ${pctS(a.b2min)} | ${a.holmTracks}/10 | ${a.within3Med} | ${a.biased.toFixed(1)} | ${a.duty.toFixed(2)} | ${a.pass ? '✅' : '❌'} |`);
+  md.push('');
+  md.push('## Per-track runawayWinnerRate (V0 / s075 / s10)');
+  md.push('| track | type | V0 | SYM-1.5-s075 | SYM-1.5-s10 |');
+  md.push('|---|---|---|---|---|');
+  for (const t of TRK) md.push(`| ${t.id} | ${t.closed ? 'closed' : 'open'} | ${pctS(AA[0].perTrack[t.id])} | ${pctS(AA[1].perTrack[t.id])} | ${pctS(AA[2].perTrack[t.id])} |`);
+  md.push('');
+  md.push('## Paired per-seed conversion (of the V0-runaway pairs)');
+  md.push('| arm | V0 runaways | converted | conv% | within3 of converted (p25/med/p75) | escapee: win/top3/drop | residual | residual gap@0.90 V0→arm (med) |');
+  md.push('|---|---|---|---|---|---|---|---|');
+  for (const name of ['SYM-1.5-s075', 'SYM-1.5-s10']) {
+    const a = paired[name].all;
+    md.push(`| ${name} | ${a.tot} | ${a.conv} | ${a.tot ? pctS(a.conv / a.tot) : '-'} | ${q(a.w3, 0.25)}/${med(a.w3)}/${q(a.w3, 0.75)} | ${a.escWin}/${a.escTop3}/${a.escDrop} | ${a.resid} | ${med(a.residV0Gap).toFixed(2)}→${med(a.residArmGap).toFixed(2)} |`);
+  }
+  md.push('');
+  md.push('*converted = a V0-runaway (track,seed) that is NOT a runaway in the arm. within3 = racers within 3.0L of P1 at 0.90 in the arm (did the lonely march become a fight, with how many). escapee win/top3/drop = where V0\'s runaway leader finishes in the arm. residual = pairs still runaway; gap@0.90 shows whether the lead at least shrank.*');
+  md.push('');
+  // Topology section
+  const grp = (arm, closed) => { const ar = TRK.filter((t) => t.closed === closed).map((t) => store[arm][t.id].agg.runawayRate); return ar.length ? mean(ar) : 0; };
+  md.push('## Topology — do the 6 new tracks behave like the known groups, and does the mechanism hold?');
+  const newOpen = TRK.filter((t) => !t.closed && !KNOWN[t.id]).map((t) => t.id);
+  const newClosed = TRK.filter((t) => t.closed && !KNOWN[t.id]).map((t) => t.id);
+  md.push(`New OPEN tracks (${newOpen.join(', ')}): V0 mean runaway ${pctS(mean(newOpen.map((id) => store.V0[id].agg.runawayRate)))} (known open ≈18–20%).`);
+  md.push(`New CLOSED tracks (${newClosed.join(', ')}): V0 mean runaway ${pctS(mean(newClosed.map((id) => store.V0[id].agg.runawayRate)))} (known closed ≈24–30%).`);
+  md.push(`Mechanism (SYM-1.5-s10) mean runaway: open group ${pctS(grp('SYM-1.5-s10', false))}, closed group ${pctS(grp('SYM-1.5-s10', true))} (V0: open ${pctS(grp('V0', false))}, closed ${pctS(grp('V0', true))}).`);
+  md.push('');
+  md.push('## The three open questions (N=200 power)');
+  md.push(`- **searound vs the 15% cap:** s075 ${pctS(AA[1].perTrack['searound'] ?? 0)}, s10 ${pctS(AA[2].perTrack['searound'] ?? 0)} (cap 15%).`);
+  md.push(`- **band-reach ≥70% on the strength arms:** s075 B1min ${pctS(AA[1].b1min)} / B2min ${pctS(AA[1].b2min)}; s10 B1min ${pctS(AA[2].b1min)} / B2min ${pctS(AA[2].b2min)} (all-track minima).`);
+  md.push(`- **s075 vs s10 action:** Δ vs V0 = ${(AA[1].actionDelta >= 0 ? '+' : '') + AA[1].actionDelta.toFixed(2)} (s075) vs ${(AA[2].actionDelta >= 0 ? '+' : '') + AA[2].actionDelta.toFixed(2)} (s10).`);
+  md.push('');
+  md.push('Data: `per-arm-track.csv` (aggregates), `races-<arm>-<track>.csv` (per-seed, paired + determinism re-run target).');
+  md.push('');
+  writeFileSync(join(OUT_C, 'SUMMARY.md'), md.join('\n'));
+
+  console.log(`\nElapsed ${((Date.now() - t0) / 60000).toFixed(1)}m → ${OUT_C}`);
+  for (const a of AA) console.log(`  ${a.name.padEnd(13)} runaway=${pctS(a.runawayRate)} maxTrack=${pctS(a.maxTrack)} actionΔ=${(a.actionDelta >= 0 ? '+' : '') + a.actionDelta.toFixed(2)} B1min=${pctS(a.b1min)} PASS=${a.pass}`);
+  for (const name of ['SYM-1.5-s075', 'SYM-1.5-s10']) { const a = paired[name].all; console.log(`  ${name} converted ${a.conv}/${a.tot} (${a.tot ? pctS(a.conv / a.tot) : '-'}); escapee win/top3/drop ${a.escWin}/${a.escTop3}/${a.escDrop}`); }
+  process.exit(0);
+}
+
+// ════════════════════════════════════════════════════════════════════════════════
 // PHASE-2b GAP-CAP RE-ROLL SWEEP (--gapreroll-phase2b) — window-fix re-run + STRENGTH axis, 9 arms.
 // Block A (strength 0.5) isolates the window-basis fix vs the broken Phase-2; Block B sweeps strength.
 // Adds a second STOP gate: window-eligible rolls per track must be > 0 on ALL tracks (was 0 on closed).
