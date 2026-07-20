@@ -54,14 +54,20 @@ The sim imports the identical JavaScript modules the browser uses:
 | File | Purpose |
 |---|---|
 | `scripts/sim-fairness.mjs` | Main headless simulator and flag-driven harness — single run, full metric report; shares its physics modules with the browser (the single source for both) |
-| `scripts/overnight-pulklr-sweep.sh` | The ONE live regression sweep — configs A0 (mechanism-off floor) vs D2/D8 (PulkLeadRotation drop-depth 2/8) across the 10 standard tracks |
-| `scripts/pp-pulklr-sweep.mjs` | Post-processor for the overnight sweep — emits the morning per-track table + PASS/FAIL vs A0 |
 | `scripts/fingerprint-default.mjs` | Byte-identity gate — hashes the shipped-default sim run across all 10 tracks to prove a change left the default game byte-identical |
+| `scripts/exp-runaway-leader.mjs` | Living reference sweep orchestrator (spawn per track → classify → CSV + `SUMMARY.md`); see [SWEEP-HARNESS.md](SWEEP-HARNESS.md) |
 
 > The standalone `param-sweep*` scripts (5-axis, 8-axis LHS+Phase-2, braking, lateral) that older
 > revisions of this doc listed have all been **deleted**. Sweeping is now done through the
-> flag-driven `sim-fairness.mjs` harness (the same modules the browser runs) plus the two
-> `pulklr` scripts above; `fingerprint-default.mjs` gates default-behaviour identity.
+> flag-driven `sim-fairness.mjs` harness (the same modules the browser runs);
+> `fingerprint-default.mjs` gates default-behaviour identity. The measurement stack as a whole —
+> observers, the orchestrator pattern, the determinism rule, output conventions — is documented in
+> **[SWEEP-HARNESS.md](SWEEP-HARNESS.md)**.
+>
+> **Retired 2026-07-20 (cleanup step 4):** the `overnight-pulklr-sweep.sh` + `pp-pulklr-sweep.mjs`
+> regression pair. Standing gates are now `fingerprint-default.mjs` (byte-identity) + the
+> `sim-fairness.mjs` harness driven by flags; ad-hoc single-knob sweeps remain (below). Recoverable via
+> tag `pre/cleanup-step4`.
 
 ---
 
@@ -137,18 +143,15 @@ node scripts/sim-fairness.mjs --races=200 --seed=42 --race-plan=true
 ### Running a sweep
 
 There is no standalone sweep binary. A sweep is `sim-fairness.mjs` invoked repeatedly with
-different mechanism flags — the same modules the browser runs — plus two `pulklr` helper scripts.
+different mechanism flags — the same modules the browser runs. A multi-combo sweep is a thin
+**orchestrator** around the harness (spawn per track → classify → CSV); the pattern, the observers it
+draws on, and the determinism rule are documented in **[SWEEP-HARNESS.md](SWEEP-HARNESS.md)**, with
+`scripts/exp-runaway-leader.mjs` as the living reference.
 
-**The one live regression sweep (configs A0 vs D2/D8, 10 tracks):**
-
-```sh
-bash scripts/overnight-pulklr-sweep.sh          # writes results under results/sweep-pulklr/
-node scripts/pp-pulklr-sweep.mjs                # post-process into the morning PASS/FAIL table
-```
-
-A0 is the mechanism-off floor (`--race-plan=false` — choreography + lead rotation are
-unconditional, so this flag is the only way to turn them off); D2/D8 run the mechanism ON with
-`--pulkLeadRotationDropDepthLengths=2` and `=8`. See the script header for the pinned world flags.
+> **Retired 2026-07-20 (cleanup step 4):** the `overnight-pulklr-sweep.sh` +
+> `pp-pulklr-sweep.mjs` regression pair (formerly documented here as the "one live regression sweep",
+> configs A0 vs D2/D8). PulkLeadRotation shipped; the pair is no longer maintained. Recoverable via tag
+> `pre/cleanup-step4`. The standing gates are the byte-identity fingerprint + the flag-driven harness.
 
 **Ad-hoc single-knob sweep** — drive the harness directly and vary one flag:
 
@@ -528,12 +531,16 @@ director cast/dwell/pull, etc.) were deleted. The shipped world has exactly one 
 the unconditional choreography + **PulkLeadRotation** (`applyPulkLeadRotation` writes `governorMult`
 in the PULK phase `[0.25, choreoOutcomeStart=0.5]`, faded to 1.0 by OUTCOME).
 
-The live sweep — `scripts/overnight-pulklr-sweep.sh` + `scripts/pp-pulklr-sweep.mjs` — optimizes the
-PulkLeadRotation strengths (`--pulkLeadRotationDropDepthLengths`, `--pulkChallengerBoost`,
-`--pulkBoostHeadroom`, `--pulkLeaderBrake`, …) for **front-action / pulk-contest** subject to the
-**unpredictability** counter-metric staying LOW and the fairness gate (band-reach ≥ 70%, 0 Holm-unfair
-start rows) holding vs the A0 mechanism-off floor. Configs A0 (`--race-plan=false`) vs D2/D8
-(drop-depth 2/8) across the 10 standard tracks; the post-processor emits the PASS/FAIL-vs-A0 table.
+Optimizing the PulkLeadRotation strengths (`--pulkLeadRotationDropDepthLengths`, `--pulkChallengerBoost`,
+`--pulkBoostHeadroom`, `--pulkLeaderBrake`, …) means driving the harness directly for
+**front-action / pulk-contest** (the `--action-metrics` observer) subject to the **unpredictability**
+counter-metric staying LOW and the fairness gate (band-reach ≥ 70%, 0 Holm-unfair start rows) holding vs
+the mechanism-off floor (`--race-plan=false`). Compare an A0 floor against drop-depth 2/8 across the 10
+standard tracks by hand or a small orchestrator (see [SWEEP-HARNESS.md](SWEEP-HARNESS.md)).
+
+> The `overnight-pulklr-sweep.sh` + `pp-pulklr-sweep.mjs` pair that once automated this A0-vs-D2/D8
+> comparison was **retired 2026-07-20** (cleanup step 4; recoverable via tag `pre/cleanup-step4`). The
+> knob and its flags are unchanged — only the dedicated wrapper is gone.
 
 ---
 
@@ -820,3 +827,50 @@ This document was the most stale; the items below correct it against source.
   executable proof: two synthetic races with **identical final ranks**, one bunched and one strung out —
   every rank-space metric is identical, every gap-space metric differs. If it ever fails, a rank metric
   started depending on gaps or a gap metric went blind to them; stop.
+
+---
+
+## 2026-07-20 — catch-up (B2-Heroes, current servo model, retained shelved flags)
+
+State of the shipped action model after the B2-Heroes work, for anyone reading the sim in isolation.
+
+### B2-Heroes "Attack & Fall" (SHIPPED ON, default `b2AttackHeroes=3`)
+
+Extra choreographed heroes cast from FRONT-post-chaos B2-finishers that **climb to ~rank 5 mid-race,
+then fall back and free-reorder in B2**. Shipped defaults: **count slider 0–5 (default 3)**,
+`b2AttackPeakRank=5`, attack window **timing 0.40–0.70**, `b2AttackFinalRank=7`, **band-arrival
+release** (`b2AttackBandArrival=true` — the servo frees an attacker the moment it re-enters B2 on the
+way down). Result: **+21% top-5 OUTCOME action** vs the no-attacker floor, B1/B2 band-reach ≥70% on all
+four tracks, Holm at the pre-existing 2/4 baseline. `count=0` restores the pre-feature game
+byte-identical (fingerprint `4ec8e64dd2641ad3`); the shipped `count=3` default is `72c3360fb75225ef`.
+The action knob is `finalRank` (release HEIGHT), not peak depth; count scales super-additively
+(1→+7%, 2→+10%, 3→+21%). Source: `heroCurveGenerator.js castHeroes` + `attackerTiming`;
+`racePlanner.js` `atkParams` branch.
+
+### Today's servo model in brief
+
+- **Strictness** — how tightly a racer is held to its authored band corridor. **Heroes run strictness
+  1.0** (fully steered along their curve). **Pack** runs at `choreoPackBandStrictness` (the shipped
+  pack corridor strength).
+- **Front-contest release** — the front group is released from strict steering at
+  `_choreoReleaseProgress = 0.97`, so the leaders can free-contest the very end.
+- **Attacker path** — an `attacker-b2` hero is **Tracked to its FinalRank, then Freed** (band-arrival):
+  steered down toward `b2AttackFinalRank`, then released to free-reorder the instant it re-enters B2,
+  bypassing the 0.80 B2 resolve.
+
+This is the single steering path — choreography + PulkLeadRotation; there is no reactive governor/director
+(that and its ~15 knobs were deleted, see §4 and ARCHITECTURE.md).
+
+### Two RETAINED shelved flag paths (default OFF, byte-identical off, kept as documented reference)
+
+Both were built and measured; both LOST to the B2-attackers and are kept OFF as a reference for **why
+liberation loses** (see LESSONS.md — "action lives in orchestration, not liberation"):
+
+- **`packReleaseEnabled`** (+ `packReSteerThreshold`) — non-hero pack runs strictness-0 inside its band.
+  **Why it lost:** breaks B2 band-reach on luger-hill + searound (67–69%) + Holm 3/4 via an **endgame
+  edge-leak** — 92% of leaks after progress 0.90; free racers at the band edge get shuffled out with no
+  runway. Diagnosis: `reports/exp-archive/exp-pack-release-results/PACK-RELEASE-B2-DIAGNOSIS.md`.
+- **`universalBandArrival`** — free B1-heroes + normal pack inside their assigned band. **Why it lost:**
+  fairness HELD (immediate re-steer) but **−6% action** — freeing settles the field.
+
+Both remain default OFF and byte-identical when off; they are documentation-by-flag, not live paths.

@@ -14,11 +14,12 @@ and what was retired.
   no governor), captured before the race-action director work.
 
 ### race-action-complete
-- `race-action-complete` (current tip) — end of the race-action phase: choreography + PulkLeadRotation
-  shipped, cleaned, documented (see [RACE-ACTION.md](RACE-ACTION.md)), and tested. Stable baseline for the
-  Stage-7 merge to master.
+- `race-action-complete` — end of the race-action phase: choreography + PulkLeadRotation
+  shipped, cleaned, documented (see [RACE-ACTION.md](RACE-ACTION.md)), and tested. The stable baseline for
+  the Stage-7 merge to master (no longer the tip — master has moved on through the post-race-action work).
+- `v1-race-action-merged` (`e1d5a2b`) — the race-action arc merged to master.
 
-### v-*-complete (earlier phase endpoints, retained)
+### v-*-complete (phase endpoints, retained)
 - `v-perf-complete` (`858bc4f`) — performance phase.
 - `v-camera-perf-complete` (`36ddc9c`) — camera performance / autorun.
 - `v-branding-phase1-complete` (`b9a2f03`) — branding phase 1.
@@ -26,6 +27,37 @@ and what was retired.
 - `v-clean-state-complete` (`ab71825`) — clean-state checkpoint.
 - `v-phaseD-complete` (`1b6f270`) — phase D.
 - `v-security-hardening-complete` (`3075f5c`) — security hardening.
+- `v-outcome-0.6-complete` (`5646d23`) — OUTCOME-start 0.6 endpoint.
+- `v-rowenv-easing-complete` (`5f5c03b`) — rowEnvMult easing shipped dormant.
+- `v-rowenv-default-on-complete` (`db27fc4`) — rowEnvMult easing flipped default ON.
+- `v-b2-heroes-complete` (`8bf54ca`) — B2-Heroes "Attack & Fall" shipped ON (`b2AttackHeroes=3`).
+- `b4-complete` (`03e28cf`) — camera-foresight B4 endpoint.
+- `backup/lbb-gate-complete` (`7883d45`) — look-before-brake gate endpoint (a `backup/*` name, but a
+  completed-phase anchor; retained).
+
+## Active-phase tags (temporary scaffolding — to collapse)
+
+These are live step-tags from open work. They are safe return points, not permanent anchors; each collapses
+into a phase endpoint once its phase closes (the incremental history then lives in commit messages + docs).
+
+### Runaway phase (open)
+- `pre/exp-runaway-baseline` (`2e14663`) — state before the runaway/parade baseline sweep.
+- `backup/exp-runaway-baseline-complete` (`f40a7a6`) — the baseline-measurement commit.
+- **Collapse plan:** fold both into the runaway phase's `*-complete` endpoint when the Runaway phase
+  (Distance Leash + Late Challenger, see BACKLOG.md) closes.
+
+### Cleanup arc (in progress, 2026-07-20)
+- `pre/cleanup-step1` (`f40a7a6`) — before archiving closed exp results + concept reviews.
+- `pre/cleanup-step2` (`cb9a336`) — before removing closed sweep/diag drivers.
+- `pre/cleanup-step3` (`c441e7c`) — before the results/ salvage + ~1 GB local scratch deletion.
+- `pre/cleanup-step4` (`2df0954`) — before this docs catch-up + pulklr retirement.
+- **Collapse plan:** collapse all four `pre/cleanup-step*` onto a single `v-cleanup-complete` anchor in
+  cleanup step 5, then delete the step-tags.
+
+### Upcoming (cleanup step 5)
+- `archive/diag-look-before-brake` (will point at `c32cc61`) — preserves the entire `diag/look-before-brake`
+  branch history (incl. the `--jobs` sweep parallelism at `0c20f9b`) as a permanent tag, after which the
+  branch itself is deleted. Re-apply the parallelism by cherry-picking from this tag.
 
 ## Retired in Step 6d (race-action arc tag collapse)
 

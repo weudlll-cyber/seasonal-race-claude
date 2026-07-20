@@ -95,8 +95,10 @@ Named so it is not mistaken for a measurement bug later.
 (`compare-zones.mjs`, `compare-sets.mjs`, `param-sweep-full.mjs`, `sweep-lateral.mjs`,
 `sim-sweep.mjs`) calling `createRacePlan` without `phaseSplitBonusEnabled`, so they ran without
 the shipped areaBonus split. All of those tools were deleted in the sweep cleanup (Stage 6a/6a-2);
-the only surviving sim tooling is `sim-fairness.mjs` (which applies the split natively),
-`overnight-pulklr-sweep.sh` + `pp-pulklr-sweep.mjs`, and `fingerprint-default.mjs`. Seam closed.
+the only surviving sim tooling is `sim-fairness.mjs` (which applies the split natively) and
+`fingerprint-default.mjs`. Seam closed. *(The `overnight-pulklr-sweep.sh` + `pp-pulklr-sweep.mjs` pair
+was also retired 2026-07-20, cleanup step 4, tag `pre/cleanup-step4` — it drove `sim-fairness.mjs`, so
+it inherited the split too; no parity seam either way.)*
 
 **O6 — shared-module parity is conditional on identical geometry.** Rows 6, 12, 13, 15, 17 are
 "identical *by shared module*." That guarantee holds only while both engines feed those functions

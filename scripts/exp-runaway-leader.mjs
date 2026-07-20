@@ -1,7 +1,7 @@
 // ============================================================
 // exp-runaway-leader.mjs — BASELINE MEASUREMENT DRIVER: runaway-winner & parade-finish rates.
 //
-// READ-ONLY. Same orchestrator pattern as exp-pack-release.mjs / exp-b2-attack.mjs: spawns the shared
+// READ-ONLY. Uses the shared sweep-orchestrator pattern (see docs/SWEEP-HARNESS.md): spawns the shared
 // sim (scripts/sim-fairness.mjs) once per track — each run pinned to that track + its seeded DEFAULT
 // racer (read from the track seed, never hardcoded) — with the read-only --runaway-parade observer, reads
 // the per-race raw records the sim writes, classifies each race with the pure module

@@ -2866,3 +2866,31 @@ that only reshape the mid-race trajectory — band-resolve checkpoints, a speed-
 in a control loop, measure what each piece is load-bearing for; fragmentation that survives a removal test is
 intentional. (The one genuinely-safe cosmetic smoothing from the same investigation — easing the ~1% rowEnvMult
 step at the boundary — held fairness because it is a tiny, isolated input, not a load-bearing one.)
+
+## Lesson 178 — Action Lives in Orchestration, Not Liberation
+The proven principle behind the whole front-action arc: **steering racers along authored curves CREATES
+top-5 churn; freeing them (releasing the servo, running strictness-0 inside a band) SETTLES the field and
+REDUCES action.** Confirmed three independent ways:
+- **B2-Heroes "Attack & Fall" (author) → +21% top-5 OUTCOME action.** Casting 3 extra heroes on a scripted
+  climb-to-~5-then-fall-and-free-reorder curve manufactures front drama without touching fairness (B1/B2
+  band-reach ≥70% all four tracks, Holm at the 2/4 baseline). Shipped ON.
+- **`packReleaseEnabled` (liberate) → BROKE B2 fairness.** Letting the non-hero pack run strictness-0 inside
+  its band leaked B2 band-reach to 67–69% on luger-hill + searound and Holm 3/4 via an endgame edge-leak
+  (92% of leaks after progress 0.90 — freed racers at the band edge shuffle out with no runway). Shelved OFF.
+- **`universalBandArrival` (liberate) → −6% action.** Freeing B1-heroes + pack inside their assigned band
+  held fairness (immediate re-steer) but the field just settled — less churn, not more. Shelved OFF.
+**Rule for future front-action work: AUTHOR scenarios (curves, casting, timing), do not liberate constraints
+(release the servo).** Liberation reduces the very thing it feels like it should increase. The two shelved
+flags are kept default-OFF and byte-identical as living reference for this (see SIM.md catch-up).
+
+## Lesson 179 — The Runaway Gap Forms BEFORE Progress 0.90
+Baseline measurement (2026-07-20, `--runaway-parade` observer, N=100 seeded races × 4 tracks): the game
+produces a **runaway winner in 23.5% of races overall** (open tracks 18%, closed tracks 28–30%) and a
+**parade finish in only 2%**. The decisive finding for any future "keep the leader catchable" work: **the
+lead that decides a runaway is already established before progress 0.90.** Of the races where the leader was
+≥3 lengths clear at 0.90 (99 across the field), **94 converted to an unchallenged win** — a ≥3L lead at 0.90
+is almost never overturned. So a late-race "distance leash" that only engages after 0.90 arrives too late;
+the runaway must be contested EARLIER (in PULK / at the choreo→OUTCOME boundary) or prevented from forming at
+all. Closed tracks are the worst offenders (28–30% vs 18% open). Parade finishes are rare and, when they
+occur, are genuinely paced (leading-group internal speed spread ≤0.10 over the final 5%) — an observe-only
+phenomenon, not a problem to chase. Method + numbers: `exp-runaway-leader-results/`; see also SWEEP-HARNESS.md.
