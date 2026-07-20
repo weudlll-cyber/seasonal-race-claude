@@ -96,7 +96,7 @@ import {
   PROPOSED_THRESHOLDS as GM_THRESHOLDS,
 } from './sim/observers/gap-metrics.mjs';
 import { maxLinkGapLengths, makeHeldOvertakeTracker, fullSpreadLengths, framesOverThresholdShare, GAP_THRESHOLD_LENGTHS, leaderSnapshot, RUNAWAY_LARGE_LENGTHS } from './sim/observers/pulk-contest.mjs';
-import { RUNAWAY_PARADE_DEFAULTS } from './sim/observers/runaway-parade.mjs';
+import { RUNAWAY_PARADE_DEFAULTS, leaderGapLengths } from './sim/observers/runaway-parade.mjs';
 import { applyPulkLeadRotation, arcT, computeDirectorCeiling } from '../client/src/modules/raceGovernor.js';
 import { lenScaleFrom, arcLengths, meanDrawnBodyLen } from '../client/src/modules/raceLengths.js';
 
@@ -227,6 +227,14 @@ const B2_ATTACK_PROGRESS_END = Number(argVal('b2-attack-progress-end', String(DE
 const B2_ATTACK_RESOLVE_PROGRESS = Number(argVal('b2-attack-resolve-progress', String(DEFAULT_RACE_DYNAMICS_CONFIG.b2AttackResolveProgress)));
 const B2_ATTACK_BAND_ARRIVAL = argVal('b2-attack-band-arrival', String(DEFAULT_RACE_DYNAMICS_CONFIG.b2AttackBandArrival)) === 'true';
 const UNIVERSAL_BAND_ARRIVAL = argVal('universal-band-arrival', String(DEFAULT_RACE_DYNAMICS_CONFIG.universalBandArrival)) === 'true';
+// ── Front distance leash (SIM-ONLY; no DevScreen/defaults entry — activated only here) ──────────────
+// --frontLeashMaxLengths engages the leash (gap-space brake on the runaway leader); --frontLeashGainPct
+// sets the brake per excess length (default 3). Absent --frontLeashMaxLengths → FRONT_LEASH off → the
+// controller is never passed the leader→P2 length and never sets leash config → byte-identical.
+const FRONT_LEASH_MAX = argVal('frontLeashMaxLengths', null);
+const FRONT_LEASH = FRONT_LEASH_MAX !== null;
+const FRONT_LEASH_MAX_LEN = FRONT_LEASH ? Number(FRONT_LEASH_MAX) : null;
+const FRONT_LEASH_GAIN_PCT = FRONT_LEASH ? Number(argVal('frontLeashGainPct', '3')) : null;
 // B2-leak trace (read-only diagnostic): adds b2LastInside to rawData rows. No-flag → byte-identical.
 const B2_TRACE = argv.includes('--b2-trace');
 // reRoll / trajectory dynamics overrides — same shared-default + argVal pattern. Lets a sweep
@@ -1126,7 +1134,15 @@ export function runSingleRace({
 
       // ── Controller-Pass: write trajectoryMultTarget (Race Plan only) ────────
       if (racePlanController) {
-        racePlanController.update(racers, raceTs, raceProgress);
+        // Front distance leash (SIM-ONLY): pass the leader→P2 arc length (racer lengths) so the
+        // controller can brake a runaway leader. Computed with the SHARED leaderGapLengths (the SAME
+        // quantity the runaway-parade observer measures). When the leash is OFF we call update() with
+        // NO 4th arg — exactly as before → byte-identical (fingerprint-gated).
+        if (FRONT_LEASH) {
+          racePlanController.update(racers, raceTs, raceProgress, leaderGapLengths(racers, isOpen, govLenScale));
+        } else {
+          racePlanController.update(racers, raceTs, raceProgress);
+        }
         // easeInOutCubic transition — mirrors index.jsx pattern, same parameters
         const TT_DUR_MS = dynamicsConfig.trajectoryTransitionDuration * 1000;
         for (const r of racers) {
@@ -1962,7 +1978,8 @@ export function runSingleRace({
           const live = racers.filter((r) => !r.finished).sort((a, b) => (b.t - a.t) || (a.index - b.index));
           if (live.length >= 2) {
             rp.leaderIdxAt090 = live[0].index;
-            rp.leaderGapP2At090Len = +(arcT(live[0].t, live[1].t, isOpen) * govLenScale).toFixed(4);
+            // Single source with the front-leash input: leaderGapLengths (arcT × lenScale, lap-aware).
+            rp.leaderGapP2At090Len = +leaderGapLengths(racers, isOpen, govLenScale).toFixed(4);
           } else if (live.length === 1) {
             rp.leaderIdxAt090 = live[0].index;
             rp.leaderGapP2At090Len = Infinity; // lone survivor — trivially uncontested
@@ -2897,6 +2914,9 @@ if (isMain) {
               b2AttackResolveProgress: B2_ATTACK_RESOLVE_PROGRESS,
               b2AttackBandArrival: B2_ATTACK_BAND_ARRIVAL,
               universalBandArrival: UNIVERSAL_BAND_ARRIVAL,
+              // Front distance leash (SIM-ONLY): null when the flag is absent → controller leash off.
+              frontLeashMaxLengths: FRONT_LEASH_MAX_LEN,
+              frontLeashGainPct:    FRONT_LEASH_GAIN_PCT,
             }, seed);
             racePlanController = createTrajectoryController(plan);
             raceSollRankMap = plan._racerTargetRank;

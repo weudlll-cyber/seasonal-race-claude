@@ -1229,3 +1229,155 @@ describe('createTrajectoryController — corridorStart gates P-controller', () =
   // NOTE: the TRANSITION phase no longer exists (choreography collapse: corridorStart := pulkEnd),
   // so the former "TRANSITION between the transEnd boundary and corrStart" test was removed with it.
 });
+
+// ── Front distance leash (SIM-ONLY gap-space brake on the runaway leader) ───────
+// The leash is driven ONLY when the plan carries frontLeash config AND update() is passed the
+// optional 4th arg (leader→P2 length). Tests keep phaseProgress FIXED at 0.70 so the choreo
+// generator (which fires only when progress increases) never casts — isolating the pack + leash —
+// and set stochasticNoise: 0 so servo targets are deterministic.
+describe('createTrajectoryController — front distance leash', () => {
+  const PROG = 0.7; // inside both OUTCOME and the leash window [0.60, 0.92]
+  const MS = 42_000;
+  const LEASH_CFG = { frontLeashMaxLengths: 2.5, frontLeashGainPct: 3, stochasticNoise: 0 };
+
+  // Racers with a chosen leader (highest t). `demote` optionally lifts N other racers above the
+  // leader (to push the leashed racer down the live order for the B1-floor test).
+  function racersWithLeader(leaderIdx, demote = 0) {
+    const rs = makeRacers(70, 14).map((r) => ({
+      ...r,
+      t: 0.3,
+      trajectoryMult: 1.0,
+      trajectoryMultTarget: 1.0,
+      trajectoryMultPrev: 1.0,
+      trajectoryMultTransStart: 0,
+    }));
+    rs[leaderIdx].t = 0.5; // clear leader
+    for (let k = 0, put = 0; put < demote && k < rs.length; k++) {
+      if (k === leaderIdx) continue;
+      rs[k].t = 0.6; // above the leader → demotes the leashed racer
+      put++;
+    }
+    return rs;
+  }
+
+  it('proportional brake scales with excess and clamps to [0.85, 1.0]', () => {
+    const plan = createRacePlan(BASE_RACERS, FINISH_T, TARGET_DUR_MS, LEASH_CFG, BASE_SEED);
+    const W = plan.winnerRacerId;
+    // gap 4.0: brake = 1 − 0.03·(4.0−2.5) = 0.955
+    let ctrl = createTrajectoryController(plan);
+    let rs = racersWithLeader(W);
+    ctrl.update(rs, MS, PROG, 4.0);
+    expect(rs.find((r) => r.index === W).trajectoryMultTarget).toBeCloseTo(0.955, 6);
+    // gap 7.5: brake = 1 − 0.03·5.0 = 0.85 → floor, never below
+    ctrl = createTrajectoryController(plan);
+    rs = racersWithLeader(W);
+    ctrl.update(rs, MS, PROG, 7.5);
+    const braked = rs.find((r) => r.index === W).trajectoryMultTarget;
+    expect(braked).toBeCloseTo(0.85, 6);
+    expect(braked).toBeGreaterThanOrEqual(0.85);
+  });
+
+  it('is exactly 1.0 (disengaged) when the gap is at/below the max', () => {
+    const plan = createRacePlan(BASE_RACERS, FINISH_T, TARGET_DUR_MS, LEASH_CFG, BASE_SEED);
+    const W = plan.winnerRacerId; // winner at rank 1 → rankError 0 → servo 1.0
+    const ctrl = createTrajectoryController(plan);
+    const rs = racersWithLeader(W);
+    ctrl.update(rs, MS, PROG, 2.0); // 2.0 < max 2.5 → never engages
+    expect(rs.find((r) => r.index === W).trajectoryMultTarget).toBe(1.0);
+  });
+
+  it('hysteresis: engages above max, holds through (max−0.5, max], releases below max−0.5; no chatter', () => {
+    const plan = createRacePlan(BASE_RACERS, FINISH_T, TARGET_DUR_MS, LEASH_CFG, BASE_SEED);
+    // A NON-winner leader so the servo target (disengaged) is distinguishable from the leash's 1.0.
+    const W = plan.winnerRacerId;
+    const leader = W === 0 ? 1 : 0;
+    const servoTarget = (() => {
+      // one-shot: read the servo-only target for `leader` at rank 1 with the leash absent
+      const p = createRacePlan(
+        BASE_RACERS,
+        FINISH_T,
+        TARGET_DUR_MS,
+        { stochasticNoise: 0 },
+        BASE_SEED
+      );
+      const c = createTrajectoryController(p);
+      const rs = racersWithLeader(leader);
+      c.update(rs, MS, PROG); // no 4th arg → leash off
+      return rs.find((r) => r.index === leader).trajectoryMultTarget;
+    })();
+    expect(servoTarget).not.toBe(1.0); // non-winner ⇒ servo steers it (so 1.0 vs servo is observable)
+
+    const ctrl = createTrajectoryController(plan);
+    const rs = racersWithLeader(leader);
+    ctrl.update(rs, MS, PROG, 3.0); // > max → ENGAGE
+    expect(rs.find((r) => r.index === leader).trajectoryMultTarget).toBeCloseTo(1 - 0.03 * 0.5, 6);
+    ctrl.update(rs, MS, PROG, 2.3); // in (max−0.5, max] → STILL engaged → leash holds at 1.0
+    expect(rs.find((r) => r.index === leader).trajectoryMultTarget).toBe(1.0);
+    ctrl.update(rs, MS, PROG, 1.9); // < max−0.5 → DISENGAGE → servo returns
+    expect(rs.find((r) => r.index === leader).trajectoryMultTarget).toBeCloseTo(servoTarget, 6);
+
+    // No chatter: from a FRESH (disengaged) controller a gap of 2.3 (≤ max) must NOT engage.
+    const ctrl2 = createTrajectoryController(plan);
+    const rs2 = racersWithLeader(leader);
+    ctrl2.update(rs2, MS, PROG, 2.3);
+    expect(rs2.find((r) => r.index === leader).trajectoryMultTarget).toBeCloseTo(servoTarget, 6);
+  });
+
+  it('window: inactive outside [0.60, 0.92]', () => {
+    const plan = createRacePlan(BASE_RACERS, FINISH_T, TARGET_DUR_MS, LEASH_CFG, BASE_SEED);
+    const W = plan.winnerRacerId;
+    // 0.95 > 0.92 → out of window → winner (rank1) stays at natural 1.0 despite a 4.0 gap
+    let ctrl = createTrajectoryController(plan);
+    let rs = racersWithLeader(W);
+    ctrl.update(rs, MS, 0.95, 4.0);
+    expect(rs.find((r) => r.index === W).trajectoryMultTarget).toBe(1.0);
+    // in-window control: same gap DOES brake
+    ctrl = createTrajectoryController(plan);
+    rs = racersWithLeader(W);
+    ctrl.update(rs, MS, 0.7, 4.0);
+    expect(rs.find((r) => r.index === W).trajectoryMultTarget).toBeCloseTo(0.955, 6);
+  });
+
+  it('B1 floor: disengages once the leashed racer falls to live rank ≥ 3, and when gap < 1.0', () => {
+    const plan = createRacePlan(BASE_RACERS, FINISH_T, TARGET_DUR_MS, LEASH_CFG, BASE_SEED);
+    const W = plan.winnerRacerId;
+    // rank floor
+    let ctrl = createTrajectoryController(plan);
+    let rs = racersWithLeader(W);
+    ctrl.update(rs, MS, PROG, 4.0); // engage, latch W (rank 1)
+    expect(rs.find((r) => r.index === W).trajectoryMultTarget).toBeCloseTo(0.955, 6);
+    rs = racersWithLeader(W, 2); // W now rank 3 (two racers lifted above)
+    ctrl.update(rs, MS, PROG, 4.0); // leashedRank ≥ 3 → forcibly disengage
+    // winner at rank 3, target rank 1 → servo BOOSTS (target > 1.0), proving the leash is off
+    expect(rs.find((r) => r.index === W).trajectoryMultTarget).toBeGreaterThan(1.0);
+    // gap floor
+    ctrl = createTrajectoryController(plan);
+    rs = racersWithLeader(W);
+    ctrl.update(rs, MS, PROG, 4.0); // engage
+    ctrl.update(rs, MS, PROG, 0.5); // gap < 1.0 → disengage → winner rank1 → servo 1.0
+    expect(rs.find((r) => r.index === W).trajectoryMultTarget).toBe(1.0);
+  });
+
+  it('no-config path is byte-identical whether or not the 4th arg is passed', () => {
+    // No frontLeash config ⇒ the leash block is skipped and the 4th arg is never read.
+    const plan = createRacePlan(
+      BASE_RACERS,
+      FINISH_T,
+      TARGET_DUR_MS,
+      { stochasticNoise: 0 },
+      BASE_SEED
+    );
+    const W = plan.winnerRacerId;
+    const cA = createTrajectoryController(plan);
+    const cB = createTrajectoryController(plan);
+    const rsA = racersWithLeader(W);
+    const rsB = racersWithLeader(W);
+    for (let f = 0; f < 3; f++) {
+      cA.update(rsA, MS, PROG); // 3 args
+      cB.update(rsB, MS, PROG, 9.9); // 4 args with a large gap — must be ignored
+    }
+    for (let i = 0; i < rsA.length; i++) {
+      expect(rsB[i].trajectoryMultTarget).toBe(rsA[i].trajectoryMultTarget);
+    }
+  });
+});

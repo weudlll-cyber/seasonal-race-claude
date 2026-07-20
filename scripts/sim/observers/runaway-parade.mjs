@@ -31,6 +31,18 @@
 // header so no single value is baked in silently.
 // ============================================================
 
+import { arcT } from '../../../client/src/modules/raceLengths.js';
+
+// leaderGapLengths — the ONE source for "leader→P2 arc distance in racer lengths" (lap-aware). This is
+// BOTH what the runaway-winner metric measures AND what the sim-only front distance leash steers on, so
+// the thing measured and the thing steered on are identical by construction (golden symmetry test).
+// racers: [{ t, index, finished }]; lenScale: govLenScale; returns 0 for a field of < 2 live racers.
+export function leaderGapLengths(racers, isOpen, lenScale) {
+  const live = racers.filter((r) => !r.finished).sort((a, b) => (b.t - a.t) || (a.index - b.index));
+  if (live.length < 2 || !(lenScale > 0)) return 0;
+  return arcT(live[0].t, live[1].t, isOpen) * lenScale;
+}
+
 export const RUNAWAY_PARADE_DEFAULTS = {
   windowStart:   0.90, // progress at which the runaway lead is first measured, and the [.,1.0] window opens
   leadLen:       3.0,  // (RUNAWAY a) rank-1 must lead rank-2 by >= this many lengths at windowStart

@@ -318,6 +318,13 @@ export function createRacePlan(racers, finishT, targetDurationMs, config = {}, s
     // B2-attackers are unaffected (own release). Default false → byte-identical.
     _universalBandArrival: !!config.universalBandArrival,
     _attackerParams: null, // Map index → {peakRank, finalRank}, populated by update() at cast time
+    // ── Front distance leash (SIM-ONLY: supplied only via the sim harness config; default OFF) ──────
+    // A gap-space brake on the current runaway leader (see reports/proposals/RUNAWAY-CONCEPT.md DECISION).
+    // The BROWSER never sets these (its config carries no frontLeash* keys) → both stay null → the leash
+    // block in update() early-skips and update() is never even passed the leader→P2 length → byte-identical.
+    // Read by update() together with the OPTIONAL leaderGapLen argument the sim (only) passes each frame.
+    _frontLeashMaxLengths: config.frontLeashMaxLengths ?? null, // engage above this leader→P2 gap (lengths)
+    _frontLeashGainPct: config.frontLeashGainPct ?? null, // brake per excess length (percent of natural speed)
   };
 }
 
@@ -384,6 +391,13 @@ export function createTrajectoryController(racePlan) {
   const _attackerMinRank = new Map(); // index → best (lowest) live rank reached so far
   const _attackerFreed = new Map(); // index → boolean: has completed climb+orchestrated-fall → free
   let _attackerFreeEvents = 0;
+  // ── Front distance leash state (SIM-ONLY; only touched when plan._frontLeashMaxLengths != null) ──
+  // Latched onto ONE racer (the runaway leader) when the leash engages, so the B1-floor disengage
+  // ("leashed racer's live rank ≥ 3") is meaningful — it tracks that specific racer, not whoever is
+  // momentarily rank 1. Closure-scoped ⇒ per race; resets automatically.
+  let _leashEngaged = false; // hysteresis state: currently braking?
+  let _leashTargetIdx = -1; // index of the leashed racer while engaged
+  let _leashFrames = 0; // diagnostic: frames the brake was applied
   // Wall-clock ms at which the areaBonus fade actually began (set on first trigger).
   // Closure-scoped per race (createTrajectoryController runs once per race), so it resets
   // automatically — no manual reset needed. Anchors the real-time fade ramp at the trigger
@@ -426,7 +440,7 @@ export function createTrajectoryController(racePlan) {
     }
   }
 
-  function update(racers, elapsedMs, phaseProgress = null) {
+  function update(racers, elapsedMs, phaseProgress = null, leaderGapLen = null) {
     const _preOutcome = getPhase(elapsedMs, phaseProgress) !== 'OUTCOME';
     // ── areaBonusMult ──────────────────────────────────────────────────────────
     // choreo (Stage 1, C-2): the areaBonus ends WITH the CHAOS phase — full during chaos, INSTANT ZERO
@@ -751,6 +765,54 @@ export function createTrajectoryController(racePlan) {
         if (r.avoidanceActive) _winnerBlockedInOutcome++;
       }
     }
+
+    // ── Front distance leash (SIM-ONLY; gap-space brake on the runaway leader) ─────────────────────
+    // Only ever runs when BOTH the plan carries leash config (sim-only) AND the caller passed the
+    // leader→P2 length (sim-only). The browser passes neither ⇒ this whole block is skipped and the
+    // controller is byte-identical (guarded by the fingerprint gate). No RNG here (determinism).
+    // Overrides the leashed racer's trajectoryMult TARGET via the same _setTarget → 1 s slew path as
+    // every other target (no new smoothing). All thresholds are FIXED internal params per the spec.
+    if (plan._frontLeashMaxLengths != null && leaderGapLen != null) {
+      const LEASH_LO = 0.6; // window start (OUTCOME begin)
+      const LEASH_HI = 0.92; // window end (protect the run-out)
+      const LEASH_HYST = 0.5; // disengage margin (lengths) below the max
+      const LEASH_MIN_MULT = 0.85; // brake floor (== controllerParams.minMult; fixed per spec)
+      const LEASH_FLOOR_RANK = 3; // disengage once the leashed racer has fallen to rank ≥ this
+      const LEASH_MIN_GAP = 1.0; // disengage once the gap is this close (contest achieved)
+      const maxLen = plan._frontLeashMaxLengths;
+      const gainFrac = (plan._frontLeashGainPct ?? 0) / 100; // brake per excess length
+      const inWindow =
+        phaseProgress != null && phaseProgress >= LEASH_LO && phaseProgress <= LEASH_HI;
+      if (!inWindow) {
+        _leashEngaged = false;
+        _leashTargetIdx = -1;
+      } else {
+        // Engage: latch onto the CURRENT rank-1 racer the first frame the gap exceeds the max.
+        if (!_leashEngaged && leaderGapLen > maxLen && leaderGapLen >= LEASH_MIN_GAP) {
+          _leashEngaged = true;
+          _leashTargetIdx = active[0].index;
+        }
+        if (_leashEngaged) {
+          const li = active.findIndex((r) => r.index === _leashTargetIdx); // live rank-1 of the leashed racer
+          const leashedRank = li + 1; // 1-indexed; li === -1 ⇒ leashed racer finished/absent
+          // Forcible disengage: contest achieved (hysteresis / min-gap) OR the leashed racer has been
+          // passed down to the B1 floor OR it left the field. Otherwise apply the proportional brake.
+          if (
+            li < 0 ||
+            leashedRank >= LEASH_FLOOR_RANK ||
+            leaderGapLen < LEASH_MIN_GAP ||
+            leaderGapLen < maxLen - LEASH_HYST
+          ) {
+            _leashEngaged = false;
+            _leashTargetIdx = -1;
+          } else {
+            const brake = clamp(1 - gainFrac * (leaderGapLen - maxLen), LEASH_MIN_MULT, 1.0);
+            _setTarget(active[li], brake, elapsedMs);
+            _leashFrames++;
+          }
+        }
+      }
+    }
   }
 
   /**
@@ -837,6 +899,8 @@ export function createTrajectoryController(racePlan) {
       attackerCast: _atkCast,
       attackerPeakReached: _atkPeak,
       attackerFreed: _attackerFreeEvents,
+      // Front-leash diagnostic (0 when OFF / never engaged): frames the leader brake was applied.
+      leashFrames: _leashFrames,
     };
     _winnerBlockedInOutcome = 0;
     _winnerStepCount = 0;
@@ -857,6 +921,9 @@ export function createTrajectoryController(racePlan) {
     _attackerMinRank.clear();
     _attackerFreed.clear();
     _attackerFreeEvents = 0;
+    _leashFrames = 0;
+    _leashEngaged = false;
+    _leashTargetIdx = -1;
     return tel;
   }
 

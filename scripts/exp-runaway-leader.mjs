@@ -28,6 +28,7 @@ import { join, dirname, isAbsolute, relative } from 'path';
 import { fileURLToPath } from 'url';
 import { promisify } from 'util';
 import { classifyRace, RUNAWAY_PARADE_DEFAULTS } from './sim/observers/runaway-parade.mjs';
+import { BAND_EDGES } from '../client/src/modules/racePlanner.js';
 
 const pExecFile = promisify(execFile);
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
@@ -138,6 +139,139 @@ const SUM_COLS = [
   'paradeGrp_mean', 'paradeGrp_2', 'paradeGrp_3', 'paradeGrp_4', 'paradeGrp_5plus',
   'paradeSpeedSpread_mean', 'paradeSpeedSpread_max',
 ];
+
+// ════════════════════════════════════════════════════════════════════════════════
+// PHASE-1a LEASH EXPLORATION SWEEP (--leash-phase1). Runs the front-distance-leash variants
+// (sim-only flags --frontLeashMaxLengths / --frontLeashGainPct) on all 4 tracks and emits a single
+// co-optimization table: runaway (overall + per track) | parade | top-5 action Δ vs V0 | B1 | B2 |
+// Holm | PASS/FAIL. Same seeds as the f40a7a6 baseline (seed=1). Facts only — the variant DECISION
+// is the owner's.
+// ════════════════════════════════════════════════════════════════════════════════
+if (argv.includes('--leash-phase1')) {
+  const OUT_LEASH = join(OUT_ABS, 'phase1-leash');
+  mkdirSync(OUT_LEASH, { recursive: true });
+  mkdirSync(TMP_ABS, { recursive: true });
+  const zoneIdxOf = (rank) => { for (let i = 0; i < BAND_EDGES.length; i++) if (rank <= BAND_EDGES[i]) return i; return BAND_EDGES.length; };
+  const bandReach = (rawData, bandNum) => {
+    const rows = (rawData || []).filter((r) => r.sollBereich === bandNum);
+    if (!rows.length) return null;
+    return rows.filter((r) => zoneIdxOf(r.finalRank) === bandNum - 1).length / rows.length;
+  };
+  // Variants in the spec's PRIORITY ORDER (complete in order; the pool preserves it).
+  const VARIANTS = [
+    { name: 'V0',       leash: false },
+    { name: 'V-2.5-m',  leash: true, max: 2.5, gain: 3 },
+    { name: 'V-2.0-m',  leash: true, max: 2.0, gain: 3 },
+    { name: 'V-3.0-m',  leash: true, max: 3.0, gain: 3 },
+    { name: 'V-2.5-lo', leash: true, max: 2.5, gain: 1.5 },
+    { name: 'V-2.5-hi', leash: true, max: 2.5, gain: 6 },
+  ];
+
+  // Run one (variant × track): spawn the sim WITH fairness output + hero-map + runaway-parade, read all
+  // three JSONs → one metrics row.
+  async function runVT(variant, track) {
+    const outAbs = join(TMP_ABS, `${variant.name}__${track.id}`);
+    const args = [
+      'scripts/sim-fairness.mjs',
+      `--track=${track.id}`, `--racer=${track.racer}`,
+      `--seed=${SEED}`, `--races=${RACES}`, `--dur=${DUR}`,
+      '--runaway-parade', '--hero-map', // hero-map → Holm; fairness-data → band-reach + action
+      `--out=${toSimOut(outAbs)}`,
+    ];
+    if (variant.leash) { args.push(`--frontLeashMaxLengths=${variant.max}`, `--frontLeashGainPct=${variant.gain}`); }
+    const t0 = Date.now();
+    await pExecFile(process.execPath, args, { cwd: ROOT, maxBuffer: 256 * 1024 * 1024 });
+    const rp = JSON.parse(readFileSync(join(outAbs, 'runaway-parade.json'), 'utf8'));
+    const fd = JSON.parse(readFileSync(join(outAbs, 'fairness-data.json'), 'utf8'));
+    let hm = {}; try { hm = JSON.parse(readFileSync(join(outAbs, 'hero-map.json'), 'utf8')); } catch { /* optional */ }
+    const races = rp.races;
+    const runaway = races.filter((r) => classifyRace(r.runawayParade, D).runawayWinner).length;
+    const parade = races.filter((r) => classifyRace(r.runawayParade, D).paradeFinish).length;
+    const nat = (fd.results || [])[0]?.avgNaturalness || {};
+    return {
+      variant: variant.name, track: track.id, type: track.closed ? 'closed' : 'open', n: races.length,
+      runaway, parade,
+      runawayRate: runaway / races.length, paradeRate: parade / races.length,
+      b1: bandReach(fd.rawData, 1), b2: bandReach(fd.rawData, 2),
+      holmUnfair: hm.fairness?.startRowUnfair ?? null,
+      top5Action: nat.outcomeTop5SwapsMean ?? null,
+      leashFrames: nat.leashFrames ?? null,
+      _secs: (Date.now() - t0) / 1000,
+    };
+  }
+
+  const jobs = [];
+  for (const v of VARIANTS) for (const t of TRACKS) jobs.push({ v, t });
+  const rows = new Array(jobs.length);
+  const startTs = Date.now();
+  let next = 0, done = 0;
+  console.log(`\n=== exp-runaway-leader --leash-phase1 === ${VARIANTS.length} variants × ${TRACKS.length} tracks × N=${RACES} (seed=${SEED}), jobs=${JOBS}`);
+  async function worker() {
+    while (next < jobs.length) {
+      const i = next++;
+      rows[i] = await runVT(jobs[i].v, jobs[i].t);
+      done++;
+      console.log(`  [${done}/${jobs.length}] ${jobs[i].v.name.padEnd(9)} ${jobs[i].t.id.padEnd(15)} runaway=${(rows[i].runawayRate * 100).toFixed(0)}% parade=${(rows[i].paradeRate * 100).toFixed(0)}% leashF=${rows[i].leashFrames ?? '-'} ${rows[i]._secs.toFixed(0)}s`);
+    }
+  }
+  await Promise.all(Array.from({ length: Math.min(JOBS, jobs.length) }, worker));
+
+  // Per-variant per-track CSV
+  const RACE_COLS_V = ['variant', 'track', 'type', 'n', 'runaway', 'runawayRate', 'parade', 'paradeRate', 'b1', 'b2', 'holmUnfair', 'top5Action', 'leashFrames'];
+  const csv = [RACE_COLS_V.join(','), ...rows.map((r) => RACE_COLS_V.map((c) => (r[c] == null ? '' : typeof r[c] === 'number' ? +r[c].toFixed(4) : r[c])).join(','))].join('\n') + '\n';
+  writeFileSync(join(OUT_LEASH, 'per-variant-track.csv'), csv);
+
+  // Aggregate per variant + PASS/FAIL vs gates; V0 = action reference.
+  const byVariant = VARIANTS.map((v) => {
+    const vr = rows.filter((r) => r.variant === v.name);
+    const N = vr.reduce((s, r) => s + r.n, 0);
+    const runaway = vr.reduce((s, r) => s + r.runaway, 0);
+    const parade = vr.reduce((s, r) => s + r.parade, 0);
+    const perTrack = {}; for (const r of vr) perTrack[r.track] = r.runawayRate;
+    const maxTrackRunaway = Math.max(...vr.map((r) => r.runawayRate));
+    const b1min = Math.min(...vr.map((r) => r.b1 ?? 0)); const b2min = Math.min(...vr.map((r) => r.b2 ?? 0));
+    const holmTracks = vr.filter((r) => (r.holmUnfair ?? 0) > 0).length; // # of tracks with a Holm-unfair start row
+    const action = mean(vr.map((r) => r.top5Action ?? 0));
+    return { name: v.name, N, runawayRate: runaway / N, paradeRate: parade / N, perTrack, maxTrackRunaway, b1min, b2min, holmTracks, action };
+  });
+  const v0 = byVariant.find((v) => v.name === 'V0');
+  for (const v of byVariant) {
+    v.actionDelta = v0.action ? v.action - v0.action : 0;
+    v.pass = v.runawayRate < 0.10 && v.maxTrackRunaway <= 0.15 && v.paradeRate <= 0.02
+      && v.actionDelta >= 0 && v.b1min >= 0.70 && v.b2min >= 0.70 && v.holmTracks <= 2;
+  }
+
+  // SUMMARY.md
+  const pctS = (x) => (x * 100).toFixed(1) + '%';
+  const md = [];
+  md.push('# Front Distance Leash — Phase-1a Exploration Sweep');
+  md.push('');
+  md.push(`Sim-only leash (SIM harness flags), all 4 tracks, **N=${RACES} per track**, seed=${SEED} (same seeds as the f40a7a6 baseline). Facts only — the variant decision is the owner's.`);
+  md.push(`Leash: brake the current rank-1 racer in progress window [0.60, 0.92] when leader→P2 gap > maxLen; proportional brake (gainPct per excess length), floor 0.85, hysteresis 0.5, B1 floor. Flags OFF → byte-identical (fingerprint 72c3360fb75225ef verified).`);
+  md.push('');
+  md.push('## Gates');
+  md.push('runaway <10% overall AND ≤15% every track AND parade ≤2% AND action Δ ≥ 0 AND B1&B2 band-reach ≥70% (every track) AND Holm ≤2/4 tracks.');
+  md.push('');
+  md.push('| variant | leash | runaway overall | runaway per track (lh/ms/sr/do) | max track | parade | top-5 action (Δ vs V0) | B1 min | B2 min | Holm | PASS |');
+  md.push('|---|---|---|---|---|---|---|---|---|---|---|');
+  const tks = TRACKS.map((t) => t.id);
+  for (const v of byVariant) {
+    const cfg = VARIANTS.find((x) => x.name === v.name);
+    const leashStr = cfg.leash ? `${cfg.max}/${cfg.gain}` : 'off';
+    const perTrackStr = tks.map((t) => (v.perTrack[t] != null ? pctS(v.perTrack[t]) : '-')).join(' / ');
+    md.push(`| ${v.name} | ${leashStr} | ${pctS(v.runawayRate)} | ${perTrackStr} | ${pctS(v.maxTrackRunaway)} | ${pctS(v.paradeRate)} | ${(v.action ?? 0).toFixed(2)} (${v.actionDelta >= 0 ? '+' : ''}${v.actionDelta.toFixed(2)}) | ${pctS(v.b1min)} | ${pctS(v.b2min)} | ${v.holmTracks}/4 | ${v.pass ? '✅' : '❌'} |`);
+  }
+  md.push('');
+  md.push(`Per-track column order: ${tks.join(' / ')}.`);
+  md.push('Raw per-(variant×track) rows: `per-variant-track.csv`.');
+  md.push('');
+  writeFileSync(join(OUT_LEASH, 'SUMMARY.md'), md.join('\n'));
+
+  console.log(`\nElapsed ${((Date.now() - startTs) / 60000).toFixed(1)}m → ${OUT_LEASH}`);
+  console.log('\nSummary (runaway overall / max-track / parade / actionΔ / PASS):');
+  for (const v of byVariant) console.log(`  ${v.name.padEnd(9)} ${pctS(v.runawayRate).padStart(6)} / ${pctS(v.maxTrackRunaway).padStart(6)} / ${pctS(v.paradeRate).padStart(5)} / ${(v.actionDelta >= 0 ? '+' : '') + v.actionDelta.toFixed(2)} / ${v.pass ? 'PASS' : 'fail'}`);
+  process.exit(0);
+}
 
 // ── Run the sweep (bounded-concurrency pool over the tracks) ─────────────────────
 mkdirSync(OUT_ABS, { recursive: true });

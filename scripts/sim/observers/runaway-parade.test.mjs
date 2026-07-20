@@ -15,8 +15,10 @@ import {
   leadingGroup,
   relativeSpeedSpread,
   winnerIndexOf,
+  leaderGapLengths,
   RUNAWAY_PARADE_DEFAULTS,
 } from './runaway-parade.mjs';
+import { arcT } from '../../../client/src/modules/raceLengths.js';
 
 const D = RUNAWAY_PARADE_DEFAULTS;
 
@@ -133,4 +135,29 @@ test('classifyRace reports parade group + speed spread together', () => {
 test('winnerIndexOf finds rank 1', () => {
   assert.equal(winnerIndexOf({ 4: 3, 9: 1, 2: 2 }), 9);
   assert.equal(winnerIndexOf({}), null);
+});
+
+// ── Golden symmetry: the front-leash gap input == the observer's leader→P2 length ──────────────
+// leaderGapLengths is the ONE source both the runaway-winner metric and the sim-only front-distance
+// leash consume, so "the quantity we measure" == "the quantity we steer on", bitwise, on any snapshot.
+test('leaderGapLengths == observer leader→P2 (arcT × lenScale) on identical snapshots, within 1e-9', () => {
+  const scale = 1 / 30; // arbitrary govLenScale
+  const cases = [
+    { racers: [{ index: 0, t: 0.50, finished: false }, { index: 1, t: 0.44, finished: false }, { index: 2, t: 0.40, finished: false }], isOpen: true },
+    // finished racers excluded; leader→P2 among the live pair
+    { racers: [{ index: 5, t: 0.99, finished: true }, { index: 0, t: 0.50, finished: false }, { index: 1, t: 0.31, finished: false }], isOpen: true },
+    // closed track (lap-aware arcT path)
+    { racers: [{ index: 3, t: 2.10, finished: false }, { index: 7, t: 1.95, finished: false }], isOpen: false },
+  ];
+  for (const { racers, isOpen } of cases) {
+    const live = racers.filter((r) => !r.finished).sort((a, b) => (b.t - a.t) || (a.index - b.index));
+    const observer = arcT(live[0].t, live[1].t, isOpen) * scale; // what the observer records (pre-round)
+    const leashInput = leaderGapLengths(racers, isOpen, scale); // what the leash steers on
+    assert.ok(Math.abs(leashInput - observer) < 1e-9, `expected ${observer}, got ${leashInput}`);
+  }
+});
+
+test('leaderGapLengths returns 0 for < 2 live racers or non-positive scale', () => {
+  assert.equal(leaderGapLengths([{ index: 0, t: 0.5, finished: false }], true, 1 / 30), 0);
+  assert.equal(leaderGapLengths([{ index: 0, t: 0.5, finished: false }, { index: 1, t: 0.4, finished: false }], true, 0), 0);
 });
