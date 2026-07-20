@@ -97,7 +97,7 @@ Named so it is not mistaken for a measurement bug later.
 the shipped areaBonus split. All of those tools were deleted in the sweep cleanup (Stage 6a/6a-2);
 the only surviving sim tooling is `sim-fairness.mjs` (which applies the split natively) and
 `fingerprint-default.mjs`. Seam closed. *(The `overnight-pulklr-sweep.sh` + `pp-pulklr-sweep.mjs` pair
-was also retired 2026-07-20, cleanup step 4, tag `pre/cleanup-step4` — it drove `sim-fairness.mjs`, so
+was also retired 2026-07-20, cleanup step 4, recoverable at commit `0bb639d~1` — it drove `sim-fairness.mjs`, so
 it inherited the split too; no parity seam either way.)*
 
 **O6 — shared-module parity is conditional on identical geometry.** Rows 6, 12, 13, 15, 17 are

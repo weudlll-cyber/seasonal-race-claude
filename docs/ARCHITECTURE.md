@@ -500,7 +500,7 @@ Racers are distributed bottom-up, center-out: Row 0 occupies the middle position
 - `modules/raceDynamicsConfig.js` — `racePlanBonusStrengthMultiplier` storage CRUD
 - `screens/RaceScreen/CameraDiagnosticsHUD.jsx` — RP DIAG overlay (5 toggleable panels)
 - `scripts/sim-fairness.mjs` — flag-driven fairness/metrics harness (single source shared with the browser); see `docs/SWEEP-HARNESS.md` for the observer + orchestrator stack
-- *(retired 2026-07-20, cleanup step 4)* `scripts/overnight-pulklr-sweep.sh` + `scripts/pp-pulklr-sweep.mjs` — the PulkLeadRotation sweep pair; PulkLeadRotation shipped, pair recoverable via tag `pre/cleanup-step4`
+- *(retired 2026-07-20, cleanup step 4)* `scripts/overnight-pulklr-sweep.sh` + `scripts/pp-pulklr-sweep.mjs` — the PulkLeadRotation sweep pair; PulkLeadRotation shipped, pair recoverable at commit `0bb639d~1`
 
 ## Pre-OUTCOME Shaping — one steering path (choreo + PulkLeadRotation)
 
@@ -983,7 +983,7 @@ The values CAN be changed but only in `defaults.js` directly, and only after run
 3. Validate top 3 on all 10 tracks with 50+ races each
 4. Apply only values that pass all hard cutoffs on all tracks
 
-**Sim scripts:** `scripts/sim-fairness.mjs` (flag-driven harness), `scripts/fingerprint-default.mjs` (byte-identity gate), `scripts/exp-runaway-leader.mjs` (reference sweep orchestrator). The `overnight-pulklr-sweep.sh` + `pp-pulklr-sweep.mjs` pair was retired 2026-07-20 (cleanup step 4; tag `pre/cleanup-step4`). See `docs/SWEEP-HARNESS.md`.
+**Sim scripts:** `scripts/sim-fairness.mjs` (flag-driven harness), `scripts/fingerprint-default.mjs` (byte-identity gate), `scripts/exp-runaway-leader.mjs` (reference sweep orchestrator). The `overnight-pulklr-sweep.sh` + `pp-pulklr-sweep.mjs` pair was retired 2026-07-20 (cleanup step 4; recoverable at commit `0bb639d~1`). See `docs/SWEEP-HARNESS.md`.
 
 ## Background Layer — GPU Compositor Promotion
 

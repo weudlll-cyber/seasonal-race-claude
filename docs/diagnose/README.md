@@ -38,8 +38,8 @@ reduces home-force to 30% during geometric overlap.
 **Files:**
 - [free-lane-force-attribution-summary.md](free-lane-force-attribution-summary.md) — Analysis report with force breakdown
 - [free-lane-force-attribution-trace.ndjson](free-lane-force-attribution-trace.ndjson) — Raw data (1800 frames, per-force)
-- `scripts/diag-free-lane-force-attribution.mjs` — Simulation script *(removed from tracking in cleanup step 2, 2026-07-20; recoverable via tag `pre/cleanup-step2` / git history. Investigation CLOSED — the home-force reduction fix below shipped.)*
-- `scripts/diag-free-lane-force-attribution-summary.mjs` — Aggregation script *(removed from tracking in cleanup step 2, 2026-07-20; recoverable via tag `pre/cleanup-step2` / git history.)*
+- `scripts/diag-free-lane-force-attribution.mjs` — Simulation script *(removed from tracking in cleanup step 2, 2026-07-20; recoverable at commit `c441e7c~1` (git history). Investigation CLOSED — the home-force reduction fix below shipped.)*
+- `scripts/diag-free-lane-force-attribution-summary.mjs` — Aggregation script *(removed from tracking in cleanup step 2, 2026-07-20; recoverable at commit `c441e7c~1` (git history).)*
 
 ---
 

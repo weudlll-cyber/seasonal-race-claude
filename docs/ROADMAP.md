@@ -557,7 +557,7 @@ controls + pinned internals (Stage 5b), not on the removed governor knobs.
   validation + owner eye-test PASS; tests 3203/3203. Detail in BACKLOG.md and ARCHITECTURE.md §(a.1);
   reports under `exp-b2-attack-results/`. *(Annotation 2026-07-20: those reports were archived to
   `reports/exp-archive/exp-b2-attack-results/` and the `exp-b2-attack.mjs` driver removed from tracking
-  in cleanup step 2 — recoverable via tag `pre/cleanup-step2`. Historical entry left as written.)*
+  in cleanup step 2 — recoverable at commit `c441e7c~1` (git history). Historical entry left as written.)*
 - **Principle proven — action lives in ORCHESTRATION, not liberation.** Steering racers along authored
   curves CREATES top-5 churn; freeing them (strictness 0 inside band) SETTLES the field and reduces
   action. Validated 3 ways: B2-attackers +21% (scripted); the shelved `packReleaseEnabled` breaks B2

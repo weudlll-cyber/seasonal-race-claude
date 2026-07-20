@@ -66,8 +66,8 @@ The sim imports the identical JavaScript modules the browser uses:
 >
 > **Retired 2026-07-20 (cleanup step 4):** the `overnight-pulklr-sweep.sh` + `pp-pulklr-sweep.mjs`
 > regression pair. Standing gates are now `fingerprint-default.mjs` (byte-identity) + the
-> `sim-fairness.mjs` harness driven by flags; ad-hoc single-knob sweeps remain (below). Recoverable via
-> tag `pre/cleanup-step4`.
+> `sim-fairness.mjs` harness driven by flags; ad-hoc single-knob sweeps remain (below). Recoverable at
+> commit `0bb639d~1` (the state before the step-4 deletion).
 
 ---
 
@@ -150,8 +150,8 @@ draws on, and the determinism rule are documented in **[SWEEP-HARNESS.md](SWEEP-
 
 > **Retired 2026-07-20 (cleanup step 4):** the `overnight-pulklr-sweep.sh` +
 > `pp-pulklr-sweep.mjs` regression pair (formerly documented here as the "one live regression sweep",
-> configs A0 vs D2/D8). PulkLeadRotation shipped; the pair is no longer maintained. Recoverable via tag
-> `pre/cleanup-step4`. The standing gates are the byte-identity fingerprint + the flag-driven harness.
+> configs A0 vs D2/D8). PulkLeadRotation shipped; the pair is no longer maintained. Recoverable at commit
+> `0bb639d~1` (the state before the step-4 deletion). The standing gates are the byte-identity fingerprint + the flag-driven harness.
 
 **Ad-hoc single-knob sweep** — drive the harness directly and vary one flag:
 
@@ -539,7 +539,7 @@ the mechanism-off floor (`--race-plan=false`). Compare an A0 floor against drop-
 standard tracks by hand or a small orchestrator (see [SWEEP-HARNESS.md](SWEEP-HARNESS.md)).
 
 > The `overnight-pulklr-sweep.sh` + `pp-pulklr-sweep.mjs` pair that once automated this A0-vs-D2/D8
-> comparison was **retired 2026-07-20** (cleanup step 4; recoverable via tag `pre/cleanup-step4`). The
+> comparison was **retired 2026-07-20** (cleanup step 4; recoverable at commit `0bb639d~1`). The
 > knob and its flags are unchanged — only the dedicated wrapper is gone.
 
 ---
@@ -798,7 +798,7 @@ node scripts/sim-fairness.mjs --track=<id> --racer=<trackDefault> --dur=60 --rac
 
 This document was the most stale; the items below correct it against source.
 
-- **Size & structure:** `scripts/sim-fairness.mjs` is now **~3522 lines** (`wc -l`), not ~5000. Observers
+- **Size & structure:** `scripts/sim-fairness.mjs` is now **~3716 lines** (`wc -l`), not ~5000. Observers
   are factored into `scripts/sim/observers/` (`fairness-stats.mjs`, `gap-metrics.mjs`, `report.mjs`).
   `scripts/sim/experiments/` no longer exists (it went with the last experiment).
 - **Dormant experiments: ALL FOUR DELETED** — TEF (`tefMult`), ROW_SPLIT (`startRowBoostMult`), the V4

@@ -35,10 +35,20 @@ and what was retired.
 - `backup/lbb-gate-complete` (`7883d45`) — look-before-brake gate endpoint (a `backup/*` name, but a
   completed-phase anchor; retained).
 
-## Active-phase tags (temporary scaffolding — to collapse)
+### Cleanup + archive endpoints (2026-07-20)
+- `v-cleanup-complete` — the 5-step repository cleanup arc endpoint: archived closed experiments +
+  concept reviews (step 1), removed closed sweep/diag drivers (step 2), salvaged `results/` `.md` docs +
+  freed ~1 GB local scratch (step 3), docs catch-up + pulklr retirement (step 4), branch/tag hygiene
+  (step 5). The `pre/cleanup-step1..4` scaffolding tags were collapsed onto this and deleted.
+- `archive/diag-look-before-brake` (`c32cc61`) — the entire `diag/look-before-brake` branch history,
+  preserved as a permanent tag before the branch was deleted (2026-07-20). Holds the look-before-brake
+  diagnostics AND the `--jobs` sweep parallelism (`0c20f9b`); the `--jobs` BACKLOG item cherry-picks from
+  here rather than a live branch.
 
-These are live step-tags from open work. They are safe return points, not permanent anchors; each collapses
-into a phase endpoint once its phase closes (the incremental history then lives in commit messages + docs).
+## Active-phase tags (temporary scaffolding — to collapse later)
+
+Live step-tags from the OPEN runaway phase — safe return points, not permanent anchors. They collapse into
+that phase's `*-complete` endpoint when it closes (incremental history then lives in commits + docs).
 
 ### Runaway phase (open)
 - `pre/exp-runaway-baseline` (`2e14663`) — state before the runaway/parade baseline sweep.
@@ -46,18 +56,41 @@ into a phase endpoint once its phase closes (the incremental history then lives 
 - **Collapse plan:** fold both into the runaway phase's `*-complete` endpoint when the Runaway phase
   (Distance Leash + Late Challenger, see BACKLOG.md) closes.
 
-### Cleanup arc (in progress, 2026-07-20)
-- `pre/cleanup-step1` (`f40a7a6`) — before archiving closed exp results + concept reviews.
-- `pre/cleanup-step2` (`cb9a336`) — before removing closed sweep/diag drivers.
-- `pre/cleanup-step3` (`c441e7c`) — before the results/ salvage + ~1 GB local scratch deletion.
-- `pre/cleanup-step4` (`2df0954`) — before this docs catch-up + pulklr retirement.
-- **Collapse plan:** collapse all four `pre/cleanup-step*` onto a single `v-cleanup-complete` anchor in
-  cleanup step 5, then delete the step-tags.
+### Cleanup arc — COLLAPSED (2026-07-20)
+The four `pre/cleanup-step1..4` scaffolding tags were **collapsed onto `v-cleanup-complete`** and deleted
+(local + origin) at the end of cleanup step 5. Permanent recovery is by commit hash, which never expires:
+the step-2 deletions are recoverable at `c441e7c~1`, the step-4 deletions at `0bb639d~1`.
 
-### Upcoming (cleanup step 5)
-- `archive/diag-look-before-brake` (will point at `c32cc61`) — preserves the entire `diag/look-before-brake`
-  branch history (incl. the `--jobs` sweep parallelism at `0c20f9b`) as a permanent tag, after which the
-  branch itself is deleted. Re-apply the parallelism by cherry-picking from this tag.
+## Branches
+
+**`master` only.** The `diag/look-before-brake` branch was archived (tag `archive/diag-look-before-brake`
+@ `c32cc61`) and deleted on both local and origin, 2026-07-20 (cleanup step 5). No other branches exist.
+
+## Complete tag set (after cleanup step 5)
+
+This is the FULL list of tags that exist on both local and origin after this cleanup — nothing else:
+
+- `b4-complete`
+- `backup/exp-runaway-baseline-complete` *(active runaway phase — collapses later)*
+- `backup/lbb-gate-complete`
+- `archive/diag-look-before-brake`
+- `pre/exp-runaway-baseline` *(active runaway phase — collapses later)*
+- `race-action-complete`
+- `stable/pre-governor-04jul` *(permanent anchor — NEVER delete)*
+- `stable/pre-overlap-closed-20jun` *(permanent anchor — NEVER delete)*
+- `v-b2-heroes-complete`
+- `v-branding-phase1-complete`
+- `v-camera-perf-complete`
+- `v-clean-state-complete`
+- `v-cleanup-complete`
+- `v-datadir-complete`
+- `v-outcome-0.6-complete`
+- `v-perf-complete`
+- `v-phaseD-complete`
+- `v-rowenv-default-on-complete`
+- `v-rowenv-easing-complete`
+- `v-security-hardening-complete`
+- `v1-race-action-merged`
 
 ## Retired in Step 6d (race-action arc tag collapse)
 
