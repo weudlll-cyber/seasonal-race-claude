@@ -43,6 +43,75 @@ export function leaderGapLengths(racers, isOpen, lenScale) {
   return arcT(live[0].t, live[1].t, isOpen) * lenScale;
 }
 
+// ── Runaway FORMATION diagnostic (read-only): WHEN does the leader→P2 gap form? ────────────────
+// Thresholds/boundaries are parameters with these defaults (printed in the sweep header).
+export const FORMATION_DEFAULTS = {
+  t15: 1.5,        // "gap opened" threshold (lengths)
+  t30: 3.0,        // "runaway lead" threshold (lengths) — same as RUNAWAY_PARADE_DEFAULTS.leadLen
+  windowEnd: 0.90, // the sustained-window end (matches the runaway-winner measurement point)
+  sample1: 0.30,   // boundary sample A (mid-chaos)
+  sample2: 0.60,   // boundary sample B (PULK→OUTCOME handoff)
+};
+
+// makeFormationTracker — a PURE, incremental per-frame tracker (no I/O, no mutation of race state).
+// The sim feeds it (gap, progress, leaderIdx) every frame; result() returns the per-race formation
+// fields. `gap` is the leader→P2 arc length (racer lengths) from the shared leaderGapLengths — the
+// SAME quantity the runaway-winner metric uses. `leaderIdx` is the current live rank-1 racer index.
+//
+// firstCrossNN  = the earliest progress at which gap first reached the threshold (null = never).
+// sustainedNN   = did the gap stay >= threshold continuously from firstCrossNN through windowEnd?
+//                 (true on the crossing frame; flipped false only if it dips below before windowEnd;
+//                  null when never crossed. A crossing at/after windowEnd stays true — no window to break.)
+// gapAt030/060  = the gap sampled at the first frame at/after sample1 / sample2 (one-shot).
+// leaderIdxAtCross30 = the live rank-1 racer index at the firstCross30 frame (null = never crossed) —
+//                 lets the caller decide leaderStable (does that racer finish rank 1?).
+export function makeFormationTracker(D = FORMATION_DEFAULTS) {
+  let firstCross15 = null, sustained15 = null;
+  let firstCross30 = null, sustained30 = null;
+  let leaderIdxAtCross30 = null;
+  let gapAt030 = null, gapAt060 = null;
+  let done030 = false, done060 = false;
+  return {
+    observe(gap, progress, leaderIdx) {
+      if (!done030 && progress >= D.sample1) { gapAt030 = gap; done030 = true; }
+      if (!done060 && progress >= D.sample2) { gapAt060 = gap; done060 = true; }
+      if (firstCross15 === null) {
+        if (gap >= D.t15) { firstCross15 = progress; sustained15 = true; }
+      } else if (sustained15 && progress <= D.windowEnd && gap < D.t15) {
+        sustained15 = false;
+      }
+      if (firstCross30 === null) {
+        if (gap >= D.t30) { firstCross30 = progress; sustained30 = true; leaderIdxAtCross30 = leaderIdx; }
+      } else if (sustained30 && progress <= D.windowEnd && gap < D.t30) {
+        sustained30 = false;
+      }
+    },
+    result() {
+      return { firstCross15, sustained15, firstCross30, sustained30, gapAt030, gapAt060, leaderIdxAtCross30 };
+    },
+  };
+}
+
+// formationLeaderStable — does the racer leading when 3.0L was first crossed finish rank 1?
+// null when 3.0L was never crossed (leaderIdxAtCross30 null) or the finish map is missing.
+export function formationLeaderStable(leaderIdxAtCross30, finalRankByIndex) {
+  if (leaderIdxAtCross30 == null) return null;
+  const winner = winnerIndexOf(finalRankByIndex);
+  if (winner == null) return null;
+  return leaderIdxAtCross30 === winner;
+}
+
+// formationBucket — bucket a firstCross progress into the report's histogram bins.
+// Returns one of: 'lt030' | '030to060' | '060to075' | '075to090' | 'never'.
+export function formationBucket(firstCross) {
+  if (firstCross == null) return 'never';
+  if (firstCross < 0.30) return 'lt030';
+  if (firstCross < 0.60) return '030to060';
+  if (firstCross < 0.75) return '060to075';
+  if (firstCross < 0.90) return '075to090';
+  return 'never'; // crossing at/after 0.90 → not "formed during the race" for this histogram
+}
+
 export const RUNAWAY_PARADE_DEFAULTS = {
   windowStart:   0.90, // progress at which the runaway lead is first measured, and the [.,1.0] window opens
   leadLen:       3.0,  // (RUNAWAY a) rank-1 must lead rank-2 by >= this many lengths at windowStart

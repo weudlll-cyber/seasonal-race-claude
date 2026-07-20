@@ -16,6 +16,9 @@ import {
   relativeSpeedSpread,
   winnerIndexOf,
   leaderGapLengths,
+  makeFormationTracker,
+  formationLeaderStable,
+  formationBucket,
   RUNAWAY_PARADE_DEFAULTS,
 } from './runaway-parade.mjs';
 import { arcT } from '../../../client/src/modules/raceLengths.js';
@@ -160,4 +163,67 @@ test('leaderGapLengths == observer leader→P2 (arcT × lenScale) on identical s
 test('leaderGapLengths returns 0 for < 2 live racers or non-positive scale', () => {
   assert.equal(leaderGapLengths([{ index: 0, t: 0.5, finished: false }], true, 1 / 30), 0);
   assert.equal(leaderGapLengths([{ index: 0, t: 0.5, finished: false }, { index: 1, t: 0.4, finished: false }], true, 0), 0);
+});
+
+// ── FORMATION tracker (WHEN does the leader→P2 gap form?) ──────────────────────────────────────
+// Feed a synthetic (gap, progress, leaderIdx) frame sequence and assert the recorded fields.
+function feed(frames) {
+  const t = makeFormationTracker();
+  for (const [gap, prog, idx] of frames) t.observe(gap, prog, idx ?? 0);
+  return t.result();
+}
+
+test('formation: threshold crossings recorded at the earliest crossing progress', () => {
+  const r = feed([[0.5, 0.10], [1.6, 0.20], [2.0, 0.40], [3.1, 0.50], [4.0, 0.80]]);
+  assert.equal(r.firstCross15, 0.20); // first frame gap ≥ 1.5
+  assert.equal(r.firstCross30, 0.50); // first frame gap ≥ 3.0
+});
+
+test('formation: sustained flag true when gap holds through 0.90, false if it dips before', () => {
+  const held = feed([[3.1, 0.50], [3.5, 0.70], [4.0, 0.90]]);
+  assert.equal(held.sustained30, true);
+  const dipped = feed([[3.1, 0.50], [2.0, 0.70], [4.0, 0.90]]); // dips below 3.0 at 0.70 (< 0.90)
+  assert.equal(dipped.sustained30, false);
+  // a dip AFTER 0.90 does not break sustained
+  const dipLate = feed([[3.1, 0.50], [4.0, 0.90], [1.0, 0.95]]);
+  assert.equal(dipLate.sustained30, true);
+});
+
+test('formation: boundary samples take the first frame at/after 0.30 and 0.60', () => {
+  const r = feed([[1.0, 0.10], [2.2, 0.31], [2.5, 0.45], [3.3, 0.62], [5.0, 0.90]]);
+  assert.equal(r.gapAt030, 2.2); // first frame ≥ 0.30
+  assert.equal(r.gapAt060, 3.3); // first frame ≥ 0.60
+});
+
+test('formation: never-crossed → nulls (firstCross, sustained, leaderIdxAtCross30)', () => {
+  const r = feed([[0.5, 0.30], [0.8, 0.60], [1.2, 0.90]]); // never reaches 1.5
+  assert.equal(r.firstCross15, null);
+  assert.equal(r.sustained15, null);
+  assert.equal(r.firstCross30, null);
+  assert.equal(r.leaderIdxAtCross30, null);
+  assert.equal(r.gapAt030, 0.5); // boundary samples still recorded
+  assert.equal(r.gapAt060, 0.8);
+});
+
+test('formation: leaderIdxAtCross30 captures the live rank-1 at the 3.0 crossing', () => {
+  const r = feed([[1.0, 0.20, 7], [3.2, 0.40, 7], [4.0, 0.60, 3]]); // racer 7 leads at the crossing
+  assert.equal(r.leaderIdxAtCross30, 7);
+});
+
+test('formationLeaderStable: true iff the crossing-leader finishes rank 1; null when never crossed', () => {
+  assert.equal(formationLeaderStable(7, { 7: 1, 3: 2 }), true);
+  assert.equal(formationLeaderStable(3, { 7: 1, 3: 2 }), false);
+  assert.equal(formationLeaderStable(null, { 7: 1 }), null);
+});
+
+test('formationBucket: bins by crossing progress', () => {
+  assert.equal(formationBucket(0.10), 'lt030');
+  assert.equal(formationBucket(0.30), '030to060');
+  assert.equal(formationBucket(0.59), '030to060');
+  assert.equal(formationBucket(0.60), '060to075');
+  assert.equal(formationBucket(0.74), '060to075');
+  assert.equal(formationBucket(0.75), '075to090');
+  assert.equal(formationBucket(0.89), '075to090');
+  assert.equal(formationBucket(0.90), 'never'); // at/after 0.90 → not formed during the race
+  assert.equal(formationBucket(null), 'never');
 });

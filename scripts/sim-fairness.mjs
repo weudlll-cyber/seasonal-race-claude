@@ -96,7 +96,7 @@ import {
   PROPOSED_THRESHOLDS as GM_THRESHOLDS,
 } from './sim/observers/gap-metrics.mjs';
 import { maxLinkGapLengths, makeHeldOvertakeTracker, fullSpreadLengths, framesOverThresholdShare, GAP_THRESHOLD_LENGTHS, leaderSnapshot, RUNAWAY_LARGE_LENGTHS } from './sim/observers/pulk-contest.mjs';
-import { RUNAWAY_PARADE_DEFAULTS, leaderGapLengths } from './sim/observers/runaway-parade.mjs';
+import { RUNAWAY_PARADE_DEFAULTS, leaderGapLengths, makeFormationTracker } from './sim/observers/runaway-parade.mjs';
 import { applyPulkLeadRotation, arcT, computeDirectorCeiling } from '../client/src/modules/raceGovernor.js';
 import { lenScaleFrom, arcLengths, meanDrawnBodyLen } from '../client/src/modules/raceLengths.js';
 
@@ -1012,6 +1012,7 @@ export function runSingleRace({
       ts095:               null,       // raceTs at that frame
       line:                null,       // finish snapshot { order:[idx], gaps:[len] } at leader-crossing
       speed095ByIndex:     null,       // per-racer avg speed over [~0.95, line] (relative-spread source)
+      formation:           makeFormationTracker(), // WHEN the leader→P2 gap forms (read-only per-frame)
     } : null;
     const HM_CEIL  = 1.09;                 // servo ceiling (maxMult 1.10) — parity with smWinnerCeilSteps
     const HM_LAT   = V4_LATERAL_PROXIMITY; // lateral proximity for a REAL overtake (0.3) — parity with physical_overtake
@@ -1973,6 +1974,13 @@ export function runSingleRace({
       // frame is sampled at pre-finish positions (matching the gap-metrics at-the-line convention).
       // Never mutates race state.
       if (rp && govLenScale > 0) {
+        // (0) FORMATION diagnostic (read-only): feed the per-frame leader→P2 gap + live leader identity
+        // to the pure tracker (WHEN the gap forms). Same shared length as every other measurement.
+        {
+          const fLive = racers.filter((r) => !r.finished).sort((a, b) => (b.t - a.t) || (a.index - b.index));
+          const fGap = fLive.length >= 2 ? arcT(fLive[0].t, fLive[1].t, isOpen) * govLenScale : 0;
+          rp.formation.observe(fGap, raceProgress, fLive.length ? fLive[0].index : -1);
+        }
         // (1) One-shot at windowStart: the frontmost LIVE racer's identity + its lead over P2 (lengths).
         if (rp.leaderIdxAt090 === null && raceProgress >= RP_WINDOW_START) {
           const live = racers.filter((r) => !r.finished).sort((a, b) => (b.t - a.t) || (a.index - b.index));
@@ -2301,6 +2309,8 @@ export function runSingleRace({
         line:                rp.line,            // { order, gaps } or null (race timed out before any finish)
         speed095ByIndex:     rp.speed095ByIndex, // { idx: speed } or null
         finalRankByIndex,
+        // FORMATION diagnostic: firstCross15/30 + sustained flags, gapAt030/060, leaderIdxAtCross30.
+        formation:           rp.formation.result(),
       };
     }
 
@@ -3070,6 +3080,8 @@ if (isMain) {
           attackerCast:           raceResults.reduce((s, r) => s + (r.naturalness?.attackerCast ?? 0), 0) / raceResults.length,
           attackerPeakReached:    raceResults.reduce((s, r) => s + (r.naturalness?.attackerPeakReached ?? 0), 0) / raceResults.length,
           attackerFreed:          raceResults.reduce((s, r) => s + (r.naturalness?.attackerFreed ?? 0), 0) / raceResults.length,
+          // Front-leash diagnostic: per-race mean of frames the leader brake was applied (0 when OFF).
+          leashFrames:            raceResults.reduce((s, r) => s + (r.naturalness?.leashFrames ?? 0), 0) / raceResults.length,
           overlapRate:             raceResults.reduce((s, r) => s + (r.liteOverlapRate ?? 0), 0) / raceResults.length,
           honestOverlapRate:       raceResults.reduce((s, r) => s + (r.honestOverlapRate ?? 0), 0) / raceResults.length,
           passThroughCount:        raceResults.reduce((s, r) => s + (r.passThroughCount ?? 0), 0) / raceResults.length,

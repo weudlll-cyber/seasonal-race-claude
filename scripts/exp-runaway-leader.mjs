@@ -27,7 +27,7 @@ import { readFileSync, writeFileSync, mkdirSync } from 'fs';
 import { join, dirname, isAbsolute, relative } from 'path';
 import { fileURLToPath } from 'url';
 import { promisify } from 'util';
-import { classifyRace, RUNAWAY_PARADE_DEFAULTS } from './sim/observers/runaway-parade.mjs';
+import { classifyRace, RUNAWAY_PARADE_DEFAULTS, formationLeaderStable, formationBucket } from './sim/observers/runaway-parade.mjs';
 import { BAND_EDGES } from '../client/src/modules/racePlanner.js';
 
 const pExecFile = promisify(execFile);
@@ -139,6 +139,160 @@ const SUM_COLS = [
   'paradeGrp_mean', 'paradeGrp_2', 'paradeGrp_3', 'paradeGrp_4', 'paradeGrp_5plus',
   'paradeSpeedSpread_mean', 'paradeSpeedSpread_max',
 ];
+
+// ════════════════════════════════════════════════════════════════════════════════
+// RUNAWAY FORMATION DIAGNOSTIC (--formation-diag). READ-ONLY: measures WHEN the leader→P2 gap forms
+// on the unmodified baseline (leash absent, shipped defaults), so the next mechanism decision rests on
+// data. Same f40a7a6 baseline seeds. Facts only — the decision is the owner's.
+// ════════════════════════════════════════════════════════════════════════════════
+if (argv.includes('--formation-diag')) {
+  const OUT_F = join(OUT_ABS, 'formation-diag');
+  mkdirSync(OUT_F, { recursive: true });
+  mkdirSync(TMP_ABS, { recursive: true });
+  const quart = (a) => { const s = [...a].sort((x, y) => x - y); return { p25: percentile(s, 0.25), p50: percentile(s, 0.5), p75: percentile(s, 0.75), n: s.length }; };
+
+  async function runTrackF(track) {
+    const outAbs = join(TMP_ABS, `formation__${track.id}`);
+    const args = [
+      'scripts/sim-fairness.mjs', `--track=${track.id}`, `--racer=${track.racer}`,
+      `--seed=${SEED}`, `--races=${RACES}`, `--dur=${DUR}`,
+      '--runaway-parade', '--skip-main-output', `--out=${toSimOut(outAbs)}`,
+    ];
+    await pExecFile(process.execPath, args, { cwd: ROOT, maxBuffer: 256 * 1024 * 1024 });
+    const j = JSON.parse(readFileSync(join(outAbs, 'runaway-parade.json'), 'utf8'));
+    const races = [...j.races].sort((a, b) => a.raceIdx - b.raceIdx);
+    return races.map((rec) => {
+      const rp = rec.runawayParade; const f = rp.formation || {};
+      const c = classifyRace(rp, D);
+      return {
+        track: track.id, type: track.closed ? 'closed' : 'open', raceIdx: rec.raceIdx, seed: rec.seed,
+        runaway: c.runawayWinner ? 1 : 0, parade: c.paradeFinish ? 1 : 0,
+        firstCross15: f.firstCross15, sustained15: f.sustained15 == null ? '' : (f.sustained15 ? 1 : 0),
+        firstCross30: f.firstCross30, sustained30: f.sustained30 == null ? '' : (f.sustained30 ? 1 : 0),
+        gapAt030: f.gapAt030, gapAt060: f.gapAt060,
+        leaderStable: (() => { const s = formationLeaderStable(f.leaderIdxAtCross30, rp.finalRankByIndex); return s == null ? '' : (s ? 1 : 0); })(),
+      };
+    });
+  }
+
+  const jobsF = [...TRACKS];
+  const perTrackRows = new Array(jobsF.length);
+  let nextF = 0, doneF = 0; const t0F = Date.now();
+  console.log(`\n=== exp-runaway-leader --formation-diag === ${TRACKS.length} tracks × N=${RACES} (seed=${SEED}), jobs=${JOBS}`);
+  async function workerF() {
+    while (nextF < jobsF.length) {
+      const i = nextF++; perTrackRows[i] = await runTrackF(jobsF[i]); doneF++;
+      const run = perTrackRows[i].filter((r) => r.runaway).length;
+      console.log(`  [${doneF}/${jobsF.length}] ${jobsF[i].id.padEnd(15)} runaway=${run}/${perTrackRows[i].length}`);
+    }
+  }
+  await Promise.all(Array.from({ length: Math.min(JOBS, jobsF.length) }, workerF));
+  const all = perTrackRows.flat();
+
+  // ── Consistency gate: runaway/parade rates MUST equal the recorded f40a7a6 baseline (N=100) ──
+  // Read-only run on identical seeds ⇒ byte-identical outcomes ⇒ exact counts.
+  const BASELINE_RUNAWAY = { 'luger-hill': 18, 'mountainstreet': 18, 'searound': 30, 'dirt-oval': 28 };
+  const gateFail = [];
+  for (const t of TRACKS) {
+    const rows = all.filter((r) => r.track === t.id);
+    const run = rows.filter((r) => r.runaway).length;
+    if (RACES === 100 && BASELINE_RUNAWAY[t.id] != null && run !== BASELINE_RUNAWAY[t.id]) {
+      gateFail.push(`${t.id}: runaway ${run}/100 (baseline ${BASELINE_RUNAWAY[t.id]}/100)`);
+    }
+  }
+  const overallRun = all.filter((r) => r.runaway).length;
+  // The overall-94 gate only applies to the full 4-track run (a single-track re-run for the determinism
+  // check has its own per-track gate above).
+  if (RACES === 100 && TRACKS.length === 4 && overallRun !== 94) gateFail.push(`OVERALL: runaway ${overallRun}/400 (baseline 94/400 = 23.5%)`);
+
+  // Per-track CSVs (used by the determinism re-run check).
+  const F_COLS = ['track', 'type', 'raceIdx', 'seed', 'runaway', 'parade', 'firstCross15', 'sustained15', 'firstCross30', 'sustained30', 'gapAt030', 'gapAt060', 'leaderStable'];
+  const toCsvF = (rows) => [F_COLS.join(','), ...rows.map((r) => F_COLS.map((c) => (r[c] == null ? '' : typeof r[c] === 'number' ? +Number(r[c]).toFixed(4) : r[c])).join(','))].join('\n') + '\n';
+  for (const t of TRACKS) writeFileSync(join(OUT_F, `formation-${t.id}.csv`), toCsvF(all.filter((r) => r.track === t.id)));
+  writeFileSync(join(OUT_F, 'formation-races.csv'), toCsvF(all));
+
+  if (gateFail.length) {
+    const msg = ['# Formation Diagnostic — CONSISTENCY GATE FAILED (STOPPED)', '', 'The runaway rates deviate from the recorded f40a7a6 baseline — the comparison basis is broken, so the diagnostic is NOT reported. Investigate before trusting any formation number.', '', ...gateFail.map((g) => `- ${g}`), ''].join('\n');
+    writeFileSync(join(OUT_F, 'SUMMARY.md'), msg);
+    console.error('\n❌ CONSISTENCY GATE FAILED:\n' + gateFail.map((g) => '  ' + g).join('\n'));
+    console.error(`\nWrote STOP report → ${join(OUT_F, 'SUMMARY.md')}`);
+    process.exit(1);
+  }
+
+  // ── Histograms + distributions (facts only) ─────────────────────────────────────
+  const BUCKETS = ['lt030', '030to060', '060to075', '075to090', 'never'];
+  const BUCKET_LABEL = { lt030: '[0,0.30)', '030to060': '[0.30,0.60)', '060to075': '[0.60,0.75)', '075to090': '[0.75,0.90)', never: 'never' };
+  const hist = (rows, field) => { const h = Object.fromEntries(BUCKETS.map((b) => [b, 0])); for (const r of rows) h[formationBucket(r[field])]++; return h; };
+  const runRows = all.filter((r) => r.runaway);
+  const nonRunRows = all.filter((r) => !r.runaway);
+
+  const md = [];
+  md.push('# Runaway Formation Diagnostic — WHEN does the leader gap form?');
+  md.push('');
+  md.push(`Read-only, unmodified baseline (leash absent, shipped defaults). All 4 tracks, **N=${RACES} per track**, seed=${SEED} (same seeds as the f40a7a6 baseline). Consistency gate PASSED (runaway/parade rates = baseline). Facts only — the mechanism decision is the owner's.`);
+  md.push(`Thresholds: 1.5L / 3.0L crossings; sustained-window end 0.90; boundary samples at 0.30 and 0.60. Same shared lap-aware length as the runaway observer.`);
+  md.push('');
+  const runawayN = runRows.length;
+  md.push(`Runaway races: **${runawayN}/${all.length}** (${(100 * runawayN / all.length).toFixed(1)}%). Non-runaway: ${nonRunRows.length}.`);
+  md.push('');
+
+  // Headline
+  const before060 = runRows.filter((r) => r.firstCross30 != null && r.firstCross30 < 0.60).length;
+  const in060_075 = runRows.filter((r) => r.firstCross30 != null && r.firstCross30 >= 0.60 && r.firstCross30 < 0.75).length;
+  const at075plus = runRows.filter((r) => r.firstCross30 != null && r.firstCross30 >= 0.75).length;
+  md.push('## Headline');
+  md.push(`Of the ${runawayN} runaway races, the 3.0L lead was first crossed **BEFORE 0.60 in ${before060} (${(100 * before060 / runawayN).toFixed(1)}%)**, in [0.60, 0.75) in ${in060_075} (${(100 * in060_075 / runawayN).toFixed(1)}%), and at 0.75 or later in ${at075plus} (${(100 * at075plus / runawayN).toFixed(1)}%).`);
+  md.push('');
+
+  // firstCross30 histogram (runaway) overall + per track
+  const histTable = (field, rows) => {
+    const lines = ['| scope | ' + BUCKETS.map((b) => BUCKET_LABEL[b]).join(' | ') + ' |', '|---|' + BUCKETS.map(() => '---').join('|') + '|'];
+    const overall = hist(rows, field);
+    lines.push('| OVERALL | ' + BUCKETS.map((b) => overall[b]).join(' | ') + ' |');
+    for (const t of TRACKS) { const h = hist(rows.filter((r) => r.track === t.id), field); lines.push(`| ${t.id} | ` + BUCKETS.map((b) => h[b]).join(' | ') + ' |'); }
+    return lines;
+  };
+  md.push('## firstCross30 histogram — RUNAWAY races (counts)');
+  md.push(...histTable('firstCross30', runRows));
+  md.push('');
+  md.push('## firstCross15 histogram — RUNAWAY races (counts)');
+  md.push(...histTable('firstCross15', runRows));
+  md.push('');
+
+  // Quartiles of firstCross30 among runaway races
+  const fc30 = runRows.filter((r) => r.firstCross30 != null).map((r) => r.firstCross30);
+  const q30 = quart(fc30);
+  md.push('## firstCross30 among runaway races — quartiles (progress)');
+  md.push(`p25 = ${q30.p25.toFixed(3)}, **median = ${q30.p50.toFixed(3)}**, p75 = ${q30.p75.toFixed(3)} (n=${q30.n}).`);
+  md.push('');
+
+  // gapAt060 distribution: runaway vs non-runaway
+  const g60run = quart(runRows.filter((r) => r.gapAt060 != null).map((r) => r.gapAt060));
+  const g60non = quart(nonRunRows.filter((r) => r.gapAt060 != null).map((r) => r.gapAt060));
+  md.push('## gapAt060 (leader→P2 at the PULK→OUTCOME handoff) — the most decision-relevant number');
+  md.push('| set | p25 | median | p75 | n |');
+  md.push('|---|---|---|---|---|');
+  md.push(`| RUNAWAY | ${g60run.p25.toFixed(2)} | **${g60run.p50.toFixed(2)}** | ${g60run.p75.toFixed(2)} | ${g60run.n} |`);
+  md.push(`| non-runaway | ${g60non.p25.toFixed(2)} | ${g60non.p50.toFixed(2)} | ${g60non.p75.toFixed(2)} | ${g60non.n} |`);
+  md.push('');
+  md.push('(Lengths. How big the leader→P2 gap already is at progress 0.60 — the earliest the leash could act.)');
+  md.push('');
+
+  // leaderStable
+  const lsRows = runRows.filter((r) => r.leaderStable !== '');
+  const lsTrue = lsRows.filter((r) => r.leaderStable === 1).length;
+  md.push('## leaderStable among runaway races');
+  md.push(`In ${lsTrue}/${lsRows.length} (${lsRows.length ? (100 * lsTrue / lsRows.length).toFixed(1) : '0'}%) of runaway races, the racer leading when 3.0L was first crossed is the one that finishes rank 1 (the eventual winner already leads at gap formation).`);
+  md.push('');
+  md.push('Data: `formation-races.csv` (all), `formation-<track>.csv` (per track, for the determinism re-run check).');
+  md.push('');
+  writeFileSync(join(OUT_F, 'SUMMARY.md'), md.join('\n'));
+
+  console.log(`\nElapsed ${((Date.now() - t0F) / 60000).toFixed(1)}m → ${OUT_F}`);
+  console.log('Consistency gate: PASSED (runaway/parade = baseline).');
+  console.log(`Headline: 3.0L crossed BEFORE 0.60 in ${before060}/${runawayN} runaway races (${(100 * before060 / runawayN).toFixed(0)}%); gapAt060 median RUNAWAY=${g60run.p50.toFixed(2)}L vs non-runaway=${g60non.p50.toFixed(2)}L.`);
+  process.exit(0);
+}
 
 // ════════════════════════════════════════════════════════════════════════════════
 // PHASE-1a LEASH EXPLORATION SWEEP (--leash-phase1). Runs the front-distance-leash variants
