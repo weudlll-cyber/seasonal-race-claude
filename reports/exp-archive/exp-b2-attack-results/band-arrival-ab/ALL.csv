@@ -1,0 +1,13 @@
+variant,track,racer,type,nRaces,b2n,peak,final,tWin,pack,b1Reach,b2Reach,holmUnfair,top5Mean,totalMean,attackerCast,attackerPeakReached,attackerFreed,releaseEvents,outOfBandFrac
+V0-baseline,luger-hill,luge,open,50,0,5,10,0.4-0.7,false,0.756,0.726,true,27.48,496.98,0,0,0,0,0.445501191733471
+V0-baseline,mountainstreet,boarder,open,50,0,5,10,0.4-0.7,false,0.776,0.756,false,33.42,557.1,0,0,0,0,0.4171003820346211
+V0-baseline,searound,manta,closed,50,0,5,10,0.4-0.7,false,0.74,0.734,true,27.18,706.86,0,0,0,0,0.43664874648181695
+V0-baseline,dirt-oval,horse,closed,50,0,5,10,0.4-0.7,false,0.8,0.776,false,28.72,720.36,0,0,0,0,0.3975565315778804
+fixed-final7,luger-hill,luge,open,50,3,5,7,0.4-0.7,false,0.728,0.728,true,32.86,482.26,2.9,2.9,2.48,2.16,0.43879802681991376
+fixed-final7,mountainstreet,boarder,open,50,3,5,7,0.4-0.7,false,0.72,0.724,false,38.5,538.3,2.96,2.96,2.86,4.06,0.41308473244425337
+fixed-final7,searound,manta,closed,50,3,5,7,0.4-0.7,false,0.712,0.704,true,32.74,681.1,2.94,2.94,2.6,2.54,0.43273273161304115
+fixed-final7,dirt-oval,horse,closed,50,3,5,7,0.4-0.7,false,0.784,0.774,false,38.56,693.5,2.94,2.94,2.78,4.34,0.3932435606165192
+band-arrival,luger-hill,luge,open,50,3,5,7,0.4-0.7,false,0.736,0.716,true,32.7,487.72,2.9,2.9,2.62,4.26,0.4396016453920961
+band-arrival,mountainstreet,boarder,open,50,3,5,7,0.4-0.7,false,0.736,0.746,false,37.5,540.52,2.96,2.96,2.92,7.22,0.4158071501046453
+band-arrival,searound,manta,closed,50,3,5,7,0.4-0.7,false,0.708,0.716,true,30.4,666.82,2.94,2.94,2.68,5,0.43669834463930757
+band-arrival,dirt-oval,horse,closed,50,3,5,7,0.4-0.7,false,0.772,0.754,false,39.56,703,2.94,2.94,2.86,7.82,0.40106980646133616

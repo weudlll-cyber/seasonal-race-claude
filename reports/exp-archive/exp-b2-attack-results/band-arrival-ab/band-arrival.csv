@@ -1,0 +1,5 @@
+variant,track,racer,type,nRaces,b2n,peak,final,tWin,pack,b1Reach,b2Reach,holmUnfair,top5Mean,totalMean,attackerCast,attackerPeakReached,attackerFreed,releaseEvents,outOfBandFrac
+band-arrival,luger-hill,luge,open,50,3,5,7,0.4-0.7,false,0.736,0.716,true,32.7,487.72,2.9,2.9,2.62,4.26,0.4396016453920961
+band-arrival,mountainstreet,boarder,open,50,3,5,7,0.4-0.7,false,0.736,0.746,false,37.5,540.52,2.96,2.96,2.92,7.22,0.4158071501046453
+band-arrival,searound,manta,closed,50,3,5,7,0.4-0.7,false,0.708,0.716,true,30.4,666.82,2.94,2.94,2.68,5,0.43669834463930757
+band-arrival,dirt-oval,horse,closed,50,3,5,7,0.4-0.7,false,0.772,0.754,false,39.56,703,2.94,2.94,2.86,7.82,0.40106980646133616

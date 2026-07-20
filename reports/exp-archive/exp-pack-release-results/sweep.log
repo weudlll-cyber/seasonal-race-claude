@@ -1,0 +1,33 @@
+
+=== exp-pack-release — Pack-Only Strictness Release sweep ===
+Variants 4 × Tracks 4 × Races 100 (seed=1, dur=60s) = 1600 races, jobs=6
+Out: C:/Users/weudl/AppData/Local/Temp/claude/c--Users-weudl-OneDrive-Dokumente-Seasonal-race-claude/0bde7542-92bb-411d-b7cc-f94d06115878/scratchpad/exp-pack-release
+
+  [ 1/16] V2-out1      mountainstreet  988s  (elapsed 16.5m)
+  [ 2/16] V1-baseline  mountainstreet  1017s  (elapsed 16.9m)
+  [ 3/16] V2-out1      luger-hill      1017s  (elapsed 17.0m)
+  [ 4/16] V1-baseline  luger-hill      1017s  (elapsed 17.0m)
+  [ 5/16] V1-baseline  searound        1744s  (elapsed 29.1m)
+  [ 6/16] V3-out2      luger-hill      943s  (elapsed 32.7m)
+  [ 7/16] V3-out2      mountainstreet  946s  (elapsed 32.7m)
+  [ 8/16] V1-baseline  dirt-oval       2229s  (elapsed 37.2m)
+  [ 9/16] V2-out1      searound        1596s  (elapsed 43.1m)
+  [10/16] V4-out3      luger-hill      782s  (elapsed 45.8m)
+  [11/16] V2-out1      dirt-oval       1894s  (elapsed 48.5m)
+  [12/16] V4-out3      mountainstreet  691s  (elapsed 48.7m)
+  [13/16] V3-out2      searound        1338s  (elapsed 51.4m)
+  [14/16] V3-out2      dirt-oval       1399s  (elapsed 56.0m)
+  [15/16] V4-out3      searound        883s  (elapsed 57.8m)
+  [16/16] V4-out3      dirt-oval       878s  (elapsed 60.4m)
+
+=== SUMMARY (mean across tracks; B1 reach is the PRIMARY gate ≥70%) ===
+| variant | B1reach | B2reach | HolmUnfair | top5/race | total/race | release/race | reSteer/race | outOfBand |
+|---|---|---|---|---|---|---|---|---|
+| V1-baseline | 77.2% | 73.7% | 2/4 | 29.27 (0%) | 617.97 (0%) | 0.0 | 0.0 | 42.5% |
+| V2-out1 | 77.5% | 74.2% | 3/4 | 29.64 (1%) | 586.62 (-5%) | 91.2 | 88.5 | 43.9% |
+| V3-out2 | 73.3% | 70.5% | 3/4 | 33.52 (15%) | 575.89 (-7%) | 64.8 | 62.1 | 45.7% |
+| V4-out3 | 68.8% | 66.3% | 3/4 | 33.90 (16%) | 563.93 (-9%) | 52.8 | 50.1 | 47.2% |
+
+Wrote per-variant CSVs + ALL.csv to C:/Users/weudl/AppData/Local/Temp/claude/c--Users-weudl-OneDrive-Dokumente-Seasonal-race-claude/0bde7542-92bb-411d-b7cc-f94d06115878/scratchpad/exp-pack-release
+B1 band-reach ≥ 70% (PRIMARY) + HolmUnfair = 0 (SECONDARY) are the binding gates; top5/total per race are the action signal.
+SWEEP-COMPLETE

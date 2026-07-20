@@ -1,0 +1,27 @@
+
+=== exp-b2-attack — Phase ba (3 variants × 4 tracks × 50 races = 600, jobs=10) ===
+Out: C:/Users/weudl/AppData/Local/Temp/claude/c--Users-weudl-OneDrive-Dokumente-Seasonal-race-claude/0bde7542-92bb-411d-b7cc-f94d06115878/scratchpad/exp-b2-ba
+
+  [ 1/12] V0-baseline  luger-hill      694s  (elapsed 11.6m)
+  [ 2/12] fixed-final7 mountainstreet  695s  (elapsed 11.6m)
+  [ 3/12] band-arrival mountainstreet  696s  (elapsed 11.6m)
+  [ 4/12] V0-baseline  mountainstreet  696s  (elapsed 11.6m)
+  [ 5/12] band-arrival luger-hill      701s  (elapsed 11.7m)
+  [ 6/12] fixed-final7 luger-hill      701s  (elapsed 11.7m)
+  [ 7/12] fixed-final7 searound        1044s  (elapsed 17.4m)
+  [ 8/12] V0-baseline  searound        1044s  (elapsed 17.4m)
+  [ 9/12] fixed-final7 dirt-oval       1155s  (elapsed 19.2m)
+  [10/12] V0-baseline  dirt-oval       1156s  (elapsed 19.3m)
+  [11/12] band-arrival searound        555s  (elapsed 20.8m)
+  [12/12] band-arrival dirt-oval       603s  (elapsed 21.6m)
+
+=== SUMMARY (mean across tracks; B1 & B2 reach ≥70% are PRIMARY gates) ===
+| variant | B1 | B2 | Holm | top5/race | cast | peakRchd | freed | outOfBand |
+|---|---|---|---|---|---|---|---|---|
+| V0-baseline | 76.8% | 74.8% | 2/4 | 29.20 (0%) | 0.00 | 0.00 | 0.00 | 42.4% |
+| fixed-final7 | 73.6% | 73.3% | 2/4 | 35.66 (22%) | 2.93 | 2.93 | 2.68 | 41.9% |
+| band-arrival | 73.8% | 73.3% | 2/4 | 35.04 (20%) | 2.93 | 2.93 | 2.77 | 42.3% |
+
+Wrote per-variant CSVs + ALL.csv to C:/Users/weudl/AppData/Local/Temp/claude/c--Users-weudl-OneDrive-Dokumente-Seasonal-race-claude/0bde7542-92bb-411d-b7cc-f94d06115878/scratchpad/exp-b2-ba
+Gates: B1 ≥70% + B2 ≥70% (attacker must not break B2). Winners: high top5 + cast≥~0.6 + fairness holds.
+SWEEP-COMPLETE

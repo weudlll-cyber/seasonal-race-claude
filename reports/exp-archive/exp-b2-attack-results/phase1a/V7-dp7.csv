@@ -1,0 +1,5 @@
+variant,track,racer,type,nRaces,b2n,peak,final,tWin,pack,b1Reach,b2Reach,holmUnfair,top5Mean,totalMean,attackerCast,attackerPeakReached,attackerFreed,releaseEvents,outOfBandFrac
+V7-dp7,luger-hill,luge,open,50,1,7,10,0.4-0.7,false,0.764,0.732,true,27.16,495.32,0.98,0.98,0.94,0.78,0.4430473041821099
+V7-dp7,mountainstreet,boarder,open,50,1,7,10,0.4-0.7,false,0.724,0.736,false,33.74,560.26,1,1,0.98,1.16,0.41316179827559973
+V7-dp7,searound,manta,closed,50,1,7,10,0.4-0.7,false,0.72,0.726,true,25.56,701.74,1,1,0.92,0.78,0.43336850667961224
+V7-dp7,dirt-oval,horse,closed,50,1,7,10,0.4-0.7,false,0.808,0.784,false,29.12,722.42,1,1,0.9,1.04,0.39720916277360785

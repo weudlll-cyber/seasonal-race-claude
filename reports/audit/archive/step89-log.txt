@@ -1,3 +1,0 @@
-Loading Trace-20260609T210927_scatter.json…
-Main: 592:47160 = CrRendererMain
-rAF frames: 404

@@ -1,0 +1,5 @@
+variant,track,racer,type,nRaces,b2n,peak,final,tWin,pack,b1Reach,b2Reach,holmUnfair,top5Mean,totalMean,attackerCast,attackerPeakReached,attackerFreed,releaseEvents,outOfBandFrac
+ArmC-both,luger-hill,luge,open,100,3,5,7,0.4-0.7,true,0.732,0.688,true,34.22,468.59,2.92,2.92,2.62,54.86,0.4645048343365381
+ArmC-both,mountainstreet,boarder,open,100,3,5,7,0.4-0.7,true,0.734,0.724,false,40.74,516.79,2.96,2.96,2.85,60.46,0.43514057035672016
+ArmC-both,searound,manta,closed,100,3,5,7,0.4-0.7,true,0.716,0.688,true,31.8,607.35,2.94,2.94,2.6,60.51,0.44839907128311374
+ArmC-both,dirt-oval,horse,closed,100,3,5,7,0.4-0.7,true,0.738,0.74,true,41.57,667.58,2.94,2.94,2.81,71.01,0.42389346545543505

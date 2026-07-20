@@ -1,0 +1,5 @@
+variant,track,racer,type,nRaces,b1Reach,b1N,b2Reach,b2N,holmUnfair,holmMinP,top5Mean,top5Std,totalMean,totalStd,releaseEvents,reSteerEvents,releasedFrac,outOfBandFrac
+V1-baseline,luger-hill,luge,open,100,0.764,500,0.713,1000,true,0.02,27.19,7.361783655192442,495.88,86.60945430931648,0,0,0,0.44775654273153964
+V1-baseline,mountainstreet,boarder,open,100,0.79,500,0.757,1000,false,1,33.02,10.926734889871506,560.52,103.36035619290034,0,0,0,0.4148324311408138
+V1-baseline,searound,manta,closed,100,0.732,500,0.711,1000,true,0.02,26.74,9.990520759725444,700.07,175.20996091558388,0,0,0,0.43883000232090763
+V1-baseline,dirt-oval,horse,closed,100,0.8,500,0.768,1000,false,0.4,30.14,8.956708450241432,715.4,161.1400043753909,0,0,0,0.39833129302393655

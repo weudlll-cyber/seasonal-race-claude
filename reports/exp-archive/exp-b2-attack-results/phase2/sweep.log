@@ -1,0 +1,27 @@
+
+=== exp-b2-attack — Phase 2 (3 variants × 4 tracks × 100 races = 1200, jobs=10) ===
+Out: C:/Users/weudl/AppData/Local/Temp/claude/c--Users-weudl-OneDrive-Dokumente-Seasonal-race-claude/0bde7542-92bb-411d-b7cc-f94d06115878/scratchpad/exp-b2-2
+
+  [ 1/12] ArmA-packV3  mountainstreet  1156s  (elapsed 19.3m)
+  [ 2/12] ArmC-both    mountainstreet  1162s  (elapsed 19.4m)
+  [ 3/12] ArmB-b2win   mountainstreet  1190s  (elapsed 19.8m)
+  [ 4/12] ArmC-both    luger-hill      1199s  (elapsed 20.0m)
+  [ 5/12] ArmA-packV3  luger-hill      1200s  (elapsed 20.0m)
+  [ 6/12] ArmB-b2win   luger-hill      1219s  (elapsed 20.3m)
+  [ 7/12] ArmA-packV3  searound        1897s  (elapsed 31.6m)
+  [ 8/12] ArmB-b2win   searound        1913s  (elapsed 31.9m)
+  [ 9/12] ArmB-b2win   dirt-oval       2296s  (elapsed 38.3m)
+  [10/12] ArmA-packV3  dirt-oval       2325s  (elapsed 38.7m)
+  [11/12] ArmC-both    searound        1512s  (elapsed 44.5m)
+  [12/12] ArmC-both    dirt-oval       1805s  (elapsed 49.4m)
+
+=== SUMMARY (mean across tracks; B1 & B2 reach ≥70% are PRIMARY gates) ===
+| variant | B1 | B2 | Holm | top5/race | cast | peakRchd | freed | outOfBand |
+|---|---|---|---|---|---|---|---|---|
+| ArmA-packV3 | 73.3% | 70.5% | 3/4 | 33.52 (0%) | 0.00 | 0.00 | 0.00 | 45.7% |
+| ArmB-b2win | 75.0% | 73.2% | 2/4 | 35.48 (6%) | 2.94 | 2.94 | 2.68 | 41.7% |
+| ArmC-both | 73.0% | 71.0% | 3/4 | 37.08 (11%) | 2.94 | 2.94 | 2.72 | 44.3% |
+
+Wrote per-variant CSVs + ALL.csv to C:/Users/weudl/AppData/Local/Temp/claude/c--Users-weudl-OneDrive-Dokumente-Seasonal-race-claude/0bde7542-92bb-411d-b7cc-f94d06115878/scratchpad/exp-b2-2
+Gates: B1 ≥70% + B2 ≥70% (attacker must not break B2). Winners: high top5 + cast≥~0.6 + fairness holds.
+SWEEP-COMPLETE

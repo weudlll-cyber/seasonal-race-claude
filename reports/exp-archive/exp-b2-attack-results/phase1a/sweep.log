@@ -1,0 +1,82 @@
+
+=== exp-b2-attack — Phase 1a (14 variants × 4 tracks × 50 races = 2800, jobs=10) ===
+Out: C:/Users/weudl/AppData/Local/Temp/claude/c--Users-weudl-OneDrive-Dokumente-Seasonal-race-claude/0bde7542-92bb-411d-b7cc-f94d06115878/scratchpad/exp-b2-1a
+
+  [ 1/56] V1-ct1       mountainstreet  533s  (elapsed 8.9m)
+  [ 2/56] V0-baseline  luger-hill      537s  (elapsed 9.0m)
+  [ 3/56] V2-ct2       mountainstreet  539s  (elapsed 9.0m)
+  [ 4/56] V1-ct1       luger-hill      542s  (elapsed 9.0m)
+  [ 5/56] V2-ct2       luger-hill      543s  (elapsed 9.1m)
+  [ 6/56] V0-baseline  mountainstreet  546s  (elapsed 9.1m)
+  [ 7/56] V1-ct1       searound        1032s  (elapsed 17.2m)
+  [ 8/56] V0-baseline  searound        1032s  (elapsed 17.2m)
+  [ 9/56] V3-dp1       mountainstreet  589s  (elapsed 18.8m)
+  [10/56] V3-dp1       luger-hill      633s  (elapsed 19.5m)
+  [11/56] V0-baseline  dirt-oval       1299s  (elapsed 21.7m)
+  [12/56] V1-ct1       dirt-oval       1302s  (elapsed 21.7m)
+  [13/56] V3-dp1       searound        1088s  (elapsed 27.2m)
+  [14/56] V2-ct2       searound        1098s  (elapsed 27.2m)
+  [15/56] V4-dp2       luger-hill      617s  (elapsed 27.5m)
+  [16/56] V4-dp2       mountainstreet  629s  (elapsed 27.7m)
+  [17/56] V5-dp3       mountainstreet  562s  (elapsed 31.1m)
+  [18/56] V5-dp3       luger-hill      585s  (elapsed 31.4m)
+  [19/56] V2-ct2       dirt-oval       1358s  (elapsed 31.6m)
+  [20/56] V3-dp1       dirt-oval       1351s  (elapsed 31.6m)
+  [21/56] V4-dp2       searound        1013s  (elapsed 35.7m)
+  [22/56] V6-dp5       luger-hill      503s  (elapsed 35.9m)
+  [23/56] V6-dp5       mountainstreet  497s  (elapsed 36.0m)
+  [24/56] V4-dp2       dirt-oval       1192s  (elapsed 39.4m)
+  [25/56] V7-dp7       mountainstreet  482s  (elapsed 39.7m)
+  [26/56] V7-dp7       luger-hill      494s  (elapsed 39.8m)
+  [27/56] V5-dp3       searound        902s  (elapsed 42.2m)
+  [28/56] V8-tm-early  luger-hill      537s  (elapsed 44.9m)
+  [29/56] V5-dp3       dirt-oval       1149s  (elapsed 46.3m)
+  [30/56] V6-dp5       searound        918s  (elapsed 46.4m)
+  [31/56] V8-tm-early  mountainstreet  540s  (elapsed 48.4m)
+  [32/56] V6-dp5       dirt-oval       1138s  (elapsed 50.4m)
+  [33/56] V9-tm-mid    luger-hill      530s  (elapsed 51.1m)
+  [34/56] V7-dp7       searound        920s  (elapsed 51.1m)
+  [35/56] V9-tm-mid    mountainstreet  480s  (elapsed 52.9m)
+  [36/56] V7-dp7       dirt-oval       1142s  (elapsed 54.9m)
+  [37/56] V8-tm-early  searound        923s  (elapsed 55.0m)
+  [38/56] V10-tm-late  luger-hill      511s  (elapsed 56.9m)
+  [39/56] V10-tm-late  mountainstreet  525s  (elapsed 59.1m)
+  [40/56] V8-tm-early  dirt-oval       1182s  (elapsed 59.5m)
+  [41/56] V9-tm-mid    searound        923s  (elapsed 61.7m)
+  [42/56] V11-fr-top   luger-hill      535s  (elapsed 61.8m)
+  [43/56] V11-fr-top   mountainstreet  534s  (elapsed 63.8m)
+  [44/56] V9-tm-mid    dirt-oval       1132s  (elapsed 65.2m)
+  [45/56] V10-tm-late  searound        924s  (elapsed 66.5m)
+  [46/56] V12-fr-mid   luger-hill      494s  (elapsed 67.4m)
+  [47/56] V12-fr-mid   mountainstreet  484s  (elapsed 67.6m)
+  [48/56] V10-tm-late  dirt-oval       1139s  (elapsed 70.1m)
+  [49/56] V11-fr-top   searound        916s  (elapsed 70.3m)
+  [50/56] V13-fr-bot   luger-hill      461s  (elapsed 71.5m)
+  [51/56] V13-fr-bot   mountainstreet  429s  (elapsed 72.4m)
+  [52/56] V11-fr-top   dirt-oval       1010s  (elapsed 73.7m)
+  [53/56] V12-fr-mid   searound        745s  (elapsed 74.1m)
+  [54/56] V12-fr-mid   dirt-oval       871s  (elapsed 76.4m)
+  [55/56] V13-fr-bot   searound        614s  (elapsed 76.7m)
+  [56/56] V13-fr-bot   dirt-oval       733s  (elapsed 79.6m)
+
+=== SUMMARY (mean across tracks; B1 & B2 reach ≥70% are PRIMARY gates) ===
+| variant | B1 | B2 | Holm | top5/race | cast | peakRchd | freed | outOfBand |
+|---|---|---|---|---|---|---|---|---|
+| V0-baseline | 76.8% | 74.8% | 2/4 | 29.20 (0%) | 0.00 | 0.00 | 0.00 | 42.4% |
+| V1-ct1 | 76.1% | 73.9% | 2/4 | 29.86 (2%) | 0.99 | 0.99 | 0.85 | 42.2% |
+| V2-ct2 | 76.1% | 73.9% | 2/4 | 30.95 (6%) | 1.94 | 1.94 | 1.64 | 41.9% |
+| V3-dp1 | 75.0% | 73.4% | 2/4 | 28.09 (-4%) | 0.88 | 0.88 | 0.55 | 42.4% |
+| V4-dp2 | 76.0% | 73.5% | 2/4 | 29.10 (-0%) | 0.97 | 0.97 | 0.65 | 42.5% |
+| V5-dp3 | 75.8% | 73.8% | 2/4 | 29.75 (2%) | 0.99 | 0.99 | 0.73 | 42.3% |
+| V6-dp5 | 76.1% | 73.9% | 2/4 | 29.86 (2%) | 0.99 | 0.99 | 0.85 | 42.2% |
+| V7-dp7 | 75.4% | 74.4% | 2/4 | 28.90 (-1%) | 0.99 | 0.99 | 0.93 | 42.2% |
+| V8-tm-early | 75.2% | 73.0% | 2/4 | 29.86 (2%) | 0.99 | 0.99 | 0.92 | 42.1% |
+| V9-tm-mid | 76.1% | 73.9% | 2/4 | 29.86 (2%) | 0.99 | 0.99 | 0.85 | 42.2% |
+| V10-tm-late | 75.6% | 73.6% | 2/4 | 30.50 (4%) | 0.99 | 0.99 | 0.74 | 42.4% |
+| V11-fr-top | 76.1% | 73.6% | 2/4 | 32.33 (11%) | 0.99 | 0.99 | 0.92 | 42.5% |
+| V12-fr-mid | 76.1% | 73.9% | 2/4 | 29.86 (2%) | 0.99 | 0.99 | 0.85 | 42.2% |
+| V13-fr-bot | 76.2% | 73.6% | 2/4 | 28.52 (-2%) | 0.99 | 0.99 | 0.79 | 42.0% |
+
+Wrote per-variant CSVs + ALL.csv to C:/Users/weudl/AppData/Local/Temp/claude/c--Users-weudl-OneDrive-Dokumente-Seasonal-race-claude/0bde7542-92bb-411d-b7cc-f94d06115878/scratchpad/exp-b2-1a
+Gates: B1 ≥70% + B2 ≥70% (attacker must not break B2). Winners: high top5 + cast≥~0.6 + fairness holds.
+SWEEP-COMPLETE

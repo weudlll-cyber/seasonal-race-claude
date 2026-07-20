@@ -1,0 +1,37 @@
+
+=== exp-b2-attack — Phase fr (5 variants × 4 tracks × 50 races = 1000, jobs=10) ===
+Out: C:/Users/weudl/AppData/Local/Temp/claude/c--Users-weudl-OneDrive-Dokumente-Seasonal-race-claude/0bde7542-92bb-411d-b7cc-f94d06115878/scratchpad/exp-b2-fr
+
+  [ 1/20] V-fr9        mountainstreet  614s  (elapsed 10.2m)
+  [ 2/20] V0-baseline  mountainstreet  615s  (elapsed 10.3m)
+  [ 3/20] V-fr7        luger-hill      616s  (elapsed 10.3m)
+  [ 4/20] V0-baseline  luger-hill      619s  (elapsed 10.3m)
+  [ 5/20] V-fr7        mountainstreet  622s  (elapsed 10.4m)
+  [ 6/20] V-fr9        luger-hill      627s  (elapsed 10.5m)
+  [ 7/20] V0-baseline  searound        1113s  (elapsed 18.6m)
+  [ 8/20] V-fr7        searound        1121s  (elapsed 18.7m)
+  [ 9/20] V-fr10       mountainstreet  614s  (elapsed 20.6m)
+  [10/20] V-fr10       luger-hill      621s  (elapsed 20.6m)
+  [11/20] V0-baseline  dirt-oval       1390s  (elapsed 23.2m)
+  [12/20] V-fr7        dirt-oval       1397s  (elapsed 23.3m)
+  [13/20] V-fr9        searound        1019s  (elapsed 27.2m)
+  [14/20] V-fr12       mountainstreet  514s  (elapsed 27.3m)
+  [15/20] V-fr10       searound        1015s  (elapsed 27.3m)
+  [16/20] V-fr12       luger-hill      533s  (elapsed 27.4m)
+  [17/20] V-fr10       dirt-oval       1155s  (elapsed 29.7m)
+  [18/20] V-fr9        dirt-oval       1167s  (elapsed 29.7m)
+  [19/20] V-fr12       searound        654s  (elapsed 31.5m)
+  [20/20] V-fr12       dirt-oval       810s  (elapsed 34.1m)
+
+=== SUMMARY (mean across tracks; B1 & B2 reach ≥70% are PRIMARY gates) ===
+| variant | B1 | B2 | Holm | top5/race | cast | peakRchd | freed | outOfBand |
+|---|---|---|---|---|---|---|---|---|
+| V0-baseline | 76.8% | 74.8% | 0/4 | 29.20 (0%) | 0.00 | 0.00 | 0.00 | 42.4% |
+| V-fr7 | 73.6% | 73.3% | 0/4 | 35.66 (22%) | 2.93 | 2.93 | 2.68 | 41.9% |
+| V-fr9 | 74.5% | 74.4% | 0/4 | 32.84 (12%) | 2.81 | 2.81 | 2.36 | 41.9% |
+| V-fr10 | 75.5% | 73.6% | 0/4 | 32.53 (11%) | 2.76 | 2.76 | 2.21 | 41.7% |
+| V-fr12 | 76.6% | 75.3% | 0/4 | 31.69 (9%) | 2.69 | 2.69 | 2.03 | 41.2% |
+
+Wrote per-variant CSVs + ALL.csv to C:/Users/weudl/AppData/Local/Temp/claude/c--Users-weudl-OneDrive-Dokumente-Seasonal-race-claude/0bde7542-92bb-411d-b7cc-f94d06115878/scratchpad/exp-b2-fr
+Gates: B1 ≥70% + B2 ≥70% (attacker must not break B2). Winners: high top5 + cast≥~0.6 + fairness holds.
+SWEEP-COMPLETE

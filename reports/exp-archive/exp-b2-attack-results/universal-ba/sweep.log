@@ -1,0 +1,22 @@
+
+=== exp-b2-attack — Phase uba (2 variants × 4 tracks × 50 races = 400, jobs=6) ===
+Out: C:/Users/weudl/AppData/Local/Temp/claude/c--Users-weudl-OneDrive-Dokumente-Seasonal-race-claude/0bde7542-92bb-411d-b7cc-f94d06115878/scratchpad/exp-uba
+
+  [ 1/8] V1-universal luger-hill      257s  (elapsed 4.3m)
+  [ 2/8] V1-universal mountainstreet  471s  (elapsed 7.8m)
+  [ 3/8] V0-b2only    mountainstreet  478s  (elapsed 8.0m)
+  [ 4/8] V0-b2only    luger-hill      490s  (elapsed 8.2m)
+  [ 5/8] V0-b2only    searound        825s  (elapsed 13.7m)
+  [ 6/8] V0-b2only    dirt-oval       980s  (elapsed 16.3m)
+  [ 7/8] V1-universal searound        724s  (elapsed 16.4m)
+  [ 8/8] V1-universal dirt-oval       739s  (elapsed 20.2m)
+
+=== SUMMARY (mean across tracks; B1 & B2 reach ≥70% are PRIMARY gates) ===
+| variant | B1 | B2 | Holm | top5/race | cast | peakRchd | freed | outOfBand |
+|---|---|---|---|---|---|---|---|---|
+| V0-b2only | 73.6% | 73.3% | 2/4 | 35.66 | 2.93 | 2.93 | 2.68 | 41.9% |
+| V1-universal | 73.5% | 73.8% | 2/4 | 33.45 | 2.93 | 2.93 | 2.71 | 43.2% |
+
+Wrote per-variant CSVs + ALL.csv to C:/Users/weudl/AppData/Local/Temp/claude/c--Users-weudl-OneDrive-Dokumente-Seasonal-race-claude/0bde7542-92bb-411d-b7cc-f94d06115878/scratchpad/exp-uba
+Gates: B1 ≥70% + B2 ≥70% (attacker must not break B2). Winners: high top5 + cast≥~0.6 + fairness holds.
+SWEEP-COMPLETE

@@ -1,0 +1,13 @@
+variant,track,racer,type,nRaces,b2n,peak,final,tWin,pack,b1Reach,b2Reach,holmUnfair,top5Mean,totalMean,attackerCast,attackerPeakReached,attackerFreed,releaseEvents,outOfBandFrac
+ArmA-packV3,luger-hill,luge,open,100,0,5,10,0.4-0.7,true,0.728,0.672,true,31.15,470.18,0,0,0,57.11,0.4818174794139636
+ArmA-packV3,mountainstreet,boarder,open,100,0,5,10,0.4-0.7,true,0.734,0.72,false,38.42,526.42,0,0,0,63.48,0.45054996299118355
+ArmA-packV3,searound,manta,closed,100,0,5,10,0.4-0.7,true,0.714,0.695,true,28.3,636.9,0,0,0,64.77,0.46407491307540827
+ArmA-packV3,dirt-oval,horse,closed,100,0,5,10,0.4-0.7,true,0.754,0.734,true,36.22,670.08,0,0,0,73.99,0.4325636844915405
+ArmB-b2win,luger-hill,luge,open,100,3,5,7,0.4-0.7,false,0.746,0.72,true,32.51,481.93,2.92,2.92,2.57,2.36,0.43672960255177584
+ArmB-b2win,mountainstreet,boarder,open,100,3,5,7,0.4-0.7,false,0.758,0.741,false,38.04,543.65,2.96,2.96,2.84,4.08,0.40942715830895626
+ArmB-b2win,searound,manta,closed,100,3,5,7,0.4-0.7,false,0.716,0.701,true,32.42,663.31,2.94,2.94,2.54,2.37,0.42898808526596177
+ArmB-b2win,dirt-oval,horse,closed,100,3,5,7,0.4-0.7,false,0.78,0.766,false,38.96,684.29,2.94,2.94,2.77,4.4,0.39411067189395244
+ArmC-both,luger-hill,luge,open,100,3,5,7,0.4-0.7,true,0.732,0.688,true,34.22,468.59,2.92,2.92,2.62,54.86,0.4645048343365381
+ArmC-both,mountainstreet,boarder,open,100,3,5,7,0.4-0.7,true,0.734,0.724,false,40.74,516.79,2.96,2.96,2.85,60.46,0.43514057035672016
+ArmC-both,searound,manta,closed,100,3,5,7,0.4-0.7,true,0.716,0.688,true,31.8,607.35,2.94,2.94,2.6,60.51,0.44839907128311374
+ArmC-both,dirt-oval,horse,closed,100,3,5,7,0.4-0.7,true,0.738,0.74,true,41.57,667.58,2.94,2.94,2.81,71.01,0.42389346545543505
