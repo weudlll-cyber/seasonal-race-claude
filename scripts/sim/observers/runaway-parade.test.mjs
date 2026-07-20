@@ -19,6 +19,9 @@ import {
   makeFormationTracker,
   formationLeaderStable,
   formationBucket,
+  speedProduct,
+  speedSaturation,
+  SPEED_SOURCE_SAMPLES,
   RUNAWAY_PARADE_DEFAULTS,
 } from './runaway-parade.mjs';
 import { arcT } from '../../../client/src/modules/raceLengths.js';
@@ -226,4 +229,37 @@ test('formationBucket: bins by crossing progress', () => {
   assert.equal(formationBucket(0.89), '075to090');
   assert.equal(formationBucket(0.90), 'never'); // at/after 0.90 → not formed during the race
   assert.equal(formationBucket(null), 'never');
+});
+
+// ── SPEED-SOURCE decomposition helpers ────────────────────────────────────────────────────────
+test('speedProduct multiplies the full factor chain', () => {
+  const f = { baseSpeed: 2, boost: 1.1, brake: 0.9, rowEnvMult: 1.02, trajectoryMult: 1.05, areaBonusMult: 1.03, governorMult: 1.0 };
+  const expected = 2 * 1.1 * 0.9 * 1.02 * 1.05 * 1.03 * 1.0;
+  assert.ok(Math.abs(speedProduct(f) - expected) < 1e-12);
+});
+
+test('speedProduct with all-neutral factors returns baseSpeed', () => {
+  assert.equal(speedProduct({ baseSpeed: 5, boost: 1, brake: 1, rowEnvMult: 1, trajectoryMult: 1, areaBonusMult: 1, governorMult: 1 }), 5);
+});
+
+test('speedSaturation: servoSaturated at the ceiling, headroom below, band headroom', () => {
+  const atCeil = speedSaturation({ trajectoryMult: 1.1, spreadFactor: 1.081 }, 1.1, 1.081);
+  assert.equal(atCeil.servoSaturated, true);
+  assert.ok(Math.abs(atCeil.servoHeadroom) < 1e-9);
+  assert.ok(Math.abs(atCeil.bandHeadroom) < 1e-9);
+  const below = speedSaturation({ trajectoryMult: 0.95, spreadFactor: 1.03 }, 1.1, 1.081);
+  assert.equal(below.servoSaturated, false);
+  assert.ok(Math.abs(below.servoHeadroom - 0.15) < 1e-9);   // 1.1 − 0.95
+  assert.ok(Math.abs(below.bandHeadroom - 0.051) < 1e-9);   // 1.081 − 1.03
+});
+
+test('speedSaturation: a braked leader (traj < 1) is NOT servoSaturated and has full servo headroom', () => {
+  const s = speedSaturation({ trajectoryMult: 0.85, spreadFactor: 1.081 }, 1.1, 1.081);
+  assert.equal(s.servoSaturated, false);
+  assert.ok(s.servoHeadroom > 0.24); // 1.1 − 0.85 = 0.25
+  assert.ok(Math.abs(s.bandHeadroom) < 1e-9); // at natural band ceiling → no natural headroom
+});
+
+test('SPEED_SOURCE_SAMPLES are the six late-race sample points', () => {
+  assert.deepEqual(SPEED_SOURCE_SAMPLES, [0.70, 0.75, 0.80, 0.85, 0.90, 0.95]);
 });

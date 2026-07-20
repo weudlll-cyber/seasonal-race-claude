@@ -43,6 +43,32 @@ export function leaderGapLengths(racers, isOpen, lenScale) {
   return arcT(live[0].t, live[1].t, isOpen) * lenScale;
 }
 
+// ── Runaway SPEED-SOURCE diagnostic (read-only): WHERE does the leader's overspeed come from? ──
+// The applied per-frame speed chain (client/src/modules/raceStep.js advanceRacerT) is, in order:
+//   effSpeed = baseSpeed · boost · brake · rowEnvMult · trajectoryMult · areaBonusMult · governorMult
+// (× dt), then a FINISH clamp Math.min(advanced, finishT+0.001). There is NO pre-finish SPEED clamp —
+// each factor is clamped only at its OWN source (trajectoryMult∈[0.85,1.10]; spreadFactor∈natural band;
+// governorMult∈pulk envelope). rowEnvMult IS "rowBonusPost"; areaBonusMult IS "areaBonusPost".
+export const SPEED_SOURCE_SAMPLES = [0.70, 0.75, 0.80, 0.85, 0.90, 0.95];
+
+// speedProduct — the full multiplicative chain (must equal the applied Δt/dt when the finish clamp
+// did not fire). `f` carries every factor captured at the advanceRacerT call site.
+export function speedProduct(f) {
+  return f.baseSpeed * f.boost * f.brake * f.rowEnvMult * f.trajectoryMult * f.areaBonusMult * f.governorMult;
+}
+
+// speedSaturation — per-factor ceiling saturation + remaining headroom (there is no single speed clamp).
+//   servoSaturated : trajectoryMult pinned at the servo ceiling (maxMult) → the servo can't push faster.
+//   servoHeadroom  : maxMult − trajectoryMult (how much MORE the servo could add to this racer).
+//   bandHeadroom   : natCeil − spreadFactor (how much faster this racer's NATURAL draw could be).
+export function speedSaturation(f, trajMax, natCeil) {
+  return {
+    servoSaturated: f.trajectoryMult >= trajMax - 1e-6,
+    servoHeadroom: trajMax - f.trajectoryMult,
+    bandHeadroom: natCeil - f.spreadFactor,
+  };
+}
+
 // ── Runaway FORMATION diagnostic (read-only): WHEN does the leader→P2 gap form? ────────────────
 // Thresholds/boundaries are parameters with these defaults (printed in the sweep header).
 export const FORMATION_DEFAULTS = {

@@ -27,7 +27,7 @@ import { readFileSync, writeFileSync, mkdirSync } from 'fs';
 import { join, dirname, isAbsolute, relative } from 'path';
 import { fileURLToPath } from 'url';
 import { promisify } from 'util';
-import { classifyRace, RUNAWAY_PARADE_DEFAULTS, formationLeaderStable, formationBucket } from './sim/observers/runaway-parade.mjs';
+import { classifyRace, RUNAWAY_PARADE_DEFAULTS, formationLeaderStable, formationBucket, SPEED_SOURCE_SAMPLES } from './sim/observers/runaway-parade.mjs';
 import { BAND_EDGES } from '../client/src/modules/racePlanner.js';
 
 const pExecFile = promisify(execFile);
@@ -139,6 +139,188 @@ const SUM_COLS = [
   'paradeGrp_mean', 'paradeGrp_2', 'paradeGrp_3', 'paradeGrp_4', 'paradeGrp_5plus',
   'paradeSpeedSpread_mean', 'paradeSpeedSpread_max',
 ];
+
+// ════════════════════════════════════════════════════════════════════════════════
+// SPEED-SOURCE DIAGNOSTIC (--speed-source-diag). READ-ONLY: decompose the late-race speed of the top-15
+// live ranks into its multiplicative factors, measure clamp saturation + headroom, and map fight
+// potential. Same f40a7a6 baseline seeds. Facts only — the mechanism decision is the owner's.
+// ════════════════════════════════════════════════════════════════════════════════
+if (argv.includes('--speed-source-diag')) {
+  const OUT_S = join(OUT_ABS, 'speed-source');
+  mkdirSync(OUT_S, { recursive: true });
+  mkdirSync(TMP_ABS, { recursive: true });
+  const med = (a) => percentile(a, 0.5);
+  const VAR_FACTORS = ['spreadFactor', 'speedBonusMult', 'boost', 'brake', 'rowEnvMult', 'trajectoryMult', 'areaBonusMult', 'governorMult'];
+
+  async function runTrackS(track) {
+    const outAbs = join(TMP_ABS, `speedsrc__${track.id}`);
+    const args = [
+      'scripts/sim-fairness.mjs', `--track=${track.id}`, `--racer=${track.racer}`,
+      `--seed=${SEED}`, `--races=${RACES}`, `--dur=${DUR}`,
+      '--runaway-parade', '--speed-source', '--skip-main-output', `--out=${toSimOut(outAbs)}`,
+    ];
+    await pExecFile(process.execPath, args, { cwd: ROOT, maxBuffer: 512 * 1024 * 1024 });
+    const rp = JSON.parse(readFileSync(join(outAbs, 'runaway-parade.json'), 'utf8'));
+    const ss = JSON.parse(readFileSync(join(outAbs, 'speed-source.json'), 'utf8'));
+    const runawayByIdx = new Map();
+    let runawayCount = 0;
+    for (const r of rp.races) { const isR = classifyRace(r.runawayParade, D).runawayWinner; runawayByIdx.set(r.raceIdx, isR); if (isR) runawayCount++; }
+    // Flatten every (race, sample, position) record, tagged with runaway class.
+    const recs = [];
+    for (const r of ss.races) {
+      const isR = runawayByIdx.get(r.raceIdx) ? 1 : 0;
+      for (const sample of Object.keys(r.speedSource.samples)) {
+        for (const pos of r.speedSource.samples[sample]) {
+          recs.push({ track: track.id, type: track.closed ? 'closed' : 'open', raceIdx: r.raceIdx, runaway: isR, sample: Number(sample), ...pos });
+        }
+      }
+    }
+    return { track, recs, runawayCount, nRaces: rp.races.length };
+  }
+
+  const jobsS = [...TRACKS];
+  const perTrackS = new Array(jobsS.length);
+  let nextS = 0, doneS = 0; const t0S = Date.now();
+  console.log(`\n=== exp-runaway-leader --speed-source-diag === ${TRACKS.length} tracks × N=${RACES} (seed=${SEED}), jobs=${JOBS}`);
+  async function workerS() {
+    while (nextS < jobsS.length) {
+      const i = nextS++; perTrackS[i] = await runTrackS(jobsS[i]); doneS++;
+      console.log(`  [${doneS}/${jobsS.length}] ${jobsS[i].id.padEnd(15)} runaway=${perTrackS[i].runawayCount}/${perTrackS[i].nRaces}`);
+    }
+  }
+  await Promise.all(Array.from({ length: Math.min(JOBS, jobsS.length) }, workerS));
+  const allRecs = perTrackS.flatMap((p) => p.recs);
+
+  // ── Consistency gate (runaway rates = baseline) + cross-check (product == effSpeed) ──
+  const BASELINE_RUNAWAY = { 'luger-hill': 18, 'mountainstreet': 18, 'searound': 30, 'dirt-oval': 28 };
+  const gateFail = [];
+  for (const p of perTrackS) {
+    if (RACES === 100 && BASELINE_RUNAWAY[p.track.id] != null && p.runawayCount !== BASELINE_RUNAWAY[p.track.id]) {
+      gateFail.push(`${p.track.id}: runaway ${p.runawayCount}/100 (baseline ${BASELINE_RUNAWAY[p.track.id]}/100)`);
+    }
+  }
+  const totalRunaway = perTrackS.reduce((s, p) => s + p.runawayCount, 0);
+  if (RACES === 100 && TRACKS.length === 4 && totalRunaway !== 94) gateFail.push(`OVERALL: runaway ${totalRunaway}/400 (baseline 94/400)`);
+  // Cross-check: product == effSpeed within 1e-9 on all non-finish-clamped records.
+  let xCk = 0, xBad = 0;
+  for (const r of allRecs) { if (!r.finishClamp) { xCk++; if (Math.abs(r.product - r.effSpeed) > 1e-9) xBad++; } }
+  if (xBad > 0) gateFail.push(`CROSS-CHECK: ${xBad}/${xCk} records where product != effSpeed (>1e-9) — decomposition incomplete`);
+
+  // Per-track raw decomposition CSVs (also the determinism re-run target).
+  const S_COLS = ['track', 'type', 'raceIdx', 'runaway', 'sample', 'rank', 'index', 'effSpeed', 'product', 'baseSpeed', 'spreadFactor', 'speedBonusMult', 'boost', 'brake', 'rowEnvMult', 'trajectoryMult', 'areaBonusMult', 'governorMult', 'servoSaturated', 'servoHeadroom', 'bandHeadroom', 'finishClamp', 'gapAhead'];
+  const toCsvS = (rows) => [S_COLS.join(','), ...rows.map((r) => S_COLS.map((c) => (r[c] == null ? '' : r[c])).join(','))].join('\n') + '\n';
+  for (const p of perTrackS) writeFileSync(join(OUT_S, `speed-source-${p.track.id}.csv`), toCsvS(p.recs));
+
+  if (gateFail.length) {
+    const msg = ['# Speed-Source Diagnostic — GATE FAILED (STOPPED)', '', 'A verification gate failed — NOT reported. Investigate before trusting any number.', '', ...gateFail.map((g) => `- ${g}`), ''].join('\n');
+    writeFileSync(join(OUT_S, 'SUMMARY.md'), msg);
+    console.error('\n❌ GATE FAILED:\n' + gateFail.map((g) => '  ' + g).join('\n'));
+    process.exit(1);
+  }
+
+  // ── Aggregation helpers ──────────────────────────────────────────────────────
+  // median factor value at a position, filtered by class + optional track. `sel` picks P1 (rank==1) or
+  // the chaser pool (rank 2..15).
+  const pick = (cls, trackId, rankSel) => allRecs.filter((r) => r.runaway === cls && (trackId ? r.track === trackId : true) && rankSel(r.rank));
+  const isP1 = (rk) => rk === 1;
+  const isChaser = (rk) => rk >= 2 && rk <= 15;
+
+  // Component decomposition: median factor at P1 vs the P2–P15 pool, per class (overall).
+  const decompRows = (cls) => {
+    const p1 = pick(cls, null, isP1); const ch = pick(cls, null, isChaser);
+    return VAR_FACTORS.map((f) => {
+      const mp1 = med(p1.map((r) => r[f])); const mch = med(ch.map((r) => r[f]));
+      return { factor: f, p1: mp1, chaser: mch, ratio: mch !== 0 ? mp1 / mch : 0, delta: mp1 - mch };
+    });
+  };
+  const decompRun = decompRows(1); const decompNon = decompRows(0);
+  // Headline: the variable factor with the largest P1/chaser ratio among runaway races.
+  const topFactor = [...decompRun].filter((d) => d.chaser !== 0).sort((a, b) => b.ratio - a.ratio)[0];
+  const p1TrajRun = med(pick(1, null, isP1).map((r) => r.trajectoryMult));
+  const p1SatShareRun = (() => { const p1 = pick(1, null, isP1); return p1.length ? p1.filter((r) => r.servoSaturated === 1).length / p1.length : 0; })();
+
+  // Saturation + headroom per position (runaway, overall).
+  const satRows = (cls) => Array.from({ length: 15 }, (_, i) => {
+    const rk = i + 1; const rows = pick(cls, null, (x) => x === rk);
+    return {
+      rank: rk, n: rows.length,
+      satShare: rows.length ? rows.filter((r) => r.servoSaturated === 1).length / rows.length : 0,
+      servoHead: med(rows.map((r) => r.servoHeadroom)),
+      bandHead: med(rows.map((r) => r.bandHeadroom)),
+      effSpeed: med(rows.map((r) => r.effSpeed)),
+    };
+  });
+  const satRun = satRows(1);
+
+  // Gap structure at 0.90: median gapAhead per position + how many of P2..P15 sit within 3.0L of P1.
+  const at090 = (cls) => allRecs.filter((r) => r.runaway === cls && Math.abs(r.sample - 0.9) < 1e-9);
+  const gapStruct = (cls) => {
+    const rows = at090(cls);
+    const byRank = Array.from({ length: 15 }, (_, i) => med(rows.filter((r) => r.rank === i + 1).map((r) => r.gapAhead)));
+    // cumulative gap to P1 per race, count within 3.0L (ranks 2..15)
+    const byRace = new Map();
+    // Key by (track, raceIdx): raceIdx 0..99 repeats per track, so a bare raceIdx collides across tracks.
+    for (const r of rows) { const k = `${r.track}:${r.raceIdx}`; if (!byRace.has(k)) byRace.set(k, {}); byRace.get(k)[r.rank] = r.gapAhead; }
+    const within3 = [];
+    for (const [, ranks] of byRace) { let cum = 0, cnt = 0; for (let rk = 2; rk <= 15; rk++) { if (ranks[rk] == null) break; cum += ranks[rk]; if (cum <= 3.0) cnt++; } within3.push(cnt); }
+    return { byRank, within3Median: med(within3), within3Mean: within3.length ? within3.reduce((s, x) => s + x, 0) / within3.length : 0, n: byRace.size };
+  };
+  const gapRun = gapStruct(1); const gapNon = gapStruct(0);
+
+  // ── SUMMARY.md ───────────────────────────────────────────────────────────────
+  const f6 = (x) => (x == null ? '-' : Number(x).toFixed(6));
+  const f3 = (x) => (x == null ? '-' : Number(x).toFixed(3));
+  const pctS = (x) => (100 * x).toFixed(1) + '%';
+  const md = [];
+  md.push('# Runaway Speed-Source Diagnostic — WHERE does the leader\'s late overspeed come from?');
+  md.push('');
+  md.push(`Read-only, unmodified baseline (all gap-servo config absent, shipped defaults). All 4 tracks, **N=${RACES} per track**, seed=${SEED} (same seeds as the f40a7a6 baseline). Top-15 live ranks decomposed at samples ${SPEED_SOURCE_SAMPLES.map((s) => s.toFixed(2)).join('/')}.`);
+  md.push('Consistency gate PASSED (runaway = baseline). Cross-check PASSED: on all ' + xCk + ' non-finish-clamped records, effSpeed == product of the recorded factors (within 1e-9) — the decomposition is complete, no factor missed.');
+  md.push('');
+  md.push('**Speed chain (from `raceStep.js advanceRacerT`):** `effSpeed = baseSpeed · boost · brake · rowEnvMult · trajectoryMult · areaBonusMult · governorMult` (× dt), then a FINISH clamp only. `rowEnvMult` = rowBonusPost; `areaBonusMult` = areaBonusPost. baseSpeed = const · **spreadFactor** · speedBonusMult. There is **no single pre-finish speed clamp** — each factor is clamped at its own source (trajectoryMult∈[0.85,1.10]; spreadFactor∈natural band ≤' + (perTrackS[0] ? '' : '') + ' ~1.081; governorMult∈pulk envelope).');
+  md.push('');
+
+  md.push('## Headline');
+  md.push(`Among runaway races, the largest P1-vs-chaser speed-delta source in [0.70, 0.95] is **${topFactor.factor}** (median P1 ${f6(topFactor.p1)} vs P2–P15 ${f6(topFactor.chaser)}, ratio ${topFactor.ratio.toFixed(4)}). P1's median trajectoryMult is **${f3(p1TrajRun)}** — ${p1TrajRun < 1.0 ? 'BELOW 1.0, i.e. the servo is BRAKING the leader, not boosting it' : 'at/above 1.0'}; P1 runs servo-clamped (traj ≥ maxMult) in ${pctS(p1SatShareRun)} of samples. So the escape speed is ${topFactor.factor === 'spreadFactor' ? 'the leader\'s NATURAL re-roll draw, not the servo or areaBonus' : 'led by ' + topFactor.factor}.`);
+  md.push('');
+
+  const decompTable = (rows, label) => {
+    const lines = [`### ${label}`, '| factor | P1 median | P2–P15 median | ratio | delta |', '|---|---|---|---|---|'];
+    for (const d of rows) lines.push(`| ${d.factor} | ${f6(d.p1)} | ${f6(d.chaser)} | ${d.ratio.toFixed(4)} | ${(d.delta >= 0 ? '+' : '') + d.delta.toFixed(6)} |`);
+    return lines;
+  };
+  md.push('## Component decomposition — P1 vs P2–P15 median (variable factors, window [0.70,0.95])');
+  md.push(...decompTable(decompRun, 'RUNAWAY races'));
+  md.push('');
+  md.push(...decompTable(decompNon, 'NON-RUNAWAY races'));
+  md.push('');
+
+  md.push('## Clamp saturation + headroom per position — RUNAWAY races');
+  md.push('`satShare` = fraction of samples with trajectoryMult pinned at the servo ceiling (1.10). `servoHead` = median (maxMult − traj) — how much MORE the servo could add. `bandHead` = median (natCeil − spreadFactor) — natural-speed headroom.');
+  md.push('| pos | n | satShare | servoHead | bandHead | median effSpeed |');
+  md.push('|---|---|---|---|---|---|');
+  for (const s of satRun) md.push(`| P${s.rank} | ${s.n} | ${pctS(s.satShare)} | ${f3(s.servoHead)} | ${f6(s.bandHead)} | ${f6(s.effSpeed)} |`);
+  md.push('');
+  md.push('*(Fight potential: a chaser with large `servoHead` AND `bandHead` COULD be sped up to close the gap; a leader already at low headroom cannot pull much further away.)*');
+  md.push('');
+
+  md.push('## Gap structure at 0.90 — median consecutive gap (lengths) + how many sit within 3.0L of P1');
+  md.push('| pos gap | ' + Array.from({ length: 14 }, (_, i) => `P${i + 1}→P${i + 2}`).join(' | ') + ' |');
+  md.push('|---|' + Array.from({ length: 14 }, () => '---').join('|') + '|');
+  md.push('| RUNAWAY | ' + gapRun.byRank.slice(1).map((g) => f3(g)).join(' | ') + ' |');
+  md.push('| non-runaway | ' + gapNon.byRank.slice(1).map((g) => f3(g)).join(' | ') + ' |');
+  md.push('');
+  md.push(`Racers within 3.0L of P1 at 0.90 (of P2..P15): RUNAWAY median **${gapRun.within3Median}** (mean ${gapRun.within3Mean.toFixed(2)}, n=${gapRun.n}); non-runaway median ${gapNon.within3Median} (mean ${gapNon.within3Mean.toFixed(2)}, n=${gapNon.n}).`);
+  md.push('');
+  md.push('Raw per-(race×sample×position) rows: `speed-source-<track>.csv`.');
+  md.push('');
+  writeFileSync(join(OUT_S, 'SUMMARY.md'), md.join('\n'));
+
+  console.log(`\nElapsed ${((Date.now() - t0S) / 60000).toFixed(1)}m → ${OUT_S}`);
+  console.log(`Cross-check PASSED (${xCk} records, 0 mismatch). Headline factor: ${topFactor.factor} (ratio ${topFactor.ratio.toFixed(4)}); P1 median traj=${f3(p1TrajRun)}.`);
+  console.log(`Within 3.0L of P1 at 0.90: RUNAWAY median ${gapRun.within3Median} vs non-runaway ${gapNon.within3Median}.`);
+  process.exit(0);
+}
 
 // ════════════════════════════════════════════════════════════════════════════════
 // RUNAWAY FORMATION DIAGNOSTIC (--formation-diag). READ-ONLY: measures WHEN the leader→P2 gap forms

@@ -96,7 +96,7 @@ import {
   PROPOSED_THRESHOLDS as GM_THRESHOLDS,
 } from './sim/observers/gap-metrics.mjs';
 import { maxLinkGapLengths, makeHeldOvertakeTracker, fullSpreadLengths, framesOverThresholdShare, GAP_THRESHOLD_LENGTHS, leaderSnapshot, RUNAWAY_LARGE_LENGTHS } from './sim/observers/pulk-contest.mjs';
-import { RUNAWAY_PARADE_DEFAULTS, leaderGapLengths, makeFormationTracker } from './sim/observers/runaway-parade.mjs';
+import { RUNAWAY_PARADE_DEFAULTS, leaderGapLengths, makeFormationTracker, SPEED_SOURCE_SAMPLES, speedProduct, speedSaturation } from './sim/observers/runaway-parade.mjs';
 import { applyPulkLeadRotation, arcT, computeDirectorCeiling } from '../client/src/modules/raceGovernor.js';
 import { lenScaleFrom, arcLengths, meanDrawnBodyLen } from '../client/src/modules/raceLengths.js';
 
@@ -342,6 +342,11 @@ const gmRaces             = [];   // per-race gap-space observations (filled onl
 // Fully flag-gated → a no-flag run does zero extra work and is byte-identical.
 const RUNAWAY_PARADE      = argv.includes('--runaway-parade');
 const rpRaces             = [];   // per-race runaway/parade raw records (filled only when RUNAWAY_PARADE)
+// SPEED-SOURCE (read-only, --speed-source): decompose the late-race speed of the top-15 live ranks into
+// its multiplicative factors at fixed samples (0.70..0.95), with clamp saturation + headroom. Pure
+// read-only capture at the advanceRacerT call site (harness Pass-2). No sim file changes; no fingerprint.
+const SPEED_SOURCE        = argv.includes('--speed-source');
+const ssRaces             = [];   // per-race top-15 speed decomposition (filled only when SPEED_SOURCE)
 // --skip-main-output: skip writing the large fairness-data.json + fairness-report.md. For a batch
 // runner that reads only hero-map.json, to avoid heavy concurrent writes into the OneDrive-synced
 // tree. Read-only measurement runs only; a normal run (flag absent) is unchanged.
@@ -583,6 +588,7 @@ export function runSingleRace({
   heroMap = false,             // --hero-map: record per-hero climb-feasibility signals (read-only)
   gapMetrics = false,          // --gap-metrics: record gap-space (time-behind-leader) signals (read-only)
   runawayParade = false,       // --runaway-parade: record runaway-winner / parade-finish raw signals (read-only)
+  speedSource = false,         // --speed-source: record top-15 late-race speed decomposition (read-only)
 }) {
   const savedRandom = Math.random;
   if (seed > 0) Math.random = makePRNG(seed);
@@ -1014,6 +1020,12 @@ export function runSingleRace({
       speed095ByIndex:     null,       // per-racer avg speed over [~0.95, line] (relative-spread source)
       formation:           makeFormationTracker(), // WHEN the leader→P2 gap forms (read-only per-frame)
     } : null;
+    // ── SPEED-SOURCE per-race state (read-only; only allocated when --speed-source) ──
+    // samples[prog] = [{ rank, index, effSpeed, product, factors…, saturation…, gapAhead, finishClamp }]
+    // for the top-15 live ranks at the first frame >= each sample progress. SS_TRAJ_MAX = the servo
+    // ceiling (controllerParams.maxMult 1.10 at defaults); NAT_CEIL (below) = the natural spreadFactor max.
+    const SS_TRAJ_MAX = 1.1;
+    const ss = speedSource ? { samples: {}, nextSample: 0, cap: null } : null;
     const HM_CEIL  = 1.09;                 // servo ceiling (maxMult 1.10) — parity with smWinnerCeilSteps
     const HM_LAT   = V4_LATERAL_PROXIMITY; // lateral proximity for a REAL overtake (0.3) — parity with physical_overtake
     const hmBandOf = (rank) => {
@@ -1430,6 +1442,10 @@ export function runSingleRace({
 
       // ── Pass 2: t-update (mirrors index.jsx RACING loop) ─────────────────────
       const effectiveBrakeFactor = computeEffectiveBrakeFactor(behaviorConfig, isOpen, raceTs);
+      // SPEED-SOURCE (read-only): is THIS frame a decomposition sample? If so, capture every factor at
+      // the advanceRacerT call site into ss.cap (index → factors + tBefore) for the top-15 build below.
+      const ssSample = ss && ss.nextSample < SPEED_SOURCE_SAMPLES.length && raceProgress >= SPEED_SOURCE_SAMPLES[ss.nextSample];
+      if (ssSample) ss.cap = new Map();
       // TEF v3: per-frame meanT of Row-0 (computed once, used per-racer below)
       for (const r of racers) {
         if (!r.finished) {
@@ -1447,6 +1463,16 @@ export function runSingleRace({
           const rowEnvMult = rowPhaseCfg.smooth
             ? computeRowEnvSmoothed(r, rowEnvTarget, raceTs)
             : rowEnvTarget;
+          // SPEED-SOURCE capture (read-only): the EXACT factors advanceRacerT is about to use, plus the
+          // pre-advance t. Same values → the recorded product equals the applied Δt bit-for-bit (unless
+          // the finish clamp fires). Never mutates race state.
+          if (ssSample) {
+            ss.cap.set(r.index, {
+              tBefore: r.t, boost, brake, rowEnvMult,
+              baseSpeed: r.baseSpeed, spreadFactor: r.spreadFactor, speedBonusMult: r.speedBonusMult ?? 1.0,
+              trajectoryMult: r.trajectoryMult, areaBonusMult: r.areaBonusMult, governorMult: r.governorMult ?? 1.0,
+            });
+          }
           r.t = advanceRacerT(r, {
             boost,
             brake,
@@ -1457,6 +1483,40 @@ export function runSingleRace({
             rowEnvMult,
           });
         }
+      }
+
+      // ── SPEED-SOURCE sample build (read-only): top-15 live ranks decomposed at this sample ──────
+      // Runs right after Pass-2 so r.t is the applied (post-clamp) value → effSpeed is the REAL Δt/dt.
+      // product = speedProduct(factors) equals effSpeed unless the finish clamp fired (finishClamp).
+      if (ssSample && ss.cap) {
+        const ssDt = DT / 16;
+        const order = racers.filter((r) => !r.finished).sort((a, b) => (b.t - a.t) || (a.index - b.index));
+        const top = order.slice(0, 15);
+        const recs = [];
+        for (let i = 0; i < top.length; i++) {
+          const r = top[i];
+          const c = ss.cap.get(r.index);
+          if (!c) continue;
+          const product = speedProduct(c);
+          const advanced = c.tBefore + product * ssDt;
+          const effSpeed = (r.t - c.tBefore) / ssDt; // applied (post finish clamp)
+          const sat = speedSaturation(c, SS_TRAJ_MAX, NAT_CEIL);
+          const gapAhead = i > 0 ? +(arcT(top[i - 1].t, r.t, isOpen) * govLenScale).toFixed(4) : 0;
+          recs.push({
+            rank: i + 1, index: r.index,
+            effSpeed: +effSpeed.toFixed(9), product: +product.toFixed(9),
+            baseSpeed: +c.baseSpeed.toFixed(9), spreadFactor: +c.spreadFactor.toFixed(6),
+            speedBonusMult: +c.speedBonusMult.toFixed(6), boost: +c.boost.toFixed(6), brake: +c.brake.toFixed(6),
+            rowEnvMult: +c.rowEnvMult.toFixed(6), trajectoryMult: +c.trajectoryMult.toFixed(6),
+            areaBonusMult: +c.areaBonusMult.toFixed(6), governorMult: +c.governorMult.toFixed(6),
+            servoSaturated: sat.servoSaturated ? 1 : 0, servoHeadroom: +sat.servoHeadroom.toFixed(6),
+            bandHeadroom: +sat.bandHeadroom.toFixed(6),
+            finishClamp: advanced > finishT + 0.001 ? 1 : 0, gapAhead,
+          });
+        }
+        ss.samples[SPEED_SOURCE_SAMPLES[ss.nextSample]] = recs;
+        ss.nextSample++;
+        ss.cap = null;
       }
 
       // ── HERO-MAP per-frame observer (--hero-map; read-only) ──────────────────
@@ -2314,6 +2374,11 @@ export function runSingleRace({
       };
     }
 
+    // ── SPEED-SOURCE record — attached ONLY when --speed-source (else results unchanged) ──
+    if (speedSource && ss) {
+      results.speedSource = { trajMax: SS_TRAJ_MAX, natCeil: +NAT_CEIL.toFixed(6), samples: ss.samples };
+    }
+
     // ── STRIP-DOWN metrics — attached ONLY when --strip-metrics is on (else results unchanged) ──
     if (STRIP_METRICS) {
       const targetRankOf = (idx) =>
@@ -2965,6 +3030,7 @@ if (isMain) {
             heroMap:            HERO_MAP,
             gapMetrics:         GAP_METRICS,
             runawayParade:      RUNAWAY_PARADE,
+            speedSource:        SPEED_SOURCE,
           });
           // HERO-MAP (--hero-map): stash this race's per-hero observations, tagged with combo meta.
           if (HERO_MAP && result.heroObs) {
@@ -2977,6 +3043,10 @@ if (isMain) {
           // RUNAWAY-PARADE (--runaway-parade): stash this race's raw record, tagged with combo meta.
           if (RUNAWAY_PARADE && result.runawayParade) {
             rpRaces.push({ trackId, racerType, durationSec, seed, raceIdx, isOpen, runawayParade: result.runawayParade });
+          }
+          // SPEED-SOURCE (--speed-source): stash this race's top-15 decomposition, tagged with combo meta.
+          if (SPEED_SOURCE && result.speedSource) {
+            ssRaces.push({ trackId, racerType, durationSec, seed, raceIdx, isOpen, speedSource: result.speedSource });
           }
           // Step 1: fair-chance placement metrics (requires race-plan target ranks)
           if (raceSollRankMap) {
@@ -3728,6 +3798,22 @@ if (isMain) {
       races: rpRaces,
     }, null, 2));
     console.log(`\n=== Runaway/Parade (${DIAG_LABEL}) ===  → ${rpPath}  (${rpRaces.length} races)`);
+  }
+
+  // ── SPEED-SOURCE raw output (--speed-source) → OUT_DIR/speed-source.json ──
+  // RAW per-race top-15 decompositions at samples 0.70..0.95. A no-flag run writes nothing.
+  if (SPEED_SOURCE) {
+    const ssPath = join(OUT_DIR, 'speed-source.json');
+    writeFileSync(ssPath, JSON.stringify({
+      meta: {
+        label: DIAG_LABEL, nRaces: N_RACES, seed: GLOBAL_SEED, samples: SPEED_SOURCE_SAMPLES,
+        note: 'Top-15 late-race speed decomposition (read-only). Factor chain: baseSpeed·boost·brake·'
+            + 'rowEnvMult(=rowBonusPost)·trajectoryMult·areaBonusMult(=areaBonusPost)·governorMult. '
+            + 'product == effSpeed unless finishClamp. Only per-factor ceilings (no single speed clamp).',
+      },
+      races: ssRaces,
+    }, null, 2));
+    console.log(`\n=== Speed-Source (${DIAG_LABEL}) ===  → ${ssPath}  (${ssRaces.length} races)`);
   }
 
 
