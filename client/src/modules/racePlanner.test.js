@@ -1415,8 +1415,9 @@ describe('createTrajectoryController — gap-cap re-roll bias', () => {
     if (gapAheadT != null) rs.push({ index: 2, t: selfT + gapAheadT, finished: false });
     return rs;
   }
-  const call = (ctrl, racers, raw, prog = 0.7, ms = 40_000) =>
-    ctrl.computeGapBiasedTarget(0, raw, SMIN, SMAX, racers, ms, prog, LS, ISOPEN);
+  // lastRollDeadlineMs defaults large (90s) so the UPPER bound never interferes unless a test sets it.
+  const call = (ctrl, racers, raw, prog = 0.7, ms = 40_000, deadline = 90_000) =>
+    ctrl.computeGapBiasedTarget(0, raw, SMIN, SMAX, racers, ms, prog, LS, ISOPEN, deadline);
 
   it('direction: a hole behind (gapBehind > G) shifts the draw SLOWER, both modes', () => {
     for (const mode of ['symmetric', 'down']) {
@@ -1462,19 +1463,50 @@ describe('createTrajectoryController — gap-cap re-roll bias', () => {
     expect(call(later, big, 1.05, 0.7)).toBe(1.05); // now 0.70 < 0.80 → passthrough (boundary MOVED)
   });
 
-  it('window UPPER bound derives from reRollLastPositionPercent AND reRollTransitionDuration (moves when either changes)', () => {
+  it('window UPPER bound = (passed lastRollDeadline − reRollTransitionDuration); moves with both', () => {
     const big = field(0.6, 0.3, null);
-    // default: windowEnd = 0.95·60000 − 3000 = 54000ms
-    const base = createTrajectoryController(planWith());
-    expect(call(base, big, 1.05, 0.7, 40_000)).toBeLessThan(1.05); // 40s ≤ 54s → biased
-    expect(call(base, big, 1.05, 0.7, 55_000)).toBe(1.05); // 55s > 54s → passthrough
-    // shrink lastPos → 50%: windowEnd = 0.5·60000 − 3000 = 27000ms → 40s now out
-    const shortLast = createTrajectoryController(planWith({ reRollLastPositionPercent: 50 }));
-    expect(call(shortLast, big, 1.05, 0.7, 40_000)).toBe(1.05);
-    // grow transition → 10s: windowEnd = 0.95·60000 − 10000 = 47000ms → 50s out, 45s in
+    const base = createTrajectoryController(planWith()); // transDur = 3000
+    // deadline 57000 → windowEnd = 54000
+    expect(call(base, big, 1.05, 0.7, 40_000, 57_000)).toBeLessThan(1.05); // 40s ≤ 54s → biased
+    expect(call(base, big, 1.05, 0.7, 55_000, 57_000)).toBe(1.05); // 55s > 54s → passthrough
+    // MOVES with the passed deadline (= reRollLastPositionPercent · realizedDur): shrink to 30000 → end 27000
+    expect(call(base, big, 1.05, 0.7, 40_000, 30_000)).toBe(1.05); // 40s > 27s → passthrough
+    // MOVES with reRollTransitionDuration: 10s → windowEnd = 57000 − 10000 = 47000
     const longTrans = createTrajectoryController(planWith({ reRollTransitionDuration: 10 }));
-    expect(call(longTrans, big, 1.05, 0.7, 50_000)).toBe(1.05);
-    expect(call(longTrans, big, 1.05, 0.7, 45_000)).toBeLessThan(1.05);
+    expect(call(longTrans, big, 1.05, 0.7, 50_000, 57_000)).toBe(1.05); // 50s > 47s → passthrough
+    expect(call(longTrans, big, 1.05, 0.7, 45_000, 57_000)).toBeLessThan(1.05); // 45s ≤ 47s → biased
+  });
+
+  it('REGRESSION (window basis): a realized-duration deadline > target keeps late closed-track rolls eligible', () => {
+    // The bug: windowEnd derived from targetDur (60s → target-based end 54000). On closed tracks the
+    // realized duration is LONGER (e.g. 90s), so lastRollDeadline = 0.95·90000 = 85500 and a roll at 55s
+    // is well inside the schedule — but the OLD target-based end (54000) wrongly excluded it (0 biased
+    // rolls on dirt-oval/searound). With the realized-based deadline passed in, it is eligible.
+    const ctrl = createTrajectoryController(planWith()); // transDur 3000
+    const big = field(0.6, 0.3, null);
+    const realizedDeadline = 0.95 * 90_000; // 85500ms — closed-track realized schedule
+    expect(call(ctrl, big, 1.05, 0.7, 55_000, realizedDeadline)).toBeLessThan(1.05); // eligible (fixed)
+    // Same roll under a target-basis deadline (54000-ish) would be excluded — proving the basis matters:
+    expect(call(ctrl, big, 1.05, 0.7, 55_000, 0.95 * 60_000)).toBe(1.05); // 55s > 54000−3000 → passthrough
+  });
+
+  it('SPEED-ROBUSTNESS: for ANY realized duration (ssf/speed shifts up & down) the window works with NO retuning', () => {
+    // realizedDurationSec = targetSeconds · expectedMinSF · closedSsf — varies with speedMultiplier,
+    // spread factors, and closed-track ssf. The transform is speed-agnostic: it consumes the harness's
+    // realized lastRollDeadline. Across a wide realized-duration range, a roll just inside the window is
+    // biased and one just outside is not — using the SAME plan config every time (no retuning).
+    const ctrl = createTrajectoryController(planWith()); // transDur 3000, choreoOutcomeStart 0.6
+    const big = field(0.6, 0.3, null);
+    const LASTPOS = 0.95,
+      TRANS = 3000;
+    for (const realizedSec of [24, 30, 45, 60, 90, 132]) {
+      const deadline = LASTPOS * realizedSec * 1000; // harness formula (realized basis)
+      const windowEnd = deadline - TRANS;
+      // a progress-eligible roll just INSIDE the window → biased
+      expect(call(ctrl, big, 1.05, 0.7, windowEnd - 1, deadline)).toBeLessThan(1.05);
+      // just OUTSIDE → passthrough
+      expect(call(ctrl, big, 1.05, 0.7, windowEnd + 1, deadline)).toBe(1.05);
+    }
   });
 
   it('config absent → passthrough byte-identical (no gapReroll keys)', () => {

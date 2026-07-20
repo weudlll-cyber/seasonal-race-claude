@@ -1145,7 +1145,8 @@ export function runSingleRace({
                 r.index, biasedTarget,
                 BASE_SPEED_MIN / BASE_SPEED_MEAN,
                 BASE_SPEED_MAX / BASE_SPEED_MEAN,
-                racers, raceTs, raceProgress, govLenScale, isOpen
+                racers, raceTs, raceProgress, govLenScale, isOpen,
+                lastRollDeadline // schedule's own realized-duration deadline (same basis as raceTs)
               )
             : biasedTarget;
           const newTarget   = Math.max(
@@ -3027,7 +3028,8 @@ if (isMain) {
               gapRerollThresholdLengths: GAP_REROLL_THRESH_LEN,
               gapRerollMode:             GAP_REROLL_MODE ?? undefined,
               gapRerollStrength:         GAP_REROLL_STRENGTH ?? undefined,
-              reRollLastPositionPercent: DYNAMICS_OVERRIDES.reRollLastPositionPercent,
+              // Window END is derived from the harness's own lastRollDeadline (passed per-frame to the
+              // transform); only the transition duration is needed in the plan.
               reRollTransitionDuration:  DYNAMICS_OVERRIDES.reRollTransitionDuration,
             }, seed);
             racePlanController = createTrajectoryController(plan);
@@ -3191,6 +3193,7 @@ if (isMain) {
           leashFrames:            raceResults.reduce((s, r) => s + (r.naturalness?.leashFrames ?? 0), 0) / raceResults.length,
           // Gap-cap re-roll diagnostics (0 when OFF): mean biased rolls/race + mean leader duty-cycle.
           gapBiasedRolls:         raceResults.reduce((s, r) => s + (r.naturalness?.gapBiasedRolls ?? 0), 0) / raceResults.length,
+          gapWindowRolls:         raceResults.reduce((s, r) => s + (r.naturalness?.gapWindowRolls ?? 0), 0) / raceResults.length,
           gapLeaderDutyCycle:     raceResults.reduce((s, r) => s + (r.naturalness?.gapLeaderDutyCycle ?? 0), 0) / raceResults.length,
           overlapRate:             raceResults.reduce((s, r) => s + (r.liteOverlapRate ?? 0), 0) / raceResults.length,
           honestOverlapRate:       raceResults.reduce((s, r) => s + (r.honestOverlapRate ?? 0), 0) / raceResults.length,

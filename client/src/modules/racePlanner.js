@@ -334,10 +334,10 @@ export function createRacePlan(racers, finishT, targetDurationMs, config = {}, s
     _gapRerollThresholdLengths: config.gapRerollThresholdLengths ?? null, // G (lengths); null = feature OFF
     _gapRerollMode: config.gapRerollMode ?? 'symmetric', // 'symmetric' | 'down'
     _gapRerollStrength: config.gapRerollStrength ?? 0.5, // fraction-to-edge = min(1, strength·(gap−G))
-    // Window-derivation inputs (config-relative, zero hardcoded constants). Lower bound = corrStartFrac
-    // (the LIVE choreoOutcomeStart). Upper bound = reRollLastPositionPercent·targetDur − transitionDur,
-    // so a biased roll's easeInOutCubic ramp settles before the last-roll deadline. Both MOVE with config.
-    _reRollLastPositionPercent: config.reRollLastPositionPercent ?? null, // % of duration; null → no upper cap
+    // Window-derivation input (config-relative, zero hardcoded). Lower bound = corrStartFrac (the LIVE
+    // choreoOutcomeStart). Upper bound = (harness lastRollDeadlineMs, realized-duration basis) −
+    // transitionDur, so a biased roll's easeInOutCubic ramp settles before the schedule's own last roll.
+    // The deadline is PASSED IN per race (never re-derived here) — one duration basis, closed-track-safe.
     _reRollTransitionDurationMs:
       config.reRollTransitionDuration != null ? config.reRollTransitionDuration * 1000 : 0,
   };
@@ -893,8 +893,9 @@ export function createTrajectoryController(racePlan) {
    * distance to that edge; always clamped to the honest [spreadMin, spreadMax] band, never beyond.
    *
    * Window (config-derived, zero hardcoded constants): fires only for scheduled rolls at/after the LIVE
-   * choreoOutcomeStart (corrStartFrac) whose easeInOutCubic transition can settle before the last-roll
-   * deadline (reRollLastPositionPercent·targetDur − transitionDur). Both bounds move with config.
+   * choreoOutcomeStart (corrStartFrac) whose easeInOutCubic transition can settle before the schedule's
+   * OWN last-roll deadline (passed in as lastRollDeadlineMs − transitionDur; same realized-duration basis
+   * as elapsedMs). Both bounds move with config; the transform never re-derives a duration itself.
    *
    * @param {number} racerIndex   racer being re-rolled
    * @param {number} rawSample    the (already PULK-biased) pre-clamp draw
@@ -905,6 +906,8 @@ export function createTrajectoryController(racePlan) {
    * @param {number} phaseProgress leader-progress fraction [0,1]
    * @param {number} lenScale     govLenScale (arc t → racer lengths); ≤0 or null ⇒ passthrough
    * @param {boolean} isOpen      track topology (lap-aware arcT)
+   * @param {number} lastRollDeadlineMs the harness's own realized-duration last-roll deadline (ms);
+   *                 null ⇒ no upper cap. The ONE duration basis in the window-end comparison.
    * @returns {number} biased pre-clamp value; caller applies the final band clamp
    */
   function computeGapBiasedTarget(
@@ -916,17 +919,21 @@ export function createTrajectoryController(racePlan) {
     elapsedMs,
     phaseProgress,
     lenScale,
-    isOpen
+    isOpen,
+    lastRollDeadlineMs
   ) {
     const G = plan._gapRerollThresholdLengths;
     if (G == null || !(lenScale > 0)) return rawSample; // feature OFF → byte-identical passthrough
     // ── Window (derived; never hardcoded) ──
     if (phaseProgress == null || phaseProgress < corrStartFrac) return rawSample; // before choreoOutcomeStart
-    if (plan._reRollLastPositionPercent != null) {
-      const windowEndMs =
-        (plan._reRollLastPositionPercent / 100) * plan._targetDurationMs -
-        plan._reRollTransitionDurationMs;
-      if (elapsedMs > windowEndMs) return rawSample; // transition would not settle before the last-roll deadline
+    // Upper bound derived from the SCHEDULE'S OWN clock: the harness passes lastRollDeadlineMs (built from
+    // realizedDurationSec — the SAME basis elapsedMs runs on), so there is ONE duration basis in this
+    // comparison. Deriving it from plan._targetDurationMs instead was the bug: on closed tracks realized
+    // duration > target, so a target-based end excluded every in-window roll (0 biased rolls). The transform
+    // NEVER re-derives a duration itself. A biased roll's transition must settle before that deadline.
+    if (lastRollDeadlineMs != null) {
+      const windowEndMs = lastRollDeadlineMs - plan._reRollTransitionDurationMs;
+      if (elapsedMs > windowEndMs) return rawSample;
     }
     const self = racers.find((r) => r.index === racerIndex);
     if (!self || self.finished) return rawSample;
@@ -1001,6 +1008,13 @@ export function createTrajectoryController(racePlan) {
       // Gap-cap re-roll diagnostics (0 when OFF): total biased rolls this race + the leader duty-cycle
       // (the MAX over racers of biased/window rolls — the "one racer repeatedly held" watch, per CONCEPT-COHESION).
       gapBiasedRolls: _gapBiasEvents,
+      // Window-eligible rolls this race (the duty-cycle denominator; the STOP-gate signal that the window
+      // is non-empty on a track — 0 on closed tracks was the bug this fix resolves).
+      gapWindowRolls: (() => {
+        let s = 0;
+        for (const [, w] of _gapWindowRollsByRacer) s += w;
+        return s;
+      })(),
       gapLeaderDutyCycle: (() => {
         let mx = 0;
         for (const [idx, w] of _gapWindowRollsByRacer) {
