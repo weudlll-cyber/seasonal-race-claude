@@ -477,6 +477,133 @@ if (argv.includes('--formation-diag')) {
 }
 
 // ════════════════════════════════════════════════════════════════════════════════
+// PHASE-2b GAP-CAP RE-ROLL SWEEP (--gapreroll-phase2b) — window-fix re-run + STRENGTH axis, 9 arms.
+// Block A (strength 0.5) isolates the window-basis fix vs the broken Phase-2; Block B sweeps strength.
+// Adds a second STOP gate: window-eligible rolls per track must be > 0 on ALL tracks (was 0 on closed).
+// ════════════════════════════════════════════════════════════════════════════════
+if (argv.includes('--gapreroll-phase2b')) {
+  const OUT_G = join(OUT_ABS, 'phase2b-windowfix');
+  mkdirSync(OUT_G, { recursive: true });
+  mkdirSync(TMP_ABS, { recursive: true });
+  const med = (a) => (a.length ? percentile(a, 0.5) : 0);
+  const zoneIdxOf = (rank) => { for (let i = 0; i < BAND_EDGES.length; i++) if (rank <= BAND_EDGES[i]) return i; return BAND_EDGES.length; };
+  const bandReach = (rawData, b) => { const rows = (rawData || []).filter((r) => r.sollBereich === b); return rows.length ? rows.filter((r) => zoneIdxOf(r.finalRank) === b - 1).length / rows.length : null; };
+  const ARMS = [
+    { name: 'V0', gr: false },
+    { name: 'SYM-1.5-s05', gr: true, mode: 'symmetric', G: 1.5, s: 0.5 },
+    { name: 'DOWN-1.5-s05', gr: true, mode: 'down', G: 1.5, s: 0.5 },
+    { name: 'SYM-2.0-s05', gr: true, mode: 'symmetric', G: 2.0, s: 0.5 },
+    { name: 'DOWN-2.0-s05', gr: true, mode: 'down', G: 2.0, s: 0.5 },
+    { name: 'SYM-1.5-s075', gr: true, mode: 'symmetric', G: 1.5, s: 0.75 },
+    { name: 'SYM-1.5-s10', gr: true, mode: 'symmetric', G: 1.5, s: 1.0 },
+    { name: 'DOWN-1.5-s075', gr: true, mode: 'down', G: 1.5, s: 0.75 },
+    { name: 'DOWN-1.5-s10', gr: true, mode: 'down', G: 1.5, s: 1.0 },
+  ];
+
+  async function runArmTrack(arm, track) {
+    const outAbs = join(TMP_ABS, `${arm.name}__${track.id}`);
+    const args = [
+      'scripts/sim-fairness.mjs', `--track=${track.id}`, `--racer=${track.racer}`,
+      `--seed=${SEED}`, `--races=${RACES}`, `--dur=${DUR}`, '--runaway-parade', '--hero-map', `--out=${toSimOut(outAbs)}`,
+    ];
+    if (arm.gr) args.push(`--gapRerollThresholdLengths=${arm.G}`, `--gapRerollMode=${arm.mode}`, `--gapRerollStrength=${arm.s}`);
+    await pExecFile(process.execPath, args, { cwd: ROOT, maxBuffer: 256 * 1024 * 1024 });
+    const rp = JSON.parse(readFileSync(join(outAbs, 'runaway-parade.json'), 'utf8'));
+    const fd = JSON.parse(readFileSync(join(outAbs, 'fairness-data.json'), 'utf8'));
+    let hm = {}; try { hm = JSON.parse(readFileSync(join(outAbs, 'hero-map.json'), 'utf8')); } catch { /* opt */ }
+    const races = rp.races.map((r) => ({ runaway: classifyRace(r.runawayParade, D).runawayWinner, parade: classifyRace(r.runawayParade, D).paradeFinish, within3: r.runawayParade.within3P1At090 }));
+    const nat = (fd.results || [])[0]?.avgNaturalness || {};
+    const runawayRows = races.filter((r) => r.runaway);
+    return {
+      arm: arm.name, track: track.id, type: track.closed ? 'closed' : 'open', n: races.length, gr: arm.gr,
+      runaway: runawayRows.length, parade: races.filter((r) => r.parade).length,
+      within3RunMed: med(runawayRows.map((r) => r.within3 ?? 0)), within3AllMed: med(races.map((r) => r.within3 ?? 0)),
+      b1: bandReach(fd.rawData, 1), b2: bandReach(fd.rawData, 2), holmUnfair: hm.fairness?.startRowUnfair ?? null,
+      top5Action: nat.outcomeTop5SwapsMean ?? null, gapWindowRolls: nat.gapWindowRolls ?? null,
+      gapBiasedRolls: nat.gapBiasedRolls ?? null, gapLeaderDutyCycle: nat.gapLeaderDutyCycle ?? null,
+    };
+  }
+
+  const jobs = [];
+  for (const a of ARMS) for (const t of TRACKS) jobs.push({ a, t });
+  const rows = new Array(jobs.length);
+  let next = 0, done = 0; const t0 = Date.now();
+  console.log(`\n=== exp-runaway-leader --gapreroll-phase2b === ${ARMS.length} arms × ${TRACKS.length} tracks × N=${RACES} (seed=${SEED}), jobs=${JOBS}`);
+  async function worker() {
+    while (next < jobs.length) {
+      const i = next++; rows[i] = await runArmTrack(jobs[i].a, jobs[i].t); done++;
+      const r = rows[i];
+      console.log(`  [${done}/${jobs.length}] ${r.arm.padEnd(14)} ${r.track.padEnd(15)} runaway=${r.runaway}/${r.n} w3run=${r.within3RunMed} winRolls=${r.gapWindowRolls != null ? r.gapWindowRolls.toFixed(0) : '-'} biased=${r.gapBiasedRolls != null ? r.gapBiasedRolls.toFixed(1) : '-'}`);
+    }
+  }
+  await Promise.all(Array.from({ length: Math.min(JOBS, jobs.length) }, worker));
+
+  // ── STOP GATE 1: V0 overall runaway must reproduce 22.5% ±2 ──
+  const v0Rows = rows.filter((r) => r.arm === 'V0');
+  const v0Rate = v0Rows.reduce((s, r) => s + r.runaway, 0) / v0Rows.reduce((s, r) => s + r.n, 0);
+  // ── STOP GATE 2: window-eligible rolls per track > 0 on ALL tracks (the fix's target) ──
+  const zeroWindow = rows.filter((r) => r.gr && (r.gapWindowRolls ?? 0) <= 0).map((r) => `${r.arm}/${r.track}`);
+  const stops = [];
+  if (RACES === 50 && (v0Rate < 0.205 || v0Rate > 0.245)) stops.push(`V0 overall runaway ${(100 * v0Rate).toFixed(1)}% outside 22.5% ±2`);
+  if (zeroWindow.length) stops.push(`window-eligible rolls still 0 on: ${zeroWindow.join(', ')}`);
+
+  // Per-(arm×track) CSV (always written).
+  const COLS = ['arm', 'track', 'type', 'n', 'runaway', 'parade', 'within3RunMed', 'within3AllMed', 'b1', 'b2', 'holmUnfair', 'top5Action', 'gapWindowRolls', 'gapBiasedRolls', 'gapLeaderDutyCycle'];
+  writeFileSync(join(OUT_G, 'per-arm-track.csv'), [COLS.join(','), ...rows.map((r) => COLS.map((c) => (r[c] == null ? '' : typeof r[c] === 'number' ? +r[c].toFixed(4) : r[c])).join(','))].join('\n') + '\n');
+
+  if (stops.length) {
+    writeFileSync(join(OUT_G, 'SUMMARY.md'), `# Gap-Reroll Phase-2b — STOP GATE FAILED\n\nNOT interpreted. Investigate before trusting results.\n\n${stops.map((s) => `- ${s}`).join('\n')}\n`);
+    console.error('\n❌ STOP GATE FAILED:\n' + stops.map((s) => '  ' + s).join('\n'));
+    process.exit(1);
+  }
+
+  const agg = ARMS.map((a) => {
+    const ar = rows.filter((r) => r.arm === a.name);
+    const N = ar.reduce((s, r) => s + r.n, 0), runaway = ar.reduce((s, r) => s + r.runaway, 0), parade = ar.reduce((s, r) => s + r.parade, 0);
+    const perTrack = {}; for (const r of ar) perTrack[r.track] = r.runaway / r.n;
+    return {
+      name: a.name, N, runawayRate: runaway / N, maxTrackRunaway: Math.max(...ar.map((r) => r.runaway / r.n)),
+      paradeRate: parade / N, perTrack, within3RunMed: med(ar.map((r) => r.within3RunMed)), within3AllMed: med(ar.map((r) => r.within3AllMed)),
+      b1min: Math.min(...ar.map((r) => r.b1 ?? 0)), b2min: Math.min(...ar.map((r) => r.b2 ?? 0)),
+      holmTracks: ar.filter((r) => (r.holmUnfair ?? 0) > 0).length, action: mean(ar.map((r) => r.top5Action ?? 0)),
+      winRolls: mean(ar.map((r) => r.gapWindowRolls ?? 0)), biasedRolls: mean(ar.map((r) => r.gapBiasedRolls ?? 0)), dutyCycle: mean(ar.map((r) => r.gapLeaderDutyCycle ?? 0)),
+    };
+  });
+  const v0 = agg.find((a) => a.name === 'V0');
+  for (const a of agg) {
+    a.actionDelta = v0.action ? a.action - v0.action : 0;
+    a.pass = a.runawayRate < 0.10 && a.maxTrackRunaway <= 0.15 && a.within3RunMed >= 2 && a.paradeRate <= 0.02 && a.actionDelta >= 0 && a.b1min >= 0.70 && a.b2min >= 0.70 && a.holmTracks <= 2;
+  }
+
+  const pctS = (x) => (100 * x).toFixed(1) + '%';
+  const md = [];
+  md.push('# Gap-Cap Re-Roll Bias — Phase-2b (window-fix re-run + strength axis)');
+  md.push('');
+  md.push(`SIM-only, scheduled rolls only, window end on the roll schedule's REALIZED-duration basis (fix ${'`'}9ff3bf3${'`'}). All 4 tracks, **N=${RACES}**, seed=${SEED} (f40a7a6 seeds). Facts only — arm decision is the owner's.`);
+  md.push(`STOP gates PASSED: V0 overall ${pctS(v0Rate)} (within 22.5% ±2); window-eligible rolls > 0 on all tracks (closed tracks were 0 pre-fix).`);
+  md.push('');
+  md.push('## Gates');
+  md.push('runaway <10% overall AND ≤15% every track AND within-3.0L-of-P1 runaway-median ≥ 2 AND parade ≤2% AND action Δ ≥ 0 AND B1&B2 ≥70% (every track) AND Holm ≤2/4.');
+  md.push('');
+  md.push('| arm | runaway | per track (lh/ms/sr/do) | max | within3 (run/all) | parade | action Δ | B1min | B2min | Holm | winRolls | biased | duty | PASS |');
+  md.push('|---|---|---|---|---|---|---|---|---|---|---|---|---|---|');
+  const tks = TRACKS.map((t) => t.id);
+  for (const a of agg) {
+    const pt = tks.map((t) => (a.perTrack[t] != null ? pctS(a.perTrack[t]) : '-')).join(' / ');
+    md.push(`| ${a.name} | ${pctS(a.runawayRate)} | ${pt} | ${pctS(a.maxTrackRunaway)} | ${a.within3RunMed} / ${a.within3AllMed} | ${pctS(a.paradeRate)} | ${(a.actionDelta >= 0 ? '+' : '') + a.actionDelta.toFixed(2)} | ${pctS(a.b1min)} | ${pctS(a.b2min)} | ${a.holmTracks}/4 | ${a.winRolls.toFixed(0)} | ${a.biasedRolls.toFixed(1)} | ${a.dutyCycle.toFixed(2)} | ${a.pass ? '✅' : '❌'} |`);
+  }
+  md.push('');
+  md.push(`Per-track column order: ${tks.join(' / ')}. Raw: ${'`'}per-arm-track.csv${'`'}. winRolls = mean window-eligible rolls/race (STOP-gate denominator); biased = mean biased rolls/race; duty = leader duty-cycle (the "held" gauge).`);
+  md.push('');
+  writeFileSync(join(OUT_G, 'SUMMARY.md'), md.join('\n'));
+
+  console.log(`\nElapsed ${((Date.now() - t0) / 60000).toFixed(1)}m → ${OUT_G}`);
+  console.log('\nSummary (runaway / within3-run / parade / actionΔ / duty / PASS):');
+  for (const a of agg) console.log(`  ${a.name.padEnd(14)} ${pctS(a.runawayRate).padStart(6)} / w3=${a.within3RunMed} / ${pctS(a.paradeRate).padStart(5)} / ${(a.actionDelta >= 0 ? '+' : '') + a.actionDelta.toFixed(2)} / dc=${a.dutyCycle.toFixed(2)} / ${a.pass ? 'PASS' : 'fail'}`);
+  process.exit(0);
+}
+
+// ════════════════════════════════════════════════════════════════════════════════
 // PHASE-2 GAP-CAP RE-ROLL SWEEP (--gapreroll-phase2). Sweeps the SIM-only gap-cap re-roll bias
 // (--gapRerollThresholdLengths / --gapRerollMode) on all 4 tracks. Scheduled-rolls-only build. Same
 // f40a7a6 seeds. Facts only — the arm decision is the owner's.
