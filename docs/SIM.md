@@ -874,3 +874,29 @@ liberation loses** (see LESSONS.md — "action lives in orchestration, not liber
   fairness HELD (immediate re-steer) but **−6% action** — freeing settles the field.
 
 Both remain default OFF and byte-identical when off; they are documentation-by-flag, not live paths.
+
+---
+
+## 2026-07-20 — Gap-cap re-roll bias (SIM-ONLY, flag-gated)
+
+The runaway investigation's mechanism (`docs/CONCEPT-COHESION.md`), built as a shared deterministic
+transform `computeGapBiasedTarget` in `client/src/modules/racePlanner.js` (beside `computePulkBiasedTarget`,
+which is untouched) and activated ONLY from the sim harness. It loads the periodic re-roll dice: a racer
+that has opened a hole **behind** itself (arc gap > G to the racer behind) draws slower next roll; in
+symmetric mode a **dropped** racer (gap > G to the racer ahead) draws faster — always inside the honest
+±8.1% band. All gaps ≤ G → bit-exact no-op.
+
+**Flags (sim only):**
+- `--gapRerollThresholdLengths=<G>` — engages the bias (absent → OFF → byte-identical).
+- `--gapRerollMode=symmetric|down` — `down` biases only the escapee slower; `symmetric` also lifts dropped racers.
+- `--gapRerollStrength=<s>` (default 0.5) — fraction-to-edge = `min(1, s·(gap−G))`.
+
+**Window (config-derived, zero hardcoded constants):** engages only for scheduled rolls at/after the LIVE
+`choreoOutcomeStart` whose 3 s ease-in transition settles before the last-roll deadline
+(`reRollLastPositionPercent·targetDur − reRollTransitionDuration`). Both bounds move if the owner changes
+`choreoOutcomeStart` / `reRollLastPositionPercent` / `reRollTransitionDuration`.
+
+**Fairness decision (binding):** SCHEDULED ROLLS ONLY — the transform never fires an off-schedule/early
+re-roll. **OFF = byte-identical** (fingerprint `72c3360fb75225ef` verified; the browser never passes the
+gap/length context so the transform early-returns there). Watch metrics: `gapBiasedRolls` per race and the
+leader duty-cycle (max share of one racer's window rolls that were biased — the "held" kill-condition gauge).

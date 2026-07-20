@@ -1381,3 +1381,120 @@ describe('createTrajectoryController — front distance leash', () => {
     }
   });
 });
+
+// ── Gap-cap re-roll bias (docs/CONCEPT-COHESION.md "loaded dice") ───────────────
+// The transform is SIM-only (threshold null ⇒ passthrough) and PURE (deterministic, no RNG).
+describe('createTrajectoryController — gap-cap re-roll bias', () => {
+  const SMIN = 0.9,
+    SMAX = 1.1,
+    LS = 30,
+    ISOPEN = true;
+  // build a plan with gapReroll config + the window inputs
+  function planWith(cfg = {}) {
+    return createRacePlan(
+      BASE_RACERS,
+      FINISH_T,
+      TARGET_DUR_MS,
+      {
+        gapRerollThresholdLengths: 2.0,
+        gapRerollMode: 'symmetric',
+        gapRerollStrength: 0.5,
+        reRollLastPositionPercent: 95,
+        reRollTransitionDuration: 3.0,
+        choreoOutcomeStart: 0.6,
+        stochasticNoise: 0,
+        ...cfg,
+      },
+      BASE_SEED
+    );
+  }
+  // a live field: `self` at t, one racer `behind` (t - gapBehindT), one `ahead` (t + gapAheadT).
+  function field(selfT, gapBehindT, gapAheadT) {
+    const rs = [{ index: 0, t: selfT, finished: false }];
+    if (gapBehindT != null) rs.push({ index: 1, t: selfT - gapBehindT, finished: false });
+    if (gapAheadT != null) rs.push({ index: 2, t: selfT + gapAheadT, finished: false });
+    return rs;
+  }
+  const call = (ctrl, racers, raw, prog = 0.7, ms = 40_000) =>
+    ctrl.computeGapBiasedTarget(0, raw, SMIN, SMAX, racers, ms, prog, LS, ISOPEN);
+
+  it('direction: a hole behind (gapBehind > G) shifts the draw SLOWER, both modes', () => {
+    for (const mode of ['symmetric', 'down']) {
+      const ctrl = createTrajectoryController(planWith({ gapRerollMode: mode }));
+      // gapBehind = 0.1·LS = 3.0 > G 2.0 → frac = 0.5·(3−2)=0.5 → 1.0 − 0.5·(1.0−0.9)=0.95
+      expect(call(ctrl, field(0.6, 0.1, null), 1.0)).toBeCloseTo(0.95, 6);
+    }
+  });
+
+  it('direction: symmetric lifts a dropped racer (gapAhead > G) FASTER; down mode does NOT', () => {
+    const sym = createTrajectoryController(planWith({ gapRerollMode: 'symmetric' }));
+    // self dropped: gapAhead = 0.1·LS = 3.0 > G; gapBehind small (0.02·LS=0.6 ≤ G) → shift up: 1.0+0.5·(1.1−1.0)=1.05
+    expect(call(sym, field(0.5, 0.02, 0.1), 1.0)).toBeCloseTo(1.05, 6);
+    const down = createTrajectoryController(planWith({ gapRerollMode: 'down' }));
+    expect(call(down, field(0.5, 0.02, 0.1), 1.0)).toBe(1.0); // down mode never lifts
+  });
+
+  it('dead zone: all gaps ≤ G → bit-exact passthrough', () => {
+    const ctrl = createTrajectoryController(planWith());
+    const raw = 1.0273; // arbitrary
+    // gapBehind = 0.05·30 = 1.5 ≤ 2.0; no racer ahead → exact passthrough
+    expect(call(ctrl, field(0.6, 0.05, null), raw)).toBe(raw);
+  });
+
+  it('proportionality + honest-band clamp: frac saturates to 1 → exactly the band edge, never beyond', () => {
+    const ctrl = createTrajectoryController(planWith());
+    // gapBehind = 0.3·30 = 9.0 → frac = min(1, 0.5·7)=1 → fully to SMIN
+    const down = call(ctrl, field(0.6, 0.3, null), 1.05);
+    expect(down).toBeCloseTo(SMIN, 9);
+    expect(down).toBeGreaterThanOrEqual(SMIN);
+    // symmetric up saturates to SMAX
+    const up = call(createTrajectoryController(planWith()), field(0.4, 0.01, 0.3), 0.95);
+    expect(up).toBeCloseTo(SMAX, 9);
+    expect(up).toBeLessThanOrEqual(SMAX);
+  });
+
+  it('window LOWER bound derives from choreoOutcomeStart (moves when it changes)', () => {
+    const big = field(0.6, 0.3, null); // gapBehind 9 → would shift hard if in-window
+    const base = createTrajectoryController(planWith({ choreoOutcomeStart: 0.6 }));
+    expect(call(base, big, 1.05, 0.7)).toBeLessThan(1.05); // 0.70 ≥ 0.60 → in window → biased
+    expect(call(base, big, 1.05, 0.5)).toBe(1.05); // 0.50 < 0.60 → before window → passthrough
+    const later = createTrajectoryController(planWith({ choreoOutcomeStart: 0.8 }));
+    expect(call(later, big, 1.05, 0.7)).toBe(1.05); // now 0.70 < 0.80 → passthrough (boundary MOVED)
+  });
+
+  it('window UPPER bound derives from reRollLastPositionPercent AND reRollTransitionDuration (moves when either changes)', () => {
+    const big = field(0.6, 0.3, null);
+    // default: windowEnd = 0.95·60000 − 3000 = 54000ms
+    const base = createTrajectoryController(planWith());
+    expect(call(base, big, 1.05, 0.7, 40_000)).toBeLessThan(1.05); // 40s ≤ 54s → biased
+    expect(call(base, big, 1.05, 0.7, 55_000)).toBe(1.05); // 55s > 54s → passthrough
+    // shrink lastPos → 50%: windowEnd = 0.5·60000 − 3000 = 27000ms → 40s now out
+    const shortLast = createTrajectoryController(planWith({ reRollLastPositionPercent: 50 }));
+    expect(call(shortLast, big, 1.05, 0.7, 40_000)).toBe(1.05);
+    // grow transition → 10s: windowEnd = 0.95·60000 − 10000 = 47000ms → 50s out, 45s in
+    const longTrans = createTrajectoryController(planWith({ reRollTransitionDuration: 10 }));
+    expect(call(longTrans, big, 1.05, 0.7, 50_000)).toBe(1.05);
+    expect(call(longTrans, big, 1.05, 0.7, 45_000)).toBeLessThan(1.05);
+  });
+
+  it('config absent → passthrough byte-identical (no gapReroll keys)', () => {
+    const plan = createRacePlan(
+      BASE_RACERS,
+      FINISH_T,
+      TARGET_DUR_MS,
+      { stochasticNoise: 0 },
+      BASE_SEED
+    );
+    const ctrl = createTrajectoryController(plan);
+    const raw = 1.0731;
+    expect(call(ctrl, field(0.6, 0.5, null), raw)).toBe(raw); // huge gap, but feature OFF → exact input
+  });
+
+  it('determinism: same inputs → same output', () => {
+    const ctrl = createTrajectoryController(planWith());
+    const rs = field(0.6, 0.12, null);
+    const a = call(ctrl, rs, 1.02);
+    const b = call(ctrl, rs, 1.02);
+    expect(b).toBe(a);
+  });
+});

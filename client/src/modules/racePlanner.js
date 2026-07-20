@@ -14,6 +14,7 @@
 import { easeInOutCubic } from '../utils/mathUtils.js';
 import { sampleHeroCurve } from './heroChoreography.js';
 import { generateHeroCurves, GENERATOR_CONFIG } from './heroCurveGenerator.js';
+import { arcT } from './raceLengths.js'; // shared lap-aware arc distance (gap-cap re-roll bias)
 
 // ── Mulberry32 PRNG (same algorithm as scripts/sim-fairness.mjs) ──────────────
 // Exported so the governor (raceGovernor.js) reuses the SAME PRNG helper (A3) instead of
@@ -325,6 +326,20 @@ export function createRacePlan(racers, finishT, targetDurationMs, config = {}, s
     // Read by update() together with the OPTIONAL leaderGapLen argument the sim (only) passes each frame.
     _frontLeashMaxLengths: config.frontLeashMaxLengths ?? null, // engage above this leader→P2 gap (lengths)
     _frontLeashGainPct: config.frontLeashGainPct ?? null, // brake per excess length (percent of natural speed)
+    // ── Gap-cap re-roll bias (SIM-ONLY; docs/CONCEPT-COHESION.md; supplied only via the sim harness) ──
+    // "Loaded dice within the honest range": when a racer has opened a hole (arc gap > G to the racer
+    // behind) its re-roll draw is shifted toward the SLOWER band edge; in symmetric mode a dropped racer
+    // (gap > G to the racer ahead) is shifted FASTER. All ≤ G → bit-exact no-op. The BROWSER never sets
+    // these → threshold null → computeGapBiasedTarget() early-returns rawSample → byte-identical.
+    _gapRerollThresholdLengths: config.gapRerollThresholdLengths ?? null, // G (lengths); null = feature OFF
+    _gapRerollMode: config.gapRerollMode ?? 'symmetric', // 'symmetric' | 'down'
+    _gapRerollStrength: config.gapRerollStrength ?? 0.5, // fraction-to-edge = min(1, strength·(gap−G))
+    // Window-derivation inputs (config-relative, zero hardcoded constants). Lower bound = corrStartFrac
+    // (the LIVE choreoOutcomeStart). Upper bound = reRollLastPositionPercent·targetDur − transitionDur,
+    // so a biased roll's easeInOutCubic ramp settles before the last-roll deadline. Both MOVE with config.
+    _reRollLastPositionPercent: config.reRollLastPositionPercent ?? null, // % of duration; null → no upper cap
+    _reRollTransitionDurationMs:
+      config.reRollTransitionDuration != null ? config.reRollTransitionDuration * 1000 : 0,
   };
 }
 
@@ -381,6 +396,11 @@ export function createTrajectoryController(racePlan) {
   // that would break an object-identity compare. Absent the flag these stay untouched (feature OFF).
   const _packReleased = new Map(); // index → boolean: currently in the released (strictness 0) state
   let _packReleaseEvents = 0; // count of steering→released transitions (a racer arrived in-band)
+  // ── Gap-cap re-roll bias telemetry (closure-scoped ⇒ per race; TELEMETRY ONLY, like the
+  // computePulkBiasedTarget counters — never feeds back into the returned draw, so determinism holds).
+  let _gapBiasEvents = 0; // total scheduled rolls this race that were gap-biased (shifted)
+  const _gapWindowRollsByRacer = new Map(); // index → rolls that fell inside the window for that racer
+  const _gapBiasByRacer = new Map(); // index → rolls that were actually shifted for that racer
   let _packReSteerEvents = 0; // count of released→steering transitions (a racer drifted out)
   let _packReleasedFrames = 0; // pack-racer-frames spent released (strictness 0)
   let _packSteerFrames = 0; // pack-racer-frames spent re-steering under the feature (strictness 1)
@@ -859,6 +879,83 @@ export function createTrajectoryController(racePlan) {
   }
 
   /**
+   * Gap-cap re-roll bias (docs/CONCEPT-COHESION.md "loaded dice within the honest range").
+   * SIM-ONLY: activated only when the plan carries a gapReroll threshold (the browser never sets it,
+   * so this early-returns rawSample there → byte-identical). PURE: a deterministic function of the
+   * already-drawn rawSample + live race state + config, using NO new RNG. computePulkBiasedTarget's
+   * behavior is untouched; this is a separate, phase-disjoint transform (OUTCOME window vs PULK).
+   *
+   * NORMATIVE DIRECTION (also the corrected CONCEPT-COHESION table):
+   *   • arc gap TO THE RACER BEHIND > G  (opened a hole behind itself) → shift toward the SLOWER edge.
+   *   • symmetric mode only: arc gap TO THE RACER AHEAD > G (dropped) → shift toward the FASTER edge.
+   *   • all gaps ≤ G → bit-exact no-op (rawSample passes through unchanged).
+   * Strength: the draw moves toward the relevant band edge by min(1, strength·(gap−G)) of the remaining
+   * distance to that edge; always clamped to the honest [spreadMin, spreadMax] band, never beyond.
+   *
+   * Window (config-derived, zero hardcoded constants): fires only for scheduled rolls at/after the LIVE
+   * choreoOutcomeStart (corrStartFrac) whose easeInOutCubic transition can settle before the last-roll
+   * deadline (reRollLastPositionPercent·targetDur − transitionDur). Both bounds move with config.
+   *
+   * @param {number} racerIndex   racer being re-rolled
+   * @param {number} rawSample    the (already PULK-biased) pre-clamp draw
+   * @param {number} spreadMin    BASE_SPEED_MIN / BASE_SPEED_MEAN (slow band edge)
+   * @param {number} spreadMax    BASE_SPEED_MAX / BASE_SPEED_MEAN (fast band edge)
+   * @param {Array}  racers       all racers
+   * @param {number} elapsedMs    fire time of this roll
+   * @param {number} phaseProgress leader-progress fraction [0,1]
+   * @param {number} lenScale     govLenScale (arc t → racer lengths); ≤0 or null ⇒ passthrough
+   * @param {boolean} isOpen      track topology (lap-aware arcT)
+   * @returns {number} biased pre-clamp value; caller applies the final band clamp
+   */
+  function computeGapBiasedTarget(
+    racerIndex,
+    rawSample,
+    spreadMin,
+    spreadMax,
+    racers,
+    elapsedMs,
+    phaseProgress,
+    lenScale,
+    isOpen
+  ) {
+    const G = plan._gapRerollThresholdLengths;
+    if (G == null || !(lenScale > 0)) return rawSample; // feature OFF → byte-identical passthrough
+    // ── Window (derived; never hardcoded) ──
+    if (phaseProgress == null || phaseProgress < corrStartFrac) return rawSample; // before choreoOutcomeStart
+    if (plan._reRollLastPositionPercent != null) {
+      const windowEndMs =
+        (plan._reRollLastPositionPercent / 100) * plan._targetDurationMs -
+        plan._reRollTransitionDurationMs;
+      if (elapsedMs > windowEndMs) return rawSample; // transition would not settle before the last-roll deadline
+    }
+    const self = racers.find((r) => r.index === racerIndex);
+    if (!self || self.finished) return rawSample;
+    // This roll is inside the window for this racer (telemetry denominator for the duty-cycle).
+    _gapWindowRollsByRacer.set(racerIndex, (_gapWindowRollsByRacer.get(racerIndex) ?? 0) + 1);
+    // Live order by t desc: the immediate neighbours ahead (higher t) and behind (lower t).
+    const live = racers.filter((r) => !r.finished).sort((a, b) => b.t - a.t || a.index - b.index);
+    const pos = live.findIndex((r) => r.index === racerIndex);
+    const behind = pos >= 0 && pos < live.length - 1 ? live[pos + 1] : null;
+    const ahead = pos > 0 ? live[pos - 1] : null;
+    const gapBehind = behind ? arcT(self.t, behind.t, isOpen) * lenScale : 0; // hole opened behind self
+    const gapAhead = ahead ? arcT(ahead.t, self.t, isOpen) * lenScale : 0; // self dropped behind ahead
+    const strength = plan._gapRerollStrength;
+    if (gapBehind > G) {
+      const frac = Math.min(1, strength * (gapBehind - G));
+      _gapBiasEvents++;
+      _gapBiasByRacer.set(racerIndex, (_gapBiasByRacer.get(racerIndex) ?? 0) + 1);
+      return clamp(rawSample - frac * (rawSample - spreadMin), spreadMin, spreadMax); // toward SLOWER
+    }
+    if (plan._gapRerollMode === 'symmetric' && gapAhead > G) {
+      const frac = Math.min(1, strength * (gapAhead - G));
+      _gapBiasEvents++;
+      _gapBiasByRacer.set(racerIndex, (_gapBiasByRacer.get(racerIndex) ?? 0) + 1);
+      return clamp(rawSample + frac * (spreadMax - rawSample), spreadMin, spreadMax); // toward FASTER
+    }
+    return rawSample; // dead zone (≤ G) → bit-exact no-op
+  }
+
+  /**
    * Collect per-race naturalness telemetry for gate evaluation.
    * Resets counters after collection (call once per race, at race end).
    *
@@ -901,6 +998,19 @@ export function createTrajectoryController(racePlan) {
       attackerFreed: _attackerFreeEvents,
       // Front-leash diagnostic (0 when OFF / never engaged): frames the leader brake was applied.
       leashFrames: _leashFrames,
+      // Gap-cap re-roll diagnostics (0 when OFF): total biased rolls this race + the leader duty-cycle
+      // (the MAX over racers of biased/window rolls — the "one racer repeatedly held" watch, per CONCEPT-COHESION).
+      gapBiasedRolls: _gapBiasEvents,
+      gapLeaderDutyCycle: (() => {
+        let mx = 0;
+        for (const [idx, w] of _gapWindowRollsByRacer) {
+          if (w > 0) {
+            const r = (_gapBiasByRacer.get(idx) ?? 0) / w;
+            if (r > mx) mx = r;
+          }
+        }
+        return mx;
+      })(),
     };
     _winnerBlockedInOutcome = 0;
     _winnerStepCount = 0;
@@ -924,6 +1034,9 @@ export function createTrajectoryController(racePlan) {
     _leashFrames = 0;
     _leashEngaged = false;
     _leashTargetIdx = -1;
+    _gapBiasEvents = 0;
+    _gapWindowRollsByRacer.clear();
+    _gapBiasByRacer.clear();
     return tel;
   }
 
@@ -937,6 +1050,7 @@ export function createTrajectoryController(racePlan) {
   return {
     update,
     computePulkBiasedTarget,
+    computeGapBiasedTarget,
     getPhase,
     getPhaseFractions,
     // Diagnostics-only: the retained index→role map (null until heroes are cast). Read by GovernorDiagHUD.

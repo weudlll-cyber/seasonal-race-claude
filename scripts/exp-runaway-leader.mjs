@@ -477,6 +477,135 @@ if (argv.includes('--formation-diag')) {
 }
 
 // ════════════════════════════════════════════════════════════════════════════════
+// PHASE-2 GAP-CAP RE-ROLL SWEEP (--gapreroll-phase2). Sweeps the SIM-only gap-cap re-roll bias
+// (--gapRerollThresholdLengths / --gapRerollMode) on all 4 tracks. Scheduled-rolls-only build. Same
+// f40a7a6 seeds. Facts only — the arm decision is the owner's.
+// ════════════════════════════════════════════════════════════════════════════════
+if (argv.includes('--gapreroll-phase2')) {
+  const OUT_G = join(OUT_ABS, 'phase2-gapreroll');
+  mkdirSync(OUT_G, { recursive: true });
+  mkdirSync(TMP_ABS, { recursive: true });
+  const med = (a) => (a.length ? percentile(a, 0.5) : 0);
+  const zoneIdxOf = (rank) => { for (let i = 0; i < BAND_EDGES.length; i++) if (rank <= BAND_EDGES[i]) return i; return BAND_EDGES.length; };
+  const bandReach = (rawData, b) => { const rows = (rawData || []).filter((r) => r.sollBereich === b); return rows.length ? rows.filter((r) => zoneIdxOf(r.finalRank) === b - 1).length / rows.length : null; };
+  const ARMS = [
+    { name: 'V0', gr: false },
+    { name: 'SYM-1.5', gr: true, mode: 'symmetric', G: 1.5 },
+    { name: 'SYM-2.0', gr: true, mode: 'symmetric', G: 2.0 },
+    { name: 'DOWN-1.5', gr: true, mode: 'down', G: 1.5 },
+    { name: 'DOWN-2.0', gr: true, mode: 'down', G: 2.0 },
+  ];
+
+  async function runArmTrack(arm, track) {
+    const outAbs = join(TMP_ABS, `${arm.name}__${track.id}`);
+    const args = [
+      'scripts/sim-fairness.mjs', `--track=${track.id}`, `--racer=${track.racer}`,
+      `--seed=${SEED}`, `--races=${RACES}`, `--dur=${DUR}`, '--runaway-parade', '--hero-map', `--out=${toSimOut(outAbs)}`,
+    ];
+    if (arm.gr) args.push(`--gapRerollThresholdLengths=${arm.G}`, `--gapRerollMode=${arm.mode}`);
+    await pExecFile(process.execPath, args, { cwd: ROOT, maxBuffer: 256 * 1024 * 1024 });
+    const rp = JSON.parse(readFileSync(join(outAbs, 'runaway-parade.json'), 'utf8'));
+    const fd = JSON.parse(readFileSync(join(outAbs, 'fairness-data.json'), 'utf8'));
+    let hm = {}; try { hm = JSON.parse(readFileSync(join(outAbs, 'hero-map.json'), 'utf8')); } catch { /* opt */ }
+    const races = rp.races.map((r) => ({ runaway: classifyRace(r.runawayParade, D).runawayWinner, parade: classifyRace(r.runawayParade, D).paradeFinish, within3: r.runawayParade.within3P1At090 }));
+    const nat = (fd.results || [])[0]?.avgNaturalness || {};
+    const runawayRows = races.filter((r) => r.runaway);
+    return {
+      arm: arm.name, track: track.id, type: track.closed ? 'closed' : 'open', n: races.length,
+      runaway: runawayRows.length, parade: races.filter((r) => r.parade).length,
+      within3RunMed: med(runawayRows.map((r) => r.within3 ?? 0)),
+      within3AllMed: med(races.map((r) => r.within3 ?? 0)),
+      b1: bandReach(fd.rawData, 1), b2: bandReach(fd.rawData, 2),
+      holmUnfair: hm.fairness?.startRowUnfair ?? null,
+      top5Action: nat.outcomeTop5SwapsMean ?? null,
+      gapBiasedRolls: nat.gapBiasedRolls ?? null, gapLeaderDutyCycle: nat.gapLeaderDutyCycle ?? null,
+    };
+  }
+
+  const jobs = [];
+  for (const a of ARMS) for (const t of TRACKS) jobs.push({ a, t });
+  const rows = new Array(jobs.length);
+  let next = 0, done = 0; const t0 = Date.now();
+  console.log(`\n=== exp-runaway-leader --gapreroll-phase2 === ${ARMS.length} arms × ${TRACKS.length} tracks × N=${RACES} (seed=${SEED}), jobs=${JOBS}`);
+  async function worker() {
+    while (next < jobs.length) {
+      const i = next++; rows[i] = await runArmTrack(jobs[i].a, jobs[i].t); done++;
+      const r = rows[i];
+      console.log(`  [${done}/${jobs.length}] ${r.arm.padEnd(9)} ${r.track.padEnd(15)} runaway=${r.runaway}/${r.n} w3run=${r.within3RunMed} biasedRolls=${r.gapBiasedRolls != null ? r.gapBiasedRolls.toFixed(1) : '-'}`);
+    }
+  }
+  await Promise.all(Array.from({ length: Math.min(JOBS, jobs.length) }, worker));
+
+  // ── V0 STOP gate: V0 overall runaway must reproduce 22.5% ±2 (byte-identical off) ──
+  const v0Rows = rows.filter((r) => r.arm === 'V0');
+  const v0N = v0Rows.reduce((s, r) => s + r.n, 0);
+  const v0Run = v0Rows.reduce((s, r) => s + r.runaway, 0);
+  const v0Rate = v0N ? v0Run / v0N : 0;
+  if (RACES === 50 && (v0Rate < 0.205 || v0Rate > 0.245)) {
+    const msg = `# Gap-Reroll Phase-2 — V0 STOP GATE FAILED\n\nV0 overall runaway ${(100 * v0Rate).toFixed(1)}% (${v0Run}/${v0N}) is outside 22.5% ±2 — the comparison basis is broken. NOT reported.\n`;
+    writeFileSync(join(OUT_G, 'SUMMARY.md'), msg);
+    console.error(`\n❌ V0 STOP GATE FAILED: ${(100 * v0Rate).toFixed(1)}% outside [20.5, 24.5]`);
+    process.exit(1);
+  }
+
+  // Per-(arm×track) CSV.
+  const COLS = ['arm', 'track', 'type', 'n', 'runaway', 'parade', 'within3RunMed', 'within3AllMed', 'b1', 'b2', 'holmUnfair', 'top5Action', 'gapBiasedRolls', 'gapLeaderDutyCycle'];
+  writeFileSync(join(OUT_G, 'per-arm-track.csv'), [COLS.join(','), ...rows.map((r) => COLS.map((c) => (r[c] == null ? '' : typeof r[c] === 'number' ? +r[c].toFixed(4) : r[c])).join(','))].join('\n') + '\n');
+
+  // Aggregate per arm + PASS/FAIL. V0 = action reference.
+  const agg = ARMS.map((a) => {
+    const ar = rows.filter((r) => r.arm === a.name);
+    const N = ar.reduce((s, r) => s + r.n, 0);
+    const runaway = ar.reduce((s, r) => s + r.runaway, 0);
+    const parade = ar.reduce((s, r) => s + r.parade, 0);
+    const perTrack = {}; for (const r of ar) perTrack[r.track] = r.runaway / r.n;
+    return {
+      name: a.name, N, runawayRate: runaway / N, maxTrackRunaway: Math.max(...ar.map((r) => r.runaway / r.n)),
+      paradeRate: parade / N, perTrack,
+      within3RunMed: med(ar.map((r) => r.within3RunMed)), within3AllMed: med(ar.map((r) => r.within3AllMed)),
+      b1min: Math.min(...ar.map((r) => r.b1 ?? 0)), b2min: Math.min(...ar.map((r) => r.b2 ?? 0)),
+      holmTracks: ar.filter((r) => (r.holmUnfair ?? 0) > 0).length,
+      action: mean(ar.map((r) => r.top5Action ?? 0)),
+      biasedRolls: mean(ar.map((r) => r.gapBiasedRolls ?? 0)), dutyCycle: mean(ar.map((r) => r.gapLeaderDutyCycle ?? 0)),
+    };
+  });
+  const v0 = agg.find((a) => a.name === 'V0');
+  for (const a of agg) {
+    a.actionDelta = v0.action ? a.action - v0.action : 0;
+    a.pass = a.runawayRate < 0.10 && a.maxTrackRunaway <= 0.15 && a.within3RunMed >= 2 && a.paradeRate <= 0.02
+      && a.actionDelta >= 0 && a.b1min >= 0.70 && a.b2min >= 0.70 && a.holmTracks <= 2;
+  }
+
+  const pctS = (x) => (100 * x).toFixed(1) + '%';
+  const md = [];
+  md.push('# Gap-Cap Re-Roll Bias — Phase-2 Exploration Sweep');
+  md.push('');
+  md.push(`SIM-only gap-cap re-roll bias (docs/CONCEPT-COHESION.md), scheduled rolls only. All 4 tracks, **N=${RACES} per track**, seed=${SEED} (same seeds as the f40a7a6 baseline). Strength 0.5 (threshold-first). Facts only — the arm decision is the owner's.`);
+  md.push(`V0 STOP gate PASSED (V0 overall runaway ${pctS(v0Rate)} within 22.5% ±2).`);
+  md.push('');
+  md.push('## Gates');
+  md.push('runaway <10% overall AND ≤15% every track AND within-3.0L-of-P1 runaway-median ≥ 2 AND parade ≤2% AND action Δ ≥ 0 AND B1&B2 ≥70% (every track) AND Holm ≤2/4.');
+  md.push('');
+  md.push('| arm | runaway overall | per track (lh/ms/sr/do) | max | within3 (run / all) | parade | action Δ | B1min | B2min | Holm | biasedRolls | dutyCycle | PASS |');
+  md.push('|---|---|---|---|---|---|---|---|---|---|---|---|---|');
+  const tks = TRACKS.map((t) => t.id);
+  for (const a of agg) {
+    const pt = tks.map((t) => (a.perTrack[t] != null ? pctS(a.perTrack[t]) : '-')).join(' / ');
+    md.push(`| ${a.name} | ${pctS(a.runawayRate)} | ${pt} | ${pctS(a.maxTrackRunaway)} | ${a.within3RunMed} / ${a.within3AllMed} | ${pctS(a.paradeRate)} | ${(a.actionDelta >= 0 ? '+' : '') + a.actionDelta.toFixed(2)} | ${pctS(a.b1min)} | ${pctS(a.b2min)} | ${a.holmTracks}/4 | ${a.biasedRolls.toFixed(1)} | ${a.dutyCycle.toFixed(2)} | ${a.pass ? '✅' : '❌'} |`);
+  }
+  md.push('');
+  md.push(`Per-track column order: ${tks.join(' / ')}. Raw per-(arm×track): \`per-arm-track.csv\`.`);
+  md.push('Watch metrics: `biasedRolls` = mean gap-biased rolls/race; `dutyCycle` = mean leader duty-cycle (share of one racer\'s window rolls biased — the "held" gauge, high = reads as a spring).');
+  md.push('');
+  writeFileSync(join(OUT_G, 'SUMMARY.md'), md.join('\n'));
+
+  console.log(`\nElapsed ${((Date.now() - t0) / 60000).toFixed(1)}m → ${OUT_G}`);
+  console.log('\nSummary (runaway / within3-run / parade / actionΔ / dutyCycle / PASS):');
+  for (const a of agg) console.log(`  ${a.name.padEnd(9)} ${pctS(a.runawayRate).padStart(6)} / w3=${a.within3RunMed} / ${pctS(a.paradeRate).padStart(5)} / ${(a.actionDelta >= 0 ? '+' : '') + a.actionDelta.toFixed(2)} / dc=${a.dutyCycle.toFixed(2)} / ${a.pass ? 'PASS' : 'fail'}`);
+  process.exit(0);
+}
+
+// ════════════════════════════════════════════════════════════════════════════════
 // PHASE-1a LEASH EXPLORATION SWEEP (--leash-phase1). Runs the front-distance-leash variants
 // (sim-only flags --frontLeashMaxLengths / --frontLeashGainPct) on all 4 tracks and emits a single
 // co-optimization table: runaway (overall + per track) | parade | top-5 action Δ vs V0 | B1 | B2 |

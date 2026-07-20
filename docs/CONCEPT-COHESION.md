@@ -3,6 +3,23 @@
 **Status:** design concept, not yet built. A concept in this repo is a promise to build it — everything
 below is either verified at source (file:line) or tagged *inferred* / *needs-measurement*. Date: 2026-07-10.
 
+**UPDATE 2026-07-20 — IMPLEMENTED flag-gated, sim-activatable (Phase-2 exploration).** The re-roll bias
+is built as `computeGapBiasedTarget` in `client/src/modules/racePlanner.js` (a shared deterministic
+transform beside `computePulkBiasedTarget`, whose behavior is untouched), activated ONLY from the sim
+harness (`scripts/sim-fairness.mjs --gapRerollThresholdLengths / --gapRerollMode / --gapRerollStrength`);
+config/flag absent → the browser and a default sim run are byte-identical (fingerprint `72c3360fb75225ef`
+verified). **Owner fairness decision (binding): SCHEDULED ROLLS ONLY — never an off-schedule/early
+re-roll.** The window is derived from config at runtime (`[choreoOutcomeStart, reRollLastPositionPercent·dur
+− reRollTransitionDuration]`), zero hardcoded constants. Browser wiring + a DevScreen knob is a separate
+later step after an owner ship decision. See docs/SIM.md and reports/proposals/GAP-REROLL-CONCEPT.md.
+
+**NORMATIVE DIRECTION TABLE (canonical — supersedes any older §1/§4 phrasing):**
+- A racer whose lap-aware arc gap **to the racer BEHIND** exceeds G (it has opened a hole behind itself)
+  → its next re-roll draw is shifted toward the **SLOWER** end of its own honest ±8.1 % band.
+- *symmetric mode only:* a racer whose gap **to the racer AHEAD** exceeds G (it has been dropped)
+  → shifted toward the **FASTER** end — always within its own honest band, never above.
+- All gaps ≤ G → **bit-exact no-op** (the draw passes through unchanged).
+
 This is the FINAL concept, reconciled from three independent proposals (CC, Copilot, Plan-Claude) written
 without seeing each other, plus a data challenge round. No threshold in it was chosen by optimising a
 metric; every number is set by the owner's eye, in racer lengths.
@@ -47,8 +64,10 @@ metric; every number is set by the owner's eye, in racer lengths.
 
 Bound the **gap between every pair of consecutive cars** to at most **G racer-lengths** (G is one number,
 set by eye). Enforce it not with a brake but by **loading the periodic speed re-roll the field already
-throws**: a car whose gap to the car ahead exceeds G draws from the faster end of its own honest ±8.1 %
-band next time; a car that has opened a hole ahead of it draws from the slower end. Below G the dice are
+throws** (per the NORMATIVE DIRECTION table in §0): a car whose gap **to the car behind** exceeds G (it
+has opened a hole behind itself) draws from the **slower** end of its own honest ±8.1 % band next time; in
+symmetric correction a car whose gap **to the car ahead** exceeds G (it has been dropped) draws from the
+**faster** end. Below G the dice are
 untouched, so the tight bunch and its overtaking room are left exactly as today. The correction is slow
 because the disease is slow (spread is the integral of tiny speed differences); where the ~9.5 s re-roll
 interval is too slow to hold the cap, the same car is made to **re-draw early** (still the dice, ~3 s
@@ -120,8 +139,10 @@ C3 satisfied for free).
 1. **Re-roll bias — the primary mechanism.** At each re-roll the draw is
    `spreadFactor + U(−halfWidth, +halfWidth)` (halfWidth = 0.75·spreadRange, index.jsx:931,1083), eased to
    the new value over `reRollTransitionDuration = 3.0 s` (defaults.js:259; index.jsx:623,1109-1122), then
-   clamped to `[spreadMin, spreadMax]` (±8.1 %). **Symmetric bias (D3):** a car with a gap-ahead > G tilts
-   the draw down; a car that has opened a hole tilts it up — always inside the honest band. This is the
+   clamped to `[spreadMin, spreadMax]` (±8.1 %). **Symmetric bias (D3) — per the NORMATIVE DIRECTION table
+   in §0:** a car whose gap **to the racer behind** > G (it has opened a hole behind itself) tilts the draw
+   **down** (slower); in symmetric mode a car whose gap **to the racer ahead** > G (it has been dropped)
+   tilts it **up** (faster) — always inside the honest band. This is the
    generalisation of the existing `computePulkBiasedTarget` (racePlanner.js:615) from `slice(0,3)`/PULK
    (racePlanner.js:208) to the whole pack, whole race, with a dead zone. *Continuous, invisible, no new
    force.*

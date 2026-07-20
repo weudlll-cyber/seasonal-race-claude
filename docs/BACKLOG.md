@@ -870,6 +870,20 @@ re-applies only if B is ever built. Note: leash brake authority is −15% / minM
 Measure with the runaway-parade observer + `exp-runaway-leader` on the f40a7a6 seeds; determinism per sweep.
 Per Lesson 178, AUTHOR the contest (leash the leader), don't LIBERATE constraints.
 
+**STATUS 2026-07-20 — leash FAILED; diagnostics done; gap-cap re-roll bias now the active mechanism.**
+Phase-1a leash sweep FAILED (runaway worsened 22.5%→~30%; braking rank-1 reshuffles a bigger runaway).
+Two read-only diagnostics followed: **formation** (`b4a1327`) — the 3.0L gap forms LATE, median progress
+0.783 (in-window, so leash timing wasn't the issue); **speed-source** (`9b51380`) — the escape is
+NATURAL (spreadFactor ≈ band ceiling 1.080 vs chasers 1.031; areaBonusPost EXONERATED = 1.0 late; servo
+already brakes the leader). New product metric surfaced: racers within 3.0L of P1 at 0.90 = median **0**
+in runaways (vs 2 non-runaway). → **ACTIVE mechanism: gap-cap re-roll bias** (`docs/CONCEPT-COHESION.md`),
+the drift instrument that re-draws spreadFactor. Built SIM-only, flag-gated (`--gapRerollThresholdLengths /
+--gapRerollMode / --gapRerollStrength`), scheduled-rolls-only (owner fairness decision), OFF = byte-identical
+(fingerprint `72c3360fb75225ef`). Phase-2 exploration sweep (symmetric/down × G 1.5/2.0, N=50) in
+`exp-runaway-leader-results/phase2-gapreroll/`. NEW first-class gate added: within-3.0L runaway median ≥ 2.
+Concept + CC/Copilot reviews: `reports/proposals/GAP-REROLL-CONCEPT.md` (+ reviews). Both reviews
+independently favored this over the leash (right instrument for the measured drift cause).
+
 ### Parade-finish — observe only 🔍 *(no action)*
 `paradeFinishRate = 2%` baseline, and when it happens the leading group is genuinely paced (internal speed
 spread ≤0.10 over the final 5%). Rare and not obviously bad — **track it via `--runaway-parade`, do not

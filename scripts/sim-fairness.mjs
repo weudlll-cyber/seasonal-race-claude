@@ -235,6 +235,15 @@ const FRONT_LEASH_MAX = argVal('frontLeashMaxLengths', null);
 const FRONT_LEASH = FRONT_LEASH_MAX !== null;
 const FRONT_LEASH_MAX_LEN = FRONT_LEASH ? Number(FRONT_LEASH_MAX) : null;
 const FRONT_LEASH_GAIN_PCT = FRONT_LEASH ? Number(argVal('frontLeashGainPct', '3')) : null;
+// ── Gap-cap re-roll bias (SIM-ONLY; docs/CONCEPT-COHESION.md) ────────────────────────────────────
+// --gapRerollThresholdLengths engages the bias; --gapRerollMode symmetric|down; --gapRerollStrength.
+// Absent --gapRerollThresholdLengths → GAP_REROLL off → the roll loop never calls the transform →
+// byte-identical (fingerprint-gated). Scheduled rolls ONLY (owner fairness decision) — no early rolls.
+const GAP_REROLL_THRESH = argVal('gapRerollThresholdLengths', null);
+const GAP_REROLL = GAP_REROLL_THRESH !== null;
+const GAP_REROLL_THRESH_LEN = GAP_REROLL ? Number(GAP_REROLL_THRESH) : null;
+const GAP_REROLL_MODE = GAP_REROLL ? argVal('gapRerollMode', 'symmetric') : null;
+const GAP_REROLL_STRENGTH = GAP_REROLL ? Number(argVal('gapRerollStrength', '0.5')) : null;
 // B2-leak trace (read-only diagnostic): adds b2LastInside to rawData rows. No-flag → byte-identical.
 const B2_TRACE = argv.includes('--b2-trace');
 // reRoll / trajectory dynamics overrides — same shared-default + argVal pattern. Lets a sweep
@@ -1013,6 +1022,8 @@ export function runSingleRace({
     const rp = runawayParade ? {
       leaderIdxAt090:      null,       // frontmost LIVE racer at the first frame >= windowStart
       leaderGapP2At090Len: null,       // its lead over P2 at that frame (lengths)
+      within3P1At090:      null,       // # live racers within leadLen (3.0) lengths behind P1 at windowStart
+
       minLeadFrom090Len:   Infinity,   // MIN lead over the field across [windowStart, its own finish]
       t095ByIndex:         null,       // per-racer t at the first frame >= (1 - speedWindow)
       ts095:               null,       // raceTs at that frame
@@ -1126,9 +1137,20 @@ export function runSingleRace({
                 racers, raceTs, raceProgress
               )
             : rawTarget;
+          // Gap-cap re-roll bias (SIM-ONLY; scheduled rolls only). Called ONLY when the flag is on, so
+          // an off run never invokes the transform → byte-identical. Passes the length-scale context
+          // (govLenScale/isOpen); the shared method computes the arc gaps + window internally.
+          const gapBiased = (GAP_REROLL && racePlanController)
+            ? racePlanController.computeGapBiasedTarget(
+                r.index, biasedTarget,
+                BASE_SPEED_MIN / BASE_SPEED_MEAN,
+                BASE_SPEED_MAX / BASE_SPEED_MEAN,
+                racers, raceTs, raceProgress, govLenScale, isOpen
+              )
+            : biasedTarget;
           const newTarget   = Math.max(
             BASE_SPEED_MIN / BASE_SPEED_MEAN,
-            Math.min(BASE_SPEED_MAX / BASE_SPEED_MEAN, biasedTarget)
+            Math.min(BASE_SPEED_MAX / BASE_SPEED_MEAN, gapBiased)
           );
           r.spreadFactorPrev    = r.spreadFactor;
           r.spreadFactorTarget  = newTarget;
@@ -2048,6 +2070,13 @@ export function runSingleRace({
             rp.leaderIdxAt090 = live[0].index;
             // Single source with the front-leash input: leaderGapLengths (arcT × lenScale, lap-aware).
             rp.leaderGapP2At090Len = +leaderGapLengths(racers, isOpen, govLenScale).toFixed(4);
+            // "In the fight": how many live racers sit within runawayParade.leadLen (3.0) lengths behind
+            // P1 at the window (the product metric — median 0 in runaways today, target ≥2).
+            let w3 = 0;
+            for (let i = 1; i < live.length; i++) {
+              if (arcT(live[0].t, live[i].t, isOpen) * govLenScale <= RUNAWAY_PARADE_DEFAULTS.leadLen) w3++;
+            }
+            rp.within3P1At090 = w3;
           } else if (live.length === 1) {
             rp.leaderIdxAt090 = live[0].index;
             rp.leaderGapP2At090Len = Infinity; // lone survivor — trivially uncontested
@@ -2365,6 +2394,7 @@ export function runSingleRace({
         leaderIdxAt090:      rp.leaderIdxAt090,
         // Infinity (lone survivor) is not JSON-representable → emit null (classifier treats it as "not clear").
         leaderGapP2At090Len: isFinite(rp.leaderGapP2At090Len) ? rp.leaderGapP2At090Len : null,
+        within3P1At090:      rp.within3P1At090,
         minLeadFrom090Len:   isFinite(rp.minLeadFrom090Len) ? +rp.minLeadFrom090Len.toFixed(4) : null,
         line:                rp.line,            // { order, gaps } or null (race timed out before any finish)
         speed095ByIndex:     rp.speed095ByIndex, // { idx: speed } or null
@@ -2992,6 +3022,13 @@ if (isMain) {
               // Front distance leash (SIM-ONLY): null when the flag is absent → controller leash off.
               frontLeashMaxLengths: FRONT_LEASH_MAX_LEN,
               frontLeashGainPct:    FRONT_LEASH_GAIN_PCT,
+              // Gap-cap re-roll bias (SIM-ONLY): null threshold → transform passthrough. The window
+              // derivation reads reRollLastPositionPercent + reRollTransitionDuration (shipped dynamics).
+              gapRerollThresholdLengths: GAP_REROLL_THRESH_LEN,
+              gapRerollMode:             GAP_REROLL_MODE ?? undefined,
+              gapRerollStrength:         GAP_REROLL_STRENGTH ?? undefined,
+              reRollLastPositionPercent: DYNAMICS_OVERRIDES.reRollLastPositionPercent,
+              reRollTransitionDuration:  DYNAMICS_OVERRIDES.reRollTransitionDuration,
             }, seed);
             racePlanController = createTrajectoryController(plan);
             raceSollRankMap = plan._racerTargetRank;
@@ -3152,6 +3189,9 @@ if (isMain) {
           attackerFreed:          raceResults.reduce((s, r) => s + (r.naturalness?.attackerFreed ?? 0), 0) / raceResults.length,
           // Front-leash diagnostic: per-race mean of frames the leader brake was applied (0 when OFF).
           leashFrames:            raceResults.reduce((s, r) => s + (r.naturalness?.leashFrames ?? 0), 0) / raceResults.length,
+          // Gap-cap re-roll diagnostics (0 when OFF): mean biased rolls/race + mean leader duty-cycle.
+          gapBiasedRolls:         raceResults.reduce((s, r) => s + (r.naturalness?.gapBiasedRolls ?? 0), 0) / raceResults.length,
+          gapLeaderDutyCycle:     raceResults.reduce((s, r) => s + (r.naturalness?.gapLeaderDutyCycle ?? 0), 0) / raceResults.length,
           overlapRate:             raceResults.reduce((s, r) => s + (r.liteOverlapRate ?? 0), 0) / raceResults.length,
           honestOverlapRate:       raceResults.reduce((s, r) => s + (r.honestOverlapRate ?? 0), 0) / raceResults.length,
           passThroughCount:        raceResults.reduce((s, r) => s + (r.passThroughCount ?? 0), 0) / raceResults.length,
