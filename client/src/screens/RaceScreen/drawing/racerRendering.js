@@ -79,7 +79,8 @@ export function drawRacers(
   ezoom,
   renderAlpha,
   interpolationEnabled,
-  highlightHeroes = false
+  highlightHeroes = false,
+  gapDevMarker = false
 ) {
   const leader = st.racers.reduce((a, b) => (b.t > a.t ? b : a));
   const inv = 1 / ezoom;
@@ -137,6 +138,24 @@ export function drawRacers(
       ctx.arc(renderX, renderY, effectiveScale * 1.2, 0, Math.PI * 2);
       ctx.stroke();
       ctx.restore();
+    }
+    // Gap-cap re-roll DEV MARKER (DevScreen → "Gap-Reroll dev marker"). A brief cyan ring that fades over
+    // ~500 ms at the instant a racer's re-roll was gap-biased — a dev-only cue to SEE where the mechanism
+    // fires. Rendering-only, zero sim effect; r._gapBiasMarkAt is set (and this only draws) when enabled.
+    if (gapDevMarker && r._gapBiasMarkAt != null) {
+      const age = (st.physicsTs ?? 0) - r._gapBiasMarkAt;
+      if (age >= 0 && age < 500) {
+        ctx.save();
+        ctx.globalAlpha = dimAlpha * (1 - age / 500);
+        ctx.strokeStyle = '#00e5ff';
+        ctx.lineWidth = 3 * inv;
+        ctx.shadowColor = '#00e5ff';
+        ctx.shadowBlur = 10 * inv;
+        ctx.beginPath();
+        ctx.arc(renderX, renderY, effectiveScale * (1.4 + 0.6 * (age / 500)), 0, Math.PI * 2);
+        ctx.stroke();
+        ctx.restore();
+      }
     }
     if (tagSet.has(r) || rIsComeback) {
       const tagName = showRpStartRowCfg

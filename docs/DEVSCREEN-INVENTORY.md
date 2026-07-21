@@ -120,6 +120,18 @@ area/row pair is gated by the Phase-Split master switch above:
 | Row bonus — PULK | `rowBonusPulk` | 0 |
 | Cohesion bias gain | `pulkBiasGain` | 2.0 |
 
+**Gap-cap re-roll (eye-test)** — added 2026-07-21, in the same Dynamics grid as the "Pack release" toggle.
+All default OFF → the shipped game is byte-identical (`gapRerollEnabled` false → the transform passes the
+draw through). Changes take effect on the next race (same as the B2-attacker count). See docs/SIM.md.
+
+| Control | Config key | Shipped default | testid |
+|---|---|---|---|
+| Gap-Reroll (eye-test) toggle | `gapRerollEnabled` | false | `gap-reroll-toggle` |
+| Gap-Reroll G (lengths) 0.5–4.0 | `gapRerollThresholdLengths` | 1.5 | — |
+| Gap-Reroll strength 0–1.5 | `gapRerollStrength` | 1.0 | — |
+| Gap-Reroll mode symmetric/down-only | `gapRerollMode` | 'symmetric' | `gap-reroll-mode` |
+| Gap-Reroll dev marker (rendering-only cyan ring) | `gapRerollDevMarker` | false | `gap-reroll-devmarker-toggle` |
+
 ---
 
 ## PINNED — config keys that EXIST but have NO DevScreen control

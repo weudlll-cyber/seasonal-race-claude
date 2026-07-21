@@ -356,6 +356,19 @@ export const DEFAULT_RACE_DYNAMICS_CONFIG = {
   // Universal band-arrival (V1 experiment): free B1-heroes + normal pack racers (strictness 0) once inside
   // their assigned band; re-steer the moment they leave. B2-attackers keep their own release. Default OFF.
   universalBandArrival: false,
+  // ── Gap-cap re-roll bias (docs/CONCEPT-COHESION.md) — "loaded dice within the honest range" ──
+  // A racer that has opened a hole behind itself (arc gap > G to the racer behind) draws SLOWER at its
+  // next scheduled re-roll; in symmetric mode a dropped racer (gap > G ahead) draws FASTER — always inside
+  // the honest ±8.1% band. Scheduled rolls only. gapRerollEnabled FALSE → the transform receives no
+  // threshold and passes the draw through bit-exact → the shipped game is byte-identical (default).
+  // Sim confirmation (N=200, all 10 tracks): symmetric/G=1.5/strength=1.0 → runaway 23%→8.3%, action +.
+  gapRerollEnabled: false,
+  gapRerollThresholdLengths: 1.5,
+  gapRerollStrength: 1.0,
+  gapRerollMode: 'symmetric',
+  // Dev-only visual cue (rendering-only, zero sim effect): flash a racer at the instant a roll is biased,
+  // so the owner can SEE where the mechanism fires before judging naturalness with it off. Default OFF.
+  gapRerollDevMarker: false,
   // Front-group pool: front N on-track positions (leader excluded) the lead rotation draws challengers from.
   pulkFrontPool: 8,
   // ── PulkLeadRotation — THE pulk-phase mechanism (UNCONDITIONAL). It COMPLETES lead changes inside

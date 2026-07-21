@@ -66,7 +66,7 @@ import {
 import { loadRowLayoutConfig } from '../../modules/rowLayoutConfig.js';
 import { loadRaceDynamicsConfig } from '../../modules/raceDynamicsConfig.js';
 import { applyPulkLeadRotation, computeDirectorCeiling } from '../../modules/raceGovernor.js';
-import { meanDrawnBodyLen } from '../../modules/raceLengths.js';
+import { meanDrawnBodyLen, lenScaleFrom } from '../../modules/raceLengths.js';
 import { loadFrameTimingConfig } from '../../modules/frameTimingConfig.js';
 import { useFadeNavigate } from '../../contexts/TransitionContext.jsx';
 import { EditorShape } from '../../modules/track-editor/EditorShape.js';
@@ -730,6 +730,15 @@ export default function RaceScreen() {
           b2AttackResolveProgress: dynamicsConfig.b2AttackResolveProgress ?? 0.85,
           b2AttackBandArrival: dynamicsConfig.b2AttackBandArrival ?? true,
           universalBandArrival: dynamicsConfig.universalBandArrival ?? false,
+          // Gap-cap re-roll bias (docs/CONCEPT-COHESION.md). Threshold passed ONLY when the owner enables
+          // it → disabled ⇒ null ⇒ computeGapBiasedTarget() passes the draw through bit-exact (byte-identical).
+          // reRollTransitionDuration feeds the window-end derivation (lastRollDeadline − transitionDur).
+          gapRerollThresholdLengths: dynamicsConfig.gapRerollEnabled
+            ? (dynamicsConfig.gapRerollThresholdLengths ?? 1.5)
+            : null,
+          gapRerollMode: dynamicsConfig.gapRerollMode ?? 'symmetric',
+          gapRerollStrength: dynamicsConfig.gapRerollStrength ?? 1.0,
+          reRollTransitionDuration: dynamicsConfig.reRollTransitionDuration,
         },
         racePlanSeed
       );
@@ -1084,6 +1093,14 @@ export default function RaceScreen() {
             };
           }
 
+          // Gap-cap re-roll bias context (SIM parity — the ONE-CLOCK principle): when the owner has
+          // enabled it, thread the BROWSER's own realized-duration lastRollDeadline + physicsTs + the
+          // shared lenScale/isOpen into the transform, exactly as the sim does. Disabled ⇒ never called.
+          const gapRerollEnabled = dynamicsConfig.gapRerollEnabled ?? false;
+          const gapRerollDevMarker = dynamicsConfig.gapRerollDevMarker ?? false;
+          const gapLenScale = gapRerollEnabled
+            ? lenScaleFrom(pathLengthPx, meanDrawnBodyLen(st.racers))
+            : 0;
           for (const r of st.racers) {
             // ── Per-racer spreadFactor re-roll + smooth transition ────────────
             if (!r.finished) {
@@ -1103,9 +1120,30 @@ export default function RaceScreen() {
                       st.raceProgress
                     )
                   : rawSample;
+                // Gap-cap re-roll bias (SIM-frozen transform). Disabled ⇒ passes biasedSample through
+                // (never called) ⇒ byte-identical. Scheduled rolls only (this is a scheduled roll).
+                const gapBiasedSample =
+                  gapRerollEnabled && racePlanController
+                    ? racePlanController.computeGapBiasedTarget(
+                        r.index,
+                        biasedSample,
+                        BASE_SPEED_MIN / BASE_SPEED_MEAN,
+                        BASE_SPEED_MAX / BASE_SPEED_MEAN,
+                        st.racers,
+                        physicsTs,
+                        st.raceProgress,
+                        gapLenScale,
+                        behaviorConfig.isOpen,
+                        lastRollDeadline
+                      )
+                    : biasedSample;
+                // Dev marker (rendering-only, DevScreen-gated, zero sim effect): tag the racer at the
+                // instant a roll was actually biased, so the owner can SEE where the mechanism fires.
+                if (gapRerollDevMarker && gapBiasedSample !== biasedSample)
+                  r._gapBiasMarkAt = physicsTs;
                 const newTarget = Math.max(
                   BASE_SPEED_MIN / BASE_SPEED_MEAN,
-                  Math.min(BASE_SPEED_MAX / BASE_SPEED_MEAN, biasedSample)
+                  Math.min(BASE_SPEED_MAX / BASE_SPEED_MEAN, gapBiasedSample)
                 );
                 r.spreadFactorPrev = r.spreadFactor;
                 r.spreadFactorTarget = newTarget;
@@ -1632,7 +1670,8 @@ export default function RaceScreen() {
         frameEffZoom,
         renderAlpha,
         frameTimingConfig.renderInterpolation,
-        cameraConfigRef.current.highlightHeroes ?? false
+        cameraConfigRef.current.highlightHeroes ?? false,
+        dynamicsConfig.gapRerollDevMarker ?? false
       );
       drawBattleDiagMarkers(
         ctx,

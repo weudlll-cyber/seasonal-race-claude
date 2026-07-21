@@ -96,7 +96,31 @@ describe('DEFAULT_RACE_DYNAMICS_CONFIG', () => {
       b2AttackResolveProgress: 0.85,
       b2AttackBandArrival: true,
       universalBandArrival: false,
+      // Gap-cap re-roll bias — default OFF (byte-identical); confirmed candidate symmetric/1.5/1.0.
+      gapRerollEnabled: false,
+      gapRerollThresholdLengths: 1.5,
+      gapRerollStrength: 1.0,
+      gapRerollMode: 'symmetric',
+      gapRerollDevMarker: false,
     });
+  });
+
+  it('gap-reroll defaults are OFF (byte-identical) with the confirmed candidate values', () => {
+    expect(DEFAULT_RACE_DYNAMICS_CONFIG.gapRerollEnabled).toBe(false);
+    expect(DEFAULT_RACE_DYNAMICS_CONFIG.gapRerollDevMarker).toBe(false);
+    expect(DEFAULT_RACE_DYNAMICS_CONFIG.gapRerollThresholdLengths).toBe(1.5);
+    expect(DEFAULT_RACE_DYNAMICS_CONFIG.gapRerollStrength).toBe(1.0);
+    expect(DEFAULT_RACE_DYNAMICS_CONFIG.gapRerollMode).toBe('symmetric');
+  });
+
+  it('a persisted gap-reroll config round-trips through load/merge (plumbs to createRacePlan)', () => {
+    // raceDynamicsConfig merges any key present in DEFAULT via spread — no whitelist. A stored enable +
+    // custom G survives the load so index.jsx can thread it into createRacePlan.
+    storageGet.mockReturnValue({ gapRerollEnabled: true, gapRerollThresholdLengths: 2.0 });
+    const loaded = loadRaceDynamicsConfig();
+    expect(loaded.gapRerollEnabled).toBe(true);
+    expect(loaded.gapRerollThresholdLengths).toBe(2.0);
+    expect(loaded.gapRerollMode).toBe('symmetric'); // unspecified → default
   });
 
   it('all numeric defaults are positive; PULK-phase bonuses default 0 (off during PULK)', () => {

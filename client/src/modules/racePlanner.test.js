@@ -1522,6 +1522,53 @@ describe('createTrajectoryController — gap-cap re-roll bias', () => {
     expect(call(ctrl, field(0.6, 0.5, null), raw)).toBe(raw); // huge gap, but feature OFF → exact input
   });
 
+  it('createRacePlan plumbs gap-reroll config + reRollTransitionDuration into the plan (browser path)', () => {
+    // The browser passes threshold ONLY when enabled; disabled ⇒ null ⇒ transform passthrough.
+    const on = createRacePlan(
+      BASE_RACERS,
+      FINISH_T,
+      TARGET_DUR_MS,
+      {
+        gapRerollThresholdLengths: 1.5,
+        gapRerollMode: 'down',
+        gapRerollStrength: 1.0,
+        reRollTransitionDuration: 3.0,
+      },
+      BASE_SEED
+    );
+    expect(on._gapRerollThresholdLengths).toBe(1.5);
+    expect(on._gapRerollMode).toBe('down');
+    expect(on._gapRerollStrength).toBe(1.0);
+    expect(on._reRollTransitionDurationMs).toBe(3000); // seconds→ms for the window-end derivation
+    // disabled path (browser passes null): transform is a no-op regardless of gaps/window
+    const off = createRacePlan(
+      BASE_RACERS,
+      FINISH_T,
+      TARGET_DUR_MS,
+      { gapRerollThresholdLengths: null },
+      BASE_SEED
+    );
+    expect(off._gapRerollThresholdLengths).toBe(null);
+    const ctrl = createTrajectoryController(off);
+    expect(
+      ctrl.computeGapBiasedTarget(
+        0,
+        1.05,
+        0.9,
+        1.1,
+        [
+          { index: 0, t: 0.6, finished: false },
+          { index: 1, t: 0.1, finished: false },
+        ],
+        40_000,
+        0.7,
+        30,
+        true,
+        57_000
+      )
+    ).toBe(1.05);
+  });
+
   it('determinism: same inputs → same output', () => {
     const ctrl = createTrajectoryController(planWith());
     const rs = field(0.6, 0.12, null);

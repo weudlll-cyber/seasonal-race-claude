@@ -900,3 +900,11 @@ symmetric mode a **dropped** racer (gap > G to the racer ahead) draws faster —
 re-roll. **OFF = byte-identical** (fingerprint `72c3360fb75225ef` verified; the browser never passes the
 gap/length context so the transform early-returns there). Watch metrics: `gapBiasedRolls` per race and the
 leader duty-cycle (max share of one racer's window rolls that were biased — the "held" kill-condition gauge).
+
+### 2026-07-21 — Browser wiring + DevScreen controls (default OFF, eye-test)
+
+After the N=200 confirmation on all 10 tracks (V0 23% → symmetric/G=1.5/strength=1.0 8.3%, action +, band-reach ≥70% held), the shared transform was wired into the BROWSER re-roll loop (`RaceScreen/index.jsx`) exactly as the sim does — the browser threads ITS OWN realized-duration `lastRollDeadline` + `physicsTs` + the shared `lenScaleFrom(pathLengthPx, meanDrawnBodyLen)` / `isOpen` into `computeGapBiasedTarget` (the ONE-CLOCK principle; the transform never re-derives a duration). The transform behavior is FROZEN.
+
+**Config keys (`DEFAULT_RACE_DYNAMICS_CONFIG`, all default OFF/byte-identical):** `gapRerollEnabled: false`, `gapRerollThresholdLengths: 1.5`, `gapRerollStrength: 1.0`, `gapRerollMode: 'symmetric'`, `gapRerollDevMarker: false`. When `gapRerollEnabled` is false the browser passes `gapRerollThresholdLengths: null` into `createRacePlan` → the transform early-returns the raw draw → **the shipped game is byte-identical** (fingerprint `72c3360fb75225ef` re-verified after defaults + client touched). The sim harness keeps its CLI semantics (`--gapReroll*` override, unchanged); it does not read these browser defaults.
+
+**DevScreen (Dynamics section):** Gap-Reroll toggle, G (0.5–4.0), strength (0–1.5), mode symmetric/down-only, and a rendering-only dev-marker (a cyan ring flashing on a racer the instant its roll was biased — zero sim effect). Changes take effect on the next race (same pattern as the B2-attacker count). A backup/ship tag follows only after the owner's eye-test.

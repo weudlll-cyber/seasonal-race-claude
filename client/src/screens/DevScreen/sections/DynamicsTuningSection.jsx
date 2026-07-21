@@ -1035,6 +1035,106 @@ const DynamicsTuningSection = forwardRef(function DynamicsTuningSection(_, ref) 
               <InfoTooltip text="Pack-only strictness release: non-hero pack racers run FREE (strictness 0) inside their band, re-steered only when they drift past the threshold above. Sim: +15% top-5 action but BREAKS B2 band-reach on Luger Hill + Searound (endgame edge-leak, 92% of leaks after progress 0.90) — dominated by B2-attackers, kept for comparison. Default OFF (byte-identical)." />
             </label>
           </div>
+          {/* ── Gap-cap re-roll bias (docs/CONCEPT-COHESION.md) — eye-test controls, default OFF ── */}
+          <div className={s.formGroup}>
+            <label
+              className={s.label}
+              style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}
+            >
+              <input
+                type="checkbox"
+                checked={dynamicsConfig.gapRerollEnabled ?? false}
+                onChange={(e) => setDynamics('gapRerollEnabled', e.target.checked)}
+                data-testid="gap-reroll-toggle"
+              />
+              Gap-Reroll (eye-test)
+              <InfoTooltip text="Gap-cap re-roll bias ('loaded dice'): a racer that has opened a hole behind itself draws SLOWER at its next scheduled re-roll (symmetric mode also lifts a dropped racer FASTER) — always inside the honest ±8.1% band, scheduled rolls only. Sim confirmation (N=200, all 10 tracks): symmetric / G=1.5 / strength=1.0 → runawayWinnerRate 23%→8.3%, action +. Default OFF (byte-identical)." />
+            </label>
+          </div>
+          <div className={s.formGroup}>
+            <label
+              className={s.label}
+              style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}
+            >
+              Gap-Reroll G (lengths)
+              <InfoTooltip text="Gap cap G in racer-lengths: the bias engages when a racer's arc gap to its neighbour exceeds G. Lower = tighter field. Confirmed candidate 1.5." />
+            </label>
+            <input
+              type="number"
+              className={s.input}
+              aria-label="Gap-Reroll G (lengths)"
+              min={0.5}
+              max={4.0}
+              step={0.25}
+              value={
+                dynamicsConfig.gapRerollThresholdLengths ??
+                DEFAULT_RACE_DYNAMICS_CONFIG.gapRerollThresholdLengths
+              }
+              onChange={(e) => {
+                const v = Number(e.target.value);
+                if (isFinite(v) && v >= 0.5 && v <= 4.0)
+                  setDynamics('gapRerollThresholdLengths', v);
+              }}
+            />
+          </div>
+          <div className={s.formGroup}>
+            <label
+              className={s.label}
+              style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}
+            >
+              Gap-Reroll strength
+              <InfoTooltip text="How hard the dice are loaded: fraction-to-band-edge = min(1, strength·(gap−G)) per excess length. 0 = off, 1.0 = confirmed candidate (fairness-clean at N=200)." />
+            </label>
+            <input
+              type="number"
+              className={s.input}
+              aria-label="Gap-Reroll strength"
+              min={0}
+              max={1.5}
+              step={0.25}
+              value={
+                dynamicsConfig.gapRerollStrength ?? DEFAULT_RACE_DYNAMICS_CONFIG.gapRerollStrength
+              }
+              onChange={(e) => {
+                const v = Number(e.target.value);
+                if (isFinite(v) && v >= 0 && v <= 1.5) setDynamics('gapRerollStrength', v);
+              }}
+            />
+          </div>
+          <div className={s.formGroup}>
+            <label
+              className={s.label}
+              style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}
+            >
+              Gap-Reroll mode
+              <InfoTooltip text="symmetric = also lift a dropped racer faster (pulls both ends toward the pack); down-only = only slow the escapee. symmetric is the confirmed candidate." />
+            </label>
+            <select
+              className={s.input}
+              aria-label="Gap-Reroll mode"
+              data-testid="gap-reroll-mode"
+              value={dynamicsConfig.gapRerollMode ?? 'symmetric'}
+              onChange={(e) => setDynamics('gapRerollMode', e.target.value)}
+            >
+              <option value="symmetric">symmetric</option>
+              <option value="down">down-only</option>
+            </select>
+          </div>
+          <div className={s.formGroup}>
+            <label
+              className={s.label}
+              style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}
+            >
+              <input
+                type="checkbox"
+                checked={dynamicsConfig.gapRerollDevMarker ?? false}
+                onChange={(e) => setDynamics('gapRerollDevMarker', e.target.checked)}
+                data-testid="gap-reroll-devmarker-toggle"
+              />
+              Gap-Reroll dev marker
+              <InfoTooltip text="Dev-only: flash a cyan ring on a racer the instant its re-roll was gap-biased — so you can SEE where the mechanism fires, then judge naturalness with it off. Rendering-only, zero sim effect. Default OFF." />
+            </label>
+          </div>
         </div>
         <SubHeading
           label="PULK bonuses"

@@ -884,6 +884,17 @@ the drift instrument that re-draws spreadFactor. Built SIM-only, flag-gated (`--
 Concept + CC/Copilot reviews: `reports/proposals/GAP-REROLL-CONCEPT.md` (+ reviews). Both reviews
 independently favored this over the leash (right instrument for the measured drift cause).
 
+**STATUS 2026-07-21 — window-basis bug fixed + N=200 confirmation + BROWSER WIRING DONE; eye-test pending.**
+The closed-track 0-biased-rolls bug (windowEnd on target vs realized duration) was fixed (`9ff3bf3`) — one
+duration basis, both engines. N=200 confirmation on ALL 10 tracks (`3464295`): **symmetric/G=1.5/strength=1.0
+→ runawayWinnerRate 23%→8.3%**, generalizes cleanly (6 new tracks behave like their groups), action IMPROVED
+(+0.53), 73% of V0-runaways converted (escapee still wins/podiums in a contest). **Browser wiring + DevScreen
+controls now DONE (default OFF, fingerprint `72c3360fb75225ef` re-verified, one-clock window in both engines)
+— OWNER EYE-TEST PENDING.** *(Secondary open observations, NOT gate-blockers for the eye-test: **searound
+sits at ~15.5%**, just over the 15% per-track cap — the only track over; **Holm 3/10** (V0 2/10, one extra
+flagged track). Band-reach — the PRIMARY fairness gate — HOLDS ≥70% on all tracks for strength 1.0; s075
+dips to 69.7% so s10 is the cleaner candidate.)* Next after eye-test: owner ship decision → backup tag.
+
 ### Parade-finish — observe only 🔍 *(no action)*
 `paradeFinishRate = 2%` baseline, and when it happens the leading group is genuinely paced (internal speed
 spread ≤0.10 over the final 5%). Rare and not obviously bad — **track it via `--runaway-parade`, do not
