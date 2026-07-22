@@ -66,7 +66,23 @@ export function loadRaceDynamicsConfig() {
     ].some((v) => typeof v !== 'number' || v <= 0 || v > 1) ||
     typeof merged.choreoOutcomeStart !== 'number' ||
     merged.choreoOutcomeStart < 0.25 ||
-    merged.choreoOutcomeStart > 0.6
+    merged.choreoOutcomeStart > 0.6 ||
+    // Front-act window + carousel (C1). Same whole-object-reject pattern as everything above.
+    // contestWindowStart must sit inside the OUTCOME act it measures: after OUTCOME begins and
+    // strictly before the release, else the window is empty or spans a phase the carousel cannot act in.
+    typeof merged.contestWindowStart !== 'number' ||
+    merged.contestWindowStart <= merged.choreoOutcomeStart ||
+    merged.contestWindowStart >= merged.choreoReleaseProgress ||
+    typeof merged.carouselEnabled !== 'boolean' ||
+    typeof merged.carouselMinParticipants !== 'number' ||
+    merged.carouselMinParticipants < 3 ||
+    typeof merged.carouselAmplitudeRanks !== 'number' ||
+    merged.carouselAmplitudeRanks < 1 ||
+    typeof merged.carouselJitterPct !== 'number' ||
+    merged.carouselJitterPct < 0 ||
+    merged.carouselJitterPct > 1 ||
+    typeof merged.carouselRoleBiasStrength !== 'number' ||
+    merged.carouselRoleBiasStrength < 0
   ) {
     return { ...DEFAULT_RACE_DYNAMICS_CONFIG };
   }

@@ -99,6 +99,7 @@ import { maxLinkGapLengths, makeHeldOvertakeTracker, fullSpreadLengths, framesOv
 import { RUNAWAY_PARADE_DEFAULTS, leaderGapLengths, makeFormationTracker, SPEED_SOURCE_SAMPLES, speedProduct, speedSaturation } from './sim/observers/runaway-parade.mjs';
 import { makeLateContestTracker, makeReleaseRankTracker } from './sim/observers/release-contest.mjs';
 import { makeFrontBattleTracker } from './sim/observers/outcome-front-battle.mjs';
+import { makeCarouselTracker } from './sim/observers/carousel-telemetry.mjs';
 import { applyPulkLeadRotation, arcT, computeDirectorCeiling } from '../client/src/modules/raceGovernor.js';
 import { lenScaleFrom, arcLengths, meanDrawnBodyLen } from '../client/src/modules/raceLengths.js';
 
@@ -215,6 +216,17 @@ const CHOREO_RESOLVE_B3 = Number(argVal('choreoResolveB3', String(DEFAULT_RACE_D
 const CHOREO_RESOLVE_B4 = Number(argVal('choreoResolveB4', String(DEFAULT_RACE_DYNAMICS_CONFIG.choreoResolveB4)));
 const CHOREO_RESOLVE_B5 = Number(argVal('choreoResolveB5', String(DEFAULT_RACE_DYNAMICS_CONFIG.choreoResolveB5)));
 const CHOREO_OUTCOME_START = Number(argVal('choreoOutcomeStart', String(DEFAULT_RACE_DYNAMICS_CONFIG.choreoOutcomeStart)));
+// ── FRONT ACT window + B1 LEAD CAROUSEL (C1; SIM-FIRST — the browser is untouched this step) ──────
+// contestWindowStart is the front act's OWN key: the outcome-front-battle observer AND the carousel
+// schedule both read it, so the measurement window no longer rides on B2's resolve checkpoint. It
+// defaults to the shipped value (= today's choreoResolveB2), so every committed baseline stays
+// comparable. Carousel + role-bias default OFF → byte-identical (fingerprint-gated).
+const CONTEST_WINDOW_START = Number(argVal('contestWindowStart', String(DEFAULT_RACE_DYNAMICS_CONFIG.contestWindowStart)));
+const CAROUSEL_ENABLED     = argVal('carouselEnabled', String(DEFAULT_RACE_DYNAMICS_CONFIG.carouselEnabled)) === 'true';
+const CAROUSEL_MIN_PARTICIPANTS = Number(argVal('carouselMinParticipants', String(DEFAULT_RACE_DYNAMICS_CONFIG.carouselMinParticipants)));
+const CAROUSEL_AMPLITUDE_RANKS  = Number(argVal('carouselAmplitudeRanks', String(DEFAULT_RACE_DYNAMICS_CONFIG.carouselAmplitudeRanks)));
+const CAROUSEL_JITTER_PCT       = Number(argVal('carouselJitterPct', String(DEFAULT_RACE_DYNAMICS_CONFIG.carouselJitterPct)));
+const CAROUSEL_ROLE_BIAS_STRENGTH = Number(argVal('carouselRoleBiasStrength', String(DEFAULT_RACE_DYNAMICS_CONFIG.carouselRoleBiasStrength)));
 // Pack-only strictness release with spatial hysteresis (parity with racePlanner/defaults). OFF →
 // byte-identical to the shipped servo (proven via fingerprint-default). Threaded into createRacePlan.
 const PACK_RELEASE_ENABLED = argVal('pack-release', String(DEFAULT_RACE_DYNAMICS_CONFIG.packReleaseEnabled)) === 'true';
@@ -1040,9 +1052,13 @@ export function runSingleRace({
       lateContest:         makeLateContestTracker(RP_WINDOW_START),
       releaseRanks:        makeReleaseRankTracker(CHOREO_RELEASE_PROGRESS),
       // ── Sustained P1 battle (read-only; definitions in sim/observers/outcome-front-battle.mjs) ──
-      // Window starts at the LIVE choreoResolveB2 — the point the front act is meant to resolve —
-      // so moving that config moves the measurement with it. No hardcoded progress constant.
-      frontBattle:         makeFrontBattleTracker({ windowStart: CHOREO_RESOLVE_B2 }),
+      // Window starts at the LIVE contestWindowStart — the front act's own key (C1), no longer
+      // B2's resolve checkpoint. No hardcoded progress constant; the carousel reads the same value.
+      frontBattle:         makeFrontBattleTracker({ windowStart: CONTEST_WINDOW_START }),
+      // C1 carousel telemetry. Allocated LAZILY: the schedule only exists after the generator has
+      // run at the choreo boundary, so it cannot be built here. Stays null when the carousel is off
+      // or was not cast — which is itself the cast-rate measurement.
+      carousel:            null,
     } : null;
     // ── SPEED-SOURCE per-race state (read-only; only allocated when --speed-source) ──
     // samples[prog] = [{ rank, index, effSpeed, product, factors…, saturation…, gapAhead, finishClamp }]
@@ -1153,15 +1169,33 @@ export function runSingleRace({
           // Gap-cap re-roll bias (SIM-ONLY; scheduled rolls only). Called ONLY when the flag is on, so
           // an off run never invokes the transform → byte-identical. Passes the length-scale context
           // (govLenScale/isOpen); the shared method computes the arc gaps + window internally.
-          const gapBiased = (GAP_REROLL && racePlanController)
-            ? racePlanController.computeGapBiasedTarget(
+          // ── ROLE-BIASED DICE (C1 Mechanism B) — evaluated FIRST, and it WINS. ──────────────────
+          // PRECEDENCE (explicit, per spec — no silent double-tilting): when a racer is a carousel
+          // participant with an authored role at this instant, the role tilt applies and the
+          // gap-reroll is SKIPPED for that racer at that roll. The two are directly opposed — an
+          // attacker that has just closed on the leader opens a hole BEHIND itself, which is the
+          // gap-reroll's down-tilt trigger, so the generic corrective would brake exactly the racer
+          // the carousel is authoring forward. Explicit intent beats generic correction; every
+          // non-participant, and every participant during a dwell, still gets the ordinary gap-reroll.
+          const roleBiased = racePlanController
+            ? racePlanController.computeRoleBiasedTarget(
                 r.index, biasedTarget,
                 BASE_SPEED_MIN / BASE_SPEED_MEAN,
                 BASE_SPEED_MAX / BASE_SPEED_MEAN,
-                racers, raceTs, raceProgress, govLenScale, isOpen,
-                lastRollDeadline // schedule's own realized-duration deadline (same basis as raceTs)
+                raceProgress
               )
-            : biasedTarget;
+            : { value: biasedTarget, biased: false };
+          const gapBiased = roleBiased.biased
+            ? roleBiased.value
+            : (GAP_REROLL && racePlanController)
+              ? racePlanController.computeGapBiasedTarget(
+                  r.index, biasedTarget,
+                  BASE_SPEED_MIN / BASE_SPEED_MEAN,
+                  BASE_SPEED_MAX / BASE_SPEED_MEAN,
+                  racers, raceTs, raceProgress, govLenScale, isOpen,
+                  lastRollDeadline // schedule's own realized-duration deadline (same basis as raceTs)
+                )
+              : biasedTarget;
           const newTarget   = Math.max(
             BASE_SPEED_MIN / BASE_SPEED_MEAN,
             Math.min(BASE_SPEED_MAX / BASE_SPEED_MEAN, gapBiased)
@@ -2085,6 +2119,18 @@ export function runSingleRace({
           // other observer here uses (arcT x govLenScale) — one shared definition, no duplicate arc
           // maths inside the observer.
           rp.frontBattle.observe(racers, raceProgress, raceTs, (aT, bT) => arcT(aT, bT, isOpen) * govLenScale);
+          // C1: authored-vs-completed handovers. The dwell threshold is the SAME derived value the
+          // schedule was built from (the servo slew), converted back to seconds here.
+          if (rp.carousel === null && racePlanController) {
+            const cp = racePlanController.getCarouselPlan();
+            if (cp) {
+              rp.carousel = makeCarouselTracker({
+                segments: cp.segments, order: cp.order,
+                dwellSec: DYNAMICS_OVERRIDES.trajectoryTransitionDuration,
+              });
+            }
+          }
+          if (rp.carousel) rp.carousel.observe(racers, raceProgress, raceTs);
         }
         // (1) One-shot at windowStart: the frontmost LIVE racer's identity + its lead over P2 (lengths).
         if (rp.leaderIdxAt090 === null && raceProgress >= RP_WINDOW_START) {
@@ -2433,8 +2479,16 @@ export function runSingleRace({
         // Sustained-P1-battle primitives over [choreoResolveB2, first finish]. contestWindowStart is echoed
         // so a record is self-describing — the window it was measured in is recoverable from the
         // file alone. classifyFrontBattle() turns these into the REAL P1 ACTION boolean downstream.
-        contestWindowStart:  CHOREO_RESOLVE_B2,
+        contestWindowStart:  CONTEST_WINDOW_START,
         frontBattle:         rp.frontBattle.result(),
+        // ── C1 carousel telemetry (null-safe when the feature is off) ──────────────────────────
+        // cast/reason/rejected answer "was it cast, and if not why"; handovers answer "did the servo
+        // deliver what was authored"; saturation is the naturalness number the sweep kills on (>50%).
+        carousel: racePlanController ? {
+          diag:       racePlanController.getCarouselDiag(),
+          handovers:  rp.carousel ? rp.carousel.result() : null,
+          telemetry:  racePlanController.getCarouselTelemetry(),
+        } : null,
       };
     }
 
@@ -3064,6 +3118,15 @@ if (isMain) {
               // Window END is derived from the harness's own lastRollDeadline (passed per-frame to the
               // transform); only the transition duration is needed in the plan.
               reRollTransitionDuration:  DYNAMICS_OVERRIDES.reRollTransitionDuration,
+              // Front act window + carousel (C1). trajectoryTransitionDuration is threaded so the
+              // plan can DERIVE the minimum authored dwell from the servo's own slew.
+              contestWindowStart:        CONTEST_WINDOW_START,
+              carouselEnabled:           CAROUSEL_ENABLED,
+              carouselMinParticipants:   CAROUSEL_MIN_PARTICIPANTS,
+              carouselAmplitudeRanks:    CAROUSEL_AMPLITUDE_RANKS,
+              carouselJitterPct:         CAROUSEL_JITTER_PCT,
+              carouselRoleBiasStrength:  CAROUSEL_ROLE_BIAS_STRENGTH,
+              trajectoryTransitionDuration: DYNAMICS_OVERRIDES.trajectoryTransitionDuration,
             }, seed);
             racePlanController = createTrajectoryController(plan);
             raceSollRankMap = plan._racerTargetRank;

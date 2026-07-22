@@ -5,6 +5,28 @@ Items ranked by urgency within each bucket. ✅ = done, 🔜 = next, ⏳ = waiti
 
 ---
 
+## Front Act / C1 — July 2026
+
+- ✅ **Gap-reroll branch-priority fix** — when both `gapBehind > G` and `gapAhead > G` the LARGER
+  imbalance now decides the tilt direction (ties keep the old gapBehind-first behaviour). The old
+  unconditional `gapBehind` return braked racers that had broken from the pack while still behind the
+  leader — the chase-suppression the small-G diagnostic measured at 6.6x. Regression tests pin both
+  the fixed case and the unchanged ones. **Consequence:** the confirmed `G=1.5 s=1.0` gap-reroll
+  numbers predate the fix and need re-measuring before they are quoted again.
+- ✅ **`contestWindowStart`** — the front act's own config key, read by both the front-battle observer
+  and the carousel schedule. Initialised to the shipped `choreoResolveB2` (0.8) so committed
+  baselines stay comparable.
+- ✅ **B1 Lead Carousel + role-biased scheduled dice** — built sim-first, default OFF, fingerprint
+  `72c3360fb75225ef` byte-identical. Browser wiring is a later separate step.
+- 🔜 **Carousel sweep** — its own spec. Note the shipped `contestWindowStart` (0.8) leaves too little
+  runway for a rotation, so the window start is itself a sweep dimension.
+
+Concept, both independent reviews, and the handover-budget re-analysis are tracked under
+`reports/proposals/`: `C1-LEAD-CAROUSEL-CONCEPT.md`, `CONCEPT-REVIEW-CC-CAROUSEL.md`,
+`CONCEPT-REVIEW-COPILOT-CAROUSEL.md`, `HANDOVER-BUDGET-REANALYSIS-CC.md`.
+
+---
+
 ## Race-Action Arc (feat/race-action) — June 2026
 
 Catch-up for the period since the last backlog refresh. Full per-commit detail is in

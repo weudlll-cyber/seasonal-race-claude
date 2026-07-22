@@ -13,7 +13,7 @@
 
 import { easeInOutCubic } from '../utils/mathUtils.js';
 import { sampleHeroCurve } from './heroChoreography.js';
-import { generateHeroCurves, GENERATOR_CONFIG } from './heroCurveGenerator.js';
+import { generateHeroCurves, GENERATOR_CONFIG, carouselRoleAt } from './heroCurveGenerator.js';
 import { arcT } from './raceLengths.js'; // shared lap-aware arc distance (gap-cap re-roll bias)
 
 // ── Mulberry32 PRNG (same algorithm as scripts/sim-fairness.mjs) ──────────────
@@ -340,6 +340,24 @@ export function createRacePlan(racers, finishT, targetDurationMs, config = {}, s
     // The deadline is PASSED IN per race (never re-derived here) — one duration basis, closed-track-safe.
     _reRollTransitionDurationMs:
       config.reRollTransitionDuration != null ? config.reRollTransitionDuration * 1000 : 0,
+    // ── FRONT ACT window + B1 LEAD CAROUSEL (C1; carouselEnabled false → nothing engages) ─────────
+    // contestWindowStart is the front act's OWN key. It falls back to choreoResolveB2 so a caller that
+    // predates the key (and the committed baselines measured under it) behaves exactly as before.
+    _contestWindowStart: config.contestWindowStart ?? config.choreoResolveB2 ?? 0.8,
+    _carouselEnabled: !!config.carouselEnabled,
+    _carouselMinParticipants: config.carouselMinParticipants ?? 3,
+    _carouselAmplitudeRanks: config.carouselAmplitudeRanks ?? 2,
+    _carouselJitterPct: config.carouselJitterPct ?? 0,
+    // Role-biased scheduled dice. 0 = OFF → computeRoleBiasedTarget() passes the draw through.
+    _carouselRoleBiasStrength: config.carouselRoleBiasStrength ?? 0,
+    // Minimum authored dwell at rank 1, DERIVED: the servo's own trajectory slew converted into
+    // progress. A hold shorter than the slew cannot be tracked, so the slew is the honest floor —
+    // never a picked constant. Falls back to the shipped 1.0 s when the caller omits it.
+    _carouselDwellProgress:
+      targetDurationMs > 0
+        ? (config.trajectoryTransitionDuration ?? 1.0) / (targetDurationMs / 1000)
+        : 0,
+    _carouselPlan: null, // filled by update() from the generator, when cast
   };
 }
 
@@ -407,6 +425,11 @@ export function createTrajectoryController(racePlan) {
   // measure how often that happens. TELEMETRY ONLY: never read back into a returned draw.
   let _gapDownTilts = 0; // gapBehind>G branch fired (toward SLOWER)
   let _gapUpTilts = 0; // gapAhead>G branch fired (toward FASTER; symmetric mode only)
+  // ── Carousel telemetry (C1). All stay 0 when the carousel is off. ──
+  let _roleUpTilts = 0; // scheduled rolls tilted FAST for the authored attacker
+  let _roleDownTilts = 0; // scheduled rolls tilted SLOW for the authored yielder
+  let _carouselSatFrames = 0; // participant-frames in W with trajectoryMult at either clamp
+  let _carouselWinFrames = 0; // participant-frames in W (the saturation denominator)
   let _gapDownAheadGtBehind = 0; // SMOKING GUN: a DOWN-tilt while gapAhead > gapBehind
   let _gapDownLeader = 0; // DOWN-tilts on the live leader (rank 1)
   let _gapDownChaser = 0; // DOWN-tilts on live ranks 2–5 (the chase group)
@@ -615,6 +638,15 @@ export function createTrajectoryController(racePlan) {
             b2AttackFinalRank: plan._b2AttackFinalRank,
             b2AttackProgress: plan._b2AttackProgress,
             b2AttackResolveProgress: plan._b2AttackResolveProgress,
+            // B1 lead carousel (C1). carouselEnabled false → the generator never enters the block,
+            // never advances `rng`, and the standard cast draws exactly what it always did.
+            // Every timing input is the LIVE plan value — no progress constant is introduced here.
+            carouselEnabled: plan._carouselEnabled,
+            carouselMinParticipants: plan._carouselMinParticipants,
+            carouselAmplitudeRanks: plan._carouselAmplitudeRanks,
+            carouselJitterPct: plan._carouselJitterPct,
+            contestWindowStart: plan._contestWindowStart,
+            carouselDwellProgress: plan._carouselDwellProgress,
           },
         });
         plan._heroCurves = new Map(gen.curves.map((c) => [c.index, c.curve]));
@@ -635,6 +667,11 @@ export function createTrajectoryController(racePlan) {
         // UNCONSUMED — kept as the prerequisite channel for the planned B4b faller shot, because b1Indices
         // (targetRank ≤ 5) structurally cannot carry a faller (targetRank > 5).
         plan._cameraPlan = gen.cameraPlan ?? null;
+        // C1: the carousel's runtime contract (segments + slot→racer order) for the role-biased dice
+        // and the saturation telemetry, plus the cast diagnosis (why it was or wasn't cast). Both are
+        // null when the feature is off.
+        plan._carouselPlan = gen.carouselPlan ?? null;
+        plan._carouselDiag = gen.carouselDiag ?? null;
         for (const r of racers) {
           r.isHeroChoreographed = plan._heroCurves.has(r.index);
           // Diagnostics-only tag for the eye-test hero-highlight (render-time). Read-only; never read by
@@ -779,6 +816,22 @@ export function createTrajectoryController(racePlan) {
       const noise = (rng() - 0.5) * 2 * plan._stochasticNoise;
       const rawTarget = clamp(1.0 + gain * (error / nActive) + noise, minMult, maxMult);
       _setTarget(r, rawTarget, elapsedMs);
+
+      // ── C1 saturation telemetry (the naturalness number; sweep kill > 50%) ──────────────────────
+      // Share of carousel-participant frames INSIDE the contest window whose applied trajectoryMult
+      // sits at either servo clamp. Reads r.trajectoryMult (the smoothed value actually multiplying
+      // speed), not the freshly-computed target, because naturalness is about what the racer DID.
+      // A racer pinned at a clamp is one the servo has run out of authority for.
+      if (
+        plan._carouselPlan &&
+        phaseProgress != null &&
+        phaseProgress >= plan._contestWindowStart &&
+        plan._carouselPlan.indices.includes(r.index)
+      ) {
+        _carouselWinFrames++;
+        const applied = tm(r);
+        if (applied >= maxMult - 1e-9 || applied <= minMult + 1e-9) _carouselSatFrames++;
+      }
 
       // Telemetry stays on rankError — measures exact-rank deviation, not blended error.
       _racerStepCount++;
@@ -959,7 +1012,13 @@ export function createTrajectoryController(racePlan) {
     const gapBehind = behind ? arcT(self.t, behind.t, isOpen) * lenScale : 0; // hole opened behind self
     const gapAhead = ahead ? arcT(ahead.t, self.t, isOpen) * lenScale : 0; // self dropped behind ahead
     const strength = plan._gapRerollStrength;
-    if (gapBehind > G) {
+    // BRANCH PRIORITY (correctness fix). When BOTH gaps exceed G the LARGER IMBALANCE decides the
+    // direction. Previously `gapBehind > G` returned unconditionally, so a racer that had broken from
+    // the pack — opening a hole behind itself while still far behind the leader — was tilted SLOWER,
+    // structurally suppressing the chase. The diagnostic found this misdirection firing 6.6x more
+    // often at small G, which is exactly where the span lever wants to operate. Ties keep the old
+    // gapBehind-first behaviour, so only the genuinely misdirected cases change.
+    if (gapBehind > G && gapBehind >= gapAhead) {
       const frac = Math.min(1, strength * (gapBehind - G));
       _gapBiasEvents++;
       _gapBiasByRacer.set(racerIndex, (_gapBiasByRacer.get(racerIndex) ?? 0) + 1);
@@ -972,6 +1031,9 @@ export function createTrajectoryController(racePlan) {
       else _gapDownPack++;
       return clamp(rawSample - frac * (rawSample - spreadMin), spreadMin, spreadMax); // toward SLOWER
     }
+    // In 'down' mode the up direction does not exist, so a racer whose gapAhead is the larger
+    // imbalance now receives NO tilt rather than a misdirected slow-down. That is the point of the
+    // fix: the old behaviour actively braked the chase it was meant to leave alone.
     if (plan._gapRerollMode === 'symmetric' && gapAhead > G) {
       const frac = Math.min(1, strength * (gapAhead - G));
       _gapBiasEvents++;
@@ -980,6 +1042,60 @@ export function createTrajectoryController(racePlan) {
       return clamp(rawSample + frac * (spreadMax - rawSample), spreadMin, spreadMax); // toward FASTER
     }
     return rawSample; // dead zone (≤ G) → bit-exact no-op
+  }
+
+  /**
+   * computeRoleBiasedTarget — ROLE-BIASED SCHEDULED DICE (C1 Mechanism B; default OFF).
+   *
+   * Same family and same fairness argument as computeGapBiasedTarget: at a racer's REGULAR scheduled
+   * re-roll the draw is tilted inside the honest ±8.1% band — never outside it, never an extra or
+   * early roll, cadence untouched. The difference is only WHAT selects the direction: here it is the
+   * carousel's authored ROLE at this instant, not a measured gap.
+   *
+   *   current attacker (climbing to rank 1) → tilted toward the FAST edge
+   *   current yielder  (handing the lead on) → tilted toward the SLOW edge
+   *   everyone else, and the whole dwell     → untouched, bit-exact
+   *
+   * This is the actuator the servo alone cannot be: the servo's authority is capped at
+   * trajectoryMult 1.10/0.85, and the measured leader draw (~1.066) already eats a third of that
+   * boost. Tilting the draw itself attacks the same budget from the other side.
+   *
+   * PRECEDENCE — explicit, no silent double-tilting. Role-bias WINS for a carousel participant and
+   * gap-reroll is skipped for that racer at that roll (the caller checks roleBiased first). The two
+   * would otherwise fight directly: an attacker that has just closed on the leader leaves a hole
+   * BEHIND itself, which is exactly the gap-reroll's down-tilt trigger — the generic corrective would
+   * brake the very racer the carousel is authoring forward. Where the carousel has an explicit
+   * intent for a racer, that intent governs; every non-participant still gets the ordinary gap-reroll.
+   *
+   * @param {number} racerIndex
+   * @param {number} rawSample     the honest draw (post pulk-bias)
+   * @param {number} spreadMin     honest band floor
+   * @param {number} spreadMax     honest band ceiling
+   * @param {number} phaseProgress leader-progress
+   * @returns {{value:number, biased:boolean, role:'attacker'|'yielder'|null}}
+   */
+  function computeRoleBiasedTarget(racerIndex, rawSample, spreadMin, spreadMax, phaseProgress) {
+    const none = { value: rawSample, biased: false, role: null };
+    const strength = plan._carouselRoleBiasStrength;
+    if (!(strength > 0) || !plan._carouselPlan || phaseProgress == null) return none;
+    const { attacker, yielder } = carouselRoleAt(plan._carouselPlan, phaseProgress);
+    if (racerIndex !== attacker && racerIndex !== yielder) return none;
+    // fraction-to-edge, clamped to the band exactly like the gap-reroll transform
+    const frac = Math.min(1, Math.max(0, strength));
+    if (racerIndex === attacker) {
+      _roleUpTilts++;
+      return {
+        value: clamp(rawSample + frac * (spreadMax - rawSample), spreadMin, spreadMax),
+        biased: true,
+        role: 'attacker',
+      };
+    }
+    _roleDownTilts++;
+    return {
+      value: clamp(rawSample - frac * (rawSample - spreadMin), spreadMin, spreadMax),
+      biased: true,
+      role: 'yielder',
+    };
   }
 
   /**
@@ -1104,6 +1220,17 @@ export function createTrajectoryController(racePlan) {
     update,
     computePulkBiasedTarget,
     computeGapBiasedTarget,
+    computeRoleBiasedTarget,
+    // C1 telemetry + the runtime carousel plan (null when not cast). Read-only accessors.
+    getCarouselPlan: () => plan._carouselPlan ?? null,
+    getCarouselDiag: () => plan._carouselDiag ?? null,
+    getCarouselTelemetry: () => ({
+      roleUpTilts: _roleUpTilts,
+      roleDownTilts: _roleDownTilts,
+      satFrames: _carouselSatFrames,
+      winFrames: _carouselWinFrames,
+      saturationShare: _carouselWinFrames > 0 ? _carouselSatFrames / _carouselWinFrames : null,
+    }),
     getPhase,
     getPhaseFractions,
     // Diagnostics-only: the retained index→role map (null until heroes are cast). Read by GovernorDiagHUD.

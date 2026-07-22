@@ -1577,3 +1577,193 @@ describe('createTrajectoryController — gap-cap re-roll bias', () => {
     expect(b).toBe(a);
   });
 });
+
+// ── Gap-reroll BRANCH PRIORITY (C1 correctness fix) ─────────────────────────────
+// When BOTH gaps exceed G the LARGER imbalance must decide the direction. The old code returned on
+// gapBehind unconditionally, so a racer that had broken from the pack — a hole behind it, but still
+// further behind the leader — was tilted SLOWER, structurally suppressing the chase.
+describe('createTrajectoryController — gap-reroll branch priority', () => {
+  const SMIN = 0.9,
+    SMAX = 1.1,
+    LS = 30,
+    ISOPEN = true;
+  function planWith(cfg = {}) {
+    return createRacePlan(
+      BASE_RACERS,
+      FINISH_T,
+      TARGET_DUR_MS,
+      {
+        gapRerollThresholdLengths: 2.0,
+        gapRerollMode: 'symmetric',
+        gapRerollStrength: 0.5,
+        reRollLastPositionPercent: 95,
+        reRollTransitionDuration: 3.0,
+        choreoOutcomeStart: 0.6,
+        stochasticNoise: 0,
+        ...cfg,
+      },
+      BASE_SEED
+    );
+  }
+  function field(selfT, gapBehindT, gapAheadT) {
+    const rs = [{ index: 0, t: selfT, finished: false }];
+    if (gapBehindT != null) rs.push({ index: 1, t: selfT - gapBehindT, finished: false });
+    if (gapAheadT != null) rs.push({ index: 2, t: selfT + gapAheadT, finished: false });
+    return rs;
+  }
+  const call = (ctrl, racers, raw, prog = 0.7, ms = 40_000, deadline = 90_000) =>
+    ctrl.computeGapBiasedTarget(0, raw, SMIN, SMAX, racers, ms, prog, LS, ISOPEN, deadline);
+
+  // THE REGRESSION: the exact case the small-G diagnostic found misdirected.
+  it('both gaps > G and gapAhead LARGER → tilts FASTER (was: slower)', () => {
+    const ctrl = createTrajectoryController(planWith());
+    // gapBehind = 0.1·30 = 3.0 > G(2.0); gapAhead = 0.2·30 = 6.0 > G and LARGER.
+    // The chaser is further off the leader than the hole it left → it must be lifted, not braked.
+    // frac = min(1, 0.5·(6−2)) = 1 → full lift to spreadMax.
+    expect(call(ctrl, field(0.5, 0.1, 0.2), 1.0)).toBeCloseTo(SMAX, 6);
+  });
+
+  it('both gaps > G and gapBehind LARGER → still tilts SLOWER (unchanged behaviour)', () => {
+    const ctrl = createTrajectoryController(planWith());
+    // gapBehind 6.0 > gapAhead 3.0 → the racer really has run away from the pack → brake.
+    expect(call(ctrl, field(0.5, 0.2, 0.1), 1.0)).toBeCloseTo(SMIN, 6);
+  });
+
+  it('ties keep the old gapBehind-first behaviour (only misdirected cases change)', () => {
+    const ctrl = createTrajectoryController(planWith());
+    // gapBehind == gapAhead == 3.0 → down-tilt, exactly as before the fix.
+    expect(call(ctrl, field(0.5, 0.1, 0.1), 1.0)).toBeCloseTo(0.95, 6);
+  });
+
+  it("'down' mode gives NO tilt when gapAhead is the larger imbalance", () => {
+    const ctrl = createTrajectoryController(planWith({ gapRerollMode: 'down' }));
+    // The up direction does not exist in down mode, so the correct action is to leave the chase
+    // alone rather than apply the misdirected brake the old code applied.
+    expect(call(ctrl, field(0.5, 0.1, 0.2), 1.0)).toBe(1.0);
+  });
+});
+
+// ── Role-biased scheduled dice (C1 Mechanism B) ─────────────────────────────────
+describe('createTrajectoryController — role-biased scheduled dice', () => {
+  const SMIN = 0.9,
+    SMAX = 1.1;
+  // A hand-built carousel plan: 3 participants, one segment boundary, climb then dwell.
+  const CAROUSEL_PLAN = {
+    K: 3,
+    order: [10, 11, 12], // slot → racer index
+    indices: [10, 11, 12],
+    segments: [
+      { start: 0.6, climbEnd: 0.64, end: 0.7, leader: 0 },
+      { start: 0.7, climbEnd: 0.74, end: 0.8, leader: 1 },
+      { start: 0.8, climbEnd: 0.84, end: 0.9, leader: 2 },
+    ],
+  };
+  function ctrlWith(strength) {
+    const plan = createRacePlan(
+      BASE_RACERS,
+      FINISH_T,
+      TARGET_DUR_MS,
+      {
+        carouselRoleBiasStrength: strength,
+        stochasticNoise: 0,
+      },
+      BASE_SEED
+    );
+    plan._carouselPlan = CAROUSEL_PLAN;
+    return createTrajectoryController(plan);
+  }
+  const call = (ctrl, idx, raw, prog) => ctrl.computeRoleBiasedTarget(idx, raw, SMIN, SMAX, prog);
+
+  it('strength 0 → bit-exact passthrough for everyone (the default)', () => {
+    const ctrl = ctrlWith(0);
+    for (const idx of [10, 11, 12]) {
+      const r = call(ctrl, idx, 1.0273, 0.72);
+      expect(r.value).toBe(1.0273);
+      expect(r.biased).toBe(false);
+    }
+  });
+
+  it('direction: attacker tilts toward the FAST edge, yielder toward the SLOW edge', () => {
+    const ctrl = ctrlWith(0.5);
+    // progress 0.72 is inside segment 1's CLIMB: baton passes from segment 0's leader (slot 0 =
+    // racer 10) to segment 1's leader (slot 1 = racer 11).
+    const attacker = call(ctrl, 11, 1.0, 0.72);
+    expect(attacker.role).toBe('attacker');
+    expect(attacker.value).toBeCloseTo(1.0 + 0.5 * (SMAX - 1.0), 6);
+    const yielder = call(ctrl, 10, 1.0, 0.72);
+    expect(yielder.role).toBe('yielder');
+    expect(yielder.value).toBeCloseTo(1.0 - 0.5 * (1.0 - SMIN), 6);
+  });
+
+  it('never leaves the honest band, even at strength 1 (and beyond)', () => {
+    const ctrl = ctrlWith(5);
+    expect(call(ctrl, 11, 1.0, 0.72).value).toBeCloseTo(SMAX, 6);
+    expect(call(ctrl, 10, 1.0, 0.72).value).toBeCloseTo(SMIN, 6);
+  });
+
+  it('no tilt during the DWELL — the hold is meant to be held, not fought over', () => {
+    const ctrl = ctrlWith(1);
+    // 0.76 is past segment 1's climbEnd (0.74) → dwell.
+    expect(call(ctrl, 11, 1.0, 0.76).biased).toBe(false);
+    expect(call(ctrl, 10, 1.0, 0.76).biased).toBe(false);
+  });
+
+  it('no tilt in the establishing segment — nobody has led yet', () => {
+    const ctrl = ctrlWith(1);
+    expect(call(ctrl, 10, 1.0, 0.62).biased).toBe(false);
+  });
+
+  it('non-participants are never tilted', () => {
+    const ctrl = ctrlWith(1);
+    expect(call(ctrl, 99, 1.0273, 0.72)).toEqual({ value: 1.0273, biased: false, role: null });
+  });
+
+  it('no carousel plan → passthrough (feature off / not cast)', () => {
+    const plan = createRacePlan(
+      BASE_RACERS,
+      FINISH_T,
+      TARGET_DUR_MS,
+      {
+        carouselRoleBiasStrength: 1,
+        stochasticNoise: 0,
+      },
+      BASE_SEED
+    );
+    const ctrl = createTrajectoryController(plan); // _carouselPlan stays null
+    expect(ctrl.computeRoleBiasedTarget(10, 1.0273, SMIN, SMAX, 0.72).biased).toBe(false);
+  });
+});
+
+// ── contestWindowStart plumbing ────────────────────────────────────────────────
+describe('createRacePlan — contestWindowStart', () => {
+  it('defaults to choreoResolveB2 so pre-key callers and committed baselines are unchanged', () => {
+    const plan = createRacePlan(
+      BASE_RACERS,
+      FINISH_T,
+      TARGET_DUR_MS,
+      { choreoResolveB2: 0.83 },
+      BASE_SEED
+    );
+    expect(plan._contestWindowStart).toBe(0.83);
+  });
+  it('once set it is independent of choreoResolveB2', () => {
+    const plan = createRacePlan(
+      BASE_RACERS,
+      FINISH_T,
+      TARGET_DUR_MS,
+      { choreoResolveB2: 0.83, contestWindowStart: 0.66 },
+      BASE_SEED
+    );
+    expect(plan._contestWindowStart).toBe(0.66);
+  });
+  it('the carousel dwell floor is DERIVED from the servo slew, not picked', () => {
+    const plan = createRacePlan(
+      BASE_RACERS,
+      FINISH_T,
+      TARGET_DUR_MS,
+      { trajectoryTransitionDuration: 1.0 },
+      BASE_SEED
+    );
+    expect(plan._carouselDwellProgress).toBeCloseTo(1.0 / (TARGET_DUR_MS / 1000), 9);
+  });
+});

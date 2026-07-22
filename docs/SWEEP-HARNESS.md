@@ -99,3 +99,46 @@ order) — stop and find it before trusting any number.
 The sim writes its run artifacts under repo ROOT (`--out` is resolved relative to ROOT), so scratch
 lands in `client/tmp/` rather than an external temp dir — a known hygiene limitation, not a per-sweep
 choice. Keep heavy raw output in `client/tmp/`; commit only the small distilled CSVs/summaries.
+
+## `exp-runaway-leader.mjs --p1-criteria` — which classifier condition blocks a race
+
+Pure POST-ANALYSIS: reads the per-seed `races-<arm>-<track>.csv` files a `--p1-contest` run already
+wrote and derives nothing that is not in them, so it needs **no sim run** and reproduces exactly from
+committed data.
+
+```
+node scripts/exp-runaway-leader.mjs --p1-criteria [--out=<results dir>]
+```
+
+`p1ContestRate` is a conjunction of four conditions, and a flat rate between two arms can hide an arm
+that improved three of them and still lost on the fourth. Two counts per condition:
+
+- **fail%** — share of races failing it (conditions overlap, so these do not sum to 100).
+- **sole** — races failing EXACTLY that one, i.e. the races a single change would flip.
+
+Writes `criterion-breakdown.md` + `criterion-breakdown.csv` next to the baseline. On the committed
+V0 / R97-ON baseline this is what identified `leadChangeCount < 3` as the wall (93% in both arms, sole
+blocker in 27 / 38 races) while proximity was the least binding term.
+
+### Front-act / carousel flags (C1)
+
+Passed straight through to the sim by any sweep mode; all default OFF so an arm that omits them is
+byte-identical to the shipped game:
+
+| flag | default | meaning |
+|---|---|---|
+| `--contestWindowStart` | 0.8 | front-act window start; read by BOTH the front-battle observer and the carousel schedule |
+| `--carouselEnabled` | false | B1 lead carousel master switch |
+| `--carouselMinParticipants` | 3 | below this many feasible participants the carousel is not cast |
+| `--carouselAmplitudeRanks` | 2 | rank swing per segment; participant count is capped at amplitude + 1 |
+| `--carouselJitterPct` | 0.15 | seeded jitter on segment timing (one-sided: only ever relaxes a climb) |
+| `--carouselRoleBiasStrength` | 0 | role-biased scheduled dice; 0 = off |
+
+Note that `--contestWindowStart` moves the MEASUREMENT window as well as the carousel schedule, by
+design (one key, one front act). An arm that changes it is not directly comparable to a baseline
+measured at a different value — state the value in the arm table.
+
+**Observed sensitivity (luger-hill, N=20, smoke only — not a sweep result):** at the shipped 0.8 the
+carousel never casts (`swing-too-slow-for-window`: the rotation needs about twice the runway that
+`[0.8, releaseProgress - 0.07]` provides). Around 0.62 it casts in roughly 60% of races; by 0.66 the
+window is already too short again. The viable band is narrow and is itself a sweep dimension.

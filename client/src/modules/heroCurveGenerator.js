@@ -85,6 +85,24 @@ export const GENERATOR_CONFIG = {
   b2AttackFinalRank: 10,
   b2AttackProgress: { start: 0.4, end: 0.7 },
   b2AttackResolveProgress: 0.85,
+  // ── B1 LEAD CAROUSEL (C1; default OFF → nothing below is reached → byte-identical) ─────────────
+  // Authored front handovers as BATON SEGMENTS through this same min-jerk machinery. Per segment one
+  // participant is authored to rank 1, the outgoing holder yields to the back of the rotation, and the
+  // rest hold their slots. See castCarousel() for the construction and the feasibility contract.
+  carouselEnabled: false,
+  carouselMinParticipants: 3,
+  carouselAmplitudeRanks: 2,
+  carouselJitterPct: 0.15,
+  // Window start for the front act. The LIVE value is threaded in from the plan (defaults.js
+  // contestWindowStart); this fallback exists only for direct/test calls.
+  contestWindowStart: 0.8,
+  // Minimum authored dwell at rank 1, in PROGRESS. Threaded in from the plan as
+  // (trajectoryTransitionDuration / raceDurationSec) — a hold shorter than the servo's own slew
+  // cannot be tracked, so the floor is DERIVED from the slew, never picked. Fallback for test calls.
+  carouselDwellProgress: 0.02,
+  // The last authored handover must COMPLETE this much progress before releaseProgress, so the field
+  // is level when the release hands the finish to natural speed and the winner stays emergent.
+  carouselFinalMarginProgress: 0.07,
 };
 
 // ── Band helpers (derived from the shared BAND_EDGES constant — single source for the edges) ────
@@ -383,13 +401,17 @@ export function castHeroes(
   drama,
   finishT,
   seed,
-  config = GENERATOR_CONFIG
+  config = GENERATOR_CONFIG,
+  preUsed = null
 ) {
   const n = postChaos.length;
   const stateOf = new Map(postChaos.map((p) => [p.index, p]));
   const winnerIdx = [...finalRanks.entries()].find(([, r]) => r === 1)?.[0];
   const cast = [];
-  const used = new Set();
+  // preUsed = racers already claimed by the carousel; they must not also receive a standard hero
+  // curve or two mechanisms would author the same racer's front position. Empty/null (the shipped
+  // path) leaves this exactly as before.
+  const used = new Set(preUsed ?? []);
 
   const addSolo = (index, role, finalRank, peakRank) => {
     const state = stateOf.get(index);
@@ -504,6 +526,281 @@ export function castHeroes(
   return cast;
 }
 
+// ════════════════════════════════════════════════════════════════════════════════════════════════
+// B1 LEAD CAROUSEL (C1) — authored front handovers as BATON SEGMENTS.
+//
+// WHY THIS SHAPE. The measured blocker is leadChangeCount (<3 in 93% of races): the field is already
+// at the front (>=3 racers within 3 lengths for half the window in most races) but rank 1 never
+// changes hands, because rank 1 is nobody's authored target — B1 heroes resolve into a static cluster
+// starting at rank 2 (see castHeroes below). The carousel makes rank 1 a TIME-SHARED target.
+//
+// THE ROTATION IS A PERMUTATION, WHICH IS WHERE THE FAIRNESS COMES FROM. K participants occupy slots
+// 1..K; in segment s the slot of participant p is `1 + ((p - leaderOf(s)) mod K)`. That is a cyclic
+// permutation: the outgoing leader goes to the BACK (slot K, a swing of K-1 = the amplitude) and
+// everyone else moves up one. Every waypoint is therefore in [1, K] ⊆ [1, BAND_EDGES[0]], so the
+// carousel can only ever permute B1 occupants among B1 ranks — band-reach is invariant BY
+// CONSTRUCTION, not by a check that could be tuned away.
+//
+// TWO HARD INVARIANTS, both enforced in castCarousel:
+//   • K >= carouselMinParticipants (3). A two-racer ping-pong produces lead CHANGES but only two
+//     distinct leaders, which cannot satisfy the classifier — so it is not cast at all.
+//   • segments >= K, i.e. at least one FULL rotation, so every participant leads at least once and
+//     distinctLeaders >= K follows structurally rather than by luck.
+//
+// AMPLITUDE. K = amplitude + 1, capped at carouselAmplitudeRanks + 1. The servo is proportional only
+// within ~2 ranks of error (gain 2.0 / nActive 40 reaches maxMult 1.10 at error 2 exactly); past that
+// it saturates and the authored shape stops reaching the track. A 2-rank amplitude is the widest
+// swing that the actuator can still TRACK rather than merely clamp against.
+//
+// FEASIBILITY IS REAL, NEVER BYPASSED. The climb span per handover is DERIVED from the participants'
+// own density-based rank-rate — `minJerkPeakFactor * amplitude / maxRankRate`, using the WEAKEST
+// participant so every emitted curve is feasible — and the finished curves are then run through the
+// same checkFeasible() every other hero curve faces. A carousel that cannot fit a full rotation into
+// the window at a feasible climb rate is NOT CAST, and the reason is recorded in `rejected` so a
+// zero cast-rate is legible in telemetry instead of looking like a silent no-op.
+// ════════════════════════════════════════════════════════════════════════════════════════════════
+
+/**
+ * carouselClimbSpan — the progress a single amplitude-wide swing needs to stay inside the density
+ * rank-rate, allowing for the min-jerk PEAK slope (~1.7x the segment average).
+ * @returns {number} required climb span in progress; Infinity when the rate is non-positive
+ */
+export function carouselClimbSpan(amplitude, maxRankRate, config = GENERATOR_CONFIG) {
+  if (!(maxRankRate > 0)) return Infinity;
+  return (config.minJerkPeakFactor * Math.abs(amplitude)) / maxRankRate;
+}
+
+/**
+ * carouselSlotOf — participant p's authored rank during segment s. The cyclic permutation described
+ * above; leaderOf(s) = s mod K, so slot 1 rotates through every participant in turn.
+ */
+export function carouselSlotOf(p, s, K) {
+  return 1 + ((((p - s) % K) + K) % K);
+}
+
+/**
+ * carouselSchedule — segment boundaries across [windowStart, windowEnd].
+ *
+ * Each segment is a CLIMB (the handover itself) followed by a DWELL (the incoming leader holds rank
+ * 1 long enough for the hold to be real and to out-last the servo's own transition). Boundaries and
+ * the climb/dwell split carry seeded jitter so a high-duty carousel does not read as a metronome.
+ *
+ * NOTE ON "AMPLITUDE JITTER": the rank amplitude is an INTEGER fixed by the permutation (jittering it
+ * would break the slot algebra and with it the band-reach-by-construction property), so the jitter
+ * applies to segment timing and to how aggressive each climb is (its span) — the observable
+ * rank-RATE — rather than to the rank distance itself.
+ *
+ * @returns {{segments: Array<{start:number, climbEnd:number, end:number, leader:number}>}|null}
+ *          null when a full rotation does not fit
+ */
+export function carouselSchedule({
+  windowStart,
+  windowEnd,
+  K,
+  climbSpan,
+  dwellSpan,
+  jitterPct = 0,
+  seed = 0,
+}) {
+  const span = windowEnd - windowStart;
+  const segLen = climbSpan + dwellSpan;
+  if (!(segLen > 0) || !(span > 0)) return null;
+  const S = Math.floor(span / segLen);
+  if (S < K) return null; // less than one full rotation → distinctLeaders >= K not structural
+  const rng = mulberry32(((seed >>> 0) ^ 0xca7011e5) >>> 0);
+  const segments = [];
+  // Spread the slack evenly rather than leaving a tail: segments share the whole window.
+  const actualSeg = span / S;
+  for (let s = 0; s < S; s++) {
+    const start = windowStart + s * actualSeg;
+    const end = windowStart + (s + 1) * actualSeg;
+    // Jitter the climb/dwell split, never the segment boundaries themselves — boundaries must stay
+    // shared between participants or the permutation would tear.
+    //
+    // ONE-SIDED BY NECESSITY: climbSpan is the MINIMUM span this swing needs to stay inside the
+    // density rank-rate, so jitter may only ever LENGTHEN a climb. A two-sided jitter would emit
+    // segments steeper than the very feasibility budget they were derived from, and the curves would
+    // then fail checkFeasible and tear the rotation. Slack above the minimum is what gets varied.
+    const climbMin = climbSpan;
+    const climbMax = Math.max(climbMin, actualSeg - dwellSpan);
+    const j = jitterPct > 0 ? rng() * jitterPct : 0;
+    const climb = clamp(climbMin + (climbMax - climbMin) * j, climbMin, climbMax);
+    segments.push({ start, climbEnd: Math.min(start + climb, end), end, leader: s % K });
+  }
+  return { segments };
+}
+
+/**
+ * carouselWaypoints — one participant's authored rank track across the whole schedule.
+ *
+ * Emits a DWELL PLATEAU per segment: (climbEnd, slot) then (end, slot). The min-jerk sampler then
+ * draws the handover itself between (end_s, slot_s) and (climbEnd_{s+1}, slot_{s+1}). The first
+ * point is the usual placeholder that anchorHeroCurve replaces with the racer's real state.
+ */
+export function carouselWaypoints(p, segments, K, config = GENERATOR_CONFIG) {
+  const slot0 = carouselSlotOf(p, 0, K);
+  const wp = [{ progress: config.anchorProgress, rank: slot0 }];
+  // EXPLICIT LEAD-IN. anchorHeroCurve replaces the placeholder above with the racer's REAL rank at
+  // the choreo boundary, which may be far from its opening slot. Without a waypoint at the window
+  // start the curve has to cover that whole approach and then flatten instantly into the first
+  // dwell, and the quintic corners hard enough there to fail checkFeasible. This point gives the
+  // approach the entire [anchor, windowStart] span and lets it arrive settled.
+  if (segments.length && segments[0].end > config.anchorProgress) {
+    wp.push({ progress: segments[0].end, rank: slot0 });
+  }
+  for (const seg of segments.slice(1)) {
+    const slot = carouselSlotOf(p, seg.leader, K);
+    wp.push({ progress: seg.climbEnd, rank: slot });
+    wp.push({ progress: seg.end, rank: slot });
+  }
+  return wp;
+}
+
+/**
+ * castCarousel — pick the participants, build the schedule, emit anchored curves.
+ *
+ * Participants are B1 finishers, ordered front-most post-chaos first (a shorter move to their
+ * starting slot is a more feasible one), jittered by the seeded rng for anti-repetition, then
+ * FEASIBILITY-FILTERED: a candidate whose density rank-rate cannot support an amplitude swing inside
+ * the window is dropped with a recorded reason. Deliberately independent of choreoIntensity — the
+ * carousel must not be hostage to an unrelated slider — so it selects from the whole B1 pool rather
+ * than from the nHeroes budget.
+ *
+ * @returns {{members: Array, segments: Array, rejected: Array, reason: string|null}}
+ *          members empty + reason set when the carousel is not cast (a clean fallthrough).
+ */
+export function castCarousel(rng, postChaos, finalRanks, finishT, seed, config = GENERATOR_CONFIG) {
+  const rejected = [];
+  const out = (reason) => ({ members: [], segments: [], rejected, reason });
+  const minK = Math.max(3, Math.round(config.carouselMinParticipants ?? 3));
+  const amplitude = Math.max(1, Math.round(config.carouselAmplitudeRanks ?? 2));
+  const maxK = Math.min(amplitude + 1, BAND_EDGES[0]);
+  if (maxK < minK) return out('amplitude-below-min-participants');
+
+  const windowStart = config.contestWindowStart;
+  const windowEnd = config.releaseProgress - (config.carouselFinalMarginProgress ?? 0);
+  if (!(windowEnd > windowStart)) return out('window-empty');
+
+  // Candidate pool: B1 finishers, front-most first, seeded jitter to break ties across races.
+  const pool = postChaos
+    .filter((p) => (finalRanks.get(p.index) ?? Infinity) <= BAND_EDGES[0])
+    .map((p) => ({ ...p, feas: racerFeasibility(p, postChaos, finishT, config), key: rng() }))
+    .sort((a, b) => a.rank - b.rank || a.key - b.key);
+  if (pool.length < minK) return out('b1-pool-too-small');
+
+  // Feasibility filter: the candidate must be able to swing `amplitude` ranks inside the window at
+  // its own density rank-rate, AND reach its starting slot from where it actually is.
+  const viable = [];
+  for (const c of pool) {
+    const need = carouselClimbSpan(amplitude, c.feas.maxRankRate, config);
+    if (!isFinite(need) || need <= 0) {
+      rejected.push({ index: c.index, reason: 'rank-rate-zero', maxRankRate: c.feas.maxRankRate });
+      continue;
+    }
+    if (need * minK > windowEnd - windowStart) {
+      rejected.push({
+        index: c.index,
+        reason: 'swing-too-slow-for-window',
+        requiredClimbSpan: +need.toFixed(4),
+      });
+      continue;
+    }
+    if (maxK < c.feas.bestRank) {
+      rejected.push({
+        index: c.index,
+        reason: 'cannot-reach-front-slots',
+        bestRank: c.feas.bestRank,
+      });
+      continue;
+    }
+    viable.push(c);
+    if (viable.length >= maxK) break;
+  }
+  if (viable.length < minK) return out('too-few-feasible');
+
+  const K = viable.length;
+  // The schedule must be feasible for the WEAKEST participant, else its curve would be emitted and
+  // then silently fail checkFeasible below — the "dead curve" the spec forbids.
+  const climbSpan = Math.max(
+    ...viable.map((c) => carouselClimbSpan(amplitude, c.feas.maxRankRate, config))
+  );
+  const dwellSpan = Math.max(0, config.carouselDwellProgress ?? 0);
+  const sched = carouselSchedule({
+    windowStart,
+    windowEnd,
+    K,
+    climbSpan,
+    dwellSpan,
+    jitterPct: config.carouselJitterPct ?? 0,
+    seed,
+  });
+  if (!sched) return out('window-too-short-for-rotation');
+
+  // LEAD-IN feasibility, now that the schedule exists. The approach from where a racer ACTUALLY is
+  // to its opening slot must fit the density rank-rate. The deadline is the end of segment 0, not
+  // the window start: segment 0 is the ESTABLISHING segment — no handover is counted out of it
+  // (authoredHandovers = segments - 1), so it is exactly the slack the approach is entitled to.
+  // A participant that cannot settle in by then is rejected here rather than emitting a curve that
+  // would fail checkFeasible later and tear the rotation.
+  const leadInDeadline = sched.segments[0].end;
+  const leadInSpan = leadInDeadline - config.anchorProgress;
+  const tooSteep = [];
+  for (let p = 0; p < viable.length; p++) {
+    const c = viable[p];
+    const need = carouselClimbSpan(
+      Math.abs(c.rank - carouselSlotOf(p, 0, K)),
+      c.feas.maxRankRate,
+      config
+    );
+    if (!(leadInSpan > 0) || need > leadInSpan) {
+      tooSteep.push({
+        index: c.index,
+        reason: 'lead-in-too-steep',
+        requiredLeadInSpan: +need.toFixed(4),
+      });
+    }
+  }
+  if (tooSteep.length) {
+    rejected.push(...tooSteep);
+    // Re-selecting a smaller rotation here would change K, hence climbSpan, hence the schedule —
+    // a loop with no clean fixed point. The honest move is to decline this race and say why.
+    return out('lead-in-too-steep');
+  }
+
+  const members = viable.map((c, p) => ({
+    index: c.index,
+    role: 'carousel',
+    slotOrder: p,
+    maxRankRate: c.feas.maxRankRate,
+    waypoints: carouselWaypoints(p, sched.segments, K, config),
+  }));
+  return { members, segments: sched.segments, rejected, reason: null, K, climbSpan, dwellSpan };
+}
+
+/**
+ * carouselRoleAt — who is attacking and who is yielding at this progress, for the role-biased dice.
+ * Inside a segment's CLIMB the incoming leader is the attacker and the outgoing one the yielder;
+ * during the DWELL nobody is tilted (the hold is meant to be held, not fought over).
+ *
+ * @returns {{attacker:number|null, yielder:number|null}} racer indices
+ */
+export function carouselRoleAt(plan, progress) {
+  const none = { attacker: null, yielder: null };
+  if (!plan || !plan.segments || !plan.segments.length) return none;
+  const { segments, order, K } = plan;
+  for (let s = 0; s < segments.length; s++) {
+    const seg = segments[s];
+    if (progress < seg.start || progress >= seg.end) continue;
+    if (progress >= seg.climbEnd) return none; // dwell: no tilt
+    // The climb into segment s hands the baton from segment s-1's leader to segment s's leader.
+    if (s === 0) return none; // nobody has led yet — the first segment only establishes the order
+    const inLeader = segments[s].leader;
+    const outLeader = segments[s - 1].leader;
+    return { attacker: order[inLeader] ?? null, yielder: order[outLeader] ?? null };
+  }
+  return none;
+}
+
 // ── Camera plan (A8): forward-looking cast + roles + beat timing for the camera director, shaped to
 // EXTEND the existing updateRacePlan(b1Indices) channel (backward-compatible Set + richer beats). ──
 export function buildCameraPlan(cast, curves, finalRanks) {
@@ -542,9 +839,66 @@ export function generateHeroCurves({
   );
   const drama = intensityToDrama(realizedIntensity, config);
 
-  const cast = castHeroes(rng, postChaos, finalRanks, drama, finishT, seed, config);
+  // ── B1 LEAD CAROUSEL (default OFF) ───────────────────────────────────────────────────────────
+  // Cast BEFORE the standard heroes so its participants can be excluded from that cast. When the
+  // flag is off this block is never entered, so `rng` is not advanced and the standard cast draws
+  // exactly the values it always did → byte-identical.
+  // The carousel is cast AND fully validated before the standard heroes, so castHeroes can be told
+  // exactly which racers are already claimed. Validating afterwards would leave a torn rotation's
+  // participants excluded from the standard cast with no curve of their own.
+  let carousel = null;
+  let carouselCurves = [];
+  if (config.carouselEnabled) {
+    carousel = castCarousel(rng, postChaos, finalRanks, finishT, seed, config);
+    if (carousel.members.length) {
+      // Same anchoring and the SAME checkFeasible every other hero curve faces — no bypass. A
+      // participant that still fails is RECORDED, and the whole carousel is then abandoned rather
+      // than run with a gap: a missing slot breaks the permutation, and with it both the
+      // band-reach-by-construction property and the structural distinctLeaders >= K.
+      const anchored = [];
+      for (const m of carousel.members) {
+        const state = postChaos.find((p) => p.index === m.index);
+        if (!state) {
+          carousel.rejected.push({ index: m.index, reason: 'no-post-chaos-state' });
+          continue;
+        }
+        const curve = anchorHeroCurve(
+          makeHeroCurve(m.waypoints),
+          config.anchorProgress,
+          state.rank,
+          state.vel ?? 0
+        );
+        if (!checkFeasible(curve, m.maxRankRate)) {
+          carousel.rejected.push({ index: m.index, reason: 'anchored-curve-infeasible' });
+          continue;
+        }
+        anchored.push({ index: m.index, role: 'carousel', curve, slotOrder: m.slotOrder });
+      }
+      if (anchored.length === carousel.members.length) {
+        carouselCurves = anchored;
+      } else {
+        carousel = {
+          ...carousel,
+          members: [],
+          segments: [],
+          reason: 'rotation-torn-by-feasibility',
+        };
+      }
+    }
+  }
 
-  const curves = [];
+  const cast = castHeroes(
+    rng,
+    postChaos,
+    finalRanks,
+    drama,
+    finishT,
+    seed,
+    config,
+    carouselCurves.length ? carouselCurves.map((c) => c.index) : null
+  );
+
+  const curves = [...carouselCurves];
   for (const member of cast) {
     const state = postChaos.find((p) => p.index === member.index);
     if (!state) continue;
@@ -586,5 +940,37 @@ export function generateHeroCurves({
   }
 
   const cameraPlan = buildCameraPlan(cast, curves, finalRanks);
-  return { heroCast: cast, curves, cameraPlan, finalRanks, requestedIntensity, realizedIntensity };
+  // carouselPlan: the runtime contract for the role-biased dice + telemetry. `order` maps a rotation
+  // slot to a racer index, so carouselRoleAt() can name the attacker/yielder at any progress. Null
+  // whenever the carousel is off or was not cast (the reason is carried for telemetry).
+  const carouselPlan =
+    carousel && carousel.members.length
+      ? {
+          segments: carousel.segments,
+          order: carouselCurves
+            .slice()
+            .sort((a, b) => a.slotOrder - b.slotOrder)
+            .map((c) => c.index),
+          K: carousel.K,
+          indices: carouselCurves.map((c) => c.index),
+        }
+      : null;
+  return {
+    heroCast: cast,
+    curves,
+    cameraPlan,
+    finalRanks,
+    requestedIntensity,
+    realizedIntensity,
+    carouselPlan,
+    carouselDiag: carousel
+      ? {
+          cast: !!carouselPlan,
+          reason: carousel.reason,
+          rejected: carousel.rejected,
+          segments: carousel.segments?.length ?? 0,
+          K: carousel.K ?? 0,
+        }
+      : null,
+  };
 }

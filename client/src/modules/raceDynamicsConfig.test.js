@@ -65,6 +65,13 @@ describe('DEFAULT_RACE_DYNAMICS_CONFIG', () => {
       choreoResolveB4: 0.65,
       choreoResolveB5: 0.6,
       choreoOutcomeStart: 0.6, // 0.6 shipped 2026-07-17 (SWEEP 2: later PULK end; valid range widened to [0.25,0.60])
+      // Front act window + B1 lead carousel (C1). All OFF/neutral by default.
+      contestWindowStart: 0.8, // initialised to the shipped choreoResolveB2 so baselines stay comparable
+      carouselEnabled: false,
+      carouselMinParticipants: 3,
+      carouselAmplitudeRanks: 2,
+      carouselJitterPct: 0.15,
+      carouselRoleBiasStrength: 0, // 0 = role-biased dice OFF
       pulkFrontPool: 8,
       phaseSplitBonusEnabled: true,
       areaBonusEarly: 1.0,
@@ -125,7 +132,13 @@ describe('DEFAULT_RACE_DYNAMICS_CONFIG', () => {
 
   it('all numeric defaults are positive; PULK-phase bonuses default 0 (off during PULK)', () => {
     // The winning phase-split turns the area/row bonuses OFF during the PULK window (0 is valid).
-    const offAtZero = new Set(['areaBonusPulk', 'rowBonusPulk', 'pulkBoostHeadroom']);
+    // carouselRoleBiasStrength is the role-biased dice OFF switch — 0 is its shipped, valid value.
+    const offAtZero = new Set([
+      'areaBonusPulk',
+      'rowBonusPulk',
+      'pulkBoostHeadroom',
+      'carouselRoleBiasStrength',
+    ]);
     for (const [key, val] of Object.entries(DEFAULT_RACE_DYNAMICS_CONFIG)) {
       if (typeof val !== 'number') continue;
       if (offAtZero.has(key)) expect(val).toBeGreaterThanOrEqual(0);
@@ -215,6 +228,35 @@ describe('loadRaceDynamicsConfig', () => {
     expect(loadRaceDynamicsConfig()).toEqual(DEFAULT_RACE_DYNAMICS_CONFIG);
     storageGet.mockReturnValue({ ...DEFAULT_RACE_DYNAMICS_CONFIG, choreoResolveB3: 0 });
     expect(loadRaceDynamicsConfig()).toEqual(DEFAULT_RACE_DYNAMICS_CONFIG);
+  });
+
+  it('returns defaults when contestWindowStart sits outside the act it measures', () => {
+    // Must be after OUTCOME begins and strictly before the release, else the window is empty or
+    // spans a phase the carousel cannot act in.
+    for (const bad of [0.5, 0.6, 0.97, 0.99]) {
+      storageGet.mockReturnValue({ ...DEFAULT_RACE_DYNAMICS_CONFIG, contestWindowStart: bad });
+      expect(loadRaceDynamicsConfig()).toEqual(DEFAULT_RACE_DYNAMICS_CONFIG);
+    }
+  });
+
+  it('accepts a contestWindowStart inside the act', () => {
+    storageGet.mockReturnValue({ ...DEFAULT_RACE_DYNAMICS_CONFIG, contestWindowStart: 0.7 });
+    expect(loadRaceDynamicsConfig().contestWindowStart).toBe(0.7);
+  });
+
+  it('returns defaults on invalid carousel config', () => {
+    const bad = [
+      { carouselEnabled: 'yes' },
+      { carouselMinParticipants: 2 }, // a 2-racer ping-pong can never pass the classifier
+      { carouselAmplitudeRanks: 0 },
+      { carouselJitterPct: -0.1 },
+      { carouselJitterPct: 1.5 },
+      { carouselRoleBiasStrength: -1 },
+    ];
+    for (const over of bad) {
+      storageGet.mockReturnValue({ ...DEFAULT_RACE_DYNAMICS_CONFIG, ...over });
+      expect(loadRaceDynamicsConfig()).toEqual(DEFAULT_RACE_DYNAMICS_CONFIG);
+    }
   });
 
   it('returns defaults when choreoOutcomeStart is out of [0.25, 0.60]', () => {
