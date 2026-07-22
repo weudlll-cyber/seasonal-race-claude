@@ -676,6 +676,157 @@ if (argv.includes('--gapreroll-confirm')) {
 }
 
 // ════════════════════════════════════════════════════════════════════════════════
+// SMALL-G CHASE-SUPPRESSION DIAGNOSTIC (--smallg-diag) — searound + mountainstreet, N=50, 3 arms.
+// Question: computeGapBiasedTarget's gapBehind>G branch RETURNS before the gapAhead>G check. At a small
+// G the owner's slider setting (0.75) should make chasers that break from the pack open a >G hole BEHIND
+// themselves and get DOWN-tilted although they are far behind the leader — the chase is structurally
+// suppressed, so escapes could GROW vs OFF. The smoking gun is gapDownAheadGtBehind: DOWN-tilts applied
+// to a racer whose gapAhead already exceeded its gapBehind. Read-only measurement; the branch-fire
+// counters are pure telemetry (fingerprint byte-identical).
+// ════════════════════════════════════════════════════════════════════════════════
+if (argv.includes('--smallg-diag')) {
+  const OUT_D = join(OUT_ABS, 'smallG-diag');
+  mkdirSync(OUT_D, { recursive: true });
+  mkdirSync(TMP_ABS, { recursive: true });
+  const TRACKS = ONLY ? [ONLY] : ['searound', 'mountainstreet'];
+  const TRK = TRACKS.map((id) => { const s = trackSeed(id); return { id, racer: s.defaultRacerTypeId, closed: !!s.closed }; });
+  // STOP gate: OFF must reproduce the confirm-n200 V0 baseline on exactly these seeds (1..50).
+  const KNOWN50 = { searound: 14, mountainstreet: 10 };
+  const ARMS = [
+    { name: 'OFF', gr: false },
+    { name: 'G15', gr: true, mode: 'symmetric', G: 1.5, s: 1.0 },
+    { name: 'G075', gr: true, mode: 'symmetric', G: 0.75, s: 1.0 },
+  ];
+  const store = {}; // store[arm][track]
+
+  async function runOne(arm, track) {
+    const outAbs = join(TMP_ABS, `smallg__${arm.name}__${track.id}`);
+    const args = ['scripts/sim-fairness.mjs', `--track=${track.id}`, `--racer=${track.racer}`,
+      `--seed=${SEED}`, `--races=${RACES}`, `--dur=${DUR}`, '--runaway-parade', `--out=${toSimOut(outAbs)}`];
+    if (arm.gr) args.push(`--gapRerollThresholdLengths=${arm.G}`, `--gapRerollMode=${arm.mode}`, `--gapRerollStrength=${arm.s}`);
+    await pExecFile(process.execPath, args, { cwd: ROOT, maxBuffer: 512 * 1024 * 1024 });
+    const rp = JSON.parse(readFileSync(join(outAbs, 'runaway-parade.json'), 'utf8'));
+    const fd = JSON.parse(readFileSync(join(outAbs, 'fairness-data.json'), 'utf8'));
+    const nat = (fd.results || [])[0]?.avgNaturalness || {};
+    const bySeed = {}; let runaway = 0, parade = 0; const gaps = [];
+    for (const rec of rp.races) {
+      const c = classifyRace(rec.runawayParade, D);
+      const g = rec.runawayParade.leaderGapP2At090Len;
+      bySeed[rec.seed] = { runaway: c.runawayWinner, parade: c.paradeFinish, gap090: g, within3: rec.runawayParade.within3P1At090 };
+      if (c.runawayWinner) runaway++; if (c.paradeFinish) parade++;
+      if (g != null) gaps.push(g); // null = lone survivor (Infinity), excluded from the mean
+    }
+    return {
+      bySeed,
+      agg: { arm: arm.name, track: track.id, n: rp.races.length, runaway, parade,
+        runawayRate: runaway / rp.races.length, paradeRate: parade / rp.races.length,
+        gap090Mean: mean(gaps), gap090Med: percentile(gaps, 0.5), gap090N: gaps.length,
+        windowRolls: nat.gapWindowRolls ?? 0, biasedRolls: nat.gapBiasedRolls ?? 0,
+        downTilts: nat.gapDownTilts ?? 0, upTilts: nat.gapUpTilts ?? 0,
+        smokingGun: nat.gapDownAheadGtBehind ?? 0,
+        downLeader: nat.gapDownLeader ?? 0, downChaser: nat.gapDownChaser ?? 0, downPack: nat.gapDownPack ?? 0,
+        downGapAheadMean: nat.gapDownGapAheadMean ?? 0, downGapBehindMean: nat.gapDownGapBehindMean ?? 0 },
+    };
+  }
+
+  const t0 = Date.now();
+  console.log(`\n=== smallg-diag === ${ARMS.length} arms × ${TRK.length} tracks × N=${RACES} (seed=${SEED}, dur=${DUR}s), jobs=${JOBS}`);
+  const jobs = ARMS.flatMap((a) => TRK.map((t) => ({ a, t })));
+  for (const a of ARMS) store[a.name] = {};
+  let nx = 0, dn = 0;
+  async function w() {
+    while (nx < jobs.length) {
+      const i = nx++; const { a, t } = jobs[i];
+      const r = await runOne(a, t);
+      store[a.name][t.id] = r; dn++;
+      console.log(`  [${dn}/${jobs.length}] ${a.name.padEnd(5)} ${t.id.padEnd(15)} runaway=${r.agg.runaway}/${r.agg.n} down=${r.agg.downTilts} up=${r.agg.upTilts} smokingGun=${r.agg.smokingGun}`);
+    }
+  }
+  await Promise.all(Array.from({ length: Math.min(JOBS, jobs.length) }, w));
+
+  // ── STOP gate: OFF reproduces the known per-track baselines on these seeds ──
+  const gateFails = [];
+  for (const t of TRK) {
+    if (KNOWN50[t.id] == null || RACES !== 50 || SEED !== 1) continue;
+    const got = store.OFF[t.id].agg.runaway;
+    if (got !== KNOWN50[t.id]) gateFails.push(`${t.id}: OFF runaway ${got} (baseline ${KNOWN50[t.id]} on seeds 1–50)`);
+  }
+  const gateChecked = TRK.filter((t) => KNOWN50[t.id] != null).length > 0 && RACES === 50 && SEED === 1;
+
+  // ── CSVs ──
+  const ACOLS = ['arm', 'track', 'n', 'runaway', 'runawayRate', 'parade', 'gap090Mean', 'gap090Med', 'gap090N',
+    'windowRolls', 'biasedRolls', 'downTilts', 'upTilts', 'smokingGun', 'downLeader', 'downChaser', 'downPack',
+    'downGapAheadMean', 'downGapBehindMean'];
+  const aggRows = ARMS.flatMap((a) => TRK.map((t) => store[a.name][t.id].agg));
+  writeFileSync(join(OUT_D, 'per-arm-track.csv'),
+    [ACOLS.join(','), ...aggRows.map((r) => ACOLS.map((c) => (r[c] == null ? '' : typeof r[c] === 'number' ? +Number(r[c]).toFixed(4) : r[c])).join(','))].join('\n') + '\n');
+  const RCOLS = ['arm', 'track', 'seed', 'runaway', 'parade', 'gap090', 'within3'];
+  for (const a of ARMS) for (const t of TRK) {
+    const bs = store[a.name][t.id].bySeed;
+    const rows = Object.keys(bs).map(Number).sort((x, y) => x - y);
+    writeFileSync(join(OUT_D, `races-${a.name}-${t.id}.csv`),
+      [RCOLS.join(','), ...rows.map((s) => [a.name, t.id, s, bs[s].runaway ? 1 : 0, bs[s].parade ? 1 : 0, r4(bs[s].gap090), bs[s].within3 ?? ''].join(','))].join('\n') + '\n');
+  }
+
+  // ── Part-B section of SUMMARY.md (Part A is prose, appended by the operator) ──
+  const pctS = (x) => (100 * x).toFixed(1) + '%';
+  const md = [];
+  md.push('# PART B — Chase-suppression at small G (searound + mountainstreet, N=' + RACES + ', ' + DUR + 's)');
+  md.push('');
+  md.push(`Arms: OFF (no gapReroll) / G15 (symmetric G=1.5 s=1.0, the confirmed candidate) / G075 (symmetric G=0.75 s=1.0, the owner's slider). Fixed baseline seeds ${SEED}–${SEED + RACES - 1}, default racer per track. Branch-fire counters are pure telemetry — no sim behavior changed.`);
+  md.push('');
+  md.push('## STOP gate — OFF reproduces the known baselines');
+  if (!gateChecked) md.push('SKIPPED (needs --races=50 --seed=1 on the known tracks).');
+  else if (gateFails.length) md.push('❌ FAILED:\n' + gateFails.map((f) => `- ${f}`).join('\n'));
+  else md.push(`✅ PASSED — OFF runaway counts equal the confirm-n200 V0 first-50-seed subset (${TRK.filter((t) => KNOWN50[t.id] != null).map((t) => `${t.id} ${store.OFF[t.id].agg.runaway}`).join(', ')}).`);
+  md.push('');
+  md.push('## Headline per arm × track');
+  md.push('| track | arm | runawayWinnerRate | mean escape gap@0.90 (L) | median | DOWN-tilts | UP-tilts | **DOWN with gapAhead>gapBehind** |');
+  md.push('|---|---|---|---|---|---|---|---|');
+  for (const t of TRK) for (const a of ARMS) {
+    const r = store[a.name][t.id].agg;
+    md.push(`| ${t.id} | ${a.name} | ${pctS(r.runawayRate)} (${r.runaway}/${r.n}) | ${r.gap090Mean.toFixed(2)} | ${r.gap090Med.toFixed(2)} | ${r.downTilts} | ${r.upTilts} | **${r.smokingGun}** |`);
+  }
+  md.push('');
+  md.push('*Mean escape gap@0.90 = leader→P2 distance in racer lengths at progress 0.90, averaged over races where P2 still exists (n per race set in `per-arm-track.csv`).*');
+  md.push('');
+  md.push('## The smoking gun — DOWN-tilts by live-rank group');
+  md.push('A DOWN-tilt shifts the draw toward the SLOW band edge. It is *intended* for a racer that has escaped forward. It is *suppression* when the racer is itself far behind the racer ahead.');
+  md.push('| track | arm | DOWN total | on leader (P1) | on chasers (P2–P5) | on pack (P6+) | gapAhead mean at DOWN | gapBehind mean at DOWN | share with gapAhead>gapBehind |');
+  md.push('|---|---|---|---|---|---|---|---|---|');
+  for (const t of TRK) for (const a of ARMS) {
+    const r = store[a.name][t.id].agg;
+    const share = r.downTilts > 0 ? pctS(r.smokingGun / r.downTilts) : '–';
+    md.push(`| ${t.id} | ${a.name} | ${r.downTilts} | ${r.downLeader} | ${r.downChaser} | ${r.downPack} | ${r.downGapAheadMean.toFixed(2)} | ${r.downGapBehindMean.toFixed(2)} | **${share}** |`);
+  }
+  md.push('');
+  md.push('## Verdict');
+  const verdict = [];
+  for (const t of TRK) {
+    const off = store.OFF[t.id].agg, g15 = store.G15[t.id].agg, g075 = store.G075[t.id].agg;
+    verdict.push(`- **${t.id}**: runaway OFF ${pctS(off.runawayRate)} → G15 ${pctS(g15.runawayRate)} → G075 ${pctS(g075.runawayRate)}; mean escape gap@0.90 ${off.gap090Mean.toFixed(2)} → ${g15.gap090Mean.toFixed(2)} → ${g075.gap090Mean.toFixed(2)}L; suppressed DOWN-tilts (gapAhead>gapBehind) ${off.smokingGun} → ${g15.smokingGun} → ${g075.smokingGun}.`);
+  }
+  md.push(...verdict);
+  md.push('');
+  const sgG15 = TRK.reduce((s, t) => s + store.G15[t.id].agg.smokingGun, 0);
+  const sgG075 = TRK.reduce((s, t) => s + store.G075[t.id].agg.smokingGun, 0);
+  const rwG15 = mean(TRK.map((t) => store.G15[t.id].agg.runawayRate));
+  const rwG075 = mean(TRK.map((t) => store.G075[t.id].agg.runawayRate));
+  const rwOFF = mean(TRK.map((t) => store.OFF[t.id].agg.runawayRate));
+  md.push(`Pooled: suppressed DOWN-tilts G15 = ${sgG15}, G075 = ${sgG075} (ratio ${sgG15 > 0 ? (sgG075 / sgG15).toFixed(1) + '×' : 'n/a'}). Mean runawayWinnerRate OFF ${pctS(rwOFF)} / G15 ${pctS(rwG15)} / G075 ${pctS(rwG075)}.`);
+  md.push('');
+  md.push('Data: `per-arm-track.csv` (aggregates), `races-<arm>-<track>.csv` (per-seed; determinism re-run target).');
+  md.push('');
+  writeFileSync(join(OUT_D, 'PART-B.md'), md.join('\n'));
+
+  console.log(`\nElapsed ${((Date.now() - t0) / 60000).toFixed(1)}m → ${OUT_D}`);
+  if (gateChecked && gateFails.length) { console.error('❌ STOP GATE FAILED:\n' + gateFails.map((f) => '  ' + f).join('\n')); process.exit(1); }
+  console.log(gateChecked ? '  STOP gate PASSED (OFF = baseline on both tracks).' : '  STOP gate SKIPPED.');
+  console.log(`  suppressed DOWN-tilts: G15=${sgG15}  G075=${sgG075}`);
+  process.exit(0);
+}
+
+// ════════════════════════════════════════════════════════════════════════════════
 // PHASE-2b GAP-CAP RE-ROLL SWEEP (--gapreroll-phase2b) — window-fix re-run + STRENGTH axis, 9 arms.
 // Block A (strength 0.5) isolates the window-basis fix vs the broken Phase-2; Block B sweeps strength.
 // Adds a second STOP gate: window-eligible rolls per track must be > 0 on ALL tracks (was 0 on closed).

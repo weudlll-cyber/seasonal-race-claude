@@ -401,6 +401,18 @@ export function createTrajectoryController(racePlan) {
   let _gapBiasEvents = 0; // total scheduled rolls this race that were gap-biased (shifted)
   const _gapWindowRollsByRacer = new Map(); // index → rolls that fell inside the window for that racer
   const _gapBiasByRacer = new Map(); // index → rolls that were actually shifted for that racer
+  // Branch-fire diagnostic for the small-G chase-suppression question: the gapBehind>G branch RETURNS
+  // before the gapAhead>G check, so a racer that is BOTH detached from the field behind it AND far
+  // behind the racer ahead gets tilted SLOWER — the chase is structurally suppressed. These counters
+  // measure how often that happens. TELEMETRY ONLY: never read back into a returned draw.
+  let _gapDownTilts = 0; // gapBehind>G branch fired (toward SLOWER)
+  let _gapUpTilts = 0; // gapAhead>G branch fired (toward FASTER; symmetric mode only)
+  let _gapDownAheadGtBehind = 0; // SMOKING GUN: a DOWN-tilt while gapAhead > gapBehind
+  let _gapDownLeader = 0; // DOWN-tilts on the live leader (rank 1)
+  let _gapDownChaser = 0; // DOWN-tilts on live ranks 2–5 (the chase group)
+  let _gapDownPack = 0; // DOWN-tilts on live rank ≥6 (the pack)
+  let _gapDownGapAheadSum = 0; // Σ gapAhead at DOWN-tilt moments (lengths)
+  let _gapDownGapBehindSum = 0; // Σ gapBehind at DOWN-tilt moments (lengths)
   let _packReSteerEvents = 0; // count of released→steering transitions (a racer drifted out)
   let _packReleasedFrames = 0; // pack-racer-frames spent released (strictness 0)
   let _packSteerFrames = 0; // pack-racer-frames spent re-steering under the feature (strictness 1)
@@ -951,12 +963,20 @@ export function createTrajectoryController(racePlan) {
       const frac = Math.min(1, strength * (gapBehind - G));
       _gapBiasEvents++;
       _gapBiasByRacer.set(racerIndex, (_gapBiasByRacer.get(racerIndex) ?? 0) + 1);
+      _gapDownTilts++;
+      _gapDownGapAheadSum += gapAhead;
+      _gapDownGapBehindSum += gapBehind;
+      if (gapAhead > gapBehind) _gapDownAheadGtBehind++;
+      if (pos === 0) _gapDownLeader++;
+      else if (pos <= 4) _gapDownChaser++;
+      else _gapDownPack++;
       return clamp(rawSample - frac * (rawSample - spreadMin), spreadMin, spreadMax); // toward SLOWER
     }
     if (plan._gapRerollMode === 'symmetric' && gapAhead > G) {
       const frac = Math.min(1, strength * (gapAhead - G));
       _gapBiasEvents++;
       _gapBiasByRacer.set(racerIndex, (_gapBiasByRacer.get(racerIndex) ?? 0) + 1);
+      _gapUpTilts++;
       return clamp(rawSample + frac * (spreadMax - rawSample), spreadMin, spreadMax); // toward FASTER
     }
     return rawSample; // dead zone (≤ G) → bit-exact no-op
@@ -1025,6 +1045,17 @@ export function createTrajectoryController(racePlan) {
         }
         return mx;
       })(),
+      // Branch-fire split (small-G chase-suppression diagnostic; 0 when OFF). gapDownAheadGtBehind is
+      // the smoking gun: DOWN-tilts applied to a racer whose gap to the racer AHEAD already exceeded
+      // its gap to the racer behind — i.e. a chaser being slowed down instead of let go.
+      gapDownTilts: _gapDownTilts,
+      gapUpTilts: _gapUpTilts,
+      gapDownAheadGtBehind: _gapDownAheadGtBehind,
+      gapDownLeader: _gapDownLeader,
+      gapDownChaser: _gapDownChaser,
+      gapDownPack: _gapDownPack,
+      gapDownGapAheadMean: _gapDownTilts > 0 ? _gapDownGapAheadSum / _gapDownTilts : 0,
+      gapDownGapBehindMean: _gapDownTilts > 0 ? _gapDownGapBehindSum / _gapDownTilts : 0,
     };
     _winnerBlockedInOutcome = 0;
     _winnerStepCount = 0;
@@ -1051,6 +1082,14 @@ export function createTrajectoryController(racePlan) {
     _gapBiasEvents = 0;
     _gapWindowRollsByRacer.clear();
     _gapBiasByRacer.clear();
+    _gapDownTilts = 0;
+    _gapUpTilts = 0;
+    _gapDownAheadGtBehind = 0;
+    _gapDownLeader = 0;
+    _gapDownChaser = 0;
+    _gapDownPack = 0;
+    _gapDownGapAheadSum = 0;
+    _gapDownGapBehindSum = 0;
     return tel;
   }
 

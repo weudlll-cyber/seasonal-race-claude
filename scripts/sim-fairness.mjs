@@ -3195,6 +3195,16 @@ if (isMain) {
           gapBiasedRolls:         raceResults.reduce((s, r) => s + (r.naturalness?.gapBiasedRolls ?? 0), 0) / raceResults.length,
           gapWindowRolls:         raceResults.reduce((s, r) => s + (r.naturalness?.gapWindowRolls ?? 0), 0) / raceResults.length,
           gapLeaderDutyCycle:     raceResults.reduce((s, r) => s + (r.naturalness?.gapLeaderDutyCycle ?? 0), 0) / raceResults.length,
+          // Branch-fire split (small-G chase-suppression diagnostic). SUMS across the run, not means —
+          // gapDownAheadGtBehind is a raw event count and must stay countable.
+          gapDownTilts:           raceResults.reduce((s, r) => s + (r.naturalness?.gapDownTilts ?? 0), 0),
+          gapUpTilts:             raceResults.reduce((s, r) => s + (r.naturalness?.gapUpTilts ?? 0), 0),
+          gapDownAheadGtBehind:   raceResults.reduce((s, r) => s + (r.naturalness?.gapDownAheadGtBehind ?? 0), 0),
+          gapDownLeader:          raceResults.reduce((s, r) => s + (r.naturalness?.gapDownLeader ?? 0), 0),
+          gapDownChaser:          raceResults.reduce((s, r) => s + (r.naturalness?.gapDownChaser ?? 0), 0),
+          gapDownPack:            raceResults.reduce((s, r) => s + (r.naturalness?.gapDownPack ?? 0), 0),
+          gapDownGapAheadMean:    _amean(raceResults.map((r) => r.naturalness?.gapDownGapAheadMean ?? 0).filter((v) => v > 0)),
+          gapDownGapBehindMean:   _amean(raceResults.map((r) => r.naturalness?.gapDownGapBehindMean ?? 0).filter((v) => v > 0)),
           overlapRate:             raceResults.reduce((s, r) => s + (r.liteOverlapRate ?? 0), 0) / raceResults.length,
           honestOverlapRate:       raceResults.reduce((s, r) => s + (r.honestOverlapRate ?? 0), 0) / raceResults.length,
           passThroughCount:        raceResults.reduce((s, r) => s + (r.passThroughCount ?? 0), 0) / raceResults.length,

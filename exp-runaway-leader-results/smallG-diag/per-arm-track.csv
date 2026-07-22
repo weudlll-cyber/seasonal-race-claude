@@ -1,0 +1,7 @@
+arm,track,n,runaway,runawayRate,parade,gap090Mean,gap090Med,gap090N,windowRolls,biasedRolls,downTilts,upTilts,smokingGun,downLeader,downChaser,downPack,downGapAheadMean,downGapBehindMean
+OFF,searound,50,14,0.28,1,2.5494,1.2299,50,0,0,0,0,0,0,0,0,0,0
+OFF,mountainstreet,50,10,0.2,1,2.1844,1.4794,50,0,0,0,0,0,0,0,0,0,0
+G15,searound,50,8,0.16,1,1.7985,1.3346,50,110.46,14.18,381,328,27,43,59,279,0.7444,2.4251
+G15,mountainstreet,50,3,0.06,1,1.6319,1.2624,50,88.74,10.68,289,245,18,39,44,206,0.6506,2.3884
+G075,searound,50,7,0.14,0,1.9062,1.4546,50,110.46,41.48,1207,867,188,86,188,933,0.6626,1.4884
+G075,mountainstreet,50,4,0.08,0,1.5839,1.1171,50,88.84,31.18,892,667,111,73,119,700,0.5963,1.445
