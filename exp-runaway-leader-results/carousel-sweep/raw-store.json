@@ -326,5 +326,115 @@
    "holmUnfair": true,
    "top5Action": 32.61
   }
+ },
+ "A2b-CAR-w70": {
+  "luger-hill": {
+   "arm": "A2b-CAR-w70",
+   "track": "luger-hill",
+   "n": 100,
+   "runaway": 17,
+   "runawayRate": 0.17,
+   "parade": 1,
+   "paradeRate": 0.01,
+   "p1Contest": 0.22,
+   "contestN": 22,
+   "castRate": 0,
+   "cast": 0,
+   "authored": 0,
+   "completed": 0,
+   "completionRate": null,
+   "satMean": null,
+   "satMax": null,
+   "spanMed": 2.4672,
+   "rejects": {
+    "window-too-short-for-rotation": 100
+   },
+   "tears": {},
+   "b1": 0.754,
+   "b2": 0.717,
+   "holmUnfair": true,
+   "top5Action": 32.52
+  },
+  "mountainstreet": {
+   "arm": "A2b-CAR-w70",
+   "track": "mountainstreet",
+   "n": 100,
+   "runaway": 17,
+   "runawayRate": 0.17,
+   "parade": 2,
+   "paradeRate": 0.02,
+   "p1Contest": 0.19,
+   "contestN": 19,
+   "castRate": 0,
+   "cast": 0,
+   "authored": 0,
+   "completed": 0,
+   "completionRate": null,
+   "satMean": null,
+   "satMax": null,
+   "spanMed": 3.3484,
+   "rejects": {
+    "window-too-short-for-rotation": 100
+   },
+   "tears": {},
+   "b1": 0.758,
+   "b2": 0.748,
+   "holmUnfair": false,
+   "top5Action": 38.01
+  },
+  "searound": {
+   "arm": "A2b-CAR-w70",
+   "track": "searound",
+   "n": 100,
+   "runaway": 28,
+   "runawayRate": 0.28,
+   "parade": 2,
+   "paradeRate": 0.02,
+   "p1Contest": 0.17,
+   "contestN": 17,
+   "castRate": 0,
+   "cast": 0,
+   "authored": 0,
+   "completed": 0,
+   "completionRate": null,
+   "satMean": null,
+   "satMax": null,
+   "spanMed": 3.642,
+   "rejects": {
+    "window-too-short-for-rotation": 100
+   },
+   "tears": {},
+   "b1": 0.706,
+   "b2": 0.695,
+   "holmUnfair": true,
+   "top5Action": 29.87
+  },
+  "dirt-oval": {
+   "arm": "A2b-CAR-w70",
+   "track": "dirt-oval",
+   "n": 100,
+   "runaway": 28,
+   "runawayRate": 0.28,
+   "parade": 1,
+   "paradeRate": 0.01,
+   "p1Contest": 0.14,
+   "contestN": 14,
+   "castRate": 0,
+   "cast": 0,
+   "authored": 0,
+   "completed": 0,
+   "completionRate": null,
+   "satMean": null,
+   "satMax": null,
+   "spanMed": 3.9467999999999996,
+   "rejects": {
+    "window-too-short-for-rotation": 100
+   },
+   "tears": {},
+   "b1": 0.77,
+   "b2": 0.751,
+   "holmUnfair": false,
+   "top5Action": 37.3
+  }
  }
 }
