@@ -92,11 +92,22 @@ export function makeCarouselTracker({ segments = [], order = [], dwellSec = 0 } 
       const authoredHandovers = Math.max(0, segments.length - 1);
       let completed = 0;
       for (let i = 1; i < holds.length; i++) if (holds[i] >= dwellMs) completed++;
+      // perSegmentCompleted[i] is null for the establishing segment (i = 0, no handover into it) and
+      // a boolean for every rotating segment. This is the TEAR LOCATION: a rotation that dies at the
+      // first handover is a different failure from one that survives two and dies on the third, and
+      // the aggregate completion rate cannot tell them apart.
+      const perSegmentCompleted = holds.map((ms, i) => (i === 0 ? null : ms >= dwellMs));
+      // Index of the first handover that failed (1-based over handovers, i.e. segment index), or
+      // null when every authored handover completed.
+      const firstTearAt = perSegmentCompleted.findIndex((v) => v === false);
       return {
         authoredHandovers,
         completedHandovers: completed,
         completionRate: authoredHandovers > 0 ? completed / authoredHandovers : null,
         dwellsSec: holds.map((ms) => +(ms / 1000).toFixed(3)),
+        perSegmentCompleted,
+        firstTearAt: firstTearAt === -1 ? null : firstTearAt,
+        dwellSec,
       };
     },
   };

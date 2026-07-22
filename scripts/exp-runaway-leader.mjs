@@ -1124,6 +1124,185 @@ if (argv.includes('--p1-contest')) {
 }
 
 // ════════════════════════════════════════════════════════════════════════════════
+// CAROUSEL SWEEP v3 (--carousel-sweep) — the B1 lead carousel, 7 arms, 4 known tracks.
+//
+// Measures whether authored front handovers break the leadChangeCount wall (<3 in 93% of races on
+// the committed baseline), and at what cost. Three build findings shape the arm list:
+//   • the carousel does not cast at the shipped contestWindowStart 0.8 (a rotation needs ~2x the
+//     runway of [0.8, release-0.07]) → the window is itself a sweep dimension (A2 vs A2b);
+//   • a 12-race smoke showed 14% handover completion at only 15% saturation — a FIELD-NOT-FOLLOWING
+//     mode the saturation gate cannot catch → completion + tear location are first-class metrics;
+//   • the gap-reroll branch-priority fix invalidates the committed 23.0→8.3% runaway result → A0
+//     requalifies it on these seeds before any GR-bearing arm is read.
+//
+// Arms run in priority order and each writes its per-seed CSVs as it lands, so a long run stays
+// committable incrementally. A1 carries a hard STOP gate: without an exact baseline reproduction
+// nothing below it is comparable.
+// ════════════════════════════════════════════════════════════════════════════════
+if (argv.includes('--carousel-sweep')) {
+  const OUT_S = join(OUT_ABS, 'carousel-sweep');
+  mkdirSync(OUT_S, { recursive: true });
+  mkdirSync(TMP_ABS, { recursive: true });
+  const KNOWN_RUNAWAY = { 'luger-hill': 18, 'mountainstreet': 18, 'searound': 30, 'dirt-oval': 28 };
+  const KNOWN_CONTEST = { 'luger-hill': 5, 'mountainstreet': 10, 'searound': 3, 'dirt-oval': 3 };
+  const TRACKS_S = ONLY ? [ONLY] : ['luger-hill', 'mountainstreet', 'searound', 'dirt-oval'];
+  const TRK = TRACKS_S.map((id) => { const s = trackSeed(id); return { id, racer: s.defaultRacerTypeId, closed: !!s.closed }; });
+  const WIN_A = Number(argVal('winA', '0.62'));   // A2 + the combination arms
+  const WIN_B = Number(argVal('winB', '0.70'));   // A2b, the product-preferable window
+  const ARMS = [
+    { name: 'A1-V0',          car: null,  gr: null, rb: 0 },
+    { name: 'A0-GR',          car: null,  gr: 1.5,  rb: 0 },
+    { name: 'A2-CAR-w62',     car: WIN_A, gr: null, rb: 0 },
+    { name: 'A2b-CAR-w70',    car: WIN_B, gr: null, rb: 0 },
+    { name: 'A3-CAR-GR',      car: WIN_A, gr: 1.5,  rb: 0 },
+    { name: 'A4-CAR-GR-RB',   car: WIN_A, gr: 1.5,  rb: 1.0 },
+    { name: 'A5-CAR-G075-RB', car: WIN_A, gr: 0.75, rb: 1.0 },
+  ];
+  const PRIMS = [
+    { key: 'distinctLeaders', dp: 1 }, { key: 'leadChangeCount', dp: 1 },
+    { key: 'maxLeadHoldShare', dp: 3 }, { key: 'frontContestFraction', dp: 3 },
+    { key: 'p1LongestMultiSec', dp: 2 },
+  ];
+  const store = {};
+  const zoneIdxS = (rank) => { for (let i = 0; i < BAND_EDGES.length; i++) if (rank <= BAND_EDGES[i]) return i; return BAND_EDGES.length; };
+  const bandReachS = (rawData, b) => {
+    const rows = (rawData || []).filter((r) => r.sollBereich === b);
+    return rows.length ? rows.filter((r) => zoneIdxS(r.finalRank) === b - 1).length / rows.length : null;
+  };
+
+  async function runOne(arm, track) {
+    const outAbs = join(TMP_ABS, 'cs__' + arm.name + '__' + track.id);
+    const args = ['scripts/sim-fairness.mjs', `--track=${track.id}`, `--racer=${track.racer}`,
+      `--seed=${SEED}`, `--races=${RACES}`, `--dur=${DUR}`, '--runaway-parade', '--hero-map',
+      `--out=${toSimOut(outAbs)}`];
+    if (arm.gr != null) args.push(`--gapRerollThresholdLengths=${arm.gr}`, '--gapRerollMode=symmetric', '--gapRerollStrength=1.0');
+    if (arm.car != null) args.push('--carouselEnabled=true', `--contestWindowStart=${arm.car}`);
+    if (arm.rb > 0) args.push(`--carouselRoleBiasStrength=${arm.rb}`);
+    await pExecFile(process.execPath, args, { cwd: ROOT, maxBuffer: 512 * 1024 * 1024 });
+    const rp = JSON.parse(readFileSync(join(outAbs, 'runaway-parade.json'), 'utf8'));
+    const fd = JSON.parse(readFileSync(join(outAbs, 'fairness-data.json'), 'utf8'));
+    let hm = {}; try { hm = JSON.parse(readFileSync(join(outAbs, 'hero-map.json'), 'utf8')); } catch { /* optional */ }
+
+    const bySeed = {};
+    let runaway = 0, parade = 0, cast = 0, authored = 0, completed = 0;
+    const rejects = {}, tears = {}, sats = [], spans = [];
+    for (const rec of [...rp.races].sort((a, b) => a.raceIdx - b.raceIdx)) {
+      const raw = rec.runawayParade;
+      const c = classifyRace(raw, D);
+      const fb = raw.frontBattle ?? null;
+      const cw = raw.carousel ?? null;
+      const dg = cw && cw.diag ? cw.diag : null;
+      const hv = cw && cw.handovers ? cw.handovers : null;
+      const tl = cw && cw.telemetry ? cw.telemetry : null;
+      if (dg && dg.cast) cast++;
+      else if (dg) { const rr = dg.reason ?? 'unknown'; rejects[rr] = (rejects[rr] ?? 0) + 1; }
+      if (hv) {
+        authored += hv.authoredHandovers; completed += hv.completedHandovers;
+        if (hv.firstTearAt != null) tears[hv.firstTearAt] = (tears[hv.firstTearAt] ?? 0) + 1;
+      }
+      if (tl && tl.saturationShare != null) sats.push(tl.saturationShare);
+      const g = raw.line && raw.line.gaps ? raw.line.gaps : null;
+      if (g && g.length >= 2) spans.push(g[0] + g[1]);
+      bySeed[rec.seed] = {
+        runaway: c.runawayWinner, parade: c.paradeFinish, fb,
+        contest: classifyFrontBattle(fb),
+        cast: !!(dg && dg.cast), reason: dg ? dg.reason : null,
+        authored: hv ? hv.authoredHandovers : 0, completed: hv ? hv.completedHandovers : 0,
+        tearAt: hv ? hv.firstTearAt : null, sat: tl ? tl.saturationShare : null,
+        span13: g && g.length >= 2 ? +(g[0] + g[1]).toFixed(4) : null,
+      };
+      if (c.runawayWinner) runaway++;
+      if (c.paradeFinish) parade++;
+    }
+    const nat = (fd.results || [])[0]?.avgNaturalness || {};
+    const n = rp.races.length;
+    const vals = Object.values(bySeed);
+    const contestN = vals.filter((x) => x.contest === true).length;
+    const contestKnown = vals.filter((x) => x.contest != null).length;
+    return { bySeed, agg: {
+      arm: arm.name, track: track.id, n,
+      runaway, runawayRate: runaway / n, parade, paradeRate: parade / n,
+      p1Contest: contestKnown ? contestN / contestKnown : null, contestN,
+      castRate: cast / n, cast, authored, completed,
+      completionRate: authored > 0 ? completed / authored : null,
+      satMean: sats.length ? mean(sats) : null, satMax: sats.length ? Math.max(...sats) : null,
+      spanMed: spans.length ? percentile(spans, 0.5) : null,
+      rejects, tears,
+      b1: bandReachS(fd.rawData, 1), b2: bandReachS(fd.rawData, 2),
+      holmUnfair: hm.fairness?.startRowUnfair ?? null,
+      top5Action: nat.outcomeTop5SwapsMean ?? null,
+    } };
+  }
+
+  const t0 = Date.now();
+  console.log('\n=== carousel-sweep v3 === ' + ARMS.length + ' arms x ' + TRK.length + ' tracks x N=' + RACES + ' (seed=' + SEED + ', dur=' + DUR + 's), jobs=' + JOBS);
+  const pctS = (x) => (x == null ? '-' : (100 * x).toFixed(1) + '%');
+
+  async function runArm(arm) {
+    store[arm.name] = {};
+    const jobs = [...TRK]; let nx = 0;
+    async function w() {
+      while (nx < jobs.length) {
+        const i = nx++; const r = await runOne(arm, jobs[i]); store[arm.name][jobs[i].id] = r;
+        console.log('  ' + arm.name.padEnd(16) + ' ' + jobs[i].id.padEnd(15) +
+          ' runaway=' + r.agg.runaway + '/' + r.agg.n + ' p1=' + pctS(r.agg.p1Contest) +
+          ' cast=' + pctS(r.agg.castRate) + ' done=' + r.agg.completed + '/' + r.agg.authored +
+          ' sat=' + pctS(r.agg.satMean));
+      }
+    }
+    await Promise.all(Array.from({ length: Math.min(JOBS, jobs.length) }, w));
+    const RCOLS = ['arm', 'track', 'seed', 'runaway', 'parade', 'contest', 'cast', 'reason',
+      'authored', 'completed', 'tearAt', 'sat', 'span13', ...PRIMS.map((p) => p.key)];
+    for (const t of TRK) {
+      const bs = store[arm.name][t.id].bySeed;
+      writeFileSync(join(OUT_S, 'races-' + arm.name + '-' + t.id + '.csv'),
+        [RCOLS.join(','), ...Object.keys(bs).map(Number).sort((x, y) => x - y).map((sd) => {
+          const b = bs[sd]; const fb = b.fb ?? {};
+          return [arm.name, t.id, sd, b.runaway ? 1 : 0, b.parade ? 1 : 0,
+            b.contest == null ? '' : b.contest ? 1 : 0, b.cast ? 1 : 0, b.reason ?? '',
+            b.authored, b.completed, b.tearAt ?? '', r4(b.sat), r4(b.span13),
+            ...PRIMS.map((p) => r4(fb[p.key]))].join(',');
+        })].join('\n') + '\n');
+    }
+    // Snapshot the aggregate store after every arm so a long run is committable as it goes.
+    writeFileSync(join(OUT_S, 'raw-store.json'), JSON.stringify(
+      Object.fromEntries(Object.keys(store).map((k) => [k,
+        Object.fromEntries(TRK.filter((t) => store[k][t.id]).map((t) => [t.id, store[k][t.id].agg]))])), null, 1));
+    console.log('  -> wrote per-seed CSVs + raw-store snapshot for ' + arm.name);
+  }
+
+  // ── A1 first + STOP gate ──────────────────────────────────────────────────────────────────
+  await runArm(ARMS[0]);
+  const gateFails = [];
+  if (RACES === 100 && SEED === 1) {
+    for (const t of TRK) {
+      const a = store['A1-V0'][t.id].agg;
+      if (KNOWN_RUNAWAY[t.id] != null && a.runaway !== KNOWN_RUNAWAY[t.id]) {
+        gateFails.push(t.id + ': runaway ' + a.runaway + ' (baseline ' + KNOWN_RUNAWAY[t.id] + ')');
+      }
+      if (KNOWN_CONTEST[t.id] != null && a.contestN !== KNOWN_CONTEST[t.id]) {
+        gateFails.push(t.id + ': p1Contest ' + a.contestN + ' (baseline ' + KNOWN_CONTEST[t.id] + ')');
+      }
+    }
+  }
+  if (gateFails.length) {
+    writeFileSync(join(OUT_S, 'SUMMARY.md'),
+      '# Carousel sweep v3 STOPPED - A1 reproduction gate failed\n\nA1 (everything OFF) must reproduce the committed baseline EXACTLY; it did not, so no arm below it is comparable. No further arm was run.\n\n' +
+      gateFails.map((f) => '- ' + f).join('\n') + '\n');
+    console.error('\nSTOP GATE FAILED:\n' + gateFails.map((f) => '  ' + f).join('\n'));
+    process.exit(1);
+  }
+  console.log(RACES === 100 && SEED === 1
+    ? '  STOP gate PASSED (A1 = committed baseline: runaway AND p1Contest on every track).'
+    : '  STOP gate SKIPPED (needs --races=100 --seed=1).');
+
+  for (const arm of ARMS.slice(1)) await runArm(arm);
+
+  console.log('\nElapsed ' + ((Date.now() - t0) / 60000).toFixed(1) + 'm -> ' + OUT_S);
+  process.exit(0);
+}
+
+// ════════════════════════════════════════════════════════════════════════════════
 // P1 CONTEST CRITERION BREAKDOWN (--p1-criteria) — WHICH of the four conditions blocks a race.
 //
 // Pure POST-ANALYSIS: reads the per-seed CSVs --p1-contest already wrote and derives nothing that

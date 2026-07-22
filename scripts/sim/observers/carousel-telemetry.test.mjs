@@ -119,3 +119,29 @@ test('an empty schedule is inert, never a divide-by-zero', () => {
   assert.equal(r.completedHandovers, 0);
   assert.equal(r.completionRate, null);
 });
+
+test('perSegmentCompleted + firstTearAt locate WHERE the rotation tears', () => {
+  const t = mk(1);
+  t.observe(field(10), 0.62, 0); // establishing
+  t.observe(field(10), 0.66, 1500);
+  t.observe(field(11), 0.75, 2000); // segment 1: completes (2 s hold)
+  t.observe(field(11), 0.78, 4000);
+  t.observe(field(10), 0.85, 5000); // segment 2: authored to 12, but 10 leads → tears
+  t.observe(field(10), 0.88, 7000);
+  const r = t.result();
+  assert.deepEqual(r.perSegmentCompleted, [null, true, false]);
+  assert.equal(r.firstTearAt, 2);
+  assert.equal(r.completedHandovers, 1);
+});
+
+test('firstTearAt is null when every authored handover completes', () => {
+  const t = mk(1);
+  t.observe(field(10), 0.66, 0);
+  t.observe(field(11), 0.75, 1000);
+  t.observe(field(11), 0.78, 3000);
+  t.observe(field(12), 0.85, 4000);
+  t.observe(field(12), 0.88, 6000);
+  const r = t.result();
+  assert.equal(r.firstTearAt, null);
+  assert.equal(r.completionRate, 1);
+});
