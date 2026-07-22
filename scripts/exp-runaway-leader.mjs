@@ -30,6 +30,7 @@ import { promisify } from 'util';
 import { classifyRace, RUNAWAY_PARADE_DEFAULTS, formationLeaderStable, formationBucket, SPEED_SOURCE_SAMPLES } from './sim/observers/runaway-parade.mjs';
 import { BAND_EDGES } from '../client/src/modules/racePlanner.js';
 import { bandExitAfterRelease, p1SwapAfter090 } from './sim/observers/release-contest.mjs';
+import { classifyFrontBattle, FRONT_BATTLE_DEFAULTS } from './sim/observers/outcome-front-battle.mjs';
 
 const pExecFile = promisify(execFile);
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
@@ -886,6 +887,301 @@ if (argv.includes('--release-sweep')) {
 
   console.log(`\nElapsed ${((Date.now() - t0) / 60000).toFixed(1)}m → ${OUT_R}`);
   for (const a of AA) console.log(`  ${a.name.padEnd(8)} runaway=${pctS(a.runawayRate)} PASS=${a.pass} p1Swap=${pctS(a.p1Swap)} exSwap=${pctS(a.exSwap)} B1exit=${pctS(a.b1Exit)} B2exit=${pctS(a.b2Exit)}`);
+  process.exit(0);
+}
+
+// ════════════════════════════════════════════════════════════════════════════════
+// P1 CONTEST BASELINE (--p1-contest) — the sustained-multi-racer-P1-battle metric, 4 known tracks.
+//
+// WHY. Every endgame number so far answers a yes/no about the LEADER (did it run away, did it get
+// passed). None of them says whether the front was a BATTLE — several racers trading P1 for a
+// stretch of the final act, which is what the eye actually rewards. This mode measures that with
+// the five primitives + classifier in sim/observers/outcome-front-battle.mjs, on exactly two arms:
+//
+//   V0      everything off — the reproduction gate (23.5% overall, 18/18/30/28) and the baseline.
+//   R97-ON  gap-reroll symmetric G=1.5 s=1.0 at the default release — the confirmed winner, so the
+//           delta below shows how much sustained P1 action the CURRENT candidate already buys.
+//
+// The output is a MEASUREMENT, not a verdict: p1ContestRate carries no threshold here. The owner
+// sets the gate after reading these baselines, and the C1 concept follows separately.
+//
+// Read-only: no config overrides beyond the two documented gap-reroll flags, no sim behavior file
+// touched → NO fingerprint to check.
+// ════════════════════════════════════════════════════════════════════════════════
+if (argv.includes('--p1-contest')) {
+  const OUT_P = join(OUT_ABS, 'p1-contest-baseline');
+  mkdirSync(OUT_P, { recursive: true });
+  mkdirSync(TMP_ABS, { recursive: true });
+  const KNOWN4 = { 'luger-hill': 18, 'mountainstreet': 18, 'searound': 30, 'dirt-oval': 28 };
+  const TRACKS_P = ONLY ? [ONLY] : ['luger-hill', 'mountainstreet', 'searound', 'dirt-oval'];
+  const TRK = TRACKS_P.map((id) => { const s = trackSeed(id); return { id, racer: s.defaultRacerTypeId, closed: !!s.closed }; });
+  const GR = { mode: 'symmetric', G: 1.5, s: 1.0 }; // the confirmed gap-reroll candidate
+  const ARMS = [
+    { name: 'V0', gr: false },
+    { name: 'R97-ON', gr: true },
+  ];
+  // The five primitives, in the order they are defined in the observer.
+  const PRIMS = [
+    { key: 'distinctLeaders', label: 'distinctLeaders', dp: 1 },
+    { key: 'leadChangeCount', label: 'leadChangeCount', dp: 1 },
+    { key: 'maxLeadHoldShare', label: 'maxLeadHoldShare', dp: 3 },
+    { key: 'frontContestFraction', label: 'frontContestFraction', dp: 3 },
+    { key: 'p1LongestMultiSec', label: 'p1LongestMultiSec', dp: 2 },
+  ];
+  const store = {};
+
+  async function runOne(arm, track) {
+    const outAbs = join(TMP_ABS, `p1c__${arm.name}__${track.id}`);
+    const args = ['scripts/sim-fairness.mjs', `--track=${track.id}`, `--racer=${track.racer}`,
+      `--seed=${SEED}`, `--races=${RACES}`, `--dur=${DUR}`, '--runaway-parade', '--skip-main-output',
+      `--out=${toSimOut(outAbs)}`];
+    if (arm.gr) args.push(`--gapRerollThresholdLengths=${GR.G}`, `--gapRerollMode=${GR.mode}`, `--gapRerollStrength=${GR.s}`);
+    await pExecFile(process.execPath, args, { cwd: ROOT, maxBuffer: 512 * 1024 * 1024 });
+    const rp = JSON.parse(readFileSync(join(outAbs, 'runaway-parade.json'), 'utf8'));
+    const bySeed = {};
+    let runaway = 0;
+    for (const rec of [...rp.races].sort((a, b) => a.raceIdx - b.raceIdx)) {
+      const raw = rec.runawayParade;
+      const c = classifyRace(raw, D);
+      const fb = raw.frontBattle ?? null;
+      bySeed[rec.seed] = {
+        runaway: c.runawayWinner,
+        windowStart: raw.contestWindowStart ?? null,
+        fb,
+        contest: classifyFrontBattle(fb),      // true / false / null (race never reached the window)
+      };
+      if (c.runawayWinner) runaway++;
+    }
+    return { bySeed, n: rp.races.length, runaway };
+  }
+
+  const t0 = Date.now();
+  console.log(`\n=== p1-contest === ${ARMS.length} arms × ${TRK.length} tracks × N=${RACES} (seed=${SEED}, dur=${DUR}s), jobs=${JOBS}`);
+
+  async function runArm(arm) {
+    store[arm.name] = {};
+    const jobs = [...TRK]; let nx = 0;
+    async function w() {
+      while (nx < jobs.length) {
+        const i = nx++; const r = await runOne(arm, jobs[i]); store[arm.name][jobs[i].id] = r;
+        const rate = Object.values(r.bySeed).filter((x) => x.contest === true).length / r.n;
+        console.log(`  ${arm.name.padEnd(7)} ${jobs[i].id.padEnd(15)} runaway=${r.runaway}/${r.n} p1Contest=${(100 * rate).toFixed(0)}%`);
+      }
+    }
+    await Promise.all(Array.from({ length: Math.min(JOBS, jobs.length) }, w));
+  }
+
+  // ── V0 first + STOP gate: without the exact known baseline nothing below is comparable ──
+  await runArm(ARMS[0]);
+  const gateFails = [];
+  if (RACES === 100 && SEED === 1) {
+    for (const t of TRK) {
+      if (KNOWN4[t.id] == null) continue;
+      if (store.V0[t.id].runaway !== KNOWN4[t.id]) gateFails.push(`${t.id}: V0 runaway ${store.V0[t.id].runaway} (baseline ${KNOWN4[t.id]})`);
+    }
+  }
+  if (gateFails.length) {
+    writeFileSync(join(OUT_P, 'SUMMARY.md'), `# P1-contest baseline STOPPED — V0 reproduction gate failed\n\nV0 must reproduce the known per-track runaway baseline EXACTLY; it did not, so the arm below it is not comparable. R97-ON was NOT run.\n\n${gateFails.map((f) => `- ${f}`).join('\n')}\n`);
+    console.error('\n❌ STOP GATE FAILED:\n' + gateFails.map((f) => '  ' + f).join('\n'));
+    process.exit(1);
+  }
+  console.log(RACES === 100 && SEED === 1
+    ? `  STOP gate PASSED (V0 = known baseline on all ${TRK.length} track${TRK.length === 1 ? '' : 's'}).`
+    : '  STOP gate SKIPPED (needs --races=100 --seed=1).');
+
+  await runArm(ARMS[1]);
+
+  // ── V0-race class per (track, seed) ────────────────────────────────────────────────────────
+  // The classes are defined by the V0 arm and then applied UNCHANGED to every arm, so a class is
+  // the same set of races everywhere and the columns are directly comparable:
+  //   normal    — V0 was not a runaway.
+  //   runaway   — V0 was a runaway AND the arm still is (the residual lonely marches).
+  //   converted — V0 was a runaway and the arm is NOT (gap-reroll broke the escape open).
+  // For V0 itself "converted" is empty by construction — V0 is its own reference.
+  const classOf = (armName, trackId, seed) => {
+    const v0 = store.V0[trackId].bySeed[seed];
+    if (!v0?.runaway) return 'normal';
+    return store[armName][trackId].bySeed[seed]?.runaway ? 'runaway' : 'converted';
+  };
+
+  // Collect a class-sliced sample of every primitive (+ the contest booleans) for a set of tracks.
+  const sample = (armName, trackIds) => {
+    const out = {};
+    for (const cls of ['all', 'normal', 'runaway', 'converted']) {
+      out[cls] = { n: 0, contestTrue: 0, contestKnown: 0 };
+      for (const p of PRIMS) out[cls][p.key] = [];
+    }
+    for (const id of trackIds) {
+      const bs = store[armName][id].bySeed;
+      for (const s of Object.keys(bs).map(Number).sort((a, b) => a - b)) {
+        const rec = bs[s];
+        const cls = classOf(armName, id, s);
+        for (const bucket of ['all', cls]) {
+          const acc = out[bucket];
+          acc.n++;
+          if (rec.contest != null) { acc.contestKnown++; if (rec.contest) acc.contestTrue++; }
+          if (rec.fb) for (const p of PRIMS) { const v = rec.fb[p.key]; if (v != null) acc[p.key].push(v); }
+        }
+      }
+    }
+    for (const cls of Object.keys(out)) out[cls].rate = out[cls].contestKnown ? out[cls].contestTrue / out[cls].contestKnown : null;
+    return out;
+  };
+
+  const overall = Object.fromEntries(ARMS.map((a) => [a.name, sample(a.name, TRK.map((t) => t.id))]));
+  const perTrack = Object.fromEntries(ARMS.map((a) => [a.name, Object.fromEntries(TRK.map((t) => [t.id, sample(a.name, [t.id])]))]));
+
+  // ── CSVs ──────────────────────────────────────────────────────────────────────────────────
+  const RCOLS = ['arm', 'track', 'seed', 'v0Class', 'runaway', 'contest',
+    ...PRIMS.map((p) => p.key), 'windowFrames'];
+  for (const a of ARMS) for (const t of TRK) {
+    const bs = store[a.name][t.id].bySeed;
+    writeFileSync(join(OUT_P, `races-${a.name}-${t.id}.csv`),
+      [RCOLS.join(','), ...Object.keys(bs).map(Number).sort((x, y) => x - y).map((s) => {
+        const rec = bs[s]; const fb = rec.fb ?? {};
+        return [a.name, t.id, s, classOf(a.name, t.id, s), rec.runaway ? 1 : 0,
+          rec.contest == null ? '' : rec.contest ? 1 : 0,
+          ...PRIMS.map((p) => r4(fb[p.key])), fb.windowFrames ?? ''].join(',');
+      })].join('\n') + '\n');
+  }
+  const q = (arr, p) => (arr.length ? percentile(arr, p) : null);
+  const fmtQ = (arr, dp) => (arr.length ? `${q(arr, 0.5).toFixed(dp)} [${q(arr, 0.25).toFixed(dp)}–${q(arr, 0.75).toFixed(dp)}]` : '–');
+  const ACOLS = ['arm', 'scope', 'v0Class', 'n', 'p1ContestRate',
+    ...PRIMS.flatMap((p) => [`${p.key}_p25`, `${p.key}_med`, `${p.key}_p75`])];
+  const aggRows = [];
+  for (const a of ARMS) {
+    for (const [scope, smp] of [['overall', overall[a.name]], ...TRK.map((t) => [t.id, perTrack[a.name][t.id]])]) {
+      for (const cls of ['all', 'normal', 'runaway', 'converted']) {
+        const s = smp[cls];
+        aggRows.push([a.name, scope, cls, s.n, r4(s.rate),
+          ...PRIMS.flatMap((p) => [r4(q(s[p.key], 0.25)), r4(q(s[p.key], 0.5)), r4(q(s[p.key], 0.75))])].join(','));
+      }
+    }
+  }
+  writeFileSync(join(OUT_P, 'per-arm-track-class.csv'), [ACOLS.join(','), ...aggRows].join('\n') + '\n');
+
+  // ── SUMMARY.md ────────────────────────────────────────────────────────────────────────────
+  const pctS = (x) => (x == null ? '–' : (100 * x).toFixed(1) + '%');
+  const anyWindow = Object.values(store.V0)[0] ? Object.values(Object.values(store.V0)[0].bySeed)[0]?.windowStart : null;
+  const md = [];
+  md.push(`# P1 Contest Score — baseline (V0 vs gap-reroll winner), N=${RACES}, ${DUR}s`);
+  md.push('');
+  md.push(`Read-only measurement of the merged "sustained multi-racer P1 battle" metric. 4 known tracks (default racer each), fixed baseline seeds ${SEED}–${SEED + RACES - 1}, scheduled rolls only, ${JOBS} parallel jobs. No sim behavior file was touched — **no fingerprint** to check. **Facts only: p1ContestRate carries no threshold here — the gate is the owner's call, and the C1 concept follows separately.**`);
+  md.push('');
+  md.push('## Observer parameters');
+  md.push(`- Window W = **[${anyWindow ?? '?'}, first finish]**. The start is the LIVE \`choreoResolveB2\` config value, read at runtime — no hardcoded progress constant. The window CLOSES at the first finish: past it, racers leave the live ordering by finishing and rank 1 is inherited straight down the field (measured to 1.0, every race reports ~40 "distinct leaders").`);
+  md.push(`- Front group = live racers within **${FRONT_BATTLE_DEFAULTS.nearLen} lengths of P1, INCLUDING P1** (so \`minGroup\` ${FRONT_BATTLE_DEFAULTS.minGroup} = the leader plus two chasers). Note this differs from runaway-parade's \`within3P1At090\`, which counts only the racers BEHIND P1.`);
+  md.push(`- Lengths via the shared lap-aware path (\`arcT × govLenScale\`) — the same one every other observer uses.`);
+  md.push(`- REAL P1 ACTION iff **all four**: distinctLeaders ≥ ${FRONT_BATTLE_DEFAULTS.minDistinctLeaders}, leadChangeCount ≥ ${FRONT_BATTLE_DEFAULTS.minLeadChanges}, maxLeadHoldShare ≤ ${FRONT_BATTLE_DEFAULTS.maxLeadHoldShare}, frontContestFraction ≥ ${FRONT_BATTLE_DEFAULTS.minFrontContestFraction}. \`p1LongestMultiSec\` is reported but is NOT a criterion (a seconds quantity, its threshold would be track- and duration-dependent).`);
+  md.push('');
+  md.push('## STOP gate');
+  md.push(RACES === 100 && SEED === 1
+    ? `✅ V0 reproduced the known runaway baseline exactly (${TRK.filter((t) => KNOWN4[t.id] != null).map((t) => `${t.id} ${store.V0[t.id].runaway}`).join(', ')}).`
+    : 'SKIPPED (needs --races=100 --seed=1).');
+  md.push('');
+  md.push('## Headline');
+  for (const a of ARMS) {
+    const s = overall[a.name].all;
+    md.push(`- **${a.name}** — ${pctS(s.rate)} of races contain a real, sustained P1 battle; in the median race the front is contested for ${q(s.frontContestFraction, 0.5) != null ? (100 * q(s.frontContestFraction, 0.5)).toFixed(0) + '%' : '–'} of the window and ${q(s.distinctLeaders, 0.5) ?? '–'} distinct racers lead.`);
+  }
+  const dV0 = overall.V0.all, dR = overall['R97-ON'].all;
+  const sgn = (x, dp) => (x == null ? '–' : (x >= 0 ? '+' : '') + x.toFixed(dp));
+  md.push('');
+  md.push(`**Delta R97-ON − V0 (what the current winner already contributes):** p1ContestRate ${sgn(dR.rate != null && dV0.rate != null ? 100 * (dR.rate - dV0.rate) : null, 1)} pp` +
+    PRIMS.map((p) => `, median ${p.label} ${sgn(q(dR[p.key], 0.5) != null && q(dV0[p.key], 0.5) != null ? q(dR[p.key], 0.5) - q(dV0[p.key], 0.5) : null, p.dp)}`).join('') + '.');
+  md.push('');
+  md.push('## Overall, by V0-race class');
+  md.push('`normal` = V0 was not a runaway. `runaway` = V0 was AND the arm still is. `converted` = V0 was, the arm is not. Classes are defined by V0 and applied unchanged to both arms, so each column is the same set of races in both. For V0 itself `converted` is empty by construction. Cells are median [p25–p75].');
+  md.push('');
+  md.push('| arm | class | races | p1ContestRate | ' + PRIMS.map((p) => p.label).join(' | ') + ' |');
+  md.push('|---|---|---|---|' + PRIMS.map(() => '---').join('|') + '|');
+  for (const a of ARMS) for (const cls of ['all', 'normal', 'runaway', 'converted']) {
+    const s = overall[a.name][cls];
+    if (!s.n) { md.push(`| ${a.name} | ${cls} | 0 | – | ${PRIMS.map(() => '–').join(' | ')} |`); continue; }
+    md.push(`| ${a.name} | ${cls} | ${s.n} | ${pctS(s.rate)} | ` + PRIMS.map((p) => fmtQ(s[p.key], p.dp)).join(' | ') + ' |');
+  }
+  md.push('');
+  md.push('## Per track, by V0-race class');
+  for (const t of TRK) {
+    md.push('');
+    md.push(`### ${t.id} (${t.closed ? 'closed' : 'open'}, ${t.racer})`);
+    md.push('| arm | class | races | p1ContestRate | ' + PRIMS.map((p) => p.label).join(' | ') + ' |');
+    md.push('|---|---|---|---|' + PRIMS.map(() => '---').join('|') + '|');
+    for (const a of ARMS) for (const cls of ['all', 'normal', 'runaway', 'converted']) {
+      const s = perTrack[a.name][t.id][cls];
+      if (!s.n) { md.push(`| ${a.name} | ${cls} | 0 | – | ${PRIMS.map(() => '–').join(' | ')} |`); continue; }
+      md.push(`| ${a.name} | ${cls} | ${s.n} | ${pctS(s.rate)} | ` + PRIMS.map((p) => fmtQ(s[p.key], p.dp)).join(' | ') + ' |');
+    }
+  }
+  md.push('');
+  md.push('Data: `per-arm-track-class.csv` (aggregates), `races-<arm>-<track>.csv` (per-seed; determinism re-run target).');
+  md.push('');
+  writeFileSync(join(OUT_P, 'SUMMARY.md'), md.join('\n'));
+
+  console.log(`\nElapsed ${((Date.now() - t0) / 60000).toFixed(1)}m → ${OUT_P}`);
+  for (const a of ARMS) console.log(`  ${a.name.padEnd(7)} p1ContestRate=${pctS(overall[a.name].all.rate)}`);
+  process.exit(0);
+}
+
+// ════════════════════════════════════════════════════════════════════════════════
+// P1 CONTEST CRITERION BREAKDOWN (--p1-criteria) — WHICH of the four conditions blocks a race.
+//
+// Pure POST-ANALYSIS: reads the per-seed CSVs --p1-contest already wrote and derives nothing that
+// is not in them, so it needs no sim run and reproduces exactly from the committed data.
+//
+// WHY. p1ContestRate is a conjunction of four conditions. A flat rate between two arms can hide an
+// arm that improved three of them and still lost on the fourth, and a design target is useless
+// without knowing which term is the wall. Two counts per condition:
+//   fail%  — share of races failing it (conditions overlap, so these do not sum to 100).
+//   sole   — races failing EXACTLY that one. Those are the races a single change would flip.
+// Facts only; no threshold and no recommendation.
+//
+// USAGE: node scripts/exp-runaway-leader.mjs --p1-criteria [--out=<results dir>]
+// ════════════════════════════════════════════════════════════════════════════════
+if (argv.includes('--p1-criteria')) {
+  const DIR = join(OUT_ABS, 'p1-contest-baseline');
+  const P = FRONT_BATTLE_DEFAULTS;
+  // Each condition as a predicate on one CSV row, in classifier order. Returns true when the row FAILS it.
+  const COND = [
+    { key: 'distinctLeaders', label: `distinctLeaders < ${P.minDistinctLeaders}`, fails: (r) => +r.distinctLeaders < P.minDistinctLeaders },
+    { key: 'leadChangeCount', label: `leadChangeCount < ${P.minLeadChanges}`, fails: (r) => +r.leadChangeCount < P.minLeadChanges },
+    { key: 'maxLeadHoldShare', label: `maxLeadHoldShare > ${P.maxLeadHoldShare}`, fails: (r) => +r.maxLeadHoldShare > P.maxLeadHoldShare },
+    { key: 'frontContestFraction', label: `frontContestFraction < ${P.minFrontContestFraction}`, fails: (r) => +r.frontContestFraction < P.minFrontContestFraction },
+  ];
+  const readCsv = (path) => {
+    const lines = readFileSync(path, 'utf8').trim().split('\n');
+    const head = lines[0].split(',');
+    return lines.slice(1).map((l) => Object.fromEntries(l.split(',').map((v, i) => [head[i], v])));
+  };
+  const ARM_NAMES = ['V0', 'R97-ON'];
+  const md = ['# P1 Contest — which criterion blocks the race', '',
+    `Post-analysis of the committed \`races-<arm>-<track>.csv\` files in this directory — no sim run, no new data. Thresholds are \`FRONT_BATTLE_DEFAULTS\`. **fail%** = share of races failing that condition (conditions overlap, so they do not sum to 100). **sole** = races failing EXACTLY that one, i.e. the races a single change would flip. Facts only.`, ''];
+  const rowsOut = [];
+  for (const arm of ARM_NAMES) {
+    const rows = [];
+    for (const t of TRACK_IDS) {
+      const p = join(DIR, `races-${arm}-${t}.csv`);
+      try { rows.push(...readCsv(p)); } catch { /* track not in this run */ }
+    }
+    if (!rows.length) continue;
+    const scored = rows.map((r) => COND.filter((c) => c.fails(r)).map((c) => c.key));
+    const pass = scored.filter((f) => f.length === 0).length;
+    md.push(`## ${arm} — ${rows.length} races, ${pass} classified REAL P1 ACTION (${(100 * pass / rows.length).toFixed(1)}%)`);
+    md.push('');
+    md.push('| condition | fail% | sole blocker |');
+    md.push('|---|---|---|');
+    for (const c of COND) {
+      const fail = scored.filter((f) => f.includes(c.key)).length;
+      const sole = scored.filter((f) => f.length === 1 && f[0] === c.key).length;
+      md.push(`| ${c.label} | ${(100 * fail / rows.length).toFixed(1)}% | ${sole} |`);
+      rowsOut.push([arm, c.key, rows.length, fail, +(fail / rows.length).toFixed(4), sole].join(','));
+    }
+    md.push('');
+  }
+  writeFileSync(join(DIR, 'criterion-breakdown.md'), md.join('\n') + '\n');
+  writeFileSync(join(DIR, 'criterion-breakdown.csv'),
+    ['arm,condition,n,failures,failRate,soleBlocker', ...rowsOut].join('\n') + '\n');
+  console.log(md.join('\n'));
   process.exit(0);
 }
 

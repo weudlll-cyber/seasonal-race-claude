@@ -98,6 +98,7 @@ import {
 import { maxLinkGapLengths, makeHeldOvertakeTracker, fullSpreadLengths, framesOverThresholdShare, GAP_THRESHOLD_LENGTHS, leaderSnapshot, RUNAWAY_LARGE_LENGTHS } from './sim/observers/pulk-contest.mjs';
 import { RUNAWAY_PARADE_DEFAULTS, leaderGapLengths, makeFormationTracker, SPEED_SOURCE_SAMPLES, speedProduct, speedSaturation } from './sim/observers/runaway-parade.mjs';
 import { makeLateContestTracker, makeReleaseRankTracker } from './sim/observers/release-contest.mjs';
+import { makeFrontBattleTracker } from './sim/observers/outcome-front-battle.mjs';
 import { applyPulkLeadRotation, arcT, computeDirectorCeiling } from '../client/src/modules/raceGovernor.js';
 import { lenScaleFrom, arcLengths, meanDrawnBodyLen } from '../client/src/modules/raceLengths.js';
 
@@ -1038,6 +1039,10 @@ export function runSingleRace({
       //   drift can be separated from "never reached the band" (see bandExitAfterRelease).
       lateContest:         makeLateContestTracker(RP_WINDOW_START),
       releaseRanks:        makeReleaseRankTracker(CHOREO_RELEASE_PROGRESS),
+      // ── Sustained P1 battle (read-only; definitions in sim/observers/outcome-front-battle.mjs) ──
+      // Window starts at the LIVE choreoResolveB2 — the point the front act is meant to resolve —
+      // so moving that config moves the measurement with it. No hardcoded progress constant.
+      frontBattle:         makeFrontBattleTracker({ windowStart: CHOREO_RESOLVE_B2 }),
     } : null;
     // ── SPEED-SOURCE per-race state (read-only; only allocated when --speed-source) ──
     // samples[prog] = [{ rank, index, effSpeed, product, factors…, saturation…, gapAhead, finishClamp }]
@@ -2076,6 +2081,10 @@ export function runSingleRace({
           // their windows.
           rp.lateContest.observe(racers, raceProgress);
           rp.releaseRanks.observe(racers, raceProgress);
+          // Sustained-P1-battle primitives. The gap callback is the SAME lap-aware length path every
+          // other observer here uses (arcT x govLenScale) — one shared definition, no duplicate arc
+          // maths inside the observer.
+          rp.frontBattle.observe(racers, raceProgress, raceTs, (aT, bT) => arcT(aT, bT, isOpen) * govLenScale);
         }
         // (1) One-shot at windowStart: the frontmost LIVE racer's identity + its lead over P2 (lengths).
         if (rp.leaderIdxAt090 === null && raceProgress >= RP_WINDOW_START) {
@@ -2421,6 +2430,11 @@ export function runSingleRace({
         leadChangeCount:     rp.lateContest.result().leadChangeCount,
         releaseProgress:     CHOREO_RELEASE_PROGRESS,
         rankAtReleaseByIndex: rp.releaseRanks.result(),
+        // Sustained-P1-battle primitives over [choreoResolveB2, first finish]. contestWindowStart is echoed
+        // so a record is self-describing — the window it was measured in is recoverable from the
+        // file alone. classifyFrontBattle() turns these into the REAL P1 ACTION boolean downstream.
+        contestWindowStart:  CHOREO_RESOLVE_B2,
+        frontBattle:         rp.frontBattle.result(),
       };
     }
 

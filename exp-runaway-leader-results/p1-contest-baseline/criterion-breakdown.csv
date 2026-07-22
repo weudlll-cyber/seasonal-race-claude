@@ -1,0 +1,9 @@
+arm,condition,n,failures,failRate,soleBlocker
+V0,distinctLeaders,400,340,0.85,0
+V0,leadChangeCount,400,374,0.935,27
+V0,maxLeadHoldShare,400,289,0.7225,3
+V0,frontContestFraction,400,192,0.48,0
+R97-ON,distinctLeaders,400,320,0.8,0
+R97-ON,leadChangeCount,400,373,0.9325,38
+R97-ON,maxLeadHoldShare,400,265,0.6625,7
+R97-ON,frontContestFraction,400,138,0.345,0
