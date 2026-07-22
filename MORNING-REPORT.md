@@ -101,13 +101,79 @@ The composer sweeps below run at the default 0.80 and capture both windows corre
 
 Data: `reports/greenfield/p2/`.
 
-### 4. Per composer — build? band delivery vs > 80%? action & p1Contest vs matched baselines? intraTierEntropy? re-deal/recompile/re-plan? band-compliance?
+### 4. Per composer (N=50 × 4 tracks, 60 s, σ=0.48)
 
-*(pending — P4/P5/P6 running)*
+**All three build and run through the full live engine, and all three hold the hard band invariant
+exactly (0 violations across every race).** But all three are dominated by the current system on both
+delivery and action:
 
-### 5. Best variant + its single binding blocker + 3–5 strongest seeds for the browser eye-check
+| composer | band delivery | tierExact | p1@0.80 | p1@0.62 | leadChange | distinctLeaders | runaway | parade | intraTierEntropy | re-deal / recompile / re-plan | band viol |
+|---|---|---|---|---|---|---|---|---|---|---|---|
+| **V-PLAN** | **69.7%** | 0% | 0.0% | 0.0% | 0.15 | 1.15 | 5.0% | 1.0% | 1.000 | 12.6 / 0 / 0 | 0 |
+| **V-COPILOT** | 67.7% | 0% | 0.0% | 0.5% | 0.12 | 1.11 | 2.5% | 0.5% | 1.000 | 0 / 0 / 0 | 0 |
+| **V-CC** | 47.2% | 0% | 0.0% | 0.0% | 0.17 | 1.17 | 7.5% | 1.0% | 1.000 | 0 / 0 / 320 | 0 |
+| *baseline (A6/A8, §3)* | *>70%* | *–* | *5.3%* | *31–54%* | *2.7–3.2* | *3.2–3.6* | *6.5–7.5%* | *0.8–2%* | *–* | *–* | *–* |
 
-*(pending)*
+- **Band delivery vs the owner's > 80% mark: all three MISS** (V-CC badly). This is exactly what P1
+  predicted — at 60 s against the reduced band, closed tracks deliver only ~70%, and V-CC spends more
+  of its band on trajectory shape/jitter so it delivers least (47%). tier-exactness is 0% everywhere:
+  no race lands *all* 40 racers in their assigned tier, because ~30–50% miss.
+- **Action vs the matched baselines: catastrophic. p1Contest ≈ 0% at both windows** (vs 5.3% @0.80 and
+  31–54% @0.62), leadChange ≈ 0.1 (vs 2.7–3.2), distinctLeaders ≈ 1.1 (vs 3.2–3.6). **The composers
+  produce essentially no lead changes and no front battle.** This is the "elegant but dull" collapse
+  that GREENFIELD-COPILOT §5 named as the biggest risk — now measured, and it is total.
+- **intraTierEntropy = 1.000** for all three — placement *within* a tier is maximally free
+  (unpredictable across seeds), which is the one thing the design promised and delivers. But it is cold
+  comfort: with p1Contest ≈ 0 the freedom shows up as smooth reshuffling, not as a visible fight for
+  position. (Caveat: at N=50 with few racers per tier-group the signature entropy saturates easily;
+  treat 1.000 as "not scripted", not as a strong action signal.)
+- **Band-compliance: perfect (0 violations).** The playback invariant — every authored factor inside
+  the honest band — held in every frame of every race. The composers never cheat the band; they simply
+  cannot buy enough position with what the band leaves after physics.
+- **Delivery diagnostics behaved as designed:** V-PLAN re-dealt its arrangement ~12.6×/race (the
+  dramaturgy shuffle); V-COPILOT never needed a recompile (its archetypes fit the reserve band);
+  V-CC re-planned at all 8 checkpoints × 40 racers (320) and reported **minMargin = 0.0000** — i.e. it
+  authored right at the reserve edge by construction, so it never predicts an *undeliverable* race,
+  it just under-delivers deep inversions by clamping their mean to the reduced band (which then shows
+  up as the 47% delivery, not as a margin violation).
+
+**Why the mechanism is sound but the result is not:** the composers do exactly what the proposals
+describe — a smooth, seed-authored, band-legal, physics-live open-loop schedule — and the physics
+stays live and honest throughout. The failure is not a bug in the composers; it is the P0/P1 wall made
+concrete. Half the band is gone to physics (σ=48%), and what remains is spent almost entirely on
+*delivering the tier*, leaving nothing to author a front fight with. Locking each racer's mean speed to
+its target rank is what guarantees fairness **and** what removes every lead change.
+
+Data: `reports/greenfield/sweep/`.
+
+### 5. Best variant + its single binding blocker + strongest seeds
+
+**Best variant: V-PLAN** — highest band delivery (69.7%), band-compliant, lowest-complexity of the
+three (a hand of band values + a seed-permuted arrangement). V-COPILOT is a close second and has the
+cleanest runaway (2.5%); V-CC is clearly last (47% delivery) — its extra trajectory machinery costs
+band it cannot spare.
+
+**The single binding blocker (all variants): zero front action.** p1Contest ≈ 0% because a monotone
+mean-speed → target-rank map produces a field that sorts once and never trades the lead. No amount of
+zero-mean shape (dramaturgy, archetype, jitter) changes the finishing order, so none of it produces a
+lead change. To get front action an open-loop composer would have to **schedule genuine proximity at
+the front and let physics/jitter decide the order there** (GREENFIELD-CC §3's actual proposal), which
+this skeleton does not yet do — and doing it costs band the P0/P1 budget does not have at 60 s. The
+secondary blocker is delivery: 80% band-reach is unreachable at 60 s within `band × (1 − σ)`; it needs
+≥ 120 s (P1, and P7 below).
+
+**Strongest seeds for the owner's browser eye-check** (V-PLAN; picked for delivery + any lead change —
+there is little action to show, so these are "cleanest delivery" exemplars, not battles):
+
+1. **dirt-oval, seed 15** — 95% band delivery, 1 lead change (the best single race)
+2. **dirt-oval, seed 4** — 90% delivery, 1 lead change
+3. **mountainstreet, seed 50** — 85% delivery, 1 lead change
+4. **mountainstreet, seed 13** — 80% delivery, 1 lead change
+5. **dirt-oval, seed 9** — 80% delivery, 1 lead change
+
+The eye-check will most likely confirm the metric: smooth, legible, fair-looking sorting with almost no
+overtaking. That is the honest state of the prototype and the thing the owner most needs to see before
+committing to or discarding the direction.
 
 ### 6. Hygiene
 
