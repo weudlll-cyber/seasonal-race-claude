@@ -97,6 +97,7 @@ import {
 } from './sim/observers/gap-metrics.mjs';
 import { maxLinkGapLengths, makeHeldOvertakeTracker, fullSpreadLengths, framesOverThresholdShare, GAP_THRESHOLD_LENGTHS, leaderSnapshot, RUNAWAY_LARGE_LENGTHS } from './sim/observers/pulk-contest.mjs';
 import { RUNAWAY_PARADE_DEFAULTS, leaderGapLengths, makeFormationTracker, SPEED_SOURCE_SAMPLES, speedProduct, speedSaturation } from './sim/observers/runaway-parade.mjs';
+import { makeLateContestTracker, makeReleaseRankTracker } from './sim/observers/release-contest.mjs';
 import { applyPulkLeadRotation, arcT, computeDirectorCeiling } from '../client/src/modules/raceGovernor.js';
 import { lenScaleFrom, arcLengths, meanDrawnBodyLen } from '../client/src/modules/raceLengths.js';
 
@@ -1030,6 +1031,13 @@ export function runSingleRace({
       line:                null,       // finish snapshot { order:[idx], gaps:[len] } at leader-crossing
       speed095ByIndex:     null,       // per-racer avg speed over [~0.95, line] (relative-spread source)
       formation:           makeFormationTracker(), // WHEN the leader→P2 gap forms (read-only per-frame)
+      // ── Release-sweep metrics (read-only; definitions in sim/observers/release-contest.mjs) ──
+      // lateContest: how many times the lead actually changed hands in [windowStart, 1.0] — the
+      //   companion to p1SwapAfter090, which alone cannot tell one pass from a five-way scrap.
+      // releaseRanks: one-shot rank snapshot at the LIVE choreoReleaseProgress, so post-release band
+      //   drift can be separated from "never reached the band" (see bandExitAfterRelease).
+      lateContest:         makeLateContestTracker(RP_WINDOW_START),
+      releaseRanks:        makeReleaseRankTracker(CHOREO_RELEASE_PROGRESS),
     } : null;
     // ── SPEED-SOURCE per-race state (read-only; only allocated when --speed-source) ──
     // samples[prog] = [{ rank, index, effSpeed, product, factors…, saturation…, gapAhead, finishClamp }]
@@ -2063,6 +2071,11 @@ export function runSingleRace({
           const fLive = racers.filter((r) => !r.finished).sort((a, b) => (b.t - a.t) || (a.index - b.index));
           const fGap = fLive.length >= 2 ? arcT(fLive[0].t, fLive[1].t, isOpen) * govLenScale : 0;
           rp.formation.observe(fGap, raceProgress, fLive.length ? fLive[0].index : -1);
+          // Release-sweep: same live ordering, two more read-only trackers. Both self-gate on
+          // progress, so feeding them every frame is correct and costs one comparison outside
+          // their windows.
+          rp.lateContest.observe(racers, raceProgress);
+          rp.releaseRanks.observe(racers, raceProgress);
         }
         // (1) One-shot at windowStart: the frontmost LIVE racer's identity + its lead over P2 (lengths).
         if (rp.leaderIdxAt090 === null && raceProgress >= RP_WINDOW_START) {
@@ -2402,6 +2415,12 @@ export function runSingleRace({
         finalRankByIndex,
         // FORMATION diagnostic: firstCross15/30 + sustained flags, gapAt030/060, leaderIdxAtCross30.
         formation:           rp.formation.result(),
+        // Release-sweep metrics: lead changes in [0.90, 1.0], and the rank snapshot at the LIVE
+        // release point (null when the race never got there). releaseProgress is echoed so a
+        // record is self-describing — the arm it came from is recoverable from the file alone.
+        leadChangeCount:     rp.lateContest.result().leadChangeCount,
+        releaseProgress:     CHOREO_RELEASE_PROGRESS,
+        rankAtReleaseByIndex: rp.releaseRanks.result(),
       };
     }
 

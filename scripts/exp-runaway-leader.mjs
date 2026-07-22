@@ -29,6 +29,7 @@ import { fileURLToPath } from 'url';
 import { promisify } from 'util';
 import { classifyRace, RUNAWAY_PARADE_DEFAULTS, formationLeaderStable, formationBucket, SPEED_SOURCE_SAMPLES } from './sim/observers/runaway-parade.mjs';
 import { BAND_EDGES } from '../client/src/modules/racePlanner.js';
+import { bandExitAfterRelease, p1SwapAfter090 } from './sim/observers/release-contest.mjs';
 
 const pExecFile = promisify(execFile);
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
@@ -672,6 +673,219 @@ if (argv.includes('--gapreroll-confirm')) {
   console.log(`\nElapsed ${((Date.now() - t0) / 60000).toFixed(1)}m → ${OUT_C}`);
   for (const a of AA) console.log(`  ${a.name.padEnd(13)} runaway=${pctS(a.runawayRate)} maxTrack=${pctS(a.maxTrack)} actionΔ=${(a.actionDelta >= 0 ? '+' : '') + a.actionDelta.toFixed(2)} B1min=${pctS(a.b1min)} PASS=${a.pass}`);
   for (const name of ['SYM-1.5-s075', 'SYM-1.5-s10']) { const a = paired[name].all; console.log(`  ${name} converted ${a.conv}/${a.tot} (${a.tot ? pctS(a.conv / a.tot) : '-'}); escapee win/top3/drop ${a.escWin}/${a.escTop3}/${a.escDrop}`); }
+  process.exit(0);
+}
+
+// ════════════════════════════════════════════════════════════════════════════════
+// RELEASE SWEEP (--release-sweep) — choreoReleaseProgress 0.97→0.93 × gap-reroll, 4 known tracks.
+// The eye-test verdict was "chasers close in, but the 0.90 leader is almost never actually passed":
+// the field runs out of runway. This sweep moves the release point earlier to buy runway, and
+// measures BOTH sides of that trade:
+//   payoff  — p1SwapAfter090 (did the 0.90 leader lose?) + leadChangeCount in [0.90, 1.0].
+//   cost    — bandExitAfterRelease: of the racers already INSIDE their band at the release point,
+//             how many drifted OUT by the finish. Endpoint band-reach cannot separate that from
+//             "never got there", and post-release drift is exactly how pack-release failed.
+// Sim-only: choreoReleaseProgress is a plan-config override via the existing sim CLI flag, so
+// defaults.js and every sim behavior file stay untouched → NO fingerprint.
+// ════════════════════════════════════════════════════════════════════════════════
+if (argv.includes('--release-sweep')) {
+  const OUT_R = join(OUT_ABS, 'release-sweep');
+  mkdirSync(OUT_R, { recursive: true });
+  mkdirSync(TMP_ABS, { recursive: true });
+  const KNOWN4 = { 'luger-hill': 18, 'mountainstreet': 18, 'searound': 30, 'dirt-oval': 28 };
+  const TRACKS = ONLY ? [ONLY] : ['luger-hill', 'mountainstreet', 'searound', 'dirt-oval'];
+  const TRK = TRACKS.map((id) => { const s = trackSeed(id); return { id, racer: s.defaultRacerTypeId, closed: !!s.closed }; });
+  const med = (a) => (a.length ? percentile(a, 0.5) : 0);
+  const zoneIdxOf = (rank) => { for (let i = 0; i < BAND_EDGES.length; i++) if (rank <= BAND_EDGES[i]) return i; return BAND_EDGES.length; };
+  const bandReach = (rawData, b) => { const rows = (rawData || []).filter((r) => r.sollBereich === b); return rows.length ? rows.filter((r) => zoneIdxOf(r.finalRank) === b - 1).length / rows.length : null; };
+  // Priority order — V0 first (the reproduction gate), then the reference arm, then the axis.
+  const GR = { mode: 'symmetric', G: 1.5, s: 1.0 }; // the confirmed gap-reroll candidate
+  const ARMS = [
+    { name: 'V0', gr: false, rel: null },
+    { name: 'R97-ON', gr: true, rel: 0.97 },
+    { name: 'R95-ON', gr: true, rel: 0.95 },
+    { name: 'R94-ON', gr: true, rel: 0.94 },
+    { name: 'R93-ON', gr: true, rel: 0.93 },
+    { name: 'R94-OFF', gr: false, rel: 0.94 }, // isolates the release effect ALONE
+  ];
+  const store = {};
+
+  async function runOne(arm, track) {
+    const outAbs = join(TMP_ABS, `rel__${arm.name}__${track.id}`);
+    const args = ['scripts/sim-fairness.mjs', `--track=${track.id}`, `--racer=${track.racer}`,
+      `--seed=${SEED}`, `--races=${RACES}`, `--dur=${DUR}`, '--runaway-parade', '--hero-map', `--out=${toSimOut(outAbs)}`];
+    if (arm.gr) args.push(`--gapRerollThresholdLengths=${GR.G}`, `--gapRerollMode=${GR.mode}`, `--gapRerollStrength=${GR.s}`);
+    if (arm.rel != null) args.push(`--choreoReleaseProgress=${arm.rel}`);
+    await pExecFile(process.execPath, args, { cwd: ROOT, maxBuffer: 512 * 1024 * 1024 });
+    const rp = JSON.parse(readFileSync(join(outAbs, 'runaway-parade.json'), 'utf8'));
+    const fd = JSON.parse(readFileSync(join(outAbs, 'fairness-data.json'), 'utf8'));
+    let hm = {}; try { hm = JSON.parse(readFileSync(join(outAbs, 'hero-map.json'), 'utf8')); } catch { /* optional */ }
+
+    // Per-seed race records + the rank-at-release map for the band-drift join.
+    const bySeed = {}; const releaseRanksBySeed = {};
+    let runaway = 0, parade = 0, swaps = 0, swapDenom = 0; const leadChanges = [];
+    for (const rec of rp.races) {
+      const c = classifyRace(rec.runawayParade, D);
+      const raw = rec.runawayParade;
+      const swap = p1SwapAfter090(c, raw);
+      bySeed[rec.seed] = { runaway: c.runawayWinner, parade: c.paradeFinish, swap, leadChanges: raw.leadChangeCount ?? 0, gap090: raw.leaderGapP2At090Len };
+      releaseRanksBySeed[rec.seed] = raw.rankAtReleaseByIndex ?? null;
+      if (c.runawayWinner) runaway++; if (c.paradeFinish) parade++;
+      if (swap != null) { swapDenom++; if (swap) swaps++; }
+      leadChanges.push(raw.leadChangeCount ?? 0);
+    }
+
+    // bandExitAfterRelease — join rawData (sollBereich + finalRank, per racer) with the release-point
+    // rank snapshot (per seed, per racer index). V0 has no release override, so its rows use the
+    // DEFAULT release point: that is the natural post-0.97 drift baseline every arm is read against.
+    const driftRows = [];
+    for (const r of fd.rawData || []) {
+      const ranks = releaseRanksBySeed[r.seed];
+      if (!ranks) continue;
+      driftRows.push({ sollBereich: r.sollBereich, rankAtRelease: ranks[r.racerIndex] ?? null, finalRank: r.finalRank });
+    }
+    const drift = bandExitAfterRelease(driftRows, [1, 2]);
+    const nat = (fd.results || [])[0]?.avgNaturalness || {};
+    return {
+      bySeed,
+      agg: { arm: arm.name, track: track.id, n: rp.races.length, runaway, parade,
+        runawayRate: runaway / rp.races.length, paradeRate: parade / rp.races.length,
+        p1Swap: swapDenom ? swaps / swapDenom : null, swaps, swapDenom,
+        leadChangeMean: mean(leadChanges),
+        b1Exit: drift[1].rate, b1ExitN: drift[1].inside, b2Exit: drift[2].rate, b2ExitN: drift[2].inside,
+        b1: bandReach(fd.rawData, 1), b2: bandReach(fd.rawData, 2),
+        holmUnfair: hm.fairness?.startRowUnfair ?? null, top5Action: nat.outcomeTop5SwapsMean ?? null,
+        biased: nat.gapBiasedRolls ?? 0, duty: nat.gapLeaderDutyCycle ?? 0 },
+    };
+  }
+
+  const t0 = Date.now();
+  console.log(`\n=== release-sweep === ${ARMS.length} arms × ${TRK.length} tracks × N=${RACES} (seed=${SEED}, dur=${DUR}s), jobs=${JOBS}`);
+
+  async function runArm(arm) {
+    store[arm.name] = {};
+    const jobs = [...TRK]; let nx = 0;
+    async function w() { while (nx < jobs.length) { const i = nx++; const r = await runOne(arm, jobs[i]); store[arm.name][jobs[i].id] = r;
+      console.log(`  ${arm.name.padEnd(8)} ${jobs[i].id.padEnd(15)} runaway=${r.agg.runaway}/${r.agg.n} swap=${r.agg.p1Swap != null ? (100 * r.agg.p1Swap).toFixed(0) + '%' : '-'} b1Exit=${r.agg.b1Exit != null ? (100 * r.agg.b1Exit).toFixed(0) + '%' : '-'}`); } }
+    await Promise.all(Array.from({ length: Math.min(JOBS, jobs.length) }, w));
+  }
+
+  // ── V0 first + STOP gate: the exact known baseline, else every comparison below is meaningless ──
+  await runArm(ARMS[0]);
+  const gateFails = [];
+  if (RACES === 100 && SEED === 1) {
+    for (const t of TRK) {
+      if (KNOWN4[t.id] == null) continue;
+      const got = store.V0[t.id].agg.runaway;
+      if (got !== KNOWN4[t.id]) gateFails.push(`${t.id}: V0 runaway ${got} (baseline ${KNOWN4[t.id]})`);
+    }
+  }
+  if (gateFails.length) {
+    writeFileSync(join(OUT_R, 'SUMMARY.md'), `# Release sweep STOPPED — V0 reproduction gate failed\n\nV0 must reproduce the known per-track baseline EXACTLY; it did not, so no arm below it is comparable. No other arm was run.\n\n${gateFails.map((f) => `- ${f}`).join('\n')}\n`);
+    console.error('\n❌ STOP GATE FAILED:\n' + gateFails.map((f) => '  ' + f).join('\n'));
+    process.exit(1);
+  }
+  console.log(RACES === 100 && SEED === 1 ? '  STOP gate PASSED (V0 = known baseline on all 4 tracks).' : '  STOP gate SKIPPED (needs --races=100 --seed=1).');
+
+  for (const arm of ARMS.slice(1)) await runArm(arm);
+
+  // ── Per-arm aggregation, incl. the paired ex-runaway (V0-runaway seed set) view ──
+  const armAgg = (name) => {
+    const ar = TRK.map((t) => store[name][t.id].agg);
+    const N = ar.reduce((s, r) => s + r.n, 0);
+    const runaway = ar.reduce((s, r) => s + r.runaway, 0);
+    const parade = ar.reduce((s, r) => s + r.parade, 0);
+    const swaps = ar.reduce((s, r) => s + r.swaps, 0);
+    const swapDenom = ar.reduce((s, r) => s + r.swapDenom, 0);
+    // Restricted to the V0-runaway seed set: did the former lonely marches gain real P1 fights?
+    let exSwap = 0, exDenom = 0, exLead = [];
+    for (const t of TRK) {
+      const v0bs = store.V0[t.id].bySeed, abs = store[name][t.id].bySeed;
+      for (const s of Object.keys(v0bs).map(Number)) {
+        if (!v0bs[s].runaway) continue;
+        const a = abs[s]; if (!a || a.swap == null) continue;
+        exDenom++; if (a.swap) exSwap++; exLead.push(a.leadChanges);
+      }
+    }
+    const w = (f) => { const v = ar.map(f).filter((x) => x != null); return v.length ? mean(v) : null; };
+    return { name, N, runawayRate: runaway / N, maxTrack: Math.max(...ar.map((r) => r.runawayRate)),
+      paradeRate: parade / N, p1Swap: swapDenom ? swaps / swapDenom : null,
+      exSwap: exDenom ? exSwap / exDenom : null, exDenom, exLeadMean: exLead.length ? mean(exLead) : null,
+      leadChangeMean: mean(ar.map((r) => r.leadChangeMean)),
+      b1Exit: w((r) => r.b1Exit), b2Exit: w((r) => r.b2Exit),
+      b1min: Math.min(...ar.map((r) => r.b1 ?? 0)), b2min: Math.min(...ar.map((r) => r.b2 ?? 0)),
+      holmTracks: ar.filter((r) => (r.holmUnfair ?? 0) > 0).length,
+      action: mean(ar.map((r) => r.top5Action ?? 0)), biased: mean(ar.map((r) => r.biased)), duty: mean(ar.map((r) => r.duty)),
+      perTrack: Object.fromEntries(ar.map((r) => [r.track, r])) };
+  };
+  const AA = ARMS.map((a) => armAgg(a.name));
+  const v0a = AA[0];
+  for (const a of AA) {
+    a.actionDelta = a.action - v0a.action;
+    // All previously binding gates stay in force. p1Swap / bandExit carry NO threshold — the owner sets those.
+    a.pass = a.runawayRate < 0.10 && a.maxTrack <= 0.15 && a.paradeRate <= 0.02 &&
+      a.actionDelta >= 0 && a.b1min >= 0.70 && a.b2min >= 0.70 && a.holmTracks <= 2;
+  }
+
+  // ── CSVs ──
+  const ACOLS = ['arm', 'track', 'n', 'runaway', 'runawayRate', 'parade', 'paradeRate', 'p1Swap', 'swaps', 'swapDenom',
+    'leadChangeMean', 'b1Exit', 'b1ExitN', 'b2Exit', 'b2ExitN', 'b1', 'b2', 'holmUnfair', 'top5Action', 'biased', 'duty'];
+  const aggRows = ARMS.flatMap((a) => TRK.map((t) => store[a.name][t.id].agg));
+  writeFileSync(join(OUT_R, 'per-arm-track.csv'),
+    [ACOLS.join(','), ...aggRows.map((r) => ACOLS.map((c) => (r[c] == null ? '' : typeof r[c] === 'number' ? +Number(r[c]).toFixed(4) : r[c])).join(','))].join('\n') + '\n');
+  const RCOLS = ['arm', 'track', 'seed', 'runaway', 'parade', 'swap', 'leadChanges', 'gap090'];
+  for (const a of ARMS) for (const t of TRK) {
+    const bs = store[a.name][t.id].bySeed;
+    writeFileSync(join(OUT_R, `races-${a.name}-${t.id}.csv`),
+      [RCOLS.join(','), ...Object.keys(bs).map(Number).sort((x, y) => x - y).map((s) =>
+        [a.name, t.id, s, bs[s].runaway ? 1 : 0, bs[s].parade ? 1 : 0, bs[s].swap == null ? '' : bs[s].swap ? 1 : 0, bs[s].leadChanges, r4(bs[s].gap090)].join(','))].join('\n') + '\n');
+  }
+
+  // ── SUMMARY.md ──
+  const pctS = (x) => (x == null ? '–' : (100 * x).toFixed(1) + '%');
+  const md = [];
+  md.push('# Release Sweep — choreoReleaseProgress 0.97→0.93 × gap-reroll (4 known tracks, N=' + RACES + ', ' + DUR + 's)');
+  md.push('');
+  md.push(`Sim-only measurement. \`choreoReleaseProgress\` is passed as a plan-config override via the existing sim CLI flag — \`defaults.js\` and every sim behavior file are untouched, so there is **no fingerprint** to check. gap-reroll arms use the confirmed candidate (symmetric, G=${GR.G}, strength=${GR.s}), scheduled rolls only. Seeds ${SEED}–${SEED + RACES - 1}, default racer per track. Facts only — the decision is the owner's.`);
+  md.push('');
+  md.push('## STOP gate');
+  md.push(RACES === 100 && SEED === 1
+    ? `✅ V0 reproduced the known baseline exactly (${TRK.filter((t) => KNOWN4[t.id] != null).map((t) => `${t.id} ${store.V0[t.id].agg.runaway}`).join(', ')}; overall ${pctS(v0a.runawayRate)}).`
+    : 'SKIPPED (needs --races=100 --seed=1).');
+  md.push('');
+  md.push('## Co-optimization table');
+  md.push('Binding gates: runaway <10% overall AND ≤15%/track AND parade ≤2% AND action Δ ≥ 0 AND B1&B2 band-reach ≥70% every track AND Holm ≤2/4. **p1SwapAfter090 and bandExitAfterRelease carry no threshold** — they are reported for the owner\'s eye and call.');
+  md.push('');
+  md.push('| arm | release | gapReroll | runaway | max track | parade | action Δ | B1min | B2min | Holm | PASS | p1Swap | ex-runaway swap | lead changes | B1 exit | B2 exit |');
+  md.push('|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|');
+  for (let i = 0; i < ARMS.length; i++) {
+    const a = AA[i], arm = ARMS[i];
+    md.push(`| ${a.name} | ${arm.rel ?? '0.97 (default)'} | ${arm.gr ? 'ON' : 'off'} | ${pctS(a.runawayRate)} | ${pctS(a.maxTrack)} | ${pctS(a.paradeRate)} | ${(a.actionDelta >= 0 ? '+' : '') + a.actionDelta.toFixed(2)} | ${pctS(a.b1min)} | ${pctS(a.b2min)} | ${a.holmTracks}/${TRK.length} | ${a.pass ? '✅' : '❌'} | ${pctS(a.p1Swap)} | ${pctS(a.exSwap)} (n=${a.exDenom}) | ${a.leadChangeMean.toFixed(2)} | ${pctS(a.b1Exit)} | ${pctS(a.b2Exit)} |`);
+  }
+  md.push('');
+  md.push('*p1Swap = share of races whose progress-0.90 leader is NOT the final winner. ex-runaway swap = the same, restricted to the seeds that were runaways in V0 (did the former lonely marches gain a real P1 fight). lead changes = mean number of times the lead genuinely changed hands in [0.90, 1.0] (a leader FINISHING is not counted — only being overtaken on track). B1/B2 exit = bandExitAfterRelease: of the racers already inside their band at the release point, the share that finished outside it.*');
+  md.push('');
+  md.push('## bandExitAfterRelease per track (the fairness-attribution metric)');
+  md.push('| arm | ' + TRK.map((t) => `${t.id} B1 / B2`).join(' | ') + ' |');
+  md.push('|---|' + TRK.map(() => '---').join('|') + '|');
+  for (const a of AA) md.push(`| ${a.name} | ` + TRK.map((t) => { const g = a.perTrack[t.id]; return `${pctS(g.b1Exit)} / ${pctS(g.b2Exit)}`; }).join(' | ') + ' |');
+  md.push('');
+  md.push('## Per-track runawayWinnerRate');
+  md.push('| arm | ' + TRK.map((t) => t.id).join(' | ') + ' |');
+  md.push('|---|' + TRK.map(() => '---').join('|') + '|');
+  for (const a of AA) md.push(`| ${a.name} | ` + TRK.map((t) => pctS(a.perTrack[t.id].runawayRate)).join(' | ') + ' |');
+  md.push('');
+  md.push('## Per-track p1SwapAfter090');
+  md.push('| arm | ' + TRK.map((t) => t.id).join(' | ') + ' |');
+  md.push('|---|' + TRK.map(() => '---').join('|') + '|');
+  for (const a of AA) md.push(`| ${a.name} | ` + TRK.map((t) => pctS(a.perTrack[t.id].p1Swap)).join(' | ') + ' |');
+  md.push('');
+  md.push('Data: `per-arm-track.csv` (aggregates), `races-<arm>-<track>.csv` (per-seed; determinism re-run target).');
+  md.push('');
+  writeFileSync(join(OUT_R, 'SUMMARY.md'), md.join('\n'));
+
+  console.log(`\nElapsed ${((Date.now() - t0) / 60000).toFixed(1)}m → ${OUT_R}`);
+  for (const a of AA) console.log(`  ${a.name.padEnd(8)} runaway=${pctS(a.runawayRate)} PASS=${a.pass} p1Swap=${pctS(a.p1Swap)} exSwap=${pctS(a.exSwap)} B1exit=${pctS(a.b1Exit)} B2exit=${pctS(a.b2Exit)}`);
   process.exit(0);
 }
 

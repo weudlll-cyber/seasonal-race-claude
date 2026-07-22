@@ -219,6 +219,23 @@ Additionally: Space (Custom Track) already present.
 
 ## Ready — spec exists, concept decided
 
+### CI / dependency hygiene — owner decisions (from the 2026-07-22 audit episode)
+
+Both open, both the owner's call. Context: CI's `npm audit --audit-level=high` step failed on five
+consecutive runs (back to 2026-07-20) with no code change on our side — two fresh upstream
+advisories against DEV dependencies (`js-yaml` GHSA-52cp-r559-cp3m, `brace-expansion`
+GHSA-3jxr-9vmj-r5cp). Fixed lockfile-only in `869615b`.
+
+- **Audit-gate policy for DEV dependencies.** ⏳ OPEN. Today the gate is hard-blocking regardless of
+  whether the advisory touches shipped code, so any new upstream advisory against a build/test-only
+  package stops CI until someone bumps a lockfile. Options: keep it hard (maximum pressure to stay
+  current), or split the step — hard-fail on runtime dependencies, report-only on `dev` ones. Trade-off
+  is prompt patching vs. unrelated red builds blocking merges.
+- **`body-parser` LOW runtime advisory (GHSA-v422-hmwv-36x6) in `server/`.** ⏳ OPEN. Below the
+  `high` gate, so CI is unaffected and it was deliberately NOT bundled into the CI-unblock commit —
+  unlike the two client fixes this is a **runtime** dependency, so the bump deserves its own decision
+  and its own verification rather than riding along in a chore commit.
+
 ### Browser seed — follow-ups (noted, NOT built; owner decision)
 
 Quick-Test races are seed-deterministic as of 2026-07 (see `docs/SIM.md` → *Browser determinism*).
