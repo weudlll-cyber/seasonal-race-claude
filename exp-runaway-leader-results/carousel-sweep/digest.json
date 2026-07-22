@@ -1,0 +1,898 @@
+{
+ "arms": {
+  "A1-V0": {
+   "n": 400,
+   "runaway": 0.235,
+   "parade": 0.02,
+   "p1": 0.0525,
+   "p1n": 21,
+   "castRate": 0,
+   "authored": 0,
+   "completed": 0,
+   "completion": null,
+   "satMean": null,
+   "satMax": null,
+   "span13": 3.2626,
+   "tears": {},
+   "reasons": {},
+   "distinctLeaders": 1,
+   "leadChangeCount": 0,
+   "maxLeadHoldShare": 1,
+   "frontContestFraction": 0.5546,
+   "p1LongestMultiSec": 7.872
+  },
+  "A0-GR": {
+   "n": 400,
+   "runaway": 0.075,
+   "parade": 0.02,
+   "p1": 0.0575,
+   "p1n": 23,
+   "castRate": 0,
+   "authored": 0,
+   "completed": 0,
+   "completion": null,
+   "satMean": null,
+   "satMax": null,
+   "span13": 2.4406,
+   "tears": {},
+   "reasons": {},
+   "distinctLeaders": 2,
+   "leadChangeCount": 1,
+   "maxLeadHoldShare": 0.8578,
+   "frontContestFraction": 0.7337,
+   "p1LongestMultiSec": 10.448
+  },
+  "A2-CAR-w62": {
+   "n": 400,
+   "runaway": 0.2175,
+   "parade": 0.02,
+   "p1": 0.22,
+   "p1n": 88,
+   "castRate": 0.555,
+   "authored": 444,
+   "completed": 130,
+   "completion": 0.2927927927927928,
+   "satMean": 0.15723693693693697,
+   "satMax": 0.5748,
+   "span13": 3.4759,
+   "tears": {
+    "1": 152,
+    "2": 62
+   },
+   "reasons": {
+    "lead-in-too-steep": 174,
+    "rotation-torn-by-feasibility": 4
+   },
+   "distinctLeaders": 3,
+   "leadChangeCount": 2,
+   "maxLeadHoldShare": 0.6942,
+   "frontContestFraction": 0.574,
+   "p1LongestMultiSec": 13.312
+  },
+  "A2b-CAR-w70": {
+   "n": 400,
+   "runaway": 0.225,
+   "parade": 0.015,
+   "p1": 0.18,
+   "p1n": 72,
+   "castRate": 0,
+   "authored": 0,
+   "completed": 0,
+   "completion": null,
+   "satMean": null,
+   "satMax": null,
+   "span13": 3.2439,
+   "tears": {},
+   "reasons": {
+    "window-too-short-for-rotation": 400
+   },
+   "distinctLeaders": 2,
+   "leadChangeCount": 1,
+   "maxLeadHoldShare": 0.7752,
+   "frontContestFraction": 0.6492,
+   "p1LongestMultiSec": 12.048
+  },
+  "A3-CAR-GR": {
+   "n": 400,
+   "runaway": 0.075,
+   "parade": 0.0175,
+   "p1": 0.28,
+   "p1n": 112,
+   "castRate": 0.555,
+   "authored": 444,
+   "completed": 141,
+   "completion": 0.31756756756756754,
+   "satMean": 0.16074639639639646,
+   "satMax": 0.6033,
+   "span13": 2.7564,
+   "tears": {
+    "1": 151,
+    "2": 62
+   },
+   "reasons": {
+    "lead-in-too-steep": 174,
+    "rotation-torn-by-feasibility": 4
+   },
+   "distinctLeaders": 3,
+   "leadChangeCount": 2,
+   "maxLeadHoldShare": 0.6344,
+   "frontContestFraction": 0.6676,
+   "p1LongestMultiSec": 15.152
+  },
+  "A4-CAR-GR-RB": {
+   "n": 400,
+   "runaway": 0.1025,
+   "parade": 0.02,
+   "p1": 0.305,
+   "p1n": 122,
+   "castRate": 0.555,
+   "authored": 444,
+   "completed": 155,
+   "completion": 0.3490990990990991,
+   "satMean": 0.15650675675675674,
+   "satMax": 0.5932,
+   "span13": 3.0094,
+   "tears": {
+    "1": 140,
+    "2": 70
+   },
+   "reasons": {
+    "lead-in-too-steep": 174,
+    "rotation-torn-by-feasibility": 4
+   },
+   "distinctLeaders": 3,
+   "leadChangeCount": 2,
+   "maxLeadHoldShare": 0.614,
+   "frontContestFraction": 0.6413,
+   "p1LongestMultiSec": 13.328
+  },
+  "A5-CAR-G075-RB": {
+   "n": 400,
+   "runaway": 0.1025,
+   "parade": 0.0075,
+   "p1": 0.4425,
+   "p1n": 177,
+   "castRate": 0.555,
+   "authored": 444,
+   "completed": 146,
+   "completion": 0.32882882882882886,
+   "satMean": 0.15875090090090085,
+   "satMax": 0.5926,
+   "span13": 2.6332,
+   "tears": {
+    "1": 138,
+    "2": 73
+   },
+   "reasons": {
+    "lead-in-too-steep": 174,
+    "rotation-torn-by-feasibility": 4
+   },
+   "distinctLeaders": 3,
+   "leadChangeCount": 3,
+   "maxLeadHoldShare": 0.5652,
+   "frontContestFraction": 0.7083,
+   "p1LongestMultiSec": 14.72
+  }
+ },
+ "perTrack": {
+  "A1-V0": {
+   "luger-hill": {
+    "n": 100,
+    "runaway": 0.18,
+    "parade": 0.01,
+    "p1": 0.05,
+    "p1n": 5,
+    "castRate": 0,
+    "authored": 0,
+    "completed": 0,
+    "completion": null,
+    "satMean": null,
+    "satMax": null,
+    "span13": 2.5086,
+    "tears": {},
+    "reasons": {},
+    "distinctLeaders": 1,
+    "leadChangeCount": 0,
+    "maxLeadHoldShare": 1,
+    "frontContestFraction": 0.9304,
+    "p1LongestMultiSec": 9.424
+   },
+   "mountainstreet": {
+    "n": 100,
+    "runaway": 0.18,
+    "parade": 0.03,
+    "p1": 0.1,
+    "p1n": 10,
+    "castRate": 0,
+    "authored": 0,
+    "completed": 0,
+    "completion": null,
+    "satMean": null,
+    "satMax": null,
+    "span13": 2.99,
+    "tears": {},
+    "reasons": {},
+    "distinctLeaders": 2,
+    "leadChangeCount": 1,
+    "maxLeadHoldShare": 0.9703,
+    "frontContestFraction": 0.6076,
+    "p1LongestMultiSec": 5.664
+   },
+   "searound": {
+    "n": 100,
+    "runaway": 0.3,
+    "parade": 0.01,
+    "p1": 0.03,
+    "p1n": 3,
+    "castRate": 0,
+    "authored": 0,
+    "completed": 0,
+    "completion": null,
+    "satMean": null,
+    "satMax": null,
+    "span13": 4.2036,
+    "tears": {},
+    "reasons": {},
+    "distinctLeaders": 1,
+    "leadChangeCount": 0,
+    "maxLeadHoldShare": 1,
+    "frontContestFraction": 0.3903,
+    "p1LongestMultiSec": 7.104
+   },
+   "dirt-oval": {
+    "n": 100,
+    "runaway": 0.28,
+    "parade": 0.03,
+    "p1": 0.03,
+    "p1n": 3,
+    "castRate": 0,
+    "authored": 0,
+    "completed": 0,
+    "completion": null,
+    "satMean": null,
+    "satMax": null,
+    "span13": 3.9468,
+    "tears": {},
+    "reasons": {},
+    "distinctLeaders": 1,
+    "leadChangeCount": 0,
+    "maxLeadHoldShare": 1,
+    "frontContestFraction": 0.5332,
+    "p1LongestMultiSec": 11.104
+   }
+  },
+  "A0-GR": {
+   "luger-hill": {
+    "n": 100,
+    "runaway": 0.1,
+    "parade": 0.01,
+    "p1": 0.06,
+    "p1n": 6,
+    "castRate": 0,
+    "authored": 0,
+    "completed": 0,
+    "completion": null,
+    "satMean": null,
+    "satMax": null,
+    "span13": 2.4328,
+    "tears": {},
+    "reasons": {},
+    "distinctLeaders": 1,
+    "leadChangeCount": 0,
+    "maxLeadHoldShare": 1,
+    "frontContestFraction": 1,
+    "p1LongestMultiSec": 10.416
+   },
+   "mountainstreet": {
+    "n": 100,
+    "runaway": 0.05,
+    "parade": 0.03,
+    "p1": 0.08,
+    "p1n": 8,
+    "castRate": 0,
+    "authored": 0,
+    "completed": 0,
+    "completion": null,
+    "satMean": null,
+    "satMax": null,
+    "span13": 2.337,
+    "tears": {},
+    "reasons": {},
+    "distinctLeaders": 2,
+    "leadChangeCount": 1,
+    "maxLeadHoldShare": 0.8331,
+    "frontContestFraction": 0.7567,
+    "p1LongestMultiSec": 7.92
+   },
+   "searound": {
+    "n": 100,
+    "runaway": 0.13,
+    "parade": 0.01,
+    "p1": 0.04,
+    "p1n": 4,
+    "castRate": 0,
+    "authored": 0,
+    "completed": 0,
+    "completion": null,
+    "satMean": null,
+    "satMax": null,
+    "span13": 2.9719,
+    "tears": {},
+    "reasons": {},
+    "distinctLeaders": 2,
+    "leadChangeCount": 1,
+    "maxLeadHoldShare": 0.8578,
+    "frontContestFraction": 0.5849,
+    "p1LongestMultiSec": 9.584
+   },
+   "dirt-oval": {
+    "n": 100,
+    "runaway": 0.02,
+    "parade": 0.03,
+    "p1": 0.05,
+    "p1n": 5,
+    "castRate": 0,
+    "authored": 0,
+    "completed": 0,
+    "completion": null,
+    "satMean": null,
+    "satMax": null,
+    "span13": 2.2615,
+    "tears": {},
+    "reasons": {},
+    "distinctLeaders": 2,
+    "leadChangeCount": 1,
+    "maxLeadHoldShare": 0.8158,
+    "frontContestFraction": 0.7463,
+    "p1LongestMultiSec": 16.576
+   }
+  },
+  "A2-CAR-w62": {
+   "luger-hill": {
+    "n": 100,
+    "runaway": 0.17,
+    "parade": 0.04,
+    "p1": 0.24,
+    "p1n": 24,
+    "castRate": 0.62,
+    "authored": 124,
+    "completed": 30,
+    "completion": 0.24193548387096775,
+    "satMean": 0.19673870967741938,
+    "satMax": 0.5411,
+    "span13": 2.9513,
+    "tears": {
+     "1": 46,
+     "2": 14
+    },
+    "reasons": {
+     "lead-in-too-steep": 38
+    },
+    "distinctLeaders": 3,
+    "leadChangeCount": 2,
+    "maxLeadHoldShare": 0.6721,
+    "frontContestFraction": 0.8119,
+    "p1LongestMultiSec": 14
+   },
+   "mountainstreet": {
+    "n": 100,
+    "runaway": 0.19,
+    "parade": 0.02,
+    "p1": 0.28,
+    "p1n": 28,
+    "castRate": 0.47,
+    "authored": 94,
+    "completed": 36,
+    "completion": 0.3829787234042553,
+    "satMean": 0.1497446808510638,
+    "satMax": 0.5748,
+    "span13": 3.604,
+    "tears": {
+     "1": 31,
+     "2": 12
+    },
+    "reasons": {
+     "lead-in-too-steep": 52,
+     "rotation-torn-by-feasibility": 1
+    },
+    "distinctLeaders": 3,
+    "leadChangeCount": 2,
+    "maxLeadHoldShare": 0.6482,
+    "frontContestFraction": 0.5973,
+    "p1LongestMultiSec": 10.592
+   },
+   "searound": {
+    "n": 100,
+    "runaway": 0.26,
+    "parade": 0.02,
+    "p1": 0.17,
+    "p1n": 17,
+    "castRate": 0.5,
+    "authored": 100,
+    "completed": 25,
+    "completion": 0.25,
+    "satMean": 0.153916,
+    "satMax": 0.5147,
+    "span13": 4.3163,
+    "tears": {
+     "1": 38,
+     "2": 12
+    },
+    "reasons": {
+     "lead-in-too-steep": 50
+    },
+    "distinctLeaders": 3,
+    "leadChangeCount": 2,
+    "maxLeadHoldShare": 0.6916,
+    "frontContestFraction": 0.4791,
+    "p1LongestMultiSec": 14.192
+   },
+   "dirt-oval": {
+    "n": 100,
+    "runaway": 0.25,
+    "parade": 0,
+    "p1": 0.19,
+    "p1n": 19,
+    "castRate": 0.63,
+    "authored": 126,
+    "completed": 39,
+    "completion": 0.30952380952380953,
+    "satMean": 0.1265873015873016,
+    "satMax": 0.4411,
+    "span13": 3.9468,
+    "tears": {
+     "1": 37,
+     "2": 24
+    },
+    "reasons": {
+     "lead-in-too-steep": 34,
+     "rotation-torn-by-feasibility": 3
+    },
+    "distinctLeaders": 3,
+    "leadChangeCount": 2,
+    "maxLeadHoldShare": 0.7267,
+    "frontContestFraction": 0.4925,
+    "p1LongestMultiSec": 17.28
+   }
+  },
+  "A2b-CAR-w70": {
+   "luger-hill": {
+    "n": 100,
+    "runaway": 0.17,
+    "parade": 0.01,
+    "p1": 0.22,
+    "p1n": 22,
+    "castRate": 0,
+    "authored": 0,
+    "completed": 0,
+    "completion": null,
+    "satMean": null,
+    "satMax": null,
+    "span13": 2.4672,
+    "tears": {},
+    "reasons": {
+     "window-too-short-for-rotation": 100
+    },
+    "distinctLeaders": 2,
+    "leadChangeCount": 1,
+    "maxLeadHoldShare": 0.7551,
+    "frontContestFraction": 0.9667,
+    "p1LongestMultiSec": 15.12
+   },
+   "mountainstreet": {
+    "n": 100,
+    "runaway": 0.17,
+    "parade": 0.02,
+    "p1": 0.19,
+    "p1n": 19,
+    "castRate": 0,
+    "authored": 0,
+    "completed": 0,
+    "completion": null,
+    "satMean": null,
+    "satMax": null,
+    "span13": 3.3484,
+    "tears": {},
+    "reasons": {
+     "window-too-short-for-rotation": 100
+    },
+    "distinctLeaders": 2,
+    "leadChangeCount": 2,
+    "maxLeadHoldShare": 0.7661,
+    "frontContestFraction": 0.6272,
+    "p1LongestMultiSec": 7.824
+   },
+   "searound": {
+    "n": 100,
+    "runaway": 0.28,
+    "parade": 0.02,
+    "p1": 0.17,
+    "p1n": 17,
+    "castRate": 0,
+    "authored": 0,
+    "completed": 0,
+    "completion": null,
+    "satMean": null,
+    "satMax": null,
+    "span13": 3.642,
+    "tears": {},
+    "reasons": {
+     "window-too-short-for-rotation": 100
+    },
+    "distinctLeaders": 2,
+    "leadChangeCount": 1,
+    "maxLeadHoldShare": 0.7574,
+    "frontContestFraction": 0.5634,
+    "p1LongestMultiSec": 13.536
+   },
+   "dirt-oval": {
+    "n": 100,
+    "runaway": 0.28,
+    "parade": 0.01,
+    "p1": 0.14,
+    "p1n": 14,
+    "castRate": 0,
+    "authored": 0,
+    "completed": 0,
+    "completion": null,
+    "satMean": null,
+    "satMax": null,
+    "span13": 3.9468,
+    "tears": {},
+    "reasons": {
+     "window-too-short-for-rotation": 100
+    },
+    "distinctLeaders": 2,
+    "leadChangeCount": 1,
+    "maxLeadHoldShare": 0.8528,
+    "frontContestFraction": 0.5234,
+    "p1LongestMultiSec": 17.056
+   }
+  },
+  "A3-CAR-GR": {
+   "luger-hill": {
+    "n": 100,
+    "runaway": 0.12,
+    "parade": 0,
+    "p1": 0.24,
+    "p1n": 24,
+    "castRate": 0.62,
+    "authored": 124,
+    "completed": 32,
+    "completion": 0.25806451612903225,
+    "satMean": 0.19552903225806456,
+    "satMax": 0.5592,
+    "span13": 2.5865,
+    "tears": {
+     "1": 46,
+     "2": 14
+    },
+    "reasons": {
+     "lead-in-too-steep": 38
+    },
+    "distinctLeaders": 3,
+    "leadChangeCount": 2,
+    "maxLeadHoldShare": 0.6788,
+    "frontContestFraction": 0.7908,
+    "p1LongestMultiSec": 13.376
+   },
+   "mountainstreet": {
+    "n": 100,
+    "runaway": 0.07,
+    "parade": 0.03,
+    "p1": 0.35,
+    "p1n": 35,
+    "castRate": 0.47,
+    "authored": 94,
+    "completed": 34,
+    "completion": 0.3617021276595745,
+    "satMean": 0.15389574468085102,
+    "satMax": 0.6033,
+    "span13": 2.8828,
+    "tears": {
+     "1": 32,
+     "2": 12
+    },
+    "reasons": {
+     "lead-in-too-steep": 52,
+     "rotation-torn-by-feasibility": 1
+    },
+    "distinctLeaders": 3,
+    "leadChangeCount": 2,
+    "maxLeadHoldShare": 0.6269,
+    "frontContestFraction": 0.6815,
+    "p1LongestMultiSec": 10.944
+   },
+   "searound": {
+    "n": 100,
+    "runaway": 0.1,
+    "parade": 0.03,
+    "p1": 0.23,
+    "p1n": 23,
+    "castRate": 0.5,
+    "authored": 100,
+    "completed": 29,
+    "completion": 0.29,
+    "satMean": 0.16915999999999998,
+    "satMax": 0.513,
+    "span13": 2.7713,
+    "tears": {
+     "1": 38,
+     "2": 11
+    },
+    "reasons": {
+     "lead-in-too-steep": 50
+    },
+    "distinctLeaders": 3,
+    "leadChangeCount": 2,
+    "maxLeadHoldShare": 0.6404,
+    "frontContestFraction": 0.6067,
+    "p1LongestMultiSec": 14.768
+   },
+   "dirt-oval": {
+    "n": 100,
+    "runaway": 0.01,
+    "parade": 0.01,
+    "p1": 0.3,
+    "p1n": 30,
+    "castRate": 0.63,
+    "authored": 126,
+    "completed": 46,
+    "completion": 0.36507936507936506,
+    "satMean": 0.12494920634920632,
+    "satMax": 0.4491,
+    "span13": 2.8596,
+    "tears": {
+     "1": 35,
+     "2": 25
+    },
+    "reasons": {
+     "lead-in-too-steep": 34,
+     "rotation-torn-by-feasibility": 3
+    },
+    "distinctLeaders": 3,
+    "leadChangeCount": 2,
+    "maxLeadHoldShare": 0.587,
+    "frontContestFraction": 0.6698,
+    "p1LongestMultiSec": 19.504
+   }
+  },
+  "A4-CAR-GR-RB": {
+   "luger-hill": {
+    "n": 100,
+    "runaway": 0.15,
+    "parade": 0,
+    "p1": 0.25,
+    "p1n": 25,
+    "castRate": 0.62,
+    "authored": 124,
+    "completed": 32,
+    "completion": 0.25806451612903225,
+    "satMean": 0.18986935483870968,
+    "satMax": 0.4886,
+    "span13": 2.7934,
+    "tears": {
+     "1": 45,
+     "2": 16
+    },
+    "reasons": {
+     "lead-in-too-steep": 38
+    },
+    "distinctLeaders": 3,
+    "leadChangeCount": 2,
+    "maxLeadHoldShare": 0.6642,
+    "frontContestFraction": 0.7823,
+    "p1LongestMultiSec": 12.736
+   },
+   "mountainstreet": {
+    "n": 100,
+    "runaway": 0.15,
+    "parade": 0.03,
+    "p1": 0.34,
+    "p1n": 34,
+    "castRate": 0.47,
+    "authored": 94,
+    "completed": 37,
+    "completion": 0.39361702127659576,
+    "satMean": 0.15776170212765955,
+    "satMax": 0.5932,
+    "span13": 2.9801,
+    "tears": {
+     "1": 31,
+     "2": 13
+    },
+    "reasons": {
+     "lead-in-too-steep": 52,
+     "rotation-torn-by-feasibility": 1
+    },
+    "distinctLeaders": 3,
+    "leadChangeCount": 2,
+    "maxLeadHoldShare": 0.6233,
+    "frontContestFraction": 0.637,
+    "p1LongestMultiSec": 10.464
+   },
+   "searound": {
+    "n": 100,
+    "runaway": 0.09,
+    "parade": 0.04,
+    "p1": 0.25,
+    "p1n": 25,
+    "castRate": 0.5,
+    "authored": 100,
+    "completed": 30,
+    "completion": 0.3,
+    "satMean": 0.159594,
+    "satMax": 0.4705,
+    "span13": 3.1534,
+    "tears": {
+     "1": 38,
+     "2": 11
+    },
+    "reasons": {
+     "lead-in-too-steep": 50
+    },
+    "distinctLeaders": 3,
+    "leadChangeCount": 2,
+    "maxLeadHoldShare": 0.6289,
+    "frontContestFraction": 0.5941,
+    "p1LongestMultiSec": 14.288
+   },
+   "dirt-oval": {
+    "n": 100,
+    "runaway": 0.02,
+    "parade": 0.01,
+    "p1": 0.38,
+    "p1n": 38,
+    "castRate": 0.63,
+    "authored": 126,
+    "completed": 56,
+    "completion": 0.4444444444444444,
+    "satMean": 0.12028730158730155,
+    "satMax": 0.3592,
+    "span13": 3.1321,
+    "tears": {
+     "1": 26,
+     "2": 30
+    },
+    "reasons": {
+     "lead-in-too-steep": 34,
+     "rotation-torn-by-feasibility": 3
+    },
+    "distinctLeaders": 3,
+    "leadChangeCount": 3,
+    "maxLeadHoldShare": 0.5756,
+    "frontContestFraction": 0.6482,
+    "p1LongestMultiSec": 19.088
+   }
+  },
+  "A5-CAR-G075-RB": {
+   "luger-hill": {
+    "n": 100,
+    "runaway": 0.11,
+    "parade": 0.01,
+    "p1": 0.37,
+    "p1n": 37,
+    "castRate": 0.62,
+    "authored": 124,
+    "completed": 30,
+    "completion": 0.24193548387096775,
+    "satMean": 0.18673709677419356,
+    "satMax": 0.4727,
+    "span13": 2.2153,
+    "tears": {
+     "1": 46,
+     "2": 15
+    },
+    "reasons": {
+     "lead-in-too-steep": 38
+    },
+    "distinctLeaders": 3,
+    "leadChangeCount": 2,
+    "maxLeadHoldShare": 0.6149,
+    "frontContestFraction": 0.8872,
+    "p1LongestMultiSec": 14.352
+   },
+   "mountainstreet": {
+    "n": 100,
+    "runaway": 0.17,
+    "parade": 0.01,
+    "p1": 0.47,
+    "p1n": 47,
+    "castRate": 0.47,
+    "authored": 94,
+    "completed": 31,
+    "completion": 0.32978723404255317,
+    "satMean": 0.15898936170212763,
+    "satMax": 0.5926,
+    "span13": 2.9086,
+    "tears": {
+     "1": 31,
+     "2": 14
+    },
+    "reasons": {
+     "lead-in-too-steep": 52,
+     "rotation-torn-by-feasibility": 1
+    },
+    "distinctLeaders": 3,
+    "leadChangeCount": 3,
+    "maxLeadHoldShare": 0.5651,
+    "frontContestFraction": 0.6793,
+    "p1LongestMultiSec": 10.592
+   },
+   "searound": {
+    "n": 100,
+    "runaway": 0.11,
+    "parade": 0,
+    "p1": 0.41,
+    "p1n": 41,
+    "castRate": 0.5,
+    "authored": 100,
+    "completed": 30,
+    "completion": 0.3,
+    "satMean": 0.14937000000000006,
+    "satMax": 0.4641,
+    "span13": 3.1714,
+    "tears": {
+     "1": 37,
+     "2": 12
+    },
+    "reasons": {
+     "lead-in-too-steep": 50
+    },
+    "distinctLeaders": 3,
+    "leadChangeCount": 3,
+    "maxLeadHoldShare": 0.5754,
+    "frontContestFraction": 0.6078,
+    "p1LongestMultiSec": 15.056
+   },
+   "dirt-oval": {
+    "n": 100,
+    "runaway": 0.02,
+    "parade": 0.01,
+    "p1": 0.52,
+    "p1n": 52,
+    "castRate": 0.63,
+    "authored": 126,
+    "completed": 55,
+    "completion": 0.4365079365079365,
+    "satMean": 0.13847619047619045,
+    "satMax": 0.3713,
+    "span13": 2.4303,
+    "tears": {
+     "1": 24,
+     "2": 32
+    },
+    "reasons": {
+     "lead-in-too-steep": 34,
+     "rotation-torn-by-feasibility": 3
+    },
+    "distinctLeaders": 3,
+    "leadChangeCount": 3,
+    "maxLeadHoldShare": 0.5236,
+    "frontContestFraction": 0.7194,
+    "p1LongestMultiSec": 21.648
+   }
+  }
+ },
+ "base": {
+  "n": 400,
+  "runaway": 0.235,
+  "parade": 0.02,
+  "p1": 0.0525,
+  "p1n": 21,
+  "castRate": 0,
+  "authored": 0,
+  "completed": 0,
+  "completion": null,
+  "satMean": null,
+  "satMax": null,
+  "span13": 3.2626,
+  "tears": {},
+  "reasons": {},
+  "distinctLeaders": 1,
+  "leadChangeCount": 0,
+  "maxLeadHoldShare": 1,
+  "frontContestFraction": 0.5546,
+  "p1LongestMultiSec": 7.872
+ }
+}
