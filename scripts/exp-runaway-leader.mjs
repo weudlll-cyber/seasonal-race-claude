@@ -1157,7 +1157,24 @@ if (argv.includes('--carousel-sweep')) {
     { name: 'A3-CAR-GR',      car: WIN_A, gr: 1.5,  rb: 0 },
     { name: 'A4-CAR-GR-RB',   car: WIN_A, gr: 1.5,  rb: 1.0 },
     { name: 'A5-CAR-G075-RB', car: WIN_A, gr: 0.75, rb: 1.0 },
+    // ── WINDOW CONTROLS (run explicitly via --arms=, never in the default sweep) ────────────────
+    // contestWindowStart moves the MEASUREMENT window as well as the carousel schedule (one key,
+    // one front act), so a carousel arm at 0.62 is NOT comparable to A1 at 0.80: the classifier's
+    // distinctLeaders >= 3 / leadChangeCount >= 3 are absolute counts over the window, and a wider
+    // window inflates them mechanically. A2 demonstrated this — its races where the carousel never
+    // cast, i.e. where it provably did nothing, still rose from 3.9% to 28.7%. These arms are the
+    // matching baselines: everything OFF, window moved, same seeds. Every carousel arm is read
+    // against its own window control, never against A1.
+    { name: 'A6-CTL-w62', car: null, gr: null, rb: 0, ctlWindow: WIN_A, control: true },
+    { name: 'A7-CTL-w70', car: null, gr: null, rb: 0, ctlWindow: WIN_B, control: true },
   ];
+  // --arms=NAME[,NAME] runs exactly those arms (used for the controls, which are excluded from the
+  // default sweep). When the selection omits A1-V0 the STOP gate is skipped: A1 has already been run
+  // and committed, and re-running it would only burn wall-clock.
+  const ARM_SEL = argVal('arms', null);
+  const SELECTED = ARM_SEL
+    ? ARM_SEL.split(',').map((x) => x.trim()).filter(Boolean)
+    : ARMS.filter((a) => !a.control).map((a) => a.name);
   const PRIMS = [
     { key: 'distinctLeaders', dp: 1 }, { key: 'leadChangeCount', dp: 1 },
     { key: 'maxLeadHoldShare', dp: 3 }, { key: 'frontContestFraction', dp: 3 },
@@ -1177,6 +1194,8 @@ if (argv.includes('--carousel-sweep')) {
       `--out=${toSimOut(outAbs)}`];
     if (arm.gr != null) args.push(`--gapRerollThresholdLengths=${arm.gr}`, '--gapRerollMode=symmetric', '--gapRerollStrength=1.0');
     if (arm.car != null) args.push('--carouselEnabled=true', `--contestWindowStart=${arm.car}`);
+    // Window control: move the measurement window, cast nothing.
+    else if (arm.ctlWindow != null) args.push(`--contestWindowStart=${arm.ctlWindow}`);
     if (arm.rb > 0) args.push(`--carouselRoleBiasStrength=${arm.rb}`);
     await pExecFile(process.execPath, args, { cwd: ROOT, maxBuffer: 512 * 1024 * 1024 });
     const rp = JSON.parse(readFileSync(join(outAbs, 'runaway-parade.json'), 'utf8'));
@@ -1235,7 +1254,7 @@ if (argv.includes('--carousel-sweep')) {
   }
 
   const t0 = Date.now();
-  console.log('\n=== carousel-sweep v3 === ' + ARMS.length + ' arms x ' + TRK.length + ' tracks x N=' + RACES + ' (seed=' + SEED + ', dur=' + DUR + 's), jobs=' + JOBS);
+  console.log('\n=== carousel-sweep v3 === ' + SELECTED.length + ' arms [' + SELECTED.join(', ') + '] x ' + TRK.length + ' tracks x N=' + RACES + ' (seed=' + SEED + ', dur=' + DUR + 's), jobs=' + JOBS);
   const pctS = (x) => (x == null ? '-' : (100 * x).toFixed(1) + '%');
 
   async function runArm(arm) {
@@ -1272,9 +1291,15 @@ if (argv.includes('--carousel-sweep')) {
   }
 
   // ── A1 first + STOP gate ──────────────────────────────────────────────────────────────────
-  await runArm(ARMS[0]);
+  const RUN = SELECTED.map((n) => {
+    const a = ARMS.find((x) => x.name === n);
+    if (!a) { console.error('unknown arm: ' + n); process.exit(2); }
+    return a;
+  });
+  const runsA1 = RUN.some((a) => a.name === 'A1-V0');
+  if (runsA1) await runArm(ARMS[0]);
   const gateFails = [];
-  if (RACES === 100 && SEED === 1) {
+  if (runsA1 && RACES === 100 && SEED === 1) {
     for (const t of TRK) {
       const a = store['A1-V0'][t.id].agg;
       if (KNOWN_RUNAWAY[t.id] != null && a.runaway !== KNOWN_RUNAWAY[t.id]) {
@@ -1292,11 +1317,15 @@ if (argv.includes('--carousel-sweep')) {
     console.error('\nSTOP GATE FAILED:\n' + gateFails.map((f) => '  ' + f).join('\n'));
     process.exit(1);
   }
-  console.log(RACES === 100 && SEED === 1
-    ? '  STOP gate PASSED (A1 = committed baseline: runaway AND p1Contest on every track).'
-    : '  STOP gate SKIPPED (needs --races=100 --seed=1).');
+  if (runsA1) {
+    console.log(RACES === 100 && SEED === 1
+      ? '  STOP gate PASSED (A1 = committed baseline: runaway AND p1Contest on every track).'
+      : '  STOP gate SKIPPED (needs --races=100 --seed=1).');
+  } else {
+    console.log('  STOP gate N/A (A1 not in this selection; already run and committed).');
+  }
 
-  for (const arm of ARMS.slice(1)) await runArm(arm);
+  for (const arm of RUN.filter((a) => a.name !== 'A1-V0')) await runArm(arm);
 
   console.log('\nElapsed ' + ((Date.now() - t0) / 60000).toFixed(1) + 'm -> ' + OUT_S);
   process.exit(0);
