@@ -100,6 +100,8 @@ import { RUNAWAY_PARADE_DEFAULTS, leaderGapLengths, makeFormationTracker, SPEED_
 import { makeLateContestTracker, makeReleaseRankTracker } from './sim/observers/release-contest.mjs';
 import { makeFrontBattleTracker } from './sim/observers/outcome-front-battle.mjs';
 import { makeCarouselTracker } from './sim/observers/carousel-telemetry.mjs';
+import { makePhysicsTaxTracker } from './sim/observers/physics-tax.mjs';
+import { createComposer, deliveryPrecheck } from '../client/src/modules/greenfieldComposer.js';
 import { applyPulkLeadRotation, arcT, computeDirectorCeiling } from '../client/src/modules/raceGovernor.js';
 import { lenScaleFrom, arcLengths, meanDrawnBodyLen } from '../client/src/modules/raceLengths.js';
 
@@ -196,6 +198,15 @@ const DUR_FILTER     = argVal('dur', null);     // e.g. --dur=30
 // The argVal(name, default) override is preserved, so --bonusMult / --corridorEnd etc. still work.
 const GLOBAL_SEED             = Number(argVal('seed', '0'));
 const RACE_PLAN_ACTIVE        = argVal('race-plan', 'true') !== 'false';
+// GREENFIELD PROTOTYPE (--composer=<vplan|vcopilot|vcc>): replace the natural re-roll dice + the
+// trajectoryMult servo with a pre-race, seed-authored per-racer speed profile (client/src/modules/
+// greenfieldComposer.js), played open-loop through the FULL live engine — avoidance, no-overlap,
+// braking all stay active. The tier ASSIGNMENT still comes from the plan; the composer only replaces
+// HOW each racer reaches its tier. Null (default) → shipped path, byte-identical. --composerSigma is
+// the physics reserve from P0 the composer holds back (share of band it must not spend).
+const COMPOSER_ID             = argVal('composer', null);
+const COMPOSER_SIGMA          = Number(argVal('composerSigma', '0'));
+const composerRaces           = [];   // per-race composer delivery diagnostics (filled only when COMPOSER_ID)
 const BONUS_MULT              = Number(argVal('bonusMult',          String(DEFAULT_RACE_DYNAMICS_CONFIG.racePlanBonusStrengthMultiplier)));
 const RP_BONUS_TRANSITION_END = Number(argVal('bonusTransitionEnd', String(DEFAULT_RACE_DYNAMICS_CONFIG.racePlanBonusTransitionEnd)));
 const RP_BONUS_FADE_MS        = Number(argVal('bonusFadeDuration',  String(DEFAULT_RACE_DYNAMICS_CONFIG.racePlanBonusFadeDuration)));
@@ -377,6 +388,14 @@ const gmRaces             = [];   // per-race gap-space observations (filled onl
 // Fully flag-gated → a no-flag run does zero extra work and is byte-identical.
 const RUNAWAY_PARADE      = argv.includes('--runaway-parade');
 const rpRaces             = [];   // per-race runaway/parade raw records (filled only when RUNAWAY_PARADE)
+// PHYSICS-TAX (read-only, --physics-tax): GREENFIELD P0. Per racer, the cumulative longitudinal
+// distance lost to avoidance braking, as a fraction of the distance it would otherwise have covered,
+// plus a per-decile-of-progress profile. Feeds sigma — the share of the natural speed band that live
+// physics already eats, and therefore the reserve a composer must not spend. Definitions live in
+// sim/observers/physics-tax.mjs; only the per-frame capture is here (it needs the advanceRacerT site).
+// Fully flag-gated → a no-flag run does zero extra work and is byte-identical.
+const PHYSICS_TAX         = argv.includes('--physics-tax');
+const ptRaces             = [];   // per-race physics-tax raw records (filled only when PHYSICS_TAX)
 // SPEED-SOURCE (read-only, --speed-source): decompose the late-race speed of the top-15 live ranks into
 // its multiplicative factors at fixed samples (0.70..0.95), with clamp saturation + headroom. Pure
 // read-only capture at the advanceRacerT call site (harness Pass-2). No sim file changes; no fingerprint.
@@ -624,6 +643,9 @@ export function runSingleRace({
   gapMetrics = false,          // --gap-metrics: record gap-space (time-behind-leader) signals (read-only)
   runawayParade = false,       // --runaway-parade: record runaway-winner / parade-finish raw signals (read-only)
   speedSource = false,         // --speed-source: record top-15 late-race speed decomposition (read-only)
+  physicsTax = false,          // --physics-tax: record per-racer avoidance-braking distance loss (read-only)
+  composer = null,             // GREENFIELD: seed-authored per-racer speed profile { speedFactorAt } or null
+  composerBandHalf = 0,        // the honest band half-width, for the per-frame band invariant check
 }) {
   const savedRandom = Math.random;
   if (seed > 0) Math.random = makePRNG(seed);
@@ -1067,11 +1089,20 @@ export function runSingleRace({
       // Window starts at the LIVE contestWindowStart — the front act's own key (C1), no longer
       // B2's resolve checkpoint. No hardcoded progress constant; the carousel reads the same value.
       frontBattle:         makeFrontBattleTracker({ windowStart: CONTEST_WINDOW_START }),
+      // GREENFIELD: a SECOND front-battle tracker fixed at the A6 window (0.62) so a single sweep
+      // yields p1Contest at BOTH the A1 window (CONTEST_WINDOW_START, default 0.80) and the A6 window.
+      // Read-only, additive; never affects race state or the primary tracker.
+      frontBattle62:       makeFrontBattleTracker({ windowStart: 0.62 }),
       // C1 carousel telemetry. Allocated LAZILY: the schedule only exists after the generator has
       // run at the choreo boundary, so it cannot be built here. Stays null when the carousel is off
       // or was not cast — which is itself the cast-rate measurement.
       carousel:            null,
     } : null;
+    // ── PHYSICS-TAX per-race tracker (read-only; only allocated when --physics-tax) ──
+    // Fed once per racer per frame at the advanceRacerT call site below. Never mutates race state.
+    const pt = physicsTax ? makePhysicsTaxTracker() : null;
+    let ptPrevMeanT = null;   // prev-frame mean live-racer t, for the field-speed sample (physics-tax)
+    let composerBandViolations = 0;  // GREENFIELD: authored-factor band-invariant violations this race
     // ── SPEED-SOURCE per-race state (read-only; only allocated when --speed-source) ──
     // samples[prog] = [{ rank, index, effSpeed, product, factors…, saturation…, gapAhead, finishClamp }]
     // for the top-15 live ranks at the first frame >= each sample progress. SS_TRAJ_MAX = the servo
@@ -1154,6 +1185,19 @@ export function runSingleRace({
       }
 
       // ── Pass 1: re-rolls + spreadFactor transitions + baseSpeed update ─────────
+      // GREENFIELD composer path: the seed-authored profile OWNS spreadFactor. No dice, no re-roll
+      // draw, no easeInOutCubic transition — the composer profile is already smooth. The band
+      // invariant is asserted here (every authored factor inside [1−b, 1+b]); violations are counted,
+      // never clamped-and-hidden. Everything downstream (physics brake/boost, no-overlap) is untouched.
+      if (composer) {
+        for (const r of racers) {
+          if (r.finished) continue;
+          const f = composer.speedFactorAt(r.index, raceProgress);
+          if (f < 1 - composerBandHalf - 1e-9 || f > 1 + composerBandHalf + 1e-9) composerBandViolations++;
+          r.spreadFactor = f;
+          r.baseSpeed    = race_baseSpeed * speedMultiplier * r.spreadFactor * r.speedBonusMult;
+        }
+      } else {
       const spreadRange = (BASE_SPEED_MAX - BASE_SPEED_MIN) / BASE_SPEED_MEAN;
       const halfWidth   = spreadRange * (dynamicsConfig.reRollVariationPercent / 100);
       for (const r of racers) {
@@ -1226,6 +1270,7 @@ export function runSingleRace({
           r.baseSpeed    = race_baseSpeed * speedMultiplier * r.spreadFactor * r.speedBonusMult;
         }
       }
+      } // end else (non-composer Pass 1)
 
       // ── Controller-Pass: write trajectoryMultTarget (Race Plan only) ────────
       if (racePlanController) {
@@ -1555,6 +1600,15 @@ export function runSingleRace({
               trajectoryMult: r.trajectoryMult, areaBonusMult: r.areaBonusMult, governorMult: r.governorMult ?? 1.0,
             });
           }
+          // PHYSICS-TAX capture (read-only): the chain WITHOUT the two physics factors, i.e.
+          // baseSpeed·rowEnvMult·trajectoryMult·areaBonusMult·governorMult·dt. The observer
+          // reconstructs the applied step and the no-brake counterfactual from vFree + boost + brake,
+          // so what is measured is exactly what advanceRacerT is about to apply. Never mutates state.
+          if (pt) {
+            const vFree = r.baseSpeed * rowEnvMult * r.trajectoryMult * r.areaBonusMult
+              * (r.governorMult ?? 1.0) * (DT / 16);
+            pt.sample(r.index, raceProgress, vFree, boost, brake);
+          }
           r.t = advanceRacerT(r, {
             boost,
             brake,
@@ -1565,6 +1619,21 @@ export function runSingleRace({
             rowEnvMult,
           });
         }
+      }
+
+      // ── PHYSICS-TAX field geometry (read-only): whole-field spread + mean speed this frame ──────
+      // Feeds the density the P1 inversion audit divides by. Runs after Pass-2 so every r.t is this
+      // frame's final value. fullSpreadLengths + govLenScale = the SAME lap-aware length unit every
+      // other observer uses. Field speed = the frame's mean live-racer t advance × govLenScale / dt.
+      if (pt) {
+        const live = racers.filter((r) => !r.finished).sort((a, b) => (b.t - a.t) || (a.index - b.index));
+        const spreadLen = live.length >= 2 ? fullSpreadLengths(live, govLenScale) : 0;
+        const meanT = live.length ? live.reduce((s, r) => s + r.t, 0) / live.length : 0;
+        const fieldSpeedLenPerSec = (ptPrevMeanT != null && live.length)
+          ? ((meanT - ptPrevMeanT) * govLenScale) / (DT / 1000)
+          : 0;
+        ptPrevMeanT = live.length ? meanT : ptPrevMeanT;
+        pt.sampleField(spreadLen, fieldSpeedLenPerSec, live.length);
       }
 
       // ── SPEED-SOURCE sample build (read-only): top-15 live ranks decomposed at this sample ──────
@@ -2131,6 +2200,7 @@ export function runSingleRace({
           // other observer here uses (arcT x govLenScale) — one shared definition, no duplicate arc
           // maths inside the observer.
           rp.frontBattle.observe(racers, raceProgress, raceTs, (aT, bT) => arcT(aT, bT, isOpen) * govLenScale);
+          rp.frontBattle62.observe(racers, raceProgress, raceTs, (aT, bT) => arcT(aT, bT, isOpen) * govLenScale);
           // C1: authored-vs-completed handovers. The dwell threshold is the SAME derived value the
           // schedule was built from (the servo slew), converted back to seconds here.
           if (rp.carousel === null && racePlanController) {
@@ -2493,6 +2563,7 @@ export function runSingleRace({
         // file alone. classifyFrontBattle() turns these into the REAL P1 ACTION boolean downstream.
         contestWindowStart:  CONTEST_WINDOW_START,
         frontBattle:         rp.frontBattle.result(),
+        frontBattle62:       rp.frontBattle62.result(),
         // ── C1 carousel telemetry (null-safe when the feature is off) ──────────────────────────
         // cast/reason/rejected answer "was it cast, and if not why"; handovers answer "did the servo
         // deliver what was authored"; saturation is the naturalness number the sweep kills on (>50%).
@@ -2502,6 +2573,19 @@ export function runSingleRace({
           telemetry:  racePlanController.getCarouselTelemetry(),
         } : null,
       };
+    }
+
+    // ── PHYSICS-TAX record — attached ONLY when --physics-tax (else results unchanged) ──
+    // Raw per-racer fractions + decile profile; sigma and the aggregates are derived downstream by
+    // sim/observers/physics-tax.mjs summarizePhysicsTax(), so the definitions stay in ONE place.
+    if (physicsTax && pt) {
+      results.physicsTax = pt.result();
+      results.physicsTax.fieldGeom = pt.fieldGeom();
+    }
+
+    // ── COMPOSER band-invariant record — attached ONLY under --composer ──
+    if (composer) {
+      results.composerBandViolations = composerBandViolations;
     }
 
     // ── SPEED-SOURCE record — attached ONLY when --speed-source (else results unchanged) ──
@@ -3083,6 +3167,10 @@ if (isMain) {
           let racePlanController = null;
           let raceSollRankMap = null;
           let b1Indices = new Set();
+          let raceComposer = null;
+          // The honest natural band half-width (spreadFactor ∈ [1−b, 1+b]); the composer authors inside
+          // it and the playback asserts it. Derived from the SAME base-speed config the sim runs.
+          const composerBandHalf = BASE_SPEED_MAX_OVR / ((BASE_SPEED_MIN_OVR + BASE_SPEED_MAX_OVR) / 2) - 1;
           if (RACE_PLAN_ACTIVE) {
             const planRacers = comboRowLayout.assignments.map(
               (a) => ({ index: a.racerIndex, startRowIndex: a.rowIndex })
@@ -3142,6 +3230,25 @@ if (isMain) {
             }, seed);
             racePlanController = createTrajectoryController(plan);
             raceSollRankMap = plan._racerTargetRank;
+            // GREENFIELD: when a composer is selected, it REPLACES the servo steering. We keep the
+            // plan's tier ASSIGNMENT (raceSollRankMap) and hand it to the composer, then null the
+            // controller so no trajectoryMult servo / pulk-bias / gap-reroll runs — the composer's
+            // open-loop profile is the only steering, physics stays live underneath.
+            if (COMPOSER_ID) {
+              const gridRankByIndex = new Map();
+              comboRowLayout.assignments.forEach((a, pos) => gridRankByIndex.set(a.racerIndex, pos + 1));
+              raceComposer = createComposer(COMPOSER_ID, {
+                n: comboRowLayout.assignments.length,
+                seed,
+                bandHalfWidth: composerBandHalf,
+                sigma: COMPOSER_SIGMA,
+                durationSec,
+                targetRankByIndex: raceSollRankMap,
+                gridRankByIndex,
+                trackCurvature: null,
+              });
+              racePlanController = null;
+            }
             if (COMEBACK_ANALYSIS) {
               for (const [idx, sr] of raceSollRankMap) {
                 if (sr <= 5) b1Indices.add(idx);
@@ -3178,7 +3285,31 @@ if (isMain) {
             gapMetrics:         GAP_METRICS,
             runawayParade:      RUNAWAY_PARADE,
             speedSource:        SPEED_SOURCE,
+            physicsTax:         PHYSICS_TAX,
+            composer:           raceComposer,
+            composerBandHalf,
           });
+          // GREENFIELD: stash the composer's compile-time delivery diagnostics + the playback's
+          // band-invariant count, tagged with combo meta. Downstream the sweep joins these to the
+          // observer suite's outcome metrics.
+          if (COMPOSER_ID && raceComposer) {
+            const pre = deliveryPrecheck(raceComposer, {
+              n: comboRowLayout.assignments.length,
+              targetRankByIndex: raceSollRankMap,
+            });
+            // Tier assignment (index → targetRank) so the sweep can compute band delivery + intraTier
+            // entropy by joining to the runaway-parade record's finalRankByIndex. Compact object.
+            const targetRankByIndex = {};
+            for (const [idx, tr] of raceSollRankMap) targetRankByIndex[idx] = tr;
+            composerRaces.push({
+              trackId, racerType, durationSec, seed, raceIdx, isOpen,
+              composer: COMPOSER_ID,
+              meta: raceComposer.meta,
+              precheck: pre,
+              bandViolations: result.composerBandViolations ?? 0,
+              targetRankByIndex,
+            });
+          }
           // HERO-MAP (--hero-map): stash this race's per-hero observations, tagged with combo meta.
           if (HERO_MAP && result.heroObs) {
             heroMapRaces.push({ trackId, racerType, durationSec, seed, raceIdx, isOpen, heroObs: result.heroObs });
@@ -3194,6 +3325,10 @@ if (isMain) {
           // SPEED-SOURCE (--speed-source): stash this race's top-15 decomposition, tagged with combo meta.
           if (SPEED_SOURCE && result.speedSource) {
             ssRaces.push({ trackId, racerType, durationSec, seed, raceIdx, isOpen, speedSource: result.speedSource });
+          }
+          // PHYSICS-TAX (--physics-tax): stash this race's per-racer braking-loss record, tagged with combo meta.
+          if (PHYSICS_TAX && result.physicsTax) {
+            ptRaces.push({ trackId, racerType, durationSec, seed, raceIdx, isOpen, physicsTax: result.physicsTax });
           }
           // Step 1: fair-chance placement metrics (requires race-plan target ranks)
           if (raceSollRankMap) {
@@ -3975,6 +4110,43 @@ if (isMain) {
       races: ssRaces,
     }, null, 2));
     console.log(`\n=== Speed-Source (${DIAG_LABEL}) ===  → ${ssPath}  (${ssRaces.length} races)`);
+  }
+
+  // ── COMPOSER delivery diagnostics (--composer) → OUT_DIR/composer.json ──
+  // Per-race compile-time delivery pre-check + playback band-invariant count. The OUTCOME metrics
+  // (band delivery, action, p1Contest) come from the standard observer suite as usual; this file is
+  // only the composer's OWN diagnostics (re-deals / recompiles / re-plans / minMargin / violations).
+  if (COMPOSER_ID) {
+    const cPath = join(OUT_DIR, 'composer.json');
+    writeFileSync(cPath, JSON.stringify({
+      meta: { label: DIAG_LABEL, composer: COMPOSER_ID, sigma: COMPOSER_SIGMA, nRaces: N_RACES, seed: GLOBAL_SEED,
+        note: 'GREENFIELD composer per-race delivery diagnostics (compile-time pre-check + playback band '
+            + 'invariant). Outcome metrics come from the standard observer suite (fairness/runaway/front).' },
+      races: composerRaces,
+    }, null, 2));
+    console.log(`\n=== Composer (${COMPOSER_ID}) ===  → ${cPath}  (${composerRaces.length} races)`);
+  }
+
+  // ── PHYSICS-TAX raw output (--physics-tax) → OUT_DIR/physics-tax.json ──
+  // RAW per-racer records only (sigma and the aggregates are derived downstream by the observer's
+  // summarizePhysicsTax(), so the definitions stay in ONE place). A no-flag run writes nothing.
+  // bandHalfWidth is echoed because sigma is meaningless without the band the run actually used.
+  if (PHYSICS_TAX) {
+    const ptPath = join(OUT_DIR, 'physics-tax.json');
+    const bandHalfWidth = BASE_SPEED_MAX_OVR / ((BASE_SPEED_MIN_OVR + BASE_SPEED_MAX_OVR) / 2) - 1;
+    writeFileSync(ptPath, JSON.stringify({
+      meta: {
+        label: DIAG_LABEL, nRaces: N_RACES, seed: GLOBAL_SEED,
+        baseSpeedMin: BASE_SPEED_MIN_OVR, baseSpeedMax: BASE_SPEED_MAX_OVR,
+        bandHalfWidth: +bandHalfWidth.toFixed(9),
+        note: 'PHYSICS TAX raw per-racer records (read-only, GREENFIELD P0). lostFrac = share of the '
+            + 'distance a racer would have covered that avoidance braking removed; sigma = lostFrac / '
+            + 'bandHalfWidth = the share of natural-band authority live physics already consumes. '
+            + 'Aggregates via scripts/sim/observers/physics-tax.mjs summarizePhysicsTax().',
+      },
+      races: ptRaces,
+    }, null, 2));
+    console.log(`\n=== Physics-Tax (${DIAG_LABEL}) ===  → ${ptPath}  (${ptRaces.length} races)`);
   }
 
 
