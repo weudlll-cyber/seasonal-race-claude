@@ -560,5 +560,129 @@
    "holmUnfair": false,
    "top5Action": 32.81
   }
+ },
+ "A4-CAR-GR-RB": {
+  "luger-hill": {
+   "arm": "A4-CAR-GR-RB",
+   "track": "luger-hill",
+   "n": 100,
+   "runaway": 15,
+   "runawayRate": 0.15,
+   "parade": 0,
+   "paradeRate": 0,
+   "p1Contest": 0.25,
+   "contestN": 25,
+   "castRate": 0.62,
+   "cast": 62,
+   "authored": 124,
+   "completed": 32,
+   "completionRate": 0.25806451612903225,
+   "satMean": 0.18987119642020361,
+   "satMax": 0.48859934853420195,
+   "spanMed": 2.7934,
+   "rejects": {
+    "lead-in-too-steep": 38
+   },
+   "tears": {
+    "1": 45,
+    "2": 16
+   },
+   "b1": 0.784,
+   "b2": 0.732,
+   "holmUnfair": true,
+   "top5Action": 28.09
+  },
+  "mountainstreet": {
+   "arm": "A4-CAR-GR-RB",
+   "track": "mountainstreet",
+   "n": 100,
+   "runaway": 15,
+   "runawayRate": 0.15,
+   "parade": 3,
+   "paradeRate": 0.03,
+   "p1Contest": 0.34,
+   "contestN": 34,
+   "castRate": 0.47,
+   "cast": 47,
+   "authored": 94,
+   "completed": 37,
+   "completionRate": 0.39361702127659576,
+   "satMean": 0.15776231787502423,
+   "satMax": 0.5931941221964424,
+   "spanMed": 2.9800999999999997,
+   "rejects": {
+    "lead-in-too-steep": 52,
+    "rotation-torn-by-feasibility": 1
+   },
+   "tears": {
+    "1": 31,
+    "2": 13
+   },
+   "b1": 0.782,
+   "b2": 0.759,
+   "holmUnfair": false,
+   "top5Action": 33.26
+  },
+  "searound": {
+   "arm": "A4-CAR-GR-RB",
+   "track": "searound",
+   "n": 100,
+   "runaway": 9,
+   "runawayRate": 0.09,
+   "parade": 4,
+   "paradeRate": 0.04,
+   "p1Contest": 0.25,
+   "contestN": 25,
+   "castRate": 0.5,
+   "cast": 50,
+   "authored": 100,
+   "completed": 30,
+   "completionRate": 0.3,
+   "satMean": 0.1595944598275792,
+   "satMax": 0.47052452421476093,
+   "spanMed": 3.1534,
+   "rejects": {
+    "lead-in-too-steep": 50
+   },
+   "tears": {
+    "1": 38,
+    "2": 11
+   },
+   "b1": 0.722,
+   "b2": 0.695,
+   "holmUnfair": true,
+   "top5Action": 27.8
+  },
+  "dirt-oval": {
+   "arm": "A4-CAR-GR-RB",
+   "track": "dirt-oval",
+   "n": 100,
+   "runaway": 2,
+   "runawayRate": 0.02,
+   "parade": 1,
+   "paradeRate": 0.01,
+   "p1Contest": 0.38,
+   "contestN": 38,
+   "castRate": 0.63,
+   "cast": 63,
+   "authored": 126,
+   "completed": 56,
+   "completionRate": 0.4444444444444444,
+   "satMean": 0.1202866575454686,
+   "satMax": 0.35923535253227407,
+   "spanMed": 3.1321,
+   "rejects": {
+    "lead-in-too-steep": 34,
+    "rotation-torn-by-feasibility": 3
+   },
+   "tears": {
+    "1": 26,
+    "2": 30
+   },
+   "b1": 0.786,
+   "b2": 0.769,
+   "holmUnfair": false,
+   "top5Action": 32.75
+  }
  }
 }
