@@ -49,6 +49,23 @@ The sim imports the identical JavaScript modules the browser uses:
 
 **The Sim-Browser Parity Rule:** every mechanics change must be mirrored in the sim before any parameter is applied to the game. The sim is not a sandbox — it is a prediction tool. After any sim-approved change, a browser check is always required.
 
+### Browser determinism (Quick-Test seed)
+
+Since 2026-07, the browser can replay a race exactly — the same mechanism the sim uses.
+
+| Quick-Test seed | behavior |
+|---|---|
+| **> 0** | **Fully deterministic.** The seed drives the plan *and* the dynamics: start rows, initial `spreadFactor`s, every scheduled re-roll, and both roll jitters. The same seed replays move-for-move — the basis for a reproducible eye-test. |
+| **0** | Unseeded (legacy). The plan is unseeded (`seed > 0` is the condition for using mulberry32) and the dynamics come from the native `Math.random()`. Every race differs. |
+
+The normal **"Start Race"** path always sends `racePlanSeed: 0`, so it stays unseeded — only Quick-Test is reproducible today.
+
+Mechanism: at the top of the race-init effect `RaceScreen/index.jsx` swaps global `Math.random` for `mulberry32(racePlanSeed)` when the seed is > 0, and restores it in the effect's cleanup — exactly what `sim-fairness.mjs` does around its race loop. Because the browser's five draw sites are line-for-line twins of the sim's, one substitution covers all of them. With `seed <= 0` the global is never touched, so every pre-existing path is byte-identical to before.
+
+> **Practical note.** Before this change the HUD showed `seed:1` on every Quick-Test while the races clearly differed — the number was the *plan* seed only, and the dynamics were unseeded. The HUD now reads `seed:N` only when the race really is reproducible, and `unseeded` at 0.
+>
+> A browser race and a sim race on the same seed are **not** expected to be frame-identical — the sim derives its per-race seed as `(N−1)×N_RACES + i + 1` and runs a fixed timestep. Determinism here means *the same browser race replays*, not browser↔sim frame parity.
+
 ### File locations
 
 | File | Purpose |

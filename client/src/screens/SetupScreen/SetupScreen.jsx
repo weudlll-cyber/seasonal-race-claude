@@ -346,7 +346,16 @@ function SetupScreen() {
   const [quickTrackId, setQuickTrackId] = useState(null);
   const quickTrack = tracks.find((t) => t.id === (quickTrackId ?? tracks[0]?.id)) ?? tracks[0];
   const [quickTestCount, setQuickTestCount] = useState(20);
-  const [quickTestSeed, setQuickTestSeed] = useState(1);
+  // Quick-Test seed. Persisted for the browser session because the seed now determines the whole
+  // race (see RaceScreen): re-running the SAME seed is the eye-test, and navigating back from a race
+  // remounts this screen — without persistence the field would silently snap back to 1 between the
+  // two runs being compared. Session-scoped on purpose; a fresh session starts from 1 again.
+  const [quickTestSeed, setQuickTestSeed] = useState(
+    () => Number(sessionStorage.getItem('quickTestSeed')) || 1
+  );
+  useEffect(() => {
+    sessionStorage.setItem('quickTestSeed', String(quickTestSeed));
+  }, [quickTestSeed]);
   // Racer type selected for Quick Test (null = use quickTrack.defaultRacerTypeId)
   const [quickTestRacerTypeId, setQuickTestRacerTypeId] = useState(null);
 

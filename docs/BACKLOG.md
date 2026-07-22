@@ -219,6 +219,23 @@ Additionally: Space (Custom Track) already present.
 
 ## Ready — spec exists, concept decided
 
+### Browser seed — follow-ups (noted, NOT built; owner decision)
+
+Quick-Test races are seed-deterministic as of 2026-07 (see `docs/SIM.md` → *Browser determinism*).
+The Quick-Test seed field persists for the browser session so the same seed can be re-run without
+re-typing it. Three follow-ups were deliberately left out of that step:
+
+- **Seed for the normal "Start Race" path.** It hardcodes `racePlanSeed: 0`, so a real race is never
+  reproducible. Options: draw a random seed per race and display it (so any race the owner likes can
+  be replayed afterwards), or leave it unseeded on purpose. Owner decision — it changes what a
+  "normal" race is, not just how it is logged.
+- **Seed persistence beyond the session.** Currently `sessionStorage`; a fresh browser session starts
+  from 1 again. Promote to `localStorage` or a URL parameter only if eye-tests need to survive a
+  restart.
+- **Replaying a browser seed in the sim.** The two engines are deterministic *individually*, but a
+  browser seed does not reproduce frame-for-frame in the sim (different per-race seed derivation and
+  timestep). Making one seed mean one race in both engines is a separate, larger piece of work.
+
 - **Visual Racer Effects** — Surface-class-driven trail system. Four sub-PRs:
   - ✅ **VRE-1** — Foundation: 4 generator modules (`particle`, `cloud`, `splash`, `line`), 9 default surface classes, registry with override resolution, `/api/surface-classes` backend API (CRUD, atomic writes), `surfaceClassLoader.js` cache, `surfaceClassApi.js` service layer. 64 frontend + 24 backend tests. No UI, no race integration.
   - ✅ **VRE-2** — Surface class editor in dev screen. Master-detail layout: class list with Default/Modified/Custom badges on the left, animated live preview canvas + generator config editor on the right. `SurfaceClassManager.jsx`, `SurfaceClassPreview.jsx`, `useSurfaceClasses.js`. 36 new unit tests + 31 new e2e tests (smoke + UX verification). 1084 unit + 183 e2e tests total.

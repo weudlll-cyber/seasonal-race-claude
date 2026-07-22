@@ -106,7 +106,11 @@ import {
 import { resolveTrailEmitter } from '../../modules/surface-effects/trailResolver.js';
 import { getCachedServerSurfaceClasses } from '../../modules/storage/surfaceClassLoader.js';
 import { loadServerClasses } from '../../modules/surface-effects/registry.js';
-import { createRacePlan, createTrajectoryController } from '../../modules/racePlanner.js';
+import {
+  createRacePlan,
+  createTrajectoryController,
+  mulberry32,
+} from '../../modules/racePlanner.js';
 import { initProbe, recordFrame, recordFrameCamera } from '../../modules/rAFProbe.js';
 import BrandLogoOverlay from './BrandLogoOverlay.jsx';
 import './RaceScreen.css';
@@ -512,6 +516,25 @@ export default function RaceScreen() {
       drawnBodyWidthRefPx,
       shapeRef.current
     );
+    // ── Deterministic race dynamics (Quick-Test) ──────────────────────────────────────────────
+    // With a seed > 0 the ENTIRE race is drawn from one seeded generator: start rows (the
+    // computeEvenRowLayout call below, which falls back to Math.random), the initial spreadFactors,
+    // every scheduled re-roll and both roll jitters. Same seed ⇒ move-for-move identical race, so
+    // an eye-test is exactly reproducible and comparable to the sim's run of that seed.
+    //
+    // This is the mechanism sim-fairness.mjs already uses (swap the global, restore in the exit
+    // path): the browser's draw sites are line-for-line twins of the sim's, so substituting the
+    // global generator covers all of them at once instead of threading an rng through five call
+    // sites in four modules. Restored in this effect's cleanup below.
+    //
+    // seed <= 0 — which includes the normal "Start Race" path (racePlanSeed hardcoded 0) — leaves
+    // Math.random untouched, so every existing path stays byte-identical to the legacy behavior.
+    // racePlanSeed is read here rather than at its former place further down because it must be
+    // known BEFORE the first draw; the race-plan code below reuses this same binding.
+    const racePlanSeed = raceData.racePlanSeed ?? 0;
+    const nativeRandom = Math.random;
+    if (racePlanSeed > 0) Math.random = mulberry32(racePlanSeed);
+
     // Row-start layout: even distribution across minimum-needed rows (bottom-up sizing)
     const pathLengthPx = geometry.pathLengthPx ?? 0;
     const rowGapPx = physicalSpriteSize * rowConfig.rowGapMultiplier;
@@ -678,7 +701,6 @@ export default function RaceScreen() {
       !!raceData.racePlanEnabled &&
       (raceData.estimatedDurationSec ?? targetDuration) >=
         (dynamicsConfig.racePlanMinDurationSec ?? 30);
-    const racePlanSeed = raceData.racePlanSeed ?? 0;
     let racePlanController = null;
     let rpPlanInfo = null;
     let cameraPlanDelivered = false; // B4a: deliver the authored cameraPlan once, mid-race (heroes cast then)
@@ -1708,7 +1730,13 @@ export default function RaceScreen() {
         ctx.fillRect(CANVAS_W - 172, 8, 164, 22);
         ctx.font = '11px monospace';
         ctx.fillStyle = '#4fc3f7';
-        ctx.fillText(`Race Plan: ON  seed:${racePlanSeed}`, CANVAS_W - 168, 24);
+        // Truthful label: with a seed > 0 the number is the seed of the plan AND the dynamics (the
+        // race replays exactly); at 0 nothing is seeded, so showing a number would be misleading.
+        ctx.fillText(
+          racePlanSeed > 0 ? `Race Plan: ON  seed:${racePlanSeed}` : 'Race Plan: ON  unseeded',
+          CANVAS_W - 168,
+          24
+        );
         ctx.restore();
       }
 
@@ -1743,6 +1771,9 @@ export default function RaceScreen() {
 
     rafRef.current = requestAnimationFrame(loop);
     return () => {
+      // Restore the global generator before anything else: leaving a seeded Math.random installed
+      // would make the REST of the app deterministic too (and repeat the same sequence next race).
+      Math.random = nativeRandom;
       cancelled = true;
       if (rafRef.current) cancelAnimationFrame(rafRef.current);
       clearTimeout(finishNavTimerRef.current);
