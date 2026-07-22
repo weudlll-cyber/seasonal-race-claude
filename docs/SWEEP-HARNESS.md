@@ -142,3 +142,68 @@ measured at a different value — state the value in the arm table.
 carousel never casts (`swing-too-slow-for-window`: the rotation needs about twice the runway that
 `[0.8, releaseProgress - 0.07]` provides). Around 0.62 it casts in roughly 60% of races; by 0.66 the
 window is already too short again. The viable band is narrow and is itself a sweep dimension.
+
+## Carousel Sweep v3 — design, and the window finding that shaped it
+
+`node scripts/exp-runaway-leader.mjs --carousel-sweep [--arms=NAME[,NAME]] [--winA=] [--winB=]`
+
+Eight arms over the 4 known tracks, N=100, fixed baseline seeds, identical seeds across every arm so
+all deltas are paired. Arms write their per-seed CSVs and a `raw-store.json` snapshot **as each arm
+lands**, so a multi-hour run stays committable incrementally. A1 carries a hard STOP gate on **both**
+the runaway counts and the p1Contest counts — runaway alone would not catch a drift in the metric
+under test.
+
+| arm | carousel | contestWindowStart | gap-reroll G | roleBias |
+|---|---|---|---|---|
+| A1-V0 | off | 0.80 | off | 0 |
+| A0-GR | off | 0.80 | 1.5 | 0 |
+| A2-CAR-w62 | on | 0.62 | off | 0 |
+| A2b-CAR-w70 | on | 0.70 | off | 0 |
+| A3-CAR-GR | on | 0.62 | 1.5 | 0 |
+| A4-CAR-GR-RB | on | 0.62 | 1.5 | 1.0 |
+| A5-CAR-G075-RB | on | 0.62 | 0.75 | 1.0 |
+| A6-CTL-w62 | **off (window control)** | 0.62 | off | 0 |
+
+`--arms=` runs an explicit subset. The control arms A6/A7 are excluded from the default selection and
+only run when named; when the selection omits A1 the STOP gate is skipped (A1 is already committed).
+
+### THE WINDOW FINDING — read this before designing any arm that touches `contestWindowStart`
+
+`contestWindowStart` moves the **measurement window** as well as the carousel schedule. That is by
+design (one key, one front act), but it makes any arm that changes it **incomparable to a baseline
+measured at a different value**. The classifier counts `distinctLeaders >= 3` and
+`leadChangeCount >= 3` as absolute totals over the window, so a wider window inflates them
+mechanically.
+
+Measured, with the carousel provably inert in both cases:
+
+| window | arm | carousel cast | p1Contest |
+|---|---|---|---|
+| 0.80 | A1-V0 | – | 5.3% |
+| 0.70 | A2b | 0 / 400 | 18.0% |
+| 0.62 | A6-CTL | 0 / 400 | **31.3%** |
+
+**+26.0pp from the window alone.** A6 also reproduces A1's runaway, top-5 action, B1min, B2min and
+Holm to the digit — none of them windowed — which is what makes it a valid control.
+
+**Rule: never compare a windowed metric across arms with different `contestWindowStart`. Run the
+matching window control (carousel OFF, same window, same seeds) and compare against that.** The v3
+sweep's entire conclusion turned on this: read against A1 the carousel looked like a 3–5x win; read
+against A6 it is net-negative.
+
+### Window viability for the carousel
+
+`[contestWindowStart, releaseProgress − carouselFinalMarginProgress]` must fit a full 3-way rotation
+at the feasibility-derived climb span. Measured: **0.70 casts 0/400** (`window-too-short-for-rotation`,
+unanimous), 0.66 was already too short in the build smoke, **0.62 casts 55.5%**. The viable band is
+narrow and is itself a sweep dimension.
+
+### Metrics the v3 arms record beyond the standing observer set
+
+- **casting rate** + aggregated rejection reasons (`lead-in-too-steep`, `window-too-short-for-rotation`,
+  `rotation-torn-by-feasibility`, …) — a zero cast rate is legible, never a silent no-op;
+- **authored vs COMPLETED handovers** (dwell-confirmed) and the completion rate;
+- **first-tear location** (`firstTearAt`, per-segment) — a rotation dying at handover 1 is a different
+  failure from one that survives two;
+- **servo-saturation share** over carousel-participant frames inside the window;
+- **front-trio span** (rank 1→3) per race, the cliff variable.

@@ -5,6 +5,37 @@ Items ranked by urgency within each bucket. ✅ = done, 🔜 = next, ⏳ = waiti
 
 ---
 
+## Front Act / C1 — carousel sweep v3 outcome (July 2026)
+
+- ✅ **Gap-reroll re-qualified after the branch-priority fix (A0, `67a1053`).** Paired, same seeds,
+  same config (symmetric G=1.5 s=1.0): runaway **8.3% → 7.5%**, only **5/400 seed flips**, −0.55 sd —
+  within noise, and every flip moved *away* from runaway. **The committed 10-track headline
+  (23.0 → 8.3%) stands provisionally; no full re-measurement needs scheduling before a default-ON
+  decision.**
+  **Caveat to quote with the headline:** this is a 4-track paired test of the *fix's effect*, not a
+  10-track re-measurement — the other 6 tracks are untested post-fix.
+  **A0's 7.5% is the runaway reference for GR-bearing arms from here on, not the pre-fix 8.3%.**
+- ❌ **B1 Lead Carousel — does not deliver.** Against its matching window control (A6, carousel OFF at
+  the same `contestWindowStart`), the carousel is **net-negative in 3 of 4 arms** (−9.3 / −3.3 / −0.8pp)
+  and a **~19pp drag** in the one arm that wins. Within every arm, races where it cast scored *below*
+  races where it did not (−17.1pp in A2), so it is **suppression, not selection**. Independent
+  confirmation from the non-windowed top-5 action metric: every casting arm loses ~13% action
+  (34.83 → ~30.4), every non-casting arm loses none. Cause: it pins three participants into authored
+  slots at strictness 1.0 and holds them between handovers — the same rank-pinning that created the
+  93% `leadChangeCount` wall. Only 29–35% of authored handovers are ever dwell-confirmed, and ~2/3 of
+  torn rotations die at the *first* handover.
+- 🔜 **The span lever is the finding worth keeping.** `G 1.5 → 0.75` is **+13.8pp**, the largest single
+  effect in the sweep, by tightening the front trio (median rank1→3 span 3.01 L → 2.63 L) — confirming
+  the handover re-analysis's cliff prediction. **Not yet isolated:** no arm ran G=0.75 with the
+  carousel OFF. That single ~22-minute arm (`--arms=`, same seeds) would confirm or refute the reading
+  that the carousel is subtracting from it.
+- ⚠️ **Window controls are mandatory** for any future arm touching `contestWindowStart`. See
+  SWEEP-HARNESS.md — moving 0.80 → 0.62 is worth +26.0pp with no mechanism running at all.
+
+Full results: `exp-runaway-leader-results/carousel-sweep/SUMMARY.md`.
+
+---
+
 ## Front Act / C1 — July 2026
 
 - ✅ **Gap-reroll branch-priority fix** — when both `gapBehind > G` and `gapAhead > G` the LARGER
