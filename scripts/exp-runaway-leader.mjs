@@ -507,6 +507,7 @@ if (argv.includes('--gapreroll-confirm')) {
     const args = ['scripts/sim-fairness.mjs', `--track=${track.id}`, `--racer=${track.racer}`,
       `--seed=${SEED}`, `--races=${RACES}`, `--dur=${DUR}`, '--runaway-parade', '--hero-map', `--out=${toSimOut(outAbs)}`];
     if (arm.gr) args.push(`--gapRerollThresholdLengths=${arm.G}`, `--gapRerollMode=${arm.mode}`, `--gapRerollStrength=${arm.s}`);
+    else args.push('--gapRerollEnabled=false'); // shipped default is now ON — an OFF arm must say so
     await pExecFile(process.execPath, args, { cwd: ROOT, maxBuffer: 512 * 1024 * 1024 });
     const rp = JSON.parse(readFileSync(join(outAbs, 'runaway-parade.json'), 'utf8'));
     const fd = JSON.parse(readFileSync(join(outAbs, 'fairness-data.json'), 'utf8'));
@@ -716,6 +717,7 @@ if (argv.includes('--release-sweep')) {
     const args = ['scripts/sim-fairness.mjs', `--track=${track.id}`, `--racer=${track.racer}`,
       `--seed=${SEED}`, `--races=${RACES}`, `--dur=${DUR}`, '--runaway-parade', '--hero-map', `--out=${toSimOut(outAbs)}`];
     if (arm.gr) args.push(`--gapRerollThresholdLengths=${GR.G}`, `--gapRerollMode=${GR.mode}`, `--gapRerollStrength=${GR.s}`);
+    else args.push('--gapRerollEnabled=false'); // shipped default is now ON — an OFF arm must say so
     if (arm.rel != null) args.push(`--choreoReleaseProgress=${arm.rel}`);
     await pExecFile(process.execPath, args, { cwd: ROOT, maxBuffer: 512 * 1024 * 1024 });
     const rp = JSON.parse(readFileSync(join(outAbs, 'runaway-parade.json'), 'utf8'));
@@ -936,6 +938,7 @@ if (argv.includes('--p1-contest')) {
       `--seed=${SEED}`, `--races=${RACES}`, `--dur=${DUR}`, '--runaway-parade', '--skip-main-output',
       `--out=${toSimOut(outAbs)}`];
     if (arm.gr) args.push(`--gapRerollThresholdLengths=${GR.G}`, `--gapRerollMode=${GR.mode}`, `--gapRerollStrength=${GR.s}`);
+    else args.push('--gapRerollEnabled=false'); // shipped default is now ON — an OFF arm must say so
     await pExecFile(process.execPath, args, { cwd: ROOT, maxBuffer: 512 * 1024 * 1024 });
     const rp = JSON.parse(readFileSync(join(outAbs, 'runaway-parade.json'), 'utf8'));
     const bySeed = {};
@@ -1214,6 +1217,7 @@ if (argv.includes('--smallg-diag')) {
     const args = ['scripts/sim-fairness.mjs', `--track=${track.id}`, `--racer=${track.racer}`,
       `--seed=${SEED}`, `--races=${RACES}`, `--dur=${DUR}`, '--runaway-parade', `--out=${toSimOut(outAbs)}`];
     if (arm.gr) args.push(`--gapRerollThresholdLengths=${arm.G}`, `--gapRerollMode=${arm.mode}`, `--gapRerollStrength=${arm.s}`);
+    else args.push('--gapRerollEnabled=false'); // shipped default is now ON — an OFF arm must say so
     await pExecFile(process.execPath, args, { cwd: ROOT, maxBuffer: 512 * 1024 * 1024 });
     const rp = JSON.parse(readFileSync(join(outAbs, 'runaway-parade.json'), 'utf8'));
     const fd = JSON.parse(readFileSync(join(outAbs, 'fairness-data.json'), 'utf8'));
@@ -1367,6 +1371,7 @@ if (argv.includes('--gapreroll-phase2b')) {
       `--seed=${SEED}`, `--races=${RACES}`, `--dur=${DUR}`, '--runaway-parade', '--hero-map', `--out=${toSimOut(outAbs)}`,
     ];
     if (arm.gr) args.push(`--gapRerollThresholdLengths=${arm.G}`, `--gapRerollMode=${arm.mode}`, `--gapRerollStrength=${arm.s}`);
+    else args.push('--gapRerollEnabled=false'); // shipped default is now ON — an OFF arm must say so
     await pExecFile(process.execPath, args, { cwd: ROOT, maxBuffer: 256 * 1024 * 1024 });
     const rp = JSON.parse(readFileSync(join(outAbs, 'runaway-parade.json'), 'utf8'));
     const fd = JSON.parse(readFileSync(join(outAbs, 'fairness-data.json'), 'utf8'));
@@ -1490,6 +1495,7 @@ if (argv.includes('--gapreroll-phase2')) {
       `--seed=${SEED}`, `--races=${RACES}`, `--dur=${DUR}`, '--runaway-parade', '--hero-map', `--out=${toSimOut(outAbs)}`,
     ];
     if (arm.gr) args.push(`--gapRerollThresholdLengths=${arm.G}`, `--gapRerollMode=${arm.mode}`);
+    else args.push('--gapRerollEnabled=false'); // shipped default is now ON — an OFF arm must say so
     await pExecFile(process.execPath, args, { cwd: ROOT, maxBuffer: 256 * 1024 * 1024 });
     const rp = JSON.parse(readFileSync(join(outAbs, 'runaway-parade.json'), 'utf8'));
     const fd = JSON.parse(readFileSync(join(outAbs, 'fairness-data.json'), 'utf8'));

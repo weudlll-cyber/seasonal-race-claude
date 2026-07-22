@@ -392,7 +392,9 @@ export const DEFAULT_RACE_DYNAMICS_CONFIG = {
   // the honest ±8.1% band. Scheduled rolls only. gapRerollEnabled FALSE → the transform receives no
   // threshold and passes the draw through bit-exact → the shipped game is byte-identical (default).
   // Sim confirmation (N=200, all 10 tracks): symmetric/G=1.5/strength=1.0 → runaway 23%→8.3%, action +.
-  gapRerollEnabled: false,
+  // SHIPPED DEFAULT ON since 2026-07-22 (symmetric, G=1.5, strength=1.0 — the measured winner).
+  // Turning it OFF here restores the pre-feature world byte-identically (fingerprint 72c3360fb75225ef).
+  gapRerollEnabled: true,
   gapRerollThresholdLengths: 1.5,
   gapRerollStrength: 1.0,
   gapRerollMode: 'symmetric',

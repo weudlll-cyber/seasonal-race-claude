@@ -253,11 +253,23 @@ const FRONT_LEASH_GAIN_PCT = FRONT_LEASH ? Number(argVal('frontLeashGainPct', '3
 // --gapRerollThresholdLengths engages the bias; --gapRerollMode symmetric|down; --gapRerollStrength.
 // Absent --gapRerollThresholdLengths → GAP_REROLL off → the roll loop never calls the transform →
 // byte-identical (fingerprint-gated). Scheduled rolls ONLY (owner fairness decision) — no early rolls.
-const GAP_REROLL_THRESH = argVal('gapRerollThresholdLengths', null);
+// SHIPPED DEFAULT (2026-07-22): gapRerollEnabled defaults TRUE, so a FLAGLESS sim run now reproduces
+// the shipped game with the gap-reroll ON — the sim is a prediction tool, not a sandbox, and it must
+// track the shipped default or every flagless sweep predicts a game that no longer exists.
+// `--gapRerollEnabled=false` restores the pre-feature world byte-identically (fingerprint
+// 72c3360fb75225ef). An explicit --gapRerollThresholdLengths still engages the transform on its own,
+// so every existing sweep arm that passes it keeps working unchanged.
+const GAP_REROLL_ON = argVal('gapRerollEnabled', String(DEFAULT_RACE_DYNAMICS_CONFIG.gapRerollEnabled)) === 'true';
+const GAP_REROLL_THRESH = argVal(
+  'gapRerollThresholdLengths',
+  GAP_REROLL_ON ? String(DEFAULT_RACE_DYNAMICS_CONFIG.gapRerollThresholdLengths) : null
+);
 const GAP_REROLL = GAP_REROLL_THRESH !== null;
 const GAP_REROLL_THRESH_LEN = GAP_REROLL ? Number(GAP_REROLL_THRESH) : null;
-const GAP_REROLL_MODE = GAP_REROLL ? argVal('gapRerollMode', 'symmetric') : null;
-const GAP_REROLL_STRENGTH = GAP_REROLL ? Number(argVal('gapRerollStrength', '0.5')) : null;
+// Mode + strength now default to the SHIPPED values (symmetric / 1.0) rather than the old
+// experiment defaults, so a flagless run is the shipped game exactly. Explicit flags still override.
+const GAP_REROLL_MODE = GAP_REROLL ? argVal('gapRerollMode', String(DEFAULT_RACE_DYNAMICS_CONFIG.gapRerollMode)) : null;
+const GAP_REROLL_STRENGTH = GAP_REROLL ? Number(argVal('gapRerollStrength', String(DEFAULT_RACE_DYNAMICS_CONFIG.gapRerollStrength))) : null;
 // B2-leak trace (read-only diagnostic): adds b2LastInside to rawData rows. No-flag → byte-identical.
 const B2_TRACE = argv.includes('--b2-trace');
 // reRoll / trajectory dynamics overrides — same shared-default + argVal pattern. Lets a sweep

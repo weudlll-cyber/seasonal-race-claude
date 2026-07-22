@@ -5,6 +5,27 @@ Items ranked by urgency within each bucket. ✅ = done, 🔜 = next, ⏳ = waiti
 
 ---
 
+## Gap-reroll — SHIPPED DEFAULT ON (July 2026)
+
+- ✅ **Gap-reroll is the shipped default: symmetric, G=1.5, strength=1.0** (`storage/defaults.js`
+  `gapRerollEnabled: true`). Closes the "gap-reroll default ON" item.
+- **New shipped-default fingerprint `efd0f4ad8eca08fa`.** The previous shipped default
+  `72c3360fb75225ef` is **SUPERSEDED**; that hash now identifies the **OFF** world, which is
+  re-verified byte-identical via `node scripts/fingerprint-default.mjs off --gapRerollEnabled=false`.
+- **Sim follows the shipped default.** `sim-fairness.mjs` never read `gapRerollEnabled`; it does now,
+  so a flagless sim run reproduces the shipped game. **A flagless run is therefore no longer the OFF
+  world** — OFF arms must pass `--gapRerollEnabled=false`, and every OFF arm in
+  `exp-runaway-leader.mjs` was updated so the committed baselines stay reproducible.
+- ⚠️ **MEASUREMENT CAVEAT — quote the headline with this qualifier.** The **23.0% → 8.3% runaway**
+  result (N=200, all 10 tracks) was measured **pre-branch-priority-fix**. The fix was validated as
+  **within-noise and directionally favourable** on a 4-track paired test at identical seeds
+  (A0, `67a1053`): **8.3% → 7.5%, 5/400 flips, all away from runaway, −0.55 sd**. The other 6 tracks
+  are untested post-fix. A full 10-track re-measurement is **not** required before shipping, but the
+  headline is a pre-fix number and should never be quoted bare.
+- ⏳ **Owner browser eye-check pending** (next morning). The backup tag follows only after it.
+
+---
+
 ## Front Act / C1 — July 2026
 
 - ✅ **Gap-reroll branch-priority fix** — when both `gapBehind > G` and `gapAhead > G` the LARGER

@@ -32,6 +32,10 @@ import { fileURLToPath } from 'url';
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
 const LABEL = process.argv[2] || 'run';
+// Any further argv entries are passed straight through to the sim. Needed since a mechanism can now
+// ship ON by default: `node scripts/fingerprint-default.mjs off --gapRerollEnabled=false` measures the
+// pre-feature world. With no extra args this is exactly the shipped-default fingerprint, as before.
+const EXTRA = process.argv.slice(3).filter((a) => a.startsWith('--'));
 const SEED = 1, RACES = 3, DUR = 60;
 // 10 standard tracks × default racer (fixed order — never reorder; it feeds the combined hash).
 const TRACKS = [
@@ -47,13 +51,14 @@ function canon(v) {
   return JSON.stringify(v);
 }
 
+if (EXTRA.length) console.log('extra sim args:', EXTRA.join(' '));
 const combined = createHash('sha256');
 const perTrack = [];
 for (const [track, racer] of TRACKS) {
   const out = `client/tmp/fp/${LABEL}__${track}`;
   execFileSync(process.execPath, [
     'scripts/sim-fairness.mjs', `--track=${track}`, `--racer=${racer}`,
-    `--seed=${SEED}`, `--races=${RACES}`, `--dur=${DUR}`, `--out=${out}`,
+    `--seed=${SEED}`, `--races=${RACES}`, `--dur=${DUR}`, `--out=${out}`, ...EXTRA,
   ], { cwd: ROOT, stdio: 'ignore' });
   const d = JSON.parse(readFileSync(join(ROOT, out, 'fairness-data.json'), 'utf8'));
   const rows = [...d.rawData].sort((a, b) => (a.raceIdx - b.raceIdx) || (a.index - b.index));

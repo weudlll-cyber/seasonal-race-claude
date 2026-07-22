@@ -1007,3 +1007,49 @@ window with `trajectoryMult` at either clamp; the naturalness number, sweep kill
 never enters the carousel block, so the shared `rng` is not advanced and the standard hero cast draws
 exactly what it always did. **Browser untouched this step** (sim-first activation, as in every phase
 before) — no DevScreen controls yet.
+
+### 2026-07-22 — Gap-reroll SHIPPED DEFAULT ON (symmetric, G=1.5, strength=1.0)
+
+The measured winner setting is now the shipped configuration. No other tuning value changed.
+
+**Fingerprints — the shipped default moved; record both.**
+
+| world | fingerprint | status |
+|---|---|---|
+| shipped default (gap-reroll **ON**) | **`efd0f4ad8eca08fa`** | **current** |
+| gap-reroll OFF (`--gapRerollEnabled=false`) | `72c3360fb75225ef` | unchanged — the pre-feature world, re-verified |
+| previous shipped default | `72c3360fb75225ef` | **SUPERSEDED** by `efd0f4ad8eca08fa` |
+
+Turning the feature off restores the pre-feature game **byte-identically** — the OFF fingerprint is
+bit-for-bit the value it has always been. That is the guarantee that survives the default flip.
+
+**The sim now follows the shipped default.** `sim-fairness.mjs` previously engaged the gap-reroll only
+when `--gapRerollThresholdLengths` was passed and never read `gapRerollEnabled` at all, so flipping the
+browser default alone would have left the sim predicting a game that no longer exists — a
+sim/browser parity break, and the shipped-default fingerprint could not have changed. It now reads
+`DEFAULT_RACE_DYNAMICS_CONFIG.gapRerollEnabled`, and mode/strength default to the shipped values
+(`symmetric` / `1.0`) instead of the old experiment defaults.
+
+> **Consequence for sweeps — a flagless sim run is no longer the OFF world.** Any arm that means
+> "gap-reroll off" must now pass **`--gapRerollEnabled=false`** explicitly. All OFF arms in
+> `exp-runaway-leader.mjs` were updated accordingly, so every committed baseline stays reproducible.
+> An explicit `--gapRerollThresholdLengths` still engages the transform on its own, so existing ON
+> arms are unchanged.
+
+`scripts/fingerprint-default.mjs` now passes any extra `--flags` through to the sim, which is how the
+OFF world is measured once a mechanism ships ON:
+
+```
+node scripts/fingerprint-default.mjs shipped                            -> efd0f4ad8eca08fa
+node scripts/fingerprint-default.mjs off --gapRerollEnabled=false       -> 72c3360fb75225ef
+```
+
+**DevScreen:** the Gap-Reroll toggle is unchanged and now reads ON by default (it renders from the
+merged `DEFAULT_RACE_DYNAMICS_CONFIG`, so no separate default was needed).
+
+**Measurement caveat that travels with the headline.** The 10-track result quoted for this setting —
+**runaway 23.0% → 8.3%** (N=200, all 10 tracks) — was measured **before** the gap-reroll
+branch-priority fix. The fix was re-qualified afterwards on a 4-track paired test at the same seeds
+(A0, `67a1053`): runaway **8.3% → 7.5%**, only **5/400 seed flips**, −0.55 sd — within noise, and every
+flip moved *away* from runaway. The 6 tracks outside that test are untested post-fix. Quote the
+headline with this qualifier.

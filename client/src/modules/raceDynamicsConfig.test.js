@@ -104,7 +104,7 @@ describe('DEFAULT_RACE_DYNAMICS_CONFIG', () => {
       b2AttackBandArrival: true,
       universalBandArrival: false,
       // Gap-cap re-roll bias — default OFF (byte-identical); confirmed candidate symmetric/1.5/1.0.
-      gapRerollEnabled: false,
+      gapRerollEnabled: true, // SHIPPED ON 2026-07-22 (symmetric, G=1.5, s=1.0)
       gapRerollThresholdLengths: 1.5,
       gapRerollStrength: 1.0,
       gapRerollMode: 'symmetric',
@@ -112,8 +112,8 @@ describe('DEFAULT_RACE_DYNAMICS_CONFIG', () => {
     });
   });
 
-  it('gap-reroll defaults are OFF (byte-identical) with the confirmed candidate values', () => {
-    expect(DEFAULT_RACE_DYNAMICS_CONFIG.gapRerollEnabled).toBe(false);
+  it('gap-reroll ships ON with the confirmed winner setting; turning it OFF is byte-identical', () => {
+    expect(DEFAULT_RACE_DYNAMICS_CONFIG.gapRerollEnabled).toBe(true);
     expect(DEFAULT_RACE_DYNAMICS_CONFIG.gapRerollDevMarker).toBe(false);
     expect(DEFAULT_RACE_DYNAMICS_CONFIG.gapRerollThresholdLengths).toBe(1.5);
     expect(DEFAULT_RACE_DYNAMICS_CONFIG.gapRerollStrength).toBe(1.0);
