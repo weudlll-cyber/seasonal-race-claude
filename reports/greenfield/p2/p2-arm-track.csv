@@ -1,0 +1,13 @@
+arm,track,type,n,runaway,parade,p1c62,p1c62K,p1c80,p1c80K,leadChangeMean
+A6-control,luger-hill,open,100,10,1,33,100,33,100,2.56
+A6-control,mountainstreet,open,100,5,3,44,100,44,100,3.33
+A6-control,searound,closed,100,13,1,28,100,28,100,2.1
+A6-control,dirt-oval,closed,100,2,3,44,100,44,100,2.91
+A5-carousel,luger-hill,open,100,15,0,25,100,25,100,2.26
+A5-carousel,mountainstreet,open,100,15,3,34,100,34,100,2.75
+A5-carousel,searound,closed,100,9,4,25,100,25,100,2.22
+A5-carousel,dirt-oval,closed,100,2,1,38,100,38,100,2.97
+A8-gr075,luger-hill,open,100,12,0,42,100,42,100,2.7
+A8-gr075,mountainstreet,open,100,5,1,60,100,60,100,3.67
+A8-gr075,searound,closed,100,9,1,45,100,45,100,2.85
+A8-gr075,dirt-oval,closed,100,0,1,69,100,69,100,3.65
