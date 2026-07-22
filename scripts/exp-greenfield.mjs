@@ -26,6 +26,9 @@ import { fileURLToPath } from 'url';
 import { dirname, join, isAbsolute, relative } from 'path';
 import { summarizePhysicsTax } from './sim/observers/physics-tax.mjs';
 import { mulberry32 } from '../client/src/modules/racePlanner.js';
+import { classifyRace, RUNAWAY_PARADE_DEFAULTS } from './sim/observers/runaway-parade.mjs';
+import { classifyFrontBattle } from './sim/observers/outcome-front-battle.mjs';
+import { bandOfRank } from '../client/src/modules/greenfieldComposer.js';
 
 const pExecFile = promisify(execFile);
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
@@ -333,12 +336,328 @@ async function phaseP1() {
   console.log(`\nWrote ${join(OUT_ABS, 'SUMMARY.md')} (${rows.length} grid cells)`);
 }
 
+// ── P2: A8 arm — the sweep's missing measurement (drop the carousel or tune it?) ──────────────
+//
+// Three arms, same baseline seeds, N × 4 tracks, all at the A6 window (contestWindowStart 0.62), so
+// the comparison is paired and self-consistent. The exact historical A5/A6 flag configs were not
+// committed, so they are DEFINED here per the spec's description and measured fresh alongside A8:
+//   A6 (control)  — shipped gap-reroll (symmetric G=1.5 s=1.0), carousel OFF.
+//   A5 (carousel) — A6 + carousel ON (roleBias 1.0) — the "tune the carousel" option.
+//   A8 (tuned GR) — gap-reroll symmetric G=0.75 s=1.0 + roleBias 1.0, carousel OFF — the missing arm.
+// NOTE: roleBias tilts only CAROUSEL participants (roles come from the carousel schedule), so with the
+// carousel OFF the A8 roleBias flag is inert — A8 is effectively "gap-reroll tightened to G=0.75". This
+// is stated in the verdict rather than hidden. The question: does A8 match/beat A5 on p1Contest WITHOUT
+// the carousel's action cost → drop the carousel; else tune it.
+const P2_ARMS = [
+  { name: 'A6-control', flags: ['--gapRerollEnabled=true', '--gapRerollThresholdLengths=1.5', '--gapRerollStrength=1.0', '--gapRerollMode=symmetric', '--carouselEnabled=false', '--contestWindowStart=0.62'] },
+  { name: 'A5-carousel', flags: ['--gapRerollEnabled=true', '--gapRerollThresholdLengths=1.5', '--gapRerollStrength=1.0', '--gapRerollMode=symmetric', '--carouselEnabled=true', '--carouselRoleBiasStrength=1.0', '--contestWindowStart=0.62'] },
+  { name: 'A8-gr075', flags: ['--gapRerollEnabled=true', '--gapRerollThresholdLengths=0.75', '--gapRerollStrength=1.0', '--gapRerollMode=symmetric', '--carouselEnabled=false', '--carouselRoleBiasStrength=1.0', '--contestWindowStart=0.62'] },
+];
+
+async function runArmTrack(arm, track) {
+  const outAbs = join(TMP_ABS, `${arm.name}-${track.id}`);
+  const args = ['scripts/sim-fairness.mjs', `--track=${track.id}`, `--racer=${track.racer}`,
+    `--seed=${SEED}`, `--races=${N}`, `--dur=${DUR}`, '--runaway-parade', '--skip-main-output',
+    ...arm.flags, `--out=${toSimOut(outAbs)}`];
+  await pExecFile(process.execPath, args, { cwd: ROOT, maxBuffer: 256 * 1024 * 1024 });
+  const rp = JSON.parse(readFileSync(join(outAbs, 'runaway-parade.json'), 'utf8'));
+  let runaway = 0, parade = 0, p1c80 = 0, p1c80K = 0, p1c62 = 0, p1c62K = 0;
+  const leadChanges = [], distinct = [];
+  for (const r of rp.races) {
+    const raw = r.runawayParade;
+    const cls = classifyRace(raw, RUNAWAY_PARADE_DEFAULTS);
+    if (cls.runawayWinner) runaway++;
+    if (cls.paradeFinish) parade++;
+    const fb80 = classifyFrontBattle(raw.frontBattle); if (fb80 != null) { p1c80K++; if (fb80) p1c80++; }
+    const fb62 = classifyFrontBattle(raw.frontBattle62); if (fb62 != null) { p1c62K++; if (fb62) p1c62++; }
+    if (raw.frontBattle) { leadChanges.push(raw.frontBattle.leadChangeCount ?? 0); distinct.push(raw.frontBattle.distinctLeaders ?? 0); }
+  }
+  const n = rp.races.length;
+  return { arm: arm.name, track, n, runaway, parade, p1c80, p1c80K, p1c62, p1c62K, leadChanges, distinct };
+}
+
+async function phaseP2() {
+  console.log(`\n=== GREENFIELD P2 — A8 arm (drop the carousel or tune it?) === ${P2_ARMS.length} arms × ${TRACKS.length} tracks × N=${N} (window 0.62)`);
+  mkdirSync(OUT_ABS, { recursive: true });
+  const jobs = [];
+  for (const arm of P2_ARMS) for (const track of TRACKS) jobs.push({ arm, track });
+  const out = new Array(jobs.length);
+  let next = 0;
+  async function worker() { while (true) { const i = next++; if (i >= jobs.length) break; out[i] = await runArmTrack(jobs[i].arm, jobs[i].track); console.log(`  ${out[i].arm.padEnd(12)} ${out[i].track.id.padEnd(14)} done`); } }
+  await Promise.all(Array.from({ length: JOBS }, worker));
+
+  // Aggregate per arm (pooled across tracks).
+  const byArm = new Map();
+  for (const r of out) { if (!byArm.has(r.arm)) byArm.set(r.arm, []); byArm.get(r.arm).push(r); }
+  const armAgg = [];
+  for (const arm of P2_ARMS) {
+    const rs = byArm.get(arm.name);
+    const s = (f) => rs.reduce((a, r) => a + f(r), 0);
+    armAgg.push({
+      arm: arm.name,
+      runawayRate: s((r) => r.runaway) / s((r) => r.n),
+      paradeRate: s((r) => r.parade) / s((r) => r.n),
+      p1Contest80: s((r) => r.p1c80K) ? s((r) => r.p1c80) / s((r) => r.p1c80K) : null,
+      p1Contest62: s((r) => r.p1c62K) ? s((r) => r.p1c62) / s((r) => r.p1c62K) : null,
+      leadChangeMean: mean(rs.flatMap((r) => r.leadChanges)),
+      distinctMean: mean(rs.flatMap((r) => r.distinct)),
+    });
+  }
+  const A6 = armAgg.find((a) => a.arm === 'A6-control');
+  const A5 = armAgg.find((a) => a.arm === 'A5-carousel');
+  const A8 = armAgg.find((a) => a.arm === 'A8-gr075');
+
+  // CSV
+  const cols = ['arm', 'runawayRate', 'paradeRate', 'p1Contest80', 'p1Contest62', 'leadChangeMean', 'distinctMean'];
+  writeFileSync(join(OUT_ABS, 'p2-arms.csv'), [cols.join(','), ...armAgg.map((a) => cols.map((c) => r4(a[c]) ?? '').join(','))].join('\n') + '\n');
+  // per arm × track
+  const tcols = ['arm', 'track', 'type', 'n', 'runaway', 'parade', 'p1c62', 'p1c62K', 'p1c80', 'p1c80K', 'leadChangeMean'];
+  writeFileSync(join(OUT_ABS, 'p2-arm-track.csv'), [tcols.join(','), ...out.map((r) => [r.arm, r.track.id, r.track.closed ? 'closed' : 'open', r.n, r.runaway, r.parade, r.p1c62, r.p1c62K, r.p1c80, r.p1c80K, r4(mean(r.leadChanges))].join(','))].join('\n') + '\n');
+
+  // Verdict
+  const dropCarousel = (A8.p1Contest62 ?? 0) >= (A5.p1Contest62 ?? 0) && A8.leadChangeMean >= A5.leadChangeMean * 0.95;
+  const md = [];
+  md.push('# GREENFIELD P2 — A8 arm: drop the carousel or tune it?');
+  md.push('');
+  md.push(`3 arms, same baseline seeds, **N=${N} × 4 tracks**, all at contestWindowStart 0.62 (the A6 window). Paired and self-consistent. A5/A6 historical flag configs were not committed, so they are defined here per the spec and measured fresh alongside A8. **roleBias tilts only carousel participants, so with the carousel OFF the A8 roleBias flag is inert — A8 is effectively gap-reroll tightened to G=0.75.**`);
+  md.push('');
+  md.push('| arm | config | p1@62 | p1@80 | runaway | parade | leadChange | distinct |');
+  md.push('|---|---|---|---|---|---|---|---|');
+  const cfgOf = { 'A6-control': 'GR G=1.5, carousel OFF', 'A5-carousel': 'GR G=1.5 + carousel ON (roleBias 1.0)', 'A8-gr075': 'GR G=0.75, carousel OFF' };
+  for (const a of armAgg) md.push(`| ${a.arm} | ${cfgOf[a.arm]} | ${pct(a.p1Contest62)} | ${pct(a.p1Contest80)} | ${pct(a.runawayRate)} | ${pct(a.paradeRate)} | ${a.leadChangeMean.toFixed(2)} | ${a.distinctMean.toFixed(2)} |`);
+  md.push('');
+  md.push('## Verdict');
+  md.push('');
+  md.push(`- A8 vs A5 on p1@62: ${pct(A8.p1Contest62)} vs ${pct(A5.p1Contest62)} (${(A8.p1Contest62 ?? 0) >= (A5.p1Contest62 ?? 0) ? 'A8 matches/beats' : 'A8 below'} A5)`);
+  md.push(`- A8 vs A5 leadChange: ${A8.leadChangeMean.toFixed(2)} vs ${A5.leadChangeMean.toFixed(2)}`);
+  md.push(`- A8 vs A6 control on p1@62: ${pct(A8.p1Contest62)} vs ${pct(A6.p1Contest62)}`);
+  md.push(`- A5 (carousel) action cost vs A6: leadChange ${A5.leadChangeMean.toFixed(2)} vs ${A6.leadChangeMean.toFixed(2)}, runaway ${pct(A5.runawayRate)} vs ${pct(A6.runawayRate)}`);
+  md.push('');
+  md.push(`**${dropCarousel ? 'DROP the carousel' : 'TUNE the carousel (or neither wins)'}** — ${dropCarousel ? 'A8 matches/beats A5 on p1Contest without the carousel; the carousel is not earning its complexity.' : 'A8 does not match A5 on p1Contest at this setting, so the carousel is not obviously droppable on these numbers.'}`);
+  md.push('');
+  md.push('Data: `p2-arms.csv`, `p2-arm-track.csv`.');
+  writeFileSync(join(OUT_ABS, 'SUMMARY.md'), md.join('\n') + '\n');
+  console.log(`\nA6 p1@62=${pct(A6.p1Contest62)} | A5 p1@62=${pct(A5.p1Contest62)} lead=${A5.leadChangeMean.toFixed(2)} | A8 p1@62=${pct(A8.p1Contest62)} lead=${A8.leadChangeMean.toFixed(2)}`);
+  console.log(`VERDICT: ${dropCarousel ? 'DROP the carousel' : 'TUNE / neither'}`);
+  console.log(`Wrote ${join(OUT_ABS, 'SUMMARY.md')}`);
+}
+
+// ── P4/P5/P6: composer sweep ────────────────────────────────────────────────────────────────
+//
+// Per composer: 4 tracks, default racers, --dur, N seeds, baseline seeds. The composer replaces the
+// steering; the FULL live engine + the whole observer suite run unchanged. Every metric is derived
+// from two read-only files per track — composer.json (delivery diagnostics + tier assignment) and
+// runaway-parade.json (the observer suite: runaway/parade/front-battle at both windows) — joined by
+// raceIdx. Band delivery is computed directly from targetRank ↔ finalRank (the honest tier-match),
+// which is the RIGHT delivery metric for an assignment-authored system.
+//
+// Historical baselines quoted for comparison (from the committed p1-contest baseline + the owner's
+// mark): band-reach > 80%; p1Contest 5.3% at the A1 window (0.80) and 31.3% at the A6 window (0.62).
+const BASELINE = { bandReach: 0.80, p1Contest80: 0.053, p1Contest62: 0.313 };
+const COMPOSER = argVal('composer', null);
+const COMPOSER_SIGMA = Number(argVal('composerSigma', '0.48')); // pooled sigma from P0
+
+// Shannon entropy (normalized 0..1) of a set of discrete outcomes.
+function normEntropy(counts) {
+  const tot = counts.reduce((s, x) => s + x, 0);
+  if (tot <= 1 || counts.length <= 1) return 0;
+  let h = 0;
+  for (const c of counts) { if (c > 0) { const p = c / tot; h -= p * Math.log2(p); } }
+  return h / Math.log2(counts.length);
+}
+
+async function runComposerTrack(track, durationSec) {
+  const outAbs = join(TMP_ABS, `${COMPOSER}-${track.id}-${durationSec}`);
+  const args = [
+    'scripts/sim-fairness.mjs',
+    `--track=${track.id}`, `--racer=${track.racer}`,
+    `--seed=${SEED}`, `--races=${N}`, `--dur=${durationSec}`,
+    `--composer=${COMPOSER}`, `--composerSigma=${COMPOSER_SIGMA}`,
+    '--runaway-parade', '--skip-main-output', `--out=${toSimOut(outAbs)}`,
+  ];
+  const t0 = Date.now();
+  await pExecFile(process.execPath, args, { cwd: ROOT, maxBuffer: 256 * 1024 * 1024 });
+  const comp = JSON.parse(readFileSync(join(outAbs, 'composer.json'), 'utf8'));
+  const rp = JSON.parse(readFileSync(join(outAbs, 'runaway-parade.json'), 'utf8'));
+  const rpByIdx = new Map(rp.races.map((r) => [r.raceIdx, r.runawayParade]));
+
+  // Join per race and compute metrics.
+  let racersTotal = 0, racersInTier = 0, tierExactRaces = 0;
+  let runaway = 0, parade = 0;
+  let p1c80 = 0, p1c80Known = 0, p1c62 = 0, p1c62Known = 0;
+  const leadChanges = [], distinctLeaders = [];
+  let bandViolTotal = 0;
+  const metaAgg = { redeals: [], recompiles: [], replans: [], minMargin: [] };
+  // intraTierEntropy: per band, gather the intra-tier finishing order (as a rank-signature) across
+  // races; entropy of the distinct signatures = how free the placement inside a tier is.
+  const tierOrderSig = new Map(); // bandIdx → Map(signature → count)
+
+  for (const rec of comp.races) {
+    const raw = rpByIdx.get(rec.raceIdx);
+    if (!raw) continue;
+    const finalRank = raw.finalRankByIndex || {};
+    const target = rec.targetRankByIndex || {};
+    // band delivery + tier exactness
+    let inTier = 0, tot = 0;
+    const byBand = new Map(); // bandIdx → [{idx, finalRank}]
+    for (const idxStr of Object.keys(target)) {
+      const tr = target[idxStr]; const fr = finalRank[idxStr];
+      if (fr == null) continue;
+      tot++; racersTotal++;
+      const tb = bandOfRank(tr);
+      if (bandOfRank(fr) === tb) { inTier++; racersInTier++; }
+      if (!byBand.has(tb)) byBand.set(tb, []);
+      byBand.get(tb).push({ idx: Number(idxStr), fr });
+    }
+    if (tot > 0 && inTier === tot) tierExactRaces++;
+    // intra-tier order signature: sort each assigned-band group by final rank, record the idx order
+    for (const [tb, arr] of byBand) {
+      if (arr.length < 2) continue;
+      const sig = arr.slice().sort((a, b) => a.fr - b.fr).map((x) => x.idx).join('>');
+      if (!tierOrderSig.has(tb)) tierOrderSig.set(tb, new Map());
+      const m = tierOrderSig.get(tb);
+      m.set(sig, (m.get(sig) || 0) + 1);
+    }
+    // runaway/parade
+    const cls = classifyRace(raw, RUNAWAY_PARADE_DEFAULTS);
+    if (cls.runawayWinner) runaway++;
+    if (cls.paradeFinish) parade++;
+    // p1Contest at both windows
+    const fb80 = classifyFrontBattle(raw.frontBattle);
+    const fb62 = classifyFrontBattle(raw.frontBattle62);
+    if (fb80 != null) { p1c80Known++; if (fb80) p1c80++; }
+    if (fb62 != null) { p1c62Known++; if (fb62) p1c62++; }
+    if (raw.frontBattle) { leadChanges.push(raw.frontBattle.leadChangeCount ?? 0); distinctLeaders.push(raw.frontBattle.distinctLeaders ?? 0); }
+    // composer diagnostics
+    bandViolTotal += rec.bandViolations ?? 0;
+    metaAgg.redeals.push(rec.meta.redeals ?? 0);
+    metaAgg.recompiles.push(rec.meta.recompiles ?? 0);
+    metaAgg.replans.push(rec.meta.replans ?? 0);
+    if (rec.meta.minMargin != null) metaAgg.minMargin.push(rec.meta.minMargin);
+  }
+
+  // intraTierEntropy: mean normalized entropy across bands that had ≥2 distinct signatures observed
+  const entPerBand = [];
+  for (const [, m] of tierOrderSig) { const counts = [...m.values()]; if (counts.length >= 1) entPerBand.push(normEntropy(counts)); }
+
+  const n = comp.races.length;
+  return {
+    track, durationSec, n,
+    bandDelivery: racersTotal ? racersInTier / racersTotal : 0,
+    tierExactness: n ? tierExactRaces / n : 0,
+    runawayRate: n ? runaway / n : 0,
+    paradeRate: n ? parade / n : 0,
+    p1Contest80: p1c80Known ? p1c80 / p1c80Known : null,
+    p1Contest62: p1c62Known ? p1c62 / p1c62Known : null,
+    leadChangeMean: mean(leadChanges),
+    distinctLeadersMean: mean(distinctLeaders),
+    intraTierEntropy: mean(entPerBand),
+    bandViolations: bandViolTotal,
+    redealsMean: mean(metaAgg.redeals),
+    recompilesMean: mean(metaAgg.recompiles),
+    replansMean: mean(metaAgg.replans),
+    minMarginMean: metaAgg.minMargin.length ? mean(metaAgg.minMargin) : null,
+    _racersTotal: racersTotal, _racersInTier: racersInTier, _tierExactRaces: tierExactRaces,
+    _runaway: runaway, _parade: parade, _p1c80: p1c80, _p1c80Known: p1c80Known, _p1c62: p1c62, _p1c62Known: p1c62Known,
+    _leadChanges: leadChanges, _distinctLeaders: distinctLeaders, _entPerBand: entPerBand,
+    _redeals: metaAgg.redeals, _recompiles: metaAgg.recompiles, _replans: metaAgg.replans, _minMargin: metaAgg.minMargin,
+  };
+}
+
+async function phaseSweep() {
+  if (!COMPOSER) { console.error('sweep requires --composer=<vplan|vcopilot|vcc>'); process.exit(1); }
+  const dur = DUR;
+  console.log(`\n=== GREENFIELD SWEEP — composer=${COMPOSER} === ${TRACKS.length} tracks × N=${N} (seed=${SEED}, dur=${dur}s), σ=${COMPOSER_SIGMA}`);
+  mkdirSync(OUT_ABS, { recursive: true });
+
+  const jobList = [...TRACKS];
+  const results = new Array(jobList.length);
+  let next = 0;
+  async function worker() {
+    while (true) {
+      const i = next++;
+      if (i >= jobList.length) break;
+      const r = await runComposerTrack(jobList[i], dur);
+      results[i] = r;
+      console.log(`  ${r.track.id.padEnd(16)} band=${pct(r.bandDelivery)} tierExact=${pct(r.tierExactness)} runaway=${pct(r.runawayRate)} parade=${pct(r.paradeRate)} p1@80=${pct(r.p1Contest80)} p1@62=${pct(r.p1Contest62)} lead=${r.leadChangeMean.toFixed(2)} viol=${r.bandViolations}`);
+    }
+  }
+  await Promise.all(Array.from({ length: JOBS }, worker));
+
+  // Pooled across tracks (population-weighted where it matters).
+  const sum = (f) => results.reduce((s, r) => s + f(r), 0);
+  const racersTotal = sum((r) => r._racersTotal);
+  const pooled = {
+    bandDelivery: racersTotal ? sum((r) => r._racersInTier) / racersTotal : 0,
+    tierExactness: sum((r) => r._tierExactRaces) / sum((r) => r.n),
+    runawayRate: sum((r) => r._runaway) / sum((r) => r.n),
+    paradeRate: sum((r) => r._parade) / sum((r) => r.n),
+    p1Contest80: sum((r) => r._p1c80Known) ? sum((r) => r._p1c80) / sum((r) => r._p1c80Known) : null,
+    p1Contest62: sum((r) => r._p1c62Known) ? sum((r) => r._p1c62) / sum((r) => r._p1c62Known) : null,
+    leadChangeMean: mean(results.flatMap((r) => r._leadChanges)),
+    distinctLeadersMean: mean(results.flatMap((r) => r._distinctLeaders)),
+    intraTierEntropy: mean(results.flatMap((r) => r._entPerBand)),
+    bandViolations: sum((r) => r.bandViolations),
+    redealsMean: mean(results.flatMap((r) => r._redeals)),
+    recompilesMean: mean(results.flatMap((r) => r._recompiles)),
+    replansMean: mean(results.flatMap((r) => r._replans)),
+    minMarginMean: results.flatMap((r) => r._minMargin).length ? mean(results.flatMap((r) => r._minMargin)) : null,
+  };
+
+  // CSV
+  const cols = ['scope', 'type', 'dur', 'n', 'bandDelivery', 'tierExactness', 'runawayRate', 'paradeRate', 'p1Contest80', 'p1Contest62', 'leadChangeMean', 'distinctLeadersMean', 'intraTierEntropy', 'bandViolations', 'redealsMean', 'recompilesMean', 'replansMean', 'minMarginMean'];
+  const rowOf = (scope, type, r) => ({ scope, type, dur, n: r.n ?? N,
+    bandDelivery: r4(r.bandDelivery), tierExactness: r4(r.tierExactness), runawayRate: r4(r.runawayRate), paradeRate: r4(r.paradeRate),
+    p1Contest80: r4(r.p1Contest80), p1Contest62: r4(r.p1Contest62), leadChangeMean: r4(r.leadChangeMean), distinctLeadersMean: r4(r.distinctLeadersMean),
+    intraTierEntropy: r4(r.intraTierEntropy), bandViolations: r.bandViolations, redealsMean: r4(r.redealsMean), recompilesMean: r4(r.recompilesMean), replansMean: r4(r.replansMean), minMarginMean: r4(r.minMarginMean) });
+  const rows = [rowOf('POOLED', 'all', pooled), ...results.map((r) => rowOf(r.track.id, r.track.closed ? 'closed' : 'open', r))];
+  writeFileSync(join(OUT_ABS, `sweep-${COMPOSER}.csv`), [cols.join(','), ...rows.map((r) => cols.map((c) => r[c] ?? '').join(','))].join('\n') + '\n');
+
+  // Markdown
+  const md = [];
+  md.push(`# GREENFIELD SWEEP — composer \`${COMPOSER}\``);
+  md.push('');
+  md.push(`4 tracks (2 open + 2 closed), default racers, **N=${N}**, dur=${dur}s, baseline seeds. σ=${COMPOSER_SIGMA} (P0 pooled). The composer replaces the re-roll dice + trajectoryMult servo; the full live engine (avoidance, no-overlap, braking) + the whole observer suite run unchanged. Band delivery = per-racer finalRank-band == assigned-tier-band.`);
+  md.push('');
+  md.push('Baselines: band-reach > 80% (owner mark); p1Contest 5.3% @0.80 (A1), 31.3% @0.62 (A6).');
+  md.push('');
+  md.push('## Pooled');
+  md.push('');
+  md.push(`- **band delivery = ${pct(pooled.bandDelivery)}** vs 80% mark ${pooled.bandDelivery >= BASELINE.bandReach ? '✅' : '❌'}; tier-exactness (all-in-tier races) = ${pct(pooled.tierExactness)}`);
+  md.push(`- runaway = ${pct(pooled.runawayRate)}; parade = ${pct(pooled.paradeRate)}`);
+  md.push(`- **p1Contest @0.80 = ${pct(pooled.p1Contest80)}** vs 5.3% ${cmp(pooled.p1Contest80, BASELINE.p1Contest80)}; **@0.62 = ${pct(pooled.p1Contest62)}** vs 31.3% ${cmp(pooled.p1Contest62, BASELINE.p1Contest62)}`);
+  md.push(`- leadChange mean = ${pooled.leadChangeMean.toFixed(2)}; distinctLeaders mean = ${pooled.distinctLeadersMean.toFixed(2)}; **intraTierEntropy = ${pooled.intraTierEntropy.toFixed(3)}**`);
+  md.push(`- band-compliance violations = ${pooled.bandViolations} (target 0 — the hard invariant)`);
+  md.push(`- delivery diagnostics: re-deals ${pooled.redealsMean.toFixed(2)}/race, recompiles ${pooled.recompilesMean.toFixed(2)}, re-plans ${pooled.replansMean.toFixed(2)}${pooled.minMarginMean != null ? `, minMargin ${pooled.minMarginMean.toFixed(4)}` : ''}`);
+  md.push('');
+  md.push('## Per track');
+  md.push('');
+  md.push('| track | type | band | tierExact | runaway | parade | p1@80 | p1@62 | lead | distinct | entropy | viol |');
+  md.push('|---|---|---|---|---|---|---|---|---|---|---|---|');
+  for (const r of results) md.push(`| ${r.track.id} | ${r.track.closed ? 'closed' : 'open'} | ${pct(r.bandDelivery)} | ${pct(r.tierExactness)} | ${pct(r.runawayRate)} | ${pct(r.paradeRate)} | ${pct(r.p1Contest80)} | ${pct(r.p1Contest62)} | ${r.leadChangeMean.toFixed(2)} | ${r.distinctLeadersMean.toFixed(2)} | ${r.intraTierEntropy.toFixed(3)} | ${r.bandViolations} |`);
+  md.push('');
+  md.push('Data: `sweep-' + COMPOSER + '.csv`.');
+  writeFileSync(join(OUT_ABS, `SUMMARY-${COMPOSER}.md`), md.join('\n') + '\n');
+  console.log(`\nPOOLED band=${pct(pooled.bandDelivery)} p1@80=${pct(pooled.p1Contest80)} p1@62=${pct(pooled.p1Contest62)} entropy=${pooled.intraTierEntropy.toFixed(3)} viol=${pooled.bandViolations}`);
+  console.log(`Wrote ${join(OUT_ABS, `SUMMARY-${COMPOSER}.md`)}`);
+
+  // Promotion check (informational; the runner decides N=100 re-run)
+  const promote = pooled.bandDelivery >= BASELINE.bandReach && (pooled.p1Contest62 ?? 0) >= BASELINE.p1Contest62;
+  console.log(`PROMOTION (band≥80% AND p1@62≥31.3%): ${promote ? 'YES → re-run N=100' : 'NO'}`);
+}
+
+function cmp(a, b) { if (a == null) return ''; return a >= b ? '✅' : '❌'; }
+
 // ── dispatch ────────────────────────────────────────────────────────────────────────────────
 
 if (PHASE === 'p0') {
   await phaseP0();
 } else if (PHASE === 'p1') {
   await phaseP1();
+} else if (PHASE === 'p2') {
+  await phaseP2();
+} else if (PHASE === 'sweep') {
+  await phaseSweep();
 } else {
   console.error(`Unknown --phase=${PHASE}. Supported here: p0. (p1 is a separate arithmetic driver; sweeps use exp-runaway-leader patterns.)`);
   process.exit(1);
