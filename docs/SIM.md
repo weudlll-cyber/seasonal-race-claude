@@ -53,16 +53,21 @@ The sim imports the identical JavaScript modules the browser uses:
 
 Since 2026-07, the browser can replay a race exactly — the same mechanism the sim uses.
 
-| Quick-Test seed | behavior |
+| Quick-Test seed field | behavior |
 |---|---|
-| **> 0** | **Fully deterministic.** The seed drives the plan *and* the dynamics: start rows, initial `spreadFactor`s, every scheduled re-roll, and both roll jitters. The same seed replays move-for-move — the basis for a reproducible eye-test. |
-| **0** | Unseeded (legacy). The plan is unseeded (`seed > 0` is the condition for using mulberry32) and the dynamics come from the native `Math.random()`. Every race differs. |
+| **empty** (default) | **Random but replayable.** Each race draws a fresh seed (1–9999) *before* it starts, then runs fully deterministic with it. Every race differs — the normal Quick-Test case, no input needed — and the HUD shows the drawn value, so any race can be replayed afterwards by typing that number. |
+| **a typed number** | **Fixed.** Every run with that number is the same race, move-for-move. |
+| ~~0~~ | Not reachable from Quick-Test: 0 is clamped up to 1, and an empty field means *random*, not *unseeded*. |
 
-The normal **"Start Race"** path always sends `racePlanSeed: 0`, so it stays unseeded — only Quick-Test is reproducible today.
+In both Quick-Test cases the seed drives the plan *and* the dynamics: start rows, initial `spreadFactor`s, every scheduled re-roll, and both roll jitters.
+
+The normal **"Start Race"** path still sends `racePlanSeed: 0` — the unseeded legacy path, where the plan is unseeded too (`seed > 0` is the condition for using mulberry32) and the dynamics come from the native `Math.random()`. Only Quick-Test is reproducible today; seeding "Start Race" is an open owner decision (see BACKLOG).
+
+The random draw happens once in `SetupScreen/quickTestSeed.js` (`resolveQuickTestSeed`), **before** the race and outside the deterministic swap — so the race itself stays a pure function of the seed. A drawn seed is never written back into the field, which is what keeps the next race random instead of pinning it to the first drawn value.
 
 Mechanism: at the top of the race-init effect `RaceScreen/index.jsx` swaps global `Math.random` for `mulberry32(racePlanSeed)` when the seed is > 0, and restores it in the effect's cleanup — exactly what `sim-fairness.mjs` does around its race loop. Because the browser's five draw sites are line-for-line twins of the sim's, one substitution covers all of them. With `seed <= 0` the global is never touched, so every pre-existing path is byte-identical to before.
 
-> **Practical note.** Before this change the HUD showed `seed:1` on every Quick-Test while the races clearly differed — the number was the *plan* seed only, and the dynamics were unseeded. The HUD now reads `seed:N` only when the race really is reproducible, and `unseeded` at 0.
+> **Practical note.** Before this change the HUD showed `seed:1` on every Quick-Test while the races clearly differed — the number was the *plan* seed only, and the dynamics were unseeded. The HUD now reads `seed:N` only when the race really is reproducible (which, in Quick-Test, is always), and `unseeded` on the legacy `racePlanSeed: 0` path.
 >
 > A browser race and a sim race on the same seed are **not** expected to be frame-identical — the sim derives its per-race seed as `(N−1)×N_RACES + i + 1` and runs a fixed timestep. Determinism here means *the same browser race replays*, not browser↔sim frame parity.
 

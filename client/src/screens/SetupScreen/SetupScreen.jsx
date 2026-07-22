@@ -40,6 +40,12 @@ import { computeRacersPerRow } from '../../modules/rowLayout.js';
 import { loadRaceBehaviorConfig } from '../../modules/raceBehaviorConfig.js';
 import { loadRaceDynamicsConfig } from '../../modules/raceDynamicsConfig.js';
 import { resolveActiveBrandProfile } from '../../modules/branding/useActiveBrandProfile.js';
+import {
+  sanitizeQuickTestSeedInput,
+  resolveQuickTestSeed,
+  QUICK_TEST_SEED_MIN,
+  QUICK_TEST_SEED_MAX,
+} from './quickTestSeed.js';
 import styles from './SetupScreen.module.css';
 
 const TABS = ['Players', 'Track', 'Settings'];
@@ -346,15 +352,24 @@ function SetupScreen() {
   const [quickTrackId, setQuickTrackId] = useState(null);
   const quickTrack = tracks.find((t) => t.id === (quickTrackId ?? tracks[0]?.id)) ?? tracks[0];
   const [quickTestCount, setQuickTestCount] = useState(20);
-  // Quick-Test seed. Persisted for the browser session because the seed now determines the whole
-  // race (see RaceScreen): re-running the SAME seed is the eye-test, and navigating back from a race
-  // remounts this screen — without persistence the field would silently snap back to 1 between the
-  // two runs being compared. Session-scoped on purpose; a fresh session starts from 1 again.
-  const [quickTestSeed, setQuickTestSeed] = useState(
-    () => Number(sessionStorage.getItem('quickTestSeed')) || 1
+  // Quick-Test seed field. EMPTY (the default) = draw a fresh random seed for each race: every race
+  // differs — the normal Quick-Test case, zero input needed — yet each one stays replayable, because
+  // it runs fully deterministic with the drawn seed and the HUD shows that value. Typing it back in
+  // replays the race exactly.
+  //
+  // Held as a STRING so "empty" is representable; '' is not the same as 0 (0 would be the legacy
+  // unseeded path, which Quick-Test can no longer reach — see quickTestSeed.js).
+  //
+  // Persisted for the browser session so a TYPED seed survives the remount that navigating back from
+  // a race causes — otherwise the field would silently reset between the two runs being compared.
+  // A drawn seed is deliberately NOT written back: the field must stay empty so the next race draws
+  // again instead of pinning itself to the first drawn value.
+  const [quickTestSeed, setQuickTestSeed] = useState(() =>
+    sanitizeQuickTestSeedInput(sessionStorage.getItem('quickTestSeed') ?? '')
   );
   useEffect(() => {
-    sessionStorage.setItem('quickTestSeed', String(quickTestSeed));
+    if (quickTestSeed === '') sessionStorage.removeItem('quickTestSeed');
+    else sessionStorage.setItem('quickTestSeed', quickTestSeed);
   }, [quickTestSeed]);
   // Racer type selected for Quick Test (null = use quickTrack.defaultRacerTypeId)
   const [quickTestRacerTypeId, setQuickTestRacerTypeId] = useState(null);
@@ -478,7 +493,10 @@ function SetupScreen() {
       estimatedDurationSec: quickEstimatedDurationSec,
       trackSurfaceClasses: track.surfaceClasses ?? [],
       racePlanEnabled: quickEstimatedDurationSec >= racePlanMinDur,
-      racePlanSeed: quickTestSeed,
+      // Empty field ⇒ a seed is drawn here, once, BEFORE the race starts — the race itself is then
+      // a pure function of it (RaceScreen seeds Math.random from this value). The drawn seed is not
+      // written back into the field, so the next Quick-Test draws a fresh one.
+      racePlanSeed: resolveQuickTestSeed(quickTestSeed).seed,
       timestamp: new Date().toISOString(),
     };
 
@@ -1098,14 +1116,15 @@ function SetupScreen() {
                   }}
                 >
                   Seed:
+                  {/* Text + numeric keypad rather than type="number": an empty field is a real,
+                      meaningful state here ("random"), and number inputs make emptiness awkward. */}
                   <input
-                    type="number"
-                    min={0}
-                    max={9999}
+                    type="text"
+                    inputMode="numeric"
+                    placeholder="random"
+                    title={`Leave empty for a fresh random seed each race (shown in the race HUD, so you can replay it). Type ${QUICK_TEST_SEED_MIN}–${QUICK_TEST_SEED_MAX} to fix the race.`}
                     value={quickTestSeed}
-                    onChange={(e) =>
-                      setQuickTestSeed(Math.max(0, Math.min(9999, Number(e.target.value) || 0)))
-                    }
+                    onChange={(e) => setQuickTestSeed(sanitizeQuickTestSeedInput(e.target.value))}
                     style={{
                       width: '52px',
                       fontSize: '11px',

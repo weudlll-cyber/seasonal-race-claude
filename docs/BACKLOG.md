@@ -222,16 +222,18 @@ Additionally: Space (Custom Track) already present.
 ### Browser seed — follow-ups (noted, NOT built; owner decision)
 
 Quick-Test races are seed-deterministic as of 2026-07 (see `docs/SIM.md` → *Browser determinism*).
-The Quick-Test seed field persists for the browser session so the same seed can be re-run without
-re-typing it. Three follow-ups were deliberately left out of that step:
+An empty seed field draws a fresh seed per race and shows it in the HUD; a typed number fixes the
+race. Typed values persist for the browser session. Status of the follow-ups:
 
-- **Seed for the normal "Start Race" path.** It hardcodes `racePlanSeed: 0`, so a real race is never
-  reproducible. Options: draw a random seed per race and display it (so any race the owner likes can
-  be replayed afterwards), or leave it unseeded on purpose. Owner decision — it changes what a
-  "normal" race is, not just how it is logged.
-- **Seed persistence beyond the session.** Currently `sessionStorage`; a fresh browser session starts
-  from 1 again. Promote to `localStorage` or a URL parameter only if eye-tests need to survive a
-  restart.
+- ✅ **Random-seed draw for Quick-Test** — done 2026-07-22. Empty field = random-but-replayable; the
+  drawn seed is shown in the HUD and can be typed back to reproduce the race exactly.
+- **Seed for the normal "Start Race" path.** ⏳ OPEN — owner decision. It still hardcodes
+  `racePlanSeed: 0`, so a real race is never reproducible. Options: adopt the Quick-Test model (draw
+  a seed per race, display it), or leave it unseeded on purpose. This changes what a "normal" race
+  is, not just how it is logged — hence not bundled with the Quick-Test work.
+- **Seed persistence beyond the session.** ⏳ OPEN — owner decision. Currently `sessionStorage`, so a
+  fresh browser session starts from an empty (random) field. Promote to `localStorage` or a URL
+  parameter only if eye-tests need a pinned seed to survive a restart.
 - **Replaying a browser seed in the sim.** The two engines are deterministic *individually*, but a
   browser seed does not reproduce frame-for-frame in the sim (different per-race seed derivation and
   timestep). Making one seed mean one race in both engines is a separate, larger piece of work.
