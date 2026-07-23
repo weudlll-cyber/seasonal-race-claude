@@ -7,11 +7,26 @@ Items ranked by urgency within each bucket. ✅ = done, 🔜 = next, ⏳ = waiti
 
 ## Gap-reroll — SHIPPED DEFAULT ON (July 2026)
 
-- ✅ **Gap-reroll is the shipped default: symmetric, G=1.5, strength=1.0** (`storage/defaults.js`
+- ✅ **Gap-reroll is the shipped default: symmetric, G=0.75, strength=0.5** (`storage/defaults.js`
   `gapRerollEnabled: true`). Closes the "gap-reroll default ON" item.
-- **New shipped-default fingerprint `efd0f4ad8eca08fa`.** The previous shipped default
-  `72c3360fb75225ef` is **SUPERSEDED**; that hash now identifies the **OFF** world, which is
-  re-verified byte-identical via `node scripts/fingerprint-default.mjs off --gapRerollEnabled=false`.
+  **RETUNED 2026-07-23** from the original ship values (G=1.5, strength=1.0).
+- ✅ **Retune gate (2026-07-23): G 1.5→0.75, strength 1.0→0.5.** Cause: at s=1.0 the correction
+  `frac = min(1, strength·(gap−G))` saturates above `G+1`, so **46% of leader corrections were full
+  slams to the band floor** — the "escapes, then gets visibly braked" the owner reported. G alone
+  cannot fix it (lowering G lowers the saturation point too; measured: corrections got *harder*).
+  Gate: 400 races/arm, 4 tracks, paired seeds, 40 closed / 60 open fields —
+  **pooled band-reach 71.6% vs 71.6% (fairness exactly neutral), Holm 2/4 in both arms**;
+  **tiltSaturated 46.0%→18.7%**, tilt frac median 0.906→0.371, escapeDepth median 2.71→1.97 L and
+  **worst case 12.07→7.29 L (−40%)**, front-group-at-line 3.86→4.05, runaway 9.5%→8.3%,
+  parade 1.3%→0.8%, duo 6.3%→4.0%, dead finales 14.7%→14.5%.
+  Duration sanity (30/120/300 s): candidate ≥ current on band-reach at every duration.
+  *(At 30 s both arms sit at ~66% band-reach — a pre-existing short-race limitation, not caused by
+  this change.)* Evidence: `reports/greenfield/gate-retune/`, driver `scripts/exp-gate-retune.mjs`
+  (branch `pre/greenfield-proto`).
+- **New shipped-default fingerprint `e93ffa70dad562a1`** (retune, 2026-07-23). The previous ON default
+  `efd0f4ad8eca08fa` (G=1.5/s=1.0) is **SUPERSEDED**. The **OFF** world is unchanged and remains
+  `72c3360fb75225ef`, re-verified byte-identical via
+  `node scripts/fingerprint-default.mjs off --gapRerollEnabled=false`.
 - **Sim follows the shipped default.** `sim-fairness.mjs` never read `gapRerollEnabled`; it does now,
   so a flagless sim run reproduces the shipped game. **A flagless run is therefore no longer the OFF
   world** — OFF arms must pass `--gapRerollEnabled=false`, and every OFF arm in

@@ -59,6 +59,8 @@ that phase's `*-complete` endpoint when it closes (incremental history then live
 ### Gap-reroll ship (open)
 - `backup/gapreroll-shipped-1594f39` (`1594f39`) — shipped master state before the G/strength retune ship
   (gap-reroll default-ON at `5ae3b1f`, plus the eye-test-seeds doc). Sim-verified and owner eye-approved.
+- `pre/g-retune-ship` (`7d0db3e`) — master immediately before the G/strength retune ship
+  (G 1.5→0.75, strength 1.0→0.5). Return point if the retune is reverted.
 - **Collapse plan:** fold into the gap-reroll phase's `*-complete` endpoint when the retune ship lands.
 
 ### Cleanup arc — COLLAPSED (2026-07-20)

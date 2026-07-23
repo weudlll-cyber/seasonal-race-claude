@@ -927,7 +927,7 @@ leader duty-cycle (max share of one racer's window rolls that were biased — th
 
 After the N=200 confirmation on all 10 tracks (V0 23% → symmetric/G=1.5/strength=1.0 8.3%, action +, band-reach ≥70% held), the shared transform was wired into the BROWSER re-roll loop (`RaceScreen/index.jsx`) exactly as the sim does — the browser threads ITS OWN realized-duration `lastRollDeadline` + `physicsTs` + the shared `lenScaleFrom(pathLengthPx, meanDrawnBodyLen)` / `isOpen` into `computeGapBiasedTarget` (the ONE-CLOCK principle; the transform never re-derives a duration). The transform behavior is FROZEN.
 
-**Config keys (`DEFAULT_RACE_DYNAMICS_CONFIG`, all default OFF/byte-identical):** `gapRerollEnabled: false`, `gapRerollThresholdLengths: 1.5`, `gapRerollStrength: 1.0`, `gapRerollMode: 'symmetric'`, `gapRerollDevMarker: false`. When `gapRerollEnabled` is false the browser passes `gapRerollThresholdLengths: null` into `createRacePlan` → the transform early-returns the raw draw → **the shipped game is byte-identical** (fingerprint `72c3360fb75225ef` re-verified after defaults + client touched). The sim harness keeps its CLI semantics (`--gapReroll*` override, unchanged); it does not read these browser defaults.
+**Config keys (`DEFAULT_RACE_DYNAMICS_CONFIG`):** `gapRerollEnabled: true`, `gapRerollThresholdLengths: 0.75`, `gapRerollStrength: 0.5`, `gapRerollMode: 'symmetric'`, `gapRerollDevMarker: false` — shipped ON 2026-07-22, **retuned 2026-07-23** (was G=1.5 / strength=1.0). When `gapRerollEnabled` is false the browser passes `gapRerollThresholdLengths: null` into `createRacePlan` → the transform early-returns the raw draw → **the shipped game is byte-identical** (fingerprint `72c3360fb75225ef` re-verified after defaults + client touched). The sim harness keeps its CLI semantics (`--gapReroll*` override, unchanged); it does not read these browser defaults.
 
 **DevScreen (Dynamics section):** Gap-Reroll toggle, G (0.5–4.0), strength (0–1.5), mode symmetric/down-only, and a rendering-only dev-marker (a cyan ring flashing on a racer the instant its roll was biased — zero sim effect). Changes take effect on the next race (same pattern as the B2-attacker count). A backup/ship tag follows only after the owner's eye-test.
 
@@ -1016,12 +1016,46 @@ The measured winner setting is now the shipped configuration. No other tuning va
 
 | world | fingerprint | status |
 |---|---|---|
-| shipped default (gap-reroll **ON**) | **`efd0f4ad8eca08fa`** | **current** |
+| shipped default (gap-reroll **ON**, retuned G=0.75 s=0.5) | **`e93ffa70dad562a1`** | **current** (2026-07-23) |
 | gap-reroll OFF (`--gapRerollEnabled=false`) | `72c3360fb75225ef` | unchanged — the pre-feature world, re-verified |
-| previous shipped default | `72c3360fb75225ef` | **SUPERSEDED** by `efd0f4ad8eca08fa` |
+| previous shipped default (ON, G=1.5 s=1.0) | `efd0f4ad8eca08fa` | **SUPERSEDED** by `e93ffa70dad562a1` |
+| pre-feature default | `72c3360fb75225ef` | superseded as a *default*; still the OFF world |
 
 Turning the feature off restores the pre-feature game **byte-identically** — the OFF fingerprint is
 bit-for-bit the value it has always been. That is the guarantee that survives the default flip.
+
+### 2026-07-23 — Gap-reroll RETUNED (symmetric, G=0.75, strength=0.5)
+
+Only the two tuning values changed; the transform itself is untouched.
+
+**Why.** `frac = min(1, strength·(gap−G))` saturates once the gap exceeds `G+1`, so at s=1.0 **46% of
+all corrections applied to the leader were full slams to the band floor** — visible braking. G alone
+cannot soften that (lowering G lowers the saturation point too; measured: corrections got *harder*).
+Strength is the only knob that reduces the magnitude of an individual correction.
+
+**Gate** (400 races/arm, 4 standard tracks, paired seeds, 40 closed / 60 open fields, 60 s):
+
+| metric | G=0.75 s=0.5 | G=1.5 s=1.0 |
+|---|---|---|
+| pooled band-reach (PRIMARY, racer-row weighted) | **71.6%** | 71.6% |
+| Holm-flagged tracks | 2/4 | 2/4 |
+| tiltSaturated | **18.7%** | 46.0% |
+| tilt frac median | **0.371** | 0.906 |
+| escapeDepth median / worst | **1.97 / 7.29 L** | 2.71 / 12.07 L |
+| front-group-at-line | **4.05** | 3.86 |
+| runaway / parade / duo | **8.3% / 0.8% / 4.0%** | 9.5% / 1.3% / 6.3% |
+| dead finales | 14.5% | 14.7% |
+
+Fairness is **exactly neutral** (identical pooled band-reach and Holm count); the change buys
+correction *softness* and a shallower worst-case escape. Duration sanity (30/120/300 s, N=25):
+candidate ≥ current on band-reach at every duration. At 30 s both arms sit at ~66% band-reach — a
+pre-existing short-race limitation, not introduced here.
+
+Evidence `reports/greenfield/gate-retune/`; driver `scripts/exp-gate-retune.mjs` (branch
+`pre/greenfield-proto`, commit `bf4ff90`). **Caveats:** arms are paired as experimental control, not
+as a paired estimator, so the deltas are differences of independent means; only pooled band-reach is
+racer-row weighted (context metrics are race-row means); episode-derived and `tiltFrac`-family metrics
+are mechanically G-coupled and comparable only at fixed G — the primary is G-independent.
 
 **The sim now follows the shipped default.** `sim-fairness.mjs` previously engaged the gap-reroll only
 when `--gapRerollThresholdLengths` was passed and never read `gapRerollEnabled` at all, so flipping the

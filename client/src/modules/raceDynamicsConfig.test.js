@@ -103,21 +103,38 @@ describe('DEFAULT_RACE_DYNAMICS_CONFIG', () => {
       b2AttackResolveProgress: 0.85,
       b2AttackBandArrival: true,
       universalBandArrival: false,
-      // Gap-cap re-roll bias — default OFF (byte-identical); confirmed candidate symmetric/1.5/1.0.
-      gapRerollEnabled: true, // SHIPPED ON 2026-07-22 (symmetric, G=1.5, s=1.0)
-      gapRerollThresholdLengths: 1.5,
-      gapRerollStrength: 1.0,
+      // Gap-cap re-roll bias — OFF is byte-identical; RETUNED 2026-07-23 to symmetric/0.75/0.5.
+      gapRerollEnabled: true, // SHIPPED ON 2026-07-22; retuned 2026-07-23 (symmetric, G=0.75, s=0.5)
+      gapRerollThresholdLengths: 0.75,
+      gapRerollStrength: 0.5,
       gapRerollMode: 'symmetric',
       gapRerollDevMarker: false,
     });
   });
 
-  it('gap-reroll ships ON with the confirmed winner setting; turning it OFF is byte-identical', () => {
+  it('gap-reroll ships ON at the RETUNED gate winner; turning it OFF is byte-identical', () => {
+    // Retuned 2026-07-23 (G 1.5→0.75, strength 1.0→0.5). The gate held fairness exactly neutral
+    // (pooled band-reach 71.6% both arms, Holm 2/4 both) while halving correction hardness —
+    // tiltSaturated 46.0%→18.7%. These two numbers are the shipped contract; pin them.
     expect(DEFAULT_RACE_DYNAMICS_CONFIG.gapRerollEnabled).toBe(true);
     expect(DEFAULT_RACE_DYNAMICS_CONFIG.gapRerollDevMarker).toBe(false);
-    expect(DEFAULT_RACE_DYNAMICS_CONFIG.gapRerollThresholdLengths).toBe(1.5);
-    expect(DEFAULT_RACE_DYNAMICS_CONFIG.gapRerollStrength).toBe(1.0);
+    expect(DEFAULT_RACE_DYNAMICS_CONFIG.gapRerollThresholdLengths).toBe(0.75);
+    expect(DEFAULT_RACE_DYNAMICS_CONFIG.gapRerollStrength).toBe(0.5);
     expect(DEFAULT_RACE_DYNAMICS_CONFIG.gapRerollMode).toBe('symmetric');
+  });
+
+  it('the retuned defaults are valid DevScreen slider positions (Reset All Defaults lands on them)', () => {
+    // resetAll() spreads DEFAULT_RACE_DYNAMICS_CONFIG wholesale, so the sliders show whatever is here.
+    // Guard the two control contracts: G input is min 0.5, max 4.0, step 0.25; strength is 0..1.5
+    // step 0.25. A default off-step or out-of-range would render a value the control cannot re-enter.
+    const G = DEFAULT_RACE_DYNAMICS_CONFIG.gapRerollThresholdLengths;
+    const S = DEFAULT_RACE_DYNAMICS_CONFIG.gapRerollStrength;
+    expect(G).toBeGreaterThanOrEqual(0.5);
+    expect(G).toBeLessThanOrEqual(4.0);
+    expect(Math.round((G - 0.5) / 0.25) * 0.25).toBeCloseTo(G - 0.5, 10);
+    expect(S).toBeGreaterThanOrEqual(0);
+    expect(S).toBeLessThanOrEqual(1.5);
+    expect(Math.round(S / 0.25) * 0.25).toBeCloseTo(S, 10);
   });
 
   it('a persisted gap-reroll config round-trips through load/merge (plumbs to createRacePlan)', () => {

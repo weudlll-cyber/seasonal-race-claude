@@ -126,9 +126,9 @@ draw through). Changes take effect on the next race (same as the B2-attacker cou
 
 | Control | Config key | Shipped default | testid |
 |---|---|---|---|
-| Gap-Reroll (eye-test) toggle | `gapRerollEnabled` | false | `gap-reroll-toggle` |
-| Gap-Reroll G (lengths) 0.5–4.0 | `gapRerollThresholdLengths` | 1.5 | — |
-| Gap-Reroll strength 0–1.5 | `gapRerollStrength` | 1.0 | — |
+| Gap-Reroll (eye-test) toggle | `gapRerollEnabled` | true | `gap-reroll-toggle` |
+| Gap-Reroll G (lengths) 0.5–4.0 | `gapRerollThresholdLengths` | 0.75 | — |
+| Gap-Reroll strength 0–1.5 | `gapRerollStrength` | 0.5 | — |
 | Gap-Reroll mode symmetric/down-only | `gapRerollMode` | 'symmetric' | `gap-reroll-mode` |
 | Gap-Reroll dev marker (rendering-only cyan ring) | `gapRerollDevMarker` | false | `gap-reroll-devmarker-toggle` |
 
