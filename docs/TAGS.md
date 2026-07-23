@@ -61,6 +61,9 @@ that phase's `*-complete` endpoint when it closes (incremental history then live
   (gap-reroll default-ON at `5ae3b1f`, plus the eye-test-seeds doc). Sim-verified and owner eye-approved.
 - `pre/g-retune-ship` (`7d0db3e`) — master immediately before the G/strength retune ship
   (G 1.5→0.75, strength 1.0→0.5). Return point if the retune is reverted.
+- `backup/g-retune-shipped-247b843` (`247b843`) — shipped master state after the G/strength retune ship
+  (defaults G=0.75, strength=0.5; new ON fingerprint `e93ffa70dad562a1`). Sim-gated, twice reviewed,
+  owner eye-approved on the served bundle.
 - **Collapse plan:** fold into the gap-reroll phase's `*-complete` endpoint when the retune ship lands.
 
 ### Cleanup arc — COLLAPSED (2026-07-20)
