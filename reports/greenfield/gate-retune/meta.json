@@ -1,0 +1,32 @@
+{
+  "arms": [
+    {
+      "label": "CANDIDATE-G075-s050",
+      "G": "0.75",
+      "S": "0.5"
+    },
+    {
+      "label": "CURRENT-G150-s100",
+      "G": "1.5",
+      "S": "1.0"
+    }
+  ],
+  "tracks": [
+    "luger-hill",
+    "mountainstreet",
+    "searound",
+    "dirt-oval"
+  ],
+  "races": 100,
+  "dur": 60,
+  "seed": 1,
+  "racersClosed": 40,
+  "racersOpen": 60,
+  "durations": [
+    30,
+    120,
+    300
+  ],
+  "durRaces": 25,
+  "wallClockSec": 2991.685
+}

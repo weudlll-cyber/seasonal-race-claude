@@ -1,0 +1,3 @@
+S,n,escapeDepthMed,escapeDepthP90,escapeDepthMax,cappedRate,leaderDownPerRace,tiltFracMed,tiltFracMean,tiltSaturatedRate,tiltDeltaMed,nTiltEvents,finaleLead,finaleDistinct,deadRate,duoEscapeRate,frontGroupAtLine,runawayRate,paradeRate,bandReach
+0.50,50,2.325,4.124,7.29,0.98,1.88,0.352,0.496,0.245,0.041,94,1.64,2.56,0.18,0.02,3.96,0.12,0.02,0.754
+1.0,50,2.325,4.044,6.918,0.96,1.78,0.74,0.687,0.416,0.076,89,1.8,2.74,0.22,0.04,4.96,0.06,0.02,0.745

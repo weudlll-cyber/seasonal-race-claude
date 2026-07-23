@@ -47,6 +47,13 @@ export function zoneIdxOf(rank) {
 export function makeLateContestTracker(windowStart = 0.9) {
   let current = null;
   let changes = 0;
+  // distinctLeaders: how many DIFFERENT racers held the lead by actually TAKING it. It must obey the
+  // same phantom rule as leadChangeCount above: near the end of a race each leader leaves the live
+  // ordering by FINISHING and the next racer inherits the front slot, so counting every racer seen at
+  // the front would saturate at field size (a 20-racer field reported 20). A racer is therefore added
+  // only when it SEEDS the window or when it takes the lead from a leader still on track. Regaining
+  // the lead later does not double-count — it is a Set.
+  const leaders = new Set();
   return {
     observe(racers, progress) {
       if (progress < windowStart) return;
@@ -57,15 +64,19 @@ export function makeLateContestTracker(windowStart = 0.9) {
       const leader = live[0].index;
       if (current === null) {
         current = leader;
+        leaders.add(leader); // seeds the window; never a change
         return;
       }
       if (leader === current) return;
       const prev = racers.find((r) => r.index === current);
-      if (prev && !prev.finished) changes++; // a real overtake, not the leader finishing
+      if (prev && !prev.finished) {
+        changes++; // a real overtake, not the leader finishing
+        leaders.add(leader); // ...and only a real overtake makes a new DISTINCT leader
+      }
       current = leader;
     },
     result() {
-      return { leadChangeCount: changes, leaderIdxAtEnd: current };
+      return { leadChangeCount: changes, leaderIdxAtEnd: current, distinctLeaders: leaders.size };
     },
   };
 }

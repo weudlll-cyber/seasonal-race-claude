@@ -1,0 +1,5 @@
+S,track,n,escapeDepthMed,escapeDepthP90,escapeDepthMax,cappedRate,leaderDownPerRace,tiltFracMed,tiltFracMean,tiltSaturatedRate,tiltDeltaMed,nTiltEvents,finaleLead,finaleDistinct,deadRate,duoEscapeRate,frontGroupAtLine,runawayRate,paradeRate,bandReach
+0.50,searound,25,2.118,4.831,7.29,1,1.8,0.377,0.501,0.267,0.043,45,1.36,2.32,0.2,0.04,3.24,0.2,0,0.72
+0.50,city-circuit,25,2.595,4.124,4.912,0.96,1.96,0.292,0.491,0.224,0.041,49,1.92,2.8,0.16,0,4.68,0.04,0.04,0.788
+1.0,searound,25,2.118,4.044,6.918,0.96,1.72,0.732,0.67,0.395,0.073,43,1.52,2.44,0.28,0.04,4.36,0.12,0.04,0.718
+1.0,city-circuit,25,2.534,4.124,4.679,0.96,1.84,0.795,0.702,0.435,0.082,46,2.08,3.04,0.16,0.04,5.56,0,0,0.771

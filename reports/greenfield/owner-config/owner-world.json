@@ -1,0 +1,501 @@
+{
+  "schemaVersion": 2,
+  "configs": {
+    "raceDynamicsConfig": {
+      "reRollVariationPercent": 75,
+      "reRollTransitionDuration": 3,
+      "reRollIntervalDivisor": 10,
+      "reRollLastPositionPercent": 95,
+      "trajectoryTransitionDuration": 1,
+      "racePlanBonusStrengthMultiplier": 2,
+      "racePlanPulkStart": 0.25,
+      "racePlanBonusTransitionEnd": 0.75,
+      "racePlanBonusFadeDuration": 1500,
+      "racePlanCorridorStart": 0.55,
+      "racePlanCorridorEnd": 1,
+      "racePlanMinDurationSec": 30,
+      "pulkBiasGain": 2,
+      "pulkEnvelopeMaxEffect": 0.12,
+      "pulkEnvelopeMaxStepPerFrame": 0.01,
+      "pulkLeaderBrake": 0.1,
+      "pulkChallengerBoost": 0.06,
+      "pulkCeilingCap": true,
+      "pulkBoostHeadroom": 0.1,
+      "choreoIntensity": 0.6,
+      "choreoPackBandStrictness": 0.5,
+      "choreoSuppressChaosBonusB1": false,
+      "choreoReleaseProgress": 0.97,
+      "choreoResolveB2": 0.8,
+      "choreoResolveB3": 0.7,
+      "choreoResolveB4": 0.65,
+      "choreoResolveB5": 0.6,
+      "choreoOutcomeStart": 0.6,
+      "contestWindowStart": 0.8,
+      "carouselEnabled": false,
+      "carouselMinParticipants": 3,
+      "carouselAmplitudeRanks": 2,
+      "carouselJitterPct": 0.15,
+      "carouselRoleBiasStrength": 0,
+      "packReleaseEnabled": true,
+      "packReSteerThreshold": 1,
+      "b2AttackHeroes": 3,
+      "b2AttackPeakRank": 5,
+      "b2AttackFinalRank": 10,
+      "b2AttackProgress": {
+        "start": 0.4,
+        "end": 0.7
+      },
+      "b2AttackResolveProgress": 0.85,
+      "b2AttackBandArrival": true,
+      "universalBandArrival": false,
+      "gapRerollEnabled": true,
+      "gapRerollThresholdLengths": 0.75,
+      "gapRerollStrength": 1,
+      "gapRerollMode": "symmetric",
+      "gapRerollDevMarker": true,
+      "pulkFrontPool": 8,
+      "pulkLeadRotationAttackerSlots": 2,
+      "pulkLeadRotationDropDepthLengths": 8,
+      "pulkLeadRotationOutsiderMaxReachLengths": 15,
+      "pulkLeadRotationDeadlockTimeoutMs": 12000,
+      "pulkLeadRotationMinHoldMs": 750,
+      "phaseSplitBonusEnabled": true,
+      "areaBonusEarly": 1,
+      "areaBonusPulk": 0,
+      "areaBonusPost": 1,
+      "rowBonusEarly": 1,
+      "rowBonusPulk": 0,
+      "rowBonusPost": 1,
+      "enableRowEnvSmooth": true
+    },
+    "raceBehaviorConfig": {
+      "enabled": true,
+      "startSpreadRange": 0.95,
+      "runoutZone": 0.05,
+      "comfortThreshold": 0.7,
+      "softRepulsionStrength": 0.1,
+      "avoidanceBufferPct": 0.2,
+      "tWeight": 2,
+      "yWeight": 1,
+      "maxLateral": 0.95,
+      "draftingMaxDistance": 80,
+      "draftingConeAngle": 30,
+      "draftingBoost": 1.04,
+      "avoidanceWarmupMs": 3000,
+      "lateralForce": 0.0114,
+      "lateralDamping": 0.16,
+      "avoidanceDistance": 0.18,
+      "speedBrakeFactor": 0.945,
+      "speedBrakeTMultiplier": 1.5,
+      "speedBrakeYThreshold": 0.18,
+      "brakeMatchActivationTMultiplier": 0.5,
+      "brakeMatchActivationYThreshold": 0.06,
+      "speedMatchMinDifferential": 0.005,
+      "speedMatchSafetyMargin": 0.001,
+      "brakeHoldTimeoutFrames": 90,
+      "brakeHoldEscapeReleaseDurationFrames": 15,
+      "brakeHoldEscapeCooldownFrames": 60,
+      "brakeReleaseDebounceFrames": 3,
+      "hardSeparationEnabled": true,
+      "hardSeparationRelaxation": 0.15,
+      "hardSeparationTolerancePct": 0.1,
+      "softSteeringSymmetric": true,
+      "softSteeringStrength": 0.03,
+      "softSteeringClearancePct": 0,
+      "softSteeringHysteresisY": 0.04,
+      "laneTargetEaseMs": 200,
+      "lateralVelocityResetSoftness": 0.5,
+      "maxLateralSpeedPerStep": 0.028,
+      "lookBeforeBrakeEnabled": true,
+      "lookBeforeBrakePassStrength": 0.5,
+      "lookBeforeBrakeReengageTMultiplier": 1.2,
+      "lookBeforeBrakeLagFrames": 2,
+      "lookBeforeBrakeRequireSlowerLeader": true,
+      "lookBeforeBrakeMinDifferential": 0.005
+    },
+    "rowLayoutConfig": {
+      "rowGapMultiplier": 1.5,
+      "speedBonusFactor": 1,
+      "maxCapacityFactor": 0.3
+    },
+    "baseSpeedConfig": {
+      "min": 0.00096,
+      "max": 0.00113
+    },
+    "autoScaleConfig": {
+      "enabled": true,
+      "referenceValue": 23,
+      "minScale": 0.65,
+      "maxScale": 2.5,
+      "minTargetScreenPx": 32
+    },
+    "frameTimingConfig": {
+      "dtSmoothingAlpha": 0.7,
+      "renderInterpolation": true
+    },
+    "cameraConfig": {
+      "schemaVersion": 17,
+      "cameraStateProfiles": {
+        "OVERVIEW": {
+          "spriteScale": 2,
+          "trackingTC": 1.5,
+          "entryTC": 1.5,
+          "leadInDuration": 0,
+          "leadOutDuration": 0,
+          "innerFramePct": 0.7,
+          "maxStateDuration": 4000,
+          "minStateHold": 5000,
+          "maxEntryDurationMs": 10000,
+          "overviewOffsetPx": 150
+        },
+        "LEADER_ZOOM": {
+          "spriteScale": 3,
+          "trackingTC": 0.25,
+          "entryTC": 0.8,
+          "leadInDuration": 0.3,
+          "leadOutDuration": 1.5,
+          "innerFramePct": 0.7,
+          "maxStateDuration": 8000,
+          "minStateHold": 5000,
+          "maxEntryDurationMs": 5000,
+          "leadAheadEnabled": false,
+          "leadOutEnabled": false
+        },
+        "BATTLE_ZOOM": {
+          "spriteScale": 2.81,
+          "trackingTC": 0.25,
+          "entryTC": 0.8,
+          "leadInDuration": 0.2,
+          "leadOutDuration": 1,
+          "innerFramePct": 0.7,
+          "maxStateDuration": 8000,
+          "minStateHold": 5000,
+          "maxEntryDurationMs": 5000,
+          "leadAheadEnabled": false,
+          "leadOutEnabled": false
+        },
+        "COMEBACK_ZOOM": {
+          "spriteScale": 2.45,
+          "trackingTC": 0.25,
+          "entryTC": 0.8,
+          "leadInDuration": 0.3,
+          "leadOutDuration": 1.5,
+          "innerFramePct": 0.7,
+          "maxStateDuration": 8000,
+          "minStateHold": 5000,
+          "maxEntryDurationMs": 5000,
+          "leadAheadEnabled": false,
+          "leadOutEnabled": false
+        },
+        "LEAD_CHANGE": {
+          "spriteScale": 3,
+          "trackingTC": 0.25,
+          "entryTC": 0.8,
+          "leadInDuration": 0.3,
+          "leadOutDuration": 1.5,
+          "innerFramePct": 0.7,
+          "maxStateDuration": 8000,
+          "minStateHold": 1500,
+          "maxEntryDurationMs": 5000,
+          "leadAheadEnabled": false,
+          "leadOutEnabled": false
+        }
+      },
+      "entryConvergenceZoom": 0.05,
+      "entryConvergencePx": 10,
+      "transitionTConvergence": 0.03,
+      "maxTargetScreenPx": 160,
+      "tagVisibleMaxCount": 10,
+      "showCameraStateHud": true,
+      "showCameraDiagnostics": false,
+      "showRpDiag": false,
+      "showRpWinnerList": false,
+      "showRpMinimapBadges": false,
+      "showRpStartRow": false,
+      "showTop10SpeedMonitor": false,
+      "enableFrameLog": false,
+      "enablePerfLog": false,
+      "showBattleDiag": false,
+      "showComebackDiag": false,
+      "showLeadChangeDiag": false,
+      "showGovernorDiag": false,
+      "endgameThreshold": 0.9,
+      "battlePulkThresholdT": 0.05,
+      "battleIsolationThresholdT": 0,
+      "battleMaxGroupSize": 6,
+      "battleMinDurationMs": 3000,
+      "battleSlowmoFactor": 0.5,
+      "battleSlowmoMinDuration": 2,
+      "battleSlowmoFadeDuration": 0.3,
+      "battleFocusDarkening": 0.4,
+      "battleMaxGroupRankSpan": 5,
+      "battleMinTopN": 10,
+      "comebackMinPositionsGained": 2,
+      "comebackWindowSec": 4,
+      "comebackMinDuration": 3,
+      "outcomePhaseThreshold": 0.65,
+      "comebackMinStartGap": 0.25,
+      "comebackMaxCurrentRankPct": 0.2,
+      "leadChangeMinGap": 0.002,
+      "leadChangeDebounceMs": 800,
+      "leadChangeMinDuration": 1.5,
+      "postStartHoldMs": 7000,
+      "battleCooldownMs": 8000,
+      "comebackCooldownMs": 10000,
+      "leadChangeCooldownMs": 5000,
+      "overviewCooldownMs": 15000,
+      "overviewClosedTrackZoom": 1.3,
+      "overviewTargetScreenPx": 28,
+      "overviewMinEffZoom": 0,
+      "battleWeight": 0.2,
+      "leadChangeWeight": 0.7,
+      "comebackWeight": 0.6,
+      "overviewWeight": 0.3,
+      "overviewTargetCount": 2,
+      "overviewStartDelay": 15,
+      "finishDramaDurationMs": 1500,
+      "finishOverviewZoomOutDurationMs": 3000,
+      "finishPauseMs": 2500,
+      "finishOverviewLookbackPx": 300,
+      "photoFinishEnabled": true,
+      "photoFinishCloseThresholdT": 0.03,
+      "photoFinishSlowmoFactor": 0.5,
+      "photoFinishLeadProgress": 0.97,
+      "countdownStartZoomSpritePx": 1,
+      "countdownDurationMs": 4000,
+      "stateOverlayEnabled": true,
+      "stateOverlayDurationMs": 3500,
+      "spritePctOfCanvas": {
+        "overview": 0.05,
+        "leader": 0.08,
+        "battle": 0.12,
+        "comeback": 0.065
+      },
+      "maxStateDuration": 4000,
+      "battleMaxDurationMs": 6000,
+      "minStateHoldMs": 5000,
+      "cameraTransitionSeconds": {
+        "overview": 1.5,
+        "leader": 0.3,
+        "battle": 0.3,
+        "comeback": 0.3
+      },
+      "targetInnerFramePct": 0.7,
+      "minRacersVisible": 8,
+      "leaderMinZoom": 0.4,
+      "zoomOutStepPerFrame": 0.005,
+      "leaderMinZoomFraction": 0.6,
+      "focalSmoothTc": 0.05,
+      "highlightHeroes": true
+    }
+  },
+  "racerTypeOverrides": {},
+  "effectiveRacerTypes": {
+    "horse": {
+      "speedMultiplier": 1,
+      "displaySize": 47,
+      "bodyFillX": 0.353,
+      "bodyFillY": 0.8,
+      "surfaceClasses": [
+        "sand",
+        "earth",
+        "grass",
+        "asphalt",
+        "snow",
+        "mud"
+      ]
+    },
+    "duck": {
+      "speedMultiplier": 0.85,
+      "displaySize": 36,
+      "bodyFillX": 0.875,
+      "bodyFillY": 0.875,
+      "surfaceClasses": [
+        "water",
+        "grass"
+      ]
+    },
+    "snail": {
+      "speedMultiplier": 0.3,
+      "displaySize": 35,
+      "bodyFillX": 0.727,
+      "bodyFillY": 0.938,
+      "surfaceClasses": [
+        "grass"
+      ]
+    },
+    "elephant": {
+      "speedMultiplier": 0.6,
+      "displaySize": 44,
+      "bodyFillX": 0.539,
+      "bodyFillY": 0.938,
+      "surfaceClasses": [
+        "sand",
+        "earth",
+        "grass"
+      ]
+    },
+    "giraffe": {
+      "speedMultiplier": 0.9,
+      "displaySize": 48,
+      "bodyFillX": 0.271,
+      "bodyFillY": 0.767,
+      "surfaceClasses": [
+        "sand",
+        "earth",
+        "grass"
+      ]
+    },
+    "snake": {
+      "speedMultiplier": 0.75,
+      "displaySize": 44,
+      "bodyFillX": 0.374,
+      "bodyFillY": 0.806,
+      "surfaceClasses": [
+        "sand",
+        "earth",
+        "grass"
+      ]
+    },
+    "dragon": {
+      "speedMultiplier": 1.1,
+      "displaySize": 50,
+      "bodyFillX": 0.836,
+      "bodyFillY": 0.898,
+      "surfaceClasses": [
+        "air",
+        "asphalt",
+        "earth",
+        "water"
+      ]
+    },
+    "f1": {
+      "speedMultiplier": 1.2,
+      "displaySize": 38,
+      "bodyFillX": 0.555,
+      "bodyFillY": 0.953,
+      "surfaceClasses": [
+        "asphalt"
+      ]
+    },
+    "rocket": {
+      "speedMultiplier": 1.25,
+      "displaySize": 47,
+      "bodyFillX": 0.278,
+      "bodyFillY": 0.801,
+      "surfaceClasses": [
+        "air",
+        "water"
+      ]
+    },
+    "buggy": {
+      "speedMultiplier": 0.95,
+      "displaySize": 38,
+      "bodyFillX": 0.844,
+      "bodyFillY": 0.875,
+      "surfaceClasses": [
+        "sand",
+        "earth",
+        "mud"
+      ]
+    },
+    "motorbike": {
+      "speedMultiplier": 1.05,
+      "displaySize": 42,
+      "bodyFillX": 0.4,
+      "bodyFillY": 0.8,
+      "surfaceClasses": [
+        "asphalt",
+        "earth"
+      ]
+    },
+    "plane": {
+      "speedMultiplier": 1.15,
+      "displaySize": 42,
+      "bodyFillX": 0.836,
+      "bodyFillY": 0.93,
+      "surfaceClasses": [
+        "air"
+      ]
+    },
+    "luge": {
+      "speedMultiplier": 1.1,
+      "displaySize": 80,
+      "bodyFillX": 0.313,
+      "bodyFillY": 0.641,
+      "surfaceClasses": [
+        "ice",
+        "snow"
+      ]
+    },
+    "beetle": {
+      "speedMultiplier": 0.9,
+      "displaySize": 38,
+      "bodyFillX": 0.398,
+      "bodyFillY": 0.672,
+      "surfaceClasses": [
+        "asphalt",
+        "cobble",
+        "earth"
+      ]
+    },
+    "boarder": {
+      "speedMultiplier": 1,
+      "displaySize": 40,
+      "bodyFillX": 0.398,
+      "bodyFillY": 0.719,
+      "surfaceClasses": [
+        "asphalt",
+        "cobble",
+        "earth"
+      ]
+    },
+    "koi": {
+      "speedMultiplier": 0.95,
+      "displaySize": 52,
+      "bodyFillX": 0.578,
+      "bodyFillY": 0.914,
+      "surfaceClasses": [
+        "water"
+      ]
+    },
+    "turtle": {
+      "speedMultiplier": 0.85,
+      "displaySize": 48,
+      "bodyFillX": 0.578,
+      "bodyFillY": 0.734,
+      "surfaceClasses": [
+        "water"
+      ]
+    },
+    "manta": {
+      "speedMultiplier": 1.1,
+      "displaySize": 56,
+      "bodyFillX": 0.633,
+      "bodyFillY": 0.805,
+      "surfaceClasses": [
+        "water"
+      ]
+    },
+    "dolphin": {
+      "speedMultiplier": 1.15,
+      "displaySize": 52,
+      "bodyFillX": 0.402,
+      "bodyFillY": 0.887,
+      "surfaceClasses": [
+        "water"
+      ]
+    },
+    "snowmobile": {
+      "speedMultiplier": 1.1,
+      "displaySize": 52,
+      "bodyFillX": 0.459,
+      "bodyFillY": 0.797,
+      "surfaceClasses": [
+        "snow",
+        "ice",
+        "earth"
+      ]
+    }
+  }
+}

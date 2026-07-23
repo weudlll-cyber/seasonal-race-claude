@@ -1,0 +1,4 @@
+arm,n,finaleLeadMean,deadFinaleRate,duoEscapeRate,deadDuoFinaleRate,frontGroupAtLineMean,frontGroup1Rate,frontGroup2Rate,frontGroup3PlusRate,gapP1P2Med,gapP2P3Med,within3At090Mean,p1Contest62,distinctLeaders62Mean,runawayRate,paradeRate
+A8-G075,400,1.6525,0.1575,0.035,0.0075,4.665,0.1075,0.185,0.7075,1.1079,0.8052,3.67,0.54,3.63,0.065,0.0075
+A0-GR-G150,400,1.525,0.2075,0.0575,0.0075,3.9775,0.15,0.235,0.615,1.2012,0.8682,3.175,0.3725,3.35,0.075,0.02
+A5-carousel,400,1.5925,0.18,0.0375,0.01,2.9975,0.2,0.3,0.5,1.4794,1.0954,2.165,0.305,3.17,0.1025,0.02

@@ -99,6 +99,8 @@ import { maxLinkGapLengths, makeHeldOvertakeTracker, fullSpreadLengths, framesOv
 import { RUNAWAY_PARADE_DEFAULTS, leaderGapLengths, makeFormationTracker, SPEED_SOURCE_SAMPLES, speedProduct, speedSaturation } from './sim/observers/runaway-parade.mjs';
 import { makeLateContestTracker, makeReleaseRankTracker } from './sim/observers/release-contest.mjs';
 import { makeFrontBattleTracker } from './sim/observers/outcome-front-battle.mjs';
+import { makePhysicsTaxTracker } from './sim/observers/physics-tax.mjs';
+import { makeEscapeEpisodeTracker } from './sim/observers/escape-episodes.mjs';
 import { applyPulkLeadRotation, arcT, computeDirectorCeiling } from '../client/src/modules/raceGovernor.js';
 import { lenScaleFrom, arcLengths, meanDrawnBodyLen } from '../client/src/modules/raceLengths.js';
 
@@ -367,6 +369,20 @@ const gmRaces             = [];   // per-race gap-space observations (filled onl
 // Fully flag-gated → a no-flag run does zero extra work and is byte-identical.
 const RUNAWAY_PARADE      = argv.includes('--runaway-parade');
 const rpRaces             = [];   // per-race runaway/parade raw records (filled only when RUNAWAY_PARADE)
+// PHYSICS-TAX (read-only, --physics-tax): GREENFIELD P0. Per racer, the cumulative longitudinal
+// distance lost to avoidance braking, as a fraction of the distance it would otherwise have covered,
+// plus a per-decile-of-progress profile. Feeds sigma — the share of the natural speed band that live
+// physics already eats, and therefore the reserve any open-loop composer must not spend. Definitions
+// live in sim/observers/physics-tax.mjs; only the per-frame capture is here (it needs the
+// advanceRacerT call site). Fully flag-gated → a no-flag run does zero extra work.
+// SCREEN escape-latency (read-only, --escape-latency): per race, the max P1->P2 gap the leader
+// reached BEFORE the first gap-reroll DOWN-tilt landed on it, plus the per-event tilt magnitudes.
+// Answers "how far does the escapee get before the brake arrives, and how hard is that brake".
+// Flag-gated because it costs a leader-gap computation per frame; absent → zero extra work.
+const ESCAPE_LATENCY      = argv.includes('--escape-latency');
+const PHYSICS_TAX         = argv.includes('--physics-tax');
+const ptRaces             = [];   // per-race physics-tax raw records (filled only when PHYSICS_TAX)
+const elRaces             = [];   // per-race escape-latency records (filled only when ESCAPE_LATENCY)
 // SPEED-SOURCE (read-only, --speed-source): decompose the late-race speed of the top-15 live ranks into
 // its multiplicative factors at fixed samples (0.70..0.95), with clamp saturation + headroom. Pure
 // read-only capture at the advanceRacerT call site (harness Pass-2). No sim file changes; no fingerprint.
@@ -614,6 +630,7 @@ export function runSingleRace({
   gapMetrics = false,          // --gap-metrics: record gap-space (time-behind-leader) signals (read-only)
   runawayParade = false,       // --runaway-parade: record runaway-winner / parade-finish raw signals (read-only)
   speedSource = false,         // --speed-source: record top-15 late-race speed decomposition (read-only)
+  physicsTax = false,          // --physics-tax: record per-racer avoidance-braking distance loss (read-only)
 }) {
   const savedRandom = Math.random;
   if (seed > 0) Math.random = makePRNG(seed);
@@ -673,6 +690,20 @@ export function runSingleRace({
     const rollCount        = Math.max(2, Math.floor(realizedDurationSec / dynamicsConfig.reRollIntervalDivisor));
     const rollInterval     = ((dynamicsConfig.reRollLastPositionPercent / 100) * realizedDurationSec * 1000) / rollCount;
     const lastRollDeadline = realizedDurationSec * 1000 * (dynamicsConfig.reRollLastPositionPercent / 100);
+    // Episode-level view (state machine + definitions in sim/observers/escape-episodes.mjs).
+    // Declared HERE, immediately before its assignment, because the assignment needs
+    // lastRollDeadline (just above) — declaring it further down would put this line in the
+    // temporal dead zone and throw.
+    let escapeEpisodes = null;
+    // SCREEN escape-episode tracker: allocated here because it needs lastRollDeadline. windowEndMs
+    // mirrors the transform's own cutoff term-for-term (racePlanner computeGapBiasedTarget), so
+    // "no correctable roll ahead" means exactly what the transform means by it.
+    if (ESCAPE_LATENCY && GAP_REROLL_THRESH_LEN != null) {
+      escapeEpisodes = makeEscapeEpisodeTracker({
+        G: GAP_REROLL_THRESH_LEN,
+        windowEndMs: lastRollDeadline - dynamicsConfig.reRollTransitionDuration * 1000,
+      });
+    }
 
     // Init racers
     const racers = Array.from({ length: nRacers }, (_, i) => {
@@ -1058,6 +1089,19 @@ export function runSingleRace({
       // resolve checkpoint. No hardcoded progress constant.
       frontBattle:         makeFrontBattleTracker({ windowStart: CONTEST_WINDOW_START }),
     } : null;
+    // ── PHYSICS-TAX per-race tracker (read-only; only allocated when --physics-tax) ──
+    // Fed once per racer per frame at the advanceRacerT call site below. Never mutates race state.
+    const pt = physicsTax ? makePhysicsTaxTracker() : null;
+    let ptPrevMeanT = null;   // prev-frame mean live-racer t, for the field-speed sample (physics-tax)
+    // ── SCREEN escape-latency (read-only) ──────────────────────────────────────────────────────
+    // escapeDepth answers the owner's eye finding: "a racer escapes to a sizeable lead and is THEN
+    // visibly braked". It is the max P1->P2 gap (racer lengths) the leader reached BEFORE the first
+    // gap-reroll DOWN-tilt landed on it — i.e. how far the escape was allowed to run before the
+    // correction arrived. Frozen at the first leader down-tilt; if none ever fires it stays the
+    // whole-race max (escapeDepthCapped=false), which is the honest "never corrected" case.
+    let escapeRunningMaxLen = 0;
+    let escapeDepthLen = null;
+    let escapePrevLeaderDowns = 0;
     // ── SPEED-SOURCE per-race state (read-only; only allocated when --speed-source) ──
     // samples[prog] = [{ rank, index, effSpeed, product, factors…, saturation…, gapAhead, finishClamp }]
     // for the top-15 live ranks at the first frame >= each sample progress. SS_TRAJ_MAX = the servo
@@ -1192,6 +1236,33 @@ export function runSingleRace({
           const prog = elapsed / r.transitionDuration;
           r.spreadFactor = r.spreadFactorPrev + (r.spreadFactorTarget - r.spreadFactorPrev) * easeInOutCubic(prog);
           r.baseSpeed    = race_baseSpeed * speedMultiplier * r.spreadFactor * r.speedBonusMult;
+        }
+      }
+
+      // ── SCREEN escape-latency sample (read-only; --escape-latency) ──────────────────────────
+      // Runs AFTER Pass 1, which is where the gap-reroll transform fires, so a down-tilt applied
+      // this frame is already visible in the controller's counter. The running max is updated first,
+      // then frozen the moment the leader's first down-tilt appears — so escapeDepth is the depth the
+      // escape had actually reached when the correction landed.
+      if (ESCAPE_LATENCY && racePlanController) {
+        const gLen = leaderGapLengths(racers, isOpen, govLenScale);
+        if (gLen > escapeRunningMaxLen) escapeRunningMaxLen = gLen;
+        const downs = racePlanController.getGapLeaderDownCount();
+        if (escapeDepthLen === null && downs > escapePrevLeaderDowns) escapeDepthLen = escapeRunningMaxLen;
+        escapePrevLeaderDowns = downs;
+        // Episode view: needs the CURRENT leader's own next scheduled roll, since "were there dice
+        // left" is a property of that racer, not of the field.
+        //
+        // WINDOW ENDS AT THE FIRST FINISH. After the leader crosses, racers drop out of the live set
+        // one by one and the "leader gap" churns violently — that produced a burst of spurious
+        // sub-second episodes pinned at raceProgress 1.0, every one of them necessarily uncorrected
+        // and out-of-rolls. Counting those would manufacture exactly the structural signal this
+        // analysis is meant to test. Same convention the front-battle observer already uses.
+        if (escapeEpisodes && finishedCount === 0) {
+          const live = racers.filter((r) => !r.finished).sort((a, b) => (b.t - a.t) || (a.index - b.index));
+          const ldr = live[0] ?? null;
+          escapeEpisodes.observe(gLen, raceProgress, raceTs, ldr ? ldr.index : null,
+            ldr ? ldr.nextRollTime : null, downs);
         }
       }
 
@@ -1523,6 +1594,15 @@ export function runSingleRace({
               trajectoryMult: r.trajectoryMult, areaBonusMult: r.areaBonusMult, governorMult: r.governorMult ?? 1.0,
             });
           }
+          // PHYSICS-TAX capture (read-only): the chain WITHOUT the two physics factors, i.e.
+          // baseSpeed·rowEnvMult·trajectoryMult·areaBonusMult·governorMult·dt. The observer
+          // reconstructs the applied step and the no-brake counterfactual from vFree + boost + brake,
+          // so what is measured is exactly what advanceRacerT is about to apply. Never mutates state.
+          if (pt) {
+            const vFree = r.baseSpeed * rowEnvMult * r.trajectoryMult * r.areaBonusMult
+              * (r.governorMult ?? 1.0) * (DT / 16);
+            pt.sample(r.index, raceProgress, vFree, boost, brake);
+          }
           r.t = advanceRacerT(r, {
             boost,
             brake,
@@ -1533,6 +1613,21 @@ export function runSingleRace({
             rowEnvMult,
           });
         }
+      }
+
+      // ── PHYSICS-TAX field geometry (read-only): whole-field spread + mean speed this frame ──────
+      // Feeds the density the P1 inversion audit divides by. Runs after Pass-2 so every r.t is this
+      // frame's final value. fullSpreadLengths + govLenScale = the SAME lap-aware length unit every
+      // other observer uses. Field speed = the frame's mean live-racer t advance × govLenScale / dt.
+      if (pt) {
+        const live = racers.filter((r) => !r.finished).sort((a, b) => (b.t - a.t) || (a.index - b.index));
+        const spreadLen = live.length >= 2 ? fullSpreadLengths(live, govLenScale) : 0;
+        const meanT = live.length ? live.reduce((s, r) => s + r.t, 0) / live.length : 0;
+        const fieldSpeedLenPerSec = (ptPrevMeanT != null && live.length)
+          ? ((meanT - ptPrevMeanT) * govLenScale) / (DT / 1000)
+          : 0;
+        ptPrevMeanT = live.length ? meanT : ptPrevMeanT;
+        pt.sampleField(spreadLen, fieldSpeedLenPerSec, live.length);
       }
 
       // ── SPEED-SOURCE sample build (read-only): top-15 live ranks decomposed at this sample ──────
@@ -2442,6 +2537,10 @@ export function runSingleRace({
         // release point (null when the race never got there). releaseProgress is echoed so a
         // record is self-describing — the arm it came from is recoverable from the file alone.
         leadChangeCount:     rp.lateContest.result().leadChangeCount,
+        // Read-only companion over the SAME [0.90, 1.0] window: how many DIFFERENT racers held the
+        // lead there. leadChangeCount alone cannot tell two racers trading it four times from four
+        // racers leading once each — the finale audit needs both.
+        lateDistinctLeaders: rp.lateContest.result().distinctLeaders,
         releaseProgress:     CHOREO_RELEASE_PROGRESS,
         rankAtReleaseByIndex: rp.releaseRanks.result(),
         // Sustained-P1-battle primitives over [choreoResolveB2, first finish]. contestWindowStart is echoed
@@ -2449,6 +2548,31 @@ export function runSingleRace({
         // file alone. classifyFrontBattle() turns these into the REAL P1 ACTION boolean downstream.
         contestWindowStart:  CONTEST_WINDOW_START,
         frontBattle:         rp.frontBattle.result(),
+      };
+    }
+
+    // ── PHYSICS-TAX record — attached ONLY when --physics-tax (else results unchanged) ──
+    // Raw per-racer fractions + decile profile; sigma and the aggregates are derived downstream by
+    // sim/observers/physics-tax.mjs summarizePhysicsTax(), so the definitions stay in ONE place.
+    if (physicsTax && pt) {
+      results.physicsTax = pt.result();
+      results.physicsTax.fieldGeom = pt.fieldGeom();
+    }
+
+    // ── SCREEN escape-latency record — attached ONLY under --escape-latency ──
+    // escapeDepthCapped=false means no leader down-tilt ever fired, so escapeDepth is the whole-race
+    // max rather than a pre-correction depth — reported explicitly so the two cases are never mixed.
+    if (ESCAPE_LATENCY && racePlanController) {
+      const evs = racePlanController.getGapLeaderDownEvents();
+      if (escapeEpisodes) escapeEpisodes.finish(raceProgress, raceTs, racePlanController.getGapLeaderDownCount());
+      results.escapeLatency = {
+        escapeDepthLen: escapeDepthLen !== null ? +escapeDepthLen.toFixed(4) : +escapeRunningMaxLen.toFixed(4),
+        escapeDepthCapped: escapeDepthLen !== null,
+        maxLeaderGapLen: +escapeRunningMaxLen.toFixed(4),
+        leaderDownCount: evs.length,
+        events: evs.map((e) => ({ p: +e.p.toFixed(4), gapLen: +e.gapLen.toFixed(4), frac: +e.frac.toFixed(4), delta: +e.delta.toFixed(6) })),
+        // Episode view (definitions in sim/observers/escape-episodes.mjs).
+        ...(escapeEpisodes ? escapeEpisodes.result() : {}),
       };
     }
 
@@ -3117,6 +3241,7 @@ if (isMain) {
             gapMetrics:         GAP_METRICS,
             runawayParade:      RUNAWAY_PARADE,
             speedSource:        SPEED_SOURCE,
+            physicsTax:         PHYSICS_TAX,
           });
           // HERO-MAP (--hero-map): stash this race's per-hero observations, tagged with combo meta.
           if (HERO_MAP && result.heroObs) {
@@ -3133,6 +3258,14 @@ if (isMain) {
           // SPEED-SOURCE (--speed-source): stash this race's top-15 decomposition, tagged with combo meta.
           if (SPEED_SOURCE && result.speedSource) {
             ssRaces.push({ trackId, racerType, durationSec, seed, raceIdx, isOpen, speedSource: result.speedSource });
+          }
+          // PHYSICS-TAX (--physics-tax): stash this race's per-racer braking-loss record, tagged with combo meta.
+          if (PHYSICS_TAX && result.physicsTax) {
+            ptRaces.push({ trackId, racerType, durationSec, seed, raceIdx, isOpen, physicsTax: result.physicsTax });
+          }
+          // SCREEN escape-latency (--escape-latency): stash this race's escape depth + leader-tilt log.
+          if (ESCAPE_LATENCY && result.escapeLatency) {
+            elRaces.push({ trackId, racerType, durationSec, seed, raceIdx, isOpen, escapeLatency: result.escapeLatency });
           }
           // Step 1: fair-chance placement metrics (requires race-plan target ranks)
           if (raceSollRankMap) {
@@ -3916,6 +4049,41 @@ if (isMain) {
     console.log(`\n=== Speed-Source (${DIAG_LABEL}) ===  → ${ssPath}  (${ssRaces.length} races)`);
   }
 
+  // ── SCREEN escape-latency output (--escape-latency) → OUT_DIR/escape-latency.json ──
+  if (ESCAPE_LATENCY) {
+    const elPath = join(OUT_DIR, 'escape-latency.json');
+    writeFileSync(elPath, JSON.stringify({
+      meta: { label: DIAG_LABEL, nRaces: N_RACES, seed: GLOBAL_SEED, nRacers: N_RACERS,
+        gapRerollThresholdLengths: GAP_REROLL_THRESH_LEN, gapRerollStrength: GAP_REROLL_STRENGTH, gapRerollMode: GAP_REROLL_MODE,
+        note: 'escapeDepthLen = max P1->P2 gap (racer lengths) reached BEFORE the first gap-reroll '
+            + 'DOWN-tilt landed on the leader (escapeDepthCapped=false => none ever fired, value is the '
+            + 'whole-race max). events = per leader-down-tilt {p, gapLen, frac, delta}.' },
+      races: elRaces,
+    }, null, 2));
+    console.log(`\n=== Escape-Latency (${DIAG_LABEL}) ===  → ${elPath}  (${elRaces.length} races)`);
+  }
+
+  // ── PHYSICS-TAX raw output (--physics-tax) → OUT_DIR/physics-tax.json ──
+  // RAW per-racer records only (sigma and the aggregates are derived downstream by the observer's
+  // summarizePhysicsTax(), so the definitions stay in ONE place). A no-flag run writes nothing.
+  // bandHalfWidth is echoed because sigma is meaningless without the band the run actually used.
+  if (PHYSICS_TAX) {
+    const ptPath = join(OUT_DIR, 'physics-tax.json');
+    const bandHalfWidth = BASE_SPEED_MAX_OVR / ((BASE_SPEED_MIN_OVR + BASE_SPEED_MAX_OVR) / 2) - 1;
+    writeFileSync(ptPath, JSON.stringify({
+      meta: {
+        label: DIAG_LABEL, nRaces: N_RACES, seed: GLOBAL_SEED,
+        baseSpeedMin: BASE_SPEED_MIN_OVR, baseSpeedMax: BASE_SPEED_MAX_OVR,
+        bandHalfWidth: +bandHalfWidth.toFixed(9),
+        note: 'PHYSICS TAX raw per-racer records (read-only, GREENFIELD P0). lostFrac = share of the '
+            + 'distance a racer would have covered that avoidance braking removed; sigma = lostFrac / '
+            + 'bandHalfWidth = the share of natural-band authority live physics already consumes. '
+            + 'Aggregates via scripts/sim/observers/physics-tax.mjs summarizePhysicsTax().',
+      },
+      races: ptRaces,
+    }, null, 2));
+    console.log(`\n=== Physics-Tax (${DIAG_LABEL}) ===  → ${ptPath}  (${ptRaces.length} races)`);
+  }
 
   // Print quick summary
   const unfair = allResults.filter((r) => r.stats.pValue < 0.05);

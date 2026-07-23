@@ -1,0 +1,6 @@
+scope,type,dur,n,bandDelivery,tierExactness,runawayRate,paradeRate,p1Contest80,p1Contest62,leadChangeMean,distinctLeadersMean,intraTierEntropy,bandViolations,redealsMean,recompilesMean,replansMean,minMarginMean
+POOLED,all,30,25,0.6555,0,0.03,0,0,0,0.09,1.09,1,0,13.24,0,0,
+luger-hill,open,30,25,0.634,0,0,0,0,0,0.08,1.08,1,0,13.24,0,0,
+mountainstreet,open,30,25,0.657,0,0,0,0,0,0.16,1.16,1,0,13.24,0,0,
+searound,closed,30,25,0.644,0,0.04,0,0,0,0.04,1.04,1,0,13.24,0,0,
+dirt-oval,closed,30,25,0.687,0,0.08,0,0,0,0.08,1.08,1,0,13.24,0,0,

@@ -1,0 +1,64 @@
+{
+  "config": {
+    "reRollIntervalDivisor": 10,
+    "reRollLastPositionPercent": 95,
+    "reRollTransitionDuration": 3
+  },
+  "durations": [
+    {
+      "realizedSec": 30,
+      "rollCount": 3,
+      "interval": 9.5,
+      "lastRoll": 28.5,
+      "windowEnd": 25.5,
+      "lastCorrectable": 19,
+      "runoutSec": 11,
+      "runoutFrac": 0.36666666666666664,
+      "lastCorrectableP": 0.6333333333333333
+    },
+    {
+      "realizedSec": 60,
+      "rollCount": 6,
+      "interval": 9.5,
+      "lastRoll": 57,
+      "windowEnd": 54,
+      "lastCorrectable": 47.5,
+      "runoutSec": 12.5,
+      "runoutFrac": 0.20833333333333334,
+      "lastCorrectableP": 0.7916666666666666
+    },
+    {
+      "realizedSec": 89,
+      "rollCount": 8,
+      "interval": 10.56875,
+      "lastRoll": 84.55,
+      "windowEnd": 81.55,
+      "lastCorrectable": 73.98125,
+      "runoutSec": 15.018749999999997,
+      "runoutFrac": 0.16874999999999996,
+      "lastCorrectableP": 0.83125
+    },
+    {
+      "realizedSec": 120,
+      "rollCount": 12,
+      "interval": 9.5,
+      "lastRoll": 114,
+      "windowEnd": 111,
+      "lastCorrectable": 104.5,
+      "runoutSec": 15.5,
+      "runoutFrac": 0.12916666666666668,
+      "lastCorrectableP": 0.8708333333333333
+    },
+    {
+      "realizedSec": 300,
+      "rollCount": 30,
+      "interval": 9.5,
+      "lastRoll": 285,
+      "windowEnd": 282,
+      "lastCorrectable": 275.5,
+      "runoutSec": 24.5,
+      "runoutFrac": 0.08166666666666667,
+      "lastCorrectableP": 0.9183333333333333
+    }
+  ]
+}
