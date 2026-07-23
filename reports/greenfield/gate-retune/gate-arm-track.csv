@@ -1,0 +1,9 @@
+arm,track,dur,bandReach,startRowUnfair,startRowMinPHolm,nRacerRows
+CANDIDATE-G075-s050,luger-hill,60,0.683,true,0.02,6000
+CANDIDATE-G075-s050,mountainstreet,60,0.695,false,0.22,6000
+CANDIDATE-G075-s050,searound,60,0.741,true,0.02,4000
+CANDIDATE-G075-s050,dirt-oval,60,0.772,false,0.16,4000
+CURRENT-G150-s100,luger-hill,60,0.674,true,0.02,6000
+CURRENT-G150-s100,mountainstreet,60,0.701,false,0.34,6000
+CURRENT-G150-s100,searound,60,0.735,true,0.02,4000
+CURRENT-G150-s100,dirt-oval,60,0.783,false,0.62,4000
