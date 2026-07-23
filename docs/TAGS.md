@@ -90,6 +90,14 @@ that phase's `*-complete` endpoint when it closes (incremental history then live
   sim's start-row → target-rank mapping changed. Fingerprints move here by design (ON
   `e93ffa70dad562a1`→`0ecca5e2dbe6526e`, OFF `72c3360fb75225ef`→`6e01e472b7655b9a`); all absolute sim
   baselines are retired ([reports/BASELINE-INVALIDATED.md](../reports/BASELINE-INVALIDATED.md)).
+- `backup/plan-grid-unification-05a5d14` (`05a5d14`) — parity step 2a shipped and owner cross-checked:
+  one per-race shuffle now feeds both the plan target-ranks and the physical placement (index-ordered to
+  match the browser); the per-combo FNV path is deleted. New fingerprints ON `0ecca5e2dbe6526e` /
+  OFF `6e01e472b7655b9a`; new invariant test + 412 suites green. The owner's three-seed cross-check
+  confirmed matching front sets, an exactly matching winner at the one clear margin (seed 42), and
+  neighbour swaps only within 0.05–0.21 s margins. The residual is diagnosed as a closed-track
+  duration-derivation seam ([reports/parity/MICRO-DIVERGENCE.md](../reports/parity/MICRO-DIVERGENCE.md),
+  `2c72fe6`), classified into the upcoming speed/duration ship.
 - **Collapse plan:** fold into the parity phase's `*-complete` endpoint when that phase closes.
 
 ### Retune / cleanup / greenfield phase — COLLAPSED (2026-07-23)
