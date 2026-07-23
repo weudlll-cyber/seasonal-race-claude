@@ -120,25 +120,17 @@ Writes `criterion-breakdown.md` + `criterion-breakdown.csv` next to the baseline
 V0 / R97-ON baseline this is what identified `leadChangeCount < 3` as the wall (93% in both arms, sole
 blocker in 27 / 38 races) while proximity was the least binding term.
 
-### Front-act / carousel flags (C1)
+### Front-act flag
 
-Passed straight through to the sim by any sweep mode; all default OFF so an arm that omits them is
-byte-identical to the shipped game:
+Passed straight through to the sim by any sweep mode:
 
 | flag | default | meaning |
 |---|---|---|
-| `--contestWindowStart` | 0.8 | front-act window start; read by BOTH the front-battle observer and the carousel schedule |
-| `--carouselEnabled` | false | B1 lead carousel master switch |
-| `--carouselMinParticipants` | 3 | below this many feasible participants the carousel is not cast |
-| `--carouselAmplitudeRanks` | 2 | rank swing per segment; participant count is capped at amplitude + 1 |
-| `--carouselJitterPct` | 0.15 | seeded jitter on segment timing (one-sided: only ever relaxes a climb) |
-| `--carouselRoleBiasStrength` | 0 | role-biased scheduled dice; 0 = off |
+| `--contestWindowStart` | 0.8 | front-act window start, read by the sustained-P1-battle observer |
 
-Note that `--contestWindowStart` moves the MEASUREMENT window as well as the carousel schedule, by
-design (one key, one front act). An arm that changes it is not directly comparable to a baseline
-measured at a different value — state the value in the arm table.
+`--contestWindowStart` moves the MEASUREMENT window, so an arm that changes it is not directly
+comparable to a baseline measured at a different value — state the value in the arm table.
 
-**Observed sensitivity (luger-hill, N=20, smoke only — not a sweep result):** at the shipped 0.8 the
-carousel never casts (`swing-too-slow-for-window`: the rotation needs about twice the runway that
-`[0.8, releaseProgress - 0.07]` provides). Around 0.62 it casts in roughly 60% of races; by 0.66 the
-window is already too short again. The viable band is narrow and is itself a sweep dimension.
+> The front-rotation flags that used to sit beside this one were removed with the mechanism itself
+> (dead-mechanisms cleanup, 2026-07-23). An arm script that still passes them will simply have them
+> ignored by the sim. Recoverable at tag `pre/dead-mechanisms-cleanup`.

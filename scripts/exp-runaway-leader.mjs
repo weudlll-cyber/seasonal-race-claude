@@ -686,7 +686,8 @@ if (argv.includes('--gapreroll-confirm')) {
 //   payoff  — p1SwapAfter090 (did the 0.90 leader lose?) + leadChangeCount in [0.90, 1.0].
 //   cost    — bandExitAfterRelease: of the racers already INSIDE their band at the release point,
 //             how many drifted OUT by the finish. Endpoint band-reach cannot separate that from
-//             "never got there", and post-release drift is exactly how pack-release failed.
+//             "never got there", and post-release drift is exactly how the shelved pack strictness
+//             release failed (see docs/LESSONS.md).
 // Sim-only: choreoReleaseProgress is a plan-config override via the existing sim CLI flag, so
 // defaults.js and every sim behavior file stay untouched → NO fingerprint.
 // ════════════════════════════════════════════════════════════════════════════════

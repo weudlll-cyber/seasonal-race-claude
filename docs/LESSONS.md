@@ -2874,14 +2874,14 @@ REDUCES action.** Confirmed three independent ways:
 - **B2-Heroes "Attack & Fall" (author) → +21% top-5 OUTCOME action.** Casting 3 extra heroes on a scripted
   climb-to-~5-then-fall-and-free-reorder curve manufactures front drama without touching fairness (B1/B2
   band-reach ≥70% all four tracks, Holm at the 2/4 baseline). Shipped ON.
-- **`packReleaseEnabled` (liberate) → BROKE B2 fairness.** Letting the non-hero pack run strictness-0 inside
+- **Pack strictness release (liberate) → BROKE B2 fairness.** Letting the non-hero pack run strictness-0 inside
   its band leaked B2 band-reach to 67–69% on luger-hill + searound and Holm 3/4 via an endgame edge-leak
-  (92% of leaks after progress 0.90 — freed racers at the band edge shuffle out with no runway). Shelved OFF.
-- **`universalBandArrival` (liberate) → −6% action.** Freeing B1-heroes + pack inside their assigned band
-  held fairness (immediate re-steer) but the field just settled — less churn, not more. Shelved OFF.
+  (92% of leaks after progress 0.90 — freed racers at the band edge shuffle out with no runway). Shelved, then removed.
+- **Universal band-arrival (liberate) → −6% action.** Freeing B1-heroes + pack inside their assigned band
+  held fairness (immediate re-steer) but the field just settled — less churn, not more. Shelved, then removed.
 **Rule for future front-action work: AUTHOR scenarios (curves, casting, timing), do not liberate constraints
-(release the servo).** Liberation reduces the very thing it feels like it should increase. The two shelved
-flags are kept default-OFF and byte-identical as living reference for this (see SIM.md catch-up).
+(release the servo).** Liberation reduces the very thing it feels like it should increase. Both losing
+mechanisms were deleted on 2026-07-23 (Lesson 180) — the measurement is the reference, not the flag.
 
 ## Lesson 179 — The Runaway Gap Forms BEFORE Progress 0.90
 Baseline measurement (2026-07-20, `--runaway-parade` observer, N=100 seeded races × 4 tracks): the game
@@ -2894,3 +2894,29 @@ the runaway must be contested EARLIER (in PULK / at the choreo→OUTCOME boundar
 all. Closed tracks are the worst offenders (28–30% vs 18% open). Parade finishes are rare and, when they
 occur, are genuinely paced (leading-group internal speed spread ≤0.10 over the final 5%) — an observe-only
 phenomenon, not a problem to chase. Method + numbers: `exp-runaway-leader-results/`; see also SWEEP-HARNESS.md.
+
+## Lesson 180 — A Control for a Shelved Mechanism Is a Loaded Gun
+Three mechanisms were deleted outright on 2026-07-23 (dead-mechanisms cleanup): the B1 lead rotation with
+its role-biased dice, the pack strictness release, and universal band-arrival. All three had been built,
+measured, and kept as default-OFF flags "as documentation" — one of them with a live DevScreen checkbox.
+Two things forced the deletion.
+
+**Measured suppressors do not get to stay as options.** The lead rotation was built to manufacture lead
+changes, and the greenfield night run measured it as the WORST arm — it suppressed the very thing it
+existed to create. A mechanism that loses is evidence; a mechanism that loses AND stays wired is a trap
+for the next person, who reads the flag name and assumes it is an untried idea.
+
+**A checkbox is not documentation — it is a live path one click away.** The shelved pack release kept a
+DevScreen toggle so the failure could be re-demonstrated. But settings persist in localStorage, and a
+persisted `true` survives every later change: the toggle was one stray click from putting a mechanism
+known to break B2 band-reach into a race nobody was auditing. Documentation belongs in LESSONS.md and
+SIM.md, where it cannot be switched on. Any control whose only purpose is "so we can show why it failed"
+should be a paragraph instead.
+
+**What survives a deletion like this.** The MEASUREMENT (kept in SIM.md / LESSONS.md, with numbers), the
+git history (tag `pre/dead-mechanisms-cleanup`, a complete archive), and any sub-part with a live
+consumer — here the spatial re-steer threshold, which the shipped B2-attacker release reads and which was
+therefore kept and re-documented rather than deleted with the rest. What does NOT survive is the config
+key, the UI control, and the code path. Both fingerprints stayed byte-identical through the removal,
+which is itself the proof the mechanisms had never been on a live path — and the reason keeping them
+would have cost nothing to measure and everything to trust.

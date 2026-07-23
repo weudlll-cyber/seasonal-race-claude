@@ -166,7 +166,7 @@ start row's outcomes are tested for a significant advantage, with a Holm correct
 for multiple comparisons; any row flagged unfair fails the gate.
 
 **The eye is the final gate.** The metrics are necessary but never sufficient. A configuration that passes
-band-reach and the Holm test still fails if the race *reads* wrong — if it looks like a carousel, a scripted
+band-reach and the Holm test still fails if the race *reads* wrong — if it looks like a fairground ride, a scripted
 parade, or a dead procession, no passing number rescues it. Conversely, if the eye says "this is real
 racing," that judgment stands. Metrics exist to catch what the eye might miss over many races, not to
 overrule it.

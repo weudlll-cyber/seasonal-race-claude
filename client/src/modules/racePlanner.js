@@ -13,7 +13,7 @@
 
 import { easeInOutCubic } from '../utils/mathUtils.js';
 import { sampleHeroCurve } from './heroChoreography.js';
-import { generateHeroCurves, GENERATOR_CONFIG, carouselRoleAt } from './heroCurveGenerator.js';
+import { generateHeroCurves, GENERATOR_CONFIG } from './heroCurveGenerator.js';
 import { arcT } from './raceLengths.js'; // shared lap-aware arc distance (gap-cap re-roll bias)
 
 // ── Mulberry32 PRNG (same algorithm as scripts/sim-fairness.mjs) ──────────────
@@ -191,14 +191,6 @@ export function createRacePlan(racers, finishT, targetDurationMs, config = {}, s
   const winnerEntry = [...racerTargetRank.entries()].find(([, rank]) => rank === 1);
   const winnerRacerId = winnerEntry[0];
 
-  // Group racers by startRowIndex
-  const byRow = new Map();
-  for (const r of racers) {
-    const row = r.startRowIndex ?? 0;
-    if (!byRow.has(row)) byRow.set(row, []);
-    byRow.get(row).push(r);
-  }
-
   // Select 3 pulk racers from middle field (rows 1–3 preferred), never the winner
   const middleField = racers.filter((r) => {
     const row = r.startRowIndex ?? 0;
@@ -294,17 +286,12 @@ export function createRacePlan(racers, finishT, targetDurationMs, config = {}, s
     _choreoGenerated: false,
     _choreoPrevRanks: null, // one-frame-earlier ranks, for the jerk-anchor velocities
     _choreoPrevProgress: null,
-    // ── Pack-only strictness release with spatial hysteresis (flag-gated; default OFF) ──────────────
-    // When a NON-hero (pack) racer is inside its target band the servo strictness drops to 0 so it
-    // roams freely (error collapses to bandError, which is 0 inside the band → natural speed). When it
-    // drifts more than _packReSteerThreshold ranks past the band edge the strictness snaps to 1 (full
-    // rank pinning) until it is fully back inside (bandError == 0), then releases again. The release↔
-    // re-steer gap IS the anti-flicker guard — there is NO time cooldown. Heroes are untouched (they
-    // keep strictness 1.0 + their authored curves + the 0.97 B1-release). packReleaseEnabled false →
-    // the servo strictness stays the shipped value → byte-identical to the pre-feature behaviour.
-    _packReleaseEnabled: !!config.packReleaseEnabled,
+    // Spatial-hysteresis threshold for a RELEASED racer: how far (ranks) it may drift past its band
+    // edge before the servo re-engages at strictness 1 and steers it back; it releases again only
+    // once it is fully inside (bandError == 0). The release↔re-steer gap IS the anti-flicker guard —
+    // there is NO time cooldown. Read by the B2-attacker free phase below (the only release path).
     _packReSteerThreshold: config.packReSteerThreshold ?? 1.0,
-    // ── B2-attacker "Attack & Fall" (default OFF: b2AttackHeroes 0 → generator casts none → byte-identical) ──
+    // ── B2-attacker "Attack & Fall" (SHIPPED ON at b2AttackHeroes 3; 0 casts none → pre-feature game) ──
     // Threaded into the hero-curve generator (which casts the attackers) AND read by the servo below, which
     // runs the Track-to-FinalRank-then-Free logic for role 'attacker-b2'. See heroCurveGenerator.js.
     _b2AttackHeroes: config.b2AttackHeroes ?? 0,
@@ -315,9 +302,6 @@ export function createRacePlan(racers, finishT, targetDurationMs, config = {}, s
     // Release model: false = fixed-final (steer to finalRank, with margin); true = band-arrival (free on
     // band re-entry = the edge, no margin). Default false → current shipped behaviour.
     _b2AttackBandArrival: !!config.b2AttackBandArrival,
-    // Universal band-arrival (V1 experiment): free B1-heroes + normal pack inside their assigned band.
-    // B2-attackers are unaffected (own release). Default false → byte-identical.
-    _universalBandArrival: !!config.universalBandArrival,
     _attackerParams: null, // Map index → {peakRank, finalRank}, populated by update() at cast time
     // ── Front distance leash (SIM-ONLY: supplied only via the sim harness config; default OFF) ──────
     // A gap-space brake on the current runaway leader (see reports/proposals/RUNAWAY-CONCEPT.md DECISION).
@@ -340,24 +324,11 @@ export function createRacePlan(racers, finishT, targetDurationMs, config = {}, s
     // The deadline is PASSED IN per race (never re-derived here) — one duration basis, closed-track-safe.
     _reRollTransitionDurationMs:
       config.reRollTransitionDuration != null ? config.reRollTransitionDuration * 1000 : 0,
-    // ── FRONT ACT window + B1 LEAD CAROUSEL (C1; carouselEnabled false → nothing engages) ─────────
-    // contestWindowStart is the front act's OWN key. It falls back to choreoResolveB2 so a caller that
-    // predates the key (and the committed baselines measured under it) behaves exactly as before.
+    // ── FRONT ACT window start ────────────────────────────────────────────────────────────────────
+    // contestWindowStart is the front act's OWN key: the sustained-P1-battle observer measures over
+    // [contestWindowStart, first finish]. It falls back to choreoResolveB2 so a caller that predates
+    // the key (and the committed baselines measured under it) behaves exactly as before.
     _contestWindowStart: config.contestWindowStart ?? config.choreoResolveB2 ?? 0.8,
-    _carouselEnabled: !!config.carouselEnabled,
-    _carouselMinParticipants: config.carouselMinParticipants ?? 3,
-    _carouselAmplitudeRanks: config.carouselAmplitudeRanks ?? 2,
-    _carouselJitterPct: config.carouselJitterPct ?? 0,
-    // Role-biased scheduled dice. 0 = OFF → computeRoleBiasedTarget() passes the draw through.
-    _carouselRoleBiasStrength: config.carouselRoleBiasStrength ?? 0,
-    // Minimum authored dwell at rank 1, DERIVED: the servo's own trajectory slew converted into
-    // progress. A hold shorter than the slew cannot be tracked, so the slew is the honest floor —
-    // never a picked constant. Falls back to the shipped 1.0 s when the caller omits it.
-    _carouselDwellProgress:
-      targetDurationMs > 0
-        ? (config.trajectoryTransitionDuration ?? 1.0) / (targetDurationMs / 1000)
-        : 0,
-    _carouselPlan: null, // filled by update() from the generator, when cast
   };
 }
 
@@ -409,9 +380,10 @@ export function createTrajectoryController(racePlan) {
   let _bidirectionalBoostCount = 0;
   let _bidirectionalBrakeCount = 0;
   let _racersBlockedCount = 0;
-  // Pack-release hysteresis state + diagnostics (closure-scoped ⇒ resets per race automatically,
-  // since createTrajectoryController runs once per race). Keyed by r.index — survives the spread-copy
-  // that would break an object-identity compare. Absent the flag these stay untouched (feature OFF).
+  // Release hysteresis state + diagnostics for a FREED B2-attacker (closure-scoped ⇒ resets per race
+  // automatically, since createTrajectoryController runs once per race). Keyed by r.index — survives
+  // the spread-copy that would break an object-identity compare. With no attackers cast these stay
+  // untouched.
   const _packReleased = new Map(); // index → boolean: currently in the released (strictness 0) state
   let _packReleaseEvents = 0; // count of steering→released transitions (a racer arrived in-band)
   // ── Gap-cap re-roll bias telemetry (closure-scoped ⇒ per race; TELEMETRY ONLY, like the
@@ -425,11 +397,6 @@ export function createTrajectoryController(racePlan) {
   // measure how often that happens. TELEMETRY ONLY: never read back into a returned draw.
   let _gapDownTilts = 0; // gapBehind>G branch fired (toward SLOWER)
   let _gapUpTilts = 0; // gapAhead>G branch fired (toward FASTER; symmetric mode only)
-  // ── Carousel telemetry (C1). All stay 0 when the carousel is off. ──
-  let _roleUpTilts = 0; // scheduled rolls tilted FAST for the authored attacker
-  let _roleDownTilts = 0; // scheduled rolls tilted SLOW for the authored yielder
-  let _carouselSatFrames = 0; // participant-frames in W with trajectoryMult at either clamp
-  let _carouselWinFrames = 0; // participant-frames in W (the saturation denominator)
   let _gapDownAheadGtBehind = 0; // SMOKING GUN: a DOWN-tilt while gapAhead > gapBehind
   let _gapDownLeader = 0; // DOWN-tilts on the live leader (rank 1)
   let _gapDownChaser = 0; // DOWN-tilts on live ranks 2–5 (the chase group)
@@ -437,11 +404,11 @@ export function createTrajectoryController(racePlan) {
   let _gapDownGapAheadSum = 0; // Σ gapAhead at DOWN-tilt moments (lengths)
   let _gapDownGapBehindSum = 0; // Σ gapBehind at DOWN-tilt moments (lengths)
   let _packReSteerEvents = 0; // count of released→steering transitions (a racer drifted out)
-  let _packReleasedFrames = 0; // pack-racer-frames spent released (strictness 0)
-  let _packSteerFrames = 0; // pack-racer-frames spent re-steering under the feature (strictness 1)
+  let _packReleasedFrames = 0; // freed-attacker frames spent released (strictness 0)
+  let _packSteerFrames = 0; // freed-attacker frames spent re-steering (strictness 1)
   // B2-attacker "Attack & Fall" state (closure-scoped ⇒ per-race). _attackerMinRank tracks the best
   // (lowest) live rank each attacker has REACHED (peak-tracking); _attackerFreed latches once it has
-  // climbed to its peak AND been steered down to its finalRank in-band (then it joins the pack-release
+  // climbed to its peak AND been steered down to its finalRank in-band (then it joins the release
   // hysteresis via _packReleased). _attackerFreeEvents counts freeings (diagnostic).
   const _attackerMinRank = new Map(); // index → best (lowest) live rank reached so far
   const _attackerFreed = new Map(); // index → boolean: has completed climb+orchestrated-fall → free
@@ -632,21 +599,12 @@ export function createTrajectoryController(racePlan) {
             anchorProgress: pulkStartFrac,
             releaseProgress: plan._choreoReleaseProgress,
             bandResolve: plan._choreoBandResolve,
-            // B2-attacker "Attack & Fall" params (default OFF: b2AttackHeroes 0 → no attackers → byte-identical).
+            // B2-attacker "Attack & Fall" params (SHIPPED ON at 3; 0 → no attackers → pre-feature game).
             b2AttackHeroes: plan._b2AttackHeroes,
             b2AttackPeakRank: plan._b2AttackPeakRank,
             b2AttackFinalRank: plan._b2AttackFinalRank,
             b2AttackProgress: plan._b2AttackProgress,
             b2AttackResolveProgress: plan._b2AttackResolveProgress,
-            // B1 lead carousel (C1). carouselEnabled false → the generator never enters the block,
-            // never advances `rng`, and the standard cast draws exactly what it always did.
-            // Every timing input is the LIVE plan value — no progress constant is introduced here.
-            carouselEnabled: plan._carouselEnabled,
-            carouselMinParticipants: plan._carouselMinParticipants,
-            carouselAmplitudeRanks: plan._carouselAmplitudeRanks,
-            carouselJitterPct: plan._carouselJitterPct,
-            contestWindowStart: plan._contestWindowStart,
-            carouselDwellProgress: plan._carouselDwellProgress,
           },
         });
         plan._heroCurves = new Map(gen.curves.map((c) => [c.index, c.curve]));
@@ -667,11 +625,6 @@ export function createTrajectoryController(racePlan) {
         // UNCONSUMED — kept as the prerequisite channel for the planned B4b faller shot, because b1Indices
         // (targetRank ≤ 5) structurally cannot carry a faller (targetRank > 5).
         plan._cameraPlan = gen.cameraPlan ?? null;
-        // C1: the carousel's runtime contract (segments + slot→racer order) for the role-biased dice
-        // and the saturation telemetry, plus the cast diagnosis (why it was or wasn't cast). Both are
-        // null when the feature is off.
-        plan._carouselPlan = gen.carouselPlan ?? null;
-        plan._carouselDiag = gen.carouselDiag ?? null;
         for (const r of racers) {
           r.isHeroChoreographed = plan._heroCurves.has(r.index);
           // Diagnostics-only tag for the eye-test hero-highlight (render-time). Read-only; never read by
@@ -739,9 +692,9 @@ export function createTrajectoryController(racePlan) {
       // B2-attacker "Attack & Fall" (Track-to-FinalRank, then Free). While NOT yet freed the attacker
       // tracks its curve at strictness 1.0 — the mandatory climb to peakRank, then the orchestrated fall
       // that the curve steers down to finalRank. It FREES once it has (a) reached its peak (best live rank
-      // ≤ peakRank) AND (b) been steered down to finalRank in-band; from then it joins the pack-release
-      // spatial hysteresis (free inside band, re-steer > threshold ranks outside). Independent of
-      // packReleaseEnabled (the attacker's own feature). No resolve-checkpoint constraint (hero-privilege).
+      // ≤ peakRank) AND (b) been steered down to finalRank in-band; from then it runs under the spatial
+      // release hysteresis (free inside band, re-steer > _packReSteerThreshold ranks outside).
+      // No resolve-checkpoint constraint (hero-privilege).
       const atkParams =
         isHero && plan._attackerParams ? plan._attackerParams.get(r.index) : undefined;
       if (atkParams) {
@@ -781,57 +734,12 @@ export function createTrajectoryController(racePlan) {
           else _packSteerFrames++;
         }
         // not-yet-freed → strictness remains 1.0 (curve tracking); nothing else to do.
-      } else if (plan._universalBandArrival) {
-        // Universal band-arrival (V1 experiment): B1-heroes AND normal pack racers run FREE (strictness 0)
-        // once inside their FIXED assigned band, and are re-steered (strictness 1) the moment they leave it.
-        // The band comes from the racer's ASSIGNED target rank (getAreaBounds of _racerTargetRank), NOT the
-        // moving hero-curve target — so a climbing hero counts as "arrived" only when it truly reaches its
-        // band. B2-attackers keep their own release (atkParams branch above). OFF → skipped → byte-identical.
-        const assignedRank = plan._racerTargetRank.get(r.index) ?? currentRank;
-        const [aLo, aHi] = getAreaBounds(assignedRank);
-        strictness = currentRank >= aLo && currentRank <= aHi ? 0 : 1.0;
-      } else if (plan._packReleaseEnabled && !isHero) {
-        // Pack-only strictness release (spatial hysteresis, flag-gated; heroes excluded). Inside the band
-        // (bandError == 0) the pack racer releases → strictness 0 → error collapses to bandError (0), so it
-        // runs at natural speed and reorders freely. Once it drifts MORE than _packReSteerThreshold ranks
-        // past the band edge it snaps to full pinning (strictness 1) and is dragged back; it only releases
-        // again after returning fully inside (bandError == 0). The release↔re-steer gap is the sole anti-
-        // flicker guard — there is no time cooldown. Only reachable in OUTCOME for the pack (pre-OUTCOME
-        // non-heroes early-return above), so the release is naturally confined to the OUTCOME phase.
-        let released = _packReleased.get(r.index) ?? false;
-        if (!released && bandError === 0) {
-          released = true;
-          _packReleaseEvents++;
-        } else if (released && Math.abs(bandError) > plan._packReSteerThreshold) {
-          released = false;
-          _packReSteerEvents++;
-        }
-        _packReleased.set(r.index, released);
-        strictness = released ? 0 : 1;
-        if (released) _packReleasedFrames++;
-        else _packSteerFrames++;
       }
       // Blended error: strictness=1.0 ≡ rankError (exact); <1.0 steers toward the band edge (loose pack).
       const error = strictness * rankError + (1 - strictness) * bandError;
       const noise = (rng() - 0.5) * 2 * plan._stochasticNoise;
       const rawTarget = clamp(1.0 + gain * (error / nActive) + noise, minMult, maxMult);
       _setTarget(r, rawTarget, elapsedMs);
-
-      // ── C1 saturation telemetry (the naturalness number; sweep kill > 50%) ──────────────────────
-      // Share of carousel-participant frames INSIDE the contest window whose applied trajectoryMult
-      // sits at either servo clamp. Reads r.trajectoryMult (the smoothed value actually multiplying
-      // speed), not the freshly-computed target, because naturalness is about what the racer DID.
-      // A racer pinned at a clamp is one the servo has run out of authority for.
-      if (
-        plan._carouselPlan &&
-        phaseProgress != null &&
-        phaseProgress >= plan._contestWindowStart &&
-        plan._carouselPlan.indices.includes(r.index)
-      ) {
-        _carouselWinFrames++;
-        const applied = tm(r);
-        if (applied >= maxMult - 1e-9 || applied <= minMult + 1e-9) _carouselSatFrames++;
-      }
 
       // Telemetry stays on rankError — measures exact-rank deviation, not blended error.
       _racerStepCount++;
@@ -1045,60 +953,6 @@ export function createTrajectoryController(racePlan) {
   }
 
   /**
-   * computeRoleBiasedTarget — ROLE-BIASED SCHEDULED DICE (C1 Mechanism B; default OFF).
-   *
-   * Same family and same fairness argument as computeGapBiasedTarget: at a racer's REGULAR scheduled
-   * re-roll the draw is tilted inside the honest ±8.1% band — never outside it, never an extra or
-   * early roll, cadence untouched. The difference is only WHAT selects the direction: here it is the
-   * carousel's authored ROLE at this instant, not a measured gap.
-   *
-   *   current attacker (climbing to rank 1) → tilted toward the FAST edge
-   *   current yielder  (handing the lead on) → tilted toward the SLOW edge
-   *   everyone else, and the whole dwell     → untouched, bit-exact
-   *
-   * This is the actuator the servo alone cannot be: the servo's authority is capped at
-   * trajectoryMult 1.10/0.85, and the measured leader draw (~1.066) already eats a third of that
-   * boost. Tilting the draw itself attacks the same budget from the other side.
-   *
-   * PRECEDENCE — explicit, no silent double-tilting. Role-bias WINS for a carousel participant and
-   * gap-reroll is skipped for that racer at that roll (the caller checks roleBiased first). The two
-   * would otherwise fight directly: an attacker that has just closed on the leader leaves a hole
-   * BEHIND itself, which is exactly the gap-reroll's down-tilt trigger — the generic corrective would
-   * brake the very racer the carousel is authoring forward. Where the carousel has an explicit
-   * intent for a racer, that intent governs; every non-participant still gets the ordinary gap-reroll.
-   *
-   * @param {number} racerIndex
-   * @param {number} rawSample     the honest draw (post pulk-bias)
-   * @param {number} spreadMin     honest band floor
-   * @param {number} spreadMax     honest band ceiling
-   * @param {number} phaseProgress leader-progress
-   * @returns {{value:number, biased:boolean, role:'attacker'|'yielder'|null}}
-   */
-  function computeRoleBiasedTarget(racerIndex, rawSample, spreadMin, spreadMax, phaseProgress) {
-    const none = { value: rawSample, biased: false, role: null };
-    const strength = plan._carouselRoleBiasStrength;
-    if (!(strength > 0) || !plan._carouselPlan || phaseProgress == null) return none;
-    const { attacker, yielder } = carouselRoleAt(plan._carouselPlan, phaseProgress);
-    if (racerIndex !== attacker && racerIndex !== yielder) return none;
-    // fraction-to-edge, clamped to the band exactly like the gap-reroll transform
-    const frac = Math.min(1, Math.max(0, strength));
-    if (racerIndex === attacker) {
-      _roleUpTilts++;
-      return {
-        value: clamp(rawSample + frac * (spreadMax - rawSample), spreadMin, spreadMax),
-        biased: true,
-        role: 'attacker',
-      };
-    }
-    _roleDownTilts++;
-    return {
-      value: clamp(rawSample - frac * (rawSample - spreadMin), spreadMin, spreadMax),
-      biased: true,
-      role: 'yielder',
-    };
-  }
-
-  /**
    * Collect per-race naturalness telemetry for gate evaluation.
    * Resets counters after collection (call once per race, at race end).
    *
@@ -1127,7 +981,7 @@ export function createTrajectoryController(racePlan) {
       bidirectionalBrakeFraction:
         _racerStepCount > 0 ? _bidirectionalBrakeCount / _racerStepCount : 0,
       racersBlockedInOutcome: _racerStepCount > 0 ? _racersBlockedCount / _racerStepCount : 0,
-      // Pack-release diagnostics (0 when the feature is OFF — no transitions ever fire).
+      // Attacker-release diagnostics (0 when no attackers are cast — no transitions ever fire).
       packReleaseEvents: _packReleaseEvents,
       packReSteerEvents: _packReSteerEvents,
       packReleasedFrameFraction:
@@ -1220,17 +1074,6 @@ export function createTrajectoryController(racePlan) {
     update,
     computePulkBiasedTarget,
     computeGapBiasedTarget,
-    computeRoleBiasedTarget,
-    // C1 telemetry + the runtime carousel plan (null when not cast). Read-only accessors.
-    getCarouselPlan: () => plan._carouselPlan ?? null,
-    getCarouselDiag: () => plan._carouselDiag ?? null,
-    getCarouselTelemetry: () => ({
-      roleUpTilts: _roleUpTilts,
-      roleDownTilts: _roleDownTilts,
-      satFrames: _carouselSatFrames,
-      winFrames: _carouselWinFrames,
-      saturationShare: _carouselWinFrames > 0 ? _carouselSatFrames / _carouselWinFrames : null,
-    }),
     getPhase,
     getPhaseFractions,
     // Diagnostics-only: the retained index→role map (null until heroes are cast). Read by GovernorDiagHUD.

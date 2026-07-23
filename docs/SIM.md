@@ -883,19 +883,22 @@ The action knob is `finalRank` (release HEIGHT), not peak depth; count scales su
 This is the single steering path — choreography + PulkLeadRotation; there is no reactive governor/director
 (that and its ~15 knobs were deleted, see §4 and ARCHITECTURE.md).
 
-### Two RETAINED shelved flag paths (default OFF, byte-identical off, kept as documented reference)
+### Two release paths that were built, measured, and REMOVED (2026-07-23)
 
-Both were built and measured; both LOST to the B2-attackers and are kept OFF as a reference for **why
-liberation loses** (see LESSONS.md — "action lives in orchestration, not liberation"):
+Both LOST to the B2-attackers and are recorded here as the evidence for **why liberation loses** (see
+LESSONS.md — "action lives in orchestration, not liberation"). They were kept for a while as default-OFF
+flags and then deleted in the dead-mechanisms cleanup ship; the code is recoverable from git history at
+tag `pre/dead-mechanisms-cleanup`.
 
-- **`packReleaseEnabled`** (+ `packReSteerThreshold`) — non-hero pack runs strictness-0 inside its band.
+- **Pack strictness release** — non-hero pack runs strictness-0 inside its band.
   **Why it lost:** breaks B2 band-reach on luger-hill + searound (67–69%) + Holm 3/4 via an **endgame
   edge-leak** — 92% of leaks after progress 0.90; free racers at the band edge get shuffled out with no
-  runway. Diagnosis: `reports/exp-archive/exp-pack-release-results/PACK-RELEASE-B2-DIAGNOSIS.md`.
-- **`universalBandArrival`** — free B1-heroes + normal pack inside their assigned band. **Why it lost:**
+  runway. Diagnosis archived under `reports/exp-archive/`.
+- **Universal band-arrival** — free B1-heroes + normal pack inside their assigned band. **Why it lost:**
   fairness HELD (immediate re-steer) but **−6% action** — freeing settles the field.
 
-Both remain default OFF and byte-identical when off; they are documentation-by-flag, not live paths.
+The spatial re-steer threshold they shared (`packReSteerThreshold`) SURVIVES: the live B2-attacker
+release reads it. Removing the two paths left both fingerprints byte-identical.
 
 ---
 
@@ -931,57 +934,26 @@ After the N=200 confirmation on all 10 tracks (V0 23% → symmetric/G=1.5/streng
 
 **DevScreen (Dynamics section):** Gap-Reroll toggle, G (0.5–4.0), strength (0–1.5), mode symmetric/down-only, and a rendering-only dev-marker (a cyan ring flashing on a racer the instant its roll was biased — zero sim effect). Changes take effect on the next race (same pattern as the B2-attacker count). A backup/ship tag follows only after the owner's eye-test.
 
-### 2026-07-22 — Front act: `contestWindowStart`, B1 Lead Carousel, role-biased dice (all default OFF)
+### 2026-07-22 — Front act: `contestWindowStart`; front lead rotation + role-biased dice (REMOVED 2026-07-23)
 
-**`contestWindowStart` — the front act's own key.** The sustained-P1-battle observer
-(`scripts/sim/observers/outcome-front-battle.mjs`) and the carousel schedule now BOTH read
-`contestWindowStart`. It previously rode on `choreoResolveB2`, which is *B2's* resolve checkpoint:
-tuning B2 for a B2 reason silently moved the front-battle measurement window and would have
-invalidated every committed baseline. It is initialised to the shipped `choreoResolveB2` value (0.8),
-so the `p1-contest-baseline` numbers stay exactly comparable; from here the two are independent.
-Sim flag: `--contestWindowStart=<0..1>`. Validation (browser path) requires
-`choreoOutcomeStart < contestWindowStart < choreoReleaseProgress`.
+**`contestWindowStart` — the front act own key. LIVE, KEPT.** The sustained-P1-battle observer
+(`scripts/sim/observers/outcome-front-battle.mjs`) reads `contestWindowStart`. It previously rode on
+`choreoResolveB2`, which is *B2 own* resolve checkpoint: tuning B2 for a B2 reason silently moved the
+front-battle measurement window and would have invalidated every committed baseline. It is initialised
+to the shipped `choreoResolveB2` value (0.8), so the `p1-contest-baseline` numbers stay exactly
+comparable; from here the two are independent. Sim flag: `--contestWindowStart=<0..1>`. Validation
+(browser path) requires `choreoOutcomeStart < contestWindowStart < choreoReleaseProgress`.
 
-**B1 Lead Carousel (`carouselEnabled`, default `false`).** Authored front handovers as BATON
-SEGMENTS through the existing min-jerk curve machinery. Per segment ONE participant is authored to
-rank 1, the outgoing holder yields to the back of the rotation, and the rest hold their slots
-(slot-holding costs no clamp residency: rankError 0 gives `trajectoryMult` 1.0 + noise).
-
-- **Fairness is structural.** The rotation is a cyclic permutation over slots `1..K`
-  (`carouselSlotOf(p, s, K) = 1 + ((p - s) mod K)`), so every waypoint lies in
-  `[1, BAND_EDGES[0]]`. The carousel can only ever reorder B1 occupants among B1 ranks —
-  band-reach is invariant BY CONSTRUCTION, not by a check.
-- **Two hard invariants.** `K >= carouselMinParticipants` (3) — a two-racer ping-pong yields lead
-  changes but only two distinct leaders and cannot pass the classifier — and `segments >= K`, one
-  full rotation, so `distinctLeaders >= K` is structural rather than lucky. Either unmet and the
-  carousel is **not cast at all** (clean fallthrough to shipped behaviour).
-- **Amplitude <= 2 ranks**, hence `K = amplitude + 1 = 3`. The servo is proportional only within ~2
-  ranks of error (`gain 2.0 / nActive 40` reaches `maxMult` 1.10 at error 2 exactly); past that it is
-  bang-bang and the authored shape stops reaching the track.
-- **Feasibility is real and never bypassed.** The climb span per handover is DERIVED from the
-  participants' own density rank-rate (`minJerkPeakFactor x amplitude / maxRankRate`, using the
-  weakest participant), and the finished curves then face the same `checkFeasible()` every other hero
-  curve faces. Jitter is **one-sided** — it may only ever lengthen a climb, never sharpen it below
-  the span it was derived from. Every rejection is recorded with a reason, so a zero cast rate is
-  legible in telemetry instead of looking like a silent no-op.
-- **The winner stays emergent.** The last authored handover completes
-  `carouselFinalMarginProgress` (0.07) before `choreoReleaseProgress`, so the field is level when the
-  release hands the finish to natural speed. The carousel has no relation to the assigned
-  `targetRank` 1 (which is reporting, not steering).
-- **Dwell is derived, not picked**: `trajectoryTransitionDuration / raceDurationSec` — a hold
-  shorter than the servo's own slew cannot be tracked.
-
-**Role-biased scheduled dice (`carouselRoleBiasStrength`, default `0` = OFF).** Same family and same
-fairness argument as the gap-reroll: at a carousel participant's REGULAR scheduled re-roll the draw
-is tilted inside the honest +/-8.1% band — toward the fast edge for the authored attacker, the slow
-edge for the yielder, nothing during a dwell. Scheduled rolls only; cadence untouched.
-
-> **PRECEDENCE (explicit, no silent double-tilting):** role-bias **wins** for a carousel participant
-> and the gap-reroll is skipped for that racer at that roll. The two are directly opposed — an
-> attacker that has just closed on the leader opens a hole BEHIND itself, which is the gap-reroll's
-> down-tilt trigger, so the generic corrective would brake exactly the racer the carousel is
-> authoring forward. Explicit intent beats generic correction; every non-participant, and every
-> participant during a dwell, still gets the ordinary gap-reroll.
+**The front lead rotation and its role-biased scheduled dice were REMOVED on 2026-07-23** (dead-
+mechanisms cleanup ship). Both were built sim-first and default OFF, so the shipped game never ran
+them. The greenfield night run then measured the rotation as the WORST arm — a suppressor of the very
+lead changes it was built to create — so the whole mechanism was deleted rather than left as a loaded
+gun in the config: the config keys, the generator casting/schedule/waypoint code, the servo role-bias
+transform and saturation telemetry, the sim flags, the handover-telemetry observer, and the unit test
+file. Removing it left BOTH fingerprints byte-identical (ON `e93ffa70dad562a1`, OFF
+`72c3360fb75225ef`), which is the proof it had never been on any live path. The design write-up and
+both independent concept reviews remain under `reports/proposals/`; the code is recoverable from git
+history at tag `pre/dead-mechanisms-cleanup`.
 
 **Gap-reroll branch-priority fix (behaviour change, gated by `gapRerollEnabled` / the sim flag).**
 When BOTH `gapBehind > G` and `gapAhead > G`, the **larger imbalance** now decides the direction;
@@ -991,22 +963,6 @@ SLOWER, structurally suppressing the chase (the small-G diagnostic measured this
 6.6x more often at small G). In `down` mode the affected case now yields **no** tilt rather than a
 misdirected brake. This does not touch the OFF fingerprint (the gap-reroll is off by default), but it
 **does change measured gap-reroll results** — the confirmed `G=1.5 s=1.0` numbers predate it.
-
-**Sim flags:** `--carouselEnabled=true|false`, `--carouselMinParticipants=<n>`,
-`--carouselAmplitudeRanks=<n>`, `--carouselJitterPct=<0..1>`, `--carouselRoleBiasStrength=<n>`,
-`--contestWindowStart=<0..1>`.
-
-**Telemetry** (per race, on the `--runaway-parade` record under `carousel`): `diag` (cast yes/no,
-reason, per-candidate rejections, K, segment count), `handovers` (authored vs **completed** — a
-handover counts only when the authored leader HOLDS live rank 1 for at least the dwell — plus the
-dwell distribution), and `telemetry.saturationShare` (share of carousel-participant frames inside the
-window with `trajectoryMult` at either clamp; the naturalness number, sweep kill > 50%).
-
-**OFF = byte-identical**, fingerprint `72c3360fb75225ef` re-verified after `heroCurveGenerator.js`,
-`racePlanner.js`, `defaults.js` and the sim were touched. With `carouselEnabled` false the generator
-never enters the carousel block, so the shared `rng` is not advanced and the standard hero cast draws
-exactly what it always did. **Browser untouched this step** (sim-first activation, as in every phase
-before) — no DevScreen controls yet.
 
 ### 2026-07-22 — Gap-reroll SHIPPED DEFAULT ON (symmetric, G=1.5, strength=1.0)
 

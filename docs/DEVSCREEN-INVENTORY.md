@@ -1,19 +1,18 @@
 # DEVSCREEN INVENTORY — the race-dynamics controls, verified at source
 
-**Read-only inventory of what the DevScreen actually renders after the DevScreen consolidation.**
-Ground truth: `client/src/screens/DevScreen/sections/DynamicsTuningSection.jsx` (+ `SubCard.jsx` for the
-`SubCard` / `SubHeading` shells). Config keys + shipped defaults from
+**Read-only inventory of what the DevScreen actually renders.** Rebuilt completely against
+`client/src/screens/DevScreen/sections/DynamicsTuningSection.jsx` as rendered (dead-mechanisms cleanup,
+2026-07-23) — every control in the file appears below, and nothing below is absent from the file.
+Ground truth for the shells: `SubCard.jsx` (`SubCard` / `SubHeading`). Config keys + shipped defaults from
 `client/src/modules/storage/defaults.js` (`DEFAULT_RACE_DYNAMICS_CONFIG`, `DEFAULT_BASE_SPEED_CONFIG`,
-`DEFAULT_ROW_LAYOUT_CONFIG`, `DEFAULT_FRAME_TIMING_CONFIG`). Every control, label, config key, and reset
-`testId` below was cross-checked against the file. Line numbers are best-effort and may drift; the label +
-key + testId are the durable identifiers.
+`DEFAULT_ROW_LAYOUT_CONFIG`, `DEFAULT_FRAME_TIMING_CONFIG`). The label + key + testId are the durable
+identifiers; line numbers are deliberately not recorded.
 
-> Choreography is now **unconditional** — there is no enable toggle. The old "Director" section (the
+> Choreography is **unconditional** — there is no enable toggle. The old "Director" section (the
 > `governorDirector*` / `governorMax*` controls) and the separate "Hero choreography (v4)" section
 > (`directorV4*`) are **gone**, along with the `RENAMED_KEY_MIGRATION` shim that once carried their
 > persisted values into the `pulk*` / `choreo*` namespace (removed in `b4e1aba` — stale configs now fall
-> back to defaults). Only the five PULK-phase controls below remain as UI. See
-> [RACE-ACTION.md](RACE-ACTION.md#8-configuration-knobs) for the live knobs.
+> back to defaults). See [RACE-ACTION.md](RACE-ACTION.md#8-configuration-knobs) for the live knobs.
 
 ---
 
@@ -28,7 +27,7 @@ Card Reset: `reset-frame-timing`. Backing config: `frameTimingConfig`.
 
 | Control | Config key | Shipped default |
 |---|---|---|
-| dt-Smoothing (EMA-Alpha) | `dtSmoothingAlpha` | (DEFAULT_FRAME_TIMING_CONFIG) |
+| dt-Smoothing (EMA-Alpha) | `dtSmoothingAlpha` | 0.7 |
 | Render Interpolation (checkbox) | `renderInterpolation` | true |
 
 Camera/render only — physics always runs fixed 16 ms steps, unaffected by this card.
@@ -41,18 +40,20 @@ Card has no card-level Reset. Backing config: `baseSpeedConfig` (range) + `raceD
 
 | Control | Config key | Shipped default |
 |---|---|---|
-| Min Speed | `min` (baseSpeedConfig) | DEFAULT_BASE_SPEED_CONFIG.min |
-| Max Speed | `max` (baseSpeedConfig) | DEFAULT_BASE_SPEED_CONFIG.max |
+| Min Speed | `min` (baseSpeedConfig) | 0.00096 |
+| Max Speed | `max` (baseSpeedConfig) | 0.00113 |
 
 **Sub-heading "Speed Re-Roll"** — Reset `reset-speed-reroll`:
 
 | Control | Config key | Shipped default |
 |---|---|---|
-| Variation Width (%) | `reRollVariationPercent` | (raceDynamicsConfig) |
-| Transition Smoothness (s) | `reRollTransitionDuration` | |
-| Trajectory Transition Duration (s) | `trajectoryTransitionDuration` | |
-| Re-Roll Frequency (÷ interval) | `reRollIntervalDivisor` | |
-| Last Roll Position (%) | `reRollLastPositionPercent` | |
+| Variation Width (%) | `reRollVariationPercent` | 75 |
+| Transition Smoothness (s) | `reRollTransitionDuration` | 3.0 |
+| Trajectory Transition Duration (s) | `trajectoryTransitionDuration` | 1.0 |
+| Re-Roll Frequency (÷ interval) | `reRollIntervalDivisor` | 10 |
+| Last Roll Position (%) | `reRollLastPositionPercent` | 95 |
+
+Also renders a read-only preview (`data-testid="reroll-preview"`).
 
 ### 3. Bonus — two sub-headings
 
@@ -79,12 +80,15 @@ changes."* Keep the warning. (Also renders read-only preview text: `race-plan-ti
 | Control | Config key | Shipped default |
 |---|---|---|
 | Enable phase-split bonuses (master checkbox) | `phaseSplitBonusEnabled` | true |
+| rowEnvSmooth (OUTCOME 0.60) (checkbox) | `enableRowEnvSmooth` | true |
 | Area bonus — EARLY | `areaBonusEarly` | 1.0 |
 | Area bonus — POST | `areaBonusPost` | 1.0 |
 | Row bonus — EARLY | `rowBonusEarly` | 1 |
 | Row bonus — POST | `rowBonusPost` | 1 |
 
 The master switch also gates the PULK-phase area/row bonuses, which live in the PULK Phase card (section 5).
+`enableRowEnvSmooth` eases the start-row speed step at the PULK→OUTCOME boundary over 1 s instead of
+stepping; it is NOT gated by the master switch and is not reset by `reset-phase-split`.
 
 ### 4. Start — Row Start layout
 
@@ -92,24 +96,43 @@ Card Reset: `reset-row-start`. Backing config: `rowLayoutConfig`. Summary text: 
 
 | Control | Config key | Shipped default |
 |---|---|---|
-| Row Gap Multiplier | `rowGapMultiplier` | (DEFAULT_ROW_LAYOUT_CONFIG) |
-| Speed Bonus Factor | `speedBonusFactor` | |
-| Max Capacity Factor | `maxCapacityFactor` | |
+| Row Gap Multiplier | `rowGapMultiplier` | 1.5 |
+| Speed Bonus Factor | `speedBonusFactor` | 1.0 |
+| Max Capacity Factor | `maxCapacityFactor` | 0.3 |
 
-### 5. PULK Phase — 5 rotation controls + a "PULK bonuses" sub-heading
+### 5. PULK Phase — card controls, gap-reroll block, and a "PULK bonuses" sub-heading
 
 The mid-race window `[0.25, PULK end]` where the lead rotation stages the front contest (always live).
 Backing config: `raceDynamicsConfig`.
 
-**Card-level controls** — Reset `reset-pulk`:
+**Card-level controls** — Reset `reset-pulk` (resets exactly these seven keys):
 
 | Control | Config key | Shipped default |
 |---|---|---|
-| PULK end / OUTCOME begins (0.25–0.55) | `choreoOutcomeStart` | 0.5 |
+| PULK end / OUTCOME begins (0.25–0.55) | `choreoOutcomeStart` | 0.6 |
 | Leader brake | `pulkLeaderBrake` | 0.1 |
 | Challenger boost (cap) | `pulkChallengerBoost` | 0.06 |
 | Ex-leader drop depth (lengths) | `pulkLeadRotationDropDepthLengths` | 8 |
 | Choreography intensity (0–1) | `choreoIntensity` | 0.6 |
+| B2-attacker count (0–5) | `b2AttackHeroes` | 3 |
+| Re-steer threshold (0.5–3.0) | `packReSteerThreshold` | 1.0 |
+
+`b2AttackHeroes` is SHIPPED ON at 3 (0 restores the pre-feature game). `packReSteerThreshold` is the
+spatial hysteresis for a RELEASED B2-attacker: how far past its band edge it may drift before the servo
+re-engages. The control's numeric range (0.25–0.55 in the PULK-end label) is the input widget's clamp;
+the validated config range is [0.25, 0.60].
+
+**Gap-cap re-roll** — the shipped cohesion mechanism (default ON since 2026-07-22, retuned 2026-07-23 to
+G = 0.75 / strength = 0.5). Turning the toggle OFF restores the pre-feature game byte-identically.
+Changes take effect on the next race (same as the B2-attacker count). See [SIM.md](SIM.md).
+
+| Control | Config key | Shipped default | testid |
+|---|---|---|---|
+| Gap-Reroll (eye-test) toggle | `gapRerollEnabled` | true | `gap-reroll-toggle` |
+| Gap-Reroll G (lengths) 0.5–4.0 | `gapRerollThresholdLengths` | 0.75 | — |
+| Gap-Reroll strength 0–1.5 | `gapRerollStrength` | 0.5 | — |
+| Gap-Reroll mode symmetric/down-only | `gapRerollMode` | 'symmetric' | `gap-reroll-mode` |
+| Gap-Reroll dev marker (rendering-only cyan ring) | `gapRerollDevMarker` | false | `gap-reroll-devmarker-toggle` |
 
 **Sub-heading "PULK bonuses"** — Reset `reset-pulk-bonuses`. These act only inside the PULK window; the
 area/row pair is gated by the Phase-Split master switch above:
@@ -119,18 +142,6 @@ area/row pair is gated by the Phase-Split master switch above:
 | Area bonus — PULK | `areaBonusPulk` | 0 |
 | Row bonus — PULK | `rowBonusPulk` | 0 |
 | Cohesion bias gain | `pulkBiasGain` | 2.0 |
-
-**Gap-cap re-roll (eye-test)** — added 2026-07-21, in the same Dynamics grid as the "Pack release" toggle.
-All default OFF → the shipped game is byte-identical (`gapRerollEnabled` false → the transform passes the
-draw through). Changes take effect on the next race (same as the B2-attacker count). See docs/SIM.md.
-
-| Control | Config key | Shipped default | testid |
-|---|---|---|---|
-| Gap-Reroll (eye-test) toggle | `gapRerollEnabled` | true | `gap-reroll-toggle` |
-| Gap-Reroll G (lengths) 0.5–4.0 | `gapRerollThresholdLengths` | 0.75 | — |
-| Gap-Reroll strength 0–1.5 | `gapRerollStrength` | 0.5 | — |
-| Gap-Reroll mode symmetric/down-only | `gapRerollMode` | 'symmetric' | `gap-reroll-mode` |
-| Gap-Reroll dev marker (rendering-only cyan ring) | `gapRerollDevMarker` | false | `gap-reroll-devmarker-toggle` |
 
 ---
 
@@ -158,6 +169,12 @@ surfaced by no control — pinned to their tuned defaults. They are intentional,
 | `choreoResolveB4` | 0.65 | B4 band-resolve checkpoint |
 | `choreoResolveB5` | 0.6 | B5 band-resolve checkpoint |
 | `choreoSuppressChaosBonusB1` | false | Stage-1 B1 chaos-bonus spoiler switch (default OFF) |
+| `contestWindowStart` | 0.8 | front-act measurement window start (read by the sim's front-battle observer) |
+| `b2AttackPeakRank` | 5 | attacker climb target |
+| `b2AttackFinalRank` | 7 | attacker fall target (shapes the fall slope under band-arrival) |
+| `b2AttackProgress` | {start: 0.4, end: 0.7} | attacker peak-timing jitter window |
+| `b2AttackResolveProgress` | 0.85 | attacker resolve checkpoint (hero-privilege, later than B2's 0.80) |
+| `b2AttackBandArrival` | true | release model: free on B2 re-entry (vs fixed-final) |
 
 ---
 
@@ -166,7 +183,20 @@ surfaced by no control — pinned to their tuned defaults. They are intentional,
 - The whole old **Director section** and all `governorDirector*` / `governorMax*` controls.
 - The separate **"Hero choreography (v4)"** section and all `directorV4*` keys.
 - Any choreography **enable toggle** — choreography is unconditional now.
+- The **"Pack release (eye-test)"** checkbox and its config key — removed in the dead-mechanisms cleanup
+  (2026-07-23). The mechanism it gated was measured, shelved, and then deleted. `packReSteerThreshold`
+  survives because the live B2-attacker release reads it, and its label/tooltip now say so.
+- The **B1 lead rotation** config family and the **universal band-arrival** key — sim-only, never had a
+  DevScreen control, removed entirely in the same cleanup.
+
+Deliberately not named here: the retired key names. Git history is the archive — `git show
+pre/dead-mechanisms-cleanup` has them, and repeating them in live docs is how a deleted mechanism gets
+half-resurrected.
 
 The `RENAMED_KEY_MIGRATION` shim that once carried persisted values under the old keys forward
 (`directorV4*` → `choreo*`, `governorDirector*` / `governorMax*` → `pulk*`) was **removed** (commit
 `b4e1aba`); a stale config holding any of those old keys now falls back to defaults rather than migrating.
+Removed keys are NOT rejected on load: `loadRaceDynamicsConfig()` merges stored over defaults and validates
+only known keys, so a persisted config still carrying a retired key stays VALID — the owner's other
+settings survive (no silent reset to defaults) and the retired key rides along inertly, because nothing
+reads it any more. Pinned by a test in `raceDynamicsConfig.test.js`.

@@ -138,7 +138,6 @@ const DynamicsTuningSection = forwardRef(function DynamicsTuningSection(_, ref) 
         DEFAULT_RACE_DYNAMICS_CONFIG.pulkLeadRotationDropDepthLengths,
       choreoIntensity: DEFAULT_RACE_DYNAMICS_CONFIG.choreoIntensity,
       b2AttackHeroes: DEFAULT_RACE_DYNAMICS_CONFIG.b2AttackHeroes,
-      packReleaseEnabled: DEFAULT_RACE_DYNAMICS_CONFIG.packReleaseEnabled,
       packReSteerThreshold: DEFAULT_RACE_DYNAMICS_CONFIG.packReSteerThreshold,
     }));
   }
@@ -990,11 +989,11 @@ const DynamicsTuningSection = forwardRef(function DynamicsTuningSection(_, ref) 
             },
             {
               key: 'packReSteerThreshold',
-              label: 'Pack re-steer threshold (0.5–3.0)',
+              label: 'Re-steer threshold (0.5–3.0)',
               min: 0.5,
               max: 3.0,
               step: 0.1,
-              tip: 'Pack-release ONLY (checkbox below): how far (ranks) a released pack racer may drift past its band edge before the servo re-engages (strictness 1) to steer it back. Integer bandError ⇒ 0.5 ≈ re-steer at ≥1 rank out, 1.5 ≈ ≥2 ranks. Larger = more freedom, more endgame leak. 1.0 = default.',
+              tip: 'How far (ranks) a RELEASED B2-attacker may drift past its band edge before the servo re-engages (strictness 1) to steer it back. Integer bandError ⇒ 0.5 ≈ re-steer at ≥1 rank out, 1.5 ≈ ≥2 ranks. Larger = more freedom, more endgame leak. 1.0 = default.',
             },
           ].map(({ key, label, min, max, step, tip }) => (
             <div className={s.formGroup} key={key}>
@@ -1020,21 +1019,6 @@ const DynamicsTuningSection = forwardRef(function DynamicsTuningSection(_, ref) 
               />
             </div>
           ))}
-          <div className={s.formGroup}>
-            <label
-              className={s.label}
-              style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}
-            >
-              <input
-                type="checkbox"
-                checked={dynamicsConfig.packReleaseEnabled ?? false}
-                onChange={(e) => setDynamics('packReleaseEnabled', e.target.checked)}
-                data-testid="pack-release-toggle"
-              />
-              Pack release (eye-test)
-              <InfoTooltip text="Pack-only strictness release: non-hero pack racers run FREE (strictness 0) inside their band, re-steered only when they drift past the threshold above. Sim: +15% top-5 action but BREAKS B2 band-reach on Luger Hill + Searound (endgame edge-leak, 92% of leaks after progress 0.90) — dominated by B2-attackers, kept for comparison. Default OFF (byte-identical)." />
-            </label>
-          </div>
           {/* ── Gap-cap re-roll bias (docs/CONCEPT-COHESION.md) — eye-test controls, default OFF ── */}
           <div className={s.formGroup}>
             <label

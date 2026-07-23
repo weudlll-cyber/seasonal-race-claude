@@ -738,9 +738,8 @@ export default function RaceScreen() {
           choreoResolveB4: dynamicsConfig.choreoResolveB4 ?? 0.65,
           choreoResolveB5: dynamicsConfig.choreoResolveB5 ?? 0.6,
           choreoOutcomeStart: dynamicsConfig.choreoOutcomeStart ?? 0.25,
-          // Pack-only strictness release (eye-test / shelved). Threaded so the DevScreen toggle reaches the
-          // plan. Fallbacks mirror DEFAULT_RACE_DYNAMICS_CONFIG. OFF → pack runs the 0.5 baseline (identical).
-          packReleaseEnabled: dynamicsConfig.packReleaseEnabled ?? false,
+          // Spatial re-steer threshold for a released B2-attacker. Threaded so the DevScreen control
+          // reaches the plan. Fallback mirrors DEFAULT_RACE_DYNAMICS_CONFIG.
           packReSteerThreshold: dynamicsConfig.packReSteerThreshold ?? 1.0,
           // B2-attacker "Attack & Fall" (band-arrival release). Threaded so the DevScreen count slider
           // actually reaches the plan. Fallbacks mirror DEFAULT_RACE_DYNAMICS_CONFIG. count 0 → no
@@ -751,7 +750,6 @@ export default function RaceScreen() {
           b2AttackProgress: dynamicsConfig.b2AttackProgress ?? { start: 0.4, end: 0.7 },
           b2AttackResolveProgress: dynamicsConfig.b2AttackResolveProgress ?? 0.85,
           b2AttackBandArrival: dynamicsConfig.b2AttackBandArrival ?? true,
-          universalBandArrival: dynamicsConfig.universalBandArrival ?? false,
           // Gap-cap re-roll bias (docs/CONCEPT-COHESION.md). Threshold passed ONLY when the owner enables
           // it → disabled ⇒ null ⇒ computeGapBiasedTarget() passes the draw through bit-exact (byte-identical).
           // reRollTransitionDuration feeds the window-end derivation (lastRollDeadline − transitionDur).

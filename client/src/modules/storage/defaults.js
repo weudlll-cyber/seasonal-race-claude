@@ -327,43 +327,16 @@ export const DEFAULT_RACE_DYNAMICS_CONFIG = {
   // Surfaced by the DevScreen "PULK end / OUTCOME begins" control.
   // 0.6 shipped 2026-07-17 (SWEEP 2: +51% PULK action vs 0.5, band-reach gate still held on 3/4 tracks).
   choreoOutcomeStart: 0.6,
-  // ── FRONT ACT window start — the front battle's OWN key (C1) ──────────────────────────────────
-  // The sustained-P1-battle observer (outcome-front-battle.mjs) and the carousel schedule BOTH read
-  // this. It was previously read off choreoResolveB2, which is *B2's* resolve checkpoint: tuning B2
-  // for a B2 reason silently moved the front-battle measurement window and invalidated every
-  // committed baseline. Initialised to the current choreoResolveB2 value, so today's baselines stay
-  // exactly comparable; from here the two are independent.
+  // ── FRONT ACT window start — the front battle's OWN key ───────────────────────────────────────
+  // The sustained-P1-battle observer (outcome-front-battle.mjs) measures over
+  // [contestWindowStart, first finish] and reads this. It was previously read off choreoResolveB2,
+  // which is *B2's* resolve checkpoint: tuning B2 for a B2 reason silently moved the front-battle
+  // measurement window and invalidated every committed baseline. Initialised to the then-current
+  // choreoResolveB2 value, so those baselines stay exactly comparable; the two are now independent.
   contestWindowStart: 0.8,
-  // ── B1 LEAD CAROUSEL (C1) — authored front handovers. DEFAULT OFF → byte-identical. ────────────
-  // Baton segments through the existing min-jerk curve machinery: per segment ONE participant is
-  // authored to rank 1 while the outgoing holder yields to the back of the rotation and the rest hold
-  // their slots. Rank 1 stops being nobody's target without becoming anybody's permanent property —
-  // the final order among B1 stays emergent from the natural run-out after choreoReleaseProgress.
-  carouselEnabled: false,
-  // Hard invariant: a 2-racer ping-pong produces lead CHANGES but only 2 distinct leaders, which
-  // cannot satisfy the classifier (distinctLeaders >= 3). Below this many feasible participants the
-  // carousel is not cast at all — a clean fallthrough to shipped behaviour, not a degenerate cast.
-  carouselMinParticipants: 3,
-  // Max rank swing per segment. The servo is PROPORTIONAL only within ~2 ranks of error
-  // (gain 2.0 / nActive 40 → error 2 hits maxMult 1.10 exactly); beyond that it is a bang-bang
-  // controller and the authored curve shape stops reaching the track. The rotation therefore spans
-  // ranks 1..(carouselAmplitudeRanks + 1), which is also why participant count is capped there.
-  carouselAmplitudeRanks: 2,
-  // Seeded jitter on segment timing + amplitude, as a fraction. Deterministic from the race seed;
-  // exists so a ~60%-duty carousel does not read as a metronome.
-  carouselJitterPct: 0.15,
-  // Role-biased scheduled dice (owner's Stufe 1; separately switchable, 0 = OFF). At a carousel
-  // participant's REGULAR scheduled re-roll the draw is tilted toward the fast end of the honest band
-  // for the current attacker and the slow end for the current yielder. Same fairness argument as the
-  // shipped gap-reroll: loaded dice inside the honest range, scheduled rolls only, cadence untouched.
-  carouselRoleBiasStrength: 0,
-  // ── Pack-only strictness release with spatial hysteresis (OUTCOME action lever; default OFF) ──────
-  // When ON, a NON-hero (pack) racer that is inside its target band has its servo strictness dropped to
-  // 0 so it roams freely (natural speed, no rank pinning); once it drifts more than packReSteerThreshold
-  // ranks past the band edge the strictness snaps to 1 (full pinning) and drags it back, releasing again
-  // only after it is fully inside the band. The release↔re-steer gap is the anti-flicker guard (no time
-  // cooldown). Heroes are untouched. OFF → byte-identical to the shipped servo. Read in racePlanner.js.
-  packReleaseEnabled: false,
+  // Spatial-hysteresis threshold for a RELEASED racer (read by the B2-attacker free phase below):
+  // how far (ranks) it may drift past its band edge before the servo re-engages at full pinning and
+  // steers it back. It releases again only after returning fully inside. Read in racePlanner.js.
   packReSteerThreshold: 1.0,
   // ── B2-attacker "Attack & Fall" (OUTCOME front-action lever; SHIPPED ON at count 3) ─────────────────
   // Cast N additional heroes from FRONT-post-chaos B2-finishers that climb to b2AttackPeakRank (mandatory
@@ -383,9 +356,6 @@ export const DEFAULT_RACE_DYNAMICS_CONFIG = {
   // fairness and is simpler (no finalRank knob), so it is the chosen model. Harmless when count=0
   // (no attackers → the servo branch never reads it), so the shipped default stays byte-identical.
   b2AttackBandArrival: true,
-  // Universal band-arrival (V1 experiment): free B1-heroes + normal pack racers (strictness 0) once inside
-  // their assigned band; re-steer the moment they leave. B2-attackers keep their own release. Default OFF.
-  universalBandArrival: false,
   // ── Gap-cap re-roll bias (docs/CONCEPT-COHESION.md) — "loaded dice within the honest range" ──
   // A racer that has opened a hole behind itself (arc gap > G to the racer behind) draws SLOWER at its
   // next scheduled re-roll; in symmetric mode a dropped racer (gap > G ahead) draws FASTER — always inside

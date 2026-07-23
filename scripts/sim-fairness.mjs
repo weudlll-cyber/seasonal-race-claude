@@ -99,7 +99,6 @@ import { maxLinkGapLengths, makeHeldOvertakeTracker, fullSpreadLengths, framesOv
 import { RUNAWAY_PARADE_DEFAULTS, leaderGapLengths, makeFormationTracker, SPEED_SOURCE_SAMPLES, speedProduct, speedSaturation } from './sim/observers/runaway-parade.mjs';
 import { makeLateContestTracker, makeReleaseRankTracker } from './sim/observers/release-contest.mjs';
 import { makeFrontBattleTracker } from './sim/observers/outcome-front-battle.mjs';
-import { makeCarouselTracker } from './sim/observers/carousel-telemetry.mjs';
 import { applyPulkLeadRotation, arcT, computeDirectorCeiling } from '../client/src/modules/raceGovernor.js';
 import { lenScaleFrom, arcLengths, meanDrawnBodyLen } from '../client/src/modules/raceLengths.js';
 
@@ -216,20 +215,12 @@ const CHOREO_RESOLVE_B3 = Number(argVal('choreoResolveB3', String(DEFAULT_RACE_D
 const CHOREO_RESOLVE_B4 = Number(argVal('choreoResolveB4', String(DEFAULT_RACE_DYNAMICS_CONFIG.choreoResolveB4)));
 const CHOREO_RESOLVE_B5 = Number(argVal('choreoResolveB5', String(DEFAULT_RACE_DYNAMICS_CONFIG.choreoResolveB5)));
 const CHOREO_OUTCOME_START = Number(argVal('choreoOutcomeStart', String(DEFAULT_RACE_DYNAMICS_CONFIG.choreoOutcomeStart)));
-// ── FRONT ACT window + B1 LEAD CAROUSEL (C1; SIM-FIRST — the browser is untouched this step) ──────
-// contestWindowStart is the front act's OWN key: the outcome-front-battle observer AND the carousel
-// schedule both read it, so the measurement window no longer rides on B2's resolve checkpoint. It
-// defaults to the shipped value (= today's choreoResolveB2), so every committed baseline stays
-// comparable. Carousel + role-bias default OFF → byte-identical (fingerprint-gated).
+// ── FRONT ACT window ──────────────────────────────────────────────────────────────────────────────
+// contestWindowStart is the front act's OWN key: the outcome-front-battle observer reads it, so the
+// measurement window no longer rides on B2's resolve checkpoint. It defaults to the shipped value
+// (= today's choreoResolveB2), so every committed baseline stays comparable.
 const CONTEST_WINDOW_START = Number(argVal('contestWindowStart', String(DEFAULT_RACE_DYNAMICS_CONFIG.contestWindowStart)));
-const CAROUSEL_ENABLED     = argVal('carouselEnabled', String(DEFAULT_RACE_DYNAMICS_CONFIG.carouselEnabled)) === 'true';
-const CAROUSEL_MIN_PARTICIPANTS = Number(argVal('carouselMinParticipants', String(DEFAULT_RACE_DYNAMICS_CONFIG.carouselMinParticipants)));
-const CAROUSEL_AMPLITUDE_RANKS  = Number(argVal('carouselAmplitudeRanks', String(DEFAULT_RACE_DYNAMICS_CONFIG.carouselAmplitudeRanks)));
-const CAROUSEL_JITTER_PCT       = Number(argVal('carouselJitterPct', String(DEFAULT_RACE_DYNAMICS_CONFIG.carouselJitterPct)));
-const CAROUSEL_ROLE_BIAS_STRENGTH = Number(argVal('carouselRoleBiasStrength', String(DEFAULT_RACE_DYNAMICS_CONFIG.carouselRoleBiasStrength)));
-// Pack-only strictness release with spatial hysteresis (parity with racePlanner/defaults). OFF →
-// byte-identical to the shipped servo (proven via fingerprint-default). Threaded into createRacePlan.
-const PACK_RELEASE_ENABLED = argVal('pack-release', String(DEFAULT_RACE_DYNAMICS_CONFIG.packReleaseEnabled)) === 'true';
+// Spatial re-steer threshold for a released B2-attacker (parity with racePlanner/defaults).
 const PACK_RESTEER_THRESHOLD = Number(argVal('pack-resteer-threshold', String(DEFAULT_RACE_DYNAMICS_CONFIG.packReSteerThreshold)));
 // B2-attacker "Attack & Fall" (parity with racePlanner/heroCurveGenerator/defaults). OFF (heroes 0) →
 // byte-identical (proven via fingerprint-default). Threaded into createRacePlan → the hero generator.
@@ -240,7 +231,6 @@ const B2_ATTACK_PROGRESS_START = Number(argVal('b2-attack-progress-start', Strin
 const B2_ATTACK_PROGRESS_END = Number(argVal('b2-attack-progress-end', String(DEFAULT_RACE_DYNAMICS_CONFIG.b2AttackProgress.end)));
 const B2_ATTACK_RESOLVE_PROGRESS = Number(argVal('b2-attack-resolve-progress', String(DEFAULT_RACE_DYNAMICS_CONFIG.b2AttackResolveProgress)));
 const B2_ATTACK_BAND_ARRIVAL = argVal('b2-attack-band-arrival', String(DEFAULT_RACE_DYNAMICS_CONFIG.b2AttackBandArrival)) === 'true';
-const UNIVERSAL_BAND_ARRIVAL = argVal('universal-band-arrival', String(DEFAULT_RACE_DYNAMICS_CONFIG.universalBandArrival)) === 'true';
 // ── Front distance leash (SIM-ONLY; no DevScreen/defaults entry — activated only here) ──────────────
 // --frontLeashMaxLengths engages the leash (gap-space brake on the runaway leader); --frontLeashGainPct
 // sets the brake per excess length (default 3). Absent --frontLeashMaxLengths → FRONT_LEASH off → the
@@ -1064,13 +1054,9 @@ export function runSingleRace({
       lateContest:         makeLateContestTracker(RP_WINDOW_START),
       releaseRanks:        makeReleaseRankTracker(CHOREO_RELEASE_PROGRESS),
       // ── Sustained P1 battle (read-only; definitions in sim/observers/outcome-front-battle.mjs) ──
-      // Window starts at the LIVE contestWindowStart — the front act's own key (C1), no longer
-      // B2's resolve checkpoint. No hardcoded progress constant; the carousel reads the same value.
+      // Window starts at the LIVE contestWindowStart — the front act's own key, no longer B2's
+      // resolve checkpoint. No hardcoded progress constant.
       frontBattle:         makeFrontBattleTracker({ windowStart: CONTEST_WINDOW_START }),
-      // C1 carousel telemetry. Allocated LAZILY: the schedule only exists after the generator has
-      // run at the choreo boundary, so it cannot be built here. Stays null when the carousel is off
-      // or was not cast — which is itself the cast-rate measurement.
-      carousel:            null,
     } : null;
     // ── SPEED-SOURCE per-race state (read-only; only allocated when --speed-source) ──
     // samples[prog] = [{ rank, index, effSpeed, product, factors…, saturation…, gapAhead, finishClamp }]
@@ -1127,7 +1113,7 @@ export function runSingleRace({
     let rlStartSnap = null, rlEndSnap = null;
 
     // ── OUTCOME rank-change observer (UNCONDITIONAL; read-only) ─────────────────
-    // The primary signal for the pack-release experiment: how much reordering happens in the OUTCOME
+    // The OUTCOME reordering signal: how much reordering happens in the OUTCOME
     // phase. Per OUTCOME frame we count adjacent rank-order swaps vs the previous OUTCOME frame (same
     // reshuffle-volume definition as amSwaps, but OUTCOME-gated). ocTotalSwaps = all adjacent swaps;
     // ocTop5Swaps = swaps where BOTH racers of the pair are currently in the top 5 (front action).
@@ -1181,33 +1167,15 @@ export function runSingleRace({
           // Gap-cap re-roll bias (SIM-ONLY; scheduled rolls only). Called ONLY when the flag is on, so
           // an off run never invokes the transform → byte-identical. Passes the length-scale context
           // (govLenScale/isOpen); the shared method computes the arc gaps + window internally.
-          // ── ROLE-BIASED DICE (C1 Mechanism B) — evaluated FIRST, and it WINS. ──────────────────
-          // PRECEDENCE (explicit, per spec — no silent double-tilting): when a racer is a carousel
-          // participant with an authored role at this instant, the role tilt applies and the
-          // gap-reroll is SKIPPED for that racer at that roll. The two are directly opposed — an
-          // attacker that has just closed on the leader opens a hole BEHIND itself, which is the
-          // gap-reroll's down-tilt trigger, so the generic corrective would brake exactly the racer
-          // the carousel is authoring forward. Explicit intent beats generic correction; every
-          // non-participant, and every participant during a dwell, still gets the ordinary gap-reroll.
-          const roleBiased = racePlanController
-            ? racePlanController.computeRoleBiasedTarget(
+          const gapBiased = (GAP_REROLL && racePlanController)
+            ? racePlanController.computeGapBiasedTarget(
                 r.index, biasedTarget,
                 BASE_SPEED_MIN / BASE_SPEED_MEAN,
                 BASE_SPEED_MAX / BASE_SPEED_MEAN,
-                raceProgress
+                racers, raceTs, raceProgress, govLenScale, isOpen,
+                lastRollDeadline // schedule's own realized-duration deadline (same basis as raceTs)
               )
-            : { value: biasedTarget, biased: false };
-          const gapBiased = roleBiased.biased
-            ? roleBiased.value
-            : (GAP_REROLL && racePlanController)
-              ? racePlanController.computeGapBiasedTarget(
-                  r.index, biasedTarget,
-                  BASE_SPEED_MIN / BASE_SPEED_MEAN,
-                  BASE_SPEED_MAX / BASE_SPEED_MEAN,
-                  racers, raceTs, raceProgress, govLenScale, isOpen,
-                  lastRollDeadline // schedule's own realized-duration deadline (same basis as raceTs)
-                )
-              : biasedTarget;
+            : biasedTarget;
           const newTarget   = Math.max(
             BASE_SPEED_MIN / BASE_SPEED_MEAN,
             Math.min(BASE_SPEED_MAX / BASE_SPEED_MEAN, gapBiased)
@@ -2131,18 +2099,6 @@ export function runSingleRace({
           // other observer here uses (arcT x govLenScale) — one shared definition, no duplicate arc
           // maths inside the observer.
           rp.frontBattle.observe(racers, raceProgress, raceTs, (aT, bT) => arcT(aT, bT, isOpen) * govLenScale);
-          // C1: authored-vs-completed handovers. The dwell threshold is the SAME derived value the
-          // schedule was built from (the servo slew), converted back to seconds here.
-          if (rp.carousel === null && racePlanController) {
-            const cp = racePlanController.getCarouselPlan();
-            if (cp) {
-              rp.carousel = makeCarouselTracker({
-                segments: cp.segments, order: cp.order,
-                dwellSec: DYNAMICS_OVERRIDES.trajectoryTransitionDuration,
-              });
-            }
-          }
-          if (rp.carousel) rp.carousel.observe(racers, raceProgress, raceTs);
         }
         // (1) One-shot at windowStart: the frontmost LIVE racer's identity + its lead over P2 (lengths).
         if (rp.leaderIdxAt090 === null && raceProgress >= RP_WINDOW_START) {
@@ -2296,7 +2252,7 @@ export function runSingleRace({
       // Δ5s oscillation: max trajectoryMult swing over any 5s window during OUTCOME
       tmDelta5sMax,
       tmOscillatingCount,
-      // OUTCOME rank-change (pack-release experiment primary signal); per-race totals over OUTCOME.
+      // OUTCOME rank-change (the OUTCOME reordering signal); per-race totals over OUTCOME.
       outcomeTop5Swaps: ocTop5Swaps,
       outcomeTotalSwaps: ocTotalSwaps,
       outcomeFrames: ocFrames,
@@ -2493,14 +2449,6 @@ export function runSingleRace({
         // file alone. classifyFrontBattle() turns these into the REAL P1 ACTION boolean downstream.
         contestWindowStart:  CONTEST_WINDOW_START,
         frontBattle:         rp.frontBattle.result(),
-        // ── C1 carousel telemetry (null-safe when the feature is off) ──────────────────────────
-        // cast/reason/rejected answer "was it cast, and if not why"; handovers answer "did the servo
-        // deliver what was authored"; saturation is the naturalness number the sweep kills on (>50%).
-        carousel: racePlanController ? {
-          diag:       racePlanController.getCarouselDiag(),
-          handovers:  rp.carousel ? rp.carousel.result() : null,
-          telemetry:  racePlanController.getCarouselTelemetry(),
-        } : null,
       };
     }
 
@@ -3110,7 +3058,6 @@ if (isMain) {
               choreoResolveB4:     CHOREO_RESOLVE_B4,
               choreoResolveB5:     CHOREO_RESOLVE_B5,
               choreoOutcomeStart:  CHOREO_OUTCOME_START,
-              packReleaseEnabled:  PACK_RELEASE_ENABLED,
               packReSteerThreshold: PACK_RESTEER_THRESHOLD,
               b2AttackHeroes:      B2_ATTACK_HEROES,
               b2AttackPeakRank:    B2_ATTACK_PEAK_RANK,
@@ -3118,7 +3065,6 @@ if (isMain) {
               b2AttackProgress:    { start: B2_ATTACK_PROGRESS_START, end: B2_ATTACK_PROGRESS_END },
               b2AttackResolveProgress: B2_ATTACK_RESOLVE_PROGRESS,
               b2AttackBandArrival: B2_ATTACK_BAND_ARRIVAL,
-              universalBandArrival: UNIVERSAL_BAND_ARRIVAL,
               // Front distance leash (SIM-ONLY): null when the flag is absent → controller leash off.
               frontLeashMaxLengths: FRONT_LEASH_MAX_LEN,
               frontLeashGainPct:    FRONT_LEASH_GAIN_PCT,
@@ -3130,15 +3076,8 @@ if (isMain) {
               // Window END is derived from the harness's own lastRollDeadline (passed per-frame to the
               // transform); only the transition duration is needed in the plan.
               reRollTransitionDuration:  DYNAMICS_OVERRIDES.reRollTransitionDuration,
-              // Front act window + carousel (C1). trajectoryTransitionDuration is threaded so the
-              // plan can DERIVE the minimum authored dwell from the servo's own slew.
+              // Front act window (the sustained-P1-battle measurement window's own key).
               contestWindowStart:        CONTEST_WINDOW_START,
-              carouselEnabled:           CAROUSEL_ENABLED,
-              carouselMinParticipants:   CAROUSEL_MIN_PARTICIPANTS,
-              carouselAmplitudeRanks:    CAROUSEL_AMPLITUDE_RANKS,
-              carouselJitterPct:         CAROUSEL_JITTER_PCT,
-              carouselRoleBiasStrength:  CAROUSEL_ROLE_BIAS_STRENGTH,
-              trajectoryTransitionDuration: DYNAMICS_OVERRIDES.trajectoryTransitionDuration,
             }, seed);
             racePlanController = createTrajectoryController(plan);
             raceSollRankMap = plan._racerTargetRank;
@@ -3261,7 +3200,7 @@ if (isMain) {
           ? mixingQuotas.reduce((s, v) => s + v, 0) / mixingQuotas.length
           : null;
         // Aggregate naturalness metrics over all races in this combo
-        // Pack-release OUTCOME rank-change: keep mean AND std across races (the spec asks for both).
+        // OUTCOME rank-change: keep mean AND std across races (the spec asks for both).
         const _ocTop5  = raceResults.map((r) => r.naturalness?.outcomeTop5Swaps ?? 0);
         const _ocTotal = raceResults.map((r) => r.naturalness?.outcomeTotalSwaps ?? 0);
         const _amean = (a) => (a.length ? a.reduce((s, v) => s + v, 0) / a.length : 0);
@@ -3285,7 +3224,7 @@ if (isMain) {
           racersBlockedInOutcome: raceResults.reduce((s, r) => s + (r.naturalness?.racersBlockedInOutcome ?? 0), 0) / raceResults.length,
           tmDelta5sMax:           Math.max(...raceResults.map((r) => r.naturalness?.tmDelta5sMax ?? 0)),
           tmOscillatingCount:     raceResults.reduce((s, r) => s + (r.naturalness?.tmOscillatingCount ?? 0), 0) / raceResults.length,
-          // Pack-release experiment: OUTCOME rank-change (mean+std) + servo release diagnostics.
+          // OUTCOME rank-change (mean+std) + servo release diagnostics.
           outcomeTop5SwapsMean:   _amean(_ocTop5),
           outcomeTop5SwapsStd:    _astd(_ocTop5),
           outcomeTotalSwapsMean:  _amean(_ocTotal),

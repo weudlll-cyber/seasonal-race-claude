@@ -65,13 +65,8 @@ describe('DEFAULT_RACE_DYNAMICS_CONFIG', () => {
       choreoResolveB4: 0.65,
       choreoResolveB5: 0.6,
       choreoOutcomeStart: 0.6, // 0.6 shipped 2026-07-17 (SWEEP 2: later PULK end; valid range widened to [0.25,0.60])
-      // Front act window + B1 lead carousel (C1). All OFF/neutral by default.
+      // Front act window (the sustained-P1-battle measurement window's own key).
       contestWindowStart: 0.8, // initialised to the shipped choreoResolveB2 so baselines stay comparable
-      carouselEnabled: false,
-      carouselMinParticipants: 3,
-      carouselAmplitudeRanks: 2,
-      carouselJitterPct: 0.15,
-      carouselRoleBiasStrength: 0, // 0 = role-biased dice OFF
       pulkFrontPool: 8,
       phaseSplitBonusEnabled: true,
       areaBonusEarly: 1.0,
@@ -92,8 +87,7 @@ describe('DEFAULT_RACE_DYNAMICS_CONFIG', () => {
       pulkLeadRotationOutsiderMaxReachLengths: 15,
       pulkLeadRotationDeadlockTimeoutMs: 12000,
       pulkLeadRotationMinHoldMs: 750,
-      // Pack-only strictness release (OUTCOME action lever; default OFF, sim-only experiment).
-      packReleaseEnabled: false,
+      // Spatial re-steer threshold for a released B2-attacker.
       packReSteerThreshold: 1.0,
       // B2-attacker "Attack & Fall" (band-arrival release). SHIPPED ON at count=3 (validated winner).
       b2AttackHeroes: 3,
@@ -102,7 +96,6 @@ describe('DEFAULT_RACE_DYNAMICS_CONFIG', () => {
       b2AttackProgress: { start: 0.4, end: 0.7 },
       b2AttackResolveProgress: 0.85,
       b2AttackBandArrival: true,
-      universalBandArrival: false,
       // Gap-cap re-roll bias — OFF is byte-identical; RETUNED 2026-07-23 to symmetric/0.75/0.5.
       gapRerollEnabled: true, // SHIPPED ON 2026-07-22; retuned 2026-07-23 (symmetric, G=0.75, s=0.5)
       gapRerollThresholdLengths: 0.75,
@@ -149,13 +142,7 @@ describe('DEFAULT_RACE_DYNAMICS_CONFIG', () => {
 
   it('all numeric defaults are positive; PULK-phase bonuses default 0 (off during PULK)', () => {
     // The winning phase-split turns the area/row bonuses OFF during the PULK window (0 is valid).
-    // carouselRoleBiasStrength is the role-biased dice OFF switch — 0 is its shipped, valid value.
-    const offAtZero = new Set([
-      'areaBonusPulk',
-      'rowBonusPulk',
-      'pulkBoostHeadroom',
-      'carouselRoleBiasStrength',
-    ]);
+    const offAtZero = new Set(['areaBonusPulk', 'rowBonusPulk', 'pulkBoostHeadroom']);
     for (const [key, val] of Object.entries(DEFAULT_RACE_DYNAMICS_CONFIG)) {
       if (typeof val !== 'number') continue;
       if (offAtZero.has(key)) expect(val).toBeGreaterThanOrEqual(0);
@@ -175,6 +162,23 @@ describe('loadRaceDynamicsConfig', () => {
     const cfg = loadRaceDynamicsConfig();
     expect(cfg.reRollVariationPercent).toBe(50);
     expect(cfg.reRollTransitionDuration).toBe(3.0);
+  });
+
+  it('a persisted config still carrying removed keys stays VALID; the keys are inert leftovers', () => {
+    // Dead-mechanisms cleanup: validation has no unknown-key rejection, so a stale blob written
+    // before a removal keeps its own settings (no silent reset to defaults) and simply carries the
+    // retired keys along — nothing reads them any more. Deliberately uses placeholder key names:
+    // the point is that ANY unknown key is inert, and naming retired keys here would re-seed them
+    // into the repo text (see docs/DEVSCREEN-INVENTORY.md, REMOVED section).
+    storageGet.mockReturnValue({
+      ...DEFAULT_RACE_DYNAMICS_CONFIG,
+      choreoIntensity: 0.42,
+      someRetiredBooleanFlag: true,
+      someRetiredNumericKey: 1,
+    });
+    const cfg = loadRaceDynamicsConfig();
+    expect(cfg.choreoIntensity).toBe(0.42); // the owner's real settings survive
+    expect(cfg).not.toEqual(DEFAULT_RACE_DYNAMICS_CONFIG); // i.e. it did NOT fall back
   });
 
   it('returns defaults when stored value is not an object', () => {
@@ -248,8 +252,8 @@ describe('loadRaceDynamicsConfig', () => {
   });
 
   it('returns defaults when contestWindowStart sits outside the act it measures', () => {
-    // Must be after OUTCOME begins and strictly before the release, else the window is empty or
-    // spans a phase the carousel cannot act in.
+    // Must be after OUTCOME begins and strictly before the release, else the measurement window is
+    // empty or spans a phase it was never meant to cover.
     for (const bad of [0.5, 0.6, 0.97, 0.99]) {
       storageGet.mockReturnValue({ ...DEFAULT_RACE_DYNAMICS_CONFIG, contestWindowStart: bad });
       expect(loadRaceDynamicsConfig()).toEqual(DEFAULT_RACE_DYNAMICS_CONFIG);
@@ -259,21 +263,6 @@ describe('loadRaceDynamicsConfig', () => {
   it('accepts a contestWindowStart inside the act', () => {
     storageGet.mockReturnValue({ ...DEFAULT_RACE_DYNAMICS_CONFIG, contestWindowStart: 0.7 });
     expect(loadRaceDynamicsConfig().contestWindowStart).toBe(0.7);
-  });
-
-  it('returns defaults on invalid carousel config', () => {
-    const bad = [
-      { carouselEnabled: 'yes' },
-      { carouselMinParticipants: 2 }, // a 2-racer ping-pong can never pass the classifier
-      { carouselAmplitudeRanks: 0 },
-      { carouselJitterPct: -0.1 },
-      { carouselJitterPct: 1.5 },
-      { carouselRoleBiasStrength: -1 },
-    ];
-    for (const over of bad) {
-      storageGet.mockReturnValue({ ...DEFAULT_RACE_DYNAMICS_CONFIG, ...over });
-      expect(loadRaceDynamicsConfig()).toEqual(DEFAULT_RACE_DYNAMICS_CONFIG);
-    }
   });
 
   it('returns defaults when choreoOutcomeStart is out of [0.25, 0.60]', () => {

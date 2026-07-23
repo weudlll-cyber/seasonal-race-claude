@@ -18,7 +18,7 @@
 //     out after being released". This metric isolates the second: of the racers who were INSIDE
 //     their assigned band AT the release point, what share finished OUTSIDE it. Releasing the
 //     field earlier gives more free-run runway for a P1 fight — and equally more runway to drift
-//     off an already-correct position. That is exactly how the pack-release experiment failed
+//     off an already-correct position. That is exactly how the pack strictness-release experiment failed
 //     (endgame drift while endpoint reach still looked acceptable), so it is measured up front
 //     rather than inferred afterwards.
 // ============================================================

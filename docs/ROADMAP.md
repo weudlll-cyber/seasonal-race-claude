@@ -560,8 +560,9 @@ controls + pinned internals (Stage 5b), not on the removed governor knobs.
   in cleanup step 2 — recoverable at commit `c441e7c~1` (git history). Historical entry left as written.)*
 - **Principle proven — action lives in ORCHESTRATION, not liberation.** Steering racers along authored
   curves CREATES top-5 churn; freeing them (strictness 0 inside band) SETTLES the field and reduces
-  action. Validated 3 ways: B2-attackers +21% (scripted); the shelved `packReleaseEnabled` breaks B2
-  band-reach via an endgame edge-leak (free); the shelved `universalBandArrival` −6% action (free).
+  action. Validated 3 ways: B2-attackers +21% (scripted); the pack strictness release breaks B2
+  band-reach via an endgame edge-leak (free); universal band-arrival −6% action (free). Both losing
+  mechanisms were removed on 2026-07-23 (dead-mechanisms cleanup); the evidence stands.
   **Future front-action features should AUTHOR scenarios (curves/casting), not liberate constraints
   (release the servo).** (This also resolves the older "Paused: no hero steered to rank 1" note above —
   B2-attackers author front-of-field drama by casting toward rank ~5, still no steered rank-1 winner.)

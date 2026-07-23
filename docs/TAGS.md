@@ -66,6 +66,14 @@ that phase's `*-complete` endpoint when it closes (incremental history then live
   owner eye-approved on the served bundle.
 - **Collapse plan:** fold into the gap-reroll phase's `*-complete` endpoint when the retune ship lands.
 
+### Dead-mechanisms cleanup (open)
+- `pre/dead-mechanisms-cleanup` (`0555f9d`) — master immediately before the dead-mechanisms cleanup ship
+  (removal of the B1 lead rotation + role-biased dice, the pack strictness release, universal
+  band-arrival, and the unread start-row grouping). **This tag is the archive** for every deleted
+  mechanism: the docs deliberately no longer name the retired config keys, so `git show` on this tag is
+  how the code and key names are recovered.
+- **Collapse plan:** fold into the cleanup phase's `*-complete` endpoint when the cleanup arc closes.
+
 ### Cleanup arc — COLLAPSED (2026-07-20)
 The four `pre/cleanup-step1..4` scaffolding tags were **collapsed onto `v-cleanup-complete`** and deleted
 (local + origin) at the end of cleanup step 5. Permanent recovery is by commit hash, which never expires:
