@@ -101,6 +101,7 @@ import { makeLateContestTracker, makeReleaseRankTracker } from './sim/observers/
 import { makeFrontBattleTracker } from './sim/observers/outcome-front-battle.mjs';
 import { makeCarouselTracker } from './sim/observers/carousel-telemetry.mjs';
 import { makePhysicsTaxTracker } from './sim/observers/physics-tax.mjs';
+import { makeEscapeEpisodeTracker } from './sim/observers/escape-episodes.mjs';
 import { createComposer, deliveryPrecheck } from '../client/src/modules/greenfieldComposer.js';
 import { applyPulkLeadRotation, arcT, computeDirectorCeiling } from '../client/src/modules/raceGovernor.js';
 import { lenScaleFrom, arcLengths, meanDrawnBodyLen } from '../client/src/modules/raceLengths.js';
@@ -711,6 +712,20 @@ export function runSingleRace({
     const rollCount        = Math.max(2, Math.floor(realizedDurationSec / dynamicsConfig.reRollIntervalDivisor));
     const rollInterval     = ((dynamicsConfig.reRollLastPositionPercent / 100) * realizedDurationSec * 1000) / rollCount;
     const lastRollDeadline = realizedDurationSec * 1000 * (dynamicsConfig.reRollLastPositionPercent / 100);
+    // Episode-level view (state machine + definitions in sim/observers/escape-episodes.mjs).
+    // Declared HERE, immediately before its assignment, because the assignment needs
+    // lastRollDeadline (just above) — declaring it further down would put this line in the
+    // temporal dead zone and throw.
+    let escapeEpisodes = null;
+    // SCREEN escape-episode tracker: allocated here because it needs lastRollDeadline. windowEndMs
+    // mirrors the transform's own cutoff term-for-term (racePlanner computeGapBiasedTarget), so
+    // "no correctable roll ahead" means exactly what the transform means by it.
+    if (ESCAPE_LATENCY && GAP_REROLL_THRESH_LEN != null) {
+      escapeEpisodes = makeEscapeEpisodeTracker({
+        G: GAP_REROLL_THRESH_LEN,
+        windowEndMs: lastRollDeadline - dynamicsConfig.reRollTransitionDuration * 1000,
+      });
+    }
 
     // Init racers
     const racers = Array.from({ length: nRacers }, (_, i) => {
@@ -1298,6 +1313,20 @@ export function runSingleRace({
         const downs = racePlanController.getGapLeaderDownCount();
         if (escapeDepthLen === null && downs > escapePrevLeaderDowns) escapeDepthLen = escapeRunningMaxLen;
         escapePrevLeaderDowns = downs;
+        // Episode view: needs the CURRENT leader's own next scheduled roll, since "were there dice
+        // left" is a property of that racer, not of the field.
+        //
+        // WINDOW ENDS AT THE FIRST FINISH. After the leader crosses, racers drop out of the live set
+        // one by one and the "leader gap" churns violently — that produced a burst of spurious
+        // sub-second episodes pinned at raceProgress 1.0, every one of them necessarily uncorrected
+        // and out-of-rolls. Counting those would manufacture exactly the structural signal this
+        // analysis is meant to test. Same convention the front-battle observer already uses.
+        if (escapeEpisodes && finishedCount === 0) {
+          const live = racers.filter((r) => !r.finished).sort((a, b) => (b.t - a.t) || (a.index - b.index));
+          const ldr = live[0] ?? null;
+          escapeEpisodes.observe(gLen, raceProgress, raceTs, ldr ? ldr.index : null,
+            ldr ? ldr.nextRollTime : null, downs);
+        }
       }
 
       // ── Controller-Pass: write trajectoryMultTarget (Race Plan only) ────────
@@ -2620,12 +2649,15 @@ export function runSingleRace({
     // max rather than a pre-correction depth — reported explicitly so the two cases are never mixed.
     if (ESCAPE_LATENCY && racePlanController) {
       const evs = racePlanController.getGapLeaderDownEvents();
+      if (escapeEpisodes) escapeEpisodes.finish(raceProgress, raceTs, racePlanController.getGapLeaderDownCount());
       results.escapeLatency = {
         escapeDepthLen: escapeDepthLen !== null ? +escapeDepthLen.toFixed(4) : +escapeRunningMaxLen.toFixed(4),
         escapeDepthCapped: escapeDepthLen !== null,
         maxLeaderGapLen: +escapeRunningMaxLen.toFixed(4),
         leaderDownCount: evs.length,
         events: evs.map((e) => ({ p: +e.p.toFixed(4), gapLen: +e.gapLen.toFixed(4), frac: +e.frac.toFixed(4), delta: +e.delta.toFixed(6) })),
+        // Episode view (definitions in sim/observers/escape-episodes.mjs).
+        ...(escapeEpisodes ? escapeEpisodes.result() : {}),
       };
     }
 
