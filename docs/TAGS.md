@@ -56,6 +56,11 @@ that phase's `*-complete` endpoint when it closes (incremental history then live
 - **Collapse plan:** fold both into the runaway phase's `*-complete` endpoint when the Runaway phase
   (Distance Leash + Late Challenger, see BACKLOG.md) closes.
 
+### Gap-reroll ship (open)
+- `backup/gapreroll-shipped-1594f39` (`1594f39`) — shipped master state before the G/strength retune ship
+  (gap-reroll default-ON at `5ae3b1f`, plus the eye-test-seeds doc). Sim-verified and owner eye-approved.
+- **Collapse plan:** fold into the gap-reroll phase's `*-complete` endpoint when the retune ship lands.
+
 ### Cleanup arc — COLLAPSED (2026-07-20)
 The four `pre/cleanup-step1..4` scaffolding tags were **collapsed onto `v-cleanup-complete`** and deleted
 (local + origin) at the end of cleanup step 5. Permanent recovery is by commit hash, which never expires:
