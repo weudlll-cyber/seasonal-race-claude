@@ -175,16 +175,98 @@ The eye-check will most likely confirm the metric: smooth, legible, fair-looking
 overtaking. That is the honest state of the prototype and the thing the owner most needs to see before
 committing to or discarding the direction.
 
-### 6. Hygiene
+### P7 (stretch) — duration scaling on the best composer (V-PLAN, N=25)
 
-*(finalised at close — see HYGIENE section below)*
+| duration | band delivery | leadChange | runaway |
+|---|---|---|---|
+| 30 s | 65.5% | 0.09 | 3.0% |
+| 60 s | 69.7% | 0.15 | 5.0% |
+| 120 s | 72.1% | 0.08 | 8.0% |
+| 300 s | **73.5%** | 0.12 | **14.0%** |
+
+Three things, and none of them rescues the design:
+
+- **Delivery improves with runway but PLATEAUS below the 80% mark** — 65.5% → 73.5% and flattening. It
+  never reaches the ~90%+ that P1's *arithmetic* predicted for the reduced band at 300 s. The gap is
+  the σ=0.48 reserve itself: holding back half the band compresses 40 racers' mean speeds into a very
+  narrow spread, so adjacent-tier separation is tiny and live physics noise reshuffles racers across
+  tier edges no matter how much runway there is. The limit is the *band budget*, not the *time*.
+- **Action does not respond to duration at all** — leadChange stays ~0.1 at every length. This confirms
+  the blocker is structural (the monotone mean→rank map), not a runway shortage. You cannot buy a lead
+  change with more time when the schedule forbids one.
+- **Runaway gets monotonically WORSE with duration (3% → 14%)** — a longer race lets a high-mean racer
+  build an unchallengeable lead, exactly the failure the current servo exists to suppress. So "just run
+  longer races" trades a little delivery for a lot more runaway and zero action.
+
+**P7 verdict: longer races are not a way out.** The design's two failures (sub-80% delivery, zero
+action) are properties of the σ-limited band budget and the mean→rank map, not of race length.
+
+Data: `reports/greenfield/p7/`.
+
+### 6. Hygiene — see the HYGIENE section below.
 
 ### 7. Wall-clock per phase, and what was skipped and why
 
-*(finalised at close)*
+| phase | wall-clock | notes |
+|---|---|---|
+| P0 physics-tax | **~59 min** | N=100 × 4 tracks × 60 s; closed tracks (searound/dirt-oval) dominate |
+| P1 inversion audit | **~23 min** | arithmetic is instant; the cost is the density measurement (N=15 × 4 tracks × 4 durations, the 300 s runs dominate) |
+| P2 A8 arm | **~43 min** | 3 arms × 4 tracks × N=100 × 60 s, paired |
+| P4/P5/P6 sweeps | **~10 min total** | N=50 × 4 tracks × 60 s each, run sequentially (~3–4 min each) |
+| P7 duration scaling | *pending* | V-PLAN × 30/120/300 s × N=25 |
+
+**Nothing in P0–P6 was skipped.** The promotion rule (re-run a composer at N=100 if it meets band
+delivery ≥ baseline AND action ≥ matched baselines) **never triggered** — no composer came close to the
+action bar, so none was promoted to N=100; this was the rule working as intended, not a skip. P7 is the
+spec's explicit stretch and is running because the night had room.
+
+One reporting limitation, disclosed: P2's arms were run at `contestWindowStart=0.62`, so its "0.80"
+column duplicates the 0.62 number rather than being an independent A1-window measurement (the composer
+sweeps, at the default 0.80, capture both windows correctly).
 
 ---
 
 ## HYGIENE
 
-*(finalised at close)*
+**Branch:** `pre/greenfield-proto`, five commits ahead of master `5ae3b1f`:
+`setup → P0+P3 → P1 → P2 → P4/P5/P6` (plus this report's final commit).
+
+**Tags created:** none. (Per tonight's ref-collision lesson, no tag of the branch name was created.)
+
+**Untracked files remaining:** zero at every commit boundary (verified `git status --short` clean).
+All temporary sim output lives under `client/tmp/` (git-ignored) and the two scratch runner scripts
+live in the session scratchpad **outside the repo** — nothing scratch survives in the working tree.
+
+**Shipped-default fingerprint:** `efd0f4ad8eca08fa`, unchanged from master and re-verified after the
+composer wiring landed. Every new capability (`--physics-tax`, `--composer`, the second front-battle
+tracker) is additive and flag-gated; the OFF path is byte-identical.
+
+**What should be collapsed / deleted at phase close (owner decision):**
+- The three composer variants and the playback path are a **prototype**, not a shipped feature. If the
+  greenfield direction is dropped, `client/src/modules/greenfieldComposer.js` (+ test) and the
+  `--composer` sim wiring can be deleted wholesale; they touch nothing on the default path.
+- **Keep `scripts/sim/observers/physics-tax.mjs`** regardless of the greenfield decision — σ and the
+  field-density measurement are useful to any future mechanism work (P0's own conclusion).
+- **Act on P2 independently of greenfield:** tightening gap-reroll to **G=0.75** beat the shipped G=1.5
+  on every metric (more contest, less runaway/parade) and **the lead carousel should be dropped** — it
+  was the worst arm. That is a shippable tuning result; the carousel code can be removed.
+- `client/tmp/exp-greenfield/` and the P0/P1/P2/P7 tmp dirs are throwaway; only `reports/greenfield/`
+  is committed.
+
+---
+
+## The one-paragraph answer for coffee
+
+Physics already eats **~half the natural speed band** (σ = 48%, up to 94% on searound), uniformly, all
+the way to the finish. The tier assignment is reachable open-loop *at the full band with ≥ 60 s*, but
+**not within the half-band physics actually leaves** — so at 30–60 s on closed tracks a third to a half
+of racers are undeliverable, and only 120 s+ recovers. Built faithfully, all three composers confirm
+it: they deliver 47–70% band (below the 80% mark), hold the band invariant perfectly, keep intra-tier
+placement genuinely free — and produce **almost no lead changes** (p1Contest ≈ 0% vs 31–54% for the
+current system), because locking each racer's mean speed to its assigned tier is simultaneously what
+makes it fair and what makes it static. The greenfield "schedule, don't steer" idea is *sound and
+honest* but, as prototyped, **dominated by the current servo on both fairness delivery and action at
+60 s** — its front-action story needs scheduled front-proximity that the P0/P1 band budget cannot
+afford at race length. **The night's most immediately useful result is unrelated to greenfield: drop
+the lead carousel and tighten gap-reroll to G=0.75** — that alone beats the shipped default on contest,
+runaway, and parade together.
