@@ -87,6 +87,14 @@ that phase's `*-complete` endpoint when it closes (incremental history then live
 - **Collapse plan:** fold into the cleanup phase's `*-complete` endpoint when the cleanup arc closes —
   the same endpoint as the dead-mechanisms cleanup above; both are one UI/dead-code arc.
 
+### Greenfield wrap (open)
+- `pre/greenfield-wrap` (`aa1f128`) — master immediately before the greenfield wrap, which ported the
+  measurement keepers (escape-episodes + physics-tax observers, `exp-gate-retune.mjs`, the
+  `distinctLeaders` fix) and the whole evidence record from `pre/greenfield-proto` onto master. The
+  ported instrumentation is read-only: both fingerprints were re-proven unchanged across it.
+- **Collapse plan:** fold into the greenfield phase's `*-complete` endpoint at phase close, together
+  with the deletion of the two analysis branches (see Branches below).
+
 ### Cleanup arc — COLLAPSED (2026-07-20)
 The four `pre/cleanup-step1..4` scaffolding tags were **collapsed onto `v-cleanup-complete`** and deleted
 (local + origin) at the end of cleanup step 5. Permanent recovery is by commit hash, which never expires:
@@ -94,8 +102,18 @@ the step-2 deletions are recoverable at `c441e7c~1`, the step-4 deletions at `0b
 
 ## Branches
 
-**`master` only.** The `diag/look-before-brake` branch was archived (tag `archive/diag-look-before-brake`
-@ `c32cc61`) and deleted on both local and origin, 2026-07-20 (cleanup step 5). No other branches exist.
+**Three branches exist on origin** (this section was stale until 2026-07-23 — it claimed master-only
+while two analysis branches had been pushed):
+
+| Branch | Head | Purpose | Planned fate |
+|---|---|---|---|
+| `master` | — | The shipped game. Everything reaches players through here. | Permanent. |
+| `pre/greenfield-proto` | `2663f7b` | The greenfield night run: physics-tax measurement, the open-loop composer prototype, the G/strength screens, and the retune gate. Its keepers (escape-episodes + physics-tax observers, `exp-gate-retune.mjs`, the evidence record) were **ported to master** in the greenfield wrap. | Delete at phase close, once the owner signs off the keep-list. The composer prototype dies with it **by design** — it was measured, dominated, and is not wanted on master. |
+| `pre/carousel-sweep` | `2e6b597` | The carousel window-control sweep that produced the verdict "suppression, not selection" — the measurement that justified deleting the mechanism. | Archive-tag and delete once its findings are confirmed captured in LESSONS/SIM. Not urgent: the mechanism it studied is already gone from master. |
+
+Neither analysis branch is a merge candidate — porting is by explicit keep-list, never by merge, because
+both carry prototypes that must not reach master. The `diag/look-before-brake` branch was archived (tag
+`archive/diag-look-before-brake` @ `c32cc61`) and deleted on both local and origin, 2026-07-20.
 
 ## Complete tag set (after cleanup step 5)
 

@@ -88,6 +88,31 @@ sweep verifies it: re-run one combo with the same seeds and diff its CSV — it 
 (md5 match). If it isn't, a nondeterminism crept in (unseeded `Math.random`, wall-clock, map-iteration
 order) — stop and find it before trusting any number.
 
+## Reporting rule — what may be compared with what
+
+Added 2026-07-23 after the greenfield screens, where two metric families were nearly read as findings
+when they were arithmetic.
+
+**1. G-coupled metrics are comparable only at fixed G.** Everything derived from escape EPISODES —
+episode count, duration, peak gap, corrected/out-of-rolls rates — is defined by the threshold `G`: an
+episode *is* "the leader gap exceeded G". Lowering G makes episodes start earlier, last longer and
+occur more often, mechanically, with no change in how the field actually behaves. The same trap
+applies to the `tiltFrac` / saturation family: `frac = min(1, strength·(gap−G))` moves with **both**
+G and strength by construction. So:
+
+- Compare episode-derived and tilt-derived numbers **only across arms that share G** (a strength
+  screen at fixed G is valid; a G screen is not).
+- Across different G, use the **G-independent** outcome metrics: runaway rate, parade rate, front
+  group at the line, lead changes, band-reach.
+- **A gate primary must be G-independent.** `exp-gate-retune.mjs` gates on pooled band-reach for
+  exactly this reason, and reports the episode/tilt numbers as context. A gate whose primary moved
+  with the knob under test would be measuring its own definition.
+
+**2. Holm is reported as a flagged-track COUNT, not a full multiple-testing procedure.** What the
+drivers print as "Holm" is *how many tracks came back flagged unfair by the per-track start-row Holm
+test*, e.g. `Holm-flagged tracks: 2/4`. There is no cross-track family-wise correction on top. Read it
+as a tally, and never as "the family-wise error rate across tracks is controlled" — it is not.
+
 ## Output conventions
 
 | Location | Contents | Tracked? |
@@ -134,3 +159,16 @@ comparable to a baseline measured at a different value — state the value in th
 > The front-rotation flags that used to sit beside this one were removed with the mechanism itself
 > (dead-mechanisms cleanup, 2026-07-23). An arm script that still passes them will simply have them
 > ignored by the sim. Recoverable at tag `pre/dead-mechanisms-cleanup`.
+
+### Footnote — schedule-math cut points are NOMINAL
+
+Any figure computed from the re-roll schedule arithmetic (`rollInterval`, the "last correctable roll"
+instant, the `schedule-math.json` cut points) is a **fixed-grid nominal value**: it assumes rolls land
+on exact multiples of the interval. The real scheduler **jitters every roll**
+(`nextRollTime = raceTs + rollInterval + jOff`, with `jOff` up to ±20% of the interval), so an
+individual race's actual roll times scatter around those cut points and can fall on either side of one.
+
+Use the schedule math as the *expected* boundary when reasoning about a population — never as a
+per-race fact, and never to conclude that a specific race did or did not have a roll available. The
+episode observer answers that per race from the leader's own `nextRollTime`
+(`hadCorrectableRollAhead`), which is the jittered truth rather than the grid.

@@ -22,7 +22,7 @@ Items ranked by urgency within each bucket. ✅ = done, 🔜 = next, ⏳ = waiti
   Duration sanity (30/120/300 s): candidate ≥ current on band-reach at every duration.
   *(At 30 s both arms sit at ~66% band-reach — a pre-existing short-race limitation, not caused by
   this change.)* Evidence: `reports/greenfield/gate-retune/`, driver `scripts/exp-gate-retune.mjs`
-  (branch `pre/greenfield-proto`).
+  — both now on **master** (ported in the greenfield wrap, 2026-07-23).
 - **New shipped-default fingerprint `e93ffa70dad562a1`** (retune, 2026-07-23). The previous ON default
   `efd0f4ad8eca08fa` (G=1.5/s=1.0) is **SUPERSEDED**. The **OFF** world is unchanged and remains
   `72c3360fb75225ef`, re-verified byte-identical via
@@ -37,7 +37,26 @@ Items ranked by urgency within each bucket. ✅ = done, 🔜 = next, ⏳ = waiti
   (A0, `67a1053`): **8.3% → 7.5%, 5/400 flips, all away from runaway, −0.55 sd**. The other 6 tracks
   are untested post-fix. A full 10-track re-measurement is **not** required before shipping, but the
   headline is a pre-fix number and should never be quoted bare.
-- ⏳ **Owner browser eye-check pending** (next morning). The backup tag follows only after it.
+- ✅ **Owner browser eye-check PASSED**; shipped at `247b843`, tagged `backup/g-retune-shipped-247b843`.
+
+## Measurement infrastructure — next up (from the independent reviews, 2026-07-23)
+
+- 🔜 **PRIORITIZED — HUD config-fingerprint badge.** Show a short hash of the *live* race-dynamics
+  config in the Dev HUD, so an eye-test can never be judged against a config nobody can reconstruct
+  afterwards. This is the highest-value measurement item outstanding: the owner-config parity audit
+  (`reports/greenfield/owner-config/`) found a persisted setting silently cancelling a shipped
+  benefit, and it was only caught because someone thought to diff the world. A badge makes that class
+  of drift visible without anyone having to suspect it first. Cheap, read-only, no fingerprint impact.
+- 🔜 **Paired per-seed delta evaluation in the gate driver.** `exp-gate-retune.mjs` already runs
+  **truly paired** arms — identical seed sequence per track, per-race seeds recorded — but then
+  aggregates each arm *independently* and compares the aggregates. The pairing is currently an
+  experimental control, not a statistical estimator. Computing per-seed deltas (arm A minus arm B on
+  the SAME race) and reporting their distribution would cut the variance the comparison has to see
+  through, and would surface the flip-level detail the branch-priority A0 check had to be run by hand
+  to get. Identified in `reports/proposals/review-pre-greenfield-proto-gate-driver-bf4ff90-copilot.md`.
+- Reporting discipline for both: see the **Reporting rule** in SWEEP-HARNESS.md — episode- and
+  tilt-derived metrics are mechanically G-coupled and comparable only at fixed G; gate primaries must
+  be G-independent; "Holm" in these drivers is a flagged-track count, not a family-wise procedure.
 
 ---
 
