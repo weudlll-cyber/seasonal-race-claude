@@ -30,6 +30,22 @@ export function mulberry32(seed) {
   };
 }
 
+// ── The race's physics RNG (parity step 1 — one shared entry point, both engines) ─────────────────
+// ONE stream feeds, IN DRAW ORDER, every physics-random site: the start-row shuffle, each racer's
+// initial spreadFactor + roll jitter, and every scheduled re-roll target + jitter. Threading this
+// single stream explicitly through those sites (instead of monkey-patching the global `Math.random`
+// for the whole race) is what keeps render-only draws — camera framing, trail/particle spawns — OFF
+// the race stream: the seeded race is now independent of frame rate, camera state, and slow-mo, and
+// the headless sim (no camera, no trails) draws the identical sequence. Because the algorithm and the
+// `0x6d2b79f5` constant match the sim's former `makePRNG`, a given seed reproduces byte-for-byte.
+//
+// `seed <= 0` → the native generator (unseeded / exploration), exactly as the pre-swap legacy path.
+// Returns a `{ physics }` bag (not a bare function) so a future named stream can be added without
+// touching call sites. `physics` carries PRNG state — create it ONCE per race and reuse the instance.
+export function makeRaceRng(seed) {
+  return { physics: seed > 0 ? mulberry32(seed) : Math.random };
+}
+
 function clamp(v, lo, hi) {
   return Math.max(lo, Math.min(hi, v));
 }

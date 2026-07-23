@@ -112,7 +112,7 @@ import { loadServerClasses } from '../../modules/surface-effects/registry.js';
 import {
   createRacePlan,
   createTrajectoryController,
-  mulberry32,
+  makeRaceRng,
 } from '../../modules/racePlanner.js';
 import { initProbe, recordFrame, recordFrameCamera } from '../../modules/rAFProbe.js';
 import BrandLogoOverlay from './BrandLogoOverlay.jsx';
@@ -519,24 +519,22 @@ export default function RaceScreen() {
       drawnBodyWidthRefPx,
       shapeRef.current
     );
-    // ── Deterministic race dynamics (Quick-Test) ──────────────────────────────────────────────
-    // With a seed > 0 the ENTIRE race is drawn from one seeded generator: start rows (the
-    // computeEvenRowLayout call below, which falls back to Math.random), the initial spreadFactors,
-    // every scheduled re-roll and both roll jitters. Same seed ⇒ move-for-move identical race, so
-    // an eye-test is exactly reproducible and comparable to the sim's run of that seed.
+    // ── Deterministic race dynamics (Quick-Test) — parity step 1 ───────────────────────────────
+    // The ENTIRE physics race is drawn from ONE explicit seeded stream, `raceRng`, threaded through
+    // every physics draw site IN ORDER: start rows (the computeEvenRowLayout call below), each
+    // racer's initial spreadFactor + roll jitter, and every scheduled re-roll target + jitter. This
+    // replaces the former global-`Math.random` swap. The swap coupled the race to render: camera
+    // framing and trail/particle spawns drew from the same global and shifted the physics stream by
+    // frame rate, camera state and slow-mo. With an explicit stream those render draws stay on the
+    // native `Math.random` and can no longer touch the race — the seeded race is now frame-rate
+    // independent and reproducible, and the headless sim draws the identical sequence for the seed.
     //
-    // This is the mechanism sim-fairness.mjs already uses (swap the global, restore in the exit
-    // path): the browser's draw sites are line-for-line twins of the sim's, so substituting the
-    // global generator covers all of them at once instead of threading an rng through five call
-    // sites in four modules. Restored in this effect's cleanup below.
-    //
-    // seed <= 0 — which includes the normal "Start Race" path (racePlanSeed hardcoded 0) — leaves
-    // Math.random untouched, so every existing path stays byte-identical to the legacy behavior.
+    // seed <= 0 — which includes the normal "Start Race" path (racePlanSeed hardcoded 0) — yields the
+    // native generator, so every existing path stays byte-identical to the legacy behavior.
     // racePlanSeed is read here rather than at its former place further down because it must be
     // known BEFORE the first draw; the race-plan code below reuses this same binding.
     const racePlanSeed = raceData.racePlanSeed ?? 0;
-    const nativeRandom = Math.random;
-    if (racePlanSeed > 0) Math.random = mulberry32(racePlanSeed);
+    const raceRng = makeRaceRng(racePlanSeed).physics;
 
     // Row-start layout: even distribution across minimum-needed rows (bottom-up sizing)
     const pathLengthPx = geometry.pathLengthPx ?? 0;
@@ -550,7 +548,7 @@ export default function RaceScreen() {
         nRacers / Math.max(1, Math.floor((2 * effectiveWidth) / Math.max(1, physicalSpriteSize)))
       )
     );
-    const rowLayout = computeEvenRowLayout(nRacers, rowCount);
+    const rowLayout = computeEvenRowLayout(nRacers, rowCount, raceRng);
 
     // Re-Roll schedule: distribute rolls evenly over [0, lastPositionPercent]% of the REALIZED race
     // duration (raceData.estimatedDurationSec). On closed tracks the engine stretches the nominal
@@ -629,10 +627,10 @@ export default function RaceScreen() {
         // spreadFactor: random luck draw — the only part affected by re-rolls.
         // speedBonusMult: positional back-row compensation — constant over the whole race.
         const spreadFactor =
-          (BASE_SPEED_MIN + Math.random() * (BASE_SPEED_MAX - BASE_SPEED_MIN)) / BASE_SPEED_MEAN;
+          (BASE_SPEED_MIN + raceRng() * (BASE_SPEED_MAX - BASE_SPEED_MIN)) / BASE_SPEED_MEAN;
         const speedBonusMult = 1 + speedBonus;
         // nextRollTime stored as offset from raceStart; converted to absolute ts at COUNTDOWN→RACING.
-        const rollJitter = (Math.random() - 0.5) * 2 * rollInterval * 0.2;
+        const rollJitter = (raceRng() - 0.5) * 2 * rollInterval * 0.2;
         const racer = {
           ...r,
           index: i,
@@ -1135,7 +1133,7 @@ export default function RaceScreen() {
             // ── Per-racer spreadFactor re-roll + smooth transition ────────────
             if (!r.finished) {
               if (physicsTs >= r.nextRollTime && physicsTs < lastRollDeadline) {
-                const rawSample = r.spreadFactor + (Math.random() - 0.5) * 2 * halfWidth;
+                const rawSample = r.spreadFactor + (raceRng() - 0.5) * 2 * halfWidth;
                 // PULK cohesion bias: the always-on field-cohesion mechanism — nudges the three
                 // pulk racers' re-roll draws toward the pulk centroid during PULK so the field
                 // stays together. No-op outside PULK / for non-pulk racers (returns rawSample).
@@ -1178,7 +1176,7 @@ export default function RaceScreen() {
                 r.spreadFactorPrev = r.spreadFactor;
                 r.spreadFactorTarget = newTarget;
                 r.transitionStartTime = physicsTs;
-                const jOff = (Math.random() - 0.5) * 2 * rollInterval * 0.2;
+                const jOff = (raceRng() - 0.5) * 2 * rollInterval * 0.2;
                 r.nextRollTime = physicsTs + rollInterval + jOff;
               }
               const elapsed = physicsTs - r.transitionStartTime;
@@ -1779,9 +1777,8 @@ export default function RaceScreen() {
 
     rafRef.current = requestAnimationFrame(loop);
     return () => {
-      // Restore the global generator before anything else: leaving a seeded Math.random installed
-      // would make the REST of the app deterministic too (and repeat the same sequence next race).
-      Math.random = nativeRandom;
+      // No global RNG to restore — the race stream is the local `raceRng` above (parity step 1),
+      // so `Math.random` was never swapped and the rest of the app stays non-deterministic.
       cancelled = true;
       if (rafRef.current) cancelAnimationFrame(rafRef.current);
       clearTimeout(finishNavTimerRef.current);

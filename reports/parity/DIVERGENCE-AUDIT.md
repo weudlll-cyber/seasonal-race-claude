@@ -32,6 +32,16 @@ driving layer that derives the plan grid and the physics RNG from an explicit se
 identically by both tools** — instead of the current "monkey-patch the global `Math.random` and
 hope the draw sites line up."
 
+> **STATUS — D-STREAM CLOSED (parity step 1, 2026-07-23, commit on `master`).** The global
+> `Math.random` swap is gone on both sides; the physics RNG is now the shared `makeRaceRng(seed)`
+> stream threaded explicitly through every physics draw site, while camera/trail draws stay on the
+> native generator. Sim fingerprints are **byte-identical** (ON `e93ffa70dad562a1`, OFF
+> `72c3360fb75225ef`); the browser seeded race is now frame-rate/camera/slow-mo independent, proven
+> by `client/src/screens/RaceScreen/seedDeterminism.test.js` (whole-race, multi-pacing). Expected
+> side effect: **browser races at a given seed now differ from before the change** (the in-race
+> re-rolls are no longer render-polluted) — previously remembered seeds are stale. **D-GRID remains
+> open** (parity step 2), so full cross-tool finishing-order equality is not yet delivered. See §2c.
+
 ---
 
 ## 1. The two pipelines, side by side
@@ -140,9 +150,13 @@ a bugfix — it should be gated behind an explicit owner decision and a full re-
 - `docs/SIM.md:72` already states plainly that browser and sim on the same seed are **not** expected
   to be frame-identical — so the project has documented this gap; the owner now wants it closed.
 
-### 2c. RNG consumption order — **CONFIRMED: the global swap pollutes the physics stream**
+### 2c. RNG consumption order — **CONFIRMED → CLOSED (parity step 1, 2026-07-23)**
 
-This is the load-bearing correctness finding, and it is provable purely by reading.
+This was the load-bearing correctness finding. It is now **fixed**: `makeRaceRng(seed)` (racePlanner.js)
+provides one explicit physics stream threaded through every draw site listed below on both sides, and
+the global `Math.random` swap was removed, so the render draws named here can no longer perturb the
+race. Sim byte-identity held (fingerprints above); the browser gained frame-rate independence. The
+original analysis is retained below as the record of what was wrong.
 
 The browser swap at `index.jsx:539` replaces the **global** `Math.random`. That global is then drawn
 from by per-frame **render** code that has no counterpart in the sim:

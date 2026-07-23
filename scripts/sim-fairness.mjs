@@ -81,7 +81,7 @@ import { WORLD_SCHEMA_VERSION, hashWorld, unsimulatableReasons, worldStamp } fro
 import { perTrackReport, renderMarkdown as renderComebackMarkdown } from './sim/observers/comeback-reality.mjs';
 import { computeEffectiveBrakeFactor } from '../client/src/modules/raceBehaviorConfig.js';
 import { advanceRacerT, computeRowEnvMult, computeRowEnvSmoothed } from '../client/src/modules/raceStep.js';
-import { createRacePlan, createTrajectoryController, BAND_EDGES } from '../client/src/modules/racePlanner.js';
+import { createRacePlan, createTrajectoryController, BAND_EDGES, makeRaceRng } from '../client/src/modules/racePlanner.js';
 import { computeFairnessStats, computeZoneSuccessRate, bandIntegrityOK, computeExtendedFairnessStats, spearman, chiSqPValue } from './sim/observers/fairness-stats.mjs';
 import { buildReport, printDiagnosticReport, printComebackReport, fmtPct } from './sim/observers/report.mjs';
 // GAP-SPACE observers (INFRA 5C): read-only, flag-gated. See gap-metrics.mjs header.
@@ -632,8 +632,12 @@ export function runSingleRace({
   speedSource = false,         // --speed-source: record top-15 late-race speed decomposition (read-only)
   physicsTax = false,          // --physics-tax: record per-racer avoidance-braking distance loss (read-only)
 }) {
-  const savedRandom = Math.random;
-  if (seed > 0) Math.random = makePRNG(seed);
+  // Parity step 1: the race's physics RNG is an EXPLICIT stream threaded through every physics draw
+  // site below (row shuffle, spreadFactor/rollJitter init, scheduled re-roll target + jitter) — the
+  // shared makeRaceRng, the same entry point the browser uses. No global `Math.random` swap: the sim
+  // has no render draws to isolate, but sharing one stream keeps sim and browser byte-identical for a
+  // seed. seed <= 0 → native generator (exploration), as before. mulberry32 == the former makePRNG.
+  const raceRng = makeRaceRng(seed).physics;
 
   try {
     const BASE_SPEED_MIN  = BASE_SPEED_MIN_OVR;
@@ -673,7 +677,7 @@ export function runSingleRace({
     const bodyRef = computeBodyNarrowRef(W_REF, nRacers, displaySize, bodyFillNarrow, DEFAULT_AUTO_SCALE_CONFIG);
     const rowGapPx            = effectiveDisplaySize * rowConfig.rowGapMultiplier;
     const deltaT              = pathLengthPx > 0 ? rowGapPx / pathLengthPx : 0.01;
-    const rowLayout           = computeEvenRowLayout(nRacers, rowCount);
+    const rowLayout           = computeEvenRowLayout(nRacers, rowCount, raceRng);
 
     const rowSizeByRow = new Map();
     for (const a of rowLayout.assignments) {
@@ -718,9 +722,9 @@ export function runSingleRace({
       const tStart = isOpen
         ? (rowLayout.totalRows - assignment.rowIndex) * deltaT
         : -(assignment.rowIndex * deltaT);
-      const spreadFactor  = (BASE_SPEED_MIN + Math.random() * (BASE_SPEED_MAX - BASE_SPEED_MIN)) / BASE_SPEED_MEAN;
+      const spreadFactor  = (BASE_SPEED_MIN + raceRng() * (BASE_SPEED_MAX - BASE_SPEED_MIN)) / BASE_SPEED_MEAN;
       const speedBonusMult = 1 + speedBonus;
-      const rollJitter    = (Math.random() - 0.5) * 2 * rollInterval * 0.2;
+      const rollJitter    = (raceRng() - 0.5) * 2 * rollInterval * 0.2;
 
       const r = {
         index:                 i,
@@ -1196,8 +1200,8 @@ export function runSingleRace({
           const rawTarget = REROLL_VARIANT === 2
             ? r.spreadFactor +
                 (dynamicsConfig.reRollVariationPercent / 100) *
-                  (((BASE_SPEED_MIN + Math.random() * (BASE_SPEED_MAX - BASE_SPEED_MIN)) / BASE_SPEED_MEAN) - r.spreadFactor)
-            : r.spreadFactor + (Math.random() - 0.5) * 2 * halfWidth;
+                  (((BASE_SPEED_MIN + raceRng() * (BASE_SPEED_MAX - BASE_SPEED_MIN)) / BASE_SPEED_MEAN) - r.spreadFactor)
+            : r.spreadFactor + (raceRng() - 0.5) * 2 * halfWidth;
           // PULK cohesion bias (the always-on field-cohesion mechanism; no-op outside PULK / for
           // non-pulk racers). Active whenever the Race Plan controller is running.
           const biasedTarget = racePlanController
@@ -1227,7 +1231,7 @@ export function runSingleRace({
           r.spreadFactorPrev    = r.spreadFactor;
           r.spreadFactorTarget  = newTarget;
           r.transitionStartTime = raceTs;
-          const jOff = (Math.random() - 0.5) * 2 * rollInterval * 0.2;
+          const jOff = (raceRng() - 0.5) * 2 * rollInterval * 0.2;
           r.nextRollTime = raceTs + rollInterval + jOff;
           r.rerollCount++;
         }
@@ -2724,7 +2728,8 @@ export function runSingleRace({
 
     return results;
   } finally {
-    Math.random = savedRandom;
+    // Nothing to restore — parity step 1 removed the global `Math.random` swap; the race stream is
+    // the local `raceRng` above. (Kept as the function's single exit point.)
   }
 }
 

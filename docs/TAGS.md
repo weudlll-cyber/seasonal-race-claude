@@ -73,6 +73,13 @@ that phase's `*-complete` endpoint when it closes (incremental history then live
   collapse below (2026-07-23) — the baseline state is recoverable at `2e14663` from the table there.
 - **Collapse plan:** fold into the runaway phase's `*-complete` endpoint when that phase closes.
 
+### Sim↔browser parity phase (open)
+- `pre/rng-isolation` (`285c6e5`) — master before parity step 1 (physics-RNG isolation): the last
+  commit where the browser races drew physics from the swapped global `Math.random`. Return point for
+  the D-STREAM fix (see [reports/parity/DIVERGENCE-AUDIT.md](../reports/parity/DIVERGENCE-AUDIT.md)).
+  Remembered browser seeds are stale after this step — the in-race stream is no longer render-polluted.
+- **Collapse plan:** fold into the parity phase's `*-complete` endpoint when that phase closes.
+
 ### Retune / cleanup / greenfield phase — COLLAPSED (2026-07-23)
 
 The four ship-steps of this phase — the **G/strength retune** (`247b843`), the **dead-mechanisms
