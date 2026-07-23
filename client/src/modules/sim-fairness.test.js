@@ -109,11 +109,14 @@ describe('canonical finish line', () => {
     expect(two.realizedDurationSec).toBeCloseTo(one.realizedDurationSec * 2, 8);
   });
 
-  it('closed track: speedMultiplier does NOT change finishT or pace', () => {
+  it('closed track: speedMultiplier leaves finishT alone but scales the duration by 1/M', () => {
     const horse = derive({ isOpen: false, laps: 2, speedMultiplier: 1.0 });
     const rocket = derive({ isOpen: false, laps: 2, speedMultiplier: 1.25 });
+    // The lap count is the finish line — the type cannot move it.
     expect(rocket.finishT).toBe(horse.finishT);
-    expect(rocket.realizedDurationSec).toBe(horse.realizedDurationSec);
+    // The type IS the pace, so the faster type finishes those laps sooner.
+    expect(rocket.realizedDurationSec).toBeCloseTo(horse.realizedDurationSec / 1.25, 10);
+    expect(rocket.paceSpeedPxPerSec).toBeCloseTo(horse.paceSpeedPxPerSec * 1.25, 10);
   });
 
   it('open track: finishT capped at 1 - runoutZone, with the slowdown taking up the slack', () => {
@@ -130,12 +133,13 @@ describe('canonical finish line', () => {
     expect(m.paceScale).toBe(1);
   });
 
-  it('open track formula: finishT = normalSpeed × seconds / pathLength', () => {
-    // 10 s is inside this mock track's natural maximum (≈13.3 s at the shipped normal speed),
-    // so the finish line moves and the pace stays at 1.0.
-    const m = derive({ isOpen: true, requestedSeconds: 10, speedMultiplier: 0.85 });
+  it('open track formula: finishT = normalSpeed x M x seconds / pathLength', () => {
+    // 10 s is inside this mock track's natural maximum at M=0.85 (≈15.6 s), so the finish
+    // line moves and the pace stays at 1.0.
+    const M = 0.85;
+    const m = derive({ isOpen: true, requestedSeconds: 10, speedMultiplier: M });
     expect(m.paceScale).toBe(1);
-    expect(m.finishT).toBeCloseTo((NORMAL_SPEED * 10) / MOCK_PATH_LENGTH, 10);
+    expect(m.finishT).toBeCloseTo((NORMAL_SPEED * M * 10) / MOCK_PATH_LENGTH, 10);
   });
 });
 

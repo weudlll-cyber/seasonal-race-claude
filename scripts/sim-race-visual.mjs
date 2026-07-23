@@ -55,6 +55,7 @@ import {
   normalSpeedFrom,
   trackDefaultLaps,
   trackDefaultSeconds,
+  paceSpeedPxPerSec,
 } from '../client/src/modules/durationModel.js';
 import {
   DEFAULT_BASE_SPEED_CONFIG,
@@ -339,6 +340,10 @@ function runSimulation(track, seed, burstIndex, burstLen) {
   const bsX        = CAM_W / worldWidth;   // closed-track scale factor (canvas→world)
 
   // THE canonical derivation — the same shared call the browser and sim-fairness make.
+  // This renderer models no racer type, so it runs at multiplier 1.0; the pace helper is used
+  // anyway so the clamp and the derivation read the same definition of "pace" as everywhere else.
+  const visualSpeedMultiplier = 1.0;
+  const visualPaceSpeed = paceSpeedPxPerSec(normalSpeedFrom(), visualSpeedMultiplier);
   const durationModel = deriveRaceDuration({
     isOpen,
     pathLengthPx,
@@ -346,11 +351,11 @@ function runSimulation(track, seed, burstIndex, burstLen) {
     requestedSeconds: trackDefaultSeconds(
       track,
       pathLengthPx,
-      normalSpeedFrom(),
+      visualPaceSpeed,
       behaviorConfig.runoutZone ?? 0.05
     ),
     normalSpeedPxPerSec: normalSpeedFrom(),
-    speedMultiplier: 1.0,
+    speedMultiplier: visualSpeedMultiplier,
     runoutZone: behaviorConfig.runoutZone ?? 0.05,
   });
   const finishT        = durationModel.finishT;

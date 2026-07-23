@@ -17,7 +17,12 @@ import {
   DIRT_OVAL_PATH_LENGTH_PX,
 } from '../../modules/headlessRaceSimulator.js';
 import { getInitialTracks } from '../../modules/storage/trackLoader.js';
-import { secondsForLaps, trackDefaultLaps, normalSpeedFrom } from '../../modules/durationModel.js';
+import {
+  secondsForLaps,
+  trackDefaultLaps,
+  normalSpeedFrom,
+  paceSpeedPxPerSec,
+} from '../../modules/durationModel.js';
 import { avg, median, p95, stddev } from '../../modules/statsHelpers.js';
 import { loadBaseSpeedConfig } from '../../modules/baseSpeedConfig.js';
 import { loadRaceBehaviorConfig } from '../../modules/raceBehaviorConfig.js';
@@ -43,7 +48,14 @@ function computeTrackCap(track, bsc) {
   const { min: MIN, max: MAX } = bsc;
   const MEAN = (MIN + MAX) / 2;
   const sxf = MAX / MEAN;
-  const derived = secondsForLaps(trackDefaultLaps(track), track.pathLengthPx, normalSpeedFrom(bsc));
+  // Pace at multiplier 1.0 on purpose: headlessRaceSimulator deliberately omits the racer
+  // type's speedMultiplier from its baseSpeed (it is a simplified statistical model, not the
+  // game), so the cap must be derived at the same M-free pace it actually runs at.
+  const derived = secondsForLaps(
+    trackDefaultLaps(track),
+    track.pathLengthPx,
+    paceSpeedPxPerSec(normalSpeedFrom(bsc), 1.0)
+  );
   return Math.max(5, Math.floor(derived / sxf) - 1);
 }
 

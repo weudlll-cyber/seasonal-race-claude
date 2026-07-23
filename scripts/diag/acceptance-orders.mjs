@@ -43,7 +43,7 @@ const planConfig = () => ({
   reRollTransitionDuration: DYN.reRollTransitionDuration, contestWindowStart: DYN.contestWindowStart,
 });
 
-console.log(`searound / manta / 40 — canonical defaults: ${LAPS} laps, normal speed ${V} px/s`);
+console.log(`searound / manta / 40 — canonical defaults: ${LAPS} laps, normal speed ${V} px/s x M=${spd} => pace ${(V*spd).toFixed(1)} px/s`);
 console.log(`derived duration (mean racer): ${model.realizedDurationSec.toFixed(2)} s   finishT=${model.finishT}\n`);
 
 for (const seed of [1, 7, 42]) {

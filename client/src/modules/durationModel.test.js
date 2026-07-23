@@ -66,7 +66,8 @@ describe('closed tracks — laps in, duration out', () => {
       runoutZone: RUNOUT,
     });
     expect(m.finishT).toBe(2);
-    expect(m.realizedDurationSec).toBeCloseTo((2 * SEAROUND) / V, 10);
+    // duration = laps x length / (normalSpeed x M) — the type is in the pace.
+    expect(m.realizedDurationSec).toBeCloseTo((2 * SEAROUND) / (V * 1.1), 10);
     expect(m.paceScale).toBe(1);
     expect(m.slowdownActive).toBe(false);
   });
@@ -113,7 +114,7 @@ describe('closed tracks — laps in, duration out', () => {
     ).toBe(MIN_LAPS);
   });
 
-  it('pace is identical for every racer class (speedMultiplier cancels to M^0)', () => {
+  it('a slower type takes proportionally LONGER over the same laps', () => {
     const slow = deriveRaceDuration({
       isOpen: false,
       pathLengthPx: SEAROUND,
@@ -128,9 +129,9 @@ describe('closed tracks — laps in, duration out', () => {
       normalSpeedPxPerSec: V,
       speedMultiplier: 1.25,
     });
-    expect(slow.realizedDurationSec).toBe(fast.realizedDurationSec);
-    // r.baseSpeed = raceBaseSpeed * M — the product, not raceBaseSpeed itself, is the pace.
-    expect(slow.raceBaseSpeed * 0.3).toBeCloseTo(fast.raceBaseSpeed * 1.25, 15);
+    // duration(M) = duration(1) / M  =>  slow/fast = 1.25 / 0.3
+    expect(slow.realizedDurationSec / fast.realizedDurationSec).toBeCloseTo(1.25 / 0.3, 10);
+    expect(slow.realizedDurationSec).toBeGreaterThan(fast.realizedDurationSec);
   });
 
   it('pace is independent of the racer count (no N-calibration in the model)', () => {
@@ -145,17 +146,141 @@ describe('closed tracks — laps in, duration out', () => {
     expect(Object.keys(m)).not.toContain('nRacers');
   });
 
-  it('a mean racer travels exactly the normal speed in px/s', () => {
+  it('a mean racer travels exactly normalSpeed x M px/s', () => {
+    const M = 1.1;
     const m = deriveRaceDuration({
       isOpen: false,
       pathLengthPx: SEAROUND,
       laps: 3,
       normalSpeedPxPerSec: V,
-      speedMultiplier: 1.1,
+      speedMultiplier: M,
     });
-    const tPerFrame = m.raceBaseSpeed * 1.1; // baseSpeed for spreadFactor = 1
+    const tPerFrame = m.raceBaseSpeed * M; // baseSpeed for spreadFactor = 1
     const pxPerSec = tPerFrame * SEAROUND * REFERENCE_FPS;
-    expect(pxPerSec).toBeCloseTo(V, 8);
+    expect(pxPerSec).toBeCloseTo(V * M, 8);
+    expect(m.paceSpeedPxPerSec).toBeCloseTo(V * M, 10);
+  });
+});
+
+// ── The owner's law ───────────────────────────────────────────────────────────────────────
+// The original requirement, now a test: the SAME type runs at the SAME px/s on a closed and
+// an open track; DIFFERENT types scale duration by their multiplier. If either half of this
+// breaks, the pace has grown a second definition somewhere.
+describe("the owner's law", () => {
+  const TYPES = [
+    ['snail', 0.3],
+    ['duck', 0.85],
+    ['horse', 1.0],
+    ['manta', 1.1],
+    ['rocket', 1.25],
+  ];
+
+  const meanPxPerSec = (model, M, pathLengthPx) =>
+    model.raceBaseSpeed * M * pathLengthPx * REFERENCE_FPS;
+
+  it('same type => identical px/s on a closed and an open track', () => {
+    for (const [name, M] of TYPES) {
+      const closed = deriveRaceDuration({
+        isOpen: false,
+        pathLengthPx: SEAROUND,
+        laps: 2,
+        normalSpeedPxPerSec: V,
+        speedMultiplier: M,
+        runoutZone: RUNOUT,
+      });
+      // An in-range open request, so no slowdown is in play (the documented exception).
+      const openSecs = Math.floor(naturalMaxSeconds(RIVER_RUN, V * M, RUNOUT) * 0.5);
+      const open = deriveRaceDuration({
+        isOpen: true,
+        pathLengthPx: RIVER_RUN,
+        requestedSeconds: openSecs,
+        normalSpeedPxPerSec: V,
+        speedMultiplier: M,
+        runoutZone: RUNOUT,
+      });
+
+      // Different topology, different track length, different finishT — same px/s.
+      expect(closed.finishT).not.toBeCloseTo(open.finishT, 3);
+      expect(meanPxPerSec(closed, M, SEAROUND)).toBeCloseTo(V * M, 6);
+      expect(meanPxPerSec(open, M, RIVER_RUN)).toBeCloseTo(V * M, 6);
+      expect(meanPxPerSec(closed, M, SEAROUND)).toBeCloseTo(meanPxPerSec(open, M, RIVER_RUN), 6);
+      // and the model reports that same pace on both
+      expect(closed.paceSpeedPxPerSec).toBe(open.paceSpeedPxPerSec);
+      expect(closed.paceSpeedPxPerSec).toBeCloseTo(V * M, 10);
+      expect(name).toBeTruthy();
+    }
+  });
+
+  it('different M => closed duration scales by exactly 1/M', () => {
+    const base = deriveRaceDuration({
+      isOpen: false,
+      pathLengthPx: SEAROUND,
+      laps: 3,
+      normalSpeedPxPerSec: V,
+      speedMultiplier: 1.0,
+      runoutZone: RUNOUT,
+    });
+    for (const [, M] of TYPES) {
+      const m = deriveRaceDuration({
+        isOpen: false,
+        pathLengthPx: SEAROUND,
+        laps: 3,
+        normalSpeedPxPerSec: V,
+        speedMultiplier: M,
+        runoutZone: RUNOUT,
+      });
+      expect(m.realizedDurationSec).toBeCloseTo(base.realizedDurationSec / M, 8);
+    }
+  });
+
+  it('different M => the open natural maximum scales by exactly 1/M', () => {
+    const base = naturalMaxSeconds(RIVER_RUN, V * 1.0, RUNOUT);
+    for (const [, M] of TYPES) {
+      expect(naturalMaxSeconds(RIVER_RUN, V * M, RUNOUT)).toBeCloseTo(base / M, 8);
+    }
+  });
+
+  it('different M => a fixed open time moves the finish line by exactly M', () => {
+    // Open races are time-bounded, so the type changes DISTANCE rather than duration.
+    const secs = 20;
+    const base = deriveRaceDuration({
+      isOpen: true,
+      pathLengthPx: RIVER_RUN,
+      requestedSeconds: secs,
+      normalSpeedPxPerSec: V,
+      speedMultiplier: 1.0,
+      runoutZone: RUNOUT,
+    });
+    for (const [, M] of TYPES) {
+      const m = deriveRaceDuration({
+        isOpen: true,
+        pathLengthPx: RIVER_RUN,
+        requestedSeconds: secs,
+        normalSpeedPxPerSec: V,
+        speedMultiplier: M,
+        runoutZone: RUNOUT,
+      });
+      expect(m.finishT).toBeCloseTo(base.finishT * M, 10);
+      expect(m.realizedDurationSec).toBeCloseTo(secs, 10);
+    }
+  });
+
+  it('the slowdown factor is computed at the type-aware pace', () => {
+    const M = 0.3; // snail: a short natural maximum, so a modest request already slows it
+    const natMax = naturalMaxSeconds(RIVER_RUN, V * M, RUNOUT);
+    const requested = Math.ceil(natMax) + 30;
+    const m = deriveRaceDuration({
+      isOpen: true,
+      pathLengthPx: RIVER_RUN,
+      requestedSeconds: requested,
+      normalSpeedPxPerSec: V,
+      speedMultiplier: M,
+      runoutZone: RUNOUT,
+    });
+    expect(m.slowdownActive).toBe(true);
+    expect(m.paceScale).toBeCloseTo(natMax / requested, 12);
+    expect(m.effectiveSpeedPxPerSec).toBeCloseTo(V * M * m.paceScale, 10);
+    expect(m.realizedDurationSec).toBeCloseTo(requested, 8);
   });
 });
 
@@ -240,9 +365,10 @@ describe('open tracks — time in, finish line out', () => {
   });
 
   it('a mean racer under slowdown travels the reduced speed exactly', () => {
-    const natMax = naturalMaxSeconds(RIVER_RUN, V, RUNOUT);
-    const secs = natMax * 1.6;
     const M = 0.85;
+    // The natural maximum — and therefore the slowdown — is taken at THIS race's pace.
+    const natMax = naturalMaxSeconds(RIVER_RUN, V * M, RUNOUT);
+    const secs = natMax * 1.6;
     const m = deriveRaceDuration({
       isOpen: true,
       pathLengthPx: RIVER_RUN,
@@ -251,8 +377,10 @@ describe('open tracks — time in, finish line out', () => {
       speedMultiplier: M,
       runoutZone: RUNOUT,
     });
+    expect(m.slowdownActive).toBe(true);
     const pxPerSec = m.raceBaseSpeed * M * RIVER_RUN * REFERENCE_FPS;
-    expect(pxPerSec).toBeCloseTo(V * m.paceScale, 8);
+    expect(pxPerSec).toBeCloseTo(V * M * m.paceScale, 8);
+    expect(m.effectiveSpeedPxPerSec).toBeCloseTo(V * M * m.paceScale, 10);
   });
 });
 
@@ -294,7 +422,13 @@ describe('browser and sim compute identical duration scalars from identical inpu
   const call = (args) =>
     deriveRaceDuration({ normalSpeedPxPerSec: V, runoutZone: RUNOUT, ...args });
 
-  const scalars = (m) => [m.finishT, m.realizedDurationSec, m.raceBaseSpeed, m.paceScale];
+  const scalars = (m) => [
+    m.finishT,
+    m.realizedDurationSec,
+    m.raceBaseSpeed,
+    m.paceScale,
+    m.paceSpeedPxPerSec,
+  ];
 
   it('closed laps case: bit-identical', () => {
     const browser = call({ isOpen: false, pathLengthPx: SEAROUND, laps: 2, speedMultiplier: 1.1 });
@@ -302,7 +436,8 @@ describe('browser and sim compute identical duration scalars from identical inpu
     expect(scalars(sim)).toEqual(scalars(browser));
     // and the values are the physically expected ones, not merely equal to each other
     expect(browser.finishT).toBe(2);
-    expect(browser.realizedDurationSec).toBeCloseTo((2 * SEAROUND) / V, 10);
+    expect(browser.realizedDurationSec).toBeCloseTo((2 * SEAROUND) / (V * 1.1), 10);
+    expect(browser.paceSpeedPxPerSec).toBeCloseTo(V * 1.1, 10);
   });
 
   it('open in-range case: bit-identical', () => {
@@ -318,7 +453,7 @@ describe('browser and sim compute identical duration scalars from identical inpu
   });
 
   it('open slowdown case: bit-identical including the pace factor', () => {
-    const natMax = naturalMaxSeconds(RIVER_RUN, V, RUNOUT);
+    const natMax = naturalMaxSeconds(RIVER_RUN, V * 0.85, RUNOUT);
     const requested = Math.ceil(natMax) + 25;
     const args = {
       isOpen: true,

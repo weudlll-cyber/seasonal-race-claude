@@ -33,6 +33,7 @@ import {
   deriveRaceDuration,
   naturalMaxSeconds,
   normalSpeedFrom,
+  paceSpeedPxPerSec,
   fieldFinishWindow,
   secondsForLaps,
   trackDefaultLaps,
@@ -275,13 +276,29 @@ function SetupScreen() {
   }, [selectedTrack]);
 
   // ── Canonical model inputs for the selected track ─────────────────────────────────────────
-  // One normal speed (px/s) for every track and class; the setup screen only ever asks the
-  // model (modules/durationModel.js) — it never re-derives a duration of its own.
+  // One normal speed (px/s) for every track; the race's PACE is that speed times the selected
+  // racer type's multiplier. The setup screen only ever asks the model
+  // (modules/durationModel.js) — it never re-derives a duration of its own.
   const normalSpeedPxPerSec = useMemo(() => normalSpeedFrom(loadBaseSpeedConfig()), []);
   const selectedPathLengthPx = useMemo(() => {
     if (!selectedTrack?.geometryId) return 0;
     return getTrack(selectedTrack.geometryId)?.pathLengthPx ?? 0;
   }, [selectedTrack]);
+
+  const selectedSpeedMultiplier = useMemo(() => {
+    if (!selectedTrack) return 1.0;
+    return (
+      getRacerType(
+        racerTypeOverride ?? selectedTrack.defaultRacerTypeId ?? 'horse'
+      )?.getSpeedMultiplier() ?? 1.0
+    );
+  }, [selectedTrack, racerTypeOverride]);
+
+  // THE pace for this race, px/s — the one definition every duration figure below reads.
+  const selectedPaceSpeed = useMemo(
+    () => paceSpeedPxPerSec(normalSpeedPxPerSec, selectedSpeedMultiplier),
+    [normalSpeedPxPerSec, selectedSpeedMultiplier]
+  );
 
   // CLOSED: the operator picks laps. Default comes from the track (migrated from its old
   // defaultDuration); duration is derived, never chosen.
@@ -290,14 +307,14 @@ function SetupScreen() {
     [selectedLaps, selectedTrack]
   );
 
-  // OPEN: the track's natural maximum at normal speed. Times beyond it stay selectable and
+  // OPEN: the track's natural maximum AT THIS RACE'S PACE. Times beyond it stay selectable and
   // trigger the uniform slowdown, so the slider runs past this mark on purpose.
   const openNaturalMaxSec = useMemo(
     () =>
       selectedPathLengthPx
-        ? naturalMaxSeconds(selectedPathLengthPx, normalSpeedPxPerSec, behaviorConfig.runoutZone)
+        ? naturalMaxSeconds(selectedPathLengthPx, selectedPaceSpeed, behaviorConfig.runoutZone)
         : 0,
-    [selectedPathLengthPx, normalSpeedPxPerSec, behaviorConfig.runoutZone]
+    [selectedPathLengthPx, selectedPaceSpeed, behaviorConfig.runoutZone]
   );
 
   const effectiveOpenTrackDuration = useMemo(() => {
@@ -306,7 +323,7 @@ function SetupScreen() {
       return trackDefaultSeconds(
         selectedTrack,
         selectedPathLengthPx,
-        normalSpeedPxPerSec,
+        selectedPaceSpeed,
         behaviorConfig.runoutZone
       );
     }
@@ -316,32 +333,27 @@ function SetupScreen() {
     openNaturalMaxSec,
     selectedTrack,
     selectedPathLengthPx,
-    normalSpeedPxPerSec,
+    selectedPaceSpeed,
     behaviorConfig.runoutZone,
     raceSettings.duration,
   ]);
 
   // THE derived race for the current selection — the same call the race engine makes.
-  // speedMultiplier is passed for completeness; it cancels out of the pace by construction.
   const raceDurationModel = useMemo(() => {
     if (!selectedTrack || !selectedPathLengthPx) return null;
-    const speedMultiplier =
-      getRacerType(
-        racerTypeOverride ?? selectedTrack.defaultRacerTypeId ?? 'horse'
-      )?.getSpeedMultiplier() ?? 1.0;
     return deriveRaceDuration({
       isOpen: trackIsOpen,
       pathLengthPx: selectedPathLengthPx,
       laps: effectiveLaps,
       requestedSeconds: effectiveOpenTrackDuration,
       normalSpeedPxPerSec,
-      speedMultiplier,
+      speedMultiplier: selectedSpeedMultiplier,
       runoutZone: behaviorConfig.runoutZone,
     });
   }, [
     selectedTrack,
     selectedPathLengthPx,
-    racerTypeOverride,
+    selectedSpeedMultiplier,
     trackIsOpen,
     effectiveLaps,
     effectiveOpenTrackDuration,
@@ -488,10 +500,13 @@ function SetupScreen() {
     const quickGeom = track.geometryId ? getTrack(track.geometryId) : null;
     const quickPathLengthPx = quickGeom?.pathLengthPx ?? 0;
     const quickLaps = trackDefaultLaps(track);
+    // The default seconds are clamped at THIS race's pace, so the Quick-Test type's own
+    // multiplier decides the ceiling — not the track's default type.
+    const quickSpeedMultiplier = getRacerType(effectiveTypeId)?.getSpeedMultiplier() ?? 1.0;
     const quickSeconds = trackDefaultSeconds(
       track,
       quickPathLengthPx,
-      normalSpeedPxPerSec,
+      paceSpeedPxPerSec(normalSpeedPxPerSec, quickSpeedMultiplier),
       behaviorConfig.runoutZone
     );
     const quickModel = deriveRaceDuration({
@@ -500,7 +515,7 @@ function SetupScreen() {
       laps: quickLaps,
       requestedSeconds: quickSeconds,
       normalSpeedPxPerSec,
-      speedMultiplier: getRacerType(effectiveTypeId)?.getSpeedMultiplier() ?? 1.0,
+      speedMultiplier: quickSpeedMultiplier,
       runoutZone: behaviorConfig.runoutZone,
     });
     const quickRealizedDurationSec = quickModel.realizedDurationSec;
@@ -884,9 +899,7 @@ function SetupScreen() {
                         {LAP_CHOICES.map((n) => {
                           const isSelected = effectiveLaps === n;
                           const secs = selectedPathLengthPx
-                            ? Math.round(
-                                secondsForLaps(n, selectedPathLengthPx, normalSpeedPxPerSec)
-                              )
+                            ? Math.round(secondsForLaps(n, selectedPathLengthPx, selectedPaceSpeed))
                             : null;
                           return (
                             <button

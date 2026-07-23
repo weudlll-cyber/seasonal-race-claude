@@ -306,31 +306,39 @@ There is exactly **one** speed normalisation and **one** duration derivation, in
 `client/src/modules/durationModel.js`. `RaceScreen`, `SetupScreen` and every sim call
 `deriveRaceDuration` and use the returned scalars verbatim — nothing re-derives a duration.
 
-**The one number.** `baseSpeedConfig.normalSpeedPxPerSec` — the **normal track speed** in world
-pixels per second, identical for every track and every racer class. Dev Screen → Dynamics →
-Speed → *Normal Track Speed*. Shipped provisional value: **225 px/s**.
+**The pace.** One number — `baseSpeedConfig.normalSpeedPxPerSec`, the **normal track speed** in
+world pixels per second, the same for every track (Dev Screen → Dynamics → Speed → *Normal Track
+Speed*, shipped provisional **225 px/s**) — times the race type's multiplier:
+
+```
+P = paceSpeed = normalSpeedPxPerSec × speedMultiplier       [world px/s]
+```
+
+`paceSpeedPxPerSec()` is the single definition; every derivation below reads its result, never the
+bare normal speed. A mean racer of that type travels exactly `P` px/s **on a closed and an open
+track alike** — the owner's law, pinned by `durationModel.test.js` → *the owner's law*.
 
 **Formula:**
 ```
 // CLOSED: the operator picks LAPS; the duration is derived.
 finishT             = laps                                  (integer >= 1)
-realizedDurationSec = laps × pathLengthPx / V
+realizedDurationSec = laps × pathLengthPx / P
 
 // OPEN: the operator picks SECONDS; the finish line is derived.
-naturalMaxSec       = (1 − runoutZone) × pathLengthPx / V
-finishT             = min(V × seconds / pathLengthPx, 1 − runoutZone)
+naturalMaxSec       = (1 − runoutZone) × pathLengthPx / P
+finishT             = min(P × seconds / pathLengthPx, 1 − runoutZone)
 paceScale           = seconds <= naturalMaxSec ? 1 : naturalMaxSec / seconds
 realizedDurationSec = seconds
 
 // BOTH — one expression, one clock (time = distance / speed):
-realizedDurationSec = finishT × pathLengthPx / (V × paceScale)
+realizedDurationSec = finishT × pathLengthPx / (P × paceScale)
 race_baseSpeed      = computeRaceBaseSpeed(finishT, realizedDurationSec × speedMultiplier)
                     = finishT / (REFERENCE_FPS × realizedDurationSec × speedMultiplier)
 
 r.baseSpeed = race_baseSpeed × speedMultiplier × spreadFactor × speedBonusMult
 ```
 
-- `V` — the normal track speed, px/s. The only pace input.
+- `P` — this race's pace, px/s. The only pace input.
 - `finishT` — lap count (closed) or a 0..1 position capped at `1 − runoutZone` (open).
 - `realizedDurationSec` — **THE clock**. `race_baseSpeed`, the re-roll schedule, the plan's
   `targetDurationMs`, the `racePlanEnabled` gate and every phase/easing fraction key on this one
@@ -338,17 +346,19 @@ r.baseSpeed = race_baseSpeed × speedMultiplier × spreadFactor × speedBonusMul
 - `paceScale` — 1 at or below the track's natural maximum. Above it the finish line is pinned to
   the physical end and the **whole field** is slowed uniformly so the chosen time still fits.
   There is no speed-up counterpart: the shortest closed race is one lap, whatever it lasts.
-- `speedMultiplier` — per-racer-type constant (horse=1.0, rocket=1.25, snail=0.3, …). Divided out
-  of `race_baseSpeed` and re-multiplied per racer, so it cancels to M⁰: **one normal speed for all
-  classes**. A snail race and an F1 race over the same track and laps take the same time.
+- `speedMultiplier` — per-racer-type constant (horse=1.0, rocket=1.25, snail=0.3, …). It
+  **multiplies the pace**. On closed tracks that scales the derived duration:
+  `duration(M) = duration(1) / M`, so a snail race is much longer than an F1 race over the same
+  laps. On open tracks, which are time-bounded, it moves the finish line instead:
+  `finishT(M) = finishT(1) × M`.
 - `spreadFactor = random[BASE_SPEED_MIN, BASE_SPEED_MAX] / BASE_SPEED_MEAN` — per-racer deviation
-  around the normal speed; tunable in Dev Screen → Dynamics → Speed → *Speed Range*. **Re-rolled
+  around the pace; tunable in Dev Screen → Dynamics → Speed → *Speed Range*. **Re-rolled
   periodically during the race** (see Re-Roll Mechanism below); only this field changes between rolls.
 - `speedBonusMult = 1 + speedBonus` — positional back-row compensation from D7c row layout.
   **Constant over the whole race** — re-rolls never touch it (see speedBonus below).
 
 **The pace is defined by the MEAN racer**, not by an N-calibrated expected minimum. A racer with
-`spreadFactor = 1.0` travels exactly `V` px/s and reaches `finishT` in exactly
+`spreadFactor = 1.0` travels exactly `P` px/s and reaches `finishT` in exactly
 `realizedDurationSec`. The spread only widens the finishing field around that; it no longer enters
 the pace, so the pace no longer depends on the racer count.
 
@@ -391,23 +401,33 @@ sessionStorage boundary.
 Tracks carry `defaultLaps` (closed) or `defaultDurationSec` (open) instead of the old
 `defaultDuration` seconds. Migration mapping, applied once to the seeds:
 
-| track | topology | old `defaultDuration` | new default | derived |
-|---|---|---|---|---|
-| city-circuit | closed | 60 s | 2 laps | 54.5 s |
-| dirt-oval | closed | 60 s | 2 laps | 58.1 s |
-| garden-path | closed | 120 s | 4 laps | 84.8 s |
-| ice-track | closed | 60 s | 2 laps | 53.9 s |
-| searound | closed | 60 s | 2 laps | 45.8 s |
-| luger-hill | open | 90 s | 43 s | clamped to natural max 43.7 s |
-| mountainstreet | open | 60 s | 60 s | natural max 66.1 s |
-| river-run | open | 60 s | 55 s | clamped to natural max 55.1 s |
-| seatrack | open | 60 s | 51 s | clamped to natural max 51.7 s |
-| space-sprint | open | 90 s | 83 s | clamped to natural max 83.5 s |
+Durations below are at the **per-track default type**, whose multiplier is part of the pace.
+
+| track | topology | default type (M) | pace px/s | old `defaultDuration` | new default | effective |
+|---|---|---|---|---|---|---|
+| city-circuit | closed | motorbike (1.05) | 236.3 | 60 s | 2 laps | **51.9 s** |
+| dirt-oval | closed | horse (1.00) | 225.0 | 60 s | 2 laps | **58.1 s** |
+| garden-path | closed | snail (0.30) | 67.5 | 120 s | 4 laps | **282.8 s** |
+| ice-track | closed | snowmobile (1.10) | 247.5 | 60 s | 2 laps | **49.0 s** |
+| searound | closed | manta (1.10) | 247.5 | 60 s | 2 laps | **41.6 s** |
+| luger-hill | open | luge (1.10) | 247.5 | 90 s | 90 s stored | **39 s** (natural max 39.7 s) |
+| mountainstreet | open | boarder (1.00) | 225.0 | 60 s | 60 s stored | **60 s** (natural max 66.1 s) |
+| river-run | open | duck (0.85) | 191.3 | 60 s | 60 s stored | **60 s** (natural max 64.9 s) |
+| seatrack | open | dolphin (1.15) | 258.8 | 60 s | 60 s stored | **44 s** (natural max 45.0 s) |
+| space-sprint | open | rocket (1.25) | 281.3 | 90 s | 90 s stored | **66 s** (natural max 66.8 s) |
 
 Closed defaults use the old staircase (< 60 s → 1, 60–89 → 2, 90–119 → 3, ≥ 120 → 4), preserved as
 `legacyLapsFromDefaultDuration()` — a migration helper only; nothing in a running race calls it.
-Open defaults are **clamped to the natural maximum at read time**, not baked, so a shipped default
-never opens into a slowdown warning and the clamp relaxes on its own if the normal speed is lowered.
+
+Open tracks store the **authored** seconds (the pre-ship `defaultDuration`) and are **clamped to
+the natural maximum at read time**, never baked. The clamp is therefore a pure function of the
+pace: a faster default type lowers the ceiling (seatrack 60 → 44 s at dolphin's 1.15), and lowering
+the normal speed — or choosing a slower type — relaxes it again. A shipped default never opens into
+a slowdown warning.
+
+garden-path is the visible consequence of restoring the type factor: at the snail's 0.3 it is a
+deliberately leisurely **282.8 s**, close to its pre-ship 280.9 s. (Under the M⁰ model it had
+collapsed to 84.8 s.)
 
 **Stored settings do not break.** `loadBaseSpeedConfig()` merges the new `normalSpeedPxPerSec` over
 any pre-ship `{min, max}` entry and repairs an absent/non-positive value, so a legacy localStorage

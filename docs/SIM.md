@@ -714,27 +714,41 @@ There is exactly **one** speed normalisation and **one** duration derivation in 
 (`sim-fairness.mjs`, `sim-race-visual.mjs`, `headlessRaceSimulator.js`) import it and use the
 returned scalars verbatim. Nothing downstream re-derives a duration.
 
-**The one number.** `baseSpeedConfig.normalSpeedPxPerSec` — the normal track speed in world
-pixels per second, identical for every track and every racer class. Adjustable in
-Dev Screen → Dynamics → Speed → *Normal Track Speed*. Shipped provisional value: **225 px/s**.
+**The pace.** One number, `baseSpeedConfig.normalSpeedPxPerSec` (adjustable in Dev Screen →
+Dynamics → Speed → *Normal Track Speed*, shipped provisional **225 px/s**), times the race type's
+multiplier:
 
-**The derivation** (`deriveRaceDuration`):
+```
+paceSpeed = normalSpeedPxPerSec × speedMultiplier          [world px/s]
+```
+
+`paceSpeedPxPerSec()` is the single definition; every helper below takes its result, never the
+bare normal speed. A mean racer of that type travels exactly `paceSpeed` px/s — **on a closed
+track and on an open track alike**. That cross-topology equality is the owner's law and is pinned
+by `durationModel.test.js` → *the owner's law*.
+
+**The derivation** (`deriveRaceDuration`), with `P = paceSpeed`:
 
 | | operator picks | finishT | duration |
 |---|---|---|---|
-| **CLOSED** | `laps` (integer ≥ 1) | `laps` | **derived**: `laps × pathLengthPx / V` |
-| **OPEN** | `seconds` | **derived**: `V × seconds / pathLengthPx`, capped at `1 − runoutZone` | the chosen seconds |
+| **CLOSED** | `laps` (integer ≥ 1) | `laps` | **derived**: `laps × pathLengthPx / P` |
+| **OPEN** | `seconds` | **derived**: `P × seconds / pathLengthPx`, capped at `1 − runoutZone` | the chosen seconds |
 
-For open tracks, `naturalMaxSeconds = (1 − runoutZone) × pathLengthPx / V` is the longest race the
-track holds at normal speed. Choosing **more** time than that is allowed: the finish line pins to
-the physical end and the whole field is slowed uniformly by `paceScale = naturalMax / requested`,
+For open tracks, `naturalMaxSeconds = (1 − runoutZone) × pathLengthPx / P` is the longest race the
+track holds at pace. Choosing **more** time than that is allowed: the finish line pins to the
+physical end and the whole field is slowed uniformly by `paceScale = naturalMax / requested`,
 so the race still lasts exactly the chosen time. There is **no speed-up** counterpart — the
 shortest closed race is one lap, whatever it lasts.
 
-`speedMultiplier` (racer class) is divided out of `raceBaseSpeed` and re-multiplied per racer, so
-it cancels to M⁰: one normal speed for all classes. The pace is defined by the **mean** racer;
-the base-speed spread only widens the finishing field around it, and enters the setup **display**
-via `fieldFinishWindow()` — never an engine input.
+Because the pace carries the type factor, **a slower type takes proportionally longer** over the
+same laps: `duration(M) = duration(1) / M`. A snail race and an F1 race are not the same length.
+On open tracks, which are time-bounded, the type moves the *finish line* instead:
+`finishT(M) = finishT(1) × M`. The pace is defined by the **mean** racer; the base-speed spread
+only widens the finishing field around it, and enters the setup **display** via
+`fieldFinishWindow()` — never an engine input.
+
+`raceBaseSpeed` is `computeRaceBaseSpeed(finishT, realizedDurationSec × speedMultiplier)`, so the
+engine's `r.baseSpeed = raceBaseSpeed × M × spreadFactor` puts the mean racer at `paceSpeed`.
 
 **One clock.** `realizedDurationSec` is the single duration scalar. `race_baseSpeed`, the re-roll
 schedule (`rollCount` / `rollInterval` / `lastRollDeadline`), the plan's `targetDurationMs`, the
@@ -762,6 +776,17 @@ Before this ship the browser derived `finishT` from the *setting* (60 → 2 laps
 `durationSec = 60`. Same seed, two different races — a 2.14× pace ratio on searound/manta.
 `scripts/diag/micro-divergence.mjs` now re-runs its A/B arms through the shared model and reports
 a checkpoint diff of **exactly zero**. See [reports/parity/MICRO-DIVERGENCE.md](../reports/parity/MICRO-DIVERGENCE.md).
+
+### Fingerprint rule (binding)
+
+The shipped-default fingerprint (`scripts/fingerprint-default.mjs`) hashes **behaviour** — race
+results — so lint, reformatting and comment edits cannot move it. Therefore:
+
+**Compute it exactly ONCE per world (ON flagless, OFF with `--gapRerollEnabled=false`), on the
+FINAL COMMITTED state — after lint and after the commit.** No pre-change measurement, no
+intermediate measurements, and none of either in a report. Debug runs during development are fine
+and stay unreported. A commit that claims byte-identity, and a commit that moves the numbers by
+design, each get one measurement of the pair on their final state; record old → new.
 
 ### CLI race-length inputs
 

@@ -7,18 +7,28 @@
 //              by the browser (RaceScreen/SetupScreen) and by the headless sims.
 //
 // THE MODEL
-//   There is exactly ONE speed normalisation in the game: a fixed NORMAL TRACK SPEED
-//   in world pixels per second (baseSpeedConfig.normalSpeedPxPerSec), identical for
-//   every track and every racer class. A mean racer moves at that speed, full stop.
+//   There is exactly ONE speed normalisation in the game. The pace of a race is
+//
+//       paceSpeed = normalSpeedPxPerSec * speedMultiplier          [world px/s]
+//
+//   where normalSpeedPxPerSec (baseSpeedConfig, DevScreen-adjustable) is the same
+//   number for every track, and speedMultiplier is the RACE TYPE's factor. A mean
+//   racer of that type travels exactly paceSpeed px/s — on a closed track and on an
+//   open track alike. That cross-topology equality is the owner's law and is pinned
+//   by a test (durationModel.test.js, "the owner's law").
 //
 //   From it, everything else is a division:
-//     meanTSpeed   = V / (pathLengthPx * REFERENCE_FPS)      [t per physics frame]
+//     meanTSpeed   = paceSpeed / (pathLengthPx * REFERENCE_FPS)  [t per physics frame]
 //     CLOSED  race: operator picks LAPS      -> finishT = laps
-//                   duration is DERIVED      -> laps * pathLengthPx / V
-//     OPEN    race: operator picks SECONDS   -> finishT = V * seconds / pathLengthPx,
+//                   duration is DERIVED      -> laps * pathLengthPx / paceSpeed
+//     OPEN    race: operator picks SECONDS   -> finishT = paceSpeed * seconds / pathLengthPx,
 //                   capped at (1 - runoutZone). Asking for more time than the track
-//                   physically holds at normal speed is allowed and scales the pace
-//                   of the WHOLE field down uniformly by `paceScale` so it fits.
+//                   physically holds at pace is allowed and scales the pace of the
+//                   WHOLE field down uniformly by `paceScale` so it fits.
+//
+//   Because pace carries the type factor, a slower type takes proportionally LONGER
+//   over the same laps: duration(M) = duration(1) / M. A snail race and an F1 race
+//   are NOT the same length.
 //
 //   One clock: `realizedDurationSec` is the single duration scalar. race_baseSpeed,
 //   the re-roll schedule, the plan's targetDurationMs, the racePlanEnabled gate and
@@ -58,18 +68,32 @@ export function normalSpeedFrom(baseSpeedConfig = DEFAULT_BASE_SPEED_CONFIG) {
 }
 
 /**
- * Longest race an OPEN track can hold at normal speed: the time a mean racer needs to
- * reach the finish line at (1 - runoutZone). Times beyond this are still selectable —
- * they trigger the uniform slowdown (see deriveRaceDuration).
+ * THE pace of a race, in world px/s — the ONE place the racer-type factor meets the normal
+ * speed. Every helper below takes the result of this, never the bare normal speed, so there
+ * is exactly one definition of "how fast this race runs" and no second seam.
+ *
+ * @param {number} normalSpeedPxPerSec  the one normal track speed (baseSpeedConfig)
+ * @param {number} [speedMultiplier=1]  the RACE TYPE's factor
+ * @returns {number} px/s a mean racer of that type travels
+ */
+export function paceSpeedPxPerSec(normalSpeedPxPerSec, speedMultiplier = 1.0) {
+  if (!(normalSpeedPxPerSec > 0) || !(speedMultiplier > 0)) return 0;
+  return normalSpeedPxPerSec * speedMultiplier;
+}
+
+/**
+ * Longest race an OPEN track can hold at pace: the time a mean racer needs to reach the
+ * finish line at (1 - runoutZone). Times beyond this are still selectable — they trigger
+ * the uniform slowdown (see deriveRaceDuration).
  *
  * @param {number} pathLengthPx
- * @param {number} normalSpeedPxPerSec
+ * @param {number} paceSpeed  px/s — from paceSpeedPxPerSec(), NOT the bare normal speed
  * @param {number} [runoutZone=0.05]
  * @returns {number} seconds
  */
-export function naturalMaxSeconds(pathLengthPx, normalSpeedPxPerSec, runoutZone = 0.05) {
-  if (!(pathLengthPx > 0) || !(normalSpeedPxPerSec > 0)) return 0;
-  return ((1 - runoutZone) * pathLengthPx) / normalSpeedPxPerSec;
+export function naturalMaxSeconds(pathLengthPx, paceSpeed, runoutZone = 0.05) {
+  if (!(pathLengthPx > 0) || !(paceSpeed > 0)) return 0;
+  return ((1 - runoutZone) * pathLengthPx) / paceSpeed;
 }
 
 /**
@@ -77,28 +101,29 @@ export function naturalMaxSeconds(pathLengthPx, normalSpeedPxPerSec, runoutZone 
  *
  * @param {number} laps
  * @param {number} pathLengthPx
- * @param {number} normalSpeedPxPerSec
+ * @param {number} paceSpeed  px/s — from paceSpeedPxPerSec(), NOT the bare normal speed
  * @returns {number} seconds for the mean racer
  */
-export function secondsForLaps(laps, pathLengthPx, normalSpeedPxPerSec) {
-  if (!(pathLengthPx > 0) || !(normalSpeedPxPerSec > 0)) return 0;
-  return (laps * pathLengthPx) / normalSpeedPxPerSec;
+export function secondsForLaps(laps, pathLengthPx, paceSpeed) {
+  if (!(pathLengthPx > 0) || !(paceSpeed > 0)) return 0;
+  return (laps * pathLengthPx) / paceSpeed;
 }
 
 /**
  * Inverse of secondsForLaps: the lap count whose derived duration is closest to `seconds`
- * on this track. This is the documented mapping the measurement protocol's fixed-seconds
- * scaling runs (30 / 60 / 120 / 300 s) use to reach a canonical closed-track race — it is
- * NOT a staircase constant, it is the model read backwards, so it tracks the normal speed.
+ * on this track at this pace. This is the documented mapping the measurement protocol's
+ * fixed-seconds scaling runs (30 / 60 / 120 / 300 s) use to reach a canonical closed-track
+ * race — it is NOT a staircase constant, it is the model read backwards, so it tracks both
+ * the normal speed and the racer type.
  *
  * @param {number} seconds
  * @param {number} pathLengthPx
- * @param {number} normalSpeedPxPerSec
+ * @param {number} paceSpeed  px/s — from paceSpeedPxPerSec(), NOT the bare normal speed
  * @returns {number} integer laps >= MIN_LAPS
  */
-export function lapsForApproxSeconds(seconds, pathLengthPx, normalSpeedPxPerSec) {
-  if (!(pathLengthPx > 0) || !(normalSpeedPxPerSec > 0)) return MIN_LAPS;
-  return Math.max(MIN_LAPS, Math.round((seconds * normalSpeedPxPerSec) / pathLengthPx));
+export function lapsForApproxSeconds(seconds, pathLengthPx, paceSpeed) {
+  if (!(pathLengthPx > 0) || !(paceSpeed > 0)) return MIN_LAPS;
+  return Math.max(MIN_LAPS, Math.round((seconds * paceSpeed) / pathLengthPx));
 }
 
 /**
@@ -111,18 +136,19 @@ export function lapsForApproxSeconds(seconds, pathLengthPx, normalSpeedPxPerSec)
  * @param {number}  [p.laps]              CLOSED: operator-chosen lap count (integer >= 1)
  * @param {number}  [p.requestedSeconds]  OPEN:   operator-chosen race time in seconds
  * @param {number}  p.normalSpeedPxPerSec
- * @param {number}  [p.speedMultiplier=1] racer-class factor — cancels out of the PACE by
- *                                        construction (one normal speed for all classes);
- *                                        it is divided out here and re-multiplied per racer.
+ * @param {number}  [p.speedMultiplier=1] the RACE TYPE's factor. It MULTIPLIES the pace
+ *                                        (paceSpeed = normalSpeed * M), so a slower type
+ *                                        makes the same laps take proportionally longer.
  * @param {number}  [p.runoutZone=0.05]
  * @returns {{
  *   finishT: number,               // laps (closed) or 0..1 position (open)
  *   realizedDurationSec: number,   // THE clock — every duration-keyed term uses this
  *   raceBaseSpeed: number,         // engine input: r.baseSpeed = raceBaseSpeed * M * spreadFactor * bonus
- *   paceScale: number,             // 1 = normal speed; < 1 = uniform slowdown (open, over-long time)
- *   naturalMaxSec: number,         // open only: longest race at normal speed (0 for closed)
+ *   paceScale: number,             // 1 = full pace; < 1 = uniform slowdown (open, over-long time)
+ *   naturalMaxSec: number,         // open only: longest race at pace (0 for closed)
  *   slowdownActive: boolean,
- *   effectiveSpeedPxPerSec: number // V * paceScale — what a mean racer actually travels at
+ *   paceSpeedPxPerSec: number,     // normalSpeed * M — this race's full pace
+ *   effectiveSpeedPxPerSec: number // paceSpeed * paceScale — what a mean racer actually travels at
  * }}
  */
 export function deriveRaceDuration({
@@ -134,7 +160,10 @@ export function deriveRaceDuration({
   speedMultiplier = 1.0,
   runoutZone = 0.05,
 }) {
-  const V = normalSpeedPxPerSec;
+  // THE pace — the one definition, used for the finish line, the natural maximum, the
+  // slowdown factor and the derived duration alike. No caller may substitute a bare
+  // normal speed for it.
+  const pace = paceSpeedPxPerSec(normalSpeedPxPerSec, speedMultiplier);
   const L = pathLengthPx;
   const EMPTY = {
     finishT: 0,
@@ -143,9 +172,10 @@ export function deriveRaceDuration({
     paceScale: 1,
     naturalMaxSec: 0,
     slowdownActive: false,
+    paceSpeedPxPerSec: 0,
     effectiveSpeedPxPerSec: 0,
   };
-  if (!(L > 0) || !(V > 0)) return EMPTY;
+  if (!(L > 0) || !(pace > 0)) return EMPTY;
 
   let finishT;
   let paceScale = 1;
@@ -154,10 +184,10 @@ export function deriveRaceDuration({
   if (isOpen) {
     const seconds = Math.max(0, requestedSeconds ?? 0);
     if (!(seconds > 0)) return EMPTY;
-    natMax = naturalMaxSeconds(L, V, runoutZone);
+    natMax = naturalMaxSeconds(L, pace, runoutZone);
     if (seconds <= natMax) {
       // In range: the finish line lands exactly where a mean racer is after `seconds`.
-      finishT = (V * seconds) / L;
+      finishT = (pace * seconds) / L;
     } else {
       // Beyond the track's natural maximum: the finish line is pinned at the physical end
       // and the WHOLE field is slowed uniformly so the chosen time is what the race takes.
@@ -169,14 +199,16 @@ export function deriveRaceDuration({
     finishT = n;
   }
 
-  const effectiveSpeedPxPerSec = V * paceScale;
+  const effectiveSpeedPxPerSec = pace * paceScale;
   // One expression, one clock: time = distance / speed. For open in-range this returns the
   // requested seconds exactly; under slowdown it also returns the requested seconds (that is
-  // what paceScale is for); for closed it is the derived laps * length / speed.
+  // what paceScale is for); for closed it is the derived laps * length / pace.
   const realizedDurationSec = (finishT * L) / effectiveSpeedPxPerSec;
-  // speedMultiplier is divided out here and re-multiplied on every racer
-  // (r.baseSpeed = raceBaseSpeed * M * spreadFactor), so the class cancels to M^0:
-  // one normal speed for ALL classes, exactly as specified.
+  // The engine multiplies this by the type again (r.baseSpeed = raceBaseSpeed * M * spreadFactor),
+  // so raceBaseSpeed carries the pace WITHOUT the type: raceBaseSpeed * M * REFERENCE_FPS *
+  // realizedDurationSec = finishT, i.e. a mean racer of this type covers finishT in exactly
+  // realizedDurationSec. (This expression is unchanged from the M^0 model — only what
+  // realizedDurationSec itself means has changed, because the pace now carries M.)
   const raceBaseSpeed = computeRaceBaseSpeed(finishT, realizedDurationSec * speedMultiplier);
 
   return {
@@ -186,6 +218,7 @@ export function deriveRaceDuration({
     paceScale,
     naturalMaxSec: natMax,
     slowdownActive: paceScale < 1,
+    paceSpeedPxPerSec: pace,
     effectiveSpeedPxPerSec,
   };
 }
@@ -225,23 +258,23 @@ export function trackDefaultLaps(track) {
 
 /**
  * The seconds an OPEN track starts at in the setup UI, CLAMPED to the track's natural maximum
- * at the current normal speed. Shipped defaults must never open into a slowdown warning; if the
- * owner later lowers the normal speed the clamp relaxes on its own, because it is evaluated
- * here rather than baked into the track record.
+ * at this race's pace. Shipped defaults must never open into a slowdown warning; if the owner
+ * later lowers the normal speed — or a slower type is chosen — the clamp follows on its own,
+ * because it is evaluated here rather than baked into the track record.
  *
  * @param {object} track
  * @param {number} pathLengthPx
- * @param {number} normalSpeedPxPerSec
+ * @param {number} paceSpeed  px/s — from paceSpeedPxPerSec(), NOT the bare normal speed
  * @param {number} [runoutZone=0.05]
  * @returns {number} seconds
  */
-export function trackDefaultSeconds(track, pathLengthPx, normalSpeedPxPerSec, runoutZone = 0.05) {
+export function trackDefaultSeconds(track, pathLengthPx, paceSpeed, runoutZone = 0.05) {
   const stored = Number.isFinite(track?.defaultDurationSec)
     ? track.defaultDurationSec
     : Number.isFinite(track?.defaultDuration)
       ? track.defaultDuration
       : 60;
-  const natMax = naturalMaxSeconds(pathLengthPx, normalSpeedPxPerSec, runoutZone);
+  const natMax = naturalMaxSeconds(pathLengthPx, paceSpeed, runoutZone);
   if (!(natMax > 0)) return Math.max(OPEN_TRACK_MIN_SECONDS, Math.round(stored));
   return Math.max(OPEN_TRACK_MIN_SECONDS, Math.min(Math.round(stored), Math.floor(natMax)));
 }

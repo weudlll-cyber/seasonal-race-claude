@@ -36,6 +36,7 @@ import {
   normalSpeedFrom,
   trackDefaultLaps,
   lapsForApproxSeconds,
+  paceSpeedPxPerSec,
 } from '../../client/src/modules/durationModel.js';
 import {
   DEFAULT_RACE_DYNAMICS_CONFIG as DYN,
@@ -77,7 +78,7 @@ const modelB = deriveRaceDuration({
 
 // Informational: the legacy measurement-protocol input ("60 s") maps to this lap count on this
 // track. It is a DIFFERENT race from the track default, by design — not a divergence.
-const protocolLaps = lapsForApproxSeconds(60, pathLengthPx, NORMAL_SPEED);
+const protocolLaps = lapsForApproxSeconds(60, pathLengthPx, paceSpeedPxPerSec(NORMAL_SPEED, spd));
 
 const effectiveWidth = geometricTrackWidth * BEH.startSpreadRange;
 const totalRows = computeRacerLayout(effectiveWidth, N, displaySize, DEFAULT_AUTO_SCALE_CONFIG).rowCount;

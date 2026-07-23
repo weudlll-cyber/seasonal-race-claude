@@ -74,6 +74,7 @@ import {
   deriveRaceDuration,
   normalSpeedFrom,
   lapsForApproxSeconds,
+  paceSpeedPxPerSec,
   trackDefaultLaps,
   trackDefaultSeconds,
   naturalMaxSeconds,
@@ -3123,6 +3124,9 @@ if (isMain) {
         // Phase-1: use topology-specific racer count (open vs closed).
         const nRacersForCombo = isOpen ? N_RACERS_OPEN : N_RACERS_CLOSED;
         // ── Canonical inputs for this combo ────────────────────────────────────────────
+        // THIS combo's pace: the one normal speed times THIS racer type's multiplier. Every
+        // per-combo derivation below reads it, so the sim and the browser agree term for term.
+        const comboPaceSpeed = paceSpeedPxPerSec(NORMAL_SPEED_PX_PER_SEC, speedMultiplier);
         // CLOSED: a lap count — explicit (--laps), else the protocol mapping of durationSec,
         //         else the track's own default. OPEN: seconds, straight from durationSec.
         const comboLaps = isOpen
@@ -3132,7 +3136,7 @@ if (isMain) {
             : LAPS_FILTER
               ? Math.max(MIN_LAPS, Number(LAPS_FILTER))
               : DUR_FILTER || !Number.isFinite(track.defaultLaps)
-                ? lapsForApproxSeconds(durationSec, pathLengthPx, NORMAL_SPEED_PX_PER_SEC)
+                ? lapsForApproxSeconds(durationSec, pathLengthPx, comboPaceSpeed)
                 : trackDefaultLaps(track);
         const comboSeconds = !isOpen
           ? 0
@@ -3140,7 +3144,7 @@ if (isMain) {
             ? trackDefaultSeconds(
                 track,
                 pathLengthPx,
-                NORMAL_SPEED_PX_PER_SEC,
+                comboPaceSpeed,
                 DEFAULT_RACE_BEHAVIOR_CONFIG.runoutZone
               )
             : durationSec;
