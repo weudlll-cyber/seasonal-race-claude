@@ -1,0 +1,18 @@
+{
+  "arms": [
+    "0.50",
+    "0.75"
+  ],
+  "races": 25,
+  "seed": 1,
+  "dur": 60,
+  "tracks": [
+    "searound",
+    "city-circuit"
+  ],
+  "racersClosed": 40,
+  "racersOpen": 60,
+  "tight": 0.5976,
+  "far": 1.4406,
+  "wallClockSec": 755.358
+}

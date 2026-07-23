@@ -432,6 +432,15 @@ export function createTrajectoryController(racePlan) {
   let _carouselWinFrames = 0; // participant-frames in W (the saturation denominator)
   let _gapDownAheadGtBehind = 0; // SMOKING GUN: a DOWN-tilt while gapAhead > gapBehind
   let _gapDownLeader = 0; // DOWN-tilts on the live leader (rank 1)
+  // SCREEN-tier escape-latency telemetry (read-only). One entry per DOWN-tilt applied to the LIVE
+  // LEADER, which is the event the eye sees as "the escapee gets braked". At that instant `gapBehind`
+  // IS the P1->P2 gap, so the entry records how far the leader had already escaped when the correction
+  // arrived, and how hard the correction was. Collecting it cannot change any drawn value: the array
+  // is written after `frac` is computed and never read by the transform.
+  //   gapLen — P1->P2 gap in racer lengths at the moment of the tilt (the escape depth at correction)
+  //   frac   — min(1, strength*(gapBehind-G)) : fraction-of-the-way-to-the-band-edge actually applied
+  //   delta  — the absolute spreadFactor reduction applied this event (frac * (rawSample - spreadMin))
+  const _gapLeaderDownEvents = [];
   let _gapDownChaser = 0; // DOWN-tilts on live ranks 2–5 (the chase group)
   let _gapDownPack = 0; // DOWN-tilts on live rank ≥6 (the pack)
   let _gapDownGapAheadSum = 0; // Σ gapAhead at DOWN-tilt moments (lengths)
@@ -1026,8 +1035,17 @@ export function createTrajectoryController(racePlan) {
       _gapDownGapAheadSum += gapAhead;
       _gapDownGapBehindSum += gapBehind;
       if (gapAhead > gapBehind) _gapDownAheadGtBehind++;
-      if (pos === 0) _gapDownLeader++;
-      else if (pos <= 4) _gapDownChaser++;
+      if (pos === 0) {
+        _gapDownLeader++;
+        // Read-only escape-latency capture (see _gapLeaderDownEvents). Written only for the LIVE
+        // leader; does not touch rawSample, spreadMin/Max or any RNG.
+        _gapLeaderDownEvents.push({
+          p: phaseProgress,
+          gapLen: gapBehind,
+          frac,
+          delta: frac * (rawSample - spreadMin),
+        });
+      } else if (pos <= 4) _gapDownChaser++;
       else _gapDownPack++;
       return clamp(rawSample - frac * (rawSample - spreadMin), spreadMin, spreadMax); // toward SLOWER
     }
@@ -1224,6 +1242,16 @@ export function createTrajectoryController(racePlan) {
     // C1 telemetry + the runtime carousel plan (null when not cast). Read-only accessors.
     getCarouselPlan: () => plan._carouselPlan ?? null,
     getCarouselDiag: () => plan._carouselDiag ?? null,
+    // SCREEN escape-latency: how many DOWN-tilts have hit the LIVE LEADER so far. Read per frame by
+    // the sim so it can freeze escapeDepth (the max P1->P2 gap reached BEFORE the first correction)
+    // at the exact moment the first one fires. Read-only accessor, no state change.
+    getGapLeaderDownCount: () => _gapDownLeader,
+    // The per-event log itself. Deliberately NOT part of collectTelemetry(): that call RESETS its
+    // counters and is invoked earlier in the sim's race-teardown than the escape-latency record is
+    // written, and its result is aggregated/averaged downstream where an array field would be
+    // meaningless. This getter neither resets nor mutates; the copy stops a consumer editing state.
+    // Controllers are constructed per race, so the log cannot accumulate across races.
+    getGapLeaderDownEvents: () => _gapLeaderDownEvents.map((e) => ({ ...e })),
     getCarouselTelemetry: () => ({
       roleUpTilts: _roleUpTilts,
       roleDownTilts: _roleDownTilts,
