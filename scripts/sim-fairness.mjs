@@ -508,20 +508,6 @@ export function makePRNG(seed) {
   };
 }
 
-// Deterministic combo seed for the main-loop start-row shuffle (comboRowLayout). Derived
-// from track+racer+global seed via FNV-1a so a given --seed reproduces the exact start-row
-// assignment for every combo — the missing piece that made --seed control the FULL batch
-// (the shuffle was previously drawn from unseeded Math.random in the main loop).
-export function comboLayoutSeed(trackId, racerType, globalSeed) {
-  let h = 0x811c9dc5;
-  const str = `${trackId}|${racerType}|${globalSeed}`;
-  for (let i = 0; i < str.length; i++) {
-    h ^= str.charCodeAt(i);
-    h = Math.imul(h, 0x01000193);
-  }
-  return (h >>> 0) || 1; // never 0 (makePRNG on 0 still works, but keep it non-zero)
-}
-
 // ── Speed transition easing (mirrors index.jsx) ───────────────────────────────
 function easeInOutCubic(t) {
   return t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
@@ -631,13 +617,20 @@ export function runSingleRace({
   runawayParade = false,       // --runaway-parade: record runaway-winner / parade-finish raw signals (read-only)
   speedSource = false,         // --speed-source: record top-15 late-race speed decomposition (read-only)
   physicsTax = false,          // --physics-tax: record per-racer avoidance-braking distance loss (read-only)
+  raceRng: raceRngParam = null,   // D-GRID: the batch loop's shared per-race physics stream (already past the
+                                  // row-shuffle draw) — passed so the plan and the racers share ONE shuffle.
+  rowLayout: rowLayoutParam = null, // D-GRID: the one row shuffle the batch loop drew from raceRngParam, so the
+                                    // physical placement here equals the plan's start-row view. Absent (direct
+                                    // callers / tests) → computed internally below, byte-identical to before.
 }) {
   // Parity step 1: the race's physics RNG is an EXPLICIT stream threaded through every physics draw
   // site below (row shuffle, spreadFactor/rollJitter init, scheduled re-roll target + jitter) — the
   // shared makeRaceRng, the same entry point the browser uses. No global `Math.random` swap: the sim
   // has no render draws to isolate, but sharing one stream keeps sim and browser byte-identical for a
   // seed. seed <= 0 → native generator (exploration), as before. mulberry32 == the former makePRNG.
-  const raceRng = makeRaceRng(seed).physics;
+  // The batch loop builds this stream (and draws the row shuffle from it) so the plan and the racers
+  // share ONE grid (D-GRID); a direct caller passes nothing and we build it here, byte-identical.
+  const raceRng = raceRngParam ?? makeRaceRng(seed).physics;
 
   try {
     const BASE_SPEED_MIN  = BASE_SPEED_MIN_OVR;
@@ -677,7 +670,9 @@ export function runSingleRace({
     const bodyRef = computeBodyNarrowRef(W_REF, nRacers, displaySize, bodyFillNarrow, DEFAULT_AUTO_SCALE_CONFIG);
     const rowGapPx            = effectiveDisplaySize * rowConfig.rowGapMultiplier;
     const deltaT              = pathLengthPx > 0 ? rowGapPx / pathLengthPx : 0.01;
-    const rowLayout           = computeEvenRowLayout(nRacers, rowCount, raceRng);
+    // D-GRID: use the batch loop's shuffle when provided (so it equals the plan's start-row view);
+    // otherwise draw it here as raceRng's first draw — byte-identical to the pre-unification path.
+    const rowLayout           = rowLayoutParam ?? computeEvenRowLayout(nRacers, rowCount, raceRng);
 
     const rowSizeByRow = new Map();
     for (const a of rowLayout.assignments) {
@@ -3139,13 +3134,11 @@ if (isMain) {
         const rowGapPx             = comboEffDisplaySize * DEFAULT_ROW_LAYOUT_CONFIG.rowGapMultiplier;
         const totalRows            = comboLayout.rowCount;
         const rowSizes             = comboLayout.layout;
-        // Seed the start-row shuffle deterministically when running a reproducible batch
-        // (GLOBAL_SEED>0). GLOBAL_SEED=0 (exploration) keeps Math.random. This is what makes
-        // --seed control the FULL batch — including the race-plan's start-row assignment.
-        const comboLayoutRng       = GLOBAL_SEED > 0
-          ? makePRNG(comboLayoutSeed(trackId, racerType, GLOBAL_SEED))
-          : Math.random;
-        const comboRowLayout       = computeEvenRowLayout(nRacersForCombo, totalRows, comboLayoutRng);
+        // D-GRID: the start-row shuffle is drawn PER RACE from the shared physics stream, inside the
+        // raceIdx loop below — NOT once per combo. The old per-combo FNV shuffle (comboLayoutSeed) is
+        // gone: it keyed the plan to a grid the racers did not stand in, and it froze one grid across
+        // the whole batch. Now every race reshuffles and ONE shuffle feeds both plan and placement,
+        // exactly as the browser does.
 
         process.stdout.write(
           `   ${racerType.padEnd(10)} ${durationSec}s  finishT=${finishT.toFixed(3)}  rows=${totalRows}  sf=${comboAutoScale.toFixed(2)}  `
@@ -3156,14 +3149,23 @@ if (isMain) {
         for (let raceIdx = 0; raceIdx < N_RACES; raceIdx++) {
           // seed=0 → non-deterministic (exploration); seed>0 → reproducible batch
           const seed = GLOBAL_SEED > 0 ? (GLOBAL_SEED - 1) * N_RACES + raceIdx + 1 : 0;
+          // D-GRID: ONE per-race shuffle, drawn as the shared physics stream's first draw, feeds BOTH
+          // the plan's start-row view (planRacers below) AND the physical placement inside
+          // runSingleRace (raceRng + rowLayout passed in). This is the browser's shape exactly.
+          const raceRng = makeRaceRng(seed).physics;
+          const rowLayout = computeEvenRowLayout(nRacersForCombo, totalRows, raceRng);
           // Phase-3A: create Race Plan + TrajectoryController for this race when active
           let racePlanController = null;
           let raceSollRankMap = null;
           let b1Indices = new Set();
           if (RACE_PLAN_ACTIVE) {
-            const planRacers = comboRowLayout.assignments.map(
-              (a) => ({ index: a.racerIndex, startRowIndex: a.rowIndex })
-            );
+            // Ordered by racer index (NOT grid position) to match the browser exactly: createRacePlan
+            // pairs rankPool[i] with racers[i].index and selects pulk racers by iterating in this
+            // order, and the browser passes its racers index-ordered. Sorting here makes racers[i].index
+            // === i on both sides, so the same seed assigns the same target rank + pulk set per racer.
+            const planRacers = rowLayout.assignments
+              .map((a) => ({ index: a.racerIndex, startRowIndex: a.rowIndex }))
+              .sort((x, y) => x.index - y.index);
             const plan = createRacePlan(planRacers, finishT, durationSec * 1000, {
               bonusStrengthMultiplier: BONUS_MULT,
               // areaBonus phase-split (INFRA 5A): threaded into the plan so the shared controller
@@ -3229,6 +3231,8 @@ if (isMain) {
             targetSeconds: durationSec,
             seed,
             nRacers: nRacersForCombo,
+            raceRng,     // D-GRID: the shared per-race stream (past the row-shuffle draw)
+            rowLayout,   // D-GRID: the one shuffle the plan above was built from
             diagnosticMode: DIAG_MODE,
             behaviorConfigOverrides: {
               isOpen,

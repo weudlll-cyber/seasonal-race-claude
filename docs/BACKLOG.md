@@ -1,5 +1,7 @@
 # RaceArena — Backlog
 
+> **⚠️ Pre-unification baseline.** Absolute sim numbers in this document (band-reach, runaway, P1-contest, physics-tax, gate results) were measured before the plan-grid unification (parity step 2a, 2026-07-23) and are pending re-measurement — see [reports/BASELINE-INVALIDATED.md](../reports/BASELINE-INVALIDATED.md). They remain as history.
+
 Living list. See ROADMAP.md for phase context and completion status.
 Items ranked by urgency within each bucket. ✅ = done, 🔜 = next, ⏳ = waiting on dependency.
 

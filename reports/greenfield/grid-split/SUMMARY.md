@@ -1,5 +1,7 @@
 # FINDING — the sim builds the start grid twice, from two different seeds
 
+> **✅ RESOLVED 2026-07-23 (parity step 2a).** This split is fixed: the sim now draws ONE per-race shuffle for both the plan and the physical placement. See [reports/parity/DIVERGENCE-AUDIT.md](../../parity/DIVERGENCE-AUDIT.md) §2a and [reports/BASELINE-INVALIDATED.md](../../BASELINE-INVALIDATED.md). Numbers below are the pre-fix baseline.
+
 **Report-only. No races run, no behaviour changed.** Pure arithmetic over the two row-layout shuffles the sim already performs, replicated with the engine's own shared functions (`computeEvenRowLayout`, `mulberry32`/`makePRNG`, `comboLayoutSeed`).
 
 ## What the split is

@@ -1,5 +1,7 @@
 # GREENFIELD NIGHT RUN — Morning Report
 
+> **⚠️ Pre-unification baseline.** All absolute figures here predate the plan-grid unification (parity step 2a, 2026-07-23) and await re-measurement — see [reports/BASELINE-INVALIDATED.md](../BASELINE-INVALIDATED.md). They remain as history.
+
 Branch `pre/greenfield-proto` (from master `5ae3b1f`). Sim-only prototype of the greenfield
 architecture with three composer variants, measured against the committed baselines. This run was
 unattended; every phase committed its own results before the next began, and the shipped-default

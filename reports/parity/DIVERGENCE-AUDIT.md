@@ -19,7 +19,7 @@ the owner is asking about — **seed → plan grid → RNG stream → finished r
 
 | # | Divergence | Same seed → same race? | Root |
 |---|---|---|---|
-| **D-GRID** | Plan target-ranks and physical start-rows are keyed to the **same** shuffle in the browser but **two different** shuffles in the sim | **No** — different racers get steered to podium | §2a |
+| **D-GRID** ✅ CLOSED (step 2a) | Plan target-ranks and physical start-rows are keyed to the **same** shuffle in the browser but **two different** shuffles in the sim | ~~No~~ → **fixed**: sim now uses one per-race shuffle for both | §2a |
 | **D-STREAM** | Browser swaps the **global** `Math.random`; per-frame **camera + trail** draws pollute the same stream the physics re-rolls draw from | **No** — and browser replay isn't even frame-rate-independent in-race | §2c |
 | **D-SEED** | Browser seed ∈ [1,9999]; sim per-race seed = `(G−1)·N + i + 1`, unbounded | Expressible one way, not always the other | §2b |
 | **D-CONFIG** | Browser reads 7 config blocks from `localStorage`; a fresh sim reads shipped defaults unless `--config` is passed | **No** if any DevScreen override or edited track is unexported | §2e |
@@ -79,9 +79,19 @@ which draw order, and which stream** each side uses.
 
 ## 2. Known suspects — confirmed / refuted at the source
 
-### 2a. Plan-grid basis mismatch — **CONFIRMED (structural)**
+### 2a. Plan-grid basis mismatch — **CONFIRMED → CLOSED (parity step 2a, 2026-07-23)**
 
-This is the cleanest "same seed, different race" cause.
+This was the cleanest "same seed, different race" cause. It is now **fixed**: the sim's outer loop
+draws ONE per-race shuffle from the shared `makeRaceRng(seed)` stream and feeds it to BOTH the plan
+(`planRacers`) and the physical placement (`raceRng` + `rowLayout` passed into `runSingleRace`), so
+the plan steers the racers that actually stand in each row — exactly as the browser already did. The
+per-combo FNV path (`comboLayoutSeed` / `comboRowLayout`) is deleted. A batch no longer shares one
+grid across its races; every race reshuffles. New invariant pinned by
+`client/src/modules/sim-fairness.test.js` ("D-GRID plan/physical grid unification"). Fingerprints
+moved **by design**: ON `e93ffa70dad562a1` → `0ecca5e2dbe6526e`, OFF `72c3360fb75225ef` →
+`6e01e472b7655b9a`. Absolute sim baselines are retired pending re-measurement
+([reports/BASELINE-INVALIDATED.md](../BASELINE-INVALIDATED.md)). The original analysis is retained
+below as the record of what was wrong.
 
 - **Browser** builds *one* row shuffle and uses it for both purposes. The physical assignment
   (`assignmentByRacer`, `index.jsx:578`) and the plan's `planRacers` come from the **same**

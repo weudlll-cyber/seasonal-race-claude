@@ -1,5 +1,7 @@
 # RaceArena — Development Roadmap
 
+> **⚠️ Pre-unification baseline.** Absolute sim numbers in this document (band-reach, runaway, P1-contest, physics-tax, gate results) were measured before the plan-grid unification (parity step 2a, 2026-07-23) and are pending re-measurement — see [reports/BASELINE-INVALIDATED.md](../reports/BASELINE-INVALIDATED.md). They remain as history.
+
 ## Phase 1 — Setup Screen ✅ 100% complete
 
 - [x] Vite + React project scaffold (migrated from CRA)

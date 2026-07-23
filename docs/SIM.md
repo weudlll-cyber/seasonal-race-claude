@@ -1,5 +1,7 @@
 # SIM.md — Simulation System Documentation
 
+> **⚠️ Pre-unification baseline.** Absolute sim numbers anywhere in this document (band-reach, runaway, P1-contest, physics-tax, gate results) predate the plan-grid unification (parity step 2a, 2026-07-23) and are pending re-measurement — see [reports/BASELINE-INVALIDATED.md](../reports/BASELINE-INVALIDATED.md). They remain as history.
+
 ## Table of Contents
 
 1. [Overview](#1-overview)
@@ -71,7 +73,7 @@ Mechanism (parity step 1, 2026-07-23): the race-init effect in `RaceScreen/index
 >
 > **The seeded browser race is now frame-rate independent** — a given seed replays move-for-move regardless of frame pacing, camera state or slow-mo (proven by `RaceScreen/seedDeterminism.test.js`, which asserts identical finishing order + checkpointed progress across wildly different pacing profiles). This is the property parity step 1 delivered by isolating the physics RNG from render.
 >
-> **Cross-tool parity is close but not yet complete.** The browser and sim now draw the *same physics stream* for a seed, but a browser race and a sim race are still not guaranteed frame-identical, for two reasons: (1) the seed mapping — to reproduce a browser seed `S` in the sim, run `--seed=S --races=1` (the sim derives race `i` as `(N−1)×N_RACES + i + 1`, which is `S` at `N=1, i=0`); and (2) the **plan-grid basis still differs** (D-GRID in [reports/parity/DIVERGENCE-AUDIT.md](../reports/parity/DIVERGENCE-AUDIT.md)): the sim keys the race plan's target-ranks to a separate start-row shuffle than the physical grid, while the browser uses one shuffle for both. Full finishing-order equality awaits the plan-grid unification (parity step 2).
+> **Cross-tool parity (updated 2026-07-23, parity step 2a — D-GRID unified).** The browser and sim now draw the *same physics stream* AND the *same start-row grid* for a seed: one per-race shuffle feeds both the race plan's target-ranks and the physical placement, on both sides (the sim's former per-combo FNV grid is deleted). To reproduce a browser seed `S` in the sim, run `--seed=S --races=1` (the sim derives race `i` as `(N−1)×N_RACES + i + 1`, which is `S` at `N=1, i=0`) with the same track, racer count and shipped default config. With those matched, the finishing order should agree. The remaining known gap is the **speed/duration model** (the next ship), plus any config the sim reads from defaults rather than an exported world; a full headless golden-test harness is deferred. The pre-unification absolute baselines are retired — see [reports/BASELINE-INVALIDATED.md](../reports/BASELINE-INVALIDATED.md).
 
 ### File locations
 

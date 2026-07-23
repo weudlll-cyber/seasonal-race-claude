@@ -45,23 +45,25 @@ it makes an eye-test repeatable and lets two people look at the same thing.
 
 ---
 
-## What a typed seed does NOT determine
+## Cross-tool seed equality — RESOLVED (parity steps 1 + 2a, 2026-07-23)
 
-It does not select the sim race of the same number. Verified at source; three independent reasons:
+A typed browser seed `S` now maps to the sim race `--seed=S --races=1` (same track, racer count,
+shipped default config). The three reasons this used to fail are all fixed:
 
-1. **The target-rank assignment attaches to different racers.** `createRacePlan` pairs
-   `rankPool[i]` with `racers[i].index`. The sim passes its plan racers ordered by **grid position**;
-   the browser passes them ordered by **racer index**. Same random sequence, different racer↔rank
-   pairing — so a different designated winner and a different assigned tier per racer.
-2. **The sim's plan grid is not seeded by the race seed.** It is drawn from
-   `comboLayoutSeed(trackId, racerType, globalSeed)` — a function of the *batch* seed and the
-   track/racer names, constant across every race in a sweep. The browser's grid comes from the typed
-   per-race seed.
-3. **The sim uses two different grids internally** (one for the plan, one for the actual start rows);
-   the browser uses one for both. See the separate plan-vs-actual grid finding.
+1. **~~The target-rank assignment attaches to different racers.~~** Fixed: the sim now passes
+   `planRacers` ordered by **racer index** (`.sort((x,y) => x.index - y.index)`), matching the browser,
+   so `createRacePlan` pairs `rankPool[i]` with racer `i` on both sides — same designated winner, same
+   pulk selection, same tier per racer.
+2. **~~The sim's plan grid is not seeded by the race seed.~~** Fixed: the per-combo FNV
+   `comboLayoutSeed` path is deleted; the plan grid is drawn per race from the shared physics stream
+   (`makeRaceRng(seed)`), the same seed basis the browser uses.
+3. **~~The sim uses two different grids internally.~~** Fixed: ONE per-race shuffle feeds both the plan
+   and the physical start rows (parity step 2a / D-GRID).
 
-The seed *number* is typeable — a sweep run as `--seed=1 --races=100` really does use per-race seeds
-`1..100` — but typing it selects a different race.
+Parity step 1 additionally isolated the physics RNG from render draws, so the browser race is
+frame-rate independent. The remaining known gap before *guaranteed* frame-identity is the
+speed/duration model (the next ship). Per-race seeds are typeable — a sweep `--seed=1 --races=100`
+uses per-race seeds `1..100`, and `--seed=S --races=1` reproduces browser seed `S`.
 
 ---
 

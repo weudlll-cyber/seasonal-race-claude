@@ -1,5 +1,7 @@
 # SIM / BROWSER PARITY AUDIT — the eye and the sweep disagree systematically
 
+> **Partly resolved 2026-07-23.** Row 11 (grid seeding) is fixed by parity step 2a (plan-grid unification); parity step 1 fixed the RNG-stream coupling. See [reports/parity/DIVERGENCE-AUDIT.md](../../parity/DIVERGENCE-AUDIT.md) and [reports/BASELINE-INVALIDATED.md](../../BASELINE-INVALIDATED.md). Absolute numbers below are the pre-unification baseline.
+
 **Owner STOP.** Three Quick-Test races watched to the end with G=0.75 (city-circuit 9443, searound
 8835, mountainstreet 1736): **one overtake total**, no top-rank action, field strung out at the line.
 Under the stored A8 finale numbers (deadFinale 15.8%) three dead finales in a row is < 1% — systematic,

@@ -84,6 +84,12 @@ that phase's `*-complete` endpoint when it closes (incremental history then live
   8/8, 374 suites green; same seed replayed an identical race (identical final-lap standings + finishing
   order, only render framing/particles differed). Pinned before the driving-layer ship (plan-grid
   unification + speed/duration redesign) reshapes master.
+- `pre/plan-grid-unification` (`fe8565e`) — master before parity step 2a (plan-grid unification /
+  D-GRID): the last commit where the sim built the plan grid from a separate per-combo FNV shuffle
+  (`comboLayoutSeed`) while the racers stood in a different per-race shuffle. Return point before the
+  sim's start-row → target-rank mapping changed. Fingerprints move here by design (ON
+  `e93ffa70dad562a1`→`0ecca5e2dbe6526e`, OFF `72c3360fb75225ef`→`6e01e472b7655b9a`); all absolute sim
+  baselines are retired ([reports/BASELINE-INVALIDATED.md](../reports/BASELINE-INVALIDATED.md)).
 - **Collapse plan:** fold into the parity phase's `*-complete` endpoint when that phase closes.
 
 ### Retune / cleanup / greenfield phase — COLLAPSED (2026-07-23)

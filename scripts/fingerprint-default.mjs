@@ -22,7 +22,11 @@
 // JSON it writes. Adding/running it cannot change any race outcome.
 //
 // Usage: node scripts/fingerprint-default.mjs [label]     (label only names the temp out dir)
-//   Stage-1 AFTER hash (reference): fa4e3796e1e5f1a5
+//   Reference hashes (shipped-default byte-identity):
+//     Stage-1 AFTER:                        fa4e3796e1e5f1a5 (historical)
+//     Parity step 1 (RNG isolation):        ON e93ffa70dad562a1  OFF 72c3360fb75225ef
+//     Parity step 2a (plan-grid unified):   ON 0ecca5e2dbe6526e  OFF 6e01e472b7655b9a  ← current
+//   (OFF = extra arg `--gapRerollEnabled=false`. Numbers MOVED at step 2a by design — D-GRID.)
 // ============================================================
 import { execFileSync } from 'child_process';
 import { readFileSync } from 'fs';

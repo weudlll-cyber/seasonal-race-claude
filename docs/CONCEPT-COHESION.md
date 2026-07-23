@@ -1,5 +1,7 @@
 # Field-cohesion concept — bound every gap with loaded dice
 
+> **⚠️ Pre-unification baseline.** Absolute sim numbers in this document (band-reach, runaway, P1-contest, physics-tax, gate results) were measured before the plan-grid unification (parity step 2a, 2026-07-23) and are pending re-measurement — see [reports/BASELINE-INVALIDATED.md](../reports/BASELINE-INVALIDATED.md). They remain as history.
+
 **Status:** design concept, not yet built. A concept in this repo is a promise to build it — everything
 below is either verified at source (file:line) or tagged *inferred* / *needs-measurement*. Date: 2026-07-10.
 

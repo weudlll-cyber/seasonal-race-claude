@@ -18,6 +18,8 @@ import {
 } from '../../../scripts/sim-fairness.mjs';
 import { REFERENCE_FPS } from './camera/lapUtils.js';
 import { DEFAULT_BASE_SPEED_CONFIG } from './storage/defaults.js';
+import { makeRaceRng, createRacePlan, createTrajectoryController } from './racePlanner.js';
+import { computeEvenRowLayout } from './rowLayout.js';
 
 // ── Minimal circular track mock ───────────────────────────────────────────────
 // Avoids loading real track JSON. Closed circular track: t ∈ [0,1] maps to a
@@ -415,5 +417,68 @@ describe('runSingleRace — mixingQuota (open-track warmup)', () => {
       count++;
     }
     expect(count).toBe(20);
+  });
+});
+
+// ── D-GRID: the plan's start-row view equals the physical placement (parity step 2a) ────────────
+// Before unification the sim built the plan from a SEPARATE per-combo FNV shuffle while the racers
+// physically stood in a different per-race shuffle, so the plan steered a grid the racers were not in.
+// The batch loop now draws ONE shuffle from the shared physics stream and feeds it to BOTH the plan
+// (planRacers) and runSingleRace (raceRng + rowLayout). This pins that invariant: every racer's
+// physical start row equals the start row the plan was built on. It mirrors the browser, where one
+// rowLayout feeds both assignmentByRacer and planRacers.
+describe('D-GRID plan/physical grid unification', () => {
+  const N = 12;
+  const SEED = 7;
+
+  // Replicate the batch loop's unified derivation exactly.
+  function buildUnified(seed) {
+    const raceRng = makeRaceRng(seed).physics; // shuffle is this stream's FIRST draw
+    const rowLayout = computeEvenRowLayout(N, 4, raceRng);
+    // Index-ordered, matching the batch loop + the browser (racers[i].index === i).
+    const planRacers = rowLayout.assignments
+      .map((a) => ({ index: a.racerIndex, startRowIndex: a.rowIndex }))
+      .sort((x, y) => x.index - y.index);
+    const plan = createRacePlan(planRacers, BASE_FINISH_T, BASE_TARGET_SEC * 1000, {}, seed);
+    const racePlanController = createTrajectoryController(plan);
+    const result = runSingleRace(
+      makeRaceParams({
+        seed,
+        nRacers: N,
+        raceRng, // same stream, now past the shuffle draw
+        rowLayout, // the one shuffle the plan above was built from
+        racePlanController,
+        racerTargetRankMap: plan._racerTargetRank,
+      })
+    );
+    return { rowLayout, planRacers, result };
+  }
+
+  it('every racer physically starts in the row the plan was built on', () => {
+    const { planRacers, result } = buildUnified(SEED);
+    const planRowByRacer = new Map(planRacers.map((p) => [p.index, p.startRowIndex]));
+    const physRowByRacer = new Map(result.map((r) => [r.racerIndex, r.startRowIndex]));
+    expect(physRowByRacer.size).toBe(N);
+    for (const [racerIndex, planRow] of planRowByRacer) {
+      expect(physRowByRacer.get(racerIndex)).toBe(planRow);
+    }
+    // non-vacuous: the shuffle actually spread racers across multiple rows (not a trivial all-row-0)
+    expect(new Set(planRacers.map((p) => p.startRowIndex)).size).toBeGreaterThan(1);
+  });
+
+  it('a plan built on a DIFFERENT shuffle would NOT match physical (guards the invariant)', () => {
+    // The pre-unification bug shape: plan grid from one seed's shuffle, racers from another.
+    const { result } = buildUnified(SEED);
+    const foreignRng = makeRaceRng(SEED + 1).physics;
+    const foreignGrid = computeEvenRowLayout(N, 4, foreignRng);
+    const foreignPlanRow = new Map(foreignGrid.assignments.map((a) => [a.racerIndex, a.rowIndex]));
+    const physRowByRacer = new Map(result.map((r) => [r.racerIndex, r.startRowIndex]));
+    let mismatches = 0;
+    for (const [racerIndex, foreignRow] of foreignPlanRow) {
+      if (physRowByRacer.get(racerIndex) !== foreignRow) mismatches++;
+    }
+    // If the plan were keyed to a foreign shuffle, most racers would be mis-keyed — exactly the
+    // defect unification removed. (A stray coincidence on a few racers is fine; demand several.)
+    expect(mismatches).toBeGreaterThan(2);
   });
 });

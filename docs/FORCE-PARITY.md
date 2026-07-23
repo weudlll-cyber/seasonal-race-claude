@@ -1,5 +1,7 @@
 # FORCE-PARITY — browser vs. fairness sim (INFRA 5B)
 
+> **⚠️ Pre-unification baseline.** Any absolute sim figures/fingerprints referenced here predate the plan-grid unification (parity step 2a, 2026-07-23) — see [reports/BASELINE-INVALIDATED.md](../reports/BASELINE-INVALIDATED.md). The force-by-force parity verdicts below still hold; only absolute numbers moved.
+
 **Read-only audit. Nothing here was fixed — everything is named.** Date: 2026-07-10, on
 `chore/sim-trust` at the Stage-5A commit (`de66798`).
 
