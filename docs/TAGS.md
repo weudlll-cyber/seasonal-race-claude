@@ -92,6 +92,12 @@ that phase's `*-complete` endpoint when it closes (incremental history then live
   measurement keepers (escape-episodes + physics-tax observers, `exp-gate-retune.mjs`, the
   `distinctLeaders` fix) and the whole evidence record from `pre/greenfield-proto` onto master. The
   ported instrumentation is read-only: both fingerprints were re-proven unchanged across it.
+- `backup/greenfield-wrap-79ac945` (`79ac945`) — shipped master state after the wrap (port + hygiene +
+  docs, `52ffb7c` → `679ba19` → `79ac945`). Both fingerprints re-proven at three stages (ON
+  `e93ffa70dad562a1`, OFF `72c3360fb75225ef`), observer suite 114/114, client suite 3267/3267, owner
+  eye-approved. **This tag is the master-side anchor for the greenfield evidence record** — the ported
+  results under `reports/greenfield/` and the keeper tooling are all reachable from here, so the two
+  analysis branches can be deleted at phase close without losing anything that was kept.
 - **Collapse plan:** fold into the greenfield phase's `*-complete` endpoint at phase close, together
   with the deletion of the two analysis branches (see Branches below).
 
