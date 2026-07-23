@@ -740,7 +740,8 @@ export default function RaceScreen() {
           choreoResolveB3: dynamicsConfig.choreoResolveB3 ?? 0.7,
           choreoResolveB4: dynamicsConfig.choreoResolveB4 ?? 0.65,
           choreoResolveB5: dynamicsConfig.choreoResolveB5 ?? 0.6,
-          choreoOutcomeStart: dynamicsConfig.choreoOutcomeStart ?? 0.25,
+          choreoOutcomeStart:
+            dynamicsConfig.choreoOutcomeStart ?? DEFAULT_RACE_DYNAMICS_CONFIG.choreoOutcomeStart,
           // Spatial re-steer threshold for a released B2-attacker. Threaded so the DevScreen control
           // reaches the plan. Fallback mirrors DEFAULT_RACE_DYNAMICS_CONFIG.
           packReSteerThreshold: dynamicsConfig.packReSteerThreshold ?? 1.0,
@@ -753,7 +754,8 @@ export default function RaceScreen() {
           b2AttackHeroes:
             dynamicsConfig.b2AttackHeroes ?? DEFAULT_RACE_DYNAMICS_CONFIG.b2AttackHeroes,
           b2AttackPeakRank: dynamicsConfig.b2AttackPeakRank ?? 5,
-          b2AttackFinalRank: dynamicsConfig.b2AttackFinalRank ?? 10,
+          b2AttackFinalRank:
+            dynamicsConfig.b2AttackFinalRank ?? DEFAULT_RACE_DYNAMICS_CONFIG.b2AttackFinalRank,
           b2AttackProgress: dynamicsConfig.b2AttackProgress ?? { start: 0.4, end: 0.7 },
           b2AttackResolveProgress: dynamicsConfig.b2AttackResolveProgress ?? 0.85,
           b2AttackBandArrival: dynamicsConfig.b2AttackBandArrival ?? true,
@@ -761,7 +763,8 @@ export default function RaceScreen() {
           // it → disabled ⇒ null ⇒ computeGapBiasedTarget() passes the draw through bit-exact (byte-identical).
           // reRollTransitionDuration feeds the window-end derivation (lastRollDeadline − transitionDur).
           gapRerollThresholdLengths: dynamicsConfig.gapRerollEnabled
-            ? (dynamicsConfig.gapRerollThresholdLengths ?? 1.5)
+            ? (dynamicsConfig.gapRerollThresholdLengths ??
+              DEFAULT_RACE_DYNAMICS_CONFIG.gapRerollThresholdLengths)
             : null,
           gapRerollMode: dynamicsConfig.gapRerollMode ?? 'symmetric',
           gapRerollStrength: dynamicsConfig.gapRerollStrength ?? 1.0,
