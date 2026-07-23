@@ -72,6 +72,9 @@ that phase's `*-complete` endpoint when it closes (incremental history then live
   band-arrival, and the unread start-row grouping). **This tag is the archive** for every deleted
   mechanism: the docs deliberately no longer name the retired config keys, so `git show` on this tag is
   how the code and key names are recovered.
+- `backup/dead-mechanisms-cleanup-08b09b7` (`08b09b7`) — shipped master state after the cleanup ship.
+  Both fingerprints byte-identical through the removal (ON `e93ffa70dad562a1`, OFF `72c3360fb75225ef`),
+  full suite green, owner eye-approved. Pinned before the DevScreen reorg.
 - **Collapse plan:** fold into the cleanup phase's `*-complete` endpoint when the cleanup arc closes.
 
 ### Cleanup arc — COLLAPSED (2026-07-20)
