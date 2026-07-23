@@ -75,10 +75,17 @@ that phase's `*-complete` endpoint when it closes (incremental history then live
 - `backup/dead-mechanisms-cleanup-08b09b7` (`08b09b7`) — shipped master state after the cleanup ship.
   Both fingerprints byte-identical through the removal (ON `e93ffa70dad562a1`, OFF `72c3360fb75225ef`),
   full suite green, owner eye-approved. Pinned before the DevScreen reorg.
+- **Collapse plan:** fold into the cleanup phase's `*-complete` endpoint when the cleanup arc closes.
+
+### DevScreen reorg (open)
 - `pre/devscreen-reorg` (`a7c662e`) — master immediately before the DevScreen reorg (gap-reroll moved
   into the Speed card, B2 attackers grouped, the row-env A/B checkbox retired to a pinned key). UI-only:
   both fingerprints unchanged across it, so it is a layout return point, not a behaviour one.
-- **Collapse plan:** fold into the cleanup phase's `*-complete` endpoint when the cleanup arc closes.
+- `backup/devscreen-reorg-e529411` (`e529411`) — shipped master state after the reorg. Both fingerprints
+  byte-identical (ON `e93ffa70dad562a1`, OFF `72c3360fb75225ef`), 3267 tests green including the new
+  control-placement pins, owner eye-approved. Pinned before the greenfield wrap.
+- **Collapse plan:** fold into the cleanup phase's `*-complete` endpoint when the cleanup arc closes —
+  the same endpoint as the dead-mechanisms cleanup above; both are one UI/dead-code arc.
 
 ### Cleanup arc — COLLAPSED (2026-07-20)
 The four `pre/cleanup-step1..4` scaffolding tags were **collapsed onto `v-cleanup-complete`** and deleted
