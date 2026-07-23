@@ -78,6 +78,12 @@ that phase's `*-complete` endpoint when it closes (incremental history then live
   commit where the browser races drew physics from the swapped global `Math.random`. Return point for
   the D-STREAM fix (see [reports/parity/DIVERGENCE-AUDIT.md](../reports/parity/DIVERGENCE-AUDIT.md)).
   Remembered browser seeds are stale after this step — the in-race stream is no longer render-polluted.
+- `backup/rng-isolation-64e0f65` (`64e0f65`) — parity step 1 shipped and owner eye-approved: `makeRaceRng`
+  threads one explicit physics stream through both engines, camera/trails off the race stream. Both sim
+  fingerprints unchanged (ON `e93ffa70dad562a1`, OFF `72c3360fb75225ef`), whole-race determinism test
+  8/8, 374 suites green; same seed replayed an identical race (identical final-lap standings + finishing
+  order, only render framing/particles differed). Pinned before the driving-layer ship (plan-grid
+  unification + speed/duration redesign) reshapes master.
 - **Collapse plan:** fold into the parity phase's `*-complete` endpoint when that phase closes.
 
 ### Retune / cleanup / greenfield phase — COLLAPSED (2026-07-23)
