@@ -5,7 +5,6 @@
   "description": "High-speed urban track with hairpin corners and tunnel sections.",
   "color": "#64748b",
   "defaultRacerTypeId": "motorbike",
-  "defaultDuration": 60,
   "defaultWinners": 3,
   "difficulty": "hard",
   "surfaceClasses": [
@@ -1701,5 +1700,6 @@
   "updatedAt": "2026-06-29T00:00:00.000Z",
   "sourceMode": "center",
   "width": 197,
-  "pathLengthPx": 6129.815015293258
+  "pathLengthPx": 6129.815015293258,
+  "defaultLaps": 2
 }

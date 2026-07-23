@@ -12,11 +12,10 @@ import { describe, it, expect } from 'vitest';
 import {
   makePRNG,
   runSingleRace,
-  computeFinishT,
   computeFairnessStats,
   RACER_CONFIGS,
 } from '../../../scripts/sim-fairness.mjs';
-import { REFERENCE_FPS } from './camera/lapUtils.js';
+import { deriveRaceDuration, normalSpeedFrom } from './durationModel.js';
 import { DEFAULT_BASE_SPEED_CONFIG } from './storage/defaults.js';
 import { makeRaceRng, createRacePlan, createTrajectoryController } from './racePlanner.js';
 import { computeEvenRowLayout } from './rowLayout.js';
@@ -45,8 +44,8 @@ const mockShape = {
 
 // Shared race parameters for most tests
 const BASE_N_RACERS = 5;
-const BASE_FINISH_T = 0.5;
-const BASE_TARGET_SEC = 30;
+const BASE_LAPS = 1;
+const NORMAL_SPEED = normalSpeedFrom(DEFAULT_BASE_SPEED_CONFIG);
 
 function makeRaceParams(overrides = {}) {
   return {
@@ -56,8 +55,8 @@ function makeRaceParams(overrides = {}) {
     isOpen: false,
     speedMultiplier: 1.0,
     displaySize: 40,
-    finishT: BASE_FINISH_T,
-    targetSeconds: BASE_TARGET_SEC,
+    laps: BASE_LAPS,
+    normalSpeedPxPerSec: NORMAL_SPEED,
     seed: 42,
     nRacers: BASE_N_RACERS,
     ...overrides,
@@ -90,43 +89,53 @@ describe('makePRNG', () => {
   });
 });
 
-// ── computeFinishT ────────────────────────────────────────────────────────────
-describe('computeFinishT', () => {
-  const BASE_SPEED_MEAN = (DEFAULT_BASE_SPEED_CONFIG.min + DEFAULT_BASE_SPEED_CONFIG.max) / 2;
-  // expectedMinSF for N=5 racers
-  const spreadMin = DEFAULT_BASE_SPEED_CONFIG.min / BASE_SPEED_MEAN;
-  const spreadMax = DEFAULT_BASE_SPEED_CONFIG.max / BASE_SPEED_MEAN;
-  const esf = spreadMin + (spreadMax - spreadMin) / (5 + 1);
-  const naturalBaseSpeed = BASE_SPEED_MEAN / esf;
+// ── canonical finish line (replaces the deleted computeFinishT) ───────────────
+// The sim no longer owns a finish-line formula: it calls the shared model, which is
+// what makes it agree with the browser. These pin the sim-side call shape.
+describe('canonical finish line', () => {
+  const derive = (args) =>
+    deriveRaceDuration({
+      pathLengthPx: MOCK_PATH_LENGTH,
+      normalSpeedPxPerSec: NORMAL_SPEED,
+      runoutZone: 0.05,
+      ...args,
+    });
 
-  it('closed track: finishT scales linearly with targetSeconds', () => {
-    const ft30 = computeFinishT(naturalBaseSpeed, 1.0, 30, false);
-    const ft60 = computeFinishT(naturalBaseSpeed, 1.0, 60, false);
-    expect(ft60).toBeCloseTo(ft30 * 2, 5);
+  it('closed track: finishT is the lap count, and duration scales linearly with it', () => {
+    const one = derive({ isOpen: false, laps: 1 });
+    const two = derive({ isOpen: false, laps: 2 });
+    expect(one.finishT).toBe(1);
+    expect(two.finishT).toBe(2);
+    expect(two.realizedDurationSec).toBeCloseTo(one.realizedDurationSec * 2, 8);
   });
 
-  it('closed track: higher speedMultiplier → larger finishT', () => {
-    const ftHorse = computeFinishT(naturalBaseSpeed, 1.0, 30, false);
-    const ftRocket = computeFinishT(naturalBaseSpeed, 1.25, 30, false);
-    expect(ftRocket).toBeGreaterThan(ftHorse);
-    expect(ftRocket).toBeCloseTo(ftHorse * 1.25, 5);
+  it('closed track: speedMultiplier does NOT change finishT or pace', () => {
+    const horse = derive({ isOpen: false, laps: 2, speedMultiplier: 1.0 });
+    const rocket = derive({ isOpen: false, laps: 2, speedMultiplier: 1.25 });
+    expect(rocket.finishT).toBe(horse.finishT);
+    expect(rocket.realizedDurationSec).toBe(horse.realizedDurationSec);
   });
 
-  it('open track: finishT capped at 0.95', () => {
-    // Very long target → would exceed 0.95
-    const ft = computeFinishT(naturalBaseSpeed, 1.25, 1000, true, 0.05);
-    expect(ft).toBe(0.95);
+  it('open track: finishT capped at 1 - runoutZone, with the slowdown taking up the slack', () => {
+    const m = derive({ isOpen: true, requestedSeconds: 1000 });
+    expect(m.finishT).toBeCloseTo(0.95, 10);
+    expect(m.slowdownActive).toBe(true);
+    expect(m.realizedDurationSec).toBeCloseTo(1000, 6);
   });
 
-  it('open track: short target below cap passes through', () => {
-    const ft = computeFinishT(naturalBaseSpeed, 0.3, 5, true, 0.05);
-    expect(ft).toBeLessThan(0.95);
-    expect(ft).toBeGreaterThan(0);
+  it('open track: a short request stays below the cap at full pace', () => {
+    const m = derive({ isOpen: true, requestedSeconds: 5 });
+    expect(m.finishT).toBeLessThan(0.95);
+    expect(m.finishT).toBeGreaterThan(0);
+    expect(m.paceScale).toBe(1);
   });
 
-  it('formula: ft = naturalBaseSpeed × speedMultiplier × REFERENCE_FPS × seconds', () => {
-    const ft = computeFinishT(naturalBaseSpeed, 0.85, 30, false);
-    expect(ft).toBeCloseTo(naturalBaseSpeed * 0.85 * REFERENCE_FPS * 30, 8);
+  it('open track formula: finishT = normalSpeed × seconds / pathLength', () => {
+    // 10 s is inside this mock track's natural maximum (≈13.3 s at the shipped normal speed),
+    // so the finish line moves and the pace stays at 1.0.
+    const m = derive({ isOpen: true, requestedSeconds: 10, speedMultiplier: 0.85 });
+    expect(m.paceScale).toBe(1);
+    expect(m.finishT).toBeCloseTo((NORMAL_SPEED * 10) / MOCK_PATH_LENGTH, 10);
   });
 });
 
@@ -327,7 +336,7 @@ describe('RACER_CONFIGS', () => {
 // ── Integration: 5 racers, real-ish setup ────────────────────────────────────
 describe('integration: 5 racers on mock circular track', () => {
   it('all 5 finish within safety timeout', () => {
-    const results = runSingleRace(makeRaceParams({ nRacers: 5, finishT: 0.3, targetSeconds: 20 }));
+    const results = runSingleRace(makeRaceParams({ nRacers: 5, laps: 1 }));
     for (const r of results) {
       expect(r.finalRank).toBeGreaterThanOrEqual(1);
       expect(r.finalRank).toBeLessThanOrEqual(5);
@@ -335,7 +344,7 @@ describe('integration: 5 racers on mock circular track', () => {
   });
 
   it('winner finishTime is less than loser finishTime (or DNF null)', () => {
-    const results = runSingleRace(makeRaceParams({ nRacers: 5, finishT: 0.3, targetSeconds: 20 }));
+    const results = runSingleRace(makeRaceParams({ nRacers: 5, laps: 1 }));
     const winner = results.find((r) => r.finalRank === 1);
     const last = results.find((r) => r.finalRank === 5);
     if (winner.finishTime != null && last.finishTime != null) {
@@ -346,7 +355,7 @@ describe('integration: 5 racers on mock circular track', () => {
   it('computeFairnessStats over 10 races produces valid output', () => {
     const races = [];
     for (let seed = 1; seed <= 10; seed++) {
-      races.push(runSingleRace(makeRaceParams({ seed, nRacers: 10, finishT: 0.3 })));
+      races.push(runSingleRace(makeRaceParams({ seed, nRacers: 10, laps: 1 })));
     }
     // Figure out how many rows the layout created
     const maxRow = Math.max(...races.flat().map((r) => r.startRowIndex));
@@ -375,7 +384,7 @@ describe('runSingleRace — mixingQuota (open-track warmup)', () => {
 
   function makeOpenParams(overrides = {}) {
     return {
-      ...makeRaceParams({ nRacers: 20, finishT: 0.8, targetSeconds: 30 }),
+      ...makeRaceParams({ nRacers: 20, requestedSeconds: 30 }),
       shape: openMockShape,
       isOpen: true,
       ...overrides,
@@ -439,7 +448,20 @@ describe('D-GRID plan/physical grid unification', () => {
     const planRacers = rowLayout.assignments
       .map((a) => ({ index: a.racerIndex, startRowIndex: a.rowIndex }))
       .sort((x, y) => x.index - y.index);
-    const plan = createRacePlan(planRacers, BASE_FINISH_T, BASE_TARGET_SEC * 1000, {}, seed);
+    // Plan duration comes from THE canonical clock, exactly as the batch loop derives it.
+    const model = deriveRaceDuration({
+      isOpen: false,
+      pathLengthPx: MOCK_PATH_LENGTH,
+      laps: BASE_LAPS,
+      normalSpeedPxPerSec: NORMAL_SPEED,
+    });
+    const plan = createRacePlan(
+      planRacers,
+      model.finishT,
+      model.realizedDurationSec * 1000,
+      {},
+      seed
+    );
     const racePlanController = createTrajectoryController(plan);
     const result = runSingleRace(
       makeRaceParams({

@@ -13,9 +13,13 @@
 // ============================================================
 
 import { describe, it, expect } from 'vitest';
-import { simulateRace, countNeighbors, secondsToFrames } from './headlessRaceSimulator.js';
-import { computeRaceBaseSpeed } from './raceBaseSpeed.js';
-import { computeClosedTrackSsf } from './camera/lapUtils.js';
+import {
+  simulateRace,
+  countNeighbors,
+  secondsToFrames,
+  DIRT_OVAL_PATH_LENGTH_PX,
+} from './headlessRaceSimulator.js';
+import { deriveRaceDuration, normalSpeedFrom } from './durationModel.js';
 import {
   DEFAULT_BASE_SPEED_CONFIG,
   DEFAULT_RACE_BEHAVIOR_CONFIG,
@@ -273,9 +277,9 @@ describe('secondsToFrames + framesPerRace propagation (TC-06/K3)', () => {
 
 // ── TC-07/K1: game-speed calibration ─────────────────────────────────────────
 //
-// After replacing calibrateBaseSpeed with the game's computeRaceBaseSpeed path,
-// race_baseSpeed must equal computeRaceBaseSpeed(2, 60 × ems(40) × closedSsf) ≈ 0.000570 t/frame.
-// The old self-referential calibrateBaseSpeed gave ≈ 0.001133 — almost 2× faster.
+// race_baseSpeed must equal the canonical model's raceBaseSpeed for 2 laps on dirt-oval:
+// a mean racer travels exactly the one normal track speed. (Before the speed/duration ship
+// this pinned the ems × closedSsf calibration; that derivation no longer exists.)
 //
 // Proof: single racer at row 0 (tStart=0, speedBonusMult=1, no neighbours → no avoidance).
 // After 1 frame: t = race_baseSpeed × spreadFactor.
@@ -284,14 +288,17 @@ describe('secondsToFrames + framesPerRace propagation (TC-06/K3)', () => {
 //   Old speed  → impliedSF ≈ 0.001133/0.000570 ≈ 1.99  (clearly outside)
 
 describe('simulateRace — game-speed calibration (TC-07/K1)', () => {
-  it('race_baseSpeed === computeRaceBaseSpeed(2, 60 × ems(40) × closedSsf) ≈ 0.000570 t/frame', () => {
-    const { min, max } = DEFAULT_BASE_SPEED_CONFIG;
-    const bsm = (min + max) / 2;
-    const smf = min / bsm;
-    const sxf = max / bsm;
-    const ems40 = smf + (sxf - smf) / 41; // N=40 → divisor N+1=41
-    const expectedSpeed = computeRaceBaseSpeed(2, 60 * ems40 * computeClosedTrackSsf(3245));
-    // ≈ 0.000570 t/frame
+  it('race_baseSpeed matches the canonical model for 2 laps on dirt-oval', () => {
+    // The canonical model IS the calibration now: a mean racer travels the one normal
+    // track speed, so race_baseSpeed = deriveRaceDuration(...).raceBaseSpeed exactly.
+    const expectedSpeed = deriveRaceDuration({
+      isOpen: false,
+      pathLengthPx: DIRT_OVAL_PATH_LENGTH_PX,
+      laps: 2,
+      normalSpeedPxPerSec: normalSpeedFrom(DEFAULT_BASE_SPEED_CONFIG),
+      speedMultiplier: 1.0,
+      runoutZone: DEFAULT_RACE_BEHAVIOR_CONFIG.runoutZone,
+    }).raceBaseSpeed;
 
     const { racerTs } = simulateRace({
       nRacers: 1,
@@ -305,7 +312,6 @@ describe('simulateRace — game-speed calibration (TC-07/K1)', () => {
     // t = race_baseSpeed × spreadFactor; impliedSF = t / expectedSpeed
     const impliedSF = racerTs[0] / expectedSpeed;
     // Game speed: impliedSF ∈ [0.9187, 1.0813] — valid spreadFactor range
-    // Old speed:  impliedSF ≈ 1.99 — fails the upper bound
     expect(impliedSF).toBeGreaterThan(0.85);
     expect(impliedSF).toBeLessThan(1.15);
   });

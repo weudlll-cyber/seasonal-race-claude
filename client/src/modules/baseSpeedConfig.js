@@ -21,6 +21,13 @@ export function loadBaseSpeedConfig() {
   const merged = { ...DEFAULT_BASE_SPEED_CONFIG, ...stored };
   // Guard: min must be > 0 and < max
   if (merged.min <= 0 || merged.min >= merged.max) return { ...DEFAULT_BASE_SPEED_CONFIG };
+  // MIGRATION: configs stored before the speed/duration ship carry only min/max. The spread
+  // above merges the new normal-speed field in; this guard also repairs a stored value that
+  // is absent, non-numeric or non-positive, so a legacy localStorage entry can never leave
+  // the game without a pace.
+  if (!Number.isFinite(merged.normalSpeedPxPerSec) || merged.normalSpeedPxPerSec <= 0) {
+    merged.normalSpeedPxPerSec = DEFAULT_BASE_SPEED_CONFIG.normalSpeedPxPerSec;
+  }
   return merged;
 }
 

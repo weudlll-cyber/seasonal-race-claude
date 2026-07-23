@@ -3,7 +3,6 @@
   "description": "",
   "defaultRacerTypeId": "manta",
   "color": "#e63946",
-  "defaultDuration": 60,
   "defaultWinners": 3,
   "surfaceClasses": [
     "water"
@@ -1729,5 +1728,6 @@
   "backgroundImageFile": "searound.jpg",
   "createdAt": "2026-06-03T10:59:48.412Z",
   "updatedAt": "2026-06-03T12:57:18.903Z",
-  "maxRacers": null
+  "maxRacers": null,
+  "defaultLaps": 2
 }

@@ -24,7 +24,8 @@ the owner is asking about — **seed → plan grid → RNG stream → finished r
 | **D-SEED** | Browser seed ∈ [1,9999]; sim per-race seed = `(G−1)·N + i + 1`, unbounded | Expressible one way, not always the other | §2b |
 | **D-CONFIG** | Browser reads 7 config blocks from `localStorage`; a fresh sim reads shipped defaults unless `--config` is passed | **No** if any DevScreen override or edited track is unexported | §2e |
 | **D-TIME** | Both fixed-dt 16 ms; wall-clock enters browser state only via the accumulator step-count and slow-mo — but slow-mo leaks into *outcome* through D-STREAM | Clean on its own; contaminated by D-STREAM | §2d |
-| O1 | Sim `computeFinishT` hardcodes `runoutZone=0.05`; browser reads `behaviorConfig.runoutZone` | Identical at default only | §2e |
+| **D-DUR** ✅ CLOSED (speed/duration ship) | Browser paced from a nominal `estimatedSecondsPerLap × laps`; sim paced from the raw `durationSec` — `race_baseSpeed`, the re-roll schedule and the plan duration all disagreed | ~~No~~ → **fixed**: one shared `deriveRaceDuration` | [MICRO-DIVERGENCE.md](MICRO-DIVERGENCE.md) |
+| ~~O1~~ ✅ CLOSED (speed/duration ship) | Sim `computeFinishT` hardcoded `runoutZone=0.05`; browser read `behaviorConfig.runoutZone` | ~~Identical at default only~~ → **fixed**: `computeFinishT` deleted; `runoutZone` is a caller argument on both sides | §2e |
 
 The two big ones for the owner's goal are **D-GRID** (structural plan-grid mismatch) and
 **D-STREAM** (global-RNG pollution). Both are dissolved by the owner's preferred fix: **one shared
@@ -41,6 +42,24 @@ hope the draw sites line up."
 > side effect: **browser races at a given seed now differ from before the change** (the in-race
 > re-rolls are no longer render-polluted) — previously remembered seeds are stale. **D-GRID remains
 > open** (parity step 2), so full cross-tool finishing-order equality is not yet delivered. See §2c.
+
+> **STATUS — D-DUR CLOSED (speed/duration ship, 2026-07-23).** The last derivation the two engines
+> did not share was the **speed/duration model**: the browser paced from a nominal
+> `estimatedSecondsPerLap × laps` while the sim paced from the raw `durationSec`, so
+> `race_baseSpeed`, the re-roll schedule and the plan `targetDurationMs` all disagreed even when
+> finishT matched (localized in [MICRO-DIVERGENCE.md](MICRO-DIVERGENCE.md)). Both sides now call
+> ONE shared derivation, `deriveRaceDuration` in `client/src/modules/durationModel.js`, built on a
+> single normal track speed in px/s. `lapsFromDuration`, `computeClosedTrackSsf`,
+> `computeSpeedScaleFactor` (with its hidden 0.5 clamp), `computeFinishT`,
+> `estimateClosedTrackDurationSec` and `openTrackDurationRange` are **deleted**.
+> `scripts/diag/micro-divergence.mjs` now reports duration scalars bit-matching, identical finish
+> orders and a max per-racer `|Δt|` of exactly **0** across seeds 1 / 7 / 42.
+>
+> **O1 is closed with it**: the hardcoded `runoutZone = 0.05` is gone — `deriveRaceDuration` takes
+> `runoutZone` from the caller's behavior config on both sides.
+>
+> Fingerprints MOVED by design (single re-baseline pending the owner's final normal-speed pick):
+> ON `0ecca5e2dbe6526e` → `e80f78a0da6a9993`, OFF `6e01e472b7655b9a` → `1cd6c9fdd62542a4`.
 
 ---
 

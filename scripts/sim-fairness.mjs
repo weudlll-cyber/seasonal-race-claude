@@ -67,8 +67,18 @@ import {
   computeRowPhysicalY,
   computeSpeedBonus,
 } from '../client/src/modules/rowLayout.js';
-import { REFERENCE_FPS, computeSpeedScaleFactor, computeClosedTrackSsf, lapsFromDuration } from '../client/src/modules/camera/lapUtils.js';
+import { REFERENCE_FPS } from '../client/src/modules/camera/lapUtils.js';
 import { computeRaceBaseSpeed } from '../client/src/modules/raceBaseSpeed.js';
+// THE canonical speed/duration model — the same module the browser imports, used verbatim.
+import {
+  deriveRaceDuration,
+  normalSpeedFrom,
+  lapsForApproxSeconds,
+  trackDefaultLaps,
+  trackDefaultSeconds,
+  naturalMaxSeconds,
+  MIN_LAPS,
+} from '../client/src/modules/durationModel.js';
 import {
   DEFAULT_BASE_SPEED_CONFIG as _DEFAULT_BASE_SPEED_CONFIG,
   DEFAULT_RACE_BEHAVIOR_CONFIG as _DEFAULT_RACE_BEHAVIOR_CONFIG,
@@ -182,7 +192,27 @@ const N_RACERS_CLOSED = Number(argVal('closedRacers', String(N_RACERS)));
 const OUT_DIR        = join(ROOT, argVal('out', 'client/tmp'));
 const TRACK_FILTER   = argVal('track', null);   // e.g. --track=river-run
 const RACER_FILTER   = argVal('racer', null);   // e.g. --racer=horse
-const DUR_FILTER     = argVal('dur', null);     // e.g. --dur=30
+// ── Canonical race-length inputs (speed/duration ship) ────────────────────────
+// The sim takes the SAME two operator inputs the browser takes, so any browser race is
+// expressible as a sim invocation:
+//   --laps=<n>      CLOSED tracks: the lap count. finishT = laps; duration is derived.
+//   --seconds=<s>   OPEN tracks:   the race time. The finish line is derived, and a time
+//                   beyond the track's natural maximum slows the whole field uniformly.
+// --dur=<s> is the retained MEASUREMENT-PROTOCOL input (the 30/60/120/300 s scaling runs).
+// It means seconds on open tracks; on closed tracks it is mapped through the model's own
+// inverse — lapsForApproxSeconds() — to the lap count whose derived duration is closest to
+// <s> on that track. That mapping is the model read backwards, not a staircase constant, so
+// it tracks the normal speed automatically.
+const DUR_FILTER     = argVal('dur', null);     // e.g. --dur=30  (protocol input, see above)
+const LAPS_FILTER    = argVal('laps', null);    // e.g. --laps=2  (closed tracks)
+const SECONDS_FILTER = argVal('seconds', null); // e.g. --seconds=45 (open tracks)
+const NORMAL_SPEED_PX_PER_SEC = Number(
+  argVal('normalSpeed', String(normalSpeedFrom()))
+); // --normalSpeed=<px/s> overrides the one normal track speed for a sweep
+// --track-defaults: run each track at ITS OWN shipped canonical default (defaultLaps for closed,
+// defaultDurationSec for open) as a single variant. This is the shipped-default game — what the
+// byte-identity fingerprint measures. Without it the sweep loops the DURATION_VARIANTS grid.
+const USE_TRACK_DEFAULTS = argv.includes('--track-defaults');
 
 // ── Phase-3A: global seed + Race Plan activation ──────────────────────────────
 // --seed=<n>  n>0: deterministic batch (race i uses seed (n-1)*N_RACES+i+1)
@@ -541,36 +571,21 @@ export const RACER_CONFIGS = {
   snowmobile: { speedMultiplier: 1.10, displaySize: 52, bodyFillX: 0.459, bodyFillY: 0.797, surfaceClasses: ['snow', 'ice', 'earth'] },
 };
 
-// ── Duration variants (seconds) ───────────────────────────────────────────────
-// --dur overrides to a single arbitrary duration (enables e.g. --dur=60 / --dur=90)
-export const DURATION_VARIANTS = DUR_FILTER ? [Number(DUR_FILTER)] : [30, 60, 120];
+// ── Race-length variants ──────────────────────────────────────────────────────
+// The canonical operator inputs, per topology. Defaults are the standard sweep grid.
+//   CLOSED: lap counts.  OPEN: seconds.
+// PROTOCOL MAPPING: --dur=<s> (the 30/60/120/300 s scaling runs) sets the OPEN seconds
+// directly and is translated to CLOSED laps per track by lapsForApproxSeconds() at the
+// combo loop — see DUR_FILTER above. DURATION_VARIANTS stays the loop variable and now
+// carries the protocol seconds; the per-track laps come from it.
+export const DURATION_VARIANTS = USE_TRACK_DEFAULTS
+  ? [0] // sentinel: the per-track canonical default supplies the real input in the combo loop
+  : DUR_FILTER
+    ? [Number(DUR_FILTER)]
+    : SECONDS_FILTER
+      ? [Number(SECONDS_FILTER)]
+      : [30, 60, 120];
 
-// ── Compute adjusted finishT (OPEN TRACKS ONLY) ───────────────────────────────
-/**
- * Returns the finishT (t-space target) for an OPEN-track race of targetSeconds.
- * baseSpeed stays at the natural N-calibrated value; only the finish line moves.
- *
- * IMPORTANT: This is OPEN-TRACK ONLY. Closed tracks must NOT use this function —
- * they use lapsFromDuration(durationSec) for the finish line (the lap-count bucket,
- * matching RaceScreen/index.jsx, headlessRaceSimulator.js, and sim-race-visual.mjs).
- * Reusing computeFinishT for closed tracks reintroduces the ~4.2-lap-vs-2-lap
- * divergence this fix removed — do not do it.
- *
- * For open tracks finishT is capped at (1 - runoutZone) since the track
- * has a physical end. The effective race will then be shorter than targetSeconds
- * for fast types on short open tracks — still valid, just recorded as-is.
- *
- * @param {number} naturalBaseSpeed  race_baseSpeed (N-calibrated, before speedMultiplier)
- * @param {number} speedMultiplier   racer-type factor
- * @param {number} targetSeconds
- * @param {boolean} isOpen
- * @param {number} [runoutZone=0.05]
- * @returns {number}
- */
-export function computeFinishT(naturalBaseSpeed, speedMultiplier, targetSeconds, isOpen, runoutZone = 0.05) {
-  const ft = naturalBaseSpeed * speedMultiplier * REFERENCE_FPS * targetSeconds;
-  return isOpen ? Math.min(ft, 1.0 - runoutZone) : ft;
-}
 
 // ── Single race simulation ────────────────────────────────────────────────────
 /**
@@ -585,8 +600,9 @@ export function computeFinishT(naturalBaseSpeed, speedMultiplier, targetSeconds,
  * @param {number}  p.displaySize          sprite size in world pixels
  * @param {number}  [p.bodyFillX=0.75]     body width / frameWidth (from spritesheet measurement)
  * @param {number}  [p.bodyFillY=0.75]     body height / frameHeight (from spritesheet measurement)
- * @param {number}  p.finishT              adjusted finish line in t-space
- * @param {number}  p.targetSeconds        used for re-roll scheduling
+ * @param {number}  [p.laps]               CLOSED: operator-chosen lap count (canonical input)
+ * @param {number}  [p.requestedSeconds]   OPEN:   operator-chosen race time (canonical input)
+ * @param {number}  p.normalSpeedPxPerSec  the one normal track speed
  * @param {number}  p.seed                 PRNG seed
  * @param {number}  p.nRacers
  * @returns {Array<{racerIndex,startRowIndex,indexInRow,finalT,finalRank,finishTime}>}
@@ -600,8 +616,9 @@ export function runSingleRace({
   displaySize,
   bodyFillX = 0.75,
   bodyFillY = 0.75,
-  finishT,
-  targetSeconds,
+  laps,
+  requestedSeconds,
+  normalSpeedPxPerSec = NORMAL_SPEED_PX_PER_SEC,
   seed,
   nRacers,
   diagnosticMode = false,
@@ -640,23 +657,22 @@ export function runSingleRace({
     const rowConfig       = { ...DEFAULT_ROW_LAYOUT_CONFIG };
     const dynamicsConfig  = { ...DEFAULT_RACE_DYNAMICS_CONFIG, ...DYNAMICS_OVERRIDES };
 
-    // N-calibrated base speed — mirrors RaceScreen/index.jsx computeRaceBaseSpeed call
-    // term-for-term, for BOTH finishT and speed (open and closed). Speed is back-solved
-    // from finishT so the median racer reaches the finish line in targetSeconds.
-    // Open tracks: finishT is the capped distance (computeFinishT); closedSsf = 1.
-    // Closed tracks: finishT is the lapsFromDuration bucket; closedSsf normalizes the
-    // back-solved speed by path length so all closed tracks share comparable on-screen
-    // pace — same single formula as index.jsx (closedSsf = 1 collapses it to the open case).
-    // speedMultiplier sits in the denominator here and is re-multiplied at lines 335/629,
-    // cancelling to net M⁰ for closed tracks — matching the browser's M-free closed pace.
-    const spreadMinFactor = BASE_SPEED_MIN / BASE_SPEED_MEAN;
-    const spreadMaxFactor = BASE_SPEED_MAX / BASE_SPEED_MEAN;
-    const expectedMinSF   = spreadMinFactor + (spreadMaxFactor - spreadMinFactor) / (nRacers + 1);
-    const closedSsf       = isOpen ? 1 : computeClosedTrackSsf(pathLengthPx);
-    const race_baseSpeed  = computeRaceBaseSpeed(
-      finishT,
-      targetSeconds * expectedMinSF * speedMultiplier * closedSsf
-    );
+    // ── THE canonical speed/duration derivation (client/src/modules/durationModel.js) ─────────
+    // The SAME shared call the browser makes, with the same inputs, so finishT, race_baseSpeed
+    // and the clock are identical by construction rather than by convention. The old
+    // nominal-vs-raw duration seam (browser paced from estimatedSecondsPerLap·laps, sim from
+    // raw durationSec) and the ems/closedSsf/ssf normalisations are gone with it.
+    const durationModel = deriveRaceDuration({
+      isOpen,
+      pathLengthPx,
+      laps,
+      requestedSeconds,
+      normalSpeedPxPerSec,
+      speedMultiplier,
+      runoutZone: behaviorConfig.runoutZone,
+    });
+    const finishT        = durationModel.finishT;
+    const race_baseSpeed = durationModel.raceBaseSpeed;
 
     // Row layout — mirrors browser's bottom-up computeRacerLayout path (Sim adjusted to match)
     const effectiveWidth      = geometricTrackWidth * behaviorConfig.startSpreadRange;
@@ -680,12 +696,8 @@ export function runSingleRace({
     }
     const assignmentByRacer = new Map(rowLayout.assignments.map((a) => [a.racerIndex, a]));
 
-    // Re-roll schedule keyed to the REALIZED race duration (parity with browser). Closed tracks:
-    // the engine stretches targetSeconds by expectedMinSF × closedSsf, so keying on targetSeconds
-    // front-loaded re-rolls into the first ~half; realizedDurationSec spreads them across the whole
-    // race. Reuses the SAME expectedMinSF/closedSsf already computed for base speed (no second calc).
-    // Open tracks: realizedDurationSec == targetSeconds (closedSsf=1 collapses the factor), unchanged.
-    const realizedDurationSec = isOpen ? targetSeconds : targetSeconds * expectedMinSF * closedSsf;
+    // Re-roll schedule keyed to THE canonical clock — the one scalar the browser also keys on.
+    const realizedDurationSec = durationModel.realizedDurationSec;
     const rollCount        = Math.max(2, Math.floor(realizedDurationSec / dynamicsConfig.reRollIntervalDivisor));
     const rollInterval     = ((dynamicsConfig.reRollLastPositionPercent / 100) * realizedDurationSec * 1000) / rollCount;
     const lastRollDeadline = realizedDurationSec * 1000 * (dynamicsConfig.reRollLastPositionPercent / 100);
@@ -780,7 +792,7 @@ export function runSingleRace({
     }
 
     const DT          = 16; // ms per frame — matches game FIXED_DT (index.jsx:138)
-    const maxTime     = Math.max(targetSeconds * 3, 600) * 1000; // safety cap: 3× or 10 min
+    const maxTime     = Math.max(realizedDurationSec * 3, 600) * 1000; // safety cap: 3× or 10 min
     let raceTs        = 0;
     let raceProgress = 0; // monotonic leader track-progress [0,1]; drives WHEN phases switch
                           // (route-based, mirrors index.jsx). Distinct from raceTs (stopwatch ms).
@@ -2037,7 +2049,7 @@ export function runSingleRace({
         }
         // stableOvertakes: confirmed lead-swaps between 20%–80% of race
         {
-          const durMs = targetSeconds * 1000;
+          const durMs = realizedDurationSec * 1000;
           if (raceTs >= durMs * 0.2 && raceTs <= durMs * 0.8) {
             for (let a = 0; a < racers.length; a++) {
               if (racers[a].finished) continue;
@@ -3110,20 +3122,41 @@ if (isMain) {
         if (DUR_FILTER && durationSec !== Number(DUR_FILTER)) continue;
         // Phase-1: use topology-specific racer count (open vs closed).
         const nRacersForCombo = isOpen ? N_RACERS_OPEN : N_RACERS_CLOSED;
-        // Open tracks: finishT = capped natural-distance (computeFinishT) at N-calibrated speed;
-        //   trackNaturalBase = BASE_SPEED_MEAN / trackSsf so traversal time is length-invariant.
-        // Closed tracks: finishT = lapsFromDuration(durationSec) — the SAME lap-count bucket as
-        //   RaceScreen/index.jsx, headlessRaceSimulator.js, and sim-race-visual.mjs. closedSsf does
-        //   NOT enter the finish line; it normalizes the back-solved speed only, inside runSingleRace
-        //   (mirrors index.jsx). Do NOT route closed tracks through computeFinishT — that reintroduces
-        //   the ~4.2-lap-vs-2-lap divergence this fix removed.
-        const trackSsf = isOpen ? computeSpeedScaleFactor(pathLengthPx) : 1;
-        // trackNaturalBase is only meaningful for OPEN tracks (consumed by computeFinishT below,
-        // which is open-track-only). Closed tracks derive finishT from lapsFromDuration directly.
-        const trackNaturalBase = isOpen ? BASE_SPEED_MEAN / trackSsf : undefined;
-        const finishT = isOpen
-          ? computeFinishT(trackNaturalBase, speedMultiplier, durationSec, isOpen)
-          : lapsFromDuration(durationSec);
+        // ── Canonical inputs for this combo ────────────────────────────────────────────
+        // CLOSED: a lap count — explicit (--laps), else the protocol mapping of durationSec,
+        //         else the track's own default. OPEN: seconds, straight from durationSec.
+        const comboLaps = isOpen
+          ? MIN_LAPS
+          : USE_TRACK_DEFAULTS
+            ? trackDefaultLaps(track)
+            : LAPS_FILTER
+              ? Math.max(MIN_LAPS, Number(LAPS_FILTER))
+              : DUR_FILTER || !Number.isFinite(track.defaultLaps)
+                ? lapsForApproxSeconds(durationSec, pathLengthPx, NORMAL_SPEED_PX_PER_SEC)
+                : trackDefaultLaps(track);
+        const comboSeconds = !isOpen
+          ? 0
+          : USE_TRACK_DEFAULTS
+            ? trackDefaultSeconds(
+                track,
+                pathLengthPx,
+                NORMAL_SPEED_PX_PER_SEC,
+                DEFAULT_RACE_BEHAVIOR_CONFIG.runoutZone
+              )
+            : durationSec;
+        // THE canonical derivation, made once per combo for the plan + the printout. Every race
+        // below re-derives it inside runSingleRace from the same inputs and gets the same numbers.
+        const comboModel = deriveRaceDuration({
+          isOpen,
+          pathLengthPx,
+          laps: comboLaps,
+          requestedSeconds: comboSeconds,
+          normalSpeedPxPerSec: NORMAL_SPEED_PX_PER_SEC,
+          speedMultiplier,
+          runoutZone: DEFAULT_RACE_BEHAVIOR_CONFIG.runoutZone,
+        });
+        const finishT = comboModel.finishT;
+        const realizedDurationSecCombo = comboModel.realizedDurationSec;
 
         // Compute row count and sizes for this track/racer combo (deterministic, seed-independent).
         // Mirrors browser's bottom-up computeRacerLayout path (Sim adjusted to match).
@@ -3141,7 +3174,7 @@ if (isMain) {
         // exactly as the browser does.
 
         process.stdout.write(
-          `   ${racerType.padEnd(10)} ${durationSec}s  finishT=${finishT.toFixed(3)}  rows=${totalRows}  sf=${comboAutoScale.toFixed(2)}  `
+          `   ${racerType.padEnd(10)} ${isOpen ? `${comboSeconds}s` : `${comboLaps}lap`}  finishT=${finishT.toFixed(3)}  dur=${realizedDurationSecCombo.toFixed(1)}s${comboModel.slowdownActive ? ` (pace ${Math.round(comboModel.paceScale*100)}%)` : ''}  rows=${totalRows}  sf=${comboAutoScale.toFixed(2)}  `
         );
 
         const raceResults   = [];
@@ -3166,7 +3199,7 @@ if (isMain) {
             const planRacers = rowLayout.assignments
               .map((a) => ({ index: a.racerIndex, startRowIndex: a.rowIndex }))
               .sort((x, y) => x.index - y.index);
-            const plan = createRacePlan(planRacers, finishT, durationSec * 1000, {
+            const plan = createRacePlan(planRacers, finishT, realizedDurationSecCombo * 1000, {
               bonusStrengthMultiplier: BONUS_MULT,
               // areaBonus phase-split (INFRA 5A): threaded into the plan so the shared controller
               // applies the rescale from ONE source (browser + sim), from the shipped dynamics config.
@@ -3228,7 +3261,9 @@ if (isMain) {
             bodyFillX,
             bodyFillY,
             finishT,
-            targetSeconds: durationSec,
+            laps: comboLaps,
+            requestedSeconds: comboSeconds,
+            normalSpeedPxPerSec: NORMAL_SPEED_PX_PER_SEC,
             seed,
             nRacers: nRacersForCombo,
             raceRng,     // D-GRID: the shared per-race stream (past the row-shuffle draw)

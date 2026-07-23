@@ -15,8 +15,8 @@
 //              purpose.
 //
 // Track parameters default to dirt-oval (closed, 1280×720) when trackConfig is omitted:
-//   pathLengthPx = 3245, trackWidthPx = 93, raceDurationSeconds = 60
-// Pass trackConfig = { pathLengthPx, trackWidthPx, raceDurationSeconds } for other closed tracks.
+//   pathLengthPx = 3245, trackWidthPx = 93, laps = 2
+// Pass trackConfig = { pathLengthPx, trackWidthPx, laps } for other closed tracks.
 //
 // World positions for drafting: simplified circular approximation
 //   radius = pathLengthPx / (2π), centered at (640, 360)
@@ -30,14 +30,13 @@ import {
   computeBodyNarrowRef,
 } from './rowLayout.js';
 import { initRacerBehavior, applyRacerBehavior } from './raceBehavior.js';
-import { computeRaceBaseSpeed } from './raceBaseSpeed.js';
-import { computeClosedTrackSsf, lapsFromDuration } from './camera/lapUtils.js';
+import { deriveRaceDuration, normalSpeedFrom } from './durationModel.js';
 
 // ── Constants ──────────────────────────────────────────────────────────────────
 
 const DT = 16; // fixed frame delta in ms (reference frame)
 const FRAMES_PER_RACE = 250; // 4000ms / 16ms = 250 frames of RACING time
-const RACE_DURATION_SECONDS = 60; // Dirt Oval target race duration — must match game's 60 s calibration
+const RACE_LAPS = 2; // Dirt Oval default lap count — the canonical closed-track operator input
 
 /** Convert a RACING duration in seconds to the equivalent frame count. */
 export const secondsToFrames = (seconds) => Math.round((seconds * 1000) / DT);
@@ -147,18 +146,22 @@ export function simulateRace({
   const { min: BASE_SPEED_MIN, max: BASE_SPEED_MAX } = baseSpeedConfig;
   const BASE_SPEED_MEAN = (BASE_SPEED_MIN + BASE_SPEED_MAX) / 2;
 
-  const raceDurationSeconds = trackConfig?.raceDurationSeconds ?? RACE_DURATION_SECONDS;
+  const laps = trackConfig?.laps ?? RACE_LAPS;
   const pathLengthPx = trackConfig?.pathLengthPx ?? DIRT_OVAL_PATH_LENGTH_PX;
   const geometricTrackWidthPx = trackConfig?.trackWidthPx ?? DIRT_OVAL_TRACK_WIDTH_PX;
   const spriteSize = SPRITE_SIZE;
-  const finishT = lapsFromDuration(raceDurationSeconds);
-  // N-calibrated base speed — same path as RaceScreen/index.jsx.
-  // closedSsf normalizes for Dirt Oval path length (3245/3200 ≈ 1.014).
-  const spreadMinFactor = BASE_SPEED_MIN / BASE_SPEED_MEAN;
-  const spreadMaxFactor = BASE_SPEED_MAX / BASE_SPEED_MEAN;
-  const ems = spreadMinFactor + (spreadMaxFactor - spreadMinFactor) / (nRacers + 1);
-  const closedSsf = computeClosedTrackSsf(pathLengthPx);
-  const race_baseSpeed = computeRaceBaseSpeed(finishT, raceDurationSeconds * ems * closedSsf);
+  // THE canonical derivation — the same shared call RaceScreen and sim-fairness make.
+  const durationModel = deriveRaceDuration({
+    isOpen: false,
+    pathLengthPx,
+    laps,
+    normalSpeedPxPerSec: normalSpeedFrom(baseSpeedConfig),
+    speedMultiplier: 1.0,
+    runoutZone: behaviorConfig.runoutZone,
+  });
+  const finishT = durationModel.finishT;
+  const race_baseSpeed = durationModel.raceBaseSpeed;
+  const raceDurationSeconds = durationModel.realizedDurationSec;
 
   // Row layout (seeded shuffle for reproducibility)
   const effectiveWidth = geometricTrackWidthPx * behaviorConfig.startSpreadRange;

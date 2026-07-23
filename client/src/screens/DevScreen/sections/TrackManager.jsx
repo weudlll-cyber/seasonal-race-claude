@@ -30,9 +30,12 @@ import { computeRacersPerRow, computeMaxRacersDefault } from '../../../modules/r
 import { EditorShape } from '../../../modules/track-editor/EditorShape.js';
 import { useSurfaceClasses } from '../../../modules/surface-effects/useSurfaceClasses.js';
 import { InfoTooltip } from '../../../components/InfoTooltip/index.js';
+import { trackDefaultLaps } from '../../../modules/durationModel.js';
 import s from '../DevScreen.module.css';
 
-const DURATIONS = [30, 60, 90, 120];
+// Canonical per-track defaults: CLOSED tracks default to a lap count, OPEN tracks to seconds.
+const LAP_CHOICES = [1, 2, 3, 4, 5, 6, 8, 10];
+const DURATIONS = [30, 45, 60, 90, 120];
 
 const BLANK = {
   name: '',
@@ -41,7 +44,8 @@ const BLANK = {
   defaultRacerTypeId: 'horse',
   geometryId: null,
   color: '#e63946',
-  defaultDuration: 60,
+  defaultLaps: 2,
+  defaultDurationSec: 60,
   defaultWinners: 3,
   worldWidth: 1280,
   worldHeight: 720,
@@ -67,6 +71,14 @@ function autoMaxRacers(geom, track, rowCfg) {
     rowGapPx,
     rowCfg.maxCapacityFactor
   );
+}
+
+// Topology of a stored geometry. Closed tracks are lap-based, open tracks time-based.
+// Unknown/absent geometry falls back to the time-based form (an open track is the safer
+// assumption: it always has a valid seconds default, whereas laps need a closed loop).
+function geometryIsClosed(geometryId) {
+  if (!geometryId) return false;
+  return getTrack(geometryId)?.closed === true;
 }
 
 function TrackManager() {
@@ -127,7 +139,8 @@ function TrackManager() {
       defaultRacerTypeId: track.defaultRacerTypeId ?? track.racerTypeId ?? track.racerId ?? 'horse',
       geometryId: geomId,
       color: track.color,
-      defaultDuration: track.defaultDuration,
+      defaultLaps: trackDefaultLaps(track),
+      defaultDurationSec: track.defaultDurationSec ?? track.defaultDuration ?? 60,
       defaultWinners: track.defaultWinners,
       worldWidth: track.worldWidth ?? 1280,
       worldHeight: track.worldHeight ?? 720,
@@ -259,7 +272,11 @@ function TrackManager() {
               >
                 <span style={{ fontSize: '1.2rem', lineHeight: 1 }}>{track.icon}</span>
                 <span style={{ fontWeight: 600, fontSize: '0.875rem' }}>{track.name}</span>
-                <span className={s.badge}>{track.defaultDuration}s</span>
+                <span className={s.badge}>
+                  {geometryIsClosed(track.geometryId)
+                    ? `${trackDefaultLaps(track)} laps`
+                    : `${track.defaultDurationSec ?? track.defaultDuration ?? 60}s`}
+                </span>
                 <span className={s.spacer} />
                 <DefaultControls
                   id={track.id}
@@ -351,20 +368,40 @@ function TrackManager() {
                 />
               </div>
             </div>
-            <div className={s.formGroup}>
-              <label className={s.label}>Default Duration</label>
-              <div className={s.optionPills}>
-                {DURATIONS.map((d) => (
-                  <button
-                    key={d}
-                    className={`${s.optionPill} ${form.defaultDuration === d ? s.optionPillActive : ''}`}
-                    onClick={() => f('defaultDuration', d)}
-                  >
-                    {d}s
-                  </button>
-                ))}
+            {/* Canonical race-length default. CLOSED tracks are defined by LAPS (the duration
+                follows from track length and the normal speed); OPEN tracks are defined by
+                SECONDS. Only the one that applies to this geometry is shown. */}
+            {geometryIsClosed(form.geometryId) ? (
+              <div className={s.formGroup}>
+                <label className={s.label}>Default Laps</label>
+                <div className={s.optionPills}>
+                  {LAP_CHOICES.map((n) => (
+                    <button
+                      key={n}
+                      className={`${s.optionPill} ${form.defaultLaps === n ? s.optionPillActive : ''}`}
+                      onClick={() => f('defaultLaps', n)}
+                    >
+                      {n}
+                    </button>
+                  ))}
+                </div>
               </div>
-            </div>
+            ) : (
+              <div className={s.formGroup}>
+                <label className={s.label}>Default Duration</label>
+                <div className={s.optionPills}>
+                  {DURATIONS.map((d) => (
+                    <button
+                      key={d}
+                      className={`${s.optionPill} ${form.defaultDurationSec === d ? s.optionPillActive : ''}`}
+                      onClick={() => f('defaultDurationSec', d)}
+                    >
+                      {d}s
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
             <div className={s.formGroup}>
               <label className={s.label}>Default Winners</label>
               <div className={s.stepper}>

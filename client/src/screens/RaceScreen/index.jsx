@@ -40,16 +40,9 @@ import {
 import { CameraDirector, OPEN_TRACK_BASE_ZOOM } from '../../modules/camera/CameraDirector.js';
 import { effectiveZoom } from '../../modules/camera/openTrackCamera.js';
 import { renderMinimap } from '../../modules/camera/Minimap.js';
-import {
-  lapsFromDuration,
-  lapProgress,
-  currentLap,
-  REFERENCE_FPS,
-  computeSpeedScaleFactor,
-  computeClosedTrackSsf,
-} from '../../modules/camera/lapUtils.js';
+import { lapProgress, currentLap } from '../../modules/camera/lapUtils.js';
 import { loadBaseSpeedConfig } from '../../modules/baseSpeedConfig.js';
-import { computeRaceBaseSpeed } from '../../modules/raceBaseSpeed.js';
+import { deriveRaceDuration, normalSpeedFrom, MIN_LAPS } from '../../modules/durationModel.js';
 import { computeRowEnvMult, computeRowEnvSmoothed, advanceRacerT } from '../../modules/raceStep.js';
 import {
   loadRaceBehaviorConfig,
@@ -485,30 +478,28 @@ export default function RaceScreen() {
     // equals overviewTargetScreenPx at OVERVIEW.
     const drawnBodyWidthRefPx = displaySize * displaySizeScale;
 
-    const duration = raceData.duration ?? 60;
-    const targetDuration = raceData.targetDuration ?? 60;
-    // Open tracks: finish line set to the distance a mean racer covers in targetDuration at natural speed.
-    // ssf scales t-space speed for track length so physical traversal time is comparable across tracks.
-    // Closed tracks: finish line is the target lap count; closedSsf normalizes race_baseSpeed by
-    // path length so all closed tracks produce comparable on-screen speeds (analogous to open ssf).
-    const ssf = isOpenTrack ? computeSpeedScaleFactor(geometry.pathLengthPx ?? 0) : 1;
-    const closedSsf = isOpenTrack ? 1 : computeClosedTrackSsf(geometry.pathLengthPx ?? 0);
-    const finishT = isOpenTrack
-      ? Math.min(
-          (BASE_SPEED_MEAN * speedMultiplier * REFERENCE_FPS * targetDuration) / ssf,
-          1 - behaviorConfig.runoutZone
-        )
-      : (raceData.targetLaps ?? lapsFromDuration(duration));
-    // N-calibrated expected-minimum spread: E[min_n] = spreadMin + (spreadMax - spreadMin) / (n+1).
-    // Ensures the expected last finisher arrives at targetDuration × closedSsf for closed tracks.
-    const spreadMinFactor = BASE_SPEED_MIN / BASE_SPEED_MEAN;
-    const spreadMaxFactor = BASE_SPEED_MAX / BASE_SPEED_MEAN;
-    const expectedMinSpreadFactor =
-      spreadMinFactor + (spreadMaxFactor - spreadMinFactor) / (nRacers + 1);
-    const race_baseSpeed = computeRaceBaseSpeed(
-      finishT,
-      targetDuration * expectedMinSpreadFactor * speedMultiplier * closedSsf
-    );
+    // ── THE canonical speed/duration derivation (modules/durationModel.js) ─────────────────────
+    // ONE shared call decides finishT, the pace and the clock. The sim makes the identical call
+    // with the identical inputs, so there is no browser-side duration term left to diverge:
+    // the former nominal (estimatedSecondsPerLap·laps) vs raw (durationSec) split is gone.
+    //   CLOSED: the operator chose LAPS; the duration is derived.
+    //   OPEN:   the operator chose SECONDS; the finish line is derived, and an over-long
+    //           request slows the whole field uniformly (paceScale < 1).
+    const normalSpeedPxPerSec = normalSpeedFrom(baseSpeedConfig);
+    const durationModel = deriveRaceDuration({
+      isOpen: isOpenTrack,
+      pathLengthPx: geometry.pathLengthPx ?? 0,
+      laps: raceData.targetLaps ?? MIN_LAPS,
+      requestedSeconds: raceData.targetDurationSec ?? raceData.targetDuration ?? 60,
+      normalSpeedPxPerSec,
+      speedMultiplier,
+      runoutZone: behaviorConfig.runoutZone,
+    });
+    const finishT = durationModel.finishT;
+    const race_baseSpeed = durationModel.raceBaseSpeed;
+    // THE clock. Everything that keys on "duration" — the re-roll schedule, the plan's
+    // targetDurationMs, the racePlanEnabled gate, every phase fraction — reads this one scalar.
+    const realizedDurationSec = durationModel.realizedDurationSec;
     const maxLaps = isOpenTrack ? 1 : finishT;
 
     camDirRef.current = new CameraDirector(
@@ -551,11 +542,8 @@ export default function RaceScreen() {
     const rowLayout = computeEvenRowLayout(nRacers, rowCount, raceRng);
 
     // Re-Roll schedule: distribute rolls evenly over [0, lastPositionPercent]% of the REALIZED race
-    // duration (raceData.estimatedDurationSec). On closed tracks the engine stretches the nominal
-    // targetDuration by ems×closedSsf, so keying the cadence on targetDuration front-loaded all
-    // re-rolls into the first ~half of the race; the realized duration spreads them across the whole
-    // race. Open tracks: estimatedDurationSec == targetDuration, so behavior is unchanged.
-    const rerollDurationSec = raceData.estimatedDurationSec ?? targetDuration;
+    // duration — the ONE canonical clock (realizedDurationSec), which the sim keys on term-for-term.
+    const rerollDurationSec = realizedDurationSec;
     const rollCount = Math.max(
       2,
       Math.floor(rerollDurationSec / dynamicsConfig.reRollIntervalDivisor)
@@ -695,13 +683,10 @@ export default function RaceScreen() {
     const showRpStartRowCfg = cameraConfigRef.current.showRpStartRow ?? false;
 
     // ── Race Plan controller ─────────────────────────────────────────────────
-    // Gate on the realized wall-clock duration (raceData.estimatedDurationSec) — for closed tracks
-    // the engine scales the nominal targetDuration by ems×closedSsf, so targetDuration under-reads
-    // the real race length. Defensive fallback to targetDuration for older raceData without the field.
+    // Gate on the ONE canonical clock — the same scalar the sim gates on.
     const racePlanEnabled =
       !!raceData.racePlanEnabled &&
-      (raceData.estimatedDurationSec ?? targetDuration) >=
-        (dynamicsConfig.racePlanMinDurationSec ?? 30);
+      realizedDurationSec >= (dynamicsConfig.racePlanMinDurationSec ?? 30);
     let racePlanController = null;
     let rpPlanInfo = null;
     let cameraPlanDelivered = false; // B4a: deliver the authored cameraPlan once, mid-race (heroes cast then)
@@ -714,7 +699,8 @@ export default function RaceScreen() {
       const plan = createRacePlan(
         planRacers,
         finishT,
-        targetDuration * 1000,
+        // THE clock, in ms — identical to the sim's createRacePlan argument by construction.
+        realizedDurationSec * 1000,
         // Last-resort ?? fallbacks: must mirror DEFAULT_RACE_DYNAMICS_CONFIG (defaults.js) exactly,
         // so a future shared-default change cannot silently re-introduce drift here.
         {
@@ -950,8 +936,8 @@ export default function RaceScreen() {
       } else if (st.phase === PHASE.RACING) {
         // Re-Roll config constants (read once per rAF, shared across all physics steps).
         // lastRollDeadline is relative to physicsTs which starts at 0 at RACING entry.
-        // Keyed on the REALIZED race duration (rerollDurationSec) so the last-roll cutoff lands at
-        // the same race fraction on closed tracks (where realized ≠ nominal targetDuration).
+        // Keyed on the ONE canonical clock, so the last-roll cutoff lands at the same race
+        // fraction here and in the sim.
         const lastRollDeadline =
           rerollDurationSec * 1000 * (dynamicsConfig.reRollLastPositionPercent / 100);
         const spreadRange = (BASE_SPEED_MAX - BASE_SPEED_MIN) / BASE_SPEED_MEAN;

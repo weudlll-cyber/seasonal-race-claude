@@ -25,9 +25,22 @@ export const DEFAULT_RACE_HISTORY = [];
 
 // Mean stays at 0.001045 while total min→max spread is reduced to ~17.7%
 // to reduce persistent pack clustering at high racer density.
+//
+// min/max are the SPREAD only — they set how far individual racers deviate from the
+// mean, not how fast the field is. The absolute pace is normalSpeedPxPerSec below.
+//
+// normalSpeedPxPerSec — THE one normal track speed, in world pixels per second, for
+// every track and every racer class (see modules/durationModel.js). Provisional value:
+// 225 px/s reproduces the pre-ship browser pace on a standard CLOSED track at the
+// reference class (speedMultiplier 1.0) to within 1% — the exact anchor is
+// baseSpeedMean * REFERENCE_CLOSED_PATH_PX * REFERENCE_FPS / ems(40) = 226.53 px/s,
+// rounded to a slider-friendly 225. The owner picks the final value by eye; changing
+// it here (or in Dev Screen → Dynamics → Speed → Normal Track Speed) rescales every
+// derived duration in the game at once and nothing else.
 export const DEFAULT_BASE_SPEED_CONFIG = {
   min: 0.00096,
   max: 0.00113,
+  normalSpeedPxPerSec: 225,
 };
 
 export const DEFAULT_ROW_LAYOUT_CONFIG = {

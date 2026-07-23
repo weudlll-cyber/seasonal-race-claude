@@ -30,20 +30,37 @@ pipeline. So every absolute figure the sim produced before this commit was measu
 The numbers stay in place as **history** — they correctly describe the pre-unification engine. They
 are simply no longer the current baseline.
 
+## Superseded — the speed/duration ship invalidated the baseline AGAIN (2026-07-23)
+
+The speed/duration ship replaced both speed normalisations, the laps staircase and the two meanings
+of "duration" with ONE canonical model (`client/src/modules/durationModel.js`): a single normal
+track speed in px/s, laps for closed tracks, bounded time for open tracks. **Race durations, the
+finish line, the pace and the re-roll schedule all moved**, on both sides — so every absolute figure
+in the affected list above is invalidated a second time, for a second reason.
+
+Two further method changes matter when comparing old numbers:
+
+- The shipped-default fingerprint now runs `--track-defaults` (each track at its own canonical
+  default) instead of `--dur=60`. It measures the shipped game; `--dur=60` no longer describes one.
+- Closed-track sweeps are specified in **laps**, open-track sweeps in **seconds**. A pre-ship
+  "60 s closed" row is not comparable to any post-ship row without going through the documented
+  protocol mapping in [docs/SIM.md](../docs/SIM.md).
+
 ## Fingerprints (shipped-default byte-identity)
 
-| World | Pre-unification (step 1) | Post-unification (step 2a) |
-|-------|--------------------------|-----------------------------|
-| ON (flagless)                 | `e93ffa70dad562a1` | `0ecca5e2dbe6526e` |
-| OFF (`--gapRerollEnabled=false`) | `72c3360fb75225ef` | `6e01e472b7655b9a` |
+| World | Pre-unification (step 1) | Post-unification (step 2a) | Speed/duration ship (current) |
+|-------|--------------------------|-----------------------------|-------------------------------|
+| ON (flagless)                 | `e93ffa70dad562a1` | `0ecca5e2dbe6526e` | `e80f78a0da6a9993` |
+| OFF (`--gapRerollEnabled=false`) | `72c3360fb75225ef` | `6e01e472b7655b9a` | `1cd6c9fdd62542a4` |
 
 ## When the new baseline is measured
 
-**Not yet, and not by this commit.** The full re-baseline sweep runs ONCE, after the
-speed/duration redesign ships, so the numbers are re-measured only when the engine is final. Until
-then, treat any absolute sim figure predating parity step 2a as provisional history. Provisional
-post-unification spot-checks (e.g. searound N=25) may appear in the step-2a report, clearly labelled
-as sanity, not gates.
+**Not yet, and not by this commit.** The full re-baseline sweep runs **ONCE**, after the owner picks
+the final **normal track speed** by eye (Dev Screen → Dynamics → Speed → Normal Track Speed;
+provisional 225 px/s). Re-baselining before that pick would measure a pace that is about to change,
+so the single sweep waits for it. Until then, treat every absolute sim figure in this repo as
+provisional history. Provisional spot-checks (e.g. the searound / river-run N=25 sanity in the
+speed/duration ship report) are clearly labelled as sanity, not gates.
 
 See [reports/parity/DIVERGENCE-AUDIT.md](parity/DIVERGENCE-AUDIT.md) (finding D-GRID) for the full
 rationale, and [docs/SIM.md](../docs/SIM.md) for the current cross-tool equality position.

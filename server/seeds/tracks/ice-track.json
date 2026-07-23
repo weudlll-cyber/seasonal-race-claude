@@ -3,7 +3,6 @@
   "description": "",
   "defaultRacerTypeId": "snowmobile",
   "color": "#e63946",
-  "defaultDuration": 60,
   "defaultWinners": 3,
   "surfaceClasses": [
     "snow",
@@ -1707,5 +1706,6 @@
   "backgroundImageFile": "ice-track.jpg",
   "createdAt": "2026-06-01T23:49:27.173Z",
   "updatedAt": "2026-06-29T00:00:00.000Z",
-  "maxRacers": null
+  "maxRacers": null,
+  "defaultLaps": 2
 }

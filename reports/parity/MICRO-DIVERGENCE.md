@@ -1,5 +1,37 @@
 # Micro-divergence localization — browser vs sim, searound / manta / 40 / 60 s
 
+> ## ✅ CLOSED — 2026-07-23, speed/duration ship
+>
+> The seam diagnosed below has been **closed**. Both engines now derive every duration-keyed
+> scalar from ONE shared model, `client/src/modules/durationModel.js` (`deriveRaceDuration`):
+> the operator picks **laps** on closed tracks and **seconds** on open ones, and finishT,
+> `race_baseSpeed`, `realizedDurationSec`, the re-roll schedule and the plan `targetDurationMs`
+> all follow from it identically on both sides. The nominal-vs-raw split described below does
+> not exist any more; neither do `lapsFromDuration`, `computeClosedTrackSsf`,
+> `computeSpeedScaleFactor` (and its hidden 0.5 clamp), `computeFinishT`,
+> `estimateClosedTrackDurationSec` or `openTrackDurationRange`.
+>
+> **`scripts/diag/micro-divergence.mjs` was rewritten to prove the closure** and now reports, for
+> the same three seeds (1 / 7 / 42) on searound / manta / 40:
+>
+> ```
+> DURATION SCALARS BIT-MATCH ACROSS THE TWO CALL SITES: YES
+> duration scalars bit-match : YES
+> finish orders identical    : YES
+> max per-racer |Δt| overall : 0.000e+0
+> SEAM CLOSED — the two arms are the same race, checkpoint diff is exactly zero.
+> ```
+>
+> The "browser-side capture that would settle it" named at the end of this report is therefore
+> **moot** — the residual it was meant to localize was the duration model itself, and the model
+> is now single-sourced. The golden-test tolerance recommendation at the bottom is superseded:
+> exact finishing-order equality is now the acceptance bar. See
+> [docs/SIM.md](../../docs/SIM.md) → *THE canonical speed/duration model*.
+>
+> Everything below is retained as the **historical diagnosis** that motivated the ship.
+
+---
+
 **Diagnosis, report-only. No shipped race code changed.** New diagnostic: `scripts/diag/micro-divergence.mjs`.
 Compute used: 6 single-race (N=1) runs total (3 seeds × 2 duration models), no sweeps.
 

@@ -22,7 +22,11 @@ beforeEach(() => {
 
 describe('DEFAULT_BASE_SPEED_CONFIG', () => {
   it('has relaxed defaults with lower total spread', () => {
-    expect(DEFAULT_BASE_SPEED_CONFIG).toEqual({ min: 0.00096, max: 0.00113 });
+    expect(DEFAULT_BASE_SPEED_CONFIG).toEqual({
+      min: 0.00096,
+      max: 0.00113,
+      normalSpeedPxPerSec: 225,
+    });
   });
 
   it('min < max', () => {

@@ -332,7 +332,7 @@ describe('SetupScreen — open-track Duration Slider (PR-A1)', () => {
   });
 });
 
-describe('SetupScreen — closed-track Laps & Duration (PR-A1 A2.5)', () => {
+describe('SetupScreen — closed-track Laps picker (canonical duration model)', () => {
   function renderWithClosedTrack() {
     const tracksWithGeometry = SAMPLE_TRACKS.map((t, i) =>
       i === 0 ? { ...t, geometryId: 'geom-closed-001' } : t
@@ -369,7 +369,7 @@ describe('SetupScreen — closed-track Laps & Duration (PR-A1 A2.5)', () => {
     sessionStorage.clear();
   });
 
-  it('shows "Laps & Duration" label for a closed track', () => {
+  it('shows the "Laps" label for a closed track', () => {
     renderWithClosedTrack();
     const tabs = screen.getAllByRole('tab');
     fireEvent.click(tabs[1]);
@@ -377,7 +377,7 @@ describe('SetupScreen — closed-track Laps & Duration (PR-A1 A2.5)', () => {
       .getAllByRole('button')
       .find((b) => b.textContent.includes('Dirt Oval') && !b.disabled);
     fireEvent.click(trackCard);
-    expect(screen.getByText(/Laps & Duration/i)).toBeInTheDocument();
+    expect(screen.getByText('Laps')).toBeInTheDocument();
   });
 
   it('shows "Estimated duration:" for a closed track', () => {
@@ -393,7 +393,7 @@ describe('SetupScreen — closed-track Laps & Duration (PR-A1 A2.5)', () => {
     );
   });
 
-  it('shows duration slider (type=range) for a closed track (PR-A2)', () => {
+  it('has NO closed-track duration control — duration is derived, never chosen', () => {
     renderWithClosedTrack();
     const tabs = screen.getAllByRole('tab');
     fireEvent.click(tabs[1]);
@@ -401,12 +401,10 @@ describe('SetupScreen — closed-track Laps & Duration (PR-A1 A2.5)', () => {
       .getAllByRole('button')
       .find((b) => b.textContent.includes('Dirt Oval') && !b.disabled);
     fireEvent.click(trackCard);
-    const slider = screen.getByTestId('closed-track-duration-slider');
-    expect(slider).toBeInTheDocument();
-    expect(slider.type).toBe('range');
+    expect(screen.queryByTestId('closed-track-duration-slider')).toBeNull();
   });
 
-  it('Model D: changing laps resets duration slider to auto', () => {
+  it('picking more laps raises the derived duration proportionally', () => {
     renderWithClosedTrack();
     const tabs = screen.getAllByRole('tab');
     fireEvent.click(tabs[1]);
@@ -415,17 +413,21 @@ describe('SetupScreen — closed-track Laps & Duration (PR-A1 A2.5)', () => {
       .find((b) => b.textContent.includes('Dirt Oval') && !b.disabled);
     fireEvent.click(trackCard);
 
-    const slider = screen.getByTestId('closed-track-duration-slider');
+    const readDuration = () => {
+      const m = screen
+        .getByTestId('closed-track-estimated-duration')
+        .textContent.match(/Estimated duration:\s*(\d+)s/);
+      return Number(m[1]);
+    };
 
-    // Move duration slider manually
-    fireEvent.change(slider, { target: { value: String(Number(slider.max)) } });
-    expect(slider.value).toBe(slider.max);
+    fireEvent.click(screen.getByTestId('lap-choice-1'));
+    const oneLap = readDuration();
+    fireEvent.click(screen.getByTestId('lap-choice-3'));
+    const threeLaps = readDuration();
 
-    // Now click a lap button — duration should reset to natural (initial auto value)
-    const lapBtn = screen.getAllByRole('button').find((b) => b.textContent.trim() === '3');
-    fireEvent.click(lapBtn);
-    // After lap change, duration resets to auto for new lap count
-    expect(screen.getByTestId('closed-track-duration-slider')).toBeInTheDocument();
+    expect(oneLap).toBeGreaterThan(0);
+    // laps × length ÷ normal speed — exactly linear in laps (±1s for the display rounding)
+    expect(Math.abs(threeLaps - 3 * oneLap)).toBeLessThanOrEqual(2);
   });
 });
 

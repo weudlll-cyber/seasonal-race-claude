@@ -98,6 +98,16 @@ that phase's `*-complete` endpoint when it closes (incremental history then live
   neighbour swaps only within 0.05–0.21 s margins. The residual is diagnosed as a closed-track
   duration-derivation seam ([reports/parity/MICRO-DIVERGENCE.md](../reports/parity/MICRO-DIVERGENCE.md),
   `2c72fe6`), classified into the upcoming speed/duration ship.
+- `pre/speed-duration-model` (`34584f7`) — master before the **speed/duration ship**: the last commit
+  with TWO speed normalisations (open `pathLengthPx/2000` with a hidden 0.5 clamp, closed
+  `pathLengthPx/3200`), the `lapsFromDuration` staircase, and two meanings of "duration" (the browser
+  paced from the nominal `estimatedSecondsPerLap × laps`, the sim from the raw `durationSec` — the
+  D-DUR seam). Return point before ONE canonical model (`client/src/modules/durationModel.js`) took
+  over: one normal track speed in px/s for all tracks and classes, laps for closed tracks, bounded
+  time for open tracks with a uniform slowdown past the natural maximum. Fingerprints move here by
+  design (ON `0ecca5e2dbe6526e`→`e80f78a0da6a9993`, OFF `6e01e472b7655b9a`→`1cd6c9fdd62542a4`); the
+  single full re-baseline waits for the owner's final normal-speed pick
+  ([reports/BASELINE-INVALIDATED.md](../reports/BASELINE-INVALIDATED.md)).
 - **Collapse plan:** fold into the parity phase's `*-complete` endpoint when that phase closes.
 
 ### Retune / cleanup / greenfield phase — COLLAPSED (2026-07-23)

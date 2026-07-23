@@ -5,7 +5,6 @@
   "description": "Classic oval on packed earth — tight turns, lots of dust.",
   "color": "#a0522d",
   "defaultRacerTypeId": "horse",
-  "defaultDuration": 60,
   "defaultWinners": 3,
   "difficulty": "medium",
   "surfaceClasses": [
@@ -1706,5 +1705,6 @@
   "updatedAt": "2026-06-29T00:00:00.000Z",
   "sourceMode": "center",
   "width": 178,
-  "pathLengthPx": 6541.495700998656
+  "pathLengthPx": 6541.495700998656,
+  "defaultLaps": 2
 }

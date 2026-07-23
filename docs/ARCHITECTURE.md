@@ -300,46 +300,120 @@ Conversion helpers (raceBehavior.js, top of file):
 - **Non-uniform track width (`getWidthAtT(t)`):** The function `getTrackWidthAtTpx` has an extension comment for when tracks with variable width are added. Implement by querying `EditorShape._centerWidth` (or equivalent) at `racer.t` per frame. Do NOT build prematurely.
 - **Sim brake-match parity:** `sim-fairness.mjs:~1007` reads `trailer.frameSizePx` (was `visibleWidthPx`) for the dynamic brake-match threshold. Sim racer objects never set `frameSizePx`, so this always falls back to `0.014`. Fix: set `frameSizePx: effectiveDisplaySize` (already set; now correctly named) and verify the threshold matches the game's `dynamicBrakeMatchT`.
 
-## Speed Pipeline (PR-A2 + fix + PR-A2.6)
+## Speed Pipeline (speed/duration ship, 2026-07)
 
-Race speed is duration-driven. The operator chooses a target duration in the SetupScreen; race
-init translates that directly into per-racer `baseSpeed`.
+There is exactly **one** speed normalisation and **one** duration derivation, in
+`client/src/modules/durationModel.js`. `RaceScreen`, `SetupScreen` and every sim call
+`deriveRaceDuration` and use the returned scalars verbatim — nothing re-derives a duration.
+
+**The one number.** `baseSpeedConfig.normalSpeedPxPerSec` — the **normal track speed** in world
+pixels per second, identical for every track and every racer class. Dev Screen → Dynamics →
+Speed → *Normal Track Speed*. Shipped provisional value: **225 px/s**.
 
 **Formula:**
 ```
-spreadMinFactor  = BASE_SPEED_MIN / BASE_SPEED_MEAN
-spreadMaxFactor  = BASE_SPEED_MAX / BASE_SPEED_MEAN
+// CLOSED: the operator picks LAPS; the duration is derived.
+finishT             = laps                                  (integer >= 1)
+realizedDurationSec = laps × pathLengthPx / V
 
-// N-calibrated: E[min of n U(spreadMin, spreadMax)] = spreadMin + range / (n+1)
-expectedMinSpreadFactor = spreadMinFactor + (spreadMaxFactor - spreadMinFactor) / (nRacers + 1)
+// OPEN: the operator picks SECONDS; the finish line is derived.
+naturalMaxSec       = (1 − runoutZone) × pathLengthPx / V
+finishT             = min(V × seconds / pathLengthPx, 1 − runoutZone)
+paceScale           = seconds <= naturalMaxSec ? 1 : naturalMaxSec / seconds
+realizedDurationSec = seconds
 
-race_baseSpeed = computeRaceBaseSpeed(finishT, targetDuration × expectedMinSpreadFactor × speedMultiplier × closedSsf)
-               = finishT / (REFERENCE_FPS × targetDuration × expectedMinSpreadFactor × speedMultiplier × closedSsf)
+// BOTH — one expression, one clock (time = distance / speed):
+realizedDurationSec = finishT × pathLengthPx / (V × paceScale)
+race_baseSpeed      = computeRaceBaseSpeed(finishT, realizedDurationSec × speedMultiplier)
+                    = finishT / (REFERENCE_FPS × realizedDurationSec × speedMultiplier)
 
 r.baseSpeed = race_baseSpeed × speedMultiplier × spreadFactor × speedBonusMult
 ```
 
-- `finishT` — target position: `1.0 − runoutZone` (open track) or lap count 1–4 (closed track).
-- `targetDuration` — operator-chosen race duration (open-track slider or closed-track duration
-  slider). Fallback: natural duration derived from mean base speed.
-- `spreadFactor = random[BASE_SPEED_MIN, BASE_SPEED_MAX] / BASE_SPEED_MEAN` — ±12.9% variation
-  around the median; tunable in Dev Screen → **Race Tuning** section (Speed Range block, PR-A3). **Re-rolled periodically during
-  the race** (see Re-Roll Mechanism below); only this field changes between rolls.
+- `V` — the normal track speed, px/s. The only pace input.
+- `finishT` — lap count (closed) or a 0..1 position capped at `1 − runoutZone` (open).
+- `realizedDurationSec` — **THE clock**. `race_baseSpeed`, the re-roll schedule, the plan's
+  `targetDurationMs`, the `racePlanEnabled` gate and every phase/easing fraction key on this one
+  scalar, on both the browser and the sim side. The former nominal-vs-raw split is gone.
+- `paceScale` — 1 at or below the track's natural maximum. Above it the finish line is pinned to
+  the physical end and the **whole field** is slowed uniformly so the chosen time still fits.
+  There is no speed-up counterpart: the shortest closed race is one lap, whatever it lasts.
+- `speedMultiplier` — per-racer-type constant (horse=1.0, rocket=1.25, snail=0.3, …). Divided out
+  of `race_baseSpeed` and re-multiplied per racer, so it cancels to M⁰: **one normal speed for all
+  classes**. A snail race and an F1 race over the same track and laps take the same time.
+- `spreadFactor = random[BASE_SPEED_MIN, BASE_SPEED_MAX] / BASE_SPEED_MEAN` — per-racer deviation
+  around the normal speed; tunable in Dev Screen → Dynamics → Speed → *Speed Range*. **Re-rolled
+  periodically during the race** (see Re-Roll Mechanism below); only this field changes between rolls.
 - `speedBonusMult = 1 + speedBonus` — positional back-row compensation from D7c row layout.
   **Constant over the whole race** — re-rolls never touch it (see speedBonus below).
-- `expectedMinSpreadFactor` — N-calibrated expected value of the minimum spreadFactor across all
-  racers. With n players drawing from U[spreadMin, spreadMax], the expected minimum is
-  `spreadMin + (spreadMax − spreadMin) / (n + 1)`. At n=3: ≈ 0.9355. At n=∞: → spreadMinFactor ≈ 0.871.
-  Pre-multiplied into the T argument of `computeRaceBaseSpeed` so the expected last finisher
-  cancels out and arrives exactly at `targetDuration`.
-- `speedMultiplier` — per-racer-type constant (horse=1.0, rocket=1.25, snail=0.6, …). Pre-multiplied
-  into the T argument so it cancels out in each racer's actual finish time.
-- `closedSsf` — closed-track path-length normalization: `closedSsf = pathLengthPx / REFERENCE_CLOSED_PATH_PX`
-  (3200), computed via `computeClosedTrackSsf` (lapUtils.js). **`closedSsf = 1` for open tracks**, so the
-  formula above is the *single* correct one for both track types — there is no separate open/closed
-  `race_baseSpeed` formula. For closed tracks it is pre-multiplied into the T argument so the field's
-  on-screen pace stays comparable across closed tracks of differing path length. This matches
-  `RaceScreen/index.jsx` (~line 487) and the now-unified `sim-fairness.mjs` formula (post `8f57cba`).
+
+**The pace is defined by the MEAN racer**, not by an N-calibrated expected minimum. A racer with
+`spreadFactor = 1.0` travels exactly `V` px/s and reaches `finishT` in exactly
+`realizedDurationSec`. The spread only widens the finishing field around that; it no longer enters
+the pace, so the pace no longer depends on the racer count.
+
+**What this replaced.** Deleted at this ship: `lapsFromDuration` (the closed laps staircase),
+`computeClosedTrackSsf` / `REFERENCE_CLOSED_PATH_PX` (closed `pathLengthPx/3200`),
+`computeSpeedScaleFactor` and its hidden `_MIN_SCALE = 0.5` clamp (open `pathLengthPx/2000`),
+`computeFinishT` (the sim's open finish-line formula), `estimateClosedTrackDurationSec`,
+`openTrackDurationRange`, and the `expectedMinSpreadFactor` term **in the pace**. See
+[SIM.md](SIM.md) → *THE canonical speed/duration model* and
+[reports/parity/MICRO-DIVERGENCE.md](../reports/parity/MICRO-DIVERGENCE.md) (the D-DUR seam this closed).
+
+### Setup screen behaviour
+
+The Track tab shows exactly one race-length control, chosen by track topology:
+
+**CLOSED tracks — a Laps picker.** Buttons 1 / 2 / 3 / 4 / 5 / 6 / 8 / 10; the track's own default
+is marked `*`. Each button's tooltip shows the duration that lap count derives to. Below the picker:
+`Estimated duration: Ns (field A–Bs)` — the mean racer's derived duration plus where the base-speed
+spread puts the rest of the field (`fieldFinishWindow`, display only). **There is no closed-track
+duration control** — duration is an output, not an input.
+
+**OPEN tracks — a seconds slider.** The slider runs to twice the track's natural maximum on
+purpose. Beneath it, `Natural maximum at normal speed: Ns` states where full pace ends, and
+`Estimated duration: Ns (field A–Bs)` mirrors the closed display. Choosing a time **beyond** the
+natural maximum is allowed and raises a warning naming the concrete factor:
+
+> ⚠️ Beyond this track's natural maximum of 55s — the whole field runs at **68%** of normal pace so
+> the race lasts 81s.
+
+A `race-plan-inactive-warning` still appears when the derived duration falls below
+`racePlanMinDurationSec`.
+
+The race payload carries only the **canonical operator inputs** — `targetLaps` (closed) or
+`targetDurationSec` (open) — plus `realizedDurationSec` / `paceScale` for display and telemetry.
+The engine re-derives everything from the inputs, so no derived scalar is trusted across the
+sessionStorage boundary.
+
+### Per-track defaults and migration
+
+Tracks carry `defaultLaps` (closed) or `defaultDurationSec` (open) instead of the old
+`defaultDuration` seconds. Migration mapping, applied once to the seeds:
+
+| track | topology | old `defaultDuration` | new default | derived |
+|---|---|---|---|---|
+| city-circuit | closed | 60 s | 2 laps | 54.5 s |
+| dirt-oval | closed | 60 s | 2 laps | 58.1 s |
+| garden-path | closed | 120 s | 4 laps | 84.8 s |
+| ice-track | closed | 60 s | 2 laps | 53.9 s |
+| searound | closed | 60 s | 2 laps | 45.8 s |
+| luger-hill | open | 90 s | 43 s | clamped to natural max 43.7 s |
+| mountainstreet | open | 60 s | 60 s | natural max 66.1 s |
+| river-run | open | 60 s | 55 s | clamped to natural max 55.1 s |
+| seatrack | open | 60 s | 51 s | clamped to natural max 51.7 s |
+| space-sprint | open | 90 s | 83 s | clamped to natural max 83.5 s |
+
+Closed defaults use the old staircase (< 60 s → 1, 60–89 → 2, 90–119 → 3, ≥ 120 → 4), preserved as
+`legacyLapsFromDefaultDuration()` — a migration helper only; nothing in a running race calls it.
+Open defaults are **clamped to the natural maximum at read time**, not baked, so a shipped default
+never opens into a slowdown warning and the clamp relaxes on its own if the normal speed is lowered.
+
+**Stored settings do not break.** `loadBaseSpeedConfig()` merges the new `normalSpeedPxPerSec` over
+any pre-ship `{min, max}` entry and repairs an absent/non-positive value, so a legacy localStorage
+config can never leave the game without a pace. A track record still carrying only `defaultDuration`
+falls back through `trackDefaultLaps` / `trackDefaultSeconds`. The stale `raceSettings.duration`
+key is left in place and simply no longer read as an engine input.
 
 **speedBonus (rowLayout.js) — Back-Row Positional Compensation:**
 `computeSpeedBonus(rowIndex, rowGapPx, pathLengthPx, speedBonusFactor, finishT, isOpen, totalRows)`
@@ -371,37 +445,42 @@ explosion when the assembly area nearly reaches the finish line. All non-finite 
 
 Mechanism is positional and deterministic — **not changed by the Re-Roll mechanism**.
 
-**Race-Duration Guarantee (Clarification):** The `targetDuration` formula calibrates the
-**median racer** (spreadFactor = 1.0) to finish at `targetDuration × expectedMinSpreadFactor`
-(≈ 87% of targetDuration). The actual **race end** — when the last finisher crosses — can
-deviate by ±6–8% (1σ) from `targetDuration` due to the intrinsic stochastic spread of N draws
-from U[spreadMin, spreadMax]. This deviation is physically invariant to any calibration change;
-it is a consequence of `E[min_n] ≠ min_n`. The guarantee is on the *expected* last finisher, not
-on any individual run.
+**Race-Duration Guarantee (Clarification):** `realizedDurationSec` is the **mean racer's**
+(spreadFactor = 1.0) arrival time, exactly. The actual **race end** — when the last finisher
+crosses — lands later by the spread: roughly `realizedDurationSec / E[min_n]`, and it varies run
+to run because `E[min_n] ≠ min_n`. That deviation is physically invariant to any calibration
+change. The setup screen therefore shows the mean duration as the headline estimate and the
+expected field window `(field A–Bs)` beside it (`fieldFinishWindow`, display only). The guarantee
+is on the mean racer, not on any individual run.
 
-`openTrackDurationRange` (lapUtils.js) derives the slider [min=30s, max] from track physics
-(path length) so the operator only sees meaningful duration values.
+`naturalMaxSeconds` (durationModel.js) derives the open-track picker's full-pace ceiling from
+track physics; the slider deliberately runs past it into the slowdown region (see *Setup screen
+behaviour* above).
 
 **Re-Roll Mechanism (PR-A2.6):**
 During a race each racer's `spreadFactor` is periodically re-drawn to create natural lead
-changes and prevent the field from freezing in initial order.
+changes and prevent the field from freezing in initial order. It keys on **the one clock**,
+`realizedDurationSec` — the same scalar the sim uses, so the cadence matches term for term.
 
 ```
-rollCount    = max(2, floor(targetDuration / 15))
-rollInterval = (0.80 × targetDuration × 1000ms) / rollCount   // ms; always ~12s
+rollCount    = max(2, floor(realizedDurationSec / reRollIntervalDivisor))
+rollInterval = (reRollLastPositionPercent/100 × realizedDurationSec × 1000ms) / rollCount
 ```
 
-| Race Duration | rollCount | rollInterval | Last Roll at |
+| Realized duration | rollCount | rollInterval | Last Roll at |
 |---|---|---|---|
-| 30s | 2 | 12s | 24s (80%) |
-| 60s | 4 | 12s | 48s (80%) |
-| 90s | 6 | 12s | 72s (80%) |
-| 120s | 8 | 12s | 96s (80%) |
+| 30s | 3 | 9.5s | 28.5s (95%) |
+| 45s | 4 | 10.7s | 42.8s (95%) |
+| 60s | 6 | 9.5s | 57s (95%) |
+| 120s | 12 | 9.5s | 114s (95%) |
+
+(at the shipped `reRollIntervalDivisor = 10`, `reRollLastPositionPercent = 95`.)
 
 Each roll draws a new `spreadFactorTarget` from a distribution centered on the current value
 with ±40% of SPREAD_RANGE width, clamped to [SPREAD_MIN, SPREAD_MAX] (Variant B). Per-racer
-jitter of ±20% of rollInterval prevents simultaneous rolls. No rolls after 80% of
-`targetDuration` so the finishing order stabilizes in the last stretch.
+jitter of ±20% of rollInterval prevents simultaneous rolls. No rolls after
+`reRollLastPositionPercent` of the realized duration, so the finishing order stabilizes in the
+last stretch.
 
 Transition: `spreadFactor` interpolates from old to new value over 2000ms using
 `easeInOutCubic` so tempo changes feel gradual. `baseSpeed` is updated live each frame during

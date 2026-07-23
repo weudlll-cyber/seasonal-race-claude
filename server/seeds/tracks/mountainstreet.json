@@ -3,7 +3,6 @@
   "description": "",
   "defaultRacerTypeId": "boarder",
   "color": "#e63946",
-  "defaultDuration": 60,
   "defaultWinners": 3,
   "surfaceClasses": [
     "asphalt"
@@ -1785,5 +1784,6 @@
   "backgroundImageFile": "mountainstreet.jpg",
   "createdAt": "2026-06-01T21:58:00.326Z",
   "updatedAt": "2026-06-01T22:01:58.680Z",
-  "maxRacers": null
+  "maxRacers": null,
+  "defaultDurationSec": 60
 }

@@ -17,7 +17,7 @@ import {
   DIRT_OVAL_PATH_LENGTH_PX,
 } from '../../modules/headlessRaceSimulator.js';
 import { getInitialTracks } from '../../modules/storage/trackLoader.js';
-import { computeClosedTrackSsf } from '../../modules/camera/lapUtils.js';
+import { secondsForLaps, trackDefaultLaps, normalSpeedFrom } from '../../modules/durationModel.js';
 import { avg, median, p95, stddev } from '../../modules/statsHelpers.js';
 import { loadBaseSpeedConfig } from '../../modules/baseSpeedConfig.js';
 import { loadRaceBehaviorConfig } from '../../modules/raceBehaviorConfig.js';
@@ -37,16 +37,14 @@ const CHUNK_SIZE = 5; // races per animation frame
 const CLOSED_TRACKS = getInitialTracks().filter((t) => t.geometryId != null && t.closed === true);
 
 // Per-track live-racing cap: the second the fastest racer reaches finishT, minus 1 s buffer.
-// Derived from race_baseSpeed calibration: fastestFinish = duration × ems × closedSsf / sxf.
-// At N=40 on Dirt Oval (3245 px, 60 s) this gives 50 s — identical to the old MAX_RUNTIME_SECONDS.
+// Reads the canonical model — the derived race duration for the track's default lap count —
+// and divides by the fastest expected spread factor to get the leader's arrival.
 function computeTrackCap(track, bsc) {
   const { min: MIN, max: MAX } = bsc;
   const MEAN = (MIN + MAX) / 2;
-  const smf = MIN / MEAN;
   const sxf = MAX / MEAN;
-  const ems = smf + (sxf - smf) / (N_RACERS + 1);
-  const fastest = (track.defaultDuration * ems * computeClosedTrackSsf(track.pathLengthPx)) / sxf;
-  return Math.max(5, Math.floor(fastest) - 1);
+  const derived = secondsForLaps(trackDefaultLaps(track), track.pathLengthPx, normalSpeedFrom(bsc));
+  return Math.max(5, Math.floor(derived / sxf) - 1);
 }
 
 // ── ASCII histogram ────────────────────────────────────────────────────────────
@@ -108,7 +106,7 @@ export default function DiagnoseVerteilung() {
       ? {
           pathLengthPx: currentTrack.pathLengthPx,
           trackWidthPx: currentTrack.width,
-          raceDurationSeconds: currentTrack.defaultDuration,
+          laps: trackDefaultLaps(currentTrack),
         }
       : null;
 

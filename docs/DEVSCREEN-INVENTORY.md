@@ -33,9 +33,24 @@ Card Reset: `reset-frame-timing`. Backing config: `frameTimingConfig`.
 
 Camera/render only — physics always runs fixed 16 ms steps, unaffected by this card.
 
-### 2. Speed — three sub-headings
+### 2. Speed — four sub-headings
 
-Card has no card-level Reset. Backing config: `baseSpeedConfig` (range) + `raceDynamicsConfig` (re-roll).
+Card has no card-level Reset. Backing config: `baseSpeedConfig` (normal speed + range) +
+`raceDynamicsConfig` (re-roll).
+
+**Sub-heading "Normal Track Speed"** — Reset `reset-normal-speed` — ADDED by the speed/duration ship:
+
+| Control | Config key | Shipped default | Test id |
+|---|---|---|---|
+| Normal Speed (px/s) | `normalSpeedPxPerSec` (baseSpeedConfig) | 225 | `normal-speed-input` |
+
+THE pace of the game: world pixels a normal racer covers per second, identical for every track and
+every racer class. Every race duration is derived from it — closed races last
+`laps × pathLengthPx / normalSpeed`, and an open track's finish line is where a normal racer is
+after the chosen time (see `client/src/modules/durationModel.js` and
+[SIM.md](SIM.md) → *THE canonical speed/duration model*). Changing it rescales every derived
+duration in the game at once and nothing else. 225 px/s is provisional — it reproduces the
+pre-ship browser pace on a standard closed track at `speedMultiplier = 1.0` to within 1%.
 
 **Sub-heading "Speed Range"** — Reset `reset-speed-range`:
 
@@ -43,6 +58,11 @@ Card has no card-level Reset. Backing config: `baseSpeedConfig` (range) + `raceD
 |---|---|---|
 | Min Speed | `min` (baseSpeedConfig) | 0.00096 |
 | Max Speed | `max` (baseSpeedConfig) | 0.00113 |
+
+These are the **spread only** — how far individual racers deviate from the normal speed. They no
+longer set the absolute pace (that is Normal Track Speed above), and they no longer enter the pace
+via an N-calibrated expected-minimum factor: the pace is defined by the mean racer, and the spread
+widens the finishing field around it.
 
 **Sub-heading "Speed Re-Roll"** — Reset `reset-speed-reroll`:
 

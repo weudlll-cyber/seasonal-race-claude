@@ -10,7 +10,7 @@
 // 1–5). Do not re-implement per stage — run this before and after and compare the two hashes.
 //
 // METHOD (fixed, do not vary between stages):
-//   • 10 standard tracks × their default racer, --seed=1 --races=3 --dur=60 → per-race seeds {1,2,3}
+//   • 10 standard tracks × their default racer, --seed=1 --races=3 --track-defaults → per-race seeds {1,2,3}
 //     per track (the sim derives race i as (seed-1)*races + i + 1).
 //   • DEFAULT config: no mechanism flags are passed, so the shipped defaults.js world is used.
 //   • Artifact: SHA-256 over canonicalized rawData — rows sorted by (raceIdx, index), object keys
@@ -25,8 +25,11 @@
 //   Reference hashes (shipped-default byte-identity):
 //     Stage-1 AFTER:                        fa4e3796e1e5f1a5 (historical)
 //     Parity step 1 (RNG isolation):        ON e93ffa70dad562a1  OFF 72c3360fb75225ef
-//     Parity step 2a (plan-grid unified):   ON 0ecca5e2dbe6526e  OFF 6e01e472b7655b9a  ← current
-//   (OFF = extra arg `--gapRerollEnabled=false`. Numbers MOVED at step 2a by design — D-GRID.)
+//     Parity step 2a (plan-grid unified):   ON 0ecca5e2dbe6526e  OFF 6e01e472b7655b9a
+//     Speed/duration ship (canonical model):ON e80f78a0da6a9993  OFF 1cd6c9fdd62542a4  ← current
+//   (OFF = extra arg `--gapRerollEnabled=false`. Numbers MOVED at step 2a — D-GRID — and again at
+//    the speed/duration ship: the shipped race is now each track's canonical default (laps for
+//    closed, seconds for open) at ONE normal speed, and the method switched --dur=60 → --track-defaults.)
 // ============================================================
 import { execFileSync } from 'child_process';
 import { readFileSync } from 'fs';
@@ -40,7 +43,7 @@ const LABEL = process.argv[2] || 'run';
 // ship ON by default: `node scripts/fingerprint-default.mjs off --gapRerollEnabled=false` measures the
 // pre-feature world. With no extra args this is exactly the shipped-default fingerprint, as before.
 const EXTRA = process.argv.slice(3).filter((a) => a.startsWith('--'));
-const SEED = 1, RACES = 3, DUR = 60;
+const SEED = 1, RACES = 3;
 // 10 standard tracks × default racer (fixed order — never reorder; it feeds the combined hash).
 const TRACKS = [
   ['city-circuit', 'motorbike'], ['dirt-oval', 'horse'], ['garden-path', 'snail'],
@@ -62,7 +65,7 @@ for (const [track, racer] of TRACKS) {
   const out = `client/tmp/fp/${LABEL}__${track}`;
   execFileSync(process.execPath, [
     'scripts/sim-fairness.mjs', `--track=${track}`, `--racer=${racer}`,
-    `--seed=${SEED}`, `--races=${RACES}`, `--dur=${DUR}`, `--out=${out}`, ...EXTRA,
+    `--seed=${SEED}`, `--races=${RACES}`, '--track-defaults', `--out=${out}`, ...EXTRA,
   ], { cwd: ROOT, stdio: 'ignore' });
   const d = JSON.parse(readFileSync(join(ROOT, out, 'fairness-data.json'), 'utf8'));
   const rows = [...d.rawData].sort((a, b) => (a.raceIdx - b.raceIdx) || (a.index - b.index));
@@ -75,5 +78,5 @@ for (const [track, racer] of TRACKS) {
   perTrack.push({ track, rows: rows.length, hash: createHash('sha256').update(rawStr).digest('hex').slice(0, 12), bias });
 }
 const combinedHash = combined.digest('hex').slice(0, 16);
-console.log('COMBINED', combinedHash, `(seed=${SEED} races=${RACES} dur=${DUR}, ${TRACKS.length} tracks, default config)`);
+console.log('COMBINED', combinedHash, `(seed=${SEED} races=${RACES} track-defaults, ${TRACKS.length} tracks, default config)`);
 for (const t of perTrack) console.log(' ', t.track.padEnd(15), t.hash, 'bias', JSON.stringify(t.bias));

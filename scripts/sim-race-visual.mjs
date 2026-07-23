@@ -50,8 +50,12 @@ import {
   computeSpeedBonus,
   computeRacersPerRow,
 } from '../client/src/modules/rowLayout.js';
-import { computeRaceBaseSpeed }   from '../client/src/modules/raceBaseSpeed.js';
-import { lapsFromDuration, REFERENCE_FPS } from '../client/src/modules/camera/lapUtils.js';
+import {
+  deriveRaceDuration,
+  normalSpeedFrom,
+  trackDefaultLaps,
+  trackDefaultSeconds,
+} from '../client/src/modules/durationModel.js';
 import {
   DEFAULT_BASE_SPEED_CONFIG,
   DEFAULT_RACE_BEHAVIOR_CONFIG,
@@ -329,22 +333,29 @@ function runSimulation(track, seed, burstIndex, burstLen) {
   const isOpen             = shape.isOpen;
   const pathLengthPx       = track.pathLengthPx ?? shape.getTotalLength();
   const geometricTrackWidth = track.width ?? shape.getActualTrackWidth();
-  const duration           = track.defaultDuration ?? 60;
-
-  const finishT = isOpen
-    ? 1.0 - (behaviorConfig.runoutZone ?? 0.05)
-    : lapsFromDuration(duration);
   const nRacers    = 20;
   const worldWidth = track.worldWidth ?? 1280;
   const worldHeight = track.worldHeight ?? 720;
   const bsX        = CAM_W / worldWidth;   // closed-track scale factor (canvas→world)
 
-  // N-calibrated base speed (mirrors index.jsx)
-  const spreadMinFactor  = BASE_SPEED_MIN / BASE_SPEED_MEAN;
-  const spreadMaxFactor  = BASE_SPEED_MAX / BASE_SPEED_MEAN;
-  const expectedMinSF    = spreadMinFactor + (spreadMaxFactor - spreadMinFactor) / (nRacers + 1);
-  const targetDuration   = finishT / (BASE_SPEED_MEAN * REFERENCE_FPS);
-  const race_baseSpeed   = computeRaceBaseSpeed(finishT, targetDuration * expectedMinSF);
+  // THE canonical derivation — the same shared call the browser and sim-fairness make.
+  const durationModel = deriveRaceDuration({
+    isOpen,
+    pathLengthPx,
+    laps: trackDefaultLaps(track),
+    requestedSeconds: trackDefaultSeconds(
+      track,
+      pathLengthPx,
+      normalSpeedFrom(),
+      behaviorConfig.runoutZone ?? 0.05
+    ),
+    normalSpeedPxPerSec: normalSpeedFrom(),
+    speedMultiplier: 1.0,
+    runoutZone: behaviorConfig.runoutZone ?? 0.05,
+  });
+  const finishT        = durationModel.finishT;
+  const race_baseSpeed = durationModel.raceBaseSpeed;
+  const targetDuration = durationModel.realizedDurationSec;
 
   // ── Row layout ──
   const displaySize = 36; // reference sprite size in world pixels

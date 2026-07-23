@@ -5,7 +5,6 @@
   "description": "Zero-gravity dash past asteroids and nebula clouds.",
   "color": "#7c3aed",
   "defaultRacerTypeId": "rocket",
-  "defaultDuration": 90,
   "defaultWinners": 3,
   "difficulty": "hard",
   "surfaceClasses": [
@@ -1776,5 +1775,6 @@
   "updatedAt": "2026-05-02T18:19:51.148Z",
   "sourceMode": "center",
   "width": 300,
-  "pathLengthPx": 19772.460802210535
+  "pathLengthPx": 19772.460802210535,
+  "defaultDurationSec": 83
 }

@@ -18,6 +18,13 @@ import { describe, it, expect, afterEach } from 'vitest';
 import { makeRaceRng, mulberry32 } from '../../modules/racePlanner.js';
 import { computeEvenRowLayout } from '../../modules/rowLayout.js';
 import { easeInOutCubic } from '../../utils/mathUtils.js';
+import {
+  deriveRaceDuration,
+  naturalMaxSeconds,
+  normalSpeedFrom,
+} from '../../modules/durationModel.js';
+import { DEFAULT_BASE_SPEED_CONFIG } from '../../modules/storage/defaults.js';
+import { REFERENCE_FPS } from '../../modules/camera/lapUtils.js';
 
 // Nothing in this suite swaps the global anymore — the whole point of the change. This guard is
 // defensive: if any test (or a future regression) leaves a seeded generator installed, restore it.
@@ -111,15 +118,52 @@ describe('makeRaceRng never touches the global (the isolation invariant)', () =>
 const FIXED_DT = 16;
 const NR = 16;
 const ROWS = 4;
-const RACE_BASE_SPEED = 0.0011; // ~1090 steps to the line at spreadFactor≈1 → dozens of re-rolls
-const FINISH_T = 1.2;
 const ROLL_INTERVAL = 400; // ms  (~25 steps)
 const TRANSITION = 160; // ms
 const LAST_ROLL_DEADLINE = 60000; // ms — re-rolls run the whole race
 const CHECK_EVERY = 100; // steps
-const MAX_STEPS = 3000;
+const MAX_STEPS = 20000;
 
-function simulateRace(seed, pacing) {
+// ── Canonical duration model (speed/duration ship) ────────────────────────────────────────────
+// The race's pace and finish line are no longer magic constants: they come from the ONE shared
+// derivation, exactly as index.jsx and the sims get them. RACE_SHAPES covers the three shapes the
+// model can produce, so pacing-invariance is proven for each — including the open-track slowdown,
+// where the whole field runs below normal pace.
+const NORMAL_SPEED = normalSpeedFrom(DEFAULT_BASE_SPEED_CONFIG);
+const TEST_PATH_LENGTH_PX = 5147.151518220427; // searound
+const RUNOUT = 0.05;
+const OPEN_NAT_MAX = naturalMaxSeconds(TEST_PATH_LENGTH_PX, NORMAL_SPEED, RUNOUT);
+
+const RACE_SHAPES = {
+  closed: { isOpen: false, pathLengthPx: TEST_PATH_LENGTH_PX, laps: 2 },
+  openInRange: {
+    isOpen: true,
+    pathLengthPx: TEST_PATH_LENGTH_PX,
+    requestedSeconds: Math.floor(OPEN_NAT_MAX * 0.6),
+  },
+  openSlowdown: {
+    isOpen: true,
+    pathLengthPx: TEST_PATH_LENGTH_PX,
+    requestedSeconds: Math.ceil(OPEN_NAT_MAX * 1.8),
+  },
+};
+
+function modelFor(shapeKey) {
+  return deriveRaceDuration({
+    ...RACE_SHAPES[shapeKey],
+    normalSpeedPxPerSec: NORMAL_SPEED,
+    speedMultiplier: 1.0,
+    runoutZone: RUNOUT,
+  });
+}
+
+// Default shape for the existing suites — the closed 2-lap race.
+const DEFAULT_MODEL = modelFor('closed');
+
+function simulateRace(seed, pacing, model = DEFAULT_MODEL) {
+  // THE canonical scalars drive the loop; nothing here re-derives a pace of its own.
+  const RACE_BASE_SPEED = model.raceBaseSpeed;
+  const FINISH_T = model.finishT;
   // Physics stream. Fixed engine → isolated `raceRng`. Coupled (pre-fix) → the global, which the
   // render draws below also consume, so a given seed installs a deterministic global generator.
   let rng;
@@ -238,6 +282,53 @@ describe('whole-race determinism is independent of frame pacing / camera / slow-
       expect(b.order).toEqual(a.order);
       expect(b.checkpoints).toEqual(a.checkpoints);
     }
+  });
+});
+
+// ── Canonical duration model (speed/duration ship) ────────────────────────────────────────────
+describe('whole-race determinism holds for every shape the canonical model produces', () => {
+  for (const shape of ['closed', 'openInRange', 'openSlowdown']) {
+    it(`${shape}: same seed → identical race across wildly different pacing`, () => {
+      const model = modelFor(shape);
+      const a = simulateRace(7, FAST, model);
+      const b = simulateRace(7, SLOWMO, model);
+      const c = simulateRace(7, HEADLESS, model);
+
+      expect(b.order).toEqual(a.order);
+      expect(b.checkpoints).toEqual(a.checkpoints);
+      expect(c.order).toEqual(a.order);
+      expect(c.checkpoints).toEqual(a.checkpoints);
+
+      // non-vacuous: the race actually ran and the field shuffled off start order
+      expect(a.steps).toBeGreaterThan(200);
+      expect(new Set(a.order).size).toBe(NR);
+      expect(a.order).not.toEqual([...Array(NR).keys()]);
+    });
+  }
+
+  it('the model, not a constant, sets the pace — a mean racer takes realizedDurationSec', () => {
+    for (const shape of ['closed', 'openInRange', 'openSlowdown']) {
+      const model = modelFor(shape);
+      // Steps a spreadFactor=1.0 racer needs to reach the line, at the model's own pace.
+      const steps = model.finishT / model.raceBaseSpeed;
+      expect((steps * FIXED_DT) / 1000).toBeCloseTo(model.realizedDurationSec, 6);
+      expect(model.raceBaseSpeed * REFERENCE_FPS * model.realizedDurationSec).toBeCloseTo(
+        model.finishT,
+        10
+      );
+    }
+  });
+
+  it('the slowdown shape really is slower than normal pace (guards a vacuous pass)', () => {
+    const normal = modelFor('openInRange');
+    const slowed = modelFor('openSlowdown');
+    expect(normal.paceScale).toBe(1);
+    expect(slowed.paceScale).toBeLessThan(1);
+    expect(slowed.effectiveSpeedPxPerSec).toBeLessThan(normal.effectiveSpeedPxPerSec);
+    // and the two produce genuinely different races
+    expect(simulateRace(7, FAST, slowed).steps).toBeGreaterThan(
+      simulateRace(7, FAST, normal).steps
+    );
   });
 });
 

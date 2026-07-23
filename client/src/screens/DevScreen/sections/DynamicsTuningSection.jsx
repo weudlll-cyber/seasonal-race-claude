@@ -93,6 +93,13 @@ const DynamicsTuningSection = forwardRef(function DynamicsTuningSection(_, ref) 
     }));
   }
 
+  function resetNormalSpeed() {
+    setSpeedConfig((prev) => ({
+      ...prev,
+      normalSpeedPxPerSec: DEFAULT_BASE_SPEED_CONFIG.normalSpeedPxPerSec,
+    }));
+  }
+
   function resetRowStart() {
     setRowConfig((prev) => ({
       ...prev,
@@ -301,8 +308,38 @@ const DynamicsTuningSection = forwardRef(function DynamicsTuningSection(_, ref) 
         subtitle="Each racer's base speed and how it is re-rolled during the race."
       >
         <SubHeading
+          label="Normal Track Speed"
+          note="THE pace of the game: how fast a normal racer travels, in track pixels per second. One number for every track and every racer class. Everything else follows from it — a closed race's duration is laps × track length ÷ this speed, and an open track's finish line is wherever a normal racer is after the chosen time. Raise it and every race gets shorter; lower it and every race gets longer."
+          onReset={resetNormalSpeed}
+          resetTestId="reset-normal-speed"
+        />
+        <div className={s.formGrid}>
+          <div className={s.formGroup}>
+            <label
+              className={s.label}
+              style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}
+            >
+              Normal Speed (px/s)
+              <InfoTooltip text="World pixels a normal racer covers per second. This is the single pace control: it applies identically to every track and every racer class, and every race duration in the game is derived from it." />
+            </label>
+            <input
+              type="number"
+              data-testid="normal-speed-input"
+              className={s.input}
+              min={10}
+              max={2000}
+              step={5}
+              value={speedConfig.normalSpeedPxPerSec}
+              onChange={(e) => {
+                const v = Number(e.target.value);
+                if (Number.isFinite(v) && v > 0) setSpeed('normalSpeedPxPerSec', v);
+              }}
+            />
+          </div>
+        </div>
+        <SubHeading
           label="Speed Range"
-          note="The slowest and fastest base speeds racers can have. At the start of each race, every racer gets a random base speed somewhere in this range. A wider range creates more dramatic differences between racers — clear leaders and stragglers. A narrower range keeps races close and competitive."
+          note="How far individual racers deviate from the normal speed. At the start of each race, every racer gets a random base speed somewhere in this range. A wider range creates more dramatic differences between racers — clear leaders and stragglers. A narrower range keeps races close and competitive. This is the SPREAD only; the absolute pace is Normal Track Speed above."
           onReset={resetSpeedRange}
           resetTestId="reset-speed-range"
         />

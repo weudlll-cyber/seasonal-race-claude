@@ -73,7 +73,7 @@ Mechanism (parity step 1, 2026-07-23): the race-init effect in `RaceScreen/index
 >
 > **The seeded browser race is now frame-rate independent** — a given seed replays move-for-move regardless of frame pacing, camera state or slow-mo (proven by `RaceScreen/seedDeterminism.test.js`, which asserts identical finishing order + checkpointed progress across wildly different pacing profiles). This is the property parity step 1 delivered by isolating the physics RNG from render.
 >
-> **Cross-tool parity (updated 2026-07-23, parity step 2a — D-GRID unified).** The browser and sim now draw the *same physics stream* AND the *same start-row grid* for a seed: one per-race shuffle feeds both the race plan's target-ranks and the physical placement, on both sides (the sim's former per-combo FNV grid is deleted). To reproduce a browser seed `S` in the sim, run `--seed=S --races=1` (the sim derives race `i` as `(N−1)×N_RACES + i + 1`, which is `S` at `N=1, i=0`) with the same track, racer count and shipped default config. With those matched, the finishing order should agree. The remaining known gap is the **speed/duration model** (the next ship), plus any config the sim reads from defaults rather than an exported world; a full headless golden-test harness is deferred. The pre-unification absolute baselines are retired — see [reports/BASELINE-INVALIDATED.md](../reports/BASELINE-INVALIDATED.md).
+> **Cross-tool parity (updated 2026-07-23, parity step 2a — D-GRID unified).** The browser and sim now draw the *same physics stream* AND the *same start-row grid* for a seed: one per-race shuffle feeds both the race plan's target-ranks and the physical placement, on both sides (the sim's former per-combo FNV grid is deleted). To reproduce a browser seed `S` in the sim, run `--seed=S --races=1` (the sim derives race `i` as `(N−1)×N_RACES + i + 1`, which is `S` at `N=1, i=0`) with the same track, racer count and shipped default config. With those matched, the finishing order should agree. The **speed/duration model is now shared too** (2026-07 ship): both sides call `deriveRaceDuration` in `client/src/modules/durationModel.js`, so finishT, `race_baseSpeed`, the re-roll schedule and the plan duration are identical by construction — `scripts/diag/micro-divergence.mjs` reports a checkpoint diff of exactly zero. Reproduce a browser race with `--laps=N` (closed) or `--seconds=S` (open), or `--track-defaults` for the shipped defaults. The remaining known gap is any config the sim reads from defaults rather than an exported world; a full headless golden-test harness is deferred. The pre-unification absolute baselines are retired — see [reports/BASELINE-INVALIDATED.md](../reports/BASELINE-INVALIDATED.md).
 
 ### File locations
 
@@ -121,7 +121,11 @@ node scripts/sim-fairness.mjs \
   --out=client/tmp     # output directory (default: client/tmp)
   --track=river-run    # run only this track (optional filter)
   --racer=horse        # run only this racer type (optional filter)
-  --dur=60             # override race duration in seconds (optional)
+  --laps=2             # CLOSED tracks: lap count (the canonical closed-track input)
+  --seconds=45         # OPEN tracks: race time in seconds (the canonical open-track input)
+  --track-defaults     # each track at its own shipped default (laps / seconds), one variant
+  --normalSpeed=225    # override the one normal track speed in px/s
+  --dur=60             # measurement-protocol seconds; on closed tracks mapped per track to laps
 ```
 
 ### Fixed seed (deterministic runs)
@@ -159,8 +163,8 @@ Activates the Race Plan controller. Required when testing zone hit rates (`raceP
 ### Running on specific tracks
 
 ```sh
-# Single track + racer + duration
-node scripts/sim-fairness.mjs --track=space-sprint --racer=rocket --dur=60 --races=200 --seed=42
+# Single track + racer, canonical inputs (open track → seconds; closed track → --laps=N)
+node scripts/sim-fairness.mjs --track=space-sprint --racer=rocket --seconds=60 --races=200 --seed=42
 
 # All tracks, extended run
 node scripts/sim-fairness.mjs --races=200 --seed=42 --race-plan=true
@@ -703,41 +707,99 @@ default wiring as they exist after the June 2026 parity work (`8f57cba`, `9cfa95
 is that `sim-fairness.mjs` is a faithful predictor of the browser — every player-facing tunable
 is sourced from the same module the browser/DevScreen use, never hand-mirrored.
 
-### finishT on closed tracks = `lapsFromDuration(durationSec)`
+### THE canonical speed/duration model (speed/duration ship, 2026-07)
 
-Closed-track `finishT` is the **lap-count bucket** `lapsFromDuration(durationSec)` from
-`client/src/modules/camera/lapUtils.js`:
+There is exactly **one** speed normalisation and **one** duration derivation in the project, in
+`client/src/modules/durationModel.js`. The browser (`RaceScreen`, `SetupScreen`) and every sim
+(`sim-fairness.mjs`, `sim-race-visual.mjs`, `headlessRaceSimulator.js`) import it and use the
+returned scalars verbatim. Nothing downstream re-derives a duration.
 
-| duration | laps |
-|----------|------|
-| < 60 s   | 1    |
-| 60–89 s  | 2    |
-| 90–119 s | 3    |
-| ≥ 120 s  | 4    |
+**The one number.** `baseSpeedConfig.normalSpeedPxPerSec` — the normal track speed in world
+pixels per second, identical for every track and every racer class. Adjustable in
+Dev Screen → Dynamics → Speed → *Normal Track Speed*. Shipped provisional value: **225 px/s**.
 
-This is the **same function the browser always used** (`RaceScreen/index.jsx`), and the same one
-`headlessRaceSimulator.js` and `sim-race-visual.mjs` use. Before `8f57cba`, `sim-fairness.mjs`
-instead derived closed-track `finishT` from a continuous natural-distance formula
-(`computeFinishT`), which produced ≈4.2 laps for a 60 s race instead of 2 — i.e. the fairness
-gates were measured over ~2× the real lap count and ~2× the on-screen speed. `8f57cba` switched
-the closed branch to `lapsFromDuration`. **`computeFinishT` is now OPEN-TRACK ONLY** — do not
-route closed tracks through it (a comment in the source warns against reintroducing the bug).
+**The derivation** (`deriveRaceDuration`):
 
-### race_baseSpeed — single unified formula (both topologies)
+| | operator picks | finishT | duration |
+|---|---|---|---|
+| **CLOSED** | `laps` (integer ≥ 1) | `laps` | **derived**: `laps × pathLengthPx / V` |
+| **OPEN** | `seconds` | **derived**: `V × seconds / pathLengthPx`, capped at `1 − runoutZone` | the chosen seconds |
 
-`sim-fairness.mjs` now back-solves speed via the shared `computeRaceBaseSpeed` helper, identical
-term-for-term to the browser. See the master formula in
-[ARCHITECTURE.md](ARCHITECTURE.md) (`race_baseSpeed` section) — not duplicated here. Key point:
-`closedSsf = pathLengthPx / 3200` enters the speed denominator (and `closedSsf = 1` for open),
-so a single formula covers both track types. The `speedMultiplier` in the denominator cancels
-the post-multiply, giving the browser's racer-type-independent base pace on closed tracks.
+For open tracks, `naturalMaxSeconds = (1 − runoutZone) × pathLengthPx / V` is the longest race the
+track holds at normal speed. Choosing **more** time than that is allowed: the finish line pins to
+the physical end and the whole field is slowed uniformly by `paceScale = naturalMax / requested`,
+so the race still lasts exactly the chosen time. There is **no speed-up** counterpart — the
+shortest closed race is one lap, whatever it lasts.
 
-### DURATION_VARIANTS = `[30, 60, 120]`
+`speedMultiplier` (racer class) is divided out of `raceBaseSpeed` and re-multiplied per racer, so
+it cancels to M⁰: one normal speed for all classes. The pace is defined by the **mean** racer;
+the base-speed spread only widens the finishing field around it, and enters the setup **display**
+via `fieldFinishWindow()` — never an engine input.
 
-The default sweep duration set is `[30, 60, 120]` (was `[30, 120]`). **60 s was added** because it
-is the actual default player-facing scenario (default race duration → `lapsFromDuration(60) = 2`
-laps), which the prior `[30, 120]` set never exercised. `--dur=<n>` still overrides to a single
-duration.
+**One clock.** `realizedDurationSec` is the single duration scalar. `race_baseSpeed`, the re-roll
+schedule (`rollCount` / `rollInterval` / `lastRollDeadline`), the plan's `targetDurationMs`, the
+`racePlanEnabled` gate and every phase/easing fraction key on it, on **both** sides.
+
+#### What this deleted
+
+| deleted | was |
+|---|---|
+| `lapsFromDuration` | the closed-track laps staircase (< 60 s → 1, 60–89 → 2, 90–119 → 3, ≥ 120 → 4) |
+| `computeClosedTrackSsf` / `REFERENCE_CLOSED_PATH_PX` | closed normalisation `pathLengthPx / 3200` |
+| `computeSpeedScaleFactor` (+ hidden `_MIN_SCALE = 0.5` clamp) | open normalisation `pathLengthPx / 2000` |
+| `computeFinishT` | the sim's open-track finish-line formula |
+| `estimateClosedTrackDurationSec`, `openTrackDurationRange` | display-only mirrors of the above |
+| the N-calibrated expected-minimum spread factor **in the pace** | made the pace depend on racer count |
+
+The staircase survives **only** as `legacyLapsFromDefaultDuration()`, a migration helper for
+tracks still carrying a pre-ship `defaultDuration`. Nothing in a running race calls it.
+
+#### The seam this closed
+
+Before this ship the browser derived `finishT` from the *setting* (60 → 2 laps) but derived
+`race_baseSpeed`, the re-roll schedule and the plan duration from a *nominal* traversal time
+(`estimatedSecondsPerLap × laps ≈ 28 s`), while the sim keyed all of them to the raw
+`durationSec = 60`. Same seed, two different races — a 2.14× pace ratio on searound/manta.
+`scripts/diag/micro-divergence.mjs` now re-runs its A/B arms through the shared model and reports
+a checkpoint diff of **exactly zero**. See [reports/parity/MICRO-DIVERGENCE.md](../reports/parity/MICRO-DIVERGENCE.md).
+
+### CLI race-length inputs
+
+The sim takes the **same two operator inputs the browser takes**, so any browser race is
+expressible as a sim invocation:
+
+```
+--laps=<n>          CLOSED tracks: the lap count (finishT = laps; duration derived)
+--seconds=<s>       OPEN tracks:   the race time (finish line derived; slowdown past natural max)
+--track-defaults    each track at ITS OWN shipped default (defaultLaps / defaultDurationSec),
+                    one variant — this is the shipped-default game the fingerprint measures
+--normalSpeed=<v>   override the one normal track speed (px/s) for a sweep
+```
+
+**Measurement-protocol mapping.** `--dur=<s>` is retained for the fixed-seconds scaling runs
+(30 / 60 / 120 / 300 s). On **open** tracks it is the seconds directly. On **closed** tracks it is
+mapped per track by `lapsForApproxSeconds(s, pathLengthPx, V)` = `max(1, round(s × V / L))` — the
+lap count whose derived duration is closest to `s` on that track. That is the model read backwards,
+not a staircase constant, so it tracks the normal speed automatically. At 225 px/s:
+
+| track | length | `--dur=30` | `--dur=60` | `--dur=120` | `--dur=300` |
+|---|---|---|---|---|---|
+| searound | 5147 px | 1 lap | 3 laps | 5 laps | 13 laps |
+| dirt-oval | 6541 px | 1 lap | 2 laps | 4 laps | 10 laps |
+| city-circuit | 6130 px | 1 lap | 2 laps | 4 laps | 11 laps |
+| garden-path | 4773 px | 1 lap | 3 laps | 6 laps | 14 laps |
+| ice-track | 6065 px | 1 lap | 2 laps | 4 laps | 11 laps |
+
+`DURATION_VARIANTS` (default `[30, 60, 120]`) remains the sweep loop variable and now carries the
+protocol **seconds**; `--seconds=` overrides it, `--track-defaults` collapses it to one per-track
+default.
+
+### race_baseSpeed
+
+`raceBaseSpeed` comes straight from `deriveRaceDuration` — it is
+`computeRaceBaseSpeed(finishT, realizedDurationSec × speedMultiplier)`, one expression for both
+topologies. The old `ems × closedSsf` / `ssf` denominators are gone. See the master formula in
+[ARCHITECTURE.md](ARCHITECTURE.md).
 
 ### Shared-config CLI defaults (no hand-mirrored literals) — `9cfa953`
 

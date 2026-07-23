@@ -6,27 +6,7 @@ import {
   tcToLerpFactor,
 } from './CameraDirector.js';
 import { effectiveZoom } from './openTrackCamera.js';
-import {
-  lapsFromDuration,
-  lapProgress,
-  currentLap,
-  estimatedSecondsPerLap,
-  REFERENCE_FPS,
-} from './lapUtils.js';
-import { DEFAULT_BASE_SPEED_CONFIG } from '../storage/defaults.js';
-
-// ── lapsFromDuration ──────────────────────────────────────────────────────────
-
-describe('lapsFromDuration', () => {
-  it('returns 1 for 30s', () => expect(lapsFromDuration(30)).toBe(1));
-  it('returns 1 for 59s', () => expect(lapsFromDuration(59)).toBe(1));
-  it('returns 2 for 60s', () => expect(lapsFromDuration(60)).toBe(2));
-  it('returns 2 for 89s', () => expect(lapsFromDuration(89)).toBe(2));
-  it('returns 3 for 90s', () => expect(lapsFromDuration(90)).toBe(3));
-  it('returns 3 for 119s', () => expect(lapsFromDuration(119)).toBe(3));
-  it('returns 4 for 120s', () => expect(lapsFromDuration(120)).toBe(4));
-  it('returns 4 for 180s', () => expect(lapsFromDuration(180)).toBe(4));
-});
+import { lapProgress, currentLap } from './lapUtils.js';
 
 // ── lapProgress ───────────────────────────────────────────────────────────────
 
@@ -1042,36 +1022,6 @@ describe('CameraDirector — OVERVIEW spriteScale on open tracks (v14 path)', ()
     cd.stateEnteredAt = 1000;
     cd.update(mockRacers(4), 1000, mockRaceState, 1280, 720);
     expect(cd.targetZoom).toBeCloseTo(2.0 / OPEN_TRACK_BASE_ZOOM, 3);
-  });
-});
-
-// ── estimatedSecondsPerLap ────────────────────────────────────────────────────
-
-describe('estimatedSecondsPerLap', () => {
-  it('returns exactly 1 / (baseSpeedMean * speedMultiplier * REFERENCE_FPS)', () => {
-    const sm = 1.0;
-    const mean = (DEFAULT_BASE_SPEED_CONFIG.min + DEFAULT_BASE_SPEED_CONFIG.max) / 2;
-    expect(estimatedSecondsPerLap(sm)).toBeCloseTo(1 / (mean * sm * REFERENCE_FPS));
-  });
-
-  it('horse (1.0) is approx 15-16 seconds', () => {
-    const s = estimatedSecondsPerLap(1.0);
-    expect(s).toBeGreaterThan(14);
-    expect(s).toBeLessThan(17);
-  });
-
-  it('snail (0.30) is roughly 3.33× horse time', () => {
-    expect(estimatedSecondsPerLap(0.3)).toBeCloseTo(estimatedSecondsPerLap(1.0) / 0.3, 1);
-  });
-
-  it('rocket (1.25) is faster than horse', () => {
-    expect(estimatedSecondsPerLap(1.25)).toBeLessThan(estimatedSecondsPerLap(1.0));
-  });
-
-  it('never returns 0 or negative for any reasonable multiplier', () => {
-    for (const sm of [0.1, 0.3, 0.5, 1.0, 1.25, 2.0]) {
-      expect(estimatedSecondsPerLap(sm)).toBeGreaterThan(0);
-    }
   });
 });
 
