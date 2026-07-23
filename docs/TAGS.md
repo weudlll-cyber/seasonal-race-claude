@@ -31,6 +31,12 @@ and what was retired.
 - `v-rowenv-easing-complete` (`5f5c03b`) — rowEnvMult easing shipped dormant.
 - `v-rowenv-default-on-complete` (`db27fc4`) — rowEnvMult easing flipped default ON.
 - `v-b2-heroes-complete` (`8bf54ca`) — B2-Heroes "Attack & Fall" shipped ON (`b2AttackHeroes=3`).
+- `v-retune-cleanup-complete` (`e0f6950`) — the **retune → dead-mechanisms cleanup → DevScreen reorg →
+  greenfield-wrap** phase endpoint (2026-07-23). One anchor for the whole arc: the G/strength retune
+  (defaults `0.75/0.5`, ON fingerprint `e93ffa70dad562a1`), the removal of the carousel / pack-release /
+  universal-band-arrival mechanisms (both fingerprints byte-identical), the DevScreen regroup, and the
+  port of the greenfield measurement keepers + evidence record onto master. The five per-step
+  `pre/*`+`backup/*` tags were collapsed onto this and deleted — see the collapse table below.
 - `b4-complete` (`03e28cf`) — camera-foresight B4 endpoint.
 - `backup/lbb-gate-complete` (`7883d45`) — look-before-brake gate endpoint (a `backup/*` name, but a
   completed-phase anchor; retained).
@@ -44,6 +50,16 @@ and what was retired.
   preserved as a permanent tag before the branch was deleted (2026-07-20). Holds the look-before-brake
   diagnostics AND the `--jobs` sweep parallelism (`0c20f9b`); the `--jobs` BACKLOG item cherry-picks from
   here rather than a live branch.
+- `archive/greenfield-proto-final` (`2663f7b`) — the entire `pre/greenfield-proto` branch history,
+  preserved as a permanent tag before the branch was deleted (2026-07-23). Holds the greenfield night
+  run in full: the physics-tax measurement, the open-loop **composer prototype** (deliberately NOT
+  ported — measured, dominated, retired with the branch), the G/strength screens, and the retune gate.
+  The keepers were ported to master in the greenfield wrap; this tag is where the un-ported prototype
+  code lives on.
+- `archive/carousel-sweep-final` (`2e6b597`) — the entire `pre/carousel-sweep` branch history,
+  preserved as a permanent tag before the branch was deleted (2026-07-23). Holds the carousel
+  window-control sweep that produced the "suppression, not selection" verdict — the measurement that
+  justified deleting the lead-rotation mechanism from master.
 
 ## Active-phase tags (temporary scaffolding — to collapse later)
 
@@ -51,55 +67,59 @@ Live step-tags from the OPEN runaway phase — safe return points, not permanent
 that phase's `*-complete` endpoint when it closes (incremental history then lives in commits + docs).
 
 ### Runaway phase (open)
-- `pre/exp-runaway-baseline` (`2e14663`) — state before the runaway/parade baseline sweep.
-- `backup/exp-runaway-baseline-complete` (`f40a7a6`) — the baseline-measurement commit.
-- **Collapse plan:** fold both into the runaway phase's `*-complete` endpoint when the Runaway phase
-  (Distance Leash + Late Challenger, see BACKLOG.md) closes.
+- `backup/exp-runaway-baseline-complete` (`f40a7a6`) — the runaway/parade baseline-measurement commit;
+  the surviving endpoint anchor for this still-open phase (Distance Leash + Late Challenger, see
+  BACKLOG.md). Its `pre/exp-runaway-baseline` scaffolding tag was collapsed in the retune/cleanup
+  collapse below (2026-07-23) — the baseline state is recoverable at `2e14663` from the table there.
+- **Collapse plan:** fold into the runaway phase's `*-complete` endpoint when that phase closes.
 
-### Gap-reroll ship (open)
-- `backup/gapreroll-shipped-1594f39` (`1594f39`) — shipped master state before the G/strength retune ship
-  (gap-reroll default-ON at `5ae3b1f`, plus the eye-test-seeds doc). Sim-verified and owner eye-approved.
-- `pre/g-retune-ship` (`7d0db3e`) — master immediately before the G/strength retune ship
-  (G 1.5→0.75, strength 1.0→0.5). Return point if the retune is reverted.
-- `backup/g-retune-shipped-247b843` (`247b843`) — shipped master state after the G/strength retune ship
-  (defaults G=0.75, strength=0.5; new ON fingerprint `e93ffa70dad562a1`). Sim-gated, twice reviewed,
-  owner eye-approved on the served bundle.
-- **Collapse plan:** fold into the gap-reroll phase's `*-complete` endpoint when the retune ship lands.
+### Retune / cleanup / greenfield phase — COLLAPSED (2026-07-23)
 
-### Dead-mechanisms cleanup (open)
-- `pre/dead-mechanisms-cleanup` (`0555f9d`) — master immediately before the dead-mechanisms cleanup ship
-  (removal of the B1 lead rotation + role-biased dice, the pack strictness release, universal
-  band-arrival, and the unread start-row grouping). **This tag is the archive** for every deleted
-  mechanism: the docs deliberately no longer name the retired config keys, so `git show` on this tag is
-  how the code and key names are recovered.
-- `backup/dead-mechanisms-cleanup-08b09b7` (`08b09b7`) — shipped master state after the cleanup ship.
-  Both fingerprints byte-identical through the removal (ON `e93ffa70dad562a1`, OFF `72c3360fb75225ef`),
-  full suite green, owner eye-approved. Pinned before the DevScreen reorg.
-- **Collapse plan:** fold into the cleanup phase's `*-complete` endpoint when the cleanup arc closes.
+The four ship-steps of this phase — the **G/strength retune** (`247b843`), the **dead-mechanisms
+cleanup** (`08b09b7`), the **DevScreen reorg** (`e529411`), and the **greenfield wrap** (`79ac945`) —
+were each captured with a `pre/*` and a `backup/*` step-tag as they landed. At phase close all of those
+were **collapsed onto `v-retune-cleanup-complete` (`e0f6950`)** and deleted, along with a batch of older
+loose `pre/*` scaffolding from the runaway/gap-reroll/carousel investigations that had never been
+collapsed. Both fingerprints are unchanged across the whole arc (ON `e93ffa70dad562a1`,
+OFF `72c3360fb75225ef`) and every ship was owner eye-approved. The removed mechanism code is separately
+recoverable at `git show pre/dead-mechanisms-cleanup`'s SHA (see table) and the greenfield prototype at
+`archive/greenfield-proto-final`.
 
-### DevScreen reorg (open)
-- `pre/devscreen-reorg` (`a7c662e`) — master immediately before the DevScreen reorg (gap-reroll moved
-  into the Speed card, B2 attackers grouped, the row-env A/B checkbox retired to a pinned key). UI-only:
-  both fingerprints unchanged across it, so it is a layout return point, not a behaviour one.
-- `backup/devscreen-reorg-e529411` (`e529411`) — shipped master state after the reorg. Both fingerprints
-  byte-identical (ON `e93ffa70dad562a1`, OFF `72c3360fb75225ef`), 3267 tests green including the new
-  control-placement pins, owner eye-approved. Pinned before the greenfield wrap.
-- **Collapse plan:** fold into the cleanup phase's `*-complete` endpoint when the cleanup arc closes —
-  the same endpoint as the dead-mechanisms cleanup above; both are one UI/dead-code arc.
+**Collapse record — every tag deleted here, name → SHA (the insurance: the commits stay findable
+forever, this file is the index).**
 
-### Greenfield wrap (open)
-- `pre/greenfield-wrap` (`aa1f128`) — master immediately before the greenfield wrap, which ported the
-  measurement keepers (escape-episodes + physics-tax observers, `exp-gate-retune.mjs`, the
-  `distinctLeaders` fix) and the whole evidence record from `pre/greenfield-proto` onto master. The
-  ported instrumentation is read-only: both fingerprints were re-proven unchanged across it.
-- `backup/greenfield-wrap-79ac945` (`79ac945`) — shipped master state after the wrap (port + hygiene +
-  docs, `52ffb7c` → `679ba19` → `79ac945`). Both fingerprints re-proven at three stages (ON
-  `e93ffa70dad562a1`, OFF `72c3360fb75225ef`), observer suite 114/114, client suite 3267/3267, owner
-  eye-approved. **This tag is the master-side anchor for the greenfield evidence record** — the ported
-  results under `reports/greenfield/` and the keeper tooling are all reachable from here, so the two
-  analysis branches can be deleted at phase close without losing anything that was kept.
-- **Collapse plan:** fold into the greenfield phase's `*-complete` endpoint at phase close, together
-  with the deletion of the two analysis branches (see Branches below).
+| Deleted tag | SHA |
+|---|---|
+| `pre/browser-seed` | `ffbd214` |
+| `pre/browser-seed-ux` | `7830bb2` |
+| `pre/carousel-build` | `9c5af2f` |
+| `pre/carousel-sweep-base` | `45516fc` |
+| `pre/dead-mechanisms-cleanup` | `0555f9d` |
+| `pre/devscreen-reorg` | `a7c662e` |
+| `pre/exp-runaway-baseline` | `2e14663` |
+| `pre/g-retune-ship` | `7d0db3e` |
+| `pre/gapreroll-browser` | `3464295` |
+| `pre/gapreroll-confirm` | `2e5f121` |
+| `pre/gapreroll-default-on` | `45e774b` |
+| `pre/gapreroll-smallG-diag` | `ddb847d` |
+| `pre/gapreroll-windowfix` | `5163215` |
+| `pre/greenfield-wrap` | `aa1f128` |
+| `pre/leash-phase1` | `fa76916` |
+| `pre/p1-contest-baseline` | `4196367` |
+| `pre/release-sweep` | `869615b` |
+| `pre/runaway-concept` | `8b98f0a` |
+| `pre/runaway-formation-diag` | `cff7474` |
+| `pre/runaway-gapreroll` | `adc54c7` |
+| `pre/runaway-speed-source` | `b4a1327` |
+| `backup/gapreroll-shipped-1594f39` | `1594f39` |
+| `backup/g-retune-shipped-247b843` | `247b843` |
+| `backup/dead-mechanisms-cleanup-08b09b7` | `08b09b7` |
+| `backup/devscreen-reorg-e529411` | `e529411` |
+| `backup/greenfield-wrap-79ac945` | `79ac945` |
+
+26 tags deleted (local + origin). The two analysis branches `pre/greenfield-proto` and
+`pre/carousel-sweep` were deleted in the same close, their history preserved as
+`archive/greenfield-proto-final` and `archive/carousel-sweep-final` (see Permanent anchors + Branches).
 
 ### Cleanup arc — COLLAPSED (2026-07-20)
 The four `pre/cleanup-step1..4` scaffolding tags were **collapsed onto `v-cleanup-complete`** and deleted
@@ -108,28 +128,30 @@ the step-2 deletions are recoverable at `c441e7c~1`, the step-4 deletions at `0b
 
 ## Branches
 
-**Three branches exist on origin** (this section was stale until 2026-07-23 — it claimed master-only
-while two analysis branches had been pushed):
+**`master` only.** The two greenfield analysis branches were deleted at the retune/cleanup phase close
+(2026-07-23), each preserved first as a permanent `archive/*` tag so nothing was lost:
 
-| Branch | Head | Purpose | Planned fate |
-|---|---|---|---|
-| `master` | — | The shipped game. Everything reaches players through here. | Permanent. |
-| `pre/greenfield-proto` | `2663f7b` | The greenfield night run: physics-tax measurement, the open-loop composer prototype, the G/strength screens, and the retune gate. Its keepers (escape-episodes + physics-tax observers, `exp-gate-retune.mjs`, the evidence record) were **ported to master** in the greenfield wrap. | Delete at phase close, once the owner signs off the keep-list. The composer prototype dies with it **by design** — it was measured, dominated, and is not wanted on master. |
-| `pre/carousel-sweep` | `2e6b597` | The carousel window-control sweep that produced the verdict "suppression, not selection" — the measurement that justified deleting the mechanism. | Archive-tag and delete once its findings are confirmed captured in LESSONS/SIM. Not urgent: the mechanism it studied is already gone from master. |
+- `pre/greenfield-proto` → `archive/greenfield-proto-final` (`2663f7b`). Its keepers (escape-episodes +
+  physics-tax observers, `exp-gate-retune.mjs`, the evidence record) had already been ported to master;
+  the composer prototype was deliberately left behind and now lives only on the archive tag.
+- `pre/carousel-sweep` → `archive/carousel-sweep-final` (`2e6b597`). Its "suppression, not selection"
+  verdict is captured in LESSONS/SIM; the mechanism it studied is already gone from master.
 
-Neither analysis branch is a merge candidate — porting is by explicit keep-list, never by merge, because
-both carry prototypes that must not reach master. The `diag/look-before-brake` branch was archived (tag
-`archive/diag-look-before-brake` @ `c32cc61`) and deleted on both local and origin, 2026-07-20.
+Neither was ever a merge candidate — both carried prototypes that must not reach master, so porting was
+by explicit keep-list, never by merge. Earlier, `diag/look-before-brake` was archived the same way (tag
+`archive/diag-look-before-brake` @ `c32cc61`, deleted 2026-07-20). No non-master branches remain.
 
-## Complete tag set (after cleanup step 5)
+## Complete tag set (after the retune/cleanup phase close, 2026-07-23)
 
-This is the FULL list of tags that exist on both local and origin after this cleanup — nothing else:
+This is the FULL list of tags that exist on both local and origin — **24 tags, nothing else**:
 
+- `archive/carousel-sweep-final` *(new — `pre/carousel-sweep` branch history)*
+- `archive/diag-look-before-brake`
+- `archive/greenfield-proto-final` *(new — `pre/greenfield-proto` branch history)*
 - `b4-complete`
+- `backup/browser-seed-complete`
 - `backup/exp-runaway-baseline-complete` *(active runaway phase — collapses later)*
 - `backup/lbb-gate-complete`
-- `archive/diag-look-before-brake`
-- `pre/exp-runaway-baseline` *(active runaway phase — collapses later)*
 - `race-action-complete`
 - `stable/pre-governor-04jul` *(permanent anchor — NEVER delete)*
 - `stable/pre-overlap-closed-20jun` *(permanent anchor — NEVER delete)*
@@ -142,6 +164,7 @@ This is the FULL list of tags that exist on both local and origin after this cle
 - `v-outcome-0.6-complete`
 - `v-perf-complete`
 - `v-phaseD-complete`
+- `v-retune-cleanup-complete` *(new — retune/cleanup/reorg/greenfield phase endpoint)*
 - `v-rowenv-default-on-complete`
 - `v-rowenv-easing-complete`
 - `v-security-hardening-complete`
