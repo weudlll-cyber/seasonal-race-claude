@@ -48,10 +48,16 @@ Two further method changes matter when comparing old numbers:
 
 ## Fingerprints (shipped-default byte-identity)
 
-| World | Pre-unification (step 1) | Post-unification (step 2a) | Speed/duration ship (current) |
-|-------|--------------------------|-----------------------------|-------------------------------|
-| ON (flagless)                 | `e93ffa70dad562a1` | `0ecca5e2dbe6526e` | `e80f78a0da6a9993` |
-| OFF (`--gapRerollEnabled=false`) | `72c3360fb75225ef` | `6e01e472b7655b9a` | `1cd6c9fdd62542a4` |
+| World | Pre-unification (step 1) | Post-unification (step 2a) | Speed/duration ship | Type-multiplier amendment (current) |
+|-------|--------------------------|-----------------------------|---------------------|--------------------------------------|
+| ON (flagless)                 | `e93ffa70dad562a1` | `0ecca5e2dbe6526e` | `e80f78a0da6a9993` | `eda28d614f5e47d9` |
+| OFF (`--gapRerollEnabled=false`) | `72c3360fb75225ef` | `6e01e472b7655b9a` | `1cd6c9fdd62542a4` | `83eec6cf5c8b0419` |
+
+The amendment (owner decision B, `41aaec7`) restored the racer-type multiplier on the pace —
+`paceSpeed = normalSpeedPxPerSec × speedMultiplier` — so every per-track default duration moved
+again (garden-path 84.8 s → 282.8 s at the snail's 0.30; seatrack's open ceiling 51 s → 44 s at the
+dolphin's 1.15). Numbers measured once per world on the final committed state, per the binding
+fingerprint rule in [docs/SIM.md](../docs/SIM.md).
 
 ## When the new baseline is measured
 
