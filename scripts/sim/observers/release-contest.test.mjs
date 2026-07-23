@@ -57,6 +57,30 @@ test('each real overtake counts once', () => {
   t.observe(field([1, 0.98], [2, 0.97]), 0.98); // change 2 (lead taken back)
   assert.equal(t.result().leadChangeCount, 2);
   assert.equal(t.result().leaderIdxAtEnd, 1);
+  // Only TWO racers ever led, even though the lead changed twice — the Set does not double-count
+  // racer 1 regaining it.
+  assert.equal(t.result().distinctLeaders, 2);
+});
+
+test('distinctLeaders obeys the phantom rule: inheriting the front by FINISHING does not count', () => {
+  // This is the regression that matters. As each leader finishes, the next racer inherits the front
+  // of the LIVE ordering. Counting those would saturate distinctLeaders at field size (a 20-racer
+  // field reported 20 before this rule was applied), making the metric meaningless.
+  const t = makeLateContestTracker(0.9);
+  t.observe(field([1, 0.95], [2, 0.94], [3, 0.93]), 0.95);      // leader 1 seeds
+  t.observe(field([1, 1.00, true], [2, 0.97], [3, 0.96]), 0.97); // 1 FINISHED → 2 inherits: phantom
+  t.observe(field([1, 1.00, true], [2, 1.00, true], [3, 0.99]), 0.99); // 2 finished → 3 inherits
+  assert.equal(t.result().leadChangeCount, 0);
+  assert.equal(t.result().distinctLeaders, 1); // only racer 1 ever actually LED
+});
+
+test('distinctLeaders counts a genuine third leader', () => {
+  const t = makeLateContestTracker(0.9);
+  t.observe(field([1, 0.90], [2, 0.89], [3, 0.88]), 0.90); // 1 seeds
+  t.observe(field([2, 0.93], [1, 0.92], [3, 0.91]), 0.93); // 2 takes it (real)
+  t.observe(field([3, 0.96], [2, 0.95], [1, 0.94]), 0.96); // 3 takes it (real)
+  assert.equal(t.result().leadChangeCount, 2);
+  assert.equal(t.result().distinctLeaders, 3);
 });
 
 test('the leader FINISHING is not a lead change — the regression that made this metric useless', () => {

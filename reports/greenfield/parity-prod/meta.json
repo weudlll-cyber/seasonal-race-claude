@@ -1,0 +1,61 @@
+{
+  "racersClosed": 40,
+  "racersOpen": 60,
+  "races": 100,
+  "dur": 60,
+  "seed": 1,
+  "tracks": [
+    "city-circuit",
+    "searound",
+    "mountainstreet",
+    "dirt-oval"
+  ],
+  "arms": [
+    {
+      "label": "PROD-G075",
+      "flags": [
+        "--gapRerollEnabled=true",
+        "--gapRerollThresholdLengths=0.75",
+        "--gapRerollStrength=1.0",
+        "--gapRerollMode=symmetric",
+        "--carouselEnabled=false"
+      ]
+    },
+    {
+      "label": "PROD-G15",
+      "flags": [
+        "--gapRerollEnabled=true",
+        "--gapRerollThresholdLengths=1.5",
+        "--gapRerollStrength=1.0",
+        "--gapRerollMode=symmetric",
+        "--carouselEnabled=false"
+      ]
+    },
+    {
+      "label": "OWNERCFG",
+      "flags": [
+        "--gapRerollEnabled=true",
+        "--gapRerollThresholdLengths=0.75",
+        "--gapRerollStrength=1.0",
+        "--gapRerollMode=symmetric",
+        "--carouselEnabled=false",
+        "--pack-release=true",
+        "--b2-attack-final-rank=10"
+      ]
+    },
+    {
+      "label": "OWNERCFG-NOPACK",
+      "flags": [
+        "--gapRerollEnabled=true",
+        "--gapRerollThresholdLengths=0.75",
+        "--gapRerollStrength=1.0",
+        "--gapRerollMode=symmetric",
+        "--carouselEnabled=false",
+        "--pack-release=false",
+        "--b2-attack-final-rank=10"
+      ]
+    }
+  ],
+  "tightThreshold": 0.5672,
+  "farThreshold": 1.4983
+}

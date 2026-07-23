@@ -2556,6 +2556,10 @@ export function runSingleRace({
         // release point (null when the race never got there). releaseProgress is echoed so a
         // record is self-describing — the arm it came from is recoverable from the file alone.
         leadChangeCount:     rp.lateContest.result().leadChangeCount,
+        // Read-only companion over the SAME [0.90, 1.0] window: how many DIFFERENT racers held the
+        // lead there. leadChangeCount alone cannot tell two racers trading it four times from four
+        // racers leading once each — the finale audit needs both.
+        lateDistinctLeaders: rp.lateContest.result().distinctLeaders,
         releaseProgress:     CHOREO_RELEASE_PROGRESS,
         rankAtReleaseByIndex: rp.releaseRanks.result(),
         // Sustained-P1-battle primitives over [choreoResolveB2, first finish]. contestWindowStart is echoed
