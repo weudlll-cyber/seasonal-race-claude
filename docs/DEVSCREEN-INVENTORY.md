@@ -2,7 +2,8 @@
 
 **Read-only inventory of what the DevScreen actually renders.** Rebuilt completely against
 `client/src/screens/DevScreen/sections/DynamicsTuningSection.jsx` as rendered (dead-mechanisms cleanup,
-2026-07-23) — every control in the file appears below, and nothing below is absent from the file.
+2026-07-23; re-checked after the DevScreen reorg the same day) — every control in the file appears below,
+and nothing below is absent from the file.
 Ground truth for the shells: `SubCard.jsx` (`SubCard` / `SubHeading`). Config keys + shipped defaults from
 `client/src/modules/storage/defaults.js` (`DEFAULT_RACE_DYNAMICS_CONFIG`, `DEFAULT_BASE_SPEED_CONFIG`,
 `DEFAULT_ROW_LAYOUT_CONFIG`, `DEFAULT_FRAME_TIMING_CONFIG`). The label + key + testId are the durable
@@ -32,7 +33,7 @@ Card Reset: `reset-frame-timing`. Backing config: `frameTimingConfig`.
 
 Camera/render only — physics always runs fixed 16 ms steps, unaffected by this card.
 
-### 2. Speed — two sub-headings
+### 2. Speed — three sub-headings
 
 Card has no card-level Reset. Backing config: `baseSpeedConfig` (range) + `raceDynamicsConfig` (re-roll).
 
@@ -54,6 +55,21 @@ Card has no card-level Reset. Backing config: `baseSpeedConfig` (range) + `raceD
 | Last Roll Position (%) | `reRollLastPositionPercent` | 95 |
 
 Also renders a read-only preview (`data-testid="reroll-preview"`).
+
+**Sub-heading "Gap-Cap Re-Roll"** — Reset `reset-gap-reroll`. Moved here from the PULK card in the
+DevScreen reorg (2026-07-23): it loads the very dice the Speed Re-Roll block above schedules, so this is
+where it is findable. The shipped cohesion mechanism (default ON since 2026-07-22, retuned 2026-07-23 to
+G = 0.75 / strength = 0.5); turning the toggle OFF restores the pre-feature game byte-identically, which
+is the world every committed baseline was measured in. Changes take effect on the next race. See
+[SIM.md](SIM.md).
+
+| Control | Config key | Shipped default | testid |
+|---|---|---|---|
+| Gap-Reroll enabled (checkbox) | `gapRerollEnabled` | true | `gap-reroll-toggle` |
+| Gap-Reroll G (lengths) 0.5–4.0 | `gapRerollThresholdLengths` | 0.75 | — |
+| Gap-Reroll strength 0–1.5 | `gapRerollStrength` | 0.5 | — |
+| Gap-Reroll mode symmetric/down-only | `gapRerollMode` | 'symmetric' | `gap-reroll-mode` |
+| Gap-Reroll dev marker (rendering-only cyan ring) | `gapRerollDevMarker` | false | `gap-reroll-devmarker-toggle` |
 
 ### 3. Bonus — two sub-headings
 
@@ -80,15 +96,12 @@ changes."* Keep the warning. (Also renders read-only preview text: `race-plan-ti
 | Control | Config key | Shipped default |
 |---|---|---|
 | Enable phase-split bonuses (master checkbox) | `phaseSplitBonusEnabled` | true |
-| rowEnvSmooth (OUTCOME 0.60) (checkbox) | `enableRowEnvSmooth` | true |
 | Area bonus — EARLY | `areaBonusEarly` | 1.0 |
 | Area bonus — POST | `areaBonusPost` | 1.0 |
 | Row bonus — EARLY | `rowBonusEarly` | 1 |
 | Row bonus — POST | `rowBonusPost` | 1 |
 
 The master switch also gates the PULK-phase area/row bonuses, which live in the PULK Phase card (section 5).
-`enableRowEnvSmooth` eases the start-row speed step at the PULK→OUTCOME boundary over 1 s instead of
-stepping; it is NOT gated by the master switch and is not reset by `reset-phase-split`.
 
 ### 4. Start — Row Start layout
 
@@ -100,12 +113,13 @@ Card Reset: `reset-row-start`. Backing config: `rowLayoutConfig`. Summary text: 
 | Speed Bonus Factor | `speedBonusFactor` | 1.0 |
 | Max Capacity Factor | `maxCapacityFactor` | 0.3 |
 
-### 5. PULK Phase — card controls, gap-reroll block, and a "PULK bonuses" sub-heading
+### 5. PULK Phase — card controls, then "PULK bonuses" and "B2 Attackers" sub-headings
 
 The mid-race window `[0.25, PULK end]` where the lead rotation stages the front contest (always live).
-Backing config: `raceDynamicsConfig`.
+Backing config: `raceDynamicsConfig`. Groups run in temporal order: the card controls set the window and
+its rotation, the PULK bonuses act inside it, and the B2 attackers resolve last (released into OUTCOME).
 
-**Card-level controls** — Reset `reset-pulk` (resets exactly these seven keys):
+**Card-level controls** — Reset `reset-pulk` (resets exactly these five keys):
 
 | Control | Config key | Shipped default |
 |---|---|---|
@@ -114,25 +128,9 @@ Backing config: `raceDynamicsConfig`.
 | Challenger boost (cap) | `pulkChallengerBoost` | 0.06 |
 | Ex-leader drop depth (lengths) | `pulkLeadRotationDropDepthLengths` | 8 |
 | Choreography intensity (0–1) | `choreoIntensity` | 0.6 |
-| B2-attacker count (0–5) | `b2AttackHeroes` | 3 |
-| Re-steer threshold (0.5–3.0) | `packReSteerThreshold` | 1.0 |
 
-`b2AttackHeroes` is SHIPPED ON at 3 (0 restores the pre-feature game). `packReSteerThreshold` is the
-spatial hysteresis for a RELEASED B2-attacker: how far past its band edge it may drift before the servo
-re-engages. The control's numeric range (0.25–0.55 in the PULK-end label) is the input widget's clamp;
-the validated config range is [0.25, 0.60].
-
-**Gap-cap re-roll** — the shipped cohesion mechanism (default ON since 2026-07-22, retuned 2026-07-23 to
-G = 0.75 / strength = 0.5). Turning the toggle OFF restores the pre-feature game byte-identically.
-Changes take effect on the next race (same as the B2-attacker count). See [SIM.md](SIM.md).
-
-| Control | Config key | Shipped default | testid |
-|---|---|---|---|
-| Gap-Reroll (eye-test) toggle | `gapRerollEnabled` | true | `gap-reroll-toggle` |
-| Gap-Reroll G (lengths) 0.5–4.0 | `gapRerollThresholdLengths` | 0.75 | — |
-| Gap-Reroll strength 0–1.5 | `gapRerollStrength` | 0.5 | — |
-| Gap-Reroll mode symmetric/down-only | `gapRerollMode` | 'symmetric' | `gap-reroll-mode` |
-| Gap-Reroll dev marker (rendering-only cyan ring) | `gapRerollDevMarker` | false | `gap-reroll-devmarker-toggle` |
+The PULK-end control's numeric range (0.25–0.55 in its label) is the input widget's clamp; the validated
+config range is [0.25, 0.60].
 
 **Sub-heading "PULK bonuses"** — Reset `reset-pulk-bonuses`. These act only inside the PULK window; the
 area/row pair is gated by the Phase-Split master switch above:
@@ -142,6 +140,20 @@ area/row pair is gated by the Phase-Split master switch above:
 | Area bonus — PULK | `areaBonusPulk` | 0 |
 | Row bonus — PULK | `rowBonusPulk` | 0 |
 | Cohesion bias gain | `pulkBiasGain` | 2.0 |
+
+**Sub-heading "B2 Attackers"** — Reset `reset-b2-attackers`. Grouped in the DevScreen reorg (2026-07-23):
+the cast count and the release hysteresis are one mechanism, and they belong together rather than loose in
+the card grid. Last group in the card because attackers resolve latest — cast at the choreo boundary,
+peak mid-race, released into OUTCOME.
+
+| Control | Config key | Shipped default |
+|---|---|---|
+| B2-attacker count (0–5) | `b2AttackHeroes` | 3 |
+| Attacker re-steer threshold (0.5–3.0) | `packReSteerThreshold` | 1.0 |
+
+`b2AttackHeroes` is SHIPPED ON at 3 (0 casts none and restores the pre-feature game).
+`packReSteerThreshold` is the release hysteresis for a FREED attacker: how far past its band edge it may
+drift before the servo re-engages at full pinning.
 
 ---
 
@@ -170,6 +182,7 @@ surfaced by no control — pinned to their tuned defaults. They are intentional,
 | `choreoResolveB5` | 0.6 | B5 band-resolve checkpoint |
 | `choreoSuppressChaosBonusB1` | false | Stage-1 B1 chaos-bonus spoiler switch (default OFF) |
 | `contestWindowStart` | 0.8 | front-act measurement window start (read by the sim's front-battle observer) |
+| `enableRowEnvSmooth` | true | eases the start-row speed step at the PULK→OUTCOME boundary over 1 s instead of stepping. Had an A/B checkbox while the easing was being compared against the instant step; **retired to pinned in the DevScreen reorg (2026-07-23)** — the comparison was settled by the rowenv ship (measured fairness-neutral, flipped to default ON), so the toggle was only an invitation to re-open a closed question. Key and behaviour unchanged; `RaceScreen` still reads it. |
 | `b2AttackPeakRank` | 5 | attacker climb target |
 | `b2AttackFinalRank` | 7 | attacker fall target (shapes the fall slope under band-arrival) |
 | `b2AttackProgress` | {start: 0.4, end: 0.7} | attacker peak-timing jitter window |

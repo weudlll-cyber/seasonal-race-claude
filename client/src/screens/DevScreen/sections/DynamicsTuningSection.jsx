@@ -113,6 +113,29 @@ const DynamicsTuningSection = forwardRef(function DynamicsTuningSection(_, ref) 
     }));
   }
 
+  // Gap-cap re-roll — the SHIPPED cohesion mechanism, grouped with the other re-roll controls
+  // (it loads the same periodic dice). Turning the toggle OFF restores the pre-feature world,
+  // which is the world every committed baseline was measured in.
+  function resetGapReroll() {
+    setDynamicsConfig((prev) => ({
+      ...prev,
+      gapRerollEnabled: DEFAULT_RACE_DYNAMICS_CONFIG.gapRerollEnabled,
+      gapRerollThresholdLengths: DEFAULT_RACE_DYNAMICS_CONFIG.gapRerollThresholdLengths,
+      gapRerollStrength: DEFAULT_RACE_DYNAMICS_CONFIG.gapRerollStrength,
+      gapRerollMode: DEFAULT_RACE_DYNAMICS_CONFIG.gapRerollMode,
+      gapRerollDevMarker: DEFAULT_RACE_DYNAMICS_CONFIG.gapRerollDevMarker,
+    }));
+  }
+
+  // B2 attackers — their own group: the cast count and the release hysteresis are one mechanism.
+  function resetB2Attackers() {
+    setDynamicsConfig((prev) => ({
+      ...prev,
+      b2AttackHeroes: DEFAULT_RACE_DYNAMICS_CONFIG.b2AttackHeroes,
+      packReSteerThreshold: DEFAULT_RACE_DYNAMICS_CONFIG.packReSteerThreshold,
+    }));
+  }
+
   function resetRacePlanBonus() {
     setDynamicsConfig((prev) => ({
       ...prev,
@@ -125,9 +148,10 @@ const DynamicsTuningSection = forwardRef(function DynamicsTuningSection(_, ref) 
     }));
   }
 
-  // The one PULK Phase section: reset only the 5 VISIBLE controls. The pinned internals
-  // (envelope/safety + rotation internals + choreo fine-tuning) keep their config defaults —
-  // they have no DevScreen control, so they are not user-resettable here.
+  // The PULK Phase card: reset only the 5 card-level controls. The B2-attacker pair has its own
+  // group Reset, and the pinned internals (envelope/safety + rotation internals + choreo
+  // fine-tuning) keep their config defaults — they have no DevScreen control, so they are not
+  // user-resettable here.
   function resetPulk() {
     setDynamicsConfig((prev) => ({
       ...prev,
@@ -137,8 +161,6 @@ const DynamicsTuningSection = forwardRef(function DynamicsTuningSection(_, ref) 
       pulkLeadRotationDropDepthLengths:
         DEFAULT_RACE_DYNAMICS_CONFIG.pulkLeadRotationDropDepthLengths,
       choreoIntensity: DEFAULT_RACE_DYNAMICS_CONFIG.choreoIntensity,
-      b2AttackHeroes: DEFAULT_RACE_DYNAMICS_CONFIG.b2AttackHeroes,
-      packReSteerThreshold: DEFAULT_RACE_DYNAMICS_CONFIG.packReSteerThreshold,
     }));
   }
 
@@ -526,6 +548,115 @@ const DynamicsTuningSection = forwardRef(function DynamicsTuningSection(_, ref) 
             Transition: <strong>{dynamicsConfig.reRollTransitionDuration}s</strong>
           </p>
         </div>
+        {/* ── Gap-cap re-roll bias (docs/CONCEPT-COHESION.md) — SHIPPED ON. Lives here because it
+            loads the very dice the Speed Re-Roll block above schedules. ── */}
+        <SubHeading
+          label="Gap-Cap Re-Roll"
+          note="The shipped cohesion mechanism — it loads the periodic re-roll dice above. A racer that has opened a hole behind itself draws SLOWER at its next scheduled roll; in symmetric mode a dropped racer draws FASTER. Always inside the honest speed band, scheduled rolls only, cadence untouched — so it tightens the field without ever giving anyone speed they could not have drawn."
+          onReset={resetGapReroll}
+          resetTestId="reset-gap-reroll"
+        />
+        <div className={s.formGrid}>
+          <div className={s.formGroup}>
+            <label
+              className={s.label}
+              style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}
+            >
+              <input
+                type="checkbox"
+                checked={dynamicsConfig.gapRerollEnabled ?? false}
+                onChange={(e) => setDynamics('gapRerollEnabled', e.target.checked)}
+                data-testid="gap-reroll-toggle"
+              />
+              Gap-Reroll enabled
+              <InfoTooltip text="Master switch for the gap-cap re-roll bias. ON = shipped (symmetric, G=0.75, strength=0.5): runaway winners 23% → 8.3% with band-reach and Holm unchanged. OFF restores the pre-feature game byte-identically — that is the world every committed baseline was measured in, so turn it off to compare against one." />
+            </label>
+          </div>
+          <div className={s.formGroup}>
+            <label
+              className={s.label}
+              style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}
+            >
+              Gap-Reroll G (lengths)
+              <InfoTooltip text="Gap cap G in racer-lengths: the bias engages only once a racer's arc gap to its neighbour exceeds G. Lower = engages sooner = tighter field. 0.75 = shipped." />
+            </label>
+            <input
+              type="number"
+              className={s.input}
+              aria-label="Gap-Reroll G (lengths)"
+              min={0.5}
+              max={4.0}
+              step={0.25}
+              value={
+                dynamicsConfig.gapRerollThresholdLengths ??
+                DEFAULT_RACE_DYNAMICS_CONFIG.gapRerollThresholdLengths
+              }
+              onChange={(e) => {
+                const v = Number(e.target.value);
+                if (isFinite(v) && v >= 0.5 && v <= 4.0)
+                  setDynamics('gapRerollThresholdLengths', v);
+              }}
+            />
+          </div>
+          <div className={s.formGroup}>
+            <label
+              className={s.label}
+              style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}
+            >
+              Gap-Reroll strength
+              <InfoTooltip text="How hard a single correction pulls: fraction-to-band-edge = min(1, strength·(gap−G)) per excess length. Higher = individual corrections hit harder and saturate at the band edge sooner (visible braking); lower = many gentle nudges. 0.5 = shipped — it halved the share of saturated corrections without costing fairness." />
+            </label>
+            <input
+              type="number"
+              className={s.input}
+              aria-label="Gap-Reroll strength"
+              min={0}
+              max={1.5}
+              step={0.25}
+              value={
+                dynamicsConfig.gapRerollStrength ?? DEFAULT_RACE_DYNAMICS_CONFIG.gapRerollStrength
+              }
+              onChange={(e) => {
+                const v = Number(e.target.value);
+                if (isFinite(v) && v >= 0 && v <= 1.5) setDynamics('gapRerollStrength', v);
+              }}
+            />
+          </div>
+          <div className={s.formGroup}>
+            <label
+              className={s.label}
+              style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}
+            >
+              Gap-Reroll mode
+              <InfoTooltip text="symmetric = also lift a dropped racer faster, pulling both ends toward the pack; down-only = just slow the escapee. symmetric = shipped." />
+            </label>
+            <select
+              className={s.input}
+              aria-label="Gap-Reroll mode"
+              data-testid="gap-reroll-mode"
+              value={dynamicsConfig.gapRerollMode ?? 'symmetric'}
+              onChange={(e) => setDynamics('gapRerollMode', e.target.value)}
+            >
+              <option value="symmetric">symmetric</option>
+              <option value="down">down-only</option>
+            </select>
+          </div>
+          <div className={s.formGroup}>
+            <label
+              className={s.label}
+              style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}
+            >
+              <input
+                type="checkbox"
+                checked={dynamicsConfig.gapRerollDevMarker ?? false}
+                onChange={(e) => setDynamics('gapRerollDevMarker', e.target.checked)}
+                data-testid="gap-reroll-devmarker-toggle"
+              />
+              Gap-Reroll dev marker
+              <InfoTooltip text="Rendering-only dev aid: flashes a cyan ring on a racer the instant its re-roll was biased, so you can SEE where the mechanism fires before judging naturalness with it off. Zero effect on the race itself. OFF = shipped." />
+            </label>
+          </div>
+        </div>
       </SubCard>
 
       {/* ── Section 3: Bonus (Race Plan Bonus + Phase-Split Bonuses) ── */}
@@ -761,22 +892,6 @@ const DynamicsTuningSection = forwardRef(function DynamicsTuningSection(_, ref) 
             <InfoTooltip text="When off, the area + row bonuses run at full strength the whole race. When on, their strength follows the per-phase values below. ON = shipped." />
           </label>
         </div>
-        <div style={{ marginBottom: '0.75rem' }}>
-          <label
-            className={s.label}
-            style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', margin: 0 }}
-          >
-            <input
-              type="checkbox"
-              aria-label="rowEnvSmooth"
-              checked={dynamicsConfig.enableRowEnvSmooth ?? false}
-              onChange={(e) => setDynamics('enableRowEnvSmooth', e.target.checked)}
-              style={{ cursor: 'pointer' }}
-            />
-            rowEnvSmooth (OUTCOME 0.60)
-            <InfoTooltip text="Ease the start-row speed step at the PULK→OUTCOME boundary (0.60) over 1s (easeInOutCubic) instead of an instant jump. Visual polish only (~0.5–1.5% on back rows); measured fairness-neutral. OFF = shipped (instant)." />
-          </label>
-        </div>
         <div className={s.formGrid}>
           {[
             {
@@ -979,22 +1094,6 @@ const DynamicsTuningSection = forwardRef(function DynamicsTuningSection(_, ref) 
               step: 0.05,
               tip: 'Overall drama intensity of the hero choreography curves. Low = calm; high = deeper comebacks, more duels, later reveals. Auto-clamped per race so it can never break fairness. 0.6 = shipped.',
             },
-            {
-              key: 'b2AttackHeroes',
-              label: 'B2-attacker count (0–5)',
-              min: 0,
-              max: 5,
-              step: 1,
-              tip: 'Number of B2-attacker heroes cast per race. Each climbs to ~rank 5 mid-race, then falls back and is freed on band re-entry (band-arrival), reordering freely in B2. 0 = OFF (shipped, byte-identical). Sim: count=3 ≈ +20% top-5 OUTCOME action with B1/B2 band-reach ≥70% and no Holm regression.',
-            },
-            {
-              key: 'packReSteerThreshold',
-              label: 'Re-steer threshold (0.5–3.0)',
-              min: 0.5,
-              max: 3.0,
-              step: 0.1,
-              tip: 'How far (ranks) a RELEASED B2-attacker may drift past its band edge before the servo re-engages (strictness 1) to steer it back. Integer bandError ⇒ 0.5 ≈ re-steer at ≥1 rank out, 1.5 ≈ ≥2 ranks. Larger = more freedom, more endgame leak. 1.0 = default.',
-            },
           ].map(({ key, label, min, max, step, tip }) => (
             <div className={s.formGroup} key={key}>
               <label
@@ -1019,106 +1118,6 @@ const DynamicsTuningSection = forwardRef(function DynamicsTuningSection(_, ref) 
               />
             </div>
           ))}
-          {/* ── Gap-cap re-roll bias (docs/CONCEPT-COHESION.md) — eye-test controls, default OFF ── */}
-          <div className={s.formGroup}>
-            <label
-              className={s.label}
-              style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}
-            >
-              <input
-                type="checkbox"
-                checked={dynamicsConfig.gapRerollEnabled ?? false}
-                onChange={(e) => setDynamics('gapRerollEnabled', e.target.checked)}
-                data-testid="gap-reroll-toggle"
-              />
-              Gap-Reroll (eye-test)
-              <InfoTooltip text="Gap-cap re-roll bias ('loaded dice'): a racer that has opened a hole behind itself draws SLOWER at its next scheduled re-roll (symmetric mode also lifts a dropped racer FASTER) — always inside the honest ±8.1% band, scheduled rolls only. Sim confirmation (N=200, all 10 tracks): symmetric / G=1.5 / strength=1.0 → runawayWinnerRate 23%→8.3%, action +. Default OFF (byte-identical)." />
-            </label>
-          </div>
-          <div className={s.formGroup}>
-            <label
-              className={s.label}
-              style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}
-            >
-              Gap-Reroll G (lengths)
-              <InfoTooltip text="Gap cap G in racer-lengths: the bias engages when a racer's arc gap to its neighbour exceeds G. Lower = tighter field. Confirmed candidate 1.5." />
-            </label>
-            <input
-              type="number"
-              className={s.input}
-              aria-label="Gap-Reroll G (lengths)"
-              min={0.5}
-              max={4.0}
-              step={0.25}
-              value={
-                dynamicsConfig.gapRerollThresholdLengths ??
-                DEFAULT_RACE_DYNAMICS_CONFIG.gapRerollThresholdLengths
-              }
-              onChange={(e) => {
-                const v = Number(e.target.value);
-                if (isFinite(v) && v >= 0.5 && v <= 4.0)
-                  setDynamics('gapRerollThresholdLengths', v);
-              }}
-            />
-          </div>
-          <div className={s.formGroup}>
-            <label
-              className={s.label}
-              style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}
-            >
-              Gap-Reroll strength
-              <InfoTooltip text="How hard the dice are loaded: fraction-to-band-edge = min(1, strength·(gap−G)) per excess length. 0 = off, 1.0 = confirmed candidate (fairness-clean at N=200)." />
-            </label>
-            <input
-              type="number"
-              className={s.input}
-              aria-label="Gap-Reroll strength"
-              min={0}
-              max={1.5}
-              step={0.25}
-              value={
-                dynamicsConfig.gapRerollStrength ?? DEFAULT_RACE_DYNAMICS_CONFIG.gapRerollStrength
-              }
-              onChange={(e) => {
-                const v = Number(e.target.value);
-                if (isFinite(v) && v >= 0 && v <= 1.5) setDynamics('gapRerollStrength', v);
-              }}
-            />
-          </div>
-          <div className={s.formGroup}>
-            <label
-              className={s.label}
-              style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}
-            >
-              Gap-Reroll mode
-              <InfoTooltip text="symmetric = also lift a dropped racer faster (pulls both ends toward the pack); down-only = only slow the escapee. symmetric is the confirmed candidate." />
-            </label>
-            <select
-              className={s.input}
-              aria-label="Gap-Reroll mode"
-              data-testid="gap-reroll-mode"
-              value={dynamicsConfig.gapRerollMode ?? 'symmetric'}
-              onChange={(e) => setDynamics('gapRerollMode', e.target.value)}
-            >
-              <option value="symmetric">symmetric</option>
-              <option value="down">down-only</option>
-            </select>
-          </div>
-          <div className={s.formGroup}>
-            <label
-              className={s.label}
-              style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}
-            >
-              <input
-                type="checkbox"
-                checked={dynamicsConfig.gapRerollDevMarker ?? false}
-                onChange={(e) => setDynamics('gapRerollDevMarker', e.target.checked)}
-                data-testid="gap-reroll-devmarker-toggle"
-              />
-              Gap-Reroll dev marker
-              <InfoTooltip text="Dev-only: flash a cyan ring on a racer the instant its re-roll was gap-biased — so you can SEE where the mechanism fires, then judge naturalness with it off. Rendering-only, zero sim effect. Default OFF." />
-            </label>
-          </div>
         </div>
         <SubHeading
           label="PULK bonuses"
@@ -1193,6 +1192,57 @@ const DynamicsTuningSection = forwardRef(function DynamicsTuningSection(_, ref) 
               }}
             />
           </div>
+        </div>
+        {/* ── B2 Attackers — last in the card because they resolve latest: cast at the choreo
+            boundary, peak mid-race, released into OUTCOME. ── */}
+        <SubHeading
+          label="B2 Attackers"
+          note="Extra choreographed heroes cast from the front of the B2 field. Each climbs to about rank 5 mid-race, then falls back and is RELEASED to reorder freely the moment it re-enters B2 — the scripted duel at the front-of-B2 boundary is what registers as top-5 action. Shipped ON at 3; the two knobs are how many are cast and how far a released one may drift before the servo takes it back."
+          onReset={resetB2Attackers}
+          resetTestId="reset-b2-attackers"
+        />
+        <div className={s.formGrid}>
+          {[
+            {
+              key: 'b2AttackHeroes',
+              label: 'B2-attacker count (0–5)',
+              min: 0,
+              max: 5,
+              step: 1,
+              tip: 'How many B2-attacker heroes are cast per race. 3 = shipped (sim: ≈ +20% top-5 OUTCOME action with B1/B2 band-reach ≥70% and no Holm regression). 0 casts none and restores the pre-feature game byte-identically.',
+            },
+            {
+              key: 'packReSteerThreshold',
+              label: 'Attacker re-steer threshold (0.5–3.0)',
+              min: 0.5,
+              max: 3.0,
+              step: 0.1,
+              tip: 'Release hysteresis for a FREED attacker: how far (ranks) it may drift past its band edge before the servo re-engages at full pinning and steers it back; it is freed again only once fully inside. Integer rank error ⇒ 0.5 ≈ re-steer at ≥1 rank out, 1.5 ≈ ≥2 ranks. Larger = more freedom, more endgame leak. 1.0 = shipped.',
+            },
+          ].map(({ key, label, min, max, step, tip }) => (
+            <div className={s.formGroup} key={key}>
+              <label
+                className={s.label}
+                style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}
+              >
+                {label}
+                <InfoTooltip text={tip} />
+              </label>
+              <input
+                type="number"
+                className={s.input}
+                aria-label={label}
+                min={min}
+                max={max}
+                step={step}
+                value={dynamicsConfig[key] ?? DEFAULT_RACE_DYNAMICS_CONFIG[key]}
+                onChange={(e) => {
+                  const v = Number(e.target.value);
+                  if (isFinite(v) && v >= min && v <= max) setDynamics(key, v);
+                }}
+              />
+            </div>
+          ))}
         </div>
       </SubCard>
     </>

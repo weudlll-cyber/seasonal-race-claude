@@ -74,12 +74,22 @@ vi.mock('../../../modules/rowLayoutConfig.js', () => ({
   },
 }));
 
+// Gap-reroll + B2-attacker keys are included so the DevScreen reorg groups render with real
+// values (they moved into the Speed card / their own PULK group). Inlined rather than shared,
+// because vi.mock factories are hoisted above any const declaration.
 vi.mock('../../../modules/raceDynamicsConfig.js', () => ({
   loadRaceDynamicsConfig: vi.fn(() => ({
     reRollVariationPercent: 58,
     reRollTransitionDuration: 5.0,
     reRollIntervalDivisor: 15,
     reRollLastPositionPercent: 80,
+    gapRerollEnabled: true,
+    gapRerollThresholdLengths: 0.75,
+    gapRerollStrength: 0.5,
+    gapRerollMode: 'symmetric',
+    gapRerollDevMarker: false,
+    b2AttackHeroes: 3,
+    packReSteerThreshold: 1.0,
   })),
   saveRaceDynamicsConfig: vi.fn(),
   DEFAULT_RACE_DYNAMICS_CONFIG: {
@@ -87,6 +97,13 @@ vi.mock('../../../modules/raceDynamicsConfig.js', () => ({
     reRollTransitionDuration: 5.0,
     reRollIntervalDivisor: 15,
     reRollLastPositionPercent: 80,
+    gapRerollEnabled: true,
+    gapRerollThresholdLengths: 0.75,
+    gapRerollStrength: 0.5,
+    gapRerollMode: 'symmetric',
+    gapRerollDevMarker: false,
+    b2AttackHeroes: 3,
+    packReSteerThreshold: 1.0,
   },
 }));
 
@@ -262,6 +279,56 @@ describe('RaceTuningSection — per-block reset buttons', () => {
     fireEvent.click(screen.getByTestId('reset-drafting'));
     const summary = screen.getByTestId('drafting-summary');
     expect(summary.textContent).toContain('80 px');
+  });
+});
+
+// ── DevScreen reorg: gap-reroll moved to Speed, B2 attackers got their own group, the row-env
+// A/B checkbox was retired to a pinned key. These pin WHERE each control lives, not just that
+// it exists — the whole point of the reorg was findability.
+describe('RaceTuningSection — DevScreen reorg', () => {
+  it('gap-reroll renders as its own group with a per-group Reset', () => {
+    render(<RaceTuningSection />);
+    expect(screen.getByText('Gap-Cap Re-Roll')).toBeTruthy();
+    expect(screen.getByTestId('reset-gap-reroll')).toBeTruthy();
+  });
+
+  it('the whole gap-reroll family is rendered (toggle, G, strength, mode, dev marker)', () => {
+    render(<RaceTuningSection />);
+    expect(screen.getByTestId('gap-reroll-toggle')).toBeTruthy();
+    expect(screen.getByLabelText('Gap-Reroll G (lengths)').value).toBe('0.75');
+    expect(screen.getByLabelText('Gap-Reroll strength').value).toBe('0.5');
+    expect(screen.getByTestId('gap-reroll-mode').value).toBe('symmetric');
+    expect(screen.getByTestId('gap-reroll-devmarker-toggle')).toBeTruthy();
+  });
+
+  it('gap-reroll sits in the Speed card, after the re-roll preview it loads', () => {
+    const { container } = render(<RaceTuningSection />);
+    const order = [...container.querySelectorAll('[data-testid]')].map((n) =>
+      n.getAttribute('data-testid')
+    );
+    expect(order.indexOf('reset-speed-reroll')).toBeLessThan(order.indexOf('reset-gap-reroll'));
+    expect(order.indexOf('reroll-preview')).toBeLessThan(order.indexOf('reset-gap-reroll'));
+    // …and before the PULK card's own groups, i.e. still inside Speed.
+    expect(order.indexOf('reset-gap-reroll')).toBeLessThan(order.indexOf('reset-pulk'));
+  });
+
+  it('drops the "(eye-test)" framing — gap-reroll is the shipped mechanism', () => {
+    render(<RaceTuningSection />);
+    expect(screen.queryByText(/Gap-Reroll \(eye-test\)/)).toBeNull();
+    expect(screen.getByText('Gap-Reroll enabled')).toBeTruthy();
+  });
+
+  it('B2 attackers render as their own group with a per-group Reset', () => {
+    render(<RaceTuningSection />);
+    expect(screen.getByText('B2 Attackers')).toBeTruthy();
+    expect(screen.getByTestId('reset-b2-attackers')).toBeTruthy();
+    expect(screen.getByLabelText('B2-attacker count (0–5)').value).toBe('3');
+    expect(screen.getByLabelText('Attacker re-steer threshold (0.5–3.0)').value).toBe('1');
+  });
+
+  it('the retired row-env A/B checkbox is gone (key stays pinned, behaviour unchanged)', () => {
+    render(<RaceTuningSection />);
+    expect(screen.queryByLabelText('rowEnvSmooth')).toBeNull();
   });
 });
 

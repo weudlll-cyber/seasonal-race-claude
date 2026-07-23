@@ -64,7 +64,10 @@ import {
   computeSpeedBonus,
 } from '../../modules/rowLayout.js';
 import { loadRowLayoutConfig } from '../../modules/rowLayoutConfig.js';
-import { loadRaceDynamicsConfig } from '../../modules/raceDynamicsConfig.js';
+import {
+  loadRaceDynamicsConfig,
+  DEFAULT_RACE_DYNAMICS_CONFIG,
+} from '../../modules/raceDynamicsConfig.js';
 import { applyPulkLeadRotation, computeDirectorCeiling } from '../../modules/raceGovernor.js';
 import { meanDrawnBodyLen, lenScaleFrom } from '../../modules/raceLengths.js';
 import { loadFrameTimingConfig } from '../../modules/frameTimingConfig.js';
@@ -742,9 +745,13 @@ export default function RaceScreen() {
           // reaches the plan. Fallback mirrors DEFAULT_RACE_DYNAMICS_CONFIG.
           packReSteerThreshold: dynamicsConfig.packReSteerThreshold ?? 1.0,
           // B2-attacker "Attack & Fall" (band-arrival release). Threaded so the DevScreen count slider
-          // actually reaches the plan. Fallbacks mirror DEFAULT_RACE_DYNAMICS_CONFIG. count 0 → no
-          // attackers cast → byte-identical to the pre-feature behaviour.
-          b2AttackHeroes: dynamicsConfig.b2AttackHeroes ?? 0,
+          // actually reaches the plan. count 0 → no attackers cast → the pre-feature behaviour.
+          // The count fallback REFERENCES the shared default instead of copying it: a literal here
+          // silently drifts when the shipped default changes (it read 0 while the ship was 3).
+          // Unreachable in practice — validation returns a complete config — so this is
+          // defense-in-depth, not a behaviour change.
+          b2AttackHeroes:
+            dynamicsConfig.b2AttackHeroes ?? DEFAULT_RACE_DYNAMICS_CONFIG.b2AttackHeroes,
           b2AttackPeakRank: dynamicsConfig.b2AttackPeakRank ?? 5,
           b2AttackFinalRank: dynamicsConfig.b2AttackFinalRank ?? 10,
           b2AttackProgress: dynamicsConfig.b2AttackProgress ?? { start: 0.4, end: 0.7 },
