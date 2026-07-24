@@ -1,0 +1,37 @@
+=== GOLDEN EQUALITY SOAK ===
+identities: 600
+tracks: 10   seeds: 1,7,42,101,2024   counts: 20,40,60
+
+  … 25/600   pass=25   mismatch=0   165s
+  … 50/600   pass=50   mismatch=0   463s
+  … 75/600   pass=75   mismatch=0   609s
+  … 100/600   pass=100   mismatch=0   743s
+  … 125/600   pass=125   mismatch=0   982s
+  … 150/600   pass=150   mismatch=0   1576s
+  … 175/600   pass=175   mismatch=0   1753s
+  … 200/600   pass=200   mismatch=0   1883s
+  … 225/600   pass=225   mismatch=0   2018s
+  … 250/600   pass=250   mismatch=0   2121s
+  … 275/600   pass=275   mismatch=0   2260s
+  … 300/600   pass=300   mismatch=0   2400s
+  … 325/600   pass=325   mismatch=0   2590s
+  … 350/600   pass=350   mismatch=0   2777s
+  … 375/600   pass=375   mismatch=0   2972s
+  … 400/600   pass=400   mismatch=0   3185s
+  … 425/600   pass=425   mismatch=0   3358s
+  … 450/600   pass=450   mismatch=0   3462s
+  … 475/600   pass=475   mismatch=0   3563s
+  … 500/600   pass=500   mismatch=0   3665s
+  … 525/600   pass=525   mismatch=0   3830s
+  … 550/600   pass=550   mismatch=0   4048s
+  … 575/600   pass=575   mismatch=0   4284s
+  … 600/600   pass=600   mismatch=0   4586s
+
+=== RESULT ===
+identities checked : 600
+equal              : 600
+mismatched         : 0
+runtime            : 4585.7s
+ALL EQUAL — parity holds across the matrix.
+
+rows -> reports/parity/golden-soak-rows.json
