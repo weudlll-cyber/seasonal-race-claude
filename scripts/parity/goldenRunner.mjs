@@ -14,17 +14,20 @@
 //                  the DEFAULT_* config objects, the CLI's laps/seconds resolution, and the sim's
 //                  own plan wiring keyed on its realizedDurationSec * 1000.
 //
-// SCOPE — READ THIS BEFORE TRUSTING A GREEN RESULT. The two arms share the per-frame loop
+// SCOPE — READ THIS BEFORE TRUSTING A GREEN RESULT. browserArm and simArm share the per-frame loop
 // (`runSingleRace`): the forces have been single-sourced since FORCE-PARITY, and re-implementing
-// that loop here would only test the re-implementation. What these arms genuinely test is the
+// that loop here would only test the re-implementation. What those two arms genuinely test is the
 // INPUT DERIVATION CHAIN — the layer where every divergence has actually lived (D-GRID, D-STREAM,
-// D-DUR, O1) — plus end-to-end determinism. A green soak means: given one identity, the browser's
-// derivation and the sim's derivation produce the same race, checkpoint for checkpoint.
+// D-DUR, O1) — plus end-to-end determinism. A green browserArm==simArm means: given one identity, the
+// browser's derivation and the sim's derivation produce the same race, checkpoint for checkpoint.
 // It does NOT mean two independent physics implementations agree, because there is only one.
 //
-// The stronger version needs RaceScreen's ~200-line init effect extracted into an importable
-// `createRaceFromIdentity()` that the browser renders through and this harness calls directly.
-// That is a shipped-code change and is deliberately NOT done here — see GOLDEN-SOAK.md.
+// realArm (ARM C) closes that gap. It runs the REAL RaceScreen init + per-step advance, extracted into
+// client/src/modules/raceCore.js (createRaceFromIdentity + stepRacePhysics), which RaceScreen renders
+// THROUGH — so realArm executes the browser's own loop, not the sim's. realArm therefore DIVERGES from
+// simArm wherever the browser genuinely differs (D-INIT per-step order; D-RUNOUT finished handling —
+// see DIVERGENCE-AUDIT.md §2f). Use browserArm==simArm for the derivation guard; use realArm to see the
+// real browser↔sim residual.
 //
 // Imported by client/src/modules/parity/goldenEquality.test.js and scripts/parity/soak.mjs.
 // ============================================================
@@ -40,7 +43,13 @@ import {
   createRacePlan,
   createTrajectoryController,
 } from '../../client/src/modules/racePlanner.js';
-import { computeEvenRowLayout, computeRacerLayout } from '../../client/src/modules/rowLayout.js';
+import {
+  computeEvenRowLayout,
+  computeRacerLayout,
+  computeBodyNarrowRef,
+} from '../../client/src/modules/rowLayout.js';
+import { loadRowLayoutConfig } from '../../client/src/modules/rowLayoutConfig.js';
+import { runRaceHeadless } from '../../client/src/modules/raceCore.js';
 import {
   deriveRaceDuration,
   normalSpeedFrom,
@@ -432,6 +441,79 @@ export function browserArm(identity) {
     laps: browserLaps,
     requestedSeconds: browserSeconds,
   });
+}
+
+/**
+ * ARM C — the REAL browser core. Unlike arm A (which hand-mirrors the derivation and then runs
+ * the SIM's per-frame loop), this arm runs the ACTUAL RaceScreen init + per-step advance, extracted
+ * into client/src/modules/raceCore.js and imported here headless. RaceScreen renders through the
+ * SAME functions, so this is what the browser executes — not a mirror. Where RaceScreen's per-step
+ * ORDER differs from the sim's (controller.update BEFORE the re-roll; advance interleaved per racer),
+ * this arm will diverge from simArm — and that divergence is the point of the arm.
+ */
+export function realArm(identity) {
+  const ctx = loadTrack(identity._trackId);
+  const cfg = RACER_CONFIGS[identity._racerType];
+  const baseSpeedConfig = loadBaseSpeedConfig();
+  const dynamicsConfig = loadRaceDynamicsConfig();
+  const behaviorConfig = { ...loadRaceBehaviorConfig(), isOpen: ctx.isOpen };
+  const rowConfig = loadRowLayoutConfig();
+  const V = normalSpeedFrom(baseSpeedConfig);
+  const pace = paceSpeedPxPerSec(V, cfg.speedMultiplier);
+
+  const browserLaps = identity.isOpen ? 1 : (identity.laps ?? trackDefaultLaps(ctx.track));
+  const browserSeconds = identity.isOpen
+    ? (identity.requestedSeconds ??
+      trackDefaultSeconds(ctx.track, ctx.pathLengthPx, pace, behaviorConfig.runoutZone))
+    : 0;
+
+  // Auto-scale exactly as RaceScreen/the sim compute it (no D3.5.5 override in a headless run — the
+  // 600-identity soak already proved the browser and sim body dims agree on every identity).
+  const effectiveWidth = ctx.geometricTrackWidth * behaviorConfig.startSpreadRange;
+  const { spriteSize: physicalSpriteSize } = computeRacerLayout(
+    effectiveWidth,
+    identity.nRacers,
+    cfg.displaySize,
+    DEFAULT_AUTO_SCALE_CONFIG
+  );
+  const bodyFillNarrow = Math.min(cfg.bodyFillX, cfg.bodyFillY);
+  const bodyFillLong = Math.max(cfg.bodyFillX, cfg.bodyFillY);
+  const W_REF = Math.min(285, effectiveWidth);
+  const bodyRef = computeBodyNarrowRef(
+    W_REF,
+    identity.nRacers,
+    cfg.displaySize,
+    bodyFillNarrow,
+    DEFAULT_AUTO_SCALE_CONFIG
+  );
+
+  const { results, checkpoints, meta } = runRaceHeadless(
+    {
+      shape: ctx.shape,
+      isOpenTrack: ctx.isOpen,
+      pathLengthPx: ctx.pathLengthPx,
+      trackWidthPx: ctx.geometricTrackWidth,
+      speedMultiplier: cfg.speedMultiplier,
+      baseSpeedConfig,
+      behaviorConfig,
+      rowConfig,
+      dynamicsConfig,
+      normalSpeedPxPerSec: V,
+      laps: browserLaps,
+      requestedSeconds: browserSeconds,
+      nRacers: identity.nRacers,
+      racePlanSeed: identity.seed,
+      racePlanEnabledFlag: true,
+      physicalSpriteSize,
+      drawnBodyWidthRefPx: bodyRef.bodyNarrow,
+      bodyFillNarrow,
+      bodyFillLong,
+    },
+    { checkpointIntervalMs: CHECKPOINT_INTERVAL_MS }
+  );
+
+  const outcome = makeRaceOutcome({ results, checkpoints });
+  return { outcome, hash: hashOutcome(outcome), model: meta.durationModel, results };
 }
 
 /**

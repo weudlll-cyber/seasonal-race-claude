@@ -26,6 +26,7 @@ import {
   buildIdentity,
   browserArm,
   simArm,
+  realArm,
   browserModel,
   simModel,
 } from '../../../../scripts/parity/goldenRunner.mjs';
@@ -135,4 +136,76 @@ describe('golden equality — browser and sim derive the same race from one iden
     expect(identity.trackGeometryHash).toMatch(/^[0-9a-f]{8}$/);
     expect(identity.rosterHash).toMatch(/^[0-9a-f]{8}$/);
   });
+});
+
+// ── The REAL browser arm (client/src/modules/raceCore.js), run headless ──────────────────────────
+// realArm executes the ACTUAL RaceScreen init + per-step advance (extracted so RaceScreen renders
+// through it). Unlike browserArm — which hand-mirrors the derivation and then runs the SIM's loop —
+// realArm runs RaceScreen's OWN per-step order (controller.update BEFORE the re-roll; advance
+// INTERLEAVED per racer; runout decay on finished racers). Two standing properties from the extraction
+// task (see reports/parity/DIVERGENCE-AUDIT.md §2f):
+//   (1) FAITHFULNESS PIN: the extracted path CAN reproduce the sim byte-for-byte — city-circuit /
+//       laps=1 / seed 1 is fully identical — so the extraction is not a systematically broken mirror.
+//       (It is NOT identical for every no-plan identity: D-INIT's interleave and D-RUNOUT perturb the
+//       race whenever an avoidance/finish interaction bites; the residual's independent proof is that
+//       realArm reproduces the owner's real-browser cross-check — Surge/Blitz demoted on seeds 7/42.)
+//   (2) THE RESIDUAL IS REAL, NOT VACUOUS: when a Race Plan runs, the order offset flips the finishing
+//       order, and the divergence is machine-located. This is D-INIT.
+describe('real browser arm (extracted raceCore) — faithfulness pin + the located residual', () => {
+  const NO_PLAN_IDENTICAL = {
+    trackId: 'city-circuit',
+    racerType: 'motorbike',
+    seed: 1,
+    nRacers: 20,
+    shape: 'closed',
+    laps: 1,
+  };
+
+  it(
+    'faithfulness pin: a no-plan identity reproduces the sim byte-for-byte',
+    () => {
+      const identity = buildIdentity(NO_PLAN_IDENTICAL);
+      expect(identity.racePlanEnabled).toBe(false); // guards the premise
+      const a = realArm(identity);
+      const b = simArm(identity);
+      expect(a.hash).toBe(b.hash);
+    },
+    RACE_TIMEOUT_MS
+  );
+
+  it(
+    'with a Race Plan, the real browser arm FLIPS the finishing order vs the sim, located (D-INIT)',
+    () => {
+      // searound / manta / 40 — the owner's browser cross-check cases. The sim-predicted winner on
+      // seeds 7 and 42 is demoted in the real path (the exact symptom the owner saw).
+      const order = (res) =>
+        [...res]
+          .sort((x, y) => x.finalRank - y.finalRank)
+          .map((r) => r.racerIndex)
+          .join(',');
+      let anyFlipped = false;
+      for (const seed of [1, 7, 42]) {
+        const identity = buildIdentity({
+          trackId: 'searound',
+          racerType: 'manta',
+          seed,
+          nRacers: 40,
+          shape: 'closed',
+        });
+        expect(identity.racePlanEnabled).toBe(true);
+        const a = realArm(identity);
+        const b = simArm(identity);
+        if (a.hash !== b.hash) {
+          const d = firstDivergence(a.outcome, b.outcome);
+          expect(d).not.toBeNull(); // a divergent hash must be locatable
+          expect(d.kind).toBe('checkpoint');
+        }
+        if (order(a.results) !== order(b.results)) anyFlipped = true;
+      }
+      // The residual must actually FLIP a finishing order on at least one cross-check seed — otherwise
+      // this guard would pass vacuously and the extraction would have silently become another mirror.
+      expect(anyFlipped).toBe(true);
+    },
+    RACE_TIMEOUT_MS
+  );
 });

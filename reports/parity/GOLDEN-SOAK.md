@@ -269,6 +269,105 @@ parity promise is **proven standing** at this scope.
 
 ---
 
+# Part D — the REAL browser arm (race-init extraction, 2026-07-24)
+
+This is the follow-up the night run flagged (autonomous decision 1 / *What remains*): make the golden
+test's browser arm run **the code the browser actually executes**, not a hand-built mirror. Done.
+
+## The extraction
+
+RaceScreen's real init + per-step advance were lifted verbatim into an importable, DOM-free module,
+[`client/src/modules/raceCore.js`](../../client/src/modules/raceCore.js):
+
+- `createRaceFromIdentity(params)` — the init: canonical duration model, the one seeded physics stream
+  (`raceRng`), row layout, re-roll schedule, every racer's physics fields, the Race Plan controller,
+  the phase-split / director config. Render-only fields (icon/colour/coat/trail) are **not** built here.
+- `stepRacePhysics(state, config)` — one FIXED_DT step, in **RaceScreen's own order** (see D-INIT).
+- `runRaceHeadless(params)` — steps to the finish and emits the golden outcome.
+
+RaceScreen is now a **thin consumer**: it calls `createRaceFromIdentity` for the init (augmenting each
+physics racer with render fields **in place**, so the render array and the physics array are one
+object) and `stepRacePhysics` inside its rAF accumulator, keeping only rendering, camera, particles,
+the fixed-timestep accumulator, the 2-step catch-up cap and BATTLE/PHOTO-FINISH slow-motion — the
+wall-clock / render concerns that do **not** change the deterministic physics sequence. The golden
+harness gained a third arm, `realArm`, that runs the SAME functions headless.
+
+**Extraction coverage (every physics piece the module carries):** the init RNG draws (row shuffle →
+per-racer spreadFactor + roll jitter, one explicit `makeRaceRng` stream, in RaceScreen's order); the
+re-roll schedule + per-step scheduled re-roll (target draw + jitter, PULK bias + gap-cap bias incl. the
+`gapRerollEnabled` v1/v2-style branch); the spreadFactor easeInOutCubic transition; the row-env phase
+envelope (`computeRowEnvMult` / smoothing); behaviour (draft boost + brake-to-match via
+`applyRacerBehavior`); the Race Plan controller (`createRacePlan` / `createTrajectoryController` +
+trajectoryMult easing) and PulkLeadRotation; finish detection + runout; and the open/closed
+`computePositions`. **What it does not carry** (deliberately — render/wall-clock, physics-neutral): the
+rAF accumulator + 2-step cap + slow-motion (a seeded race is frame-rate/slow-mo independent —
+`seedDeterminism.test.js`), camera, particles, scoreboard, sprite draw.
+
+## Neutrality proof
+
+A **pure refactor** — the sim and the shared physics modules were untouched, so:
+
+- **Fingerprints unchanged** on the final committed state: **ON `eda28d614f5e47d9`**, **OFF
+  `83eec6cf5c8b0419`** — verified equal to the pre-refactor values, per the binding rule.
+- **Full client suite green**: 158 files, 3286 tests. **Production build green.**
+- The extraction faithfully represents RaceScreen by **construction** (RaceScreen renders through the
+  same functions) and by **ground truth** (`realArm` reproduces the owner's real-browser cross-check,
+  below); a no-plan identity (city-circuit / laps=1 / seed 1) is byte-identical to the sim.
+
+## The residual, now machine-visible — per seed (searound / manta / 40, canonical)
+
+`realArm` vs `simArm`, the owner's three cross-check seeds:
+
+| seed | sim winner | real winner | real vs owner's browser | first located divergence |
+|---|---|---|---|---|
+| 1 | Maverick | **Maverick** (podium Maverick/Breeze/Hawk unchanged) | matches — owner saw seed 1 EXACT | checkpoint 20000 ms, racerIndex 23 |
+| 7 | Surge | **Gale** — Surge demoted to **2nd** | matches — owner saw Surge 3rd | checkpoint 5000 ms, racerIndex 38 |
+| 42 | Blitz | **Orbit** — Blitz demoted to **2nd** | matches — owner saw Blitz 2nd | checkpoint 5000 ms, racerIndex 4 |
+
+The real path **reproduces the owner's browser outcome** — the sim-predicted winners on seeds 7 and 42
+are demoted exactly as the owner observed, while seed 1 is stable. That is the residual the soak's own
+proof boundary named: *the headless runner mirrors RaceScreen but is not RaceScreen.* Now it is.
+
+## Subset tally — 60 identities, real arm across all 10 tracks
+
+hashEq counts full outcome equality; **finishOrderEq** counts equal finishing order (the meaningful
+"same race" signal — D-RUNOUT changes checkpoint `t` without necessarily changing order):
+
+| category | n | hashEq | finishOrderEq |
+|---|---|---|---|
+| closed / plan | 18 | 0 | **0** |
+| closed / no-plan | 12 | 1 | 8 |
+| open / plan | 24 | 0 | **0** |
+| open / no-plan | 6 | 0 | 2 |
+| **total** | **60** | **1** | **10** |
+
+**Every plan-enabled race (42/42) flips its finishing order** — D-INIT is systematic. No-plan races
+mostly preserve order (10/18); they still differ at post-finish checkpoints (D-RUNOUT) and are subtly
+perturbed by the interleaved advance.
+
+## The 0.144 s margins — quantisation, confirmed at the source
+
+All three acceptance margins printing exactly **0.144 s** is a **step quantum**, not coincidence.
+Finish is detected only at FIXED_DT = **16 ms** step boundaries — the sim sets `finishTime = raceTs/1000`
+([`sim-fairness.mjs:2279`](../../scripts/sim-fairness.mjs#L2279)) with `raceTs` a strict multiple of 16,
+and RaceScreen sets `finishTimeMs = physicsTs` likewise. So **every** finish time, and therefore every
+margin, is an exact multiple of 16 ms. Verified empirically: 100 % of the top-10 finish times on all
+three seeds are `k·16 ms`. `0.144 = 9 × 16 ms`. The recurrence of *9* across the three **sim** races is
+the coincidence riding on the quantum — the **real** path yields **9 / 13 / 9** steps for the same three
+races (seed 7's margin widens to 0.208 s), so the triple 0.144 s is not a deeper single-checkpoint
+artefact, just the sim landing on 9 three times.
+
+## The two located divergences (finding-first — no fix)
+
+Recorded in [DIVERGENCE-AUDIT.md](DIVERGENCE-AUDIT.md) §2f as **D-INIT** (per-step execution order:
+`controller.update()` before the re-roll + interleaved advance) and **D-RUNOUT** (RaceScreen slides
+finished racers with runout decay; the sim freezes them). The open-track `computePositions` projection
+was checked and is **render-only** (avoidance is arc-space), so it is not a divergence. Both live
+entirely on the browser side; the fix — which side is canonical — is an owner decision, deliberately
+deferred.
+
+---
+
 # Autonomous decisions made tonight
 
 The owner was asleep and the planner offline; these were decided without input, with reasons.
@@ -310,5 +409,9 @@ The owner was asleep and the planner offline; these were decided without input, 
   Speed; provisional 225 px/s)
 - the **single full re-baseline**, which waits for that pick
 - the **backup tag**, which waits for the cross-check
-- the follow-up in decision 1: extract `createRaceFromIdentity()` so the golden test's browser arm
-  becomes genuinely independent of the sim's loop
+- ~~the follow-up in decision 1: extract `createRaceFromIdentity()` so the golden test's browser arm
+  becomes genuinely independent of the sim's loop~~ — **DONE (Part D)**. The extraction is shipped,
+  RaceScreen renders through it, and `realArm` reproduces the owner's browser cross-check; the residual
+  is now two located, owner-decision divergences (**D-INIT**, **D-RUNOUT**). The cross-check the backup
+  tag waits on is a **browser↔sim** equality, which D-INIT/D-RUNOUT show does not yet hold — so that
+  fix (choosing the canonical side) is the next gate, not this extraction.

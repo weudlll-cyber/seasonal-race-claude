@@ -108,6 +108,15 @@ that phase's `*-complete` endpoint when it closes (incremental history then live
   design (ON `0ecca5e2dbe6526e`→`e80f78a0da6a9993`, OFF `6e01e472b7655b9a`→`1cd6c9fdd62542a4`); the
   single full re-baseline waits for the owner's final normal-speed pick
   ([reports/BASELINE-INVALIDATED.md](../reports/BASELINE-INVALIDATED.md)).
+- `pre/race-init-extraction` (`72b8605`) — master before RaceScreen's real init + per-step advance were
+  extracted into an importable, DOM-free `client/src/modules/raceCore.js` (`createRaceFromIdentity` +
+  `stepRacePhysics`) that RaceScreen renders **through** and the golden harness runs headless (`realArm`).
+  A pure refactor: **both sim fingerprints unchanged** (ON `eda28d614f5e47d9`, OFF `83eec6cf5c8b0419`),
+  full client suite + build green. The extracted real arm made the residual machine-visible — the
+  RaceScreen↔sim **per-step execution-order** offset **D-INIT** (flips the finishing order on every
+  plan-enabled race, reproducing the owner's browser cross-check) and the **finished-racer runout**
+  difference **D-RUNOUT** ([reports/parity/DIVERGENCE-AUDIT.md](../reports/parity/DIVERGENCE-AUDIT.md)
+  §2f) — finding-first, no fix.
 - **Collapse plan:** fold into the parity phase's `*-complete` endpoint when that phase closes.
 
 ### Retune / cleanup / greenfield phase — COLLAPSED (2026-07-23)
@@ -180,7 +189,8 @@ by explicit keep-list, never by merge. Earlier, `diag/look-before-brake` was arc
 
 ## Complete tag set (after the retune/cleanup phase close, 2026-07-23)
 
-This is the FULL list of tags that exist on both local and origin — **24 tags, nothing else**:
+This is the FULL list of tags that exist on both local and origin — **25 tags, nothing else** (the
+`pre/race-init-extraction` anchor was added 2026-07-24):
 
 - `archive/carousel-sweep-final` *(new — `pre/carousel-sweep` branch history)*
 - `archive/diag-look-before-brake`
@@ -190,6 +200,7 @@ This is the FULL list of tags that exist on both local and origin — **24 tags,
 - `backup/exp-runaway-baseline-complete` *(active runaway phase — collapses later)*
 - `backup/lbb-gate-complete`
 - `race-action-complete`
+- `pre/race-init-extraction` *(active parity phase — collapses later)*
 - `stable/pre-governor-04jul` *(permanent anchor — NEVER delete)*
 - `stable/pre-overlap-closed-20jun` *(permanent anchor — NEVER delete)*
 - `v-b2-heroes-complete`

@@ -28,7 +28,7 @@ import {
 import { emitBurst, drawParticles, drawSurfaceTrails } from './drawing/particleRendering.js';
 import { drawRacers } from './drawing/racerRendering.js';
 import { formatRaceTime } from '../../utils/formatRaceTime.js';
-import { lerp, lerpAngle, easeInOutCubic } from '../../utils/mathUtils.js';
+import { lerp, lerpAngle } from '../../utils/mathUtils.js';
 import { resolveActiveBrandProfile } from '../../modules/branding/useActiveBrandProfile.js';
 import { drawBattleDiagMarkers } from './drawing/battleDiagRendering.js';
 import { getRacerType, getCoatsByType } from '../../modules/racer-types/index.js';
@@ -40,29 +40,14 @@ import {
 import { CameraDirector, OPEN_TRACK_BASE_ZOOM } from '../../modules/camera/CameraDirector.js';
 import { effectiveZoom } from '../../modules/camera/openTrackCamera.js';
 import { renderMinimap } from '../../modules/camera/Minimap.js';
-import { lapProgress, currentLap } from '../../modules/camera/lapUtils.js';
+import { lapProgress } from '../../modules/camera/lapUtils.js';
 import { loadBaseSpeedConfig } from '../../modules/baseSpeedConfig.js';
-import { deriveRaceDuration, normalSpeedFrom, MIN_LAPS } from '../../modules/durationModel.js';
-import { computeRowEnvMult, computeRowEnvSmoothed, advanceRacerT } from '../../modules/raceStep.js';
-import {
-  loadRaceBehaviorConfig,
-  computeEffectiveBrakeFactor,
-} from '../../modules/raceBehaviorConfig.js';
-import { initRacerBehavior, applyRacerBehavior } from '../../modules/raceBehavior.js';
-import {
-  computeRacerLayout,
-  computeBodyNarrowRef,
-  computeEvenRowLayout,
-  computeRowPhysicalY,
-  computeSpeedBonus,
-} from '../../modules/rowLayout.js';
+import { normalSpeedFrom, MIN_LAPS } from '../../modules/durationModel.js';
+import { createRaceFromIdentity, stepRacePhysics } from '../../modules/raceCore.js';
+import { loadRaceBehaviorConfig } from '../../modules/raceBehaviorConfig.js';
+import { computeRacerLayout, computeBodyNarrowRef } from '../../modules/rowLayout.js';
 import { loadRowLayoutConfig } from '../../modules/rowLayoutConfig.js';
-import {
-  loadRaceDynamicsConfig,
-  DEFAULT_RACE_DYNAMICS_CONFIG,
-} from '../../modules/raceDynamicsConfig.js';
-import { applyPulkLeadRotation, computeDirectorCeiling } from '../../modules/raceGovernor.js';
-import { meanDrawnBodyLen, lenScaleFrom } from '../../modules/raceLengths.js';
+import { loadRaceDynamicsConfig } from '../../modules/raceDynamicsConfig.js';
 import { loadFrameTimingConfig } from '../../modules/frameTimingConfig.js';
 import { useFadeNavigate } from '../../contexts/TransitionContext.jsx';
 import { EditorShape } from '../../modules/track-editor/EditorShape.js';
@@ -102,11 +87,6 @@ import {
 import { resolveTrailEmitter } from '../../modules/surface-effects/trailResolver.js';
 import { getCachedServerSurfaceClasses } from '../../modules/storage/surfaceClassLoader.js';
 import { loadServerClasses } from '../../modules/surface-effects/registry.js';
-import {
-  createRacePlan,
-  createTrajectoryController,
-  makeRaceRng,
-} from '../../modules/racePlanner.js';
 import { initProbe, recordFrame, recordFrameCamera } from '../../modules/rAFProbe.js';
 import BrandLogoOverlay from './BrandLogoOverlay.jsx';
 import './RaceScreen.css';
@@ -135,8 +115,6 @@ const PHASE = { COUNTDOWN: 0, RACING: 1, FINISHED: 2 };
 // regardless of browser frame rate, eliminating the 2:1 speed oscillation seen
 // when rAF alternates between 16ms and 33ms frames.
 const FIXED_DT = 16;
-
-const tPos = (t) => ((t % 1) + 1) % 1;
 
 export default function RaceScreen() {
   const fadeNavigate = useFadeNavigate();
@@ -421,9 +399,6 @@ export default function RaceScreen() {
     const speedMultiplier = racerType.getSpeedMultiplier();
 
     const baseSpeedConfig = loadBaseSpeedConfig();
-    const BASE_SPEED_MIN = baseSpeedConfig.min;
-    const BASE_SPEED_MAX = baseSpeedConfig.max;
-    const BASE_SPEED_MEAN = (BASE_SPEED_MIN + BASE_SPEED_MAX) / 2;
 
     const behaviorConfig = loadRaceBehaviorConfig();
     behaviorConfig.isOpen = isOpenTrack;
@@ -478,29 +453,55 @@ export default function RaceScreen() {
     // equals overviewTargetScreenPx at OVERVIEW.
     const drawnBodyWidthRefPx = displaySize * displaySizeScale;
 
-    // ── THE canonical speed/duration derivation (modules/durationModel.js) ─────────────────────
-    // ONE shared call decides finishT, the pace and the clock. The sim makes the identical call
-    // with the identical inputs, so there is no browser-side duration term left to diverge:
-    // the former nominal (estimatedSecondsPerLap·laps) vs raw (durationSec) split is gone.
-    //   CLOSED: the operator chose LAPS; the duration is derived.
-    //   OPEN:   the operator chose SECONDS; the finish line is derived, and an over-long
-    //           request slows the whole field uniformly (paceScale < 1).
+    // ── The REAL race init, extracted to modules/raceCore.js (createRaceFromIdentity) ───────────
+    // The canonical duration model, the seeded physics stream (raceRng), the row layout, the re-roll
+    // schedule, every racer's physics fields, the Race Plan controller and the phase-split / director
+    // config are all built there now — so the browser and the headless golden harness run the SAME
+    // code. RaceScreen stays the renderer: it augments each physics racer with render-only fields
+    // below and drives stepRacePhysics() from its rAF accumulator. Byte-identical to the former inline
+    // init — the physics draw order (row shuffle → per-racer spreadFactor + roll jitter → re-rolls)
+    // and every scalar are unchanged; the code merely moved.
     const normalSpeedPxPerSec = normalSpeedFrom(baseSpeedConfig);
-    const durationModel = deriveRaceDuration({
-      isOpen: isOpenTrack,
-      pathLengthPx: geometry.pathLengthPx ?? 0,
+    const racePlanSeed = raceData.racePlanSeed ?? 0;
+    const pathLengthPx = geometry.pathLengthPx ?? 0;
+    const race = createRaceFromIdentity({
+      shape: shapeRef.current,
+      isOpenTrack,
+      pathLengthPx,
+      trackWidthPx,
+      speedMultiplier,
+      baseSpeedConfig,
+      behaviorConfig,
+      rowConfig,
+      dynamicsConfig,
+      normalSpeedPxPerSec,
       laps: raceData.targetLaps ?? MIN_LAPS,
       requestedSeconds: raceData.targetDurationSec ?? raceData.targetDuration ?? 60,
-      normalSpeedPxPerSec,
-      speedMultiplier,
-      runoutZone: behaviorConfig.runoutZone,
+      nRacers,
+      racePlanSeed,
+      racePlanEnabledFlag: !!raceData.racePlanEnabled,
+      physicalSpriteSize,
+      drawnBodyWidthRefPx,
+      bodyFillNarrow,
+      bodyFillLong,
+      constSpeedActive,
     });
-    const finishT = durationModel.finishT;
-    const race_baseSpeed = durationModel.raceBaseSpeed;
-    // THE clock. Everything that keys on "duration" — the re-roll schedule, the plan's
-    // targetDurationMs, the racePlanEnabled gate, every phase fraction — reads this one scalar.
-    const realizedDurationSec = durationModel.realizedDurationSec;
-    const maxLaps = isOpenTrack ? 1 : finishT;
+    const raceState = race.state;
+    const raceCfg = race.config;
+    const raceMeta = race.meta;
+    const computePositions = race.computePositions;
+    // finishT / maxLaps / realizedDurationSec / race_baseSpeed live on raceState / raceCfg and are read
+    // through st.* below; no local aliases needed. The render/diag reads keep the rest.
+    const rowLayout = raceMeta.rowLayout;
+    const assignmentByRacer = raceMeta.assignmentByRacer;
+    const lastRollDeadline = raceMeta.lastRollDeadline;
+    const racePlanEnabled = raceMeta.racePlanEnabled;
+    const racePlanController = raceMeta.racePlanController;
+    const rpPlanInfo = raceMeta.rpPlanInfo;
+    const govFractions = raceMeta.govFractions;
+    const govSeed = raceMeta.govSeed;
+    const govMeanBodyLen = raceMeta.govMeanBodyLen;
+    const pulkLeadRotationOn = raceMeta.pulkLeadRotationOn;
 
     camDirRef.current = new CameraDirector(
       worldWidth,
@@ -510,58 +511,10 @@ export default function RaceScreen() {
       drawnBodyWidthRefPx,
       shapeRef.current
     );
-    // ── Deterministic race dynamics (Quick-Test) — parity step 1 ───────────────────────────────
-    // The ENTIRE physics race is drawn from ONE explicit seeded stream, `raceRng`, threaded through
-    // every physics draw site IN ORDER: start rows (the computeEvenRowLayout call below), each
-    // racer's initial spreadFactor + roll jitter, and every scheduled re-roll target + jitter. This
-    // replaces the former global-`Math.random` swap. The swap coupled the race to render: camera
-    // framing and trail/particle spawns drew from the same global and shifted the physics stream by
-    // frame rate, camera state and slow-mo. With an explicit stream those render draws stay on the
-    // native `Math.random` and can no longer touch the race — the seeded race is now frame-rate
-    // independent and reproducible, and the headless sim draws the identical sequence for the seed.
-    //
-    // seed <= 0 — which includes the normal "Start Race" path (racePlanSeed hardcoded 0) — yields the
-    // native generator, so every existing path stays byte-identical to the legacy behavior.
-    // racePlanSeed is read here rather than at its former place further down because it must be
-    // known BEFORE the first draw; the race-plan code below reuses this same binding.
-    const racePlanSeed = raceData.racePlanSeed ?? 0;
-    const raceRng = makeRaceRng(racePlanSeed).physics;
-
-    // Row-start layout: even distribution across minimum-needed rows (bottom-up sizing)
-    const pathLengthPx = geometry.pathLengthPx ?? 0;
-    const rowGapPx = physicalSpriteSize * rowConfig.rowGapMultiplier;
-    const deltaT_per_row = pathLengthPx > 0 ? rowGapPx / pathLengthPx : 0.01;
-
-    // rowCount: min rows at current sprite size; racers distributed evenly across them
-    const rowCount = Math.max(
-      1,
-      Math.ceil(
-        nRacers / Math.max(1, Math.floor((2 * effectiveWidth) / Math.max(1, physicalSpriteSize)))
-      )
-    );
-    const rowLayout = computeEvenRowLayout(nRacers, rowCount, raceRng);
-
-    // Re-Roll schedule: distribute rolls evenly over [0, lastPositionPercent]% of the REALIZED race
-    // duration — the ONE canonical clock (realizedDurationSec), which the sim keys on term-for-term.
-    const rerollDurationSec = realizedDurationSec;
-    const rollCount = Math.max(
-      2,
-      Math.floor(rerollDurationSec / dynamicsConfig.reRollIntervalDivisor)
-    );
-    const rollInterval =
-      ((dynamicsConfig.reRollLastPositionPercent / 100) * rerollDurationSec * 1000) / rollCount;
-
-    // Ensure surface-class registry has the latest cached server data.
+    // Ensure surface-class registry has the latest cached server data (before trail emitters resolve).
     // Code defaults are always present; this picks up any user-defined overrides.
     loadServerClasses(getCachedServerSurfaceClasses());
     const trackSurfaceClasses = raceData.trackSurfaceClasses ?? [];
-
-    // Index assignments by racerIndex for O(1) lookup in the map below
-    const rowSizeByRow = new Map();
-    for (const a of rowLayout.assignments) {
-      rowSizeByRow.set(a.rowIndex, (rowSizeByRow.get(a.rowIndex) ?? 0) + 1);
-    }
-    const assignmentByRacer = new Map(rowLayout.assignments.map((a) => [a.racerIndex, a]));
 
     overlayUsedBattleIndicesRef.current.clear();
     overlayUsedComebackIndicesRef.current.clear();
@@ -570,269 +523,58 @@ export default function RaceScreen() {
     winnerTextFiredRef.current = false;
     setWinnerOverlayText(null);
 
-    g.current = {
+    // ── Augment the extracted physics racers with render-only fields (icon/colour/coat/pattern/
+    // trail/emitter). Done IN PLACE so the render array and the physics array stepRacePhysics mutates
+    // are the SAME objects. `for (k in src) if (!(k in r))` copies the roster's display fields without
+    // ever overwriting a physics field — reproducing the former `{ ...r, ...physics }` spread exactly.
+    // None of these draw from raceRng (coat/pattern hash the name), so the physics stream is untouched.
+    for (let i = 0; i < raceState.racers.length; i++) {
+      const r = raceState.racers[i];
+      const src = raceData.racers[i];
+      for (const k in src) if (!(k in r)) r[k] = src[k];
+      r.icon = trackEmoji ?? src.icon;
+      r.color = RACER_COLORS[i % RACER_COLORS.length];
+      r.coatId = getCoatsByType(typeId) ? assignCoat(src.name, getCoatsByType(typeId)) : undefined;
+      r.patternId = assignPattern(src.name, PATTERN_IDS);
+      r.trail = [];
+      // VRE-4: one emitter instance per racer (stateful generators must not be shared)
+      r.surfaceEmitter = resolveTrailEmitter(racerType, trackSurfaceClasses);
+      r.surfaceParticles = [];
+    }
+
+    // g.current IS the extracted physics state (racers, finishT, maxLaps, finishedCount, raceProgress,
+    // physicsTs) with the render/phase fields added on top — one object, so stepRacePhysics and the
+    // renderer share it.
+    g.current = Object.assign(raceState, {
       phase: PHASE.COUNTDOWN,
       countdownStart: null,
       raceStart: null,
       lastTs: null,
       physicsAccum: 0,
-      physicsTs: 0,
       smoothDt: 16,
       slowmoFadeProgress: 0,
       slowmoActive: false,
       slowmoStartWallTs: 0,
-      slowmoIsPhotoFinish: false, // 15a-predictive: current slowmo was triggered by PHOTO_FINISH (releases without min-duration)
+      slowmoIsPhotoFinish: false, // 15a-predictive: PHOTO_FINISH slowmo (releases without min-duration)
       slowmoTs: null,
       focusFadeProgress: 0,
-      finishedCount: 0,
       dustParticles: [],
       burstParticles: [],
-      maxLaps,
-      finishT,
       finalLapStartTs: null,
-      // Leader track-progress fraction [0,1]; drives WHEN phases switch (route-based, not time).
-      // Monotonic — never regresses when the leader finishes. Distinct from physicsTs (the race
-      // stopwatch in ms, which drives finish times + real-time eased transitions).
-      raceProgress: 0,
-      racers: raceData.racers.map((r, i) => {
-        const assignment = assignmentByRacer.get(i) ?? { rowIndex: 0, indexInRow: 0 };
-        const rowSize = rowSizeByRow.get(assignment.rowIndex) ?? 1;
-        const speedBonus = computeSpeedBonus(
-          assignment.rowIndex,
-          rowGapPx,
-          pathLengthPx,
-          rowConfig.speedBonusFactor,
-          finishT,
-          isOpenTrack,
-          rowLayout.totalRows
-        );
-        // Closed tracks: negative t wraps correctly via modulo in _idx.
-        // Open tracks: offset each row forward from t=0 so all rows start within the path.
-        // Front row (rowIndex 0) starts at totalRows×deltaT; last row starts at 1×deltaT.
-        const tStart = isOpenTrack
-          ? (rowLayout.totalRows - assignment.rowIndex) * deltaT_per_row
-          : -(assignment.rowIndex * deltaT_per_row);
-        // spreadFactor: random luck draw — the only part affected by re-rolls.
-        // speedBonusMult: positional back-row compensation — constant over the whole race.
-        const spreadFactor =
-          (BASE_SPEED_MIN + raceRng() * (BASE_SPEED_MAX - BASE_SPEED_MIN)) / BASE_SPEED_MEAN;
-        const speedBonusMult = 1 + speedBonus;
-        // nextRollTime stored as offset from raceStart; converted to absolute ts at COUNTDOWN→RACING.
-        const rollJitter = (raceRng() - 0.5) * 2 * rollInterval * 0.2;
-        const racer = {
-          ...r,
-          index: i,
-          t: tStart,
-          lap: 1,
-          icon: trackEmoji ?? r.icon,
-          spreadFactor,
-          speedBonusMult,
-          rawRowBonus: speedBonus, // PULK-action: raw start-row bonus for the phase-split envelope (parity with sim)
-          baseSpeed: race_baseSpeed * speedMultiplier * spreadFactor * speedBonusMult,
-          spreadFactorPrev: spreadFactor,
-          spreadFactorTarget: spreadFactor,
-          transitionStartTime: 0,
-          transitionDuration: dynamicsConfig.reRollTransitionDuration * 1000,
-          nextRollTime: rollInterval + rollJitter,
-          color: RACER_COLORS[i % RACER_COLORS.length],
-          coatId: getCoatsByType(typeId) ? assignCoat(r.name, getCoatsByType(typeId)) : undefined,
-          patternId: assignPattern(r.name, PATTERN_IDS),
-          finished: false,
-          finishRank: null,
-          runoutDecay: 1,
-          trail: [],
-          x: 0,
-          y: 0,
-          angle: 0,
-          frameSizePx: physicalSpriteSize,
-          drawnBodyWidthPx: drawnBodyWidthRefPx,
-          // Drawn body length from render primitives — independent of drawnBodyWidthPx variable.
-          // Isotropic renderer: scale = drawnBodyWidthRefPx / (displaySize × bodyFillNarrow).
-          // All sprite frames are square (verified: all 20 types use equal frameWidth/frameHeight),
-          // so the general ×(frameWidth/frameHeight) factor equals 1 and is omitted.
-          drawnBodyLengthPx:
-            bodyFillNarrow > 0
-              ? (drawnBodyWidthRefPx * bodyFillLong) / bodyFillNarrow
-              : drawnBodyWidthRefPx,
-          trackWidthPx,
-          pathLengthPx,
-          // VRE-4: one emitter instance per racer (stateful generators must not be shared)
-          surfaceEmitter: resolveTrailEmitter(racerType, trackSurfaceClasses),
-          surfaceParticles: [],
-          trajectoryMult: 1.0,
-          trajectoryMultTarget: 1.0,
-          trajectoryMultPrev: 1.0,
-          trajectoryMultTransStart: 0,
-          areaBonusMult: 1.0,
-          // Governor (Stage B): single multiplier, slew-limited in-place (no separate
-          // prev/target transition fields — the rate limiter reads governorMult itself).
-          governorMult: 1.0,
-        };
-        initRacerBehavior(racer);
-        racer.physicalY = computeRowPhysicalY(
-          assignment.indexInRow,
-          rowSize,
-          behaviorConfig.startSpreadRange
-        );
-        return racer;
-      }),
-    };
+    });
 
     // ── Config flags for canvas-loop use ────────────────────────────────────
     const showRpMinimapBadgesCfg = cameraConfigRef.current.showRpMinimapBadges ?? false;
     const showRpStartRowCfg = cameraConfigRef.current.showRpStartRow ?? false;
 
-    // ── Race Plan controller ─────────────────────────────────────────────────
-    // Gate on the ONE canonical clock — the same scalar the sim gates on.
-    const racePlanEnabled =
-      !!raceData.racePlanEnabled &&
-      realizedDurationSec >= (dynamicsConfig.racePlanMinDurationSec ?? 30);
-    let racePlanController = null;
-    let rpPlanInfo = null;
+    // Camera/diag-only Race-Plan bindings (the controller + plan info come from the extracted core).
     let cameraPlanDelivered = false; // B4a: deliver the authored cameraPlan once, mid-race (heroes cast then)
     const speedRings = new Map();
-    if (racePlanEnabled) {
-      const planRacers = g.current.racers.map((r) => ({
-        index: r.index,
-        startRowIndex: assignmentByRacer.get(r.index)?.rowIndex ?? 0,
-      }));
-      const plan = createRacePlan(
-        planRacers,
-        finishT,
-        // THE clock, in ms — identical to the sim's createRacePlan argument by construction.
-        realizedDurationSec * 1000,
-        // Last-resort ?? fallbacks: must mirror DEFAULT_RACE_DYNAMICS_CONFIG (defaults.js) exactly,
-        // so a future shared-default change cannot silently re-introduce drift here.
-        {
-          bonusStrengthMultiplier: dynamicsConfig.racePlanBonusStrengthMultiplier ?? 2.0,
-          // areaBonus phase-split (INFRA 5A): threaded into the plan so the controller applies the
-          // rescale from ONE shared source (browser + sim). Fallbacks mirror DEFAULT_RACE_DYNAMICS_CONFIG.
-          phaseSplitBonusEnabled: dynamicsConfig.phaseSplitBonusEnabled ?? false,
-          areaBonusEarly: dynamicsConfig.areaBonusEarly ?? 1.0,
-          areaBonusPulk: dynamicsConfig.areaBonusPulk ?? 0,
-          areaBonusPost: dynamicsConfig.areaBonusPost ?? 1.0,
-          pulkStart: dynamicsConfig.racePlanPulkStart ?? 0.25,
-          bonusTransitionEnd: dynamicsConfig.racePlanBonusTransitionEnd ?? 0.75,
-          bonusFadeDuration: dynamicsConfig.racePlanBonusFadeDuration ?? 1500,
-          corridorStart: dynamicsConfig.racePlanCorridorStart ?? 0.55,
-          corridorEnd: dynamicsConfig.racePlanCorridorEnd ?? 1.0,
-          pulkBiasGain: dynamicsConfig.pulkBiasGain ?? 2.0,
-          choreoIntensity: dynamicsConfig.choreoIntensity ?? 0.6,
-          choreoPackBandStrictness: dynamicsConfig.choreoPackBandStrictness ?? 0.5,
-          choreoReleaseProgress: dynamicsConfig.choreoReleaseProgress ?? 0.97,
-          choreoResolveB2: dynamicsConfig.choreoResolveB2 ?? 0.8,
-          choreoResolveB3: dynamicsConfig.choreoResolveB3 ?? 0.7,
-          choreoResolveB4: dynamicsConfig.choreoResolveB4 ?? 0.65,
-          choreoResolveB5: dynamicsConfig.choreoResolveB5 ?? 0.6,
-          choreoOutcomeStart:
-            dynamicsConfig.choreoOutcomeStart ?? DEFAULT_RACE_DYNAMICS_CONFIG.choreoOutcomeStart,
-          // Spatial re-steer threshold for a released B2-attacker. Threaded so the DevScreen control
-          // reaches the plan. Fallback mirrors DEFAULT_RACE_DYNAMICS_CONFIG.
-          packReSteerThreshold: dynamicsConfig.packReSteerThreshold ?? 1.0,
-          // B2-attacker "Attack & Fall" (band-arrival release). Threaded so the DevScreen count slider
-          // actually reaches the plan. count 0 → no attackers cast → the pre-feature behaviour.
-          // The count fallback REFERENCES the shared default instead of copying it: a literal here
-          // silently drifts when the shipped default changes (it read 0 while the ship was 3).
-          // Unreachable in practice — validation returns a complete config — so this is
-          // defense-in-depth, not a behaviour change.
-          b2AttackHeroes:
-            dynamicsConfig.b2AttackHeroes ?? DEFAULT_RACE_DYNAMICS_CONFIG.b2AttackHeroes,
-          b2AttackPeakRank: dynamicsConfig.b2AttackPeakRank ?? 5,
-          b2AttackFinalRank:
-            dynamicsConfig.b2AttackFinalRank ?? DEFAULT_RACE_DYNAMICS_CONFIG.b2AttackFinalRank,
-          b2AttackProgress: dynamicsConfig.b2AttackProgress ?? { start: 0.4, end: 0.7 },
-          b2AttackResolveProgress: dynamicsConfig.b2AttackResolveProgress ?? 0.85,
-          b2AttackBandArrival: dynamicsConfig.b2AttackBandArrival ?? true,
-          // Gap-cap re-roll bias (docs/CONCEPT-COHESION.md). Threshold passed ONLY when the owner enables
-          // it → disabled ⇒ null ⇒ computeGapBiasedTarget() passes the draw through bit-exact (byte-identical).
-          // reRollTransitionDuration feeds the window-end derivation (lastRollDeadline − transitionDur).
-          gapRerollThresholdLengths: dynamicsConfig.gapRerollEnabled
-            ? (dynamicsConfig.gapRerollThresholdLengths ??
-              DEFAULT_RACE_DYNAMICS_CONFIG.gapRerollThresholdLengths)
-            : null,
-          gapRerollMode: dynamicsConfig.gapRerollMode ?? 'symmetric',
-          gapRerollStrength: dynamicsConfig.gapRerollStrength ?? 1.0,
-          reRollTransitionDuration: dynamicsConfig.reRollTransitionDuration,
-        },
-        racePlanSeed
-      );
-      racePlanController = createTrajectoryController(plan);
-      // choreo: heroes are cast + tagged (isHeroChoreographed) at the post-chaos boundary inside
-      // update() (the generator needs the actual field state), not here — nothing to tag at init.
-      rpPlanInfo = {
-        targetRanks: plan._racerTargetRank,
-        b1Indices: new Set(
-          [...plan._racerTargetRank.entries()].filter(([, rank]) => rank <= 5).map(([idx]) => idx)
-        ),
-      };
-    }
-    // Inject B1-racer set into CameraDirector for COMEBACK detection
+    // Inject B1-racer set into CameraDirector for COMEBACK detection (controller + plan info come
+    // from the extracted core; the createRacePlan / director / phase-split setup all live there now).
     if (racePlanEnabled && rpPlanInfo?.b1Indices) {
       camDirRef.current.updateRacePlan(rpPlanInfo.b1Indices);
     }
-
-    // ── Pre-OUTCOME contest-injector "director" setup ──────────────────────────
-    // Built once per race from the shared dynamics config. Phase fractions come from the
-    // controller (live boundaries, single source). maxEffect + maxStepPerFrame are the shared
-    // realism envelope (±12% clamp + slew) the director rides.
-    // PulkLeadRotation: THE pulk-phase mechanism, unconditional (within its [pulkStart, pulkEnd) window).
-    // Reads only pulk* config keys — its own realism envelope + strength knobs (no borrowed variables).
-    const pulkLeadRotationOn = racePlanEnabled;
-    const pulkLeadRotCfg = {
-      enabled: pulkLeadRotationOn,
-      attackerSlots: dynamicsConfig.pulkLeadRotationAttackerSlots ?? 2,
-      dropDepthLengths: dynamicsConfig.pulkLeadRotationDropDepthLengths ?? 2,
-      outsiderMaxReachLengths: dynamicsConfig.pulkLeadRotationOutsiderMaxReachLengths ?? 15,
-      deadlockTimeoutMs: dynamicsConfig.pulkLeadRotationDeadlockTimeoutMs ?? 12000,
-      minHoldMs: dynamicsConfig.pulkLeadRotationMinHoldMs ?? 750,
-      frontPool: dynamicsConfig.pulkFrontPool ?? 8,
-      leaderBrake: dynamicsConfig.pulkLeaderBrake ?? 0,
-      challengerBoost: dynamicsConfig.pulkChallengerBoost ?? 0,
-      maxEffect: dynamicsConfig.pulkEnvelopeMaxEffect ?? 0.12,
-      maxStepPerFrame: dynamicsConfig.pulkEnvelopeMaxStepPerFrame ?? 0.01,
-      ceilingCap:
-        (dynamicsConfig.pulkCeilingCap ?? false)
-          ? computeDirectorCeiling(
-              BASE_SPEED_MAX,
-              BASE_SPEED_MEAN,
-              dynamicsConfig.pulkBoostHeadroom ?? 0
-            )
-          : 0,
-    };
-    const govFractions = racePlanController?.getPhaseFractions?.() ?? null;
-    const govSeed = racePlanController?.seed ?? 0;
-    // ── PULK-action phase-split bonuses (parity with sim-fairness.mjs) ──
-    // rowBonus strength gated by race phase: chaos EARLY, PULK, post POST. (The areaBonus half of
-    // this split moved into the shared controller in racePlanner.js — INFRA 5A — so the browser no
-    // longer rescales areaBonusMult here; it is threaded into createRacePlan above instead.)
-    const phaseSplitBonusEnabled = dynamicsConfig.phaseSplitBonusEnabled ?? false;
-    const rowBonusEarly = dynamicsConfig.rowBonusEarly ?? 1;
-    const rowBonusPulk = dynamicsConfig.rowBonusPulk ?? 1;
-    const rowBonusPost = dynamicsConfig.rowBonusPost ?? 1;
-    const enableRowEnvSmooth = dynamicsConfig.enableRowEnvSmooth ?? false;
-    // Phase-split boundaries follow the LIVE plan phase fractions (single source: the controller),
-    // NOT hardcoded literals — so if the owner moves the PULK phase the bonuses follow it. Defaults
-    // (pulkStart 0.25 / pulkEnd 0.5) are unchanged, so this is byte-identical to the pinned values.
-    const PHASE_CHAOS_END = govFractions?.pulkStartFrac ?? 0.25;
-    const PHASE_PULK_END = govFractions?.pulkEndFrac ?? 0.5;
-    // Row-bonus phase envelope config for the shared t-update (modules/raceStep.js).
-    // Boundaries are the LIVE plan fractions above (never a literal). Built once per race
-    // — every field is frame-constant. Consumed by advanceRacerT and the vt velocity factor.
-    const rowPhaseCfg = {
-      enabled: phaseSplitBonusEnabled,
-      chaosEndFrac: PHASE_CHAOS_END,
-      pulkEndFrac: PHASE_PULK_END,
-      early: rowBonusEarly,
-      pulk: rowBonusPulk,
-      post: rowBonusPost,
-      smooth: enableRowEnvSmooth, // ease the rowEnvMult step over 1s (default false = instant)
-    };
-    // Per-race director state. applyPulkLeadRotation lazily attaches its own leadRot sub-state
-    // (brakeSet / attacker slots / outsider / cooldowns) on first call; nothing else is needed here.
-    const dirState = {};
-    // Mean drawn body length (px) over the field — the racer-length unit for the governor's
-    // arc-distance bound. Computed once per race (bodies are fixed per racer). Guarded > 0.
-    const govMeanBodyLen = meanDrawnBodyLen(g.current.racers); // shared racer-length source
 
     // Initialise Race-Plan diag fields (geometry snapshot at race start)
     diagDataRef.current.rpEnabled = racePlanEnabled;
@@ -848,36 +590,9 @@ export default function RaceScreen() {
     // drawOpenTrackFinishLine derives its own perp/fwd vectors from finishT angle locally.
     const openTrackHW = isOpenTrack ? trackWidthPx / 2 : 0;
 
-    // physicalY ∈ [-1, +1] maps to EditorShape offset ∈ [-0.5, +0.5] via /2.
-    function computePositions() {
-      const st = g.current;
-      const shape = shapeRef.current;
-      for (const r of st.racers) {
-        const t = isOpenTrack ? Math.min(r.t, 1) : tPos(r.t);
-        if (isOpenTrack) {
-          // Fix 3: Eliminate forward-shift wackeln caused by the inner↔outer spline
-          // cross-section not being perfectly perpendicular to the track tangent.
-          // Strategy: use the original getPosition call for the boundary point (preserves
-          // correct track-width scale and stays within bounds), then project the
-          // center→boundary vector onto the LOCAL perpendicular at this t, discarding
-          // any forward component. r.angle is the local tangent so each racer points
-          // correctly along the track at their own position.
-          const center = shape.getPosition(t, 0);
-          const lateral = shape.getPosition(t, r.physicalY / 2);
-          const perpCos = Math.cos(center.angle + Math.PI / 2);
-          const perpSin = Math.sin(center.angle + Math.PI / 2);
-          const lateralDist = (lateral.x - center.x) * perpCos + (lateral.y - center.y) * perpSin;
-          r.x = center.x + perpCos * lateralDist;
-          r.y = center.y + perpSin * lateralDist;
-          r.angle = center.angle;
-        } else {
-          const pos = shape.getPosition(t, r.physicalY / 2);
-          r.x = pos.x;
-          r.y = pos.y;
-          r.angle = pos.angle;
-        }
-      }
-    }
+    // computePositions() is the extracted core's closure (race.computePositions above) — RaceScreen's
+    // open-track perp-projection, verbatim. Bound to g.current (=raceState) so it and stepRacePhysics
+    // write the same racer array.
 
     // Pre-allocated render-interpolation buffer — reused every frame, no per-frame allocation.
     const renderBuf = [];
@@ -934,15 +649,10 @@ export default function RaceScreen() {
           setPhase(PHASE.RACING);
         }
       } else if (st.phase === PHASE.RACING) {
-        // Re-Roll config constants (read once per rAF, shared across all physics steps).
-        // lastRollDeadline is relative to physicsTs which starts at 0 at RACING entry.
-        // Keyed on the ONE canonical clock, so the last-roll cutoff lands at the same race
-        // fraction here and in the sim.
-        const lastRollDeadline =
-          rerollDurationSec * 1000 * (dynamicsConfig.reRollLastPositionPercent / 100);
-        const spreadRange = (BASE_SPEED_MAX - BASE_SPEED_MIN) / BASE_SPEED_MEAN;
-        const halfWidth = spreadRange * (dynamicsConfig.reRollVariationPercent / 100);
-        // D4: snapshot t before all physics steps so constSpeed can equalize deltas
+        // Re-Roll config constants (lastRollDeadline/spreadRange/halfWidth) moved into the extracted
+        // core (raceCfg); lastRollDeadline is still bound above from raceMeta for the diag readout.
+        // D4: snapshot t before all physics steps so constSpeed can equalize deltas. The constSpeed
+        // `_diagPrevT` snapshot stays here (per-rAF, matching legacy cadence); stepRacePhysics reads it.
         for (const r of st.racers) r._diagLogPrevT = r.t;
         if (constSpeedActive) {
           for (const r of st.racers) r._diagPrevT = r.t;
@@ -1002,35 +712,22 @@ export default function RaceScreen() {
         const _physicsTsBeforeLoop = st.physicsTs;
         let _catchupSteps = 0;
         while (st.physicsAccum >= FIXED_DT && _catchupSteps++ < 2) {
-          st.physicsTs += FIXED_DT;
+          // ── THE per-step advance — extracted to raceCore.stepRacePhysics (RaceScreen order) ──
+          // Advances st.physicsTs by FIXED_DT and mutates every racer (leader progress →
+          // controller.update → trajectoryMult transition → PulkLeadRotation → per-racer re-roll +
+          // advance → computePositions → applyRacerBehavior → finish detection + lap). Byte-identical
+          // to the code that lived inline here; the render/camera/diag reads below consume its output.
+          stepRacePhysics(st, raceCfg);
           const physicsTs = st.physicsTs;
 
-          // B1: snapshot per-step so _prev is always exactly 1 step behind curr.
-          // Must be inside the loop — per-rAF snapshot causes freeze+snap on 2-step frames:
-          // _prev would be 2 steps behind while alpha≈0, then the next frame jumps ~2S.
+          // Burst particles for racers that crossed the line THIS step (render-only; the finish
+          // detection itself now lives in stepRacePhysics, so we key on finishTimeMs === physicsTs).
           for (const r of st.racers) {
-            r._prevT = r.t;
-            r._prevX = r.x;
-            r._prevY = r.y;
-            r._prevAngle = r.angle;
+            if (r.finished && r.finishTimeMs === physicsTs) emitBurst(st.burstParticles, r.x, r.y);
           }
 
-          // Monotonic leader track-progress [0,1] — drives WHEN phases switch (route-based).
-          // Never regresses when the leader finishes.
-          let _leaderT = -Infinity;
-          for (const r of st.racers) {
-            if (!r.finished && r.t > _leaderT) _leaderT = r.t;
-          }
-          const _rawProgress = _leaderT > -Infinity ? _leaderT / st.finishT : 0;
-          if (_leaderT > -Infinity) {
-            st.raceProgress = Math.min(1, Math.max(st.raceProgress, _rawProgress));
-          }
-          // (no unfinished racer: leave raceProgress unchanged)
-
-          // Controller-Pass: rank racers by current t, write trajectoryMultTarget on each.
-          if (racePlanController) racePlanController.update(st.racers, physicsTs, st.raceProgress);
           // B4a: deliver the authored cameraPlan to the CameraDirector once it exists (heroes are cast
-          // mid-race, so it is null at race start). Camera-only; the pre-arm path is flag-gated in the Director.
+          // mid-race inside controller.update, so it is null at race start). Camera-only.
           if (racePlanController && !cameraPlanDelivered) {
             const cp = racePlanController.getCameraPlan?.();
             if (cp) {
@@ -1039,54 +736,13 @@ export default function RaceScreen() {
             }
           }
 
-          // ── trajectoryMult easeInOutCubic transition (mirrors spreadFactor pattern) ──
-          if (racePlanController) {
-            const TT_DUR_MS = dynamicsConfig.trajectoryTransitionDuration * 1000;
-            for (const r of st.racers) {
-              const elapsed = physicsTs - r.trajectoryMultTransStart;
-              r.trajectoryMult =
-                elapsed < TT_DUR_MS
-                  ? r.trajectoryMultPrev +
-                    (r.trajectoryMultTarget - r.trajectoryMultPrev) *
-                      easeInOutCubic(elapsed / TT_DUR_MS)
-                  : r.trajectoryMultTarget;
-            }
-          }
-
-          // (areaBonus phase-split moved into the shared controller — racePlanController.update()
-          // now rescales areaBonusMult from ONE source for browser + sim; INFRA 5A. Nothing to do
-          // here: the controller-pass above already produced the phase-split areaBonusMult.)
-
-          // Resolved phase — computed every frame whenever a race plan is running (feeds the always-on
-          // GovernorDiagHUD phase readout). Pure getPhase; no physics.
+          // Resolved phase — feeds the always-on GovernorDiagHUD phase readout. Pure getPhase; no physics.
           const govPhase = racePlanController
             ? racePlanController.getPhase(physicsTs, st.raceProgress)
             : null;
 
-          // ── PulkLeadRotation — until-P1 attackers + outsider + distance ex-leader brake (default OFF → skipped) ──
-          if (pulkLeadRotationOn && govFractions) {
-            applyPulkLeadRotation(
-              st.racers,
-              st.finishT,
-              {
-                progress: st.raceProgress,
-                pulkStartFrac: govFractions.pulkStartFrac,
-                pulkEndFrac: govFractions.pulkEndFrac,
-                corrStartFrac: govFractions.corrStartFrac,
-                pathLengthPx,
-                meanBodyLen: govMeanBodyLen,
-                isOpen: isOpenTrack,
-                currentMs: physicsTs,
-                dirState,
-              },
-              pulkLeadRotCfg
-            );
-          }
-
-          // ── GovernorDiagHUD snapshot — ONE write site, EVERY frame a plan runs. cfg reflects the
-          // ACTIVE mechanism (PulkLeadRotation when the plan is running, else a directorEnabled:false
-          // stub in OUTCOME/off) so the HUD always reads the truth. Read-only; touches nothing but the
-          // diag ref. heroRoles = the retained index→role map (diagnostics-only; null until heroes cast).
+          // ── GovernorDiagHUD snapshot — ONE write site, EVERY frame a plan runs. Read-only; touches
+          // nothing but the diag ref. heroRoles = the retained index→role map (null until heroes cast).
           if (racePlanController && govFractions) {
             const diagCfg = pulkLeadRotationOn
               ? { directorEnabled: true, pulkOnly: true } // lead-rotation: PULK-scoped, active in PULK
@@ -1105,148 +761,6 @@ export default function RaceScreen() {
               isOpen: isOpenTrack,
               heroRoles: racePlanController.getHeroRoles?.() ?? null,
             };
-          }
-
-          // Gap-cap re-roll bias context (SIM parity — the ONE-CLOCK principle): when the owner has
-          // enabled it, thread the BROWSER's own realized-duration lastRollDeadline + physicsTs + the
-          // shared lenScale/isOpen into the transform, exactly as the sim does. Disabled ⇒ never called.
-          const gapRerollEnabled = dynamicsConfig.gapRerollEnabled ?? false;
-          const gapRerollDevMarker = dynamicsConfig.gapRerollDevMarker ?? false;
-          const gapLenScale = gapRerollEnabled
-            ? lenScaleFrom(pathLengthPx, meanDrawnBodyLen(st.racers))
-            : 0;
-          for (const r of st.racers) {
-            // ── Per-racer spreadFactor re-roll + smooth transition ────────────
-            if (!r.finished) {
-              if (physicsTs >= r.nextRollTime && physicsTs < lastRollDeadline) {
-                const rawSample = r.spreadFactor + (raceRng() - 0.5) * 2 * halfWidth;
-                // PULK cohesion bias: the always-on field-cohesion mechanism — nudges the three
-                // pulk racers' re-roll draws toward the pulk centroid during PULK so the field
-                // stays together. No-op outside PULK / for non-pulk racers (returns rawSample).
-                const biasedSample = racePlanController
-                  ? racePlanController.computePulkBiasedTarget(
-                      r.index,
-                      rawSample,
-                      BASE_SPEED_MIN / BASE_SPEED_MEAN,
-                      BASE_SPEED_MAX / BASE_SPEED_MEAN,
-                      st.racers,
-                      physicsTs,
-                      st.raceProgress
-                    )
-                  : rawSample;
-                // Gap-cap re-roll bias (SIM-frozen transform). Disabled ⇒ passes biasedSample through
-                // (never called) ⇒ byte-identical. Scheduled rolls only (this is a scheduled roll).
-                const gapBiasedSample =
-                  gapRerollEnabled && racePlanController
-                    ? racePlanController.computeGapBiasedTarget(
-                        r.index,
-                        biasedSample,
-                        BASE_SPEED_MIN / BASE_SPEED_MEAN,
-                        BASE_SPEED_MAX / BASE_SPEED_MEAN,
-                        st.racers,
-                        physicsTs,
-                        st.raceProgress,
-                        gapLenScale,
-                        behaviorConfig.isOpen,
-                        lastRollDeadline
-                      )
-                    : biasedSample;
-                // Dev marker (rendering-only, DevScreen-gated, zero sim effect): tag the racer at the
-                // instant a roll was actually biased, so the owner can SEE where the mechanism fires.
-                if (gapRerollDevMarker && gapBiasedSample !== biasedSample)
-                  r._gapBiasMarkAt = physicsTs;
-                const newTarget = Math.max(
-                  BASE_SPEED_MIN / BASE_SPEED_MEAN,
-                  Math.min(BASE_SPEED_MAX / BASE_SPEED_MEAN, gapBiasedSample)
-                );
-                r.spreadFactorPrev = r.spreadFactor;
-                r.spreadFactorTarget = newTarget;
-                r.transitionStartTime = physicsTs;
-                const jOff = (raceRng() - 0.5) * 2 * rollInterval * 0.2;
-                r.nextRollTime = physicsTs + rollInterval + jOff;
-              }
-              const elapsed = physicsTs - r.transitionStartTime;
-              if (elapsed < r.transitionDuration) {
-                const tProg = elapsed / r.transitionDuration;
-                r.spreadFactor =
-                  r.spreadFactorPrev +
-                  (r.spreadFactorTarget - r.spreadFactorPrev) * easeInOutCubic(tProg);
-                r.baseSpeed = race_baseSpeed * speedMultiplier * r.spreadFactor * r.speedBonusMult;
-              }
-            }
-            // Apply D7b boost/brake flags from the previous step.
-            // On open tracks, speedBrakeFactor is eased in over avoidanceWarmupMs (ramp).
-            const boost = r.draftingBoostActive ? behaviorConfig.draftingBoost : 1.0;
-            const effectiveBrakeFactor = computeEffectiveBrakeFactor(
-              behaviorConfig,
-              isOpenTrack,
-              physicsTs
-            );
-            // Flag 2 (report 06): brakeMatchFactor is written by raceBehavior.js one frame
-            // prior and read here — same one-frame-lag cross-file pattern as avoidanceActive.
-            // Flag 3 (report 06): min() preserves the warmup ramp: during the first 3s the
-            // ramp factor may already be weaker than the cap, so the cap must not override it.
-            // speedBrakeFactor (0.945) remains a fixed floor via effectiveBrakeFactor.
-            const brake = r.avoidanceActive
-              ? Math.min(effectiveBrakeFactor, r.brakeMatchFactor ?? effectiveBrakeFactor)
-              : 1.0;
-            // PULK-action: start-row bonus phase envelope (parity with sim; default 1.0 = no-op). baseSpeed
-            // bakes in the FULL speedBonusMult; rowEnvMult corrects it to the phase strength s (EARLY/PULK/
-            // POST): effective speedBonusMult = 1 + rawRowBonus·s → envMult = (1+rawRowBonus·s)/(1+rawRowBonus).
-            const rowEnvTarget = computeRowEnvMult(r.rawRowBonus, st.raceProgress, rowPhaseCfg);
-            // Opt-in: ease the rowEnvMult step over 1s (default off → target, byte-identical). Used for
-            // BOTH the t-advance (passed as f.rowEnvMult) and the vt velocity factor below (one value).
-            const rowEnvMult = rowPhaseCfg.smooth
-              ? computeRowEnvSmoothed(r, rowEnvTarget, physicsTs)
-              : rowEnvTarget;
-            if (!r.finished) {
-              // Shared per-frame advance (modules/raceStep.js). dt defaults to 1.0
-              // (FIXED_DT/16) — the fixed timestep, kept explicit in the shared function.
-              r.t = advanceRacerT(r, {
-                boost,
-                brake,
-                raceProgress: st.raceProgress,
-                finishT: st.finishT,
-                phase: rowPhaseCfg,
-                rowEnvMult,
-              });
-            } else {
-              // Run-out: finished racers keep moving but decay to a stop
-              r.runoutDecay *= 0.97;
-              r.t += r.baseSpeed * r.runoutDecay;
-            }
-            // Dimensionless velocity factor (≈1.0 at race_baseSpeed, 0 when finished).
-            // Drives lookahead scaling in CameraDirector: vt=1.0 → full lookaheadDistance,
-            // vt=2.0 → double lead, vt=0 → no lead. Guard: race_baseSpeed>0 prevents ÷0.
-            r.vt =
-              race_baseSpeed > 0 && !r.finished
-                ? (r.baseSpeed * boost * brake * rowEnvMult * r.trajectoryMult * r.areaBonusMult) /
-                  race_baseSpeed
-                : 0;
-          }
-          // D4: equalize all non-finished racers to the mean delta-t
-          if (constSpeedActive) {
-            const active = st.racers.filter((r) => !r.finished);
-            if (active.length > 0) {
-              const meanDt =
-                active.reduce((s, r) => s + (r.t - (r._diagPrevT ?? r.t)), 0) / active.length;
-              for (const r of active) {
-                r.t = (r._diagPrevT ?? r.t) + meanDt;
-                r.vt = race_baseSpeed > 0 ? meanDt / race_baseSpeed : 0;
-              }
-            }
-          }
-          computePositions();
-          applyRacerBehavior(st.racers, behaviorConfig, { currentTs: physicsTs });
-          for (const r of st.racers) {
-            if (r.finished) continue;
-            if (r.t >= st.finishT) {
-              r.finished = true;
-              r.finishRank = ++st.finishedCount;
-              r.finishTimeMs = physicsTs;
-              emitBurst(st.burstParticles, r.x, r.y);
-            }
-            r.lap = isOpenTrack ? 1 : currentLap(r.t, st.maxLaps);
           }
 
           // Scoreboard: update when physicsTs crosses a 250ms bucket boundary.

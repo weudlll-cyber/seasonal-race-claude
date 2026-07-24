@@ -26,6 +26,8 @@ the owner is asking about — **seed → plan grid → RNG stream → finished r
 | **D-TIME** | Both fixed-dt 16 ms; wall-clock enters browser state only via the accumulator step-count and slow-mo — but slow-mo leaks into *outcome* through D-STREAM | Clean on its own; contaminated by D-STREAM | §2d |
 | **D-DUR** ✅ CLOSED (speed/duration ship) | Browser paced from a nominal `estimatedSecondsPerLap × laps`; sim paced from the raw `durationSec` — `race_baseSpeed`, the re-roll schedule and the plan duration all disagreed | ~~No~~ → **fixed**: one shared `deriveRaceDuration` | [MICRO-DIVERGENCE.md](MICRO-DIVERGENCE.md) |
 | ~~O1~~ ✅ CLOSED (speed/duration ship) | Sim `computeFinishT` hardcoded `runoutZone=0.05`; browser read `behaviorConfig.runoutZone` | ~~Identical at default only~~ → **fixed**: `computeFinishT` deleted; `runoutZone` is a caller argument on both sides | §2e |
+| **D-INIT** ⚠️ OPEN, LOCATED (race-init extraction) | Per-step **execution order**: RaceScreen runs `controller.update()` **before** the re-roll draw and advances each racer **interleaved** with its re-roll; the sim runs all re-rolls (Pass 1) **before** `update()`, then advances in a **separate Pass 2**. With a Race Plan the re-roll's pulk/gap bias reads the controller at a **one-frame offset** → **flips the finishing order**; even without a plan the interleave perturbs the race | **No** — flips order on 100% of tested plan-enabled races (matches the owner's browser cross-check) | §2f |
+| **D-RUNOUT** ⚠️ OPEN, LOCATED (race-init extraction) | RaceScreen keeps **finished** racers moving — runout decay `r.t += baseSpeed·runoutDecay` (they slide forward); the sim **freezes** finished racers (Pass 2 advances only `!finished`). Post-finish checkpoint `t` always differs, and a still-sliding finisher can perturb a later finisher via avoidance | **No** at post-finish checkpoints; usually order-preserving | §2f |
 
 The two big ones for the owner's goal are **D-GRID** (structural plan-grid mismatch) and
 **D-STREAM** (global-RNG pollution). Both are dissolved by the owner's preferred fix: **one shared
@@ -285,6 +287,64 @@ gate resolves differently, one side runs with a plan and the other without → m
 without threading `behaviorConfig.runoutZone` (`sim-fairness.mjs:584-586`); the browser reads the
 config value (`index.jsx:491`). Identical at the shipped default, divergent if the owner overrides
 `runoutZone` (open-track finish line moves on one side only).
+
+### 2f. Per-step ORDER and finished-racer RUNOUT — **CONFIRMED, LOCATED (race-init extraction, 2026-07-24)**
+
+This is what fix-plan **step 6** (§4) turned up the moment it became runnable. RaceScreen's real init +
+per-step advance were extracted into an importable, DOM-free
+[`client/src/modules/raceCore.js`](../../client/src/modules/raceCore.js) —
+`createRaceFromIdentity()` + `stepRacePhysics()` — and RaceScreen was refactored to render **through**
+them (a pure refactor; both sim fingerprints unchanged, full client suite + build green). The golden
+harness gained a third arm, `realArm` ([`scripts/parity/goldenRunner.mjs`](../../scripts/parity/goldenRunner.mjs)),
+that runs those SAME functions headless. So for the first time the harness compares **the code the
+browser actually runs** against the sim — not a hand-built mirror. Arm A (`browserArm`) runs the sim's
+`runSingleRace` and therefore agrees with the sim trivially; that is exactly why 600/600 of the soak
+was "ALL EQUAL" yet the owner's browser cross-check still failed on seeds 7 and 42. The extraction's
+faithfulness rests on independent ground truth: **`realArm` reproduces the owner's actual browser
+result** (below), and a no-plan identity (city-circuit / laps=1 / seed 1) is byte-identical to the sim.
+
+**D-INIT — the per-step execution-order offset.** RaceScreen's fixed-step body and the sim's differ:
+
+| step | RaceScreen (`raceCore.stepRacePhysics`) | sim (`runSingleRace`) |
+|---|---|---|
+| 1 | leader progress | leader progress |
+| 2 | **`controller.update()`** | **re-roll draw** (Pass 1) — `computePulkBiasedTarget` / `computeGapBiasedTarget` |
+| 3 | trajectoryMult transition | **`controller.update()`** |
+| 4 | **re-roll draw**, then **`advanceRacerT` — interleaved per racer** | trajectoryMult transition |
+| 5 | computePositions → applyRacerBehavior → finish | `advanceRacerT` (Pass 2) → computePositions → applyRacerBehavior → finish |
+
+With a Race Plan, the re-roll's pulk/gap **bias** reads the controller's per-frame state at a one-frame
+offset (the browser sees **this** frame's `update()`, the sim **last** frame's). The offset is
+deterministic and compounds, and the measured effect is unambiguous: **every plan-enabled race tested
+flips its finishing order** (18/18 closed in the subset below). On the owner's cross-check cases
+(searound / manta / 40, canonical): seed 1 keeps its winner (Maverick), but seeds 7 and 42 **demote the
+sim-predicted winner** — Surge → 2nd, Blitz → 2nd — the exact symptom the owner reported in the browser.
+First machine-located divergence: seed 7 at checkpoint 5000 ms (racerIndex 38), seed 42 at 5000 ms
+(racerIndex 4), seed 1 at 20000 ms (racerIndex 23). The interleaved advance (step 4) also perturbs
+**no-plan** races — a small but real pre-finish delta (e.g. city-circuit / laps=1 / seed 42 first
+diverges at ~14.6 s, before any finish) — though there it usually preserves the finishing order.
+
+**D-RUNOUT — finished-racer handling.** RaceScreen keeps finished racers moving with runout decay
+(`r.runoutDecay *= 0.97; r.t += r.baseSpeed * r.runoutDecay` — [`index.jsx`], now in
+`raceCore.stepRacePhysics`); the sim's Pass 2 advances **only** `!r.finished` racers
+([`sim-fairness.mjs:1583-1584`](../../scripts/sim-fairness.mjs#L1583)), so a finished racer's `t`
+**freezes** at its crossing value. Consequence: every checkpoint sampled after a racer finishes differs
+between the two, and a still-sliding finisher can nudge a later finisher's time (and, rarely, its rank)
+through arc-space avoidance. This is why no-plan closed races diverge **late** (only after the first
+crossing) while their finishing order stays intact.
+
+**NOT a divergence — the open-track position projection.** On open tracks RaceScreen's
+`computePositions` perp-projects the lateral offset (a wobble fix, "Fix 3") while the sim uses a plain
+`getPosition(t, physicalY/2)`. This changes world `x/y` — but `applyRacerBehavior` computes avoidance in
+**arc space** (`shortestArcDeltaT(t)` + `physicalY` + body dimensions; it never reads world `x/y`), and
+nothing else on the physics path reads `x/y` either. So the projection difference is **render-only**;
+open-track divergences trace to the same D-INIT + D-RUNOUT, not to position.
+
+**Status.** Both D-INIT and D-RUNOUT are **findings**, not yet fixed — the task that located them was
+finding-first, with the fix left to an owner decision (which side is canonical: the browser's order +
+runout, or the sim's?). Neither touches the sim, so both fingerprints are unchanged. The standing guard
+is now in `goldenEquality.test.js` ("real browser arm — faithfulness pin + the located residual"): it
+pins a byte-identical no-plan identity and requires a plan-enabled race to **flip order, locatably**.
 
 ---
 
