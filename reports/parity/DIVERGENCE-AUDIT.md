@@ -26,8 +26,10 @@ the owner is asking about — **seed → plan grid → RNG stream → finished r
 | **D-TIME** | Both fixed-dt 16 ms; wall-clock enters browser state only via the accumulator step-count and slow-mo — but slow-mo leaks into *outcome* through D-STREAM | Clean on its own; contaminated by D-STREAM | §2d |
 | **D-DUR** ✅ CLOSED (speed/duration ship) | Browser paced from a nominal `estimatedSecondsPerLap × laps`; sim paced from the raw `durationSec` — `race_baseSpeed`, the re-roll schedule and the plan duration all disagreed | ~~No~~ → **fixed**: one shared `deriveRaceDuration` | [MICRO-DIVERGENCE.md](MICRO-DIVERGENCE.md) |
 | ~~O1~~ ✅ CLOSED (speed/duration ship) | Sim `computeFinishT` hardcoded `runoutZone=0.05`; browser read `behaviorConfig.runoutZone` | ~~Identical at default only~~ → **fixed**: `computeFinishT` deleted; `runoutZone` is a caller argument on both sides | §2e |
-| **D-INIT** ⚠️ OPEN, LOCATED (race-init extraction) | Per-step **execution order**: RaceScreen runs `controller.update()` **before** the re-roll draw and advances each racer **interleaved** with its re-roll; the sim runs all re-rolls (Pass 1) **before** `update()`, then advances in a **separate Pass 2**. With a Race Plan the re-roll's pulk/gap bias reads the controller at a **one-frame offset** → **flips the finishing order**; even without a plan the interleave perturbs the race | **No** — flips order on 100% of tested plan-enabled races (matches the owner's browser cross-check) | §2f |
-| **D-RUNOUT** ⚠️ OPEN, LOCATED (race-init extraction) | RaceScreen keeps **finished** racers moving — runout decay `r.t += baseSpeed·runoutDecay` (they slide forward); the sim **freezes** finished racers (Pass 2 advances only `!finished`). Post-finish checkpoint `t` always differs, and a still-sliding finisher can perturb a later finisher via avoidance | **No** at post-finish checkpoints; usually order-preserving | §2f |
+| **D-INIT** ✅ CLOSED (step-order alignment) | Per-step **execution order**: RaceScreen ran `controller.update()` **before** the re-roll and advanced **interleaved**; the sim ran all re-rolls (Pass 1) **before** `update()`, then Pass 2 | ~~No~~ → **fixed**: the sim now executes the browser's step function (`raceCore.stepRacePhysics`) — one loop | §2f |
+| **D-RUNOUT** ✅ CLOSED (step-order alignment) | RaceScreen slid **finished** racers (runout decay); the sim **froze** them (Pass 2 advanced only `!finished`) | ~~No~~ → **fixed**: the shared step slides finished racers in the sim too; observers read runout state without steering | §2f |
+| **D-NAME** ✅ CLOSED (step-order alignment) | The avoidance symmetry tiebreak (`raceBehavior.js`) keys on `r.name`; the sim raced an `R{i+1}` roster while the browser races real names → different lateral resolution | ~~No~~ → **fixed**: the sim carries the browser's roster names (a `racerNames` param); the golden arms race the same roster | §2f |
+| **D-ROWCOUNT** ✅ CLOSED (step-order alignment) | RaceScreen **ignores** `computeRacerLayout`'s `rowCount` and computes its OWN inline `ceil(N / floor(2·effWidth / spriteSize))`; the sim used `computeRacerLayout.rowCount`. They disagree for small sprites (dolphin: 4 vs 3) → a different start-row grid | ~~No~~ → **fixed**: the sim (combo loop + golden harness) adopts the browser's inline rowCount; matching even `rowSizes` keep the fairness bucketing aligned | §2f |
 
 The two big ones for the owner's goal are **D-GRID** (structural plan-grid mismatch) and
 **D-STREAM** (global-RNG pollution). Both are dissolved by the owner's preferred fix: **one shared
@@ -340,11 +342,53 @@ crossing) while their finishing order stays intact.
 nothing else on the physics path reads `x/y` either. So the projection difference is **render-only**;
 open-track divergences trace to the same D-INIT + D-RUNOUT, not to position.
 
-**Status.** Both D-INIT and D-RUNOUT are **findings**, not yet fixed — the task that located them was
-finding-first, with the fix left to an owner decision (which side is canonical: the browser's order +
-runout, or the sim's?). Neither touches the sim, so both fingerprints are unchanged. The standing guard
-is now in `goldenEquality.test.js` ("real browser arm — faithfulness pin + the located residual"): it
-pins a byte-identical no-plan identity and requires a plan-enabled race to **flip order, locatably**.
+### 2f-RESOLVED — the sim adopted the browser's step function (step-order alignment, 2026-07-24)
+
+Owner decision: **the browser is canonical** (it is the product; precedent D-GRID; the sim's absolutes
+are pending re-baseline anyway). So the sim's own single-race stepping was **deleted and replaced by the
+browser's real step**: `runSingleRace`'s Pass 0 / Pass 1 / controller-pass / PulkLeadRotation / Pass 2 /
+computePositions / applyRacerBehavior / finish were removed and replaced by a single
+`raceCore.stepRacePhysics(state, cfg)` call — the SAME function RaceScreen renders through. **One loop,
+shared.** D-INIT and D-RUNOUT dissolve **by construction**: the sim now runs the browser's order and
+slides finished racers (runout) exactly as the browser does. `raceCore.js` was not changed.
+
+**Two more** divergences surfaced as the order matched — one at once, one only the full soak exposed —
+and had to be closed with it:
+
+**D-NAME — the roster-name avoidance tiebreak.** `applyRacerBehavior`'s symmetry tiebreak
+([`raceBehavior.js`](../../client/src/modules/raceBehavior.js), `stablePairBit`) keys on
+`String(r.name ?? r.id ?? r.index)`. The browser races the operator's roster (Quick-Test =
+`QUICK_TEST_NAMES`); the sim raced an `R{i+1}` roster; the headless core had no names and fell back to
+`index`. Three different keys → three different lateral resolutions → different races. Fixed WITHOUT
+touching `raceBehavior.js` or the browser: `runSingleRace` gained a `racerNames` param and the golden
+harness hands both arms the browser's roster, so the physics tiebreak sees the same names it sees in the
+browser. (The combo loop / fingerprint keep the self-consistent `R{i+1}` baseline — a sim-internal
+regression anchor, never compared to a browser race.)
+
+**D-ROWCOUNT — the start-row grid, exposed only by the full soak.** The 60-identity subset (default types)
+was 60/60, but the 600-identity soak flagged **30 mismatches, all `searound/dolphin`** (an ALT type). Root:
+RaceScreen **ignores** `computeRacerLayout`'s `rowCount` and computes its OWN inline
+`ceil(N / floor(2·effWidth / spriteSize))` from the auto-scaled sprite size; the sim used
+`computeRacerLayout.rowCount`. The two coincide for most types but **disagree for small sprites** — dolphin
+(sprite 35.6) gives **4/7/10 rows in the browser vs 3/6/9 in the sim** at N=20/40/60 — a different start
+grid, hence a different race. Neither `browserArm` nor the old soak caught it because both ran the sim's
+formula. Fixed WITHOUT touching `raceCore.js`/`raceBehavior.js`/the browser: the sim's combo loop and the
+golden harness now compute rowCount with the browser's inline formula (and the matching even `rowSizes`, so
+fairness bucketing stays aligned). The 10 fingerprint combos all have coinciding rowCounts at N=40, so the
+fingerprints are **unchanged** by this fix. A `searound/dolphin` case is now pinned in `goldenEquality.test.js`.
+
+**Observers.** The sim's telemetry still reads race state **between** steps and never steers — verified:
+the only racer-field write in the loop is the `finishTimeMs → finishTime` copy. Metrics that sampled at
+the mid-Pass advance site (`--speed-source`, `--physics-tax`) lose that exact site under the shared step
+(they degrade, they do not block — sweep-only, unused by any parity proof). The escape-episode window
+already closes at first finish, so runout adds no spurious episodes.
+
+**Proof.** `goldenEquality.test.js` now asserts `realArm == simArm` (byte-identical) on the owner's three
+cross-check seeds — winners **Maverick / Gale / Orbit**, with **Surge 3rd** (seed 7) and **Blitz 2nd**
+(seed 42), exactly as the owner observed in the browser. The 60-identity subset is **60/60 equal**; the
+600-identity soak is the phase-closing proof (see GOLDEN-SOAK.md Part E). The sim fingerprints **moved by
+design** (the sim's behaviour now equals the browser's): **ON `8b13ccbe96992cc0`**, **OFF `e07150f936361a73`**
+(from ON `eda28d614f5e47d9` / OFF `83eec6cf5c8b0419`). The browser is untouched by construction.
 
 ---
 

@@ -49,7 +49,7 @@ import {
   computeBodyNarrowRef,
 } from '../../client/src/modules/rowLayout.js';
 import { loadRowLayoutConfig } from '../../client/src/modules/rowLayoutConfig.js';
-import { runRaceHeadless } from '../../client/src/modules/raceCore.js';
+import { createRaceFromIdentity, stepRacePhysics } from '../../client/src/modules/raceCore.js';
 import {
   deriveRaceDuration,
   normalSpeedFrom,
@@ -287,12 +287,19 @@ function simPlanConfig(DYN) {
 function execute({ ctx, cfg, identity, model, planConfig, behaviorConfig, laps, requestedSeconds }) {
   const { seed, nRacers } = identity;
   const effectiveWidth = ctx.geometricTrackWidth * behaviorConfig.startSpreadRange;
-  const totalRows = computeRacerLayout(
+  // D-ROWCOUNT: RaceScreen ignores computeRacerLayout's rowCount and computes its OWN inline formula from
+  // the auto-scaled sprite size. The two disagree for small sprites (e.g. dolphin: 4 vs 3), so the arms
+  // must use the browser's inline formula to share the start-row grid — exactly as createRaceFromIdentity.
+  const physicalSpriteSize = computeRacerLayout(
     effectiveWidth,
     nRacers,
     cfg.displaySize,
     DEFAULT_AUTO_SCALE_CONFIG
-  ).rowCount;
+  ).spriteSize;
+  const totalRows = Math.max(
+    1,
+    Math.ceil(nRacers / Math.max(1, Math.floor((2 * effectiveWidth) / Math.max(1, physicalSpriteSize))))
+  );
 
   const raceRng = makeRaceRng(seed).physics;
   const rowLayout = computeEvenRowLayout(nRacers, totalRows, raceRng);
@@ -344,6 +351,9 @@ function execute({ ctx, cfg, identity, model, planConfig, behaviorConfig, laps, 
     nRacers,
     raceRng,
     rowLayout,
+    // D-NAME: hand the sim the SAME roster the browser races (the avoidance symmetry tiebreak keys on
+    // r.name). Without this, arm A/B would race an `R{i+1}` roster while the real browser races these.
+    racerNames: rosterOf(nRacers).map((r) => r.name),
     behaviorConfigOverrides: { isOpen: ctx.isOpen },
     racePlanController,
     racerTargetRankMap,
@@ -487,30 +497,54 @@ export function realArm(identity) {
     DEFAULT_AUTO_SCALE_CONFIG
   );
 
-  const { results, checkpoints, meta } = runRaceHeadless(
-    {
-      shape: ctx.shape,
-      isOpenTrack: ctx.isOpen,
-      pathLengthPx: ctx.pathLengthPx,
-      trackWidthPx: ctx.geometricTrackWidth,
-      speedMultiplier: cfg.speedMultiplier,
-      baseSpeedConfig,
-      behaviorConfig,
-      rowConfig,
-      dynamicsConfig,
-      normalSpeedPxPerSec: V,
-      laps: browserLaps,
-      requestedSeconds: browserSeconds,
-      nRacers: identity.nRacers,
-      racePlanSeed: identity.seed,
-      racePlanEnabledFlag: true,
-      physicalSpriteSize,
-      drawnBodyWidthRefPx: bodyRef.bodyNarrow,
-      bodyFillNarrow,
-      bodyFillLong,
-    },
-    { checkpointIntervalMs: CHECKPOINT_INTERVAL_MS }
-  );
+  // Build the REAL browser race via the shared core, then AUGMENT each racer with the browser's roster
+  // name — exactly as RaceScreen does before rendering (the avoidance symmetry tiebreak keys on r.name).
+  // We step the core directly here (rather than via runRaceHeadless) so raceCore.js stays untouched.
+  const { state, config, meta } = createRaceFromIdentity({
+    shape: ctx.shape,
+    isOpenTrack: ctx.isOpen,
+    pathLengthPx: ctx.pathLengthPx,
+    trackWidthPx: ctx.geometricTrackWidth,
+    speedMultiplier: cfg.speedMultiplier,
+    baseSpeedConfig,
+    behaviorConfig,
+    rowConfig,
+    dynamicsConfig,
+    normalSpeedPxPerSec: V,
+    laps: browserLaps,
+    requestedSeconds: browserSeconds,
+    nRacers: identity.nRacers,
+    racePlanSeed: identity.seed,
+    racePlanEnabledFlag: true,
+    physicalSpriteSize,
+    drawnBodyWidthRefPx: bodyRef.bodyNarrow,
+    bodyFillNarrow,
+    bodyFillLong,
+  });
+  const names = rosterOf(identity.nRacers).map((r) => r.name);
+  for (let i = 0; i < state.racers.length; i++) state.racers[i].name = names[i];
+
+  config.computePositions();
+  const nR = state.racers.length;
+  const checkpoints = new Map();
+  let nextCp = CHECKPOINT_INTERVAL_MS;
+  const maxTime = Math.max(meta.realizedDurationSec * 3, 600) * 1000;
+  while (state.finishedCount < nR && state.physicsTs < maxTime) {
+    stepRacePhysics(state, config);
+    if (state.physicsTs >= nextCp) {
+      const arr = new Array(nR).fill(null);
+      for (const r of state.racers) arr[r.index] = r.t;
+      checkpoints.set(nextCp, arr);
+      nextCp += CHECKPOINT_INTERVAL_MS;
+    }
+  }
+  const dnf = state.racers.filter((r) => !r.finished).sort((a, b) => b.t - a.t);
+  for (let k = 0; k < dnf.length; k++) dnf[k].finishRank = state.finishedCount + 1 + k;
+  const results = state.racers.map((r) => ({
+    racerIndex: r.index,
+    finalRank: r.finishRank,
+    finishTime: r.finishTimeMs == null ? null : r.finishTimeMs / 1000,
+  }));
 
   const outcome = makeRaceOutcome({ results, checkpoints });
   return { outcome, hash: hashOutcome(outcome), model: meta.durationModel, results };

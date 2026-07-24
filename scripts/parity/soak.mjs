@@ -21,7 +21,7 @@ import {
   RACER_CONFIGS,
   loadTrack,
   buildIdentity,
-  browserArm,
+  realArm,
   simArm,
 } from './goldenRunner.mjs';
 import { firstDivergence, hashIdentity } from '../../client/src/modules/parity/raceIdentity.js';
@@ -100,13 +100,15 @@ function main() {
     let row;
     try {
       const identity = buildIdentity(c);
-      const a = browserArm(identity);
+      // Step-order alignment: arm A is now the REAL browser core (raceCore), and the sim executes the
+      // SAME stepRacePhysics — so this soak proves realArm == simArm, byte for byte, across the matrix.
+      const a = realArm(identity);
       const b = simArm(identity);
       const equal = a.hash === b.hash;
       row = {
         label,
         identityHash: hashIdentity(identity),
-        browserHash: a.hash,
+        realHash: a.hash,
         simHash: b.hash,
         equal,
         realizedDurationSec: Number(a.model.realizedDurationSec.toFixed(3)),
@@ -121,7 +123,7 @@ function main() {
         row.firstDivergence = d;
         mismatches.push(row);
         console.log(`  MISMATCH  ${label}`);
-        console.log(`            identity ${row.identityHash}  browser ${a.hash}  sim ${b.hash}`);
+        console.log(`            identity ${row.identityHash}  real ${a.hash}  sim ${b.hash}`);
         console.log(
           `            first divergence: ${d ? `${d.kind} @ ${d.at} — ${d.detail}` : 'none located'}`
         );

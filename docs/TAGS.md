@@ -108,6 +108,17 @@ that phase's `*-complete` endpoint when it closes (incremental history then live
   design (ON `0ecca5e2dbe6526e`→`e80f78a0da6a9993`, OFF `6e01e472b7655b9a`→`1cd6c9fdd62542a4`); the
   single full re-baseline waits for the owner's final normal-speed pick
   ([reports/BASELINE-INVALIDATED.md](../reports/BASELINE-INVALIDATED.md)).
+- `pre/step-order-alignment` (`0bd146f`) — master before the sim's single-race stepping was **replaced by
+  the browser's real step** (`raceCore.stepRacePhysics`). Owner decision: the browser is canonical. The
+  sim's Pass 0/1/controller/PulkLeadRotation/Pass 2/computePositions/applyRacerBehavior/finish were deleted
+  and replaced by ONE shared `stepRacePhysics` call — so **D-INIT + D-RUNOUT dissolve by construction**,
+  and **D-NAME** (the `raceBehavior.js` roster-name avoidance tiebreak) + **D-ROWCOUNT** (the sim used
+  `computeRacerLayout.rowCount`; RaceScreen uses its own inline formula — they disagree for small sprites)
+  closed by handing the sim the browser's roster + inline rowCount. `raceCore.js` + the browser untouched.
+  Sim fingerprints move BY DESIGN: ON
+  `eda28d614f5e47d9`→`8b13ccbe96992cc0`, OFF `83eec6cf5c8b0419`→`e07150f936361a73`. Golden `realArm == simArm`
+  (Maverick/Gale/Orbit; Surge 3rd, Blitz 2nd), 60-subset 60/60, full soak = phase-closing proof
+  ([reports/parity/DIVERGENCE-AUDIT.md](../reports/parity/DIVERGENCE-AUDIT.md) §2f-RESOLVED).
 - `pre/race-init-extraction` (`72b8605`) — master before RaceScreen's real init + per-step advance were
   extracted into an importable, DOM-free `client/src/modules/raceCore.js` (`createRaceFromIdentity` +
   `stepRacePhysics`) that RaceScreen renders **through** and the golden harness runs headless (`realArm`).
@@ -189,8 +200,8 @@ by explicit keep-list, never by merge. Earlier, `diag/look-before-brake` was arc
 
 ## Complete tag set (after the retune/cleanup phase close, 2026-07-23)
 
-This is the FULL list of tags that exist on both local and origin — **25 tags, nothing else** (the
-`pre/race-init-extraction` anchor was added 2026-07-24):
+This is the FULL list of tags that exist on both local and origin — **26 tags, nothing else** (the
+`pre/race-init-extraction` and `pre/step-order-alignment` anchors were added 2026-07-24):
 
 - `archive/carousel-sweep-final` *(new — `pre/carousel-sweep` branch history)*
 - `archive/diag-look-before-brake`
@@ -201,6 +212,7 @@ This is the FULL list of tags that exist on both local and origin — **25 tags,
 - `backup/lbb-gate-complete`
 - `race-action-complete`
 - `pre/race-init-extraction` *(active parity phase — collapses later)*
+- `pre/step-order-alignment` *(active parity phase — collapses later)*
 - `stable/pre-governor-04jul` *(permanent anchor — NEVER delete)*
 - `stable/pre-overlap-closed-20jun` *(permanent anchor — NEVER delete)*
 - `v-b2-heroes-complete`

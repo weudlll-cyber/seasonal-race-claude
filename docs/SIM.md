@@ -25,8 +25,21 @@ Beyond fairness, the sim also measures lateral movement quality (zigzag, overlap
 
 ### How it relates to the browser game
 
-The sim imports the identical JavaScript modules the browser uses:
+**ONE loop, shared (step-order alignment, 2026-07-24).** The sim no longer has a per-frame loop of its
+own. `runSingleRace`'s single-race stepping IS the browser's real per-step advance,
+`raceCore.stepRacePhysics` — the exact function `RaceScreen` renders through (extracted, DOM-free, in
+[`client/src/modules/raceCore.js`](../client/src/modules/raceCore.js)). The sim builds the race, then in
+its loop calls `stepRacePhysics(state, cfg)` and runs its observers **around** it (they read state
+between steps; they never steer). So a browser race and a sim race on the same identity + roster are
+**byte-identical by construction** — the standing proof is `realArm == simArm` in
+`client/src/modules/parity/goldenEquality.test.js` and the 600-identity soak (GOLDEN-SOAK.md). This
+closed the last three divergences — **D-INIT** (per-step order), **D-RUNOUT** (finished-racer runout)
+and **D-NAME** (the roster-name avoidance tiebreak; the sim now carries the browser's roster names). See
+[reports/parity/DIVERGENCE-AUDIT.md](../reports/parity/DIVERGENCE-AUDIT.md) §2f.
 
+Both sides import the identical physics modules:
+
+- `raceCore.js` — the shared init + per-step advance (`createRaceFromIdentity` + `stepRacePhysics`)
 - `raceBehavior.js` — soft steering, hard separation, avoidance, speed braking
 - `rowLayout.js` — start position layout and speed bonus
 - `racePlanner.js` — Race Plan zone targeting

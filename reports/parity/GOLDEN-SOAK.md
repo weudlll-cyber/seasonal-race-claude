@@ -368,6 +368,97 @@ deferred.
 
 ---
 
+# Part E — step-order alignment: the sim adopts the browser's step (2026-07-24)
+
+Owner decision on Part D's residual: **the browser is canonical** (it is the product; precedent D-GRID;
+the sim's absolutes are pending re-baseline anyway). So instead of tolerating D-INIT / D-RUNOUT, the sim
+**adopted the browser's step function**.
+
+## What changed
+
+`scripts/sim-fairness.mjs`'s `runSingleRace` had its own single-race loop — Pass 0 (leader progress),
+Pass 1 (re-rolls), the controller-pass, PulkLeadRotation, Pass 2 (`advanceRacerT`), `computePositions`,
+`applyRacerBehavior` and finish detection. **All of it was deleted** and replaced by a single call to
+`raceCore.stepRacePhysics(state, cfg)` — the exact function `RaceScreen` renders through. The config
+bundle is built from the sim's own locals; the observers stay, reading state **between** steps (they
+observe, they never steer — the only racer-field write left in the loop is the `finishTimeMs → finishTime`
+copy). Two sim-only steering hooks that lived inside the loop went with it — the `FRONT_LEASH` 4th-arg
+leash and the `--heroChaosAreaBonus=off` areaBonus suppression (both default-off experiments the browser
+never had); the mean-reverting `--rerollVariant=2` draw is likewise gone (the browser has only variant 1).
+
+Because the step now matched, **two more** divergences surfaced — one at once, one only the full soak
+exposed — and were closed with it:
+
+- **D-NAME** — `applyRacerBehavior`'s avoidance symmetry tiebreak (`raceBehavior.js`, `stablePairBit`)
+  keys on `r.name`. The sim raced an `R{i+1}` roster while the browser races the real one, so the lateral
+  resolution differed. Fixed WITHOUT touching `raceBehavior.js` or the browser: `runSingleRace` gained a
+  `racerNames` param and the golden harness hands **both** arms the browser's roster (`QUICK_TEST_NAMES`),
+  so the physics tiebreak sees the same names it sees in the browser. The combo loop / fingerprint keep
+  the self-consistent `R{i+1}` baseline (a sim-internal anchor, never compared to a browser race).
+- **D-ROWCOUNT** — the subset was 60/60, but the full soak flagged **30 mismatches, all `searound/dolphin`**
+  (an ALT type). RaceScreen **ignores** `computeRacerLayout`'s `rowCount` and computes its own inline
+  `ceil(N / floor(2·effWidth / spriteSize))`; the sim used `computeRacerLayout.rowCount`. They disagree for
+  small sprites (dolphin: 4 vs 3) → a different start-row grid. Fixed WITHOUT touching `raceCore.js` /
+  `raceBehavior.js` / the browser: the sim's combo loop and the golden harness adopt the browser's inline
+  rowCount (with matching even `rowSizes`). The 10 fingerprint combos coincide at N=40, so the fingerprints
+  are unchanged; a `searound/dolphin` case is now pinned in `goldenEquality.test.js`.
+
+`raceCore.js` and the browser are **untouched by construction** — RaceScreen and raceCore behaviour are
+identical; only the sim moved.
+
+## Proof, in order
+
+**(a) Golden test — real arm vs sim, the owner's three seeds** (searound / manta / 40, canonical). Outcome
+hashes **EQUAL**, finishing orders identical, winners as the owner saw them in the browser:
+
+| seed | winner | notable |
+|---|---|---|
+| 1 | **Maverick** | Maverick before Breeze |
+| 7 | **Gale** | **Surge 3rd** |
+| 42 | **Orbit** | **Blitz 2nd** |
+
+`goldenEquality.test.js` now asserts `realArm.hash === simArm.hash`, identical finishing order, and the
+winner index per seed — the guard that keeps the two loops from ever silently diverging again.
+
+**(b) The 60-identity subset** — realArm vs simArm across all 10 tracks, both topologies, plan and no-plan:
+
+| category | n | hashEq | finishOrderEq |
+|---|---|---|---|
+| closed / plan | 18 | 18 | 18 |
+| closed / no-plan | 12 | 12 | 12 |
+| open / plan | 24 | 24 | 24 |
+| open / no-plan | 6 | 6 | 6 |
+| **total** | **60** | **60** | **60** |
+
+**All 60 byte-identical** — every finishing order equal, every 5-second checkpoint equal.
+
+**(c) The full soak — 600 / 600 EQUAL, 0 mismatches** (`scripts/parity/soak.mjs`, now `realArm` vs
+`simArm`; runtime 5260.8 s). Every identity in the matrix — all 10 tracks, both topologies, all three
+model shapes, default + ALT types, 20/40/60 racers, seeds 1/7/42/101/2024, lap variants — produces a
+**byte-identical** outcome hash between the real browser core and the sim: finishing order and every
+5-second checkpoint equal, no tolerance anywhere. Non-vacuous: **600/600 distinct** outcome hashes (every
+identity is its own race), **405** plan-enabled / **195** no-plan. (The first run flagged 30
+`searound/dolphin` mismatches → D-ROWCOUNT above; this is the re-run after that fix.)
+
+**(d) Suites + build.** Responsible suites green (`goldenEquality`, `sim-fairness`, `raceStep`,
+`racePlanner`, `seedDeterminism`); full client suite **3291 tests** green; production build green.
+
+## Sim fingerprints — moved BY DESIGN
+
+The sim's behaviour now equals the browser's, so the fingerprints move (measured once on the final
+committed state, per the binding rule):
+
+| world | old (Part D) | **new (step-order alignment)** |
+|---|---|---|
+| ON (flagless) | `eda28d614f5e47d9` | **`8b13ccbe96992cc0`** |
+| OFF (`--gapRerollEnabled=false`) | `83eec6cf5c8b0419` | **`e07150f936361a73`** |
+
+The browser has no fingerprint and is untouched. After this, the owner reruns the three browser seeds one
+last time — the bar is word-for-word (Maverick / Gale / Orbit, Surge 3rd, Blitz 2nd) — and then the backup
+tag, the normal-speed pick and the single full re-baseline follow.
+
+---
+
 # Autonomous decisions made tonight
 
 The owner was asleep and the planner offline; these were decided without input, with reasons.

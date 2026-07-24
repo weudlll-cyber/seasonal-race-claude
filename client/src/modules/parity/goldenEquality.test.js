@@ -138,53 +138,26 @@ describe('golden equality — browser and sim derive the same race from one iden
   });
 });
 
-// ── The REAL browser arm (client/src/modules/raceCore.js), run headless ──────────────────────────
-// realArm executes the ACTUAL RaceScreen init + per-step advance (extracted so RaceScreen renders
-// through it). Unlike browserArm — which hand-mirrors the derivation and then runs the SIM's loop —
-// realArm runs RaceScreen's OWN per-step order (controller.update BEFORE the re-roll; advance
-// INTERLEAVED per racer; runout decay on finished racers). Two standing properties from the extraction
-// task (see reports/parity/DIVERGENCE-AUDIT.md §2f):
-//   (1) FAITHFULNESS PIN: the extracted path CAN reproduce the sim byte-for-byte — city-circuit /
-//       laps=1 / seed 1 is fully identical — so the extraction is not a systematically broken mirror.
-//       (It is NOT identical for every no-plan identity: D-INIT's interleave and D-RUNOUT perturb the
-//       race whenever an avoidance/finish interaction bites; the residual's independent proof is that
-//       realArm reproduces the owner's real-browser cross-check — Surge/Blitz demoted on seeds 7/42.)
-//   (2) THE RESIDUAL IS REAL, NOT VACUOUS: when a Race Plan runs, the order offset flips the finishing
-//       order, and the divergence is machine-located. This is D-INIT.
-describe('real browser arm (extracted raceCore) — faithfulness pin + the located residual', () => {
-  const NO_PLAN_IDENTICAL = {
-    trackId: 'city-circuit',
-    racerType: 'motorbike',
-    seed: 1,
-    nRacers: 20,
-    shape: 'closed',
-    laps: 1,
-  };
+// ── The REAL browser arm (client/src/modules/raceCore.js) vs the sim — now EQUAL by construction ──
+// realArm runs RaceScreen's OWN init + per-step advance (raceCore). Since the step-order alignment,
+// the SIM's runSingleRace executes that SAME stepRacePhysics, and the golden harness hands both arms
+// the browser's roster names (the avoidance symmetry tiebreak keys on r.name), so realArm and simArm
+// are byte-identical. This closes D-INIT (per-step order), D-RUNOUT (finished-racer runout) and D-NAME
+// (roster-name tiebreak) — see reports/parity/DIVERGENCE-AUDIT.md §2f. The residual the extraction
+// task located is now DISSOLVED, not merely monitored.
+describe('real browser arm (raceCore) == sim — the step-order-alignment parity guard', () => {
+  const order = (res) =>
+    [...res]
+      .sort((x, y) => x.finalRank - y.finalRank)
+      .map((r) => r.racerIndex)
+      .join(',');
 
-  it(
-    'faithfulness pin: a no-plan identity reproduces the sim byte-for-byte',
-    () => {
-      const identity = buildIdentity(NO_PLAN_IDENTICAL);
-      expect(identity.racePlanEnabled).toBe(false); // guards the premise
-      const a = realArm(identity);
-      const b = simArm(identity);
-      expect(a.hash).toBe(b.hash);
-    },
-    RACE_TIMEOUT_MS
-  );
-
-  it(
-    'with a Race Plan, the real browser arm FLIPS the finishing order vs the sim, located (D-INIT)',
-    () => {
-      // searound / manta / 40 — the owner's browser cross-check cases. The sim-predicted winner on
-      // seeds 7 and 42 is demoted in the real path (the exact symptom the owner saw).
-      const order = (res) =>
-        [...res]
-          .sort((x, y) => x.finalRank - y.finalRank)
-          .map((r) => r.racerIndex)
-          .join(',');
-      let anyFlipped = false;
-      for (const seed of [1, 7, 42]) {
+  // searound / manta / 40 — the owner's cross-check cases + their winners (Maverick / Gale / Orbit).
+  const WINNERS = { 1: 27, 7: 39, 42: 21 };
+  for (const seed of [1, 7, 42]) {
+    it(
+      `searound/manta/40/seed=${seed}: real browser arm and sim are byte-identical`,
+      () => {
         const identity = buildIdentity({
           trackId: 'searound',
           racerType: 'manta',
@@ -197,14 +170,64 @@ describe('real browser arm (extracted raceCore) — faithfulness pin + the locat
         const b = simArm(identity);
         if (a.hash !== b.hash) {
           const d = firstDivergence(a.outcome, b.outcome);
-          expect(d).not.toBeNull(); // a divergent hash must be locatable
-          expect(d.kind).toBe('checkpoint');
+          throw new Error(
+            `REAL-ARM MISMATCH seed=${seed}: real ${a.hash} sim ${b.hash} — ` +
+              `${d ? `${d.kind} @ ${d.at} — ${d.detail}` : 'no positional divergence located'}`
+          );
         }
-        if (order(a.results) !== order(b.results)) anyFlipped = true;
+        expect(a.hash).toBe(b.hash);
+        expect(order(a.results)).toBe(order(b.results));
+        // the winner matches the owner's browser cross-check
+        expect(a.results.find((r) => r.finalRank === 1).racerIndex).toBe(WINNERS[seed]);
+      },
+      RACE_TIMEOUT_MS
+    );
+  }
+
+  it(
+    'holds across topologies, the plan gate, and the D-ROWCOUNT small-sprite case',
+    () => {
+      for (const c of [
+        {
+          trackId: 'city-circuit',
+          racerType: 'motorbike',
+          seed: 1,
+          nRacers: 20,
+          shape: 'closed',
+          laps: 1,
+        },
+        { trackId: 'river-run', racerType: 'duck', seed: 7, nRacers: 20, shape: 'open-in-range' },
+        // D-ROWCOUNT guard: dolphin's small sprite makes RaceScreen's inline rowCount (4) disagree with
+        // computeRacerLayout.rowCount (3) on searound — the start grid the sim must share with the browser.
+        { trackId: 'searound', racerType: 'dolphin', seed: 42, nRacers: 40, shape: 'closed' },
+      ]) {
+        const identity = buildIdentity(c);
+        const a = realArm(identity);
+        const b = simArm(identity);
+        expect(a.hash).toBe(b.hash);
       }
-      // The residual must actually FLIP a finishing order on at least one cross-check seed — otherwise
-      // this guard would pass vacuously and the extraction would have silently become another mirror.
-      expect(anyFlipped).toBe(true);
+    },
+    RACE_TIMEOUT_MS
+  );
+
+  it(
+    'is not vacuous: a perturbed identity produces a DIFFERENT real-arm hash',
+    () => {
+      const base = buildIdentity({
+        trackId: 'searound',
+        racerType: 'manta',
+        seed: 7,
+        nRacers: 40,
+        shape: 'closed',
+      });
+      const other = buildIdentity({
+        trackId: 'searound',
+        racerType: 'manta',
+        seed: 8,
+        nRacers: 40,
+        shape: 'closed',
+      });
+      expect(realArm(base).hash).not.toBe(realArm(other).hash);
     },
     RACE_TIMEOUT_MS
   );
