@@ -1,0 +1,13 @@
+arm,normalSpeed,track,bandReach,startRowUnfair,startRowMinPHolm,durSec,paceScale,slowdown
+v180,180,luger-hill,0.664,true,0.04,49,1,false
+v180,180,mountainstreet,0.709,false,0.18,60,1,false
+v180,180,searound,0.709,true,0.02,51.991,1,false
+v180,180,dirt-oval,0.736,false,0.06,72.683,1,false
+v225,225,luger-hill,0.655,true,0.02,39,1,false
+v225,225,mountainstreet,0.693,true,0.04,60,1,false
+v225,225,searound,0.694,true,0.02,41.593,1,false
+v225,225,dirt-oval,0.717,false,0.1,58.147,1,false
+v270,270,luger-hill,0.652,true,0.04,33,1,false
+v270,270,mountainstreet,0.686,false,1,55,1,false
+v270,270,searound,0.695,true,0.02,34.661,1,false
+v270,270,dirt-oval,0.7,false,0.06,48.456,1,false

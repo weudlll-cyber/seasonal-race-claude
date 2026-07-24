@@ -1,0 +1,4 @@
+arm,normalSpeed,nRaces,bandReachPooled,holmFlaggedTracks,deadRate,frontGroupAtLine,finaleLead,finaleDistinct,runawayRate,paradeRate,duoRate,escapeDepthMed,escapeDepthP90,escapeDepthMax,durMean,slowdownTracks
+v180,180,200,0.701,2,0.135,3.315,1.795,2.785,0.11,0.025,0.025,2.498,5.05,10.133,58.419,0
+v225,225,200,0.686,3,0.25,2.76,1.485,2.48,0.25,0.02,0.045,2.852,6.385,12.851,49.685,0
+v270,270,200,0.68,2,0.175,2.48,1.62,2.605,0.29,0.02,0.035,3.57,8.292,21.745,42.779,0

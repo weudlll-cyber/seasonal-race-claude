@@ -1,0 +1,287 @@
+{
+  "arms": [
+    {
+      "label": "v180",
+      "normalSpeed": 180
+    },
+    {
+      "label": "v225",
+      "normalSpeed": 225
+    },
+    {
+      "label": "v270",
+      "normalSpeed": 270
+    }
+  ],
+  "tracks": [
+    "luger-hill",
+    "mountainstreet",
+    "searound",
+    "dirt-oval"
+  ],
+  "races": 50,
+  "seed": 1,
+  "racersClosed": 40,
+  "racersOpen": 60,
+  "wallClockSec": 1307.372,
+  "pooled": [
+    {
+      "arm": "v180",
+      "normalSpeed": 180,
+      "nRaces": 200,
+      "bandReachPooled": 0.7009,
+      "holmFlaggedTracks": 2,
+      "holmTracksTotal": 4,
+      "deadRate": 0.135,
+      "frontGroupAtLine": 3.315,
+      "finaleLead": 1.795,
+      "finaleDistinct": 2.785,
+      "runawayRate": 0.11,
+      "paradeRate": 0.025,
+      "duoRate": 0.025,
+      "escapeDepthMed": 2.4975,
+      "escapeDepthP90": 5.0496,
+      "escapeDepthMax": 10.1329,
+      "ep": {
+        "nEpisodes": 947,
+        "correctedRate": 0.17529039070749736,
+        "uncorrectedRate": 0.8247096092925026,
+        "outOfRollsRate": 0.1351636747624076,
+        "uncorrectedOtherRate": 0.689545934530095,
+        "outOfRollsShareOfUncorrected": 0.16389244558258642,
+        "unresolvedRate": 0.1583949313621964,
+        "durationMsMed": 4160,
+        "durationMsP90": 13584,
+        "peakGapMed": 1.3578,
+        "peakGapP90": 3.5703,
+        "startPMed": 0.5572,
+        "startedAfterWindowEndRate": 0.06335797254487856,
+        "correctedStartPMed": 0.6862,
+        "uncorrectedStartPMed": 0.4906
+      },
+      "durMean": 58.41867876090643,
+      "slowdownTracks": 0,
+      "_rawCounts": {
+        "dead": 27,
+        "runaway": 22,
+        "parade": 5,
+        "duo": 5
+      }
+    },
+    {
+      "arm": "v225",
+      "normalSpeed": 225,
+      "nRaces": 200,
+      "bandReachPooled": 0.6865,
+      "holmFlaggedTracks": 3,
+      "holmTracksTotal": 4,
+      "deadRate": 0.25,
+      "frontGroupAtLine": 2.76,
+      "finaleLead": 1.485,
+      "finaleDistinct": 2.48,
+      "runawayRate": 0.25,
+      "paradeRate": 0.02,
+      "duoRate": 0.045,
+      "escapeDepthMed": 2.8523,
+      "escapeDepthP90": 6.3851,
+      "escapeDepthMax": 12.8507,
+      "ep": {
+        "nEpisodes": 995,
+        "correctedRate": 0.12763819095477386,
+        "uncorrectedRate": 0.8723618090452261,
+        "outOfRollsRate": 0.1708542713567839,
+        "uncorrectedOtherRate": 0.7015075376884422,
+        "outOfRollsShareOfUncorrected": 0.195852534562212,
+        "unresolvedRate": 0.16381909547738693,
+        "durationMsMed": 3360,
+        "durationMsP90": 12944,
+        "peakGapMed": 1.3319,
+        "peakGapP90": 4.1168,
+        "startPMed": 0.5415,
+        "startedAfterWindowEndRate": 0.04321608040201005,
+        "correctedStartPMed": 0.667,
+        "uncorrectedStartPMed": 0.4991
+      },
+      "durMean": 49.68494300872514,
+      "slowdownTracks": 0,
+      "_rawCounts": {
+        "dead": 50,
+        "runaway": 50,
+        "parade": 4,
+        "duo": 9
+      }
+    },
+    {
+      "arm": "v270",
+      "normalSpeed": 270,
+      "nRaces": 200,
+      "bandReachPooled": 0.6805,
+      "holmFlaggedTracks": 2,
+      "holmTracksTotal": 4,
+      "deadRate": 0.175,
+      "frontGroupAtLine": 2.48,
+      "finaleLead": 1.62,
+      "finaleDistinct": 2.605,
+      "runawayRate": 0.29,
+      "paradeRate": 0.02,
+      "duoRate": 0.035,
+      "escapeDepthMed": 3.5703,
+      "escapeDepthP90": 8.2924,
+      "escapeDepthMax": 21.7448,
+      "ep": {
+        "nEpisodes": 1028,
+        "correctedRate": 0.12354085603112841,
+        "uncorrectedRate": 0.8764591439688716,
+        "outOfRollsRate": 0.20233463035019456,
+        "uncorrectedOtherRate": 0.6741245136186771,
+        "outOfRollsShareOfUncorrected": 0.23085460599334073,
+        "unresolvedRate": 0.16439688715953307,
+        "durationMsMed": 2896,
+        "durationMsP90": 11408,
+        "peakGapMed": 1.3851,
+        "peakGapP90": 4.4878,
+        "startPMed": 0.5184,
+        "startedAfterWindowEndRate": 0.04961089494163424,
+        "correctedStartPMed": 0.6551,
+        "uncorrectedStartPMed": 0.478
+      },
+      "durMean": 42.779119173937616,
+      "slowdownTracks": 0,
+      "_rawCounts": {
+        "dead": 35,
+        "runaway": 58,
+        "parade": 4,
+        "duo": 7
+      }
+    }
+  ],
+  "verdicts": {
+    "v180": {
+      "safe": true,
+      "notes": []
+    },
+    "v225": {
+      "safe": false,
+      "notes": [
+        "band-reach 68.7% < 70%",
+        "3/4 Holm-unfair tracks"
+      ]
+    },
+    "v270": {
+      "safe": false,
+      "notes": [
+        "band-reach 68.0% < 70%"
+      ]
+    }
+  },
+  "perTrack": [
+    {
+      "arm": "v180",
+      "track": "luger-hill",
+      "bandReach": 0.664,
+      "startRowUnfair": true,
+      "durSec": 49,
+      "paceScale": 1,
+      "slowdown": false
+    },
+    {
+      "arm": "v180",
+      "track": "mountainstreet",
+      "bandReach": 0.7093333333333334,
+      "startRowUnfair": false,
+      "durSec": 60,
+      "paceScale": 1,
+      "slowdown": false
+    },
+    {
+      "arm": "v180",
+      "track": "searound",
+      "bandReach": 0.7085,
+      "startRowUnfair": true,
+      "durSec": 51.991429476974,
+      "paceScale": 1,
+      "slowdown": false
+    },
+    {
+      "arm": "v180",
+      "track": "dirt-oval",
+      "bandReach": 0.736,
+      "startRowUnfair": false,
+      "durSec": 72.68328556665173,
+      "paceScale": 1,
+      "slowdown": false
+    },
+    {
+      "arm": "v225",
+      "track": "luger-hill",
+      "bandReach": 0.6553333333333333,
+      "startRowUnfair": true,
+      "durSec": 39,
+      "paceScale": 1,
+      "slowdown": false
+    },
+    {
+      "arm": "v225",
+      "track": "mountainstreet",
+      "bandReach": 0.6926666666666667,
+      "startRowUnfair": true,
+      "durSec": 60,
+      "paceScale": 1,
+      "slowdown": false
+    },
+    {
+      "arm": "v225",
+      "track": "searound",
+      "bandReach": 0.694,
+      "startRowUnfair": true,
+      "durSec": 41.5931435815792,
+      "paceScale": 1,
+      "slowdown": false
+    },
+    {
+      "arm": "v225",
+      "track": "dirt-oval",
+      "bandReach": 0.7165,
+      "startRowUnfair": false,
+      "durSec": 58.146628453321384,
+      "paceScale": 1,
+      "slowdown": false
+    },
+    {
+      "arm": "v270",
+      "track": "luger-hill",
+      "bandReach": 0.6523333333333333,
+      "startRowUnfair": true,
+      "durSec": 33,
+      "paceScale": 1,
+      "slowdown": false
+    },
+    {
+      "arm": "v270",
+      "track": "mountainstreet",
+      "bandReach": 0.686,
+      "startRowUnfair": false,
+      "durSec": 55,
+      "paceScale": 1,
+      "slowdown": false
+    },
+    {
+      "arm": "v270",
+      "track": "searound",
+      "bandReach": 0.695,
+      "startRowUnfair": true,
+      "durSec": 34.660952984649334,
+      "paceScale": 1,
+      "slowdown": false
+    },
+    {
+      "arm": "v270",
+      "track": "dirt-oval",
+      "bandReach": 0.7,
+      "startRowUnfair": false,
+      "durSec": 48.45552371110115,
+      "paceScale": 1,
+      "slowdown": false
+    }
+  ]
+}
