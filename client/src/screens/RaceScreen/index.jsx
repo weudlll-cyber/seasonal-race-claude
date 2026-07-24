@@ -1234,41 +1234,51 @@ export default function RaceScreen() {
         drawFinishedOverlay(ctx);
       }
 
-      // ── Race Plan status badge (top-right, dev/sightcheck aid) ──────────────
-      if (racePlanController && st.phase !== PHASE.COUNTDOWN) {
+      // ── Top-right HUD info pills (race-plan/seed + config-fingerprint) ──────────────
+      // Each row is a pill that HUGS its text: the label sits INSIDE the block, left-aligned and
+      // vertically centered, with the block right-anchored so the two rows line up. The explicit
+      // textAlign/textBaseline are REQUIRED — earlier render helpers (racer name tags, overlays)
+      // leave the shared context at textAlign='center'/'right', which previously pushed these labels
+      // out to the LEFT of their bars. One helper draws both rows so they can never drift apart.
+      const HUD_PILL_RIGHT = CANVAS_W - 8;
+      const drawHudPill = (label, y, h, bg, fg, fontPx) => {
         ctx.save();
-        ctx.fillStyle = 'rgba(0,0,0,0.65)';
-        ctx.fillRect(CANVAS_W - 172, 8, 164, 22);
-        ctx.font = '11px monospace';
-        ctx.fillStyle = '#4fc3f7';
-        // Truthful label: with a seed > 0 the number is the seed of the plan AND the dynamics (the
-        // race replays exactly); at 0 nothing is seeded, so showing a number would be misleading.
-        ctx.fillText(
-          racePlanSeed > 0 ? `Race Plan: ON  seed:${racePlanSeed}` : 'Race Plan: ON  unseeded',
-          CANVAS_W - 168,
-          24
-        );
+        ctx.font = `${fontPx}px monospace`;
+        ctx.textAlign = 'left';
+        ctx.textBaseline = 'middle';
+        const pad = 8;
+        const w = Math.ceil(ctx.measureText(label).width) + pad * 2;
+        const x = HUD_PILL_RIGHT - w;
+        ctx.fillStyle = bg;
+        ctx.fillRect(x, y, w, h);
+        ctx.fillStyle = fg;
+        ctx.fillText(label, x + pad, y + h / 2 + 0.5);
         ctx.restore();
+      };
+
+      // Row 1 — Race Plan status (dev/sightcheck aid). Truthful label: with a seed > 0 the number is
+      // the seed of the plan AND the dynamics (the race replays exactly); at 0 nothing is seeded.
+      if (racePlanController && st.phase !== PHASE.COUNTDOWN) {
+        const label =
+          racePlanSeed > 0 ? `Race Plan: ON  seed:${racePlanSeed}` : 'Race Plan: ON  unseeded';
+        drawHudPill(label, 8, 22, 'rgba(0,0,0,0.65)', '#4fc3f7', 11);
       }
 
-      // ── Config-fingerprint badge (below the seed badge) — fix-plan step 4 ────
-      // Quiet grey when the race is on shipped defaults (comparable to a default-config sim run);
-      // prominent red when N config keys are off default (a cross-check is NOT apples-to-apples).
+      // Row 2 — config-fingerprint badge (fix-plan step 4). Quiet grey when the race is on shipped
+      // defaults (comparable to a default-config sim run); prominent red when N config keys are off.
       if (st.phase !== PHASE.COUNTDOWN) {
         const off = cfgBadge.diffCount > 0;
-        ctx.save();
-        ctx.fillStyle = off ? 'rgba(120,20,20,0.78)' : 'rgba(0,0,0,0.5)';
-        ctx.fillRect(CANVAS_W - 172, 32, 164, 20);
-        ctx.font = '10px monospace';
-        ctx.fillStyle = off ? '#ff8a80' : '#9e9e9e';
-        ctx.fillText(
-          off
-            ? `cfg ${cfgBadge.hashShort}  ${cfgBadge.diffCount} off default`
-            : `cfg ${cfgBadge.hashShort}  defaults`,
-          CANVAS_W - 168,
-          46
+        const label = off
+          ? `cfg ${cfgBadge.hashShort} · ${cfgBadge.diffCount} off default`
+          : `cfg ${cfgBadge.hashShort} · defaults`;
+        drawHudPill(
+          label,
+          34,
+          20,
+          off ? 'rgba(120,20,20,0.82)' : 'rgba(0,0,0,0.5)',
+          off ? '#ff8a80' : '#9e9e9e',
+          10
         );
-        ctx.restore();
       }
 
       // ── PiP minimap (RACING and FINISHED only) ──
