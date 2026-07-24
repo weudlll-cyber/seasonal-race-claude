@@ -17,13 +17,33 @@ import { loadFrameTimingConfig } from './frameTimingConfig.js';
 import { loadCameraConfig } from './cameraConfig.js';
 import { RACER_TYPE_IDS, getRacerType } from './racer-types/index.js';
 import { storageGet, KEYS } from './storage/storage.js';
-import { DEFAULT_RACE_DYNAMICS_CONFIG, DEFAULT_RACE_BEHAVIOR_CONFIG } from './storage/defaults.js';
+import {
+  DEFAULT_RACE_DYNAMICS_CONFIG,
+  DEFAULT_RACE_BEHAVIOR_CONFIG,
+  DEFAULT_ROW_LAYOUT_CONFIG,
+  DEFAULT_BASE_SPEED_CONFIG,
+  DEFAULT_FRAME_TIMING_CONFIG,
+  DEFAULT_CAMERA_CONFIG,
+} from './storage/defaults.js';
+import { DEFAULT_AUTO_SCALE_CONFIG } from './autoSpriteScale.js';
 import {
   WORLD_SCHEMA_VERSION,
   hashWorld,
   unsimulatableReasons,
   canonicalJson,
 } from './raceConfigWorld.js';
+import { countConfigDiffs } from './parity/configFingerprint.js';
+
+// The shipped-default value of every race-path config block — the reference the HUD badge diffs against.
+const DEFAULT_CONFIG_WORLD = {
+  raceDynamicsConfig: DEFAULT_RACE_DYNAMICS_CONFIG,
+  raceBehaviorConfig: DEFAULT_RACE_BEHAVIOR_CONFIG,
+  rowLayoutConfig: DEFAULT_ROW_LAYOUT_CONFIG,
+  baseSpeedConfig: DEFAULT_BASE_SPEED_CONFIG,
+  autoScaleConfig: DEFAULT_AUTO_SCALE_CONFIG,
+  frameTimingConfig: DEFAULT_FRAME_TIMING_CONFIG,
+  cameraConfig: DEFAULT_CAMERA_CONFIG,
+};
 
 // The racer-type config fields that affect the SIM (speed + avoidance geometry). getRacerType(id).config
 // already reflects any stored per-type overrides (racer-types/index.js:292 applies them at boot).
@@ -89,6 +109,15 @@ export function describeDeviations(world = buildWorldConfig()) {
   cmp(c.raceDynamicsConfig, DEFAULT_RACE_DYNAMICS_CONFIG, 'raceDynamicsConfig');
   cmp(c.raceBehaviorConfig, DEFAULT_RACE_BEHAVIOR_CONFIG, 'raceBehaviorConfig');
   return dev;
+}
+
+// The in-race HUD config-fingerprint badge (fix-plan step 4): the short world hash + the EXACT count of
+// config leaf keys that differ from the shipped defaults. 0 → the race is on defaults (comparable to a
+// default-config sim run); >0 → the eye-tester must know N knobs are off before trusting a cross-check.
+// The count logic is the shared, pinned countConfigDiffs; the visual gets the owner's eye later.
+export function configFingerprintBadge(world = buildWorldConfig()) {
+  const { count, keys } = countConfigDiffs(world.configs, DEFAULT_CONFIG_WORLD);
+  return { hashShort: hashWorld(world).short, diffCount: count, diffKeys: keys };
 }
 
 // The full DevScreen status for the export panel: hash, deviations, and whether the sim can run it.

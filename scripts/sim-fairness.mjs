@@ -66,6 +66,7 @@ import {
   computeRacerLayout,
   computeRowPhysicalY,
   computeSpeedBonus,
+  computeStartRowCount,
 } from '../client/src/modules/rowLayout.js';
 import { REFERENCE_FPS } from '../client/src/modules/camera/lapUtils.js';
 import { computeRaceBaseSpeed } from '../client/src/modules/raceBaseSpeed.js';
@@ -187,7 +188,10 @@ const DEFAULT_BASE_SPEED_CONFIG    = mergeCfg('baseSpeedConfig',    _DEFAULT_BAS
 const DEFAULT_AUTO_SCALE_CONFIG    = mergeCfg('autoScaleConfig',    _DEFAULT_AUTO_SCALE_CONFIG);
 const WORLD_STAMP = worldStamp(WORLD); // { schemaVersion, worldHash: <short>|'ASSUMED-DEFAULTS', provisional }
 
-const N_RACES        = Number(argVal('races', '50'));
+// --replay-seed=S: the documented alias for `--seed=S --races=1` — run exactly the one race a browser
+// Quick-Test on seed S runs (fix-plan step 3 / D-SEED). Overrides --seed and --races when present.
+const REPLAY_SEED    = argVal('replay-seed', null);
+const N_RACES        = REPLAY_SEED != null ? 1 : Number(argVal('races', '50'));
 const N_RACERS       = Number(argVal('racers', '40'));
 // --openRacers / --closedRacers: per-topology racer count (Phase-1 matrix).
 // Fall back to N_RACERS when not specified so existing --racers= still works.
@@ -229,7 +233,7 @@ const USE_TRACK_DEFAULTS = argv.includes('--track-defaults');
 // (DEFAULT_RACE_DYNAMICS_CONFIG), not hand-mirrored here — so a change to the shared default
 // propagates automatically and these defaults can never silently drift from the browser.
 // The argVal(name, default) override is preserved, so --bonusMult / --corridorEnd etc. still work.
-const GLOBAL_SEED             = Number(argVal('seed', '0'));
+const GLOBAL_SEED             = REPLAY_SEED != null ? Number(REPLAY_SEED) : Number(argVal('seed', '0'));
 const RACE_PLAN_ACTIVE        = argVal('race-plan', 'true') !== 'false';
 const BONUS_MULT              = Number(argVal('bonusMult',          String(DEFAULT_RACE_DYNAMICS_CONFIG.racePlanBonusStrengthMultiplier)));
 const RP_BONUS_TRANSITION_END = Number(argVal('bonusTransitionEnd', String(DEFAULT_RACE_DYNAMICS_CONFIG.racePlanBonusTransitionEnd)));
@@ -3059,7 +3063,7 @@ if (isMain) {
         const comboEffDisplaySize  = comboLayout.spriteSize;
         const comboAutoScale       = comboEffDisplaySize / displaySize;
         const rowGapPx             = comboEffDisplaySize * DEFAULT_ROW_LAYOUT_CONFIG.rowGapMultiplier;
-        const totalRows            = Math.max(1, Math.ceil(nRacersForCombo / Math.max(1, Math.floor((2 * effectiveWidth) / Math.max(1, comboEffDisplaySize)))));
+        const totalRows            = computeStartRowCount(effectiveWidth, nRacersForCombo, comboEffDisplaySize);
         const _bigRPR              = Math.ceil(nRacersForCombo / totalRows);
         const _smallRPR            = Math.floor(nRacersForCombo / totalRows);
         const _bigCount            = nRacersForCombo - _smallRPR * totalRows;

@@ -9,25 +9,30 @@
 //              not reachable from Quick-Test.
 // ============================================================
 
-// The field's accepted range. Kept small enough that a seed shown in the HUD is easy to
-// read off the screen and type back in — that round-trip IS the replay workflow.
+// The minimum typed/drawn seed (0 = the unseeded legacy path, deliberately unreachable from Quick-Test).
 export const QUICK_TEST_SEED_MIN = 1;
+// The AUTO-DRAW ceiling only: a randomly-drawn seed stays small enough to read off the HUD and type
+// back in. TYPED seeds are NOT capped by this — a sim replay seed like `(G−1)·N + i + 1` can exceed it,
+// and must be typable for the replay round-trip (fix-plan step 3 / D-SEED).
 export const QUICK_TEST_SEED_MAX = 9999;
+// The upper bound a TYPED seed is clamped to — kept at MAX_SAFE_INTEGER so the value survives as an
+// exact integer for mulberry32 (any larger and Number() would round it).
+export const QUICK_TEST_SEED_TYPED_MAX = Number.MAX_SAFE_INTEGER;
 
 /**
  * Normalize what the user typed into the seed field.
- * Returns '' for an empty field (= "random"), otherwise a clamped integer string.
- * 0 is clamped up to QUICK_TEST_SEED_MIN: the unseeded legacy path is deliberately
- * unreachable from Quick-Test, so there is no way to type your way back into it.
+ * Returns '' for an empty field (= "random"), otherwise a positive integer string. Typed seeds accept
+ * ANY positive integer (clamped only to [MIN, MAX_SAFE_INTEGER]) so a sim seed is typable for replay;
+ * 0 is clamped up to QUICK_TEST_SEED_MIN so the unseeded legacy path stays unreachable.
  *
  * @param {string|number} raw the raw input value
- * @returns {string} '' or a decimal integer string within [MIN, MAX]
+ * @returns {string} '' or a decimal integer string in [MIN, MAX_SAFE_INTEGER]
  */
 export function sanitizeQuickTestSeedInput(raw) {
   const digits = String(raw ?? '').replace(/[^0-9]/g, '');
   if (digits === '') return '';
-  const n = Number(digits);
-  return String(Math.max(QUICK_TEST_SEED_MIN, Math.min(QUICK_TEST_SEED_MAX, n)));
+  const n = Math.min(QUICK_TEST_SEED_TYPED_MAX, Math.max(QUICK_TEST_SEED_MIN, Number(digits)));
+  return String(n);
 }
 
 /**

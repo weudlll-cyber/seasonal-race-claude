@@ -61,6 +61,7 @@ import {
   getEffectiveMaxTargetScreenPx,
 } from '../../modules/autoSpriteScale.js';
 import { loadCameraConfig } from '../../modules/cameraConfig.js';
+import { configFingerprintBadge } from '../../modules/exportRaceConfig.js';
 import CameraStateHUD from './CameraStateHUD.jsx';
 import CameraDiagnosticsHUD from './CameraDiagnosticsHUD.jsx';
 import RacePlanHUD from './RacePlanHUD.jsx';
@@ -405,6 +406,10 @@ export default function RaceScreen() {
     const rowConfig = loadRowLayoutConfig();
     const dynamicsConfig = loadRaceDynamicsConfig();
     const frameTimingConfig = loadFrameTimingConfig();
+
+    // Config-fingerprint badge (fix-plan step 4): short world hash + how many config keys are off the
+    // shipped defaults. Race-constant, computed once here; drawn under the seed badge in the loop below.
+    const cfgBadge = configFingerprintBadge();
 
     // Auto-sprite-scale: compute displaySizeScale unless D3.5.5 override exists
     const autoScaleConfig = loadAutoScaleConfig();
@@ -1242,6 +1247,26 @@ export default function RaceScreen() {
           racePlanSeed > 0 ? `Race Plan: ON  seed:${racePlanSeed}` : 'Race Plan: ON  unseeded',
           CANVAS_W - 168,
           24
+        );
+        ctx.restore();
+      }
+
+      // ── Config-fingerprint badge (below the seed badge) — fix-plan step 4 ────
+      // Quiet grey when the race is on shipped defaults (comparable to a default-config sim run);
+      // prominent red when N config keys are off default (a cross-check is NOT apples-to-apples).
+      if (st.phase !== PHASE.COUNTDOWN) {
+        const off = cfgBadge.diffCount > 0;
+        ctx.save();
+        ctx.fillStyle = off ? 'rgba(120,20,20,0.78)' : 'rgba(0,0,0,0.5)';
+        ctx.fillRect(CANVAS_W - 172, 32, 164, 20);
+        ctx.font = '10px monospace';
+        ctx.fillStyle = off ? '#ff8a80' : '#9e9e9e';
+        ctx.fillText(
+          off
+            ? `cfg ${cfgBadge.hashShort}  ${cfgBadge.diffCount} off default`
+            : `cfg ${cfgBadge.hashShort}  defaults`,
+          CANVAS_W - 168,
+          46
         );
         ctx.restore();
       }

@@ -30,7 +30,12 @@
 // ============================================================
 
 import { deriveRaceDuration } from './durationModel.js';
-import { computeEvenRowLayout, computeRowPhysicalY, computeSpeedBonus } from './rowLayout.js';
+import {
+  computeEvenRowLayout,
+  computeRowPhysicalY,
+  computeSpeedBonus,
+  computeStartRowCount,
+} from './rowLayout.js';
 import { computeEffectiveBrakeFactor } from './raceBehaviorConfig.js';
 import { initRacerBehavior, applyRacerBehavior } from './raceBehavior.js';
 import { computeRowEnvMult, computeRowEnvSmoothed, advanceRacerT } from './raceStep.js';
@@ -109,12 +114,8 @@ export function createRaceFromIdentity(p) {
 
   const rowGapPx = physicalSpriteSize * rowConfig.rowGapMultiplier;
   const deltaT_per_row = pathLengthPx > 0 ? rowGapPx / pathLengthPx : 0.01;
-  const rowCount = Math.max(
-    1,
-    Math.ceil(
-      nRacers / Math.max(1, Math.floor((2 * effectiveWidth) / Math.max(1, physicalSpriteSize)))
-    )
-  );
+  // D-ROWCOUNT: the ONE shared start-row count (rowLayout.js) — no longer an inline formula here.
+  const rowCount = computeStartRowCount(effectiveWidth, nRacers, physicalSpriteSize);
   const rowLayout = computeEvenRowLayout(nRacers, rowCount, raceRng);
 
   // Re-Roll schedule keyed on the ONE canonical clock (realizedDurationSec).

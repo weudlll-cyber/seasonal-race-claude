@@ -170,6 +170,26 @@ export function computeRacerLayout(effectiveWidth, nRacers, displaySize, config)
 }
 
 /**
+ * THE start-row count for a race — the SINGLE SOURCE the browser and the sim both consume (D-ROWCOUNT).
+ *
+ * RaceScreen historically computed this INLINE and IGNORED computeRacerLayout()'s own rowCount; the two
+ * disagree for small sprites (e.g. dolphin: 4 vs 3), which silently gave the browser and the sim different
+ * start grids. This is that inline formula, extracted so there is one definition — the minimum number of
+ * rows such that each row holds at most floor(2·effectiveWidth / spriteSize) racers.
+ *
+ * @param {number} effectiveWidth  track width × startSpreadRange (world px)
+ * @param {number} nRacers
+ * @param {number} spriteSize      the auto-scaled physical sprite size (computeRacerLayout().spriteSize)
+ * @returns {number} row count (≥ 1)
+ */
+export function computeStartRowCount(effectiveWidth, nRacers, spriteSize) {
+  return Math.max(
+    1,
+    Math.ceil(nRacers / Math.max(1, Math.floor((2 * effectiveWidth) / Math.max(1, spriteSize))))
+  );
+}
+
+/**
  * Compute multi-row layout with even distribution across rows.
  * Racer indices are shuffled so grid position is random (not rank-ordered).
  * The first ceil(nRacers/rowCount) racers per row go to the "big" rows; the rest

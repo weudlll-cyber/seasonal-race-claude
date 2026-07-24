@@ -47,6 +47,7 @@ import {
   computeEvenRowLayout,
   computeRacerLayout,
   computeBodyNarrowRef,
+  computeStartRowCount,
 } from '../../client/src/modules/rowLayout.js';
 import { loadRowLayoutConfig } from '../../client/src/modules/rowLayoutConfig.js';
 import { createRaceFromIdentity, stepRacePhysics } from '../../client/src/modules/raceCore.js';
@@ -287,19 +288,15 @@ function simPlanConfig(DYN) {
 function execute({ ctx, cfg, identity, model, planConfig, behaviorConfig, laps, requestedSeconds }) {
   const { seed, nRacers } = identity;
   const effectiveWidth = ctx.geometricTrackWidth * behaviorConfig.startSpreadRange;
-  // D-ROWCOUNT: RaceScreen ignores computeRacerLayout's rowCount and computes its OWN inline formula from
-  // the auto-scaled sprite size. The two disagree for small sprites (e.g. dolphin: 4 vs 3), so the arms
-  // must use the browser's inline formula to share the start-row grid — exactly as createRaceFromIdentity.
+  // D-ROWCOUNT: use the ONE shared start-row count (rowLayout.js) — the browser's formula, which disagrees
+  // with computeRacerLayout.rowCount for small sprites (dolphin: 4 vs 3). createRaceFromIdentity uses it too.
   const physicalSpriteSize = computeRacerLayout(
     effectiveWidth,
     nRacers,
     cfg.displaySize,
     DEFAULT_AUTO_SCALE_CONFIG
   ).spriteSize;
-  const totalRows = Math.max(
-    1,
-    Math.ceil(nRacers / Math.max(1, Math.floor((2 * effectiveWidth) / Math.max(1, physicalSpriteSize))))
-  );
+  const totalRows = computeStartRowCount(effectiveWidth, nRacers, physicalSpriteSize);
 
   const raceRng = makeRaceRng(seed).physics;
   const rowLayout = computeEvenRowLayout(nRacers, totalRows, raceRng);

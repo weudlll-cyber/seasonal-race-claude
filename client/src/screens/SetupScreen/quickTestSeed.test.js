@@ -37,8 +37,18 @@ describe('seed field input sanitizing', () => {
     expect(sanitizeQuickTestSeedInput('-7')).toBe('7');
   });
 
-  it('clamps to the field range', () => {
-    expect(sanitizeQuickTestSeedInput('99999')).toBe(String(QUICK_TEST_SEED_MAX));
+  it('accepts ANY positive integer above the auto-draw ceiling (sim replay seeds are typable)', () => {
+    // A sim seed like (G−1)·N + i + 1 can exceed the 9999 auto-draw ceiling; it must round-trip.
+    expect(sanitizeQuickTestSeedInput('99999')).toBe('99999');
+    expect(sanitizeQuickTestSeedInput(String(QUICK_TEST_SEED_MAX + 1))).toBe(
+      String(QUICK_TEST_SEED_MAX + 1)
+    );
+    expect(sanitizeQuickTestSeedInput('120001')).toBe('120001'); // e.g. sim --seed=3 N=40000
+  });
+
+  it('clamps a typed seed to MAX_SAFE_INTEGER so it stays an exact integer', () => {
+    const huge = String(Number.MAX_SAFE_INTEGER) + '0'; // one digit too many
+    expect(sanitizeQuickTestSeedInput(huge)).toBe(String(Number.MAX_SAFE_INTEGER));
   });
 
   it('makes seed 0 — the legacy unseeded path — unreachable', () => {

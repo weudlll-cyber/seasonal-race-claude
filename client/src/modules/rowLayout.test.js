@@ -16,6 +16,7 @@ import {
   computeEvenRowLayout,
   computeRacerLayout,
   computeBodyNarrowRef,
+  computeStartRowCount,
 } from './rowLayout.js';
 import { BODY_LONG_AXIS_MAX_RATIO } from './racer-types/SpriteRacerType.js';
 
@@ -825,5 +826,40 @@ describe('Overlap guard — visible body ≤ physical avoidance slot', () => {
     expect(bodyNarrow).toBeCloseTo(19.0, 1);
     expect(physSlot).toBeCloseTo(23.75, 1);
     expect(bodyNarrow).toBeLessThan(physSlot); // visible body fits within physical slot
+  });
+});
+
+// ── computeStartRowCount — the single-source start-row count (D-ROWCOUNT) ─────────────────────────
+describe('computeStartRowCount — the browser/sim single-source row count', () => {
+  it('is the inline formula: ceil(N / floor(2·effWidth / spriteSize)), floored at 1', () => {
+    // floor(2·100/25)=8 slots/row → ceil(20/8)=3, ceil(40/8)=5
+    expect(computeStartRowCount(100, 20, 25)).toBe(3);
+    expect(computeStartRowCount(100, 40, 25)).toBe(5);
+    // floor(2·100/50)=4 slots/row → ceil(20/4)=5
+    expect(computeStartRowCount(100, 20, 50)).toBe(5);
+  });
+
+  it('a larger sprite yields at least as many rows (fewer fit per row)', () => {
+    for (const [effW, n] of [
+      [120, 40],
+      [120, 60],
+      [200, 50],
+    ]) {
+      expect(computeStartRowCount(effW, n, 50)).toBeGreaterThanOrEqual(
+        computeStartRowCount(effW, n, 35)
+      );
+    }
+  });
+
+  it('never returns less than 1 (sprite wider than the track → one racer per row)', () => {
+    expect(computeStartRowCount(10, 40, 100)).toBe(40); // 0 slots/row → clamp to 1 slot → N rows
+    expect(computeStartRowCount(100, 1, 25)).toBe(1);
+    expect(computeStartRowCount(0, 20, 25)).toBeGreaterThanOrEqual(1);
+  });
+
+  it('feeds computeEvenRowLayout consistently (rowCount == totalRows out)', () => {
+    const rc = computeStartRowCount(120, 40, 35);
+    const layout = computeEvenRowLayout(40, rc, () => 0.5);
+    expect(layout.totalRows).toBe(rc);
   });
 });
