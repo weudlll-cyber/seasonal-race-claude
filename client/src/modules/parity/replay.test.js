@@ -79,9 +79,11 @@ describe('replay — the emit → replay round-trip', () => {
       expect(r.identityMatches).toBe(true);
       expect(r.equal).toBe(true);
       expect(r.realHash).toBe(r.simHash);
-      // the owner's cross-check winner for seed 7
-      expect(r.order[0]).toBe('Gale');
-      expect(r.order[2]).toBe('Surge'); // Surge 3rd
+      // shipped-default (150 px/s) order for seed 7 — real core == sim (the equal/hash checks above are the
+      // guarantee). SUPERSEDES the owner's 225 cross-check (then Gale 1st / Surge 3rd); the pace change
+      // swapped them. Re-confirmed at the owner's 150 eye-check.
+      expect(r.order[0]).toBe('Surge');
+      expect(r.order[2]).toBe('Gale'); // Gale now 3rd
     },
     RACE_TIMEOUT_MS
   );

@@ -30,17 +30,19 @@ export const DEFAULT_RACE_HISTORY = [];
 // mean, not how fast the field is. The absolute pace is normalSpeedPxPerSec below.
 //
 // normalSpeedPxPerSec — THE one normal track speed, in world pixels per second, for
-// every track and every racer class (see modules/durationModel.js). Provisional value:
-// 225 px/s reproduces the pre-ship browser pace on a standard CLOSED track at the
-// reference class (speedMultiplier 1.0) to within 1% — the exact anchor is
-// baseSpeedMean * REFERENCE_CLOSED_PATH_PX * REFERENCE_FPS / ems(40) = 226.53 px/s,
-// rounded to a slider-friendly 225. The owner picks the final value by eye; changing
-// it here (or in Dev Screen → Dynamics → Speed → Normal Track Speed) rescales every
-// derived duration in the game at once and nothing else.
+// every track and every racer class (see modules/durationModel.js). This is the SINGLE
+// SOURCE for the game's absolute pace; changing it here (or in Dev Screen → Dynamics →
+// Speed → Normal Track Speed) rescales every derived duration in the game at once and
+// nothing else. The physics-neutral anchor is baseSpeedMean * REFERENCE_CLOSED_PATH_PX *
+// REFERENCE_FPS / ems(40) = 226.53 px/s (a slider-friendly 225 reproduced the pre-ship
+// browser pace to within 1%). The OWNER'S SHIPPED PICK is 150 px/s — a calmer, more
+// readable pace chosen by eye after the speed-candidate sweep (v150 VIABLE; the faster
+// v225/v270 arms raised runaway; see reports/parity/REBASELINE.md). The full baseline is
+// re-measured at 150 (racer-row weighted, canonical defaults) in that report.
 export const DEFAULT_BASE_SPEED_CONFIG = {
   min: 0.00096,
   max: 0.00113,
-  normalSpeedPxPerSec: 225,
+  normalSpeedPxPerSec: 150,
 };
 
 export const DEFAULT_ROW_LAYOUT_CONFIG = {

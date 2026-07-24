@@ -30,6 +30,7 @@ import {
   DEFAULT_FRAME_TIMING_CONFIG,
 } from '../../../modules/frameTimingConfig.js';
 import { InfoTooltip } from '../../../components/InfoTooltip/index.js';
+import { RACE_RELEVANT_DEFAULTS } from './raceRelevantReset.js';
 import { SubCard, SubHeading } from './SubCard.jsx';
 import s from '../DevScreen.module.css';
 
@@ -198,11 +199,13 @@ const DynamicsTuningSection = forwardRef(function DynamicsTuningSection(_, ref) 
     setFrameTimingConfig({ ...DEFAULT_FRAME_TIMING_CONFIG });
   }
 
+  // The card-level "Reset All Defaults" restores only the RACE-RELEVANT blocks this section owns (baseSpeed,
+  // rowLayout, raceDynamics), spread from the shared source of truth. frameTiming is COSMETIC and is left
+  // untouched here on purpose — its dedicated "Frame Timing" Reset link still resets it explicitly.
   function resetAll() {
-    setSpeedConfig({ ...DEFAULT_BASE_SPEED_CONFIG });
-    setRowConfig({ ...DEFAULT_ROW_LAYOUT_CONFIG });
-    setDynamicsConfig({ ...DEFAULT_RACE_DYNAMICS_CONFIG });
-    setFrameTimingConfig({ ...DEFAULT_FRAME_TIMING_CONFIG });
+    setSpeedConfig({ ...RACE_RELEVANT_DEFAULTS.baseSpeedConfig });
+    setRowConfig({ ...RACE_RELEVANT_DEFAULTS.rowLayoutConfig });
+    setDynamicsConfig({ ...RACE_RELEVANT_DEFAULTS.raceDynamicsConfig });
   }
 
   useImperativeHandle(ref, () => ({ resetAll }));

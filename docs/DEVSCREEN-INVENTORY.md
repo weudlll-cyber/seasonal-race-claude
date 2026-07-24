@@ -22,9 +22,26 @@ identifiers; line numbers are deliberately not recorded.
 The section renders five `SubCard`s. Cards 2, 3, and 5 hold multiple control groups separated by
 `SubHeading`s, each with its own per-group Reset.
 
+### 0. "Reset All Defaults" — the Race Tuning card-level button
+
+The **Race Tuning** card (`RaceTuningSection.jsx`) wraps DynamicsTuningSection + BehaviorTuningSection and
+carries one card-level **"Reset All Defaults"** button. Its semantics are aligned with the HUD badge's
+race / cosmetic split (`configFingerprint.js`): it restores **exactly the five RACE-RELEVANT config
+blocks** — `raceDynamicsConfig`, `raceBehaviorConfig`, `rowLayoutConfig`, `baseSpeedConfig`,
+`autoScaleConfig` — to their shipped defaults, and **deliberately leaves the two COSMETIC blocks
+(`cameraConfig`, `frameTimingConfig`) untouched** so an operator's dev camera overlays / frame-timing
+tweaks survive a race-tuning reset. The reset targets are read from the single source of truth
+`raceRelevantReset.js` (`RACE_RELEVANT_DEFAULTS`); `autoScaleConfig` lives in its own Auto-Scale tab and is
+persisted directly by the master reset. Invariant pinned in `raceRelevantReset.test.js`: after this reset
+`splitConfigDiffs(...).race.count === 0` — so the badge reads quiet grey "0 race" by construction, and the
+button and the badge can never disagree. (Before 2026-07-24 the button reset `frameTimingConfig` — a
+cosmetic block — and missed `autoScaleConfig` — a race block; both were corrected in the speed-150
+re-baseline arc.)
+
 ### 1. Frame Timing — global / technical (not the race itself)
 
-Card Reset: `reset-frame-timing`. Backing config: `frameTimingConfig`.
+Card Reset: `reset-frame-timing`. Backing config: `frameTimingConfig`. COSMETIC — the card-level "Reset All
+Defaults" does **not** touch it; only this per-card `reset-frame-timing` link resets it.
 
 | Control | Config key | Shipped default |
 |---|---|---|

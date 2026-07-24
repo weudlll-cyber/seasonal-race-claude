@@ -26,7 +26,7 @@ import {
 import { REFERENCE_FPS } from './camera/lapUtils.js';
 import { DEFAULT_BASE_SPEED_CONFIG } from './storage/defaults.js';
 
-const V = DEFAULT_BASE_SPEED_CONFIG.normalSpeedPxPerSec; // 225 px/s
+const V = DEFAULT_BASE_SPEED_CONFIG.normalSpeedPxPerSec; // shipped default (150 px/s); assertions derive from V
 const RUNOUT = 0.05;
 
 // Real geometries — the numbers the shipped tracks actually produce.

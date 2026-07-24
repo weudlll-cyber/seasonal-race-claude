@@ -111,7 +111,7 @@ import {
   PROPOSED_THRESHOLDS as GM_THRESHOLDS,
 } from './sim/observers/gap-metrics.mjs';
 import { maxLinkGapLengths, makeHeldOvertakeTracker, fullSpreadLengths, framesOverThresholdShare, GAP_THRESHOLD_LENGTHS, leaderSnapshot, RUNAWAY_LARGE_LENGTHS } from './sim/observers/pulk-contest.mjs';
-import { RUNAWAY_PARADE_DEFAULTS, leaderGapLengths, makeFormationTracker, SPEED_SOURCE_SAMPLES, speedProduct, speedSaturation } from './sim/observers/runaway-parade.mjs';
+import { RUNAWAY_PARADE_DEFAULTS, leaderGapLengths, makeFormationTracker, SPEED_SOURCE_SAMPLES } from './sim/observers/runaway-parade.mjs';
 import { makeLateContestTracker, makeReleaseRankTracker } from './sim/observers/release-contest.mjs';
 import { makeFrontBattleTracker } from './sim/observers/outcome-front-battle.mjs';
 import { makePhysicsTaxTracker } from './sim/observers/physics-tax.mjs';
@@ -1542,29 +1542,30 @@ export function runSingleRace({
       // Runs right after Pass-2 so r.t is the applied (post-clamp) value → effSpeed is the REAL Δt/dt.
       // product = speedProduct(factors) equals effSpeed unless the finish clamp fired (finishClamp).
       if (ssSample && ss.cap) {
-        const ssDt = DT / 16;
+        // Read-only servo-saturation capture. The per-racer FACTOR-decomposition capture (baseSpeed /
+        // boost / brake / … product) was retired when Pass-2 moved inside stepRacePhysics — it required a
+        // pre-advance snapshot at the old advance site that no longer exists. But `trajectoryMult` (the
+        // servo output) and `spreadFactor` (the natural draw) persist on each racer through the step, so
+        // the SATURATION view the runaway diagnostics need is still measurable here between steps —
+        // observe-only, it never steers. This block runs ONLY under --speed-source, so the shipped-default
+        // byte-identity fingerprint (measured without the flag) is untouched by construction.
         const order = racers.filter((r) => !r.finished).sort((a, b) => (b.t - a.t) || (a.index - b.index));
         const top = order.slice(0, 15);
         const recs = [];
         for (let i = 0; i < top.length; i++) {
           const r = top[i];
-          const c = ss.cap.get(r.index);
-          if (!c) continue;
-          const product = speedProduct(c);
-          const advanced = c.tBefore + product * ssDt;
-          const effSpeed = (r.t - c.tBefore) / ssDt; // applied (post finish clamp)
-          const sat = speedSaturation(c, SS_TRAJ_MAX, NAT_CEIL);
+          const trajectoryMult = r.trajectoryMult ?? 1.0; // servo output this frame
+          const spreadFactor = r.spreadFactor ?? 1.0; // natural re-roll draw this frame
           const gapAhead = i > 0 ? +(arcT(top[i - 1].t, r.t, isOpen) * govLenScale).toFixed(4) : 0;
           recs.push({
             rank: i + 1, index: r.index,
-            effSpeed: +effSpeed.toFixed(9), product: +product.toFixed(9),
-            baseSpeed: +c.baseSpeed.toFixed(9), spreadFactor: +c.spreadFactor.toFixed(6),
-            speedBonusMult: +c.speedBonusMult.toFixed(6), boost: +c.boost.toFixed(6), brake: +c.brake.toFixed(6),
-            rowEnvMult: +c.rowEnvMult.toFixed(6), trajectoryMult: +c.trajectoryMult.toFixed(6),
-            areaBonusMult: +c.areaBonusMult.toFixed(6), governorMult: +c.governorMult.toFixed(6),
-            servoSaturated: sat.servoSaturated ? 1 : 0, servoHeadroom: +sat.servoHeadroom.toFixed(6),
-            bandHeadroom: +sat.bandHeadroom.toFixed(6),
-            finishClamp: advanced > finishT + 0.001 ? 1 : 0, gapAhead,
+            trajectoryMult: +trajectoryMult.toFixed(6), spreadFactor: +spreadFactor.toFixed(6),
+            // servoSaturated: the servo is pinned at its ceiling (maxMult) → it can push the leader no
+            // faster. servoHeadroom / bandHeadroom = remaining room in the servo / the natural draw.
+            servoSaturated: trajectoryMult >= SS_TRAJ_MAX - 1e-6 ? 1 : 0,
+            servoHeadroom: +(SS_TRAJ_MAX - trajectoryMult).toFixed(6),
+            bandHeadroom: +(NAT_CEIL - spreadFactor).toFixed(6),
+            gapAhead,
           });
         }
         ss.samples[SPEED_SOURCE_SAMPLES[ss.nextSample]] = recs;

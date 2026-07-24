@@ -136,6 +136,16 @@ that phase's `*-complete` endpoint when it closes (incremental history then live
   D-ROWCOUNT closed; sim fingerprints ON `8b13ccbe96992cc0` / OFF `e07150f936361a73`), and the replay UX
   (fix-plan steps 3+4). Report: [reports/parity/STEP-ORDER-ARC.md](../reports/parity/STEP-ORDER-ARC.md).
   What remains is the single re-baseline (after the owner's speed pick).
+- `pre/speed-150-rebaseline` (`bde0bc0`) — master **before the speed-150 ship + single re-baseline**: the
+  last commit with the provisional 225 px/s pace, the pre-150 test/winner anchors, the frameTiming-resetting
+  "Reset All Defaults", and the factor-decomposition `--speed-source` capture. Return point before
+  `normalSpeedPxPerSec` 225 → 150 (the owner's eye pick), the "Reset All Defaults" ↔ badge race/cosmetic
+  alignment, and the speed-source capture realignment shipped together. **Both fingerprints move here by
+  design** (ON `8b13ccbe96992cc0`→`__FP_ON__`, OFF `e07150f936361a73`→`__FP_OFF__`); the single full
+  re-baseline was measured on the committed 150 state (pooled band-reach **71.0%**, CLEARS 70%) and
+  [reports/BASELINE-INVALIDATED.md](../reports/BASELINE-INVALIDATED.md) was resolved →
+  [reports/parity/REBASELINE.md](../reports/parity/REBASELINE.md). The post-ship **backup** anchor is the
+  owner's to cut in the morning (after the hard-reload / reset / eye-check block).
 - **Collapse plan:** fold into the parity phase's `*-complete` endpoint when that phase closes.
 
 ### Retune / cleanup / greenfield phase — COLLAPSED (2026-07-23)

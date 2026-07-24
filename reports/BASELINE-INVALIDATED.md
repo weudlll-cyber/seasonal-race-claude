@@ -1,3 +1,12 @@
+> ## ✅ RESOLVED — 2026-07-25. The single full re-baseline has been measured.
+>
+> The owner picked the normal speed (**150 px/s**), and the single re-baseline this note was waiting on
+> has been run and recorded in **[reports/parity/REBASELINE.md](parity/REBASELINE.md)** (N=100 × 4 tracks
+> = 400 pooled races, racer-row weighted, shipped defaults). **The new baseline anchor is pooled band-reach
+> 71.0% (CLEARS 70%)**; the new shipped-default fingerprints are in the table below and in REBASELINE §3.
+> This document stays as the history of WHY every pre-150 absolute is stale; **REBASELINE.md is the current
+> truth.** Read any absolute sim figure dated before 2026-07-25 as retired history.
+
 # ⚠️ Absolute sim numbers before the plan-grid unification are a PRE-UNIFICATION BASELINE
 
 **Date: 2026-07-23. Applies to: every absolute simulator metric recorded in this repo before the
@@ -48,10 +57,14 @@ Two further method changes matter when comparing old numbers:
 
 ## Fingerprints (shipped-default byte-identity)
 
-| World | Pre-unification (step 1) | Post-unification (step 2a) | Speed/duration ship | Type-multiplier amendment (current) |
-|-------|--------------------------|-----------------------------|---------------------|--------------------------------------|
-| ON (flagless)                 | `e93ffa70dad562a1` | `0ecca5e2dbe6526e` | `e80f78a0da6a9993` | `eda28d614f5e47d9` |
-| OFF (`--gapRerollEnabled=false`) | `72c3360fb75225ef` | `6e01e472b7655b9a` | `1cd6c9fdd62542a4` | `83eec6cf5c8b0419` |
+| World | Pre-unification (step 1) | Post-unification (step 2a) | Speed/duration ship | Type-multiplier amendment | Step-order alignment (225) | **Speed-150 ship (current)** |
+|-------|--------------------------|-----------------------------|---------------------|-----------------|-----------------|------------------|
+| ON (flagless)                 | `e93ffa70dad562a1` | `0ecca5e2dbe6526e` | `e80f78a0da6a9993` | `eda28d614f5e47d9` | `8b13ccbe96992cc0` | **`__FP_ON__`** |
+| OFF (`--gapRerollEnabled=false`) | `72c3360fb75225ef` | `6e01e472b7655b9a` | `1cd6c9fdd62542a4` | `83eec6cf5c8b0419` | `e07150f936361a73` | **`__FP_OFF__`** |
+
+The **speed-150 ship** (2026-07-25, commit `__COMMIT_A__`) moved both fingerprints again — a different
+normal speed consumes the re-roll stream differently, so the shipped race changed. Values minted once on
+the committed state per the binding rule; see [reports/parity/REBASELINE.md](parity/REBASELINE.md) §3.
 
 The amendment (owner decision B, `41aaec7`) restored the racer-type multiplier on the pace —
 `paceSpeed = normalSpeedPxPerSec × speedMultiplier` — so every per-track default duration moved

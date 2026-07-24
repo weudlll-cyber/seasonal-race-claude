@@ -14,6 +14,7 @@ import {
   DEFAULT_RACE_BEHAVIOR_CONFIG,
 } from '../../../modules/raceBehaviorConfig.js';
 import { InfoTooltip } from '../../../components/InfoTooltip/index.js';
+import { RACE_RELEVANT_DEFAULTS } from './raceRelevantReset.js';
 import { SubCard } from './SubCard.jsx';
 import s from '../DevScreen.module.css';
 
@@ -96,8 +97,10 @@ const BehaviorTuningSection = forwardRef(function BehaviorTuningSection(_, ref) 
     }));
   }
 
+  // Restores the raceBehavior block (RACE-RELEVANT) from the shared source of truth, so the card-level
+  // "Reset All Defaults" and the badge's race count are computed from the same defaults.
   function resetAll() {
-    setBehaviorConfig({ ...DEFAULT_RACE_BEHAVIOR_CONFIG });
+    setBehaviorConfig({ ...RACE_RELEVANT_DEFAULTS.raceBehaviorConfig });
   }
 
   useImperativeHandle(ref, () => ({ resetAll }));

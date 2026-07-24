@@ -25,7 +25,7 @@ describe('DEFAULT_BASE_SPEED_CONFIG', () => {
     expect(DEFAULT_BASE_SPEED_CONFIG).toEqual({
       min: 0.00096,
       max: 0.00113,
-      normalSpeedPxPerSec: 225,
+      normalSpeedPxPerSec: 150, // owner's shipped pace pick (was 225) — see reports/parity/REBASELINE.md
     });
   });
 

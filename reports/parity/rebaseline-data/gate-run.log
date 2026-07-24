@@ -1,0 +1,43 @@
+
+=== RE-BASELINE GATE — shipped defaults, normalSpeed 150 px/s ===
+tracks luger-hill, mountainstreet, searound, dirt-oval | N=100/track => 400 pooled races | racers 40 closed / 60 open | canonical per-track defaults | gap-reroll ON default
+
+track           topo   N   bandReach  Holm  dead   front@line  runaway  parade   duo   escDepMed  escDepP90  servoSat   durSec
+luger-hill      open   100     68.1%   UNF   7.0%        3.60    15.0%    3.0%   6.0%      2.258      4.089      6.4%    59.0
+mountainstreet  open   100     70.0%    ok  14.0%        3.96     6.0%    3.0%   6.0%      2.049      4.154      5.3%    60.0
+searound        closed 100     72.5%   UNF  22.0%        2.82    19.0%    3.0%   4.0%      2.407      5.483      9.2%    62.4
+dirt-oval       closed 100     75.6%   UNF  19.0%        4.22    11.0%    1.0%   3.0%      2.152       4.61      7.7%    87.2
+
+── POOLED (400 races) ──
+band-reach (racer-row weighted) : 71.0%   CLEARS 70%
+Holm-unfair start-row tracks    : 3/4
+runaway / parade / duo          : 12.8% / 2.5% / 4.8%
+dead finales                    : 15.5%
+front group @ line              : 3.65
+finale lead-changes / distinct  : 1.80 / 2.77
+escape depth med / p90 / max    : 2.188 / 4.587 / 10.154
+saturated-correction rate       : 7.1%
+mean derived duration           : 67.2 s
+
+=== 70% VERDICT: band-reach 71.0% pooled CLEARS 70% at shipped config ===
+
+=== DURATION-SCALING PASS (N=25/track/dur) — protocol seconds 30 / 120 / 300 ===
+
+dur   track           bandReach  runaway  parade   dead   servoSat
+ 30s  luger-hill         63.9%     12.0%    0.0% 20.0%      7.2%
+ 30s  mountainstreet     68.0%     12.0%    0.0% 32.0%      6.2%
+ 30s  searound           64.2%     40.0%    0.0% 28.0%     10.0%
+ 30s  dirt-oval          67.1%     20.0%    8.0% 28.0%      7.9%
+      POOLED 30s         65.8%     21.0%    2.0% 27.0%      7.8%
+120s  luger-hill         69.3%      4.0%    0.0% 20.0%      5.4%
+120s  mountainstreet     72.5%      4.0%    4.0% 12.0%      4.8%
+120s  searound           78.4%      0.0%    0.0%  8.0%      8.6%
+120s  dirt-oval          83.4%      0.0%    8.0%  4.0%      6.4%
+      POOLED 120s        74.9%      2.0%    3.0% 11.0%      6.3%
+300s  luger-hill         74.3%      0.0%    0.0%  8.0%      6.1%
+300s  mountainstreet     73.6%      0.0%    0.0% 12.0%      3.7%
+300s  searound           80.7%      0.0%    0.0%  4.0%      6.6%
+300s  dirt-oval          81.3%      0.0%    0.0%  8.0%      6.4%
+      POOLED 300s        76.8%      0.0%    0.0%  8.0%      5.7%
+
+wrote C:\Users\weudl\OneDrive\Dokumente\Seasonal race claude\reports\parity\rebaseline-data\rebaseline-150.json

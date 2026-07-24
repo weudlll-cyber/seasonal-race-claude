@@ -10,15 +10,20 @@
 import { useRef } from 'react';
 import DynamicsTuningSection from './DynamicsTuningSection.jsx';
 import BehaviorTuningSection from './BehaviorTuningSection.jsx';
+import { resetAutoScaleToDefault } from './raceRelevantReset.js';
 import s from '../DevScreen.module.css';
 
 function RaceTuningSection() {
   const dynamicsRef = useRef(null);
   const behaviorRef = useRef(null);
 
+  // "Reset All Defaults" restores all FIVE race-relevant blocks: baseSpeed + rowLayout + raceDynamics
+  // (Dynamics section), raceBehavior (Behavior section), and autoScale (its own tab, persisted directly).
+  // The two COSMETIC blocks (camera, frameTiming) are deliberately left untouched — see raceRelevantReset.js.
   function handleReset() {
     dynamicsRef.current?.resetAll();
     behaviorRef.current?.resetAll();
+    resetAutoScaleToDefault();
   }
 
   return (
@@ -32,6 +37,7 @@ function RaceTuningSection() {
           <button
             className={`${s.btn} ${s.btnGhost}`}
             onClick={handleReset}
+            title="Resets all race-relevant settings to defaults (speed, dynamics, behavior, row layout, auto-scale). Camera and frame-timing overlays are left untouched."
             style={{ fontSize: '0.75rem' }}
           >
             Reset All Defaults
