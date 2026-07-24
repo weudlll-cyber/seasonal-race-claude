@@ -148,10 +148,10 @@ OFF = extra arg `--gapRerollEnabled=false`).
 
 | World | Pre-150 (step-order alignment, 225) | **Post-150 (shipped, committed)** |
 |---|---|---|
-| ON (flagless) | `8b13ccbe96992cc0` | **`__FP_ON__`** |
-| OFF (`--gapRerollEnabled=false`) | `e07150f936361a73` | **`__FP_OFF__`** |
+| ON (flagless) | `8b13ccbe96992cc0` | **`6fdfe851dbb4ca72`** |
+| OFF (`--gapRerollEnabled=false`) | `e07150f936361a73` | **`f8f7d9c2fd3283e9`** |
 
-_(Minted on commit `__COMMIT_A__` — the speed-150 ship — and recorded here in the immediate docs-only
+_(Minted on commit `13b654d` — the speed-150 ship — and recorded here in the immediate docs-only
 follow-up, per the once-only fingerprint rule: the docs commit cannot move a behaviour hash.)_
 
 ---

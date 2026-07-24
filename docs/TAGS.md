@@ -141,7 +141,7 @@ that phase's `*-complete` endpoint when it closes (incremental history then live
   "Reset All Defaults", and the factor-decomposition `--speed-source` capture. Return point before
   `normalSpeedPxPerSec` 225 → 150 (the owner's eye pick), the "Reset All Defaults" ↔ badge race/cosmetic
   alignment, and the speed-source capture realignment shipped together. **Both fingerprints move here by
-  design** (ON `8b13ccbe96992cc0`→`__FP_ON__`, OFF `e07150f936361a73`→`__FP_OFF__`); the single full
+  design** (ON `8b13ccbe96992cc0`→`6fdfe851dbb4ca72`, OFF `e07150f936361a73`→`f8f7d9c2fd3283e9`); the single full
   re-baseline was measured on the committed 150 state (pooled band-reach **71.0%**, CLEARS 70%) and
   [reports/BASELINE-INVALIDATED.md](../reports/BASELINE-INVALIDATED.md) was resolved →
   [reports/parity/REBASELINE.md](../reports/parity/REBASELINE.md). The post-ship **backup** anchor is the

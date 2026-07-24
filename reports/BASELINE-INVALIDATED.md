@@ -59,10 +59,10 @@ Two further method changes matter when comparing old numbers:
 
 | World | Pre-unification (step 1) | Post-unification (step 2a) | Speed/duration ship | Type-multiplier amendment | Step-order alignment (225) | **Speed-150 ship (current)** |
 |-------|--------------------------|-----------------------------|---------------------|-----------------|-----------------|------------------|
-| ON (flagless)                 | `e93ffa70dad562a1` | `0ecca5e2dbe6526e` | `e80f78a0da6a9993` | `eda28d614f5e47d9` | `8b13ccbe96992cc0` | **`__FP_ON__`** |
-| OFF (`--gapRerollEnabled=false`) | `72c3360fb75225ef` | `6e01e472b7655b9a` | `1cd6c9fdd62542a4` | `83eec6cf5c8b0419` | `e07150f936361a73` | **`__FP_OFF__`** |
+| ON (flagless)                 | `e93ffa70dad562a1` | `0ecca5e2dbe6526e` | `e80f78a0da6a9993` | `eda28d614f5e47d9` | `8b13ccbe96992cc0` | **`6fdfe851dbb4ca72`** |
+| OFF (`--gapRerollEnabled=false`) | `72c3360fb75225ef` | `6e01e472b7655b9a` | `1cd6c9fdd62542a4` | `83eec6cf5c8b0419` | `e07150f936361a73` | **`f8f7d9c2fd3283e9`** |
 
-The **speed-150 ship** (2026-07-25, commit `__COMMIT_A__`) moved both fingerprints again — a different
+The **speed-150 ship** (2026-07-25, commit `13b654d`) moved both fingerprints again — a different
 normal speed consumes the re-roll stream differently, so the shipped race changed. Values minted once on
 the committed state per the binding rule; see [reports/parity/REBASELINE.md](parity/REBASELINE.md) §3.
 

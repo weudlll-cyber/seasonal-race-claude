@@ -31,7 +31,9 @@
 //     Parity step 1 (RNG isolation):        ON e93ffa70dad562a1  OFF 72c3360fb75225ef
 //     Parity step 2a (plan-grid unified):   ON 0ecca5e2dbe6526e  OFF 6e01e472b7655b9a
 //     Speed/duration ship (canonical model):ON e80f78a0da6a9993  OFF 1cd6c9fdd62542a4
-//     Type-multiplier amendment (pace=V*M):ON eda28d614f5e47d9  OFF 83eec6cf5c8b0419  ← current
+//     Type-multiplier amendment (pace=V*M):ON eda28d614f5e47d9  OFF 83eec6cf5c8b0419
+//     Step-order alignment (sim runs step):ON 8b13ccbe96992cc0  OFF e07150f936361a73
+//     Speed-150 ship (owner pace pick):    ON 6fdfe851dbb4ca72  OFF f8f7d9c2fd3283e9  ← current
 //   (OFF = extra arg `--gapRerollEnabled=false`. Numbers MOVED at step 2a — D-GRID — and again at
 //    the speed/duration ship: the shipped race is now each track's canonical default (laps for
 //    closed, seconds for open) at ONE normal speed, and the method switched --dur=60 → --track-defaults.)
