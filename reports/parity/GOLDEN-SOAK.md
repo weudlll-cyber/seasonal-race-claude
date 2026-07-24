@@ -4,8 +4,8 @@
 amendment** (owner decision B, finished and pushed first), then the **golden equality test** and
 its **600-identity overnight soak**.
 
-Commits: ship `9e41c2b` → amendment `41aaec7` → fingerprint record `3575869` → this document and
-the golden harness (SHA at the bottom). Ship and amendment were pushed together, as instructed.
+Commits: ship `9e41c2b` → amendment `41aaec7` → fingerprint record `3575869` → golden harness +
+this document `d9947c0`. Ship and amendment were pushed together, as instructed.
 
 The backup tag still waits for the owner's cross-check, as planned.
 
