@@ -128,6 +128,14 @@ that phase's `*-complete` endpoint when it closes (incremental history then live
   plan-enabled race, reproducing the owner's browser cross-check) and the **finished-racer runout**
   difference **D-RUNOUT** ([reports/parity/DIVERGENCE-AUDIT.md](../reports/parity/DIVERGENCE-AUDIT.md)
   §2f) — finding-first, no fix.
+- `backup/parity-arc-48f92d9` (`48f92d9`) — **the parity arc, pinned.** The owner's three-seed browser
+  cross-check on the aligned build **PASSED word-for-word** — winners **Maverick / Gale / Orbit**, identical
+  standings and times to the sim predictions — so browser↔sim equality holds **in the wild**, not just in
+  the harness. This anchor spans the whole arc **`9e41c2b..48f92d9`**: the speed/duration ship, the
+  type-multiplier amendment (owner decision B), the step-order alignment (D-INIT / D-RUNOUT / D-NAME /
+  D-ROWCOUNT closed; sim fingerprints ON `8b13ccbe96992cc0` / OFF `e07150f936361a73`), and the replay UX
+  (fix-plan steps 3+4). Report: [reports/parity/STEP-ORDER-ARC.md](../reports/parity/STEP-ORDER-ARC.md).
+  What remains is the single re-baseline (after the owner's speed pick).
 - **Collapse plan:** fold into the parity phase's `*-complete` endpoint when that phase closes.
 
 ### Retune / cleanup / greenfield phase — COLLAPSED (2026-07-23)
@@ -200,8 +208,9 @@ by explicit keep-list, never by merge. Earlier, `diag/look-before-brake` was arc
 
 ## Complete tag set (after the retune/cleanup phase close, 2026-07-23)
 
-This is the FULL list of tags that exist on both local and origin — **26 tags, nothing else** (the
-`pre/race-init-extraction` and `pre/step-order-alignment` anchors were added 2026-07-24):
+This is the FULL list of tags that exist on both local and origin — **27 tags, nothing else** (the
+`pre/race-init-extraction` + `pre/step-order-alignment` anchors and the `backup/parity-arc-48f92d9`
+cross-check anchor were added 2026-07-24):
 
 - `archive/carousel-sweep-final` *(new — `pre/carousel-sweep` branch history)*
 - `archive/diag-look-before-brake`
@@ -210,6 +219,7 @@ This is the FULL list of tags that exist on both local and origin — **26 tags,
 - `backup/browser-seed-complete`
 - `backup/exp-runaway-baseline-complete` *(active runaway phase — collapses later)*
 - `backup/lbb-gate-complete`
+- `backup/parity-arc-48f92d9` *(parity arc pinned — owner cross-check passed word-for-word)*
 - `race-action-complete`
 - `pre/race-init-extraction` *(active parity phase — collapses later)*
 - `pre/step-order-alignment` *(active parity phase — collapses later)*
