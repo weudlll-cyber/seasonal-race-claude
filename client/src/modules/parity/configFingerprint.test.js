@@ -6,7 +6,15 @@
 // ============================================================
 
 import { describe, it, expect } from 'vitest';
-import { countConfigDiffs, configFingerprintSummary } from './configFingerprint.js';
+import {
+  countConfigDiffs,
+  configFingerprintSummary,
+  splitConfigDiffs,
+  raceRelevantWorldHash,
+  RACE_RELEVANT_CONFIG_KEYS,
+  COSMETIC_CONFIG_KEYS,
+} from './configFingerprint.js';
+import { WORLD_CONFIG_KEYS } from '../raceConfigWorld.js';
 
 const defaults = {
   raceDynamicsConfig: { a: 1, b: 2, nested: { x: 1 } },
@@ -85,5 +93,71 @@ describe('configFingerprintSummary', () => {
     const s = configFingerprintSummary({ currentWorld: cur, defaultsWorld: defaults });
     expect(s.onDefaults).toBe(false);
     expect(s.diffCount).toBe(1);
+  });
+});
+
+// ── the race / cosmetic split — red means "not apples-to-apples" ─────────────────────────────────
+describe('splitConfigDiffs — race-relevant vs cosmetic', () => {
+  it('RACE-relevant + COSMETIC keys partition WORLD_CONFIG_KEYS exactly', () => {
+    expect([...RACE_RELEVANT_CONFIG_KEYS, ...COSMETIC_CONFIG_KEYS].sort()).toEqual(
+      [...WORLD_CONFIG_KEYS].sort()
+    );
+    expect(RACE_RELEVANT_CONFIG_KEYS).toHaveLength(5);
+    expect(COSMETIC_CONFIG_KEYS).toEqual(['cameraConfig', 'frameTimingConfig']);
+  });
+
+  it('a race-relevant change → race.count > 0 (RED); cosmetic.count 0', () => {
+    const cur = structuredClone(defaults);
+    cur.raceDynamicsConfig.a = 99; // gap-reroll-like knob
+    const s = splitConfigDiffs(cur, defaults);
+    expect(s.race.count).toBe(1);
+    expect(s.race.keys).toEqual(['raceDynamicsConfig.a']);
+    expect(s.cosmetic.count).toBe(0);
+  });
+
+  it('a cosmetic-only change stays QUIET: race.count 0, cosmetic.count > 0', () => {
+    const cur = structuredClone(defaults);
+    cur.cameraConfig.countdownDurationMs = 2000;
+    cur.frameTimingConfig.dtSmoothingAlpha = 0.5;
+    const s = splitConfigDiffs(cur, defaults);
+    expect(s.race.count).toBe(0); // NOT red
+    expect(s.cosmetic.count).toBe(2);
+  });
+
+  it('the owner case: many cosmetic keys off, race at defaults → race.count 0 (quiet)', () => {
+    const cur = structuredClone(defaults);
+    // 10 cosmetic-ish diffs, all in cameraConfig
+    for (let i = 0; i < 10; i++) cur.cameraConfig[`devToggle${i}`] = true;
+    const s = splitConfigDiffs(cur, defaults);
+    expect(s.race.count).toBe(0);
+    expect(s.cosmetic.count).toBe(10);
+  });
+
+  it('mixed drift reports both counts', () => {
+    const cur = structuredClone(defaults);
+    cur.baseSpeedConfig.max = 1.2; // race
+    cur.rowLayoutConfig.rowGapMultiplier = 2; // race
+    cur.cameraConfig.countdownDurationMs = 1; // cosmetic
+    const s = splitConfigDiffs(cur, defaults);
+    expect(s.race.count).toBe(2);
+    expect(s.cosmetic.count).toBe(1);
+  });
+});
+
+describe('raceRelevantWorldHash — cosmetic-independent', () => {
+  it('is stable across cosmetic tweaks', () => {
+    const base = raceRelevantWorldHash(defaults);
+    const cur = structuredClone(defaults);
+    cur.cameraConfig.countdownDurationMs = 999;
+    cur.frameTimingConfig.dtSmoothingAlpha = 0.1;
+    expect(raceRelevantWorldHash(cur)).toBe(base);
+  });
+
+  it('changes when a race-relevant key changes', () => {
+    const base = raceRelevantWorldHash(defaults);
+    const cur = structuredClone(defaults);
+    cur.raceBehaviorConfig.draftingBoost = 1.2;
+    expect(raceRelevantWorldHash(cur)).not.toBe(base);
+    expect(raceRelevantWorldHash(cur)).toMatch(/^[0-9a-f]{6}$/);
   });
 });

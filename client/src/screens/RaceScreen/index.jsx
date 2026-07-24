@@ -1264,13 +1264,16 @@ export default function RaceScreen() {
         drawHudPill(label, 8, 22, 'rgba(0,0,0,0.65)', '#4fc3f7', 11);
       }
 
-      // Row 2 — config-fingerprint badge (fix-plan step 4). Quiet grey when the race is on shipped
-      // defaults (comparable to a default-config sim run); prominent red when N config keys are off.
+      // Row 2 — config-fingerprint badge (fix-plan step 4). RED means "NOT apples-to-apples with a
+      // default-config sim run" — that is RACE-relevant drift only. Cosmetic (camera / frame-timing)
+      // drift is reported quietly and never turns the badge red. `hashShort` is the race-relevant world
+      // hash, comparable 1:1 to a sim invocation's identity.
       if (st.phase !== PHASE.COUNTDOWN) {
-        const off = cfgBadge.diffCount > 0;
-        const label = off
-          ? `cfg ${cfgBadge.hashShort} · ${cfgBadge.diffCount} off default`
-          : `cfg ${cfgBadge.hashShort} · defaults`;
+        const off = cfgBadge.raceCount > 0;
+        const label =
+          cfgBadge.raceCount === 0 && cfgBadge.cosmeticCount === 0
+            ? `cfg ${cfgBadge.hashShort} · defaults`
+            : `cfg ${cfgBadge.hashShort} · ${cfgBadge.raceCount} race / ${cfgBadge.cosmeticCount} cosmetic`;
         drawHudPill(
           label,
           34,

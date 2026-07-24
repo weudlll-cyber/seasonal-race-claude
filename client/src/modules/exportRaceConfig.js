@@ -32,7 +32,7 @@ import {
   unsimulatableReasons,
   canonicalJson,
 } from './raceConfigWorld.js';
-import { countConfigDiffs } from './parity/configFingerprint.js';
+import { splitConfigDiffs, raceRelevantWorldHash } from './parity/configFingerprint.js';
 
 // The shipped-default value of every race-path config block — the reference the HUD badge diffs against.
 const DEFAULT_CONFIG_WORLD = {
@@ -111,13 +111,19 @@ export function describeDeviations(world = buildWorldConfig()) {
   return dev;
 }
 
-// The in-race HUD config-fingerprint badge (fix-plan step 4): the short world hash + the EXACT count of
-// config leaf keys that differ from the shipped defaults. 0 → the race is on defaults (comparable to a
-// default-config sim run); >0 → the eye-tester must know N knobs are off before trusting a cross-check.
-// The count logic is the shared, pinned countConfigDiffs; the visual gets the owner's eye later.
+// The in-race HUD config-fingerprint badge (fix-plan step 4). `hashShort` is the RACE-relevant world hash
+// (only the config that scopes browser↔sim parity — cosmetic tweaks never move it). The off-default count
+// is SPLIT: `raceCount` is the number that actually breaks apples-to-apples with a default-config sim run
+// (→ the prominent red state), `cosmeticCount` is camera / frame-timing drift, reported but never red.
 export function configFingerprintBadge(world = buildWorldConfig()) {
-  const { count, keys } = countConfigDiffs(world.configs, DEFAULT_CONFIG_WORLD);
-  return { hashShort: hashWorld(world).short, diffCount: count, diffKeys: keys };
+  const { race, cosmetic } = splitConfigDiffs(world.configs, DEFAULT_CONFIG_WORLD);
+  return {
+    hashShort: raceRelevantWorldHash(world.configs),
+    raceCount: race.count,
+    cosmeticCount: cosmetic.count,
+    raceKeys: race.keys,
+    cosmeticKeys: cosmetic.keys,
+  };
 }
 
 // The full DevScreen status for the export panel: hash, deviations, and whether the sim can run it.
