@@ -7,6 +7,18 @@ Items ranked by urgency within each bucket. ✅ = done, 🔜 = next, ⏳ = waiti
 
 ---
 
+## Evolution Act 1 — assignment-follows-field (CLOSED 2026-07-26, reverted)
+
+- ❌ **AFF built flag-gated (default OFF, byte-identical) then REVERTED after a NEGATIVE SCREEN.** The
+  code-verified diagnosis: making the pack's target rank follow the live field drives `rankError→0`, which
+  *removes* the servo's within-band restoring force rather than adding contest — so band-reach fell below
+  the 70% floor (71.1%→66.8%) and finales went deader/runaway-ier (same "liberation settles the field"
+  family as the retired B2 pack-release / universal band-arrival). Build reverted for source hygiene,
+  recoverable @`cd520e0`; the lab journal stays in [reports/evolution/](../reports/evolution/)
+  (AFF-DESIGN-CC, AFF-SCREEN, AFF-NEXT-CC).
+- 🔜 **Successor candidate (future act, not scheduled):** finale-window / front-band contest that ADDS a
+  bounded chase term while KEEPING the static endpoint pin — see AFF-NEXT-CC.md.
+
 ## Gap-reroll — SHIPPED DEFAULT ON (July 2026)
 
 - ✅ **Gap-reroll is the shipped default: symmetric, G=0.5, strength=1.0** (`storage/defaults.js`

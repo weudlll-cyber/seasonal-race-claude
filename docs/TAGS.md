@@ -66,6 +66,15 @@ and what was retired.
 Live step-tags from the OPEN runaway phase — safe return points, not permanent anchors. They collapse into
 that phase's `*-complete` endpoint when it closes (incremental history then lives in commits + docs).
 
+### Evolution Act 1 — assignment-follows-field (CLOSED 2026-07-26)
+- **AFF build recoverable @`cd520e0`, reverted** (`git revert cd520e0`). The flag-gated
+  assignment-follows-field build (Act 1) was verified byte-identical (ON `7c70b1eae7d31e22` / OFF
+  `f8f7d9c2fd3283e9`) but SCREENed NEGATIVE (pooled band-reach 71.1%→66.8%, below the 70% floor —
+  verified force-removal diagnosis). Owner closed Act 1; the build was reverted for source hygiene, the
+  three `reports/evolution/AFF-*.md` kept as the lab journal. Scaffolding tags: `pre/aff-build`
+  (`86e0d6d`) and `pre/aff-remove` (`0fed3ee`). The living code reads as if AFF was never built; the full
+  build is recoverable at `cd520e0`.
+
 ### Runaway phase (open)
 - `backup/exp-runaway-baseline-complete` (`f40a7a6`) — the runaway/parade baseline-measurement commit;
   the surviving endpoint anchor for this still-open phase (Distance Leash + Late Challenger, see

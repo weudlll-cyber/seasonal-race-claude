@@ -572,3 +572,17 @@ controls + pinned internals (Stage 5b), not on the removed governor knobs.
   by the B2-Heroes work, but deferred pending an owner decision on drama-at-leader vs. deep-band reach
   (they want opposite servo tuning). The B2 per-hero intensity budget, the Re-Gate on `9cfa953`, and the
   `--jobs` sweep parallelism all remain open as before.
+
+## 2026-07-26 — status update (Evolution Act 1: assignment-follows-field CLOSED — reverted after negative SCREEN)
+
+- **Act 1 CLOSED, mechanism REVERTED.** The flag-gated assignment-follows-field build (cd520e0, default
+  OFF, verified byte-identical: ON 7c70b1eae7d31e22 / OFF f8f7d9c2fd3283e9) SCREENed NEGATIVE — pooled
+  band-reach 71.1%→66.8% (below the 70% floor), dead finales + runaway up, lead changes down. Diagnosis
+  (code-verified): a live-following target drives rankError→0, REMOVING the servo's within-band restoring
+  force instead of adding contest — the same "liberation settles the field / breaks band-reach" family as
+  the retired B2 pack-release + universal band-arrival. Reverted for source hygiene (git revert cd520e0);
+  the living code reads as if AFF was never built; the build is recoverable @cd520e0.
+- **Lab journal kept:** reports/evolution/AFF-DESIGN-CC.md, AFF-SCREEN.md, AFF-NEXT-CC.md. Scaffolding
+  tags pre/aff-build (86e0d6d) + pre/aff-remove (0fed3ee). **Successor candidate** (future act, not
+  scheduled): a finale-window / front-band contest that ADDS a bounded chase term while KEEPING the static
+  endpoint pin (see AFF-NEXT-CC.md).
