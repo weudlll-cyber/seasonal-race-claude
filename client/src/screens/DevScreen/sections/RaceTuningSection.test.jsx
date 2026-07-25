@@ -84,8 +84,8 @@ vi.mock('../../../modules/raceDynamicsConfig.js', () => ({
     reRollIntervalDivisor: 15,
     reRollLastPositionPercent: 80,
     gapRerollEnabled: true,
-    gapRerollThresholdLengths: 0.75,
-    gapRerollStrength: 0.5,
+    gapRerollThresholdLengths: 0.5,
+    gapRerollStrength: 1.0,
     gapRerollMode: 'symmetric',
     gapRerollDevMarker: false,
     b2AttackHeroes: 3,
@@ -98,8 +98,8 @@ vi.mock('../../../modules/raceDynamicsConfig.js', () => ({
     reRollIntervalDivisor: 15,
     reRollLastPositionPercent: 80,
     gapRerollEnabled: true,
-    gapRerollThresholdLengths: 0.75,
-    gapRerollStrength: 0.5,
+    gapRerollThresholdLengths: 0.5,
+    gapRerollStrength: 1.0,
     gapRerollMode: 'symmetric',
     gapRerollDevMarker: false,
     b2AttackHeroes: 3,
@@ -295,8 +295,8 @@ describe('RaceTuningSection — DevScreen reorg', () => {
   it('the whole gap-reroll family is rendered (toggle, G, strength, mode, dev marker)', () => {
     render(<RaceTuningSection />);
     expect(screen.getByTestId('gap-reroll-toggle')).toBeTruthy();
-    expect(screen.getByLabelText('Gap-Reroll G (lengths)').value).toBe('0.75');
-    expect(screen.getByLabelText('Gap-Reroll strength').value).toBe('0.5');
+    expect(screen.getByLabelText('Gap-Reroll G (lengths)').value).toBe('0.5');
+    expect(screen.getByLabelText('Gap-Reroll strength').value).toBe('1');
     expect(screen.getByTestId('gap-reroll-mode').value).toBe('symmetric');
     expect(screen.getByTestId('gap-reroll-devmarker-toggle')).toBeTruthy();
   });

@@ -375,25 +375,20 @@ export const DEFAULT_RACE_DYNAMICS_CONFIG = {
   // A racer that has opened a hole behind itself (arc gap > G to the racer behind) draws SLOWER at its
   // next scheduled re-roll; in symmetric mode a dropped racer (gap > G ahead) draws FASTER — always inside
   // the honest ±8.1% band. Scheduled rolls only. gapRerollEnabled FALSE → the transform receives no
-  // threshold and passes the draw through bit-exact → the shipped game is byte-identical (default).
-  // Sim confirmation (N=200, all 10 tracks): symmetric/G=1.5/strength=1.0 → runaway 23%→8.3%, action +.
-  // SHIPPED DEFAULT ON since 2026-07-22 (symmetric); RETUNED 2026-07-23 to G=0.75, strength=0.5.
+  // threshold and passes the draw through bit-exact → the pre-feature world is byte-identical (OFF
+  // shipped-default fingerprint f8f7d9c2fd3283e9 on the current speed-150 engine).
   //
-  // WHY THE RETUNE. At G=1.5/s=1.0 a racer would escape to a sizeable lead and then be VISIBLY braked:
-  // frac = min(1, strength·(gap−G)) saturates once the gap exceeds G+1, so ~46% of all corrections
-  // applied to the leader were full slams to the band floor. G alone could not fix that (lowering G
-  // lowers the saturation point too — measured: corrections got HARDER, not gentler); strength is the
-  // only knob that softens an individual correction.
-  // GATE (400 races/arm, 4 tracks, paired seeds, 40 closed / 60 open fields):
-  //   pooled band-reach 71.6% vs 71.6% — fairness EXACTLY neutral, Holm 2/4 in both arms;
-  //   tiltSaturated 46.0%→18.7%, tilt frac median 0.906→0.371 (corrections ~half as hard);
-  //   escapeDepth median 2.71→1.97 L, worst-case 12.07→7.29 L (−40%);
-  //   front-group-at-line 3.86→4.05, runaway 9.5%→8.3%, parade 1.3%→0.8%, duo 6.3%→4.0%.
-  // Duration sanity (30/120/300 s): candidate ≥ current on band-reach at every duration.
-  // Turning it OFF here restores the pre-feature world byte-identically (fingerprint 72c3360fb75225ef).
+  // SHIPPED HISTORY: ON since 2026-07-22 (symmetric); retuned 2026-07-23 (G 1.5→0.75, strength 1.0→0.5);
+  // FLIPPED 2026-07-26 to the confirmed candidate G=0.5, strength=1.0 after the ten-track confirm gate
+  // (owner decision). The mechanic: frac = min(1, strength·(gap−G)) — G sets how small a gap starts a
+  // correction, strength how hard each correction pulls. The flip fires the correction EARLIER (smaller G)
+  // and at FULL strength; the confirm gate showed this makes the finale livelier, not deader.
+  // CURRENT TRUTH for the shipped metric set is the CANDIDATE column of reports/parity/GS-CONFIRM-GATE.md
+  // (N=100 × all 10 tracks: pooled band-reach 71.8%→72.7%, dead finales 14.1%→10.0%, runaway 10.1%→6.8%,
+  // every finale guardrail better, Holm unchanged 3/10) on the speed-150 baseline (reports/parity/REBASELINE.md).
   gapRerollEnabled: true,
-  gapRerollThresholdLengths: 0.75,
-  gapRerollStrength: 0.5,
+  gapRerollThresholdLengths: 0.5,
+  gapRerollStrength: 1.0,
   gapRerollMode: 'symmetric',
   // Dev-only visual cue (rendering-only, zero sim effect): flash a racer at the instant a roll is biased,
   // so the owner can SEE where the mechanism fires before judging naturalness with it off. Default OFF.

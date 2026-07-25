@@ -152,12 +152,12 @@ describe('real browser arm (raceCore) == sim — the step-order-alignment parity
       .map((r) => r.racerIndex)
       .join(',');
 
-  // searound / manta / 40 — the shipped-default (150 px/s) winners. real core == sim on all three (the
-  // hash + order equality below is the parity guarantee; the winner index is just the concrete anchor).
-  // The owner's 225-era cross-check (Maverick 27 / Gale 39 / Orbit 21) is SUPERSEDED by the speed-150 ship:
-  // a different pace consumes the re-roll stream differently, so the finishing order moved (seed 7's winner
-  // is now Surge, idx 17). The owner's 150 eye-check re-confirms the feel.
-  const WINNERS = { 1: 38, 7: 17, 42: 7 };
+  // searound / manta / 40 — the shipped-default winners. real core == sim on all three (the hash + order
+  // equality below is the parity guarantee; the winner index is just the concrete anchor). These moved
+  // again at the 2026-07-26 gap-reroll flip (G 0.75→0.5, strength 0.5→1.0): a different re-roll bias
+  // consumes the stream differently, so the finishing order shifted (seed 1 → idx 27, seed 42 → idx 21;
+  // seed 7 unchanged at idx 17). real == sim still holds byte-for-byte — only the concrete anchor moved.
+  const WINNERS = { 1: 27, 7: 17, 42: 21 };
   for (const seed of [1, 7, 42]) {
     it(
       `searound/manta/40/seed=${seed}: real browser arm and sim are byte-identical`,

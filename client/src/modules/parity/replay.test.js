@@ -79,11 +79,11 @@ describe('replay — the emit → replay round-trip', () => {
       expect(r.identityMatches).toBe(true);
       expect(r.equal).toBe(true);
       expect(r.realHash).toBe(r.simHash);
-      // shipped-default (150 px/s) order for seed 7 — real core == sim (the equal/hash checks above are the
-      // guarantee). SUPERSEDES the owner's 225 cross-check (then Gale 1st / Surge 3rd); the pace change
-      // swapped them. Re-confirmed at the owner's 150 eye-check.
+      // shipped-default order for seed 7 — real core == sim (the equal/hash checks above are the
+      // guarantee). Moved again at the 2026-07-26 gap-reroll flip (G 0.75→0.5, strength 0.5→1.0): the
+      // winner (Surge) held, but 3rd place shifted from Gale to Breeze. real == sim still byte-identical.
       expect(r.order[0]).toBe('Surge');
-      expect(r.order[2]).toBe('Gale'); // Gale now 3rd
+      expect(r.order[2]).toBe('Breeze'); // Breeze now 3rd
     },
     RACE_TIMEOUT_MS
   );

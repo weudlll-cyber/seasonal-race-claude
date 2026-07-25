@@ -96,27 +96,27 @@ describe('DEFAULT_RACE_DYNAMICS_CONFIG', () => {
       b2AttackProgress: { start: 0.4, end: 0.7 },
       b2AttackResolveProgress: 0.85,
       b2AttackBandArrival: true,
-      // Gap-cap re-roll bias — OFF is byte-identical; RETUNED 2026-07-23 to symmetric/0.75/0.5.
-      gapRerollEnabled: true, // SHIPPED ON 2026-07-22; retuned 2026-07-23 (symmetric, G=0.75, s=0.5)
-      gapRerollThresholdLengths: 0.75,
-      gapRerollStrength: 0.5,
+      // Gap-cap re-roll bias — OFF is byte-identical; FLIPPED 2026-07-26 to symmetric/0.5/1.0.
+      gapRerollEnabled: true, // SHIPPED ON 2026-07-22; retuned 0.75/0.5 (07-23); flipped G=0.5/s=1.0 (07-26)
+      gapRerollThresholdLengths: 0.5,
+      gapRerollStrength: 1.0,
       gapRerollMode: 'symmetric',
       gapRerollDevMarker: false,
     });
   });
 
-  it('gap-reroll ships ON at the RETUNED gate winner; turning it OFF is byte-identical', () => {
-    // Retuned 2026-07-23 (G 1.5→0.75, strength 1.0→0.5). The gate held fairness exactly neutral
-    // (pooled band-reach 71.6% both arms, Holm 2/4 both) while halving correction hardness —
-    // tiltSaturated 46.0%→18.7%. These two numbers are the shipped contract; pin them.
+  it('gap-reroll ships ON at the CONFIRMED candidate; turning it OFF is byte-identical', () => {
+    // Flipped 2026-07-26 (G 0.75→0.5, strength 0.5→1.0) after the ten-track confirm gate — the candidate
+    // wins every guardrail (pooled band-reach 71.8%→72.7%, dead finales 14.1%→10.0%, runaway 10.1%→6.8%,
+    // Holm unchanged 3/10). These are the shipped values; pin them. See reports/parity/GS-CONFIRM-GATE.md.
     expect(DEFAULT_RACE_DYNAMICS_CONFIG.gapRerollEnabled).toBe(true);
     expect(DEFAULT_RACE_DYNAMICS_CONFIG.gapRerollDevMarker).toBe(false);
-    expect(DEFAULT_RACE_DYNAMICS_CONFIG.gapRerollThresholdLengths).toBe(0.75);
-    expect(DEFAULT_RACE_DYNAMICS_CONFIG.gapRerollStrength).toBe(0.5);
+    expect(DEFAULT_RACE_DYNAMICS_CONFIG.gapRerollThresholdLengths).toBe(0.5);
+    expect(DEFAULT_RACE_DYNAMICS_CONFIG.gapRerollStrength).toBe(1.0);
     expect(DEFAULT_RACE_DYNAMICS_CONFIG.gapRerollMode).toBe('symmetric');
   });
 
-  it('the retuned defaults are valid DevScreen slider positions (Reset All Defaults lands on them)', () => {
+  it('the shipped defaults are valid DevScreen slider positions (Reset All Defaults lands on them)', () => {
     // resetAll() spreads DEFAULT_RACE_DYNAMICS_CONFIG wholesale, so the sliders show whatever is here.
     // Guard the two control contracts: G input is min 0.5, max 4.0, step 0.25; strength is 0..1.5
     // step 0.25. A default off-step or out-of-range would render a value the control cannot re-enter.
