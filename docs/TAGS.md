@@ -73,99 +73,43 @@ that phase's `*-complete` endpoint when it closes (incremental history then live
   collapse below (2026-07-23) — the baseline state is recoverable at `2e14663` from the table there.
 - **Collapse plan:** fold into the runaway phase's `*-complete` endpoint when that phase closes.
 
-### Sim↔browser parity phase (open)
-- `pre/rng-isolation` (`285c6e5`) — master before parity step 1 (physics-RNG isolation): the last
-  commit where the browser races drew physics from the swapped global `Math.random`. Return point for
-  the D-STREAM fix (see [reports/parity/DIVERGENCE-AUDIT.md](../reports/parity/DIVERGENCE-AUDIT.md)).
-  Remembered browser seeds are stale after this step — the in-race stream is no longer render-polluted.
-- `backup/rng-isolation-64e0f65` (`64e0f65`) — parity step 1 shipped and owner eye-approved: `makeRaceRng`
-  threads one explicit physics stream through both engines, camera/trails off the race stream. Both sim
-  fingerprints unchanged (ON `e93ffa70dad562a1`, OFF `72c3360fb75225ef`), whole-race determinism test
-  8/8, 374 suites green; same seed replayed an identical race (identical final-lap standings + finishing
-  order, only render framing/particles differed). Pinned before the driving-layer ship (plan-grid
-  unification + speed/duration redesign) reshapes master.
-- `pre/plan-grid-unification` (`fe8565e`) — master before parity step 2a (plan-grid unification /
-  D-GRID): the last commit where the sim built the plan grid from a separate per-combo FNV shuffle
-  (`comboLayoutSeed`) while the racers stood in a different per-race shuffle. Return point before the
-  sim's start-row → target-rank mapping changed. Fingerprints move here by design (ON
-  `e93ffa70dad562a1`→`0ecca5e2dbe6526e`, OFF `72c3360fb75225ef`→`6e01e472b7655b9a`); all absolute sim
-  baselines are retired ([reports/BASELINE-INVALIDATED.md](../reports/BASELINE-INVALIDATED.md)).
-- `backup/plan-grid-unification-05a5d14` (`05a5d14`) — parity step 2a shipped and owner cross-checked:
-  one per-race shuffle now feeds both the plan target-ranks and the physical placement (index-ordered to
-  match the browser); the per-combo FNV path is deleted. New fingerprints ON `0ecca5e2dbe6526e` /
-  OFF `6e01e472b7655b9a`; new invariant test + 412 suites green. The owner's three-seed cross-check
-  confirmed matching front sets, an exactly matching winner at the one clear margin (seed 42), and
-  neighbour swaps only within 0.05–0.21 s margins. The residual is diagnosed as a closed-track
-  duration-derivation seam ([reports/parity/MICRO-DIVERGENCE.md](../reports/parity/MICRO-DIVERGENCE.md),
-  `2c72fe6`), classified into the upcoming speed/duration ship.
-- `pre/speed-duration-model` (`34584f7`) — master before the **speed/duration ship**: the last commit
-  with TWO speed normalisations (open `pathLengthPx/2000` with a hidden 0.5 clamp, closed
-  `pathLengthPx/3200`), the `lapsFromDuration` staircase, and two meanings of "duration" (the browser
-  paced from the nominal `estimatedSecondsPerLap × laps`, the sim from the raw `durationSec` — the
-  D-DUR seam). Return point before ONE canonical model (`client/src/modules/durationModel.js`) took
-  over: one normal track speed in px/s for all tracks and classes, laps for closed tracks, bounded
-  time for open tracks with a uniform slowdown past the natural maximum. Fingerprints move here by
-  design (ON `0ecca5e2dbe6526e`→`e80f78a0da6a9993`, OFF `6e01e472b7655b9a`→`1cd6c9fdd62542a4`); the
-  single full re-baseline waits for the owner's final normal-speed pick
-  ([reports/BASELINE-INVALIDATED.md](../reports/BASELINE-INVALIDATED.md)).
-- `pre/step-order-alignment` (`0bd146f`) — master before the sim's single-race stepping was **replaced by
-  the browser's real step** (`raceCore.stepRacePhysics`). Owner decision: the browser is canonical. The
-  sim's Pass 0/1/controller/PulkLeadRotation/Pass 2/computePositions/applyRacerBehavior/finish were deleted
-  and replaced by ONE shared `stepRacePhysics` call — so **D-INIT + D-RUNOUT dissolve by construction**,
-  and **D-NAME** (the `raceBehavior.js` roster-name avoidance tiebreak) + **D-ROWCOUNT** (the sim used
-  `computeRacerLayout.rowCount`; RaceScreen uses its own inline formula — they disagree for small sprites)
-  closed by handing the sim the browser's roster + inline rowCount. `raceCore.js` + the browser untouched.
-  Sim fingerprints move BY DESIGN: ON
-  `eda28d614f5e47d9`→`8b13ccbe96992cc0`, OFF `83eec6cf5c8b0419`→`e07150f936361a73`. Golden `realArm == simArm`
-  (Maverick/Gale/Orbit; Surge 3rd, Blitz 2nd), 60-subset 60/60, full soak = phase-closing proof
-  ([reports/parity/DIVERGENCE-AUDIT.md](../reports/parity/DIVERGENCE-AUDIT.md) §2f-RESOLVED).
-- `pre/race-init-extraction` (`72b8605`) — master before RaceScreen's real init + per-step advance were
-  extracted into an importable, DOM-free `client/src/modules/raceCore.js` (`createRaceFromIdentity` +
-  `stepRacePhysics`) that RaceScreen renders **through** and the golden harness runs headless (`realArm`).
-  A pure refactor: **both sim fingerprints unchanged** (ON `eda28d614f5e47d9`, OFF `83eec6cf5c8b0419`),
-  full client suite + build green. The extracted real arm made the residual machine-visible — the
-  RaceScreen↔sim **per-step execution-order** offset **D-INIT** (flips the finishing order on every
-  plan-enabled race, reproducing the owner's browser cross-check) and the **finished-racer runout**
-  difference **D-RUNOUT** ([reports/parity/DIVERGENCE-AUDIT.md](../reports/parity/DIVERGENCE-AUDIT.md)
-  §2f) — finding-first, no fix.
-- `backup/parity-arc-48f92d9` (`48f92d9`) — **the parity arc, pinned.** The owner's three-seed browser
-  cross-check on the aligned build **PASSED word-for-word** — winners **Maverick / Gale / Orbit**, identical
-  standings and times to the sim predictions — so browser↔sim equality holds **in the wild**, not just in
-  the harness. This anchor spans the whole arc **`9e41c2b..48f92d9`**: the speed/duration ship, the
-  type-multiplier amendment (owner decision B), the step-order alignment (D-INIT / D-RUNOUT / D-NAME /
-  D-ROWCOUNT closed; sim fingerprints ON `8b13ccbe96992cc0` / OFF `e07150f936361a73`), and the replay UX
-  (fix-plan steps 3+4). Report: [reports/parity/STEP-ORDER-ARC.md](../reports/parity/STEP-ORDER-ARC.md).
-  What remains is the single re-baseline (after the owner's speed pick).
-- `pre/speed-150-rebaseline` (`bde0bc0`) — master **before the speed-150 ship + single re-baseline**: the
-  last commit with the provisional 225 px/s pace, the pre-150 test/winner anchors, the frameTiming-resetting
-  "Reset All Defaults", and the factor-decomposition `--speed-source` capture. Return point before
-  `normalSpeedPxPerSec` 225 → 150 (the owner's eye pick), the "Reset All Defaults" ↔ badge race/cosmetic
-  alignment, and the speed-source capture realignment shipped together. **Both fingerprints move here by
-  design** (ON `8b13ccbe96992cc0`→`6fdfe851dbb4ca72`, OFF `e07150f936361a73`→`f8f7d9c2fd3283e9`); the single full
-  re-baseline was measured on the committed 150 state (pooled band-reach **71.0%**, CLEARS 70%) and
-  [reports/BASELINE-INVALIDATED.md](../reports/BASELINE-INVALIDATED.md) was resolved →
-  [reports/parity/REBASELINE.md](../reports/parity/REBASELINE.md). The post-ship **backup** anchors were
-  cut after the owner's 150 eye-check passed — see the two `backup/*` entries below.
-- `backup/speed-150-rebaseline-4b707cb` (`4b707cb`) — **the shipped speed-150 world, pinned (owner eye
-  passed).** Spans the night arc `bde0bc0..4b707cb`: the 150 ship + "Reset All Defaults"↔badge alignment +
-  speed-source realignment (`13b654d`), the once-only fingerprint record (`a75e66e`, ON `6fdfe851dbb4ca72`
-  / OFF `f8f7d9c2fd3283e9`), and the G/s honest-world SCREEN (`4b707cb`). The single re-baseline PASSED
-  (pooled band-reach **71.0%**, CLEARS 70%); [reports/parity/REBASELINE.md](../reports/parity/REBASELINE.md)
-  is the current baseline truth. The return point before any G/s flip changes master.
-- `backup/gs-confirm-evidence-1865990` (`1865990`) — **the G/s decision evidence on top of the shipped
-  world (report-only, nothing flipped).** The ten-track, N=100, paired-seed confirm gate of the candidate
-  G=0.5/s=1.0 vs shipped G=0.75/s=0.5: pooled band-reach 71.8% → 72.7% (+0.8 pp, wins 9/10 tracks), every
-  finale guardrail better (dead 14.1→10.0%, runaway 10.1→6.8%), Holm unchanged 3/10 → "recommend flip" for
-  the owner's decision ([reports/parity/GS-CONFIRM-GATE.md](../reports/parity/GS-CONFIRM-GATE.md)). Pinned
-  before the flip decision so the evidence state is recoverable whether or not the knobs change.
-- `backup/gs-flip-6f438ea` (`6f438ea`) — **the gs-flip end state, pinned (owner eye passed).** The parity
-  phase's final anchor before collapse: the confirmed candidate shipped as the default
-  (`gapRerollThresholdLengths` 0.75→0.5, `gapRerollStrength` 0.5→1.0; flip `6c060a5`, ON fingerprint
-  `6fdfe851dbb4ca72`→`7c70b1eae7d31e22`, OFF invariant `f8f7d9c2fd3283e9` held) plus the full docs audit to
-  the current world (`6f438ea`). Owner eye-approved: after Reset All Defaults the sliders land on 0.5 / 1.0,
-  the badge reads grey, and the finale is confirmed livelier. Its pre-tag is `pre/gs-flip` (`6d246d0`). The
-  CI security unblock (`4a4bcf3`, dev-toolchain audit overrides — no game code) sits on top.
-- **Collapse plan:** fold into the parity phase's `*-complete` endpoint when that phase closes.
+### Parity phase — COLLAPSED (2026-07-25)
+
+The sim↔browser parity phase is complete; its 13 `pre/*`+`backup/*` step-tags are collapsed onto the single
+anchor **`v-parity-complete`** and deleted (local + origin). **Phase summary:** the four step-order
+divergences (**D-INIT / D-RUNOUT / D-NAME / D-ROWCOUNT**) were closed with the sim adopting the browser's
+real `raceCore.stepRacePhysics`; the golden soak proved `realArm == simArm` **600/600 byte-identical**; the
+owner's three-seed browser cross-check passed **word-for-word**; the owner picked **150 px/s** and the single
+re-baseline landed (pooled band-reach **71.0%**, resolving BASELINE-INVALIDATED →
+[reports/parity/REBASELINE.md](../reports/parity/REBASELINE.md)); and the gap-reroll knobs were flipped to
+the confirmed candidate **G=0.5 / strength=1.0** after the ten-track confirm gate
+([reports/parity/GS-CONFIRM-GATE.md](../reports/parity/GS-CONFIRM-GATE.md)). End-state shipped-default
+fingerprints: **ON `7c70b1eae7d31e22` / OFF `f8f7d9c2fd3283e9`**. Full narrative lives in the linked
+`reports/parity/*.md` docs (DIVERGENCE-AUDIT, GOLDEN-SOAK, STEP-ORDER-ARC, REBASELINE, GS-CONFIRM-GATE), the
+commit messages, and this file's git history (where the per-tag prose is preserved).
+
+**Collapse record — every tag deleted here, name → SHA (the commits stay findable forever; this table is the
+index).**
+
+| Deleted tag | SHA |
+|---|---|
+| `pre/rng-isolation` | `285c6e5` |
+| `pre/plan-grid-unification` | `fe8565e` |
+| `pre/race-init-extraction` | `72b8605` |
+| `pre/step-order-alignment` | `0bd146f` |
+| `pre/speed-duration-model` | `34584f7` |
+| `pre/speed-150-rebaseline` | `bde0bc0` |
+| `pre/gs-flip` | `6d246d0` |
+| `backup/rng-isolation-64e0f65` | `64e0f65` |
+| `backup/plan-grid-unification-05a5d14` | `05a5d14` |
+| `backup/parity-arc-48f92d9` | `48f92d9` |
+| `backup/speed-150-rebaseline-4b707cb` | `4b707cb` |
+| `backup/gs-confirm-evidence-1865990` | `1865990` |
+| `backup/gs-flip-6f438ea` | `6f438ea` |
+
+13 tags deleted (local + origin), collapsed onto **`v-parity-complete`** — the annotated parity phase
+endpoint anchor on the phase-close commit (150 px/s, gap-reroll G=0.5/s=1.0, fingerprints
+ON `7c70b1eae7d31e22` / OFF `f8f7d9c2fd3283e9`).
 
 ### Retune / cleanup / greenfield phase — COLLAPSED (2026-07-23)
 
@@ -235,23 +179,20 @@ Neither was ever a merge candidate — both carried prototypes that must not rea
 by explicit keep-list, never by merge. Earlier, `diag/look-before-brake` was archived the same way (tag
 `archive/diag-look-before-brake` @ `c32cc61`, deleted 2026-07-20). No non-master branches remain.
 
-## Complete tag set (after the retune/cleanup phase close, 2026-07-23)
+## Complete tag set (after the parity phase close, 2026-07-25)
 
-This is the FULL list of tags that exist on both local and origin — **27 tags, nothing else** (the
-`pre/race-init-extraction` + `pre/step-order-alignment` anchors and the `backup/parity-arc-48f92d9`
-cross-check anchor were added 2026-07-24):
+This is the FULL list of tags that exist on both local and origin — **25 tags, nothing else**. The 13
+parity `pre/*`+`backup/*` step-tags were collapsed onto **`v-parity-complete`** and deleted (see the *Parity
+phase — COLLAPSED* record above); everything else is a permanent keeper:
 
-- `archive/carousel-sweep-final` *(new — `pre/carousel-sweep` branch history)*
+- `archive/carousel-sweep-final`
 - `archive/diag-look-before-brake`
-- `archive/greenfield-proto-final` *(new — `pre/greenfield-proto` branch history)*
+- `archive/greenfield-proto-final`
 - `b4-complete`
 - `backup/browser-seed-complete`
 - `backup/exp-runaway-baseline-complete` *(active runaway phase — collapses later)*
 - `backup/lbb-gate-complete`
-- `backup/parity-arc-48f92d9` *(parity arc pinned — owner cross-check passed word-for-word)*
 - `race-action-complete`
-- `pre/race-init-extraction` *(active parity phase — collapses later)*
-- `pre/step-order-alignment` *(active parity phase — collapses later)*
 - `stable/pre-governor-04jul` *(permanent anchor — NEVER delete)*
 - `stable/pre-overlap-closed-20jun` *(permanent anchor — NEVER delete)*
 - `v-b2-heroes-complete`
@@ -261,9 +202,10 @@ cross-check anchor were added 2026-07-24):
 - `v-cleanup-complete`
 - `v-datadir-complete`
 - `v-outcome-0.6-complete`
+- `v-parity-complete` *(new — sim↔browser parity phase endpoint; 150 px/s, gap-reroll G=0.5/s=1.0, fingerprints ON `7c70b1eae7d31e22` / OFF `f8f7d9c2fd3283e9`)*
 - `v-perf-complete`
 - `v-phaseD-complete`
-- `v-retune-cleanup-complete` *(new — retune/cleanup/reorg/greenfield phase endpoint)*
+- `v-retune-cleanup-complete`
 - `v-rowenv-default-on-complete`
 - `v-rowenv-easing-complete`
 - `v-security-hardening-complete`
