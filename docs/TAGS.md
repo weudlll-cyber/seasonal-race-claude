@@ -144,8 +144,20 @@ that phase's `*-complete` endpoint when it closes (incremental history then live
   design** (ON `8b13ccbe96992cc0`→`6fdfe851dbb4ca72`, OFF `e07150f936361a73`→`f8f7d9c2fd3283e9`); the single full
   re-baseline was measured on the committed 150 state (pooled band-reach **71.0%**, CLEARS 70%) and
   [reports/BASELINE-INVALIDATED.md](../reports/BASELINE-INVALIDATED.md) was resolved →
-  [reports/parity/REBASELINE.md](../reports/parity/REBASELINE.md). The post-ship **backup** anchor is the
-  owner's to cut in the morning (after the hard-reload / reset / eye-check block).
+  [reports/parity/REBASELINE.md](../reports/parity/REBASELINE.md). The post-ship **backup** anchors were
+  cut after the owner's 150 eye-check passed — see the two `backup/*` entries below.
+- `backup/speed-150-rebaseline-4b707cb` (`4b707cb`) — **the shipped speed-150 world, pinned (owner eye
+  passed).** Spans the night arc `bde0bc0..4b707cb`: the 150 ship + "Reset All Defaults"↔badge alignment +
+  speed-source realignment (`13b654d`), the once-only fingerprint record (`a75e66e`, ON `6fdfe851dbb4ca72`
+  / OFF `f8f7d9c2fd3283e9`), and the G/s honest-world SCREEN (`4b707cb`). The single re-baseline PASSED
+  (pooled band-reach **71.0%**, CLEARS 70%); [reports/parity/REBASELINE.md](../reports/parity/REBASELINE.md)
+  is the current baseline truth. The return point before any G/s flip changes master.
+- `backup/gs-confirm-evidence-1865990` (`1865990`) — **the G/s decision evidence on top of the shipped
+  world (report-only, nothing flipped).** The ten-track, N=100, paired-seed confirm gate of the candidate
+  G=0.5/s=1.0 vs shipped G=0.75/s=0.5: pooled band-reach 71.8% → 72.7% (+0.8 pp, wins 9/10 tracks), every
+  finale guardrail better (dead 14.1→10.0%, runaway 10.1→6.8%), Holm unchanged 3/10 → "recommend flip" for
+  the owner's decision ([reports/parity/GS-CONFIRM-GATE.md](../reports/parity/GS-CONFIRM-GATE.md)). Pinned
+  before the flip decision so the evidence state is recoverable whether or not the knobs change.
 - **Collapse plan:** fold into the parity phase's `*-complete` endpoint when that phase closes.
 
 ### Retune / cleanup / greenfield phase — COLLAPSED (2026-07-23)
