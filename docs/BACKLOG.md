@@ -7,6 +7,26 @@ Items ranked by urgency within each bucket. ✅ = done, 🔜 = next, ⏳ = waiti
 
 ---
 
+## Evolution Act 2 — finale front-compression (BUILT, flag-gated, DEFAULT OFF — July 2026)
+
+- 🔬 **Built flag-gated (default OFF, byte-identical), awaiting owner eye test.** Inverts the Act 1 lesson:
+  keep the static `rankError` restoring force fully intact everywhere, and ADD contest ONLY in the finale
+  window and ONLY among the front runners — as ONE **scheduled-dice overlay** on the gap-cap re-roll
+  (`racePlanner.js` `computeGapBiasedTarget`), never on the servo/target. Two gap-sequenced halves for a
+  STATIC front-band member in `[0.80,0.90]`: (A) catch-up UP-tilt for a pursuer > G_c behind the leader;
+  (B) leader-bleed DOWN-tilt only when the leader's lead over P2 > the LARGER G_b (hard-validated G_b>G_c,
+  so B can't run without A). Not the rejected Front-Leash (that braked the SERVO and reordered the pack,
+  Lesson 178) — a mild, capped, paired dice tilt within honest bands; strictly intra-front-band so
+  band-reach is untouched by construction. Fingerprints unmoved (ON `7c70b1eae7d31e22`/OFF
+  `f8f7d9c2fd3283e9`). Six race-relevant keys (`finaleFrontCompression` + window/gates/strength). Design:
+  [reports/evolution/FINALE-DESIGN-CC.md](../reports/evolution/FINALE-DESIGN-CC.md); mechanism:
+  [SIM.md](SIM.md). Backup tag `pre/finale-compression`.
+- 🔜 **SCREEN → owner decision.** `scripts/exp-finale-screen.mjs` →
+  [reports/evolution/FINALE-SCREEN.md](../reports/evolution/FINALE-SCREEN.md) (CONTROL vs FINALE,
+  luger-hill + searound, N=25/arm/track): band-reach ≥70% is the primary veto; dead finales / front@line /
+  lead-changes / runaway / escape are guardrails; the intervention split confirms B stays a rare backstop.
+  Nothing ships until the owner decides.
+
 ## Evolution Act 1 — assignment-follows-field (CLOSED 2026-07-26, reverted)
 
 - ❌ **AFF built flag-gated (default OFF, byte-identical) then REVERTED after a NEGATIVE SCREEN.** The

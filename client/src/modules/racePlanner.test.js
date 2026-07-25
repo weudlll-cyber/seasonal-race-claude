@@ -1666,3 +1666,123 @@ describe('createRacePlan — contestWindowStart', () => {
     expect(plan._contestWindowStart).toBe(0.66);
   });
 });
+
+// ── Finale front-compression (Evolution Act 2) ──────────────────────────────────
+// A front-band-scoped, finale-windowed dice tilt layered on computeGapBiasedTarget. These tests drive the
+// transform directly with the shipped gap-reroll made INERT (gapRerollThresholdLengths = 100, so the
+// neighbour-gap branches never fire) — so any change to the returned draw is the finale overlay alone.
+// lastRollDeadlineMs is passed null (the schedule cut does not apply). OFF byte-identity of the shipped
+// game is separately proven by the fingerprint gate.
+describe('createTrajectoryController — finale front-compression (Act 2)', () => {
+  const N = 6; // ranks 1..6 → front band = 1..5, rank 6 = back band
+  const racersN = makeRacers(N, N);
+  const SPREAD_MIN = 0.9;
+  const SPREAD_MAX = 1.1;
+  const RAW = 1.0; // mid-band draw → room to tilt either way
+
+  function buildPlan(overrides = {}) {
+    return createRacePlan(
+      racersN,
+      FINISH_T,
+      TARGET_DUR_MS,
+      {
+        gapRerollThresholdLengths: 100, // shipped gap-reroll inert
+        gapRerollStrength: 1.0,
+        gapRerollMode: 'symmetric',
+        finaleFrontCompression: true,
+        finaleContestWindowStart: 0.8,
+        finaleContestWindowEnd: 0.9,
+        finaleCatchupGateLengths: 1.0, // G_c
+        finaleLeaderBleedGateLengths: 2.0, // G_b
+        finaleCompressStrength: 1.0,
+        ...overrides,
+      },
+      7
+    );
+  }
+  const idxOfRank = (plan, rank) => [...plan._racerTargetRank].find(([, r]) => r === rank)[0];
+  // Live field: place `leaderT`/`selfT` at the front, everyone else parked behind.
+  function field(selfIdx, selfT, leaderIdx, leaderT) {
+    return racersN.map((r) => ({
+      index: r.index,
+      t: r.index === selfIdx ? selfT : r.index === leaderIdx ? leaderT : 0.0,
+      finished: false,
+    }));
+  }
+  // arc-t → lengths scale 10: a t-gap of 0.10 = 1.0 length.
+  const LEN = 10;
+  const call = (ctrl, selfIdx, racers, progress) =>
+    ctrl.computeGapBiasedTarget(
+      selfIdx,
+      RAW,
+      SPREAD_MIN,
+      SPREAD_MAX,
+      racers,
+      50_000,
+      progress,
+      LEN,
+      true,
+      null
+    );
+
+  it('(A) catch-up UP-tilt fires for a front-band pursuer past G_c (draws faster)', () => {
+    const plan = buildPlan();
+    const ctrl = createTrajectoryController(plan);
+    const self = idxOfRank(plan, 2); // static front-band pursuer
+    const leader = idxOfRank(plan, 1);
+    // leader 0.85, self 0.70 → gap 0.15 × 10 = 1.5 lengths > G_c(1.0)
+    const out = call(ctrl, self, field(self, 0.7, leader, 0.85), 0.85);
+    expect(out).toBeGreaterThan(RAW);
+    expect(ctrl.getFinaleTiltCounts()).toEqual({ up: 1, down: 0 });
+  });
+
+  it('(B) leader-bleed DOWN-tilt fires only when the leader gap exceeds the LARGER G_b (draws slower)', () => {
+    const plan = buildPlan();
+    const ctrl = createTrajectoryController(plan);
+    const leader = idxOfRank(plan, 1); // static front-band member, made live leader
+    // leader 0.85, P2 0.60 → gap 0.25 × 10 = 2.5 lengths > G_b(2.0)
+    const out = call(ctrl, leader, field(leader, 0.85, idxOfRank(plan, 3), 0.6), 0.85);
+    expect(out).toBeLessThan(RAW);
+    expect(ctrl.getFinaleTiltCounts()).toEqual({ up: 0, down: 1 });
+  });
+
+  it('the leader gets NO bleed between G_c and G_b — B needs the larger gate', () => {
+    const plan = buildPlan();
+    const ctrl = createTrajectoryController(plan);
+    const leader = idxOfRank(plan, 1);
+    // leader 0.85, P2 0.70 → gap 1.5 lengths: > G_c but < G_b → no down-tilt on the leader.
+    const out = call(ctrl, leader, field(leader, 0.85, idxOfRank(plan, 3), 0.7), 0.85);
+    expect(out).toBe(RAW); // shipped inert + finale not armed → passthrough
+    expect(ctrl.getFinaleTiltCounts()).toEqual({ up: 0, down: 0 });
+  });
+
+  it('OFF: the overlay is inert — no tilt, no counts (flag false)', () => {
+    const plan = buildPlan({ finaleFrontCompression: false });
+    const ctrl = createTrajectoryController(plan);
+    const leader = idxOfRank(plan, 1);
+    const out = call(ctrl, leader, field(leader, 0.85, idxOfRank(plan, 3), 0.6), 0.85); // wide gap
+    expect(out).toBe(RAW);
+    expect(ctrl.getFinaleTiltCounts()).toEqual({ up: 0, down: 0 });
+  });
+
+  it('window gate: no effect outside [windowStart, windowEnd]', () => {
+    const plan = buildPlan();
+    const ctrl = createTrajectoryController(plan);
+    const self = idxOfRank(plan, 2);
+    const leader = idxOfRank(plan, 1);
+    const racers = field(self, 0.7, leader, 0.85); // would fire (A) at 1.5 lengths
+    expect(call(ctrl, self, racers, 0.79)).toBe(RAW); // before the window
+    expect(call(ctrl, self, racers, 0.95)).toBe(RAW); // after the window
+    expect(ctrl.getFinaleTiltCounts()).toEqual({ up: 0, down: 0 });
+  });
+
+  it('front-band scope: a STATIC back-band racer is never tilted, even as the runaway leader', () => {
+    const plan = buildPlan();
+    const ctrl = createTrajectoryController(plan);
+    const back = idxOfRank(plan, N); // static rank 6 → back band
+    // Make the back-band racer the live leader with a wide P2 gap; finale must not fire.
+    const out = call(ctrl, back, field(back, 0.85, idxOfRank(plan, 1), 0.6), 0.85);
+    expect(out).toBe(RAW);
+    expect(ctrl.getFinaleTiltCounts()).toEqual({ up: 0, down: 0 });
+  });
+});

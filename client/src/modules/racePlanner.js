@@ -334,6 +334,16 @@ export function createRacePlan(racers, finishT, targetDurationMs, config = {}, s
     _gapRerollThresholdLengths: config.gapRerollThresholdLengths ?? null, // G (lengths); null = feature OFF
     _gapRerollMode: config.gapRerollMode ?? 'symmetric', // 'symmetric' | 'down'
     _gapRerollStrength: config.gapRerollStrength ?? 0.5, // fraction-to-edge = min(1, strength·(gap−G))
+    // ── Finale front-compression (Evolution Act 2) — flag-gated, DEFAULT OFF ──────────────────────────
+    // A front-band-scoped, finale-windowed dice-tilt overlay on computeGapBiasedTarget (below). OFF → the
+    // overlay is skipped → byte-identical. It reads the STATIC map read-only and NEVER touches the servo
+    // target. bleedGate > catchupGate is validated upstream (raceDynamicsConfig) so (B) can't outrun (A).
+    _finaleFrontCompression: !!config.finaleFrontCompression,
+    _finaleContestWindowStart: config.finaleContestWindowStart ?? 0.8,
+    _finaleContestWindowEnd: config.finaleContestWindowEnd ?? 0.9,
+    _finaleCatchupGateLengths: config.finaleCatchupGateLengths ?? 1.0, // G_c (lengths)
+    _finaleLeaderBleedGateLengths: config.finaleLeaderBleedGateLengths ?? 2.0, // G_b (lengths); > G_c
+    _finaleCompressStrength: config.finaleCompressStrength ?? 1.0,
     // Window-derivation input (config-relative, zero hardcoded). Lower bound = corrStartFrac (the LIVE
     // choreoOutcomeStart). Upper bound = (harness lastRollDeadlineMs, realized-duration basis) −
     // transitionDur, so a biased roll's easeInOutCubic ramp settles before the schedule's own last roll.
@@ -426,6 +436,10 @@ export function createTrajectoryController(racePlan) {
   const _gapLeaderDownEvents = [];
   let _gapDownChaser = 0; // DOWN-tilts on live ranks 2–5 (the chase group)
   let _gapDownPack = 0; // DOWN-tilts on live rank ≥6 (the pack)
+  // Finale front-compression (Act 2) intervention split — TELEMETRY ONLY (never read back into a draw).
+  // The SCREEN reads these to confirm (B) stays a rare backstop relative to (A).
+  let _finaleUpTilts = 0; // (A) catch-up UP-tilts fired (front pursuer pulled toward the leader)
+  let _finaleDownTilts = 0; // (B) leader-bleed DOWN-tilts fired (only on a leader→P2 gap > G_b)
   let _gapDownGapAheadSum = 0; // Σ gapAhead at DOWN-tilt moments (lengths)
   let _gapDownGapBehindSum = 0; // Σ gapBehind at DOWN-tilt moments (lengths)
   let _packReSteerEvents = 0; // count of released→steering transitions (a racer drifted out)
@@ -924,6 +938,51 @@ export function createTrajectoryController(racePlan) {
     if (G == null || !(lenScale > 0)) return rawSample; // feature OFF → byte-identical passthrough
     // ── Window (derived; never hardcoded) ──
     if (phaseProgress == null || phaseProgress < corrStartFrac) return rawSample; // before choreoOutcomeStart
+    // ── Finale front-compression overlay (Evolution Act 2; flag-gated, DEFAULT OFF) ─────────────────
+    // Layered on THIS scheduled draw, ahead of the shipped gap-reroll bias. Fires only for a STATIC
+    // front-band member (target rank ≤ BAND_EDGES[0], read-only) inside [windowStart, windowEnd]. Two
+    // gap-magnitude-sequenced halves — (A) catch-up UP-tilt for a front pursuer more than G_c behind the
+    // live leader; (B) leader-bleed DOWN-tilt for the live leader only when its lead over P2 exceeds the
+    // LARGER G_b (so (B) can never fire without (A) having been possible). Both tilt the DRAW within the
+    // SAME honest ±band clamps as the gap-reroll — no servo/_setTarget touch, no target-map mutation, no
+    // rng. Strictly intra-front-band (ranks 1–5) so any order change is a lead change, never a band
+    // crossing → band-reach untouched by construction. If the flag is off or no gate is met, this block
+    // is inert and the shipped gap-reroll bias below runs unchanged (OFF → byte-identical).
+    if (
+      plan._finaleFrontCompression &&
+      phaseProgress >= plan._finaleContestWindowStart &&
+      phaseProgress <= plan._finaleContestWindowEnd
+    ) {
+      const selfF = racers.find((r) => r.index === racerIndex);
+      const staticRankF = plan._racerTargetRank.get(racerIndex);
+      if (selfF && !selfF.finished && staticRankF != null && staticRankF <= BAND_EDGES[0]) {
+        const liveF = racers
+          .filter((r) => !r.finished)
+          .sort((a, b) => b.t - a.t || a.index - b.index);
+        const posF = liveF.findIndex((r) => r.index === racerIndex);
+        const sc = plan._finaleCompressStrength;
+        if (posF === 0) {
+          // (B) leader bleed — only on a genuine breakaway (leader→P2 gap > the LARGER gate G_b).
+          const p2 = liveF.length > 1 ? liveF[1] : null;
+          const gapLead = p2 ? arcT(selfF.t, p2.t, isOpen) * lenScale : 0;
+          if (gapLead > plan._finaleLeaderBleedGateLengths) {
+            const frac = Math.min(1, sc * (gapLead - plan._finaleLeaderBleedGateLengths));
+            _finaleDownTilts++;
+            return clamp(rawSample - frac * (rawSample - spreadMin), spreadMin, spreadMax); // SLOWER
+          }
+        } else if (posF > 0) {
+          // (A) catch-up — pull a front-band pursuer toward the live leader (leader→self gap > G_c).
+          const leaderF = liveF[0];
+          const gapToLead = arcT(leaderF.t, selfF.t, isOpen) * lenScale;
+          if (gapToLead > plan._finaleCatchupGateLengths) {
+            const frac = Math.min(1, sc * (gapToLead - plan._finaleCatchupGateLengths));
+            _finaleUpTilts++;
+            return clamp(rawSample + frac * (spreadMax - rawSample), spreadMin, spreadMax); // FASTER
+          }
+        }
+      }
+      // flag on but no gate met → fall through to the shipped gap-reroll bias unchanged.
+    }
     // Upper bound derived from the SCHEDULE'S OWN clock: the harness passes lastRollDeadlineMs (built from
     // realizedDurationSec — the SAME basis elapsedMs runs on), so there is ONE duration basis in this
     // comparison. Deriving it from plan._targetDurationMs instead was the bug: on closed tracks realized
@@ -1118,6 +1177,10 @@ export function createTrajectoryController(racePlan) {
     // meaningless. This getter neither resets nor mutates; the copy stops a consumer editing state.
     // Controllers are constructed per race, so the log cannot accumulate across races.
     getGapLeaderDownEvents: () => _gapLeaderDownEvents.map((e) => ({ ...e })),
+    // Finale front-compression intervention split (Act 2): counts of (A) catch-up UP-tilts and (B)
+    // leader-bleed DOWN-tilts this race. Both 0 when the feature is OFF. Read by the sim SCREEN to
+    // confirm (B) stays a rare backstop. Read-only; controllers are per-race so it never accumulates.
+    getFinaleTiltCounts: () => ({ up: _finaleUpTilts, down: _finaleDownTilts }),
     getPhase,
     getPhaseFractions,
     // Diagnostics-only: the retained index→role map (null until heroes are cast). Read by GovernorDiagHUD.

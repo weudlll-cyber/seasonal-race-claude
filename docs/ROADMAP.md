@@ -586,3 +586,20 @@ controls + pinned internals (Stage 5b), not on the removed governor knobs.
   tags pre/aff-build (86e0d6d) + pre/aff-remove (0fed3ee). **Successor candidate** (future act, not
   scheduled): a finale-window / front-band contest that ADDS a bounded chase term while KEEPING the static
   endpoint pin (see AFF-NEXT-CC.md).
+
+## 2026-07-26 — status update (Evolution Act 2: finale front-compression — BUILT, flag-gated, DEFAULT OFF)
+
+- **Built — finale front-compression, flag-gated DEFAULT OFF, report-only SCREEN pending.** Act 2 inverts
+  the Act 1 lesson: keep the static rankError restoring force fully intact everywhere; add finale contest
+  as ONE scheduled-dice overlay on the gap-cap re-roll (racePlanner.js computeGapBiasedTarget), NOT on the
+  servo/target map. For a STATIC front-band member in [0.80,0.90]: (A) catch-up UP-tilt for a pursuer > G_c
+  behind the live leader; (B) leader-bleed DOWN-tilt for the leader only when its lead over P2 > the larger
+  G_b (hard-validated G_b>G_c → B can't run without A). Honest-band dice tilts, not servo brakes (escapes
+  the Front-Leash rejection, Lesson 178); strictly intra-front-band (ranks 1-5) → band-reach untouched by
+  construction. Fingerprint invariance proven: flagless ON 7c70b1eae7d31e22 / OFF f8f7d9c2fd3283e9 unmoved.
+  Six race-relevant config keys; sim + golden plumbed; unit + golden + flag-ON soak green. Backup tag
+  pre/finale-compression.
+- **SCREEN (report-only, no ship).** scripts/exp-finale-screen.mjs → reports/evolution/FINALE-SCREEN.md
+  (CONTROL vs FINALE, luger-hill + searound, N=25/arm/track): band-reach ≥70% primary veto; dead finales /
+  front@line / lead-changes / runaway / escape guardrails; A-vs-B intervention split. Owner decides after
+  an eye test; the first firing shows (A) doing the work with (B) a rare backstop.
