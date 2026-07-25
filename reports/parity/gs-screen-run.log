@@ -1,0 +1,32 @@
+
+=== G/s OPTIMUM SWEEP — honest shipped 150 px/s world ===
+tracks: luger-hill (open, Holm-flagged) + searound (closed) | N=25/arm/track | paired seeds | racers 40/60
+shipped knobs: G=0.75 (gapRerollThresholdLengths), s=0.5 (gapRerollStrength)
+
+── AXIS A: strength at G=0.75 (paired seeds) ──
+arm                 bandReach  Holm  dead   front@line  runaway  escDepMed  escDepP90  servoSat
+G0.75 s0.5 (SHIP)      68.6%   1/2  20.0%        3.36    18.0%      2.169      4.178      7.6%
+G0.75 s0.75            69.0%   1/2  18.0%        3.54    18.0%      2.131      4.008      7.2%
+G0.75 s1.0             69.8%   1/2  14.0%        3.68    12.0%      2.089      4.465      7.6%
+
+shipped band-reach 68.6% | best clean strength arm: G0.75 s1.0 @ 69.8%
+decision: strength axis inconclusive; band-reach STILL SHORT of 70% → OPEN the G axis
+
+── AXIS B: G axis at best s=1 (paired seeds) ──
+arm                 bandReach  Holm  dead   front@line  runaway  escDepMed  escDepP90  servoSat
+G0.5 s1                71.1%   2/2   8.0%        4.14    14.0%       2.25       3.92      7.7%
+G0.75 s1               69.8%   1/2  14.0%        3.68    12.0%      2.089      4.465      7.6%
+G1.0 s1                68.6%   2/2  12.0%        3.64    18.0%      2.449      5.833      7.8%
+
+=== RANKED CANDIDATES (by pooled band-reach; guardrail damage flagged) ===
+arm                 bandReach  Δreach   dead   front@line  runaway  servoSat   guardrail
+G0.5 s1                71.1%  +2.5pp        8.0%        4.14    14.0%      7.7%   clean
+G0.75 s1.0             69.8%  +1.2pp       14.0%        3.68    12.0%      7.6%   clean
+G0.75 s0.75            69.0%  +0.4pp       18.0%        3.54    18.0%      7.2%   clean
+G0.75 s0.5 (SHIP)      68.6%  +0.0pp       20.0%        3.36    18.0%      7.6%   —(ship)
+G1.0 s1                68.6%  +0.0pp       12.0%        3.64    18.0%      7.8%   clean
+
+=== RECOMMENDATION ===
+CHANGE → G=0.5, s=1: band-reach 71.1% (+2.5pp vs ship 68.6%), no guardrail damage.
+
+wrote C:\Users\weudl\OneDrive\Dokumente\Seasonal race claude\reports\parity\gs-screen-data\gs-screen-150.json

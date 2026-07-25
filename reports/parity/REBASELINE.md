@@ -161,13 +161,49 @@ follow-up, per the once-only fingerprint rule: the docs commit cannot move a beh
 Runs AFTER the speed-150 commit, on the shipped engine, via CLI flags only (no code change). Full protocol
 and ranked table: [HONEST-WORLD-GS-SCREEN.md](HONEST-WORLD-GS-SCREEN.md). Summary:
 
-__GS_SUMMARY__
+**SCREEN tier, N=25, paired seeds, two Holm-flagged stress tracks (luger-hill open + searound closed — my
+pick; both the weaker-finale track of their topology, where headroom and risk both live).** Decisive
+pairing first (strength axis at G=0.75), G axis opened at the best s because the strength axis was
+inconclusive and short of 70% on the stress pool.
+
+Ranked (band-reach; guardrail = dead finales / front@line / runaway vs ship):
+
+| rank | arm | band-reach | Δ vs ship | dead | front@line | runaway | guardrail |
+|---|---|---|---|---|---|---|---|
+| 1 | **G0.5 s1.0** | **71.1%** | **+2.5 pp** | 8.0% | 4.14 | 14.0% | **clean** |
+| 2 | G0.75 s1.0 | 69.8% | +1.2 pp | 14.0% | 3.68 | 12.0% | clean |
+| 3 | G0.75 s0.75 | 69.0% | +0.4 pp | 18.0% | 3.54 | 18.0% | clean |
+| 4 | G0.75 s0.5 (SHIP) | 68.6% | — | 20.0% | 3.36 | 18.0% | — |
+| 5 | G1.0 s1.0 | 68.6% | +0.0 pp | 12.0% | 3.64 | 18.0% | clean |
+
+**Recommendation: the shipped G=0.75 / s=0.5 is NOT confirmed optimal — a candidate (G=0.5, s=1.0) screens
+better.** It lifts band-reach +2.5 pp on the stress pool and, crucially, does so by making the finale
+*livelier*, not deader: it has the FEWEST dead finales of any arm (8% vs the ship's 20%), the most
+front-group finishes (4.14), and lower runaway (14%). The pull is **monotonic on both axes** (lower G +
+higher s → more band-reach AND a cleaner finale), which is more trustworthy than any single N=25 arm.
+
+**But this is a SCREEN, not a ship.** N=25 carries ~±3–4 pp noise; only the two weakest tracks were run;
+the winner flags Holm 2/2 (a tighter/stronger reroll compresses the field). **Nothing was changed.** The
+owner's move, if the direction appeals, is a **gate-tier confirm** (N=100 × the full 4 gate tracks at
+G=0.5 s=1.0) before flipping the Dev Screen defaults. Full detail:
+[HONEST-WORLD-GS-SCREEN.md](HONEST-WORLD-GS-SCREEN.md).
 
 ---
 
 ## 5. Commit SHAs
 
-__SHAS__
+| ref | SHA | what |
+|---|---|---|
+| `pre/speed-150-rebaseline` (tag) | `bde0bc0` | master before the ship — the pre-150 return point (already on origin) |
+| commit A | `13b654d` | the speed-150 ship (STEPs 1–3) + the re-baseline gate results |
+| commit B | `a75e66e` | records the shipped-default fingerprints (once-only, post-commit docs) |
+| commit C | this commit | the G/s screen (HONEST-WORLD-GS-SCREEN.md) + this §4/§5 fill — report-only |
+
+Commits A and B are pushed to `origin/master`; commit C carries this report and is report-only (no
+shipped-behaviour change, so the fingerprints in §3 still describe HEAD).
+
+The **backup / post-ship anchor tag is intentionally NOT cut here** — per the morning list it is the
+owner/planner's to cut after the hard-reload → reset → eye-check block.
 
 ---
 

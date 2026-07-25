@@ -1,0 +1,603 @@
+{
+  "normalSpeed": 150,
+  "races": 25,
+  "seed": 1,
+  "open": "luger-hill",
+  "closed": "searound",
+  "shipReach": 0.686,
+  "strength": [
+    {
+      "arm": {
+        "G": 0.75,
+        "s": 0.5,
+        "label": "G0.75 s0.5 (SHIP)"
+      },
+      "agg": {
+        "bandReachPooled": 0.686,
+        "holmFlaggedTracks": 1,
+        "holmTracksTotal": 2,
+        "deadRate": 0.2,
+        "frontGroupAtLine": 3.36,
+        "runawayRate": 0.18,
+        "escapeDepthMed": 2.1694,
+        "escapeDepthP90": 4.1785,
+        "servoSatPooled": 0.07644444444444444,
+        "ep": {
+          "nEpisodes": 209,
+          "correctedRate": 0.22966507177033493,
+          "uncorrectedRate": 0.7703349282296651,
+          "outOfRollsRate": 0.11961722488038277,
+          "uncorrectedOtherRate": 0.6507177033492823,
+          "outOfRollsShareOfUncorrected": 0.15527950310559005,
+          "unresolvedRate": 0.1722488038277512,
+          "durationMsMed": 4896,
+          "durationMsP90": 16304,
+          "peakGapMed": 1.3637,
+          "peakGapP90": 3.7257,
+          "startPMed": 0.5905,
+          "startedAfterWindowEndRate": 0.06698564593301436,
+          "correctedStartPMed": 0.6594,
+          "uncorrectedStartPMed": 0.4866
+        },
+        "perTrack": [
+          {
+            "id": "luger-hill",
+            "closed": false,
+            "bandReach": 0.668,
+            "holm": false,
+            "holmP": 0.06,
+            "secs": 434.568
+          },
+          {
+            "id": "searound",
+            "closed": true,
+            "bandReach": 0.713,
+            "holm": true,
+            "holmP": 0.02,
+            "secs": 282.635
+          }
+        ]
+      }
+    },
+    {
+      "arm": {
+        "G": 0.75,
+        "s": 0.75,
+        "label": "G0.75 s0.75"
+      },
+      "agg": {
+        "bandReachPooled": 0.69,
+        "holmFlaggedTracks": 1,
+        "holmTracksTotal": 2,
+        "deadRate": 0.18,
+        "frontGroupAtLine": 3.54,
+        "runawayRate": 0.18,
+        "escapeDepthMed": 2.1315,
+        "escapeDepthP90": 4.0075,
+        "servoSatPooled": 0.07244444444444445,
+        "ep": {
+          "nEpisodes": 210,
+          "correctedRate": 0.2523809523809524,
+          "uncorrectedRate": 0.7476190476190476,
+          "outOfRollsRate": 0.14285714285714285,
+          "uncorrectedOtherRate": 0.6047619047619047,
+          "outOfRollsShareOfUncorrected": 0.1910828025477707,
+          "unresolvedRate": 0.1619047619047619,
+          "durationMsMed": 5280,
+          "durationMsP90": 15872,
+          "peakGapMed": 1.3817,
+          "peakGapP90": 3.4798,
+          "startPMed": 0.5905,
+          "startedAfterWindowEndRate": 0.06666666666666667,
+          "correctedStartPMed": 0.6723,
+          "uncorrectedStartPMed": 0.4689
+        },
+        "perTrack": [
+          {
+            "id": "luger-hill",
+            "closed": false,
+            "bandReach": 0.6693333333333333,
+            "holm": false,
+            "holmP": 0.06,
+            "secs": 433.603
+          },
+          {
+            "id": "searound",
+            "closed": true,
+            "bandReach": 0.721,
+            "holm": true,
+            "holmP": 0.02,
+            "secs": 278.044
+          }
+        ]
+      }
+    },
+    {
+      "arm": {
+        "G": 0.75,
+        "s": 1,
+        "label": "G0.75 s1.0"
+      },
+      "agg": {
+        "bandReachPooled": 0.6984,
+        "holmFlaggedTracks": 1,
+        "holmTracksTotal": 2,
+        "deadRate": 0.14,
+        "frontGroupAtLine": 3.68,
+        "runawayRate": 0.12,
+        "escapeDepthMed": 2.0894,
+        "escapeDepthP90": 4.4652,
+        "servoSatPooled": 0.07555555555555556,
+        "ep": {
+          "nEpisodes": 217,
+          "correctedRate": 0.2488479262672811,
+          "uncorrectedRate": 0.7511520737327189,
+          "outOfRollsRate": 0.14285714285714285,
+          "uncorrectedOtherRate": 0.6082949308755761,
+          "outOfRollsShareOfUncorrected": 0.1901840490797546,
+          "unresolvedRate": 0.17972350230414746,
+          "durationMsMed": 5616,
+          "durationMsP90": 15776,
+          "peakGapMed": 1.4153,
+          "peakGapP90": 3.3732,
+          "startPMed": 0.5955,
+          "startedAfterWindowEndRate": 0.07834101382488479,
+          "correctedStartPMed": 0.6723,
+          "uncorrectedStartPMed": 0.4884
+        },
+        "perTrack": [
+          {
+            "id": "luger-hill",
+            "closed": false,
+            "bandReach": 0.68,
+            "holm": false,
+            "holmP": 0.06,
+            "secs": 436.495
+          },
+          {
+            "id": "searound",
+            "closed": true,
+            "bandReach": 0.726,
+            "holm": true,
+            "holmP": 0.02,
+            "secs": 284.207
+          }
+        ]
+      }
+    }
+  ],
+  "gAxis": [
+    {
+      "arm": {
+        "G": 0.5,
+        "s": 1,
+        "label": "G0.5 s1"
+      },
+      "agg": {
+        "bandReachPooled": 0.7108,
+        "holmFlaggedTracks": 2,
+        "holmTracksTotal": 2,
+        "deadRate": 0.08,
+        "frontGroupAtLine": 4.14,
+        "runawayRate": 0.14,
+        "escapeDepthMed": 2.2498,
+        "escapeDepthP90": 3.9195,
+        "servoSatPooled": 0.07711111111111112,
+        "ep": {
+          "nEpisodes": 294,
+          "correctedRate": 0.20748299319727892,
+          "uncorrectedRate": 0.7925170068027211,
+          "outOfRollsRate": 0.11564625850340136,
+          "uncorrectedOtherRate": 0.6768707482993197,
+          "outOfRollsShareOfUncorrected": 0.1459227467811159,
+          "unresolvedRate": 0.1292517006802721,
+          "durationMsMed": 4176,
+          "durationMsP90": 14768,
+          "peakGapMed": 1.1618,
+          "peakGapP90": 2.9719,
+          "startPMed": 0.5126,
+          "startedAfterWindowEndRate": 0.05442176870748299,
+          "correctedStartPMed": 0.6635,
+          "uncorrectedStartPMed": 0.4426
+        },
+        "perTrack": [
+          {
+            "id": "luger-hill",
+            "closed": false,
+            "bandReach": 0.684,
+            "holm": true,
+            "holmP": 0.02,
+            "secs": 464.672
+          },
+          {
+            "id": "searound",
+            "closed": true,
+            "bandReach": 0.751,
+            "holm": true,
+            "holmP": 0.02,
+            "secs": 297.313
+          }
+        ]
+      }
+    },
+    {
+      "arm": {
+        "G": 0.75,
+        "s": 1,
+        "label": "G0.75 s1"
+      },
+      "agg": {
+        "bandReachPooled": 0.6984,
+        "holmFlaggedTracks": 1,
+        "holmTracksTotal": 2,
+        "deadRate": 0.14,
+        "frontGroupAtLine": 3.68,
+        "runawayRate": 0.12,
+        "escapeDepthMed": 2.0894,
+        "escapeDepthP90": 4.4652,
+        "servoSatPooled": 0.07555555555555556,
+        "ep": {
+          "nEpisodes": 217,
+          "correctedRate": 0.2488479262672811,
+          "uncorrectedRate": 0.7511520737327189,
+          "outOfRollsRate": 0.14285714285714285,
+          "uncorrectedOtherRate": 0.6082949308755761,
+          "outOfRollsShareOfUncorrected": 0.1901840490797546,
+          "unresolvedRate": 0.17972350230414746,
+          "durationMsMed": 5616,
+          "durationMsP90": 15776,
+          "peakGapMed": 1.4153,
+          "peakGapP90": 3.3732,
+          "startPMed": 0.5955,
+          "startedAfterWindowEndRate": 0.07834101382488479,
+          "correctedStartPMed": 0.6723,
+          "uncorrectedStartPMed": 0.4884
+        },
+        "perTrack": [
+          {
+            "id": "luger-hill",
+            "closed": false,
+            "bandReach": 0.68,
+            "holm": false,
+            "holmP": 0.06,
+            "secs": 459.955
+          },
+          {
+            "id": "searound",
+            "closed": true,
+            "bandReach": 0.726,
+            "holm": true,
+            "holmP": 0.02,
+            "secs": 295.403
+          }
+        ]
+      }
+    },
+    {
+      "arm": {
+        "G": 1,
+        "s": 1,
+        "label": "G1.0 s1"
+      },
+      "agg": {
+        "bandReachPooled": 0.686,
+        "holmFlaggedTracks": 2,
+        "holmTracksTotal": 2,
+        "deadRate": 0.12,
+        "frontGroupAtLine": 3.64,
+        "runawayRate": 0.18,
+        "escapeDepthMed": 2.4494,
+        "escapeDepthP90": 5.8334,
+        "servoSatPooled": 0.07777777777777778,
+        "ep": {
+          "nEpisodes": 159,
+          "correctedRate": 0.2893081761006289,
+          "uncorrectedRate": 0.710691823899371,
+          "outOfRollsRate": 0.14465408805031446,
+          "uncorrectedOtherRate": 0.5660377358490566,
+          "outOfRollsShareOfUncorrected": 0.20353982300884957,
+          "unresolvedRate": 0.18238993710691823,
+          "durationMsMed": 6464,
+          "durationMsP90": 16304,
+          "peakGapMed": 1.5239,
+          "peakGapP90": 4.2646,
+          "startPMed": 0.6151,
+          "startedAfterWindowEndRate": 0.07547169811320754,
+          "correctedStartPMed": 0.7031,
+          "uncorrectedStartPMed": 0.504
+        },
+        "perTrack": [
+          {
+            "id": "luger-hill",
+            "closed": false,
+            "bandReach": 0.6673333333333333,
+            "holm": true,
+            "holmP": 0.04,
+            "secs": 458.434
+          },
+          {
+            "id": "searound",
+            "closed": true,
+            "bandReach": 0.714,
+            "holm": true,
+            "holmP": 0.02,
+            "secs": 295.715
+          }
+        ]
+      }
+    }
+  ],
+  "ranked": [
+    {
+      "arm": {
+        "G": 0.5,
+        "s": 1,
+        "label": "G0.5 s1"
+      },
+      "agg": {
+        "bandReachPooled": 0.7108,
+        "holmFlaggedTracks": 2,
+        "holmTracksTotal": 2,
+        "deadRate": 0.08,
+        "frontGroupAtLine": 4.14,
+        "runawayRate": 0.14,
+        "escapeDepthMed": 2.2498,
+        "escapeDepthP90": 3.9195,
+        "servoSatPooled": 0.07711111111111112,
+        "ep": {
+          "nEpisodes": 294,
+          "correctedRate": 0.20748299319727892,
+          "uncorrectedRate": 0.7925170068027211,
+          "outOfRollsRate": 0.11564625850340136,
+          "uncorrectedOtherRate": 0.6768707482993197,
+          "outOfRollsShareOfUncorrected": 0.1459227467811159,
+          "unresolvedRate": 0.1292517006802721,
+          "durationMsMed": 4176,
+          "durationMsP90": 14768,
+          "peakGapMed": 1.1618,
+          "peakGapP90": 2.9719,
+          "startPMed": 0.5126,
+          "startedAfterWindowEndRate": 0.05442176870748299,
+          "correctedStartPMed": 0.6635,
+          "uncorrectedStartPMed": 0.4426
+        },
+        "perTrack": [
+          {
+            "id": "luger-hill",
+            "closed": false,
+            "bandReach": 0.684,
+            "holm": true,
+            "holmP": 0.02,
+            "secs": 464.672
+          },
+          {
+            "id": "searound",
+            "closed": true,
+            "bandReach": 0.751,
+            "holm": true,
+            "holmP": 0.02,
+            "secs": 297.313
+          }
+        ]
+      }
+    },
+    {
+      "arm": {
+        "G": 0.75,
+        "s": 1,
+        "label": "G0.75 s1.0"
+      },
+      "agg": {
+        "bandReachPooled": 0.6984,
+        "holmFlaggedTracks": 1,
+        "holmTracksTotal": 2,
+        "deadRate": 0.14,
+        "frontGroupAtLine": 3.68,
+        "runawayRate": 0.12,
+        "escapeDepthMed": 2.0894,
+        "escapeDepthP90": 4.4652,
+        "servoSatPooled": 0.07555555555555556,
+        "ep": {
+          "nEpisodes": 217,
+          "correctedRate": 0.2488479262672811,
+          "uncorrectedRate": 0.7511520737327189,
+          "outOfRollsRate": 0.14285714285714285,
+          "uncorrectedOtherRate": 0.6082949308755761,
+          "outOfRollsShareOfUncorrected": 0.1901840490797546,
+          "unresolvedRate": 0.17972350230414746,
+          "durationMsMed": 5616,
+          "durationMsP90": 15776,
+          "peakGapMed": 1.4153,
+          "peakGapP90": 3.3732,
+          "startPMed": 0.5955,
+          "startedAfterWindowEndRate": 0.07834101382488479,
+          "correctedStartPMed": 0.6723,
+          "uncorrectedStartPMed": 0.4884
+        },
+        "perTrack": [
+          {
+            "id": "luger-hill",
+            "closed": false,
+            "bandReach": 0.68,
+            "holm": false,
+            "holmP": 0.06,
+            "secs": 436.495
+          },
+          {
+            "id": "searound",
+            "closed": true,
+            "bandReach": 0.726,
+            "holm": true,
+            "holmP": 0.02,
+            "secs": 284.207
+          }
+        ]
+      }
+    },
+    {
+      "arm": {
+        "G": 0.75,
+        "s": 0.75,
+        "label": "G0.75 s0.75"
+      },
+      "agg": {
+        "bandReachPooled": 0.69,
+        "holmFlaggedTracks": 1,
+        "holmTracksTotal": 2,
+        "deadRate": 0.18,
+        "frontGroupAtLine": 3.54,
+        "runawayRate": 0.18,
+        "escapeDepthMed": 2.1315,
+        "escapeDepthP90": 4.0075,
+        "servoSatPooled": 0.07244444444444445,
+        "ep": {
+          "nEpisodes": 210,
+          "correctedRate": 0.2523809523809524,
+          "uncorrectedRate": 0.7476190476190476,
+          "outOfRollsRate": 0.14285714285714285,
+          "uncorrectedOtherRate": 0.6047619047619047,
+          "outOfRollsShareOfUncorrected": 0.1910828025477707,
+          "unresolvedRate": 0.1619047619047619,
+          "durationMsMed": 5280,
+          "durationMsP90": 15872,
+          "peakGapMed": 1.3817,
+          "peakGapP90": 3.4798,
+          "startPMed": 0.5905,
+          "startedAfterWindowEndRate": 0.06666666666666667,
+          "correctedStartPMed": 0.6723,
+          "uncorrectedStartPMed": 0.4689
+        },
+        "perTrack": [
+          {
+            "id": "luger-hill",
+            "closed": false,
+            "bandReach": 0.6693333333333333,
+            "holm": false,
+            "holmP": 0.06,
+            "secs": 433.603
+          },
+          {
+            "id": "searound",
+            "closed": true,
+            "bandReach": 0.721,
+            "holm": true,
+            "holmP": 0.02,
+            "secs": 278.044
+          }
+        ]
+      }
+    },
+    {
+      "arm": {
+        "G": 0.75,
+        "s": 0.5,
+        "label": "G0.75 s0.5 (SHIP)"
+      },
+      "agg": {
+        "bandReachPooled": 0.686,
+        "holmFlaggedTracks": 1,
+        "holmTracksTotal": 2,
+        "deadRate": 0.2,
+        "frontGroupAtLine": 3.36,
+        "runawayRate": 0.18,
+        "escapeDepthMed": 2.1694,
+        "escapeDepthP90": 4.1785,
+        "servoSatPooled": 0.07644444444444444,
+        "ep": {
+          "nEpisodes": 209,
+          "correctedRate": 0.22966507177033493,
+          "uncorrectedRate": 0.7703349282296651,
+          "outOfRollsRate": 0.11961722488038277,
+          "uncorrectedOtherRate": 0.6507177033492823,
+          "outOfRollsShareOfUncorrected": 0.15527950310559005,
+          "unresolvedRate": 0.1722488038277512,
+          "durationMsMed": 4896,
+          "durationMsP90": 16304,
+          "peakGapMed": 1.3637,
+          "peakGapP90": 3.7257,
+          "startPMed": 0.5905,
+          "startedAfterWindowEndRate": 0.06698564593301436,
+          "correctedStartPMed": 0.6594,
+          "uncorrectedStartPMed": 0.4866
+        },
+        "perTrack": [
+          {
+            "id": "luger-hill",
+            "closed": false,
+            "bandReach": 0.668,
+            "holm": false,
+            "holmP": 0.06,
+            "secs": 434.568
+          },
+          {
+            "id": "searound",
+            "closed": true,
+            "bandReach": 0.713,
+            "holm": true,
+            "holmP": 0.02,
+            "secs": 282.635
+          }
+        ]
+      }
+    },
+    {
+      "arm": {
+        "G": 1,
+        "s": 1,
+        "label": "G1.0 s1"
+      },
+      "agg": {
+        "bandReachPooled": 0.686,
+        "holmFlaggedTracks": 2,
+        "holmTracksTotal": 2,
+        "deadRate": 0.12,
+        "frontGroupAtLine": 3.64,
+        "runawayRate": 0.18,
+        "escapeDepthMed": 2.4494,
+        "escapeDepthP90": 5.8334,
+        "servoSatPooled": 0.07777777777777778,
+        "ep": {
+          "nEpisodes": 159,
+          "correctedRate": 0.2893081761006289,
+          "uncorrectedRate": 0.710691823899371,
+          "outOfRollsRate": 0.14465408805031446,
+          "uncorrectedOtherRate": 0.5660377358490566,
+          "outOfRollsShareOfUncorrected": 0.20353982300884957,
+          "unresolvedRate": 0.18238993710691823,
+          "durationMsMed": 6464,
+          "durationMsP90": 16304,
+          "peakGapMed": 1.5239,
+          "peakGapP90": 4.2646,
+          "startPMed": 0.6151,
+          "startedAfterWindowEndRate": 0.07547169811320754,
+          "correctedStartPMed": 0.7031,
+          "uncorrectedStartPMed": 0.504
+        },
+        "perTrack": [
+          {
+            "id": "luger-hill",
+            "closed": false,
+            "bandReach": 0.6673333333333333,
+            "holm": true,
+            "holmP": 0.04,
+            "secs": 458.434
+          },
+          {
+            "id": "searound",
+            "closed": true,
+            "bandReach": 0.714,
+            "holm": true,
+            "holmP": 0.02,
+            "secs": 295.715
+          }
+        ]
+      }
+    }
+  ],
+  "recommendation": {
+    "change": true,
+    "G": 0.5,
+    "s": 1,
+    "bandReach": 0.7108
+  }
+}
