@@ -1158,3 +1158,36 @@ branch-priority fix. The fix was re-qualified afterwards on a 4-track paired tes
 (A0, `67a1053`): runaway **8.3% → 7.5%**, only **5/400 seed flips**, −0.55 sd — within noise, and every
 flip moved *away* from runaway. The 6 tracks outside that test are untested post-fix. Quote the
 headline with this qualifier.
+
+## 2026-07-25 — Assignment-follows-field (Evolution Act 1, flag-gated build, DEFAULT OFF)
+
+**Mechanism.** With `assignmentFollowsField` ON, the shared servo (`racePlanner.js` `update()` →
+`applyAssignmentFollowsField`) reassigns the PACK's intra-band target ranks **every OUTCOME tick** to
+follow the LIVE field (t-desc order) instead of a pinned plan-time slot. Band **membership** is fixed
+(each racer's dynamic target is always one of its OWN plan-time band's pack slots, so it can never cross
+a `BAND_EDGES` boundary — hard invariant). An intra-band slot swap commits **only** when the challenger
+leads the incumbent by more than `affSwapThresholdLengths` of arc-gap (same `arcT × lenScale` "lengths"
+unit as `gapRerollThresholdLengths`) — the anti-flap hysteresis. Excluded from reassignment:
+**hero-choreographed** racers (they own their curve ranks; the pack fills the remaining band slots) and
+**released** racers (a hero subset; release keeps reading FIXED band membership). The reassignment is a
+**pure deterministic function of live state** — no `rng()` draw, no wall-clock / absolute-ms constant —
+so it is mirrored byte-for-byte across the browser and the sim, both of which run the same
+`stepRacePhysics` (which computes the identical `affLenScale` and passes it, with the track topology,
+into `update()`). Determinism is the acceptance keystone: same seed + config + track ⇒ identical race.
+
+**Static-map contract (untouched).** `plan._racerTargetRank` remains the frozen endpoint map — hero
+curve generation input, `winnerRacerId` (frozen at plan time), `areaBonus` precompute, `b1Indices`, and
+every sim observer baseline keep reading it. AFF is a **separate runtime assignment layer**
+(`plan._affAssignedRank`) consumed ONLY at the servo pack target-selection site; when OFF it stays null
+and the servo reads the static map exactly as before → **byte-identical shipped game**.
+
+**Fingerprint invariance (proven, this build).** Default OFF, so nothing shipped changed: flagless ON
+`7c70b1eae7d31e22` and OFF (`--gapRerollEnabled=false`) `f8f7d9c2fd3283e9` — both unchanged from master.
+
+**Sim CLI.** `--assignmentFollowsField=true` engages the mechanism; `--affSwapThresholdLengths=<L>`
+(default 0.5) sets the swap hysteresis. Absent/false → byte-identical. When ON, each `rawData` row
+carries `affSwaps` (per-racer committed intra-band swap count) for the flap diagnostic; the field is
+gated on the flag, so a flagless run's `rawData` (the fingerprint's world) is unchanged. The flag-ON
+parity soak subset is `node scripts/parity/soak.mjs --limit=60 --assignmentFollowsField=true` — it
+engages AFF in BOTH the real and sim arms and asserts `realArm == simArm` byte-for-byte. The SCREEN
+comparison is `scripts/exp-aff-screen.mjs` (report → `reports/evolution/AFF-SCREEN.md`).

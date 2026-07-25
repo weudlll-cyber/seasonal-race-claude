@@ -8,7 +8,7 @@
 // ============================================================
 
 import { describe, it, expect, beforeEach } from 'vitest';
-import { createRacePlan, createTrajectoryController } from './racePlanner.js';
+import { createRacePlan, createTrajectoryController, BAND_EDGES } from './racePlanner.js';
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -1664,5 +1664,175 @@ describe('createRacePlan — contestWindowStart', () => {
       BASE_SEED
     );
     expect(plan._contestWindowStart).toBe(0.66);
+  });
+});
+
+// ── Assignment-follows-field (Evolution Act 1) ──────────────────────────────────
+// The pack's intra-band target ranks are reassigned to follow the LIVE field every OUTCOME tick, gated
+// on the affSwapThresholdLengths arc-gap hysteresis, strictly inside each racer's plan-time band. These
+// tests drive update() on the elapsedMs (phaseProgress=null) OUTCOME path, which casts NO heroes, so the
+// whole field is the pack; heroes are injected manually for the exclusion test. Byte-identity when OFF is
+// separately proven by the shipped-default fingerprint gate.
+describe('createTrajectoryController — assignment-follows-field (AFF)', () => {
+  const N = 10;
+  const racersN = makeRacers(N, N);
+
+  function buildPlan({ on = true, H = 0.5 } = {}, seed = 7) {
+    return createRacePlan(
+      racersN,
+      FINISH_T,
+      TARGET_DUR_MS,
+      { assignmentFollowsField: on, affSwapThresholdLengths: H },
+      seed
+    );
+  }
+  function liveRacers(tByIndex) {
+    return racersN.map((r) => ({
+      ...r,
+      t: tByIndex.get(r.index) ?? 0,
+      finished: false,
+      trajectoryMult: 1.0,
+      trajectoryMultTarget: 1.0,
+      trajectoryMultPrev: 1.0,
+      trajectoryMultTransStart: 0,
+    }));
+  }
+  function bandBoundsOf(rank) {
+    const i = BAND_EDGES.findIndex((e) => rank <= e);
+    const bi = i < 0 ? BAND_EDGES.length : i;
+    const lo = bi === 0 ? 1 : BAND_EDGES[bi - 1] + 1;
+    const hi = bi < BAND_EDGES.length ? BAND_EDGES[bi] : N;
+    return [lo, hi];
+  }
+
+  it('OFF: the mechanism is inert — _affAssignedRank stays null through an OUTCOME tick', () => {
+    const plan = buildPlan({ on: false });
+    const ctrl = createTrajectoryController(plan);
+    const outcomeMs = plan._phases.transEnd + 1000;
+    const tMap = new Map(racersN.map((r) => [r.index, 0.5 - r.index * 0.03]));
+    ctrl.update(liveRacers(tMap), outcomeMs, null, null, 1.0, true);
+    expect(plan._affAssignedRank).toBeNull();
+    expect(plan._affSwapByRacer).toBeNull();
+  });
+
+  it('intra-band invariant: a dynamic target never crosses its plan-time band edges', () => {
+    // H=0 → swap on any lead (maximum churn) — the hardest stress on the band-edge invariant.
+    const plan = buildPlan({ on: true, H: 0 });
+    const ctrl = createTrajectoryController(plan);
+    const outcomeMs = plan._phases.transEnd + 1000;
+    const staticMap = plan._racerTargetRank;
+    for (let tick = 0; tick < 30; tick++) {
+      // A deterministic per-tick reshuffle of the live order (no rng — reproducible).
+      const tMap = new Map(racersN.map((r) => [r.index, ((r.index * 7 + tick * 13) % N) / N]));
+      ctrl.update(liveRacers(tMap), outcomeMs, null, null, 1.0, true);
+      for (const r of racersN) {
+        const [lo, hi] = bandBoundsOf(staticMap.get(r.index));
+        const dyn = plan._affAssignedRank.get(r.index);
+        expect(dyn).toBeGreaterThanOrEqual(lo);
+        expect(dyn).toBeLessThanOrEqual(hi);
+      }
+      // The dynamic assignment is always a permutation of the static ranks (no rank lost or duplicated).
+      const dynRanks = [...plan._affAssignedRank.values()].sort((a, b) => a - b);
+      expect(dynRanks).toEqual([...staticMap.values()].sort((a, b) => a - b));
+    }
+  });
+
+  it('hysteresis: an intra-band slot swap commits only when the lead exceeds the threshold', () => {
+    const two = makeRacers(2, 2);
+    const H = 0.5;
+    const plan = createRacePlan(
+      two,
+      FINISH_T,
+      TARGET_DUR_MS,
+      { assignmentFollowsField: true, affSwapThresholdLengths: H },
+      3
+    );
+    const staticMap = plan._racerTargetRank;
+    const A = [...staticMap].find(([, rk]) => rk === 1)[0]; // static rank 1
+    const B = [...staticMap].find(([, rk]) => rk === 2)[0]; // static rank 2 (same band as A)
+    const ctrl = createTrajectoryController(plan);
+    const outcomeMs = plan._phases.transEnd + 1000;
+    const mk = (tA, tB) =>
+      two.map((r) => ({
+        ...r,
+        t: r.index === A ? tA : tB,
+        finished: false,
+        trajectoryMult: 1.0,
+        trajectoryMultTarget: 1.0,
+        trajectoryMultPrev: 1.0,
+        trajectoryMultTransStart: 0,
+      }));
+
+    // B leads A by 0.4 lengths (< H) → HOLD: assignment unchanged, no committed swap.
+    ctrl.update(mk(0.0, 0.4), outcomeMs, null, null, 1.0, true);
+    expect(plan._affAssignedRank.get(A)).toBe(1);
+    expect(plan._affAssignedRank.get(B)).toBe(2);
+    expect([...plan._affSwapByRacer.values()].reduce((s, v) => s + v, 0)).toBe(0);
+
+    // B leads A by 0.6 lengths (> H) → SWAP: B takes slot 1, A drops to slot 2; both counted.
+    ctrl.update(mk(0.0, 0.6), outcomeMs, null, null, 1.0, true);
+    expect(plan._affAssignedRank.get(B)).toBe(1);
+    expect(plan._affAssignedRank.get(A)).toBe(2);
+    expect(plan._affSwapByRacer.get(A)).toBe(1);
+    expect(plan._affSwapByRacer.get(B)).toBe(1);
+  });
+
+  it('follows the field: a pack member leading its band by a wide margin takes the band-best slot', () => {
+    const plan = buildPlan({ on: true, H: 0.5 });
+    const ctrl = createTrajectoryController(plan);
+    const outcomeMs = plan._phases.transEnd + 1000;
+    const staticMap = plan._racerTargetRank;
+    const band0 = [...staticMap].filter(([, rk]) => rk <= BAND_EDGES[0]).map(([i]) => i);
+    const leader = band0[3];
+    const tMap = new Map();
+    band0.forEach((idx, k) => tMap.set(idx, idx === leader ? 0.9 : 0.1 + k * 0.02)); // sub-H spacing on the rest
+    racersN.forEach((r) => {
+      if (!tMap.has(r.index)) tMap.set(r.index, 0.0);
+    });
+    for (let k = 0; k < 20; k++) ctrl.update(liveRacers(tMap), outcomeMs, null, null, 1.0, true);
+    const bestSlot = band0.map((i) => staticMap.get(i)).sort((a, b) => a - b)[0];
+    expect(plan._affAssignedRank.get(leader)).toBe(bestSlot);
+  });
+
+  it('heroes (and released racers, a hero subset) are never reassigned', () => {
+    const plan = buildPlan({ on: true, H: 0 });
+    const staticMap = plan._racerTargetRank;
+    const heroIdx = [...staticMap].find(([, rk]) => rk === 2)[0]; // a band-0 racer
+    const heroRank = staticMap.get(heroIdx);
+    // Inject a flat stub hero curve so the servo samples a constant rank (phaseProgress=null → pts[0]).
+    plan._heroCurves = new Map([
+      [
+        heroIdx,
+        {
+          points: [
+            { progress: 0, rank: heroRank },
+            { progress: 1, rank: heroRank },
+          ],
+        },
+      ],
+    ]);
+    const ctrl = createTrajectoryController(plan);
+    const outcomeMs = plan._phases.transEnd + 1000;
+    for (let tick = 0; tick < 10; tick++) {
+      const racers = liveRacers(new Map(racersN.map((r) => [r.index, (N - r.index) / N])));
+      racers.find((r) => r.index === heroIdx).isHeroChoreographed = true;
+      ctrl.update(racers, outcomeMs, null, null, 1.0, true);
+    }
+    // The hero kept its static slot in the AFF map and was never counted as an intra-band swap.
+    expect(plan._affAssignedRank.get(heroIdx)).toBe(heroRank);
+    expect(plan._affSwapByRacer.get(heroIdx) ?? 0).toBe(0);
+  });
+
+  it('degrades to a no-op when the length scale is 0 (assignment stays on the static slots)', () => {
+    const plan = buildPlan({ on: true, H: 0.5 });
+    const ctrl = createTrajectoryController(plan);
+    const outcomeMs = plan._phases.transEnd + 1000;
+    const staticMap = plan._racerTargetRank;
+    const tMap = new Map(racersN.map((r) => [r.index, (N - r.index) / N])); // reversed order
+    ctrl.update(liveRacers(tMap), outcomeMs, null, null, 0, true); // lenScale 0 → every gap reads 0
+    for (const r of racersN) {
+      expect(plan._affAssignedRank.get(r.index)).toBe(staticMap.get(r.index));
+    }
+    expect([...plan._affSwapByRacer.values()].reduce((s, v) => s + v, 0)).toBe(0);
   });
 });

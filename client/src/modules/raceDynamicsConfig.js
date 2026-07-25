@@ -72,7 +72,12 @@ export function loadRaceDynamicsConfig() {
     // else the measurement window is empty or spans a phase it was never meant to cover.
     typeof merged.contestWindowStart !== 'number' ||
     merged.contestWindowStart <= merged.choreoOutcomeStart ||
-    merged.contestWindowStart >= merged.choreoReleaseProgress
+    merged.contestWindowStart >= merged.choreoReleaseProgress ||
+    // Assignment-follows-field (Evolution Act 1). Same whole-object-reject pattern. The flag is a
+    // boolean; the swap threshold is a non-negative arc-gap in racer lengths (0 = swap on any lead).
+    typeof merged.assignmentFollowsField !== 'boolean' ||
+    typeof merged.affSwapThresholdLengths !== 'number' ||
+    merged.affSwapThresholdLengths < 0
   ) {
     return { ...DEFAULT_RACE_DYNAMICS_CONFIG };
   }

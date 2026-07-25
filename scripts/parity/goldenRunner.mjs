@@ -245,6 +245,11 @@ function browserPlanConfig(dynamicsConfig) {
     gapRerollMode: dynamicsConfig.gapRerollMode ?? 'symmetric',
     gapRerollStrength: dynamicsConfig.gapRerollStrength ?? 1.0,
     reRollTransitionDuration: dynamicsConfig.reRollTransitionDuration,
+    // Assignment-follows-field (Evolution Act 1) — default OFF → byte-identical.
+    assignmentFollowsField: dynamicsConfig.assignmentFollowsField ?? false,
+    affSwapThresholdLengths:
+      dynamicsConfig.affSwapThresholdLengths ??
+      DEFAULT_RACE_DYNAMICS_CONFIG.affSwapThresholdLengths,
   };
 }
 
@@ -281,8 +286,28 @@ function simPlanConfig(DYN) {
     gapRerollStrength: DYN.gapRerollStrength,
     reRollTransitionDuration: DYN.reRollTransitionDuration,
     contestWindowStart: DYN.contestWindowStart,
+    // Assignment-follows-field (Evolution Act 1) — default OFF → byte-identical.
+    assignmentFollowsField: DYN.assignmentFollowsField ?? false,
+    affSwapThresholdLengths:
+      DYN.affSwapThresholdLengths ?? DEFAULT_RACE_DYNAMICS_CONFIG.affSwapThresholdLengths,
   };
 }
+
+// Optional AFF override for the flag-ON parity soak (scripts/parity/soak.mjs --assignmentFollowsField=true):
+// engages assignment-follows-field in BOTH arms so the soak proves real==sim WITH the mechanism live.
+// Absent → {} → the shipped default world (AFF off), so the golden/replay/soak defaults are untouched.
+// The sim arm's step-cfg flag comes from sim-fairness's own --assignmentFollowsField (same argv), so both
+// arms compute the identical affLenScale in the shared stepRacePhysics.
+const AFF_SOAK_OVERRIDE = (() => {
+  if (!process.argv.includes('--assignmentFollowsField=true')) return {};
+  const t = process.argv.find((a) => a.startsWith('--affSwapThresholdLengths='));
+  return {
+    assignmentFollowsField: true,
+    affSwapThresholdLengths: t
+      ? Number(t.split('=')[1])
+      : DEFAULT_RACE_DYNAMICS_CONFIG.affSwapThresholdLengths,
+  };
+})();
 
 /** Shared execution: identical from here down — the per-frame loop is single-sourced. */
 function execute({ ctx, cfg, identity, model, planConfig, behaviorConfig, laps, requestedSeconds }) {
@@ -462,7 +487,7 @@ export function realArm(identity) {
   const ctx = loadTrack(identity._trackId);
   const cfg = RACER_CONFIGS[identity._racerType];
   const baseSpeedConfig = loadBaseSpeedConfig();
-  const dynamicsConfig = loadRaceDynamicsConfig();
+  const dynamicsConfig = { ...loadRaceDynamicsConfig(), ...AFF_SOAK_OVERRIDE };
   const behaviorConfig = { ...loadRaceBehaviorConfig(), isOpen: ctx.isOpen };
   const rowConfig = loadRowLayoutConfig();
   const V = normalSpeedFrom(baseSpeedConfig);
@@ -580,7 +605,7 @@ export function simArm(identity) {
     cfg,
     identity,
     model,
-    planConfig: simPlanConfig(DEFAULT_RACE_DYNAMICS_CONFIG),
+    planConfig: simPlanConfig({ ...DEFAULT_RACE_DYNAMICS_CONFIG, ...AFF_SOAK_OVERRIDE }),
     behaviorConfig,
     laps: comboLaps,
     requestedSeconds: comboSeconds,

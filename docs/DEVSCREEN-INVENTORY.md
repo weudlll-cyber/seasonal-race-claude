@@ -110,6 +110,18 @@ baseline was measured in. Changes take effect on the next race. See [SIM.md](SIM
 | Gap-Reroll mode symmetric/down-only | `gapRerollMode` | 'symmetric' | `gap-reroll-mode` |
 | Gap-Reroll dev marker (rendering-only cyan ring) | `gapRerollDevMarker` | false | `gap-reroll-devmarker-toggle` |
 
+**Assignment-follows-field (Evolution Act 1) — config keys, NO DevScreen control.** Two race-relevant
+`raceDynamicsConfig` keys added by the Act 1 flag-gated build. They have **no** DevScreen widget by owner
+decision (the Race Plan B1 table keeps showing the ORIGINAL static assigned targets as the fairness
+reference — no live-target UI). They toggle via config/export or the sim CLI only, ship **default OFF**
+(byte-identical), count toward the HUD badge's "R race" total when off-default, and reset with
+"Reset All Defaults". Mechanism + static-map contract: [SIM.md](SIM.md).
+
+| Config key (no control) | Shipped default | Meaning |
+|---|---|---|
+| `assignmentFollowsField` | false | ON → the pack's intra-band target ranks follow the live field every servo tick (strictly intra-band) |
+| `affSwapThresholdLengths` | 0.5 | arc-gap (racer lengths) a challenger must lead an incumbent by before an intra-band slot swap commits (same unit as `gapRerollThresholdLengths`) |
+
 ### 3. Bonus — two sub-headings
 
 Card has no card-level Reset. Backing config: `raceDynamicsConfig`.

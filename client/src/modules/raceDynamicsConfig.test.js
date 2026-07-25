@@ -102,6 +102,9 @@ describe('DEFAULT_RACE_DYNAMICS_CONFIG', () => {
       gapRerollStrength: 1.0,
       gapRerollMode: 'symmetric',
       gapRerollDevMarker: false,
+      // Assignment-follows-field (Evolution Act 1) — flag-gated, DEFAULT OFF (byte-identical shipped game).
+      assignmentFollowsField: false,
+      affSwapThresholdLengths: 0.5,
     });
   });
 
@@ -138,6 +141,27 @@ describe('DEFAULT_RACE_DYNAMICS_CONFIG', () => {
     expect(loaded.gapRerollEnabled).toBe(true);
     expect(loaded.gapRerollThresholdLengths).toBe(2.0);
     expect(loaded.gapRerollMode).toBe('symmetric'); // unspecified → default
+  });
+
+  it('assignment-follows-field ships DEFAULT OFF at threshold 0.5 (byte-identical shipped game)', () => {
+    expect(DEFAULT_RACE_DYNAMICS_CONFIG.assignmentFollowsField).toBe(false);
+    expect(DEFAULT_RACE_DYNAMICS_CONFIG.affSwapThresholdLengths).toBe(0.5);
+  });
+
+  it('a persisted assignment-follows-field config round-trips through load/merge', () => {
+    // Same no-whitelist spread-merge path as gap-reroll: a stored flag + custom threshold survive the
+    // load so index.jsx can thread them into createRacePlan.
+    storageGet.mockReturnValue({ assignmentFollowsField: true, affSwapThresholdLengths: 1.25 });
+    const loaded = loadRaceDynamicsConfig();
+    expect(loaded.assignmentFollowsField).toBe(true);
+    expect(loaded.affSwapThresholdLengths).toBe(1.25);
+  });
+
+  it('rejects a non-boolean AFF flag or a negative threshold to defaults (whole-object reject)', () => {
+    storageGet.mockReturnValue({ assignmentFollowsField: 'yes' });
+    expect(loadRaceDynamicsConfig()).toEqual({ ...DEFAULT_RACE_DYNAMICS_CONFIG });
+    storageGet.mockReturnValue({ affSwapThresholdLengths: -1 });
+    expect(loadRaceDynamicsConfig()).toEqual({ ...DEFAULT_RACE_DYNAMICS_CONFIG });
   });
 
   it('all numeric defaults are positive; PULK-phase bonuses default 0 (off during PULK)', () => {

@@ -572,3 +572,22 @@ controls + pinned internals (Stage 5b), not on the removed governor knobs.
   by the B2-Heroes work, but deferred pending an owner decision on drama-at-leader vs. deep-band reach
   (they want opposite servo tuning). The B2 per-hero intensity budget, the Re-Gate on `9cfa953`, and the
   `--jobs` sweep parallelism all remain open as before.
+## 2026-07-25 — status update (Evolution Act 1: assignment-follows-field — BUILT, flag-gated, DEFAULT OFF)
+
+- **Built — assignment-follows-field (AFF), flag-gated DEFAULT OFF, report-only SCREEN.** Deletes
+  intra-band slot-pinning for the PACK: with `assignmentFollowsField` ON the shared servo reassigns the
+  pack's intra-band target ranks every OUTCOME tick to follow the live field, strictly inside each
+  racer's plan-time band (`BAND_EDGES` never crossed), gated by an `affSwapThresholdLengths` (default
+  0.5) arc-gap hysteresis. Heroes + released racers are excluded; the static `plan._racerTargetRank`
+  endpoint map is untouched (`winnerRacerId` frozen, `areaBonus`/`b1Indices`/observer baselines all
+  still read it). Pure deterministic function of live state (no rng, no clock) → browser == sim by
+  construction. Backup tag `pre/aff-build`.
+- **Fingerprint invariance PROVEN (nothing shipped changed).** Flagless ON `7c70b1eae7d31e22` and OFF
+  `f8f7d9c2fd3283e9` — both unchanged from master. Unit suites (planner AFF mechanism, config
+  round-trip/validation, badge + "Reset All Defaults" invariants) green; golden-equality parity green;
+  flag-ON parity soak subset (`soak.mjs --limit=60 --assignmentFollowsField=true`) real == sim
+  byte-identical with the mechanism live.
+- **SCREEN (report-only, no ship).** `scripts/exp-aff-screen.mjs` → `reports/evolution/AFF-SCREEN.md`:
+  CONTROL (shipped defaults) vs AFF@0.5, luger-hill + searound, N=25/arm/track, band-reach primary +
+  finale guardrails + flap diagnostic (mean intra-band swaps/racer/race). **Nothing ships; the owner
+  decides after an eye test.**

@@ -257,6 +257,11 @@ export function createRaceFromIdentity(p) {
         gapRerollMode: dynamicsConfig.gapRerollMode ?? 'symmetric',
         gapRerollStrength: dynamicsConfig.gapRerollStrength ?? 1.0,
         reRollTransitionDuration: dynamicsConfig.reRollTransitionDuration,
+        // Assignment-follows-field (Evolution Act 1) — default OFF → byte-identical.
+        assignmentFollowsField: dynamicsConfig.assignmentFollowsField ?? false,
+        affSwapThresholdLengths:
+          dynamicsConfig.affSwapThresholdLengths ??
+          DEFAULT_RACE_DYNAMICS_CONFIG.affSwapThresholdLengths,
       },
       racePlanSeed
     );
@@ -371,6 +376,7 @@ export function createRaceFromIdentity(p) {
     trajectoryTransitionDurationMs: dynamicsConfig.trajectoryTransitionDuration * 1000,
     gapRerollEnabled: dynamicsConfig.gapRerollEnabled ?? false,
     gapRerollDevMarker: dynamicsConfig.gapRerollDevMarker ?? false,
+    assignmentFollowsField: dynamicsConfig.assignmentFollowsField ?? false,
     constSpeedActive,
     computePositions,
   };
@@ -432,6 +438,7 @@ export function stepRacePhysics(st, cfg) {
     trajectoryTransitionDurationMs,
     gapRerollEnabled,
     gapRerollDevMarker,
+    assignmentFollowsField,
     constSpeedActive,
     computePositions,
   } = cfg;
@@ -461,7 +468,21 @@ export function stepRacePhysics(st, cfg) {
   }
 
   // Controller-Pass: rank racers by current t, write trajectoryMultTarget on each.
-  if (racePlanController) racePlanController.update(st.racers, physicsTs, st.raceProgress);
+  // Assignment-follows-field (default OFF): pass the arc-t→racer-length scale + topology so the servo's
+  // intra-band hysteresis measures swaps in the SAME "lengths" unit as gapRerollThresholdLengths. Both
+  // scalars are per-race constants; when AFF is OFF the scale is 0 and update() ignores it (byte-identical).
+  const affLenScale = assignmentFollowsField
+    ? lenScaleFrom(pathLengthPx, meanDrawnBodyLen(st.racers))
+    : 0;
+  if (racePlanController)
+    racePlanController.update(
+      st.racers,
+      physicsTs,
+      st.raceProgress,
+      null,
+      affLenScale,
+      isOpenTrack
+    );
 
   // trajectoryMult easeInOutCubic transition (mirrors spreadFactor pattern).
   if (racePlanController) {
