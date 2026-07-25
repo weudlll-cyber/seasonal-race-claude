@@ -48,7 +48,7 @@ Every row was verified against the source directly (not only via the inventory s
 | 4 | `BASE_SPEED_MIN/MAX/MEAN` band = 0.00096 / 0.00113 | index.jsx:423-425 via `loadBaseSpeedConfig()` | sim-fairness.mjs:549-551 via `DEFAULT_BASE_SPEED_CONFIG` | **IDENTICAL** — same SOT ([defaults.js:29-30](../client/src/modules/storage/defaults.js#L29-L30)); spread ±8.1% both |
 | 5 | `spreadFactor` init `= (MIN+rand·(MAX−MIN))/MEAN` | index.jsx:604 | sim-fairness.mjs:617 | **IDENTICAL** formula (RNG stream differs *by design*: sim seeds `Math.random`, browser uses system RNG) |
 | 6 | `speedBonusMult` / `rawRowBonus` (start-row bonus) | index.jsx:587 `computeSpeedBonus` | sim-fairness.mjs:608 same shared fn | **IDENTICAL-BY-SHARED-MODULE** (depends on identical row layout — a maintained invariant) |
-| 7 | `finishT` `= min(BASE_SPEED_MEAN/ssf·spd·FPS·dur, 1−runoutZone)` | index.jsx:488-493 | sim-fairness.mjs:2498-2500 `computeFinishT` | **DIVERGENT-IF-OVERRIDDEN** — identical at default (`runoutZone=0.05`), but sim hardcodes `0.05` in `computeFinishT` while browser reads `behaviorConfig.runoutZone`. See open item **O1**. |
+| 7 | `finishT` (closed: `laps`; open: `min(pace·seconds/L, 1−runoutZone)`) | shared `durationModel.deriveRaceDuration` | shared `durationModel.deriveRaceDuration` (sim-fairness.mjs:677-684) | **IDENTICAL-BY-SHARED-MODULE** — the speed/duration ship replaced the two normalisations + `computeFinishT` with one `deriveRaceDuration` on both sides; the sim passes `runoutZone: behaviorConfig.runoutZone`. Seam **O1 closed**. |
 | 8 | Re-roll schedule (`rollCount`, `rollInterval`, `lastRollDeadline`, `realizedDuration`) | index.jsx:538-539, 938-939 | sim-fairness.mjs:599-602 | **IDENTICAL** — same formulas, same `dynamicsConfig` source (75 / 3.0 / 10 / 95) |
 | 9 | Re-roll target draw (variant 1) | index.jsx:1093-1110 | sim-fairness.mjs:1036 | **IDENTICAL** at default. **SIM-ONLY**: `--rerollVariant=2` mean-reverting draw (sim:1032-1035), no browser equivalent, default off. See **O2**. |
 | 10 | Re-roll transition (`easeInOutCubic`, `transitionDuration`) | index.jsx:1119-1124 | sim-fairness.mjs:1058-1063 | **IDENTICAL** |
@@ -67,13 +67,10 @@ Every row was verified against the source directly (not only via the inventory s
 
 ## Still-open divergences (plain language) — NAMED, NOT FIXED
 
-**O1 — `finishT` run-out zone source.** The sim's `computeFinishT` (sim-fairness.mjs:498-500)
-takes `runoutZone` as a parameter defaulting to `0.05` and is **called without passing it**, so
-the sim always uses `0.05`. The browser uses `behaviorConfig.runoutZone` (index.jsx:491). Both
-are `0.05` in the shipped config, so today they agree. If the owner ever changes `runoutZone`,
-the browser's open-track finish line moves and the sim's does not. Low blast radius (open tracks
-only), but it is a real seam. *Fix would be: thread `behaviorConfig.runoutZone` into the sim's
-`computeFinishT` call.*
+**O1 — `finishT` run-out zone source — RESOLVED (speed/duration ship).** The sim's `computeFinishT`
+was deleted; both engines now derive `finishT` from the shared `durationModel.deriveRaceDuration`,
+and `sim-fairness.mjs` passes `runoutZone: behaviorConfig.runoutZone` into it. A changed `runoutZone`
+now moves the open-track finish line identically on both sides. No seam remains.
 
 **O2 — `--rerollVariant=2` is a sim-only experiment.** The mean-reverting re-roll draw
 (sim-fairness.mjs:1032-1035) has no browser equivalent. It defaults to variant 1 (byte-identical
@@ -112,6 +109,6 @@ future geometry change re-opens a gap without touching any force directly.
 
 At the shipped config, after INFRA steps 4 and 5A, **no force in the t-update diverges between
 browser and sim.** The two known divergences (`rowEnvMult`, `areaBonusMult`) are closed at the
-source. The open items above are seams (O1, O3, O6), a cosmetic browser-only effect (O4), and
+source. The open items above are seams (O3, O6), a cosmetic browser-only effect (O4), and
 sim-only tooling (O2) — none is an active divergence in a default shipped race (O5 is now closed —
 the auxiliary tools were deleted). No third active force divergence was found.

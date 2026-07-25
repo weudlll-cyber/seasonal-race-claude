@@ -1,6 +1,6 @@
 # RaceArena — Backlog
 
-> **⚠️ Pre-unification baseline.** Absolute sim numbers in this document (band-reach, runaway, P1-contest, physics-tax, gate results) were measured before the plan-grid unification (parity step 2a, 2026-07-23) and are pending re-measurement — see [reports/BASELINE-INVALIDATED.md](../reports/BASELINE-INVALIDATED.md). They remain as history.
+> **✅ Baseline re-measured (2026-07-26).** Absolute sim numbers in this document (band-reach, runaway, P1-contest, physics-tax, gate results) predate the plan-grid unification + speed/duration ship and are retired history. The current baseline is [reports/parity/REBASELINE.md](../reports/parity/REBASELINE.md) (speed-150, pooled band-reach 71.0%) and the CANDIDATE column of [reports/parity/GS-CONFIRM-GATE.md](../reports/parity/GS-CONFIRM-GATE.md) (band-reach 72.7%, dead finales 10.0%, runaway 6.8%).
 
 Living list. See ROADMAP.md for phase context and completion status.
 Items ranked by urgency within each bucket. ✅ = done, 🔜 = next, ⏳ = waiting on dependency.
@@ -9,9 +9,12 @@ Items ranked by urgency within each bucket. ✅ = done, 🔜 = next, ⏳ = waiti
 
 ## Gap-reroll — SHIPPED DEFAULT ON (July 2026)
 
-- ✅ **Gap-reroll is the shipped default: symmetric, G=0.75, strength=0.5** (`storage/defaults.js`
+- ✅ **Gap-reroll is the shipped default: symmetric, G=0.5, strength=1.0** (`storage/defaults.js`
   `gapRerollEnabled: true`). Closes the "gap-reroll default ON" item.
-  **RETUNED 2026-07-23** from the original ship values (G=1.5, strength=1.0).
+  **FLIPPED 2026-07-26** to the confirmed candidate G=0.5/s=1.0 after the ten-track confirm gate (was
+  0.75/0.5, retuned 2026-07-23 from the original ship values G=1.5/s=1.0). Confirm gate: pooled band-reach
+  71.8%→72.7%, dead finales 14.1%→10.0%, runaway 10.1%→6.8%, every guardrail better, Holm unchanged 3/10 —
+  see [reports/parity/GS-CONFIRM-GATE.md](../reports/parity/GS-CONFIRM-GATE.md).
 - ✅ **Retune gate (2026-07-23): G 1.5→0.75, strength 1.0→0.5.** Cause: at s=1.0 the correction
   `frac = min(1, strength·(gap−G))` saturates above `G+1`, so **46% of leader corrections were full
   slams to the band floor** — the "escapes, then gets visibly braked" the owner reported. G alone
@@ -24,11 +27,15 @@ Items ranked by urgency within each bucket. ✅ = done, 🔜 = next, ⏳ = waiti
   Duration sanity (30/120/300 s): candidate ≥ current on band-reach at every duration.
   *(At 30 s both arms sit at ~66% band-reach — a pre-existing short-race limitation, not caused by
   this change.)* Evidence: `reports/greenfield/gate-retune/`, driver `scripts/exp-gate-retune.mjs`
-  — both now on **master** (ported in the greenfield wrap, 2026-07-23).
-- **New shipped-default fingerprint `e93ffa70dad562a1`** (retune, 2026-07-23). The previous ON default
-  `efd0f4ad8eca08fa` (G=1.5/s=1.0) is **SUPERSEDED**. The **OFF** world is unchanged and remains
-  `72c3360fb75225ef`, re-verified byte-identical via
-  `node scripts/fingerprint-default.mjs off --gapRerollEnabled=false`.
+  — both now on **master** (ported in the greenfield wrap, 2026-07-23). *(These retune-gate figures are
+  PRE-UNIFICATION and retained only as the 2026-07-23 decision record; the current baseline is
+  [reports/parity/REBASELINE.md](../reports/parity/REBASELINE.md) + GS-CONFIRM-GATE.md.)*
+- **Shipped-default fingerprints (current):** the ON hash moved with every world change since the retune
+  (plan-grid unification → speed/duration ship → step-order alignment → speed-150 → the 2026-07-26 flip) —
+  the current pair is recorded in [reports/parity/REBASELINE.md](../reports/parity/REBASELINE.md) §3 and
+  the flip's docs commit; the **OFF** invariant is **`f8f7d9c2fd3283e9`** (byte-identical to the pre-feature
+  world, `node scripts/fingerprint-default.mjs off --gapRerollEnabled=false`). Historical ON hashes
+  `e93ffa70dad562a1` (retune) and `efd0f4ad8eca08fa` (G=1.5/s=1.0) are superseded.
 - **Sim follows the shipped default.** `sim-fairness.mjs` never read `gapRerollEnabled`; it does now,
   so a flagless sim run reproduces the shipped game. **A flagless run is therefore no longer the OFF
   world** — OFF arms must pass `--gapRerollEnabled=false`, and every OFF arm in

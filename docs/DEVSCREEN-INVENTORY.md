@@ -59,15 +59,16 @@ Card has no card-level Reset. Backing config: `baseSpeedConfig` (normal speed + 
 
 | Control | Config key | Shipped default | Test id |
 |---|---|---|---|
-| Normal Speed (px/s) | `normalSpeedPxPerSec` (baseSpeedConfig) | 225 | `normal-speed-input` |
+| Normal Speed (px/s) | `normalSpeedPxPerSec` (baseSpeedConfig) | 150 | `normal-speed-input` |
 
 THE pace of the game: world pixels a normal racer covers per second, identical for every track and
 every racer class. Every race duration is derived from it — closed races last
 `laps × pathLengthPx / normalSpeed`, and an open track's finish line is where a normal racer is
 after the chosen time (see `client/src/modules/durationModel.js` and
 [SIM.md](SIM.md) → *THE canonical speed/duration model*). Changing it rescales every derived
-duration in the game at once and nothing else. 225 px/s is provisional — it reproduces the
-pre-ship browser pace on a standard closed track at `speedMultiplier = 1.0` to within 1%.
+duration in the game at once and nothing else. 150 px/s is the owner's shipped pick (a calmer,
+more readable pace; the earlier provisional 225 reproduced the pre-ship browser pace to within 1%).
+See [reports/parity/REBASELINE.md](../reports/parity/REBASELINE.md) for the speed-150 baseline.
 
 **Sub-heading "Speed Range"** — Reset `reset-speed-range`:
 
@@ -96,15 +97,16 @@ Also renders a read-only preview (`data-testid="reroll-preview"`).
 **Sub-heading "Gap-Cap Re-Roll"** — Reset `reset-gap-reroll`. Moved here from the PULK card in the
 DevScreen reorg (2026-07-23): it loads the very dice the Speed Re-Roll block above schedules, so this is
 where it is findable. The shipped cohesion mechanism (default ON since 2026-07-22, retuned 2026-07-23 to
-G = 0.75 / strength = 0.5); turning the toggle OFF restores the pre-feature game byte-identically, which
-is the world every committed baseline was measured in. Changes take effect on the next race. See
-[SIM.md](SIM.md).
+G = 0.75 / strength = 0.5, then **flipped 2026-07-26 to the confirmed candidate G = 0.5 / strength = 1.0**
+after the ten-track confirm gate — see [reports/parity/GS-CONFIRM-GATE.md](../reports/parity/GS-CONFIRM-GATE.md));
+turning the toggle OFF restores the pre-feature game byte-identically, which is the world every committed
+baseline was measured in. Changes take effect on the next race. See [SIM.md](SIM.md).
 
 | Control | Config key | Shipped default | testid |
 |---|---|---|---|
 | Gap-Reroll enabled (checkbox) | `gapRerollEnabled` | true | `gap-reroll-toggle` |
-| Gap-Reroll G (lengths) 0.5–4.0 | `gapRerollThresholdLengths` | 0.75 | — |
-| Gap-Reroll strength 0–1.5 | `gapRerollStrength` | 0.5 | — |
+| Gap-Reroll G (lengths) 0.5–4.0 | `gapRerollThresholdLengths` | 0.5 | — |
+| Gap-Reroll strength 0–1.5 | `gapRerollStrength` | 1.0 | — |
 | Gap-Reroll mode symmetric/down-only | `gapRerollMode` | 'symmetric' | `gap-reroll-mode` |
 | Gap-Reroll dev marker (rendering-only cyan ring) | `gapRerollDevMarker` | false | `gap-reroll-devmarker-toggle` |
 

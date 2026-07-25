@@ -308,7 +308,7 @@ There is exactly **one** speed normalisation and **one** duration derivation, in
 
 **The pace.** One number — `baseSpeedConfig.normalSpeedPxPerSec`, the **normal track speed** in
 world pixels per second, the same for every track (Dev Screen → Dynamics → Speed → *Normal Track
-Speed*, shipped provisional **225 px/s**) — times the race type's multiplier:
+Speed*, shipped **150 px/s** — the owner's pick, see [reports/parity/REBASELINE.md](../reports/parity/REBASELINE.md)) — times the race type's multiplier:
 
 ```
 P = paceSpeed = normalSpeedPxPerSec × speedMultiplier       [world px/s]
@@ -401,20 +401,24 @@ sessionStorage boundary.
 Tracks carry `defaultLaps` (closed) or `defaultDurationSec` (open) instead of the old
 `defaultDuration` seconds. Migration mapping, applied once to the seeds:
 
-Durations below are at the **per-track default type**, whose multiplier is part of the pace.
+The migrated defaults (laps for closed, stored seconds for open) are **speed-independent** — they do not
+change with the normal-speed pick. The realized durations they produce at the shipped **150 px/s** are in
+[reports/parity/REBASELINE.md](../reports/parity/REBASELINE.md) §0 (e.g. dirt-oval 87.2 s, searound 62.4 s,
+luger-hill 59.0 s, mountainstreet 60.0 s; garden-path far longer at the snail's 0.30×). The multiplier `M`
+is the type-intrinsic speed multiplier (part of the pace), not a speed.
 
-| track | topology | default type (M) | pace px/s | old `defaultDuration` | new default | effective |
-|---|---|---|---|---|---|---|
-| city-circuit | closed | motorbike (1.05) | 236.3 | 60 s | 2 laps | **51.9 s** |
-| dirt-oval | closed | horse (1.00) | 225.0 | 60 s | 2 laps | **58.1 s** |
-| garden-path | closed | snail (0.30) | 67.5 | 120 s | 4 laps | **282.8 s** |
-| ice-track | closed | snowmobile (1.10) | 247.5 | 60 s | 2 laps | **49.0 s** |
-| searound | closed | manta (1.10) | 247.5 | 60 s | 2 laps | **41.6 s** |
-| luger-hill | open | luge (1.10) | 247.5 | 90 s | 90 s stored | **39 s** (natural max 39.7 s) |
-| mountainstreet | open | boarder (1.00) | 225.0 | 60 s | 60 s stored | **60 s** (natural max 66.1 s) |
-| river-run | open | duck (0.85) | 191.3 | 60 s | 60 s stored | **60 s** (natural max 64.9 s) |
-| seatrack | open | dolphin (1.15) | 258.8 | 60 s | 60 s stored | **44 s** (natural max 45.0 s) |
-| space-sprint | open | rocket (1.25) | 281.3 | 90 s | 90 s stored | **66 s** (natural max 66.8 s) |
+| track | topology | default type (M) | old `defaultDuration` | new default |
+|---|---|---|---|---|
+| city-circuit | closed | motorbike (1.05) | 60 s | 2 laps |
+| dirt-oval | closed | horse (1.00) | 60 s | 2 laps |
+| garden-path | closed | snail (0.30) | 120 s | 4 laps |
+| ice-track | closed | snowmobile (1.10) | 60 s | 2 laps |
+| searound | closed | manta (1.10) | 60 s | 2 laps |
+| luger-hill | open | luge (1.10) | 90 s | 90 s stored |
+| mountainstreet | open | boarder (1.00) | 60 s | 60 s stored |
+| river-run | open | duck (0.85) | 60 s | 60 s stored |
+| seatrack | open | dolphin (1.15) | 60 s | 60 s stored |
+| space-sprint | open | rocket (1.25) | 90 s | 90 s stored |
 
 Closed defaults use the old staircase (< 60 s → 1, 60–89 → 2, 90–119 → 3, ≥ 120 → 4), preserved as
 `legacyLapsFromDefaultDuration()` — a migration helper only; nothing in a running race calls it.

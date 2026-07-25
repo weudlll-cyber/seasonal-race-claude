@@ -7,6 +7,14 @@ and — on the committed honest world — screens whether the shipped gap-reroll
 sit at their optimum. No owner input was available; every choice is recorded with its reason. Nothing was
 tuned or shipped from the G/s sweep — it MEASURES; the owner decides in the morning.
 
+> **Update — 2026-07-26: the gap-reroll knobs were flipped to the confirmed candidate.** After the owner
+> approved the ten-track confirm gate, the shipped gap-reroll defaults moved from G=0.75 / s=0.5 to
+> **G=0.5, strength=1.0** (commit `6c060a5`; ON fingerprint `6fdfe851dbb4ca72` → `7c70b1eae7d31e22`, OFF
+> invariant `f8f7d9c2fd3283e9` held). This speed-150 re-baseline (pooled band-reach 71.0% at the then-shipped
+> G=0.75 / s=0.5) remains the **pace** baseline; for the shipped **knobs**, the current-truth metric set is
+> the **CANDIDATE column of [GS-CONFIRM-GATE.md](GS-CONFIRM-GATE.md)** (N=100 × 10 tracks: pooled band-reach
+> 72.7%, dead finales 10.0%, runaway 6.8%).
+
 ---
 
 ## 0. What shipped (STEPs 1–3, staged → committed together)

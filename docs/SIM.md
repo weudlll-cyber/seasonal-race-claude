@@ -137,7 +137,7 @@ node scripts/sim-fairness.mjs \
   --laps=2             # CLOSED tracks: lap count (the canonical closed-track input)
   --seconds=45         # OPEN tracks: race time in seconds (the canonical open-track input)
   --track-defaults     # each track at its own shipped default (laps / seconds), one variant
-  --normalSpeed=225    # override the one normal track speed in px/s
+  --normalSpeed=150    # override the one normal track speed in px/s (shipped default 150)
   --dur=60             # measurement-protocol seconds; on closed tracks mapped per track to laps
 ```
 
@@ -728,8 +728,8 @@ There is exactly **one** speed normalisation and **one** duration derivation in 
 returned scalars verbatim. Nothing downstream re-derives a duration.
 
 **The pace.** One number, `baseSpeedConfig.normalSpeedPxPerSec` (adjustable in Dev Screen →
-Dynamics → Speed → *Normal Track Speed*, shipped provisional **225 px/s**), times the race type's
-multiplier:
+Dynamics → Speed → *Normal Track Speed*, shipped **150 px/s** — the owner's pick; see
+[reports/parity/REBASELINE.md](../reports/parity/REBASELINE.md)), times the race type's multiplier:
 
 ```
 paceSpeed = normalSpeedPxPerSec × speedMultiplier          [world px/s]
@@ -801,6 +801,22 @@ intermediate measurements, and none of either in a report. Debug runs during dev
 and stay unreported. A commit that claims byte-identity, and a commit that moves the numbers by
 design, each get one measurement of the pair on their final state; record old → new.
 
+**Current shipped-default fingerprints (2026-07-26).** The shipped world is speed **150 px/s** with
+gap-reroll ON at **G=0.5, strength=1.0** (flipped 2026-07-26 from 0.75/0.5). The current pair is:
+
+| world | fingerprint |
+|---|---|
+| ON (flagless — the shipped game) | **`7c70b1eae7d31e22`** |
+| OFF (`--gapRerollEnabled=false` — pre-feature world) | **`f8f7d9c2fd3283e9`** |
+
+The ON hash moved by design at each world change (retune `e93ffa70dad562a1` → plan-grid `0ecca5e2dbe6526e`
+→ speed/duration `e80f78a0da6a9993` → type-mult `eda28d614f5e47d9` → step-order `8b13ccbe96992cc0` →
+speed-150 `6fdfe851dbb4ca72` → **flip `7c70b1eae7d31e22`**); the OFF invariant is unchanged since the
+speed-150 ship. Baseline metrics: [reports/parity/REBASELINE.md](../reports/parity/REBASELINE.md) +
+[reports/parity/GS-CONFIRM-GATE.md](../reports/parity/GS-CONFIRM-GATE.md) (CANDIDATE column). **The dated
+subsections below are accreting history — their fingerprints were current on their date; this block is the
+current pair.**
+
 ### CLI race-length inputs
 
 The sim takes the **same two operator inputs the browser takes**, so any browser race is
@@ -818,15 +834,10 @@ expressible as a sim invocation:
 (30 / 60 / 120 / 300 s). On **open** tracks it is the seconds directly. On **closed** tracks it is
 mapped per track by `lapsForApproxSeconds(s, pathLengthPx, V)` = `max(1, round(s × V / L))` — the
 lap count whose derived duration is closest to `s` on that track. That is the model read backwards,
-not a staircase constant, so it tracks the normal speed automatically. At 225 px/s:
-
-| track | length | `--dur=30` | `--dur=60` | `--dur=120` | `--dur=300` |
-|---|---|---|---|---|---|
-| searound | 5147 px | 1 lap | 3 laps | 5 laps | 13 laps |
-| dirt-oval | 6541 px | 1 lap | 2 laps | 4 laps | 10 laps |
-| city-circuit | 6130 px | 1 lap | 2 laps | 4 laps | 11 laps |
-| garden-path | 4773 px | 1 lap | 3 laps | 6 laps | 14 laps |
-| ice-track | 6065 px | 1 lap | 2 laps | 4 laps | 11 laps |
+not a staircase constant, so it tracks the normal speed automatically — recompute per speed via
+`lapsForApproxSeconds`, never a fixed table. At the shipped **150 px/s**, e.g. searound (5147 px) maps
+`--dur=30 / 60 / 120 / 300` → **1 / 2 / 3 / 9 laps** (the counts fall as the pace slows from the 225-era
+example, exactly because the mapping tracks the speed).
 
 `DURATION_VARIANTS` (default `[30, 60, 120]`) remains the sweep loop variable and now carries the
 protocol **seconds**; `--seconds=` overrides it, `--track-defaults` collapses it to one per-track
@@ -1034,7 +1045,7 @@ leader duty-cycle (max share of one racer's window rolls that were biased — th
 
 After the N=200 confirmation on all 10 tracks (V0 23% → symmetric/G=1.5/strength=1.0 8.3%, action +, band-reach ≥70% held), the shared transform was wired into the BROWSER re-roll loop (`RaceScreen/index.jsx`) exactly as the sim does — the browser threads ITS OWN realized-duration `lastRollDeadline` + `physicsTs` + the shared `lenScaleFrom(pathLengthPx, meanDrawnBodyLen)` / `isOpen` into `computeGapBiasedTarget` (the ONE-CLOCK principle; the transform never re-derives a duration). The transform behavior is FROZEN.
 
-**Config keys (`DEFAULT_RACE_DYNAMICS_CONFIG`):** `gapRerollEnabled: true`, `gapRerollThresholdLengths: 0.75`, `gapRerollStrength: 0.5`, `gapRerollMode: 'symmetric'`, `gapRerollDevMarker: false` — shipped ON 2026-07-22, **retuned 2026-07-23** (was G=1.5 / strength=1.0). When `gapRerollEnabled` is false the browser passes `gapRerollThresholdLengths: null` into `createRacePlan` → the transform early-returns the raw draw → **the shipped game is byte-identical** (fingerprint `72c3360fb75225ef` re-verified after defaults + client touched). The sim harness keeps its CLI semantics (`--gapReroll*` override, unchanged); it does not read these browser defaults.
+**Config keys (`DEFAULT_RACE_DYNAMICS_CONFIG`), current shipped values:** `gapRerollEnabled: true`, `gapRerollThresholdLengths: 0.5`, `gapRerollStrength: 1.0`, `gapRerollMode: 'symmetric'`, `gapRerollDevMarker: false` — shipped ON 2026-07-22, retuned 2026-07-23 (from G=1.5 / strength=1.0), **flipped 2026-07-26 to G=0.5 / strength=1.0** (confirmed candidate). When `gapRerollEnabled` is false the browser passes `gapRerollThresholdLengths: null` into `createRacePlan` → the transform early-returns the raw draw → **the shipped game is byte-identical** (OFF invariant `f8f7d9c2fd3283e9`; the pre-unification `72c3360fb75225ef` is historical). The sim harness keeps its CLI semantics (`--gapReroll*` override, unchanged); it does not read these browser defaults.
 
 **DevScreen (Dynamics section):** Gap-Reroll toggle, G (0.5–4.0), strength (0–1.5), mode symmetric/down-only, and a rendering-only dev-marker (a cyan ring flashing on a racer the instant its roll was biased — zero sim effect). Changes take effect on the next race (same pattern as the B2-attacker count). A backup/ship tag follows only after the owner's eye-test.
 
@@ -1076,8 +1087,8 @@ The measured winner setting is now the shipped configuration. No other tuning va
 
 | world | fingerprint | status |
 |---|---|---|
-| shipped default (gap-reroll **ON**, retuned G=0.75 s=0.5) | **`e93ffa70dad562a1`** | **current** (2026-07-23) |
-| gap-reroll OFF (`--gapRerollEnabled=false`) | `72c3360fb75225ef` | unchanged — the pre-feature world, re-verified |
+| shipped default (gap-reroll **ON**, retuned G=0.75 s=0.5) | **`e93ffa70dad562a1`** | at 2026-07-23 — **SUPERSEDED** (see the current pair under *Fingerprint rule* above; ON is now `7c70b1eae7d31e22` after the speed-150 ship + the 2026-07-26 flip) |
+| gap-reroll OFF (`--gapRerollEnabled=false`) | `72c3360fb75225ef` | pre-unification OFF — **superseded**; the OFF invariant is now `f8f7d9c2fd3283e9` |
 | previous shipped default (ON, G=1.5 s=1.0) | `efd0f4ad8eca08fa` | **SUPERSEDED** by `e93ffa70dad562a1` |
 | pre-feature default | `72c3360fb75225ef` | superseded as a *default*; still the OFF world |
 

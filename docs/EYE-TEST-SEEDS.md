@@ -1,8 +1,10 @@
-# Eye-test seeds — what a seed does and does not mean
+# Eye-test seeds — what a seed means
 
-**Status: binding practice.** Written after a source-level verification showed that seed numbers had
-been handed to the owner as if they identified a specific measured sim race. They do not. This
-document is the honest replacement for that habit.
+**Status: binding practice. Rewritten 2026-07-26.** An earlier version of this note warned that a typed
+browser seed was *never* a cross-tool identifier. That was true before the parity arc; it is **no longer
+true**. After the RNG isolation, the plan-grid unification, the canonical speed/duration model and the
+step-order alignment, **a typed seed reproduces the SAME race in the browser and in the sim.** This doc is
+the current practice.
 
 Doc-only: nothing here changes behaviour.
 
@@ -10,95 +12,81 @@ Doc-only: nothing here changes behaviour.
 
 ## The one-sentence rule
 
-> **A typed browser seed is a browser-local replay handle. It is never a cross-tool race identifier.**
+> **A typed seed IS a cross-tool race identifier: given the same configuration, seed `S` reproduces the
+> same race in the browser and in the sim (`--seed=S --races=1`), byte-identical.**
 
-Typing `24` into the browser does **not** show you the sim's race `24`. It shows you *a* browser race
-that happens to be exactly repeatable.
+Typing `24` into the browser Quick-Test shows you the same race the sim runs for seed 24 — same start-row
+shuffle, same spread draws, same re-roll targets, same designated winner, same finishing order. Only the
+camera framing and particles differ (those are render-only and off the race stream); the race itself is
+identical.
+
+**Why it holds now.** Both engines run the one shared step (`raceCore.stepRacePhysics`) over one shared
+identity (`createRaceFromIdentity`): the physics RNG is isolated from render draws (`makeRaceRng(seed)`),
+one per-race shuffle feeds both the plan target-ranks and the physical start rows, and there is one
+canonical duration model (`client/src/modules/durationModel.js`). The golden harness proves it —
+`realArm` (the real browser core) `== simArm` (the sim) is **byte-identical across the 600-identity soak**
+(see [reports/parity/GOLDEN-SOAK.md](../reports/parity/GOLDEN-SOAK.md) and
+[STEP-ORDER-ARC.md](../reports/parity/STEP-ORDER-ARC.md)).
 
 ---
 
-## What a typed Quick-Test seed DOES determine
+## What a typed Quick-Test seed determines
 
 Quick-Test writes the typed value to `racePlanSeed`
-([SetupScreen.jsx](../client/src/screens/SetupScreen/SetupScreen.jsx)), and the race-init effect then
-swaps the global generator: `Math.random = mulberry32(racePlanSeed)`
-([RaceScreen/index.jsx](../client/src/screens/RaceScreen/index.jsx)).
+([SetupScreen.jsx](../client/src/screens/SetupScreen/SetupScreen.jsx)); the race-init effect threads it as
+the one explicit physics stream (`makeRaceRng(racePlanSeed)`)
+([RaceScreen/index.jsx](../client/src/screens/RaceScreen/index.jsx)). Given an identical configuration, the
+seed fixes:
 
-So, **given an identical configuration**, the seed fixes:
-
-- the start-row shuffle (`computeEvenRowLayout`),
+- the start-row shuffle (one per-race shuffle, shared with the plan grid),
 - the initial `spreadFactor` draws,
 - every scheduled re-roll target and its jitter,
-- `createRacePlan`'s target-rank assignment (its own `mulberry32(seed)`),
+- `createRacePlan`'s target-rank assignment,
 - deterministic winner text.
 
-**Consequence: the same seed replays the same browser race move-for-move.** That is genuinely useful —
-it makes an eye-test repeatable and lets two people look at the same thing.
+**Consequence: the same seed replays the same race move-for-move, in either tool.**
 
-### Two hard caveats
+### Two caveats that still hold
 
-1. **Quick-Test only.** The normal **"Start Race" path passes `racePlanSeed: 0`**, which leaves
-   `Math.random` untouched — those races are unseeded and **not reproducible at all**.
+1. **Quick-Test only.** The normal **"Start Race" path passes `racePlanSeed: 0`** (owner decision), which
+   leaves the stream unseeded — those races are **not reproducible**. Reproducibility is a Quick-Test
+   (typed-seed) property.
 2. **The seed is only meaningful together with the full config.** Change the field size, racer type,
-   duration, or any dynamics value, and the same seed produces a different race. A seed without its
-   configuration is not a reference to anything.
+   laps/seconds, or any dynamics value and the same seed produces a different race. A seed without its
+   configuration is not a reference to anything — this is why an eye-test instruction always states the
+   config.
 
----
-
-## Cross-tool seed equality — RESOLVED (parity steps 1 + 2a, 2026-07-23)
-
-A typed browser seed `S` now maps to the sim race `--seed=S --races=1` (same track, racer count,
-shipped default config). The three reasons this used to fail are all fixed:
-
-1. **~~The target-rank assignment attaches to different racers.~~** Fixed: the sim now passes
-   `planRacers` ordered by **racer index** (`.sort((x,y) => x.index - y.index)`), matching the browser,
-   so `createRacePlan` pairs `rankPool[i]` with racer `i` on both sides — same designated winner, same
-   pulk selection, same tier per racer.
-2. **~~The sim's plan grid is not seeded by the race seed.~~** Fixed: the per-combo FNV
-   `comboLayoutSeed` path is deleted; the plan grid is drawn per race from the shared physics stream
-   (`makeRaceRng(seed)`), the same seed basis the browser uses.
-3. **~~The sim uses two different grids internally.~~** Fixed: ONE per-race shuffle feeds both the plan
-   and the physical start rows (parity step 2a / D-GRID).
-
-Parity step 1 additionally isolated the physics RNG from render draws, so the browser race is
-frame-rate independent. The remaining known gap before *guaranteed* frame-identity is the
-speed/duration model (the next ship). Per-race seeds are typeable — a sweep `--seed=1 --races=100`
-uses per-race seeds `1..100`, and `--seed=S --races=1` reproduces browser seed `S`.
+Typed seeds accept any positive integer (the browser cap was lifted to `MAX_SAFE_INTEGER`; the old 9999
+ceiling now bounds only auto-drawn random seeds). A sweep `--seed=1 --races=100` uses per-race seeds
+`1..100`, so `--seed=S --races=1` reproduces browser seed `S`.
 
 ---
 
 ## How to write an eye-test instruction (template)
 
-Use this wording. It is honest and still gives the owner something repeatable:
-
-> **Eye-test — Quick-Test, track `<track>`, config `<the setting under test, e.g. gap-reroll G=0.75>`,
-> field `<N>` × `<racer type>`, duration `<D>`s.**
-> Seeds **`<s1>` / `<s2>` / `<s3>`** — these replay identically in the browser and are a reproducible
-> **sample of the configuration**. They are **not** the sim races of the same numbers; judge the
-> configuration across all three, not any single race.
+> **Eye-test — Quick-Test, track `<track>`, config `<the setting under test, e.g. gap-reroll G=0.5 s=1.0>`,
+> field `<N>` × `<racer type>`, `<laps>` laps / `<D>`s.**
+> Seeds **`<s1>` / `<s2>` / `<s3>`** — these reproduce identically in the browser AND are the same races
+> the sim runs for those numbers. Judge the configuration across all three, not any single race.
 
 ### The rules behind the template
 
-- **Eye-tests judge a CONFIGURATION, not a race.** Always give several seeds and ask for a verdict on
-  the setting, not on one race.
-- **Always state the full config** alongside the seeds (track, racer type, field size, duration, and
-  the setting under test). Seeds are meaningless without it.
-- **Never pair an eye-test observation with a specific row of measured data.** "Seed 87 showed a duo
-  escape, and the CSV says seed 87 had 5 lead changes" is comparing two different races.
-- **Never call a browser observation an outlier of a sim distribution.** The browser race is not a
-  draw from that distribution. State sim findings in sim-space and browser findings in browser-space.
-- A browser eye-test *can* legitimately falsify a claim about how a configuration **looks** — that is
-  its whole job, and it needs no seed correspondence to do it.
+- **Eye-tests judge a CONFIGURATION, not a single race.** Give several seeds and ask for a verdict on the
+  setting.
+- **Always state the full config** alongside the seeds. Seeds are meaningless without it.
+- **You CAN cross-reference a browser observation with the sim CSV row for the same seed** — they are the
+  same race now. "Seed 87 showed a duo escape, and the sim row for seed 87 has 5 lead changes" is a valid
+  statement about one race.
+- A browser eye-test's job is to judge how a configuration **looks**; the sim quantifies the same races at
+  scale. They share one identity space.
 
 ---
 
-## If you genuinely need to watch a specific measured sim race
+## To watch a specific measured sim race
 
-There is currently no supported way, and **seed translation is not one** — the mismatch is a different
-mapping plus a different grid source, not an offset, so "translating" it would mean changing shipped
-default behaviour and re-baselining every committed result.
-
-The supported route, when it is built, is a **sim → browser race fixture**: the sim dumps the authored
-inputs of a chosen race (grid assignment + target-rank map + seed + config) and a dev-only browser path
-loads them, then runs the normal live engine. This is tracked in the backlog against the
-browser↔sim parity item. It is not required for any ship decision.
+- **The direct way:** type the seed into the browser Quick-Test with the same config. It is the same race.
+- **Offline / reproducible fixture:** `scripts/parity/replay.mjs`. `--emit` dumps a race's full identity
+  (seed / track / roster / counts / laps|seconds / `racePlanEnabled` / world hash) to an `identity.json`;
+  `--replay=<identity.json>` re-runs the real browser core vs the sim and asserts they are equal (and
+  flags a drifted identity). `--replay-seed=S` is the alias for `--seed=S --races=1`. The identity loads
+  the same way in both engines via `createRaceFromIdentity` + `stepRacePhysics`.

@@ -1,19 +1,23 @@
 # Field-cohesion concept — bound every gap with loaded dice
 
-> **⚠️ Pre-unification baseline.** Absolute sim numbers in this document (band-reach, runaway, P1-contest, physics-tax, gate results) were measured before the plan-grid unification (parity step 2a, 2026-07-23) and are pending re-measurement — see [reports/BASELINE-INVALIDATED.md](../reports/BASELINE-INVALIDATED.md). They remain as history.
+> **✅ Baseline re-measured (2026-07-26).** Absolute sim numbers in this document (band-reach, runaway, P1-contest, physics-tax, gate results) predate the plan-grid unification + speed/duration ship and are retired history. The current baseline is [reports/parity/REBASELINE.md](../reports/parity/REBASELINE.md) (speed-150, pooled band-reach 71.0%) and the CANDIDATE column of [reports/parity/GS-CONFIRM-GATE.md](../reports/parity/GS-CONFIRM-GATE.md) (band-reach 72.7%, dead finales 10.0%, runaway 6.8%).
 
-**Status:** design concept, not yet built. A concept in this repo is a promise to build it — everything
-below is either verified at source (file:line) or tagged *inferred* / *needs-measurement*. Date: 2026-07-10.
+**Status:** SHIPPED ON by default (2026-07-26). The mechanism below is live in both the browser and the
+sim — gap-reroll `symmetric`, G=0.5, strength=1.0 (`storage/defaults.js`), wired to the DevScreen
+(Dynamics → Speed → Gap-Cap Re-Roll). This doc remains the design rationale; the shipped values and their
+evidence are in [reports/parity/GS-CONFIRM-GATE.md](../reports/parity/GS-CONFIRM-GATE.md). Original concept
+date: 2026-07-10.
 
 **UPDATE 2026-07-20 — IMPLEMENTED flag-gated, sim-activatable (Phase-2 exploration).** The re-roll bias
 is built as `computeGapBiasedTarget` in `client/src/modules/racePlanner.js` (a shared deterministic
 transform beside `computePulkBiasedTarget`, whose behavior is untouched), activated ONLY from the sim
 harness (`scripts/sim-fairness.mjs --gapRerollThresholdLengths / --gapRerollMode / --gapRerollStrength`);
-config/flag absent → the browser and a default sim run are byte-identical (fingerprint `72c3360fb75225ef`
-verified). **Owner fairness decision (binding): SCHEDULED ROLLS ONLY — never an off-schedule/early
-re-roll.** The window is derived from config at runtime (`[choreoOutcomeStart, reRollLastPositionPercent·dur
-− reRollTransitionDuration]`), zero hardcoded constants. Browser wiring + a DevScreen knob is a separate
-later step after an owner ship decision. See docs/SIM.md and reports/proposals/GAP-REROLL-CONCEPT.md.
+turning it OFF (`--gapRerollEnabled=false`) makes the browser and a default sim run byte-identical (OFF
+invariant `f8f7d9c2fd3283e9`). **Owner fairness decision (binding): SCHEDULED ROLLS ONLY — never an
+off-schedule/early re-roll.** The window is derived from config at runtime (`[choreoOutcomeStart,
+reRollLastPositionPercent·dur − reRollTransitionDuration]`), zero hardcoded constants. **UPDATE 2026-07-26 —
+SHIPPED ON by default and browser-wired** (DevScreen Dynamics → Speed → Gap-Cap Re-Roll), at the confirmed
+candidate G=0.5/strength=1.0. See docs/SIM.md and reports/proposals/GAP-REROLL-CONCEPT.md.
 
 **NORMATIVE DIRECTION TABLE (canonical — supersedes any older §1/§4 phrasing):**
 - A racer whose lap-aware arc gap **to the racer BEHIND** exceeds G (it has opened a hole behind itself)
