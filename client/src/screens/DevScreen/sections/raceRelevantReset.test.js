@@ -69,25 +69,6 @@ describe('after "Reset All Defaults" the badge reads 0 race — by construction'
     expect(s.cosmetic.count).toBeGreaterThan(0);
   });
 
-  it('the assignment-follows-field keys are in the reset target and counted by the badge', () => {
-    // Evolution Act 1 added two race-relevant keys. Reset must restore them (they live in the reset
-    // target's raceDynamicsConfig block), and toggling AFF on must register as a RACE diff so the HUD
-    // badge counts it as "R race" — the two guarantees the SPEC requires.
-    expect(RACE_RELEVANT_DEFAULTS.raceDynamicsConfig).toHaveProperty(
-      'assignmentFollowsField',
-      false
-    );
-    expect(RACE_RELEVANT_DEFAULTS.raceDynamicsConfig).toHaveProperty(
-      'affSwapThresholdLengths',
-      0.5
-    );
-    const on = structuredClone(RACE_RELEVANT_DEFAULTS);
-    on.raceDynamicsConfig.assignmentFollowsField = true;
-    const s = splitConfigDiffs(on, DEFAULTS_WORLD);
-    expect(s.race.keys).toContain('raceDynamicsConfig.assignmentFollowsField');
-    expect(s.race.count).toBeGreaterThan(0);
-  });
-
   it('flipping any single race block off-target makes race.count > 0 (guards the coverage)', () => {
     for (const block of RACE_RELEVANT_CONFIG_KEYS) {
       const cur = structuredClone(RACE_RELEVANT_DEFAULTS);

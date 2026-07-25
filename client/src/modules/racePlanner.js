@@ -334,15 +334,6 @@ export function createRacePlan(racers, finishT, targetDurationMs, config = {}, s
     _gapRerollThresholdLengths: config.gapRerollThresholdLengths ?? null, // G (lengths); null = feature OFF
     _gapRerollMode: config.gapRerollMode ?? 'symmetric', // 'symmetric' | 'down'
     _gapRerollStrength: config.gapRerollStrength ?? 0.5, // fraction-to-edge = min(1, strength·(gap−G))
-    // ── Assignment-follows-field (Evolution Act 1) — flag-gated, DEFAULT OFF ──────────────────────────
-    // When ON, the servo reassigns the PACK's intra-band target ranks every tick to follow the live
-    // order (see update() → applyAssignmentFollowsField). OFF → the pack reads the static
-    // _racerTargetRank exactly as before → byte-identical. affSwapThresholdLengths is the arc-gap (in
-    // racer lengths) a challenger must lead an incumbent by before an intra-band slot swap commits.
-    _assignmentFollowsField: !!config.assignmentFollowsField,
-    _affSwapThresholdLengths: config.affSwapThresholdLengths ?? 0.5,
-    _affAssignedRank: null, // Map index → live intra-band target rank; lazily built on the first OUTCOME tick
-    _affSwapByRacer: null, // Map index → committed intra-band swap count this race (AFF/live diagnostic)
     // Window-derivation input (config-relative, zero hardcoded). Lower bound = corrStartFrac (the LIVE
     // choreoOutcomeStart). Upper bound = (harness lastRollDeadlineMs, realized-duration basis) −
     // transitionDur, so a biased roll's easeInOutCubic ramp settles before the schedule's own last roll.
@@ -496,87 +487,7 @@ export function createTrajectoryController(racePlan) {
     }
   }
 
-  // ── Assignment-follows-field reassignment (Evolution Act 1) ──────────────────────────────────────
-  // PURE function of the live order + fixed plan-time band membership (no rng, no clock → browser==sim).
-  // For each FIXED plan-time band, the live PACK members (non-hero) are handed that band's pack slot
-  // ranks, ordered to follow the live field — but an adjacent intra-band swap commits ONLY when the
-  // challenger leads the incumbent by more than plan._affSwapThresholdLengths of arc-gap (hysteresis),
-  // so noise-level order flaps do not churn the target. Strictly intra-band: a racer's dynamic target is
-  // always one of its OWN band's pack slots, so it can never cross a BAND_EDGE. Writes
-  // plan._affAssignedRank (index → live intra-band target rank) and tallies committed swaps per racer
-  // (plan._affSwapByRacer — AFF/live diagnostic only). Heroes (own their curve ranks) and released
-  // racers (heroes; release reads FIXED band membership) are never reassigned.
-  function applyAssignmentFollowsField(active, heroCurves, lenScale, isOpen) {
-    const staticMap = plan._racerTargetRank;
-    const H = plan._affSwapThresholdLengths;
-    let assigned = plan._affAssignedRank;
-    if (assigned == null) {
-      assigned = new Map(staticMap); // seed from the static endpoint map on the first OUTCOME tick
-      plan._affAssignedRank = assigned;
-      plan._affSwapByRacer = new Map();
-    }
-    const swaps = plan._affSwapByRacer;
-    // Partition the live PACK by fixed plan-time band. Heroes own their curve ranks → excluded (and
-    // released racers are heroes, so they are excluded too); the pack fills the remaining band slots.
-    const bands = new Map(); // bandIndex → array of live pack racers
-    for (const r of active) {
-      if (heroCurves && heroCurves.has(r.index)) continue;
-      const sr = staticMap.get(r.index);
-      if (sr == null) continue;
-      const b = rankToBandIndex(sr);
-      let arr = bands.get(b);
-      if (arr == null) {
-        arr = [];
-        bands.set(b, arr);
-      }
-      arr.push(r);
-    }
-    for (const members of bands.values()) {
-      if (members.length < 2) {
-        // A lone pack member in the band → its slot is fixed; nothing to reorder.
-        if (members.length === 1) assigned.set(members[0].index, staticMap.get(members[0].index));
-        continue;
-      }
-      // The band's pack slot ranks (distinct integers, all inside the band by construction).
-      const slots = members.map((r) => staticMap.get(r.index)).sort((a, b) => a - b);
-      // Committed order = pack members sorted by their CURRENT assigned rank (best slot first). Stable
-      // index tiebreak keeps both engines identical on any (permutation-impossible) equal-rank case.
-      const order = [...members].sort(
-        (a, b) => assigned.get(a.index) - assigned.get(b.index) || a.index - b.index
-      );
-      // One adjacent-swap pass gated by arc-gap hysteresis: order[i] holds the better (smaller) slot;
-      // swap with order[i+1] only when the latter is now live-ahead by more than H racer lengths.
-      // Per-tick cadence + adjacent-only gating lets genuine overtakes propagate over ticks while
-      // noise-level neighbour flaps (gap ≤ H) are held.
-      for (let i = 0; i < order.length - 1; i++) {
-        const incumbent = order[i];
-        const challenger = order[i + 1];
-        if (challenger.t > incumbent.t) {
-          const gapLen = lenScale > 0 ? arcT(challenger.t, incumbent.t, isOpen) * lenScale : 0;
-          if (gapLen > H) {
-            order[i] = challenger;
-            order[i + 1] = incumbent;
-            swaps.set(challenger.index, (swaps.get(challenger.index) ?? 0) + 1);
-            swaps.set(incumbent.index, (swaps.get(incumbent.index) ?? 0) + 1);
-          }
-        }
-      }
-      for (let i = 0; i < order.length; i++) assigned.set(order[i].index, slots[i]);
-    }
-  }
-
-  // affLenScale + isOpen (both optional; default to the byte-identical no-op) are the arc-t→racer-length
-  // scale and the track topology the assignment-follows-field hysteresis reads. The BROWSER and the SIM
-  // both pass them from the SAME shared step (raceCore.stepRacePhysics), so the pure AFF reassignment is
-  // mirrored in both engines. When AFF is OFF they are ignored entirely.
-  function update(
-    racers,
-    elapsedMs,
-    phaseProgress = null,
-    leaderGapLen = null,
-    affLenScale = 0,
-    isOpen = false
-  ) {
+  function update(racers, elapsedMs, phaseProgress = null, leaderGapLen = null) {
     const _preOutcome = getPhase(elapsedMs, phaseProgress) !== 'OUTCOME';
     // ── areaBonusMult ──────────────────────────────────────────────────────────
     // choreo (Stage 1, C-2): the areaBonus ends WITH the CHAOS phase — full during chaos, INSTANT ZERO
@@ -756,14 +667,6 @@ export function createTrajectoryController(racePlan) {
     // whole-field cut subsumes it. heroCurves only exist post-pulkStart, i.e. after the cut.
     const heroCurves = plan._heroCurves;
 
-    // ── Assignment-follows-field (Evolution Act 1) — flag-gated, DEFAULT OFF ──────────────────────────
-    // Recompute the PACK's dynamic intra-band assignment once per OUTCOME tick, BEFORE the per-racer
-    // servo loop consumes it. OFF (or pre-OUTCOME) → _affAssignedRank stays null → the loop reads the
-    // static _racerTargetRank exactly as before → byte-identical. See applyAssignmentFollowsField.
-    if (plan._assignmentFollowsField && !_preOutcome) {
-      applyAssignmentFollowsField(active, heroCurves, affLenScale, isOpen);
-    }
-
     const NOISE_THRESH = plan._stochasticNoise;
     const tm = (r) => r.trajectoryMult ?? 1.0;
 
@@ -786,21 +689,13 @@ export function createTrajectoryController(racePlan) {
         isHero &&
         phaseProgress >= plan._choreoReleaseProgress &&
         (plan._racerTargetRank.get(r.index) ?? nActive) <= BAND_EDGES[0];
-      // choreo heroes: time-varying target rank from their own curve; the pack: the Fisher-Yates target.
-      // AFF ON (pack only): the live intra-band assignment (_affAssignedRank) replaces the static slot;
-      // it is a strictly-intra-band reshuffle of the SAME band's pack ranks, so the endpoint contract
-      // (the static _racerTargetRank map) is untouched. AFF OFF → _affAssignedRank null → static slot.
-      const packTargetRank =
-        plan._affAssignedRank != null
-          ? (plan._affAssignedRank.get(r.index) ??
-            plan._racerTargetRank.get(r.index) ??
-            currentRank)
-          : (plan._racerTargetRank.get(r.index) ?? currentRank);
+      // choreo heroes: time-varying target rank from their own curve; the pack: the constant Fisher-Yates
+      // target (unchanged endpoint). The curve ends in the hero's assigned band.
       const targetRank = released
         ? currentRank
         : isHero
           ? sampleHeroCurve(heroCurve, phaseProgress)
-          : packTargetRank;
+          : (plan._racerTargetRank.get(r.index) ?? currentRank);
       // positive rankError = racer currently ranked worse than target → boost
       const rankError = currentRank - targetRank;
       // Band bounds computed once — used for both steering blend and corridor telemetry.
@@ -1223,10 +1118,6 @@ export function createTrajectoryController(racePlan) {
     // meaningless. This getter neither resets nor mutates; the copy stops a consumer editing state.
     // Controllers are constructed per race, so the log cannot accumulate across races.
     getGapLeaderDownEvents: () => _gapLeaderDownEvents.map((e) => ({ ...e })),
-    // Assignment-follows-field flap diagnostic (AFF/live): committed intra-band swaps this race, by
-    // racer index. Empty when AFF is OFF (never built). Read-only; controllers are per-race so it never
-    // accumulates across races. Consumed by the sim SCREEN to report mean swaps/racer/race.
-    getAffSwapByRacer: () => new Map(plan._affSwapByRacer ?? []),
     getPhase,
     getPhaseFractions,
     // Diagnostics-only: the retained index→role map (null until heroes are cast). Read by GovernorDiagHUD.

@@ -393,17 +393,6 @@ export const DEFAULT_RACE_DYNAMICS_CONFIG = {
   // Dev-only visual cue (rendering-only, zero sim effect): flash a racer at the instant a roll is biased,
   // so the owner can SEE where the mechanism fires before judging naturalness with it off. Default OFF.
   gapRerollDevMarker: false,
-  // ── Assignment-follows-field (Evolution Act 1) — flag-gated, DEFAULT OFF ──────────────────────────
-  // Deletes intra-band slot-pinning for the PACK: every servo tick the pack's target ranks are
-  // reassigned to follow the LIVE field (t-desc order) instead of a pinned plan-time slot. Band
-  // MEMBERSHIP stays fixed (a racer's dynamic target never crosses its plan-time BAND_EDGES); only the
-  // ordering INSIDE a band is dynamic. Heroes (own their curve ranks) and released racers are excluded.
-  // A slot swap commits only when the challenger leads the incumbent by > affSwapThresholdLengths of
-  // arc-gap (same "lengths" unit as gapRerollThresholdLengths) — the anti-flap hysteresis. Pure
-  // deterministic function of live state (no rng, no clock) → browser==sim by construction. OFF →
-  // the servo reads the static plan._racerTargetRank exactly as before → byte-identical shipped game.
-  assignmentFollowsField: false,
-  affSwapThresholdLengths: 0.5,
   // Front-group pool: front N on-track positions (leader excluded) the lead rotation draws challengers from.
   pulkFrontPool: 8,
   // ── PulkLeadRotation — THE pulk-phase mechanism (UNCONDITIONAL). It COMPLETES lead changes inside

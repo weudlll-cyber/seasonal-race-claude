@@ -300,13 +300,6 @@ const GAP_REROLL_THRESH_LEN = GAP_REROLL ? Number(GAP_REROLL_THRESH) : null;
 // experiment defaults, so a flagless run is the shipped game exactly. Explicit flags still override.
 const GAP_REROLL_MODE = GAP_REROLL ? argVal('gapRerollMode', String(DEFAULT_RACE_DYNAMICS_CONFIG.gapRerollMode)) : null;
 const GAP_REROLL_STRENGTH = GAP_REROLL ? Number(argVal('gapRerollStrength', String(DEFAULT_RACE_DYNAMICS_CONFIG.gapRerollStrength))) : null;
-// ── Assignment-follows-field (Evolution Act 1; flag-gated, DEFAULT OFF) ────────────────────────────
-// --assignmentFollowsField=true engages the pack's live intra-band reassignment (racePlanner update());
-// absent/false → the servo reads the static _racerTargetRank → byte-identical (a flagless sim run is the
-// shipped game). --affSwapThresholdLengths sets the arc-gap swap hysteresis (racer lengths). When ON the
-// per-racer committed-swap count is attached to each rawData row (affSwaps) for the flap diagnostic.
-const AFF_ON = argVal('assignmentFollowsField', String(DEFAULT_RACE_DYNAMICS_CONFIG.assignmentFollowsField)) === 'true';
-const AFF_SWAP_THRESH = Number(argVal('affSwapThresholdLengths', String(DEFAULT_RACE_DYNAMICS_CONFIG.affSwapThresholdLengths)));
 // B2-leak trace (read-only diagnostic): adds b2LastInside to rawData rows. No-flag → byte-identical.
 const B2_TRACE = argv.includes('--b2-trace');
 // reRoll / trajectory dynamics overrides — same shared-default + argVal pattern. Lets a sweep
@@ -1230,7 +1223,6 @@ export function runSingleRace({
       trajectoryTransitionDurationMs: dynamicsConfig.trajectoryTransitionDuration * 1000,
       gapRerollEnabled: GAP_REROLL,
       gapRerollDevMarker: false,
-      assignmentFollowsField: AFF_ON,
       constSpeedActive: false,
       computePositions,
     };
@@ -2268,8 +2260,6 @@ export function runSingleRace({
     // outcomeReached: true if at least one racer crossed the finish line (race didn't time out)
     results.outcomeReached = finishedCount > 0;
     results.b2LastInside = b2LastInside; // B2-leak trace: index → last OUTCOME progress inside B2
-    // AFF flap diagnostic: index → committed intra-band swaps this race (empty when AFF is OFF).
-    results.affSwapByRacer = racePlanController ? racePlanController.getAffSwapByRacer() : new Map();
 
     // Phase-3B: COMEBACK analysis result
     if (cbCfg) {
@@ -3154,9 +3144,6 @@ if (isMain) {
               reRollTransitionDuration:  DYNAMICS_OVERRIDES.reRollTransitionDuration,
               // Front act window (the sustained-P1-battle measurement window's own key).
               contestWindowStart:        CONTEST_WINDOW_START,
-              // Assignment-follows-field (Evolution Act 1): OFF → static slots (byte-identical).
-              assignmentFollowsField:    AFF_ON,
-              affSwapThresholdLengths:   AFF_SWAP_THRESH,
             }, seed);
             racePlanController = createTrajectoryController(plan);
             raceSollRankMap = plan._racerTargetRank;
@@ -3282,9 +3269,6 @@ if (isMain) {
               sollBereich,
               // B2-leak trace field: only added under --b2-trace, so no-flag rawData stays byte-identical.
               ...(B2_TRACE ? { b2LastInside: result.b2LastInside?.get(r.racerIndex) ?? -1 } : {}),
-              // AFF flap diagnostic: only added under --assignmentFollowsField, so flagless rawData
-              // (the byte-identity fingerprint's world) stays byte-identical.
-              ...(AFF_ON ? { affSwaps: result.affSwapByRacer?.get(r.racerIndex) ?? 0 } : {}),
               ...r,
             });
           }

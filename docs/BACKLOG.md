@@ -7,22 +7,6 @@ Items ranked by urgency within each bucket. ✅ = done, 🔜 = next, ⏳ = waiti
 
 ---
 
-## Evolution Act 1 — assignment-follows-field (BUILT, flag-gated, DEFAULT OFF — July 2026)
-
-- ✅ **AFF built, flag-gated DEFAULT OFF (byte-identical).** With `assignmentFollowsField` ON the shared
-  servo (`racePlanner.js` `applyAssignmentFollowsField`) reassigns the PACK's intra-band target ranks
-  every OUTCOME tick to follow the live field — strictly intra-band (`BAND_EDGES` never crossed), gated
-  by an `affSwapThresholdLengths` (default 0.5) arc-gap hysteresis. Heroes + released racers excluded;
-  the static `plan._racerTargetRank` endpoint map is untouched. Pure deterministic (no rng/clock) →
-  browser == sim. Backup tag `pre/aff-build`. Fingerprint invariance proven: flagless ON
-  `7c70b1eae7d31e22`, OFF `f8f7d9c2fd3283e9` (both unchanged). Unit + golden-equality + flag-ON parity
-  soak subset (60 identities, real==sim) all green. Mechanism doc: [SIM.md](SIM.md).
-- 🔜 **Owner eye test → default decision.** SCREEN (report-only) `scripts/exp-aff-screen.mjs` →
-  [reports/evolution/AFF-SCREEN.md](../reports/evolution/AFF-SCREEN.md) (CONTROL vs AFF@0.5, luger-hill +
-  searound, N=25/arm/track: band-reach + finale guardrails + flap diagnostic). Nothing ships until the
-  owner decides after an eye test; the report's closing line also flags whether per-tick cadence looks
-  stable or the roll-boundary fallback should be considered.
-
 ## Gap-reroll — SHIPPED DEFAULT ON (July 2026)
 
 - ✅ **Gap-reroll is the shipped default: symmetric, G=0.5, strength=1.0** (`storage/defaults.js`
