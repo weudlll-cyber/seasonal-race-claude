@@ -158,6 +158,13 @@ that phase's `*-complete` endpoint when it closes (incremental history then live
   finale guardrail better (dead 14.1→10.0%, runaway 10.1→6.8%), Holm unchanged 3/10 → "recommend flip" for
   the owner's decision ([reports/parity/GS-CONFIRM-GATE.md](../reports/parity/GS-CONFIRM-GATE.md)). Pinned
   before the flip decision so the evidence state is recoverable whether or not the knobs change.
+- `backup/gs-flip-6f438ea` (`6f438ea`) — **the gs-flip end state, pinned (owner eye passed).** The parity
+  phase's final anchor before collapse: the confirmed candidate shipped as the default
+  (`gapRerollThresholdLengths` 0.75→0.5, `gapRerollStrength` 0.5→1.0; flip `6c060a5`, ON fingerprint
+  `6fdfe851dbb4ca72`→`7c70b1eae7d31e22`, OFF invariant `f8f7d9c2fd3283e9` held) plus the full docs audit to
+  the current world (`6f438ea`). Owner eye-approved: after Reset All Defaults the sliders land on 0.5 / 1.0,
+  the badge reads grey, and the finale is confirmed livelier. Its pre-tag is `pre/gs-flip` (`6d246d0`). The
+  CI security unblock (`4a4bcf3`, dev-toolchain audit overrides — no game code) sits on top.
 - **Collapse plan:** fold into the parity phase's `*-complete` endpoint when that phase closes.
 
 ### Retune / cleanup / greenfield phase — COLLAPSED (2026-07-23)
