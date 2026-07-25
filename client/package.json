@@ -27,6 +27,11 @@
     "vite": "^8.0.0",
     "vitest": "^4.1.4"
   },
+  "overrides": {
+    "brace-expansion": "5.0.8",
+    "minimatch": "10.2.5",
+    "postcss": "^8.5.18"
+  },
   "scripts": {
     "dev": "vite",
     "build": "vite build",
