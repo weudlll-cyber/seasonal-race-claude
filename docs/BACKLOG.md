@@ -7,6 +7,24 @@ Items ranked by urgency within each bucket. ✅ = done, 🔜 = next, ⏳ = waiti
 
 ---
 
+## Evolution Act 2 — finale front-compression (CLOSED 2026-07-26, all three builds reverted)
+
+- ❌ **Three flag-gated finale builds (fixed dice overlay → DevScreen toggle → adaptive spread-scaled
+  gates) all REVERTED after the decisive adaptive SCREEN failed its pre-registered bar.** Act 2 added
+  contest as a scheduled-dice overlay on the gap-cap re-roll (front-band only, finale window, never the
+  servo/target), first with fixed gates then with gates scaled to the live front spread S. Neither the
+  fixed nor the adaptive dose could lift BOTH topologies with one track-agnostic law: the adaptive variant
+  held the floor and even cured the closed over-churn, but STILL could not restore the open over-calm
+  (luger-hill lead-changes 3.00→2.32), and the realized gates barely separated (open G_c 1.01 / closed 1.47)
+  — proving front spread is NOT the distinguishing variable. **Root cause is structural physics:** the open
+  track's long `[0.90,1.0]` run-out re-expands any `[0.80,0.90]` compression, while the closed track's
+  bunched laps churn — so no single track-agnostic finale-dice law serves both topologies. All builds were
+  DEFAULT OFF / byte-identical throughout; reverted for source hygiene, recoverable @`8d5e9fd` (fixed) /
+  @`7404bd9` (toggle) / @`197763d` (adaptive). Lab journal kept in
+  [reports/evolution/](../reports/evolution/) (FINALE-DESIGN-CC, FINALE-SCREEN, FINALE-ADAPTIVE-CC,
+  FINALE-ADAPTIVE-SCREEN). Scaffolding tags `pre/finale-compression`, `pre/finale-devscreen`,
+  `pre/finale-adaptive`, `pre/finale-remove`.
+
 ## Evolution Act 1 — assignment-follows-field (CLOSED 2026-07-26, reverted)
 
 - ❌ **AFF built flag-gated (default OFF, byte-identical) then REVERTED after a NEGATIVE SCREEN.** The

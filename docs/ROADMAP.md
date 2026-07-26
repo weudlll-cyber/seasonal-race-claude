@@ -586,3 +586,20 @@ controls + pinned internals (Stage 5b), not on the removed governor knobs.
   tags pre/aff-build (86e0d6d) + pre/aff-remove (0fed3ee). **Successor candidate** (future act, not
   scheduled): a finale-window / front-band contest that ADDS a bounded chase term while KEEPING the static
   endpoint pin (see AFF-NEXT-CC.md).
+
+## 2026-07-26 — status update (Evolution Act 2: finale front-compression CLOSED — all three builds reverted)
+
+- **Act 2 CLOSED, all three finale builds REVERTED.** The fixed dice overlay (8d5e9fd), the DevScreen
+  toggle (7404bd9), and the adaptive spread-scaled gates (197763d) were all flag-gated DEFAULT OFF /
+  byte-identical (ON 7c70b1eae7d31e22 / OFF f8f7d9c2fd3283e9) and all reverted for source hygiene after the
+  decisive adaptive SCREEN failed its pre-registered bar. One track-agnostic law could not lift BOTH
+  topologies: the adaptive gates held the floor and cured the closed over-churn but STILL couldn't restore
+  the open over-calm (luger-hill lead-changes 3.00→2.32); the realized gates barely separated (open G_c
+  1.01 / closed 1.47), so front spread is NOT the distinguishing variable. Root cause is structural physics
+  — open's long [0.90,1.0] run-out re-expands any [0.80,0.90] compression, closed's bunched laps churn — so
+  no scheduled-dice finale overlay serves both topologies.
+- **Living code reads as if Act 2 was never built** (grep tally 0 in client/ + scripts/). Lab journal kept:
+  reports/evolution/FINALE-DESIGN-CC.md, FINALE-SCREEN.md, FINALE-ADAPTIVE-CC.md, FINALE-ADAPTIVE-SCREEN.md.
+  Recoverable @8d5e9fd/@7404bd9/@197763d; scaffolding tags pre/finale-compression, pre/finale-devscreen,
+  pre/finale-adaptive, pre/finale-remove. Lesson: the finale-window front-band contest that Act 1 named as
+  a successor was tried (fixed + adaptive) and does not work as a single track-agnostic dice law.

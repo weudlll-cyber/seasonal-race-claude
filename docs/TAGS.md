@@ -66,6 +66,18 @@ and what was retired.
 Live step-tags from the OPEN runaway phase — safe return points, not permanent anchors. They collapse into
 that phase's `*-complete` endpoint when it closes (incremental history then lives in commits + docs).
 
+### Evolution Act 2 — finale front-compression (CLOSED 2026-07-26)
+- **Act 2 finale builds recoverable @`8d5e9fd`/@`7404bd9`/@`197763d`, reverted** (three `git revert`
+  commits, newest first). The flag-gated finale front-compression arc — a scheduled-dice overlay on the
+  gap-cap re-roll (fixed gates `8d5e9fd`, DevScreen toggle `7404bd9`, adaptive spread-scaled gates
+  `197763d`) — was verified byte-identical (ON `7c70b1eae7d31e22` / OFF `f8f7d9c2fd3283e9`) but its decisive
+  adaptive SCREEN failed the "one track-agnostic law lifts BOTH topologies" bar (root cause structural
+  physics; see `reports/evolution/FINALE-ADAPTIVE-SCREEN.md`). Owner closed Act 2; all three builds reverted
+  for source hygiene, the five `reports/evolution/FINALE-*.md`+`AFF-*.md` kept as the lab journal.
+  Scaffolding tags: `pre/finale-compression`, `pre/finale-devscreen`, `pre/finale-adaptive`,
+  `pre/finale-remove`. The living code reads as if Act 2 was never built; the builds are recoverable at the
+  three SHAs above.
+
 ### Evolution Act 1 — assignment-follows-field (CLOSED 2026-07-26)
 - **AFF build recoverable @`cd520e0`, reverted** (`git revert cd520e0`). The flag-gated
   assignment-follows-field build (Act 1) was verified byte-identical (ON `7c70b1eae7d31e22` / OFF
