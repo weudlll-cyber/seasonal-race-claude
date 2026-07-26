@@ -45,6 +45,29 @@ const G_PX = G_LEN * BODY_LONG;
 const clamp = (v, lo, hi) => Math.max(lo, Math.min(hi, v));
 const lerp = (a, b, t) => a + (b - a) * t;
 const smoother = (t) => t * t * t * (t * (t * 6 - 15) + 10); // min-jerk easing (smootherstep)
+// Band edges match the shipped racePlanner BAND_EDGES [5,15,25,40] (B1..B5). With N=24 only B1..B3 populate.
+const bandOf = (rank) => (rank <= 5 ? 0 : rank <= 15 ? 1 : rank <= 25 ? 2 : rank <= 40 ? 3 : 4);
+// Abramowitz-Stegun normal CDF (same approximation the standing fairness observer uses).
+function normalCDF(z) {
+  const t = 1 / (1 + 0.2316419 * Math.abs(z));
+  const poly = t * (0.319381530 + t * (-0.356563782 + t * (1.781477937 + t * (-1.821255978 + t * 1.330274429))));
+  const phi = 1 - (1 / Math.sqrt(2 * Math.PI)) * Math.exp(-0.5 * z * z) * poly;
+  return z >= 0 ? phi : 1 - phi;
+}
+// Holm-Bonferroni step-down (FWER α=0.05) — identical to scripts/sim/observers/fairness-stats.mjs holmCorrect.
+function holmCorrect(pValues) {
+  const n = pValues.length; if (n === 0) return [];
+  const idx = pValues.map((p, i) => ({ p, i })).sort((a, b) => a.p - b.p);
+  const adj = new Array(n); let runMax = 0;
+  for (let k = 0; k < n; k++) { runMax = Math.max(runMax, Math.min(1, (n - k) * idx[k].p)); adj[idx[k].i] = runMax; }
+  return adj;
+}
+// One-sided lower test that a row's band-reach is BELOW the 0.70 floor (normal approx to binomial proportion).
+const reachBelowFloorP = (reached, n, floor = 0.7) => {
+  if (n === 0) return 1;
+  const phat = reached / n, se = Math.sqrt((floor * (1 - floor)) / n);
+  return se > 0 ? normalCDF((phat - floor) / se) : phat < floor ? 0 : 1;
+};
 
 function mulberry32(seed) {
   let s = seed >>> 0;
@@ -201,7 +224,6 @@ function runRace(track, seed, { segSec, mExtra, chain }) {
   const finishRank = new Array(N); finishOrder.forEach((i, r) => { finishRank[i] = r + 1; });
   const winner = finishOrder[0];
   // band-reach (F_final reach): assigned band vs finish band
-  const bandOf = (rank) => rank <= 5 ? 0 : rank <= 15 ? 1 : rank <= 25 ? 2 : 3;
   let reach = 0; for (let i = 0; i < N; i++) if (bandOf(pi[i]) === bandOf(finishRank[i])) reach++;
 
   return {
@@ -220,10 +242,15 @@ function runRace(track, seed, { segSec, mExtra, chain }) {
 function runPass(track, seeds, params) {
   const winRow = {}; let n = 0, reach = 0, lcAll = 0, lcLate = 0, ot = 0, dead = 0, ov = 0, blk = 0, numRows = 0;
   const ckPlaceRacer = []; // ckPlaceRacer[k][place] = map racer->count (entropy)
+  const rowReached = [], rowTotal = []; // per-START-row band-reach (the standing fairness measure)
   let segOt = null, K = 0;
   for (const seed of seeds) {
     const r = runRace(track, seed, params);
     winRow[r.winnerStartRow] = (winRow[r.winnerStartRow] ?? 0) + 1;
+    for (let i = 0; i < N; i++) {
+      const row = r.startRow[i]; rowReached[row] = rowReached[row] ?? 0; rowTotal[row] = rowTotal[row] ?? 0;
+      rowTotal[row]++; if (bandOf(r.pi[i]) === bandOf(r.finishRank[i])) rowReached[row]++;
+    }
     numRows = r.numRows; K = r.K; n++; reach += r.reachRate; lcAll += r.leadChangesAll; lcLate += r.leadChangesLate;
     ot += r.overtakesTotal; dead += r.deadLate; ov += r.overlaps; blk += r.blockedFrac;
     if (!segOt) segOt = new Array(r.segOvertakes.length).fill(0);
@@ -238,6 +265,7 @@ function runPass(track, seeds, params) {
   });
   return {
     n, numRows, K, winRow,
+    rowReach: rowReached.map((v, i) => ({ row: i, reached: v, total: rowTotal[i], rate: v / rowTotal[i] })),
     reachMean: reach / n, lcAllMean: lcAll / n, lcLateMean: lcLate / n, otMean: ot / n, deadRate: dead / n,
     overlapsTotal: ov, blockedFracMean: blk / n,
     segOtMean: segOt ? segOt.map((v) => v / n) : [],
@@ -294,6 +322,49 @@ if (MODE === 'unit') {
       console.log(`${String(segSec).padStart(3)}   ${mExtra}     | ${id.padEnd(10)} | ${p.K} ${String(p.numRows).padStart(2)}  | ${(p.reachMean * 100).toFixed(0)}%  chi²${rf.chi2.toFixed(1)}(${((rf.maxShare - rf.minShare) * 100).toFixed(0)}%) | ${p.lcLateMean.toFixed(2)}   ${segOtAvg.toFixed(1)}     ${(p.deadRate * 100).toFixed(0)}% | ${(p.entMean ?? 0).toFixed(2)} ${(p.blockedFracMean * 100).toFixed(1)}%  ${p.overlapsTotal}`);
     }
   }
+} else if (MODE === 'score') {
+  // RE-SCORE (CHAIN-SIM-1 v2). THE standing fairness gate (owner-confirmed): the fair draw assigns each racer a
+  // target PLACE; places 1-5 → band 1, 6-15 → band 2, … (BAND_EDGES). The gate = ≥70% of racers reach their
+  // drawn band, measured OVERALL (NOT per start row, NOT who takes place 1). Win-by-row + per-row breakdown are
+  // DESCRIPTIVE only. chaosFrac=0 → Stage 1 (strict from grid). chaosFrac>0 → Stage 2 (chaos phase to boundary).
+  const segSec = Number(argVal('segSec', '20')), mExtra = Number(argVal('mExtra', '2'));
+  const chaosFrac = Number(argVal('chaosFrac', '0'));
+  const FLOOR = 0.7;
+  const SEEDS = seedRange(2000, 2100); // identical seeds to Phase C
+  const stage = chaosFrac > 0 ? `STAGE 2 (chaos→strict boundary ${chaosFrac})` : 'STAGE 1 (strict from grid, no chaos)';
+  console.log(`=== RE-SCORE ${stage} — segSec=${segSec} mExtra=${mExtra}, N=${SEEDS.length}/track ===\n`);
+  const per = {};
+  for (const id of TRACKS4) {
+    const t = loadTrack(id);
+    per[id] = {
+      CH: runPass(t, SEEDS, { segSec, mExtra, chain: true, chaosFrac }),
+      CT: runPass(t, SEEDS, { segSec, mExtra, chain: false, chaosFrac }),
+    };
+  }
+  // THE GATE — overall band-reach ≥70% (band = rank-range of the drawn place). Strict-phase overlaps must be 0.
+  console.log('--- GATE: overall band-reach ≥70% (drawn place → band), + action vs control + strict overlaps ---');
+  console.log('  track          | CH reach  CT reach | CH dead  CT dead | CH lcLate CT lcLate | strictOv | gate');
+  let allPass = true;
+  for (const id of TRACKS4) {
+    const ch = per[id].CH, ct = per[id].CT;
+    const reachOK = ch.reachMean >= FLOOR, ovOK = ch.overlapsTotal === 0;
+    const actionOK = ch.deadRate <= ct.deadRate && ch.lcLateMean >= ct.lcLateMean;
+    const pass = reachOK && ovOK && actionOK; if (!pass) allPass = false;
+    console.log(`  ${id.padEnd(14)} | ${(ch.reachMean * 100).toFixed(0).padStart(6)}%  ${(ct.reachMean * 100).toFixed(0).padStart(6)}% | ${(ch.deadRate * 100).toFixed(0).padStart(5)}%  ${(ct.deadRate * 100).toFixed(0).padStart(5)}% | ${ch.lcLateMean.toFixed(2).padStart(7)}  ${ct.lcLateMean.toFixed(2).padStart(7)} | ${String(ch.overlapsTotal).padStart(6)}   | ${pass ? 'PASS' : 'FAIL'}${reachOK ? '' : ' reach<70'}${ovOK ? '' : ' overlap'}${actionOK ? '' : ' action'}`);
+  }
+  // DESCRIPTIVE: per-start-row band-reach breakdown (row0=front) — shows WHERE reach concentrates; NOT a gate.
+  console.log('\n--- DESCRIPTIVE: per-start-row band-reach (row0=front) — CHAIN [not a gate] ---');
+  for (const id of TRACKS4) console.log(`  ${id.padEnd(14)} ${per[id].CH.rowReach.map((rr) => `r${rr.row}:${(rr.rate * 100).toFixed(0)}%`).join('  ')}`);
+  console.log('--- DESCRIPTIVE: win-by-start-row — CHAIN front→back [DEMOTED, not a gate] ---');
+  for (const id of TRACKS4) {
+    const rf = rowFairness(per[id].CH.winRow, per[id].CH.numRows, per[id].CH.n);
+    console.log(`  ${id.padEnd(14)} ${rf.shares.map((s) => (s * 100).toFixed(0) + '%').join(' ')}`);
+  }
+  console.log(`\nCLOSING: ${allPass ? 'PASS — band-fair (overall ≥70%) on all 4 tracks, beats control on action, 0 strict-phase overlaps' : 'FAIL — see gate column'}`);
+  console.log('JSON ' + JSON.stringify(Object.fromEntries(TRACKS4.map((id) => [id, {
+    CH: { overall: per[id].CH.reachMean, rows: per[id].CH.rowReach.map((r) => r.rate), strictOv: per[id].CH.overlapsTotal, lcLate: per[id].CH.lcLateMean, dead: per[id].CH.deadRate },
+    CT: { overall: per[id].CT.reachMean, rows: per[id].CT.rowReach.map((r) => r.rate), strictOv: per[id].CT.overlapsTotal, lcLate: per[id].CT.lcLateMean, dead: per[id].CT.deadRate },
+  }]))));
 } else {
   // Phase C: FINAL GATE, best variant, 4 tracks, N=100, paired vs CONTROL.
   const segSec = Number(argVal('segSec', '12')), mExtra = Number(argVal('mExtra', '2'));
