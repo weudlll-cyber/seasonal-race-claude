@@ -57,6 +57,12 @@ const ARM_LIB = {
   M0seg30:   withF(NAKED, '--avoidanceWarmupMs=0', '--chainSegSec=30'),
   M0mx0:     withF(NAKED, '--avoidanceWarmupMs=0', '--chainMExtra=0'),
   M0mx4:     withF(NAKED, '--avoidanceWarmupMs=0', '--chainMExtra=4'),
+  // Round B — chaos PRE-SORT window (chain anchors at the boundary; field spreads before it). SOLE engine.
+  // rowOn = start-row bonus back on (helps back rows climb during chaos). warmup ON (NAKED default).
+  B25:       boundary(withF(without(NAKED, '--speedBonusFactor='), '--speedBonusFactor=1.0'), 0.25),
+  B25noRow:  boundary(NAKED, 0.25),                                        // window + warmup only, no row bonus
+  B25area:   withF(without(boundary(withF(without(NAKED, '--speedBonusFactor='), '--speedBonusFactor=1.0'), 0.25), '--bonusMult='), '--bonusMult=2.0'),
+  B50:       boundary(withF(without(NAKED, '--speedBonusFactor='), '--speedBonusFactor=1.0'), 0.5),
 };
 
 const BAND_EDGES = [5, 15, 25, 40];
