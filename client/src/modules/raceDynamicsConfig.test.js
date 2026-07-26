@@ -65,6 +65,10 @@ describe('DEFAULT_RACE_DYNAMICS_CONFIG', () => {
       choreoResolveB4: 0.65,
       choreoResolveB5: 0.6,
       choreoOutcomeStart: 0.6, // 0.6 shipped 2026-07-17 (SWEEP 2: later PULK end; valid range widened to [0.25,0.60])
+      // Chain choreography (default OFF; OFF byte-identical to shipped). See reports/evolution/CHAIN-INT-1.md.
+      chainChoreoEnabled: false,
+      chainSegSec: 20,
+      chainMExtra: 2,
       // Front act window (the sustained-P1-battle measurement window's own key).
       contestWindowStart: 0.8, // initialised to the shipped choreoResolveB2 so baselines stay comparable
       pulkFrontPool: 8,

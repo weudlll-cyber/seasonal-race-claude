@@ -257,6 +257,10 @@ export function createRaceFromIdentity(p) {
         gapRerollMode: dynamicsConfig.gapRerollMode ?? 'symmetric',
         gapRerollStrength: dynamicsConfig.gapRerollStrength ?? 1.0,
         reRollTransitionDuration: dynamicsConfig.reRollTransitionDuration,
+        // Chain choreography (default OFF → byte-identical shipped path). Whole-field curve choreography.
+        chainChoreoEnabled: dynamicsConfig.chainChoreoEnabled ?? false,
+        chainSegSec: dynamicsConfig.chainSegSec ?? 20,
+        chainMExtra: dynamicsConfig.chainMExtra ?? 2,
       },
       racePlanSeed
     );

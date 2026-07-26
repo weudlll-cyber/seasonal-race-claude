@@ -342,6 +342,14 @@ export const DEFAULT_RACE_DYNAMICS_CONFIG = {
   // Surfaced by the DevScreen "PULK end / OUTCOME begins" control.
   // 0.6 shipped 2026-07-17 (SWEEP 2: +51% PULK action vs 0.5, band-reach gate still held on 3/4 tracks).
   choreoOutcomeStart: 0.6,
+  // ── Chain choreography (default OFF; OFF = byte-identical to the shipped hero-choreo world) ────────
+  // When ON, the whole field is choreographed from the chaos→strict boundary to the finish: instead of
+  // casting 2–4 heroes + pinning the pack to a constant target, EVERY racer gets a rank-space curve from
+  // its post-chaos rank to its DRAWN place (the shipped fair draw, untouched), re-anchored (GPS reroute)
+  // at K checkpoints. Same servo, same honest envelope, same traffic. See reports/evolution/CHAIN-INT-1.md.
+  chainChoreoEnabled: false,
+  chainSegSec: 20, // target segment duration → K = clamp(round(durationSec / segSec), 3, 8) re-plan checkpoints
+  chainMExtra: 2, // outcome-neutral round-trip excursion budget per racer (0 = pure monotone ease to the drawn place)
   // ── FRONT ACT window start — the front battle's OWN key ───────────────────────────────────────
   // The sustained-P1-battle observer (outcome-front-battle.mjs) measures over
   // [contestWindowStart, first finish] and reads this. It was previously read off choreoResolveB2,

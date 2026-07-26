@@ -300,6 +300,10 @@ const GAP_REROLL_THRESH_LEN = GAP_REROLL ? Number(GAP_REROLL_THRESH) : null;
 // experiment defaults, so a flagless run is the shipped game exactly. Explicit flags still override.
 const GAP_REROLL_MODE = GAP_REROLL ? argVal('gapRerollMode', String(DEFAULT_RACE_DYNAMICS_CONFIG.gapRerollMode)) : null;
 const GAP_REROLL_STRENGTH = GAP_REROLL ? Number(argVal('gapRerollStrength', String(DEFAULT_RACE_DYNAMICS_CONFIG.gapRerollStrength))) : null;
+// Chain choreography (default OFF → byte-identical shipped path). Same shared-default + argVal pattern.
+const CHAIN_CHOREO_ON = argVal('chainChoreoEnabled', String(DEFAULT_RACE_DYNAMICS_CONFIG.chainChoreoEnabled)) === 'true';
+const CHAIN_SEG_SEC = Number(argVal('chainSegSec', String(DEFAULT_RACE_DYNAMICS_CONFIG.chainSegSec)));
+const CHAIN_MEXTRA = Number(argVal('chainMExtra', String(DEFAULT_RACE_DYNAMICS_CONFIG.chainMExtra)));
 // B2-leak trace (read-only diagnostic): adds b2LastInside to rawData rows. No-flag → byte-identical.
 const B2_TRACE = argv.includes('--b2-trace');
 // reRoll / trajectory dynamics overrides — same shared-default + argVal pattern. Lets a sweep
@@ -3144,6 +3148,10 @@ if (isMain) {
               reRollTransitionDuration:  DYNAMICS_OVERRIDES.reRollTransitionDuration,
               // Front act window (the sustained-P1-battle measurement window's own key).
               contestWindowStart:        CONTEST_WINDOW_START,
+              // Chain choreography (SIM CLI): OFF → shipped hero-choreo path (byte-identical).
+              chainChoreoEnabled:        CHAIN_CHOREO_ON,
+              chainSegSec:               CHAIN_SEG_SEC,
+              chainMExtra:               CHAIN_MEXTRA,
             }, seed);
             racePlanController = createTrajectoryController(plan);
             raceSollRankMap = plan._racerTargetRank;

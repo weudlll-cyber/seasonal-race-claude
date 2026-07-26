@@ -12,8 +12,9 @@
 // ============================================================
 
 import { easeInOutCubic } from '../utils/mathUtils.js';
-import { sampleHeroCurve } from './heroChoreography.js';
+import { sampleHeroCurve, anchorHeroCurve } from './heroChoreography.js';
 import { generateHeroCurves, GENERATOR_CONFIG } from './heroCurveGenerator.js';
+import { generateChainCurves, chainCheckpointCount } from './chainChoreography.js';
 import { arcT } from './raceLengths.js'; // shared lap-aware arc distance (gap-cap re-roll bias)
 
 // ── Mulberry32 PRNG (same algorithm as scripts/sim-fairness.mjs) ──────────────
@@ -281,6 +282,15 @@ export function createRacePlan(racers, finishT, targetDurationMs, config = {}, s
     // mutable result (filled in-place by update()). _choreoPackBandStrictness loosens the PACK so heroes
     // can weave through (heroes themselves always track their curve exactly).
     _choreoEnabled: true,
+    // ── Chain choreography (default OFF → shipped hero-choreo path, byte-identical) ────────────────────
+    // When ON, update() casts a curve for EVERY racer (not 2–4 heroes) via generateChainCurves and
+    // re-anchors them at K checkpoints (GPS reroute). The servo/actuator/clamp and the fair draw are
+    // reused unchanged; only the target SOURCE (all racers get a curve) and the re-plan are new.
+    chainChoreoEnabled: !!config.chainChoreoEnabled,
+    _chainSegSec: config.chainSegSec ?? 20,
+    _chainMExtra: config.chainMExtra ?? 2,
+    _chainCheckpoints: null, // progress values where the curves re-anchor to actual place; built at cast time
+    _chainNextCk: 0,
     _choreoIntensity: config.choreoIntensity ?? 0.6,
     _choreoPackBandStrictness: config.choreoPackBandStrictness ?? 0.5,
     // Stage 1 spoiler switch (default OFF): suppress the B1-target pool's CHAOS areaBonus so the future
@@ -609,58 +619,121 @@ export function createTrajectoryController(racePlan) {
             ? (i + 1 - plan._choreoPrevRanks.get(r.index)) / dpr
             : 0,
         }));
-        const gen = generateHeroCurves({
-          seed: plan.seed,
-          postChaos,
-          finalRanks: plan._racerTargetRank,
-          intensity: plan._choreoIntensity,
-          finishT: plan._finishT,
-          // DevScreen-tuned per-band resolve + release override the generator defaults (single source
-          // for the tunable values is the dynamics config, threaded through the plan). anchorProgress is
-          // the LIVE resolved pulkStart fraction (the director-anchor = PULK begin): moving PULK begin
-          // moves the hero curve anchor with it, with no second copy of the value.
-          config: {
-            ...GENERATOR_CONFIG,
+        if (plan.chainChoreoEnabled) {
+          // CHAIN: author a curve for EVERY racer (post-chaos rank → drawn place), re-anchored at K
+          // checkpoints below. Reuses the shipped fair draw (finalRanks) + curve engine; the servo,
+          // envelope clamp, and traffic are untouched. Sim-proven (reports/evolution/CHAIN-SIM-1.md).
+          const durationSec = (plan._targetDurationMs > 0 ? plan._targetDurationMs : 1000) / 1000;
+          const K = chainCheckpointCount(durationSec, plan._chainSegSec);
+          const gen = generateChainCurves({
+            seed: plan.seed,
+            postChaos,
+            finalRanks: plan._racerTargetRank,
             anchorProgress: pulkStartFrac,
-            releaseProgress: plan._choreoReleaseProgress,
-            bandResolve: plan._choreoBandResolve,
-            // B2-attacker "Attack & Fall" params (SHIPPED ON at 3; 0 → no attackers → pre-feature game).
-            b2AttackHeroes: plan._b2AttackHeroes,
-            b2AttackPeakRank: plan._b2AttackPeakRank,
-            b2AttackFinalRank: plan._b2AttackFinalRank,
-            b2AttackProgress: plan._b2AttackProgress,
-            b2AttackResolveProgress: plan._b2AttackResolveProgress,
-          },
-        });
-        plan._heroCurves = new Map(gen.curves.map((c) => [c.index, c.curve]));
-        // B2-attacker runtime params (peakRank + finalRank), for the servo's Track-to-FinalRank-then-Free
-        // logic. Only attacker-b2 curves carry them; empty map when the feature is OFF.
-        plan._attackerParams = new Map(
-          gen.curves
-            .filter((c) => c.role === 'attacker-b2')
-            .map((c) => [c.index, { peakRank: c.peakRank, finalRank: c.finalRank }])
-        );
-        // Retain the authored ROLE (sovereign-lead / comebacker / faller) the generator already
-        // produced — ONE source, populated here beside _heroCurves. Diagnostics-only (GovernorDiagHUD);
-        // never recomputed, never read by physics.
-        plan._heroRoles = new Map(gen.curves.map((c) => [c.index, c.role]));
-        // B4a foresight pipeline: retain the FULL authored cameraPlan (all heroes + roles + beat timing)
-        // the generator already emits — ONE source, populated here beside _heroCurves/_heroRoles, never
-        // recomputed, never read by physics. Delivered to the CameraDirector (setCameraPlan) but currently
-        // UNCONSUMED — kept as the prerequisite channel for the planned B4b faller shot, because b1Indices
-        // (targetRank ≤ 5) structurally cannot carry a faller (targetRank > 5).
-        plan._cameraPlan = gen.cameraPlan ?? null;
-        for (const r of racers) {
-          r.isHeroChoreographed = plan._heroCurves.has(r.index);
-          // Diagnostics-only tag for the eye-test hero-highlight (render-time). Read-only; never read by
-          // physics. False for everyone when no attackers are cast → byte-identical.
-          r.isAttackerB2 = plan._attackerParams ? plan._attackerParams.has(r.index) : false;
+            K,
+            mExtra: plan._chainMExtra,
+          });
+          plan._heroCurves = new Map(gen.curves.map((c) => [c.index, c.curve]));
+          plan._chainCheckpoints = gen.checkpoints;
+          plan._chainNextCk = 0;
+          plan._chainPrevRanks = new Map(postChaos.map((p) => [p.index, p.rank]));
+          plan._chainPrevProgress = phaseProgress;
+          // Chain mode casts no B2 attackers and no dramatic roles; keep the shipped fields defined + empty
+          // so the servo's attacker/role reads are inert (byte-identical structure, empty maps).
+          plan._attackerParams = new Map();
+          plan._heroRoles = new Map(gen.curves.map((c) => [c.index, 'chain']));
+          plan._cameraPlan = null;
+          for (const r of racers) {
+            r.isHeroChoreographed = plan._heroCurves.has(r.index);
+            r.isAttackerB2 = false;
+          }
+        } else {
+          const gen = generateHeroCurves({
+            seed: plan.seed,
+            postChaos,
+            finalRanks: plan._racerTargetRank,
+            intensity: plan._choreoIntensity,
+            finishT: plan._finishT,
+            // DevScreen-tuned per-band resolve + release override the generator defaults (single source
+            // for the tunable values is the dynamics config, threaded through the plan). anchorProgress is
+            // the LIVE resolved pulkStart fraction (the director-anchor = PULK begin): moving PULK begin
+            // moves the hero curve anchor with it, with no second copy of the value.
+            config: {
+              ...GENERATOR_CONFIG,
+              anchorProgress: pulkStartFrac,
+              releaseProgress: plan._choreoReleaseProgress,
+              bandResolve: plan._choreoBandResolve,
+              // B2-attacker "Attack & Fall" params (SHIPPED ON at 3; 0 → no attackers → pre-feature game).
+              b2AttackHeroes: plan._b2AttackHeroes,
+              b2AttackPeakRank: plan._b2AttackPeakRank,
+              b2AttackFinalRank: plan._b2AttackFinalRank,
+              b2AttackProgress: plan._b2AttackProgress,
+              b2AttackResolveProgress: plan._b2AttackResolveProgress,
+            },
+          });
+          plan._heroCurves = new Map(gen.curves.map((c) => [c.index, c.curve]));
+          // B2-attacker runtime params (peakRank + finalRank), for the servo's Track-to-FinalRank-then-Free
+          // logic. Only attacker-b2 curves carry them; empty map when the feature is OFF.
+          plan._attackerParams = new Map(
+            gen.curves
+              .filter((c) => c.role === 'attacker-b2')
+              .map((c) => [c.index, { peakRank: c.peakRank, finalRank: c.finalRank }])
+          );
+          // Retain the authored ROLE (sovereign-lead / comebacker / faller) the generator already
+          // produced — ONE source, populated here beside _heroCurves. Diagnostics-only (GovernorDiagHUD);
+          // never recomputed, never read by physics.
+          plan._heroRoles = new Map(gen.curves.map((c) => [c.index, c.role]));
+          // B4a foresight pipeline: retain the FULL authored cameraPlan (all heroes + roles + beat timing)
+          // the generator already emits — ONE source, populated here beside _heroCurves/_heroRoles, never
+          // recomputed, never read by physics. Delivered to the CameraDirector (setCameraPlan) but currently
+          // UNCONSUMED — kept as the prerequisite channel for the planned B4b faller shot, because b1Indices
+          // (targetRank ≤ 5) structurally cannot carry a faller (targetRank > 5).
+          plan._cameraPlan = gen.cameraPlan ?? null;
+          for (const r of racers) {
+            r.isHeroChoreographed = plan._heroCurves.has(r.index);
+            // Diagnostics-only tag for the eye-test hero-highlight (render-time). Read-only; never read by
+            // physics. False for everyone when no attackers are cast → byte-identical.
+            r.isAttackerB2 = plan._attackerParams ? plan._attackerParams.has(r.index) : false;
+          }
         }
         plan._choreoGenerated = true;
       } else {
         plan._choreoPrevRanks = new Map(active.map((r, i) => [r.index, i + 1]));
         plan._choreoPrevProgress = phaseProgress;
       }
+    }
+    // CHAIN GPS reroute: at each checkpoint, re-anchor every curve to the ACTUAL place (rank by t) and
+    // keep the drawn place fixed. Reuses anchorHeroCurve (the shipped re-anchor primitive). L181-safe:
+    // the live order is only the START of the re-authored tail; the attractor stays the fixed drawn place.
+    // OFF (no flag) → this block never runs → byte-identical.
+    if (
+      plan.chainChoreoEnabled &&
+      plan._choreoGenerated &&
+      plan._chainCheckpoints &&
+      plan._chainPrevRanks &&
+      phaseProgress != null
+    ) {
+      if (
+        plan._chainNextCk < plan._chainCheckpoints.length &&
+        phaseProgress >= plan._chainCheckpoints[plan._chainNextCk] &&
+        phaseProgress > plan._chainPrevProgress
+      ) {
+        const dpr = phaseProgress - plan._chainPrevProgress;
+        for (let i = 0; i < nActive; i++) {
+          const r = active[i];
+          const curve = plan._heroCurves.get(r.index);
+          if (!curve) continue;
+          const actualRank = i + 1;
+          const vel = plan._chainPrevRanks.has(r.index)
+            ? (actualRank - plan._chainPrevRanks.get(r.index)) / dpr
+            : 0;
+          plan._heroCurves.set(r.index, anchorHeroCurve(curve, phaseProgress, actualRank, vel));
+        }
+        plan._chainNextCk++;
+      }
+      // Track ranks each frame so the next checkpoint's re-anchor velocity is a true one-frame delta.
+      plan._chainPrevRanks = new Map(active.map((r, i) => [r.index, i + 1]));
+      plan._chainPrevProgress = phaseProgress;
     }
     // Stage 1 (C-2): under choreo the areaBonus is already zero for EVERY racer from the chaos boundary
     // (set in the areaBonus block above), so the old per-hero neutralize here is now redundant — the
