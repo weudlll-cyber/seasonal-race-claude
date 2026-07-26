@@ -3,9 +3,16 @@
 **Branch `exp/chain-choreo` (sim-only, master untouched beyond STEP 0). Author: CC. Unattended autonomous run.**
 Prototype: `scripts/exp/chain-sim.mjs`. Concept: `reports/evolution/CHAIN-CHOREO-CC.md`.
 
-## Closing line (read first)
+> **⚠️ SUPERSEDED BY THE RE-SCORE v2 ADDENDUM AT THE END OF THIS FILE.** The original run below scored the
+> KILL on **win-by-start-row**, which is **NOT** the project's fairness gate. The owner reconfirmed the gate:
+> the fair draw assigns each racer a target *place*; places 1–5 → band 1, 6–15 → band 2, … and the measure is
+> **≥70% of racers reach their drawn band, measured OVERALL — not per start row, and nothing about who takes
+> place 1** (within-band order is free). Re-scored on that gate, chain choreography **PASSES on all four
+> tracks**. Read the original run for the mechanism build and action data; read the addendum for the verdict.
 
-**KILL.** Chain choreography is the first mechanism to *beat its paired control on the finale* — it roughly
+## Closing line (original run — see addendum for the corrected verdict)
+
+**KILL (on the wrong gate — superseded).** Chain choreography is the first mechanism to *beat its paired control on the finale* — it roughly
 **halves the dead-finale rate and triples-to-sextuples late lead-changes on all four tracks, at zero overlaps**
 — but it buys that action by loosening the win-restoring force, which re-opens a **statistically significant,
 monotone front-favoring start-row win bias on all four tracks** (front row wins 52–72%). That trips the
@@ -185,3 +192,101 @@ mechanism — which is the strong result: it shows L181 is not an artifact of on
 
 **Branch:** `exp/chain-choreo`. **Master (STEP 0 only):** `a12b6ab`. Sim + this report committed on the branch.
 No master commits beyond STEP 0, no tags created (per spec).
+
+---
+
+# RE-SCORE v2 ADDENDUM — the standing fairness gate (supersedes the closing line above)
+
+**Branch `exp/chain-choreo` @ `7849da8`. Re-score command:**
+`node scripts/exp/chain-sim.mjs --mode=score --segSec=20 --mExtra=2` (N=100/track, seeds 2000–2099 — identical
+to Phase C, so this re-scores the exact same races, not a new draw).
+
+## The corrected fairness rule (quoted, owner-confirmed)
+
+> The fair draw assigns each racer a target **place** before the race. **Places 1–5 land in band 1, the next
+> places in band 2, and so on** (the shipped `BAND_EDGES` = [5,15,25,40] → B1…B5). **THE fairness measure,
+> unchanged for the whole project: at least 70% of racers reach their drawn band** — measured **OVERALL**.
+> Owner correction, verbatim intent: *"not per start row … places 1–5 in the first band, the next places in
+> the 2nd band, and so on."* **Nothing about who takes place 1; within-band order is free.**
+
+My original run scored the KILL on **win-by-start-row equality** (chi² on who finishes 1st). That is not the
+gate — it measures *exact place 1*, which the rule explicitly leaves free. Re-scored on the real gate:
+
+## THE GATE — Stage 1 (strict from the grid, no chaos phase; the conservative condition)
+
+Gate = overall band-reach ≥70% **AND** action ≥ control (dead-finale ≤, late-lead-changes ≥) **AND** 0
+strict-phase overlaps **AND** one global parameter set (segSec=20, mExtra=2 on every track).
+
+| track | CH reach | CT reach | CH dead | CT dead | CH lcLate | CT lcLate | strict overlaps | gate |
+|---|---|---|---|---|---|---|---|---|
+| luger-hill (open) | **95%** | 95% | 43% | 87% | 0.78 | 0.13 | 0 | **PASS** |
+| mountainstreet (open) | **99%** | 97% | 32% | 84% | 0.95 | 0.33 | 0 | **PASS** |
+| searound (closed) | **84%** | 75% | 53% | 81% | 0.63 | 0.21 | 0 | **PASS** |
+| dirt-oval | **96%** | 92% | 40% | 82% | 0.82 | 0.23 | 0 | **PASS** |
+
+**Overall band-reach clears 70% on all four tracks (84–99%), and CH ≥ CT on reach everywhere.** The action
+result from the original run stands and is now correctly the *action* axis, not disqualified by a mis-applied
+fairness gate: dead finales roughly **halved**, late lead-changes **3–6×**, 0 strict-phase overlaps.
+
+## DESCRIPTIVE — per-start-row band-reach (row 0 = front) — NOT the gate
+
+Included because the earlier spec asked for a per-row breakdown; the owner then clarified the gate is overall,
+so these are context only. Even so, **every row clears 70%** (a stricter per-row floor would also pass):
+
+| track | per-row band-reach, front → back (CHAIN) |
+|---|---|
+| luger-hill | 97% / 92% |
+| mountainstreet | 99% / 98% |
+| searound | 88% / 89% / 84% / **77%** |
+| dirt-oval | 97% / 97% / 92% |
+
+The lowest cell is searound's back row at 77% — above the floor. Since this is measured **strict from the
+grid**, it is the *conservative* case (see Stage 2 note).
+
+## DESCRIPTIVE — win-by-start-row (DEMOTED; not a fairness gate)
+
+The front-bias from the original run is real but is **within-band freedom**, not a gate failure: the fair draw
+places a random racer into band 1; which racer in band 1 finishes exactly 1st is free.
+
+| track | win share, front → back (CHAIN) |
+|---|---|
+| luger-hill | 72% / 28% |
+| mountainstreet | 65% / 35% |
+| searound | 47% / 36% / 12% / 5% |
+| dirt-oval | 52% / 37% / 11% |
+
+## Stage 2 (chaos phase) — set up in the sim, NOT run; here is why it is unnecessary
+
+The sim supports a `--chaosFrac` parameter (chaos→strict boundary; the comb/checkpoints anchor at the
+boundary, overlaps permitted before it, back-row speed bonus). Per the spec, Stage 2 is required only *if
+Stage 1 fails*. **Stage 1 passes, and it passes in the conservative direction:** running strict rules from the
+grid with no chaos phase and no back-row bonus makes back-row band-reach *harder* than the real game. The
+shipped chaos phase exists precisely to lift back-row reach; adding it can only **widen** the already-passing
+margin (the binding cell, searound back row, is already 77%). Running it would confirm PASS with more headroom,
+not change the verdict. (To keep the report honest: I did **not** wire the shipped chaos parameters — boundary
+fraction and back-row-bonus values — from the shipped config; if the owner wants the confirmatory Stage 2 run,
+I will read those exact values and run `--chaosFrac=<shipped boundary>` rather than invent them.)
+
+## NEW closing line (standing gate)
+
+**PASS.** Under the project's actual fairness gate — ≥70% of racers reach their drawn band, measured overall,
+within-band order free — **chain choreography is band-fair on all four tracks (reach 84–99%), beats its paired
+control on the finale (dead-finale halved, late lead-changes 3–6×), holds 0 strict-phase overlaps, and does it
+from one global parameter set.** It is the first mechanism in the Evolution series to clear fairness *and* beat
+control on action at once. The KILL in the original run was an artifact of scoring fairness as win-by-start-row
+instead of band-reach. **Recommend: promote to the next stage** (owner eye-test / browser wiring decision).
+
+## Owner-only questions
+
+1. **The win-by-row front-bias vs the DEAD-ENDS pillar wording.** DEAD-ENDS.md states the pillar as *"Fair =
+   equal win-chance from every start row."* The gate you reconfirmed measures **band-reach**, under which chain
+   PASSES, and treats exact place-1 as within-band freedom — but the win distribution is front-biased (72/28
+   on luger). These are consistent only if "win-chance" in the pillar means "reach a good band," not "finish
+   exactly 1st." **Is the front-biased place-1 distribution acceptable (within-band freedom), or should the
+   pillar wording in DEAD-ENDS.md be tightened to say band-reach?** This is the one judgement call the metrics
+   can't settle.
+2. **Run the confirmatory Stage 2?** I can wire the shipped chaos boundary + back-row-bonus from config and
+   re-run `--mode=score --chaosFrac=<shipped>` to show the widened margin. Worth it, or is the conservative
+   Stage-1 PASS enough?
+3. **Next stage = browser eye-test?** The sim clears every number; the on-rails feel can only be settled by
+   your eye. Want the dev server started for a look, or a browser-wiring spec first?
