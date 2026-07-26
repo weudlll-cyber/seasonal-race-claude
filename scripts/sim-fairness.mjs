@@ -312,13 +312,6 @@ const FINALE_WIN_END = Number(argVal('finaleContestWindowEnd', String(DEFAULT_RA
 const FINALE_CATCHUP_GATE = Number(argVal('finaleCatchupGateLengths', String(DEFAULT_RACE_DYNAMICS_CONFIG.finaleCatchupGateLengths)));
 const FINALE_BLEED_GATE = Number(argVal('finaleLeaderBleedGateLengths', String(DEFAULT_RACE_DYNAMICS_CONFIG.finaleLeaderBleedGateLengths)));
 const FINALE_STRENGTH = Number(argVal('finaleCompressStrength', String(DEFAULT_RACE_DYNAMICS_CONFIG.finaleCompressStrength)));
-// Finale ADAPTIVE gates (Act 2, the decisive test): --finaleAdaptiveGates=true scales the gates by the
-// live front spread S. Absent/false → the fixed gates, byte-identical. When ON, each rawData row also
-// carries the per-race realized gate means (finaleGcMean/finaleGbMean) so the SCREEN can confirm they scaled.
-const FINALE_ADAPTIVE = argVal('finaleAdaptiveGates', String(DEFAULT_RACE_DYNAMICS_CONFIG.finaleAdaptiveGates)) === 'true';
-const FINALE_CATCHUP_FRAC = Number(argVal('finaleCatchupGateFrac', String(DEFAULT_RACE_DYNAMICS_CONFIG.finaleCatchupGateFrac)));
-const FINALE_BLEED_FRAC = Number(argVal('finaleLeaderBleedGateFrac', String(DEFAULT_RACE_DYNAMICS_CONFIG.finaleLeaderBleedGateFrac)));
-const FINALE_MIN_SPREAD = Number(argVal('finaleAdaptiveMinSpreadLengths', String(DEFAULT_RACE_DYNAMICS_CONFIG.finaleAdaptiveMinSpreadLengths)));
 const B2_TRACE = argv.includes('--b2-trace');
 // reRoll / trajectory dynamics overrides — same shared-default + argVal pattern. Lets a sweep
 // test DevScreen-tuned (localStorage-only) values WITHOUT changing the shared defaults.js.
@@ -3171,11 +3164,6 @@ if (isMain) {
               finaleCatchupGateLengths:     FINALE_CATCHUP_GATE,
               finaleLeaderBleedGateLengths: FINALE_BLEED_GATE,
               finaleCompressStrength:       FINALE_STRENGTH,
-              // Finale ADAPTIVE gates (Evolution Act 2): OFF → fixed gates (byte-identical).
-              finaleAdaptiveGates:          FINALE_ADAPTIVE,
-              finaleCatchupGateFrac:        FINALE_CATCHUP_FRAC,
-              finaleLeaderBleedGateFrac:    FINALE_BLEED_FRAC,
-              finaleAdaptiveMinSpreadLengths: FINALE_MIN_SPREAD,
             }, seed);
             racePlanController = createTrajectoryController(plan);
             raceSollRankMap = plan._racerTargetRank;
@@ -3304,13 +3292,7 @@ if (isMain) {
               // Finale intervention split (Act 2): per-RACE totals attached to each row; only under
               // --finaleFrontCompression, so flagless rawData (the fingerprint's world) is byte-identical.
               ...(FINALE_ON
-                ? {
-                    finaleUp: result.finaleTilts?.up ?? 0,
-                    finaleDown: result.finaleTilts?.down ?? 0,
-                    // Realized adaptive-gate means (null unless finaleAdaptiveGates fired this race).
-                    finaleGcMean: result.finaleTilts?.gcMean ?? null,
-                    finaleGbMean: result.finaleTilts?.gbMean ?? null,
-                  }
+                ? { finaleUp: result.finaleTilts?.up ?? 0, finaleDown: result.finaleTilts?.down ?? 0 }
                 : {}),
               ...r,
             });

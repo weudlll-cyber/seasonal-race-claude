@@ -274,17 +274,6 @@ export function createRaceFromIdentity(p) {
         finaleCompressStrength:
           dynamicsConfig.finaleCompressStrength ??
           DEFAULT_RACE_DYNAMICS_CONFIG.finaleCompressStrength,
-        // Finale ADAPTIVE gates (Evolution Act 2) — default OFF → byte-identical.
-        finaleAdaptiveGates: dynamicsConfig.finaleAdaptiveGates ?? false,
-        finaleCatchupGateFrac:
-          dynamicsConfig.finaleCatchupGateFrac ??
-          DEFAULT_RACE_DYNAMICS_CONFIG.finaleCatchupGateFrac,
-        finaleLeaderBleedGateFrac:
-          dynamicsConfig.finaleLeaderBleedGateFrac ??
-          DEFAULT_RACE_DYNAMICS_CONFIG.finaleLeaderBleedGateFrac,
-        finaleAdaptiveMinSpreadLengths:
-          dynamicsConfig.finaleAdaptiveMinSpreadLengths ??
-          DEFAULT_RACE_DYNAMICS_CONFIG.finaleAdaptiveMinSpreadLengths,
       },
       racePlanSeed
     );

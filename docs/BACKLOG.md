@@ -9,22 +9,7 @@ Items ranked by urgency within each bucket. ✅ = done, 🔜 = next, ⏳ = waiti
 
 ## Evolution Act 2 — finale front-compression (BUILT, flag-gated, DEFAULT OFF — July 2026)
 
-- ⛔ **ABANDON RECOMMENDED after the decisive adaptive test (2026-07-26).** Both the FIXED-dose SCREEN and
-  the ADAPTIVE spread-scaled SCREEN failed the "one track-agnostic law lifts BOTH topologies" bar. The
-  adaptive variant (`finaleAdaptiveGates`, gates = fractions of the live front spread S) held the pooled
-  floor (71.1%→71.7%) and even CURED the closed over-churn the fixed dose caused (searound runaway
-  16%→16% and dead 8%→12% vs the fixed dose's 16%→24% / 8%→16%) — but it STILL could not restore the open
-  over-calm (luger-hill lead-changes 3.00→2.32, front@line 5.36→4.04). The smoking gun: the realized gates
-  barely separated (open G_c 1.01 vs closed 1.47), because the live front spread S is nearly the same on
-  both topologies (~4–6 L) — so **front spread is NOT the hidden variable**; the open/closed split is
-  structural physics (open's long `[0.90,1.0]` run-out re-expands any compression; closed's bunched laps
-  churn), which no `[0.80,0.90]` scheduled-dice tilt can reach. Both builds remain flag-gated DEFAULT OFF
-  (byte-identical); the owner decides whether to revert (as with Act 1). Evidence:
-  [FINALE-SCREEN.md](../reports/evolution/FINALE-SCREEN.md),
-  [FINALE-ADAPTIVE-CC.md](../reports/evolution/FINALE-ADAPTIVE-CC.md),
-  [FINALE-ADAPTIVE-SCREEN.md](../reports/evolution/FINALE-ADAPTIVE-SCREEN.md). Adaptive build backup tag
-  `pre/finale-adaptive`.
-- 🔬 **Built flag-gated (default OFF, byte-identical).** Inverts the Act 1 lesson:
+- 🔬 **Built flag-gated (default OFF, byte-identical), awaiting owner eye test.** Inverts the Act 1 lesson:
   keep the static `rankError` restoring force fully intact everywhere, and ADD contest ONLY in the finale
   window and ONLY among the front runners — as ONE **scheduled-dice overlay** on the gap-cap re-roll
   (`racePlanner.js` `computeGapBiasedTarget`), never on the servo/target. Two gap-sequenced halves for a

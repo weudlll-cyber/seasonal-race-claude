@@ -146,10 +146,6 @@ const DynamicsTuningSection = forwardRef(function DynamicsTuningSection(_, ref) 
       finaleCatchupGateLengths: DEFAULT_RACE_DYNAMICS_CONFIG.finaleCatchupGateLengths,
       finaleLeaderBleedGateLengths: DEFAULT_RACE_DYNAMICS_CONFIG.finaleLeaderBleedGateLengths,
       finaleCompressStrength: DEFAULT_RACE_DYNAMICS_CONFIG.finaleCompressStrength,
-      finaleAdaptiveGates: DEFAULT_RACE_DYNAMICS_CONFIG.finaleAdaptiveGates,
-      finaleCatchupGateFrac: DEFAULT_RACE_DYNAMICS_CONFIG.finaleCatchupGateFrac,
-      finaleLeaderBleedGateFrac: DEFAULT_RACE_DYNAMICS_CONFIG.finaleLeaderBleedGateFrac,
-      finaleAdaptiveMinSpreadLengths: DEFAULT_RACE_DYNAMICS_CONFIG.finaleAdaptiveMinSpreadLengths,
     }));
   }
 
@@ -876,105 +872,6 @@ const DynamicsTuningSection = forwardRef(function DynamicsTuningSection(_, ref) 
               onChange={(e) => {
                 const v = Number(e.target.value);
                 if (isFinite(v) && v >= 0 && v <= 3) setDynamics('finaleCompressStrength', v);
-              }}
-            />
-          </div>
-          <div className={s.formGroup}>
-            <label
-              className={s.label}
-              style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}
-            >
-              <input
-                type="checkbox"
-                checked={dynamicsConfig.finaleAdaptiveGates ?? false}
-                onChange={(e) => setDynamics('finaleAdaptiveGates', e.target.checked)}
-                data-testid="finale-adaptive-gates-toggle"
-              />
-              Adaptive gates (spread-scaled)
-              <InfoTooltip text="Act 2 decisive test. When ON (needs Finale front-compression ON too), the two gates stop being fixed lengths and become fractions of the LIVE front-band spread S (leader→P5, racer lengths): G_c = c·S, G_b = b·S. That keeps the same RELATIVE selectivity on a wide (open) or bunched (closed) front — one track-agnostic law. OFF = the fixed gates above." />
-            </label>
-          </div>
-          <div className={s.formGroup}>
-            <label
-              className={s.label}
-              style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}
-            >
-              Catch-up gate fraction c
-              <InfoTooltip text="G_c = c × (live front spread). A pursuer more than that fraction of the front-spread behind the leader gets the catch-up FASTER tilt. Must stay below the bleed fraction b. 0.25 = committed (≈1.0 L at a typical S≈4 L)." />
-            </label>
-            <input
-              type="number"
-              className={s.input}
-              aria-label="Catch-up gate fraction c"
-              min={0}
-              max={1}
-              step={0.05}
-              value={
-                dynamicsConfig.finaleCatchupGateFrac ??
-                DEFAULT_RACE_DYNAMICS_CONFIG.finaleCatchupGateFrac
-              }
-              onChange={(e) => {
-                const v = Number(e.target.value);
-                const b =
-                  dynamicsConfig.finaleLeaderBleedGateFrac ??
-                  DEFAULT_RACE_DYNAMICS_CONFIG.finaleLeaderBleedGateFrac;
-                // HARD invariant b > c: reject a c that would meet/exceed the bleed fraction.
-                if (isFinite(v) && v >= 0 && v < b) setDynamics('finaleCatchupGateFrac', v);
-              }}
-            />
-          </div>
-          <div className={s.formGroup}>
-            <label
-              className={s.label}
-              style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}
-            >
-              Leader-bleed gate fraction b
-              <InfoTooltip text="G_b = b × (live front spread). The runaway backstop: the leader bleeds only when its lead over P2 exceeds that fraction of the front-spread. Must stay ABOVE the catch-up fraction c (so G_b > G_c for every spread). 0.5 = committed." />
-            </label>
-            <input
-              type="number"
-              className={s.input}
-              aria-label="Leader-bleed gate fraction b"
-              min={0.05}
-              max={1.5}
-              step={0.05}
-              value={
-                dynamicsConfig.finaleLeaderBleedGateFrac ??
-                DEFAULT_RACE_DYNAMICS_CONFIG.finaleLeaderBleedGateFrac
-              }
-              onChange={(e) => {
-                const v = Number(e.target.value);
-                const c =
-                  dynamicsConfig.finaleCatchupGateFrac ??
-                  DEFAULT_RACE_DYNAMICS_CONFIG.finaleCatchupGateFrac;
-                // HARD invariant b > c: reject a b that would not strictly exceed the catch-up fraction.
-                if (isFinite(v) && v > c && v <= 1.5) setDynamics('finaleLeaderBleedGateFrac', v);
-              }}
-            />
-          </div>
-          <div className={s.formGroup}>
-            <label
-              className={s.label}
-              style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}
-            >
-              Adaptive min spread (lengths)
-              <InfoTooltip text="Below this live front spread the front is already a clump, so the adaptive overlay is a no-op (it never divides a tiny front into contest that isn't there). 1.0 = committed." />
-            </label>
-            <input
-              type="number"
-              className={s.input}
-              aria-label="Adaptive min spread (lengths)"
-              min={0}
-              max={10}
-              step={0.25}
-              value={
-                dynamicsConfig.finaleAdaptiveMinSpreadLengths ??
-                DEFAULT_RACE_DYNAMICS_CONFIG.finaleAdaptiveMinSpreadLengths
-              }
-              onChange={(e) => {
-                const v = Number(e.target.value);
-                if (isFinite(v) && v >= 0 && v <= 10)
-                  setDynamics('finaleAdaptiveMinSpreadLengths', v);
               }}
             />
           </div>

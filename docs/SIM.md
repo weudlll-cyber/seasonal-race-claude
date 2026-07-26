@@ -1193,31 +1193,3 @@ gated on the flag, so a flagless run's `rawData` (the fingerprint's world) is un
 soak is `node scripts/parity/soak.mjs --limit=60 --finaleFrontCompression=true` (engages the overlay in
 BOTH arms, asserts `realArm == simArm`). SCREEN driver: `scripts/exp-finale-screen.mjs`
 (report → `reports/evolution/FINALE-SCREEN.md`).
-
-## 2026-07-26 — Finale ADAPTIVE gates (Evolution Act 2, spread-scaled, DEFAULT OFF)
-
-**Mechanism.** `finaleAdaptiveGates` layers ON TOP of `finaleFrontCompression`: when ON, the two finale
-gates stop being fixed lengths and become **fractions of the LIVE front-band spread** `S` = the
-leader→live-P5 arc-gap in racer lengths (`arcT × lenScale`, lap-aware). `G_c = finaleCatchupGateFrac · S`,
-`G_b = finaleLeaderBleedGateFrac · S`, with `bleedFrac > catchupFrac` validated at config load so
-`G_b > G_c` for **every** `S`. Below `finaleAdaptiveMinSpreadLengths` the front is a clump → the overlay is
-a no-op. Everything else is unchanged (window `[0.80,0.90]`, static front-band scope, honest ±band clamp,
-never touching servo/target/`BAND_EDGES`). When `finaleAdaptiveGates` is OFF the overlay reads the fixed
-`G_c`/`G_b` exactly as the Act 2 build; both this flag AND `finaleFrontCompression` OFF ⇒ byte-identical.
-
-**"One law, zero track knowledge" contract.** The fixed absolute gates fired with the WRONG selectivity per
-topology (the fixed-dose SCREEN did opposite things open vs closed). Scaling the gates by the race's OWN
-live front spread keeps the **relative** selectivity constant on both topologies from a single global
-parameter set — no per-track config, no track-type branch. `S` is a pure function of live `t` + `lenScale`
-(both identical across engines) → no rng, no clock → parity-golden safe; duration-scaled (progress-based
-window, spatial `S` in lengths).
-
-**Fingerprint invariance (proven, this build).** Both new + old finale flags default OFF: flagless ON
-`7c70b1eae7d31e22` and OFF (`--gapRerollEnabled=false`) `f8f7d9c2fd3283e9` — unchanged from master.
-
-**Sim CLI.** `--finaleAdaptiveGates=true` (with `--finaleFrontCompression=true`) engages the spread-scaled
-gates; `--finaleCatchupGateFrac`, `--finaleLeaderBleedGateFrac`, `--finaleAdaptiveMinSpreadLengths` set the
-knobs. When ON, each `rawData` row also carries the realized per-race gate means (`finaleGcMean`,
-`finaleGbMean`) so the SCREEN can confirm the gates scaled apart per track. Flag-ON parity soak:
-`node scripts/parity/soak.mjs --limit=60 --finaleAdaptiveGates=true`. SCREEN driver:
-`scripts/exp-finale-adaptive-screen.mjs` (report → `reports/evolution/FINALE-ADAPTIVE-SCREEN.md`).

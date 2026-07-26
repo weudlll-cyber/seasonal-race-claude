@@ -88,17 +88,7 @@ export function loadRaceDynamicsConfig() {
     typeof merged.finaleLeaderBleedGateLengths !== 'number' ||
     merged.finaleLeaderBleedGateLengths <= merged.finaleCatchupGateLengths ||
     typeof merged.finaleCompressStrength !== 'number' ||
-    merged.finaleCompressStrength < 0 ||
-    // Finale ADAPTIVE gates (Evolution Act 2). Same whole-object-reject pattern. The flag is a boolean;
-    // the two fractions are non-negative with the HARD invariant bleedFrac > catchupFrac (so G_b>G_c for
-    // every live spread S, no runtime validator needed); the spread floor is a non-negative length.
-    typeof merged.finaleAdaptiveGates !== 'boolean' ||
-    typeof merged.finaleCatchupGateFrac !== 'number' ||
-    merged.finaleCatchupGateFrac < 0 ||
-    typeof merged.finaleLeaderBleedGateFrac !== 'number' ||
-    merged.finaleLeaderBleedGateFrac <= merged.finaleCatchupGateFrac ||
-    typeof merged.finaleAdaptiveMinSpreadLengths !== 'number' ||
-    merged.finaleAdaptiveMinSpreadLengths < 0
+    merged.finaleCompressStrength < 0
   ) {
     return { ...DEFAULT_RACE_DYNAMICS_CONFIG };
   }

@@ -414,20 +414,6 @@ export const DEFAULT_RACE_DYNAMICS_CONFIG = {
   finaleCatchupGateLengths: 1.0, // G_c — front pursuer→leader gap that arms the catch-up UP-tilt (lengths)
   finaleLeaderBleedGateLengths: 2.0, // G_b — leader→P2 gap that arms the bleed DOWN-tilt; MUST be > G_c
   finaleCompressStrength: 1.0, // shared tilt strength: fraction-to-edge = min(1, strength·(gap−gate))
-  // ── Finale ADAPTIVE gates (Evolution Act 2, the decisive test) — flag-gated, DEFAULT OFF ───────────
-  // The fixed absolute gates above fire with the WRONG selectivity per topology (the CONTROL front is
-  // ~1.8× wider on open than closed, so a fixed G_c=1.0 L fires on nearly EVERY open pursuer → uniform
-  // pull → contest killed; on the bunched closed front the fixed 2.0 L bleed dumps the leader into the
-  // pack → churn). finaleAdaptiveGates layers ON TOP of finaleFrontCompression: it makes the two gates
-  // FRACTIONS of the LIVE front-band spread S (leader→live-P5 arc-gap in racer lengths), so the RELATIVE
-  // selectivity is constant on both topologies — one track-agnostic law, ZERO track knowledge. G_c = c·S,
-  // G_b = b·S with b>c (validated), so G_b>G_c holds by construction. Below finaleAdaptiveMinSpreadLengths
-  // the front is already a clump → the overlay is a no-op. When finaleAdaptiveGates is OFF the overlay
-  // uses the fixed G_c/G_b exactly as today; both this flag AND finaleFrontCompression OFF ⇒ byte-identical.
-  finaleAdaptiveGates: false,
-  finaleCatchupGateFrac: 0.25, // c — G_c = c·S (reproduces G_c≈1.0 L at a typical front spread S≈4 L)
-  finaleLeaderBleedGateFrac: 0.5, // b — G_b = b·S; MUST be > c (so G_b > G_c for every S)
-  finaleAdaptiveMinSpreadLengths: 1.0, // S floor (lengths): front tighter than this ⇒ overlay no-op
   // Front-group pool: front N on-track positions (leader excluded) the lead rotation draws challengers from.
   pulkFrontPool: 8,
   // ── PulkLeadRotation — THE pulk-phase mechanism (UNCONDITIONAL). It COMPLETES lead changes inside

@@ -344,13 +344,6 @@ export function createRacePlan(racers, finishT, targetDurationMs, config = {}, s
     _finaleCatchupGateLengths: config.finaleCatchupGateLengths ?? 1.0, // G_c (lengths)
     _finaleLeaderBleedGateLengths: config.finaleLeaderBleedGateLengths ?? 2.0, // G_b (lengths); > G_c
     _finaleCompressStrength: config.finaleCompressStrength ?? 1.0,
-    // Finale ADAPTIVE gates (Act 2): when ON, G_c/G_b become fractions of the live front spread S
-    // (leader→P5 lengths); OFF → the fixed gates above are used unchanged. bleedFrac > catchupFrac is
-    // validated upstream so G_b > G_c holds for every S. Below minSpread the overlay is a no-op.
-    _finaleAdaptiveGates: !!config.finaleAdaptiveGates,
-    _finaleCatchupGateFrac: config.finaleCatchupGateFrac ?? 0.25, // c
-    _finaleLeaderBleedGateFrac: config.finaleLeaderBleedGateFrac ?? 0.5, // b; > c
-    _finaleAdaptiveMinSpreadLengths: config.finaleAdaptiveMinSpreadLengths ?? 1.0,
     // Window-derivation input (config-relative, zero hardcoded). Lower bound = corrStartFrac (the LIVE
     // choreoOutcomeStart). Upper bound = (harness lastRollDeadlineMs, realized-duration basis) −
     // transitionDur, so a biased roll's easeInOutCubic ramp settles before the schedule's own last roll.
@@ -447,11 +440,6 @@ export function createTrajectoryController(racePlan) {
   // The SCREEN reads these to confirm (B) stays a rare backstop relative to (A).
   let _finaleUpTilts = 0; // (A) catch-up UP-tilts fired (front pursuer pulled toward the leader)
   let _finaleDownTilts = 0; // (B) leader-bleed DOWN-tilts fired (only on a leader→P2 gap > G_b)
-  // Adaptive-gate diagnostic (Act 2): the realized G_c/G_b (lengths) accumulated each time the overlay is
-  // active under finaleAdaptiveGates, so the SCREEN can confirm the gates scaled apart per topology.
-  let _finaleGcSum = 0;
-  let _finaleGbSum = 0;
-  let _finaleGateSamples = 0;
   let _gapDownGapAheadSum = 0; // Σ gapAhead at DOWN-tilt moments (lengths)
   let _gapDownGapBehindSum = 0; // Σ gapBehind at DOWN-tilt moments (lengths)
   let _packReSteerEvents = 0; // count of released→steering transitions (a racer drifted out)
@@ -973,48 +961,27 @@ export function createTrajectoryController(racePlan) {
           .sort((a, b) => b.t - a.t || a.index - b.index);
         const posF = liveF.findIndex((r) => r.index === racerIndex);
         const sc = plan._finaleCompressStrength;
-        // Resolve the two gates. ADAPTIVE (Act 2 decisive test): scale them by the LIVE front-band spread
-        // S = leader→live-P5 arc-gap (racer lengths, same lap-aware arcT × lenScale plumbing), so relative
-        // selectivity is constant on both topologies (one track-agnostic law). G_c = c·S, G_b = b·S with
-        // b>c (validated) ⇒ G_b>G_c for every S. Below the spread floor the front is a clump → no-op
-        // (active=false → fall through). FIXED (adaptive OFF): the committed absolute gates, unchanged.
-        let gc = plan._finaleCatchupGateLengths;
-        let gb = plan._finaleLeaderBleedGateLengths;
-        let active = true;
-        if (plan._finaleAdaptiveGates) {
-          const p5 = liveF[Math.min(4, liveF.length - 1)];
-          const spreadS = arcT(liveF[0].t, p5.t, isOpen) * lenScale;
-          if (spreadS < plan._finaleAdaptiveMinSpreadLengths) {
-            active = false; // front already tight → nothing to compress
-          } else {
-            gc = plan._finaleCatchupGateFrac * spreadS;
-            gb = plan._finaleLeaderBleedGateFrac * spreadS;
-            _finaleGcSum += gc;
-            _finaleGbSum += gb;
-            _finaleGateSamples++;
-          }
-        }
-        if (active && posF === 0) {
+        if (posF === 0) {
           // (B) leader bleed — only on a genuine breakaway (leader→P2 gap > the LARGER gate G_b).
           const p2 = liveF.length > 1 ? liveF[1] : null;
           const gapLead = p2 ? arcT(selfF.t, p2.t, isOpen) * lenScale : 0;
-          if (gapLead > gb) {
-            const frac = Math.min(1, sc * (gapLead - gb));
+          if (gapLead > plan._finaleLeaderBleedGateLengths) {
+            const frac = Math.min(1, sc * (gapLead - plan._finaleLeaderBleedGateLengths));
             _finaleDownTilts++;
             return clamp(rawSample - frac * (rawSample - spreadMin), spreadMin, spreadMax); // SLOWER
           }
-        } else if (active && posF > 0) {
+        } else if (posF > 0) {
           // (A) catch-up — pull a front-band pursuer toward the live leader (leader→self gap > G_c).
           const leaderF = liveF[0];
           const gapToLead = arcT(leaderF.t, selfF.t, isOpen) * lenScale;
-          if (gapToLead > gc) {
-            const frac = Math.min(1, sc * (gapToLead - gc));
+          if (gapToLead > plan._finaleCatchupGateLengths) {
+            const frac = Math.min(1, sc * (gapToLead - plan._finaleCatchupGateLengths));
             _finaleUpTilts++;
             return clamp(rawSample + frac * (spreadMax - rawSample), spreadMin, spreadMax); // FASTER
           }
         }
       }
-      // flag on but no gate met (or front too tight) → fall through to the shipped gap-reroll bias.
+      // flag on but no gate met → fall through to the shipped gap-reroll bias unchanged.
     }
     // Upper bound derived from the SCHEDULE'S OWN clock: the harness passes lastRollDeadlineMs (built from
     // realizedDurationSec — the SAME basis elapsedMs runs on), so there is ONE duration basis in this
@@ -1213,13 +1180,7 @@ export function createTrajectoryController(racePlan) {
     // Finale front-compression intervention split (Act 2): counts of (A) catch-up UP-tilts and (B)
     // leader-bleed DOWN-tilts this race. Both 0 when the feature is OFF. Read by the sim SCREEN to
     // confirm (B) stays a rare backstop. Read-only; controllers are per-race so it never accumulates.
-    getFinaleTiltCounts: () => ({
-      up: _finaleUpTilts,
-      down: _finaleDownTilts,
-      // Realized adaptive gates (means, lengths) — null unless finaleAdaptiveGates was active this race.
-      gcMean: _finaleGateSamples ? _finaleGcSum / _finaleGateSamples : null,
-      gbMean: _finaleGateSamples ? _finaleGbSum / _finaleGateSamples : null,
-    }),
+    getFinaleTiltCounts: () => ({ up: _finaleUpTilts, down: _finaleDownTilts }),
     getPhase,
     getPhaseFractions,
     // Diagnostics-only: the retained index→role map (null until heroes are cast). Read by GovernorDiagHUD.
