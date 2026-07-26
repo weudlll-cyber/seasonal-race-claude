@@ -10,6 +10,7 @@ This index maps the documents under `docs/`.
 - [ROADMAP.md](ROADMAP.md) — development roadmap and phase completion status.
 - [BACKLOG.md](BACKLOG.md) — living backlog (see ROADMAP.md for phase context).
 - [PROJECT-PRINCIPLES.md](PROJECT-PRINCIPLES.md) — project principles that override convenience when they conflict.
+- [DEAD-ENDS.md](DEAD-ENDS.md) — **required reading before ANY race-mechanism proposal or diagnosis:** approaches already built, measured, and retired.
 
 ## Subsystem specs & references
 - [TRACK_EDITOR.md](TRACK_EDITOR.md) — track editor specification (Center/Boundary modes).
