@@ -264,15 +264,25 @@ function finalePlanKeys(cfg) {
       cfg.finaleLeaderBleedGateLengths ?? DEFAULT_RACE_DYNAMICS_CONFIG.finaleLeaderBleedGateLengths,
     finaleCompressStrength:
       cfg.finaleCompressStrength ?? DEFAULT_RACE_DYNAMICS_CONFIG.finaleCompressStrength,
+    finaleAdaptiveGates: cfg.finaleAdaptiveGates ?? false,
+    finaleCatchupGateFrac:
+      cfg.finaleCatchupGateFrac ?? DEFAULT_RACE_DYNAMICS_CONFIG.finaleCatchupGateFrac,
+    finaleLeaderBleedGateFrac:
+      cfg.finaleLeaderBleedGateFrac ?? DEFAULT_RACE_DYNAMICS_CONFIG.finaleLeaderBleedGateFrac,
+    finaleAdaptiveMinSpreadLengths:
+      cfg.finaleAdaptiveMinSpreadLengths ??
+      DEFAULT_RACE_DYNAMICS_CONFIG.finaleAdaptiveMinSpreadLengths,
   };
 }
 
 // Optional AFF-style override for the flag-ON finale parity soak
 // (soak.mjs --finaleFrontCompression=true): engages the overlay in BOTH arms so the soak proves
 // real==sim WITH the mechanism live. Absent → {} → the shipped default world (finale off).
-const FINALE_SOAK_OVERRIDE = process.argv.includes('--finaleFrontCompression=true')
-  ? { finaleFrontCompression: true }
-  : {};
+const FINALE_SOAK_OVERRIDE = process.argv.includes('--finaleAdaptiveGates=true')
+  ? { finaleFrontCompression: true, finaleAdaptiveGates: true } // adaptive layers on the overlay
+  : process.argv.includes('--finaleFrontCompression=true')
+    ? { finaleFrontCompression: true }
+    : {};
 
 function simPlanConfig(DYN) {
   return {

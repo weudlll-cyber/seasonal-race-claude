@@ -127,6 +127,15 @@ would violate it, so an invalid pair can never persist (and the window fields li
 | Catch-up gate G_c (lengths, < G_b) | `finaleCatchupGateLengths` | 1.0 | — |
 | Leader-bleed gate G_b (lengths, > G_c) | `finaleLeaderBleedGateLengths` | 2.0 | — |
 | Finale compress strength (0–3) | `finaleCompressStrength` | 1.0 | — |
+| Adaptive gates (spread-scaled) (checkbox) | `finaleAdaptiveGates` | false | `finale-adaptive-gates-toggle` |
+| Catch-up gate fraction c (< b) | `finaleCatchupGateFrac` | 0.25 | — |
+| Leader-bleed gate fraction b (> c) | `finaleLeaderBleedGateFrac` | 0.5 | — |
+| Adaptive min spread (lengths) | `finaleAdaptiveMinSpreadLengths` | 1.0 | — |
+
+When **Adaptive gates** is ON (needs Finale front-compression ON too) the two gates become fractions of the
+live front-band spread `S` (`G_c = c·S`, `G_b = b·S`) — one track-agnostic law, no per-track config. The UI
+(and the load validator) enforce **`finaleLeaderBleedGateFrac` (b) > `finaleCatchupGateFrac` (c)** so
+`G_b > G_c` for every spread. See [SIM.md](SIM.md).
 
 ### 3. Bonus — two sub-headings
 

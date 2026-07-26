@@ -1733,7 +1733,7 @@ describe('createTrajectoryController — finale front-compression (Act 2)', () =
     // leader 0.85, self 0.70 → gap 0.15 × 10 = 1.5 lengths > G_c(1.0)
     const out = call(ctrl, self, field(self, 0.7, leader, 0.85), 0.85);
     expect(out).toBeGreaterThan(RAW);
-    expect(ctrl.getFinaleTiltCounts()).toEqual({ up: 1, down: 0 });
+    expect(ctrl.getFinaleTiltCounts()).toMatchObject({ up: 1, down: 0 });
   });
 
   it('(B) leader-bleed DOWN-tilt fires only when the leader gap exceeds the LARGER G_b (draws slower)', () => {
@@ -1743,7 +1743,7 @@ describe('createTrajectoryController — finale front-compression (Act 2)', () =
     // leader 0.85, P2 0.60 → gap 0.25 × 10 = 2.5 lengths > G_b(2.0)
     const out = call(ctrl, leader, field(leader, 0.85, idxOfRank(plan, 3), 0.6), 0.85);
     expect(out).toBeLessThan(RAW);
-    expect(ctrl.getFinaleTiltCounts()).toEqual({ up: 0, down: 1 });
+    expect(ctrl.getFinaleTiltCounts()).toMatchObject({ up: 0, down: 1 });
   });
 
   it('the leader gets NO bleed between G_c and G_b — B needs the larger gate', () => {
@@ -1753,7 +1753,7 @@ describe('createTrajectoryController — finale front-compression (Act 2)', () =
     // leader 0.85, P2 0.70 → gap 1.5 lengths: > G_c but < G_b → no down-tilt on the leader.
     const out = call(ctrl, leader, field(leader, 0.85, idxOfRank(plan, 3), 0.7), 0.85);
     expect(out).toBe(RAW); // shipped inert + finale not armed → passthrough
-    expect(ctrl.getFinaleTiltCounts()).toEqual({ up: 0, down: 0 });
+    expect(ctrl.getFinaleTiltCounts()).toMatchObject({ up: 0, down: 0 });
   });
 
   it('OFF: the overlay is inert — no tilt, no counts (flag false)', () => {
@@ -1762,7 +1762,7 @@ describe('createTrajectoryController — finale front-compression (Act 2)', () =
     const leader = idxOfRank(plan, 1);
     const out = call(ctrl, leader, field(leader, 0.85, idxOfRank(plan, 3), 0.6), 0.85); // wide gap
     expect(out).toBe(RAW);
-    expect(ctrl.getFinaleTiltCounts()).toEqual({ up: 0, down: 0 });
+    expect(ctrl.getFinaleTiltCounts()).toMatchObject({ up: 0, down: 0 });
   });
 
   it('window gate: no effect outside [windowStart, windowEnd]', () => {
@@ -1773,7 +1773,7 @@ describe('createTrajectoryController — finale front-compression (Act 2)', () =
     const racers = field(self, 0.7, leader, 0.85); // would fire (A) at 1.5 lengths
     expect(call(ctrl, self, racers, 0.79)).toBe(RAW); // before the window
     expect(call(ctrl, self, racers, 0.95)).toBe(RAW); // after the window
-    expect(ctrl.getFinaleTiltCounts()).toEqual({ up: 0, down: 0 });
+    expect(ctrl.getFinaleTiltCounts()).toMatchObject({ up: 0, down: 0 });
   });
 
   it('front-band scope: a STATIC back-band racer is never tilted, even as the runaway leader', () => {
@@ -1783,6 +1783,99 @@ describe('createTrajectoryController — finale front-compression (Act 2)', () =
     // Make the back-band racer the live leader with a wide P2 gap; finale must not fire.
     const out = call(ctrl, back, field(back, 0.85, idxOfRank(plan, 1), 0.6), 0.85);
     expect(out).toBe(RAW);
-    expect(ctrl.getFinaleTiltCounts()).toEqual({ up: 0, down: 0 });
+    expect(ctrl.getFinaleTiltCounts()).toMatchObject({ up: 0, down: 0 });
+  });
+});
+
+// ── Finale ADAPTIVE gates (Evolution Act 2) ─────────────────────────────────────
+// When finaleAdaptiveGates is ON the two gates become fractions of the LIVE front spread S (leader→P5,
+// lengths): G_c = c·S, G_b = b·S. These tests drive computeGapBiasedTarget directly with the shipped
+// gap-reroll inert (threshold 100) so any change is the finale overlay, and place each STATIC rank at a
+// chosen t so S is exact.
+describe('createTrajectoryController — finale ADAPTIVE gates (Act 2)', () => {
+  const N = 6;
+  const racersN = makeRacers(N, N);
+  const SPREAD_MIN = 0.9;
+  const SPREAD_MAX = 1.1;
+  const RAW = 1.0;
+  const LEN = 10; // arc-t → lengths: a t-gap of 0.10 = 1.0 length
+
+  function buildPlan(overrides = {}) {
+    return createRacePlan(
+      racersN,
+      FINISH_T,
+      TARGET_DUR_MS,
+      {
+        gapRerollThresholdLengths: 100, // shipped gap-reroll inert
+        finaleFrontCompression: true,
+        finaleContestWindowStart: 0.8,
+        finaleContestWindowEnd: 0.9,
+        finaleCatchupGateLengths: 1.0,
+        finaleLeaderBleedGateLengths: 2.0,
+        finaleCompressStrength: 1.0,
+        finaleAdaptiveGates: true,
+        finaleCatchupGateFrac: 0.25, // c
+        finaleLeaderBleedGateFrac: 0.5, // b
+        finaleAdaptiveMinSpreadLengths: 1.0,
+        ...overrides,
+      },
+      7
+    );
+  }
+  const idxOfRank = (plan, rank) => [...plan._racerTargetRank].find(([, r]) => r === rank)[0];
+  // Place each STATIC rank at a given t; live order then follows t desc, so leader→P5 spread is exact.
+  function fieldByRank(plan, tByRank) {
+    return racersN.map((r) => ({
+      index: r.index,
+      t: tByRank[plan._racerTargetRank.get(r.index)] ?? 0.0,
+      finished: false,
+    }));
+  }
+  const call = (ctrl, selfIdx, racers, progress = 0.85) =>
+    ctrl.computeGapBiasedTarget(
+      selfIdx,
+      RAW,
+      SPREAD_MIN,
+      SPREAD_MAX,
+      racers,
+      40_000,
+      progress,
+      LEN,
+      true,
+      null
+    );
+
+  it('gates scale with S: the SAME 1.5 L pursuer gap fires on a narrow front, not on a wide one', () => {
+    // WIDE front: leader→P5 = 8 L ⇒ G_c = 0.25·8 = 2.0 L. A 1.5 L pursuer gap is BELOW it → no catch-up.
+    const planW = buildPlan();
+    const ctrlW = createTrajectoryController(planW);
+    const wide = fieldByRank(planW, { 1: 0.9, 2: 0.75, 3: 0.7, 4: 0.6, 5: 0.1, 6: 0.05 }); // S = 8 L
+    expect(call(ctrlW, idxOfRank(planW, 2), wide)).toBe(RAW);
+    expect(ctrlW.getFinaleTiltCounts().gcMean).toBeCloseTo(2.0, 6); // gate scaled up on the wide front
+    // NARROW front: leader→P5 = 3 L ⇒ G_c = 0.75 L. The SAME 1.5 L pursuer gap now CLEARS → catch-up fires.
+    const planN = buildPlan();
+    const ctrlN = createTrajectoryController(planN);
+    const narrow = fieldByRank(planN, { 1: 0.9, 2: 0.75, 3: 0.72, 4: 0.65, 5: 0.6, 6: 0.55 }); // S = 3 L
+    expect(call(ctrlN, idxOfRank(planN, 2), narrow)).toBeGreaterThan(RAW);
+    expect(ctrlN.getFinaleTiltCounts().up).toBe(1);
+    expect(ctrlN.getFinaleTiltCounts().gcMean).toBeCloseTo(0.75, 6); // gate scaled down on the narrow front
+  });
+
+  it('small-spread floor: a front tighter than the floor is a no-op (no tilt, no gate sampled)', () => {
+    const plan = buildPlan({ finaleAdaptiveMinSpreadLengths: 1.0 });
+    const ctrl = createTrajectoryController(plan);
+    const tight = fieldByRank(plan, { 1: 0.9, 2: 0.88, 3: 0.87, 4: 0.86, 5: 0.85, 6: 0.84 }); // S = 0.5 L
+    expect(call(ctrl, idxOfRank(plan, 2), tight)).toBe(RAW);
+    expect(ctrl.getFinaleTiltCounts()).toMatchObject({ up: 0, down: 0, gcMean: null });
+  });
+
+  it('adaptive OFF ⇒ the overlay uses the FIXED gates (identical to the shipped Act 2 overlay)', () => {
+    // Same WIDE front where adaptive (G_c=2.0) would NOT fire on 1.5 L; with adaptive OFF the fixed
+    // G_c=1.0 DOES fire — proving the flag only switches the gate source and OFF reproduces the fixed overlay.
+    const plan = buildPlan({ finaleAdaptiveGates: false });
+    const ctrl = createTrajectoryController(plan);
+    const wide = fieldByRank(plan, { 1: 0.9, 2: 0.75, 3: 0.7, 4: 0.6, 5: 0.1, 6: 0.05 });
+    expect(call(ctrl, idxOfRank(plan, 2), wide)).toBeGreaterThan(RAW);
+    expect(ctrl.getFinaleTiltCounts()).toMatchObject({ up: 1, gcMean: null }); // no adaptive gate sampled
   });
 });

@@ -109,6 +109,11 @@ describe('DEFAULT_RACE_DYNAMICS_CONFIG', () => {
       finaleCatchupGateLengths: 1.0,
       finaleLeaderBleedGateLengths: 2.0,
       finaleCompressStrength: 1.0,
+      // Finale ADAPTIVE gates (Evolution Act 2) — flag-gated, DEFAULT OFF.
+      finaleAdaptiveGates: false,
+      finaleCatchupGateFrac: 0.25,
+      finaleLeaderBleedGateFrac: 0.5,
+      finaleAdaptiveMinSpreadLengths: 1.0,
     });
   });
 
@@ -188,6 +193,34 @@ describe('DEFAULT_RACE_DYNAMICS_CONFIG', () => {
     expect(loadRaceDynamicsConfig()).toEqual({ ...DEFAULT_RACE_DYNAMICS_CONFIG });
     storageGet.mockReturnValue({ finaleFrontCompression: 'yes' });
     expect(loadRaceDynamicsConfig()).toEqual({ ...DEFAULT_RACE_DYNAMICS_CONFIG });
+  });
+
+  it('finale adaptive gates ship DEFAULT OFF with a valid fraction ordering (b > c)', () => {
+    expect(DEFAULT_RACE_DYNAMICS_CONFIG.finaleAdaptiveGates).toBe(false);
+    expect(DEFAULT_RACE_DYNAMICS_CONFIG.finaleLeaderBleedGateFrac).toBeGreaterThan(
+      DEFAULT_RACE_DYNAMICS_CONFIG.finaleCatchupGateFrac
+    );
+  });
+
+  it('rejects a finale config where the bleed FRACTION is not strictly greater than the catch-up fraction', () => {
+    storageGet.mockReturnValue({ finaleCatchupGateFrac: 0.5, finaleLeaderBleedGateFrac: 0.5 });
+    expect(loadRaceDynamicsConfig()).toEqual({ ...DEFAULT_RACE_DYNAMICS_CONFIG });
+    storageGet.mockReturnValue({ finaleCatchupGateFrac: 0.8, finaleLeaderBleedGateFrac: 0.3 });
+    expect(loadRaceDynamicsConfig()).toEqual({ ...DEFAULT_RACE_DYNAMICS_CONFIG });
+  });
+
+  it('a persisted finale adaptive config round-trips through load/merge', () => {
+    storageGet.mockReturnValue({
+      finaleAdaptiveGates: true,
+      finaleCatchupGateFrac: 0.3,
+      finaleLeaderBleedGateFrac: 0.7,
+      finaleAdaptiveMinSpreadLengths: 1.5,
+    });
+    const loaded = loadRaceDynamicsConfig();
+    expect(loaded.finaleAdaptiveGates).toBe(true);
+    expect(loaded.finaleCatchupGateFrac).toBe(0.3);
+    expect(loaded.finaleLeaderBleedGateFrac).toBe(0.7);
+    expect(loaded.finaleAdaptiveMinSpreadLengths).toBe(1.5);
   });
 
   it('all numeric defaults are positive; PULK-phase bonuses default 0 (off during PULK)', () => {

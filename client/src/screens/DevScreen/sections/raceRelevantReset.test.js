@@ -79,10 +79,15 @@ describe('after "Reset All Defaults" the badge reads 0 race — by construction'
     expect(RACE_RELEVANT_DEFAULTS.raceDynamicsConfig).toHaveProperty(
       'finaleLeaderBleedGateLengths'
     );
+    // Act 2 adaptive keys are in the reset target too.
+    expect(RACE_RELEVANT_DEFAULTS.raceDynamicsConfig).toHaveProperty('finaleAdaptiveGates', false);
+    expect(RACE_RELEVANT_DEFAULTS.raceDynamicsConfig).toHaveProperty('finaleCatchupGateFrac');
     const on = structuredClone(RACE_RELEVANT_DEFAULTS);
     on.raceDynamicsConfig.finaleFrontCompression = true;
+    on.raceDynamicsConfig.finaleAdaptiveGates = true;
     const s = splitConfigDiffs(on, DEFAULTS_WORLD);
     expect(s.race.keys).toContain('raceDynamicsConfig.finaleFrontCompression');
+    expect(s.race.keys).toContain('raceDynamicsConfig.finaleAdaptiveGates');
     expect(s.race.count).toBeGreaterThan(0);
   });
 

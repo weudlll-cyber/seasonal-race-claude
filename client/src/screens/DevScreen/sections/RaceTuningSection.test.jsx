@@ -160,6 +160,10 @@ describe('RaceTuningSection — renders all 8 blocks', () => {
     expect(screen.getByLabelText('Catch-up gate G_c (lengths)')).toBeTruthy();
     expect(screen.getByLabelText('Leader-bleed gate G_b (lengths)')).toBeTruthy();
     expect(screen.getByTestId('reset-finale-compression')).toBeTruthy();
+    // Act 2 adaptive controls (spread-scaled gates) sit in the same sub-heading group.
+    expect(screen.getByTestId('finale-adaptive-gates-toggle')).toBeTruthy();
+    expect(screen.getByLabelText('Catch-up gate fraction c')).toBeTruthy();
+    expect(screen.getByLabelText('Leader-bleed gate fraction b')).toBeTruthy();
   });
 
   it('renders Block 5: Drafting / Slipstream with summary', () => {

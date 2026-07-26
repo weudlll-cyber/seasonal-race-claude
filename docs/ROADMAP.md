@@ -603,3 +603,19 @@ controls + pinned internals (Stage 5b), not on the removed governor knobs.
   (CONTROL vs FINALE, luger-hill + searound, N=25/arm/track): band-reach ≥70% primary veto; dead finales /
   front@line / lead-changes / runaway / escape guardrails; A-vs-B intervention split. Owner decides after
   an eye test; the first firing shows (A) doing the work with (B) a rare backstop.
+
+## 2026-07-26 — status update (Evolution Act 2: adaptive finale — DECISIVE FAIL, abandon recommended)
+
+- **Decisive adaptive test done — ABANDON Act 2 recommended.** `finaleAdaptiveGates` (built flag-gated,
+  DEFAULT OFF, byte-identical: ON 7c70b1eae7d31e22 / OFF f8f7d9c2fd3283e9) made the finale gates fractions
+  of the LIVE front spread S (G_c=c·S, G_b=b·S, b>c) so relative selectivity is constant on both
+  topologies — one track-agnostic law, zero track config. It HELD the pooled floor (71.1%→71.7%) and CURED
+  the closed over-churn the fixed dose caused (searound runaway 16%→16%, dead 8%→12%, vs fixed 16%→24% /
+  8%→16%), but STILL could not restore the open over-calm (luger-hill lead-changes 3.00→2.32). The realized
+  gates barely separated (open G_c 1.01 vs closed 1.47) because S is ~4–6 L on BOTH tracks — so front
+  spread is NOT the distinguishing variable; the open/closed split is structural physics (open re-expands
+  in the last 10%, closed churns on bunched laps) that no [0.80,0.90] scheduled-dice tilt reaches.
+- **Verification (all green):** unit 188 (planner adaptive scaling / floor / adaptive-OFF=fixed, config,
+  badge/reset), golden-equality, flag-ON adaptive soak 60/60 real==sim. Both finale builds stay flag-gated
+  DEFAULT OFF; the owner decides whether to revert (as with Act 1). Evidence in reports/evolution/
+  (FINALE-ADAPTIVE-CC.md + FINALE-ADAPTIVE-SCREEN.md). Adaptive backup tag pre/finale-adaptive.
