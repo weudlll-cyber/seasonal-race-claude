@@ -110,23 +110,23 @@ baseline was measured in. Changes take effect on the next race. See [SIM.md](SIM
 | Gap-Reroll mode symmetric/down-only | `gapRerollMode` | 'symmetric' | `gap-reroll-mode` |
 | Gap-Reroll dev marker (rendering-only cyan ring) | `gapRerollDevMarker` | false | `gap-reroll-devmarker-toggle` |
 
-**Finale front-compression (Evolution Act 2) — config keys, NO DevScreen control.** Six race-relevant
-`raceDynamicsConfig` keys added by the Act 2 flag-gated build: a front-band-scoped, finale-windowed dice
-tilt layered on the gap-cap re-roll (it never touches the servo target). No DevScreen widget in this build
-(toggle via config/export or the sim CLI only); ships **default OFF** (byte-identical), counts toward the
-HUD badge's "R race" total when off-default, and resets with "Reset All Defaults". Mechanism +
-"never touches target/servo" contract: [SIM.md](SIM.md). The load validator enforces the hard invariant
-**`finaleLeaderBleedGateLengths` > `finaleCatchupGateLengths`** (so the leader-bleed can never arm on a
-smaller gap than the catch-up); a config that violates it falls back to defaults.
+**Sub-heading "Finale Front-Compression" (Evolution Act 2)** — Reset `reset-finale-compression`. A
+front-band-scoped, finale-windowed dice tilt layered on the gap-cap re-roll (it never touches the servo
+target). Ships **default OFF** (byte-identical); toggling ON counts toward the HUD badge's "R race" total
+(the intended apples-to-apples warning), and both the master "Reset All Defaults" and this sub-heading's
+own Reset restore all six keys (flag back OFF). Mechanism + "never touches target/servo" contract:
+[SIM.md](SIM.md). Both the load validator AND the two gate fields enforce the hard invariant
+**`finaleLeaderBleedGateLengths` (G_b) > `finaleCatchupGateLengths` (G_c)** — the UI rejects an edit that
+would violate it, so an invalid pair can never persist (and the window fields likewise keep start < end).
 
-| Config key (no control) | Shipped default | Meaning |
-|---|---|---|
-| `finaleFrontCompression` | false | ON → front-band pursuers get a catch-up UP-tilt and a runaway leader a mild bleed DOWN-tilt, in the finale window, on the scheduled re-roll draw |
-| `finaleContestWindowStart` | 0.8 | finale window start (progress fraction; duration-scaled) |
-| `finaleContestWindowEnd` | 0.9 | finale window end (`[0.9,1.0]` stays physics-live) |
-| `finaleCatchupGateLengths` | 1.0 | G_c — front pursuer→leader gap (lengths) that arms the catch-up (A) |
-| `finaleLeaderBleedGateLengths` | 2.0 | G_b — leader→P2 gap (lengths) that arms the bleed (B); must be > G_c |
-| `finaleCompressStrength` | 1.0 | shared tilt strength: fraction-to-edge = min(1, strength·(gap−gate)) |
+| Control | Config key | Shipped default | testid |
+|---|---|---|---|
+| Finale front-compression (checkbox) | `finaleFrontCompression` | false | `finale-front-compression-toggle` |
+| Finale window start (0.5–0.99, < end) | `finaleContestWindowStart` | 0.8 | — |
+| Finale window end (> start, ≤ 1.0) | `finaleContestWindowEnd` | 0.9 | — |
+| Catch-up gate G_c (lengths, < G_b) | `finaleCatchupGateLengths` | 1.0 | — |
+| Leader-bleed gate G_b (lengths, > G_c) | `finaleLeaderBleedGateLengths` | 2.0 | — |
+| Finale compress strength (0–3) | `finaleCompressStrength` | 1.0 | — |
 
 ### 3. Bonus — two sub-headings
 

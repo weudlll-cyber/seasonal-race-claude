@@ -135,6 +135,20 @@ const DynamicsTuningSection = forwardRef(function DynamicsTuningSection(_, ref) 
     }));
   }
 
+  // Finale front-compression (Evolution Act 2) — its own reset. Toggling the flag back OFF restores the
+  // shipped byte-identical world; the four knobs return to their committed first-dose values.
+  function resetFinaleCompression() {
+    setDynamicsConfig((prev) => ({
+      ...prev,
+      finaleFrontCompression: DEFAULT_RACE_DYNAMICS_CONFIG.finaleFrontCompression,
+      finaleContestWindowStart: DEFAULT_RACE_DYNAMICS_CONFIG.finaleContestWindowStart,
+      finaleContestWindowEnd: DEFAULT_RACE_DYNAMICS_CONFIG.finaleContestWindowEnd,
+      finaleCatchupGateLengths: DEFAULT_RACE_DYNAMICS_CONFIG.finaleCatchupGateLengths,
+      finaleLeaderBleedGateLengths: DEFAULT_RACE_DYNAMICS_CONFIG.finaleLeaderBleedGateLengths,
+      finaleCompressStrength: DEFAULT_RACE_DYNAMICS_CONFIG.finaleCompressStrength,
+    }));
+  }
+
   // B2 attackers — their own group: the cast count and the release hysteresis are one mechanism.
   function resetB2Attackers() {
     setDynamicsConfig((prev) => ({
@@ -695,6 +709,171 @@ const DynamicsTuningSection = forwardRef(function DynamicsTuningSection(_, ref) 
               Gap-Reroll dev marker
               <InfoTooltip text="Rendering-only dev aid: flashes a cyan ring on a racer the instant its re-roll was biased, so you can SEE where the mechanism fires before judging naturalness with it off. Zero effect on the race itself. OFF = shipped." />
             </label>
+          </div>
+        </div>
+        {/* ── Finale front-compression (Evolution Act 2) — a flag-gated dice overlay on the gap-cap
+            re-roll above; never touches the servo/target. Default OFF → shipped byte-identical. ── */}
+        <SubHeading
+          label="Finale Front-Compression"
+          note="Act 2 (default OFF, eye-test toggle). A finale-window, front-band-only dice tilt layered on the gap-cap re-roll — it NEVER touches the servo target. In the finale window it pulls the front favourites together: a pursuer more than G_c behind the live leader draws FASTER (catch-up), and a runaway leader whose lead over P2 exceeds the LARGER G_b draws SLOWER (bleed backstop). Honest speed band, scheduled rolls only. Turning it ON makes the race NOT apples-to-apples with a defaults sim run — the badge goes red (R 1), which is the intended warning."
+          onReset={resetFinaleCompression}
+          resetTestId="reset-finale-compression"
+        />
+        <div className={s.formGrid}>
+          <div className={s.formGroup}>
+            <label
+              className={s.label}
+              style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}
+            >
+              <input
+                type="checkbox"
+                checked={dynamicsConfig.finaleFrontCompression ?? false}
+                onChange={(e) => setDynamics('finaleFrontCompression', e.target.checked)}
+                data-testid="finale-front-compression-toggle"
+              />
+              Finale front-compression
+              <InfoTooltip text="Master switch for the Act 2 finale overlay. OFF = shipped (byte-identical). ON = compress the front band in the finale window (catch-up + capped leader-bleed backstop), on the scheduled re-roll draw only. UI toggle for the owner eye-test; run a same-seed A/B with it ON vs OFF." />
+            </label>
+          </div>
+          <div className={s.formGroup}>
+            <label
+              className={s.label}
+              style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}
+            >
+              Finale window start
+              <InfoTooltip text="Progress fraction where the overlay begins. Must be below the window end. 0.80 = committed. [windowEnd, 1.0] is left physics-live." />
+            </label>
+            <input
+              type="number"
+              className={s.input}
+              aria-label="Finale window start"
+              min={0.5}
+              max={0.99}
+              step={0.05}
+              value={
+                dynamicsConfig.finaleContestWindowStart ??
+                DEFAULT_RACE_DYNAMICS_CONFIG.finaleContestWindowStart
+              }
+              onChange={(e) => {
+                const v = Number(e.target.value);
+                const end =
+                  dynamicsConfig.finaleContestWindowEnd ??
+                  DEFAULT_RACE_DYNAMICS_CONFIG.finaleContestWindowEnd;
+                if (isFinite(v) && v > 0 && v < end) setDynamics('finaleContestWindowStart', v);
+              }}
+            />
+          </div>
+          <div className={s.formGroup}>
+            <label
+              className={s.label}
+              style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}
+            >
+              Finale window end
+              <InfoTooltip text="Progress fraction where the overlay stops (must be above the start). 0.90 = committed — the last stretch stays physics-live." />
+            </label>
+            <input
+              type="number"
+              className={s.input}
+              aria-label="Finale window end"
+              min={0.51}
+              max={1.0}
+              step={0.05}
+              value={
+                dynamicsConfig.finaleContestWindowEnd ??
+                DEFAULT_RACE_DYNAMICS_CONFIG.finaleContestWindowEnd
+              }
+              onChange={(e) => {
+                const v = Number(e.target.value);
+                const start =
+                  dynamicsConfig.finaleContestWindowStart ??
+                  DEFAULT_RACE_DYNAMICS_CONFIG.finaleContestWindowStart;
+                if (isFinite(v) && v <= 1 && v > start) setDynamics('finaleContestWindowEnd', v);
+              }}
+            />
+          </div>
+          <div className={s.formGroup}>
+            <label
+              className={s.label}
+              style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}
+            >
+              Catch-up gate G_c (lengths)
+              <InfoTooltip text="A front pursuer more than G_c racer-lengths behind the live leader gets a catch-up FASTER tilt. Lower = arms sooner = tighter front. Must stay below the leader-bleed gate G_b. 1.0 = committed." />
+            </label>
+            <input
+              type="number"
+              className={s.input}
+              aria-label="Catch-up gate G_c (lengths)"
+              min={0}
+              max={10}
+              step={0.25}
+              value={
+                dynamicsConfig.finaleCatchupGateLengths ??
+                DEFAULT_RACE_DYNAMICS_CONFIG.finaleCatchupGateLengths
+              }
+              onChange={(e) => {
+                const v = Number(e.target.value);
+                const gb =
+                  dynamicsConfig.finaleLeaderBleedGateLengths ??
+                  DEFAULT_RACE_DYNAMICS_CONFIG.finaleLeaderBleedGateLengths;
+                // HARD invariant G_b > G_c: reject a G_c that would meet/exceed the bleed gate.
+                if (isFinite(v) && v >= 0 && v < gb) setDynamics('finaleCatchupGateLengths', v);
+              }}
+            />
+          </div>
+          <div className={s.formGroup}>
+            <label
+              className={s.label}
+              style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}
+            >
+              Leader-bleed gate G_b (lengths)
+              <InfoTooltip text="The runaway backstop: the live leader draws SLOWER only when its lead over P2 exceeds G_b. Must stay ABOVE the catch-up gate G_c (so the bleed can never arm without the catch-up). 2.0 = committed." />
+            </label>
+            <input
+              type="number"
+              className={s.input}
+              aria-label="Leader-bleed gate G_b (lengths)"
+              min={0.25}
+              max={10}
+              step={0.25}
+              value={
+                dynamicsConfig.finaleLeaderBleedGateLengths ??
+                DEFAULT_RACE_DYNAMICS_CONFIG.finaleLeaderBleedGateLengths
+              }
+              onChange={(e) => {
+                const v = Number(e.target.value);
+                const gc =
+                  dynamicsConfig.finaleCatchupGateLengths ??
+                  DEFAULT_RACE_DYNAMICS_CONFIG.finaleCatchupGateLengths;
+                // HARD invariant G_b > G_c: reject a G_b that would not strictly exceed the catch-up gate.
+                if (isFinite(v) && v > gc && v <= 10)
+                  setDynamics('finaleLeaderBleedGateLengths', v);
+              }}
+            />
+          </div>
+          <div className={s.formGroup}>
+            <label
+              className={s.label}
+              style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}
+            >
+              Finale compress strength
+              <InfoTooltip text="How hard each finale tilt pulls: fraction-to-band-edge = min(1, strength·(gap−gate)). Higher = firmer compression. Honest band always caps it. 1.0 = committed." />
+            </label>
+            <input
+              type="number"
+              className={s.input}
+              aria-label="Finale compress strength"
+              min={0}
+              max={3}
+              step={0.25}
+              value={
+                dynamicsConfig.finaleCompressStrength ??
+                DEFAULT_RACE_DYNAMICS_CONFIG.finaleCompressStrength
+              }
+              onChange={(e) => {
+                const v = Number(e.target.value);
+                if (isFinite(v) && v >= 0 && v <= 3) setDynamics('finaleCompressStrength', v);
+              }}
+            />
           </div>
         </div>
       </SubCard>
