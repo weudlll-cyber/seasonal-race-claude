@@ -44,6 +44,10 @@ const withF = (arr, ...adds) => [...arr, ...adds];
 const boundary = (base, x) => without(without(base, '--pulkStart='), '--choreoOutcomeStart=')
   .concat([`--pulkStart=${x}`, `--choreoOutcomeStart=${x}`]);
 
+const ROW = (a) => withF(without(a, '--speedBonusFactor='), '--speedBonusFactor=1.0'); // start-row bonus ON
+const B25F = boundary(ROW(NAKED), 0.25); // the best Round-B base: chaos 0.25 + row bonus, sole engine
+const setF = (a, prefix, val) => withF(without(a, prefix), `${prefix}${val}`);
+
 const ARM_LIB = {
   ship: [],
   // Round A — from the gun
@@ -63,6 +67,17 @@ const ARM_LIB = {
   B25noRow:  boundary(NAKED, 0.25),                                        // window + warmup only, no row bonus
   B25area:   withF(without(boundary(withF(without(NAKED, '--speedBonusFactor='), '--speedBonusFactor=1.0'), 0.25), '--bonusMult='), '--bonusMult=2.0'),
   B50:       boundary(withF(without(NAKED, '--speedBonusFactor='), '--speedBonusFactor=1.0'), 0.5),
+  // Round C — refine around the best base (B25F): boundary cutoff 0.15, checkpoint density, mExtra, release.
+  B15:       boundary(ROW(NAKED), 0.15),
+  B25seg12:  setF(B25F, '--chainSegSec=', '12'),   // denser checkpoints (K up)
+  B25seg30:  setF(B25F, '--chainSegSec=', '30'),   // sparser checkpoints
+  B25mx0:    setF(B25F, '--chainMExtra=', '0'),    // no round-trip excursions
+  B25mx4:    setF(B25F, '--chainMExtra=', '4'),    // more excursions
+  B25rel:    setF(B25F, '--choreoReleaseProgress=', '0.97'), // free B1 to natural speed at the finish (finale run-out)
+  // Round D — refine around the reach winner B15 (boundary 0.15 + row bonus). Chase open-track action (mExtra).
+  B10:       boundary(ROW(NAKED), 0.10),
+  B15mx4:    setF(boundary(ROW(NAKED), 0.15), '--chainMExtra=', '4'),
+  B15mx4rel: setF(setF(boundary(ROW(NAKED), 0.15), '--chainMExtra=', '4'), '--choreoReleaseProgress=', '0.97'),
 };
 
 const BAND_EDGES = [5, 15, 25, 40];
