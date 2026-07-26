@@ -76,9 +76,13 @@ function runRace(track, seed, { segSec, mExtra, chain }) {
   const numLanes = Math.max(2, Math.floor(W / (BODY_WIDE + LANE_MARGIN)));
   const rowSize = numLanes;
   const numRows = Math.ceil(N / rowSize);
-  const durSec = 60; // measurement races are 60 s (standing protocol); T scales with D
+  const durSec = 60; // measurement races are 60 s (standing protocol)
   const K = checkpointCount(durSec, segSec);
-  const T = durSec; // nominal race time; comb front reaches D at tprog=1
+  const T = durSec; // race time; comb front reaches D at tprog=1
+  // Pace derived so a 60 s race traverses D — the shipped duration model's rule. The comb front then
+  // advances at exactly v0 (D/T), so racers CAN track their authored targets (else the formation runs
+  // away from everyone and the field never reorders). Envelope is ±(min/max mult) around this v0.
+  const v0 = D / T;
   const rowGapPx = 2.0 * BODY_LONG;
 
   // Start rows: racer index i → row (front rows lower index), lane. Start slot = start order (by row).
@@ -148,15 +152,15 @@ function runRace(track, seed, { segSec, mExtra, chain }) {
       let desired;
       if (chain) {
         const tx = combX(slotTarget(i, tprog), tprog);
-        let cmd = V0 + (tx - x[i]) / TAU;
+        let cmd = v0 + (tx - x[i]) / TAU;
         if (TEXTURE_STD > 0) cmd *= 1 + clamp(gaussT[i]() * TEXTURE_STD, -REROLL_BAND, REROLL_BAND);
-        desired = clamp(cmd, MIN_MULT * V0, MAX_MULT * V0);
+        desired = clamp(cmd, MIN_MULT * v0, MAX_MULT * v0);
       } else {
         // CONTROL: single fixed formation (target slot = final draw), + honest re-roll noise.
         const tx = combX(pi[i], tprog);
         rerollW[i] = clamp(rerollW[i] * decay + gaussR[i]() * rNoiseStd, -REROLL_BAND, REROLL_BAND);
-        let cmd = V0 * (1 + rerollW[i]) + (tx - x[i]) / TAU;
-        desired = clamp(cmd, MIN_MULT * V0, MAX_MULT * V0);
+        let cmd = v0 * (1 + rerollW[i]) + (tx - x[i]) / TAU;
+        desired = clamp(cmd, MIN_MULT * v0, MAX_MULT * v0);
       }
       const wantX = x[i] + desired * DT;
       const capHere = capForward(i, y[i], wantX);
