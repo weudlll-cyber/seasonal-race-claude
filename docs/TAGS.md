@@ -66,6 +66,17 @@ and what was retired.
 Live step-tags from the OPEN runaway phase — safe return points, not permanent anchors. They collapse into
 that phase's `*-complete` endpoint when it closes (incremental history then lives in commits + docs).
 
+### Evolution — greenfield experiments (new regime: branch, drop-not-revert)
+- **handicap-pursuit experiment recoverable @`089c7d2` (branch retired 2026-07-26).** First greenfield
+  experiment (`exp/handicap-pursuit`, off master): a standalone sim-only prototype of the handicap-pursuit
+  concept. PROTO-1 (longitudinal) PASSED, PROTO-2 (lateral traffic) KILLED, and the world clarification
+  (identical racers) made the whole ability-handicap premise moot (see LESSONS.md #183). Per the experiment
+  regime the branch was DROPPED (not reverted); its two reports live on master
+  (`reports/evolution/PURSUIT-PROTO-{1,2}.md`) and the full branch tip is preserved at the lightweight tag
+  **`archive/handicap-pursuit-089c7d2`** (→ `089c7d2`). The sim code (`scripts/exp/pursuit-sim*.mjs`) is an
+  experiment artifact and lives only at that archived SHA; the reusable overlap-free traffic core is
+  documented in LESSONS #183 for the peloton line.
+
 ### Evolution Act 2 — finale front-compression (CLOSED 2026-07-26)
 - **Act 2 finale builds recoverable @`8d5e9fd`/@`7404bd9`/@`197763d`, reverted** (three `git revert`
   commits, newest first). The flag-gated finale front-compression arc — a scheduled-dice overlay on the

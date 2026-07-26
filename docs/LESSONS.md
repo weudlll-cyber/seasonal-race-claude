@@ -2976,3 +2976,31 @@ owner rule "one rule set for every track" is binding, so a solution counts only 
 mechanism lifts BOTH topologies at once. Evidence: `reports/evolution/FINALE-SCREEN.md` +
 `FINALE-ADAPTIVE-SCREEN.md` + `FINALE-ADAPTIVE-CC.md`; builds recoverable @`8d5e9fd`/@`7404bd9`/@`197763d`;
 all fingerprints byte-identical (default OFF) throughout.
+
+## Lesson 183 — A Start-Position Handicap Is Moot for Identical Racers — and an Overlap-Free Traffic Core Is Buildable (handicap-pursuit experiment)
+The blank-page "handicap pursuit" concept (stagger the grid by ability so every racer's expected arrival is
+equal, then let honest motion run) was prototyped on a dropped experiment branch. PROTO-1 (longitudinal,
+traffic-free) PASSED cleanly — one global handicap slope gave a class-uniform win distribution (chi²=3.3)
+and a ~1.1-length bunch finish on both topologies. PROTO-2 added real lateral traffic under the hard
+no-co-location rule and it collapsed. But the deeper finding is that the premise itself dissolved.
+
+**Context.** PROTO-2 kept 0 overlap violations across seeds on both tracks, yet the win distribution swung
+hard to the slow front-starters (snail 68.5% pooled, 99.5% on the narrow searound vs 37.5% on the wide
+luger-hill): honest overlap-free passing means a fast back-marker can only overtake into an open lane, and a
+narrow track for a mixed-ability field has none, so it is held while the slow front-runners cruise home —
+and the bias scales with track width, so no single global rule can fix both. Separately and more
+fundamentally, the world was then clarified: **all racers in a race are identical** — same type, same speed.
+
+**Insight.** With identical racers there are no ability classes, so there is nothing to handicap — any
+ability-equalization mechanism is a category error. Fairness in this game is about the START ROW (equal
+win-chance from every row), not ability. The durable asset from the experiment is NOT the concept but the
+physics it forced us to build: the PROTO-2 **overlap-free 2D traffic/blocking core** — forward-gap cap +
+clearance-checked lane changes + honest holding when no lane is open, provably 0 overlaps — which shows that
+honest blocking (a desired feature, not a defect) is cleanly buildable and reusable.
+
+**Consequence.** Do not re-attempt ability handicaps or pursuit-by-ability; the identical-racer world makes
+them moot. Reuse the overlap-free traffic core for the identical-racer *mixing* experiments (the peloton /
+drafting line, where the field is kept together by honest physics and the start row is washed out by
+mixing, not by steering). The experiment branch was dropped, not reverted — its two reports are the lab
+journal. Evidence: reports/evolution/PURSUIT-PROTO-1.md + PURSUIT-PROTO-2.md; recoverable at the archive tag
+`archive/handicap-pursuit-089c7d2`.
