@@ -321,6 +321,8 @@ if (MODE === 'unit') {
   emit('occ entropy', (p) => (p.entMean ?? 0).toFixed(2));
   emit('blocked frac', (p) => (p.blockedFracMean * 100).toFixed(1) + '%');
   emit('overlaps', (p) => String(p.overlapsTotal));
+  // Direction of the win bias: per-row win share, CHAIN arm (row 0 = front start row).
+  for (const id of TRACKS4) console.log(`  winShare[${id}] CH front→back: ${per[id].rfCH.shares.map((s) => (s * 100).toFixed(0) + '%').join(' ')}`);
   console.log('\nJSON ' + JSON.stringify(Object.fromEntries(TRACKS4.map((id) => [id, {
     numRows: per[id].CH.numRows, K: per[id].CH.K,
     CH: { reach: per[id].CH.reachMean, winChi2: per[id].rfCH.chi2, winMaxMin: per[id].rfCH.maxShare - per[id].rfCH.minShare, lcLate: per[id].CH.lcLateMean, overtakes: per[id].CH.otMean, dead: per[id].CH.deadRate, ent: per[id].CH.entMean, blocked: per[id].CH.blockedFracMean, ov: per[id].CH.overlapsTotal },
