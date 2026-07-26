@@ -72,23 +72,7 @@ export function loadRaceDynamicsConfig() {
     // else the measurement window is empty or spans a phase it was never meant to cover.
     typeof merged.contestWindowStart !== 'number' ||
     merged.contestWindowStart <= merged.choreoOutcomeStart ||
-    merged.contestWindowStart >= merged.choreoReleaseProgress ||
-    // Finale front-compression (Evolution Act 2). Same whole-object-reject pattern. The flag is a
-    // boolean; the window is an ordered pair inside (0,1); the gates + strength are non-negative lengths;
-    // and the HARD invariant is bleedGate > catchupGate — so the leader-bleed (B) can never arm on a
-    // smaller gap than the catch-up (A). A config that violates any of these falls back to defaults.
-    typeof merged.finaleFrontCompression !== 'boolean' ||
-    typeof merged.finaleContestWindowStart !== 'number' ||
-    typeof merged.finaleContestWindowEnd !== 'number' ||
-    merged.finaleContestWindowStart <= 0 ||
-    merged.finaleContestWindowEnd > 1 ||
-    merged.finaleContestWindowStart >= merged.finaleContestWindowEnd ||
-    typeof merged.finaleCatchupGateLengths !== 'number' ||
-    merged.finaleCatchupGateLengths < 0 ||
-    typeof merged.finaleLeaderBleedGateLengths !== 'number' ||
-    merged.finaleLeaderBleedGateLengths <= merged.finaleCatchupGateLengths ||
-    typeof merged.finaleCompressStrength !== 'number' ||
-    merged.finaleCompressStrength < 0
+    merged.contestWindowStart >= merged.choreoReleaseProgress
   ) {
     return { ...DEFAULT_RACE_DYNAMICS_CONFIG };
   }

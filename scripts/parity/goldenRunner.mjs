@@ -245,34 +245,8 @@ function browserPlanConfig(dynamicsConfig) {
     gapRerollMode: dynamicsConfig.gapRerollMode ?? 'symmetric',
     gapRerollStrength: dynamicsConfig.gapRerollStrength ?? 1.0,
     reRollTransitionDuration: dynamicsConfig.reRollTransitionDuration,
-    ...finalePlanKeys(dynamicsConfig),
   };
 }
-
-// Finale front-compression (Evolution Act 2) plan keys — read from a config with DEFAULT_* fallbacks.
-// Shared by both arms so browser and sim build the identical overlay config. Default OFF → inert.
-function finalePlanKeys(cfg) {
-  return {
-    finaleFrontCompression: cfg.finaleFrontCompression ?? false,
-    finaleContestWindowStart:
-      cfg.finaleContestWindowStart ?? DEFAULT_RACE_DYNAMICS_CONFIG.finaleContestWindowStart,
-    finaleContestWindowEnd:
-      cfg.finaleContestWindowEnd ?? DEFAULT_RACE_DYNAMICS_CONFIG.finaleContestWindowEnd,
-    finaleCatchupGateLengths:
-      cfg.finaleCatchupGateLengths ?? DEFAULT_RACE_DYNAMICS_CONFIG.finaleCatchupGateLengths,
-    finaleLeaderBleedGateLengths:
-      cfg.finaleLeaderBleedGateLengths ?? DEFAULT_RACE_DYNAMICS_CONFIG.finaleLeaderBleedGateLengths,
-    finaleCompressStrength:
-      cfg.finaleCompressStrength ?? DEFAULT_RACE_DYNAMICS_CONFIG.finaleCompressStrength,
-  };
-}
-
-// Optional AFF-style override for the flag-ON finale parity soak
-// (soak.mjs --finaleFrontCompression=true): engages the overlay in BOTH arms so the soak proves
-// real==sim WITH the mechanism live. Absent → {} → the shipped default world (finale off).
-const FINALE_SOAK_OVERRIDE = process.argv.includes('--finaleFrontCompression=true')
-  ? { finaleFrontCompression: true }
-  : {};
 
 function simPlanConfig(DYN) {
   return {
@@ -307,7 +281,6 @@ function simPlanConfig(DYN) {
     gapRerollStrength: DYN.gapRerollStrength,
     reRollTransitionDuration: DYN.reRollTransitionDuration,
     contestWindowStart: DYN.contestWindowStart,
-    ...finalePlanKeys(DYN),
   };
 }
 
@@ -489,7 +462,7 @@ export function realArm(identity) {
   const ctx = loadTrack(identity._trackId);
   const cfg = RACER_CONFIGS[identity._racerType];
   const baseSpeedConfig = loadBaseSpeedConfig();
-  const dynamicsConfig = { ...loadRaceDynamicsConfig(), ...FINALE_SOAK_OVERRIDE };
+  const dynamicsConfig = loadRaceDynamicsConfig();
   const behaviorConfig = { ...loadRaceBehaviorConfig(), isOpen: ctx.isOpen };
   const rowConfig = loadRowLayoutConfig();
   const V = normalSpeedFrom(baseSpeedConfig);
@@ -607,7 +580,7 @@ export function simArm(identity) {
     cfg,
     identity,
     model,
-    planConfig: simPlanConfig({ ...DEFAULT_RACE_DYNAMICS_CONFIG, ...FINALE_SOAK_OVERRIDE }),
+    planConfig: simPlanConfig(DEFAULT_RACE_DYNAMICS_CONFIG),
     behaviorConfig,
     laps: comboLaps,
     requestedSeconds: comboSeconds,

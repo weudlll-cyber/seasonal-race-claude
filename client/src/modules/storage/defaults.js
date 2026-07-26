@@ -393,27 +393,6 @@ export const DEFAULT_RACE_DYNAMICS_CONFIG = {
   // Dev-only visual cue (rendering-only, zero sim effect): flash a racer at the instant a roll is biased,
   // so the owner can SEE where the mechanism fires before judging naturalness with it off. Default OFF.
   gapRerollDevMarker: false,
-  // ── Finale front-compression (Evolution Act 2) — flag-gated, DEFAULT OFF ──────────────────────────
-  // A front-band-scoped, finale-windowed dice tilt layered ON the gap-cap re-roll (racePlanner.js
-  // computeGapBiasedTarget). It NEVER touches the servo target or plan._racerTargetRank (the Act 1 trap
-  // that deleted the restoring force) — it only tilts the scheduled re-roll DRAW, inside the same honest
-  // ±band clamps. Two halves of ONE dice knob, sequenced by gap magnitude, both firing ONLY for a STATIC
-  // front-band member (target rank ≤ 5) inside [windowStart, windowEnd] of progress:
-  //   (A) catch-up UP-tilt: a front pursuer more than finaleCatchupGateLengths behind the live leader
-  //       draws FASTER — pulls the front together (multi-racer, not a 2-racer duel).
-  //   (B) leader-bleed DOWN-tilt: the live leader draws SLOWER only when its lead over P2 exceeds the
-  //       LARGER finaleLeaderBleedGateLengths — a runaway backstop that can never run without (A)
-  //       (validation enforces bleedGate > catchupGate). Not the rejected Front-Leash (that braked the
-  //       SERVO continuously and just reordered the pack, Lesson 178) — this is a mild, capped, paired,
-  //       scheduled-dice tilt, so contest comes from convergence, not suppression.
-  // Pure function of live state (no rng beyond the existing draw) → browser==sim. OFF → the overlay is
-  // skipped → the shipped game is byte-identical (ON fingerprint 7c70b1eae7d31e22 unchanged).
-  finaleFrontCompression: false,
-  finaleContestWindowStart: 0.8, // finale window start (progress fraction; duration-scaled, no ms)
-  finaleContestWindowEnd: 0.9, // finale window end (set up contest by ~0.9; [0.9,1.0] stays physics-live)
-  finaleCatchupGateLengths: 1.0, // G_c — front pursuer→leader gap that arms the catch-up UP-tilt (lengths)
-  finaleLeaderBleedGateLengths: 2.0, // G_b — leader→P2 gap that arms the bleed DOWN-tilt; MUST be > G_c
-  finaleCompressStrength: 1.0, // shared tilt strength: fraction-to-edge = min(1, strength·(gap−gate))
   // Front-group pool: front N on-track positions (leader excluded) the lead rotation draws challengers from.
   pulkFrontPool: 8,
   // ── PulkLeadRotation — THE pulk-phase mechanism (UNCONDITIONAL). It COMPLETES lead changes inside

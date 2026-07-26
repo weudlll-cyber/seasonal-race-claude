@@ -257,23 +257,6 @@ export function createRaceFromIdentity(p) {
         gapRerollMode: dynamicsConfig.gapRerollMode ?? 'symmetric',
         gapRerollStrength: dynamicsConfig.gapRerollStrength ?? 1.0,
         reRollTransitionDuration: dynamicsConfig.reRollTransitionDuration,
-        // Finale front-compression (Evolution Act 2) — default OFF → byte-identical.
-        finaleFrontCompression: dynamicsConfig.finaleFrontCompression ?? false,
-        finaleContestWindowStart:
-          dynamicsConfig.finaleContestWindowStart ??
-          DEFAULT_RACE_DYNAMICS_CONFIG.finaleContestWindowStart,
-        finaleContestWindowEnd:
-          dynamicsConfig.finaleContestWindowEnd ??
-          DEFAULT_RACE_DYNAMICS_CONFIG.finaleContestWindowEnd,
-        finaleCatchupGateLengths:
-          dynamicsConfig.finaleCatchupGateLengths ??
-          DEFAULT_RACE_DYNAMICS_CONFIG.finaleCatchupGateLengths,
-        finaleLeaderBleedGateLengths:
-          dynamicsConfig.finaleLeaderBleedGateLengths ??
-          DEFAULT_RACE_DYNAMICS_CONFIG.finaleLeaderBleedGateLengths,
-        finaleCompressStrength:
-          dynamicsConfig.finaleCompressStrength ??
-          DEFAULT_RACE_DYNAMICS_CONFIG.finaleCompressStrength,
       },
       racePlanSeed
     );

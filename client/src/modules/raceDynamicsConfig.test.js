@@ -102,13 +102,6 @@ describe('DEFAULT_RACE_DYNAMICS_CONFIG', () => {
       gapRerollStrength: 1.0,
       gapRerollMode: 'symmetric',
       gapRerollDevMarker: false,
-      // Finale front-compression (Evolution Act 2) — flag-gated, DEFAULT OFF (byte-identical shipped game).
-      finaleFrontCompression: false,
-      finaleContestWindowStart: 0.8,
-      finaleContestWindowEnd: 0.9,
-      finaleCatchupGateLengths: 1.0,
-      finaleLeaderBleedGateLengths: 2.0,
-      finaleCompressStrength: 1.0,
     });
   });
 
@@ -145,49 +138,6 @@ describe('DEFAULT_RACE_DYNAMICS_CONFIG', () => {
     expect(loaded.gapRerollEnabled).toBe(true);
     expect(loaded.gapRerollThresholdLengths).toBe(2.0);
     expect(loaded.gapRerollMode).toBe('symmetric'); // unspecified → default
-  });
-
-  it('finale front-compression ships DEFAULT OFF with a valid gate ordering (G_b > G_c)', () => {
-    expect(DEFAULT_RACE_DYNAMICS_CONFIG.finaleFrontCompression).toBe(false);
-    expect(DEFAULT_RACE_DYNAMICS_CONFIG.finaleContestWindowStart).toBe(0.8);
-    expect(DEFAULT_RACE_DYNAMICS_CONFIG.finaleContestWindowEnd).toBe(0.9);
-    expect(DEFAULT_RACE_DYNAMICS_CONFIG.finaleLeaderBleedGateLengths).toBeGreaterThan(
-      DEFAULT_RACE_DYNAMICS_CONFIG.finaleCatchupGateLengths
-    );
-  });
-
-  it('a persisted finale front-compression config round-trips through load/merge', () => {
-    storageGet.mockReturnValue({
-      finaleFrontCompression: true,
-      finaleCatchupGateLengths: 0.75,
-      finaleLeaderBleedGateLengths: 1.5,
-    });
-    const loaded = loadRaceDynamicsConfig();
-    expect(loaded.finaleFrontCompression).toBe(true);
-    expect(loaded.finaleCatchupGateLengths).toBe(0.75);
-    expect(loaded.finaleLeaderBleedGateLengths).toBe(1.5);
-  });
-
-  it('rejects a finale config where the bleed gate is not strictly greater than the catch-up gate', () => {
-    // The HARD invariant: G_b > G_c, so the leader-bleed (B) can never arm on a smaller gap than the
-    // catch-up (A). A violating blob falls back to defaults (whole-object reject).
-    storageGet.mockReturnValue({
-      finaleCatchupGateLengths: 2.0,
-      finaleLeaderBleedGateLengths: 2.0,
-    });
-    expect(loadRaceDynamicsConfig()).toEqual({ ...DEFAULT_RACE_DYNAMICS_CONFIG });
-    storageGet.mockReturnValue({
-      finaleCatchupGateLengths: 3.0,
-      finaleLeaderBleedGateLengths: 1.0,
-    });
-    expect(loadRaceDynamicsConfig()).toEqual({ ...DEFAULT_RACE_DYNAMICS_CONFIG });
-  });
-
-  it('rejects a finale window that is inverted or a non-boolean flag (whole-object reject)', () => {
-    storageGet.mockReturnValue({ finaleContestWindowStart: 0.9, finaleContestWindowEnd: 0.8 });
-    expect(loadRaceDynamicsConfig()).toEqual({ ...DEFAULT_RACE_DYNAMICS_CONFIG });
-    storageGet.mockReturnValue({ finaleFrontCompression: 'yes' });
-    expect(loadRaceDynamicsConfig()).toEqual({ ...DEFAULT_RACE_DYNAMICS_CONFIG });
   });
 
   it('all numeric defaults are positive; PULK-phase bonuses default 0 (off during PULK)', () => {

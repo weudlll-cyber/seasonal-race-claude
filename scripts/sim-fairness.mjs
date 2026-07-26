@@ -301,17 +301,6 @@ const GAP_REROLL_THRESH_LEN = GAP_REROLL ? Number(GAP_REROLL_THRESH) : null;
 const GAP_REROLL_MODE = GAP_REROLL ? argVal('gapRerollMode', String(DEFAULT_RACE_DYNAMICS_CONFIG.gapRerollMode)) : null;
 const GAP_REROLL_STRENGTH = GAP_REROLL ? Number(argVal('gapRerollStrength', String(DEFAULT_RACE_DYNAMICS_CONFIG.gapRerollStrength))) : null;
 // B2-leak trace (read-only diagnostic): adds b2LastInside to rawData rows. No-flag → byte-identical.
-// ── Finale front-compression (Evolution Act 2; flag-gated, DEFAULT OFF) ────────────────────────────
-// --finaleFrontCompression=true engages the front-band-scoped, finale-windowed dice overlay inside the
-// gap-cap re-roll path (racePlanner computeGapBiasedTarget). Absent/false → byte-identical. All knobs
-// default to DEFAULT_RACE_DYNAMICS_CONFIG so a flagless run is the shipped game. When ON, each rawData
-// row carries the per-race intervention split (finaleUp = catch-up A, finaleDown = leader-bleed B).
-const FINALE_ON = argVal('finaleFrontCompression', String(DEFAULT_RACE_DYNAMICS_CONFIG.finaleFrontCompression)) === 'true';
-const FINALE_WIN_START = Number(argVal('finaleContestWindowStart', String(DEFAULT_RACE_DYNAMICS_CONFIG.finaleContestWindowStart)));
-const FINALE_WIN_END = Number(argVal('finaleContestWindowEnd', String(DEFAULT_RACE_DYNAMICS_CONFIG.finaleContestWindowEnd)));
-const FINALE_CATCHUP_GATE = Number(argVal('finaleCatchupGateLengths', String(DEFAULT_RACE_DYNAMICS_CONFIG.finaleCatchupGateLengths)));
-const FINALE_BLEED_GATE = Number(argVal('finaleLeaderBleedGateLengths', String(DEFAULT_RACE_DYNAMICS_CONFIG.finaleLeaderBleedGateLengths)));
-const FINALE_STRENGTH = Number(argVal('finaleCompressStrength', String(DEFAULT_RACE_DYNAMICS_CONFIG.finaleCompressStrength)));
 const B2_TRACE = argv.includes('--b2-trace');
 // reRoll / trajectory dynamics overrides — same shared-default + argVal pattern. Lets a sweep
 // test DevScreen-tuned (localStorage-only) values WITHOUT changing the shared defaults.js.
@@ -2271,8 +2260,6 @@ export function runSingleRace({
     // outcomeReached: true if at least one racer crossed the finish line (race didn't time out)
     results.outcomeReached = finishedCount > 0;
     results.b2LastInside = b2LastInside; // B2-leak trace: index → last OUTCOME progress inside B2
-    // Finale front-compression intervention split (Act 2): {up: A-fired, down: B-fired} this race.
-    results.finaleTilts = racePlanController ? racePlanController.getFinaleTiltCounts() : { up: 0, down: 0 };
 
     // Phase-3B: COMEBACK analysis result
     if (cbCfg) {
@@ -3157,13 +3144,6 @@ if (isMain) {
               reRollTransitionDuration:  DYNAMICS_OVERRIDES.reRollTransitionDuration,
               // Front act window (the sustained-P1-battle measurement window's own key).
               contestWindowStart:        CONTEST_WINDOW_START,
-              // Finale front-compression (Evolution Act 2): OFF → overlay inert (byte-identical).
-              finaleFrontCompression:       FINALE_ON,
-              finaleContestWindowStart:     FINALE_WIN_START,
-              finaleContestWindowEnd:       FINALE_WIN_END,
-              finaleCatchupGateLengths:     FINALE_CATCHUP_GATE,
-              finaleLeaderBleedGateLengths: FINALE_BLEED_GATE,
-              finaleCompressStrength:       FINALE_STRENGTH,
             }, seed);
             racePlanController = createTrajectoryController(plan);
             raceSollRankMap = plan._racerTargetRank;
@@ -3289,11 +3269,6 @@ if (isMain) {
               sollBereich,
               // B2-leak trace field: only added under --b2-trace, so no-flag rawData stays byte-identical.
               ...(B2_TRACE ? { b2LastInside: result.b2LastInside?.get(r.racerIndex) ?? -1 } : {}),
-              // Finale intervention split (Act 2): per-RACE totals attached to each row; only under
-              // --finaleFrontCompression, so flagless rawData (the fingerprint's world) is byte-identical.
-              ...(FINALE_ON
-                ? { finaleUp: result.finaleTilts?.up ?? 0, finaleDown: result.finaleTilts?.down ?? 0 }
-                : {}),
               ...r,
             });
           }

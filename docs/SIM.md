@@ -1158,38 +1158,3 @@ branch-priority fix. The fix was re-qualified afterwards on a 4-track paired tes
 (A0, `67a1053`): runaway **8.3% → 7.5%**, only **5/400 seed flips**, −0.55 sd — within noise, and every
 flip moved *away* from runaway. The 6 tracks outside that test are untested post-fix. Quote the
 headline with this qualifier.
-
-## 2026-07-26 — Finale front-compression (Evolution Act 2, flag-gated dice overlay, DEFAULT OFF)
-
-**Mechanism.** With `finaleFrontCompression` ON, a front-band-scoped, finale-windowed **dice tilt** is
-layered on the gap-cap re-roll (`racePlanner.js` `computeGapBiasedTarget`). It fires only for a **STATIC**
-front-band member (`plan._racerTargetRank` rank ≤ `BAND_EDGES[0]`, read-only) inside
-`[finaleContestWindowStart, finaleContestWindowEnd]` (default `[0.80, 0.90]`), and has two gap-magnitude-
-sequenced halves: **(A)** a catch-up **UP-tilt** for a front pursuer more than `finaleCatchupGateLengths`
-(G_c) behind the live leader — pulls the front together (multi-racer, no 2-racer duel); **(B)** a
-leader-bleed **DOWN-tilt** for the live leader only when its lead over P2 exceeds the **larger**
-`finaleLeaderBleedGateLengths` (G_b) — a runaway backstop. `G_b > G_c` is hard-validated, so **(B) can
-never run without (A)** being possible. Both tilt the scheduled draw within the SAME honest `spreadMin/
-spreadMax` clamps as the shipped gap-reroll.
-
-**"Never touches target/servo" contract (the Act 1 lesson inverted).** Act 1 (assignment-follows-field)
-broke fairness AND deadened the finale by making the servo target follow the field, which deleted the
-`rankError` restoring force. Act 2 keeps that static restoring force **fully intact everywhere** — the
-overlay never calls `_setTarget`, never mutates `plan._racerTargetRank`, and never crosses `BAND_EDGES`
-(all bias stays within ranks 1–5, so any order change is an intra-front-band lead change, never a band
-crossing → **band-reach is untouched by construction**). It is not the rejected Front-Leash (a continuous
-SERVO brake that just reordered the pack, Lesson 178): this is a mild, capped, **paired** scheduled-dice
-tilt, so contest comes from convergence, not suppression. Pure function of live state (no rng beyond the
-existing draw) → browser == sim.
-
-**Fingerprint invariance (proven, this build).** Default OFF, so nothing shipped changed: flagless ON
-`7c70b1eae7d31e22` and OFF (`--gapRerollEnabled=false`) `f8f7d9c2fd3283e9` — both unchanged from master.
-
-**Sim CLI.** `--finaleFrontCompression=true` engages the overlay; `--finaleContestWindow{Start,End}`,
-`--finaleCatchupGateLengths`, `--finaleLeaderBleedGateLengths`, `--finaleCompressStrength` set the knobs
-(all default to `DEFAULT_RACE_DYNAMICS_CONFIG`). When ON, each `rawData` row carries the per-race
-intervention split (`finaleUp` = A catch-up, `finaleDown` = B leader-bleed) for the SCREEN; the field is
-gated on the flag, so a flagless run's `rawData` (the fingerprint's world) is unchanged. The flag-ON parity
-soak is `node scripts/parity/soak.mjs --limit=60 --finaleFrontCompression=true` (engages the overlay in
-BOTH arms, asserts `realArm == simArm`). SCREEN driver: `scripts/exp-finale-screen.mjs`
-(report → `reports/evolution/FINALE-SCREEN.md`).

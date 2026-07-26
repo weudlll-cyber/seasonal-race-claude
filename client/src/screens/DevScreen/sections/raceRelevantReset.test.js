@@ -69,23 +69,6 @@ describe('after "Reset All Defaults" the badge reads 0 race — by construction'
     expect(s.cosmetic.count).toBeGreaterThan(0);
   });
 
-  it('the finale front-compression flag is in the reset target and counted by the badge', () => {
-    // Evolution Act 2 added six race-relevant keys. Reset must restore them, and toggling the feature on
-    // must register as a RACE diff so the HUD badge reads "R race".
-    expect(RACE_RELEVANT_DEFAULTS.raceDynamicsConfig).toHaveProperty(
-      'finaleFrontCompression',
-      false
-    );
-    expect(RACE_RELEVANT_DEFAULTS.raceDynamicsConfig).toHaveProperty(
-      'finaleLeaderBleedGateLengths'
-    );
-    const on = structuredClone(RACE_RELEVANT_DEFAULTS);
-    on.raceDynamicsConfig.finaleFrontCompression = true;
-    const s = splitConfigDiffs(on, DEFAULTS_WORLD);
-    expect(s.race.keys).toContain('raceDynamicsConfig.finaleFrontCompression');
-    expect(s.race.count).toBeGreaterThan(0);
-  });
-
   it('flipping any single race block off-target makes race.count > 0 (guards the coverage)', () => {
     for (const block of RACE_RELEVANT_CONFIG_KEYS) {
       const cur = structuredClone(RACE_RELEVANT_DEFAULTS);
