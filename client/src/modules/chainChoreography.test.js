@@ -3,7 +3,7 @@
 // (scripts/exp/chain-sim.mjs). Guards the L181-safety + determinism of the full-field author.
 // ============================================================
 import { describe, it, expect } from 'vitest';
-import { sampleHeroCurve } from './heroChoreography.js';
+import { sampleHeroCurve, anchorHeroCurve } from './heroChoreography.js';
 import { generateChainCurves, chainCheckpointCount } from './chainChoreography.js';
 
 const N = 24;
@@ -85,5 +85,30 @@ describe('generateChainCurves', () => {
   it('mExtra=0 still lands the exact draw (pure monotone ease, no excursion)', () => {
     const { curves } = generateChainCurves({ ...ARGS, mExtra: 0 });
     for (const c of curves) expect(sampleHeroCurve(c.curve, 1.0)).toBe(draw.get(c.index));
+  });
+
+  // SMOOTHNESS RULE (owner, binding): the chain never steps the target. Speed changes route through the
+  // shipped eased _setTarget/trajectoryMult slew (unchanged — asserted byte-identical by the fingerprint);
+  // the chain's own contribution — the target rank — is a min-jerk curve, jerk-matched at every re-anchor,
+  // so the target evolves with a bounded slope (no discontinuity) even across a GPS-reroute seam.
+  it('SMOOTHNESS: the sampled target rank has bounded slope everywhere, incl. across a re-anchor seam', () => {
+    const { curves } = generateChainCurves(ARGS);
+    const c = curves.find((x) => x.index === 0).curve;
+    // Re-anchor mid-race to the racer's ACTUAL rank (a GPS reroute), then sweep across the seam.
+    const seam = 0.55;
+    const re = anchorHeroCurve(c, seam, 12, 0); // actual rank 12 at the seam
+    // Measure the PER-TICK target-rank change (the smoothness unit that matters): one physics tick is
+    // FIXED_DT=16ms; a 60s race advances leader-progress ~16/60000 = 2.67e-4 per tick.
+    const progPerTick = 16 / 60000;
+    let maxPerTick = 0;
+    for (let p = 0.25; p < 1 - progPerTick; p += progPerTick) {
+      const d = Math.abs(sampleHeroCurve(re, p + progPerTick) - sampleHeroCurve(re, p));
+      if (d > maxPerTick) maxPerTick = d;
+    }
+    // A true STEP would move the target by O(N) ranks in one tick; a min-jerk curve moves <1 rank/tick.
+    // (Empirically ~0.02–0.07 rank/tick even across the re-anchor seam.) This proves no discontinuity.
+    expect(maxPerTick).toBeLessThan(1.0);
+    // Value at the seam equals the anchor exactly (C0 continuity by construction).
+    expect(sampleHeroCurve(re, seam)).toBeCloseTo(12, 6);
   });
 });

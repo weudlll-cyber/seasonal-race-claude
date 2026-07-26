@@ -484,6 +484,10 @@ const V4_LATERAL_PROXIMITY = Number(argVal('v4LateralProximity', '0.3'));
 // ── Phase-2L: behaviorConfig overrides via CLI ────────────────────────────────
 const WARMUP_MS_RAW      = argVal('avoidanceWarmupMs', null);
 const WARMUP_MS_OVERRIDE = WARMUP_MS_RAW !== null ? Number(WARMUP_MS_RAW) : null;
+// --speedBonusFactor=N (rowLayoutConfig): the start-row catch-up bonus factor. Default (null) → shipped
+// value. 0 disables the start-row speed bonus entirely (CHAIN-ABLATE M0). Sim-only override.
+const SPEED_BONUS_FACTOR_RAW = argVal('speedBonusFactor', null);
+const SPEED_BONUS_FACTOR_OVERRIDE = SPEED_BONUS_FACTOR_RAW !== null ? Number(SPEED_BONUS_FACTOR_RAW) : null;
 // --behavior='{"lateralForce":0.016,"lateralDamping":0.30}' — JSON object merged into behaviorConfig
 const BEHAVIOR_OVERRIDE_RAW = argVal('behavior', null);
 const BEHAVIOR_OVERRIDE = BEHAVIOR_OVERRIDE_RAW ? (() => {
@@ -670,7 +674,8 @@ export function runSingleRace({
     const BASE_SPEED_MAX  = BASE_SPEED_MAX_OVR;
     const BASE_SPEED_MEAN = (BASE_SPEED_MIN + BASE_SPEED_MAX) / 2;
     const behaviorConfig  = { ...DEFAULT_RACE_BEHAVIOR_CONFIG, ...behaviorConfigOverrides };
-    const rowConfig       = { ...DEFAULT_ROW_LAYOUT_CONFIG };
+    const rowConfig       = { ...DEFAULT_ROW_LAYOUT_CONFIG,
+      ...(SPEED_BONUS_FACTOR_OVERRIDE !== null ? { speedBonusFactor: SPEED_BONUS_FACTOR_OVERRIDE } : {}) };
     const dynamicsConfig  = { ...DEFAULT_RACE_DYNAMICS_CONFIG, ...DYNAMICS_OVERRIDES };
 
     // ── THE canonical speed/duration derivation (client/src/modules/durationModel.js) ─────────

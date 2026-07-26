@@ -1,0 +1,135 @@
+// ============================================================
+// scripts/exp-chain-ablate.mjs — CHAIN-ABLATE-1 battery. Read-only driver: each ARM is a named CLI
+// flag-set on sim-fairness.mjs (no engine change here). Ship control (flagless) is run ONCE and reused.
+// Runs the selected arms on 4 standard tracks, N races, paired seeds; prints band-reach / dead-finale /
+// late-lead-changes / per-row band-reach vs ship. Deltas vs ship let the add-back ledger keep/discard.
+// Usage: node scripts/exp-chain-ablate.mjs --arms=M0,M0warm [--races=20] [--seed=1] [--jobs=4]
+// ============================================================
+import { execFile } from 'node:child_process';
+import { promisify } from 'node:util';
+import { readFileSync, mkdirSync, writeFileSync, existsSync } from 'node:fs';
+import { join, dirname, relative } from 'node:path';
+import { fileURLToPath } from 'node:url';
+import { classifyRace, RUNAWAY_PARADE_DEFAULTS } from './sim/observers/runaway-parade.mjs';
+import { DEFAULT_BASE_SPEED_CONFIG } from '../client/src/modules/storage/defaults.js';
+
+const pExecFile = promisify(execFile);
+const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
+const argv = process.argv.slice(2);
+const argVal = (k, d) => { const m = argv.find((a) => a.startsWith(`--${k}=`)); return m ? m.slice(k.length + 3) : d; };
+
+const NORMAL_SPEED = DEFAULT_BASE_SPEED_CONFIG.normalSpeedPxPerSec;
+const RACES = Number(argVal('races', '20'));
+const SEED = Number(argVal('seed', '1'));
+const JOBS = Math.max(1, Number(argVal('jobs', '4')));
+const TMP = join(ROOT, 'client/tmp/exp-chain-ablate');
+const OUT = join(ROOT, 'reports/evolution/chain-ablate-data');
+const toSimOut = (a) => relative(ROOT, a).replace(/\\/g, '/');
+
+const TRACK_IDS = ['luger-hill', 'mountainstreet', 'searound', 'dirt-oval'];
+const trackSeed = (id) => JSON.parse(readFileSync(join(ROOT, 'server/seeds/tracks', `${id}.json`), 'utf8'));
+const TRACKS = TRACK_IDS.map((id) => { const s = trackSeed(id); return { id, racer: s.defaultRacerTypeId, closed: !!s.closed }; });
+const RACERS_CLOSED = 40, RACERS_OPEN = 60;
+
+// ── Arm library. NAKED = the M0 base: chain from the gun, SOLE action engine, all helpers OFF. ──────────
+const NAKED = [
+  '--chainChoreoEnabled=true', '--pulkStart=0', '--choreoOutcomeStart=0', '--choreoReleaseProgress=1.0',
+  '--bonusMult=0', '--reRollVariationPercent=0', '--gapRerollEnabled=false', '--speedBonusFactor=0',
+  '--b2AttackHeroes=0', '--pulkLeadRotationAttackerSlots=0',
+];
+const without = (arr, prefix) => arr.filter((f) => !f.startsWith(prefix));
+const withF = (arr, ...adds) => [...arr, ...adds];
+// A helper "until X%" via a chaos window: chain anchors at X (pulkStart=X), the named helper is ON only
+// during [0,X] (chaos), chain from X. Used for the duration-cutoff sweeps.
+const boundary = (base, x) => without(without(base, '--pulkStart='), '--choreoOutcomeStart=')
+  .concat([`--pulkStart=${x}`, `--choreoOutcomeStart=${x}`]);
+
+const ARM_LIB = {
+  ship: [],
+  // Round A — from the gun
+  M0:        withF(NAKED, '--avoidanceWarmupMs=0'),                       // strict from gun
+  M0warm:    NAKED,                                                        // + shipped overlap warmup
+  M0row:     withF(without(NAKED, '--speedBonusFactor='), '--avoidanceWarmupMs=0', '--speedBonusFactor=1.0'),
+  M0rowwarm: withF(without(NAKED, '--speedBonusFactor='), '--speedBonusFactor=1.0'),
+  // Round A extras
+  M0release: withF(without(NAKED, '--choreoReleaseProgress='), '--avoidanceWarmupMs=0', '--choreoReleaseProgress=0.97'),
+  M0seg12:   withF(NAKED, '--avoidanceWarmupMs=0', '--chainSegSec=12'),
+  M0seg30:   withF(NAKED, '--avoidanceWarmupMs=0', '--chainSegSec=30'),
+  M0mx0:     withF(NAKED, '--avoidanceWarmupMs=0', '--chainMExtra=0'),
+  M0mx4:     withF(NAKED, '--avoidanceWarmupMs=0', '--chainMExtra=4'),
+};
+
+const BAND_EDGES = [5, 15, 25, 40];
+const zoneIdx = (rank) => { for (let i = 0; i < BAND_EDGES.length; i++) if (rank <= BAND_EDGES[i]) return i; return BAND_EDGES.length; };
+const mean = (a) => (a.length ? a.reduce((s, x) => s + x, 0) / a.length : 0);
+const pct = (x) => (x == null ? 'n/a' : (x * 100).toFixed(0) + '%');
+
+async function runArmTrack(armKey, flags, track) {
+  const nRacers = track.closed ? RACERS_CLOSED : RACERS_OPEN;
+  const outAbs = join(TMP, `${armKey}__${track.id}`);
+  const args = ['scripts/sim-fairness.mjs',
+    `--track=${track.id}`, `--racer=${track.racer}`,
+    `--seed=${SEED}`, `--races=${RACES}`, `--racers=${nRacers}`, `--normalSpeed=${NORMAL_SPEED}`,
+    '--track-defaults', ...flags, '--runaway-parade', '--hero-map', `--out=${toSimOut(outAbs)}`];
+  await pExecFile(process.execPath, args, { cwd: ROOT, maxBuffer: 512 * 1024 * 1024 });
+  const hm = JSON.parse(readFileSync(join(outAbs, 'hero-map.json'), 'utf8'));
+  const rp = JSON.parse(readFileSync(join(outAbs, 'runaway-parade.json'), 'utf8'));
+  const fd = JSON.parse(readFileSync(join(outAbs, 'fairness-data.json'), 'utf8'));
+  const rowReached = [], rowTotal = [];
+  for (const r of fd.rawData) { const row = r.startRowIndex; rowReached[row] = (rowReached[row] ?? 0) + (zoneIdx(r.finalRank) === zoneIdx(r.sollRank) ? 1 : 0); rowTotal[row] = (rowTotal[row] ?? 0) + 1; }
+  const rows = rp.races.map((rec) => { const raw = rec.runawayParade; const c = classifyRace(raw, RUNAWAY_PARADE_DEFAULTS); return { lc: raw.leadChangeCount ?? 0, dead: (raw.leadChangeCount ?? 0) === 0 ? 1 : 0, runaway: c.runawayWinner ? 1 : 0 }; });
+  return {
+    arm: armKey, track: track.id, closed: track.closed,
+    bandReach: hm.fairness?.bandReach ?? null,
+    startRowUnfair: hm.fairness?.startRowUnfair ?? null,
+    rowReachMin: Math.min(...rowReached.map((v, i) => (rowTotal[i] ? v / rowTotal[i] : 1))),
+    deadRate: mean(rows.map((r) => r.dead)), leadChanges: mean(rows.map((r) => r.lc)), runawayRate: mean(rows.map((r) => r.runaway)),
+  };
+}
+
+async function pool(tasks) {
+  const out = []; let i = 0;
+  await Promise.all(Array.from({ length: Math.min(JOBS, tasks.length) }, async () => { while (i < tasks.length) { const k = i++; out[k] = await tasks[k](); } }));
+  return out;
+}
+
+const requested = (argVal('arms', 'M0') || '').split(',').map((s) => s.trim()).filter(Boolean);
+const arms = ['ship', ...requested.filter((a) => a !== 'ship')];
+for (const a of arms) if (!ARM_LIB[a]) { console.error(`unknown arm: ${a}. Known: ${Object.keys(ARM_LIB).join(', ')}`); process.exit(1); }
+
+mkdirSync(OUT, { recursive: true });
+const t0 = Date.now();
+console.log(`\n=== CHAIN-ABLATE battery — N=${RACES}/arm/track | tracks ${TRACK_IDS.join(', ')} | seed=${SEED} jobs=${JOBS} ===`);
+console.log(`arms: ${arms.join(', ')}`);
+
+// Reuse cached ship results if present (same seed/races), else run.
+const cacheFile = join(OUT, `ship_N${RACES}_s${SEED}.json`);
+let shipRuns = null;
+if (arms.includes('ship') && existsSync(cacheFile)) { shipRuns = JSON.parse(readFileSync(cacheFile, 'utf8')); console.log('(ship cache hit)'); }
+
+const tasks = [];
+for (const armKey of arms) {
+  if (armKey === 'ship' && shipRuns) continue;
+  for (const t of TRACKS) tasks.push(() => runArmTrack(armKey, ARM_LIB[armKey], t));
+}
+const fresh = await pool(tasks);
+const all = [...(shipRuns ?? []), ...fresh];
+if (arms.includes('ship') && !shipRuns) writeFileSync(cacheFile, JSON.stringify(all.filter((r) => r.arm === 'ship'), null, 2));
+
+const get = (arm, track) => all.find((r) => r.arm === arm && r.track === track);
+// Table: for each arm, per-track band / dead / lc, and vs-ship deltas + a summary line.
+for (const armKey of arms) {
+  console.log(`\n── ${armKey} ──`);
+  console.log(`  track           | band (Δship) | dead (Δship) | lead-chg (Δship) | rowMin | holm`);
+  let bSum = 0, passReach = 0;
+  for (const t of TRACKS) {
+    const r = get(armKey, t.id), s = get('ship', t.id);
+    const dB = s ? (r.bandReach - s.bandReach) * 100 : 0, dD = s ? (r.deadRate - s.deadRate) * 100 : 0, dL = s ? r.leadChanges - s.leadChanges : 0;
+    bSum += r.bandReach; if (r.bandReach >= 0.70) passReach++;
+    const sgn = (x, u = '') => (x >= 0 ? '+' : '') + x.toFixed(u === 'pp' ? 0 : 2) + u;
+    console.log(`  ${t.id.padEnd(15)} | ${pct(r.bandReach).padStart(4)} (${armKey === 'ship' ? '  —' : sgn(dB, 'pp')}) | ${pct(r.deadRate).padStart(4)} (${armKey === 'ship' ? '  —' : sgn(dD, 'pp')}) | ${r.leadChanges.toFixed(2).padStart(5)} (${armKey === 'ship' ? '  —' : sgn(dL)}) | ${pct(r.rowReachMin).padStart(4)} | ${r.startRowUnfair ? 'UNF' : 'ok'}`);
+  }
+  console.log(`  SUMMARY band-reach mean ${pct(bSum / TRACKS.length)} | tracks ≥70%: ${passReach}/${TRACKS.length}`);
+}
+console.log(`\nruntime ${((Date.now() - t0) / 60000).toFixed(1)} min`);
+writeFileSync(join(OUT, `battery_${arms.filter((a) => a !== 'ship').join('-').slice(0, 60)}.json`), JSON.stringify({ races: RACES, seed: SEED, arms, results: all }, null, 2) + '\n');
