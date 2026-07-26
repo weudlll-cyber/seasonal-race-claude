@@ -2922,3 +2922,57 @@ therefore kept and re-documented rather than deleted with the rest. What does NO
 key, the UI control, and the code path. Both fingerprints stayed byte-identical through the removal,
 which is itself the proof the mechanisms had never been on a live path — and the reason keeping them
 would have cost nothing to measure and everything to trust.
+
+## Lesson 181 — The Target Must Never Follow the Field (Evolution Act 1, assignment-follows-field)
+Assignment-follows-field reassigned each pack racer's intra-band target rank to the LIVE order every servo
+tick, on the theory that "letting targets follow the field" would make the front fight for live positions.
+The SCREEN did the opposite of the theory: it broke the fairness floor (pooled band-reach 71.1%→66.8%) AND
+deadened the finale (dead finales and runaway up, lead-changes down) at the same time.
+
+**Context.** The pack servo error is `0.5·rankError + 0.5·bandError` (`rankError = currentRank − targetRank`
+against the static Fisher-Yates slot; `bandError` only bites at a band edge). A live-following target makes
+`targetRank ≈ currentRank`, so `rankError → 0` by construction — the restoring half of the controller goes
+silent, leaving only the half-strength, edge-only `bandError`. The hysteresis threshold only interpolates
+between "neutralized" (`H→0`) and "shipped" (`H→∞`); it cannot ADD a force. Cadence (per-tick vs
+roll-boundary) has the same limit: no clock change restores a force the design removed.
+
+**Insight.** In this engine, **fairness and finale contest are the SAME force — the static-slot pull.** The
+servo produces band-reach (it holds racers to their assigned band) and the finale comeback/brake (it pulls
+the designated winner up and reins escapees in) with one and the same `rankError` term. Anything that
+weakens the pull toward the static assignment — following the field, blending the target toward live rank —
+removes BOTH at once. "Following" is operationally identical to "stop correcting," which is the opposite of
+contest.
+
+**Consequence.** Contest mechanisms must ADD selective energy ON TOP of the intact restoring force (e.g.
+honest dice-draw tilts on the scheduled re-roll), and must NEVER modify what the servo steers toward. Keep
+`plan._racerTargetRank` a frozen endpoint contract. Evidence: `reports/evolution/AFF-SCREEN.md` +
+`AFF-NEXT-CC.md`; build recoverable @`cd520e0`; both fingerprints stayed byte-identical (default OFF), which
+is the proof the mechanism was never on a live path.
+
+## Lesson 182 — No Single Track-Agnostic Finale-Dice Law Lifts Both Topologies (Evolution Act 2, finale front-compression)
+Act 2 took Lesson 181's advice — leave the servo alone, add contest as a scheduled-dice overlay on the
+gap-cap re-roll, front-band only, in the finale window `[0.80,0.90]`. It was built twice: with FIXED
+length-gates, then with ADAPTIVE gates scaled to the live front spread `S` (`G_c = c·S`, `G_b = b·S`). The
+fairness floor always held and the mechanism worked exactly as built — and it still failed the decisive bar.
+
+**Context.** One fixed dose did OPPOSITE things by topology: on open tracks it over-calmed (lead-changes
+3.00→2.32, front@line looser), on closed tracks it added contest but churned (dead 8→16%, runaway 16→24%).
+The adaptive variant was the pre-registered fix — normalize the gates by the race's own front spread so
+selectivity is constant on both. It held the pooled floor and even CURED the closed over-churn (runaway
+16→16%, dead 8→12%), but STILL could not restore the open over-calm (lead-changes 3.00→2.32). The smoking
+gun: the realized gates barely separated (open `G_c` 1.01 vs closed 1.47) because the live front spread `S`
+is ~4–6 L on BOTH topologies — **no race-internal spread signal distinguishes the two regimes.**
+
+**Insight.** The open/closed split is **structural physics, not gate selectivity.** Open tracks re-expand
+in the last ~10% (a long run-out where scheduled dice are sparse and live physics carries the finish, so any
+`[0.80,0.90]` compression washes out by the line); closed tracks churn in bunched lap traffic (bleeding a
+leader lands it back in the pack). A scheduled-dice draw-tilt inside the finale window cannot reach either
+effect — at any dose, adaptive or not.
+
+**Consequence.** Do NOT re-attempt finale contest via a scheduled-dice overlay on the re-roll, nor any
+retuning of its gates/strength/window — the mechanism class is exhausted for this goal. Late-race dynamics
+need a different foundation (see the Servo-vs-Deck consultation). Per-track tuning is NOT an escape: the
+owner rule "one rule set for every track" is binding, so a solution counts only if a single track-agnostic
+mechanism lifts BOTH topologies at once. Evidence: `reports/evolution/FINALE-SCREEN.md` +
+`FINALE-ADAPTIVE-SCREEN.md` + `FINALE-ADAPTIVE-CC.md`; builds recoverable @`8d5e9fd`/@`7404bd9`/@`197763d`;
+all fingerprints byte-identical (default OFF) throughout.
