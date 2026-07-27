@@ -2,12 +2,18 @@
 // File:        scriptCompiler.js
 // Path:        client/src/modules/scriptCompiler.js
 // Project:     RaceArena
-// Description: THE FINALE SCRIPT COMPILER (ACTION-BUILD-4). Per race, a seeded, row-blind draw of a
+// Description: THE FINALE SCRIPT COMPILER (ACTION-BUILD-4/5). Per race, a seeded, row-blind draw of a
 //              script set from the finale pool, compiled through the full admission stack
-//              (reachability accountant · per-racer exposure cap · geometry preference · whole-race
+//              (reachability accountant · per-racer exposure cap · LOCAL-CLEARANCE admission · whole-race
 //              occupancy spread), emitted as AUTHORED CURVES (rank-space waypoints). Nothing runs per
 //              tick here: this is the formation author's pen — it decides WHICH curves get written.
 //              What does not fit the admission stack is SHRUNK or DROPPED before it exists.
+//
+//              ACTION-BUILD-5 (the owner's situational rule): the topology-derived scarcity constant is
+//              GONE. Every LATERAL element (fight-for-lead / duel / photo-fan) AND every accordion beat is
+//              admitted PER-INSTANCE by the clearance reader (clearanceReader.js), reading only local space
+//              — planned track width at the arc + planned occupancy + the wandering free corridor sequenced
+//              one maneuver at a time. Longitudinal families are admissible everywhere. No topology/track read.
 //
 //              CONTRACT (binding, same as the chain author):
 //                • Endpoint invariant (L181): every authored curve ENDS EXACTLY at the racer's drawn
