@@ -78,6 +78,14 @@ const ARM_LIB = {
   B10:       boundary(ROW(NAKED), 0.10),
   B15mx4:    setF(boundary(ROW(NAKED), 0.15), '--chainMExtra=', '4'),
   B15mx4rel: setF(setF(boundary(ROW(NAKED), 0.15), '--chainMExtra=', '4'), '--choreoReleaseProgress=', '0.97'),
+  // ── DRAMA-1 (Phase 2): on the B15 substrate. Two autopsy-named levers — free intra-band front rank
+  // (choreoReleaseProgress < 1 frees drawn-B1 finishers to contest P1, attacking OVER-STEER) and drama
+  // formations (false leaders / late arrivals manufacture front crossings). B15D0 = the exact B15 baseline.
+  B15D0:      boundary(ROW(NAKED), 0.15),
+  B15rel85:   setF(boundary(ROW(NAKED), 0.15), '--choreoReleaseProgress=', '0.85'),
+  B15rel70:   setF(boundary(ROW(NAKED), 0.15), '--choreoReleaseProgress=', '0.70'),
+  B15drama:   withF(boundary(ROW(NAKED), 0.15), '--chainDrama=true'),
+  B15dramaRel85: withF(setF(boundary(ROW(NAKED), 0.15), '--choreoReleaseProgress=', '0.85'), '--chainDrama=true'),
 };
 
 const BAND_EDGES = [5, 15, 25, 40];

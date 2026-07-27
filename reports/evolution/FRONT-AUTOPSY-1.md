@@ -7,10 +7,15 @@ suspects was the binding constraint. Observer: `--front-autopsy` in `sim-fairnes
 
 ## Closing line (read first)
 
-<!-- FILLED AFTER THE REFINED RUN -->
-**PENDING REFINED RUN.** Preliminary (N=100×4): the front is **never fuel-starved** (DRIVE 0%); the binding
-constraint in dead finales is **OVER-STEER — the servo braking a closing front racer to hold its assigned
-rank — ~75%** (open 78%, closed 72%), with SPACE (no clear lane) second (~23%, higher on closed).
+**The enemy is the servo's intra-band rank-hold (OVER-STEER), and it is PERVASIVE.** The front is never
+fuel-starved (DRIVE 0%). In dead finales the binding constraint is **OVER-STEER — the servo braking a
+closing front racer to hold its assigned rank — in 75%** (open **83%**, closed **68%**); SPACE (no clear
+lane) is second and **matters far more on closed tracks (28%) than open (13%)**. Crucially, **dead and alive
+finales are near-identical on every instrument** (servo-opposition 55% vs 58%, blocked 39% vs 43%, fuel 0.149
+vs 0.161 in the last 10%): the servo suppresses front passes in ~55% of closing situations in EVERY race —
+the 12% dead rate is the tail of that pervasive suppression, not a separate broken mode. **A new force should
+free intra-band rank at the front (the band rule never required holding rank), and on closed tracks respect
+lane scarcity (stagger duels).**
 
 ## Fingerprint assertion (behavior unchanged)
 
@@ -20,7 +25,7 @@ baseline:
 | run | COMBINED |
 |---|---|
 | shipped baseline | `7c70b1eae7d31e22` |
-| **with `--front-autopsy`** | <!-- FILLED --> `7c70b1eae7d31e22` (asserted) |
+| **with `--front-autopsy`** | **`7c70b1eae7d31e22`** — identical ✓ (asserted twice: initial + refined observer) |
 
 ## Instrument definitions (exact, reviewable)
 
@@ -60,22 +65,71 @@ Classified on the LAST-10% window (fall back to final-third if that window had n
 Rationale: DRIVE is the root (no fuel ⇒ nothing to block or steer); given fuel, a closing pass is prevented
 by either no lane (SPACE) or the servo (OVER-STEER) — the more frequent denier is named binding.
 
-## CAUSE RANKING (binding constraint per dead finale)
+## CAUSE RANKING (binding constraint per dead finale) — N=100×4
 
-<!-- FILLED AFTER THE REFINED RUN -->
+| track | topo | dead rate | DRIVE | SPACE | OVER-STEER | TIMING | other |
+|---|---|---|---|---|---|---|---|
+| luger-hill | open | 8% | 0 | 13% | **88%** | 0 | 0 |
+| mountainstreet | open | 15% | 0 | 13% | **80%** | 0 | 7% |
+| searound | closed | 11% | 0 | 18% | **82%** | 0 | 0 |
+| dirt-oval | closed | 14% | 0 | 36% | **57%** | 0 | 7% |
+| **OPEN pooled** | | 12% | 0 | 13% | **83%** | 0 | 4% |
+| **CLOSED pooled** | | 13% | 0 | **28%** | **68%** | 0 | 4% |
+| **ALL pooled** | | 12% | 0 | 21% | **75%** | 0 | 4% |
+
+**DRIVE = 0 and TIMING = 0 everywhere.** The front always has passing fuel (fuelSpread ≈ 0.15–0.18, never
+converged), and no dead finale is a pure early-timing lock without a space/steer cause. The killer is the
+servo braking closing front racers (OVER-STEER); on the closed tracks, lane scarcity (SPACE) is a real
+secondary (28% vs 13% open), and on dirt-oval it nearly ties (36% SPACE / 57% OVER-STEER).
 
 ## DEAD vs ALIVE (the causal signal — last-10% window)
 
-<!-- FILLED AFTER THE REFINED RUN -->
+| group | n | fuelSpread | trajAtClamp | blockedFrac | servoOppFrac | P1 lock | set-3 lock |
+|---|---|---|---|---|---|---|---|
+| DEAD | 48 | 0.149 | 33% | 39% | 55% | (saturated) | (saturated) |
+| ALIVE | 352 | 0.161 | 32% | 43% | 58% | (saturated) | (saturated) |
 
-## LOCK-IN + COINCIDENCE
+**The instruments barely differ between dead and alive** (dead has marginally less fuel and slightly less
+closing/servo action — i.e. a slightly more settled front — but nothing categorical). The honest reading:
+front-pass suppression (servo brake in ~55–58% of closing situations, traffic block in ~40%) is a **baseline
+property of every finale**, not something that switches on in the dead 12%. A force that reduces it will lift
+lead-changes across the whole distribution, not merely convert the dead tail. (`fracTrajAtClamp` ≈ 32%: the
+honest ±width IS being used a third of the time at the front — the envelope is not the limiter; the servo's
+*direction* is.)
 
-<!-- FILLED AFTER THE REFINED RUN -->
+## LOCK-IN + COINCIDENCE — inconclusive (documented limitation)
 
-## THE ENEMY, MEASURED
+Both lock metrics **saturated at 1.0** for dead and alive alike. Cause: the observer tracks P1 (and the top-3
+set) among *unfinished* racers, so when the leader crosses the line the "leader" role shifts to the next
+racer, registering a spurious change at ≈1.0. All 48 dead races show a P1 change in [0.5,1] by this metric,
+which contradicts the standing dead definition (no lead change in [0.90,1.0]) — confirming the artifact. The
+coincidence table (|P1lock−marker|: convergence 0.00 degenerate, lastRoll 0.05, choreoRelease 0.03) is
+therefore **not trustworthy** and no marker claim is made. A finish-aware lock metric (freeze the P1 identity
+at each racer's own crossing) is the fix for a follow-up; it does not change the cause ranking or the
+dead-vs-alive conclusion above, which do not depend on it.
 
-<!-- FILLED AFTER THE REFINED RUN -->
+## THE ENEMY, MEASURED (the direct input to the design round)
+
+- **Both topologies:** the primary enemy is **OVER-STEER — the servo holding intra-band RANK at the front**
+  (open 83%, closed 68%). The band rule only requires the BAND; a top-5 racer is already in its front band,
+  so the servo's rank-brake on a closing top-5 racer is *gratuitous* under the fairness gate. **A new force
+  must free intra-band rank at the front** (let the front race freely once in-band) — this is the lever the
+  owner pre-authorised, and the autopsy names it as the dominant cause.
+- **Closed tracks additionally:** **SPACE (lane scarcity) is a real secondary (28%)**. Freeing rank there
+  will create more closing attempts than the few lanes can service → the drama duels must be **staggered /
+  sequenced** on closed tracks so closing passes don't pile into the same lane at once.
+- **Not the enemy:** DRIVE (fuel) — the front always has speed spread; and the envelope width is used ~1/3
+  of the time. So a new force should NOT add more speed width; it should redirect the servo's *intent*
+  (stop holding rank in-band) and manufacture front crossings (drama formations), within the existing clamp.
 
 ## Owner-only questions
 
-<!-- FILLED AFTER THE REFINED RUN -->
+1. The lock-in metric is confounded by racers finishing (saturated at 1.0). Want the finish-aware fix run as
+   a small addendum, or is the cause ranking + dead-vs-alive signal (which don't depend on it) enough?
+2. The autopsy says the suppression is *pervasive* (dead ≈ alive), so the design target is "lift front
+   lead-changes across all races," not "convert the 12% dead." DRAMA-1 (this run's Phase 2+) builds to that
+   target — confirm that framing.
+
+---
+**Branch `exp/chain-choreo`.** Observer `--front-autopsy` (read-only); runner `scripts/exp-front-autopsy.mjs`;
+data `reports/evolution/front-autopsy-data/autopsy.json`. Fingerprint with observer = `7c70b1eae7d31e22`.
