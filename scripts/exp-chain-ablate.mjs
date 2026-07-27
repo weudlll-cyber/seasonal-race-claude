@@ -86,6 +86,13 @@ const ARM_LIB = {
   B15rel70:   setF(boundary(ROW(NAKED), 0.15), '--choreoReleaseProgress=', '0.70'),
   B15drama:   withF(boundary(ROW(NAKED), 0.15), '--chainDrama=true'),
   B15dramaRel85: withF(setF(boundary(ROW(NAKED), 0.15), '--choreoReleaseProgress=', '0.85'), '--chainDrama=true'),
+  // Round F — drama RESOLVE cutoff sweep (duration rule): resolve=0.75 broke reach; converge earlier so the
+  // servo can still land the drawn place within the envelope, while keeping the mid-race front churn.
+  B15dr40:    withF(boundary(ROW(NAKED), 0.15), '--chainDrama=true', '--chainDramaResolve=0.4'),
+  B15dr50:    withF(boundary(ROW(NAKED), 0.15), '--chainDrama=true', '--chainDramaResolve=0.5'),
+  B15dr60:    withF(boundary(ROW(NAKED), 0.15), '--chainDrama=true', '--chainDramaResolve=0.6'),
+  B15dr50f25: withF(boundary(ROW(NAKED), 0.15), '--chainDrama=true', '--chainDramaResolve=0.5', '--chainDramaFrac=0.25'),
+  B15dr50hd6: withF(boundary(ROW(NAKED), 0.15), '--chainDrama=true', '--chainDramaResolve=0.5', '--chainDramaHoldDepth=6'),
 };
 
 const BAND_EDGES = [5, 15, 25, 40];
