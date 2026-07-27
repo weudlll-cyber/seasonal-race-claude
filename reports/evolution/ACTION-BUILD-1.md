@@ -84,9 +84,31 @@ built: the script compiler/scheduler, the full Reachability Accountant (arc-shri
 migrating duel, the variety-metrics pipeline, and the actionLevel slider mapping quota→accountant. These are
 the direct continuation and the only way to answer Q4–Q6.
 
-## STAGE 3 — reduced gate (N=50) — the two best densities vs ship + B15
+## STAGE 3 — REDUCED GATE (N=50, clearly labelled; full N=100 is the follow-up)
 
-<!-- FILLED FROM N=50 GATE (or marked follow-up if not finished in the box) -->
+`node scripts/exp-chain-ablate.mjs --arms=B15acc3,B15acc6 --races=50`. Confirms Stage 1 more starkly.
+
+| arm | band mean · ≥70% | dead (l/m/s/d) | lead-chg (l/m/s/d) | LAW_full (l/m/s/d) |
+|---|---|---|---|---|
+| ship | 72% · 3/4 | 8/20/6/10% | 2.64/1.98/1.60/2.04 | 0.30/0.29/0.31/0.28 |
+| B15+acc **d3** | **74% · 4/4** | 12/**8**/26/16% | 2.24/2.16/1.56/1.66 | 0.44/0.42/0.51/0.45 |
+| B15+acc **d6** | **74% · 4/4** | **4/4**/22/20% | 2.60/**2.58**/1.52/1.60 | 0.43/0.38/0.49/0.44 |
+
+**The topology split is unambiguous at N=50:**
+- **OPEN — a real win.** density 6 cuts dead-finales ~4–5× (luger 8→**4%**, mountainstreet 20→**4%**), lifts
+  mountainstreet lead-changes (1.98→2.58). The malus-side compression thesis is confirmed where lanes exist.
+- **CLOSED — a real loss.** searound dead-finale 6→**26%** (d3) / **22%** (d6); dirt 10→16/20%. The braked
+  pack cannot pass for lack of lanes → the finale jams. This is the L182 wall, measured to the density.
+- **Band-reach — accordion is fairest** (4/4 vs ship 3/4) at both densities; no reach jam.
+- **LAW — beats B15, not ship** (accordion 0.38–0.51 vs ship 0.28–0.31): whole-race action added over the
+  sorter, but ship's stack still more continuous.
+
+**Three-tier verdict:** **FALLS SHORT of a clean "beats ship"** (loses on the closed tracks and on the LAW
+headline) — but it is a genuine **partial: band-fairest of the three, real whole-race action over the sorter,
+and open-track dead-finales cut 4–5×.** The one thing standing between "partial" and "adoption candidate" is
+the closed-track lane-scarcity jam, and the fix is named and cheap (the lane-clearance-conditional beat /
+density-reactive thinning). **Eye-test recommendation: watch mountainstreet (open) at density 6 first — the
+dead-finale→4% is the visible payoff; then watch searound to see the jam the thinner must fix.**
 
 ## Closing line
 

@@ -1,0 +1,54 @@
+[
+  {
+    "arm": "ship",
+    "track": "luger-hill",
+    "closed": false,
+    "bandReach": 0.688,
+    "startRowUnfair": true,
+    "rowReachMin": 0.67,
+    "deadRate": 0.08,
+    "leadChanges": 2.64,
+    "runawayRate": 0.16,
+    "lawFull": 0.3024759999999999,
+    "lawL50": 0.251726
+  },
+  {
+    "arm": "ship",
+    "track": "mountainstreet",
+    "closed": false,
+    "bandReach": 0.701,
+    "startRowUnfair": true,
+    "rowReachMin": 0.692,
+    "deadRate": 0.2,
+    "leadChanges": 1.98,
+    "runawayRate": 0.06,
+    "lawFull": 0.29336,
+    "lawL50": 0.21294200000000005
+  },
+  {
+    "arm": "ship",
+    "track": "searound",
+    "closed": true,
+    "bandReach": 0.7525,
+    "startRowUnfair": true,
+    "rowReachMin": 0.744,
+    "deadRate": 0.06,
+    "leadChanges": 1.6,
+    "runawayRate": 0.16,
+    "lawFull": 0.31429599999999996,
+    "lawL50": 0.24580400000000005
+  },
+  {
+    "arm": "ship",
+    "track": "dirt-oval",
+    "closed": true,
+    "bandReach": 0.7575,
+    "startRowUnfair": false,
+    "rowReachMin": 0.736,
+    "deadRate": 0.1,
+    "leadChanges": 2.04,
+    "runawayRate": 0.06,
+    "lawFull": 0.2763440000000001,
+    "lawL50": 0.18541800000000003
+  }
+]
