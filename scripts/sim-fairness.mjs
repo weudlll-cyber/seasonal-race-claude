@@ -411,6 +411,8 @@ const gmRaces             = [];   // per-race gap-space observations (filled onl
 // Fully flag-gated → a no-flag run does zero extra work and is byte-identical.
 const RUNAWAY_PARADE      = argv.includes('--runaway-parade');
 const rpRaces             = [];   // per-race runaway/parade raw records (filled only when RUNAWAY_PARADE)
+const FRONT_AUTOPSY       = argv.includes('--front-autopsy'); // FRONT-AUTOPSY-1: finale front-group diagnosis
+const faRaces             = [];   // per-race front-autopsy records (filled only when FRONT_AUTOPSY)
 // PHYSICS-TAX (read-only, --physics-tax): GREENFIELD P0. Per racer, the cumulative longitudinal
 // distance lost to avoidance braking, as a fraction of the distance it would otherwise have covered,
 // plus a per-decile-of-progress profile. Feeds sigma — the share of the natural speed band that live
@@ -648,6 +650,7 @@ export function runSingleRace({
   heroMap = false,             // --hero-map: record per-hero climb-feasibility signals (read-only)
   gapMetrics = false,          // --gap-metrics: record gap-space (time-behind-leader) signals (read-only)
   runawayParade = false,       // --runaway-parade: record runaway-winner / parade-finish raw signals (read-only)
+  frontAutopsy = false,        // --front-autopsy: record finale front-group DRIVE/SPACE/TIMING/OVER-STEER signals (read-only)
   speedSource = false,         // --speed-source: record top-15 late-race speed decomposition (read-only)
   physicsTax = false,          // --physics-tax: record per-racer avoidance-braking distance loss (read-only)
   raceRng: raceRngParam = null,   // D-GRID: the batch loop's shared per-race physics stream (already past the
@@ -1120,6 +1123,33 @@ export function runSingleRace({
       // Window starts at the LIVE contestWindowStart — the front act's own key, no longer B2's
       // resolve checkpoint. No hardcoded progress constant.
       frontBattle:         makeFrontBattleTracker({ windowStart: CONTEST_WINDOW_START }),
+    } : null;
+    // ── FRONT-AUTOPSY per-race state (read-only; only allocated when --front-autopsy) ──────────────
+    // Finale diagnosis of the top-place action. Four instruments over the FINAL THIRD (raceProgress >=
+    // FA_FINAL) for the live front group (top-5 by t; top-3 tracked too). Definitions (documented):
+    //   speed(r)  = baseSpeed * trajectoryMult * areaBonusMult — the realized late-race speed proxy.
+    //   CLOSING pair (behind i, ahead i-1 in the top-5): gap < FA_CLOSE_LEN lengths AND
+    //             speed(behind) > speed(ahead)*(1+FA_CLOSE_SPD) — a faster racer bearing down on the one ahead.
+    //   (a) DRIVE   : fuelSpread = (max-min speed)/mean across the top-5 (is there any speed difference
+    //                 left to pass with?), + trajectoryMult distribution vs the [0.85,1.10] clamp (is the
+    //                 honest width even used?). Converged front (fuelSpread < FA_CONV) = no passing fuel.
+    //   (b) SPACE   : among CLOSING pairs, the behind racer has r.avoidanceActive === true — the traffic
+    //                 core's OWN "braking behind a leader, no free lane" signal (raceBehavior). = blocked pass.
+    //   (c) TIMING  : lock-in = the LAST progress (tracked from FA_LOCK_FROM) at which the top-3 / top-5
+    //                 index-order changed; convergence progress = earliest p after which fuelSpread stays
+    //                 < FA_CONV to the end; coincidence markers (last scheduled roll, choreo release).
+    //   (d) OVER-STEER: among CLOSING pairs, the behind racer has trajectoryMult < FA_BRAKE (servo braking
+    //                 it) — the servo pulls a closing FRONT racer back (holds intra-band rank) though a top-5
+    //                 racer is already in its front band. = servo opposing the emerging swap.
+    const FA_FINAL = 2 / 3, FA_LOCK_FROM = 0.5;         // windows (final third; lock tracked from mid-race)
+    const FA_CLOSE_LEN = 3.0, FA_CLOSE_SPD = 0.005;     // closing-pair gap (lengths) + min rel-speed (0.5%)
+    const FA_CONV = 0.02, FA_BRAKE = 0.99;              // fuel-converged threshold (2%) + servo-brake threshold
+    const fa = frontAutopsy ? {
+      ticks: 0, trajSpreadSum: 0, fuelSpreadSum: 0, trajAtMax: 0, trajAtMin: 0, frontSlots: 0,
+      closingTicks: 0, blockedTicks: 0, servoOppTicks: 0,
+      prevK3: null, prevK5: null, lockIn3: null, lockIn5: null,
+      convSeries: [],        // {progress, fuelSpread} over [FA_LOCK_FROM, 1] for the convergence point
+      markers: { lastRoll: DYNAMICS_OVERRIDES.reRollLastPositionPercent / 100, choreoRelease: CHOREO_RELEASE_PROGRESS },
     } : null;
     // ── PHYSICS-TAX per-race tracker (read-only; only allocated when --physics-tax) ──
     // Fed once per racer per frame at the advanceRacerT call site below. Never mutates race state.
@@ -2013,6 +2043,43 @@ export function runSingleRace({
       // scale); seconds kept as a secondary column. Records the field's lengths/seconds behind at the
       // checkpoints, the final-third leader→P2 gap (lengths + seconds), and the at-the-line snapshot.
       // Never mutates race state.
+      // ── FRONT-AUTOPSY per-tick (read-only) ──────────────────────────────────────────────────────
+      if (frontAutopsy && raceProgress >= FA_LOCK_FROM) {
+        const faOrder = racers.filter((r) => !r.finished).sort((a, b) => (b.t - a.t) || (a.index - b.index));
+        if (faOrder.length >= 2) {
+          // Lock-in (tracked from mid-race): last progress the top-3 / top-5 index-order changed.
+          const faKey = (n) => faOrder.slice(0, n).map((r) => r.index).join(',');
+          const k3 = faKey(3), k5 = faKey(5);
+          if (fa.prevK3 !== null && k3 !== fa.prevK3) fa.lockIn3 = raceProgress;
+          if (fa.prevK5 !== null && k5 !== fa.prevK5) fa.lockIn5 = raceProgress;
+          fa.prevK3 = k3; fa.prevK5 = k5;
+          // The four instruments over the FINAL THIRD only.
+          if (raceProgress >= FA_FINAL) {
+            const top5 = faOrder.slice(0, 5);
+            const spd = (r) => r.baseSpeed * (r.trajectoryMult ?? 1) * (r.areaBonusMult ?? 1);
+            const tms = top5.map((r) => r.trajectoryMult ?? 1);
+            const sps = top5.map(spd);
+            const mn = Math.min, mx = Math.max, mean = sps.reduce((s, x) => s + x, 0) / sps.length;
+            fa.ticks++; fa.frontSlots += top5.length;
+            fa.trajSpreadSum += mx(...tms) - mn(...tms);
+            const fuelSpread = mean > 0 ? (mx(...sps) - mn(...sps)) / mean : 0;
+            fa.fuelSpreadSum += fuelSpread;
+            fa.convSeries.push({ progress: raceProgress, fuelSpread });
+            for (const tm of tms) { if (tm >= 1.099) fa.trajAtMax++; if (tm <= 0.851) fa.trajAtMin++; }
+            for (let i = 1; i < top5.length; i++) {
+              const behind = top5[i], ahead = top5[i - 1];
+              const gapLen = arcT(ahead.t, behind.t, isOpen) * govLenScale;
+              if (gapLen < FA_CLOSE_LEN && spd(behind) > spd(ahead) * (1 + FA_CLOSE_SPD)) {
+                fa.closingTicks++;
+                if (behind.avoidanceActive) fa.blockedTicks++;                 // SPACE (traffic-denied lane)
+                if ((behind.trajectoryMult ?? 1) < FA_BRAKE) fa.servoOppTicks++; // OVER-STEER (servo brakes it)
+              }
+            }
+          } else {
+            fa.convSeries.push({ progress: raceProgress, fuelSpread: null }); // pre-final-third: lock only
+          }
+        }
+      }
       if (gapMetrics) {
         let leaderMaxT = -Infinity;
         for (const r of racers) if (r.t > leaderMaxT) leaderMaxT = r.t;
@@ -2460,6 +2527,28 @@ export function runSingleRace({
         // file alone. classifyFrontBattle() turns these into the REAL P1 ACTION boolean downstream.
         contestWindowStart:  CONTEST_WINDOW_START,
         frontBattle:         rp.frontBattle.result(),
+      };
+    }
+
+    // ── FRONT-AUTOPSY record — attached ONLY when --front-autopsy (else results unchanged) ──
+    if (frontAutopsy && fa) {
+      // Convergence point: earliest final-third progress after which fuelSpread stays < FA_CONV to the end.
+      const fin = fa.convSeries.filter((s) => s.fuelSpread != null);
+      let convProgress = null;
+      for (let i = 0; i < fin.length; i++) {
+        if (fin.slice(i).every((s) => s.fuelSpread < FA_CONV)) { convProgress = fin[i].progress; break; }
+      }
+      results.frontAutopsy = {
+        ticks: fa.ticks,
+        meanTrajSpread: fa.ticks ? +(fa.trajSpreadSum / fa.ticks).toFixed(4) : null,      // (a) width used?
+        meanFuelSpread: fa.ticks ? +(fa.fuelSpreadSum / fa.ticks).toFixed(4) : null,      // (a) passing fuel
+        fracTrajAtClamp: fa.frontSlots ? +((fa.trajAtMax + fa.trajAtMin) / fa.frontSlots).toFixed(4) : null,
+        closingTicks: fa.closingTicks,                                                    // (b/d) denominator
+        blockedFrac: fa.closingTicks ? +(fa.blockedTicks / fa.closingTicks).toFixed(4) : 0, // (b) SPACE
+        servoOppFrac: fa.closingTicks ? +(fa.servoOppTicks / fa.closingTicks).toFixed(4) : 0, // (d) OVER-STEER
+        lockIn3: fa.lockIn3, lockIn5: fa.lockIn5,                                         // (c) TIMING
+        convProgress,                                                                     // (c) fuel death point
+        markers: fa.markers,                                                              // (c) coincidence
       };
     }
 
@@ -3199,6 +3288,7 @@ if (isMain) {
             heroMap:            HERO_MAP,
             gapMetrics:         GAP_METRICS,
             runawayParade:      RUNAWAY_PARADE,
+            frontAutopsy:       FRONT_AUTOPSY,
             speedSource:        SPEED_SOURCE,
             physicsTax:         PHYSICS_TAX,
           });
@@ -3213,6 +3303,10 @@ if (isMain) {
           // RUNAWAY-PARADE (--runaway-parade): stash this race's raw record, tagged with combo meta.
           if (RUNAWAY_PARADE && result.runawayParade) {
             rpRaces.push({ trackId, racerType, durationSec, seed, raceIdx, isOpen, runawayParade: result.runawayParade });
+          }
+          // FRONT-AUTOPSY (--front-autopsy): stash this race's finale diagnosis, tagged with combo meta.
+          if (FRONT_AUTOPSY && result.frontAutopsy) {
+            faRaces.push({ trackId, racerType, durationSec, seed, raceIdx, isOpen, frontAutopsy: result.frontAutopsy });
           }
           // SPEED-SOURCE (--speed-source): stash this race's top-15 decomposition, tagged with combo meta.
           if (SPEED_SOURCE && result.speedSource) {
@@ -3990,6 +4084,23 @@ if (isMain) {
       races: rpRaces,
     }, null, 2));
     console.log(`\n=== Runaway/Parade (${DIAG_LABEL}) ===  → ${rpPath}  (${rpRaces.length} races)`);
+  }
+
+  // ── FRONT-AUTOPSY raw output (--front-autopsy) → OUT_DIR/front-autopsy.json ──
+  // RAW per-race finale-diagnosis records (binding-constraint classification is done downstream by the
+  // autopsy runner, so the precedence rule stays in ONE place). A no-flag run writes nothing (byte-identical).
+  if (FRONT_AUTOPSY) {
+    const faPath = join(OUT_DIR, 'front-autopsy.json');
+    writeFileSync(faPath, JSON.stringify({
+      meta: {
+        label: DIAG_LABEL, nRaces: N_RACES, seed: GLOBAL_SEED,
+        note: 'FRONT-AUTOPSY finale front-group diagnosis (read-only). DRIVE=meanFuelSpread/meanTrajSpread/'
+            + 'fracTrajAtClamp; SPACE=blockedFrac; OVER-STEER=servoOppFrac; TIMING=lockIn3/5,convProgress,markers. '
+            + 'Binding-constraint precedence applied downstream in scripts/exp-front-autopsy.mjs.',
+      },
+      races: faRaces,
+    }, null, 2));
+    console.log(`\n=== Front-Autopsy (${DIAG_LABEL}) ===  → ${faPath}  (${faRaces.length} races)`);
   }
 
   // ── SPEED-SOURCE raw output (--speed-source) → OUT_DIR/speed-source.json ──
