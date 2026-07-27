@@ -87,6 +87,7 @@ export function compileRaceScripts({
   clearance = null,
   frontConvergence = false,
   accordion = null,
+  budgetGrade = false,
 }) {
   const N = postChaos.length;
   const rng = mulberry32(((seed | 0) ^ 0x5c819f) >>> 0 || 1); // isolated stream (own salt)
@@ -109,6 +110,26 @@ export function compileRaceScripts({
       })
     : null;
 
+  // ── ACTION-BUILD-6 CLEARANCE-GRADED SCRIPT BUDGET (BUILD-5 proposal 1). One global monotone rule reading
+  // ONLY the lane count the reader already computes (min over the race distance): wide geometry keeps the
+  // full budget; very few lanes thin EVERY family toward zero — handing the narrowest tracks back to the
+  // plain B15 + proximity substrate that already wins there. No topology/track/name read. Applied only when
+  // budgetGrade is on; the scale is always reported for telemetry. LANE_FLOOR..LANE_FULL are lane counts
+  // (a physical quantity), not per-track constants. ──
+  let minLanes = null;
+  let budgetScale = 1;
+  if (reader) {
+    minLanes = Infinity;
+    for (let p = anchorProgress; p <= 1 + 1e-9; p += 0.05)
+      minLanes = Math.min(minLanes, reader.lanesAt(p));
+    const LANE_FLOOR = 5; // at/below this many lanes the front band fills the width → no script helps
+    const LANE_FULL = 8; // at/above this the budget is full
+    budgetScale = clamp((minLanes - LANE_FLOOR) / (LANE_FULL - LANE_FLOOR), 0, 1);
+  }
+  const applyBudget = budgetGrade && reader;
+  const gs = applyBudget ? budgetScale : 1; // general thinning
+  const gsFront = applyBudget ? Math.sqrt(budgetScale) : 1; // front convergence / pace thinned LAST (gentler)
+
   // ── SLIDER → script budget (monotone). Higher actionLevel = strictly more scripts of every family. The
   // budget is now TOPOLOGY-BLIND: we draw ambitiously for every family (compression included) and let the
   // clearance reader admit/refuse each lateral instance by local space. What has no room simply is not built. ──
@@ -125,6 +146,16 @@ export function compileRaceScripts({
     duelPair: q(1),
     photoFan: rng() < 0.5 * LEVEL ? 1 : 0, // sometimes; clearance decides if it fits
   };
+  // Thin every family by the graded budget (front convergence / pace thinned LAST, via gsFront). At the
+  // narrowest geometry gs → 0 → all quotas 0 → the plain B15 + proximity substrate. gs == 1 → unchanged.
+  if (applyBudget) {
+    quota.fightForLead = gs >= 0.5 ? quota.fightForLead : 0;
+    quota.comebacker = Math.round(quota.comebacker * gs);
+    quota.fallbacker = Math.round(quota.fallbacker * gs);
+    quota.duelPair = Math.round(quota.duelPair * gs);
+    quota.photoFan = gs >= 0.5 ? quota.photoFan : 0;
+    quota.paceConvergence = Math.round(quota.paceConvergence * gsFront);
+  }
 
   const used = new Set(); // per-racer exposure cap: each racer belongs to at most ONE script
   const scripts = new Map();
@@ -440,11 +471,19 @@ export function compileRaceScripts({
         : { admitted: true };
       if (dec.admitted) {
         accordAdmittedBeats.push(bi);
-        stats.accordAdmit++;
       } else {
         stats.accordRefuse++;
       }
     }
+    // The accordion is a compression element too, so the graded budget thins it with the scripts: keep only
+    // a budgetScale fraction of the clearance-admitted beats (gs → 0 removes them all, handing the narrowest
+    // geometry fully back to the plain proximity substrate; gs == 1 keeps every admitted beat).
+    if (applyBudget && accordAdmittedBeats.length) {
+      const keep = Math.round(accordAdmittedBeats.length * gs);
+      stats.accordRefuse += accordAdmittedBeats.length - keep;
+      accordAdmittedBeats.length = keep;
+    }
+    stats.accordAdmit = accordAdmittedBeats.length;
   }
 
   // ── Per-race variety signature: the sorted (role, resolve-bucket) multiset. Two races with the same
@@ -462,6 +501,8 @@ export function compileRaceScripts({
     stats.counts.photoFan;
   stats.actionLevel = actionLevel;
   stats.lanesFront = reader ? reader.lanesAt(0.85) : null; // representative finale lane count (telemetry)
+  stats.minLanes = minLanes; // min lanes over the race distance (drives the graded budget)
+  stats.budgetScale = applyBudget ? +budgetScale.toFixed(3) : 1; // 1 = full budget, 0 = handed to substrate
 
   return { scripts, accordBeats, accordAdmittedBeats, stats };
 }

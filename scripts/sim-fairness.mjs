@@ -332,6 +332,7 @@ const SCRIPT_COMPILER = argVal('scriptCompiler', 'false') === 'true';
 const ACTION_LEVEL = argVal('actionLevel', 'mid');
 const CLEARANCE_ADMIT = argVal('clearanceAdmit', 'false') === 'true'; // ACTION-BUILD-5 situational rule
 const FRONT_CONVERGENCE = argVal('frontConvergence', 'false') === 'true'; // ARM C front-band longitudinal
+const CLEARANCE_BUDGET = argVal('clearanceBudget', 'false') === 'true'; // ACTION-BUILD-6 graded script budget
 // B2-leak trace (read-only diagnostic): adds b2LastInside to rawData rows. No-flag → byte-identical.
 const B2_TRACE = argv.includes('--b2-trace');
 // reRoll / trajectory dynamics overrides — same shared-default + argVal pattern. Lets a sweep
@@ -3336,6 +3337,7 @@ if (isMain) {
               actionLevel:               ACTION_LEVEL,
               clearanceAdmit:            CLEARANCE_ADMIT,
               frontConvergence:          FRONT_CONVERGENCE,
+              clearanceBudget:           CLEARANCE_BUDGET,
               trackWidthPx:              geometricTrackWidth,
               carWidthPx:                comboBodyNarrowPx,
               chainSegSec:               CHAIN_SEG_SEC,

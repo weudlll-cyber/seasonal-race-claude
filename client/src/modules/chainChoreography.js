@@ -82,6 +82,7 @@ export function generateChainCurves({
       clearance: compiler.clearance ?? null,
       frontConvergence: !!compiler.frontConvergence,
       accordion: compiler.accordion ?? null,
+      budgetGrade: !!compiler.budgetGrade,
     });
     compiled = out.scripts;
     scriptStats = out.stats;

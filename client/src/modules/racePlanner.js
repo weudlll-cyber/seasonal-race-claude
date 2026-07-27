@@ -327,6 +327,9 @@ export function createRacePlan(racers, finishT, targetDurationMs, config = {}, s
             ? { widthAt: () => config.trackWidthPx ?? 300, carWidth: config.carWidthPx ?? 28.5 }
             : null,
           frontConvergence: !!config.frontConvergence,
+          // ACTION-BUILD-6: clearance-graded script budget — thin ALL families toward zero on very-few-lane
+          // geometry (hand the narrowest tracks back to the plain proximity substrate). One monotone rule.
+          budgetGrade: !!config.clearanceBudget,
           // The accordion pulses are compiled + clearance-admitted alongside the scripts (both on → the
           // runtime consumes _accordAdmittedByClearance for beat admission in place of its open-lane read).
           accordion: config.chainAccordion

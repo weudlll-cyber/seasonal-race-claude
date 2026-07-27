@@ -139,6 +139,43 @@ describe("compileRaceScripts — LOCAL-CLEARANCE admission (the owner's situatio
     expect(converted).toBeGreaterThan(0); // the longitudinal story owns the moment compression cannot have
   });
 
+  it('CLEARANCE-GRADED BUDGET (ACTION-BUILD-6): narrow → near-zero budget, wide → full, identical → identical', () => {
+    // Narrow (≈4 lanes < LANE_FLOOR) → budgetScale 0 → the substrate; wide (≈10 lanes ≥ LANE_FULL) → full.
+    let narrowScripts = 0,
+      wideScripts = 0;
+    for (let seed = 1; seed <= 20; seed++) {
+      const n = compileRaceScripts({
+        ...BASE,
+        seed,
+        clearance: NARROW,
+        frontConvergence: true,
+        budgetGrade: true,
+      });
+      const w = compileRaceScripts({
+        ...BASE,
+        seed,
+        clearance: WIDE,
+        frontConvergence: true,
+        budgetGrade: true,
+      });
+      narrowScripts += n.stats.scriptCount;
+      wideScripts += w.stats.scriptCount;
+      expect(n.stats.budgetScale).toBe(0); // handed back to the substrate
+      expect(w.stats.budgetScale).toBe(1); // full budget
+    }
+    expect(narrowScripts).toBe(0); // near-zero: no scripts survive on the narrowest geometry
+    expect(wideScripts).toBeGreaterThan(0); // full budget keeps the scripts where there is room
+    // Locally-identical profiles → identical budgets (no topology channel).
+    const a = compileRaceScripts({ ...BASE, clearance: NARROW, budgetGrade: true }).stats
+      .budgetScale;
+    const b = compileRaceScripts({
+      ...BASE,
+      clearance: { widthAt: () => 115, carWidth: 28.5 },
+      budgetGrade: true,
+    }).stats.budgetScale;
+    expect(a).toBe(b);
+  });
+
   it('ACCORDION beats are clearance-admitted: fewer admitted in narrow space than wide', () => {
     const acc = { density: 6, pulseLen: 0.06 };
     let wideBeats = 0,

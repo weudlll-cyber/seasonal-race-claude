@@ -126,6 +126,10 @@ const ARM_LIB = {
   // front-band longitudinal catch-up instead (the longitudinal finale story owns the moment compression can't).
   B15clrC: withF(boundary(ROW(NAKED), 0.15), '--chainProximity=true', '--scriptCompiler=true', '--actionLevel=mid',
                  '--clearanceAdmit=true', '--frontConvergence=true', '--chainAccordion=true', '--accordDensity=6', '--accordAdmit=true', '--accordSkip=true'),
+  // ── ACTION-BUILD-6 ARM D (B15clrC + clearance-graded script BUDGET): thin ALL families toward zero on
+  // very-few-lane geometry (hands the narrowest tracks back to the B15+proximity substrate). One monotone rule.
+  B15clrD: withF(boundary(ROW(NAKED), 0.15), '--chainProximity=true', '--scriptCompiler=true', '--actionLevel=mid',
+                 '--clearanceAdmit=true', '--frontConvergence=true', '--clearanceBudget=true', '--chainAccordion=true', '--accordDensity=6', '--accordAdmit=true', '--accordSkip=true'),
   B15compLo:  withF(boundary(ROW(NAKED), 0.15), '--chainProximity=true', '--scriptCompiler=true', '--actionLevel=low',
                     '--chainAccordion=true', '--accordDensity=6', '--accordAdmit=true', '--accordSkip=true'),
   B15compHi:  withF(boundary(ROW(NAKED), 0.15), '--chainProximity=true', '--scriptCompiler=true', '--actionLevel=high',
@@ -179,6 +183,8 @@ async function runArmTrack(armKey, flags, track) {
     accAdmit: mean(ss.map((s) => s.accordAdmit ?? 0)),
     accRefuse: mean(ss.map((s) => s.accordRefuse ?? 0)),
     frontConv: mean(ss.map((s) => s.frontConverted ?? 0)),
+    budgetScale: mean(ss.map((s) => s.budgetScale ?? 1)),
+    minLanes: mean(ss.map((s) => s.minLanes ?? 0)),
   };
   // Lead-fight proxy: leader changes in the last 30% (distinct-leaders signal). fa records whole-race
   // leader-change progresses in `leadChangesProg` (added ACTION-BUILD-4); fall back to 0 when absent.
@@ -247,7 +253,7 @@ for (const armKey of arms) {
     if (!c || !c.nRaces) continue;
     const fm = c.famMean;
     console.log(`    [comp ${t.id.padEnd(13)}] scripts ${c.scriptCount.toFixed(1)} (fl${fm.fightForLead.toFixed(1)} cb${fm.comebacker.toFixed(1)} fb${fm.fallbacker.toFixed(1)} pc${fm.paceConvergence.toFixed(1)} dp${fm.duelPair.toFixed(1)} pf${fm.photoFan.toFixed(1)}) | drop ${c.dropped.toFixed(1)} shrink ${c.shrunk.toFixed(1)} | H ${c.entropy.toFixed(2)} sigColl ${(c.sigCollision * 100).toFixed(0)}% (${c.distinctSigs}/${c.nRaces})`);
-    console.log(`    [clr  ${t.id.padEnd(13)}] lanes ${c.lanes.toFixed(1)} | latAdmit ${c.latAdmit.toFixed(1)} latRefuse ${c.latRefuse.toFixed(1)} | accAdmit ${c.accAdmit.toFixed(1)} accRefuse ${c.accRefuse.toFixed(1)} | frontConv ${c.frontConv.toFixed(1)} | leadLast30 ${r.leadLast30.toFixed(2)}`);
+    console.log(`    [clr  ${t.id.padEnd(13)}] lanes ${c.lanes.toFixed(1)} (min ${c.minLanes.toFixed(1)}) budget ${c.budgetScale.toFixed(2)} | latAdmit ${c.latAdmit.toFixed(1)} latRefuse ${c.latRefuse.toFixed(1)} | accAdmit ${c.accAdmit.toFixed(1)} | frontConv ${c.frontConv.toFixed(1)} | leadLast30 ${r.leadLast30.toFixed(2)}`);
   }
 }
 console.log(`\nruntime ${((Date.now() - t0) / 60000).toFixed(1)} min`);
