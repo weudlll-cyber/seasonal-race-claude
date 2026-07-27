@@ -325,6 +325,12 @@ const ACCORD_SKIP = argVal('accordSkip', 'false') === 'true'; // B: lane-conditi
 const CHAIN_PROXIMITY = argVal('chainProximity', 'false') === 'true';
 const PROXIMITY_STRENGTH = Number(argVal('proximityStrength', '0.5'));
 const PROXIMITY_RESOLVE = Number(argVal('proximityResolve', '0.85'));
+// ACTION-BUILD-4 finale script compiler (SIM-ONLY; default OFF). actionLevel = the slider (low/mid/high).
+// geomScarcity = local-clearance read for the geometry preference: default is topology-derived (open
+// tracks re-expand → low scarcity; closed tracks churn on bunched laps → high scarcity), overridable.
+const SCRIPT_COMPILER = argVal('scriptCompiler', 'false') === 'true';
+const ACTION_LEVEL = argVal('actionLevel', 'mid');
+const GEOM_SCARCITY_ARG = argVal('geomScarcity', ''); // '' → topology-derived per track below
 // B2-leak trace (read-only diagnostic): adds b2LastInside to rawData rows. No-flag → byte-identical.
 const B2_TRACE = argv.includes('--b2-trace');
 // reRoll / trajectory dynamics overrides — same shared-default + argVal pattern. Lets a sweep
@@ -2599,6 +2605,7 @@ export function runSingleRace({
         convProgress, markers: fa.markers,                                                // (c) coincidence
         // LAW — Longest Actionless Window (progress span with no leader change). Headline product metric.
         leadChanges: fa.leadChanges.length,
+        leadChangesProg: fa.leadChanges.slice(), // ACTION-BUILD-4: raw progresses (distinct-leaders-last-30% metric)
         LAW_full: (() => { const e = [0, ...fa.leadChanges, 1]; let m = 0; for (let i = 1; i < e.length; i++) m = Math.max(m, e[i] - e[i - 1]); return +m.toFixed(4); })(),
         LAW_last50: (() => { const e = [0.5, ...fa.leadChanges.filter((x) => x >= 0.5), 1]; let m = 0; for (let i = 1; i < e.length; i++) m = Math.max(m, e[i] - e[i - 1]); return +m.toFixed(4); })(),
       };
@@ -3314,6 +3321,12 @@ if (isMain) {
               chainProximity:            CHAIN_PROXIMITY,
               proximityStrength:         PROXIMITY_STRENGTH,
               proximityResolve:          PROXIMITY_RESOLVE,
+              // ACTION-BUILD-4 finale script compiler. Geometry preference reads local clearance: default
+              // is topology-derived (open re-expands → 0.3; closed churns on bunched laps → 0.7), or the
+              // explicit --geomScarcity override. One global rule reading topology, never a track name.
+              scriptCompilerEnabled:     SCRIPT_COMPILER,
+              actionLevel:               ACTION_LEVEL,
+              geomScarcity:              GEOM_SCARCITY_ARG !== '' ? Number(GEOM_SCARCITY_ARG) : (isOpen ? 0.3 : 0.7),
               chainSegSec:               CHAIN_SEG_SEC,
               chainMExtra:               CHAIN_MEXTRA,
             }, seed);
@@ -3380,7 +3393,9 @@ if (isMain) {
               frontAutopsy: (() => {
                 // ACTION-BUILD-2 accordion diagnostics (via the controller accessor): skip rate = broken lane promises.
                 const a = racePlanController?.getAccordStats ? racePlanController.getAccordStats() : { skip: 0, fire: 0 };
-                return { ...result.frontAutopsy, accordSkipRate: a.fire ? +(a.skip / a.fire).toFixed(4) : 0, accordFireTicks: a.fire };
+                // ACTION-BUILD-4 script-compiler telemetry (per-race draw + admission counts + variety signature).
+                const sc = racePlanController?.getScriptStats ? racePlanController.getScriptStats() : null;
+                return { ...result.frontAutopsy, accordSkipRate: a.fire ? +(a.skip / a.fire).toFixed(4) : 0, accordFireTicks: a.fire, scriptStats: sc };
               })() });
           }
           // SPEED-SOURCE (--speed-source): stash this race's top-15 decomposition, tagged with combo meta.

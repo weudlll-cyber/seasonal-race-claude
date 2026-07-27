@@ -19,6 +19,7 @@
 
 import { makeHeroCurve, anchorHeroCurve } from './heroChoreography.js';
 import { mulberry32 } from './racePlanner.js';
+import { compileRaceScripts } from './scriptCompiler.js';
 
 const clamp = (v, lo, hi) => Math.max(lo, Math.min(hi, v));
 const lerp = (a, b, t) => a + (b - a) * t;
@@ -46,7 +47,11 @@ export function chainCheckpointCount(durationSec, segSec) {
  * @param {number}   args.anchorProgress  the chaos→strict boundary fraction (pulkStartFrac) — curves start here
  * @param {number}   args.K               re-plan checkpoint count (from chainCheckpointCount)
  * @param {number}   args.mExtra          outcome-neutral oscillation amplitude (0 = pure monotone ease)
- * @returns {{ curves: Array<{index:number, curve:object, finalRank:number}>, checkpoints: number[] }}
+ * @param {object}   [args.compiler]      finale script compiler config {actionLevel, scarcity} or null.
+ *                                        When present, a seeded row-blind script set is drawn from the
+ *                                        finale pool and authored on top of the B15+proximity substrate;
+ *                                        scripted racers use their compiled curves, the rest ease as usual.
+ * @returns {{ curves: Array<{index:number, curve:object, finalRank:number}>, checkpoints: number[], scriptStats: (object|null) }}
  */
 export function generateChainCurves({
   seed,
@@ -57,8 +62,26 @@ export function generateChainCurves({
   mExtra,
   drama = null,
   proximity = null,
+  compiler = null,
 }) {
   const N = postChaos.length;
+  // ── THE FINALE SCRIPT COMPILER (ACTION-BUILD-4): draw + compile the per-race script set (admission-side;
+  // endpoint-invariant by construction). Scripted racers use their authored curves below; every other
+  // racer keeps the B15 ease + proximity floor. Null → not imported path runs (byte-identical substrate).
+  let compiled = null;
+  let scriptStats = null;
+  if (compiler) {
+    const out = compileRaceScripts({
+      seed,
+      postChaos,
+      finalRanks,
+      anchorProgress,
+      actionLevel: compiler.actionLevel ?? 'mid',
+      scarcity: compiler.scarcity ?? 0.5,
+    });
+    compiled = out.scripts;
+    scriptStats = out.stats;
+  }
   // Proximity floor: pull a rank toward its BAND CENTER (bunch within-band = contestable) through the
   // approach, releasing to the exact drawn rank at the finish. Within-band only ⇒ reachable; band
   // separation (fairness) preserved. One global rule; band edges are the shipped BAND_EDGES.
@@ -97,7 +120,15 @@ export function generateChainCurves({
     // engine (min-jerk) + the eased servo; envelope-safe (the servo clamps trajectoryMult regardless).
     let waypoints;
     let role = 'ease';
-    if (drama && drama.frac > 0) {
+    // COMPILER: if this racer carries a compiled finale script, its authored waypoints win (they already
+    // end EXACTLY at finalRank — endpoint invariant asserted in scriptCompiler + the tests). The default
+    // ease/drama/proximity path below is skipped for scripted racers.
+    const script = compiled ? compiled.get(pc.index) : null;
+    if (script) {
+      waypoints = script.waypoints;
+      role = script.role;
+    }
+    if (!waypoints && drama && drama.frac > 0) {
       // stagger the resolve time per racer so late climbs/drops don't all land together (closed-track safe).
       const resolve = clamp(
         drama.resolve - stagJit * (drama.stagger ?? 0),
@@ -160,5 +191,5 @@ export function generateChainCurves({
       role,
     });
   }
-  return { curves, checkpoints };
+  return { curves, checkpoints, scriptStats };
 }

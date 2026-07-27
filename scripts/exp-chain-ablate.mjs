@@ -110,6 +110,15 @@ const ARM_LIB = {
   // ── ACTION-BUILD-3 — the proximity floor (bunch each band toward its centre; fan at the finish).
   B15prox:    withF(boundary(ROW(NAKED), 0.15), '--chainProximity=true'),
   B15proxAcc: withF(boundary(ROW(NAKED), 0.15), '--chainProximity=true', '--chainAccordion=true', '--accordDensity=6', '--accordAdmit=true', '--accordSkip=true'),
+  // ── ACTION-BUILD-4 — the finale SCRIPT COMPILER on the B15+proximity substrate. The full candidate:
+  // proximity floor + a seeded finale script set (fight-for-lead / comebacker / fallbacker / pace-order
+  // convergence / duel / photo-fan) + the open-lane accordion where lanes afford it. actionLevel=mid.
+  B15comp:    withF(boundary(ROW(NAKED), 0.15), '--chainProximity=true', '--scriptCompiler=true', '--actionLevel=mid',
+                    '--chainAccordion=true', '--accordDensity=6', '--accordAdmit=true', '--accordSkip=true'),
+  B15compLo:  withF(boundary(ROW(NAKED), 0.15), '--chainProximity=true', '--scriptCompiler=true', '--actionLevel=low',
+                    '--chainAccordion=true', '--accordDensity=6', '--accordAdmit=true', '--accordSkip=true'),
+  B15compHi:  withF(boundary(ROW(NAKED), 0.15), '--chainProximity=true', '--scriptCompiler=true', '--actionLevel=high',
+                    '--chainAccordion=true', '--accordDensity=6', '--accordAdmit=true', '--accordSkip=true'),
 };
 
 const BAND_EDGES = [5, 15, 25, 40];
@@ -132,6 +141,29 @@ async function runArmTrack(armKey, flags, track) {
   const lawFull = mean(faR.map((r) => r.LAW_full));
   const lawL50 = mean(faR.map((r) => r.LAW_last50));
   const skipRate = mean(faR.map((r) => r.accordSkipRate ?? 0));
+  // ── ACTION-BUILD-4 script-compiler aggregation (null-safe: 0 when the compiler is OFF) ──
+  const ss = faR.map((r) => r.scriptStats).filter(Boolean);
+  const FAMILIES = ['fightForLead', 'comebacker', 'fallbacker', 'paceConvergence', 'duelPair', 'photoFan'];
+  const famMean = {};
+  for (const f of FAMILIES) famMean[f] = mean(ss.map((s) => s.counts?.[f] ?? 0));
+  // Variety: signature-collision rate (races sharing a timeline signature) + role-mix entropy H_script.
+  const sigCounts = new Map();
+  for (const s of ss) sigCounts.set(s.signature, (sigCounts.get(s.signature) ?? 0) + 1);
+  const collided = [...sigCounts.values()].filter((c) => c > 1).reduce((a, c) => a + c, 0);
+  const sigCollision = ss.length ? collided / ss.length : 0;
+  const famTotals = FAMILIES.map((f) => ss.reduce((a, s) => a + (s.counts?.[f] ?? 0), 0));
+  const grand = famTotals.reduce((a, c) => a + c, 0);
+  const entropy = grand ? -famTotals.filter((c) => c > 0).map((c) => c / grand).reduce((a, p) => a + p * Math.log2(p), 0) : 0;
+  const compiler = {
+    scriptCount: mean(ss.map((s) => s.scriptCount ?? 0)),
+    dropped: mean(ss.map((s) => s.dropped ?? 0)),
+    shrunk: mean(ss.map((s) => s.shrunk ?? 0)),
+    exposure: mean(ss.map((s) => s.exposure ?? 0)),
+    famMean, sigCollision, entropy, distinctSigs: sigCounts.size, nRaces: ss.length,
+  };
+  // Lead-fight proxy: leader changes in the last 30% (distinct-leaders signal). fa records whole-race
+  // leader-change progresses in `leadChangesProg` (added ACTION-BUILD-4); fall back to 0 when absent.
+  const leadLast30 = mean(faR.map((r) => (r.leadChangesProg ?? []).filter((p) => p >= 0.7).length));
   const rowReached = [], rowTotal = [];
   for (const r of fd.rawData) { const row = r.startRowIndex; rowReached[row] = (rowReached[row] ?? 0) + (zoneIdx(r.finalRank) === zoneIdx(r.sollRank) ? 1 : 0); rowTotal[row] = (rowTotal[row] ?? 0) + 1; }
   const rows = rp.races.map((rec) => { const raw = rec.runawayParade; const c = classifyRace(raw, RUNAWAY_PARADE_DEFAULTS); return { lc: raw.leadChangeCount ?? 0, dead: (raw.leadChangeCount ?? 0) === 0 ? 1 : 0, runaway: c.runawayWinner ? 1 : 0 }; });
@@ -141,7 +173,7 @@ async function runArmTrack(armKey, flags, track) {
     startRowUnfair: hm.fairness?.startRowUnfair ?? null,
     rowReachMin: Math.min(...rowReached.map((v, i) => (rowTotal[i] ? v / rowTotal[i] : 1))),
     deadRate: mean(rows.map((r) => r.dead)), leadChanges: mean(rows.map((r) => r.lc)), runawayRate: mean(rows.map((r) => r.runaway)),
-    lawFull, lawL50, skipRate,
+    lawFull, lawL50, skipRate, compiler, leadLast30,
   };
 }
 
@@ -189,6 +221,14 @@ for (const armKey of arms) {
     console.log(`  ${t.id.padEnd(15)} | ${pct(r.bandReach).padStart(4)} (${armKey === 'ship' ? '  —' : sgn(dB, 'pp')}) | ${pct(r.deadRate).padStart(4)} (${armKey === 'ship' ? '  —' : sgn(dD, 'pp')}) | ${r.leadChanges.toFixed(2).padStart(5)} (${armKey === 'ship' ? '  —' : sgn(dL)}) | ${r.lawFull.toFixed(2)}   ${r.lawL50.toFixed(2)}  (${armKey === 'ship' ? ' —/—' : sgn(dLAW) + '/' + sgn(dLAW50)}) | skip ${(r.skipRate * 100).toFixed(0)}% | ${r.startRowUnfair ? 'UNF' : 'ok'}`);
   }
   console.log(`  SUMMARY band-reach mean ${pct(bSum / TRACKS.length)} | tracks ≥70%: ${passReach}/${TRACKS.length}`);
+  // ACTION-BUILD-4 compiler line (only when scripts were drawn — nRaces>0 on the candidate arms).
+  for (const t of TRACKS) {
+    const r = get(armKey, t.id);
+    const c = r.compiler;
+    if (!c || !c.nRaces) continue;
+    const fm = c.famMean;
+    console.log(`    [comp ${t.id.padEnd(13)}] scripts ${c.scriptCount.toFixed(1)} (fl${fm.fightForLead.toFixed(1)} cb${fm.comebacker.toFixed(1)} fb${fm.fallbacker.toFixed(1)} pc${fm.paceConvergence.toFixed(1)} dp${fm.duelPair.toFixed(1)} pf${fm.photoFan.toFixed(1)}) | drop ${c.dropped.toFixed(1)} shrink ${c.shrunk.toFixed(1)} | H ${c.entropy.toFixed(2)} sigColl ${(c.sigCollision * 100).toFixed(0)}% (${c.distinctSigs}/${c.nRaces}) | leadLast30 ${r.leadLast30.toFixed(2)}`);
+  }
 }
 console.log(`\nruntime ${((Date.now() - t0) / 60000).toFixed(1)} min`);
 writeFileSync(join(OUT, `battery_${arms.filter((a) => a !== 'ship').join('-').slice(0, 60)}.json`), JSON.stringify({ races: RACES, seed: SEED, arms, results: all }, null, 2) + '\n');

@@ -311,6 +311,15 @@ export function createRacePlan(racers, finishT, targetDurationMs, config = {}, s
     // DRAMA-1 intra-band front-rank freeing (SIM-ONLY; default 1.0 = no change). See servo above.
     _chainFrontStrictness: config.chainFrontStrictness ?? 1.0,
     _chainFrontFreeFrom: config.chainFrontFreeFrom ?? 0.7,
+    // ── ACTION-BUILD-4: THE FINALE SCRIPT COMPILER (SIM-ONLY; admission-side; default OFF). Per race a
+    // seeded, row-blind script set is drawn from the finale pool and authored as curves through the full
+    // admission stack (reachability · exposure cap · geometry preference · occupancy spread). Frozen
+    // runtime budget: scripts are curves — the servo/envelope/traffic core are unchanged. `scarcity` is
+    // the local-clearance read (0 open .. 1 scarce) driving the geometry preference; passed in per race.
+    _scriptCompiler: config.scriptCompilerEnabled
+      ? { actionLevel: config.actionLevel ?? 'mid', scarcity: config.geomScarcity ?? 0.5 }
+      : null,
+    _scriptStats: null, // last compiled per-race stats (telemetry; read via getScriptStats)
     // ── ACTION-BUILD-1: THE ACCORDION (SIM-ONLY; default OFF) ────────────────────────────────────────────
     // Malus-side momentary-leader compression. At seeded beat windows (any phase) the CURRENT race leader
     // (rankIdx 0) is eased toward the malus floor — smooth via _setTarget — so the racers behind pass at
@@ -679,7 +688,9 @@ export function createTrajectoryController(racePlan) {
             mExtra: plan._chainMExtra,
             drama: plan._chainDrama,
             proximity: plan._chainProximity,
+            compiler: plan._scriptCompiler,
           });
+          plan._scriptStats = gen.scriptStats ?? null;
           plan._heroCurves = new Map(gen.curves.map((c) => [c.index, c.curve]));
           plan._chainCheckpoints = gen.checkpoints;
           plan._chainNextCk = 0;
@@ -688,7 +699,8 @@ export function createTrajectoryController(racePlan) {
           // Chain mode casts no B2 attackers and no dramatic roles; keep the shipped fields defined + empty
           // so the servo's attacker/role reads are inert (byte-identical structure, empty maps).
           plan._attackerParams = new Map();
-          plan._heroRoles = new Map(gen.curves.map((c) => [c.index, 'chain']));
+          // Carry the authored role per racer (compiler scripts: comebacker/fallbacker/…; else 'chain').
+          plan._heroRoles = new Map(gen.curves.map((c) => [c.index, c.role || 'chain']));
           plan._cameraPlan = null;
           for (const r of racers) {
             r.isHeroChoreographed = plan._heroCurves.has(r.index);
@@ -1301,6 +1313,8 @@ export function createTrajectoryController(racePlan) {
     // ACTION-BUILD-2: read-only accordion skip diagnostics (no state change). Returns the invariant's
     // quality meter — skipRate = brake-ticks the lane-conditional skip vetoed / admitted beat-ticks.
     getAccordStats: () => ({ skip: plan._accordSkipTicks ?? 0, fire: plan._accordFireTicks ?? 0 }),
+    // ACTION-BUILD-4: read-only per-race script-compiler telemetry (null until the boundary cast fires).
+    getScriptStats: () => plan._scriptStats,
     // SCREEN escape-latency: how many DOWN-tilts have hit the LIVE LEADER so far. Read per frame by
     // the sim so it can freeze escapeDepth (the max P1->P2 gap reached BEFORE the first correction)
     // at the exact moment the first one fires. Read-only accessor, no state change.
