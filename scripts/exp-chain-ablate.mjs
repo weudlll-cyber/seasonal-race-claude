@@ -99,6 +99,10 @@ const ARM_LIB = {
   B15fs25:    withF(boundary(ROW(NAKED), 0.15), '--chainFrontStrictness=0.25'),
   B15fs0:     withF(boundary(ROW(NAKED), 0.15), '--chainFrontStrictness=0.0'),
   B15fs25e50: withF(boundary(ROW(NAKED), 0.15), '--chainFrontStrictness=0.25', '--chainFrontFreeFrom=0.5'),
+  // ── ACTION-BUILD-1 Stage 1 — THE ACCORDION (malus-side momentary-leader brake), density low/mid/high.
+  B15acc3:  withF(boundary(ROW(NAKED), 0.15), '--chainAccordion=true', '--accordDensity=3'),
+  B15acc6:  withF(boundary(ROW(NAKED), 0.15), '--chainAccordion=true', '--accordDensity=6'),
+  B15acc9:  withF(boundary(ROW(NAKED), 0.15), '--chainAccordion=true', '--accordDensity=9'),
 };
 
 const BAND_EDGES = [5, 15, 25, 40];
@@ -112,11 +116,14 @@ async function runArmTrack(armKey, flags, track) {
   const args = ['scripts/sim-fairness.mjs',
     `--track=${track.id}`, `--racer=${track.racer}`,
     `--seed=${SEED}`, `--races=${RACES}`, `--racers=${nRacers}`, `--normalSpeed=${NORMAL_SPEED}`,
-    '--track-defaults', ...flags, '--runaway-parade', '--hero-map', `--out=${toSimOut(outAbs)}`];
+    '--track-defaults', ...flags, '--runaway-parade', '--hero-map', '--front-autopsy', `--out=${toSimOut(outAbs)}`];
   await pExecFile(process.execPath, args, { cwd: ROOT, maxBuffer: 512 * 1024 * 1024 });
   const hm = JSON.parse(readFileSync(join(outAbs, 'hero-map.json'), 'utf8'));
   const rp = JSON.parse(readFileSync(join(outAbs, 'runaway-parade.json'), 'utf8'));
   const fd = JSON.parse(readFileSync(join(outAbs, 'fairness-data.json'), 'utf8'));
+  const faR = JSON.parse(readFileSync(join(outAbs, 'front-autopsy.json'), 'utf8')).races.map((r) => r.frontAutopsy);
+  const lawFull = mean(faR.map((r) => r.LAW_full));
+  const lawL50 = mean(faR.map((r) => r.LAW_last50));
   const rowReached = [], rowTotal = [];
   for (const r of fd.rawData) { const row = r.startRowIndex; rowReached[row] = (rowReached[row] ?? 0) + (zoneIdx(r.finalRank) === zoneIdx(r.sollRank) ? 1 : 0); rowTotal[row] = (rowTotal[row] ?? 0) + 1; }
   const rows = rp.races.map((rec) => { const raw = rec.runawayParade; const c = classifyRace(raw, RUNAWAY_PARADE_DEFAULTS); return { lc: raw.leadChangeCount ?? 0, dead: (raw.leadChangeCount ?? 0) === 0 ? 1 : 0, runaway: c.runawayWinner ? 1 : 0 }; });
@@ -126,6 +133,7 @@ async function runArmTrack(armKey, flags, track) {
     startRowUnfair: hm.fairness?.startRowUnfair ?? null,
     rowReachMin: Math.min(...rowReached.map((v, i) => (rowTotal[i] ? v / rowTotal[i] : 1))),
     deadRate: mean(rows.map((r) => r.dead)), leadChanges: mean(rows.map((r) => r.lc)), runawayRate: mean(rows.map((r) => r.runaway)),
+    lawFull, lawL50,
   };
 }
 
@@ -162,14 +170,15 @@ const get = (arm, track) => all.find((r) => r.arm === arm && r.track === track);
 // Table: for each arm, per-track band / dead / lc, and vs-ship deltas + a summary line.
 for (const armKey of arms) {
   console.log(`\n── ${armKey} ──`);
-  console.log(`  track           | band (Δship) | dead (Δship) | lead-chg (Δship) | rowMin | holm`);
+  console.log(`  track           | band (Δship) | dead (Δship) | lead-chg (Δship) | LAWfull LAWl50 (Δship) | holm`);
   let bSum = 0, passReach = 0;
   for (const t of TRACKS) {
     const r = get(armKey, t.id), s = get('ship', t.id);
     const dB = s ? (r.bandReach - s.bandReach) * 100 : 0, dD = s ? (r.deadRate - s.deadRate) * 100 : 0, dL = s ? r.leadChanges - s.leadChanges : 0;
+    const dLAW = s ? r.lawFull - s.lawFull : 0, dLAW50 = s ? r.lawL50 - s.lawL50 : 0;
     bSum += r.bandReach; if (r.bandReach >= 0.70) passReach++;
     const sgn = (x, u = '') => (x >= 0 ? '+' : '') + x.toFixed(u === 'pp' ? 0 : 2) + u;
-    console.log(`  ${t.id.padEnd(15)} | ${pct(r.bandReach).padStart(4)} (${armKey === 'ship' ? '  —' : sgn(dB, 'pp')}) | ${pct(r.deadRate).padStart(4)} (${armKey === 'ship' ? '  —' : sgn(dD, 'pp')}) | ${r.leadChanges.toFixed(2).padStart(5)} (${armKey === 'ship' ? '  —' : sgn(dL)}) | ${pct(r.rowReachMin).padStart(4)} | ${r.startRowUnfair ? 'UNF' : 'ok'}`);
+    console.log(`  ${t.id.padEnd(15)} | ${pct(r.bandReach).padStart(4)} (${armKey === 'ship' ? '  —' : sgn(dB, 'pp')}) | ${pct(r.deadRate).padStart(4)} (${armKey === 'ship' ? '  —' : sgn(dD, 'pp')}) | ${r.leadChanges.toFixed(2).padStart(5)} (${armKey === 'ship' ? '  —' : sgn(dL)}) | ${r.lawFull.toFixed(2)}   ${r.lawL50.toFixed(2)}  (${armKey === 'ship' ? ' —/—' : sgn(dLAW) + '/' + sgn(dLAW50)}) | ${r.startRowUnfair ? 'UNF' : 'ok'}`);
   }
   console.log(`  SUMMARY band-reach mean ${pct(bSum / TRACKS.length)} | tracks ≥70%: ${passReach}/${TRACKS.length}`);
 }

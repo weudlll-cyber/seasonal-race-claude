@@ -306,6 +306,25 @@ export function createRacePlan(racers, finishT, targetDurationMs, config = {}, s
     // DRAMA-1 intra-band front-rank freeing (SIM-ONLY; default 1.0 = no change). See servo above.
     _chainFrontStrictness: config.chainFrontStrictness ?? 1.0,
     _chainFrontFreeFrom: config.chainFrontFreeFrom ?? 0.7,
+    // ── ACTION-BUILD-1: THE ACCORDION (SIM-ONLY; default OFF) ────────────────────────────────────────────
+    // Malus-side momentary-leader compression. At seeded beat windows (any phase) the CURRENT race leader
+    // (rankIdx 0) is eased toward the malus floor — smooth via _setTarget — so the racers behind pass at
+    // normal speed; the servo restores it after the beat (outcome-neutral). Non-Leash guard pack: bounded
+    // pulse length, per-racer beat cap, race-level duty-cycle ceiling. Brief+seeded+self-resolving, NOT the
+    // continuous anti-escape Leash (DEAD-ENDS §B). Beats + counters are built lazily in update().
+    _chainAccordion: config.chainAccordion
+      ? {
+          density: config.accordDensity ?? 5, // beats per race
+          pulseLen: config.accordPulseLen ?? 0.06, // beat window length (progress)
+          floor: config.accordFloor ?? 0.85, // malus target (the two-sided envelope floor; never below)
+          perRacerCap: config.accordPerRacerCap ?? 2, // max distinct beats braking any one racer
+          dutyCap: config.accordDutyCap ?? 0.25, // max fraction of leader-ticks spent braking (Leash guard)
+        }
+      : null,
+    _accordBeats: null, // seeded beat-start progresses (built lazily)
+    _accordRacerBeats: null, // index → Set(beatIdx) it was braked in (per-racer cap)
+    _accordBrakeTicks: 0,
+    _accordLeaderTicks: 0,
     _choreoIntensity: config.choreoIntensity ?? 0.6,
     _choreoPackBandStrictness: config.choreoPackBandStrictness ?? 0.5,
     // Stage 1 spoiler switch (default OFF): suppress the B1-target pool's CHAOS areaBonus so the future
@@ -865,8 +884,45 @@ export function createTrajectoryController(racePlan) {
       // Blended error: strictness=1.0 ≡ rankError (exact); <1.0 steers toward the band edge (loose pack).
       const error = strictness * rankError + (1 - strictness) * bandError;
       const noise = (rng() - 0.5) * 2 * plan._stochasticNoise;
-      const rawTarget = clamp(1.0 + gain * (error / nActive) + noise, minMult, maxMult);
-      _setTarget(r, rawTarget, elapsedMs);
+      let finalTarget = clamp(1.0 + gain * (error / nActive) + noise, minMult, maxMult);
+      // THE ACCORDION: brake the momentary leader (rankIdx 0) during a seeded beat, within the caps. The
+      // target is the malus floor (never below → two-sided envelope respected); _setTarget eases it (smooth).
+      if (plan._chainAccordion && rankIdx === 0 && phaseProgress != null) {
+        const acc = plan._chainAccordion;
+        if (!plan._accordBeats) {
+          const arng = mulberry32(((plan.seed | 0) ^ 0x0acc0) >>> 0 || 1);
+          const beats = [];
+          for (let bi = 0; bi < acc.density; bi++)
+            beats.push(+(0.12 + (0.9 - 0.12) * ((bi + arng()) / acc.density)).toFixed(4));
+          plan._accordBeats = beats;
+          plan._accordRacerBeats = new Map();
+        }
+        plan._accordLeaderTicks++;
+        let beatIdx = -1;
+        for (let bi = 0; bi < plan._accordBeats.length; bi++) {
+          const b = plan._accordBeats[bi];
+          if (phaseProgress >= b && phaseProgress < b + acc.pulseLen) {
+            beatIdx = bi;
+            break;
+          }
+        }
+        if (beatIdx >= 0) {
+          const duty = plan._accordLeaderTicks
+            ? plan._accordBrakeTicks / plan._accordLeaderTicks
+            : 0;
+          let set = plan._accordRacerBeats.get(r.index);
+          if (!set) {
+            set = new Set();
+            plan._accordRacerBeats.set(r.index, set);
+          }
+          if (duty < acc.dutyCap && (set.has(beatIdx) || set.size < acc.perRacerCap)) {
+            finalTarget = acc.floor; // ease toward the malus floor; servo restores after the beat
+            plan._accordBrakeTicks++;
+            set.add(beatIdx);
+          }
+        }
+      }
+      _setTarget(r, finalTarget, elapsedMs);
 
       // Telemetry stays on rankError — measures exact-rank deviation, not blended error.
       _racerStepCount++;

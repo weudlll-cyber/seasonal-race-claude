@@ -312,6 +312,13 @@ const CHAIN_DRAMA_STAGGER = Number(argVal('chainDramaStagger', '0.15'));
 const CHAIN_DRAMA_HOLDDEPTH = Number(argVal('chainDramaHoldDepth', '10'));
 const CHAIN_FRONT_STRICTNESS = Number(argVal('chainFrontStrictness', '1.0')); // <1 → free intra-band front rank late
 const CHAIN_FRONT_FREEFROM = Number(argVal('chainFrontFreeFrom', '0.7'));
+// ACTION-BUILD-1 accordion (SIM-ONLY; default OFF).
+const CHAIN_ACCORDION = argVal('chainAccordion', 'false') === 'true';
+const ACCORD_DENSITY = Number(argVal('accordDensity', '5'));
+const ACCORD_PULSELEN = Number(argVal('accordPulseLen', '0.06'));
+const ACCORD_FLOOR = Number(argVal('accordFloor', '0.85'));
+const ACCORD_PERRACERCAP = Number(argVal('accordPerRacerCap', '2'));
+const ACCORD_DUTYCAP = Number(argVal('accordDutyCap', '0.25'));
 // B2-leak trace (read-only diagnostic): adds b2LastInside to rawData rows. No-flag → byte-identical.
 const B2_TRACE = argv.includes('--b2-trace');
 // reRoll / trajectory dynamics overrides — same shared-default + argVal pattern. Lets a sweep
@@ -1160,6 +1167,7 @@ export function runSingleRace({
       lTicks: 0, lFuelSum: 0, lTrajAtClamp: 0, lFrontSlots: 0, lClosing: 0, lBlocked: 0, lServoOpp: 0,
       // Lock tracking from FA_LOCK_FROM: P1 leader, top-3 SET (order-independent), top-3/5 ORDER.
       prevP1: null, lockP1: null, prevSet3: null, lockSet3: null, prevK3: null, prevK5: null, lockIn3: null, lockIn5: null,
+      prevLeader: null, leadChanges: [], // ACTION-BUILD-1: whole-race leader-change progresses for LAW
       convSeries: [],        // {progress, fuelSpread} over [FA_LOCK_FROM, 1] for the convergence point
       markers: { lastRoll: DYNAMICS_OVERRIDES.reRollLastPositionPercent / 100, choreoRelease: CHOREO_RELEASE_PROGRESS },
     } : null;
@@ -2056,6 +2064,15 @@ export function runSingleRace({
       // checkpoints, the final-third leader→P2 gap (lengths + seconds), and the at-the-line snapshot.
       // Never mutates race state.
       // ── FRONT-AUTOPSY per-tick (read-only) ──────────────────────────────────────────────────────
+      // LAW: whole-race leader-change progresses (a "front action event"). Runs every tick from the gun.
+      if (frontAutopsy) {
+        let ldr = -1, ldrT = -Infinity;
+        for (const r of racers) if (!r.finished && r.t > ldrT) { ldrT = r.t; ldr = r.index; }
+        if (ldr >= 0) {
+          if (fa.prevLeader != null && ldr !== fa.prevLeader) fa.leadChanges.push(+raceProgress.toFixed(4));
+          fa.prevLeader = ldr;
+        }
+      }
       if (frontAutopsy && raceProgress >= FA_LOCK_FROM) {
         const faOrder = racers.filter((r) => !r.finished).sort((a, b) => (b.t - a.t) || (a.index - b.index));
         if (faOrder.length >= 2) {
@@ -2574,6 +2591,10 @@ export function runSingleRace({
         // (c) TIMING — P1 (winner) lock is the real one; set3 = top-3 membership; ord = strict order.
         lockP1: fa.lockP1, lockSet3: fa.lockSet3, lockIn3: fa.lockIn3, lockIn5: fa.lockIn5,
         convProgress, markers: fa.markers,                                                // (c) coincidence
+        // LAW — Longest Actionless Window (progress span with no leader change). Headline product metric.
+        leadChanges: fa.leadChanges.length,
+        LAW_full: (() => { const e = [0, ...fa.leadChanges, 1]; let m = 0; for (let i = 1; i < e.length; i++) m = Math.max(m, e[i] - e[i - 1]); return +m.toFixed(4); })(),
+        LAW_last50: (() => { const e = [0.5, ...fa.leadChanges.filter((x) => x >= 0.5), 1]; let m = 0; for (let i = 1; i < e.length; i++) m = Math.max(m, e[i] - e[i - 1]); return +m.toFixed(4); })(),
       };
     }
 
@@ -3276,6 +3297,12 @@ if (isMain) {
               chainDramaHoldDepth:       CHAIN_DRAMA_HOLDDEPTH,
               chainFrontStrictness:      CHAIN_FRONT_STRICTNESS,
               chainFrontFreeFrom:        CHAIN_FRONT_FREEFROM,
+              chainAccordion:            CHAIN_ACCORDION,
+              accordDensity:             ACCORD_DENSITY,
+              accordPulseLen:            ACCORD_PULSELEN,
+              accordFloor:               ACCORD_FLOOR,
+              accordPerRacerCap:         ACCORD_PERRACERCAP,
+              accordDutyCap:             ACCORD_DUTYCAP,
               chainSegSec:               CHAIN_SEG_SEC,
               chainMExtra:               CHAIN_MEXTRA,
             }, seed);
