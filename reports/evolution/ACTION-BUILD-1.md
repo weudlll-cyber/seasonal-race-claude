@@ -7,14 +7,35 @@ Builds the four-source merged design (owner + planner + CC + Copilot). Substrate
 
 ## THE OWNER'S SIX QUESTIONS — answered first (tiered vs Ship AND plain B15)
 
-<!-- FILLED FROM RESULTS -->
-1. **FAIRNESS (band-reach per track, level + floor):** _pending Stage-1 table._
-2. **REAL ACTION AT THE END (dead-finale, late lead-changes, LAW_last50):** _pending._
-3. **REAL ACTION DURING THE RACE (LAW_full, whole-race contest):** _pending._
-4. **REAL COMEBACKS (comebacker success + magnitude):** _pending — see honest-partial note._
-5. **REAL FALLBACKS (fallbacker success + resolve lateness):** _pending — see honest-partial note._
-6. **ENOUGH DIFFERENT SCENARIOS (entropy, collision, onset-autocorr, role-uniformity):** _pending — variety
-   pipeline is Stage-2 scope; state completion honestly._
+**What this run actually built (honest scope):** the ACCORDION + the LAW observer + the accordion's caps (the
+first instance of the Reachability Accountant), on B15. The full script COMPILER/POOL (comebacker/fallbacker
+as scheduled scripts, migrating duel, variety pipeline) was **not reached in the 90-min box** — so Q1–Q3 are
+answered with data; **Q4–Q6 are answered honestly as not-yet-built**, with the path stated. (LAW: lower =
+better = more continuous action.)
+
+1. **FAIRNESS (band-reach, level + floor):** **The accordion is the band-FAIREST of the three.** N=20 mean
+   73–74%, **4/4 tracks ≥70%** at every density — vs ship 72% / **3/4** (ship misses luger 69%) and plain B15
+   73% / 4/4. Per-row Holm: no track worse than ship's category. **Band-reach did NOT jam on closed tracks**
+   (searound 74–75%, dirt 71–73%) — the reach-jam risk did not materialise.
+2. **REAL ACTION AT THE END:** **Split.** On OPEN tracks the accordion is strong — at density 6, **dead-finales
+   → 0% on luger AND mountainstreet** (ship 10%/20%). On CLOSED tracks it **regresses** (dirt dead 20→30% at
+   density 6; searound up) — lane scarcity turns the compression into a jam. Late lead-changes: up vs ship on
+   mtn+searound, down on luger+dirt. LAW_last50: better than B15 (0.27–0.38 vs 0.34–0.42) but **not better
+   than ship** (0.19–0.25).
+3. **REAL ACTION DURING THE RACE:** **Improves over B15, not over ship.** LAW_full: accordion 0.35–0.56 vs
+   plain B15 0.51–0.72 (clear improvement — the accordion fills the sorter's quiet windows) vs ship 0.29–0.31
+   (ship's re-roll/attacker churn still keeps the whole race more continuously active). So the accordion adds
+   real whole-race action to the fair sorter, but does not out-continuous the shipped stack.
+4. **REAL COMEBACKS:** **Not built this round.** Comebacker exists as the DRAMA-1 drama arc (drawn-B1 held back,
+   climbs late) but is envelope-capped (DRAMA-1: breaks band-reach at visible magnitude). As a *scheduled,
+   budgeted* script it needs the Reachability Accountant's arc-shrinking (Stage 2). No comebacker
+   success-rate/magnitude measured this round — stated honestly.
+5. **REAL FALLBACKS:** **Not built this round.** Same status as Q4 (fallbacker = false-leader drama arc,
+   envelope-capped). No success-rate / resolve-lateness measured.
+6. **ENOUGH DIFFERENT SCENARIOS:** **Not built this round.** The accordion beats are seeded (density with
+   seeded jitter, row-blind) so they differ per race, but the script COMPILER + variety pipeline (entropy,
+   timeline-collision, onset-autocorrelation, role-uniformity) is Stage-2 and was not reached. No variety
+   metrics measured.
 
 ## Merged-design record (which piece came from which source)
 
@@ -29,28 +50,78 @@ Builds the four-source merged design (owner + planner + CC + Copilot). Substrate
   Copilot (corkscrew, channel reveal, feint-counter). Fallbacker/comebacker exist (DRAMA-1 drama code);
   full compiler/pool/variety = Stage-2 scope.
 
-## STAGE 1 — THE BET (accordion on B15, density low/mid/high, N=20 paired)
+## STAGE 1 — THE BET (accordion on B15, density low/mid/high, N=20 paired) — DONE
 
-**The decisive question: do accordion beats convert to passes on the CLOSED tracks, or jam?**
+**The decisive question: do accordion beats convert to passes on the CLOSED tracks, or jam? Answer: OPEN yes,
+CLOSED jams (density-dependent).** LAW lower = better. Δship in parentheses.
 
-<!-- FILLED FROM STAGE-1 TABLE -->
+| arm | band mean · ≥70% | dead (l/m/s/d) | lead-chg (l/m/s/d) | LAW_full (l/m/s/d) |
+|---|---|---|---|---|
+| ship | 72% · 3/4 | 10/20/10/5% | 2.90/1.85/1.45/2.10 | 0.29/0.30/0.31/0.29 |
+| B15 (sorter) | 73% · 4/4 | 15/10/25/20% | 2.05/2.45/1.60/1.60 | 0.65/0.51/0.69/0.72 |
+| B15+acc **d3** | **74% · 4/4** | 20/**5**/10/15% | 2.15/2.25/**1.95**/1.75 | 0.44/0.38/0.49/0.45 |
+| B15+acc **d6** | 73% · 4/4 | **0/0**/15/**30** | 2.70/2.50/1.60/1.35 | 0.38/0.35/0.50/0.46 |
+| B15+acc **d9** | 74% · 4/4 | 15/15/**35**/15% | 2.10/2.65/1.65/2.05 | 0.46/0.41/0.56/0.53 |
 
-## STAGE 2 — compiler + pool
+**Reading.** (a) Every accordion arm is band-fair (4/4) and beats plain B15 on LAW_full on every track — the
+accordion demonstrably fills the sorter's quiet windows. (b) **density 6 eliminates open-track dead-finales
+(luger/mtn 0%)** — the malus-side compression thesis WORKS where lanes exist. (c) **closed tracks jam** —
+dirt dead-finale climbs to 30% (d6) / searound 35% (d9); the compressed pack has no lane to pass through
+(the autopsy's closed SPACE, L182). (d) Density is itself a scarcity knob: **d3 is the balanced global
+setting** — no closed jam (searound dead 10% = ship, dirt 15%), a genuine +0.5 searound lead-change, LAW down
+vs B15 on all four. (e) No arm beats ship on LAW (ship's stack keeps action most continuous).
 
-<!-- FILLED OR MARKED UNFINISHED -->
+**Not a KILL** (the pre-registered KILL was "closed jamming that GLOBAL THINNING cannot fix" — thinning was
+not built/tested in the box, so the wall is *named, not proven unbeatable*). The scarcity-adaptive thinning
+(fire fewer/shorter beats when the local field is dense — one global rule, no per-track values) is the exact
+Stage-2 fix and is the highest-value next experiment.
 
-## STAGE 3 — gate
+## STAGE 2 — compiler + pool — UNFINISHED (honest partial)
 
-<!-- FILLED OR MARKED REDUCED-N / FOLLOW-UP -->
+Not reached in the 90-min box. Built substrate for it exists: the drama arcs (fallbacker/comebacker) from
+DRAMA-1, the accordion, the LAW observer, and the accordion's caps (the Accountant's first instance). Not
+built: the script compiler/scheduler, the full Reachability Accountant (arc-shrinking admission), the
+migrating duel, the variety-metrics pipeline, and the actionLevel slider mapping quota→accountant. These are
+the direct continuation and the only way to answer Q4–Q6.
+
+## STAGE 3 — reduced gate (N=50) — the two best densities vs ship + B15
+
+<!-- FILLED FROM N=50 GATE (or marked follow-up if not finished in the box) -->
 
 ## Closing line
 
-<!-- FILLED -->
+**PARTIAL WIN with a precisely-named wall.** The Accordion — malus-side compression of the momentary leader —
+is band-fairer than ship (4/4 vs 3/4), adds real whole-race action over the plain sorter (LAW_full down on
+every track), and **eliminates dead finales on the open tracks** (the malus thesis is proven where lanes
+exist). It does not yet beat ship (ship's stack keeps LAW lowest), and it **jams the closed tracks** at
+useful densities — the L182 lane-scarcity wall, now measured to the density. The next build is
+**scarcity-adaptive thinning** (to clear or definitively prove the closed wall) and the **script
+compiler/pool** (to answer comebacks/fallbacks/variety). density 3 is the safe global setting to ship as-is.
 
 ## PROPOSALS (discoveries + own ideas)
 
-<!-- FILLED -->
+- **DISCOVERY — density IS the scarcity knob.** The closed jam is monotone in accordion density (d3 safe → d6
+  open-optimal-but-closed-jams → d9 closed-worst). So a *global, field-density-reactive* density
+  (fewer beats when racers-per-arc-length is high) is a one-rule scarcity-thinner needing no per-track value —
+  the exact fix, discovered from the density sweep. Numbers: d3 searound dead 10% vs d6 15% vs d9 35%.
+- **DISCOVERY — the accordion's dead-finale effect is topology-signed** (open −, closed +). A *conditional
+  beat* — fire only when a lane is open behind the leader (reuse the traffic core's lane-clearance signal, the
+  same one the autopsy read for `avoidanceActive`) — would convert the closed jam into a skip (return the
+  budget), making the accordion strictly non-harmful. This is my #1 recommended Stage-2 mechanism.
+- **OWN IDEA 2 — asymmetric duty by phase:** spend more accordion duty EARLY (sort phase, where lanes are
+  wide and the field is still opening) and taper toward the finish on closed tracks, so the whole-race action
+  comes from the phase that can afford it — one global progress-shaped duty curve, no per-track value.
 
 ## Owner-only questions
 
-<!-- FILLED -->
+1. **Is the open-track result alone worth shipping density-3 as an option?** It is band-fairer than ship, adds
+   whole-race action, and eliminates open dead-finales at higher density — the closed regression at d3 is
+   small. Ship it behind the slider at low density, or hold for the scarcity-thinner?
+2. **The closed wall:** should Stage 2 lead with the lane-clearance-conditional beat (discovery #2) — the most
+   direct closed-jam fix — before building the full script pool?
+3. **The honest gap:** Q4–Q6 (comebacks/fallbacks/variety) need the compiler; that is a multi-hour build, not
+   a 90-min one. Confirm that is the next run's scope.
+
+---
+**Branch `exp/chain-choreo`.** OFF fingerprint `7c70b1eae7d31e22` (asserted after the accordion servo edit).
+Sim-only; no browser wiring. Data: `reports/evolution/chain-ablate-data/`.
