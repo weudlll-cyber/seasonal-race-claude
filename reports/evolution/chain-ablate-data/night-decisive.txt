@@ -1,0 +1,21 @@
+
+=== CHAIN-ABLATE battery — N=100/arm/track | tracks searound, dirt-oval | seed=1 jobs=4 ===
+arms: ship, B15clrD
+
+── ship ──
+  track           | band (Δship) | dead (Δship) | lead-chg (Δship) | LAWfull LAWl50 (Δship) | holm
+  searound        |  74% (  —) |  11% (  —) |  1.62 (  —) | 0.31   0.23  ( —/—) | skip 0% | UNF
+  dirt-oval       |  70% (  —) |  21% (  —) |  1.33 (  —) | 0.32   0.26  ( —/—) | skip 0% | UNF
+  SUMMARY band-reach mean 72% | tracks ≥70%: 1/2
+
+── B15clrD ──
+  track           | band (Δship) | dead (Δship) | lead-chg (Δship) | LAWfull LAWl50 (Δship) | holm
+  searound        |  78% (+4pp) |  20% (+9pp) |  1.52 (-0.10) | 0.66   0.40  (+0.35/+0.17) | skip 0% | UNF
+  dirt-oval       |  73% (+4pp) |  13% (-8pp) |  1.77 (+0.44) | 0.50   0.34  (+0.18/+0.09) | skip 23% | ok
+  SUMMARY band-reach mean 75% | tracks ≥70%: 2/2
+    [comp searound     ] scripts 0.0 (fl0.0 cb0.0 fb0.0 pc0.0 dp0.0 pf0.0) | drop 0.0 shrink 0.0 | H 0.00 sigColl 100% (1/100)
+    [clr  searound     ] lanes 5.0 (min 5.0) budget 0.00 | latAdmit 0.0 latRefuse 0.0 | accAdmit 0.0 | frontConv 0.0 | leadLast30 37.19
+    [comp dirt-oval    ] scripts 8.0 (fl1.0 cb1.9 fb2.0 pc2.1 dp0.9 pf0.0) | drop 0.0 shrink 0.2 | H 2.24 sigColl 2% (99/100)
+    [clr  dirt-oval    ] lanes 10.0 (min 10.0) budget 1.00 | latAdmit 4.9 latRefuse 0.0 | accAdmit 6.0 | frontConv 0.0 | leadLast30 37.12
+
+runtime 11.5 min
