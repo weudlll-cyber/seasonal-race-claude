@@ -321,6 +321,10 @@ const ACCORD_PERRACERCAP = Number(argVal('accordPerRacerCap', '2'));
 const ACCORD_DUTYCAP = Number(argVal('accordDutyCap', '0.25'));
 const ACCORD_ADMIT = argVal('accordAdmit', 'false') === 'true'; // A: open-lane invariant
 const ACCORD_SKIP = argVal('accordSkip', 'false') === 'true'; // B: lane-conditional skip
+// ACTION-BUILD-3 proximity floor (SIM-ONLY; default OFF).
+const CHAIN_PROXIMITY = argVal('chainProximity', 'false') === 'true';
+const PROXIMITY_STRENGTH = Number(argVal('proximityStrength', '0.5'));
+const PROXIMITY_RESOLVE = Number(argVal('proximityResolve', '0.85'));
 // B2-leak trace (read-only diagnostic): adds b2LastInside to rawData rows. No-flag → byte-identical.
 const B2_TRACE = argv.includes('--b2-trace');
 // reRoll / trajectory dynamics overrides — same shared-default + argVal pattern. Lets a sweep
@@ -3307,6 +3311,9 @@ if (isMain) {
               accordDutyCap:             ACCORD_DUTYCAP,
               accordAdmit:               ACCORD_ADMIT,
               accordSkip:                ACCORD_SKIP,
+              chainProximity:            CHAIN_PROXIMITY,
+              proximityStrength:         PROXIMITY_STRENGTH,
+              proximityResolve:          PROXIMITY_RESOLVE,
               chainSegSec:               CHAIN_SEG_SEC,
               chainMExtra:               CHAIN_MEXTRA,
             }, seed);

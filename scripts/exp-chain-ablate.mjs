@@ -107,6 +107,9 @@ const ARM_LIB = {
   B15accA:  withF(boundary(ROW(NAKED), 0.15), '--chainAccordion=true', '--accordDensity=6', '--accordAdmit=true'),
   B15accAB: withF(boundary(ROW(NAKED), 0.15), '--chainAccordion=true', '--accordDensity=6', '--accordAdmit=true', '--accordSkip=true'),
   B15accB:  withF(boundary(ROW(NAKED), 0.15), '--chainAccordion=true', '--accordDensity=6', '--accordSkip=true'),
+  // ── ACTION-BUILD-3 — the proximity floor (bunch each band toward its centre; fan at the finish).
+  B15prox:    withF(boundary(ROW(NAKED), 0.15), '--chainProximity=true'),
+  B15proxAcc: withF(boundary(ROW(NAKED), 0.15), '--chainProximity=true', '--chainAccordion=true', '--accordDensity=6', '--accordAdmit=true', '--accordSkip=true'),
 };
 
 const BAND_EDGES = [5, 15, 25, 40];

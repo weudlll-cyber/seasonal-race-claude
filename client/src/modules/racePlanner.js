@@ -303,6 +303,11 @@ export function createRacePlan(racers, finishT, targetDurationMs, config = {}, s
           holdDepth: config.chainDramaHoldDepth ?? 10,
         }
       : null,
+    // ACTION-BUILD-3 PROXIMITY FLOOR (SIM-ONLY; admission-side; default OFF). Bunch each band toward its
+    // centre through the approach (contestable-proximity), fanning to the drawn rank at the finish.
+    _chainProximity: config.chainProximity
+      ? { strength: config.proximityStrength ?? 0.5, resolve: config.proximityResolve ?? 0.85 }
+      : null,
     // DRAMA-1 intra-band front-rank freeing (SIM-ONLY; default 1.0 = no change). See servo above.
     _chainFrontStrictness: config.chainFrontStrictness ?? 1.0,
     _chainFrontFreeFrom: config.chainFrontFreeFrom ?? 0.7,
@@ -673,6 +678,7 @@ export function createTrajectoryController(racePlan) {
             K,
             mExtra: plan._chainMExtra,
             drama: plan._chainDrama,
+            proximity: plan._chainProximity,
           });
           plan._heroCurves = new Map(gen.curves.map((c) => [c.index, c.curve]));
           plan._chainCheckpoints = gen.checkpoints;

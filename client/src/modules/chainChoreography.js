@@ -56,8 +56,14 @@ export function generateChainCurves({
   K,
   mExtra,
   drama = null,
+  proximity = null,
 }) {
   const N = postChaos.length;
+  // Proximity floor: pull a rank toward its BAND CENTER (bunch within-band = contestable) through the
+  // approach, releasing to the exact drawn rank at the finish. Within-band only ⇒ reachable; band
+  // separation (fairness) preserved. One global rule; band edges are the shipped BAND_EDGES.
+  const bandCenter = (rk) =>
+    rk <= 5 ? 3 : rk <= 15 ? 10 : rk <= 25 ? 20 : rk <= 40 ? 33 : Math.min(N, 45);
   const rng = mulberry32(((seed | 0) ^ 0x9e3779b9) >>> 0 || 1);
   const B1 = 5; // front band top edge (BAND_EDGES[0])
 
@@ -132,6 +138,14 @@ export function generateChainCurves({
           const base = lerp(anchorRank, finalRank, smoother(frac));
           const osc = mExtra * Math.sin(Math.PI * oscN * frac + oscPh) * (1 - frac);
           rank = clamp(base + osc, 1, N);
+          if (proximity && proximity.strength > 0) {
+            // Hold the band-center pull through the approach, then release to the exact rank by the finish
+            // (pull → 0 as frac → 1 so the endpoint invariant is untouched). Keeps each band tight.
+            const resolve = proximity.resolve ?? 0.85;
+            const pull =
+              proximity.strength * (frac < resolve ? 1 : Math.max(0, (1 - frac) / (1 - resolve)));
+            rank = clamp(lerp(rank, bandCenter(finalRank), pull), 1, N);
+          }
         }
         waypoints.push({ progress: prog, rank });
       }
