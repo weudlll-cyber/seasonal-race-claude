@@ -103,6 +103,10 @@ const ARM_LIB = {
   B15acc3:  withF(boundary(ROW(NAKED), 0.15), '--chainAccordion=true', '--accordDensity=3'),
   B15acc6:  withF(boundary(ROW(NAKED), 0.15), '--chainAccordion=true', '--accordDensity=6'),
   B15acc9:  withF(boundary(ROW(NAKED), 0.15), '--chainAccordion=true', '--accordDensity=9'),
+  // ── ACTION-BUILD-2 — the open lane (A = admit invariant, B = lane-conditional skip). Base density 6.
+  B15accA:  withF(boundary(ROW(NAKED), 0.15), '--chainAccordion=true', '--accordDensity=6', '--accordAdmit=true'),
+  B15accAB: withF(boundary(ROW(NAKED), 0.15), '--chainAccordion=true', '--accordDensity=6', '--accordAdmit=true', '--accordSkip=true'),
+  B15accB:  withF(boundary(ROW(NAKED), 0.15), '--chainAccordion=true', '--accordDensity=6', '--accordSkip=true'),
 };
 
 const BAND_EDGES = [5, 15, 25, 40];
@@ -124,6 +128,7 @@ async function runArmTrack(armKey, flags, track) {
   const faR = JSON.parse(readFileSync(join(outAbs, 'front-autopsy.json'), 'utf8')).races.map((r) => r.frontAutopsy);
   const lawFull = mean(faR.map((r) => r.LAW_full));
   const lawL50 = mean(faR.map((r) => r.LAW_last50));
+  const skipRate = mean(faR.map((r) => r.accordSkipRate ?? 0));
   const rowReached = [], rowTotal = [];
   for (const r of fd.rawData) { const row = r.startRowIndex; rowReached[row] = (rowReached[row] ?? 0) + (zoneIdx(r.finalRank) === zoneIdx(r.sollRank) ? 1 : 0); rowTotal[row] = (rowTotal[row] ?? 0) + 1; }
   const rows = rp.races.map((rec) => { const raw = rec.runawayParade; const c = classifyRace(raw, RUNAWAY_PARADE_DEFAULTS); return { lc: raw.leadChangeCount ?? 0, dead: (raw.leadChangeCount ?? 0) === 0 ? 1 : 0, runaway: c.runawayWinner ? 1 : 0 }; });
@@ -133,7 +138,7 @@ async function runArmTrack(armKey, flags, track) {
     startRowUnfair: hm.fairness?.startRowUnfair ?? null,
     rowReachMin: Math.min(...rowReached.map((v, i) => (rowTotal[i] ? v / rowTotal[i] : 1))),
     deadRate: mean(rows.map((r) => r.dead)), leadChanges: mean(rows.map((r) => r.lc)), runawayRate: mean(rows.map((r) => r.runaway)),
-    lawFull, lawL50,
+    lawFull, lawL50, skipRate,
   };
 }
 
@@ -178,7 +183,7 @@ for (const armKey of arms) {
     const dLAW = s ? r.lawFull - s.lawFull : 0, dLAW50 = s ? r.lawL50 - s.lawL50 : 0;
     bSum += r.bandReach; if (r.bandReach >= 0.70) passReach++;
     const sgn = (x, u = '') => (x >= 0 ? '+' : '') + x.toFixed(u === 'pp' ? 0 : 2) + u;
-    console.log(`  ${t.id.padEnd(15)} | ${pct(r.bandReach).padStart(4)} (${armKey === 'ship' ? '  —' : sgn(dB, 'pp')}) | ${pct(r.deadRate).padStart(4)} (${armKey === 'ship' ? '  —' : sgn(dD, 'pp')}) | ${r.leadChanges.toFixed(2).padStart(5)} (${armKey === 'ship' ? '  —' : sgn(dL)}) | ${r.lawFull.toFixed(2)}   ${r.lawL50.toFixed(2)}  (${armKey === 'ship' ? ' —/—' : sgn(dLAW) + '/' + sgn(dLAW50)}) | ${r.startRowUnfair ? 'UNF' : 'ok'}`);
+    console.log(`  ${t.id.padEnd(15)} | ${pct(r.bandReach).padStart(4)} (${armKey === 'ship' ? '  —' : sgn(dB, 'pp')}) | ${pct(r.deadRate).padStart(4)} (${armKey === 'ship' ? '  —' : sgn(dD, 'pp')}) | ${r.leadChanges.toFixed(2).padStart(5)} (${armKey === 'ship' ? '  —' : sgn(dL)}) | ${r.lawFull.toFixed(2)}   ${r.lawL50.toFixed(2)}  (${armKey === 'ship' ? ' —/—' : sgn(dLAW) + '/' + sgn(dLAW50)}) | skip ${(r.skipRate * 100).toFixed(0)}% | ${r.startRowUnfair ? 'UNF' : 'ok'}`);
   }
   console.log(`  SUMMARY band-reach mean ${pct(bSum / TRACKS.length)} | tracks ≥70%: ${passReach}/${TRACKS.length}`);
 }

@@ -319,6 +319,8 @@ const ACCORD_PULSELEN = Number(argVal('accordPulseLen', '0.06'));
 const ACCORD_FLOOR = Number(argVal('accordFloor', '0.85'));
 const ACCORD_PERRACERCAP = Number(argVal('accordPerRacerCap', '2'));
 const ACCORD_DUTYCAP = Number(argVal('accordDutyCap', '0.25'));
+const ACCORD_ADMIT = argVal('accordAdmit', 'false') === 'true'; // A: open-lane invariant
+const ACCORD_SKIP = argVal('accordSkip', 'false') === 'true'; // B: lane-conditional skip
 // B2-leak trace (read-only diagnostic): adds b2LastInside to rawData rows. No-flag → byte-identical.
 const B2_TRACE = argv.includes('--b2-trace');
 // reRoll / trajectory dynamics overrides — same shared-default + argVal pattern. Lets a sweep
@@ -3303,6 +3305,8 @@ if (isMain) {
               accordFloor:               ACCORD_FLOOR,
               accordPerRacerCap:         ACCORD_PERRACERCAP,
               accordDutyCap:             ACCORD_DUTYCAP,
+              accordAdmit:               ACCORD_ADMIT,
+              accordSkip:                ACCORD_SKIP,
               chainSegSec:               CHAIN_SEG_SEC,
               chainMExtra:               CHAIN_MEXTRA,
             }, seed);
@@ -3365,7 +3369,12 @@ if (isMain) {
           }
           // FRONT-AUTOPSY (--front-autopsy): stash this race's finale diagnosis, tagged with combo meta.
           if (FRONT_AUTOPSY && result.frontAutopsy) {
-            faRaces.push({ trackId, racerType, durationSec, seed, raceIdx, isOpen, frontAutopsy: result.frontAutopsy });
+            faRaces.push({ trackId, racerType, durationSec, seed, raceIdx, isOpen,
+              frontAutopsy: (() => {
+                // ACTION-BUILD-2 accordion diagnostics (via the controller accessor): skip rate = broken lane promises.
+                const a = racePlanController?.getAccordStats ? racePlanController.getAccordStats() : { skip: 0, fire: 0 };
+                return { ...result.frontAutopsy, accordSkipRate: a.fire ? +(a.skip / a.fire).toFixed(4) : 0, accordFireTicks: a.fire };
+              })() });
           }
           // SPEED-SOURCE (--speed-source): stash this race's top-15 decomposition, tagged with combo meta.
           if (SPEED_SOURCE && result.speedSource) {

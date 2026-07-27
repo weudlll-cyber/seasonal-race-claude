@@ -319,12 +319,18 @@ export function createRacePlan(racers, finishT, targetDurationMs, config = {}, s
           floor: config.accordFloor ?? 0.85, // malus target (the two-sided envelope floor; never below)
           perRacerCap: config.accordPerRacerCap ?? 2, // max distinct beats braking any one racer
           dutyCap: config.accordDutyCap ?? 0.25, // max fraction of leader-ticks spent braking (Leash guard)
+          // ACTION-BUILD-2 (admission-side; frozen runtime budget — NOT new forces):
+          admit: !!config.accordAdmit, // A: open-lane invariant — admit a beat only where a passing lane exists
+          skip: !!config.accordSkip, // B: lane-conditional skip — per-tick, skip the brake if the route is jammed
         }
       : null,
     _accordBeats: null, // seeded beat-start progresses (built lazily)
     _accordRacerBeats: null, // index → Set(beatIdx) it was braked in (per-racer cap)
+    _accordAdmitted: null, // beatIdx → admitted? (A, evaluated once at beat entry)
     _accordBrakeTicks: 0,
     _accordLeaderTicks: 0,
+    _accordSkipTicks: 0, // B skipped a brake this tick (broken lane promise) — the quality meter
+    _accordFireTicks: 0, // admitted beat-ticks where a brake was intended (skip-rate denominator)
     _choreoIntensity: config.choreoIntensity ?? 0.6,
     _choreoPackBandStrictness: config.choreoPackBandStrictness ?? 0.5,
     // Stage 1 spoiler switch (default OFF): suppress the B1-target pool's CHAOS areaBonus so the future
@@ -896,6 +902,7 @@ export function createTrajectoryController(racePlan) {
             beats.push(+(0.12 + (0.9 - 0.12) * ((bi + arng()) / acc.density)).toFixed(4));
           plan._accordBeats = beats;
           plan._accordRacerBeats = new Map();
+          plan._accordAdmitted = new Map();
         }
         plan._accordLeaderTicks++;
         let beatIdx = -1;
@@ -907,18 +914,37 @@ export function createTrajectoryController(racePlan) {
           }
         }
         if (beatIdx >= 0) {
-          const duty = plan._accordLeaderTicks
-            ? plan._accordBrakeTicks / plan._accordLeaderTicks
-            : 0;
-          let set = plan._accordRacerBeats.get(r.index);
-          if (!set) {
-            set = new Set();
-            plan._accordRacerBeats.set(r.index, set);
-          }
-          if (duty < acc.dutyCap && (set.has(beatIdx) || set.size < acc.perRacerCap)) {
-            finalTarget = acc.floor; // ease toward the malus floor; servo restores after the beat
-            plan._accordBrakeTicks++;
-            set.add(beatIdx);
+          // THE OPEN LANE — reads the traffic core's OWN clearance signal (no new force): a passing route
+          // exists if an immediate follower (rankIdx 1..3, contestable proximity) is NOT traffic-blocked
+          // (avoidanceActive=false ⇒ it has a free lane). One global rule reading physics; no per-track value.
+          // The pass can only happen if the IMMEDIATE follower (the one that would overtake the braked
+          // leader) has a free lane — i.e. it is not traffic-blocked. If it is blocked, braking the leader
+          // only deepens the jam → the lane promise is broken here.
+          const openLane = () => nActive < 2 || !active[1].avoidanceActive;
+          // A — OPEN-LANE INVARIANT: admit a beat (once, at entry) only where the passing lane exists.
+          if (acc.admit && !plan._accordAdmitted.has(beatIdx))
+            plan._accordAdmitted.set(beatIdx, openLane());
+          const admitted = !acc.admit || plan._accordAdmitted.get(beatIdx);
+          if (admitted) {
+            plan._accordFireTicks++;
+            // B — LANE-CONDITIONAL SKIP: if the route is jammed this tick, skip the brake (never queue).
+            if (acc.skip && !openLane()) {
+              plan._accordSkipTicks++;
+            } else {
+              const duty = plan._accordLeaderTicks
+                ? plan._accordBrakeTicks / plan._accordLeaderTicks
+                : 0;
+              let set = plan._accordRacerBeats.get(r.index);
+              if (!set) {
+                set = new Set();
+                plan._accordRacerBeats.set(r.index, set);
+              }
+              if (duty < acc.dutyCap && (set.has(beatIdx) || set.size < acc.perRacerCap)) {
+                finalTarget = acc.floor; // ease toward the malus floor; servo restores after the beat
+                plan._accordBrakeTicks++;
+                set.add(beatIdx);
+              }
+            }
           }
         }
       }
@@ -1266,6 +1292,9 @@ export function createTrajectoryController(racePlan) {
     update,
     computePulkBiasedTarget,
     computeGapBiasedTarget,
+    // ACTION-BUILD-2: read-only accordion skip diagnostics (no state change). Returns the invariant's
+    // quality meter — skipRate = brake-ticks the lane-conditional skip vetoed / admitted beat-ticks.
+    getAccordStats: () => ({ skip: plan._accordSkipTicks ?? 0, fire: plan._accordFireTicks ?? 0 }),
     // SCREEN escape-latency: how many DOWN-tilts have hit the LIVE LEADER so far. Read per frame by
     // the sim so it can freeze escapeDepth (the max P1->P2 gap reached BEFORE the first correction)
     // at the exact moment the first one fires. Read-only accessor, no state change.
