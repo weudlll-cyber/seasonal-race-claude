@@ -93,6 +93,12 @@ const ARM_LIB = {
   B15dr60:    withF(boundary(ROW(NAKED), 0.15), '--chainDrama=true', '--chainDramaResolve=0.6'),
   B15dr50f25: withF(boundary(ROW(NAKED), 0.15), '--chainDrama=true', '--chainDramaResolve=0.5', '--chainDramaFrac=0.25'),
   B15dr50hd6: withF(boundary(ROW(NAKED), 0.15), '--chainDrama=true', '--chainDramaResolve=0.5', '--chainDramaHoldDepth=6'),
+  // Round G — free intra-band FRONT rank the RIGHT way (band-hold, rank-free): reduce servo strictness for
+  // front-band racers in the finale (keeps the corral → no runaway; drops the rank-hold → OVER-STEER enemy).
+  B15fs50:    withF(boundary(ROW(NAKED), 0.15), '--chainFrontStrictness=0.5'),
+  B15fs25:    withF(boundary(ROW(NAKED), 0.15), '--chainFrontStrictness=0.25'),
+  B15fs0:     withF(boundary(ROW(NAKED), 0.15), '--chainFrontStrictness=0.0'),
+  B15fs25e50: withF(boundary(ROW(NAKED), 0.15), '--chainFrontStrictness=0.25', '--chainFrontFreeFrom=0.5'),
 };
 
 const BAND_EDGES = [5, 15, 25, 40];

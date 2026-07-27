@@ -310,6 +310,8 @@ const CHAIN_DRAMA_FRAC = Number(argVal('chainDramaFrac', '0.4'));
 const CHAIN_DRAMA_RESOLVE = Number(argVal('chainDramaResolve', '0.75'));
 const CHAIN_DRAMA_STAGGER = Number(argVal('chainDramaStagger', '0.15'));
 const CHAIN_DRAMA_HOLDDEPTH = Number(argVal('chainDramaHoldDepth', '10'));
+const CHAIN_FRONT_STRICTNESS = Number(argVal('chainFrontStrictness', '1.0')); // <1 → free intra-band front rank late
+const CHAIN_FRONT_FREEFROM = Number(argVal('chainFrontFreeFrom', '0.7'));
 // B2-leak trace (read-only diagnostic): adds b2LastInside to rawData rows. No-flag → byte-identical.
 const B2_TRACE = argv.includes('--b2-trace');
 // reRoll / trajectory dynamics overrides — same shared-default + argVal pattern. Lets a sweep
@@ -3272,6 +3274,8 @@ if (isMain) {
               chainDramaResolve:         CHAIN_DRAMA_RESOLVE,
               chainDramaStagger:         CHAIN_DRAMA_STAGGER,
               chainDramaHoldDepth:       CHAIN_DRAMA_HOLDDEPTH,
+              chainFrontStrictness:      CHAIN_FRONT_STRICTNESS,
+              chainFrontFreeFrom:        CHAIN_FRONT_FREEFROM,
               chainSegSec:               CHAIN_SEG_SEC,
               chainMExtra:               CHAIN_MEXTRA,
             }, seed);

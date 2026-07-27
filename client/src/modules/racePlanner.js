@@ -291,6 +291,21 @@ export function createRacePlan(racers, finishT, targetDurationMs, config = {}, s
     _chainMExtra: config.chainMExtra ?? 2,
     _chainCheckpoints: null, // progress values where the curves re-anchor to actual place; built at cast time
     _chainNextCk: 0,
+    // ── DRAMA formations (SIM-ONLY; supplied only via the sim harness config; default OFF) ──────────────
+    // Intermediate formations that DELIBERATELY diverge from the drawn final (false leaders / late
+    // arrivals), converging only at the finish. Browser never sets chainDrama → null → the B15 sorter,
+    // byte-identical. Endpoint stays the drawn place (fairness untouched). See reports/evolution/DRAMA-1.md.
+    _chainDrama: config.chainDrama
+      ? {
+          frac: config.chainDramaFrac ?? 0.4,
+          resolve: config.chainDramaResolve ?? 0.75,
+          stagger: config.chainDramaStagger ?? 0.15,
+          holdDepth: config.chainDramaHoldDepth ?? 10,
+        }
+      : null,
+    // DRAMA-1 intra-band front-rank freeing (SIM-ONLY; default 1.0 = no change). See servo above.
+    _chainFrontStrictness: config.chainFrontStrictness ?? 1.0,
+    _chainFrontFreeFrom: config.chainFrontFreeFrom ?? 0.7,
     _choreoIntensity: config.choreoIntensity ?? 0.6,
     _choreoPackBandStrictness: config.choreoPackBandStrictness ?? 0.5,
     // Stage 1 spoiler switch (default OFF): suppress the B1-target pool's CHAOS areaBonus so the future
@@ -632,6 +647,7 @@ export function createTrajectoryController(racePlan) {
             anchorProgress: pulkStartFrac,
             K,
             mExtra: plan._chainMExtra,
+            drama: plan._chainDrama,
           });
           plan._heroCurves = new Map(gen.curves.map((c) => [c.index, c.curve]));
           plan._chainCheckpoints = gen.checkpoints;
@@ -787,6 +803,19 @@ export function createTrajectoryController(racePlan) {
         : plan._choreoEnabled
           ? plan._choreoPackBandStrictness
           : bandStrictness;
+      // DRAMA-1: free intra-band RANK at the front late (the autopsy's OVER-STEER enemy, done RIGHT). Under
+      // chain mode, once in the finale a FRONT-BAND racer (targetRank ≤ B1) steers to its BAND, not its exact
+      // rank (strictness lowered) — so the front races freely WITHIN B1 while the band corral (band-reach) is
+      // kept. Unlike choreoRelease (target = currentRank ⇒ no corral ⇒ natural-speed runaway), this keeps the
+      // band steering, only dropping the rank-hold. Default _chainFrontStrictness = 1.0 → no change.
+      if (
+        plan.chainChoreoEnabled &&
+        plan._chainFrontStrictness < 1 &&
+        phaseProgress >= plan._chainFrontFreeFrom &&
+        targetRank <= BAND_EDGES[0]
+      ) {
+        strictness = plan._chainFrontStrictness;
+      }
       // B2-attacker "Attack & Fall" (Track-to-FinalRank, then Free). While NOT yet freed the attacker
       // tracks its curve at strictness 1.0 — the mandatory climb to peakRank, then the orchestrated fall
       // that the curve steers down to finalRank. It FREES once it has (a) reached its peak (best live rank
