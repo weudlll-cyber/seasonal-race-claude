@@ -22,11 +22,20 @@ const NORMAL_SPEED = DEFAULT_BASE_SPEED_CONFIG.normalSpeedPxPerSec;
 const RACES = Number(argVal('races', '20'));
 const SEED = Number(argVal('seed', '1'));
 const JOBS = Math.max(1, Number(argVal('jobs', '4')));
+// ACTION-NIGHT-1: fixed duration (30/60/180) via --dur; empty → each track's canonical default.
+const DUR = argVal('dur', '');
 const TMP = join(ROOT, 'client/tmp/exp-chain-ablate');
 const OUT = join(ROOT, 'reports/evolution/chain-ablate-data');
 const toSimOut = (a) => relative(ROOT, a).replace(/\\/g, '/');
 
-const TRACK_IDS = ['luger-hill', 'mountainstreet', 'searound', 'dirt-oval'];
+// --tracks=four (default) | ten (the 10 standard fingerprint tracks) | comma-list of ids.
+const TEN_TRACKS = ['city-circuit', 'dirt-oval', 'garden-path', 'ice-track', 'luger-hill',
+  'mountainstreet', 'river-run', 'searound', 'seatrack', 'space-sprint'];
+const FOUR_TRACKS = ['luger-hill', 'mountainstreet', 'searound', 'dirt-oval'];
+const TRACKS_ARG = argVal('tracks', 'four');
+const TRACK_IDS = TRACKS_ARG === 'ten' ? TEN_TRACKS
+  : TRACKS_ARG === 'four' ? FOUR_TRACKS
+  : TRACKS_ARG.split(',').map((s) => s.trim()).filter(Boolean);
 const trackSeed = (id) => JSON.parse(readFileSync(join(ROOT, 'server/seeds/tracks', `${id}.json`), 'utf8'));
 const TRACKS = TRACK_IDS.map((id) => { const s = trackSeed(id); return { id, racer: s.defaultRacerTypeId, closed: !!s.closed }; });
 const RACERS_CLOSED = 40, RACERS_OPEN = 60;
@@ -143,11 +152,12 @@ const pct = (x) => (x == null ? 'n/a' : (x * 100).toFixed(0) + '%');
 
 async function runArmTrack(armKey, flags, track) {
   const nRacers = track.closed ? RACERS_CLOSED : RACERS_OPEN;
-  const outAbs = join(TMP, `${armKey}__${track.id}`);
+  const outAbs = join(TMP, `${armKey}__${track.id}__d${DUR || 'def'}`);
+  const durArgs = DUR ? [`--dur=${DUR}`] : ['--track-defaults'];
   const args = ['scripts/sim-fairness.mjs',
     `--track=${track.id}`, `--racer=${track.racer}`,
     `--seed=${SEED}`, `--races=${RACES}`, `--racers=${nRacers}`, `--normalSpeed=${NORMAL_SPEED}`,
-    '--track-defaults', ...flags, '--runaway-parade', '--hero-map', '--front-autopsy', `--out=${toSimOut(outAbs)}`];
+    ...durArgs, ...flags, '--runaway-parade', '--hero-map', '--front-autopsy', `--out=${toSimOut(outAbs)}`];
   await pExecFile(process.execPath, args, { cwd: ROOT, maxBuffer: 512 * 1024 * 1024 });
   const hm = JSON.parse(readFileSync(join(outAbs, 'hero-map.json'), 'utf8'));
   const rp = JSON.parse(readFileSync(join(outAbs, 'runaway-parade.json'), 'utf8'));
@@ -218,7 +228,7 @@ console.log(`\n=== CHAIN-ABLATE battery — N=${RACES}/arm/track | tracks ${TRAC
 console.log(`arms: ${arms.join(', ')}`);
 
 // Reuse cached ship results if present (same seed/races), else run.
-const cacheFile = join(OUT, `ship_N${RACES}_s${SEED}.json`);
+const cacheFile = join(OUT, `ship_${TRACKS_ARG === 'ten' || TRACKS_ARG === 'four' ? TRACKS_ARG : 'custom'}_N${RACES}_s${SEED}_d${DUR || 'def'}.json`);
 let shipRuns = null;
 if (arms.includes('ship') && existsSync(cacheFile)) { shipRuns = JSON.parse(readFileSync(cacheFile, 'utf8')); console.log('(ship cache hit)'); }
 
