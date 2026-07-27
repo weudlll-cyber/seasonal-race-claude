@@ -87,6 +87,43 @@ describe('generateChainCurves', () => {
     for (const c of curves) expect(sampleHeroCurve(c.curve, 1.0)).toBe(draw.get(c.index));
   });
 
+  // DRAMA formations: intermediate targets diverge from the draw, converge only at the finish.
+  const DRAMA = { frac: 1.0, resolve: 0.8, stagger: 0, holdDepth: 12 };
+
+  it('DRAMA: endpoint invariant still holds (every curve ends at the drawn place)', () => {
+    const { curves } = generateChainCurves({ ...ARGS, drama: DRAMA });
+    for (const c of curves) expect(sampleHeroCurve(c.curve, 1.0)).toBe(draw.get(c.index));
+  });
+
+  it('DRAMA: false leaders (drawn OUTSIDE B1) are held IN B1 mid-race, then reeled back', () => {
+    const { curves } = generateChainCurves({ ...ARGS, drama: DRAMA });
+    const fl = curves.filter((c) => c.role === 'falseLeader');
+    expect(fl.length).toBeGreaterThan(0);
+    for (const c of fl) {
+      expect(draw.get(c.index)).toBeGreaterThan(5); // drawn outside B1
+      expect(sampleHeroCurve(c.curve, 0.5)).toBeLessThanOrEqual(5.5); // held in the front mid-race
+      expect(sampleHeroCurve(c.curve, 1.0)).toBe(draw.get(c.index)); // but ends at its drawn place
+    }
+  });
+
+  it('DRAMA: late arrivals (drawn INTO B1) are held back mid-race, then climb in', () => {
+    const { curves } = generateChainCurves({ ...ARGS, drama: DRAMA });
+    const la = curves.filter((c) => c.role === 'lateArrival');
+    expect(la.length).toBeGreaterThan(0);
+    for (const c of la) {
+      expect(draw.get(c.index)).toBeLessThanOrEqual(5); // drawn into B1
+      expect(sampleHeroCurve(c.curve, 0.5)).toBeGreaterThan(5.5); // held outside the front mid-race
+      expect(sampleHeroCurve(c.curve, 1.0)).toBe(draw.get(c.index)); // climbs to its drawn place by the end
+    }
+  });
+
+  it('DRAMA: deterministic + row-blind (adding startRowIndex changes nothing)', () => {
+    const a = generateChainCurves({ ...ARGS, drama: DRAMA });
+    const withRows = postChaos.map((p) => ({ ...p, startRowIndex: p.index % 4 }));
+    const b = generateChainCurves({ ...ARGS, postChaos: withRows, drama: DRAMA });
+    expect(JSON.stringify(a)).toBe(JSON.stringify(b));
+  });
+
   // SMOOTHNESS RULE (owner, binding): the chain never steps the target. Speed changes route through the
   // shipped eased _setTarget/trajectoryMult slew (unchanged — asserted byte-identical by the fingerprint);
   // the chain's own contribution — the target rank — is a min-jerk curve, jerk-matched at every re-anchor,

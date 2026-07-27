@@ -34,15 +34,21 @@ const RACERS_CLOSED = 40, RACERS_OPEN = 60;
 // ── Binding-constraint precedence (documented) ────────────────────────────────────────────────────────
 // Asked in order: was there passing FUEL? if not → DRIVE. If yes but nobody adjacent-closing → TIMING/other.
 // If a closing pass existed, why did it fail — no lane (SPACE) or servo brake (OVER-STEER)? dominant wins.
-const FA_CONV = 0.02;   // meanFuelSpread below this ⇒ front speeds converged (no fuel) — matches the observer
+const FA_CONV = 0.02;   // fuelSpread below this ⇒ front speeds converged (no fuel) — matches the observer
 const DOM = 0.33;       // a cause must bind ≥1/3 of closing ticks to be called dominant
+// Classify on the LAST-10% window (where the dead-finale def lives); fall back to final-third if the late
+// window had no ticks. Precedence: no fuel → DRIVE; fuel but no front closing → TIMING; else SPACE vs
+// OVER-STEER by whichever denied the closing pass more often.
 function classifyCause(fa) {
-  if (fa.meanFuelSpread == null || fa.ticks === 0) return 'other';
-  if (fa.meanFuelSpread < FA_CONV) return 'DRIVE';                    // (a) no passing fuel
-  if (fa.closingTicks === 0) return 'TIMING';                          // (c) fuel exists, no front closing
-  const b = fa.blockedFrac, s = fa.servoOppFrac;
-  if (b >= s && b >= DOM) return 'SPACE';                              // (b) traffic denied the lane
-  if (s > b && s >= DOM) return 'OVER-STEER';                          // (d) servo braked the closer
+  const fuel = fa.lateFuelSpread ?? fa.meanFuelSpread;
+  const closing = fa.lateClosingTicks ?? fa.closingTicks;
+  const b = fa.lateClosingTicks ? fa.lateBlockedFrac : fa.blockedFrac;
+  const s = fa.lateClosingTicks ? fa.lateServoOppFrac : fa.servoOppFrac;
+  if (fuel == null) return 'other';
+  if (fuel < FA_CONV) return 'DRIVE';                    // (a) no passing fuel
+  if (!closing) return 'TIMING';                         // (c) fuel exists, no front closing pair
+  if (b >= s && b >= DOM) return 'SPACE';                // (b) traffic denied the lane
+  if (s > b && s >= DOM) return 'OVER-STEER';            // (d) servo braked the closer
   return 'multiple/other';
 }
 
@@ -100,22 +106,23 @@ printRanking('OPEN (pooled)', all.filter((r) => !r.closed));
 printRanking('CLOSED (pooled)', all.filter((r) => r.closed));
 printRanking('ALL (pooled)', all);
 
-console.log(`\n── DEAD vs ALIVE — mean of each instrument (the causal signal) ──`);
-console.log(`  group  n    fuelSpread trajSpread trajAtClamp blockedFrac servoOppFrac lockIn3 lockIn5 convProg`);
+console.log(`\n── DEAD vs ALIVE — mean of each instrument (the causal signal). LATE = last-10% window ──`);
+console.log(`  group  n    fuel(late) trajClamp(late) blocked(late) servoOpp(late) lockP1  lockSet3`);
 for (const [label, rows] of [['DEAD', all.filter((r) => r.dead)], ['ALIVE', all.filter((r) => !r.dead)]]) {
   const m = (k) => mean(rows.map((r) => r[k]).filter((x) => x != null));
-  console.log(`  ${label.padEnd(6)} ${String(rows.length).padStart(3)}  ${f2(m('meanFuelSpread')).padStart(9)} ${f2(m('meanTrajSpread')).padStart(10)} ${pc(m('fracTrajAtClamp')).padStart(11)} ${pc(m('blockedFrac')).padStart(11)} ${pc(m('servoOppFrac')).padStart(12)} ${f2(m('lockIn3')).padStart(7)} ${f2(m('lockIn5')).padStart(7)} ${f2(m('convProgress')).padStart(8)}`);
+  console.log(`  ${label.padEnd(6)} ${String(rows.length).padStart(3)}  ${f2(m('lateFuelSpread')).padStart(9)} ${pc(m('lateFracTrajAtClamp')).padStart(14)} ${pc(m('lateBlockedFrac')).padStart(12)} ${pc(m('lateServoOppFrac')).padStart(13)} ${f2(m('lockP1')).padStart(6)} ${f2(m('lockSet3')).padStart(8)}`);
 }
+console.log(`  (final-third means — DEAD vs ALIVE — fuel ${f2(mean(all.filter((r) => r.dead).map((r) => r.meanFuelSpread)))}/${f2(mean(all.filter((r) => !r.dead).map((r) => r.meanFuelSpread)))}  servoOpp ${pc(mean(all.filter((r) => r.dead).map((r) => r.servoOppFrac)))}/${pc(mean(all.filter((r) => !r.dead).map((r) => r.servoOppFrac)))})`);
 
-console.log(`\n── LOCK-IN + COINCIDENCE (dead finales) — which marker best predicts the top-3 lock ──`);
+console.log(`\n── LOCK-IN + COINCIDENCE (dead finales) — WINNER (P1) lock + top-3 membership lock ──`);
 const dead = all.filter((r) => r.dead);
-const lock3 = dead.map((r) => r.lockIn3).filter((x) => x != null);
-console.log(`  top-3 lockIn: median ${f2(pctl(lock3, 0.5))} p25 ${f2(pctl(lock3, 0.25))} p75 ${f2(pctl(lock3, 0.75))}`);
-const markerErr = (marker) => mean(dead.map((r) => (r.lockIn3 != null && r[marker] != null) ? Math.abs(r.lockIn3 - (typeof r[marker] === 'object' ? null : r[marker])) : null).filter((x) => x != null));
-const convErr = mean(dead.map((r) => (r.lockIn3 != null && r.convProgress != null) ? Math.abs(r.lockIn3 - r.convProgress) : null).filter((x) => x != null));
-const rollErr = mean(dead.map((r) => (r.lockIn3 != null) ? Math.abs(r.lockIn3 - r.markers.lastRoll) : null).filter((x) => x != null));
-const relErr = mean(dead.map((r) => (r.lockIn3 != null) ? Math.abs(r.lockIn3 - r.markers.choreoRelease) : null).filter((x) => x != null));
-console.log(`  |lockIn3 − marker| mean:  convergence ${f2(convErr)}  ·  lastRoll(0.95) ${f2(rollErr)}  ·  choreoRelease(0.97) ${f2(relErr)}  (smaller = better predictor)`);
+const lp1 = dead.map((r) => r.lockP1).filter((x) => x != null);
+const ls3 = dead.map((r) => r.lockSet3).filter((x) => x != null);
+console.log(`  P1 lock:      median ${f2(pctl(lp1, 0.5))} p25 ${f2(pctl(lp1, 0.25))} p75 ${f2(pctl(lp1, 0.75))}  (n=${lp1.length}; null ⇒ P1 never changed in [0.5,1] = locked ≤0.5)`);
+console.log(`  top-3 set lock: median ${f2(pctl(ls3, 0.5))} p25 ${f2(pctl(ls3, 0.25))} p75 ${f2(pctl(ls3, 0.75))}  (n=${ls3.length})`);
+console.log(`  DEAD races with NO P1 change in [0.5,1]: ${dead.filter((r) => r.lockP1 == null).length}/${dead.length}`);
+const err = (get) => mean(dead.map((r) => (r.lockP1 != null) ? Math.abs(r.lockP1 - get(r)) : null).filter((x) => x != null));
+console.log(`  |P1lock − marker| mean:  convergence ${f2(err((r) => r.convProgress ?? 1))}  ·  lastRoll(0.95) ${f2(err((r) => r.markers.lastRoll))}  ·  choreoRelease(0.97) ${f2(err((r) => r.markers.choreoRelease))}  (smaller = better predictor)`);
 
 console.log(`\nruntime ${((Date.now() - t0) / 60000).toFixed(1)} min`);
 writeFileSync(join(OUT, 'autopsy.json'), JSON.stringify({ races: RACES, seed: SEED, rows: all }, null, 2) + '\n');

@@ -48,9 +48,18 @@ export function chainCheckpointCount(durationSec, segSec) {
  * @param {number}   args.mExtra          outcome-neutral oscillation amplitude (0 = pure monotone ease)
  * @returns {{ curves: Array<{index:number, curve:object, finalRank:number}>, checkpoints: number[] }}
  */
-export function generateChainCurves({ seed, postChaos, finalRanks, anchorProgress, K, mExtra }) {
+export function generateChainCurves({
+  seed,
+  postChaos,
+  finalRanks,
+  anchorProgress,
+  K,
+  mExtra,
+  drama = null,
+}) {
   const N = postChaos.length;
   const rng = mulberry32(((seed | 0) ^ 0x9e3779b9) >>> 0 || 1);
+  const B1 = 5; // front band top edge (BAND_EDGES[0])
 
   // K checkpoints in (anchorProgress, 1]. The last is exactly 1.0 (the finish) → the drawn formation.
   const checkpoints = [];
@@ -60,25 +69,72 @@ export function generateChainCurves({ seed, postChaos, finalRanks, anchorProgres
   for (const pc of postChaos) {
     const anchorRank = clamp(pc.rank, 1, N);
     const finalRank = clamp(finalRanks.get(pc.index) ?? pc.rank, 1, N);
-    // Per-racer seeded oscillation (extra crossings; vanishes at the finish). Drawn per racer so the
-    // schedule differs every race and is not a synchronized wave. NEVER reads start row or live order.
+    // Per-racer seeded draws (row-blind — index/seed only, never start row): oscillation lobes + phase,
+    // a drama roll, a B1 slot for false leaders, and a per-racer stagger so duels sequence not synchronize.
     const oscN = 1 + Math.floor(rng() * 3); // 1..3 lobes
     const oscPh = rng() * Math.PI * 2;
+    // Drama-only draws are taken ONLY when drama is active, so the non-drama path consumes the exact same
+    // RNG stream as the B15 sorter (curves unchanged when drama is off).
+    let dramaRoll = 0,
+      b1Slot = 1,
+      stagJit = 0;
+    if (drama && drama.frac > 0) {
+      dramaRoll = rng();
+      b1Slot = 1 + Math.floor(rng() * B1); // a front slot for a false leader to occupy
+      stagJit = rng(); // 0..1 → per-racer stagger of the resolve time
+    }
 
-    const waypoints = [{ progress: anchorProgress, rank: anchorRank }];
-    for (let k = 1; k <= K; k++) {
-      const prog = checkpoints[k - 1];
-      const frac = (prog - anchorProgress) / Math.max(1e-6, 1 - anchorProgress); // 0..1
-      let rank;
-      if (k === K) {
-        // ENDPOINT INVARIANT: exactly the drawn place; no excursion. This is the L181-safe attractor.
-        rank = finalRank;
-      } else {
-        const base = lerp(anchorRank, finalRank, smoother(frac));
-        const osc = mExtra * Math.sin(Math.PI * oscN * frac + oscPh) * (1 - frac); // ×0 at frac=1
-        rank = clamp(base + osc, 1, N);
+    // ── DRAMA role (owner's language): intermediate formations DIVERGE from the draw, converge only at
+    // the finish. FALSE LEADER = drawn OUTSIDE B1 but held IN B1 until `resolve`, then reeled back to its
+    // drawn place. LATE ARRIVAL = drawn INTO B1 but held back until `resolve`, then climbs into the front.
+    // Endpoint is ALWAYS finalRank (fairness untouched; only the finish is measured). Smooth by the curve
+    // engine (min-jerk) + the eased servo; envelope-safe (the servo clamps trajectoryMult regardless).
+    let waypoints;
+    let role = 'ease';
+    if (drama && drama.frac > 0) {
+      // stagger the resolve time per racer so late climbs/drops don't all land together (closed-track safe).
+      const resolve = clamp(
+        drama.resolve - stagJit * (drama.stagger ?? 0),
+        anchorProgress + 0.15,
+        0.97
+      );
+      const holdStart = clamp(anchorProgress + 0.1, anchorProgress + 1e-3, resolve - 1e-3);
+      if (finalRank > B1 && dramaRoll < drama.frac) {
+        role = 'falseLeader';
+        const hold = b1Slot; // occupy a front slot
+        waypoints = [
+          { progress: anchorProgress, rank: anchorRank },
+          { progress: holdStart, rank: hold },
+          { progress: resolve, rank: hold },
+          { progress: 1.0, rank: finalRank }, // reeled back to the drawn place
+        ];
+      } else if (finalRank <= B1 && dramaRoll < drama.frac) {
+        role = 'lateArrival';
+        const hold = clamp(finalRank + (drama.holdDepth ?? 10), B1 + 1, N); // wait outside the front
+        waypoints = [
+          { progress: anchorProgress, rank: anchorRank },
+          { progress: holdStart, rank: hold },
+          { progress: resolve, rank: hold },
+          { progress: 1.0, rank: finalRank }, // climbs into the front late
+        ];
       }
-      waypoints.push({ progress: prog, rank });
+    }
+    if (!waypoints) {
+      // Default: min-jerk ease anchor→drawn with the small vanishing oscillation (the B15 sorter).
+      waypoints = [{ progress: anchorProgress, rank: anchorRank }];
+      for (let k = 1; k <= K; k++) {
+        const prog = checkpoints[k - 1];
+        const frac = (prog - anchorProgress) / Math.max(1e-6, 1 - anchorProgress);
+        let rank;
+        if (k === K) {
+          rank = finalRank; // ENDPOINT INVARIANT
+        } else {
+          const base = lerp(anchorRank, finalRank, smoother(frac));
+          const osc = mExtra * Math.sin(Math.PI * oscN * frac + oscPh) * (1 - frac);
+          rank = clamp(base + osc, 1, N);
+        }
+        waypoints.push({ progress: prog, rank });
+      }
     }
 
     // Build via the shipped curve engine, then jerk-match to the boundary (same as the hero handoff).
@@ -87,6 +143,7 @@ export function generateChainCurves({ seed, postChaos, finalRanks, anchorProgres
       index: pc.index,
       curve: anchorHeroCurve(curve, anchorProgress, anchorRank, pc.vel ?? 0),
       finalRank,
+      role,
     });
   }
   return { curves, checkpoints };

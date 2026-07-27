@@ -304,6 +304,12 @@ const GAP_REROLL_STRENGTH = GAP_REROLL ? Number(argVal('gapRerollStrength', Stri
 const CHAIN_CHOREO_ON = argVal('chainChoreoEnabled', String(DEFAULT_RACE_DYNAMICS_CONFIG.chainChoreoEnabled)) === 'true';
 const CHAIN_SEG_SEC = Number(argVal('chainSegSec', String(DEFAULT_RACE_DYNAMICS_CONFIG.chainSegSec)));
 const CHAIN_MEXTRA = Number(argVal('chainMExtra', String(DEFAULT_RACE_DYNAMICS_CONFIG.chainMExtra)));
+// DRAMA formations (SIM-ONLY; DRAMA-1). OFF → the B15 sorter. Endpoint stays the drawn place (fairness).
+const CHAIN_DRAMA_ON = argVal('chainDrama', 'false') === 'true';
+const CHAIN_DRAMA_FRAC = Number(argVal('chainDramaFrac', '0.4'));
+const CHAIN_DRAMA_RESOLVE = Number(argVal('chainDramaResolve', '0.75'));
+const CHAIN_DRAMA_STAGGER = Number(argVal('chainDramaStagger', '0.15'));
+const CHAIN_DRAMA_HOLDDEPTH = Number(argVal('chainDramaHoldDepth', '10'));
 // B2-leak trace (read-only diagnostic): adds b2LastInside to rawData rows. No-flag → byte-identical.
 const B2_TRACE = argv.includes('--b2-trace');
 // reRoll / trajectory dynamics overrides — same shared-default + argVal pattern. Lets a sweep
@@ -1144,10 +1150,14 @@ export function runSingleRace({
     const FA_FINAL = 2 / 3, FA_LOCK_FROM = 0.5;         // windows (final third; lock tracked from mid-race)
     const FA_CLOSE_LEN = 3.0, FA_CLOSE_SPD = 0.005;     // closing-pair gap (lengths) + min rel-speed (0.5%)
     const FA_CONV = 0.02, FA_BRAKE = 0.99;              // fuel-converged threshold (2%) + servo-brake threshold
+    const FA_LATE = 0.9;   // the LAST-10% window — where the standing dead-finale def (leadChangeCount) lives
     const fa = frontAutopsy ? {
-      ticks: 0, trajSpreadSum: 0, fuelSpreadSum: 0, trajAtMax: 0, trajAtMin: 0, frontSlots: 0,
+      ticks: 0, trajSpreadSum: 0, fuelSpreadSum: 0, trajAtClamp: 0, frontSlots: 0,
       closingTicks: 0, blockedTicks: 0, servoOppTicks: 0,
-      prevK3: null, prevK5: null, lockIn3: null, lockIn5: null,
+      // LATE window [FA_LATE,1] — same instruments, restricted to where "dead" is decided.
+      lTicks: 0, lFuelSum: 0, lTrajAtClamp: 0, lFrontSlots: 0, lClosing: 0, lBlocked: 0, lServoOpp: 0,
+      // Lock tracking from FA_LOCK_FROM: P1 leader, top-3 SET (order-independent), top-3/5 ORDER.
+      prevP1: null, lockP1: null, prevSet3: null, lockSet3: null, prevK3: null, prevK5: null, lockIn3: null, lockIn5: null,
       convSeries: [],        // {progress, fuelSpread} over [FA_LOCK_FROM, 1] for the convergence point
       markers: { lastRoll: DYNAMICS_OVERRIDES.reRollLastPositionPercent / 100, choreoRelease: CHOREO_RELEASE_PROGRESS },
     } : null;
@@ -2047,32 +2057,39 @@ export function runSingleRace({
       if (frontAutopsy && raceProgress >= FA_LOCK_FROM) {
         const faOrder = racers.filter((r) => !r.finished).sort((a, b) => (b.t - a.t) || (a.index - b.index));
         if (faOrder.length >= 2) {
-          // Lock-in (tracked from mid-race): last progress the top-3 / top-5 index-order changed.
-          const faKey = (n) => faOrder.slice(0, n).map((r) => r.index).join(',');
-          const k3 = faKey(3), k5 = faKey(5);
+          // Lock-in (tracked from mid-race): P1 leader, top-3 SET (order-independent), top-3/5 ORDER.
+          const p1 = faOrder[0].index;
+          const set3 = faOrder.slice(0, 3).map((r) => r.index).sort((a, b) => a - b).join(',');
+          const ord = (n) => faOrder.slice(0, n).map((r) => r.index).join(',');
+          const k3 = ord(3), k5 = ord(5);
+          if (fa.prevP1 !== null && p1 !== fa.prevP1) fa.lockP1 = raceProgress;       // WINNER lock (the real one)
+          if (fa.prevSet3 !== null && set3 !== fa.prevSet3) fa.lockSet3 = raceProgress; // top-3 membership lock
           if (fa.prevK3 !== null && k3 !== fa.prevK3) fa.lockIn3 = raceProgress;
           if (fa.prevK5 !== null && k5 !== fa.prevK5) fa.lockIn5 = raceProgress;
-          fa.prevK3 = k3; fa.prevK5 = k5;
-          // The four instruments over the FINAL THIRD only.
+          fa.prevP1 = p1; fa.prevSet3 = set3; fa.prevK3 = k3; fa.prevK5 = k5;
+          // The four instruments over the FINAL THIRD (and, separately, the LAST-10% window).
           if (raceProgress >= FA_FINAL) {
             const top5 = faOrder.slice(0, 5);
             const spd = (r) => r.baseSpeed * (r.trajectoryMult ?? 1) * (r.areaBonusMult ?? 1);
             const tms = top5.map((r) => r.trajectoryMult ?? 1);
             const sps = top5.map(spd);
             const mn = Math.min, mx = Math.max, mean = sps.reduce((s, x) => s + x, 0) / sps.length;
+            const fuelSpread = mean > 0 ? (mx(...sps) - mn(...sps)) / mean : 0;
+            const late = raceProgress >= FA_LATE;
             fa.ticks++; fa.frontSlots += top5.length;
             fa.trajSpreadSum += mx(...tms) - mn(...tms);
-            const fuelSpread = mean > 0 ? (mx(...sps) - mn(...sps)) / mean : 0;
             fa.fuelSpreadSum += fuelSpread;
             fa.convSeries.push({ progress: raceProgress, fuelSpread });
-            for (const tm of tms) { if (tm >= 1.099) fa.trajAtMax++; if (tm <= 0.851) fa.trajAtMin++; }
+            if (late) { fa.lTicks++; fa.lFrontSlots += top5.length; fa.lFuelSum += fuelSpread; }
+            for (const tm of tms) { if (tm >= 1.099 || tm <= 0.851) { fa.trajAtClamp++; if (late) fa.lTrajAtClamp++; } }
             for (let i = 1; i < top5.length; i++) {
               const behind = top5[i], ahead = top5[i - 1];
               const gapLen = arcT(ahead.t, behind.t, isOpen) * govLenScale;
               if (gapLen < FA_CLOSE_LEN && spd(behind) > spd(ahead) * (1 + FA_CLOSE_SPD)) {
-                fa.closingTicks++;
-                if (behind.avoidanceActive) fa.blockedTicks++;                 // SPACE (traffic-denied lane)
-                if ((behind.trajectoryMult ?? 1) < FA_BRAKE) fa.servoOppTicks++; // OVER-STEER (servo brakes it)
+                const blocked = !!behind.avoidanceActive;                       // SPACE (traffic-denied lane)
+                const braked = (behind.trajectoryMult ?? 1) < FA_BRAKE;         // OVER-STEER (servo brakes it)
+                fa.closingTicks++; if (blocked) fa.blockedTicks++; if (braked) fa.servoOppTicks++;
+                if (late) { fa.lClosing++; if (blocked) fa.lBlocked++; if (braked) fa.lServoOpp++; }
               }
             }
           } else {
@@ -2542,13 +2559,19 @@ export function runSingleRace({
         ticks: fa.ticks,
         meanTrajSpread: fa.ticks ? +(fa.trajSpreadSum / fa.ticks).toFixed(4) : null,      // (a) width used?
         meanFuelSpread: fa.ticks ? +(fa.fuelSpreadSum / fa.ticks).toFixed(4) : null,      // (a) passing fuel
-        fracTrajAtClamp: fa.frontSlots ? +((fa.trajAtMax + fa.trajAtMin) / fa.frontSlots).toFixed(4) : null,
+        fracTrajAtClamp: fa.frontSlots ? +(fa.trajAtClamp / fa.frontSlots).toFixed(4) : null,
         closingTicks: fa.closingTicks,                                                    // (b/d) denominator
         blockedFrac: fa.closingTicks ? +(fa.blockedTicks / fa.closingTicks).toFixed(4) : 0, // (b) SPACE
         servoOppFrac: fa.closingTicks ? +(fa.servoOppTicks / fa.closingTicks).toFixed(4) : 0, // (d) OVER-STEER
-        lockIn3: fa.lockIn3, lockIn5: fa.lockIn5,                                         // (c) TIMING
-        convProgress,                                                                     // (c) fuel death point
-        markers: fa.markers,                                                              // (c) coincidence
+        // LAST-10% window (where "dead" is decided) — the discriminating instruments.
+        lateFuelSpread: fa.lTicks ? +(fa.lFuelSum / fa.lTicks).toFixed(4) : null,
+        lateFracTrajAtClamp: fa.lFrontSlots ? +(fa.lTrajAtClamp / fa.lFrontSlots).toFixed(4) : null,
+        lateClosingTicks: fa.lClosing,
+        lateBlockedFrac: fa.lClosing ? +(fa.lBlocked / fa.lClosing).toFixed(4) : 0,
+        lateServoOppFrac: fa.lClosing ? +(fa.lServoOpp / fa.lClosing).toFixed(4) : 0,
+        // (c) TIMING — P1 (winner) lock is the real one; set3 = top-3 membership; ord = strict order.
+        lockP1: fa.lockP1, lockSet3: fa.lockSet3, lockIn3: fa.lockIn3, lockIn5: fa.lockIn5,
+        convProgress, markers: fa.markers,                                                // (c) coincidence
       };
     }
 
@@ -3244,6 +3267,11 @@ if (isMain) {
               contestWindowStart:        CONTEST_WINDOW_START,
               // Chain choreography (SIM CLI): OFF → shipped hero-choreo path (byte-identical).
               chainChoreoEnabled:        CHAIN_CHOREO_ON,
+              chainDrama:                CHAIN_DRAMA_ON,
+              chainDramaFrac:            CHAIN_DRAMA_FRAC,
+              chainDramaResolve:         CHAIN_DRAMA_RESOLVE,
+              chainDramaStagger:         CHAIN_DRAMA_STAGGER,
+              chainDramaHoldDepth:       CHAIN_DRAMA_HOLDDEPTH,
               chainSegSec:               CHAIN_SEG_SEC,
               chainMExtra:               CHAIN_MEXTRA,
             }, seed);
