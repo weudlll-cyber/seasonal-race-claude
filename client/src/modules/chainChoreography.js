@@ -51,7 +51,8 @@ export function chainCheckpointCount(durationSec, segSec) {
  *                                        When present, a seeded row-blind script set is drawn from the
  *                                        finale pool and authored on top of the B15+proximity substrate;
  *                                        scripted racers use their compiled curves, the rest ease as usual.
- * @returns {{ curves: Array<{index:number, curve:object, finalRank:number}>, checkpoints: number[], scriptStats: (object|null) }}
+ * @returns {{ curves: Array<{index:number, curve:object, finalRank:number}>, checkpoints: number[],
+ *            scriptStats: (object|null), accordSchedule: ({beats:number[], admitted:number[]}|null) }}
  */
 export function generateChainCurves({
   seed,
@@ -70,6 +71,7 @@ export function generateChainCurves({
   // racer keeps the B15 ease + proximity floor. Null → not imported path runs (byte-identical substrate).
   let compiled = null;
   let scriptStats = null;
+  let accordSchedule = null; // ACTION-BUILD-5: {beats, admitted} from the clearance-gated beat pass
   if (compiler) {
     const out = compileRaceScripts({
       seed,
@@ -77,10 +79,13 @@ export function generateChainCurves({
       finalRanks,
       anchorProgress,
       actionLevel: compiler.actionLevel ?? 'mid',
-      scarcity: compiler.scarcity ?? 0.5,
+      clearance: compiler.clearance ?? null,
+      frontConvergence: !!compiler.frontConvergence,
+      accordion: compiler.accordion ?? null,
     });
     compiled = out.scripts;
     scriptStats = out.stats;
+    accordSchedule = { beats: out.accordBeats, admitted: out.accordAdmittedBeats };
   }
   // Proximity floor: pull a rank toward its BAND CENTER (bunch within-band = contestable) through the
   // approach, releasing to the exact drawn rank at the finish. Within-band only ⇒ reachable; band
@@ -191,5 +196,5 @@ export function generateChainCurves({
       role,
     });
   }
-  return { curves, checkpoints, scriptStats };
+  return { curves, checkpoints, scriptStats, accordSchedule };
 }

@@ -118,6 +118,14 @@ const ARM_LIB = {
   // ── ACTION-BUILD-5 ARM A (attribution): the @328171a compiler with the accordion FULLY OFF — isolates
   // how much of the closed dead belongs to the accordion vs the scripts. (Run BEFORE the clearance refactor.)
   B15scriptOnly: withF(boundary(ROW(NAKED), 0.15), '--chainProximity=true', '--scriptCompiler=true', '--actionLevel=mid'),
+  // ── ACTION-BUILD-5 ARM B (the owner's rule): compiler + accordion, BOTH under LOCAL-CLEARANCE admission
+  // (topology constant deleted; lateral scripts + beats admitted per-instance by planned local space).
+  B15clr:  withF(boundary(ROW(NAKED), 0.15), '--chainProximity=true', '--scriptCompiler=true', '--actionLevel=mid',
+                 '--clearanceAdmit=true', '--chainAccordion=true', '--accordDensity=6', '--accordAdmit=true', '--accordSkip=true'),
+  // ── ACTION-BUILD-5 ARM C (B + front convergence): where a front lateral is clearance-refused, author a
+  // front-band longitudinal catch-up instead (the longitudinal finale story owns the moment compression can't).
+  B15clrC: withF(boundary(ROW(NAKED), 0.15), '--chainProximity=true', '--scriptCompiler=true', '--actionLevel=mid',
+                 '--clearanceAdmit=true', '--frontConvergence=true', '--chainAccordion=true', '--accordDensity=6', '--accordAdmit=true', '--accordSkip=true'),
   B15compLo:  withF(boundary(ROW(NAKED), 0.15), '--chainProximity=true', '--scriptCompiler=true', '--actionLevel=low',
                     '--chainAccordion=true', '--accordDensity=6', '--accordAdmit=true', '--accordSkip=true'),
   B15compHi:  withF(boundary(ROW(NAKED), 0.15), '--chainProximity=true', '--scriptCompiler=true', '--actionLevel=high',
@@ -163,6 +171,14 @@ async function runArmTrack(armKey, flags, track) {
     shrunk: mean(ss.map((s) => s.shrunk ?? 0)),
     exposure: mean(ss.map((s) => s.exposure ?? 0)),
     famMean, sigCollision, entropy, distinctSigs: sigCounts.size, nRaces: ss.length,
+    // ACTION-BUILD-5 clearance telemetry: lanes read, lateral admitted vs refused (the situational rule
+    // firing where room exists / refusing where it does not), accordion beats admitted, front-conversions.
+    lanes: mean(ss.map((s) => s.lanesFront ?? 0)),
+    latAdmit: mean(ss.map((s) => s.lateralAdmit ?? 0)),
+    latRefuse: mean(ss.map((s) => s.lateralRefuse ?? 0)),
+    accAdmit: mean(ss.map((s) => s.accordAdmit ?? 0)),
+    accRefuse: mean(ss.map((s) => s.accordRefuse ?? 0)),
+    frontConv: mean(ss.map((s) => s.frontConverted ?? 0)),
   };
   // Lead-fight proxy: leader changes in the last 30% (distinct-leaders signal). fa records whole-race
   // leader-change progresses in `leadChangesProg` (added ACTION-BUILD-4); fall back to 0 when absent.
@@ -230,7 +246,8 @@ for (const armKey of arms) {
     const c = r.compiler;
     if (!c || !c.nRaces) continue;
     const fm = c.famMean;
-    console.log(`    [comp ${t.id.padEnd(13)}] scripts ${c.scriptCount.toFixed(1)} (fl${fm.fightForLead.toFixed(1)} cb${fm.comebacker.toFixed(1)} fb${fm.fallbacker.toFixed(1)} pc${fm.paceConvergence.toFixed(1)} dp${fm.duelPair.toFixed(1)} pf${fm.photoFan.toFixed(1)}) | drop ${c.dropped.toFixed(1)} shrink ${c.shrunk.toFixed(1)} | H ${c.entropy.toFixed(2)} sigColl ${(c.sigCollision * 100).toFixed(0)}% (${c.distinctSigs}/${c.nRaces}) | leadLast30 ${r.leadLast30.toFixed(2)}`);
+    console.log(`    [comp ${t.id.padEnd(13)}] scripts ${c.scriptCount.toFixed(1)} (fl${fm.fightForLead.toFixed(1)} cb${fm.comebacker.toFixed(1)} fb${fm.fallbacker.toFixed(1)} pc${fm.paceConvergence.toFixed(1)} dp${fm.duelPair.toFixed(1)} pf${fm.photoFan.toFixed(1)}) | drop ${c.dropped.toFixed(1)} shrink ${c.shrunk.toFixed(1)} | H ${c.entropy.toFixed(2)} sigColl ${(c.sigCollision * 100).toFixed(0)}% (${c.distinctSigs}/${c.nRaces})`);
+    console.log(`    [clr  ${t.id.padEnd(13)}] lanes ${c.lanes.toFixed(1)} | latAdmit ${c.latAdmit.toFixed(1)} latRefuse ${c.latRefuse.toFixed(1)} | accAdmit ${c.accAdmit.toFixed(1)} accRefuse ${c.accRefuse.toFixed(1)} | frontConv ${c.frontConv.toFixed(1)} | leadLast30 ${r.leadLast30.toFixed(2)}`);
   }
 }
 console.log(`\nruntime ${((Date.now() - t0) / 60000).toFixed(1)} min`);

@@ -325,12 +325,13 @@ const ACCORD_SKIP = argVal('accordSkip', 'false') === 'true'; // B: lane-conditi
 const CHAIN_PROXIMITY = argVal('chainProximity', 'false') === 'true';
 const PROXIMITY_STRENGTH = Number(argVal('proximityStrength', '0.5'));
 const PROXIMITY_RESOLVE = Number(argVal('proximityResolve', '0.85'));
-// ACTION-BUILD-4 finale script compiler (SIM-ONLY; default OFF). actionLevel = the slider (low/mid/high).
-// geomScarcity = local-clearance read for the geometry preference: default is topology-derived (open
-// tracks re-expand → low scarcity; closed tracks churn on bunched laps → high scarcity), overridable.
+// ACTION-BUILD-4/5 finale script compiler (SIM-ONLY; default OFF). actionLevel = the slider (low/mid/high).
+// ACTION-BUILD-5 replaces the topology-derived scarcity constant with LOCAL-CLEARANCE ADMISSION: lateral
+// scripts + accordion beats are admitted per-instance by planned local width+occupancy (never topology).
 const SCRIPT_COMPILER = argVal('scriptCompiler', 'false') === 'true';
 const ACTION_LEVEL = argVal('actionLevel', 'mid');
-const GEOM_SCARCITY_ARG = argVal('geomScarcity', ''); // '' → topology-derived per track below
+const CLEARANCE_ADMIT = argVal('clearanceAdmit', 'false') === 'true'; // ACTION-BUILD-5 situational rule
+const FRONT_CONVERGENCE = argVal('frontConvergence', 'false') === 'true'; // ARM C front-band longitudinal
 // B2-leak trace (read-only diagnostic): adds b2LastInside to rawData rows. No-flag → byte-identical.
 const B2_TRACE = argv.includes('--b2-trace');
 // reRoll / trajectory dynamics overrides — same shared-default + argVal pattern. Lets a sweep
@@ -3219,6 +3220,13 @@ if (isMain) {
         const effectiveWidth       = geometricTrackWidth * DEFAULT_RACE_BEHAVIOR_CONFIG.startSpreadRange;
         const comboLayout          = computeRacerLayout(effectiveWidth, nRacersForCombo, displaySize, DEFAULT_AUTO_SCALE_CONFIG);
         const comboEffDisplaySize  = comboLayout.spriteSize;
+        // ACTION-BUILD-5: the drawn car FOOTPRINT width (px), computed exactly as the physics does
+        // (index.jsx W_REF + computeBodyNarrowRef). This is the lateral body used by overlap detection —
+        // the honest car width for the clearance reader's lane count (trackWidth / carWidth).
+        const comboBodyNarrowPx    = computeBodyNarrowRef(
+          Math.min(285, effectiveWidth), nRacersForCombo, displaySize,
+          Math.min(bodyFillX, bodyFillY), DEFAULT_AUTO_SCALE_CONFIG
+        ).bodyNarrow;
         const comboAutoScale       = comboEffDisplaySize / displaySize;
         const rowGapPx             = comboEffDisplaySize * DEFAULT_ROW_LAYOUT_CONFIG.rowGapMultiplier;
         const totalRows            = computeStartRowCount(effectiveWidth, nRacersForCombo, comboEffDisplaySize);
@@ -3321,12 +3329,15 @@ if (isMain) {
               chainProximity:            CHAIN_PROXIMITY,
               proximityStrength:         PROXIMITY_STRENGTH,
               proximityResolve:          PROXIMITY_RESOLVE,
-              // ACTION-BUILD-4 finale script compiler. Geometry preference reads local clearance: default
-              // is topology-derived (open re-expands → 0.3; closed churns on bunched laps → 0.7), or the
-              // explicit --geomScarcity override. One global rule reading topology, never a track name.
+              // ACTION-BUILD-4/5 finale script compiler + LOCAL-CLEARANCE ADMISSION. The clearance reader
+              // reads planned local width (trackWidthPx at the arc — constant for uniform tracks) and the
+              // drawn car footprint (carWidthPx) → lanes; no topology/track constant is read anywhere.
               scriptCompilerEnabled:     SCRIPT_COMPILER,
               actionLevel:               ACTION_LEVEL,
-              geomScarcity:              GEOM_SCARCITY_ARG !== '' ? Number(GEOM_SCARCITY_ARG) : (isOpen ? 0.3 : 0.7),
+              clearanceAdmit:            CLEARANCE_ADMIT,
+              frontConvergence:          FRONT_CONVERGENCE,
+              trackWidthPx:              geometricTrackWidth,
+              carWidthPx:                comboBodyNarrowPx,
               chainSegSec:               CHAIN_SEG_SEC,
               chainMExtra:               CHAIN_MEXTRA,
             }, seed);

@@ -317,9 +317,25 @@ export function createRacePlan(racers, finishT, targetDurationMs, config = {}, s
     // runtime budget: scripts are curves — the servo/envelope/traffic core are unchanged. `scarcity` is
     // the local-clearance read (0 open .. 1 scarce) driving the geometry preference; passed in per race.
     _scriptCompiler: config.scriptCompilerEnabled
-      ? { actionLevel: config.actionLevel ?? 'mid', scarcity: config.geomScarcity ?? 0.5 }
+      ? {
+          actionLevel: config.actionLevel ?? 'mid',
+          // ACTION-BUILD-5 LOCAL-CLEARANCE ADMISSION (the owner's situational rule). When clearanceAdmit is
+          // on, every lateral script AND every accordion beat is admitted per-instance by planned local
+          // clearance (width @ arc + planned occupancy), never by topology/track. widthAt is constant here
+          // (shipped tracks are uniform-width); a width profile can be passed later for chicanes.
+          clearance: config.clearanceAdmit
+            ? { widthAt: () => config.trackWidthPx ?? 300, carWidth: config.carWidthPx ?? 28.5 }
+            : null,
+          frontConvergence: !!config.frontConvergence,
+          // The accordion pulses are compiled + clearance-admitted alongside the scripts (both on → the
+          // runtime consumes _accordAdmittedByClearance for beat admission in place of its open-lane read).
+          accordion: config.chainAccordion
+            ? { density: config.accordDensity ?? 5, pulseLen: config.accordPulseLen ?? 0.06 }
+            : null,
+        }
       : null,
     _scriptStats: null, // last compiled per-race stats (telemetry; read via getScriptStats)
+    _accordAdmittedByClearance: null, // Set(beatIdx) admitted by the clearance reader (compiler on) or null
     // ── ACTION-BUILD-1: THE ACCORDION (SIM-ONLY; default OFF) ────────────────────────────────────────────
     // Malus-side momentary-leader compression. At seeded beat windows (any phase) the CURRENT race leader
     // (rankIdx 0) is eased toward the malus floor — smooth via _setTarget — so the racers behind pass at
@@ -691,6 +707,15 @@ export function createTrajectoryController(racePlan) {
             compiler: plan._scriptCompiler,
           });
           plan._scriptStats = gen.scriptStats ?? null;
+          // ACTION-BUILD-5: the compiler already generated the accordion beat schedule AND clearance-admitted
+          // each beat. Adopt them so the runtime accordion admits by planned local clearance (not its own
+          // open-lane read). Only when the accordion is on AND the compiler produced a schedule.
+          if (gen.accordSchedule && gen.accordSchedule.beats && gen.accordSchedule.beats.length) {
+            plan._accordBeats = gen.accordSchedule.beats;
+            plan._accordAdmittedByClearance = new Set(gen.accordSchedule.admitted);
+            plan._accordRacerBeats = new Map();
+            plan._accordAdmitted = new Map();
+          }
           plan._heroCurves = new Map(gen.curves.map((c) => [c.index, c.curve]));
           plan._chainCheckpoints = gen.checkpoints;
           plan._chainNextCk = 0;
@@ -939,10 +964,18 @@ export function createTrajectoryController(racePlan) {
           // leader) has a free lane — i.e. it is not traffic-blocked. If it is blocked, braking the leader
           // only deepens the jam → the lane promise is broken here.
           const openLane = () => nActive < 2 || !active[1].avoidanceActive;
-          // A — OPEN-LANE INVARIANT: admit a beat (once, at entry) only where the passing lane exists.
-          if (acc.admit && !plan._accordAdmitted.has(beatIdx))
-            plan._accordAdmitted.set(beatIdx, openLane());
-          const admitted = !acc.admit || plan._accordAdmitted.get(beatIdx);
+          // A — ADMISSION. ACTION-BUILD-5: when the compiler is on it has already clearance-admitted each
+          // beat by PLANNED local space (width @ the beat's arc + planned occupancy, sequenced through the
+          // shared corridor with the lateral scripts) → use that set. Otherwise the shipped open-lane read
+          // (ACTION-BUILD-2): admit a beat once at entry only where the live passing lane exists.
+          let admitted;
+          if (plan._accordAdmittedByClearance) {
+            admitted = plan._accordAdmittedByClearance.has(beatIdx);
+          } else {
+            if (acc.admit && !plan._accordAdmitted.has(beatIdx))
+              plan._accordAdmitted.set(beatIdx, openLane());
+            admitted = !acc.admit || plan._accordAdmitted.get(beatIdx);
+          }
           if (admitted) {
             plan._accordFireTicks++;
             // B — LANE-CONDITIONAL SKIP: if the route is jammed this tick, skip the brake (never queue).

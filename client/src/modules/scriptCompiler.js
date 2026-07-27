@@ -26,6 +26,7 @@
 // ============================================================
 
 import { mulberry32 } from './racePlanner.js';
+import { createClearanceReader } from './clearanceReader.js';
 
 const clamp = (v, lo, hi) => Math.max(lo, Math.min(hi, v));
 
@@ -58,9 +59,18 @@ const LONGITUDINAL = 'longitudinal'; // same-lane honest catch-up / hold-and-res
  * @param {Map<number,number>} args.finalRanks  index → DRAWN final place (the fair draw; the terminal contract)
  * @param {number} args.anchorProgress    the chaos→strict boundary fraction (curves start here)
  * @param {('low'|'mid'|'high')} [args.actionLevel]  the slider — scales the script budget (monotone)
- * @param {number} [args.scarcity]        lateral-clearance read in [0,1]; 1 = lanes scarce (closed), 0 = open
+ * @param {object} [args.clearance]       LOCAL-CLEARANCE reader inputs {widthAt, carWidth} (ACTION-BUILD-5).
+ *                                        When present, every LATERAL element (fight-for-lead / duel /
+ *                                        photo-fan) and every accordion beat is admitted per-instance by
+ *                                        planned local clearance; longitudinal scripts are ungated. When
+ *                                        null, lateral elements are authored ungated (attribution arm).
+ * @param {boolean} [args.frontConvergence]  ARM C: where a FRONT lateral is clearance-refused, author a
+ *                                        front-band pace-order convergence in its place (longitudinal owns
+ *                                        the moment compression cannot have). One global rule reading clearance.
+ * @param {object} [args.accordion]       {density, pulseLen} → compute the beat schedule + clearance-admit
+ *                                        each beat here (the runtime consumes the admitted set). Null → no beats.
  * @returns {{ scripts: Map<number,{role:string, kind:string, waypoints:Array<{progress:number,rank:number}>, resolve:number}>,
- *            stats: object }}
+ *            accordBeats: number[], accordAdmittedBeats: number[], stats: object }}
  */
 export function compileRaceScripts({
   seed,
@@ -68,11 +78,12 @@ export function compileRaceScripts({
   finalRanks,
   anchorProgress,
   actionLevel = 'mid',
-  scarcity = 0.5,
+  clearance = null,
+  frontConvergence = false,
+  accordion = null,
 }) {
   const N = postChaos.length;
   const rng = mulberry32(((seed | 0) ^ 0x5c819f) >>> 0 || 1); // isolated stream (own salt)
-  const s = clamp(scarcity, 0, 1);
 
   // Live rank + drawn place lookups (row-blind — index only).
   const anchorRankOf = new Map(postChaos.map((p) => [p.index, clamp(p.rank, 1, N)]));
@@ -80,23 +91,33 @@ export function compileRaceScripts({
   // Field ordered by DRAWN place (band assignment reads the draw, never the live order or the row).
   const byDrawn = postChaos.map((p) => p.index).sort((a, b) => drawnOf(a) - drawnOf(b));
 
-  // ── SLIDER → script budget (monotone). Higher actionLevel = strictly more scripts of every family. ──
+  // ── LOCAL-CLEARANCE READER (the owner's situational rule). Planned occupancy = the DRAWN ranks (the
+  // terminal state of every compiled curve; in the finale windows the field is sorted to it). No topology,
+  // no track name, no per-track constant — only local width + local occupancy. Null → lateral is ungated. ──
+  const drawnRanks = postChaos.map((p) => drawnOf(p.index));
+  const reader = clearance
+    ? createClearanceReader({
+        widthAt: clearance.widthAt,
+        carWidth: clearance.carWidth,
+        plannedRanksAt: () => drawnRanks,
+      })
+    : null;
+
+  // ── SLIDER → script budget (monotone). Higher actionLevel = strictly more scripts of every family. The
+  // budget is now TOPOLOGY-BLIND: we draw ambitiously for every family (compression included) and let the
+  // clearance reader admit/refuse each lateral instance by local space. What has no room simply is not built. ──
   const LEVEL = { low: 0.6, mid: 1.0, high: 1.5 }[actionLevel] ?? 1.0;
-  // Geometry preference (one global rule reading local clearance, never a track name): scarce lateral
-  // room favours longitudinal same-lane scripts; open room favours compression/rotation.
-  const compW = 1 - s; // open → 1, closed → 0
-  const longW = 0.5 + s; // closed → 1.5, open → 0.5
   // Per-family target counts (a seeded jitter around the target makes the draw vary race to race). The
   // ±2.2 span gives a real -1/0/+1 spread (a ×1.0 span rounds to 0 almost always → identical draws).
   const jitter = () => Math.round((rng() - 0.5) * 2.2); // ~-1..+1 (row-blind seeded), genuinely varied
-  const q = (base, w) => Math.max(0, Math.round(base * LEVEL * w) + jitter());
+  const q = (base) => Math.max(0, Math.round(base * LEVEL) + jitter());
   const quota = {
-    fightForLead: Math.min(1, Math.max(0, Math.round(1 * LEVEL * compW))), // 0 or 1 group
-    comebacker: q(2, longW),
-    fallbacker: q(2, longW),
-    paceConvergence: q(1, longW),
-    duelPair: q(1, compW),
-    photoFan: compW > 0.4 && rng() < 0.5 * LEVEL ? 1 : 0, // sometimes, open only
+    fightForLead: Math.round(1 * LEVEL) >= 1 ? 1 : 0, // one group attempted; clearance filters members
+    comebacker: q(2),
+    fallbacker: q(2),
+    paceConvergence: q(frontConvergence ? 2 : 1), // ARM C raises the longitudinal front story
+    duelPair: q(1),
+    photoFan: rng() < 0.5 * LEVEL ? 1 : 0, // sometimes; clearance decides if it fits
   };
 
   const used = new Set(); // per-racer exposure cap: each racer belongs to at most ONE script
@@ -114,6 +135,22 @@ export function compileRaceScripts({
     shrunk: 0,
     dropped: 0,
     exposure: 0, // racers carrying a script
+    // ACTION-BUILD-5 clearance telemetry: lateral instances the reader let through vs refused for lack of
+    // local room; and how many refusals were converted to a front-band longitudinal story (ARM C).
+    lateralAdmit: 0,
+    lateralRefuse: 0,
+    frontConverted: 0,
+    accordAdmit: 0,
+    accordRefuse: 0,
+  };
+
+  // Lateral admission through the clearance reader. `null` reader → ungated (attribution arm) → always yes.
+  const admitLateral = (p0, p1, rankLo, rankHi) => {
+    if (!reader) return { admitted: true, freeLanes: null };
+    const r = reader.admit({ p0, p1, rankLo, rankHi });
+    if (r.admitted) stats.lateralAdmit++;
+    else stats.lateralRefuse++;
+    return r;
   };
 
   // Whole-race occupancy: resolve times are handed out from a spread so scripts do not all land together
@@ -180,31 +217,63 @@ export function compileRaceScripts({
 
   // ── FIGHT FOR THE LEAD — the B1-drawn group trades the lead from ~0.7 (1–3 place excursions; intra-band
   // ⇒ zero fairness cost). Each member peaks (is pulled toward rank 1) in a sequenced window so distinct
-  // racers lead through the finale, then all resolve to their drawn ranks. Compression → open lanes only. ──
+  // racers lead through the finale. LATERAL → each peak is admitted per-instance by the clearance reader:
+  // it fires only where a free corridor exists at that place/time, and members sequence through the shared
+  // corridor (one at a time where the front is tight, several where it is wide). ARM C: a member the reader
+  // REFUSES is converted to a front-band longitudinal catch-up (compression cannot have the moment, so the
+  // longitudinal finale story does). Endpoint stays the drawn place for every member either way. ──
   if (quota.fightForLead) {
     const front = byDrawn.filter((i) => drawnOf(i) <= BAND_EDGES[0] && !used.has(i)).slice(0, 4);
     if (front.length >= 2) {
       const start = 0.7;
       const span = 0.24; // 0.70..0.94 lead-trading window
+      let anyAdmitted = false;
       front.forEach((idx, j) => {
         const finalRank = drawnOf(idx);
         const aRank = anchorRankOf.get(idx) ?? finalRank;
-        // Each member is pulled to the front of B1 in its own sub-window → sequenced lead changes.
         const peakProg = clamp(start + span * ((j + 0.5) / front.length), start, 0.94);
         const peakRank = 1 + (j % 2); // alternate rank 1 / rank 2 so the lead genuinely changes hands
-        const preProg = clamp(peakProg - 0.1, anchorProgress + 0.05, peakProg - 1e-3);
-        const waypoints = [
-          { progress: anchorProgress, rank: aRank },
-          { progress: preProg, rank: clamp(Math.round((aRank + finalRank) / 2), 1, BAND_EDGES[0]) },
-          { progress: peakProg, rank: peakRank },
-          { progress: 1.0, rank: finalRank }, // resolves to the drawn place (fairness untouched)
-        ];
-        scripts.set(idx, { role: 'fightForLead', kind: COMPRESSION, waypoints, resolve: peakProg });
-        used.add(idx);
-        stats.exposure++;
+        const dec = admitLateral(peakProg - 0.03, peakProg + 0.03, 1, peakRank + 2);
+        if (dec.admitted) {
+          const preProg = clamp(peakProg - 0.1, anchorProgress + 0.05, peakProg - 1e-3);
+          const waypoints = [
+            { progress: anchorProgress, rank: aRank },
+            {
+              progress: preProg,
+              rank: clamp(Math.round((aRank + finalRank) / 2), 1, BAND_EDGES[0]),
+            },
+            { progress: peakProg, rank: peakRank },
+            { progress: 1.0, rank: finalRank }, // resolves to the drawn place (fairness untouched)
+          ];
+          scripts.set(idx, {
+            role: 'fightForLead',
+            kind: COMPRESSION,
+            waypoints,
+            resolve: peakProg,
+          });
+          used.add(idx);
+          stats.exposure++;
+          anyAdmitted = true;
+        } else if (frontConvergence) {
+          // ARM C: no lateral room here → a single clean same-lane climb into the front slot instead.
+          const holdStart = clamp(anchorProgress + 0.1, anchorProgress + 0.02, 0.55);
+          if (
+            admitHold(
+              idx,
+              'paceConvergence',
+              LONGITUDINAL,
+              holdStart,
+              peakProg,
+              clamp(finalRank + 2, 1, N)
+            )
+          )
+            stats.frontConverted++;
+        }
       });
-      stats.counts.fightForLead = 1;
-      stats.admitted++;
+      if (anyAdmitted) {
+        stats.counts.fightForLead = 1;
+        stats.admitted++;
+      }
     }
   }
 
@@ -264,8 +333,9 @@ export function compileRaceScripts({
     }
   }
 
-  // ── BAND-LOCAL DUEL PAIR — two adjacent same-band racers trade their local order once or twice, then
-  // resolve to their drawn places. Rotation → open lanes. ──
+  // ── BAND-LOCAL DUEL PAIR — two adjacent same-band racers trade their local order once, then resolve to
+  // their drawn places. LATERAL (a rotation) → admitted per-instance by the clearance reader; refused where
+  // the local field fills the lanes, sequenced through the shared corridor. ──
   {
     let placed = 0;
     for (let k = 0; k < byDrawn.length - 1 && placed < quota.duelPair; k++) {
@@ -276,6 +346,7 @@ export function compileRaceScripts({
       const db = drawnOf(b);
       if (bandOf(da) !== bandOf(db) || db - da > 3) continue;
       const cross = 0.6 + rng() * 0.2; // one crossing near 0.6..0.8
+      if (!admitLateral(cross - 0.03, cross + 0.03, da - 1, db + 1).admitted) continue; // no lateral room here
       const aA = anchorRankOf.get(a) ?? da;
       const aB = anchorRankOf.get(b) ?? db;
       // A dips to B's place, B rises to A's place at the crossing; both resolve to their draws.
@@ -308,11 +379,12 @@ export function compileRaceScripts({
     }
   }
 
-  // ── PHOTO-FINISH FAN (sometimes, open only) — a small late compression of the top cluster: the front
-  // ~5 drawn racers pinch together at ~0.92 then fan to their exact places at the line. Band-local. ──
+  // ── PHOTO-FINISH FAN (sometimes) — a small late compression of the top cluster: the front ~5 drawn
+  // racers pinch together at ~0.92 then fan to their exact places at the line. LATERAL → admitted only
+  // where the finish-line front has a free corridor (a tight front on narrow geometry refuses it). ──
   if (quota.photoFan) {
     const front = byDrawn.filter((i) => drawnOf(i) <= BAND_EDGES[0] && !used.has(i)).slice(0, 5);
-    if (front.length >= 3) {
+    if (front.length >= 3 && admitLateral(0.9, 1.0, 1, BAND_EDGES[0]).admitted) {
       const pinch = 0.9 + rng() * 0.04;
       let any = false;
       front.forEach((idx, j) => {
@@ -342,6 +414,33 @@ export function compileRaceScripts({
     }
   }
 
+  // ── ACCORDION BEATS UNDER CLEARANCE — every accordion pulse is a compression element, so it goes through
+  // the SAME reader (and the SAME shared-corridor state as the lateral scripts above: a beat that would
+  // fight a lead-trade for the front lane is refused). The beat schedule is generated here, identically to
+  // the runtime formula (same 0x0acc0 salt), so beat indices align; the runtime consumes accordAdmittedBeats
+  // for its beat-entry admission instead of its own open-lane read. Only computed when the accordion is on. ──
+  let accordBeats = [];
+  const accordAdmittedBeats = [];
+  if (accordion && accordion.density > 0) {
+    const arng = mulberry32(((seed | 0) ^ 0x0acc0) >>> 0 || 1);
+    for (let bi = 0; bi < accordion.density; bi++)
+      accordBeats.push(+(0.12 + (0.9 - 0.12) * ((bi + arng()) / accordion.density)).toFixed(4));
+    const pulseLen = accordion.pulseLen ?? 0.06;
+    for (let bi = 0; bi < accordBeats.length; bi++) {
+      const b = accordBeats[bi];
+      // The pass the beat buys is the immediate follower going by the momentary leader → front ranks 1..3.
+      const dec = reader
+        ? reader.admit({ p0: b, p1: b + pulseLen, rankLo: 1, rankHi: 3 })
+        : { admitted: true };
+      if (dec.admitted) {
+        accordAdmittedBeats.push(bi);
+        stats.accordAdmit++;
+      } else {
+        stats.accordRefuse++;
+      }
+    }
+  }
+
   // ── Per-race variety signature: the sorted (role, resolve-bucket) multiset. Two races with the same
   // signature are a near-duplicate timeline (C_sig collision). Entropy of the role mix is H_script. ──
   const sigParts = [];
@@ -356,7 +455,7 @@ export function compileRaceScripts({
     stats.counts.duelPair +
     stats.counts.photoFan;
   stats.actionLevel = actionLevel;
-  stats.scarcity = +s.toFixed(3);
+  stats.lanesFront = reader ? reader.lanesAt(0.85) : null; // representative finale lane count (telemetry)
 
-  return { scripts, stats };
+  return { scripts, accordBeats, accordAdmittedBeats, stats };
 }
