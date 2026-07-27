@@ -115,6 +115,9 @@ const ARM_LIB = {
   // convergence / duel / photo-fan) + the open-lane accordion where lanes afford it. actionLevel=mid.
   B15comp:    withF(boundary(ROW(NAKED), 0.15), '--chainProximity=true', '--scriptCompiler=true', '--actionLevel=mid',
                     '--chainAccordion=true', '--accordDensity=6', '--accordAdmit=true', '--accordSkip=true'),
+  // ── ACTION-BUILD-5 ARM A (attribution): the @328171a compiler with the accordion FULLY OFF — isolates
+  // how much of the closed dead belongs to the accordion vs the scripts. (Run BEFORE the clearance refactor.)
+  B15scriptOnly: withF(boundary(ROW(NAKED), 0.15), '--chainProximity=true', '--scriptCompiler=true', '--actionLevel=mid'),
   B15compLo:  withF(boundary(ROW(NAKED), 0.15), '--chainProximity=true', '--scriptCompiler=true', '--actionLevel=low',
                     '--chainAccordion=true', '--accordDensity=6', '--accordAdmit=true', '--accordSkip=true'),
   B15compHi:  withF(boundary(ROW(NAKED), 0.15), '--chainProximity=true', '--scriptCompiler=true', '--actionLevel=high',
