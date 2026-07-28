@@ -335,6 +335,12 @@ const FRONT_CONVERGENCE = argVal('frontConvergence', 'false') === 'true'; // ARM
 const CLEARANCE_BUDGET = argVal('clearanceBudget', 'false') === 'true'; // ACTION-BUILD-6 graded script budget
 const FINALE_CAST = argVal('finaleCast', 'false') === 'true'; // ACTION-BUILD-7 owner's finale cast (final-draw for all)
 const NEGATIVE_SPACE = argVal('negativeSpace', 'false') === 'true'; // ACTION-BUILD-7 one band left calm
+// ACTION-FREEBAND-1 (SIM-ONLY; default OFF): band-corridor finale + tempo noise. ONE runtime tempo source.
+const FREE_BAND = argVal('freeBand', 'false') === 'true';
+const FREE_BAND_R = Number(argVal('freeBandR', '0.85'));
+const FREE_BAND_NOISE = argVal('freeBandNoise', 'frozen'); // 'reroll' | 'frozen'
+const FREE_BAND_AMP = Number(argVal('freeBandAmp', '0.08'));
+const FREE_BAND_CORRIDOR_GAIN = Number(argVal('freeBandCorridorGain', '4'));
 // B2-leak trace (read-only diagnostic): adds b2LastInside to rawData rows. No-flag → byte-identical.
 const B2_TRACE = argv.includes('--b2-trace');
 // reRoll / trajectory dynamics overrides — same shared-default + argVal pattern. Lets a sweep
@@ -3364,6 +3370,11 @@ if (isMain) {
               clearanceBudget:           CLEARANCE_BUDGET,
               finaleCast:                FINALE_CAST,
               negativeSpace:             NEGATIVE_SPACE,
+              freeBand:                  FREE_BAND,
+              freeBandR:                 FREE_BAND_R,
+              freeBandNoise:             FREE_BAND_NOISE,
+              freeBandAmp:               FREE_BAND_AMP,
+              freeBandCorridorGain:      FREE_BAND_CORRIDOR_GAIN,
               trackWidthPx:              geometricTrackWidth,
               carWidthPx:                comboBodyNarrowPx,
               chainSegSec:               CHAIN_SEG_SEC,
@@ -3434,7 +3445,8 @@ if (isMain) {
                 const a = racePlanController?.getAccordStats ? racePlanController.getAccordStats() : { skip: 0, fire: 0 };
                 // ACTION-BUILD-4 script-compiler telemetry (per-race draw + admission counts + variety signature).
                 const sc = racePlanController?.getScriptStats ? racePlanController.getScriptStats() : null;
-                return { ...result.frontAutopsy, accordSkipRate: a.fire ? +(a.skip / a.fire).toFixed(4) : 0, accordFireTicks: a.fire, scriptStats: sc };
+                const fbs = racePlanController?.getFreeBandStats ? racePlanController.getFreeBandStats() : null;
+                return { ...result.frontAutopsy, accordSkipRate: a.fire ? +(a.skip / a.fire).toFixed(4) : 0, accordFireTicks: a.fire, scriptStats: sc, freeBand: fbs };
               })() });
           }
           // SPEED-SOURCE (--speed-source): stash this race's top-15 decomposition, tagged with combo meta.

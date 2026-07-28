@@ -343,6 +343,25 @@ export function createRacePlan(racers, finishT, targetDurationMs, config = {}, s
       : null,
     _scriptStats: null, // last compiled per-race stats (telemetry; read via getScriptStats)
     _accordAdmittedByClearance: null, // Set(beatIdx) admitted by the clearance reader (compiler on) or null
+    // ── ACTION-FREEBAND-1 (SIM-ONLY; default OFF). The finale fairness mechanism is a BAND CORRIDOR: from
+    // the release point R the endpoint is BAND-exact, not rank-exact. After R, every 'chain' racer is freed
+    // from its curve and steered ONLY on its DRAWN-band error (hard at the edges, free inside); a bounded
+    // tempo-variance source (frozen offset or periodic re-sample = the re-roll's finale statistics) decides
+    // the within-band order, unresolved to the line. ONE runtime tempo source + ONE corridor governor. Arc
+    // racers (owner-comebacker / -fallbacker, ARM C) keep their authored curves — a declared corridor exception.
+    _freeBand: config.freeBand
+      ? {
+          R: config.freeBandR ?? 0.85, // release point
+          noise: config.freeBandNoise ?? 'frozen', // 'reroll' (re-sampled) | 'frozen' (once at R)
+          amp: config.freeBandAmp ?? 0.08, // bounded tempo offset (±amp on trajectoryMult)
+          interval: config.freeBandInterval ?? 0.06, // re-sample period (reroll), in progress
+          lastPos: config.freeBandLastPos ?? 0.95, // freeze the last draw after this (ship's frozen-last-draw)
+          corridorGain: config.freeBandCorridorGain ?? 4, // edge-correction multiplier (hard band edge)
+        }
+      : null,
+    _fbOffset: new Map(), // free-band tempo offsets: index → {off} (frozen) or index → {bucket, off} (reroll)
+    _fbRng: null, // free-band's own seeded RNG (isolated; built lazily)
+    _fbEdgeFights: 0, // corridor-edge fights (a racer pushed to its band edge and held) — fairness telemetry
     // ── ACTION-BUILD-1: THE ACCORDION (SIM-ONLY; default OFF) ────────────────────────────────────────────
     // Malus-side momentary-leader compression. At seeded beat windows (any phase) the CURRENT race leader
     // (rankIdx 0) is eased toward the malus floor — smooth via _setTarget — so the racers behind pass at
@@ -837,6 +856,59 @@ export function createTrajectoryController(racePlan) {
     for (let rankIdx = 0; rankIdx < nActive; rankIdx++) {
       const r = active[rankIdx];
       const currentRank = rankIdx + 1; // 1-indexed, 1 = leading
+      // ── ACTION-FREEBAND-1: after the release point R, a 'chain' racer is freed from its curve to the BAND
+      // CORRIDOR (steer ONLY on its DRAWN-band error — 0 inside → free, over-gained at the edge → hard) plus a
+      // bounded tempo-variance source (frozen or re-sampled). No exact-rank capture. Arc racers (owner-arcs,
+      // ARM C) keep their curve below (a declared corridor exception). Flag OFF → this never runs (byte-id). ──
+      if (plan._freeBand && !_preOutcome && phaseProgress >= plan._freeBand.R) {
+        // Release everyone EXCEPT an active owner-arc (comebacker / fallbacker) — those are the ARM-C
+        // cross-band authored stories that keep their curve (the declared corridor exception).
+        const fbRole = plan._heroRoles ? plan._heroRoles.get(r.index) : null;
+        if (fbRole !== 'comebacker' && fbRole !== 'fallbacker') {
+          const fb = plan._freeBand;
+          if (!plan._fbRng) plan._fbRng = mulberry32(((plan.seed | 0) ^ 0xf3eba7d) >>> 0 || 1);
+          let entry = plan._fbOffset.get(r.index);
+          if (fb.noise === 'frozen') {
+            if (!entry) {
+              entry = { off: (plan._fbRng() * 2 - 1) * fb.amp };
+              plan._fbOffset.set(r.index, entry);
+            }
+          } else {
+            // reroll: re-sample the bounded offset per interval up to lastPos, then FREEZE the last draw
+            // (the re-roll's own finale statistics — re-randomized tempo that goes quiet to the line).
+            const bucket =
+              phaseProgress <= fb.lastPos ? Math.floor((phaseProgress - fb.R) / fb.interval) : -1;
+            if (!entry) {
+              entry = { bucket: -999, off: 0 };
+              plan._fbOffset.set(r.index, entry);
+            }
+            if (bucket !== -1 && bucket !== entry.bucket) {
+              entry.bucket = bucket;
+              entry.off = (plan._fbRng() * 2 - 1) * fb.amp;
+            }
+          }
+          const fbNoise = entry.off;
+          const fbDrawn = plan._racerTargetRank.get(r.index) ?? currentRank;
+          const [fbLo, fbHi] = getAreaBounds(fbDrawn);
+          const fbBandErr =
+            currentRank < fbLo ? currentRank - fbLo : currentRank > fbHi ? currentRank - fbHi : 0;
+          if (fbBandErr !== 0) plan._fbEdgeFights++;
+          const fbTarget = clamp(
+            1.0 + gain * fb.corridorGain * (fbBandErr / nActive) + fbNoise,
+            minMult,
+            maxMult
+          );
+          _setTarget(r, fbTarget, elapsedMs);
+          _racerStepCount++;
+          if (currentRank >= fbLo && currentRank <= fbHi) _racersInCorridorCount++;
+          if (r.avoidanceActive) _racersBlockedCount++;
+          if (r.index === plan.winnerRacerId) {
+            _winnerStepCount++;
+            if (r.avoidanceActive) _winnerBlockedInOutcome++;
+          }
+          continue;
+        }
+      }
       const heroCurve = heroCurves && r.isHeroChoreographed ? heroCurves.get(r.index) : null;
       const isHero = !!heroCurve;
       // Pre-OUTCOME: only heroes steer (toward their curves); the pack stays pinned to 1.0 exactly as
@@ -1355,6 +1427,16 @@ export function createTrajectoryController(racePlan) {
     getAccordStats: () => ({ skip: plan._accordSkipTicks ?? 0, fire: plan._accordFireTicks ?? 0 }),
     // ACTION-BUILD-4: read-only per-race script-compiler telemetry (null until the boundary cast fires).
     getScriptStats: () => plan._scriptStats,
+    // ACTION-FREEBAND-1: read-only corridor telemetry (edge-fights = how often a racer was held at its band edge).
+    getFreeBandStats: () =>
+      plan._freeBand
+        ? {
+            edgeFights: plan._fbEdgeFights ?? 0,
+            R: plan._freeBand.R,
+            noise: plan._freeBand.noise,
+            amp: plan._freeBand.amp,
+          }
+        : null,
     // SCREEN escape-latency: how many DOWN-tilts have hit the LIVE LEADER so far. Read per frame by
     // the sim so it can freeze escapeDepth (the max P1->P2 gap reached BEFORE the first correction)
     // at the exact moment the first one fires. Read-only accessor, no state change.
