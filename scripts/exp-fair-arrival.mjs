@@ -23,25 +23,33 @@ const pct = (x) => (x == null ? 'n/a' : (x * 100).toFixed(0) + '%');
 const BE = [5, 15, 25, 40];
 const zi = (r) => { for (let i = 0; i < BE.length; i++) if (r <= BE[i]) return i; return BE.length; };
 
-const TRACKS = [{ id: 'searound', racer: 'manta' }, { id: 'ice-track', racer: 'snowmobile' }];
-// CHAOS-STEER-1: the owner's Part 1 (chaosSteer) measured ALONE vs Ship. faB60 = the band-bias R=0.60 arm,
-// carried as CONTEXT only (the FAIR-ARRIVAL-1 draw-bias cache). No combined A+B arm in this run.
-// FAIR-ARRIVAL-COMBINE-1: the two validated halves alone AND together. The combo is BOTH flags on — the
-// steer untouched, the bias untouched, no new coupling code.
+// FAIR-ARRIVAL-CONFIRM-1: 10-track confirm of the COMBO. --tracks=ten runs all 10 standard tracks (racer +
+// closed read from the seed); default is the searound+ice screen pair. Field size 40 closed / 60 open.
+const TEN = ['city-circuit', 'dirt-oval', 'garden-path', 'ice-track', 'luger-hill', 'mountainstreet', 'river-run', 'searound', 'seatrack', 'space-sprint'];
+const trackSeed = (id) => JSON.parse(readFileSync(join(ROOT, 'server/seeds/tracks', `${id}.json`), 'utf8'));
+const TRACKS_ARG = argVal('tracks', 'searound,ice-track');
+const TRACK_IDS = TRACKS_ARG === 'ten' ? TEN : TRACKS_ARG.split(',').map((s) => s.trim()).filter(Boolean);
+const TRACKS = TRACK_IDS.map((id) => { const s = trackSeed(id); return { id, racer: s.defaultRacerTypeId, closed: !!s.closed }; });
+// CHAOS-STEER-1: the owner's Part 1 (chaosSteer) measured ALONE vs Ship. faB60 = the band-bias R=0.60 arm.
+// FAIR-ARRIVAL-COMBINE-1: the two validated halves alone AND together (combo = BOTH flags, no coupling code).
 const STEER = ['--chaosSteer=true', '--chaosSteerGain=0.06'];
 const BIAS = ['--bandBias=true', '--bandR=0.60', '--bandBiasGain=0.10'];
-const ARMS = {
+const ALL_ARMS = {
   ship: [],
   chaosSteer: STEER,
   faB60: BIAS,
   combo: [...STEER, ...BIAS],
 };
+// --arms filter (default all). CONFIRM-1 runs --arms=ship,combo (lean; attribution arms reserved for the gate).
+const ARM_KEYS = (argVal('arms', Object.keys(ALL_ARMS).join(','))).split(',').map((s) => s.trim()).filter(Boolean);
+const ARMS = Object.fromEntries(ARM_KEYS.map((k) => [k, ALL_ARMS[k]]));
 
 async function run(armKey, flags, track) {
   const out = join(TMP, `${armKey}__${track.id}`);
+  const nRacers = track.closed ? 40 : 60;
   await pExec(process.execPath, [
     'scripts/sim-fairness.mjs', `--track=${track.id}`, `--racer=${track.racer}`,
-    `--seed=1`, `--races=${RACES}`, `--racers=40`, '--track-defaults', ...flags,
+    `--seed=1`, `--races=${RACES}`, `--racers=${nRacers}`, '--track-defaults', ...flags,
     '--runaway-parade', '--hero-map', '--front-autopsy', `--out=${toOut(out)}`,
   ], { cwd: ROOT, maxBuffer: 512 * 1024 * 1024 });
   const hm = JSON.parse(readFileSync(join(out, 'hero-map.json'), 'utf8'));
@@ -62,10 +70,18 @@ async function run(armKey, flags, track) {
   }
   const fc = mean(rp.map((r) => r.frontBattle?.frontContestFraction ?? 0));
   const dead = mean(rp.map((r) => ((r.leadChangeCount ?? 0) === 0 ? 1 : 0)));
-  // DEAD-BORING = dead race (no P1 change) AND no sustained front contest (frontContest < 0.3).
-  let boring = 0;
-  for (const r of rp) if ((r.leadChangeCount ?? 0) === 0 && (r.frontBattle?.frontContestFraction ?? 0) < 0.3) boring++;
+  // DEAD-BORING = dead race (no P1 change) AND no sustained front contest (frontContest < 0.3); THRILLER = the
+  // complement within dead (a dead-by-count race that still held a sustained front contest).
+  let boring = 0, thriller = 0;
+  for (const r of rp) {
+    if ((r.leadChangeCount ?? 0) !== 0) continue;
+    if ((r.frontBattle?.frontContestFraction ?? 0) < 0.3) boring++; else thriller++;
+  }
   const deadBoring = rp.length ? boring / rp.length : 0;
+  const deadThriller = rp.length ? thriller / rp.length : 0;
+  const p1MultiSec = mean(rp.map((r) => r.frontBattle?.p1LongestMultiSec ?? 0));
+  // NOTE: LAW is UNAVAILABLE on this frozen branch — the LAW/front-autopsy observer was built later on the
+  // chain line; porting it would be a code change CONFIRM-1 forbids. Reported as n/a. All other metrics stand.
   // CHAOS-STEER-1 scorecard + steer telemetry (chaosSteer field is attached for every arm, read-only).
   const cs = rp.map((r) => r.chaosSteer).filter(Boolean);
   const inBandEnd = mean(cs.map((c) => (c.nField ? c.inBandEnd / c.nField : 0)));
@@ -80,7 +96,8 @@ async function run(armKey, flags, track) {
   return {
     arm: armKey, track: track.id,
     arrival: hm.fairness?.bandReach ?? null, holm: hm.fairness?.startRowUnfair ? 'UNF' : 'ok', rowMin,
-    dead, deadBoring, fc, distinctLead: mean(rp.map((r) => r.frontBattle?.distinctLeaders ?? 0)),
+    dead, deadBoring, deadThriller, p1MultiSec, closed: track.closed,
+    fc, distinctLead: mean(rp.map((r) => r.frontBattle?.distinctLeaders ?? 0)),
     maxLeadHold: mean(rp.map((r) => r.frontBattle?.maxLeadHoldShare ?? 0)),
     steerTele, rowBandReach, rowSteer,
   };
@@ -90,22 +107,18 @@ async function pool(tasks) { const out = []; let i = 0; await Promise.all(Array.
 
 mkdirSync(TMP, { recursive: true });
 const t0 = Date.now();
-console.log(`\n=== FAIR-ARRIVAL-1 screen — N=${RACES}/arm/track | searound + ice | track-defaults | jobs=${JOBS} ===`);
+console.log(`\n=== FAIR-ARRIVAL confirm — N=${RACES}/arm/track | ${TRACK_IDS.join(', ')} | track-defaults | arms ${ARM_KEYS.join(',')} | jobs=${JOBS} ===`);
 const tasks = [];
 for (const [k, f] of Object.entries(ARMS)) for (const t of TRACKS) tasks.push(() => run(k, f, t));
 const all = await pool(tasks);
 const get = (a, t) => all.find((r) => r.arm === a && r.track === t);
-const ship = { searound: get('ship', 'searound'), 'ice-track': get('ship', 'ice-track') };
 for (const armKey of Object.keys(ARMS)) {
   console.log(`\n── ${armKey} ──`);
   for (const t of TRACKS) {
-    const r = get(armKey, t.id), s = ship[t.id];
+    const r = get(armKey, t.id), s = get('ship', t.id);
     const dArr = s ? (r.arrival - s.arrival) * 100 : 0, dFc = s ? (r.fc - s.fc) * 100 : 0, dDB = s ? (r.deadBoring - s.deadBoring) * 100 : 0;
     const sgn = (x) => (x >= 0 ? '+' : '') + x.toFixed(0) + 'pp';
-    // NIGHT GATE per track (spec): arrival ≥ 90% AND frontContest ≥ ship AND DEAD-BORING ≤ ship.
-    // (Row-skew is the 4th, judged from the per-row diagnosis below — reported, not auto-gated.)
-    const gate = r.arrival >= 0.90 && r.fc >= (s?.fc ?? 0) && r.deadBoring <= (s?.deadBoring ?? 1);
-    console.log(`  ${t.id.padEnd(11)} | ARRIVAL ${pct(r.arrival)} (${armKey === 'ship' ? '—' : sgn(dArr)}) rowMin ${pct(r.rowMin)} ${r.holm} | frontContest ${pct(r.fc)} (${armKey === 'ship' ? '—' : sgn(dFc)}) | DEAD ${pct(r.dead)} DEAD-BORING ${pct(r.deadBoring)} (${armKey === 'ship' ? '—' : sgn(dDB)}) | distinctLead ${r.distinctLead.toFixed(2)} | ${gate ? 'GATE✓' : ''}`);
+    console.log(`  ${t.id.padEnd(13)}${r.closed ? 'C' : 'O'} | ARRIVAL ${pct(r.arrival)} (${armKey === 'ship' ? '—' : sgn(dArr)}) rowMin ${pct(r.rowMin)} ${r.holm} | fC ${pct(r.fc)} (${armKey === 'ship' ? '—' : sgn(dFc)}) | DEAD ${pct(r.dead)} BORING ${pct(r.deadBoring)} (${armKey === 'ship' ? '—' : sgn(dDB)}) thrill ${pct(r.deadThriller)} | dLead ${r.distinctLead.toFixed(2)} maxHold ${pct(r.maxLeadHold)} p1s ${r.p1MultiSec.toFixed(1)}`);
     // CHAOS-STEER-1 scorecard line: in-band-at-chaos-end (the direct Part-1 number) + delta vs ship, and steer telemetry.
     const st = r.steerTele, ss = s?.steerTele;
     const dIB = ss ? (st.inBandEnd - ss.inBandEnd) * 100 : 0;
@@ -124,4 +137,23 @@ for (const armKey of Object.keys(ARMS)) {
     }
   }
 }
-console.log(`\nruntime ${((Date.now() - t0) / 60000).toFixed(1)} min | NIGHT GATE = arrival≥90% AND frontContest≥ship AND DEAD-BORING≤ship (both tracks) AND row-skew absent/explained`);
+// ── CONFIRM-1 per-track gate read (directional at N=50): COMBO vs SHIP. Criteria:
+//   A arrival ≥ ship+10pp AND never below ship · R rowMin ≥ ship · F frontContest ≥ ship−2pp · B DEAD-BORING ≤ ship+2pp
+if (ARM_KEYS.includes('combo')) {
+  console.log(`\n=== CONFIRM GATE (COMBO vs SHIP, per track) — A:arrival≥+10 & ≥ship · R:rowMin≥ship · F:fC≥ship−2 · B:DEAD-BORING≤ship+2 ===`);
+  console.log(`  track            | arrival ship→combo | A | rowMin ship→combo | R | fC ship→combo | F | BORING ship→combo | B | PASS/weak`);
+  const weak = [];
+  for (const t of TRACKS) {
+    const s = get('ship', t.id), c = get('combo', t.id);
+    const A = c.arrival >= s.arrival + 0.10 && c.arrival >= s.arrival;
+    const R = c.rowMin >= s.rowMin - 1e-9;
+    const F = c.fc >= s.fc - 0.02;
+    const B = c.deadBoring <= s.deadBoring + 0.02;
+    const allPass = A && R && F && B;
+    if (!allPass) weak.push(t.id);
+    const mk = (b) => (b ? '✓' : '✗');
+    console.log(`  ${t.id.padEnd(15)}${c.closed ? 'C' : 'O'}| ${pct(s.arrival)}→${pct(c.arrival)} | ${mk(A)} | ${pct(s.rowMin)}→${pct(c.rowMin)} | ${mk(R)} | ${pct(s.fc)}→${pct(c.fc)} | ${mk(F)} | ${pct(s.deadBoring)}→${pct(c.deadBoring)} | ${mk(B)} | ${allPass ? 'PASS' : 'WEAK'}`);
+  }
+  console.log(`\n  WEAK TRACKS (night watchlist): ${weak.length ? weak.join(', ') : 'none — all 10 pass directionally'}`);
+}
+console.log(`\nruntime ${((Date.now() - t0) / 60000).toFixed(1)} min | CONFIRM (directional at N=${RACES}; binding verdict = N=100 night gate)`);
