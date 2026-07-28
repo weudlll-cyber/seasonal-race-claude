@@ -210,6 +210,7 @@ export function compileRaceScripts({
     nearMissChaser: -1, // index of the chaser planned to close to photo-finish range without passing (-1 = none)
     behindP1DuelPlanned: 0, // authored P2+ swaps in the contest window (the behind-P1 tension mark)
     chains: 0, // racers carrying a role CHAIN (>1 authored role in disjoint windows)
+    frontCloser: 0, // ACTION-BUILD-7c: pace-order convergence reserved at the FRONT (the completion mechanism)
     timeShareSum: 0, // Σ authored time-share (progress fraction under any authored role) across storied racers
     countDist: {}, // realized per-family draw counts this race (for the distribution report)
   };
@@ -421,9 +422,12 @@ export function compileRaceScripts({
     // LEADER-DEFENDS — drawn here BEFORE the comeback families so it owns the rank-1 racer. NEVER a quiet
     // front: (a) a planned near-miss chaser closes to photo-finish range without passing, (b) genuine P2+
     // place changes behind P1. A defended race is a PLANNED dead-finale (P1 held), not a casting hole.
-    if (rng() < 0.2) {
+    if (rng() < 0.1) {
+      // ACTION-BUILD-7c: defended share lowered to ~10% (v5: small).
       const leader = byDrawn.find((i) => drawnOf(i) === 1 && !used.has(i));
-      const chaser = byDrawn.find((i) => drawnOf(i) >= 2 && drawnOf(i) <= 3 && !used.has(i));
+      const chaser =
+        byDrawn.find((i) => drawnOf(i) === 2 && !used.has(i)) ?? // prefer the drawn P2 (tightest gap)
+        byDrawn.find((i) => drawnOf(i) >= 2 && drawnOf(i) <= 3 && !used.has(i));
       if (leader != null && chaser != null) {
         scripts.set(leader, {
           role: 'leaderHold',
@@ -439,13 +443,16 @@ export function compileRaceScripts({
         stats.exposure++;
         stats.timeShareSum += 1 - anchorProgress;
         const cd = drawnOf(chaser);
+        // ACTION-BUILD-7c SPATIAL near-miss: the chaser reaches rank 2 EARLY (by 0.85) and sits right behind
+        // P1 through the finale (spatially settled adjacent), then ends at its drawn place — so the gap at the
+        // line is a body-length, not a 3-length hold. It still never passes (P1 is the held leader).
         scripts.set(chaser, {
           role: 'nearMissChaser',
           kind: LONGITUDINAL,
-          resolve: 0.9,
+          resolve: 0.95,
           waypoints: [
             { progress: anchorProgress, rank: anchorRankOf.get(chaser) ?? cd },
-            { progress: 0.8, rank: clamp(BAND_EDGES[0], cd + 1, N) },
+            { progress: 0.85, rank: 2 },
             { progress: 1.0, rank: cd },
           ],
         });
@@ -490,6 +497,27 @@ export function compileRaceScripts({
         stats.scenario = 'leaderDefends';
         stats.leaderDefendsPlanned = 1;
         stats.counts.leaderDefends = 1;
+      }
+    }
+    // ── RESERVE THE CLOSER (ACTION-BUILD-7c) — in a CHANGE-drawn race the proven completion mechanism
+    // (pace-order convergence) is RESERVED at the FRONT before the final-draw consumes the field. The winner
+    // (drawn rank 1) is the faster racer held a couple ranks behind through the middle, then completing an
+    // honest same-lane catch-up to rank 1 by the line — a COMPLETED P1 change (unlike an endpoint-exact swap
+    // that reverses to the known order). This is what actually lowers dead-finale + makes the finale legible. ──
+    if (stats.scenario !== 'leaderDefends') {
+      const n = 1 + (rng() < 0.5 ? 1 : 0); // 1–2 front closers
+      const front = byDrawn.filter((i) => drawnOf(i) <= BAND_EDGES[0] && !used.has(i));
+      let placed = 0;
+      for (const idx of front) {
+        if (placed >= n) break;
+        const fr = drawnOf(idx);
+        const holdRank = clamp(fr + 2 + Math.floor(rng() * 2), fr + 1, BAND_EDGES[0] + 2); // a couple back
+        const holdStart = clamp(anchorProgress + 0.1, anchorProgress + 0.02, 0.5);
+        const resolve = +(0.8 + rng() * 0.1).toFixed(4); // completes the catch-up late (0.80–0.90)
+        if (admitHold(idx, 'paceConvergence', LONGITUDINAL, holdStart, resolve, holdRank)) {
+          stats.frontCloser++;
+          placed++;
+        }
       }
     }
     // OWNER-COMEBACKER: drawn INTO band 1, runs visibly far back (held OUTSIDE band 1), reaches band 1 ONLY

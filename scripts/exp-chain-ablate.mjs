@@ -214,6 +214,7 @@ async function runArmTrack(armKey, flags, track) {
   };
   // ── ACTION-BUILD-7b owner-cast + front-scenario telemetry (aligned per race; guarded when absent) ──
   const sPer = faR.map((r) => r.scriptStats); // may contain nulls (ship/night arms) → guarded below
+  const rpRaw = rp.races.map((rec) => rec.runawayParade); // per-race runaway-parade (carries .frontBattle)
   const distinct = (arr) => [...new Set(arr.filter((x) => x != null))].sort((a, b) => a - b);
   const scenarioOf = (r, s) => (r.leaderHolds ? (s?.scenario === 'leaderDefends' ? 'defended' : 'unplannedHold') : 'genuineChange');
   const scen = faR.map((r, i) => scenarioOf(r, sPer[i]));
@@ -232,7 +233,13 @@ async function runArmTrack(armKey, flags, track) {
     defendedShare: ss.length ? ss.filter((s) => s.scenario === 'leaderDefends').length / ss.length : 0,
     pLeaderHolds: mean(faR.map((r) => r.leaderHolds ?? 0)),
     behindP1: mean(faR.map((r) => r.behindP1Changes ?? 0)),
+    frontCloser: mean(ss.map((s) => s.frontCloser ?? 0)),
     scenarioEntropy, scenCounts,
+    // ── ACTION-BUILD-7c HONEST FRONT SCORING (existing outcome-front-battle observer, no new sim code) ──
+    frontContest: mean(rpRaw.map((x) => x.frontBattle?.frontContestFraction ?? 0)),
+    p1LongestSec: mean(rpRaw.map((x) => x.frontBattle?.p1LongestMultiSec ?? 0)),
+    maxLeadHold: mean(rpRaw.map((x) => x.frontBattle?.maxLeadHoldShare ?? 0)),
+    distinctLead: mean(rpRaw.map((x) => x.frontBattle?.distinctLeaders ?? 0)),
     defendedGaps: faR.filter((r, i) => sPer[i]?.scenario === 'leaderDefends').map((r) => r.lineGapLen).filter((x) => x != null),
     countDistCB: distinct(sPer.map((s) => s?.countDist?.comebacker)),
     countDistFB: distinct(sPer.map((s) => s?.countDist?.fallbacker)),
@@ -258,6 +265,19 @@ async function runArmTrack(armKey, flags, track) {
     else deadSplit.completionFail++;
   }
   b7b.deadSplit = deadSplit;
+  // ── ACTION-BUILD-7c: split "dead" into DEAD-BORING (no P1 change AND no sustained front contest) vs
+  // DEFENDED-THRILLER (no change but a near-miss gap < ~1.5L + behind-P1 churn, OR a sustained P1 contest).
+  // Decision number = DEAD-BORING rate vs Ship per track. ──
+  let boring = 0, thriller = 0;
+  for (let i = 0; i < rows.length; i++) {
+    if (!rows[i].dead) continue;
+    const fb = rpRaw[i]?.frontBattle, s = sPer[i], f = faR[i];
+    const sustained = (fb?.frontContestFraction ?? 0) >= 0.3;
+    const nearMiss = s?.scenario === 'leaderDefends' && f?.lineGapLen != null && f.lineGapLen < 1.5 && (f?.behindP1Changes ?? 0) >= 5;
+    if (sustained || nearMiss) thriller++; else boring++;
+  }
+  b7b.deadBoring = rows.length ? boring / rows.length : 0;
+  b7b.deadThriller = rows.length ? thriller / rows.length : 0;
   return {
     arm: armKey, track: track.id, closed: track.closed,
     bandReach: hm.fairness?.bandReach ?? null,
@@ -310,6 +330,12 @@ for (const armKey of arms) {
     bSum += r.bandReach; if (r.bandReach >= 0.70) passReach++;
     const sgn = (x, u = '') => (x >= 0 ? '+' : '') + x.toFixed(u === 'pp' ? 0 : 2) + u;
     console.log(`  ${t.id.padEnd(15)} | ${pct(r.bandReach).padStart(4)} (${armKey === 'ship' ? '  —' : sgn(dB, 'pp')}) | ${pct(r.deadRate).padStart(4)} (${armKey === 'ship' ? '  —' : sgn(dD, 'pp')}) | ${r.leadChanges.toFixed(2).padStart(5)} (${armKey === 'ship' ? '  —' : sgn(dL)}) | ${r.lawFull.toFixed(2)}   ${r.lawL50.toFixed(2)}  (${armKey === 'ship' ? ' —/—' : sgn(dLAW) + '/' + sgn(dLAW50)}) | skip ${(r.skipRate * 100).toFixed(0)}% | ${r.startRowUnfair ? 'UNF' : 'ok'}`);
+    // ACTION-BUILD-7c honest front scoring (every arm): DEAD-BORING vs Ship is the decision number.
+    const b = r.b7b, sb = s?.b7b;
+    if (b) {
+      const dBoring = sb ? (b.deadBoring - sb.deadBoring) * 100 : 0;
+      console.log(`     └score ${t.id.padEnd(12)} | DEAD-BORING ${pct(b.deadBoring).padStart(4)} (${armKey === 'ship' ? '—' : sgn(dBoring, 'pp')}) · thriller ${pct(b.deadThriller)} | frontContest ${(b.frontContest * 100).toFixed(0)}% | distinctLead ${b.distinctLead.toFixed(2)} | maxLeadHold ${(b.maxLeadHold * 100).toFixed(0)}% | p1MultiSec ${b.p1LongestSec.toFixed(1)}`);
+    }
   }
   console.log(`  SUMMARY band-reach mean ${pct(bSum / TRACKS.length)} | tracks ≥70%: ${passReach}/${TRACKS.length}`);
   // ACTION-BUILD-4 compiler line (only when scripts were drawn — nRaces>0 on the candidate arms).
@@ -330,7 +356,7 @@ for (const armKey of arms) {
       const gaps = b.defendedGaps;
       const gapStr = gaps.length ? `${(gaps.reduce((s, x) => s + x, 0) / gaps.length).toFixed(2)}L (n${gaps.length})` : 'n/a';
       const dw = b.depthWindow;
-      console.log(`    [ownr ${t.id.padEnd(13)}] cb ${b.ownerCB.toFixed(1)} fb ${b.ownerFB.toFixed(1)} mid ${b.midMover.toFixed(1)} | depth ${b.ownerDepth} (win 10%=${dw?.w10} 12%=${dw?.w12} 15%=${dw?.w15}) | counts cb[${b.countDistCB}] fb[${b.countDistFB}] mid[${b.countDistMM}]`);
+      console.log(`    [ownr ${t.id.padEnd(13)}] cb ${b.ownerCB.toFixed(1)} fb ${b.ownerFB.toFixed(1)} mid ${b.midMover.toFixed(1)} frontCloser ${b.frontCloser.toFixed(1)} | depth ${b.ownerDepth} (win 10%=${dw?.w10} 12%=${dw?.w12} 15%=${dw?.w15}) | counts cb[${b.countDistCB}] fb[${b.countDistFB}] mid[${b.countDistMM}]`);
       console.log(`    [scen ${t.id.padEnd(13)}] defendShare ${(b.defendedShare * 100).toFixed(0)}% | P(leaderHolds) ${(b.pLeaderHolds * 100).toFixed(0)}% | scenH ${b.scenarioEntropy.toFixed(2)} ${JSON.stringify(b.scenCounts)} | behindP1 ${b.behindP1.toFixed(1)} | defGap ${gapStr}`);
       console.log(`    [dead ${t.id.padEnd(13)}] total ${b.deadSplit.total} = nearMiss ${b.deadSplit.plannedNearMiss} + castHole ${b.deadSplit.castingHole} + completeFail ${b.deadSplit.completionFail} | chains ${b.chains.toFixed(1)} timeShare ${b.timeShareMean.toFixed(2)}`);
     }
