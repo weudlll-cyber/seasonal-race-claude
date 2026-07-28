@@ -62,7 +62,7 @@ import {
 } from '../../modules/autoSpriteScale.js';
 import { loadCameraConfig } from '../../modules/cameraConfig.js';
 import { configFingerprintBadge } from '../../modules/exportRaceConfig.js';
-import { eyeActiveWorld, eyeSessionActive, EYE_COMBO_FLAGS } from '../../utils/eyeMode.js';
+import { activeWorld, WORLD_COMBO_FLAGS } from '../../utils/worldMode.js';
 import CameraStateHUD from './CameraStateHUD.jsx';
 import CameraDiagnosticsHUD from './CameraDiagnosticsHUD.jsx';
 import RacePlanHUD from './RacePlanHUD.jsx';
@@ -468,15 +468,44 @@ export default function RaceScreen() {
     // init — the physics draw order (row shuffle → per-racer spreadFactor + roll jitter → re-rolls)
     // and every scalar are unchanged; the code merely moved.
     const normalSpeedPxPerSec = normalSpeedFrom(baseSpeedConfig);
-    // ── EYE-SETUP-1 (dev-only BLIND viewing): when ?eye=A/B maps to the COMBO world, inject the combo flags
-    // (chaosSteer + faB60 draw-bias, exactly as screened — no coupling, no new engine code); and force a
-    // FRESH seed every race so no single showcase seed is ever reused. No ?eye → untouched, byte-identical
-    // shipped. Injecting into the local dynamicsConfig only — the config-fingerprint badge reads the STORED
-    // config, so nothing about the world is shown in the UI.
-    if (eyeActiveWorld() === 'combo') Object.assign(dynamicsConfig, EYE_COMBO_FLAGS);
-    const racePlanSeed = eyeSessionActive()
+    // ── EYE-SETUP-2 (dev-only OPEN viewing): ?world=combo injects the combo flags (chaosSteer + faB60
+    // draw-bias, exactly as screened — no coupling, no new engine code); ?world=ship forces shipped for a
+    // side-by-side. A fresh seed every race so no single showcase seed is reused. No ?world → untouched,
+    // byte-identical shipped. PROOF IT IS LIVE (a silent no-op must be impossible): a corner badge, a
+    // race-start console line, a runtime assertion that the flags are actually in the live config, and an
+    // in-band-at-chaos-end log in the frame loop (below) that must sit ~65–70% for combo vs ~30% for ship.
+    const _world = activeWorld(); // 'combo' | 'ship' | null
+    if (_world === 'combo') Object.assign(dynamicsConfig, WORLD_COMBO_FLAGS);
+    const racePlanSeed = _world
       ? Math.floor(Math.random() * 0x7fffffff) + 1
       : (raceData.racePlanSeed ?? 0);
+    // Read the flags back from the SAME object handed to createRaceFromIdentity → the live config the plan
+    // is built from. comboOK false while ?world=combo ⇒ the injection silently failed ⇒ scream (never ship).
+    const _comboFlagsLive = dynamicsConfig.chaosSteer === true && dynamicsConfig.bandBias === true;
+    let worldBadge = null; // { text, color } drawn each frame; null when not in a ?world session
+    if (_world === 'combo') {
+      worldBadge = _comboFlagsLive
+        ? { text: 'WORLD: COMBO', color: 'green' }
+        : { text: 'WORLD: COMBO FAILED', color: 'red' };
+    } else if (_world === 'ship') {
+      worldBadge = { text: 'WORLD: SHIP', color: 'blue' };
+    }
+    if (_world) {
+      const line =
+        `[world] ${_world} | chaosSteer=${dynamicsConfig.chaosSteer ? 'ON' : 'OFF'}` +
+        ` | bandBias=${dynamicsConfig.bandBias ? `ON (gain ${dynamicsConfig.bandBiasGain}, R ${dynamicsConfig.bandBiasR})` : 'OFF'}` +
+        ` | seed ${racePlanSeed}`;
+      if (_world === 'combo' && !_comboFlagsLive) {
+        console.error(
+          '[world] COMBO FAILED — combo flags NOT present in the live config!',
+          dynamicsConfig
+        );
+      } else {
+        // eslint-disable-next-line no-console
+        console.info(line);
+      }
+    }
+    let chaosEndLogged = false; // frame-loop: log in-band-at-chaos-end once per race (the live steer proof)
     const pathLengthPx = geometry.pathLengthPx ?? 0;
     const race = createRaceFromIdentity({
       shape: shapeRef.current,
@@ -733,6 +762,34 @@ export default function RaceScreen() {
           // to the code that lived inline here; the render/camera/diag reads below consume its output.
           stepRacePhysics(st, raceCfg);
           const physicsTs = st.physicsTs;
+
+          // ── EYE-SETUP-2 LIVE PROOF: at chaos end, log in-band-at-chaos-end from the controller's own
+          // read-only snapshot (captured for EVERY world). Combo must sit ~65–70%, ship ~30% — this line is
+          // the live proof the steer ran. If ?world=combo but the steer left ZERO ticks, it did not run →
+          // flip the badge red and error loudly (a silent no-op is impossible).
+          if (
+            _world &&
+            !chaosEndLogged &&
+            racePlanController?.getChaosSteerStats &&
+            st.raceProgress >= (govFractions?.pulkStartFrac ?? 0.25)
+          ) {
+            chaosEndLogged = true;
+            const s = racePlanController.getChaosSteerStats();
+            const ib = s.inBandEnd ?? [];
+            const inCount = ib.filter(([, ok]) => ok).length;
+            const pctIn = ib.length ? Math.round((100 * inCount) / ib.length) : 0;
+            // eslint-disable-next-line no-console
+            console.info(
+              `[world] ${_world} in-band-at-chaos-end: ${pctIn}% (${inCount}/${ib.length}) · steerTicks ${s.steeredTicks ?? 0}`
+            );
+            if (_world === 'combo' && (s.steeredTicks ?? 0) === 0) {
+              worldBadge = { text: 'WORLD: COMBO FAILED (steer idle)', color: 'red' };
+
+              console.error(
+                '[world] COMBO FAILED — the chaos steer ran ZERO ticks; it is not active!'
+              );
+            }
+          }
 
           // Burst particles for racers that crossed the line THIS step (render-only; the finish
           // detection itself now lives in stepRacePhysics, so we key on finishTimeMs === physicsTs).
@@ -1265,12 +1322,32 @@ export default function RaceScreen() {
         ctx.restore();
       };
 
+      // Row 0 — EYE-SETUP-2 WORLD badge (dev-only; drawn ONLY in a ?world session, so the normal game view
+      // is unchanged). green COMBO / blue SHIP / RED "COMBO FAILED" if the flags never reached the live
+      // config or the steer ran zero ticks. Prominent (bordered, larger) so a silent no-op is impossible.
+      if (worldBadge && st.phase !== PHASE.COUNTDOWN) {
+        const bg =
+          worldBadge.color === 'green'
+            ? 'rgba(20,110,40,0.92)'
+            : worldBadge.color === 'red'
+              ? 'rgba(185,20,20,0.96)'
+              : 'rgba(20,60,150,0.92)';
+        const fg =
+          worldBadge.color === 'red'
+            ? '#ffcdd2'
+            : worldBadge.color === 'green'
+              ? '#b9f6ca'
+              : '#bbdefb';
+        drawHudPill(worldBadge.text, 8, 26, bg, fg, 14);
+      }
+
       // Row 1 — Race Plan status (dev/sightcheck aid). Truthful label: with a seed > 0 the number is
       // the seed of the plan AND the dynamics (the race replays exactly); at 0 nothing is seeded.
+      // Shifted down only while the WORLD badge is showing, so the normal view is untouched.
       if (racePlanController && st.phase !== PHASE.COUNTDOWN) {
         const label =
           racePlanSeed > 0 ? `Race Plan: ON  seed:${racePlanSeed}` : 'Race Plan: ON  unseeded';
-        drawHudPill(label, 8, 22, 'rgba(0,0,0,0.65)', '#4fc3f7', 11);
+        drawHudPill(label, worldBadge ? 40 : 8, 22, 'rgba(0,0,0,0.65)', '#4fc3f7', 11);
       }
 
       // Row 2 — config-fingerprint badge (fix-plan step 4). RED means "NOT apples-to-apples with a
@@ -1285,7 +1362,7 @@ export default function RaceScreen() {
             : `cfg ${cfgBadge.hashShort} · ${cfgBadge.raceCount} race / ${cfgBadge.cosmeticCount} cosmetic`;
         drawHudPill(
           label,
-          34,
+          worldBadge ? 66 : 34,
           20,
           off ? 'rgba(120,20,20,0.82)' : 'rgba(0,0,0,0.5)',
           off ? '#ff8a80' : '#9e9e9e',
