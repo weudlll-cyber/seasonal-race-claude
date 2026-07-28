@@ -25,9 +25,35 @@ export const EYE_COMBO_FLAGS = Object.freeze({
   bandBiasGain: 0.1,
 });
 
+const LETTER_KEY = 'ra_eye_letter'; // sticky active letter (survives navigate('/race') dropping the query)
+
 const hasWindow = () => typeof window !== 'undefined' && !!window.location;
 const eyeParam = () =>
   hasWindow() ? new URLSearchParams(window.location.search).get('eye') : null;
+
+// The ACTIVE blind letter. The app navigates by path (navigate('/race')), which DROPS the ?eye query, so the
+// letter must be sticky: a URL ?eye=A/B wins AND is persisted to sessionStorage; when the query is absent
+// (e.g. on /race after a path navigation) the last sticky letter is used. Meta params (reveal/reset) and no
+// param → no active letter (unless a sticky one exists, which reveal/reset leave for the running session).
+function activeLetter() {
+  if (!hasWindow()) return null;
+  const p = eyeParam();
+  if (p === 'A' || p === 'B') {
+    try {
+      window.sessionStorage.setItem(LETTER_KEY, p);
+    } catch {
+      /* ignore */
+    }
+    return p;
+  }
+  if (p === 'reveal') return null; // reveal is a meta view; do not change the active letter
+  try {
+    const s = window.sessionStorage.getItem(LETTER_KEY);
+    return s === 'A' || s === 'B' ? s : null;
+  } catch {
+    return null;
+  }
+}
 
 function readMap() {
   if (!hasWindow()) return null;
@@ -68,15 +94,13 @@ function ensureMapping() {
  * @returns {'ship'|'combo'|null}
  */
 export function eyeActiveWorld() {
-  const p = eyeParam();
-  if (p !== 'A' && p !== 'B') return null;
-  return ensureMapping()[p];
+  const letter = activeLetter();
+  return letter ? ensureMapping()[letter] : null;
 }
 
 /** True while a blind A/B session is active (used to force a fresh seed per race). */
 export function eyeSessionActive() {
-  const p = eyeParam();
-  return p === 'A' || p === 'B';
+  return activeLetter() != null;
 }
 
 // Meta commands, handled once on module load (import side-effect): reveal / reset. Guarded for non-browser.
@@ -92,6 +116,7 @@ export function eyeSessionActive() {
   } else if (p === 'reset') {
     try {
       window.localStorage.removeItem(KEY);
+      window.sessionStorage.removeItem(LETTER_KEY);
     } catch {
       /* ignore */
     }
