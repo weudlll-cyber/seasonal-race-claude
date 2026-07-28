@@ -2100,7 +2100,6 @@ export function runSingleRace({
           // ── ACTION-BUILD-7b front-scenario telemetry (read-only) ──
           if (raceProgress >= 0.7) {
             if (fa.leaderAt07 == null) fa.leaderAt07 = p1; // leader at finale entry
-            fa.winnerIdx = p1; // running leader → the last value is the winner at the line
             const p2 = faOrder[1].index; // P2 order-change count (the behind-P1 tension mark)
             if (fa.prevP2 != null && p2 !== fa.prevP2) fa.behindP1Changes++;
             fa.prevP2 = p2;
@@ -2622,10 +2621,17 @@ export function runSingleRace({
         // LAW — Longest Actionless Window (progress span with no leader change). Headline product metric.
         leadChanges: fa.leadChanges.length,
         leadChangesProg: fa.leadChanges.slice(), // ACTION-BUILD-4: raw progresses (distinct-leaders-last-30% metric)
-        // ACTION-BUILD-7b front-scenario telemetry.
-        leaderAt07: fa.leaderAt07, winnerIdx: fa.winnerIdx,
-        leaderHolds: fa.leaderAt07 != null && fa.leaderAt07 === fa.winnerIdx ? 1 : 0,
-        behindP1Changes: fa.behindP1Changes, lineGapLen: fa.lineGapLen,
+        // ACTION-BUILD-7b front-scenario telemetry. The WINNER is the finish-rank-1 racer (it crosses the
+        // line first and leaves the live field, so it must be read from finishRank, not the last live leader).
+        ...(() => {
+          const win = racers.find((r) => r.finishRank === 1);
+          const winnerIdx = win ? win.index : null;
+          return {
+            leaderAt07: fa.leaderAt07, winnerIdx,
+            leaderHolds: fa.leaderAt07 != null && winnerIdx != null && fa.leaderAt07 === winnerIdx ? 1 : 0,
+            behindP1Changes: fa.behindP1Changes, lineGapLen: fa.lineGapLen,
+          };
+        })(),
         LAW_full: (() => { const e = [0, ...fa.leadChanges, 1]; let m = 0; for (let i = 1; i < e.length; i++) m = Math.max(m, e[i] - e[i - 1]); return +m.toFixed(4); })(),
         LAW_last50: (() => { const e = [0.5, ...fa.leadChanges.filter((x) => x >= 0.5), 1]; let m = 0; for (let i = 1; i < e.length; i++) m = Math.max(m, e[i] - e[i - 1]); return +m.toFixed(4); })(),
       };

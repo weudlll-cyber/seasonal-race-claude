@@ -564,8 +564,10 @@ export function compileRaceScripts({
         const holdStart = clamp(anchorProgress + 0.05 + rng() * 0.1, anchorProgress + 0.02, 0.4);
         if (
           admitHold(idx, 'midRaceMover', LONGITUDINAL, holdStart, nextResolve(0.45, 0.68), holdRank)
-        )
+        ) {
           stats.midRaceMover++;
+          placed++;
+        }
       }
     }
   }
