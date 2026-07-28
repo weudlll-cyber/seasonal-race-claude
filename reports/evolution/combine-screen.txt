@@ -1,0 +1,44 @@
+
+=== FAIR-ARRIVAL-1 screen — N=25/arm/track | searound + ice | track-defaults | jobs=4 ===
+
+── ship ──
+  searound    | ARRIVAL 75% (—) rowMin 66% UNF | frontContest 42% (—) | DEAD 8% DEAD-BORING 8% (—) | distinctLead 1.80 | 
+     └chaos-end in-band 29% (—) | steer: share 0% · ticks/race 0 · meanMult n/a · maxTickΔ 0.0000
+     └row band-reach | r0:69% r1:79% r2:77% r3:77% r4:81% r5:66% r6:75%
+     └row steer-exposure | r0:steer0%/mult— r1:steer0%/mult— r2:steer0%/mult— r3:steer0%/mult— r4:steer0%/mult— r5:steer0%/mult— r6:steer0%/mult—
+  ice-track   | ARRIVAL 72% (—) rowMin 65% ok | frontContest 68% (—) | DEAD 12% DEAD-BORING 0% (—) | distinctLead 1.92 | 
+     └chaos-end in-band 32% (—) | steer: share 0% · ticks/race 0 · meanMult n/a · maxTickΔ 0.0000
+     └row band-reach | r0:74% r1:76% r2:73% r3:65%
+     └row steer-exposure | r0:steer0%/mult— r1:steer0%/mult— r2:steer0%/mult— r3:steer0%/mult—
+
+── chaosSteer ──
+  searound    | ARRIVAL 78% (+3pp) rowMin 71% UNF | frontContest 67% (+25pp) | DEAD 8% DEAD-BORING 4% (-4pp) | distinctLead 1.92 | 
+     └chaos-end in-band 68% (+39pp) | steer: share 91% · ticks/race 18550 · meanMult 0.979 · maxTickΔ 0.0071
+     └row band-reach | r0:76% r1:81% r2:80% r3:71% r4:83% r5:78% r6:76%
+     └row steer-exposure | r0:steer93%/mult0.870 r1:steer97%/mult0.897 r2:steer99%/mult0.937 r3:steer99%/mult1.006 r4:steer88%/mult1.049 r5:steer80%/mult1.068 r6:steer74%/mult1.089
+  ice-track   | ARRIVAL 79% (+7pp) rowMin 77% UNF | frontContest 77% (+9pp) | DEAD 16% DEAD-BORING 0% (+0pp) | distinctLead 2.32 | 
+     └chaos-end in-band 70% (+38pp) | steer: share 93% · ticks/race 17771 · meanMult 0.980 · maxTickΔ 0.0103
+     └row band-reach | r0:77% r1:81% r2:79% r3:78%
+     └row steer-exposure | r0:steer96%/mult0.903 r1:steer100%/mult0.951 r2:steer96%/mult1.016 r3:steer78%/mult1.055
+
+── faB60 ──
+  searound    | ARRIVAL 89% (+14pp) rowMin 86% UNF | frontContest 42% (-0pp) | DEAD 20% DEAD-BORING 8% (+0pp) | distinctLead 1.72 | 
+     └chaos-end in-band 29% (+0pp) | steer: share 0% · ticks/race 0 · meanMult n/a · maxTickΔ 0.0000
+     └row band-reach | r0:86% r1:92% r2:91% r3:89% r4:91% r5:86% r6:86%
+     └row steer-exposure | r0:steer0%/mult— r1:steer0%/mult— r2:steer0%/mult— r3:steer0%/mult— r4:steer0%/mult— r5:steer0%/mult— r6:steer0%/mult—
+  ice-track   | ARRIVAL 89% (+17pp) rowMin 86% UNF | frontContest 67% (-1pp) | DEAD 20% DEAD-BORING 8% (+8pp) | distinctLead 2.20 | 
+     └chaos-end in-band 32% (+0pp) | steer: share 0% · ticks/race 0 · meanMult n/a · maxTickΔ 0.0000
+     └row band-reach | r0:88% r1:90% r2:91% r3:86%
+     └row steer-exposure | r0:steer0%/mult— r1:steer0%/mult— r2:steer0%/mult— r3:steer0%/mult—
+
+── combo ──
+  searound    | ARRIVAL 90% (+15pp) rowMin 88% UNF | frontContest 67% (+24pp) | DEAD 16% DEAD-BORING 4% (-4pp) | distinctLead 2.04 | GATE✓
+     └chaos-end in-band 68% (+39pp) | steer: share 91% · ticks/race 18550 · meanMult 0.979 · maxTickΔ 0.0071
+     └row band-reach | r0:88% r1:89% r2:88% r3:90% r4:95% r5:90% r6:91%
+     └row steer-exposure | r0:steer93%/mult0.870 r1:steer97%/mult0.897 r2:steer99%/mult0.937 r3:steer99%/mult1.006 r4:steer88%/mult1.049 r5:steer80%/mult1.068 r6:steer74%/mult1.089
+  ice-track   | ARRIVAL 90% (+18pp) rowMin 88% ok | frontContest 78% (+10pp) | DEAD 12% DEAD-BORING 0% (+0pp) | distinctLead 2.32 | GATE✓
+     └chaos-end in-band 70% (+38pp) | steer: share 93% · ticks/race 17771 · meanMult 0.980 · maxTickΔ 0.0103
+     └row band-reach | r0:92% r1:88% r2:91% r3:89%
+     └row steer-exposure | r0:steer96%/mult0.903 r1:steer100%/mult0.951 r2:steer96%/mult1.016 r3:steer78%/mult1.055
+
+runtime 9.2 min | NIGHT GATE = arrival≥90% AND frontContest≥ship AND DEAD-BORING≤ship (both tracks) AND row-skew absent/explained
