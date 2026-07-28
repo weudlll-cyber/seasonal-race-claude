@@ -1,0 +1,22 @@
+
+=== FAIR-ARRIVAL-1 screen — N=25/arm/track | searound + ice | track-defaults | jobs=4 ===
+
+── ship ──
+  searound    | ARRIVAL 75% (—) rowMin 66% UNF | frontContest 42% (—) | DEAD 8% DEAD-BORING 8% (—) | distinctLead 1.80 | 
+     └chaos-end in-band 29% (—) | steer: share 0% · ticks/race 0 · meanMult n/a · maxTickΔ 0.0000
+  ice-track   | ARRIVAL 72% (—) rowMin 65% ok | frontContest 68% (—) | DEAD 12% DEAD-BORING 0% (—) | distinctLead 1.92 | 
+     └chaos-end in-band 32% (—) | steer: share 0% · ticks/race 0 · meanMult n/a · maxTickΔ 0.0000
+
+── chaosSteer ──
+  searound    | ARRIVAL 78% (+3pp) rowMin 71% UNF | frontContest 67% (+25pp) | DEAD 8% DEAD-BORING 4% (-4pp) | distinctLead 1.92 | 
+     └chaos-end in-band 68% (+39pp) | steer: share 91% · ticks/race 18550 · meanMult 0.979 · maxTickΔ 0.0071
+  ice-track   | ARRIVAL 79% (+7pp) rowMin 77% UNF | frontContest 77% (+9pp) | DEAD 16% DEAD-BORING 0% (+0pp) | distinctLead 2.32 | 
+     └chaos-end in-band 70% (+38pp) | steer: share 93% · ticks/race 17771 · meanMult 0.980 · maxTickΔ 0.0103
+
+── faB60 ──
+  searound    | ARRIVAL 89% (+14pp) rowMin 86% UNF | frontContest 42% (-0pp) | DEAD 20% DEAD-BORING 8% (+0pp) | distinctLead 1.72 | 
+     └chaos-end in-band 29% (+0pp) | steer: share 0% · ticks/race 0 · meanMult n/a · maxTickΔ 0.0000
+  ice-track   | ARRIVAL 89% (+17pp) rowMin 86% UNF | frontContest 67% (-1pp) | DEAD 20% DEAD-BORING 8% (+8pp) | distinctLead 2.20 | 
+     └chaos-end in-band 32% (+0pp) | steer: share 0% · ticks/race 0 · meanMult n/a · maxTickΔ 0.0000
+
+runtime 6.6 min | GATE = arrival≥90% AND frontContest within 10pp AND DEAD-BORING≤ship (both tracks)
