@@ -63,6 +63,19 @@ byte-identical shipped.
    and lint are clean, and the owner runs the final live 2-race check with the badge and console as the
    instrument.
 
+## THE PROOF-OF-LIVE CAUGHT A SECOND, DEEPER BUG (and it is now fixed)
+The owner's first live `?world=combo` produced the RED badge `COMBO FAILED (steer idle)` with the console
+showing `chaosSteer=ON` at race start but `in-band-at-chaos-end: 25% · steerTicks 0` — i.e. the flag was in
+`dynamicsConfig` yet the running plan never got it. Root cause (FIX NOTE #1): `raceCore.createRaceFromIdentity`
+builds the `createRacePlan` config by an **explicit whitelist** that never listed the fair-arrival flags, so the
+browser's plan was created without them (`plan._chaosSteer` = null → steer 0 ticks) even though the badge's
+config-level check saw the flag; the sim worked only because `sim-fairness.mjs` has its **own** createRacePlan
+call. **Fix (`3c88c97`):** thread `chaosAnchor/chaosSteer/bandBias/bandWall` (+gains/R) through raceCore's plan
+config (and the `goldenRunner` twin), all default OFF → null → byte-identical shipped. **Proven headless via the
+real browser path** (`createRaceFromIdentity`, = realArm/RaceScreen): searound ship `steerTicks 0 / in-band 33%`
+→ searound combo `steerTicks 19245 / in-band 75%`, ice combo `18414 / 65%`. Golden parity 32/32 pass
+(byte-identical); the red badge did its job — it made the silent no-op impossible and surfaced the real bug.
+
 ## PROPOSALS (≥2)
 1. **Owner runs the 2-race live check now; report done only if the badge reads green COMBO / blue SHIP and the
    in-band line shows ~68% vs ~30%.** If instead the badge is red or the in-band line is ~30% under
