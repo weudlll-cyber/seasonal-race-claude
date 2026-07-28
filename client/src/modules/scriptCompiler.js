@@ -42,6 +42,11 @@ const bandOf = (rank) => {
   for (let i = 0; i < BAND_EDGES.length; i++) if (rank <= BAND_EDGES[i]) return i;
   return BAND_EDGES.length;
 };
+const bandBounds = (bi, N) => {
+  const lo = bi === 0 ? 1 : BAND_EDGES[bi - 1] + 1;
+  const hi = bi < BAND_EDGES.length ? BAND_EDGES[bi] : N;
+  return [lo, Math.min(hi, N)];
+};
 
 // Reachability accountant: from a hold at `holdRank` released at progress `resolve`, the servo must be
 // able to fan the racer back to `finalRank` by the finish. The chain's smoothness proof bounds the
@@ -88,8 +93,12 @@ export function compileRaceScripts({
   frontConvergence = false,
   accordion = null,
   budgetGrade = false,
+  finaleCast = false, // ACTION-BUILD-7: the owner's finale cast (final-draw for all + finale-resolving arcs)
+  negativeSpace = false, // ACTION-BUILD-7 planner proposal 2: keep one band calm as a texture
 }) {
   const N = postChaos.length;
+  // ACTION-BUILD-7 slider stage: 'default' is the middle. low/default/high scale story density.
+  const stage = actionLevel === 'default' ? 'mid' : actionLevel;
   const rng = mulberry32(((seed | 0) ^ 0x5c819f) >>> 0 || 1); // isolated stream (own salt)
 
   // Live rank + drawn place lookups (row-blind — index only).
@@ -133,28 +142,34 @@ export function compileRaceScripts({
   // ── SLIDER → script budget (monotone). Higher actionLevel = strictly more scripts of every family. The
   // budget is now TOPOLOGY-BLIND: we draw ambitiously for every family (compression included) and let the
   // clearance reader admit/refuse each lateral instance by local space. What has no room simply is not built. ──
-  const LEVEL = { low: 0.6, mid: 1.0, high: 1.5 }[actionLevel] ?? 1.0;
+  const LEVEL = { low: 0.6, mid: 1.0, high: 1.5 }[stage] ?? 1.0;
   // Per-family target counts (a seeded jitter around the target makes the draw vary race to race). The
   // ±2.2 span gives a real -1/0/+1 spread (a ×1.0 span rounds to 0 almost always → identical draws).
   const jitter = () => Math.round((rng() - 0.5) * 2.2); // ~-1..+1 (row-blind seeded), genuinely varied
   const q = (base) => Math.max(0, Math.round(base * LEVEL) + jitter());
+  // ACTION-BUILD-7: MULTIPLE finale-resolving arcs per race are asked for (target 3) → the arc quotas rise.
+  const arcBase = finaleCast ? 3 : 2;
   const quota = {
     fightForLead: Math.round(1 * LEVEL) >= 1 ? 1 : 0, // one group attempted; clearance filters members
-    comebacker: q(2),
-    fallbacker: q(2),
+    comebacker: q(arcBase),
+    fallbacker: q(arcBase),
     paceConvergence: q(frontConvergence ? 2 : 1), // ARM C raises the longitudinal front story
     duelPair: q(1),
     photoFan: rng() < 0.5 * LEVEL ? 1 : 0, // sometimes; clearance decides if it fits
   };
-  // Thin every family by the graded budget (front convergence / pace thinned LAST, via gsFront). At the
-  // narrowest geometry gs → 0 → all quotas 0 → the plain B15 + proximity substrate. gs == 1 → unchanged.
+  // Thin by the graded budget. ACTION-BUILD-7 (finaleCast): the budget gates ONLY the LATERAL families
+  // (fight-for-lead / duel / photo-fan) that genuinely need side room — the longitudinal families run
+  // everywhere, because the final-draw engine (below) is the narrow-track finale mechanism and needs no
+  // lane. Pre-BUILD-7 (finaleCast off): the budget thins every family, as ACTION-BUILD-6.
   if (applyBudget) {
     quota.fightForLead = gs >= 0.5 ? quota.fightForLead : 0;
-    quota.comebacker = Math.round(quota.comebacker * gs);
-    quota.fallbacker = Math.round(quota.fallbacker * gs);
     quota.duelPair = Math.round(quota.duelPair * gs);
     quota.photoFan = gs >= 0.5 ? quota.photoFan : 0;
-    quota.paceConvergence = Math.round(quota.paceConvergence * gsFront);
+    if (!finaleCast) {
+      quota.comebacker = Math.round(quota.comebacker * gs);
+      quota.fallbacker = Math.round(quota.fallbacker * gs);
+      quota.paceConvergence = Math.round(quota.paceConvergence * gsFront);
+    }
   }
 
   const used = new Set(); // per-racer exposure cap: each racer belongs to at most ONE script
@@ -179,6 +194,10 @@ export function compileRaceScripts({
     frontConverted: 0,
     accordAdmit: 0,
     accordRefuse: 0,
+    // ACTION-BUILD-7 finale-cast telemetry.
+    finalDraw: 0, // racers given an authored finish-stretch tempo (the ship's finale engine, authored)
+    bandDuels: 0, // contested intra-band crossings authored by the final-draw (across bands)
+    quietBand: -1, // the band left calm as negative-space texture (-1 = none)
   };
 
   // Lateral admission through the clearance reader. `null` reader → ungated (attribution arm) → always yes.
@@ -324,7 +343,9 @@ export function compileRaceScripts({
       const depth = 5 + Math.floor(rng() * 5); // 5..9 places to climb back
       const holdRank = drawnOf(idx) + depth;
       const holdStart = clamp(anchorProgress + 0.08 + rng() * 0.1, anchorProgress + 0.02, 0.5);
-      const resolve = nextResolve(0.7, 0.95);
+      // ACTION-BUILD-7 (target 3): a finale-RESOLVING variant reaches its band in the last moments; the
+      // mid-race variant stays in the pool. ~half each when finaleCast (an extra seeded roll, guarded).
+      const resolve = finaleCast && rng() < 0.5 ? nextResolve(0.85, 0.98) : nextResolve(0.7, 0.95);
       if (admitHold(idx, 'comebacker', LONGITUDINAL, holdStart, resolve, holdRank)) placed++;
     }
   }
@@ -343,7 +364,8 @@ export function compileRaceScripts({
       const rise = 4 + Math.floor(rng() * 5); // shown 4..8 places better than it finishes
       const holdRank = Math.max(1, drawnOf(idx) - rise);
       const holdStart = clamp(anchorProgress + 0.06 + rng() * 0.1, anchorProgress + 0.02, 0.5);
-      const resolve = nextResolve(0.72, 0.94); // falls back late
+      // ACTION-BUILD-7 (target 3): a finale-RESOLVING variant whose slide completes near the line.
+      const resolve = finaleCast && rng() < 0.5 ? nextResolve(0.86, 0.98) : nextResolve(0.72, 0.94);
       if (admitHold(idx, 'fallbacker', LONGITUDINAL, holdStart, resolve, holdRank)) placed++;
     }
   }
@@ -451,6 +473,66 @@ export function compileRaceScripts({
     }
   }
 
+  // ── FINAL-DRAW FOR ALL (ACTION-BUILD-7, the owner's brief; target 2 + 4) — the ship's proven finale
+  // engine (the last-reroll tempo differences that persist to the line), AUTHORED instead of rolled and
+  // freed of the servo fight. Every racer not otherwise cast gets a persistent finish-stretch tempo: within
+  // its band, an authored late crossing — planner proposal 1: the planned-slower (drawn behind) is held
+  // slightly AHEAD at finale entry, and the planned-faster passes it to the exact drawn place by the line.
+  // Longitudinal / same-lane → needs NO side room → NOT lane-gated → the narrow-track finale engine
+  // (searound, ice). Endpoint-exact (each racer ends at its drawn place) so band-reach is untouched, and
+  // pillar 3 (order within a band is free) makes the crossing a zero-fairness-cost band-duel. The crossing
+  // spans [FINALE_ENTRY, 1.0] so its visible action is inside the finale window. Only when finaleCast. ──
+  const FINALE_ENTRY = 0.7;
+  if (finaleCast) {
+    // Density curve: the fraction of same-band pairs that get a late cross rises with the slider so more
+    // racers carry a visible finale story at higher stages (monotone). Negative-space (planner proposal 2):
+    // one seeded band is left calm (no final-draw) as a texture, guarding against uniform busy-ness.
+    const crossFrac = { low: 0.45, mid: 0.85, high: 1.0 }[stage] ?? 0.85;
+    stats.quietBand = negativeSpace ? Math.floor(rng() * (BAND_EDGES.length + 1)) : -1;
+    for (let bi = 0; bi <= BAND_EDGES.length; bi++) {
+      if (bi === stats.quietBand) continue;
+      const [lo, hi] = bandBounds(bi, N);
+      const members = byDrawn.filter((i) => !used.has(i) && drawnOf(i) >= lo && drawnOf(i) <= hi);
+      for (let m = 0; m + 1 < members.length; m += 2) {
+        const a = members[m]; // drawn AHEAD (planned faster)
+        const b = members[m + 1]; // drawn BEHIND (planned slower)
+        const da = drawnOf(a);
+        const db = drawnOf(b);
+        const roll = rng();
+        if (roll >= crossFrac) continue; // this pair stays monotone (falls through to the default ease)
+        const aRankA = anchorRankOf.get(a) ?? da;
+        const aRankB = anchorRankOf.get(b) ?? db;
+        // Late cross: at FINALE_ENTRY the slower (b) sits ahead (da) and the faster (a) sits behind (db);
+        // they cross to their exact drawn places by the line. Within-band, adjacent ranks → reachable.
+        scripts.set(a, {
+          role: 'finalDraw',
+          kind: LONGITUDINAL,
+          resolve: 0.9,
+          waypoints: [
+            { progress: anchorProgress, rank: aRankA },
+            { progress: FINALE_ENTRY, rank: db },
+            { progress: 1.0, rank: da },
+          ],
+        });
+        scripts.set(b, {
+          role: 'finalDraw',
+          kind: LONGITUDINAL,
+          resolve: 0.9,
+          waypoints: [
+            { progress: anchorProgress, rank: aRankB },
+            { progress: FINALE_ENTRY, rank: da },
+            { progress: 1.0, rank: db },
+          ],
+        });
+        used.add(a);
+        used.add(b);
+        stats.finalDraw += 2;
+        stats.bandDuels++;
+        stats.exposure += 2;
+      }
+    }
+  }
+
   // ── ACCORDION BEATS UNDER CLEARANCE — every accordion pulse is a compression element, so it goes through
   // the SAME reader (and the SAME shared-corridor state as the lateral scripts above: a beat that would
   // fight a lead-trade for the front lane is refused). The beat schedule is generated here, identically to
@@ -503,6 +585,29 @@ export function compileRaceScripts({
   stats.lanesFront = reader ? reader.lanesAt(0.85) : null; // representative finale lane count (telemetry)
   stats.minLanes = minLanes; // min lanes over the race distance (drives the graded budget)
   stats.budgetScale = applyBudget ? +budgetScale.toFixed(3) : 1; // 1 = full budget, 0 = handed to substrate
+
+  // ── STORY-DENSITY ACCOUNTING (ACTION-BUILD-7 target 1) — a racer "carries a story visible in the finale"
+  // if its AUTHORED rank changes by ≥1 place across the finale window [0.7, 1.0] (a net late gain/loss, i.e.
+  // an overtake or a slide the eye sees near the line). Progress-based ⇒ duration-independent. Per-racer
+  // exposure is structurally ≤1 (the `used` set forbids a second story), so no racer is a puppet all race. ──
+  const rankAt = (wps, p) => {
+    if (p <= wps[0].progress) return wps[0].rank;
+    for (let i = 1; i < wps.length; i++) {
+      if (p <= wps[i].progress) {
+        const t = (p - wps[i - 1].progress) / Math.max(1e-9, wps[i].progress - wps[i - 1].progress);
+        return wps[i - 1].rank + (wps[i].rank - wps[i - 1].rank) * t;
+      }
+    }
+    return wps[wps.length - 1].rank;
+  };
+  let finaleStories = 0;
+  for (const sc of scripts.values()) {
+    const endRank = sc.waypoints[sc.waypoints.length - 1].rank;
+    if (Math.abs(rankAt(sc.waypoints, 0.7) - endRank) >= 1) finaleStories++;
+  }
+  stats.finaleStories = finaleStories; // racers with a ≥1-place move in the last 30% (the density target)
+  stats.storiedRacers = stats.exposure; // total racers carrying any authored story (exposure ≤1 each)
+  stats.exposureMax = 1; // structural (the `used` set); reported so a future pair-script cannot break it
 
   return { scripts, accordBeats, accordAdmittedBeats, stats };
 }

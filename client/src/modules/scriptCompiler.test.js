@@ -190,6 +190,84 @@ describe("compileRaceScripts — LOCAL-CLEARANCE admission (the owner's situatio
   });
 });
 
+describe("compileRaceScripts — ACTION-BUILD-7 the owner's finale cast", () => {
+  const FC = { ...BASE, finaleCast: true };
+
+  it('STORY DENSITY: at the default slider >=10 racers carry a finale-window story (field 40)', () => {
+    for (let seed = 1; seed <= 20; seed++) {
+      const s = compileRaceScripts({ ...FC, seed, actionLevel: 'default' }).stats;
+      expect(s.finaleStories).toBeGreaterThanOrEqual(10);
+    }
+  });
+
+  it('SLIDER MONOTONICITY: finale-story density rises low <= default <= high (pooled)', () => {
+    const tot = (lvl) => {
+      let n = 0;
+      for (let seed = 1; seed <= 30; seed++)
+        n += compileRaceScripts({ ...FC, seed, actionLevel: lvl }).stats.finaleStories;
+      return n;
+    };
+    const lo = tot('low'),
+      def = tot('default'),
+      hi = tot('high');
+    expect(def).toBeGreaterThanOrEqual(lo);
+    expect(hi).toBeGreaterThanOrEqual(def);
+  });
+
+  it('FINAL-DRAW ENDPOINT INVARIANCE: every final-draw script ends EXACTLY at the drawn place', () => {
+    const { scripts } = compileRaceScripts(FC);
+    const fd = [...scripts.values()].filter((sc) => sc.role === 'finalDraw');
+    expect(fd.length).toBeGreaterThan(0);
+    for (const sc of fd)
+      expect(sc.waypoints[sc.waypoints.length - 1].rank).toBeGreaterThanOrEqual(1);
+    // the endpoint rank must equal the racer's draw (checked by index below)
+    for (const [idx, sc] of scripts) {
+      if (sc.role === 'finalDraw')
+        expect(sc.waypoints[sc.waypoints.length - 1].rank).toBe(draw.get(idx));
+    }
+  });
+
+  it('BAND-DUELS as a real family: contested intra-band crossings across MULTIPLE bands', () => {
+    const { scripts, stats } = compileRaceScripts(FC);
+    expect(stats.bandDuels).toBeGreaterThan(1); // not 0.8/race — a real family
+    // final-draw crossings appear in more than one band (not only the front)
+    const bandsWithDuel = new Set();
+    for (const [idx, sc] of scripts)
+      if (sc.role === 'finalDraw') bandsWithDuel.add(bandOf(draw.get(idx)));
+    expect(bandsWithDuel.size).toBeGreaterThan(1);
+  });
+
+  it('ARCS THAT END AT THE LINE: finaleCast produces arcs resolving in the finale window (>=0.85)', () => {
+    let lateArcs = 0;
+    for (let seed = 1; seed <= 20; seed++) {
+      const { scripts } = compileRaceScripts({ ...FC, seed });
+      for (const sc of scripts.values())
+        if ((sc.role === 'comebacker' || sc.role === 'fallbacker') && sc.resolve >= 0.85)
+          lateArcs++;
+    }
+    expect(lateArcs).toBeGreaterThan(0);
+  });
+
+  it('EXPOSURE stays per-racer-bounded (no puppet-all-race): max one story per racer', () => {
+    const { scripts, stats } = compileRaceScripts(FC);
+    expect(stats.exposureMax).toBe(1);
+    expect(scripts.size).toBe(stats.exposure); // Map keyed by index ⇒ one story each
+  });
+
+  it('NEGATIVE-SPACE (proposal 2): one band is left calm (no final-draw there)', () => {
+    const { scripts, stats } = compileRaceScripts({ ...FC, negativeSpace: true });
+    expect(stats.quietBand).toBeGreaterThanOrEqual(0);
+    for (const [idx, sc] of scripts)
+      if (sc.role === 'finalDraw') expect(bandOf(draw.get(idx))).not.toBe(stats.quietBand);
+  });
+
+  it('finaleCast is ungated by clearance: final-draw runs even with NARROW clearance', () => {
+    const s = compileRaceScripts({ ...FC, clearance: NARROW, budgetGrade: true }).stats;
+    expect(s.budgetScale).toBe(0); // lateral budget handed to substrate
+    expect(s.finalDraw).toBeGreaterThan(0); // but the final-draw engine still runs (no side room needed)
+  });
+});
+
 describe('compileRaceScripts — integration through generateChainCurves', () => {
   const GEN = { seed: 7, postChaos, finalRanks: draw, anchorProgress: 0.15, K: 4, mExtra: 2 };
   const COMP = { actionLevel: 'mid', clearance: WIDE };

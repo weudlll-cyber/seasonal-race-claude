@@ -330,6 +330,10 @@ export function createRacePlan(racers, finishT, targetDurationMs, config = {}, s
           // ACTION-BUILD-6: clearance-graded script budget — thin ALL families toward zero on very-few-lane
           // geometry (hand the narrowest tracks back to the plain proximity substrate). One monotone rule.
           budgetGrade: !!config.clearanceBudget,
+          // ACTION-BUILD-7: the owner's finale cast — final-draw for all (the ship's finale engine authored)
+          // + finale-resolving arcs; the graded budget then gates ONLY lateral families. Longitudinal, no force.
+          finaleCast: !!config.finaleCast,
+          negativeSpace: !!config.negativeSpace,
           // The accordion pulses are compiled + clearance-admitted alongside the scripts (both on → the
           // runtime consumes _accordAdmittedByClearance for beat admission in place of its open-lane read).
           accordion: config.chainAccordion

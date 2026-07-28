@@ -139,6 +139,15 @@ const ARM_LIB = {
   // very-few-lane geometry (hands the narrowest tracks back to the B15+proximity substrate). One monotone rule.
   B15clrD: withF(boundary(ROW(NAKED), 0.15), '--chainProximity=true', '--scriptCompiler=true', '--actionLevel=mid',
                  '--clearanceAdmit=true', '--frontConvergence=true', '--clearanceBudget=true', '--chainAccordion=true', '--accordDensity=6', '--accordAdmit=true', '--accordSkip=true'),
+  // ── ACTION-BUILD-7 — THE OWNER'S FINALE CAST on the BUILD-6 stack: final-draw for all (the ship's finale
+  // engine authored, ungated longitudinal → the narrow-track engine) + finale-resolving arcs; the graded
+  // budget now gates ONLY lateral. Three slider stages measure the never-run density curve.
+  B15fcLo: withF(boundary(ROW(NAKED), 0.15), '--chainProximity=true', '--scriptCompiler=true', '--finaleCast=true', '--actionLevel=low',
+                 '--clearanceAdmit=true', '--frontConvergence=true', '--clearanceBudget=true', '--chainAccordion=true', '--accordDensity=6', '--accordAdmit=true', '--accordSkip=true'),
+  B15fc:   withF(boundary(ROW(NAKED), 0.15), '--chainProximity=true', '--scriptCompiler=true', '--finaleCast=true', '--actionLevel=default',
+                 '--clearanceAdmit=true', '--frontConvergence=true', '--clearanceBudget=true', '--chainAccordion=true', '--accordDensity=6', '--accordAdmit=true', '--accordSkip=true'),
+  B15fcHi: withF(boundary(ROW(NAKED), 0.15), '--chainProximity=true', '--scriptCompiler=true', '--finaleCast=true', '--actionLevel=high',
+                 '--clearanceAdmit=true', '--frontConvergence=true', '--clearanceBudget=true', '--chainAccordion=true', '--accordDensity=6', '--accordAdmit=true', '--accordSkip=true'),
   B15compLo:  withF(boundary(ROW(NAKED), 0.15), '--chainProximity=true', '--scriptCompiler=true', '--actionLevel=low',
                     '--chainAccordion=true', '--accordDensity=6', '--accordAdmit=true', '--accordSkip=true'),
   B15compHi:  withF(boundary(ROW(NAKED), 0.15), '--chainProximity=true', '--scriptCompiler=true', '--actionLevel=high',
@@ -195,6 +204,13 @@ async function runArmTrack(armKey, flags, track) {
     frontConv: mean(ss.map((s) => s.frontConverted ?? 0)),
     budgetScale: mean(ss.map((s) => s.budgetScale ?? 1)),
     minLanes: mean(ss.map((s) => s.minLanes ?? 0)),
+    // ACTION-BUILD-7 density + final-draw telemetry.
+    finaleStories: mean(ss.map((s) => s.finaleStories ?? 0)),
+    finaleStoriesDist: ss.map((s) => s.finaleStories ?? 0), // per-race distribution
+    finalDraw: mean(ss.map((s) => s.finalDraw ?? 0)),
+    bandDuels: mean(ss.map((s) => s.bandDuels ?? 0)),
+    storiedRacers: mean(ss.map((s) => s.storiedRacers ?? 0)),
+    exposureMax: Math.max(0, ...ss.map((s) => s.exposureMax ?? 0)),
   };
   // Lead-fight proxy: leader changes in the last 30% (distinct-leaders signal). fa records whole-race
   // leader-change progresses in `leadChangesProg` (added ACTION-BUILD-4); fall back to 0 when absent.
@@ -264,6 +280,11 @@ for (const armKey of arms) {
     const fm = c.famMean;
     console.log(`    [comp ${t.id.padEnd(13)}] scripts ${c.scriptCount.toFixed(1)} (fl${fm.fightForLead.toFixed(1)} cb${fm.comebacker.toFixed(1)} fb${fm.fallbacker.toFixed(1)} pc${fm.paceConvergence.toFixed(1)} dp${fm.duelPair.toFixed(1)} pf${fm.photoFan.toFixed(1)}) | drop ${c.dropped.toFixed(1)} shrink ${c.shrunk.toFixed(1)} | H ${c.entropy.toFixed(2)} sigColl ${(c.sigCollision * 100).toFixed(0)}% (${c.distinctSigs}/${c.nRaces})`);
     console.log(`    [clr  ${t.id.padEnd(13)}] lanes ${c.lanes.toFixed(1)} (min ${c.minLanes.toFixed(1)}) budget ${c.budgetScale.toFixed(2)} | latAdmit ${c.latAdmit.toFixed(1)} latRefuse ${c.latRefuse.toFixed(1)} | accAdmit ${c.accAdmit.toFixed(1)} | frontConv ${c.frontConv.toFixed(1)} | leadLast30 ${r.leadLast30.toFixed(2)}`);
+    if (c.finaleStories > 0 || c.finalDraw > 0) {
+      const d = c.finaleStoriesDist; const mn = Math.min(...d), mx = Math.max(...d);
+      const below10 = d.filter((x) => x < 10).length;
+      console.log(`    [dens ${t.id.padEnd(13)}] finaleStories ${c.finaleStories.toFixed(1)} (min ${mn} max ${mx}, ${below10}/${d.length} races <10) | finalDraw ${c.finalDraw.toFixed(1)} bandDuels ${c.bandDuels.toFixed(1)} | storied ${c.storiedRacers.toFixed(1)} expMax ${c.exposureMax}`);
+    }
   }
 }
 console.log(`\nruntime ${((Date.now() - t0) / 60000).toFixed(1)} min`);
