@@ -245,6 +245,18 @@ function browserPlanConfig(dynamicsConfig) {
     gapRerollMode: dynamicsConfig.gapRerollMode ?? 'symmetric',
     gapRerollStrength: dynamicsConfig.gapRerollStrength ?? 1.0,
     reRollTransitionDuration: dynamicsConfig.reRollTransitionDuration,
+    // FAIR-ARRIVAL flags — mirror of raceCore's createRacePlan wiring (kept in sync per the "written twice"
+    // note). All default OFF ⇒ null in the plan ⇒ byte-identical for the shipped-defaults parity soak.
+    chaosAnchor: dynamicsConfig.chaosAnchor ?? false,
+    chaosAnchorGain: dynamicsConfig.chaosAnchorGain ?? 0.06,
+    chaosSteer: dynamicsConfig.chaosSteer ?? false,
+    chaosSteerGain: dynamicsConfig.chaosSteerGain ?? 0.06,
+    bandBias: dynamicsConfig.bandBias ?? false,
+    bandBiasR: dynamicsConfig.bandBiasR ?? 0.8,
+    bandBiasGain: dynamicsConfig.bandBiasGain ?? 0.06,
+    bandWall: dynamicsConfig.bandWall ?? false,
+    bandWallR: dynamicsConfig.bandWallR ?? 0.8,
+    bandWallGain: dynamicsConfig.bandWallGain ?? 4,
   };
 }
 
