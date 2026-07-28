@@ -1,0 +1,67 @@
+
+=== CHAIN-ABLATE battery — N=25/arm/track | tracks searound, ice-track | seed=1 jobs=4 ===
+arms: ship, B15clrD, fbD, fbEw, fbEm, fbF
+(ship cache hit)
+
+── ship ──
+  track           | band (Δship) | dead (Δship) | lead-chg (Δship) | LAWfull LAWl50 (Δship) | holm
+  searound        |  75% (  —) |   8% (  —) |  1.48 (  —) | 0.31   0.25  ( —/—) | skip 0% | UNF
+     └score searound     | DEAD-BORING   8% (—) · thriller 0% | frontContest 42% (—) | distinctLead 1.80 | maxLeadHold 83% | p1MultiSec 5.2
+  ice-track       |  72% (  —) |  12% (  —) |  1.60 (  —) | 0.29   0.23  ( —/—) | skip 0% | ok
+     └score ice-track    | DEAD-BORING   0% (—) · thriller 12% | frontContest 68% (—) | distinctLead 1.92 | maxLeadHold 81% | p1MultiSec 9.3
+  SUMMARY band-reach mean 74% | tracks ≥70%: 2/2
+
+── B15clrD ──
+  track           | band (Δship) | dead (Δship) | lead-chg (Δship) | LAWfull LAWl50 (Δship) | holm
+  searound        |  77% (+2pp) |  12% (+4pp) |  2.00 (+0.52) | 0.66   0.39  (+0.35/+0.14) | skip 0% | ok
+     └score searound     | DEAD-BORING   4% (-4pp) · thriller 8% | frontContest 40% (-2pp) | distinctLead 1.64 | maxLeadHold 86% | p1MultiSec 5.0
+  ice-track       |  72% (-0pp) |  20% (+8pp) |  1.88 (+0.28) | 0.56   0.41  (+0.28/+0.18) | skip 17% | ok
+     └score ice-track    | DEAD-BORING  20% (+20pp) · thriller 0% | frontContest 38% (-30pp) | distinctLead 1.72 | maxLeadHold 84% | p1MultiSec 5.2
+  SUMMARY band-reach mean 74% | tracks ≥70%: 2/2
+    [comp searound     ] scripts 0.0 (fl0.0 cb0.0 fb0.0 pc0.0 dp0.0 pf0.0) | drop 0.0 shrink 0.0 | H 0.00 sigColl 100% (1/25)
+    [clr  searound     ] lanes 5.0 (min 5.0) budget 0.00 | latAdmit 0.0 latRefuse 0.0 | accAdmit 0.0 | frontConv 0.0 | leadLast30 37.88
+    [comp ice-track    ] scripts 8.4 (fl1.0 cb2.3 fb2.2 pc2.2 dp0.7 pf0.0) | drop 0.0 shrink 0.3 | H 2.19 sigColl 0% (25/25)
+    [clr  ice-track    ] lanes 10.0 (min 10.0) budget 1.00 | latAdmit 4.7 latRefuse 0.0 | accAdmit 6.0 | frontConv 0.0 | leadLast30 37.88
+    [dens ice-track    ] finaleStories 10.6 (min 8 max 13, 4/25 races <10) | finalDraw 0.0 bandDuels 0.0 | storied 12.2 expMax 1
+
+── fbD ──
+  track           | band (Δship) | dead (Δship) | lead-chg (Δship) | LAWfull LAWl50 (Δship) | holm
+  searound        |  69% (-6pp) |  24% (+16pp) |  1.24 (-0.24) | 0.70   0.42  (+0.39/+0.17) | skip 0% | UNF
+     └score searound     | DEAD-BORING  20% (+12pp) · thriller 4% | frontContest 28% (-15pp) | distinctLead 1.36 | maxLeadHold 91% | p1MultiSec 3.4
+     └freeband searound   | R 0.85 noise reroll | edgeFights 13483/race | rowReachMin 62% (per-row floor)
+  ice-track       |  69% (-3pp) |  24% (+12pp) |  1.36 (-0.24) | 0.74   0.37  (+0.45/+0.14) | skip 0% | UNF
+     └score ice-track    | DEAD-BORING  20% (+20pp) · thriller 4% | frontContest 36% (-32pp) | distinctLead 1.56 | maxLeadHold 87% | p1MultiSec 5.2
+     └freeband ice-track  | R 0.85 noise reroll | edgeFights 15268/race | rowReachMin 63% (per-row floor)
+  SUMMARY band-reach mean 69% | tracks ≥70%: 0/2
+
+── fbEw ──
+  track           | band (Δship) | dead (Δship) | lead-chg (Δship) | LAWfull LAWl50 (Δship) | holm
+  searound        |  46% (-29pp) |  56% (+48pp) |  0.64 (-0.84) | 0.71   0.43  (+0.40/+0.18) | skip 0% | UNF
+     └score searound     | DEAD-BORING  36% (+28pp) · thriller 20% | frontContest 29% (-14pp) | distinctLead 1.24 | maxLeadHold 97% | p1MultiSec 3.5
+     └freeband searound   | R 0.85 noise reroll | edgeFights 16935/race | rowReachMin 41% (per-row floor)
+  ice-track       |  48% (-24pp) |  36% (+24pp) |  1.00 (-0.60) | 0.75   0.39  (+0.47/+0.16) | skip 0% | UNF
+     └score ice-track    | DEAD-BORING  20% (+20pp) · thriller 16% | frontContest 38% (-31pp) | distinctLead 1.36 | maxLeadHold 92% | p1MultiSec 5.4
+     └freeband ice-track  | R 0.85 noise reroll | edgeFights 18292/race | rowReachMin 46% (per-row floor)
+  SUMMARY band-reach mean 47% | tracks ≥70%: 0/2
+
+── fbEm ──
+  track           | band (Δship) | dead (Δship) | lead-chg (Δship) | LAWfull LAWl50 (Δship) | holm
+  searound        |  50% (-25pp) |  44% (+36pp) |  0.92 (-0.56) | 0.71   0.43  (+0.40/+0.18) | skip 0% | UNF
+     └score searound     | DEAD-BORING  32% (+24pp) · thriller 12% | frontContest 29% (-13pp) | distinctLead 1.20 | maxLeadHold 97% | p1MultiSec 3.6
+     └freeband searound   | R 0.85 noise reroll | edgeFights 15670/race | rowReachMin 46% (per-row floor)
+  ice-track       |  53% (-19pp) |  56% (+44pp) |  0.48 (-1.12) | 0.74   0.39  (+0.46/+0.15) | skip 0% | UNF
+     └score ice-track    | DEAD-BORING  28% (+28pp) · thriller 28% | frontContest 40% (-28pp) | distinctLead 1.36 | maxLeadHold 91% | p1MultiSec 5.8
+     └freeband ice-track  | R 0.85 noise reroll | edgeFights 17170/race | rowReachMin 46% (per-row floor)
+  SUMMARY band-reach mean 51% | tracks ≥70%: 0/2
+
+── fbF ──
+  track           | band (Δship) | dead (Δship) | lead-chg (Δship) | LAWfull LAWl50 (Δship) | holm
+  searound        |  47% (-28pp) |  44% (+36pp) |  0.88 (-0.60) | 0.75   0.44  (+0.44/+0.19) | skip 0% | ok
+     └score searound     | DEAD-BORING  32% (+24pp) · thriller 12% | frontContest 39% (-4pp) | distinctLead 1.20 | maxLeadHold 94% | p1MultiSec 4.7
+     └freeband searound   | R 0.85 noise reroll | edgeFights 77224/race | rowReachMin 38% (per-row floor)
+  ice-track       |  49% (-23pp) |  48% (+36pp) |  0.76 (-0.84) | 0.76   0.47  (+0.48/+0.24) | skip 0% | ok
+     └score ice-track    | DEAD-BORING  32% (+32pp) · thriller 16% | frontContest 33% (-35pp) | distinctLead 1.12 | maxLeadHold 96% | p1MultiSec 4.7
+     └freeband ice-track  | R 0.85 noise reroll | edgeFights 91504/race | rowReachMin 45% (per-row floor)
+  SUMMARY band-reach mean 48% | tracks ≥70%: 0/2
+
+runtime 6.4 min
