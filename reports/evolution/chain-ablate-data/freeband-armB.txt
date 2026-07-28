@@ -1,0 +1,24 @@
+
+=== CHAIN-ABLATE battery — N=25/arm/track | tracks searound, ice-track | seed=1 jobs=4 ===
+arms: ship, fbB85
+(ship cache hit)
+
+── ship ──
+  track           | band (Δship) | dead (Δship) | lead-chg (Δship) | LAWfull LAWl50 (Δship) | holm
+  searound        |  75% (  —) |   8% (  —) |  1.48 (  —) | 0.31   0.25  ( —/—) | skip 0% | UNF
+     └score searound     | DEAD-BORING   8% (—) · thriller 0% | frontContest 42% (—) | distinctLead 1.80 | maxLeadHold 83% | p1MultiSec 5.2
+  ice-track       |  72% (  —) |  12% (  —) |  1.60 (  —) | 0.29   0.23  ( —/—) | skip 0% | ok
+     └score ice-track    | DEAD-BORING   0% (—) · thriller 12% | frontContest 68% (—) | distinctLead 1.92 | maxLeadHold 81% | p1MultiSec 9.3
+  SUMMARY band-reach mean 74% | tracks ≥70%: 2/2
+
+── fbB85 ──
+  track           | band (Δship) | dead (Δship) | lead-chg (Δship) | LAWfull LAWl50 (Δship) | holm
+  searound        |  71% (-4pp) |  24% (+16pp) |  1.12 (-0.36) | 0.66   0.39  (+0.35/+0.14) | skip 0% | UNF
+     └score searound     | DEAD-BORING  20% (+12pp) · thriller 4% | frontContest 33% (-10pp) | distinctLead 1.48 | maxLeadHold 89% | p1MultiSec 4.0
+     └freeband searound   | R 0.85 noise frozen | edgeFights 12034/race | rowReachMin 62% (per-row floor)
+  ice-track       |  72% (+1pp) |  36% (+24pp) |  1.24 (-0.36) | 0.58   0.39  (+0.30/+0.15) | skip 0% | ok
+     └score ice-track    | DEAD-BORING  24% (+24pp) · thriller 12% | frontContest 30% (-38pp) | distinctLead 1.52 | maxLeadHold 89% | p1MultiSec 4.3
+     └freeband ice-track  | R 0.85 noise frozen | edgeFights 13434/race | rowReachMin 68% (per-row floor)
+  SUMMARY band-reach mean 72% | tracks ≥70%: 2/2
+
+runtime 3.0 min
