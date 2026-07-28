@@ -212,19 +212,59 @@ async function runArmTrack(armKey, flags, track) {
     storiedRacers: mean(ss.map((s) => s.storiedRacers ?? 0)),
     exposureMax: Math.max(0, ...ss.map((s) => s.exposureMax ?? 0)),
   };
+  // ── ACTION-BUILD-7b owner-cast + front-scenario telemetry (aligned per race; guarded when absent) ──
+  const sPer = faR.map((r) => r.scriptStats); // may contain nulls (ship/night arms) → guarded below
+  const distinct = (arr) => [...new Set(arr.filter((x) => x != null))].sort((a, b) => a - b);
+  const scenarioOf = (r, s) => (r.leaderHolds ? (s?.scenario === 'leaderDefends' ? 'defended' : 'unplannedHold') : 'genuineChange');
+  const scen = faR.map((r, i) => scenarioOf(r, sPer[i]));
+  const scenCounts = {};
+  for (const c of scen) scenCounts[c] = (scenCounts[c] ?? 0) + 1;
+  const scenN = scen.length;
+  const scenarioEntropy = scenN ? -Object.values(scenCounts).map((c) => c / scenN).reduce((a, p) => a + p * Math.log2(p), 0) : 0;
+  const b7b = {
+    ownerCB: mean(ss.map((s) => s.ownerComebacker ?? 0)),
+    ownerFB: mean(ss.map((s) => s.ownerFallbacker ?? 0)),
+    midMover: mean(ss.map((s) => s.midRaceMover ?? 0)),
+    ownerDepth: Math.max(0, ...ss.map((s) => s.ownerDepth ?? 0)),
+    depthWindow: ss.find((s) => s.depthWindow)?.depthWindow ?? null,
+    chains: mean(ss.map((s) => s.chains ?? 0)),
+    timeShareMean: mean(ss.map((s) => s.timeShareMean ?? 0)),
+    defendedShare: ss.length ? ss.filter((s) => s.scenario === 'leaderDefends').length / ss.length : 0,
+    pLeaderHolds: mean(faR.map((r) => r.leaderHolds ?? 0)),
+    behindP1: mean(faR.map((r) => r.behindP1Changes ?? 0)),
+    scenarioEntropy, scenCounts,
+    defendedGaps: faR.filter((r, i) => sPer[i]?.scenario === 'leaderDefends').map((r) => r.lineGapLen).filter((x) => x != null),
+    countDistCB: distinct(sPer.map((s) => s?.countDist?.comebacker)),
+    countDistFB: distinct(sPer.map((s) => s?.countDist?.fallbacker)),
+    countDistMM: distinct(sPer.map((s) => s?.countDist?.midRaceMover)),
+    nStoried: ss.length,
+  };
   // Lead-fight proxy: leader changes in the last 30% (distinct-leaders signal). fa records whole-race
   // leader-change progresses in `leadChangesProg` (added ACTION-BUILD-4); fall back to 0 when absent.
   const leadLast30 = mean(faR.map((r) => (r.leadChangesProg ?? []).filter((p) => p >= 0.7).length));
   const rowReached = [], rowTotal = [];
   for (const r of fd.rawData) { const row = r.startRowIndex; rowReached[row] = (rowReached[row] ?? 0) + (zoneIdx(r.finalRank) === zoneIdx(r.sollRank) ? 1 : 0); rowTotal[row] = (rowTotal[row] ?? 0) + 1; }
   const rows = rp.races.map((rec) => { const raw = rec.runawayParade; const c = classifyRace(raw, RUNAWAY_PARADE_DEFAULTS); return { lc: raw.leadChangeCount ?? 0, dead: (raw.leadChangeCount ?? 0) === 0 ? 1 : 0, runaway: c.runawayWinner ? 1 : 0 }; });
+  // ── ACTION-BUILD-7b DEAD-RACE split (aligned rows↔faR↔scriptStats): a dead race is a drawn near-miss
+  // (planned leader-defends), a casting hole (no story cast at the front), or a completion failure (cast
+  // but the pass did not complete — ice saturation). ──
+  const deadSplit = { plannedNearMiss: 0, castingHole: 0, completionFail: 0, total: 0 };
+  for (let i = 0; i < rows.length; i++) {
+    if (!rows[i].dead) continue;
+    deadSplit.total++;
+    const s = sPer[i];
+    if (s?.scenario === 'leaderDefends') deadSplit.plannedNearMiss++;
+    else if ((s?.finaleStories ?? 0) < 10) deadSplit.castingHole++;
+    else deadSplit.completionFail++;
+  }
+  b7b.deadSplit = deadSplit;
   return {
     arm: armKey, track: track.id, closed: track.closed,
     bandReach: hm.fairness?.bandReach ?? null,
     startRowUnfair: hm.fairness?.startRowUnfair ?? null,
     rowReachMin: Math.min(...rowReached.map((v, i) => (rowTotal[i] ? v / rowTotal[i] : 1))),
     deadRate: mean(rows.map((r) => r.dead)), leadChanges: mean(rows.map((r) => r.lc)), runawayRate: mean(rows.map((r) => r.runaway)),
-    lawFull, lawL50, skipRate, compiler, leadLast30,
+    lawFull, lawL50, skipRate, compiler, leadLast30, b7b,
   };
 }
 
@@ -284,6 +324,15 @@ for (const armKey of arms) {
       const d = c.finaleStoriesDist; const mn = Math.min(...d), mx = Math.max(...d);
       const below10 = d.filter((x) => x < 10).length;
       console.log(`    [dens ${t.id.padEnd(13)}] finaleStories ${c.finaleStories.toFixed(1)} (min ${mn} max ${mx}, ${below10}/${d.length} races <10) | finalDraw ${c.finalDraw.toFixed(1)} bandDuels ${c.bandDuels.toFixed(1)} | storied ${c.storiedRacers.toFixed(1)} expMax ${c.exposureMax}`);
+    }
+    const b = r.b7b;
+    if (b && b.nStoried > 0 && (b.ownerCB > 0 || b.chains > 0 || b.defendedShare > 0)) {
+      const gaps = b.defendedGaps;
+      const gapStr = gaps.length ? `${(gaps.reduce((s, x) => s + x, 0) / gaps.length).toFixed(2)}L (n${gaps.length})` : 'n/a';
+      const dw = b.depthWindow;
+      console.log(`    [ownr ${t.id.padEnd(13)}] cb ${b.ownerCB.toFixed(1)} fb ${b.ownerFB.toFixed(1)} mid ${b.midMover.toFixed(1)} | depth ${b.ownerDepth} (win 10%=${dw?.w10} 12%=${dw?.w12} 15%=${dw?.w15}) | counts cb[${b.countDistCB}] fb[${b.countDistFB}] mid[${b.countDistMM}]`);
+      console.log(`    [scen ${t.id.padEnd(13)}] defendShare ${(b.defendedShare * 100).toFixed(0)}% | P(leaderHolds) ${(b.pLeaderHolds * 100).toFixed(0)}% | scenH ${b.scenarioEntropy.toFixed(2)} ${JSON.stringify(b.scenCounts)} | behindP1 ${b.behindP1.toFixed(1)} | defGap ${gapStr}`);
+      console.log(`    [dead ${t.id.padEnd(13)}] total ${b.deadSplit.total} = nearMiss ${b.deadSplit.plannedNearMiss} + castHole ${b.deadSplit.castingHole} + completeFail ${b.deadSplit.completionFail} | chains ${b.chains.toFixed(1)} timeShare ${b.timeShareMean.toFixed(2)}`);
     }
   }
 }

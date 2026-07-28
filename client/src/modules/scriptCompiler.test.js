@@ -227,14 +227,17 @@ describe("compileRaceScripts — ACTION-BUILD-7 the owner's finale cast", () => 
     }
   });
 
-  it('BAND-DUELS as a real family: contested intra-band crossings across MULTIPLE bands', () => {
-    const { scripts, stats } = compileRaceScripts(FC);
-    expect(stats.bandDuels).toBeGreaterThan(1); // not 0.8/race — a real family
-    // final-draw crossings appear in more than one band (not only the front)
+  it('BAND-DUELS as a real family: contested intra-band crossings across MULTIPLE bands (pooled)', () => {
+    let totalDuels = 0;
     const bandsWithDuel = new Set();
-    for (const [idx, sc] of scripts)
-      if (sc.role === 'finalDraw') bandsWithDuel.add(bandOf(draw.get(idx)));
-    expect(bandsWithDuel.size).toBeGreaterThan(1);
+    for (let seed = 1; seed <= 20; seed++) {
+      const { scripts, stats } = compileRaceScripts({ ...FC, seed });
+      totalDuels += stats.bandDuels;
+      for (const [idx, sc] of scripts)
+        if (sc.role === 'finalDraw') bandsWithDuel.add(bandOf(draw.get(idx)));
+    }
+    expect(totalDuels / 20).toBeGreaterThan(1); // a real family (not 0.8/race)
+    expect(bandsWithDuel.size).toBeGreaterThan(1); // across bands, not only the front
   });
 
   it('ARCS THAT END AT THE LINE: finaleCast produces arcs resolving in the finale window (>=0.85)', () => {
@@ -248,10 +251,12 @@ describe("compileRaceScripts — ACTION-BUILD-7 the owner's finale cast", () => 
     expect(lateArcs).toBeGreaterThan(0);
   });
 
-  it('EXPOSURE stays per-racer-bounded (no puppet-all-race): max one story per racer', () => {
+  it('EXPOSURE stays per-racer-bounded (chains give band-1 up to 2 roles, still one curve each)', () => {
     const { scripts, stats } = compileRaceScripts(FC);
-    expect(stats.exposureMax).toBe(1);
-    expect(scripts.size).toBe(stats.exposure); // Map keyed by index ⇒ one story each
+    expect(stats.exposureMax).toBe(2); // band-1 chains = two roles in one curve
+    expect(scripts.size).toBe(stats.exposure); // still one Map entry (one curve) per racer
+    expect(stats.chains).toBeLessThan(stats.storiedRacers); // chains are a bounded subset, not everyone
+    expect(stats.timeShareMean).toBeLessThan(0.85); // authored time-share stays moderate on average
   });
 
   it('NEGATIVE-SPACE (proposal 2): one band is left calm (no final-draw there)', () => {
@@ -265,6 +270,102 @@ describe("compileRaceScripts — ACTION-BUILD-7 the owner's finale cast", () => 
     const s = compileRaceScripts({ ...FC, clearance: NARROW, budgetGrade: true }).stats;
     expect(s.budgetScale).toBe(0); // lateral budget handed to substrate
     expect(s.finalDraw).toBeGreaterThan(0); // but the final-draw engine still runs (no side room needed)
+  });
+});
+
+describe('compileRaceScripts — ACTION-BUILD-7b owner definitions + variety + chains', () => {
+  const FC = { ...BASE, finaleCast: true };
+  const ownerRole = (scripts, role) => [...scripts].filter(([, sc]) => sc.role === role);
+  const holdRank = (sc) => sc.waypoints[1].rank; // the held (mid) rank
+
+  it('OWNER-COMEBACKER: drawn into band 1, held OUTSIDE band 1, reaches band 1 only >= 0.9', () => {
+    let seen = 0;
+    for (let seed = 1; seed <= 40; seed++) {
+      const { scripts } = compileRaceScripts({ ...FC, seed });
+      for (const [idx, sc] of ownerRole(scripts, 'comebacker')) {
+        expect(draw.get(idx)).toBeLessThanOrEqual(5); // drawn INTO band 1
+        expect(sc.resolve).toBeGreaterThanOrEqual(0.9); // reaches band 1 only in the last ~10%
+        expect(holdRank(sc)).toBeGreaterThan(5); // held visibly OUTSIDE band 1
+        seen++;
+      }
+    }
+    expect(seen).toBeGreaterThan(0);
+  });
+
+  it('OWNER-FALLBACKER: drawn NOT band 1, holds a leading (band-1) position, exits only >= 0.9', () => {
+    let seen = 0;
+    for (let seed = 1; seed <= 40; seed++) {
+      const { scripts } = compileRaceScripts({ ...FC, seed });
+      for (const [idx, sc] of ownerRole(scripts, 'fallbacker')) {
+        expect(draw.get(idx)).toBeGreaterThan(5); // drawn NOT band 1
+        expect(sc.resolve).toBeGreaterThanOrEqual(0.9); // falls out only in the last ~10%
+        expect(holdRank(sc)).toBeLessThanOrEqual(5); // held IN band 1 (a leading position)
+        seen++;
+      }
+    }
+    expect(seen).toBeGreaterThan(0);
+  });
+
+  it('MID-RACE MOVER is a separately named family that resolves mid-race (< 0.7)', () => {
+    let seen = 0;
+    for (let seed = 1; seed <= 40; seed++) {
+      const { scripts } = compileRaceScripts({ ...FC, seed });
+      for (const [, sc] of ownerRole(scripts, 'midRaceMover')) {
+        expect(sc.resolve).toBeLessThan(0.7);
+        seen++;
+      }
+    }
+    expect(seen).toBeGreaterThan(0);
+  });
+
+  it('VARIETY: per-family COUNT draws are non-degenerate (never always-1, never always-0)', () => {
+    const counts = { comebacker: new Set(), fallbacker: new Set(), midRaceMover: new Set() };
+    for (let seed = 1; seed <= 60; seed++) {
+      const cd = compileRaceScripts({ ...FC, seed }).stats.countDist;
+      counts.comebacker.add(cd.comebacker);
+      counts.fallbacker.add(cd.fallbacker);
+      counts.midRaceMover.add(cd.midRaceMover);
+    }
+    // each family realises at least 3 distinct counts (a genuine 0/1/2/3 spread), never a single value
+    for (const k of Object.keys(counts)) expect(counts[k].size).toBeGreaterThanOrEqual(3);
+  });
+
+  it('LEADER-DEFENDS: a defended race carries a planned near-miss chaser + behind-P1 tension', () => {
+    let defended = 0;
+    for (let seed = 1; seed <= 60; seed++) {
+      const { scripts, stats } = compileRaceScripts({ ...FC, seed });
+      if (stats.scenario !== 'leaderDefends') continue;
+      defended++;
+      expect(stats.nearMissChaser).toBeGreaterThanOrEqual(0); // (a) a planned near-miss chaser
+      expect(stats.leaderDefendsPlanned).toBe(1);
+      expect([...scripts.values()].some((sc) => sc.role === 'leaderHold')).toBe(true); // leader holds P1
+      expect([...scripts.values()].some((sc) => sc.role === 'nearMissChaser')).toBe(true);
+    }
+    expect(defended).toBeGreaterThan(0); // the scenario is actually drawn (small share)
+    expect(defended).toBeLessThan(60); // ...but not every race (a share, not a pattern)
+  });
+
+  it('MULTI-ROLE CHAINS: band-1 racers chain in DISJOINT windows; endpoint stays the drawn place (pooled)', () => {
+    let total = 0;
+    for (let seed = 1; seed <= 20; seed++) {
+      const { scripts } = compileRaceScripts({ ...FC, seed });
+      for (const [idx, sc] of scripts) {
+        if (sc.role !== 'chain') continue;
+        total++;
+        const [w1, w2] = sc.chainWindows;
+        expect(w1[1]).toBeLessThanOrEqual(w2[0]); // disjoint windows
+        expect(bandOf(draw.get(idx))).toBe(0); // band-1 racers chain
+        expect(sc.waypoints[sc.waypoints.length - 1].rank).toBe(draw.get(idx)); // endpoint = draw
+      }
+    }
+    expect(total).toBeGreaterThan(0); // chains actually happen (pooled over seeds)
+  });
+
+  it('NEGATIVE-SPACE never draws band 1 (owner rule: the front is cast every race)', () => {
+    for (let seed = 1; seed <= 40; seed++) {
+      const s = compileRaceScripts({ ...FC, seed, negativeSpace: true }).stats;
+      if (s.quietBand !== -1) expect(s.quietBand).toBeGreaterThanOrEqual(1);
+    }
   });
 });
 
@@ -299,6 +400,22 @@ describe('compileRaceScripts — integration through generateChainCurves', () =>
     });
     expect(JSON.stringify(base.curves)).toBe(JSON.stringify(nullc.curves));
     expect(base.scriptStats ?? null).toBe(null);
+  });
+
+  it('CHAIN SPLICE: the spliced curve keeps a small per-tick target delta across the window seam (0.7)', () => {
+    const { curves } = generateChainCurves({
+      ...GEN,
+      compiler: { actionLevel: 'default', finaleCast: true },
+    });
+    const progPerTick = 16 / 60000; // one 16ms tick over a 60s race
+    let maxDelta = 0;
+    for (const c of curves) {
+      for (let p = 0.6; p < 0.85; p += progPerTick) {
+        const d = Math.abs(sampleHeroCurve(c.curve, p + progPerTick) - sampleHeroCurve(c.curve, p));
+        if (d > maxDelta) maxDelta = d;
+      }
+    }
+    expect(maxDelta).toBeLessThan(1.0); // a min-jerk splice moves < 1 rank/tick (no discontinuity)
   });
 
   it('the compiler + accordion schedule report through the generator', () => {

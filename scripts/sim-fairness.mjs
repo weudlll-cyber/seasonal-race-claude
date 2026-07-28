@@ -1184,6 +1184,9 @@ export function runSingleRace({
       // Lock tracking from FA_LOCK_FROM: P1 leader, top-3 SET (order-independent), top-3/5 ORDER.
       prevP1: null, lockP1: null, prevSet3: null, lockSet3: null, prevK3: null, prevK5: null, lockIn3: null, lockIn5: null,
       prevLeader: null, leadChanges: [], // ACTION-BUILD-1: whole-race leader-change progresses for LAW
+      // ACTION-BUILD-7b: front-scenario telemetry — leader at finale entry (0.7), winner at the line,
+      // P2 order-changes behind P1 in the contest window, and the P1→P2 gap (lengths) at the line.
+      leaderAt07: null, winnerIdx: null, prevP2: null, behindP1Changes: 0, lineGapLen: null,
       convSeries: [],        // {progress, fuelSpread} over [FA_LOCK_FROM, 1] for the convergence point
       markers: { lastRoll: DYNAMICS_OVERRIDES.reRollLastPositionPercent / 100, choreoRelease: CHOREO_RELEASE_PROGRESS },
     } : null;
@@ -2094,6 +2097,15 @@ export function runSingleRace({
         if (faOrder.length >= 2) {
           // Lock-in (tracked from mid-race): P1 leader, top-3 SET (order-independent), top-3/5 ORDER.
           const p1 = faOrder[0].index;
+          // ── ACTION-BUILD-7b front-scenario telemetry (read-only) ──
+          if (raceProgress >= 0.7) {
+            if (fa.leaderAt07 == null) fa.leaderAt07 = p1; // leader at finale entry
+            fa.winnerIdx = p1; // running leader → the last value is the winner at the line
+            const p2 = faOrder[1].index; // P2 order-change count (the behind-P1 tension mark)
+            if (fa.prevP2 != null && p2 !== fa.prevP2) fa.behindP1Changes++;
+            fa.prevP2 = p2;
+            if (raceProgress >= 0.95) fa.lineGapLen = +leaderGapLengths(racers, isOpen, govLenScale).toFixed(4);
+          }
           const set3 = faOrder.slice(0, 3).map((r) => r.index).sort((a, b) => a - b).join(',');
           const ord = (n) => faOrder.slice(0, n).map((r) => r.index).join(',');
           const k3 = ord(3), k5 = ord(5);
@@ -2610,6 +2622,10 @@ export function runSingleRace({
         // LAW — Longest Actionless Window (progress span with no leader change). Headline product metric.
         leadChanges: fa.leadChanges.length,
         leadChangesProg: fa.leadChanges.slice(), // ACTION-BUILD-4: raw progresses (distinct-leaders-last-30% metric)
+        // ACTION-BUILD-7b front-scenario telemetry.
+        leaderAt07: fa.leaderAt07, winnerIdx: fa.winnerIdx,
+        leaderHolds: fa.leaderAt07 != null && fa.leaderAt07 === fa.winnerIdx ? 1 : 0,
+        behindP1Changes: fa.behindP1Changes, lineGapLen: fa.lineGapLen,
         LAW_full: (() => { const e = [0, ...fa.leadChanges, 1]; let m = 0; for (let i = 1; i < e.length; i++) m = Math.max(m, e[i] - e[i - 1]); return +m.toFixed(4); })(),
         LAW_last50: (() => { const e = [0.5, ...fa.leadChanges.filter((x) => x >= 0.5), 1]; let m = 0; for (let i = 1; i < e.length; i++) m = Math.max(m, e[i] - e[i - 1]); return +m.toFixed(4); })(),
       };

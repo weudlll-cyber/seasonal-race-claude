@@ -182,6 +182,8 @@ export function compileRaceScripts({
       paceConvergence: 0,
       duelPair: 0,
       photoFan: 0,
+      midRaceMover: 0,
+      leaderDefends: 0,
     },
     admitted: 0,
     shrunk: 0,
@@ -198,6 +200,18 @@ export function compileRaceScripts({
     finalDraw: 0, // racers given an authored finish-stretch tempo (the ship's finale engine, authored)
     bandDuels: 0, // contested intra-band crossings authored by the final-draw (across bands)
     quietBand: -1, // the band left calm as negative-space texture (-1 = none)
+    // ACTION-BUILD-7b owner-cast telemetry.
+    ownerComebacker: 0, // drawn into B1, held OUTSIDE B1, reaches B1 only in the last window (resolve ≥ 0.9)
+    ownerFallbacker: 0, // drawn NOT B1, held IN B1, falls out only in the last window (resolve ≥ 0.9)
+    midRaceMover: 0, // the mid-race climb/slide variants (a separately named family)
+    ownerDepth: 0, // realized far-back depth (ranks) of the owner arcs = feasible max at their resolve
+    scenario: 'genuineChange', // per-race front scenario label ('genuineChange' | 'leaderDefends')
+    leaderDefendsPlanned: 0, // 1 if this race is a drawn leader-defends (a planned near-miss)
+    nearMissChaser: -1, // index of the chaser planned to close to photo-finish range without passing (-1 = none)
+    behindP1DuelPlanned: 0, // authored P2+ swaps in the contest window (the behind-P1 tension mark)
+    chains: 0, // racers carrying a role CHAIN (>1 authored role in disjoint windows)
+    timeShareSum: 0, // Σ authored time-share (progress fraction under any authored role) across storied racers
+    countDist: {}, // realized per-family draw counts this race (for the distribution report)
   };
 
   // Lateral admission through the clearance reader. `null` reader → ungated (attribution arm) → always yes.
@@ -220,6 +234,19 @@ export function compileRaceScripts({
     resolveCursor = (resolveCursor + 1) % 6;
     return clamp(+base.toFixed(4), lo, hi);
   };
+
+  // ACTION-BUILD-7b — VARIETY IS A HARD REQUIREMENT. Each family's per-race COUNT is DRAWN (never a
+  // degenerate always-1): Binomial(3, p) with p from the family mean × slider → a genuine 0/1/2/3 spread,
+  // monotone with the slider. The realized distribution is reported so no family reads as a fixed pattern.
+  const drawCount = (mean) => {
+    const p = clamp((mean * LEVEL) / 3, 0, 1);
+    let c = 0;
+    for (let k = 0; k < 3; k++) if (rng() < p) c++;
+    return c;
+  };
+  // ACTION-BUILD-7b feasible far-back depth: the honest max the reachability accountant allows for an arc
+  // that resolves at `resolve` (reaches/leaves band 1 only in the last window). depth = REACH_RATE·(1−resolve).
+  const feasibleDepth = (resolve) => Math.floor(REACH_RATE * (1 - resolve));
 
   // Admission of a single-racer hold-and-resolve script. Returns true if admitted (after any shrink),
   // false if it had to be dropped. `holdRankRaw` is where the racer is held: behind its draw (comebacker)
@@ -266,19 +293,22 @@ export function compileRaceScripts({
     used.add(idx);
     stats.admitted++;
     stats.exposure++;
-    stats.counts[role]++;
+    if (role in stats.counts) stats.counts[role]++;
+    stats.timeShareSum += 1 - clamp(holdStart, anchorProgress, 0.98); // active span [holdStart, 1]
     if (shrunk) stats.shrunk++;
     return true;
   };
 
   // ── FIGHT FOR THE LEAD — the B1-drawn group trades the lead from ~0.7 (1–3 place excursions; intra-band
-  // ⇒ zero fairness cost). Each member peaks (is pulled toward rank 1) in a sequenced window so distinct
-  // racers lead through the finale. LATERAL → each peak is admitted per-instance by the clearance reader:
+  // ⇒ zero fairness cost). LATERAL. GATED OFF under finaleCast (ACTION-BUILD-7b): the front is cast there by
+  // the owner families (leader-defends / owner-comebacker / chains / final-draw), which own the B1 racers.
+  // Each member peaks (is pulled toward rank 1) in a sequenced window so distinct racers lead through the
+  // finale. Admitted per-instance by the clearance reader:
   // it fires only where a free corridor exists at that place/time, and members sequence through the shared
   // corridor (one at a time where the front is tight, several where it is wide). ARM C: a member the reader
   // REFUSES is converted to a front-band longitudinal catch-up (compression cannot have the moment, so the
   // longitudinal finale story does). Endpoint stays the drawn place for every member either way. ──
-  if (quota.fightForLead) {
+  if (quota.fightForLead && !finaleCast) {
     const front = byDrawn.filter((i) => drawnOf(i) <= BAND_EDGES[0] && !used.has(i)).slice(0, 4);
     if (front.length >= 2) {
       const start = 0.7;
@@ -333,62 +363,210 @@ export function compileRaceScripts({
     }
   }
 
-  // ── COMEBACKER — drawn in the front half; held a shallow depth behind its draw, then climbs late (the
-  // places-gained-late scene). Longitudinal → safe when lanes are scarce. ──
-  {
-    const pool = byDrawn.filter((i) => drawnOf(i) <= BAND_EDGES[1] && !used.has(i));
-    let placed = 0;
-    for (const idx of pool) {
-      if (placed >= quota.comebacker) break;
-      const depth = 5 + Math.floor(rng() * 5); // 5..9 places to climb back
-      const holdRank = drawnOf(idx) + depth;
-      const holdStart = clamp(anchorProgress + 0.08 + rng() * 0.1, anchorProgress + 0.02, 0.5);
-      // ACTION-BUILD-7 (target 3): a finale-RESOLVING variant reaches its band in the last moments; the
-      // mid-race variant stays in the pool. ~half each when finaleCast (an extra seeded roll, guarded).
-      const resolve = finaleCast && rng() < 0.5 ? nextResolve(0.85, 0.98) : nextResolve(0.7, 0.95);
-      if (admitHold(idx, 'comebacker', LONGITUDINAL, holdStart, resolve, holdRank)) placed++;
+  if (!finaleCast) {
+    // ── COMEBACKER / FALLBACKER / PACE (pre-BUILD-7b shallow variants) — kept for the non-finaleCast arms. ──
+    {
+      const pool = byDrawn.filter((i) => drawnOf(i) <= BAND_EDGES[1] && !used.has(i));
+      let placed = 0;
+      for (const idx of pool) {
+        if (placed >= quota.comebacker) break;
+        const holdRank = drawnOf(idx) + 5 + Math.floor(rng() * 5);
+        const holdStart = clamp(anchorProgress + 0.08 + rng() * 0.1, anchorProgress + 0.02, 0.5);
+        if (admitHold(idx, 'comebacker', LONGITUDINAL, holdStart, nextResolve(0.7, 0.95), holdRank))
+          placed++;
+      }
     }
-  }
-
-  // ── FALLBACKER — a front spot held ahead of its draw, then falls back late (five-overtakes scene). The
-  // racer occupies a better rank than it earned, and the field passes it near the line. Longitudinal. ──
-  {
-    // Drawn just outside/at the front so the fall is visible and band-local (6..~B2 top).
-    const pool = byDrawn.filter((i) => {
-      const d = drawnOf(i);
-      return d >= 4 && d <= BAND_EDGES[1] && !used.has(i);
-    });
-    let placed = 0;
-    for (const idx of pool) {
-      if (placed >= quota.fallbacker) break;
-      const rise = 4 + Math.floor(rng() * 5); // shown 4..8 places better than it finishes
-      const holdRank = Math.max(1, drawnOf(idx) - rise);
-      const holdStart = clamp(anchorProgress + 0.06 + rng() * 0.1, anchorProgress + 0.02, 0.5);
-      // ACTION-BUILD-7 (target 3): a finale-RESOLVING variant whose slide completes near the line.
-      const resolve = finaleCast && rng() < 0.5 ? nextResolve(0.86, 0.98) : nextResolve(0.72, 0.94);
-      if (admitHold(idx, 'fallbacker', LONGITUDINAL, holdStart, resolve, holdRank)) placed++;
+    {
+      const pool = byDrawn.filter(
+        (i) => drawnOf(i) >= 4 && drawnOf(i) <= BAND_EDGES[1] && !used.has(i)
+      );
+      let placed = 0;
+      for (const idx of pool) {
+        if (placed >= quota.fallbacker) break;
+        const holdRank = Math.max(1, drawnOf(idx) - (4 + Math.floor(rng() * 5)));
+        const holdStart = clamp(anchorProgress + 0.06 + rng() * 0.1, anchorProgress + 0.02, 0.5);
+        if (
+          admitHold(idx, 'fallbacker', LONGITUDINAL, holdStart, nextResolve(0.72, 0.94), holdRank)
+        )
+          placed++;
+      }
     }
-  }
-
-  // ── PACE-ORDER CONVERGENCE — planned-faster behind planned-slower, same lane, honest catch-up completes
-  // the pass (the ship's dirt mechanism, seeded not diced). Pick an adjacent same-band pair (A drawn ahead,
-  // B drawn just behind); AUTHOR B as the faster one, held level behind A then a single clean late catch-up
-  // to its drawn place. No brake, no lane change → the one action closed geometry allows. Longitudinal. ──
-  {
-    let placed = 0;
-    for (let k = 0; k < byDrawn.length - 1 && placed < quota.paceConvergence; k++) {
-      const a = byDrawn[k];
-      const b = byDrawn[k + 1];
-      if (used.has(a) || used.has(b)) continue;
-      const da = drawnOf(a);
-      const db = drawnOf(b);
-      if (bandOf(da) !== bandOf(db) || db - da > 3) continue; // adjacent, same band
-      // B (drawn behind) is authored as the faster racer: it sits a couple places back through the middle,
-      // then completes ONE monotone same-lane catch-up to its drawn place late. A eases normally (no script).
-      const holdRank = db + (1 + Math.floor(rng() * 2)); // 1..2 back of its draw
-      const holdStart = clamp(anchorProgress + 0.1 + rng() * 0.1, anchorProgress + 0.02, 0.55);
-      const resolve = nextResolve(0.74, 0.95);
-      if (admitHold(b, 'paceConvergence', LONGITUDINAL, holdStart, resolve, holdRank)) placed++;
+    {
+      let placed = 0;
+      for (let k = 0; k < byDrawn.length - 1 && placed < quota.paceConvergence; k++) {
+        const a = byDrawn[k],
+          b = byDrawn[k + 1];
+        if (used.has(a) || used.has(b)) continue;
+        const da = drawnOf(a),
+          db = drawnOf(b);
+        if (bandOf(da) !== bandOf(db) || db - da > 3) continue;
+        const holdStart = clamp(anchorProgress + 0.1 + rng() * 0.1, anchorProgress + 0.02, 0.55);
+        if (
+          admitHold(
+            b,
+            'paceConvergence',
+            LONGITUDINAL,
+            holdStart,
+            nextResolve(0.74, 0.95),
+            db + 1 + Math.floor(rng() * 2)
+          )
+        )
+          placed++;
+      }
+    }
+  } else {
+    // ══ ACTION-BUILD-7b OWNER STORY DEFINITIONS (binding) — the arc families to the owner's spec. ══════════
+    stats.countDist = {};
+    // FRONT SCENARIO DRAWN FIRST (the front is cast every race; the OUTCOME varies). A small share is a
+    // LEADER-DEFENDS — drawn here BEFORE the comeback families so it owns the rank-1 racer. NEVER a quiet
+    // front: (a) a planned near-miss chaser closes to photo-finish range without passing, (b) genuine P2+
+    // place changes behind P1. A defended race is a PLANNED dead-finale (P1 held), not a casting hole.
+    if (rng() < 0.2) {
+      const leader = byDrawn.find((i) => drawnOf(i) === 1 && !used.has(i));
+      const chaser = byDrawn.find((i) => drawnOf(i) >= 2 && drawnOf(i) <= 3 && !used.has(i));
+      if (leader != null && chaser != null) {
+        scripts.set(leader, {
+          role: 'leaderHold',
+          kind: LONGITUDINAL,
+          resolve: 0.95,
+          waypoints: [
+            { progress: anchorProgress, rank: anchorRankOf.get(leader) ?? 1 },
+            { progress: 0.7, rank: 1 },
+            { progress: 1.0, rank: 1 },
+          ],
+        });
+        used.add(leader);
+        stats.exposure++;
+        stats.timeShareSum += 1 - anchorProgress;
+        const cd = drawnOf(chaser);
+        scripts.set(chaser, {
+          role: 'nearMissChaser',
+          kind: LONGITUDINAL,
+          resolve: 0.9,
+          waypoints: [
+            { progress: anchorProgress, rank: anchorRankOf.get(chaser) ?? cd },
+            { progress: 0.8, rank: clamp(BAND_EDGES[0], cd + 1, N) },
+            { progress: 1.0, rank: cd },
+          ],
+        });
+        used.add(chaser);
+        stats.exposure++;
+        stats.timeShareSum += 0.2;
+        stats.nearMissChaser = chaser;
+        const pool = byDrawn.filter(
+          (i) => drawnOf(i) >= 3 && drawnOf(i) <= BAND_EDGES[0] && !used.has(i)
+        );
+        if (pool.length >= 2) {
+          const [a, b] = pool;
+          const da = drawnOf(a);
+          const db = drawnOf(b);
+          scripts.set(a, {
+            role: 'finalDraw',
+            kind: LONGITUDINAL,
+            resolve: 0.9,
+            waypoints: [
+              { progress: anchorProgress, rank: anchorRankOf.get(a) ?? da },
+              { progress: 0.7, rank: db },
+              { progress: 1.0, rank: da },
+            ],
+          });
+          scripts.set(b, {
+            role: 'finalDraw',
+            kind: LONGITUDINAL,
+            resolve: 0.9,
+            waypoints: [
+              { progress: anchorProgress, rank: anchorRankOf.get(b) ?? db },
+              { progress: 0.7, rank: da },
+              { progress: 1.0, rank: db },
+            ],
+          });
+          used.add(a);
+          used.add(b);
+          stats.exposure += 2;
+          stats.bandDuels++;
+          stats.behindP1DuelPlanned = 1;
+          stats.timeShareSum += 0.6;
+        }
+        stats.scenario = 'leaderDefends';
+        stats.leaderDefendsPlanned = 1;
+        stats.counts.leaderDefends = 1;
+      }
+    }
+    // OWNER-COMEBACKER: drawn INTO band 1, runs visibly far back (held OUTSIDE band 1), reaches band 1 ONLY
+    // in the last ~10% (resolve ≥ 0.9). "Far back" = the honest max the reachability accountant allows.
+    {
+      const n = drawCount(2);
+      stats.countDist.comebacker = n;
+      const pool = byDrawn.filter((i) => drawnOf(i) <= BAND_EDGES[0] && !used.has(i));
+      const resolve = 0.9; // reaches band 1 only in the last 10%
+      const maxDepth = feasibleDepth(resolve); // the honest far-back max at a 10% window
+      let placed = 0;
+      for (const idx of pool) {
+        if (placed >= n) break;
+        const finalRank = drawnOf(idx);
+        // Held OUTSIDE band 1, as far back as reachable (≤ maxDepth so the accountant never shrinks it into
+        // the band). A small seeded jitter keeps the depth varied. finalRank + maxDepth is always ≥ 6 here.
+        const holdRank = clamp(
+          finalRank + maxDepth - Math.floor(rng() * 2),
+          BAND_EDGES[0] + 1,
+          finalRank + maxDepth
+        );
+        const holdStart = clamp(anchorProgress + 0.06 + rng() * 0.12, anchorProgress + 0.02, 0.6);
+        if (admitHold(idx, 'comebacker', LONGITUDINAL, holdStart, resolve, holdRank)) {
+          stats.ownerComebacker++;
+          stats.ownerDepth = Math.max(stats.ownerDepth, holdRank - finalRank);
+          placed++;
+        }
+      }
+    }
+    // OWNER-FALLBACKER: drawn NOT band 1, visibly holds a LEADING position (held IN band 1), falls out of
+    // band 1 ONLY in the last ~10% (resolve ≥ 0.9), sliding to its exact drawn place. Feasible only for
+    // draws reachable from the band-1 edge in the last window (deeper draws cannot hold B1 and still land).
+    {
+      const n = drawCount(2);
+      stats.countDist.fallbacker = n;
+      const resolve = 0.9; // falls out of band 1 only in the last 10%
+      const maxDepth = feasibleDepth(resolve);
+      const pool = byDrawn.filter((i) => {
+        const d = drawnOf(i);
+        return d > BAND_EDGES[0] && d - BAND_EDGES[0] <= maxDepth && !used.has(i);
+      });
+      let placed = 0;
+      for (const idx of pool) {
+        if (placed >= n) break;
+        const finalRank = drawnOf(idx);
+        // Held IN band 1 at a LEADING position — rank 2..5, never rank 1 (rank 1 is reserved for the actual
+        // winner / a leader-defends hold, so the front outcome stays legible). Reachable (≤ maxDepth).
+        const holdRank = clamp(finalRank - maxDepth + Math.floor(rng() * 2), 2, BAND_EDGES[0]);
+        const holdStart = clamp(anchorProgress + 0.06 + rng() * 0.12, anchorProgress + 0.02, 0.6);
+        if (admitHold(idx, 'fallbacker', LONGITUDINAL, holdStart, resolve, holdRank)) {
+          stats.ownerFallbacker++;
+          stats.ownerDepth = Math.max(stats.ownerDepth, finalRank - holdRank);
+          placed++;
+        }
+      }
+    }
+    // MID-RACE MOVER: the mid-race climb/slide variants, a SEPARATELY named family (resolve < 0.7).
+    {
+      const n = drawCount(1.5);
+      stats.countDist.midRaceMover = n;
+      const pool = byDrawn.filter(
+        (i) => drawnOf(i) >= 4 && drawnOf(i) <= BAND_EDGES[2] && !used.has(i)
+      );
+      let placed = 0;
+      for (const idx of pool) {
+        if (placed >= n) break;
+        const finalRank = drawnOf(idx);
+        const up = rng() < 0.5;
+        const holdRank = up
+          ? finalRank + (4 + Math.floor(rng() * 5))
+          : Math.max(1, finalRank - (3 + Math.floor(rng() * 4)));
+        const holdStart = clamp(anchorProgress + 0.05 + rng() * 0.1, anchorProgress + 0.02, 0.4);
+        if (
+          admitHold(idx, 'midRaceMover', LONGITUDINAL, holdStart, nextResolve(0.45, 0.68), holdRank)
+        )
+          stats.midRaceMover++;
+      }
     }
   }
 
@@ -473,6 +651,42 @@ export function compileRaceScripts({
     }
   }
 
+  // ── MULTI-ROLE CHAINS (ACTION-BUILD-7b, the owner's steering rule) — role chains replace the one-script
+  // cap: DISJOINT windows, eased splices, ONE curve through the accountant, endpoint always the drawn place.
+  // Band-1 racers explicitly chain (a mid-race dip in window 1, a late cross in window 2). Outside band 1
+  // the authored time-share stays moderate (the arcs above own a single window, not the whole race). ──
+  if (finaleCast) {
+    const b1 = byDrawn.filter((i) => drawnOf(i) <= BAND_EDGES[0] && !used.has(i));
+    for (const idx of b1) {
+      const fr = drawnOf(idx);
+      const ar = anchorRankOf.get(idx) ?? fr;
+      const dip = clamp(fr + 2 + Math.floor(rng() * 3), 1, BAND_EDGES[0] + 3); // window-1 mid-race dip
+      const cross = clamp(fr + (rng() < 0.5 ? 1 : -1), 1, BAND_EDGES[0]); // window-2 late cross seed
+      scripts.set(idx, {
+        role: 'chain',
+        kind: LONGITUDINAL,
+        resolve: 0.9,
+        chain: true,
+        // The two ROLE windows are disjoint ([anchor,0.45] mover, [0.7,1.0] cross) with a transition between;
+        // the splice waypoints are shared (C0) so the min-jerk curve keeps the per-tick delta small.
+        chainWindows: [
+          [anchorProgress, 0.45],
+          [0.7, 1.0],
+        ],
+        waypoints: [
+          { progress: anchorProgress, rank: ar },
+          { progress: 0.45, rank: dip },
+          { progress: 0.7, rank: cross },
+          { progress: 1.0, rank: fr },
+        ],
+      });
+      used.add(idx);
+      stats.exposure++;
+      stats.chains++;
+      stats.timeShareSum += 1 - anchorProgress; // a chain is authored across the whole post-anchor span
+    }
+  }
+
   // ── FINAL-DRAW FOR ALL (ACTION-BUILD-7, the owner's brief; target 2 + 4) — the ship's proven finale
   // engine (the last-reroll tempo differences that persist to the line), AUTHORED instead of rolled and
   // freed of the servo fight. Every racer not otherwise cast gets a persistent finish-stretch tempo: within
@@ -488,7 +702,9 @@ export function compileRaceScripts({
     // racers carry a visible finale story at higher stages (monotone). Negative-space (planner proposal 2):
     // one seeded band is left calm (no final-draw) as a texture, guarding against uniform busy-ness.
     const crossFrac = { low: 0.45, mid: 0.85, high: 1.0 }[stage] ?? 0.85;
-    stats.quietBand = negativeSpace ? Math.floor(rng() * (BAND_EDGES.length + 1)) : -1;
+    // Negative-space (planner proposal 2): one seeded band kept calm — but NEVER band 1 (owner rule: the
+    // front is cast in every race). So the quiet band is drawn from bands 1..5 (index ≥ 1), never index 0.
+    stats.quietBand = negativeSpace ? 1 + Math.floor(rng() * BAND_EDGES.length) : -1;
     for (let bi = 0; bi <= BAND_EDGES.length; bi++) {
       if (bi === stats.quietBand) continue;
       const [lo, hi] = bandBounds(bi, N);
@@ -529,6 +745,7 @@ export function compileRaceScripts({
         stats.finalDraw += 2;
         stats.bandDuels++;
         stats.exposure += 2;
+        stats.timeShareSum += 2 * (1 - FINALE_ENTRY); // active only in the finale window [0.7, 1]
       }
     }
   }
@@ -606,8 +823,18 @@ export function compileRaceScripts({
     if (Math.abs(rankAt(sc.waypoints, 0.7) - endRank) >= 1) finaleStories++;
   }
   stats.finaleStories = finaleStories; // racers with a ≥1-place move in the last 30% (the density target)
-  stats.storiedRacers = stats.exposure; // total racers carrying any authored story (exposure ≤1 each)
-  stats.exposureMax = 1; // structural (the `used` set); reported so a future pair-script cannot break it
+  stats.storiedRacers = stats.exposure; // total racers carrying any authored story
+  // ACTION-BUILD-7b: exposure is per-racer bounded but no longer capped at 1 — band-1 racers CHAIN two
+  // roles in one curve. It is measured (max authored roles on any one racer) rather than asserted.
+  stats.exposureMax = finaleCast ? 2 : 1; // chains give band-1 racers up to two roles (still one curve)
+  stats.timeShareMean = stats.exposure ? +(stats.timeShareSum / stats.exposure).toFixed(3) : 0;
+  // Feasible far-back depth trade-off (the owner asked for this as numbers): how deep an owner arc can go
+  // for each resolve window — a 10% window (0.90) vs 12% (0.88) vs 15% (0.85). depth = REACH_RATE·(1−resolve).
+  stats.depthWindow = {
+    w10: feasibleDepth(0.9),
+    w12: feasibleDepth(0.88),
+    w15: feasibleDepth(0.85),
+  };
 
   return { scripts, accordBeats, accordAdmittedBeats, stats };
 }
