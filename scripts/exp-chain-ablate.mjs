@@ -154,6 +154,22 @@ const ARM_LIB = {
                     '--chainAccordion=true', '--accordDensity=6', '--accordAdmit=true', '--accordSkip=true'),
 };
 
+// ── CHOREO-RELEASE-1 arms (owner-chartered). The owner's per-racer release built ON the full choreo
+// candidate (B15clrD = curves-for-all + B15 + proximity + clearance + budget). Two measured axes:
+// RELEASE TIMING (EARLY vs AT-T) and TARGET T {0.70,0.80,0.90}; plus the AT80+WALL literal-band variant.
+// faB60 (the owner's cache name; no such cache exists in-repo) ≙ the minimal band-fair sorter B15 (the
+// fairness-floor baseline). candidate-as-is ≙ B15clrD (already defined above).
+const CAND = ARM_LIB.B15clrD;
+const REL = (...adds) => withF(CAND, '--chainReleaseEnabled=true', ...adds);
+ARM_LIB.AT70dice   = REL('--chainReleaseTiming=atT',   '--chainReleaseT=0.70', '--chainReleaseMode=dice');
+ARM_LIB.AT80dice   = REL('--chainReleaseTiming=atT',   '--chainReleaseT=0.80', '--chainReleaseMode=dice');
+ARM_LIB.AT90dice   = REL('--chainReleaseTiming=atT',   '--chainReleaseT=0.90', '--chainReleaseMode=dice');
+ARM_LIB.EARLYdice  = REL('--chainReleaseTiming=early', '--chainReleaseT=0.80', '--chainReleaseMode=dice');
+ARM_LIB.AT80wall   = REL('--chainReleaseTiming=atT',   '--chainReleaseT=0.80', '--chainReleaseMode=wall');
+// PART-1 anchor-hit with/without the chaos aim (AT80+DICE substrate, aim ON).
+ARM_LIB.AT80diceAim = REL('--chainReleaseTiming=atT',  '--chainReleaseT=0.80', '--chainReleaseMode=dice', '--chainChaosAim=true');
+ARM_LIB.faB60      = ARM_LIB.B15;
+
 const BAND_EDGES = [5, 15, 25, 40];
 const zoneIdx = (rank) => { for (let i = 0; i < BAND_EDGES.length; i++) if (rank <= BAND_EDGES[i]) return i; return BAND_EDGES.length; };
 const mean = (a) => (a.length ? a.reduce((s, x) => s + x, 0) / a.length : 0);
@@ -215,6 +231,23 @@ async function runArmTrack(armKey, flags, track) {
   // ── ACTION-BUILD-7b owner-cast + front-scenario telemetry (aligned per race; guarded when absent) ──
   const sPer = faR.map((r) => r.scriptStats); // may contain nulls (ship/night arms) → guarded below
   const rpRaw = rp.races.map((rec) => rec.runawayParade); // per-race runaway-parade (carries .frontBattle)
+  // ── CHOREO-RELEASE-1 telemetry aggregation (null when the line is OFF) ──
+  const relRaw = rpRaw.map((x) => x?.choreoRelease).filter(Boolean);
+  let release = null;
+  if (relRaw.length) {
+    const allProgs = relRaw.flatMap((c) => c.releaseProgs ?? []).sort((a, b) => a - b);
+    const median = allProgs.length ? allProgs[Math.floor(allProgs.length / 2)] : null;
+    const cbTot = relRaw.reduce((a, c) => a + c.cbTot, 0), cbReal = relRaw.reduce((a, c) => a + c.cbReal, 0);
+    const fbTot = relRaw.reduce((a, c) => a + c.fbTot, 0), fbReal = relRaw.reduce((a, c) => a + c.fbReal, 0);
+    release = {
+      anchorHit: mean(relRaw.map((c) => c.anchorHitMeanAbs ?? 0)),
+      releaseMedian: median,
+      releaseEarlyFrac: allProgs.length ? allProgs.filter((p) => p < 0.85).length / allProgs.length : 0,
+      neverReleased: mean(relRaw.map((c) => (c.nHeroes ?? 0) - (c.releasedCount ?? 0))),
+      stragglerHalfPct: mean(relRaw.map((c) => (c.nHeroes ? c.stragglerHalfCount / c.nHeroes : 0))),
+      cbTot, cbReal, fbTot, fbReal,
+    };
+  }
   const distinct = (arr) => [...new Set(arr.filter((x) => x != null))].sort((a, b) => a - b);
   const scenarioOf = (r, s) => (r.leaderHolds ? (s?.scenario === 'leaderDefends' ? 'defended' : 'unplannedHold') : 'genuineChange');
   const scen = faR.map((r, i) => scenarioOf(r, sPer[i]));
@@ -284,7 +317,7 @@ async function runArmTrack(armKey, flags, track) {
     startRowUnfair: hm.fairness?.startRowUnfair ?? null,
     rowReachMin: Math.min(...rowReached.map((v, i) => (rowTotal[i] ? v / rowTotal[i] : 1))),
     deadRate: mean(rows.map((r) => r.dead)), leadChanges: mean(rows.map((r) => r.lc)), runawayRate: mean(rows.map((r) => r.runaway)),
-    lawFull, lawL50, skipRate, compiler, leadLast30, b7b,
+    lawFull, lawL50, skipRate, compiler, leadLast30, b7b, release,
   };
 }
 
@@ -335,6 +368,11 @@ for (const armKey of arms) {
     if (b) {
       const dBoring = sb ? (b.deadBoring - sb.deadBoring) * 100 : 0;
       console.log(`     └score ${t.id.padEnd(12)} | DEAD-BORING ${pct(b.deadBoring).padStart(4)} (${armKey === 'ship' ? '—' : sgn(dBoring, 'pp')}) · thriller ${pct(b.deadThriller)} | frontContest ${(b.frontContest * 100).toFixed(0)}% | distinctLead ${b.distinctLead.toFixed(2)} | maxLeadHold ${(b.maxLeadHold * 100).toFixed(0)}% | p1MultiSec ${b.p1LongestSec.toFixed(1)}`);
+    }
+    // CHOREO-RELEASE-1 telemetry line (only on release/aim arms).
+    const rl = r.release;
+    if (rl) {
+      console.log(`     └release ${t.id.padEnd(10)} | anchorHit ${rl.anchorHit.toFixed(1)} | releaseMed ${rl.releaseMedian == null ? 'n/a' : rl.releaseMedian.toFixed(3)} · early<0.85 ${(rl.releaseEarlyFrac * 100).toFixed(0)}% | neverRel ${rl.neverReleased.toFixed(1)} | straggler@50% ${(rl.stragglerHalfPct * 100).toFixed(0)}% | cb ${rl.cbReal}/${rl.cbTot} · fb ${rl.fbReal}/${rl.fbTot}`);
     }
   }
   console.log(`  SUMMARY band-reach mean ${pct(bSum / TRACKS.length)} | tracks ≥70%: ${passReach}/${TRACKS.length}`);

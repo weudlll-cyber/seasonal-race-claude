@@ -335,6 +335,15 @@ const FRONT_CONVERGENCE = argVal('frontConvergence', 'false') === 'true'; // ARM
 const CLEARANCE_BUDGET = argVal('clearanceBudget', 'false') === 'true'; // ACTION-BUILD-6 graded script budget
 const FINALE_CAST = argVal('finaleCast', 'false') === 'true'; // ACTION-BUILD-7 owner's finale cast (final-draw for all)
 const NEGATIVE_SPACE = argVal('negativeSpace', 'false') === 'true'; // ACTION-BUILD-7 one band left calm
+// CHOREO-RELEASE-1 (SIM-ONLY; owner-chartered; default OFF). PART 2 per-racer conditional release to ship's
+// re-roll under band-hold; PART 1 chaos-phase aim. All default OFF → byte-identical shipped path.
+const CHAIN_RELEASE_ON = argVal('chainReleaseEnabled', 'false') === 'true';
+const CHAIN_RELEASE_TIMING = argVal('chainReleaseTiming', 'atT'); // 'atT' | 'early'
+const CHAIN_RELEASE_T = Number(argVal('chainReleaseT', '0.8')); // target T (Dauer-Regel lever)
+const CHAIN_RELEASE_MODE = argVal('chainReleaseMode', 'dice'); // 'dice' | 'wall'
+const CHAIN_RELEASE_RESTEER = Number(argVal('chainReleaseReSteer', '1.0')); // dice band-hold tolerance
+const CHAIN_CHAOS_AIM = argVal('chainChaosAim', 'false') === 'true'; // PART 1 chaos-phase aim
+const CHAIN_CHAOS_AIM_STRENGTH = Number(argVal('chainChaosAimStrength', '1.5'));
 // B2-leak trace (read-only diagnostic): adds b2LastInside to rawData rows. No-flag → byte-identical.
 const B2_TRACE = argv.includes('--b2-trace');
 // reRoll / trajectory dynamics overrides — same shared-default + argVal pattern. Lets a sweep
@@ -2590,6 +2599,34 @@ export function runSingleRace({
         // file alone. classifyFrontBattle() turns these into the REAL P1 ACTION boolean downstream.
         contestWindowStart:  CONTEST_WINDOW_START,
         frontBattle:         rp.frontBattle.result(),
+        // CHOREO-RELEASE-1 telemetry: PART-1 anchor-hit, release-time distribution, mid-race stragglers,
+        // and comebacker/fallbacker realization (cb/fb are exempt → curve-guided to their authored place).
+        choreoRelease:       ((CHAIN_RELEASE_ON || CHAIN_CHAOS_AIM) && racePlanController?.getChoreoReleaseStats)
+          ? (() => {
+              const s = racePlanController.getChoreoReleaseStats();
+              const B1 = 5;
+              const anchorAbs = (s.anchorHit ?? []).map((a) => Math.abs(a.boundaryRank - a.plannedAnchor));
+              const relProgs = (s.releaseProg ?? []).map(([, p]) => p);
+              const nHeroes = (s.drawn ?? []).length;
+              const stragglerHalf = (s.stragglerHalf ?? []).filter(([, ok]) => !ok).length;
+              const roleMap = new Map(s.roles ?? []);
+              const drawnMap = new Map(s.drawn ?? []);
+              let cbTot = 0, cbReal = 0, fbTot = 0, fbReal = 0;
+              for (const [idx, role] of roleMap) {
+                const fin = finalRankByIndex[idx];
+                if (role === 'comebacker') { cbTot++; if (fin != null && fin <= B1) cbReal++; }
+                else if (role === 'fallbacker') { fbTot++; if (fin != null && fin > B1) fbReal++; }
+              }
+              return {
+                anchorHitMeanAbs: anchorAbs.length ? +(anchorAbs.reduce((a, b) => a + b, 0) / anchorAbs.length).toFixed(2) : null,
+                releaseProgs: relProgs.map((p) => +p.toFixed(4)),
+                releasedCount: relProgs.length,
+                nHeroes,
+                stragglerHalfCount: stragglerHalf,
+                cbTot, cbReal, fbTot, fbReal,
+              };
+            })()
+          : null,
       };
     }
 
@@ -3368,6 +3405,14 @@ if (isMain) {
               carWidthPx:                comboBodyNarrowPx,
               chainSegSec:               CHAIN_SEG_SEC,
               chainMExtra:               CHAIN_MEXTRA,
+              // CHOREO-RELEASE-1 (owner-chartered; default OFF → byte-identical).
+              chainReleaseEnabled:       CHAIN_RELEASE_ON,
+              chainReleaseTiming:        CHAIN_RELEASE_TIMING,
+              chainReleaseT:             CHAIN_RELEASE_T,
+              chainReleaseMode:          CHAIN_RELEASE_MODE,
+              chainReleaseReSteer:       CHAIN_RELEASE_RESTEER,
+              chainChaosAim:             CHAIN_CHAOS_AIM,
+              chainChaosAimStrength:     CHAIN_CHAOS_AIM_STRENGTH,
             }, seed);
             racePlanController = createTrajectoryController(plan);
             raceSollRankMap = plan._racerTargetRank;

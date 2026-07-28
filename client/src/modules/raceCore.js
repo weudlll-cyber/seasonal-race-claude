@@ -521,11 +521,23 @@ export function stepRacePhysics(st, cfg) {
               st.raceProgress
             )
           : rawSample;
+        // CHOREO-RELEASE-1 PART 1: chaos-phase aim (internal no-op unless _chainChaosAim is set → returns
+        // the input unchanged, so the shipped world stays byte-identical). Fires only in PRE_PULK.
+        const aimedSample = racePlanController
+          ? racePlanController.computeChaosAimTarget(
+              r.index,
+              biasedSample,
+              BASE_SPEED_MIN / BASE_SPEED_MEAN,
+              BASE_SPEED_MAX / BASE_SPEED_MEAN,
+              st.racers,
+              st.raceProgress
+            )
+          : biasedSample;
         const gapBiasedSample =
           gapRerollEnabled && racePlanController
             ? racePlanController.computeGapBiasedTarget(
                 r.index,
-                biasedSample,
+                aimedSample,
                 BASE_SPEED_MIN / BASE_SPEED_MEAN,
                 BASE_SPEED_MAX / BASE_SPEED_MEAN,
                 st.racers,
@@ -535,7 +547,7 @@ export function stepRacePhysics(st, cfg) {
                 behaviorConfig.isOpen,
                 lastRollDeadline
               )
-            : biasedSample;
+            : aimedSample;
         if (gapRerollDevMarker && gapBiasedSample !== biasedSample) r._gapBiasMarkAt = physicsTs;
         const newTarget = Math.max(
           BASE_SPEED_MIN / BASE_SPEED_MEAN,

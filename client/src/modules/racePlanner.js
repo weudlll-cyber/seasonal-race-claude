@@ -311,6 +311,34 @@ export function createRacePlan(racers, finishT, targetDurationMs, config = {}, s
     // DRAMA-1 intra-band front-rank freeing (SIM-ONLY; default 1.0 = no change). See servo above.
     _chainFrontStrictness: config.chainFrontStrictness ?? 1.0,
     _chainFrontFreeFrom: config.chainFrontFreeFrom ?? 0.7,
+    // ── CHOREO-RELEASE-1 (SIM-ONLY; owner-chartered; default OFF → byte-identical). PART 2: PER-RACER
+    // CONDITIONAL RELEASE. A chain racer is curve-guided until it ARRIVES in its DRAWN band; on arrival
+    // its curve stops steering and it runs under ship's re-roll HELD to that band (bandError steering,
+    // exactly the shipped attacker-release hysteresis). This is the re-roll P1-uncertainty force the
+    // admission-side line (ACTION-BUILD-5/7c) could not add, now owner-authorised. Two release timings:
+    //   EARLY — release the MOMENT it is in band (checked from chaos end) → max dice time.
+    //   AT-T  — release no earlier than T → max sorting calm; T is the Dauer-Regel lever.
+    // Stragglers (not in band at T) stay guided until they arrive (to the line if need be — arrival is
+    // STRUCTURAL). Comebackers/fallbackers (authored roles) are NEVER released — authored to the line.
+    // WALL mode = literal band-rule: a hard band wall (strictness 1 the instant it leaves band, no drift)
+    // instead of the soft dice hold — measured at the calm (AT-T) timing.
+    _chainRelease: config.chainReleaseEnabled
+      ? {
+          timing: config.chainReleaseTiming === 'early' ? 'early' : 'atT',
+          T: config.chainReleaseT ?? 0.8,
+          mode: config.chainReleaseMode === 'wall' ? 'wall' : 'dice',
+          reSteer: config.chainReleaseReSteer ?? 1.0, // dice band-hold tolerance (ranks out of band)
+        }
+      : null,
+    _chainReleased: new Map(), // index -> true once released (band-hold hysteresis state)
+    _chainReleaseProg: new Map(), // index -> phaseProgress at first release (release-time telemetry)
+    _chainStragglerHalf: null, // Map index->inDrawnBand captured once at mid-race (straggler telemetry)
+    // PART 1: CHAOS-PHASE AIM. During chaos, bias each racer's re-roll toward the speed that lands it near
+    // its PLANNED anchor (drawn band centre) by the boundary, so the handoff correction is small and it is
+    // already roughly sorted when the curve begins (anchor-hit). Same "aim the dice within the honest band"
+    // trick as the fair-arrival line, applied in the chaos window. Default OFF → chaos untouched.
+    _chainChaosAim: config.chainChaosAim ? { strength: config.chainChaosAimStrength ?? 1.5 } : null,
+    _chainAnchorHit: null, // [{index, boundaryRank, plannedAnchor}] captured at the boundary (telemetry)
     // ── ACTION-BUILD-4: THE FINALE SCRIPT COMPILER (SIM-ONLY; admission-side; default OFF). Per race a
     // seeded, row-blind script set is drawn from the finale pool and authored as curves through the full
     // admission stack (reachability · exposure cap · geometry preference · occupancy spread). Frozen
@@ -728,6 +756,14 @@ export function createTrajectoryController(racePlan) {
           plan._chainNextCk = 0;
           plan._chainPrevRanks = new Map(postChaos.map((p) => [p.index, p.rank]));
           plan._chainPrevProgress = phaseProgress;
+          // CHOREO-RELEASE-1 PART 1 telemetry: at the boundary, record each racer's post-chaos rank vs its
+          // PLANNED anchor (drawn band centre). anchor-hit = |boundaryRank − plannedAnchor|; small = chaos
+          // landed it near its curve start (PART 1's chaos aim reduces this). Captured once, read-only.
+          plan._chainAnchorHit = postChaos.map((p) => {
+            const drawn = plan._racerTargetRank.get(p.index) ?? p.rank;
+            const [lo, hi] = getAreaBounds(drawn);
+            return { index: p.index, boundaryRank: p.rank, plannedAnchor: (lo + hi) / 2 };
+          });
           // Chain mode casts no B2 attackers and no dramatic roles; keep the shipped fields defined + empty
           // so the servo's attacker/role reads are inert (byte-identical structure, empty maps).
           plan._attackerParams = new Map();
@@ -834,6 +870,15 @@ export function createTrajectoryController(racePlan) {
     const NOISE_THRESH = plan._stochasticNoise;
     const tm = (r) => r.trajectoryMult ?? 1.0;
 
+    // CHOREO-RELEASE-1 straggler telemetry: at the first frame past mid-race, record which chain heroes are
+    // NOT yet in their DRAWN band (the owner's straggler definition). One-time (map stays non-null after).
+    const captureHalf =
+      plan._chainRelease &&
+      plan._chainStragglerHalf == null &&
+      phaseProgress != null &&
+      phaseProgress >= 0.5;
+    if (captureHalf) plan._chainStragglerHalf = new Map();
+
     for (let rankIdx = 0; rankIdx < nActive; rankIdx++) {
       const r = active[rankIdx];
       const currentRank = rankIdx + 1; // 1-indexed, 1 = leading
@@ -853,13 +898,55 @@ export function createTrajectoryController(racePlan) {
         isHero &&
         phaseProgress >= plan._choreoReleaseProgress &&
         (plan._racerTargetRank.get(r.index) ?? nActive) <= BAND_EDGES[0];
+      // ── CHOREO-RELEASE-1 PART 2: per-racer conditional release to ship's re-roll under band-hold.
+      // A chain hero is released the moment it ARRIVES in its DRAWN band (EARLY) or no earlier than T
+      // (AT-T); once released it steers to its DRAWN band (not its exact rank) at strictness 0, so within
+      // the band the re-roll dice drive it (genuine P1 uncertainty) while the band corral is held. Dice
+      // mode re-captures only after it drifts > reSteer ranks out (hysteresis); wall mode re-captures the
+      // instant it leaves the band (hard wall). Comebackers/fallbackers are exempt (authored to the line).
+      let chainReleased = false;
+      let chainReleaseWall = false;
+      const drawnRank = plan._racerTargetRank.get(r.index) ?? currentRank;
+      if (plan._chainRelease && isHero) {
+        const role = plan._heroRoles ? plan._heroRoles.get(r.index) : null;
+        const exempt = role === 'comebacker' || role === 'fallbacker';
+        if (!exempt) {
+          const [dLo, dHi] = getAreaBounds(drawnRank);
+          const inBand = currentRank >= dLo && currentRank <= dHi;
+          const timingOk =
+            plan._chainRelease.timing === 'early' ? true : phaseProgress >= plan._chainRelease.T;
+          let rel = plan._chainReleased.get(r.index) ?? false;
+          if (!rel && inBand && timingOk) {
+            rel = true;
+            if (!plan._chainReleaseProg.has(r.index))
+              plan._chainReleaseProg.set(r.index, phaseProgress);
+          }
+          if (rel && plan._chainRelease.mode === 'dice') {
+            // band-hold hysteresis: re-capture (guide back) only after it drifts past the tolerance.
+            const drift =
+              currentRank < dLo ? dLo - currentRank : currentRank > dHi ? currentRank - dHi : 0;
+            if (drift > plan._chainRelease.reSteer) rel = false;
+          }
+          plan._chainReleased.set(r.index, rel);
+          chainReleased = rel;
+          chainReleaseWall = rel && plan._chainRelease.mode === 'wall';
+        }
+      }
+      // Straggler snapshot at mid-race: is this hero already home (in its DRAWN band)?
+      if (captureHalf && isHero) {
+        const [sLo, sHi] = getAreaBounds(drawnRank);
+        plan._chainStragglerHalf.set(r.index, currentRank >= sLo && currentRank <= sHi);
+      }
       // choreo heroes: time-varying target rank from their own curve; the pack: the constant Fisher-Yates
-      // target (unchanged endpoint). The curve ends in the hero's assigned band.
-      const targetRank = released
-        ? currentRank
-        : isHero
-          ? sampleHeroCurve(heroCurve, phaseProgress)
-          : (plan._racerTargetRank.get(r.index) ?? currentRank);
+      // target (unchanged endpoint). The curve ends in the hero's assigned band. A chain-released racer
+      // targets its DRAWN rank so the band bounds below resolve to its DRAWN band (the hold corral).
+      const targetRank = chainReleased
+        ? drawnRank
+        : released
+          ? currentRank
+          : isHero
+            ? sampleHeroCurve(heroCurve, phaseProgress)
+            : (plan._racerTargetRank.get(r.index) ?? currentRank);
       // positive rankError = racer currently ranked worse than target → boost
       const rankError = currentRank - targetRank;
       // Band bounds computed once — used for both steering blend and corridor telemetry.
@@ -890,6 +977,12 @@ export function createTrajectoryController(racePlan) {
         targetRank <= BAND_EDGES[0]
       ) {
         strictness = plan._chainFrontStrictness;
+      }
+      // CHOREO-RELEASE-1 PART 2: a released racer drops rank-hold. DICE → strictness 0 (error = bandError:
+      // 0 inside the band ⇒ the re-roll dice drive it; a soft pull only once outside). WALL → hard: strictness
+      // 1 the instant it is outside its drawn band (drives straight back to the drawn rank), 0 inside.
+      if (chainReleased) {
+        strictness = chainReleaseWall ? (bandError !== 0 ? 1 : 0) : 0;
       }
       // B2-attacker "Attack & Fall" (Track-to-FinalRank, then Free). While NOT yet freed the attacker
       // tracks its curve at strictness 1.0 — the mandatory climb to peakRank, then the orchestrated fall
@@ -1116,6 +1209,39 @@ export function createTrajectoryController(racePlan) {
     _pulkBiasDeltaSum += Math.abs(result - rawSample);
     _pulkBiasEventCount += 1;
     return result;
+  }
+
+  /**
+   * CHOREO-RELEASE-1 PART 1 — chaos-phase aim. During chaos (PRE_PULK) bias each racer's re-roll toward
+   * the speed that carries it to its PLANNED anchor (drawn band centre) by the boundary, so it ends the
+   * chaos near the START of its planned curve (small anchor-hit, small handoff correction). Same
+   * "aim the dice within the honest band" shape as computePulkBiasedTarget; clamped to the honest spread,
+   * so it is loaded dice, not a new force channel. OFF (no _chainChaosAim) → returns rawSample untouched.
+   *
+   * @returns {number} biased pre-clamp value; caller applies the final honest-band clamp.
+   */
+  function computeChaosAimTarget(
+    racerIndex,
+    rawSample,
+    spreadMin,
+    spreadMax,
+    racers,
+    phaseProgress
+  ) {
+    if (!plan._chainChaosAim) return rawSample;
+    if (getPhase(null, phaseProgress) !== 'PRE_PULK') return rawSample;
+    const thisRacer = racers.find((r) => r.index === racerIndex);
+    if (!thisRacer || thisRacer.finished) return rawSample;
+    const drawn = plan._racerTargetRank.get(racerIndex);
+    if (drawn == null) return rawSample;
+    const [lo, hi] = getAreaBounds(drawn);
+    const plannedAnchor = (lo + hi) / 2;
+    // live rank = 1 + (# non-finished racers strictly ahead by t). rank > anchor ⇒ behind plan ⇒ faster.
+    let liveRank = 1;
+    for (const o of racers) if (!o.finished && o.t > thisRacer.t) liveRank++;
+    const n = racers.length || 1;
+    const biased = rawSample + plan._chainChaosAim.strength * ((liveRank - plannedAnchor) / n);
+    return clamp(biased, spreadMin, spreadMax);
   }
 
   /**
@@ -1349,7 +1475,18 @@ export function createTrajectoryController(racePlan) {
   return {
     update,
     computePulkBiasedTarget,
+    computeChaosAimTarget,
     computeGapBiasedTarget,
+    // CHOREO-RELEASE-1 read-only per-race telemetry (null/empty when the line is OFF). anchorHit = the
+    // PART-1 boundary snapshot; releaseProg = when each racer released; stragglerHalf = who was still out
+    // of its drawn band at mid-race; roles/drawn = for cb/fb realization computed sim-side.
+    getChoreoReleaseStats: () => ({
+      anchorHit: plan._chainAnchorHit,
+      releaseProg: plan._chainReleaseProg ? [...plan._chainReleaseProg.entries()] : [],
+      stragglerHalf: plan._chainStragglerHalf ? [...plan._chainStragglerHalf.entries()] : [],
+      roles: plan._heroRoles ? [...plan._heroRoles.entries()] : [],
+      drawn: plan._racerTargetRank ? [...plan._racerTargetRank.entries()] : [],
+    }),
     // ACTION-BUILD-2: read-only accordion skip diagnostics (no state change). Returns the invariant's
     // quality meter — skipRate = brake-ticks the lane-conditional skip vetoed / admitted beat-ticks.
     getAccordStats: () => ({ skip: plan._accordSkipTicks ?? 0, fire: plan._accordFireTicks ?? 0 }),
