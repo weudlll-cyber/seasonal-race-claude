@@ -250,6 +250,10 @@ const FA_BAND_WALL            = argVal('bandWall', 'false') === 'true';
 const FA_BAND_R               = Number(argVal('bandR', '0.80'));
 const FA_BAND_BIAS_GAIN       = Number(argVal('bandBiasGain', '0.06'));
 const FA_BAND_WALL_GAIN       = Number(argVal('bandWallGain', '4'));
+// CHAOS-STEER-1 (SIM-ONLY; default OFF). The owner's Part 1 built PROPERLY (continuous chaos-phase pull
+// toward the drawn band, reachable). OFF → byte-identical.
+const FA_CHAOS_STEER          = argVal('chaosSteer', 'false') === 'true';
+const FA_CHAOS_STEER_GAIN     = Number(argVal('chaosSteerGain', '0.06'));
 // Hero choreography — master flag + drama intensity + loose-pack bandStrictness. Passed into
 // createRacePlan (flag OFF → byte-identical; the intensity/strictness only apply when ON).
 const CHOREO_ENABLED     = true; // choreography is UNCONDITIONAL (de-flagged S3); classic gates below are now statically false (Stage-4 removal)
@@ -2459,6 +2463,14 @@ export function runSingleRace({
         // file alone. classifyFrontBattle() turns these into the REAL P1 ACTION boolean downstream.
         contestWindowStart:  CONTEST_WINDOW_START,
         frontBattle:         rp.frontBattle.result(),
+        // CHAOS-STEER-1 scorecard (attached for EVERY arm — the in-band-at-chaos-end capture is read-only):
+        // in-band-at-chaos-end count + field size, steer grip (ticks, mean mult), and Sanftheits (maxTickΔ).
+        chaosSteer:          (() => {
+          const s = racePlanController?.getChaosSteerStats ? racePlanController.getChaosSteerStats() : null;
+          if (!s) return null;
+          const inBandEnd = s.inBandEnd.filter(([, ok]) => ok).length;
+          return { inBandEnd, nField: s.inBandEnd.length, steeredTicks: s.steeredTicks, steeredRacers: s.steeredRacers, meanMult: s.meanMult, maxTickDelta: s.maxTickDelta };
+        })(),
       };
     }
 
@@ -3132,6 +3144,9 @@ if (isMain) {
               bandWall:                FA_BAND_WALL,
               bandWallR:               FA_BAND_R,
               bandWallGain:            FA_BAND_WALL_GAIN,
+              // CHAOS-STEER-1: the owner's Part 1 built properly (reachable continuous chaos pull).
+              chaosSteer:              FA_CHAOS_STEER,
+              chaosSteerGain:          FA_CHAOS_STEER_GAIN,
               choreoSuppressChaosBonusB1: CHOREO_SUPPRESS_CHAOS_BONUS_B1,
               choreoIntensity:     CHOREO_INTENSITY,
               choreoPackBandStrictness: CHOREO_PACK_BAND_STRICTNESS,
