@@ -1,0 +1,34 @@
+
+=== CHAIN-ABLATE battery — N=25/arm/track | tracks searound, ice-track | seed=1 jobs=4 ===
+arms: ship, B15clrD, B15fc
+
+── ship ──
+  track           | band (Δship) | dead (Δship) | lead-chg (Δship) | LAWfull LAWl50 (Δship) | holm
+  searound        |  75% (  —) |   8% (  —) |  1.48 (  —) | 0.31   0.25  ( —/—) | skip 0% | UNF
+  ice-track       |  72% (  —) |  12% (  —) |  1.60 (  —) | 0.29   0.23  ( —/—) | skip 0% | ok
+  SUMMARY band-reach mean 74% | tracks ≥70%: 2/2
+
+── B15clrD ──
+  track           | band (Δship) | dead (Δship) | lead-chg (Δship) | LAWfull LAWl50 (Δship) | holm
+  searound        |  77% (+2pp) |  12% (+4pp) |  2.00 (+0.52) | 0.66   0.39  (+0.35/+0.14) | skip 0% | ok
+  ice-track       |  74% (+2pp) |  24% (+12pp) |  1.64 (+0.04) | 0.55   0.38  (+0.27/+0.15) | skip 16% | ok
+  SUMMARY band-reach mean 75% | tracks ≥70%: 2/2
+    [comp searound     ] scripts 0.0 (fl0.0 cb0.0 fb0.0 pc0.0 dp0.0 pf0.0) | drop 0.0 shrink 0.0 | H 0.00 sigColl 100% (1/25)
+    [clr  searound     ] lanes 5.0 (min 5.0) budget 0.00 | latAdmit 0.0 latRefuse 0.0 | accAdmit 0.0 | frontConv 0.0 | leadLast30 37.88
+    [comp ice-track    ] scripts 8.4 (fl1.0 cb2.3 fb2.2 pc2.2 dp0.7 pf0.0) | drop 0.0 shrink 0.3 | H 2.19 sigColl 0% (25/25)
+    [clr  ice-track    ] lanes 10.0 (min 10.0) budget 1.00 | latAdmit 4.7 latRefuse 0.0 | accAdmit 6.0 | frontConv 0.0 | leadLast30 38.00
+    [dens ice-track    ] finaleStories 10.6 (min 8 max 13, 4/25 races <10) | finalDraw 0.0 bandDuels 0.0 | storied 12.2 expMax 1
+
+── B15fc ──
+  track           | band (Δship) | dead (Δship) | lead-chg (Δship) | LAWfull LAWl50 (Δship) | holm
+  searound        |  75% (+0pp) |  12% (+4pp) |  1.72 (+0.24) | 0.53   0.37  (+0.22/+0.12) | skip 0% | UNF
+  ice-track       |  72% (+0pp) |  32% (+20pp) |  1.60 (+0.00) | 0.53   0.36  (+0.24/+0.12) | skip 17% | ok
+  SUMMARY band-reach mean 74% | tracks ≥70%: 2/2
+    [comp searound     ] scripts 8.7 (fl0.0 cb3.3 fb3.2 pc2.2 dp0.0 pf0.0) | drop 0.0 shrink 2.1 | H 1.57 sigColl 0% (25/25)
+    [clr  searound     ] lanes 5.0 (min 5.0) budget 0.00 | latAdmit 0.0 latRefuse 0.0 | accAdmit 0.0 | frontConv 0.0 | leadLast30 36.96
+    [dens searound     ] finaleStories 32.3 (min 26 max 39, 0/25 races <10) | finalDraw 23.6 bandDuels 11.8 | storied 32.3 expMax 1
+    [comp ice-track    ] scripts 10.4 (fl1.0 cb3.3 fb3.2 pc2.2 dp0.7 pf0.0) | drop 0.0 shrink 2.6 | H 2.11 sigColl 0% (25/25)
+    [clr  ice-track    ] lanes 10.0 (min 10.0) budget 1.00 | latAdmit 4.7 latRefuse 0.0 | accAdmit 6.0 | frontConv 0.0 | leadLast30 38.80
+    [dens ice-track    ] finaleStories 32.1 (min 24 max 38, 0/25 races <10) | finalDraw 19.3 bandDuels 9.6 | storied 33.4 expMax 1
+
+runtime 4.4 min
