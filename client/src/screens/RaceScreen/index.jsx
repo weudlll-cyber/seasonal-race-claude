@@ -62,6 +62,7 @@ import {
 } from '../../modules/autoSpriteScale.js';
 import { loadCameraConfig } from '../../modules/cameraConfig.js';
 import { configFingerprintBadge } from '../../modules/exportRaceConfig.js';
+import { eyeActiveWorld, eyeSessionActive, EYE_COMBO_FLAGS } from '../../utils/eyeMode.js';
 import CameraStateHUD from './CameraStateHUD.jsx';
 import CameraDiagnosticsHUD from './CameraDiagnosticsHUD.jsx';
 import RacePlanHUD from './RacePlanHUD.jsx';
@@ -467,7 +468,15 @@ export default function RaceScreen() {
     // init — the physics draw order (row shuffle → per-racer spreadFactor + roll jitter → re-rolls)
     // and every scalar are unchanged; the code merely moved.
     const normalSpeedPxPerSec = normalSpeedFrom(baseSpeedConfig);
-    const racePlanSeed = raceData.racePlanSeed ?? 0;
+    // ── EYE-SETUP-1 (dev-only BLIND viewing): when ?eye=A/B maps to the COMBO world, inject the combo flags
+    // (chaosSteer + faB60 draw-bias, exactly as screened — no coupling, no new engine code); and force a
+    // FRESH seed every race so no single showcase seed is ever reused. No ?eye → untouched, byte-identical
+    // shipped. Injecting into the local dynamicsConfig only — the config-fingerprint badge reads the STORED
+    // config, so nothing about the world is shown in the UI.
+    if (eyeActiveWorld() === 'combo') Object.assign(dynamicsConfig, EYE_COMBO_FLAGS);
+    const racePlanSeed = eyeSessionActive()
+      ? Math.floor(Math.random() * 0x7fffffff) + 1
+      : (raceData.racePlanSeed ?? 0);
     const pathLengthPx = geometry.pathLengthPx ?? 0;
     const race = createRaceFromIdentity({
       shape: shapeRef.current,
