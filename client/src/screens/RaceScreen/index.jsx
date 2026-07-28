@@ -62,7 +62,7 @@ import {
 } from '../../modules/autoSpriteScale.js';
 import { loadCameraConfig } from '../../modules/cameraConfig.js';
 import { configFingerprintBadge } from '../../modules/exportRaceConfig.js';
-import { activeWorld, WORLD_COMBO_FLAGS } from '../../utils/worldMode.js';
+import { activeWorld, worldFlags } from '../../utils/worldMode.js';
 import CameraStateHUD from './CameraStateHUD.jsx';
 import CameraDiagnosticsHUD from './CameraDiagnosticsHUD.jsx';
 import RacePlanHUD from './RacePlanHUD.jsx';
@@ -474,19 +474,22 @@ export default function RaceScreen() {
     // byte-identical shipped. PROOF IT IS LIVE (a silent no-op must be impossible): a corner badge, a
     // race-start console line, a runtime assertion that the flags are actually in the live config, and an
     // in-band-at-chaos-end log in the frame loop (below) that must sit ~65–70% for combo vs ~30% for ship.
-    const _world = activeWorld(); // 'combo' | 'ship' | null
-    if (_world === 'combo') Object.assign(dynamicsConfig, WORLD_COMBO_FLAGS);
+    const _world = activeWorld(); // 'combo' | 'combo15' | 'ship' | null
+    const _worldIsCombo = _world === 'combo' || _world === 'combo15';
+    const _wf = worldFlags(_world);
+    if (_wf) Object.assign(dynamicsConfig, _wf);
     const racePlanSeed = _world
       ? Math.floor(Math.random() * 0x7fffffff) + 1
       : (raceData.racePlanSeed ?? 0);
     // Read the flags back from the SAME object handed to createRaceFromIdentity → the live config the plan
-    // is built from. comboOK false while ?world=combo ⇒ the injection silently failed ⇒ scream (never ship).
+    // is built from. false while a combo world ⇒ the injection silently failed ⇒ scream (never ship blind).
     const _comboFlagsLive = dynamicsConfig.chaosSteer === true && dynamicsConfig.bandBias === true;
     let worldBadge = null; // { text, color } drawn each frame; null when not in a ?world session
-    if (_world === 'combo') {
+    if (_worldIsCombo) {
+      const label = _world === 'combo15' ? 'COMBO15' : 'COMBO';
       worldBadge = _comboFlagsLive
-        ? { text: 'WORLD: COMBO', color: 'green' }
-        : { text: 'WORLD: COMBO FAILED', color: 'red' };
+        ? { text: `WORLD: ${label}`, color: 'green' }
+        : { text: `WORLD: ${label} FAILED`, color: 'red' };
     } else if (_world === 'ship') {
       worldBadge = { text: 'WORLD: SHIP', color: 'blue' };
     }
@@ -494,10 +497,11 @@ export default function RaceScreen() {
       const line =
         `[world] ${_world} | chaosSteer=${dynamicsConfig.chaosSteer ? 'ON' : 'OFF'}` +
         ` | bandBias=${dynamicsConfig.bandBias ? `ON (gain ${dynamicsConfig.bandBiasGain}, R ${dynamicsConfig.bandBiasR})` : 'OFF'}` +
+        `${_world === 'combo15' ? ` | pulkStart=${dynamicsConfig.racePlanPulkStart}` : ''}` +
         ` | seed ${racePlanSeed}`;
-      if (_world === 'combo' && !_comboFlagsLive) {
+      if (_worldIsCombo && !_comboFlagsLive) {
         console.error(
-          '[world] COMBO FAILED — combo flags NOT present in the live config!',
+          `[world] ${_world} FAILED — combo flags NOT present in the live config!`,
           dynamicsConfig
         );
       } else {
@@ -782,8 +786,11 @@ export default function RaceScreen() {
             console.info(
               `[world] ${_world} in-band-at-chaos-end: ${pctIn}% (${inCount}/${ib.length}) · steerTicks ${s.steeredTicks ?? 0}`
             );
-            if (_world === 'combo' && (s.steeredTicks ?? 0) === 0) {
-              worldBadge = { text: 'WORLD: COMBO FAILED (steer idle)', color: 'red' };
+            if (_worldIsCombo && (s.steeredTicks ?? 0) === 0) {
+              worldBadge = {
+                text: `WORLD: ${_world === 'combo15' ? 'COMBO15' : 'COMBO'} FAILED (steer idle)`,
+                color: 'red',
+              };
 
               console.error(
                 '[world] COMBO FAILED — the chaos steer ran ZERO ticks; it is not active!'

@@ -25,10 +25,24 @@ export const WORLD_COMBO_FLAGS = Object.freeze({
   bandBiasGain: 0.1,
 });
 
+// COMBO15 = the COMBO with the chaos window shrunk 0.25 -> 0.15 (racePlanPulkStart), the PULK-SPECTACLE-1
+// fix that recovers the mid-race while holding the finale. The FAIR-ARRIVAL-GATE candidate.
+export const WORLD_COMBO15_FLAGS = Object.freeze({
+  ...WORLD_COMBO_FLAGS,
+  racePlanPulkStart: 0.15,
+});
+
+/** Flag object to inject for a given world (null when none / ship). */
+export function worldFlags(world) {
+  if (world === 'combo') return WORLD_COMBO_FLAGS;
+  if (world === 'combo15') return WORLD_COMBO15_FLAGS;
+  return null;
+}
+
 function readParam() {
   if (typeof window === 'undefined' || !window.location) return null;
   const w = new URLSearchParams(window.location.search).get('world');
-  return w === 'combo' || w === 'ship' ? w : null;
+  return w === 'combo' || w === 'combo15' || w === 'ship' ? w : null;
 }
 
 // Captured ONCE at bundle load — while the initial URL still carries ?world, before any route redirect
@@ -37,8 +51,8 @@ const CAPTURED = readParam();
 
 /**
  * The active dev viewing world: a live URL `?world` wins, else the value captured at page load, else
- * null (the shipped game). 'combo' | 'ship' | null.
- * @returns {'combo'|'ship'|null}
+ * null (the shipped game). 'combo' | 'combo15' | 'ship' | null.
+ * @returns {'combo'|'combo15'|'ship'|null}
  */
 export function activeWorld() {
   return readParam() ?? CAPTURED;

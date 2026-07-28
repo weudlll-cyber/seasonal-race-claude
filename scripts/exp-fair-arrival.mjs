@@ -172,23 +172,46 @@ for (const armKey of Object.keys(ARMS)) {
     }
   }
 }
-// ── CONFIRM-1 per-track gate read (directional at N=50): COMBO vs SHIP. Criteria:
-//   A arrival ≥ ship+10pp AND never below ship · R rowMin ≥ ship · F frontContest ≥ ship−2pp · B DEAD-BORING ≤ ship+2pp
-if (ARM_KEYS.includes('combo')) {
-  console.log(`\n=== CONFIRM GATE (COMBO vs SHIP, per track) — A:arrival≥+10 & ≥ship · R:rowMin≥ship · F:fC≥ship−2 · B:DEAD-BORING≤ship+2 ===`);
-  console.log(`  track            | arrival ship→combo | A | rowMin ship→combo | R | fC ship→combo | F | BORING ship→combo | B | PASS/weak`);
-  const weak = [];
+// ── FAIR-ARRIVAL-GATE (preregistered, binding at N=100). Candidate arm = --gate-arm (default combo15).
+// Per track vs SHIP: A arrival [(≥ship+10pp OR ≥88% abs) AND ≥ship] · R rowMin≥ship · F fC≥ship−2pp ·
+// B DEAD-BORING≤ship+2pp · P PULK WATCHDOG [maxLeadHoldShare_mid≤ship+5pp AND distinctLeaders_mid≥ship−1
+// AND chaos maxGap≤ship+1.0L]. PASS = arrival OR-form on ≥8/10 & no track failing both forms & never below
+// ship; R/F/B/P everywhere; Holm not worsened on any watchlist track.
+const GATE_ARM = argVal('gate-arm', 'combo15');
+if (ARM_KEYS.includes(GATE_ARM)) {
+  const mk = (b) => (b ? '✓' : '✗');
+  const f1 = (x) => (x == null ? 'n/a' : x.toFixed(1));
+  console.log(`\n=== FAIR-ARRIVAL-GATE (${GATE_ARM} vs SHIP, N=${RACES}, per track) ===`);
+  console.log(`  track            | arrival S→C | A | rowMin S→C · Holm | R | fC S→C | F | BORING S→C | B | PULK maxHold/distLead/chaosGap S→C | P | PASS`);
+  let arrivalOK = 0, failBoth = 0, belowShip = 0;
+  const failEverywhere = { R: [], F: [], B: [], P: [] }, holmWorse = [];
+  const rows = [];
   for (const t of TRACKS) {
-    const s = get('ship', t.id), c = get('combo', t.id);
-    const A = c.arrival >= s.arrival + 0.10 && c.arrival >= s.arrival;
-    const R = c.rowMin >= s.rowMin - 1e-9;
-    const F = c.fc >= s.fc - 0.02;
-    const B = c.deadBoring <= s.deadBoring + 0.02;
-    const allPass = A && R && F && B;
-    if (!allPass) weak.push(t.id);
-    const mk = (b) => (b ? '✓' : '✗');
-    console.log(`  ${t.id.padEnd(15)}${c.closed ? 'C' : 'O'}| ${pct(s.arrival)}→${pct(c.arrival)} | ${mk(A)} | ${pct(s.rowMin)}→${pct(c.rowMin)} | ${mk(R)} | ${pct(s.fc)}→${pct(c.fc)} | ${mk(F)} | ${pct(s.deadBoring)}→${pct(c.deadBoring)} | ${mk(B)} | ${allPass ? 'PASS' : 'WEAK'}`);
+    const s = get('ship', t.id), c = get(GATE_ARM, t.id);
+    const aDelta = c.arrival >= s.arrival + 0.10, aAbs = c.arrival >= 0.88, notBelow = c.arrival >= s.arrival - 1e-9;
+    const A = (aDelta || aAbs) && notBelow;
+    if (A) arrivalOK++; if (notBelow && !aDelta && !aAbs) failBoth++; if (!notBelow) belowShip++;
+    const R = c.rowMin >= s.rowMin - 1e-9; if (!R) failEverywhere.R.push(t.id);
+    const F = c.fc >= s.fc - 0.02; if (!F) failEverywhere.F.push(t.id);
+    const B = c.deadBoring <= s.deadBoring + 0.02; if (!B) failEverywhere.B.push(t.id);
+    // PULK WATCHDOG (the owner's finding as a permanent gate line).
+    const sp = s.pulk, cp = c.pulk;
+    const pHold = cp.maxLeadHoldShare_mid <= sp.maxLeadHoldShare_mid + 0.05;
+    const pDist = cp.distinctLeaders_mid >= sp.distinctLeaders_mid - 1;
+    const pGap = cp.maxGapChaos <= sp.maxGapChaos + 1.0;
+    const P = pHold && pDist && pGap; if (!P) failEverywhere.P.push(t.id);
+    // Holm: worsened = ship ok → candidate UNF.
+    if (s.holm === 'ok' && c.holm === 'UNF') holmWorse.push(t.id);
+    const pass = A && R && F && B && P;
+    rows.push({ t, s, c, A, R, F, B, P, pass, aDelta, aAbs, sp, cp });
+    console.log(`  ${t.id.padEnd(15)}${c.closed ? 'C' : 'O'}| ${pct(s.arrival)}→${pct(c.arrival)}${aDelta ? '' : aAbs ? '*' : '✗'} | ${mk(A)} | ${pct(s.rowMin)}→${pct(c.rowMin)} ${s.holm}/${c.holm} | ${mk(R)} | ${pct(s.fc)}→${pct(c.fc)} | ${mk(F)} | ${pct(s.deadBoring)}→${pct(c.deadBoring)} | ${mk(B)} | ${cp.maxLeadHoldShare_mid.toFixed(2)}(${(sp.maxLeadHoldShare_mid).toFixed(2)}) ${f1(cp.distinctLeaders_mid)}(${f1(sp.distinctLeaders_mid)}) ${f1(cp.maxGapChaos)}L(${f1(sp.maxGapChaos)}) | ${mk(P)} | ${pass ? 'PASS' : 'FAIL'}`);
   }
-  console.log(`\n  WEAK TRACKS (night watchlist): ${weak.length ? weak.join(', ') : 'none — all 10 pass directionally'}`);
+  const arrivalGate = arrivalOK >= 8 && failBoth === 0 && belowShip === 0;
+  const everywhere = (k) => failEverywhere[k].length === 0;
+  const GATE_PASS = arrivalGate && everywhere('R') && everywhere('F') && everywhere('B') && everywhere('P') && holmWorse.length === 0;
+  console.log(`\n  ── GATE VERDICT: ${GATE_PASS ? 'PASS' : 'PARTIAL'} ──`);
+  console.log(`  arrival: OK-form ${arrivalOK}/10 (need ≥8), failBoth ${failBoth} (need 0), belowShip ${belowShip} (need 0) → ${arrivalGate ? 'PASS' : 'FAIL'}`);
+  console.log(`  rowMin≥ship: ${everywhere('R') ? 'PASS' : 'FAIL ' + failEverywhere.R.join(',')} | fC≥ship−2: ${everywhere('F') ? 'PASS' : 'FAIL ' + failEverywhere.F.join(',')} | DEAD-BORING≤ship+2: ${everywhere('B') ? 'PASS' : 'FAIL ' + failEverywhere.B.join(',')}`);
+  console.log(`  PULK watchdog: ${everywhere('P') ? 'PASS' : 'FAIL ' + failEverywhere.P.join(',')} | Holm worsened: ${holmWorse.length ? holmWorse.join(',') : 'none'}`);
 }
-console.log(`\nruntime ${((Date.now() - t0) / 60000).toFixed(1)} min | CONFIRM (directional at N=${RACES}; binding verdict = N=100 night gate)`);
+console.log(`\nruntime ${((Date.now() - t0) / 60000).toFixed(1)} min | FAIR-ARRIVAL-GATE (binding at N=${RACES}); gate-arm=${GATE_ARM}`);
