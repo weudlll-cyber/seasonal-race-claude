@@ -34,11 +34,15 @@ const TRACKS = TRACK_IDS.map((id) => { const s = trackSeed(id); return { id, rac
 // FAIR-ARRIVAL-COMBINE-1: the two validated halves alone AND together (combo = BOTH flags, no coupling code).
 const STEER = ['--chaosSteer=true', '--chaosSteerGain=0.06'];
 const BIAS = ['--bandBias=true', '--bandR=0.60', '--bandBiasGain=0.10'];
+// PULK-SPECTACLE-1 STAGE 3: chaos window 0.25 -> 0.15 (one flag; everything else untouched).
+const CHAOS15 = ['--pulkStart=0.15'];
 const ALL_ARMS = {
   ship: [],
   chaosSteer: STEER,
   faB60: BIAS,
   combo: [...STEER, ...BIAS],
+  ship15: [...CHAOS15],
+  combo15: [...STEER, ...BIAS, ...CHAOS15],
 };
 // --arms filter (default all). CONFIRM-1 runs --arms=ship,combo (lean; attribution arms reserved for the gate).
 const ARM_KEYS = (argVal('arms', Object.keys(ALL_ARMS).join(','))).split(',').map((s) => s.trim()).filter(Boolean);
@@ -50,7 +54,7 @@ async function run(armKey, flags, track) {
   await pExec(process.execPath, [
     'scripts/sim-fairness.mjs', `--track=${track.id}`, `--racer=${track.racer}`,
     `--seed=1`, `--races=${RACES}`, `--racers=${nRacers}`, '--track-defaults', ...flags,
-    '--runaway-parade', '--hero-map', '--front-autopsy', `--out=${toOut(out)}`,
+    '--runaway-parade', '--hero-map', '--front-autopsy', '--pulk-window', `--out=${toOut(out)}`,
   ], { cwd: ROOT, maxBuffer: 512 * 1024 * 1024 });
   const hm = JSON.parse(readFileSync(join(out, 'hero-map.json'), 'utf8'));
   const rp = JSON.parse(readFileSync(join(out, 'runaway-parade.json'), 'utf8')).races.map((r) => r.runawayParade);
@@ -68,6 +72,29 @@ async function run(armKey, flags, track) {
       a.n += pr.n; a.steered += pr.steered; a.ticks += pr.ticks; a.multSum += pr.multSum; a.inBandEnd += pr.inBandEnd;
     }
   }
+  // ── PULK-SPECTACLE-1 front-liveliness aggregation (chaos / pulk / LAW / brake) ──
+  const fl = rp.map((r) => r.frontLiveliness).filter(Boolean);
+  const flA = (f) => (fl.length ? mean(fl.map((x) => f(x) ?? 0)) : null);
+  const flPct = (pred) => (fl.length ? fl.filter(pred).length / fl.length : null);
+  const flAvgNonNull = (f) => { const v = fl.map(f).filter((y) => y != null); return v.length ? mean(v) : null; };
+  const pulk = fl.length ? {
+    // CHAOS window [0, chaosEnd]
+    maxGapChaos: flA((x) => x.maxGapP1P2_chaos), gapAtChaosEnd: flAvgNonNull((x) => x.gapAtChaosEnd),
+    fieldSpreadAtChaosEnd: flAvgNonNull((x) => x.fieldSpreadAtChaosEnd),
+    leaderSteered025Pct: flPct((x) => x.leaderSteeredAtChaosEnd),
+    leaderSteerMeanMult: flAvgNonNull((x) => x.leaderSteerMeanMult),
+    leaderDrawnB1_025Pct: flPct((x) => x.leaderDrawnRankAtChaosEnd != null && x.leaderDrawnRankAtChaosEnd <= 5),
+    // PULK window [chaosEnd, 0.60]
+    maxLeadHoldShare_mid: flA((x) => x.maxLeadHoldShare_mid), distinctLeaders_mid: flA((x) => x.distinctLeaders_mid),
+    leadChanges_mid: flA((x) => x.leadChanges_mid), meanGapP1P2_mid: flA((x) => x.meanGapP1P2_mid),
+    maxGapP1P2_mid: flA((x) => x.maxGapP1P2_mid), earlyBreakawayPct: flPct((x) => x.earlyBreakaway),
+    leaderIsDrawnB1_mid: flA((x) => x.leaderIsDrawnB1_mid), firstLeadChange: flAvgNonNull((x) => x.firstLeadChangeFromChaosEnd),
+    // BRAKE (addendum): trigger-armed share + actual fires + the design gate fraction
+    brakeArmed_mid: flAvgNonNull((x) => x.brakeArmed_mid), brakeFires_chaos: flA((x) => x.brakeFires_chaos),
+    brakeFires_mid: flA((x) => x.brakeFires_mid), gapCapGateFrac: fl[0]?.gapCapGateFrac ?? null,
+    // LAW
+    LAW_full: flA((x) => x.LAW_full), LAW_last50: flA((x) => x.LAW_last50),
+  } : null;
   const fc = mean(rp.map((r) => r.frontBattle?.frontContestFraction ?? 0));
   const dead = mean(rp.map((r) => ((r.leadChangeCount ?? 0) === 0 ? 1 : 0)));
   // DEAD-BORING = dead race (no P1 change) AND no sustained front contest (frontContest < 0.3); THRILLER = the
@@ -99,7 +126,7 @@ async function run(armKey, flags, track) {
     dead, deadBoring, deadThriller, p1MultiSec, closed: track.closed,
     fc, distinctLead: mean(rp.map((r) => r.frontBattle?.distinctLeaders ?? 0)),
     maxLeadHold: mean(rp.map((r) => r.frontBattle?.maxLeadHoldShare ?? 0)),
-    steerTele, rowBandReach, rowSteer,
+    steerTele, rowBandReach, rowSteer, pulk,
   };
 }
 
@@ -123,6 +150,14 @@ for (const armKey of Object.keys(ARMS)) {
     const st = r.steerTele, ss = s?.steerTele;
     const dIB = ss ? (st.inBandEnd - ss.inBandEnd) * 100 : 0;
     console.log(`     └chaos-end in-band ${pct(st.inBandEnd)} (${armKey === 'ship' ? '—' : sgn(dIB)}) | steer: share ${pct(st.steeredShare)} · ticks/race ${st.steeredTicks.toFixed(0)} · meanMult ${st.meanMult == null ? 'n/a' : st.meanMult.toFixed(3)} · maxTickΔ ${st.maxTickDelta.toFixed(4)}`);
+    // PULK-SPECTACLE-1: chaos / pulk / brake windows (the owner's mid-race-flat finding).
+    const p = r.pulk;
+    if (p) {
+      const f1 = (x) => (x == null ? 'n/a' : x.toFixed(1)), f2 = (x) => (x == null ? 'n/a' : x.toFixed(2));
+      console.log(`     └CHAOS | maxGap ${f1(p.maxGapChaos)}L · handover@end ${f1(p.gapAtChaosEnd)}L · fieldSpread ${f1(p.fieldSpreadAtChaosEnd)}L · leaderSteered ${pct(p.leaderSteered025Pct)}(mult ${f2(p.leaderSteerMeanMult)}) · leaderDrawnB1 ${pct(p.leaderDrawnB1_025Pct)}`);
+      console.log(`     └PULK  | maxHold ${f2(p.maxLeadHoldShare_mid)} · distinctLead ${f1(p.distinctLeaders_mid)} · earlyBreak ${pct(p.earlyBreakawayPct)} · leaderDrawnB1_mid ${f2(p.leaderIsDrawnB1_mid)} · meanGap ${f1(p.meanGapP1P2_mid)}L · 1stLeadChg ${f2(p.firstLeadChange)}`);
+      console.log(`     └BRAKE | armed_mid ${f2(p.brakeArmed_mid)} · fires chaos/mid ${f1(p.brakeFires_chaos)}/${f1(p.brakeFires_mid)} · gate ${f2(p.gapCapGateFrac)} · LAW ${f2(p.LAW_full)}/${f2(p.LAW_last50)}`);
+    }
     // ROW-SKEW DIAGNOSIS: per-start-row band-reach (all arms) + per-row steer exposure (steer/combo arms).
     const rows = [...new Set([...r.rowBandReach.keys()])].filter((i) => r.rowBandReach[i] != null);
     const brLine = rows.map((i) => `r${i}:${pct(r.rowBandReach[i])}`).join(' ');

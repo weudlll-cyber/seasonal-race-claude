@@ -114,6 +114,7 @@ import { maxLinkGapLengths, makeHeldOvertakeTracker, fullSpreadLengths, framesOv
 import { RUNAWAY_PARADE_DEFAULTS, leaderGapLengths, makeFormationTracker, SPEED_SOURCE_SAMPLES } from './sim/observers/runaway-parade.mjs';
 import { makeLateContestTracker, makeReleaseRankTracker } from './sim/observers/release-contest.mjs';
 import { makeFrontBattleTracker } from './sim/observers/outcome-front-battle.mjs';
+import { makeFrontLivelinessTracker } from './sim/observers/front-liveliness.mjs';
 import { makePhysicsTaxTracker } from './sim/observers/physics-tax.mjs';
 import { makeEscapeEpisodeTracker } from './sim/observers/escape-episodes.mjs';
 import { applyPulkLeadRotation, arcT, computeDirectorCeiling } from '../client/src/modules/raceGovernor.js';
@@ -308,6 +309,9 @@ const GAP_REROLL_THRESH = argVal(
 );
 const GAP_REROLL = GAP_REROLL_THRESH !== null;
 const GAP_REROLL_THRESH_LEN = GAP_REROLL ? Number(GAP_REROLL_THRESH) : null;
+// PULK-SPECTACLE-1 (read-only): front-liveliness observer — LAW + chaos/pulk window metrics + gap-cap
+// brake-armed share. Piggybacks on --runaway-parade's rp object. OFF → not allocated.
+const PULK_WINDOW = argv.includes('--pulk-window');
 // Mode + strength now default to the SHIPPED values (symmetric / 1.0) rather than the old
 // experiment defaults, so a flagless run is the shipped game exactly. Explicit flags still override.
 const GAP_REROLL_MODE = GAP_REROLL ? argVal('gapRerollMode', String(DEFAULT_RACE_DYNAMICS_CONFIG.gapRerollMode)) : null;
@@ -1123,6 +1127,19 @@ export function runSingleRace({
       // Window starts at the LIVE contestWindowStart — the front act's own key, no longer B2's
       // resolve checkpoint. No hardcoded progress constant.
       frontBattle:         makeFrontBattleTracker({ windowStart: CONTEST_WINDOW_START }),
+      // PULK-SPECTACLE-1 front-liveliness (read-only): LAW + chaos[0,0.25]/pulk[0.25,0.60] metrics.
+      // drawnRank from the plan's fair draw; gapCapG = the shipped gap-cap threshold (lengths) or null.
+      frontLiveliness:     PULK_WINDOW
+        ? makeFrontLivelinessTracker({
+            drawnRank: (i) => racerTargetRankMap?.get(i) ?? null,
+            // chaosEnd tracks the LIVE pulkStart so the chaos window / handover snapshot align with the
+            // real chaos→pulk boundary (STAGE 3: --pulkStart=0.15 measures the 0.15 handover, not 0.25).
+            chaosEnd: RP_PULK_START,
+            windowHi: 0.6,
+            breakawayLen: 2.0,
+            gapCapG: GAP_REROLL_THRESH_LEN,
+          })
+        : null,
     } : null;
     // ── PHYSICS-TAX per-race tracker (read-only; only allocated when --physics-tax) ──
     // Fed once per racer per frame at the advanceRacerT call site below. Never mutates race state.
@@ -2116,6 +2133,8 @@ export function runSingleRace({
           // other observer here uses (arcT x govLenScale) — one shared definition, no duplicate arc
           // maths inside the observer.
           rp.frontBattle.observe(racers, raceProgress, raceTs, (aT, bT) => arcT(aT, bT, isOpen) * govLenScale);
+          // PULK-SPECTACLE-1 front-liveliness — same shared length path; self-gates on progress windows.
+          if (rp.frontLiveliness) rp.frontLiveliness.observe(racers, raceProgress, (aT, bT) => arcT(aT, bT, isOpen) * govLenScale);
         }
         // (1) One-shot at windowStart: the frontmost LIVE racer's identity + its lead over P2 (lengths).
         if (rp.leaderIdxAt090 === null && raceProgress >= RP_WINDOW_START) {
@@ -2463,6 +2482,34 @@ export function runSingleRace({
         // file alone. classifyFrontBattle() turns these into the REAL P1 ACTION boolean downstream.
         contestWindowStart:  CONTEST_WINDOW_START,
         frontBattle:         rp.frontBattle.result(),
+        // PULK-SPECTACLE-1 front-liveliness: LAW + chaos/pulk metrics, plus the leader-at-0.25 identity
+        // enriched with start-row + steer, the windowed gap-cap brake-fire events, and the gate fraction
+        // (the gap-cap is inactive below corrStartFrac → the chaos/pulk breakaway is unpoliced by design).
+        frontLiveliness:     (rp.frontLiveliness) ? (() => {
+          const r = rp.frontLiveliness.result();
+          const li = r.leaderIdxAtChaosEnd;
+          const leaderRow = li != null ? (racers.find((x) => x.index === li)?.startRowIndex ?? null) : null;
+          const css = racePlanController?.getChaosSteerStats ? racePlanController.getChaosSteerStats() : null;
+          const byR = css?.byRacer ? new Map(css.byRacer) : null;
+          const st = (li != null && byR) ? byR.get(li) : null;
+          const leaderSteered = st ? (st.ticks > 0) : false;
+          const leaderSteerMeanMult = st && st.ticks > 0 ? +(st.multSum / st.ticks).toFixed(3) : null;
+          // Gap-cap brake-fire events on the LIVE LEADER, windowed by progress (p). chaos [0,0.25], pulk [0.25,0.60].
+          const ev = racePlanController?.getGapLeaderDownEvents ? racePlanController.getGapLeaderDownEvents() : [];
+          const inWin = (lo, hi) => ev.filter((e) => e.p != null && e.p >= lo && e.p < hi);
+          const meanGap = (arr) => (arr.length ? +(arr.reduce((a, e) => a + (e.gapLen ?? 0), 0) / arr.length).toFixed(3) : null);
+          const chaosEv = inWin(0, 0.25), pulkEv = inWin(0.25, 0.6);
+          const pf = racePlanController?.getPhaseFractions ? racePlanController.getPhaseFractions() : null;
+          return {
+            ...r,
+            leaderRowAtChaosEnd: leaderRow,
+            leaderSteeredAtChaosEnd: leaderSteered,
+            leaderSteerMeanMult,
+            brakeFires_chaos: chaosEv.length, brakeMeanGap_chaos: meanGap(chaosEv),
+            brakeFires_mid: pulkEv.length, brakeMeanGap_mid: meanGap(pulkEv),
+            gapCapGateFrac: pf?.corrStartFrac ?? null, // gap-cap inactive below this → chaos unpoliced
+          };
+        })() : null,
         // CHAOS-STEER-1 scorecard (attached for EVERY arm — the in-band-at-chaos-end capture is read-only):
         // in-band-at-chaos-end count + field size, steer grip (ticks, mean mult), and Sanftheits (maxTickΔ).
         chaosSteer:          (() => {
