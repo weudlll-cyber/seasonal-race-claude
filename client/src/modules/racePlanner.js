@@ -339,6 +339,14 @@ export function createRacePlan(racers, finishT, targetDurationMs, config = {}, s
     // trick as the fair-arrival line, applied in the chaos window. Default OFF → chaos untouched.
     _chainChaosAim: config.chainChaosAim ? { strength: config.chainChaosAimStrength ?? 1.5 } : null,
     _chainAnchorHit: null, // [{index, boundaryRank, plannedAnchor}] captured at the boundary (telemetry)
+    // ── CHOREO-RELEASE-2: the STRONG Part 1, ported from exp/fair-arrival @a25e09c (continuous, clamped,
+    // per-tick-smooth, chaos-phase only) — NOT the whisper draw-bias above (chainChaosAim, found ineffective:
+    // anchor-hit 13.2→13.3). It steers each racer toward its PLANNED CURVE START. The chain + compiler curves
+    // anchor to the ACTUAL post-chaos rank (no distinct planned start exists BEFORE the boundary, where the
+    // steer runs), so the planned anchor formation reduces to the DRAWN BAND for every racer — the spec's
+    // "fall back to the drawn band where no anchor exists" applies universally in this architecture. Reachable
+    // via the pin-early-return skip below (the same fix that made fair-arrival's steer grip). OFF → identical.
+    _chaosSteer: config.chaosSteer ? { gain: config.chaosSteerGain ?? 0.06 } : null,
     // ── ACTION-BUILD-4: THE FINALE SCRIPT COMPILER (SIM-ONLY; admission-side; default OFF). Per race a
     // seeded, row-blind script set is drawn from the finale pool and authored as curves through the full
     // admission stack (reachability · exposure cap · geometry preference · occupancy spread). Frozen
@@ -504,6 +512,12 @@ export function createTrajectoryController(racePlan) {
   let _winnerStepCount = 0;
   let _pulkBiasDeltaSum = 0;
   let _pulkBiasEventCount = 0;
+  // CHOREO-RELEASE-2 strong-steer telemetry (closure-scoped ⇒ per race): steered ticks, summed target mult
+  // (mean pull), and max per-tick |Δ trajectoryMult| over steered racers (Sanftheits proof).
+  let _chaosSteerTicks = 0;
+  let _chaosSteerMultSum = 0;
+  let _chaosSteerMaxTickDelta = 0;
+  const _chaosSteerLastMult = new Map();
   let _racerStepCount = 0;
   let _racersInCorridorCount = 0;
   let _corridorViolationSum = 0;
@@ -693,7 +707,12 @@ export function createTrajectoryController(racePlan) {
     // steer toward, and the PACK runs at a looser bandStrictness. choreo-off → identical early-return.
     const choreoActive =
       plan._choreoEnabled && phaseProgress != null && phaseProgress >= pulkStartFrac;
-    if (_preOutcome && !choreoActive) {
+    // CHOREO-RELEASE-2: the pre-outcome pin returns early during chaos, before the per-racer steer block —
+    // exactly the reachability trap that made the whisper aim (and fair-arrival's ARM A) never grip. Skip it
+    // during chaos when the strong steer is active so the block below is reached. OFF → identical early-return.
+    const chaosSteerNow =
+      plan._chaosSteer != null && phaseProgress != null && phaseProgress < pulkStartFrac;
+    if (_preOutcome && !choreoActive && !chaosSteerNow) {
       for (const r of racers) _setTarget(r, 1.0, elapsedMs);
       return;
     }
@@ -884,6 +903,31 @@ export function createTrajectoryController(racePlan) {
       const currentRank = rankIdx + 1; // 1-indexed, 1 = leading
       const heroCurve = heroCurves && r.isHeroChoreographed ? heroCurves.get(r.index) : null;
       const isHero = !!heroCurve;
+      // ── CHOREO-RELEASE-2 STRONG STEER (chaos phase only): ease each racer toward its PLANNED CURVE START —
+      // the drawn band (the chain/compiler curves anchor to the ACTUAL post-chaos rank, so before the boundary
+      // the planned anchor formation IS the drawn band for every racer). Out of band → clamped pull toward it
+      // (_setTarget slews → Sanftheits-Regel, two-sided clamp [minMult,maxMult]); in band → 1.0, untouched.
+      // Ends with the chaos phase; reachable via the early-return skip above. Placed BEFORE the pre-outcome pin
+      // so it is not overwritten. Telemetry: steered ticks, summed target mult, max per-tick |Δ trajectoryMult|.
+      if (plan._chaosSteer && phaseProgress != null && phaseProgress < pulkStartFrac) {
+        const csDrawn = plan._racerTargetRank.get(r.index) ?? currentRank;
+        const [csLo, csHi] = getAreaBounds(csDrawn);
+        const csErr =
+          currentRank < csLo ? currentRank - csLo : currentRank > csHi ? currentRank - csHi : 0;
+        const csTarget = clamp(1.0 + plan._chaosSteer.gain * clamp(csErr, -5, 5), minMult, maxMult);
+        _setTarget(r, csTarget, elapsedMs);
+        const nowMult = r.trajectoryMult ?? 1.0;
+        if (_chaosSteerLastMult.has(r.index)) {
+          const d = Math.abs(nowMult - _chaosSteerLastMult.get(r.index));
+          if (d > _chaosSteerMaxTickDelta) _chaosSteerMaxTickDelta = d;
+        }
+        _chaosSteerLastMult.set(r.index, nowMult);
+        if (csErr !== 0) {
+          _chaosSteerTicks++;
+          _chaosSteerMultSum += csTarget;
+        }
+        continue;
+      }
       // Pre-OUTCOME: only heroes steer (toward their curves); the pack stays pinned to 1.0 exactly as
       // before. In OUTCOME every racer steers (heroes toward their curves).
       if (_preOutcome && !isHero) {
@@ -1486,6 +1530,10 @@ export function createTrajectoryController(racePlan) {
       stragglerHalf: plan._chainStragglerHalf ? [...plan._chainStragglerHalf.entries()] : [],
       roles: plan._heroRoles ? [...plan._heroRoles.entries()] : [],
       drawn: plan._racerTargetRank ? [...plan._racerTargetRank.entries()] : [],
+      // CHOREO-RELEASE-2 strong-steer telemetry (0/null when the steer is OFF).
+      steerTicks: _chaosSteerTicks,
+      steerMeanMult: _chaosSteerTicks ? _chaosSteerMultSum / _chaosSteerTicks : null,
+      steerMaxTickDelta: _chaosSteerMaxTickDelta,
     }),
     // ACTION-BUILD-2: read-only accordion skip diagnostics (no state change). Returns the invariant's
     // quality meter — skipRate = brake-ticks the lane-conditional skip vetoed / admitted beat-ticks.

@@ -342,8 +342,11 @@ const CHAIN_RELEASE_TIMING = argVal('chainReleaseTiming', 'atT'); // 'atT' | 'ea
 const CHAIN_RELEASE_T = Number(argVal('chainReleaseT', '0.8')); // target T (Dauer-Regel lever)
 const CHAIN_RELEASE_MODE = argVal('chainReleaseMode', 'dice'); // 'dice' | 'wall'
 const CHAIN_RELEASE_RESTEER = Number(argVal('chainReleaseReSteer', '1.0')); // dice band-hold tolerance
-const CHAIN_CHAOS_AIM = argVal('chainChaosAim', 'false') === 'true'; // PART 1 chaos-phase aim
+const CHAIN_CHAOS_AIM = argVal('chainChaosAim', 'false') === 'true'; // PART 1 chaos-phase aim (whisper draw-bias)
 const CHAIN_CHAOS_AIM_STRENGTH = Number(argVal('chainChaosAimStrength', '1.5'));
+// CHOREO-RELEASE-2: the STRONG Part 1 ported from exp/fair-arrival (continuous positional steer). Default OFF.
+const FA_CHAOS_STEER = argVal('chaosSteer', 'false') === 'true';
+const FA_CHAOS_STEER_GAIN = Number(argVal('chaosSteerGain', '0.06'));
 // B2-leak trace (read-only diagnostic): adds b2LastInside to rawData rows. No-flag → byte-identical.
 const B2_TRACE = argv.includes('--b2-trace');
 // reRoll / trajectory dynamics overrides — same shared-default + argVal pattern. Lets a sweep
@@ -2601,7 +2604,7 @@ export function runSingleRace({
         frontBattle:         rp.frontBattle.result(),
         // CHOREO-RELEASE-1 telemetry: PART-1 anchor-hit, release-time distribution, mid-race stragglers,
         // and comebacker/fallbacker realization (cb/fb are exempt → curve-guided to their authored place).
-        choreoRelease:       ((CHAIN_RELEASE_ON || CHAIN_CHAOS_AIM) && racePlanController?.getChoreoReleaseStats)
+        choreoRelease:       ((CHAIN_CHOREO_ON || CHAIN_RELEASE_ON || CHAIN_CHAOS_AIM || FA_CHAOS_STEER) && racePlanController?.getChoreoReleaseStats)
           ? (() => {
               const s = racePlanController.getChoreoReleaseStats();
               const B1 = 5;
@@ -2624,6 +2627,10 @@ export function runSingleRace({
                 nHeroes,
                 stragglerHalfCount: stragglerHalf,
                 cbTot, cbReal, fbTot, fbReal,
+                // CHOREO-RELEASE-2 strong-steer telemetry.
+                steerTicks: s.steerTicks ?? 0,
+                steerMeanMult: s.steerMeanMult ?? null,
+                steerMaxTickDelta: s.steerMaxTickDelta ?? 0,
               };
             })()
           : null,
@@ -3413,6 +3420,8 @@ if (isMain) {
               chainReleaseReSteer:       CHAIN_RELEASE_RESTEER,
               chainChaosAim:             CHAIN_CHAOS_AIM,
               chainChaosAimStrength:     CHAIN_CHAOS_AIM_STRENGTH,
+              chaosSteer:                FA_CHAOS_STEER,
+              chaosSteerGain:            FA_CHAOS_STEER_GAIN,
             }, seed);
             racePlanController = createTrajectoryController(plan);
             raceSollRankMap = plan._racerTargetRank;

@@ -169,6 +169,9 @@ ARM_LIB.AT80wall   = REL('--chainReleaseTiming=atT',   '--chainReleaseT=0.80', '
 // PART-1 anchor-hit with/without the chaos aim (AT80+DICE substrate, aim ON).
 ARM_LIB.AT80diceAim = REL('--chainReleaseTiming=atT',  '--chainReleaseT=0.80', '--chainReleaseMode=dice', '--chainChaosAim=true');
 ARM_LIB.faB60      = ARM_LIB.B15;
+// ── CHOREO-RELEASE-2: the STRONG Part 1 (continuous positional steer, ported from fair-arrival) ON TOP of
+// the best release arm (AT90+HOLD-DICE) = the owner's FULL archived architecture (both parts at full strength).
+ARM_LIB.AT90diceSteer = REL('--chainReleaseTiming=atT', '--chainReleaseT=0.90', '--chainReleaseMode=dice', '--chaosSteer=true', '--chaosSteerGain=0.06');
 
 const BAND_EDGES = [5, 15, 25, 40];
 const zoneIdx = (rank) => { for (let i = 0; i < BAND_EDGES.length; i++) if (rank <= BAND_EDGES[i]) return i; return BAND_EDGES.length; };
@@ -239,6 +242,7 @@ async function runArmTrack(armKey, flags, track) {
     const median = allProgs.length ? allProgs[Math.floor(allProgs.length / 2)] : null;
     const cbTot = relRaw.reduce((a, c) => a + c.cbTot, 0), cbReal = relRaw.reduce((a, c) => a + c.cbReal, 0);
     const fbTot = relRaw.reduce((a, c) => a + c.fbTot, 0), fbReal = relRaw.reduce((a, c) => a + c.fbReal, 0);
+    const steerMM = relRaw.map((c) => c.steerMeanMult).filter((x) => x != null);
     release = {
       anchorHit: mean(relRaw.map((c) => c.anchorHitMeanAbs ?? 0)),
       releaseMedian: median,
@@ -246,6 +250,8 @@ async function runArmTrack(armKey, flags, track) {
       neverReleased: mean(relRaw.map((c) => (c.nHeroes ?? 0) - (c.releasedCount ?? 0))),
       stragglerHalfPct: mean(relRaw.map((c) => (c.nHeroes ? c.stragglerHalfCount / c.nHeroes : 0))),
       cbTot, cbReal, fbTot, fbReal,
+      steerMeanMult: steerMM.length ? mean(steerMM) : null,
+      steerMaxTickDelta: relRaw.length ? Math.max(...relRaw.map((c) => c.steerMaxTickDelta ?? 0)) : 0,
     };
   }
   const distinct = (arr) => [...new Set(arr.filter((x) => x != null))].sort((a, b) => a - b);
@@ -373,6 +379,7 @@ for (const armKey of arms) {
     const rl = r.release;
     if (rl) {
       console.log(`     └release ${t.id.padEnd(10)} | anchorHit ${rl.anchorHit.toFixed(1)} | releaseMed ${rl.releaseMedian == null ? 'n/a' : rl.releaseMedian.toFixed(3)} · early<0.85 ${(rl.releaseEarlyFrac * 100).toFixed(0)}% | neverRel ${rl.neverReleased.toFixed(1)} | straggler@50% ${(rl.stragglerHalfPct * 100).toFixed(0)}% | cb ${rl.cbReal}/${rl.cbTot} · fb ${rl.fbReal}/${rl.fbTot}`);
+      if (rl.steerMeanMult != null) console.log(`     └steer   ${t.id.padEnd(10)} | meanMult ${rl.steerMeanMult.toFixed(3)} · maxTickΔ ${rl.steerMaxTickDelta.toFixed(4)}`);
     }
   }
   console.log(`  SUMMARY band-reach mean ${pct(bSum / TRACKS.length)} | tracks ≥70%: ${passReach}/${TRACKS.length}`);
