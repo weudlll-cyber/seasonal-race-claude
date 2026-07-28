@@ -103,11 +103,21 @@ export function eyeSessionActive() {
   return activeLetter() != null;
 }
 
-// Meta commands, handled once on module load (import side-effect): reveal / reset. Guarded for non-browser.
+// Runs ONCE at module load (import side-effect), i.e. at page load while the URL still carries ?eye — BEFORE
+// any react-router navigate('/race') can drop the query. This is where a blind session is ARMED: seeing
+// ?eye=A/B here persists the sticky letter AND establishes the mapping immediately, so it survives the later
+// path navigation (fixes the "localStorage null → session never started" case). Also handles reveal / reset.
 (function handleEyeMeta() {
   if (!hasWindow()) return;
   const p = eyeParam();
-  if (p === 'reveal') {
+  if (p === 'A' || p === 'B') {
+    try {
+      window.sessionStorage.setItem(LETTER_KEY, p); // arm the sticky letter at page load
+    } catch {
+      /* ignore */
+    }
+    ensureMapping(); // establish + log the coin-flip now, so the session is live before the first race
+  } else if (p === 'reveal') {
     // eslint-disable-next-line no-console
     console.info(
       '[eye] mapping:',
