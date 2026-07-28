@@ -152,6 +152,12 @@ const ARM_LIB = {
                     '--chainAccordion=true', '--accordDensity=6', '--accordAdmit=true', '--accordSkip=true'),
   B15compHi:  withF(boundary(ROW(NAKED), 0.15), '--chainProximity=true', '--scriptCompiler=true', '--actionLevel=high',
                     '--chainAccordion=true', '--accordDensity=6', '--accordAdmit=true', '--accordSkip=true'),
+  // ── ACTION-FREEBAND-1 — band corridor + finale tempo noise. NO stories (the noise IS the front fight).
+  // ARM A = re-roll statistics live in the finale; ARM B = frozen offset. R-sweep {0.70, 0.85}.
+  fbA85: withF(boundary(ROW(NAKED), 0.15), '--chainProximity=true', '--freeBand=true', '--freeBandR=0.85', '--freeBandNoise=reroll', '--freeBandAmp=0.06', '--freeBandCorridorGain=2'),
+  fbA70: withF(boundary(ROW(NAKED), 0.15), '--chainProximity=true', '--freeBand=true', '--freeBandR=0.70', '--freeBandNoise=reroll', '--freeBandAmp=0.06', '--freeBandCorridorGain=2'),
+  fbB85: withF(boundary(ROW(NAKED), 0.15), '--chainProximity=true', '--freeBand=true', '--freeBandR=0.85', '--freeBandNoise=frozen', '--freeBandAmp=0.06', '--freeBandCorridorGain=2'),
+  fbB70: withF(boundary(ROW(NAKED), 0.15), '--chainProximity=true', '--freeBand=true', '--freeBandR=0.70', '--freeBandNoise=frozen', '--freeBandAmp=0.06', '--freeBandCorridorGain=2'),
 };
 
 const BAND_EDGES = [5, 15, 25, 40];
@@ -245,6 +251,11 @@ async function runArmTrack(armKey, flags, track) {
     countDistFB: distinct(sPer.map((s) => s?.countDist?.fallbacker)),
     countDistMM: distinct(sPer.map((s) => s?.countDist?.midRaceMover)),
     nStoried: ss.length,
+    // ACTION-FREEBAND-1 corridor telemetry (0 when the line is off).
+    edgeFights: mean(faR.map((r) => r.freeBand?.edgeFights ?? 0)),
+    freeBandOn: faR.some((r) => r.freeBand),
+    freeBandR: faR.find((r) => r.freeBand)?.freeBand?.R ?? null,
+    freeBandNoise: faR.find((r) => r.freeBand)?.freeBand?.noise ?? null,
   };
   // Lead-fight proxy: leader changes in the last 30% (distinct-leaders signal). fa records whole-race
   // leader-change progresses in `leadChangesProg` (added ACTION-BUILD-4); fall back to 0 when absent.
@@ -334,7 +345,9 @@ for (const armKey of arms) {
     const b = r.b7b, sb = s?.b7b;
     if (b) {
       const dBoring = sb ? (b.deadBoring - sb.deadBoring) * 100 : 0;
-      console.log(`     └score ${t.id.padEnd(12)} | DEAD-BORING ${pct(b.deadBoring).padStart(4)} (${armKey === 'ship' ? '—' : sgn(dBoring, 'pp')}) · thriller ${pct(b.deadThriller)} | frontContest ${(b.frontContest * 100).toFixed(0)}% | distinctLead ${b.distinctLead.toFixed(2)} | maxLeadHold ${(b.maxLeadHold * 100).toFixed(0)}% | p1MultiSec ${b.p1LongestSec.toFixed(1)}`);
+      const dFC = sb ? (b.frontContest - sb.frontContest) * 100 : 0;
+      console.log(`     └score ${t.id.padEnd(12)} | DEAD-BORING ${pct(b.deadBoring).padStart(4)} (${armKey === 'ship' ? '—' : sgn(dBoring, 'pp')}) · thriller ${pct(b.deadThriller)} | frontContest ${(b.frontContest * 100).toFixed(0)}% (${armKey === 'ship' ? '—' : sgn(dFC, 'pp')}) | distinctLead ${b.distinctLead.toFixed(2)} | maxLeadHold ${(b.maxLeadHold * 100).toFixed(0)}% | p1MultiSec ${b.p1LongestSec.toFixed(1)}`);
+      if (b.freeBandOn) console.log(`     └freeband ${t.id.padEnd(10)} | R ${b.freeBandR} noise ${b.freeBandNoise} | edgeFights ${b.edgeFights.toFixed(0)}/race | rowReachMin ${(r.rowReachMin * 100).toFixed(0)}% (per-row floor)`);
     }
   }
   console.log(`  SUMMARY band-reach mean ${pct(bSum / TRACKS.length)} | tracks ≥70%: ${passReach}/${TRACKS.length}`);
