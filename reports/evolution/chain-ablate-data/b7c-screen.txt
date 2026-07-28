@@ -1,0 +1,46 @@
+
+=== CHAIN-ABLATE battery — N=25/arm/track | tracks searound, ice-track | seed=1 jobs=4 ===
+arms: ship, B15clrD, B15fc
+
+── ship ──
+  track           | band (Δship) | dead (Δship) | lead-chg (Δship) | LAWfull LAWl50 (Δship) | holm
+  searound        |  75% (  —) |   8% (  —) |  1.48 (  —) | 0.31   0.25  ( —/—) | skip 0% | UNF
+     └score searound     | DEAD-BORING   8% (—) · thriller 0% | frontContest 42% | distinctLead 1.80 | maxLeadHold 83% | p1MultiSec 5.2
+  ice-track       |  72% (  —) |  12% (  —) |  1.60 (  —) | 0.29   0.23  ( —/—) | skip 0% | ok
+     └score ice-track    | DEAD-BORING   0% (—) · thriller 12% | frontContest 68% | distinctLead 1.92 | maxLeadHold 81% | p1MultiSec 9.3
+  SUMMARY band-reach mean 74% | tracks ≥70%: 2/2
+
+── B15clrD ──
+  track           | band (Δship) | dead (Δship) | lead-chg (Δship) | LAWfull LAWl50 (Δship) | holm
+  searound        |  77% (+2pp) |  12% (+4pp) |  2.00 (+0.52) | 0.66   0.39  (+0.35/+0.14) | skip 0% | ok
+     └score searound     | DEAD-BORING   4% (-4pp) · thriller 8% | frontContest 40% | distinctLead 1.64 | maxLeadHold 86% | p1MultiSec 5.0
+  ice-track       |  72% (-0pp) |  20% (+8pp) |  1.88 (+0.28) | 0.56   0.41  (+0.28/+0.18) | skip 17% | ok
+     └score ice-track    | DEAD-BORING  20% (+20pp) · thriller 0% | frontContest 38% | distinctLead 1.72 | maxLeadHold 84% | p1MultiSec 5.2
+  SUMMARY band-reach mean 74% | tracks ≥70%: 2/2
+    [comp searound     ] scripts 0.0 (fl0.0 cb0.0 fb0.0 pc0.0 dp0.0 pf0.0) | drop 0.0 shrink 0.0 | H 0.00 sigColl 100% (1/25)
+    [clr  searound     ] lanes 5.0 (min 5.0) budget 0.00 | latAdmit 0.0 latRefuse 0.0 | accAdmit 0.0 | frontConv 0.0 | leadLast30 37.88
+    [comp ice-track    ] scripts 8.4 (fl1.0 cb2.3 fb2.2 pc2.2 dp0.7 pf0.0) | drop 0.0 shrink 0.3 | H 2.19 sigColl 0% (25/25)
+    [clr  ice-track    ] lanes 10.0 (min 10.0) budget 1.00 | latAdmit 4.7 latRefuse 0.0 | accAdmit 6.0 | frontConv 0.0 | leadLast30 37.88
+    [dens ice-track    ] finaleStories 10.6 (min 8 max 13, 4/25 races <10) | finalDraw 0.0 bandDuels 0.0 | storied 12.2 expMax 1
+
+── B15fc ──
+  track           | band (Δship) | dead (Δship) | lead-chg (Δship) | LAWfull LAWl50 (Δship) | holm
+  searound        |  73% (-2pp) |  32% (+24pp) |  1.28 (-0.20) | 0.59   0.43  (+0.28/+0.18) | skip 0% | ok
+     └score searound     | DEAD-BORING  24% (+16pp) · thriller 8% | frontContest 19% | distinctLead 1.40 | maxLeadHold 93% | p1MultiSec 2.3
+  ice-track       |  72% (+1pp) |  20% (+8pp) |  2.04 (+0.44) | 0.52   0.39  (+0.23/+0.16) | skip 28% | ok
+     └score ice-track    | DEAD-BORING   8% (+8pp) · thriller 12% | frontContest 43% | distinctLead 1.84 | maxLeadHold 84% | p1MultiSec 6.3
+  SUMMARY band-reach mean 73% | tracks ≥70%: 2/2
+    [comp searound     ] scripts 4.9 (fl0.0 cb1.6 fb2.0 pc1.4 dp0.0 pf0.0) | drop 0.0 shrink 0.0 | H 1.57 sigColl 0% (25/25)
+    [clr  searound     ] lanes 5.0 (min 5.0) budget 0.00 | latAdmit 0.0 latRefuse 0.0 | accAdmit 0.0 | frontConv 0.0 | leadLast30 37.20
+    [dens searound     ] finaleStories 32.0 (min 24 max 36, 0/25 races <10) | finalDraw 24.6 bandDuels 12.5 | storied 32.3 expMax 2
+    [ownr searound     ] cb 1.6 fb 2.0 mid 1.6 frontCloser 1.4 | depth 5 (win 10%=5 12%=7 15%=9) | counts cb[0,1,2,3] fb[0,1,2,3] mid[0,1,2,3]
+    [scen searound     ] defendShare 16% | P(leaderHolds) 80% | scenH 1.21 {"unplannedHold":17,"genuineChange":5,"defended":3} | behindP1 38.6 | defGap 2.50L (n4)
+    [dead searound     ] total 8 = nearMiss 2 + castHole 0 + completeFail 6 | chains 0.5 timeShare 0.40
+    [comp ice-track    ] scripts 5.6 (fl0.0 cb1.6 fb2.0 pc1.4 dp0.7 pf0.0) | drop 0.0 shrink 0.0 | H 1.92 sigColl 0% (25/25)
+    [clr  ice-track    ] lanes 10.0 (min 10.0) budget 1.00 | latAdmit 0.7 latRefuse 0.0 | accAdmit 6.0 | frontConv 0.0 | leadLast30 37.80
+    [dens ice-track    ] finaleStories 31.3 (min 24 max 36, 0/25 races <10) | finalDraw 23.8 bandDuels 12.0 | storied 32.6 expMax 2
+    [ownr ice-track    ] cb 1.6 fb 2.0 mid 1.6 frontCloser 1.4 | depth 5 (win 10%=5 12%=7 15%=9) | counts cb[0,1,2,3] fb[0,1,2,3] mid[0,1,2,3]
+    [scen ice-track    ] defendShare 16% | P(leaderHolds) 52% | scenH 1.40 {"genuineChange":12,"defended":3,"unplannedHold":10} | behindP1 40.5 | defGap 1.49L (n4)
+    [dead ice-track    ] total 5 = nearMiss 1 + castHole 0 + completeFail 4 | chains 0.2 timeShare 0.38
+
+runtime 5.6 min

@@ -237,7 +237,98 @@ chains disjoint+spliced, negative-space ≠ B1). Data: `chain-ablate-data/b7b-sc
 ---
 ---
 
-## (ACTION-BUILD-7 foot, superseded by the 7b section above)
+# ACTION-BUILD-7c — completion + honest front scoring (micro-arm)
+
+**Branch `exp/chain-choreo` (sim-only). Author: CC.** Admission-side, frozen budget, no new force. Four
+changes: (1) RESERVE THE CLOSER — pace-order convergence reserved at the front before the final-draw; (2)
+defended share 20%→10%; (3) spatial near-miss chaser; (4) HONEST FRONT SCORING via the existing
+outcome-front-battle observer (no new sim code), splitting dead into DEAD-BORING vs DEFENDED-THRILLER.
+Screen searound + ice, N=25, then STOP. **OFF fingerprint `7c70b1eae7d31e22`** asserted.
+
+## VERDICT (read first)
+**The honest scoring is the decisive result, and it VINDICATES Ship while confirming the earned-KILL a fourth
+time.** On the fair metric — DEAD-BORING (dead AND no sustained front contest) vs Ship — BUILD-7c is WORSE on
+both tracks (searound +16pp, ice +8pp), because **Ship's dead is not boring: it is thrilling.** Ship's re-roll
+produces a sustained P1 contest (frontContest 42–68%) and near-miss dead races; the authored cast produces
+density but a lower contest (19–43%) and more genuinely boring dead. Two of the four changes are keepers (the
+spatial near-miss FIXED ice's gap 3.41 L → 1.49 L; the honest scoring is the right scoreboard); the closer
+BACKFIRES on the narrow track.
+
+## 1. THE DECISION — DEAD-BORING vs Ship (honest front scoring)
+
+| track | Ship: dead / **boring** / thriller · frontContest | BUILD-7c: dead / **boring** / thriller · frontContest | Δ boring |
+|---|---|---|---|
+| searound | 8 / **8** / 0 · 42% | 32 / **24** / 8 · 19% | **+16pp** |
+| ice-track | 12 / **0** / 12 · 68% | 20 / **8** / 12 · 43% | **+8pp** |
+
+*(night B15clrD boring: searound 4 (−4pp), ice 20 (+20pp).)* frontContest = fraction of the finale window with
+a live P1 battle; distinctLeaders / maxLeadHold / p1MultiSec confirm it.
+
+- **DEAD-BORING is WORSE than Ship on both** → the micro-arm fails its own decision number.
+- **The scoring exonerates Ship and indicts the metric that drove this line**: Ship's ice dead (12%) is
+  **0% boring / 12% thriller** with frontContest **68%** — its dead races are sustained P1 battles and
+  near-misses, not dead-boring. The plain dead-finale count was unfair to Ship. On the *fair* metric Ship is
+  strong (boring 8% / 0%), and the authored cast — despite 32 finale stories — is more boring, with a LOWER
+  sustained-contest fraction (19–43% vs Ship's 42–68%).
+- **Why**: authored endpoint-exact curves resolve to the fixed draw, so the front is legible but *decided*;
+  Ship's re-roll leaves the P1 genuinely in doubt for longer (higher frontContest, p1MultiSec 5–9 s vs 2–6 s).
+
+## 2. THE FOUR CHANGES (built + measured)
+- **Reserve the closer** — pace-order convergence fired at the front, **realized 1.4/race** on both tracks
+  (reported as asked). But on **searound it BACKFIRES**: budget 0 / 5 lanes / a bunched field, so the winner
+  held a few ranks back cannot *complete* the same-lane catch-up — it snaps to P1 only at the line, which the
+  observer reads as no contest → searound dead 24→**32**, P(leader-holds) 80%. **The completion mechanism
+  needs room (or a spread field) to complete; on the narrowest track it deepens the boring dead.**
+- **Defended share → ~10%** (realized 16% drawn; leader-defends smaller, as asked).
+- **Spatial near-miss — WORKS**: the chaser reaching rank 2 by 0.85 and sitting behind P1 pulled the ice gap
+  at the line **3.41 L → 1.49 L** (a genuine near-miss now); searound 2.50 L (still loose). A keepable fix.
+- **Honest scoring** — delivered the fair verdict above; it is the scoreboard this line should have used all
+  along (density × band-reach × frontContest × DEAD-BORING, not the raw dead count).
+
+### THE FIVE SENTENCES (ripcord 2 — updated)
+1. Almost every racer is sorted to its drawn band by the chain and released to the fixed fair draw, so
+   band-reach holds (2/2 ≥ 70%). 2. A seeded, row-blind cast draws owner-comebackers, owner-fallbackers,
+   mid-race movers and band-duels with non-degenerate counts, all endpoint-exact through the reachability
+   accountant, and in each change-drawn race a pace-order convergence is RESERVED at the front as the
+   completion mechanism. 3. A ~10% share is a drawn leader-defends whose chaser now sits spatially behind P1
+   to a body-length near-miss, with genuine behind-P1 place changes. 4. Every lateral element is
+   clearance-gated and the budget grades only lateral, so the longitudinal front cast runs everywhere — but on
+   the narrowest track the closer cannot COMPLETE its catch-up through the bunched field, so its front change
+   snaps at the line and reads as dead-boring. 5. The cast moves no one and the runtime budget is frozen, so
+   the shipped world is byte-identical with the line OFF — and on the honest scoreboard (DEAD-BORING and
+   sustained frontContest) Ship's re-roll still wins the front, a runtime force this admission-side line
+   cannot match.
+
+## PROPOSALS (≥2)
+1. **Adopt the honest scoreboard and close the line on the front-action goal.** Four builds (5 / 7 / 7b / 7c)
+   now agree: authored fair curves deliver density, variety, owner definitions and legibility, but cannot beat
+   Ship on P1 uncertainty — and the *fair* metric (DEAD-BORING + frontContest) shows Ship is actually good,
+   not dead. Propose declaring the front-action goal an earned-KILL within the frozen budget, and keeping the
+   admission-side wins that are orthogonal (the clearance reader, the proximity floor, the graded budget, the
+   spatial near-miss) as shippable fairness/continuity pieces — not as a Ship-beating action engine.
+2. **If action-beyond-Ship is still wanted, it needs the re-roll (a runtime force) — scope it as a SEPARATE,
+   explicitly-authorised line.** The one thing that raises frontContest is genuine P1 tempo uncertainty; only
+   a controlled speed-variation source (Ship's re-roll, bounded and band-fair) provides it. That is outside
+   ripcord 1 and should be its own owner-authorised experiment, not smuggled into the admission-side cast.
+3. **Keep the spatial near-miss + honest scoring regardless.** The chaser-to-spatial-target fix (3.4→1.5 L)
+   and the DEAD-BORING / frontContest scoreboard are small, correct, and improve how every future finale is
+   judged; keep them independent of the kill.
+
+## Owner questions
+1. **Declare the front-action earned-KILL** (adopt the honest scoreboard; keep the orthogonal admission-side
+   wins) — yes/no?
+2. **Authorise a separate re-roll-based front line** (a runtime force, scoped explicitly) if beating Ship on
+   frontContest is still the goal?
+
+---
+**Branch `exp/chain-choreo`.** BUILD-7c OFF fingerprint `7c70b1eae7d31e22` (== baseline, final committed
+state). Commits: build `bf56cac`, this report. Tests: 34 compiler (149 suite). Data:
+`chain-ablate-data/b7c-screen.txt`. **Screen-only (stopped per protocol).** Push verified — see `git log origin`.
+
+---
+---
+
+## (ACTION-BUILD-7 foot, superseded by the 7b/7c sections above)
 **Branch `exp/chain-choreo`.** OFF fingerprint `7c70b1eae7d31e22` (== baseline, final committed state; the
 cast is admission-side + flag-gated). Commits: Stage A build `3404aa2`, Stage B screen `84797b0`, this report.
 Tests: 141 pass (8 new: density ≥10, slider monotonicity, final-draw endpoint invariance, band-duels across
