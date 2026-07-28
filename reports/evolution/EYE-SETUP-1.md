@@ -54,8 +54,11 @@ player would.
 console (F12 → Console), or ask CC to print it. Your per-track notes, mapped to ship/combo, become the eye
 verdict. To run another fully-blind session later, open `?eye=reset` first (re-randomizes the mapping).
 
-**Guardrails.** Keep `?eye=A`/`?eye=B` in the address bar while racing (if a navigation drops the query, re-add
-it — without it, races fall back to plain ship). The mapping is fixed per session, so don't reset mid-viewing.
+**Guardrails.** The active letter is STICKY (sessionStorage): set `?eye=A` once and it holds through every
+"start race" navigation — you do NOT need to keep the query in the address bar. To SWITCH worlds, put
+`?eye=B` in the bar and press Enter (a full reload); to go back, `?eye=A`. The mapping is fixed per session,
+so don't `?eye=reset` mid-viewing. (Fix `0c72930`: the app navigates by path, which drops the query, so the
+letter is persisted rather than read only from the URL.)
 
 ### THE FIVE SENTENCES (every kept element)
 1. A dev-only `?eye=A` / `?eye=B` switch coin-flips {A,B} → {ship, combo} once per session, stores the mapping in
