@@ -417,6 +417,7 @@ export function createTrajectoryController(racePlan) {
   const _chaosSteerInBandEnd = new Map();
   const _chaosSteerLastMult = new Map(); // index → trajectoryMult observed last frame (frame-to-frame Δ)
   const _chaosSteerRacers = new Set(); // distinct racers the steer touched (out of band ≥1 chaos frame)
+  const _chaosSteerByRacer = new Map(); // index → {ticks, multSum} (per-racer steer exposure → per-row skew)
   let _chaosSteerEndCaptured = false;
   let _racerStepCount = 0;
   let _racersInCorridorCount = 0;
@@ -747,6 +748,10 @@ export function createTrajectoryController(racePlan) {
           _chaosSteerTicks++;
           _chaosSteerMultSum += csTarget;
           _chaosSteerRacers.add(r.index);
+          const pr = _chaosSteerByRacer.get(r.index) ?? { ticks: 0, multSum: 0 };
+          pr.ticks++;
+          pr.multSum += csTarget;
+          _chaosSteerByRacer.set(r.index, pr);
         }
         continue;
       }
@@ -1241,6 +1246,7 @@ export function createTrajectoryController(racePlan) {
       steeredRacers: _chaosSteerRacers.size,
       meanMult: _chaosSteerTicks ? _chaosSteerMultSum / _chaosSteerTicks : null,
       maxTickDelta: _chaosSteerMaxTickDelta,
+      byRacer: [..._chaosSteerByRacer.entries()], // [index, {ticks, multSum}] — per-row skew join
     }),
     // SCREEN escape-latency: how many DOWN-tilts have hit the LIVE LEADER so far. Read per frame by
     // the sim so it can freeze escapeDepth (the max P1->P2 gap reached BEFORE the first correction)

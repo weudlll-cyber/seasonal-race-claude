@@ -2469,7 +2469,20 @@ export function runSingleRace({
           const s = racePlanController?.getChaosSteerStats ? racePlanController.getChaosSteerStats() : null;
           if (!s) return null;
           const inBandEnd = s.inBandEnd.filter(([, ok]) => ok).length;
-          return { inBandEnd, nField: s.inBandEnd.length, steeredTicks: s.steeredTicks, steeredRacers: s.steeredRacers, meanMult: s.meanMult, maxTickDelta: s.maxTickDelta };
+          // ROW-SKEW DIAGNOSIS: join per-racer steer exposure + in-band-at-chaos-end to each racer's START
+          // ROW, so the driver can show share-steered + mean-mult PER start row (the ice-Holm mechanism).
+          const byR = new Map(s.byRacer);
+          const ibe = new Map(s.inBandEnd);
+          const perRow = {};
+          for (const r of racers) {
+            const row = r.startRowIndex ?? 0;
+            const pr = perRow[row] ?? (perRow[row] = { n: 0, steered: 0, ticks: 0, multSum: 0, inBandEnd: 0 });
+            pr.n++;
+            const st = byR.get(r.index);
+            if (st) { pr.steered++; pr.ticks += st.ticks; pr.multSum += st.multSum; }
+            if (ibe.get(r.index)) pr.inBandEnd++;
+          }
+          return { inBandEnd, nField: s.inBandEnd.length, steeredTicks: s.steeredTicks, steeredRacers: s.steeredRacers, meanMult: s.meanMult, maxTickDelta: s.maxTickDelta, perRow };
         })(),
       };
     }
