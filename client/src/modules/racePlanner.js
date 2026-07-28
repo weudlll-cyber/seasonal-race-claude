@@ -256,6 +256,18 @@ export function createRacePlan(racers, finishT, targetDurationMs, config = {}, s
     _pulkTargetSpread: config.pulkTargetSpread ?? DEFAULT_PULK_TARGET_SPREAD,
     _stochasticNoise: config.stochasticNoise ?? DEFAULT_STOCHASTIC_NOISE,
     _pulkBiasGain: config.pulkBiasGain ?? DEFAULT_PULK_BIAS_GAIN,
+    // ── FAIR-ARRIVAL-1 (SIM-ONLY; default OFF). The owner's two-part proposal to raise band arrival while
+    // keeping ship's re-roll action. ARM A: gentle chaos-phase steering toward the DRAWN BAND (the
+    // orchestration anchor), ending with the chaos phase. ARM B: from R, re-aim the re-roll DRAW (not the
+    // position) toward the drawn band — the dice are aimed, not fought, clamped to the honest range (nothing
+    // to pin). ARM C: hard band walls from R (the literal wording; expected to pin). All flag-gated. ──
+    _chaosAnchor: config.chaosAnchor ? { gain: config.chaosAnchorGain ?? 0.06 } : null,
+    _bandBias: config.bandBias
+      ? { R: config.bandBiasR ?? 0.8, gain: config.bandBiasGain ?? 0.06 }
+      : null,
+    _bandWall: config.bandWall
+      ? { R: config.bandWallR ?? 0.8, gain: config.bandWallGain ?? 4 }
+      : null,
     _racerTargetRank: racerTargetRank,
     _racerAreaBonus: racerAreaBonus,
     _areaBonusFadeDuration:
@@ -675,6 +687,37 @@ export function createTrajectoryController(racePlan) {
       const currentRank = rankIdx + 1; // 1-indexed, 1 = leading
       const heroCurve = heroCurves && r.isHeroChoreographed ? heroCurves.get(r.index) : null;
       const isHero = !!heroCurve;
+      // ── FAIR-ARRIVAL-1 ARM A (chaos anchor steering): during the chaos phase (< pulkStart) a racer OUT of
+      // its DRAWN band is gently pulled toward it (the orchestration anchor — a band, not an exact rank),
+      // within the two-sided clamp; the re-roll scatter stays random around it. Ends with the chaos phase, so
+      // the finale is byte-unchanged vs ship. Flag OFF → never runs. ──
+      if (plan._chaosAnchor && phaseProgress != null && phaseProgress < pulkStartFrac) {
+        const caDrawn = plan._racerTargetRank.get(r.index) ?? currentRank;
+        const [caLo, caHi] = getAreaBounds(caDrawn);
+        const caErr =
+          currentRank < caLo ? currentRank - caLo : currentRank > caHi ? currentRank - caHi : 0;
+        _setTarget(
+          r,
+          clamp(1.0 + plan._chaosAnchor.gain * clamp(caErr, -5, 5), minMult, maxMult),
+          elapsedMs
+        );
+        continue;
+      }
+      // ── FAIR-ARRIVAL-1 ARM C (hard band walls from R): the literal owner wording — a hard corridor holds
+      // each racer to its drawn band while ship's re-roll runs. A positional force that FIGHTS the dice
+      // (expected to pin, per FREEBAND). Flag OFF → never runs. ──
+      if (plan._bandWall && phaseProgress != null && phaseProgress >= plan._bandWall.R) {
+        const bwDrawn = plan._racerTargetRank.get(r.index) ?? currentRank;
+        const [bwLo, bwHi] = getAreaBounds(bwDrawn);
+        const bwErr =
+          currentRank < bwLo ? currentRank - bwLo : currentRank > bwHi ? currentRank - bwHi : 0;
+        _setTarget(
+          r,
+          clamp(1.0 + gain * plan._bandWall.gain * (bwErr / nActive), minMult, maxMult),
+          elapsedMs
+        );
+        continue;
+      }
       // Pre-OUTCOME: only heroes steer (toward their curves); the pack stays pinned to 1.0 exactly as
       // before. In OUTCOME every racer steers (heroes toward their curves).
       if (_preOutcome && !isHero) {
@@ -855,6 +898,25 @@ export function createTrajectoryController(racePlan) {
     elapsedMs,
     phaseProgress = null
   ) {
+    const thisRacer0 = racers.find((r) => r.index === racerIndex);
+    if (!thisRacer0 || thisRacer0.finished) return rawSample;
+
+    // ── FAIR-ARRIVAL-1 ARM B: from R, AIM the re-roll DRAW toward the racer's drawn band, clamped to the
+    // honest [spreadMin, spreadMax] range — nothing is fought and no position is forced, the tempo dice are
+    // simply loaded toward the band. An OUT-of-band racer draws toward the near edge (catch-up / fall-back);
+    // an IN-band racer keeps the free dice, so the within-band order is still decided by chance (pillar 3). ──
+    if (plan._bandBias && phaseProgress != null && phaseProgress >= plan._bandBias.R) {
+      let rank = 1;
+      for (const o of racers) if (!o.finished && o.t > thisRacer0.t) rank++;
+      const [bbLo, bbHi] = getAreaBounds(plan._racerTargetRank.get(racerIndex) ?? rank);
+      const bandErr = rank < bbLo ? rank - bbLo : rank > bbHi ? rank - bbHi : 0;
+      if (bandErr === 0) return rawSample; // in band → free dice
+      const biased = clamp(rawSample + plan._bandBias.gain * bandErr, spreadMin, spreadMax);
+      _pulkBiasDeltaSum += Math.abs(biased - rawSample);
+      _pulkBiasEventCount += 1;
+      return biased;
+    }
+
     if (getPhase(elapsedMs, phaseProgress) !== 'PULK') return rawSample;
 
     const thisRacer = racers.find((r) => r.index === racerIndex);

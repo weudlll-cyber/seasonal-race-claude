@@ -242,6 +242,14 @@ const RP_PULK_START           = Number(argVal('pulkStart',          String(DEFAU
 const RP_CORRIDOR_START       = Number(argVal('corridorStart',      String(DEFAULT_RACE_DYNAMICS_CONFIG.racePlanCorridorStart)));
 const RP_CORRIDOR_END         = Number(argVal('corridorEnd',        String(DEFAULT_RACE_DYNAMICS_CONFIG.racePlanCorridorEnd)));
 const RP_PULK_BIAS_GAIN       = Number(argVal('pulkBiasGain',       String(DEFAULT_RACE_DYNAMICS_CONFIG.pulkBiasGain)));
+// FAIR-ARRIVAL-1 flags (SIM-ONLY; default OFF).
+const FA_CHAOS_ANCHOR         = argVal('chaosAnchor', 'false') === 'true';
+const FA_CHAOS_ANCHOR_GAIN    = Number(argVal('chaosAnchorGain', '0.04'));
+const FA_BAND_BIAS            = argVal('bandBias', 'false') === 'true';
+const FA_BAND_WALL            = argVal('bandWall', 'false') === 'true';
+const FA_BAND_R               = Number(argVal('bandR', '0.80'));
+const FA_BAND_BIAS_GAIN       = Number(argVal('bandBiasGain', '0.06'));
+const FA_BAND_WALL_GAIN       = Number(argVal('bandWallGain', '4'));
 // Hero choreography — master flag + drama intensity + loose-pack bandStrictness. Passed into
 // createRacePlan (flag OFF → byte-identical; the intensity/strictness only apply when ON).
 const CHOREO_ENABLED     = true; // choreography is UNCONDITIONAL (de-flagged S3); classic gates below are now statically false (Stage-4 removal)
@@ -3115,6 +3123,15 @@ if (isMain) {
               corridorStart:           RP_CORRIDOR_START,
               corridorEnd:             RP_CORRIDOR_END,
               pulkBiasGain:            RP_PULK_BIAS_GAIN,
+              // FAIR-ARRIVAL-1 (SIM-ONLY; default OFF): chaos anchor steering (A) · band-aware draw bias (B) · hard band walls (C).
+              chaosAnchor:             FA_CHAOS_ANCHOR,
+              chaosAnchorGain:         FA_CHAOS_ANCHOR_GAIN,
+              bandBias:                FA_BAND_BIAS,
+              bandBiasR:               FA_BAND_R,
+              bandBiasGain:            FA_BAND_BIAS_GAIN,
+              bandWall:                FA_BAND_WALL,
+              bandWallR:               FA_BAND_R,
+              bandWallGain:            FA_BAND_WALL_GAIN,
               choreoSuppressChaosBonusB1: CHOREO_SUPPRESS_CHAOS_BONUS_B1,
               choreoIntensity:     CHOREO_INTENSITY,
               choreoPackBandStrictness: CHOREO_PACK_BAND_STRICTNESS,
