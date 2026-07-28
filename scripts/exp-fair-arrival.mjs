@@ -16,7 +16,11 @@ const argv = process.argv.slice(2);
 const argVal = (k, d) => { const m = argv.find((a) => a.startsWith(`--${k}=`)); return m ? m.slice(k.length + 3) : d; };
 const RACES = Number(argVal('races', '25'));
 const JOBS = Math.max(1, Number(argVal('jobs', '4')));
-const TMP = join(ROOT, 'client/tmp/fair-arrival');
+// --tag gives a stage its OWN output dir so parallel stages (S1/S2/S3) never collide; --dur overrides
+// track-defaults (STAGE 2 = 30s, STAGE 3 = 180s). Both default to the original behaviour.
+const TAG = argVal('tag', '');
+const DUR = argVal('dur', '');
+const TMP = join(ROOT, 'client/tmp/fair-arrival' + (TAG ? `-${TAG}` : ''));
 const toOut = (a) => relative(ROOT, a).replace(/\\/g, '/');
 const mean = (a) => (a.length ? a.reduce((s, x) => s + x, 0) / a.length : 0);
 const pct = (x) => (x == null ? 'n/a' : (x * 100).toFixed(0) + '%');
@@ -53,7 +57,7 @@ async function run(armKey, flags, track) {
   const nRacers = track.closed ? 40 : 60;
   await pExec(process.execPath, [
     'scripts/sim-fairness.mjs', `--track=${track.id}`, `--racer=${track.racer}`,
-    `--seed=1`, `--races=${RACES}`, `--racers=${nRacers}`, '--track-defaults', ...flags,
+    `--seed=1`, `--races=${RACES}`, `--racers=${nRacers}`, ...(DUR ? [`--dur=${DUR}`] : ['--track-defaults']), ...flags,
     '--runaway-parade', '--hero-map', '--front-autopsy', '--pulk-window', `--out=${toOut(out)}`,
   ], { cwd: ROOT, maxBuffer: 512 * 1024 * 1024 });
   const hm = JSON.parse(readFileSync(join(out, 'hero-map.json'), 'utf8'));
@@ -134,7 +138,7 @@ async function pool(tasks) { const out = []; let i = 0; await Promise.all(Array.
 
 mkdirSync(TMP, { recursive: true });
 const t0 = Date.now();
-console.log(`\n=== FAIR-ARRIVAL confirm — N=${RACES}/arm/track | ${TRACK_IDS.join(', ')} | track-defaults | arms ${ARM_KEYS.join(',')} | jobs=${JOBS} ===`);
+console.log(`\n=== FAIR-ARRIVAL confirm — N=${RACES}/arm/track | ${TRACK_IDS.join(', ')} | ${DUR ? DUR + 's' : 'track-defaults'} | arms ${ARM_KEYS.join(',')} | jobs=${JOBS}${TAG ? ' | tag=' + TAG : ''} ===`);
 const tasks = [];
 for (const [k, f] of Object.entries(ARMS)) for (const t of TRACKS) tasks.push(() => run(k, f, t));
 const all = await pool(tasks);
