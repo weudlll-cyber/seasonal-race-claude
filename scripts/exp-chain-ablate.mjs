@@ -158,6 +158,12 @@ const ARM_LIB = {
   fbA70: withF(boundary(ROW(NAKED), 0.15), '--chainProximity=true', '--freeBand=true', '--freeBandR=0.70', '--freeBandNoise=reroll', '--freeBandAmp=0.06', '--freeBandCorridorGain=2'),
   fbB85: withF(boundary(ROW(NAKED), 0.15), '--chainProximity=true', '--freeBand=true', '--freeBandR=0.85', '--freeBandNoise=frozen', '--freeBandAmp=0.06', '--freeBandCorridorGain=2'),
   fbB70: withF(boundary(ROW(NAKED), 0.15), '--chainProximity=true', '--freeBand=true', '--freeBandR=0.70', '--freeBandNoise=frozen', '--freeBandAmp=0.06', '--freeBandCorridorGain=2'),
+  // ── ACTION-FREEBAND-2 — the stowaway removed (--chainProximity OFF everywhere) + the soft-spring dial.
+  // Best R from FREEBAND-1 = 0.85 (0.70 was worse). D = hard wall; E = soft spring {weak,medium}; F = E + scatter recovery.
+  fbD:   withF(boundary(ROW(NAKED), 0.15), '--freeBand=true', '--freeBandR=0.85', '--freeBandNoise=reroll', '--freeBandAmp=0.06', '--freeBandCorridor=hard', '--freeBandCorridorGain=2'),
+  fbEw:  withF(boundary(ROW(NAKED), 0.15), '--freeBand=true', '--freeBandR=0.85', '--freeBandNoise=reroll', '--freeBandAmp=0.06', '--freeBandCorridor=soft', '--freeBandSpringMax=0.03', '--freeBandSpringK=24'),
+  fbEm:  withF(boundary(ROW(NAKED), 0.15), '--freeBand=true', '--freeBandR=0.85', '--freeBandNoise=reroll', '--freeBandAmp=0.06', '--freeBandCorridor=soft', '--freeBandSpringMax=0.06', '--freeBandSpringK=24'),
+  fbF:   withF(boundary(ROW(NAKED), 0.15), '--freeBand=true', '--freeBandR=0.85', '--freeBandNoise=reroll', '--freeBandAmp=0.06', '--freeBandCorridor=soft', '--freeBandSpringMax=0.06', '--freeBandSpringK=24', '--freeBandSpringFrom=0.15'),
 };
 
 const BAND_EDGES = [5, 15, 25, 40];

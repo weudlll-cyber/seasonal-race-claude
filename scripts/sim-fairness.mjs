@@ -341,6 +341,11 @@ const FREE_BAND_R = Number(argVal('freeBandR', '0.85'));
 const FREE_BAND_NOISE = argVal('freeBandNoise', 'frozen'); // 'reroll' | 'frozen'
 const FREE_BAND_AMP = Number(argVal('freeBandAmp', '0.08'));
 const FREE_BAND_CORRIDOR_GAIN = Number(argVal('freeBandCorridorGain', '4'));
+// ACTION-FREEBAND-2: hard wall vs soft band spring + reachability-bounded scatter recovery (springFrom).
+const FREE_BAND_CORRIDOR = argVal('freeBandCorridor', 'hard'); // 'hard' | 'soft'
+const FREE_BAND_SPRING_K = Number(argVal('freeBandSpringK', '24'));
+const FREE_BAND_SPRING_MAX = Number(argVal('freeBandSpringMax', '0.06'));
+const FREE_BAND_SPRING_FROM_ARG = argVal('freeBandSpringFrom', ''); // '' → R (finale-only)
 // B2-leak trace (read-only diagnostic): adds b2LastInside to rawData rows. No-flag → byte-identical.
 const B2_TRACE = argv.includes('--b2-trace');
 // reRoll / trajectory dynamics overrides — same shared-default + argVal pattern. Lets a sweep
@@ -3375,6 +3380,10 @@ if (isMain) {
               freeBandNoise:             FREE_BAND_NOISE,
               freeBandAmp:               FREE_BAND_AMP,
               freeBandCorridorGain:      FREE_BAND_CORRIDOR_GAIN,
+              freeBandCorridor:          FREE_BAND_CORRIDOR,
+              freeBandSpringK:           FREE_BAND_SPRING_K,
+              freeBandSpringMax:         FREE_BAND_SPRING_MAX,
+              freeBandSpringFrom:        FREE_BAND_SPRING_FROM_ARG !== '' ? Number(FREE_BAND_SPRING_FROM_ARG) : null,
               trackWidthPx:              geometricTrackWidth,
               carWidthPx:                comboBodyNarrowPx,
               chainSegSec:               CHAIN_SEG_SEC,

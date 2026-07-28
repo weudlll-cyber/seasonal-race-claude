@@ -357,6 +357,14 @@ export function createRacePlan(racers, finishT, targetDurationMs, config = {}, s
           interval: config.freeBandInterval ?? 0.06, // re-sample period (reroll), in progress
           lastPos: config.freeBandLastPos ?? 0.95, // freeze the last draw after this (ship's frozen-last-draw)
           corridorGain: config.freeBandCorridorGain ?? 4, // edge-correction multiplier (hard band edge)
+          // ACTION-FREEBAND-2: 'hard' wall vs 'soft' band spring (bounded pull).
+          corridor: config.freeBandCorridor ?? 'hard',
+          springK: config.freeBandSpringK ?? 24, // spring stiffness (soft)
+          springMax: config.freeBandSpringMax ?? 0.06, // spring pull cap (soft) — << the ±clamp
+          // ARM F reachability-bounded scatter recovery: the (soft) spring begins pulling toward the drawn
+          // band at springFrom (< R) so it also does the sort — bounded, row-blind, topology-blind. Noise
+          // still only from R. Default = R (finale-only, ARMs D/E).
+          springFrom: config.freeBandSpringFrom ?? null,
         }
       : null,
     _fbOffset: new Map(), // free-band tempo offsets: index → {off} (frozen) or index → {bucket, off} (reroll)
@@ -860,15 +868,22 @@ export function createTrajectoryController(racePlan) {
       // CORRIDOR (steer ONLY on its DRAWN-band error — 0 inside → free, over-gained at the edge → hard) plus a
       // bounded tempo-variance source (frozen or re-sampled). No exact-rank capture. Arc racers (owner-arcs,
       // ARM C) keep their curve below (a declared corridor exception). Flag OFF → this never runs (byte-id). ──
-      if (plan._freeBand && !_preOutcome && phaseProgress >= plan._freeBand.R) {
+      // ACTION-FREEBAND-2: the release begins at springFrom (= R for the hard/soft finale arms; earlier for
+      // ARM F, where a bounded band SPRING also does the sort — the reachability-bounded scatter recovery).
+      // The tempo noise is always gated to R; before R (ARM F) the spring pulls toward band with no noise.
+      const fbFrom = plan._freeBand ? (plan._freeBand.springFrom ?? plan._freeBand.R) : 1;
+      if (plan._freeBand && !_preOutcome && phaseProgress >= fbFrom) {
         // Release everyone EXCEPT an active owner-arc (comebacker / fallbacker) — those are the ARM-C
         // cross-band authored stories that keep their curve (the declared corridor exception).
         const fbRole = plan._heroRoles ? plan._heroRoles.get(r.index) : null;
         if (fbRole !== 'comebacker' && fbRole !== 'fallbacker') {
           const fb = plan._freeBand;
           if (!plan._fbRng) plan._fbRng = mulberry32(((plan.seed | 0) ^ 0xf3eba7d) >>> 0 || 1);
+          const fbNoiseOn = phaseProgress >= fb.R; // noise only in the finale; spring may sort before R (ARM F)
           let entry = plan._fbOffset.get(r.index);
-          if (fb.noise === 'frozen') {
+          if (!fbNoiseOn) {
+            entry = { off: 0 };
+          } else if (fb.noise === 'frozen') {
             if (!entry) {
               entry = { off: (plan._fbRng() * 2 - 1) * fb.amp };
               plan._fbOffset.set(r.index, entry);
@@ -893,11 +908,15 @@ export function createTrajectoryController(racePlan) {
           const fbBandErr =
             currentRank < fbLo ? currentRank - fbLo : currentRank > fbHi ? currentRank - fbHi : 0;
           if (fbBandErr !== 0) plan._fbEdgeFights++;
-          const fbTarget = clamp(
-            1.0 + gain * fb.corridorGain * (fbBandErr / nActive) + fbNoise,
-            minMult,
-            maxMult
-          );
+          // ACTION-FREEBAND-2: 'hard' = a corridor wall (saturates to the full clamp at the edge); 'soft' =
+          // a bounded band SPRING (a gentle pull toward the drawn band, capped at springMax << the clamp), so
+          // a racer may drift a little out of band (some arrival cost) but is never over-braked/pinned — the
+          // tempo race keeps its room. strength 0 → ship; hard wall → FREEBAND-1.
+          const fbPull =
+            fb.corridor === 'soft'
+              ? clamp(fb.springK * (fbBandErr / nActive), -fb.springMax, fb.springMax)
+              : gain * fb.corridorGain * (fbBandErr / nActive);
+          const fbTarget = clamp(1.0 + fbPull + fbNoise, minMult, maxMult);
           _setTarget(r, fbTarget, elapsedMs);
           _racerStepCount++;
           if (currentRank >= fbLo && currentRank <= fbHi) _racersInCorridorCount++;
