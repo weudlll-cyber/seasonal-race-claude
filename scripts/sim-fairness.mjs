@@ -19,7 +19,9 @@
 //
 // Usage:
 //   node scripts/sim-fairness.mjs [--races=50] [--racers=40]
-//                                  [--out=client/tmp]
+//                                  [--out=<dir>]      (default: $RA_SCRATCH_DIR or <os-tmp>/racearena-scratch,
+//                                                      i.e. OFF the OneDrive tree; absolute honoured, relative → repo ROOT)
+//                                  [--purge-tmp]      (wipe the scratch OUT_DIR before the run; artifacts are reproducible)
 //                                  [--track=<id>] [--racer=<id>] [--dur=<sec>] [--seed=<n>]
 //
 //   Read-only diagnostics (flag-gated; a run without them is byte-identical):
@@ -47,9 +49,10 @@
 //   <out>/fairness-report.md   — human-readable Markdown report
 // ============================================================
 
-import { readFileSync, mkdirSync, writeFileSync, existsSync, readdirSync } from 'fs';
+import { readFileSync, mkdirSync, writeFileSync, existsSync, readdirSync, rmSync } from 'fs';
 import { join, dirname, isAbsolute } from 'path';
 import { fileURLToPath } from 'url';
+import { tmpdir } from 'os';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dir = dirname(__filename);
@@ -198,7 +201,13 @@ const N_RACERS       = Number(argVal('racers', '40'));
 // Fall back to N_RACERS when not specified so existing --racers= still works.
 const N_RACERS_OPEN   = Number(argVal('openRacers',   String(N_RACERS)));
 const N_RACERS_CLOSED = Number(argVal('closedRacers', String(N_RACERS)));
-const OUT_DIR        = join(ROOT, argVal('out', 'client/tmp'));
+// Scratch output. Default is an ABSOLUTE dir OUTSIDE the (OneDrive-synced) repo tree so heavy sweeps do
+// not thrash the sync client; override with env RA_SCRATCH_DIR or a `--out=` path. An absolute --out is
+// honoured as-is; a relative --out is still resolved under the repo ROOT (back-compat, e.g. --out=client/tmp).
+const RA_SCRATCH_DIR = process.env.RA_SCRATCH_DIR || join(tmpdir(), 'racearena-scratch');
+const _outArg        = argVal('out', RA_SCRATCH_DIR);
+const OUT_DIR        = isAbsolute(_outArg) ? _outArg : join(ROOT, _outArg);
+const PURGE_TMP      = argv.includes('--purge-tmp'); // wipe OUT_DIR before the run (artifacts are reproducible)
 const TRACK_FILTER   = argVal('track', null);   // e.g. --track=river-run
 const RACER_FILTER   = argVal('racer', null);   // e.g. --racer=horse
 // ── Canonical race-length inputs (speed/duration ship) ────────────────────────
@@ -3033,6 +3042,10 @@ if (isMain) {
   }
   console.log('');
 
+  if (PURGE_TMP && existsSync(OUT_DIR)) {
+    rmSync(OUT_DIR, { recursive: true, force: true });
+    console.log(`--purge-tmp: wiped ${OUT_DIR}`);
+  }
   mkdirSync(OUT_DIR, { recursive: true });
 
   const BASE_SPEED_MIN  = BASE_SPEED_MIN_OVR;
