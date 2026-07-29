@@ -1,0 +1,46 @@
+{
+  "track": "luger-hill",
+  "closed": false,
+  "surfaces": [
+    "ice",
+    "air"
+  ],
+  "expected": 5,
+  "cells": [
+    {
+      "type": "dragon",
+      "bandReach": 0.879,
+      "rowMin": 0.8683333333333333,
+      "holm": "UNF",
+      "runaway": 0
+    },
+    {
+      "type": "luge",
+      "bandReach": 0.8923333333333333,
+      "rowMin": 0.88,
+      "holm": "UNF",
+      "runaway": 0
+    },
+    {
+      "type": "plane",
+      "bandReach": 0.8816666666666667,
+      "rowMin": 0.8573333333333333,
+      "holm": "UNF",
+      "runaway": 0
+    },
+    {
+      "type": "rocket",
+      "bandReach": 0.8913333333333333,
+      "rowMin": 0.8773333333333333,
+      "holm": "ok",
+      "runaway": 0
+    },
+    {
+      "type": "snowmobile",
+      "bandReach": 0.8713333333333333,
+      "rowMin": 0.855,
+      "holm": "UNF",
+      "runaway": 0
+    }
+  ]
+}
