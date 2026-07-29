@@ -103,12 +103,59 @@ tried and did not produce provable row-fairness.
 - **Lesson 172** — steer position, never rank.
 - **Lesson 178** — action lives in ORCHESTRATION, not liberation; freeing the servo just settles the field.
 - **Lessons 181 / 182 / 183** — (above).
-- **New (2026-07-26, owner + code-verified)** — with identical racers, a breakaway once formed cannot be
-  reeled in by ANY continuous physical force (draft has finite range; braking the leader brakes the whole
-  front). A solution must PREVENT a breakaway (hard coupling / format) or make it IRRELEVANT to the result
-  (elimination = drama at the back; sector scoring = many finish lines; re-pack/restart = reset the field)
-  — NOT catch it after the fact.
+- **New (2026-07-26, owner + code-verified; wording made precise 2026-07-29 after COMBO15 shipped)** — with
+  identical racers, a breakaway once formed cannot be reeled in by ANY continuous physical force (draft has
+  finite range; braking the leader brakes the whole front — STEER-CAP-1 reconfirmed this from the other side:
+  capping the boost to close the gap WIDENED it, Lesson 189). That physical-force impossibility STANDS. What
+  the original bullet under-enumerated is the *class of non-physical-force solutions*: a mechanism does not
+  have to CATCH the breakaway or PREVENT it — it can make the breakaway **irrelevant to the FAIRNESS result**
+  by shaping the re-roll DRAW so the finishing order lands each racer in the band of its drawn place
+  regardless of who led the chaos. **This is the shipped answer (COMBO15, 2026-07-29):** the leader may still
+  break away in chaos, but the band-aware draw bias redistributes the FINISH into drawn bands (arrival
+  85–90%), so the escape stops deciding the race without ever being physically caught. So the precise wall is:
+  PREVENT a breakaway (hard coupling / format), OR make it irrelevant to the result — either by FORMAT
+  (elimination = drama at the back; sector scoring = many finish lines; re-pack/restart = reset the field) OR
+  by DRAW (bias the re-roll toward the drawn band, the Cliff Law's correct sign, Lesson 184) — but NEVER by a
+  continuous physical force that tries to catch it after the fact.
 - **Project Principle 9** — the camera is not a solution; action must exist in the physics.
+
+## G. The action / fair-arrival line (2026-07-27 … 07-29) — what died so COMBO15 could ship
+The multi-week hunt that ended in the shipped COMBO15 world (chaos steer + band-aware re-roll bias + 0.15
+chaos window, master `@175a475`, tag `v-ship-combo15`). These are the retired arms; the SHIPPED mechanism is
+documented in [FAIRNESS.md](FAIRNESS.md) and [../reports/parity/REBASELINE.md](../reports/parity/REBASELINE.md),
+not here.
+- **Admission-only action family (ACTION-BUILD-4 … 7 + ACTION-NIGHT-1) — FOUR kills, DEAD.** A series that
+  tried to manufacture sustained P1 uncertainty from the ADMISSION side only (frozen runtime budget): authored
+  traffic density, open-lane invariants, lane-conditional skips, proximity floors, authored cast/order. Each
+  improved a fairness or continuity sub-metric but NONE bought sustained P1 uncertainty — the front stayed
+  decided. **Why dead:** authored density/cast is still a decided race (Lesson 185); action needs a live
+  undecided re-roll window, which the admission side cannot create without a runtime force. Proof:
+  reports/evolution/ACTION-BUILD-4.md … ACTION-BUILD-7.md + ACTION-NIGHT-1.md (the overnight confirm).
+- **Band-corridor / free-band family (ACTION-FREEBAND-1/2) — DEAD, preregistered closure honored.** Make
+  racers reach their drawn band by a positional corridor: a HARD wall pinned the band but crushed the contest
+  (frontContest 28–36% vs ship 42–68%) and still fell below ship arrival; a SOFT spring leaked arrival off a
+  cliff (69→46%) without raising the contest. The dial is a **CLIFF, not a slope** (Lesson 184). **Why dead:**
+  any post-dice positional force is an opponent force. The preregistered gate (arrival ≥ ship+10 with contest
+  within 10pp and DEAD-BORING ≤ ship) was met by NO cell, so the line auto-closed. Proof:
+  reports/evolution/ACTION-FREEBAND-1.md + ACTION-FREEBAND-2.md. (Superseded by the WORKING sign of the same
+  goal: bias the DRAW, not the position — shipped as COMBO15.)
+- **Choreo-release family (CHOREO-RELEASE-1/2) — DEAD, three confirmations.** Lift the frozen-budget
+  constraint and RELEASE each racer to the ship's re-roll once it reaches home. Arrival-SAFE (band-hold worked,
+  80/75% at AT90) but the finish stayed DEAD-BORING because the outcome was already decided; the time-curve ran
+  the WRONG way (more dice time → more dead-boring), and a strong-steer variant confirmed it a third time.
+  **Why dead:** a decided race is flat however its motion is released (Lesson 185). Proof:
+  reports/evolution/CHOREO-RELEASE-1.md + CHOREO-RELEASE-2.md.
+- **Boost-side steer cap (STEER-CAP-1) — DEAD, backfired 6/6.** Cap the chaos-steer upper clamp to shrink
+  space-sprint's chaos hole. It WIDENED the gap on all three tracks at both caps. **Why dead:** the chaos
+  P1–P2 gap is set by the chasers' climb, not the leader's knob — throttling the boost slows the pursuers
+  (Lesson 189, the Wrong-Lever Law). The space-sprint residual (~1.6× ship) is documented as accepted, not
+  chased with this lever. Proof: reports/evolution/STEER-CAP-1.md.
+- **Blind A/B viewer (`?eye=A/B`) — DEAD tooling, replaced by the proof-of-live standard.** A coin-flip
+  blind-mapping URL switch for owner eye-tests. It never armed twice: path-navigation dropped the query before
+  mount, and the injected flags never passed raceCore's plan whitelist (silent no-op). **Why dead:** a viewer
+  with no liveness assertion is indistinguishable from a no-op (Lesson 187); cost two evenings. Replaced by the
+  proof-of-live triple (badge + console + runtime assertion) and, going forward, DevScreen presets over the
+  real config keys — NOT a `?world`/`?eye` URL hack. Proof: reports/evolution/EYE-SETUP-2.md.
 
 ## What this leaves open (not tried, not excluded)
 Formats that make a breakaway irrelevant rather than catching it: **elimination** (last-at-call out of
