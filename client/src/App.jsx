@@ -48,8 +48,10 @@ function App() {
     }
   }, []);
 
+  // react-router v7: startTransition + relativeSplatPath are the DEFAULT behavior now, so the v6
+  // `future` opt-in flags are removed (the app was already running with them enabled).
   return (
-    <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
+    <BrowserRouter>
       <AuthProvider>
         <BrandingSyncOnAuth />
         <RacerSyncOnAuth />

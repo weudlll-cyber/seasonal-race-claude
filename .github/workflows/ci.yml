@@ -44,12 +44,11 @@ jobs:
       - name: Run tests with coverage
         run: npm run test:coverage
 
-      # Audit policy (HYGIENE-1): npm audit FAILS the build on HIGH/CRITICAL; MODERATE and below are advisory.
-      - name: Security audit (fail on high/critical)
-        run: npm audit --audit-level=high
-
-      - name: Security audit (moderate — advisory, never fails)
-        run: npm audit --audit-level=moderate || true
+      # Audit policy (HYGIENE-1): FAILS the build on HIGH/CRITICAL, except advisories in the documented
+      # ALLOWLIST in scripts/audit-gate.mjs (each with a justification + remove-when condition). MODERATE
+      # and below are advisory only. See scripts/audit-gate.mjs.
+      - name: Security audit gate (high/critical fail unless allowlisted)
+        run: node ../scripts/audit-gate.mjs
 
   # ── Docs ────────────────────────────────────────────────────
   docs:
