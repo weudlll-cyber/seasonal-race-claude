@@ -365,7 +365,7 @@ The Round 1/2 diagnosis tables remain valid as **historical learning material**.
 - `_computeZoomLevels`: inverse path activation, 36px fallback when `referenceSpriteSize=0`, battle>leader ordering, `updateConfig()` live-apply
 - Cross-track invariance: closed worldW=1280 vs 6000, open worldW=6000, all produce `targetPx ± 0.01`
 
-7 updated tests in [`cameraConfig.test.js`](../client/src/modules/cameraConfig.test.js), [`CameraZoomTuningSection.test.jsx`](../client/src/screens/DevScreen/sections/CameraZoomTuningSection.test.jsx), [`SpriteSizeRangeSection.test.jsx`](../client/src/screens/DevScreen/sections/SpriteSizeRangeSection.test.jsx).
+7 updated tests in [`cameraConfig.test.js`](../client/src/modules/cameraConfig.test.js), `CameraZoomTuningSection.test.jsx` (since removed in a DevScreen refactor), [`SpriteSizeRangeSection.test.jsx`](../client/src/screens/DevScreen/sections/SpriteSizeRangeSection.test.jsx).
 
 ### Evaluated and rejected: Drama-Floor
 

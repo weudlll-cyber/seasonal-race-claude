@@ -52,4 +52,4 @@ proportionally.
 
 ---
 
-_Solution discussion and chosen approach: see [HANDOFF.md](../HANDOFF.md)_
+_Solution discussion and chosen approach: recorded in the commit history for this diagnosis (the former HANDOFF.md is not maintained)._

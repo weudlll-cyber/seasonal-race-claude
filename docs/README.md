@@ -24,8 +24,6 @@ This index maps the documents under `docs/`.
 ## Diagnoses, analyses & history
 - [CAMERA_TUNING_DIAGNOSIS.md](CAMERA_TUNING_DIAGNOSIS.md) — camera tuning effectiveness diagnosis report.
 - [SPEED_REFACTOR_ANALYSIS.md](SPEED_REFACTOR_ANALYSIS.md) — PR-A2 speed-pipeline refactor analysis.
-- [inventory-2026-05.md](inventory-2026-05.md) — May 2026 mechanics inventory (start phase + forces).
 - [LESSONS.md](LESSONS.md) — accumulated development lessons (L-numbered).
 - [AUDIT.md](AUDIT.md) — security & quality audit log (per-cycle entries).
 - [AUTH.md](AUTH.md) — authentication & authorization architecture (DESIGN, not built yet).
-- [handoff-notes.md](handoff-notes.md) — historical handoff notes.

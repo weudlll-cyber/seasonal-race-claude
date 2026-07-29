@@ -346,7 +346,7 @@ cleanup:
 ```
 
 **Single call site** — `camDir.update()` is called exactly once per frame at
-[`RaceScreen/index.jsx:1329`](client/src/screens/RaceScreen/index.jsx#L1329).
+[`RaceScreen/index.jsx`](../client/src/screens/RaceScreen/index.jsx).
 
 **React StrictMode** — `<React.StrictMode>` is active in dev (`client/src/main.jsx:16`).
 StrictMode double-invokes `useEffect` in dev. The `cancelled` flag (set before
