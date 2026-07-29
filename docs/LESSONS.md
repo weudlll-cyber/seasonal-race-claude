@@ -3004,3 +3004,140 @@ drafting line, where the field is kept together by honest physics and the start 
 mixing, not by steering). The experiment branch was dropped, not reverted — its two reports are the lab
 journal. Evidence: reports/evolution/PURSUIT-PROTO-1.md + PURSUIT-PROTO-2.md; recoverable at the archive tag
 `archive/handicap-pursuit-089c7d2`.
+
+## Lesson 184 — The Cliff Law: Correct the DRAW, Never the Motion After the Dice
+Every mechanism that tried to make racers reach the band of their drawn place by ACTING ON THEIR MOTION —
+a hard positional wall, a soft band spring, an authored finale curve — created a force the racer's honest
+physics then had to fight, and the fairness↔action frontier came out a **cliff**, not a slope. The one
+mechanism that worked did the opposite: it biased the RE-ROLL DRAW itself toward the drawn band, clamped to
+the honest `[spreadMin, spreadMax]` range, so nothing was ever fought.
+
+**Context.** The free-band line swept the corridor dial from hard wall to soft spring: hardening it lifted
+arrival only to 69% (already below ship's 72–75%) while crushing frontContest to 28–36%; softening it dropped
+arrival off a cliff (69→46%) *without* the contest rising (28→29%). There was no middle cell trading a little
+fairness for meaningful action. FAIR-ARRIVAL's B-vs-C comparison isolated why: ARM C (a literal band wall from
+`R`) posted arrival 68/70% DOWN and frontContest crushed to 27/55 (the pin); ARM B (aim the DRAW) posted
+arrival 89/89% (+14/+17pp) with frontContest within 1–2pp of ship AND the per-row floor UP 65→86.
+
+**Insight.** A correction applied *after* the dice have been rolled is an opponent force — it fights the
+racer's spread draw, its re-roll, and the servo all at once, so it can only buy fairness by spending action
+(and often loses both). A correction applied *to* the dice — shaping the draw before it becomes motion —
+changes what the racer *is*, so the honest physics that follows carries the fairness for free. Same goal,
+opposite sign: load the draw, don't wall the position.
+
+**Consequence.** Do not re-attempt band-arrival via any post-dice positional force (wall, spring, authored
+curve); the class is a cliff and closed. Reach fairness by biasing the re-roll draw within the honest tempo
+range (the shipped COMBO15 `bandBias`), keeping in-band racers on FREE dice (pillar 3). Evidence:
+reports/evolution/ACTION-FREEBAND-1.md + ACTION-FREEBAND-2.md (the cliff) and reports/evolution/FAIR-ARRIVAL-1.md
+(B-vs-C: aim the dice works, wall the position fails).
+
+## Lesson 185 — The Decidedness Law: The Fight IS the Undecidedness; Sort PARTIALLY, Not FULLY
+Action is not a thing you add on top of a plan — it is the plan being *not yet decided*. Every attempt to
+choreograph a livelier finish onto an already-decided outcome stayed flat, because a race whose result is
+fixed has nothing left to contest. The corollary is a timing law: the live re-roll is where the undecidedness
+lives, so FULL pre-sorting (deciding early) empties the pulk phase, while PARTIAL sorting leaves enough
+undecided to feed it.
+
+**Context.** The choreo-release line freed each racer to the ship's re-roll once home — arrival-safe (band-hold
+worked, 80/75% at AT90) but the finish stayed DEAD-BORING because the outcome was already decided; three
+confirmations, including a strong steer variant, all ran the T-curve the WRONG way (more dice time →
+more dead-boring). PULK-SPECTACLE then measured the mirror image from the other end: COMBO25's chaos steer
+FULLY sorted the field into the drawn band by chaos-end, and the pre-sorted band-1 favourite then OWNED the
+mid-race pulk (leaderIsDrawnB1_mid 0.57–0.75, distinctLeaders down); shrinking the chaos window to 0.15
+(COMBO15) made the sort PARTIAL, and the pulk came alive (maxLeadHoldShare_mid 0.42→0.27, distinctLeaders →~11).
+
+**Insight.** "Planned" and "decided" are the same thing, and a decided race is a flat race regardless of how
+its motion is dressed. The knob is not *how much* choreography but *how much stays undecided going into the
+window you want lively* — a FULL sort spends the pulk's uncertainty to buy chaos-end fairness; a PARTIAL sort
+banks the fairness and leaves the pulk something to fight over.
+
+**Consequence.** Never add action by scripting motion onto a fixed result; instead protect a live re-roll
+window where the order is genuinely still open, and tune the *fraction* sorted, not the amount of overlay.
+The shipped 0.15 chaos window is this law applied. Evidence: reports/evolution/CHOREO-RELEASE-1.md +
+CHOREO-RELEASE-2.md (decided = flat, three confirmations) and reports/evolution/PULK-SPECTACLE-1.md
+(full sort empties the pulk, partial sort feeds it).
+
+## Lesson 186 — The Proximity Floor Is a FAIRNESS Asset, Not Only an Action Tool
+Band-centre bunching — pulling each racer toward the middle of its drawn band through the approach — was
+carried as an action/closeness helper. When it was finally removed as a "stowaway" in a clean preregistered
+screen, band ARRIVAL fell. The closeness mechanism was quietly delivering fairness the whole time.
+
+**Context.** Every FREEBAND-1 arm had `--chainProximity` ON. FREEBAND-2's first act was to remove it and
+re-measure: with the proximity floor gone, absolute band arrival DROPPED (the hard-wall cell fell to 69/69%,
+below ship), and the per-row floor collapsed to 38–63%. The floor was not pinning racers to a wall — it was
+seating them in the centre of their band, from where the honest finish lands them in-band far more often.
+
+**Insight.** A mechanism justified by one metric (action/closeness) can be load-bearing for another
+(fairness/arrival) without anyone having attributed it there. Bunching toward band-centre raises arrival
+because a racer already near its band centre needs the least post-draw motion to finish in-band — the same
+"correct the position early, not late" logic as the Cliff Law, expressed as a floor.
+
+**Consequence.** Before removing a mechanism because its *stated* purpose is served elsewhere, measure it
+against the OTHER scoreboards first — a closeness tool may be a fairness tool wearing the wrong label. Evidence:
+reports/evolution/ACTION-FREEBAND-2.md §2 (the stowaway was a fairness asset: removing the proximity floor
+lowered arrival).
+
+## Lesson 187 — The Whitelist Trap and the Proof-of-Live Standard for Viewing Tools
+A plan flag set in `dynamicsConfig` does nothing in the browser unless it also passes `raceCore`'s explicit
+plan-config WHITELIST — and a dev viewing tool that silently no-ops looks exactly like a working one. Both
+together cost two evenings of blind eye-tests that were never actually running the candidate.
+
+**Context.** EYE-SETUP's `?world=combo` injected the fair-arrival flags into `dynamicsConfig`, but
+`raceCore.createRaceFromIdentity` builds its `createRacePlan` config from a hardcoded whitelist that never
+listed those flags, so the browser's plan got them stripped (steer ran 0 ticks) even though the config object
+carried them. The sim worked because `sim-fairness` has its own `createRacePlan`. The bug was invisible until
+a proof-of-live layer — a green/red on-screen badge, a race-start console line, and a runtime assertion that
+the flags are present in the LIVE config plus a chaos-end steer-tick check — flipped the badge RED instead of
+letting another blind session ship.
+
+**Insight.** The browser plan config is written twice (`raceCore` for the game, `goldenRunner.browserPlanConfig`
+for the parity twin); a new plan flag must be added to BOTH plus the sim, or it is silently dead on the path
+you're actually eye-testing. And any tool whose whole job is to show a variant must be able to PROVE it is
+showing that variant — a viewer with no liveness assertion is indistinguishable from a no-op.
+
+**Consequence.** To add a plan flag to the browser, thread it through `raceCore.createRaceFromIdentity`'s
+`createRacePlan` whitelist AND `goldenRunner.browserPlanConfig`, never only `sim-fairness`. Any viewing/eye-test
+tool ships with a proof-of-live triple: visible badge + console echo + runtime assertion that screams on a
+silent no-op. Evidence: reports/evolution/EYE-SETUP-2.md (the whitelist root cause + the badge that caught it).
+
+## Lesson 188 — Judge Fronts on the DUAL Scoreboard and Whole Races on the THREE-WINDOW Readout
+The dead-finale counter sees only COMPLETED P1 passes, so it scored genuine thrillers — a P2 pinned half a
+length behind for the whole finish — as "dead," and it scored the shipped game as duller than it is. The
+owner's eye caught mid-race flatness that every finale-only metric had passed.
+
+**Context.** Across the ACTION line the dead-finale count kept flagging ship's finales as dead when the front
+was in fact a sustained unresolved chase (contested but no lead CHANGE). Separately, PULK-SPECTACLE only found
+the real problem — a chaos breakaway that then owned the mid-race — because it read the race in THREE windows
+(chaos `[0, 0.15]` / pulk `[0.15, 0.60]` / finale), where the summary finale metrics showed nothing wrong; the
+LAW (longest-actionless-window) and pulk-hold means lived in the middle window the finale readout never looked at.
+
+**Insight.** A single completed-pass counter conflates "no contest" with "contest that didn't resolve," and a
+finale-only readout is blind to where a mid-race race actually goes flat. Fronts need a dual scoreboard
+(lead-CHANGES *and* sustained-proximity/hold), and whole races need the three-window split, or the metric will
+disagree with the eye — and the eye is right.
+
+**Consequence.** Score front liveliness on both axes (changes + hold), and gate whole-race liveliness on the
+chaos/pulk/finale three-window observer, not a finale summary. The v2 pulk watchdog is this lesson made a
+permanent gate line. Evidence: reports/evolution/ACTION-BUILD-7.md (the dual-scoreboard front reading) and
+reports/evolution/PULK-SPECTACLE-1.md (the three-window readout that found what finale metrics missed).
+
+## Lesson 189 — The Wrong-Lever Law: The Chaos P1–P2 Gap Is Set by the CHASERS, Not the Leader's Knob
+To close a modest early breakaway, the obvious lever is to cap how hard the steer boosts the leader. It
+backfired on every cell: capping the boost WIDENED the gap, because the boost is what lets the deep-drawn
+chasers climb and CLOSE — throttle it and the pursuers fall back instead.
+
+**Context.** STEER-CAP-1 lowered only the chaos-steer upper clamp (leader boost 1.10→1.04/1.06), aiming to
+shrink space-sprint's ~3.3L chaos hole. It fired correctly, and chaos maxGap INCREASED on all three tracks at
+both caps (6/6 cells): space-sprint 3.1→3.8/3.4, ice 2.5→2.8/2.7, searound 2.8→3.0/2.9 — the exact opposite of
+the intent, plus a two-sided loss (frontContest and in-band both fell).
+
+**Insight.** The chaos P1–P2 gap is the distance from the leader to the *field behind it*, and that distance
+is governed by how fast the chasers are climbing, not by the leader's own speed. The boost is a chaser's knob
+as much as a leader's; capping it slows the people trying to close the gap, so the gap grows. Diagnose which
+side of a gap a lever actually acts on before assuming it shrinks the gap.
+
+**Consequence.** Do not throttle the boost side to close a breakaway; if space-sprint's residual must close it
+needs a CHASER-side mechanism (partial-sort / band-EDGE target) or a leader BRAKE, not a boost cap. This is
+also why the v2 pulk watchdog reads chaos maxGap as a ratio to ship (≤ ship×1.5), catching disproportionate
+breakaway without punishing honest chase. Evidence: reports/evolution/STEER-CAP-1.md (boost cap backfires 6/6,
+the mechanism named).
