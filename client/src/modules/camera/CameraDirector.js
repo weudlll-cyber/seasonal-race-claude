@@ -469,15 +469,22 @@ export class CameraDirector {
   // ── Director helpers ──────────────────────────────────────────────────────
 
   _weightedRandomPick(candidates) {
-    if (candidates.length === 0) return null;
-    if (candidates.length === 1) return candidates[0];
-    const total = candidates.reduce((sum, c) => sum + c.weight, 0);
+    // Defense in depth (BATTLE-WEIGHT-ZERO-1): a weight of 0 means "never", so the selector must never
+    // surface a non-positive-weight candidate even if a caller mis-pushes one. Drop weight <= 0 BEFORE
+    // summing; an empty or zero-sum pool returns null (no pick) rather than an arbitrary candidate — the
+    // old code returned candidates[0] for a length-1 pool (ignoring its weight) and the first candidate for
+    // a zero-sum pool (r = Math.random()*0 = 0 → r -= w → r <= 0 on the first element).
+    const pool = candidates.filter((c) => c.weight > 0);
+    if (pool.length === 0) return null;
+    if (pool.length === 1) return pool[0];
+    const total = pool.reduce((sum, c) => sum + c.weight, 0);
+    if (!(total > 0)) return null;
     let r = Math.random() * total;
-    for (const c of candidates) {
+    for (const c of pool) {
       r -= c.weight;
       if (r <= 0) return c;
     }
-    return candidates[candidates.length - 1];
+    return pool[pool.length - 1];
   }
 
   _isOverviewEligible(ts, raceState) {
@@ -1133,7 +1140,9 @@ export class CameraDirector {
     else {
       const candidates = [];
 
-      if (hasBattle && battleCooledDown) {
+      // Every pool push is guarded by weight > 0 (BATTLE-WEIGHT-ZERO-1): a 0.00 slider means "never",
+      // consistently for every event. (The selector below also filters weight <= 0 as defense in depth.)
+      if (hasBattle && battleCooledDown && this._battleWeight > 0) {
         candidates.push({
           state: CAM_STATE.BATTLE_ZOOM,
           weight: this._battleWeight,
@@ -1142,7 +1151,7 @@ export class CameraDirector {
       }
 
       const lcCooledDown = ts - this._lastLeadChangeExitTs >= this._leadChangeCooldownMs;
-      if (this._leadChangePending && lcCooledDown) {
+      if (this._leadChangePending && lcCooledDown && this._leadChangeWeight > 0) {
         candidates.push({
           state: CAM_STATE.LEAD_CHANGE,
           weight: this._leadChangeWeight,
@@ -1153,7 +1162,11 @@ export class CameraDirector {
       const comebackCooledDown = ts - this._lastComebackExitTs >= this._comebackCooldownMs;
       let _comebackRacer = null;
       const _internalOutcomePhase = leaderProgress > this._outcomePhaseThreshold;
-      if ((raceState?.isOutcomePhase || _internalOutcomePhase) && comebackCooledDown) {
+      if (
+        (raceState?.isOutcomePhase || _internalOutcomePhase) &&
+        comebackCooledDown &&
+        this._comebackWeight > 0
+      ) {
         _comebackRacer = this._detectComebackRacer(racers, ts);
         if (_comebackRacer) {
           candidates.push({
@@ -1165,7 +1178,7 @@ export class CameraDirector {
         }
       }
 
-      if (this._isOverviewEligible(ts, raceState)) {
+      if (this._isOverviewEligible(ts, raceState) && this._overviewWeight > 0) {
         candidates.push({
           state: CAM_STATE.OVERVIEW,
           weight: this._overviewWeight,

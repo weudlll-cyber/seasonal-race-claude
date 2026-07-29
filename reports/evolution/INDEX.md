@@ -5,6 +5,7 @@ themselves are the record; the living docs are [LESSONS.md](../../docs/LESSONS.m
 and [FAIRNESS.md](../../docs/FAIRNESS.md). Shipped world: **COMBO15** (`v-ship-combo15`, fingerprint `ded0a126048e4cdb`).
 
 ## Camera / presentation fixes
+- [BATTLE-WEIGHT-ZERO-1.md](BATTLE-WEIGHT-ZERO-1.md) — a weight-0 camera event (BATTLE) still entered (unguarded pool push + selector returned zero-weight/zero-sum picks). **FIXED: weight>0 pool guards + selector filters weight<=0 → null; fp identical.**
 - [CAMERA-JITTER-1.md](CAMERA-JITTER-1.md) — the LEADER-MINVIS-1 min-visible floor jittered zoom+pan (binding racer flips each frame in the dense field). **FIXED: asymmetric rate-limit (loosen instant, tighten slow) → floor swing 0.42→0.04; fp identical.**
 - [BATTLE-TRIGGER-RANGE-1.md](BATTLE-TRIGGER-RANGE-1.md) — Pulk Closeness / Isolation sliders re-scaled to the sub-1% zone (0.1%–2.0%, step 0.1%) for the dense COMBO15 field. **Presentation-only; defaults unchanged; fp identical.**
 - [LEADER-MINVIS-1.md](LEADER-MINVIS-1.md) — the LEADER "zoom out until ≥8 visible" rule existed but didn't act (slow ratchet zoomed in first, crawled out, reset on transition). **FIXED: direct per-frame min-visible zoom floor; fp identical.**

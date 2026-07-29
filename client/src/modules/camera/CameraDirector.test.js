@@ -5999,3 +5999,150 @@ describe('dynamic zoom-out — min-visible floor is smoothed (CAMERA-JITTER-1)',
     expect(visible).toBe(6); // visTarget clamps to the 6 active — all shown, no over-zoom
   });
 });
+
+// ── BATTLE-WEIGHT-ZERO-1: a zero-weight event never enters, and the selector is defensive ────
+// DEFECT A: a zero-weight state was pushed to the pool and returned by the single-candidate early-out.
+// DEFECT B: the weighted selector returned a zero-weight / zero-sum candidate instead of no-pick.
+
+describe('weighted event selection never surfaces a zero-weight state (BATTLE-WEIGHT-ZERO-1)', () => {
+  const denseTop = Array.from({ length: 10 }, (_, i) => ({
+    index: i,
+    t: 0.5 - i * 0.001, // leaderProgress ≈ 0.5 (mid-race: past holds, below endgame + outcome)
+    x: 600 + i * 4,
+    y: 360,
+    finished: false,
+  }));
+  const rs = (over = {}) => ({
+    raceElapsed: 20000,
+    finishedCount: 0,
+    winner: null,
+    finishT: 1.0,
+    ...over,
+  });
+  const mkDir = (cfg = {}) => new CameraDirector(1280, 720, false, cfg, 36);
+  // ts = 20000 is past START_PHASE (3000) + postStartHold (7000) and the 8000ms battle cooldown.
+
+  // ── selector unit (DEFECT B) ──
+  it('_weightedRandomPick: a single zero-weight candidate returns null (not the candidate)', () => {
+    expect(mkDir()._weightedRandomPick([{ state: CAM_STATE.BATTLE_ZOOM, weight: 0 }])).toBeNull();
+  });
+  it('_weightedRandomPick: an all-zero (zero-sum) pool returns null', () => {
+    expect(
+      mkDir()._weightedRandomPick([
+        { state: 'A', weight: 0 },
+        { state: 'B', weight: 0 },
+      ])
+    ).toBeNull();
+  });
+  it('_weightedRandomPick: an empty pool returns null', () => {
+    expect(mkDir()._weightedRandomPick([])).toBeNull();
+  });
+  it('_weightedRandomPick: a mixed pool never returns the zero-weight member', () => {
+    const cd = mkDir();
+    for (let i = 0; i < 200; i++) {
+      const p = cd._weightedRandomPick([
+        { state: 'ZERO', weight: 0 },
+        { state: 'POS', weight: 0.5 },
+      ]);
+      expect(p.state).toBe('POS');
+    }
+  });
+  it('_weightedRandomPick: positive weights still pick proportionally', () => {
+    const cd = mkDir();
+    const counts = { A: 0, B: 0 };
+    for (let i = 0; i < 4000; i++)
+      counts[
+        cd._weightedRandomPick([
+          { state: 'A', weight: 0.75 },
+          { state: 'B', weight: 0.25 },
+        ]).state
+      ]++;
+    const frac = counts.A / (counts.A + counts.B);
+    expect(frac).toBeGreaterThan(0.6);
+    expect(frac).toBeLessThan(0.9);
+  });
+
+  // ── pool integration (DEFECT A — the owner's case) ──
+  it('BATTLE weight 0 is never selected even when a pulk is eligible every frame (owner symptom)', () => {
+    const cd = mkDir({
+      battleWeight: 0,
+      leadChangeWeight: 0,
+      comebackWeight: 0,
+      overviewWeight: 0,
+    });
+    cd._isPulk = () => true; // force battle eligibility
+    for (let i = 0; i < 300; i++) {
+      const pick = cd._pickNextState(denseTop, 20000 + i * 16, rs());
+      if (pick) expect(pick.nextState).not.toBe(CAM_STATE.BATTLE_ZOOM);
+    }
+  });
+  it('BATTLE weight > 0 DOES fire when a pulk is eligible (control: the guard is weight-specific)', () => {
+    const cd = mkDir({
+      battleWeight: 1,
+      leadChangeWeight: 0,
+      comebackWeight: 0,
+      overviewWeight: 0,
+    });
+    cd._isPulk = () => true;
+    let sawBattle = false;
+    for (let i = 0; i < 40; i++)
+      if (cd._pickNextState(denseTop, 20000 + i * 16, rs())?.nextState === CAM_STATE.BATTLE_ZOOM)
+        sawBattle = true;
+    expect(sawBattle).toBe(true);
+  });
+  it('LEAD_CHANGE weight 0 is never selected even when a lead change is pending', () => {
+    const cd = mkDir({
+      leadChangeWeight: 0,
+      battleWeight: 0,
+      comebackWeight: 0,
+      overviewWeight: 0,
+    });
+    cd._leadChangePending = true;
+    const pick = cd._pickNextState(denseTop, 20000, rs());
+    expect(pick.nextState).not.toBe(CAM_STATE.LEAD_CHANGE);
+  });
+  it('all pool weights 0 → no-pick → LEADER default (never BATTLE)', () => {
+    const cd = mkDir({
+      battleWeight: 0,
+      leadChangeWeight: 0,
+      comebackWeight: 0,
+      overviewWeight: 0,
+    });
+    cd._isPulk = () => true;
+    cd._isOverviewEligible = () => true;
+    const pick = cd._pickNextState(denseTop, 20000, rs());
+    expect(pick.nextState).toBe(CAM_STATE.LEADER_ZOOM);
+    expect(pick.reason).toMatch(/no active candidates/);
+  });
+
+  // ── mandatory states are outside the pool (STEP 4) ──
+  it('mandatory start-phase OVERVIEW fires even with all pool weights 0', () => {
+    const cd = mkDir({
+      battleWeight: 0,
+      leadChangeWeight: 0,
+      comebackWeight: 0,
+      overviewWeight: 0,
+    });
+    expect(cd._pickNextState(denseTop, 1000, rs({ raceElapsed: 1000 })).nextState).toBe(
+      CAM_STATE.OVERVIEW
+    );
+  });
+  it('mandatory endgame LEADER fires even with all pool weights 0', () => {
+    const cd = mkDir({
+      battleWeight: 0,
+      leadChangeWeight: 0,
+      comebackWeight: 0,
+      overviewWeight: 0,
+    });
+    const endgame = Array.from({ length: 10 }, (_, i) => ({
+      index: i,
+      t: 0.95 - i * 0.001,
+      x: 600,
+      y: 360,
+      finished: false,
+    }));
+    const pick = cd._pickNextState(endgame, 20000, rs()); // leaderProgress 0.95 > endgameThreshold
+    expect(pick.nextState).toBe(CAM_STATE.LEADER_ZOOM);
+    expect(pick.reason).toMatch(/endgame/);
+  });
+});
