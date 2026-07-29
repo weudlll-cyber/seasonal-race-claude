@@ -1,0 +1,46 @@
+
+=== CHAIN-ABLATE battery — N=20/arm/track | tracks luger-hill, mountainstreet, searound, dirt-oval | seed=1 jobs=4 ===
+arms: ship, B15clrC, B15clrD
+(ship cache hit)
+
+── ship ──
+  track           | band (Δship) | dead (Δship) | lead-chg (Δship) | LAWfull LAWl50 (Δship) | holm
+  luger-hill      |  69% (  —) |  10% (  —) |  2.90 (  —) | 0.29   0.24  ( —/—) | skip 0% | ok
+  mountainstreet  |  71% (  —) |  20% (  —) |  1.85 (  —) | 0.30   0.22  ( —/—) | skip 0% | ok
+  searound        |  75% (  —) |  10% (  —) |  1.45 (  —) | 0.31   0.25  ( —/—) | skip 0% | UNF
+  dirt-oval       |  73% (  —) |   5% (  —) |  2.10 (  —) | 0.29   0.19  ( —/—) | skip 0% | ok
+  SUMMARY band-reach mean 72% | tracks ≥70%: 3/4
+
+── B15clrC ──
+  track           | band (Δship) | dead (Δship) | lead-chg (Δship) | LAWfull LAWl50 (Δship) | holm
+  luger-hill      |  73% (+5pp) |  10% (+0pp) |  2.60 (-0.30) | 0.44   0.33  (+0.14/+0.09) | skip 15% | UNF
+  mountainstreet  |  72% (+1pp) |   0% (-20pp) |  2.90 (+1.05) | 0.42   0.32  (+0.12/+0.10) | skip 25% | ok
+  searound        |  73% (-2pp) |  30% (+20pp) |  1.85 (+0.40) | 0.51   0.35  (+0.20/+0.10) | skip 29% | ok
+  dirt-oval       |  72% (-1pp) |  15% (+10pp) |  1.50 (-0.60) | 0.55   0.39  (+0.26/+0.20) | skip 18% | ok
+  SUMMARY band-reach mean 73% | tracks ≥70%: 4/4
+    [comp luger-hill   ] scripts 8.5 (fl1.0 cb2.4 fb2.2 pc2.2 dp0.8 pf0.0) | drop 0.0 shrink 0.3 | H 2.19 sigColl 0% (20/20)
+    [clr  luger-hill   ] lanes 10.0 (min 10.0) budget 1.00 | latAdmit 4.8 latRefuse 0.0 | accAdmit 6.0 | frontConv 0.0 | leadLast30 56.50
+    [comp mountainstreet] scripts 8.5 (fl1.0 cb2.4 fb2.2 pc2.2 dp0.8 pf0.0) | drop 0.0 shrink 0.3 | H 2.19 sigColl 0% (20/20)
+    [clr  mountainstreet] lanes 15.0 (min 15.0) budget 1.00 | latAdmit 4.8 latRefuse 0.0 | accAdmit 6.0 | frontConv 0.0 | leadLast30 56.20
+    [comp searound     ] scripts 9.9 (fl1.0 cb2.4 fb2.2 pc4.2 dp0.1 pf0.0) | drop 0.0 shrink 0.3 | H 1.93 sigColl 0% (20/20)
+    [clr  searound     ] lanes 5.0 (min 5.0) budget 1.00 | latAdmit 2.1 latRefuse 17.5 | accAdmit 4.0 | frontConv 2.0 | leadLast30 37.30
+    [comp dirt-oval    ] scripts 8.5 (fl1.0 cb2.4 fb2.2 pc2.2 dp0.8 pf0.0) | drop 0.0 shrink 0.3 | H 2.19 sigColl 0% (20/20)
+    [clr  dirt-oval    ] lanes 10.0 (min 10.0) budget 1.00 | latAdmit 4.8 latRefuse 0.0 | accAdmit 6.0 | frontConv 0.0 | leadLast30 38.60
+
+── B15clrD ──
+  track           | band (Δship) | dead (Δship) | lead-chg (Δship) | LAWfull LAWl50 (Δship) | holm
+  luger-hill      |  73% (+5pp) |  10% (+0pp) |  2.60 (-0.30) | 0.44   0.33  (+0.14/+0.09) | skip 15% | UNF
+  mountainstreet  |  72% (+1pp) |   0% (-20pp) |  2.90 (+1.05) | 0.42   0.32  (+0.12/+0.10) | skip 25% | ok
+  searound        |  77% (+2pp) |  15% (+5pp) |  1.80 (+0.35) | 0.62   0.39  (+0.31/+0.14) | skip 0% | ok
+  dirt-oval       |  72% (-1pp) |  15% (+10pp) |  1.50 (-0.60) | 0.55   0.39  (+0.26/+0.20) | skip 18% | ok
+  SUMMARY band-reach mean 73% | tracks ≥70%: 4/4
+    [comp luger-hill   ] scripts 8.5 (fl1.0 cb2.4 fb2.2 pc2.2 dp0.8 pf0.0) | drop 0.0 shrink 0.3 | H 2.19 sigColl 0% (20/20)
+    [clr  luger-hill   ] lanes 10.0 (min 10.0) budget 1.00 | latAdmit 4.8 latRefuse 0.0 | accAdmit 6.0 | frontConv 0.0 | leadLast30 56.50
+    [comp mountainstreet] scripts 8.5 (fl1.0 cb2.4 fb2.2 pc2.2 dp0.8 pf0.0) | drop 0.0 shrink 0.3 | H 2.19 sigColl 0% (20/20)
+    [clr  mountainstreet] lanes 15.0 (min 15.0) budget 1.00 | latAdmit 4.8 latRefuse 0.0 | accAdmit 6.0 | frontConv 0.0 | leadLast30 56.20
+    [comp searound     ] scripts 0.0 (fl0.0 cb0.0 fb0.0 pc0.0 dp0.0 pf0.0) | drop 0.0 shrink 0.0 | H 0.00 sigColl 100% (1/20)
+    [clr  searound     ] lanes 5.0 (min 5.0) budget 0.00 | latAdmit 0.0 latRefuse 0.0 | accAdmit 0.0 | frontConv 0.0 | leadLast30 37.55
+    [comp dirt-oval    ] scripts 8.5 (fl1.0 cb2.4 fb2.2 pc2.2 dp0.8 pf0.0) | drop 0.0 shrink 0.3 | H 2.19 sigColl 0% (20/20)
+    [clr  dirt-oval    ] lanes 10.0 (min 10.0) budget 1.00 | latAdmit 4.8 latRefuse 0.0 | accAdmit 6.0 | frontConv 0.0 | leadLast30 38.60
+
+runtime 7.4 min

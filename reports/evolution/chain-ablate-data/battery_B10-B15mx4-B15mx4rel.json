@@ -1,0 +1,188 @@
+{
+  "races": 20,
+  "seed": 1,
+  "arms": [
+    "ship",
+    "B10",
+    "B15mx4",
+    "B15mx4rel"
+  ],
+  "results": [
+    {
+      "arm": "ship",
+      "track": "luger-hill",
+      "closed": false,
+      "bandReach": 0.685,
+      "startRowUnfair": false,
+      "rowReachMin": 0.64375,
+      "deadRate": 0.1,
+      "leadChanges": 2.9,
+      "runawayRate": 0.1
+    },
+    {
+      "arm": "ship",
+      "track": "mountainstreet",
+      "closed": false,
+      "bandReach": 0.71,
+      "startRowUnfair": false,
+      "rowReachMin": 0.7,
+      "deadRate": 0.2,
+      "leadChanges": 1.85,
+      "runawayRate": 0
+    },
+    {
+      "arm": "ship",
+      "track": "searound",
+      "closed": true,
+      "bandReach": 0.74625,
+      "startRowUnfair": true,
+      "rowReachMin": 0.65,
+      "deadRate": 0.1,
+      "leadChanges": 1.45,
+      "runawayRate": 0.2
+    },
+    {
+      "arm": "ship",
+      "track": "dirt-oval",
+      "closed": true,
+      "bandReach": 0.73125,
+      "startRowUnfair": false,
+      "rowReachMin": 0.72,
+      "deadRate": 0.05,
+      "leadChanges": 2.1,
+      "runawayRate": 0.15
+    },
+    {
+      "arm": "B10",
+      "track": "luger-hill",
+      "closed": false,
+      "bandReach": 0.7241666666666666,
+      "startRowUnfair": true,
+      "rowReachMin": 0.6722222222222223,
+      "deadRate": 0.15,
+      "leadChanges": 1.95,
+      "runawayRate": 0.3
+    },
+    {
+      "arm": "B10",
+      "track": "mountainstreet",
+      "closed": false,
+      "bandReach": 0.7708333333333334,
+      "startRowUnfair": false,
+      "rowReachMin": 0.745,
+      "deadRate": 0.15,
+      "leadChanges": 2.05,
+      "runawayRate": 0.45
+    },
+    {
+      "arm": "B10",
+      "track": "searound",
+      "closed": true,
+      "bandReach": 0.73875,
+      "startRowUnfair": false,
+      "rowReachMin": 0.6333333333333333,
+      "deadRate": 0.15,
+      "leadChanges": 1.4,
+      "runawayRate": 0.45
+    },
+    {
+      "arm": "B10",
+      "track": "dirt-oval",
+      "closed": true,
+      "bandReach": 0.74,
+      "startRowUnfair": true,
+      "rowReachMin": 0.68,
+      "deadRate": 0.35,
+      "leadChanges": 1,
+      "runawayRate": 0.4
+    },
+    {
+      "arm": "B15mx4",
+      "track": "luger-hill",
+      "closed": false,
+      "bandReach": 0.7108333333333333,
+      "startRowUnfair": false,
+      "rowReachMin": 0.6166666666666667,
+      "deadRate": 0.2,
+      "leadChanges": 2.05,
+      "runawayRate": 0.3
+    },
+    {
+      "arm": "B15mx4",
+      "track": "mountainstreet",
+      "closed": false,
+      "bandReach": 0.7383333333333333,
+      "startRowUnfair": false,
+      "rowReachMin": 0.72,
+      "deadRate": 0.15,
+      "leadChanges": 1.5,
+      "runawayRate": 0.4
+    },
+    {
+      "arm": "B15mx4",
+      "track": "searound",
+      "closed": true,
+      "bandReach": 0.75,
+      "startRowUnfair": true,
+      "rowReachMin": 0.6583333333333333,
+      "deadRate": 0.2,
+      "leadChanges": 1.75,
+      "runawayRate": 0.55
+    },
+    {
+      "arm": "B15mx4",
+      "track": "dirt-oval",
+      "closed": true,
+      "bandReach": 0.71875,
+      "startRowUnfair": false,
+      "rowReachMin": 0.62,
+      "deadRate": 0.2,
+      "leadChanges": 1.95,
+      "runawayRate": 0.3
+    },
+    {
+      "arm": "B15mx4rel",
+      "track": "luger-hill",
+      "closed": false,
+      "bandReach": 0.7091666666666666,
+      "startRowUnfair": false,
+      "rowReachMin": 0.6111111111111112,
+      "deadRate": 0.1,
+      "leadChanges": 1.8,
+      "runawayRate": 0.3
+    },
+    {
+      "arm": "B15mx4rel",
+      "track": "mountainstreet",
+      "closed": false,
+      "bandReach": 0.7525,
+      "startRowUnfair": false,
+      "rowReachMin": 0.725,
+      "deadRate": 0.05,
+      "leadChanges": 2,
+      "runawayRate": 0.4
+    },
+    {
+      "arm": "B15mx4rel",
+      "track": "searound",
+      "closed": true,
+      "bandReach": 0.73,
+      "startRowUnfair": true,
+      "rowReachMin": 0.6416666666666667,
+      "deadRate": 0.15,
+      "leadChanges": 1.65,
+      "runawayRate": 0.55
+    },
+    {
+      "arm": "B15mx4rel",
+      "track": "dirt-oval",
+      "closed": true,
+      "bandReach": 0.70625,
+      "startRowUnfair": false,
+      "rowReachMin": 0.625,
+      "deadRate": 0.25,
+      "leadChanges": 1.6,
+      "runawayRate": 0.3
+    }
+  ]
+}

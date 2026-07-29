@@ -1,0 +1,53 @@
+
+=== CHAIN-ABLATE battery — N=100/arm/track | tracks city-circuit, dirt-oval, garden-path, ice-track, luger-hill, mountainstreet, river-run, searound, seatrack, space-sprint | seed=1 jobs=4 ===
+arms: ship, B15clrD
+
+── ship ──
+  track           | band (Δship) | dead (Δship) | lead-chg (Δship) | LAWfull LAWl50 (Δship) | holm
+  city-circuit    |  67% (  —) |  18% (  —) |  1.72 (  —) | 0.32   0.26  ( —/—) | skip 0% | UNF
+  dirt-oval       |  70% (  —) |  21% (  —) |  1.33 (  —) | 0.32   0.26  ( —/—) | skip 0% | UNF
+  garden-path     |  76% (  —) |  16% (  —) |  1.87 (  —) | 0.29   0.20  ( —/—) | skip 0% | ok
+  ice-track       |  68% (  —) |  17% (  —) |  1.55 (  —) | 0.33   0.25  ( —/—) | skip 0% | UNF
+  luger-hill      |  63% (  —) |   8% (  —) |  2.13 (  —) | 0.31   0.25  ( —/—) | skip 0% | UNF
+  mountainstreet  |  67% (  —) |  18% (  —) |  1.76 (  —) | 0.31   0.25  ( —/—) | skip 0% | ok
+  river-run       |  67% (  —) |  19% (  —) |  1.48 (  —) | 0.31   0.25  ( —/—) | skip 0% | UNF
+  searound        |  66% (  —) |  20% (  —) |  1.28 (  —) | 0.37   0.28  ( —/—) | skip 0% | UNF
+  seatrack        |  66% (  —) |  16% (  —) |  1.68 (  —) | 0.31   0.25  ( —/—) | skip 0% | ok
+  space-sprint    |  61% (  —) |   6% (  —) |  1.83 (  —) | 0.30   0.24  ( —/—) | skip 0% | UNF
+  SUMMARY band-reach mean 67% | tracks ≥70%: 1/10
+
+── B15clrD ──
+  track           | band (Δship) | dead (Δship) | lead-chg (Δship) | LAWfull LAWl50 (Δship) | holm
+  city-circuit    |  73% (+5pp) |  14% (-4pp) |  1.89 (+0.17) | 0.51   0.36  (+0.19/+0.10) | skip 21% | ok
+  dirt-oval       |  73% (+4pp) |  13% (-8pp) |  1.77 (+0.44) | 0.50   0.34  (+0.18/+0.09) | skip 23% | ok
+  garden-path     |  72% (-4pp) |  19% (+3pp) |  1.58 (-0.29) | 0.59   0.39  (+0.31/+0.19) | skip 22% | ok
+  ice-track       |  74% (+5pp) |  24% (+7pp) |  1.28 (-0.27) | 0.51   0.36  (+0.19/+0.11) | skip 22% | UNF
+  luger-hill      |  69% (+6pp) |  13% (+5pp) |  1.97 (-0.16) | 0.46   0.35  (+0.15/+0.09) | skip 15% | UNF
+  mountainstreet  |  72% (+4pp) |  13% (-5pp) |  2.03 (+0.27) | 0.45   0.34  (+0.14/+0.09) | skip 14% | UNF
+  river-run       |  71% (+4pp) |   9% (-10pp) |  2.23 (+0.75) | 0.45   0.34  (+0.15/+0.08) | skip 19% | UNF
+  searound        |  74% (+8pp) |  34% (+14pp) |  1.20 (-0.08) | 0.67   0.38  (+0.30/+0.10) | skip 0% | UNF
+  seatrack        |  71% (+5pp) |  17% (+1pp) |  1.75 (+0.07) | 0.44   0.33  (+0.13/+0.07) | skip 14% | UNF
+  space-sprint    |  65% (+4pp) |  15% (+9pp) |  1.83 (+0.00) | 0.44   0.33  (+0.14/+0.09) | skip 11% | UNF
+  SUMMARY band-reach mean 71% | tracks ≥70%: 8/10
+    [comp city-circuit ] scripts 8.0 (fl1.0 cb1.9 fb2.0 pc2.1 dp0.9 pf0.0) | drop 0.0 shrink 0.2 | H 2.24 sigColl 2% (99/100)
+    [clr  city-circuit ] lanes 10.0 (min 10.0) budget 1.00 | latAdmit 4.9 latRefuse 0.0 | accAdmit 6.0 | frontConv 0.0 | leadLast30 36.96
+    [comp dirt-oval    ] scripts 8.0 (fl1.0 cb1.9 fb2.0 pc2.1 dp0.9 pf0.0) | drop 0.0 shrink 0.2 | H 2.24 sigColl 2% (99/100)
+    [clr  dirt-oval    ] lanes 10.0 (min 10.0) budget 1.00 | latAdmit 4.9 latRefuse 0.0 | accAdmit 6.0 | frontConv 0.0 | leadLast30 37.12
+    [comp garden-path  ] scripts 8.0 (fl1.0 cb1.9 fb2.0 pc2.1 dp0.9 pf0.0) | drop 0.0 shrink 0.2 | H 2.24 sigColl 2% (99/100)
+    [clr  garden-path  ] lanes 10.0 (min 10.0) budget 1.00 | latAdmit 4.9 latRefuse 0.0 | accAdmit 6.0 | frontConv 0.0 | leadLast30 39.36
+    [comp ice-track    ] scripts 8.0 (fl1.0 cb1.9 fb2.0 pc2.1 dp0.9 pf0.0) | drop 0.0 shrink 0.2 | H 2.24 sigColl 2% (99/100)
+    [clr  ice-track    ] lanes 10.0 (min 10.0) budget 1.00 | latAdmit 4.9 latRefuse 0.0 | accAdmit 6.0 | frontConv 0.0 | leadLast30 36.01
+    [comp luger-hill   ] scripts 8.0 (fl1.0 cb1.9 fb2.0 pc2.1 dp0.9 pf0.0) | drop 0.0 shrink 0.2 | H 2.24 sigColl 2% (99/100)
+    [clr  luger-hill   ] lanes 10.0 (min 10.0) budget 1.00 | latAdmit 4.9 latRefuse 0.0 | accAdmit 6.0 | frontConv 0.0 | leadLast30 51.22
+    [comp mountainstreet] scripts 8.0 (fl1.0 cb1.9 fb2.0 pc2.1 dp0.9 pf0.0) | drop 0.0 shrink 0.2 | H 2.24 sigColl 2% (99/100)
+    [clr  mountainstreet] lanes 15.0 (min 15.0) budget 1.00 | latAdmit 4.9 latRefuse 0.0 | accAdmit 6.0 | frontConv 0.0 | leadLast30 50.48
+    [comp river-run    ] scripts 8.0 (fl1.0 cb1.9 fb2.0 pc2.1 dp0.9 pf0.0) | drop 0.0 shrink 0.2 | H 2.24 sigColl 2% (99/100)
+    [clr  river-run    ] lanes 10.0 (min 10.0) budget 1.00 | latAdmit 4.9 latRefuse 0.0 | accAdmit 6.0 | frontConv 0.0 | leadLast30 51.86
+    [comp searound     ] scripts 0.0 (fl0.0 cb0.0 fb0.0 pc0.0 dp0.0 pf0.0) | drop 0.0 shrink 0.0 | H 0.00 sigColl 100% (1/100)
+    [clr  searound     ] lanes 5.0 (min 5.0) budget 0.00 | latAdmit 0.0 latRefuse 0.0 | accAdmit 0.0 | frontConv 0.0 | leadLast30 34.61
+    [comp seatrack     ] scripts 8.0 (fl1.0 cb1.9 fb2.0 pc2.1 dp0.9 pf0.0) | drop 0.0 shrink 0.2 | H 2.24 sigColl 2% (99/100)
+    [clr  seatrack     ] lanes 15.0 (min 15.0) budget 1.00 | latAdmit 4.9 latRefuse 0.0 | accAdmit 6.0 | frontConv 0.0 | leadLast30 50.73
+    [comp space-sprint ] scripts 8.0 (fl1.0 cb1.9 fb2.0 pc2.1 dp0.9 pf0.0) | drop 0.0 shrink 0.2 | H 2.24 sigColl 2% (99/100)
+    [clr  space-sprint ] lanes 31.0 (min 31.0) budget 1.00 | latAdmit 4.9 latRefuse 0.0 | accAdmit 6.0 | frontConv 0.0 | leadLast30 49.71
+
+runtime 48.5 min

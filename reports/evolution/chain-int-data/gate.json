@@ -1,0 +1,227 @@
+{
+  "mode": "gate",
+  "races": 100,
+  "seed": 1,
+  "results": [
+    {
+      "track": "luger-hill",
+      "arm": "control",
+      "closed": false,
+      "bandReach": 0.6901666666666667,
+      "startRowUnfair": true,
+      "startRowMinPHolm": 0.02,
+      "perRowWins": [
+        0.13,
+        0.09,
+        0.19,
+        0.13,
+        0.17,
+        0.14,
+        0.15
+      ],
+      "rowReach": [
+        0.7088888888888889,
+        0.7,
+        0.6788888888888889,
+        0.6777777777777778,
+        0.715,
+        0.6775,
+        0.6725
+      ],
+      "deadRate": 0.08,
+      "leadChanges": 2.58,
+      "runawayRate": 0.13,
+      "paradeRate": 0,
+      "nRaces": 100
+    },
+    {
+      "track": "mountainstreet",
+      "arm": "control",
+      "closed": false,
+      "bandReach": 0.708,
+      "startRowUnfair": false,
+      "startRowMinPHolm": 0.2,
+      "perRowWins": [
+        0.31,
+        0.38,
+        0.31
+      ],
+      "rowReach": [
+        0.7005,
+        0.7205,
+        0.703
+      ],
+      "deadRate": 0.15,
+      "leadChanges": 2.03,
+      "runawayRate": 0.04,
+      "paradeRate": 0.02,
+      "nRaces": 100
+    },
+    {
+      "track": "searound",
+      "arm": "control",
+      "closed": true,
+      "bandReach": 0.74075,
+      "startRowUnfair": true,
+      "startRowMinPHolm": 0.02,
+      "perRowWins": [
+        0.21,
+        0.14,
+        0.12,
+        0.15,
+        0.19,
+        0.09,
+        0.1
+      ],
+      "rowReach": [
+        0.7366666666666667,
+        0.7533333333333333,
+        0.7566666666666667,
+        0.73,
+        0.745,
+        0.726,
+        0.734
+      ],
+      "deadRate": 0.11,
+      "leadChanges": 1.62,
+      "runawayRate": 0.16,
+      "paradeRate": 0,
+      "nRaces": 100
+    },
+    {
+      "track": "dirt-oval",
+      "arm": "control",
+      "closed": true,
+      "bandReach": 0.7565,
+      "startRowUnfair": false,
+      "startRowMinPHolm": 0.08,
+      "perRowWins": [
+        0.27,
+        0.29,
+        0.26,
+        0.18
+      ],
+      "rowReach": [
+        0.779,
+        0.753,
+        0.745,
+        0.749
+      ],
+      "deadRate": 0.14,
+      "leadChanges": 2.06,
+      "runawayRate": 0.04,
+      "paradeRate": 0,
+      "nRaces": 100
+    },
+    {
+      "track": "luger-hill",
+      "arm": "chain",
+      "closed": false,
+      "bandReach": 0.7338333333333333,
+      "startRowUnfair": true,
+      "startRowMinPHolm": 0.02,
+      "perRowWins": [
+        0.21,
+        0.14,
+        0.1,
+        0.12,
+        0.14,
+        0.14,
+        0.15
+      ],
+      "rowReach": [
+        0.75,
+        0.7233333333333334,
+        0.7388888888888889,
+        0.7466666666666667,
+        0.715,
+        0.74125,
+        0.71875
+      ],
+      "deadRate": 0.14,
+      "leadChanges": 2.2,
+      "runawayRate": 0.08,
+      "paradeRate": 0,
+      "nRaces": 100
+    },
+    {
+      "track": "mountainstreet",
+      "arm": "chain",
+      "closed": false,
+      "bandReach": 0.7306666666666667,
+      "startRowUnfair": false,
+      "startRowMinPHolm": 0.16,
+      "perRowWins": [
+        0.31,
+        0.4,
+        0.29
+      ],
+      "rowReach": [
+        0.7435,
+        0.74,
+        0.7085
+      ],
+      "deadRate": 0.05,
+      "leadChanges": 2.38,
+      "runawayRate": 0.09,
+      "paradeRate": 0,
+      "nRaces": 100
+    },
+    {
+      "track": "searound",
+      "arm": "chain",
+      "closed": true,
+      "bandReach": 0.75925,
+      "startRowUnfair": true,
+      "startRowMinPHolm": 0.02,
+      "perRowWins": [
+        0.21,
+        0.19,
+        0.17,
+        0.1,
+        0.14,
+        0.13,
+        0.06
+      ],
+      "rowReach": [
+        0.7333333333333333,
+        0.775,
+        0.7916666666666666,
+        0.7583333333333333,
+        0.7633333333333333,
+        0.742,
+        0.746
+      ],
+      "deadRate": 0.25,
+      "leadChanges": 1.45,
+      "runawayRate": 0.18,
+      "paradeRate": 0,
+      "nRaces": 100
+    },
+    {
+      "track": "dirt-oval",
+      "arm": "chain",
+      "closed": true,
+      "bandReach": 0.78975,
+      "startRowUnfair": false,
+      "startRowMinPHolm": 1,
+      "perRowWins": [
+        0.28,
+        0.22,
+        0.32,
+        0.18
+      ],
+      "rowReach": [
+        0.783,
+        0.786,
+        0.785,
+        0.805
+      ],
+      "deadRate": 0.17,
+      "leadChanges": 2.02,
+      "runawayRate": 0.04,
+      "paradeRate": 0,
+      "nRaces": 100
+    }
+  ]
+}

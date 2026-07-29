@@ -1,0 +1,30 @@
+
+=== CHAIN-ABLATE battery — N=25/arm/track | tracks searound, ice-track | seed=1 jobs=4 ===
+arms: ship, B15fc
+(ship cache hit)
+
+── ship ──
+  track           | band (Δship) | dead (Δship) | lead-chg (Δship) | LAWfull LAWl50 (Δship) | holm
+  searound        |  75% (  —) |   8% (  —) |  1.48 (  —) | 0.31   0.25  ( —/—) | skip 0% | UNF
+  ice-track       |  72% (  —) |  12% (  —) |  1.60 (  —) | 0.29   0.23  ( —/—) | skip 0% | ok
+  SUMMARY band-reach mean 74% | tracks ≥70%: 2/2
+
+── B15fc ──
+  track           | band (Δship) | dead (Δship) | lead-chg (Δship) | LAWfull LAWl50 (Δship) | holm
+  searound        |  74% (-1pp) |  24% (+16pp) |  1.20 (-0.28) | 0.60   0.41  (+0.29/+0.15) | skip 0% | ok
+  ice-track       |  74% (+2pp) |  20% (+8pp) |  1.72 (+0.12) | 0.52   0.37  (+0.24/+0.14) | skip 21% | ok
+  SUMMARY band-reach mean 74% | tracks ≥70%: 2/2
+    [comp searound     ] scripts 3.7 (fl0.0 cb1.6 fb2.0 pc0.0 dp0.0 pf0.0) | drop 0.0 shrink 0.0 | H 0.99 sigColl 0% (25/25)
+    [clr  searound     ] lanes 5.0 (min 5.0) budget 0.00 | latAdmit 0.0 latRefuse 0.0 | accAdmit 0.0 | frontConv 0.0 | leadLast30 36.64
+    [dens searound     ] finaleStories 31.6 (min 24 max 36, 0/25 races <10) | finalDraw 24.3 bandDuels 12.5 | storied 32.0 expMax 2
+    [ownr searound     ] cb 1.6 fb 2.0 mid 1.5 | depth 5 (win 10%=5 12%=7 15%=9) | counts cb[0,1,2,3] fb[1,2,3] mid[0,1,2,3]
+    [scen searound     ] defendShare 32% | P(leaderHolds) 64% | scenH 1.46 {"genuineChange":9,"unplannedHold":12,"defended":4} | behindP1 38.0 | defGap 1.29L (n8)
+    [dead searound     ] total 6 = nearMiss 2 + castHole 0 + completeFail 4 | chains 1.2 timeShare 0.40
+    [comp ice-track    ] scripts 4.4 (fl0.0 cb1.6 fb2.0 pc0.0 dp0.7 pf0.0) | drop 0.0 shrink 0.0 | H 1.53 sigColl 0% (25/25)
+    [clr  ice-track    ] lanes 10.0 (min 10.0) budget 1.00 | latAdmit 0.8 latRefuse 0.0 | accAdmit 6.0 | frontConv 0.0 | leadLast30 37.16
+    [dens ice-track    ] finaleStories 30.8 (min 24 max 37, 0/25 races <10) | finalDraw 23.7 bandDuels 12.2 | storied 32.3 expMax 2
+    [ownr ice-track    ] cb 1.6 fb 2.0 mid 1.5 | depth 5 (win 10%=5 12%=7 15%=9) | counts cb[0,1,2,3] fb[1,2,3] mid[0,1,2,3]
+    [scen ice-track    ] defendShare 32% | P(leaderHolds) 56% | scenH 1.52 {"defended":5,"unplannedHold":9,"genuineChange":11} | behindP1 39.5 | defGap 3.41L (n8)
+    [dead ice-track    ] total 5 = nearMiss 3 + castHole 0 + completeFail 2 | chains 0.6 timeShare 0.37
+
+runtime 1.5 min
