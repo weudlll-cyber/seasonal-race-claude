@@ -1090,7 +1090,7 @@ const DynamicsTuningSection = forwardRef(function DynamicsTuningSection(_, ref) 
         title="PULK Phase"
         onReset={resetPulk}
         resetTestId="reset-pulk"
-        subtitle="The PULK phase — the mid-race window [0.25, PULK end] where the lead rotation stages a real front contest (always live). The boundary sets where PULK hands off to OUTCOME; the leader brake + challenger boost set the front-action strength; the drop depth is the depth lever (how far a dethroned leader falls before release); intensity sets the overall choreography drama. Advanced envelope + rotation internals are pinned to their tuned defaults."
+        subtitle="The PULK phase — the mid-race window [0.15, PULK end] where the lead rotation stages a real front contest (always live). The boundary sets where PULK hands off to OUTCOME; the leader brake + challenger boost set the front-action strength; the drop depth is the depth lever (how far a dethroned leader falls before release); intensity sets the overall choreography drama. Advanced envelope + rotation internals are pinned to their tuned defaults."
       >
         <div className={s.formGrid}>
           {[
@@ -1100,7 +1100,7 @@ const DynamicsTuningSection = forwardRef(function DynamicsTuningSection(_, ref) 
               min: 0.25,
               max: 0.55,
               step: 0.05,
-              tip: "Where the PULK window ends and OUTCOME (the pack's band-steering) begins — one boundary, no TRANSITION phase. PULK runs [0.25, this] with the lead rotation live throughout; raising it lengthens the PULK contest and hands OUTCOME off later. 0.5 = shipped.",
+              tip: "Where the PULK window ends and OUTCOME (the pack's band-steering) begins — one boundary, no TRANSITION phase. PULK runs [0.15, this] with the lead rotation live throughout; raising it lengthens the PULK contest and hands OUTCOME off later. 0.5 = shipped.",
             },
             {
               key: 'pulkLeaderBrake',
@@ -1161,7 +1161,7 @@ const DynamicsTuningSection = forwardRef(function DynamicsTuningSection(_, ref) 
         </div>
         <SubHeading
           label="PULK bonuses"
-          note="Phase-split bonuses + cohesion bias that act ONLY inside the PULK window [0.25, PULK end]. The area/row bonuses are gated by the Phase-Split master switch in the Bonus section above; the cohesion bias pulls the pulk racers’ re-roll draws toward the pack centroid. All ship flat (bonuses 0, bias 2.0) for the shipped PULK."
+          note="Phase-split bonuses + cohesion bias that act ONLY inside the PULK window [0.15, PULK end]. The area/row bonuses are gated by the Phase-Split master switch in the Bonus section above; the cohesion bias pulls the pulk racers’ re-roll draws toward the pack centroid. All ship flat (bonuses 0, bias 2.0) for the shipped PULK."
           onReset={resetPulkBonuses}
           resetTestId="reset-pulk-bonuses"
         />
@@ -1172,7 +1172,7 @@ const DynamicsTuningSection = forwardRef(function DynamicsTuningSection(_, ref) 
               style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}
             >
               Area bonus — PULK
-              <InfoTooltip text="Area-bonus strength inside the PULK window (target-band speed nudge). Gated by the Phase-Split master switch. Acts only inside the PULK window [0.25, PULK end]. 0 = shipped." />
+              <InfoTooltip text="Area-bonus strength inside the PULK window (target-band speed nudge). Gated by the Phase-Split master switch. Acts only inside the PULK window [0.15, PULK end]. 0 = shipped." />
             </label>
             <input
               type="number"
@@ -1194,7 +1194,7 @@ const DynamicsTuningSection = forwardRef(function DynamicsTuningSection(_, ref) 
               style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}
             >
               Row bonus — PULK
-              <InfoTooltip text="Start-row catch-up bonus fraction inside the PULK window. Gated by the Phase-Split master switch. Acts only inside the PULK window [0.25, PULK end]. 0 = shipped." />
+              <InfoTooltip text="Start-row catch-up bonus fraction inside the PULK window. Gated by the Phase-Split master switch. Acts only inside the PULK window [0.15, PULK end]. 0 = shipped." />
             </label>
             <input
               type="number"
@@ -1216,7 +1216,7 @@ const DynamicsTuningSection = forwardRef(function DynamicsTuningSection(_, ref) 
               style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}
             >
               Cohesion bias gain
-              <InfoTooltip text="How strongly the pulk racers' re-roll draws are pulled back toward the pack centroid, so the field stays together and does not string out before the contest. Acts only inside the PULK window [0.25, PULK end]. 0 = no cohesion; higher = tighter pack. 2.0 = shipped." />
+              <InfoTooltip text="How strongly the pulk racers' re-roll draws are pulled back toward the pack centroid, so the field stays together and does not string out before the contest. Acts only inside the PULK window [0.15, PULK end]. 0 = no cohesion; higher = tighter pack. 2.0 = shipped." />
             </label>
             <input
               type="number"

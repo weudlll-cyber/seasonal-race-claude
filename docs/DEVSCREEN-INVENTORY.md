@@ -154,7 +154,7 @@ Card Reset: `reset-row-start`. Backing config: `rowLayoutConfig`. Summary text: 
 
 ### 5. PULK Phase — card controls, then "PULK bonuses" and "B2 Attackers" sub-headings
 
-The mid-race window `[0.25, PULK end]` where the lead rotation stages the front contest (always live).
+The mid-race window `[0.15, PULK end]` where the lead rotation stages the front contest (always live).
 Backing config: `raceDynamicsConfig`. Groups run in temporal order: the card controls set the window and
 its rotation, the PULK bonuses act inside it, and the B2 attackers resolve last (released into OUTCOME).
 
@@ -203,7 +203,12 @@ surfaced by no control — pinned to their tuned defaults. They are intentional,
 
 | Key | Shipped default | What it pins |
 |---|---|---|
-| `racePlanPulkStart` | 0.25 | CHAOS→PULK boundary (structural, fixed) |
+| `racePlanPulkStart` | 0.15 | CHAOS→PULK boundary — the chaos window `[0, 0.15]` (COMBO15; was 0.25) |
+| `chaosSteer` | true | COMBO15: continuous gentle chaos-phase pull toward each racer's drawn band |
+| `chaosSteerGain` | 0.06 | COMBO15: chaos-steer gain |
+| `bandBias` | true | COMBO15: band-aware re-roll DRAW bias (the fair-arrival win) |
+| `bandBiasR` | 0.6 | COMBO15: progress from which the draw bias acts |
+| `bandBiasGain` | 0.1 | COMBO15: draw-bias gain |
 | `pulkEnvelopeMaxEffect` | 0.12 | realism envelope: outer clamp on \|governorMult−1\| (±12%) |
 | `pulkEnvelopeMaxStepPerFrame` | 0.01 | realism envelope: per-frame slew limit |
 | `pulkCeilingCap` | true | cap a boosted racer's speed at the natural band max |
