@@ -156,13 +156,14 @@ const DynamicsTuningSection = forwardRef(function DynamicsTuningSection(_, ref) 
     }));
   }
 
-  // The PULK Phase card: reset only the 5 card-level controls. The B2-attacker pair has its own
+  // The PULK Phase card: reset only the 6 card-level controls. The B2-attacker pair has its own
   // group Reset, and the pinned internals (envelope/safety + rotation internals + choreo
   // fine-tuning) keep their config defaults — they have no DevScreen control, so they are not
   // user-resettable here.
   function resetPulk() {
     setDynamicsConfig((prev) => ({
       ...prev,
+      racePlanPulkStart: DEFAULT_RACE_DYNAMICS_CONFIG.racePlanPulkStart,
       choreoOutcomeStart: DEFAULT_RACE_DYNAMICS_CONFIG.choreoOutcomeStart,
       pulkLeaderBrake: DEFAULT_RACE_DYNAMICS_CONFIG.pulkLeaderBrake,
       pulkChallengerBoost: DEFAULT_RACE_DYNAMICS_CONFIG.pulkChallengerBoost,
@@ -1090,17 +1091,25 @@ const DynamicsTuningSection = forwardRef(function DynamicsTuningSection(_, ref) 
         title="PULK Phase"
         onReset={resetPulk}
         resetTestId="reset-pulk"
-        subtitle="The PULK phase — the mid-race window [0.15, PULK end] where the lead rotation stages a real front contest (always live). The boundary sets where PULK hands off to OUTCOME; the leader brake + challenger boost set the front-action strength; the drop depth is the depth lever (how far a dethroned leader falls before release); intensity sets the overall choreography drama. Advanced envelope + rotation internals are pinned to their tuned defaults."
+        subtitle="The PULK phase — the mid-race window [PULK begin, PULK end] where the lead rotation stages a real front contest (always live). PULK begin is the CHAOS→PULK boundary (the chaos window is [0, PULK begin]); PULK end sets where PULK hands off to OUTCOME; the leader brake + challenger boost set the front-action strength; the drop depth is the depth lever (how far a dethroned leader falls before release); intensity sets the overall choreography drama. Advanced envelope + rotation internals are pinned to their tuned defaults."
       >
         <div className={s.formGrid}>
           {[
+            {
+              key: 'racePlanPulkStart',
+              label: 'PULK begin / CHAOS ends (0.10–0.60)',
+              min: 0.1,
+              max: 0.6,
+              step: 0.05,
+              tip: 'The CHAOS→PULK boundary: the chaos window is [0, this], where the fair-arrival chaos steer runs and the field reshuffles unscripted; heroes are cast and the PULK lead rotation begins at this progress. Narrower = livelier mid-race (PULK-SPECTACLE). 0.15 = shipped (COMBO15).',
+            },
             {
               key: 'choreoOutcomeStart',
               label: 'PULK end / OUTCOME begins (0.25–0.55)',
               min: 0.25,
               max: 0.55,
               step: 0.05,
-              tip: "Where the PULK window ends and OUTCOME (the pack's band-steering) begins — one boundary, no TRANSITION phase. PULK runs [0.15, this] with the lead rotation live throughout; raising it lengthens the PULK contest and hands OUTCOME off later. 0.5 = shipped.",
+              tip: "Where the PULK window ends and OUTCOME (the pack's band-steering) begins — one boundary, no TRANSITION phase. PULK runs [PULK begin, this] with the lead rotation live throughout; raising it lengthens the PULK contest and hands OUTCOME off later. 0.5 = shipped.",
             },
             {
               key: 'pulkLeaderBrake',

@@ -64,6 +64,11 @@ export function loadRaceDynamicsConfig() {
       merged.choreoResolveB4,
       merged.choreoResolveB5,
     ].some((v) => typeof v !== 'number' || v <= 0 || v > 1) ||
+    // racePlanPulkStart — the CHAOS→PULK boundary (DevScreen control). Honest validated range
+    // [0.10, 0.60] per the measured chain-world plateau; shipped default 0.15 (COMBO15).
+    typeof merged.racePlanPulkStart !== 'number' ||
+    merged.racePlanPulkStart < 0.1 ||
+    merged.racePlanPulkStart > 0.6 ||
     typeof merged.choreoOutcomeStart !== 'number' ||
     merged.choreoOutcomeStart < 0.25 ||
     merged.choreoOutcomeStart > 0.6 ||

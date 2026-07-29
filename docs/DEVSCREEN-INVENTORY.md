@@ -158,18 +158,22 @@ The mid-race window `[0.15, PULK end]` where the lead rotation stages the front 
 Backing config: `raceDynamicsConfig`. Groups run in temporal order: the card controls set the window and
 its rotation, the PULK bonuses act inside it, and the B2 attackers resolve last (released into OUTCOME).
 
-**Card-level controls** — Reset `reset-pulk` (resets exactly these five keys):
+**Card-level controls** — Reset `reset-pulk` (resets exactly these six keys):
 
 | Control | Config key | Shipped default |
 |---|---|---|
+| PULK begin / CHAOS ends (0.10–0.60) | `racePlanPulkStart` | 0.15 |
 | PULK end / OUTCOME begins (0.25–0.55) | `choreoOutcomeStart` | 0.6 |
 | Leader brake | `pulkLeaderBrake` | 0.1 |
 | Challenger boost (cap) | `pulkChallengerBoost` | 0.06 |
 | Ex-leader drop depth (lengths) | `pulkLeadRotationDropDepthLengths` | 8 |
 | Choreography intensity (0–1) | `choreoIntensity` | 0.6 |
 
-The PULK-end control's numeric range (0.25–0.55 in its label) is the input widget's clamp; the validated
-config range is [0.25, 0.60].
+`racePlanPulkStart` (**PULK begin**, the CHAOS→PULK boundary) is now a surfaced control (HYGIENE-1): input
+widget clamp [0.10, 0.60], validated config range **[0.10, 0.60]** (per the measured chain-world plateau);
+shipped default **0.15** (COMBO15). It is part of the `raceDynamics` block, so the master **Reset All
+Defaults** restores it and the HUD config badge counts it as race-relevant. The PULK-end control's numeric
+range (0.25–0.55 in its label) is the input widget's clamp; its validated config range is [0.25, 0.60].
 
 **Sub-heading "PULK bonuses"** — Reset `reset-pulk-bonuses`. These act only inside the PULK window; the
 area/row pair is gated by the Phase-Split master switch above:
@@ -203,7 +207,6 @@ surfaced by no control — pinned to their tuned defaults. They are intentional,
 
 | Key | Shipped default | What it pins |
 |---|---|---|
-| `racePlanPulkStart` | 0.15 | CHAOS→PULK boundary — the chaos window `[0, 0.15]` (COMBO15; was 0.25) |
 | `chaosSteer` | true | COMBO15: continuous gentle chaos-phase pull toward each racer's drawn band |
 | `chaosSteerGain` | 0.06 | COMBO15: chaos-steer gain |
 | `bandBias` | true | COMBO15: band-aware re-roll DRAW bias (the fair-arrival win) |
