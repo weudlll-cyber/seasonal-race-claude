@@ -15,6 +15,7 @@ import { easeInOutCubic } from '../utils/mathUtils.js';
 import { sampleHeroCurve } from './heroChoreography.js';
 import { generateHeroCurves, GENERATOR_CONFIG } from './heroCurveGenerator.js';
 import { arcT } from './raceLengths.js'; // shared lap-aware arc distance (gap-cap re-roll bias)
+import { DEFAULT_RACE_DYNAMICS_CONFIG } from './storage/defaults.js'; // single source for phase-boundary defaults (no raw drift)
 
 // ── Mulberry32 PRNG (same algorithm as scripts/sim-fairness.mjs) ──────────────
 // Exported so the governor (raceGovernor.js) reuses the SAME PRNG helper (A3) instead of
@@ -72,12 +73,13 @@ function getAreaBounds(targetRank) {
 
 // ── Phase 3A M2v2 defaults ────────────────────────────────────────────────────
 
-// THE single source for the default phase boundaries. pulkStart here is the ONE literal that defines
-// the CHAOS→PULK / director-anchor boundary; the hero-curve generator's anchor default derives from it
-// (heroCurveGenerator.js reads DEFAULT_PHASE_FRACTIONS.pulkStart), and the live per-race value is
-// threaded into the generator from the resolved plan — so there is no second copy of the anchor value.
+// THE default phase boundaries. pulkStart defines the CHAOS→PULK / director-anchor boundary; it is NOT a raw
+// literal — it derives from the single source `DEFAULT_RACE_DYNAMICS_CONFIG.racePlanPulkStart` (the shipped
+// default, 0.15) so it can never drift from the shipped world. The hero-curve generator's anchor default
+// derives from this (heroCurveGenerator.js reads DEFAULT_PHASE_FRACTIONS.pulkStart), and the live per-race
+// value is threaded into the generator from the resolved plan — so there is no second copy of the anchor value.
 export const DEFAULT_PHASE_FRACTIONS = {
-  pulkStart: 0.25,
+  pulkStart: DEFAULT_RACE_DYNAMICS_CONFIG.racePlanPulkStart,
   pulkEnd: 0.5,
   transitionEnd: 0.75,
   corridorStart: 0.55,
@@ -161,7 +163,9 @@ export function createRacePlan(racers, finishT, targetDurationMs, config = {}, s
   // Single source: every downstream phase read (getPhase, the engine's + sim's areaBonus phase-split
   // via getPhaseFractions) inherits these fractions — no duplicated phase math. Choreography is
   // UNCONDITIONAL: PULK ends at choreoOutcomeStart and OUTCOME steers from there (one boundary).
-  const choreoPulkEnd = config.choreoOutcomeStart ?? 0.25;
+  // Fallback tracks the resolved pulkStart (not a raw literal): when choreoOutcomeStart is absent, PULK
+  // collapses to zero-width AT pulkStart, whatever the shipped default is — so nothing can drift from it.
+  const choreoPulkEnd = config.choreoOutcomeStart ?? phaseFractions.pulkStart;
   phaseFractions.pulkEnd = choreoPulkEnd;
   phaseFractions.corridorStart = choreoPulkEnd;
 

@@ -226,7 +226,8 @@ export function createRaceFromIdentity(p) {
         areaBonusEarly: dynamicsConfig.areaBonusEarly ?? 1.0,
         areaBonusPulk: dynamicsConfig.areaBonusPulk ?? 0,
         areaBonusPost: dynamicsConfig.areaBonusPost ?? 1.0,
-        pulkStart: dynamicsConfig.racePlanPulkStart ?? 0.25,
+        pulkStart:
+          dynamicsConfig.racePlanPulkStart ?? DEFAULT_RACE_DYNAMICS_CONFIG.racePlanPulkStart,
         bonusTransitionEnd: dynamicsConfig.racePlanBonusTransitionEnd ?? 0.75,
         bonusFadeDuration: dynamicsConfig.racePlanBonusFadeDuration ?? 1500,
         corridorStart: dynamicsConfig.racePlanCorridorStart ?? 0.55,
@@ -310,7 +311,8 @@ export function createRaceFromIdentity(p) {
   const rowBonusPulk = dynamicsConfig.rowBonusPulk ?? 1;
   const rowBonusPost = dynamicsConfig.rowBonusPost ?? 1;
   const enableRowEnvSmooth = dynamicsConfig.enableRowEnvSmooth ?? false;
-  const PHASE_CHAOS_END = govFractions?.pulkStartFrac ?? 0.25;
+  const PHASE_CHAOS_END =
+    govFractions?.pulkStartFrac ?? DEFAULT_RACE_DYNAMICS_CONFIG.racePlanPulkStart;
   const PHASE_PULK_END = govFractions?.pulkEndFrac ?? 0.5;
   const rowPhaseCfg = {
     enabled: phaseSplitBonusEnabled,

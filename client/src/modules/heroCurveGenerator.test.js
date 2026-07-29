@@ -399,10 +399,11 @@ describe('orchestrator — determinism, cast size, all-emitted-feasible', () => 
     // Every emitted curve is anchored at config.anchorProgress: its first control point sits exactly at
     // that progress. The race path threads the LIVE resolved pulkStart here (racePlanner.js), so moving
     // PULK begin moves the anchor with it — no second copy of the value. Default derives from THE single
-    // source, DEFAULT_PHASE_FRACTIONS.pulkStart (0.25).
+    // source, DEFAULT_PHASE_FRACTIONS.pulkStart, which itself reads DEFAULT_RACE_DYNAMICS_CONFIG.racePlanPulkStart
+    // (shipped default 0.15 since COMBO15).
     const dflt = generateHeroCurves({ seed: 5, postChaos, finalRanks, intensity: 0.9, finishT });
-    for (const { curve } of dflt.curves) expect(curve.points[0].progress).toBeCloseTo(0.25, 10);
-    for (const anchor of [0.15, 0.4]) {
+    for (const { curve } of dflt.curves) expect(curve.points[0].progress).toBeCloseTo(0.15, 10);
+    for (const anchor of [0.35, 0.4]) {
       const g = generateHeroCurves({
         seed: 5,
         postChaos,

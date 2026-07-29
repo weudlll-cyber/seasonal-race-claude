@@ -215,7 +215,7 @@ function browserPlanConfig(dynamicsConfig) {
     areaBonusEarly: dynamicsConfig.areaBonusEarly ?? 1.0,
     areaBonusPulk: dynamicsConfig.areaBonusPulk ?? 0,
     areaBonusPost: dynamicsConfig.areaBonusPost ?? 1.0,
-    pulkStart: dynamicsConfig.racePlanPulkStart ?? 0.25,
+    pulkStart: dynamicsConfig.racePlanPulkStart ?? DEFAULT_RACE_DYNAMICS_CONFIG.racePlanPulkStart,
     bonusTransitionEnd: dynamicsConfig.racePlanBonusTransitionEnd ?? 0.75,
     bonusFadeDuration: dynamicsConfig.racePlanBonusFadeDuration ?? 1500,
     corridorStart: dynamicsConfig.racePlanCorridorStart ?? 0.55,

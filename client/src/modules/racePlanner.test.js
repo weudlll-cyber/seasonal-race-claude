@@ -107,7 +107,7 @@ describe('createRacePlan', () => {
       { choreoOutcomeStart: 0.5 },
       BASE_SEED
     );
-    expect(plan.phaseFractions.pulkStart).toBe(0.25);
+    expect(plan.phaseFractions.pulkStart).toBe(0.15); // shipped default racePlanPulkStart (COMBO15); no explicit override here
     expect(plan.phaseFractions.pulkEnd).toBe(0.5);
     expect(plan.phaseFractions.corridorStart).toBe(0.5); // choreography collapse: corridorStart := pulkEnd
     expect(plan.phaseFractions.corridorEnd).toBe(1.0);
@@ -121,7 +121,7 @@ describe('createRacePlan', () => {
       { choreoOutcomeStart: 0.5 },
       BASE_SEED
     );
-    expect(plan._phases.pulkStart).toBeCloseTo(0.25 * TARGET_DUR_MS, 0);
+    expect(plan._phases.pulkStart).toBeCloseTo(0.15 * TARGET_DUR_MS, 0);
     expect(plan._phases.pulkEnd).toBeCloseTo(0.5 * TARGET_DUR_MS, 0);
   });
 
@@ -134,7 +134,7 @@ describe('createRacePlan', () => {
       { postStartHoldMs: holdMs },
       BASE_SEED
     );
-    // pulkStart fraction = 0.25 × 60000 = 15000ms < 20000ms, so holdMs wins
+    // pulkStart fraction = 0.15 × 60000 = 9000ms < 20000ms, so holdMs wins
     expect(plan._phases.pulkStart).toBe(holdMs);
   });
 
@@ -161,7 +161,7 @@ describe('createRacePlan', () => {
 
 // ── PHASE COLLAPSE: OUTCOME begins where PULK ends (choreography is unconditional) ──
 describe('createRacePlan — phase collapse', () => {
-  it('default outcome-start: PULK collapses — pulkEnd == corridorStart == 0.25 (OUTCOME from the chaos boundary)', () => {
+  it('default outcome-start: PULK collapses — pulkEnd == corridorStart == pulkStart (0.15) (OUTCOME from the chaos boundary)', () => {
     const plan = createRacePlan(
       BASE_RACERS,
       FINISH_T,
@@ -169,9 +169,11 @@ describe('createRacePlan — phase collapse', () => {
       { corridorStart: 0.55 }, // corridorStart shortcut is OVERRIDDEN by the choreography collapse
       BASE_SEED
     );
-    expect(plan.phaseFractions.corridorStart).toBe(0.25);
-    expect(plan.phaseFractions.pulkEnd).toBe(0.25);
-    expect(plan.phaseFractions.pulkStart).toBe(0.25); // zero-width PULK + TRANSITION = the two-phase model
+    // With choreoOutcomeStart absent, PULK end falls back to the resolved pulkStart (shipped default 0.15),
+    // so PULK is zero-width AT the chaos boundary — the collapse tracks pulkStart, not a raw literal.
+    expect(plan.phaseFractions.corridorStart).toBe(0.15);
+    expect(plan.phaseFractions.pulkEnd).toBe(0.15);
+    expect(plan.phaseFractions.pulkStart).toBe(0.15); // zero-width PULK + TRANSITION = the two-phase model
   });
 
   it('honours a custom choreoOutcomeStart (owner sweet-spot control)', () => {
@@ -763,7 +765,7 @@ describe('createRacePlan — phase-boundary hardening', () => {
       { choreoOutcomeStart: 0.5 },
       BASE_SEED
     );
-    expect(plan.phaseFractions.pulkStart).toBe(0.25);
+    expect(plan.phaseFractions.pulkStart).toBe(0.15); // shipped default racePlanPulkStart (COMBO15)
     expect(plan.phaseFractions.pulkEnd).toBe(0.5);
     expect(plan.phaseFractions.corridorStart).toBe(0.5); // := pulkEnd (collapse)
     expect(plan.phaseFractions.corridorEnd).toBe(1.0);
