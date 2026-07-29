@@ -76,6 +76,10 @@ every track. `corrP1` (bonus↔leader correlation) is **action-quality context, 
 has no target. Measure fairness in the shipped config (see §"shipped == measured", LESSONS 166),
 and quality in gap space / racer lengths, never rank space (LESSONS 172).
 
+This is **layer 1** (row-blind draw) of the owner's two-layer fairness definition. The full definition —
+both layers, the ABSOLUTE band-arrival headline number, the permanent v2 duration-relative pulk watchdog, and
+the documented residuals — is the canonical [FAIRNESS.md](FAIRNESS.md). The shipped world is COMBO15.
+
 ## 9. The camera is not a solution for missing action
 
 Action must exist in the *physics* — real lead changes, real closing, real overtakes. The camera
