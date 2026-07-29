@@ -5,6 +5,7 @@ themselves are the record; the living docs are [LESSONS.md](../../docs/LESSONS.m
 and [FAIRNESS.md](../../docs/FAIRNESS.md). Shipped world: **COMBO15** (`v-ship-combo15`, fingerprint `ded0a126048e4cdb`).
 
 ## Camera / presentation fixes
+- [BATTLE-TRIGGER-RANGE-1.md](BATTLE-TRIGGER-RANGE-1.md) — Pulk Closeness / Isolation sliders re-scaled to the sub-1% zone (0.1%–2.0%, step 0.1%) for the dense COMBO15 field. **Presentation-only; defaults unchanged; fp identical.**
 - [LEADER-MINVIS-1.md](LEADER-MINVIS-1.md) — the LEADER "zoom out until ≥8 visible" rule existed but didn't act (slow ratchet zoomed in first, crawled out, reset on transition). **FIXED: direct per-frame min-visible zoom floor; fp identical.**
 - [OVERVIEW-ZOOM-1.md](OVERVIEW-ZOOM-1.md) — the OVERVIEW view ignored the selected sprite scale (L116/`c7fa30a` regression). **FIXED: selected scale multiplies the normalized target; default unchanged, fp identical.**
 

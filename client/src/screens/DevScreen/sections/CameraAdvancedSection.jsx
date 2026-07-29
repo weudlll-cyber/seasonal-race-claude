@@ -455,30 +455,30 @@ function CameraAdvancedSection() {
           <SliderRow
             label="Pulk Closeness (lap %)"
             testId="battle-pulk-threshold-t"
-            min={0.01}
-            max={0.15}
-            step={0.005}
+            min={0.001}
+            max={0.02}
+            step={0.001}
             value={config.battlePulkThresholdT ?? 0.05}
             onChange={(e) => {
               const v = parseFloat(e.target.value);
-              if (v >= 0.01 && v <= 0.15) set('battlePulkThresholdT', v);
+              if (v >= 0.001 && v <= 0.02) set('battlePulkThresholdT', v);
             }}
             display={`${((config.battlePulkThresholdT ?? 0.05) * 100).toFixed(1)}%`}
-            tip="How close (as a fraction of a lap) ≥3 top-10 racers must be to trigger BATTLE. Scale-independent — same on every track. Lower = tighter duel, higher = fires more often. Default 0.05 (5% of a lap)."
+            tip="How close (as a fraction of a lap) ≥3 top-10 racers must be to trigger BATTLE. Scale-independent — same on every track. Lower = tighter duel, higher = fires more often. Fine-grained for the dense COMBO15 field: range 0.1%–2.0%, step 0.1%. Default 0.05 (5% of a lap) — above the slider max, so the thumb pins at 2.0% until you move it (the stored value is preserved)."
           />
           <SliderRow
             label="Isolation (lap %)"
             testId="battle-isolation-threshold-t"
             min={0}
-            max={0.2}
-            step={0.005}
+            max={0.02}
+            step={0.001}
             value={config.battleIsolationThresholdT ?? 0}
             onChange={(e) => {
               const v = parseFloat(e.target.value);
-              if (v >= 0 && v <= 0.2) set('battleIsolationThresholdT', v);
+              if (v >= 0 && v <= 0.02) set('battleIsolationThresholdT', v);
             }}
             display={`${((config.battleIsolationThresholdT ?? 0) * 100).toFixed(1)}%`}
-            tip="Reject a battle if any non-group racer is within this lap fraction of a group member. 0 = disabled. Recommendation ≈ 1.5 × Pulk Closeness. Ships disabled (default 0)."
+            tip="Reject a battle if any non-group racer is within this lap fraction of a group member. 0 = disabled. Recommendation ≈ 1.5 × Pulk Closeness. Fine-grained: range 0.0%–2.0%, step 0.1%. Ships disabled (default 0)."
           />
           <SliderRow
             label="Max. group size"
