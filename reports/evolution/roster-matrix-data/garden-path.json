@@ -1,0 +1,95 @@
+{
+  "track": "garden-path",
+  "closed": true,
+  "surfaces": [
+    "grass",
+    "earth"
+  ],
+  "expected": 12,
+  "cells": [
+    {
+      "type": "beetle",
+      "bandReach": 0.9,
+      "rowMin": 0.8814285714285715,
+      "holm": "ok",
+      "runaway": 0
+    },
+    {
+      "type": "boarder",
+      "bandReach": 0.8905,
+      "rowMin": 0.88,
+      "holm": "ok",
+      "runaway": 0
+    },
+    {
+      "type": "buggy",
+      "bandReach": 0.8865,
+      "rowMin": 0.8757142857142857,
+      "holm": "ok",
+      "runaway": 0
+    },
+    {
+      "type": "dragon",
+      "bandReach": 0.8815,
+      "rowMin": 0.874,
+      "holm": "ok",
+      "runaway": 0
+    },
+    {
+      "type": "duck",
+      "bandReach": 0.903,
+      "rowMin": 0.8928571428571429,
+      "holm": "ok",
+      "runaway": 0
+    },
+    {
+      "type": "elephant",
+      "bandReach": 0.896,
+      "rowMin": 0.874,
+      "holm": "UNF",
+      "runaway": 0
+    },
+    {
+      "type": "giraffe",
+      "bandReach": 0.897,
+      "rowMin": 0.882,
+      "holm": "ok",
+      "runaway": 0
+    },
+    {
+      "type": "horse",
+      "bandReach": 0.904,
+      "rowMin": 0.9,
+      "holm": "ok",
+      "runaway": 0
+    },
+    {
+      "type": "motorbike",
+      "bandReach": 0.903,
+      "rowMin": 0.89,
+      "holm": "UNF",
+      "runaway": 0
+    },
+    {
+      "type": "snail",
+      "bandReach": 0.91,
+      "rowMin": 0.9046153846153846,
+      "holm": "ok",
+      "runaway": 0
+    },
+    {
+      "type": "snake",
+      "bandReach": 0.872,
+      "rowMin": 0.83,
+      "holm": "UNF",
+      "runaway": 0
+    },
+    {
+      "type": "snowmobile",
+      "bandReach": 0.8845,
+      "rowMin": 0.872,
+      "holm": "ok",
+      "runaway": 0
+    }
+  ]
+}
