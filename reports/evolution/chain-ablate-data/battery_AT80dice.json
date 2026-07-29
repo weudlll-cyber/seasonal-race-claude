@@ -1,0 +1,191 @@
+{
+  "races": 2,
+  "seed": 1,
+  "arms": [
+    "ship",
+    "AT80dice"
+  ],
+  "results": [
+    {
+      "arm": "ship",
+      "track": "searound",
+      "closed": true,
+      "bandReach": 0.7875,
+      "startRowUnfair": false,
+      "rowReachMin": 0.6666666666666666,
+      "deadRate": 0,
+      "leadChanges": 1.5,
+      "runawayRate": 0,
+      "lawFull": 0.2874,
+      "lawL50": 0.24760000000000001,
+      "skipRate": 0,
+      "compiler": {
+        "scriptCount": 0,
+        "dropped": 0,
+        "shrunk": 0,
+        "exposure": 0,
+        "famMean": {
+          "fightForLead": 0,
+          "comebacker": 0,
+          "fallbacker": 0,
+          "paceConvergence": 0,
+          "duelPair": 0,
+          "photoFan": 0
+        },
+        "sigCollision": 0,
+        "entropy": 0,
+        "distinctSigs": 0,
+        "nRaces": 0,
+        "lanes": 0,
+        "latAdmit": 0,
+        "latRefuse": 0,
+        "accAdmit": 0,
+        "accRefuse": 0,
+        "frontConv": 0,
+        "budgetScale": 0,
+        "minLanes": 0,
+        "finaleStories": 0,
+        "finaleStoriesDist": [],
+        "finalDraw": 0,
+        "bandDuels": 0,
+        "storiedRacers": 0,
+        "exposureMax": 0
+      },
+      "leadLast30": 36,
+      "b7b": {
+        "ownerCB": 0,
+        "ownerFB": 0,
+        "midMover": 0,
+        "ownerDepth": 0,
+        "depthWindow": null,
+        "chains": 0,
+        "timeShareMean": 0,
+        "defendedShare": 0,
+        "pLeaderHolds": 0,
+        "behindP1": 38,
+        "frontCloser": 0,
+        "scenarioEntropy": 0,
+        "scenCounts": {
+          "genuineChange": 2
+        },
+        "frontContest": 0.48203447017676265,
+        "p1LongestSec": 6.5280000000000005,
+        "maxLeadHold": 0.725893698225714,
+        "distinctLead": 2,
+        "defendedGaps": [],
+        "countDistCB": [],
+        "countDistFB": [],
+        "countDistMM": [],
+        "nStoried": 0,
+        "deadSplit": {
+          "plannedNearMiss": 0,
+          "castingHole": 0,
+          "completionFail": 0,
+          "total": 0
+        },
+        "deadBoring": 0,
+        "deadThriller": 0
+      },
+      "release": null
+    },
+    {
+      "arm": "AT80dice",
+      "track": "searound",
+      "closed": true,
+      "bandReach": 0.6875,
+      "startRowUnfair": false,
+      "rowReachMin": 0.5,
+      "deadRate": 0,
+      "leadChanges": 2.5,
+      "runawayRate": 0,
+      "lawFull": 0.6406000000000001,
+      "lawL50": 0.34575,
+      "skipRate": 0,
+      "compiler": {
+        "scriptCount": 0,
+        "dropped": 0,
+        "shrunk": 0,
+        "exposure": 0,
+        "famMean": {
+          "fightForLead": 0,
+          "comebacker": 0,
+          "fallbacker": 0,
+          "paceConvergence": 0,
+          "duelPair": 0,
+          "photoFan": 0
+        },
+        "sigCollision": 1,
+        "entropy": 0,
+        "distinctSigs": 1,
+        "nRaces": 2,
+        "lanes": 5,
+        "latAdmit": 0,
+        "latRefuse": 0,
+        "accAdmit": 0,
+        "accRefuse": 6,
+        "frontConv": 0,
+        "budgetScale": 0,
+        "minLanes": 5,
+        "finaleStories": 0,
+        "finaleStoriesDist": [
+          0,
+          0
+        ],
+        "finalDraw": 0,
+        "bandDuels": 0,
+        "storiedRacers": 0,
+        "exposureMax": 1
+      },
+      "leadLast30": 36.5,
+      "b7b": {
+        "ownerCB": 0,
+        "ownerFB": 0,
+        "midMover": 0,
+        "ownerDepth": 0,
+        "depthWindow": {
+          "w10": 5,
+          "w12": 7,
+          "w15": 9
+        },
+        "chains": 0,
+        "timeShareMean": 0,
+        "defendedShare": 0,
+        "pLeaderHolds": 0,
+        "behindP1": 37.5,
+        "frontCloser": 0,
+        "scenarioEntropy": 0,
+        "scenCounts": {
+          "genuineChange": 2
+        },
+        "frontContest": 0.5553609503502893,
+        "p1LongestSec": 7.08,
+        "maxLeadHold": 0.6628972484516195,
+        "distinctLead": 2,
+        "defendedGaps": [],
+        "countDistCB": [],
+        "countDistFB": [],
+        "countDistMM": [],
+        "nStoried": 2,
+        "deadSplit": {
+          "plannedNearMiss": 0,
+          "castingHole": 0,
+          "completionFail": 0,
+          "total": 0
+        },
+        "deadBoring": 0,
+        "deadThriller": 0
+      },
+      "release": {
+        "anchorHit": 13.5,
+        "releaseMedian": 0.8001,
+        "releaseEarlyFrac": 0.7945205479452054,
+        "neverReleased": 3.5,
+        "stragglerHalfPct": 0.6,
+        "cbTot": 0,
+        "cbReal": 0,
+        "fbTot": 0,
+        "fbReal": 0
+      }
+    }
+  ]
+}
