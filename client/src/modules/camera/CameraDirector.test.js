@@ -5913,3 +5913,89 @@ describe('dynamic zoom-out — LEADER min-visible floor (LEADER-MINVIS-1)', () =
     expect(cd.targetZoom).toBeGreaterThanOrEqual(1.0 - 1e-9);
   });
 });
+
+// ── CAMERA-JITTER-1: the min-visible floor is smoothed (asymmetric rate-limit) ───────────────
+// A dense DYNAMIC field where the visTarget-th nearest racer flips frame-to-frame used to make the raw floor
+// (and thus targetZoom + the coupled pan) oscillate wildly. The floor now loosens instantly (never crops) but
+// tightens only ≤ zoomOutStepPerFrame per frame — so its output is smooth and the zoom lerp has a stable target.
+
+describe('dynamic zoom-out — min-visible floor is smoothed (CAMERA-JITTER-1)', () => {
+  const W = 1280;
+  const CH = 720;
+  const rs = { raceElapsed: 8000, finishedCount: 0, winner: null, finishT: 1.0 };
+  const STEP = 0.005; // default zoomOutStepPerFrame
+
+  // Dense ring around the leader; racers near the 8th-nearest boundary wobble so the binding racer flips.
+  const dynamicField = (frame) => {
+    const r = [{ index: 0, t: 0.95, x: 640, y: 360, finished: false }];
+    for (let i = 1; i < 40; i++) {
+      const baseR = 120 + i * 40;
+      const wob = Math.sin((frame + i * 7) * 0.9) * 90;
+      const ang = i * 2.399;
+      r.push({
+        index: i,
+        t: 0.9 - i * 0.001,
+        x: 640 + Math.cos(ang) * (baseR + wob),
+        y: 360 + Math.sin(ang) * (baseR + wob) * 0.6,
+        finished: false,
+      });
+    }
+    return r;
+  };
+
+  const runDynamic = (cfg, frames = 120) => {
+    const cd = new CameraDirector(W, CH, false, cfg, 28.5);
+    const floors = [];
+    const visibles = [];
+    for (let i = 0; i < frames; i++) {
+      cd.state = CAM_STATE.LEADER_ZOOM;
+      cd.update(dynamicField(i), 8000 + i * 16, rs, W, CH);
+      floors.push(cd._leaderPhaseZoomFloor);
+      visibles.push(cd._countVisibleRacers(dynamicField(i), cd.zoom * cd._bsX, W, CH));
+    }
+    return { floors, visibles };
+  };
+
+  it('floor output is smooth on a flipping-binding-racer field (bounded per-frame delta, no wild swing)', () => {
+    const { floors } = runDynamic({ minRacersVisible: 8 });
+    const tail = floors.slice(-80).filter((f) => f != null);
+    // Tightening (upward floor moves) is capped at zoomOutStepPerFrame × dtScale (≈ 0.005/frame). Allow a
+    // small margin for dt scaling; the point is it is bounded and tiny vs the raw floor's ~0.25/frame jumps.
+    let maxUp = 0;
+    for (let i = 1; i < tail.length; i++) maxUp = Math.max(maxUp, tail[i] - tail[i - 1]);
+    expect(maxUp).toBeLessThanOrEqual(STEP * 1.05); // tightening is rate-limited (no inward snap)
+    const range = Math.max(...tail) - Math.min(...tail);
+    expect(range).toBeLessThan(0.15); // no wild swing (the raw floor swung ~0.42 pre-fix)
+  });
+
+  it('no collapse: the field stays in frame on a churning field (never the tight-profile ~1)', () => {
+    // The live count fluctuates because the zoom LERP lags the instant loosen (spec: "may lag a few frames
+    // while loosening — acceptable") and the focus-centered floor ignores the inner-frame inset. The
+    // guarantee is that it never COLLAPSES to the pre-LEADER-MINVIS tight-profile handful — it stays a healthy
+    // fraction of the field with a mean near visTarget.
+    const { visibles } = runDynamic({ minRacersVisible: 8 });
+    const steady = visibles.slice(20);
+    for (const v of steady) expect(v).toBeGreaterThanOrEqual(5); // no collapse (tight profile hit ~1)
+    const mean = steady.reduce((a, b) => a + b, 0) / steady.length;
+    expect(mean).toBeGreaterThanOrEqual(7); // healthy — near the min(8) target
+  });
+
+  it('small-field guard: a 6-racer dynamic field never over-zooms (all 6 stay visible)', () => {
+    const smallDynamic = (frame) =>
+      Array.from({ length: 6 }, (_, i) => ({
+        index: i,
+        t: 0.95 - i * 0.05,
+        x: 640 + Math.cos(i * 2.399) * (150 + i * 60 + Math.sin(frame * 0.9 + i) * 40),
+        y: 360 + Math.sin(i * 2.399) * (150 + i * 60) * 0.6,
+        finished: false,
+      }));
+    const cd = new CameraDirector(W, CH, false, { minRacersVisible: 8 }, 28.5);
+    let visible = 0;
+    for (let i = 0; i < 120; i++) {
+      cd.state = CAM_STATE.LEADER_ZOOM;
+      cd.update(smallDynamic(i), 8000 + i * 16, rs, W, CH);
+      visible = cd._countVisibleRacers(smallDynamic(i), cd.zoom * cd._bsX, W, CH);
+    }
+    expect(visible).toBe(6); // visTarget clamps to the 6 active — all shown, no over-zoom
+  });
+});

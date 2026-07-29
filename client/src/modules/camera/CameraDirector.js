@@ -2138,9 +2138,24 @@ export class CameraDirector {
           canvasH
         );
         // Never tighter than min-visible; never looser than the hard floor.
-        const floor = Math.max(effectiveFloor, Math.min(this.targetZoom, minVisZoom));
-        this._leaderPhaseZoomFloor = floor; // exposed for diagnostics/tests
-        this.targetZoom = Math.min(this.targetZoom, floor);
+        const rawFloor = Math.max(effectiveFloor, Math.min(this.targetZoom, minVisZoom));
+        // CAMERA-JITTER-1: the raw floor is recomputed from the visTarget-th nearest racer, which flips
+        // frame-to-frame in the dense COMBO15 field — feeding it to targetZoom raw makes the zoom (and the
+        // coupled pan) swim. Smooth it ASYMMETRICALLY: LOOSEN (zoom out, lower floor) immediately so a racer
+        // is never cropped, but TIGHTEN (zoom in, raise floor) only slowly (≤ zoomOutStepPerFrame per frame,
+        // dt-scaled) so a transient flip can never snap the camera inward. The result pins to the loosest
+        // recent value and creeps in gently, giving the zoom lerp a STABLE target. First frame of the phase
+        // (floor === null after a state transition) snaps to the raw value — correct framing on entry.
+        if (this._leaderPhaseZoomFloor === null || rawFloor <= this._leaderPhaseZoomFloor) {
+          this._leaderPhaseZoomFloor = rawFloor;
+        } else {
+          const dtScale = (this._lastDt * FRAME_RATE) / 1000;
+          this._leaderPhaseZoomFloor = Math.min(
+            rawFloor,
+            this._leaderPhaseZoomFloor + this._zoomOutStepPerFrame * dtScale
+          );
+        }
+        this.targetZoom = Math.min(this.targetZoom, this._leaderPhaseZoomFloor);
       }
     }
   }
