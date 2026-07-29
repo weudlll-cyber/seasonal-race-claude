@@ -61,6 +61,26 @@ and what was retired.
   window-control sweep that produced the "suppression, not selection" verdict — the measurement that
   justified deleting the lead-rotation mechanism from master.
 
+### COMBO15 ship + the action/fair-arrival line (2026-07-29)
+The shipped world is now **COMBO15** (chaos steer + band-aware re-roll bias + 0.15 chaos window). The ship
+anchors are permanent; the four experiment branches that fed the multi-week action/fair-arrival hunt were
+archived as permanent `archive/*` tags and their remote branches deleted (branch hygiene, owner-approved).
+- `v-ship-combo15` (`175a475`) — **the ship: COMBO15 as the default world merged to master.** New shipped
+  fingerprint `ded0a126048e4cdb` (replaces the pre-combo15 anchor `7c70b1eae7d31e22`; OFF invariant
+  `f8f7d9c2fd3283e9` unchanged). See [../reports/evolution/MERGE-SHIP-1.md](../reports/evolution/MERGE-SHIP-1.md)
+  and [FAIRNESS.md](FAIRNESS.md).
+- `pre/ship-combo15` (`215afde`) — the return point: master state right BEFORE COMBO15 shipped.
+- `archive/fair-arrival-merged` (`215afde`) — the `exp/fair-arrival` line (its work is on master via the
+  merge `175a475`; this anchors the pre-ship state). Reports on master: `FAIR-ARRIVAL-*`, `CHAOS-STEER-1`,
+  `PULK-SPECTACLE-1`, `EYE-SETUP-{1,2}`, `STEER-CAP-1`, `FAIR-ARRIVAL-GATE`, `MERGE-SHIP-1`.
+- `archive/chain-choreo-final` (`15c1d58`) — the entire `exp/chain-choreo` history (the admission-only
+  action family: ACTION-BUILD-1..7 + ACTION-NIGHT-1 + CHAIN-SIM/INT/ABLATE + DRAMA + FRONT-AUTOPSY). Reports
+  copied to master in DOCS-1 STAGE 1. DEAD (section G, [DEAD-ENDS.md](DEAD-ENDS.md)).
+- `archive/free-band-final` (`aa21576`) — the entire `exp/free-band` history (the band-corridor family:
+  ACTION-FREEBAND-1/2, the cliff). Reports copied to master. DEAD.
+- `archive/choreo-release-final` (`109abd6`) — the entire `exp/choreo-release` history (per-racer conditional
+  release: arrival-safe but decided-finale-flat; CHOREO-RELEASE-1/2). Reports copied to master. DEAD.
+
 ## Active-phase tags (temporary scaffolding — to collapse later)
 
 Live step-tags from the OPEN runaway phase — safe return points, not permanent anchors. They collapse into
@@ -209,7 +229,18 @@ the step-2 deletions are recoverable at `c441e7c~1`, the step-4 deletions at `0b
 
 Neither was ever a merge candidate — both carried prototypes that must not reach master, so porting was
 by explicit keep-list, never by merge. Earlier, `diag/look-before-brake` was archived the same way (tag
-`archive/diag-look-before-brake` @ `c32cc61`, deleted 2026-07-20). No non-master branches remain.
+`archive/diag-look-before-brake` @ `c32cc61`, deleted 2026-07-20).
+
+**2026-07-29 — the four action/fair-arrival experiment branches were deleted after the COMBO15 ship**, each
+preserved first as a permanent `archive/*` tag (owner-approved branch hygiene, per the handicap-pursuit
+precedent). `exp/fair-arrival` was MERGED to master (its work ships as COMBO15); the other three are DEAD
+lines whose reports were copied to master in DOCS-1 STAGE 1:
+- `exp/fair-arrival` → `archive/fair-arrival-merged` (`215afde`) — merged via `175a475`.
+- `exp/chain-choreo` → `archive/chain-choreo-final` (`15c1d58`).
+- `exp/free-band` → `archive/free-band-final` (`aa21576`).
+- `exp/choreo-release` → `archive/choreo-release-final` (`109abd6`).
+
+No non-master branches remain.
 
 ## Complete tag set (after the parity phase close, 2026-07-25)
 
