@@ -1,0 +1,166 @@
+
+=== FAIR-ARRIVAL confirm — N=50/arm/track | city-circuit, dirt-oval, garden-path, ice-track, luger-hill, mountainstreet, river-run, searound, seatrack, space-sprint | 180s | arms ship,combo15 | jobs=4 | tag=s3 ===
+
+── ship ──
+  city-circuit C | ARRIVAL 79% (—) rowMin 76% ok | fC 79% (—) | DEAD 4% BORING 0% (—) thrill 4% | dLead 3.22 maxHold 55% p1s 27.9
+     └chaos-end in-band 34% (—) | steer: share 0% · ticks/race 0 · meanMult n/a · maxTickΔ 0.0000
+     └CHAOS | maxGap 3.5L · handover@end 2.8L · fieldSpread 30.9L · leaderSteered 0%(mult n/a) · leaderDrawnB1 54%
+     └PULK  | maxHold 0.33 · distinctLead 8.7 · earlyBreak 0% · leaderDrawnB1_mid 0.17 · meanGap 0.7L · 1stLeadChg 0.03
+     └BRAKE | armed_mid 0.41 · fires chaos/mid 0.0/0.0 · gate 0.60 · LAW 0.22/0.13
+     └row band-reach | r0:82% r1:78% r2:79% r3:76%
+     └row steer-exposure | r0:steer0%/mult— r1:steer0%/mult— r2:steer0%/mult— r3:steer0%/mult—
+  dirt-oval    C | ARRIVAL 81% (—) rowMin 80% ok | fC 79% (—) | DEAD 4% BORING 2% (—) thrill 2% | dLead 3.26 maxHold 54% p1s 25.2
+     └chaos-end in-band 35% (—) | steer: share 0% · ticks/race 0 · meanMult n/a · maxTickΔ 0.0000
+     └CHAOS | maxGap 2.9L · handover@end 2.3L · fieldSpread 25.8L · leaderSteered 0%(mult n/a) · leaderDrawnB1 38%
+     └PULK  | maxHold 0.32 · distinctLead 8.6 · earlyBreak 0% · leaderDrawnB1_mid 0.16 · meanGap 0.6L · 1stLeadChg 0.03
+     └BRAKE | armed_mid 0.36 · fires chaos/mid 0.0/0.0 · gate 0.60 · LAW 0.22/0.15
+     └row band-reach | r0:83% r1:80% r2:80% r3:80%
+     └row steer-exposure | r0:steer0%/mult— r1:steer0%/mult— r2:steer0%/mult— r3:steer0%/mult—
+  garden-path  C | ARRIVAL 80% (—) rowMin 79% ok | fC 97% (—) | DEAD 10% BORING 0% (—) thrill 10% | dLead 2.68 maxHold 65% p1s 42.3
+     └chaos-end in-band 34% (—) | steer: share 0% · ticks/race 0 · meanMult n/a · maxTickΔ 0.0000
+     └CHAOS | maxGap 2.1L · handover@end 1.5L · fieldSpread 15.4L · leaderSteered 0%(mult n/a) · leaderDrawnB1 44%
+     └PULK  | maxHold 0.35 · distinctLead 7.5 · earlyBreak 0% · leaderDrawnB1_mid 0.19 · meanGap 0.4L · 1stLeadChg 0.03
+     └BRAKE | armed_mid 0.20 · fires chaos/mid 0.0/0.0 · gate 0.60 · LAW 0.24/0.16
+     └row band-reach | r0:82% r1:79% r2:79%
+     └row steer-exposure | r0:steer0%/mult— r1:steer0%/mult— r2:steer0%/mult—
+  ice-track    C | ARRIVAL 80% (—) rowMin 79% ok | fC 77% (—) | DEAD 2% BORING 0% (—) thrill 2% | dLead 3.48 maxHold 53% p1s 24.6
+     └chaos-end in-band 35% (—) | steer: share 0% · ticks/race 0 · meanMult n/a · maxTickΔ 0.0000
+     └CHAOS | maxGap 3.5L · handover@end 2.9L · fieldSpread 33.1L · leaderSteered 0%(mult n/a) · leaderDrawnB1 52%
+     └PULK  | maxHold 0.33 · distinctLead 8.7 · earlyBreak 0% · leaderDrawnB1_mid 0.18 · meanGap 0.7L · 1stLeadChg 0.03
+     └BRAKE | armed_mid 0.46 · fires chaos/mid 0.0/0.0 · gate 0.60 · LAW 0.22/0.12
+     └row band-reach | r0:79% r1:82% r2:80% r3:79%
+     └row steer-exposure | r0:steer0%/mult— r1:steer0%/mult— r2:steer0%/mult— r3:steer0%/mult—
+  luger-hill   O | ARRIVAL 73% (—) rowMin 66% UNF | fC 98% (—) | DEAD 8% BORING 0% (—) thrill 8% | dLead 2.18 maxHold 71% p1s 35.6
+     └chaos-end in-band 26% (—) | steer: share 0% · ticks/race 0 · meanMult n/a · maxTickΔ 0.0000
+     └CHAOS | maxGap 1.1L · handover@end 0.9L · fieldSpread 13.4L · leaderSteered 0%(mult n/a) · leaderDrawnB1 12%
+     └PULK  | maxHold 0.38 · distinctLead 7.0 · earlyBreak 0% · leaderDrawnB1_mid 0.09 · meanGap 0.2L · 1stLeadChg 0.04
+     └BRAKE | armed_mid 0.08 · fires chaos/mid 0.0/0.0 · gate 0.60 · LAW 0.26/0.20
+     └row band-reach | r0:74% r1:74% r2:76% r3:74% r4:75% r5:72% r6:66%
+     └row steer-exposure | r0:steer0%/mult— r1:steer0%/mult— r2:steer0%/mult— r3:steer0%/mult— r4:steer0%/mult— r5:steer0%/mult— r6:steer0%/mult—
+  mountainstreetO | ARRIVAL 74% (—) rowMin 73% ok | fC 94% (—) | DEAD 2% BORING 0% (—) thrill 2% | dLead 3.30 maxHold 61% p1s 32.5
+     └chaos-end in-band 28% (—) | steer: share 0% · ticks/race 0 · meanMult n/a · maxTickΔ 0.0000
+     └CHAOS | maxGap 1.8L · handover@end 1.5L · fieldSpread 17.4L · leaderSteered 0%(mult n/a) · leaderDrawnB1 32%
+     └PULK  | maxHold 0.28 · distinctLead 10.8 · earlyBreak 0% · leaderDrawnB1_mid 0.13 · meanGap 0.3L · 1stLeadChg 0.03
+     └BRAKE | armed_mid 0.15 · fires chaos/mid 0.0/0.0 · gate 0.60 · LAW 0.23/0.15
+     └row band-reach | r0:75% r1:74% r2:73%
+     └row steer-exposure | r0:steer0%/mult— r1:steer0%/mult— r2:steer0%/mult—
+  river-run    O | ARRIVAL 73% (—) rowMin 73% ok | fC 94% (—) | DEAD 0% BORING 0% (—) thrill 0% | dLead 2.84 maxHold 57% p1s 34.0
+     └chaos-end in-band 29% (—) | steer: share 0% · ticks/race 0 · meanMult n/a · maxTickΔ 0.0000
+     └CHAOS | maxGap 1.8L · handover@end 1.4L · fieldSpread 17.6L · leaderSteered 0%(mult n/a) · leaderDrawnB1 34%
+     └PULK  | maxHold 0.31 · distinctLead 10.0 · earlyBreak 0% · leaderDrawnB1_mid 0.14 · meanGap 0.3L · 1stLeadChg 0.03
+     └BRAKE | armed_mid 0.16 · fires chaos/mid 0.0/0.0 · gate 0.60 · LAW 0.22/0.14
+     └row band-reach | r0:73% r1:74% r2:73%
+     └row steer-exposure | r0:steer0%/mult— r1:steer0%/mult— r2:steer0%/mult—
+  searound     C | ARRIVAL 81% (—) rowMin 78% ok | fC 66% (—) | DEAD 0% BORING 0% (—) thrill 0% | dLead 3.30 maxHold 53% p1s 21.1
+     └chaos-end in-band 35% (—) | steer: share 0% · ticks/race 0 · meanMult n/a · maxTickΔ 0.0000
+     └CHAOS | maxGap 5.0L · handover@end 4.0L · fieldSpread 38.2L · leaderSteered 0%(mult n/a) · leaderDrawnB1 48%
+     └PULK  | maxHold 0.35 · distinctLead 7.4 · earlyBreak 0% · leaderDrawnB1_mid 0.18 · meanGap 1.0L · 1stLeadChg 0.04
+     └BRAKE | armed_mid 0.58 · fires chaos/mid 0.0/0.0 · gate 0.60 · LAW 0.23/0.13
+     └row band-reach | r0:84% r1:79% r2:78% r3:79% r4:84% r5:82% r6:85%
+     └row steer-exposure | r0:steer0%/mult— r1:steer0%/mult— r2:steer0%/mult— r3:steer0%/mult— r4:steer0%/mult— r5:steer0%/mult— r6:steer0%/mult—
+  seatrack     O | ARRIVAL 75% (—) rowMin 74% ok | fC 99% (—) | DEAD 10% BORING 0% (—) thrill 10% | dLead 2.48 maxHold 67% p1s 35.1
+     └chaos-end in-band 28% (—) | steer: share 0% · ticks/race 0 · meanMult n/a · maxTickΔ 0.0000
+     └CHAOS | maxGap 1.4L · handover@end 1.1L · fieldSpread 12.3L · leaderSteered 0%(mult n/a) · leaderDrawnB1 24%
+     └PULK  | maxHold 0.29 · distinctLead 9.1 · earlyBreak 0% · leaderDrawnB1_mid 0.11 · meanGap 0.2L · 1stLeadChg 0.03
+     └BRAKE | armed_mid 0.09 · fires chaos/mid 0.0/0.0 · gate 0.60 · LAW 0.23/0.16
+     └row band-reach | r0:77% r1:74% r2:76% r3:74%
+     └row steer-exposure | r0:steer0%/mult— r1:steer0%/mult— r2:steer0%/mult— r3:steer0%/mult—
+  space-sprint O | ARRIVAL 73% (—) rowMin 70% ok | fC 84% (—) | DEAD 4% BORING 0% (—) thrill 4% | dLead 3.12 maxHold 57% p1s 28.5
+     └chaos-end in-band 27% (—) | steer: share 0% · ticks/race 0 · meanMult n/a · maxTickΔ 0.0000
+     └CHAOS | maxGap 2.3L · handover@end 1.7L · fieldSpread 25.6L · leaderSteered 0%(mult n/a) · leaderDrawnB1 28%
+     └PULK  | maxHold 0.25 · distinctLead 11.3 · earlyBreak 0% · leaderDrawnB1_mid 0.10 · meanGap 0.4L · 1stLeadChg 0.02
+     └BRAKE | armed_mid 0.28 · fires chaos/mid 0.0/0.0 · gate 0.60 · LAW 0.21/0.13
+     └row band-reach | r0:74% r1:70% r2:75% r3:74%
+     └row steer-exposure | r0:steer0%/mult— r1:steer0%/mult— r2:steer0%/mult— r3:steer0%/mult—
+
+── combo15 ──
+  city-circuit C | ARRIVAL 85% (+7pp) rowMin 84% ok | fC 85% (+6pp) | DEAD 6% BORING 0% (+0pp) thrill 6% | dLead 3.42 maxHold 54% p1s 29.2
+     └chaos-end in-band 69% (+35pp) | steer: share 94% · ticks/race 24642 · meanMult 0.983 · maxTickΔ 0.0113
+     └CHAOS | maxGap 4.7L · handover@end 3.9L · fieldSpread 20.1L · leaderSteered 80%(mult 1.10) · leaderDrawnB1 100%
+     └PULK  | maxHold 0.28 · distinctLead 12.0 · earlyBreak 0% · leaderDrawnB1_mid 0.40 · meanGap 0.8L · 1stLeadChg 0.05
+     └BRAKE | armed_mid 0.39 · fires chaos/mid 0.0/0.0 · gate 0.60 · LAW 0.17/0.11
+     └row band-reach | r0:84% r1:86% r2:87% r3:84%
+     └row steer-exposure | r0:steer97%/mult0.916 r1:steer99%/mult0.961 r2:steer96%/mult1.016 r3:steer82%/mult1.038
+  dirt-oval    C | ARRIVAL 88% (+7pp) rowMin 87% ok | fC 87% (+8pp) | DEAD 4% BORING 0% (-2pp) thrill 4% | dLead 3.38 maxHold 52% p1s 28.6
+     └chaos-end in-band 71% (+36pp) | steer: share 93% · ticks/race 22249 · meanMult 0.983 · maxTickΔ 0.0111
+     └CHAOS | maxGap 3.6L · handover@end 2.9L · fieldSpread 16.8L · leaderSteered 80%(mult 1.10) · leaderDrawnB1 100%
+     └PULK  | maxHold 0.28 · distinctLead 11.3 · earlyBreak 0% · leaderDrawnB1_mid 0.42 · meanGap 0.7L · 1stLeadChg 0.04
+     └BRAKE | armed_mid 0.35 · fires chaos/mid 0.0/0.0 · gate 0.60 · LAW 0.17/0.12
+     └row band-reach | r0:89% r1:87% r2:88% r3:88%
+     └row steer-exposure | r0:steer97%/mult0.914 r1:steer99%/mult0.958 r2:steer96%/mult1.017 r3:steer81%/mult1.041
+  garden-path  C | ARRIVAL 87% (+7pp) rowMin 86% ok | fC 100% (+3pp) | DEAD 8% BORING 0% (+0pp) thrill 8% | dLead 3.18 maxHold 56% p1s 42.5
+     └chaos-end in-band 72% (+38pp) | steer: share 93% · ticks/race 30534 · meanMult 0.980 · maxTickΔ 0.0113
+     └CHAOS | maxGap 2.8L · handover@end 2.3L · fieldSpread 10.5L · leaderSteered 82%(mult 1.09) · leaderDrawnB1 100%
+     └PULK  | maxHold 0.32 · distinctLead 10.8 · earlyBreak 0% · leaderDrawnB1_mid 0.47 · meanGap 0.4L · 1stLeadChg 0.05
+     └BRAKE | armed_mid 0.19 · fires chaos/mid 0.0/0.0 · gate 0.60 · LAW 0.18/0.12
+     └row band-reach | r0:88% r1:86% r2:86%
+     └row steer-exposure | r0:steer98%/mult0.896 r1:steer100%/mult0.991 r2:steer80%/mult1.061
+  ice-track    C | ARRIVAL 84% (+4pp) rowMin 81% ok | fC 84% (+7pp) | DEAD 2% BORING 0% (+0pp) thrill 2% | dLead 3.52 maxHold 48% p1s 28.0
+     └chaos-end in-band 71% (+36pp) | steer: share 93% · ticks/race 23624 · meanMult 0.983 · maxTickΔ 0.0115
+     └CHAOS | maxGap 4.8L · handover@end 3.9L · fieldSpread 21.4L · leaderSteered 80%(mult 1.10) · leaderDrawnB1 100%
+     └PULK  | maxHold 0.27 · distinctLead 12.2 · earlyBreak 0% · leaderDrawnB1_mid 0.42 · meanGap 0.8L · 1stLeadChg 0.05
+     └BRAKE | armed_mid 0.43 · fires chaos/mid 0.0/0.0 · gate 0.60 · LAW 0.17/0.11
+     └row band-reach | r0:81% r1:84% r2:85% r3:83%
+     └row steer-exposure | r0:steer96%/mult0.916 r1:steer100%/mult0.958 r2:steer95%/mult1.017 r3:steer81%/mult1.040
+  luger-hill   O | ARRIVAL 90% (+17pp) rowMin 88% UNF | fC 99% (+1pp) | DEAD 2% BORING 0% (+0pp) thrill 2% | dLead 2.42 maxHold 67% p1s 35.3
+     └chaos-end in-band 46% (+20pp) | steer: share 87% · ticks/race 41899 · meanMult 0.972 · maxTickΔ 0.0071
+     └CHAOS | maxGap 1.2L · handover@end 1.1L · fieldSpread 10.2L · leaderSteered 88%(mult 1.08) · leaderDrawnB1 94%
+     └PULK  | maxHold 0.31 · distinctLead 9.8 · earlyBreak 0% · leaderDrawnB1_mid 0.35 · meanGap 0.2L · 1stLeadChg 0.05
+     └BRAKE | armed_mid 0.09 · fires chaos/mid 0.0/0.0 · gate 0.60 · LAW 0.20/0.19
+     └row band-reach | r0:89% r1:92% r2:91% r3:89% r4:90% r5:91% r6:88%
+     └row steer-exposure | r0:steer97%/mult0.855 r1:steer98%/mult0.870 r2:steer99%/mult0.908 r3:steer87%/mult1.010 r4:steer88%/mult1.083 r5:steer70%/mult1.100 r6:steer66%/mult1.100
+  mountainstreetO | ARRIVAL 86% (+12pp) rowMin 86% ok | fC 99% (+5pp) | DEAD 8% BORING 0% (+0pp) thrill 8% | dLead 3.28 maxHold 53% p1s 34.5
+     └chaos-end in-band 69% (+41pp) | steer: share 94% · ticks/race 37019 · meanMult 0.975 · maxTickΔ 0.0111
+     └CHAOS | maxGap 2.4L · handover@end 2.0L · fieldSpread 10.7L · leaderSteered 82%(mult 1.10) · leaderDrawnB1 100%
+     └PULK  | maxHold 0.23 · distinctLead 15.1 · earlyBreak 0% · leaderDrawnB1_mid 0.36 · meanGap 0.4L · 1stLeadChg 0.04
+     └BRAKE | armed_mid 0.14 · fires chaos/mid 0.0/0.0 · gate 0.60 · LAW 0.17/0.12
+     └row band-reach | r0:86% r1:86% r2:86%
+     └row steer-exposure | r0:steer99%/mult0.913 r1:steer100%/mult0.972 r2:steer84%/mult1.042
+  river-run    O | ARRIVAL 86% (+13pp) rowMin 85% ok | fC 98% (+3pp) | DEAD 0% BORING 0% (+0pp) thrill 0% | dLead 3.14 maxHold 55% p1s 33.8
+     └chaos-end in-band 68% (+40pp) | steer: share 94% · ticks/race 36953 · meanMult 0.975 · maxTickΔ 0.0115
+     └CHAOS | maxGap 2.4L · handover@end 2.1L · fieldSpread 10.9L · leaderSteered 82%(mult 1.10) · leaderDrawnB1 100%
+     └PULK  | maxHold 0.24 · distinctLead 14.4 · earlyBreak 0% · leaderDrawnB1_mid 0.39 · meanGap 0.4L · 1stLeadChg 0.05
+     └BRAKE | armed_mid 0.15 · fires chaos/mid 0.0/0.0 · gate 0.60 · LAW 0.17/0.13
+     └row band-reach | r0:87% r1:85% r2:86%
+     └row steer-exposure | r0:steer99%/mult0.911 r1:steer100%/mult0.971 r2:steer84%/mult1.043
+  searound     C | ARRIVAL 87% (+5pp) rowMin 83% ok | fC 79% (+13pp) | DEAD 0% BORING 0% (+0pp) thrill 0% | dLead 3.78 maxHold 49% p1s 25.3
+     └chaos-end in-band 71% (+37pp) | steer: share 92% · ticks/race 27080 · meanMult 0.981 · maxTickΔ 0.0071
+     └CHAOS | maxGap 6.5L · handover@end 5.4L · fieldSpread 25.3L · leaderSteered 72%(mult 1.09) · leaderDrawnB1 100%
+     └PULK  | maxHold 0.30 · distinctLead 10.6 · earlyBreak 0% · leaderDrawnB1_mid 0.45 · meanGap 1.2L · 1stLeadChg 0.05
+     └BRAKE | armed_mid 0.55 · fires chaos/mid 0.0/0.0 · gate 0.60 · LAW 0.17/0.11
+     └row band-reach | r0:89% r1:83% r2:86% r3:88% r4:88% r5:86% r6:87%
+     └row steer-exposure | r0:steer92%/mult0.890 r1:steer99%/mult0.912 r2:steer100%/mult0.939 r3:steer100%/mult1.007 r4:steer88%/mult1.039 r5:steer79%/mult1.047 r6:steer80%/mult1.067
+  seatrack     O | ARRIVAL 88% (+13pp) rowMin 88% UNF | fC 100% (+1pp) | DEAD 8% BORING 0% (+0pp) thrill 8% | dLead 2.62 maxHold 61% p1s 35.7
+     └chaos-end in-band 68% (+40pp) | steer: share 93% · ticks/race 41111 · meanMult 0.972 · maxTickΔ 0.0071
+     └CHAOS | maxGap 1.9L · handover@end 1.7L · fieldSpread 7.9L · leaderSteered 80%(mult 1.10) · leaderDrawnB1 100%
+     └PULK  | maxHold 0.27 · distinctLead 12.4 · earlyBreak 0% · leaderDrawnB1_mid 0.42 · meanGap 0.3L · 1stLeadChg 0.05
+     └BRAKE | armed_mid 0.12 · fires chaos/mid 0.0/0.0 · gate 0.60 · LAW 0.20/0.17
+     └row band-reach | r0:88% r1:88% r2:89% r3:89%
+     └row steer-exposure | r0:steer98%/mult0.876 r1:steer100%/mult0.920 r2:steer97%/mult1.024 r3:steer77%/mult1.076
+  space-sprint O | ARRIVAL 86% (+12pp) rowMin 84% ok | fC 90% (+6pp) | DEAD 0% BORING 0% (+0pp) thrill 0% | dLead 3.52 maxHold 49% p1s 29.8
+     └chaos-end in-band 67% (+40pp) | steer: share 94% · ticks/race 39719 · meanMult 0.974 · maxTickΔ 0.0107
+     └CHAOS | maxGap 3.8L · handover@end 3.4L · fieldSpread 16.2L · leaderSteered 80%(mult 1.10) · leaderDrawnB1 100%
+     └PULK  | maxHold 0.22 · distinctLead 16.1 · earlyBreak 0% · leaderDrawnB1_mid 0.35 · meanGap 0.6L · 1stLeadChg 0.05
+     └BRAKE | armed_mid 0.24 · fires chaos/mid 0.0/0.0 · gate 0.60 · LAW 0.16/0.11
+     └row band-reach | r0:87% r1:86% r2:84% r3:86%
+     └row steer-exposure | r0:steer99%/mult0.890 r1:steer100%/mult0.931 r2:steer97%/mult1.015 r3:steer82%/mult1.058
+
+=== FAIR-ARRIVAL-GATE (combo15 vs SHIP, N=50, per track) ===
+  track            | arrival S→C | A | rowMin S→C · Holm | R | fC S→C | F | BORING S→C | B | PULK maxHold/distLead/chaosGap S→C | P | PASS
+  city-circuit   C| 79%→85%✗ | ✗ | 76%→84% ok/ok | ✓ | 79%→85% | ✓ | 0%→0% | ✓ | 0.28(0.33) 12.0(8.7) 4.7L(3.5) | ✗ | FAIL
+  dirt-oval      C| 81%→88%* | ✓ | 80%→87% ok/ok | ✓ | 79%→87% | ✓ | 2%→0% | ✓ | 0.28(0.32) 11.3(8.6) 3.6L(2.9) | ✓ | PASS
+  garden-path    C| 80%→87%✗ | ✗ | 79%→86% ok/ok | ✓ | 97%→100% | ✓ | 0%→0% | ✓ | 0.32(0.35) 10.8(7.5) 2.8L(2.1) | ✓ | FAIL
+  ice-track      C| 80%→84%✗ | ✗ | 79%→81% ok/ok | ✓ | 77%→84% | ✓ | 0%→0% | ✓ | 0.27(0.33) 12.2(8.7) 4.8L(3.5) | ✗ | FAIL
+  luger-hill     O| 73%→90% | ✓ | 66%→88% UNF/UNF | ✓ | 98%→99% | ✓ | 0%→0% | ✓ | 0.31(0.38) 9.8(7.0) 1.2L(1.1) | ✓ | PASS
+  mountainstreet O| 74%→86% | ✓ | 73%→86% ok/ok | ✓ | 94%→99% | ✓ | 0%→0% | ✓ | 0.23(0.28) 15.1(10.8) 2.4L(1.8) | ✓ | PASS
+  river-run      O| 73%→86% | ✓ | 73%→85% ok/ok | ✓ | 94%→98% | ✓ | 0%→0% | ✓ | 0.24(0.31) 14.4(10.0) 2.4L(1.8) | ✓ | PASS
+  searound       C| 81%→87%✗ | ✗ | 78%→83% ok/ok | ✓ | 66%→79% | ✓ | 0%→0% | ✓ | 0.30(0.35) 10.6(7.4) 6.5L(5.0) | ✗ | FAIL
+  seatrack       O| 75%→88% | ✓ | 74%→88% ok/UNF | ✓ | 99%→100% | ✓ | 0%→0% | ✓ | 0.27(0.29) 12.4(9.1) 1.9L(1.4) | ✓ | PASS
+  space-sprint   O| 73%→86% | ✓ | 70%→84% ok/ok | ✓ | 84%→90% | ✓ | 0%→0% | ✓ | 0.22(0.25) 16.1(11.3) 3.8L(2.3) | ✗ | FAIL
+
+  ── GATE VERDICT: PARTIAL ──
+  arrival: OK-form 6/10 (need ≥8), failBoth 4 (need 0), belowShip 0 (need 0) → FAIL
+  rowMin≥ship: PASS | fC≥ship−2: PASS | DEAD-BORING≤ship+2: PASS
+  PULK watchdog: FAIL city-circuit,ice-track,searound,space-sprint | Holm worsened: seatrack
+
+runtime 319.0 min | FAIR-ARRIVAL-GATE (binding at N=50); gate-arm=combo15

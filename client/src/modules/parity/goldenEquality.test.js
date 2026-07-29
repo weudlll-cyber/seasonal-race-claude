@@ -154,10 +154,11 @@ describe('real browser arm (raceCore) == sim — the step-order-alignment parity
 
   // searound / manta / 40 — the shipped-default winners. real core == sim on all three (the hash + order
   // equality below is the parity guarantee; the winner index is just the concrete anchor). These moved
-  // again at the 2026-07-26 gap-reroll flip (G 0.75→0.5, strength 0.5→1.0): a different re-roll bias
-  // consumes the stream differently, so the finishing order shifted (seed 1 → idx 27, seed 42 → idx 21;
-  // seed 7 unchanged at idx 17). real == sim still holds byte-for-byte — only the concrete anchor moved.
-  const WINNERS = { 1: 27, 7: 17, 42: 21 };
+  // again at the 2026-07-29 COMBO15 ship (MERGE-SHIP-1): the fair-arrival mechanism became the default
+  // world (chaos window 0.15, chaosSteer, bandBias) so the finishing order shifted (seed 1 → idx 38).
+  // seed 7 unchanged at idx 17 and seed 42 unchanged at idx 21. real == sim still holds byte-for-byte —
+  // only the concrete anchor moved. Pre-combo15 anchor was seed 1 → idx 27.
+  const WINNERS = { 1: 38, 7: 17, 42: 21 };
   for (const seed of [1, 7, 42]) {
     it(
       `searound/manta/40/seed=${seed}: real browser arm and sim are byte-identical`,

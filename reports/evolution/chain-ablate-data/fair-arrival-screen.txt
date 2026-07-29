@@ -1,0 +1,32 @@
+
+=== FAIR-ARRIVAL-1 screen — N=25/arm/track | searound + ice | track-defaults | jobs=4 ===
+
+── ship ──
+  searound    | ARRIVAL 75% (—) rowMin 66% UNF | frontContest 42% (—) | DEAD 8% DEAD-BORING 8% (—) | distinctLead 1.80 | 
+  ice-track   | ARRIVAL 72% (—) rowMin 65% ok | frontContest 68% (—) | DEAD 12% DEAD-BORING 0% (—) | distinctLead 1.92 | 
+
+── A ──
+  searound    | ARRIVAL 75% (+0pp) rowMin 66% UNF | frontContest 42% (+0pp) | DEAD 8% DEAD-BORING 8% (+0pp) | distinctLead 1.80 | 
+  ice-track   | ARRIVAL 72% (+0pp) rowMin 65% ok | frontContest 68% (+0pp) | DEAD 12% DEAD-BORING 0% (+0pp) | distinctLead 1.92 | 
+
+── Bweak ──
+  searound    | ARRIVAL 82% (+7pp) rowMin 72% ok | frontContest 44% (+2pp) | DEAD 20% DEAD-BORING 8% (+0pp) | distinctLead 1.80 | 
+  ice-track   | ARRIVAL 84% (+0pp) rowMin 78% ok | frontContest 69% (+0pp) | DEAD 12% DEAD-BORING 4% (+0pp) | distinctLead 1.96 | 
+
+── Bmed ──
+  searound    | ARRIVAL 83% (+8pp) rowMin 79% UNF | frontContest 44% (+2pp) | DEAD 24% DEAD-BORING 16% (+8pp) | distinctLead 1.76 | 
+  ice-track   | ARRIVAL 84% (+0pp) rowMin 82% ok | frontContest 68% (+0pp) | DEAD 24% DEAD-BORING 4% (+0pp) | distinctLead 1.96 | 
+
+── B60 ──
+  searound    | ARRIVAL 89% (+14pp) rowMin 86% UNF | frontContest 42% (-0pp) | DEAD 20% DEAD-BORING 8% (+0pp) | distinctLead 1.72 | 
+  ice-track   | ARRIVAL 89% (+0pp) rowMin 86% UNF | frontContest 67% (+0pp) | DEAD 20% DEAD-BORING 8% (+0pp) | distinctLead 2.20 | 
+
+── AB60 ──
+  searound    | ARRIVAL 89% (+14pp) rowMin 86% UNF | frontContest 42% (-0pp) | DEAD 20% DEAD-BORING 8% (+0pp) | distinctLead 1.72 | 
+  ice-track   | ARRIVAL 89% (+0pp) rowMin 86% UNF | frontContest 67% (+0pp) | DEAD 20% DEAD-BORING 8% (+0pp) | distinctLead 2.20 | 
+
+── C ──
+  searound    | ARRIVAL 68% (-7pp) rowMin 59% UNF | frontContest 27% (-16pp) | DEAD 36% DEAD-BORING 24% (+16pp) | distinctLead 1.48 | 
+  ice-track   | ARRIVAL 70% (+0pp) rowMin 62% ok | frontContest 55% (+0pp) | DEAD 12% DEAD-BORING 4% (+0pp) | distinctLead 1.52 | 
+
+runtime 15.4 min | GATE = arrival≥90% AND frontContest within 10pp AND DEAD-BORING≤ship (both tracks)

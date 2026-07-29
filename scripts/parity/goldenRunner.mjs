@@ -245,6 +245,18 @@ function browserPlanConfig(dynamicsConfig) {
     gapRerollMode: dynamicsConfig.gapRerollMode ?? 'symmetric',
     gapRerollStrength: dynamicsConfig.gapRerollStrength ?? 1.0,
     reRollTransitionDuration: dynamicsConfig.reRollTransitionDuration,
+    // FAIR-ARRIVAL flags — mirror of raceCore's createRacePlan wiring (kept in sync per the "written twice"
+    // note). All default OFF ⇒ null in the plan ⇒ byte-identical for the shipped-defaults parity soak.
+    chaosAnchor: dynamicsConfig.chaosAnchor ?? false,
+    chaosAnchorGain: dynamicsConfig.chaosAnchorGain ?? 0.06,
+    chaosSteer: dynamicsConfig.chaosSteer ?? false,
+    chaosSteerGain: dynamicsConfig.chaosSteerGain ?? 0.06,
+    bandBias: dynamicsConfig.bandBias ?? false,
+    bandBiasR: dynamicsConfig.bandBiasR ?? 0.8,
+    bandBiasGain: dynamicsConfig.bandBiasGain ?? 0.06,
+    bandWall: dynamicsConfig.bandWall ?? false,
+    bandWallR: dynamicsConfig.bandWallR ?? 0.8,
+    bandWallGain: dynamicsConfig.bandWallGain ?? 4,
   };
 }
 
@@ -281,6 +293,18 @@ function simPlanConfig(DYN) {
     gapRerollStrength: DYN.gapRerollStrength,
     reRollTransitionDuration: DYN.reRollTransitionDuration,
     contestWindowStart: DYN.contestWindowStart,
+    // COMBO15 (MERGE-SHIP-1): the FAIR-ARRIVAL mechanism is a shipped default — thread it here too so the sim
+    // arm matches the real browser arm (raceCore) under the new defaults. Mirrors browserPlanConfig.
+    chaosAnchor: DYN.chaosAnchor ?? false,
+    chaosAnchorGain: DYN.chaosAnchorGain ?? 0.06,
+    chaosSteer: DYN.chaosSteer ?? false,
+    chaosSteerGain: DYN.chaosSteerGain ?? 0.06,
+    bandBias: DYN.bandBias ?? false,
+    bandBiasR: DYN.bandBiasR ?? 0.8,
+    bandBiasGain: DYN.bandBiasGain ?? 0.06,
+    bandWall: DYN.bandWall ?? false,
+    bandWallR: DYN.bandWallR ?? 0.8,
+    bandWallGain: DYN.bandWallGain ?? 4,
   };
 }
 

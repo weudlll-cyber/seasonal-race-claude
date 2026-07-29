@@ -256,6 +256,25 @@ export function createRacePlan(racers, finishT, targetDurationMs, config = {}, s
     _pulkTargetSpread: config.pulkTargetSpread ?? DEFAULT_PULK_TARGET_SPREAD,
     _stochasticNoise: config.stochasticNoise ?? DEFAULT_STOCHASTIC_NOISE,
     _pulkBiasGain: config.pulkBiasGain ?? DEFAULT_PULK_BIAS_GAIN,
+    // ── FAIR-ARRIVAL-1 (SIM-ONLY; default OFF). The owner's two-part proposal to raise band arrival while
+    // keeping ship's re-roll action. ARM A: gentle chaos-phase steering toward the DRAWN BAND (the
+    // orchestration anchor), ending with the chaos phase. ARM B: from R, re-aim the re-roll DRAW (not the
+    // position) toward the drawn band — the dice are aimed, not fought, clamped to the honest range (nothing
+    // to pin). ARM C: hard band walls from R (the literal wording; expected to pin). All flag-gated. ──
+    _chaosAnchor: config.chaosAnchor ? { gain: config.chaosAnchorGain ?? 0.06 } : null,
+    // ── CHAOS-STEER-1 (SIM-ONLY; default OFF). The owner's Part 1 built PROPERLY: a CONTINUOUS gentle pull
+    // during the CHAOS phase ONLY toward the DRAWN BAND (not a draw bias, not a hard wall). Reachable —
+    // the pre-outcome pin early-return is skipped while active (that return is exactly why ARM A never
+    // gripped). Out of band → eased toward it (two-sided clamp [minMult,maxMult], _setTarget slews it →
+    // Sanftheits); in band → 1.0, untouched. Pull TARGET ends with chaos; the slew-eased mult then decays
+    // into early PULK (no snap). Flag OFF → null → never runs → byte-identical. ──
+    _chaosSteer: config.chaosSteer ? { gain: config.chaosSteerGain ?? 0.06 } : null,
+    _bandBias: config.bandBias
+      ? { R: config.bandBiasR ?? 0.8, gain: config.bandBiasGain ?? 0.06 }
+      : null,
+    _bandWall: config.bandWall
+      ? { R: config.bandWallR ?? 0.8, gain: config.bandWallGain ?? 4 }
+      : null,
     _racerTargetRank: racerTargetRank,
     _racerAreaBonus: racerAreaBonus,
     _areaBonusFadeDuration:
@@ -389,6 +408,17 @@ export function createTrajectoryController(racePlan) {
   let _winnerStepCount = 0;
   let _pulkBiasDeltaSum = 0;
   let _pulkBiasEventCount = 0;
+  // CHAOS-STEER-1 telemetry (closure-scoped ⇒ per race). Ticks steered, summed target mult (mean pull),
+  // max per-tick |Δ trajectoryMult| over steered racers (Sanftheits proof), and the in-band-at-chaos-end
+  // scorecard (index → in drawn band at the first PULK frame) captured read-only for EVERY arm (ship too).
+  let _chaosSteerTicks = 0;
+  let _chaosSteerMultSum = 0;
+  let _chaosSteerMaxTickDelta = 0;
+  const _chaosSteerInBandEnd = new Map();
+  const _chaosSteerLastMult = new Map(); // index → trajectoryMult observed last frame (frame-to-frame Δ)
+  const _chaosSteerRacers = new Set(); // distinct racers the steer touched (out of band ≥1 chaos frame)
+  const _chaosSteerByRacer = new Map(); // index → {ticks, multSum} (per-racer steer exposure → per-row skew)
+  let _chaosSteerEndCaptured = false;
   let _racerStepCount = 0;
   let _racersInCorridorCount = 0;
   let _corridorViolationSum = 0;
@@ -578,7 +608,12 @@ export function createTrajectoryController(racePlan) {
     // steer toward, and the PACK runs at a looser bandStrictness. choreo-off → identical early-return.
     const choreoActive =
       plan._choreoEnabled && phaseProgress != null && phaseProgress >= pulkStartFrac;
-    if (_preOutcome && !choreoActive) {
+    // CHAOS-STEER-1: the pre-outcome pin returns early — which is precisely why the chaos steer never
+    // gripped (the per-racer steer block sat AFTER this return, dead). Skip the early return during chaos
+    // when the steer is active so that block is reached. OFF → chaosSteerNow false → identical early-return.
+    const chaosSteerNow =
+      plan._chaosSteer != null && phaseProgress != null && phaseProgress < pulkStartFrac;
+    if (_preOutcome && !choreoActive && !chaosSteerNow) {
       for (const r of racers) _setTarget(r, 1.0, elapsedMs);
       return;
     }
@@ -587,6 +622,20 @@ export function createTrajectoryController(racePlan) {
     const active = racers
       .filter((r) => !r.finished)
       .sort((a, b) => (b.t !== a.t ? b.t - a.t : a.index - b.index));
+
+    // CHAOS-STEER-1 scorecard: at the FIRST PULK frame (chaos end) snapshot whether each racer is in its
+    // DRAWN band. Read-only (no _setTarget / no RNG), so it runs for EVERY arm — ship included — to give
+    // the in-band-at-chaos-end delta, and cannot perturb the OFF fingerprint.
+    if (!_chaosSteerEndCaptured && phaseProgress != null && phaseProgress >= pulkStartFrac) {
+      for (let i = 0; i < active.length; i++) {
+        const rr = active[i];
+        const dr = plan._racerTargetRank.get(rr.index);
+        if (dr == null) continue;
+        const [blo, bhi] = getAreaBounds(dr);
+        _chaosSteerInBandEnd.set(rr.index, i + 1 >= blo && i + 1 <= bhi);
+      }
+      _chaosSteerEndCaptured = true;
+    }
 
     for (const r of racers) {
       if (r.finished) _setTarget(r, 1.0, elapsedMs);
@@ -675,6 +724,68 @@ export function createTrajectoryController(racePlan) {
       const currentRank = rankIdx + 1; // 1-indexed, 1 = leading
       const heroCurve = heroCurves && r.isHeroChoreographed ? heroCurves.get(r.index) : null;
       const isHero = !!heroCurve;
+      // ── CHAOS-STEER-1: the owner's Part 1, built PROPERLY (reachable — see the early-return skip above).
+      // During chaos (< pulkStart) a racer OUT of its DRAWN band is eased toward it by a clamped multiplier
+      // (Sanftheits-Regel: _setTarget slews it, no per-tick snap; two-sided clamp [minMult,maxMult] honoured).
+      // IN band → caErr 0 → target 1.0 → untouched. The pull TARGET ends with the chaos phase. Telemetry:
+      // steered-tick count, summed target mult (mean pull), and the max per-tick |Δ mult| (smoothness proof).
+      if (plan._chaosSteer && phaseProgress != null && phaseProgress < pulkStartFrac) {
+        const csDrawn = plan._racerTargetRank.get(r.index) ?? currentRank;
+        const [csLo, csHi] = getAreaBounds(csDrawn);
+        const csErr =
+          currentRank < csLo ? currentRank - csLo : currentRank > csHi ? currentRank - csHi : 0;
+        const csTarget = clamp(1.0 + plan._chaosSteer.gain * clamp(csErr, -5, 5), minMult, maxMult);
+        _setTarget(r, csTarget, elapsedMs);
+        // Smoothness proof: the eased trajectoryMult read this frame is last frame's RESULT; compare to the
+        // value observed the previous frame → the true per-tick step the ease produced (bounded = smooth).
+        const nowMult = r.trajectoryMult ?? 1.0;
+        if (_chaosSteerLastMult.has(r.index)) {
+          const d = Math.abs(nowMult - _chaosSteerLastMult.get(r.index));
+          if (d > _chaosSteerMaxTickDelta) _chaosSteerMaxTickDelta = d;
+        }
+        _chaosSteerLastMult.set(r.index, nowMult);
+        if (csErr !== 0) {
+          _chaosSteerTicks++;
+          _chaosSteerMultSum += csTarget;
+          _chaosSteerRacers.add(r.index);
+          const pr = _chaosSteerByRacer.get(r.index) ?? { ticks: 0, multSum: 0 };
+          pr.ticks++;
+          pr.multSum += csTarget;
+          _chaosSteerByRacer.set(r.index, pr);
+        }
+        continue;
+      }
+      // ── FAIR-ARRIVAL-1 ARM A (chaos anchor steering): during the chaos phase (< pulkStart) a racer OUT of
+      // its DRAWN band is gently pulled toward it (the orchestration anchor — a band, not an exact rank),
+      // within the two-sided clamp; the re-roll scatter stays random around it. Ends with the chaos phase, so
+      // the finale is byte-unchanged vs ship. Flag OFF → never runs. ──
+      if (plan._chaosAnchor && phaseProgress != null && phaseProgress < pulkStartFrac) {
+        const caDrawn = plan._racerTargetRank.get(r.index) ?? currentRank;
+        const [caLo, caHi] = getAreaBounds(caDrawn);
+        const caErr =
+          currentRank < caLo ? currentRank - caLo : currentRank > caHi ? currentRank - caHi : 0;
+        _setTarget(
+          r,
+          clamp(1.0 + plan._chaosAnchor.gain * clamp(caErr, -5, 5), minMult, maxMult),
+          elapsedMs
+        );
+        continue;
+      }
+      // ── FAIR-ARRIVAL-1 ARM C (hard band walls from R): the literal owner wording — a hard corridor holds
+      // each racer to its drawn band while ship's re-roll runs. A positional force that FIGHTS the dice
+      // (expected to pin, per FREEBAND). Flag OFF → never runs. ──
+      if (plan._bandWall && phaseProgress != null && phaseProgress >= plan._bandWall.R) {
+        const bwDrawn = plan._racerTargetRank.get(r.index) ?? currentRank;
+        const [bwLo, bwHi] = getAreaBounds(bwDrawn);
+        const bwErr =
+          currentRank < bwLo ? currentRank - bwLo : currentRank > bwHi ? currentRank - bwHi : 0;
+        _setTarget(
+          r,
+          clamp(1.0 + gain * plan._bandWall.gain * (bwErr / nActive), minMult, maxMult),
+          elapsedMs
+        );
+        continue;
+      }
       // Pre-OUTCOME: only heroes steer (toward their curves); the pack stays pinned to 1.0 exactly as
       // before. In OUTCOME every racer steers (heroes toward their curves).
       if (_preOutcome && !isHero) {
@@ -855,6 +966,25 @@ export function createTrajectoryController(racePlan) {
     elapsedMs,
     phaseProgress = null
   ) {
+    const thisRacer0 = racers.find((r) => r.index === racerIndex);
+    if (!thisRacer0 || thisRacer0.finished) return rawSample;
+
+    // ── FAIR-ARRIVAL-1 ARM B: from R, AIM the re-roll DRAW toward the racer's drawn band, clamped to the
+    // honest [spreadMin, spreadMax] range — nothing is fought and no position is forced, the tempo dice are
+    // simply loaded toward the band. An OUT-of-band racer draws toward the near edge (catch-up / fall-back);
+    // an IN-band racer keeps the free dice, so the within-band order is still decided by chance (pillar 3). ──
+    if (plan._bandBias && phaseProgress != null && phaseProgress >= plan._bandBias.R) {
+      let rank = 1;
+      for (const o of racers) if (!o.finished && o.t > thisRacer0.t) rank++;
+      const [bbLo, bbHi] = getAreaBounds(plan._racerTargetRank.get(racerIndex) ?? rank);
+      const bandErr = rank < bbLo ? rank - bbLo : rank > bbHi ? rank - bbHi : 0;
+      if (bandErr === 0) return rawSample; // in band → free dice
+      const biased = clamp(rawSample + plan._bandBias.gain * bandErr, spreadMin, spreadMax);
+      _pulkBiasDeltaSum += Math.abs(biased - rawSample);
+      _pulkBiasEventCount += 1;
+      return biased;
+    }
+
     if (getPhase(elapsedMs, phaseProgress) !== 'PULK') return rawSample;
 
     const thisRacer = racers.find((r) => r.index === racerIndex);
@@ -1108,6 +1238,16 @@ export function createTrajectoryController(racePlan) {
     update,
     computePulkBiasedTarget,
     computeGapBiasedTarget,
+    // CHAOS-STEER-1 read-only per-race telemetry. inBandEnd = the direct Part-1 scorecard (index → in
+    // drawn band at chaos end), captured for EVERY arm; ticks/meanMult = grip; maxTickDelta = Sanftheits.
+    getChaosSteerStats: () => ({
+      inBandEnd: [..._chaosSteerInBandEnd.entries()],
+      steeredTicks: _chaosSteerTicks,
+      steeredRacers: _chaosSteerRacers.size,
+      meanMult: _chaosSteerTicks ? _chaosSteerMultSum / _chaosSteerTicks : null,
+      maxTickDelta: _chaosSteerMaxTickDelta,
+      byRacer: [..._chaosSteerByRacer.entries()], // [index, {ticks, multSum}] — per-row skew join
+    }),
     // SCREEN escape-latency: how many DOWN-tilts have hit the LIVE LEADER so far. Read per frame by
     // the sim so it can freeze escapeDepth (the max P1->P2 gap reached BEFORE the first correction)
     // at the exact moment the first one fires. Read-only accessor, no state change.

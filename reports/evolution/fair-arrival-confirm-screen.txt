@@ -1,0 +1,103 @@
+
+=== FAIR-ARRIVAL confirm — N=50/arm/track | city-circuit, dirt-oval, garden-path, ice-track, luger-hill, mountainstreet, river-run, searound, seatrack, space-sprint | track-defaults | arms ship,combo | jobs=4 ===
+
+── ship ──
+  city-circuit C | ARRIVAL 74% (—) rowMin 73% ok | fC 58% (—) | DEAD 12% BORING 8% (—) thrill 4% | dLead 1.98 maxHold 78% p1s 8.9
+     └chaos-end in-band 32% (—) | steer: share 0% · ticks/race 0 · meanMult n/a · maxTickΔ 0.0000
+     └row band-reach | r0:74% r1:76% r2:73% r3:73%
+     └row steer-exposure | r0:steer0%/mult— r1:steer0%/mult— r2:steer0%/mult— r3:steer0%/mult—
+  dirt-oval    C | ARRIVAL 76% (—) rowMin 74% ok | fC 75% (—) | DEAD 10% BORING 4% (—) thrill 6% | dLead 2.34 maxHold 66% p1s 13.0
+     └chaos-end in-band 33% (—) | steer: share 0% · ticks/race 0 · meanMult n/a · maxTickΔ 0.0000
+     └row band-reach | r0:78% r1:76% r2:75% r3:74%
+     └row steer-exposure | r0:steer0%/mult— r1:steer0%/mult— r2:steer0%/mult— r3:steer0%/mult—
+  garden-path  C | ARRIVAL 84% (—) rowMin 83% ok | fC 99% (—) | DEAD 2% BORING 0% (—) thrill 2% | dLead 3.98 maxHold 47% p1s 83.9
+     └chaos-end in-band 35% (—) | steer: share 0% · ticks/race 0 · meanMult n/a · maxTickΔ 0.0000
+     └row band-reach | r0:84% r1:84% r2:83%
+     └row steer-exposure | r0:steer0%/mult— r1:steer0%/mult— r2:steer0%/mult—
+  ice-track    C | ARRIVAL 74% (—) rowMin 70% UNF | fC 71% (—) | DEAD 18% BORING 2% (—) thrill 16% | dLead 2.20 maxHold 74% p1s 10.0
+     └chaos-end in-band 33% (—) | steer: share 0% · ticks/race 0 · meanMult n/a · maxTickΔ 0.0000
+     └row band-reach | r0:76% r1:75% r2:75% r3:70%
+     └row steer-exposure | r0:steer0%/mult— r1:steer0%/mult— r2:steer0%/mult— r3:steer0%/mult—
+  luger-hill   O | ARRIVAL 69% (—) rowMin 67% UNF | fC 62% (—) | DEAD 8% BORING 2% (—) thrill 6% | dLead 1.76 maxHold 85% p1s 6.9
+     └chaos-end in-band 25% (—) | steer: share 0% · ticks/race 0 · meanMult n/a · maxTickΔ 0.0000
+     └row band-reach | r0:70% r1:70% r2:69% r3:67% r4:72% r5:67% r6:67%
+     └row steer-exposure | r0:steer0%/mult— r1:steer0%/mult— r2:steer0%/mult— r3:steer0%/mult— r4:steer0%/mult— r5:steer0%/mult— r6:steer0%/mult—
+  mountainstreetO | ARRIVAL 70% (—) rowMin 69% UNF | fC 71% (—) | DEAD 20% BORING 4% (—) thrill 16% | dLead 2.14 maxHold 77% p1s 8.4
+     └chaos-end in-band 28% (—) | steer: share 0% · ticks/race 0 · meanMult n/a · maxTickΔ 0.0000
+     └row band-reach | r0:70% r1:71% r2:69%
+     └row steer-exposure | r0:steer0%/mult— r1:steer0%/mult— r2:steer0%/mult—
+  river-run    O | ARRIVAL 70% (—) rowMin 68% ok | fC 62% (—) | DEAD 2% BORING 0% (—) thrill 2% | dLead 2.00 maxHold 75% p1s 7.1
+     └chaos-end in-band 27% (—) | steer: share 0% · ticks/race 0 · meanMult n/a · maxTickΔ 0.0000
+     └row band-reach | r0:72% r1:70% r2:68%
+     └row steer-exposure | r0:steer0%/mult— r1:steer0%/mult— r2:steer0%/mult—
+  searound     C | ARRIVAL 75% (—) rowMin 74% UNF | fC 46% (—) | DEAD 6% BORING 6% (—) thrill 0% | dLead 1.90 maxHold 79% p1s 5.7
+     └chaos-end in-band 31% (—) | steer: share 0% · ticks/race 0 · meanMult n/a · maxTickΔ 0.0000
+     └row band-reach | r0:75% r1:76% r2:75% r3:75% r4:76% r5:74% r6:76%
+     └row steer-exposure | r0:steer0%/mult— r1:steer0%/mult— r2:steer0%/mult— r3:steer0%/mult— r4:steer0%/mult— r5:steer0%/mult— r6:steer0%/mult—
+  seatrack     O | ARRIVAL 68% (—) rowMin 67% ok | fC 72% (—) | DEAD 12% BORING 2% (—) thrill 10% | dLead 2.06 maxHold 78% p1s 8.3
+     └chaos-end in-band 27% (—) | steer: share 0% · ticks/race 0 · meanMult n/a · maxTickΔ 0.0000
+     └row band-reach | r0:69% r1:71% r2:67% r3:67%
+     └row steer-exposure | r0:steer0%/mult— r1:steer0%/mult— r2:steer0%/mult— r3:steer0%/mult—
+  space-sprint O | ARRIVAL 69% (—) rowMin 67% UNF | fC 56% (—) | DEAD 8% BORING 4% (—) thrill 4% | dLead 2.48 maxHold 65% p1s 9.1
+     └chaos-end in-band 27% (—) | steer: share 0% · ticks/race 0 · meanMult n/a · maxTickΔ 0.0000
+     └row band-reach | r0:71% r1:67% r2:68% r3:68%
+     └row steer-exposure | r0:steer0%/mult— r1:steer0%/mult— r2:steer0%/mult— r3:steer0%/mult—
+
+── combo ──
+  city-circuit C | ARRIVAL 91% (+17pp) rowMin 90% ok | fC 85% (+27pp) | DEAD 10% BORING 0% (-8pp) thrill 10% | dLead 2.52 maxHold 67% p1s 13.0
+     └chaos-end in-band 72% (+39pp) | steer: share 93% · ticks/race 17846 · meanMult 0.981 · maxTickΔ 0.0110
+     └row band-reach | r0:92% r1:90% r2:91% r3:90%
+     └row steer-exposure | r0:steer96%/mult0.902 r1:steer99%/mult0.951 r2:steer95%/mult1.022 r3:steer81%/mult1.051
+  dirt-oval    C | ARRIVAL 91% (+15pp) rowMin 89% ok | fC 88% (+13pp) | DEAD 16% BORING 0% (-4pp) thrill 16% | dLead 2.42 maxHold 64% p1s 14.5
+     └chaos-end in-band 70% (+37pp) | steer: share 93% · ticks/race 19134 · meanMult 0.982 · maxTickΔ 0.0116
+     └row band-reach | r0:92% r1:93% r2:89% r3:91%
+     └row steer-exposure | r0:steer96%/mult0.907 r1:steer100%/mult0.954 r2:steer95%/mult1.019 r3:steer80%/mult1.046
+  garden-path  C | ARRIVAL 88% (+4pp) rowMin 86% ok | fC 99% (+0pp) | DEAD 6% BORING 0% (+0pp) thrill 6% | dLead 3.90 maxHold 47% p1s 84.2
+     └chaos-end in-band 79% (+44pp) | steer: share 96% · ticks/race 74760 · meanMult 0.988 · maxTickΔ 0.0109
+     └row band-reach | r0:87% r1:86% r2:90%
+     └row steer-exposure | r0:steer99%/mult0.947 r1:steer100%/mult0.992 r2:steer88%/mult1.025
+  ice-track    C | ARRIVAL 90% (+16pp) rowMin 89% UNF | fC 78% (+7pp) | DEAD 12% BORING 0% (-2pp) thrill 12% | dLead 2.44 maxHold 67% p1s 10.7
+     └chaos-end in-band 71% (+38pp) | steer: share 92% · ticks/race 17213 · meanMult 0.981 · maxTickΔ 0.0110
+     └row band-reach | r0:90% r1:89% r2:90% r3:89%
+     └row steer-exposure | r0:steer96%/mult0.899 r1:steer100%/mult0.951 r2:steer94%/mult1.025 r3:steer79%/mult1.053
+  luger-hill   O | ARRIVAL 90% (+21pp) rowMin 88% UNF | fC 87% (+26pp) | DEAD 14% BORING 0% (-2pp) thrill 14% | dLead 1.92 maxHold 81% p1s 9.6
+     └chaos-end in-band 66% (+41pp) | steer: share 90% · ticks/race 22760 · meanMult 0.971 · maxTickΔ 0.0093
+     └row band-reach | r0:89% r1:90% r2:92% r3:90% r4:89% r5:91% r6:88%
+     └row steer-exposure | r0:steer97%/mult0.859 r1:steer99%/mult0.876 r2:steer100%/mult0.912 r3:steer97%/mult0.989 r4:steer91%/mult1.050 r5:steer76%/mult1.082 r6:steer68%/mult1.095
+  mountainstreetO | ARRIVAL 90% (+20pp) rowMin 89% UNF | fC 87% (+16pp) | DEAD 14% BORING 0% (-4pp) thrill 14% | dLead 2.12 maxHold 74% p1s 10.0
+     └chaos-end in-band 68% (+41pp) | steer: share 94% · ticks/race 22116 · meanMult 0.970 · maxTickΔ 0.0116
+     └row band-reach | r0:91% r1:89% r2:89%
+     └row steer-exposure | r0:steer99%/mult0.901 r1:steer100%/mult0.965 r2:steer83%/mult1.041
+  river-run    O | ARRIVAL 88% (+18pp) rowMin 88% ok | fC 87% (+26pp) | DEAD 8% BORING 0% (+0pp) thrill 8% | dLead 2.24 maxHold 72% p1s 10.0
+     └chaos-end in-band 70% (+43pp) | steer: share 94% · ticks/race 21376 · meanMult 0.971 · maxTickΔ 0.0116
+     └row band-reach | r0:89% r1:88% r2:88%
+     └row steer-exposure | r0:steer99%/mult0.906 r1:steer100%/mult0.967 r2:steer83%/mult1.037
+  searound     C | ARRIVAL 90% (+15pp) rowMin 88% UNF | fC 71% (+26pp) | DEAD 12% BORING 2% (-4pp) thrill 10% | dLead 2.26 maxHold 71% p1s 8.5
+     └chaos-end in-band 69% (+38pp) | steer: share 89% · ticks/race 18109 · meanMult 0.979 · maxTickΔ 0.0071
+     └row band-reach | r0:90% r1:88% r2:90% r3:89% r4:93% r5:91% r6:90%
+     └row steer-exposure | r0:steer91%/mult0.869 r1:steer96%/mult0.893 r2:steer99%/mult0.929 r3:steer99%/mult1.012 r4:steer86%/mult1.056 r5:steer75%/mult1.070 r6:steer74%/mult1.088
+  seatrack     O | ARRIVAL 89% (+21pp) rowMin 88% ok | fC 93% (+21pp) | DEAD 8% BORING 0% (-2pp) thrill 8% | dLead 2.32 maxHold 71% p1s 10.5
+     └chaos-end in-band 70% (+43pp) | steer: share 94% · ticks/race 22565 · meanMult 0.971 · maxTickΔ 0.0115
+     └row band-reach | r0:89% r1:91% r2:88% r3:88%
+     └row steer-exposure | r0:steer98%/mult0.889 r1:steer100%/mult0.927 r2:steer97%/mult1.008 r3:steer83%/mult1.053
+  space-sprint O | ARRIVAL 86% (+17pp) rowMin 84% ok | fC 55% (-1pp) | DEAD 2% BORING 0% (-4pp) thrill 2% | dLead 2.70 maxHold 59% p1s 8.3
+     └chaos-end in-band 67% (+40pp) | steer: share 95% · ticks/race 32754 · meanMult 0.973 · maxTickΔ 0.0115
+     └row band-reach | r0:87% r1:84% r2:88% r3:85%
+     └row steer-exposure | r0:steer98%/mult0.901 r1:steer100%/mult0.940 r2:steer97%/mult1.007 r3:steer83%/mult1.043
+
+=== CONFIRM GATE (COMBO vs SHIP, per track) — A:arrival≥+10 & ≥ship · R:rowMin≥ship · F:fC≥ship−2 · B:DEAD-BORING≤ship+2 ===
+  track            | arrival ship→combo | A | rowMin ship→combo | R | fC ship→combo | F | BORING ship→combo | B | PASS/weak
+  city-circuit   C| 74%→91% | ✓ | 73%→90% | ✓ | 58%→85% | ✓ | 8%→0% | ✓ | PASS
+  dirt-oval      C| 76%→91% | ✓ | 74%→89% | ✓ | 75%→88% | ✓ | 4%→0% | ✓ | PASS
+  garden-path    C| 84%→88% | ✗ | 83%→86% | ✓ | 99%→99% | ✓ | 0%→0% | ✓ | WEAK
+  ice-track      C| 74%→90% | ✓ | 70%→89% | ✓ | 71%→78% | ✓ | 2%→0% | ✓ | PASS
+  luger-hill     O| 69%→90% | ✓ | 67%→88% | ✓ | 62%→87% | ✓ | 2%→0% | ✓ | PASS
+  mountainstreet O| 70%→90% | ✓ | 69%→89% | ✓ | 71%→87% | ✓ | 4%→0% | ✓ | PASS
+  river-run      O| 70%→88% | ✓ | 68%→88% | ✓ | 62%→87% | ✓ | 0%→0% | ✓ | PASS
+  searound       C| 75%→90% | ✓ | 74%→88% | ✓ | 46%→71% | ✓ | 6%→2% | ✓ | PASS
+  seatrack       O| 68%→89% | ✓ | 67%→88% | ✓ | 72%→93% | ✓ | 2%→0% | ✓ | PASS
+  space-sprint   O| 69%→86% | ✓ | 67%→84% | ✓ | 56%→55% | ✓ | 4%→0% | ✓ | PASS
+
+  WEAK TRACKS (night watchlist): garden-path
+
+runtime 98.8 min | CONFIRM (directional at N=50; binding verdict = N=100 night gate)

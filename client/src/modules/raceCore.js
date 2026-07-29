@@ -257,6 +257,21 @@ export function createRaceFromIdentity(p) {
         gapRerollMode: dynamicsConfig.gapRerollMode ?? 'symmetric',
         gapRerollStrength: dynamicsConfig.gapRerollStrength ?? 1.0,
         reRollTransitionDuration: dynamicsConfig.reRollTransitionDuration,
+        // FAIR-ARRIVAL flags (chaos anchor/steer · band-aware draw bias · hard walls). These MUST be threaded
+        // into the plan the BROWSER (and the golden headless harness) builds here — the sim has its OWN
+        // createRacePlan call, so without this the browser's ?world=combo carried chaosSteer/bandBias in
+        // dynamicsConfig yet the running plan never received them (steer 0 ticks; EYE-SETUP-2 red badge). All
+        // default OFF ⇒ createRacePlan makes _chaosSteer / _bandBias / _bandWall null ⇒ byte-identical shipped.
+        chaosAnchor: dynamicsConfig.chaosAnchor ?? false,
+        chaosAnchorGain: dynamicsConfig.chaosAnchorGain ?? 0.06,
+        chaosSteer: dynamicsConfig.chaosSteer ?? false,
+        chaosSteerGain: dynamicsConfig.chaosSteerGain ?? 0.06,
+        bandBias: dynamicsConfig.bandBias ?? false,
+        bandBiasR: dynamicsConfig.bandBiasR ?? 0.8,
+        bandBiasGain: dynamicsConfig.bandBiasGain ?? 0.06,
+        bandWall: dynamicsConfig.bandWall ?? false,
+        bandWallR: dynamicsConfig.bandWallR ?? 0.8,
+        bandWallGain: dynamicsConfig.bandWallGain ?? 4,
       },
       racePlanSeed
     );
