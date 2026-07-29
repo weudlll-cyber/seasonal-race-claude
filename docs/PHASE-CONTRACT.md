@@ -9,8 +9,11 @@ enumerates those contracts so a boundary can never move and silently break them.
 ## The phase model (verified)
 
 `DEFAULT_PHASE_FRACTIONS` (racePlanner.js:62-69): `pulkStart 0.25, pulkEnd 0.5, transitionEnd 0.75,
-corridorStart 0.55, corridorEnd 1.0, midToLateSwitchFraction 0.85`. These are the raw literals; the
-resolved plan overwrites two of them (below).
+corridorStart 0.55, corridorEnd 1.0, midToLateSwitchFraction 0.85`. These are the raw fallback literals; the
+resolved plan overwrites three of them. **`pulkStart` is overwritten by config `racePlanPulkStart` — the
+shipped default is `0.15` since COMBO15 (2026-07-29), not the `0.25` fallback literal above** (the fallback
+only applies to a direct `createRacePlan` caller that passes no `pulkStart`, e.g. a unit test). `pulkEnd` and
+`corridorStart` are overwritten from `choreoOutcomeStart` (below).
 
 **The shipped two-phase model (racePlanner.js:147-149), UNCONDITIONAL.** Choreography is always on
 (`_choreoEnabled` is hardcoded `true`, racePlanner.js:274). At plan build time:
@@ -24,13 +27,15 @@ keeps `pulkStart <= pulkEnd <= corridorStart <= corridorEnd`.
 because `corridorStart == pulkEnd` always, the TRANSITION branch is zero-width and unreachable** — a racer
 goes straight from PULK to OUTCOME. TRANSITION is a dead branch, not a live phase.
 
-At the shipped default `choreoOutcomeStart == 0.5` the three live phases are: **CHAOS/PRE_PULK [0, 0.25) ·
-PULK [0.25, 0.5) · OUTCOME [0.5, 1.0)**. The owner may set `choreoOutcomeStart` anywhere in 0.25–0.55; at
-0.25 (== `pulkStart`) PULK is zero-width and OUTCOME starts at the chaos boundary.
+At the shipped defaults `racePlanPulkStart == 0.15` and `choreoOutcomeStart == 0.5` the three live phases are:
+**CHAOS/PRE_PULK [0, 0.15) · PULK [0.15, 0.5) · OUTCOME [0.5, 1.0)**. The owner may set `choreoOutcomeStart`
+anywhere in 0.25–0.60; since `pulkStart` (0.15) now sits below that whole range, PULK is always at least 0.10
+wide under the shipped chaos window (it is no longer collapsible to zero-width from the DevScreen, unlike the
+pre-COMBO15 world where `pulkStart` was 0.25 == the `choreoOutcomeStart` minimum).
 
 ---
 
-## 1. `pulkStart` = 0.25 — the CHAOS→PULK boundary (config key `racePlanPulkStart`)
+## 1. `pulkStart` = 0.15 (shipped; fallback literal 0.25) — the CHAOS→PULK boundary (config key `racePlanPulkStart`)
 
 - **Who reads it.** `getPhase` (racePlanner.js:359,365); the row-envelope chaos-end (raceStep.js via
   `computeRowEnvMult`; browser `PHASE_CHAOS_END` index.jsx; sim `pulkStartLive` sim-fairness.mjs); the
@@ -44,10 +49,13 @@ PULK [0.25, 0.5) · OUTCOME [0.5, 1.0)**. The owner may set `choreoOutcomeStart`
   2–4 heroes are cast with anchored curves, and where the PULK lead rotation begins.
 - **When it MOVES.** The chaos window resizes → the areaBonus-zero point moves, heroes are cast
   earlier/later, and the PULK contest window opens earlier/later.
-- **DevScreen.** `racePlanPulkStart` — default 0.25 (range 0.05–0.50 per the config comment,
-  defaults.js:270). It is the CHAOS→PULK boundary AND the hero-curve anchor; the live resolved value is
-  threaded into the generator, so there is no second copy of the anchor.
-- **Calibrated for it.** 0.25 as the chaos→choreo boundary; `areaBonusEarly=1.0`, `rowBonusEarly=1`.
+- **DevScreen.** `racePlanPulkStart` — shipped default **0.15** (COMBO15; the narrower chaos window). It is
+  the CHAOS→PULK boundary AND the hero-curve anchor; the live resolved value is threaded into the generator,
+  so there is no second copy of the anchor. (It is a pinned config key surfaced by no live control — see
+  [DEVSCREEN-INVENTORY.md](DEVSCREEN-INVENTORY.md).)
+- **Calibrated for it.** 0.15 as the chaos→choreo boundary; `areaBonusEarly=1.0`, `rowBonusEarly=1`. The
+  COMBO15 chaos steer + band-aware re-roll bias run over this `[0, 0.15]` chaos window (see
+  [FAIRNESS.md](FAIRNESS.md)).
 
 ## 2. `pulkEnd` = `choreoOutcomeStart` — the PULK end / OUTCOME start (config key `choreoOutcomeStart`) — **the owned PULK→OUTCOME seam**
 
@@ -65,7 +73,7 @@ PULK [0.25, 0.5) · OUTCOME [0.5, 1.0)**. The owner may set `choreoOutcomeStart`
   window in which the PULK lead rotation runs; the phase-weight fade window; and — via
   `corridorStart := pulkEnd` — the moment OUTCOME band-steering begins.
 - **When it MOVES.** Raising it lengthens the PULK contest and hands OUTCOME off later; the PULK-window
-  mechanisms act over a longer span. Lowering it to `pulkStart` (0.25) closes the PULK window (zero
+  mechanisms act over a longer span. Lowering it toward `pulkStart` (0.15, below its 0.25 minimum) narrows the PULK window (toward zero
   width) and OUTCOME starts at the chaos boundary. Because PULK end == OUTCOME start, moving this ONE
   value moves both seams together.
 - **DevScreen.** "PULK end / OUTCOME begins (0.25–0.55)", config key `choreoOutcomeStart`, in the PULK

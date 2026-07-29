@@ -18,7 +18,7 @@ thing that makes the watch worthwhile is believable, varied motion. Race-Action 
 manufactures that motion while never letting the race become unfair or unnatural.
 
 The mechanism runs in two phases. In the **Chaos phase** the back of the field washes forward on its own,
-producing an unscripted early shuffle. At the quarter mark the system casts a small set of **heroes** and
+producing an unscripted early shuffle. At the chaos boundary (progress 0.15) the system casts a small set of **heroes** and
 switches into the **Choreographed phase**, where two cooperating engines run to the finish: hero
 choreography steers a handful of designated racers along authored position curves, and PulkLeadRotation
 generates lead changes among the non-hero racers at the front. A final OUTCOME backstop tightens the field
@@ -51,17 +51,21 @@ objective the code optimizes for within those constraints.
 The race timeline is expressed as a progress fraction from 0 (start) to 1 (finish), driven by the leader's
 progress rather than a wall clock, so the phases track the actual race.
 
-**Chaos phase (0 to 0.25).** The opening quarter is deliberately unscripted. The natural spread of speeds,
+**Chaos phase (0 to 0.15).** The opening ~15% is deliberately unscripted. The natural spread of speeds,
 combined with a mild forward wash for the back rows, lets the field reshuffle without any director
 intervention. This is where the early, organic-looking movement comes from. During this phase each racer
 also carries a small **area bonus** — a per-racer speed nudge tied to its target band — which helps the
-early ordering settle toward a fair distribution.
+early ordering settle toward a fair distribution. Since COMBO15 (2026-07-29) the chaos window also runs a
+gentle **chaos steer** toward each racer's drawn band (a slew-eased target nudge, in-band racers untouched),
+which — together with the band-aware re-roll draw bias from progress 0.60 — lifts band arrival to 85–90%
+(see [FAIRNESS.md](FAIRNESS.md)); the chaos window was narrowed from 0.25 to **0.15** at the same ship to keep
+the mid-race lively.
 
-At the 0.25 boundary — the *chaos boundary* — two things happen. Heroes are cast from the racers standing up
+At the 0.15 boundary — the *chaos boundary* — two things happen. Heroes are cast from the racers standing up
 front, and their position curves are generated for the remainder of the race. From this instant the area
 bonus is cut to neutral for every racer.
 
-**Choreographed phase (0.25 to finish).** From the chaos boundary onward the race runs as one continuous
+**Choreographed phase (0.15 to finish).** From the chaos boundary onward the race runs as one continuous
 control window. Hero curves steer the 2–4 designated racers; PulkLeadRotation drives lead changes among the
 non-hero front-runners; and from the 0.5 mark the OUTCOME backstop begins gently tightening the field so the
 finish is close rather than strung out.
