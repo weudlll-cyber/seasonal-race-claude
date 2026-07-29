@@ -3,7 +3,7 @@
 # Path:        .github/workflows/ci.yml
 # Project:     RaceArena
 # Created:     2026-04-19
-# Description: Full QA pipeline — lint, format-check, tests, security audit
+# Description: Full QA pipeline — lint, format-check, tests, security audit, living-doc link check
 #              Runs on every push and pull request to main / master
 # ============================================================
 
@@ -44,5 +44,25 @@ jobs:
       - name: Run tests with coverage
         run: npm run test:coverage
 
+      # Audit policy (HYGIENE-1): npm audit FAILS the build on HIGH/CRITICAL; MODERATE and below are advisory.
       - name: Security audit (fail on high/critical)
         run: npm audit --audit-level=high
+
+      - name: Security audit (moderate — advisory, never fails)
+        run: npm audit --audit-level=moderate || true
+
+  # ── Docs ────────────────────────────────────────────────────
+  docs:
+    name: Living-doc link check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      # Fails on any dangling relative link in the LIVING docs (docs/ + repo-root *.md).
+      # reports/ is excluded by design — it is the lab journal (historical, allowed to rot).
+      - name: Check living-doc links
+        run: node scripts/check-doc-links.mjs
