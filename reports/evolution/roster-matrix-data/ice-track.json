@@ -1,0 +1,54 @@
+{
+  "track": "ice-track",
+  "closed": true,
+  "surfaces": [
+    "snow",
+    "ice",
+    "air"
+  ],
+  "expected": 6,
+  "cells": [
+    {
+      "type": "dragon",
+      "bandReach": 0.891,
+      "rowMin": 0.872,
+      "holm": "ok",
+      "runaway": 0
+    },
+    {
+      "type": "horse",
+      "bandReach": 0.8865,
+      "rowMin": 0.856,
+      "holm": "UNF",
+      "runaway": 0
+    },
+    {
+      "type": "luge",
+      "bandReach": 0.889,
+      "rowMin": 0.8628571428571429,
+      "holm": "UNF",
+      "runaway": 0
+    },
+    {
+      "type": "plane",
+      "bandReach": 0.889,
+      "rowMin": 0.8830769230769231,
+      "holm": "ok",
+      "runaway": 0
+    },
+    {
+      "type": "rocket",
+      "bandReach": 0.882,
+      "rowMin": 0.858,
+      "holm": "ok",
+      "runaway": 0
+    },
+    {
+      "type": "snowmobile",
+      "bandReach": 0.884,
+      "rowMin": 0.874,
+      "holm": "ok",
+      "runaway": 0
+    }
+  ]
+}
