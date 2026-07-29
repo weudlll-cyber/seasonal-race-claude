@@ -42,7 +42,9 @@ const PROFILE_FIELDS = [
     max: 5.0,
     step: 0.05,
     tip: (v, n) =>
-      `Sprite zoom factor for ${n}. ${v.toFixed(2)}× — relative to natural density-scaled size. 1.0 = natural size, 2.0 = twice as large.`,
+      n === 'Overview'
+        ? `Sprite zoom factor for the Overview. ${v.toFixed(2)}× — MULTIPLIES the normalized overview size (which keeps racers a constant on-screen size regardless of racer count). 1.0 = the normalized default, 2.0 = twice as large.`
+        : `Sprite zoom factor for ${n}. ${v.toFixed(2)}× — relative to natural density-scaled size. 1.0 = natural size, 2.0 = twice as large.`,
   },
   {
     key: 'trackingTC',

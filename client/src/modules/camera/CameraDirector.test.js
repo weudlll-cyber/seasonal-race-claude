@@ -5751,196 +5751,165 @@ describe('_countVisibleRacers', () => {
   });
 });
 
-describe('dynamic zoom-out — _setTargets LEADER_ZOOM / LEAD_CHANGE', () => {
-  const WORLD_W = 1280;
-  const CANVAS_W = 1280;
-  const CANVAS_H = 720;
-  const raceState = { raceElapsed: 5000, finishedCount: 0, finishT: 1.0 };
+// ── LEADER-MINVIS-1: direct min-visible zoom floor ───────────────────────────
+// The LEADER/LEAD_CHANGE camera zooms to the profile but never TIGHTER than the zoom that keeps
+// min(minRacersVisible, active field) racers on canvas around the pan focus — computed directly each
+// frame (replaces the old slow per-frame ratchet, which zoomed all the way in first and crawled back out).
 
-  // Two off-screen racers (screenX < 0 at zoom=2.0, offsetX=0)
-  const offScreen = [
-    { x: -200, y: 360, t: 0.9, index: 0, finished: false },
-    { x: -200, y: 360, t: 0.8, index: 1, finished: false },
-  ];
+describe('_zoomFloorForMinVisible (direct min-visible zoom)', () => {
+  const cd = new CameraDirector(1280, 720, false, {}, 36);
+  const CW = 1280,
+    CH = 720; // halfW = 640, halfH = 360
+  const F = { x: 640, y: 360 }; // focus at canvas centre in a 1:1 (bsX=1) world
 
-  // Three on-screen racers (screenX in [200,800] at zoom=1.0, offsetX=0)
-  const onScreen = [
-    { x: 200, y: 200, t: 0.9, index: 0, finished: false },
-    { x: 300, y: 200, t: 0.8, index: 1, finished: false },
-    { x: 400, y: 200, t: 0.7, index: 2, finished: false },
-  ];
-
-  function makeDir(min = 3, floor = 0.4, step = 0.01, fraction = 0.6) {
-    const dir = new CameraDirector(
-      WORLD_W,
-      CANVAS_H,
-      false,
-      {
-        minRacersVisible: min,
-        leaderMinZoom: floor,
-        leaderMinZoomFraction: fraction,
-        zoomOutStepPerFrame: step,
-      },
-      36
-    );
-    dir.state = CAM_STATE.LEADER_ZOOM;
-    dir._lerpPhase = 'tracking';
-    dir.zoom = 2.0;
-    dir.offsetX = 0;
-    dir.offsetY = 0;
-    return dir;
-  }
-
-  it('floor decrements by zoomOutStepPerFrame when visible < minRacersVisible', () => {
-    const dir = makeDir(3, 0.4, 0.01);
-    dir._leaderPhaseZoomFloor = 2.0;
-    // offScreen: visCount=0 < minRacersVisible=3 → floor decrements
-    dir._setTargets(offScreen, CANVAS_W, CANVAS_H, raceState);
-    expect(dir._leaderPhaseZoomFloor).toBeCloseTo(1.99, 4);
+  it('returns the visTarget-th largest per-racer max zoom (x-limited)', () => {
+    // dx = 160,320,480,640 → maxZoom = 640/dx = 4.0, 2.0, 1.333, 1.0 (divisor=1). 3rd largest = 1.333.
+    const racers = [160, 320, 480, 640].map((dx, i) => ({
+      x: F.x + dx,
+      y: F.y,
+      index: i,
+      finished: false,
+    }));
+    expect(cd._zoomFloorForMinVisible(racers, F.x, F.y, 3, 1.0, CW, CH)).toBeCloseTo(640 / 480, 4);
+    expect(cd._zoomFloorForMinVisible(racers, F.x, F.y, 1, 1.0, CW, CH)).toBeCloseTo(4.0, 4);
+    expect(cd._zoomFloorForMinVisible(racers, F.x, F.y, 4, 1.0, CW, CH)).toBeCloseTo(1.0, 4);
   });
 
-  it('floor stays constant when visible >= minRacersVisible', () => {
-    const dir = makeDir(3, 0.4, 0.01);
-    dir._leaderPhaseZoomFloor = 2.0;
-    // onScreen: visCount=3 >= minRacersVisible=3 → floor unchanged
-    dir._setTargets(onScreen, CANVAS_W, CANVAS_H, raceState);
-    expect(dir._leaderPhaseZoomFloor).toBeCloseTo(2.0, 4);
+  it('is limited by the tighter of the x / y extents', () => {
+    // dy = 180 → zy = 360/180 = 2.0; dx = 320 → zx = 2.0; equal → 2.0. dy = 360 → zy = 1.0 dominates.
+    const racers = [{ x: F.x + 320, y: F.y + 360, index: 0, finished: false }];
+    expect(cd._zoomFloorForMinVisible(racers, F.x, F.y, 1, 1.0, CW, CH)).toBeCloseTo(1.0, 4);
   });
 
-  it('floor stops at 1.0 on closed track regardless of leaderMinZoom=0.4', () => {
-    // Closed track (WORLD_W=1280, isOpenTrack=false). Fraction floor disabled (leaderMinZoomFraction=0)
-    // to isolate the black-screen clamp: effectiveFloor = max(1.0, 0) = 1.0.
-    const dir = makeDir(3, 0.4, 0.01, 0);
-    dir._leaderPhaseZoomFloor = 1.01; // one step above effective floor=1.0
-    dir._setTargets(offScreen, CANVAS_W, CANVAS_H, raceState);
-    expect(dir._leaderPhaseZoomFloor).toBeCloseTo(1.0, 4);
-    // Second call: already at effective floor — must not go below
-    dir._setTargets(offScreen, CANVAS_W, CANVAS_H, raceState);
-    expect(dir._leaderPhaseZoomFloor).toBeCloseTo(1.0, 4);
+  it('Infinity (no constraint) when fewer active racers than visTarget — the small-field guard', () => {
+    const racers = [{ x: F.x + 320, y: F.y, index: 0, finished: false }];
+    expect(cd._zoomFloorForMinVisible(racers, F.x, F.y, 8, 1.0, CW, CH)).toBe(Infinity);
   });
 
-  it('floor stops at leaderMinZoomFraction × leaderZoom when that dominates', () => {
-    // Default fraction 0.6: effectiveFloor = max(1.0, 0.6 × leaderZoom) — world-independent cap.
-    const dir = makeDir(3, 0.4, 0.01, 0.6);
-    const expectedFloor = Math.max(1.0, 0.6 * dir._leaderZoom);
-    expect(expectedFloor).toBeGreaterThan(1.0); // precondition: fraction floor dominates here
-    dir._leaderPhaseZoomFloor = expectedFloor + 0.01;
-    dir._setTargets(offScreen, CANVAS_W, CANVAS_H, raceState);
-    expect(dir._leaderPhaseZoomFloor).toBeCloseTo(expectedFloor, 4);
-    // Already at fraction floor — must not descend further
-    dir._setTargets(offScreen, CANVAS_W, CANVAS_H, raceState);
-    expect(dir._leaderPhaseZoomFloor).toBeCloseTo(expectedFloor, 4);
+  it('Infinity when all racers sit at the focus (dx=dy=0)', () => {
+    const racers = [0, 1, 2].map((i) => ({ x: F.x, y: F.y, index: i, finished: false }));
+    expect(cd._zoomFloorForMinVisible(racers, F.x, F.y, 3, 1.0, CW, CH)).toBe(Infinity);
   });
 
-  it('floor stops at leaderMinZoom on open track (no closed-track clamp)', () => {
-    // Open track with fraction floor disabled (leaderMinZoomFraction=0): effectiveFloor =
-    // max(leaderMinZoom, 0) = 0.4 (no 1.0 clamp applied).
-    const openDir = new CameraDirector(
-      WORLD_W,
-      CANVAS_H,
-      true, // isOpenTrack
-      {
-        minRacersVisible: 3,
-        leaderMinZoom: 0.4,
-        leaderMinZoomFraction: 0,
-        zoomOutStepPerFrame: 0.01,
-      },
-      36
-    );
-    openDir.state = CAM_STATE.LEADER_ZOOM;
-    openDir._lerpPhase = 'tracking';
-    openDir.zoom = 2.0;
-    openDir.offsetX = 0;
-    openDir.offsetY = 0;
-    openDir._leaderPhaseZoomFloor = 0.41;
-    openDir._setTargets(offScreen, CANVAS_W, CANVAS_H, raceState);
-    expect(openDir._leaderPhaseZoomFloor).toBeCloseTo(0.4, 4);
-    openDir._setTargets(offScreen, CANVAS_W, CANVAS_H, raceState);
-    expect(openDir._leaderPhaseZoomFloor).toBeCloseTo(0.4, 4);
-  });
-
-  it('closed-track floor never descends below 1.0 even when leaderMinZoom is very low', () => {
-    // leaderMinZoom=0.1 — without the fix this would allow cam.zoom=0.1 causing black screen.
-    const dir = new CameraDirector(
-      1536, // City Circuit worldW — bsX=0.8333
-      CANVAS_H,
-      false,
-      { minRacersVisible: 3, leaderMinZoom: 0.1, zoomOutStepPerFrame: 0.05 },
-      36
-    );
-    dir.state = CAM_STATE.LEADER_ZOOM;
-    dir._lerpPhase = 'tracking';
-    dir.zoom = 2.0;
-    dir.offsetX = 0;
-    dir.offsetY = 0;
-    dir._leaderPhaseZoomFloor = 2.0;
-    // Drive the ratchet for many frames until it saturates.
-    for (let i = 0; i < 50; i++) {
-      dir._setTargets(offScreen, CANVAS_W, CANVAS_H, raceState);
-    }
-    expect(dir._leaderPhaseZoomFloor).toBeGreaterThanOrEqual(1.0 - 1e-9);
-  });
-
-  it('targetZoom does not increase mid-phase once floor is below natural target', () => {
-    const dir = makeDir(3, 0.4, 0.01);
-    // Floor below default _leaderZoom (≈2.83 for closed track at 1280 world) — cap applies
-    dir._leaderPhaseZoomFloor = 1.0;
-    dir._setTargets(onScreen, CANVAS_W, CANVAS_H, raceState);
-    expect(dir.targetZoom).toBeLessThanOrEqual(1.0 + 1e-9);
-  });
-
-  it('initializes floor to natural targetZoom on first call when floor is null', () => {
-    const dir = makeDir(3, 0.4, 0.01);
-    dir._leaderPhaseZoomFloor = null;
-    // onScreen: enough visible → floor initializes but does not decrement
-    dir._setTargets(onScreen, CANVAS_W, CANVAS_H, raceState);
-    expect(dir._leaderPhaseZoomFloor).not.toBeNull();
-    expect(dir._leaderPhaseZoomFloor).toBeGreaterThan(0);
-  });
-
-  it('floor resets to null on state transition', () => {
-    const dir = new CameraDirector(WORLD_W, CANVAS_H, false, { minRacersVisible: 3 }, 36);
-    dir._leaderPhaseZoomFloor = 1.5;
-    dir._prevCommittedState = CAM_STATE.LEADER_ZOOM;
-    dir._activeStateMinHoldMs = 0;
-    // start-phase → OVERVIEW
-    dir._transition(
-      onScreen,
-      1000,
-      { raceElapsed: 1000, finishedCount: 0, finishT: 1.0 },
-      CANVAS_W,
-      CANVAS_H
-    );
-    expect(dir._leaderPhaseZoomFloor).toBeNull();
-  });
-
-  it('dynamic zoom-out does not apply in OVERVIEW state', () => {
-    const dir = makeDir(3, 0.4, 0.01);
-    dir.state = CAM_STATE.OVERVIEW;
-    dir._leaderPhaseZoomFloor = 1.0;
-    const floorBefore = dir._leaderPhaseZoomFloor;
-    // OVERVIEW case in _setTargets — floor block should not run
-    dir._setTargets(offScreen, CANVAS_W, CANVAS_H, raceState);
-    expect(dir._leaderPhaseZoomFloor).toBe(floorBefore);
-  });
-
-  it('dynamic zoom-out applies to LEAD_CHANGE the same as LEADER_ZOOM', () => {
-    const dir = makeDir(3, 0.4, 0.01);
-    dir.state = CAM_STATE.LEAD_CHANGE;
-    dir._leaderPhaseZoomFloor = 2.0;
-    dir._setTargets(offScreen, CANVAS_W, CANVAS_H, raceState);
-    expect(dir._leaderPhaseZoomFloor).toBeCloseTo(1.99, 4);
-  });
-
-  it('stops ratchet when all active racers are visible, even if fewer than minRacersVisible', () => {
-    // minRacersVisible=3 but only 2 active racers exist, both on-screen → ratchet must not fire
-    const dir = makeDir(3, 0.4, 0.01);
-    dir._leaderPhaseZoomFloor = 2.0;
-    const twoOnScreen = [
-      { x: 200, y: 200, t: 0.9, index: 0, finished: false },
-      { x: 300, y: 200, t: 0.8, index: 1, finished: false },
+  it('skips finished racers', () => {
+    const racers = [
+      { x: F.x + 160, y: F.y, index: 0, finished: false }, // maxZoom 4.0
+      { x: F.x + 640, y: F.y, index: 1, finished: true }, // ignored
     ];
-    dir._setTargets(twoOnScreen, CANVAS_W, CANVAS_H, raceState);
-    expect(dir._leaderPhaseZoomFloor).toBeCloseTo(2.0, 4);
+    expect(cd._zoomFloorForMinVisible(racers, F.x, F.y, 1, 1.0, CW, CH)).toBeCloseTo(4.0, 4);
+  });
+});
+
+describe('dynamic zoom-out — LEADER min-visible floor (LEADER-MINVIS-1)', () => {
+  const WORLD_W = 1280;
+  const CW = 1280;
+  const CH = 720;
+  const rs = { raceElapsed: 8000, finishedCount: 0, winner: null, finishT: 1.0 };
+
+  // Leader at the FRONT; the rest of the field somewhere behind.
+  const strungField = () => {
+    const r = [{ index: 0, t: 0.95, x: 1150, y: 360, finished: false }];
+    for (let i = 1; i < 40; i++)
+      r.push({
+        index: i,
+        t: 0.5,
+        x: 250 + (i % 10) * 15,
+        y: 320 + ((i / 10) | 0) * 20,
+        finished: false,
+      });
+    return r;
+  };
+  // Whole field bunched right around the leader.
+  const bunchedField = () =>
+    Array.from({ length: 40 }, (_, i) => ({
+      index: i,
+      t: 0.95 - i * 0.001,
+      x: 620 + (i % 8) * 6,
+      y: 350 + ((i / 8) | 0) * 6,
+      finished: false,
+    }));
+
+  const drive = (cfg, field, state = CAM_STATE.LEADER_ZOOM, frames = 150) => {
+    const cd = new CameraDirector(WORLD_W, CH, false, cfg, 28.5);
+    const racers = field();
+    for (let i = 0; i < frames; i++) {
+      cd.state = state;
+      cd.update(racers, 8000 + i * 16, rs, CW, CH);
+    }
+    const visible = cd._countVisibleRacers(racers, cd.zoom * cd._bsX, CW, CH);
+    return { cd, racers, visible };
+  };
+
+  it('field 40 strung out → floor relaxes so at least min(8) racers are visible', () => {
+    const { visible } = drive({ minRacersVisible: 8 }, strungField);
+    expect(visible).toBeGreaterThanOrEqual(8);
+  });
+
+  it('bunched field → the floor does NOT force a zoom-out below the leader zoom', () => {
+    // All racers already near the leader → min-visible satisfied at the profile zoom, so the floor
+    // equals the (resolved) leader target and does not drag the camera wider.
+    const { cd } = drive({ minRacersVisible: 8 }, bunchedField);
+    expect(cd.targetZoom).toBeGreaterThan(1.4); // stays near leaderZoom (~1.81), not ratcheted to the floor
+  });
+
+  it('minRacersVisible = 0 → feature OFF: strung field stays at the tight leader zoom', () => {
+    const off = drive({ minRacersVisible: 0 }, strungField);
+    const on = drive({ minRacersVisible: 8 }, strungField);
+    // OFF keeps the tight leader zoom (few visible); ON relaxes it wider.
+    expect(off.cd.targetZoom).toBeGreaterThan(on.cd.targetZoom);
+    expect(off.cd._leaderPhaseZoomFloor == null || off.cd._leaderPhaseZoomFloor === null).toBe(
+      true
+    );
+  });
+
+  it('small field (6, all active) → guard holds: no floor-ratchet past showing the whole field', () => {
+    const smallField = () =>
+      Array.from({ length: 6 }, (_, i) => ({
+        index: i,
+        t: 0.95 - i * 0.05,
+        x: 400 + i * 120,
+        y: 360,
+        finished: false,
+      }));
+    const { visible } = drive({ minRacersVisible: 8 }, smallField);
+    expect(visible).toBe(6); // all 6 shown; visTarget clamps to active count
+  });
+
+  it('LEAD_CHANGE applies the same min-visible floor as LEADER_ZOOM', () => {
+    const { visible } = drive({ minRacersVisible: 8 }, strungField, CAM_STATE.LEAD_CHANGE);
+    expect(visible).toBeGreaterThanOrEqual(8);
+  });
+
+  it('the profile zoom write does NOT defeat the floor (targetZoom clamped every frame)', () => {
+    // After convergence on a strung field the profile keeps writing targetZoom = leaderZoom each frame,
+    // but the floor clamps it below leaderZoom so the wide view is retained.
+    const { cd } = drive({ minRacersVisible: 8 }, strungField);
+    expect(cd.targetZoom).toBeLessThan(cd._leaderZoom);
+  });
+
+  it('does NOT apply in OVERVIEW state', () => {
+    const cd = new CameraDirector(WORLD_W, CH, false, { minRacersVisible: 8 }, 28.5);
+    cd.state = CAM_STATE.OVERVIEW;
+    cd._leaderPhaseZoomFloor = 1.0;
+    cd._setTargets(strungField(), CW, CH, rs);
+    expect(cd._leaderPhaseZoomFloor).toBe(1.0); // untouched
+  });
+
+  it('does NOT apply in BATTLE_ZOOM state — BATTLE framing is untouched by the min-visible rule', () => {
+    // BATTLE must show the duel, not the whole field: the min-visible floor only gates LEADER/LEAD_CHANGE.
+    const cd = new CameraDirector(WORLD_W, CH, false, { minRacersVisible: 8 }, 28.5);
+    cd.state = CAM_STATE.BATTLE_ZOOM;
+    cd._leaderPhaseZoomFloor = 1.0;
+    cd._setTargets(strungField(), CW, CH, rs);
+    expect(cd._leaderPhaseZoomFloor).toBe(1.0); // untouched — no min-visible clamp in BATTLE
+    expect(cd.targetZoom).toBeCloseTo(cd._battleZoom, 6); // BATTLE zoom is exactly the profile
+  });
+
+  it('closed-track floor never descends below 1.0 (black-screen guard)', () => {
+    const { cd } = drive(
+      { minRacersVisible: 8, leaderMinZoom: 0.1, leaderMinZoomFraction: 0 },
+      strungField
+    );
+    expect(cd.targetZoom).toBeGreaterThanOrEqual(1.0 - 1e-9);
   });
 });

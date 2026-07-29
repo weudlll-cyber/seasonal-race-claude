@@ -1692,6 +1692,34 @@ export class CameraDirector {
     return count;
   }
 
+  /**
+   * Largest cam.zoom at which at least `visTarget` non-finished racers stay on canvas when the camera is
+   * centered on (fx, fy). Focus-centered geometry: a racer at world offset (dx, dy) from the focus is on
+   * canvas iff `zoom·divisor·|dx| < canvasW/2` and `zoom·divisor·|dy| < canvasH/2`, so its per-racer max
+   * cam.zoom is `min(halfW/(|dx|·divisor), halfH/(|dy|·divisor))`; the `visTarget`-th largest of those is the
+   * zoom below which ≥ visTarget racers are visible. Returns Infinity (no constraint) when fewer active
+   * racers than visTarget exist — the small-field guard — or when visTarget ≤ 0. This is a close
+   * approximation (ignores world-edge clamp + inner-frame inset) that keeps the leader roughly centered;
+   * it is used only as a zoom-OUT floor, never to zoom in past the profile.
+   */
+  _zoomFloorForMinVisible(racers, fx, fy, visTarget, divisor, canvasW, canvasH) {
+    if (!racers || visTarget <= 0 || divisor <= 0) return Infinity;
+    const halfW = canvasW / 2;
+    const halfH = canvasH / 2;
+    const maxZooms = [];
+    for (const r of racers) {
+      if (r.finished) continue;
+      const dx = Math.abs(r.x - fx) * divisor;
+      const dy = Math.abs(r.y - fy) * divisor;
+      const zx = dx > 1e-6 ? halfW / dx : Infinity;
+      const zy = dy > 1e-6 ? halfH / dy : Infinity;
+      maxZooms.push(Math.min(zx, zy));
+    }
+    if (maxZooms.length < visTarget) return Infinity; // fewer active than target → no constraint
+    maxZooms.sort((a, b) => b - a);
+    return maxZooms[visTarget - 1];
+  }
+
   // Compute the Y offset for closed tracks using bsY (may differ from bsX on non-square worlds).
   // effZoomX = resolved.effectiveZoom = cam.zoom * bsX; effZoomY = cam.zoom * bsY.
   _closedOffsetY(targetY, effZoomX, canvasH) {
@@ -2073,52 +2101,47 @@ export class CameraDirector {
       }
     }
 
-    // Dynamic zoom-out: if fewer than _minRacersVisible non-finished racers are visible,
-    // gradually reduce targetZoom each frame until enough appear or the effective floor is reached.
-    // Also stops early when all active (non-finished) racers are already visible, even if that
-    // count is below minRacersVisible — prevents ratcheting to the hard floor with small fields.
-    // One-directional within a phase: floor only decrements, never increments.
+    // Min-visible zoom floor (LEADER-MINVIS-1): in LEADER_ZOOM / LEAD_CHANGE the camera may zoom to the
+    // profile value BUT is clamped so it never zooms TIGHTER than the zoom that keeps min(minRacersVisible,
+    // active field) racers on canvas around the pan focus. This floor is computed DIRECTLY each frame from
+    // the racers' geometry (self-consistent — no dependence on the lagging live zoom/offset), so the rule
+    // holds instantly and survives state transitions. It replaces the old slow per-frame ratchet, which
+    // first zoomed all the way in to the tight profile (dropping to ~1 visible on a strung field) and only
+    // crawled back out over several seconds at zoomOutStepPerFrame, restarting on every transition — so in a
+    // live race the LEADER view sat at the tight zoom showing too few racers. minRacersVisible = 0 disables
+    // the feature (byte-compatible with the pre-feature world). The visual change is still smoothed by the
+    // normal zoom lerp (this.zoom → targetZoom).
     if (
       this._minRacersVisible > 0 &&
       (this.state === CAM_STATE.LEADER_ZOOM || this.state === CAM_STATE.LEAD_CHANGE)
     ) {
-      // Evaluate visibility at the LIVE zoom (this.zoom), not the target zoom. The pan offset
-      // (this.offsetX) is computed by _setClosedTrackTargets / _setOpenTrackTargets at
-      // currEffZoom = this.zoom × bsX (or × BASE for open), so the visibility test must use the
-      // same zoom to stay geometrically consistent. Using targetZoom while this.zoom is still
-      // lerping makes effZoom and this.offsetX disagree, mapping every racer off-screen
-      // (visCount = 0) and ratcheting the floor to its hard minimum (whole field shown).
-      // During entry this.zoom is low (wide view from OVERVIEW) → most racers count as visible →
-      // floor holds at its initial value; once this.zoom reaches leaderZoom and fewer than
-      // visTarget racers are genuinely on-screen, the floor ratchets down until visTarget reappear.
-      const effZoom = this._isOpenTrack ? this.zoom * OPEN_TRACK_BASE_ZOOM : this.zoom * this._bsX;
-      const visCount = this._countVisibleRacers(racers, effZoom, canvasW, canvasH);
       const activeCount = racers ? racers.reduce((n, r) => n + (r.finished ? 0 : 1), 0) : 0;
       const visTarget = Math.min(this._minRacersVisible, activeCount);
-      // Initialize floor to natural targetZoom on first frame of this phase.
-      if (this._leaderPhaseZoomFloor === null) {
-        this._leaderPhaseZoomFloor = this.targetZoom;
-      }
-      // World-size-independent floor: leaderMinZoomFraction × leaderZoom keeps the camera from
-      // zooming out below a fixed fraction of the leader zoom (effZoom = fraction × spriteScale,
-      // identical visual scale on every world). On closed tracks cam.zoom must also stay >= 1.0:
-      // below that, _setClosedTrackTargets computes the pan offset at minEffZoom=bsX but rendering
-      // uses the lower effZoom, squeezing the world into the top-left corner (black screen bug).
+      const focus = getPanTarget(CAM_STATE.LEADER_ZOOM, focusRacers, this._shape);
+      // World-size-independent hard floor: leaderMinZoomFraction × leaderZoom bounds how far out the camera
+      // may go (identical visual scale on every world). On closed tracks cam.zoom must also stay >= 1.0:
+      // below that, _setClosedTrackTargets computes the pan offset at minEffZoom = bsX but rendering uses the
+      // lower effZoom, squeezing the world into the top-left corner (the black-screen bug).
       const fractionFloor = this._leaderMinZoomFraction * this._leaderZoom;
       const effectiveFloor = this._isOpenTrack
         ? Math.max(this._leaderMinZoom, fractionFloor)
         : Math.max(1.0, fractionFloor);
-      // Ratchet floor down when under-visible and above effective hard floor.
-      // dt-scaled so zoom-out speed is time-proportional (=1.0 at 16.67ms/60fps).
-      if (visCount < visTarget && this._leaderPhaseZoomFloor > effectiveFloor) {
-        const dtScale = (this._lastDt * FRAME_RATE) / 1000;
-        this._leaderPhaseZoomFloor = Math.max(
-          this._leaderPhaseZoomFloor - this._zoomOutStepPerFrame * dtScale,
-          effectiveFloor
+      if (visTarget > 0 && focus) {
+        const divisor = this._isOpenTrack ? OPEN_TRACK_BASE_ZOOM : this._bsX;
+        const minVisZoom = this._zoomFloorForMinVisible(
+          racers,
+          focus.x,
+          focus.y,
+          visTarget,
+          divisor,
+          canvasW,
+          canvasH
         );
+        // Never tighter than min-visible; never looser than the hard floor.
+        const floor = Math.max(effectiveFloor, Math.min(this.targetZoom, minVisZoom));
+        this._leaderPhaseZoomFloor = floor; // exposed for diagnostics/tests
+        this.targetZoom = Math.min(this.targetZoom, floor);
       }
-      // Apply floor: targetZoom cannot exceed floor (prevents zoom-in mid-phase).
-      this.targetZoom = Math.min(this.targetZoom, this._leaderPhaseZoomFloor);
     }
   }
 
