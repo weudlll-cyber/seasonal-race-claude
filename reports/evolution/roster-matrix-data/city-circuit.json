@@ -1,0 +1,52 @@
+{
+  "track": "city-circuit",
+  "closed": true,
+  "surfaces": [
+    "asphalt"
+  ],
+  "expected": 6,
+  "cells": [
+    {
+      "type": "beetle",
+      "bandReach": 0.8895,
+      "rowMin": 0.8830769230769231,
+      "holm": "ok",
+      "runaway": 0
+    },
+    {
+      "type": "boarder",
+      "bandReach": 0.8955,
+      "rowMin": 0.8784615384615385,
+      "holm": "ok",
+      "runaway": 0
+    },
+    {
+      "type": "dragon",
+      "bandReach": 0.8895,
+      "rowMin": 0.88,
+      "holm": "ok",
+      "runaway": 0
+    },
+    {
+      "type": "f1",
+      "bandReach": 0.8745,
+      "rowMin": 0.8676923076923077,
+      "holm": "UNF",
+      "runaway": 0
+    },
+    {
+      "type": "horse",
+      "bandReach": 0.887,
+      "rowMin": 0.864,
+      "holm": "UNF",
+      "runaway": 0
+    },
+    {
+      "type": "motorbike",
+      "bandReach": 0.882,
+      "rowMin": 0.87,
+      "holm": "ok",
+      "runaway": 0
+    }
+  ]
+}
