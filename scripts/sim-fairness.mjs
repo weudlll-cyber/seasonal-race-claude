@@ -255,6 +255,8 @@ const FA_BAND_WALL_GAIN       = Number(argVal('bandWallGain', '4'));
 // toward the drawn band, reachable). OFF → byte-identical.
 const FA_CHAOS_STEER          = argVal('chaosSteer', 'false') === 'true';
 const FA_CHAOS_STEER_GAIN     = Number(argVal('chaosSteerGain', '0.06'));
+// STEER-CAP-1: boost-side cap (null → no cap → byte-identical). Sweep {1.04, 1.06}.
+const FA_STEER_BOOST_CAP      = argVal('steerBoostCap', '') !== '' ? Number(argVal('steerBoostCap', '')) : null;
 // Hero choreography — master flag + drama intensity + loose-pack bandStrictness. Passed into
 // createRacePlan (flag OFF → byte-identical; the intensity/strictness only apply when ON).
 const CHOREO_ENABLED     = true; // choreography is UNCONDITIONAL (de-flagged S3); classic gates below are now statically false (Stage-4 removal)
@@ -3207,6 +3209,7 @@ if (isMain) {
               // CHAOS-STEER-1: the owner's Part 1 built properly (reachable continuous chaos pull).
               chaosSteer:              FA_CHAOS_STEER,
               chaosSteerGain:          FA_CHAOS_STEER_GAIN,
+              steerBoostCap:           FA_STEER_BOOST_CAP,
               choreoSuppressChaosBonusB1: CHOREO_SUPPRESS_CHAOS_BONUS_B1,
               choreoIntensity:     CHOREO_INTENSITY,
               choreoPackBandStrictness: CHOREO_PACK_BAND_STRICTNESS,

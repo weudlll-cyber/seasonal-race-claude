@@ -47,6 +47,9 @@ const ALL_ARMS = {
   combo: [...STEER, ...BIAS],
   ship15: [...CHAOS15],
   combo15: [...STEER, ...BIAS, ...CHAOS15],
+  // STEER-CAP-1: COMBO15 + boost-side cap sweep (the space-sprint chaos-hole fix).
+  combo15cap104: [...STEER, ...BIAS, ...CHAOS15, '--steerBoostCap=1.04'],
+  combo15cap106: [...STEER, ...BIAS, ...CHAOS15, '--steerBoostCap=1.06'],
 };
 // --arms filter (default all). CONFIRM-1 runs --arms=ship,combo (lean; attribution arms reserved for the gate).
 const ARM_KEYS = (argVal('arms', Object.keys(ALL_ARMS).join(','))).split(',').map((s) => s.trim()).filter(Boolean);
@@ -186,9 +189,9 @@ if (ARM_KEYS.includes(GATE_ARM)) {
   const mk = (b) => (b ? '✓' : '✗');
   const f1 = (x) => (x == null ? 'n/a' : x.toFixed(1));
   console.log(`\n=== FAIR-ARRIVAL-GATE (${GATE_ARM} vs SHIP, N=${RACES}, per track) ===`);
-  console.log(`  track            | arrival S→C | A | rowMin S→C · Holm | R | fC S→C | F | BORING S→C | B | PULK maxHold/distLead/chaosGap S→C | P | PASS`);
+  console.log(`  track            | arrival S→C | A | rowMin S→C · Holm | R | fC S→C | F | BORING S→C | B | PULK maxHold/distLead/chaosGap C(S) | P/P2 | PASS`);
   let arrivalOK = 0, failBoth = 0, belowShip = 0;
-  const failEverywhere = { R: [], F: [], B: [], P: [] }, holmWorse = [];
+  const failEverywhere = { R: [], F: [], B: [], P: [], P2: [] }, holmWorse = [];
   const rows = [];
   for (const t of TRACKS) {
     const s = get('ship', t.id), c = get(GATE_ARM, t.id);
@@ -202,13 +205,15 @@ if (ARM_KEYS.includes(GATE_ARM)) {
     const sp = s.pulk, cp = c.pulk;
     const pHold = cp.maxLeadHoldShare_mid <= sp.maxLeadHoldShare_mid + 0.05;
     const pDist = cp.distinctLeaders_mid >= sp.distinctLeaders_mid - 1;
-    const pGap = cp.maxGapChaos <= sp.maxGapChaos + 1.0;
+    const pGap = cp.maxGapChaos <= sp.maxGapChaos + 1.0; // v1 absolute
+    const pGap2 = cp.maxGapChaos <= sp.maxGapChaos * 1.5; // v2 duration-relative (PREREGISTERED for future gates)
     const P = pHold && pDist && pGap; if (!P) failEverywhere.P.push(t.id);
+    const P2 = pHold && pDist && pGap2; if (!P2) failEverywhere.P2.push(t.id);
     // Holm: worsened = ship ok → candidate UNF.
     if (s.holm === 'ok' && c.holm === 'UNF') holmWorse.push(t.id);
     const pass = A && R && F && B && P;
     rows.push({ t, s, c, A, R, F, B, P, pass, aDelta, aAbs, sp, cp });
-    console.log(`  ${t.id.padEnd(15)}${c.closed ? 'C' : 'O'}| ${pct(s.arrival)}→${pct(c.arrival)}${aDelta ? '' : aAbs ? '*' : '✗'} | ${mk(A)} | ${pct(s.rowMin)}→${pct(c.rowMin)} ${s.holm}/${c.holm} | ${mk(R)} | ${pct(s.fc)}→${pct(c.fc)} | ${mk(F)} | ${pct(s.deadBoring)}→${pct(c.deadBoring)} | ${mk(B)} | ${cp.maxLeadHoldShare_mid.toFixed(2)}(${(sp.maxLeadHoldShare_mid).toFixed(2)}) ${f1(cp.distinctLeaders_mid)}(${f1(sp.distinctLeaders_mid)}) ${f1(cp.maxGapChaos)}L(${f1(sp.maxGapChaos)}) | ${mk(P)} | ${pass ? 'PASS' : 'FAIL'}`);
+    console.log(`  ${t.id.padEnd(15)}${c.closed ? 'C' : 'O'}| ${pct(s.arrival)}→${pct(c.arrival)}${aDelta ? '' : aAbs ? '*' : '✗'} | ${mk(A)} | ${pct(s.rowMin)}→${pct(c.rowMin)} ${s.holm}/${c.holm} | ${mk(R)} | ${pct(s.fc)}→${pct(c.fc)} | ${mk(F)} | ${pct(s.deadBoring)}→${pct(c.deadBoring)} | ${mk(B)} | ${cp.maxLeadHoldShare_mid.toFixed(2)}(${(sp.maxLeadHoldShare_mid).toFixed(2)}) ${f1(cp.distinctLeaders_mid)}(${f1(sp.distinctLeaders_mid)}) ${f1(cp.maxGapChaos)}L(${f1(sp.maxGapChaos)}) | ${mk(P)}/${mk(P2)} | ${pass ? 'PASS' : 'FAIL'}`);
   }
   const arrivalGate = arrivalOK >= 8 && failBoth === 0 && belowShip === 0;
   const everywhere = (k) => failEverywhere[k].length === 0;
@@ -216,6 +221,6 @@ if (ARM_KEYS.includes(GATE_ARM)) {
   console.log(`\n  ── GATE VERDICT: ${GATE_PASS ? 'PASS' : 'PARTIAL'} ──`);
   console.log(`  arrival: OK-form ${arrivalOK}/10 (need ≥8), failBoth ${failBoth} (need 0), belowShip ${belowShip} (need 0) → ${arrivalGate ? 'PASS' : 'FAIL'}`);
   console.log(`  rowMin≥ship: ${everywhere('R') ? 'PASS' : 'FAIL ' + failEverywhere.R.join(',')} | fC≥ship−2: ${everywhere('F') ? 'PASS' : 'FAIL ' + failEverywhere.F.join(',')} | DEAD-BORING≤ship+2: ${everywhere('B') ? 'PASS' : 'FAIL ' + failEverywhere.B.join(',')}`);
-  console.log(`  PULK watchdog: ${everywhere('P') ? 'PASS' : 'FAIL ' + failEverywhere.P.join(',')} | Holm worsened: ${holmWorse.length ? holmWorse.join(',') : 'none'}`);
+  console.log(`  PULK watchdog v1 (abs ship+1.0L): ${everywhere('P') ? 'PASS' : 'FAIL ' + failEverywhere.P.join(',')} | v2 (ratio ship×1.5, PREREG): ${everywhere('P2') ? 'PASS' : 'FAIL ' + failEverywhere.P2.join(',')} | Holm worsened: ${holmWorse.length ? holmWorse.join(',') : 'none'}`);
 }
 console.log(`\nruntime ${((Date.now() - t0) / 60000).toFixed(1)} min | FAIR-ARRIVAL-GATE (binding at N=${RACES}); gate-arm=${GATE_ARM}`);
