@@ -4,6 +4,9 @@ One line per report: what it tried → verdict → the lesson/outcome. This is t
 themselves are the record; the living docs are [LESSONS.md](../../docs/LESSONS.md), [DEAD-ENDS.md](../../docs/DEAD-ENDS.md),
 and [FAIRNESS.md](../../docs/FAIRNESS.md). Shipped world: **COMBO15** (`v-ship-combo15`, fingerprint `ded0a126048e4cdb`).
 
+## Camera / presentation fixes
+- [OVERVIEW-ZOOM-1.md](OVERVIEW-ZOOM-1.md) — the OVERVIEW view ignored the selected sprite scale (L116/`c7fa30a` regression). **FIXED: selected scale multiplies the normalized target; default unchanged, fp identical.**
+
 ## Hygiene + record (2026-07-29)
 - [HYGIENE-1.md](HYGIENE-1.md) — empty the hygiene list: single-sourced phase defaults, `racePlanPulkStart` DevScreen control, CI link-checker + audit-gate, local tooling, react-router 6→7. **Behavior-neutral (fp identical).**
 - [DOC-SYNC-1.md](DOC-SYNC-1.md) — bring every living doc to COMBO15 (pulkStart 0.15, fingerprints, dangling links). **Doc-only; fp identical.**

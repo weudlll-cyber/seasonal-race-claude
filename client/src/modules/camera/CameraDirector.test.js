@@ -1025,6 +1025,77 @@ describe('CameraDirector — OVERVIEW spriteScale on open tracks (v14 path)', ()
   });
 });
 
+// ── OVERVIEW-ZOOM-1: the selected OVERVIEW sprite scale scales the OVERVIEW snap zoom ─────────
+// After transitioning INTO overview (drawnBodyWidthRefPx > 0), the snap zoom is the L116 count-
+// normalized target MULTIPLIED by the selected cameraStateProfiles.OVERVIEW.spriteScale. Before the
+// fix the selection was ignored on closed tracks (regression from c7fa30a). scale 1.0 = unchanged.
+
+describe('CameraDirector — OVERVIEW snap respects the selected sprite scale (OVERVIEW-ZOOM-1)', () => {
+  const cfg = (scale) => ({
+    cameraStateProfiles: { OVERVIEW: { spriteScale: scale } },
+    overviewTargetScreenPx: 28,
+  });
+  const racers = [
+    { t: 0.3, x: 300, y: 200, finished: false },
+    { t: 0.2, x: 250, y: 180, finished: false },
+  ];
+  const startRs = { raceElapsed: 1000, finishedCount: 0, winner: null, finishT: 1.0 };
+  const REF = 20; // drawnBodyWidthRefPx
+
+  // Fire the OVERVIEW entry snap by transitioning in from LEADER_ZOOM during the start phase.
+  const snap = (worldW, isOpen, scale) => {
+    const cd = new CameraDirector(worldW, 720, isOpen, cfg(scale), REF);
+    cd.state = CAM_STATE.LEADER_ZOOM;
+    cd.stateEnteredAt = 0;
+    cd.update(racers, 9000, startRs, 1280, 720);
+    return cd;
+  };
+
+  it('CLOSED: zoom = overviewTargetScreenPx × spriteScale / (ref × bsX) — 2.5 matches the formula', () => {
+    const cd = snap(1280, false, 2.5); // bsX = 1280/1280 = 1.0 → raw = 28×2.5/20 = 3.5
+    expect(cd.state).toBe(CAM_STATE.OVERVIEW);
+    expect(cd.zoom).toBeCloseTo((28 * 2.5) / (REF * 1.0), 3);
+  });
+
+  it('CLOSED: scale 2.5 is 2.5× the scale-1.0 zoom (selection now respected, was ignored)', () => {
+    expect(snap(1280, false, 2.5).zoom / snap(1280, false, 1.0).zoom).toBeCloseTo(2.5, 2);
+  });
+
+  it('CLOSED: scale 1.0 leaves the default OVERVIEW zoom unchanged (28×1.0/20 = 1.4)', () => {
+    expect(snap(1280, false, 1.0).zoom).toBeCloseTo((28 * 1.0) / (REF * 1.0), 3);
+  });
+
+  it('OPEN: scale 2.5 is 2.5× the scale-1.0 zoom (selection respected on open too)', () => {
+    expect(snap(6144, true, 2.5).zoom / snap(6144, true, 1.0).zoom).toBeCloseTo(2.5, 2);
+  });
+
+  it('non-finite spriteScale falls back to natural size (1.0) — finite, equals the scale-1.0 zoom', () => {
+    const bad = snap(1280, false, NaN);
+    expect(Number.isFinite(bad.zoom)).toBe(true);
+    expect(bad.zoom).toBeCloseTo(snap(1280, false, 1.0).zoom, 6);
+  });
+
+  it('legacy config (spritePctOfCanvas, no cameraStateProfiles) → unscaled default, finite zoom', () => {
+    const cd = new CameraDirector(
+      1280,
+      720,
+      false,
+      {
+        spritePctOfCanvas: { leader: 0.08, battle: 0.12, comeback: 0.1 },
+        overviewTargetScreenPx: 28,
+      },
+      REF
+    );
+    cd.state = CAM_STATE.LEADER_ZOOM;
+    cd.stateEnteredAt = 0;
+    cd.update(racers, 9000, startRs, 1280, 720);
+    expect(cd.state).toBe(CAM_STATE.OVERVIEW);
+    expect(cd._overviewSpriteScale).toBe(1.0); // legacy → unscaled
+    expect(Number.isFinite(cd.zoom)).toBe(true);
+    expect(cd.zoom).toBeCloseTo((28 * 1.0) / (REF * 1.0), 3);
+  });
+});
+
 // ── CameraDirector — configurable zoom multipliers ────────────────────────────
 
 // Base config shared by battle-trigger tests — v2 format with spritePctOfCanvas (legacy path).

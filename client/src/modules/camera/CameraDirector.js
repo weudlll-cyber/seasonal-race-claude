@@ -299,6 +299,9 @@ export class CameraDirector {
    * @returns {number}            cam.zoom to assign to this state
    */
   _computeZoomForSpriteScale(spriteScale) {
+    // Hardening: a non-finite spriteScale (corrupt persisted config) falls back to natural size (1.0)
+    // rather than propagating NaN into cam.zoom.
+    if (!Number.isFinite(spriteScale)) spriteScale = 1.0;
     let rawZoom;
     if (this._isOpenTrack) {
       rawZoom = spriteScale / OPEN_TRACK_BASE_ZOOM;
@@ -337,9 +340,12 @@ export class CameraDirector {
       this._leadChangeZoom = this._computeZoomForSpriteScale(scale.leadChange);
       this._battleZoom = this._computeZoomForSpriteScale(scale.battle);
       this._comebackZoom = this._computeZoomForSpriteScale(scale.comeback);
-      this._overviewStateZoom = this._computeZoomForSpriteScale(
-        profiles.OVERVIEW?.spriteScale ?? 1.0
-      );
+      // The SELECTED OVERVIEW sprite scale (cameraStateProfiles.OVERVIEW.spriteScale). It multiplies the
+      // count-normalized OVERVIEW target size (L116) so the owner's slider actually scales the OVERVIEW —
+      // 1.0 = the normalized default, 2.5 = 2.5× the normalized size. Finite-guarded (default 1.0).
+      const ovScale = profiles.OVERVIEW?.spriteScale;
+      this._overviewSpriteScale = Number.isFinite(ovScale) ? ovScale : 1.0;
+      this._overviewStateZoom = this._computeZoomForSpriteScale(this._overviewSpriteScale);
     } else if (config?.spritePctOfCanvas) {
       // Legacy path: old configs with spritePctOfCanvas (v2/v3) but no cameraStateProfiles.
       const rawPct = config.spritePctOfCanvas;
@@ -350,6 +356,7 @@ export class CameraDirector {
       this._comebackZoom = this._computeZoomForSpriteScale(toScale(rawPct.comeback));
       // OVERVIEW zoom: preserve full-world defaults for legacy configs.
       this._overviewStateZoom = this._isOpenTrack ? this.overviewZoom : 1.0;
+      this._overviewSpriteScale = 1.0; // legacy configs have no OVERVIEW.spriteScale → unscaled (unchanged)
     } else {
       // No config at all: use scale defaults.
       this._leaderZoom = this._computeZoomForSpriteScale(DEFAULT_SPRITE_SCALE.leader);
@@ -358,6 +365,7 @@ export class CameraDirector {
       this._comebackZoom = this._computeZoomForSpriteScale(DEFAULT_SPRITE_SCALE.comeback);
       // OVERVIEW zoom: preserve full-world defaults (closed=1.0, open=overviewZoom).
       this._overviewStateZoom = this._isOpenTrack ? this.overviewZoom : 1.0;
+      this._overviewSpriteScale = 1.0; // no config → natural size (unchanged)
     }
     this._innerFramePct = config?.targetInnerFramePct ?? DEFAULT_INNER_FRAME_PCT;
     // Countdown start zoom: convert spritePx → spriteScale, typically clamped to overviewZoom.
@@ -1271,7 +1279,15 @@ export class CameraDirector {
             // _overviewTargetScreenPx screen pixels. The effective-zoom divisor is
             // OPEN_TRACK_BASE_ZOOM (open) or bsX (closed) — same formula, different multiplier.
             const divisor = this._isOpenTrack ? OPEN_TRACK_BASE_ZOOM : this._bsX;
-            const raw = this._overviewTargetScreenPx / (this._drawnBodyWidthRefPx * divisor);
+            // The SELECTED OVERVIEW sprite scale MULTIPLIES the normalized target size (OVERVIEW-ZOOM-1):
+            // spriteScale 1.0 = the L116 count-normalized default (unchanged); 2.5 = racers 2.5× that size.
+            // Before this fix the selection was ignored on closed tracks and only a soft ceiling on open
+            // (regression from c7fa30a / L116, which decoupled the OVERVIEW zoom from the setting).
+            const ovScale = Number.isFinite(this._overviewSpriteScale)
+              ? this._overviewSpriteScale
+              : 1.0;
+            const raw =
+              (this._overviewTargetScreenPx * ovScale) / (this._drawnBodyWidthRefPx * divisor);
             // Open ceiling: 80% of state zoom prevents the leader leaving canvas during pan.
             // Closed ceiling: only MAX_INVERSE_ZOOM — resolveCamera handles world-edge clamping.
             const maxZoom = this._isOpenTrack
