@@ -243,17 +243,14 @@ const RP_PULK_START           = Number(argVal('pulkStart',          String(DEFAU
 const RP_CORRIDOR_START       = Number(argVal('corridorStart',      String(DEFAULT_RACE_DYNAMICS_CONFIG.racePlanCorridorStart)));
 const RP_CORRIDOR_END         = Number(argVal('corridorEnd',        String(DEFAULT_RACE_DYNAMICS_CONFIG.racePlanCorridorEnd)));
 const RP_PULK_BIAS_GAIN       = Number(argVal('pulkBiasGain',       String(DEFAULT_RACE_DYNAMICS_CONFIG.pulkBiasGain)));
-// FAIR-ARRIVAL flags. bandBias + chaosSteer are now SHIPPED DEFAULTS (COMBO15, MERGE-SHIP-1): a flagless sim
+// FAIR-ARRIVAL flags. bandBias + chaosSteer are the SHIPPED DEFAULTS (COMBO15, MERGE-SHIP-1): a flagless sim
 // run reproduces the shipped world, so their defaults read from DEFAULT_RACE_DYNAMICS_CONFIG (same shared-
-// default pattern as pulkStart). chaosAnchor / bandWall stay OFF (never shipped). `--bandBias=false` etc.
-// restore the pre-combo15 world explicitly.
-const FA_CHAOS_ANCHOR         = argVal('chaosAnchor', 'false') === 'true';
-const FA_CHAOS_ANCHOR_GAIN    = Number(argVal('chaosAnchorGain', '0.04'));
+// default pattern as pulkStart). `--bandBias=false` / `--chaosSteer=false` restore the pre-combo15 world.
+// (The two never-shipped FAIR-ARRIVAL-1 arms — the chaos-phase position anchor (A) and the hard band
+// corridor (C) — were removed in CLEAN-SWEEP-1; only the shipped steer + draw-bias remain.)
 const FA_BAND_BIAS            = argVal('bandBias', String(DEFAULT_RACE_DYNAMICS_CONFIG.bandBias)) === 'true';
-const FA_BAND_WALL            = argVal('bandWall', 'false') === 'true';
 const FA_BAND_R               = Number(argVal('bandR', String(DEFAULT_RACE_DYNAMICS_CONFIG.bandBiasR)));
 const FA_BAND_BIAS_GAIN       = Number(argVal('bandBiasGain', String(DEFAULT_RACE_DYNAMICS_CONFIG.bandBiasGain)));
-const FA_BAND_WALL_GAIN       = Number(argVal('bandWallGain', '4'));
 // CHAOS-STEER (SHIPPED default in COMBO15). Continuous chaos-phase pull toward the drawn band.
 const FA_CHAOS_STEER          = argVal('chaosSteer', String(DEFAULT_RACE_DYNAMICS_CONFIG.chaosSteer)) === 'true';
 const FA_CHAOS_STEER_GAIN     = Number(argVal('chaosSteerGain', String(DEFAULT_RACE_DYNAMICS_CONFIG.chaosSteerGain)));
@@ -3197,16 +3194,10 @@ if (isMain) {
               corridorStart:           RP_CORRIDOR_START,
               corridorEnd:             RP_CORRIDOR_END,
               pulkBiasGain:            RP_PULK_BIAS_GAIN,
-              // FAIR-ARRIVAL-1 (SIM-ONLY; default OFF): chaos anchor steering (A) · band-aware draw bias (B) · hard band walls (C).
-              chaosAnchor:             FA_CHAOS_ANCHOR,
-              chaosAnchorGain:         FA_CHAOS_ANCHOR_GAIN,
+              // COMBO15 fair-arrival mechanism (SHIPPED default): band-aware draw bias (B) + chaos steer.
               bandBias:                FA_BAND_BIAS,
               bandBiasR:               FA_BAND_R,
               bandBiasGain:            FA_BAND_BIAS_GAIN,
-              bandWall:                FA_BAND_WALL,
-              bandWallR:               FA_BAND_R,
-              bandWallGain:            FA_BAND_WALL_GAIN,
-              // CHAOS-STEER-1: the owner's Part 1 built properly (reachable continuous chaos pull).
               chaosSteer:              FA_CHAOS_STEER,
               chaosSteerGain:          FA_CHAOS_STEER_GAIN,
               choreoSuppressChaosBonusB1: CHOREO_SUPPRESS_CHAOS_BONUS_B1,

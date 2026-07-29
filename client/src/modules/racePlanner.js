@@ -256,24 +256,18 @@ export function createRacePlan(racers, finishT, targetDurationMs, config = {}, s
     _pulkTargetSpread: config.pulkTargetSpread ?? DEFAULT_PULK_TARGET_SPREAD,
     _stochasticNoise: config.stochasticNoise ?? DEFAULT_STOCHASTIC_NOISE,
     _pulkBiasGain: config.pulkBiasGain ?? DEFAULT_PULK_BIAS_GAIN,
-    // ── FAIR-ARRIVAL-1 (SIM-ONLY; default OFF). The owner's two-part proposal to raise band arrival while
-    // keeping ship's re-roll action. ARM A: gentle chaos-phase steering toward the DRAWN BAND (the
-    // orchestration anchor), ending with the chaos phase. ARM B: from R, re-aim the re-roll DRAW (not the
-    // position) toward the drawn band — the dice are aimed, not fought, clamped to the honest range (nothing
-    // to pin). ARM C: hard band walls from R (the literal wording; expected to pin). All flag-gated. ──
-    _chaosAnchor: config.chaosAnchor ? { gain: config.chaosAnchorGain ?? 0.06 } : null,
-    // ── CHAOS-STEER-1 (SIM-ONLY; default OFF). The owner's Part 1 built PROPERLY: a CONTINUOUS gentle pull
-    // during the CHAOS phase ONLY toward the DRAWN BAND (not a draw bias, not a hard wall). Reachable —
-    // the pre-outcome pin early-return is skipped while active (that return is exactly why ARM A never
-    // gripped). Out of band → eased toward it (two-sided clamp [minMult,maxMult], _setTarget slews it →
-    // Sanftheits); in band → 1.0, untouched. Pull TARGET ends with chaos; the slew-eased mult then decays
-    // into early PULK (no snap). Flag OFF → null → never runs → byte-identical. ──
+    // ── COMBO15 shipped fair-arrival mechanism (default ON). Two cooperating parts, both flag-gated so OFF
+    // reproduces the pre-combo15 world byte-identically. CHAOS STEER: a CONTINUOUS gentle pull during the
+    // CHAOS phase ONLY toward the DRAWN BAND (not a draw bias, not a hard wall). Reachable — the pre-outcome
+    // pin early-return is skipped while active. Out of band → eased toward it (two-sided clamp
+    // [minMult,maxMult], _setTarget slews it → Sanftheits); in band → 1.0, untouched. Pull TARGET ends with
+    // chaos; the slew-eased mult then decays into early PULK (no snap). Flag OFF → null → never runs. ──
     _chaosSteer: config.chaosSteer ? { gain: config.chaosSteerGain ?? 0.06 } : null,
+    // BAND-BIAS DRAW: from R, re-aim the re-roll DRAW (not the position) toward the drawn band — the dice are
+    // aimed within the honest [spreadMin,spreadMax] range, so nothing is fought and in-band racers keep free
+    // dice. This is the fairness win (arrival 85–90%); the Cliff Law's correct sign (LESSONS L184). OFF → null.
     _bandBias: config.bandBias
       ? { R: config.bandBiasR ?? 0.8, gain: config.bandBiasGain ?? 0.06 }
-      : null,
-    _bandWall: config.bandWall
-      ? { R: config.bandWallR ?? 0.8, gain: config.bandWallGain ?? 4 }
       : null,
     _racerTargetRank: racerTargetRank,
     _racerAreaBonus: racerAreaBonus,
@@ -727,7 +721,7 @@ export function createTrajectoryController(racePlan) {
       // ── CHAOS-STEER-1: the owner's Part 1, built PROPERLY (reachable — see the early-return skip above).
       // During chaos (< pulkStart) a racer OUT of its DRAWN band is eased toward it by a clamped multiplier
       // (Sanftheits-Regel: _setTarget slews it, no per-tick snap; two-sided clamp [minMult,maxMult] honoured).
-      // IN band → caErr 0 → target 1.0 → untouched. The pull TARGET ends with the chaos phase. Telemetry:
+      // IN band → csErr 0 → target 1.0 → untouched. The pull TARGET ends with the chaos phase. Telemetry:
       // steered-tick count, summed target mult (mean pull), and the max per-tick |Δ mult| (smoothness proof).
       if (plan._chaosSteer && phaseProgress != null && phaseProgress < pulkStartFrac) {
         const csDrawn = plan._racerTargetRank.get(r.index) ?? currentRank;
@@ -753,37 +747,6 @@ export function createTrajectoryController(racePlan) {
           pr.multSum += csTarget;
           _chaosSteerByRacer.set(r.index, pr);
         }
-        continue;
-      }
-      // ── FAIR-ARRIVAL-1 ARM A (chaos anchor steering): during the chaos phase (< pulkStart) a racer OUT of
-      // its DRAWN band is gently pulled toward it (the orchestration anchor — a band, not an exact rank),
-      // within the two-sided clamp; the re-roll scatter stays random around it. Ends with the chaos phase, so
-      // the finale is byte-unchanged vs ship. Flag OFF → never runs. ──
-      if (plan._chaosAnchor && phaseProgress != null && phaseProgress < pulkStartFrac) {
-        const caDrawn = plan._racerTargetRank.get(r.index) ?? currentRank;
-        const [caLo, caHi] = getAreaBounds(caDrawn);
-        const caErr =
-          currentRank < caLo ? currentRank - caLo : currentRank > caHi ? currentRank - caHi : 0;
-        _setTarget(
-          r,
-          clamp(1.0 + plan._chaosAnchor.gain * clamp(caErr, -5, 5), minMult, maxMult),
-          elapsedMs
-        );
-        continue;
-      }
-      // ── FAIR-ARRIVAL-1 ARM C (hard band walls from R): the literal owner wording — a hard corridor holds
-      // each racer to its drawn band while ship's re-roll runs. A positional force that FIGHTS the dice
-      // (expected to pin, per FREEBAND). Flag OFF → never runs. ──
-      if (plan._bandWall && phaseProgress != null && phaseProgress >= plan._bandWall.R) {
-        const bwDrawn = plan._racerTargetRank.get(r.index) ?? currentRank;
-        const [bwLo, bwHi] = getAreaBounds(bwDrawn);
-        const bwErr =
-          currentRank < bwLo ? currentRank - bwLo : currentRank > bwHi ? currentRank - bwHi : 0;
-        _setTarget(
-          r,
-          clamp(1.0 + gain * plan._bandWall.gain * (bwErr / nActive), minMult, maxMult),
-          elapsedMs
-        );
         continue;
       }
       // Pre-OUTCOME: only heroes steer (toward their curves); the pack stays pinned to 1.0 exactly as
