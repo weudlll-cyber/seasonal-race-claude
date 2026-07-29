@@ -70,6 +70,8 @@ archived as permanent `archive/*` tags and their remote branches deleted (branch
   `f8f7d9c2fd3283e9` unchanged). See [../reports/evolution/MERGE-SHIP-1.md](../reports/evolution/MERGE-SHIP-1.md)
   and [FAIRNESS.md](FAIRNESS.md).
 - `pre/ship-combo15` (`215afde`) — the return point: master state right BEFORE COMBO15 shipped.
+- `pre/clean-sweep` (`dad4077`) — the return point before CLEAN-SWEEP-1 (dead-arm removal + local audit) and
+  the DOC-SYNC-1 doc pass that followed. Master state at the end of DOCS-1.
 - `archive/fair-arrival-merged` (`215afde`) — the `exp/fair-arrival` line (its work is on master via the
   merge `175a475`; this anchors the pre-ship state). Reports on master: `FAIR-ARRIVAL-*`, `CHAOS-STEER-1`,
   `PULK-SPECTACLE-1`, `EYE-SETUP-{1,2}`, `STEER-CAP-1`, `FAIR-ARRIVAL-GATE`, `MERGE-SHIP-1`.
@@ -107,7 +109,7 @@ that phase's `*-complete` endpoint when it closes (incremental history then live
   for source hygiene, the five `reports/evolution/FINALE-*.md`+`AFF-*.md` kept as the lab journal.
   Scaffolding tags: `pre/finale-compression`, `pre/finale-devscreen`, `pre/finale-adaptive`,
   `pre/finale-remove`. The living code reads as if Act 2 was never built; the builds are recoverable at the
-  three SHAs above.
+  three SHAs above. Permanent close anchor on origin: **`backup/finale-closed-26b2c34`** (→ `26b2c34`).
 
 ### Evolution Act 1 — assignment-follows-field (CLOSED 2026-07-26)
 - **AFF build recoverable @`cd520e0`, reverted** (`git revert cd520e0`). The flag-gated
@@ -116,7 +118,7 @@ that phase's `*-complete` endpoint when it closes (incremental history then live
   verified force-removal diagnosis). Owner closed Act 1; the build was reverted for source hygiene, the
   three `reports/evolution/AFF-*.md` kept as the lab journal. Scaffolding tags: `pre/aff-build`
   (`86e0d6d`) and `pre/aff-remove` (`0fed3ee`). The living code reads as if AFF was never built; the full
-  build is recoverable at `cd520e0`.
+  build is recoverable at `cd520e0`. Permanent close anchor on origin: **`backup/aff-closed-fc6afbf`** (→ `fc6afbf`).
 
 ### Runaway phase (open)
 - `backup/exp-runaway-baseline-complete` (`f40a7a6`) — the runaway/parade baseline-measurement commit;
@@ -244,7 +246,8 @@ No non-master branches remain.
 
 ## Complete tag set (after the parity phase close, 2026-07-25)
 
-This is the FULL list of tags that exist on both local and origin — **25 tags, nothing else**. The 13
+This was the FULL tag set **at the 2026-07-25 parity-phase close — 25 tags**. It is a dated snapshot;
+the current origin set is **41 tags** (the 16 additions since are listed in the addendum below). The 13
 parity `pre/*`+`backup/*` step-tags were collapsed onto **`v-parity-complete`** and deleted (see the *Parity
 phase — COLLAPSED* record above); everything else is a permanent keeper:
 
@@ -273,6 +276,22 @@ phase — COLLAPSED* record above); everything else is a permanent keeper:
 - `v-rowenv-easing-complete`
 - `v-security-hardening-complete`
 - `v1-race-action-merged`
+
+### Additions since 2026-07-25 (current origin total: 41 tags)
+
+Reconciled against `git ls-remote --tags origin` on 2026-07-29 (DOC-SYNC-1). The 16 tags added after the
+parity-phase snapshot above:
+
+- **COMBO15 ship + fair-arrival line (2026-07-29):** `v-ship-combo15` (`175a475`), `pre/ship-combo15`
+  (`215afde`), `pre/clean-sweep` (`dad4077`), and the four experiment archives
+  `archive/{chain-choreo-final,free-band-final,choreo-release-final,fair-arrival-merged}` — see the
+  *COMBO15 ship + the action/fair-arrival line* subsection under Permanent anchors.
+- **Evolution Act 1/Act 2 close anchors + scaffolding (2026-07-26):** `backup/aff-closed-fc6afbf`,
+  `backup/finale-closed-26b2c34`, and the scaffolding tags `pre/aff-build`, `pre/aff-remove`,
+  `pre/finale-compression`, `pre/finale-devscreen`, `pre/finale-adaptive`, `pre/finale-remove` — see the
+  *Evolution Act 1/Act 2 CLOSED* sections above.
+- **Greenfield experiment archive:** `archive/handicap-pursuit-089c7d2` — see the *Evolution — greenfield
+  experiments* section.
 
 ## Retired in Step 6d (race-action arc tag collapse)
 
