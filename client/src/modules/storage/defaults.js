@@ -282,7 +282,9 @@ export const DEFAULT_RACE_DYNAMICS_CONFIG = {
   // bonusTransitionEnd: bonus active until this point, then fades over bonusFadeDuration ms.
   // corridorStart / corridorEnd: P-controller (OUTCOME phase) active window.
   // Constraint enforced (phase-hardening clamp): pulkStart <= pulkEnd <= corridorStart <= corridorEnd.
-  racePlanPulkStart: 0.25,
+  // SHIPPED WORLD = COMBO15 (MERGE-SHIP-1): the chaos window is 0.15 (the PULK-SPECTACLE fix that keeps the
+  // mid-race lively). The old 0.25 remains a valid slider position (parity rule) — it is no longer the default.
+  racePlanPulkStart: 0.15,
   racePlanBonusTransitionEnd: 0.75,
   racePlanBonusFadeDuration: 1500,
   racePlanCorridorStart: 0.55,
@@ -291,6 +293,17 @@ export const DEFAULT_RACE_DYNAMICS_CONFIG = {
   // Below this the race falls back to raw physics (no target-rank sorting).
   // Sim-validated fair down to 30s; DevScreen-adjustable.
   racePlanMinDurationSec: 30,
+  // ── SHIPPED WORLD = COMBO15 (MERGE-SHIP-1). The FAIR-ARRIVAL candidate is now the default game: a gentle
+  // continuous CHAOS STEER toward each racer's drawn band (raises band arrival to 85–90%), plus a band-aware
+  // RE-ROLL DRAW BIAS from R=0.60 that finishes the arrival job — together they lift arrival + front action
+  // over the pre-combo15 world while the 0.15 chaos window keeps the mid-race lively. Gate record:
+  // reports/evolution/FAIR-ARRIVAL-GATE.md. These are ordinary config keys; OFF (chaosSteer/bandBias false)
+  // reproduces the pre-combo15 shipped world (a valid slider position, parity rule).
+  chaosSteer: true,
+  chaosSteerGain: 0.06,
+  bandBias: true,
+  bandBiasR: 0.6,
+  bandBiasGain: 0.1,
   // PULK field-cohesion bias gain: during the PULK phase the three pulk racers' re-roll draws are
   // nudged toward the pulk centroid by this gain × normalised gap, so the field stays together
   // (the always-on cohesion mechanism). 0 = no cohesion; higher = tighter pack. 2.0 = shipped.

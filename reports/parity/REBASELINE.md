@@ -7,6 +7,46 @@ and — on the committed honest world — screens whether the shipped gap-reroll
 sit at their optimum. No owner input was available; every choice is recorded with its reason. Nothing was
 tuned or shipped from the G/s sweep — it MEASURES; the owner decides in the morning.
 
+> ## ⇒ CURRENT BASELINE — 2026-07-29: COMBO15 shipped (MERGE-SHIP-1). Read this first.
+>
+> **The shipped world is now COMBO15** (commit on `exp/fair-arrival`, merged to master; tag `v-ship-combo15`,
+> return point `pre/ship-combo15` = `215afde`). COMBO15 = the speed-150 + gap-reroll (G=0.5/s=1.0) world of the
+> blocks below, PLUS the FAIR-ARRIVAL mechanism promoted to a shipped default: a gentle continuous **chaos
+> steer** toward each racer's drawn band (`chaosSteer:true`, gain 0.06) + a band-aware **re-roll draw bias**
+> (`bandBias:true`, R=0.60, gain 0.10), with the chaos window shrunk to **`racePlanPulkStart:0.15`** (the
+> PULK-SPECTACLE mid-race-liveliness fix). Turning `chaosSteer`/`bandBias` off and `pulkStart` back to 0.25
+> reproduces the pre-combo15 world byte-for-byte (valid slider positions — parity rule).
+>
+> **New shipped-default fingerprint** (minted once on the committed state, `fingerprint-default.mjs on`,
+> seed=1 races=3 track-defaults, 10 tracks): **ON `ded0a126048e4cdb`** (replaces the pre-combo15 anchor
+> `7c70b1eae7d31e22`); **OFF invariant `f8f7d9c2fd3283e9`** unchanged. Full lineage in
+> [docs/SIM.md](../../docs/SIM.md) *Fingerprint rule*.
+>
+> **Golden numbers — the binding N=100 gate record** ([FAIR-ARRIVAL-GATE.md](../evolution/FAIR-ARRIVAL-GATE.md),
+> 10 tracks, track-defaults, paired seeds). COMBO15 is a NEAR-PASS (7/10 full-pass; 3 characterised misses,
+> none of them pulk-flatness):
+>
+> | metric (COMBO15 vs pre-combo15 ship) | value |
+> |---|---|
+> | band arrival | **85–90% / track** (OR-form 9/10; was 69–83%) — miss: garden-path 86% (ship-ceiling track, 2pp under the 88% floor) |
+> | per-row floor (rowMin) | **≥ ship on all 10 tracks** (e.g. luger 67→88, ice 72→89, dirt 75→90) |
+> | frontContest | **≥ ship on all 10** (+7 to +17pp) |
+> | DEAD-BORING finales | **≤ ship+2 on all 10** |
+> | Holm-unfair start rows | **worsened on ZERO tracks** (space-sprint even improved UNF→ok) |
+> | pulk mid-race (the fix) | maxLeadHoldShare_mid 0.42→**0.27** (≤ship); distinctLeaders_mid →**~11** (≫ship); leaderIsDrawnB1_mid ~0.60→**~0.35** |
+>
+> **PULK watchdog — the permanent gate line (now v2, duration-relative).** The owner's mid-race-flatness
+> finding is a standing gate: chaos-window maxGap must not blow out into a lone breakaway. **v1** was an
+> absolute `ship + 1.0L` tolerance; it tripped searound/space-sprint at 60s and 4 tracks at 180s **purely
+> because gaps scale with race length** while the true flatness signals passed. **v2 reads the chaos maxGap as
+> a RATIO to ship (`≤ ship × 1.5`)** so it measures *disproportionate* breakaway, not absolute lengths.
+> Documented residuals at v2: **space-sprint ~1.6× ship** (a genuine chaos-gap overshoot, just over the 1.5×
+> line — the one real miss) and **garden-path arrival ceiling 86%** (that track's structural cap; ship sits at
+> 83%). Both are characterised, not regressions.
+>
+> The blocks below (speed-150 ship, G/s flip) remain the **substrate** COMBO15 is built on; COMBO15 is the
+> current shipped truth on top of them.
+
 > **Update — 2026-07-26: the gap-reroll knobs were flipped to the confirmed candidate.** After the owner
 > approved the ten-track confirm gate, the shipped gap-reroll defaults moved from G=0.75 / s=0.5 to
 > **G=0.5, strength=1.0** (commit `6c060a5`; ON fingerprint `6fdfe851dbb4ca72` → `7c70b1eae7d31e22`, OFF

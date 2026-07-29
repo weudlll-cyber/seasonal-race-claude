@@ -243,20 +243,20 @@ const RP_PULK_START           = Number(argVal('pulkStart',          String(DEFAU
 const RP_CORRIDOR_START       = Number(argVal('corridorStart',      String(DEFAULT_RACE_DYNAMICS_CONFIG.racePlanCorridorStart)));
 const RP_CORRIDOR_END         = Number(argVal('corridorEnd',        String(DEFAULT_RACE_DYNAMICS_CONFIG.racePlanCorridorEnd)));
 const RP_PULK_BIAS_GAIN       = Number(argVal('pulkBiasGain',       String(DEFAULT_RACE_DYNAMICS_CONFIG.pulkBiasGain)));
-// FAIR-ARRIVAL-1 flags (SIM-ONLY; default OFF).
+// FAIR-ARRIVAL flags. bandBias + chaosSteer are now SHIPPED DEFAULTS (COMBO15, MERGE-SHIP-1): a flagless sim
+// run reproduces the shipped world, so their defaults read from DEFAULT_RACE_DYNAMICS_CONFIG (same shared-
+// default pattern as pulkStart). chaosAnchor / bandWall stay OFF (never shipped). `--bandBias=false` etc.
+// restore the pre-combo15 world explicitly.
 const FA_CHAOS_ANCHOR         = argVal('chaosAnchor', 'false') === 'true';
 const FA_CHAOS_ANCHOR_GAIN    = Number(argVal('chaosAnchorGain', '0.04'));
-const FA_BAND_BIAS            = argVal('bandBias', 'false') === 'true';
+const FA_BAND_BIAS            = argVal('bandBias', String(DEFAULT_RACE_DYNAMICS_CONFIG.bandBias)) === 'true';
 const FA_BAND_WALL            = argVal('bandWall', 'false') === 'true';
-const FA_BAND_R               = Number(argVal('bandR', '0.80'));
-const FA_BAND_BIAS_GAIN       = Number(argVal('bandBiasGain', '0.06'));
+const FA_BAND_R               = Number(argVal('bandR', String(DEFAULT_RACE_DYNAMICS_CONFIG.bandBiasR)));
+const FA_BAND_BIAS_GAIN       = Number(argVal('bandBiasGain', String(DEFAULT_RACE_DYNAMICS_CONFIG.bandBiasGain)));
 const FA_BAND_WALL_GAIN       = Number(argVal('bandWallGain', '4'));
-// CHAOS-STEER-1 (SIM-ONLY; default OFF). The owner's Part 1 built PROPERLY (continuous chaos-phase pull
-// toward the drawn band, reachable). OFF → byte-identical.
-const FA_CHAOS_STEER          = argVal('chaosSteer', 'false') === 'true';
-const FA_CHAOS_STEER_GAIN     = Number(argVal('chaosSteerGain', '0.06'));
-// STEER-CAP-1: boost-side cap (null → no cap → byte-identical). Sweep {1.04, 1.06}.
-const FA_STEER_BOOST_CAP      = argVal('steerBoostCap', '') !== '' ? Number(argVal('steerBoostCap', '')) : null;
+// CHAOS-STEER (SHIPPED default in COMBO15). Continuous chaos-phase pull toward the drawn band.
+const FA_CHAOS_STEER          = argVal('chaosSteer', String(DEFAULT_RACE_DYNAMICS_CONFIG.chaosSteer)) === 'true';
+const FA_CHAOS_STEER_GAIN     = Number(argVal('chaosSteerGain', String(DEFAULT_RACE_DYNAMICS_CONFIG.chaosSteerGain)));
 // Hero choreography — master flag + drama intensity + loose-pack bandStrictness. Passed into
 // createRacePlan (flag OFF → byte-identical; the intensity/strictness only apply when ON).
 const CHOREO_ENABLED     = true; // choreography is UNCONDITIONAL (de-flagged S3); classic gates below are now statically false (Stage-4 removal)
@@ -3209,7 +3209,6 @@ if (isMain) {
               // CHAOS-STEER-1: the owner's Part 1 built properly (reachable continuous chaos pull).
               chaosSteer:              FA_CHAOS_STEER,
               chaosSteerGain:          FA_CHAOS_STEER_GAIN,
-              steerBoostCap:           FA_STEER_BOOST_CAP,
               choreoSuppressChaosBonusB1: CHOREO_SUPPRESS_CHAOS_BONUS_B1,
               choreoIntensity:     CHOREO_INTENSITY,
               choreoPackBandStrictness: CHOREO_PACK_BAND_STRICTNESS,

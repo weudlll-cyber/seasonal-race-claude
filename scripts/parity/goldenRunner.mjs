@@ -293,6 +293,18 @@ function simPlanConfig(DYN) {
     gapRerollStrength: DYN.gapRerollStrength,
     reRollTransitionDuration: DYN.reRollTransitionDuration,
     contestWindowStart: DYN.contestWindowStart,
+    // COMBO15 (MERGE-SHIP-1): the FAIR-ARRIVAL mechanism is a shipped default — thread it here too so the sim
+    // arm matches the real browser arm (raceCore) under the new defaults. Mirrors browserPlanConfig.
+    chaosAnchor: DYN.chaosAnchor ?? false,
+    chaosAnchorGain: DYN.chaosAnchorGain ?? 0.06,
+    chaosSteer: DYN.chaosSteer ?? false,
+    chaosSteerGain: DYN.chaosSteerGain ?? 0.06,
+    bandBias: DYN.bandBias ?? false,
+    bandBiasR: DYN.bandBiasR ?? 0.8,
+    bandBiasGain: DYN.bandBiasGain ?? 0.06,
+    bandWall: DYN.bandWall ?? false,
+    bandWallR: DYN.bandWallR ?? 0.8,
+    bandWallGain: DYN.bandWallGain ?? 4,
   };
 }
 

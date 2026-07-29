@@ -41,6 +41,12 @@ describe('DEFAULT_RACE_DYNAMICS_CONFIG', () => {
       racePlanCorridorStart: 0.55,
       racePlanCorridorEnd: 1.0,
       racePlanMinDurationSec: 30,
+      // SHIPPED WORLD = COMBO15 (MERGE-SHIP-1): chaos steer + faB60 draw-bias pinned ON.
+      chaosSteer: true,
+      chaosSteerGain: 0.06,
+      bandBias: true,
+      bandBiasR: 0.6,
+      bandBiasGain: 0.1,
       pulkBiasGain: 2.0,
       pulkEnvelopeMaxEffect: 0.12,
       pulkEnvelopeMaxStepPerFrame: 0.01,
@@ -76,8 +82,8 @@ describe('DEFAULT_RACE_DYNAMICS_CONFIG', () => {
       rowBonusPulk: 0,
       rowBonusPost: 1,
       enableRowEnvSmooth: true,
-      // Reopened PULK (feat/pulk-reopen).
-      racePlanPulkStart: 0.25,
+      // Reopened PULK (feat/pulk-reopen). COMBO15 (MERGE-SHIP-1): chaos window shrunk 0.25 → 0.15.
+      racePlanPulkStart: 0.15,
       // STAGE-1/2/3 CLEANUP 2026-07-13: removed the M1 front-contest flag, the M2 cohesion-spring keys,
       // the predecessor PULK race-director's two keys, and (S3 de-flag) the choreoEnabled +
       // pulkLeadRotationEnabled toggles — snapshot re-baselined to the surviving keys (intended).
@@ -114,6 +120,19 @@ describe('DEFAULT_RACE_DYNAMICS_CONFIG', () => {
     expect(DEFAULT_RACE_DYNAMICS_CONFIG.gapRerollThresholdLengths).toBe(0.5);
     expect(DEFAULT_RACE_DYNAMICS_CONFIG.gapRerollStrength).toBe(1.0);
     expect(DEFAULT_RACE_DYNAMICS_CONFIG.gapRerollMode).toBe('symmetric');
+  });
+
+  it('COMBO15 is the shipped world; turning the steer/bias OFF reaches the pre-combo15 world', () => {
+    // MERGE-SHIP-1: the FAIR-ARRIVAL candidate is the default game. Pin the shipped values. The N=100 gate
+    // record (reports/evolution/FAIR-ARRIVAL-GATE.md): arrival 85–90% per track, per-row floor up, front-
+    // Contest ≥ ship, pulk fixed. chaosSteer/bandBias false + pulkStart 0.25 restore the pre-combo15 world
+    // (valid slider positions, parity rule).
+    expect(DEFAULT_RACE_DYNAMICS_CONFIG.chaosSteer).toBe(true);
+    expect(DEFAULT_RACE_DYNAMICS_CONFIG.chaosSteerGain).toBe(0.06);
+    expect(DEFAULT_RACE_DYNAMICS_CONFIG.bandBias).toBe(true);
+    expect(DEFAULT_RACE_DYNAMICS_CONFIG.bandBiasR).toBe(0.6);
+    expect(DEFAULT_RACE_DYNAMICS_CONFIG.bandBiasGain).toBe(0.1);
+    expect(DEFAULT_RACE_DYNAMICS_CONFIG.racePlanPulkStart).toBe(0.15);
   });
 
   it('the shipped defaults are valid DevScreen slider positions (Reset All Defaults lands on them)', () => {

@@ -801,21 +801,24 @@ intermediate measurements, and none of either in a report. Debug runs during dev
 and stay unreported. A commit that claims byte-identity, and a commit that moves the numbers by
 design, each get one measurement of the pair on their final state; record old → new.
 
-**Current shipped-default fingerprints (2026-07-26).** The shipped world is speed **150 px/s** with
-gap-reroll ON at **G=0.5, strength=1.0** (flipped 2026-07-26 from 0.75/0.5). The current pair is:
+**Current shipped-default fingerprint (2026-07-29 — COMBO15 ship, MERGE-SHIP-1).** The shipped world is now
+**COMBO15** (speed 150 px/s + gap-reroll ON G=0.5/s=1.0, PLUS the FAIR-ARRIVAL candidate: chaos steer +
+faB60 draw-bias, chaos window 0.15). The current print is:
 
 | world | fingerprint |
 |---|---|
-| ON (flagless — the shipped game) | **`7c70b1eae7d31e22`** |
+| ON (flagless — the shipped game = COMBO15) | **`ded0a126048e4cdb`** |
 | OFF (`--gapRerollEnabled=false` — pre-feature world) | **`f8f7d9c2fd3283e9`** |
 
 The ON hash moved by design at each world change (retune `e93ffa70dad562a1` → plan-grid `0ecca5e2dbe6526e`
 → speed/duration `e80f78a0da6a9993` → type-mult `eda28d614f5e47d9` → step-order `8b13ccbe96992cc0` →
-speed-150 `6fdfe851dbb4ca72` → **flip `7c70b1eae7d31e22`**); the OFF invariant is unchanged since the
-speed-150 ship. Baseline metrics: [reports/parity/REBASELINE.md](../reports/parity/REBASELINE.md) +
-[reports/parity/GS-CONFIRM-GATE.md](../reports/parity/GS-CONFIRM-GATE.md) (CANDIDATE column). **The dated
+speed-150 `6fdfe851dbb4ca72` → gap-flip `7c70b1eae7d31e22` (**the pre-combo15 anchor**) → **COMBO15
+`ded0a126048e4cdb`**); the OFF invariant is unchanged. To reproduce the pre-combo15 world set
+`--chaosSteer=false --bandBias=false --pulkStart=0.25` (a valid slider position, parity rule) — that
+returns the `7c70b1eae7d31e22` print. Baseline metrics: [reports/evolution/FAIR-ARRIVAL-GATE.md](../reports/evolution/FAIR-ARRIVAL-GATE.md)
+(the N=100 gate record) + [reports/parity/REBASELINE.md](../reports/parity/REBASELINE.md). **The dated
 subsections below are accreting history — their fingerprints were current on their date; this block is the
-current pair.**
+current print.**
 
 ### CLI race-length inputs
 

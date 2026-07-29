@@ -47,9 +47,6 @@ const ALL_ARMS = {
   combo: [...STEER, ...BIAS],
   ship15: [...CHAOS15],
   combo15: [...STEER, ...BIAS, ...CHAOS15],
-  // STEER-CAP-1: COMBO15 + boost-side cap sweep (the space-sprint chaos-hole fix).
-  combo15cap104: [...STEER, ...BIAS, ...CHAOS15, '--steerBoostCap=1.04'],
-  combo15cap106: [...STEER, ...BIAS, ...CHAOS15, '--steerBoostCap=1.06'],
 };
 // --arms filter (default all). CONFIRM-1 runs --arms=ship,combo (lean; attribution arms reserved for the gate).
 const ARM_KEYS = (argVal('arms', Object.keys(ALL_ARMS).join(','))).split(',').map((s) => s.trim()).filter(Boolean);

@@ -268,15 +268,7 @@ export function createRacePlan(racers, finishT, targetDurationMs, config = {}, s
     // gripped). Out of band → eased toward it (two-sided clamp [minMult,maxMult], _setTarget slews it →
     // Sanftheits); in band → 1.0, untouched. Pull TARGET ends with chaos; the slew-eased mult then decays
     // into early PULK (no snap). Flag OFF → null → never runs → byte-identical. ──
-    // STEER-CAP-1: optional BOOST-SIDE cap. The chaos steer boosts deep out-of-band racers toward the
-    // envelope ceiling (~1.09–1.10), which is what digs the chaos hole; steerBoostCap lowers ONLY the upper
-    // clamp (the brake side, toward minMult, is untouched). Default null → upper stays maxMult → byte-identical.
-    _chaosSteer: config.chaosSteer
-      ? {
-          gain: config.chaosSteerGain ?? 0.06,
-          boostCap: config.steerBoostCap != null ? Math.max(1.0, config.steerBoostCap) : null,
-        }
-      : null,
+    _chaosSteer: config.chaosSteer ? { gain: config.chaosSteerGain ?? 0.06 } : null,
     _bandBias: config.bandBias
       ? { R: config.bandBiasR ?? 0.8, gain: config.bandBiasGain ?? 0.06 }
       : null,
@@ -742,9 +734,7 @@ export function createTrajectoryController(racePlan) {
         const [csLo, csHi] = getAreaBounds(csDrawn);
         const csErr =
           currentRank < csLo ? currentRank - csLo : currentRank > csHi ? currentRank - csHi : 0;
-        // STEER-CAP-1: boost-side cap lowers ONLY the upper clamp (brake floor minMult unchanged).
-        const csUpper = plan._chaosSteer.boostCap ?? maxMult;
-        const csTarget = clamp(1.0 + plan._chaosSteer.gain * clamp(csErr, -5, 5), minMult, csUpper);
+        const csTarget = clamp(1.0 + plan._chaosSteer.gain * clamp(csErr, -5, 5), minMult, maxMult);
         _setTarget(r, csTarget, elapsedMs);
         // Smoothness proof: the eased trajectoryMult read this frame is last frame's RESULT; compare to the
         // value observed the previous frame → the true per-tick step the ease produced (bounded = smooth).
