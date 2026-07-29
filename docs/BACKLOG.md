@@ -993,7 +993,19 @@ branch.
 
 ## 2026-07-20 — added (runaway baseline + cleanup)
 
-### Runaway phase — Distance Leash (active) + Late Challenger (deferred) 🔜 *(flag-gated; decided 2026-07-20)*
+### Runaway phase — ✅ CLOSED 2026-07-29 (solved by the shipped gap-reroll; Distance Leash REJECTED)
+**CLOSED.** The runaway problem was solved by the **gap-reroll cohesion mechanism** shipped as a default
+(`gapRerollEnabled` ON, G=0.5 / strength=1.0, 2026-07-26): the N=200 × 10-track confirm cut runaway-winner
+**23.5% → 8.3%** and generalized cleanly across tracks. The **Distance Leash** below was built sim-only and
+**REJECTED** — it made runaway WORSE (braking rank-1 dumps the leader into the pack and promotes a fresh
+escapee, and its outcome window engaged after the gap had already formed, Lesson 179); the **Late Challenger**
+was never needed once gap-reroll shipped. COMBO15's v2 duration-relative PULK watchdog (`chaosGap ≤ ship×1.5`,
+[FAIRNESS.md](FAIRNESS.md)) is the permanent guard against a disproportionate early breakaway. The material
+below is retained as the lab-journal record of the phase; no further work is planned. Endpoint anchor:
+`backup/exp-runaway-baseline-complete` (`f40a7a6`).
+
+<details><summary>Lab-journal record (the original open-phase plan — superseded by the gap-reroll ship)</summary>
+
 Baseline established: **runawayWinnerRate = 23.5%** overall (open 18% / closed 28–30%) via the
 `--runaway-parade` observer (`scripts/sim/observers/runaway-parade.mjs`, baseline in
 `exp-runaway-leader-results/`). **Goal:** keep the leader catchable without breaking fairness. **Key
@@ -1046,13 +1058,15 @@ sits at ~15.5%**, just over the 15% per-track cap — the only track over; **Hol
 flagged track). Band-reach — the PRIMARY fairness gate — HOLDS ≥70% on all tracks for strength 1.0; s075
 dips to 69.7% so s10 is the cleaner candidate.)* Next after eye-test: owner ship decision → backup tag.
 
+</details>
+
 ### Parade-finish — observe only 🔍 *(no action)*
 `paradeFinishRate = 2%` baseline, and when it happens the leading group is genuinely paced (internal speed
 spread ≤0.10 over the final 5%). Rare and not obviously bad — **track it via `--runaway-parade`, do not
 chase it.** Revisit only if a runaway fix pushes it up.
 
-### Sim `--out` forced under repo ROOT 🔧 *(hygiene, small)*
-`sim-fairness.mjs` resolves `--out` relative to repo ROOT (`join(ROOT, out)`), so a sweep's raw scratch
-cannot be redirected to an external non-OneDrive temp dir; it lands in `client/tmp/` (gitignored). Noticed
-during the runaway baseline sweep. Low priority — allow an absolute `--out` (skip the ROOT join when the
-path is absolute) if we ever want scratch off the OneDrive-synced tree for speed.
+### Sim `--out` forced under repo ROOT 🔧 — ✅ DONE (HYGIENE-1 STEP 4, 2026-07-29)
+`sim-fairness.mjs` now honours an absolute `--out` (skips the ROOT join when the path is absolute), and its
+scratch OUT_DIR **defaults off the OneDrive tree** (`$RA_SCRATCH_DIR` or `<os-tmp>/racearena-scratch`,
+env-overridable); a relative `--out` still resolves under repo ROOT for back-compat. Added `--purge-tmp` to
+wipe the scratch dir, and `scripts/audit-local.mjs` reports scratch/tmp size. See reports/evolution/HYGIENE-1.md.

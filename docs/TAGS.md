@@ -85,7 +85,7 @@ archived as permanent `archive/*` tags and their remote branches deleted (branch
 
 ## Active-phase tags (temporary scaffolding — to collapse later)
 
-Live step-tags from the OPEN runaway phase — safe return points, not permanent anchors. They collapse into
+Step-tags from the runaway phase (now CLOSED 2026-07-29, see below) and any later work — safe return points, not permanent anchors. They collapse into
 that phase's `*-complete` endpoint when it closes (incremental history then lives in commits + docs).
 
 ### Evolution — greenfield experiments (new regime: branch, drop-not-revert)
@@ -120,12 +120,17 @@ that phase's `*-complete` endpoint when it closes (incremental history then live
   (`86e0d6d`) and `pre/aff-remove` (`0fed3ee`). The living code reads as if AFF was never built; the full
   build is recoverable at `cd520e0`. Permanent close anchor on origin: **`backup/aff-closed-fc6afbf`** (→ `fc6afbf`).
 
-### Runaway phase (open)
-- `backup/exp-runaway-baseline-complete` (`f40a7a6`) — the runaway/parade baseline-measurement commit;
-  the surviving endpoint anchor for this still-open phase (Distance Leash + Late Challenger, see
-  BACKLOG.md). Its `pre/exp-runaway-baseline` scaffolding tag was collapsed in the retune/cleanup
-  collapse below (2026-07-23) — the baseline state is recoverable at `2e14663` from the table there.
-- **Collapse plan:** fold into the runaway phase's `*-complete` endpoint when that phase closes.
+### Runaway phase — CLOSED (2026-07-29)
+**Status: CLOSED.** The runaway problem was SOLVED by the **gap-reroll cohesion mechanism** (shipped default
+`gapRerollEnabled` ON, G=0.5 / strength=1.0, 2026-07-26): the N=200 × 10-track confirm cut runaway-winner
+**23% → 8.3%** and generalized cleanly. The two flagged follow-ups were resolved WITHOUT new mechanisms: the
+**Distance Leash** was built sim-only and REJECTED (it made runaway WORSE — a braked leader dumps into the
+pack and promotes a fresh escapee; see the leash result reports), and the **Late Challenger** was never needed
+once gap-reroll shipped. COMBO15's v2 duration-relative PULK watchdog (`chaosGap ≤ ship×1.5`, [FAIRNESS.md](FAIRNESS.md))
+now stands as the permanent guard against a disproportionate early breakaway. Baseline + fix reports:
+`reports/` runaway/parade baseline (`f40a7a6`) + the gap-reroll confirm; baseline state recoverable at
+`2e14663`. Endpoint anchor: `backup/exp-runaway-baseline-complete` (`f40a7a6`) — retained as the phase's
+permanent close anchor.
 
 ### Parity phase — COLLAPSED (2026-07-25)
 
@@ -256,7 +261,7 @@ phase — COLLAPSED* record above); everything else is a permanent keeper:
 - `archive/greenfield-proto-final`
 - `b4-complete`
 - `backup/browser-seed-complete`
-- `backup/exp-runaway-baseline-complete` *(active runaway phase — collapses later)*
+- `backup/exp-runaway-baseline-complete` *(runaway phase CLOSED 2026-07-29 — permanent close anchor; the gap-reroll shipped the fix)*
 - `backup/lbb-gate-complete`
 - `race-action-complete`
 - `stable/pre-governor-04jul` *(permanent anchor — NEVER delete)*
