@@ -1,0 +1,52 @@
+{
+  "track": "mountainstreet",
+  "closed": false,
+  "surfaces": [
+    "asphalt"
+  ],
+  "expected": 6,
+  "cells": [
+    {
+      "type": "beetle",
+      "bandReach": 0.8973333333333333,
+      "rowMin": 0.89,
+      "holm": "ok",
+      "runaway": 0
+    },
+    {
+      "type": "boarder",
+      "bandReach": 0.89,
+      "rowMin": 0.882,
+      "holm": "UNF",
+      "runaway": 0
+    },
+    {
+      "type": "dragon",
+      "bandReach": 0.8766666666666667,
+      "rowMin": 0.8533333333333334,
+      "holm": "UNF",
+      "runaway": 0
+    },
+    {
+      "type": "f1",
+      "bandReach": 0.88,
+      "rowMin": 0.868,
+      "holm": "UNF",
+      "runaway": 0
+    },
+    {
+      "type": "horse",
+      "bandReach": 0.9013333333333333,
+      "rowMin": 0.892,
+      "holm": "UNF",
+      "runaway": 0
+    },
+    {
+      "type": "motorbike",
+      "bandReach": 0.8713333333333333,
+      "rowMin": 0.865,
+      "holm": "UNF",
+      "runaway": 0
+    }
+  ]
+}
