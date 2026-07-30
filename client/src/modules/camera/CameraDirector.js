@@ -917,6 +917,10 @@ export class CameraDirector {
     } else {
       this.offsetX += (this.targetOffsetX - this.offsetX) * lf;
       this.offsetY += (this.targetOffsetY - this.offsetY) * lf;
+      // CAMERA-FOCUS-1: the smooth pan lerp above TRAILS the anchor; at a tight LEADER zoom the trail can
+      // push the current leader past the inner safe region (proven: ~69% of frames on a sprint). Hold the
+      // anchor inside the inner frame as the guarantee — the pan stays glued to whoever leads.
+      this._containAnchorInFrame(racers, canvasW, canvasH);
     }
     if (this._lerpPhase === 'entry') {
       if (this._entryStartTs === null) this._entryStartTs = ts;
@@ -1000,6 +1004,10 @@ export class CameraDirector {
     }
     if (this._diagEnabled)
       this._recordDiagFrame(ts, dt, lf, tSpaceLerpActive, _diagTransitioned, racers);
+    // CAMERA-FOCUS-1: expose the current pan anchor (LEADER-family only) for the dev HUD.
+    const _anchor = this._focusAnchorRacer(racers);
+    this._anchorRacerIndex = _anchor?.index ?? null;
+    this._anchorRacerLabel = _anchor ? (_anchor.name ?? _anchor.id ?? `#${_anchor.index}`) : null;
     return { zoom: this.zoom, offsetX: this.offsetX, offsetY: this.offsetY };
   }
 
@@ -1483,6 +1491,53 @@ export class CameraDirector {
   // Returns the top-N racers by position — the set the camera focuses on.
   _focusRacers(racers) {
     return [...racers].sort((a, b) => b.t - a.t).slice(0, Math.min(TOP_N, racers.length));
+  }
+
+  /**
+   * CAMERA-FOCUS-1: the single racer the LEADER-family pan is ANCHORED on this frame. Re-evaluated every
+   * frame, so a P1 swap moves the anchor to the new leader automatically (the pan then lerps to it smoothly).
+   * LEADER_ZOOM / LEAD_CHANGE → the current leader (max t). COMEBACK_ZOOM → the locked comeback racer.
+   * BATTLE_ZOOM / OVERVIEW → null (group / whole-field shots have no single anchor — no containment there).
+   */
+  _focusAnchorRacer(racers) {
+    if (!racers || racers.length === 0) return null;
+    if (this.state === CAM_STATE.COMEBACK_ZOOM) {
+      return (
+        this._findByIndex(racers, this._comebackLockedRacerIndex, this._comebackLockedRacer) ??
+        this._focusRacers(racers)[Math.min(2, racers.length - 1)] ??
+        null
+      );
+    }
+    if (this.state === CAM_STATE.LEADER_ZOOM || this.state === CAM_STATE.LEAD_CHANGE) {
+      let leader = racers[0];
+      for (const r of racers) if (r.t > leader.t) leader = r;
+      return leader;
+    }
+    return null;
+  }
+
+  /**
+   * CAMERA-FOCUS-1 containment clamp — the hard guarantee that the anchor racer never leaves the inner safe
+   * region of the frame (mirror of the min-visible ZOOM floor, but for PAN). Applied after the per-frame pan
+   * lerp in LEADER-family states: the smooth lerp trails the anchor for feel, and this shifts the offset just
+   * enough to hold the anchor inside [margin, canvas − margin] (margin = (1 − innerFramePct)/2 × canvas) when
+   * the trailing lag would otherwise push it past that boundary. Only corrects when needed, so a centered
+   * anchor is untouched. Mutates this.offsetX/Y in place.
+   */
+  _containAnchorInFrame(racers, canvasW, canvasH) {
+    const anchor = this._focusAnchorRacer(racers);
+    if (!anchor) return;
+    const effZoom = this._isOpenTrack ? this.zoom * OPEN_TRACK_BASE_ZOOM : this.zoom * this._bsX;
+    if (!(effZoom > 0)) return;
+    const innerFrac = this._innerFramePct ?? DEFAULT_INNER_FRAME_PCT;
+    const mx = ((1 - innerFrac) / 2) * canvasW;
+    const my = ((1 - innerFrac) / 2) * canvasH;
+    const sx = anchor.x * effZoom + this.offsetX;
+    if (sx < mx) this.offsetX += mx - sx;
+    else if (sx > canvasW - mx) this.offsetX -= sx - (canvasW - mx);
+    const sy = anchor.y * effZoom + this.offsetY;
+    if (sy < my) this.offsetY += my - sy;
+    else if (sy > canvasH - my) this.offsetY -= sy - (canvasH - my);
   }
 
   /**
@@ -2382,6 +2437,16 @@ export class CameraDirector {
     if (this._inFinishDrama) return 'FINISH';
     if (this._inFinishMode) return 'FINISH_OVERVIEW';
     return this.state;
+  }
+
+  /** CAMERA-FOCUS-1: index of the racer the LEADER-family pan is anchored on this frame (null otherwise). */
+  get anchorRacerIndex() {
+    return this._anchorRacerIndex ?? null;
+  }
+
+  /** CAMERA-FOCUS-1: display label of the current pan anchor racer (name/id/#index) for the dev HUD. */
+  get anchorRacerLabel() {
+    return this._anchorRacerLabel ?? null;
   }
 
   /** Pause in ms after all racers finish before the leaderboard is shown. Read by RaceScreen. */

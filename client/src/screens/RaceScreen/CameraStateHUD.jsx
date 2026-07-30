@@ -61,7 +61,7 @@ const STATE_CONFIG = {
  * @param {string}  camState  Current hudState from CameraDirector
  * @param {boolean} visible   Whether the HUD should render (from dev-panel toggle)
  */
-export default function CameraStateHUD({ camState, visible }) {
+export default function CameraStateHUD({ camState, anchorLabel = null, visible }) {
   const [displayState, setDisplayState] = useState(camState);
   const [fadeOpacity, setFadeOpacity] = useState(1);
   const timerRef = useRef(null);
@@ -99,6 +99,15 @@ export default function CameraStateHUD({ camState, visible }) {
         {cfg.icon}
       </span>
       <span className="cam-hud-label">{cfg.label}</span>
+      {anchorLabel && (
+        <span
+          className="cam-hud-anchor"
+          data-testid="camera-anchor-label"
+          style={{ marginLeft: '0.4rem', opacity: 0.72, fontSize: '0.82em' }}
+        >
+          ▸ {anchorLabel}
+        </span>
+      )}
     </div>
   );
 }

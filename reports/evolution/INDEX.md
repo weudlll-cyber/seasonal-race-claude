@@ -5,6 +5,8 @@ themselves are the record; the living docs are [LESSONS.md](../../docs/LESSONS.m
 and [FAIRNESS.md](../../docs/FAIRNESS.md). Shipped world: **COMBO15** (`v-ship-combo15`, fingerprint `ded0a126048e4cdb`).
 
 ## Camera / presentation fixes
+
+- [CAMERA-FOCUS-1.md](CAMERA-FOCUS-1.md) — the LEADER-family camera drifted AWAY from the current leader. STEP-0 proved the pan IS anchored on the leader (midpoint suspect falsified, `rawPan == leaderX`); the drift is **pure pan lag** — the smooth lerp trails a fast leader and the tight LEADER zoom amplifies it past inner-70 (69/100 frames at fast+tight, 0 when slow or zoom relaxed; LEADER-MINVIS-1 masks it). **FIXED: per-frame containment clamp (pan mirror of the min-visible zoom floor) → 0/100 outside inner-70; anchor helper + dev HUD ▸anchor line; fp identical `ded0a126048e4cdb`.**
 - [BATTLE-WEIGHT-ZERO-1.md](BATTLE-WEIGHT-ZERO-1.md) — a weight-0 camera event (BATTLE) still entered (unguarded pool push + selector returned zero-weight/zero-sum picks). **FIXED: weight>0 pool guards + selector filters weight<=0 → null; fp identical.**
 - [CAMERA-JITTER-1.md](CAMERA-JITTER-1.md) — the LEADER-MINVIS-1 min-visible floor jittered zoom+pan (binding racer flips each frame in the dense field). **FIXED: asymmetric rate-limit (loosen instant, tighten slow) → floor swing 0.42→0.04; fp identical.**
 - [BATTLE-TRIGGER-RANGE-1.md](BATTLE-TRIGGER-RANGE-1.md) — Pulk Closeness / Isolation sliders re-scaled to the sub-1% zone (0.1%–2.0%, step 0.1%) for the dense COMBO15 field. **Presentation-only; defaults unchanged; fp identical.**

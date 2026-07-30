@@ -7,6 +7,7 @@ import {
 } from './CameraDirector.js';
 import { effectiveZoom } from './openTrackCamera.js';
 import { lapProgress, currentLap } from './lapUtils.js';
+import { DEFAULT_CAMERA_CONFIG } from '../cameraConfig.js';
 
 // ── lapProgress ───────────────────────────────────────────────────────────────
 
@@ -6144,5 +6145,140 @@ describe('weighted event selection never surfaces a zero-weight state (BATTLE-WE
     const pick = cd._pickNextState(endgame, 20000, rs()); // leaderProgress 0.95 > endgameThreshold
     expect(pick.nextState).toBe(CAM_STATE.LEADER_ZOOM);
     expect(pick.reason).toMatch(/endgame/);
+  });
+});
+
+// ── CAMERA-FOCUS-1: LEADER-family pan stays anchored on the current leader (no away-drift) ────
+// Root cause proven read-only: the pan anchors on leader[0] (never a P1-P2 midpoint), but the smooth
+// pan lerp TRAILS the leader; at a tight LEADER zoom the trail pushes him past the inner frame. The
+// containment clamp holds the anchor inside the inner region every frame.
+
+describe('CAMERA-FOCUS-1 — leader anchored + contained in frame', () => {
+  const W = 6000,
+    CW = 1280,
+    CH = 720,
+    BODY = 28.5,
+    OPEN_BASE = 1.5;
+  const mkCfg = (minVis) => {
+    const c = structuredClone(DEFAULT_CAMERA_CONFIG);
+    c.cameraStateProfiles.LEADER_ZOOM = {
+      ...c.cameraStateProfiles.LEADER_ZOOM,
+      spriteScale: 3,
+      trackingTC: 0.25,
+      innerFramePct: 0.7,
+    };
+    c.minRacersVisible = minVis;
+    return c;
+  };
+  const rs = { raceElapsed: 20000, finishedCount: 0, winner: null, finishT: 1.0 };
+  const innerBounds = (cd) => {
+    const m = ((1 - (cd._innerFramePct ?? 0.7)) / 2) * CW;
+    return [m, CW - m];
+  };
+  const screenX = (cd, x) => x * cd.zoom * OPEN_BASE + cd.offsetX;
+
+  it('_focusAnchorRacer returns the current leader (max t) for LEADER_ZOOM / LEAD_CHANGE', () => {
+    const cd = new CameraDirector(W, 720, true, mkCfg(0), BODY);
+    const racers = [
+      { index: 5, t: 0.3, x: 1000, y: 360, finished: false },
+      { index: 9, t: 0.7, x: 2000, y: 360, finished: false }, // leader (max t)
+      { index: 2, t: 0.5, x: 1500, y: 360, finished: false },
+    ];
+    cd.state = CAM_STATE.LEADER_ZOOM;
+    expect(cd._focusAnchorRacer(racers).index).toBe(9);
+    cd.state = CAM_STATE.LEAD_CHANGE;
+    expect(cd._focusAnchorRacer(racers).index).toBe(9);
+    cd.state = CAM_STATE.BATTLE_ZOOM;
+    expect(cd._focusAnchorRacer(racers)).toBeNull(); // group shot — no single anchor
+  });
+
+  it('P2 falls back 3 L → the anchor stays the leader (no midpoint pull)', () => {
+    const cd = new CameraDirector(W, 720, true, mkCfg(0), BODY);
+    cd.state = CAM_STATE.LEADER_ZOOM;
+    const near = [
+      { index: 0, t: 0.5, x: 1500, y: 360, finished: false },
+      { index: 1, t: 0.49, x: 1490, y: 360, finished: false },
+    ];
+    const far = [
+      { index: 0, t: 0.5, x: 1500, y: 360, finished: false },
+      { index: 1, t: 0.49, x: 1500 - 3 * BODY, y: 360, finished: false },
+    ];
+    expect(cd._focusAnchorRacer(near).index).toBe(0);
+    expect(cd._focusAnchorRacer(far).index).toBe(0); // gap opened — anchor unchanged
+  });
+
+  it('leader sprint at the tight zoom → stays inside the inner frame EVERY frame after entry (containment)', () => {
+    const cd = new CameraDirector(W, 720, true, mkCfg(0), BODY); // min-vis off → tightest zoom
+    let lx = 1500;
+    const field = () => [
+      { index: 0, t: 0.5, x: lx, y: 360, finished: false },
+      ...Array.from({ length: 9 }, (_, i) => ({
+        index: i + 1,
+        t: 0.49 - i * 0.001,
+        x: lx - (i + 2) * BODY,
+        y: 360,
+        finished: false,
+      })),
+    ];
+    for (let i = 0; i < 120; i++) {
+      cd.state = CAM_STATE.LEADER_ZOOM;
+      cd.update(field(), 20000 + i * 16, rs, CW, CH);
+    } // converge/entry
+    const [lo, hi] = innerBounds(cd);
+    let worst = 0;
+    for (let f = 1; f <= 100; f++) {
+      lx += 9; // fast sprint
+      cd.state = CAM_STATE.LEADER_ZOOM;
+      cd.update(field(), 20000 + (120 + f) * 16, rs, CW, CH);
+      const sx = screenX(cd, lx);
+      worst = Math.max(worst, sx < lo ? lo - sx : sx > hi ? sx - hi : 0);
+      expect(sx).toBeGreaterThanOrEqual(lo - 1);
+      expect(sx).toBeLessThanOrEqual(hi + 1);
+    }
+    expect(worst).toBeLessThanOrEqual(1); // never past the inner boundary
+  });
+
+  it('P1 swap mid-hold → the anchor re-targets to the NEW leader and it is in frame', () => {
+    const cd = new CameraDirector(W, 720, true, mkCfg(0), BODY);
+    let a = 1500,
+      b = 1480; // racer 0 leads, racer 1 just behind
+    const field = (swap) => [
+      { index: 0, t: swap ? 0.49 : 0.5, x: a, y: 360, finished: false },
+      { index: 1, t: swap ? 0.5 : 0.49, x: b, y: 360, finished: false },
+      ...Array.from({ length: 8 }, (_, i) => ({
+        index: i + 2,
+        t: 0.45 - i * 0.001,
+        x: 1400 - i * BODY,
+        y: 360,
+        finished: false,
+      })),
+    ];
+    for (let i = 0; i < 90; i++) {
+      cd.state = CAM_STATE.LEADER_ZOOM;
+      cd.update(field(false), 20000 + i * 16, rs, CW, CH);
+    }
+    expect(cd.anchorRacerIndex).toBe(0);
+    // swap: racer 1 becomes the leader; advance b ahead and drive
+    for (let f = 1; f <= 40; f++) {
+      b += 3;
+      cd.state = CAM_STATE.LEADER_ZOOM;
+      cd.update(field(true), 20000 + (90 + f) * 16, rs, CW, CH);
+    }
+    expect(cd.anchorRacerIndex).toBe(1); // re-anchored to the new leader
+    const [lo, hi] = innerBounds(cd);
+    const sx = screenX(cd, b);
+    expect(sx).toBeGreaterThanOrEqual(lo - 1);
+    expect(sx).toBeLessThanOrEqual(hi + 1);
+  });
+
+  it('COMEBACK hold → the anchor is the locked comeback racer, not the leader', () => {
+    const cd = new CameraDirector(W, 720, true, mkCfg(0), BODY);
+    cd.state = CAM_STATE.COMEBACK_ZOOM;
+    cd._comebackLockedRacerIndex = 7;
+    const racers = [
+      { index: 0, t: 0.7, x: 2000, y: 360, finished: false }, // leader
+      { index: 7, t: 0.4, x: 1200, y: 360, finished: false }, // comeback subject
+    ];
+    expect(cd._focusAnchorRacer(racers).index).toBe(7);
   });
 });

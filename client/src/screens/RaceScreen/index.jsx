@@ -179,6 +179,8 @@ export default function RaceScreen() {
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [camState, setCamState] = useState(null);
   const prevHudStateRef = useRef(null);
+  const [camAnchor, setCamAnchor] = useState(null); // CAMERA-FOCUS-1: dev-HUD pan-anchor racer label
+  const prevCamAnchorRef = useRef(null);
   const perfLogRef = useRef(null);
   // Camera config as React state so updateConfig() is called whenever it changes.
   const [cameraConfig] = useState(() => loadCameraConfig());
@@ -1092,6 +1094,12 @@ export default function RaceScreen() {
         prevHudStateRef.current = newHudState;
         setCamState(newHudState);
       }
+      // CAMERA-FOCUS-1: sync the dev-HUD pan-anchor label (re-renders only when the anchor racer changes).
+      const newAnchor = camDirRef.current.anchorRacerLabel;
+      if (newAnchor !== prevCamAnchorRef.current) {
+        prevCamAnchorRef.current = newAnchor;
+        setCamAnchor(newAnchor);
+      }
       // 15a-predictive winner text: fire ONCE the winner has crossed during the photo-finish shot.
       // Scoped to the photo-finish only: fire while hudState IS 'PHOTO_FINISH', OR on the frame the
       // shot resolves AWAY from it (prevHudState was 'PHOTO_FINISH') so a 0→2 same-frame end can't
@@ -1409,7 +1417,11 @@ export default function RaceScreen() {
             className="race-canvas"
             style={{ position: 'relative' }}
           />
-          <CameraStateHUD camState={camState} visible={showCameraStateHud} />
+          <CameraStateHUD
+            camState={camState}
+            anchorLabel={camAnchor}
+            visible={showCameraStateHud}
+          />
           {/* Winner text (persistent) takes precedence over the transient state overlay — one banner. */}
           <StateOverlay text={winnerOverlayText ?? overlayText} />
           <CameraDiagnosticsHUD
