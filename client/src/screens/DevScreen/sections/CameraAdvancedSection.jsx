@@ -680,6 +680,60 @@ function CameraAdvancedSection() {
             margin: '0.75rem 0 0.4rem',
           }}
         >
+          <strong>Transition grammar</strong> — how the camera changes shots (CAMERA-GRAMMAR-1).
+          Glide eases pan+zoom together; Cut snaps them. Forward-framing places the leader ahead in
+          frame so the pack behind (the action) is visible.
+        </p>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem' }}>
+          <label
+            style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', fontSize: '0.88rem' }}
+          >
+            <span style={{ minWidth: '11rem' }}>Transition style</span>
+            <select
+              data-testid="regie-transition-grammar"
+              value={config.cameraTransitionGrammar ?? 'glide'}
+              onChange={(e) => set('cameraTransitionGrammar', e.target.value)}
+              style={{ padding: '0.2rem 0.4rem' }}
+            >
+              <option value="glide">Glide (smooth)</option>
+              <option value="cut">Cut (crisp)</option>
+            </select>
+          </label>
+          <SliderRow
+            label="Glide duration (ms)"
+            testId="regie-glide-duration-ms"
+            min={300}
+            max={900}
+            step={50}
+            value={config.glideDurationMs ?? 500}
+            onChange={(e) => set('glideDurationMs', parseInt(e.target.value, 10))}
+            display={`${config.glideDurationMs ?? 500} ms`}
+            tip="How long a Glide transition takes to ease pan+zoom from the old shot to the new subject's framing. Only used when Transition style = Glide. Range 300–900 ms. Default 500."
+          />
+          <SliderRow
+            label="Leader forward-frame"
+            testId="regie-leader-forward-frac"
+            min={0.5}
+            max={0.8}
+            step={0.02}
+            value={config.leaderForwardFrac ?? 0.66}
+            onChange={(e) => set('leaderForwardFrac', parseFloat(e.target.value))}
+            display={
+              (config.leaderForwardFrac ?? 0.66) <= 0.5
+                ? 'Centre'
+                : (config.leaderForwardFrac ?? 0.66).toFixed(2)
+            }
+            tip="Where the leader sits along the motion axis. 0.50 = dead centre; 0.66 = about two-thirds forward toward the leading edge so most of the frame shows the pack behind (the action). Range 0.50–0.80. Default 0.66."
+          />
+        </div>
+
+        <p
+          style={{
+            fontSize: '0.78rem',
+            color: 'var(--color-muted)',
+            margin: '0.75rem 0 0.4rem',
+          }}
+        >
           <strong>Adaptive Zoom Floor</strong> — during LEADER_ZOOM and LEAD_CHANGE, if fewer than
           Min racers visible are on screen the camera pulls back each frame until enough appear or
           the floor is reached. 0 = disabled.

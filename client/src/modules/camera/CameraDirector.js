@@ -172,6 +172,12 @@ export class CameraDirector {
     // CAMERA-FOCUS-3 grammar (A): frame-1 hard-cut pending for the state just entered (pan + zoom snap
     // together to the correct framing). Generalizes the LEAD_CHANGE hard-cut to every anchored entry.
     this._cutSnapPending = false;
+    // CAMERA-GRAMMAR-1 grammar (B) glide: start-of-transition framing captured on entry; pan+zoom ease
+    // from here to the moving target over glideDurationMs.
+    this._glideStartTs = null;
+    this._glideStartZoom = null;
+    this._glideStartOffsetX = null;
+    this._glideStartOffsetY = null;
     this._leadInStartTs = null;
     this._leadOutStartCamT = null;
     this._leadOutStartTs = null;
@@ -377,7 +383,13 @@ export class CameraDirector {
     // DEFAULT_CAMERA_CONFIG selects 'cut'; the code fallback stays 'legacy' so bare-config callers and
     // the existing entry-glide tests keep their behaviour. The FOCUS-2 fallback grammar (B) FULL GLIDE
     // is named in the report, not wired here.
-    this._transitionGrammar = config?.cameraTransitionGrammar === 'cut' ? 'cut' : 'legacy';
+    // CAMERA-GRAMMAR-1 transition grammar (entry STYLE only): 'glide' (shipped) eases pan+zoom together;
+    // 'cut' snaps them; 'legacy' is the bare-caller follow-lerp fallback. Unknown/absent → 'legacy'.
+    const _g = config?.cameraTransitionGrammar;
+    this._transitionGrammar = _g === 'cut' ? 'cut' : _g === 'glide' ? 'glide' : 'legacy';
+    // Glide entry duration (ms) — one bounded ease for pan AND zoom. Validated to [300, 900]; default 500.
+    const _gd = config?.glideDurationMs;
+    this._glideDurationMs = Number.isFinite(_gd) && _gd >= 300 && _gd <= 900 ? _gd : 500;
     // CAMERA-FOCUS-3 leader forward-framing fraction (owner's "pack behind, leader forward"). Valid only
     // in (0.5, 0.8]; anything else (incl. absent) → dead-centre, the legacy framing.
     const lff = config?.leaderForwardFrac;
@@ -918,10 +930,22 @@ export class CameraDirector {
     this._lastDt = dt;
     this._setTargets(racers, canvasW, canvasH, raceState);
 
-    // CAMERA-FOCUS-3 grammar (A) TRUE CUT: on the entry frame, pan AND zoom snap TOGETHER to the new
-    // subject's correct framing (min-vis + centering already applied by _setTargets). Frame 1 is right;
-    // there is no acquisition glide. Supersedes the LEAD_CHANGE offset-only snap.
-    if (this._cutSnapPending) {
+    // CAMERA-GRAMMAR-1 grammar (B) FULL GLIDE: pan AND zoom travel TOGETHER on ONE bounded ease from the
+    // captured entry framing to the (moving) target framing over glideDurationMs. Sharing one ease factor
+    // means the zoom-about-anchor invariant holds by construction DURING the glide — the anchor is framed
+    // consistently every frame (no instant half, no hybrid, no mid-transition lurch). Lands correctly
+    // framed at s=1, then hands off to the steady follow path.
+    if (this._lerpPhase === 'glide') {
+      const dur = this._glideDurationMs;
+      const s = dur > 0 ? Math.min(1, Math.max(0, (ts - this._glideStartTs) / dur)) : 1;
+      const e = s * s * (3 - 2 * s); // smoothstep ease
+      this.zoom = this._glideStartZoom + (this.targetZoom - this._glideStartZoom) * e;
+      this.offsetX = this._glideStartOffsetX + (this.targetOffsetX - this._glideStartOffsetX) * e;
+      this.offsetY = this._glideStartOffsetY + (this.targetOffsetY - this._glideStartOffsetY) * e;
+      this._leadChangeSnapPending = false;
+      this._containAnchorInFrame(racers, canvasW, canvasH); // safety rail (no-op mid-glide)
+      if (s >= 1) this._lerpPhase = 'tracking'; // glide complete → steady follow
+    } else if (this._cutSnapPending) {
       this._cutSnapPending = false;
       this._leadChangeSnapPending = false;
       this.zoom = this.targetZoom;
@@ -1260,6 +1284,12 @@ export class CameraDirector {
   _transition(racers, ts, raceState, _canvasW = CANVAS_W, _canvasH = CANVAS_H_REF) {
     const prevState = this.state;
     const prevEnteredAt = this.stateEnteredAt;
+    // CAMERA-GRAMMAR-1: the PRE-transition framing, captured before the commit block's OVERVIEW/LEAD_CHANGE
+    // hard zoom-snaps. Grammar 'glide' eases from THIS (not the snapped value) to the target so the glide
+    // smooths pan AND zoom together — never a snapped-zoom-plus-gliding-pan hybrid.
+    const _preZoom = this.zoom;
+    const _preOffsetX = this.offsetX;
+    const _preOffsetY = this.offsetY;
 
     // Record exit timestamps for per-state cooldowns
     if (prevState === CAM_STATE.OVERVIEW) {
@@ -1531,21 +1561,28 @@ export class CameraDirector {
         this._leadChangeSnapPending = true;
       }
 
-      // CAMERA-FOCUS-3 grammar (A) TRUE CUT: every anchored/active state entry snaps pan AND zoom
-      // together to the new subject's correct framing on frame 1 (zero acquisition — kills the
-      // half-glide "corner-riding" hybrid). Exempt the finish-mode OVERVIEW zoom-out, a mandatory
-      // dramatic glide (STEP 2: respect existing mandatory states). LEAD_CHANGE / normal OVERVIEW
-      // already snap; this brings LEADER / BATTLE / COMEBACK / PHOTO_FINISH onto the same grammar.
-      if (this._transitionGrammar === 'cut') {
-        const finishGlide = nextState === CAM_STATE.OVERVIEW && this._inFinishMode;
-        if (!finishGlide) {
-          this._lerpPhase = 'tracking'; // skip the entry glide — the cut lands framed on frame 1
+      // CAMERA-GRAMMAR-1: the grammar picks the ENTRY STYLE only — correctness (follow tracking, per-axis
+      // screen mapping, zoom-about-anchor) is decoupled from it. Both SHIPPED grammars promote the observer
+      // to 'follow' on entry so _setTargets frames the live subject (forward-framed anchor), never the
+      // entry-phase centreline pan:
+      //   'glide' (default) — pan AND zoom travel TOGETHER on one bounded ease (glideDurationMs) to the
+      //                       subject's correct framing. Smooth; no instant half, no hybrid.
+      //   'cut'             — pan AND zoom snap to that framing on frame 1 (crisp, zero acquisition).
+      // 'legacy' is the bare-caller fallback and is left on the pre-existing entry-glide path (still used by
+      // finish-mode OVERVIEW). The finish-mode OVERVIEW zoom-out stays a mandatory dramatic glide, exempt.
+      const finishGlide = nextState === CAM_STATE.OVERVIEW && this._inFinishMode;
+      if (!finishGlide && this._transitionGrammar !== 'legacy') {
+        this._observerPhase = 'follow';
+        if (this._transitionGrammar === 'cut') {
+          this._lerpPhase = 'tracking';
           this._cutSnapPending = true;
-          // Promote straight to the follow observer so _setTargets tracks the live subject (leader's
-          // actual position + forward-framing bias) from frame 1 — not the entry-phase centerline pan.
-          // Without this the observer stays 'idle' (entry glide never ran to promote it) and anchored
-          // states pan the track centreline forever. Mirrors the LEAD_CHANGE hard-cut path.
-          this._observerPhase = 'follow';
+        } else {
+          // 'glide' — ease from the PRE-transition framing (before any OVERVIEW/LEAD_CHANGE zoom snap).
+          this._lerpPhase = 'glide';
+          this._glideStartTs = ts;
+          this._glideStartZoom = _preZoom;
+          this._glideStartOffsetX = _preOffsetX;
+          this._glideStartOffsetY = _preOffsetY;
         }
       }
     }

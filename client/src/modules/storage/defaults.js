@@ -255,11 +255,14 @@ export const DEFAULT_CAMERA_CONFIG = {
   // edge. The pan target is shifted backward along the track tangent to achieve it; the containment clamp
   // (inner-70) stays the hard rail. Absent/invalid → dead-centre (legacy). Range 0.5–0.8.
   leaderForwardFrac: 0.66,
-  // CAMERA-FOCUS-3 transition grammar. 'cut' (grammar A, shipped) = every anchored/active state entry
-  // snaps pan AND zoom together to the new subject's correct framing on frame 1 — zero acquisition, no
-  // half-glide "corner-riding". 'legacy' = the pre-FOCUS-3 entry glide. Additive top-level field (no
-  // schema bump): the v17 loader merges DEFAULT under stored, so existing configs inherit 'cut' too.
-  cameraTransitionGrammar: 'cut',
+  // CAMERA-GRAMMAR-1 transition grammar (entry STYLE only; correctness is universal). 'glide' (shipped,
+  // owner's verdict) = on state entry pan AND zoom travel TOGETHER on one bounded ease to the subject's
+  // correct framing — smooth, no hard cut. 'cut' = snap pan+zoom on frame 1 (crisp). 'legacy' = bare-caller
+  // follow-lerp fallback. Additive top-level field (no schema bump): the v17 loader merges DEFAULT under
+  // stored, so existing configs inherit 'glide' too.
+  cameraTransitionGrammar: 'glide',
+  // CAMERA-GRAMMAR-1 glide entry duration (ms) — one bounded ease for pan AND zoom. Validated [300, 900].
+  glideDurationMs: 500,
   // Dynamic zoom-out: if fewer than minRacersVisible non-finished racers are visible, the camera
   // gradually reduces targetZoom each frame until enough racers appear or leaderMinZoom is reached.
   // 0 = disabled. Range: 0–15.

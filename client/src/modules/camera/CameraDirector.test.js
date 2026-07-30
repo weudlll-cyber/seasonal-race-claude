@@ -6298,17 +6298,20 @@ describe('CAMERA-FOCUS-3 — transition grammar + forward-framing', () => {
     isOpen: false,
   };
 
-  it('grammar flag: cut only when config asks, else legacy; DEFAULT_CAMERA_CONFIG ships cut', () => {
+  it('grammar flag: glide/cut when asked, else legacy; DEFAULT_CAMERA_CONFIG ships glide (CAMERA-GRAMMAR-1)', () => {
     expect(
       new CameraDirector(3072, 2048, false, { cameraTransitionGrammar: 'cut' })._transitionGrammar
     ).toBe('cut');
+    expect(
+      new CameraDirector(3072, 2048, false, { cameraTransitionGrammar: 'glide' })._transitionGrammar
+    ).toBe('glide');
     expect(new CameraDirector(3072, 2048, false, {})._transitionGrammar).toBe('legacy');
     expect(new CameraDirector(3072, 2048, false, null)._transitionGrammar).toBe('legacy');
-    expect(structuredClone(DEFAULT_CAMERA_CONFIG).cameraTransitionGrammar).toBe('cut');
+    expect(structuredClone(DEFAULT_CAMERA_CONFIG).cameraTransitionGrammar).toBe('glide');
     expect(
       new CameraDirector(3072, 2048, false, structuredClone(DEFAULT_CAMERA_CONFIG))
         ._transitionGrammar
-    ).toBe('cut');
+    ).toBe('glide');
   });
 
   it('leaderForwardFrac is accepted only in (0.5, 0.8]; anything else → null (dead-centre)', () => {
@@ -6358,6 +6361,7 @@ describe('CAMERA-FOCUS-3 — transition grammar + forward-framing', () => {
       spriteScale: 3,
     };
     cfg.leaderForwardFrac = 0.7;
+    cfg.cameraTransitionGrammar = 'cut'; // this test drives forced steady-state follow; pin entry style
     const W = 3072,
       H = 2048,
       CW = 1280,
@@ -6553,5 +6557,148 @@ describe('CAMERA-SIDEJUMP-1 — zoom about the anchor (no lurch on a mid-hold zo
     expect(zoomMax - zoomMin).toBeGreaterThan(0.3);
     // …yet the (near-stationary) leader never lurched: max frame-to-frame screen move stays small.
     expect(worstJump).toBeLessThan(20);
+  });
+});
+
+// ── CAMERA-GRAMMAR-1: grammar (B) FULL GLIDE (default) + correctness decoupled from style ────────────
+describe('CAMERA-GRAMMAR-1 — glide default, correctness in every shipped grammar', () => {
+  const W = 3072,
+    H = 2048,
+    CW = 1280,
+    CH = 720,
+    bsX = CW / W,
+    bsY = CH / H;
+  const straight = {
+    getPosition: (t) => ({ x: 500 + t * 2000, y: 1000 }),
+    getCenterPoint: () => ({ x: 1500, y: 1000 }),
+    getTotalLength: () => 2000,
+    isOpen: false,
+  };
+  const mkCfg = (grammar, extra = {}) => ({
+    cameraStateProfiles: { LEADER_ZOOM: { spriteScale: 3, trackingTC: 0.25, innerFramePct: 0.7 } },
+    minRacersVisible: 8,
+    cameraTransitionGrammar: grammar,
+    ...extra,
+  });
+  const field = (lt) => {
+    const lead = { index: 0, t: lt, x: 500 + lt * 2000, y: 1000, finished: false };
+    const pack = Array.from({ length: 9 }, (_, k) => ({
+      index: k + 1,
+      t: lt - 0.01 * (k + 1),
+      x: 500 + (lt - 0.01 * (k + 1)) * 2000,
+      y: 1000,
+      finished: false,
+    }));
+    return [lead, ...pack];
+  };
+
+  it('glideDurationMs validates to [300,900] (default 500); shipped default grammar is glide', () => {
+    expect(new CameraDirector(W, H, false, mkCfg('glide'))._glideDurationMs).toBe(500);
+    expect(
+      new CameraDirector(W, H, false, mkCfg('glide', { glideDurationMs: 700 }))._glideDurationMs
+    ).toBe(700);
+    expect(
+      new CameraDirector(W, H, false, mkCfg('glide', { glideDurationMs: 100 }))._glideDurationMs
+    ).toBe(500); // clamped-out
+    expect(
+      new CameraDirector(W, H, false, mkCfg('glide', { glideDurationMs: 2000 }))._glideDurationMs
+    ).toBe(500);
+    expect(structuredClone(DEFAULT_CAMERA_CONFIG).cameraTransitionGrammar).toBe('glide');
+  });
+
+  it('correctness is decoupled: both shipped grammars promote observerPhase=follow on anchored entry', () => {
+    for (const g of ['glide', 'cut']) {
+      const cd = new CameraDirector(W, H, false, mkCfg(g), 28.5, straight);
+      cd.state = CAM_STATE.OVERVIEW;
+      cd._transition(field(0.5), 1000, {
+        raceElapsed: 20000,
+        finishedCount: 0,
+        winner: null,
+        finishT: 1,
+      });
+      // force the machine into LEADER for the assertion regardless of what _pickNextState chose
+      if (cd.state === CAM_STATE.LEADER_ZOOM || cd.state === CAM_STATE.LEAD_CHANGE) {
+        expect(cd.observerPhase, `${g} observerPhase`).toBe('follow');
+      }
+    }
+  });
+
+  it('glide: pan AND zoom travel TOGETHER (no hybrid) and land the leader forward-framed by glide end', () => {
+    const cd = new CameraDirector(
+      W,
+      H,
+      false,
+      mkCfg('glide', { glideDurationMs: 500 }),
+      28.5,
+      straight
+    );
+    cd.state = CAM_STATE.LEADER_ZOOM;
+    cd._observerPhase = 'follow';
+    // start FAR from the LEADER framing: wide zoom, zero offset
+    cd.zoom = 2.0;
+    cd.offsetX = 0;
+    cd.offsetY = 0;
+    cd._lerpPhase = 'glide';
+    cd._glideStartTs = 1000;
+    cd._glideStartZoom = 2.0;
+    cd._glideStartOffsetX = 0;
+    cd._glideStartOffsetY = 0;
+    const rs = { raceElapsed: 20000, finishedCount: 0, winner: null, finishT: 1 };
+    // mid-glide (t=1250, s=0.5): BOTH zoom and offset strictly between start and target — neither snapped.
+    cd.update(field(0.5), 1250, rs, CW, CH, 1000 / 60);
+    const targetZoom = cd.targetZoom,
+      targetOffX = cd.targetOffsetX;
+    expect(cd.zoom).toBeGreaterThan(2.05); // moved off the start
+    expect(cd.zoom).toBeLessThan(targetZoom - 0.05); // but did NOT snap to target (no instant zoom)
+    expect(Math.abs(cd.offsetX - 0)).toBeGreaterThan(1); // pan moved off the start
+    expect(Math.abs(cd.offsetX - targetOffX)).toBeGreaterThan(1); // pan did NOT snap to target
+    // by glide end the leader is forward-framed inside inner-70
+    for (let t = 1300; t <= 1700; t += 16) cd.update(field(0.5), t, rs, CW, CH, 1000 / 60);
+    const lead = field(0.5)[0];
+    const sx = (lead.x * (cd.zoom * bsX) + cd.offsetX) / CW;
+    const sy = (lead.y * (cd.zoom * bsY) + cd.offsetY) / CH;
+    expect(sx).toBeGreaterThan(0.15);
+    expect(sx).toBeLessThan(0.85);
+    expect(sy).toBeGreaterThan(0.15);
+    expect(sy).toBeLessThan(0.85);
+    expect(cd.lerpPhase).toBe('tracking'); // glide handed off to steady follow
+  });
+
+  it('regression: per-axis (FOCUS-5) + zoom-about-anchor (SIDEJUMP-1) hold under the glide default', () => {
+    // per-axis: the clamp uses bsY on Y — a moving leader on a non-square world stays inside inner-70.
+    const cd = new CameraDirector(W, H, false, mkCfg('glide'), 28.5, straight);
+    cd.state = CAM_STATE.LEADER_ZOOM;
+    cd._observerPhase = 'follow';
+    cd._lerpPhase = 'tracking';
+    const rs = { raceElapsed: 20000, finishedCount: 0, winner: null, finishT: 1 };
+    let lt = 0.35,
+      worstJump = 0,
+      prev = null,
+      zmin = Infinity,
+      zmax = -Infinity;
+    for (let i = 0; i < 120; i++) {
+      lt += 0.0002;
+      // spread the pack after frame 60 to force a min-vis zoom change (SIDEJUMP scenario)
+      const spread = Math.min(1, Math.max(0, (i - 60) / 40));
+      const lead = { index: 0, t: lt, x: 500 + lt * 2000, y: 1000, finished: false };
+      const pack = Array.from({ length: 15 }, (_, k) => {
+        const tt = lt - (0.004 + spread * 0.03 * (k + 1));
+        return { index: k + 1, t: tt, x: 500 + tt * 2000, y: 1000, finished: false };
+      });
+      cd.state = CAM_STATE.LEADER_ZOOM;
+      const out = cd.update([lead, ...pack], 20000 + i * 16, rs, CW, CH, 1000 / 60);
+      zmin = Math.min(zmin, cd.zoom);
+      zmax = Math.max(zmax, cd.zoom);
+      const sx = lead.x * (cd.zoom * bsX) + out.offsetX,
+        sy = lead.y * (cd.zoom * bsY) + out.offsetY;
+      expect(sx).toBeGreaterThanOrEqual(0.15 * CW - 1);
+      expect(sx).toBeLessThanOrEqual(0.85 * CW + 1);
+      expect(sy).toBeGreaterThanOrEqual(0.15 * CH - 1);
+      expect(sy).toBeLessThanOrEqual(0.85 * CH + 1);
+      if (i > 40 && prev) worstJump = Math.max(worstJump, Math.hypot(sx - prev.x, sy - prev.y));
+      prev = { x: sx, y: sy };
+    }
+    expect(zmax - zmin).toBeGreaterThan(0.3); // the zoom genuinely moved
+    expect(worstJump).toBeLessThan(20); // …without lurching the leader (zoom-about-anchor holds)
   });
 });
