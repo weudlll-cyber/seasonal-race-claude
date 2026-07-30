@@ -908,6 +908,10 @@ export class CameraDirector {
       this._camT !== null &&
       this._shape &&
       this._transitionTargetT !== null;
+    // CAMERA-SIDEJUMP-1: the camera zooms about the WORLD ORIGIN. Capture the zoom before this frame's
+    // lerp so the follow path can re-apply the change AROUND the anchor instead (keeping the anchor's
+    // screen position fixed across any zoom change — see the root-fix note below).
+    const _zoomAtStart = this.zoom;
     if (tSpaceLerpActive) {
       this.zoom += (this.targetZoom - this.zoom) * lf;
     }
@@ -941,6 +945,22 @@ export class CameraDirector {
         this.offsetX = this.targetOffsetX;
         this.offsetY = this.targetOffsetY;
       } else {
+        // CAMERA-SIDEJUMP-1 ROOT FIX — zoom about the ANCHOR, not the world origin. Screen position is
+        // worldPos·effZoom + offset; when effZoom changes and the offset lerp only creeps toward its new
+        // target, the anchor SLIDES across the frame faster than the pan can follow — it lurches to the
+        // edge, then the pan slowly recovers (the owner's "wide move, leader not where he should be"). The
+        // trigger was a min-vis floor loosen, but the cause is generic to EVERY zoom change. Fixing it here
+        // — re-apply this frame's zoom delta around the anchor's world position so its screen position is
+        // preserved, THEN let the pan lerp ease it toward the forward-framed target — makes every zoom
+        // source (min-vis, future mechanisms) lurch-free without touching any of them.
+        const _anchor = this._focusAnchorRacer(racers);
+        const _dz = this.zoom - _zoomAtStart;
+        if (_anchor && _dz !== 0) {
+          const _ezx = this._isOpenTrack ? OPEN_TRACK_BASE_ZOOM : this._bsX;
+          const _ezy = this._isOpenTrack ? OPEN_TRACK_BASE_ZOOM : this._bsY;
+          this.offsetX -= _anchor.x * _ezx * _dz;
+          this.offsetY -= _anchor.y * _ezy * _dz;
+        }
         this.offsetX += (this.targetOffsetX - this.offsetX) * lf;
         this.offsetY += (this.targetOffsetY - this.offsetY) * lf;
         // CAMERA-FOCUS-1: the smooth pan lerp above TRAILS the anchor; at a tight LEADER zoom the trail can

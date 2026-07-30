@@ -6483,3 +6483,75 @@ describe('CAMERA-FOCUS-5 — per-axis screen mapping (forward-framing + containm
     expect(r.cd.clampActiveAxes.y).toBeLessThan(15);
   });
 });
+
+// ── CAMERA-SIDEJUMP-1: zoom-about-anchor — a zoom change mid-hold must NOT lurch the leader ──────────
+// Root cause: screen = worldPos·effZoom + offset; when the zoom changes (a min-vis floor loosen) and the
+// pan lerp only creeps toward its new target, the anchor slides across the frame faster than the pan can
+// follow — it lurched to the edge, then recovered ("wide move, leader not where he should be"). The fix
+// re-applies each frame's zoom delta AROUND the anchor, so its screen position is preserved and the pan
+// lerp only eases it toward the forward target. Generic to every zoom source.
+describe('CAMERA-SIDEJUMP-1 — zoom about the anchor (no lurch on a mid-hold zoom change)', () => {
+  const W = 3072,
+    H = 2048,
+    CW = 1280,
+    CH = 720,
+    bsX = CW / W,
+    bsY = CH / H;
+  const straightShape = {
+    getPosition: (t) => ({ x: 500 + t * 2000, y: 1000 }),
+    getCenterPoint: () => ({ x: 1500, y: 1000 }),
+    getTotalLength: () => 2000,
+    isOpen: false,
+  };
+
+  it('a min-vis floor loosen during a LEADER hold does not lurch the leader across the frame', () => {
+    const cfg = {
+      cameraStateProfiles: {
+        LEADER_ZOOM: { spriteScale: 3, trackingTC: 0.25, innerFramePct: 0.7 },
+      },
+      minRacersVisible: 8,
+    };
+    const cd = new CameraDirector(W, H, false, cfg, 28.5, straightShape);
+    cd.state = CAM_STATE.LEADER_ZOOM;
+    cd._observerPhase = 'follow';
+    const rs = { raceElapsed: 20000, finishedCount: 0, winner: null, finishT: 1 };
+    // A slow leader at t≈0.5 with a pack that starts BUNCHED (tight zoom) then SPREADS (forces the min-vis
+    // floor to loosen → zoom out mid-hold).
+    const lt0 = 0.5;
+    const field = (i) => {
+      const lt = lt0 + i * 0.00004; // barely moving — screen motion is dominated by the zoom change
+      const spread = Math.min(1, Math.max(0, (i - 60) / 40)); // 0 until frame 60, ramps to 1 by frame 100
+      const lead = { index: 0, t: lt, x: 500 + lt * 2000, y: 1000, finished: false };
+      const pack = Array.from({ length: 15 }, (_, k) => {
+        const back = 0.004 + spread * 0.03 * (k + 1); // pack fans out behind as spread grows
+        const t = lt - back;
+        return { index: k + 1, t, x: 500 + t * 2000, y: 1000, finished: false };
+      });
+      return [lead, ...pack];
+    };
+    let prevSX = null,
+      worstJump = 0,
+      zoomMin = Infinity,
+      zoomMax = -Infinity;
+    for (let i = 0; i < 140; i++) {
+      cd.state = CAM_STATE.LEADER_ZOOM;
+      const racers = field(i);
+      const out = cd.update(racers, 20000 + i * 16, rs, CW, CH, 1000 / 60);
+      zoomMin = Math.min(zoomMin, cd.zoom);
+      zoomMax = Math.max(zoomMax, cd.zoom);
+      const lead = racers[0];
+      const sx = lead.x * (cd.zoom * bsX) + out.offsetX;
+      const sy = lead.y * (cd.zoom * bsY) + out.offsetY;
+      if (i > 40 && prevSX)
+        worstJump = Math.max(worstJump, Math.hypot(sx - prevSX.x, sy - prevSX.y));
+      prevSX = { x: sx, y: sy };
+      // leader must never leave the inner region during the zoom change
+      expect(sx, `frame ${i} leader sx`).toBeGreaterThanOrEqual(0.15 * CW - 1);
+      expect(sx, `frame ${i} leader sx`).toBeLessThanOrEqual(0.85 * CW + 1);
+    }
+    // the field genuinely spread enough to move the zoom (otherwise the test proves nothing)
+    expect(zoomMax - zoomMin).toBeGreaterThan(0.3);
+    // …yet the (near-stationary) leader never lurched: max frame-to-frame screen move stays small.
+    expect(worstJump).toBeLessThan(20);
+  });
+});
