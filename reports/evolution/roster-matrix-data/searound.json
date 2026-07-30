@@ -1,0 +1,59 @@
+{
+  "track": "searound",
+  "closed": true,
+  "surfaces": [
+    "water"
+  ],
+  "expected": 7,
+  "cells": [
+    {
+      "type": "dolphin",
+      "bandReach": 0.8765,
+      "rowMin": 0.844,
+      "holm": "UNF",
+      "runaway": 0
+    },
+    {
+      "type": "dragon",
+      "bandReach": 0.8985,
+      "rowMin": 0.8866666666666667,
+      "holm": "ok",
+      "runaway": 0
+    },
+    {
+      "type": "duck",
+      "bandReach": 0.871,
+      "rowMin": 0.846,
+      "holm": "UNF",
+      "runaway": 0
+    },
+    {
+      "type": "koi",
+      "bandReach": 0.904,
+      "rowMin": 0.888,
+      "holm": "UNF",
+      "runaway": 0
+    },
+    {
+      "type": "manta",
+      "bandReach": 0.8935,
+      "rowMin": 0.8833333333333333,
+      "holm": "UNF",
+      "runaway": 0
+    },
+    {
+      "type": "rocket",
+      "bandReach": 0.8785,
+      "rowMin": 0.86,
+      "holm": "ok",
+      "runaway": 0
+    },
+    {
+      "type": "turtle",
+      "bandReach": 0.8735,
+      "rowMin": 0.772,
+      "holm": "UNF",
+      "runaway": 0
+    }
+  ]
+}
