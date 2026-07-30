@@ -6282,3 +6282,116 @@ describe('CAMERA-FOCUS-1 — leader anchored + contained in frame', () => {
     expect(cd._focusAnchorRacer(racers).index).toBe(7);
   });
 });
+
+// ── CAMERA-FOCUS-3: transition grammar (A) TRUE CUT + leader forward-framing ──────────────────
+// Kills the half-glide "corner-riding" acquisition: every anchored entry snaps pan+zoom together to
+// the correct framing on frame 1. The leader is framed FORWARD (pack behind = the action). Bisect proof
+// + replay measurement live in reports/evolution/CAMERA-FOCUS-3.md.
+
+describe('CAMERA-FOCUS-3 — transition grammar + forward-framing', () => {
+  // straight-line mock shape (kept within a 3072×2048 world): getPosition(t) = (500 + t*2000, 1000);
+  // tangent is +x everywhere, so the leader's motion axis is screen-x.
+  const straightShape = {
+    getPosition: (t) => ({ x: 500 + t * 2000, y: 1000 }),
+    getCenterPoint: () => ({ x: 1500, y: 1000 }),
+    getTotalLength: () => 2000,
+    isOpen: false,
+  };
+
+  it('grammar flag: cut only when config asks, else legacy; DEFAULT_CAMERA_CONFIG ships cut', () => {
+    expect(
+      new CameraDirector(3072, 2048, false, { cameraTransitionGrammar: 'cut' })._transitionGrammar
+    ).toBe('cut');
+    expect(new CameraDirector(3072, 2048, false, {})._transitionGrammar).toBe('legacy');
+    expect(new CameraDirector(3072, 2048, false, null)._transitionGrammar).toBe('legacy');
+    expect(structuredClone(DEFAULT_CAMERA_CONFIG).cameraTransitionGrammar).toBe('cut');
+    expect(
+      new CameraDirector(3072, 2048, false, structuredClone(DEFAULT_CAMERA_CONFIG))
+        ._transitionGrammar
+    ).toBe('cut');
+  });
+
+  it('leaderForwardFrac is accepted only in (0.5, 0.8]; anything else → null (dead-centre)', () => {
+    const mk = (v) =>
+      new CameraDirector(3072, 2048, false, { leaderForwardFrac: v })._leaderForwardFrac;
+    expect(mk(0.66)).toBe(0.66);
+    expect(mk(0.8)).toBe(0.8);
+    expect(mk(0.5)).toBeNull(); // 0.5 = centre, not a forward bias
+    expect(mk(0.9)).toBeNull(); // too far
+    expect(mk(undefined)).toBeNull();
+    expect(mk('x')).toBeNull();
+    expect(structuredClone(DEFAULT_CAMERA_CONFIG).leaderForwardFrac).toBe(0.66);
+  });
+
+  it('_applyLeaderForwardBias shifts the pan target BACKWARD along motion so the leader sits forward', () => {
+    const cd = new CameraDirector(
+      3072,
+      2048,
+      false,
+      { leaderForwardFrac: 0.66 },
+      28.5,
+      straightShape
+    );
+    // effZoom=2, frameW=1280 → biasWorld = (0.66−0.5)*1280/2 = 102.4 world px backward along +x tangent.
+    const out = cd._applyLeaderForwardBias({ x: 1500, y: 1000 }, 0.5, 2, 1280);
+    expect(out.x).toBeCloseTo(1500 - 102.4, 1);
+    expect(out.y).toBeCloseTo(1000, 3);
+    // disabled (frac null) → unchanged
+    const cd2 = new CameraDirector(3072, 2048, false, {}, 28.5, straightShape);
+    expect(cd2._applyLeaderForwardBias({ x: 1500, y: 1000 }, 0.5, 2, 1280)).toEqual({
+      x: 1500,
+      y: 1000,
+    });
+  });
+
+  it('clamp diagnostics: clampActiveCount / clampActiveAxes start at 0', () => {
+    const cd = new CameraDirector(3072, 2048, false, {});
+    expect(cd.clampActiveCount).toBe(0);
+    expect(cd.clampActiveAxes).toEqual({ x: 0, y: 0 });
+  });
+
+  it('STEP-3 forward-framing (closed): leader sits FORWARD of centre and the X containment clamp stays idle', () => {
+    const cfg = structuredClone(DEFAULT_CAMERA_CONFIG);
+    cfg.cameraStateProfiles.LEADER_ZOOM = {
+      ...cfg.cameraStateProfiles.LEADER_ZOOM,
+      spriteScale: 3,
+    };
+    cfg.leaderForwardFrac = 0.7;
+    const W = 3072,
+      H = 2048,
+      CW = 1280,
+      CH = 720,
+      bsX = CW / W;
+    const cd = new CameraDirector(W, H, false, cfg, 28.5, straightShape);
+    cd.state = CAM_STATE.LEADER_ZOOM;
+    cd._observerPhase = 'follow'; // steady follow (as grammar-cut promotes on entry)
+    const rs = { raceElapsed: 20000, finishedCount: 0, winner: null, finishT: 1.0 };
+    let lt = 0.3,
+      sumFrac = 0,
+      n = 0;
+    const px = (t) => 500 + t * 2000; // match straightShape.getPosition
+    for (let i = 0; i < 200; i++) {
+      lt += 0.00012; // leader advances gently along +x (steady follow — tracking keeps up)
+      const lead = { index: 0, t: lt, x: px(lt), y: 1000, finished: false };
+      const pack = Array.from({ length: 9 }, (_, k) => ({
+        index: k + 1,
+        t: lt - 0.01 * (k + 1),
+        x: px(lt - 0.01 * (k + 1)),
+        y: 1000,
+        finished: false,
+      }));
+      const racers = [lead, ...pack];
+      cd.state = CAM_STATE.LEADER_ZOOM;
+      const out = cd.update(racers, 20000 + i * 16, rs, CW, CH, 1000 / 60);
+      if (i > 60) {
+        const sx = lead.x * (cd.zoom * bsX) + out.offsetX;
+        sumFrac += sx / CW;
+        n++;
+      }
+    }
+    const avgFrac = sumFrac / n;
+    expect(avgFrac).toBeGreaterThan(0.55); // leader forward of centre (0.5)
+    expect(avgFrac).toBeLessThan(0.85); // but inside the inner-70 leading edge (not at the edge)
+    expect(cd.clampActiveAxes.x).toBeLessThan(10); // motion-axis clamp idle: tracking frames the leader
+  });
+});

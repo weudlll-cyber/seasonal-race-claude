@@ -249,6 +249,17 @@ export const DEFAULT_CAMERA_CONFIG = {
   minStateHoldMs: 5000,
   cameraTransitionSeconds: { overview: 1.5, leader: 0.3, battle: 0.3, comeback: 0.3 },
   targetInnerFramePct: 0.7,
+  // CAMERA-FOCUS-3 leader framing: where the leader sits along the motion axis in LEADER_ZOOM. 0.5 =
+  // dead-centre; > 0.5 = FORWARD (leader toward the leading edge, so most of the frame shows the pack
+  // BEHIND him — that is where the action is; owner's design). 0.66 = leader at ~2/3, safe margin to the
+  // edge. The pan target is shifted backward along the track tangent to achieve it; the containment clamp
+  // (inner-70) stays the hard rail. Absent/invalid → dead-centre (legacy). Range 0.5–0.8.
+  leaderForwardFrac: 0.66,
+  // CAMERA-FOCUS-3 transition grammar. 'cut' (grammar A, shipped) = every anchored/active state entry
+  // snaps pan AND zoom together to the new subject's correct framing on frame 1 — zero acquisition, no
+  // half-glide "corner-riding". 'legacy' = the pre-FOCUS-3 entry glide. Additive top-level field (no
+  // schema bump): the v17 loader merges DEFAULT under stored, so existing configs inherit 'cut' too.
+  cameraTransitionGrammar: 'cut',
   // Dynamic zoom-out: if fewer than minRacersVisible non-finished racers are visible, the camera
   // gradually reduces targetZoom each frame until enough racers appear or leaderMinZoom is reached.
   // 0 = disabled. Range: 0–15.

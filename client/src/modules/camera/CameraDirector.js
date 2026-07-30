@@ -169,6 +169,9 @@ export class CameraDirector {
     this._camT = null;
     this._observerPhase = 'idle';
     this._leadChangeSnapPending = false;
+    // CAMERA-FOCUS-3 grammar (A): frame-1 hard-cut pending for the state just entered (pan + zoom snap
+    // together to the correct framing). Generalizes the LEAD_CHANGE hard-cut to every anchored entry.
+    this._cutSnapPending = false;
     this._leadInStartTs = null;
     this._leadOutStartCamT = null;
     this._leadOutStartTs = null;
@@ -368,6 +371,17 @@ export class CameraDirector {
       this._overviewSpriteScale = 1.0; // no config → natural size (unchanged)
     }
     this._innerFramePct = config?.targetInnerFramePct ?? DEFAULT_INNER_FRAME_PCT;
+    // CAMERA-FOCUS-3 transition grammar. 'cut' (grammar A) = every anchored/active state entry snaps
+    // pan AND zoom together to the new subject's correct framing on frame 1 (zero acquisition — the
+    // half-glide "corner-riding" hybrid is dead). 'legacy' = the pre-FOCUS-3 entry glide. The shipped
+    // DEFAULT_CAMERA_CONFIG selects 'cut'; the code fallback stays 'legacy' so bare-config callers and
+    // the existing entry-glide tests keep their behaviour. The FOCUS-2 fallback grammar (B) FULL GLIDE
+    // is named in the report, not wired here.
+    this._transitionGrammar = config?.cameraTransitionGrammar === 'cut' ? 'cut' : 'legacy';
+    // CAMERA-FOCUS-3 leader forward-framing fraction (owner's "pack behind, leader forward"). Valid only
+    // in (0.5, 0.8]; anything else (incl. absent) → dead-centre, the legacy framing.
+    const lff = config?.leaderForwardFrac;
+    this._leaderForwardFrac = Number.isFinite(lff) && lff > 0.5 && lff <= 0.8 ? lff : null;
     // Countdown start zoom: convert spritePx → spriteScale, typically clamped to overviewZoom.
     this._countdownStartZoom = this._computeZoomForSpriteScale(
       (config?.countdownStartZoomSpritePx ?? 1) / FALLBACK_REFERENCE_SPRITE_SIZE
@@ -900,27 +914,40 @@ export class CameraDirector {
     this._lastDt = dt;
     this._setTargets(racers, canvasW, canvasH, raceState);
 
-    // LEAD_CHANGE hard-cut: snap offsetX/Y synchronously with the zoom snap so the
-    // zoomed-in frame shows the correct racer from frame 0, not the previous position.
-    if (this._leadChangeSnapPending) {
+    // CAMERA-FOCUS-3 grammar (A) TRUE CUT: on the entry frame, pan AND zoom snap TOGETHER to the new
+    // subject's correct framing (min-vis + centering already applied by _setTargets). Frame 1 is right;
+    // there is no acquisition glide. Supersedes the LEAD_CHANGE offset-only snap.
+    if (this._cutSnapPending) {
+      this._cutSnapPending = false;
       this._leadChangeSnapPending = false;
+      this.zoom = this.targetZoom;
       this.offsetX = this.targetOffsetX;
       this.offsetY = this.targetOffsetY;
-    }
-
-    if (!tSpaceLerpActive) {
-      this.zoom += (this.targetZoom - this.zoom) * lf;
-    }
-    if (tSpaceLerpActive) {
-      this.offsetX = this.targetOffsetX;
-      this.offsetY = this.targetOffsetY;
-    } else {
-      this.offsetX += (this.targetOffsetX - this.offsetX) * lf;
-      this.offsetY += (this.targetOffsetY - this.offsetY) * lf;
-      // CAMERA-FOCUS-1: the smooth pan lerp above TRAILS the anchor; at a tight LEADER zoom the trail can
-      // push the current leader past the inner safe region (proven: ~69% of frames on a sprint). Hold the
-      // anchor inside the inner frame as the guarantee — the pan stays glued to whoever leads.
+      // Emergency rail — a no-op when the cut lands centered (anchored states); returns early otherwise.
       this._containAnchorInFrame(racers, canvasW, canvasH);
+    } else {
+      // LEAD_CHANGE hard-cut (legacy grammar): snap offsetX/Y synchronously with the zoom snap so the
+      // zoomed-in frame shows the correct racer from frame 0, not the previous position.
+      if (this._leadChangeSnapPending) {
+        this._leadChangeSnapPending = false;
+        this.offsetX = this.targetOffsetX;
+        this.offsetY = this.targetOffsetY;
+      }
+
+      if (!tSpaceLerpActive) {
+        this.zoom += (this.targetZoom - this.zoom) * lf;
+      }
+      if (tSpaceLerpActive) {
+        this.offsetX = this.targetOffsetX;
+        this.offsetY = this.targetOffsetY;
+      } else {
+        this.offsetX += (this.targetOffsetX - this.offsetX) * lf;
+        this.offsetY += (this.targetOffsetY - this.offsetY) * lf;
+        // CAMERA-FOCUS-1: the smooth pan lerp above TRAILS the anchor; at a tight LEADER zoom the trail can
+        // push the current leader past the inner safe region (proven: ~69% of frames on a sprint). Hold the
+        // anchor inside the inner frame as the guarantee — the pan stays glued to whoever leads.
+        this._containAnchorInFrame(racers, canvasW, canvasH);
+      }
     }
     if (this._lerpPhase === 'entry') {
       if (this._entryStartTs === null) this._entryStartTs = ts;
@@ -1483,6 +1510,24 @@ export class CameraDirector {
         }
         this._leadChangeSnapPending = true;
       }
+
+      // CAMERA-FOCUS-3 grammar (A) TRUE CUT: every anchored/active state entry snaps pan AND zoom
+      // together to the new subject's correct framing on frame 1 (zero acquisition — kills the
+      // half-glide "corner-riding" hybrid). Exempt the finish-mode OVERVIEW zoom-out, a mandatory
+      // dramatic glide (STEP 2: respect existing mandatory states). LEAD_CHANGE / normal OVERVIEW
+      // already snap; this brings LEADER / BATTLE / COMEBACK / PHOTO_FINISH onto the same grammar.
+      if (this._transitionGrammar === 'cut') {
+        const finishGlide = nextState === CAM_STATE.OVERVIEW && this._inFinishMode;
+        if (!finishGlide) {
+          this._lerpPhase = 'tracking'; // skip the entry glide — the cut lands framed on frame 1
+          this._cutSnapPending = true;
+          // Promote straight to the follow observer so _setTargets tracks the live subject (leader's
+          // actual position + forward-framing bias) from frame 1 — not the entry-phase centerline pan.
+          // Without this the observer stays 'idle' (entry glide never ran to promote it) and anchored
+          // states pan the track centreline forever. Mirrors the LEAD_CHANGE hard-cut path.
+          this._observerPhase = 'follow';
+        }
+      }
     }
 
     this._prevCommittedState = nextState;
@@ -1517,6 +1562,39 @@ export class CameraDirector {
   }
 
   /**
+   * CAMERA-FOCUS-3 leader forward-framing. Shifts a pan target BACKWARD along the leader's motion tangent
+   * so the leader lands at screen fraction `_leaderForwardFrac` (> 0.5) along the motion axis — i.e. FORWARD,
+   * with the trailing pack filling the rest of the frame (the action is behind the leader). Returns the
+   * target unchanged when disabled, when the shape/T is missing, or when the tangent is degenerate.
+   *
+   * @param {{x:number,y:number}} pos   the un-biased pan target (leader's smoothed world position)
+   * @param {number|null} leaderT       the leader's track T
+   * @param {number} effZoom            effective world→screen zoom on the X axis for this state
+   * @param {number} frameW             canvas width in px
+   */
+  _applyLeaderForwardBias(pos, leaderT, effZoom, frameW) {
+    if (this._leaderForwardFrac == null || leaderT == null || !this._shape || !(effZoom > 0))
+      return pos;
+    // world distance that maps to (frac − 0.5) of the frame on screen → how far FORWARD the leader sits
+    const biasWorld = ((this._leaderForwardFrac - 0.5) * frameW) / effZoom;
+    if (!(biasWorld > 0)) return pos;
+    const eps = 0.003;
+    const tA = this._isOpenTrack ? Math.min(1, leaderT + eps) : (((leaderT + eps) % 1) + 1) % 1;
+    const tB = this._isOpenTrack ? Math.max(0, leaderT - eps) : (((leaderT - eps) % 1) + 1) % 1;
+    const pA = this._shape.getPosition(tA, 0);
+    const pB = this._shape.getPosition(tB, 0);
+    if (!pA || !pB) return pos;
+    let dx = pA.x - pB.x,
+      dy = pA.y - pB.y;
+    const len = Math.hypot(dx, dy);
+    if (!(len > 0)) return pos;
+    dx /= len;
+    dy /= len;
+    // shift the pan CENTRE backward along motion → the leader appears forward by biasWorld
+    return { x: pos.x - dx * biasWorld, y: pos.y - dy * biasWorld };
+  }
+
+  /**
    * CAMERA-FOCUS-1 containment clamp — the hard guarantee that the anchor racer never leaves the inner safe
    * region of the frame (mirror of the min-visible ZOOM floor, but for PAN). Applied after the per-frame pan
    * lerp in LEADER-family states: the smooth lerp trails the anchor for feel, and this shifts the offset just
@@ -1533,11 +1611,43 @@ export class CameraDirector {
     const mx = ((1 - innerFrac) / 2) * canvasW;
     const my = ((1 - innerFrac) / 2) * canvasH;
     const sx = anchor.x * effZoom + this.offsetX;
-    if (sx < mx) this.offsetX += mx - sx;
-    else if (sx > canvasW - mx) this.offsetX -= sx - (canvasW - mx);
+    let active = false,
+      ax = false,
+      ay = false;
+    if (sx < mx) {
+      this.offsetX += mx - sx;
+      active = true;
+      ax = true;
+    } else if (sx > canvasW - mx) {
+      this.offsetX -= sx - (canvasW - mx);
+      active = true;
+      ax = true;
+    }
     const sy = anchor.y * effZoom + this.offsetY;
-    if (sy < my) this.offsetY += my - sy;
-    else if (sy > canvasH - my) this.offsetY -= sy - (canvasH - my);
+    if (sy < my) {
+      this.offsetY += my - sy;
+      active = true;
+      ay = true;
+    } else if (sy > canvasH - my) {
+      this.offsetY -= sy - (canvasH - my);
+      active = true;
+      ay = true;
+    }
+    // CAMERA-FOCUS-3 diagnostic: count frames where the emergency rail actually corrected the pan.
+    // With grammar (A) cut + centered steady-state tracking this should be ~0 (the rail is a safety net).
+    if (active) this._clampActiveCount = (this._clampActiveCount ?? 0) + 1;
+    if (ax) this._clampActiveX = (this._clampActiveX ?? 0) + 1;
+    if (ay) this._clampActiveY = (this._clampActiveY ?? 0) + 1;
+  }
+
+  /** CAMERA-FOCUS-3: frames on which the containment clamp actually moved the pan (emergency-rail use). */
+  get clampActiveCount() {
+    return this._clampActiveCount ?? 0;
+  }
+
+  /** CAMERA-FOCUS-3: per-axis clamp activations (diagnostic). */
+  get clampActiveAxes() {
+    return { x: this._clampActiveX ?? 0, y: this._clampActiveY ?? 0 };
   }
 
   /**
@@ -2008,6 +2118,7 @@ export class CameraDirector {
 
       case CAM_STATE.LEADER_ZOOM: {
         this.targetZoom = this._leaderZoom;
+        const leaderT = focusRacers[0]?.t ?? null;
         if (this._isOpenTrack) {
           let panTarget;
           if (this._camT !== null && this._shape && this._observerPhase !== 'follow') {
@@ -2015,6 +2126,16 @@ export class CameraDirector {
           } else {
             const raw = getPanTarget(CAM_STATE.LEADER_ZOOM, focusRacers, this._shape);
             panTarget = this._smoothFocal(raw.x, raw.y);
+          }
+          // CAMERA-FOCUS-3 forward-framing: shift the pan target backward along the leader's motion so
+          // the leader sits FORWARD in frame with the pack behind him (only in the steady follow phase).
+          if (panTarget && this._observerPhase === 'follow') {
+            panTarget = this._applyLeaderForwardBias(
+              panTarget,
+              leaderT,
+              this._leaderZoom * OPEN_TRACK_BASE_ZOOM,
+              canvasW
+            );
           }
           if (panTarget) this._setOpenTrackTargets(panTarget, this._leaderZoom, frameSize);
         } else {
@@ -2024,6 +2145,14 @@ export class CameraDirector {
           } else {
             const raw = getPanTarget(CAM_STATE.LEADER_ZOOM, focusRacers, this._shape);
             panTarget = this._smoothFocal(raw.x, raw.y);
+          }
+          if (panTarget && this._observerPhase === 'follow') {
+            panTarget = this._applyLeaderForwardBias(
+              panTarget,
+              leaderT,
+              this._leaderZoom * this._bsX,
+              canvasW
+            );
           }
           if (panTarget) {
             this._setClosedTrackTargets(
