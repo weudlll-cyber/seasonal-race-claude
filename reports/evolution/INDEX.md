@@ -20,6 +20,7 @@ and [FAIRNESS.md](../../docs/FAIRNESS.md). Shipped world: **COMBO15** (`v-ship-c
 - [DOCS-1.md](DOCS-1.md) — the complete written record: preserve the 3 closed branches' reports, L184–189, DEAD-ENDS §G, FAIRNESS.md. **Record complete.**
 
 ## The FAIR-ARRIVAL → COMBO15 line (SHIPPED)
+- [ROSTER-MATRIX-1.md](ROSTER-MATRIX-1.md) — does every surface-compatible racer reach its band on the tracks it belongs on? Read-only measure of all 71 eligible `(type, track)` cells on COMBO15. **YES — every cell 84.4–91.0% arrival, 0% runaway; worst = seatrack/rocket 84.4%. One signal: rocket is the softest cell on 4 open water/air tracks (mild over-power). fp identical `ded0a126`.**
 - [MERGE-SHIP-1.md](MERGE-SHIP-1.md) — COMBO15 becomes the default world; source cleaned. **SHIPPED (fp ded0a126).**
 - [STEER-CAP-1.md](STEER-CAP-1.md) — cap the boost side of the chaos steer to close space-sprint's gap. **KILL — backfired 6/6 (Lesson 189, wrong lever).**
 - [FAIR-ARRIVAL-GATE.md](FAIR-ARRIVAL-GATE.md) — binding N=100 × 10-track record on COMBO15. **PARTIAL near-pass (7/10 full-pass); pulk flatness FIXED.**
