@@ -6332,13 +6332,14 @@ describe('CAMERA-FOCUS-3 — transition grammar + forward-framing', () => {
       28.5,
       straightShape
     );
-    // effZoom=2, frameW=1280 → biasWorld = (0.66−0.5)*1280/2 = 102.4 world px backward along +x tangent.
-    const out = cd._applyLeaderForwardBias({ x: 1500, y: 1000 }, 0.5, 2, 1280);
+    // Horizontal motion (tangent +x): effZoomX=2, frameW=1280 → span=1280, sLen=2 →
+    // worldBias = (0.66−0.5)*1280/2 = 102.4 world px backward along +x. (effZoomY/frameH inert here.)
+    const out = cd._applyLeaderForwardBias({ x: 1500, y: 1000 }, 0.5, 2, 2, 1280, 720);
     expect(out.x).toBeCloseTo(1500 - 102.4, 1);
     expect(out.y).toBeCloseTo(1000, 3);
     // disabled (frac null) → unchanged
     const cd2 = new CameraDirector(3072, 2048, false, {}, 28.5, straightShape);
-    expect(cd2._applyLeaderForwardBias({ x: 1500, y: 1000 }, 0.5, 2, 1280)).toEqual({
+    expect(cd2._applyLeaderForwardBias({ x: 1500, y: 1000 }, 0.5, 2, 2, 1280, 720)).toEqual({
       x: 1500,
       y: 1000,
     });
@@ -6393,5 +6394,92 @@ describe('CAMERA-FOCUS-3 — transition grammar + forward-framing', () => {
     expect(avgFrac).toBeGreaterThan(0.55); // leader forward of centre (0.5)
     expect(avgFrac).toBeLessThan(0.85); // but inside the inner-70 leading edge (not at the edge)
     expect(cd.clampActiveAxes.x).toBeLessThan(10); // motion-axis clamp idle: tracking frames the leader
+  });
+});
+
+// ── CAMERA-FOCUS-5: per-axis screen mapping — the leader is framed forward on EVERY heading, and the ──
+// containment clamp uses bsY on the Y axis (matching the live ctx.scale(zoom·bsX, zoom·bsY)). The original
+// bug used bsX for BOTH axes: on a non-square world the Y check was mis-scaled, shoving the leader to the
+// edge and firing the clamp ~44% of frames. Fix drops the clamp to ~0 and frames vertical motion correctly.
+describe('CAMERA-FOCUS-5 — per-axis screen mapping (forward-framing + containment)', () => {
+  const W = 3072,
+    H = 2048,
+    CW = 1280,
+    CH = 720; // non-square world: bsX (0.417) ≠ bsY (0.352)
+  const bsX = CW / W,
+    bsY = CH / H;
+  const straight = (fn, len) => ({
+    getPosition: fn,
+    getCenterPoint: () => fn(0.5),
+    getTotalLength: () => len,
+    isOpen: false,
+  });
+  const SHAPES = {
+    right: straight((t) => ({ x: 500 + t * 2000, y: 1000 }), 2000),
+    left: straight((t) => ({ x: 2500 - t * 2000, y: 1000 }), 2000),
+    down: straight((t) => ({ x: 1500, y: 500 + t * 1200 }), 1200),
+    up: straight((t) => ({ x: 1500, y: 1700 - t * 1200 }), 1200),
+  };
+  const driveLeader = (shape) => {
+    const cfg = {
+      cameraStateProfiles: {
+        LEADER_ZOOM: { spriteScale: 3, trackingTC: 0.25, innerFramePct: 0.7 },
+      },
+      minRacersVisible: 8,
+      cameraTransitionGrammar: 'cut',
+      leaderForwardFrac: 0.66,
+    };
+    const cd = new CameraDirector(W, H, false, cfg, 28.5, shape);
+    cd.state = CAM_STATE.LEADER_ZOOM;
+    cd._observerPhase = 'follow';
+    let lt = 0.35,
+      sx = 0,
+      sy = 0,
+      n = 0;
+    for (let i = 0; i < 160; i++) {
+      lt += 0.0006;
+      const p = shape.getPosition(lt);
+      const lead = { index: 0, t: lt, x: p.x, y: p.y, finished: false };
+      const pack = Array.from({ length: 9 }, (_, k) => {
+        const pp = shape.getPosition(lt - 0.01 * (k + 1));
+        return { index: k + 1, t: lt - 0.01 * (k + 1), x: pp.x, y: pp.y, finished: false };
+      });
+      cd.state = CAM_STATE.LEADER_ZOOM;
+      const out = cd.update(
+        [lead, ...pack],
+        20000 + i * 16,
+        { raceElapsed: 20000, finishedCount: 0, winner: null, finishT: 1 },
+        CW,
+        CH,
+        1000 / 60
+      );
+      if (i > 70) {
+        sx += (lead.x * (cd.zoom * bsX) + out.offsetX) / CW;
+        sy += (lead.y * (cd.zoom * bsY) + out.offsetY) / CH;
+        n++;
+      }
+    }
+    return { x: sx / n, y: sy / n, cd };
+  };
+
+  it('the leader lands ~2/3 toward the LEADING edge on ALL four cardinal headings (vertical included)', () => {
+    for (const [dir, shape] of Object.entries(SHAPES)) {
+      const r = driveLeader(shape);
+      const along =
+        dir === 'right' ? r.x : dir === 'left' ? 1 - r.x : dir === 'down' ? r.y : 1 - r.y;
+      // faithful per-axis screen position — forward of centre toward the leading edge, not at the edge
+      expect(along, `${dir} forwardFrac`).toBeGreaterThan(0.58);
+      expect(along, `${dir} forwardFrac`).toBeLessThan(0.85);
+    }
+  });
+
+  it('the containment clamp uses bsY on the Y axis (matches the render); vertical motion no longer edge-rides', () => {
+    // 'down' motion is the case the bsX-for-Y bug broke: the leader was shoved to the top edge.
+    const r = driveLeader(SHAPES.down);
+    // faithful (bsY) leader Y is forward (~2/3 down), NOT pinned at the top/bottom edge:
+    expect(r.y).toBeGreaterThan(0.58);
+    expect(r.y).toBeLessThan(0.85);
+    // and the emergency rail is essentially idle on both axes (was ~44% on Y with the bug):
+    expect(r.cd.clampActiveAxes.y).toBeLessThan(15);
   });
 });

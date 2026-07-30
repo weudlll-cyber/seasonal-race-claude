@@ -1569,15 +1569,20 @@ export class CameraDirector {
    *
    * @param {{x:number,y:number}} pos   the un-biased pan target (leader's smoothed world position)
    * @param {number|null} leaderT       the leader's track T
-   * @param {number} effZoom            effective world→screen zoom on the X axis for this state
+   * @param {number} effZoomX           effective world→screen zoom on the X axis for this state
+   * @param {number} effZoomY           effective world→screen zoom on the Y axis for this state
    * @param {number} frameW             canvas width in px
+   * @param {number} frameH             canvas height in px
    */
-  _applyLeaderForwardBias(pos, leaderT, effZoom, frameW) {
-    if (this._leaderForwardFrac == null || leaderT == null || !this._shape || !(effZoom > 0))
+  _applyLeaderForwardBias(pos, leaderT, effZoomX, effZoomY, frameW, frameH) {
+    if (
+      this._leaderForwardFrac == null ||
+      leaderT == null ||
+      !this._shape ||
+      !(effZoomX > 0) ||
+      !(effZoomY > 0)
+    )
       return pos;
-    // world distance that maps to (frac − 0.5) of the frame on screen → how far FORWARD the leader sits
-    const biasWorld = ((this._leaderForwardFrac - 0.5) * frameW) / effZoom;
-    if (!(biasWorld > 0)) return pos;
     const eps = 0.003;
     const tA = this._isOpenTrack ? Math.min(1, leaderT + eps) : (((leaderT + eps) % 1) + 1) % 1;
     const tB = this._isOpenTrack ? Math.max(0, leaderT - eps) : (((leaderT - eps) % 1) + 1) % 1;
@@ -1590,8 +1595,22 @@ export class CameraDirector {
     if (!(len > 0)) return pos;
     dx /= len;
     dy /= len;
-    // shift the pan CENTRE backward along motion → the leader appears forward by biasWorld
-    return { x: pos.x - dx * biasWorld, y: pos.y - dy * biasWorld };
+    // CAMERA-FOCUS-5: the screen mapping is PER-AXIS (ctx.scale(zoom·bsX, zoom·bsY) closed). Work the
+    // shift in SCREEN space so the leader lands (frac−0.5) of the frame FORWARD along the motion direction
+    // on EVERY heading — not just horizontal. The world tangent (dx,dy) projects to the screen tangent
+    // (dx·effZoomX, dy·effZoomY); `span` is the frame extent along that heading (frameW for horizontal
+    // motion, frameH for vertical, blended between). The world shift that yields that screen displacement
+    // is span·(dx,dy)/sLen — which cancels back to the old (frac−0.5)·frameW/effZoomX for pure-horizontal
+    // motion (why the X axis was already right) but is now correct on vertical/diagonal sections too.
+    const sxDir = dx * effZoomX;
+    const syDir = dy * effZoomY;
+    const sLen = Math.hypot(sxDir, syDir);
+    if (!(sLen > 0)) return pos;
+    const span = (Math.abs(sxDir) / sLen) * frameW + (Math.abs(syDir) / sLen) * frameH;
+    const worldBias = ((this._leaderForwardFrac - 0.5) * span) / sLen;
+    if (!(worldBias > 0)) return pos;
+    // shift the pan CENTRE backward along motion → the leader appears forward on screen
+    return { x: pos.x - dx * worldBias, y: pos.y - dy * worldBias };
   }
 
   /**
@@ -1605,12 +1624,19 @@ export class CameraDirector {
   _containAnchorInFrame(racers, canvasW, canvasH) {
     const anchor = this._focusAnchorRacer(racers);
     if (!anchor) return;
-    const effZoom = this._isOpenTrack ? this.zoom * OPEN_TRACK_BASE_ZOOM : this.zoom * this._bsX;
-    if (!(effZoom > 0)) return;
+    // CAMERA-FOCUS-5: the screen mapping is PER-AXIS. The live render applies ctx.scale(cam.zoom·bsX,
+    // cam.zoom·bsY) for closed tracks — bsX on X, bsY on Y — so the anchor's screen position must be
+    // computed with effZoomX on X and effZoomY on Y. Using bsX for BOTH (the original bug) mis-scaled the
+    // Y check on non-square worlds (searound bsX 0.417 vs bsY 0.352 = 19% off): the clamp saw the leader
+    // lower than he really was, shoved him up toward the edge, and fired ~44% of frames. Open tracks use a
+    // uniform zoom (OPEN_TRACK_BASE_ZOOM on both axes), so effZoomY == effZoomX there.
+    const effZoomX = this._isOpenTrack ? this.zoom * OPEN_TRACK_BASE_ZOOM : this.zoom * this._bsX;
+    const effZoomY = this._isOpenTrack ? effZoomX : this.zoom * this._bsY;
+    if (!(effZoomX > 0) || !(effZoomY > 0)) return;
     const innerFrac = this._innerFramePct ?? DEFAULT_INNER_FRAME_PCT;
     const mx = ((1 - innerFrac) / 2) * canvasW;
     const my = ((1 - innerFrac) / 2) * canvasH;
-    const sx = anchor.x * effZoom + this.offsetX;
+    const sx = anchor.x * effZoomX + this.offsetX;
     let active = false,
       ax = false,
       ay = false;
@@ -1623,7 +1649,7 @@ export class CameraDirector {
       active = true;
       ax = true;
     }
-    const sy = anchor.y * effZoom + this.offsetY;
+    const sy = anchor.y * effZoomY + this.offsetY;
     if (sy < my) {
       this.offsetY += my - sy;
       active = true;
@@ -2144,13 +2170,10 @@ export class CameraDirector {
           }
           // CAMERA-FOCUS-3 forward-framing: shift the pan target backward along the leader's motion so
           // the leader sits FORWARD in frame with the pack behind him (only in the steady follow phase).
+          // Open tracks use a uniform zoom on both axes.
           if (panTarget && this._observerPhase === 'follow') {
-            panTarget = this._applyLeaderForwardBias(
-              panTarget,
-              leaderT,
-              this._leaderZoom * OPEN_TRACK_BASE_ZOOM,
-              canvasW
-            );
+            const ez = this._leaderZoom * OPEN_TRACK_BASE_ZOOM;
+            panTarget = this._applyLeaderForwardBias(panTarget, leaderT, ez, ez, canvasW, canvasH);
           }
           if (panTarget) this._setOpenTrackTargets(panTarget, this._leaderZoom, frameSize);
         } else {
@@ -2162,11 +2185,14 @@ export class CameraDirector {
             panTarget = this._smoothFocal(raw.x, raw.y);
           }
           if (panTarget && this._observerPhase === 'follow') {
+            // closed tracks: per-axis zoom (bsX on X, bsY on Y) — matches the live ctx.scale.
             panTarget = this._applyLeaderForwardBias(
               panTarget,
               leaderT,
               this._leaderZoom * this._bsX,
-              canvasW
+              this._leaderZoom * this._bsY,
+              canvasW,
+              canvasH
             );
           }
           if (panTarget) {
