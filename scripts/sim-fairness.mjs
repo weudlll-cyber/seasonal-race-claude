@@ -450,6 +450,14 @@ const elRaces             = [];   // per-race escape-latency records (filled onl
 // read-only capture at the advanceRacerT call site (harness Pass-2). No sim file changes; no fingerprint.
 const SPEED_SOURCE        = argv.includes('--speed-source');
 const ssRaces             = [];   // per-race top-15 speed decomposition (filled only when SPEED_SOURCE)
+// --dump-frames=<path>: read-only per-frame POSITION recorder for the FIRST race only. Installs a
+// frameHook that captures [{index,x,y,t,finished}] per frame (after the shared step's computePositions,
+// exactly the array the browser hands the camera) plus race meta, then writes <path> as JSON. Purpose:
+// a faithful camera replay — feed the SAME real race into any CameraDirector version (CAMERA-FOCUS-2
+// bisect ladder). Observer only: no engine touched, no fingerprint. Pair with --races=1 --tracks=<one>.
+const DUMP_FRAMES         = argVal('dump-frames', null);
+const _dumpFrames         = [];   // per-frame position snapshots (filled only when DUMP_FRAMES, first race)
+let   _dumpDone           = false;
 // --skip-main-output: skip writing the large fairness-data.json + fairness-report.md. For a batch
 // runner that reads only hero-map.json, to avoid heavy concurrent writes into the OneDrive-synced
 // tree. Read-only measurement runs only; a normal run (flag absent) is unchanged.
@@ -3286,7 +3294,32 @@ if (isMain) {
             runawayParade:      RUNAWAY_PARADE,
             speedSource:        SPEED_SOURCE,
             physicsTax:         PHYSICS_TAX,
+            // CAMERA-FOCUS-2: capture the exact per-frame racer array the browser feeds the camera,
+            // for the FIRST race only. Read-only observer — cannot alter the race.
+            frameHook: (DUMP_FRAMES && !_dumpDone)
+              ? ((raceTs, _diag, racers) => {
+                  _dumpFrames.push({
+                    t: raceTs,
+                    racers: racers.map((r) => ({
+                      index: r.index, x: r.x, y: r.y, t: r.t, finished: !!r.finished,
+                    })),
+                  });
+                })
+              : null,
           });
+          // CAMERA-FOCUS-2: write the recorded replay once (first race), then stop capturing.
+          if (DUMP_FRAMES && !_dumpDone && _dumpFrames.length) {
+            writeFileSync(DUMP_FRAMES, JSON.stringify({
+              meta: {
+                track: trackId, seed, nRacers: nRacersForCombo, isOpen, finishT,
+                worldW: track.worldWidth ?? 1280, worldH: track.worldHeight ?? 720,
+                frames: _dumpFrames.length,
+              },
+              frames: _dumpFrames,
+            }));
+            _dumpDone = true;
+            console.log(`  [dump-frames] wrote ${_dumpFrames.length} frames → ${DUMP_FRAMES}`);
+          }
           // HERO-MAP (--hero-map): stash this race's per-hero observations, tagged with combo meta.
           if (HERO_MAP && result.heroObs) {
             heroMapRaces.push({ trackId, racerType, durationSec, seed, raceIdx, isOpen, heroObs: result.heroObs });
