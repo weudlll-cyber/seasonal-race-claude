@@ -60,7 +60,7 @@ import {
   getEffectiveMinTargetScreenPx,
   getEffectiveMaxTargetScreenPx,
 } from '../../modules/autoSpriteScale.js';
-import { loadCameraConfig } from '../../modules/cameraConfig.js';
+import { loadCameraConfig, cameraConfigProvenance } from '../../modules/cameraConfig.js';
 import { configFingerprintBadge } from '../../modules/exportRaceConfig.js';
 import CameraStateHUD from './CameraStateHUD.jsx';
 import CameraDiagnosticsHUD from './CameraDiagnosticsHUD.jsx';
@@ -181,6 +181,7 @@ export default function RaceScreen() {
   const prevHudStateRef = useRef(null);
   const [camAnchor, setCamAnchor] = useState(null); // CAMERA-FOCUS-1: dev-HUD pan-anchor racer label
   const prevCamAnchorRef = useRef(null);
+  const truthEntryLoggedRef = useRef(false); // CAMERA-FOCUS-4: one-shot observer-phase log per race
   const perfLogRef = useRef(null);
   // Camera config as React state so updateConfig() is called whenever it changes.
   const [cameraConfig] = useState(() => loadCameraConfig());
@@ -518,6 +519,25 @@ export default function RaceScreen() {
       drawnBodyWidthRefPx,
       shapeRef.current
     );
+    // CAMERA-FOCUS-4 LIVE TRUTH — print, at every race start, exactly which build + camera path this
+    // browser is running: short commit · RESOLVED transition grammar · leader forward-frac · stored schema
+    // version · per-key source (stored vs default) for the two FOCUS-3 keys. Reload once and paste this to
+    // settle any stale-bundle / stale-config ghost hunt in a single glance. This line stays forever.
+    {
+      const commit = typeof __RA_COMMIT__ !== 'undefined' ? __RA_COMMIT__ : 'dev';
+      const prov = cameraConfigProvenance();
+      // eslint-disable-next-line no-console
+      console.info(
+        `[RA CAMERA LIVE TRUTH] commit=${commit} ` +
+          `resolvedGrammar=${camDirRef.current.transitionGrammar} ` +
+          `leaderForwardFrac=${camDirRef.current.leaderForwardFrac ?? 'null'} ` +
+          `storedSchema=${prov.storedSchemaVersion ?? 'none'} hadStoredConfig=${prov.hadStored} ` +
+          `source{cameraTransitionGrammar}=${prov.sources.cameraTransitionGrammar} ` +
+          `source{leaderForwardFrac}=${prov.sources.leaderForwardFrac} ` +
+          `(observerPhase logged on first anchored entry)`
+      );
+      truthEntryLoggedRef.current = false;
+    }
     // Ensure surface-class registry has the latest cached server data (before trail emitters resolve).
     // Code defaults are always present; this picks up any user-defined overrides.
     loadServerClasses(getCachedServerSurfaceClasses());
@@ -1099,6 +1119,24 @@ export default function RaceScreen() {
       if (newAnchor !== prevCamAnchorRef.current) {
         prevCamAnchorRef.current = newAnchor;
         setCamAnchor(newAnchor);
+      }
+      // CAMERA-FOCUS-4 LIVE TRUTH: on the FIRST anchored-state entry, log the resolved observer phase once.
+      // grammar 'cut' promotes it to 'follow' on entry; 'legacy' leaves it 'idle' until the entry glide
+      // converges — so this single value tells the owner which pan path his browser actually ran.
+      if (
+        !truthEntryLoggedRef.current &&
+        (newHudState === 'LEADER_ZOOM' ||
+          newHudState === 'BATTLE_ZOOM' ||
+          newHudState === 'COMEBACK_ZOOM' ||
+          newHudState === 'LEAD_CHANGE')
+      ) {
+        truthEntryLoggedRef.current = true;
+        // eslint-disable-next-line no-console
+        console.info(
+          `[RA CAMERA LIVE TRUTH] first anchored entry: state=${newHudState} ` +
+            `observerPhase=${camDirRef.current.observerPhase} grammar=${camDirRef.current.transitionGrammar} ` +
+            `(expect observerPhase='follow' when grammar='cut')`
+        );
       }
       // 15a-predictive winner text: fire ONCE the winner has crossed during the photo-finish shot.
       // Scoped to the photo-finish only: fire while hudState IS 'PHOTO_FINISH', OR on the frame the

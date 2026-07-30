@@ -128,7 +128,9 @@ function mergeStateProfiles(storedProfiles, { stripSpriteScale = false } = {}) {
   return out;
 }
 
-export function loadCameraConfig() {
+// Resolve the stored camera config through its schema-version migration path. May, on some branches,
+// return a config that predates the newest top-level keys — loadCameraConfig() fills those from DEFAULT.
+function resolveStoredCameraConfig() {
   const stored = storageGet(KEYS.CAMERA_CONFIG);
   if (!stored || typeof stored !== 'object') return { ...DEFAULT_CAMERA_CONFIG };
 
@@ -298,6 +300,47 @@ export function loadCameraConfig() {
     merged.cameraStateProfiles = mergeStateProfiles(stored.cameraStateProfiles);
   }
   return merged;
+}
+
+/**
+ * The live camera config: the stored config resolved through its migration path, then guaranteed to be
+ * DEFAULTS overlaid by stored keys. CAMERA-FOCUS-4 systemic rule (bug class #3 — "the flag never reaches
+ * the live config"): a stored config may OVERRIDE a value but can NEVER silently omit new machinery — any
+ * top-level DEFAULT key absent from the resolved config is filled from DEFAULT here, on every branch. The
+ * 'legacy' constructor fallback in CameraDirector therefore only ever fires for a truly bare test caller
+ * (`new CameraDirector()` with no config), never for a real persisted config.
+ */
+export function loadCameraConfig() {
+  const resolved = resolveStoredCameraConfig();
+  const out = { ...resolved };
+  for (const key of Object.keys(DEFAULT_CAMERA_CONFIG)) {
+    if (!(key in out)) out[key] = DEFAULT_CAMERA_CONFIG[key];
+  }
+  return out;
+}
+
+/**
+ * CAMERA-FOCUS-4 LIVE TRUTH — read-only provenance of the resolved camera config. For each top-level
+ * key it reports whether the resolved value came from the STORED config or from DEFAULT, plus the stored
+ * schema version. Lets the race-start console line prove — in one glance — that a persisted config did
+ * NOT silently omit new machinery (e.g. cameraTransitionGrammar). No behaviour change.
+ * @returns {{ resolved: object, sources: Record<string,'stored'|'default'>, storedSchemaVersion: number|null, hadStored: boolean }}
+ */
+export function cameraConfigProvenance() {
+  const stored = storageGet(KEYS.CAMERA_CONFIG);
+  const storedObj = stored && typeof stored === 'object' ? stored : {};
+  const resolved = loadCameraConfig();
+  const sources = {};
+  for (const key of Object.keys(DEFAULT_CAMERA_CONFIG)) {
+    sources[key] = Object.prototype.hasOwnProperty.call(storedObj, key) ? 'stored' : 'default';
+  }
+  return {
+    resolved,
+    sources,
+    storedSchemaVersion:
+      typeof storedObj.schemaVersion === 'number' ? storedObj.schemaVersion : null,
+    hadStored: !!stored && typeof stored === 'object',
+  };
 }
 
 export function saveCameraConfig(config) {

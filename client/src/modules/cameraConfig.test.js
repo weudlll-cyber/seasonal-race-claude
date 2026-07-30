@@ -892,3 +892,54 @@ describe('mergeStateProfiles — helper behavior via loadCameraConfig', () => {
     );
   });
 });
+
+// ── CAMERA-FOCUS-4: the config-merge rule — new machinery can never be silently omitted ──────────
+import { CameraDirector } from './camera/CameraDirector.js';
+import { cameraConfigProvenance } from './cameraConfig.js';
+
+describe('CAMERA-FOCUS-4 — stored config can never omit new machinery', () => {
+  it('a persisted v17 config lacking the new keys resolves grammar cut + forward-frac (not legacy)', () => {
+    // The owner's case: a stored cosmetic config (off-default keys) saved BEFORE FOCUS-3 existed, so it
+    // has NO cameraTransitionGrammar / leaderForwardFrac. The load must fill them from DEFAULT.
+    storageGet.mockReturnValue({
+      schemaVersion: 17,
+      showCameraStateHud: false,
+      overviewOffsetPx: 200,
+      minRacersVisible: 6,
+      focalSmoothTc: 0.02,
+      leaderMinZoomFraction: 0.5,
+    });
+    const cfg = loadCameraConfig();
+    expect(cfg.cameraTransitionGrammar).toBe('cut');
+    expect(cfg.leaderForwardFrac).toBe(0.66);
+    // stored overrides still win where present:
+    expect(cfg.minRacersVisible).toBe(6);
+    expect(cfg.overviewOffsetPx).toBe(200);
+    // and the CameraDirector built from it runs the NEW path, not the legacy fallback:
+    const cd = new CameraDirector(3072, 2048, false, cfg);
+    expect(cd.transitionGrammar).toBe('cut');
+  });
+
+  it('systemic guarantee: even if a resolve branch dropped a new key, loadCameraConfig fills it', () => {
+    // A migration-era config (schemaVersion 9) exercises a different branch; new keys must still resolve.
+    storageGet.mockReturnValue({ schemaVersion: 9, minRacersVisible: 4 });
+    const cfg = loadCameraConfig();
+    expect(cfg.cameraTransitionGrammar).toBe('cut');
+    expect(cfg.leaderForwardFrac).toBe(0.66);
+  });
+
+  it('only a truly bare CameraDirector caller (no config) falls back to legacy', () => {
+    expect(new CameraDirector().transitionGrammar).toBe('legacy');
+    expect(new CameraDirector(3072, 2048, false, loadCameraConfig()).transitionGrammar).toBe('cut');
+  });
+
+  it('cameraConfigProvenance reports per-key source (stored vs default) + schema version', () => {
+    storageGet.mockReturnValue({ schemaVersion: 17, minRacersVisible: 6 });
+    const prov = cameraConfigProvenance();
+    expect(prov.storedSchemaVersion).toBe(17);
+    expect(prov.hadStored).toBe(true);
+    expect(prov.sources.minRacersVisible).toBe('stored');
+    expect(prov.sources.cameraTransitionGrammar).toBe('default'); // filled from DEFAULT, not stored
+    expect(prov.resolved.cameraTransitionGrammar).toBe('cut');
+  });
+});

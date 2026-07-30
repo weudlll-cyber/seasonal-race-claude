@@ -28,6 +28,8 @@ export default [
         ...globals.es2022,
         // Vite transforms process.env references at build time; tell ESLint it exists
         process: 'readonly',
+        // Vite `define` injects the short commit at build time (CAMERA-FOCUS-4 LIVE TRUTH line).
+        __RA_COMMIT__: 'readonly',
       },
       parserOptions: {
         ecmaFeatures: { jsx: true },

@@ -1650,6 +1650,21 @@ export class CameraDirector {
     return { x: this._clampActiveX ?? 0, y: this._clampActiveY ?? 0 };
   }
 
+  /** CAMERA-FOCUS-4 LIVE TRUTH: the RESOLVED transition grammar this director is running ('cut'|'legacy'). */
+  get transitionGrammar() {
+    return this._transitionGrammar;
+  }
+
+  /** CAMERA-FOCUS-4 LIVE TRUTH: the current observer phase ('idle'|'lead-in'|'follow'). */
+  get observerPhase() {
+    return this._observerPhase;
+  }
+
+  /** CAMERA-FOCUS-4 LIVE TRUTH: resolved leader forward-framing fraction (null when centred). */
+  get leaderForwardFrac() {
+    return this._leaderForwardFrac;
+  }
+
   /**
    * Finds the first group of ≥3 racers that simultaneously satisfy all BATTLE conditions:
    *   1. Closeness  — all pairwise lap-normalized arc distances shortestArcDeltaT ≤ battlePulkThresholdT
