@@ -1,0 +1,31 @@
+{
+  "track": "space-sprint",
+  "closed": false,
+  "surfaces": [
+    "air"
+  ],
+  "expected": 3,
+  "cells": [
+    {
+      "type": "dragon",
+      "bandReach": 0.8816666666666667,
+      "rowMin": 0.8733333333333333,
+      "holm": "UNF",
+      "runaway": 0
+    },
+    {
+      "type": "plane",
+      "bandReach": 0.888,
+      "rowMin": 0.882,
+      "holm": "ok",
+      "runaway": 0
+    },
+    {
+      "type": "rocket",
+      "bandReach": 0.85,
+      "rowMin": 0.8226666666666667,
+      "holm": "ok",
+      "runaway": 0
+    }
+  ]
+}
