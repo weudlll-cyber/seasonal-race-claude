@@ -1,4 +1,4 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import {
   CameraDirector,
   CAM_STATE,
@@ -6700,5 +6700,57 @@ describe('CAMERA-GRAMMAR-1 — glide default, correctness in every shipped gramm
     }
     expect(zmax - zmin).toBeGreaterThan(0.3); // the zoom genuinely moved
     expect(worstJump).toBeLessThan(20); // …without lurching the leader (zoom-about-anchor holds)
+  });
+});
+
+// ── CAMERA-DETOUR-1: frame-log instrument liveness (Lesson 187 proof-of-live) ──────────────────
+// The instrument must PROVE it is not a silent no-op: it emits a window on a real transition when the
+// flag is on, and emits NOTHING when the flag is off. A viewing tool that cannot prove liveness is the
+// exact trap Lesson 187 was written for. It measures; it must never move a camera value (covered by the
+// fingerprint OFF==ON check in the report + the wider suite still passing).
+describe('CameraDirector — CAMERA-DETOUR-1 frame-log liveness', () => {
+  // Drive OVERVIEW for a few frames (fills the 3-frame pre-buffer), then force a real transition
+  // (finishedCount>0 → LEADER_ZOOM, Priority 1 overrides all), then run ~35 frames to complete the
+  // ~30-frame post window.
+  const driveThroughTransition = (cd) => {
+    let ts = 1000;
+    cd.state = CAM_STATE.OVERVIEW;
+    cd.stateEnteredAt = 0;
+    const overview = { raceElapsed: 1000, finishedCount: 0, winner: null, finishT: 1.0 };
+    for (let i = 0; i < 5; i++) {
+      cd.update(mockRacers(4), ts, overview, 1280, 720);
+      ts += 16;
+    }
+    const afterFinish = { raceElapsed: 2000, finishedCount: 1, winner: null, finishT: 1.0 };
+    for (let i = 0; i < 35; i++) {
+      cd.update(mockRacers(4), ts, afterFinish, 1280, 720);
+      ts += 16;
+    }
+  };
+
+  it('ON: emits a [RA CAMERA DETOUR] window (pre + post frames) on a real transition', () => {
+    const spy = vi.spyOn(console, 'info').mockImplementation(() => {});
+    const cd = new CameraDirector(1280, 720, false, { cameraDetourLog: true });
+    driveThroughTransition(cd);
+    const log = cd.exportDetourLog();
+    expect(log.length).toBeGreaterThan(0); // a window was captured
+    const w = log[log.length - 1];
+    expect(w.frames.some((f) => f.rel < 0)).toBe(true); // captured the pre-transition frames (candidate A)
+    expect(w.frames.some((f) => f.rel === 0)).toBe(true); // and the transition frame itself
+    expect(w.frames.filter((f) => f.rel >= 0).length).toBeGreaterThan(20); // ~30 post frames
+    // the anchor screen position is present on post frames (the STEP-3 flip signal)
+    expect(w.frames.find((f) => f.rel === 0).anchorSX).not.toBeNull();
+    // a copy-pasteable console line fired for the owner's live session
+    expect(spy.mock.calls.some((c) => String(c[0]).startsWith('[RA CAMERA DETOUR]'))).toBe(true);
+    spy.mockRestore();
+  });
+
+  it('OFF (default): produces NO frame-log lines and no export — proves it is truly gated', () => {
+    const spy = vi.spyOn(console, 'info').mockImplementation(() => {});
+    const cd = new CameraDirector(1280, 720, false); // cameraDetourLog defaults false
+    driveThroughTransition(cd);
+    expect(cd.exportDetourLog()).toHaveLength(0);
+    expect(spy.mock.calls.some((c) => String(c[0]).startsWith('[RA CAMERA DETOUR]'))).toBe(false);
+    spy.mockRestore();
   });
 });

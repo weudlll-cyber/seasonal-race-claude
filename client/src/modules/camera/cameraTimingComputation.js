@@ -65,6 +65,7 @@ export function computeTimingFromConfig(config) {
   const battleCooldownMs = config?.battleCooldownMs ?? BATTLE_COOLDOWN_MS;
   const showDiagnostics = config?.showCameraDiagnostics ?? false;
   const diagEnabled = config?.enableFrameLog ?? false;
+  const detourEnabled = config?.cameraDetourLog ?? false; // CAMERA-DETOUR-1 per-transition frame log
   const transitionTConvergence = config?.transitionTConvergence ?? TRANSITION_T_CONVERGENCE;
   const overviewOffsetPx =
     config?.cameraStateProfiles?.OVERVIEW?.overviewOffsetPx ?? DEFAULT_OVERVIEW_OFFSET_PX;
@@ -292,6 +293,7 @@ export function computeTimingFromConfig(config) {
     battleCooldownMs,
     showDiagnostics,
     diagEnabled,
+    detourEnabled,
     transitionTConvergence,
     overviewOffsetPx,
     overviewCooldownMs,

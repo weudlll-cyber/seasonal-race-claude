@@ -275,6 +275,17 @@ export class CameraDirector {
     this._diagPrevOffsetX = null;
     this._diagPrevOffsetY = null;
     this._diagPrevZoom = null;
+    // CAMERA-DETOUR-1: per-transition frame log (read-only; gated by config.cameraDetourLog).
+    // Captures 3 frames BEFORE each view change and the first ~30 after, to locate where the
+    // camera's wrong-direction move begins. Writes ONLY to these _detour* fields — never a camera value.
+    this._detourPreBuf = []; // rolling last-3 pre-transition frame snapshots
+    this._detourWindow = null; // active capture window { from, to, preoX/Y, prez, frames[], remaining }
+    this._detourLog = []; // completed windows (for export/inspection)
+    this._detourPrevState = null; // previous frame's state → the transition's from-state
+    this._detourContainActive = false; // did _containAnchorInFrame move offset this frame (candidate C)
+    this._detourContainDeltaX = 0;
+    this._detourContainDeltaY = 0;
+    this._detourSetTargetsZoom = null; // the zoom _setTargets used this frame (candidate D)
     // prevFocusT as it was at the START of the current frame (before overwrite).
     this._diagPrevFocusT = null;
     // Set to 'threshold'|'timeout' on the frame where entry→tracking fires; null all other frames.
@@ -418,6 +429,7 @@ export class CameraDirector {
     this._battleCooldownMs = t.battleCooldownMs;
     this._showDiagnostics = t.showDiagnostics;
     this._diagEnabled = t.diagEnabled;
+    this._detourEnabled = t.detourEnabled; // CAMERA-DETOUR-1 per-transition frame log (read-only)
     this._transitionTConvergence = t.transitionTConvergence;
     this._overviewOffsetPx = t.overviewOffsetPx;
     this._overviewCooldownMs = t.overviewCooldownMs;
@@ -928,6 +940,9 @@ export class CameraDirector {
       this.zoom += (this.targetZoom - this.zoom) * lf;
     }
     this._lastDt = dt;
+    // CAMERA-DETOUR-1 candidate D: capture the zoom _setTargets is about to use (it reads this.zoom for
+    // its currEffZoom pan computation) so it can be compared to the zoom the renderer finally draws with.
+    if (this._detourEnabled) this._detourSetTargetsZoom = this.zoom;
     this._setTargets(racers, canvasW, canvasH, raceState);
 
     // CAMERA-GRAMMAR-1 grammar (B) FULL GLIDE: pan AND zoom travel TOGETHER on ONE bounded ease from the
@@ -1075,6 +1090,7 @@ export class CameraDirector {
     }
     if (this._diagEnabled)
       this._recordDiagFrame(ts, dt, lf, tSpaceLerpActive, _diagTransitioned, racers);
+    if (this._detourEnabled) this._recordDetourFrame(tSpaceLerpActive, _diagTransitioned, racers);
     // CAMERA-FOCUS-1: expose the current pan anchor (LEADER-family only) for the dev HUD.
     const _anchor = this._focusAnchorRacer(racers);
     this._anchorRacerIndex = _anchor?.index ?? null;
@@ -1679,6 +1695,13 @@ export class CameraDirector {
    * anchor is untouched. Mutates this.offsetX/Y in place.
    */
   _containAnchorInFrame(racers, canvasW, canvasH) {
+    // CAMERA-DETOUR-1 candidate C: measure the actual offset delta this clamp applies (Lesson 192 —
+    // clamp-active is a measurement, not a comment). Default 0/false covers the early-return no-op paths.
+    if (this._detourEnabled) {
+      this._detourContainActive = false;
+      this._detourContainDeltaX = 0;
+      this._detourContainDeltaY = 0;
+    }
     const anchor = this._focusAnchorRacer(racers);
     if (!anchor) return;
     // CAMERA-FOCUS-5: the screen mapping is PER-AXIS. The live render applies ctx.scale(cam.zoom·bsX,
@@ -1690,6 +1713,8 @@ export class CameraDirector {
     const effZoomX = this._isOpenTrack ? this.zoom * OPEN_TRACK_BASE_ZOOM : this.zoom * this._bsX;
     const effZoomY = this._isOpenTrack ? effZoomX : this.zoom * this._bsY;
     if (!(effZoomX > 0) || !(effZoomY > 0)) return;
+    const _dcBeforeX = this._detourEnabled ? this.offsetX : 0; // CAMERA-DETOUR-1 candidate C
+    const _dcBeforeY = this._detourEnabled ? this.offsetY : 0;
     const innerFrac = this._innerFramePct ?? DEFAULT_INNER_FRAME_PCT;
     const mx = ((1 - innerFrac) / 2) * canvasW;
     const my = ((1 - innerFrac) / 2) * canvasH;
@@ -1721,6 +1746,117 @@ export class CameraDirector {
     if (active) this._clampActiveCount = (this._clampActiveCount ?? 0) + 1;
     if (ax) this._clampActiveX = (this._clampActiveX ?? 0) + 1;
     if (ay) this._clampActiveY = (this._clampActiveY ?? 0) + 1;
+    if (this._detourEnabled) {
+      this._detourContainDeltaX = this.offsetX - _dcBeforeX;
+      this._detourContainDeltaY = this.offsetY - _dcBeforeY;
+      this._detourContainActive = active;
+    }
+  }
+
+  // CAMERA-DETOUR-1: read-only per-transition frame recorder. Writes ONLY to _detour* fields and the
+  // console — never a camera value (so the fingerprint is identical off and on). Captures 3 frames
+  // before each transition and ~30 after, with the candidate-A/B/C/D signals, so the frame where the
+  // NEW anchor's screen movement flips sign is locatable off the owner's LIVE trace (seed 5601). The
+  // anchor screen position below is projected with the SAME offset/zoom the renderer committed THIS
+  // frame — never a recomputation from other inputs (a log line that recomputes its own expectation is
+  // a tautology and proves nothing; that exact mistake hid the camera defect for two days).
+  _recordDetourFrame(tSpaceLerpActive, transitioned, racers) {
+    const r3 = (v) => (v == null ? null : Math.round(v * 1000) / 1000);
+    const r6 = (v) => (v == null ? null : Math.round(v * 1e6) / 1e6);
+
+    // On the transition frame: open a window and flush the rolling pre-buffer as rel -N..-1.
+    if (transitioned) {
+      if (this._detourWindow) {
+        // A prior window is still open (transitions <30 frames apart) — keep it (truncated) so
+        // nothing is lost; only completed windows are console-emitted below.
+        this._detourLog.push(this._detourWindow);
+        if (this._detourLog.length > 20) this._detourLog.shift();
+      }
+      const pre = this._detourPreBuf.slice(-3);
+      const preFrames = pre.map((p, i) => ({
+        rel: i - pre.length,
+        from: p.st,
+        to: this.state,
+        anchorSX: null, // the NEW-state anchor is undefined before the transition
+        anchorSY: null,
+        oX: r3(p.ox),
+        oY: r3(p.oy),
+        z: r6(p.z),
+        camT: r6(p.ct),
+      }));
+      const lastPre = pre.length ? pre[pre.length - 1] : null;
+      this._detourWindow = {
+        from: this._detourPrevState,
+        to: this.state,
+        preoX: lastPre ? lastPre.ox : null, // candidate A: the offset the eye last saw (rel -1)
+        preoY: lastPre ? lastPre.oy : null,
+        prez: lastPre ? lastPre.z : null,
+        frames: preFrames,
+        remaining: 31, // rel 0..30
+      };
+    }
+
+    // Capture this frame into the active window (rel 0..30).
+    if (this._detourWindow && this._detourWindow.remaining > 0) {
+      const w = this._detourWindow;
+      const rel = 31 - w.remaining;
+      // The NEW state's centre world point — getPanTarget covers every state (incl. BATTLE, where
+      // _focusAnchorRacer is null) — projected with THIS frame's rendered offset/zoom.
+      const anchorW = getPanTarget(this.state, this._focusRacers(racers), this._shape);
+      const ezx = this._isOpenTrack ? this.zoom * OPEN_TRACK_BASE_ZOOM : this.zoom * this._bsX;
+      const ezy = this._isOpenTrack ? this.zoom * OPEN_TRACK_BASE_ZOOM : this.zoom * this._bsY;
+      w.frames.push({
+        rel,
+        from: w.from,
+        to: this.state,
+        anchorSX: r3(anchorW.x * ezx + this.offsetX),
+        anchorSY: r3(anchorW.y * ezy + this.offsetY),
+        oX: r3(this.offsetX),
+        oY: r3(this.offsetY),
+        z: r6(this.zoom),
+        gsoX: r3(this._glideStartOffsetX), // candidate A: where the glide started from …
+        gsoY: r3(this._glideStartOffsetY),
+        gsz: r6(this._glideStartZoom),
+        preoX: r3(w.preoX), // … versus the offset the eye last saw
+        preoY: r3(w.preoY),
+        prez: r6(w.prez),
+        camT: this._camT == null ? null : r6(this._camT), // candidate B: the second (track-space) mover
+        camTRead: !!tSpaceLerpActive, // did the follow path read _camT this frame
+        containMod: !!this._detourContainActive, // candidate C: did the clamp move the pan …
+        containDX: r3(this._detourContainDeltaX), // … and by how much (measured, not assumed)
+        containDY: r3(this._detourContainDeltaY),
+        stZoom: this._detourSetTargetsZoom == null ? null : r6(this._detourSetTargetsZoom), // candidate D:
+        rz: r6(this.zoom), // the zoom _setTargets used vs the zoom the renderer drew with
+      });
+      w.remaining -= 1;
+      if (w.remaining === 0) {
+        this._detourLog.push(w);
+        if (this._detourLog.length > 20) this._detourLog.shift();
+        try {
+          // eslint-disable-next-line no-console
+          console.info(`[RA CAMERA DETOUR] ${w.from}->${w.to}`, JSON.stringify(w.frames));
+        } catch {
+          // console unavailable (headless) — the window is still in _detourLog for export
+        }
+        this._detourWindow = null;
+      }
+    }
+
+    // Advance the rolling pre-buffer (keep last 3) and remember this frame's state.
+    this._detourPreBuf.push({
+      st: this.state,
+      ox: this.offsetX,
+      oy: this.offsetY,
+      z: this.zoom,
+      ct: this._camT,
+    });
+    if (this._detourPreBuf.length > 3) this._detourPreBuf.shift();
+    this._detourPrevState = this.state;
+  }
+
+  /** CAMERA-DETOUR-1: completed per-transition windows captured while cameraDetourLog was on. */
+  exportDetourLog() {
+    return this._detourLog;
   }
 
   /** CAMERA-FOCUS-3: frames on which the containment clamp actually moved the pan (emergency-rail use). */
