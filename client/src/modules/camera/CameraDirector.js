@@ -286,6 +286,10 @@ export class CameraDirector {
     this._detourContainDeltaX = 0;
     this._detourContainDeltaY = 0;
     this._detourSetTargetsZoom = null; // the zoom _setTargets used this frame (candidate D)
+    // CAMERA-DETOUR-2 follow-up: separate the anchor's world motion from the camera's.
+    this._detourBranch = null; // which branch wrote offsetX/offsetY this frame: 'glide' | 'cut' | 'follow'
+    this._detourGlideS = null; // glide progress s (linear) this frame, if the glide branch ran
+    this._detourGlideE = null; // eased glide factor e this frame, if the glide branch ran
     // prevFocusT as it was at the START of the current frame (before overwrite).
     this._diagPrevFocusT = null;
     // Set to 'threshold'|'timeout' on the frame where entry→tracking fires; null all other frames.
@@ -950,10 +954,22 @@ export class CameraDirector {
     // means the zoom-about-anchor invariant holds by construction DURING the glide — the anchor is framed
     // consistently every frame (no instant half, no hybrid, no mid-transition lurch). Lands correctly
     // framed at s=1, then hands off to the steady follow path.
+    // CAMERA-DETOUR-2: reset the per-frame branch / glide-progress markers before the branches
+    // choose one (read-only diagnosis — records WHICH branch wrote offsetX/offsetY this frame).
+    if (this._detourEnabled) {
+      this._detourBranch = null;
+      this._detourGlideS = null;
+      this._detourGlideE = null;
+    }
     if (this._lerpPhase === 'glide') {
       const dur = this._glideDurationMs;
       const s = dur > 0 ? Math.min(1, Math.max(0, (ts - this._glideStartTs) / dur)) : 1;
       const e = s * s * (3 - 2 * s); // smoothstep ease
+      if (this._detourEnabled) {
+        this._detourBranch = 'glide';
+        this._detourGlideS = s;
+        this._detourGlideE = e;
+      }
       this.zoom = this._glideStartZoom + (this.targetZoom - this._glideStartZoom) * e;
       this.offsetX = this._glideStartOffsetX + (this.targetOffsetX - this._glideStartOffsetX) * e;
       this.offsetY = this._glideStartOffsetY + (this.targetOffsetY - this._glideStartOffsetY) * e;
@@ -961,6 +977,7 @@ export class CameraDirector {
       this._containAnchorInFrame(racers, canvasW, canvasH); // safety rail (no-op mid-glide)
       if (s >= 1) this._lerpPhase = 'tracking'; // glide complete → steady follow
     } else if (this._cutSnapPending) {
+      if (this._detourEnabled) this._detourBranch = 'cut';
       this._cutSnapPending = false;
       this._leadChangeSnapPending = false;
       this.zoom = this.targetZoom;
@@ -969,6 +986,7 @@ export class CameraDirector {
       // Emergency rail — a no-op when the cut lands centered (anchored states); returns early otherwise.
       this._containAnchorInFrame(racers, canvasW, canvasH);
     } else {
+      if (this._detourEnabled) this._detourBranch = 'follow';
       // LEAD_CHANGE hard-cut (legacy grammar): snap offsetX/Y synchronously with the zoom snap so the
       // zoomed-in frame shows the correct racer from frame 0, not the previous position.
       if (this._leadChangeSnapPending) {
@@ -1802,7 +1820,8 @@ export class CameraDirector {
       const rel = 31 - w.remaining;
       // The NEW state's centre world point — getPanTarget covers every state (incl. BATTLE, where
       // _focusAnchorRacer is null) — projected with THIS frame's rendered offset/zoom.
-      const anchorW = getPanTarget(this.state, this._focusRacers(racers), this._shape);
+      const focus = this._focusRacers(racers);
+      const anchorW = getPanTarget(this.state, focus, this._shape);
       const ezx = this._isOpenTrack ? this.zoom * OPEN_TRACK_BASE_ZOOM : this.zoom * this._bsX;
       const ezy = this._isOpenTrack ? this.zoom * OPEN_TRACK_BASE_ZOOM : this.zoom * this._bsY;
       w.frames.push({
@@ -1811,9 +1830,20 @@ export class CameraDirector {
         to: this.state,
         anchorSX: r3(anchorW.x * ezx + this.offsetX),
         anchorSY: r3(anchorW.y * ezy + this.offsetY),
+        // CAMERA-DETOUR-2: the anchor's WORLD position — so its own motion is separable from the
+        // camera's (the OVERVIEW centroid moves on its own as the field spreads).
+        awX: r3(anchorW.x),
+        awY: r3(anchorW.y),
+        rc: focus.length, // how many racers the anchor centroid was computed from (a changing set moves it)
         oX: r3(this.offsetX),
         oY: r3(this.offsetY),
         z: r6(this.zoom),
+        // the glide's ENDPOINT as recomputed this frame — a moving endpoint shows up as a moving endpoint
+        toX: r3(this.targetOffsetX),
+        toY: r3(this.targetOffsetY),
+        s: this._detourGlideS == null ? null : r6(this._detourGlideS), // glide progress (linear) …
+        e: this._detourGlideE == null ? null : r6(this._detourGlideE), // … and eased
+        br: this._detourBranch, // which branch WROTE offsetX/offsetY this frame: glide | cut | follow
         gsoX: r3(this._glideStartOffsetX), // candidate A: where the glide started from …
         gsoY: r3(this._glideStartOffsetY),
         gsz: r6(this._glideStartZoom),

@@ -37,12 +37,13 @@ OVERVIEW→LEADER_ZOOM transition produces a captured window (pre + ~30 post fra
 `[RA CAMERA DETOUR]` console line; with the flag **OFF** (default), the same drive produces **no export and no
 console line**. Both pass. This is the Lesson-187 proof-of-live for the instrument itself. **Deviation:** none.
 
-### STEP 3 — the decisive readout — **WAITED ON THE OWNER (not yet run).**
-STEP 3 must be taken from the owner's LIVE session with his `[RA CAMERA DETOUR]` trace on seed 5601 (Lesson 191:
-the harness is trusted only while live == replay, frame-exact). That trace has **not arrived**, so per the spec I
-**stop at STEP 3 and report what is ready** rather than substitute a replay and call it the readout — that is
-exactly the mistake that cost this project two days. What the owner runs is in "Handoff" below. The flip-frame
-verdict + ruled-out candidates will be filled from his trace.
+### STEP 3 — the decisive readout — **RUN (owner's live trace delivered).** Verdict recorded in [CAMERA-DETOUR-2.md](CAMERA-DETOUR-2.md).
+The owner ran this instrument on seed 5601 and delivered four transition windows. Result: **candidates C
+(containment clamp steering) and D (frame-0 target framing in the wrong zoom scale) CONFIRMED; A EXCLUDED
+(`gso*` == `preo*` exactly); B NOT evidenced**, and one window (LEADER_ZOOM→OVERVIEW) remains unexplained — its
+444 px excursion has `containMod:false` and `camTRead:false`, so the "second mover" branch fires but its logged
+mover denies involvement. The full numbers, the follow-up instrument extension, and the proposed fixes are in
+[CAMERA-DETOUR-2.md](CAMERA-DETOUR-2.md) — read the two as ONE diagnosis.
 
 ### STEP 4 — the second, independent finding — CONFIRMED (real bug) but effectively UNREACHABLE live. See below.
 

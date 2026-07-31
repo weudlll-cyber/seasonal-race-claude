@@ -6739,7 +6739,14 @@ describe('CameraDirector — CAMERA-DETOUR-1 frame-log liveness', () => {
     expect(w.frames.some((f) => f.rel === 0)).toBe(true); // and the transition frame itself
     expect(w.frames.filter((f) => f.rel >= 0).length).toBeGreaterThan(20); // ~30 post frames
     // the anchor screen position is present on post frames (the STEP-3 flip signal)
-    expect(w.frames.find((f) => f.rel === 0).anchorSX).not.toBeNull();
+    const f0 = w.frames.find((f) => f.rel === 0);
+    expect(f0.anchorSX).not.toBeNull();
+    // CAMERA-DETOUR-2 extension: the anchor WORLD position, glide endpoint, branch + centroid count
+    // are logged so anchor-motion can be separated from camera-motion.
+    expect(f0.awX).not.toBeNull();
+    expect(f0.toX).not.toBeNull();
+    expect(typeof f0.br).toBe('string'); // 'glide' | 'cut' | 'follow'
+    expect(typeof f0.rc).toBe('number');
     // a copy-pasteable console line fired for the owner's live session
     expect(spy.mock.calls.some((c) => String(c[0]).startsWith('[RA CAMERA DETOUR]'))).toBe(true);
     spy.mockRestore();
