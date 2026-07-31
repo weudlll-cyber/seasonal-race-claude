@@ -601,6 +601,13 @@ export const DEFAULT_RACE_BEHAVIOR_CONFIG = {
   softSteeringStrength: 0.03,
   softSteeringClearancePct: 0.0,
   softSteeringHysteresisY: 0.04,
+  //   softSteeringObstacleMargin: RACER-FLAPPING-2 margin hysteresis. The incumbent §4a obstacle keeps
+  //                           the steer target unless a challenger's constraining force exceeds it by this
+  //                           RELATIVE margin — stops the most-constraining winner alternating tick-to-tick
+  //                           between two comparable obstacles (the flapping root). Geometric + per-agent,
+  //                           NO clock. A dominant challenger still switches immediately (eased by the
+  //                           lateral clamp). 0 = disabled (pre-fix winner-take-all). Set by the sweep.
+  softSteeringObstacleMargin: 0.5,
   // ── Lateral feel smoothing (Stage A2) — FEEL only; avoidance DECISIONS unchanged ──
   // laneTargetEaseMs: when the lateral steering target flips (a new free-lane / pass
   //   candidate), the EFFECTIVE target eases toward it over this long via easeInOutCubic,

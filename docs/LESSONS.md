@@ -3141,3 +3141,30 @@ needs a CHASER-side mechanism (partial-sort / band-EDGE target) or a leader BRAK
 also why the v2 pulk watchdog reads chaos maxGap as a ratio to ship (≤ ship×1.5), catching disproportionate
 breakaway without punishing honest chase. Evidence: reports/evolution/STEER-CAP-1.md (boost cap backfires 6/6,
 the mechanism named).
+
+## Lesson 190 — The Synchronization Law: Commitment in Mutual Avoidance Must Be Per-Agent and Geometric, Never Timed
+To stop racers flip-flopping left-right in traffic (the §4a soft-steer re-picking the most-constraining
+obstacle every tick between two comparable gaps), the obvious fix is to make a racer COMMIT to a chosen side
+for a short window. A fixed-time commit window backfired: it fixed the one targeted racer but made the FIELD
+worse.
+
+**Context.** RACER-FLAPPING-1 shipped a 0.4 s (24-frame) side-commit. On seed 5601 it took the caught leader
+(Arrow) from 17 lateral reversals/2 s to 0 — a clean single-agent win. But the whole-race dramatic-flapper
+count (racers with ≥5 reversals/2 s at ≥0.18 amplitude) rose from 1 to 6 and the worst episode from 6 to 10.
+Earned kill; nothing shipped.
+
+**Insight.** A *clock* is shared wall-time. When many racers each hold a side for the same fixed window, their
+windows overlap: the field freezes its mutual avoidance together, over-approaches while frozen, then all
+re-decide at the same moment — one racer's fast flap becomes several racers' synchronized larger flaps. The
+timer couples agents that should be independent. Hysteresis in a mutual system must be **per-agent and
+geometric** — keyed on each racer's own local state, with no shared time reference. RACER-FLAPPING-2 replaced
+the clock with a **margin**: the incumbent obstacle keeps the steer unless a challenger's constraining force
+exceeds it by a relative epsilon. There is no window to synchronize; each racer switches on its own geometry,
+so a genuinely-dominant challenger still takes over immediately. It killed Arrow's flap (18→1 reversals) AND
+held/improved the field guard (0 dramatic flappers) across seeds — the opposite of the timer.
+
+**Consequence.** In any mutual-avoidance or multi-agent commitment problem, never gate the decision on elapsed
+time; gate it on a per-agent geometric margin. And always test a subtle avoidance change with a whole-FIELD
+guard across multiple seeds, not a single targeted agent on one seed — the single-agent win hid a field
+regression until the field guard exposed it. Evidence: reports/evolution/RACER-FLAPPING-1.md (the timer kill)
+and RACER-FLAPPING-2.md (the margin fix + the field guard that caught margin 0.30's seed-5602 regression).

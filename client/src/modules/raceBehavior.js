@@ -94,6 +94,12 @@ export function initRacerBehavior(racer) {
   racer.physicalYVelocity = 0;
   racer.avoidanceActive = false;
   racer.draftingBoostActive = false;
+  // RACER-FLAPPING-2 margin hysteresis: the §4a soft-steer obstacle this racer is currently steering
+  // relative to (_ssObstacle = last frame's winner, the incumbent; _ssObstacleNext = this frame's winner).
+  // The incumbent keeps the steer target until a CHALLENGER is more constraining by a margin — geometric,
+  // per-agent, NO clock (a fixed time-window synchronised the field and amplified flapping; see LESSONS).
+  racer._ssObstacle = -1;
+  racer._ssObstacleNext = -1;
   // Brake-to-match hold state (Step 1 — overtaking rebuild, report 06 §3).
   // brakeMatchLeaderIndex: locked leader's index, or -1 (no hold active).
   //   Negative values encode escape/cooldown: -(escapeFrames+cooldownFrames) → 0.
@@ -396,6 +402,10 @@ export function applyRacerBehavior(racers, config, priorityExtras) {
   for (const r of active) {
     _ssTarget.set(r.index, 0);
     _ssForceMag.set(r.index, 0);
+    // RACER-FLAPPING-2: promote last frame's §4a winner to this frame's incumbent, then clear the slot
+    // for this frame's decision. The incumbent gets the margin bonus in assignSoftTarget below.
+    r._ssObstacle = r._ssObstacleNext ?? -1;
+    r._ssObstacleNext = -1;
   }
   const speedBrakeSet = _speedBrakeSet;
   // Look-ahead lane-change (Stage A3): uniform per-step lateral-speed cap. Read once so the
@@ -642,15 +652,26 @@ export function applyRacerBehavior(racers, config, priorityExtras) {
           pxToPhysicalY(contactWidth, trackWidth) * (1 + (config.softSteeringClearancePct ?? 0));
         const ssCap = Math.min(config.maxLateral, 1.0);
         const ssHystY = config.softSteeringHysteresisY ?? 0.04;
+        // RACER-FLAPPING-2 margin hysteresis: the INCUMBENT obstacle (the one steered relative to last
+        // frame) keeps the target unless a challenger's force exceeds it by this RELATIVE margin. This
+        // stops the most-constraining winner alternating tick-to-tick between two comparable obstacles —
+        // the root of the flapping — while a genuinely-dominant challenger still takes over immediately
+        // (switch eased by the shipped lateral clamp). 0 = disabled (pre-fix winner-take-all).
+        const ssMargin = config.softSteeringObstacleMargin ?? 0;
         const assignSoftTarget = (self, obstacle) => {
-          if (forceMag <= (_ssForceMag.get(self.index) ?? 0)) return; // strict: most-constraining wins
+          // The incumbent competes with a (1+margin) bonus, so a challenger must beat it by the margin to
+          // take the steer. Only the incumbent is boosted, so the comparison stays a single well-defined max.
+          const incumbent = obstacle.index != null && obstacle.index === self._ssObstacle;
+          const effForce = incumbent ? forceMag * (1 + ssMargin) : forceMag;
+          if (effForce <= (_ssForceMag.get(self.index) ?? 0)) return;
           const rel = self.physicalY - obstacle.physicalY;
           const dir = Math.abs(rel) >= ssHystY ? (rel >= 0 ? 1 : -1) : pairTieDir(self, obstacle);
           let target = obstacle.physicalY + dir * contactOffsetY;
           if (target < -ssCap) target = -ssCap;
           else if (target > ssCap) target = ssCap;
           _ssTarget.set(self.index, target);
-          _ssForceMag.set(self.index, forceMag);
+          _ssForceMag.set(self.index, effForce);
+          self._ssObstacleNext = obstacle.index ?? -1; // this racer's chosen obstacle this frame
         };
         // §4a is always asymmetric: trailer yields to leader, leader
         // holds its line. The leader's target stays 0 (centerline reset

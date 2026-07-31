@@ -158,7 +158,9 @@ describe('real browser arm (raceCore) == sim — the step-order-alignment parity
   // world (chaos window 0.15, chaosSteer, bandBias) so the finishing order shifted (seed 1 → idx 38).
   // seed 7 unchanged at idx 17 and seed 42 unchanged at idx 21. real == sim still holds byte-for-byte —
   // only the concrete anchor moved. Pre-combo15 anchor was seed 1 → idx 27.
-  const WINNERS = { 1: 38, 7: 17, 42: 21 };
+  // RACER-FLAPPING-2 (margin hysteresis) moved the searound seed-1 and seed-7 winners (42 stays 21). real
+  // == sim byte-identity (a.hash === b.hash above) is the actual guarantee; these are the shipped outcomes.
+  const WINNERS = { 1: 2, 7: 38, 42: 21 };
   for (const seed of [1, 7, 42]) {
     it(
       `searound/manta/40/seed=${seed}: real browser arm and sim are byte-identical`,

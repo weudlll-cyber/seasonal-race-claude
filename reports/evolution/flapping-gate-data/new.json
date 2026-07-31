@@ -1,0 +1,9 @@
+{
+  "note": "RACER-FLAPPING-2 shipped world (softSteeringObstacleMargin=0.5). N=100 quartet paired vs FAIRNESS-RECHECK-1 ship. N=300 native Holm = OPEN RESIDUAL (deferred per owner; must run before any further engine change).",
+  "results": [
+    {"track":"searound","racer":"manta","N":100,"bandReach":0.898,"ship":0.892,"rowMin":0.88,"holm":"UNFAIR(near-pass=ship)","holmP":0.020,"runaway":0.0},
+    {"track":"luger-hill","racer":"luge","N":100,"bandReach":0.916,"ship":0.916,"rowMin":0.90,"holm":"UNFAIR(near-pass=ship)","holmP":0.020,"runaway":0.0},
+    {"track":"seatrack","racer":"dolphin","N":100,"bandReach":0.896,"ship":0.909,"rowMin":0.89,"holm":"ok","holmP":0.120,"runaway":0.0},
+    {"track":"space-sprint","racer":"rocket","N":100,"bandReach":0.888,"ship":0.883,"holm":"ok","holmP":0.260,"runaway":0.0}
+  ]
+}

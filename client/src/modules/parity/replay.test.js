@@ -80,10 +80,10 @@ describe('replay — the emit → replay round-trip', () => {
       expect(r.equal).toBe(true);
       expect(r.realHash).toBe(r.simHash);
       // shipped-default order for seed 7 — real core == sim (the equal/hash checks above are the
-      // guarantee). Moved again at the 2026-07-26 gap-reroll flip (G 0.75→0.5, strength 0.5→1.0): the
-      // winner (Surge) held, but 3rd place shifted from Gale to Breeze. real == sim still byte-identical.
-      expect(r.order[0]).toBe('Surge');
-      expect(r.order[2]).toBe('Breeze'); // Breeze now 3rd
+      // guarantee). Moved again at the RACER-FLAPPING-2 margin-hysteresis engine change: the winner is now
+      // Breeze. real == sim still byte-identical (the equal/hash checks above prove it).
+      expect(r.order[0]).toBe('Breeze');
+      expect(r.order[2]).toBe('Orbit'); // 3rd place after the margin change
     },
     RACE_TIMEOUT_MS
   );
