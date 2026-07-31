@@ -7,7 +7,43 @@ and — on the committed honest world — screens whether the shipped gap-reroll
 sit at their optimum. No owner input was available; every choice is recorded with its reason. Nothing was
 tuned or shipped from the G/s sweep — it MEASURES; the owner decides in the morning.
 
-> ## ⇒ CURRENT BASELINE — 2026-07-31: RACER-FLAPPING-2 (margin hysteresis). Read this first.
+> ## ⇒ CURRENT BASELINE — 2026-07-31: RACER-MOTION-2 (lateral acceleration cap). Read this first.
+>
+> **The shipped world is COMBO15 + margin hysteresis + a per-tick lateral acceleration cap** — the SECOND
+> engine change since COMBO15. The §4a integrator applied a dodge's full lateral step on the first tick, so an
+> overtake swerve snapped rather than glided; the cap (`maxLateralAccelPerStep:0.0005`) bounds the per-tick
+> CHANGE in the lateral step so the dodge eases in and out. It smooths only the steer/integrator half; the
+> hard-separation non-penetration SAFETY (the dominant jerk source per RACER-MOTION-1) is left **UNTOUCHED by
+> owner decision**. Set `--behavior='{"maxLateralAccelPerStep":0}'` to reproduce the pre-motion world
+> byte-for-byte (valid slider position, parity rule).
+>
+> **New shipped-default fingerprints** (minted once on the committed state; the cap runs in BOTH worlds, so
+> both moved): **ON `dc4647be0f55ebdb`** (replaces the pre-motion anchor `62400c8e88cdbe59`); **OFF
+> `854018ee5d3d83e1`** (replaces `8d0bd4d2d92ded24`). Pre-ship state tagged `pre/motion` (`e99b034d`). Full
+> lineage in [docs/SIM.md](../../docs/SIM.md) *Fingerprint rule*.
+>
+> **STEP-1 pick — ε=0.0005** is the strongest cap that keeps every gate (seed-5601 dense-traffic sweep): accel
+> p99 drops 2.7× and max 2.1×, solo overtake still completes, body-overlap falls to 56083 (well under the 72303
+> baseline — avoidance is NOT late), Arrow flap 2 ≤ 3, FIELD GUARD 0. ε=0.001 was rejected (overlap 75439 >
+> baseline — too loose lets dodges arrive late).
+>
+> **Gate — N=100 quartet paired vs the FLAPPING-2 ship `62400c8e` (all four GREEN):** band arrival holds within
+> noise (searound 89.8→89.3, luger-hill 91.6→91.3, seatrack 89.6→**91.5**↑, space-sprint 88.8→89.0), **runaway
+> 0%** on all, rowMin healthy 87–91%, and the N=100 hero-map Holm flags the **same two tracks** as the ship
+> (searound + luger UNFAIR; seatrack + space-sprint ok) — **no new UNFAIR**, so Holm ≤ ship. Evidence:
+> [reports/evolution/RACER-MOTION-2.md](../evolution/RACER-MOTION-2.md).
+>
+> **⚠ OPEN RESIDUAL — the 300-race pooled native Holm was DEFERRED (owner decision) to cover BOTH engine
+> changes at once.** The definitive Holm gate (`computeFairnessStats`, 300 races/track, the instrument the
+> "0 Holm-unfair" criterion is written against) has not been run since COMBO15. **Forward-moving rule: it now
+> runs on the COMBINED world (flapping hysteresis + motion cap) at the next overnight occasion and MUST run
+> before any further engine change.** The rationale for deferring: the N=100 quartet already shows the motion
+> cap is fairness-neutral (band holds, no new UNFAIR); the risk is accepted. The N=100 hero-map Holm is
+> encouraging but is not the definitive test.
+>
+> ---
+>
+> ## ⇒ PREVIOUS BASELINE — 2026-07-31: RACER-FLAPPING-2 (margin hysteresis).
 >
 > **The shipped world is COMBO15 + avoidance margin hysteresis** — the FIRST engine change since COMBO15.
 > The §4a soft-steer re-picked the most-constraining obstacle every physics tick between two comparable gaps,

@@ -801,25 +801,28 @@ intermediate measurements, and none of either in a report. Debug runs during dev
 and stay unreported. A commit that claims byte-identity, and a commit that moves the numbers by
 design, each get one measurement of the pair on their final state; record old → new.
 
-**Current shipped-default fingerprint (2026-07-31 — RACER-FLAPPING-2, margin hysteresis).** The shipped
+**Current shipped-default fingerprint (2026-07-31 — RACER-MOTION-2, lateral acceleration cap).** The shipped
 world is COMBO15 (speed 150 px/s + gap-reroll ON G=0.5/s=1.0 + FAIR-ARRIVAL chaos steer + faB60 draw-bias,
-chaos window 0.15) PLUS the **avoidance margin hysteresis** (`softSteeringObstacleMargin:0.5` — the §4a
-incumbent obstacle keeps the steer unless a challenger dominates by 30%; kills the traffic left-right flap).
-This is the FIRST engine change since COMBO15. Because the change is in the avoidance code (which runs in
-BOTH worlds), **both** hashes moved. The current print is:
+chaos window 0.15) PLUS the **avoidance margin hysteresis** (`softSteeringObstacleMargin:0.5`, RACER-FLAPPING-2)
+PLUS the **lateral acceleration cap** (`maxLateralAccelPerStep:0.0005` — bounds the per-tick change in a racer's
+lateral step so a dodge eases in/out instead of snapping to full swerve; the hard-separation safety is
+untouched). This is the SECOND engine change since COMBO15. Because the cap is in the avoidance integrator
+(which runs in BOTH worlds), **both** hashes moved. The current print is:
 
 | world | fingerprint |
 |---|---|
-| ON (flagless — the shipped game = COMBO15 + margin hysteresis) | **`62400c8e88cdbe59`** |
-| OFF (`--gapRerollEnabled=false` — pre-feature world) | **`8d0bd4d2d92ded24`** |
+| ON (flagless — the shipped game = COMBO15 + margin hysteresis + accel cap) | **`dc4647be0f55ebdb`** |
+| OFF (`--gapRerollEnabled=false` — pre-feature world) | **`854018ee5d3d83e1`** |
 
 The ON hash moved by design at each world change (retune `e93ffa70dad562a1` → plan-grid `0ecca5e2dbe6526e`
 → speed/duration `e80f78a0da6a9993` → type-mult `eda28d614f5e47d9` → step-order `8b13ccbe96992cc0` →
-speed-150 `6fdfe851dbb4ca72` → gap-flip `7c70b1eae7d31e22` → COMBO15 `ded0a126048e4cdb` (**the pre-flapping
-anchor**) → **RACER-FLAPPING-2 `62400c8e88cdbe59`**). The OFF invariant, unchanged since speed-150, moved
-here for the first time (`f8f7d9c2fd3283e9` → **`8d0bd4d2d92ded24`**) because the avoidance change is present
-with gap-reroll OFF too. To reproduce the pre-flapping world set `--behavior='{"softSteeringObstacleMargin":0}'`
-(a valid slider position, parity rule) — that returns `ded0a126048e4cdb` (ON) / `f8f7d9c2fd3283e9` (OFF). To
+speed-150 `6fdfe851dbb4ca72` → gap-flip `7c70b1eae7d31e22` → COMBO15 `ded0a126048e4cdb` → RACER-FLAPPING-2
+`62400c8e88cdbe59` (**the pre-motion anchor**) → **RACER-MOTION-2 `dc4647be0f55ebdb`**). The OFF invariant
+moved again (`8d0bd4d2d92ded24` → **`854018ee5d3d83e1`**) because the accel cap is present with gap-reroll OFF
+too. To reproduce the pre-motion world set `--behavior='{"maxLateralAccelPerStep":0}'` (a valid slider
+position, parity rule) — that returns `62400c8e88cdbe59` (ON) / `8d0bd4d2d92ded24` (OFF). To reproduce the
+pre-flapping world additionally set `--behavior='{"maxLateralAccelPerStep":0,"softSteeringObstacleMargin":0}'`
+— that returns `ded0a126048e4cdb` (ON) / `f8f7d9c2fd3283e9` (OFF). To
 reproduce the pre-combo15 world set
 `--chaosSteer=false --bandBias=false --pulkStart=0.25` (a valid slider position, parity rule) — that
 returns the `7c70b1eae7d31e22` print. Baseline metrics: [reports/evolution/FAIR-ARRIVAL-GATE.md](../reports/evolution/FAIR-ARRIVAL-GATE.md)
