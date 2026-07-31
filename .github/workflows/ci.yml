@@ -81,5 +81,14 @@ jobs:
       # The guards' own liveness tests (proving they CAN fail) PLUS the sim-observer tests. All are
       # plain node:test with only relative imports — no external deps, so no `npm ci` is needed.
       # `find` enumerates the files so a newly added *.test.mjs is picked up automatically.
+      #
+      # SELF-ASSERTING INPUT (Lesson 187 — do NOT simplify this away): if `find` returns NOTHING (a
+      # rename, a move, a changed extension), `node --test` with no file args does NOT run this suite —
+      # it either runs zero tests (a green, silent no-op) or discovers unrelated repo-wide tests. So the
+      # discovered list is asserted non-empty and the step FAILS LOUDLY before node --test is invoked,
+      # the same discipline the guards themselves use.
       - name: Run script test suite (guard liveness + observers)
-        run: node --test $(find scripts -name '*.test.mjs')
+        run: |
+          files=$(find scripts -name '*.test.mjs')
+          test -n "$files" || { echo "FAIL: no script test files found under scripts/ (find returned nothing). A green run with zero tests is the Lesson-187 no-op trap; refusing to pass."; exit 1; }
+          node --test $files
