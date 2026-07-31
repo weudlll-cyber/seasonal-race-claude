@@ -1,0 +1,12 @@
+{
+  "track": "searound",
+  "racer": "manta",
+  "races": 100,
+  "bandReach": 0.89175,
+  "rowMin": 0.8783333333333333,
+  "holm": "UNFAIR",
+  "holmP": 0.02,
+  "runaway": 0,
+  "frontContestMeanLeadChanges": null,
+  "secs": 858
+}
