@@ -7,7 +7,36 @@ and — on the committed honest world — screens whether the shipped gap-reroll
 sit at their optimum. No owner input was available; every choice is recorded with its reason. Nothing was
 tuned or shipped from the G/s sweep — it MEASURES; the owner decides in the morning.
 
-> ## ⇒ CURRENT BASELINE — 2026-07-29: COMBO15 shipped (MERGE-SHIP-1). Read this first.
+> ## ⇒ CURRENT BASELINE — 2026-07-31: RACER-FLAPPING-2 (margin hysteresis). Read this first.
+>
+> **The shipped world is COMBO15 + avoidance margin hysteresis** — the FIRST engine change since COMBO15.
+> The §4a soft-steer re-picked the most-constraining obstacle every physics tick between two comparable gaps,
+> so racers flipped left-right in traffic; the fix (`softSteeringObstacleMargin:0.5`) keeps the incumbent
+> obstacle unless a challenger's force dominates by 30% — per-agent, geometric, **no clock** (the timer form
+> synchronised the field and was killed; Lesson 190). Set `--behavior='{"softSteeringObstacleMargin":0}'` to
+> reproduce the pre-flapping world byte-for-byte (valid slider position, parity rule).
+>
+> **New shipped-default fingerprints** (minted once on the committed state, commit `171a7225`; the change is in
+> the avoidance code that runs in BOTH worlds, so both moved): **ON `62400c8e88cdbe59`** (replaces the
+> pre-flapping anchor `ded0a126048e4cdb`); **OFF `8d0bd4d2d92ded24`** (replaces `f8f7d9c2fd3283e9` — the OFF
+> invariant moved for the first time since speed-150). Pre-merge state tagged `pre/flapping` (`d0870326`).
+> Full lineage in [docs/SIM.md](../../docs/SIM.md) *Fingerprint rule*.
+>
+> **Gate — N=100 quartet paired vs the COMBO15 ship (all four GREEN):** band arrival holds within noise
+> (searound 89.2→89.8, luger-hill 91.6→91.6, seatrack 90.9→89.6, space-sprint 88.3→88.8), **runaway 0%** on
+> all, **Holm ≤ ship** (seatrack + space-sprint improved to `ok`). Flap: Arrow (seed 5601) 18→1 reversals;
+> whole-race FIELD GUARD 0 dramatic flappers on seeds 5601/5602/5603 (≤ ship); body-overlap ≤ ship (avoidance
+> still separates). Evidence: [reports/evolution/RACER-FLAPPING-2.md](../evolution/RACER-FLAPPING-2.md).
+>
+> **⚠ OPEN RESIDUAL — the 300-race pooled native Holm was DEFERRED (owner call).** The definitive Holm gate
+> (`computeFairnessStats`, 300 races/track, the instrument the "0 Holm-unfair" criterion is written against)
+> was not run for this world. **Forward-moving rule: it runs on the next overnight occasion and MUST run
+> before any further engine change.** The N=100 hero-map Holm here is encouraging (two tracks improved to
+> `ok`) but is not the definitive test.
+>
+> ---
+>
+> ## ⇒ PREVIOUS BASELINE — 2026-07-29: COMBO15 shipped (MERGE-SHIP-1).
 >
 > **The shipped world is now COMBO15** (commit on `exp/fair-arrival`, merged to master; tag `v-ship-combo15`,
 > return point `pre/ship-combo15` = `215afde`). COMBO15 = the speed-150 + gap-reroll (G=0.5/s=1.0) world of the
