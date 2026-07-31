@@ -1,0 +1,50 @@
+[
+  {
+    "label": "combined",
+    "track": "searound",
+    "racer": "manta",
+    "N": 300,
+    "bandReach": 0.8928333333333334,
+    "rowMin": 0.8777777777777778,
+    "holm": "UNFAIR",
+    "holmP": 0.02,
+    "runaway": 0,
+    "secs": 1012
+  },
+  {
+    "label": "combined",
+    "track": "luger-hill",
+    "racer": "luge",
+    "N": 300,
+    "bandReach": 0.9103333333333333,
+    "rowMin": 0.9033333333333333,
+    "holm": "UNFAIR",
+    "holmP": 0.02,
+    "runaway": 0,
+    "secs": 934
+  },
+  {
+    "label": "combined",
+    "track": "seatrack",
+    "racer": "dolphin",
+    "N": 300,
+    "bandReach": 0.9074166666666666,
+    "rowMin": 0.9035714285714286,
+    "holm": "UNFAIR",
+    "holmP": 0.02,
+    "runaway": 0,
+    "secs": 1019
+  },
+  {
+    "label": "combined",
+    "track": "space-sprint",
+    "racer": "rocket",
+    "N": 300,
+    "bandReach": 0.88975,
+    "rowMin": 0.8846153846153846,
+    "holm": "ok",
+    "holmP": 0.26,
+    "runaway": 0,
+    "secs": 1583
+  }
+]

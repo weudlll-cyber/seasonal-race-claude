@@ -33,13 +33,19 @@ tuned or shipped from the G/s sweep — it MEASURES; the owner decides in the mo
 > (searound + luger UNFAIR; seatrack + space-sprint ok) — **no new UNFAIR**, so Holm ≤ ship. Evidence:
 > [reports/evolution/RACER-MOTION-2.md](../evolution/RACER-MOTION-2.md).
 >
-> **⚠ OPEN RESIDUAL — the 300-race pooled native Holm was DEFERRED (owner decision) to cover BOTH engine
-> changes at once.** The definitive Holm gate (`computeFairnessStats`, 300 races/track, the instrument the
-> "0 Holm-unfair" criterion is written against) has not been run since COMBO15. **Forward-moving rule: it now
-> runs on the COMBINED world (flapping hysteresis + motion cap) at the next overnight occasion and MUST run
-> before any further engine change.** The rationale for deferring: the N=100 quartet already shows the motion
-> cap is fairness-neutral (band holds, no new UNFAIR); the risk is accepted. The N=100 hero-map Holm is
-> encouraging but is not the definitive test.
+> **✅ RESIDUAL PAID — combined 300-race native Holm run 2026-07-31; result: motion is Holm-NEUTRAL, gate for
+> the next engine change is OPEN.** The definitive gate (`computeFairnessStats`, native pooled Holm, N=300
+> races/track) was run on the combined world dc4647be (`exp-flapping-gate.mjs --nlist=300 --label=combined`)
+> AND on the pre-motion world 62400c8e (`--behavior='{"maxLateralAccelPerStep":0}'`), paired, same seed. The
+> acceleration cap changes the Holm verdict on **0/4 tracks**: band arrival within noise (searound 89.3,
+> luger-hill 91.0, seatrack 90.7, space-sprint 89.0), runaway **0%** all, rowMin 88–90% all. So both deferred
+> engine changes (flapping hysteresis + motion cap) are verified fairness-neutral at definitive power. **Honest
+> texture caveat (reserved for owner read, NOT auto-blessed):** the N=300 measures the standing world — for the
+> first time — as **3/4 of this quartet carrying a small pre-existing start-row gradient** (searound +
+> luger-hill + seatrack UNFAIR at the p=0.020 permutation floor; space-sprint clean), so it does not meet the
+> aspirational "0 Holm-unfair" line at N=300 power. The gradient is tiny (worst row still reaches band 88–90%),
+> pre-existing, and motion-neutral — but whether it warrants its own start-row fairness line is an owner call.
+> Full evidence + comparator: [reports/evolution/HOLM-300-COMBINED.md](../evolution/HOLM-300-COMBINED.md).
 >
 > ---
 >
