@@ -100,6 +100,9 @@ export function initRacerBehavior(racer) {
   // per-agent, NO clock (a fixed time-window synchronised the field and amplified flapping; see LESSONS).
   racer._ssObstacle = -1;
   racer._ssObstacleNext = -1;
+  // RACER-MOTION-1 second-order smoothing: last tick's actual lateral step (velocity). The per-tick CHANGE
+  // in this (acceleration) is bounded so lateral motion eases in/out instead of snapping at a dodge on/off.
+  racer._prevLatStep = 0;
   // Brake-to-match hold state (Step 1 — overtaking rebuild, report 06 §3).
   // brakeMatchLeaderIndex: locked leader's index, or -1 (no hold active).
   //   Negative values encode escape/cooldown: -(escapeFrames+cooldownFrames) → 0.
@@ -411,6 +414,9 @@ export function applyRacerBehavior(racers, config, priorityExtras) {
   // Look-ahead lane-change (Stage A3): uniform per-step lateral-speed cap. Read once so the
   // SAME constant feeds both the dodge trigger (dT_start below) and the integrator step clamp.
   const vLatMax = Math.max(0, config.maxLateralSpeedPerStep ?? MAX_LATERAL_SPEED_PER_STEP_FALLBACK);
+  // RACER-MOTION-1: per-tick lateral ACCELERATION cap (bounds the CHANGE in the step, not just the step).
+  // 0 = disabled (pre-fix bang-bang, where a saturating dodge snaps velocity 0↔clamp = the visible jerk).
+  const aLatMax = Math.max(0, config.maxLateralAccelPerStep ?? 0);
   // Brake-to-match: per-frame minimum cap per trailer (most constraining leader wins).
   // Populated in the pair loop; consumed in the apply-deltas loop to update racer state.
   const brakeMatchCaps = _brakeMatchCaps; // trailer.index → lowest requiredBrakeFactor this frame
@@ -783,6 +789,7 @@ export function applyRacerBehavior(racers, config, priorityExtras) {
     Math.min(1, config.lateralVelocityResetSoftness ?? VELOCITY_RESET_SOFTNESS_FALLBACK)
   );
   for (const r of active) {
+    const _yStart = r.physicalY; // RACER-MOTION-1: pre-tick position → this tick's actual step for jerk cap
     let delta = 0;
 
     // ── Look-before-brake pass steering (req 3 + 4) ─────────────────────────
@@ -855,6 +862,21 @@ export function applyRacerBehavior(racers, config, priorityExtras) {
       r.physicalYVelocity = cappedStep;
     }
 
+    // RACER-MOTION-1 second-order smoothing (Sanftheits-Regel): bound the per-tick CHANGE in the step
+    // (lateral acceleration) so the velocity eases in and out — a dodge no longer snaps 0↔clamp. This
+    // SHAPES the existing steer output; it is a derivative-side clamp alongside the shipped vLatMax step
+    // clamp, no new force. aLatMax very large / 0 → never limits → reproduces the prior bang-bang.
+    if (aLatMax > 0) {
+      const step = newY - r.physicalY;
+      const prevStep = r._prevLatStep ?? 0;
+      const accel = step - prevStep;
+      if (Math.abs(accel) > aLatMax) {
+        const limitedStep = prevStep + (accel > 0 ? aLatMax : -aLatMax);
+        newY = r.physicalY + limitedStep;
+        r.physicalYVelocity = limitedStep;
+      }
+    }
+
     // maxLateral cap + hard boundary clamp. Stage A2: the position clamp stays HARD
     // (physicalY pinned to the cap); the velocity is DAMPED toward 0 (retain velResetKeep)
     // instead of hard-zeroed, so a moving racer eases to a stop at the wall rather than
@@ -863,6 +885,9 @@ export function applyRacerBehavior(racers, config, priorityExtras) {
     const clamped = Math.max(-cap, Math.min(cap, newY));
     if (clamped !== newY) r.physicalYVelocity *= velResetKeep;
     r.physicalY = clamped;
+    // RACER-MOTION-1: the ACTUAL lateral step taken this tick (post all clamps) — the acceleration cap
+    // above bounds next tick's step relative to this one.
+    r._prevLatStep = r.physicalY - _yStart;
     r.avoidanceActive = speedBrakeSet.has(r.index);
 
     // ── Brake-to-match hold state update ──────────────────────────────────
