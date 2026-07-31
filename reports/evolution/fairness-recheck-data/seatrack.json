@@ -1,0 +1,12 @@
+{
+  "track": "seatrack",
+  "racer": "dolphin",
+  "races": 100,
+  "bandReach": 0.909,
+  "rowMin": 0.9064285714285715,
+  "holm": "UNFAIR",
+  "holmP": 0.04,
+  "runaway": 0,
+  "frontContestMeanLeadChanges": null,
+  "secs": 716
+}
