@@ -456,6 +456,9 @@ const ssRaces             = [];   // per-race top-15 speed decomposition (filled
 // a faithful camera replay — feed the SAME real race into any CameraDirector version (CAMERA-FOCUS-2
 // bisect ladder). Observer only: no engine touched, no fingerprint. Pair with --races=1 --tracks=<one>.
 const DUMP_FRAMES         = argVal('dump-frames', null);
+// RACER-FLAPPING-1: optional browser roster names (comma-separated, index order) for faithful repro.
+const _rn                 = argVal('racer-names', null);
+const RACER_NAMES         = _rn ? _rn.split(',').map((s) => s.trim()) : null;
 const _dumpFrames         = [];   // per-frame position snapshots (filled only when DUMP_FRAMES, first race)
 let   _dumpDone           = false;
 // --skip-main-output: skip writing the large fairness-data.json + fairness-report.md. For a batch
@@ -3288,6 +3291,9 @@ if (isMain) {
               : null,
             breakawayDiag:      BREAKAWAY_DIAG,
             frontAction:        FRONT_ACTION,
+            // RACER-FLAPPING-1: reproduce the browser's roster names (D-NAME) so the avoidance symmetry
+            // tiebreak matches the owner's race. --racer-names=a,b,c (comma-separated, index order).
+            racerNames:         RACER_NAMES,
             racerTargetRankMap: raceSollRankMap,
             heroMap:            HERO_MAP,
             gapMetrics:         GAP_METRICS,
@@ -3302,6 +3308,9 @@ if (isMain) {
                     t: raceTs,
                     racers: racers.map((r) => ({
                       index: r.index, x: r.x, y: r.y, t: r.t, finished: !!r.finished,
+                      // RACER-FLAPPING-1: raw SIM lateral state (physicalY ∈ [-1,+1]) + its velocity and
+                      // the avoidance flag — lets a trace decide if a left-right flap is sim-side or render.
+                      pY: r.physicalY, pYv: r.physicalYVelocity, avoid: !!r.avoidanceActive,
                     })),
                   });
                 })

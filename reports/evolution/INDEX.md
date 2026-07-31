@@ -4,6 +4,10 @@ One line per report: what it tried → verdict → the lesson/outcome. This is t
 themselves are the record; the living docs are [LESSONS.md](../../docs/LESSONS.md), [DEAD-ENDS.md](../../docs/DEAD-ENDS.md),
 and [FAIRNESS.md](../../docs/FAIRNESS.md). Shipped world: **COMBO15** (`v-ship-combo15`, fingerprint `ded0a126048e4cdb`).
 
+## Racer avoidance / feel
+
+- [RACER-FLAPPING-1.md](RACER-FLAPPING-1.md) — racers flip left-right in traffic. **Diagnosed sim-side: `physicalY` oscillates (heading/render ruled out); reproduced with the real roster — Arrow leads, gets caught into traffic at ~18s, flaps 17 reversals/2s because §4a re-picks the most-constraining obstacle every tick with NO commit. STEP-1b fix (fixed 0.4s side-commit) = EARNED KILL: fixed Arrow (17→0) but made the field WORSE (dramatic flappers 1→6) — a synchronized fixed window de-responsivises mutual avoidance. Reverted; nothing shipped; fingerprint `ded0a126` identical. Next = obstacle-choice MARGIN hysteresis (not a timer) + a race-invariant flap metric. New read-only tooling: `--dump-frames` physicalY + `--racer-names` + `exp-flapping-gate.mjs`.**
+
 ## Camera / presentation fixes
 
 - [CAMERA-GRAMMAR-1.md](CAMERA-GRAMMAR-1.md) — ship grammar (B) FULL GLIDE as default per the owner's verdict (hard cuts too abrupt), correctness decoupled from style. **On entry pan+zoom ease TOGETHER over glideDurationMs (500, validated 300-900) to the forward-framed target — the 3436px cut becomes ~230px/frame smooth, leaderOut 0%. Glide captures the PRE-transition framing (before OVERVIEW/LEAD_CHANGE zoom snaps) so no snapped-zoom+gliding-pan hybrid; zoom-about-anchor holds through the glide by construction. Both shipped grammars (glide/cut) promote follow + per-axis + anchor-pivot (legacy = bare-caller fallback, still used by finish-mode). Dev panel exposes transition style + glide duration + leader forward-frame. fp `ded0a126`; 955 tests.**
