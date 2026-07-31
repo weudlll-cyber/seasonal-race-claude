@@ -779,7 +779,10 @@ describe('applyRacerBehavior — look-ahead lane-change (Stage A3)', () => {
 
   it('(d) very large vLatMax reproduces the prior near-instant dodge (escape hatch)', () => {
     const [tBig, lBig] = pair(0.037, 1.2e-4, 1.0e-4);
-    applyRacerBehavior([tBig, lBig], a3({ maxLateralSpeedPerStep: 10 }));
+    // This test isolates the vLatMax escape hatch, so the SEPARATE per-tick acceleration cap
+    // (shipped default 0.0005 since RACER-MOTION-2) is disabled here — otherwise it bounds the
+    // first-frame change to 0.0005 and masks the vLatMax hatch.
+    applyRacerBehavior([tBig, lBig], a3({ maxLateralSpeedPerStep: 10, maxLateralAccelPerStep: 0 }));
     // Uncapped: the 0.5 pass spring moves ~0.028 in one frame — far past the 0.01 cap case.
     expect(tBig.physicalY - 0.05).toBeGreaterThan(0.02);
   });

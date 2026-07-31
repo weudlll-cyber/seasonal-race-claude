@@ -635,7 +635,7 @@ export const DEFAULT_RACE_BEHAVIOR_CONFIG = {
   // lateral step (acceleration = Δvelocity per 16ms), applied on top of the speed cap. It bounds the JERK:
   // a dodge no longer snaps velocity 0↔clamp at its on/off (the visible jump) but eases in and out. Shapes
   // the existing steer output — no new force. 0 = disabled (pre-RACER-MOTION-1 bang-bang). Set by the sweep.
-  maxLateralAccelPerStep: 0,
+  maxLateralAccelPerStep: 0.0005,
   // ── Look before you brake ───────────────────────────────────────────────────
   // When a racer closes on a slower racer in the same lane AND a side is genuinely
   // free (same isSideFree geometry as the overlap resolver), it commits to that free

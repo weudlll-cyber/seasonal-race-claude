@@ -80,10 +80,10 @@ describe('replay — the emit → replay round-trip', () => {
       expect(r.equal).toBe(true);
       expect(r.realHash).toBe(r.simHash);
       // shipped-default order for seed 7 — real core == sim (the equal/hash checks above are the
-      // guarantee). Moved again at the RACER-FLAPPING-2 margin-hysteresis engine change: the winner is now
-      // Breeze. real == sim still byte-identical (the equal/hash checks above prove it).
+      // guarantee). Moved again at the RACER-MOTION-2 acceleration-cap engine change: the winner stays
+      // Breeze but 3rd place is now Surge. real == sim still byte-identical (the equal/hash checks above prove it).
       expect(r.order[0]).toBe('Breeze');
-      expect(r.order[2]).toBe('Orbit'); // 3rd place after the margin change
+      expect(r.order[2]).toBe('Surge'); // 3rd place after the motion-cap change
     },
     RACE_TIMEOUT_MS
   );
