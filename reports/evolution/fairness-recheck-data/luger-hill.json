@@ -1,0 +1,12 @@
+{
+  "track": "luger-hill",
+  "racer": "luge",
+  "races": 100,
+  "bandReach": 0.916,
+  "rowMin": 0.90875,
+  "holm": "UNFAIR",
+  "holmP": 0.02,
+  "runaway": 0,
+  "frontContestMeanLeadChanges": null,
+  "secs": 720
+}
