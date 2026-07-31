@@ -1,6 +1,6 @@
 # RaceArena — Development Roadmap
 
-> **✅ Baseline re-measured (2026-07-26).** Absolute sim numbers in this document (band-reach, runaway, P1-contest, physics-tax, gate results) predate the plan-grid unification + speed/duration ship and are retired history. The current baseline is [reports/parity/REBASELINE.md](../reports/parity/REBASELINE.md) (speed-150, pooled band-reach 71.0%) and the CANDIDATE column of [reports/parity/GS-CONFIRM-GATE.md](../reports/parity/GS-CONFIRM-GATE.md) (band-reach 72.7%, dead finales 10.0%, runaway 6.8%).
+> **✅ Baseline — see REBASELINE.** Absolute sim numbers scattered in this document (band-reach, runaway, P1-contest, physics-tax, gate results) are retired history from before the current shipped world. The live baseline is the [reports/parity/REBASELINE.md](../reports/parity/REBASELINE.md) top block — the shipped world `dc4647be0f55ebdb` (COMBO15 + margin hysteresis + lateral acceleration cap, master `@94da53e`).
 
 ## Phase 1 — Setup Screen ✅ 100% complete
 

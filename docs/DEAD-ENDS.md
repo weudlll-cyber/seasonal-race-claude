@@ -157,6 +157,23 @@ not here.
   proof-of-live triple (badge + console + runtime assertion) and, going forward, DevScreen presets over the
   real config keys — NOT a `?world`/`?eye` URL hack. Proof: reports/evolution/EYE-SETUP-2.md.
 
+## H. Avoidance feel — proposals closed by owner (2026-07-31)
+The RACER-FLAPPING / RACER-MOTION line shipped two keepers (margin hysteresis `softSteeringObstacleMargin` 0.5,
+lateral acceleration cap `maxLateralAccelPerStep` 0.0005). Two related avoidance ideas are CLOSED:
+
+- **Ease the hard-separation push (the "glide-apart" proposal) — CLOSED by owner decision, 2026-07-31.**
+  RACER-MOTION-1 identified the hard-separation non-penetration pass (direct `physicalY` writes) as the dominant
+  lateral-jerk source and proposed rate-limiting it so overlapping racers glide apart instead of stepping.
+  **Why closed:** the owner declined the trade — *"without it we get far too many overlaps."* The non-penetration
+  safety stays UNTOUCHED; the acceptable Sanftheit win (the integrator acceleration cap) was taken instead, and it
+  is provably fairness-neutral (HOLM-300-COMBINED). Reopening the hard-separation trade is the **owner's call
+  alone**. Proof: reports/evolution/RACER-MOTION-1.md, RACER-MOTION-2.md.
+- **The 0.4 s fixed timer for avoidance commitment — EARNED KILL.** RACER-FLAPPING-1 shipped a 24-frame
+  side-commit to stop the traffic left-right flap. **Why dead:** it fixed the one targeted racer (Arrow 17→0
+  reversals) but synchronised the FIELD — dramatic flappers rose 1→6 — because a shared clock couples agents that
+  must be independent. Replaced by per-agent geometric margin hysteresis (RACER-FLAPPING-2). Cross-reference
+  **Lesson 190** (the Synchronization Law). Proof: reports/evolution/RACER-FLAPPING-1.md.
+
 ## What this leaves open (not tried, not excluded)
 Formats that make a breakaway irrelevant rather than catching it: **elimination** (last-at-call out of
 contention), **sector / intermediate scoring** (winner = best across several lines), a **mandatory

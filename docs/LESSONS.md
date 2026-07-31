@@ -3168,3 +3168,57 @@ time; gate it on a per-agent geometric margin. And always test a subtle avoidanc
 guard across multiple seeds, not a single targeted agent on one seed — the single-agent win hid a field
 regression until the field guard exposed it. Evidence: reports/evolution/RACER-FLAPPING-1.md (the timer kill)
 and RACER-FLAPPING-2.md (the margin fix + the field guard that caught margin 0.30's seed-5602 regression).
+
+## Lesson 191 — The Live-Truth Law: A Behaviour-Changing UI/Camera Fix Ships Only on the Owner's Live Console Proof
+Tests measure the CODE; they cannot measure the SESSION. A camera or UI fix can pass every automated check and
+still be wrong on screen, because the measurement harness and the defect can share the same mistaken assumption.
+
+**Context.** For two days a camera-focus defect resisted every fix because the measurement harness computed
+screen-Y using the X scale — the exact error the defect itself made. The harness and the bug agreed, so every
+"fix" looked correct in replay while the owner's eye still saw the fault. Only the owner's live session was a
+correct instrument (CAMERA-FOCUS-5, `@72fc52e` — per-axis screen mapping: Y clamp used `bsX`, render uses `bsY`).
+
+**Insight / the law.** No behaviour-changing UI or camera fix counts as shipped without a **console proof line
+from the owner's LIVE session**. The acceptance invariants must hold on a live trace, and the measurement
+harness is trusted only while **live == replay, frame-exact**. When the two diverge, the live session wins and
+the harness is the suspect.
+
+**Consequence / enforcement.** A camera/UI acceptance is not "green tests" — it is a live console proof line the
+owner produced, plus a live==replay frame-exact check on the harness before its numbers are believed. If a fix
+"passes" but the owner's eye disagrees, audit the harness for a shared assumption before re-touching the fix.
+Evidence: reports/evolution/CAMERA-FOCUS-5.md.
+
+## Lesson 192 — Clamps Are Guardrails, Never Steering
+A containment clamp keeps the camera inside bounds; it must never be the thing that AIMS the camera. If the
+clamp is doing the aiming, the intended steering was never actually wired.
+
+**Context.** The follow observer that was supposed to steer the camera was never promoted, so for months the
+containment clamp was the only thing moving it — and the camera tracked the track centreline instead of the
+action, because the centreline is where an un-steered clamp settles (CAMERA-FOCUS-3, `@34f87ad`).
+
+**Insight / the law.** Steering and containment are different jobs. A clamp is a guardrail: active only at the
+edges, silent in the middle. When a clamp is continuously active it is silently substituting for missing
+steering, and the symptom (camera on the centreline, not the subject) looks like a tuning problem when it is a
+wiring problem.
+
+**Consequence / enforcement.** "Clamp-active near zero in steady state" is a **test, not a comment**: assert the
+containment clamp fires only at the bounds, so a regression where the clamp becomes the de-facto steering trips
+CI instead of shipping. Evidence: reports/evolution/CAMERA-FOCUS-3.md.
+
+## Lesson 193 — The Living-Config Law: A Stored Config Must Never Silently Disable New Machinery
+A change to a default is not live until it reaches the STORED config the running session reads. A stored config
+from before the change can silently strip new keys, so the new machinery is present in code but absent at runtime.
+
+**Context.** The bug class "the switch never reached the living config" appeared **three times in one week**: a
+fix looked inert not because it was wrong but because the merged live config never carried its new key, so the
+machinery ran with the key defaulted-off.
+
+**Insight / the law.** Merging into the living config must be **deep**, and legacy config shapes are honoured
+only through the bare constructor path — never by a shallow merge that lets an old stored object mask a new key.
+When a fix appears to have no effect, **prove the live path first** before doubting the fix: confirm the key is
+present in the config the session actually reads.
+
+**Consequence / enforcement.** Deep-merge the stored config against the current defaults on load; route legacy
+shapes through the constructor, not a shallow spread. Diagnosis order for an inert fix is fixed: live-path proof
+FIRST, fix-logic doubt second. Related: the same "prove the live path" discipline is the enforcement side of
+Lesson 191's live==replay trust rule.

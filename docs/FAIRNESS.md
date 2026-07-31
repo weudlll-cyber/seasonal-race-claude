@@ -3,7 +3,9 @@
 **This is the canonical definition of fairness for the race dynamics.** It states the owner's definition,
 names the ONE headline number, and pins the permanent gate lines a race-dynamics change must clear. The
 operational start-row gate in [PROJECT-PRINCIPLES.md §8](PROJECT-PRINCIPLES.md) is layer 1 of this definition;
-this document is the whole of it. Current shipped world: **COMBO15** (master `@175a475`, tag `v-ship-combo15`).
+this document is the whole of it. Current shipped world: **`dc4647be0f55ebdb`** = COMBO15 + margin hysteresis
+(`softSteeringObstacleMargin` 0.5, RACER-FLAPPING-2) + lateral acceleration cap (`maxLateralAccelPerStep` 0.0005,
+RACER-MOTION-2), master `@94da53e` (OFF invariant `854018ee5d3d83e1`). Fingerprint lineage: [docs/SIM.md](SIM.md).
 
 ---
 
@@ -83,6 +85,29 @@ future change need not chase them but must not worsen them:
 - **garden-path arrival ceiling ~86%.** This track's start-row geometry caps arrival: the servo world already
   sits at 83% there and COMBO15 lifts it only to 86% — the same +3pp shape as every other track, so the
   ceiling is structural, not a mechanism gap. Judge garden-path on its absolute 86%, not on the delta.
+
+### The Layer-1 start-row gradient at N=300 (pre-existing, DOCUMENTED AND SHELVED 2026-07-31)
+
+Layer 1 above requires **zero Holm-unfair start rows**. At the definitive N=300 native pooled Holm the shipped
+world does NOT meet that line on 3 of the 4 quartet tracks. This residual is on record; the Layer-1 criterion
+itself is **not weakened, softened or rewritten** — it stands exactly as written above, with this one named and
+dated exception.
+
+- **What was measured.** N=300 races/track, native pooled Holm (`computeFairnessStats`), on the combined
+  shipped world `dc4647be` AND — paired, same seeds — on the pre-motion world `62400c8e`
+  (`--behavior='{"maxLateralAccelPerStep":0}'`).
+- **The finding.** A tiny start-row gradient flags on **searound, luger-hill and seatrack** at the **p=0.020
+  permutation floor**; **space-sprint is clean**.
+- **The magnitude.** It is small: the worst start row still reaches its band **88–90%** of the time, far above
+  the 70% floor, and every track's band arrival (searound 89.3 / luger-hill 91.0 / seatrack 90.7 /
+  space-sprint 89.0) sits within noise of the ship. Runaway is 0% on all four.
+- **It is PRE-EXISTING.** The gradient predates both engine changes: the acceleration cap changes the Holm
+  verdict on **0 of 4 tracks** (identical UNFAIR/ok verdict with the cap on vs off), so seatrack's flip versus
+  the underpowered N=100 quartet is statistical power revealing a standing gradient, not a motion regression.
+- **The owner's verdict (2026-07-31): DOCUMENT AND SHELF.** The watchdog only hears *better* — nothing got
+  worse. A dedicated start-row fairness project opens **only on the owner's explicit word**.
+
+Evidence: [reports/evolution/HOLM-300-COMBINED.md](../reports/evolution/HOLM-300-COMBINED.md).
 
 ---
 

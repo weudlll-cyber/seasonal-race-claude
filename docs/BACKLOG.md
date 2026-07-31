@@ -1,6 +1,6 @@
 # RaceArena — Backlog
 
-> **✅ Baseline re-measured (2026-07-26).** Absolute sim numbers in this document (band-reach, runaway, P1-contest, physics-tax, gate results) predate the plan-grid unification + speed/duration ship and are retired history. The current baseline is [reports/parity/REBASELINE.md](../reports/parity/REBASELINE.md) (speed-150, pooled band-reach 71.0%) and the CANDIDATE column of [reports/parity/GS-CONFIRM-GATE.md](../reports/parity/GS-CONFIRM-GATE.md) (band-reach 72.7%, dead finales 10.0%, runaway 6.8%).
+> **✅ Baseline — see REBASELINE.** Absolute sim numbers scattered in this document (band-reach, runaway, P1-contest, physics-tax, gate results) are retired history from before the current shipped world. The live baseline is the [reports/parity/REBASELINE.md](../reports/parity/REBASELINE.md) top block — the shipped world `dc4647be0f55ebdb` (COMBO15 + margin hysteresis + lateral acceleration cap, master `@94da53e`).
 
 Living list. See ROADMAP.md for phase context and completion status.
 Items ranked by urgency within each bucket. ✅ = done, 🔜 = next, ⏳ = waiting on dependency.
@@ -80,12 +80,15 @@ Items ranked by urgency within each bucket. ✅ = done, 🔜 = next, ⏳ = waiti
 
 ## Measurement infrastructure — next up (from the independent reviews, 2026-07-23)
 
-- 🔜 **PRIORITIZED — HUD config-fingerprint badge.** Show a short hash of the *live* race-dynamics
-  config in the Dev HUD, so an eye-test can never be judged against a config nobody can reconstruct
-  afterwards. This is the highest-value measurement item outstanding: the owner-config parity audit
-  (`reports/greenfield/owner-config/`) found a persisted setting silently cancelling a shipped
-  benefit, and it was only caught because someone thought to diff the world. A badge makes that class
-  of drift visible without anyone having to suspect it first. Cheap, read-only, no fingerprint impact.
+- ✅ **DONE — HUD config-fingerprint badge** (shipped `42500f4d`, "replay UX + rowCount unification",
+  behaviour-neutral). `configFingerprintBadge()` in `client/src/modules/exportRaceConfig.js` is rendered in
+  the race HUD (`client/src/screens/RaceScreen/index.jsx`, under the seed badge). It shows a short
+  RACE-relevant world hash plus a SPLIT off-default count: `raceCount` — the number of off-default keys that
+  actually break apples-to-apples with a default-config sim run, shown in the prominent **RED** state — and a
+  never-red `cosmeticCount` for camera / frame-timing drift. This is exactly the "make config drift visible
+  without anyone having to suspect it first" item: the owner-config parity audit
+  (`reports/greenfield/owner-config/`) found a persisted setting silently cancelling a shipped benefit, caught
+  only because someone diffed the world; the badge surfaces that class of drift live.
 - 🔜 **Paired per-seed delta evaluation in the gate driver.** `exp-gate-retune.mjs` already runs
   **truly paired** arms — identical seed sequence per track, per-race seeds recorded — but then
   aggregates each arm *independently* and compares the aggregates. The pairing is currently an
@@ -1070,3 +1073,40 @@ chase it.** Revisit only if a runaway fix pushes it up.
 scratch OUT_DIR **defaults off the OneDrive tree** (`$RA_SCRATCH_DIR` or `<os-tmp>/racearena-scratch`,
 env-overridable); a relative `--out` still resolves under repo ROOT for back-compat. Added `--purge-tmp` to
 wipe the scratch dir, and `scripts/audit-local.mjs` reports scratch/tmp size. See reports/evolution/HYGIENE-1.md.
+
+## 2026-07-31 — added (DOC-SYNC-2: long-term items, owner's hand)
+
+These lived only in the planner's chat-side handoff and had no home in the repo. All are **UNSCHEDULED —
+owner's hand**: parked here with enough context to be actionable months from now, none scheduled.
+
+- ⏳ **Bundle code-split.** The production client bundle exceeds the 500 kB warning threshold (the vite build
+  prints "Some chunks are larger than 500 kB after minification"; `dist/assets/index-*.js` ≈ 763 kB / 222 kB
+  gzip). Split via dynamic `import()` / route-level code-splitting (or `build.rolldownOptions.output.codeSplitting`)
+  so the first paint doesn't pull the whole app. Pure build/perf work, no behaviour change.
+- ⏳ **Coarser fairness bands.** A product-level simplification the owner has raised: reduce the number of
+  finishing-place bands so "reached your band" is a coarser, more forgiving promise. Would touch the band
+  definition used by `computeZoneSuccessRate` / the draw and would re-baseline every fairness number — a
+  deliberate product decision, not a tuning tweak. Owner to decide the band count before any work starts.
+- ⏳ **The story layer (owner-cast narrative toolkit).** The banked owner-cast toolkit for authored race
+  stories: the **multi-role rule** (a racer may hold several narrative roles across the race provided their
+  windows are DISJOINT, smoothly welded, and resolve to ONE endpoint — no contradictory simultaneous roles);
+  **comebacker** and **fallbacker** definitions (a racer authored to climb, or to slide, over a bounded window);
+  and the **drawn-not-patterned** counts (how many of each role per race are DRAWN from a distribution, never a
+  fixed recurring pattern the eye learns). Design-first; no mechanism until the owner fixes the definitions.
+- ⏳ **CAMERA-GLIDE-PATH-1 — view-change detour.** A camera view change travels fast but takes a visible
+  DETOUR rather than the direct line. Standing hypothesis: the pan is interpolated in **track space (T-lerp)**
+  and so follows the curvature of the track, instead of on a straight **screen-space** line between the two
+  view positions. Investigate by tracing the pan interpolation space; candidate fix is to lerp the screen-space
+  target, not the track parameter. Owner-visible feel item.
+- ⏳ **Camera block reset.** Parked camera item (block reset) from the camera saga handoff — needs the owner to
+  restate the exact symptom before it is actionable; recorded here so it is not lost.
+- ⏳ **Camera-weights design question — relative vs absolute weighting (deferred).** Whether the camera's
+  subject-selection weights should be RELATIVE (ranked against the current field) or ABSOLUTE (fixed thresholds).
+  A design question the owner deferred; no implementation until it is answered.
+- ⏳ **Start-row gradient project — SHELVED WITH DOCUMENTATION, opens only on the owner's explicit word.** The
+  definitive N=300 native pooled Holm found a small PRE-EXISTING start-row gradient on searound / luger-hill /
+  seatrack (space-sprint clean); owner verdict 2026-07-31 = document and shelf. Canonical home: the
+  [FAIRNESS.md start-row-gradient residual subsection](FAIRNESS.md) (evidence
+  [HOLM-300-COMBINED.md](../reports/evolution/HOLM-300-COMBINED.md)). Candidate direction on record if it ever
+  opens: **chaos traffic for the rear rows** (give the back rows more chaos-window mixing), which would aim to
+  raise the bar to "silent even at N=300". Do NOT start without the owner's explicit word.

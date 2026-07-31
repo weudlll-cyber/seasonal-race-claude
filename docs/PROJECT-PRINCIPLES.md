@@ -78,7 +78,10 @@ and quality in gap space / racer lengths, never rank space (LESSONS 172).
 
 This is **layer 1** (row-blind draw) of the owner's two-layer fairness definition. The full definition —
 both layers, the ABSOLUTE band-arrival headline number, the permanent v2 duration-relative pulk watchdog, and
-the documented residuals — is the canonical [FAIRNESS.md](FAIRNESS.md). The shipped world is COMBO15.
+the documented residuals — is the canonical [FAIRNESS.md](FAIRNESS.md); its
+[N=300 start-row-gradient residual](FAIRNESS.md) records the one named, dated exception to the zero-Holm line
+(pre-existing, shelved by owner decision 2026-07-31 — the criterion itself is unchanged). The shipped world is
+`dc4647be` = COMBO15 + margin hysteresis + lateral acceleration cap (master `@94da53e`).
 
 ## 9. The camera is not a solution for missing action
 

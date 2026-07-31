@@ -40,11 +40,13 @@ tuned or shipped from the G/s sweep — it MEASURES; the owner decides in the mo
 > acceleration cap changes the Holm verdict on **0/4 tracks**: band arrival within noise (searound 89.3,
 > luger-hill 91.0, seatrack 90.7, space-sprint 89.0), runaway **0%** all, rowMin 88–90% all. So both deferred
 > engine changes (flapping hysteresis + motion cap) are verified fairness-neutral at definitive power. **Honest
-> texture caveat (reserved for owner read, NOT auto-blessed):** the N=300 measures the standing world — for the
+> texture (recorded finding):** the N=300 measures the standing world — for the
 > first time — as **3/4 of this quartet carrying a small pre-existing start-row gradient** (searound +
 > luger-hill + seatrack UNFAIR at the p=0.020 permutation floor; space-sprint clean), so it does not meet the
 > aspirational "0 Holm-unfair" line at N=300 power. The gradient is tiny (worst row still reaches band 88–90%),
-> pre-existing, and motion-neutral — but whether it warrants its own start-row fairness line is an owner call.
+> pre-existing, and motion-neutral. **Owner verdict 2026-07-31: DOCUMENT AND SHELF** — the watchdog only hears
+> better, nothing got worse; a dedicated start-row fairness project opens only on the owner's explicit word. The
+> canonical home for this residual is the [FAIRNESS.md start-row-gradient subsection](../../docs/FAIRNESS.md).
 > Full evidence + comparator: [reports/evolution/HOLM-300-COMBINED.md](../evolution/HOLM-300-COMBINED.md).
 >
 > ---

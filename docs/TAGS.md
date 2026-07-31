@@ -62,7 +62,9 @@ and what was retired.
   justified deleting the lead-rotation mechanism from master.
 
 ### COMBO15 ship + the action/fair-arrival line (2026-07-29)
-The shipped world is now **COMBO15** (chaos steer + band-aware re-roll bias + 0.15 chaos window). The ship
+COMBO15 (chaos steer + band-aware re-roll bias + 0.15 chaos window) was the shipped world **at this ship**; it
+has since advanced through two avoidance engine changes to the current world `dc4647be0f55ebdb` (see the
+*Engine changes since COMBO15* subsection below). The ship
 anchors are permanent; the four experiment branches that fed the multi-week action/fair-arrival hunt were
 archived as permanent `archive/*` tags and their remote branches deleted (branch hygiene, owner-approved).
 - `v-ship-combo15` (`175a475`) — **the ship: COMBO15 as the default world merged to master.** New shipped
@@ -82,6 +84,18 @@ archived as permanent `archive/*` tags and their remote branches deleted (branch
   ACTION-FREEBAND-1/2, the cliff). Reports copied to master. DEAD.
 - `archive/choreo-release-final` (`109abd6`) — the entire `exp/choreo-release` history (per-racer conditional
   release: arrival-safe but decided-finale-flat; CHOREO-RELEASE-1/2). Reports copied to master. DEAD.
+
+### Engine changes since COMBO15 — RACER-FLAPPING-2 + RACER-MOTION-2 (2026-07-31)
+Two `pre/*` return points captured before the two avoidance engine changes that followed COMBO15. Each restores
+a distinct shipped world by fingerprint; registered here in DOC-SYNC-2 (they were live at origin but had no
+entry). Full fingerprint lineage: [SIM.md](SIM.md); reports:
+[../reports/evolution/INDEX.md](../reports/evolution/INDEX.md) (RACER-FLAPPING-2, RACER-MOTION-2, HOLM-300-COMBINED).
+- `pre/flapping` (`d0870326`, 2026-07-31) — the pre-RACER-FLAPPING-2 state: restores plain **COMBO15**
+  (`ded0a126048e4cdb`), before the avoidance margin hysteresis (`softSteeringObstacleMargin` 0.5).
+  RACER-FLAPPING-2 shipped `62400c8e88cdbe59`.
+- `pre/motion` (`e99b034d`, 2026-07-31) — the pre-RACER-MOTION-2 state: restores **COMBO15 + margin hysteresis**
+  (`62400c8e88cdbe59`), before the lateral acceleration cap (`maxLateralAccelPerStep` 0.0005). RACER-MOTION-2
+  shipped the current world `dc4647be0f55ebdb`.
 
 ## Active-phase tags (temporary scaffolding — to collapse later)
 
@@ -282,10 +296,17 @@ phase — COLLAPSED* record above); everything else is a permanent keeper:
 - `v-security-hardening-complete`
 - `v1-race-action-merged`
 
-### Additions since 2026-07-25 (current origin total: 41 tags)
+### Additions since 2026-07-25 (current origin total: 45 tags)
 
-Reconciled against `git ls-remote --tags origin` on 2026-07-29 (DOC-SYNC-1). The 16 tags added after the
-parity-phase snapshot above:
+Reconciled against `git ls-remote --tags origin` on 2026-07-31 (DOC-SYNC-2); the 2026-07-29 (DOC-SYNC-1) count
+was 41. The 4 tags added since DOC-SYNC-1:
+- **Engine changes since COMBO15 (2026-07-31):** `pre/flapping` (`d0870326`) and `pre/motion` (`e99b034d`) —
+  registered above in the *Engine changes since COMBO15* subsection.
+- **Unregistered, flagged for a follow-up reconciliation (out of DOC-SYNC-2 scope):** `pre/hygiene`
+  (`a4103bb4`) and `pre/router-7` (`83f5c8d9`) — real tags at origin from other work (a hygiene pass and a
+  router task) with no register entry yet; owner/planner to place them.
+
+The 16 tags added after the parity-phase snapshot above (to DOC-SYNC-1):
 
 - **COMBO15 ship + fair-arrival line (2026-07-29):** `v-ship-combo15` (`175a475`), `pre/ship-combo15`
   (`215afde`), `pre/clean-sweep` (`dad4077`), and the four experiment archives
