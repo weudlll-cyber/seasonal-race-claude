@@ -52,10 +52,15 @@ jobs:
 
   # ── Docs ────────────────────────────────────────────────────
   docs:
-    name: Living-doc link check
+    name: Living-doc guards (links, index, tags)
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          # Full history + tags: check-tags.mjs compares docs/TAGS.md against the origin tag list,
+          # so the checkout MUST bring the tags (a shallow, tagless checkout would make the guard
+          # FAIL LOUDLY by design — see scripts/check-tags.mjs).
+          fetch-depth: 0
 
       - uses: actions/setup-node@v4
         with:
@@ -65,3 +70,11 @@ jobs:
       # reports/ is excluded by design — it is the lab journal (historical, allowed to rot).
       - name: Check living-doc links
         run: node scripts/check-doc-links.mjs
+
+      # Fails if any report in reports/evolution/ is not referenced from INDEX.md (orphan report).
+      - name: Check every report is indexed
+        run: node scripts/check-index.mjs
+
+      # Fails if any tag at origin is not registered in docs/TAGS.md (undocumented anchor).
+      - name: Check every origin tag is registered
+        run: node scripts/check-tags.mjs

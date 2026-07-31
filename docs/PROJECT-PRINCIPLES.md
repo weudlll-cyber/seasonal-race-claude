@@ -81,7 +81,7 @@ both layers, the ABSOLUTE band-arrival headline number, the permanent v2 duratio
 the documented residuals — is the canonical [FAIRNESS.md](FAIRNESS.md); its
 [N=300 start-row-gradient residual](FAIRNESS.md) records the one named, dated exception to the zero-Holm line
 (pre-existing, shelved by owner decision 2026-07-31 — the criterion itself is unchanged). The shipped world is
-`dc4647be` = COMBO15 + margin hysteresis + lateral acceleration cap (master `@94da53e`).
+`dc4647be` = COMBO15 + margin hysteresis + lateral acceleration cap (fingerprint lineage in [SIM.md](SIM.md)).
 
 ## 9. The camera is not a solution for missing action
 

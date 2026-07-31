@@ -302,9 +302,12 @@ Reconciled against `git ls-remote --tags origin` on 2026-07-31 (DOC-SYNC-2); the
 was 41. The 4 tags added since DOC-SYNC-1:
 - **Engine changes since COMBO15 (2026-07-31):** `pre/flapping` (`d0870326`) and `pre/motion` (`e99b034d`) —
   registered above in the *Engine changes since COMBO15* subsection.
-- **Unregistered, flagged for a follow-up reconciliation (out of DOC-SYNC-2 scope):** `pre/hygiene`
-  (`a4103bb4`) and `pre/router-7` (`83f5c8d9`) — real tags at origin from other work (a hygiene pass and a
-  router task) with no register entry yet; owner/planner to place them.
+- **HYGIENE-1-era return points (registered SHIP-GUARD-1, 2026-07-31):** `pre/hygiene` (`a4103bb4`,
+  2026-07-29) — sits at the DOC-SYNC-1 report commit (`docs(evolution): DOC-SYNC-1 report — living docs synced
+  to COMBO15`); a docs-only return point, restores the COMBO15 world unchanged (no fingerprint move).
+  `pre/router-7` (`83f5c8d9`, 2026-07-29) — sits at the HYGIENE-1 STEP 4 commit (`chore(hygiene): local audit
+  tool + --purge-tmp + scratch off the OneDrive tree`); a tooling/hygiene return point from the HYGIENE-1 arc
+  (react-router 6→7, audit tooling), restores the COMBO15 world unchanged (no fingerprint move).
 
 The 16 tags added after the parity-phase snapshot above (to DOC-SYNC-1):
 

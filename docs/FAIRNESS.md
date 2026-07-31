@@ -5,7 +5,7 @@ names the ONE headline number, and pins the permanent gate lines a race-dynamics
 operational start-row gate in [PROJECT-PRINCIPLES.md §8](PROJECT-PRINCIPLES.md) is layer 1 of this definition;
 this document is the whole of it. Current shipped world: **`dc4647be0f55ebdb`** = COMBO15 + margin hysteresis
 (`softSteeringObstacleMargin` 0.5, RACER-FLAPPING-2) + lateral acceleration cap (`maxLateralAccelPerStep` 0.0005,
-RACER-MOTION-2), master `@94da53e` (OFF invariant `854018ee5d3d83e1`). Fingerprint lineage: [docs/SIM.md](SIM.md).
+RACER-MOTION-2), OFF invariant `854018ee5d3d83e1`. Fingerprint lineage: [docs/SIM.md](SIM.md).
 
 ---
 
