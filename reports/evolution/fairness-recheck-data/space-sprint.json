@@ -1,0 +1,12 @@
+{
+  "track": "space-sprint",
+  "racer": "rocket",
+  "races": 100,
+  "bandReach": 0.883,
+  "rowMin": 0.8757142857142857,
+  "holm": "ok",
+  "holmP": 0.12,
+  "runaway": 0,
+  "frontContestMeanLeadChanges": null,
+  "secs": 1054
+}
