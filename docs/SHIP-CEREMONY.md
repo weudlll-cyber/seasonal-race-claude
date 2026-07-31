@@ -69,7 +69,10 @@ went missing).
   `node scripts/check-index.mjs`, `node scripts/check-tags.mjs` — all three green. Plus the full test
   suite + `eslint` + `build`. These are the cheap catches for the drift a human reviewer cannot see.
 - [ ] **12. Commit, push, verify.** One clear commit; push; confirm with `git log origin/master
-  --oneline -3` that the push landed.
+  --oneline -3` that the push landed. **Any verification transcript pasted into the report must come
+  from the state ACTUALLY being committed** — re-run the guards after the commit if that is the only
+  way to make it honest, and say that you did. A transcript from an intermediate state (guards still
+  untracked, a doc not yet written) does not prove the state it is filed under, even when it is green.
 
 ## The ONE CANONICAL HOME rule
 

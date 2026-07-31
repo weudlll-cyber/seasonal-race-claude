@@ -70,7 +70,16 @@ try {
   fail(`cannot read tag register ${TAGS_MD}: ${e.message}`);
 }
 
-const unregistered = tags.filter((t) => !tagsMd.includes(t.name));
+// A tag counts as registered only when its name appears as a WHOLE TOKEN — not as a substring of a
+// longer name (so `pre/motion` is NOT satisfied by `pre/motion-2` in the register). Tag names are
+// made of [A-Za-z0-9_./-]; a match must be bounded by a character outside that set (or string edge).
+// Mirrors the link-target discipline check-index uses for report filenames.
+const TAG_CHAR = 'A-Za-z0-9_./-';
+const escapeRe = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+const isRegistered = (name) =>
+  new RegExp(`(?<![${TAG_CHAR}])${escapeRe(name)}(?![${TAG_CHAR}])`).test(tagsMd);
+
+const unregistered = tags.filter((t) => !isRegistered(t.name));
 
 console.log(`check-tags: ${tags.length} origin tags checked, ${unregistered.length} unregistered.`);
 

@@ -10,6 +10,10 @@
 // LOUD-FAILURE RULE (Lesson 187, proof-of-live): a guard that passes because it found nothing to
 // check is indistinguishable from a no-op. So an unreadable dir, an unreadable index, or ZERO
 // reports all FAIL — never a silent green.
+//
+// REACH (boundary, not a bug): this scans only the FLAT `*.md` files directly in the reports dir;
+// subdirectories are not descended. There are zero report files in subdirectories today. If reports
+// ever move into subdirs, widen the readdir to recurse.
 // ============================================================
 
 import { readFileSync, readdirSync } from 'node:fs';

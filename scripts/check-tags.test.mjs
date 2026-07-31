@@ -66,6 +66,19 @@ test('check-tags PASSES when every origin tag is registered (^{} lines ignored)'
   assert.match(r.stdout, /2 origin tags checked, 0 unregistered/);
 });
 
+test('check-tags requires an EXACT token — a longer tag in the register does not satisfy a shorter one', () => {
+  // Origin has `pre/motion`; the register names only `pre/motion-2`. Substring matching would wrongly
+  // pass; whole-token matching must FAIL and name pre/motion.
+  const p = fixture({
+    'ls-remote.txt':
+      'dddddddddddddddddddddddddddddddddddddddd\trefs/tags/pre/motion\n',
+    'TAGS.md': '# Tags\n- `pre/motion-2` (a different, longer tag)\n',
+  });
+  const r = runGuard(p['ls-remote.txt'], p['TAGS.md']);
+  assert.notEqual(r.status, 0, 'a longer tag must not satisfy the shorter one');
+  assert.match(r.stderr, /pre\/motion -> ddddddd/, 'the shorter tag must be reported unregistered');
+});
+
 test('check-tags FAILS LOUDLY when the tag list is empty (a checkout without tags, Lesson 187)', () => {
   const p = fixture({ 'empty.txt': '', 'TAGS.md': '# Tags\n' });
   const r = runGuard(p['empty.txt'], p['TAGS.md']);
