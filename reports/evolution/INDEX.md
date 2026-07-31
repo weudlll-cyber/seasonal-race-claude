@@ -26,6 +26,7 @@ and [FAIRNESS.md](../../docs/FAIRNESS.md). Shipped world: **COMBO15** (`v-ship-c
 - [DOCS-1.md](DOCS-1.md) — the complete written record: preserve the 3 closed branches' reports, L184–189, DEAD-ENDS §G, FAIRNESS.md. **Record complete.**
 
 ## The FAIR-ARRIVAL → COMBO15 line (SHIPPED)
+- [FAIRNESS-RECHECK-1.md](FAIRNESS-RECHECK-1.md) — read-only re-proof the shipped world still holds its gate after the camera week. **fp `ded0a126` IDENTICAL first+last (byte-identical world). N=100 quartet: band arrival 88.3–91.6% (in the 85–90% band, matches ROSTER baseline), runaway 0%, rowMin 88–91% — headline GREEN. Holm flags 3/4 at the small-N hero-map config = the known 7/10 near-pass texture (not a regression — fingerprint proves no change; definitive Holm = the 300-race native gate). Action metrics need the pulk harness (not captured).**
 - [ROSTER-MATRIX-1.md](ROSTER-MATRIX-1.md) — does every surface-compatible racer reach its band on the tracks it belongs on? Read-only measure of all 71 eligible `(type, track)` cells on COMBO15. **YES — every cell 84.4–91.0% arrival, 0% runaway; worst = seatrack/rocket 84.4%. One signal: rocket is the softest cell on 4 open water/air tracks (mild over-power). fp identical `ded0a126`.**
 - [MERGE-SHIP-1.md](MERGE-SHIP-1.md) — COMBO15 becomes the default world; source cleaned. **SHIPPED (fp ded0a126).**
 - [STEER-CAP-1.md](STEER-CAP-1.md) — cap the boost side of the chaos steer to close space-sprint's gap. **KILL — backfired 6/6 (Lesson 189, wrong lever).**
