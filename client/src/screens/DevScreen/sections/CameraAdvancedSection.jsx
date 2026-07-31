@@ -1441,6 +1441,12 @@ function CameraAdvancedSection() {
             tip: 'Enables the per-frame camera ring buffer. An export button appears on the race screen.',
           },
           {
+            key: 'cameraDetourLog',
+            testId: 'cam-detour-log-toggle',
+            label: 'Enable detour frame log (CAMERA-DETOUR-1)',
+            tip: 'Read-only diagnosis of the wrong-direction move: logs 3 frames before + ~30 after each view change to the console as "[RA CAMERA DETOUR]" lines. Alters no camera value. Run a race, then copy the console lines.',
+          },
+          {
             key: 'enablePerfLog',
             testId: 'perf-log-toggle',
             label: 'Enable perf log',
