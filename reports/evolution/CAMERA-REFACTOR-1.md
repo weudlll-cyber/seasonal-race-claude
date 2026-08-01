@@ -336,9 +336,29 @@ it.** Look at the OVERVIEW column: **14.4%, 14.4%, 14.4%**, then it drifts to 12
 invariant for a 3× resolution range and then fails. It is invariant *because* it normalises by the
 racer's world size, and it fails at k ≥ 2 because `drawnBodyWidthRefPx` stops scaling — its input
 `W_REF` is capped at a **hard-coded 285 world pixels** (`RaceScreen/index.jsx:447`,
-`W_REF = Math.min(285, effectiveWidth)`). Above roughly a 4600-px world the reference body saturates
-and the one correct formula in the camera goes wrong. **The right rule is already in the code; a
-magic number breaks it.**
+`W_REF = Math.min(285, effectiveWidth)`). ~~Above roughly a 4600-px world the reference body
+saturates and the one correct formula in the camera goes wrong.~~ **The right rule is already in the
+code; a magic number breaks it.**
+
+> **CORRECTION (2026-08-02, [CAMERA-CEILING-1](CAMERA-CEILING-1.md)).** The struck sentence
+> generalised this sweep wrongly, and the owner caught it. **The cap keys on TRACK width, not WORLD
+> width:** `effectiveWidth = trackWidthPx × 0.95`, so it binds only when the *track* is wider than
+> **300 px**. The "~4600-px world" figure is an artefact of *this table*, where world and track width
+> scale together — at k = 2 the world is 6144 **and the track is 356 px**, and it is the 356 that
+> trips the cap. Stated as a general rule about world width it is wrong: **Mountainstreet is a
+> 6144-px world with a 300-px track, and the cap does not bind there.** Measured across all ten
+> shipped tracks the distortion is **exactly 0.00%** — `300 × 0.95 = 285.00000000000000000` in exact
+> IEEE arithmetic, so the widest shipped track lands precisely on the boundary without being reduced.
+> The rows in the table above are correct **for a re-authored track** and remain the right warning
+> for the first wide track anyone draws.
+>
+> Two further narrowings from the same re-check: the **0.5× column** assumed the *sprites* scaled
+> with the world too; with a real, unscaled racer type the start-grid row staircase splits the field
+> into two rows and 0.5× gives 4.96 track-widths, not the invariant value — so the honest invariance
+> band is **1× to 1.5×**, bounded below by the row staircase and above by the 285 cap. And the
+> cross-track consistency this report credits to the sprite rule (2.48 track-widths on 9 of 10
+> tracks) is really `2 × W_ref / N` with one start row and `N = 20`: the track width cancels, which
+> is *why* it is consistent — and the same `/N` is why it is unstable in racer count.
 
 **(2) The other four states are resolution-blind by construction.** `effZoom = slider` is an
 *absolute* screen-pixels-per-world-pixel scale, so it shows a constant number of **world pixels**, not
@@ -481,8 +501,11 @@ alone, and both touch the same call sites.** He is right that it should be done 
 2. **OVERVIEW-FRAMING-1's closed-only scoping** (B1 #9). It is an unfinished feature, not a
    projection issue; CAMERA-REFACTOR-0 recommended reverting it and that recommendation stands.
 3. **The `W_REF = 285` cap.** It is in `RaceScreen`'s sprite sizing, not the camera. It must be fixed
-   for the resolution guarantee to hold above ~4600-px worlds, but it is a different file with a
-   different owner and deserves its own attributable change.
+   for the resolution guarantee to hold ~~above ~4600-px worlds~~ **on any track wider than 300 px
+   (see the CORRECTION above)**, but it is a different file with a different owner and deserves its
+   own attributable change. **It binds on no shipped track today** — so it is a future trap, not a
+   present distortion, and it does NOT gate the slider-unit decision
+   ([CAMERA-CEILING-1](CAMERA-CEILING-1.md)).
 
 **One thing worth doing immediately and cheaply, whatever else happens:** the Dev Screen tooltip for
 the OVERVIEW "Sprite scale" slider should stop implying it is comparable to the others. One sentence —

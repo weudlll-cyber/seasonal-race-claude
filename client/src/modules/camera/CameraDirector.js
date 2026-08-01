@@ -1437,15 +1437,15 @@ export class CameraDirector {
             const raw =
               (this._overviewTargetScreenPx * ovScale) /
               (this._drawnBodyWidthRefPx * this._proj.axisX);
-            // QUARANTINED open/closed branch (NOT one of the 13): the open-track 0.8× ceiling.
-            // Its comment says it "prevents the leader leaving canvas during pan" — a PAN problem
-            // solved with a ZOOM cap. Measured: it binds on 100% of open-track frames, so open
-            // OVERVIEW never runs the formula above. Removing it changes the picture (−19% to −32%
-            // visible world), so it belongs to the slider-unit block, not here.
-            const maxZoom = this._isOpenTrack
-              ? Math.min(MAX_INVERSE_ZOOM, this._overviewStateZoom * 0.8)
-              : MAX_INVERSE_ZOOM;
-            snapZoom = Math.max(this._proj.minCamZoom, Math.min(maxZoom, raw));
+            // CAMERA-CEILING-1: the open-track 0.8× ceiling is GONE. It capped the snap zoom at
+            // 80% of the whole-world zoom on open tracks only, and it bound on 100% of open-track
+            // frames — so open OVERVIEW never ran the rule above at all: it showed a 39.9 px racer
+            // where the rule says 49.0. Its stated purpose ("prevents the leader leaving canvas
+            // during pan") was a PAN problem solved with a ZOOM cap; the pan is now held by
+            // resolveCamera's world-edge clamp and, in LEADER-family states, the containment clamp.
+            // Removing it makes open-track OVERVIEW ~20% tighter and makes ONE setting mean ONE
+            // thing on all ten tracks. See reports/evolution/CAMERA-CEILING-1.md.
+            snapZoom = this._proj.clampCamZoom(raw);
             // QUARANTINED open/closed branch (NOT one of the 13): overviewMinEffZoom is documented
             // as open-track-only and defaults to 0; gating it preserves that for anyone who set it.
             if (this._isOpenTrack && this._overviewMinEffZoom > 0) {
