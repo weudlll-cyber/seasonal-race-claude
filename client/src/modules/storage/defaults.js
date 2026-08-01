@@ -211,6 +211,14 @@ export const DEFAULT_CAMERA_CONFIG = {
   overviewClosedTrackZoom: 1.3, // @deprecated 2026-06-04 — retired; kept in schema v15 for migration compatibility only; not read at runtime
   overviewTargetScreenPx: 28, // minimum visible narrow-body screen size (px) for OVERVIEW (and floor for all phases)
   overviewMinEffZoom: 0, // OVERVIEW zoom floor (effective zoom). 0 = off (current behavior). E.g. 0.6 = effZoom never goes below 0.6 on open tracks.
+  // OVERVIEW-FRAMING-1 — the owner's framing rule. OVERVIEW frames the LEADER + the next
+  // (overviewFrameRacers − 1) racers, deriving the zoom to fit them, floored so a racer sprite never
+  // shrinks below overviewMinSpriteFrac of the frame width (legibility outranks the count). The frame
+  // centre sits BEHIND the leader (box centre, toward the field); the leader is always kept in-frame
+  // with margin (the offset yields, never the leader). Both are FRACTIONS/counts, never pixels — so the
+  // framing is identical at any resolution (see CameraDirector._setOverviewGroupTargets).
+  overviewFrameRacers: 5, // leader + next (N−1) racers OVERVIEW must frame when the sprite floor allows
+  overviewMinSpriteFrac: 0.018, // min racer-sprite on-screen width as a fraction of the frame width (the zoom-out floor)
   // Director (weighted random) — candidate pool weights (0.0–1.0)
   battleWeight: 0.8,
   leadChangeWeight: 0.7,

@@ -496,6 +496,8 @@ export class CameraDirector {
     this._overviewTargetCount = t.overviewTargetCount;
     this._overviewStartDelay = t.overviewStartDelay;
     this._overviewTargetScreenPx = t.overviewTargetScreenPx;
+    this._overviewFrameRacers = t.overviewFrameRacers; // OVERVIEW-FRAMING-1 owner value: leader + next N−1
+    this._overviewMinSpriteFrac = t.overviewMinSpriteFrac; // OVERVIEW-FRAMING-1 owner value: sprite-size floor (frame fraction)
     this._overviewMinEffZoom = t.overviewMinEffZoom ?? 0;
     this._minRacersVisible = config?.minRacersVisible ?? 8;
     this._leaderMinZoom = config?.leaderMinZoom ?? 0.4;
@@ -2269,26 +2271,104 @@ export class CameraDirector {
   }
 
   /**
-   * Compute the OVERVIEW pan target with radial offset applied.
-   * The camera center is shifted from the leader toward the track center by
-   * overviewOffsetPx world pixels, so the leader appears at the outer viewport
-   * edge with the pack visible behind.
-   * @param {{ x: number, y: number }} leaderPos  Leader world-coordinate position.
-   * @returns {{ x: number, y: number }}
+   * OVERVIEW-FRAMING-1 — frame the LEADER + the next (overviewFrameRacers − 1) racers, as a computed
+   * rule (replacing the old fixed radial offset toward the shape centre). The owner's rule:
+   *   1. Group = leader + next N−1 in running order (racers sorted by t descending).
+   *   2. Derive the zoom to FIT the group's world bounding box within innerFramePct of the frame.
+   *   3. FLOOR the zoom at the minimum sprite size (`overviewMinSpriteFrac` × frame width); the floor
+   *      OUTRANKS the count — legibility beats fitting everyone.
+   *   4. Frame centre = the box centre, which sits BEHIND the leader (toward the field, i.e. toward the
+   *      followers who ARE backward along the track) — the leader is shown but not centred.
+   *   6. GUARANTEE (outranks the offset): the leader is ALWAYS kept inside innerFramePct. If the offset,
+   *      the world-edge clamp, or the sprite floor would push him out, the centre yields toward the
+   *      leader — never the leader off-screen. Nothing here is a pixel; everything is a fraction of the
+   *      frame, so the framing is identical at any resolution (checks 1/3/4; standing tests exist).
+   *
+   * resolveCamera fits only a SINGLE point (no bounding box, no sprite floor, no yield-the-offset
+   * guarantee), so this is a dedicated computation that reuses its world→screen + innerFramePct concepts.
+   * See reports/evolution/OVERVIEW-FRAMING-1.md.
+   *
+   * @param {Array<{x:number,y:number,t:number}>} sorted  racers sorted by t DESC (leader = sorted[0])
    */
-  _applyOverviewRadialOffset(leaderPos) {
-    const center = this._shape
-      ? this._shape.getCenterPoint()
-      : {
-          x: (this._worldBounds.minX + this._worldBounds.maxX) / 2,
-          y: (this._worldBounds.minY + this._worldBounds.maxY) / 2,
-        };
-    const dx = leaderPos.x - center.x;
-    const dy = leaderPos.y - center.y;
-    const len = Math.sqrt(dx * dx + dy * dy);
-    if (len < 1) return leaderPos; // leader at track center — no meaningful radial direction
-    const scale = this._overviewOffsetPx / len;
-    return { x: leaderPos.x - dx * scale, y: leaderPos.y - dy * scale };
+  _setOverviewGroupTargets(sorted, frameSize) {
+    const fw = frameSize.width;
+    const fh = frameSize.height;
+    const inner = this._innerFramePct ?? DEFAULT_INNER_FRAME_PCT;
+    // Per-axis world→screen scale: effZoom = cam.zoom × axisScale (bsX/bsY closed, BASE_ZOOM open) —
+    // the SAME mapping the renderer applies (ctx.scale) and _closedOffsetY uses.
+    const axisX = this._isOpenTrack ? OPEN_TRACK_BASE_ZOOM : this._bsX;
+    const axisY = this._isOpenTrack ? OPEN_TRACK_BASE_ZOOM : this._bsY;
+
+    const n = Math.max(1, Math.round(this._overviewFrameRacers ?? 5));
+    const group = sorted.slice(0, Math.min(n, sorted.length));
+    const leader = group[0] ?? sorted[0] ?? { x: 0, y: 0 };
+
+    // (1) group world bounding box
+    let minx = Infinity,
+      maxx = -Infinity,
+      miny = Infinity,
+      maxy = -Infinity;
+    for (const r of group) {
+      if (r.x < minx) minx = r.x;
+      if (r.x > maxx) maxx = r.x;
+      if (r.y < miny) miny = r.y;
+      if (r.y > maxy) maxy = r.y;
+    }
+    const boxW = Math.max(1, maxx - minx);
+    const boxH = Math.max(1, maxy - miny);
+
+    // (2) zoom that fits the box within the inner frame (per axis → take the more zoomed-OUT one)
+    const zoomFit = Math.min((inner * fw) / (axisX * boxW), (inner * fh) / (axisY * boxH));
+    // ceiling: never tighter than the normal overview zoom (OVERVIEW must not become a leader-zoom)
+    const zoomCeil = this._overviewSnapZoom ?? this._overviewStateZoom ?? this.overviewZoom;
+    // (3) floor: a racer sprite must stay ≥ overviewMinSpriteFrac of the frame width (legibility)
+    const minSpriteScreen = Math.max(0, this._overviewMinSpriteFrac ?? 0) * fw;
+    const refBody = this._drawnBodyWidthRefPx > 0 ? this._drawnBodyWidthRefPx : 36;
+    const zoomFloor = minSpriteScreen > 0 ? minSpriteScreen / (refBody * axisX) : 0;
+    // fit, but never tighter than overview, and never below the sprite floor (floor outranks count) or
+    // the whole-world zoom
+    let zoom = Math.min(zoomCeil, zoomFit);
+    zoom = Math.max(zoom, zoomFloor, this.overviewZoom);
+
+    const effX = zoom * axisX;
+    const effY = zoom * axisY;
+
+    // (4) frame centre = box centre (behind the leader, toward the field)
+    let cx = (minx + maxx) / 2;
+    let cy = (miny + maxy) / 2;
+
+    // world-edge clamp (best-effort: keep the viewport inside the world where it fits) — this YIELDS to
+    // the leader guarantee below, which runs last.
+    cx = this._clampCentreToBounds(
+      cx,
+      fw / (2 * effX),
+      this._worldBounds.minX,
+      this._worldBounds.maxX
+    );
+    cy = this._clampCentreToBounds(
+      cy,
+      fh / (2 * effY),
+      this._worldBounds.minY,
+      this._worldBounds.maxY
+    );
+
+    // (6) ABSOLUTE leader guarantee: keep the leader inside innerFramePct. This clamp is LAST, so no
+    // slider / resolution / floor can crop him — the centre yields toward the leader, never vice versa.
+    const maxOffX = ((inner / 2) * fw) / effX;
+    const maxOffY = ((inner / 2) * fh) / effY;
+    if (Math.abs(leader.x - cx) > maxOffX) cx = leader.x - Math.sign(leader.x - cx) * maxOffX;
+    if (Math.abs(leader.y - cy) > maxOffY) cy = leader.y - Math.sign(leader.y - cy) * maxOffY;
+
+    this.targetZoom = zoom;
+    this.targetOffsetX = fw / 2 - cx * effX;
+    this.targetOffsetY = fh / 2 - cy * effY;
+  }
+
+  /** OVERVIEW-FRAMING-1 helper: keep a frame-centre coordinate so the viewport stays inside the world
+   *  when the world is larger than the viewport; centre it when the world is smaller than the viewport. */
+  _clampCentreToBounds(c, half, min, max) {
+    if (max - min <= 2 * half) return (min + max) / 2; // world smaller than viewport → centre it
+    return Math.max(min + half, Math.min(max - half, c));
   }
 
   /**
@@ -2382,21 +2462,39 @@ export class CameraDirector {
           }
         }
         const isStartPhase = raceState && raceState.raceElapsed < START_PHASE_DURATION;
-        // During start phase: centroid of full field so no racer is cropped.
-        // After start phase: follow leader with radial offset toward field.
-        const basePanTarget = isStartPhase
-          ? getPanTarget(CAM_STATE.OVERVIEW, racers.length ? racers : focusRacers, this._shape)
-          : focusRacers.length > 0
-            ? { x: focusRacers[0].x, y: focusRacers[0].y }
-            : { x: 0, y: 0 };
-        const target =
-          !isStartPhase && this._overviewOffsetPx > 0
-            ? this._applyOverviewRadialOffset(basePanTarget)
-            : basePanTarget;
-        if (this._isOpenTrack) {
-          this._setOpenTrackTargets(target, _ovSnapZoom, frameSize, this._overviewMinEffZoom);
+        if (isStartPhase) {
+          // Start phase: centroid of the full field at the overview snap zoom, so no racer is cropped
+          // at the gun (before a leader has emerged).
+          const startTarget = getPanTarget(
+            CAM_STATE.OVERVIEW,
+            racers.length ? racers : focusRacers,
+            this._shape
+          );
+          if (this._isOpenTrack) {
+            this._setOpenTrackTargets(
+              startTarget,
+              _ovSnapZoom,
+              frameSize,
+              this._overviewMinEffZoom
+            );
+          } else {
+            this._setClosedTrackTargets(startTarget, _ovSnapZoom * this._bsX, frameSize, canvasH);
+          }
+        } else if (!this._isOpenTrack) {
+          // OVERVIEW-FRAMING-1 (CLOSED tracks — the defect case, where the field WRAPS and the old
+          // whole-world overview + toward-shape-centre radial offset pushed the leader off the edge):
+          // frame the leader + next N−1 with a derived zoom (floored at the min sprite size), the centre
+          // behind the leader, and the leader ALWAYS kept in frame.
+          const sortedByT = [...racers].sort((a, b) => b.t - a.t);
+          this._setOverviewGroupTargets(sortedByT.length ? sortedByT : focusRacers, frameSize);
         } else {
-          this._setClosedTrackTargets(target, _ovSnapZoom * this._bsX, frameSize, canvasH);
+          // OPEN tracks: the whole-track overview already frames the leader + the full field (no wrap, no
+          // off-edge problem), so it already satisfies "show the leader + N". Keep it — leader-centred at
+          // the overview snap zoom (the dead radial offset removed). The new derived-group framing is
+          // neither needed nor validated for the open-track uniform-zoom path; see OVERVIEW-FRAMING-1.md.
+          const leaderPos =
+            focusRacers.length > 0 ? { x: focusRacers[0].x, y: focusRacers[0].y } : { x: 0, y: 0 };
+          this._setOpenTrackTargets(leaderPos, _ovSnapZoom, frameSize, this._overviewMinEffZoom);
         }
         break;
       }

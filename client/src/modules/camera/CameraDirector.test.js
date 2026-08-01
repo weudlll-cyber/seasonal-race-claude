@@ -3926,108 +3926,6 @@ describe('CameraDirector — Phase 3B: 3-condition BATTLE detection', () => {
   });
 });
 
-// ── OVERVIEW radial offset ────────────────────────────────────────────────────
-
-describe('CameraDirector — OVERVIEW _applyOverviewRadialOffset', () => {
-  function makeCD(offsetPx = 150) {
-    const mockShape = {
-      getCenterPoint: () => ({ x: 640, y: 360 }),
-      getPosition: () => ({ x: 640, y: 360 }),
-      isOpen: false,
-    };
-    return new CameraDirector(
-      1280,
-      720,
-      false,
-      {
-        cameraStateProfiles: {
-          OVERVIEW: {
-            spriteScale: 1.0,
-            trackingTC: 1.5,
-            entryTC: 1.5,
-            leadInDuration: 0,
-            leadOutDuration: 0,
-            innerFramePct: 0.7,
-            maxStateDuration: 4000,
-            minStateHold: 5000,
-            maxEntryDurationMs: 10000,
-            overviewOffsetPx: offsetPx,
-          },
-          LEADER_ZOOM: {
-            spriteScale: 65 / 36,
-            trackingTC: 0.25,
-            entryTC: 0.8,
-            leadInDuration: 0.3,
-            leadOutDuration: 1.5,
-            innerFramePct: 0.7,
-            maxStateDuration: 8000,
-            minStateHold: 5000,
-            maxEntryDurationMs: 5000,
-          },
-          BATTLE_ZOOM: {
-            spriteScale: 101 / 36,
-            trackingTC: 0.25,
-            entryTC: 0.8,
-            leadInDuration: 0.2,
-            leadOutDuration: 1.0,
-            innerFramePct: 0.7,
-            maxStateDuration: 8000,
-            minStateHold: 5000,
-            maxEntryDurationMs: 5000,
-          },
-          COMEBACK_ZOOM: {
-            spriteScale: 50 / 36,
-            trackingTC: 0.25,
-            entryTC: 0.8,
-            leadInDuration: 0.3,
-            leadOutDuration: 1.5,
-            innerFramePct: 0.7,
-            maxStateDuration: 8000,
-            minStateHold: 5000,
-            maxEntryDurationMs: 5000,
-          },
-        },
-        entryConvergenceZoom: 0.05,
-        entryConvergencePx: 10,
-        transitionTConvergence: 0.03,
-      },
-      36,
-      mockShape
-    );
-  }
-
-  it('leader above center: pan target shifts toward center (downward), showing field below', () => {
-    const cd = makeCD(150);
-    // Leader (640,100), center (640,360): dy = 100-360 = -260, scale = 150/260
-    // result.y = 100 - (-260)*(150/260) = 100+150 = 250
-    const result = cd._applyOverviewRadialOffset({ x: 640, y: 100 });
-    expect(result.x).toBeCloseTo(640);
-    expect(result.y).toBeCloseTo(250);
-  });
-
-  it('leader right of center: pan target shifts leftward, showing field to the left', () => {
-    const cd = makeCD(100);
-    // Leader (900,360), center (640,360): dx = 260, scale = 100/260
-    // result.x = 900 - 260*(100/260) = 900-100 = 800
-    const result = cd._applyOverviewRadialOffset({ x: 900, y: 360 });
-    expect(result.x).toBeCloseTo(800);
-    expect(result.y).toBeCloseTo(360);
-  });
-
-  it('leader at track center: returns position unchanged (no radial direction)', () => {
-    const cd = makeCD(150);
-    const result = cd._applyOverviewRadialOffset({ x: 640, y: 360 });
-    expect(result).toEqual({ x: 640, y: 360 });
-  });
-
-  it('overviewOffsetPx=0: pan target unchanged (leader stays centered)', () => {
-    const cd = makeCD(0);
-    const result = cd._applyOverviewRadialOffset({ x: 640, y: 100 });
-    expect(result.x).toBeCloseTo(640);
-    expect(result.y).toBeCloseTo(100);
-  });
-});
-
 // ── Lead-Ahead toggle ─────────────────────────────────────────────────────────
 
 describe('CameraDirector — leadAheadEnabled toggle', () => {
@@ -6808,5 +6706,107 @@ describe('CameraDirector — CAMERA-GLIDE-TARGET-1 glide endpoint at destination
     cd.zoom = 6.0;
     cd._setClosedTrackTargets(target, stateEffZoom, FRAME, 720);
     expect(cd.targetOffsetX).not.toBeCloseTo(a, 3); // non-glide still uses the live zoom (unchanged)
+  });
+});
+
+// ── OVERVIEW-FRAMING-1: frame the leader + N racers; the leader is ALWAYS framed ──────────────────
+// The owner's rule made testable (Lesson 192 — "the leader is always framed" is a TEST, not a comment).
+describe('CameraDirector — OVERVIEW-FRAMING-1 leader-always-framed framing', () => {
+  const INNER = 0.7;
+  const frame = { width: 1280, height: 720 };
+  const mkDir = () => {
+    const cd = new CameraDirector(3000, 1500, false);
+    cd._innerFramePct = INNER;
+    cd._overviewSnapZoom = cd._overviewStateZoom ?? cd.overviewZoom ?? 1; // a defined zoom ceiling
+    return cd;
+  };
+  // leader (max t) + spread followers, all inside world [0,3000] × [0,1500]
+  const spreadGroup = () =>
+    [2600, 2300, 2000, 1700, 1400, 1100, 800].map((x, i) => ({
+      x,
+      y: 760 + (i % 2 ? 90 : -90),
+      t: 2 - i * 0.02,
+    }));
+  const screenOf = (cd, r) => ({
+    sx: r.x * cd.targetZoom * cd._bsX + cd.targetOffsetX,
+    sy: r.y * cd.targetZoom * cd._bsY + cd.targetOffsetY,
+  });
+  const inInner = (cd, r, fw, fh) => {
+    const s = screenOf(cd, r);
+    const mx = ((1 - INNER) / 2) * fw;
+    const my = ((1 - INNER) / 2) * fh;
+    return (
+      s.sx >= mx - 1e-6 && s.sx <= fw - mx + 1e-6 && s.sy >= my - 1e-6 && s.sy <= fh - my + 1e-6
+    );
+  };
+
+  it('leader is ALWAYS inside the inner frame across the whole slider range (checks 1, 4, 6)', () => {
+    const group = spreadGroup();
+    const leader = group[0];
+    for (const N of [2, 5, 8, 12]) {
+      for (const frac of [0.01, 0.022, 0.04, 0.06]) {
+        const cd = mkDir();
+        cd._overviewFrameRacers = N;
+        cd._overviewMinSpriteFrac = frac;
+        cd._setOverviewGroupTargets(group, frame);
+        expect(inInner(cd, leader, frame.width, frame.height)).toBe(true);
+      }
+    }
+  });
+
+  it('frames at least N racers when the sprite floor does not bind (check 2)', () => {
+    const group = spreadGroup();
+    const cd = mkDir();
+    cd._overviewFrameRacers = 5;
+    cd._overviewMinSpriteFrac = 0.005; // tiny floor → does not bind
+    cd._setOverviewGroupTargets(group, frame);
+    const framed = group.filter((r) => inInner(cd, r, frame.width, frame.height)).length;
+    expect(framed).toBeGreaterThanOrEqual(5);
+  });
+
+  it('the frame centre sits BEHIND the leader — leader ahead of centre, field behind (rule 4)', () => {
+    const group = spreadGroup();
+    const cd = mkDir();
+    cd._overviewFrameRacers = 5;
+    cd._overviewMinSpriteFrac = 0.005;
+    cd._setOverviewGroupTargets(group, frame);
+    // followers have lower x, so the leader (max x) sits to the RIGHT of the frame centre
+    expect(screenOf(cd, group[0]).sx).toBeGreaterThan(frame.width / 2);
+  });
+
+  it('resolution independence: fractional framing identical at 3 canvas scales (check 3)', () => {
+    const group = spreadGroup();
+    const leader = group[0];
+    const out = [];
+    for (const k of [1, 1.5, 2]) {
+      const cd = mkDir();
+      cd._bsX *= k; // bsX = CANVAS_W/worldW scales with resolution; cam.zoom is resolution-independent
+      cd._bsY *= k;
+      cd._overviewFrameRacers = 5;
+      cd._overviewMinSpriteFrac = 0.022;
+      const fk = { width: 1280 * k, height: 720 * k };
+      cd._setOverviewGroupTargets(group, fk);
+      const effX = cd.targetZoom * cd._bsX;
+      out.push({
+        leaderFrac: (leader.x * effX + cd.targetOffsetX) / fk.width,
+        visWorldFrac: fk.width / effX,
+      });
+    }
+    expect(out[1].leaderFrac).toBeCloseTo(out[0].leaderFrac, 6);
+    expect(out[2].leaderFrac).toBeCloseTo(out[0].leaderFrac, 6);
+    expect(out[1].visWorldFrac).toBeCloseTo(out[0].visWorldFrac, 6);
+    expect(out[2].visWorldFrac).toBeCloseTo(out[0].visWorldFrac, 6);
+  });
+
+  it('config live path: the two owner values flow config → director; absent → defaults (Lesson 193)', () => {
+    const withVals = new CameraDirector(3000, 1500, false, {
+      overviewFrameRacers: 8,
+      overviewMinSpriteFrac: 0.04,
+    });
+    expect(withVals._overviewFrameRacers).toBe(8);
+    expect(withVals._overviewMinSpriteFrac).toBeCloseTo(0.04, 6);
+    const bare = new CameraDirector(3000, 1500, false, {}); // stored config missing the keys → defaults
+    expect(bare._overviewFrameRacers).toBe(5);
+    expect(bare._overviewMinSpriteFrac).toBeCloseTo(0.018, 6);
   });
 });

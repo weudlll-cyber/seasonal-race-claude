@@ -104,6 +104,10 @@ still-easing zoom instead of the destination zoom). Presentation-only — the wo
 - `pre/glide-target` (`2e20e1f3`, 2026-08-01) — the pre-fix state: the two CAMERA-DETOUR diagnosis reports +
   the gated frame log, before `_setClosedTrackTargets`/`_setOpenTrackTargets` were changed to resolve the pan
   endpoint at the destination zoom. Restores the shipped world `dc4647be0f55ebdb` (the fix moves no fingerprint).
+- `pre/overview-framing` (`e1c6f90b`, 2026-08-01) — the pre-change state before OVERVIEW-FRAMING-1 (the owner's
+  framing rule: OVERVIEW frames the leader + N racers at a derived zoom with a sprite-size floor, centre behind
+  the leader, leader always in-frame — replacing the fixed toward-shape-centre radial offset). Sits at the
+  CAMERA-GLIDE-TARGET-1 (cause-D) commit; restores the shipped world `dc4647be0f55ebdb` (presentation only).
 
 ## Active-phase tags (temporary scaffolding — to collapse later)
 

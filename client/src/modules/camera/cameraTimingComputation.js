@@ -74,6 +74,8 @@ export function computeTimingFromConfig(config) {
   // normalization (same formula as open tracks). Field is kept in defaults.js / schema v15
   // for migration compatibility but is no longer read at runtime.
   const overviewTargetScreenPx = config?.overviewTargetScreenPx ?? 28;
+  const overviewFrameRacers = config?.overviewFrameRacers ?? 5; // OVERVIEW-FRAMING-1: leader + next N−1
+  const overviewMinSpriteFrac = config?.overviewMinSpriteFrac ?? 0.018; // sprite floor as a frame fraction
   const overviewMinEffZoom = config?.overviewMinEffZoom ?? 0;
 
   // Per-state lead-ahead toggle (default true for backward compat with old configs).
@@ -296,6 +298,8 @@ export function computeTimingFromConfig(config) {
     detourEnabled,
     transitionTConvergence,
     overviewOffsetPx,
+    overviewFrameRacers,
+    overviewMinSpriteFrac,
     overviewCooldownMs,
     overviewTargetScreenPx,
     overviewMinEffZoom,

@@ -657,6 +657,28 @@ function CameraAdvancedSection() {
             tip="Target sprite screen size during OVERVIEW on open tracks. Camera zoom is chosen so sprites appear at this size regardless of racer count. Smaller = more zoomed out (more track visible). Only affects open tracks. Default 18 px."
           />
           <SliderRow
+            label="OVERVIEW racers framed (leader + N−1)"
+            testId="regie-overview-frame-racers"
+            min={2}
+            max={12}
+            step={1}
+            value={config.overviewFrameRacers ?? 5}
+            onChange={(e) => set('overviewFrameRacers', parseInt(e.target.value, 10))}
+            display={`${config.overviewFrameRacers ?? 5}`}
+            tip="OVERVIEW-FRAMING-1: OVERVIEW frames the leader plus this many racers in running order; the zoom is derived to fit them. Higher = more of the field shown (more zoomed out). The minimum-sprite floor below outranks this when they conflict. The leader is always kept in frame. Set before a race."
+          />
+          <SliderRow
+            label="OVERVIEW min sprite size (% of frame width)"
+            testId="regie-overview-min-sprite-frac"
+            min={1}
+            max={6}
+            step={0.1}
+            value={(config.overviewMinSpriteFrac ?? 0.018) * 100}
+            onChange={(e) => set('overviewMinSpriteFrac', parseFloat(e.target.value) / 100)}
+            display={`${((config.overviewMinSpriteFrac ?? 0.018) * 100).toFixed(1)}%`}
+            tip="OVERVIEW-FRAMING-1: the zoom stops zooming out once a racer sprite would shrink below this fraction of the frame width — legibility outranks the racer count. Expressed as a fraction of the frame, so the framing is identical at any resolution. The owner expects this floor to bind rarely. Set before a race."
+          />
+          <SliderRow
             label="OVERVIEW zoom floor (effZoom)"
             testId="regie-overview-min-eff-zoom"
             min={0}

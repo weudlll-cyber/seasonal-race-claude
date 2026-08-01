@@ -113,6 +113,15 @@ a *beneficial side effect of correctness*, not a change to cause C, which remain
 - **The LEAD_CHANGE-window clamp `containDX` post-fix (check 5).** Needs a live glide where the anchor would have
   breached the inner frame; the stationary-anchor harness cannot manufacture that. The owner's re-run shows it.
 
+## EYE-TEST RESULT — ACCEPTED (owner, 2026-08-01)
+
+**The owner ran seed 5601 on the standard track and the wrong-direction move at view changes is GONE — cause D
+is accepted.** Attribution is preserved: cause D was built, measured, and eye-accepted on its own before any
+further camera change. Two formalities from this spec remain and were folded into the OVERVIEW-FRAMING-1
+hand-off (a single combined run): (1) the `[RA CAMERA LIVE TRUTH]` line from a session running the POST-fix
+build (the line on file is from the pre-fix commit), and (2) a second zoom setting (accepted so far at one
+setting only). Cause C (the containment clamp) remains present and unfixed, as designed.
+
 ## Hand-off — owner, please accept or reject (seed 5601)
 
 1. **http://localhost:5173** → log in. 2. Dev Screen → Camera → set a zoom setting **before** the race. 3. Run
