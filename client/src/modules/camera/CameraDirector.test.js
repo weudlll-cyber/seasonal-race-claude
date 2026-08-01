@@ -6761,3 +6761,52 @@ describe('CameraDirector — CAMERA-DETOUR-1 frame-log liveness', () => {
     spy.mockRestore();
   });
 });
+
+// ── CAMERA-GLIDE-TARGET-1: the glide endpoint is computed at the DESTINATION zoom (cause D fix) ──────
+// The standing invariant: during a GLIDE, targetOffset is the DESTINATION framing, so it does NOT depend
+// on the live, still-easing zoom — it is constant for the glide's duration (moving only as the anchor
+// world point moves). This test would have caught cause D on the day GRAMMAR-1 shipped. The fix is
+// glide-specific: the entry/tracking paths, which pin offset to targetOffset each frame while the zoom
+// eases, must KEEP tracking the live render zoom — asserted here too so the fix cannot silently widen.
+const FRAME = { width: 1280, height: 720 };
+describe('CameraDirector — CAMERA-GLIDE-TARGET-1 glide endpoint at destination zoom', () => {
+  const target = { x: 800, y: 420 };
+
+  for (const dest of ['leader', 'battle']) {
+    it(`GLIDE endpoint is invariant to the live easing zoom (${dest} destination — two settings)`, () => {
+      const cd = new CameraDirector(1280, 720, false);
+      cd._lerpPhase = 'glide';
+      const stateEffZoom = cd[`_${dest}Zoom`] * cd._bsX; // destination zoom, resolved from config
+      cd.zoom = 1.0; // early glide (still eased-out)
+      cd._setClosedTrackTargets(target, stateEffZoom, FRAME, 720);
+      const early = cd.targetOffsetX;
+      cd.zoom = 6.0; // a wildly different LIVE zoom, still mid-glide
+      cd._setClosedTrackTargets(target, stateEffZoom, FRAME, 720);
+      const late = cd.targetOffsetX;
+      expect(late).toBeCloseTo(early, 6); // endpoint does NOT travel with the live zoom (cause D fixed)
+    });
+  }
+
+  it('GLIDE endpoint mirrors on OPEN tracks too (both target functions fixed)', () => {
+    const cd = new CameraDirector(6000, 720, true);
+    cd._lerpPhase = 'glide';
+    cd.zoom = 1.0;
+    cd._setOpenTrackTargets(target, cd._leaderZoom, FRAME);
+    const early = cd.targetOffsetX;
+    cd.zoom = 5.0;
+    cd._setOpenTrackTargets(target, cd._leaderZoom, FRAME);
+    expect(cd.targetOffsetX).toBeCloseTo(early, 6);
+  });
+
+  it('ENTRY/TRACKING endpoint still tracks the live zoom — the fix is glide-specific (entry path untouched)', () => {
+    const cd = new CameraDirector(1280, 720, false);
+    cd._lerpPhase = 'tracking';
+    const stateEffZoom = cd._leaderZoom * cd._bsX;
+    cd.zoom = 1.0;
+    cd._setClosedTrackTargets(target, stateEffZoom, FRAME, 720);
+    const a = cd.targetOffsetX;
+    cd.zoom = 6.0;
+    cd._setClosedTrackTargets(target, stateEffZoom, FRAME, 720);
+    expect(cd.targetOffsetX).not.toBeCloseTo(a, 3); // non-glide still uses the live zoom (unchanged)
+  });
+});

@@ -2196,15 +2196,28 @@ export class CameraDirector {
     });
     this.targetZoom = zoomResolved.effectiveZoom / this._bsX;
 
-    const currEffZoom = Math.max(this.zoom * this._bsX, minEffZoom);
-    const panResolved = resolveCamera({
-      targetWorld: target,
-      desiredEffZoom: currEffZoom,
-      worldBounds: this._worldBounds,
-      frameSize,
-      innerFramePct: this._innerFramePct,
-      minEffZoom,
-    });
+    // CAMERA-GLIDE-TARGET-1 (fixes CAMERA-DETOUR cause D): the GRAMMAR-1 glide interpolates the offset from the
+    // captured start to THIS endpoint across the whole glide, so the endpoint must be the DESTINATION framing —
+    // resolved at the zoom the transition LANDS on (zoomResolved above, i.e. this.targetZoom) — NOT the live,
+    // still-easing zoom. Computing it at the live zoom made the endpoint travel ~1150 px during the glide while
+    // the camera steered honestly toward a point that was wrong for the whole journey. The non-glide paths
+    // (entry/tracking) PIN offset to targetOffset every frame while the zoom eases, so they must keep the endpoint
+    // at the CURRENT render zoom (the deliberate ordering in update()); leave those unchanged. The glide's
+    // endpoint is therefore constant for the glide's duration (moving only as the anchor world point moves).
+    let panResolved;
+    if (this._lerpPhase === 'glide') {
+      panResolved = zoomResolved; // destination framing (the same resolve that set this.targetZoom)
+    } else {
+      const currEffZoom = Math.max(this.zoom * this._bsX, minEffZoom);
+      panResolved = resolveCamera({
+        targetWorld: target,
+        desiredEffZoom: currEffZoom,
+        worldBounds: this._worldBounds,
+        frameSize,
+        innerFramePct: this._innerFramePct,
+        minEffZoom,
+      });
+    }
     this.targetOffsetX = -panResolved.camX * panResolved.effectiveZoom;
     this.targetOffsetY = this._closedOffsetY(target.y, panResolved.effectiveZoom, canvasH);
     this._lastResolvedPanTarget = panResolved;
@@ -2233,15 +2246,23 @@ export class CameraDirector {
     });
     this.targetZoom = zoomResolved.effectiveZoom / BASE;
 
-    const currEffZoom = Math.max(this.zoom * BASE, minEffZoom);
-    const panResolved = resolveCamera({
-      targetWorld: target,
-      desiredEffZoom: currEffZoom,
-      worldBounds: this._worldBounds,
-      frameSize,
-      innerFramePct: this._innerFramePct,
-      minEffZoom,
-    });
+    // CAMERA-GLIDE-TARGET-1 (see _setClosedTrackTargets): the glide endpoint is resolved at the DESTINATION zoom,
+    // not the live easing zoom; the entry/tracking paths keep the live-zoom endpoint (they pin offset to it each
+    // frame). Open tracks mirror the closed-track fix.
+    let panResolved;
+    if (this._lerpPhase === 'glide') {
+      panResolved = zoomResolved; // destination framing
+    } else {
+      const currEffZoom = Math.max(this.zoom * BASE, minEffZoom);
+      panResolved = resolveCamera({
+        targetWorld: target,
+        desiredEffZoom: currEffZoom,
+        worldBounds: this._worldBounds,
+        frameSize,
+        innerFramePct: this._innerFramePct,
+        minEffZoom,
+      });
+    }
     this.targetOffsetX = -panResolved.camX * panResolved.effectiveZoom;
     this.targetOffsetY = -panResolved.camY * panResolved.effectiveZoom;
     this._lastResolvedPanTarget = panResolved;

@@ -97,6 +97,14 @@ entry). Full fingerprint lineage: [SIM.md](SIM.md); reports:
   (`62400c8e88cdbe59`), before the lateral acceleration cap (`maxLateralAccelPerStep` 0.0005). RACER-MOTION-2
   shipped the current world `dc4647be0f55ebdb`.
 
+### Camera detour fix — CAMERA-GLIDE-TARGET-1 (2026-08-01)
+Return point captured before the first CAMERA-DETOUR fix (cause D: the glide endpoint was computed at the live,
+still-easing zoom instead of the destination zoom). Presentation-only — the world fingerprint is unchanged
+(`dc4647be0f55ebdb`); cause C (the containment clamp) is deliberately left for the next block.
+- `pre/glide-target` (`2e20e1f3`, 2026-08-01) — the pre-fix state: the two CAMERA-DETOUR diagnosis reports +
+  the gated frame log, before `_setClosedTrackTargets`/`_setOpenTrackTargets` were changed to resolve the pan
+  endpoint at the destination zoom. Restores the shipped world `dc4647be0f55ebdb` (the fix moves no fingerprint).
+
 ## Active-phase tags (temporary scaffolding — to collapse later)
 
 Step-tags from the runaway phase (now CLOSED 2026-07-29, see below) and any later work — safe return points, not permanent anchors. They collapse into
