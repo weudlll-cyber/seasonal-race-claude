@@ -6670,41 +6670,42 @@ const FRAME = { width: 1280, height: 720 };
 describe('CameraDirector — CAMERA-GLIDE-TARGET-1 glide endpoint at destination zoom', () => {
   const target = { x: 800, y: 420 };
 
+  // CAMERA-PROJECTION-1: _setClosedTrackTargets / _setOpenTrackTargets merged into the single
+  // _setTrackTargets, which takes the state's cam.zoom (not its effective zoom). Same assertions.
   for (const dest of ['leader', 'battle']) {
     it(`GLIDE endpoint is invariant to the live easing zoom (${dest} destination — two settings)`, () => {
       const cd = new CameraDirector(1280, 720, false);
       cd._lerpPhase = 'glide';
-      const stateEffZoom = cd[`_${dest}Zoom`] * cd._bsX; // destination zoom, resolved from config
+      const stateCamZoom = cd[`_${dest}Zoom`]; // destination zoom, resolved from config
       cd.zoom = 1.0; // early glide (still eased-out)
-      cd._setClosedTrackTargets(target, stateEffZoom, FRAME, 720);
+      cd._setTrackTargets(target, stateCamZoom, FRAME);
       const early = cd.targetOffsetX;
       cd.zoom = 6.0; // a wildly different LIVE zoom, still mid-glide
-      cd._setClosedTrackTargets(target, stateEffZoom, FRAME, 720);
+      cd._setTrackTargets(target, stateCamZoom, FRAME);
       const late = cd.targetOffsetX;
       expect(late).toBeCloseTo(early, 6); // endpoint does NOT travel with the live zoom (cause D fixed)
     });
   }
 
-  it('GLIDE endpoint mirrors on OPEN tracks too (both target functions fixed)', () => {
+  it('GLIDE endpoint mirrors on OPEN tracks too (one shared target function now)', () => {
     const cd = new CameraDirector(6000, 720, true);
     cd._lerpPhase = 'glide';
     cd.zoom = 1.0;
-    cd._setOpenTrackTargets(target, cd._leaderZoom, FRAME);
+    cd._setTrackTargets(target, cd._leaderZoom, FRAME);
     const early = cd.targetOffsetX;
     cd.zoom = 5.0;
-    cd._setOpenTrackTargets(target, cd._leaderZoom, FRAME);
+    cd._setTrackTargets(target, cd._leaderZoom, FRAME);
     expect(cd.targetOffsetX).toBeCloseTo(early, 6);
   });
 
   it('ENTRY/TRACKING endpoint still tracks the live zoom — the fix is glide-specific (entry path untouched)', () => {
     const cd = new CameraDirector(1280, 720, false);
     cd._lerpPhase = 'tracking';
-    const stateEffZoom = cd._leaderZoom * cd._bsX;
     cd.zoom = 1.0;
-    cd._setClosedTrackTargets(target, stateEffZoom, FRAME, 720);
+    cd._setTrackTargets(target, cd._leaderZoom, FRAME);
     const a = cd.targetOffsetX;
     cd.zoom = 6.0;
-    cd._setClosedTrackTargets(target, stateEffZoom, FRAME, 720);
+    cd._setTrackTargets(target, cd._leaderZoom, FRAME);
     expect(cd.targetOffsetX).not.toBeCloseTo(a, 3); // non-glide still uses the live zoom (unchanged)
   });
 });
@@ -6714,8 +6715,8 @@ describe('CameraDirector — CAMERA-GLIDE-TARGET-1 glide endpoint at destination
 describe('CameraDirector — OVERVIEW-FRAMING-1 leader-always-framed framing', () => {
   const INNER = 0.7;
   const frame = { width: 1280, height: 720 };
-  const mkDir = () => {
-    const cd = new CameraDirector(3000, 1500, false);
+  const mkDir = (worldW = 3000, worldH = 1500) => {
+    const cd = new CameraDirector(worldW, worldH, false);
     cd._innerFramePct = INNER;
     cd._overviewSnapZoom = cd._overviewStateZoom ?? cd.overviewZoom ?? 1; // a defined zoom ceiling
     return cd;
@@ -6775,18 +6776,21 @@ describe('CameraDirector — OVERVIEW-FRAMING-1 leader-always-framed framing', (
   });
 
   it('resolution independence: fractional framing identical at 3 canvas scales (check 3)', () => {
+    // CAMERA-PROJECTION-1: the scales now come from the projection, so this scales the WORLD (which
+    // is what the axis scales are derived from) instead of poking _bsX/_bsY behind the director's
+    // back. Same invariant: scale world and canvas together and the framing must not move.
     const group = spreadGroup();
     const leader = group[0];
     const out = [];
     for (const k of [1, 1.5, 2]) {
-      const cd = mkDir();
-      cd._bsX *= k; // bsX = CANVAS_W/worldW scales with resolution; cam.zoom is resolution-independent
-      cd._bsY *= k;
+      // world SHRINKS as the canvas grows by k, so axisX = 1280/worldW scales by k — the exact
+      // relationship the old test faked by multiplying _bsX.
+      const cd = mkDir(3000 / k, 1500 / k);
       cd._overviewFrameRacers = 5;
       cd._overviewMinSpriteFrac = 0.022;
       const fk = { width: 1280 * k, height: 720 * k };
       cd._setOverviewGroupTargets(group, fk);
-      const effX = cd.targetZoom * cd._bsX;
+      const effX = cd._proj.effX(cd.targetZoom);
       out.push({
         leaderFrac: (leader.x * effX + cd.targetOffsetX) / fk.width,
         visWorldFrac: fk.width / effX,

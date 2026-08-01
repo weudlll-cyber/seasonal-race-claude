@@ -109,6 +109,16 @@ still-easing zoom instead of the destination zoom). Presentation-only — the wo
   the leader, leader always in-frame — replacing the fixed toward-shape-centre radial offset). Sits at the
   CAMERA-GLIDE-TARGET-1 (cause-D) commit; restores the shipped world `dc4647be0f55ebdb` (presentation only).
 
+### Camera projection refactor — CAMERA-PROJECTION-1 (2026-08-01, branch `camera-refactor`)
+Return point captured before the camera gained a single world↔screen projection and lost the ~28 open/closed
+branches that existed only because closed computed world-relative and open computed fixed-absolute. The refactor
+is behaviour-preserving by construction — proven by a frame-by-frame replay diff, not by a fingerprint (the
+simulation is untouched and no simulation file is in the diff).
+- `pre/projection` (`54cbe5d4`, 2026-08-01) — the pre-refactor state: the two CAMERA-REFACTOR measurement
+  reports, before `projection.js` existed and while `_setClosedTrackTargets` / `_setOpenTrackTargets` /
+  `_closedOffsetY` were still three separate functions. Camera-only; the shipped world `dc4647be0f55ebdb` is
+  untouched on both sides of this tag.
+
 ## Active-phase tags (temporary scaffolding — to collapse later)
 
 Step-tags from the runaway phase (now CLOSED 2026-07-29, see below) and any later work — safe return points, not permanent anchors. They collapse into
