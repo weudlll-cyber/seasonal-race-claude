@@ -161,6 +161,17 @@ number that meant something different on every track). Both are fixed, so the id
   nothing catches a LEADER setting of 1 or below when the shot goes empty. Camera-only; the shipped
   world `dc4647be0f55ebdb` is untouched on both sides. Config schema v20.
 
+### Camera company guarantee, made proportionate — CAMERA-COMPANY-2 (2026-08-02, branch `camera-refactor`)
+Return point captured before the guarantee stopped being over-cautious. CAMERA-COMPANY-1 shipped it
+correct in KIND and too strong in DEGREE: `innerFramePct` (0.7) and `reach` (0.66) multiplied, so a
+companion was allowed only 46% of the frame chord, and the owner's 40-racer break-away widened to 2.32
+track widths where he asked for 1.0. The owner's decision here: **visible with a margin is enough** —
+a guaranteed companion does not have to sit inside the subject's safe region.
+- `pre/company-2` (`cfd47cd5`, 2026-08-02) — the state where the company guarantee reads
+  `innerFramePct` and applies ONE scalar `reach` in every direction, so it promises company inside the
+  safe region and delivers one racer fewer. Camera-only; the shipped world `dc4647be0f55ebdb` is
+  untouched on both sides. Config schema v20.
+
 ## Active-phase tags (temporary scaffolding — to collapse later)
 
 Step-tags from the runaway phase (now CLOSED 2026-07-29, see below) and any later work — safe return points, not permanent anchors. They collapse into
@@ -576,6 +587,7 @@ The full list of the 177 retired tags is recorded below for the archive.
 - `pre/sweep-instrumentation-pulklr`
 - `pre/v4-choreography`
 - `pre/company`
+- `pre/company-2`
 - `pre/framing`
 - `pre/picture-fixes`
 - `pre/v4-on-trunk`

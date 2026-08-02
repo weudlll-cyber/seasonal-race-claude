@@ -24,6 +24,7 @@ import {
   corridorGuarantee,
   pairGuarantee,
   companyGuarantee,
+  COMPANY_FRAME_PCT,
 } from './framingRule.js';
 
 export const CAM_STATE = {
@@ -1833,6 +1834,8 @@ export class CameraDirector {
     // leader at 0.66 along the frame has 0.66 of it behind him. A centred subject has half.
     const forward = framingFor(this.state).position === POSITION.FORWARD;
     const reach = forward && this._leaderForwardFrac != null ? this._leaderForwardFrac : 0.5;
+    // COMPANY_FRAME_PCT, not `_innerFramePct`: a guaranteed companion needs to be visible with a
+    // margin, not inside the subject's safe region. See the constant for the owner's reasoning.
     return companyGuarantee(
       subjects.point,
       racers,
@@ -1841,7 +1844,7 @@ export class CameraDirector {
       this._proj.axisY,
       frameSize.width,
       frameSize.height,
-      this._innerFramePct ?? DEFAULT_INNER_FRAME_PCT,
+      COMPANY_FRAME_PCT,
       reach
     );
   }

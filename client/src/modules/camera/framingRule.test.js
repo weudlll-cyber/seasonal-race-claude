@@ -17,6 +17,7 @@ import {
   corridorGuarantee,
   pairGuarantee,
   companyGuarantee,
+  COMPANY_FRAME_PCT,
 } from './framingRule.js';
 import { CameraDirector, CAM_STATE } from './CameraDirector.js';
 import { DEFAULT_CAMERA_CONFIG } from '../cameraConfig.js';
@@ -24,6 +25,10 @@ import { frameExtentAlong } from './frameGeometry.js';
 
 const W = 1280;
 const H = 720;
+
+// The subject's safe region, mirrored from CameraDirector's DEFAULT_INNER_FRAME_PCT. The company
+// guarantee deliberately does NOT use it — CAMERA-COMPANY-2 — and these tests hold that apart.
+const SUBJECT_INNER_PCT = 0.7;
 
 // The shipped projections, reduced to what a guarantee reads.
 const CLOSED = { axisX: 1280 / 3072, axisY: 720 / 2048, tw: 131, name: 'searound (closed)' };
@@ -365,9 +370,39 @@ describe('companyGuarantee — do not show emptiness', () => {
     expect(fits(aboveNear, honest)).toBe(false);
   });
 
-  it('respects the inner-frame fraction', () => {
+  it('respects the frame fraction it is given', () => {
     const field = [at(0, 0), at(400, 0)];
     expect(g(field, 2, 0.7)).toBeCloseTo(g(field, 2, 1) * 0.7, 9);
+  });
+
+  // ── CAMERA-COMPANY-2: visible with a margin, not inside the subject's safe region ────────────
+  it('defaults to the COMPANION MARGIN, not to the subject safe region', () => {
+    const field = [at(0, 0), at(400, 0)];
+    const dflt = companyGuarantee(anchor, field, 2, CLOSED.axisX, CLOSED.axisY, W, H);
+    expect(dflt).toBeCloseTo(g(field, 2, COMPANY_FRAME_PCT), 9);
+    // and it is the owner's decision made numeric: a companion gets more room than innerFramePct
+    // would give it, so the same company costs a tighter shot.
+    expect(dflt).toBeGreaterThan(g(field, 2, SUBJECT_INNER_PCT));
+    expect(dflt / g(field, 2, SUBJECT_INNER_PCT)).toBeCloseTo(
+      COMPANY_FRAME_PCT / SUBJECT_INNER_PCT,
+      6
+    );
+  });
+
+  it('the margin is a real margin — a guaranteed companion is never AT the edge', () => {
+    // At the guarantee's own zoom the furthest guaranteed companion still has the margin between it
+    // and the frame edge: the reason 0.9 exists is that half a drawn body must fit there.
+    const field = [at(0, 0), at(150, 0), at(500, 0), at(900, 0)];
+    const z = companyGuarantee(anchor, field, 4, CLOSED.axisX, CLOSED.axisY, W, H);
+    const kept = field.filter((r) => r !== field[0] && fits(r, z));
+    expect(kept.length).toBeGreaterThanOrEqual(3);
+    for (const r of kept) {
+      const sx = (r.x - anchor.x) * CLOSED.axisX * z;
+      const sy = (r.y - anchor.y) * CLOSED.axisY * z;
+      const reachable = frameExtentAlong(sx, sy, W, H) * REACH;
+      // inside the margin: never further out than 0.9 of the room it could have used
+      expect(Math.hypot(sx, sy)).toBeLessThanOrEqual(reachable * COMPANY_FRAME_PCT + 1e-9);
+    }
   });
 
   it('reach scales the room: a forward-framed subject has more of the frame behind him', () => {

@@ -236,6 +236,29 @@ export function pairGuarantee(a, b, axisX, axisY, frameW, frameH, innerFramePct 
 }
 
 /**
+ * THE COMPANION MARGIN — how much of the frame a guaranteed companion must be inside.
+ *
+ * CAMERA-COMPANY-2, and it is the owner's decision, not a derivation: **visible with a margin is
+ * enough**. A guaranteed companion does NOT have to sit inside `innerFramePct`. The guarantee says
+ * "do not show emptiness", and a racer near the frame edge is not emptiness. `innerFramePct` exists
+ * so the SUBJECT does not cling to the edge — a different job, and it keeps doing it for the subject
+ * and for both geometric guarantees. Only the company guarantee reads this instead.
+ *
+ * Why 0.9 and not a rounder 1.0: 5% of the frame on each side is half a drawn body at the largest a
+ * body gets in these shots — measured across the owner's own race, the drawn body is 6.65% of the
+ * frame height at the median and 9.50% at p95 and at maximum. Half of that worst case is 4.75%, so
+ * 5% is the smallest round margin that never cuts a guaranteed racer at the edge. It is deliberately
+ * NOT sized for the tracking lag as well: measured at the binding companion over the same race, the
+ * live camera adds 0.00% extra overshoot past the edge (median, p95 and max alike), because the live
+ * zoom trails a WIDENING target and is therefore never tighter than the shot the guarantee sized.
+ *
+ * Expressed as a fraction of the frame rather than in pixels, per the standing rule. Not a slider:
+ * it is read off the sprite size, not chosen by taste, so if the sprite grows this gets re-measured
+ * rather than tuned.
+ */
+export const COMPANY_FRAME_PCT = 0.9;
+
+/**
  * THE DRAMATURGICAL GUARANTEE — "do not show emptiness".
  *
  * The owner zooms LEADER in tight ON PURPOSE, and wants the camera to catch him exactly when the
@@ -262,6 +285,7 @@ export function pairGuarantee(a, b, axisX, axisY, frameW, frameH, innerFramePct 
  * shot twice as tight as it should have and let the guaranteed company fall off the far edge.
  *
  * @param {number} minVisible  how many racers must be in frame INCLUDING the anchor; <= 1 disables
+ * @param {number} [framePct=COMPANY_FRAME_PCT]  the region a companion must be inside
  * @param {number} [reach=0.5] share of the frame extent available from the anchor toward the company
  * @returns {number} cam.zoom ceiling; Infinity when nothing constrains
  */
@@ -273,7 +297,7 @@ export function companyGuarantee(
   axisY,
   frameW,
   frameH,
-  innerFramePct = 1,
+  framePct = COMPANY_FRAME_PCT,
   reach = 0.5
 ) {
   if (!anchor || !Array.isArray(racers)) return Infinity;
@@ -286,14 +310,7 @@ export function companyGuarantee(
     const dy = r.y - anchor.y;
     if (dx === 0 && dy === 0) continue; // the anchor itself
     ceilings.push(
-      zoomCeilingToFit(
-        { x: dx, y: dy },
-        axisX,
-        axisY,
-        frameW,
-        frameH,
-        innerFramePct * clamp01(reach)
-      )
+      zoomCeilingToFit({ x: dx, y: dy }, axisX, axisY, frameW, frameH, framePct * clamp01(reach))
     );
   }
   if (ceilings.length === 0) return Infinity;
