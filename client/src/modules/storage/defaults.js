@@ -294,11 +294,15 @@ export const DEFAULT_CAMERA_CONFIG = {
   // (never zoom in then back out), orientation-aware, and ranked by the zoom each racer would
   // require rather than by raw distance — which is what the old floor got wrong.
   //
-  // Default 3 is measured, not chosen: at LEADER 1 on searound it halves the frames where the leader
-  // is ALONE (4% → 2%) and cuts thin frames (<3 racers) from 7% to 3%, while costing almost nothing
-  // in restlessness (0.28 → 0.30 direction changes per second, identical swing). 5 and 8 buy little
-  // more emptiness protection and do cost restlessness (0.55 and 0.74 rev/s) and shot (mean 1.31 →
-  // 1.43 track widths, which eats a tight LEADER setting). See reports/evolution/CAMERA-COMPANY-1.md.
+  // Default 3 is measured, not chosen, and CAMERA-COMPANY-2 RE-MEASURED it at the 40-racer field the
+  // owner actually runs — the CAMERA-COMPANY-1 numbers were taken at 20 and understated his case,
+  // because more racers supply a longer queue rather than closer company. At 40 with LEADER 1: on
+  // dirt-oval 3 cuts the frames where the leader is ALONE from 6% to 1% and thin frames (<3 racers)
+  // from 7% to 1%, at 0.26 direction changes per second and a p95 shot of 1.45 track widths — barely
+  // wider than the 1.0 he asked for. 5 and 8 buy NO further emptiness protection on that track and do
+  // cost the shot: p95 1.76 and 2.32 track widths, the second being the over-wide picture this block
+  // was opened to fix. On searound 5 does buy a little (thin 4% → 2%) for +0.22 rev/s, which is the
+  // one honest reason to raise it. See reports/evolution/CAMERA-COMPANY-2.md.
   minRacersVisible: 3,
   // Focal-position smoothing: EMA time-constant (seconds) applied to the camera's world-space
   // pan target during follow phase. Reduces velocity-oscillation artefacts (COMEBACK speedBrake

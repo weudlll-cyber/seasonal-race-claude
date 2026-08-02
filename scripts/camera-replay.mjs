@@ -378,7 +378,14 @@ function replayTo(marker, built, cameraConfig, frameTimingConfig) {
     if (trace.length > 4 * WINDOW + 4) trace.shift();
 
     if (hit === null && st.physicsTs >= targetPts) {
-      hit = { row, frames: trace.length };
+      // SNAPSHOT THE FIELD HERE. `st.racers` is mutated in place by every later step, and this loop
+      // deliberately runs on for WINDOW more frames so the trace can show what happened NEXT. Reading
+      // the field afterwards therefore reads the world ~WINDOW frames past the mark: the witness that
+      // was meant to prove "same race, same moment" instead compared the marker against a LATER
+      // moment and failed every racer by a uniform +8 frames of travel, which reads exactly like a
+      // physics divergence. The physics was never wrong — at step 584 the leader is at 0.235445, the
+      // marker's value to six decimals. Only the reader was standing in the wrong frame.
+      hit = { row, frames: trace.length, racers: st.racers.map((r) => ({ ...r })) };
       // Keep going for WINDOW more frames so the trace shows what happened NEXT.
       if (WINDOW <= 0) break;
     }
@@ -508,10 +515,13 @@ if (!hit) {
 }
 
 // ── The witness: did we reproduce HIS race? ───────────────────────────────────────────────────
-const st = built.state;
+// THE FIELD AS IT WAS AT THE MARKED FRAME, not as it is now. Everything below — the witness, the
+// on-screen counts, the field listing and both pictures — must read this snapshot; `built.state` has
+// moved on by the length of the trailing trace window.
+const markRacers = hit.racers;
 let leader = null;
 let tSum = 0;
-for (const r of st.racers) {
+for (const r of markRacers) {
   tSum += r.t;
   if (!leader || r.t > leader.t) leader = r;
 }
@@ -530,7 +540,7 @@ console.log(`  field t-sum   marker ${pad(num(w.tsum, 6), 14)} replay ${pad(num(
 // says "failed" leaves the next person exactly where they started.
 let vecOk = true;
 if (Array.isArray(w.tvec)) {
-  const byIndex = new Map(st.racers.map((r) => [r.index, r]));
+  const byIndex = new Map(markRacers.map((r) => [r.index, r]));
   const off = [];
   for (let i = 0; i < w.tvec.length; i++) {
     const mine = byIndex.get(i);
@@ -600,13 +610,13 @@ if (WINDOW > 0) {
 const inner = world.cameraConfig.cameraStateProfiles?.[s.st]?.innerFramePct ?? 0.7;
 const mx = ((1 - inner) / 2) * CANVAS_W;
 const my = ((1 - inner) / 2) * CANVAS_H;
-const onScreen = st.racers
+const onScreen = markRacers
   .map((r) => ({ r, x: r.x * s.ezx + s.ox, y: r.y * s.ezy + s.oy }))
   .sort((a, b) => b.r.t - a.r.t);
 const inCanvas = onScreen.filter((p) => p.x >= 0 && p.x <= CANVAS_W && p.y >= 0 && p.y <= CANVAS_H);
 const lead = onScreen[0];
 console.log('\nON SCREEN under the marker\'s own camera');
-console.log(`  racers in the 1280×720 frame : ${inCanvas.length} of ${st.racers.length}`);
+console.log(`  racers in the 1280×720 frame : ${inCanvas.length} of ${markRacers.length}`);
 console.log(
   `  leader ${lead.r.name} at (${lead.x.toFixed(0)}, ${lead.y.toFixed(0)}) — ` +
     `${lead.x >= 0 && lead.x <= CANVAS_W && lead.y >= 0 && lead.y <= CANVAS_H ? 'in frame' : 'OFF FRAME'}` +
@@ -649,11 +659,11 @@ if (WRITE_PNG) {
   const replayPng = join(OUT_DIR, `${tag}-REPLAY.png`);
   writeFileSync(
     ownerPng,
-    renderCameraFrame(built.shape, st.racers, { ox: s.ox, oy: s.oy, ezx: s.ezx, ezy: s.ezy }, inner)
+    renderCameraFrame(built.shape, markRacers, { ox: s.ox, oy: s.oy, ezx: s.ezx, ezy: s.ezy }, inner)
   );
   writeFileSync(
     replayPng,
-    renderCameraFrame(built.shape, st.racers, { ox: h.ox, oy: h.oy, ezx: h.ezx, ezy: h.ezy }, inner)
+    renderCameraFrame(built.shape, markRacers, { ox: h.ox, oy: h.oy, ezx: h.ezx, ezy: h.ezy }, inner)
   );
   console.log('\nPICTURES');
   console.log(`  ${ownerPng}`);
