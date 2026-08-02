@@ -40,7 +40,7 @@ function resolveStoredCameraConfig() {
   const stored = storageGet(KEYS.CAMERA_CONFIG);
   if (!stored || typeof stored !== 'object') return { ...DEFAULT_CAMERA_CONFIG };
 
-  if (stored.schemaVersion !== 20) return { ...DEFAULT_CAMERA_CONFIG };
+  if (stored.schemaVersion !== 21) return { ...DEFAULT_CAMERA_CONFIG };
 
   // v20: merge top-level fields, then deep-merge cameraStateProfiles.
   const merged = { ...DEFAULT_CAMERA_CONFIG, ...stored };
@@ -92,5 +92,5 @@ export function cameraConfigProvenance() {
 }
 
 export function saveCameraConfig(config) {
-  return storageSet(KEYS.CAMERA_CONFIG, { ...config, schemaVersion: 20 });
+  return storageSet(KEYS.CAMERA_CONFIG, { ...config, schemaVersion: 21 });
 }

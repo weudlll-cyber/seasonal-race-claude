@@ -493,7 +493,10 @@ describe('CAMERA-COMPANY-1 — the guarantee through the director', () => {
     minRacersVisible: n,
     cameraStateProfiles: {
       ...DEFAULT_CAMERA_CONFIG.cameraStateProfiles,
-      LEADER_ZOOM: { ...DEFAULT_CAMERA_CONFIG.cameraStateProfiles.LEADER_ZOOM, trackWidths: 0.5 },
+      LEADER_ZOOM: {
+        ...DEFAULT_CAMERA_CONFIG.cameraStateProfiles.LEADER_ZOOM,
+        visibleCorridors: 0.5,
+      },
     },
   });
 
@@ -502,7 +505,7 @@ describe('CAMERA-COMPANY-1 — the guarantee through the director', () => {
     const off = settle(mk(tight(0)), racers);
     const on = settle(mk(tight(3)), racers);
     expect(visibleCount(on, racers)).toBeGreaterThanOrEqual(3);
-    expect(on.visibleTrackWidths).toBeGreaterThan(off.visibleTrackWidths); // it widened
+    expect(on.visibleCorridors).toBeGreaterThan(off.visibleCorridors); // it widened
   });
 
   it('is a LIMIT, not a correction — the zoom never goes in and then comes back out', () => {
@@ -530,13 +533,13 @@ describe('CAMERA-COMPANY-1 — the guarantee through the director', () => {
           ...DEFAULT_CAMERA_CONFIG.cameraStateProfiles,
           LEADER_ZOOM: {
             ...DEFAULT_CAMERA_CONFIG.cameraStateProfiles.LEADER_ZOOM,
-            trackWidths: 6,
+            visibleCorridors: 6,
           },
         },
       }),
       racers
     );
-    expect(wide.visibleTrackWidths).toBeCloseTo(6, 1);
+    expect(wide.visibleCorridors).toBeCloseTo(6, 1);
   });
 
   it('applies to the single-subject shots and NOT to the pair shots', () => {

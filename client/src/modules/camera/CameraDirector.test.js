@@ -154,7 +154,7 @@ describe('CameraDirector', () => {
     const cd = new CameraDirector();
     cd.state = CAM_STATE.OVERVIEW;
     for (let i = 0; i < 200; i++) cd.update(mockRacers(4), 1000, mockRaceState, 1280, 720);
-    expect(cd.visibleTrackWidths).toBeCloseTo(4, 1);
+    expect(cd.visibleCorridors).toBeCloseTo(1.5, 1); // OVERVIEW default, in standard corridors
     expect(isFinite(cd.offsetX)).toBe(true);
     expect(isFinite(cd.offsetY)).toBe(true);
   });
@@ -165,7 +165,7 @@ describe('CameraDirector', () => {
     const settle = (cd) => {
       cd.state = CAM_STATE.OVERVIEW;
       for (let i = 0; i < 300; i++) cd.update(mockRacers(4), 1000, mockRaceState, 1280, 720);
-      return cd.visibleTrackWidths;
+      return cd.visibleCorridors;
     };
     expect(settle(new CameraDirector(6000, 720, true))).toBeCloseTo(
       settle(new CameraDirector(1280, 720, false)),
@@ -177,7 +177,7 @@ describe('CameraDirector', () => {
     const cd = new CameraDirector(6000, 720, true);
     cd.state = CAM_STATE.OVERVIEW;
     for (let i = 0; i < 300; i++) cd.update(mockRacers(4), 1000, mockRaceState, 1280, 720);
-    expect(cd.visibleTrackWidths).toBeCloseTo(4, 1);
+    expect(cd.visibleCorridors).toBeCloseTo(1.5, 1); // OVERVIEW default, in standard corridors
   });
 
   it('LEADER_ZOOM converges to zoom > 1', () => {
@@ -262,7 +262,7 @@ describe('CameraDirector — bbox clamping', () => {
     for (let i = 0; i < 300; i++) cd.update(centreRacers, 1000, mockRaceState, 1280, 720);
     // CAMERA-ZOOM-UNIT-1: read the zoom the unit resolved rather than restating it — the assertion
     // under test is the PAN (centre on the racer), not the zoom value.
-    expect(cd.visibleTrackWidths).toBeCloseTo(2, 3); // LEADER default
+    expect(cd.visibleCorridors).toBeCloseTo(0.75, 3); // LEADER default, in standard corridors
     expect(cd.offsetX).toBeCloseTo(640 - 640 * cd.zoom, 0);
   });
 
@@ -704,7 +704,7 @@ describe('CameraDirector — §5.4 trigger extensions', () => {
     for (let i = 0; i < 60; i++) cd.update(spreadRacers, 1000 + i * 16, startRs, 1280, 720);
     // At least the OVERVIEW setting: the OVERVIEW-FRAMING-1 group fit may WIDEN the shot to keep
     // the group in frame (a guarantee), but nothing may make it tighter than the setting.
-    expect(cd.visibleTrackWidths).toBeGreaterThanOrEqual(4 - 1e-9);
+    expect(cd.visibleCorridors).toBeGreaterThanOrEqual(1.5 - 1e-9);
     expect(isFinite(cd.targetOffsetX)).toBe(true);
 
     cd.state = CAM_STATE.OVERVIEW;
@@ -1579,7 +1579,7 @@ describe('tcToLerpFactor (Phase 1 helper)', () => {
 const profileConfig = {
   cameraStateProfiles: {
     OVERVIEW: {
-      trackWidths: 5.14,
+      visibleCorridors: 5.14,
       trackingTC: 1.5,
       entryTC: 1.5,
       leadInDuration: 0,
@@ -1589,7 +1589,7 @@ const profileConfig = {
       minStateHold: 5000,
     },
     LEADER_ZOOM: {
-      trackWidths: 2.85,
+      visibleCorridors: 2.85,
       trackingTC: 0.25,
       entryTC: 0.25,
       leadInDuration: 0,
@@ -1599,7 +1599,7 @@ const profileConfig = {
       minStateHold: 5000,
     },
     BATTLE_ZOOM: {
-      trackWidths: 1.83,
+      visibleCorridors: 1.83,
       trackingTC: 0.35,
       entryTC: 0.35,
       leadInDuration: 0,
@@ -1609,7 +1609,7 @@ const profileConfig = {
       minStateHold: 5000,
     },
     COMEBACK_ZOOM: {
-      trackWidths: 3.7,
+      visibleCorridors: 3.7,
       trackingTC: 0.3,
       entryTC: 0.3,
       leadInDuration: 0,
@@ -2575,7 +2575,7 @@ describe('CameraDirector — Etappe 11: BATTLE_ZOOM pin-lock convergence', () =>
       ...phasedConfig,
       cameraStateProfiles: {
         ...phasedConfig.cameraStateProfiles,
-        BATTLE_ZOOM: { ...phasedConfig.cameraStateProfiles.BATTLE_ZOOM, trackWidths: 1.03 },
+        BATTLE_ZOOM: { ...phasedConfig.cameraStateProfiles.BATTLE_ZOOM, visibleCorridors: 1.03 },
       },
     };
     const cd = new CameraDirector(1280, 720, false, highZoomConfig, 36, shape);
@@ -3280,7 +3280,7 @@ describe('CameraDirector — leadAheadEnabled toggle', () => {
     return {
       cameraStateProfiles: {
         OVERVIEW: {
-          trackWidths: 5.14,
+          visibleCorridors: 5.14,
           trackingTC: 1.5,
           entryTC: 1.5,
           leadInDuration: 0,
@@ -3291,7 +3291,7 @@ describe('CameraDirector — leadAheadEnabled toggle', () => {
           maxEntryDurationMs: 10000,
         },
         LEADER_ZOOM: {
-          trackWidths: 2.85,
+          visibleCorridors: 2.85,
           trackingTC: 0.25,
           entryTC: 0.8,
           leadInDuration: 0.3,
@@ -3303,7 +3303,7 @@ describe('CameraDirector — leadAheadEnabled toggle', () => {
           leadAheadEnabled,
         },
         BATTLE_ZOOM: {
-          trackWidths: 1.83,
+          visibleCorridors: 1.83,
           trackingTC: 0.25,
           entryTC: 0.8,
           leadInDuration: 0.2,
@@ -3315,7 +3315,7 @@ describe('CameraDirector — leadAheadEnabled toggle', () => {
           leadAheadEnabled,
         },
         COMEBACK_ZOOM: {
-          trackWidths: 3.7,
+          visibleCorridors: 3.7,
           trackingTC: 0.25,
           entryTC: 0.8,
           leadInDuration: 0.3,
@@ -5136,7 +5136,7 @@ describe('CAMERA-FOCUS-1 — leader anchored + contained in frame', () => {
     const c = structuredClone(DEFAULT_CAMERA_CONFIG);
     c.cameraStateProfiles.LEADER_ZOOM = {
       ...c.cameraStateProfiles.LEADER_ZOOM,
-      trackWidths: 1.71,
+      visibleCorridors: 1.71,
       trackingTC: 0.25,
       innerFramePct: 0.7,
     };
@@ -5330,7 +5330,7 @@ describe('CAMERA-FOCUS-3 — transition grammar + forward-framing', () => {
     const cfg = structuredClone(DEFAULT_CAMERA_CONFIG);
     cfg.cameraStateProfiles.LEADER_ZOOM = {
       ...cfg.cameraStateProfiles.LEADER_ZOOM,
-      trackWidths: 1.71,
+      visibleCorridors: 1.71,
     };
     cfg.leaderForwardFrac = 0.7;
     cfg.cameraTransitionGrammar = 'cut'; // this test drives forced steady-state follow; pin entry style
@@ -5399,7 +5399,7 @@ describe('CAMERA-FOCUS-5 — per-axis screen mapping (forward-framing + containm
   const driveLeader = (shape) => {
     const cfg = {
       cameraStateProfiles: {
-        LEADER_ZOOM: { trackWidths: 1.71, trackingTC: 0.25, innerFramePct: 0.7 },
+        LEADER_ZOOM: { visibleCorridors: 1.71, trackingTC: 0.25, innerFramePct: 0.7 },
       },
       cameraTransitionGrammar: 'cut',
       leaderForwardFrac: 0.66,
@@ -5482,7 +5482,7 @@ describe('CAMERA-SIDEJUMP-1 — zoom about the anchor (no lurch on a mid-hold zo
   it('a min-vis floor loosen during a LEADER hold does not lurch the leader across the frame', () => {
     const cfg = {
       cameraStateProfiles: {
-        LEADER_ZOOM: { trackWidths: 1.71, trackingTC: 0.25, innerFramePct: 0.7 },
+        LEADER_ZOOM: { visibleCorridors: 1.71, trackingTC: 0.25, innerFramePct: 0.7 },
       },
     };
     const cd = new CameraDirector(W, H, false, cfg, 28.5, straightShape);
@@ -5546,7 +5546,7 @@ describe('CAMERA-GRAMMAR-1 — glide default, correctness in every shipped gramm
   };
   const mkCfg = (grammar, extra = {}) => ({
     cameraStateProfiles: {
-      LEADER_ZOOM: { trackWidths: 1.71, trackingTC: 0.25, innerFramePct: 0.7 },
+      LEADER_ZOOM: { visibleCorridors: 1.71, trackingTC: 0.25, innerFramePct: 0.7 },
     },
     cameraTransitionGrammar: grammar,
     ...extra,
@@ -6018,7 +6018,7 @@ describe('CAMERA-FRAMING-1 — one rule, six states, through the director', () =
 
   it('LEAD_CHANGE keeps the OVERTAKEN racer in frame — its guarantee', () => {
     const racers = field();
-    const cd = mk({ cameraStateProfiles: profilesWith('LEAD_CHANGE', { trackWidths: 0.3 }) });
+    const cd = mk({ cameraStateProfiles: profilesWith('LEAD_CHANGE', { visibleCorridors: 0.3 }) });
     cd._prevLeaderIndex = 1;
     settle(cd, CAM_STATE.LEAD_CHANGE, racers);
     // Even asked for a 0.3-track-width shot, the guarantee widens until the passed racer fits.
@@ -6028,7 +6028,7 @@ describe('CAMERA-FRAMING-1 — one rule, six states, through the director', () =
 
   it('BATTLE keeps BOTH contenders in frame at a setting far tighter than the corridor', () => {
     const racers = field();
-    const cd = mk({ cameraStateProfiles: profilesWith('BATTLE_ZOOM', { trackWidths: 0.2 }) });
+    const cd = mk({ cameraStateProfiles: profilesWith('BATTLE_ZOOM', { visibleCorridors: 0.2 }) });
     settle(cd, CAM_STATE.BATTLE_ZOOM, racers);
     expect(inFrame(screenOf(cd, racers[0]))).toBe(true);
     expect(inFrame(screenOf(cd, racers[1]))).toBe(true);
@@ -6036,11 +6036,11 @@ describe('CAMERA-FRAMING-1 — one rule, six states, through the director', () =
 
   it('the guarantee only ever WIDENS — a generous setting is left alone', () => {
     const cd = settle(
-      mk({ cameraStateProfiles: profilesWith('LEADER_ZOOM', { trackWidths: 6 }) }),
+      mk({ cameraStateProfiles: profilesWith('LEADER_ZOOM', { visibleCorridors: 6 }) }),
       CAM_STATE.LEADER_ZOOM,
       field()
     );
-    expect(cd.visibleTrackWidths).toBeCloseTo(6, 1); // untouched by the guarantee
+    expect(cd.visibleCorridors).toBeCloseTo(6, 1); // untouched by the guarantee
   });
 
   it('FORWARD states push the subject off centre; CENTRED states do not', () => {
@@ -6085,18 +6085,22 @@ describe('CAMERA-FRAMING-1 — one rule, six states, through the director', () =
   it('PHOTO_FINISH has its OWN zoom — it no longer borrows BATTLE', () => {
     const cd = mk({
       cameraStateProfiles: {
-        ...profilesWith('BATTLE_ZOOM', { trackWidths: 2 }),
-        PHOTO_FINISH: { trackWidths: 0.8 },
+        ...profilesWith('BATTLE_ZOOM', { visibleCorridors: 2 }),
+        PHOTO_FINISH: { visibleCorridors: 0.8 },
       },
     });
     expect(cd._photoFinishZoom).not.toBeCloseTo(cd._battleZoom, 6);
     expect(cd._photoFinishZoom).toBeGreaterThan(cd._battleZoom); // 0.8 TW is tighter than 2 TW
   });
 
-  it('a config with no PHOTO_FINISH entry frames exactly as BATTLE did — no silent change', () => {
+  it('a config with no PHOTO_FINISH entry falls back to ITS OWN default, not to BATTLE', () => {
+    // CAMERA-REFERENCE-WIDTH-1: the BATTLE fallback was back-compat for configs written before the
+    // key existed. Schema v21 discards those outright, so it can never fire again — and borrowing
+    // BATTLE's number is exactly the defect CAMERA-FRAMING-1 was opened to fix.
     const profiles = { ...DEFAULT_CAMERA_CONFIG.cameraStateProfiles };
     delete profiles.PHOTO_FINISH;
     const cd = mk({ cameraStateProfiles: profiles });
-    expect(cd._photoFinishZoom).toBeCloseTo(cd._battleZoom, 9);
+    expect(cd._photoFinishZoom).toBeGreaterThan(cd._battleZoom); // tighter than a battle
+    expect(cd.constructor.name).toBe('CameraDirector');
   });
 });

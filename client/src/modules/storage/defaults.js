@@ -54,20 +54,32 @@ export const DEFAULT_ROW_LAYOUT_CONFIG = {
 };
 
 export const DEFAULT_CAMERA_CONFIG = {
-  schemaVersion: 20,
+  schemaVersion: 21,
+  // CAMERA-REFERENCE-WIDTH-1 (schema v21): the width, in world px, that ONE standard corridor means.
+  // Every state's `visibleCorridors` is measured in these, so this one number rescales every shot on
+  // every track at once. 300 is the widest corridor authored so far, which is why the ten shipped
+  // tracks are all framed against the same yardstick today. A track WIDER than this keeps its own
+  // width instead (max(reference, actual)), so its corridor is never asked to be cropped.
+  referenceCorridorPx: 300,
   // Per-state camera profiles — each key matches a CAM_STATE enum value.
   //
-  // CAMERA-ZOOM-UNIT-1 (schema v18): `trackWidths` is THE zoom setting for every state — how many
-  // track widths of world are visible across the frame. One rule, one unit: the state says WHO the
-  // camera is on, this number says HOW FAR IN. Higher = wider, and the same number frames the same
-  // shot on every track, open or closed, at any world resolution (see camera/zoomUnit.js).
-  // It replaces `spriteScale` (an absolute screen-scale, so one setting meant 2.36 track widths on
-  // Mountainstreet and 5.40 on Searound) and OVERVIEW's separate target-sprite-size rule with its
-  // racer-count division. The values are clean round numbers chosen by the owner over reproducing
-  // the previous picture; 1.0 is the floor the full-track-width guarantee enforces.
+  // CAMERA-REFERENCE-WIDTH-1 (schema v21): `visibleCorridors` is THE zoom setting for every state —
+  // how much world is in shot, measured in STANDARD corridors rather than in this track's own width.
+  // One rule, one unit: the state says WHO the camera is on, this number says HOW FAR IN. Higher =
+  // wider, and the same number now frames THE SAME AMOUNT OF WORLD on every track, narrow or wide
+  // (see camera/zoomUnit.js).
+  //
+  // THESE NUMBERS HAVE NOTHING IN COMMON WITH THE OLD ONES. It is a unit change, like miles to
+  // kilometres: the old values were multiples of each track's own corridor, these are multiples of a
+  // fixed 300 px. LEADER 2 meant 262 world px on Searound and 600 on Mountainstreet; LEADER 0.75
+  // means 225 everywhere. Nothing here is a regression from the old set — it is a different scale.
+  //
+  // The anchor is the owner's own eye: he typed 1.67 on Searound under the old unit, saw 219 world
+  // px and judged it good ("the racers are not too big"). 0.75 x 300 = 225 px is that picture,
+  // 2.7% wider — below what the eye separates. Every other state keeps the ratio to LEADER it had.
   cameraStateProfiles: {
     OVERVIEW: {
-      trackWidths: 4, // the widest shot — roughly double LEADER
+      visibleCorridors: 1.5, // 450 world px — the widest shot, double LEADER
       trackingTC: 1.5,
       entryTC: 1.5,
       leadInDuration: 0, // seconds camera holds lead-in position before following racer
@@ -78,7 +90,7 @@ export const DEFAULT_CAMERA_CONFIG = {
       maxEntryDurationMs: 10000, // timeout fallback: force tracking after this many ms in entry
     },
     LEADER_ZOOM: {
-      trackWidths: 2, // the reference shot
+      visibleCorridors: 0.75, // 225 world px — the reference shot, the owner's own eye
       trackingTC: 0.25,
       entryTC: 0.8,
       leadInDuration: 0.3,
@@ -91,7 +103,7 @@ export const DEFAULT_CAMERA_CONFIG = {
       leadOutEnabled: false, // OFF by default — lead-out causes "camera stops, racer runs away" effect
     },
     BATTLE_ZOOM: {
-      trackWidths: 1.5, // tighter than LEADER
+      visibleCorridors: 0.55, // 165 world px — tighter than LEADER
       trackingTC: 0.25,
       entryTC: 0.8,
       leadInDuration: 0.2,
@@ -104,7 +116,7 @@ export const DEFAULT_CAMERA_CONFIG = {
       leadOutEnabled: false,
     },
     COMEBACK_ZOOM: {
-      trackWidths: 1.5, // tighter than LEADER
+      visibleCorridors: 0.55, // 165 world px — tighter than LEADER
       trackingTC: 0.25,
       entryTC: 0.8,
       leadInDuration: 0.3,
@@ -118,9 +130,9 @@ export const DEFAULT_CAMERA_CONFIG = {
     },
     PHOTO_FINISH: {
       // CAMERA-FRAMING-1: its OWN entry at last. It borrowed BATTLE's numbers, so the most dramatic
-      // shot in the race was never closer than an ordinary battle. 1.0 is tighter than BATTLE's 1.5
-      // and safe: its guarantee is the two contenders, not the corridor, so the pair decides.
-      trackWidths: 1,
+      // shot in the race was never closer than an ordinary battle. It is now the tightest setting
+      // shipped, and safe: its guarantee is the two contenders, not the corridor, so the pair decides.
+      visibleCorridors: 0.4, // 120 world px — the tightest shot in the race
       trackingTC: 0.25,
       entryTC: 0.8,
       leadInDuration: 0,
@@ -133,7 +145,7 @@ export const DEFAULT_CAMERA_CONFIG = {
       leadOutEnabled: false,
     },
     LEAD_CHANGE: {
-      trackWidths: 2, // same framing as LEADER — only the subject differs
+      visibleCorridors: 0.75, // same framing as LEADER — only the subject differs
       trackingTC: 0.25,
       entryTC: 0.8,
       leadInDuration: 0.3,
@@ -255,9 +267,9 @@ export const DEFAULT_CAMERA_CONFIG = {
   photoFinishSlowmoFactor: 0.5, // physics slow-motion factor during the photo-finish shot (1.0 = normal, 0.5 = half speed)
   photoFinishLeadProgress: 0.97, // predictive gate: leader progress (fraction of finishT, 0..1) at which the one-shot close-check fires BEFORE the line
   // Countdown camera phase: zooms from start-zoom to OVERVIEW zoom during the pre-race countdown.
-  // CAMERA-ZOOM-UNIT-1: the countdown opens on the same unit — a wide establishing shot that
+  // CAMERA-REFERENCE-WIDTH-1: the countdown opens on the same unit — a wide establishing shot that
   // eases into OVERVIEW. Clamped by the projection, so on a small world it means "the whole world".
-  countdownStartTrackWidths: 8,
+  countdownStartCorridors: 3,
   countdownDurationMs: 4000, // matches the default race countdown duration
   // State overlay: narrative text shown during first seconds of OVERVIEW / BATTLE / COMEBACK.
   stateOverlayEnabled: true,

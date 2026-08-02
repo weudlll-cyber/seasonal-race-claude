@@ -40,16 +40,26 @@ const STATE_LABELS = {
 
 const PROFILE_FIELDS = [
   {
-    key: 'trackWidths',
-    label: 'Track widths visible',
-    min: 1,
-    max: 12,
-    step: 0.5,
+    key: 'visibleCorridors',
+    label: 'World in shot (corridors)',
+    // CAMERA-REFERENCE-WIDTH-1 range, derived from measurement rather than inherited:
+    //  min 0.25 — at 0.25 the largest creature (the luge, 59 px) already fills 79% of the frame
+    //             height; below that a racer is a portrait rather than a shot.
+    //  max 13   — the widest track needs 12.55 corridors to be fully in frame (Seatrack).
+    //  step 0.05 — 7% of the shot at the LEADER default, 3% at OVERVIEW; roughly the smallest
+    //             change the eye separates. The old min of 1.0 was the full-track-width guarantee's
+    //             threshold and is gone with it: the guarantee now computes on its own.
+    min: 0.25,
+    max: 13,
+    step: 0.05,
     tip: (v, n) =>
-      `How much of the world ${n} shows: ${v.toFixed(1)} track widths across the frame. ` +
-      `HIGHER = WIDER. The same number frames the same shot on every track, open or closed, at any ` +
-      `world size — so ${n} at 2 looks like every other state at 2. 1.0 is the floor: the full ` +
-      `track width is always visible, so two racers side by side can never both leave the frame.`,
+      `How much world ${n} shows: ${v.toFixed(2)} standard corridors across the frame, i.e. ` +
+      `${Math.round(v * 300)} world pixels at the default 300 px reference. HIGHER = WIDER. ` +
+      `The same number now shows the SAME AMOUNT OF WORLD on every track — a narrow track no ` +
+      `longer gets a tighter shot just for being narrow. It is not measured in this track's own ` +
+      `width any more, so it is not the same scale as the old "track widths" number: 0.75 here is ` +
+      `roughly what 2 used to be on a wide track. Racers still differ in size between tracks ` +
+      `because the animals differ — a manta is bigger than a horse, and that part is deliberate.`,
   },
   {
     key: 'trackingTC',
@@ -349,21 +359,21 @@ function CameraAdvancedSection() {
               className={s.label}
               style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}
             >
-              Countdown Start Zoom (px)
+              Countdown opening shot (corridors)
               <InfoTooltip
-                text={`How wide the countdown opens, in track widths, before easing into Overview. Clamped to the widest the world allows. Currently: ${config.countdownStartTrackWidths ?? 8}.`}
+                text={`How wide the countdown opens, in standard corridors, before easing into Overview. Clamped to the widest the world allows, so on a small world it simply means "the whole world". Currently: ${config.countdownStartCorridors ?? 3} = ${Math.round((config.countdownStartCorridors ?? 3) * (config.referenceCorridorPx ?? 300))} world pixels.`}
               />
             </label>
             <input
               type="number"
               className={s.input}
-              min={1}
-              max={200}
-              step={1}
-              value={config.countdownStartTrackWidths ?? 8}
+              min={0.25}
+              max={30}
+              step={0.25}
+              value={config.countdownStartCorridors ?? 3}
               onChange={(e) => {
                 const v = Number(e.target.value);
-                if (v >= 1 && v <= 30) set('countdownStartTrackWidths', v);
+                if (v >= 0.25 && v <= 30) set('countdownStartCorridors', v);
               }}
             />
           </div>
@@ -625,6 +635,23 @@ function CameraAdvancedSection() {
             }}
             display={`${config.overviewStartDelay ?? 15}s`}
             tip="Seconds after race start before OVERVIEW may appear in the pool for the first time. Default 15 s."
+          />
+          <SliderRow
+            label="Standard corridor (world px)"
+            testId="regie-reference-corridor-px"
+            // Range from measurement: 100 px is below the narrowest corridor shipped (131) and is
+            // where a shot stops holding a start row; 600 is double the widest. Step 10 because a
+            // 10 px change is 3% of the shot — about the smallest that reads on screen.
+            min={100}
+            max={600}
+            step={10}
+            value={config.referenceCorridorPx ?? 300}
+            onChange={(e) => {
+              const v = parseInt(e.target.value, 10);
+              if (v >= 100 && v <= 600) set('referenceCorridorPx', v);
+            }}
+            display={`${config.referenceCorridorPx ?? 300} px`}
+            tip="The width, in world pixels, that ONE corridor means for every camera setting. Every state's 'World in shot' number is measured in these, so changing this rescales EVERY shot on EVERY track at once — raise it and the whole game pulls back, lower it and everything moves in. It is what makes one number mean the same picture on a narrow track and a wide one. Default 300: the widest corridor drawn so far, so today every track is judged against the same yardstick. A track wider than this keeps its own width instead, so its corridor is never cropped."
           />
           <SliderRow
             label="Company: min racers in frame"

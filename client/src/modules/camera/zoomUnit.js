@@ -3,40 +3,57 @@
 // Path:        client/src/modules/camera/zoomUnit.js
 // Project:     RaceArena
 // Created:     2026-08-02
-// Description: THE camera's zoom unit (CAMERA-ZOOM-UNIT-1): TRACK WIDTHS.
+// Description: THE camera's zoom unit (CAMERA-REFERENCE-WIDTH-1): STANDARD CORRIDORS.
 //
 //              The owner's design, in his words: "Eigentlich wird immer genau das Gleiche
 //              angezeigt, ich kann aber über den Zoomfaktor steuern, wie viel ich wirklich sehen
 //              will." One framing rule for every state; the state says WHO the camera is on, a
 //              per-state number says HOW FAR IN. This module is that number's definition.
 //
-//              THE UNIT. `trackWidths` = how many track widths of world fit ACROSS THE FRAME —
-//              measured on the SHORT screen axis. Two reasons it is the short axis and not the
-//              long one:
-//                1. The owner's floor is "at minimum I must see the full track width, so that in
-//                   the worst case both racers are still visible". A track corridor is drawn
-//                   horizontally at one point of the lap and vertically at another, so the honest
-//                   guarantee has to hold on the WORST axis. Defining the parameter on that same
-//                   axis makes the guarantee exactly `trackWidths >= 1` — his sentence IS the
-//                   number, on every track, with no per-topology threshold to remember.
-//                2. On every shipped track the short axis is Y (visible height / visible width is
-//                   0.67 closed, 0.56 open), so "short axis" is not a moving target.
+//              THE UNIT. `visibleCorridors` = how much world is in shot, measured in STANDARD
+//              corridors, on the SHORT screen axis. A standard corridor is one width in world
+//              pixels — `referenceCorridorPx`, a Dev Screen value — and NOT the track's own width.
+//
+//              WHY IT IS NO LONGER THE TRACK'S OWN WIDTH. CAMERA-ZOOM-UNIT-1 divided by the actual
+//              corridor, which made the owner's sentence exactly the number ("1.0 = the full track
+//              width"). It also made the picture uneven in a way he could see. Measured across all
+//              ten tracks at 40 racers, a racer's height on screen came out as
+//
+//                  racer / frame  =  1.9 / (racers per row)
+//
+//              because the track width cancels on BOTH sides — the camera divides by it, and the
+//              start-grid packing sizes the sprite from it. What survives is an integer. Searound
+//              is the extreme on both counts at once (the narrowest corridor, 131 px, carrying the
+//              biggest animal, the manta), so only 6 fit in a row and the racer filled 31.7% of the
+//              frame against Mountainstreet's 9.5% — a 3.33x spread with no author behind it.
+//              Dividing by a FIXED reference drops that spread to 2.21x, and the remainder is
+//              exactly the spread of the AUTHORED creature sizes: the manta stays bigger because it
+//              IS bigger. Normalising the creatures themselves is the other half and is parked by
+//              the owner's decision — sprite size drives `computeRacersPerRow`, so it moves the
+//              start grid and every race, and it needs the engine ceremony.
+//
+//              max(reference, actual width), and why: a track authored WIDER than the reference
+//              keeps its own width, so the setting can never ask for less world than that track's
+//              corridor occupies. On the ten tracks shipped today the widest is exactly 300, so this
+//              is identical to a plain 300 — it is insurance for the next track he draws, not
+//              present-day behaviour.
 //
 //              WHY IT IS RESOLUTION- AND TOPOLOGY-INVARIANT, by construction:
-//                camZoom   = canvasH / (n * trackWidthPx * axisY)
-//                effY      = camZoom * axisY = canvasH / (n * trackWidthPx)
-//                visibleH  = canvasH / effY  = n * trackWidthPx        ← the world size cancels
-//              The same n therefore shows the same number of track widths on a 3072-px closed
-//              world and a 6144-px open one. That is the owner's precondition, met by algebra
-//              rather than by calibration.
+//                camZoom   = canvasH / (n * referenceWidthPx * axisY)
+//                effY      = camZoom * axisY = canvasH / (n * referenceWidthPx)
+//                visibleH  = canvasH / effY  = n * referenceWidthPx     <- the world size cancels
+//              The same n therefore shows the same WORLD on a 131-px corridor and on a 300-px one,
+//              on a 3072-px closed world and a 6144-px open one. That is the whole property this
+//              unit buys, met by algebra rather than by calibration.
 //
-//              WHAT IT REPLACES. Five different formulas whose numbers did not mean the same
-//              thing: four states used `spriteScale` (an absolute screen-px-per-world-px scale, so
-//              the same setting framed 2.36 track widths on Mountainstreet and 5.40 on Searound)
-//              and OVERVIEW derived its zoom from a target SPRITE SIZE normalised by
-//              `2 x W_ref / racersPerRow` — a start-grid packing quantity whose racer-count
-//              division was measured non-monotonic (30 racers 1.65 TW, 40 racers 2.48, 60 racers
-//              1.65). Neither survives here. There is no sprite size in this file.
+//              THE GUARANTEE DOES NOT LIVE HERE ANY MORE. This module used to clamp the setting to
+//              at least one real track width. That clamp belonged to a unit whose number MEANT track
+//              widths; under a reference it would silently re-introduce the per-track unevenness the
+//              unit exists to remove — a narrow track would still be pinned to its own narrow
+//              corridor. The corridor guarantee now lives solely in framingRule.js, where it is
+//              orientation-aware, reads the REAL corridor, and is applied by the director with
+//              Math.min alongside the pair and company guarantees. One place where a shot is
+//              widened, not two.
 //
 //              Pure: no state, no config reads, no imports. Everything the caller needs to test it
 //              is an argument.
@@ -47,94 +64,100 @@ const CANVAS_W = 1280;
 const CANVAS_H = 720;
 
 /**
- * The cam.zoom that shows exactly `trackWidths` track widths across the short (Y) screen axis.
+ * The width in world px that ONE standard corridor means on this track.
  *
- * @param {number} trackWidths   the setting, in track widths (> 0)
- * @param {number} trackWidthPx  the track's corridor width in world px
- * @param {number} axisY         the projection's world->screen Y scale at cam.zoom = 1
- * @param {number} [canvasH]     canvas height the projection is defined against
- * @returns {number} cam.zoom (unclamped — the caller applies the projection range and the guarantee)
+ * `max(reference, actual)`: narrow tracks are framed against the shared reference — that is the
+ * point of the unit — while a track wider than the reference keeps its own width. Without the max,
+ * authoring a 400-px track would make 1.0 show 0.75 of its corridor and hand every tight shot there
+ * to the guarantee instead of to the setting.
+ *
+ * @param {number} referenceCorridorPx  the standard corridor, in world px (Dev Screen value)
+ * @param {number} trackWidthPx         this track's actual corridor width
+ * @returns {number} world px per corridor; NaN when neither input is usable
  */
-export function camZoomForTrackWidths(trackWidths, trackWidthPx, axisY, canvasH = CANVAS_H) {
-  if (!(trackWidths > 0) || !(trackWidthPx > 0) || !(axisY > 0)) return NaN;
-  return canvasH / (trackWidths * trackWidthPx * axisY);
+export function referenceWidthFor(referenceCorridorPx, trackWidthPx) {
+  const ref =
+    Number.isFinite(referenceCorridorPx) && referenceCorridorPx > 0 ? referenceCorridorPx : 0;
+  const tw = Number.isFinite(trackWidthPx) && trackWidthPx > 0 ? trackWidthPx : 0;
+  const out = Math.max(ref, tw);
+  return out > 0 ? out : NaN;
 }
 
 /**
- * The inverse: how many track widths a given cam.zoom actually shows across the short axis.
+ * The cam.zoom that shows exactly `corridors` standard corridors across the short (Y) screen axis.
+ *
+ * @param {number} corridors        the setting (> 0)
+ * @param {number} referenceWidthPx world px per corridor — from `referenceWidthFor`
+ * @param {number} axisY            the projection's world->screen Y scale at cam.zoom = 1
+ * @param {number} [canvasH]        canvas height the projection is defined against
+ * @returns {number} cam.zoom (unclamped — the caller applies the range and the guarantees)
+ */
+export function camZoomForCorridors(corridors, referenceWidthPx, axisY, canvasH = CANVAS_H) {
+  if (!(corridors > 0) || !(referenceWidthPx > 0) || !(axisY > 0)) return NaN;
+  return canvasH / (corridors * referenceWidthPx * axisY);
+}
+
+/**
+ * The inverse: how many standard corridors a given cam.zoom actually shows across the short axis.
  * This is what a test or a diagnostic should assert on — it reads the picture, not the setting.
  */
-export function trackWidthsForCamZoom(camZoom, trackWidthPx, axisY, canvasH = CANVAS_H) {
-  if (!(camZoom > 0) || !(trackWidthPx > 0) || !(axisY > 0)) return NaN;
-  return canvasH / (camZoom * axisY * trackWidthPx);
+export function corridorsForCamZoom(camZoom, referenceWidthPx, axisY, canvasH = CANVAS_H) {
+  if (!(camZoom > 0) || !(referenceWidthPx > 0) || !(axisY > 0)) return NaN;
+  return canvasH / (camZoom * axisY * referenceWidthPx);
 }
 
 /**
- * How many track widths are visible on EACH axis at a cam.zoom. The long axis follows from the
- * projection's aspect ratio and is reported, never set: closed tracks scale X and Y differently
- * (an 18.5% anisotropy that predates this block), so the long axis shows 1.50x the short-axis
- * count on a closed track and 1.78x on an open one.
+ * The same picture in the unit a person can check against a ruler: how much WORLD is in shot, in
+ * world px, across the short axis. It is `corridorsForCamZoom * referenceWidthPx` by construction,
+ * and it exists because "225 world px" is falsifiable against a marker while "0.75 corridors" is not.
  */
-export function visibleTrackWidths(
+export function visibleWorldPx(camZoom, axisY, canvasH = CANVAS_H) {
+  if (!(camZoom > 0) || !(axisY > 0)) return NaN;
+  return canvasH / (camZoom * axisY);
+}
+
+/**
+ * How many standard corridors are visible on EACH axis at a cam.zoom. The long axis follows from the
+ * projection's aspect ratio and is reported, never set: closed tracks scale X and Y differently (an
+ * 18.5% anisotropy that predates this block), so the long axis shows 1.50x the short-axis count on a
+ * closed track and 1.78x on an open one.
+ */
+export function visibleCorridors(
   camZoom,
-  trackWidthPx,
+  referenceWidthPx,
   axisX,
   axisY,
   canvasW = CANVAS_W,
   canvasH = CANVAS_H
 ) {
   return {
-    across: trackWidthsForCamZoom(camZoom, trackWidthPx, axisY, canvasH),
-    along: trackWidthsForCamZoom(camZoom, trackWidthPx, axisX, canvasW),
+    across: corridorsForCamZoom(camZoom, referenceWidthPx, axisY, canvasH),
+    along: corridorsForCamZoom(camZoom, referenceWidthPx, axisX, canvasW),
   };
 }
 
 /**
- * THE GUARANTEE (Part B): the full track width is always visible.
+ * Resolve a state's setting into a cam.zoom: the unit, then the projection's physical range. ONE
+ * function, used by every state — that is the whole point of the block.
  *
- * Returns the TIGHTEST cam.zoom at which a full track width still fits on BOTH axes. It is a
- * ceiling on how far in the camera may go — a guarantee that WIDENS the shot when a setting asks
- * for more than it allows. It never steers, never moves the centre, and never picks a subject
- * (Lesson 192); a caller applies it with `Math.min` and nothing else.
+ * No guarantee is applied here; see the file header. The corridor guarantee is orientation-aware,
+ * reads the real corridor, and is applied by the director together with the pair and company
+ * guarantees.
  *
- * Under this unit the guarantee is exactly `trackWidths >= 1` on the short axis. The X term is
- * kept anyway so the guarantee stays correct if a future canvas or projection makes X the shorter
- * axis — the property must not depend on which axis happens to be smaller today.
- */
-export function guaranteeCamZoom(
-  trackWidthPx,
-  axisX,
-  axisY,
-  canvasW = CANVAS_W,
-  canvasH = CANVAS_H
-) {
-  if (!(trackWidthPx > 0)) return Infinity;
-  const byX = axisX > 0 ? canvasW / (trackWidthPx * axisX) : Infinity;
-  const byY = axisY > 0 ? canvasH / (trackWidthPx * axisY) : Infinity;
-  return Math.min(byX, byY);
-}
-
-/**
- * Resolve a state's setting into a cam.zoom: the unit, then the guarantee, then the projection's
- * own physical range. ONE function, used by every state — that is the whole point of the block.
- *
- * @param {number} trackWidths  the state's setting
+ * @param {number} corridors  the state's setting
  * @param {object} p
- * @param {number} p.trackWidthPx
- * @param {number} p.axisX
+ * @param {number} p.referenceWidthPx
  * @param {number} p.axisY
  * @param {(z:number)=>number} p.clampCamZoom  the projection's range clamp
- * @param {number} [p.fallbackTrackWidths]     used when the setting is not a finite positive number
+ * @param {number} [p.fallbackCorridors]  used when the setting is not a finite positive number
  * @returns {number} cam.zoom
  */
-export function resolveZoomForTrackWidths(
-  trackWidths,
-  { trackWidthPx, axisX, axisY, clampCamZoom, fallbackTrackWidths = 2 }
+export function resolveZoomForCorridors(
+  corridors,
+  { referenceWidthPx, axisY, clampCamZoom, fallbackCorridors = 0.75 }
 ) {
-  const n = Number.isFinite(trackWidths) && trackWidths > 0 ? trackWidths : fallbackTrackWidths;
-  const raw = camZoomForTrackWidths(n, trackWidthPx, axisY);
+  const n = Number.isFinite(corridors) && corridors > 0 ? corridors : fallbackCorridors;
+  const raw = camZoomForCorridors(n, referenceWidthPx, axisY);
   if (!Number.isFinite(raw)) return clampCamZoom(NaN);
-  // The guarantee outranks the setting: asking for less than one track width gets one track width.
-  const guaranteed = Math.min(raw, guaranteeCamZoom(trackWidthPx, axisX, axisY));
-  return clampCamZoom(guaranteed);
+  return clampCamZoom(raw);
 }

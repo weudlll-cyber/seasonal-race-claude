@@ -172,6 +172,18 @@ a guaranteed companion does not have to sit inside the subject's safe region.
   safe region and delivers one racer fewer. Camera-only; the shipped world `dc4647be0f55ebdb` is
   untouched on both sides. Config schema v20.
 
+### Camera zoom unit becomes a standard corridor — CAMERA-REFERENCE-WIDTH-1 (2026-08-03, branch `camera-refactor`)
+Return point captured before the zoom unit stopped dividing by each track's OWN corridor. Measurement
+found the reason the owner could see: a racer's height on screen came out as 1.9 / (racers per row) on
+all ten tracks, because the track width cancels on both sides — the camera divides by it and the
+start-grid packing sizes the sprite from it. Searound is the extreme on both counts (narrowest
+corridor, biggest animal) so its racer filled 31.7% of the frame against Mountainstreet's 9.5%. The
+unit now divides by a Dev Screen reference width instead, applied as `max(reference, actual)`.
+- `pre/reference-width` (`1abc9383`, 2026-08-03) — the last state where `trackWidths` means the
+  track's own corridor, the zoom unit carries its own full-track-width clamp, and the setting's range
+  starts at 1.0. Camera-only; the shipped world `dc4647be0f55ebdb` is untouched on both sides. Config
+  schema v20 (this block ships v21, which discards a stored v20 camera config).
+
 ## Active-phase tags (temporary scaffolding — to collapse later)
 
 Step-tags from the runaway phase (now CLOSED 2026-07-29, see below) and any later work — safe return points, not permanent anchors. They collapse into
@@ -589,6 +601,7 @@ The full list of the 177 retired tags is recorded below for the archive.
 - `pre/company`
 - `pre/company-2`
 - `pre/framing`
+- `pre/reference-width`
 - `pre/picture-fixes`
 - `pre/v4-on-trunk`
 - `pre/zoom-unit`

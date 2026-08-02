@@ -15,7 +15,12 @@ import { mulberry32 } from '../racePlanner.js';
 import { shortestArcDeltaT } from '../../utils/mathUtils.js';
 import { computeTimingFromConfig, BATTLE_PULK_THRESHOLD_T } from './cameraTimingComputation.js';
 import { projectionForTrack, OPEN_TRACK_BASE_ZOOM as _PROJ_OPEN_BASE } from './projection.js';
-import { resolveZoomForTrackWidths, guaranteeCamZoom, trackWidthsForCamZoom } from './zoomUnit.js';
+import {
+  resolveZoomForCorridors,
+  referenceWidthFor,
+  corridorsForCamZoom,
+  visibleWorldPx,
+} from './zoomUnit.js';
 import { frameExtentAlong } from './frameGeometry.js';
 import {
   framingFor,
@@ -65,17 +70,21 @@ const _OVERVIEW_COOLDOWN_MS = 15000; // default ms after leaving OVERVIEW before
 const CANVAS_W = 1280; // reference canvas width
 const CANVAS_H_REF = 720; // reference canvas height for pct → px conversion
 const TOP_N = 3; // camera focuses on the top-N racers by position
-// CAMERA-ZOOM-UNIT-1 fallbacks, in TRACK WIDTHS across the frame, used when no config (or no
-// cameraStateProfiles) is provided. They match DEFAULT_CAMERA_CONFIG so a bare-config director and
-// a configured one frame the same shot. OVERVIEW is the widest; BATTLE/COMEBACK are tighter than
-// LEADER; every value stays above the guarantee (1.0) so nothing is clamped at rest.
-const DEFAULT_TRACK_WIDTHS = {
-  overview: 4,
-  leader: 2,
-  leadChange: 2,
-  battle: 1.5,
-  comeback: 1.5,
+// CAMERA-REFERENCE-WIDTH-1 fallbacks, in STANDARD CORRIDORS across the frame, used when no config
+// (or no cameraStateProfiles) is provided. They match DEFAULT_CAMERA_CONFIG so a bare-config
+// director and a configured one frame the same shot. OVERVIEW is the widest; BATTLE/COMEBACK are
+// tighter than LEADER; PHOTO_FINISH is the tightest. At the shipped 300 px reference LEADER is
+// 225 world px — the picture the owner judged good on Searound.
+const DEFAULT_CORRIDORS = {
+  overview: 1.5,
+  leader: 0.75,
+  leadChange: 0.75,
+  battle: 0.55,
+  comeback: 0.55,
+  photoFinish: 0.4,
 };
+/** CAMERA-REFERENCE-WIDTH-1: world px per standard corridor when no config reaches the director. */
+const DEFAULT_REFERENCE_CORRIDOR_PX = 300;
 /** CAMERA-COMPANY-1 default: the anchor plus this many−1 others must stay in frame. */
 const DEFAULT_MIN_RACERS_VISIBLE = 3;
 /** Fallback corridor width (world px) when no track width and no shape reach the director. */
@@ -377,38 +386,38 @@ export class CameraDirector {
   }
 
   /**
-   * CAMERA-ZOOM-UNIT-1: THE zoom rule. One function, every state.
+   * CAMERA-REFERENCE-WIDTH-1: THE zoom rule. One function, every state.
    *
-   * `trackWidths` is how many track widths of world are visible across the frame. The unit, the
-   * full-track-width guarantee and the projection's physical range all live in zoomUnit.js; this
-   * is the director's single call into it, so there is exactly one place where a setting becomes
-   * a cam.zoom.
+   * `corridors` is how much world is visible across the frame, in STANDARD corridors — a fixed
+   * reference width, not this track's own. The unit and the projection's physical range live in
+   * zoomUnit.js; this is the director's single call into it, so there is exactly one place where a
+   * setting becomes a cam.zoom. No guarantee is applied here: the corridor, pair and company
+   * guarantees are combined once, in `_setTargets`, with Math.min.
    *
-   * @param {number} trackWidths
+   * @param {number} corridors
    * @param {number} [fallback]  used when the setting is missing or corrupt
    * @returns {number} cam.zoom
    */
-  _computeZoomForTrackWidths(trackWidths, fallback = DEFAULT_TRACK_WIDTHS.leader) {
-    return resolveZoomForTrackWidths(trackWidths, {
-      trackWidthPx: this._trackWidthPx,
-      axisX: this._proj.axisX,
+  _computeZoomForCorridors(corridors, fallback = DEFAULT_CORRIDORS.leader) {
+    return resolveZoomForCorridors(corridors, {
+      referenceWidthPx: this._referenceWidthPx,
       axisY: this._proj.axisY,
       clampCamZoom: (z) => this._proj.clampCamZoom(z),
-      fallbackTrackWidths: fallback,
+      fallbackCorridors: fallback,
     });
   }
 
-  /**
-   * The tightest cam.zoom that still shows a full track width (Part B). A CEILING applied with
-   * Math.min — it widens a shot, never steers one.
-   */
-  _trackWidthGuaranteeZoom() {
-    return guaranteeCamZoom(this._trackWidthPx, this._proj.axisX, this._proj.axisY);
+  /** Diagnostics/tests: how many standard corridors the camera is actually showing right now. */
+  get visibleCorridors() {
+    return corridorsForCamZoom(this.zoom, this._referenceWidthPx, this._proj.axisY);
   }
 
-  /** Diagnostics/tests: how many track widths the camera is actually showing right now. */
-  get visibleTrackWidths() {
-    return trackWidthsForCamZoom(this.zoom, this._trackWidthPx, this._proj.axisY);
+  /**
+   * Diagnostics/tests: how much WORLD is in shot right now, in world px across the short axis.
+   * The falsifiable form of the same reading — a marker records world px, not corridors.
+   */
+  get visibleWorldPx() {
+    return visibleWorldPx(this.zoom, this._proj.axisY);
   }
 
   /**
@@ -428,33 +437,39 @@ export class CameraDirector {
    */
   _computeZoomLevels(config) {
     const profiles = config?.cameraStateProfiles;
+    // CAMERA-REFERENCE-WIDTH-1: the standard corridor, and the max() that keeps a track WIDER than
+    // the reference framed by its own width, so the setting can never ask to crop its corridor.
+    const refCfg = config?.referenceCorridorPx;
+    this._referenceCorridorPx =
+      Number.isFinite(refCfg) && refCfg > 0 ? refCfg : DEFAULT_REFERENCE_CORRIDOR_PX;
+    this._referenceWidthPx = referenceWidthFor(this._referenceCorridorPx, this._trackWidthPx);
     const widthOf = (state, fallback) => {
-      const v = profiles?.[state]?.trackWidths;
+      const v = profiles?.[state]?.visibleCorridors;
       return Number.isFinite(v) && v > 0 ? v : fallback;
     };
-    this._overviewTrackWidths = widthOf('OVERVIEW', DEFAULT_TRACK_WIDTHS.overview);
-    this._leaderZoom = this._computeZoomForTrackWidths(
-      widthOf('LEADER_ZOOM', DEFAULT_TRACK_WIDTHS.leader)
+    this._overviewCorridors = widthOf('OVERVIEW', DEFAULT_CORRIDORS.overview);
+    this._leaderZoom = this._computeZoomForCorridors(
+      widthOf('LEADER_ZOOM', DEFAULT_CORRIDORS.leader)
     );
-    this._leadChangeZoom = this._computeZoomForTrackWidths(
-      widthOf('LEAD_CHANGE', DEFAULT_TRACK_WIDTHS.leadChange)
+    this._leadChangeZoom = this._computeZoomForCorridors(
+      widthOf('LEAD_CHANGE', DEFAULT_CORRIDORS.leadChange)
     );
-    this._battleZoom = this._computeZoomForTrackWidths(
-      widthOf('BATTLE_ZOOM', DEFAULT_TRACK_WIDTHS.battle)
+    this._battleZoom = this._computeZoomForCorridors(
+      widthOf('BATTLE_ZOOM', DEFAULT_CORRIDORS.battle)
     );
-    this._comebackZoom = this._computeZoomForTrackWidths(
-      widthOf('COMEBACK_ZOOM', DEFAULT_TRACK_WIDTHS.comeback)
+    this._comebackZoom = this._computeZoomForCorridors(
+      widthOf('COMEBACK_ZOOM', DEFAULT_CORRIDORS.comeback)
     );
     // CAMERA-FRAMING-1: PHOTO_FINISH gets its OWN setting. It borrowed BATTLE's number, so the most
     // dramatic shot in the race was never any closer than an ordinary battle. The fallback is
     // BATTLE's value, so a config written before this key existed frames exactly as it used to.
-    this._photoFinishZoom = this._computeZoomForTrackWidths(
-      widthOf('PHOTO_FINISH', widthOf('BATTLE_ZOOM', DEFAULT_TRACK_WIDTHS.battle))
+    this._photoFinishZoom = this._computeZoomForCorridors(
+      widthOf('PHOTO_FINISH', DEFAULT_CORRIDORS.photoFinish)
     );
     // OVERVIEW is the same rule at the widest setting — no sprite size, no racer count.
-    this._overviewStateZoom = this._computeZoomForTrackWidths(
-      this._overviewTrackWidths,
-      DEFAULT_TRACK_WIDTHS.overview
+    this._overviewStateZoom = this._computeZoomForCorridors(
+      this._overviewCorridors,
+      DEFAULT_CORRIDORS.overview
     );
     this._innerFramePct = config?.targetInnerFramePct ?? DEFAULT_INNER_FRAME_PCT;
     // CAMERA-COMPANY-1: how many racers must be in frame, INCLUDING the anchor. <= 1 disables the
@@ -478,12 +493,12 @@ export class CameraDirector {
     const lff = config?.leaderForwardFrac;
     this._leaderForwardFrac = Number.isFinite(lff) && lff > 0.5 && lff <= 0.8 ? lff : null;
     // Countdown start zoom: convert spritePx → spriteScale, typically clamped to overviewZoom.
-    // CAMERA-ZOOM-UNIT-1: the countdown opens on the same unit. `countdownStartTrackWidths` is a
+    // CAMERA-REFERENCE-WIDTH-1: the countdown opens on the same unit. `countdownStartCorridors` is a
     // wide establishing shot that eases into OVERVIEW; it is clamped by the projection like every
     // other setting, so on a small world it simply means "the whole world".
-    this._countdownStartZoom = this._computeZoomForTrackWidths(
-      config?.countdownStartTrackWidths,
-      DEFAULT_TRACK_WIDTHS.overview * 2
+    this._countdownStartZoom = this._computeZoomForCorridors(
+      config?.countdownStartCorridors,
+      DEFAULT_CORRIDORS.overview * 2
     );
   }
 
