@@ -11,7 +11,7 @@
 
 import { describe, it, expect } from 'vitest';
 import { frameExtentAlong } from './frameGeometry.js';
-import { CameraDirector, CAM_STATE } from './CameraDirector.js';
+import { CameraDirector } from './CameraDirector.js';
 import { DEFAULT_CAMERA_CONFIG } from '../cameraConfig.js';
 
 const W = 1280;

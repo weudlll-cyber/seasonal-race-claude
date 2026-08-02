@@ -14,11 +14,7 @@ import { diagMixin } from './CameraDirectorDiag.js';
 import { mulberry32 } from '../racePlanner.js';
 import { shortestArcDeltaT } from '../../utils/mathUtils.js';
 import { computeTimingFromConfig, BATTLE_PULK_THRESHOLD_T } from './cameraTimingComputation.js';
-import {
-  projectionForTrack,
-  OPEN_TRACK_BASE_ZOOM as _PROJ_OPEN_BASE,
-  MAX_CAM_ZOOM,
-} from './projection.js';
+import { projectionForTrack, OPEN_TRACK_BASE_ZOOM as _PROJ_OPEN_BASE } from './projection.js';
 import { resolveZoomForTrackWidths, guaranteeCamZoom, trackWidthsForCamZoom } from './zoomUnit.js';
 import { frameExtentAlong } from './frameGeometry.js';
 import {
@@ -63,16 +59,9 @@ const _TC_LEADER = 0.3;
 const _TC_BATTLE = 0.3;
 const _TC_COMEBACK = 0.3;
 const _OVERVIEW_COOLDOWN_MS = 15000; // default ms after leaving OVERVIEW before it can recur
-// Ceiling for inverse (targetSize-based) zoom; raised from 5 to support worldW=6144 (Mountainstreet).
-// CAMERA-PROJECTION-1: the value now lives in projection.js as MAX_CAM_ZOOM — it is a cap in cam.zoom
-// space, which is why it means "never less than 10% of the world" on a closed track but "never tighter
-// than 15x" on an open one (CAMERA-REFACTOR-1 B2). Aliased here; the number is unchanged.
-const MAX_INVERSE_ZOOM = MAX_CAM_ZOOM;
 const CANVAS_W = 1280; // reference canvas width
 const CANVAS_H_REF = 720; // reference canvas height for pct → px conversion
 const TOP_N = 3; // camera focuses on the top-N racers by position
-// migration divisor for legacy/countdown conversion; px equivalent used in the scale formulae below.
-const FALLBACK_REFERENCE_SPRITE_SIZE = 36;
 // CAMERA-ZOOM-UNIT-1 fallbacks, in TRACK WIDTHS across the frame, used when no config (or no
 // cameraStateProfiles) is provided. They match DEFAULT_CAMERA_CONFIG so a bare-config director and
 // a configured one frame the same shot. OVERVIEW is the widest; BATTLE/COMEBACK are tighter than
@@ -141,7 +130,7 @@ export class CameraDirector {
    *   Call updateConfig() for live-apply without re-construction.
    * @param {number} [drawnBodyWidthRefPx=0]
    *   displaySize × displaySizeScale for the race's racer type. When 0, a console
-   *   warning is emitted and FALLBACK_REFERENCE_SPRITE_SIZE (36px) is used instead.
+   *   warning is emitted and a fallback body size is used instead.
    * @param {object|null} [shape=null]
    *   EditorShape instance for the current track. When provided, BATTLE_ZOOM pan
    *   targets are resolved at the arc-length midpoint on the racing line rather than

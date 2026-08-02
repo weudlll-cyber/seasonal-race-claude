@@ -190,7 +190,11 @@ knob should not exist before the question does.
 **Removed — key, control, label, tooltip and code together:** `minRacersVisible`, `leaderMinZoom`,
 `leaderMinZoomFraction`, `zoomOutStepPerFrame`, `overviewFrameRacers`, `overviewMinSpriteFrac` (six
 config keys, six Dev Screen sliders); `_containAnchorInFrame`, `_countVisibleRacers`,
-`_zoomFloorForMinVisible`, `_setOverviewGroupTargets` (four methods); the whole migration chain.
+`_zoomFloorForMinVisible`, `_setOverviewGroupTargets` (four methods); the whole migration chain; and
+three declarations this block orphaned or exposed — `FALLBACK_REFERENCE_SPRITE_SIZE` (its last
+consumer, the countdown, moved to track widths in CAMERA-ZOOM-UNIT-1), `MAX_INVERSE_ZOOM` (a dead
+alias since the cap moved into `projection.js`) and the now-unused `MAX_CAM_ZOOM` import. Lint is
+clean on every touched camera file.
 
 **Extracted:** `camera/framingRule.js` (236 lines) — the table, the guarantee and the position
 principle, pure. `_headingAt` — one definition of "which way is ahead", shared by the forward bias and
@@ -200,7 +204,7 @@ the corridor guarantee, which previously computed the tangent twice.
 
 | file | before | after |
 |---|---:|---:|
-| `camera/CameraDirector.js` | 2875 | **2693** |
+| `camera/CameraDirector.js` | 2875 | **2685** |
 | `camera/CameraDirector.test.js` | 6329 | **6094** |
 | `camera/cameraTimingComputation.js` | 360 | **356** |
 | `cameraConfig.js` | 372 | **96** |
