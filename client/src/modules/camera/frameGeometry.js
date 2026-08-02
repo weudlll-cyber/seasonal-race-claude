@@ -54,3 +54,38 @@ export function frameExtentAlong(dirX, dirY, frameW, frameH) {
   const toHorizontal = s > 0 ? frameH / s : Infinity;
   return Math.min(toVertical, toHorizontal);
 }
+
+/**
+ * How far a POINT in the frame can reach in a direction before leaving it — CAMERA-COMPANY-2.
+ *
+ * `frameExtentAlong` answers this for the centre, where the two halves are equal. Nothing else in
+ * the frame has that symmetry: a subject pushed forward has more room behind it than ahead, and
+ * exactly as much to either side as the rectangle allows in THAT direction. The company guarantee
+ * measures from the anchor, not from the centre, so it needs this rather than a fraction of a chord.
+ *
+ * The region is the centred `framePct` sub-rectangle, so a margin can be kept at the edge without a
+ * second parameter: `framePct` 0.9 reserves 5% of each side.
+ *
+ * @param {number} px  point x in frame coordinates (0 = left edge)
+ * @param {number} py  point y in frame coordinates (0 = top edge)
+ * @param {number} dirX  direction, any length
+ * @param {number} dirY
+ * @param {number} frameW
+ * @param {number} frameH
+ * @param {number} [framePct=1]  the centred fraction of the frame the point may reach into
+ * @returns {number} distance in screen px; 0 when the point is already outside that region
+ */
+export function roomFromPointAlong(px, py, dirX, dirY, frameW, frameH, framePct = 1) {
+  const len = Math.hypot(dirX, dirY);
+  if (!(len > 0) || !(frameW > 0) || !(frameH > 0)) return 0;
+  const pct = framePct > 1 ? 1 : framePct < 0 ? 0 : framePct;
+  const ux = dirX / len;
+  const uy = dirY / len;
+  const marginX = (frameW * (1 - pct)) / 2;
+  const marginY = (frameH * (1 - pct)) / 2;
+  // Distance to each bounding line along the ray; a component of 0 never reaches its pair of sides.
+  const toX = ux > 0 ? (frameW - marginX - px) / ux : ux < 0 ? (marginX - px) / ux : Infinity;
+  const toY = uy > 0 ? (frameH - marginY - py) / uy : uy < 0 ? (marginY - py) / uy : Infinity;
+  const room = Math.min(toX, toY);
+  return room > 0 ? room : 0;
+}

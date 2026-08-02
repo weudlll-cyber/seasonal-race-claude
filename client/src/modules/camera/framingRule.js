@@ -39,7 +39,7 @@
 //              Pure: no state, no config reads, no clock. Its only import is the frame chord.
 // ============================================================
 
-import { frameExtentAlong } from './frameGeometry.js';
+import { frameExtentAlong, roomFromPointAlong } from './frameGeometry.js';
 
 /** Where the subject sits in frame, and why. */
 export const POSITION = {
@@ -259,6 +259,37 @@ export function pairGuarantee(a, b, axisX, axisY, frameW, frameH, innerFramePct 
 export const COMPANY_FRAME_PCT = 0.9;
 
 /**
+ * WHERE THE ANCHOR SITS IN FRAME — the framing rule's own answer, in screen coordinates.
+ *
+ * The company guarantee has to know this before the camera moves, and it can: the position is a
+ * FRACTION of the frame, so it is the same at every zoom. A centred subject is at the middle; a
+ * forward-framed one is displaced along its heading by `(frac − 0.5)` of the frame's chord in that
+ * direction — the same arithmetic `_applyLeaderForwardBias` performs on the pan target, stated once
+ * here so the guarantee and the pan cannot disagree about where the subject will be.
+ *
+ * This is the INTENDED position. Where the world edge clamps the pan the subject lands elsewhere
+ * (measured on the owner's frame: 0.601 along the motion axis instead of 0.66, because the leader was
+ * within half a viewport of the world's right edge). That is the world-bounds clamp in
+ * `_setTrackTargets`, a separate mechanism, and this deliberately does not model it.
+ *
+ * @param {number} frameW
+ * @param {number} frameH
+ * @param {number|null} forwardFrac  where along its heading the subject sits; null/0.5 = centred
+ * @param {{x:number,y:number}|null} headingScreen  the subject's heading in SCREEN space
+ * @returns {{x:number,y:number}} the anchor's screen position
+ */
+export function anchorScreenPoint(frameW, frameH, forwardFrac, headingScreen) {
+  const centre = { x: frameW / 2, y: frameH / 2 };
+  if (forwardFrac == null || !headingScreen) return centre;
+  const len = Math.hypot(headingScreen.x, headingScreen.y);
+  if (!(len > 0)) return centre;
+  const ux = headingScreen.x / len;
+  const uy = headingScreen.y / len;
+  const shift = (forwardFrac - 0.5) * frameExtentAlong(ux, uy, frameW, frameH);
+  return { x: centre.x + ux * shift, y: centre.y + uy * shift };
+}
+
+/**
  * THE DRAMATURGICAL GUARANTEE — "do not show emptiness".
  *
  * The owner zooms LEADER in tight ON PURPOSE, and wants the camera to catch him exactly when the
@@ -274,19 +305,23 @@ export const COMPANY_FRAME_PCT = 0.9;
  * include than one beside it, depending on the frame's shape in that direction, and this asks the
  * frame rather than assuming.
  *
+ * WHERE THE ROOM IS MEASURED FROM — CAMERA-COMPANY-2. The corridor and pair vectors span between two
+ * things that must BOTH be in frame, so they are compared against the whole chord. A company vector
+ * runs FROM the anchor out to a companion, so what matters is the room between the anchor's own place
+ * in the frame and the edge, IN THAT DIRECTION.
+ *
+ * This used to be one scalar `reach` — 0.5 centred, `leaderForwardFrac` forward — applied to every
+ * direction alike. Measured against the truth on the owner's own frame it was over-generous
+ * everywhere and by wildly different amounts: 0.601 dead behind, 0.591 behind-left, 0.482/0.518
+ * beside, 0.399 dead ahead, all computed as 0.66. Over-generous means it permitted a shot TIGHTER
+ * than the room allows, so it promised five racers and delivered four. `anchorAt` replaces the
+ * scalar: give it where the anchor actually sits and the room is measured, not assumed.
+ *
  * @param {{x:number,y:number}} anchor   the world point the shot is built around
  * @param {Array<{x:number,y:number,finished?:boolean}>} racers  the live field (the anchor may be in it)
- * REACH, and why it is not 1. The corridor and pair vectors span between two things that must BOTH
- * be in frame, so they are compared against the whole extent. A company vector runs from the ANCHOR
- * — which sits at or near the centre — out to a companion, so the room available is only the part of
- * the frame on that side. `reach` is that share: 0.5 for a centred subject, and the forward fraction
- * for a subject pushed forward (a leader at 0.66 along the frame has 0.66 of it behind him, which is
- * exactly where his company is). Passing 1 here was a real defect, caught by a test: it permitted a
- * shot twice as tight as it should have and let the guaranteed company fall off the far edge.
- *
  * @param {number} minVisible  how many racers must be in frame INCLUDING the anchor; <= 1 disables
  * @param {number} [framePct=COMPANY_FRAME_PCT]  the region a companion must be inside
- * @param {number} [reach=0.5] share of the frame extent available from the anchor toward the company
+ * @param {{x:number,y:number}|null} [anchorAt=null]  the anchor's SCREEN position; frame centre when null
  * @returns {number} cam.zoom ceiling; Infinity when nothing constrains
  */
 export function companyGuarantee(
@@ -298,20 +333,27 @@ export function companyGuarantee(
   frameW,
   frameH,
   framePct = COMPANY_FRAME_PCT,
-  reach = 0.5
+  anchorAt = null
 ) {
   if (!anchor || !Array.isArray(racers)) return Infinity;
   const need = Math.floor(minVisible) - 1; // the anchor itself is one of them
   if (!(need > 0)) return Infinity;
+  const at = anchorAt ?? { x: frameW / 2, y: frameH / 2 };
   const ceilings = [];
   for (const r of racers) {
     if (!r || r.finished) continue;
     const dx = r.x - anchor.x;
     const dy = r.y - anchor.y;
     if (dx === 0 && dy === 0) continue; // the anchor itself
-    ceilings.push(
-      zoomCeilingToFit({ x: dx, y: dy }, axisX, axisY, frameW, frameH, framePct * clamp01(reach))
-    );
+    const sx = dx * axisX;
+    const sy = dy * axisY;
+    const needed = Math.hypot(sx, sy);
+    if (!(needed > 0)) continue;
+    const room = roomFromPointAlong(at.x, at.y, sx, sy, frameW, frameH, framePct);
+    // Room 0 means the anchor is already outside the region in that direction — the framing itself
+    // is broken there, and no zoom fixes it. Skipping keeps this from returning a ceiling of 0.
+    if (!(room > 0)) continue;
+    ceilings.push(room / needed);
   }
   if (ceilings.length === 0) return Infinity;
   // Most permissive first: ceilings[0] is the nearest company, in the frame's own terms.

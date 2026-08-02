@@ -25,6 +25,7 @@ import {
   pairGuarantee,
   companyGuarantee,
   COMPANY_FRAME_PCT,
+  anchorScreenPoint,
 } from './framingRule.js';
 
 export const CAM_STATE = {
@@ -1705,6 +1706,18 @@ export class CameraDirector {
   }
 
   /**
+   * CAMERA-COMPANY-2: the same tangent in SCREEN space. Zoom cancels — only the axis RATIO survives
+   * the normalisation — so this is a fixed direction for a given track parameter, which is why the
+   * company guarantee can ask where the anchor will sit before the zoom is known.
+   * @param {number|null} t
+   */
+  _headingScreen(t) {
+    const h = this._headingAt(t);
+    if (!h) return null;
+    return { x: h.x * this._proj.axisX, y: h.y * this._proj.axisY };
+  }
+
+  /**
    * CAMERA-FRAMING-1: WHO the camera is on, per state. This is the only genuinely per-state part of
    * the framing rule — the guarantee and the frame position are uniform (see framingRule.js).
    *
@@ -1832,8 +1845,20 @@ export class CameraDirector {
     if (framingFor(this.state).guarantee === GUARANTEE.PAIR) return Infinity;
     // The company sits BEHIND a forward-framed subject, and forward framing gives it more room: a
     // leader at 0.66 along the frame has 0.66 of it behind him. A centred subject has half.
-    const forward = framingFor(this.state).position === POSITION.FORWARD;
-    const reach = forward && this._leaderForwardFrac != null ? this._leaderForwardFrac : 0.5;
+    // WHERE the anchor will sit, from the framing rule — so the room toward each companion is
+    // measured rather than assumed. A single scalar in every direction was over-generous everywhere
+    // (0.66 assumed against a true 0.399 dead ahead), which is why it delivered one companion fewer
+    // than it promised. This is the INTENDED position and is deliberately zoom-INDEPENDENT: reading
+    // the anchor back off the live camera instead was tried and measured worse (promise kept 82.3%
+    // of frames against 97.1%), because during a widening the live zoom is tighter than the target,
+    // so the read-back over-states the room the finished shot will actually have and the guarantee
+    // talks itself into staying tight. See the report.
+    const at = anchorScreenPoint(
+      frameSize.width,
+      frameSize.height,
+      framingFor(this.state).position === POSITION.FORWARD ? this._leaderForwardFrac : null,
+      this._headingScreen(subjects.t)
+    );
     // COMPANY_FRAME_PCT, not `_innerFramePct`: a guaranteed companion needs to be visible with a
     // margin, not inside the subject's safe region. See the constant for the owner's reasoning.
     return companyGuarantee(
@@ -1845,7 +1870,7 @@ export class CameraDirector {
       frameSize.width,
       frameSize.height,
       COMPANY_FRAME_PCT,
-      reach
+      at
     );
   }
 

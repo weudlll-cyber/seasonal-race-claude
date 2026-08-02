@@ -18,10 +18,11 @@ import {
   pairGuarantee,
   companyGuarantee,
   COMPANY_FRAME_PCT,
+  anchorScreenPoint,
 } from './framingRule.js';
 import { CameraDirector, CAM_STATE } from './CameraDirector.js';
 import { DEFAULT_CAMERA_CONFIG } from '../cameraConfig.js';
-import { frameExtentAlong } from './frameGeometry.js';
+import { frameExtentAlong, roomFromPointAlong } from './frameGeometry.js';
 
 const W = 1280;
 const H = 720;
@@ -280,17 +281,18 @@ describe('companyGuarantee — do not show emptiness', () => {
   const H = 720;
   const anchor = { x: 1000, y: 1000 };
   const at = (dx, dy) => ({ x: anchor.x + dx, y: anchor.y + dy, finished: false });
-  // The company vector runs FROM the anchor, which sits at the centre, so the room available is the
-  // half-extent — the same `reach` the guarantee itself applies. A helper that used the full extent
-  // would agree with a guarantee twice as generous as the real one.
-  const REACH = 0.5;
-  const fits = (r, z, reach = REACH) => {
+  // CAMERA-COMPANY-2: the company vector runs FROM the anchor, so "does it fit" is asked of the room
+  // between the anchor's own place in the frame and the edge — not of a fraction of the chord. The
+  // helper therefore ray-casts exactly as the guarantee does; anything simpler would agree with a
+  // guarantee that is wrong in the same way.
+  const CENTRE = { x: W / 2, y: H / 2 };
+  const fits = (r, z, framePct = 1, at = CENTRE) => {
     const sx = (r.x - anchor.x) * CLOSED.axisX * z;
     const sy = (r.y - anchor.y) * CLOSED.axisY * z;
-    return Math.hypot(sx, sy) <= frameExtentAlong(sx, sy, W, H) * reach + 1e-9;
+    return Math.hypot(sx, sy) <= roomFromPointAlong(at.x, at.y, sx, sy, W, H, framePct) + 1e-9;
   };
-  const g = (racers, n, inner = 1) =>
-    companyGuarantee(anchor, racers, n, CLOSED.axisX, CLOSED.axisY, W, H, inner, REACH);
+  const g = (racers, n, framePct = 1, at = CENTRE) =>
+    companyGuarantee(anchor, racers, n, CLOSED.axisX, CLOSED.axisY, W, H, framePct, at);
 
   it('keeps exactly the company it is asked for — the anchor plus n−1 others', () => {
     const field = [at(0, 0), at(120, 0), at(400, 0), at(900, 0), at(2000, 0)];
@@ -394,23 +396,56 @@ describe('companyGuarantee — do not show emptiness', () => {
     // and the frame edge: the reason 0.9 exists is that half a drawn body must fit there.
     const field = [at(0, 0), at(150, 0), at(500, 0), at(900, 0)];
     const z = companyGuarantee(anchor, field, 4, CLOSED.axisX, CLOSED.axisY, W, H);
-    const kept = field.filter((r) => r !== field[0] && fits(r, z));
+    const kept = field.filter((r) => r !== field[0] && fits(r, z, COMPANY_FRAME_PCT));
     expect(kept.length).toBeGreaterThanOrEqual(3);
     for (const r of kept) {
       const sx = (r.x - anchor.x) * CLOSED.axisX * z;
       const sy = (r.y - anchor.y) * CLOSED.axisY * z;
-      const reachable = frameExtentAlong(sx, sy, W, H) * REACH;
-      // inside the margin: never further out than 0.9 of the room it could have used
-      expect(Math.hypot(sx, sy)).toBeLessThanOrEqual(reachable * COMPANY_FRAME_PCT + 1e-9);
+      // inside the margin: never further out than the room the 0.9 region leaves it
+      const room = roomFromPointAlong(CENTRE.x, CENTRE.y, sx, sy, W, H, COMPANY_FRAME_PCT);
+      expect(Math.hypot(sx, sy)).toBeLessThanOrEqual(room + 1e-9);
+      // and the margin is real: at the full frame there would still be room to spare
+      expect(roomFromPointAlong(CENTRE.x, CENTRE.y, sx, sy, W, H, 1)).toBeGreaterThan(room);
     }
   });
 
-  it('reach scales the room: a forward-framed subject has more of the frame behind him', () => {
-    const field = [at(0, 0), at(400, 0)];
-    const centred = companyGuarantee(anchor, field, 2, CLOSED.axisX, CLOSED.axisY, W, H, 1, 0.5);
-    const forward = companyGuarantee(anchor, field, 2, CLOSED.axisX, CLOSED.axisY, W, H, 1, 0.66);
+  // ── CAMERA-COMPANY-2: the room is DIRECTIONAL ────────────────────────────────────────────────
+  it('a forward-framed subject really does have more room behind him', () => {
+    // Heading east on screen, so the anchor is pushed east and the company lies west, behind him.
+    const behind = [at(0, 0), at(-400, 0)];
+    const fwdAt = anchorScreenPoint(W, H, 0.66, { x: 1, y: 0 });
+    const centred = g(behind, 2, 1, CENTRE);
+    const forward = g(behind, 2, 1, fwdAt);
     expect(forward).toBeGreaterThan(centred); // more room behind = a tighter shot is allowed
+    // and it is the frame's own arithmetic, not a fraction: 0.66 of a 1280 px chord behind him.
+    expect(fwdAt.x).toBeCloseTo(W / 2 + 0.16 * W, 6);
     expect(forward / centred).toBeCloseTo(0.66 / 0.5, 6);
+  });
+
+  it('the SAME forward framing costs room ahead — the scalar could not say both', () => {
+    const ahead = [at(0, 0), at(400, 0)];
+    const fwdAt = anchorScreenPoint(W, H, 0.66, { x: 1, y: 0 });
+    expect(g(ahead, 2, 1, fwdAt)).toBeLessThan(g(ahead, 2, 1, CENTRE)); // less room = wider shot
+    expect(g(ahead, 2, 1, fwdAt) / g(ahead, 2, 1, CENTRE)).toBeCloseTo(0.34 / 0.5, 6);
+  });
+
+  it('FAILURE PROOF: the scalar reach passes a companion the directional room refuses', () => {
+    // The shipped scalar was `leaderForwardFrac` applied in EVERY direction. Measured on the owner's
+    // own frame it was over-generous everywhere: 0.66 assumed where the truth was 0.399 dead ahead
+    // and 0.482 beside. Here is that failure as arithmetic, with a companion BESIDE a forward-framed
+    // anchor — a direction the forward bias gives no extra room in at all.
+    const beside = at(0, 400);
+    const field = [at(0, 0), beside];
+    const fwdAt = anchorScreenPoint(W, H, 0.66, { x: 1, y: 0 });
+    const scalar = frameExtentAlong(0, 1, W, H) * 0.66; // what the old code believed was available
+    const truth = roomFromPointAlong(fwdAt.x, fwdAt.y, 0, 1, W, H, 1); // what the frame really gives
+    expect(scalar).toBeGreaterThan(truth * 1.3); // over-generous by more than 30% in this direction
+
+    const zScalar = scalar / Math.hypot(0, (beside.y - anchor.y) * CLOSED.axisY);
+    const zHonest = g(field, 2, 1, fwdAt);
+    expect(zScalar).toBeGreaterThan(zHonest); // the scalar permits the TIGHTER shot …
+    expect(fits(beside, zScalar, 1, fwdAt)).toBe(false); // … and at it the guaranteed racer is OUT
+    expect(fits(beside, zHonest, 1, fwdAt)).toBe(true); // the directional one keeps its promise
   });
 });
 
@@ -526,6 +561,27 @@ describe('CAMERA-COMPANY-1 — the guarantee through the director', () => {
         expected
       );
     }
+  });
+
+  // ── CAMERA-COMPANY-2: the promise is about the REGION, so test it there ──────────────────────
+  it('delivers the promised count INSIDE the region it promises, not merely on canvas', () => {
+    const racers = brokenAway();
+    const cd = settle(mk(tight(4)), racers);
+    // The shot the guarantee SIZED: target zoom, anchored where the anchor actually is. Counting at
+    // the live zoom would measure the tracking lag instead of the guarantee.
+    const lead = racers[0];
+    const ax = lead.x * cd._proj.effX(cd.zoom) + cd.offsetX;
+    const ay = lead.y * cd._proj.effY(cd.zoom) + cd.offsetY;
+    const ex = cd._proj.effX(cd.targetZoom);
+    const ey = cd._proj.effY(cd.targetZoom);
+    const mx = (FRAME.width * (1 - COMPANY_FRAME_PCT)) / 2;
+    const my = (FRAME.height * (1 - COMPANY_FRAME_PCT)) / 2;
+    const inRegion = racers.filter((r) => {
+      const x = ax + (r.x - lead.x) * ex;
+      const y = ay + (r.y - lead.y) * ey;
+      return x >= mx && x <= FRAME.width - mx && y >= my && y <= FRAME.height - my;
+    }).length;
+    expect(inRegion).toBeGreaterThanOrEqual(4);
   });
 
   it('turning it off restores the pre-guarantee picture exactly', () => {
