@@ -139,6 +139,17 @@ sprite floor (`Math.max(proportionalScreenPx, minTargetScreenPx)`, which the own
   `overviewOffsetPx` still present as a dead key. Camera/render only; the shipped world
   `dc4647be0f55ebdb` is untouched on both sides of this tag. Config schema v18.
 
+### Camera framing — CAMERA-FRAMING-1 (2026-08-02, branch `camera-refactor`)
+Return point captured before the second half of the owner's camera design: every state described by
+ANCHOR (who the camera is on) + GUARANTEE (who must stay in frame) + the already-shipped track-widths
+zoom, with frame position derived from one principle rather than being a fourth setting. The picture
+CHANGES here, most of all in LEAD_CHANGE — which holds 37.6% of all frames and had never been designed
+(it fell into `panTarget`'s default centroid branch and never received the forward bias).
+- `pre/framing` (`74bf88b1`, 2026-08-02) — the pre-change state: LEAD_CHANGE undefined in `panTarget.js`,
+  PHOTO_FINISH borrowing BATTLE's zoom, the min-visible floor and the containment clamp both STEERING,
+  and the floor's single-effZoom per-axis defect still live. Camera-only; the shipped world
+  `dc4647be0f55ebdb` is untouched on both sides. Config schema v19.
+
 ## Active-phase tags (temporary scaffolding — to collapse later)
 
 Step-tags from the runaway phase (now CLOSED 2026-07-29, see below) and any later work — safe return points, not permanent anchors. They collapse into
@@ -553,6 +564,7 @@ The full list of the 177 retired tags is recorded below for the archive.
 - `pre/surge-telemetry-agg`
 - `pre/sweep-instrumentation-pulklr`
 - `pre/v4-choreography`
+- `pre/framing`
 - `pre/picture-fixes`
 - `pre/v4-on-trunk`
 - `pre/zoom-unit`
