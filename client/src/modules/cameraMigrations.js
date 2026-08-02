@@ -331,3 +331,48 @@ export function migrateV16toV17(config) {
     schemaVersion: 17,
   };
 }
+
+// v17→v18 (CAMERA-ZOOM-UNIT-1): ONE zoom unit — track widths.
+//
+// Every state's zoom setting becomes `trackWidths` (how many track widths of world are visible
+// across the frame). The old per-state `spriteScale` is DROPPED rather than converted, and so is
+// OVERVIEW's target-sprite-size input: the owner chose clean round defaults over reproducing the
+// previous picture, so a conversion would compute a number nobody wants. Two retired keys go with
+// it — `overviewClosedTrackZoom` (dead in code since 2026-06-04, its slider and tooltip still
+// claiming otherwise) and `overviewMinEffZoom` (an open-track-only second zoom bound on the same
+// surface) — and the countdown's `countdownStartZoomSpritePx` becomes `countdownStartTrackWidths`.
+//
+// A stored value the owner set on ANY key this block did not touch survives untouched (Lesson 193).
+export function migrateV17toV18(config) {
+  const {
+    // eslint-disable-next-line no-unused-vars
+    overviewClosedTrackZoom,
+    // eslint-disable-next-line no-unused-vars
+    overviewMinEffZoom,
+
+    overviewTargetScreenPx: _ovTargetPx,
+    // eslint-disable-next-line no-unused-vars
+    countdownStartZoomSpritePx,
+    ...rest
+  } = config;
+  const defProfiles = DEFAULT_CAMERA_CONFIG.cameraStateProfiles;
+  const profiles = {};
+  for (const state of Object.keys(defProfiles)) {
+    // eslint-disable-next-line no-unused-vars
+    const { spriteScale, spritePx, ...keep } = config.cameraStateProfiles?.[state] ?? {};
+    profiles[state] = {
+      ...defProfiles[state],
+      ...keep,
+      trackWidths: defProfiles[state].trackWidths,
+    };
+  }
+  return {
+    ...rest,
+    // The render-time sprite floor keeps its own key and its stored value — it is NOT the camera's
+    // zoom input any more, and RaceScreen still reads it. See the report.
+    overviewTargetScreenPx: _ovTargetPx ?? DEFAULT_CAMERA_CONFIG.overviewTargetScreenPx,
+    countdownStartTrackWidths: DEFAULT_CAMERA_CONFIG.countdownStartTrackWidths,
+    cameraStateProfiles: profiles,
+    schemaVersion: 18,
+  };
+}

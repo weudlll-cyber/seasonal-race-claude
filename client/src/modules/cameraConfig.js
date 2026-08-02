@@ -84,6 +84,7 @@ import {
   migrateV14toV15,
   migrateV15toV16,
   migrateV16toV17,
+  migrateV17toV18,
 } from './cameraMigrations.js';
 
 export { DEFAULT_CAMERA_CONFIG };
@@ -101,9 +102,10 @@ const MIGRATION_CHAIN = [
   migrateV14toV15,
   migrateV15toV16,
   migrateV16toV17,
+  migrateV17toV18,
 ];
 
-// Apply migrations to bring a config from `fromVersion` (>=5) up to v17.
+// Apply migrations to bring a config from `fromVersion` (>=5) up to v18.
 function applyMigrationsSinceV5(config, fromVersion) {
   return MIGRATION_CHAIN.slice(Math.max(0, fromVersion - 5)).reduce(
     (cfg, migrate) => migrate(cfg),
@@ -292,9 +294,19 @@ function resolveStoredCameraConfig() {
     return applyMigrationsSinceV5(merged, 16);
   }
 
-  if (stored.schemaVersion !== 17) return { ...DEFAULT_CAMERA_CONFIG };
+  if (stored.schemaVersion === 17) {
+    // v17→v18 (CAMERA-ZOOM-UNIT-1): merge top-level fields, deep-merge profiles, then move every
+    // state onto the track-widths unit and drop the retired zoom keys.
+    const merged = { ...DEFAULT_CAMERA_CONFIG, ...stored };
+    if (stored.cameraStateProfiles) {
+      merged.cameraStateProfiles = mergeStateProfiles(stored.cameraStateProfiles);
+    }
+    return applyMigrationsSinceV5(merged, 17);
+  }
 
-  // v17: merge top-level fields, then deep-merge cameraStateProfiles.
+  if (stored.schemaVersion !== 18) return { ...DEFAULT_CAMERA_CONFIG };
+
+  // v18: merge top-level fields, then deep-merge cameraStateProfiles.
   const merged = { ...DEFAULT_CAMERA_CONFIG, ...stored };
   if (stored.cameraStateProfiles) {
     merged.cameraStateProfiles = mergeStateProfiles(stored.cameraStateProfiles);
@@ -344,5 +356,5 @@ export function cameraConfigProvenance() {
 }
 
 export function saveCameraConfig(config) {
-  return storageSet(KEYS.CAMERA_CONFIG, { ...config, schemaVersion: 17 });
+  return storageSet(KEYS.CAMERA_CONFIG, { ...config, schemaVersion: 18 });
 }

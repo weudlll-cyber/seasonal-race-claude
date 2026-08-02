@@ -19,6 +19,7 @@ import {
   OPEN_TRACK_BASE_ZOOM as _PROJ_OPEN_BASE,
   MAX_CAM_ZOOM,
 } from './projection.js';
+import { resolveZoomForTrackWidths, guaranteeCamZoom, trackWidthsForCamZoom } from './zoomUnit.js';
 
 export const CAM_STATE = {
   OVERVIEW: 'OVERVIEW',
@@ -64,13 +65,19 @@ const CANVAS_H_REF = 720; // reference canvas height for pct → px conversion
 const TOP_N = 3; // camera focuses on the top-N racers by position
 // migration divisor for legacy/countdown conversion; px equivalent used in the scale formulae below.
 const FALLBACK_REFERENCE_SPRITE_SIZE = 36;
-// Scale defaults used when no config (or no cameraStateProfiles) is provided.
-// Match DEFAULT_CAMERA_CONFIG values (v14): LEADER=1.81, BATTLE=2.81, COMEBACK=1.39.
-const DEFAULT_SPRITE_SCALE = {
-  leader: 1.81,
-  battle: 2.81,
-  comeback: 1.39,
+// CAMERA-ZOOM-UNIT-1 fallbacks, in TRACK WIDTHS across the frame, used when no config (or no
+// cameraStateProfiles) is provided. They match DEFAULT_CAMERA_CONFIG so a bare-config director and
+// a configured one frame the same shot. OVERVIEW is the widest; BATTLE/COMEBACK are tighter than
+// LEADER; every value stays above the guarantee (1.0) so nothing is clamped at rest.
+const DEFAULT_TRACK_WIDTHS = {
+  overview: 4,
+  leader: 2,
+  leadChange: 2,
+  battle: 1.5,
+  comeback: 1.5,
 };
+/** Fallback corridor width (world px) when no track width and no shape reach the director. */
+const FALLBACK_TRACK_WIDTH_PX = 140;
 // World-pixel radial offset: camera shifts toward field so leader sits at the outer viewport edge.
 const _DEFAULT_OVERVIEW_OFFSET_PX = 150;
 const DEFAULT_INNER_FRAME_PCT = 0.7;
@@ -140,7 +147,8 @@ export class CameraDirector {
     isOpenTrack = false,
     config = null,
     drawnBodyWidthRefPx = 0,
-    shape = null
+    shape = null,
+    trackWidthPx = 0
   ) {
     // CAMERA-PROJECTION-1: the ONE world↔screen mapping. Every zoom formula, guardrail and
     // diagnostic in this file goes through it — nothing re-derives `x * zoom * scale + offset`.
@@ -158,6 +166,16 @@ export class CameraDirector {
     this._bsX = CANVAS_W / worldW;
     this._bsY = CANVAS_H_REF / worldH;
     this._drawnBodyWidthRefPx = drawnBodyWidthRefPx;
+    // CAMERA-ZOOM-UNIT-1: the corridor width every zoom setting is expressed in. Passed by
+    // RaceScreen (geometry.width, the same number the physics uses); derived from the shape when a
+    // caller does not supply it; a constant only when there is neither, so a bare `new
+    // CameraDirector()` still produces a sane picture instead of NaN.
+    this._trackWidthPx =
+      trackWidthPx > 0
+        ? trackWidthPx
+        : (shape?.getActualTrackWidth?.() ?? 0) > 0
+          ? shape.getActualTrackWidth()
+          : FALLBACK_TRACK_WIDTH_PX;
     // The loosest cam.zoom this projection allows. Historically written as
     // `isOpen ? CANVAS_W/worldW : 1.0` at five separate sites; now one value.
     this.overviewZoom = CANVAS_W / worldW;
@@ -360,83 +378,79 @@ export class CameraDirector {
   }
 
   /**
-   * Compute cam.zoom from a spriteScale factor.
+   * CAMERA-ZOOM-UNIT-1: THE zoom rule. One function, every state.
    *
-   * spriteScale = 1.0 means sprites render at their natural density-scaled size.
-   * drawnBodyWidthRefPx cancels out of the formula (L82):
-   *   Closed: zoom = spriteScale / bsX   (bsX = CANVAS_W / worldW)
-   *   Open:   zoom = spriteScale / OPEN_TRACK_BASE_ZOOM
+   * `trackWidths` is how many track widths of world are visible across the frame. The unit, the
+   * full-track-width guarantee and the projection's physical range all live in zoomUnit.js; this
+   * is the director's single call into it, so there is exactly one place where a setting becomes
+   * a cam.zoom.
    *
-   * Safety nets: result is clamped to [minZoom, MAX_INVERSE_ZOOM] where minZoom
-   * equals 1.0 for closed tracks or overviewZoom for open tracks.
-   *
-   * @param {number} spriteScale  Relative scale factor (1.0 = natural size)
-   * @returns {number}            cam.zoom to assign to this state
+   * @param {number} trackWidths
+   * @param {number} [fallback]  used when the setting is missing or corrupt
+   * @returns {number} cam.zoom
    */
-  _computeZoomForSpriteScale(spriteScale) {
-    // Hardening: a non-finite spriteScale (corrupt persisted config) falls back to natural size (1.0)
-    // rather than propagating NaN into cam.zoom.
-    if (!Number.isFinite(spriteScale)) spriteScale = 1.0;
-    // CAMERA-PROJECTION-1: spriteScale IS the effective world→screen scale this state asks for
-    // (the two former branches divided by exactly the scale the renderer multiplies back, so they
-    // always produced the same effective zoom — only their clamps differed). One inverse now, and
-    // the clamps are the projection's own range.
-    return this._proj.clampCamZoom(this._proj.camZoomForEffX(spriteScale));
+  _computeZoomForTrackWidths(trackWidths, fallback = DEFAULT_TRACK_WIDTHS.leader) {
+    return resolveZoomForTrackWidths(trackWidths, {
+      trackWidthPx: this._trackWidthPx,
+      axisX: this._proj.axisX,
+      axisY: this._proj.axisY,
+      clampCamZoom: (z) => this._proj.clampCamZoom(z),
+      fallbackTrackWidths: fallback,
+    });
   }
 
   /**
-   * Derive _leaderZoom / _leadChangeZoom / _battleZoom / _comebackZoom from config.
+   * The tightest cam.zoom that still shows a full track width (Part B). A CEILING applied with
+   * Math.min — it widens a shot, never steers one.
+   */
+  _trackWidthGuaranteeZoom() {
+    return guaranteeCamZoom(this._trackWidthPx, this._proj.axisX, this._proj.axisY);
+  }
+
+  /** Diagnostics/tests: how many track widths the camera is actually showing right now. */
+  get visibleTrackWidths() {
+    return trackWidthsForCamZoom(this.zoom, this._trackWidthPx, this._proj.axisY);
+  }
+
+  /**
+   * Derive every state's cam.zoom from its TRACK-WIDTHS setting (CAMERA-ZOOM-UNIT-1).
    *
-   * v14+: each zoom level is computed from spriteScale (relative factor) stored in
-   * cameraStateProfiles. zoom = spriteScale / bsX (closed) or spriteScale / OPEN_BASE (open).
-   * drawnBodyWidthRefPx cancels out — zoom is racer-count-independent (L82).
+   * All five states run the SAME rule now — OVERVIEW is not a different kind of shot, it is this
+   * shot at the widest setting. The three things that used to make them incommensurable are gone:
+   * the absolute `spriteScale` screen-scale, OVERVIEW's target-SPRITE-SIZE derivation, and the
+   * `2 x W_ref / racersPerRow` racer-count division that came with it.
    *
-   * Legacy spritePctOfCanvas path: pct × CANVAS_H_REF / FALLBACK_REFERENCE_SPRITE_SIZE gives
-   * the equivalent spriteScale, preserving cross-track invariance for old configs.
+   * Legacy configs (v2/v3 `spritePctOfCanvas`, or a v17 config that reached a director without
+   * migration) have no track-width numbers to read. They get the shipped defaults rather than a
+   * converted value: the owner chose clean round numbers over reproducing the old picture, so a
+   * conversion would be work in service of a result nobody wants.
    *
    * @param {object|null} config
    */
   _computeZoomLevels(config) {
     const profiles = config?.cameraStateProfiles;
-    if (profiles) {
-      // v14 path: spriteScale is the relative zoom factor.
-      const scale = {
-        leader: profiles.LEADER_ZOOM?.spriteScale ?? DEFAULT_SPRITE_SCALE.leader,
-        leadChange: profiles.LEAD_CHANGE?.spriteScale ?? DEFAULT_SPRITE_SCALE.leader,
-        battle: profiles.BATTLE_ZOOM?.spriteScale ?? DEFAULT_SPRITE_SCALE.battle,
-        comeback: profiles.COMEBACK_ZOOM?.spriteScale ?? DEFAULT_SPRITE_SCALE.comeback,
-      };
-      this._leaderZoom = this._computeZoomForSpriteScale(scale.leader);
-      this._leadChangeZoom = this._computeZoomForSpriteScale(scale.leadChange);
-      this._battleZoom = this._computeZoomForSpriteScale(scale.battle);
-      this._comebackZoom = this._computeZoomForSpriteScale(scale.comeback);
-      // The SELECTED OVERVIEW sprite scale (cameraStateProfiles.OVERVIEW.spriteScale). It multiplies the
-      // count-normalized OVERVIEW target size (L116) so the owner's slider actually scales the OVERVIEW —
-      // 1.0 = the normalized default, 2.5 = 2.5× the normalized size. Finite-guarded (default 1.0).
-      const ovScale = profiles.OVERVIEW?.spriteScale;
-      this._overviewSpriteScale = Number.isFinite(ovScale) ? ovScale : 1.0;
-      this._overviewStateZoom = this._computeZoomForSpriteScale(this._overviewSpriteScale);
-    } else if (config?.spritePctOfCanvas) {
-      // Legacy path: old configs with spritePctOfCanvas (v2/v3) but no cameraStateProfiles.
-      const rawPct = config.spritePctOfCanvas;
-      const toScale = (pct) => (pct * CANVAS_H_REF) / FALLBACK_REFERENCE_SPRITE_SIZE;
-      this._leaderZoom = this._computeZoomForSpriteScale(toScale(rawPct.leader));
-      this._leadChangeZoom = this._computeZoomForSpriteScale(toScale(rawPct.leader));
-      this._battleZoom = this._computeZoomForSpriteScale(toScale(rawPct.battle));
-      this._comebackZoom = this._computeZoomForSpriteScale(toScale(rawPct.comeback));
-      // OVERVIEW zoom: preserve full-world defaults for legacy configs.
-      this._overviewStateZoom = this._proj.minCamZoom; // "whole world", in this projection's cam.zoom space
-      this._overviewSpriteScale = 1.0; // legacy configs have no OVERVIEW.spriteScale → unscaled (unchanged)
-    } else {
-      // No config at all: use scale defaults.
-      this._leaderZoom = this._computeZoomForSpriteScale(DEFAULT_SPRITE_SCALE.leader);
-      this._leadChangeZoom = this._computeZoomForSpriteScale(DEFAULT_SPRITE_SCALE.leader);
-      this._battleZoom = this._computeZoomForSpriteScale(DEFAULT_SPRITE_SCALE.battle);
-      this._comebackZoom = this._computeZoomForSpriteScale(DEFAULT_SPRITE_SCALE.comeback);
-      // OVERVIEW zoom: preserve full-world defaults (closed=1.0, open=overviewZoom).
-      this._overviewStateZoom = this._proj.minCamZoom; // "whole world", in this projection's cam.zoom space
-      this._overviewSpriteScale = 1.0; // no config → natural size (unchanged)
-    }
+    const widthOf = (state, fallback) => {
+      const v = profiles?.[state]?.trackWidths;
+      return Number.isFinite(v) && v > 0 ? v : fallback;
+    };
+    this._overviewTrackWidths = widthOf('OVERVIEW', DEFAULT_TRACK_WIDTHS.overview);
+    this._leaderZoom = this._computeZoomForTrackWidths(
+      widthOf('LEADER_ZOOM', DEFAULT_TRACK_WIDTHS.leader)
+    );
+    this._leadChangeZoom = this._computeZoomForTrackWidths(
+      widthOf('LEAD_CHANGE', DEFAULT_TRACK_WIDTHS.leadChange)
+    );
+    this._battleZoom = this._computeZoomForTrackWidths(
+      widthOf('BATTLE_ZOOM', DEFAULT_TRACK_WIDTHS.battle)
+    );
+    this._comebackZoom = this._computeZoomForTrackWidths(
+      widthOf('COMEBACK_ZOOM', DEFAULT_TRACK_WIDTHS.comeback)
+    );
+    // OVERVIEW is the same rule at the widest setting — no sprite size, no racer count.
+    this._overviewStateZoom = this._computeZoomForTrackWidths(
+      this._overviewTrackWidths,
+      DEFAULT_TRACK_WIDTHS.overview
+    );
     this._innerFramePct = config?.targetInnerFramePct ?? DEFAULT_INNER_FRAME_PCT;
     // CAMERA-FOCUS-3 transition grammar. 'cut' (grammar A) = every anchored/active state entry snaps
     // pan AND zoom together to the new subject's correct framing on frame 1 (zero acquisition — the
@@ -456,8 +470,12 @@ export class CameraDirector {
     const lff = config?.leaderForwardFrac;
     this._leaderForwardFrac = Number.isFinite(lff) && lff > 0.5 && lff <= 0.8 ? lff : null;
     // Countdown start zoom: convert spritePx → spriteScale, typically clamped to overviewZoom.
-    this._countdownStartZoom = this._computeZoomForSpriteScale(
-      (config?.countdownStartZoomSpritePx ?? 1) / FALLBACK_REFERENCE_SPRITE_SIZE
+    // CAMERA-ZOOM-UNIT-1: the countdown opens on the same unit. `countdownStartTrackWidths` is a
+    // wide establishing shot that eases into OVERVIEW; it is clamped by the projection like every
+    // other setting, so on a small world it simply means "the whole world".
+    this._countdownStartZoom = this._computeZoomForTrackWidths(
+      config?.countdownStartTrackWidths,
+      DEFAULT_TRACK_WIDTHS.overview * 2
     );
   }
 
@@ -541,10 +559,8 @@ export class CameraDirector {
     this._overviewWeight = t.overviewWeight;
     this._overviewTargetCount = t.overviewTargetCount;
     this._overviewStartDelay = t.overviewStartDelay;
-    this._overviewTargetScreenPx = t.overviewTargetScreenPx;
     this._overviewFrameRacers = t.overviewFrameRacers; // OVERVIEW-FRAMING-1 owner value: leader + next N−1
     this._overviewMinSpriteFrac = t.overviewMinSpriteFrac; // OVERVIEW-FRAMING-1 owner value: sprite-size floor (frame fraction)
-    this._overviewMinEffZoom = t.overviewMinEffZoom ?? 0;
     this._minRacersVisible = config?.minRacersVisible ?? 8;
     this._leaderMinZoom = config?.leaderMinZoom ?? 0.4;
     this._leaderMinZoomFraction = config?.leaderMinZoomFraction ?? 0.6;
@@ -1451,43 +1467,13 @@ export class CameraDirector {
       // temporarily override the entry TC to achieve the configured zoom-out duration.
       if (nextState === CAM_STATE.OVERVIEW) {
         if (!this._inFinishMode) {
-          let snapZoom;
-          if (this._drawnBodyWidthRefPx > 0) {
-            // Choose the zoom that makes a racer _overviewTargetScreenPx × spriteScale pixels wide
-            // on screen. This is the one resolution-INVARIANT zoom rule in the camera
-            // (CAMERA-REFACTOR-1 B2) — it normalises by the racer's world size, so the same setting
-            // frames the same fraction of the track however the world is authored. The other four
-            // states do NOT use it yet; moving them onto it is the slider-unit block.
-            // The SELECTED OVERVIEW sprite scale MULTIPLIES the normalized target size (OVERVIEW-ZOOM-1):
-            // spriteScale 1.0 = the L116 count-normalized default (unchanged); 2.5 = racers 2.5× that size.
-            const ovScale = Number.isFinite(this._overviewSpriteScale)
-              ? this._overviewSpriteScale
-              : 1.0;
-            // The cam.zoom whose effective X scale makes the body that many screen px wide.
-            // Kept as ONE division by the product (rather than two chained divisions) so the result
-            // is bit-identical to the pre-refactor expression — a 1-ULP drift here would show up in
-            // the replay diff and weaken the "nothing changed" proof for no benefit.
-            const raw =
-              (this._overviewTargetScreenPx * ovScale) /
-              (this._drawnBodyWidthRefPx * this._proj.axisX);
-            // CAMERA-CEILING-1: the open-track 0.8× ceiling is GONE. It capped the snap zoom at
-            // 80% of the whole-world zoom on open tracks only, and it bound on 100% of open-track
-            // frames — so open OVERVIEW never ran the rule above at all: it showed a 39.9 px racer
-            // where the rule says 49.0. Its stated purpose ("prevents the leader leaving canvas
-            // during pan") was a PAN problem solved with a ZOOM cap; the pan is now held by
-            // resolveCamera's world-edge clamp and, in LEADER-family states, the containment clamp.
-            // Removing it makes open-track OVERVIEW ~20% tighter and makes ONE setting mean ONE
-            // thing on all ten tracks. See reports/evolution/CAMERA-CEILING-1.md.
-            snapZoom = this._proj.clampCamZoom(raw);
-            // QUARANTINED open/closed branch (NOT one of the 13): overviewMinEffZoom is documented
-            // as open-track-only and defaults to 0; gating it preserves that for anyone who set it.
-            if (this._isOpenTrack && this._overviewMinEffZoom > 0) {
-              snapZoom = Math.max(snapZoom, this._proj.camZoomForEffX(this._overviewMinEffZoom));
-            }
-            this._overviewSnapZoom = snapZoom; // stored so _setTargets uses the same zoom
-          } else {
-            snapZoom = this._overviewStateZoom;
-          }
+          // CAMERA-ZOOM-UNIT-1: OVERVIEW snaps to its TRACK-WIDTHS setting, the same rule the other
+          // four states run. What stood here before derived the zoom from a target sprite size
+          // divided by `2 x W_ref / racersPerRow`, which made the widest shot in the camera depend
+          // on how many racers were in the race — non-monotonically. There is no sprite size and no
+          // racer count in this path any more.
+          const snapZoom = this._overviewStateZoom;
+          this._overviewSnapZoom = snapZoom; // stored so _setTargets uses the same zoom
           this.zoom = snapZoom;
           this.targetZoom = snapZoom;
         } else {
@@ -2462,11 +2448,11 @@ export class CameraDirector {
         // Normalized snap zoom committed at OVERVIEW entry — same for open and closed tracks.
         // Falls back to _overviewStateZoom before the first OVERVIEW transition fires.
         const _ovSnapZoom = this._overviewSnapZoom ?? this._overviewStateZoom;
-        // QUARANTINED open/closed branch (NOT one of the 13 topology sites): overviewMinEffZoom is
-        // an open-track-only zoom-out floor and its Dev Screen tooltip says so. Applying it on
-        // closed tracks would change the picture for anyone who has set it, so it stays gated until
-        // the slider-unit block. See reports/evolution/CAMERA-PROJECTION-1.md.
-        const ovExtraMin = this._isOpenTrack ? this._overviewMinEffZoom : 0;
+        // CAMERA-ZOOM-UNIT-1: the quarantined open-track-only `overviewMinEffZoom` floor is GONE
+        // (it was the last open/closed branch in the SCALE path). It existed as a second, differently
+        // -phrased zoom bound on the surface this block rebuilds; the setting itself is now the bound
+        // and the projection's own range is the backstop.
+        const ovExtraMin = 0;
 
         // Entry phase with T-space lerp active: pan follows _camT along the track curve,
         // matching LEADER/BATTLE/COMEBACK — prevents hard snap to leader position on frame 1.

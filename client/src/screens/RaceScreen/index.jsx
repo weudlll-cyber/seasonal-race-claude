@@ -528,7 +528,10 @@ export default function RaceScreen() {
       isOpenTrack,
       cameraConfig,
       drawnBodyWidthRefPx,
-      shapeRef.current
+      shapeRef.current,
+      // CAMERA-ZOOM-UNIT-1: the corridor width every zoom setting is expressed in — the SAME
+      // number the physics uses (geometry.width, spline estimate only for tracks without one).
+      trackWidthPx
     );
     // CAMERA-REPRO-1: the camera makes its OWN random draws (which state to cut to, when the next
     // OVERVIEW is due). Unseeded, the same race shows a different camera every time — which is why

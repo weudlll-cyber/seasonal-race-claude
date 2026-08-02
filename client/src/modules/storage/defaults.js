@@ -54,16 +54,20 @@ export const DEFAULT_ROW_LAYOUT_CONFIG = {
 };
 
 export const DEFAULT_CAMERA_CONFIG = {
-  schemaVersion: 17,
+  schemaVersion: 18,
   // Per-state camera profiles — each key matches a CAM_STATE enum value.
-  // CameraDirector reads from here; legacy spritePctOfCanvas / cameraTransitionSeconds
-  // are kept below for localStorage backwards-compat (v3→v4 migration reads them).
-  // spriteScale: relative zoom factor — 1.0 = sprite at natural density-scaled size.
-  // Derived from v7 spritePx defaults (÷36): OVERVIEW=36/36=1.0, LEADER=65/36≈1.81,
-  // BATTLE=101/36≈2.81, COMEBACK=50/36≈1.39. Racer-count-independent (L82, L83).
+  //
+  // CAMERA-ZOOM-UNIT-1 (schema v18): `trackWidths` is THE zoom setting for every state — how many
+  // track widths of world are visible across the frame. One rule, one unit: the state says WHO the
+  // camera is on, this number says HOW FAR IN. Higher = wider, and the same number frames the same
+  // shot on every track, open or closed, at any world resolution (see camera/zoomUnit.js).
+  // It replaces `spriteScale` (an absolute screen-scale, so one setting meant 2.36 track widths on
+  // Mountainstreet and 5.40 on Searound) and OVERVIEW's separate target-sprite-size rule with its
+  // racer-count division. The values are clean round numbers chosen by the owner over reproducing
+  // the previous picture; 1.0 is the floor the full-track-width guarantee enforces.
   cameraStateProfiles: {
     OVERVIEW: {
-      spriteScale: 1.0,
+      trackWidths: 4, // the widest shot — roughly double LEADER
       trackingTC: 1.5,
       entryTC: 1.5,
       leadInDuration: 0, // seconds camera holds lead-in position before following racer
@@ -75,7 +79,7 @@ export const DEFAULT_CAMERA_CONFIG = {
       overviewOffsetPx: 150, // world px: camera shifts toward field so leader appears at outer edge
     },
     LEADER_ZOOM: {
-      spriteScale: 1.81,
+      trackWidths: 2, // the reference shot
       trackingTC: 0.25,
       entryTC: 0.8,
       leadInDuration: 0.3,
@@ -88,7 +92,7 @@ export const DEFAULT_CAMERA_CONFIG = {
       leadOutEnabled: false, // OFF by default — lead-out causes "camera stops, racer runs away" effect
     },
     BATTLE_ZOOM: {
-      spriteScale: 2.81,
+      trackWidths: 1.5, // tighter than LEADER
       trackingTC: 0.25,
       entryTC: 0.8,
       leadInDuration: 0.2,
@@ -101,7 +105,7 @@ export const DEFAULT_CAMERA_CONFIG = {
       leadOutEnabled: false,
     },
     COMEBACK_ZOOM: {
-      spriteScale: 1.39,
+      trackWidths: 1.5, // tighter than LEADER
       trackingTC: 0.25,
       entryTC: 0.8,
       leadInDuration: 0.3,
@@ -114,7 +118,7 @@ export const DEFAULT_CAMERA_CONFIG = {
       leadOutEnabled: false,
     },
     LEAD_CHANGE: {
-      spriteScale: 1.81,
+      trackWidths: 2, // same framing as LEADER — only the subject differs
       trackingTC: 0.25,
       entryTC: 0.8,
       leadInDuration: 0.3,
@@ -210,9 +214,7 @@ export const DEFAULT_CAMERA_CONFIG = {
   comebackCooldownMs: 10000, // ms after leaving COMEBACK before it can re-trigger
   leadChangeCooldownMs: 5000, // ms after leaving LEAD_CHANGE before it can re-trigger
   overviewCooldownMs: 15000, // ms after leaving OVERVIEW before it can recur
-  overviewClosedTrackZoom: 1.3, // @deprecated 2026-06-04 — retired; kept in schema v15 for migration compatibility only; not read at runtime
   overviewTargetScreenPx: 28, // minimum visible narrow-body screen size (px) for OVERVIEW (and floor for all phases)
-  overviewMinEffZoom: 0, // OVERVIEW zoom floor (effective zoom). 0 = off (current behavior). E.g. 0.6 = effZoom never goes below 0.6 on open tracks.
   // OVERVIEW-FRAMING-1 — the owner's framing rule. OVERVIEW frames the LEADER + the next
   // (overviewFrameRacers − 1) racers, deriving the zoom to fit them, floored so a racer sprite never
   // shrinks below overviewMinSpriteFrac of the frame width (legibility outranks the count). The frame
@@ -243,7 +245,9 @@ export const DEFAULT_CAMERA_CONFIG = {
   photoFinishSlowmoFactor: 0.5, // physics slow-motion factor during the photo-finish shot (1.0 = normal, 0.5 = half speed)
   photoFinishLeadProgress: 0.97, // predictive gate: leader progress (fraction of finishT, 0..1) at which the one-shot close-check fires BEFORE the line
   // Countdown camera phase: zooms from start-zoom to OVERVIEW zoom during the pre-race countdown.
-  countdownStartZoomSpritePx: 1, // tiny value → clamped to min zoom (whole track visible)
+  // CAMERA-ZOOM-UNIT-1: the countdown opens on the same unit — a wide establishing shot that
+  // eases into OVERVIEW. Clamped by the projection, so on a small world it means "the whole world".
+  countdownStartTrackWidths: 8,
   countdownDurationMs: 4000, // matches the default race countdown duration
   // State overlay: narrative text shown during first seconds of OVERVIEW / BATTLE / COMEBACK.
   stateOverlayEnabled: true,

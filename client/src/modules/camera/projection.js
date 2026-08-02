@@ -37,8 +37,19 @@ export const OPEN_TRACK_BASE_ZOOM = 1.5;
 export const REFERENCE_CANVAS_W = 1280;
 export const REFERENCE_CANVAS_H = 720;
 
-/** Ceiling for cam.zoom. See `maxCamZoom` — this is a cap in cam.zoom space, not effective zoom. */
-export const MAX_CAM_ZOOM = 10.0;
+/**
+ * Absurdity backstop for cam.zoom. NOT the meaningful tight-end bound — that is the full-track-width
+ * guarantee in zoomUnit.js, which is expressed in the same unit the owner sets and therefore means
+ * something. This number only stops a corrupt value producing an infinite zoom.
+ *
+ * CAMERA-ZOOM-UNIT-1 raised it from 10. At 10 it BOUND on legal settings: BATTLE at 1.5 track widths
+ * on Searound (the narrowest corridor, 131 px, on a 3072x2048 world) needs cam.zoom 10.42, so the old
+ * ceiling silently delivered 1.56 track widths instead of the 1.5 that was asked for — the exact
+ * class of "the same number means different things on different tracks" this block exists to remove.
+ * 24 clears the tightest legal setting on every shipped track (the strictest is Searound's guarantee
+ * at 15.63) with headroom, and stays far below anything a person would set on purpose.
+ */
+export const MAX_CAM_ZOOM = 24.0;
 
 /**
  * Build the world<->screen projection for one race.

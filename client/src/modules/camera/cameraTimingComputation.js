@@ -70,13 +70,15 @@ export function computeTimingFromConfig(config) {
   const overviewOffsetPx =
     config?.cameraStateProfiles?.OVERVIEW?.overviewOffsetPx ?? DEFAULT_OVERVIEW_OFFSET_PX;
   const overviewCooldownMs = config?.overviewCooldownMs ?? OVERVIEW_COOLDOWN_MS;
-  // overviewClosedTrackZoom removed 2026-06-04: closed tracks now use referenceSpriteSize
-  // normalization (same formula as open tracks). Field is kept in defaults.js / schema v15
-  // for migration compatibility but is no longer read at runtime.
-  const overviewTargetScreenPx = config?.overviewTargetScreenPx ?? 28;
+  // CAMERA-ZOOM-UNIT-1 removed three OVERVIEW zoom inputs that the track-widths unit replaces:
+  //   overviewClosedTrackZoom  — dead since 2026-06-04, its Dev Screen tooltip still described
+  //                              behaviour it did not have; key, slider and tooltip all gone now
+  //   overviewTargetScreenPx   — was the OVERVIEW zoom's target SPRITE SIZE. The camera no longer
+  //                              reads it; the key survives ONLY as RaceScreen's render-time sprite
+  //                              floor, which is a different mechanism (see the report)
+  //   overviewMinEffZoom       — an open-track-only second zoom bound on the same surface
   const overviewFrameRacers = config?.overviewFrameRacers ?? 5; // OVERVIEW-FRAMING-1: leader + next N−1
   const overviewMinSpriteFrac = config?.overviewMinSpriteFrac ?? 0.018; // sprite floor as a frame fraction
-  const overviewMinEffZoom = config?.overviewMinEffZoom ?? 0;
 
   // Per-state lead-ahead toggle (default true for backward compat with old configs).
   const leadAheadEnabledByState = {};
@@ -301,8 +303,6 @@ export function computeTimingFromConfig(config) {
     overviewFrameRacers,
     overviewMinSpriteFrac,
     overviewCooldownMs,
-    overviewTargetScreenPx,
-    overviewMinEffZoom,
     leadAheadEnabledByState,
     leadOutEnabledByState,
     maxEntryDurationByState,

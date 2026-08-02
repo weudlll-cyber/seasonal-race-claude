@@ -1,3 +1,10 @@
+// CAMERA-ZOOM-UNIT-1 (schema v18): the per-state ZOOM field is now `trackWidths`, and the
+// v17->v18 migration deliberately DISCARDS whatever zoom a stored config carried instead of
+// converting it — the owner chose clean round defaults over reproducing the old picture, so a
+// converted number would be work in service of a result nobody wants. The migration assertions
+// below therefore read "the legacy zoom did not survive, the shipped default is in its place".
+// Every NON-zoom stored field must still survive untouched (Lesson 193); that is asserted too.
+
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 vi.mock('./storage/storage.js', () => ({
@@ -66,10 +73,10 @@ describe('loadCameraConfig', () => {
     });
     const cfg = loadCameraConfig();
     expect(cfg.maxTargetScreenPx).toBe(200);
-    expect(cfg.schemaVersion).toBe(17);
+    expect(cfg.schemaVersion).toBe(18);
   });
 
-  it('schemaVersion=2: respects stored spritePctOfCanvas.leader → migrated to spriteScale', () => {
+  it('schemaVersion=2: a stored legacy zoom does NOT survive v18 — the track-widths default replaces it', () => {
     storageGet.mockReturnValue({
       schemaVersion: 2,
       spritePctOfCanvas: {
@@ -81,7 +88,9 @@ describe('loadCameraConfig', () => {
     });
     const cfg = loadCameraConfig();
     // 0.1 × 720 = 72 → spriteScale = 72/36 = 2.0
-    expect(cfg.cameraStateProfiles.LEADER_ZOOM.spriteScale).toBe(72 / 36);
+    expect(cfg.cameraStateProfiles.LEADER_ZOOM.trackWidths).toBe(
+      DEFAULT_CAMERA_CONFIG.cameraStateProfiles.LEADER_ZOOM.trackWidths
+    );
     expect(cfg.spritePctOfCanvas.leader).toBe(0.1);
   });
 
@@ -92,12 +101,14 @@ describe('loadCameraConfig', () => {
     });
     const cfg = loadCameraConfig();
     // leader: Math.round(0.1×720)=72 → spriteScale=72/36=2.0; others fall back to default spriteScale
-    expect(cfg.cameraStateProfiles.LEADER_ZOOM.spriteScale).toBe(72 / 36);
-    expect(cfg.cameraStateProfiles.OVERVIEW.spriteScale).toBe(
-      DEFAULT_CAMERA_CONFIG.cameraStateProfiles.OVERVIEW.spriteScale
+    expect(cfg.cameraStateProfiles.LEADER_ZOOM.trackWidths).toBe(
+      DEFAULT_CAMERA_CONFIG.cameraStateProfiles.LEADER_ZOOM.trackWidths
     );
-    expect(cfg.cameraStateProfiles.BATTLE_ZOOM.spriteScale).toBe(
-      DEFAULT_CAMERA_CONFIG.cameraStateProfiles.BATTLE_ZOOM.spriteScale
+    expect(cfg.cameraStateProfiles.OVERVIEW.trackWidths).toBe(
+      DEFAULT_CAMERA_CONFIG.cameraStateProfiles.OVERVIEW.trackWidths
+    );
+    expect(cfg.cameraStateProfiles.BATTLE_ZOOM.trackWidths).toBe(
+      DEFAULT_CAMERA_CONFIG.cameraStateProfiles.BATTLE_ZOOM.trackWidths
     );
   });
 });
@@ -108,7 +119,7 @@ describe('saveCameraConfig', () => {
     saveCameraConfig(config);
     expect(storageSet).toHaveBeenCalledWith(
       'racearena:cameraConfig',
-      expect.objectContaining({ schemaVersion: 17 })
+      expect.objectContaining({ schemaVersion: 18 })
     );
   });
 
@@ -116,7 +127,7 @@ describe('saveCameraConfig', () => {
     saveCameraConfig({ maxTargetScreenPx: 160 });
     expect(storageSet).toHaveBeenCalledWith(
       'racearena:cameraConfig',
-      expect.objectContaining({ schemaVersion: 17 })
+      expect.objectContaining({ schemaVersion: 18 })
     );
   });
 });
@@ -130,7 +141,7 @@ describe('loadCameraConfig — v11→v12 migration', () => {
     });
     const cfg = loadCameraConfig();
     // v11 chains through v12, v13, v14, and v15
-    expect(cfg.schemaVersion).toBe(17);
+    expect(cfg.schemaVersion).toBe(18);
     expect(cfg.countdownStartZoomSpritePx).toBe(DEFAULT_CAMERA_CONFIG.countdownStartZoomSpritePx);
     expect(cfg.countdownDurationMs).toBe(DEFAULT_CAMERA_CONFIG.countdownDurationMs);
   });
@@ -146,7 +157,7 @@ describe('loadCameraConfig — v16→v17 migration (BATTLE arc closeness)', () =
       cameraStateProfiles: DEFAULT_CAMERA_CONFIG.cameraStateProfiles,
     });
     const cfg = loadCameraConfig();
-    expect(cfg.schemaVersion).toBe(17);
+    expect(cfg.schemaVersion).toBe(18);
     expect(cfg.battlePulkThresholdPx).toBeUndefined();
     expect(cfg.battleIsolationThresholdPx).toBeUndefined();
     expect(cfg.battlePulkThresholdT).toBe(0.05);
@@ -160,7 +171,7 @@ describe('loadCameraConfig — v16→v17 migration (BATTLE arc closeness)', () =
       cameraStateProfiles: DEFAULT_CAMERA_CONFIG.cameraStateProfiles,
     });
     const cfg = loadCameraConfig();
-    expect(cfg.schemaVersion).toBe(17);
+    expect(cfg.schemaVersion).toBe(18);
     expect(cfg.battlePulkThresholdT).toBe(0.09);
   });
 });
@@ -174,7 +185,7 @@ describe('loadCameraConfig — v2/v3 migration', () => {
     const cfg = loadCameraConfig();
     expect(cfg.battleMaxDurationMs).toBe(9999);
     expect('battleMaxDuration' in cfg).toBe(false);
-    expect(cfg.schemaVersion).toBe(17);
+    expect(cfg.schemaVersion).toBe(18);
   });
 
   it('v2 config without battleMaxDuration migrates to v14 and gets default battleMaxDurationMs', () => {
@@ -183,7 +194,7 @@ describe('loadCameraConfig — v2/v3 migration', () => {
       maxTargetScreenPx: 200,
     });
     const cfg = loadCameraConfig();
-    expect(cfg.schemaVersion).toBe(17);
+    expect(cfg.schemaVersion).toBe(18);
     expect(cfg.maxTargetScreenPx).toBe(200);
     expect('battleMaxDuration' in cfg).toBe(false);
     expect(cfg.battleMaxDurationMs).toBe(DEFAULT_CAMERA_CONFIG.battleMaxDurationMs);
@@ -197,12 +208,12 @@ describe('loadCameraConfig — v2/v3 migration', () => {
     const cfg = loadCameraConfig();
     expect(cfg.battleMaxDurationMs).toBe(8000);
     expect('battleMaxDuration' in cfg).toBe(false);
-    expect(cfg.schemaVersion).toBe(17);
+    expect(cfg.schemaVersion).toBe(18);
   });
 });
 
 describe('loadCameraConfig — v3→v4 migration: cameraStateProfiles built from legacy fields', () => {
-  it('LEADER_ZOOM.spriteScale is derived from stored spritePctOfCanvas.leader (0.11→79px→79/36)', () => {
+  it('a stored legacy zoom is DISCARDED at v18 in favour of the shipped track-widths default', () => {
     storageGet.mockReturnValue({
       schemaVersion: 3,
       spritePctOfCanvas: { overview: 0.05, leader: 0.11, battle: 0.12, comeback: 0.065 },
@@ -210,7 +221,9 @@ describe('loadCameraConfig — v3→v4 migration: cameraStateProfiles built from
     });
     const cfg = loadCameraConfig();
     // Math.round(0.11 × 720) = Math.round(79.2) = 79 → spriteScale = 79/36
-    expect(cfg.cameraStateProfiles.LEADER_ZOOM.spriteScale).toBe(79 / 36);
+    expect(cfg.cameraStateProfiles.LEADER_ZOOM.trackWidths).toBe(
+      DEFAULT_CAMERA_CONFIG.cameraStateProfiles.LEADER_ZOOM.trackWidths
+    );
   });
 
   it('BATTLE_ZOOM.maxStateDuration picks up battleMaxDurationMs (BATTLE had its own cap)', () => {
@@ -248,13 +261,15 @@ describe('loadCameraConfig — v3→v4 migration: cameraStateProfiles built from
     storageGet.mockReturnValue({ schemaVersion: 3 });
     const cfg = loadCameraConfig();
     const defProf = DEFAULT_CAMERA_CONFIG.cameraStateProfiles;
-    expect(cfg.cameraStateProfiles.LEADER_ZOOM.spriteScale).toBe(defProf.LEADER_ZOOM.spriteScale);
+    expect(cfg.cameraStateProfiles.LEADER_ZOOM.trackWidths).toBe(
+      DEFAULT_CAMERA_CONFIG.cameraStateProfiles.LEADER_ZOOM.trackWidths
+    );
     expect(cfg.cameraStateProfiles.OVERVIEW.trackingTC).toBe(defProf.OVERVIEW.trackingTC);
   });
 });
 
 describe('loadCameraConfig — v4 schema: deep-merge cameraStateProfiles', () => {
-  it('stored v4 cameraStateProfiles are merged and spritePct→spritePx→spriteScale converted', () => {
+  it('stored v4 cameraStateProfiles are merged; the zoom field is replaced by the v18 track-widths default', () => {
     storageGet.mockReturnValue({
       schemaVersion: 4,
       cameraStateProfiles: {
@@ -263,15 +278,17 @@ describe('loadCameraConfig — v4 schema: deep-merge cameraStateProfiles', () =>
     });
     const cfg = loadCameraConfig();
     // migrateV6toV7 converts 0.15 × 720 = 108 → migrateV13toV14: 108/36 = 3.0
-    expect(cfg.cameraStateProfiles.LEADER_ZOOM.spriteScale).toBe(3.0);
+    expect(cfg.cameraStateProfiles.LEADER_ZOOM.trackWidths).toBe(
+      DEFAULT_CAMERA_CONFIG.cameraStateProfiles.LEADER_ZOOM.trackWidths
+    );
     expect('spritePct' in cfg.cameraStateProfiles.LEADER_ZOOM).toBe(false);
     // Other fields come from default
     expect(cfg.cameraStateProfiles.LEADER_ZOOM.trackingTC).toBe(
       DEFAULT_CAMERA_CONFIG.cameraStateProfiles.LEADER_ZOOM.trackingTC
     );
     // Unmentioned state uses scale defaults
-    expect(cfg.cameraStateProfiles.BATTLE_ZOOM.spriteScale).toBe(
-      DEFAULT_CAMERA_CONFIG.cameraStateProfiles.BATTLE_ZOOM.spriteScale
+    expect(cfg.cameraStateProfiles.BATTLE_ZOOM.trackWidths).toBe(
+      DEFAULT_CAMERA_CONFIG.cameraStateProfiles.BATTLE_ZOOM.trackWidths
     );
   });
 
@@ -283,8 +300,8 @@ describe('loadCameraConfig — v4 schema: deep-merge cameraStateProfiles', () =>
   });
 });
 
-describe('loadCameraConfig — v5→v7 migration: leadInDuration reset + spritePct→spriteScale', () => {
-  it('v5 config with old leadInDuration=1.0 is migrated: leadInDuration reset, spritePct→spriteScale', () => {
+describe('loadCameraConfig — v5→v7 migration: leadInDuration reset (zoom now ends at the v18 unit)', () => {
+  it('v5 config with old leadInDuration=1.0 is migrated: leadInDuration reset, zoom on the v18 unit', () => {
     storageGet.mockReturnValue({
       schemaVersion: 5,
       cameraStateProfiles: {
@@ -331,7 +348,7 @@ describe('loadCameraConfig — v5→v7 migration: leadInDuration reset + spriteP
       },
     });
     const cfg = loadCameraConfig();
-    expect(cfg.schemaVersion).toBe(17);
+    expect(cfg.schemaVersion).toBe(18);
     expect(cfg.cameraStateProfiles.LEADER_ZOOM.leadInDuration).toBe(
       DEFAULT_CAMERA_CONFIG.cameraStateProfiles.LEADER_ZOOM.leadInDuration
     );
@@ -343,10 +360,18 @@ describe('loadCameraConfig — v5→v7 migration: leadInDuration reset + spriteP
     );
     expect(cfg.cameraStateProfiles.OVERVIEW.leadInDuration).toBe(0);
     // spritePct→spritePx→spriteScale: 0.09×720=65→65/36, 0.14×720≈101→101/36, 0.07×720=50→50/36, 0.05×720=36→1.0
-    expect(cfg.cameraStateProfiles.LEADER_ZOOM.spriteScale).toBe(65 / 36);
-    expect(cfg.cameraStateProfiles.BATTLE_ZOOM.spriteScale).toBe(101 / 36);
-    expect(cfg.cameraStateProfiles.COMEBACK_ZOOM.spriteScale).toBe(50 / 36);
-    expect(cfg.cameraStateProfiles.OVERVIEW.spriteScale).toBe(1.0);
+    expect(cfg.cameraStateProfiles.LEADER_ZOOM.trackWidths).toBe(
+      DEFAULT_CAMERA_CONFIG.cameraStateProfiles.LEADER_ZOOM.trackWidths
+    );
+    expect(cfg.cameraStateProfiles.BATTLE_ZOOM.trackWidths).toBe(
+      DEFAULT_CAMERA_CONFIG.cameraStateProfiles.BATTLE_ZOOM.trackWidths
+    );
+    expect(cfg.cameraStateProfiles.COMEBACK_ZOOM.trackWidths).toBe(
+      DEFAULT_CAMERA_CONFIG.cameraStateProfiles.COMEBACK_ZOOM.trackWidths
+    );
+    expect(cfg.cameraStateProfiles.OVERVIEW.trackWidths).toBe(
+      DEFAULT_CAMERA_CONFIG.cameraStateProfiles.OVERVIEW.trackWidths
+    );
     expect('spritePct' in cfg.cameraStateProfiles.LEADER_ZOOM).toBe(false);
   });
 
@@ -359,7 +384,9 @@ describe('loadCameraConfig — v5→v7 migration: leadInDuration reset + spriteP
     });
     const cfg = loadCameraConfig();
     // Math.round(0.15 × 720) = 108 → spriteScale = 108/36 = 3.0
-    expect(cfg.cameraStateProfiles.LEADER_ZOOM.spriteScale).toBe(3.0);
+    expect(cfg.cameraStateProfiles.LEADER_ZOOM.trackWidths).toBe(
+      DEFAULT_CAMERA_CONFIG.cameraStateProfiles.LEADER_ZOOM.trackWidths
+    );
     expect('spritePct' in cfg.cameraStateProfiles.LEADER_ZOOM).toBe(false);
     expect(cfg.cameraStateProfiles.LEADER_ZOOM.leadInDuration).toBe(
       DEFAULT_CAMERA_CONFIG.cameraStateProfiles.LEADER_ZOOM.leadInDuration
@@ -385,8 +412,10 @@ describe('loadCameraConfig — v5→v7 migration: leadInDuration reset + spriteP
     const cfg = loadCameraConfig();
     // user-tuned leadInDuration 0.8 survives; spritePct=0.09 → spriteScale=65/36
     expect(cfg.cameraStateProfiles.LEADER_ZOOM.leadInDuration).toBe(0.8);
-    expect(cfg.cameraStateProfiles.LEADER_ZOOM.spriteScale).toBe(65 / 36);
-    expect(cfg.schemaVersion).toBe(17);
+    expect(cfg.cameraStateProfiles.LEADER_ZOOM.trackWidths).toBe(
+      DEFAULT_CAMERA_CONFIG.cameraStateProfiles.LEADER_ZOOM.trackWidths
+    );
+    expect(cfg.schemaVersion).toBe(18);
   });
 });
 
@@ -438,12 +467,20 @@ describe('loadCameraConfig — v6→v7 migration: spritePct→spriteScale', () =
       },
     });
     const cfg = loadCameraConfig();
-    expect(cfg.schemaVersion).toBe(17);
+    expect(cfg.schemaVersion).toBe(18);
     // Migration formula: Math.round(spritePct × 720) → /36 for spriteScale
-    expect(cfg.cameraStateProfiles.OVERVIEW.spriteScale).toBe(1.0); // 0.05×720=36→36/36=1.0
-    expect(cfg.cameraStateProfiles.LEADER_ZOOM.spriteScale).toBe(65 / 36); // 0.09×720=64.8→65
-    expect(cfg.cameraStateProfiles.BATTLE_ZOOM.spriteScale).toBe(101 / 36); // 0.14×720=100.8→101
-    expect(cfg.cameraStateProfiles.COMEBACK_ZOOM.spriteScale).toBe(50 / 36); // 0.07×720=50.4→50
+    expect(cfg.cameraStateProfiles.OVERVIEW.trackWidths).toBe(
+      DEFAULT_CAMERA_CONFIG.cameraStateProfiles.OVERVIEW.trackWidths
+    ); // 0.05×720=36→36/36=1.0
+    expect(cfg.cameraStateProfiles.LEADER_ZOOM.trackWidths).toBe(
+      DEFAULT_CAMERA_CONFIG.cameraStateProfiles.LEADER_ZOOM.trackWidths
+    ); // 0.09×720=64.8→65
+    expect(cfg.cameraStateProfiles.BATTLE_ZOOM.trackWidths).toBe(
+      DEFAULT_CAMERA_CONFIG.cameraStateProfiles.BATTLE_ZOOM.trackWidths
+    ); // 0.14×720=100.8→101
+    expect(cfg.cameraStateProfiles.COMEBACK_ZOOM.trackWidths).toBe(
+      DEFAULT_CAMERA_CONFIG.cameraStateProfiles.COMEBACK_ZOOM.trackWidths
+    ); // 0.07×720=50.4→50
     // spritePct key must not survive
     expect('spritePct' in cfg.cameraStateProfiles.OVERVIEW).toBe(false);
     expect('spritePct' in cfg.cameraStateProfiles.LEADER_ZOOM).toBe(false);
@@ -458,8 +495,10 @@ describe('loadCameraConfig — v6→v7 migration: spritePct→spriteScale', () =
     });
     const cfg = loadCameraConfig();
     // Math.round(0.20 × 720) = 144 → spriteScale = 144/36 = 4.0
-    expect(cfg.cameraStateProfiles.LEADER_ZOOM.spriteScale).toBe(4.0);
-    expect(cfg.schemaVersion).toBe(17);
+    expect(cfg.cameraStateProfiles.LEADER_ZOOM.trackWidths).toBe(
+      DEFAULT_CAMERA_CONFIG.cameraStateProfiles.LEADER_ZOOM.trackWidths
+    );
+    expect(cfg.schemaVersion).toBe(18);
   });
 
   it('v7 stored config is migrated to v14, user-tuned spritePx converted to spriteScale', () => {
@@ -479,8 +518,10 @@ describe('loadCameraConfig — v6→v7 migration: spritePct→spriteScale', () =
       },
     });
     const cfg = loadCameraConfig();
-    expect(cfg.cameraStateProfiles.LEADER_ZOOM.spriteScale).toBe(80 / 36);
-    expect(cfg.schemaVersion).toBe(17);
+    expect(cfg.cameraStateProfiles.LEADER_ZOOM.trackWidths).toBe(
+      DEFAULT_CAMERA_CONFIG.cameraStateProfiles.LEADER_ZOOM.trackWidths
+    );
+    expect(cfg.schemaVersion).toBe(18);
   });
 
   it('v9 stored config is migrated to v14, leadAheadEnabled and leadOutEnabled injected into LEADER/BATTLE/COMEBACK', () => {
@@ -505,7 +546,7 @@ describe('loadCameraConfig — v6→v7 migration: spritePct→spriteScale', () =
       },
     });
     const cfg = loadCameraConfig();
-    expect(cfg.schemaVersion).toBe(17);
+    expect(cfg.schemaVersion).toBe(18);
     expect(cfg.cameraStateProfiles.LEADER_ZOOM.leadAheadEnabled).toBe(false);
     expect(cfg.cameraStateProfiles.BATTLE_ZOOM.leadAheadEnabled).toBe(false);
     expect(cfg.cameraStateProfiles.COMEBACK_ZOOM.leadAheadEnabled).toBe(false);
@@ -513,7 +554,9 @@ describe('loadCameraConfig — v6→v7 migration: spritePct→spriteScale', () =
     expect(cfg.cameraStateProfiles.BATTLE_ZOOM.leadOutEnabled).toBe(false);
     expect(cfg.cameraStateProfiles.COMEBACK_ZOOM.leadOutEnabled).toBe(false);
     // User-tuned spritePx converted to spriteScale
-    expect(cfg.cameraStateProfiles.LEADER_ZOOM.spriteScale).toBe(80 / 36);
+    expect(cfg.cameraStateProfiles.LEADER_ZOOM.trackWidths).toBe(
+      DEFAULT_CAMERA_CONFIG.cameraStateProfiles.LEADER_ZOOM.trackWidths
+    );
   });
 
   it('v8 stored config is migrated to v14, overviewOffsetPx injected into OVERVIEW profile', () => {
@@ -538,7 +581,7 @@ describe('loadCameraConfig — v6→v7 migration: spritePct→spriteScale', () =
       },
     });
     const cfg = loadCameraConfig();
-    expect(cfg.schemaVersion).toBe(17);
+    expect(cfg.schemaVersion).toBe(18);
     expect(cfg.cameraStateProfiles.OVERVIEW.overviewOffsetPx).toBe(
       DEFAULT_CAMERA_CONFIG.cameraStateProfiles.OVERVIEW.overviewOffsetPx
     );
@@ -577,13 +620,15 @@ describe('loadCameraConfig — v10→v11 migration: leadOutEnabled', () => {
       },
     });
     const cfg = loadCameraConfig();
-    expect(cfg.schemaVersion).toBe(17);
+    expect(cfg.schemaVersion).toBe(18);
     expect(cfg.cameraStateProfiles.LEADER_ZOOM.leadOutEnabled).toBe(false);
     expect(cfg.cameraStateProfiles.BATTLE_ZOOM.leadOutEnabled).toBe(false);
     expect(cfg.cameraStateProfiles.COMEBACK_ZOOM.leadOutEnabled).toBe(false);
     // Existing user-tuned values preserved; spritePx converted to spriteScale
     expect(cfg.cameraStateProfiles.LEADER_ZOOM.leadAheadEnabled).toBe(true);
-    expect(cfg.cameraStateProfiles.LEADER_ZOOM.spriteScale).toBe(75 / 36);
+    expect(cfg.cameraStateProfiles.LEADER_ZOOM.trackWidths).toBe(
+      DEFAULT_CAMERA_CONFIG.cameraStateProfiles.LEADER_ZOOM.trackWidths
+    );
     // OVERVIEW is not touched
     expect('leadOutEnabled' in cfg.cameraStateProfiles.OVERVIEW).toBe(false);
   });
@@ -602,7 +647,7 @@ describe('loadCameraConfig — v10→v11 migration: leadOutEnabled', () => {
       },
     });
     const cfg = loadCameraConfig();
-    expect(cfg.schemaVersion).toBe(17);
+    expect(cfg.schemaVersion).toBe(18);
     expect(cfg.cameraStateProfiles.LEADER_ZOOM.leadOutEnabled).toBe(true);
   });
 
@@ -621,9 +666,11 @@ describe('loadCameraConfig — v10→v11 migration: leadOutEnabled', () => {
       },
     });
     const cfg = loadCameraConfig();
-    expect(cfg.schemaVersion).toBe(17);
+    expect(cfg.schemaVersion).toBe(18);
     expect(cfg.cameraStateProfiles.LEADER_ZOOM.leadOutEnabled).toBe(true);
-    expect(cfg.cameraStateProfiles.LEADER_ZOOM.spriteScale).toBe(90 / 36);
+    expect(cfg.cameraStateProfiles.LEADER_ZOOM.trackWidths).toBe(
+      DEFAULT_CAMERA_CONFIG.cameraStateProfiles.LEADER_ZOOM.trackWidths
+    );
   });
 });
 
@@ -635,7 +682,7 @@ describe('loadCameraConfig — v12→v13 migration', () => {
       postStartHoldMs: 7000,
     });
     const cfg = loadCameraConfig();
-    expect(cfg.schemaVersion).toBe(17);
+    expect(cfg.schemaVersion).toBe(18);
     expect(cfg.stateOverlayEnabled).toBe(DEFAULT_CAMERA_CONFIG.stateOverlayEnabled);
     expect(cfg.stateOverlayDurationMs).toBe(DEFAULT_CAMERA_CONFIG.stateOverlayDurationMs);
   });
@@ -647,7 +694,7 @@ describe('loadCameraConfig — v12→v13 migration', () => {
       cameraStateProfiles: DEFAULT_CAMERA_CONFIG.cameraStateProfiles,
     });
     const cfg = loadCameraConfig();
-    expect(cfg.schemaVersion).toBe(17);
+    expect(cfg.schemaVersion).toBe(18);
     expect(cfg.stateOverlayEnabled).toBe(false);
   });
 
@@ -665,7 +712,7 @@ describe('loadCameraConfig — v12→v13 migration', () => {
     // Verify the defaults themselves are correct for a brand-new installation.
     storageGet.mockReturnValue(null);
     const cfg = loadCameraConfig();
-    expect(cfg.schemaVersion).toBe(17);
+    expect(cfg.schemaVersion).toBe(18);
     expect(cfg.stateOverlayEnabled).toBe(true);
     expect(cfg.stateOverlayDurationMs).toBe(3500);
   });
@@ -684,12 +731,22 @@ describe('loadCameraConfig — v13→v14 migration: spritePx → spriteScale', (
       },
     });
     const cfg = loadCameraConfig();
-    expect(cfg.schemaVersion).toBe(17);
-    expect(cfg.cameraStateProfiles.OVERVIEW.spriteScale).toBe(1.0);
-    expect(cfg.cameraStateProfiles.LEADER_ZOOM.spriteScale).toBe(65 / 36);
-    expect(cfg.cameraStateProfiles.BATTLE_ZOOM.spriteScale).toBe(101 / 36);
-    expect(cfg.cameraStateProfiles.COMEBACK_ZOOM.spriteScale).toBe(50 / 36);
-    expect(cfg.cameraStateProfiles.LEAD_CHANGE.spriteScale).toBe(65 / 36);
+    expect(cfg.schemaVersion).toBe(18);
+    expect(cfg.cameraStateProfiles.OVERVIEW.trackWidths).toBe(
+      DEFAULT_CAMERA_CONFIG.cameraStateProfiles.OVERVIEW.trackWidths
+    );
+    expect(cfg.cameraStateProfiles.LEADER_ZOOM.trackWidths).toBe(
+      DEFAULT_CAMERA_CONFIG.cameraStateProfiles.LEADER_ZOOM.trackWidths
+    );
+    expect(cfg.cameraStateProfiles.BATTLE_ZOOM.trackWidths).toBe(
+      DEFAULT_CAMERA_CONFIG.cameraStateProfiles.BATTLE_ZOOM.trackWidths
+    );
+    expect(cfg.cameraStateProfiles.COMEBACK_ZOOM.trackWidths).toBe(
+      DEFAULT_CAMERA_CONFIG.cameraStateProfiles.COMEBACK_ZOOM.trackWidths
+    );
+    expect(cfg.cameraStateProfiles.LEAD_CHANGE.trackWidths).toBe(
+      DEFAULT_CAMERA_CONFIG.cameraStateProfiles.LEAD_CHANGE.trackWidths
+    );
     expect('spritePx' in cfg.cameraStateProfiles.LEADER_ZOOM).toBe(false);
   });
 
@@ -701,8 +758,10 @@ describe('loadCameraConfig — v13→v14 migration: spritePx → spriteScale', (
       },
     });
     const cfg = loadCameraConfig();
-    expect(cfg.cameraStateProfiles.LEADER_ZOOM.spriteScale).toBe(3.0);
-    expect(cfg.schemaVersion).toBe(17);
+    expect(cfg.cameraStateProfiles.LEADER_ZOOM.trackWidths).toBe(
+      DEFAULT_CAMERA_CONFIG.cameraStateProfiles.LEADER_ZOOM.trackWidths
+    );
+    expect(cfg.schemaVersion).toBe(18);
   });
 
   it('v13 config with spriteScale already set is not overwritten', () => {
@@ -716,7 +775,9 @@ describe('loadCameraConfig — v13→v14 migration: spritePx → spriteScale', (
       },
     });
     const cfg = loadCameraConfig();
-    expect(cfg.cameraStateProfiles.LEADER_ZOOM.spriteScale).toBe(2.5);
+    expect(cfg.cameraStateProfiles.LEADER_ZOOM.trackWidths).toBe(
+      DEFAULT_CAMERA_CONFIG.cameraStateProfiles.LEADER_ZOOM.trackWidths
+    );
   });
 
   it('v14 stored config migrates to v15, user-tuned spriteScale is preserved unchanged', () => {
@@ -728,8 +789,10 @@ describe('loadCameraConfig — v13→v14 migration: spritePx → spriteScale', (
       },
     });
     const cfg = loadCameraConfig();
-    expect(cfg.schemaVersion).toBe(17);
-    expect(cfg.cameraStateProfiles.LEADER_ZOOM.spriteScale).toBe(2.0);
+    expect(cfg.schemaVersion).toBe(18);
+    expect(cfg.cameraStateProfiles.LEADER_ZOOM.trackWidths).toBe(
+      DEFAULT_CAMERA_CONFIG.cameraStateProfiles.LEADER_ZOOM.trackWidths
+    );
   });
 });
 
@@ -749,7 +812,9 @@ describe('loadCameraConfig — v15 passthrough', () => {
     // Unset top-level field comes from defaults
     expect(cfg.minStateHoldMs).toBe(DEFAULT_CAMERA_CONFIG.minStateHoldMs);
     // Stored field inside the state is preserved
-    expect(cfg.cameraStateProfiles.LEADER_ZOOM.spriteScale).toBe(3.0);
+    expect(cfg.cameraStateProfiles.LEADER_ZOOM.trackWidths).toBe(
+      DEFAULT_CAMERA_CONFIG.cameraStateProfiles.LEADER_ZOOM.trackWidths
+    );
     // Non-overridden field in the same state is filled from defaults (per-state deep merge)
     expect(cfg.cameraStateProfiles.LEADER_ZOOM.trackingTC).toBe(
       DEFAULT_CAMERA_CONFIG.cameraStateProfiles.LEADER_ZOOM.trackingTC
@@ -758,7 +823,7 @@ describe('loadCameraConfig — v15 passthrough', () => {
     expect(cfg.cameraStateProfiles.OVERVIEW).toEqual(
       DEFAULT_CAMERA_CONFIG.cameraStateProfiles.OVERVIEW
     );
-    expect(cfg.schemaVersion).toBe(17);
+    expect(cfg.schemaVersion).toBe(18);
   });
 
   it('v15 WITHOUT cameraStateProfiles: top-level override merged, cameraStateProfiles equals defaults', () => {
@@ -773,7 +838,7 @@ describe('loadCameraConfig — v15 passthrough', () => {
     expect(cfg.minStateHoldMs).toBe(DEFAULT_CAMERA_CONFIG.minStateHoldMs);
     // Deep-merge block skipped → profiles are the defaults spread from DEFAULT_CAMERA_CONFIG
     expect(cfg.cameraStateProfiles).toEqual(DEFAULT_CAMERA_CONFIG.cameraStateProfiles);
-    expect(cfg.schemaVersion).toBe(17);
+    expect(cfg.schemaVersion).toBe(18);
   });
 });
 
@@ -786,7 +851,7 @@ describe('loadCameraConfig — normalizeCameraTransitionSeconds scalar branch', 
       cameraTransitionSeconds: 2.5,
     });
     const cfg = loadCameraConfig();
-    expect(cfg.schemaVersion).toBe(17);
+    expect(cfg.schemaVersion).toBe(18);
     // The scalar becomes the overview TC; other keys come from DEFAULT_CAMERA_CONFIG.
     expect(cfg.cameraTransitionSeconds.overview).toBe(2.5);
     expect(cfg.cameraTransitionSeconds.leader).toBe(
@@ -816,7 +881,7 @@ describe('applyMigrationsSinceV5 — runner slice logic', () => {
       },
     });
     const cfg = loadCameraConfig();
-    expect(cfg.schemaVersion).toBe(17);
+    expect(cfg.schemaVersion).toBe(18);
     // migrateV14toV15 injected overviewClosedTrackZoom
     expect(cfg.overviewClosedTrackZoom).toBe(DEFAULT_CAMERA_CONFIG.overviewClosedTrackZoom);
     // leadInDuration must NOT have been reset (migrateV5toV6 must not have run)
@@ -833,10 +898,12 @@ describe('applyMigrationsSinceV5 — runner slice logic', () => {
       },
     });
     const cfg = loadCameraConfig();
-    expect(cfg.schemaVersion).toBe(17);
+    expect(cfg.schemaVersion).toBe(18);
     // migrateV6toV7 converted spritePct; migrateV13toV14 produced spriteScale
     expect('spritePct' in cfg.cameraStateProfiles.LEADER_ZOOM).toBe(false);
-    expect(cfg.cameraStateProfiles.LEADER_ZOOM.spriteScale).toBe(65 / 36); // Math.round(0.09×720)=65
+    expect(cfg.cameraStateProfiles.LEADER_ZOOM.trackWidths).toBe(
+      DEFAULT_CAMERA_CONFIG.cameraStateProfiles.LEADER_ZOOM.trackWidths
+    ); // Math.round(0.09×720)=65
     // migrateV14toV15 ran (overviewClosedTrackZoom present)
     expect(cfg.overviewClosedTrackZoom).toBe(DEFAULT_CAMERA_CONFIG.overviewClosedTrackZoom);
   });
@@ -865,8 +932,8 @@ describe('mergeStateProfiles — helper behavior via loadCameraConfig', () => {
     );
     // spriteScale present from default base (not stripped); BATTLE_ZOOM was not in stored,
     // so its spriteScale flows through the no-strip base → chain → final output.
-    expect(cfg.cameraStateProfiles.BATTLE_ZOOM.spriteScale).toBe(
-      DEFAULT_CAMERA_CONFIG.cameraStateProfiles.BATTLE_ZOOM.spriteScale
+    expect(cfg.cameraStateProfiles.BATTLE_ZOOM.trackWidths).toBe(
+      DEFAULT_CAMERA_CONFIG.cameraStateProfiles.BATTLE_ZOOM.trackWidths
     );
   });
 
@@ -883,7 +950,9 @@ describe('mergeStateProfiles — helper behavior via loadCameraConfig', () => {
     // Override preserved
     expect(cfg.cameraStateProfiles.LEADER_ZOOM.trackingTC).toBe(0.55);
     // spritePct converted: Math.round(0.12 × 720) = 86 → spriteScale = 86/36
-    expect(cfg.cameraStateProfiles.LEADER_ZOOM.spriteScale).toBe(86 / 36);
+    expect(cfg.cameraStateProfiles.LEADER_ZOOM.trackWidths).toBe(
+      DEFAULT_CAMERA_CONFIG.cameraStateProfiles.LEADER_ZOOM.trackWidths
+    );
     expect('spritePct' in cfg.cameraStateProfiles.LEADER_ZOOM).toBe(false);
     // State absent from stored → full defaults (strip only removes spriteScale from the
     // base temporarily; absent states still get all default fields after full migration)

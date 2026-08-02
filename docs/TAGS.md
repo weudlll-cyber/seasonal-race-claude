@@ -119,6 +119,16 @@ simulation is untouched and no simulation file is in the diff).
   `_closedOffsetY` were still three separate functions. Camera-only; the shipped world `dc4647be0f55ebdb` is
   untouched on both sides of this tag.
 
+### Camera zoom unit — CAMERA-ZOOM-UNIT-1 (2026-08-02, branch `camera-refactor`)
+Return point captured before the camera's five separate zoom formulas — four states on an absolute
+`spriteScale` screen-scale, OVERVIEW on a target SPRITE SIZE normalised by a start-grid packing quantity —
+became ONE rule whose parameter is TRACK WIDTHS. The picture deliberately CHANGES here: the owner chose
+clean round defaults over reproducing the old framing, so this tag is the only way back to the old picture.
+- `pre/zoom-unit` (`2488124f`, 2026-08-02) — the pre-change state: `spriteScale` per state, OVERVIEW's
+  `overviewTargetScreenPx / (2 x W_ref / racersPerRow)` derivation, and the retired `overviewClosedTrackZoom`
+  / `overviewMinEffZoom` keys still present. Camera-only; the shipped world `dc4647be0f55ebdb` is untouched
+  on both sides of this tag. Config schema v17 (v18 is the track-widths schema).
+
 ## Active-phase tags (temporary scaffolding — to collapse later)
 
 Step-tags from the runaway phase (now CLOSED 2026-07-29, see below) and any later work — safe return points, not permanent anchors. They collapse into
@@ -534,4 +544,5 @@ The full list of the 177 retired tags is recorded below for the archive.
 - `pre/sweep-instrumentation-pulklr`
 - `pre/v4-choreography`
 - `pre/v4-on-trunk`
+- `pre/zoom-unit`
 

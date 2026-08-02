@@ -36,15 +36,16 @@ const STATE_LABELS = {
 
 const PROFILE_FIELDS = [
   {
-    key: 'spriteScale',
-    label: 'Sprite scale (×)',
-    min: 0.5,
-    max: 5.0,
-    step: 0.05,
+    key: 'trackWidths',
+    label: 'Track widths visible',
+    min: 1,
+    max: 12,
+    step: 0.5,
     tip: (v, n) =>
-      n === 'Overview'
-        ? `Sprite zoom factor for the Overview. ${v.toFixed(2)}× — MULTIPLIES the normalized overview size (which keeps racers a constant on-screen size regardless of racer count). 1.0 = the normalized default, 2.0 = twice as large.`
-        : `Sprite zoom factor for ${n}. ${v.toFixed(2)}× — relative to natural density-scaled size. 1.0 = natural size, 2.0 = twice as large.`,
+      `How much of the world ${n} shows: ${v.toFixed(1)} track widths across the frame. ` +
+      `HIGHER = WIDER. The same number frames the same shot on every track, open or closed, at any ` +
+      `world size — so ${n} at 2 looks like every other state at 2. 1.0 is the floor: the full ` +
+      `track width is always visible, so two racers side by side can never both leave the frame.`,
   },
   {
     key: 'trackingTC',
@@ -356,7 +357,7 @@ function CameraAdvancedSection() {
             >
               Countdown Start Zoom (px)
               <InfoTooltip
-                text={`Sprite height at countdown start. Very small values are clamped to minimum zoom (full track visible). Currently: ${config.countdownStartZoomSpritePx ?? 1}px.`}
+                text={`How wide the countdown opens, in track widths, before easing into Overview. Clamped to the widest the world allows. Currently: ${config.countdownStartTrackWidths ?? 8}.`}
               />
             </label>
             <input
@@ -365,10 +366,10 @@ function CameraAdvancedSection() {
               min={1}
               max={200}
               step={1}
-              value={config.countdownStartZoomSpritePx ?? 1}
+              value={config.countdownStartTrackWidths ?? 8}
               onChange={(e) => {
                 const v = Number(e.target.value);
-                if (v >= 1 && v <= 200) set('countdownStartZoomSpritePx', v);
+                if (v >= 1 && v <= 30) set('countdownStartTrackWidths', v);
               }}
             />
           </div>
@@ -632,21 +633,7 @@ function CameraAdvancedSection() {
             tip="Seconds after race start before OVERVIEW may appear in the pool for the first time. Default 15 s."
           />
           <SliderRow
-            label="OVERVIEW Closed Zoom"
-            testId="regie-overview-closed-track-zoom"
-            min={1.0}
-            max={2.0}
-            step={0.05}
-            value={config.overviewClosedTrackZoom ?? 1.3}
-            onChange={(e) => {
-              const v = parseFloat(e.target.value);
-              if (v >= 1.0 && v <= 2.0) set('overviewClosedTrackZoom', v);
-            }}
-            display={(config.overviewClosedTrackZoom ?? 1.3).toFixed(2)}
-            tip="Zoom multiplier for OVERVIEW on closed tracks. 1.0 = no pan (camera frozen), 1.3 = 30% zoom-in giving pan room. Only affects closed tracks. Default 1.30."
-          />
-          <SliderRow
-            label="OVERVIEW target sprite size (px)"
+            label="Minimum sprite size on screen (px)"
             testId="regie-overview-target-screen-px"
             min={16}
             max={48}
@@ -654,7 +641,7 @@ function CameraAdvancedSection() {
             value={config.overviewTargetScreenPx ?? 18}
             onChange={(e) => set('overviewTargetScreenPx', parseInt(e.target.value, 10))}
             display={`${config.overviewTargetScreenPx ?? 18}px`}
-            tip="Target sprite screen size during OVERVIEW on open tracks. Camera zoom is chosen so sprites appear at this size regardless of racer count. Smaller = more zoomed out (more track visible). Only affects open tracks. Default 18 px."
+            tip="RENDER floor, not a camera setting: a racer sprite is never drawn smaller than this on screen, in any camera state. It no longer influences the zoom — CAMERA-ZOOM-UNIT-1 moved every state onto 'track widths visible', so how big a racer looks is now purely a consequence of how far in the camera is. Default 28 px."
           />
           <SliderRow
             label="OVERVIEW racers framed (leader + N−1)"
@@ -677,21 +664,6 @@ function CameraAdvancedSection() {
             onChange={(e) => set('overviewMinSpriteFrac', parseFloat(e.target.value) / 100)}
             display={`${((config.overviewMinSpriteFrac ?? 0.018) * 100).toFixed(1)}%`}
             tip="OVERVIEW-FRAMING-1: the zoom stops zooming out once a racer sprite would shrink below this fraction of the frame width — legibility outranks the racer count. Expressed as a fraction of the frame, so the framing is identical at any resolution. The owner expects this floor to bind rarely. Set before a race."
-          />
-          <SliderRow
-            label="OVERVIEW zoom floor (effZoom)"
-            testId="regie-overview-min-eff-zoom"
-            min={0}
-            max={0.9}
-            step={0.05}
-            value={config.overviewMinEffZoom ?? 0}
-            onChange={(e) => set('overviewMinEffZoom', parseFloat(e.target.value))}
-            display={
-              (config.overviewMinEffZoom ?? 0) === 0
-                ? 'Off'
-                : (config.overviewMinEffZoom ?? 0).toFixed(2) + '×'
-            }
-            tip="Minimum effective zoom (effZoom) during OVERVIEW on open tracks. 0 = off (current behavior — camera zooms out as far as racer count demands). Higher = less zoom-out, fewer GPU stutter frames. Suggested range: 0.5–0.7. Only affects open tracks. Default: off."
           />
         </div>
 
