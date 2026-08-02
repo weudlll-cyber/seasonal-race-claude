@@ -20,6 +20,7 @@ import {
   MAX_CAM_ZOOM,
 } from './projection.js';
 import { resolveZoomForTrackWidths, guaranteeCamZoom, trackWidthsForCamZoom } from './zoomUnit.js';
+import { frameExtentAlong } from './frameGeometry.js';
 
 export const CAM_STATE = {
   OVERVIEW: 'OVERVIEW',
@@ -1721,15 +1722,18 @@ export class CameraDirector {
     // CAMERA-FOCUS-5: the screen mapping is PER-AXIS (ctx.scale(zoom·bsX, zoom·bsY) closed). Work the
     // shift in SCREEN space so the leader lands (frac−0.5) of the frame FORWARD along the motion direction
     // on EVERY heading — not just horizontal. The world tangent (dx,dy) projects to the screen tangent
-    // (dx·effZoomX, dy·effZoomY); `span` is the frame extent along that heading (frameW for horizontal
-    // motion, frameH for vertical, blended between). The world shift that yields that screen displacement
-    // is span·(dx,dy)/sLen — which cancels back to the old (frac−0.5)·frameW/effZoomX for pure-horizontal
-    // motion (why the X axis was already right) but is now correct on vertical/diagonal sections too.
+    // (dx·effZoomX, dy·effZoomY); `span` is how far the frame reaches along that heading.
+    //
+    // CAMERA-PICTURE-FIXES-1: `span` was `|cos|·frameW + |sin|·frameH` — a BLEND of the side lengths,
+    // right on both axes and wrong between them (the weights sum to up to √2). At the owner's 74°
+    // heading it read 1091.4 px where the frame reaches 759.9 px, so frac 0.66 displaced 23.0pp
+    // instead of 16.0pp. It is now the rectangle's actual chord through the centre; the axis cases
+    // are unchanged, which is why no test caught this.
     const sxDir = dx * effZoomX;
     const syDir = dy * effZoomY;
     const sLen = Math.hypot(sxDir, syDir);
     if (!(sLen > 0)) return pos;
-    const span = (Math.abs(sxDir) / sLen) * frameW + (Math.abs(syDir) / sLen) * frameH;
+    const span = frameExtentAlong(sxDir, syDir, frameW, frameH);
     const worldBias = ((this._leaderForwardFrac - 0.5) * span) / sLen;
     if (!(worldBias > 0)) return pos;
     // shift the pan CENTRE backward along motion → the leader appears forward on screen

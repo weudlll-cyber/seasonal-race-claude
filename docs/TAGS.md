@@ -129,6 +129,16 @@ clean round defaults over reproducing the old framing, so this tag is the only w
   / `overviewMinEffZoom` keys still present. Camera-only; the shipped world `dc4647be0f55ebdb` is untouched
   on both sides of this tag. Config schema v17 (v18 is the track-widths schema).
 
+### Camera picture fixes — CAMERA-PICTURE-FIXES-1 (2026-08-02, branch `camera-refactor`)
+Return point captured before two MEASURED defects that both move the picture were cleared, ahead of the
+framing block so its effect is not judged through a known error: the forward-bias span formula
+(`|cos|·W + |sin|·H`, 1.436x over the geometric extent at the owner's 74 deg heading) and the render-time
+sprite floor (`Math.max(proportionalScreenPx, minTargetScreenPx)`, which the owner does not want).
+- `pre/picture-fixes` (`854e2f87`, 2026-08-02) — the post-zoom-unit state: `leaderForwardFrac` 0.66
+  displacing 23.0pp instead of 16.0pp on a diagonal heading, the sprite floor still binding, and
+  `overviewOffsetPx` still present as a dead key. Camera/render only; the shipped world
+  `dc4647be0f55ebdb` is untouched on both sides of this tag. Config schema v18.
+
 ## Active-phase tags (temporary scaffolding — to collapse later)
 
 Step-tags from the runaway phase (now CLOSED 2026-07-29, see below) and any later work — safe return points, not permanent anchors. They collapse into
@@ -543,6 +553,7 @@ The full list of the 177 retired tags is recorded below for the archive.
 - `pre/surge-telemetry-agg`
 - `pre/sweep-instrumentation-pulklr`
 - `pre/v4-choreography`
+- `pre/picture-fixes`
 - `pre/v4-on-trunk`
 - `pre/zoom-unit`
 
