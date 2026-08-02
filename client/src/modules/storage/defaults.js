@@ -54,7 +54,7 @@ export const DEFAULT_ROW_LAYOUT_CONFIG = {
 };
 
 export const DEFAULT_CAMERA_CONFIG = {
-  schemaVersion: 19,
+  schemaVersion: 20,
   // Per-state camera profiles — each key matches a CAM_STATE enum value.
   //
   // CAMERA-ZOOM-UNIT-1 (schema v18): `trackWidths` is THE zoom setting for every state — how many
@@ -112,6 +112,22 @@ export const DEFAULT_CAMERA_CONFIG = {
       innerFramePct: 0.7,
       maxStateDuration: 8000,
       minStateHold: 5000,
+      maxEntryDurationMs: 5000,
+      leadAheadEnabled: false,
+      leadOutEnabled: false,
+    },
+    PHOTO_FINISH: {
+      // CAMERA-FRAMING-1: its OWN entry at last. It borrowed BATTLE's numbers, so the most dramatic
+      // shot in the race was never closer than an ordinary battle. 1.0 is tighter than BATTLE's 1.5
+      // and safe: its guarantee is the two contenders, not the corridor, so the pair decides.
+      trackWidths: 1,
+      trackingTC: 0.25,
+      entryTC: 0.8,
+      leadInDuration: 0,
+      leadOutDuration: 0,
+      innerFramePct: 0.7,
+      maxStateDuration: 8000,
+      minStateHold: 1500,
       maxEntryDurationMs: 5000,
       leadAheadEnabled: false,
       leadOutEnabled: false,
@@ -213,14 +229,10 @@ export const DEFAULT_CAMERA_CONFIG = {
   comebackCooldownMs: 10000, // ms after leaving COMEBACK before it can re-trigger
   leadChangeCooldownMs: 5000, // ms after leaving LEAD_CHANGE before it can re-trigger
   overviewCooldownMs: 15000, // ms after leaving OVERVIEW before it can recur
-  // OVERVIEW-FRAMING-1 — the owner's framing rule. OVERVIEW frames the LEADER + the next
-  // (overviewFrameRacers − 1) racers, deriving the zoom to fit them, floored so a racer sprite never
-  // shrinks below overviewMinSpriteFrac of the frame width (legibility outranks the count). The frame
-  // centre sits BEHIND the leader (box centre, toward the field); the leader is always kept in-frame
-  // with margin (the offset yields, never the leader). Both are FRACTIONS/counts, never pixels — so the
-  // framing is identical at any resolution (see CameraDirector._setOverviewGroupTargets).
-  overviewFrameRacers: 5, // leader + next (N−1) racers OVERVIEW must frame when the sprite floor allows
-  overviewMinSpriteFrac: 0.018, // min racer-sprite on-screen width as a fraction of the frame width (the zoom-out floor)
+  // CAMERA-FRAMING-1: OVERVIEW-FRAMING-1's "leader + N racers, derive the zoom to fit them" is gone.
+  // It was a guarantee phrased as a HEADCOUNT, and how many racers you see is an OUTCOME of how far
+  // in the camera is, not an input to it. OVERVIEW now runs the same rule as every other state:
+  // anchor the leader, guarantee the corridor, sit forward of centre. See camera/framingRule.js.
   // Director (weighted random) — candidate pool weights (0.0–1.0)
   battleWeight: 0.8,
   leadChangeWeight: 0.7,
@@ -276,19 +288,11 @@ export const DEFAULT_CAMERA_CONFIG = {
   cameraTransitionGrammar: 'glide',
   // CAMERA-GRAMMAR-1 glide entry duration (ms) — one bounded ease for pan AND zoom. Validated [300, 900].
   glideDurationMs: 500,
-  // Dynamic zoom-out: if fewer than minRacersVisible non-finished racers are visible, the camera
-  // gradually reduces targetZoom each frame until enough racers appear or leaderMinZoom is reached.
-  // 0 = disabled. Range: 0–15.
-  minRacersVisible: 8,
-  // Hard zoom-out floor for LEADER_ZOOM and LEAD_CHANGE. Camera will not zoom out past this.
-  leaderMinZoom: 0.4,
-  // Zoom reduction per frame when too few racers are visible. 0.005 = ~0.5%/frame at 60 fps.
-  zoomOutStepPerFrame: 0.005,
-  // World-size-independent zoom-out floor for LEADER_ZOOM / LEAD_CHANGE, as a fraction of the
-  // configured leader zoom. floor = max(blackScreenFloor, leaderMinZoomFraction × leaderZoom).
-  // 1.0 = camera stays pinned at leader zoom (no zoom-out); 0.6 = may zoom out to 60% of leader
-  // zoom; low values approach whole-world zoom on large tracks. Range: 0.1–1.0.
-  leaderMinZoomFraction: 0.6,
+  // CAMERA-FRAMING-1: the dynamic zoom-out floor (minRacersVisible / leaderMinZoom /
+  // leaderMinZoomFraction / zoomOutStepPerFrame) is gone. It was a second zoom authority that
+  // STEERED — it read where the racers happened to be and pulled the zoom out around them, fighting
+  // the state's own setting and ratcheting frame to frame — and it carried the third instance of the
+  // bsX/bsY per-axis defect. Its job is now the GUARANTEE, which widens for named subjects.
   // Focal-position smoothing: EMA time-constant (seconds) applied to the camera's world-space
   // pan target during follow phase. Reduces velocity-oscillation artefacts (COMEBACK speedBrake
   // cycling) and per-physics-step quantisation jitter (LEADER_ZOOM). 0 = disabled.

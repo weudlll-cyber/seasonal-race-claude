@@ -1,0 +1,262 @@
+// ============================================================
+// framingRule.test.js — CAMERA-FRAMING-1
+//
+// The load-bearing invariant of this block: THE GUARANTEE HOLDS IN EVERY ORIENTATION. A track's
+// heading on screen rotates, and a guarantee that only holds on the axes is not a guarantee — it is
+// the bsX/bsY defect wearing a different hat. So the orientation sweeps here are the test, and each
+// carries a failure proof showing what an orientation-blind bound does with the same inputs.
+// ============================================================
+
+import { describe, it, expect } from 'vitest';
+import {
+  FRAMING_BY_STATE,
+  GUARANTEE,
+  POSITION,
+  framingFor,
+  zoomCeilingToFit,
+  corridorGuarantee,
+  pairGuarantee,
+} from './framingRule.js';
+import { frameExtentAlong } from './frameGeometry.js';
+
+const W = 1280;
+const H = 720;
+
+// The shipped projections, reduced to what a guarantee reads.
+const CLOSED = { axisX: 1280 / 3072, axisY: 720 / 2048, tw: 131, name: 'searound (closed)' };
+const CLOSED_WIDE = { axisX: 1280 / 3072, axisY: 720 / 2047, tw: 211, name: 'ice-track (closed)' };
+const OPEN = { axisX: 1.5, axisY: 1.5, tw: 300, name: 'mountainstreet (open)' };
+const TRACKS = [CLOSED, CLOSED_WIDE, OPEN];
+
+const headingAt = (deg) => ({
+  x: Math.cos((deg * Math.PI) / 180),
+  y: Math.sin((deg * Math.PI) / 180),
+});
+
+/** Does a world vector centred on the anchor actually fit the inner frame at this zoom? */
+const fits = (vec, z, t, inner = 1) => {
+  const sx = vec.x * t.axisX * z;
+  const sy = vec.y * t.axisY * z;
+  return Math.hypot(sx, sy) <= frameExtentAlong(sx, sy, W, H) * inner + 1e-9;
+};
+
+describe('the table: six states, three columns, one answer to the position question', () => {
+  it('describes exactly the six states, and nothing else', () => {
+    expect(Object.keys(FRAMING_BY_STATE).sort()).toEqual(
+      [
+        'BATTLE_ZOOM',
+        'COMEBACK_ZOOM',
+        'LEAD_CHANGE',
+        'LEADER_ZOOM',
+        'OVERVIEW',
+        'PHOTO_FINISH',
+      ].sort()
+    );
+  });
+
+  it('position follows the principle, not a preference: forward exactly when nothing is ahead', () => {
+    for (const [state, f] of Object.entries(FRAMING_BY_STATE)) {
+      const expected = f.aheadMatters ? POSITION.CENTRED : POSITION.FORWARD;
+      expect(f.position, `${state} must derive its position from aheadMatters`).toBe(expected);
+    }
+  });
+
+  it('matches the owner’s six lines', () => {
+    const f = FRAMING_BY_STATE;
+    expect(f.LEADER_ZOOM).toMatchObject({
+      guarantee: GUARANTEE.CORRIDOR,
+      position: POSITION.FORWARD,
+    });
+    expect(f.LEAD_CHANGE).toMatchObject({ guarantee: GUARANTEE.PAIR, position: POSITION.FORWARD });
+    expect(f.BATTLE_ZOOM).toMatchObject({ guarantee: GUARANTEE.PAIR, position: POSITION.CENTRED });
+    expect(f.COMEBACK_ZOOM).toMatchObject({
+      guarantee: GUARANTEE.CORRIDOR,
+      position: POSITION.CENTRED,
+    });
+    expect(f.OVERVIEW).toMatchObject({ guarantee: GUARANTEE.CORRIDOR, position: POSITION.FORWARD });
+    expect(f.PHOTO_FINISH).toMatchObject({ guarantee: GUARANTEE.PAIR, position: POSITION.CENTRED });
+  });
+
+  it('LEAD_CHANGE is DEFINED — it was the one state with no framing case at all', () => {
+    // It fell into panTarget's default centroid branch, never received the forward bias, and holds
+    // 37.6% of all frames. Centred by omission is not a design.
+    expect(framingFor('LEAD_CHANGE').anchor).toBe('new-leader');
+    expect(framingFor('LEAD_CHANGE').guarantee).toBe(GUARANTEE.PAIR);
+    expect(framingFor('LEAD_CHANGE').position).toBe(POSITION.FORWARD);
+  });
+
+  it('an unknown state falls back to LEADER framing rather than to nothing', () => {
+    expect(framingFor('NOT_A_STATE')).toBe(FRAMING_BY_STATE.LEADER_ZOOM);
+    expect(framingFor(undefined)).toBe(FRAMING_BY_STATE.LEADER_ZOOM);
+  });
+});
+
+describe('THE GUARANTEE HOLDS IN EVERY ORIENTATION — corridor', () => {
+  it.each(TRACKS)('$name: the corridor fits at the guaranteed zoom, every 1° of heading', (t) => {
+    for (let deg = 0; deg < 360; deg += 1) {
+      const z = corridorGuarantee(headingAt(deg), t.tw, t.axisX, t.axisY, W, H);
+      const perp = {
+        x: -Math.sin((deg * Math.PI) / 180) * t.tw,
+        y: Math.cos((deg * Math.PI) / 180) * t.tw,
+      };
+      expect(fits(perp, z, t), `heading ${deg}° on ${t.name}`).toBe(true);
+    }
+  });
+
+  it.each(TRACKS)(
+    '$name: and it is TIGHT — one step tighter and the corridor no longer fits',
+    (t) => {
+      for (let deg = 0; deg < 360; deg += 7) {
+        const z = corridorGuarantee(headingAt(deg), t.tw, t.axisX, t.axisY, W, H);
+        const perp = {
+          x: -Math.sin((deg * Math.PI) / 180) * t.tw,
+          y: Math.cos((deg * Math.PI) / 180) * t.tw,
+        };
+        expect(fits(perp, z * 1.02, t), `heading ${deg}° should NOT fit 2% tighter`).toBe(false);
+      }
+    }
+  );
+
+  it('respects the inner-frame fraction — a safe region means a wider shot', () => {
+    const full = corridorGuarantee(headingAt(30), CLOSED.tw, CLOSED.axisX, CLOSED.axisY, W, H, 1);
+    const inner = corridorGuarantee(
+      headingAt(30),
+      CLOSED.tw,
+      CLOSED.axisX,
+      CLOSED.axisY,
+      W,
+      H,
+      0.7
+    );
+    expect(inner).toBeLessThan(full);
+    expect(inner).toBeCloseTo(full * 0.7, 9);
+  });
+
+  it('FAILURE PROOF: an orientation-BLIND bound over-widens for most of the lap', () => {
+    // The heading-blind guarantee has to assume the worst orientation everywhere — which is what
+    // the shipped one did before this block. Measure how much shot that costs around a lap.
+    const worst = Math.min(
+      zoomCeilingToFit({ x: CLOSED.tw, y: 0 }, CLOSED.axisX, CLOSED.axisY, W, H),
+      zoomCeilingToFit({ x: 0, y: CLOSED.tw }, CLOSED.axisX, CLOSED.axisY, W, H)
+    );
+    let over = 0;
+    let sum = 0;
+    for (let deg = 0; deg < 360; deg += 1) {
+      const aware = corridorGuarantee(headingAt(deg), CLOSED.tw, CLOSED.axisX, CLOSED.axisY, W, H);
+      expect(aware).toBeGreaterThanOrEqual(worst - 1e-9); // never tighter than the worst case
+      if (aware > worst * 1.001) over++;
+      sum += aware / worst;
+    }
+    expect(over).toBeGreaterThan(180); // over-widened on more than half the headings
+    expect(sum / 360).toBeGreaterThan(1.1); // and by more than 10% on average
+  });
+
+  it('a degenerate heading falls back to the worst orientation rather than to nothing', () => {
+    const z = corridorGuarantee({ x: 0, y: 0 }, CLOSED.tw, CLOSED.axisX, CLOSED.axisY, W, H);
+    const worst = Math.min(
+      zoomCeilingToFit({ x: CLOSED.tw, y: 0 }, CLOSED.axisX, CLOSED.axisY, W, H),
+      zoomCeilingToFit({ x: 0, y: CLOSED.tw }, CLOSED.axisX, CLOSED.axisY, W, H)
+    );
+    expect(z).toBeCloseTo(worst, 9);
+    expect(corridorGuarantee(null, CLOSED.tw, CLOSED.axisX, CLOSED.axisY, W, H)).toBeCloseTo(
+      worst,
+      9
+    );
+  });
+
+  it('no corridor width means no corridor constraint', () => {
+    expect(corridorGuarantee(headingAt(45), 0, CLOSED.axisX, CLOSED.axisY, W, H)).toBe(Infinity);
+  });
+});
+
+describe('THE GUARANTEE HOLDS IN EVERY ORIENTATION — pair', () => {
+  it.each(TRACKS)(
+    '$name: both contenders fit at the guaranteed zoom, every 1° of separation',
+    (t) => {
+      const gap = 60; // world px between the two
+      for (let deg = 0; deg < 360; deg += 1) {
+        const a = { x: 1000, y: 1000 };
+        const h = headingAt(deg);
+        const b = { x: a.x + h.x * gap, y: a.y + h.y * gap };
+        const z = pairGuarantee(a, b, t.axisX, t.axisY, W, H);
+        expect(fits({ x: b.x - a.x, y: b.y - a.y }, z, t), `separation ${deg}° on ${t.name}`).toBe(
+          true
+        );
+      }
+    }
+  );
+
+  it('THIS is what lets a battle go tighter than one track width, honestly', () => {
+    // The owner has asked for settings below 1 track width. A pair nose-to-tail is separated by a
+    // few body lengths, so "everyone who matters stays in frame" permits a far tighter shot than
+    // the corridor proxy would — without breaking his rule.
+    const a = { x: 1000, y: 1000 };
+    const b = { x: 1030, y: 1000 }; // 30 px apart, nose to tail
+    const pair = pairGuarantee(a, b, CLOSED.axisX, CLOSED.axisY, W, H);
+    const corridor = corridorGuarantee({ x: 1, y: 0 }, CLOSED.tw, CLOSED.axisX, CLOSED.axisY, W, H);
+    expect(pair).toBeGreaterThan(corridor); // a tighter shot is permitted
+    expect(pair / corridor).toBeGreaterThan(2); // and substantially so
+  });
+
+  it('padding widens the requirement — a whole sprite fits, not just a centre point', () => {
+    const a = { x: 1000, y: 1000 };
+    const b = { x: 1060, y: 1000 };
+    const bare = pairGuarantee(a, b, CLOSED.axisX, CLOSED.axisY, W, H, 1, 0);
+    const padded = pairGuarantee(a, b, CLOSED.axisX, CLOSED.axisY, W, H, 1, 40);
+    expect(padded).toBeLessThan(bare);
+    expect(fits({ x: 100, y: 0 }, padded, CLOSED)).toBe(true); // 60 separation + 40 padding
+  });
+
+  it('co-located contenders are constrained only by their padding, worst-orientation', () => {
+    const p = { x: 500, y: 500 };
+    expect(pairGuarantee(p, { ...p }, CLOSED.axisX, CLOSED.axisY, W, H, 1, 0)).toBe(Infinity);
+    const padded = pairGuarantee(p, { ...p }, CLOSED.axisX, CLOSED.axisY, W, H, 1, 50);
+    expect(Number.isFinite(padded)).toBe(true);
+    expect(fits({ x: 50, y: 0 }, padded, CLOSED)).toBe(true);
+    expect(fits({ x: 0, y: 50 }, padded, CLOSED)).toBe(true);
+  });
+
+  it('a missing contender means no pair constraint — it must not zoom to a point', () => {
+    expect(pairGuarantee(null, { x: 1, y: 1 }, CLOSED.axisX, CLOSED.axisY, W, H)).toBe(Infinity);
+    expect(pairGuarantee({ x: 1, y: 1 }, null, CLOSED.axisX, CLOSED.axisY, W, H)).toBe(Infinity);
+  });
+
+  it('FAILURE PROOF: measuring the pair on ONE axis loses the other', () => {
+    // The bsX/bsY family, applied to a pair: judging a diagonal separation by its X component alone
+    // says it fits when it does not.
+    const a = { x: 1000, y: 1000 };
+    const b = { x: 1000 + 40, y: 1000 + 260 }; // mostly vertical
+    const honest = pairGuarantee(a, b, CLOSED.axisX, CLOSED.axisY, W, H);
+    const xOnly = zoomCeilingToFit({ x: 40, y: 0 }, CLOSED.axisX, CLOSED.axisY, W, H);
+    expect(xOnly).toBeGreaterThan(honest * 2); // the X-only bound permits a far tighter shot …
+    expect(fits({ x: 40, y: 260 }, xOnly, CLOSED)).toBe(false); // … at which the pair does NOT fit
+  });
+});
+
+describe('a guarantee widens and never steers (Lesson 192)', () => {
+  it('returns a ceiling only — same inputs, same number, no hidden state', () => {
+    const args = [headingAt(37), CLOSED.tw, CLOSED.axisX, CLOSED.axisY, W, H];
+    expect(corridorGuarantee(...args)).toBe(corridorGuarantee(...args));
+    const p = [{ x: 0, y: 0 }, { x: 50, y: 50 }, CLOSED.axisX, CLOSED.axisY, W, H];
+    expect(pairGuarantee(...p)).toBe(pairGuarantee(...p));
+  });
+
+  it('every guarantee is a Math.min-able ceiling: never zero, never negative, never NaN', () => {
+    for (const t of TRACKS) {
+      for (let deg = 0; deg < 360; deg += 11) {
+        const c = corridorGuarantee(headingAt(deg), t.tw, t.axisX, t.axisY, W, H);
+        expect(c).toBeGreaterThan(0);
+        expect(Number.isNaN(c)).toBe(false);
+      }
+    }
+  });
+
+  it('is monotonic: a wider corridor or a bigger gap always means a wider shot', () => {
+    const z = (tw) => corridorGuarantee(headingAt(20), tw, CLOSED.axisX, CLOSED.axisY, W, H);
+    expect(z(100)).toBeGreaterThan(z(200));
+    expect(z(200)).toBeGreaterThan(z(400));
+    const p = (gap) =>
+      pairGuarantee({ x: 0, y: 0 }, { x: gap, y: 0 }, CLOSED.axisX, CLOSED.axisY, W, H);
+    expect(p(50)).toBeGreaterThan(p(150));
+  });
+});

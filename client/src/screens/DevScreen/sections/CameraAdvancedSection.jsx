@@ -24,6 +24,9 @@ const CAM_STATES_FOR_PROFILES = [
   'BATTLE_ZOOM',
   'COMEBACK_ZOOM',
   'LEAD_CHANGE',
+  // CAMERA-FRAMING-1: PHOTO_FINISH has its own row at last. It borrowed BATTLE's numbers, so the
+  // closest shot in the race was never closer than an ordinary battle.
+  'PHOTO_FINISH',
 ];
 
 const STATE_LABELS = {
@@ -32,6 +35,7 @@ const STATE_LABELS = {
   BATTLE_ZOOM: 'Battle Zoom',
   COMEBACK_ZOOM: 'Comeback Zoom',
   LEAD_CHANGE: 'Lead Change',
+  PHOTO_FINISH: 'Photo Finish',
 };
 
 const PROFILE_FIELDS = [
@@ -622,28 +626,6 @@ function CameraAdvancedSection() {
             display={`${config.overviewStartDelay ?? 15}s`}
             tip="Seconds after race start before OVERVIEW may appear in the pool for the first time. Default 15 s."
           />
-          <SliderRow
-            label="OVERVIEW racers framed (leader + N−1)"
-            testId="regie-overview-frame-racers"
-            min={2}
-            max={12}
-            step={1}
-            value={config.overviewFrameRacers ?? 5}
-            onChange={(e) => set('overviewFrameRacers', parseInt(e.target.value, 10))}
-            display={`${config.overviewFrameRacers ?? 5}`}
-            tip="OVERVIEW-FRAMING-1: OVERVIEW frames the leader plus this many racers in running order; the zoom is derived to fit them. Higher = more of the field shown (more zoomed out). The minimum-sprite floor below outranks this when they conflict. The leader is always kept in frame. Set before a race."
-          />
-          <SliderRow
-            label="OVERVIEW min sprite size (% of frame width)"
-            testId="regie-overview-min-sprite-frac"
-            min={1}
-            max={6}
-            step={0.1}
-            value={(config.overviewMinSpriteFrac ?? 0.018) * 100}
-            onChange={(e) => set('overviewMinSpriteFrac', parseFloat(e.target.value) / 100)}
-            display={`${((config.overviewMinSpriteFrac ?? 0.018) * 100).toFixed(1)}%`}
-            tip="OVERVIEW-FRAMING-1: the zoom stops zooming out once a racer sprite would shrink below this fraction of the frame width — legibility outranks the racer count. Expressed as a fraction of the frame, so the framing is identical at any resolution. The owner expects this floor to bind rarely. Set before a race."
-          />
         </div>
 
         <p
@@ -711,52 +693,7 @@ function CameraAdvancedSection() {
           Min racers visible are on screen the camera pulls back each frame until enough appear or
           the floor is reached. 0 = disabled.
         </p>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem' }}>
-          <SliderRow
-            label="Min racers visible"
-            testId="regie-min-racers-visible"
-            min={0}
-            max={15}
-            step={1}
-            value={config.minRacersVisible ?? 8}
-            onChange={(e) => set('minRacersVisible', parseInt(e.target.value, 10))}
-            display={`${config.minRacersVisible ?? 8}`}
-            tip="Minimum non-finished racers that must be visible in LEADER_ZOOM / LEAD_CHANGE. Camera zooms out until this count is met or the floor is hit. 0 = disabled. Default 8."
-          />
-          <SliderRow
-            label="Leader min zoom fraction"
-            testId="regie-leader-min-zoom-fraction"
-            min={0.1}
-            max={1.0}
-            step={0.05}
-            value={config.leaderMinZoomFraction ?? 0.6}
-            onChange={(e) => set('leaderMinZoomFraction', parseFloat(e.target.value))}
-            display={(config.leaderMinZoomFraction ?? 0.6).toFixed(2)}
-            tip="Minimum zoom as a fraction of leader zoom. 1.0 = camera stays pinned at leader zoom (no zoom-out). 0.6 = camera may zoom out to 60% of leader zoom. Low values approach whole-world zoom on large tracks. Default 0.60."
-          />
-          <SliderRow
-            label="Leader min zoom (floor)"
-            testId="regie-leader-min-zoom"
-            min={0.1}
-            max={1.0}
-            step={0.05}
-            value={config.leaderMinZoom ?? 0.4}
-            onChange={(e) => set('leaderMinZoom', parseFloat(e.target.value))}
-            display={(config.leaderMinZoom ?? 0.4).toFixed(2)}
-            tip="Hard zoom-out floor for LEADER_ZOOM and LEAD_CHANGE. Camera will not zoom past this value even if too few racers are visible. Default 0.40."
-          />
-          <SliderRow
-            label="Zoom-out speed (per frame)"
-            testId="regie-zoom-out-step"
-            min={0.001}
-            max={0.02}
-            step={0.001}
-            value={config.zoomOutStepPerFrame ?? 0.005}
-            onChange={(e) => set('zoomOutStepPerFrame', parseFloat(e.target.value))}
-            display={`${((config.zoomOutStepPerFrame ?? 0.005) * 100).toFixed(1)}%`}
-            tip="Zoom reduction per frame when too few racers are visible. 0.005 = ~0.5% per frame at 60 fps. Higher = faster pull-back. Default 0.005."
-          />
-        </div>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem' }}></div>
       </div>
 
       {/* ── 4. LEAD_CHANGE ── */}

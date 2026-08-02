@@ -73,8 +73,6 @@ export function computeTimingFromConfig(config) {
   //   overviewTargetScreenPx   — was the OVERVIEW zoom's target SPRITE SIZE, then the render-time
   //                              sprite floor; CAMERA-PICTURE-FIXES-1 removed the floor and the key
   //   overviewMinEffZoom       — an open-track-only second zoom bound on the same surface
-  const overviewFrameRacers = config?.overviewFrameRacers ?? 5; // OVERVIEW-FRAMING-1: leader + next N−1
-  const overviewMinSpriteFrac = config?.overviewMinSpriteFrac ?? 0.018; // sprite floor as a frame fraction
 
   // Per-state lead-ahead toggle (default true for backward compat with old configs).
   const leadAheadEnabledByState = {};
@@ -295,8 +293,6 @@ export function computeTimingFromConfig(config) {
     diagEnabled,
     detourEnabled,
     transitionTConvergence,
-    overviewFrameRacers,
-    overviewMinSpriteFrac,
     overviewCooldownMs,
     leadAheadEnabledByState,
     leadOutEnabledByState,

@@ -1,3 +1,13 @@
+// CAMERA-FRAMING-1 removed the describe blocks for the min-visible zoom FLOOR
+// (LEADER-MINVIS-1, CAMERA-JITTER-1, `_zoomFloorForMinVisible`, `_countVisibleRacers`) and for
+// OVERVIEW-FRAMING-1's leader-plus-N group fit. All five tested mechanisms that no longer exist:
+// the floor was a second zoom authority that STEERED (it read where racers happened to be and
+// pulled the zoom out around them), and the group fit was a guarantee phrased as a headcount. Their
+// job — "do not crop what matters" — is now the GUARANTEE in framingRule.js, which widens for named
+// subjects. The floor also carried the third instance of the bsX/bsY per-axis defect, which dies
+// with it. Deleted rather than adapted; the replacement coverage is framingRule.test.js plus the
+// framing block at the end of this file.
+
 // CAMERA-ZOOM-UNIT-1 removed the twelve describe blocks that lived here and above. Every one of
 // them tested the OLD zoom unit — `_computeZoomForSpriteScale`, the legacy `spritePctOfCanvas`
 // conversion, OVERVIEW's target-SPRITE-SIZE derivation and its racer-count normalisation, and the
@@ -171,7 +181,7 @@ describe('CameraDirector', () => {
   });
 
   it('LEADER_ZOOM converges to zoom > 1', () => {
-    const cd = new CameraDirector(1280, 720, false, { minRacersVisible: 0 });
+    const cd = new CameraDirector(1280, 720, false, {});
     cd.state = CAM_STATE.LEADER_ZOOM;
     for (let i = 0; i < 200; i++) cd.update(mockRacers(4), 1000, mockRaceState, 1280, 720);
     expect(cd.zoom).toBeGreaterThan(1.1);
@@ -246,7 +256,7 @@ describe('CameraDirector — bbox clamping', () => {
 
   it('LEADER_ZOOM with racers near canvas center: converges to adaptive offset with no clamping', () => {
     const worldW = 1280;
-    const cd = new CameraDirector(worldW, 720, false, { minRacersVisible: 0 });
+    const cd = new CameraDirector(worldW, 720, false, {});
     cd.state = CAM_STATE.LEADER_ZOOM;
     const centreRacers = [{ t: 1, x: 640, y: 360, finished: false }];
     for (let i = 0; i < 300; i++) cd.update(centreRacers, 1000, mockRaceState, 1280, 720);
@@ -1385,7 +1395,6 @@ describe('CameraDirector — trivial pan centering (closed tracks)', () => {
     const config = {
       ...inverseConfig,
       spritePctOfCanvas: { ...inverseConfig.spritePctOfCanvas, leader: 0.16 },
-      minRacersVisible: 0,
     };
     const cd = new CameraDirector(worldW, worldH, false, config, 36);
     cd.state = CAM_STATE.LEADER_ZOOM;
@@ -1657,7 +1666,7 @@ describe('CameraDirector — Phase 1: dt-scaled lerp', () => {
 
   it('two half-dt frames converge to the same result as one full-dt frame', () => {
     const makeCD = () => {
-      const cd = new CameraDirector(1280, 720, false, { minRacersVisible: 0 }, 36);
+      const cd = new CameraDirector(1280, 720, false, {}, 36);
       cd.state = CAM_STATE.LEADER_ZOOM;
       cd.stateEnteredAt = 0;
       cd.zoom = 1.0;
@@ -4962,322 +4971,6 @@ describe('CameraDirector — LEAD_CHANGE pan snap', () => {
   });
 });
 
-// ── Dynamic zoom-out (minRacersVisible) ──────────────────────────────────────
-
-describe('_countVisibleRacers', () => {
-  const WORLD_W = 1280;
-  const CANVAS_W = 1280;
-  const CANVAS_H = 720;
-
-  it('counts racers whose screen position falls within the viewport', () => {
-    const cd = new CameraDirector(WORLD_W, CANVAS_H, false, {}, 36);
-    cd.offsetX = 0;
-    cd.offsetY = 0;
-    // bsX = 1.0 for 1280-wide world on a 1280-wide canvas (closed track)
-    const effZoom = 1.0;
-    const racers = [
-      { x: 400, y: 200, finished: false }, // visible
-      { x: 640, y: 360, finished: false }, // visible (center)
-      { x: -100, y: 200, finished: false }, // off-screen left
-      { x: 1400, y: 200, finished: false }, // off-screen right (screenX=1400 >= 1280)
-      { x: 400, y: 200, finished: true }, // finished — must be skipped
-    ];
-    expect(cd._countVisibleRacers(racers, effZoom, CANVAS_W, CANVAS_H)).toBe(2);
-  });
-
-  it('returns 0 for empty racers array', () => {
-    const cd = new CameraDirector(WORLD_W, CANVAS_H, false, {}, 36);
-    expect(cd._countVisibleRacers([], 1.0, CANVAS_W, CANVAS_H)).toBe(0);
-  });
-
-  it('returns 0 when effZoom is zero', () => {
-    const cd = new CameraDirector(WORLD_W, CANVAS_H, false, {}, 36);
-    const racers = [{ x: 400, y: 200, finished: false }];
-    expect(cd._countVisibleRacers(racers, 0, CANVAS_W, CANVAS_H)).toBe(0);
-  });
-
-  it('uses current offsetX/Y to shift the visible window', () => {
-    const cd = new CameraDirector(WORLD_W, CANVAS_H, false, {}, 36);
-    cd.offsetX = -500;
-    cd.offsetY = 0;
-    // racer at x=200: screenX = 200 * 1.0 + (-500) = -300 → off-screen
-    const racers = [{ x: 200, y: 200, finished: false }];
-    expect(cd._countVisibleRacers(racers, 1.0, CANVAS_W, CANVAS_H)).toBe(0);
-  });
-});
-
-// ── LEADER-MINVIS-1: direct min-visible zoom floor ───────────────────────────
-// The LEADER/LEAD_CHANGE camera zooms to the profile but never TIGHTER than the zoom that keeps
-// min(minRacersVisible, active field) racers on canvas around the pan focus — computed directly each
-// frame (replaces the old slow per-frame ratchet, which zoomed all the way in first and crawled back out).
-
-describe('_zoomFloorForMinVisible (direct min-visible zoom)', () => {
-  const cd = new CameraDirector(1280, 720, false, {}, 36);
-  const CW = 1280,
-    CH = 720; // halfW = 640, halfH = 360
-  const F = { x: 640, y: 360 }; // focus at canvas centre in a 1:1 (bsX=1) world
-
-  it('returns the visTarget-th largest per-racer max zoom (x-limited)', () => {
-    // dx = 160,320,480,640 → maxZoom = 640/dx = 4.0, 2.0, 1.333, 1.0 (divisor=1). 3rd largest = 1.333.
-    const racers = [160, 320, 480, 640].map((dx, i) => ({
-      x: F.x + dx,
-      y: F.y,
-      index: i,
-      finished: false,
-    }));
-    expect(cd._zoomFloorForMinVisible(racers, F.x, F.y, 3, 1.0, CW, CH)).toBeCloseTo(640 / 480, 4);
-    expect(cd._zoomFloorForMinVisible(racers, F.x, F.y, 1, 1.0, CW, CH)).toBeCloseTo(4.0, 4);
-    expect(cd._zoomFloorForMinVisible(racers, F.x, F.y, 4, 1.0, CW, CH)).toBeCloseTo(1.0, 4);
-  });
-
-  it('is limited by the tighter of the x / y extents', () => {
-    // dy = 180 → zy = 360/180 = 2.0; dx = 320 → zx = 2.0; equal → 2.0. dy = 360 → zy = 1.0 dominates.
-    const racers = [{ x: F.x + 320, y: F.y + 360, index: 0, finished: false }];
-    expect(cd._zoomFloorForMinVisible(racers, F.x, F.y, 1, 1.0, CW, CH)).toBeCloseTo(1.0, 4);
-  });
-
-  it('Infinity (no constraint) when fewer active racers than visTarget — the small-field guard', () => {
-    const racers = [{ x: F.x + 320, y: F.y, index: 0, finished: false }];
-    expect(cd._zoomFloorForMinVisible(racers, F.x, F.y, 8, 1.0, CW, CH)).toBe(Infinity);
-  });
-
-  it('Infinity when all racers sit at the focus (dx=dy=0)', () => {
-    const racers = [0, 1, 2].map((i) => ({ x: F.x, y: F.y, index: i, finished: false }));
-    expect(cd._zoomFloorForMinVisible(racers, F.x, F.y, 3, 1.0, CW, CH)).toBe(Infinity);
-  });
-
-  it('skips finished racers', () => {
-    const racers = [
-      { x: F.x + 160, y: F.y, index: 0, finished: false }, // maxZoom 4.0
-      { x: F.x + 640, y: F.y, index: 1, finished: true }, // ignored
-    ];
-    expect(cd._zoomFloorForMinVisible(racers, F.x, F.y, 1, 1.0, CW, CH)).toBeCloseTo(4.0, 4);
-  });
-});
-
-describe('dynamic zoom-out — LEADER min-visible floor (LEADER-MINVIS-1)', () => {
-  const WORLD_W = 1280;
-  const CW = 1280;
-  const CH = 720;
-  const rs = { raceElapsed: 8000, finishedCount: 0, winner: null, finishT: 1.0 };
-
-  // Leader at the FRONT; the rest of the field somewhere behind.
-  const strungField = () => {
-    const r = [{ index: 0, t: 0.95, x: 1150, y: 360, finished: false }];
-    for (let i = 1; i < 40; i++)
-      r.push({
-        index: i,
-        t: 0.5,
-        x: 250 + (i % 10) * 15,
-        y: 320 + ((i / 10) | 0) * 20,
-        finished: false,
-      });
-    return r;
-  };
-  // Whole field bunched right around the leader.
-  const bunchedField = () =>
-    Array.from({ length: 40 }, (_, i) => ({
-      index: i,
-      t: 0.95 - i * 0.001,
-      x: 620 + (i % 8) * 6,
-      y: 350 + ((i / 8) | 0) * 6,
-      finished: false,
-    }));
-
-  // CAMERA-ZOOM-UNIT-1: 400 frames, not 150. The mechanism under test is unchanged, but the
-  // LEADER default now starts at 2 track widths instead of the old spriteScale 1.81, which is a
-  // TIGHTER starting shot on this fixture's 1280-px world — so the smoothed floor (0.005 cam.zoom
-  // per frame) needs proportionally longer to walk out to the relaxed zoom. The assertion is the
-  // same; only the time allowed to converge moved.
-  const drive = (cfg, field, state = CAM_STATE.LEADER_ZOOM, frames = 400) => {
-    // CAMERA-ZOOM-UNIT-1: `leaderMinZoomFraction` is a RELATIVE bound — the min-visible floor may
-    // not relax below this fraction of the LEADER zoom. It was tuned against the old unit's leader
-    // value, so with the new track-width default it binds before the floor can reach 8 visible on
-    // this fixture. These tests are about the FLOOR MECHANISM, so the bound is opened here and the
-    // interaction is recorded in the report as input to the framing block (which owns both).
-    const cd = new CameraDirector(WORLD_W, CH, false, { leaderMinZoomFraction: 0.3, ...cfg }, 28.5);
-    const racers = field();
-    for (let i = 0; i < frames; i++) {
-      cd.state = state;
-      cd.update(racers, 8000 + i * 16, rs, CW, CH);
-    }
-    const visible = cd._countVisibleRacers(racers, cd.zoom * cd._bsX, CW, CH);
-    return { cd, racers, visible };
-  };
-
-  it('field 40 strung out → floor relaxes so at least min(8) racers are visible', () => {
-    const { visible } = drive({ minRacersVisible: 8 }, strungField);
-    expect(visible).toBeGreaterThanOrEqual(8);
-  });
-
-  it('bunched field → the floor does NOT force a zoom-out below the leader zoom', () => {
-    // All racers already near the leader → min-visible satisfied at the profile zoom, so the floor
-    // equals the (resolved) leader target and does not drag the camera wider.
-    const { cd } = drive({ minRacersVisible: 8 }, bunchedField);
-    expect(cd.targetZoom).toBeGreaterThan(1.4); // stays near leaderZoom (~1.81), not ratcheted to the floor
-  });
-
-  it('minRacersVisible = 0 → feature OFF: strung field stays at the tight leader zoom', () => {
-    const off = drive({ minRacersVisible: 0 }, strungField);
-    const on = drive({ minRacersVisible: 8 }, strungField);
-    // OFF keeps the tight leader zoom (few visible); ON relaxes it wider.
-    expect(off.cd.targetZoom).toBeGreaterThan(on.cd.targetZoom);
-    expect(off.cd._leaderPhaseZoomFloor == null || off.cd._leaderPhaseZoomFloor === null).toBe(
-      true
-    );
-  });
-
-  it('small field (6, all active) → guard holds: no floor-ratchet past showing the whole field', () => {
-    const smallField = () =>
-      Array.from({ length: 6 }, (_, i) => ({
-        index: i,
-        t: 0.95 - i * 0.05,
-        x: 400 + i * 120,
-        y: 360,
-        finished: false,
-      }));
-    const { visible } = drive({ minRacersVisible: 8 }, smallField);
-    expect(visible).toBe(6); // all 6 shown; visTarget clamps to active count
-  });
-
-  it('LEAD_CHANGE applies the same min-visible floor as LEADER_ZOOM', () => {
-    const { visible } = drive({ minRacersVisible: 8 }, strungField, CAM_STATE.LEAD_CHANGE);
-    expect(visible).toBeGreaterThanOrEqual(8);
-  });
-
-  it('the profile zoom write does NOT defeat the floor (targetZoom clamped every frame)', () => {
-    // After convergence on a strung field the profile keeps writing targetZoom = leaderZoom each frame,
-    // but the floor clamps it below leaderZoom so the wide view is retained.
-    const { cd } = drive({ minRacersVisible: 8 }, strungField);
-    expect(cd.targetZoom).toBeLessThan(cd._leaderZoom);
-  });
-
-  it('does NOT apply in OVERVIEW state', () => {
-    const cd = new CameraDirector(WORLD_W, CH, false, { minRacersVisible: 8 }, 28.5);
-    cd.state = CAM_STATE.OVERVIEW;
-    cd._leaderPhaseZoomFloor = 1.0;
-    cd._setTargets(strungField(), CW, CH, rs);
-    expect(cd._leaderPhaseZoomFloor).toBe(1.0); // untouched
-  });
-
-  it('does NOT apply in BATTLE_ZOOM state — BATTLE framing is untouched by the min-visible rule', () => {
-    // BATTLE must show the duel, not the whole field: the min-visible floor only gates LEADER/LEAD_CHANGE.
-    const cd = new CameraDirector(WORLD_W, CH, false, { minRacersVisible: 8 }, 28.5);
-    cd.state = CAM_STATE.BATTLE_ZOOM;
-    cd._leaderPhaseZoomFloor = 1.0;
-    cd._setTargets(strungField(), CW, CH, rs);
-    expect(cd._leaderPhaseZoomFloor).toBe(1.0); // untouched — no min-visible clamp in BATTLE
-    expect(cd.targetZoom).toBeCloseTo(cd._battleZoom, 6); // BATTLE zoom is exactly the profile
-  });
-
-  it('closed-track floor never descends below 1.0 (black-screen guard)', () => {
-    const { cd } = drive(
-      { minRacersVisible: 8, leaderMinZoom: 0.1, leaderMinZoomFraction: 0 },
-      strungField
-    );
-    expect(cd.targetZoom).toBeGreaterThanOrEqual(1.0 - 1e-9);
-  });
-});
-
-// ── CAMERA-JITTER-1: the min-visible floor is smoothed (asymmetric rate-limit) ───────────────
-// A dense DYNAMIC field where the visTarget-th nearest racer flips frame-to-frame used to make the raw floor
-// (and thus targetZoom + the coupled pan) oscillate wildly. The floor now loosens instantly (never crops) but
-// tightens only ≤ zoomOutStepPerFrame per frame — so its output is smooth and the zoom lerp has a stable target.
-
-describe('dynamic zoom-out — min-visible floor is smoothed (CAMERA-JITTER-1)', () => {
-  const W = 1280;
-  const CH = 720;
-  const rs = { raceElapsed: 8000, finishedCount: 0, winner: null, finishT: 1.0 };
-  const STEP = 0.005; // default zoomOutStepPerFrame
-
-  // Dense ring around the leader; racers near the 8th-nearest boundary wobble so the binding racer flips.
-  const dynamicField = (frame) => {
-    const r = [{ index: 0, t: 0.95, x: 640, y: 360, finished: false }];
-    for (let i = 1; i < 40; i++) {
-      const baseR = 120 + i * 40;
-      const wob = Math.sin((frame + i * 7) * 0.9) * 90;
-      const ang = i * 2.399;
-      r.push({
-        index: i,
-        t: 0.9 - i * 0.001,
-        x: 640 + Math.cos(ang) * (baseR + wob),
-        y: 360 + Math.sin(ang) * (baseR + wob) * 0.6,
-        finished: false,
-      });
-    }
-    return r;
-  };
-
-  const runDynamic = (cfg, frames = 120) => {
-    const cd = new CameraDirector(W, CH, false, cfg, 28.5);
-    const floors = [];
-    const visibles = [];
-    for (let i = 0; i < frames; i++) {
-      cd.state = CAM_STATE.LEADER_ZOOM;
-      cd.update(dynamicField(i), 8000 + i * 16, rs, W, CH);
-      floors.push(cd._leaderPhaseZoomFloor);
-      visibles.push(cd._countVisibleRacers(dynamicField(i), cd.zoom * cd._bsX, W, CH));
-    }
-    return { floors, visibles };
-  };
-
-  it('floor output is smooth on a flipping-binding-racer field (bounded per-frame delta, no wild swing)', () => {
-    const { floors } = runDynamic({ minRacersVisible: 8 });
-    const tail = floors.slice(-80).filter((f) => f != null);
-    // Tightening (upward floor moves) is capped at zoomOutStepPerFrame × dtScale (≈ 0.005/frame). Allow a
-    // small margin for dt scaling; the point is it is bounded and tiny vs the raw floor's ~0.25/frame jumps.
-    let maxUp = 0;
-    for (let i = 1; i < tail.length; i++) maxUp = Math.max(maxUp, tail[i] - tail[i - 1]);
-    expect(maxUp).toBeLessThanOrEqual(STEP * 1.05); // tightening is rate-limited (no inward snap)
-    const range = Math.max(...tail) - Math.min(...tail);
-    expect(range).toBeLessThan(0.15); // no wild swing (the raw floor swung ~0.42 pre-fix)
-  });
-
-  it('no collapse: the field stays in frame on a churning field (never the tight-profile ~1)', () => {
-    // The live count fluctuates because the zoom LERP lags the instant loosen (spec: "may lag a few frames
-    // while loosening — acceptable") and the focus-centered floor ignores the inner-frame inset. The
-    // guarantee is that it never COLLAPSES to the pre-LEADER-MINVIS tight-profile handful — it stays a healthy
-    // fraction of the field with a mean near visTarget.
-    const { visibles } = runDynamic({ minRacersVisible: 8 });
-    const steady = visibles.slice(20);
-    for (const v of steady) expect(v).toBeGreaterThanOrEqual(5); // no collapse (tight profile hit ~1)
-    const mean = steady.reduce((a, b) => a + b, 0) / steady.length;
-    expect(mean).toBeGreaterThanOrEqual(7); // healthy — near the min(8) target
-  });
-
-  it('small-field guard: a 6-racer dynamic field never over-zooms (all 6 stay visible)', () => {
-    const smallDynamic = (frame) =>
-      Array.from({ length: 6 }, (_, i) => ({
-        index: i,
-        t: 0.95 - i * 0.05,
-        x: 640 + Math.cos(i * 2.399) * (150 + i * 60 + Math.sin(frame * 0.9 + i) * 40),
-        y: 360 + Math.sin(i * 2.399) * (150 + i * 60) * 0.6,
-        finished: false,
-      }));
-    // CAMERA-ZOOM-UNIT-1: `leaderMinZoomFraction` bounds how far the min-visible floor may relax,
-    // RELATIVE to the LEADER zoom — it was tuned against the old unit. Opened here so the test
-    // exercises the small-field guard itself; the interaction is recorded for the framing block.
-    const cd = new CameraDirector(
-      W,
-      CH,
-      false,
-      { minRacersVisible: 8, leaderMinZoomFraction: 0.3 },
-      28.5
-    );
-    let visible = 0;
-    for (let i = 0; i < 120; i++) {
-      cd.state = CAM_STATE.LEADER_ZOOM;
-      cd.update(smallDynamic(i), 8000 + i * 16, rs, W, CH);
-      visible = cd._countVisibleRacers(smallDynamic(i), cd.zoom * cd._bsX, W, CH);
-    }
-    expect(visible).toBe(6); // visTarget clamps to the 6 active — all shown, no over-zoom
-  });
-});
-
-// ── BATTLE-WEIGHT-ZERO-1: a zero-weight event never enters, and the selector is defensive ────
-// DEFECT A: a zero-weight state was pushed to the pool and returned by the single-candidate early-out.
-// DEFECT B: the weighted selector returned a zero-weight / zero-sum candidate instead of no-pick.
-
 describe('weighted event selection never surfaces a zero-weight state (BATTLE-WEIGHT-ZERO-1)', () => {
   const denseTop = Array.from({ length: 10 }, (_, i) => ({
     index: i,
@@ -5432,7 +5125,10 @@ describe('CAMERA-FOCUS-1 — leader anchored + contained in frame', () => {
     CH = 720,
     BODY = 28.5,
     OPEN_BASE = 1.5;
-  const mkCfg = (minVis) => {
+  // CAMERA-FRAMING-1: the parameter was `minVis` for the deleted min-visible floor; the fixture
+  // keeps its shape so the surrounding tests read unchanged, but the value no longer configures
+  // anything and the floor it fed is gone.
+  const mkCfg = () => {
     const c = structuredClone(DEFAULT_CAMERA_CONFIG);
     c.cameraStateProfiles.LEADER_ZOOM = {
       ...c.cameraStateProfiles.LEADER_ZOOM,
@@ -5440,7 +5136,6 @@ describe('CAMERA-FOCUS-1 — leader anchored + contained in frame', () => {
       trackingTC: 0.25,
       innerFramePct: 0.7,
     };
-    c.minRacersVisible = minVis;
     return c;
   };
   const rs = { raceElapsed: 20000, finishedCount: 0, winner: null, finishT: 1.0 };
@@ -5702,7 +5397,6 @@ describe('CAMERA-FOCUS-5 — per-axis screen mapping (forward-framing + containm
       cameraStateProfiles: {
         LEADER_ZOOM: { trackWidths: 1.71, trackingTC: 0.25, innerFramePct: 0.7 },
       },
-      minRacersVisible: 8,
       cameraTransitionGrammar: 'cut',
       leaderForwardFrac: 0.66,
     };
@@ -5786,7 +5480,6 @@ describe('CAMERA-SIDEJUMP-1 — zoom about the anchor (no lurch on a mid-hold zo
       cameraStateProfiles: {
         LEADER_ZOOM: { trackWidths: 1.71, trackingTC: 0.25, innerFramePct: 0.7 },
       },
-      minRacersVisible: 8,
     };
     const cd = new CameraDirector(W, H, false, cfg, 28.5, straightShape);
     cd.state = CAM_STATE.LEADER_ZOOM;
@@ -5851,7 +5544,6 @@ describe('CAMERA-GRAMMAR-1 — glide default, correctness in every shipped gramm
     cameraStateProfiles: {
       LEADER_ZOOM: { trackWidths: 1.71, trackingTC: 0.25, innerFramePct: 0.7 },
     },
-    minRacersVisible: 8,
     cameraTransitionGrammar: grammar,
     ...extra,
   });
@@ -6089,115 +5781,6 @@ describe('CameraDirector — CAMERA-GLIDE-TARGET-1 glide endpoint at destination
 
 // ── OVERVIEW-FRAMING-1: frame the leader + N racers; the leader is ALWAYS framed ──────────────────
 // The owner's rule made testable (Lesson 192 — "the leader is always framed" is a TEST, not a comment).
-describe('CameraDirector — OVERVIEW-FRAMING-1 leader-always-framed framing', () => {
-  const INNER = 0.7;
-  const frame = { width: 1280, height: 720 };
-  const mkDir = (worldW = 3000, worldH = 1500) => {
-    const cd = new CameraDirector(worldW, worldH, false);
-    cd._innerFramePct = INNER;
-    cd._overviewSnapZoom = cd._overviewStateZoom ?? cd.overviewZoom ?? 1; // a defined zoom ceiling
-    return cd;
-  };
-  // leader (max t) + spread followers, all inside world [0,3000] × [0,1500]
-  const spreadGroup = () =>
-    [2600, 2300, 2000, 1700, 1400, 1100, 800].map((x, i) => ({
-      x,
-      y: 760 + (i % 2 ? 90 : -90),
-      t: 2 - i * 0.02,
-    }));
-  const screenOf = (cd, r) => ({
-    sx: r.x * cd.targetZoom * cd._bsX + cd.targetOffsetX,
-    sy: r.y * cd.targetZoom * cd._bsY + cd.targetOffsetY,
-  });
-  const inInner = (cd, r, fw, fh) => {
-    const s = screenOf(cd, r);
-    const mx = ((1 - INNER) / 2) * fw;
-    const my = ((1 - INNER) / 2) * fh;
-    return (
-      s.sx >= mx - 1e-6 && s.sx <= fw - mx + 1e-6 && s.sy >= my - 1e-6 && s.sy <= fh - my + 1e-6
-    );
-  };
-
-  it('leader is ALWAYS inside the inner frame across the whole slider range (checks 1, 4, 6)', () => {
-    const group = spreadGroup();
-    const leader = group[0];
-    for (const N of [2, 5, 8, 12]) {
-      for (const frac of [0.01, 0.022, 0.04, 0.06]) {
-        const cd = mkDir();
-        cd._overviewFrameRacers = N;
-        cd._overviewMinSpriteFrac = frac;
-        cd._setOverviewGroupTargets(group, frame);
-        expect(inInner(cd, leader, frame.width, frame.height)).toBe(true);
-      }
-    }
-  });
-
-  it('frames at least N racers when the sprite floor does not bind (check 2)', () => {
-    const group = spreadGroup();
-    const cd = mkDir();
-    cd._overviewFrameRacers = 5;
-    cd._overviewMinSpriteFrac = 0.005; // tiny floor → does not bind
-    cd._setOverviewGroupTargets(group, frame);
-    const framed = group.filter((r) => inInner(cd, r, frame.width, frame.height)).length;
-    expect(framed).toBeGreaterThanOrEqual(5);
-  });
-
-  it('the frame centre sits BEHIND the leader — leader ahead of centre, field behind (rule 4)', () => {
-    const group = spreadGroup();
-    const cd = mkDir();
-    cd._overviewFrameRacers = 5;
-    cd._overviewMinSpriteFrac = 0.005;
-    cd._setOverviewGroupTargets(group, frame);
-    // followers have lower x, so the leader (max x) sits to the RIGHT of the frame centre
-    expect(screenOf(cd, group[0]).sx).toBeGreaterThan(frame.width / 2);
-  });
-
-  it('resolution independence: fractional framing identical at 3 canvas scales (check 3)', () => {
-    // CAMERA-PROJECTION-1: the scales now come from the projection, so this scales the WORLD (which
-    // is what the axis scales are derived from) instead of poking _bsX/_bsY behind the director's
-    // back. Same invariant: scale world and canvas together and the framing must not move.
-    const group = spreadGroup();
-    const leader = group[0];
-    const out = [];
-    for (const k of [1, 1.5, 2]) {
-      // world SHRINKS as the canvas grows by k, so axisX = 1280/worldW scales by k — the exact
-      // relationship the old test faked by multiplying _bsX.
-      const cd = mkDir(3000 / k, 1500 / k);
-      cd._overviewFrameRacers = 5;
-      cd._overviewMinSpriteFrac = 0.022;
-      const fk = { width: 1280 * k, height: 720 * k };
-      cd._setOverviewGroupTargets(group, fk);
-      const effX = cd._proj.effX(cd.targetZoom);
-      out.push({
-        leaderFrac: (leader.x * effX + cd.targetOffsetX) / fk.width,
-        visWorldFrac: fk.width / effX,
-      });
-    }
-    expect(out[1].leaderFrac).toBeCloseTo(out[0].leaderFrac, 6);
-    expect(out[2].leaderFrac).toBeCloseTo(out[0].leaderFrac, 6);
-    expect(out[1].visWorldFrac).toBeCloseTo(out[0].visWorldFrac, 6);
-    expect(out[2].visWorldFrac).toBeCloseTo(out[0].visWorldFrac, 6);
-  });
-
-  it('config live path: the two owner values flow config → director; absent → defaults (Lesson 193)', () => {
-    const withVals = new CameraDirector(3000, 1500, false, {
-      overviewFrameRacers: 8,
-      overviewMinSpriteFrac: 0.04,
-    });
-    expect(withVals._overviewFrameRacers).toBe(8);
-    expect(withVals._overviewMinSpriteFrac).toBeCloseTo(0.04, 6);
-    const bare = new CameraDirector(3000, 1500, false, {}); // stored config missing the keys → defaults
-    expect(bare._overviewFrameRacers).toBe(5);
-    expect(bare._overviewMinSpriteFrac).toBeCloseTo(0.018, 6);
-  });
-});
-
-// ── CAMERA-REPRO-1: the director's own dice, and the detour log's shared clock ─────────────────────
-// The camera rolls two dice of its own — which state to cut to (_weightedRandomPick) and when the
-// next OVERVIEW is due (_scheduleNextOverview). Unseeded, the SAME race shows a different camera
-// every run, which is exactly why a marked moment could never be handed to anyone before. These
-// tests pin the two properties the marker/replay path stands on: seeded is reproducible, and
-// unseeded is unchanged from what shipped.
 describe('CameraDirector.setRandomSeed (CAMERA-REPRO-1)', () => {
   const driveRace = (cd) => {
     const out = [];
@@ -6325,5 +5908,187 @@ describe('detour log carries the marker clock (CAMERA-REPRO-1)', () => {
     expect(post[0].ts).toBeGreaterThanOrEqual(1000);
     expect(post.at(-1).ts).toBeLessThanOrEqual(ts);
     spy.mockRestore();
+  });
+});
+
+// ── CAMERA-FRAMING-1: the rule, through the director ──────────────────────────────────────────
+// framingRule.test.js proves the rule in isolation. This block proves it REACHES the picture: that
+// every state resolves anchor/guarantee/position through the one path, that LEAD_CHANGE is framed
+// at all (it never was), and that the two deleted steering mechanisms are really gone.
+
+describe('CAMERA-FRAMING-1 — one rule, six states, through the director', () => {
+  const WORLD_W = 3072;
+  const WORLD_H = 2048;
+  const TW = 178;
+  const FRAME = { width: 1280, height: 720 };
+
+  // A closed oval whose heading rotates, so orientation is genuinely exercised.
+  const ovalShape = {
+    isOpen: false,
+    getActualTrackWidth: () => TW,
+    getTotalLength: () => 4000,
+    getPosition: (t) => {
+      const a = 2 * Math.PI * (((t % 1) + 1) % 1);
+      return { x: 1536 + Math.cos(a) * 900, y: 1024 + Math.sin(a) * 600, angle: a };
+    },
+  };
+  const profilesWith = (state, patch) => ({
+    ...DEFAULT_CAMERA_CONFIG.cameraStateProfiles,
+    [state]: { ...DEFAULT_CAMERA_CONFIG.cameraStateProfiles[state], ...patch },
+  });
+  const mk = (cfg = {}) =>
+    new CameraDirector(
+      WORLD_W,
+      WORLD_H,
+      false,
+      { ...DEFAULT_CAMERA_CONFIG, ...cfg },
+      28.5,
+      ovalShape,
+      TW
+    );
+  const field = (n = 6) =>
+    Array.from({ length: n }, (_, i) => {
+      const t = 0.3 - i * 0.012;
+      const p = ovalShape.getPosition(t);
+      return { index: i, name: `R${i}`, t, x: p.x, y: p.y, finished: false };
+    });
+  const rs = { raceElapsed: 20000, finishedCount: 0, winner: null, finishT: 2 };
+
+  const settle = (cd, state, racers, frames = 200) => {
+    for (let i = 0; i < frames; i++) {
+      cd.state = state;
+      cd.update(racers, 20000 + i * 16, rs, FRAME.width, FRAME.height);
+    }
+    return cd;
+  };
+  const screenOf = (cd, r) => ({
+    x: r.x * cd._proj.effX(cd.zoom) + cd.offsetX,
+    y: r.y * cd._proj.effY(cd.zoom) + cd.offsetY,
+  });
+  const inFrame = (p) => p.x >= 0 && p.x <= FRAME.width && p.y >= 0 && p.y <= FRAME.height;
+
+  it('every state resolves a finite anchor, zoom and offset — no state falls through a default', () => {
+    for (const state of [
+      CAM_STATE.OVERVIEW,
+      CAM_STATE.LEADER_ZOOM,
+      CAM_STATE.LEAD_CHANGE,
+      CAM_STATE.BATTLE_ZOOM,
+      CAM_STATE.COMEBACK_ZOOM,
+      CAM_STATE.PHOTO_FINISH,
+    ]) {
+      const cd = settle(mk(), state, field());
+      expect(Number.isFinite(cd.zoom), `${state} zoom`).toBe(true);
+      expect(Number.isFinite(cd.offsetX), `${state} offsetX`).toBe(true);
+      expect(Number.isFinite(cd.offsetY), `${state} offsetY`).toBe(true);
+      expect(cd.zoom).toBeGreaterThan(0);
+    }
+  });
+
+  it('LEAD_CHANGE anchors on the NEW LEADER — it used to centre on a centroid', () => {
+    // "Anchors on X" means the camera follows X and nothing else: move X and the camera moves;
+    // move a racer that is not the anchor and it does not. Asserting a screen POSITION would be
+    // wrong here — LEAD_CHANGE is a FORWARD state, so the leader is deliberately off centre.
+    const base = field();
+    const run = (racers) => {
+      const cd = mk();
+      cd._prevLeaderIndex = 1;
+      settle(cd, CAM_STATE.LEAD_CHANGE, racers);
+      return { x: cd.targetOffsetX, y: cd.targetOffsetY };
+    };
+    const ref = run(base);
+
+    // Move the leader along the track: the camera must follow.
+    const movedLeader = base.map((r, i) => {
+      if (i !== 0) return r;
+      const p = ovalShape.getPosition(r.t + 0.05);
+      return { ...r, t: r.t + 0.05, x: p.x, y: p.y };
+    });
+    const afterLeader = run(movedLeader);
+    expect(Math.hypot(afterLeader.x - ref.x, afterLeader.y - ref.y)).toBeGreaterThan(50);
+
+    // Move a mid-pack racer who is neither the anchor nor the guaranteed partner: no effect.
+    const movedOther = base.map((r, i) => (i === 4 ? { ...r, x: r.x + 400, y: r.y + 400 } : r));
+    const afterOther = run(movedOther);
+    expect(Math.hypot(afterOther.x - ref.x, afterOther.y - ref.y)).toBeLessThan(1e-6);
+  });
+
+  it('LEAD_CHANGE keeps the OVERTAKEN racer in frame — its guarantee', () => {
+    const racers = field();
+    const cd = mk({ cameraStateProfiles: profilesWith('LEAD_CHANGE', { trackWidths: 0.3 }) });
+    cd._prevLeaderIndex = 1;
+    settle(cd, CAM_STATE.LEAD_CHANGE, racers);
+    // Even asked for a 0.3-track-width shot, the guarantee widens until the passed racer fits.
+    expect(inFrame(screenOf(cd, racers[0]))).toBe(true);
+    expect(inFrame(screenOf(cd, racers[1]))).toBe(true);
+  });
+
+  it('BATTLE keeps BOTH contenders in frame at a setting far tighter than the corridor', () => {
+    const racers = field();
+    const cd = mk({ cameraStateProfiles: profilesWith('BATTLE_ZOOM', { trackWidths: 0.2 }) });
+    settle(cd, CAM_STATE.BATTLE_ZOOM, racers);
+    expect(inFrame(screenOf(cd, racers[0]))).toBe(true);
+    expect(inFrame(screenOf(cd, racers[1]))).toBe(true);
+  });
+
+  it('the guarantee only ever WIDENS — a generous setting is left alone', () => {
+    const cd = settle(
+      mk({ cameraStateProfiles: profilesWith('LEADER_ZOOM', { trackWidths: 6 }) }),
+      CAM_STATE.LEADER_ZOOM,
+      field()
+    );
+    expect(cd.visibleTrackWidths).toBeCloseTo(6, 1); // untouched by the guarantee
+  });
+
+  it('FORWARD states push the subject off centre; CENTRED states do not', () => {
+    const racers = field();
+    const fwd = settle(mk(), CAM_STATE.LEADER_ZOOM, racers);
+    const ctr = settle(mk(), CAM_STATE.COMEBACK_ZOOM, racers);
+    const fwdAnchor = screenOf(fwd, racers[0]);
+    const cbRacer = racers[Math.min(2, racers.length - 1)];
+    const ctrAnchor = screenOf(ctr, cbRacer);
+    const offFwd = Math.hypot(fwdAnchor.x - 640, fwdAnchor.y - 360);
+    const offCtr = Math.hypot(ctrAnchor.x - 640, ctrAnchor.y - 360);
+    expect(offFwd).toBeGreaterThan(offCtr);
+  });
+
+  it('the containment clamp is INERT — clampActiveCount stays 0 through a glide', () => {
+    // It was measured ACTIVE on 23 of 23 glide frames while its comment claimed "no-op mid-glide".
+    // This is that comment turned into a test.
+    const cd = mk({ cameraTransitionGrammar: 'glide' });
+    const racers = field();
+    cd.state = CAM_STATE.OVERVIEW;
+    for (let i = 0; i < 5; i++) cd.update(racers, 20000 + i * 16, rs, FRAME.width, FRAME.height);
+    cd.state = CAM_STATE.LEADER_ZOOM;
+    cd._lerpPhase = 'glide';
+    cd._glideStartTs = 20080;
+    for (let i = 0; i < 40; i++) cd.update(racers, 20080 + i * 16, rs, FRAME.width, FRAME.height);
+    expect(cd.clampActiveCount).toBe(0);
+  });
+
+  it('the deleted steering mechanisms are really gone, not merely unused', () => {
+    const cd = mk();
+    expect(cd._containAnchorInFrame).toBeUndefined();
+    expect(cd._zoomFloorForMinVisible).toBeUndefined();
+    expect(cd._countVisibleRacers).toBeUndefined();
+    expect(cd._setOverviewGroupTargets).toBeUndefined();
+    expect(cd._minRacersVisible).toBeUndefined();
+  });
+
+  it('PHOTO_FINISH has its OWN zoom — it no longer borrows BATTLE', () => {
+    const cd = mk({
+      cameraStateProfiles: {
+        ...profilesWith('BATTLE_ZOOM', { trackWidths: 2 }),
+        PHOTO_FINISH: { trackWidths: 0.8 },
+      },
+    });
+    expect(cd._photoFinishZoom).not.toBeCloseTo(cd._battleZoom, 6);
+    expect(cd._photoFinishZoom).toBeGreaterThan(cd._battleZoom); // 0.8 TW is tighter than 2 TW
+  });
+
+  it('a config with no PHOTO_FINISH entry frames exactly as BATTLE did — no silent change', () => {
+    const profiles = { ...DEFAULT_CAMERA_CONFIG.cameraStateProfiles };
+    delete profiles.PHOTO_FINISH;
+    const cd = mk({ cameraStateProfiles: profiles });
+    expect(cd._photoFinishZoom).toBeCloseTo(cd._battleZoom, 9);
   });
 });
