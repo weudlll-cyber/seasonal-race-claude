@@ -23,6 +23,7 @@ import {
   POSITION,
   corridorGuarantee,
   pairGuarantee,
+  companyGuarantee,
 } from './framingRule.js';
 
 export const CAM_STATE = {
@@ -73,6 +74,8 @@ const DEFAULT_TRACK_WIDTHS = {
   battle: 1.5,
   comeback: 1.5,
 };
+/** CAMERA-COMPANY-1 default: the anchor plus this many−1 others must stay in frame. */
+const DEFAULT_MIN_RACERS_VISIBLE = 3;
 /** Fallback corridor width (world px) when no track width and no shape reach the director. */
 const FALLBACK_TRACK_WIDTH_PX = 140;
 // World-pixel radial offset: camera shifts toward field so leader sits at the outer viewport edge.
@@ -452,6 +455,9 @@ export class CameraDirector {
       DEFAULT_TRACK_WIDTHS.overview
     );
     this._innerFramePct = config?.targetInnerFramePct ?? DEFAULT_INNER_FRAME_PCT;
+    // CAMERA-COMPANY-1: how many racers must be in frame, INCLUDING the anchor. <= 1 disables the
+    // dramaturgical guarantee entirely (the geometric ones are unaffected).
+    this._minRacersVisible = config?.minRacersVisible ?? DEFAULT_MIN_RACERS_VISIBLE;
     // CAMERA-FOCUS-3 transition grammar. 'cut' (grammar A) = every anchored/active state entry snaps
     // pan AND zoom together to the new subject's correct framing on frame 1 (zero acquisition — the
     // half-glide "corner-riding" hybrid is dead). 'legacy' = the pre-FOCUS-3 entry glide. The shipped
@@ -1810,6 +1816,37 @@ export class CameraDirector {
   }
 
   /**
+   * CAMERA-COMPANY-1: the DRAMATURGICAL guarantee — "do not show emptiness".
+   *
+   * Deliberately NOT part of `_guaranteeCeiling`. The geometric guarantees protect named subjects;
+   * this one protects the SHOT, and folding them together would hide that they answer different
+   * questions. Both are applied with Math.min at the same place, before the camera moves.
+   *
+   * Applies to the SINGLE-ANCHOR states only. BATTLE, PHOTO_FINISH and LEAD_CHANGE already guarantee
+   * a pair, which IS company — adding a headcount there would fight a guarantee that is already
+   * doing the job. See the report for the measurement behind that choice.
+   */
+  _companyCeiling(subjects, racers, frameSize) {
+    if (!(this._minRacersVisible > 1)) return Infinity;
+    if (framingFor(this.state).guarantee === GUARANTEE.PAIR) return Infinity;
+    // The company sits BEHIND a forward-framed subject, and forward framing gives it more room: a
+    // leader at 0.66 along the frame has 0.66 of it behind him. A centred subject has half.
+    const forward = framingFor(this.state).position === POSITION.FORWARD;
+    const reach = forward && this._leaderForwardFrac != null ? this._leaderForwardFrac : 0.5;
+    return companyGuarantee(
+      subjects.point,
+      racers,
+      this._minRacersVisible,
+      this._proj.axisX,
+      this._proj.axisY,
+      frameSize.width,
+      frameSize.height,
+      this._innerFramePct ?? DEFAULT_INNER_FRAME_PCT,
+      reach
+    );
+  }
+
+  /**
    * CAMERA-FOCUS-3 leader forward-framing. Shifts a pan target BACKWARD along the leader's motion tangent
    * so the leader lands at screen fraction `_leaderForwardFrac` (> 0.5) along the motion axis — i.e. FORWARD,
    * with the trailing pack filling the rest of the frame (the action is behind the leader). Returns the
@@ -2419,8 +2456,14 @@ export class CameraDirector {
 
     if (!panTarget) return;
 
-    // ── HOW FAR IN: the state setting, WIDENED by the guarantee (never tightened) ──────────────
-    const guaranteed = Math.min(stateZoom, this._guaranteeCeiling(subjects, frameSize));
+    // ── HOW FAR IN: the state setting, WIDENED by the guarantees (never tightened) ─────────────
+    // A LIMIT, not a correction: the target is min(setting, geometric, dramaturgical) computed
+    // BEFORE the camera moves, so it never zooms in and then backs out. In-then-out is pumping.
+    const guaranteed = Math.min(
+      stateZoom,
+      this._guaranteeCeiling(subjects, frameSize),
+      this._companyCeiling(subjects, racers, frameSize)
+    );
 
     // ── WHERE IN FRAME: from the principle, not from a slider ──────────────────────────────────
     if (framing.position === POSITION.FORWARD && this._observerPhase === 'follow') {

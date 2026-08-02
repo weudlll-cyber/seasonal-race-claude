@@ -49,12 +49,25 @@ export const POSITION = {
   FORWARD: 'forward',
 };
 
-/** What must stay in frame. */
+/**
+ * What must stay in frame. TWO KINDS, and the difference matters enough to name:
+ *
+ *   GEOMETRIC — "do not crop what matters". CORRIDOR and PAIR. They protect named subjects whose
+ *               positions are known, and they are satisfied or not by pure geometry.
+ *   DRAMATURGICAL — "do not show emptiness". COMPANY. It protects the SHOT rather than a subject:
+ *               a leader alone in frame, with no reference and no tension, is a correct picture of
+ *               nothing. The owner's words for the failure it prevents: *"das ist nicht spannend"*.
+ *
+ * A reader must be able to tell them apart, because they answer different questions and will
+ * eventually be tuned against each other. They are deliberately NOT folded together.
+ */
 export const GUARANTEE = {
-  /** The full track corridor, measured perpendicular to the heading. */
+  /** GEOMETRIC: the full track corridor, measured perpendicular to the heading. */
   CORRIDOR: 'corridor',
-  /** Two named contenders, measured along the line between them. */
+  /** GEOMETRIC: two named contenders, measured along the line between them. */
   PAIR: 'pair',
+  /** DRAMATURGICAL: enough of the field in frame that the shot has tension. See companyGuarantee. */
+  COMPANY: 'company',
 };
 
 /**
@@ -220,6 +233,74 @@ export function pairGuarantee(a, b, axisX, axisY, frameW, frameH, innerFramePct 
     frameH,
     innerFramePct
   );
+}
+
+/**
+ * THE DRAMATURGICAL GUARANTEE — "do not show emptiness".
+ *
+ * The owner zooms LEADER in tight ON PURPOSE, and wants the camera to catch him exactly when the
+ * picture would go empty. This returns the tightest cam.zoom at which at least `minVisible` racers
+ * (the anchor plus its nearest company) are still in frame. Like every guarantee here it is a
+ * CEILING, applied with Math.min BEFORE the camera moves — the camera never zooms in and then backs
+ * out. That in-then-out shape is pumping, a failure class this project has already paid for once.
+ *
+ * WHY IT IS SORTED BY CEILING, NOT BY DISTANCE. The old floor ranked racers by world distance and
+ * then applied ONE axis scale to both axes — the third instance of the bsX/bsY defect, over-stating
+ * screen Y by 18.5% on every closed track. Ranking by the zoom each racer would REQUIRE is both the
+ * fix and the orientation-aware form: a racer directly above the anchor is cheaper or dearer to
+ * include than one beside it, depending on the frame's shape in that direction, and this asks the
+ * frame rather than assuming.
+ *
+ * @param {{x:number,y:number}} anchor   the world point the shot is built around
+ * @param {Array<{x:number,y:number,finished?:boolean}>} racers  the live field (the anchor may be in it)
+ * REACH, and why it is not 1. The corridor and pair vectors span between two things that must BOTH
+ * be in frame, so they are compared against the whole extent. A company vector runs from the ANCHOR
+ * — which sits at or near the centre — out to a companion, so the room available is only the part of
+ * the frame on that side. `reach` is that share: 0.5 for a centred subject, and the forward fraction
+ * for a subject pushed forward (a leader at 0.66 along the frame has 0.66 of it behind him, which is
+ * exactly where his company is). Passing 1 here was a real defect, caught by a test: it permitted a
+ * shot twice as tight as it should have and let the guaranteed company fall off the far edge.
+ *
+ * @param {number} minVisible  how many racers must be in frame INCLUDING the anchor; <= 1 disables
+ * @param {number} [reach=0.5] share of the frame extent available from the anchor toward the company
+ * @returns {number} cam.zoom ceiling; Infinity when nothing constrains
+ */
+export function companyGuarantee(
+  anchor,
+  racers,
+  minVisible,
+  axisX,
+  axisY,
+  frameW,
+  frameH,
+  innerFramePct = 1,
+  reach = 0.5
+) {
+  if (!anchor || !Array.isArray(racers)) return Infinity;
+  const need = Math.floor(minVisible) - 1; // the anchor itself is one of them
+  if (!(need > 0)) return Infinity;
+  const ceilings = [];
+  for (const r of racers) {
+    if (!r || r.finished) continue;
+    const dx = r.x - anchor.x;
+    const dy = r.y - anchor.y;
+    if (dx === 0 && dy === 0) continue; // the anchor itself
+    ceilings.push(
+      zoomCeilingToFit(
+        { x: dx, y: dy },
+        axisX,
+        axisY,
+        frameW,
+        frameH,
+        innerFramePct * clamp01(reach)
+      )
+    );
+  }
+  if (ceilings.length === 0) return Infinity;
+  // Most permissive first: ceilings[0] is the nearest company, in the frame's own terms.
+  ceilings.sort((a, b) => b - a);
+  // Asking for more company than the field can supply must not zoom to a point: take what exists.
+  return ceilings[Math.min(need, ceilings.length) - 1];
 }
 
 /** Unit perpendicular to a world heading, or null when the heading is degenerate. */

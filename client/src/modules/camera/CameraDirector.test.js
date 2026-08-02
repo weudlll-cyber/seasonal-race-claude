@@ -4615,7 +4615,11 @@ describe('CameraDirector — FINISH_OVERVIEW lookback', () => {
       WORLD_W,
       CANVAS_H,
       true,
-      { finishOverviewLookbackPx: lookbackPx },
+      // CAMERA-COMPANY-1: the dramaturgical guarantee is OFF here. These tests assert WHERE the
+      // camera centres in FINISH_OVERVIEW (a fixed point behind the line, not the winner's live
+      // position). The guarantee legitimately responds to the winner moving — it is company — so
+      // leaving it on would test two things at once.
+      { finishOverviewLookbackPx: lookbackPx, minRacersVisible: 0 },
       36,
       makeShape()
     );
@@ -4672,7 +4676,7 @@ describe('CameraDirector — FINISH_OVERVIEW lookback', () => {
       WORLD_W,
       CANVAS_H,
       true,
-      { finishOverviewLookbackPx: 600 },
+      { finishOverviewLookbackPx: 600, minRacersVisible: 0 },
       36,
       shape
     );
@@ -4708,7 +4712,7 @@ describe('CameraDirector — FINISH_OVERVIEW lookback', () => {
       WORLD_W,
       CANVAS_H,
       true,
-      { finishOverviewLookbackPx: 0 },
+      { finishOverviewLookbackPx: 0, minRacersVisible: 0 },
       36,
       shape
     );
@@ -6066,12 +6070,16 @@ describe('CAMERA-FRAMING-1 — one rule, six states, through the director', () =
   });
 
   it('the deleted steering mechanisms are really gone, not merely unused', () => {
+    // The MECHANISMS are gone — the pan-moving clamp, the ratcheting floor and its two helpers.
+    // `minRacersVisible` is NOT among them: CAMERA-COMPANY-1 brought the CONCEPT back as a
+    // guarantee (a pre-move limit), which is what it should have been. What is gone is the code
+    // that steered; what is back is the rule that widens.
     const cd = mk();
     expect(cd._containAnchorInFrame).toBeUndefined();
     expect(cd._zoomFloorForMinVisible).toBeUndefined();
     expect(cd._countVisibleRacers).toBeUndefined();
     expect(cd._setOverviewGroupTargets).toBeUndefined();
-    expect(cd._minRacersVisible).toBeUndefined();
+    expect(cd._minRacersVisible).toBeGreaterThan(1); // the guarantee, not the floor
   });
 
   it('PHOTO_FINISH has its OWN zoom — it no longer borrows BATTLE', () => {

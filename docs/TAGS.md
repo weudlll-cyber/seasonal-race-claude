@@ -150,6 +150,17 @@ CHANGES here, most of all in LEAD_CHANGE — which holds 37.6% of all frames and
   and the floor's single-effZoom per-axis defect still live. Camera-only; the shipped world
   `dc4647be0f55ebdb` is untouched on both sides. Config schema v19.
 
+### Camera company guarantee — CAMERA-COMPANY-1 (2026-08-02, branch `camera-refactor`)
+Return point captured before the min-racers floor came BACK, as a guarantee rather than a floor. It was
+deleted in CAMERA-FRAMING-1 as "a guarantee phrased as a headcount"; the owner corrected that reading —
+it was a DRAMATURGICAL guarantee ("do not show emptiness"), and its absence is visible in his
+post-framing screenshot: the leader huge and alone, *"das ist nicht spannend"*. The concept was right,
+the arithmetic was broken (one axis scale on both axes — the bsX/bsY family — competing with a zoom
+number that meant something different on every track). Both are fixed, so the idea returns cleanly.
+- `pre/company` (`5383750b`, 2026-08-02) — the state with corridor and pair guarantees only, where
+  nothing catches a LEADER setting of 1 or below when the shot goes empty. Camera-only; the shipped
+  world `dc4647be0f55ebdb` is untouched on both sides. Config schema v20.
+
 ## Active-phase tags (temporary scaffolding — to collapse later)
 
 Step-tags from the runaway phase (now CLOSED 2026-07-29, see below) and any later work — safe return points, not permanent anchors. They collapse into
@@ -564,6 +575,7 @@ The full list of the 177 retired tags is recorded below for the archive.
 - `pre/surge-telemetry-agg`
 - `pre/sweep-instrumentation-pulklr`
 - `pre/v4-choreography`
+- `pre/company`
 - `pre/framing`
 - `pre/picture-fixes`
 - `pre/v4-on-trunk`

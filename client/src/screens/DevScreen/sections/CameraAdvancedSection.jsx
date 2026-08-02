@@ -626,6 +626,19 @@ function CameraAdvancedSection() {
             display={`${config.overviewStartDelay ?? 15}s`}
             tip="Seconds after race start before OVERVIEW may appear in the pool for the first time. Default 15 s."
           />
+          <SliderRow
+            label="Company: min racers in frame"
+            testId="regie-min-racers-visible"
+            min={0}
+            max={12}
+            step={1}
+            value={config.minRacersVisible ?? 3}
+            onChange={(e) => set('minRacersVisible', parseInt(e.target.value, 10))}
+            display={
+              (config.minRacersVisible ?? 3) <= 1 ? 'Off' : `${config.minRacersVisible ?? 3}`
+            }
+            tip="The DRAMATURGICAL guarantee — 'do not show emptiness'. At least this many racers stay in frame, counting the subject, so a tight LEADER shot never goes empty: leader alone, no reference, no tension. It is a LIMIT, not a correction — the camera does not zoom in and then back out, it simply does not go that far. 0 or 1 turns it off. Applies to the single-subject shots (LEADER, COMEBACK, OVERVIEW); BATTLE, LEAD_CHANGE and PHOTO_FINISH already guarantee their pair. Default 3: measured to halve the frames where the leader is alone at a LEADER setting of 1, at almost no cost in restlessness."
+          />
         </div>
 
         <p
