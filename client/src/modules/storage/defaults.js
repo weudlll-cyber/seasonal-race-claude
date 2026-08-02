@@ -54,7 +54,7 @@ export const DEFAULT_ROW_LAYOUT_CONFIG = {
 };
 
 export const DEFAULT_CAMERA_CONFIG = {
-  schemaVersion: 18,
+  schemaVersion: 19,
   // Per-state camera profiles — each key matches a CAM_STATE enum value.
   //
   // CAMERA-ZOOM-UNIT-1 (schema v18): `trackWidths` is THE zoom setting for every state — how many
@@ -76,7 +76,6 @@ export const DEFAULT_CAMERA_CONFIG = {
       maxStateDuration: 4000,
       minStateHold: 5000,
       maxEntryDurationMs: 10000, // timeout fallback: force tracking after this many ms in entry
-      overviewOffsetPx: 150, // world px: camera shifts toward field so leader appears at outer edge
     },
     LEADER_ZOOM: {
       trackWidths: 2, // the reference shot
@@ -214,7 +213,6 @@ export const DEFAULT_CAMERA_CONFIG = {
   comebackCooldownMs: 10000, // ms after leaving COMEBACK before it can re-trigger
   leadChangeCooldownMs: 5000, // ms after leaving LEAD_CHANGE before it can re-trigger
   overviewCooldownMs: 15000, // ms after leaving OVERVIEW before it can recur
-  overviewTargetScreenPx: 28, // minimum visible narrow-body screen size (px) for OVERVIEW (and floor for all phases)
   // OVERVIEW-FRAMING-1 — the owner's framing rule. OVERVIEW frames the LEADER + the next
   // (overviewFrameRacers − 1) racers, deriving the zoom to fit them, floored so a racer sprite never
   // shrinks below overviewMinSpriteFrac of the frame width (legibility outranks the count). The frame

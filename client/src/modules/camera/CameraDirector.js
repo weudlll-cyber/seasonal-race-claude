@@ -80,7 +80,6 @@ const DEFAULT_TRACK_WIDTHS = {
 /** Fallback corridor width (world px) when no track width and no shape reach the director. */
 const FALLBACK_TRACK_WIDTH_PX = 140;
 // World-pixel radial offset: camera shifts toward field so leader sits at the outer viewport edge.
-const _DEFAULT_OVERVIEW_OFFSET_PX = 150;
 const DEFAULT_INNER_FRAME_PCT = 0.7;
 const LEAD_OUT_DECAY = 0.05; // per-60fps-frame EMA factor for lead-out camera deceleration
 const NOMINAL_T_PER_FRAME = 0.001; // fallback racer speed (t/frame) for lead-in distance when _prevFocusT is unknown
@@ -374,7 +373,7 @@ export class CameraDirector {
   updateConfig(config) {
     this._computeZoomLevels(config);
     this._computeTimingConfig(config);
-    // Invalidate stored snap so the new overviewTargetScreenPx takes effect on the next OVERVIEW cut.
+    // Invalidate the stored snap so a changed OVERVIEW setting takes effect on the next cut.
     this._overviewSnapZoom = null;
   }
 
@@ -500,7 +499,6 @@ export class CameraDirector {
     this._diagEnabled = t.diagEnabled;
     this._detourEnabled = t.detourEnabled; // CAMERA-DETOUR-1 per-transition frame log (read-only)
     this._transitionTConvergence = t.transitionTConvergence;
-    this._overviewOffsetPx = t.overviewOffsetPx;
     this._overviewCooldownMs = t.overviewCooldownMs;
     this._leadAheadEnabledByState = t.leadAheadEnabledByState;
     this._leadOutEnabledByState = t.leadOutEnabledByState;

@@ -1,3 +1,9 @@
+// CAMERA-PICTURE-FIXES-1 removed the describe blocks that covered the minimum-sprite-size FLOOR
+// (`getEffectiveMinTargetScreenPx` and `computeRenderDisplayScale`'s `Math.max`). The floor is gone
+// — sprites scale with the camera and nothing holds them up — so those tests covered deleted code
+// and were removed rather than "adapted". What replaces them is the no-floor block at the end of
+// this file, which pins the property the owner actually asked for.
+
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import {
   computeAutoScaleFactor,
@@ -134,151 +140,6 @@ describe('saveAutoScaleConfig', () => {
   });
 });
 
-describe('getEffectiveMinTargetScreenPx — world-pixel floor (Block Y)', () => {
-  it('floor value 36 returns 36 (generic pass-through test)', () => {
-    expect(getEffectiveMinTargetScreenPx(undefined, 36)).toBe(36);
-  });
-
-  it('72px world-pixel floor returns 72', () => {
-    expect(getEffectiveMinTargetScreenPx(undefined, 72)).toBe(72);
-  });
-
-  it('floor is resolution-independent: same value regardless of canvas size', () => {
-    // floor value always passes through unchanged, unlike old pct×canvasH which varied by canvas size
-    expect(getEffectiveMinTargetScreenPx(undefined, 36)).toBe(36);
-  });
-
-  it('type override (absolute px) wins when set', () => {
-    expect(getEffectiveMinTargetScreenPx(48, 36)).toBe(48);
-  });
-
-  it('null type override falls back to world-pixel floor', () => {
-    expect(getEffectiveMinTargetScreenPx(null, 36)).toBe(36);
-  });
-
-  it('type override 0 (explicit zero) is respected', () => {
-    expect(getEffectiveMinTargetScreenPx(0, 36)).toBe(0);
-  });
-});
-
-describe('getEffectiveMinTargetScreenPx — floor in computeRenderDisplayScale (Block Y)', () => {
-  it('closed-track: floor 36px — screenPx ≥ 36 for realistic effZoom range', () => {
-    const floor36 = getEffectiveMinTargetScreenPx(undefined, 36);
-    for (const effZoom of [0.5, 0.8, 1.0, 1.5, 2.0]) {
-      const result = computeRenderDisplayScale(40, 0.65, effZoom, floor36);
-      const screenPx = 40 * result * effZoom;
-      expect(screenPx).toBeGreaterThanOrEqual(floor36 - 0.001);
-    }
-  });
-
-  it('open-track: effZoom ≈ 0.32 (6000px world) — floor 36 clamps render to 36px', () => {
-    // 6000px world: overviewZoom = 1280/6000 ≈ 0.213; with openTrackBaseZoom=1.5 → 0.32
-    const openEffZoom = 1.5 * (1280 / 6000);
-    const floor36 = getEffectiveMinTargetScreenPx(undefined, 36);
-    const dss = 1.44; // river-run at N=10 from diagnostic
-    const result = computeRenderDisplayScale(40, dss, openEffZoom, floor36);
-    const screenPx = 40 * result * openEffZoom;
-    expect(screenPx).toBeCloseTo(36, 1);
-    expect(screenPx).toBeGreaterThanOrEqual(36);
-  });
-});
-
-describe('computeRenderDisplayScale', () => {
-  const displaySize = 40;
-  const displaySizeScale = 1.0145; // 140/6/23 — neutral on reference track
-  const minPx = 32;
-
-  it('no-floor case: result = displaySizeScale (proportional, floor not active)', () => {
-    // effZoom=1.5 (open-track OVERVIEW): proportionalPx = 40×1.0145×1.5 = 60.9 > 32
-    const result = computeRenderDisplayScale(displaySize, displaySizeScale, 1.5, minPx);
-    expect(result).toBeCloseTo(displaySizeScale, 5);
-  });
-
-  it('sprite screen size scales proportionally with effZoom (LEADER > OVERVIEW)', () => {
-    // OVERVIEW: effZoom=1.5 → screenPx = 40×1.0145×1.5 = 60.9
-    // LEADER:   effZoom=2.1 → screenPx = 40×1.0145×2.1 = 85.2
-    const overviewScale = computeRenderDisplayScale(displaySize, displaySizeScale, 1.5, minPx);
-    const leaderScale = computeRenderDisplayScale(displaySize, displaySizeScale, 2.1, minPx);
-    const overviewScreenPx = displaySize * overviewScale * 1.5;
-    const leaderScreenPx = displaySize * leaderScale * 2.1;
-    expect(leaderScreenPx).toBeGreaterThan(overviewScreenPx);
-    expect(leaderScreenPx).toBeCloseTo(85.2, 0);
-    expect(overviewScreenPx).toBeCloseTo(60.9, 0);
-  });
-
-  it('1280-track + LEADER: screen size ≈ 85px (proportional, was 57px constant in D7a)', () => {
-    // worldWidth=1280 open track, LEADER cam.zoom=1.4: effZoom=1.5×1.4=2.1
-    const result = computeRenderDisplayScale(displaySize, displaySizeScale, 2.1, minPx);
-    const screenPx = displaySize * result * 2.1;
-    expect(screenPx).toBeCloseTo(85.2, 0);
-  });
-
-  it('1280-track + OVERVIEW: screen size ≈ 61px', () => {
-    // worldWidth=1280 open track, OVERVIEW cam.zoom=1.0: effZoom=1.5×1.0=1.5
-    const result = computeRenderDisplayScale(displaySize, displaySizeScale, 1.5, minPx);
-    const screenPx = displaySize * result * 1.5;
-    expect(screenPx).toBeCloseTo(60.9, 0);
-  });
-
-  it('floor kicks in on large closed track (effZoom≈0.064) — screenPx = 32', () => {
-    // worldWidth=6000 closed track, LEADER state:
-    // cam.zoom = (1280/6000)×1.4 = 0.2987, bsX = 1280/6000 = 0.2133
-    // effZoom = 0.2987 × 0.2133 = 0.0637
-    const effZoom = (1280 / 6000) * 1.4 * (1280 / 6000);
-    const dss = computeAutoScaleFactor(140, 6, DEFAULT_AUTO_SCALE_CONFIG); // 1.0145
-    const result = computeRenderDisplayScale(displaySize, dss, effZoom, minPx);
-    const screenPx = displaySize * result * effZoom;
-    expect(screenPx).toBeCloseTo(32, 1);
-    expect(screenPx).toBeGreaterThanOrEqual(32);
-  });
-
-  it('floor protects on any large track: screenPx never falls below minTargetScreenPx', () => {
-    for (const effZoom of [0.01, 0.05, 0.1, 0.15]) {
-      const result = computeRenderDisplayScale(displaySize, displaySizeScale, effZoom, minPx);
-      const screenPx = displaySize * result * effZoom;
-      expect(screenPx).toBeGreaterThanOrEqual(minPx - 0.001);
-    }
-  });
-
-  it('custom minTargetScreenPx=48: floor at 48px', () => {
-    const effZoom = 0.05; // tiny, would give proportional ~2px
-    const result = computeRenderDisplayScale(displaySize, displaySizeScale, effZoom, 48);
-    const screenPx = displaySize * result * effZoom;
-    expect(screenPx).toBeCloseTo(48, 1);
-  });
-
-  it('returns displaySizeScale for invalid effZoom (guard against divide-by-zero)', () => {
-    expect(computeRenderDisplayScale(displaySize, displaySizeScale, 0, minPx)).toBe(
-      displaySizeScale
-    );
-    expect(computeRenderDisplayScale(displaySize, displaySizeScale, -1, minPx)).toBe(
-      displaySizeScale
-    );
-    expect(computeRenderDisplayScale(displaySize, displaySizeScale, null, minPx)).toBe(
-      displaySizeScale
-    );
-  });
-
-  it('returns displaySizeScale for invalid displaySize (guard)', () => {
-    expect(computeRenderDisplayScale(0, displaySizeScale, 1.5, minPx)).toBe(displaySizeScale);
-    expect(computeRenderDisplayScale(-5, displaySizeScale, 1.5, minPx)).toBe(displaySizeScale);
-  });
-
-  it('BATTLE > LEADER > OVERVIEW screen size (proportional ordering preserved)', () => {
-    // worldWidth=1280 open track
-    const overview = computeRenderDisplayScale(displaySize, displaySizeScale, 1.5, minPx);
-    const leader = computeRenderDisplayScale(displaySize, displaySizeScale, 2.1, minPx);
-    const battle = computeRenderDisplayScale(displaySize, displaySizeScale, 2.4, minPx);
-    const overviewPx = displaySize * overview * 1.5;
-    const leaderPx = displaySize * leader * 2.1;
-    const battlePx = displaySize * battle * 2.4;
-    expect(battlePx).toBeGreaterThan(leaderPx);
-    expect(leaderPx).toBeGreaterThan(overviewPx);
-  });
-});
-
-// ── getEffectiveMaxTargetScreenPx ──────────────────────────────────────────────
-
 describe('getEffectiveMaxTargetScreenPx', () => {
   it('returns globalMaxPx when typeOverridePx is undefined', () => {
     expect(getEffectiveMaxTargetScreenPx(undefined, 160)).toBe(160);
@@ -299,59 +160,87 @@ describe('getEffectiveMaxTargetScreenPx', () => {
 
 // ── computeRenderDisplayScale — ceiling clamp (maxTargetScreenPx) ─────────────
 
-describe('computeRenderDisplayScale — ceiling clamp', () => {
-  const displaySize = 40;
-  const displaySizeScale = 1.0;
-  const minPx = 32;
+// ── computeRenderDisplayScale: sprites scale, nothing holds them up ─────────────────────────────
+// CAMERA-PICTURE-FIXES-1. The owner's rule: "die Sprites sollten immer angepasst groß sein". A
+// racer's size on screen says how far in the camera is, and says nothing else. The old minimum-size
+// floor bound in OVERVIEW on 9 of the 10 shipped tracks, drawing 28 px where the zoom asked for
+// 17-20 px; it is gone, and these tests pin its absence.
 
-  it('no ceiling when maxTargetScreenPx is undefined — behavior unchanged', () => {
-    const effZoom = 2.0; // proportional = 40*1*2 = 80px, above 32 floor
-    const result = computeRenderDisplayScale(displaySize, displaySizeScale, effZoom, minPx);
-    const screenPx = displaySize * result * effZoom;
-    expect(screenPx).toBeCloseTo(80, 1); // no ceiling applied
+describe('computeRenderDisplayScale — proportional, with no floor', () => {
+  const DS = 36;
+
+  it('returns the density scale untouched: screen size is purely zoom x world size', () => {
+    for (const eff of [0.05, 0.25, 1, 2.5, 10]) {
+      expect(computeRenderDisplayScale(DS, 1.0, eff)).toBeCloseTo(1.0, 12);
+      expect(computeRenderDisplayScale(DS, 0.7, eff)).toBeCloseTo(0.7, 12);
+    }
   });
 
-  it('ceiling clamps screenPx to maxTargetScreenPx when zoom pushes it over', () => {
-    const effZoom = 5.0; // proportional = 40*1*5 = 200px > max=160
-    const result = computeRenderDisplayScale(displaySize, displaySizeScale, effZoom, minPx, 160);
-    const screenPx = displaySize * result * effZoom;
-    expect(screenPx).toBeCloseTo(160, 1);
-    expect(screenPx).toBeLessThanOrEqual(160.001);
+  it('NO FLOOR: a far-out camera draws a genuinely tiny sprite', () => {
+    // The case the floor existed for — a large closed track at OVERVIEW. It now shrinks.
+    const eff = 0.064;
+    const scale = computeRenderDisplayScale(DS, 1.0, eff);
+    expect(DS * scale * eff).toBeCloseTo(DS * eff, 9); // 2.3 px, not the old 32 px
+    expect(DS * scale * eff).toBeLessThan(5);
   });
 
-  it('ceiling does NOT clamp when proportional is within corridor', () => {
-    const effZoom = 2.0; // proportional = 80px, within [32, 160]
-    const result = computeRenderDisplayScale(displaySize, displaySizeScale, effZoom, minPx, 160);
-    const screenPx = displaySize * result * effZoom;
-    expect(screenPx).toBeCloseTo(80, 1);
+  it('screen size is strictly monotonic in zoom — twice the zoom is twice the sprite', () => {
+    const px = (eff) => DS * computeRenderDisplayScale(DS, 1.0, eff) * eff;
+    expect(px(2)).toBeCloseTo(2 * px(1), 9);
+    expect(px(4)).toBeCloseTo(2 * px(2), 9);
+    let prev = 0;
+    for (const eff of [0.1, 0.5, 1, 2, 5]) {
+      const cur = px(eff);
+      expect(cur).toBeGreaterThan(prev);
+      prev = cur;
+    }
   });
 
-  it('floor still applies when proportional is below min, ceiling above min', () => {
-    const effZoom = 0.05; // proportional = 40*1*0.05 = 2px < min=32
-    const result = computeRenderDisplayScale(displaySize, displaySizeScale, effZoom, minPx, 160);
-    const screenPx = displaySize * result * effZoom;
-    expect(screenPx).toBeCloseTo(32, 1);
+  it('the state ordering follows the zoom ordering, with no floor flattening the wide end', () => {
+    // BATTLE (tightest) > LEADER > OVERVIEW (widest) — and OVERVIEW is no longer pinned to a floor.
+    const px = (eff) => DS * computeRenderDisplayScale(DS, 1.0, eff) * eff;
+    const overview = px(0.5),
+      leader = px(1.0),
+      battle = px(1.33);
+    expect(battle).toBeGreaterThan(leader);
+    expect(leader).toBeGreaterThan(overview);
+    expect(leader / overview).toBeCloseTo(2.0, 9); // exactly the zoom ratio
   });
 
-  it('edge case: min > max — ceiling ignored (min wins)', () => {
-    const effZoom = 5.0; // proportional = 200px
-    // min=100, max=50: invalid corridor → max ignored, floor at 100 applied
-    const result = computeRenderDisplayScale(displaySize, displaySizeScale, effZoom, 100, 50);
-    const screenPx = displaySize * result * effZoom;
-    // Floor at 100 wins; proportional 200 > 100, so proportional used (no floor)
-    expect(screenPx).toBeCloseTo(200, 1);
+  it('degenerate inputs fall back to the density scale rather than dividing by zero', () => {
+    for (const args of [
+      [DS, 0.8, 0],
+      [DS, 0.8, -1],
+      [0, 0.8, 1],
+      [DS, 0.8, undefined],
+    ]) {
+      expect(computeRenderDisplayScale(...args)).toBe(0.8);
+    }
+  });
+});
+
+describe('computeRenderDisplayScale — the ceiling survives (it is a different question)', () => {
+  const DS = 36;
+
+  it('clamps when the proportional size exceeds the ceiling', () => {
+    const scale = computeRenderDisplayScale(DS, 1.0, 10, 160);
+    expect(DS * scale * 10).toBeCloseTo(160, 9);
   });
 
-  it('edge case: displaySize=0 — returns displaySizeScale, no NaN', () => {
-    const result = computeRenderDisplayScale(0, 1.5, 2.0, minPx, 160);
-    expect(result).toBe(1.5);
-    expect(isNaN(result)).toBe(false);
+  it('does not touch a sprite inside the ceiling', () => {
+    expect(computeRenderDisplayScale(DS, 1.0, 2, 160)).toBeCloseTo(1.0, 12);
   });
 
-  it('corridor clamping: extreme high zoom (effZoom=10) stays at ceiling', () => {
-    const effZoom = 10.0; // proportional = 40*1*10 = 400px
-    const result = computeRenderDisplayScale(displaySize, displaySizeScale, effZoom, minPx, 160);
-    const screenPx = displaySize * result * effZoom;
-    expect(screenPx).toBeCloseTo(160, 1);
+  it('an absent, zero or negative ceiling means no ceiling', () => {
+    for (const max of [undefined, null, 0, -5]) {
+      expect(computeRenderDisplayScale(DS, 1.0, 10, max)).toBeCloseTo(1.0, 12);
+    }
+  });
+
+  it('the ceiling no longer depends on a floor to decide whether to apply', () => {
+    // The old guard was `maxTargetScreenPx > minTargetScreenPx`, so removing the floor could have
+    // silently disabled the ceiling. It is now a plain positive check.
+    const scale = computeRenderDisplayScale(DS, 1.0, 10, 40);
+    expect(DS * scale * 10).toBeCloseTo(40, 9);
   });
 });

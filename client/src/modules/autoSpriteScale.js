@@ -45,22 +45,25 @@ export function computeAutoScaleFactor(trackWidth, racerCount, config) {
 /**
  * Compute the final world-space sprite scale for rendering.
  *
- * Sprites scale proportionally with the camera zoom (natural "closer = bigger").
- * A floor of minTargetScreenPx guarantees visibility on very large tracks where
- * the camera zooms far out. An optional ceiling of maxTargetScreenPx prevents
- * sprites growing too large when the camera zooms in close.
+ * Sprites scale proportionally with the camera zoom — closer is bigger, always, with nothing
+ * holding them up. CAMERA-PICTURE-FIXES-1 removed the minimum-size FLOOR that used to sit here
+ * (`Math.max(proportionalScreenPx, minTargetScreenPx)`): the owner's rule is "die Sprites sollten
+ * immer angepasst groß sein" — a racer's size on screen should say how far in the camera is and
+ * nothing else. The floor bound in OVERVIEW on 9 of the 10 shipped tracks, drawing racers 28 px
+ * where the zoom asked for 17–20 px, and it was the last thing making sprite size a second,
+ * silent zoom authority.
+ *
+ * The optional CEILING stays: it stops sprites growing without bound at very tight zoom, which is
+ * a different question and one the owner has not asked to change.
  *
  * screenPx = displaySize × result × frameEffZoom
  *
- * When neither bound applies: result = displaySizeScale (track-density factor unchanged).
- * When floor applies:         result = minTargetScreenPx / (displaySize × frameEffZoom).
- * When ceiling applies:       result = maxTargetScreenPx / (displaySize × frameEffZoom).
- * When min > max:             ceiling is ignored (min wins).
+ * With no ceiling:      result = displaySizeScale (track-density factor, unchanged).
+ * When ceiling applies: result = maxTargetScreenPx / (displaySize × frameEffZoom).
  *
  * @param {number}           displaySize        Racer type base display size in world pixels
  * @param {number}           displaySizeScale   Track-density auto-scale factor (from computeAutoScaleFactor)
- * @param {number}           frameEffZoom       Effective canvas scale this frame (cam.zoom×bsX or BASE_ZOOM×cam.zoom)
- * @param {number}           minTargetScreenPx  Floor: minimum sprite size in screen pixels
+ * @param {number}           frameEffZoom       Effective canvas scale this frame
  * @param {number|undefined} maxTargetScreenPx  Ceiling: maximum sprite size in screen pixels (optional)
  * @returns {number}  World-space scale factor to pass to drawRacer
  */
@@ -68,34 +71,14 @@ export function computeRenderDisplayScale(
   displaySize,
   displaySizeScale,
   frameEffZoom,
-  minTargetScreenPx,
   maxTargetScreenPx
 ) {
   if (!frameEffZoom || frameEffZoom <= 0 || !displaySize || displaySize <= 0)
     return displaySizeScale;
   const proportionalScreenPx = displaySize * displaySizeScale * frameEffZoom;
-  const flooredScreenPx = Math.max(proportionalScreenPx, minTargetScreenPx);
-  const applyMax = maxTargetScreenPx != null && maxTargetScreenPx > minTargetScreenPx;
-  const targetScreenPx = applyMax ? Math.min(flooredScreenPx, maxTargetScreenPx) : flooredScreenPx;
-  return targetScreenPx / (displaySize * frameEffZoom);
-}
-
-/**
- * Resolve the effective minTargetScreenPx for a single racer type.
- *
- * minSpritePx is expressed in world pixels (same coordinate system as the track corridor),
- * making the floor canvas-resolution-independent. Identical sprite/track proportions result
- * on Open and Closed tracks regardless of their canvas dimensions.
- *
- * If a per-type absolute override is set it wins directly (backwards-compatible).
- *
- * @param {number|undefined} typeOverridePx  Per-type absolute override (from racerType.config.minTargetScreenPx)
- * @param {number}           minSpritePx     Floor value (e.g. OVERVIEW.spriteScale from cameraConfig, v14+)
- * @returns {number}  Effective floor in screen pixels
- */
-export function getEffectiveMinTargetScreenPx(typeOverridePx, minSpritePx) {
-  if (typeOverridePx != null) return typeOverridePx;
-  return minSpritePx;
+  if (!(maxTargetScreenPx > 0) || proportionalScreenPx <= maxTargetScreenPx)
+    return displaySizeScale;
+  return maxTargetScreenPx / (displaySize * frameEffZoom);
 }
 
 /**

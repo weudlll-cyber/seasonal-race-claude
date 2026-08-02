@@ -115,16 +115,6 @@ const PROFILE_FIELDS = [
       `Forces entry→tracking after this many ms even if T-space gap is above threshold. ${v}ms.`,
   },
   {
-    key: 'overviewOffsetPx',
-    label: 'Overview radial offset (px)',
-    min: 0,
-    max: 400,
-    step: 10,
-    onlyFor: 'OVERVIEW',
-    tip: (v) =>
-      `Camera shifts toward field so leader appears at outer viewport edge. 0 = centered. ${v}px.`,
-  },
-  {
     key: 'leadAheadEnabled',
     label: 'Lead-Ahead active',
     type: 'boolean',
@@ -631,17 +621,6 @@ function CameraAdvancedSection() {
             }}
             display={`${config.overviewStartDelay ?? 15}s`}
             tip="Seconds after race start before OVERVIEW may appear in the pool for the first time. Default 15 s."
-          />
-          <SliderRow
-            label="Minimum sprite size on screen (px)"
-            testId="regie-overview-target-screen-px"
-            min={16}
-            max={48}
-            step={1}
-            value={config.overviewTargetScreenPx ?? 18}
-            onChange={(e) => set('overviewTargetScreenPx', parseInt(e.target.value, 10))}
-            display={`${config.overviewTargetScreenPx ?? 18}px`}
-            tip="RENDER floor, not a camera setting: a racer sprite is never drawn smaller than this on screen, in any camera state. It no longer influences the zoom — CAMERA-ZOOM-UNIT-1 moved every state onto 'track widths visible', so how big a racer looks is now purely a consequence of how far in the camera is. Default 28 px."
           />
           <SliderRow
             label="OVERVIEW racers framed (leader + N−1)"

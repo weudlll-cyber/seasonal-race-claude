@@ -57,7 +57,6 @@ import { extractEffects } from '../TrackEditor/trackEditorSave.js';
 import {
   loadAutoScaleConfig,
   computeRenderDisplayScale,
-  getEffectiveMinTargetScreenPx,
   getEffectiveMaxTargetScreenPx,
 } from '../../modules/autoSpriteScale.js';
 import { loadCameraConfig, cameraConfigProvenance } from '../../modules/cameraConfig.js';
@@ -469,7 +468,7 @@ export default function RaceScreen() {
       }
     }
     // drawnBodyWidthRefPx = body-narrow world-px: camera zoom set so visible narrow-axis body
-    // equals overviewTargetScreenPx at OVERVIEW.
+    // is the camera's body-size reference for OVERVIEW-FRAMING-1's sprite floor.
     const drawnBodyWidthRefPx = displaySize * displaySizeScale;
 
     // ── The REAL race init, extracted to modules/raceCore.js (createRaceFromIdentity) ───────────
@@ -1253,15 +1252,13 @@ export default function RaceScreen() {
       markerFrame.camZoom = cam.zoom;
       markerFrame.offsetX = cam.offsetX;
       markerFrame.offsetY = cam.offsetY;
-      // Honest single floor: overviewTargetScreenPx is the minimum visible narrow-body
-      // size in screen-px for ALL camera states (body-narrow units, not frame units).
-      // Applies uniformly — no open/closed branch, no OVERVIEW.spriteScale coupling.
-      const minFloorPx = cameraConfigRef.current.overviewTargetScreenPx ?? 28;
+      // CAMERA-PICTURE-FIXES-1: no minimum sprite size. Sprites scale with the camera and nothing
+      // else — the owner's "die Sprites sollten immer angepasst groß sein". Only the ceiling is
+      // still consulted, and it does not bind at any shipped default.
       const frameDisplayScale = computeRenderDisplayScale(
         displaySize,
         displaySizeScale,
         frameEffZoom,
-        getEffectiveMinTargetScreenPx(racerTypeRef.current?.config?.minTargetScreenPx, minFloorPx),
         getEffectiveMaxTargetScreenPx(
           racerTypeRef.current?.config?.maxTargetScreenPx,
           cameraConfigRef.current.maxTargetScreenPx

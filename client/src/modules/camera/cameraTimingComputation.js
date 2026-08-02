@@ -24,7 +24,6 @@ const TC_BATTLE = 0.3;
 const TC_COMEBACK = 0.3;
 const OVERVIEW_COOLDOWN_MS = 15000;
 const TRANSITION_T_CONVERGENCE = 0.03;
-const DEFAULT_OVERVIEW_OFFSET_PX = 150;
 const ENDGAME_PROGRESS_THRESHOLD = 0.85;
 const DEFAULT_MAX_ENTRY_DURATION_MS = {
   OVERVIEW: 10000,
@@ -67,15 +66,12 @@ export function computeTimingFromConfig(config) {
   const diagEnabled = config?.enableFrameLog ?? false;
   const detourEnabled = config?.cameraDetourLog ?? false; // CAMERA-DETOUR-1 per-transition frame log
   const transitionTConvergence = config?.transitionTConvergence ?? TRANSITION_T_CONVERGENCE;
-  const overviewOffsetPx =
-    config?.cameraStateProfiles?.OVERVIEW?.overviewOffsetPx ?? DEFAULT_OVERVIEW_OFFSET_PX;
   const overviewCooldownMs = config?.overviewCooldownMs ?? OVERVIEW_COOLDOWN_MS;
   // CAMERA-ZOOM-UNIT-1 removed three OVERVIEW zoom inputs that the track-widths unit replaces:
   //   overviewClosedTrackZoom  — dead since 2026-06-04, its Dev Screen tooltip still described
   //                              behaviour it did not have; key, slider and tooltip all gone now
-  //   overviewTargetScreenPx   — was the OVERVIEW zoom's target SPRITE SIZE. The camera no longer
-  //                              reads it; the key survives ONLY as RaceScreen's render-time sprite
-  //                              floor, which is a different mechanism (see the report)
+  //   overviewTargetScreenPx   — was the OVERVIEW zoom's target SPRITE SIZE, then the render-time
+  //                              sprite floor; CAMERA-PICTURE-FIXES-1 removed the floor and the key
   //   overviewMinEffZoom       — an open-track-only second zoom bound on the same surface
   const overviewFrameRacers = config?.overviewFrameRacers ?? 5; // OVERVIEW-FRAMING-1: leader + next N−1
   const overviewMinSpriteFrac = config?.overviewMinSpriteFrac ?? 0.018; // sprite floor as a frame fraction
@@ -299,7 +295,6 @@ export function computeTimingFromConfig(config) {
     diagEnabled,
     detourEnabled,
     transitionTConvergence,
-    overviewOffsetPx,
     overviewFrameRacers,
     overviewMinSpriteFrac,
     overviewCooldownMs,

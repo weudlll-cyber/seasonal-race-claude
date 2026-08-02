@@ -368,11 +368,35 @@ export function migrateV17toV18(config) {
   }
   return {
     ...rest,
-    // The render-time sprite floor keeps its own key and its stored value — it is NOT the camera's
-    // zoom input any more, and RaceScreen still reads it. See the report.
-    overviewTargetScreenPx: _ovTargetPx ?? DEFAULT_CAMERA_CONFIG.overviewTargetScreenPx,
     countdownStartTrackWidths: DEFAULT_CAMERA_CONFIG.countdownStartTrackWidths,
     cameraStateProfiles: profiles,
     schemaVersion: 18,
+  };
+}
+
+// v18→v19 (CAMERA-PICTURE-FIXES-1): drop two keys that no longer drive anything.
+//
+//   overviewTargetScreenPx — was the OVERVIEW zoom's target sprite size, then (after the zoom unit
+//                            landed) the render-time sprite FLOOR. The floor is removed: sprites
+//                            scale with the camera and nothing holds them up, so the key has no
+//                            remaining consumer and its Dev Screen slider would do nothing.
+//   overviewOffsetPx       — assigned to a director field and read NOWHERE since OVERVIEW-FRAMING-1.
+//                            A stored 150 has had no effect for weeks; the slider claimed otherwise.
+//
+// Both are stripped from the stored config so nothing carries a value that cannot act. Every other
+// stored field, including anything the owner tuned, passes through untouched (Lesson 193).
+export function migrateV18toV19(config) {
+  // eslint-disable-next-line no-unused-vars
+  const { overviewTargetScreenPx, ...rest } = config;
+  const profiles = {};
+  for (const [state, profile] of Object.entries(config.cameraStateProfiles ?? {})) {
+    // eslint-disable-next-line no-unused-vars
+    const { overviewOffsetPx, ...keep } = profile ?? {};
+    profiles[state] = keep;
+  }
+  return {
+    ...rest,
+    ...(Object.keys(profiles).length ? { cameraStateProfiles: profiles } : {}),
+    schemaVersion: 19,
   };
 }
