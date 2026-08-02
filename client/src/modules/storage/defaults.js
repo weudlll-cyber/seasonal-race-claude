@@ -6,6 +6,8 @@
 // Description: Default data for all storage keys — seeded on first launch
 // ============================================================
 
+import { DEFAULT_AUTO_SCALE_CONFIG } from '../autoSpriteScale.js';
+
 export const DEFAULT_RACE_DEFAULTS = {
   duration: 60,
   winners: 3,
@@ -690,4 +692,19 @@ export const DEFAULT_RACE_BEHAVIOR_CONFIG = {
   lookBeforeBrakeLagFrames: 2,
   lookBeforeBrakeRequireSlowerLeader: true,
   lookBeforeBrakeMinDifferential: 0.005,
+};
+
+// ── The shipped-default CONFIG WORLD ──────────────────────────────────────────────────────────
+// The default value of every race-path config block, in one object keyed exactly like
+// raceConfigWorld.WORLD_CONFIG_KEYS. This is the reference the HUD fingerprint badge diffs
+// against, and the base a CAMERA-REPRO-1 marker's config diff is applied back onto — so the two
+// MUST read the same defaults. One home, both sides import it.
+export const DEFAULT_CONFIG_WORLD = {
+  raceDynamicsConfig: DEFAULT_RACE_DYNAMICS_CONFIG,
+  raceBehaviorConfig: DEFAULT_RACE_BEHAVIOR_CONFIG,
+  rowLayoutConfig: DEFAULT_ROW_LAYOUT_CONFIG,
+  baseSpeedConfig: DEFAULT_BASE_SPEED_CONFIG,
+  autoScaleConfig: DEFAULT_AUTO_SCALE_CONFIG,
+  frameTimingConfig: DEFAULT_FRAME_TIMING_CONFIG,
+  cameraConfig: DEFAULT_CAMERA_CONFIG,
 };

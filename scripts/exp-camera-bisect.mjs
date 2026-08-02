@@ -5,9 +5,11 @@
 //   (1) frames the current leader sits OUTSIDE the inner-70 region during LEADER-family holds,
 //   (2) pan-velocity variance (the "jumping"),
 //   (3) pan direction flips per 100 frames,
-// over FULL race + an EARLY window (first half of lap 1 — the owner's flagged window). Because it is ONE
-// recorded race, the ONLY variable is the camera CODE at each commit. Optional modes add a trackingTC
-// sweep (target-side EMA sizing) and a state-transition churn breakdown.
+// over FULL race + an EARLY window (first half of lap 1 — the owner's flagged window). One recorded race
+// AND (since CAMERA-REPRO-1) one fixed camera-dice seed make the camera CODE the only variable at each
+// commit; before that fix the director's own Math.random draws differed per rung and the table silently
+// mixed code differences with dice differences. Optional modes add a trackingTC sweep (target-side EMA
+// sizing) and a state-transition churn breakdown.
 //
 // Record the replay first (read-only observer on the shipped sim):
 //   node scripts/sim-fairness.mjs --track=searound --racer=manta --seed=5601 --races=1 --racers=20 \
@@ -43,6 +45,28 @@ const MX = 0.15 * CW, MY = 0.15 * CH;   // inner-70 margins
 const EARLY_MAXT = finishT / 4;          // first HALF of lap 1 (finishT laps → lap 1 is t∈[0,1])
 const FLIP_EPS = 0.5;                     // px: ignore sub-pixel jitter when counting direction reversals
 const variance = (a) => { if (a.length < 2) return 0; const m = a.reduce((s, v) => s + v, 0) / a.length; return a.reduce((s, v) => s + (v - m) ** 2, 0) / a.length; };
+
+// CAMERA-REPRO-1 FIX — this ladder was NOT comparable rung to rung.
+// The race is fixed (it comes out of the recorded dump), but the CAMERA rolls its own dice:
+// _weightedRandomPick chooses the next state and _scheduleNextOverview jitters the OVERVIEW
+// interval, both off Math.random. Unseeded, every rung saw a different sequence of camera
+// decisions, so a difference between two rungs could be the code OR the dice and the table never
+// said which. Seeding Math.random with ONE fixed value before every replay makes the dice the same
+// for all rungs, which is the only condition under which "the only variable is the camera CODE at
+// each commit" — the claim in this file's header — is actually true. Seeding here (rather than via
+// CameraDirector.setRandomSeed) is deliberate: the old rungs are checked out at commits that do not
+// have that method.
+const CAMERA_DICE_SEED = 0x5eed1;
+function mulberry32(seed) {
+  let s = seed >>> 0;
+  return function () {
+    s += 0x6d2b79f5;
+    let t = s;
+    t = Math.imul(t ^ (t >>> 15), t | 1);
+    t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
 const mean = (a) => (a.length ? a.reduce((s, v) => s + v, 0) / a.length : 0);
 
 // the five rungs — oldest ("a few days ago") to today
@@ -63,6 +87,16 @@ function mkConfig(tc = 0.25) {
 }
 
 function replay(CameraDirector, CAM_STATE, tc, want = {}) {
+  const _realRandom = Math.random;
+  Math.random = mulberry32(CAMERA_DICE_SEED); // same dice for every rung — see CAMERA_DICE_SEED above
+  try {
+    return _replay(CameraDirector, CAM_STATE, tc, want);
+  } finally {
+    Math.random = _realRandom;
+  }
+}
+
+function _replay(CameraDirector, CAM_STATE, tc, want = {}) {
   const cd = new CameraDirector(worldW, worldH, false, mkConfig(tc), BODY, shape);
   const LEADERFAM = new Set([CAM_STATE.LEADER_ZOOM, CAM_STATE.LEAD_CHANGE]);
   const full = { vels: [], flips: 0, flipDen: 0, lOut: 0, lF: 0 };

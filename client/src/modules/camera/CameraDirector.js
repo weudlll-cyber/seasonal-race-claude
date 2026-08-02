@@ -11,6 +11,7 @@
 import { getPanTarget } from './panTarget.js';
 import { resolveCamera } from './resolveCamera.js';
 import { diagMixin } from './CameraDirectorDiag.js';
+import { mulberry32 } from '../racePlanner.js';
 import { shortestArcDeltaT } from '../../utils/mathUtils.js';
 import { computeTimingFromConfig, BATTLE_PULK_THRESHOLD_T } from './cameraTimingComputation.js';
 import {
@@ -312,6 +313,38 @@ export class CameraDirector {
     this._diagPrevFocusT = null;
     // Set to 'threshold'|'timeout' on the frame where entry→tracking fires; null all other frames.
     this._diagConvergenceReason = null;
+    // CAMERA-REPRO-1: the director's OWN randomness (state pick + OVERVIEW schedule jitter). null
+    // means "call Math.random at the draw site", which is literally what the two sites did before —
+    // including following a later global swap, which storing the function reference here would not.
+    // setRandomSeed() puts a seeded stream in its place so a marked moment can be replayed; without
+    // one, a perfect physics replay still diverges the moment the director rolls a die.
+    this._rng = null;
+    this._randomSeed = 0;
+  }
+
+  /** The director's next random draw: its own seeded stream, or the global generator. */
+  _random() {
+    return this._rng ? this._rng() : Math.random();
+  }
+
+  /**
+   * CAMERA-REPRO-1: make the director's own random draws reproducible.
+   *
+   * Call ONCE, right after construction and before the first update(). RaceScreen draws a fresh
+   * seed per race from Math.random, so every race is still as random as it ever was — but the
+   * drawn seed travels in the marker, which is what makes a marked moment reproducible at all.
+   *
+   * @param {number} seed  Positive integer. 0 (or a non-finite value) restores Math.random.
+   */
+  setRandomSeed(seed) {
+    const s = Number.isFinite(seed) ? seed >>> 0 : 0;
+    this._randomSeed = s;
+    this._rng = s > 0 ? mulberry32(s) : null;
+  }
+
+  /** The seed passed to setRandomSeed(), or 0 when the director runs on Math.random. */
+  get randomSeed() {
+    return this._randomSeed;
   }
 
   /**
@@ -536,7 +569,7 @@ export class CameraDirector {
     if (pool.length === 1) return pool[0];
     const total = pool.reduce((sum, c) => sum + c.weight, 0);
     if (!(total > 0)) return null;
-    let r = Math.random() * total;
+    let r = this._random() * total;
     for (const c of pool) {
       r -= c.weight;
       if (r <= 0) return c;
@@ -563,7 +596,7 @@ export class CameraDirector {
       estimate != null
         ? estimate / Math.max(1, this._overviewTargetCount)
         : this._overviewCooldownMs;
-    const jitter = 0.8 + Math.random() * 0.4;
+    const jitter = 0.8 + this._random() * 0.4;
     this._overviewScheduleNext = elapsed + interval * jitter;
   }
 
@@ -1805,6 +1838,10 @@ export class CameraDirector {
       const pre = this._detourPreBuf.slice(-3);
       const preFrames = pre.map((p, i) => ({
         rel: i - pre.length,
+        // CAMERA-REPRO-1: the camera clock this frame was drawn at. The ONE coordinate a marker and
+        // this log share — without it the marker can say WHERE only in prose, and matching a marked
+        // moment to a logged window is eyeball work.
+        ts: r3(p.ts),
         from: p.st,
         to: this.state,
         anchorSX: null, // the NEW-state anchor is undefined before the transition
@@ -1837,6 +1874,7 @@ export class CameraDirector {
       const anchorS = this._proj.toScreen(anchorW, this.zoom, this.offsetX, this.offsetY);
       w.frames.push({
         rel,
+        ts: r3(this._lastTs), // CAMERA-REPRO-1: shared coordinate with the marker's moment.cms
         from: w.from,
         to: this.state,
         anchorSX: r3(anchorS.x),
@@ -1886,6 +1924,7 @@ export class CameraDirector {
     // Advance the rolling pre-buffer (keep last 3) and remember this frame's state.
     this._detourPreBuf.push({
       st: this.state,
+      ts: this._lastTs,
       ox: this.offsetX,
       oy: this.offsetY,
       z: this.zoom,

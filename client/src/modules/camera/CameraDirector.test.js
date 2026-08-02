@@ -6814,3 +6814,139 @@ describe('CameraDirector — OVERVIEW-FRAMING-1 leader-always-framed framing', (
     expect(bare._overviewMinSpriteFrac).toBeCloseTo(0.018, 6);
   });
 });
+
+// ── CAMERA-REPRO-1: the director's own dice, and the detour log's shared clock ─────────────────────
+// The camera rolls two dice of its own — which state to cut to (_weightedRandomPick) and when the
+// next OVERVIEW is due (_scheduleNextOverview). Unseeded, the SAME race shows a different camera
+// every run, which is exactly why a marked moment could never be handed to anyone before. These
+// tests pin the two properties the marker/replay path stands on: seeded is reproducible, and
+// unseeded is unchanged from what shipped.
+describe('CameraDirector.setRandomSeed (CAMERA-REPRO-1)', () => {
+  const driveRace = (cd) => {
+    const out = [];
+    let ts = 1000;
+    for (let i = 0; i < 400; i++) {
+      const raceState = {
+        raceElapsed: ts - 1000,
+        finishedCount: 0,
+        winner: null,
+        finishT: 1.0,
+      };
+      cd.update(mockRacers(6), ts, raceState, 1280, 720, 16);
+      out.push(`${cd.state}|${cd.zoom.toFixed(6)}|${cd.offsetX.toFixed(3)}`);
+      ts += 16;
+    }
+    return out;
+  };
+
+  // The two draw sites, exercised directly. Driving the state machine cannot be relied on to roll a
+  // die within any fixed number of frames, and a test that silently exercises nothing is worse than
+  // no test at all — this project has shipped one of those before.
+  const rollBoth = (cd) => {
+    cd._weightedRandomPick([
+      { state: 'A', weight: 1 },
+      { state: 'B', weight: 1 },
+    ]);
+    cd._scheduleNextOverview(1000, { finishT: 1, raceElapsed: 5000 }, { t: 0.4 });
+  };
+
+  it('defaults to Math.random — an unseeded director draws from the global generator, as it always has', () => {
+    const cd = new CameraDirector(1280, 720, false, DEFAULT_CAMERA_CONFIG);
+    expect(cd.randomSeed).toBe(0);
+    const spy = vi.spyOn(Math, 'random');
+    rollBoth(cd);
+    expect(spy).toHaveBeenCalledTimes(2); // one draw per site, unchanged from the shipped path
+    spy.mockRestore();
+  });
+
+  it('same seed → identical camera run, frame for frame', () => {
+    const a = new CameraDirector(1280, 720, false, DEFAULT_CAMERA_CONFIG);
+    const b = new CameraDirector(1280, 720, false, DEFAULT_CAMERA_CONFIG);
+    a.setRandomSeed(5601);
+    b.setRandomSeed(5601);
+    expect(driveRace(b)).toEqual(driveRace(a));
+    expect(a.randomSeed).toBe(5601);
+  });
+
+  it('a seeded director never touches the global generator', () => {
+    const cd = new CameraDirector(1280, 720, false, DEFAULT_CAMERA_CONFIG);
+    cd.setRandomSeed(99);
+    const spy = vi.spyOn(Math, 'random');
+    rollBoth(cd);
+    driveRace(cd);
+    expect(spy).not.toHaveBeenCalled();
+    spy.mockRestore();
+  });
+
+  it('seed 0 restores the shipped Math.random path', () => {
+    const cd = new CameraDirector(1280, 720, false, DEFAULT_CAMERA_CONFIG);
+    cd.setRandomSeed(4242);
+    cd.setRandomSeed(0);
+    expect(cd.randomSeed).toBe(0);
+    const spy = vi.spyOn(Math, 'random');
+    rollBoth(cd);
+    expect(spy).toHaveBeenCalledTimes(2);
+    spy.mockRestore();
+  });
+
+  it('both draw sites move with the seed — the state pick AND the OVERVIEW jitter', () => {
+    const picks = (seed) => {
+      const cd = new CameraDirector(1280, 720, false, DEFAULT_CAMERA_CONFIG);
+      cd.setRandomSeed(seed);
+      const out = [];
+      for (let i = 0; i < 40; i++) {
+        out.push(
+          cd._weightedRandomPick([
+            { state: 'A', weight: 1 },
+            { state: 'B', weight: 1 },
+            { state: 'C', weight: 2 },
+          ]).state
+        );
+        cd._scheduleNextOverview(1000, { finishT: 1, raceElapsed: 5000 }, { t: 0.4 });
+        out.push(cd._overviewScheduleNext.toFixed(4));
+      }
+      return out.join(',');
+    };
+    expect(picks(11)).toBe(picks(11)); // reproducible
+    expect(picks(11)).not.toBe(picks(12)); // and genuinely seed-dependent
+  });
+
+  it('the seeded stream is a real uniform generator, not a constant', () => {
+    const cd = new CameraDirector(1280, 720, false, DEFAULT_CAMERA_CONFIG);
+    cd.setRandomSeed(7);
+    const draws = Array.from({ length: 500 }, () => cd._random());
+    expect(new Set(draws).size).toBeGreaterThan(400);
+    expect(Math.min(...draws)).toBeGreaterThanOrEqual(0);
+    expect(Math.max(...draws)).toBeLessThan(1);
+    const mean = draws.reduce((s, v) => s + v, 0) / draws.length;
+    expect(mean).toBeGreaterThan(0.4);
+    expect(mean).toBeLessThan(0.6);
+  });
+});
+
+describe('detour log carries the marker clock (CAMERA-REPRO-1)', () => {
+  it('every logged frame has a ts on the same clock the marker records', () => {
+    const spy = vi.spyOn(console, 'info').mockImplementation(() => {});
+    const cd = new CameraDirector(1280, 720, false, { cameraDetourLog: true });
+    let ts = 1000;
+    const overview = { raceElapsed: 1000, finishedCount: 0, winner: null, finishT: 1.0 };
+    for (let i = 0; i < 5; i++) {
+      cd.update(mockRacers(4), ts, overview, 1280, 720);
+      ts += 16;
+    }
+    const afterFinish = { raceElapsed: 2000, finishedCount: 1, winner: null, finishT: 1.0 };
+    for (let i = 0; i < 35; i++) {
+      cd.update(mockRacers(4), ts, afterFinish, 1280, 720);
+      ts += 16;
+    }
+    const w = cd.exportDetourLog().at(-1);
+    const post = w.frames.filter((f) => f.rel >= 0);
+    expect(post.length).toBeGreaterThan(0);
+    for (const f of post) expect(typeof f.ts).toBe('number');
+    // monotonic and on the caller's clock — so a marker's moment.cms locates a window without guesswork
+    for (let i = 1; i < post.length; i++) expect(post[i].ts).toBeGreaterThan(post[i - 1].ts);
+    expect(post[0].ts).toBeGreaterThanOrEqual(1000);
+    expect(post.at(-1).ts).toBeLessThanOrEqual(ts);
+    spy.mockRestore();
+  });
+});

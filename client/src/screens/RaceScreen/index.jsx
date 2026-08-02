@@ -61,11 +61,14 @@ import {
   getEffectiveMaxTargetScreenPx,
 } from '../../modules/autoSpriteScale.js';
 import { loadCameraConfig, cameraConfigProvenance } from '../../modules/cameraConfig.js';
-import { configFingerprintBadge } from '../../modules/exportRaceConfig.js';
+import { configFingerprintBadge, buildWorldConfig } from '../../modules/exportRaceConfig.js';
+import { buildCameraMarker, configDiffWithValues } from '../../modules/camera/cameraMarker.js';
+import { DEFAULT_CONFIG_WORLD } from '../../modules/storage/defaults.js';
 import CameraStateHUD from './CameraStateHUD.jsx';
 import CameraDiagnosticsHUD from './CameraDiagnosticsHUD.jsx';
 import RacePlanHUD from './RacePlanHUD.jsx';
 import CameraFrameLogHUD from './CameraFrameLogHUD.jsx';
+import CameraMarkerHUD from './CameraMarkerHUD.jsx';
 import PerfLogHUD from './PerfLogHUD.jsx';
 import { createPerfLog, recordPerfFrame } from './perfLog.js';
 import StateOverlay from './StateOverlay.jsx';
@@ -161,6 +164,10 @@ export default function RaceScreen() {
     rpTop10: [],
   });
   const leaderDiagRef = useRef({ snapshots: [], frozen: false });
+  // CAMERA-REPRO-1: the marker's window into the running race. `markerBuildRef.current` is installed
+  // by the race-init effect and returns the marker for the CURRENT frame; the HUD calls it on M.
+  // A ref (not props) so pressing M costs the race loop nothing and re-renders nothing.
+  const markerBuildRef = useRef(null);
 
   const [raceData, setRaceData] = useState(null);
   const [error, setError] = useState(null);
@@ -412,7 +419,11 @@ export default function RaceScreen() {
 
     // Config-fingerprint badge (fix-plan step 4): short world hash + how many config keys are off the
     // shipped defaults. Race-constant, computed once here; drawn under the seed badge in the loop below.
-    const cfgBadge = configFingerprintBadge();
+    // CAMERA-REPRO-1 reuses the SAME world snapshot for the marker's config diff — one gather, so the
+    // badge and the marker can never disagree about what this race was configured with.
+    const cfgWorld = buildWorldConfig();
+    const cfgBadge = configFingerprintBadge(cfgWorld);
+    const cfgDiff = configDiffWithValues(cfgWorld.configs, DEFAULT_CONFIG_WORLD);
 
     // Auto-sprite-scale: compute displaySizeScale unless D3.5.5 override exists
     const autoScaleConfig = loadAutoScaleConfig();
@@ -519,6 +530,14 @@ export default function RaceScreen() {
       drawnBodyWidthRefPx,
       shapeRef.current
     );
+    // CAMERA-REPRO-1: the camera makes its OWN random draws (which state to cut to, when the next
+    // OVERVIEW is due). Unseeded, the same race shows a different camera every time — which is why
+    // "it looked wrong at 40 s" could never be handed to anyone. Draw ONE seed per race from
+    // Math.random, exactly as random as before, and give it to the director: the race stays as
+    // unpredictable as it always was, and the drawn seed travels in the marker so a marked moment
+    // can be stood in again. This mirrors the Quick-Test seed rule (drawn, not fixed, then shown).
+    const cameraRandomSeed = (Math.random() * 0x7fffffff) >>> 0 || 1;
+    camDirRef.current.setRandomSeed(cameraRandomSeed);
     // CAMERA-FOCUS-4 LIVE TRUTH — print, at every race start, exactly which build + camera path this
     // browser is running: short commit · RESOLVED transition grammar · leader forward-frac · stored schema
     // version · per-key source (stored vs default) for the two FOCUS-3 keys. Reload once and paste this to
@@ -534,10 +553,56 @@ export default function RaceScreen() {
           `storedSchema=${prov.storedSchemaVersion ?? 'none'} hadStoredConfig=${prov.hadStored} ` +
           `source{cameraTransitionGrammar}=${prov.sources.cameraTransitionGrammar} ` +
           `source{leaderForwardFrac}=${prov.sources.leaderForwardFrac} ` +
-          `(observerPhase logged on first anchored entry)`
+          `cameraSeed=${cameraRandomSeed} ` +
+          `(observerPhase logged on first anchored entry · press M to mark a moment)`
       );
       truthEntryLoggedRef.current = false;
     }
+
+    // CAMERA-REPRO-1: the ONE frame snapshot the marker reads. Written at the end of every rAF frame
+    // with the values the RENDERER committed — never recomputed later from other inputs, because a
+    // marker that re-derives its own numbers would describe a frame that was never drawn.
+    // One pre-allocated object, four number writes per frame.
+    const markerFrame = { ts: 0, effZoomX: 1, effZoomY: 1, camZoom: 1, offsetX: 0, offsetY: 0 };
+    markerBuildRef.current = () => {
+      const st = g.current;
+      const cd = camDirRef.current;
+      if (!st || !cd || st.phase !== PHASE.RACING) return null;
+      return buildCameraMarker({
+        raceData,
+        raceState: st,
+        cameraSeed: cameraRandomSeed,
+        physicsTs: st.physicsTs,
+        camMs: st.raceStart != null ? markerFrame.ts - st.raceStart : 0,
+        frameLogIdx: cd.diagEnabled ? cd.diagFrameCount : null,
+        logs: {
+          frame: !!cameraConfigRef.current.enableFrameLog,
+          detour: !!cameraConfigRef.current.cameraDetourLog,
+        },
+        shot: {
+          state: cd.hudState,
+          lerpPhase: cd.lerpPhase,
+          observerPhase: cd.observerPhase,
+          zoom: markerFrame.camZoom,
+          offsetX: markerFrame.offsetX,
+          offsetY: markerFrame.offsetY,
+          targetZoom: cd.targetZoom,
+          targetOffsetX: cd.targetOffsetX,
+          targetOffsetY: cd.targetOffsetY,
+          camT: cd.camT,
+          effZoomX: markerFrame.effZoomX,
+          effZoomY: markerFrame.effZoomY,
+          anchor: cd.anchorRacerLabel,
+        },
+        cfg: {
+          fingerprint: cfgBadge.hashShort,
+          diff: cfgDiff,
+          racerTypeOverrides: cfgWorld.racerTypeOverrides,
+        },
+        build: typeof __RA_COMMIT__ !== 'undefined' ? __RA_COMMIT__ : 'dev',
+        at: new Date().toISOString(),
+      });
+    };
     // Ensure surface-class registry has the latest cached server data (before trail emitters resolve).
     // Code defaults are always present; this picks up any user-defined overrides.
     loadServerClasses(getCachedServerSurfaceClasses());
@@ -1176,6 +1241,15 @@ export default function RaceScreen() {
       const frameEffZoom = isOpenTrack
         ? effectiveZoom(cam.zoom, OPEN_TRACK_BASE_ZOOM)
         : cam.zoom * bsX;
+      // CAMERA-REPRO-1: hand the marker the values this frame is about to draw with. BOTH axis
+      // scales — the ctx.scale() below is (zoom×bsX, zoom×bsY) on a closed track, and those differ
+      // whenever the world is not 16:9.
+      markerFrame.ts = ts;
+      markerFrame.effZoomX = frameEffZoom;
+      markerFrame.effZoomY = isOpenTrack ? frameEffZoom : cam.zoom * bsY;
+      markerFrame.camZoom = cam.zoom;
+      markerFrame.offsetX = cam.offsetX;
+      markerFrame.offsetY = cam.offsetY;
       // Honest single floor: overviewTargetScreenPx is the minimum visible narrow-body
       // size in screen-px for ALL camera states (body-narrow units, not frame units).
       // Applies uniformly — no open/closed branch, no OVERVIEW.spriteScale coupling.
@@ -1364,6 +1438,7 @@ export default function RaceScreen() {
       // No global RNG to restore — the race stream is the local `raceRng` above (parity step 1),
       // so `Math.random` was never swapped and the rest of the app stays non-deterministic.
       cancelled = true;
+      markerBuildRef.current = null; // CAMERA-REPRO-1: no markers from a torn-down race
       if (rafRef.current) cancelAnimationFrame(rafRef.current);
       clearTimeout(finishNavTimerRef.current);
       for (const inst of effectsRef.current) inst.destroy?.();
@@ -1470,6 +1545,7 @@ export default function RaceScreen() {
             showRpDiag={showRpDiag}
           />
           <CameraFrameLogHUD cameraRef={camDirRef} visible={enableFrameLog} />
+          <CameraMarkerHUD buildRef={markerBuildRef} />
           <PerfLogHUD perfLogRef={perfLogRef} visible={enablePerfLog} />
           <BattleDiagHUD cameraRef={camDirRef} racersRef={g} visible={showBattleDiag} />
           <ComebackDiagHUD cameraRef={camDirRef} racersRef={g} visible={showComebackDiag} />
