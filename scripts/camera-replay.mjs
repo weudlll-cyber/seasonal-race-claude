@@ -31,6 +31,7 @@
 // Options:
 //   --out=<dir>      where the PNGs go (default: <repo>/client/tmp/camera-replay)
 //   --window=<n>     also print the n frames before and after the mark (default 8)
+//   --field=<n>      list the top n racers BY NAME at the mark (default 8; 0 to skip)
 //   --no-png         skip the pictures, print numbers only
 // ============================================================
 
@@ -611,6 +612,31 @@ console.log(
     `${lead.x >= 0 && lead.x <= CANVAS_W && lead.y >= 0 && lead.y <= CANVAS_H ? 'in frame' : 'OFF FRAME'}` +
     `, ${lead.x >= mx && lead.x <= CANVAS_W - mx && lead.y >= my && lead.y <= CANVAS_H - my ? 'inside' : 'OUTSIDE'} the inner-${Math.round(inner * 100)} region`
 );
+
+// SIM-NAMES-1: the field BY NAME. The whole point of the marker loop is that the owner says "Storm
+// drifted off the left edge" and the answer comes back about Storm — not about racer #7. The names
+// come from the marker, which took them from his own roster.
+const FIELD_ROWS = Number(arg('field', '8'));
+if (FIELD_ROWS > 0) {
+  console.log(`\nFIELD AT THE MARK — top ${Math.min(FIELD_ROWS, onScreen.length)} by position, as he saw them`);
+  console.log('    pos  racer        screen x,y      in frame   inner-region');
+  onScreen.slice(0, FIELD_ROWS).forEach((p, i) => {
+    const onCanvas = p.x >= 0 && p.x <= CANVAS_W && p.y >= 0 && p.y <= CANVAS_H;
+    const inInner = p.x >= mx && p.x <= CANVAS_W - mx && p.y >= my && p.y <= CANVAS_H - my;
+    console.log(
+      `    ${String(i + 1).padStart(3)}  ${pad(p.r.name, 12)} ${pad(
+        `${p.x.toFixed(0)},${p.y.toFixed(0)}`,
+        15
+      )} ${pad(onCanvas ? 'yes' : 'NO', 10)} ${inInner ? 'inside' : 'outside'}`
+    );
+  });
+  if (marker.race.namesOmitted) {
+    console.log(
+      `    (the marker's roster was dropped to keep the line short — ${marker.race.namesOmitted} racers,\n` +
+        `     so these are index placeholders, NOT the names he saw)`
+    );
+  }
+}
 
 // ── Pictures ──────────────────────────────────────────────────────────────────────────────────
 if (WRITE_PNG) {
