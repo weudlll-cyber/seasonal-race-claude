@@ -12,6 +12,7 @@ import { getPanTarget } from './panTarget.js';
 import { resolveCamera } from './resolveCamera.js';
 import { diagMixin } from './CameraDirectorDiag.js';
 import { DetourRecorder } from './detourRecorder.js';
+import { ComebackDetector } from './comebackDetector.js';
 import {
   detectPulkGroup,
   groupStillCohesive,
@@ -249,22 +250,11 @@ export class CameraDirector {
     this._battleGroupRacerIndices = [];
     // Centroid T of the battle group at BATTLE_ZOOM entry — drives camera pan (Q4).
     this._battleLockT = null;
-    // COMEBACK: B1-racer set (Set<racerIndex>) injected by updateRacePlan(). Null = race plan off.
-    this._b1Indices = null;
-    // Rank history ring buffer per B1 racer: Map<index, Array<{ts, rank}>>
-    this._rankHistory = new Map();
-    // Camera lock for the current COMEBACK_ZOOM episode.
+    // Camera lock for the current COMEBACK_ZOOM episode. This stays here and the DETECTION does
+    // not: who is coming back is a question about the race (comebackDetector.js), which racer the
+    // camera has committed to for this episode is a question about the shot.
     this._comebackLockedRacer = null;
     this._comebackLockedRacerIndex = null;
-    // Foresight pipeline: the full authored cameraPlan is STORED here (delivered mid-race by
-    // RaceScreen.setCameraPlan). Consumed by _deriveCastComebackers() → _castComebackerIndices, which
-    // supplies _detectComebackRacer's primary candidate list (B4b).
-    this._cameraPlan = null;
-    // Cast comebacker set: the heroes cast with role 'comebacker' (Set<racerIndex>). Derived ONCE from
-    // _cameraPlan whenever the plan is (re)stored — never per frame. Null/empty when the plan has no
-    // comebacker (assigned winner starts up front ⇒ cast 'sovereign-lead') or no plan is present; in that
-    // case _detectComebackRacer falls back to the b1Indices scan.
-    this._castComebackerIndices = null;
     // Cached per-frame values for getComebackDiagData() — updated every update() call.
     this._diagLeaderProgress = 0;
     this._diagIsExternalOutcomePhase = false;
@@ -541,11 +531,18 @@ export class CameraDirector {
     this._lfEntryByState = t.lfEntryByState;
     this._entryConvergenceZoom = t.entryConvergenceZoom;
     this._entryConvergencePx = t.entryConvergencePx;
-    this._comebackMinPositionsGained = t.comebackMinPositionsGained;
-    this._comebackWindowSec = t.comebackWindowSec;
+    // The four gates that define a comeback. Same reasoning as _battleGates: comebackDetector.js
+    // applies them together, so they travel together. `??=` because _computeTimingConfig runs from
+    // the constructor before the detector exists, and again on every live-apply after it does.
+    this._comebackGates = {
+      windowSec: t.comebackWindowSec,
+      minPositionsGained: t.comebackMinPositionsGained,
+      minStartGap: t.comebackMinStartGap,
+      maxCurrentRankPct: t.comebackMaxCurrentRankPct,
+    };
+    this._comeback ??= new ComebackDetector(this._comebackGates);
+    this._comeback.setGates(this._comebackGates);
     this._outcomePhaseThreshold = t.outcomePhaseThreshold;
-    this._comebackMinStartGap = t.comebackMinStartGap;
-    this._comebackMaxCurrentRankPct = t.comebackMaxCurrentRankPct;
     this._leadChangeMinGap = t.leadChangeMinGap;
     this._leadChangeDebounceMs = t.leadChangeDebounceMs;
     // comebackMinDuration / leadChangeMinDuration are deliberately NOT stored: they are consumed
@@ -650,128 +647,30 @@ export class CameraDirector {
   }
 
   /**
-   * Inject the B1-racer set for COMEBACK detection. Call once after race start when Race Plan is
-   * active. Pass null (or omit) to disable COMEBACK detection (race plan off or closed track).
-   * @param {Set<number>|null} b1Indices  Set of racer indices with targetRank ≤ 5.
+   * Race start: hand the COMEBACK detector its roster (racers with targetRank ≤ 5) and release the
+   * camera's own lock. Pass null to switch COMEBACK off (race plan off, or a closed track).
+   * The plan is usually null here — heroes are cast mid-race and arrive later via setCameraPlan().
+   * @param {Set<number>|null} b1Indices
+   * @param {object|null} cameraPlan
    */
   updateRacePlan(b1Indices, cameraPlan = null) {
-    this._b1Indices = b1Indices instanceof Set ? b1Indices : null;
-    this._rankHistory = new Map(); // clear stale history on every race start
+    this._comeback.setRoster(b1Indices, cameraPlan);
     this._comebackLockedRacer = null;
     this._comebackLockedRacerIndex = null;
-    // Store the authored plan (usually null here — heroes are cast mid-race, so the RaceScreen
-    // delivers it later via setCameraPlan()).
-    this._cameraPlan = cameraPlan ?? null;
-    this._deriveCastComebackers();
   }
 
   /**
-   * Deliver the authored cameraPlan mid-race (after heroes are cast), WITHOUT resetting rank history.
-   * The RaceScreen calls it once, when the plan first becomes available.
+   * Deliver the authored cameraPlan mid-race, once the heroes are cast. Keeps the rank history —
+   * the racers were already being watched; the plan only says which of them the story named.
    * @param {object|null} cameraPlan  { b1Indices, heroes:[{index,role,finalRank,beats}] }
    */
   setCameraPlan(cameraPlan) {
-    this._cameraPlan = cameraPlan ?? null;
-    this._deriveCastComebackers();
+    this._comeback.setPlan(cameraPlan);
   }
 
-  /**
-   * Derive the cast comebacker set from the stored cameraPlan — the heroes cast with role 'comebacker'.
-   * Called ONCE whenever the plan is (re)stored, never per frame. Sets _castComebackerIndices to null when
-   * the plan is absent or names no comebacker, so _detectComebackRacer falls back to the b1Indices scan.
-   */
-  _deriveCastComebackers() {
-    const heroes = this._cameraPlan?.heroes;
-    if (!Array.isArray(heroes)) {
-      this._castComebackerIndices = null;
-      return;
-    }
-    const set = new Set();
-    for (const h of heroes) {
-      if (h && h.role === 'comebacker' && Number.isInteger(h.index)) set.add(h.index);
-    }
-    this._castComebackerIndices = set.size > 0 ? set : null;
-  }
-
-  /**
-   * Record the current rank of every B1 racer into the rank-history ring buffer.
-   * Called once per rAF frame at the top of update(). Only B1 racers are tracked to
-   * keep per-frame allocation trivial. Entries older than (windowSec + 2s) are pruned.
-   * @param {Array} racers  Full live racer array (unsorted).
-   * @param {number} ts  Current rAF timestamp in ms.
-   */
-  _updateRankHistory(racers, ts) {
-    if (!this._b1Indices || this._b1Indices.size === 0) return;
-    const windowMs = (this._comebackWindowSec ?? 5) * 1000;
-    const pruneMs = windowMs + 2000; // 2 s extra buffer so window-start comparison always finds an entry
-    const sorted = [...racers].sort((a, b) => b.t - a.t);
-    for (let i = 0; i < sorted.length; i++) {
-      const r = sorted[i];
-      if (!this._b1Indices.has(r.index)) continue;
-      let hist = this._rankHistory.get(r.index);
-      if (!hist) {
-        hist = [];
-        this._rankHistory.set(r.index, hist);
-      }
-      hist.push({ ts, rank: i + 1 });
-      // Prune entries beyond the max retention window (keep at least 1 entry)
-      while (hist.length > 1 && hist[0].ts < ts - pruneMs) hist.shift();
-    }
-  }
-
-  /**
-   * Detect the best B1 comeback candidate among live racers.
-   * Returns the racer object with the highest rank-gain within the configured window,
-   * or null when no B1 racer meets the minimum gain threshold.
-   * @param {Array} racers  Full live racer array.
-   * @param {number} ts  Current timestamp in ms.
-   * @returns {object|null}
-   */
+  /** The best current comeback, or null. See comebackDetector.js for what "best" means. */
   _detectComebackRacer(racers, ts) {
-    if (!this._b1Indices || this._b1Indices.size === 0) return null;
-    const minGain = this._comebackMinPositionsGained ?? 3;
-    const windowMs = (this._comebackWindowSec ?? 5) * 1000;
-    const cutoff = ts - windowMs;
-    const sorted = [...racers].sort((a, b) => b.t - a.t);
-    const currentRankByIndex = new Map(sorted.map((r, i) => [r.index, i + 1]));
-    let bestRacer = null;
-    let bestGain = -1;
-    // Primary candidates: the cast comebacker set (the race actually names who comes back). Fallback:
-    // the full b1Indices scan, used when the plan has no comebacker or no plan was delivered. Every cast
-    // comebacker is drawn from the B1 pool (targetRank ≤ 5 = b1Indices), so it is already rank-tracked.
-    const candidates =
-      this._castComebackerIndices && this._castComebackerIndices.size > 0
-        ? this._castComebackerIndices
-        : this._b1Indices;
-    for (const idx of candidates) {
-      const currentRank = currentRankByIndex.get(idx);
-      if (currentRank == null) continue; // finished or absent
-      const hist = this._rankHistory.get(idx);
-      if (!hist || hist.length < 2) continue;
-      // Earliest entry still within the evaluation window
-      let earliestInWindow = null;
-      for (let i = 0; i < hist.length; i++) {
-        if (hist[i].ts >= cutoff) {
-          earliestInWindow = hist[i];
-          break;
-        }
-      }
-      if (!earliestInWindow) continue;
-      // Start-rank filter: racer must have been far enough back at window start
-      const N = sorted.length;
-      const normDivisor = Math.max(N - 1, 1);
-      const startGapNorm = (earliestInWindow.rank - 1) / normDivisor;
-      if (startGapNorm < this._comebackMinStartGap) continue;
-      // Current-rank filter: racer must not already be in the lead group
-      const currentRankNorm = (currentRank - 1) / normDivisor;
-      if (currentRankNorm < this._comebackMaxCurrentRankPct) continue;
-      const gain = earliestInWindow.rank - currentRank; // positive = moved forward
-      if (gain >= minGain && gain > bestGain) {
-        bestGain = gain;
-        bestRacer = sorted.find((r) => r.index === idx) ?? null;
-      }
-    }
-    return bestRacer;
+    return this._comeback.best(racers, ts);
   }
 
   /**
@@ -838,7 +737,7 @@ export class CameraDirector {
   // dt: frame duration in ms (optional — defaults to 1000/60 for backward compat with tests).
   // Returns { zoom, offsetX, offsetY } to apply as ctx transform.
   update(racers, ts, raceState, canvasW, canvasH, dt = 1000 / FRAME_RATE) {
-    this._updateRankHistory(racers, ts);
+    this._comeback.recordRanks(racers, ts);
     this._updateLeaderTracking(raceState?.physicsRacers ?? racers, ts);
     // Cache leaderProgress and external outcome-phase flag for getComebackDiagData().
     if (racers && racers.length > 0 && raceState?.finishT > 0) {
@@ -1377,7 +1276,7 @@ export class CameraDirector {
           candidates.push({
             state: CAM_STATE.COMEBACK_ZOOM,
             weight: this._comebackWeight,
-            reason: `comeback: ${_comebackRacer.name ?? _comebackRacer.index} gained ≥${this._comebackMinPositionsGained} positions`,
+            reason: `comeback: ${_comebackRacer.name ?? _comebackRacer.index} gained ≥${this._comebackGates.minPositionsGained} positions`,
             data: { comebackRacer: _comebackRacer },
           });
         }

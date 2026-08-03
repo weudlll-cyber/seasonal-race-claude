@@ -477,8 +477,8 @@ describe('CameraDirector — §5.3 attention hierarchy', () => {
     // Inject B1 set and seed rank history: racer 2 was rank 8 five seconds ago → gain = 5 ≥ 3
     cd.updateRacePlan(new Set([2]));
     const nowTs = 9000;
-    const windowMs = (cd._comebackWindowSec ?? 5) * 1000;
-    cd._rankHistory.set(2, [
+    const windowMs = cd._comebackGates.windowSec * 1000;
+    cd._comeback._history.set(2, [
       { ts: nowTs - windowMs + 100, rank: 8 },
       { ts: nowTs - 100, rank: 3 },
     ]);
@@ -520,12 +520,12 @@ describe('CameraDirector — B4b comeback candidate = cast comebacker', () => {
   // Seed rank history so BOTH racer 1 (gain 3) and racer 2 (gain 5) pass every reality filter, and
   // racer 2 has the LARGER gain — so a blind b1 scan would prefer racer 2 over the cast comebacker.
   const seedHistory = (cd, { r1StartRank = 8, r2StartRank = 8 } = {}) => {
-    const cutoffPlus = nowTs - cd._comebackWindowSec * 1000 + 100;
-    cd._rankHistory.set(1, [
+    const cutoffPlus = nowTs - cd._comebackGates.windowSec * 1000 + 100;
+    cd._comeback._history.set(1, [
       { ts: cutoffPlus, rank: r1StartRank },
       { ts: nowTs - 100, rank: 5 },
     ]);
-    cd._rankHistory.set(2, [
+    cd._comeback._history.set(2, [
       { ts: cutoffPlus, rank: r2StartRank },
       { ts: nowTs - 100, rank: 3 },
     ]);
@@ -547,7 +547,7 @@ describe('CameraDirector — B4b comeback candidate = cast comebacker', () => {
     const cd = new CameraDirector();
     cd.updateRacePlan(new Set([1, 2]));
     cd.setCameraPlan(planWithComebacker);
-    expect([...cd._castComebackerIndices]).toEqual([1]);
+    expect([...cd._comeback._cast]).toEqual([1]);
     seedHistory(cd);
     const best = cd._detectComebackRacer(buildField(), nowTs);
     expect(best).not.toBeNull();
@@ -559,7 +559,7 @@ describe('CameraDirector — B4b comeback candidate = cast comebacker', () => {
     const cd = new CameraDirector();
     cd.updateRacePlan(new Set([1, 2]));
     cd.setCameraPlan(planWithoutComebacker);
-    expect(cd._castComebackerIndices).toBeNull();
+    expect(cd._comeback._cast).toBeNull();
     seedHistory(cd);
     const best = cd._detectComebackRacer(buildField(), nowTs);
     expect(best).not.toBeNull();
@@ -569,7 +569,7 @@ describe('CameraDirector — B4b comeback candidate = cast comebacker', () => {
   it('(c) no plan → b1 scan runs exactly as today (largest real gain wins)', () => {
     const cd = new CameraDirector();
     cd.updateRacePlan(new Set([1, 2])); // race plan on, but no cameraPlan delivered
-    expect(cd._castComebackerIndices).toBeNull();
+    expect(cd._comeback._cast).toBeNull();
     seedHistory(cd);
     const best = cd._detectComebackRacer(buildField(), nowTs);
     expect(best).not.toBeNull();
@@ -612,7 +612,7 @@ describe('CameraDirector — B4b comeback candidate = cast comebacker', () => {
       { index: 9, t: 0.9, x: 0, y: 0, finished: false },
     ];
     // start rank 4 → gain 4-2 = 2 (≥ min), startGapNorm (4-1)/9 = 0.33 < 0.4 → filtered out.
-    cd._rankHistory.set(1, [
+    cd._comeback._history.set(1, [
       { ts: nowTs - cd._comebackWindowSec * 1000 + 100, rank: 4 },
       { ts: nowTs - 100, rank: 2 },
     ]);
@@ -640,7 +640,7 @@ describe('CameraDirector — B4b comeback candidate = cast comebacker', () => {
     ];
     // start rank 6 → gain 6-1 = 5 (≥ min), startGapNorm (6-1)/9 = 0.56 ≥ 0.4 (passes start-gap), but
     // currentRankNorm (1-1)/9 = 0 < 0.1 default → current-rank gate filters it out.
-    cd._rankHistory.set(1, [
+    cd._comeback._history.set(1, [
       { ts: nowTs - cd._comebackWindowSec * 1000 + 100, rank: 6 },
       { ts: nowTs - 100, rank: 1 },
     ]);
