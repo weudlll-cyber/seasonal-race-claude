@@ -1172,11 +1172,11 @@ describe('CameraDirector — B: BATTLE hysteresis', () => {
 describe('CameraDirector — D5: per-state transition constants', () => {
   it('no config: _lfOverview from 1.5s fallback ≈ 0.0253, _lfLeader from 0.3s ≈ 0.121', () => {
     const cd = new CameraDirector();
-    expect(cd._lfOverview).toBeCloseTo(1 - Math.pow(0.1, 1 / (1.5 * 60)), 5);
-    expect(cd._lfOverview).toBeCloseTo(0.0253, 3);
-    expect(cd._lfLeader).toBeCloseTo(1 - Math.pow(0.1, 1 / (0.3 * 60)), 5);
-    expect(cd._lfBattle).toBeCloseTo(1 - Math.pow(0.1, 1 / (0.3 * 60)), 5);
-    expect(cd._lfComeback).toBeCloseTo(1 - Math.pow(0.1, 1 / (0.3 * 60)), 5);
+    expect(cd._lfByState.OVERVIEW).toBeCloseTo(1 - Math.pow(0.1, 1 / (1.5 * 60)), 5);
+    expect(cd._lfByState.OVERVIEW).toBeCloseTo(0.0253, 3);
+    expect(cd._lfByState.LEADER_ZOOM).toBeCloseTo(1 - Math.pow(0.1, 1 / (0.3 * 60)), 5);
+    expect(cd._lfByState.BATTLE_ZOOM).toBeCloseTo(1 - Math.pow(0.1, 1 / (0.3 * 60)), 5);
+    expect(cd._lfByState.COMEBACK_ZOOM).toBeCloseTo(1 - Math.pow(0.1, 1 / (0.3 * 60)), 5);
   });
 
   it('object config sets per-state TC and lf independently', () => {
@@ -1185,38 +1185,38 @@ describe('CameraDirector — D5: per-state transition constants', () => {
       cameraTransitionSeconds: { overview: 2.0, leader: 0.5, battle: 0.4, comeback: 0.6 },
     };
     const cd = new CameraDirector(1280, 720, false, cfg);
-    expect(cd._tcOverview).toBe(2.0);
-    expect(cd._tcLeader).toBe(0.5);
-    expect(cd._tcBattle).toBe(0.4);
-    expect(cd._tcComeback).toBe(0.6);
-    expect(cd._lfOverview).toBeCloseTo(1 - Math.pow(0.1, 1 / (2.0 * 60)), 5);
-    expect(cd._lfLeader).toBeCloseTo(1 - Math.pow(0.1, 1 / (0.5 * 60)), 5);
-    expect(cd._lfBattle).toBeCloseTo(1 - Math.pow(0.1, 1 / (0.4 * 60)), 5);
-    expect(cd._lfComeback).toBeCloseTo(1 - Math.pow(0.1, 1 / (0.6 * 60)), 5);
+    expect(cd._tcByState.OVERVIEW).toBe(2.0);
+    expect(cd._tcByState.LEADER_ZOOM).toBe(0.5);
+    expect(cd._tcByState.BATTLE_ZOOM).toBe(0.4);
+    expect(cd._tcByState.COMEBACK_ZOOM).toBe(0.6);
+    expect(cd._lfByState.OVERVIEW).toBeCloseTo(1 - Math.pow(0.1, 1 / (2.0 * 60)), 5);
+    expect(cd._lfByState.LEADER_ZOOM).toBeCloseTo(1 - Math.pow(0.1, 1 / (0.5 * 60)), 5);
+    expect(cd._lfByState.BATTLE_ZOOM).toBeCloseTo(1 - Math.pow(0.1, 1 / (0.4 * 60)), 5);
+    expect(cd._lfByState.COMEBACK_ZOOM).toBeCloseTo(1 - Math.pow(0.1, 1 / (0.6 * 60)), 5);
   });
 
   it('scalar config applies scalar to overview, defaults to zoom-state TCs', () => {
     const cfg = { ...pctConfig, cameraTransitionSeconds: 0.5 };
     const cd = new CameraDirector(1280, 720, false, cfg);
-    expect(cd._tcOverview).toBe(0.5);
-    expect(cd._tcLeader).toBe(0.3);
-    expect(cd._tcBattle).toBe(0.3);
-    expect(cd._lfOverview).toBeCloseTo(1 - Math.pow(0.1, 1 / (0.5 * 60)), 5);
-    expect(cd._lfLeader).toBeCloseTo(1 - Math.pow(0.1, 1 / (0.3 * 60)), 5);
+    expect(cd._tcByState.OVERVIEW).toBe(0.5);
+    expect(cd._tcByState.LEADER_ZOOM).toBe(0.3);
+    expect(cd._tcByState.BATTLE_ZOOM).toBe(0.3);
+    expect(cd._lfByState.OVERVIEW).toBeCloseTo(1 - Math.pow(0.1, 1 / (0.5 * 60)), 5);
+    expect(cd._lfByState.LEADER_ZOOM).toBeCloseTo(1 - Math.pow(0.1, 1 / (0.3 * 60)), 5);
   });
 
   it('live-apply: updateConfig() with object TC updates all per-state lf values', () => {
     const cd = new CameraDirector();
-    const prevLfOverview = cd._lfOverview;
+    const prevLfOverview = cd._lfByState.OVERVIEW;
     cd.updateConfig({
       ...pctConfig,
       cameraTransitionSeconds: { overview: 0.5, leader: 0.1, battle: 0.1, comeback: 0.1 },
     });
-    expect(cd._lfOverview).toBeGreaterThan(prevLfOverview);
-    expect(cd._lfOverview).toBeCloseTo(1 - Math.pow(0.1, 1 / (0.5 * 60)), 5);
-    expect(cd._lfLeader).toBeCloseTo(1 - Math.pow(0.1, 1 / (0.1 * 60)), 5);
-    expect(cd._lfBattle).toBeCloseTo(1 - Math.pow(0.1, 1 / (0.1 * 60)), 5);
-    expect(cd._lfComeback).toBeCloseTo(1 - Math.pow(0.1, 1 / (0.1 * 60)), 5);
+    expect(cd._lfByState.OVERVIEW).toBeGreaterThan(prevLfOverview);
+    expect(cd._lfByState.OVERVIEW).toBeCloseTo(1 - Math.pow(0.1, 1 / (0.5 * 60)), 5);
+    expect(cd._lfByState.LEADER_ZOOM).toBeCloseTo(1 - Math.pow(0.1, 1 / (0.1 * 60)), 5);
+    expect(cd._lfByState.BATTLE_ZOOM).toBeCloseTo(1 - Math.pow(0.1, 1 / (0.1 * 60)), 5);
+    expect(cd._lfByState.COMEBACK_ZOOM).toBeCloseTo(1 - Math.pow(0.1, 1 / (0.1 * 60)), 5);
   });
 });
 
@@ -1646,7 +1646,7 @@ describe('CameraDirector — Phase 1: dt-scaled lerp', () => {
     // from how far zoom moved toward the target.
     const delta = cd.targetZoom - startZoom;
     const actualLf = (cd.zoom - startZoom) / delta;
-    expect(actualLf).toBeCloseTo(cd._lfLeader, 4);
+    expect(actualLf).toBeCloseTo(cd._lfByState.LEADER_ZOOM, 4);
   });
 
   it('double dt (33.33ms) produces larger lerp step than single dt', () => {
@@ -1769,13 +1769,13 @@ describe('CameraDirector — Phase 2: lerpPhase automat', () => {
     const cd = new CameraDirector(1280, 720, false, phase2Config, 36);
     // In entry phase, lerpFactorForState should return entry lf
     const entryLf = cd._lerpFactorForState(CAM_STATE.LEADER_ZOOM);
-    expect(entryLf).toBeCloseTo(cd._lfEntryLeader, 10);
+    expect(entryLf).toBeCloseTo(cd._lfEntryByState.LEADER_ZOOM, 10);
     expect(entryLf).toBeCloseTo(tcToLerpFactor(2.0), 10);
 
     // Switch to tracking, then check
     cd._lerpPhase = 'tracking';
     const trackingLf = cd._lerpFactorForState(CAM_STATE.LEADER_ZOOM);
-    expect(trackingLf).toBeCloseTo(cd._lfLeader, 10);
+    expect(trackingLf).toBeCloseTo(cd._lfByState.LEADER_ZOOM, 10);
     expect(trackingLf).toBeCloseTo(tcToLerpFactor(0.1), 10);
 
     // The two must differ
@@ -1785,15 +1785,15 @@ describe('CameraDirector — Phase 2: lerpPhase automat', () => {
   it('with entryTC == trackingTC, behavior is equivalent to phase 1 (no-op)', () => {
     // Default profileConfig has entryTC == trackingTC for all states
     const cd = new CameraDirector(1280, 720, false, profileConfig, 36);
-    expect(cd._lfEntryLeader).toBeCloseTo(cd._lfLeader, 10);
-    expect(cd._lfEntryBattle).toBeCloseTo(cd._lfBattle, 10);
-    expect(cd._lfEntryOverview).toBeCloseTo(cd._lfOverview, 10);
-    expect(cd._lfEntryComeback).toBeCloseTo(cd._lfComeback, 10);
+    expect(cd._lfEntryByState.LEADER_ZOOM).toBeCloseTo(cd._lfByState.LEADER_ZOOM, 10);
+    expect(cd._lfEntryByState.BATTLE_ZOOM).toBeCloseTo(cd._lfByState.BATTLE_ZOOM, 10);
+    expect(cd._lfEntryByState.OVERVIEW).toBeCloseTo(cd._lfByState.OVERVIEW, 10);
+    expect(cd._lfEntryByState.COMEBACK_ZOOM).toBeCloseTo(cd._lfByState.COMEBACK_ZOOM, 10);
   });
 
   it('updateConfig() with new entryTC updates _lfEntry immediately', () => {
     const cd = new CameraDirector(1280, 720, false, profileConfig, 36);
-    const before = cd._lfEntryLeader;
+    const before = cd._lfEntryByState.LEADER_ZOOM;
     const updated = {
       ...profileConfig,
       cameraStateProfiles: {
@@ -1802,8 +1802,8 @@ describe('CameraDirector — Phase 2: lerpPhase automat', () => {
       },
     };
     cd.updateConfig(updated);
-    expect(cd._lfEntryLeader).toBeLessThan(before); // slower convergence
-    expect(cd._lfEntryLeader).toBeCloseTo(tcToLerpFactor(3.0), 10);
+    expect(cd._lfEntryByState.LEADER_ZOOM).toBeLessThan(before); // slower convergence
+    expect(cd._lfEntryByState.LEADER_ZOOM).toBeCloseTo(tcToLerpFactor(3.0), 10);
     // _lfEntryByState map updated too
     expect(cd._lfEntryByState[CAM_STATE.LEADER_ZOOM]).toBeCloseTo(tcToLerpFactor(3.0), 10);
   });

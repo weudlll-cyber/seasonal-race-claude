@@ -61,8 +61,8 @@ describe('computeTimingFromConfig — null config (all defaults)', () => {
   it('uses fallback overviewCooldownMs', () => expect(t.overviewCooldownMs).toBe(15000));
   it('showDiagnostics defaults false', () => expect(t.showDiagnostics).toBe(false));
   it('diagEnabled defaults false', () => expect(t.diagEnabled).toBe(false));
-  it('uses fallback tcOverview = 1.5', () => expect(t.tcOverview).toBe(1.5));
-  it('uses fallback tcLeader = 0.3', () => expect(t.tcLeader).toBe(0.3));
+  it('uses fallback tcOverview = 1.5', () => expect(t.tcByState.OVERVIEW).toBe(1.5));
+  it('uses fallback tcLeader = 0.3', () => expect(t.tcByState.LEADER_ZOOM).toBe(0.3));
   it('uses fallback overviewStartDelay = 15', () => expect(t.overviewStartDelay).toBe(15));
   it('uses fallback overviewTargetCount = 2', () => expect(t.overviewTargetCount).toBe(2));
   it('all states present in minStateHoldByState', () => {
@@ -86,7 +86,7 @@ describe('computeTimingFromConfig — null config (all defaults)', () => {
   });
   it('lfOverview matches tcToLerpFactor(1.5)', () => {
     const expected = 1 - Math.pow(0.1, 1 / (1.5 * 60));
-    expect(t.lfOverview).toBeCloseTo(expected, 10);
+    expect(t.lfByState.OVERVIEW).toBeCloseTo(expected, 10);
   });
   it('phasedByState has leadInDuration 0 for all states (legacy)', () => {
     for (const v of Object.values(t.phasedByState)) {
@@ -122,9 +122,9 @@ describe('computeTimingFromConfig — cameraStateProfiles path', () => {
   const cfg = { cameraStateProfiles: minimalProfiles() };
   const t = computeTimingFromConfig(cfg);
 
-  it('reads tcOverview from profiles', () => expect(t.tcOverview).toBe(1.5));
-  it('reads tcLeader from profiles', () => expect(t.tcLeader).toBe(0.3));
-  it('reads tcBattle from profiles', () => expect(t.tcBattle).toBe(0.3));
+  it('reads tcOverview from profiles', () => expect(t.tcByState.OVERVIEW).toBe(1.5));
+  it('reads tcLeader from profiles', () => expect(t.tcByState.LEADER_ZOOM).toBe(0.3));
+  it('reads tcBattle from profiles', () => expect(t.tcByState.BATTLE_ZOOM).toBe(0.3));
   it('BATTLE_ZOOM maxStateDuration from profile', () => {
     expect(t.maxStateDurationByState['BATTLE_ZOOM']).toBe(6000);
   });
@@ -155,26 +155,29 @@ describe('computeTimingFromConfig — cameraStateProfiles path', () => {
 describe('computeTimingFromConfig — legacy flat-field path', () => {
   it('scalar cameraTransitionSeconds applies to tcOverview only', () => {
     const t = computeTimingFromConfig({ cameraTransitionSeconds: 2.0 });
-    expect(t.tcOverview).toBe(2.0);
-    expect(t.tcLeader).toBe(0.3);
+    expect(t.tcByState.OVERVIEW).toBe(2.0);
+    expect(t.tcByState.LEADER_ZOOM).toBe(0.3);
   });
   it('object cameraTransitionSeconds reads per-state', () => {
     const t = computeTimingFromConfig({
       cameraTransitionSeconds: { overview: 1.0, leader: 0.5, battle: 0.4, comeback: 0.6 },
     });
-    expect(t.tcOverview).toBe(1.0);
-    expect(t.tcLeader).toBe(0.5);
-    expect(t.tcBattle).toBe(0.4);
-    expect(t.tcComeback).toBe(0.6);
+    expect(t.tcByState.OVERVIEW).toBe(1.0);
+    expect(t.tcByState.LEADER_ZOOM).toBe(0.5);
+    expect(t.tcByState.BATTLE_ZOOM).toBe(0.4);
+    expect(t.tcByState.COMEBACK_ZOOM).toBe(0.6);
   });
   it('minStateHoldByState all equal minStateHoldMs in legacy path', () => {
     const t = computeTimingFromConfig({ minStateHoldMs: 3000 });
     for (const v of Object.values(t.minStateHoldByState)) expect(v).toBe(3000);
   });
   it('entryTC equals trackingTC in legacy path (no distinction)', () => {
+    // CAMERA-HYGIENE-2: asserted on the lerp-factor maps, which the director actually reads.
+    // It used to compare `tcEntryOverview` against `tcOverview` — two returned scalars that no
+    // production code consumed, so the assertion held whatever the maps said.
     const t = computeTimingFromConfig({ cameraTransitionSeconds: 0.8 });
-    expect(t.tcEntryOverview).toBe(t.tcOverview);
-    expect(t.tcEntryLeader).toBe(t.tcLeader);
+    expect(t.lfEntryByState.OVERVIEW).toBe(t.lfByState.OVERVIEW);
+    expect(t.lfEntryByState.LEADER_ZOOM).toBe(t.lfByState.LEADER_ZOOM);
   });
 });
 

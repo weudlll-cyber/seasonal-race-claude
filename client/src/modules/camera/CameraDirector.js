@@ -14,6 +14,12 @@ import { diagMixin } from './CameraDirectorDiag.js';
 import { DetourRecorder } from './detourRecorder.js';
 import { ComebackDetector } from './comebackDetector.js';
 import {
+  resolveFramingConfig,
+  DEFAULT_CORRIDORS,
+  DEFAULT_COUNTDOWN_CORRIDORS,
+  DEFAULT_INNER_FRAME_PCT,
+} from './framingConfig.js';
+import {
   detectPulkGroup,
   groupStillCohesive,
   groupHoldsP1OrP2,
@@ -76,27 +82,10 @@ const FRAME_RATE = 60; // reference display frame rate for lerp formula (dt-scal
 const CANVAS_W = REFERENCE_CANVAS_W;
 const CANVAS_H_REF = REFERENCE_CANVAS_H;
 const TOP_N = 3; // camera focuses on the top-N racers by position
-// CAMERA-REFERENCE-WIDTH-1 fallbacks, in STANDARD CORRIDORS across the frame, used when no config
-// (or no cameraStateProfiles) is provided. They match DEFAULT_CAMERA_CONFIG so a bare-config
-// director and a configured one frame the same shot. OVERVIEW is the widest; BATTLE/COMEBACK are
-// tighter than LEADER; PHOTO_FINISH is the tightest. At the shipped 300 px reference LEADER is
-// 225 world px — the picture the owner judged good on Searound.
-const DEFAULT_CORRIDORS = {
-  overview: 1.5,
-  leader: 0.75,
-  leadChange: 0.75,
-  battle: 0.55,
-  comeback: 0.55,
-  photoFinish: 0.4,
-};
-/** CAMERA-REFERENCE-WIDTH-1: world px per standard corridor when no config reaches the director. */
-const DEFAULT_REFERENCE_CORRIDOR_PX = 300;
-/** CAMERA-COMPANY-1 default: the anchor plus this many−1 others must stay in frame. */
-const DEFAULT_MIN_RACERS_VISIBLE = 3;
+// Every framing default and validation band lives in framingConfig.js — see the header there for
+// why the bands REJECT out-of-range values rather than clamping them.
 /** Fallback corridor width (world px) when no track width and no shape reach the director. */
 const FALLBACK_TRACK_WIDTH_PX = 140;
-// World-pixel radial offset: camera shifts toward field so leader sits at the outer viewport edge.
-const DEFAULT_INNER_FRAME_PCT = 0.7;
 const LEAD_OUT_DECAY = 0.05; // per-60fps-frame EMA factor for lead-out camera deceleration
 const NOMINAL_T_PER_FRAME = 0.001; // fallback racer speed (t/frame) for lead-in distance when _prevFocusT is unknown
 const DIAG_RING_SIZE = 600; // frame-log ring buffer size (≈10 s @ 60 fps)
@@ -365,7 +354,7 @@ export class CameraDirector {
    * @param {number} [fallback]  used when the setting is missing or corrupt
    * @returns {number} cam.zoom
    */
-  _computeZoomForCorridors(corridors, fallback = DEFAULT_CORRIDORS.leader) {
+  _computeZoomForCorridors(corridors, fallback = DEFAULT_CORRIDORS.LEADER_ZOOM) {
     return resolveZoomForCorridors(corridors, {
       referenceWidthPx: this._referenceWidthPx,
       axisY: this._proj.axisY,
@@ -403,70 +392,35 @@ export class CameraDirector {
    * @param {object|null} config
    */
   _computeZoomLevels(config) {
-    const profiles = config?.cameraStateProfiles;
-    // CAMERA-REFERENCE-WIDTH-1: the standard corridor, and the max() that keeps a track WIDER than
-    // the reference framed by its own width, so the setting can never ask to crop its corridor.
-    const refCfg = config?.referenceCorridorPx;
-    this._referenceCorridorPx =
-      Number.isFinite(refCfg) && refCfg > 0 ? refCfg : DEFAULT_REFERENCE_CORRIDOR_PX;
+    const f = resolveFramingConfig(config);
+    // CAMERA-REFERENCE-WIDTH-1: the standard corridor, and the max() inside referenceWidthFor that
+    // keeps a track WIDER than the reference framed by its own width — so a setting can never ask
+    // to crop the corridor it is measured in.
+    this._referenceCorridorPx = f.referenceCorridorPx;
     this._referenceWidthPx = referenceWidthFor(this._referenceCorridorPx, this._trackWidthPx);
-    const widthOf = (state, fallback) => {
-      const v = profiles?.[state]?.visibleCorridors;
-      return Number.isFinite(v) && v > 0 ? v : fallback;
-    };
-    this._overviewCorridors = widthOf('OVERVIEW', DEFAULT_CORRIDORS.overview);
-    this._leaderZoom = this._computeZoomForCorridors(
-      widthOf('LEADER_ZOOM', DEFAULT_CORRIDORS.leader)
-    );
-    this._leadChangeZoom = this._computeZoomForCorridors(
-      widthOf('LEAD_CHANGE', DEFAULT_CORRIDORS.leadChange)
-    );
-    this._battleZoom = this._computeZoomForCorridors(
-      widthOf('BATTLE_ZOOM', DEFAULT_CORRIDORS.battle)
-    );
-    this._comebackZoom = this._computeZoomForCorridors(
-      widthOf('COMEBACK_ZOOM', DEFAULT_CORRIDORS.comeback)
-    );
-    // CAMERA-FRAMING-1: PHOTO_FINISH gets its OWN setting. It borrowed BATTLE's number, so the most
-    // dramatic shot in the race was never any closer than an ordinary battle. The fallback is
-    // BATTLE's value, so a config written before this key existed frames exactly as it used to.
-    this._photoFinishZoom = this._computeZoomForCorridors(
-      widthOf('PHOTO_FINISH', DEFAULT_CORRIDORS.photoFinish)
-    );
+
+    // Corridors → cam.zoom, one call per state through the single conversion.
+    const c = f.corridorsByState;
+    this._overviewCorridors = c.OVERVIEW;
+    this._leaderZoom = this._computeZoomForCorridors(c.LEADER_ZOOM);
+    this._leadChangeZoom = this._computeZoomForCorridors(c.LEAD_CHANGE);
+    this._battleZoom = this._computeZoomForCorridors(c.BATTLE_ZOOM);
+    this._comebackZoom = this._computeZoomForCorridors(c.COMEBACK_ZOOM);
+    this._photoFinishZoom = this._computeZoomForCorridors(c.PHOTO_FINISH);
     // OVERVIEW is the same rule at the widest setting — no sprite size, no racer count.
-    this._overviewStateZoom = this._computeZoomForCorridors(
-      this._overviewCorridors,
-      DEFAULT_CORRIDORS.overview
-    );
-    this._innerFramePct = config?.targetInnerFramePct ?? DEFAULT_INNER_FRAME_PCT;
-    // CAMERA-COMPANY-1: how many racers must be in frame, INCLUDING the anchor. <= 1 disables the
-    // dramaturgical guarantee entirely (the geometric ones are unaffected).
-    this._minRacersVisible = config?.minRacersVisible ?? DEFAULT_MIN_RACERS_VISIBLE;
-    // CAMERA-FOCUS-3 transition grammar. 'cut' (grammar A) = every anchored/active state entry snaps
-    // pan AND zoom together to the new subject's correct framing on frame 1 (zero acquisition — the
-    // half-glide "corner-riding" hybrid is dead). 'legacy' = the pre-FOCUS-3 entry glide. The shipped
-    // DEFAULT_CAMERA_CONFIG selects 'cut'; the code fallback stays 'legacy' so bare-config callers and
-    // the existing entry-glide tests keep their behaviour. The FOCUS-2 fallback grammar (B) FULL GLIDE
-    // is named in the report, not wired here.
-    // CAMERA-GRAMMAR-1 transition grammar (entry STYLE only): 'glide' (shipped) eases pan+zoom together;
-    // 'cut' snaps them; 'legacy' is the bare-caller follow-lerp fallback. Unknown/absent → 'legacy'.
-    const _g = config?.cameraTransitionGrammar;
-    this._transitionGrammar = _g === 'cut' ? 'cut' : _g === 'glide' ? 'glide' : 'legacy';
-    // Glide entry duration (ms) — one bounded ease for pan AND zoom. Validated to [300, 900]; default 500.
-    const _gd = config?.glideDurationMs;
-    this._glideDurationMs = Number.isFinite(_gd) && _gd >= 300 && _gd <= 900 ? _gd : 500;
-    // CAMERA-FOCUS-3 leader forward-framing fraction (owner's "pack behind, leader forward"). Valid only
-    // in (0.5, 0.8]; anything else (incl. absent) → dead-centre, the legacy framing.
-    const lff = config?.leaderForwardFrac;
-    this._leaderForwardFrac = Number.isFinite(lff) && lff > 0.5 && lff <= 0.8 ? lff : null;
-    // Countdown start zoom: convert spritePx → spriteScale, typically clamped to overviewZoom.
-    // CAMERA-REFERENCE-WIDTH-1: the countdown opens on the same unit. `countdownStartCorridors` is a
-    // wide establishing shot that eases into OVERVIEW; it is clamped by the projection like every
-    // other setting, so on a small world it simply means "the whole world".
+    this._overviewStateZoom = this._computeZoomForCorridors(c.OVERVIEW, DEFAULT_CORRIDORS.OVERVIEW);
+    // The countdown opens wide on the SAME unit and eases into OVERVIEW. It is clamped by the
+    // projection like every other setting, so on a small world it simply means "the whole world".
     this._countdownStartZoom = this._computeZoomForCorridors(
-      config?.countdownStartCorridors,
-      DEFAULT_CORRIDORS.overview * 2
+      f.countdownCorridors,
+      DEFAULT_COUNTDOWN_CORRIDORS
     );
+
+    this._innerFramePct = f.innerFramePct;
+    this._minRacersVisible = f.minRacersVisible;
+    this._transitionGrammar = f.transitionGrammar;
+    this._glideDurationMs = f.glideDurationMs;
+    this._leaderForwardFrac = f.leaderForwardFrac;
   }
 
   /**
@@ -500,16 +454,6 @@ export class CameraDirector {
     this._leadAheadEnabledByState = t.leadAheadEnabledByState;
     this._leadOutEnabledByState = t.leadOutEnabledByState;
     this._maxEntryDurationByState = t.maxEntryDurationByState;
-    this._tcOverview = t.tcOverview;
-    this._tcLeader = t.tcLeader;
-    this._tcBattle = t.tcBattle;
-    this._tcComeback = t.tcComeback;
-    this._tcLeadChange = t.tcLeadChange;
-    this._tcEntryOverview = t.tcEntryOverview;
-    this._tcEntryLeader = t.tcEntryLeader;
-    this._tcEntryBattle = t.tcEntryBattle;
-    this._tcEntryComeback = t.tcEntryComeback;
-    this._tcEntryLeadChange = t.tcEntryLeadChange;
     this._minStateHoldMs = t.minStateHoldMs;
     this._battleMaxDurationMs = t.battleMaxDurationMs;
     this._maxStateDuration = t.maxStateDuration;
@@ -517,17 +461,7 @@ export class CameraDirector {
     this._maxStateDurationByState = t.maxStateDurationByState;
     this._phasedByState = t.phasedByState;
     this._tcByState = t.tcByState;
-    this._lfOverview = t.lfOverview;
-    this._lfLeader = t.lfLeader;
-    this._lfBattle = t.lfBattle;
-    this._lfComeback = t.lfComeback;
-    this._lfLeadChange = t.lfLeadChange;
     this._lfByState = t.lfByState;
-    this._lfEntryOverview = t.lfEntryOverview;
-    this._lfEntryLeader = t.lfEntryLeader;
-    this._lfEntryBattle = t.lfEntryBattle;
-    this._lfEntryComeback = t.lfEntryComeback;
-    this._lfEntryLeadChange = t.lfEntryLeadChange;
     this._lfEntryByState = t.lfEntryByState;
     this._entryConvergenceZoom = t.entryConvergenceZoom;
     this._entryConvergencePx = t.entryConvergencePx;
@@ -722,7 +656,7 @@ export class CameraDirector {
 
   _lerpFactorForState(state) {
     const map = this._lerpPhase === 'entry' ? this._lfEntryByState : this._lfByState;
-    return map[state] ?? this._lfOverview;
+    return map[state] ?? map.OVERVIEW;
   }
 
   // Signed T-delta for track-parameter lerp.

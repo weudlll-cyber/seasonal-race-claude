@@ -223,6 +223,10 @@ export function computeTimingFromConfig(config) {
   const lfEntryBattle = tcToLerpFactor(tcEntryBattle);
   const lfEntryComeback = tcToLerpFactor(tcEntryComeback);
   const lfEntryLeadChange = tcToLerpFactor(tcEntryLeadChange);
+  // CAMERA-HYGIENE-2: the per-state scalars (tcLeader, lfBattle, lfEntryOverview, ...) are locals
+  // now. They used to be returned AND stored on the director alongside these maps — forty data
+  // points that had to agree with twenty. The maps are what the director reads; the scalars were
+  // read only by tests, which is exactly the arrangement where a wrong map goes unnoticed.
   const lfEntryByState = {
     OVERVIEW: lfEntryOverview,
     LEADER_ZOOM: lfEntryLeader,
@@ -299,16 +303,6 @@ export function computeTimingFromConfig(config) {
     leadAheadEnabledByState,
     leadOutEnabledByState,
     maxEntryDurationByState,
-    tcOverview,
-    tcLeader,
-    tcBattle,
-    tcComeback,
-    tcLeadChange,
-    tcEntryOverview,
-    tcEntryLeader,
-    tcEntryBattle,
-    tcEntryComeback,
-    tcEntryLeadChange,
     minStateHoldMs,
     battleMaxDurationMs,
     maxStateDuration,
@@ -316,17 +310,7 @@ export function computeTimingFromConfig(config) {
     maxStateDurationByState,
     phasedByState,
     tcByState,
-    lfOverview,
-    lfLeader,
-    lfBattle,
-    lfComeback,
-    lfLeadChange,
     lfByState,
-    lfEntryOverview,
-    lfEntryLeader,
-    lfEntryBattle,
-    lfEntryComeback,
-    lfEntryLeadChange,
     lfEntryByState,
     entryConvergenceZoom,
     entryConvergencePx,

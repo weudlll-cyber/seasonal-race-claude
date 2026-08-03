@@ -181,7 +181,7 @@ export const diagMixin = {
 
   /** TC (seconds) for the current state — readable by the diagnostics HUD. */
   get currentTc() {
-    return this._tcByState?.[this.state] ?? this._tcOverview;
+    return this._tcByState?.[this.state] ?? this._tcByState?.OVERVIEW;
   },
 
   /** Current lerp phase: 'entry' (slow, smooth) or 'tracking' (fast, sticky). */
