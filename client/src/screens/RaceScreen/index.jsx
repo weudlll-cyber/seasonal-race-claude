@@ -1311,7 +1311,7 @@ export default function RaceScreen() {
       drawSurfaceTrails(ctx, st.racers);
       const focusFactor = st.focusFadeProgress ?? 0;
       const livePulkGroup =
-        focusFactor > 0 ? (camDirRef.current?._detectPulkGroup?.(st.racers) ?? null) : null;
+        focusFactor > 0 ? (camDirRef.current?.detectBattleGroup?.(st.racers) ?? null) : null;
       // ── CAMERA-TAGS-1: WHICH names are drawn, decided in SCREEN space before anything is drawn ──
       // Eligibility is "on canvas"; label-vs-label occlusion decides the rest, so the count is an
       // output. The START-FORMATION exception shows every name through the countdown and for

@@ -143,8 +143,8 @@ export const diagMixin = {
 
     // Q1: isolation check for DiagHUD display (arc)
     let isGroupIsolated = true;
-    if (racers && groupRacers.length > 0 && this._battleIsolationThresholdT > 0) {
-      const isoThrT = this._battleIsolationThresholdT;
+    if (racers && groupRacers.length > 0 && this._battleGates.isolationT > 0) {
+      const isoThrT = this._battleGates.isolationT;
       const groupSet = new Set(groupRacers.map((r) => r));
       for (const ro of racers) {
         if (groupSet.has(ro)) continue;
@@ -168,9 +168,9 @@ export const diagMixin = {
       currentGroupRacers: currentGroup ?? [],
       isPulkNow: currentGroup !== null,
       isGroupIsolated,
-      isolationThresholdT: this._battleIsolationThresholdT,
+      isolationThresholdT: this._battleGates.isolationT,
       groupPairwiseTemporal,
-      closenessThresholdT: this._battlePulkThresholdT,
+      closenessThresholdT: this._battleGates.closenessT,
     };
   },
 

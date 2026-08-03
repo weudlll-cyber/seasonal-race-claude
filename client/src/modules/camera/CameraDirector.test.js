@@ -808,10 +808,10 @@ describe('CameraDirector — finish drama pulse (Block W)', () => {
 // 107px black bars. These two tests must fail without the isOpenTrack hotfix.
 
 describe('CameraDirector — battle trigger tunables (Block X)', () => {
-  it('no config: fallback _maxStateDuration=8000, _battlePulkThresholdT=0.05, _battleMinDurationMs=3000, _endgameThreshold=0.85', () => {
+  it('no config: fallback _maxStateDuration=8000, _battleGates.closenessT=0.05, _battleMinDurationMs=3000, _endgameThreshold=0.85', () => {
     const cd = new CameraDirector();
     expect(cd._maxStateDuration).toBe(8000);
-    expect(cd._battlePulkThresholdT).toBe(0.05);
+    expect(cd._battleGates.closenessT).toBe(0.05);
     expect(cd._battleMinDurationMs).toBe(3000);
     expect(cd._endgameThreshold).toBe(0.85);
     expect(cd._postStartHoldMs).toBe(7000);
@@ -908,7 +908,7 @@ describe('CameraDirector — battle trigger tunables (Block X)', () => {
       maxStateDuration: 3000,
       endgameThreshold: 0.9,
     });
-    expect(cd._battlePulkThresholdT).toBe(0.08);
+    expect(cd._battleGates.closenessT).toBe(0.08);
     expect(cd._battleMinDurationMs).toBe(1500);
     expect(cd._maxStateDuration).toBe(3000);
     expect(cd._endgameThreshold).toBe(0.9);
@@ -3265,11 +3265,11 @@ describe('CameraDirector — Phase 3B: 3-condition BATTLE detection', () => {
     expect(found).not.toBeNull();
     expect(found.index).toBe(r0.index);
     expect(found).not.toBe(r0); // it IS a spread copy, not the original
-
-    // _getBattleFocusRacer should return the spread copy (not fall back to leader)
-    const focusRacer = cd._getBattleFocusRacer(renderRacers);
-    expect(focusRacer.index).toBe(r0.index);
-    expect(focusRacer.t).toBeCloseTo(r0.t + 0.0001, 5);
+    expect(found.t).toBeCloseTo(r0.t + 0.0001, 5); // and it carries THIS frame's position
+    // CAMERA-HYGIENE-2 removed the second half of this test. It re-asserted the same lookup through
+    // `_getBattleFocusRacer`, a method whose only caller in the whole repo was this line — dead
+    // production code kept alive by the test that tested it. The guarantee is unchanged: the
+    // surviving mechanism is `_findByIndex`, which the camera really does use every frame.
   });
 });
 
@@ -4068,7 +4068,7 @@ describe('CameraDirector — Q1: isolation condition', () => {
 
   it('isolation threshold configurable via config', () => {
     const cd = new CameraDirector(1280, 720, false, { battleIsolationThresholdT: 0.075 });
-    expect(cd._battleIsolationThresholdT).toBe(0.075);
+    expect(cd._battleGates.isolationT).toBe(0.075);
   });
 
   it('BATTLE blocked when non-group racer is within isolation threshold (arc)', () => {

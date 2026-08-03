@@ -12,6 +12,13 @@ import { getPanTarget } from './panTarget.js';
 import { resolveCamera } from './resolveCamera.js';
 import { diagMixin } from './CameraDirectorDiag.js';
 import { DetourRecorder } from './detourRecorder.js';
+import {
+  detectPulkGroup,
+  groupStillCohesive,
+  groupHoldsP1OrP2,
+  findByIndex,
+  resolveGroup,
+} from './battleGroup.js';
 import { mulberry32 } from '../racePlanner.js';
 import { shortestArcDeltaT } from '../../utils/mathUtils.js';
 import { computeTimingFromConfig } from './cameraTimingComputation.js';
@@ -479,12 +486,16 @@ export class CameraDirector {
    */
   _computeTimingConfig(config) {
     const t = computeTimingFromConfig(config);
-    this._battlePulkThresholdT = t.battlePulkThresholdT;
+    // The five gates that define a BATTLE group, kept together because battleGroup.js applies them
+    // together and a gate that drifted away from its siblings would be silently unenforced.
+    this._battleGates = {
+      closenessT: t.battlePulkThresholdT,
+      isolationT: t.battleIsolationThresholdT,
+      maxSize: t.battleMaxGroupSize,
+      maxRankSpan: t.battleMaxGroupRankSpan,
+      minTopN: t.battleMinTopN,
+    };
     this._battleMinDurationMs = t.battleMinDurationMs;
-    this._battleIsolationThresholdT = t.battleIsolationThresholdT;
-    this._battleMaxGroupSize = t.battleMaxGroupSize;
-    this._battleMaxGroupRankSpan = t.battleMaxGroupRankSpan;
-    this._battleMinTopN = t.battleMinTopN;
     this._endgameThreshold = t.endgameThreshold;
     this._postStartHoldMs = t.postStartHoldMs;
     this._battleCooldownMs = t.battleCooldownMs;
@@ -1340,7 +1351,7 @@ export class CameraDirector {
         candidates.push({
           state: CAM_STATE.BATTLE_ZOOM,
           weight: this._battleWeight,
-          reason: `battle: pulk (arc<=${this._battlePulkThresholdT})`,
+          reason: `battle: pulk (arc<=${this._battleGates.closenessT})`,
         });
       }
 
@@ -2057,105 +2068,25 @@ export class CameraDirector {
   }
 
   /**
-   * Finds the first group of ≥3 racers that simultaneously satisfy all BATTLE conditions:
-   *   1. Closeness  — all pairwise lap-normalized arc distances shortestArcDeltaT ≤ battlePulkThresholdT
-   *                   (scale-independent; replaced the world-px test in 15b)
-   *   2. Isolation  — no non-member within battleIsolationThresholdT (lap fraction) of any member
-   *   3. Positional — frontmost group racer at rank 3 or worse (P1/P2 are LEADER territory);
-   *                   seed-triple rank span ≤ 3; frontmost rank ≤ battleMinTopN
-   *   4. Expansion  — greedy expansion capped at battleMaxGroupRankSpan total rank span
-   *
-   * Returns the group sorted frontmost-first (highest t), or null when no group qualifies.
-   * @param {Array<{x:number, y:number, t:number}>} racers  Full racer list, any order.
-   * @returns {Array|null}
+   * Which racers are in a BATTLE right now — this director's gates applied to the group rules in
+   * battleGroup.js. PUBLIC because the render path asks the same question for the battle-focus
+   * darkening, and a render file reaching into a `_private` method is how the mint tripwire's
+   * motivating case started.
+   * @param {Array<{t:number}>} racers
+   * @returns {Array|null} the group frontmost-first, or null when no group qualifies
    */
-  _detectPulkGroup(racers) {
-    if (!racers || racers.length < 3) return null;
-    const sorted = [...racers].sort((a, b) => b.t - a.t);
-    const n = sorted.length;
-    if (n < 3) return null;
-    // 15b: closeness is the lap-normalized arc distance only (scale-independent — one knob
-    // means the same on-track closeness on every track, unlike world-px which varied 1.5–4.9%
-    // of a lap across the 3072–6144px worlds and rejected every real cluster).
-    const tThr = this._battlePulkThresholdT;
-    const isoThrT = this._battleIsolationThresholdT;
-    const maxSize = this._battleMaxGroupSize ?? 6;
-    const maxRankSpan = this._battleMaxGroupRankSpan ?? 5;
-    // i >= 2: frontmost battle racer must be at rank 3 or worse (P1/P2 are LEADER territory).
-    // i < battleMinTopN: frontmost must be in the configured top-N (default top-10).
-    const minTopN = this._battleMinTopN ?? 10;
-    for (let i = 2; i < n - 2 && i < minTopN; i++) {
-      for (let j = i + 1; j < n && j - i <= 3; j++) {
-        for (let k = j + 1; k < n && k - i <= 3; k++) {
-          const ri = sorted[i],
-            rj = sorted[j],
-            rk = sorted[k];
-          // Closeness condition — lap-normalized shortest arc (raw t accumulates across laps;
-          // co-located racers across the start/finish seam must read as near). Sole spatial gate.
-          if (
-            shortestArcDeltaT(ri.t, rj.t) > tThr ||
-            shortestArcDeltaT(ri.t, rk.t) > tThr ||
-            shortestArcDeltaT(rj.t, rk.t) > tThr
-          )
-            continue;
-          // Q2: greedy expansion — add adjacent-rank racers (index >= 2, not P1/P2) up to maxSize.
-          // Track rank span: reject candidates that would push (maxIdx - minIdx) > maxRankSpan.
-          const group = [ri, rj, rk];
-          const groupSet = new Set([i, j, k]);
-          let minGroupIdx = i; // seed frontmost always has best rank (i <= j <= k)
-          let maxGroupIdx = k;
-          for (let e = 2; e < n && group.length < maxSize; e++) {
-            if (groupSet.has(e)) continue;
-            const re = sorted[e];
-            // Rank-span guard: check before spatial/temporal (cheaper)
-            const candMin = Math.min(minGroupIdx, e);
-            const candMax = Math.max(maxGroupIdx, e);
-            if (candMax - candMin > maxRankSpan) continue;
-            let fits = true;
-            for (const gm of group) {
-              if (shortestArcDeltaT(gm.t, re.t) > tThr) {
-                fits = false;
-                break;
-              }
-            }
-            if (fits) {
-              group.push(re);
-              groupSet.add(e);
-              minGroupIdx = candMin;
-              maxGroupIdx = candMax;
-            }
-          }
-          // Q1: isolation check (arc) — reject when any non-member is within isoThrT (lap
-          // fraction) of any member. Skip when threshold is 0 (disabled).
-          if (isoThrT > 0) {
-            let isolated = true;
-            outer: for (let o = 0; o < n; o++) {
-              if (groupSet.has(o)) continue;
-              const ro = sorted[o];
-              for (const gm of group) {
-                if (shortestArcDeltaT(gm.t, ro.t) < isoThrT) {
-                  isolated = false;
-                  break outer;
-                }
-              }
-            }
-            if (!isolated) continue;
-          }
-          return group; // sorted frontmost-first (highest t), size 3–maxSize
-        }
-      }
-    }
-    return null;
+  detectBattleGroup(racers) {
+    return detectPulkGroup(racers, this._battleGates);
   }
 
-  /**
-   * Returns true when a qualifying BATTLE group exists.
-   * All three conditions (spatial + temporal + positional) must hold simultaneously.
-   * @param {Array<{x:number, y:number, t:number}>} racers
-   * @returns {boolean}
-   */
+  /** Alias kept for the diagnostics mixin and the existing tests. */
+  _detectPulkGroup(racers) {
+    return this.detectBattleGroup(racers);
+  }
+
+  /** True when a qualifying BATTLE group exists. */
   _isPulk(racers) {
-    return this._detectPulkGroup(racers) !== null;
+    return this.detectBattleGroup(racers) !== null;
   }
 
   /** Clears all BATTLE lock state and triggers a transition out of BATTLE_ZOOM. */
@@ -2170,89 +2101,33 @@ export class CameraDirector {
   }
 
   /**
-   * Q3 exit condition: returns true while the original locked battle group is still cohesive
-   * (all pairwise arc distances <= battlePulkThresholdT — 15b: same scale-independent measure
-   * as entry, so BATTLE enters AND exits on arc, no world-px). Returns true for empty groups so
-   * tests that set state directly never get spurious early exits.
+   * Q3 exit condition: is the group the camera locked onto still a group? Returns true for a
+   * missing or under-size stored group so a test that sets `state` directly never gets a spurious
+   * early exit — it falls back to "is there any pulk at all".
    * @param {Array} racers
    * @returns {boolean}
    */
   _isOriginalGroupStillValid(racers) {
-    if (
-      !racers ||
-      !this._battleGroupRacerIndices?.length ||
-      this._battleGroupRacerIndices.length < 3
-    )
-      return this._isPulk(racers); // no stored group → fall back to any-pulk check (backward compat)
+    const stored = this._battleGroupRacerIndices;
+    if (!racers || !stored?.length || stored.length < 3) return this._isPulk(racers);
     const group = this._findGroupRacers(racers);
-    if (group.length < this._battleGroupRacerIndices.length) return false;
-    const tThr = this._battlePulkThresholdT;
-    for (let a = 0; a < group.length; a++) {
-      for (let b = a + 1; b < group.length; b++) {
-        const ra = group[a],
-          rb = group[b];
-        if (shortestArcDeltaT(ra.t, rb.t) > tThr) return false;
-      }
-    }
-    return true;
+    if (group.length < stored.length) return false; // somebody left the field entirely
+    return groupStillCohesive(group, this._battleGates.closenessT);
   }
 
-  /**
-   * Returns true when any member of the locked BATTLE group has drifted into P1 or P2
-   * since the group was formed. Used as an additional early-exit trigger in update().
-   * @param {Array} racers  Current full racer list.
-   * @returns {boolean}
-   */
+  /** True once a member of the locked BATTLE group has climbed into P1 or P2 — an exit trigger. */
   _isBattleGroupP2Drifted(racers) {
-    if (!racers || !this._battleGroupRacerIndices?.length) return false;
-    const sorted = [...racers].sort((a, b) => b.t - a.t);
-    const p12Set = new Set([sorted[0]?.index, sorted[1]?.index].filter((v) => v != null));
-    if (p12Set.size === 0) return false;
-    return this._battleGroupRacerIndices.some((idx) => idx != null && p12Set.has(idx));
+    return groupHoldsP1OrP2(racers, this._battleGroupRacerIndices);
   }
 
-  /**
-   * Returns the camera's focus racer during BATTLE_ZOOM.
-   * When a racer was locked at BATTLE_ZOOM entry and is still present in the racers
-   * array, that locked racer is returned so the camera stays on them even if another
-   * racer in the group takes the lead.
-   * Falls back to the current race leader when the locked racer is not found.
-   * @param {Array} racers  Current full racer list.
-   * @returns {object|null}
-   */
-  _getBattleFocusRacer(racers) {
-    const found = this._findByIndex(racers, this._battleLockedRacerIndex, this._battleLockedRacer);
-    if (found) return found;
-    // Fallback: frontmost racer
-    return racers.reduce((best, r) => (!best || r.t > best.t ? r : best), null);
-  }
-
-  /**
-   * Stable racer lookup: tries r.index === idx first (survives renderInterpolation spread-copies),
-   * then falls back to r === fallbackRef (backward compat for tests without index field).
-   * Returns null when neither finds a match.
-   */
+  /** Stable racer lookup that survives renderInterpolation's per-frame spread-copies. */
   _findByIndex(racers, idx, fallbackRef) {
-    if (idx != null) {
-      const r = racers.find((r) => r.index === idx);
-      if (r) return r;
-    }
-    if (fallbackRef) {
-      return racers.find((r) => r === fallbackRef) ?? null;
-    }
-    return null;
+    return findByIndex(racers, idx, fallbackRef);
   }
 
-  /**
-   * Resolves the stored battle group to live racer objects from the current racers array.
-   * Uses _battleGroupRacerIndices for index-based lookup (stable across spread-copies),
-   * falls back to _battleGroupRacers reference for each slot.
-   */
+  /** The stored battle group, resolved to this frame's live racer objects. */
   _findGroupRacers(racers) {
-    if (!racers || !this._battleGroupRacerIndices?.length) return this._battleGroupRacers ?? [];
-    return this._battleGroupRacerIndices
-      .map((idx, i) => this._findByIndex(racers, idx, this._battleGroupRacers?.[i] ?? null))
-      .filter(Boolean);
+    return resolveGroup(racers, this._battleGroupRacerIndices, this._battleGroupRacers);
   }
 
   /**
