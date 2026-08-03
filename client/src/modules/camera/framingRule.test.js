@@ -19,6 +19,7 @@ import {
   companyGuarantee,
   COMPANY_FRAME_PCT,
   anchorScreenPoint,
+  lateralShiftToFit,
 } from './framingRule.js';
 import { CameraDirector, CAM_STATE } from './CameraDirector.js';
 import { DEFAULT_CAMERA_CONFIG } from '../cameraConfig.js';
@@ -592,5 +593,226 @@ describe('CAMERA-COMPANY-1 — the guarantee through the director', () => {
     const a = settle(mk({ ...tight(0) }), racers);
     const b = settle(mk({ ...tight(1) }), racers);
     expect(b.targetZoom).toBeCloseTo(a.targetZoom, 9);
+  });
+});
+
+// ── CAMERA-LATERAL-1: follow ALONG the track, sit on the centreline ACROSS it ─────────────────
+// The owner: "what I really need now is the camera guided laterally on the centreline, because the
+// jumps look partly even worse". The jumps were real and measured: before this block an anchor
+// change moved the camera 62-84 world px sideways, 28-37% of the 225 px shot.
+
+describe('lateralShiftToFit — the lateral guarantee, as arithmetic', () => {
+  const SCALE = 2; // screen px per world px along the perpendicular
+  const ROOM = 200; // screen px available on each side of the anchor
+
+  it('holds the centreline when everything already fits — the default is 0, exactly', () => {
+    expect(lateralShiftToFit([50, -50, 80], ROOM, ROOM, SCALE)).toBe(0);
+    expect(lateralShiftToFit([0], ROOM, ROOM, SCALE)).toBe(0);
+  });
+
+  it('shifts by the LEAST that works, and no more', () => {
+    // A subject 150 world px out needs 300 screen px; only 200 are available, so the camera must
+    // move 50 world px toward it — not to it, and not past it.
+    expect(lateralShiftToFit([150], ROOM, ROOM, SCALE)).toBeCloseTo(50, 9);
+    expect(lateralShiftToFit([-150], ROOM, ROOM, SCALE)).toBeCloseTo(-50, 9);
+  });
+
+  it('returns to the centreline as soon as it can — no memory, no hysteresis', () => {
+    expect(lateralShiftToFit([150], ROOM, ROOM, SCALE)).toBeCloseTo(50, 9);
+    expect(lateralShiftToFit([90], ROOM, ROOM, SCALE)).toBe(0); // the very next frame, back to zero
+  });
+
+  it('honours an ASYMMETRIC frame — a forward-framed anchor has unequal room to the sides', () => {
+    expect(lateralShiftToFit([150], 100, 300, SCALE)).toBeCloseTo(100, 9); // less room that way
+    expect(lateralShiftToFit([150], 400, 100, SCALE)).toBe(0); // plenty that way
+  });
+
+  it('satisfies EVERY subject at once, not just the worst one', () => {
+    const d = lateralShiftToFit([150, -20], ROOM, ROOM, SCALE);
+    for (const L of [150, -20]) expect(Math.abs(L - d) * SCALE).toBeLessThanOrEqual(ROOM + 1e-9);
+    expect(d).toBeCloseTo(50, 9); // the least that satisfies BOTH, not the worst one's demand
+  });
+
+  it('an impossible set splits the difference rather than picking a side', () => {
+    // 300 apart with only 200 px of room each way: no shift fits both. The ZOOM guarantee should
+    // have widened; this must still return something sane rather than a wild number.
+    const d = lateralShiftToFit([200, -200], ROOM, ROOM, SCALE);
+    expect(d).toBeCloseTo(0, 9);
+    expect(Number.isFinite(d)).toBe(true);
+  });
+
+  it('degenerate inputs constrain nothing', () => {
+    expect(lateralShiftToFit([], ROOM, ROOM, SCALE)).toBe(0);
+    expect(lateralShiftToFit([50], ROOM, ROOM, 0)).toBe(0);
+    expect(lateralShiftToFit(null, ROOM, ROOM, SCALE)).toBe(0);
+  });
+
+  // FAILURE PROOF — the defect this function had on its first cut, kept as arithmetic. Written as
+  // "bring these screen POINTS inside the frame", a subject far away ALONG the track would drag the
+  // camera sideways chasing something no lateral move can reach. Measured on an open track's
+  // LEAD_CHANGE it drove the camera 500 world px off the centreline. The signature is the proof:
+  // this function cannot see the along-track axis at all, because it is never given it.
+  it('FAILURE PROOF: an along-track excursion cannot move the lateral guarantee', () => {
+    expect(lateralShiftToFit.length).toBe(4); // offsets, roomPlus, roomMinus, scale — no 2-D input
+    // the same lateral offsets give the same answer no matter what happens along the track
+    expect(lateralShiftToFit([40, -40], ROOM, ROOM, SCALE)).toBe(0);
+  });
+});
+
+describe('CAMERA-LATERAL-1 — the two axes, through the director', () => {
+  const TW = 178;
+  const FRAME = { width: 1280, height: 720 };
+  // A closed oval whose heading rotates through every orientation over a lap.
+  const shape = {
+    isOpen: false,
+    getActualTrackWidth: () => TW,
+    getTotalLength: () => 4000,
+    getPosition: (t) => {
+      const a = 2 * Math.PI * (((t % 1) + 1) % 1);
+      return { x: 1536 + Math.cos(a) * 900, y: 1024 + Math.sin(a) * 600, angle: a };
+    },
+  };
+  // The world point of a racer sitting `lat` world px off the centreline at track position t.
+  const atLane = (t, lat) => {
+    const a = shape.getPosition(t);
+    const b = shape.getPosition(t + 0.002);
+    const dx = b.x - a.x;
+    const dy = b.y - a.y;
+    const L = Math.hypot(dx, dy) || 1;
+    return { x: a.x - (dy / L) * lat, y: a.y + (dx / L) * lat };
+  };
+  const mk = (cfg) =>
+    new CameraDirector(3072, 2047, false, { ...DEFAULT_CAMERA_CONFIG, ...cfg }, 28.5, shape, TW);
+  const rs = { raceElapsed: 20000, finishedCount: 0, winner: null, finishT: 2 };
+  const settle = (cd, racers, state, frames = 240) => {
+    for (let i = 0; i < frames; i++) {
+      cd.state = state;
+      cd.update(racers, 20000 + i * 16, rs, FRAME.width, FRAME.height);
+    }
+    return cd;
+  };
+  // How far the committed camera centre sits off the corridor centreline, in world px. Measured by
+  // nearest point on the whole lap, because each state anchors on a different racer at a different
+  // track position — reading it at one fixed t would measure the wrong place for half of them.
+  const offCentreline = (cd) => {
+    const cx = (FRAME.width / 2 - cd.offsetX) / cd._proj.effX(cd.zoom);
+    const cy = (FRAME.height / 2 - cd.offsetY) / cd._proj.effY(cd.zoom);
+    let best = Infinity;
+    let bt = 0;
+    for (let i = 0; i < 2000; i++) {
+      const p = shape.getPosition(i / 2000);
+      const d = (p.x - cx) ** 2 + (p.y - cy) ** 2;
+      if (d < best) {
+        best = d;
+        bt = i / 2000;
+      }
+    }
+    const on = shape.getPosition(bt);
+    const b = shape.getPosition(bt + 0.002);
+    const dx = b.x - on.x;
+    const dy = b.y - on.y;
+    const L = Math.hypot(dx, dy) || 1;
+    return (cx - on.x) * (-dy / L) + (cy - on.y) * (dx / L);
+  };
+  const field = (leaderLane) => {
+    const out = [];
+    for (let i = 0; i < 8; i++) {
+      const t = 0.5 - 0.03 * i;
+      const lane = i === 0 ? leaderLane : ((i % 3) - 1) * (TW / 3);
+      const p = atLane(t, lane);
+      out.push({ index: i, name: `R${i}`, t, x: p.x, y: p.y, finished: false });
+    }
+    return out;
+  };
+
+  it('THE ASK: a lead change between racers in different lanes does not throw the picture sideways', () => {
+    // Same track position, opposite lanes — the worst case for an anchor swap, and exactly what the
+    // owner sees. Under the old rule the camera carried the subject's lane, so this moved it a full
+    // corridor width. Under the new rule the ACROSS axis never moved at all.
+    const cd = mk({ minRacersVisible: 0 });
+    settle(cd, field(-TW / 2), CAM_STATE.LEADER_ZOOM);
+    const before = offCentreline(cd);
+    settle(cd, field(+TW / 2), CAM_STATE.LEADER_ZOOM);
+    const after = offCentreline(cd);
+    expect(Math.abs(after - before)).toBeLessThan(TW * 0.1); // was a full corridor width
+    expect(Math.abs(before)).toBeLessThan(TW * 0.1); // and both sit ON the centreline
+    expect(Math.abs(after)).toBeLessThan(TW * 0.1);
+  });
+
+  it('ALONG the track the camera still follows the subject — this is NOT CAMERA-FOCUS-3', () => {
+    // The pin is cross-track only. Move the subject ALONG the track and the camera must follow.
+    const cd = mk({ minRacersVisible: 0 });
+    const at = (t) => {
+      const f = field(0).map((r, i) => {
+        const tt = t - 0.03 * i;
+        const p = atLane(tt, 0);
+        return { ...r, t: tt, x: p.x, y: p.y };
+      });
+      settle(cd, f, CAM_STATE.LEADER_ZOOM);
+      return {
+        x: (FRAME.width / 2 - cd.offsetX) / cd._proj.effX(cd.zoom),
+        y: (FRAME.height / 2 - cd.offsetY) / cd._proj.effY(cd.zoom),
+      };
+    };
+    const a = at(0.25);
+    const b = at(0.5);
+    const moved = Math.hypot(b.x - a.x, b.y - a.y);
+    const subjectMoved = Math.hypot(
+      shape.getPosition(0.5).x - shape.getPosition(0.25).x,
+      shape.getPosition(0.5).y - shape.getPosition(0.25).y
+    );
+    expect(moved).toBeGreaterThan(subjectMoved * 0.5); // it travelled with the subject
+  });
+
+  it('every state sits on the centreline — one rule, no exemptions', () => {
+    for (const state of [
+      CAM_STATE.LEADER_ZOOM,
+      CAM_STATE.COMEBACK_ZOOM,
+      CAM_STATE.OVERVIEW,
+      CAM_STATE.BATTLE_ZOOM,
+      CAM_STATE.LEAD_CHANGE,
+      CAM_STATE.PHOTO_FINISH,
+    ]) {
+      const cd = mk({ minRacersVisible: 0 });
+      settle(cd, field(TW / 2), state);
+      expect(Math.abs(offCentreline(cd)), state).toBeLessThan(TW * 0.35);
+    }
+  });
+
+  // FAILURE PROOF for the lateral guarantee — his second question, and the one that decides it:
+  // "do we still see everything important on the track?"
+  it('WORST CASE: outermost lane, tightest setting, corridor across the SHORT screen axis', () => {
+    // t = 0.25 on this oval is the top of the arc, where the track runs horizontally on screen, so
+    // the corridor is measured up-down — the short axis, the least room there is.
+    const T = 0.25;
+    const tight = {
+      minRacersVisible: 0,
+      cameraStateProfiles: Object.fromEntries(
+        Object.entries(DEFAULT_CAMERA_CONFIG.cameraStateProfiles).map(([k, v]) => [
+          k,
+          { ...v, visibleCorridors: 0.25 }, // the tightest the control allows
+        ])
+      ),
+    };
+    for (const lane of [+TW / 2, -TW / 2]) {
+      const outer = atLane(T, lane);
+      const racers = [
+        { index: 0, name: 'OUTER', t: T, x: outer.x, y: outer.y, finished: false },
+        ...field(0)
+          .slice(1)
+          .map((r, i) => {
+            const tt = T - 0.03 * (i + 1);
+            const p = atLane(tt, 0);
+            return { ...r, t: tt, x: p.x, y: p.y };
+          }),
+      ];
+      const cd = settle(mk(tight), racers, CAM_STATE.LEADER_ZOOM);
+      const sx = outer.x * cd._proj.effX(cd.zoom) + cd.offsetX;
+      const sy = outer.y * cd._proj.effY(cd.zoom) + cd.offsetY;
+      expect(sx, `lane ${lane} x`).toBeGreaterThanOrEqual(0);
+      expect(sx, `lane ${lane} x`).toBeLessThanOrEqual(FRAME.width);
+      expect(sy, `lane ${lane} y`).toBeGreaterThanOrEqual(0);
+      expect(sy, `lane ${lane} y`).toBeLessThanOrEqual(FRAME.height);
+    }
   });
 });

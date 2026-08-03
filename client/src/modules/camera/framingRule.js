@@ -362,6 +362,56 @@ export function companyGuarantee(
   return ceilings[Math.min(need, ceilings.length) - 1];
 }
 
+/**
+ * THE LATERAL GUARANTEE — CAMERA-LATERAL-1.
+ *
+ * The camera sits on the corridor centreline ACROSS the track. That is a default position, and like
+ * every default position in this design it has a guarantee behind it: shift off the centreline only
+ * when a guaranteed subject would otherwise leave the frame, by the smallest amount that works, and
+ * return to zero the moment it is no longer needed.
+ *
+ * It SHIFTS; it never steers. It cannot choose a subject, cannot look ahead, and has no memory: given
+ * the same geometry it returns the same number, and given geometry that already fits it returns
+ * exactly 0. That is what keeps it a guarantee rather than a second follow rule (Lesson 192).
+ *
+ * STRICTLY ONE-DIMENSIONAL, and that is not a simplification — it is the fix for a defect this
+ * function had on its first cut. Written as "bring these screen points inside the frame rectangle",
+ * it would also try to rescue a subject that is out of frame ALONG the track, because a diagonal
+ * perpendicular has a component on both screen axes. On an open track's LEAD_CHANGE, where the
+ * passed racer can be far behind, that drove the camera 500 world px off the centreline chasing a
+ * subject no sideways move could ever reach. The lateral guarantee owns the lateral axis and nothing
+ * else; an along-track excursion is the ZOOM guarantee's business.
+ *
+ * The algebra, per subject: it sits `L` world px off the centreline; the camera sits `d` off it; so
+ * the subject is `(L - d)` off the camera's own axis, which on screen is `(L - d) * scale` px away
+ * from the anchor along the perpendicular. That must fall inside the room the frame leaves on each
+ * side, giving one interval of admissible `d` per subject. The answer is the value of smallest
+ * magnitude in their intersection — which is 0 whenever 0 is admissible, i.e. hold the centreline.
+ *
+ * @param {number[]} lateralOffsets  each guaranteed subject's world px offset from the centreline
+ * @param {number} roomPlus   screen px from the anchor to the frame edge along +perpendicular
+ * @param {number} roomMinus  screen px from the anchor to the frame edge along -perpendicular
+ * @param {number} scale      screen px per world px along the perpendicular
+ * @returns {number} world px to shift the pan target along the perpendicular; 0 = hold the centreline
+ */
+export function lateralShiftToFit(lateralOffsets, roomPlus, roomMinus, scale) {
+  if (!Array.isArray(lateralOffsets) || lateralOffsets.length === 0) return 0;
+  if (!(scale > 0) || !(roomPlus >= 0) || !(roomMinus >= 0)) return 0;
+  let lo = -Infinity;
+  let hi = Infinity;
+  for (const L of lateralOffsets) {
+    if (!Number.isFinite(L)) continue;
+    lo = Math.max(lo, L - roomPlus / scale);
+    hi = Math.min(hi, L + roomMinus / scale);
+  }
+  if (!Number.isFinite(lo) || !Number.isFinite(hi)) return 0;
+  // Unsatisfiable: no shift fits everyone, which means the ZOOM guarantee should have widened and
+  // did not. Split the difference rather than picking a side, and never return a wild number.
+  if (lo > hi) return (lo + hi) / 2;
+  if (lo <= 0 && hi >= 0) return 0; // the centreline already works — hold it
+  return lo > 0 ? lo : hi; // the smallest move that reaches the admissible interval
+}
+
 /** Unit perpendicular to a world heading, or null when the heading is degenerate. */
 function perpendicularOf(heading) {
   if (!heading) return null;

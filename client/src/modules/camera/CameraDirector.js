@@ -21,7 +21,7 @@ import {
   corridorsForCamZoom,
   visibleWorldPx,
 } from './zoomUnit.js';
-import { frameExtentAlong } from './frameGeometry.js';
+import { frameExtentAlong, roomFromPointAlong } from './frameGeometry.js';
 import {
   framingFor,
   GUARANTEE,
@@ -31,6 +31,7 @@ import {
   companyGuarantee,
   COMPANY_FRAME_PCT,
   anchorScreenPoint,
+  lateralShiftToFit,
 } from './framingRule.js';
 
 export const CAM_STATE = {
@@ -1721,6 +1722,101 @@ export class CameraDirector {
   }
 
   /**
+   * CAMERA-LATERAL-1: THE ACROSS-TRACK PIN. The corridor centreline at a track parameter.
+   *
+   * ==========================================================================================
+   * READ THIS BEFORE "FIXING" IT. This looks like the camera saga's original defect —
+   * CAMERA-FOCUS-3, where the camera tracked the track centreline for months because the follow
+   * observer was never switched on. It is NOT the same thing, and the difference is the design:
+   *
+   *   THAT bug pinned BOTH axes, and it was an ACCIDENT.
+   *   THIS pins ONLY the cross-track axis, and it is DELIBERATE.
+   *
+   * Along the track the camera follows the subject exactly as before, forward offset and all —
+   * `_smoothFocal`, `_applyLeaderForwardBias` and the whole follow path are untouched. Only the
+   * component ACROSS the corridor is replaced by the centreline, because carrying the subject's LANE
+   * is what threw the picture sideways at every lead change: measured before this block, an anchor
+   * change moved the camera 62-84 world px sideways, 28-37% of the 225 px shot.
+   *
+   * If you are here because the camera "does not follow the racer", check the ALONG axis first. It
+   * does. Delete this and the sideways jumping comes straight back.
+   * ==========================================================================================
+   *
+   * @param {number|null} t
+   * @returns {{x:number,y:number}|null}
+   */
+  _centrelineAt(t) {
+    if (t == null || !this._shape) return null;
+    const tt = this._isOpenTrack ? Math.max(0, Math.min(1, t)) : ((t % 1) + 1) % 1;
+    return this._shape.getPosition(tt, 0) ?? null;
+  }
+
+  /**
+   * CAMERA-LATERAL-1: the lateral guarantee. Shift off the centreline only to keep the state's
+   * guaranteed subjects in frame, by the least that works, and return to zero as soon as it can.
+   *
+   * WHICH SUBJECTS, and why only these. The zoom guarantees measure FROM the anchor, so with the
+   * anchor pinned to the centreline the corridor and the company are exact by construction — the
+   * corridor is symmetric about the anchor and each companion's vector starts there. The PAIR
+   * guarantee is the one that is not: it measures the separation |a-b| against the whole chord and
+   * assumes the pair is centred about the anchor, which a pinned anchor no longer provides. The
+   * corridor edges are included anyway, at no cost, so a future change to the zoom rule cannot
+   * quietly start cropping the corridor without a test noticing.
+   *
+   * @returns {{x:number,y:number}} the pan target, shifted along the perpendicular when it must be
+   */
+  _applyLateralGuarantee(panTarget, headingT, subjects, camZoom, frameSize) {
+    if (!panTarget || !this._shape) return panTarget;
+    const heading = this._headingAt(headingT);
+    if (!heading) return panTarget;
+    const len = Math.hypot(heading.x, heading.y);
+    if (!(len > 0)) return panTarget;
+    const perp = { x: -heading.y / len, y: heading.x / len };
+
+    const anchor = subjects.point ?? panTarget;
+    const effX = this._proj.effX(camZoom);
+    const effY = this._proj.effY(camZoom);
+    const at = anchorScreenPoint(
+      frameSize.width,
+      frameSize.height,
+      framingFor(this.state).position === POSITION.FORWARD ? this._leaderForwardFrac : null,
+      this._headingScreen(headingT)
+    );
+    // The perpendicular in SCREEN space, and how many screen px one world px along it is worth.
+    const vx = perp.x * effX;
+    const vy = perp.y * effY;
+    const scale = Math.hypot(vx, vy);
+    if (!(scale > 0)) return panTarget;
+    const pct = this._innerFramePct ?? DEFAULT_INNER_FRAME_PCT;
+    const roomPlus = roomFromPointAlong(at.x, at.y, vx, vy, frameSize.width, frameSize.height, pct);
+    const roomMinus = roomFromPointAlong(
+      at.x,
+      at.y,
+      -vx,
+      -vy,
+      frameSize.width,
+      frameSize.height,
+      pct
+    );
+
+    // Each guaranteed subject's offset from the CENTRELINE, in world px. The anchor is on the
+    // centreline, so a subject's lateral offset is just its displacement projected on the perpendicular.
+    const lateralOf = (r) => (r.x - anchor.x) * perp.x + (r.y - anchor.y) * perp.y;
+    const offsets = [];
+    const half = this._trackWidthPx / 2;
+    if (half > 0) offsets.push(half, -half); // the corridor edges, always
+    if (framingFor(this.state).guarantee === GUARANTEE.PAIR) {
+      for (const r of subjects.pair) if (r) offsets.push(lateralOf(r));
+    }
+    if (offsets.length === 0) return panTarget;
+
+    const d = lateralShiftToFit(offsets, roomPlus, roomMinus, scale);
+    if (!Number.isFinite(d) || d === 0) return panTarget;
+    this._lateralShiftPx = d;
+    return { x: panTarget.x + perp.x * d, y: panTarget.y + perp.y * d };
+  }
+
+  /**
    * CAMERA-COMPANY-2: the same tangent in SCREEN space. Zoom cancels — only the axis RATIO survives
    * the normalisation — so this is a fixed direction for a given track parameter, which is why the
    * company guarantee can ask where the anchor will sit before the zoom is known.
@@ -2459,6 +2555,8 @@ export class CameraDirector {
     const subjects = this._framingSubjects(racers, focusRacers);
     let panTarget = subjects.point;
     let headingT = subjects.t;
+    let pinAcross = true;
+    this._lateralShiftPx = 0;
 
     // OVERVIEW's anchor exceptions, in priority order. Each REPLACES the anchor and then rejoins.
     if (this.state === CAM_STATE.OVERVIEW) {
@@ -2472,25 +2570,45 @@ export class CameraDirector {
           headingT = lookbackT;
         }
       } else if (startPhase) {
-        // Before a leader exists, hold the whole field so nobody is cropped at the gun.
+        // Before a leader exists, hold the whole field so nobody is cropped at the gun. The field
+        // spans the whole corridor here and there is no single subject, so the across-track pin does
+        // not apply — this branch keeps the centroid it always had.
         panTarget = getPanTarget(
           CAM_STATE.OVERVIEW,
           racers.length ? racers : focusRacers,
           this._shape
         );
+        pinAcross = false;
       }
     }
 
     // Entry-phase T-space pan: the camera travels along the racing line to its new subject rather
     // than cutting across the infield. Same anchor, different route to it.
-    if (this._panFollowsCamT()) {
+    const followsCamT = this._panFollowsCamT();
+    if (followsCamT) {
       const camTPos = this._shapePosAtCamT();
       if (camTPos) {
         panTarget = camTPos;
         headingT = this._camT;
+        pinAcross = false; // the T-space pan is already ON the centreline by construction
       }
-    } else if (
+    }
+
+    // ── ACROSS THE TRACK: the corridor centreline. ALONG the track: unchanged. ─────────────────
+    // CAMERA-LATERAL-1. Done BEFORE the focal smoothing, so the smoothing keeps doing its job on the
+    // along-track motion, and before the guarantees, so each of them measures from the anchor the
+    // camera will actually use. See _centrelineAt for why this is NOT the CAMERA-FOCUS-3 defect.
+    if (pinAcross) {
+      const onCentre = this._centrelineAt(headingT);
+      if (onCentre) {
+        panTarget = onCentre;
+        subjects.point = onCentre;
+      }
+    }
+
+    if (
       panTarget &&
+      !followsCamT &&
       (this.state === CAM_STATE.LEADER_ZOOM || this.state === CAM_STATE.COMEBACK_ZOOM)
     ) {
       // Focal smoothing removes the brake-induced velocity oscillation on single-racer anchors.
@@ -2519,6 +2637,9 @@ export class CameraDirector {
         canvasH
       );
     }
+
+    // ── AND ACROSS IT: shift off the centreline only when a guaranteed subject needs it ────────
+    panTarget = this._applyLateralGuarantee(panTarget, headingT, subjects, guaranteed, frameSize);
 
     this._setTrackTargets(panTarget, guaranteed, frameSize);
   }

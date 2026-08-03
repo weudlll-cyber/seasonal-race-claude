@@ -184,6 +184,17 @@ unit now divides by a Dev Screen reference width instead, applied as `max(refere
   starts at 1.0. Camera-only; the shipped world `dc4647be0f55ebdb` is untouched on both sides. Config
   schema v20 (this block ships v21, which discards a stored v20 camera config).
 
+### Camera follows along the track, sits on the centreline across it — CAMERA-LATERAL-1 (2026-08-03, branch `camera-refactor`)
+Return point captured before the anchor stopped carrying the subject's LANE. The reference-width block
+tightened the shot (600 -> 225 world px on the 300 px tracks), which made an old defect visible rather
+than causing it: a lead change between racers in different lanes threw the picture sideways by 62-84
+world px, 28-37% of the shot. The camera now follows ALONG the track exactly as before and sits on the
+corridor CENTRELINE across it, with a lateral guarantee that shifts only when a guaranteed subject
+would otherwise leave the frame.
+- `pre/lateral` (`3b06f78f`, 2026-08-03) — the state where the pan anchor carries the subject's lateral
+  position on both axes. Camera-only; the shipped world `dc4647be0f55ebdb` is untouched on both sides.
+  Config schema v21 on both sides.
+
 ## Active-phase tags (temporary scaffolding — to collapse later)
 
 Step-tags from the runaway phase (now CLOSED 2026-07-29, see below) and any later work — safe return points, not permanent anchors. They collapse into
@@ -601,6 +612,7 @@ The full list of the 177 retired tags is recorded below for the archive.
 - `pre/company`
 - `pre/company-2`
 - `pre/framing`
+- `pre/lateral`
 - `pre/reference-width`
 - `pre/picture-fixes`
 - `pre/v4-on-trunk`
