@@ -26,6 +26,7 @@ import {
   drawFinishedOverlay,
 } from './drawing/overlayRendering.js';
 import { emitBurst, drawParticles, drawSurfaceTrails } from './drawing/particleRendering.js';
+import { computeTagLayout, tagFontScreenPx } from './nameTagLayout.js';
 import { drawRacers } from './drawing/racerRendering.js';
 import { formatRaceTime } from '../../utils/formatRaceTime.js';
 import { lerp, lerpAngle } from '../../utils/mathUtils.js';
@@ -125,6 +126,8 @@ export default function RaceScreen() {
   // eslint-disable-next-line react-hooks/refs
   fadeNavRef.current = fadeNavigate; // inline render-body sync — no extra effect, no queue shift
   const canvasRef = useRef(null);
+  // CAMERA-TAGS-1: the set of racer indices that carried a name tag last frame.
+  const tagIncumbentsRef = useRef(null);
   const bgCanvasRef = useRef(null);
   const screenRef = useRef(null);
   const rafRef = useRef(null);
@@ -1309,11 +1312,45 @@ export default function RaceScreen() {
       const focusFactor = st.focusFadeProgress ?? 0;
       const livePulkGroup =
         focusFactor > 0 ? (camDirRef.current?._detectPulkGroup?.(st.racers) ?? null) : null;
+      // ── CAMERA-TAGS-1: WHICH names are drawn, decided in SCREEN space before anything is drawn ──
+      // Eligibility is "on canvas"; label-vs-label occlusion decides the rest, so the count is an
+      // output. The START-FORMATION exception shows every name through the countdown and for
+      // `nameTagAllUntilMs` after the gun — the owner's requirement, so a spectator can find their
+      // racer once. `tagIncumbentsRef` carries last frame's set: a label already on screen is
+      // offered its pixels first, which is what keeps the layout from churning (Lesson 190).
+      const tagFontPx = tagFontScreenPx(cameraConfigRef.current.nameTagFrameFrac, canvas.height);
+      const raceElapsedMs = st.raceStart != null ? ts - st.raceStart : 0;
+      const showAllTags =
+        st.phase !== PHASE.RACING ||
+        raceElapsedMs < (cameraConfigRef.current.nameTagAllUntilMs ?? 0);
+      ctx.save();
+      ctx.font = `bold ${tagFontPx}px sans-serif`;
+      const measureTagText = (txt) => ctx.measureText(txt).width;
+      const tagLayout = computeTagLayout({
+        racers: st.racers,
+        effX: frameEffZoom,
+        effY: markerFrame.effZoomY,
+        offsetX: cam.offsetX,
+        offsetY: cam.offsetY,
+        canvasW: canvas.width,
+        canvasH: canvas.height,
+        fontPx: tagFontPx,
+        measureText: measureTagText,
+        showAll: showAllTags,
+        incumbents: tagIncumbentsRef.current,
+        labelOf: (r) =>
+          showRpStartRowCfg
+            ? r.name + ' (R' + (assignmentByRacer.get(r.index)?.rowIndex ?? 0) + ')'
+            : r.name,
+      });
+      ctx.restore();
+      tagIncumbentsRef.current = tagLayout.shown;
+
       drawRacers(
         ctx,
         st,
         racerTypeRef.current,
-        cameraConfigRef.current.tagVisibleMaxCount,
+        tagLayout,
         cameraConfigRef.current.battleFocusDarkening,
         camDirRef.current?.hudState ?? null,
         camDirRef.current?.comebackLockedRacerIndex ?? null,
@@ -1323,6 +1360,8 @@ export default function RaceScreen() {
         assignmentByRacer,
         frameDisplayScale,
         frameEffZoom,
+        markerFrame.effZoomY,
+        tagFontPx,
         renderAlpha,
         frameTimingConfig.renderInterpolation,
         cameraConfigRef.current.highlightHeroes ?? false,

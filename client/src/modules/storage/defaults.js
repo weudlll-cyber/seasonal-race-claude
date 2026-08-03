@@ -184,7 +184,27 @@ export const DEFAULT_CAMERA_CONFIG = {
   // tracks whose racers are drawn at 14.3 world px (Mountainstreet, Seatrack, Space Sprint) plus a
   // 1% nudge on Dirt Oval; nothing outside OVERVIEW is touched at any value up to 0.06.
   minDrawnFrameFrac: 0.045,
-  tagVisibleMaxCount: 10,
+  // CAMERA-TAGS-1 — name tags. `tagVisibleMaxCount` (top N by race position) is GONE: it answered
+  // "who matters in the standings" where a label answers "who is that on screen", and it never
+  // looked at whether two labels landed on each other. Eligibility is now "on canvas" and
+  // label-vs-label occlusion decides the rest, so the COUNT is an output rather than a setting.
+  //
+  // The label is UI: the same size on screen at every zoom, on every track, at any world
+  // resolution. 0.022 of frame height = 15.8 px at 720. The rule it replaces was
+  // max(8, round(11/effZoom)), which clamped above effZoom 1.375 and so produced a 2.4x size
+  // difference between tracks at one setting.
+  nameTagFrameFrac: 0.022,
+  // THE START-FORMATION EXCEPTION, and the owner's reason for it: during the start formation EVERY
+  // name must be visible so that every spectator can find their racer once. All names are shown
+  // through the countdown and for this long after the gun.
+  //
+  // 8000 ms is measured, not chosen. Decluttering drops 10-22% of names while the field is still a
+  // block, worst around 4 s in; by 8 s it drops essentially nothing (survival ratio 1.00). So the
+  // handover costs names before 8 s and costs nothing after it — and because nothing is dropped at
+  // that moment, the switch is INVISIBLE and needs no transition. Note this is well past the
+  // camera's own 3 s start hold: handing over when the camera does would take ~20% of the names
+  // away at the densest moment.
+  nameTagAllUntilMs: 8000,
   showCameraStateHud: true,
   showCameraDiagnostics: false,
   showRpDiag: false,

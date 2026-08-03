@@ -7,41 +7,54 @@
 //              in world coordinates.
 // ============================================================
 
-import { visibleTagRacers } from '../nameTagVisibility.js';
 import { lerp, lerpAngle } from '../../../utils/mathUtils.js';
 
 const PHASE_RACING = 1;
 
 /**
- * Draws the name tag above a racer in world coordinates.
+ * Draws the name tag above a racer.
+ *
+ * CAMERA-TAGS-1: the label is UI, so it is drawn in SCREEN pixels. The old rule sized it in world
+ * units as `max(8, round(11 / effZoom))` — the `/effZoom` was right (it is what keeps a world-drawn
+ * label constant on screen) but `round()` collapsed it at high zoom and the `max(8, …)` added to
+ * catch that then CLAMPED, so above effZoom 1.375 the label grew again: a 2.4x size difference
+ * between tracks at one setting. Sizing in world units also SQUASHED the label vertically by up to
+ * 16% on closed tracks, whose world->screen scale is anisotropic.
+ *
+ * Both go away by undoing the camera transform for the label alone: translate to the racer, scale by
+ * (1/effX, 1/effY), and from there one unit IS one screen pixel. No rounding, no clamp, no squash.
+ *
  * @param {CanvasRenderingContext2D} ctx
  * @param {number} px  World X position.
  * @param {number} py  World Y position.
  * @param {string} name
  * @param {boolean} isLeader
  * @param {boolean} isComeback
- * @param {number} ezoom  Effective canvas zoom (used to size labels in world units).
+ * @param {number} effX  world->screen scale on X at the current zoom
+ * @param {number} effY  world->screen scale on Y
+ * @param {number} fontPx  label font size in SCREEN px
  * @param {boolean} isRacing  True when phase === RACING (enables crown icon).
  */
-function drawNameTag(ctx, px, py, name, isLeader, isComeback, ezoom, isRacing) {
-  const inv = 1 / ezoom;
-  const fontPx = Math.max(8, Math.round(11 * inv));
-  const bgH = Math.max(6, Math.round(13 * inv));
-  const offsetY = Math.max(12, Math.round(22 * inv));
-  const nameY = py - offsetY;
+function drawNameTag(ctx, px, py, name, isLeader, isComeback, effX, effY, fontPx, isRacing) {
+  const bgH = fontPx * 1.18;
+  const offsetY = fontPx * 2.0;
+  ctx.save();
+  ctx.translate(px, py);
+  ctx.scale(1 / effX, 1 / effY); // one unit is now one screen pixel
   ctx.font = `bold ${fontPx}px sans-serif`;
-  const nameW = ctx.measureText(name).width + Math.round(8 * inv);
+  const nameW = ctx.measureText(name).width + 8;
   ctx.fillStyle = 'rgba(0,0,0,0.65)';
-  ctx.fillRect(px - nameW / 2, nameY - bgH, nameW, bgH);
+  ctx.fillRect(-nameW / 2, -offsetY - bgH, nameW, bgH);
   ctx.textBaseline = 'bottom';
   ctx.textAlign = 'center';
   ctx.fillStyle = isLeader ? '#ffd700' : isComeback ? '#00dd55' : '#eee';
-  ctx.fillText(name, px, nameY);
+  ctx.fillText(name, 0, -offsetY);
   if (isLeader && isRacing) {
-    ctx.font = `${Math.max(10, Math.round(14 * inv))}px serif`;
+    ctx.font = `${fontPx * 1.27}px serif`;
     ctx.textBaseline = 'bottom';
-    ctx.fillText('👑', px, nameY - bgH);
+    ctx.fillText('👑', 0, -offsetY - bgH);
   }
+  ctx.restore();
 }
 
 /**
@@ -50,7 +63,8 @@ function drawNameTag(ctx, px, py, name, isLeader, isComeback, ezoom, isRacing) {
  * @param {CanvasRenderingContext2D} ctx
  * @param {object} st  Game state (g.current): racers, phase, focusFadeProgress, slowmoTs, lastTs.
  * @param {object} racerType  Racer type instance with drawRacer() method.
- * @param {number} tagVisibleMaxCount  Max tags shown (from cameraConfig).
+ * @param {{shown:Set<number>}} tagLayout  CAMERA-TAGS-1: which racers get a tag this frame, decided
+ *        in screen space by nameTagLayout.computeTagLayout. The renderer only obeys it.
  * @param {number} battleFocusDarkening  Dim factor for non-group racers (from cameraConfig).
  * @param {string|null} hudState  CameraDirector.hudState (for comeback detection).
  * @param {number|null} comebackLockedIdx  CameraDirector.comebackLockedRacerIndex.
@@ -59,7 +73,9 @@ function drawNameTag(ctx, px, py, name, isLeader, isComeback, ezoom, isRacing) {
  * @param {boolean} showRpStartRowCfg  Whether to show row number in name tags.
  * @param {Map} assignmentByRacer  racer.index → { rowIndex } assignment map.
  * @param {number} effectiveScale  Sprite display scale.
- * @param {number} ezoom  Effective canvas zoom.
+ * @param {number} ezoom  Effective canvas zoom (X axis).
+ * @param {number} ezoomY  Effective canvas zoom on Y (differs on closed tracks).
+ * @param {number} tagFontPx  Name-tag font size in SCREEN px.
  * @param {number} renderAlpha  Render-interpolation alpha (0 = no interp).
  * @param {boolean} interpolationEnabled  Whether render interpolation is active.
  */
@@ -67,7 +83,7 @@ export function drawRacers(
   ctx,
   st,
   racerType,
-  tagVisibleMaxCount,
+  tagLayout,
   battleFocusDarkening,
   hudState,
   comebackLockedIdx,
@@ -77,6 +93,8 @@ export function drawRacers(
   assignmentByRacer,
   effectiveScale,
   ezoom,
+  ezoomY,
+  tagFontPx,
   renderAlpha,
   interpolationEnabled,
   highlightHeroes = false,
@@ -85,7 +103,7 @@ export function drawRacers(
   const leader = st.racers.reduce((a, b) => (b.t > a.t ? b : a));
   const inv = 1 / ezoom;
   const isRacing = st.phase === PHASE_RACING;
-  const tagSet = new Set(visibleTagRacers(st.racers, isRacing, tagVisibleMaxCount));
+  const tagShown = tagLayout?.shown ?? null;
   const doInterp = interpolationEnabled && isRacing;
 
   const isInComeback = hudState === 'COMEBACK_ZOOM';
@@ -157,7 +175,7 @@ export function drawRacers(
         ctx.restore();
       }
     }
-    if (tagSet.has(r) || rIsComeback) {
+    if (tagShown?.has(r.index) || rIsComeback) {
       const tagName = showRpStartRowCfg
         ? r.name + ' (R' + (assignmentByRacer.get(r.index)?.rowIndex ?? 0) + ')'
         : r.name;
@@ -169,6 +187,8 @@ export function drawRacers(
         r === leader,
         rIsComeback && r !== leader,
         ezoom,
+        ezoomY ?? ezoom,
+        tagFontPx,
         isRacing
       );
     }

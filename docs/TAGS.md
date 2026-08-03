@@ -220,6 +220,17 @@ with a test pinning that it cannot reach the zoom. First block to run the new MI
   on the three widest tracks is drawn at 3.17% of frame height in OVERVIEW. Shipped world
   `dc4647be0f55ebdb` untouched on both sides.
 
+### Name tags: the unit, and readability before count — CAMERA-TAGS-1 (2026-08-03, branch `camera-refactor`)
+Return point captured before name tags stopped being "top N by race position". Three independent
+designs converged on the same skeleton; the accepted reframe is that the owner's two goals are not in
+tension — ten labels on a clump are unreadable AND cover more racers than one would, so decluttering
+buys both. Stage 1 of three: the unit and label-vs-label occlusion. Stages 2 (priority from the
+director's anchor + guarantee set) and 3 (multi-slot placement, sprite avoidance) are named in the
+module header. Minted `dc4647be0f55ebdb`, unchanged.
+- `pre/tags` (`77a7812d`, 2026-08-03) — the state where `tagVisibleMaxCount` selects the top 10 by
+  race position with no decluttering at all, and the label size is `max(8, round(11/effZoom))`.
+  Shipped world `dc4647be0f55ebdb` untouched on both sides.
+
 ## Active-phase tags (temporary scaffolding — to collapse later)
 
 Step-tags from the runaway phase (now CLOSED 2026-07-29, see below) and any later work — safe return points, not permanent anchors. They collapse into
@@ -641,6 +652,7 @@ The full list of the 177 retired tags is recorded below for the archive.
 - `pre/min-draw`
 - `pre/no-schema`
 - `pre/reference-width`
+- `pre/tags`
 - `pre/picture-fixes`
 - `pre/v4-on-trunk`
 - `pre/zoom-unit`

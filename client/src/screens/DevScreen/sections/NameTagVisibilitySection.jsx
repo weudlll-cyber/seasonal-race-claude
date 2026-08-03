@@ -30,7 +30,8 @@ function NameTagVisibilitySection() {
   function handleReset() {
     setConfig((prev) => ({
       ...prev,
-      tagVisibleMaxCount: DEFAULT_CAMERA_CONFIG.tagVisibleMaxCount,
+      nameTagFrameFrac: DEFAULT_CAMERA_CONFIG.nameTagFrameFrac,
+      nameTagAllUntilMs: DEFAULT_CAMERA_CONFIG.nameTagAllUntilMs,
     }));
   }
 
@@ -57,9 +58,10 @@ function NameTagVisibilitySection() {
           </button>
         </div>
         <p style={{ fontSize: '0.78rem', color: 'var(--color-muted)', marginBottom: '0.75rem' }}>
-          Controls how many name tags appear during the race. All tags are always shown during the
-          countdown (so you can find your racer) and after the race ends. During the race, only the
-          leading group is shown to keep the screen readable.
+          Every racer on screen is offered a name tag; a tag is dropped only when it would land on
+          one that is already there, so what you see is always readable and the COUNT follows the
+          picture rather than a setting. All names are shown during the countdown and for the first
+          seconds of the race — long enough to find your racer — and after the race ends.
         </p>
 
         <div className={s.formGrid}>
@@ -68,21 +70,44 @@ function NameTagVisibilitySection() {
               className={s.label}
               style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}
             >
-              Max tags during race
+              Name size (% of frame)
               <InfoTooltip
-                text={`Maximum number of name tags shown during the race. With fewer racers than this number, all are shown. Higher = more tags visible (risk of overlap). Lower = cleaner view, only the front-runners. Value: ${config.tagVisibleMaxCount} tags.`}
+                text={`How big a name tag is drawn, as a share of the frame height — the same size on screen at every zoom and on every track. ${((config.nameTagFrameFrac ?? 0.022) * 100).toFixed(1)}% = ${Math.round((config.nameTagFrameFrac ?? 0.022) * 720)} px on a 720-tall frame. Bigger names are easier to read but collide sooner, so fewer of them fit.`}
               />
             </label>
             <input
               type="number"
               className={s.input}
-              min={3}
-              max={20}
-              step={1}
-              value={config.tagVisibleMaxCount}
+              min={1.0}
+              max={5.0}
+              step={0.1}
+              value={Math.round((config.nameTagFrameFrac ?? 0.022) * 1000) / 10}
               onChange={(e) => {
                 const v = Number(e.target.value);
-                if (v >= 3 && v <= 20) set('tagVisibleMaxCount', v);
+                if (v >= 1.0 && v <= 5.0) set('nameTagFrameFrac', v / 100);
+              }}
+            />
+          </div>
+          <div className={s.formGroup}>
+            <label
+              className={s.label}
+              style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}
+            >
+              Show all names for (s)
+              <InfoTooltip
+                text={`How long after the gun EVERY name stays visible, so a spectator can find their racer once. Default 8 s: measured, not chosen — while the field is still a block, decluttering would drop 10-22% of the names, worst about 4 s in; by 8 s it drops essentially none, so the handover is invisible. Note the camera's own start hold ends at 3 s, which is too early. Value: ${((config.nameTagAllUntilMs ?? 8000) / 1000).toFixed(1)} s.`}
+              />
+            </label>
+            <input
+              type="number"
+              className={s.input}
+              min={0}
+              max={30}
+              step={0.5}
+              value={(config.nameTagAllUntilMs ?? 8000) / 1000}
+              onChange={(e) => {
+                const v = Number(e.target.value);
+                if (v >= 0 && v <= 30) set('nameTagAllUntilMs', Math.round(v * 1000));
               }}
             />
           </div>
