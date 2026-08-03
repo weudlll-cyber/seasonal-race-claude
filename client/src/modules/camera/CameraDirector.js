@@ -13,7 +13,7 @@ import { resolveCamera } from './resolveCamera.js';
 import { diagMixin } from './CameraDirectorDiag.js';
 import { mulberry32 } from '../racePlanner.js';
 import { shortestArcDeltaT } from '../../utils/mathUtils.js';
-import { computeTimingFromConfig, BATTLE_PULK_THRESHOLD_T } from './cameraTimingComputation.js';
+import { computeTimingFromConfig } from './cameraTimingComputation.js';
 import {
   projectionForTrack,
   OPEN_TRACK_BASE_ZOOM as _PROJ_OPEN_BASE,
@@ -55,24 +55,12 @@ export const CAM_STATE = {
 // here so RaceScreen and the diagnostics HUD keep their existing import path.
 export const OPEN_TRACK_BASE_ZOOM = _PROJ_OPEN_BASE;
 
-const _MAX_STATE_DURATION = 8000; // fallback when no config provided
+// CAMERA-HYGIENE-2: the sixteen `_UPPER_CASE` timing fallbacks that stood here are gone. Every one
+// of them was a second copy of a constant in cameraTimingComputation.js, and not one was read — the
+// director gets its fallbacks by calling computeTimingFromConfig(null). They were the shape a
+// silent divergence takes: two numbers that must agree, and nothing making them.
 const START_PHASE_DURATION = 3000; // ms of forced OVERVIEW at race start
-const _ENDGAME_PROGRESS_THRESHOLD = 0.85; // fallback when no config provided
-// Single source in cameraTimingComputation.js; aliased here with underscore convention.
-const _BATTLE_PULK_THRESHOLD_T = BATTLE_PULK_THRESHOLD_T;
-const _BATTLE_MIN_DURATION_MS = 3000; // fallback: minimum ms BATTLE stays after entry
-const _FINISH_DRAMA_DURATION = 1500; // ms of LEADER_ZOOM on winner before OVERVIEW
-const _POST_START_HOLD_MS = 7000; // ms of forced LEADER after start phase (no BATTLE during this window)
-const _BATTLE_COOLDOWN_MS = 8000; // ms after leaving BATTLE before BATTLE can re-trigger
-const _BATTLE_MAX_DURATION = 6000; // ms BATTLE can hold before forced transition
-const _MIN_STATE_HOLD_MS = 5000; // minimum ms any state is held before _transition() fires
 const FRAME_RATE = 60; // reference display frame rate for lerp formula (dt-scaling applied in update)
-// Per-state transition TC fallbacks (used when no config is provided at all)
-const _TC_OVERVIEW = 1.5;
-const _TC_LEADER = 0.3;
-const _TC_BATTLE = 0.3;
-const _TC_COMEBACK = 0.3;
-const _OVERVIEW_COOLDOWN_MS = 15000; // default ms after leaving OVERVIEW before it can recur
 // CAMERA-HYGIENE-1: the reference canvas has ONE home, projection.js. It was declared independently
 // here, in zoomUnit.js and in two drawing modules — four constants that must agree and nothing
 // making them.
@@ -102,19 +90,6 @@ const FALLBACK_TRACK_WIDTH_PX = 140;
 const DEFAULT_INNER_FRAME_PCT = 0.7;
 const LEAD_OUT_DECAY = 0.05; // per-60fps-frame EMA factor for lead-out camera deceleration
 const NOMINAL_T_PER_FRAME = 0.001; // fallback racer speed (t/frame) for lead-in distance when _prevFocusT is unknown
-// Default T-space convergence threshold. Raised from 0.005 to 0.03 so the camera exits entry
-// phase while the leader is moving: steady-state gap = ese/lf ≈ 0.026 at typical speeds, which
-// was above the old threshold (camera never converged). Configurable via transitionTConvergence.
-const _TRANSITION_T_CONVERGENCE = 0.03;
-// Per-state fallback max entry duration (ms) when not set in cameraStateProfiles.
-// Formula: ≈ 3.45 × entryTC × 2 (safety factor). OVERVIEW uses TC=1.5s, others TC=0.8s.
-const _DEFAULT_MAX_ENTRY_DURATION_MS = {
-  OVERVIEW: 10000,
-  LEADER_ZOOM: 5000,
-  BATTLE_ZOOM: 5000,
-  COMEBACK_ZOOM: 5000,
-  LEAD_CHANGE: 5000,
-};
 const DIAG_RING_SIZE = 600; // frame-log ring buffer size (≈10 s @ 60 fps)
 
 // Shortest signed T-delta on a circular track [0,1).
@@ -207,7 +182,6 @@ export class CameraDirector {
     this._photoFinishGateDone = false; // 15a-predictive: once-only latch — the pre-line close-check fires exactly once
     this._photoFinishEnterPending = false; // 15a-predictive: set by update() when the gate decides to enter; consumed by _pickNextState
     this._inFinishMode = false;
-    this._finishModeStartTs = null;
     this.zoom = this.overviewZoom;
     this.targetZoom = this.overviewZoom;
     this.offsetX = 0;
@@ -236,7 +210,6 @@ export class CameraDirector {
     this._glideStartOffsetY = null;
     this._leadInStartTs = null;
     this._leadOutStartCamT = null;
-    this._leadOutStartTs = null;
     this._leadOutDistanceT = 0;
     this._prevFocusT = null;
     this._lastFocusT = 0;
@@ -310,7 +283,6 @@ export class CameraDirector {
     this._leadChangePrevLeaderName = null;
     this._leadCandidateIndex = null;
     this._leadCandidateSince = null;
-    this._lastLeadChangeTs = -Infinity;
     // Director: per-state exit timestamps for individual cooldowns
     this._lastComebackExitTs = -Infinity;
     this._lastLeadChangeExitTs = -Infinity;
@@ -336,9 +308,6 @@ export class CameraDirector {
     this._detourWindow = null; // active capture window { from, to, preoX/Y, prez, frames[], remaining }
     this._detourLog = []; // completed windows (for export/inspection)
     this._detourPrevState = null; // previous frame's state → the transition's from-state
-    this._detourContainActive = false; // did _containAnchorInFrame move offset this frame (candidate C)
-    this._detourContainDeltaX = 0;
-    this._detourContainDeltaY = 0;
     this._detourSetTargetsZoom = null; // the zoom _setTargets used this frame (candidate D)
     // CAMERA-DETOUR-2 follow-up: separate the anchor's world motion from the camera's.
     this._detourBranch = null; // which branch wrote offsetX/offsetY this frame: 'glide' | 'cut' | 'follow'
@@ -568,13 +537,14 @@ export class CameraDirector {
     this._entryConvergencePx = t.entryConvergencePx;
     this._comebackMinPositionsGained = t.comebackMinPositionsGained;
     this._comebackWindowSec = t.comebackWindowSec;
-    this._comebackMinDuration = t.comebackMinDuration;
     this._outcomePhaseThreshold = t.outcomePhaseThreshold;
     this._comebackMinStartGap = t.comebackMinStartGap;
     this._comebackMaxCurrentRankPct = t.comebackMaxCurrentRankPct;
     this._leadChangeMinGap = t.leadChangeMinGap;
     this._leadChangeDebounceMs = t.leadChangeDebounceMs;
-    this._leadChangeMinDuration = t.leadChangeMinDuration;
+    // comebackMinDuration / leadChangeMinDuration are deliberately NOT stored: they are consumed
+    // inside computeTimingFromConfig, which folds them into minStateHoldByState. Keeping a second
+    // copy here made two live controls look inert to the CAMERA-HYGIENE-1 perturbation audit.
     this._finishDramaDurationMs = t.finishDramaDurationMs;
     this._finishOverviewZoomOutDurationMs = t.finishOverviewZoomOutDurationMs;
     this._finishPauseMs = t.finishPauseMs;
@@ -1098,8 +1068,10 @@ export class CameraDirector {
       // CAMERA-FRAMING-1: the containment clamp used to run here, claiming to be a no-op mid-glide.
       // It was measured ACTIVE on 23 of 23 glide frames with corrections to −390 px — it had become
       // a rail that steered the pan away from the glide it was interpolating. Gone; the glide now
-      // lands exactly where it aimed. `clampActiveCount` stays as a diagnostic and is asserted to
-      // remain 0 through a glide.
+      // lands exactly where it aimed, which is what `glide lands on its target framing` asserts.
+      // (CAMERA-HYGIENE-2: this note used to claim a `clampActiveCount` diagnostic still watched
+      // the clamp. Nothing had incremented that counter since the clamp was deleted, so the test
+      // that asserted it stayed 0 could not fail. Counter, getters and test are gone.)
       if (s >= 1) this._lerpPhase = 'tracking'; // glide complete → steady follow
     } else if (this._cutSnapPending) {
       if (this._detourEnabled) this._detourBranch = 'cut';
@@ -1265,7 +1237,6 @@ export class CameraDirector {
       if (raceState.finishedCount >= 2 || raceState.finishedCount >= racers.length) {
         this._inPhotoFinish = false;
         this._inFinishMode = true;
-        this._finishModeStartTs = ts;
         return {
           nextState: CAM_STATE.OVERVIEW,
           reason: 'photo-finish: end (2nd crossing / all finished) → FINISH_OVERVIEW',
@@ -1309,7 +1280,6 @@ export class CameraDirector {
         this._inFinishDrama = false;
         this._inPhotoFinish = false;
         this._inFinishMode = true;
-        this._finishModeStartTs = ts;
         return {
           nextState: CAM_STATE.OVERVIEW,
           reason: 'finish: drama expired → FINISH_OVERVIEW',
@@ -1527,7 +1497,6 @@ export class CameraDirector {
       if (nextState === CAM_STATE.LEAD_CHANGE) {
         this._leadChangeNewLeaderName = this._currentLeaderName;
         this._leadChangePrevLeaderName = this._prevLeaderName;
-        this._lastLeadChangeTs = ts;
         // Hard cut: skip entry lerp — camera snaps to lead-change zoom immediately
         this._lerpPhase = 'tracking';
         this.zoom = this._leadChangeZoom;
@@ -1597,7 +1566,6 @@ export class CameraDirector {
     if (!isRepeat) {
       // Reset phased observer and set up T-space lerp for the new state.
       this._leadOutStartCamT = null;
-      this._leadOutStartTs = null;
       this._leadOutDistanceT = 0;
       this._entrySpeedEstimate = NOMINAL_T_PER_FRAME;
       // Reset so frame 1 of the new state uses NOMINAL_T_PER_FRAME as speed estimate,
@@ -1865,7 +1833,6 @@ export class CameraDirector {
 
     const d = lateralShiftToFit(offsets, roomPlus, roomMinus, scale);
     if (!Number.isFinite(d) || d === 0) return panTarget;
-    this._lateralShiftPx = d;
     return { x: panTarget.x + perp.x * d, y: panTarget.y + perp.y * d };
   }
 
@@ -2172,9 +2139,10 @@ export class CameraDirector {
         prez: r6(w.prez),
         camT: this._camT == null ? null : r6(this._camT), // candidate B: the second (track-space) mover
         camTRead: !!tSpaceLerpActive, // did the follow path read _camT this frame
-        containMod: !!this._detourContainActive, // candidate C: did the clamp move the pan …
-        containDX: r3(this._detourContainDeltaX), // … and by how much (measured, not assumed)
-        containDY: r3(this._detourContainDeltaY),
+        // CAMERA-HYGIENE-2: candidate C (containMod/containDX/containDY) is gone. Its writer was the
+        // containment clamp, deleted in CAMERA-FRAMING-1; every window logged since has carried
+        // `containMod:false, containDX:0, containDY:0` — three columns that could only ever say
+        // "the thing that no longer exists did not happen".
         stZoom: this._detourSetTargetsZoom == null ? null : r6(this._detourSetTargetsZoom), // candidate D:
         rz: r6(this.zoom), // the zoom _setTargets used vs the zoom the renderer drew with
       });
@@ -2209,24 +2177,9 @@ export class CameraDirector {
     return this._detourLog;
   }
 
-  /** CAMERA-FOCUS-3: frames on which the containment clamp actually moved the pan (emergency-rail use). */
-  get clampActiveCount() {
-    return this._clampActiveCount ?? 0;
-  }
-
-  /** CAMERA-FOCUS-3: per-axis clamp activations (diagnostic). */
-  get clampActiveAxes() {
-    return { x: this._clampActiveX ?? 0, y: this._clampActiveY ?? 0 };
-  }
-
-  /** CAMERA-FOCUS-4 LIVE TRUTH: the RESOLVED transition grammar this director is running ('cut'|'legacy'). */
+  /** CAMERA-FOCUS-4 LIVE TRUTH: the RESOLVED transition grammar this director is running. */
   get transitionGrammar() {
     return this._transitionGrammar;
-  }
-
-  /** CAMERA-FOCUS-4 LIVE TRUTH: the current observer phase ('idle'|'lead-in'|'follow'). */
-  get observerPhase() {
-    return this._observerPhase;
   }
 
   /** CAMERA-FOCUS-4 LIVE TRUTH: resolved leader forward-framing fraction (null when centred). */
@@ -2602,7 +2555,6 @@ export class CameraDirector {
     let panTarget = subjects.point;
     let headingT = subjects.t;
     let pinAcross = true;
-    this._lateralShiftPx = 0;
 
     // OVERVIEW's anchor exceptions, in priority order. Each REPLACES the anchor and then rejoins.
     if (this.state === CAM_STATE.OVERVIEW) {
@@ -2796,7 +2748,6 @@ export class CameraDirector {
     ) {
       this._observerPhase = 'lead-out';
       this._leadOutStartCamT = this._camT;
-      this._leadOutStartTs = ts;
       // Camera moves at ~half racer speed during lead-out, decelerating via EMA.
       // _prevFocusT here is update()'s first write this frame (~line 723); _computePhasedPanTarget
       // has not yet written it on this code path — all its writes come at the exits below.

@@ -5326,11 +5326,10 @@ describe('CAMERA-FOCUS-3 — transition grammar + forward-framing', () => {
     });
   });
 
-  it('clamp diagnostics: clampActiveCount / clampActiveAxes start at 0', () => {
-    const cd = new CameraDirector(3072, 2048, false, {});
-    expect(cd.clampActiveCount).toBe(0);
-    expect(cd.clampActiveAxes).toEqual({ x: 0, y: 0 });
-  });
+  // CAMERA-HYGIENE-2 deleted `clamp diagnostics: clampActiveCount / clampActiveAxes start at 0`.
+  // It used to guarantee that the containment clamp's activation counters read zero on a fresh
+  // director. Nothing had incremented those counters since CAMERA-FRAMING-1 deleted the clamp, so
+  // the getters returned a literal 0 and the test could not fail under any change to any file.
 
   it('STEP-3 forward-framing (closed): leader sits FORWARD of centre and the X containment clamp stays idle', () => {
     const cfg = structuredClone(DEFAULT_CAMERA_CONFIG);
@@ -5375,7 +5374,6 @@ describe('CAMERA-FOCUS-3 — transition grammar + forward-framing', () => {
     const avgFrac = sumFrac / n;
     expect(avgFrac).toBeGreaterThan(0.55); // leader forward of centre (0.5)
     expect(avgFrac).toBeLessThan(0.85); // but inside the inner-70 leading edge (not at the edge)
-    expect(cd.clampActiveAxes.x).toBeLessThan(10); // motion-axis clamp idle: tracking frames the leader
   });
 });
 
@@ -5460,8 +5458,6 @@ describe('CAMERA-FOCUS-5 — per-axis screen mapping (forward-framing + containm
     // faithful (bsY) leader Y is forward (~2/3 down), NOT pinned at the top/bottom edge:
     expect(r.y).toBeGreaterThan(0.58);
     expect(r.y).toBeLessThan(0.85);
-    // and the emergency rail is essentially idle on both axes (was ~44% on Y with the bug):
-    expect(r.cd.clampActiveAxes.y).toBeLessThan(15);
   });
 });
 
@@ -6061,9 +6057,12 @@ describe('CAMERA-FRAMING-1 — one rule, six states, through the director', () =
     expect(offFwd).toBeGreaterThan(offCtr);
   });
 
-  it('the containment clamp is INERT — clampActiveCount stays 0 through a glide', () => {
-    // It was measured ACTIVE on 23 of 23 glide frames while its comment claimed "no-op mid-glide".
-    // This is that comment turned into a test.
+  it('the glide LANDS on the framing it aimed at — nothing corrects it on the way', () => {
+    // CAMERA-HYGIENE-2 replaces `the containment clamp is INERT — clampActiveCount stays 0`. That
+    // test asserted a counter nothing incremented, so it could not fail; this asserts the property
+    // the clamp's removal was FOR. The clamp was measured active on 23 of 23 glide frames, steering
+    // the pan away from the interpolation by up to −390 px. If any steering returns to the glide
+    // branch, the camera stops arriving at its own endpoint and these three go red.
     const cd = mk({ cameraTransitionGrammar: 'glide' });
     const racers = field();
     cd.state = CAM_STATE.OVERVIEW;
@@ -6072,7 +6071,11 @@ describe('CAMERA-FRAMING-1 — one rule, six states, through the director', () =
     cd._lerpPhase = 'glide';
     cd._glideStartTs = 20080;
     for (let i = 0; i < 40; i++) cd.update(racers, 20080 + i * 16, rs, FRAME.width, FRAME.height);
-    expect(cd.clampActiveCount).toBe(0);
+    // 40 frames × 16 ms = 640 ms > the 500 ms glide, so s has passed 1 and the ease has landed.
+    expect(cd._lerpPhase).toBe('tracking');
+    expect(cd.offsetX).toBeCloseTo(cd.targetOffsetX, 6);
+    expect(cd.offsetY).toBeCloseTo(cd.targetOffsetY, 6);
+    expect(cd.zoom).toBeCloseTo(cd.targetZoom, 6);
   });
 
   it('the deleted steering mechanisms are really gone, not merely unused', () => {
@@ -6085,6 +6088,10 @@ describe('CAMERA-FRAMING-1 — one rule, six states, through the director', () =
     expect(cd._zoomFloorForMinVisible).toBeUndefined();
     expect(cd._countVisibleRacers).toBeUndefined();
     expect(cd._setOverviewGroupTargets).toBeUndefined();
+    // CAMERA-HYGIENE-2: and so are the clamp's orphaned activation counters. They outlived their
+    // writer by two blocks and read a constant 0 the whole time.
+    expect(cd.clampActiveCount).toBeUndefined();
+    expect(cd.clampActiveAxes).toBeUndefined();
     expect(cd._minRacersVisible).toBeGreaterThan(1); // the guarantee, not the floor
   });
 

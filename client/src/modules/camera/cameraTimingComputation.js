@@ -9,9 +9,11 @@
 //              Does NOT import from CameraDirector.js — no circular dep.
 // ============================================================
 
-// Fallback constants — single source of truth; imported by CameraDirector.js.
+// THE fallback constants for every timing tunable. A director built with no config at all gets
+// these by calling computeTimingFromConfig(null) — there is deliberately no second copy anywhere
+// (CAMERA-HYGIENE-2 deleted the sixteen that had accumulated in CameraDirector.js).
 const MAX_STATE_DURATION = 8000;
-export const BATTLE_PULK_THRESHOLD_T = 0.05; // lap fraction (15b: arc closeness, was 0.12 px-era)
+const BATTLE_PULK_THRESHOLD_T = 0.05; // lap fraction (15b: arc closeness, was 0.12 px-era)
 const BATTLE_MIN_DURATION_MS = 3000;
 const POST_START_HOLD_MS = 7000;
 const BATTLE_COOLDOWN_MS = 8000;
