@@ -80,6 +80,20 @@ Items ranked by urgency within each bucket. ✅ = done, 🔜 = next, ⏳ = waiti
 
 ## Measurement infrastructure — next up (from the independent reviews, 2026-07-23)
 
+- 🔜 **HYGIENE PHASE — the engine-input module list, beside `WORLD_CONFIG_KEYS`.** Stage 2 of the mint
+  tripwire ([SHIP-CEREMONY.md](SHIP-CEREMONY.md) → "THE MINT TRIPWIRE"). Enumerate, in
+  `client/src/modules/raceConfigWorld.js` next to `WORLD_CONFIG_KEYS` and under the same "keep them in
+  lock-step" rule, the MODULES whose values reach `createRaceFromIdentity` / `stepRacePhysics` — plus a
+  test that FAILS when `raceCore.js` imports something not on the list. Then adding an engine input
+  forces the list to change, and the list drives the mint rule instead of a person's memory.
+  **Why both:** the mint rule catches what someone remembers; the list catches what nobody does, and in
+  this project the second kind is what has held. **The case that motivated it:** `drawnBodyWidthRefPx`
+  is computed in a screen file and consumed by `raceBehavior.js` as the avoidance body size, so a
+  race-moving value can sit in a "presentation-only" diff and pass every check —
+  `autoSpriteScale.js` did exactly that in CAMERA-PICTURE-FIXES-1 (fingerprint did NOT move, but
+  nothing established it; see [CAMERA-MINT-TRIPWIRE-1](../reports/evolution/CAMERA-MINT-TRIPWIRE-1.md)).
+  Owner asked for this to be done properly in the hygiene phase rather than tacked onto a camera block.
+
 - ✅ **DONE — HUD config-fingerprint badge** (shipped `42500f4d`, "replay UX + rowCount unification",
   behaviour-neutral). `configFingerprintBadge()` in `client/src/modules/exportRaceConfig.js` is rendered in
   the race HUD (`client/src/screens/RaceScreen/index.jsx`, under the seed badge). It shows a short
