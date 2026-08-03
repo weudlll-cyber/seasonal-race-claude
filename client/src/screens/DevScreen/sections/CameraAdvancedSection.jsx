@@ -637,6 +637,27 @@ function CameraAdvancedSection() {
             tip="Seconds after race start before OVERVIEW may appear in the pool for the first time. Default 15 s."
           />
           <SliderRow
+            label="Minimum racer size (% of frame)"
+            testId="regie-min-drawn-frame-frac"
+            // 0 .. 10% of frame height. Above ~6% the floor starts binding on most tracks and
+            // stops being a floor; step 0.5% is ~3.6 screen px, about the smallest change that
+            // reads on a racer this size.
+            min={0}
+            max={10}
+            step={0.5}
+            value={Math.round((config.minDrawnFrameFrac ?? 0.045) * 1000) / 10}
+            onChange={(e) => {
+              const v = Number(e.target.value);
+              if (v >= 0 && v <= 10) set('minDrawnFrameFrac', v / 100);
+            }}
+            display={
+              (config.minDrawnFrameFrac ?? 0.045) <= 0
+                ? 'Off'
+                : `${((config.minDrawnFrameFrac ?? 0.045) * 100).toFixed(1)}%`
+            }
+            tip="A readability floor: a racer is never DRAWN smaller than this share of the frame height, so it stays recognisable when the camera is far out. It affects the drawing only — it does not change the zoom, it cannot override your 'World in shot' setting, and it never moves the camera. Default 4.5%: before this floor existed the Space Sprint start formation drew its rockets at 4.44% and the owner was happy with it; without any floor they are 3.17% and the formation stops overlapping. At the default it only bites in Overview, on the tracks whose racers are drawn smallest. 0 turns it off."
+          />
+          <SliderRow
             label="Standard corridor (world px)"
             testId="regie-reference-corridor-px"
             // Range from measurement: 100 px is below the narrowest corridor shipped (131) and is

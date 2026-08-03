@@ -1,14 +1,19 @@
-// CAMERA-PICTURE-FIXES-1 removed the describe blocks that covered the minimum-sprite-size FLOOR
-// (`getEffectiveMinTargetScreenPx` and `computeRenderDisplayScale`'s `Math.max`). The floor is gone
-// — sprites scale with the camera and nothing holds them up — so those tests covered deleted code
-// and were removed rather than "adapted". What replaces them is the no-floor block at the end of
-// this file, which pins the property the owner actually asked for.
+// CAMERA-PICTURE-FIXES-1 removed the minimum-sprite-size floor; CAMERA-MIN-DRAW-1 brought it back
+// with its purpose stated and its implementation fixed — a FRACTION OF THE FRAME rather than
+// absolute screen pixels, and drawing-only rather than a second zoom authority.
+//
+// The blocks below are therefore in three parts, and the middle one is the point:
+//   • PROPORTIONAL — with the floor OFF, screen size is purely zoom x world size (unchanged).
+//   • THE FLOOR    — what it guarantees, where it binds, and a failure proof of the picture
+//                    without it (the owner's Space Sprint start formation).
+//   • THE CEILING  — a different question, untouched.
+// `getEffectiveMinTargetScreenPx` is NOT back: the old per-type absolute-pixel override belonged to
+// the old implementation, and nothing asked for it to return.
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import {
   computeAutoScaleFactor,
   computeRenderDisplayScale,
-  getEffectiveMinTargetScreenPx,
   getEffectiveMaxTargetScreenPx,
   DEFAULT_AUTO_SCALE_CONFIG,
   loadAutoScaleConfig,
@@ -166,7 +171,7 @@ describe('getEffectiveMaxTargetScreenPx', () => {
 // floor bound in OVERVIEW on 9 of the 10 shipped tracks, drawing 28 px where the zoom asked for
 // 17-20 px; it is gone, and these tests pin its absence.
 
-describe('computeRenderDisplayScale — proportional, with no floor', () => {
+describe('computeRenderDisplayScale — proportional when the floor is OFF', () => {
   const DS = 36;
 
   it('returns the density scale untouched: screen size is purely zoom x world size', () => {
@@ -176,11 +181,11 @@ describe('computeRenderDisplayScale — proportional, with no floor', () => {
     }
   });
 
-  it('NO FLOOR: a far-out camera draws a genuinely tiny sprite', () => {
-    // The case the floor existed for — a large closed track at OVERVIEW. It now shrinks.
+  it('floor OFF: a far-out camera draws a genuinely tiny sprite', () => {
+    // With the floor at 0 the old behaviour is exactly reproduced — nothing holds the sprite up.
     const eff = 0.064;
-    const scale = computeRenderDisplayScale(DS, 1.0, eff);
-    expect(DS * scale * eff).toBeCloseTo(DS * eff, 9); // 2.3 px, not the old 32 px
+    const scale = computeRenderDisplayScale(DS, 1.0, eff, undefined, 0);
+    expect(DS * scale * eff).toBeCloseTo(DS * eff, 9); // 2.3 px
     expect(DS * scale * eff).toBeLessThan(5);
   });
 
@@ -196,8 +201,8 @@ describe('computeRenderDisplayScale — proportional, with no floor', () => {
     }
   });
 
-  it('the state ordering follows the zoom ordering, with no floor flattening the wide end', () => {
-    // BATTLE (tightest) > LEADER > OVERVIEW (widest) — and OVERVIEW is no longer pinned to a floor.
+  it('the state ordering follows the zoom ordering when nothing binds', () => {
+    // BATTLE (tightest) > LEADER > OVERVIEW (widest), in exact proportion to the zoom.
     const px = (eff) => DS * computeRenderDisplayScale(DS, 1.0, eff) * eff;
     const overview = px(0.5),
       leader = px(1.0),
@@ -242,5 +247,78 @@ describe('computeRenderDisplayScale — the ceiling survives (it is a different 
     // silently disabled the ceiling. It is now a plain positive check.
     const scale = computeRenderDisplayScale(DS, 1.0, 10, 40);
     expect(DS * scale * 10).toBeCloseTo(40, 9);
+  });
+});
+
+// ── CAMERA-MIN-DRAW-1: the readability floor ─────────────────────────────────────────────────
+// The owner found this himself and his evidence settled it: the Space Sprint START formation used
+// to overlap slightly and no longer did. Same 20 slots, same grid — the sprites had shrunk.
+describe('computeRenderDisplayScale — the readability FLOOR', () => {
+  const DS = 36;
+  const CH = 720;
+  const FRAC = 0.045; // the shipped default
+  const px = (eff, frac = FRAC, scale = 1.0) =>
+    DS * computeRenderDisplayScale(DS, scale, eff, undefined, frac, CH) * eff;
+
+  it('guarantees the fraction exactly, and not a pixel more', () => {
+    // eff 0.064 would draw 2.3 px; the floor lifts it to 4.5% of 720 = 32.4 px.
+    expect(px(0.064)).toBeCloseTo(FRAC * CH, 9);
+    expect(px(0.2)).toBeCloseTo(FRAC * CH, 9);
+  });
+
+  it('does nothing at all once the sprite is big enough', () => {
+    const eff = 2;
+    expect(px(eff)).toBeCloseTo(DS * eff, 9); // purely zoom x world size
+    expect(computeRenderDisplayScale(DS, 1.0, eff, undefined, FRAC, CH)).toBeCloseTo(1.0, 12);
+  });
+
+  it('is a floor, not a target — screen size still rises with zoom above it', () => {
+    const a = px(1);
+    const b = px(2);
+    expect(b).toBeCloseTo(2 * a, 9);
+    expect(a).toBeGreaterThan(FRAC * CH);
+  });
+
+  it('0 turns it off, and so does a missing value', () => {
+    const eff = 0.064;
+    expect(px(eff, 0)).toBeCloseTo(DS * eff, 9);
+    expect(DS * computeRenderDisplayScale(DS, 1.0, eff) * eff).toBeCloseTo(DS * eff, 9);
+  });
+
+  it('is a FRACTION of the frame — a taller canvas gets a proportionally larger floor', () => {
+    // This is the whole reason it is not 32 absolute pixels any more.
+    const eff = 0.064;
+    const at = (h) => DS * computeRenderDisplayScale(DS, 1.0, eff, undefined, FRAC, h) * eff;
+    expect(at(720)).toBeCloseTo(0.045 * 720, 9);
+    expect(at(1440)).toBeCloseTo(0.045 * 1440, 9);
+    expect(at(1440) / at(720)).toBeCloseTo(2, 9);
+  });
+
+  it('outranks the ceiling — being readable beats being small', () => {
+    // A contradictory pair (floor above ceiling) must resolve, and it resolves upward.
+    const eff = 0.064;
+    const scale = computeRenderDisplayScale(DS, 1.0, eff, 10, FRAC, CH);
+    expect(DS * scale * eff).toBeCloseTo(FRAC * CH, 9);
+  });
+
+  // FAILURE PROOF — the owner's own picture, as arithmetic. On Space Sprint the racer is drawn at
+  // 14.3 world px and OVERVIEW's frameEffZoom is 1.6, so without a floor it is 22.8 screen px:
+  // 3.17% of the frame, against the 4.44% he had approved. That 29% shrink is what stopped the
+  // start formation overlapping.
+  it('FAILURE PROOF: without the floor the Space Sprint start draws at 3.17% of the frame', () => {
+    const DRAWN_WORLD = 14.25;
+    const OVERVIEW_EFF = 1.6;
+    const bare =
+      DRAWN_WORLD *
+      computeRenderDisplayScale(DRAWN_WORLD, 1.0, OVERVIEW_EFF, undefined, 0) *
+      OVERVIEW_EFF;
+    expect(bare).toBeCloseTo(22.8, 1);
+    expect(bare / 720).toBeLessThan(0.035); // unreadably small, and below what he approved
+    const floored =
+      DRAWN_WORLD *
+      computeRenderDisplayScale(DRAWN_WORLD, 1.0, OVERVIEW_EFF, undefined, FRAC, 720) *
+      OVERVIEW_EFF;
+    expect(floored).toBeCloseTo(32.4, 1); // back to the size in his reference image (32.0)
+    expect(floored / bare).toBeCloseTo(1.42, 2);
   });
 });

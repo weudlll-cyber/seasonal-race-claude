@@ -1235,8 +1235,8 @@ export default function RaceScreen() {
       // so it stays in fixed screen space.
       //
       // Sprite scaling (D7a proportional): sprites scale naturally with the camera
-      // zoom — closer = bigger. computeRenderDisplayScale applies a floor so sprites
-      // stay visible on very large tracks where the camera zooms far out.
+      // zoom — closer = bigger — with a readability floor so a racer is never drawn
+      // too small to recognise (CAMERA-MIN-DRAW-1).
       //
       // frameEffZoom is the raw canvas scale (cam.zoom×bsX closed, BASE×cam.zoom open).
       // It's used by labels/trail (via 1/frameEffZoom) to stay constant screen-size.
@@ -1252,9 +1252,9 @@ export default function RaceScreen() {
       markerFrame.camZoom = cam.zoom;
       markerFrame.offsetX = cam.offsetX;
       markerFrame.offsetY = cam.offsetY;
-      // CAMERA-PICTURE-FIXES-1: no minimum sprite size. Sprites scale with the camera and nothing
-      // else — the owner's "die Sprites sollten immer angepasst groß sein". Only the ceiling is
-      // still consulted, and it does not bind at any shipped default.
+      // CAMERA-MIN-DRAW-1: the readability FLOOR is back, as a fraction of the frame — never draw a
+      // racer too small to recognise. It is a bound on THIS multiplication and nothing else; the
+      // camera above has already chosen its zoom without ever reading the value.
       const frameDisplayScale = computeRenderDisplayScale(
         displaySize,
         displaySizeScale,
@@ -1262,7 +1262,9 @@ export default function RaceScreen() {
         getEffectiveMaxTargetScreenPx(
           racerTypeRef.current?.config?.maxTargetScreenPx,
           cameraConfigRef.current.maxTargetScreenPx
-        )
+        ),
+        cameraConfigRef.current.minDrawnFrameFrac,
+        canvas.height
       );
 
       // ── Bg canvas: lazy-draw once on first available frame; CSS transform each frame ──

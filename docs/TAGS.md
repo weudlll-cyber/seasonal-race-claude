@@ -208,6 +208,18 @@ rather than be half-honoured, and which never touches his settings.
   check in the loader and its save-time stamp. Camera-only; the shipped world `dc4647be0f55ebdb` is
   untouched on both sides.
 
+### The readability floor returns — CAMERA-MIN-DRAW-1 (2026-08-03, branch `camera-refactor`)
+Return point captured before the minimum drawn size came back. CAMERA-PICTURE-FIXES-1 removed the
+render sprite floor on the reading that a racer's size should say how far in the camera is and nothing
+else — right about the implementation, wrong about the purpose. The owner found the cost himself: the
+Space Sprint START formation used to overlap slightly and no longer did, because the rockets had
+shrunk 29% (32.0 -> 22.8 screen px). The floor returns as a FRACTION OF THE FRAME and drawing-only,
+with a test pinning that it cannot reach the zoom. First block to run the new MINT TRIPWIRE: minted
+`dc4647be0f55ebdb`, unchanged.
+- `pre/min-draw` (`766a6f94`, 2026-08-03) — the state with no minimum drawn size at all, where a racer
+  on the three widest tracks is drawn at 3.17% of frame height in OVERVIEW. Shipped world
+  `dc4647be0f55ebdb` untouched on both sides.
+
 ## Active-phase tags (temporary scaffolding — to collapse later)
 
 Step-tags from the runaway phase (now CLOSED 2026-07-29, see below) and any later work — safe return points, not permanent anchors. They collapse into
@@ -626,6 +638,7 @@ The full list of the 177 retired tags is recorded below for the archive.
 - `pre/company-2`
 - `pre/framing`
 - `pre/lateral`
+- `pre/min-draw`
 - `pre/no-schema`
 - `pre/reference-width`
 - `pre/picture-fixes`

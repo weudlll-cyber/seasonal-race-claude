@@ -42,43 +42,65 @@ export function computeAutoScaleFactor(trackWidth, racerCount, config) {
   return Math.max(minScale, Math.min(maxScale, densityFactor));
 }
 
+/** The reference canvas height the frame fractions below are expressed against. */
+const CANVAS_H_REF = 720;
+
 /**
  * Compute the final world-space sprite scale for rendering.
  *
- * Sprites scale proportionally with the camera zoom — closer is bigger, always, with nothing
- * holding them up. CAMERA-PICTURE-FIXES-1 removed the minimum-size FLOOR that used to sit here
- * (`Math.max(proportionalScreenPx, minTargetScreenPx)`): the owner's rule is "die Sprites sollten
- * immer angepasst groß sein" — a racer's size on screen should say how far in the camera is and
- * nothing else. The floor bound in OVERVIEW on 9 of the 10 shipped tracks, drawing racers 28 px
- * where the zoom asked for 17–20 px, and it was the last thing making sprite size a second,
- * silent zoom authority.
+ * Sprites scale proportionally with the camera zoom — closer is bigger. Two bounds sit on that, and
+ * they answer different questions:
  *
- * The optional CEILING stays: it stops sprites growing without bound at very tight zoom, which is
- * a different question and one the owner has not asked to change.
+ *   CEILING (`maxTargetScreenPx`) — stop sprites growing without bound at very tight zoom.
+ *   FLOOR   (`minDrawnFrameFrac`) — CAMERA-MIN-DRAW-1: never draw a racer too small to RECOGNISE.
+ *
+ * THE FLOOR'S HISTORY, because it has been here before and was removed for a real reason.
+ * CAMERA-PICTURE-FIXES-1 deleted `Math.max(proportionalScreenPx, minTargetScreenPx)` on the reading
+ * that a racer's size should say how far in the camera is and nothing else. That reading was wrong
+ * about the PURPOSE and right about the IMPLEMENTATION: the old floor was expressed in absolute
+ * screen pixels against a zoom unit that has since changed twice, and it fought the owner's zoom
+ * setting. Removing it made the start formation on Space Sprint shrink 29% — from the 32.0 screen px
+ * he had approved to 22.8 — and the rockets became, in his words, tiny.
+ *
+ * So it returns with its purpose stated and its implementation fixed, exactly as the min-racers floor
+ * did in CAMERA-COMPANY-1:
+ *   • a FRACTION OF THE FRAME, not pixels, so it survives the next unit change
+ *   • DRAWING ONLY. It cannot reach the zoom — see the zoom-independence test in the suite. The old
+ *     one was a second, silent zoom authority; this one is a lower bound on one multiplication.
  *
  * screenPx = displaySize × result × frameEffZoom
  *
- * With no ceiling:      result = displaySizeScale (track-density factor, unchanged).
- * When ceiling applies: result = maxTargetScreenPx / (displaySize × frameEffZoom).
+ * Neither bound applies: result = displaySizeScale (track-density factor, unchanged).
+ * Floor applies:         result = (minDrawnFrameFrac × canvasH) / (displaySize × frameEffZoom).
+ * Ceiling applies:       result = maxTargetScreenPx / (displaySize × frameEffZoom).
+ * Both would apply:      the FLOOR wins — being readable outranks being small.
  *
  * @param {number}           displaySize        Racer type base display size in world pixels
  * @param {number}           displaySizeScale   Track-density auto-scale factor (from computeAutoScaleFactor)
  * @param {number}           frameEffZoom       Effective canvas scale this frame
  * @param {number|undefined} maxTargetScreenPx  Ceiling: maximum sprite size in screen pixels (optional)
+ * @param {number}           [minDrawnFrameFrac=0]  Floor, as a fraction of frame height; 0 = off
+ * @param {number}           [canvasH=720]      Frame height the fraction is measured against
  * @returns {number}  World-space scale factor to pass to drawRacer
  */
 export function computeRenderDisplayScale(
   displaySize,
   displaySizeScale,
   frameEffZoom,
-  maxTargetScreenPx
+  maxTargetScreenPx,
+  minDrawnFrameFrac = 0,
+  canvasH = CANVAS_H_REF
 ) {
   if (!frameEffZoom || frameEffZoom <= 0 || !displaySize || displaySize <= 0)
     return displaySizeScale;
   const proportionalScreenPx = displaySize * displaySizeScale * frameEffZoom;
+  const minScreenPx = minDrawnFrameFrac > 0 && canvasH > 0 ? minDrawnFrameFrac * canvasH : 0;
+  // The floor is applied LAST so it outranks the ceiling: a sprite that is somehow both too big and
+  // too small to read is a contradiction, and readability is the one the owner asked for.
+  if (proportionalScreenPx < minScreenPx) return minScreenPx / (displaySize * frameEffZoom);
   if (!(maxTargetScreenPx > 0) || proportionalScreenPx <= maxTargetScreenPx)
     return displaySizeScale;
-  return maxTargetScreenPx / (displaySize * frameEffZoom);
+  return Math.max(maxTargetScreenPx, minScreenPx) / (displaySize * frameEffZoom);
 }
 
 /**

@@ -354,3 +354,41 @@ describe('the racer count is gone from the zoom', () => {
     expect(v.along / v.across).toBeCloseTo(1.5, 2); // closed-track anisotropy, reported not set
   });
 });
+
+// ── CAMERA-MIN-DRAW-1: the readability floor is DRAWING ONLY ──────────────────────────────────
+// The old minimum-sprite-size floor was a second, silent zoom authority — it fought the owner's own
+// zoom setting, which is why CAMERA-PICTURE-FIXES-1 removed it. The floor is back, but it bounds one
+// multiplication in the render loop and nothing else. This is the guard for that: the camera must
+// produce byte-identical zooms whatever the floor is set to, including absurd values.
+describe('the min-draw floor cannot reach the zoom', () => {
+  const withFloor = (frac) => ({ ...DEFAULT_CAMERA_CONFIG, minDrawnFrameFrac: frac });
+  const zoomsOf = (cfg) => {
+    const cd = new CameraDirector(3072, 2047, false, cfg, 28.5, null, 178);
+    return {
+      overview: cd._overviewStateZoom,
+      leader: cd._leaderZoom,
+      leadChange: cd._leadChangeZoom,
+      battle: cd._battleZoom,
+      comeback: cd._comebackZoom,
+      photo: cd._photoFinishZoom,
+      countdown: cd._countdownStartZoom,
+    };
+  };
+
+  it('every state zoom is identical with the floor off, at the default, and at an absurd value', () => {
+    const off = zoomsOf(withFloor(0));
+    for (const frac of [0.045, 0.2, 0.9]) {
+      const on = zoomsOf(withFloor(frac));
+      for (const key of Object.keys(off)) {
+        expect(on[key], `${key} at ${frac}`).toBe(off[key]); // exact, not close
+      }
+    }
+  });
+
+  it('and the shipped default frames exactly the same world as a config without the key at all', () => {
+    const { minDrawnFrameFrac: _omit, ...noKey } = DEFAULT_CAMERA_CONFIG;
+    const a = zoomsOf(noKey);
+    const b = zoomsOf(DEFAULT_CAMERA_CONFIG);
+    for (const key of Object.keys(a)) expect(b[key]).toBe(a[key]);
+  });
+});

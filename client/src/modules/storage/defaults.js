@@ -170,6 +170,20 @@ export const DEFAULT_CAMERA_CONFIG = {
   // allow convergence while the leader is moving. Raised from 0.005 (never-converge) to 0.03.
   transitionTConvergence: 0.03,
   maxTargetScreenPx: 160,
+  // CAMERA-MIN-DRAW-1 — the readability floor: never draw a racer too small to RECOGNISE. A
+  // FRACTION OF THE FRAME HEIGHT, not pixels, so it survives the next change of zoom unit (the old
+  // floor was 32 absolute screen px and did not). 0 turns it off.
+  //
+  // DRAWING ONLY. It bounds one multiplication in the render loop and can never reach the zoom —
+  // that is what made the old floor fight the owner's own setting, and there is a test pinning it.
+  //
+  // Default 0.045 is measured against the picture he approved: before the floor was removed, the
+  // Space Sprint start formation drew its rockets at 32.0 screen px (4.44% of frame height). Without
+  // it they are 22.8 px — a 29% shrink, and the reason the start formation stopped overlapping.
+  // 0.045 = 32.4 px reproduces that within 1%. It binds in OVERVIEW only, and only on the three
+  // tracks whose racers are drawn at 14.3 world px (Mountainstreet, Seatrack, Space Sprint) plus a
+  // 1% nudge on Dirt Oval; nothing outside OVERVIEW is touched at any value up to 0.06.
+  minDrawnFrameFrac: 0.045,
   tagVisibleMaxCount: 10,
   showCameraStateHud: true,
   showCameraDiagnostics: false,
