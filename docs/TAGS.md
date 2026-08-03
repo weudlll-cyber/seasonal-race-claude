@@ -240,6 +240,17 @@ every commit in this block holds it bit-identical at `deddc4b483a0689b`.
   in two files, four independent reference-canvas constants, a dead `_clampCentreToBounds`. Shipped
   world `dc4647be0f55ebdb` and camera fingerprint `deddc4b483a0689b` on both sides.
 
+### The four weights made to work — CAMERA-WEIGHTS-1 (2026-08-04, branch `camera-refactor`)
+Return point captured before the state-selection weights became an acceptance propensity. The HUD
+audit found all four inert; the diagnosis was not a dead wire but a dead EFFECT — 73.2% of selections
+had no candidate and 16.7% had exactly one, and a single candidate was returned without its weight
+being read, so eligibility decided 90% of the state distribution. **This block deliberately MOVES the
+camera fingerprint** — it is a change detector, not a prohibition. Camera `deddc4b483a0689b` ->
+`4b33c4d31bec93ea`; the shipped world `dc4647be0f55ebdb` is untouched.
+- `pre/weights` (`0c875e08`, 2026-08-04) — the state where a weight is a tie-break among coincidences,
+  `overviewWeight` 0.3 -> 10 moves OVERVIEW's share by 1.8pp, and the endgame exception fires
+  LEAD_CHANGE even with its weight at 0.
+
 ## Active-phase tags (temporary scaffolding — to collapse later)
 
 Step-tags from the runaway phase (now CLOSED 2026-07-29, see below) and any later work — safe return points, not permanent anchors. They collapse into
@@ -654,6 +665,7 @@ The full list of the 177 retired tags is recorded below for the archive.
 - `pre/surge-telemetry-agg`
 - `pre/sweep-instrumentation-pulklr`
 - `pre/v4-choreography`
+- `pre/weights`
 - `pre/camera-hygiene`
 - `pre/company`
 - `pre/company-2`

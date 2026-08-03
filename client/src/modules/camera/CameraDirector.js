@@ -599,6 +599,38 @@ export class CameraDirector {
 
   // ── Director helpers ──────────────────────────────────────────────────────
 
+  /**
+   * CAMERA-WEIGHTS-1: THE WEIGHT'S MEANING, stated so the owner can predict what a value buys.
+   *
+   *   A weight is HOW OFTEN YOU TAKE THIS SHOT WHEN IT IS OFFERED.
+   *     0    — never. The state does not appear.
+   *     0.7  — when this shot is available, take it about 7 times in 10; otherwise stay on the leader.
+   *     1+   — always take it when available, and outrank a lower weight when two shots compete.
+   *
+   * WHY AN ABSOLUTE PROPENSITY AND NOT A RELATIVE SHARE. A relative share ("battle 70% of the
+   * cuts") promises something the camera cannot deliver: eligibility is not under its control, so if
+   * a battle never becomes eligible no weight can give it 70% of anything. A propensity only ever
+   * promises what the gates already allow, which is why it is predictable.
+   *
+   * WHY THIS WAS NEEDED. Measured before the change: 73.2% of selections had NO eligible candidate
+   * and 16.7% had exactly ONE — and a single candidate was returned outright, without its weight
+   * ever being read. So the weights decided 10.0% of selections and ELIGIBILITY decided the other
+   * 90%. That is why the dial appeared dead: `overviewWeight` 0.3 -> 10, a 33x increase, moved
+   * OVERVIEW's share of the race by 1.8 percentage points.
+   *
+   * HOW IT COMPOSES WITH THE HOLDS, because both are real and neither may silently win. The holds
+   * and cooldowns still decide WHETHER a shot is offered — they are what stops the picture flicking
+   * between states, and the weight cannot override them. The weight decides whether an OFFERED shot
+   * is taken. A declined offer falls through to LEADER, and the next frame may offer again; the
+   * state's own minStateHold then governs how long the accepted shot lasts. Holds gate, weights
+   * choose — in that order, deliberately.
+   */
+  _acceptsOffer(weight) {
+    if (!(weight > 0)) return false; // 0 means never, and it is checked here as well as at the gate
+    if (weight >= 1) return true;
+    return this._random() < weight;
+  }
+
   _weightedRandomPick(candidates) {
     // Defense in depth (BATTLE-WEIGHT-ZERO-1): a weight of 0 means "never", so the selector must never
     // surface a non-positive-weight candidate even if a caller mis-pushes one. Drop weight <= 0 BEFORE
@@ -1324,7 +1356,10 @@ export class CameraDirector {
     // is the most dramatic moment and must not be suppressed.
     else if (leaderProgress > this._endgameThreshold) {
       const lcCooledDown = ts - this._lastLeadChangeExitTs >= this._leadChangeCooldownMs;
-      if (this._leadChangePending && lcCooledDown) {
+      // CAMERA-WEIGHTS-1: the endgame exception used to bypass the weight completely, so a
+      // leadChangeWeight of 0 still produced LEAD_CHANGE near the line — measured at 1.8% of all
+      // frames with the dial at zero. A weight of 0 means the state does not appear, everywhere.
+      if (this._leadChangePending && lcCooledDown && this._acceptsOffer(this._leadChangeWeight)) {
         return {
           nextState: CAM_STATE.LEAD_CHANGE,
           reason: `lead-change: endgame exception (progress=${leaderProgress.toFixed(2)})`,
@@ -1389,6 +1424,16 @@ export class CameraDirector {
       }
 
       const pick = this._weightedRandomPick(candidates);
+      // THE OFFER. Eligibility and the cooldowns have decided that this shot MAY be taken; the weight
+      // decides whether it IS. Declining falls through to the leader default below, which is the
+      // honest neutral — not a second pick, which would make a low weight boost whatever came next.
+      if (pick && !this._acceptsOffer(pick.weight)) {
+        return {
+          nextState: CAM_STATE.LEADER_ZOOM,
+          reason: `leader: ${pick.state} offered and declined (weight ${pick.weight})`,
+          data: {},
+        };
+      }
       if (pick) {
         if (pick.state === CAM_STATE.OVERVIEW) {
           this._scheduleNextOverview(ts, raceState, leader);

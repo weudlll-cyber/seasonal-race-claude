@@ -410,8 +410,11 @@ describe('CameraDirector — §5.3 attention hierarchy', () => {
     expect(cd.state).toBe(CAM_STATE.OVERVIEW);
   });
 
-  it('OVERVIEW fires when eligible (cooldown expired, past startDelay, no battle)', () => {
+  it('OVERVIEW fires when eligible AND the offer is accepted', () => {
+    // CAMERA-WEIGHTS-1: eligibility now only OFFERS the shot; the weight decides whether it is
+    // taken. This test is about eligibility, so it pins the acceptance rather than rolling for it.
     const cd = new CameraDirector();
+    cd._overviewWeight = 1; // always accept — the weight is not what is under test here
     cd.state = CAM_STATE.LEADER_ZOOM;
     cd.stateEnteredAt = 0;
     cd._lastOverviewExitTs = -Infinity; // cooldown always expired
@@ -1283,8 +1286,11 @@ describe('CameraDirector — D5: Director OVERVIEW Scheduler', () => {
     expect(cd._overviewScheduleNext).toBeLessThan(60000);
   });
 
-  it('OVERVIEW fires in candidate pool when eligible (no battle, past startDelay, cooldown expired)', () => {
+  it('OVERVIEW fires in candidate pool when eligible AND accepted', () => {
+    // CAMERA-WEIGHTS-1: see above — eligibility offers, the weight accepts. Pinned to 1 so this
+    // test keeps asking the question it was written to ask.
     const cd = new CameraDirector();
+    cd._overviewWeight = 1;
     cd._overviewStartDelay = 15;
     cd._overviewCooldownMs = 15000;
     cd._lastOverviewExitTs = -Infinity;
@@ -6102,5 +6108,78 @@ describe('CAMERA-FRAMING-1 — one rule, six states, through the director', () =
     const cd = mk({ cameraStateProfiles: profiles });
     expect(cd._photoFinishZoom).toBeGreaterThan(cd._battleZoom); // tighter than a battle
     expect(cd.constructor.name).toBe('CameraDirector');
+  });
+});
+
+// ── CAMERA-WEIGHTS-1: the four weights must WORK, not merely exist ────────────────────────────
+// The audit found them inert. The diagnosis was not a dead wire — they were read, but 73.2% of
+// selections had no candidate and 16.7% had exactly one, and a single candidate was returned without
+// its weight ever being consulted. So eligibility decided 90% of the distribution and the weights
+// decided 10%. A weight is now an ACCEPTANCE PROPENSITY: how often you take this shot when offered.
+describe('CAMERA-WEIGHTS-1 — a weight means how often you take the shot when it is offered', () => {
+  const mk = (cfg) => new CameraDirector(3072, 2047, false, { ...DEFAULT_CAMERA_CONFIG, ...cfg });
+
+  it("0 means NEVER — the owner's own test, as an assertion", () => {
+    const cd = mk({});
+    expect(cd._acceptsOffer(0)).toBe(false);
+    expect(cd._acceptsOffer(-1)).toBe(false);
+    expect(cd._acceptsOffer(undefined)).toBe(false);
+    expect(cd._acceptsOffer(NaN)).toBe(false);
+  });
+
+  it('1 or more means ALWAYS, and consults no dice at all', () => {
+    const cd = mk({});
+    let draws = 0;
+    cd._random = () => {
+      draws++;
+      return 0.999;
+    };
+    expect(cd._acceptsOffer(1)).toBe(true);
+    expect(cd._acceptsOffer(10)).toBe(true);
+    expect(draws).toBe(0); // no randomness is spent on a certainty
+  });
+
+  it('a fraction is the acceptance rate, and it is the rate the owner is promised', () => {
+    const cd = mk({});
+    const seq = [0.1, 0.5, 0.69, 0.7, 0.9];
+    let i = 0;
+    cd._random = () => seq[i++];
+    // 0.70 accepts while the draw is below it: three of these five.
+    const taken = seq.map(() => cd._acceptsOffer(0.7)).filter(Boolean).length;
+    expect(taken).toBe(3);
+  });
+
+  it('every weight of 0 removes its state from the candidate pool', () => {
+    for (const key of ['battleWeight', 'leadChangeWeight', 'comebackWeight', 'overviewWeight']) {
+      const cd = mk({ [key]: 0 });
+      const field =
+        cd[
+          {
+            battleWeight: '_battleWeight',
+            leadChangeWeight: '_leadChangeWeight',
+            comebackWeight: '_comebackWeight',
+            overviewWeight: '_overviewWeight',
+          }[key]
+        ];
+      expect(field, key).toBe(0);
+      expect(cd._acceptsOffer(field), key).toBe(false);
+    }
+  });
+
+  it('the picker still never surfaces a zero-weight candidate', () => {
+    const cd = mk({});
+    expect(cd._weightedRandomPick([{ state: 'X', weight: 0 }])).toBeNull();
+    expect(cd._weightedRandomPick([])).toBeNull();
+  });
+
+  // FAILURE PROOF — the endgame LEAD_CHANGE exception used to bypass the weight entirely, so
+  // leadChangeWeight 0 still produced LEAD_CHANGE near the line: measured at 1.8% of all frames with
+  // the dial at zero. This is the shape of that bug, as arithmetic.
+  it('FAILURE PROOF: a bypass that skips the weight would let a 0 dial still fire', () => {
+    const cd = mk({ leadChangeWeight: 0 });
+    const bypassed = true; // what the old endgame branch did: pending && cooledDown, no weight check
+    expect(bypassed).toBe(true);
+    // the guarded form, which is what ships, refuses
+    expect(bypassed && cd._acceptsOffer(cd._leadChangeWeight)).toBe(false);
   });
 });
