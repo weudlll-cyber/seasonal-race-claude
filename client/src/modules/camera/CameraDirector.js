@@ -14,7 +14,12 @@ import { diagMixin } from './CameraDirectorDiag.js';
 import { mulberry32 } from '../racePlanner.js';
 import { shortestArcDeltaT } from '../../utils/mathUtils.js';
 import { computeTimingFromConfig, BATTLE_PULK_THRESHOLD_T } from './cameraTimingComputation.js';
-import { projectionForTrack, OPEN_TRACK_BASE_ZOOM as _PROJ_OPEN_BASE } from './projection.js';
+import {
+  projectionForTrack,
+  OPEN_TRACK_BASE_ZOOM as _PROJ_OPEN_BASE,
+  REFERENCE_CANVAS_W,
+  REFERENCE_CANVAS_H,
+} from './projection.js';
 import {
   resolveZoomForCorridors,
   referenceWidthFor,
@@ -68,8 +73,11 @@ const _TC_LEADER = 0.3;
 const _TC_BATTLE = 0.3;
 const _TC_COMEBACK = 0.3;
 const _OVERVIEW_COOLDOWN_MS = 15000; // default ms after leaving OVERVIEW before it can recur
-const CANVAS_W = 1280; // reference canvas width
-const CANVAS_H_REF = 720; // reference canvas height for pct → px conversion
+// CAMERA-HYGIENE-1: the reference canvas has ONE home, projection.js. It was declared independently
+// here, in zoomUnit.js and in two drawing modules — four constants that must agree and nothing
+// making them.
+const CANVAS_W = REFERENCE_CANVAS_W;
+const CANVAS_H_REF = REFERENCE_CANVAS_H;
 const TOP_N = 3; // camera focuses on the top-N racers by position
 // CAMERA-REFERENCE-WIDTH-1 fallbacks, in STANDARD CORRIDORS across the frame, used when no config
 // (or no cameraStateProfiles) is provided. They match DEFAULT_CAMERA_CONFIG so a bare-config
@@ -2453,13 +2461,6 @@ export class CameraDirector {
       frameSize.height
     );
     this._lastResolvedPanTarget = panResolved;
-  }
-
-  /** OVERVIEW-FRAMING-1 helper: keep a frame-centre coordinate so the viewport stays inside the world
-   *  when the world is larger than the viewport; centre it when the world is smaller than the viewport. */
-  _clampCentreToBounds(c, half, min, max) {
-    if (max - min <= 2 * half) return (min + max) / 2; // world smaller than viewport → centre it
-    return Math.max(min + half, Math.min(max - half, c));
   }
 
   /**

@@ -1,4 +1,6 @@
 // ============================================================
+
+import { REFERENCE_CANVAS_W, REFERENCE_CANVAS_H } from './projection.js';
 // File:        zoomUnit.js
 // Path:        client/src/modules/camera/zoomUnit.js
 // Project:     RaceArena
@@ -60,8 +62,8 @@
 // ============================================================
 
 /** Reference canvas the projection's axis scales are defined against. */
-const CANVAS_W = 1280;
-const CANVAS_H = 720;
+const CANVAS_W = REFERENCE_CANVAS_W;
+const CANVAS_H = REFERENCE_CANVAS_H;
 
 /**
  * The width in world px that ONE standard corridor means on this track.

@@ -7,10 +7,12 @@
 //              overlays and records a 20-frame snapshot during BATTLE_ZOOM state.
 // ============================================================
 
+import { REFERENCE_CANVAS_W, REFERENCE_CANVAS_H } from '../../../modules/camera/projection.js';
+
 import { lerp } from '../../../utils/mathUtils.js';
 
-const CANVAS_W = 1280;
-const CANVAS_H = 720;
+const CANVAS_W = REFERENCE_CANVAS_W;
+const CANVAS_H = REFERENCE_CANVAS_H;
 const PHASE_RACING = 1;
 
 /**

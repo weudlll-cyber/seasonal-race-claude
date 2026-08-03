@@ -7,9 +7,11 @@
 //              cache), and track lighting.
 // ============================================================
 
+import { REFERENCE_CANVAS_W } from '../../../modules/camera/projection.js';
+
 import { getBackgroundImage } from '../../../modules/track-effects/bgImageCache.js';
 
-const CANVAS_W = 1280;
+const CANVAS_W = REFERENCE_CANVAS_W;
 
 // Pre-darkened background cache — keyed by `${path}_${ww}x${wh}`.
 // Each entry is an OffscreenCanvas with rgba(0,0,0,0.25) baked in once at load.

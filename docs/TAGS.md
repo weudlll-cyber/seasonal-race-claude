@@ -231,6 +231,15 @@ module header. Minted `dc4647be0f55ebdb`, unchanged.
   race position with no decluttering at all, and the label size is `max(8, round(11/effZoom))`.
   Shipped world `dc4647be0f55ebdb` untouched on both sides.
 
+### The camera deep clean, before the merge — CAMERA-HYGIENE-1 (2026-08-03, branch `camera-refactor`)
+Return point captured before the hygiene pass the owner asked for BEFORE the merge, so master gets one
+clean landing. Its acceptance test is the good kind: hygiene must not move the picture, and that is
+PROVABLE — `scripts/camera-fingerprint.mjs` hashes every camera decision over ten seeded races, and
+every commit in this block holds it bit-identical at `deddc4b483a0689b`.
+- `pre/camera-hygiene` (`48069246`, 2026-08-03) — the pre-clean state: `QUICK_TEST_NAMES` duplicated
+  in two files, four independent reference-canvas constants, a dead `_clampCentreToBounds`. Shipped
+  world `dc4647be0f55ebdb` and camera fingerprint `deddc4b483a0689b` on both sides.
+
 ## Active-phase tags (temporary scaffolding — to collapse later)
 
 Step-tags from the runaway phase (now CLOSED 2026-07-29, see below) and any later work — safe return points, not permanent anchors. They collapse into
@@ -645,6 +654,7 @@ The full list of the 177 retired tags is recorded below for the archive.
 - `pre/surge-telemetry-agg`
 - `pre/sweep-instrumentation-pulklr`
 - `pre/v4-choreography`
+- `pre/camera-hygiene`
 - `pre/company`
 - `pre/company-2`
 - `pre/framing`
