@@ -80,7 +80,11 @@ Items ranked by urgency within each bucket. ✅ = done, 🔜 = next, ⏳ = waiti
 
 ## Measurement infrastructure — next up (from the independent reviews, 2026-07-23)
 
-- 🔜 **HYGIENE PHASE — the engine-input module list, beside `WORLD_CONFIG_KEYS`.** Stage 2 of the mint
+- ✅ **DONE (CAMERA-HYGIENE-1) — the engine-input module list, beside `WORLD_CONFIG_KEYS`.** Shipped as
+  `ENGINE_INPUT_MODULES` in `raceConfigWorld.js` with `client/src/modules/engineInputs.test.js`, which
+  reads `raceCore.js`'s own imports and fails when it names a module the list does not — so adding an
+  engine input forces a decision instead of a silence. Original entry:
+- ⛔️ *(superseded by the line above)* **HYGIENE PHASE — the engine-input module list, beside `WORLD_CONFIG_KEYS`.** Stage 2 of the mint
   tripwire ([SHIP-CEREMONY.md](SHIP-CEREMONY.md) → "THE MINT TRIPWIRE"). Enumerate, in
   `client/src/modules/raceConfigWorld.js` next to `WORLD_CONFIG_KEYS` and under the same "keep them in
   lock-step" rule, the MODULES whose values reach `createRaceFromIdentity` / `stepRacePhysics` — plus a

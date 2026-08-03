@@ -27,6 +27,39 @@ export const WORLD_CONFIG_KEYS = [
   'cameraConfig',
 ];
 
+// ── THE ENGINE-INPUT MODULE LIST — CAMERA-HYGIENE-1, stage 2 of the mint tripwire ─────────────
+// WHY THIS EXISTS. `WORLD_CONFIG_KEYS` above stops a race-path CONFIG key going unnoticed. This is
+// its twin for MODULES, and it exists because the folder test failed: our rule for presentation work
+// was "no simulation file in the diff", which is a test of FOLDERS — and the engine's inputs are not
+// confined to one. `drawnBodyWidthRefPx` is computed in a SCREEN file and consumed by
+// `raceBehavior.js` as the avoidance body size, so a value that moves the race can sit in a camera
+// diff and pass every check. That is not hypothetical: `autoSpriteScale.js` — which also exports the
+// auto-scale config the start-grid packing reads — sat in the CAMERA-PICTURE-FIXES-1 diff and nobody
+// noticed until the owner asked why overtaking looked easier. The fingerprint had NOT moved, but
+// nothing in the regime had established that.
+//
+// THE RULE THIS DRIVES ([../../../docs/SHIP-CEREMONY.md] → THE MINT TRIPWIRE): a block that touches a
+// file under client/src/modules/ outside camera/ mints once. That rule works when someone remembers
+// it. THIS list works when nobody does — the test beside it fails the moment `raceCore.js` imports a
+// module that is not named here, so adding an engine input forces a decision instead of a silence.
+//
+// KEEP IN LOCK-STEP with raceCore.js's own imports. Adding an entry is a claim that the module's
+// values reach `createRaceFromIdentity` / `stepRacePhysics` — which is exactly the claim that means
+// "a change here moves the world, mint before you ship it".
+export const ENGINE_INPUT_MODULES = [
+  './durationModel.js',
+  './rowLayout.js',
+  './raceBehaviorConfig.js',
+  './raceBehavior.js',
+  './raceStep.js',
+  './raceGovernor.js',
+  './raceLengths.js',
+  './racePlanner.js',
+  './raceDynamicsConfig.js',
+  './camera/lapUtils.js',
+  '../utils/mathUtils.js',
+];
+
 // ── Canonical serialisation: stable key order at every depth → identical string on both sides. ──
 export function canonicalJson(value) {
   const seen = new WeakSet();
