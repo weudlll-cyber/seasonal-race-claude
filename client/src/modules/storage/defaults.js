@@ -54,8 +54,11 @@ export const DEFAULT_ROW_LAYOUT_CONFIG = {
 };
 
 export const DEFAULT_CAMERA_CONFIG = {
-  schemaVersion: 21,
-  // CAMERA-REFERENCE-WIDTH-1 (schema v21): the width, in world px, that ONE standard corridor means.
+  // NO schemaVersion here, and none is coming back — see cameraConfig.js. Loading is defaults
+  // underneath, stored values on top, unknown or retired keys ignored, so a new key below always
+  // reaches the live config and the owner's settings are never wiped by a change.
+  //
+  // CAMERA-REFERENCE-WIDTH-1: the width, in world px, that ONE standard corridor means.
   // Every state's `visibleCorridors` is measured in these, so this one number rescales every shot on
   // every track at once. 300 is the widest corridor authored so far, which is why the ten shipped
   // tracks are all framed against the same yardstick today. A track WIDER than this keeps its own
@@ -63,7 +66,7 @@ export const DEFAULT_CAMERA_CONFIG = {
   referenceCorridorPx: 300,
   // Per-state camera profiles — each key matches a CAM_STATE enum value.
   //
-  // CAMERA-REFERENCE-WIDTH-1 (schema v21): `visibleCorridors` is THE zoom setting for every state —
+  // CAMERA-REFERENCE-WIDTH-1: `visibleCorridors` is THE zoom setting for every state —
   // how much world is in shot, measured in STANDARD corridors rather than in this track's own width.
   // One rule, one unit: the state says WHO the camera is on, this number says HOW FAR IN. Higher =
   // wider, and the same number now frames THE SAME AMOUNT OF WORLD on every track, narrow or wide

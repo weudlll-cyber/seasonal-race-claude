@@ -1,7 +1,7 @@
 // CAMERA-FRAMING-1 removed every migration describe block in this file. The owner is the only
 // person testing and asked that no migration code be written for his benefit, so the fourteen-step
 // chain (v5→v19) and the loader's per-version ladder are DELETED, not deprecated: a stored config of
-// the current schema is merged over the defaults, and anything else is discarded. These tests
+// defaults underneath, stored values on top, unknown or retired keys ignored. These tests
 // exercised code that no longer exists. What remains below is the behaviour that still has meaning —
 // the current-schema merge, the defaults guarantee, and provenance.
 
@@ -36,7 +36,7 @@ describe('loadCameraConfig', () => {
     expect(cfg).toEqual(DEFAULT_CAMERA_CONFIG);
   });
 
-  it('migration schema v1 (missing schemaVersion) → DEFAULT_CAMERA_CONFIG', () => {
+  it('a stored config with RETIRED keys keeps its known values — nothing is discarded', () => {
     storageGet.mockReturnValue({
       leaderZoomMultiplier: 1.8,
       battleZoomMultiplier: 2.5,
@@ -50,7 +50,6 @@ describe('loadCameraConfig', () => {
 
   it('a stored config from any older schema is DISCARDED — defaults, not a migration', () => {
     storageGet.mockReturnValue({
-      schemaVersion: 1,
       leaderZoomMultiplier: 1.8,
       minSpritePctOfCanvas: 0.05,
     });
@@ -63,9 +62,8 @@ describe('loadCameraConfig', () => {
     expect(() => loadCameraConfig()).not.toThrow();
   });
 
-  it('a stored config of the current schema is merged over the defaults', () => {
+  it('a stored config is merged over the defaults', () => {
     storageGet.mockReturnValue({
-      schemaVersion: 21,
       maxTargetScreenPx: 200,
       spritePctOfCanvas: {
         overview: 0.05,
@@ -80,12 +78,10 @@ describe('loadCameraConfig', () => {
     });
     const cfg = loadCameraConfig();
     expect(cfg.maxTargetScreenPx).toBe(200);
-    expect(cfg.schemaVersion).toBe(21);
   });
 
   it('a stored config carrying no zoom field gets the shipped standard-corridors default', () => {
     storageGet.mockReturnValue({
-      schemaVersion: 21,
       spritePctOfCanvas: {
         overview: 0.05,
         leader: 0.1,
@@ -101,9 +97,8 @@ describe('loadCameraConfig', () => {
     expect(cfg.spritePctOfCanvas.leader).toBe(0.1);
   });
 
-  it('schemaVersion=2: missing spritePctOfCanvas sub-keys fall back to scale defaults', () => {
+  it('missing spritePctOfCanvas sub-keys fall back to scale defaults', () => {
     storageGet.mockReturnValue({
-      schemaVersion: 21,
       spritePctOfCanvas: { leader: 0.1 }, // only leader overridden
     });
     const cfg = loadCameraConfig();
@@ -121,20 +116,20 @@ describe('loadCameraConfig', () => {
 });
 
 describe('saveCameraConfig', () => {
-  it('writes schemaVersion: 21', () => {
+  it('writes the config as given — no version stamp is added', () => {
     const config = { ...DEFAULT_CAMERA_CONFIG };
     saveCameraConfig(config);
     expect(storageSet).toHaveBeenCalledWith(
       'racearena:cameraConfig',
-      expect.objectContaining({ schemaVersion: 21 })
+      expect.not.objectContaining({ schemaVersion: expect.anything() })
     );
   });
 
-  it('writes schemaVersion: 21 even when not in input config', () => {
+  it('round-trips a value without inventing fields', () => {
     saveCameraConfig({ maxTargetScreenPx: 160 });
     expect(storageSet).toHaveBeenCalledWith(
       'racearena:cameraConfig',
-      expect.objectContaining({ schemaVersion: 21 })
+      expect.not.objectContaining({ schemaVersion: expect.anything() })
     );
   });
 });
@@ -142,7 +137,6 @@ describe('saveCameraConfig', () => {
 describe('loadCameraConfig — v4 schema: deep-merge cameraStateProfiles', () => {
   it('a stored profile that names no zoom keeps the shipped standard-corridors default', () => {
     storageGet.mockReturnValue({
-      schemaVersion: 21,
       cameraStateProfiles: {
         LEADER_ZOOM: { entryTC: 0.9 }, // a non-zoom override
       },
@@ -163,18 +157,17 @@ describe('loadCameraConfig — v4 schema: deep-merge cameraStateProfiles', () =>
   });
 
   it('entryConvergenceZoom and entryConvergencePx are present', () => {
-    storageGet.mockReturnValue({ schemaVersion: 21 });
+    storageGet.mockReturnValue({});
     const cfg = loadCameraConfig();
     expect(cfg.entryConvergenceZoom).toBe(DEFAULT_CAMERA_CONFIG.entryConvergenceZoom);
     expect(cfg.entryConvergencePx).toBe(DEFAULT_CAMERA_CONFIG.entryConvergencePx);
   });
 });
 
-describe('loadCameraConfig — current-schema passthrough', () => {
+describe('loadCameraConfig — stored-over-defaults', () => {
   it('WITH cameraStateProfiles: stored field preserved, others from defaults, missing state filled', () => {
     // LEADER_ZOOM has one override; OVERVIEW is absent from stored → must come from defaults.
     storageGet.mockReturnValue({
-      schemaVersion: 21,
       maxTargetScreenPx: 250,
       cameraStateProfiles: {
         LEADER_ZOOM: { spriteScale: 3.0 },
@@ -197,12 +190,10 @@ describe('loadCameraConfig — current-schema passthrough', () => {
     expect(cfg.cameraStateProfiles.OVERVIEW).toEqual(
       DEFAULT_CAMERA_CONFIG.cameraStateProfiles.OVERVIEW
     );
-    expect(cfg.schemaVersion).toBe(21);
   });
 
   it('WITHOUT cameraStateProfiles: top-level override merged, profiles equal the defaults', () => {
     storageGet.mockReturnValue({
-      schemaVersion: 21,
       maxTargetScreenPx: 180,
     });
     const cfg = loadCameraConfig();
@@ -212,7 +203,6 @@ describe('loadCameraConfig — current-schema passthrough', () => {
     expect(cfg.minStateHoldMs).toBe(DEFAULT_CAMERA_CONFIG.minStateHoldMs);
     // Deep-merge block skipped → profiles are the defaults spread from DEFAULT_CAMERA_CONFIG
     expect(cfg.cameraStateProfiles).toEqual(DEFAULT_CAMERA_CONFIG.cameraStateProfiles);
-    expect(cfg.schemaVersion).toBe(21);
   });
 });
 
@@ -221,7 +211,6 @@ describe('mergeStateProfiles — helper behavior via loadCameraConfig', () => {
     // v7 uses no-strip — default spriteScale is in the base and survives when the stored
     // override does not supply one.
     storageGet.mockReturnValue({
-      schemaVersion: 21,
       cameraStateProfiles: {
         LEADER_ZOOM: { trackingTC: 0.77 }, // one override; no spriteScale supplied
       },
@@ -246,7 +235,6 @@ describe('mergeStateProfiles — helper behavior via loadCameraConfig', () => {
 
   it('a stored profile merges over the default profile, key by key', () => {
     storageGet.mockReturnValue({
-      schemaVersion: 21,
       cameraStateProfiles: {
         LEADER_ZOOM: { trackingTC: 0.55 },
       },
@@ -276,7 +264,6 @@ describe('CAMERA-FOCUS-4 — stored config can never omit new machinery', () => 
     // The owner's case: a stored cosmetic config (off-default keys) saved BEFORE FOCUS-3 existed, so it
     // has NO cameraTransitionGrammar / leaderForwardFrac. The load must fill them from DEFAULT.
     storageGet.mockReturnValue({
-      schemaVersion: 21,
       showCameraStateHud: false,
       overviewOffsetPx: 200,
       minRacersVisible: 6,
@@ -286,17 +273,22 @@ describe('CAMERA-FOCUS-4 — stored config can never omit new machinery', () => 
     const cfg = loadCameraConfig();
     expect(cfg.cameraTransitionGrammar).toBe('glide');
     expect(cfg.leaderForwardFrac).toBe(0.66);
-    // stored overrides still win where present:
+    // stored overrides still win where the key is still live:
     expect(cfg.minRacersVisible).toBe(6);
-    expect(cfg.overviewOffsetPx).toBe(200);
+    expect(cfg.showCameraStateHud).toBe(false);
+    // …and RETIRED keys are ignored rather than carried forward. `overviewOffsetPx` and
+    // `leaderMinZoomFraction` were deleted with the mechanisms they configured; a config stored
+    // before that still holds them, and the loader simply does not look at them.
+    expect(cfg.overviewOffsetPx).toBeUndefined();
+    expect(cfg.leaderMinZoomFraction).toBeUndefined();
     // and the CameraDirector built from it runs the NEW path, not the legacy fallback:
     const cd = new CameraDirector(3072, 2048, false, cfg);
     expect(cd.transitionGrammar).toBe('glide');
   });
 
   it('systemic guarantee: even if a resolve branch dropped a new key, loadCameraConfig fills it', () => {
-    // A migration-era config (schemaVersion 9) exercises a different branch; new keys must still resolve.
-    storageGet.mockReturnValue({ schemaVersion: 21, minRacersVisible: 4 });
+    // A config stored before this key existed: the new key must still resolve, from the defaults.
+    storageGet.mockReturnValue({ minRacersVisible: 4 });
     const cfg = loadCameraConfig();
     expect(cfg.cameraTransitionGrammar).toBe('glide');
     expect(cfg.leaderForwardFrac).toBe(0.66);
@@ -309,13 +301,73 @@ describe('CAMERA-FOCUS-4 — stored config can never omit new machinery', () => 
     );
   });
 
-  it('cameraConfigProvenance reports per-key source (stored vs default) + schema version', () => {
-    storageGet.mockReturnValue({ schemaVersion: 21, glideDurationMs: 600 });
+  it('cameraConfigProvenance reports per-key source (stored vs default)', () => {
+    storageGet.mockReturnValue({ glideDurationMs: 600 });
     const prov = cameraConfigProvenance();
-    expect(prov.storedSchemaVersion).toBe(21);
     expect(prov.hadStored).toBe(true);
     expect(prov.sources.glideDurationMs).toBe('stored');
     expect(prov.sources.cameraTransitionGrammar).toBe('default'); // filled from DEFAULT, not stored
     expect(prov.resolved.cameraTransitionGrammar).toBe('glide');
+  });
+});
+
+// ── CAMERA-NO-SCHEMA-1: the rule that replaced the version, as tests ──────────────────────────
+// The owner's standing instruction: no schema, no version bumps, no migrations. What replaces the
+// machinery is defaults underneath, stored values on top, unknown or retired keys ignored. These
+// pin that rule directly, because it is now the only thing protecting his settings.
+describe('no schema, no version — just sane loading', () => {
+  it('a stored config is NEVER discarded wholesale — every known value survives', () => {
+    // The old rule threw the WHOLE config away on a version mismatch. That is what wiped his
+    // settings twice (v20, v21) and made him retype everything. It cannot happen again.
+    storageGet.mockReturnValue({
+      schemaVersion: 7, // a stale field from the old regime: meaningless now, and harmless
+      minRacersVisible: 6,
+      glideDurationMs: 700,
+    });
+    const cfg = loadCameraConfig();
+    expect(cfg.minRacersVisible).toBe(6);
+    expect(cfg.glideDurationMs).toBe(700);
+    expect(cfg.schemaVersion).toBeUndefined(); // not a key of the defaults, so not in the live config
+  });
+
+  it('a NEW default key always reaches the live config (Lesson 193, without versioning)', () => {
+    storageGet.mockReturnValue({ minRacersVisible: 6 });
+    const cfg = loadCameraConfig();
+    for (const key of Object.keys(DEFAULT_CAMERA_CONFIG)) expect(cfg, key).toHaveProperty(key);
+  });
+
+  it('a stored state PROFILE merges key by key, and unknown profile fields are ignored', () => {
+    storageGet.mockReturnValue({
+      cameraStateProfiles: {
+        LEADER_ZOOM: { visibleCorridors: 0.4, retiredKnob: 99 },
+        NOT_A_STATE: { visibleCorridors: 5 },
+      },
+    });
+    const cfg = loadCameraConfig();
+    expect(cfg.cameraStateProfiles.LEADER_ZOOM.visibleCorridors).toBe(0.4); // his value wins
+    expect(cfg.cameraStateProfiles.LEADER_ZOOM.trackingTC).toBe(
+      DEFAULT_CAMERA_CONFIG.cameraStateProfiles.LEADER_ZOOM.trackingTC
+    ); // the rest from defaults
+    expect(cfg.cameraStateProfiles.LEADER_ZOOM.retiredKnob).toBeUndefined();
+    expect(cfg.cameraStateProfiles.NOT_A_STATE).toBeUndefined();
+    expect(Object.keys(cfg.cameraStateProfiles).sort()).toEqual(
+      Object.keys(DEFAULT_CAMERA_CONFIG.cameraStateProfiles).sort()
+    );
+  });
+
+  it('saving does not stamp anything onto what he stored', () => {
+    saveCameraConfig({ minRacersVisible: 5 });
+    expect(storageSet).toHaveBeenCalledWith('racearena:cameraConfig', { minRacersVisible: 5 });
+  });
+
+  // FAILURE PROOF — what the version check did, computed from the same inputs. A stored config whose
+  // version did not match the code's was discarded ENTIRELY: every value below would have come back
+  // as the default. That is the behaviour this block deleted.
+  it('FAILURE PROOF: the version check would have thrown all of this away', () => {
+    const stored = { schemaVersion: 20, minRacersVisible: 6, glideDurationMs: 700 };
+    storageGet.mockReturnValue(stored);
+    const versionChecked = stored.schemaVersion !== 21 ? { ...DEFAULT_CAMERA_CONFIG } : stored;
+    expect(versionChecked.minRacersVisible).toBe(DEFAULT_CAMERA_CONFIG.minRacersVisible); // wiped
+    expect(loadCameraConfig().minRacersVisible).toBe(6); // kept
   });
 });

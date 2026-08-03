@@ -195,6 +195,19 @@ would otherwise leave the frame.
   position on both axes. Camera-only; the shipped world `dc4647be0f55ebdb` is untouched on both sides.
   Config schema v21 on both sides.
 
+### Config schema removed for good — CAMERA-NO-SCHEMA-1 (2026-08-03, branch `camera-refactor`)
+Return point captured before the camera config's `schemaVersion` was deleted. The owner's standing
+instruction, given four times: no schema, no version bumps, no migrations — he is the only person
+testing, there is nothing to migrate from and nobody to migrate for. The versioning was actively
+harmful: v20 and v21 each DISCARDED his stored camera config and he retyped it. Replaced by sane
+loading — defaults underneath, stored values on top, unknown or retired keys ignored — which gives the
+Lesson 193 protection with no versioning at all. `WORLD_SCHEMA_VERSION` in `raceConfigWorld.js` is a
+different thing and STAYS: a browser<->sim handshake on the exported world, which must abort loudly
+rather than be half-honoured, and which never touches his settings.
+- `pre/no-schema` (`41d2ed38`, 2026-08-03) — the last state carrying `schemaVersion: 21`, its equality
+  check in the loader and its save-time stamp. Camera-only; the shipped world `dc4647be0f55ebdb` is
+  untouched on both sides.
+
 ## Active-phase tags (temporary scaffolding — to collapse later)
 
 Step-tags from the runaway phase (now CLOSED 2026-07-29, see below) and any later work — safe return points, not permanent anchors. They collapse into
@@ -613,6 +626,7 @@ The full list of the 177 retired tags is recorded below for the archive.
 - `pre/company-2`
 - `pre/framing`
 - `pre/lateral`
+- `pre/no-schema`
 - `pre/reference-width`
 - `pre/picture-fixes`
 - `pre/v4-on-trunk`

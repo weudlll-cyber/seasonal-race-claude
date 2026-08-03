@@ -542,7 +542,7 @@ export default function RaceScreen() {
     camDirRef.current.setRandomSeed(cameraRandomSeed);
     // CAMERA-FOCUS-4 LIVE TRUTH — print, at every race start, exactly which build + camera path this
     // browser is running: short commit · RESOLVED transition grammar · leader forward-frac · stored schema
-    // version · per-key source (stored vs default) for the two FOCUS-3 keys. Reload once and paste this to
+    // per-key source (stored vs default) for the two FOCUS-3 keys. Reload once and paste this to
     // settle any stale-bundle / stale-config ghost hunt in a single glance. This line stays forever.
     {
       const commit = typeof __RA_COMMIT__ !== 'undefined' ? __RA_COMMIT__ : 'dev';
@@ -552,7 +552,7 @@ export default function RaceScreen() {
         `[RA CAMERA LIVE TRUTH] commit=${commit} ` +
           `resolvedGrammar=${camDirRef.current.transitionGrammar} ` +
           `leaderForwardFrac=${camDirRef.current.leaderForwardFrac ?? 'null'} ` +
-          `storedSchema=${prov.storedSchemaVersion ?? 'none'} hadStoredConfig=${prov.hadStored} ` +
+          `hadStoredConfig=${prov.hadStored} ` +
           `source{cameraTransitionGrammar}=${prov.sources.cameraTransitionGrammar} ` +
           `source{leaderForwardFrac}=${prov.sources.leaderForwardFrac} ` +
           `cameraSeed=${cameraRandomSeed} ` +
