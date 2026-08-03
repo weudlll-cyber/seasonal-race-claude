@@ -5733,6 +5733,38 @@ describe('CameraDirector — CAMERA-DETOUR-1 frame-log liveness', () => {
     expect(spy.mock.calls.some((c) => String(c[0]).startsWith('[RA CAMERA DETOUR]'))).toBe(false);
     spy.mockRestore();
   });
+
+  it('ON and OFF draw the SAME picture — the instrument does not move what it measures', () => {
+    // CAMERA-HYGIENE-2. This is the claim detourRecorder.js is built on and the reason
+    // scripts/camera-fingerprint.mjs is allowed to ignore the flag: the recorder reads the
+    // director and writes only its own buffers. Nothing asserted it before. Every frame's
+    // committed camera values are compared, not just the last — a recorder that perturbed one
+    // frame and settled back would pass an endpoint check.
+    const spy = vi.spyOn(console, 'info').mockImplementation(() => {});
+    const trace = (config) => {
+      const cd = new CameraDirector(1280, 720, false, config);
+      const frames = [];
+      let ts = 0;
+      const rec = () => frames.push([cd.state, cd.zoom, cd.offsetX, cd.offsetY, cd._camT]);
+      cd.state = CAM_STATE.OVERVIEW;
+      cd.stateEnteredAt = 0;
+      const overview = { raceElapsed: 1000, finishedCount: 0, winner: null, finishT: 1.0 };
+      for (let i = 0; i < 5; i++, ts += 16) {
+        cd.update(mockRacers(4), ts, overview, 1280, 720);
+        rec();
+      }
+      const afterFinish = { raceElapsed: 2000, finishedCount: 1, winner: null, finishT: 1.0 };
+      for (let i = 0; i < 35; i++, ts += 16) {
+        cd.update(mockRacers(4), ts, afterFinish, 1280, 720);
+        rec();
+      }
+      return frames;
+    };
+    const off = trace(null);
+    const on = trace({ cameraDetourLog: true });
+    expect(on).toEqual(off);
+    spy.mockRestore();
+  });
 });
 
 // ── CAMERA-GLIDE-TARGET-1: the glide endpoint is computed at the DESTINATION zoom (cause D fix) ──────
