@@ -22,7 +22,7 @@ Every element of the spec, before any numbers.
 | **§2 Stage 1a** — extract the transition DECISION, machine-readable reason | **BUILT** | `transitionDecision.js`, `{action, reason}` |
 | §2 — call site keeps every action and every `this` assignment | **BUILT** | |
 | §2 — photo-finish gate split honestly, or left alone with a reason | **BUILT, split** | the split is honest; §4 argues why |
-| §2 — tests pinning the five reasons and the hold gate | **BUILT** | +29 tests incl. full precedence |
+| §2 — tests pinning the five reasons and the hold gate | **BUILT** | **+32** tests incl. full precedence |
 | §2 — do NOT extract the transition machinery | **RESPECTED** | |
 | §2 — do NOT touch `_computeTimingConfig` | **RESPECTED** | |
 | **§3 Stage 1b (a)** — delete the two stale ARCHITECTURE sections, pointer only | **BUILT** | one move made, one deliberate non-move argued |
