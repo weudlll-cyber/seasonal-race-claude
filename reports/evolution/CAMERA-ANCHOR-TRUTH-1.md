@@ -39,7 +39,8 @@ Every element of the spec, before any numbers.
 | §4c — mint tripwire, world must be `dc4647be0f55ebdb` | **BUILT** | unmoved |
 | §5 — Stage 1 both fingerprints bit-identical at every commit | **BUILT** | run, not argued |
 | §5 — Stage 2 deltas recorded per commit | **BUILT** | §5 table |
-| §5 — tests adjusted AND extended incl. where none existed | **BUILT** | +40 |
+| §5 — tests adjusted AND extended incl. where none existed | **BUILT** | **+43** (3494 → 3537) |
+| §5 — full suite green | **BUILT** | §10 |
 | §5 — re-mint both as branch baselines in report + ceremony | **BUILT** | SHIP-CEREMONY + CAMERA_DIRECTOR updated |
 | §5 — owner's eye list | **BUILT** | §8 |
 | §6 — hygiene limited to what this change orphans | **BUILT** | §7 |
@@ -311,3 +312,24 @@ one-screen guard for a docs/hygiene block.
 be cropped" from a plausible worry into 0.238%, and it will cost one run to re-answer after any future
 framing change. **The measurement was worth building even though the fix was not** — that is the
 argument for diagnosis-first as a standing rule, not just this block's method.
+
+---
+
+## 10. THE SUITE
+
+**3537 passed / 3537, 173 files / 173, vitest exit code 0**, at the branch tip. Base was **3494**, so
+this block adds **+43**: 32 in `transitionDecision.test.js`, 7 in `framingRule.test.js` (§4a), 4 in
+`framingConfig.test.js` (§4c). Nothing was deleted or skipped.
+
+Run as `npx vitest run --coverage --testTimeout=120000`. **The raised timeout is stated rather than
+hidden**: `vitest.config.js` sets no `testTimeout`, so the 5 s default applies, and two heavy sim
+tests in `sim-fairness.test.js` exceed it on this machine under coverage instrumentation. That is a
+pre-existing local artefact established in CI-AUDIT-GREEN-1 §5.1 — CI's own record shows
+`Run tests with coverage = success` at the default — and it is unrelated to anything here: no test
+this block touched is anywhere near the limit. Raising the clock removes a known local confound; it
+does not paper over a failure, and with it raised there are **no failures of any kind**.
+
+Also green at the tip: ESLint, `check-doc-links` (321 links / 52 files / 0 dangling), `check-index`
+(96 reports / 0 unindexed), `check-tags` (63 tags / 0 unregistered), and the 121 script tests.
+
+**Not pushed.** The branch is complete and waiting on the owner's eye (§8).
