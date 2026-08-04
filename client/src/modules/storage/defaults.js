@@ -6,6 +6,8 @@
 // Description: Default data for all storage keys — seeded on first launch
 // ============================================================
 
+import { DEFAULT_AUTO_SCALE_CONFIG } from '../autoSpriteScale.js';
+
 export const DEFAULT_RACE_DEFAULTS = {
   duration: 60,
   winners: 3,
@@ -52,16 +54,35 @@ export const DEFAULT_ROW_LAYOUT_CONFIG = {
 };
 
 export const DEFAULT_CAMERA_CONFIG = {
-  schemaVersion: 17,
+  // NO schemaVersion here, and none is coming back — see cameraConfig.js. Loading is defaults
+  // underneath, stored values on top, unknown or retired keys ignored, so a new key below always
+  // reaches the live config and the owner's settings are never wiped by a change.
+  //
+  // CAMERA-REFERENCE-WIDTH-1: the width, in world px, that ONE standard corridor means.
+  // Every state's `visibleCorridors` is measured in these, so this one number rescales every shot on
+  // every track at once. 300 is the widest corridor authored so far, which is why the ten shipped
+  // tracks are all framed against the same yardstick today. A track WIDER than this keeps its own
+  // width instead (max(reference, actual)), so its corridor is never asked to be cropped.
+  referenceCorridorPx: 300,
   // Per-state camera profiles — each key matches a CAM_STATE enum value.
-  // CameraDirector reads from here; legacy spritePctOfCanvas / cameraTransitionSeconds
-  // are kept below for localStorage backwards-compat (v3→v4 migration reads them).
-  // spriteScale: relative zoom factor — 1.0 = sprite at natural density-scaled size.
-  // Derived from v7 spritePx defaults (÷36): OVERVIEW=36/36=1.0, LEADER=65/36≈1.81,
-  // BATTLE=101/36≈2.81, COMEBACK=50/36≈1.39. Racer-count-independent (L82, L83).
+  //
+  // CAMERA-REFERENCE-WIDTH-1: `visibleCorridors` is THE zoom setting for every state —
+  // how much world is in shot, measured in STANDARD corridors rather than in this track's own width.
+  // One rule, one unit: the state says WHO the camera is on, this number says HOW FAR IN. Higher =
+  // wider, and the same number now frames THE SAME AMOUNT OF WORLD on every track, narrow or wide
+  // (see camera/zoomUnit.js).
+  //
+  // THESE NUMBERS HAVE NOTHING IN COMMON WITH THE OLD ONES. It is a unit change, like miles to
+  // kilometres: the old values were multiples of each track's own corridor, these are multiples of a
+  // fixed 300 px. LEADER 2 meant 262 world px on Searound and 600 on Mountainstreet; LEADER 0.75
+  // means 225 everywhere. Nothing here is a regression from the old set — it is a different scale.
+  //
+  // The anchor is the owner's own eye: he typed 1.67 on Searound under the old unit, saw 219 world
+  // px and judged it good ("the racers are not too big"). 0.75 x 300 = 225 px is that picture,
+  // 2.7% wider — below what the eye separates. Every other state keeps the ratio to LEADER it had.
   cameraStateProfiles: {
     OVERVIEW: {
-      spriteScale: 1.0,
+      visibleCorridors: 1.5, // 450 world px — the widest shot, double LEADER
       trackingTC: 1.5,
       entryTC: 1.5,
       leadInDuration: 0, // seconds camera holds lead-in position before following racer
@@ -70,10 +91,9 @@ export const DEFAULT_CAMERA_CONFIG = {
       maxStateDuration: 4000,
       minStateHold: 5000,
       maxEntryDurationMs: 10000, // timeout fallback: force tracking after this many ms in entry
-      overviewOffsetPx: 150, // world px: camera shifts toward field so leader appears at outer edge
     },
     LEADER_ZOOM: {
-      spriteScale: 1.81,
+      visibleCorridors: 0.75, // 225 world px — the reference shot, the owner's own eye
       trackingTC: 0.25,
       entryTC: 0.8,
       leadInDuration: 0.3,
@@ -86,7 +106,7 @@ export const DEFAULT_CAMERA_CONFIG = {
       leadOutEnabled: false, // OFF by default — lead-out causes "camera stops, racer runs away" effect
     },
     BATTLE_ZOOM: {
-      spriteScale: 2.81,
+      visibleCorridors: 0.55, // 165 world px — tighter than LEADER
       trackingTC: 0.25,
       entryTC: 0.8,
       leadInDuration: 0.2,
@@ -99,7 +119,7 @@ export const DEFAULT_CAMERA_CONFIG = {
       leadOutEnabled: false,
     },
     COMEBACK_ZOOM: {
-      spriteScale: 1.39,
+      visibleCorridors: 0.55, // 165 world px — tighter than LEADER
       trackingTC: 0.25,
       entryTC: 0.8,
       leadInDuration: 0.3,
@@ -111,8 +131,24 @@ export const DEFAULT_CAMERA_CONFIG = {
       leadAheadEnabled: false,
       leadOutEnabled: false,
     },
+    PHOTO_FINISH: {
+      // CAMERA-FRAMING-1: its OWN entry at last. It borrowed BATTLE's numbers, so the most dramatic
+      // shot in the race was never closer than an ordinary battle. It is now the tightest setting
+      // shipped, and safe: its guarantee is the two contenders, not the corridor, so the pair decides.
+      visibleCorridors: 0.4, // 120 world px — the tightest shot in the race
+      trackingTC: 0.25,
+      entryTC: 0.8,
+      leadInDuration: 0,
+      leadOutDuration: 0,
+      innerFramePct: 0.7,
+      maxStateDuration: 8000,
+      minStateHold: 1500,
+      maxEntryDurationMs: 5000,
+      leadAheadEnabled: false,
+      leadOutEnabled: false,
+    },
     LEAD_CHANGE: {
-      spriteScale: 1.81,
+      visibleCorridors: 0.75, // same framing as LEADER — only the subject differs
       trackingTC: 0.25,
       entryTC: 0.8,
       leadInDuration: 0.3,
@@ -134,7 +170,41 @@ export const DEFAULT_CAMERA_CONFIG = {
   // allow convergence while the leader is moving. Raised from 0.005 (never-converge) to 0.03.
   transitionTConvergence: 0.03,
   maxTargetScreenPx: 160,
-  tagVisibleMaxCount: 10,
+  // CAMERA-MIN-DRAW-1 — the readability floor: never draw a racer too small to RECOGNISE. A
+  // FRACTION OF THE FRAME HEIGHT, not pixels, so it survives the next change of zoom unit (the old
+  // floor was 32 absolute screen px and did not). 0 turns it off.
+  //
+  // DRAWING ONLY. It bounds one multiplication in the render loop and can never reach the zoom —
+  // that is what made the old floor fight the owner's own setting, and there is a test pinning it.
+  //
+  // Default 0.045 is measured against the picture he approved: before the floor was removed, the
+  // Space Sprint start formation drew its rockets at 32.0 screen px (4.44% of frame height). Without
+  // it they are 22.8 px — a 29% shrink, and the reason the start formation stopped overlapping.
+  // 0.045 = 32.4 px reproduces that within 1%. It binds in OVERVIEW only, and only on the three
+  // tracks whose racers are drawn at 14.3 world px (Mountainstreet, Seatrack, Space Sprint) plus a
+  // 1% nudge on Dirt Oval; nothing outside OVERVIEW is touched at any value up to 0.06.
+  minDrawnFrameFrac: 0.045,
+  // CAMERA-TAGS-1 — name tags. `tagVisibleMaxCount` (top N by race position) is GONE: it answered
+  // "who matters in the standings" where a label answers "who is that on screen", and it never
+  // looked at whether two labels landed on each other. Eligibility is now "on canvas" and
+  // label-vs-label occlusion decides the rest, so the COUNT is an output rather than a setting.
+  //
+  // The label is UI: the same size on screen at every zoom, on every track, at any world
+  // resolution. 0.022 of frame height = 15.8 px at 720. The rule it replaces was
+  // max(8, round(11/effZoom)), which clamped above effZoom 1.375 and so produced a 2.4x size
+  // difference between tracks at one setting.
+  nameTagFrameFrac: 0.022,
+  // THE START-FORMATION EXCEPTION, and the owner's reason for it: during the start formation EVERY
+  // name must be visible so that every spectator can find their racer once. All names are shown
+  // through the countdown and for this long after the gun.
+  //
+  // 8000 ms is measured, not chosen. Decluttering drops 10-22% of names while the field is still a
+  // block, worst around 4 s in; by 8 s it drops essentially nothing (survival ratio 1.00). So the
+  // handover costs names before 8 s and costs nothing after it — and because nothing is dropped at
+  // that moment, the switch is INVISIBLE and needs no transition. Note this is well past the
+  // camera's own 3 s start hold: handing over when the camera does would take ~20% of the names
+  // away at the densest moment.
+  nameTagAllUntilMs: 8000,
   showCameraStateHud: true,
   showCameraDiagnostics: false,
   showRpDiag: false,
@@ -208,17 +278,10 @@ export const DEFAULT_CAMERA_CONFIG = {
   comebackCooldownMs: 10000, // ms after leaving COMEBACK before it can re-trigger
   leadChangeCooldownMs: 5000, // ms after leaving LEAD_CHANGE before it can re-trigger
   overviewCooldownMs: 15000, // ms after leaving OVERVIEW before it can recur
-  overviewClosedTrackZoom: 1.3, // @deprecated 2026-06-04 — retired; kept in schema v15 for migration compatibility only; not read at runtime
-  overviewTargetScreenPx: 28, // minimum visible narrow-body screen size (px) for OVERVIEW (and floor for all phases)
-  overviewMinEffZoom: 0, // OVERVIEW zoom floor (effective zoom). 0 = off (current behavior). E.g. 0.6 = effZoom never goes below 0.6 on open tracks.
-  // OVERVIEW-FRAMING-1 — the owner's framing rule. OVERVIEW frames the LEADER + the next
-  // (overviewFrameRacers − 1) racers, deriving the zoom to fit them, floored so a racer sprite never
-  // shrinks below overviewMinSpriteFrac of the frame width (legibility outranks the count). The frame
-  // centre sits BEHIND the leader (box centre, toward the field); the leader is always kept in-frame
-  // with margin (the offset yields, never the leader). Both are FRACTIONS/counts, never pixels — so the
-  // framing is identical at any resolution (see CameraDirector._setOverviewGroupTargets).
-  overviewFrameRacers: 5, // leader + next (N−1) racers OVERVIEW must frame when the sprite floor allows
-  overviewMinSpriteFrac: 0.018, // min racer-sprite on-screen width as a fraction of the frame width (the zoom-out floor)
+  // CAMERA-FRAMING-1: OVERVIEW-FRAMING-1's "leader + N racers, derive the zoom to fit them" is gone.
+  // It was a guarantee phrased as a HEADCOUNT, and how many racers you see is an OUTCOME of how far
+  // in the camera is, not an input to it. OVERVIEW now runs the same rule as every other state:
+  // anchor the leader, guarantee the corridor, sit forward of centre. See camera/framingRule.js.
   // Director (weighted random) — candidate pool weights (0.0–1.0)
   battleWeight: 0.8,
   leadChangeWeight: 0.7,
@@ -241,22 +304,16 @@ export const DEFAULT_CAMERA_CONFIG = {
   photoFinishSlowmoFactor: 0.5, // physics slow-motion factor during the photo-finish shot (1.0 = normal, 0.5 = half speed)
   photoFinishLeadProgress: 0.97, // predictive gate: leader progress (fraction of finishT, 0..1) at which the one-shot close-check fires BEFORE the line
   // Countdown camera phase: zooms from start-zoom to OVERVIEW zoom during the pre-race countdown.
-  countdownStartZoomSpritePx: 1, // tiny value → clamped to min zoom (whole track visible)
+  // CAMERA-REFERENCE-WIDTH-1: the countdown opens on the same unit — a wide establishing shot that
+  // eases into OVERVIEW. Clamped by the projection, so on a small world it means "the whole world".
+  countdownStartCorridors: 3,
   countdownDurationMs: 4000, // matches the default race countdown duration
   // State overlay: narrative text shown during first seconds of OVERVIEW / BATTLE / COMEBACK.
   stateOverlayEnabled: true,
   stateOverlayDurationMs: 3500,
-  // Legacy fields kept for v3→v4 migration reads. CameraDirector no longer reads these.
-  spritePctOfCanvas: {
-    overview: 0.05,
-    leader: 0.08,
-    battle: 0.12,
-    comeback: 0.065,
-  },
   maxStateDuration: 4000,
   battleMaxDurationMs: 6000,
   minStateHoldMs: 5000,
-  cameraTransitionSeconds: { overview: 1.5, leader: 0.3, battle: 0.3, comeback: 0.3 },
   targetInnerFramePct: 0.7,
   // CAMERA-FOCUS-3 leader framing: where the leader sits along the motion axis in LEADER_ZOOM. 0.5 =
   // dead-centre; > 0.5 = FORWARD (leader toward the leading edge, so most of the frame shows the pack
@@ -272,19 +329,22 @@ export const DEFAULT_CAMERA_CONFIG = {
   cameraTransitionGrammar: 'glide',
   // CAMERA-GRAMMAR-1 glide entry duration (ms) — one bounded ease for pan AND zoom. Validated [300, 900].
   glideDurationMs: 500,
-  // Dynamic zoom-out: if fewer than minRacersVisible non-finished racers are visible, the camera
-  // gradually reduces targetZoom each frame until enough racers appear or leaderMinZoom is reached.
-  // 0 = disabled. Range: 0–15.
-  minRacersVisible: 8,
-  // Hard zoom-out floor for LEADER_ZOOM and LEAD_CHANGE. Camera will not zoom out past this.
-  leaderMinZoom: 0.4,
-  // Zoom reduction per frame when too few racers are visible. 0.005 = ~0.5%/frame at 60 fps.
-  zoomOutStepPerFrame: 0.005,
-  // World-size-independent zoom-out floor for LEADER_ZOOM / LEAD_CHANGE, as a fraction of the
-  // configured leader zoom. floor = max(blackScreenFloor, leaderMinZoomFraction × leaderZoom).
-  // 1.0 = camera stays pinned at leader zoom (no zoom-out); 0.6 = may zoom out to 60% of leader
-  // zoom; low values approach whole-world zoom on large tracks. Range: 0.1–1.0.
-  leaderMinZoomFraction: 0.6,
+  // CAMERA-COMPANY-1 — the DRAMATURGICAL guarantee: "do not show emptiness". The minimum number of
+  // racers in frame INCLUDING the anchor; 0 or 1 disables it. This is the min-racers idea returning
+  // as a GUARANTEE rather than the floor it used to be: a LIMIT computed before the camera moves
+  // (never zoom in then back out), orientation-aware, and ranked by the zoom each racer would
+  // require rather than by raw distance — which is what the old floor got wrong.
+  //
+  // Default 3 is measured, not chosen, and CAMERA-COMPANY-2 RE-MEASURED it at the 40-racer field the
+  // owner actually runs — the CAMERA-COMPANY-1 numbers were taken at 20 and understated his case,
+  // because more racers supply a longer queue rather than closer company. At 40 with LEADER 1: on
+  // dirt-oval 3 cuts the frames where the leader is ALONE from 6% to 1% and thin frames (<3 racers)
+  // from 7% to 1%, at 0.26 direction changes per second and a p95 shot of 1.45 track widths — barely
+  // wider than the 1.0 he asked for. 5 and 8 buy NO further emptiness protection on that track and do
+  // cost the shot: p95 1.76 and 2.32 track widths, the second being the over-wide picture this block
+  // was opened to fix. On searound 5 does buy a little (thin 4% → 2%) for +0.22 rev/s, which is the
+  // one honest reason to raise it. See reports/evolution/CAMERA-COMPANY-2.md.
+  minRacersVisible: 3,
   // Focal-position smoothing: EMA time-constant (seconds) applied to the camera's world-space
   // pan target during follow phase. Reduces velocity-oscillation artefacts (COMEBACK speedBrake
   // cycling) and per-physics-step quantisation jitter (LEADER_ZOOM). 0 = disabled.
@@ -690,4 +750,19 @@ export const DEFAULT_RACE_BEHAVIOR_CONFIG = {
   lookBeforeBrakeLagFrames: 2,
   lookBeforeBrakeRequireSlowerLeader: true,
   lookBeforeBrakeMinDifferential: 0.005,
+};
+
+// ── The shipped-default CONFIG WORLD ──────────────────────────────────────────────────────────
+// The default value of every race-path config block, in one object keyed exactly like
+// raceConfigWorld.WORLD_CONFIG_KEYS. This is the reference the HUD fingerprint badge diffs
+// against, and the base a CAMERA-REPRO-1 marker's config diff is applied back onto — so the two
+// MUST read the same defaults. One home, both sides import it.
+export const DEFAULT_CONFIG_WORLD = {
+  raceDynamicsConfig: DEFAULT_RACE_DYNAMICS_CONFIG,
+  raceBehaviorConfig: DEFAULT_RACE_BEHAVIOR_CONFIG,
+  rowLayoutConfig: DEFAULT_ROW_LAYOUT_CONFIG,
+  baseSpeedConfig: DEFAULT_BASE_SPEED_CONFIG,
+  autoScaleConfig: DEFAULT_AUTO_SCALE_CONFIG,
+  frameTimingConfig: DEFAULT_FRAME_TIMING_CONFIG,
+  cameraConfig: DEFAULT_CAMERA_CONFIG,
 };

@@ -2,14 +2,27 @@
 // File:        CameraDirectorDiag.js
 // Path:        client/src/modules/camera/CameraDirectorDiag.js
 // Project:     RaceArena
-// Description: Diagnostics mixin for CameraDirector. Installed onto
-//              CameraDirector.prototype via Object.defineProperties at
-//              the bottom of CameraDirector.js. All methods use this.*
-//              and are resolved against CameraDirector instances at call
-//              time. No import from CameraDirector.js — avoids circular dep.
+//
+// WHAT THIS IS FOR: everything the Dev Screen and the frame log need to SEE what the camera is
+// doing — the BATTLE / COMEBACK / LEAD_CHANGE panels, the per-frame ring buffer and its export.
+//
+// WHAT IT IS NOT FOR, and this is the rule the file lives by: it is READ-ONLY on the camera. It
+// may compute, format and buffer; it may not write a camera value or change a decision. That is
+// why the camera fingerprint is identical with every diagnostic flag on and off, and it is what
+// makes this file safe to edit without a re-baseline.
+//
+// A panel must also never re-implement a rule it is displaying. `getComebackDiagData` used to
+// carry its own copy of the window-start scan, so the HUD and the gate could in principle disagree
+// about which history entry "the start of the window" is; it calls the detector's own
+// `earliestAtOrAfter` now.
+//
+// HOW IT IS INSTALLED: `Object.defineProperties` onto CameraDirector.prototype at the bottom of
+// CameraDirector.js. Every method resolves `this.*` against a live director at call time. It does
+// not import from CameraDirector.js, which is what keeps the dependency one-way.
 // ============================================================
 
 import { shortestArcDeltaT } from '../../utils/mathUtils.js';
+import { earliestAtOrAfter } from './comebackDetector.js';
 
 export const diagMixin = {
   // ── Lead-change diagnostics ───────────────────────────────────────────────
@@ -41,26 +54,21 @@ export const diagMixin = {
   getComebackDiagData(racers, ts) {
     const sorted = racers ? [...racers].sort((a, b) => b.t - a.t) : [];
     const currentRankByIndex = new Map(sorted.map((r, i) => [r.index, i + 1]));
-    const windowMs = (this._comebackWindowSec ?? 5) * 1000;
-    const cutoff = ts - windowMs;
-    const minGain = this._comebackMinPositionsGained ?? 3;
-    const minStartGap = this._comebackMinStartGap ?? 0.25;
-    const maxCurrentRankPct = this._comebackMaxCurrentRankPct ?? 0.2;
+    const g = this._comebackGates;
+    const cutoff = ts - g.windowSec * 1000;
+    const minGain = g.minPositionsGained;
+    const minStartGap = g.minStartGap;
+    const maxCurrentRankPct = g.maxCurrentRankPct;
     const N = sorted.length;
     const normDivisor = Math.max(N - 1, 1);
     const b1Data = [];
-    if (this._b1Indices) {
-      for (const idx of this._b1Indices) {
+    if (this._comeback.roster) {
+      for (const idx of this._comeback.roster) {
         const racer = sorted.find((r) => r.index === idx);
         const currentRank = currentRankByIndex.get(idx) ?? null;
-        const hist = this._rankHistory.get(idx) ?? [];
-        let earliestInWindow = null;
-        for (let i = 0; i < hist.length; i++) {
-          if (hist[i].ts >= cutoff) {
-            earliestInWindow = hist[i];
-            break;
-          }
-        }
+        // The detector's own window lookup, so the HUD and the gate can never disagree about
+        // which history entry "the start of the window" means.
+        const earliestInWindow = earliestAtOrAfter(this._comeback.historyFor(idx), cutoff);
         const gain =
           earliestInWindow != null && currentRank != null ? earliestInWindow.rank - currentRank : 0;
         const startGapNorm =
@@ -88,7 +96,7 @@ export const diagMixin = {
       active: this.state === 'COMEBACK_ZOOM',
       lockedRacer,
       b1Data,
-      windowSec: this._comebackWindowSec ?? 5,
+      windowSec: g.windowSec,
       minPositionsGained: minGain,
       outcomePhaseThreshold: threshold,
       leaderProgress: progress,
@@ -143,8 +151,8 @@ export const diagMixin = {
 
     // Q1: isolation check for DiagHUD display (arc)
     let isGroupIsolated = true;
-    if (racers && groupRacers.length > 0 && this._battleIsolationThresholdT > 0) {
-      const isoThrT = this._battleIsolationThresholdT;
+    if (racers && groupRacers.length > 0 && this._battleGates.isolationT > 0) {
+      const isoThrT = this._battleGates.isolationT;
       const groupSet = new Set(groupRacers.map((r) => r));
       for (const ro of racers) {
         if (groupSet.has(ro)) continue;
@@ -168,9 +176,9 @@ export const diagMixin = {
       currentGroupRacers: currentGroup ?? [],
       isPulkNow: currentGroup !== null,
       isGroupIsolated,
-      isolationThresholdT: this._battleIsolationThresholdT,
+      isolationThresholdT: this._battleGates.isolationT,
       groupPairwiseTemporal,
-      closenessThresholdT: this._battlePulkThresholdT,
+      closenessThresholdT: this._battleGates.closenessT,
     };
   },
 
@@ -185,7 +193,7 @@ export const diagMixin = {
 
   /** TC (seconds) for the current state — readable by the diagnostics HUD. */
   get currentTc() {
-    return this._tcByState?.[this.state] ?? this._tcOverview;
+    return this._tcByState?.[this.state] ?? this._tcByState?.OVERVIEW;
   },
 
   /** Current lerp phase: 'entry' (slow, smooth) or 'tracking' (fast, sticky). */

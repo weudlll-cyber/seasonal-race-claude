@@ -620,6 +620,42 @@ describe('computeBodyNarrowRef — body-basis proof (giraffe vs. duck)', () => {
   });
 });
 
+// CAMERA-PROJECTION-1 (Part E — DIAGNOSED, NOT SHIPPED): the camera reference body must SCALE with
+// the track for the OVERVIEW zoom rule to stay resolution-invariant. Its callers pass
+// `Math.min(285, effectiveWidth)`, and that absolute ceiling freezes the reference above a ~300 px
+// track (CAMERA-REFACTOR-1 B2). The fix was NOT made in this block: the same expression lives in
+// RaceScreen, headlessRaceSimulator.js AND sim-fairness.mjs, the value reaches raceBehavior's
+// separation physics, and changing it in one place alone would break sim/browser parity. It needs
+// its own block with the engine ceremony. These tests pin the behaviour so that block has a target.
+describe('computeBodyNarrowRef — how the reference scales with the track (CAMERA-PROJECTION-1 Part E)', () => {
+  // A racer whose own size ceiling (displaySize × bodyFillNarrow × maxScale = 36 × 0.875 × 2.5
+  // = 78.75) is far away, so the track-width term is the one that decides.
+  const at = (w) => computeBodyNarrowRef(w, 20, 36, 0.875, AUTOCONFIG).bodyNarrow;
+
+  it('given an unclamped reference width, doubling the track doubles the reference body', () => {
+    // 2x the world → 2x the track width → 2x the reference body, so the camera would frame the same
+    // fraction of the track. This is the property the guarantee needs.
+    expect(at(285)).toBeCloseTo(28.5, 6); // 2 × 285 / 20
+    expect(at(570) / at(285)).toBeCloseTo(2, 6);
+  });
+
+  it('FAILURE PROOF: the min(285, …) the callers actually pass flattens exactly that scaling', () => {
+    const capped = (w) =>
+      computeBodyNarrowRef(Math.min(285, w), 20, 36, 0.875, AUTOCONFIG).bodyNarrow;
+    expect(capped(570) / capped(285)).toBeCloseTo(1, 6); // frozen — the live defect
+  });
+
+  it('HONEST LIMIT: a SECOND absolute ceiling remains — the racer type is still not world-relative', () => {
+    // displaySize × bodyFillNarrow × maxScale is a racer-type constant. It does not scale with the
+    // world, so even with the 285 removed it would take over above roughly 2.5x the authored
+    // resolution and the reference would stop tracking the track again. Removing the 285 would
+    // extend the guarantee; it would NOT complete it. See reports/evolution/CAMERA-PROJECTION-1.md.
+    const ceiling = 36 * 0.875 * AUTOCONFIG.maxScale;
+    expect(at(1140)).toBeCloseTo(ceiling, 6); // 2 × 1140 / 20 = 114 would exceed it → clamped
+    expect(at(1140) / at(285)).toBeLessThan(4); // NOT the 4x that true invariance would give
+  });
+});
+
 describe('computeBodyNarrowRef — track decoupling proof', () => {
   // At same N and W_REF, all tracks should give the same bodyNarrow for the same racer type.
   // Rocket (ds=47, bodyFillNarrow=0.278) at N=20: result must not vary with the caller's

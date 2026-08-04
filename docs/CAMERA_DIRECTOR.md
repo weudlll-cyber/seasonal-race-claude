@@ -1,387 +1,286 @@
-# CameraDirector — Technical Reference
+# The Camera — Architecture Reference
 
-**File:** `client/src/modules/camera/CameraDirector.js`
-**Last updated:** 2026-05-28 (reflects commit `87e8f1c` forward; covers v14/v15 config schema)
+**Last rewritten:** 2026-08-04 (CAMERA-HYGIENE-2), against the code as it stands on `camera-refactor`.
+
+**What this document is FOR:** the shape of the camera — which file owns what, the order things
+happen in, and the reasoning that is not visible from any single file. Read it before changing the
+camera; it is written for somebody arriving in six months who was not here for any of this.
+
+**What this document is NOT for, deliberately:** the config table. There used to be one here, and by
+the time it was next read it listed eight keys that no longer existed and four defaults that were
+wrong. Every camera setting has ONE canonical home — its entry in
+[`defaults.js`](../client/src/modules/storage/defaults.js) and its tooltip on the Dev Screen, which
+sit next to the value they describe and move with it. This file does not repeat them.
+
+**The acceptance test for any change here.** `node scripts/camera-fingerprint.mjs` hashes every
+decision the director makes — state, lerp phase, anchor, zoom, both offsets, `camT`, both targets —
+on every frame of a seeded race across all ten tracks. Current: **`4b33c4d31bec93ea`**. A refactor
+that tidies code must not move the picture, and that is provable rather than arguable. It covers the
+DIRECTOR only; the render path (sprite scale, name-tag layout, drawing) is out of scope by
+construction and must be argued another way.
 
 ---
 
-## 1. Overview
+## 1. The files, and what each one is FOR
 
-`CameraDirector` is a TV-style camera state machine for RaceArena. It runs once per
-animation frame inside the `RACING` game phase and returns `{ zoom, offsetX, offsetY }`
-that is applied as a canvas `ctx.transform` by `RaceScreen`.
-
-Key design goals:
-
-- **Closed and open tracks** share one class; `isOpenTrack` flag controls the zoom and pan formulas.
-- **Lerp-smoothed zoom and pan** — no hard cuts except LEAD_CHANGE (intentional snap).
-- **T-space pan path** — during the entry phase the camera travels along the track curve
-  (via `_camT` + `shape.getPosition`) instead of taking the euclidean shortcut through
-  the infield.
-- **Weighted-random director** — after mandatory priority rules, eligible state candidates
-  are picked by weighted random draw so broadcasts feel varied, not mechanical.
-- **Config live-apply** — `updateConfig(config)` recomputes all zoom and timing parameters
-  without a race restart.
-
-### Exports
-
-| Name | Kind | Description |
+| File | For | Not for |
 |---|---|---|
-| `CAM_STATE` | const object | All 5 state names as string constants |
-| `OPEN_TRACK_BASE_ZOOM` | number | `1.5` — base zoom multiplier for open-track rendering |
-| `FALLBACK_REFERENCE_SPRITE_SIZE` | number | `36` — fallback sprite size when `referenceSpriteSize` is 0 |
-| `tcToLerpFactor(tc)` | function | Converts a time-constant (s) to a per-60fps-frame lerp factor |
-| `CameraDirector` | class | Main camera state machine |
+| `CameraDirector.js` | The state machine and the camera's own motion: which shot we are on, and where the camera is this frame. | Anything answerable without a camera — see the rows below. |
+| `projection.js` | THE world↔screen mapping. Every zoom formula, guardrail and diagnostic goes through it. | Deciding anything. It converts. |
+| `zoomUnit.js` | The corridor unit: turning "how much world is in shot" into a `cam.zoom`, and back. | The per-state settings themselves. |
+| `framingConfig.js` | Resolving a raw config into framing numbers, with every default and validation band. | Producing a `cam.zoom` — it knows nothing of the projection or the track. |
+| `cameraTimingComputation.js` | Resolving a raw config into timing numbers, with every timing fallback. | Anything spatial. |
+| `framingRule.js` | The framing rule: who must stay in frame, where the subject sits, and the zoom ceilings that honour it. | Moving a centre. The guarantees WIDEN; they never steer. |
+| `frameGeometry.js` | Rectangle geometry: how far the frame reaches along a direction. | Cameras. |
+| `resolveCamera.js` | Viewport clamping: fitting a desired shot inside the world bounds. | Choosing the desired shot. |
+| `panTarget.js` | The world point a state centres on, given its subjects. | Zoom. |
+| `battleGroup.js` | Who is fighting whom, from positions and thresholds. | Cameras. Pure, stateless. |
+| `comebackDetector.js` | Who is coming through the field, from rank history. | Whether the camera cuts to them. |
+| `detourRecorder.js` | The per-transition diagnostic frame log. | Anything. It never writes a camera value — that is the whole point. |
+| `CameraDirectorDiag.js` | The diagnostics mixin: the HUD panels and the frame-log ring buffer. | Direction. Read-only by design. |
+| `lapUtils.js`, `openTrackCamera.js`, `Minimap.js`, `cameraMarker.js` | Lap arithmetic; the open-track base zoom for the render transform; the minimap; the reproducible-moment marker. | — |
+
+**The one-way rule.** The director imports from the modules; no module imports from the director.
+`CameraDirectorDiag.js` is installed onto the prototype by `Object.defineProperties` at the bottom of
+`CameraDirector.js` precisely so it can use `this.*` without an import cycle.
 
 ---
 
-## 2. State Machine
+## 2. The state machine
 
 ### 2.1 States
 
-| State | `CAM_STATE` key | Description |
-|---|---|---|
-| Overview | `OVERVIEW` | Full-field view, adaptive zoom, follows leader + field centroid |
-| Leader Zoom | `LEADER_ZOOM` | Tight zoom on current race leader (and immediate followers) |
-| Battle Zoom | `BATTLE_ZOOM` | Locked on a detected pulk group (≥3 racers in proximity) |
-| Comeback Zoom | `COMEBACK_ZOOM` | Follows a B1-racer who has gained ≥N positions within a time window |
-| Lead Change | `LEAD_CHANGE` | Hard-cut to new leader on position swap; zoomed in tight |
-
-Plus two transient **finish-sequence** sub-phases (not discrete states, tracked via flags):
-
-| Phase | Flag | What happens |
-|---|---|---|
-| `FINISH` drama | `_inFinishDrama = true` | `finishDramaDurationMs` of LEADER_ZOOM on the winner (first-finish detected) |
-| `FINISH_OVERVIEW` | `_inFinishMode = true` | Gradual zoom-out; camera pans to `lookbackT` near the finish line |
-
-### 2.2 Transition priority chain (`_pickNextState`)
-
-Priority is evaluated in strict order every time `_transition()` is called:
-
-1. **Finish override** — if any racer has finished:
-   - First detection → fire FINISH drama (LEADER_ZOOM for `finishDramaDurationMs`).
-   - Drama expired → enter FINISH_OVERVIEW (OVERVIEW); lock `_inFinishMode`, no further transitions.
-   - Drama still active → suppress transition (return null).
-2. **Start phase** (`raceElapsed < 3000 ms`) → force OVERVIEW.
-3. **Post-start hold** (`raceElapsed < 3000 + postStartHoldMs`) → force LEADER_ZOOM.
-   Prevents BATTLE triggering on natural clustering at race start.
-4. **Endgame** (`leaderProgress > endgameThreshold`, default 0.90) → force LEADER_ZOOM.
-   Exception: a LEAD_CHANGE that cleared its cooldown passes through the endgame gate.
-5. **Weighted-random candidate pool** — if none of the above applies, build a list of
-   eligible candidates and pick one by weighted draw:
-   - BATTLE_ZOOM (weight `battleWeight`, default 0.8) — when `_isPulk()` and `battleCooldownMs` cleared.
-   - LEAD_CHANGE (weight `leadChangeWeight`, default 0.7) — when `_leadChangePending` and `leadChangeCooldownMs` cleared.
-   - COMEBACK_ZOOM (weight `comebackWeight`, default 0.6) — when outcome phase active and `comebackCooldownMs` cleared and a qualifying comeback racer found.
-   - OVERVIEW (weight `overviewWeight`, default 0.3) — when `_isOverviewEligible()` (scheduler + cooldown).
-   - Default fallback when pool is empty: LEADER_ZOOM.
-
-### 2.3 State lifecycle in `update()`
-
-Each `update()` call (once per frame) follows this sequence:
-
-1. Update rank history and leader-tracking bookkeeping.
-2. Compute `stateAge`, `minHold`, `stateCap`.
-3. **Early exits** (BATTLE-specific, checked before the general hold gate):
-   - If `stateAge ≥ battleMinDurationMs` and original group is no longer cohesive → `_exitBattle()`.
-   - If `stateAge ≥ battleMinDurationMs` and a group member has drifted to P1/P2 → `_exitBattle()`.
-4. **Interrupt** — LEADER_ZOOM with `_leadChangePending` fires `_transition()` immediately.
-5. **General hold gate** — `_transition()` when `stateAge ≥ max(minHold, stateCap)`,
-   or when the finish-drama pulse expires, or on first-finish detection.
-6. Apply dt-scaled lerp factor.
-7. **T-space entry lerp** — if `_lerpPhase === 'entry'` and `_camT !== null`:
-   advance `_camT` toward `_transitionTargetT` along the track. Also updates
-   `_prevFocusT` and `_entrySpeedEstimate` for the lead-ahead calculation.
-8. **Zoom-before-setTargets** — when T-space lerp active, apply zoom lerp first so
-   pan is computed at the post-lerp zoom (avoids per-frame mismatch).
-9. `_setTargets()` — compute `targetZoom`, `targetOffsetX`, `targetOffsetY`.
-10. LEAD_CHANGE snap — if `_leadChangeSnapPending`, instantly assign `offsetX/Y = targetOffsetX/Y`.
-11. Apply zoom and pan lerps (pixel space) when T-space lerp is NOT active.
-12. **Entry convergence gate** — check whether zoom + T-space deltas are below thresholds;
-    promote `_lerpPhase` from `'entry'` to `'tracking'`; start phased observer.
-13. `_computePhasedPanTarget()` — phased observer (lead-in / follow / lead-out) advances
-    `_camT` so next frame's `_setTargets` tracks the correct world position.
-14. Return `{ zoom, offsetX, offsetY }`.
-
----
-
-## 3. Config Schema (v14 / v15)
-
-Config is passed to the constructor and to `updateConfig()`. All fields are optional;
-hardcoded fallbacks apply when omitted.
-
-### 3.1 Top-level fields
-
-| Field | Type | Default | Description |
-|---|---|---|---|
-| `battlePulkThresholdPx` | number | 200 | World-pixel radius for pulk spatial condition |
-| `battlePulkThresholdT` | number | 0.12 | Max T-space gap between pulk members |
-| `battleMinDurationMs` | number | 3000 | Minimum ms BATTLE_ZOOM holds after entry |
-| `battleIsolationThresholdPx` | number | 0 | Non-group racers must be this far from the group (0 = disabled) |
-| `battleMaxGroupSize` | number | 6 | Max racers in a detected pulk (clamped 3–6) |
-| `battleMaxGroupRankSpan` | number | 5 | Max rank-span allowed in the pulk group |
-| `battleMinTopN` | number | 10 | Frontmost pulk racer must be within top-N |
-| `battleCooldownMs` | number | 8000 | Lockout after leaving BATTLE_ZOOM |
-| `endgameThreshold` | number | 0.90 | Leader progress fraction that triggers endgame gate (code fallback 0.85; RaceScreen passes 0.90 when config omits this field) |
-| `postStartHoldMs` | number | 7000 | ms of forced LEADER after start phase |
-| `transitionTConvergence` | number | 0.03 | T-space delta threshold for entry→tracking promotion |
-| `entryConvergenceZoom` | number | 0.05 | Zoom delta threshold for entry→tracking promotion |
-| `entryConvergencePx` | number | 10 | Pixel delta threshold for entry→tracking promotion |
-| `overviewCooldownMs` | number | 15000 | ms after leaving OVERVIEW before it can recur |
-| `overviewClosedTrackZoom` | number | 1.3 | Extra zoom-in factor on top of OVERVIEW zoom (closed tracks only) |
-| `showCameraDiagnostics` | boolean | false | Emit `console.warn` on every state transition |
-| `enableFrameLog` | boolean | false | Record per-frame diagnostics ring buffer |
-| `comebackMinPositionsGained` | number | 2 | Positions gained required to qualify as comeback |
-| `comebackWindowSec` | number | 4 | Time window (s) over which position gain is measured |
-| `comebackMinDuration` | number | 3 | Minimum s COMEBACK_ZOOM holds (also sets minStateHold) |
-| `outcomePhaseThreshold` | number | 0.75 | Leader progress fraction for internal outcome-phase flag |
-| `comebackMinStartGap` | number | 0.4 | Min starting rank gap fraction for comeback eligibility |
-| `comebackMaxCurrentRankPct` | number | 0.1 | Max current rank fraction to trigger comeback |
-| `comebackCooldownMs` | number | 10000 | Lockout after leaving COMEBACK_ZOOM |
-| `leadChangeMinGap` | number | 0.002 | Min T-delta for a confirmed lead change |
-| `leadChangeDebounceMs` | number | 800 | Debounce window for candidate lead-change detection |
-| `leadChangeMinDuration` | number | 1.5 | Minimum s LEAD_CHANGE holds (also sets minStateHold) |
-| `leadChangeCooldownMs` | number | 5000 | Lockout after leaving LEAD_CHANGE |
-| `finishDramaDurationMs` | number | 1500 | ms of LEADER_ZOOM drama pulse on first finish |
-| `finishOverviewZoomOutDurationMs` | number | 3000 | Duration (ms) of the smooth zoom-out into FINISH_OVERVIEW |
-| `finishPauseMs` | number | 2500 | ms pause after all racers finish before leaderboard shows |
-| `finishOverviewLookbackPx` | number | 300 | World-pixel offset before finish line for FINISH_OVERVIEW anchor |
-| `battleWeight` | number | 0.8 | Weighted-random draw weight for BATTLE_ZOOM |
-| `leadChangeWeight` | number | 0.7 | Weighted-random draw weight for LEAD_CHANGE |
-| `comebackWeight` | number | 0.6 | Weighted-random draw weight for COMEBACK_ZOOM |
-| `overviewWeight` | number | 0.3 | Weighted-random draw weight for OVERVIEW |
-| `overviewTargetCount` | number | 2 | Target number of OVERVIEW visits per race |
-| `overviewStartDelay` | number | — | ms after race start before first OVERVIEW is eligible |
-| `targetInnerFramePct` | number | 0.7 | Fraction of canvas the focus subject must stay within |
-| `countdownStartZoomSpritePx` | number | — | Sprite size (px) at countdown start for zoom animation |
-
-### 3.2 `cameraStateProfiles` (v14+)
-
-Per-state profile object. Each key is a state name (`OVERVIEW`, `LEADER_ZOOM`,
-`BATTLE_ZOOM`, `COMEBACK_ZOOM`, `LEAD_CHANGE`).
-
-| Field | Type | Description |
-|---|---|---|
-| `spriteScale` | number | Relative scale factor for zoom (1.0 = natural size). Replaces legacy `spritePctOfCanvas`. |
-| `trackingTC` | number | Lerp time-constant (s) for the **tracking** phase. 90% convergence ≈ 3.45 × TC. |
-| `entryTC` | number | Lerp time-constant (s) for the **entry** phase. Falls back to `trackingTC` when omitted. |
-| `minStateHold` | number | Minimum ms this state holds before transitioning. |
-| `maxStateDuration` | number | Hard cap (ms) after which `_transition()` fires unconditionally. |
-| `leadInDuration` | number | Seconds to hold the lead-ahead anchor before switching to follow. |
-| `leadOutDuration` | number | Seconds before state end to start lead-out deceleration. |
-| `leadAheadEnabled` | boolean | Whether lead-ahead offset is computed for this state. Default true. |
-| `leadOutEnabled` | boolean | Whether lead-out phase is active for this state. Default true. |
-| `maxEntryDurationMs` | number | Timeout (ms) for entry→tracking promotion regardless of convergence. |
-| `overviewOffsetPx` | number | (OVERVIEW only) World-pixel radial shift toward the field. Default 150. |
-
-### 3.3 Legacy path (`spritePctOfCanvas`)
-
-Old configs without `cameraStateProfiles` may supply `spritePctOfCanvas.{leader,battle,comeback}`.
-Converted to `spriteScale` equivalents via:
-
-```
-spriteScale = pct × 720 / 36
-```
-
-### 3.4 Zoom defaults (v14)
-
-When no config is provided, `DEFAULT_SPRITE_SCALE` applies:
-
-| State | spriteScale |
+| State | Shot |
 |---|---|
-| LEADER_ZOOM | 1.81 |
-| BATTLE_ZOOM | 2.81 |
-| COMEBACK_ZOOM | 1.39 |
-| LEAD_CHANGE | 1.81 (same as LEADER) |
+| `OVERVIEW` | The establishing shot — the widest setting of the same rule every other state runs. |
+| `LEADER_ZOOM` | The current leader, framed forward so the pack behind him fills the frame. |
+| `BATTLE_ZOOM` | A detected group fighting behind the lead. |
+| `COMEBACK_ZOOM` | A racer climbing through the field. |
+| `LEAD_CHANGE` | The racer who has just taken the lead, with the racer he passed. |
+| `PHOTO_FINISH` | The top two contesting the line. The tightest shot in the race, and it has its own setting — it used to borrow BATTLE's, so the most dramatic moment was never closer than an ordinary battle. |
+
+Two finish sub-phases are flags rather than states, because they are OVERVIEW and LEADER_ZOOM with a
+different anchor and a lock: `_inFinishDrama` (the pulse on the winner) and `_inFinishMode`
+(FINISH_OVERVIEW, held on a fixed point behind the line so later finishers cross in shot).
+`hudState` reports them.
+
+### 2.2 The priority chain (`_pickNextState`)
+
+Evaluated in strict order on every `_transition()`:
+
+0. **Photo-finish lifecycle.** Once entered, the director owns the state until the second racer
+   crosses (or all have). There is deliberately NO wall-clock cap: under photo-finish slow motion a
+   wall-time timer expired during the approach, before the winner crossed, and ate the winner text.
+1. **Finish.** First crossing → either PHOTO_FINISH (top two close) or the LEADER_ZOOM drama pulse;
+   pulse expired → FINISH_OVERVIEW, which is absolute and admits no further transitions.
+2. **Pre-line photo-finish entry**, a once-only latch evaluated in `update()` and consumed here.
+3. **Start phase** (`raceElapsed < 3000 ms`) → OVERVIEW.
+4. **Post-start hold** (`+ postStartHoldMs`) → LEADER_ZOOM, so BATTLE cannot fire on the natural
+   clustering at the gun.
+5. **Endgame** (`leaderProgress > endgameThreshold`) → LEADER_ZOOM, with LEAD_CHANGE allowed
+   through — a lead swap near the line is the most dramatic moment there is.
+6. **The weighted pool** — every eligible candidate, one weighted draw.
+
+### 2.3 What a weight MEANS, because it is not obvious
+
+**A weight is how often you take this shot when it is offered.** 0 means never — the state does not
+appear, anywhere, including through the endgame exception. 0.7 means take it about seven times in
+ten and otherwise stay on the leader. 1 or more means always, and outranks a lower weight when two
+shots compete.
+
+It is an absolute propensity, not a relative share, because a share promises something the camera
+cannot deliver: eligibility is not under its control, so if a battle never becomes eligible no weight
+can give it 70% of anything.
+
+**Holds gate, weights choose — in that order.** The holds and cooldowns decide whether a shot is
+OFFERED; they are what stops the picture flicking between states and no weight can override them. The
+weight decides whether an offered shot is TAKEN. A declined offer falls through to LEADER, never to a
+second pick — a second pick would make a low weight boost whatever came next.
+
+> **If you are writing a test that says "the gate opened, therefore the state was entered", pin the
+> weight.** Otherwise the test is a coin flip. Eighteen were, and the suite failed about one run in
+> ten. `ALWAYS_TAKE` in `CameraDirector.test.js` exists for this.
+
+### 2.4 What `update()` does, in order
+
+The order matters and parts of it are load-bearing:
+
+1. Record ranks (comeback detector) and leader tracking.
+2. Compute `stateAge`, `minHold`, `stateCap`; evaluate the one-shot photo-finish gate.
+3. BATTLE early exits — group dispersed, or a member drifted into P1/P2.
+4. LEAD_CHANGE interrupt out of LEADER_ZOOM.
+5. The general hold gate → `_transition()`.
+6. **T-space entry lerp** — during entry, advance `_camT` along the TRACK toward the target, so the
+   camera travels the curve instead of cutting across the infield.
+7. **Zoom lerp BEFORE `_setTargets`**, when the T-space lerp is active. Without this, `_setTargets`
+   computes the pan at the pre-lerp zoom while the renderer draws at the post-lerp zoom — a per-frame
+   mismatch proportional to `camX × Δzoom`, visible as camera jumps whenever `dt` varies.
+8. `_setTargets()` — the framing rule (§3).
+9. One of three branches writes `offsetX/offsetY`: **glide**, **cut**, or **follow**.
+10. Entry-convergence gate → promote `entry` to `tracking`, start the phased observer.
+11. `_computePhasedPanTarget()` — lead-in / follow / lead-out advance `_camT` for NEXT frame.
+12. Diagnostics, then return `{ zoom, offsetX, offsetY }`.
+
+**`targetOffsetX/Y` are owned exclusively by `_setTargets`.** `_computePhasedPanTarget` only moves
+`_camT`. Two writers to the pan target is how the camera acquires a fight with itself.
 
 ---
 
-## 4. Pan and Zoom Architecture
+## 3. The framing rule
 
-### 4.1 Zoom levels
+A state is described by three things and only three:
 
-**Closed tracks** — `effectiveZoom = cam.zoom × bsX` where `bsX = 1280 / worldW`.
-OVERVIEW uses `cam.zoom = 1` (bsX alone fills the canvas). Zoom states use
-`cam.zoom = spriteScale / bsX`.
+- **ANCHOR** — who the camera is on. The only genuinely per-state part (`_framingSubjects`).
+- **GUARANTEE** — who must stay in frame. Applied as a zoom CEILING: it WIDENS the shot and never
+  moves a centre.
+- **ZOOM** — how much world is in shot, in standard corridors.
 
-**Open tracks** — `effectiveZoom = cam.zoom × OPEN_TRACK_BASE_ZOOM (1.5)`.
-OVERVIEW uses `cam.zoom = overviewZoom = 1280 / worldW`. Zoom states use
-`cam.zoom = spriteScale / OPEN_TRACK_BASE_ZOOM`.
+Frame POSITION is not a fourth setting. It follows from "is there anything worth seeing ahead of the
+subject?", answered once per state in `framingRule.js`.
 
-Both paths clamp to `[minZoom, MAX_INVERSE_ZOOM (5.0)]`.
+The ceilings are combined with `Math.min` in one place, BEFORE the camera moves. That is deliberate:
+a limit computed first means the camera never zooms in and then backs out, and in-then-out is
+pumping.
 
-`effectiveZoom()` in `openTrackCamera.js` is still imported by the render path for the
-canvas transform. CameraDirector's internal zoom (`this.zoom`) is the cam-space value;
-the render path multiplies by `bsX` (closed) or `OPEN_TRACK_BASE_ZOOM` (open).
+### 3.1 The unit
 
-### 4.2 T-space entry lerp
+`visibleCorridors` is how much world is across the frame in STANDARD corridors — a fixed reference
+width (`referenceCorridorPx`, shipped at 300), not this track's own. That is what makes one number
+mean the same picture on a narrow track and a wide one. A track wider than the reference keeps its
+own width, so a setting can never ask to crop the corridor it is measured in.
 
-During `_lerpPhase === 'entry'` with a shape available, `_camT` (normalized track
-position in [0,1)) is lerped toward `_transitionTargetT` each frame. The pan target
-is then derived from `shape.getPosition(_camT, 0)` rather than racer pixel coordinates.
-This makes the camera travel along the track curve instead of cutting through the infield.
+> **The lesson this unit encodes:** a number compared against something on screen must be expressed
+> as a fraction of the screen. Four separate defects on this branch were the same mistake.
 
-`_transitionTargetT` is updated every frame during entry:
-```
-targetT = focusT + entrySpeedEstimate × 60 × leadInDuration
-```
+### 3.2 The across-track pin (`_centrelineAt`)
 
-The entry phase promotes to `'tracking'` when **all three** convergence criteria are met,
-or when `maxEntryDurationMs` is exceeded:
-- `|targetZoom − zoom| < entryConvergenceZoom`
-- `|_camT − _transitionTargetT| < transitionTConvergence` (or T-lerp not active)
-- `|targetOffsetX − offsetX| < entryConvergencePx` (skipped when T-lerp active)
+The camera follows the subject ALONG the track exactly as it always did. Only the component ACROSS
+the corridor is replaced by the centreline, because carrying the subject's LANE threw the picture
+sideways at every lead change — measured at 62–84 world px, 28–37% of the shot.
 
-**Zoom-before-setTargets ordering** — when T-space lerp is active, zoom is lerped *before*
-`_setTargets()` so pan is computed at the post-lerp zoom. This prevents a per-frame
-mismatch (proportional to `camX × Δzoom`) that causes visible jumps on variable dt.
+**This looks like the camera saga's original defect and is not.** That bug pinned BOTH axes and was
+an accident. This pins one and is deliberate. If you are here because "the camera does not follow the
+racer", check the ALONG axis first.
 
-### 4.3 Phased observer (tracking phase)
+### 3.3 Zoom about the anchor
 
-After entry converges, `_computePhasedPanTarget()` runs each frame:
+Screen position is `worldPos × effZoom + offset`. When the zoom changes and the offset lerp only
+creeps toward its new target, the anchor SLIDES across the frame faster than the pan can follow — it
+lurches to the edge and the pan slowly recovers. The follow branch re-applies each frame's zoom delta
+around the anchor's world position first, so every zoom source is lurch-free without touching any of
+them individually.
 
-| Sub-phase | `_observerPhase` | Behavior |
-|---|---|---|
-| `'lead-in'` | Holds `_camT` at the lead-ahead anchor; transitions to `'follow'` after `leadInDuration` seconds |
-| `'follow'` | Sets `_camT = focusT` each frame so `_setTargets` tracks the racer's world position |
-| `'lead-out'` | EMA deceleration of `_camT` toward `leadOutStartCamT + leadOutDistanceT`; triggered when remaining state time ≤ `leadOutDuration` |
-| `'idle'` | No T-space tracking; pixel-space lerp handles pan |
+### 3.4 What is NOT here any more, and must not come back
 
-`_computePhasedPanTarget` does **not** write `targetOffsetX/Y` — those are owned
-exclusively by `_setTargets`. It only advances `_camT` so the next frame's `_setTargets`
-reads the correct track position.
+- **The containment clamp.** It claimed to be a no-op mid-glide and was measured ACTIVE on 23 of 23
+  glide frames, correcting the pan by up to −390 px. It had become a rail steering the pan away from
+  the glide it was interpolating. Keeping subjects in frame is the GUARANTEE's job, which widens.
+- **The min-visible zoom FLOOR.** A second zoom authority that read where racers happened to be and
+  pulled the zoom out around them, fighting the state's own setting and ratcheting frame to frame.
+  The concept came back as the COMPANY guarantee — a pre-move limit, which is what it should always
+  have been.
 
-**`_prevFocusT` write ownership** — first write is in the T-space entry lerp block
-(entry phase); second write is in `_computePhasedPanTarget` exits (tracking phase).
-The phases are mutually exclusive so there is never a double-write conflict within a
-single frame.
-
-### 4.4 OVERVIEW pan
-
-After start phase: follows the leader with a radial offset (`overviewOffsetPx` world
-pixels) shifted from the leader toward the track center.
-During start phase: centroid of the full field.
-In FINISH_OVERVIEW: fixed point `finishOverviewLookbackPx` before the finish line
-(stationary anchor — prevents camera drift with the winner's runout movement).
-
-### 4.5 LEAD_CHANGE hard cut
-
-LEAD_CHANGE skips the entry lerp entirely: `_lerpPhase` is forced to `'tracking'`, zoom
-snaps to `_leadChangeZoom`, `_camT` snaps to the new leader's T, and
-`_leadChangeSnapPending = true` causes `offsetX/Y` to be assigned (not lerped) on the
-first update frame.
-
-### 4.6 `resolveCamera` — viewport clamping
-
-`_setClosedTrackTargets` and `_setOpenTrackTargets` call `resolveCamera()` twice per frame:
-1. At `stateEffZoom` → final `targetZoom` (may be reduced by world-edge clamping).
-2. At current (lerping) `cam.zoom` → pan target for this frame, keeping the subject
-   within `targetInnerFramePct` of the canvas as zoom lerps.
+The residual trail that the clamp used to hide is the tracking lag. It is measured and reported
+rather than papered over. See §6.
 
 ---
 
-## 5. Battle Detection
+## 4. Battle detection
 
-Battle is triggered by `_isPulk(racers)` → `_detectPulkGroup(racers)`.
+`battleGroup.js`. A group qualifies when all four hold at once:
 
-A group qualifies when it satisfies **all four** conditions simultaneously:
+1. **Closeness** — all pairwise arc distances ≤ `battlePulkThresholdT`.
+2. **Isolation** — no non-member within `battleIsolationThresholdT` (0 disables).
+3. **Positional** — frontmost at rank 3 or worse (P1/P2 are LEADER territory), seed rank span ≤ 3,
+   frontmost inside `battleMinTopN`.
+4. **Expansion** — greedy, capped by `battleMaxGroupSize` and `battleMaxGroupRankSpan`.
 
-1. **Spatial** — all pairwise euclidean distances `< battlePulkThresholdPx` (world pixels).
-2. **Temporal** — all pairwise `|t_i − t_j| < battlePulkThresholdT`.
-3. **Positional** — frontmost group racer is at rank ≥ 3 (P1/P2 are LEADER territory);
-   seed triple's rank span ≤ 3; frontmost rank ≤ `battleMinTopN`.
-4. **Expansion** — greedy: add adjacent-rank racers up to `battleMaxGroupSize`;
-   reject any candidate that pushes rank span beyond `battleMaxGroupRankSpan`.
+**The unit is arc, not pixels, and this was learned the hard way.** World px meant 1.5% of a lap on
+one track and 4.9% on another across the 3072–6144 px worlds, so one knob could not mean the same
+closeness twice and rejected every real cluster on the large ones. Raw `t` will not do either: it
+accumulates across laps, and two racers either side of the start/finish seam must read as adjacent.
 
-Optional: if `battleIsolationThresholdPx > 0`, no non-group racer may be within that
-distance of any group member.
+BATTLE **enters and exits on the same measure**, so the hysteresis is one somebody chose.
 
-### Camera lock at entry
-
-`_transition()` calls `_detectPulkGroup()` once at BATTLE_ZOOM entry and stores:
-- `_battleLockedRacerIndex` — stable `r.index` of the frontmost group member.
-- `_battleGroupRacerIndices` — stable indices of all group members.
-- `_battleLockT` — centroid T of the group at entry; drives T-space lerp initial target.
-
-During BATTLE the camera follows the **live centroid** of the locked group
-(`_findGroupRacers` resolves current positions by index, surviving `renderInterpolation`
-spread-copies).
-
-### BATTLE_ZOOM early exits
-
-After `battleMinDurationMs` elapses, `update()` checks two conditions before the
-general hold gate:
-
-1. **Group dispersal** — any pair in the locked group exceeds `battlePulkThresholdPx`.
-2. **P2 drift** — any group member is now in P1 or P2.
-
-Either calls `_exitBattle()` which records `_lastBattleExitTs` and calls `_transition()`.
-`battleCooldownMs` prevents immediate re-entry.
+At entry the group's stable indices are stored and the camera follows the group's LIVE centroid.
+Lookups go through `findByIndex`, because `renderInterpolation` hands the camera a fresh spread-copy
+of every racer each frame and a stored object reference stops being `===` anything.
 
 ---
 
-## 6. Execution Order
+## 5. Execution order and call sites
 
 ```
-RaceScreen (useEffect, [raceData, fadeNavigate])
+RaceScreen  (useEffect [raceData, fadeNavigate])
 │
-│  let cancelled = false
+├── new CameraDirector(worldW, worldH, isOpenTrack, config, drawnBodyWidthRefPx, shape, trackWidthPx)
+│   └── setRandomSeed(seed)          ← once, before the first update(); makes a marked moment replayable
 │
-├── new CameraDirector(worldW, worldH, isOpenTrack, config, spriteSize, shape)
-│
-└── requestAnimationFrame loop (single rAF per frame)
+└── requestAnimationFrame loop  (one rAF per frame; `cancelled` guards React StrictMode's double-invoke)
     │
-    │  if (cancelled) return          ← StrictMode guard
+    ├── [COUNTDOWN]  camDir.updateCountdown(racers, ts, elapsed, durationMs, cW, cH)
     │
-    ├── [COUNTDOWN phase]
-    │     camDir.updateCountdown(racers, ts, elapsed, duration, cW, cH)
-    │
-    └── [RACING phase]
-          camDir.updateRacePlan({ b1Indices })     ← when race plan changes
-          result = camDir.update(renderRacers, ts, raceState, CANVAS_W, CANVAS_H, smoothDt)
-          ctx.setTransform(result.zoom * bsX, 0, 0, result.zoom * bsY, result.offsetX, result.offsetY)
-
-cleanup:
-    cancelled = true
-    cancelAnimationFrame(rafRef.current)
+    └── [RACING]     camDir.updateRacePlan(b1Indices)      ← race start; resets the comeback roster
+                     camDir.setCameraPlan(plan)            ← once, mid-race, when the heroes are cast
+                     camDir.update(renderRacers, ts, raceState, CANVAS_W, CANVAS_H, smoothDt)
+                     camDir.detectBattleGroup(st.racers)   ← render only, for the battle-focus darkening
+                     ctx.setTransform(...)
 ```
 
-**Single call site** — `camDir.update()` is called exactly once per frame at
-[`RaceScreen/index.jsx`](../client/src/screens/RaceScreen/index.jsx).
+`update()` is called exactly once per frame, from `RaceScreen/index.jsx`. `updateConfig(config)`
+live-applies a new config without reconstruction; it takes effect on the next `_transition()`.
 
-**React StrictMode** — `<React.StrictMode>` is active in dev (`client/src/main.jsx:16`).
-StrictMode double-invokes `useEffect` in dev. The `cancelled` flag (set before
-`cancelAnimationFrame` in the cleanup) ensures the discarded first loop exits immediately
-on its first tick and never calls `update()`.
-
-**`updateRacePlan({ b1Indices })`** — injects the B1 racer index set used for COMEBACK
-detection. Called whenever the race plan changes; safe to call every frame.
-
-**`updateConfig(config)`** — live-applies a new camera config (recomputes zoom + timing
-without re-constructing). Effective on the next `_transition()` call.
+**`detectBattleGroup` is public on purpose.** The render path used to reach into `_detectPulkGroup`,
+and a render file reaching into an engine private is the exact shape the mint tripwire exists to
+catch. The call site uses optional chaining, so a rename would fail silently — there is a contract
+test at both ends.
 
 ---
 
-## 7. Known Issues
+## 6. What is protected by tests, and what only by convention
 
-- **`openTrackPanTarget()` in `openTrackCamera.js`** is dead code. `effectiveZoom()` from
-  the same file is still used by the render path; `openTrackPanTarget` is an orphan and
-  should be removed in a cleanup pass.
+**The render path is no longer convention-only.** `scripts/render-fingerprint.mjs`
+(**`ae7e9243bd2add8b`**) hashes the SEQUENCE of draw calls — sprite placement, text, styles,
+transforms and layer order — at six fixed frames across all ten tracks, by driving the real
+`renderRaceFrame()` through a recording context. It covers what the camera fingerprint structurally
+cannot: what actually reaches the canvas. Run it on any block whose diff can reach a `ctx.` call.
 
-- **No BATTLE_ZOOM integration test under `renderInterpolation`** — `_findByIndex`
-  index-based lookup was introduced to fix object-identity failures under spread-copy
-  interpolation, but existing unit tests use direct state assignment without going through
-  `_transition()`. A live integration test would provide stronger coverage.
+**Protected — a change breaks a test:** the zoom unit's invariance; the six-state framing table;
+corridor / pair / company guarantees on every heading; the company guarantee inside its region; the
+lateral guarantee's arithmetic and its one-dimensionality; the min-draw floor and its
+zoom-independence; name-tag layout, occlusion and the start-formation exception; the config loader's
+defaults-under / stored-over / unknown-ignored rule; every framing validation band and its
+reject-not-clamp behaviour; the engine-input list; the detour recorder's non-interference; the
+render path's `detectBattleGroup` contract; and every camera decision at once, via the fingerprint.
 
-- **OVERVIEW scheduler not unit-tested** — `_isOverviewEligible` and `_scheduleNextOverview`
-  are covered only through the fairness sim, not vitest.
+**Convention only — nothing fails if it breaks:**
+
+- **The tracking lag.** Measured repeatedly (5.8–7.9 pp in LEADER, 25.2 pp in OVERVIEW), never
+  asserted. Change a `trackingTC` default and no test notices.
+- **The state machine's transition reasons.** Which state fires when is covered only where a
+  specific block wrote a case.
+- **Slow motion.** Physics-time scaling in the render loop has no camera-side test.
+- **The HUD overlay and every diagnostic flag.** Read-only by design, unasserted by consequence.
+- **The world-bounds clamp.** Named as the cause of two measured residuals; nothing pins it.
+- **The rasteriser, the artwork, and the sprite blit.** What is left of the render hole after
+  RENDER-FINGERPRINT-1.
+- **Particles and surface trails.** Their draw calls run but the render fingerprint's harness never
+  fills their buffers, so both layers are no-ops in it. Found by a sabotage that swapped them and
+  did NOT move the hash.
 
 ---
 
-## 8. Open Items
+## 7. Open items
 
-- Config UI to expose per-state `leadInDuration` / `leadOutDuration` (phased observer timing).
-- Expose `battleIsolationThresholdPx` in the camera config UI (currently defaults to 0).
-- BATTLE detection does not account for lapping on closed tracks (extreme edge case with
-  large field-size gaps).
-- `_diagRingBuf` frame-log export (`exportDiagLog()` in the diagnostics mixin) has no UI
-  entry point in the Dev Screen — wiring pending.
+- **The tracking lag** — measured, unfixed, the owner's call.
+- **The world-bounds clamp** — cause of the 0.601-vs-0.66 framing residual and part of the lateral
+  residual; still unexamined.
+- **The corridor guarantee vs. the anchor position** — it sizes assuming a centred anchor while the
+  forward bias moves it.
+- **`targetInnerFramePct`** is live but has no Dev Screen control, against the project's
+  everything-is-UI-configurable principle.
+- **Three code fallbacks disagree with the shipped defaults** (`outcomePhaseThreshold` 0.75 vs 0.65,
+  `comebackMinStartGap` 0.4 vs 0.25, `comebackMaxCurrentRankPct` 0.1 vs 0.2). Only a bare-config
+  caller sees the fallbacks, so this is latent rather than active.
+- **`START_PHASE_DURATION = 3000`** is a constant, not a control, and CAMERA-TAGS-1 measured it about
+  five seconds short of when the field actually spreads.

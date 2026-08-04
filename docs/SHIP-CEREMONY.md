@@ -13,6 +13,56 @@ gates). A **docs-only** change (no fingerprint move) runs only the guard step (#
 doc homes — see [DOC-SYNC-2](../reports/evolution/DOC-SYNC-2.md) for that lighter path. If unsure
 whether a change moves the fingerprint, mint before and after (#3) and compare — that is the arbiter.
 
+### THE MINT TRIPWIRE — when a "presentation-only" block must mint anyway
+
+Camera and other presentation work still skips this whole ceremony. But it does not skip the mint:
+
+> **Mint once at the end of any block whose diff touches a file under `client/src/modules/` that is
+> NOT under `client/src/modules/camera/`.** One `node scripts/fingerprint-default.mjs`, compare
+> against the shipped fingerprint, and say the result in the report. About two minutes.
+
+**Why it exists.** The old test was "no simulation file in the diff" — but that is a test of FOLDERS,
+and the engine's inputs are not confined to one. `drawnBodyWidthRefPx` is computed in a screen file
+and consumed by `raceBehavior.js` as the avoidance body size, so a value that moves the race can enter
+a camera diff and pass every check untouched. That is not hypothetical: `autoSpriteScale.js` — which
+also exports the auto-scale config the start-grid packing reads — sat in the CAMERA-PICTURE-FIXES-1
+diff and nobody noticed until the owner asked why overtaking looked easier
+([CAMERA-MINT-TRIPWIRE-1](../reports/evolution/CAMERA-MINT-TRIPWIRE-1.md); the fingerprint had NOT
+moved, but nothing in the regime had established that).
+
+No list, no judgement call: a block that stays inside `camera/` pays nothing, and anything that
+strays out of it pays two minutes. If the fingerprint moved, the block is not presentation-only and
+the full ceremony above applies.
+
+**This rule works when someone remembers it.** Its durable twin — an enumerated list of the modules
+whose values reach `createRaceFromIdentity` / `stepRacePhysics`, kept beside `WORLD_CONFIG_KEYS` in
+`raceConfigWorld.js` with a test that fails when `raceCore.js` imports something not on it — is
+scheduled for the hygiene phase (see [BACKLOG.md](BACKLOG.md)). Keep both: the mint rule catches what
+a person remembers, the list catches what nobody does.
+
+### THE THREE FINGERPRINTS — which one a block owes
+
+They are CHANGE DETECTORS, not prohibitions. A block may move one deliberately; what it may not do
+is move one without noticing.
+
+| | covers | run it when | cost |
+|---|---|---|---|
+| `scripts/fingerprint-default.mjs` — **world** `dc4647be0f55ebdb` | the RACE: physics, plan, outcome | any behaviour change, and per the mint tripwire above | ~2 min |
+| `scripts/camera-fingerprint.mjs` — **camera** `4b33c4d31bec93ea` | the DIRECTOR's decisions: state, phase, anchor, zoom, offsets, camT, targets | any block touching `client/src/modules/camera/` | ~85 s |
+| `scripts/render-fingerprint.mjs` — **render** `ae7e9243bd2add8b` | the DRAW CALL SEQUENCE: sprite placement, text, styles, transforms, layer order | any block touching the drawing path — `RaceScreen/renderRaceFrame.js`, `RaceScreen/drawing/`, `nameTagLayout.js`, `Minimap.js`, the racer types' `drawRacer` | ~30 s |
+
+**Why the render one earns its cost only on drawing blocks.** The camera fingerprint already covers
+every decision the director makes, and it is the cheaper answer for camera-only work. The render
+fingerprint answers the question the camera one structurally cannot — *did the picture change?* —
+and until RENDER-FINGERPRINT-1 that was an argument every camera block ended on. Run it whenever the
+diff can reach a `ctx.` call.
+
+**Read [RENDER-FINGERPRINT-1](../reports/evolution/RENDER-FINGERPRINT-1.md) §"blind to" before
+trusting it.** It is blind to the rasteriser, to the artwork, and — measured, not assumed — to the
+sprite blit itself, because node has no `Image` and the racer body falls back to its procedural
+branch. Placement, order, text, styles and every other layer are covered. The owner's eye remains
+the instrument for artwork.
+
 ## The checklist
 
 Work top to bottom. Steps that are marked **ONE step** are a single unit of work with two artefacts —

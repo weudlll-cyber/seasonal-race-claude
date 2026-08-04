@@ -2,16 +2,27 @@
 // File:        cameraTimingComputation.js
 // Path:        client/src/modules/camera/cameraTimingComputation.js
 // Project:     RaceArena
-// Description: Pure function for computing CameraDirector timing
-//              parameters from a config object. Extracted from
-//              CameraDirector._computeTimingConfig() so the logic
-//              can be unit-tested without a full class instance.
-//              Does NOT import from CameraDirector.js — no circular dep.
+//
+// WHAT THIS IS FOR: resolving a raw camera config into every TIMING number the director trusts —
+// holds, caps, cooldowns, lerp time-constants, the phased-observer durations, the weights. Every
+// timing default and every fallback lives here and nowhere else, so a director built with no config
+// at all gets its behaviour by calling this with `null`.
+//
+// WHAT IT IS NOT FOR: anything spatial. It has no idea how wide a shot is. Its sibling
+// framingConfig.js resolves HOW WIDE and HOW; this one resolves WHEN. Both are pure, both are
+// called on construction and again on every live-apply, and neither imports from CameraDirector.js.
+//
+// A NOTE ON WHAT IT RETURNS. It returns the per-state MAPS (`tcByState`, `lfByState`,
+// `lfEntryByState`) and not the per-state scalars. It used to return both — forty numbers that had
+// to agree with twenty — and the scalars were read by nothing but their own assertions, which is
+// the arrangement where a wrongly-built map stays green (CAMERA-HYGIENE-2).
 // ============================================================
 
-// Fallback constants — single source of truth; imported by CameraDirector.js.
+// THE fallback constants for every timing tunable. A director built with no config at all gets
+// these by calling computeTimingFromConfig(null) — there is deliberately no second copy anywhere
+// (CAMERA-HYGIENE-2 deleted the sixteen that had accumulated in CameraDirector.js).
 const MAX_STATE_DURATION = 8000;
-export const BATTLE_PULK_THRESHOLD_T = 0.05; // lap fraction (15b: arc closeness, was 0.12 px-era)
+const BATTLE_PULK_THRESHOLD_T = 0.05; // lap fraction (15b: arc closeness, was 0.12 px-era)
 const BATTLE_MIN_DURATION_MS = 3000;
 const POST_START_HOLD_MS = 7000;
 const BATTLE_COOLDOWN_MS = 8000;
@@ -24,7 +35,6 @@ const TC_BATTLE = 0.3;
 const TC_COMEBACK = 0.3;
 const OVERVIEW_COOLDOWN_MS = 15000;
 const TRANSITION_T_CONVERGENCE = 0.03;
-const DEFAULT_OVERVIEW_OFFSET_PX = 150;
 const ENDGAME_PROGRESS_THRESHOLD = 0.85;
 const DEFAULT_MAX_ENTRY_DURATION_MS = {
   OVERVIEW: 10000,
@@ -67,16 +77,13 @@ export function computeTimingFromConfig(config) {
   const diagEnabled = config?.enableFrameLog ?? false;
   const detourEnabled = config?.cameraDetourLog ?? false; // CAMERA-DETOUR-1 per-transition frame log
   const transitionTConvergence = config?.transitionTConvergence ?? TRANSITION_T_CONVERGENCE;
-  const overviewOffsetPx =
-    config?.cameraStateProfiles?.OVERVIEW?.overviewOffsetPx ?? DEFAULT_OVERVIEW_OFFSET_PX;
   const overviewCooldownMs = config?.overviewCooldownMs ?? OVERVIEW_COOLDOWN_MS;
-  // overviewClosedTrackZoom removed 2026-06-04: closed tracks now use referenceSpriteSize
-  // normalization (same formula as open tracks). Field is kept in defaults.js / schema v15
-  // for migration compatibility but is no longer read at runtime.
-  const overviewTargetScreenPx = config?.overviewTargetScreenPx ?? 28;
-  const overviewFrameRacers = config?.overviewFrameRacers ?? 5; // OVERVIEW-FRAMING-1: leader + next N−1
-  const overviewMinSpriteFrac = config?.overviewMinSpriteFrac ?? 0.018; // sprite floor as a frame fraction
-  const overviewMinEffZoom = config?.overviewMinEffZoom ?? 0;
+  // CAMERA-ZOOM-UNIT-1 removed three OVERVIEW zoom inputs that the track-widths unit replaces:
+  //   overviewClosedTrackZoom  — dead since 2026-06-04, its Dev Screen tooltip still described
+  //                              behaviour it did not have; key, slider and tooltip all gone now
+  //   overviewTargetScreenPx   — was the OVERVIEW zoom's target SPRITE SIZE, then the render-time
+  //                              sprite floor; CAMERA-PICTURE-FIXES-1 removed the floor and the key
+  //   overviewMinEffZoom       — an open-track-only second zoom bound on the same surface
 
   // Per-state lead-ahead toggle (default true for backward compat with old configs).
   const leadAheadEnabledByState = {};
@@ -225,6 +232,10 @@ export function computeTimingFromConfig(config) {
   const lfEntryBattle = tcToLerpFactor(tcEntryBattle);
   const lfEntryComeback = tcToLerpFactor(tcEntryComeback);
   const lfEntryLeadChange = tcToLerpFactor(tcEntryLeadChange);
+  // CAMERA-HYGIENE-2: the per-state scalars (tcLeader, lfBattle, lfEntryOverview, ...) are locals
+  // now. They used to be returned AND stored on the director alongside these maps — forty data
+  // points that had to agree with twenty. The maps are what the director reads; the scalars were
+  // read only by tests, which is exactly the arrangement where a wrong map goes unnoticed.
   const lfEntryByState = {
     OVERVIEW: lfEntryOverview,
     LEADER_ZOOM: lfEntryLeader,
@@ -297,25 +308,10 @@ export function computeTimingFromConfig(config) {
     diagEnabled,
     detourEnabled,
     transitionTConvergence,
-    overviewOffsetPx,
-    overviewFrameRacers,
-    overviewMinSpriteFrac,
     overviewCooldownMs,
-    overviewTargetScreenPx,
-    overviewMinEffZoom,
     leadAheadEnabledByState,
     leadOutEnabledByState,
     maxEntryDurationByState,
-    tcOverview,
-    tcLeader,
-    tcBattle,
-    tcComeback,
-    tcLeadChange,
-    tcEntryOverview,
-    tcEntryLeader,
-    tcEntryBattle,
-    tcEntryComeback,
-    tcEntryLeadChange,
     minStateHoldMs,
     battleMaxDurationMs,
     maxStateDuration,
@@ -323,17 +319,7 @@ export function computeTimingFromConfig(config) {
     maxStateDurationByState,
     phasedByState,
     tcByState,
-    lfOverview,
-    lfLeader,
-    lfBattle,
-    lfComeback,
-    lfLeadChange,
     lfByState,
-    lfEntryOverview,
-    lfEntryLeader,
-    lfEntryBattle,
-    lfEntryComeback,
-    lfEntryLeadChange,
     lfEntryByState,
     entryConvergenceZoom,
     entryConvergencePx,

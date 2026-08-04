@@ -24,6 +24,9 @@ const CAM_STATES_FOR_PROFILES = [
   'BATTLE_ZOOM',
   'COMEBACK_ZOOM',
   'LEAD_CHANGE',
+  // CAMERA-FRAMING-1: PHOTO_FINISH has its own row at last. It borrowed BATTLE's numbers, so the
+  // closest shot in the race was never closer than an ordinary battle.
+  'PHOTO_FINISH',
 ];
 
 const STATE_LABELS = {
@@ -32,19 +35,31 @@ const STATE_LABELS = {
   BATTLE_ZOOM: 'Battle Zoom',
   COMEBACK_ZOOM: 'Comeback Zoom',
   LEAD_CHANGE: 'Lead Change',
+  PHOTO_FINISH: 'Photo Finish',
 };
 
 const PROFILE_FIELDS = [
   {
-    key: 'spriteScale',
-    label: 'Sprite scale (×)',
-    min: 0.5,
-    max: 5.0,
+    key: 'visibleCorridors',
+    label: 'World in shot (corridors)',
+    // CAMERA-REFERENCE-WIDTH-1 range, derived from measurement rather than inherited:
+    //  min 0.25 — at 0.25 the largest creature (the luge, 59 px) already fills 79% of the frame
+    //             height; below that a racer is a portrait rather than a shot.
+    //  max 13   — the widest track needs 12.55 corridors to be fully in frame (Seatrack).
+    //  step 0.05 — 7% of the shot at the LEADER default, 3% at OVERVIEW; roughly the smallest
+    //             change the eye separates. The old min of 1.0 was the full-track-width guarantee's
+    //             threshold and is gone with it: the guarantee now computes on its own.
+    min: 0.25,
+    max: 13,
     step: 0.05,
     tip: (v, n) =>
-      n === 'Overview'
-        ? `Sprite zoom factor for the Overview. ${v.toFixed(2)}× — MULTIPLIES the normalized overview size (which keeps racers a constant on-screen size regardless of racer count). 1.0 = the normalized default, 2.0 = twice as large.`
-        : `Sprite zoom factor for ${n}. ${v.toFixed(2)}× — relative to natural density-scaled size. 1.0 = natural size, 2.0 = twice as large.`,
+      `How much world ${n} shows: ${v.toFixed(2)} standard corridors across the frame, i.e. ` +
+      `${Math.round(v * 300)} world pixels at the default 300 px reference. HIGHER = WIDER. ` +
+      `The same number now shows the SAME AMOUNT OF WORLD on every track — a narrow track no ` +
+      `longer gets a tighter shot just for being narrow. It is not measured in this track's own ` +
+      `width any more, so it is not the same scale as the old "track widths" number: 0.75 here is ` +
+      `roughly what 2 used to be on a wide track. Racers still differ in size between tracks ` +
+      `because the animals differ — a manta is bigger than a horse, and that part is deliberate.`,
   },
   {
     key: 'trackingTC',
@@ -112,16 +127,6 @@ const PROFILE_FIELDS = [
     step: 500,
     tip: (v) =>
       `Forces entry→tracking after this many ms even if T-space gap is above threshold. ${v}ms.`,
-  },
-  {
-    key: 'overviewOffsetPx',
-    label: 'Overview radial offset (px)',
-    min: 0,
-    max: 400,
-    step: 10,
-    onlyFor: 'OVERVIEW',
-    tip: (v) =>
-      `Camera shifts toward field so leader appears at outer viewport edge. 0 = centered. ${v}px.`,
   },
   {
     key: 'leadAheadEnabled',
@@ -354,21 +359,21 @@ function CameraAdvancedSection() {
               className={s.label}
               style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}
             >
-              Countdown Start Zoom (px)
+              Countdown opening shot (corridors)
               <InfoTooltip
-                text={`Sprite height at countdown start. Very small values are clamped to minimum zoom (full track visible). Currently: ${config.countdownStartZoomSpritePx ?? 1}px.`}
+                text={`How wide the countdown opens, in standard corridors, before easing into Overview. Clamped to the widest the world allows, so on a small world it simply means "the whole world". Currently: ${config.countdownStartCorridors ?? 3} = ${Math.round((config.countdownStartCorridors ?? 3) * (config.referenceCorridorPx ?? 300))} world pixels.`}
               />
             </label>
             <input
               type="number"
               className={s.input}
-              min={1}
-              max={200}
-              step={1}
-              value={config.countdownStartZoomSpritePx ?? 1}
+              min={0.25}
+              max={30}
+              step={0.25}
+              value={config.countdownStartCorridors ?? 3}
               onChange={(e) => {
                 const v = Number(e.target.value);
-                if (v >= 1 && v <= 200) set('countdownStartZoomSpritePx', v);
+                if (v >= 0.25 && v <= 30) set('countdownStartCorridors', v);
               }}
             />
           </div>
@@ -632,66 +637,55 @@ function CameraAdvancedSection() {
             tip="Seconds after race start before OVERVIEW may appear in the pool for the first time. Default 15 s."
           />
           <SliderRow
-            label="OVERVIEW Closed Zoom"
-            testId="regie-overview-closed-track-zoom"
-            min={1.0}
-            max={2.0}
-            step={0.05}
-            value={config.overviewClosedTrackZoom ?? 1.3}
+            label="Minimum racer size (% of frame)"
+            testId="regie-min-drawn-frame-frac"
+            // 0 .. 10% of frame height. Above ~6% the floor starts binding on most tracks and
+            // stops being a floor; step 0.5% is ~3.6 screen px, about the smallest change that
+            // reads on a racer this size.
+            min={0}
+            max={10}
+            step={0.5}
+            value={Math.round((config.minDrawnFrameFrac ?? 0.045) * 1000) / 10}
             onChange={(e) => {
-              const v = parseFloat(e.target.value);
-              if (v >= 1.0 && v <= 2.0) set('overviewClosedTrackZoom', v);
+              const v = Number(e.target.value);
+              if (v >= 0 && v <= 10) set('minDrawnFrameFrac', v / 100);
             }}
-            display={(config.overviewClosedTrackZoom ?? 1.3).toFixed(2)}
-            tip="Zoom multiplier for OVERVIEW on closed tracks. 1.0 = no pan (camera frozen), 1.3 = 30% zoom-in giving pan room. Only affects closed tracks. Default 1.30."
+            display={
+              (config.minDrawnFrameFrac ?? 0.045) <= 0
+                ? 'Off'
+                : `${((config.minDrawnFrameFrac ?? 0.045) * 100).toFixed(1)}%`
+            }
+            tip="A readability floor: a racer is never DRAWN smaller than this share of the frame height, so it stays recognisable when the camera is far out. It affects the drawing only — it does not change the zoom, it cannot override your 'World in shot' setting, and it never moves the camera. Default 4.5%: before this floor existed the Space Sprint start formation drew its rockets at 4.44% and the owner was happy with it; without any floor they are 3.17% and the formation stops overlapping. At the default it only bites in Overview, on the tracks whose racers are drawn smallest. 0 turns it off."
           />
           <SliderRow
-            label="OVERVIEW target sprite size (px)"
-            testId="regie-overview-target-screen-px"
-            min={16}
-            max={48}
-            step={1}
-            value={config.overviewTargetScreenPx ?? 18}
-            onChange={(e) => set('overviewTargetScreenPx', parseInt(e.target.value, 10))}
-            display={`${config.overviewTargetScreenPx ?? 18}px`}
-            tip="Target sprite screen size during OVERVIEW on open tracks. Camera zoom is chosen so sprites appear at this size regardless of racer count. Smaller = more zoomed out (more track visible). Only affects open tracks. Default 18 px."
+            label="Standard corridor (world px)"
+            testId="regie-reference-corridor-px"
+            // Range from measurement: 100 px is below the narrowest corridor shipped (131) and is
+            // where a shot stops holding a start row; 600 is double the widest. Step 10 because a
+            // 10 px change is 3% of the shot — about the smallest that reads on screen.
+            min={100}
+            max={600}
+            step={10}
+            value={config.referenceCorridorPx ?? 300}
+            onChange={(e) => {
+              const v = parseInt(e.target.value, 10);
+              if (v >= 100 && v <= 600) set('referenceCorridorPx', v);
+            }}
+            display={`${config.referenceCorridorPx ?? 300} px`}
+            tip="The width, in world pixels, that ONE corridor means for every camera setting. Every state's 'World in shot' number is measured in these, so changing this rescales EVERY shot on EVERY track at once — raise it and the whole game pulls back, lower it and everything moves in. It is what makes one number mean the same picture on a narrow track and a wide one. Default 300: the widest corridor drawn so far, so today every track is judged against the same yardstick. A track wider than this keeps its own width instead, so its corridor is never cropped."
           />
           <SliderRow
-            label="OVERVIEW racers framed (leader + N−1)"
-            testId="regie-overview-frame-racers"
-            min={2}
+            label="Company: min racers in frame"
+            testId="regie-min-racers-visible"
+            min={0}
             max={12}
             step={1}
-            value={config.overviewFrameRacers ?? 5}
-            onChange={(e) => set('overviewFrameRacers', parseInt(e.target.value, 10))}
-            display={`${config.overviewFrameRacers ?? 5}`}
-            tip="OVERVIEW-FRAMING-1: OVERVIEW frames the leader plus this many racers in running order; the zoom is derived to fit them. Higher = more of the field shown (more zoomed out). The minimum-sprite floor below outranks this when they conflict. The leader is always kept in frame. Set before a race."
-          />
-          <SliderRow
-            label="OVERVIEW min sprite size (% of frame width)"
-            testId="regie-overview-min-sprite-frac"
-            min={1}
-            max={6}
-            step={0.1}
-            value={(config.overviewMinSpriteFrac ?? 0.018) * 100}
-            onChange={(e) => set('overviewMinSpriteFrac', parseFloat(e.target.value) / 100)}
-            display={`${((config.overviewMinSpriteFrac ?? 0.018) * 100).toFixed(1)}%`}
-            tip="OVERVIEW-FRAMING-1: the zoom stops zooming out once a racer sprite would shrink below this fraction of the frame width — legibility outranks the racer count. Expressed as a fraction of the frame, so the framing is identical at any resolution. The owner expects this floor to bind rarely. Set before a race."
-          />
-          <SliderRow
-            label="OVERVIEW zoom floor (effZoom)"
-            testId="regie-overview-min-eff-zoom"
-            min={0}
-            max={0.9}
-            step={0.05}
-            value={config.overviewMinEffZoom ?? 0}
-            onChange={(e) => set('overviewMinEffZoom', parseFloat(e.target.value))}
+            value={config.minRacersVisible ?? 3}
+            onChange={(e) => set('minRacersVisible', parseInt(e.target.value, 10))}
             display={
-              (config.overviewMinEffZoom ?? 0) === 0
-                ? 'Off'
-                : (config.overviewMinEffZoom ?? 0).toFixed(2) + '×'
+              (config.minRacersVisible ?? 3) <= 1 ? 'Off' : `${config.minRacersVisible ?? 3}`
             }
-            tip="Minimum effective zoom (effZoom) during OVERVIEW on open tracks. 0 = off (current behavior — camera zooms out as far as racer count demands). Higher = less zoom-out, fewer GPU stutter frames. Suggested range: 0.5–0.7. Only affects open tracks. Default: off."
+            tip="The DRAMATURGICAL guarantee — 'do not show emptiness'. At least this many racers stay in frame, counting the subject, so a tight LEADER shot never goes empty: leader alone, no reference, no tension. It is a LIMIT, not a correction — the camera does not zoom in and then back out, it simply does not go that far. 0 or 1 turns it off. Applies to the single-subject shots (LEADER, COMEBACK, OVERVIEW); BATTLE, LEAD_CHANGE and PHOTO_FINISH already guarantee their pair. Default 3: measured to halve the frames where the leader is alone at a LEADER setting of 1, at almost no cost in restlessness."
           />
         </div>
 
@@ -746,64 +740,6 @@ function CameraAdvancedSection() {
                 : (config.leaderForwardFrac ?? 0.66).toFixed(2)
             }
             tip="Where the leader sits along the motion axis. 0.50 = dead centre; 0.66 = about two-thirds forward toward the leading edge so most of the frame shows the pack behind (the action). Range 0.50–0.80. Default 0.66."
-          />
-        </div>
-
-        <p
-          style={{
-            fontSize: '0.78rem',
-            color: 'var(--color-muted)',
-            margin: '0.75rem 0 0.4rem',
-          }}
-        >
-          <strong>Adaptive Zoom Floor</strong> — during LEADER_ZOOM and LEAD_CHANGE, if fewer than
-          Min racers visible are on screen the camera pulls back each frame until enough appear or
-          the floor is reached. 0 = disabled.
-        </p>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem' }}>
-          <SliderRow
-            label="Min racers visible"
-            testId="regie-min-racers-visible"
-            min={0}
-            max={15}
-            step={1}
-            value={config.minRacersVisible ?? 8}
-            onChange={(e) => set('minRacersVisible', parseInt(e.target.value, 10))}
-            display={`${config.minRacersVisible ?? 8}`}
-            tip="Minimum non-finished racers that must be visible in LEADER_ZOOM / LEAD_CHANGE. Camera zooms out until this count is met or the floor is hit. 0 = disabled. Default 8."
-          />
-          <SliderRow
-            label="Leader min zoom fraction"
-            testId="regie-leader-min-zoom-fraction"
-            min={0.1}
-            max={1.0}
-            step={0.05}
-            value={config.leaderMinZoomFraction ?? 0.6}
-            onChange={(e) => set('leaderMinZoomFraction', parseFloat(e.target.value))}
-            display={(config.leaderMinZoomFraction ?? 0.6).toFixed(2)}
-            tip="Minimum zoom as a fraction of leader zoom. 1.0 = camera stays pinned at leader zoom (no zoom-out). 0.6 = camera may zoom out to 60% of leader zoom. Low values approach whole-world zoom on large tracks. Default 0.60."
-          />
-          <SliderRow
-            label="Leader min zoom (floor)"
-            testId="regie-leader-min-zoom"
-            min={0.1}
-            max={1.0}
-            step={0.05}
-            value={config.leaderMinZoom ?? 0.4}
-            onChange={(e) => set('leaderMinZoom', parseFloat(e.target.value))}
-            display={(config.leaderMinZoom ?? 0.4).toFixed(2)}
-            tip="Hard zoom-out floor for LEADER_ZOOM and LEAD_CHANGE. Camera will not zoom past this value even if too few racers are visible. Default 0.40."
-          />
-          <SliderRow
-            label="Zoom-out speed (per frame)"
-            testId="regie-zoom-out-step"
-            min={0.001}
-            max={0.02}
-            step={0.001}
-            value={config.zoomOutStepPerFrame ?? 0.005}
-            onChange={(e) => set('zoomOutStepPerFrame', parseFloat(e.target.value))}
-            display={`${((config.zoomOutStepPerFrame ?? 0.005) * 100).toFixed(1)}%`}
-            tip="Zoom reduction per frame when too few racers are visible. 0.005 = ~0.5% per frame at 60 fps. Higher = faster pull-back. Default 0.005."
           />
         </div>
       </div>
@@ -969,7 +905,7 @@ function CameraAdvancedSection() {
               if (v >= 0.5 && v <= 0.95) set('outcomePhaseThreshold', v);
             }}
             display={`${((config.outcomePhaseThreshold ?? 0.75) * 100).toFixed(0)}%`}
-            tip="Leader progress from which COMEBACK is considered active internally (independent of the external isOutcomePhase flag). Default 75%."
+            tip="Leader progress from which COMEBACK is considered active internally (independent of the external isOutcomePhase flag). Default 65%."
           />
           <SliderRow
             label="Min. starting gap"
@@ -983,7 +919,7 @@ function CameraAdvancedSection() {
               if (v >= 0.1 && v <= 0.9) set('comebackMinStartGap', v);
             }}
             display={`${((config.comebackMinStartGap ?? 0.4) * 100).toFixed(0)}%`}
-            tip="The racer must have had at least this normalised gap to P1 at the start of the observation window (field fraction). 0.40 = must have been in the back 60% of the field. Default 40%."
+            tip="The racer must have had at least this normalised gap to P1 at the start of the observation window (field fraction). 0.25 = must have been in the back 75% of the field. Default 25%."
           />
           <SliderRow
             label="Max. current rank (lead-group filter)"
@@ -997,7 +933,7 @@ function CameraAdvancedSection() {
               if (v >= 0.05 && v <= 0.5) set('comebackMaxCurrentRankPct', v);
             }}
             display={`${((config.comebackMaxCurrentRankPct ?? 0.1) * 100).toFixed(0)}%`}
-            tip="Racer must not have a better normalised rank than this at trigger time. 0.10 = top 10% excluded (e.g. P1–P4 with 40 racers). Default 10%."
+            tip="Racer must not have a better normalised rank than this at trigger time. 0.20 = top 20% excluded (e.g. P1–P8 with 40 racers). Default 20%."
           />
         </div>
       </div>

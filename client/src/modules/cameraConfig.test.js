@@ -1,3 +1,17 @@
+// CAMERA-FRAMING-1 removed every migration describe block in this file. The owner is the only
+// person testing and asked that no migration code be written for his benefit, so the fourteen-step
+// chain (v5→v19) and the loader's per-version ladder are DELETED, not deprecated: a stored config of
+// defaults underneath, stored values on top, unknown or retired keys ignored. These tests
+// exercised code that no longer exists. What remains below is the behaviour that still has meaning —
+// the current-schema merge, the defaults guarantee, and provenance.
+
+// CAMERA-ZOOM-UNIT-1 (schema v18): the per-state ZOOM field is now `visibleCorridors`, and the
+// v17->v18 migration deliberately DISCARDS whatever zoom a stored config carried instead of
+// converting it — the owner chose clean round defaults over reproducing the old picture, so a
+// converted number would be work in service of a result nobody wants. The migration assertions
+// below therefore read "the legacy zoom did not survive, the shipped default is in its place".
+// Every NON-zoom stored field must still survive untouched (Lesson 193); that is asserted too.
+
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 vi.mock('./storage/storage.js', () => ({
@@ -22,7 +36,7 @@ describe('loadCameraConfig', () => {
     expect(cfg).toEqual(DEFAULT_CAMERA_CONFIG);
   });
 
-  it('migration schema v1 (missing schemaVersion) → DEFAULT_CAMERA_CONFIG', () => {
+  it('a stored config with RETIRED keys keeps its known values — nothing is discarded', () => {
     storageGet.mockReturnValue({
       leaderZoomMultiplier: 1.8,
       battleZoomMultiplier: 2.5,
@@ -34,9 +48,8 @@ describe('loadCameraConfig', () => {
     expect(cfg).toEqual(DEFAULT_CAMERA_CONFIG);
   });
 
-  it('migration schemaVersion=1 (explicit old version) → DEFAULT_CAMERA_CONFIG', () => {
+  it('a stored config from any older schema is DISCARDED — defaults, not a migration', () => {
     storageGet.mockReturnValue({
-      schemaVersion: 1,
       leaderZoomMultiplier: 1.8,
       minSpritePctOfCanvas: 0.05,
     });
@@ -49,9 +62,8 @@ describe('loadCameraConfig', () => {
     expect(() => loadCameraConfig()).not.toThrow();
   });
 
-  it('schemaVersion=2 stored config is migrated to v14 and merged with defaults', () => {
+  it('a stored config is merged over the defaults', () => {
     storageGet.mockReturnValue({
-      schemaVersion: 2,
       maxTargetScreenPx: 200,
       spritePctOfCanvas: {
         overview: 0.05,
@@ -66,12 +78,10 @@ describe('loadCameraConfig', () => {
     });
     const cfg = loadCameraConfig();
     expect(cfg.maxTargetScreenPx).toBe(200);
-    expect(cfg.schemaVersion).toBe(17);
   });
 
-  it('schemaVersion=2: respects stored spritePctOfCanvas.leader → migrated to spriteScale', () => {
+  it('a stored config carrying no zoom field gets the shipped standard-corridors default', () => {
     storageGet.mockReturnValue({
-      schemaVersion: 2,
       spritePctOfCanvas: {
         overview: 0.05,
         leader: 0.1,
@@ -81,663 +91,87 @@ describe('loadCameraConfig', () => {
     });
     const cfg = loadCameraConfig();
     // 0.1 × 720 = 72 → spriteScale = 72/36 = 2.0
-    expect(cfg.cameraStateProfiles.LEADER_ZOOM.spriteScale).toBe(72 / 36);
-    expect(cfg.spritePctOfCanvas.leader).toBe(0.1);
+    expect(cfg.cameraStateProfiles.LEADER_ZOOM.visibleCorridors).toBe(
+      DEFAULT_CAMERA_CONFIG.cameraStateProfiles.LEADER_ZOOM.visibleCorridors
+    );
+    // CAMERA-HYGIENE-2: `expect(cfg.spritePctOfCanvas.leader).toBe(0.1)` used to follow. It
+    // guaranteed that a legacy key SURVIVED the load — and the loader keeps a stored key only
+    // while the defaults still declare it. Now that the two dead legacy keys are gone from
+    // defaults, the loader drops them, which is the "unknown ignored" rule doing its job.
+    expect(cfg.spritePctOfCanvas).toBeUndefined();
   });
 
-  it('schemaVersion=2: missing spritePctOfCanvas sub-keys fall back to scale defaults', () => {
+  it('missing spritePctOfCanvas sub-keys fall back to scale defaults', () => {
     storageGet.mockReturnValue({
-      schemaVersion: 2,
       spritePctOfCanvas: { leader: 0.1 }, // only leader overridden
     });
     const cfg = loadCameraConfig();
     // leader: Math.round(0.1×720)=72 → spriteScale=72/36=2.0; others fall back to default spriteScale
-    expect(cfg.cameraStateProfiles.LEADER_ZOOM.spriteScale).toBe(72 / 36);
-    expect(cfg.cameraStateProfiles.OVERVIEW.spriteScale).toBe(
-      DEFAULT_CAMERA_CONFIG.cameraStateProfiles.OVERVIEW.spriteScale
+    expect(cfg.cameraStateProfiles.LEADER_ZOOM.visibleCorridors).toBe(
+      DEFAULT_CAMERA_CONFIG.cameraStateProfiles.LEADER_ZOOM.visibleCorridors
     );
-    expect(cfg.cameraStateProfiles.BATTLE_ZOOM.spriteScale).toBe(
-      DEFAULT_CAMERA_CONFIG.cameraStateProfiles.BATTLE_ZOOM.spriteScale
+    expect(cfg.cameraStateProfiles.OVERVIEW.visibleCorridors).toBe(
+      DEFAULT_CAMERA_CONFIG.cameraStateProfiles.OVERVIEW.visibleCorridors
+    );
+    expect(cfg.cameraStateProfiles.BATTLE_ZOOM.visibleCorridors).toBe(
+      DEFAULT_CAMERA_CONFIG.cameraStateProfiles.BATTLE_ZOOM.visibleCorridors
     );
   });
 });
 
 describe('saveCameraConfig', () => {
-  it('writes schemaVersion: 17', () => {
+  it('writes the config as given — no version stamp is added', () => {
     const config = { ...DEFAULT_CAMERA_CONFIG };
     saveCameraConfig(config);
     expect(storageSet).toHaveBeenCalledWith(
       'racearena:cameraConfig',
-      expect.objectContaining({ schemaVersion: 17 })
+      expect.not.objectContaining({ schemaVersion: expect.anything() })
     );
   });
 
-  it('writes schemaVersion: 17 even when not in input config', () => {
+  it('round-trips a value without inventing fields', () => {
     saveCameraConfig({ maxTargetScreenPx: 160 });
     expect(storageSet).toHaveBeenCalledWith(
       'racearena:cameraConfig',
-      expect.objectContaining({ schemaVersion: 17 })
+      expect.not.objectContaining({ schemaVersion: expect.anything() })
     );
-  });
-});
-
-describe('loadCameraConfig — v11→v12 migration', () => {
-  it('v11 config gains countdownStartZoomSpritePx and countdownDurationMs at defaults', () => {
-    storageGet.mockReturnValue({
-      schemaVersion: 11,
-      cameraStateProfiles: DEFAULT_CAMERA_CONFIG.cameraStateProfiles,
-      postStartHoldMs: 7000,
-    });
-    const cfg = loadCameraConfig();
-    // v11 chains through v12, v13, v14, and v15
-    expect(cfg.schemaVersion).toBe(17);
-    expect(cfg.countdownStartZoomSpritePx).toBe(DEFAULT_CAMERA_CONFIG.countdownStartZoomSpritePx);
-    expect(cfg.countdownDurationMs).toBe(DEFAULT_CAMERA_CONFIG.countdownDurationMs);
-  });
-});
-
-describe('loadCameraConfig — v16→v17 migration (BATTLE arc closeness)', () => {
-  it('strips px thresholds, migrates closeness 0.12→0.05, injects isolation arc knob', () => {
-    storageGet.mockReturnValue({
-      schemaVersion: 16,
-      battlePulkThresholdPx: 200,
-      battlePulkThresholdT: 0.12,
-      battleIsolationThresholdPx: 300,
-      cameraStateProfiles: DEFAULT_CAMERA_CONFIG.cameraStateProfiles,
-    });
-    const cfg = loadCameraConfig();
-    expect(cfg.schemaVersion).toBe(17);
-    expect(cfg.battlePulkThresholdPx).toBeUndefined();
-    expect(cfg.battleIsolationThresholdPx).toBeUndefined();
-    expect(cfg.battlePulkThresholdT).toBe(0.05);
-    expect(cfg.battleIsolationThresholdT).toBe(0);
-  });
-
-  it('preserves a non-default user closeness value through v16→v17', () => {
-    storageGet.mockReturnValue({
-      schemaVersion: 16,
-      battlePulkThresholdT: 0.09,
-      cameraStateProfiles: DEFAULT_CAMERA_CONFIG.cameraStateProfiles,
-    });
-    const cfg = loadCameraConfig();
-    expect(cfg.schemaVersion).toBe(17);
-    expect(cfg.battlePulkThresholdT).toBe(0.09);
-  });
-});
-
-describe('loadCameraConfig — v2/v3 migration', () => {
-  it('migrates battleMaxDuration to battleMaxDurationMs (non-default value confirms migration ran)', () => {
-    storageGet.mockReturnValue({
-      schemaVersion: 2,
-      battleMaxDuration: 9999,
-    });
-    const cfg = loadCameraConfig();
-    expect(cfg.battleMaxDurationMs).toBe(9999);
-    expect('battleMaxDuration' in cfg).toBe(false);
-    expect(cfg.schemaVersion).toBe(17);
-  });
-
-  it('v2 config without battleMaxDuration migrates to v14 and gets default battleMaxDurationMs', () => {
-    storageGet.mockReturnValue({
-      schemaVersion: 2,
-      maxTargetScreenPx: 200,
-    });
-    const cfg = loadCameraConfig();
-    expect(cfg.schemaVersion).toBe(17);
-    expect(cfg.maxTargetScreenPx).toBe(200);
-    expect('battleMaxDuration' in cfg).toBe(false);
-    expect(cfg.battleMaxDurationMs).toBe(DEFAULT_CAMERA_CONFIG.battleMaxDurationMs);
-  });
-
-  it('schemaVersion=3 config with battleMaxDurationMs is migrated to v14', () => {
-    storageGet.mockReturnValue({
-      schemaVersion: 3,
-      battleMaxDurationMs: 8000,
-    });
-    const cfg = loadCameraConfig();
-    expect(cfg.battleMaxDurationMs).toBe(8000);
-    expect('battleMaxDuration' in cfg).toBe(false);
-    expect(cfg.schemaVersion).toBe(17);
-  });
-});
-
-describe('loadCameraConfig — v3→v4 migration: cameraStateProfiles built from legacy fields', () => {
-  it('LEADER_ZOOM.spriteScale is derived from stored spritePctOfCanvas.leader (0.11→79px→79/36)', () => {
-    storageGet.mockReturnValue({
-      schemaVersion: 3,
-      spritePctOfCanvas: { overview: 0.05, leader: 0.11, battle: 0.12, comeback: 0.065 },
-      cameraTransitionSeconds: { overview: 1.5, leader: 0.3, battle: 0.3, comeback: 0.3 },
-    });
-    const cfg = loadCameraConfig();
-    // Math.round(0.11 × 720) = Math.round(79.2) = 79 → spriteScale = 79/36
-    expect(cfg.cameraStateProfiles.LEADER_ZOOM.spriteScale).toBe(79 / 36);
-  });
-
-  it('BATTLE_ZOOM.maxStateDuration picks up battleMaxDurationMs (BATTLE had its own cap)', () => {
-    storageGet.mockReturnValue({
-      schemaVersion: 3,
-      battleMaxDurationMs: 9000,
-      maxStateDuration: 4000,
-    });
-    const cfg = loadCameraConfig();
-    expect(cfg.cameraStateProfiles.BATTLE_ZOOM.maxStateDuration).toBe(9000);
-    expect(cfg.cameraStateProfiles.OVERVIEW.maxStateDuration).toBe(4000);
-  });
-
-  it('OVERVIEW.trackingTC comes from cameraTransitionSeconds.overview', () => {
-    storageGet.mockReturnValue({
-      schemaVersion: 3,
-      cameraTransitionSeconds: { overview: 2.5, leader: 0.4, battle: 0.4, comeback: 0.4 },
-    });
-    const cfg = loadCameraConfig();
-    expect(cfg.cameraStateProfiles.OVERVIEW.trackingTC).toBe(2.5);
-    expect(cfg.cameraStateProfiles.LEADER_ZOOM.trackingTC).toBe(0.4);
-  });
-
-  it('minStateHold comes from global minStateHoldMs', () => {
-    storageGet.mockReturnValue({
-      schemaVersion: 3,
-      minStateHoldMs: 7000,
-    });
-    const cfg = loadCameraConfig();
-    expect(cfg.cameraStateProfiles.LEADER_ZOOM.minStateHold).toBe(7000);
-    expect(cfg.cameraStateProfiles.BATTLE_ZOOM.minStateHold).toBe(7000);
-  });
-
-  it('missing legacy fields fall back to DEFAULT_CAMERA_CONFIG profile scale values', () => {
-    storageGet.mockReturnValue({ schemaVersion: 3 });
-    const cfg = loadCameraConfig();
-    const defProf = DEFAULT_CAMERA_CONFIG.cameraStateProfiles;
-    expect(cfg.cameraStateProfiles.LEADER_ZOOM.spriteScale).toBe(defProf.LEADER_ZOOM.spriteScale);
-    expect(cfg.cameraStateProfiles.OVERVIEW.trackingTC).toBe(defProf.OVERVIEW.trackingTC);
   });
 });
 
 describe('loadCameraConfig — v4 schema: deep-merge cameraStateProfiles', () => {
-  it('stored v4 cameraStateProfiles are merged and spritePct→spritePx→spriteScale converted', () => {
+  it('a stored profile that names no zoom keeps the shipped standard-corridors default', () => {
     storageGet.mockReturnValue({
-      schemaVersion: 4,
       cameraStateProfiles: {
-        LEADER_ZOOM: { spritePct: 0.15 }, // only spritePct overridden (v4 format)
+        LEADER_ZOOM: { entryTC: 0.9 }, // a non-zoom override
       },
     });
     const cfg = loadCameraConfig();
-    // migrateV6toV7 converts 0.15 × 720 = 108 → migrateV13toV14: 108/36 = 3.0
-    expect(cfg.cameraStateProfiles.LEADER_ZOOM.spriteScale).toBe(3.0);
-    expect('spritePct' in cfg.cameraStateProfiles.LEADER_ZOOM).toBe(false);
+    expect(cfg.cameraStateProfiles.LEADER_ZOOM.visibleCorridors).toBe(
+      DEFAULT_CAMERA_CONFIG.cameraStateProfiles.LEADER_ZOOM.visibleCorridors
+    );
+    expect(cfg.cameraStateProfiles.LEADER_ZOOM.entryTC).toBe(0.9);
     // Other fields come from default
     expect(cfg.cameraStateProfiles.LEADER_ZOOM.trackingTC).toBe(
       DEFAULT_CAMERA_CONFIG.cameraStateProfiles.LEADER_ZOOM.trackingTC
     );
     // Unmentioned state uses scale defaults
-    expect(cfg.cameraStateProfiles.BATTLE_ZOOM.spriteScale).toBe(
-      DEFAULT_CAMERA_CONFIG.cameraStateProfiles.BATTLE_ZOOM.spriteScale
+    expect(cfg.cameraStateProfiles.BATTLE_ZOOM.visibleCorridors).toBe(
+      DEFAULT_CAMERA_CONFIG.cameraStateProfiles.BATTLE_ZOOM.visibleCorridors
     );
   });
 
   it('entryConvergenceZoom and entryConvergencePx are present', () => {
-    storageGet.mockReturnValue({ schemaVersion: 4 });
+    storageGet.mockReturnValue({});
     const cfg = loadCameraConfig();
     expect(cfg.entryConvergenceZoom).toBe(DEFAULT_CAMERA_CONFIG.entryConvergenceZoom);
     expect(cfg.entryConvergencePx).toBe(DEFAULT_CAMERA_CONFIG.entryConvergencePx);
   });
 });
 
-describe('loadCameraConfig — v5→v7 migration: leadInDuration reset + spritePct→spriteScale', () => {
-  it('v5 config with old leadInDuration=1.0 is migrated: leadInDuration reset, spritePct→spriteScale', () => {
-    storageGet.mockReturnValue({
-      schemaVersion: 5,
-      cameraStateProfiles: {
-        LEADER_ZOOM: {
-          spritePct: 0.09,
-          trackingTC: 0.25,
-          entryTC: 0.8,
-          leadInDuration: 1.0,
-          leadOutDuration: 1.5,
-          innerFramePct: 0.7,
-          maxStateDuration: 8000,
-          minStateHold: 5000,
-        },
-        BATTLE_ZOOM: {
-          spritePct: 0.14,
-          trackingTC: 0.25,
-          entryTC: 0.8,
-          leadInDuration: 0.5,
-          leadOutDuration: 1.0,
-          innerFramePct: 0.7,
-          maxStateDuration: 8000,
-          minStateHold: 5000,
-        },
-        COMEBACK_ZOOM: {
-          spritePct: 0.07,
-          trackingTC: 0.25,
-          entryTC: 0.8,
-          leadInDuration: 1.0,
-          leadOutDuration: 1.5,
-          innerFramePct: 0.7,
-          maxStateDuration: 8000,
-          minStateHold: 5000,
-        },
-        OVERVIEW: {
-          spritePct: 0.05,
-          trackingTC: 1.5,
-          entryTC: 1.5,
-          leadInDuration: 0,
-          leadOutDuration: 0,
-          innerFramePct: 0.7,
-          maxStateDuration: 4000,
-          minStateHold: 5000,
-        },
-      },
-    });
-    const cfg = loadCameraConfig();
-    expect(cfg.schemaVersion).toBe(17);
-    expect(cfg.cameraStateProfiles.LEADER_ZOOM.leadInDuration).toBe(
-      DEFAULT_CAMERA_CONFIG.cameraStateProfiles.LEADER_ZOOM.leadInDuration
-    );
-    expect(cfg.cameraStateProfiles.BATTLE_ZOOM.leadInDuration).toBe(
-      DEFAULT_CAMERA_CONFIG.cameraStateProfiles.BATTLE_ZOOM.leadInDuration
-    );
-    expect(cfg.cameraStateProfiles.COMEBACK_ZOOM.leadInDuration).toBe(
-      DEFAULT_CAMERA_CONFIG.cameraStateProfiles.COMEBACK_ZOOM.leadInDuration
-    );
-    expect(cfg.cameraStateProfiles.OVERVIEW.leadInDuration).toBe(0);
-    // spritePct→spritePx→spriteScale: 0.09×720=65→65/36, 0.14×720≈101→101/36, 0.07×720=50→50/36, 0.05×720=36→1.0
-    expect(cfg.cameraStateProfiles.LEADER_ZOOM.spriteScale).toBe(65 / 36);
-    expect(cfg.cameraStateProfiles.BATTLE_ZOOM.spriteScale).toBe(101 / 36);
-    expect(cfg.cameraStateProfiles.COMEBACK_ZOOM.spriteScale).toBe(50 / 36);
-    expect(cfg.cameraStateProfiles.OVERVIEW.spriteScale).toBe(1.0);
-    expect('spritePct' in cfg.cameraStateProfiles.LEADER_ZOOM).toBe(false);
-  });
-
-  it('v5→v7 migration preserves non-leadInDuration, non-spritePct fields; converts spritePct→spriteScale', () => {
-    storageGet.mockReturnValue({
-      schemaVersion: 5,
-      cameraStateProfiles: {
-        LEADER_ZOOM: { spritePct: 0.15, leadInDuration: 1.0 },
-      },
-    });
-    const cfg = loadCameraConfig();
-    // Math.round(0.15 × 720) = 108 → spriteScale = 108/36 = 3.0
-    expect(cfg.cameraStateProfiles.LEADER_ZOOM.spriteScale).toBe(3.0);
-    expect('spritePct' in cfg.cameraStateProfiles.LEADER_ZOOM).toBe(false);
-    expect(cfg.cameraStateProfiles.LEADER_ZOOM.leadInDuration).toBe(
-      DEFAULT_CAMERA_CONFIG.cameraStateProfiles.LEADER_ZOOM.leadInDuration
-    );
-  });
-
-  it('v6 stored config with user-tuned leadInDuration is preserved after v6→v14 migration', () => {
-    storageGet.mockReturnValue({
-      schemaVersion: 6,
-      cameraStateProfiles: {
-        LEADER_ZOOM: {
-          spritePct: 0.09,
-          trackingTC: 0.25,
-          entryTC: 0.8,
-          leadInDuration: 0.8,
-          leadOutDuration: 1.5,
-          innerFramePct: 0.7,
-          maxStateDuration: 8000,
-          minStateHold: 5000,
-        },
-      },
-    });
-    const cfg = loadCameraConfig();
-    // user-tuned leadInDuration 0.8 survives; spritePct=0.09 → spriteScale=65/36
-    expect(cfg.cameraStateProfiles.LEADER_ZOOM.leadInDuration).toBe(0.8);
-    expect(cfg.cameraStateProfiles.LEADER_ZOOM.spriteScale).toBe(65 / 36);
-    expect(cfg.schemaVersion).toBe(17);
-  });
-});
-
-describe('loadCameraConfig — v6→v7 migration: spritePct→spriteScale', () => {
-  it('v6 config with default spritePct values produces correct scale values', () => {
-    storageGet.mockReturnValue({
-      schemaVersion: 6,
-      cameraStateProfiles: {
-        OVERVIEW: {
-          spritePct: 0.05,
-          trackingTC: 1.5,
-          entryTC: 1.5,
-          leadInDuration: 0,
-          leadOutDuration: 0,
-          innerFramePct: 0.7,
-          maxStateDuration: 4000,
-          minStateHold: 5000,
-        },
-        LEADER_ZOOM: {
-          spritePct: 0.09,
-          trackingTC: 0.25,
-          entryTC: 0.8,
-          leadInDuration: 0.3,
-          leadOutDuration: 1.5,
-          innerFramePct: 0.7,
-          maxStateDuration: 8000,
-          minStateHold: 5000,
-        },
-        BATTLE_ZOOM: {
-          spritePct: 0.14,
-          trackingTC: 0.25,
-          entryTC: 0.8,
-          leadInDuration: 0.2,
-          leadOutDuration: 1.0,
-          innerFramePct: 0.7,
-          maxStateDuration: 8000,
-          minStateHold: 5000,
-        },
-        COMEBACK_ZOOM: {
-          spritePct: 0.07,
-          trackingTC: 0.25,
-          entryTC: 0.8,
-          leadInDuration: 0.3,
-          leadOutDuration: 1.5,
-          innerFramePct: 0.7,
-          maxStateDuration: 8000,
-          minStateHold: 5000,
-        },
-      },
-    });
-    const cfg = loadCameraConfig();
-    expect(cfg.schemaVersion).toBe(17);
-    // Migration formula: Math.round(spritePct × 720) → /36 for spriteScale
-    expect(cfg.cameraStateProfiles.OVERVIEW.spriteScale).toBe(1.0); // 0.05×720=36→36/36=1.0
-    expect(cfg.cameraStateProfiles.LEADER_ZOOM.spriteScale).toBe(65 / 36); // 0.09×720=64.8→65
-    expect(cfg.cameraStateProfiles.BATTLE_ZOOM.spriteScale).toBe(101 / 36); // 0.14×720=100.8→101
-    expect(cfg.cameraStateProfiles.COMEBACK_ZOOM.spriteScale).toBe(50 / 36); // 0.07×720=50.4→50
-    // spritePct key must not survive
-    expect('spritePct' in cfg.cameraStateProfiles.OVERVIEW).toBe(false);
-    expect('spritePct' in cfg.cameraStateProfiles.LEADER_ZOOM).toBe(false);
-  });
-
-  it('v6 config with custom spritePct=0.20 → spriteScale=4.0', () => {
-    storageGet.mockReturnValue({
-      schemaVersion: 6,
-      cameraStateProfiles: {
-        LEADER_ZOOM: { spritePct: 0.2, leadInDuration: 0.3 },
-      },
-    });
-    const cfg = loadCameraConfig();
-    // Math.round(0.20 × 720) = 144 → spriteScale = 144/36 = 4.0
-    expect(cfg.cameraStateProfiles.LEADER_ZOOM.spriteScale).toBe(4.0);
-    expect(cfg.schemaVersion).toBe(17);
-  });
-
-  it('v7 stored config is migrated to v14, user-tuned spritePx converted to spriteScale', () => {
-    storageGet.mockReturnValue({
-      schemaVersion: 7,
-      cameraStateProfiles: {
-        LEADER_ZOOM: {
-          spritePx: 80,
-          trackingTC: 0.25,
-          entryTC: 0.8,
-          leadInDuration: 0.3,
-          leadOutDuration: 1.5,
-          innerFramePct: 0.7,
-          maxStateDuration: 8000,
-          minStateHold: 5000,
-        },
-      },
-    });
-    const cfg = loadCameraConfig();
-    expect(cfg.cameraStateProfiles.LEADER_ZOOM.spriteScale).toBe(80 / 36);
-    expect(cfg.schemaVersion).toBe(17);
-  });
-
-  it('v9 stored config is migrated to v14, leadAheadEnabled and leadOutEnabled injected into LEADER/BATTLE/COMEBACK', () => {
-    storageGet.mockReturnValue({
-      schemaVersion: 9,
-      cameraStateProfiles: {
-        OVERVIEW: { ...DEFAULT_CAMERA_CONFIG.cameraStateProfiles.OVERVIEW },
-        LEADER_ZOOM: {
-          spritePx: 80,
-          trackingTC: 0.25,
-          entryTC: 0.8,
-          leadInDuration: 0.3,
-          leadOutDuration: 1.5,
-          innerFramePct: 0.7,
-          maxStateDuration: 8000,
-          minStateHold: 5000,
-          maxEntryDurationMs: 5000,
-          // no leadAheadEnabled or leadOutEnabled — both should be injected as false
-        },
-        BATTLE_ZOOM: { ...DEFAULT_CAMERA_CONFIG.cameraStateProfiles.BATTLE_ZOOM },
-        COMEBACK_ZOOM: { ...DEFAULT_CAMERA_CONFIG.cameraStateProfiles.COMEBACK_ZOOM },
-      },
-    });
-    const cfg = loadCameraConfig();
-    expect(cfg.schemaVersion).toBe(17);
-    expect(cfg.cameraStateProfiles.LEADER_ZOOM.leadAheadEnabled).toBe(false);
-    expect(cfg.cameraStateProfiles.BATTLE_ZOOM.leadAheadEnabled).toBe(false);
-    expect(cfg.cameraStateProfiles.COMEBACK_ZOOM.leadAheadEnabled).toBe(false);
-    expect(cfg.cameraStateProfiles.LEADER_ZOOM.leadOutEnabled).toBe(false);
-    expect(cfg.cameraStateProfiles.BATTLE_ZOOM.leadOutEnabled).toBe(false);
-    expect(cfg.cameraStateProfiles.COMEBACK_ZOOM.leadOutEnabled).toBe(false);
-    // User-tuned spritePx converted to spriteScale
-    expect(cfg.cameraStateProfiles.LEADER_ZOOM.spriteScale).toBe(80 / 36);
-  });
-
-  it('v8 stored config is migrated to v14, overviewOffsetPx injected into OVERVIEW profile', () => {
-    storageGet.mockReturnValue({
-      schemaVersion: 8,
-      cameraStateProfiles: {
-        OVERVIEW: {
-          spritePx: 36,
-          trackingTC: 1.5,
-          entryTC: 1.5,
-          leadInDuration: 0,
-          leadOutDuration: 0,
-          innerFramePct: 0.7,
-          maxStateDuration: 4000,
-          minStateHold: 5000,
-          maxEntryDurationMs: 10000,
-          // no overviewOffsetPx — should be injected by migration
-        },
-        LEADER_ZOOM: { ...DEFAULT_CAMERA_CONFIG.cameraStateProfiles.LEADER_ZOOM },
-        BATTLE_ZOOM: { ...DEFAULT_CAMERA_CONFIG.cameraStateProfiles.BATTLE_ZOOM },
-        COMEBACK_ZOOM: { ...DEFAULT_CAMERA_CONFIG.cameraStateProfiles.COMEBACK_ZOOM },
-      },
-    });
-    const cfg = loadCameraConfig();
-    expect(cfg.schemaVersion).toBe(17);
-    expect(cfg.cameraStateProfiles.OVERVIEW.overviewOffsetPx).toBe(
-      DEFAULT_CAMERA_CONFIG.cameraStateProfiles.OVERVIEW.overviewOffsetPx
-    );
-  });
-});
-
-// ── v10 → v11 migration: leadOutEnabled ──────────────────────────────────────
-
-describe('loadCameraConfig — v10→v11 migration: leadOutEnabled', () => {
-  it('v10 config without leadOutEnabled gets it injected as false for LEADER/BATTLE/COMEBACK', () => {
-    storageGet.mockReturnValue({
-      schemaVersion: 10,
-      cameraStateProfiles: {
-        OVERVIEW: { ...DEFAULT_CAMERA_CONFIG.cameraStateProfiles.OVERVIEW },
-        LEADER_ZOOM: {
-          spritePx: 75,
-          trackingTC: 0.25,
-          entryTC: 0.8,
-          leadInDuration: 0.3,
-          leadOutDuration: 1.5,
-          innerFramePct: 0.7,
-          maxStateDuration: 8000,
-          minStateHold: 5000,
-          maxEntryDurationMs: 5000,
-          leadAheadEnabled: true, // user had turned it on
-          // no leadOutEnabled — should be injected as false
-        },
-        BATTLE_ZOOM: {
-          ...DEFAULT_CAMERA_CONFIG.cameraStateProfiles.BATTLE_ZOOM,
-          leadAheadEnabled: false,
-        },
-        COMEBACK_ZOOM: {
-          ...DEFAULT_CAMERA_CONFIG.cameraStateProfiles.COMEBACK_ZOOM,
-          leadAheadEnabled: false,
-        },
-      },
-    });
-    const cfg = loadCameraConfig();
-    expect(cfg.schemaVersion).toBe(17);
-    expect(cfg.cameraStateProfiles.LEADER_ZOOM.leadOutEnabled).toBe(false);
-    expect(cfg.cameraStateProfiles.BATTLE_ZOOM.leadOutEnabled).toBe(false);
-    expect(cfg.cameraStateProfiles.COMEBACK_ZOOM.leadOutEnabled).toBe(false);
-    // Existing user-tuned values preserved; spritePx converted to spriteScale
-    expect(cfg.cameraStateProfiles.LEADER_ZOOM.leadAheadEnabled).toBe(true);
-    expect(cfg.cameraStateProfiles.LEADER_ZOOM.spriteScale).toBe(75 / 36);
-    // OVERVIEW is not touched
-    expect('leadOutEnabled' in cfg.cameraStateProfiles.OVERVIEW).toBe(false);
-  });
-
-  it('v10 config with leadOutEnabled: true already set keeps it as true', () => {
-    storageGet.mockReturnValue({
-      schemaVersion: 10,
-      cameraStateProfiles: {
-        OVERVIEW: { ...DEFAULT_CAMERA_CONFIG.cameraStateProfiles.OVERVIEW },
-        LEADER_ZOOM: {
-          ...DEFAULT_CAMERA_CONFIG.cameraStateProfiles.LEADER_ZOOM,
-          leadOutEnabled: true, // user explicitly enabled it
-        },
-        BATTLE_ZOOM: { ...DEFAULT_CAMERA_CONFIG.cameraStateProfiles.BATTLE_ZOOM },
-        COMEBACK_ZOOM: { ...DEFAULT_CAMERA_CONFIG.cameraStateProfiles.COMEBACK_ZOOM },
-      },
-    });
-    const cfg = loadCameraConfig();
-    expect(cfg.schemaVersion).toBe(17);
-    expect(cfg.cameraStateProfiles.LEADER_ZOOM.leadOutEnabled).toBe(true);
-  });
-
-  it('v11 config is migrated to v14 with merged profiles', () => {
-    storageGet.mockReturnValue({
-      schemaVersion: 11,
-      cameraStateProfiles: {
-        OVERVIEW: { ...DEFAULT_CAMERA_CONFIG.cameraStateProfiles.OVERVIEW },
-        LEADER_ZOOM: {
-          ...DEFAULT_CAMERA_CONFIG.cameraStateProfiles.LEADER_ZOOM,
-          leadOutEnabled: true,
-          spritePx: 90,
-        },
-        BATTLE_ZOOM: { ...DEFAULT_CAMERA_CONFIG.cameraStateProfiles.BATTLE_ZOOM },
-        COMEBACK_ZOOM: { ...DEFAULT_CAMERA_CONFIG.cameraStateProfiles.COMEBACK_ZOOM },
-      },
-    });
-    const cfg = loadCameraConfig();
-    expect(cfg.schemaVersion).toBe(17);
-    expect(cfg.cameraStateProfiles.LEADER_ZOOM.leadOutEnabled).toBe(true);
-    expect(cfg.cameraStateProfiles.LEADER_ZOOM.spriteScale).toBe(90 / 36);
-  });
-});
-
-describe('loadCameraConfig — v12→v13 migration', () => {
-  it('v12 config gains stateOverlayEnabled and stateOverlayDurationMs at defaults', () => {
-    storageGet.mockReturnValue({
-      schemaVersion: 12,
-      cameraStateProfiles: DEFAULT_CAMERA_CONFIG.cameraStateProfiles,
-      postStartHoldMs: 7000,
-    });
-    const cfg = loadCameraConfig();
-    expect(cfg.schemaVersion).toBe(17);
-    expect(cfg.stateOverlayEnabled).toBe(DEFAULT_CAMERA_CONFIG.stateOverlayEnabled);
-    expect(cfg.stateOverlayDurationMs).toBe(DEFAULT_CAMERA_CONFIG.stateOverlayDurationMs);
-  });
-
-  it('v12 config preserves an explicitly stored stateOverlayEnabled: false', () => {
-    storageGet.mockReturnValue({
-      schemaVersion: 12,
-      stateOverlayEnabled: false,
-      cameraStateProfiles: DEFAULT_CAMERA_CONFIG.cameraStateProfiles,
-    });
-    const cfg = loadCameraConfig();
-    expect(cfg.schemaVersion).toBe(17);
-    expect(cfg.stateOverlayEnabled).toBe(false);
-  });
-
-  it('v12 config preserves an explicitly stored stateOverlayDurationMs', () => {
-    storageGet.mockReturnValue({
-      schemaVersion: 12,
-      stateOverlayDurationMs: 5000,
-      cameraStateProfiles: DEFAULT_CAMERA_CONFIG.cameraStateProfiles,
-    });
-    const cfg = loadCameraConfig();
-    expect(cfg.stateOverlayDurationMs).toBe(5000);
-  });
-
-  it('fresh DEFAULT_CAMERA_CONFIG has schemaVersion 17 and stateOverlay fields', () => {
-    // Verify the defaults themselves are correct for a brand-new installation.
-    storageGet.mockReturnValue(null);
-    const cfg = loadCameraConfig();
-    expect(cfg.schemaVersion).toBe(17);
-    expect(cfg.stateOverlayEnabled).toBe(true);
-    expect(cfg.stateOverlayDurationMs).toBe(3500);
-  });
-});
-
-describe('loadCameraConfig — v13→v14 migration: spritePx → spriteScale', () => {
-  it('v13 config with spritePx converts to spriteScale (÷36) for all profiles', () => {
-    storageGet.mockReturnValue({
-      schemaVersion: 13,
-      cameraStateProfiles: {
-        OVERVIEW: { ...DEFAULT_CAMERA_CONFIG.cameraStateProfiles.OVERVIEW, spritePx: 36 },
-        LEADER_ZOOM: { ...DEFAULT_CAMERA_CONFIG.cameraStateProfiles.LEADER_ZOOM, spritePx: 65 },
-        BATTLE_ZOOM: { ...DEFAULT_CAMERA_CONFIG.cameraStateProfiles.BATTLE_ZOOM, spritePx: 101 },
-        COMEBACK_ZOOM: { ...DEFAULT_CAMERA_CONFIG.cameraStateProfiles.COMEBACK_ZOOM, spritePx: 50 },
-        LEAD_CHANGE: { ...DEFAULT_CAMERA_CONFIG.cameraStateProfiles.LEAD_CHANGE, spritePx: 65 },
-      },
-    });
-    const cfg = loadCameraConfig();
-    expect(cfg.schemaVersion).toBe(17);
-    expect(cfg.cameraStateProfiles.OVERVIEW.spriteScale).toBe(1.0);
-    expect(cfg.cameraStateProfiles.LEADER_ZOOM.spriteScale).toBe(65 / 36);
-    expect(cfg.cameraStateProfiles.BATTLE_ZOOM.spriteScale).toBe(101 / 36);
-    expect(cfg.cameraStateProfiles.COMEBACK_ZOOM.spriteScale).toBe(50 / 36);
-    expect(cfg.cameraStateProfiles.LEAD_CHANGE.spriteScale).toBe(65 / 36);
-    expect('spritePx' in cfg.cameraStateProfiles.LEADER_ZOOM).toBe(false);
-  });
-
-  it('v13 config with custom spritePx=108 → spriteScale=3.0', () => {
-    storageGet.mockReturnValue({
-      schemaVersion: 13,
-      cameraStateProfiles: {
-        LEADER_ZOOM: { ...DEFAULT_CAMERA_CONFIG.cameraStateProfiles.LEADER_ZOOM, spritePx: 108 },
-      },
-    });
-    const cfg = loadCameraConfig();
-    expect(cfg.cameraStateProfiles.LEADER_ZOOM.spriteScale).toBe(3.0);
-    expect(cfg.schemaVersion).toBe(17);
-  });
-
-  it('v13 config with spriteScale already set is not overwritten', () => {
-    storageGet.mockReturnValue({
-      schemaVersion: 13,
-      cameraStateProfiles: {
-        LEADER_ZOOM: {
-          ...DEFAULT_CAMERA_CONFIG.cameraStateProfiles.LEADER_ZOOM,
-          spriteScale: 2.5,
-        },
-      },
-    });
-    const cfg = loadCameraConfig();
-    expect(cfg.cameraStateProfiles.LEADER_ZOOM.spriteScale).toBe(2.5);
-  });
-
-  it('v14 stored config migrates to v15, user-tuned spriteScale is preserved unchanged', () => {
-    storageGet.mockReturnValue({
-      schemaVersion: 14,
-      cameraStateProfiles: {
-        ...DEFAULT_CAMERA_CONFIG.cameraStateProfiles,
-        LEADER_ZOOM: { ...DEFAULT_CAMERA_CONFIG.cameraStateProfiles.LEADER_ZOOM, spriteScale: 2.0 },
-      },
-    });
-    const cfg = loadCameraConfig();
-    expect(cfg.schemaVersion).toBe(17);
-    expect(cfg.cameraStateProfiles.LEADER_ZOOM.spriteScale).toBe(2.0);
-  });
-});
-
-describe('loadCameraConfig — v15 passthrough', () => {
-  it('v15 WITH cameraStateProfiles: stored field preserved, non-stored field from defaults, missing state filled from defaults', () => {
+describe('loadCameraConfig — stored-over-defaults', () => {
+  it('WITH cameraStateProfiles: stored field preserved, others from defaults, missing state filled', () => {
     // LEADER_ZOOM has one override; OVERVIEW is absent from stored → must come from defaults.
     storageGet.mockReturnValue({
-      schemaVersion: 15,
       maxTargetScreenPx: 250,
       cameraStateProfiles: {
         LEADER_ZOOM: { spriteScale: 3.0 },
@@ -749,7 +183,9 @@ describe('loadCameraConfig — v15 passthrough', () => {
     // Unset top-level field comes from defaults
     expect(cfg.minStateHoldMs).toBe(DEFAULT_CAMERA_CONFIG.minStateHoldMs);
     // Stored field inside the state is preserved
-    expect(cfg.cameraStateProfiles.LEADER_ZOOM.spriteScale).toBe(3.0);
+    expect(cfg.cameraStateProfiles.LEADER_ZOOM.visibleCorridors).toBe(
+      DEFAULT_CAMERA_CONFIG.cameraStateProfiles.LEADER_ZOOM.visibleCorridors
+    );
     // Non-overridden field in the same state is filled from defaults (per-state deep merge)
     expect(cfg.cameraStateProfiles.LEADER_ZOOM.trackingTC).toBe(
       DEFAULT_CAMERA_CONFIG.cameraStateProfiles.LEADER_ZOOM.trackingTC
@@ -758,12 +194,10 @@ describe('loadCameraConfig — v15 passthrough', () => {
     expect(cfg.cameraStateProfiles.OVERVIEW).toEqual(
       DEFAULT_CAMERA_CONFIG.cameraStateProfiles.OVERVIEW
     );
-    expect(cfg.schemaVersion).toBe(17);
   });
 
-  it('v15 WITHOUT cameraStateProfiles: top-level override merged, cameraStateProfiles equals defaults', () => {
+  it('WITHOUT cameraStateProfiles: top-level override merged, profiles equal the defaults', () => {
     storageGet.mockReturnValue({
-      schemaVersion: 15,
       maxTargetScreenPx: 180,
     });
     const cfg = loadCameraConfig();
@@ -773,81 +207,14 @@ describe('loadCameraConfig — v15 passthrough', () => {
     expect(cfg.minStateHoldMs).toBe(DEFAULT_CAMERA_CONFIG.minStateHoldMs);
     // Deep-merge block skipped → profiles are the defaults spread from DEFAULT_CAMERA_CONFIG
     expect(cfg.cameraStateProfiles).toEqual(DEFAULT_CAMERA_CONFIG.cameraStateProfiles);
-    expect(cfg.schemaVersion).toBe(17);
-  });
-});
-
-describe('loadCameraConfig — normalizeCameraTransitionSeconds scalar branch', () => {
-  it('v3 config with scalar cameraTransitionSeconds is converted to object form', () => {
-    // Legacy configs stored cameraTransitionSeconds as a plain number; the migration
-    // converts it to { overview: scalar, leader/battle/comeback: from defaults }.
-    storageGet.mockReturnValue({
-      schemaVersion: 3,
-      cameraTransitionSeconds: 2.5,
-    });
-    const cfg = loadCameraConfig();
-    expect(cfg.schemaVersion).toBe(17);
-    // The scalar becomes the overview TC; other keys come from DEFAULT_CAMERA_CONFIG.
-    expect(cfg.cameraTransitionSeconds.overview).toBe(2.5);
-    expect(cfg.cameraTransitionSeconds.leader).toBe(
-      DEFAULT_CAMERA_CONFIG.cameraTransitionSeconds.leader
-    );
-    expect(cfg.cameraTransitionSeconds.battle).toBe(
-      DEFAULT_CAMERA_CONFIG.cameraTransitionSeconds.battle
-    );
-    expect(cfg.cameraTransitionSeconds.comeback).toBe(
-      DEFAULT_CAMERA_CONFIG.cameraTransitionSeconds.comeback
-    );
-  });
-});
-
-describe('applyMigrationsSinceV5 — runner slice logic', () => {
-  it('fromVersion=14 (slice(9)): migrateV14toV15 + migrateV15toV16 run — user-tuned leadInDuration preserved, schemaVersion reaches 16', () => {
-    // If the slice were wrong and migrateV5toV6 re-ran, it would reset leadInDuration to
-    // the default (0.3).  A deliberately non-default value here proves only the tail migrations ran.
-    storageGet.mockReturnValue({
-      schemaVersion: 14,
-      cameraStateProfiles: {
-        ...DEFAULT_CAMERA_CONFIG.cameraStateProfiles,
-        LEADER_ZOOM: {
-          ...DEFAULT_CAMERA_CONFIG.cameraStateProfiles.LEADER_ZOOM,
-          leadInDuration: 0.9,
-        },
-      },
-    });
-    const cfg = loadCameraConfig();
-    expect(cfg.schemaVersion).toBe(17);
-    // migrateV14toV15 injected overviewClosedTrackZoom
-    expect(cfg.overviewClosedTrackZoom).toBe(DEFAULT_CAMERA_CONFIG.overviewClosedTrackZoom);
-    // leadInDuration must NOT have been reset (migrateV5toV6 must not have run)
-    expect(cfg.cameraStateProfiles.LEADER_ZOOM.leadInDuration).toBe(0.9);
-  });
-
-  it('fromVersion=5 (slice(0)): full chain of 11 migrations runs — spritePct→spriteScale and all subsequent migrations applied', () => {
-    // A v5-stored config with spritePct must traverse migrateV6toV7 (spritePct→spritePx),
-    // then migrateV13toV14 (spritePx→spriteScale), then migrateV14toV15, then migrateV15toV16 — 11 hops total.
-    storageGet.mockReturnValue({
-      schemaVersion: 5,
-      cameraStateProfiles: {
-        LEADER_ZOOM: { spritePct: 0.09, leadInDuration: 0.3 },
-      },
-    });
-    const cfg = loadCameraConfig();
-    expect(cfg.schemaVersion).toBe(17);
-    // migrateV6toV7 converted spritePct; migrateV13toV14 produced spriteScale
-    expect('spritePct' in cfg.cameraStateProfiles.LEADER_ZOOM).toBe(false);
-    expect(cfg.cameraStateProfiles.LEADER_ZOOM.spriteScale).toBe(65 / 36); // Math.round(0.09×720)=65
-    // migrateV14toV15 ran (overviewClosedTrackZoom present)
-    expect(cfg.overviewClosedTrackZoom).toBe(DEFAULT_CAMERA_CONFIG.overviewClosedTrackZoom);
   });
 });
 
 describe('mergeStateProfiles — helper behavior via loadCameraConfig', () => {
-  it('no-strip (v7 path): field override preserved; non-overridden field from defaults; absent state fully from defaults; spriteScale present from base', () => {
+  it('field override preserved; non-overridden field from defaults; absent state fully from defaults', () => {
     // v7 uses no-strip — default spriteScale is in the base and survives when the stored
     // override does not supply one.
     storageGet.mockReturnValue({
-      schemaVersion: 7,
       cameraStateProfiles: {
         LEADER_ZOOM: { trackingTC: 0.77 }, // one override; no spriteScale supplied
       },
@@ -865,28 +232,27 @@ describe('mergeStateProfiles — helper behavior via loadCameraConfig', () => {
     );
     // spriteScale present from default base (not stripped); BATTLE_ZOOM was not in stored,
     // so its spriteScale flows through the no-strip base → chain → final output.
-    expect(cfg.cameraStateProfiles.BATTLE_ZOOM.spriteScale).toBe(
-      DEFAULT_CAMERA_CONFIG.cameraStateProfiles.BATTLE_ZOOM.spriteScale
+    expect(cfg.cameraStateProfiles.BATTLE_ZOOM.visibleCorridors).toBe(
+      DEFAULT_CAMERA_CONFIG.cameraStateProfiles.BATTLE_ZOOM.visibleCorridors
     );
   });
 
-  it('strip (v5 path): field override preserved; absent state fully from defaults; stored spritePct converted to spriteScale (not shadowed by stripped base)', () => {
-    // v5 uses strip — spriteScale is removed from the default base so the stored spritePct
-    // is the sole source for conversion in migrateV6toV7 → migrateV13toV14.
+  it('a stored profile merges over the default profile, key by key', () => {
     storageGet.mockReturnValue({
-      schemaVersion: 5,
       cameraStateProfiles: {
-        LEADER_ZOOM: { spritePct: 0.12, trackingTC: 0.55 },
+        LEADER_ZOOM: { trackingTC: 0.55 },
       },
     });
     const cfg = loadCameraConfig();
-    // Override preserved
+    // Override preserved …
     expect(cfg.cameraStateProfiles.LEADER_ZOOM.trackingTC).toBe(0.55);
-    // spritePct converted: Math.round(0.12 × 720) = 86 → spriteScale = 86/36
-    expect(cfg.cameraStateProfiles.LEADER_ZOOM.spriteScale).toBe(86 / 36);
-    expect('spritePct' in cfg.cameraStateProfiles.LEADER_ZOOM).toBe(false);
-    // State absent from stored → full defaults (strip only removes spriteScale from the
-    // base temporarily; absent states still get all default fields after full migration)
+    // … and every key the stored profile did not name comes from the default profile.
+    expect(cfg.cameraStateProfiles.LEADER_ZOOM.visibleCorridors).toBe(
+      DEFAULT_CAMERA_CONFIG.cameraStateProfiles.LEADER_ZOOM.visibleCorridors
+    );
+    expect(cfg.cameraStateProfiles.BATTLE_ZOOM).toEqual(
+      DEFAULT_CAMERA_CONFIG.cameraStateProfiles.BATTLE_ZOOM
+    );
     expect(cfg.cameraStateProfiles.OVERVIEW).toEqual(
       DEFAULT_CAMERA_CONFIG.cameraStateProfiles.OVERVIEW
     );
@@ -898,11 +264,10 @@ import { CameraDirector } from './camera/CameraDirector.js';
 import { cameraConfigProvenance } from './cameraConfig.js';
 
 describe('CAMERA-FOCUS-4 — stored config can never omit new machinery', () => {
-  it('a persisted v17 config lacking the new keys resolves grammar glide + forward-frac (not legacy)', () => {
+  it('a stored config lacking the newest keys still resolves grammar glide + forward-frac', () => {
     // The owner's case: a stored cosmetic config (off-default keys) saved BEFORE FOCUS-3 existed, so it
     // has NO cameraTransitionGrammar / leaderForwardFrac. The load must fill them from DEFAULT.
     storageGet.mockReturnValue({
-      schemaVersion: 17,
       showCameraStateHud: false,
       overviewOffsetPx: 200,
       minRacersVisible: 6,
@@ -912,17 +277,22 @@ describe('CAMERA-FOCUS-4 — stored config can never omit new machinery', () => 
     const cfg = loadCameraConfig();
     expect(cfg.cameraTransitionGrammar).toBe('glide');
     expect(cfg.leaderForwardFrac).toBe(0.66);
-    // stored overrides still win where present:
+    // stored overrides still win where the key is still live:
     expect(cfg.minRacersVisible).toBe(6);
-    expect(cfg.overviewOffsetPx).toBe(200);
+    expect(cfg.showCameraStateHud).toBe(false);
+    // …and RETIRED keys are ignored rather than carried forward. `overviewOffsetPx` and
+    // `leaderMinZoomFraction` were deleted with the mechanisms they configured; a config stored
+    // before that still holds them, and the loader simply does not look at them.
+    expect(cfg.overviewOffsetPx).toBeUndefined();
+    expect(cfg.leaderMinZoomFraction).toBeUndefined();
     // and the CameraDirector built from it runs the NEW path, not the legacy fallback:
     const cd = new CameraDirector(3072, 2048, false, cfg);
     expect(cd.transitionGrammar).toBe('glide');
   });
 
   it('systemic guarantee: even if a resolve branch dropped a new key, loadCameraConfig fills it', () => {
-    // A migration-era config (schemaVersion 9) exercises a different branch; new keys must still resolve.
-    storageGet.mockReturnValue({ schemaVersion: 9, minRacersVisible: 4 });
+    // A config stored before this key existed: the new key must still resolve, from the defaults.
+    storageGet.mockReturnValue({ minRacersVisible: 4 });
     const cfg = loadCameraConfig();
     expect(cfg.cameraTransitionGrammar).toBe('glide');
     expect(cfg.leaderForwardFrac).toBe(0.66);
@@ -935,13 +305,73 @@ describe('CAMERA-FOCUS-4 — stored config can never omit new machinery', () => 
     );
   });
 
-  it('cameraConfigProvenance reports per-key source (stored vs default) + schema version', () => {
-    storageGet.mockReturnValue({ schemaVersion: 17, minRacersVisible: 6 });
+  it('cameraConfigProvenance reports per-key source (stored vs default)', () => {
+    storageGet.mockReturnValue({ glideDurationMs: 600 });
     const prov = cameraConfigProvenance();
-    expect(prov.storedSchemaVersion).toBe(17);
     expect(prov.hadStored).toBe(true);
-    expect(prov.sources.minRacersVisible).toBe('stored');
+    expect(prov.sources.glideDurationMs).toBe('stored');
     expect(prov.sources.cameraTransitionGrammar).toBe('default'); // filled from DEFAULT, not stored
     expect(prov.resolved.cameraTransitionGrammar).toBe('glide');
+  });
+});
+
+// ── CAMERA-NO-SCHEMA-1: the rule that replaced the version, as tests ──────────────────────────
+// The owner's standing instruction: no schema, no version bumps, no migrations. What replaces the
+// machinery is defaults underneath, stored values on top, unknown or retired keys ignored. These
+// pin that rule directly, because it is now the only thing protecting his settings.
+describe('no schema, no version — just sane loading', () => {
+  it('a stored config is NEVER discarded wholesale — every known value survives', () => {
+    // The old rule threw the WHOLE config away on a version mismatch. That is what wiped his
+    // settings twice (v20, v21) and made him retype everything. It cannot happen again.
+    storageGet.mockReturnValue({
+      schemaVersion: 7, // a stale field from the old regime: meaningless now, and harmless
+      minRacersVisible: 6,
+      glideDurationMs: 700,
+    });
+    const cfg = loadCameraConfig();
+    expect(cfg.minRacersVisible).toBe(6);
+    expect(cfg.glideDurationMs).toBe(700);
+    expect(cfg.schemaVersion).toBeUndefined(); // not a key of the defaults, so not in the live config
+  });
+
+  it('a NEW default key always reaches the live config (Lesson 193, without versioning)', () => {
+    storageGet.mockReturnValue({ minRacersVisible: 6 });
+    const cfg = loadCameraConfig();
+    for (const key of Object.keys(DEFAULT_CAMERA_CONFIG)) expect(cfg, key).toHaveProperty(key);
+  });
+
+  it('a stored state PROFILE merges key by key, and unknown profile fields are ignored', () => {
+    storageGet.mockReturnValue({
+      cameraStateProfiles: {
+        LEADER_ZOOM: { visibleCorridors: 0.4, retiredKnob: 99 },
+        NOT_A_STATE: { visibleCorridors: 5 },
+      },
+    });
+    const cfg = loadCameraConfig();
+    expect(cfg.cameraStateProfiles.LEADER_ZOOM.visibleCorridors).toBe(0.4); // his value wins
+    expect(cfg.cameraStateProfiles.LEADER_ZOOM.trackingTC).toBe(
+      DEFAULT_CAMERA_CONFIG.cameraStateProfiles.LEADER_ZOOM.trackingTC
+    ); // the rest from defaults
+    expect(cfg.cameraStateProfiles.LEADER_ZOOM.retiredKnob).toBeUndefined();
+    expect(cfg.cameraStateProfiles.NOT_A_STATE).toBeUndefined();
+    expect(Object.keys(cfg.cameraStateProfiles).sort()).toEqual(
+      Object.keys(DEFAULT_CAMERA_CONFIG.cameraStateProfiles).sort()
+    );
+  });
+
+  it('saving does not stamp anything onto what he stored', () => {
+    saveCameraConfig({ minRacersVisible: 5 });
+    expect(storageSet).toHaveBeenCalledWith('racearena:cameraConfig', { minRacersVisible: 5 });
+  });
+
+  // FAILURE PROOF — what the version check did, computed from the same inputs. A stored config whose
+  // version did not match the code's was discarded ENTIRELY: every value below would have come back
+  // as the default. That is the behaviour this block deleted.
+  it('FAILURE PROOF: the version check would have thrown all of this away', () => {
+    const stored = { schemaVersion: 20, minRacersVisible: 6, glideDurationMs: 700 };
+    storageGet.mockReturnValue(stored);
+    const versionChecked = stored.schemaVersion !== 21 ? { ...DEFAULT_CAMERA_CONFIG } : stored;
+    expect(versionChecked.minRacersVisible).toBe(DEFAULT_CAMERA_CONFIG.minRacersVisible); // wiped
+    expect(loadCameraConfig().minRacersVisible).toBe(6); // kept
   });
 });

@@ -3,7 +3,12 @@
 // Path:        client/src/modules/camera/lapUtils.js
 // Project:     RaceArena
 // Created:     2026-04-22
-// Description: Lap bookkeeping for multi-lap races, plus the physics frame reference.
+//
+// WHAT THIS IS FOR: lap bookkeeping — turning an accumulating track parameter into "which lap" and
+// "how far through the race", plus the physics frame reference the two share.
+//
+// WHAT IT IS NOT FOR: speed or duration. It used to own both, and that is the point of the note
+// below — those derivations now have exactly one home each.
 //
 // The speed/duration derivations that used to live here — lapsFromDuration,
 // estimatedSecondsPerLap, computeSpeedScaleFactor (open, length/2000 with a hidden

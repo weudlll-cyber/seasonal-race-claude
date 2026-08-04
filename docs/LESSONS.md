@@ -3222,3 +3222,109 @@ present in the config the session actually reads.
 shapes through the constructor, not a shallow spread. Diagnosis order for an inert fix is fixed: live-path proof
 FIRST, fix-logic doubt second. Related: the same "prove the live path" discipline is the enforcement side of
 Lesson 191's live==replay trust rule.
+
+## Lesson 194 — The Unit Law: A Number Compared Against The Frame Must Be Expressed As A Fraction Of The Frame
+An absolute pixel value that lives in a coordinate space somebody will later change is a defect with a delay
+fuse. It is correct on the day it is written and wrong on the day the space moves, and nothing announces it.
+
+**Context.** Four separate defects on the camera branch were the same mistake wearing different clothes: the
+sprite floor written as `32 px`; the name-tag size as `max(8, …)` px; the zoom unit measured in *this track's*
+width, so one setting meant a different picture on every track; and the reference canvas declared independently
+in four files that all had to agree, with nothing making them agree. Each was found separately, diagnosed
+separately and fixed separately before anyone noticed they were one family.
+
+**Insight / the law.** If a number is compared against something on screen, express it as a **fraction of the
+screen** — or of the one fixed reference the screen is derived from. `minDrawnFrameFrac` (a share of frame
+height) cannot rot the way `32 px` did; `visibleCorridors` against a fixed standard corridor cannot mean two
+things on two tracks the way "track widths" did. The test is mechanical: say out loud which space the number
+lives in. If the answer is "pixels, on whatever canvas we happen to have", it will drift.
+
+**Consequence / enforcement.** A new camera or layout constant in absolute pixels needs a written justification
+for why its space cannot move. The reference canvas has ONE home (`projection.js`); the corridor unit has ONE
+home (`zoomUnit.js`); the framing defaults and their validation bands have ONE home (`framingConfig.js`).
+Sibling of the bsX/bsY family: same shape, different quantity. Evidence:
+reports/evolution/CAMERA-MIN-DRAW-1.md, CAMERA-TAGS-1.md, CAMERA-ZOOM-UNIT-1.md, CAMERA-REFERENCE-WIDTH-1.md.
+
+## Lesson 195 — The Chord Law: A Formula Right On The Axes And Wrong Between Them Passes Every Axis-Aligned Test
+Test fixtures gravitate to horizontal and vertical because they are easy to reason about. A geometry bug that is
+exactly right at 0° and 90° and wrong at 74° will therefore never be caught.
+
+**Context.** The leader forward-framing shift used `|cos|·W + |sin|·H` as "how far the frame reaches along this
+heading" — a BLEND of the two side lengths, whose weights sum to as much as √2. On the axes it is exactly right.
+At the owner's 74° heading it read 1091.4 px where the frame actually reaches 759.9 px, so a 0.66 framing
+fraction displaced the leader 23.0 percentage points instead of 16.0. Every existing test used an axis-aligned
+heading, so nothing failed. The correct quantity is the rectangle's actual chord through the centre.
+
+**Insight / the law.** For any geometry that takes a DIRECTION as input, the axis cases are exactly the ones
+that cannot discriminate. Test an arbitrary angle that is neither an axis nor 45°, and derive the expected value
+from the geometry independently rather than from the formula under test.
+
+**Consequence / enforcement.** Direction-taking geometry gets a non-special-angle test with an independently
+derived expectation. Sibling of L194 — same family (a quantity that is right in the space it was written and
+wrong in the space it is used), different axis. Evidence: reports/evolution/CAMERA-PICTURE-FIXES-1.md,
+`frameGeometry.js`.
+
+## Lesson 196 — The Dead-Instrument Law: A Reading Nobody Has Seen Move Is Indistinguishable From No Reading
+A counter, a control or an assertion that has not been observed to CHANGE is not evidence of anything. It looks
+like coverage on the page and provides none.
+
+**Context.** Three shapes of one failure, all found in a single hygiene pass. `clampActiveCount` was a
+diagnostic counter whose only writer had been deleted two blocks earlier: it returned a literal 0, a comment
+claimed it still watched the glide, and a test asserted it stayed 0 — a test that could not fail under any
+change to any file. The detour log carried three columns recording, on every frame, that the mechanism which no
+longer exists did not happen. And twenty per-state timing scalars were returned and stored beside the maps
+holding the same values, read by nothing but their own assertions — so a wrongly-built map would have gone
+unnoticed while its tests stayed green.
+
+**Insight / the law.** Ask of every reading: **what would have to change for this to read differently?** If the
+answer is "nothing", it is not an instrument. This is Lesson 187's proof-of-live standard turned inward, onto
+the codebase's own diagnostics and its test suite: a test that cannot fail is indistinguishable from no test,
+and a counter that cannot move is indistinguishable from a constant.
+
+**Consequence / enforcement.** When a mechanism is deleted, delete its instrumentation in the same commit —
+counters, log columns, and the assertions that read them. Assert on the value production code CONSUMES, never on
+a mirror of it. Prefer a test that can be SHOWN to fail: sabotage it once, watch it go red, restore. Evidence:
+reports/evolution/CAMERA-HYGIENE-2.md.
+
+## Lesson 197 — The Propensity Law: Making A Dial Real Turns Every Downstream Assertion Into A Coin Flip
+When a setting stops being decorative and starts genuinely deciding something probabilistic, every test that
+depended on the old determinism silently becomes a sampling experiment — and a suite that fails one run in ten
+trains people to press re-run instead of reading.
+
+**Context.** CAMERA-WEIGHTS-1 gave the four state weights a real meaning: a propensity, where `battleWeight` 0.8
+means "take this shot about eight times in ten when it is offered". It was the right change and it was measured.
+But eighteen existing tests asserted "the gate opened, therefore the state was entered" — true before, a coin
+flip after. COMEBACK at weight 0.6 fails 0.4^4 = 2.6% of runs on its own even with three retries, and the union
+across all eighteen is roughly one full-suite run in ten. It went unnoticed for a commit because the individual
+failures looked like unrelated flakes.
+
+**Insight / the law.** Introducing randomness into a decision path is a **suite-wide** change, not a local one.
+Find every assertion downstream of the newly-random decision and make it deterministic on purpose — by pinning
+the probability to its certain value, NOT by seeding: a seed pins the stream, and any later change to draw ORDER
+silently unpins it again.
+
+**Consequence / enforcement.** After making any gate probabilistic, force the generator to both extremes and run
+the suite. At "always decline", every test that was really asserting the gate goes red and names itself; at
+"always accept", what remains red is the set genuinely about the lottery. That two-run sweep is the whole audit
+and it takes minutes. Evidence: reports/evolution/CAMERA-HYGIENE-2.md.
+
+## Lesson 198 — The Silent-Seam Law: An Optional Call Across A Module Boundary Fails Quietly Forever
+`a?.b?.()` does not throw when `b` is renamed. It evaluates to `undefined`, the caller's `?? null` turns that
+into a plausible-looking answer, and the feature stops working with no error, no failing test, and no
+fingerprint movement.
+
+**Context.** The render path asks the camera who is currently in a battle, in order to darken everyone else:
+`camDirRef.current?.detectBattleGroup?.(st.racers) ?? null`. Rename the method and the darkening simply stops.
+Every camera test still passes, because the DIRECTOR is fine. The camera fingerprint does not see it either,
+because darkening is render, not direction. This is the mint tripwire's motivating case from the other
+direction — there, a value computed in a render file and consumed by the engine.
+
+**Insight / the law.** Optional chaining across a module boundary converts a loud failure into a silent one, and
+it gets used precisely where the boundary is least stable. The two ends must be pinned to each other by
+something that is neither end: a test that reads the CALLER's source for the call shape and exercises the CALLEE
+for a real answer.
+
+**Consequence / enforcement.** Every optional cross-module call gets a contract test at both ends, verified by
+sabotage — rename each side in turn and watch the right assertion go red. Match the call AS a call, never as a
+substring: a `toContain` on the method name passes happily while the call site says `nameRenamed?.(`. Evidence:
+reports/evolution/CAMERA-HYGIENE-2.md, the contract test at the foot of `CameraDirector.test.js`.

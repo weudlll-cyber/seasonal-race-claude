@@ -76,6 +76,7 @@ import {
   makeRaceOutcome,
   hashOutcome,
 } from '../../client/src/modules/parity/raceIdentity.js';
+import { QUICK_TEST_NAMES } from '../../client/src/modules/racerNames.js';
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..', '..');
 
@@ -128,7 +129,6 @@ export function loadTrack(trackId) {
 }
 
 /** A deterministic roster of N names — the browser's Quick-Test fill, in order. */
-const QUICK_TEST_NAMES = ['Turbo','Blaze','Rocket','Flash','Speedy','Thunder','Nitro','Drift','Bolt','Zephyr','Storm','Comet','Arrow','Blitz','Apex','Ridge','Flare','Surge','Dash','Nova','Mercury','Orbit','Quasar','Pixel','Vortex','Hawk','Raptor','Maverick','Phantom','Shadow','Phoenix','Titan','Atlas','Falcon','Eagle','Sparrow','Raven','Swift','Breeze','Gale','Cosmos','Nebula','Pulsar','Zenith','Meridian','Vector','Delta','Echo','Foxtrot','Gamma','Onyx','Jade','Topaz','Amber','Obsidian','Garnet','Cobalt','Crimson','Azure','Verdant','Lynx','Puma','Jaguar','Cheetah','Ocelot','Panther','Cougar','Viper','Cobra','Mamba'];
 export function rosterOf(n) {
   return Array.from({ length: n }, (_, i) => ({ name: QUICK_TEST_NAMES[i] ?? `Racer${i}` }));
 }

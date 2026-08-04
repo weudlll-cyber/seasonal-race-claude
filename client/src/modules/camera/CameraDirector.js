@@ -3,16 +3,80 @@
 // Path:        client/src/modules/camera/CameraDirector.js
 // Project:     RaceArena
 // Created:     2026-04-22
-// Description: TV-style camera state machine for both open and closed track races.
-//              Switches between OVERVIEW / LEADER_ZOOM / BATTLE_ZOOM /
-//              COMEBACK_ZOOM states, lerp-smoothed zoom and pan.
+//
+// WHAT THIS IS FOR: two things, and only these two.
+//   1. WHICH SHOT are we on — the state machine: eligibility, the holds and cooldowns, the weighted
+//      pick, the finish sequence's scripted lifecycle.
+//   2. WHERE IS THE CAMERA this frame — its own motion: `zoom`, `offsetX`, `offsetY`, `camT`, the
+//      lerp phases and the three branches (glide / cut / follow) that may write the offset.
+//
+// WHAT THIS IS NOT FOR: anything answerable without a camera. Those questions have their own files
+// and this one only asks them —
+//   who is fighting whom .................. battleGroup.js       (pure, stateless)
+//   who is coming through the field ....... comebackDetector.js  (owns the rank history)
+//   how wide is each shot, and how ........ framingConfig.js     (defaults + validation bands)
+//   when does anything happen ............. cameraTimingComputation.js
+//   who must stay in frame ................ framingRule.js       (guarantees WIDEN; never steer)
+//   world <-> screen ...................... projection.js        (the ONLY mapping)
+//   how much world is in shot ............. zoomUnit.js          (standard corridors)
+//   where did the camera go wrong ......... detourRecorder.js    (never writes a camera value)
+//
+// THE ACCEPTANCE TEST, and it is the good kind. `node scripts/camera-fingerprint.mjs` hashes every
+// decision this file makes on every frame of a seeded race across ten tracks. A refactor that
+// tidies code must not move the picture, and unlike a tuning change that is PROVABLE rather than
+// arguable. Current: 4b33c4d31bec93ea. If your change is meant to move the picture, it is not
+// hygiene — say so, and re-baseline deliberately.
+//
+// READ FIRST, if you are changing behaviour: docs/CAMERA_DIRECTOR.md. The ordering inside update()
+// is load-bearing in two places that look arbitrary (the zoom lerp before _setTargets, and
+// _setTargets owning targetOffsetX/Y alone), and both are explained there and at the call sites.
 // ============================================================
 
 import { getPanTarget } from './panTarget.js';
 import { resolveCamera } from './resolveCamera.js';
 import { diagMixin } from './CameraDirectorDiag.js';
+import { DetourRecorder } from './detourRecorder.js';
+import { ComebackDetector } from './comebackDetector.js';
+import {
+  resolveFramingConfig,
+  DEFAULT_CORRIDORS,
+  DEFAULT_COUNTDOWN_CORRIDORS,
+  DEFAULT_INNER_FRAME_PCT,
+} from './framingConfig.js';
+import {
+  detectPulkGroup,
+  groupStillCohesive,
+  groupHoldsP1OrP2,
+  findByIndex,
+  resolveGroup,
+} from './battleGroup.js';
+import { mulberry32 } from '../racePlanner.js';
 import { shortestArcDeltaT } from '../../utils/mathUtils.js';
-import { computeTimingFromConfig, BATTLE_PULK_THRESHOLD_T } from './cameraTimingComputation.js';
+import { computeTimingFromConfig } from './cameraTimingComputation.js';
+import {
+  projectionForTrack,
+  OPEN_TRACK_BASE_ZOOM as _PROJ_OPEN_BASE,
+  REFERENCE_CANVAS_W,
+  REFERENCE_CANVAS_H,
+} from './projection.js';
+import {
+  resolveZoomForCorridors,
+  referenceWidthFor,
+  corridorsForCamZoom,
+  visibleWorldPx,
+} from './zoomUnit.js';
+import { frameExtentAlong, roomFromPointAlong } from './frameGeometry.js';
+import {
+  framingFor,
+  GUARANTEE,
+  POSITION,
+  corridorGuarantee,
+  pairGuarantee,
+  companyGuarantee,
+  COMPANY_FRAME_PCT,
+  anchorScreenPoint,
+  lateralShiftToFit,
+} from './framingRule.js';
 
 export const CAM_STATE = {
   OVERVIEW: 'OVERVIEW',
@@ -25,59 +89,29 @@ export const CAM_STATE = {
   PHOTO_FINISH: 'PHOTO_FINISH',
 };
 
-// Base zoom multiplier for open tracks — applied in the render path (effectiveZoom),
-// not inside CameraDirector. Exported so RaceScreen can use the same constant.
-export const OPEN_TRACK_BASE_ZOOM = 1.5;
+// Base zoom multiplier for open tracks. CAMERA-PROJECTION-1: the single definition now lives in
+// projection.js (it is a property of the world→screen mapping, not of the director); re-exported
+// here so RaceScreen and the diagnostics HUD keep their existing import path.
+export const OPEN_TRACK_BASE_ZOOM = _PROJ_OPEN_BASE;
 
-const _MAX_STATE_DURATION = 8000; // fallback when no config provided
+// CAMERA-HYGIENE-2: the sixteen `_UPPER_CASE` timing fallbacks that stood here are gone. Every one
+// of them was a second copy of a constant in cameraTimingComputation.js, and not one was read — the
+// director gets its fallbacks by calling computeTimingFromConfig(null). They were the shape a
+// silent divergence takes: two numbers that must agree, and nothing making them.
 const START_PHASE_DURATION = 3000; // ms of forced OVERVIEW at race start
-const _ENDGAME_PROGRESS_THRESHOLD = 0.85; // fallback when no config provided
-// Single source in cameraTimingComputation.js; aliased here with underscore convention.
-const _BATTLE_PULK_THRESHOLD_T = BATTLE_PULK_THRESHOLD_T;
-const _BATTLE_MIN_DURATION_MS = 3000; // fallback: minimum ms BATTLE stays after entry
-const _FINISH_DRAMA_DURATION = 1500; // ms of LEADER_ZOOM on winner before OVERVIEW
-const _POST_START_HOLD_MS = 7000; // ms of forced LEADER after start phase (no BATTLE during this window)
-const _BATTLE_COOLDOWN_MS = 8000; // ms after leaving BATTLE before BATTLE can re-trigger
-const _BATTLE_MAX_DURATION = 6000; // ms BATTLE can hold before forced transition
-const _MIN_STATE_HOLD_MS = 5000; // minimum ms any state is held before _transition() fires
 const FRAME_RATE = 60; // reference display frame rate for lerp formula (dt-scaling applied in update)
-// Per-state transition TC fallbacks (used when no config is provided at all)
-const _TC_OVERVIEW = 1.5;
-const _TC_LEADER = 0.3;
-const _TC_BATTLE = 0.3;
-const _TC_COMEBACK = 0.3;
-const _OVERVIEW_COOLDOWN_MS = 15000; // default ms after leaving OVERVIEW before it can recur
-const MAX_INVERSE_ZOOM = 10.0; // ceiling for inverse (targetSize-based) zoom; raised from 5 to support worldW=6144 (Mountainstreet)
-const CANVAS_W = 1280; // reference canvas width
-const CANVAS_H_REF = 720; // reference canvas height for pct → px conversion
+// CAMERA-HYGIENE-1: the reference canvas has ONE home, projection.js. It was declared independently
+// here, in zoomUnit.js and in two drawing modules — four constants that must agree and nothing
+// making them.
+const CANVAS_W = REFERENCE_CANVAS_W;
+const CANVAS_H_REF = REFERENCE_CANVAS_H;
 const TOP_N = 3; // camera focuses on the top-N racers by position
-// migration divisor for legacy/countdown conversion; px equivalent used in the scale formulae below.
-const FALLBACK_REFERENCE_SPRITE_SIZE = 36;
-// Scale defaults used when no config (or no cameraStateProfiles) is provided.
-// Match DEFAULT_CAMERA_CONFIG values (v14): LEADER=1.81, BATTLE=2.81, COMEBACK=1.39.
-const DEFAULT_SPRITE_SCALE = {
-  leader: 1.81,
-  battle: 2.81,
-  comeback: 1.39,
-};
-// World-pixel radial offset: camera shifts toward field so leader sits at the outer viewport edge.
-const _DEFAULT_OVERVIEW_OFFSET_PX = 150;
-const DEFAULT_INNER_FRAME_PCT = 0.7;
+// Every framing default and validation band lives in framingConfig.js — see the header there for
+// why the bands REJECT out-of-range values rather than clamping them.
+/** Fallback corridor width (world px) when no track width and no shape reach the director. */
+const FALLBACK_TRACK_WIDTH_PX = 140;
 const LEAD_OUT_DECAY = 0.05; // per-60fps-frame EMA factor for lead-out camera deceleration
 const NOMINAL_T_PER_FRAME = 0.001; // fallback racer speed (t/frame) for lead-in distance when _prevFocusT is unknown
-// Default T-space convergence threshold. Raised from 0.005 to 0.03 so the camera exits entry
-// phase while the leader is moving: steady-state gap = ese/lf ≈ 0.026 at typical speeds, which
-// was above the old threshold (camera never converged). Configurable via transitionTConvergence.
-const _TRANSITION_T_CONVERGENCE = 0.03;
-// Per-state fallback max entry duration (ms) when not set in cameraStateProfiles.
-// Formula: ≈ 3.45 × entryTC × 2 (safety factor). OVERVIEW uses TC=1.5s, others TC=0.8s.
-const _DEFAULT_MAX_ENTRY_DURATION_MS = {
-  OVERVIEW: 10000,
-  LEADER_ZOOM: 5000,
-  BATTLE_ZOOM: 5000,
-  COMEBACK_ZOOM: 5000,
-  LEAD_CHANGE: 5000,
-};
 const DIAG_RING_SIZE = 600; // frame-log ring buffer size (≈10 s @ 60 fps)
 
 // Shortest signed T-delta on a circular track [0,1).
@@ -116,7 +150,7 @@ export class CameraDirector {
    *   Call updateConfig() for live-apply without re-construction.
    * @param {number} [drawnBodyWidthRefPx=0]
    *   displaySize × displaySizeScale for the race's racer type. When 0, a console
-   *   warning is emitted and FALLBACK_REFERENCE_SPRITE_SIZE (36px) is used instead.
+   *   warning is emitted and a fallback body size is used instead.
    * @param {object|null} [shape=null]
    *   EditorShape instance for the current track. When provided, BATTLE_ZOOM pan
    *   targets are resolved at the arc-length midpoint on the racing line rather than
@@ -129,18 +163,37 @@ export class CameraDirector {
     isOpenTrack = false,
     config = null,
     drawnBodyWidthRefPx = 0,
-    shape = null
+    shape = null,
+    trackWidthPx = 0
   ) {
+    // CAMERA-PROJECTION-1: the ONE world↔screen mapping. Every zoom formula, guardrail and
+    // diagnostic in this file goes through it — nothing re-derives `x * zoom * scale + offset`.
+    // This is also the single surviving open/closed decision in the SCALE path: the ~28 branches
+    // it replaced are listed in reports/evolution/CAMERA-PROJECTION-1.md. `_isOpenTrack` survives
+    // only for the 13 genuine TOPOLOGY questions (does the track parameter wrap?).
+    this._proj = projectionForTrack(worldW, worldH, isOpenTrack);
     this._isOpenTrack = isOpenTrack;
     this._shape = shape;
     this._worldW = worldW;
     this._worldBounds = { minX: 0, minY: 0, maxX: worldW, maxY: worldH };
+    // The WORLD-FIT scales (canvas ÷ world). These keep their historical meaning and are NOT the
+    // same thing as the projection's axis scales: on a closed track they coincide, on an open track
+    // the projection maps at a uniform OPEN_TRACK_BASE_ZOOM instead. Read by the dev HUD and tests.
     this._bsX = CANVAS_W / worldW;
     this._bsY = CANVAS_H_REF / worldH;
     this._drawnBodyWidthRefPx = drawnBodyWidthRefPx;
-    // Adaptive overview zoom: shows the entire world at cam.zoom=overviewZoom.
-    // For closed tracks, OVERVIEW uses cam.zoom=1 (bsX handles world mapping).
-    // For open tracks, OVERVIEW uses cam.zoom=overviewZoom to shrink the field of view.
+    // CAMERA-ZOOM-UNIT-1: the corridor width every zoom setting is expressed in. Passed by
+    // RaceScreen (geometry.width, the same number the physics uses); derived from the shape when a
+    // caller does not supply it; a constant only when there is neither, so a bare `new
+    // CameraDirector()` still produces a sane picture instead of NaN.
+    this._trackWidthPx =
+      trackWidthPx > 0
+        ? trackWidthPx
+        : (shape?.getActualTrackWidth?.() ?? 0) > 0
+          ? shape.getActualTrackWidth()
+          : FALLBACK_TRACK_WIDTH_PX;
+    // The loosest cam.zoom this projection allows. Historically written as
+    // `isOpen ? CANVAS_W/worldW : 1.0` at five separate sites; now one value.
     this.overviewZoom = CANVAS_W / worldW;
     this._computeZoomLevels(config);
     this._computeTimingConfig(config);
@@ -151,7 +204,6 @@ export class CameraDirector {
     this._photoFinishGateDone = false; // 15a-predictive: once-only latch — the pre-line close-check fires exactly once
     this._photoFinishEnterPending = false; // 15a-predictive: set by update() when the gate decides to enter; consumed by _pickNextState
     this._inFinishMode = false;
-    this._finishModeStartTs = null;
     this.zoom = this.overviewZoom;
     this.targetZoom = this.overviewZoom;
     this.offsetX = 0;
@@ -180,7 +232,6 @@ export class CameraDirector {
     this._glideStartOffsetY = null;
     this._leadInStartTs = null;
     this._leadOutStartCamT = null;
-    this._leadOutStartTs = null;
     this._leadOutDistanceT = 0;
     this._prevFocusT = null;
     this._lastFocusT = 0;
@@ -212,22 +263,11 @@ export class CameraDirector {
     this._battleGroupRacerIndices = [];
     // Centroid T of the battle group at BATTLE_ZOOM entry — drives camera pan (Q4).
     this._battleLockT = null;
-    // COMEBACK: B1-racer set (Set<racerIndex>) injected by updateRacePlan(). Null = race plan off.
-    this._b1Indices = null;
-    // Rank history ring buffer per B1 racer: Map<index, Array<{ts, rank}>>
-    this._rankHistory = new Map();
-    // Camera lock for the current COMEBACK_ZOOM episode.
+    // Camera lock for the current COMEBACK_ZOOM episode. This stays here and the DETECTION does
+    // not: who is coming back is a question about the race (comebackDetector.js), which racer the
+    // camera has committed to for this episode is a question about the shot.
     this._comebackLockedRacer = null;
     this._comebackLockedRacerIndex = null;
-    // Foresight pipeline: the full authored cameraPlan is STORED here (delivered mid-race by
-    // RaceScreen.setCameraPlan). Consumed by _deriveCastComebackers() → _castComebackerIndices, which
-    // supplies _detectComebackRacer's primary candidate list (B4b).
-    this._cameraPlan = null;
-    // Cast comebacker set: the heroes cast with role 'comebacker' (Set<racerIndex>). Derived ONCE from
-    // _cameraPlan whenever the plan is (re)stored — never per frame. Null/empty when the plan has no
-    // comebacker (assigned winner starts up front ⇒ cast 'sovereign-lead') or no plan is present; in that
-    // case _detectComebackRacer falls back to the b1Indices scan.
-    this._castComebackerIndices = null;
     // Cached per-frame values for getComebackDiagData() — updated every update() call.
     this._diagLeaderProgress = 0;
     this._diagIsExternalOutcomePhase = false;
@@ -235,7 +275,6 @@ export class CameraDirector {
     this._prevCommittedState = null; // null on first call so constructor-state is never treated as a repeat
     // Dynamic zoom-out floor: tracks the minimum targetZoom for the current LEADER/LEAD_CHANGE phase.
     // Null between phases. Resets on every state transition. Only decrements within a phase.
-    this._leaderPhaseZoomFloor = null;
     // Focal-position EMA state: smoothed world-space pan target for LEADER_ZOOM and COMEBACK_ZOOM
     // follow phases. Null = uninitialized (snaps to raw on first follow-phase call).
     // Reset to null on every non-repeat state transition so cuts stay crisp.
@@ -245,7 +284,6 @@ export class CameraDirector {
     // Null until first non-repeat OVERVIEW transition on open tracks with drawnBodyWidthRefPx>0.
     // _setTargets reads this; falls back to _overviewStateZoom when null.
     this._overviewSnapZoom = null;
-    // _leaderMinZoom, _zoomOutStepPerFrame, _minRacersVisible set in _computeTimingConfig (above).
     // LEAD_CHANGE: leader-tracking state
     this._currentLeaderIndex = null;
     this._currentLeaderName = null;
@@ -256,7 +294,6 @@ export class CameraDirector {
     this._leadChangePrevLeaderName = null;
     this._leadCandidateIndex = null;
     this._leadCandidateSince = null;
-    this._lastLeadChangeTs = -Infinity;
     // Director: per-state exit timestamps for individual cooldowns
     this._lastComebackExitTs = -Infinity;
     this._lastLeadChangeExitTs = -Infinity;
@@ -275,25 +312,45 @@ export class CameraDirector {
     this._diagPrevOffsetX = null;
     this._diagPrevOffsetY = null;
     this._diagPrevZoom = null;
-    // CAMERA-DETOUR-1: per-transition frame log (read-only; gated by config.cameraDetourLog).
-    // Captures 3 frames BEFORE each view change and the first ~30 after, to locate where the
-    // camera's wrong-direction move begins. Writes ONLY to these _detour* fields — never a camera value.
-    this._detourPreBuf = []; // rolling last-3 pre-transition frame snapshots
-    this._detourWindow = null; // active capture window { from, to, preoX/Y, prez, frames[], remaining }
-    this._detourLog = []; // completed windows (for export/inspection)
-    this._detourPrevState = null; // previous frame's state → the transition's from-state
-    this._detourContainActive = false; // did _containAnchorInFrame move offset this frame (candidate C)
-    this._detourContainDeltaX = 0;
-    this._detourContainDeltaY = 0;
-    this._detourSetTargetsZoom = null; // the zoom _setTargets used this frame (candidate D)
-    // CAMERA-DETOUR-2 follow-up: separate the anchor's world motion from the camera's.
-    this._detourBranch = null; // which branch wrote offsetX/offsetY this frame: 'glide' | 'cut' | 'follow'
-    this._detourGlideS = null; // glide progress s (linear) this frame, if the glide branch ran
-    this._detourGlideE = null; // eased glide factor e this frame, if the glide branch ran
+    // `this._detour` — the per-transition frame recorder — is created by _computeTimingConfig()
+    // above, which already ran. It is deliberately NOT re-declared here: this block runs after it
+    // and a `= null` would destroy the recorder the config just asked for.
     // prevFocusT as it was at the START of the current frame (before overwrite).
     this._diagPrevFocusT = null;
     // Set to 'threshold'|'timeout' on the frame where entry→tracking fires; null all other frames.
     this._diagConvergenceReason = null;
+    // CAMERA-REPRO-1: the director's OWN randomness (state pick + OVERVIEW schedule jitter). null
+    // means "call Math.random at the draw site", which is literally what the two sites did before —
+    // including following a later global swap, which storing the function reference here would not.
+    // setRandomSeed() puts a seeded stream in its place so a marked moment can be replayed; without
+    // one, a perfect physics replay still diverges the moment the director rolls a die.
+    this._rng = null;
+    this._randomSeed = 0;
+  }
+
+  /** The director's next random draw: its own seeded stream, or the global generator. */
+  _random() {
+    return this._rng ? this._rng() : Math.random();
+  }
+
+  /**
+   * CAMERA-REPRO-1: make the director's own random draws reproducible.
+   *
+   * Call ONCE, right after construction and before the first update(). RaceScreen draws a fresh
+   * seed per race from Math.random, so every race is still as random as it ever was — but the
+   * drawn seed travels in the marker, which is what makes a marked moment reproducible at all.
+   *
+   * @param {number} seed  Positive integer. 0 (or a non-finite value) restores Math.random.
+   */
+  setRandomSeed(seed) {
+    const s = Number.isFinite(seed) ? seed >>> 0 : 0;
+    this._randomSeed = s;
+    this._rng = s > 0 ? mulberry32(s) : null;
+  }
+
+  /** The seed passed to setRandomSeed(), or 0 when the director runs on Math.random. */
+  get randomSeed() {
+    return this._randomSeed;
   }
 
   /**
@@ -304,115 +361,90 @@ export class CameraDirector {
   updateConfig(config) {
     this._computeZoomLevels(config);
     this._computeTimingConfig(config);
-    // Invalidate stored snap so the new overviewTargetScreenPx takes effect on the next OVERVIEW cut.
+    // Invalidate the stored snap so a changed OVERVIEW setting takes effect on the next cut.
     this._overviewSnapZoom = null;
   }
 
   /**
-   * Compute cam.zoom from a spriteScale factor.
+   * CAMERA-REFERENCE-WIDTH-1: THE zoom rule. One function, every state.
    *
-   * spriteScale = 1.0 means sprites render at their natural density-scaled size.
-   * drawnBodyWidthRefPx cancels out of the formula (L82):
-   *   Closed: zoom = spriteScale / bsX   (bsX = CANVAS_W / worldW)
-   *   Open:   zoom = spriteScale / OPEN_TRACK_BASE_ZOOM
+   * `corridors` is how much world is visible across the frame, in STANDARD corridors — a fixed
+   * reference width, not this track's own. The unit and the projection's physical range live in
+   * zoomUnit.js; this is the director's single call into it, so there is exactly one place where a
+   * setting becomes a cam.zoom. No guarantee is applied here: the corridor, pair and company
+   * guarantees are combined once, in `_setTargets`, with Math.min.
    *
-   * Safety nets: result is clamped to [minZoom, MAX_INVERSE_ZOOM] where minZoom
-   * equals 1.0 for closed tracks or overviewZoom for open tracks.
-   *
-   * @param {number} spriteScale  Relative scale factor (1.0 = natural size)
-   * @returns {number}            cam.zoom to assign to this state
+   * @param {number} corridors
+   * @param {number} [fallback]  used when the setting is missing or corrupt
+   * @returns {number} cam.zoom
    */
-  _computeZoomForSpriteScale(spriteScale) {
-    // Hardening: a non-finite spriteScale (corrupt persisted config) falls back to natural size (1.0)
-    // rather than propagating NaN into cam.zoom.
-    if (!Number.isFinite(spriteScale)) spriteScale = 1.0;
-    let rawZoom;
-    if (this._isOpenTrack) {
-      rawZoom = spriteScale / OPEN_TRACK_BASE_ZOOM;
-    } else {
-      const bsX = CANVAS_W / this._worldW;
-      rawZoom = spriteScale / bsX;
-    }
+  _computeZoomForCorridors(corridors, fallback = DEFAULT_CORRIDORS.LEADER_ZOOM) {
+    return resolveZoomForCorridors(corridors, {
+      referenceWidthPx: this._referenceWidthPx,
+      axisY: this._proj.axisY,
+      clampCamZoom: (z) => this._proj.clampCamZoom(z),
+      fallbackCorridors: fallback,
+    });
+  }
 
-    const minZoom = this._isOpenTrack ? this.overviewZoom : 1.0;
-    return Math.max(minZoom, Math.min(MAX_INVERSE_ZOOM, rawZoom));
+  /** Diagnostics/tests: how many standard corridors the camera is actually showing right now. */
+  get visibleCorridors() {
+    return corridorsForCamZoom(this.zoom, this._referenceWidthPx, this._proj.axisY);
   }
 
   /**
-   * Derive _leaderZoom / _leadChangeZoom / _battleZoom / _comebackZoom from config.
+   * Diagnostics/tests: how much WORLD is in shot right now, in world px across the short axis.
+   * The falsifiable form of the same reading — a marker records world px, not corridors.
+   */
+  get visibleWorldPx() {
+    return visibleWorldPx(this.zoom, this._proj.axisY);
+  }
+
+  /**
+   * Derive every state's cam.zoom from its TRACK-WIDTHS setting (CAMERA-ZOOM-UNIT-1).
    *
-   * v14+: each zoom level is computed from spriteScale (relative factor) stored in
-   * cameraStateProfiles. zoom = spriteScale / bsX (closed) or spriteScale / OPEN_BASE (open).
-   * drawnBodyWidthRefPx cancels out — zoom is racer-count-independent (L82).
+   * All five states run the SAME rule now — OVERVIEW is not a different kind of shot, it is this
+   * shot at the widest setting. The three things that used to make them incommensurable are gone:
+   * the absolute `spriteScale` screen-scale, OVERVIEW's target-SPRITE-SIZE derivation, and the
+   * `2 x W_ref / racersPerRow` racer-count division that came with it.
    *
-   * Legacy spritePctOfCanvas path: pct × CANVAS_H_REF / FALLBACK_REFERENCE_SPRITE_SIZE gives
-   * the equivalent spriteScale, preserving cross-track invariance for old configs.
+   * Legacy configs (v2/v3 `spritePctOfCanvas`, or a v17 config that reached a director without
+   * migration) have no track-width numbers to read. They get the shipped defaults rather than a
+   * converted value: the owner chose clean round numbers over reproducing the old picture, so a
+   * conversion would be work in service of a result nobody wants.
    *
    * @param {object|null} config
    */
   _computeZoomLevels(config) {
-    const profiles = config?.cameraStateProfiles;
-    if (profiles) {
-      // v14 path: spriteScale is the relative zoom factor.
-      const scale = {
-        leader: profiles.LEADER_ZOOM?.spriteScale ?? DEFAULT_SPRITE_SCALE.leader,
-        leadChange: profiles.LEAD_CHANGE?.spriteScale ?? DEFAULT_SPRITE_SCALE.leader,
-        battle: profiles.BATTLE_ZOOM?.spriteScale ?? DEFAULT_SPRITE_SCALE.battle,
-        comeback: profiles.COMEBACK_ZOOM?.spriteScale ?? DEFAULT_SPRITE_SCALE.comeback,
-      };
-      this._leaderZoom = this._computeZoomForSpriteScale(scale.leader);
-      this._leadChangeZoom = this._computeZoomForSpriteScale(scale.leadChange);
-      this._battleZoom = this._computeZoomForSpriteScale(scale.battle);
-      this._comebackZoom = this._computeZoomForSpriteScale(scale.comeback);
-      // The SELECTED OVERVIEW sprite scale (cameraStateProfiles.OVERVIEW.spriteScale). It multiplies the
-      // count-normalized OVERVIEW target size (L116) so the owner's slider actually scales the OVERVIEW —
-      // 1.0 = the normalized default, 2.5 = 2.5× the normalized size. Finite-guarded (default 1.0).
-      const ovScale = profiles.OVERVIEW?.spriteScale;
-      this._overviewSpriteScale = Number.isFinite(ovScale) ? ovScale : 1.0;
-      this._overviewStateZoom = this._computeZoomForSpriteScale(this._overviewSpriteScale);
-    } else if (config?.spritePctOfCanvas) {
-      // Legacy path: old configs with spritePctOfCanvas (v2/v3) but no cameraStateProfiles.
-      const rawPct = config.spritePctOfCanvas;
-      const toScale = (pct) => (pct * CANVAS_H_REF) / FALLBACK_REFERENCE_SPRITE_SIZE;
-      this._leaderZoom = this._computeZoomForSpriteScale(toScale(rawPct.leader));
-      this._leadChangeZoom = this._computeZoomForSpriteScale(toScale(rawPct.leader));
-      this._battleZoom = this._computeZoomForSpriteScale(toScale(rawPct.battle));
-      this._comebackZoom = this._computeZoomForSpriteScale(toScale(rawPct.comeback));
-      // OVERVIEW zoom: preserve full-world defaults for legacy configs.
-      this._overviewStateZoom = this._isOpenTrack ? this.overviewZoom : 1.0;
-      this._overviewSpriteScale = 1.0; // legacy configs have no OVERVIEW.spriteScale → unscaled (unchanged)
-    } else {
-      // No config at all: use scale defaults.
-      this._leaderZoom = this._computeZoomForSpriteScale(DEFAULT_SPRITE_SCALE.leader);
-      this._leadChangeZoom = this._computeZoomForSpriteScale(DEFAULT_SPRITE_SCALE.leader);
-      this._battleZoom = this._computeZoomForSpriteScale(DEFAULT_SPRITE_SCALE.battle);
-      this._comebackZoom = this._computeZoomForSpriteScale(DEFAULT_SPRITE_SCALE.comeback);
-      // OVERVIEW zoom: preserve full-world defaults (closed=1.0, open=overviewZoom).
-      this._overviewStateZoom = this._isOpenTrack ? this.overviewZoom : 1.0;
-      this._overviewSpriteScale = 1.0; // no config → natural size (unchanged)
-    }
-    this._innerFramePct = config?.targetInnerFramePct ?? DEFAULT_INNER_FRAME_PCT;
-    // CAMERA-FOCUS-3 transition grammar. 'cut' (grammar A) = every anchored/active state entry snaps
-    // pan AND zoom together to the new subject's correct framing on frame 1 (zero acquisition — the
-    // half-glide "corner-riding" hybrid is dead). 'legacy' = the pre-FOCUS-3 entry glide. The shipped
-    // DEFAULT_CAMERA_CONFIG selects 'cut'; the code fallback stays 'legacy' so bare-config callers and
-    // the existing entry-glide tests keep their behaviour. The FOCUS-2 fallback grammar (B) FULL GLIDE
-    // is named in the report, not wired here.
-    // CAMERA-GRAMMAR-1 transition grammar (entry STYLE only): 'glide' (shipped) eases pan+zoom together;
-    // 'cut' snaps them; 'legacy' is the bare-caller follow-lerp fallback. Unknown/absent → 'legacy'.
-    const _g = config?.cameraTransitionGrammar;
-    this._transitionGrammar = _g === 'cut' ? 'cut' : _g === 'glide' ? 'glide' : 'legacy';
-    // Glide entry duration (ms) — one bounded ease for pan AND zoom. Validated to [300, 900]; default 500.
-    const _gd = config?.glideDurationMs;
-    this._glideDurationMs = Number.isFinite(_gd) && _gd >= 300 && _gd <= 900 ? _gd : 500;
-    // CAMERA-FOCUS-3 leader forward-framing fraction (owner's "pack behind, leader forward"). Valid only
-    // in (0.5, 0.8]; anything else (incl. absent) → dead-centre, the legacy framing.
-    const lff = config?.leaderForwardFrac;
-    this._leaderForwardFrac = Number.isFinite(lff) && lff > 0.5 && lff <= 0.8 ? lff : null;
-    // Countdown start zoom: convert spritePx → spriteScale, typically clamped to overviewZoom.
-    this._countdownStartZoom = this._computeZoomForSpriteScale(
-      (config?.countdownStartZoomSpritePx ?? 1) / FALLBACK_REFERENCE_SPRITE_SIZE
+    const f = resolveFramingConfig(config);
+    // CAMERA-REFERENCE-WIDTH-1: the standard corridor, and the max() inside referenceWidthFor that
+    // keeps a track WIDER than the reference framed by its own width — so a setting can never ask
+    // to crop the corridor it is measured in.
+    this._referenceCorridorPx = f.referenceCorridorPx;
+    this._referenceWidthPx = referenceWidthFor(this._referenceCorridorPx, this._trackWidthPx);
+
+    // Corridors → cam.zoom, one call per state through the single conversion.
+    const c = f.corridorsByState;
+    this._overviewCorridors = c.OVERVIEW;
+    this._leaderZoom = this._computeZoomForCorridors(c.LEADER_ZOOM);
+    this._leadChangeZoom = this._computeZoomForCorridors(c.LEAD_CHANGE);
+    this._battleZoom = this._computeZoomForCorridors(c.BATTLE_ZOOM);
+    this._comebackZoom = this._computeZoomForCorridors(c.COMEBACK_ZOOM);
+    this._photoFinishZoom = this._computeZoomForCorridors(c.PHOTO_FINISH);
+    // OVERVIEW is the same rule at the widest setting — no sprite size, no racer count.
+    this._overviewStateZoom = this._computeZoomForCorridors(c.OVERVIEW, DEFAULT_CORRIDORS.OVERVIEW);
+    // The countdown opens wide on the SAME unit and eases into OVERVIEW. It is clamped by the
+    // projection like every other setting, so on a small world it simply means "the whole world".
+    this._countdownStartZoom = this._computeZoomForCorridors(
+      f.countdownCorridors,
+      DEFAULT_COUNTDOWN_CORRIDORS
     );
+
+    this._innerFramePct = f.innerFramePct;
+    this._minRacersVisible = f.minRacersVisible;
+    this._transitionGrammar = f.transitionGrammar;
+    this._glideDurationMs = f.glideDurationMs;
+    this._leaderForwardFrac = f.leaderForwardFrac;
   }
 
   /**
@@ -422,34 +454,30 @@ export class CameraDirector {
    */
   _computeTimingConfig(config) {
     const t = computeTimingFromConfig(config);
-    this._battlePulkThresholdT = t.battlePulkThresholdT;
+    // The five gates that define a BATTLE group, kept together because battleGroup.js applies them
+    // together and a gate that drifted away from its siblings would be silently unenforced.
+    this._battleGates = {
+      closenessT: t.battlePulkThresholdT,
+      isolationT: t.battleIsolationThresholdT,
+      maxSize: t.battleMaxGroupSize,
+      maxRankSpan: t.battleMaxGroupRankSpan,
+      minTopN: t.battleMinTopN,
+    };
     this._battleMinDurationMs = t.battleMinDurationMs;
-    this._battleIsolationThresholdT = t.battleIsolationThresholdT;
-    this._battleMaxGroupSize = t.battleMaxGroupSize;
-    this._battleMaxGroupRankSpan = t.battleMaxGroupRankSpan;
-    this._battleMinTopN = t.battleMinTopN;
     this._endgameThreshold = t.endgameThreshold;
     this._postStartHoldMs = t.postStartHoldMs;
     this._battleCooldownMs = t.battleCooldownMs;
     this._showDiagnostics = t.showDiagnostics;
     this._diagEnabled = t.diagEnabled;
-    this._detourEnabled = t.detourEnabled; // CAMERA-DETOUR-1 per-transition frame log (read-only)
+    // CAMERA-DETOUR-1: create the recorder when the log is switched on, drop it when it is switched
+    // off. Live-apply keeps an existing recorder so a mid-race config edit does not lose its buffer.
+    if (t.detourEnabled) this._detour ??= new DetourRecorder();
+    else this._detour = null;
     this._transitionTConvergence = t.transitionTConvergence;
-    this._overviewOffsetPx = t.overviewOffsetPx;
     this._overviewCooldownMs = t.overviewCooldownMs;
     this._leadAheadEnabledByState = t.leadAheadEnabledByState;
     this._leadOutEnabledByState = t.leadOutEnabledByState;
     this._maxEntryDurationByState = t.maxEntryDurationByState;
-    this._tcOverview = t.tcOverview;
-    this._tcLeader = t.tcLeader;
-    this._tcBattle = t.tcBattle;
-    this._tcComeback = t.tcComeback;
-    this._tcLeadChange = t.tcLeadChange;
-    this._tcEntryOverview = t.tcEntryOverview;
-    this._tcEntryLeader = t.tcEntryLeader;
-    this._tcEntryBattle = t.tcEntryBattle;
-    this._tcEntryComeback = t.tcEntryComeback;
-    this._tcEntryLeadChange = t.tcEntryLeadChange;
     this._minStateHoldMs = t.minStateHoldMs;
     this._battleMaxDurationMs = t.battleMaxDurationMs;
     this._maxStateDuration = t.maxStateDuration;
@@ -457,29 +485,27 @@ export class CameraDirector {
     this._maxStateDurationByState = t.maxStateDurationByState;
     this._phasedByState = t.phasedByState;
     this._tcByState = t.tcByState;
-    this._lfOverview = t.lfOverview;
-    this._lfLeader = t.lfLeader;
-    this._lfBattle = t.lfBattle;
-    this._lfComeback = t.lfComeback;
-    this._lfLeadChange = t.lfLeadChange;
     this._lfByState = t.lfByState;
-    this._lfEntryOverview = t.lfEntryOverview;
-    this._lfEntryLeader = t.lfEntryLeader;
-    this._lfEntryBattle = t.lfEntryBattle;
-    this._lfEntryComeback = t.lfEntryComeback;
-    this._lfEntryLeadChange = t.lfEntryLeadChange;
     this._lfEntryByState = t.lfEntryByState;
     this._entryConvergenceZoom = t.entryConvergenceZoom;
     this._entryConvergencePx = t.entryConvergencePx;
-    this._comebackMinPositionsGained = t.comebackMinPositionsGained;
-    this._comebackWindowSec = t.comebackWindowSec;
-    this._comebackMinDuration = t.comebackMinDuration;
+    // The four gates that define a comeback. Same reasoning as _battleGates: comebackDetector.js
+    // applies them together, so they travel together. `??=` because _computeTimingConfig runs from
+    // the constructor before the detector exists, and again on every live-apply after it does.
+    this._comebackGates = {
+      windowSec: t.comebackWindowSec,
+      minPositionsGained: t.comebackMinPositionsGained,
+      minStartGap: t.comebackMinStartGap,
+      maxCurrentRankPct: t.comebackMaxCurrentRankPct,
+    };
+    this._comeback ??= new ComebackDetector(this._comebackGates);
+    this._comeback.setGates(this._comebackGates);
     this._outcomePhaseThreshold = t.outcomePhaseThreshold;
-    this._comebackMinStartGap = t.comebackMinStartGap;
-    this._comebackMaxCurrentRankPct = t.comebackMaxCurrentRankPct;
     this._leadChangeMinGap = t.leadChangeMinGap;
     this._leadChangeDebounceMs = t.leadChangeDebounceMs;
-    this._leadChangeMinDuration = t.leadChangeMinDuration;
+    // comebackMinDuration / leadChangeMinDuration are deliberately NOT stored: they are consumed
+    // inside computeTimingFromConfig, which folds them into minStateHoldByState. Keeping a second
+    // copy here made two live controls look inert to the CAMERA-HYGIENE-1 perturbation audit.
     this._finishDramaDurationMs = t.finishDramaDurationMs;
     this._finishOverviewZoomOutDurationMs = t.finishOverviewZoomOutDurationMs;
     this._finishPauseMs = t.finishPauseMs;
@@ -495,14 +521,6 @@ export class CameraDirector {
     this._overviewWeight = t.overviewWeight;
     this._overviewTargetCount = t.overviewTargetCount;
     this._overviewStartDelay = t.overviewStartDelay;
-    this._overviewTargetScreenPx = t.overviewTargetScreenPx;
-    this._overviewFrameRacers = t.overviewFrameRacers; // OVERVIEW-FRAMING-1 owner value: leader + next N−1
-    this._overviewMinSpriteFrac = t.overviewMinSpriteFrac; // OVERVIEW-FRAMING-1 owner value: sprite-size floor (frame fraction)
-    this._overviewMinEffZoom = t.overviewMinEffZoom ?? 0;
-    this._minRacersVisible = config?.minRacersVisible ?? 8;
-    this._leaderMinZoom = config?.leaderMinZoom ?? 0.4;
-    this._leaderMinZoomFraction = config?.leaderMinZoomFraction ?? 0.6;
-    this._zoomOutStepPerFrame = config?.zoomOutStepPerFrame ?? 0.005;
     this._focalSmoothTc = config?.focalSmoothTc ?? 0.05;
     // Pre-compute per-60fps EMA base factor from TC. 0 when TC=0 (disabled).
     // alpha per frame = 1 − (1−base)^(dt×60/1000) — same dt-normalisation as the zoom lerp.
@@ -511,6 +529,38 @@ export class CameraDirector {
   }
 
   // ── Director helpers ──────────────────────────────────────────────────────
+
+  /**
+   * CAMERA-WEIGHTS-1: THE WEIGHT'S MEANING, stated so the owner can predict what a value buys.
+   *
+   *   A weight is HOW OFTEN YOU TAKE THIS SHOT WHEN IT IS OFFERED.
+   *     0    — never. The state does not appear.
+   *     0.7  — when this shot is available, take it about 7 times in 10; otherwise stay on the leader.
+   *     1+   — always take it when available, and outrank a lower weight when two shots compete.
+   *
+   * WHY AN ABSOLUTE PROPENSITY AND NOT A RELATIVE SHARE. A relative share ("battle 70% of the
+   * cuts") promises something the camera cannot deliver: eligibility is not under its control, so if
+   * a battle never becomes eligible no weight can give it 70% of anything. A propensity only ever
+   * promises what the gates already allow, which is why it is predictable.
+   *
+   * WHY THIS WAS NEEDED. Measured before the change: 73.2% of selections had NO eligible candidate
+   * and 16.7% had exactly ONE — and a single candidate was returned outright, without its weight
+   * ever being read. So the weights decided 10.0% of selections and ELIGIBILITY decided the other
+   * 90%. That is why the dial appeared dead: `overviewWeight` 0.3 -> 10, a 33x increase, moved
+   * OVERVIEW's share of the race by 1.8 percentage points.
+   *
+   * HOW IT COMPOSES WITH THE HOLDS, because both are real and neither may silently win. The holds
+   * and cooldowns still decide WHETHER a shot is offered — they are what stops the picture flicking
+   * between states, and the weight cannot override them. The weight decides whether an OFFERED shot
+   * is taken. A declined offer falls through to LEADER, and the next frame may offer again; the
+   * state's own minStateHold then governs how long the accepted shot lasts. Holds gate, weights
+   * choose — in that order, deliberately.
+   */
+  _acceptsOffer(weight) {
+    if (!(weight > 0)) return false; // 0 means never, and it is checked here as well as at the gate
+    if (weight >= 1) return true;
+    return this._random() < weight;
+  }
 
   _weightedRandomPick(candidates) {
     // Defense in depth (BATTLE-WEIGHT-ZERO-1): a weight of 0 means "never", so the selector must never
@@ -523,7 +573,7 @@ export class CameraDirector {
     if (pool.length === 1) return pool[0];
     const total = pool.reduce((sum, c) => sum + c.weight, 0);
     if (!(total > 0)) return null;
-    let r = Math.random() * total;
+    let r = this._random() * total;
     for (const c of pool) {
       r -= c.weight;
       if (r <= 0) return c;
@@ -550,133 +600,35 @@ export class CameraDirector {
       estimate != null
         ? estimate / Math.max(1, this._overviewTargetCount)
         : this._overviewCooldownMs;
-    const jitter = 0.8 + Math.random() * 0.4;
+    const jitter = 0.8 + this._random() * 0.4;
     this._overviewScheduleNext = elapsed + interval * jitter;
   }
 
   /**
-   * Inject the B1-racer set for COMEBACK detection. Call once after race start when Race Plan is
-   * active. Pass null (or omit) to disable COMEBACK detection (race plan off or closed track).
-   * @param {Set<number>|null} b1Indices  Set of racer indices with targetRank ≤ 5.
+   * Race start: hand the COMEBACK detector its roster (racers with targetRank ≤ 5) and release the
+   * camera's own lock. Pass null to switch COMEBACK off (race plan off, or a closed track).
+   * The plan is usually null here — heroes are cast mid-race and arrive later via setCameraPlan().
+   * @param {Set<number>|null} b1Indices
+   * @param {object|null} cameraPlan
    */
   updateRacePlan(b1Indices, cameraPlan = null) {
-    this._b1Indices = b1Indices instanceof Set ? b1Indices : null;
-    this._rankHistory = new Map(); // clear stale history on every race start
+    this._comeback.setRoster(b1Indices, cameraPlan);
     this._comebackLockedRacer = null;
     this._comebackLockedRacerIndex = null;
-    // Store the authored plan (usually null here — heroes are cast mid-race, so the RaceScreen
-    // delivers it later via setCameraPlan()).
-    this._cameraPlan = cameraPlan ?? null;
-    this._deriveCastComebackers();
   }
 
   /**
-   * Deliver the authored cameraPlan mid-race (after heroes are cast), WITHOUT resetting rank history.
-   * The RaceScreen calls it once, when the plan first becomes available.
+   * Deliver the authored cameraPlan mid-race, once the heroes are cast. Keeps the rank history —
+   * the racers were already being watched; the plan only says which of them the story named.
    * @param {object|null} cameraPlan  { b1Indices, heroes:[{index,role,finalRank,beats}] }
    */
   setCameraPlan(cameraPlan) {
-    this._cameraPlan = cameraPlan ?? null;
-    this._deriveCastComebackers();
+    this._comeback.setPlan(cameraPlan);
   }
 
-  /**
-   * Derive the cast comebacker set from the stored cameraPlan — the heroes cast with role 'comebacker'.
-   * Called ONCE whenever the plan is (re)stored, never per frame. Sets _castComebackerIndices to null when
-   * the plan is absent or names no comebacker, so _detectComebackRacer falls back to the b1Indices scan.
-   */
-  _deriveCastComebackers() {
-    const heroes = this._cameraPlan?.heroes;
-    if (!Array.isArray(heroes)) {
-      this._castComebackerIndices = null;
-      return;
-    }
-    const set = new Set();
-    for (const h of heroes) {
-      if (h && h.role === 'comebacker' && Number.isInteger(h.index)) set.add(h.index);
-    }
-    this._castComebackerIndices = set.size > 0 ? set : null;
-  }
-
-  /**
-   * Record the current rank of every B1 racer into the rank-history ring buffer.
-   * Called once per rAF frame at the top of update(). Only B1 racers are tracked to
-   * keep per-frame allocation trivial. Entries older than (windowSec + 2s) are pruned.
-   * @param {Array} racers  Full live racer array (unsorted).
-   * @param {number} ts  Current rAF timestamp in ms.
-   */
-  _updateRankHistory(racers, ts) {
-    if (!this._b1Indices || this._b1Indices.size === 0) return;
-    const windowMs = (this._comebackWindowSec ?? 5) * 1000;
-    const pruneMs = windowMs + 2000; // 2 s extra buffer so window-start comparison always finds an entry
-    const sorted = [...racers].sort((a, b) => b.t - a.t);
-    for (let i = 0; i < sorted.length; i++) {
-      const r = sorted[i];
-      if (!this._b1Indices.has(r.index)) continue;
-      let hist = this._rankHistory.get(r.index);
-      if (!hist) {
-        hist = [];
-        this._rankHistory.set(r.index, hist);
-      }
-      hist.push({ ts, rank: i + 1 });
-      // Prune entries beyond the max retention window (keep at least 1 entry)
-      while (hist.length > 1 && hist[0].ts < ts - pruneMs) hist.shift();
-    }
-  }
-
-  /**
-   * Detect the best B1 comeback candidate among live racers.
-   * Returns the racer object with the highest rank-gain within the configured window,
-   * or null when no B1 racer meets the minimum gain threshold.
-   * @param {Array} racers  Full live racer array.
-   * @param {number} ts  Current timestamp in ms.
-   * @returns {object|null}
-   */
+  /** The best current comeback, or null. See comebackDetector.js for what "best" means. */
   _detectComebackRacer(racers, ts) {
-    if (!this._b1Indices || this._b1Indices.size === 0) return null;
-    const minGain = this._comebackMinPositionsGained ?? 3;
-    const windowMs = (this._comebackWindowSec ?? 5) * 1000;
-    const cutoff = ts - windowMs;
-    const sorted = [...racers].sort((a, b) => b.t - a.t);
-    const currentRankByIndex = new Map(sorted.map((r, i) => [r.index, i + 1]));
-    let bestRacer = null;
-    let bestGain = -1;
-    // Primary candidates: the cast comebacker set (the race actually names who comes back). Fallback:
-    // the full b1Indices scan, used when the plan has no comebacker or no plan was delivered. Every cast
-    // comebacker is drawn from the B1 pool (targetRank ≤ 5 = b1Indices), so it is already rank-tracked.
-    const candidates =
-      this._castComebackerIndices && this._castComebackerIndices.size > 0
-        ? this._castComebackerIndices
-        : this._b1Indices;
-    for (const idx of candidates) {
-      const currentRank = currentRankByIndex.get(idx);
-      if (currentRank == null) continue; // finished or absent
-      const hist = this._rankHistory.get(idx);
-      if (!hist || hist.length < 2) continue;
-      // Earliest entry still within the evaluation window
-      let earliestInWindow = null;
-      for (let i = 0; i < hist.length; i++) {
-        if (hist[i].ts >= cutoff) {
-          earliestInWindow = hist[i];
-          break;
-        }
-      }
-      if (!earliestInWindow) continue;
-      // Start-rank filter: racer must have been far enough back at window start
-      const N = sorted.length;
-      const normDivisor = Math.max(N - 1, 1);
-      const startGapNorm = (earliestInWindow.rank - 1) / normDivisor;
-      if (startGapNorm < this._comebackMinStartGap) continue;
-      // Current-rank filter: racer must not already be in the lead group
-      const currentRankNorm = (currentRank - 1) / normDivisor;
-      if (currentRankNorm < this._comebackMaxCurrentRankPct) continue;
-      const gain = earliestInWindow.rank - currentRank; // positive = moved forward
-      if (gain >= minGain && gain > bestGain) {
-        bestGain = gain;
-        bestRacer = sorted.find((r) => r.index === idx) ?? null;
-      }
-    }
-    return bestRacer;
+    return this._comeback.best(racers, ts);
   }
 
   /**
@@ -728,7 +680,7 @@ export class CameraDirector {
 
   _lerpFactorForState(state) {
     const map = this._lerpPhase === 'entry' ? this._lfEntryByState : this._lfByState;
-    return map[state] ?? this._lfOverview;
+    return map[state] ?? map.OVERVIEW;
   }
 
   // Signed T-delta for track-parameter lerp.
@@ -743,7 +695,7 @@ export class CameraDirector {
   // dt: frame duration in ms (optional — defaults to 1000/60 for backward compat with tests).
   // Returns { zoom, offsetX, offsetY } to apply as ctx transform.
   update(racers, ts, raceState, canvasW, canvasH, dt = 1000 / FRAME_RATE) {
-    this._updateRankHistory(racers, ts);
+    this._comeback.recordRanks(racers, ts);
     this._updateLeaderTracking(raceState?.physicsRacers ?? racers, ts);
     // Cache leaderProgress and external outcome-phase flag for getComebackDiagData().
     if (racers && racers.length > 0 && raceState?.finishT > 0) {
@@ -948,7 +900,7 @@ export class CameraDirector {
     this._lastDt = dt;
     // CAMERA-DETOUR-1 candidate D: capture the zoom _setTargets is about to use (it reads this.zoom for
     // its currEffZoom pan computation) so it can be compared to the zoom the renderer finally draws with.
-    if (this._detourEnabled) this._detourSetTargetsZoom = this.zoom;
+    this._detour?.noteSetTargetsZoom(this.zoom);
     this._setTargets(racers, canvasW, canvasH, raceState);
 
     // CAMERA-GRAMMAR-1 grammar (B) FULL GLIDE: pan AND zoom travel TOGETHER on ONE bounded ease from the
@@ -958,37 +910,33 @@ export class CameraDirector {
     // framed at s=1, then hands off to the steady follow path.
     // CAMERA-DETOUR-2: reset the per-frame branch / glide-progress markers before the branches
     // choose one (read-only diagnosis — records WHICH branch wrote offsetX/offsetY this frame).
-    if (this._detourEnabled) {
-      this._detourBranch = null;
-      this._detourGlideS = null;
-      this._detourGlideE = null;
-    }
+    this._detour?.beginFrame();
     if (this._lerpPhase === 'glide') {
       const dur = this._glideDurationMs;
       const s = dur > 0 ? Math.min(1, Math.max(0, (ts - this._glideStartTs) / dur)) : 1;
       const e = s * s * (3 - 2 * s); // smoothstep ease
-      if (this._detourEnabled) {
-        this._detourBranch = 'glide';
-        this._detourGlideS = s;
-        this._detourGlideE = e;
-      }
+      this._detour?.noteBranch('glide', s, e);
       this.zoom = this._glideStartZoom + (this.targetZoom - this._glideStartZoom) * e;
       this.offsetX = this._glideStartOffsetX + (this.targetOffsetX - this._glideStartOffsetX) * e;
       this.offsetY = this._glideStartOffsetY + (this.targetOffsetY - this._glideStartOffsetY) * e;
       this._leadChangeSnapPending = false;
-      this._containAnchorInFrame(racers, canvasW, canvasH); // safety rail (no-op mid-glide)
+      // CAMERA-FRAMING-1: the containment clamp used to run here, claiming to be a no-op mid-glide.
+      // It was measured ACTIVE on 23 of 23 glide frames with corrections to −390 px — it had become
+      // a rail that steered the pan away from the glide it was interpolating. Gone; the glide now
+      // lands exactly where it aimed, which is what `glide lands on its target framing` asserts.
+      // (CAMERA-HYGIENE-2: this note used to claim a `clampActiveCount` diagnostic still watched
+      // the clamp. Nothing had incremented that counter since the clamp was deleted, so the test
+      // that asserted it stayed 0 could not fail. Counter, getters and test are gone.)
       if (s >= 1) this._lerpPhase = 'tracking'; // glide complete → steady follow
     } else if (this._cutSnapPending) {
-      if (this._detourEnabled) this._detourBranch = 'cut';
+      this._detour?.noteBranch('cut');
       this._cutSnapPending = false;
       this._leadChangeSnapPending = false;
       this.zoom = this.targetZoom;
       this.offsetX = this.targetOffsetX;
       this.offsetY = this.targetOffsetY;
-      // Emergency rail — a no-op when the cut lands centered (anchored states); returns early otherwise.
-      this._containAnchorInFrame(racers, canvasW, canvasH);
     } else {
-      if (this._detourEnabled) this._detourBranch = 'follow';
+      this._detour?.noteBranch('follow');
       // LEAD_CHANGE hard-cut (legacy grammar): snap offsetX/Y synchronously with the zoom snap so the
       // zoomed-in frame shows the correct racer from frame 0, not the previous position.
       if (this._leadChangeSnapPending) {
@@ -1015,17 +963,15 @@ export class CameraDirector {
         const _anchor = this._focusAnchorRacer(racers);
         const _dz = this.zoom - _zoomAtStart;
         if (_anchor && _dz !== 0) {
-          const _ezx = this._isOpenTrack ? OPEN_TRACK_BASE_ZOOM : this._bsX;
-          const _ezy = this._isOpenTrack ? OPEN_TRACK_BASE_ZOOM : this._bsY;
-          this.offsetX -= _anchor.x * _ezx * _dz;
-          this.offsetY -= _anchor.y * _ezy * _dz;
+          this.offsetX -= _anchor.x * this._proj.axisX * _dz;
+          this.offsetY -= _anchor.y * this._proj.axisY * _dz;
         }
         this.offsetX += (this.targetOffsetX - this.offsetX) * lf;
         this.offsetY += (this.targetOffsetY - this.offsetY) * lf;
-        // CAMERA-FOCUS-1: the smooth pan lerp above TRAILS the anchor; at a tight LEADER zoom the trail can
-        // push the current leader past the inner safe region (proven: ~69% of frames on a sprint). Hold the
-        // anchor inside the inner frame as the guarantee — the pan stays glued to whoever leads.
-        this._containAnchorInFrame(racers, canvasW, canvasH);
+        // CAMERA-FRAMING-1: the containment clamp is gone from here too. It corrected the pan every
+        // frame the lerp trailed the anchor, which is a STEER — it moved the centre. Keeping the
+        // guaranteed subjects in frame is now the ZOOM guarantee's job (it widens), and the residual
+        // trail is the tracking lag, which is measured and reported rather than papered over.
       }
     }
     if (this._lerpPhase === 'entry') {
@@ -1110,7 +1056,7 @@ export class CameraDirector {
     }
     if (this._diagEnabled)
       this._recordDiagFrame(ts, dt, lf, tSpaceLerpActive, _diagTransitioned, racers);
-    if (this._detourEnabled) this._recordDetourFrame(tSpaceLerpActive, _diagTransitioned, racers);
+    this._detour?.record(this, tSpaceLerpActive, _diagTransitioned, racers);
     // CAMERA-FOCUS-1: expose the current pan anchor (LEADER-family only) for the dev HUD.
     const _anchor = this._focusAnchorRacer(racers);
     this._anchorRacerIndex = _anchor?.index ?? null;
@@ -1146,7 +1092,6 @@ export class CameraDirector {
       if (raceState.finishedCount >= 2 || raceState.finishedCount >= racers.length) {
         this._inPhotoFinish = false;
         this._inFinishMode = true;
-        this._finishModeStartTs = ts;
         return {
           nextState: CAM_STATE.OVERVIEW,
           reason: 'photo-finish: end (2nd crossing / all finished) → FINISH_OVERVIEW',
@@ -1190,7 +1135,6 @@ export class CameraDirector {
         this._inFinishDrama = false;
         this._inPhotoFinish = false;
         this._inFinishMode = true;
-        this._finishModeStartTs = ts;
         return {
           nextState: CAM_STATE.OVERVIEW,
           reason: 'finish: drama expired → FINISH_OVERVIEW',
@@ -1237,7 +1181,10 @@ export class CameraDirector {
     // is the most dramatic moment and must not be suppressed.
     else if (leaderProgress > this._endgameThreshold) {
       const lcCooledDown = ts - this._lastLeadChangeExitTs >= this._leadChangeCooldownMs;
-      if (this._leadChangePending && lcCooledDown) {
+      // CAMERA-WEIGHTS-1: the endgame exception used to bypass the weight completely, so a
+      // leadChangeWeight of 0 still produced LEAD_CHANGE near the line — measured at 1.8% of all
+      // frames with the dial at zero. A weight of 0 means the state does not appear, everywhere.
+      if (this._leadChangePending && lcCooledDown && this._acceptsOffer(this._leadChangeWeight)) {
         return {
           nextState: CAM_STATE.LEAD_CHANGE,
           reason: `lead-change: endgame exception (progress=${leaderProgress.toFixed(2)})`,
@@ -1261,7 +1208,7 @@ export class CameraDirector {
         candidates.push({
           state: CAM_STATE.BATTLE_ZOOM,
           weight: this._battleWeight,
-          reason: `battle: pulk (arc<=${this._battlePulkThresholdT})`,
+          reason: `battle: pulk (arc<=${this._battleGates.closenessT})`,
         });
       }
 
@@ -1287,7 +1234,7 @@ export class CameraDirector {
           candidates.push({
             state: CAM_STATE.COMEBACK_ZOOM,
             weight: this._comebackWeight,
-            reason: `comeback: ${_comebackRacer.name ?? _comebackRacer.index} gained ≥${this._comebackMinPositionsGained} positions`,
+            reason: `comeback: ${_comebackRacer.name ?? _comebackRacer.index} gained ≥${this._comebackGates.minPositionsGained} positions`,
             data: { comebackRacer: _comebackRacer },
           });
         }
@@ -1302,6 +1249,16 @@ export class CameraDirector {
       }
 
       const pick = this._weightedRandomPick(candidates);
+      // THE OFFER. Eligibility and the cooldowns have decided that this shot MAY be taken; the weight
+      // decides whether it IS. Declining falls through to the leader default below, which is the
+      // honest neutral — not a second pick, which would make a low weight boost whatever came next.
+      if (pick && !this._acceptsOffer(pick.weight)) {
+        return {
+          nextState: CAM_STATE.LEADER_ZOOM,
+          reason: `leader: ${pick.state} offered and declined (weight ${pick.weight})`,
+          data: {},
+        };
+      }
       if (pick) {
         if (pick.state === CAM_STATE.OVERVIEW) {
           this._scheduleNextOverview(ts, raceState, leader);
@@ -1395,7 +1352,6 @@ export class CameraDirector {
       if (nextState === CAM_STATE.LEAD_CHANGE) {
         this._leadChangeNewLeaderName = this._currentLeaderName;
         this._leadChangePrevLeaderName = this._prevLeaderName;
-        this._lastLeadChangeTs = ts;
         // Hard cut: skip entry lerp — camera snaps to lead-change zoom immediately
         this._lerpPhase = 'tracking';
         this.zoom = this._leadChangeZoom;
@@ -1407,36 +1363,13 @@ export class CameraDirector {
       // temporarily override the entry TC to achieve the configured zoom-out duration.
       if (nextState === CAM_STATE.OVERVIEW) {
         if (!this._inFinishMode) {
-          let snapZoom;
-          if (this._drawnBodyWidthRefPx > 0) {
-            // Normalize for both open and closed tracks: choose cam.zoom so racers appear at
-            // _overviewTargetScreenPx screen pixels. The effective-zoom divisor is
-            // OPEN_TRACK_BASE_ZOOM (open) or bsX (closed) — same formula, different multiplier.
-            const divisor = this._isOpenTrack ? OPEN_TRACK_BASE_ZOOM : this._bsX;
-            // The SELECTED OVERVIEW sprite scale MULTIPLIES the normalized target size (OVERVIEW-ZOOM-1):
-            // spriteScale 1.0 = the L116 count-normalized default (unchanged); 2.5 = racers 2.5× that size.
-            // Before this fix the selection was ignored on closed tracks and only a soft ceiling on open
-            // (regression from c7fa30a / L116, which decoupled the OVERVIEW zoom from the setting).
-            const ovScale = Number.isFinite(this._overviewSpriteScale)
-              ? this._overviewSpriteScale
-              : 1.0;
-            const raw =
-              (this._overviewTargetScreenPx * ovScale) / (this._drawnBodyWidthRefPx * divisor);
-            // Open ceiling: 80% of state zoom prevents the leader leaving canvas during pan.
-            // Closed ceiling: only MAX_INVERSE_ZOOM — resolveCamera handles world-edge clamping.
-            const maxZoom = this._isOpenTrack
-              ? Math.min(MAX_INVERSE_ZOOM, this._overviewStateZoom * 0.8)
-              : MAX_INVERSE_ZOOM;
-            const minZoom = this._isOpenTrack ? this.overviewZoom : 1.0;
-            snapZoom = Math.max(minZoom, Math.min(maxZoom, raw));
-            // Apply configurable zoom floor (open tracks only): prevents extreme zoom-out at low racer counts.
-            if (this._isOpenTrack && this._overviewMinEffZoom > 0) {
-              snapZoom = Math.max(snapZoom, this._overviewMinEffZoom / OPEN_TRACK_BASE_ZOOM);
-            }
-            this._overviewSnapZoom = snapZoom; // stored so _setTargets uses the same zoom
-          } else {
-            snapZoom = this._overviewStateZoom;
-          }
+          // CAMERA-ZOOM-UNIT-1: OVERVIEW snaps to its TRACK-WIDTHS setting, the same rule the other
+          // four states run. What stood here before derived the zoom from a target sprite size
+          // divided by `2 x W_ref / racersPerRow`, which made the widest shot in the camera depend
+          // on how many racers were in the race — non-monotonically. There is no sprite size and no
+          // racer count in this path any more.
+          const snapZoom = this._overviewStateZoom;
+          this._overviewSnapZoom = snapZoom; // stored so _setTargets uses the same zoom
           this.zoom = snapZoom;
           this.targetZoom = snapZoom;
         } else {
@@ -1447,7 +1380,6 @@ export class CameraDirector {
       }
 
       // Reset per-phase zoom-out floor on every state transition.
-      this._leaderPhaseZoomFloor = null;
       // Reset focal smoother so the first follow frame snaps to the new target — no lag on cuts.
       this._smoothedFocalX = null;
       this._smoothedFocalY = null;
@@ -1489,7 +1421,6 @@ export class CameraDirector {
     if (!isRepeat) {
       // Reset phased observer and set up T-space lerp for the new state.
       this._leadOutStartCamT = null;
-      this._leadOutStartTs = null;
       this._leadOutDistanceT = 0;
       this._entrySpeedEstimate = NOMINAL_T_PER_FRAME;
       // Reset so frame 1 of the new state uses NOMINAL_T_PER_FRAME as speed estimate,
@@ -1573,15 +1504,8 @@ export class CameraDirector {
         raceState?.finishT > 0 &&
         this._shape
       ) {
-        const normT = this._isOpenTrack
-          ? Math.min(1, raceState.finishT)
-          : ((raceState.finishT % 1) + 1) % 1;
-        const pathLen = this._shape.getTotalLength?.() ?? 0;
-        const lookbackFrac = pathLen > 0 ? this._finishOverviewLookbackPx / pathLen : 0;
-        const lookbackT = this._isOpenTrack
-          ? Math.max(0, normT - lookbackFrac)
-          : (((normT - lookbackFrac) % 1) + 1) % 1;
-        this._transitionTargetT = lookbackT;
+        const lookbackT = this._finishLookbackT(raceState.finishT);
+        if (lookbackT !== null) this._transitionTargetT = lookbackT;
       }
 
       // LEAD_CHANGE hard cut: snap _camT to new leader and flag pan snap in update().
@@ -1655,6 +1579,288 @@ export class CameraDirector {
   }
 
   /**
+   * CAMERA-FRAMING-1: the track tangent at a track parameter, in world space. One definition, used
+   * by the forward bias (which direction is "ahead") and by the corridor guarantee (which direction
+   * is "across"). Returns null when there is no shape or the tangent is degenerate.
+   * @param {number|null} t
+   */
+  _headingAt(t) {
+    if (t == null || !this._shape) return null;
+    const eps = 0.003;
+    const tA = this._isOpenTrack ? Math.min(1, t + eps) : (((t + eps) % 1) + 1) % 1;
+    const tB = this._isOpenTrack ? Math.max(0, t - eps) : (((t - eps) % 1) + 1) % 1;
+    const pA = this._shape.getPosition(tA, 0);
+    const pB = this._shape.getPosition(tB, 0);
+    if (!pA || !pB) return null;
+    const dx = pA.x - pB.x;
+    const dy = pA.y - pB.y;
+    return Math.hypot(dx, dy) > 0 ? { x: dx, y: dy } : null;
+  }
+
+  /**
+   * CAMERA-LATERAL-1: THE ACROSS-TRACK PIN. The corridor centreline at a track parameter.
+   *
+   * ==========================================================================================
+   * READ THIS BEFORE "FIXING" IT. This looks like the camera saga's original defect —
+   * CAMERA-FOCUS-3, where the camera tracked the track centreline for months because the follow
+   * observer was never switched on. It is NOT the same thing, and the difference is the design:
+   *
+   *   THAT bug pinned BOTH axes, and it was an ACCIDENT.
+   *   THIS pins ONLY the cross-track axis, and it is DELIBERATE.
+   *
+   * Along the track the camera follows the subject exactly as before, forward offset and all —
+   * `_smoothFocal`, `_applyLeaderForwardBias` and the whole follow path are untouched. Only the
+   * component ACROSS the corridor is replaced by the centreline, because carrying the subject's LANE
+   * is what threw the picture sideways at every lead change: measured before this block, an anchor
+   * change moved the camera 62-84 world px sideways, 28-37% of the 225 px shot.
+   *
+   * If you are here because the camera "does not follow the racer", check the ALONG axis first. It
+   * does. Delete this and the sideways jumping comes straight back.
+   * ==========================================================================================
+   *
+   * @param {number|null} t
+   * @returns {{x:number,y:number}|null}
+   */
+  _centrelineAt(t) {
+    if (t == null || !this._shape) return null;
+    const tt = this._isOpenTrack ? Math.max(0, Math.min(1, t)) : ((t % 1) + 1) % 1;
+    return this._shape.getPosition(tt, 0) ?? null;
+  }
+
+  /**
+   * CAMERA-LATERAL-1: the lateral guarantee. Shift off the centreline only to keep the state's
+   * guaranteed subjects in frame, by the least that works, and return to zero as soon as it can.
+   *
+   * WHICH SUBJECTS, and why only these. The zoom guarantees measure FROM the anchor, so with the
+   * anchor pinned to the centreline the corridor and the company are exact by construction — the
+   * corridor is symmetric about the anchor and each companion's vector starts there. The PAIR
+   * guarantee is the one that is not: it measures the separation |a-b| against the whole chord and
+   * assumes the pair is centred about the anchor, which a pinned anchor no longer provides. The
+   * corridor edges are included anyway, at no cost, so a future change to the zoom rule cannot
+   * quietly start cropping the corridor without a test noticing.
+   *
+   * @returns {{x:number,y:number}} the pan target, shifted along the perpendicular when it must be
+   */
+  _applyLateralGuarantee(panTarget, headingT, subjects, camZoom, frameSize) {
+    if (!panTarget || !this._shape) return panTarget;
+    const heading = this._headingAt(headingT);
+    if (!heading) return panTarget;
+    const len = Math.hypot(heading.x, heading.y);
+    if (!(len > 0)) return panTarget;
+    const perp = { x: -heading.y / len, y: heading.x / len };
+
+    const anchor = subjects.point ?? panTarget;
+    const effX = this._proj.effX(camZoom);
+    const effY = this._proj.effY(camZoom);
+    const at = anchorScreenPoint(
+      frameSize.width,
+      frameSize.height,
+      framingFor(this.state).position === POSITION.FORWARD ? this._leaderForwardFrac : null,
+      this._headingScreen(headingT)
+    );
+    // The perpendicular in SCREEN space, and how many screen px one world px along it is worth.
+    const vx = perp.x * effX;
+    const vy = perp.y * effY;
+    const scale = Math.hypot(vx, vy);
+    if (!(scale > 0)) return panTarget;
+    const pct = this._innerFramePct ?? DEFAULT_INNER_FRAME_PCT;
+    const roomPlus = roomFromPointAlong(at.x, at.y, vx, vy, frameSize.width, frameSize.height, pct);
+    const roomMinus = roomFromPointAlong(
+      at.x,
+      at.y,
+      -vx,
+      -vy,
+      frameSize.width,
+      frameSize.height,
+      pct
+    );
+
+    // Each guaranteed subject's offset from the CENTRELINE, in world px. The anchor is on the
+    // centreline, so a subject's lateral offset is just its displacement projected on the perpendicular.
+    const lateralOf = (r) => (r.x - anchor.x) * perp.x + (r.y - anchor.y) * perp.y;
+    const offsets = [];
+    const half = this._trackWidthPx / 2;
+    if (half > 0) offsets.push(half, -half); // the corridor edges, always
+    if (framingFor(this.state).guarantee === GUARANTEE.PAIR) {
+      for (const r of subjects.pair) if (r) offsets.push(lateralOf(r));
+    }
+    if (offsets.length === 0) return panTarget;
+
+    const d = lateralShiftToFit(offsets, roomPlus, roomMinus, scale);
+    if (!Number.isFinite(d) || d === 0) return panTarget;
+    return { x: panTarget.x + perp.x * d, y: panTarget.y + perp.y * d };
+  }
+
+  /**
+   * CAMERA-COMPANY-2: the same tangent in SCREEN space. Zoom cancels — only the axis RATIO survives
+   * the normalisation — so this is a fixed direction for a given track parameter, which is why the
+   * company guarantee can ask where the anchor will sit before the zoom is known.
+   * @param {number|null} t
+   */
+  _headingScreen(t) {
+    const h = this._headingAt(t);
+    if (!h) return null;
+    return { x: h.x * this._proj.axisX, y: h.y * this._proj.axisY };
+  }
+
+  /**
+   * CAMERA-FRAMING-1: WHO the camera is on, per state. This is the only genuinely per-state part of
+   * the framing rule — the guarantee and the frame position are uniform (see framingRule.js).
+   *
+   * @returns {{point: {x,y}|null, t: number|null, pair: [object|null, object|null]}}
+   *   `point` the world point to centre on, `t` its track parameter (for the heading), and `pair`
+   *   the two racers a PAIR guarantee must keep in frame.
+   */
+  _framingSubjects(racers, focusRacers) {
+    const leader = focusRacers[0] ?? null;
+    switch (this.state) {
+      case CAM_STATE.LEAD_CHANGE: {
+        // The racer NOW leading, with the racer he just passed as the pair partner. Before this
+        // block LEAD_CHANGE had no case at all: panTarget fell through to its default centroid
+        // branch, so the camera sat on the average of the top three and never received the forward
+        // bias — in the state that holds 37.6% of all frames.
+        const passed = this._findByIndex(racers, this._prevLeaderIndex, null);
+        return {
+          point: leader ? { x: leader.x, y: leader.y } : null,
+          t: leader?.t ?? null,
+          pair: [leader, passed],
+        };
+      }
+      case CAM_STATE.BATTLE_ZOOM: {
+        const group = this._findGroupRacers(racers);
+        const contenders = group.length >= 2 ? group : focusRacers;
+        const a = contenders[0] ?? null;
+        const b = contenders[1] ?? null;
+        const point =
+          a && b
+            ? getPanTarget(CAM_STATE.BATTLE_ZOOM, [a, b], this._shape)
+            : a
+              ? { x: a.x, y: a.y }
+              : null;
+        return { point, t: a && b ? (a.t + b.t) / 2 : (a?.t ?? null), pair: [a, b] };
+      }
+      case CAM_STATE.PHOTO_FINISH: {
+        // The deterministic top two contesting the line — never the live battle-group detection.
+        const a = focusRacers[0] ?? null;
+        const b = focusRacers[1] ?? null;
+        const point =
+          a && b
+            ? getPanTarget(CAM_STATE.BATTLE_ZOOM, [a, b], this._shape)
+            : a
+              ? { x: a.x, y: a.y }
+              : null;
+        return { point, t: a && b ? (a.t + b.t) / 2 : (a?.t ?? null), pair: [a, b] };
+      }
+      case CAM_STATE.COMEBACK_ZOOM: {
+        const locked =
+          this._findByIndex(racers, this._comebackLockedRacerIndex, this._comebackLockedRacer) ??
+          focusRacers[Math.min(2, focusRacers.length - 1)] ??
+          null;
+        return {
+          point: locked ? { x: locked.x, y: locked.y } : null,
+          t: locked?.t ?? null,
+          pair: [null, null],
+        };
+      }
+      case CAM_STATE.OVERVIEW:
+      case CAM_STATE.LEADER_ZOOM:
+      default:
+        return {
+          point: leader ? { x: leader.x, y: leader.y } : null,
+          t: leader?.t ?? null,
+          pair: [null, null],
+        };
+    }
+  }
+
+  /**
+   * CAMERA-FRAMING-1: the GUARANTEE, as a cam.zoom CEILING. "Everyone who matters right now stays in
+   * frame." It WIDENS the shot when the state setting would crop the guaranteed subjects, and does
+   * nothing otherwise — it never moves a centre and never picks a subject (Lesson 192).
+   *
+   * Orientation-aware: the corridor is measured perpendicular to the heading and the pair along the
+   * line between them, so the bound binds exactly when it must instead of assuming the worst
+   * orientation for the whole lap.
+   *
+   * @returns {number} cam.zoom ceiling, Infinity when nothing constrains
+   */
+  _guaranteeCeiling(subjects, frameSize) {
+    const kind = framingFor(this.state).guarantee;
+    const { axisX, axisY } = this._proj;
+    const inner = this._innerFramePct ?? DEFAULT_INNER_FRAME_PCT;
+    if (kind === GUARANTEE.PAIR) {
+      const [a, b] = subjects.pair;
+      const ceiling = pairGuarantee(
+        a,
+        b,
+        axisX,
+        axisY,
+        frameSize.width,
+        frameSize.height,
+        inner,
+        this._drawnBodyWidthRefPx
+      );
+      // A pair state with only one contender present has no pair to keep together; fall back to the
+      // corridor so the shot is still bounded by something real.
+      if (Number.isFinite(ceiling)) return ceiling;
+    }
+    return corridorGuarantee(
+      this._headingAt(subjects.t),
+      this._trackWidthPx,
+      axisX,
+      axisY,
+      frameSize.width,
+      frameSize.height,
+      inner
+    );
+  }
+
+  /**
+   * CAMERA-COMPANY-1: the DRAMATURGICAL guarantee — "do not show emptiness".
+   *
+   * Deliberately NOT part of `_guaranteeCeiling`. The geometric guarantees protect named subjects;
+   * this one protects the SHOT, and folding them together would hide that they answer different
+   * questions. Both are applied with Math.min at the same place, before the camera moves.
+   *
+   * Applies to the SINGLE-ANCHOR states only. BATTLE, PHOTO_FINISH and LEAD_CHANGE already guarantee
+   * a pair, which IS company — adding a headcount there would fight a guarantee that is already
+   * doing the job. See the report for the measurement behind that choice.
+   */
+  _companyCeiling(subjects, racers, frameSize) {
+    if (!(this._minRacersVisible > 1)) return Infinity;
+    if (framingFor(this.state).guarantee === GUARANTEE.PAIR) return Infinity;
+    // The company sits BEHIND a forward-framed subject, and forward framing gives it more room: a
+    // leader at 0.66 along the frame has 0.66 of it behind him. A centred subject has half.
+    // WHERE the anchor will sit, from the framing rule — so the room toward each companion is
+    // measured rather than assumed. A single scalar in every direction was over-generous everywhere
+    // (0.66 assumed against a true 0.399 dead ahead), which is why it delivered one companion fewer
+    // than it promised. This is the INTENDED position and is deliberately zoom-INDEPENDENT: reading
+    // the anchor back off the live camera instead was tried and measured worse (promise kept 82.3%
+    // of frames against 97.1%), because during a widening the live zoom is tighter than the target,
+    // so the read-back over-states the room the finished shot will actually have and the guarantee
+    // talks itself into staying tight. See the report.
+    const at = anchorScreenPoint(
+      frameSize.width,
+      frameSize.height,
+      framingFor(this.state).position === POSITION.FORWARD ? this._leaderForwardFrac : null,
+      this._headingScreen(subjects.t)
+    );
+    // COMPANY_FRAME_PCT, not `_innerFramePct`: a guaranteed companion needs to be visible with a
+    // margin, not inside the subject's safe region. See the constant for the owner's reasoning.
+    return companyGuarantee(
+      subjects.point,
+      racers,
+      this._minRacersVisible,
+      this._proj.axisX,
+      this._proj.axisY,
+      frameSize.width,
+      frameSize.height,
+      COMPANY_FRAME_PCT,
+      at
+    );
+  }
+
+  /**
    * CAMERA-FOCUS-3 leader forward-framing. Shifts a pan target BACKWARD along the leader's motion tangent
    * so the leader lands at screen fraction `_leaderForwardFrac` (> 0.5) along the motion axis — i.e. FORWARD,
    * with the trailing pack filling the rest of the frame (the action is behind the leader). Returns the
@@ -1676,239 +1882,41 @@ export class CameraDirector {
       !(effZoomY > 0)
     )
       return pos;
-    const eps = 0.003;
-    const tA = this._isOpenTrack ? Math.min(1, leaderT + eps) : (((leaderT + eps) % 1) + 1) % 1;
-    const tB = this._isOpenTrack ? Math.max(0, leaderT - eps) : (((leaderT - eps) % 1) + 1) % 1;
-    const pA = this._shape.getPosition(tA, 0);
-    const pB = this._shape.getPosition(tB, 0);
-    if (!pA || !pB) return pos;
-    let dx = pA.x - pB.x,
-      dy = pA.y - pB.y;
-    const len = Math.hypot(dx, dy);
-    if (!(len > 0)) return pos;
-    dx /= len;
-    dy /= len;
+    // CAMERA-FRAMING-1: one definition of "which way is ahead", shared with the corridor guarantee.
+    const heading = this._headingAt(leaderT);
+    if (!heading) return pos;
+    const len = Math.hypot(heading.x, heading.y);
+    const dx = heading.x / len;
+    const dy = heading.y / len;
     // CAMERA-FOCUS-5: the screen mapping is PER-AXIS (ctx.scale(zoom·bsX, zoom·bsY) closed). Work the
     // shift in SCREEN space so the leader lands (frac−0.5) of the frame FORWARD along the motion direction
     // on EVERY heading — not just horizontal. The world tangent (dx,dy) projects to the screen tangent
-    // (dx·effZoomX, dy·effZoomY); `span` is the frame extent along that heading (frameW for horizontal
-    // motion, frameH for vertical, blended between). The world shift that yields that screen displacement
-    // is span·(dx,dy)/sLen — which cancels back to the old (frac−0.5)·frameW/effZoomX for pure-horizontal
-    // motion (why the X axis was already right) but is now correct on vertical/diagonal sections too.
+    // (dx·effZoomX, dy·effZoomY); `span` is how far the frame reaches along that heading.
+    //
+    // CAMERA-PICTURE-FIXES-1: `span` was `|cos|·frameW + |sin|·frameH` — a BLEND of the side lengths,
+    // right on both axes and wrong between them (the weights sum to up to √2). At the owner's 74°
+    // heading it read 1091.4 px where the frame reaches 759.9 px, so frac 0.66 displaced 23.0pp
+    // instead of 16.0pp. It is now the rectangle's actual chord through the centre; the axis cases
+    // are unchanged, which is why no test caught this.
     const sxDir = dx * effZoomX;
     const syDir = dy * effZoomY;
     const sLen = Math.hypot(sxDir, syDir);
     if (!(sLen > 0)) return pos;
-    const span = (Math.abs(sxDir) / sLen) * frameW + (Math.abs(syDir) / sLen) * frameH;
+    const span = frameExtentAlong(sxDir, syDir, frameW, frameH);
     const worldBias = ((this._leaderForwardFrac - 0.5) * span) / sLen;
     if (!(worldBias > 0)) return pos;
     // shift the pan CENTRE backward along motion → the leader appears forward on screen
     return { x: pos.x - dx * worldBias, y: pos.y - dy * worldBias };
   }
 
-  /**
-   * CAMERA-FOCUS-1 containment clamp — the hard guarantee that the anchor racer never leaves the inner safe
-   * region of the frame (mirror of the min-visible ZOOM floor, but for PAN). Applied after the per-frame pan
-   * lerp in LEADER-family states: the smooth lerp trails the anchor for feel, and this shifts the offset just
-   * enough to hold the anchor inside [margin, canvas − margin] (margin = (1 − innerFramePct)/2 × canvas) when
-   * the trailing lag would otherwise push it past that boundary. Only corrects when needed, so a centered
-   * anchor is untouched. Mutates this.offsetX/Y in place.
-   */
-  _containAnchorInFrame(racers, canvasW, canvasH) {
-    // CAMERA-DETOUR-1 candidate C: measure the actual offset delta this clamp applies (Lesson 192 —
-    // clamp-active is a measurement, not a comment). Default 0/false covers the early-return no-op paths.
-    if (this._detourEnabled) {
-      this._detourContainActive = false;
-      this._detourContainDeltaX = 0;
-      this._detourContainDeltaY = 0;
-    }
-    const anchor = this._focusAnchorRacer(racers);
-    if (!anchor) return;
-    // CAMERA-FOCUS-5: the screen mapping is PER-AXIS. The live render applies ctx.scale(cam.zoom·bsX,
-    // cam.zoom·bsY) for closed tracks — bsX on X, bsY on Y — so the anchor's screen position must be
-    // computed with effZoomX on X and effZoomY on Y. Using bsX for BOTH (the original bug) mis-scaled the
-    // Y check on non-square worlds (searound bsX 0.417 vs bsY 0.352 = 19% off): the clamp saw the leader
-    // lower than he really was, shoved him up toward the edge, and fired ~44% of frames. Open tracks use a
-    // uniform zoom (OPEN_TRACK_BASE_ZOOM on both axes), so effZoomY == effZoomX there.
-    const effZoomX = this._isOpenTrack ? this.zoom * OPEN_TRACK_BASE_ZOOM : this.zoom * this._bsX;
-    const effZoomY = this._isOpenTrack ? effZoomX : this.zoom * this._bsY;
-    if (!(effZoomX > 0) || !(effZoomY > 0)) return;
-    const _dcBeforeX = this._detourEnabled ? this.offsetX : 0; // CAMERA-DETOUR-1 candidate C
-    const _dcBeforeY = this._detourEnabled ? this.offsetY : 0;
-    const innerFrac = this._innerFramePct ?? DEFAULT_INNER_FRAME_PCT;
-    const mx = ((1 - innerFrac) / 2) * canvasW;
-    const my = ((1 - innerFrac) / 2) * canvasH;
-    const sx = anchor.x * effZoomX + this.offsetX;
-    let active = false,
-      ax = false,
-      ay = false;
-    if (sx < mx) {
-      this.offsetX += mx - sx;
-      active = true;
-      ax = true;
-    } else if (sx > canvasW - mx) {
-      this.offsetX -= sx - (canvasW - mx);
-      active = true;
-      ax = true;
-    }
-    const sy = anchor.y * effZoomY + this.offsetY;
-    if (sy < my) {
-      this.offsetY += my - sy;
-      active = true;
-      ay = true;
-    } else if (sy > canvasH - my) {
-      this.offsetY -= sy - (canvasH - my);
-      active = true;
-      ay = true;
-    }
-    // CAMERA-FOCUS-3 diagnostic: count frames where the emergency rail actually corrected the pan.
-    // With grammar (A) cut + centered steady-state tracking this should be ~0 (the rail is a safety net).
-    if (active) this._clampActiveCount = (this._clampActiveCount ?? 0) + 1;
-    if (ax) this._clampActiveX = (this._clampActiveX ?? 0) + 1;
-    if (ay) this._clampActiveY = (this._clampActiveY ?? 0) + 1;
-    if (this._detourEnabled) {
-      this._detourContainDeltaX = this.offsetX - _dcBeforeX;
-      this._detourContainDeltaY = this.offsetY - _dcBeforeY;
-      this._detourContainActive = active;
-    }
-  }
-
-  // CAMERA-DETOUR-1: read-only per-transition frame recorder. Writes ONLY to _detour* fields and the
-  // console — never a camera value (so the fingerprint is identical off and on). Captures 3 frames
-  // before each transition and ~30 after, with the candidate-A/B/C/D signals, so the frame where the
-  // NEW anchor's screen movement flips sign is locatable off the owner's LIVE trace (seed 5601). The
-  // anchor screen position below is projected with the SAME offset/zoom the renderer committed THIS
-  // frame — never a recomputation from other inputs (a log line that recomputes its own expectation is
-  // a tautology and proves nothing; that exact mistake hid the camera defect for two days).
-  _recordDetourFrame(tSpaceLerpActive, transitioned, racers) {
-    const r3 = (v) => (v == null ? null : Math.round(v * 1000) / 1000);
-    const r6 = (v) => (v == null ? null : Math.round(v * 1e6) / 1e6);
-
-    // On the transition frame: open a window and flush the rolling pre-buffer as rel -N..-1.
-    if (transitioned) {
-      if (this._detourWindow) {
-        // A prior window is still open (transitions <30 frames apart) — keep it (truncated) so
-        // nothing is lost; only completed windows are console-emitted below.
-        this._detourLog.push(this._detourWindow);
-        if (this._detourLog.length > 20) this._detourLog.shift();
-      }
-      const pre = this._detourPreBuf.slice(-3);
-      const preFrames = pre.map((p, i) => ({
-        rel: i - pre.length,
-        from: p.st,
-        to: this.state,
-        anchorSX: null, // the NEW-state anchor is undefined before the transition
-        anchorSY: null,
-        oX: r3(p.ox),
-        oY: r3(p.oy),
-        z: r6(p.z),
-        camT: r6(p.ct),
-      }));
-      const lastPre = pre.length ? pre[pre.length - 1] : null;
-      this._detourWindow = {
-        from: this._detourPrevState,
-        to: this.state,
-        preoX: lastPre ? lastPre.ox : null, // candidate A: the offset the eye last saw (rel -1)
-        preoY: lastPre ? lastPre.oy : null,
-        prez: lastPre ? lastPre.z : null,
-        frames: preFrames,
-        remaining: 31, // rel 0..30
-      };
-    }
-
-    // Capture this frame into the active window (rel 0..30).
-    if (this._detourWindow && this._detourWindow.remaining > 0) {
-      const w = this._detourWindow;
-      const rel = 31 - w.remaining;
-      // The NEW state's centre world point — getPanTarget covers every state (incl. BATTLE, where
-      // _focusAnchorRacer is null) — projected with THIS frame's rendered offset/zoom.
-      const focus = this._focusRacers(racers);
-      const anchorW = getPanTarget(this.state, focus, this._shape);
-      const ezx = this._isOpenTrack ? this.zoom * OPEN_TRACK_BASE_ZOOM : this.zoom * this._bsX;
-      const ezy = this._isOpenTrack ? this.zoom * OPEN_TRACK_BASE_ZOOM : this.zoom * this._bsY;
-      w.frames.push({
-        rel,
-        from: w.from,
-        to: this.state,
-        anchorSX: r3(anchorW.x * ezx + this.offsetX),
-        anchorSY: r3(anchorW.y * ezy + this.offsetY),
-        // CAMERA-DETOUR-2: the anchor's WORLD position — so its own motion is separable from the
-        // camera's (the OVERVIEW centroid moves on its own as the field spreads).
-        awX: r3(anchorW.x),
-        awY: r3(anchorW.y),
-        rc: focus.length, // how many racers the anchor centroid was computed from (a changing set moves it)
-        oX: r3(this.offsetX),
-        oY: r3(this.offsetY),
-        z: r6(this.zoom),
-        // the glide's ENDPOINT as recomputed this frame — a moving endpoint shows up as a moving endpoint
-        toX: r3(this.targetOffsetX),
-        toY: r3(this.targetOffsetY),
-        s: this._detourGlideS == null ? null : r6(this._detourGlideS), // glide progress (linear) …
-        e: this._detourGlideE == null ? null : r6(this._detourGlideE), // … and eased
-        br: this._detourBranch, // which branch WROTE offsetX/offsetY this frame: glide | cut | follow
-        gsoX: r3(this._glideStartOffsetX), // candidate A: where the glide started from …
-        gsoY: r3(this._glideStartOffsetY),
-        gsz: r6(this._glideStartZoom),
-        preoX: r3(w.preoX), // … versus the offset the eye last saw
-        preoY: r3(w.preoY),
-        prez: r6(w.prez),
-        camT: this._camT == null ? null : r6(this._camT), // candidate B: the second (track-space) mover
-        camTRead: !!tSpaceLerpActive, // did the follow path read _camT this frame
-        containMod: !!this._detourContainActive, // candidate C: did the clamp move the pan …
-        containDX: r3(this._detourContainDeltaX), // … and by how much (measured, not assumed)
-        containDY: r3(this._detourContainDeltaY),
-        stZoom: this._detourSetTargetsZoom == null ? null : r6(this._detourSetTargetsZoom), // candidate D:
-        rz: r6(this.zoom), // the zoom _setTargets used vs the zoom the renderer drew with
-      });
-      w.remaining -= 1;
-      if (w.remaining === 0) {
-        this._detourLog.push(w);
-        if (this._detourLog.length > 20) this._detourLog.shift();
-        try {
-          // eslint-disable-next-line no-console
-          console.info(`[RA CAMERA DETOUR] ${w.from}->${w.to}`, JSON.stringify(w.frames));
-        } catch {
-          // console unavailable (headless) — the window is still in _detourLog for export
-        }
-        this._detourWindow = null;
-      }
-    }
-
-    // Advance the rolling pre-buffer (keep last 3) and remember this frame's state.
-    this._detourPreBuf.push({
-      st: this.state,
-      ox: this.offsetX,
-      oy: this.offsetY,
-      z: this.zoom,
-      ct: this._camT,
-    });
-    if (this._detourPreBuf.length > 3) this._detourPreBuf.shift();
-    this._detourPrevState = this.state;
-  }
-
   /** CAMERA-DETOUR-1: completed per-transition windows captured while cameraDetourLog was on. */
   exportDetourLog() {
-    return this._detourLog;
+    return this._detour?.export() ?? [];
   }
 
-  /** CAMERA-FOCUS-3: frames on which the containment clamp actually moved the pan (emergency-rail use). */
-  get clampActiveCount() {
-    return this._clampActiveCount ?? 0;
-  }
-
-  /** CAMERA-FOCUS-3: per-axis clamp activations (diagnostic). */
-  get clampActiveAxes() {
-    return { x: this._clampActiveX ?? 0, y: this._clampActiveY ?? 0 };
-  }
-
-  /** CAMERA-FOCUS-4 LIVE TRUTH: the RESOLVED transition grammar this director is running ('cut'|'legacy'). */
+  /** CAMERA-FOCUS-4 LIVE TRUTH: the RESOLVED transition grammar this director is running. */
   get transitionGrammar() {
     return this._transitionGrammar;
-  }
-
-  /** CAMERA-FOCUS-4 LIVE TRUTH: the current observer phase ('idle'|'lead-in'|'follow'). */
-  get observerPhase() {
-    return this._observerPhase;
   }
 
   /** CAMERA-FOCUS-4 LIVE TRUTH: resolved leader forward-framing fraction (null when centred). */
@@ -1917,105 +1925,25 @@ export class CameraDirector {
   }
 
   /**
-   * Finds the first group of ≥3 racers that simultaneously satisfy all BATTLE conditions:
-   *   1. Closeness  — all pairwise lap-normalized arc distances shortestArcDeltaT ≤ battlePulkThresholdT
-   *                   (scale-independent; replaced the world-px test in 15b)
-   *   2. Isolation  — no non-member within battleIsolationThresholdT (lap fraction) of any member
-   *   3. Positional — frontmost group racer at rank 3 or worse (P1/P2 are LEADER territory);
-   *                   seed-triple rank span ≤ 3; frontmost rank ≤ battleMinTopN
-   *   4. Expansion  — greedy expansion capped at battleMaxGroupRankSpan total rank span
-   *
-   * Returns the group sorted frontmost-first (highest t), or null when no group qualifies.
-   * @param {Array<{x:number, y:number, t:number}>} racers  Full racer list, any order.
-   * @returns {Array|null}
+   * Which racers are in a BATTLE right now — this director's gates applied to the group rules in
+   * battleGroup.js. PUBLIC because the render path asks the same question for the battle-focus
+   * darkening, and a render file reaching into a `_private` method is how the mint tripwire's
+   * motivating case started.
+   * @param {Array<{t:number}>} racers
+   * @returns {Array|null} the group frontmost-first, or null when no group qualifies
    */
-  _detectPulkGroup(racers) {
-    if (!racers || racers.length < 3) return null;
-    const sorted = [...racers].sort((a, b) => b.t - a.t);
-    const n = sorted.length;
-    if (n < 3) return null;
-    // 15b: closeness is the lap-normalized arc distance only (scale-independent — one knob
-    // means the same on-track closeness on every track, unlike world-px which varied 1.5–4.9%
-    // of a lap across the 3072–6144px worlds and rejected every real cluster).
-    const tThr = this._battlePulkThresholdT;
-    const isoThrT = this._battleIsolationThresholdT;
-    const maxSize = this._battleMaxGroupSize ?? 6;
-    const maxRankSpan = this._battleMaxGroupRankSpan ?? 5;
-    // i >= 2: frontmost battle racer must be at rank 3 or worse (P1/P2 are LEADER territory).
-    // i < battleMinTopN: frontmost must be in the configured top-N (default top-10).
-    const minTopN = this._battleMinTopN ?? 10;
-    for (let i = 2; i < n - 2 && i < minTopN; i++) {
-      for (let j = i + 1; j < n && j - i <= 3; j++) {
-        for (let k = j + 1; k < n && k - i <= 3; k++) {
-          const ri = sorted[i],
-            rj = sorted[j],
-            rk = sorted[k];
-          // Closeness condition — lap-normalized shortest arc (raw t accumulates across laps;
-          // co-located racers across the start/finish seam must read as near). Sole spatial gate.
-          if (
-            shortestArcDeltaT(ri.t, rj.t) > tThr ||
-            shortestArcDeltaT(ri.t, rk.t) > tThr ||
-            shortestArcDeltaT(rj.t, rk.t) > tThr
-          )
-            continue;
-          // Q2: greedy expansion — add adjacent-rank racers (index >= 2, not P1/P2) up to maxSize.
-          // Track rank span: reject candidates that would push (maxIdx - minIdx) > maxRankSpan.
-          const group = [ri, rj, rk];
-          const groupSet = new Set([i, j, k]);
-          let minGroupIdx = i; // seed frontmost always has best rank (i <= j <= k)
-          let maxGroupIdx = k;
-          for (let e = 2; e < n && group.length < maxSize; e++) {
-            if (groupSet.has(e)) continue;
-            const re = sorted[e];
-            // Rank-span guard: check before spatial/temporal (cheaper)
-            const candMin = Math.min(minGroupIdx, e);
-            const candMax = Math.max(maxGroupIdx, e);
-            if (candMax - candMin > maxRankSpan) continue;
-            let fits = true;
-            for (const gm of group) {
-              if (shortestArcDeltaT(gm.t, re.t) > tThr) {
-                fits = false;
-                break;
-              }
-            }
-            if (fits) {
-              group.push(re);
-              groupSet.add(e);
-              minGroupIdx = candMin;
-              maxGroupIdx = candMax;
-            }
-          }
-          // Q1: isolation check (arc) — reject when any non-member is within isoThrT (lap
-          // fraction) of any member. Skip when threshold is 0 (disabled).
-          if (isoThrT > 0) {
-            let isolated = true;
-            outer: for (let o = 0; o < n; o++) {
-              if (groupSet.has(o)) continue;
-              const ro = sorted[o];
-              for (const gm of group) {
-                if (shortestArcDeltaT(gm.t, ro.t) < isoThrT) {
-                  isolated = false;
-                  break outer;
-                }
-              }
-            }
-            if (!isolated) continue;
-          }
-          return group; // sorted frontmost-first (highest t), size 3–maxSize
-        }
-      }
-    }
-    return null;
+  detectBattleGroup(racers) {
+    return detectPulkGroup(racers, this._battleGates);
   }
 
-  /**
-   * Returns true when a qualifying BATTLE group exists.
-   * All three conditions (spatial + temporal + positional) must hold simultaneously.
-   * @param {Array<{x:number, y:number, t:number}>} racers
-   * @returns {boolean}
-   */
+  /** Alias kept for the diagnostics mixin and the existing tests. */
+  _detectPulkGroup(racers) {
+    return this.detectBattleGroup(racers);
+  }
+
+  /** True when a qualifying BATTLE group exists. */
   _isPulk(racers) {
-    return this._detectPulkGroup(racers) !== null;
+    return this.detectBattleGroup(racers) !== null;
   }
 
   /** Clears all BATTLE lock state and triggers a transition out of BATTLE_ZOOM. */
@@ -2030,173 +1958,79 @@ export class CameraDirector {
   }
 
   /**
-   * Q3 exit condition: returns true while the original locked battle group is still cohesive
-   * (all pairwise arc distances <= battlePulkThresholdT — 15b: same scale-independent measure
-   * as entry, so BATTLE enters AND exits on arc, no world-px). Returns true for empty groups so
-   * tests that set state directly never get spurious early exits.
+   * Q3 exit condition: is the group the camera locked onto still a group? Returns true for a
+   * missing or under-size stored group so a test that sets `state` directly never gets a spurious
+   * early exit — it falls back to "is there any pulk at all".
    * @param {Array} racers
    * @returns {boolean}
    */
   _isOriginalGroupStillValid(racers) {
-    if (
-      !racers ||
-      !this._battleGroupRacerIndices?.length ||
-      this._battleGroupRacerIndices.length < 3
-    )
-      return this._isPulk(racers); // no stored group → fall back to any-pulk check (backward compat)
+    const stored = this._battleGroupRacerIndices;
+    if (!racers || !stored?.length || stored.length < 3) return this._isPulk(racers);
     const group = this._findGroupRacers(racers);
-    if (group.length < this._battleGroupRacerIndices.length) return false;
-    const tThr = this._battlePulkThresholdT;
-    for (let a = 0; a < group.length; a++) {
-      for (let b = a + 1; b < group.length; b++) {
-        const ra = group[a],
-          rb = group[b];
-        if (shortestArcDeltaT(ra.t, rb.t) > tThr) return false;
-      }
-    }
-    return true;
+    if (group.length < stored.length) return false; // somebody left the field entirely
+    return groupStillCohesive(group, this._battleGates.closenessT);
   }
 
-  /**
-   * Returns true when any member of the locked BATTLE group has drifted into P1 or P2
-   * since the group was formed. Used as an additional early-exit trigger in update().
-   * @param {Array} racers  Current full racer list.
-   * @returns {boolean}
-   */
+  /** True once a member of the locked BATTLE group has climbed into P1 or P2 — an exit trigger. */
   _isBattleGroupP2Drifted(racers) {
-    if (!racers || !this._battleGroupRacerIndices?.length) return false;
-    const sorted = [...racers].sort((a, b) => b.t - a.t);
-    const p12Set = new Set([sorted[0]?.index, sorted[1]?.index].filter((v) => v != null));
-    if (p12Set.size === 0) return false;
-    return this._battleGroupRacerIndices.some((idx) => idx != null && p12Set.has(idx));
+    return groupHoldsP1OrP2(racers, this._battleGroupRacerIndices);
   }
 
-  /**
-   * Returns the camera's focus racer during BATTLE_ZOOM.
-   * When a racer was locked at BATTLE_ZOOM entry and is still present in the racers
-   * array, that locked racer is returned so the camera stays on them even if another
-   * racer in the group takes the lead.
-   * Falls back to the current race leader when the locked racer is not found.
-   * @param {Array} racers  Current full racer list.
-   * @returns {object|null}
-   */
-  _getBattleFocusRacer(racers) {
-    const found = this._findByIndex(racers, this._battleLockedRacerIndex, this._battleLockedRacer);
-    if (found) return found;
-    // Fallback: frontmost racer
-    return racers.reduce((best, r) => (!best || r.t > best.t ? r : best), null);
-  }
-
-  /**
-   * Stable racer lookup: tries r.index === idx first (survives renderInterpolation spread-copies),
-   * then falls back to r === fallbackRef (backward compat for tests without index field).
-   * Returns null when neither finds a match.
-   */
+  /** Stable racer lookup that survives renderInterpolation's per-frame spread-copies. */
   _findByIndex(racers, idx, fallbackRef) {
-    if (idx != null) {
-      const r = racers.find((r) => r.index === idx);
-      if (r) return r;
-    }
-    if (fallbackRef) {
-      return racers.find((r) => r === fallbackRef) ?? null;
-    }
-    return null;
+    return findByIndex(racers, idx, fallbackRef);
   }
 
-  /**
-   * Resolves the stored battle group to live racer objects from the current racers array.
-   * Uses _battleGroupRacerIndices for index-based lookup (stable across spread-copies),
-   * falls back to _battleGroupRacers reference for each slot.
-   */
+  /** The stored battle group, resolved to this frame's live racer objects. */
   _findGroupRacers(racers) {
-    if (!racers || !this._battleGroupRacerIndices?.length) return this._battleGroupRacers ?? [];
-    return this._battleGroupRacerIndices
-      .map((idx, i) => this._findByIndex(racers, idx, this._battleGroupRacers?.[i] ?? null))
-      .filter(Boolean);
+    return resolveGroup(racers, this._battleGroupRacerIndices, this._battleGroupRacers);
   }
 
   /**
-   * Count non-finished racers whose screen projection falls within the canvas viewport.
-   * Uses the current (live) offsetX/Y so the visibility check matches what the player sees.
-   * @param {Array} racers   Full racer list.
-   * @param {number} effZoom  Effective zoom (cam.zoom × BASE for open, × bsX for closed).
-   * @param {number} canvasW  Canvas width in pixels.
-   * @param {number} canvasH  Canvas height in pixels.
-   * @returns {number}  Count of visible non-finished racers.
+   * The Y pan offset for a resolved cam.zoom. Split out because the Y axis has its OWN world→screen
+   * scale on every non-square closed world (bsY != bsX) — the projection supplies it, so this can
+   * no longer be written with the X scale (the CAMERA-FOCUS-5 defect). On open tracks the mapping
+   * is uniform, so effY == effX and this reduces exactly to the former open-track formula.
    */
-  _countVisibleRacers(racers, effZoom, canvasW, canvasH) {
-    if (!racers || effZoom <= 0) return 0;
-    let count = 0;
-    for (const r of racers) {
-      if (r.finished) continue;
-      const sx = r.x * effZoom + this.offsetX;
-      const sy = r.y * effZoom + this.offsetY;
-      if (sx >= 0 && sx < canvasW && sy >= 0 && sy < canvasH) count++;
-    }
-    return count;
-  }
-
-  /**
-   * Largest cam.zoom at which at least `visTarget` non-finished racers stay on canvas when the camera is
-   * centered on (fx, fy). Focus-centered geometry: a racer at world offset (dx, dy) from the focus is on
-   * canvas iff `zoom·divisor·|dx| < canvasW/2` and `zoom·divisor·|dy| < canvasH/2`, so its per-racer max
-   * cam.zoom is `min(halfW/(|dx|·divisor), halfH/(|dy|·divisor))`; the `visTarget`-th largest of those is the
-   * zoom below which ≥ visTarget racers are visible. Returns Infinity (no constraint) when fewer active
-   * racers than visTarget exist — the small-field guard — or when visTarget ≤ 0. This is a close
-   * approximation (ignores world-edge clamp + inner-frame inset) that keeps the leader roughly centered;
-   * it is used only as a zoom-OUT floor, never to zoom in past the profile.
-   */
-  _zoomFloorForMinVisible(racers, fx, fy, visTarget, divisor, canvasW, canvasH) {
-    if (!racers || visTarget <= 0 || divisor <= 0) return Infinity;
-    const halfW = canvasW / 2;
-    const halfH = canvasH / 2;
-    const maxZooms = [];
-    for (const r of racers) {
-      if (r.finished) continue;
-      const dx = Math.abs(r.x - fx) * divisor;
-      const dy = Math.abs(r.y - fy) * divisor;
-      const zx = dx > 1e-6 ? halfW / dx : Infinity;
-      const zy = dy > 1e-6 ? halfH / dy : Infinity;
-      maxZooms.push(Math.min(zx, zy));
-    }
-    if (maxZooms.length < visTarget) return Infinity; // fewer active than target → no constraint
-    maxZooms.sort((a, b) => b - a);
-    return maxZooms[visTarget - 1];
-  }
-
-  // Compute the Y offset for closed tracks using bsY (may differ from bsX on non-square worlds).
-  // effZoomX = resolved.effectiveZoom = cam.zoom * bsX; effZoomY = cam.zoom * bsY.
-  _closedOffsetY(targetY, effZoomX, canvasH) {
-    const camZoom = effZoomX / this._bsX;
-    const effZoomY = camZoom * this._bsY;
-    const camYMax = Math.max(this._worldBounds.minY, this._worldBounds.maxY - canvasH / effZoomY);
-    const idealCamY = targetY - canvasH / (2 * effZoomY);
+  _offsetYFor(targetY, camZoom, canvasH) {
+    const effY = this._proj.effY(camZoom);
+    const camYMax = Math.max(this._worldBounds.minY, this._worldBounds.maxY - canvasH / effY);
+    const idealCamY = targetY - canvasH / (2 * effY);
     const camY = Math.max(this._worldBounds.minY, Math.min(camYMax, idealCamY));
-    return -camY * effZoomY;
+    return -camY * effY;
   }
 
   /**
-   * Coordinated pan+zoom target computation for closed-track zoom states.
+   * Coordinated pan+zoom target computation for every anchored state, on every track.
+   *
+   * CAMERA-PROJECTION-1: this replaces _setClosedTrackTargets + _setOpenTrackTargets +
+   * _closedOffsetY. Those three were ONE algorithm written twice — the only differences were
+   * which world→screen scale they used and whether the Y axis got its own. The projection now
+   * supplies both, so there is one implementation and one place for a framing bug to live.
    *
    * Two resolveCamera calls are made each frame:
-   *   1. stateEffZoom  → final zoom target (may be reduced by world-edge clamping)
-   *   2. this.zoom*bsX → pan target for the *current* (lerping) zoom level
+   *   1. the state's own zoom → the final zoom target (may be reduced by world-edge clamping)
+   *   2. the LIVE zoom        → the pan target for the zoom the renderer is drawing with right now,
+   *                             so the pan chases the subject smoothly while the zoom eases.
    *
-   * Because call 2 uses the live zoom value, the pan target smoothly chases the
-   * racer as zoom lerps 1→stateZoom, keeping the target within the inner frame
-   * throughout the transition rather than snapping on entry.
+   * @param {{x:number,y:number}} target        world-space pan target
+   * @param {number} stateCamZoom               cam.zoom this state asks for (NOT effective zoom)
+   * @param {{width:number,height:number}} frameSize
+   * @param {number} [extraMinEffZoom=0]        optional additional zoom-out floor (OVERVIEW only)
    */
-  _setClosedTrackTargets(target, stateEffZoom, frameSize, canvasH) {
-    const minEffZoom = this._bsX;
+  _setTrackTargets(target, stateCamZoom, frameSize, extraMinEffZoom = 0) {
+    const proj = this._proj;
+    const minEffZoom = Math.max(proj.minEffX(), extraMinEffZoom);
     const zoomResolved = resolveCamera({
       targetWorld: target,
-      desiredEffZoom: stateEffZoom,
+      desiredEffZoom: proj.effX(stateCamZoom),
       worldBounds: this._worldBounds,
       frameSize,
       innerFramePct: this._innerFramePct,
       minEffZoom,
     });
-    this.targetZoom = zoomResolved.effectiveZoom / this._bsX;
+    this.targetZoom = proj.camZoomForEffX(zoomResolved.effectiveZoom);
 
     // CAMERA-GLIDE-TARGET-1 (fixes CAMERA-DETOUR cause D): the GRAMMAR-1 glide interpolates the offset from the
     // captured start to THIS endpoint across the whole glide, so the endpoint must be the DESTINATION framing —
@@ -2210,10 +2044,9 @@ export class CameraDirector {
     if (this._lerpPhase === 'glide') {
       panResolved = zoomResolved; // destination framing (the same resolve that set this.targetZoom)
     } else {
-      const currEffZoom = Math.max(this.zoom * this._bsX, minEffZoom);
       panResolved = resolveCamera({
         targetWorld: target,
-        desiredEffZoom: currEffZoom,
+        desiredEffZoom: Math.max(proj.effX(this.zoom), minEffZoom),
         worldBounds: this._worldBounds,
         frameSize,
         innerFramePct: this._innerFramePct,
@@ -2221,154 +2054,12 @@ export class CameraDirector {
       });
     }
     this.targetOffsetX = -panResolved.camX * panResolved.effectiveZoom;
-    this.targetOffsetY = this._closedOffsetY(target.y, panResolved.effectiveZoom, canvasH);
-    this._lastResolvedPanTarget = panResolved;
-  }
-
-  /**
-   * Coordinated pan+zoom target computation for open-track zoom states.
-   * Mirror of _setClosedTrackTargets but uses OPEN_TRACK_BASE_ZOOM instead of bsX.
-   * Open tracks apply uniform zoom (cam.zoom × BASE_ZOOM), so Y offset is also uniform.
-   * @param {{ x: number, y: number }} target  World-space pan target
-   * @param {number} stateZoom  cam.zoom for this state (not effective zoom)
-   * @param {{ width: number, height: number }} frameSize
-   */
-  _setOpenTrackTargets(target, stateZoom, frameSize, extraMinEffZoom = 0) {
-    const BASE = OPEN_TRACK_BASE_ZOOM;
-    const minEffZoom = Math.max(this.overviewZoom * BASE, extraMinEffZoom);
-    const stateEffZoom = stateZoom * BASE;
-
-    const zoomResolved = resolveCamera({
-      targetWorld: target,
-      desiredEffZoom: stateEffZoom,
-      worldBounds: this._worldBounds,
-      frameSize,
-      innerFramePct: this._innerFramePct,
-      minEffZoom,
-    });
-    this.targetZoom = zoomResolved.effectiveZoom / BASE;
-
-    // CAMERA-GLIDE-TARGET-1 (see _setClosedTrackTargets): the glide endpoint is resolved at the DESTINATION zoom,
-    // not the live easing zoom; the entry/tracking paths keep the live-zoom endpoint (they pin offset to it each
-    // frame). Open tracks mirror the closed-track fix.
-    let panResolved;
-    if (this._lerpPhase === 'glide') {
-      panResolved = zoomResolved; // destination framing
-    } else {
-      const currEffZoom = Math.max(this.zoom * BASE, minEffZoom);
-      panResolved = resolveCamera({
-        targetWorld: target,
-        desiredEffZoom: currEffZoom,
-        worldBounds: this._worldBounds,
-        frameSize,
-        innerFramePct: this._innerFramePct,
-        minEffZoom,
-      });
-    }
-    this.targetOffsetX = -panResolved.camX * panResolved.effectiveZoom;
-    this.targetOffsetY = -panResolved.camY * panResolved.effectiveZoom;
-    this._lastResolvedPanTarget = panResolved;
-  }
-
-  /**
-   * OVERVIEW-FRAMING-1 — frame the LEADER + the next (overviewFrameRacers − 1) racers, as a computed
-   * rule (replacing the old fixed radial offset toward the shape centre). The owner's rule:
-   *   1. Group = leader + next N−1 in running order (racers sorted by t descending).
-   *   2. Derive the zoom to FIT the group's world bounding box within innerFramePct of the frame.
-   *   3. FLOOR the zoom at the minimum sprite size (`overviewMinSpriteFrac` × frame width); the floor
-   *      OUTRANKS the count — legibility beats fitting everyone.
-   *   4. Frame centre = the box centre, which sits BEHIND the leader (toward the field, i.e. toward the
-   *      followers who ARE backward along the track) — the leader is shown but not centred.
-   *   6. GUARANTEE (outranks the offset): the leader is ALWAYS kept inside innerFramePct. If the offset,
-   *      the world-edge clamp, or the sprite floor would push him out, the centre yields toward the
-   *      leader — never the leader off-screen. Nothing here is a pixel; everything is a fraction of the
-   *      frame, so the framing is identical at any resolution (checks 1/3/4; standing tests exist).
-   *
-   * resolveCamera fits only a SINGLE point (no bounding box, no sprite floor, no yield-the-offset
-   * guarantee), so this is a dedicated computation that reuses its world→screen + innerFramePct concepts.
-   * See reports/evolution/OVERVIEW-FRAMING-1.md.
-   *
-   * @param {Array<{x:number,y:number,t:number}>} sorted  racers sorted by t DESC (leader = sorted[0])
-   */
-  _setOverviewGroupTargets(sorted, frameSize) {
-    const fw = frameSize.width;
-    const fh = frameSize.height;
-    const inner = this._innerFramePct ?? DEFAULT_INNER_FRAME_PCT;
-    // Per-axis world→screen scale: effZoom = cam.zoom × axisScale (bsX/bsY closed, BASE_ZOOM open) —
-    // the SAME mapping the renderer applies (ctx.scale) and _closedOffsetY uses.
-    const axisX = this._isOpenTrack ? OPEN_TRACK_BASE_ZOOM : this._bsX;
-    const axisY = this._isOpenTrack ? OPEN_TRACK_BASE_ZOOM : this._bsY;
-
-    const n = Math.max(1, Math.round(this._overviewFrameRacers ?? 5));
-    const group = sorted.slice(0, Math.min(n, sorted.length));
-    const leader = group[0] ?? sorted[0] ?? { x: 0, y: 0 };
-
-    // (1) group world bounding box
-    let minx = Infinity,
-      maxx = -Infinity,
-      miny = Infinity,
-      maxy = -Infinity;
-    for (const r of group) {
-      if (r.x < minx) minx = r.x;
-      if (r.x > maxx) maxx = r.x;
-      if (r.y < miny) miny = r.y;
-      if (r.y > maxy) maxy = r.y;
-    }
-    const boxW = Math.max(1, maxx - minx);
-    const boxH = Math.max(1, maxy - miny);
-
-    // (2) zoom that fits the box within the inner frame (per axis → take the more zoomed-OUT one)
-    const zoomFit = Math.min((inner * fw) / (axisX * boxW), (inner * fh) / (axisY * boxH));
-    // ceiling: never tighter than the normal overview zoom (OVERVIEW must not become a leader-zoom)
-    const zoomCeil = this._overviewSnapZoom ?? this._overviewStateZoom ?? this.overviewZoom;
-    // (3) floor: a racer sprite must stay ≥ overviewMinSpriteFrac of the frame width (legibility)
-    const minSpriteScreen = Math.max(0, this._overviewMinSpriteFrac ?? 0) * fw;
-    const refBody = this._drawnBodyWidthRefPx > 0 ? this._drawnBodyWidthRefPx : 36;
-    const zoomFloor = minSpriteScreen > 0 ? minSpriteScreen / (refBody * axisX) : 0;
-    // fit, but never tighter than overview, and never below the sprite floor (floor outranks count) or
-    // the whole-world zoom
-    let zoom = Math.min(zoomCeil, zoomFit);
-    zoom = Math.max(zoom, zoomFloor, this.overviewZoom);
-
-    const effX = zoom * axisX;
-    const effY = zoom * axisY;
-
-    // (4) frame centre = box centre (behind the leader, toward the field)
-    let cx = (minx + maxx) / 2;
-    let cy = (miny + maxy) / 2;
-
-    // world-edge clamp (best-effort: keep the viewport inside the world where it fits) — this YIELDS to
-    // the leader guarantee below, which runs last.
-    cx = this._clampCentreToBounds(
-      cx,
-      fw / (2 * effX),
-      this._worldBounds.minX,
-      this._worldBounds.maxX
+    this.targetOffsetY = this._offsetYFor(
+      target.y,
+      proj.camZoomForEffX(panResolved.effectiveZoom),
+      frameSize.height
     );
-    cy = this._clampCentreToBounds(
-      cy,
-      fh / (2 * effY),
-      this._worldBounds.minY,
-      this._worldBounds.maxY
-    );
-
-    // (6) ABSOLUTE leader guarantee: keep the leader inside innerFramePct. This clamp is LAST, so no
-    // slider / resolution / floor can crop him — the centre yields toward the leader, never vice versa.
-    const maxOffX = ((inner / 2) * fw) / effX;
-    const maxOffY = ((inner / 2) * fh) / effY;
-    if (Math.abs(leader.x - cx) > maxOffX) cx = leader.x - Math.sign(leader.x - cx) * maxOffX;
-    if (Math.abs(leader.y - cy) > maxOffY) cy = leader.y - Math.sign(leader.y - cy) * maxOffY;
-
-    this.targetZoom = zoom;
-    this.targetOffsetX = fw / 2 - cx * effX;
-    this.targetOffsetY = fh / 2 - cy * effY;
-  }
-
-  /** OVERVIEW-FRAMING-1 helper: keep a frame-centre coordinate so the viewport stays inside the world
-   *  when the world is larger than the viewport; centre it when the world is smaller than the viewport. */
-  _clampCentreToBounds(c, half, min, max) {
-    if (max - min <= 2 * half) return (min + max) / 2; // world smaller than viewport → centre it
-    return Math.max(min + half, Math.min(max - half, c));
+    this._lastResolvedPanTarget = panResolved;
   }
 
   /**
@@ -2403,342 +2094,181 @@ export class CameraDirector {
     return { x: this._smoothedFocalX, y: this._smoothedFocalY };
   }
 
+  /**
+   * The track parameter `finishOverviewLookbackPx` of path length BEFORE the finish line — the
+   * stationary point FINISH_OVERVIEW frames so later finishers cross in shot.
+   * The open/closed test is a genuine TOPOLOGY question (wrap on a loop, clamp on a line) and is
+   * one of the 13. It used to be written out twice, verbatim (CAMERA-REFACTOR-0 C3 #6).
+   * @param {number} finishT
+   * @returns {number|null} lookback T, or null when there is no shape to measure against
+   */
+  _finishLookbackT(finishT) {
+    if (!this._shape) return null;
+    const normT = this._isOpenTrack ? Math.min(1, finishT) : ((finishT % 1) + 1) % 1;
+    const pathLen = this._shape.getTotalLength?.() ?? 0;
+    const lookbackFrac = pathLen > 0 ? this._finishOverviewLookbackPx / pathLen : 0;
+    return this._isOpenTrack
+      ? Math.max(0, normT - lookbackFrac)
+      : (((normT - lookbackFrac) % 1) + 1) % 1;
+  }
+
+  /**
+   * The world point on the racing line at the camera's current track parameter, or null.
+   * The open/closed test here is a genuine TOPOLOGY question — does the track parameter WRAP
+   * (a loop) or CLAMP (a line)? It was written out at six separate call sites; it lives here now.
+   */
+  _shapePosAtCamT() {
+    if (this._camT === null || !this._shape) return null;
+    const t = this._isOpenTrack ? Math.max(0, Math.min(1, this._camT)) : ((this._camT % 1) + 1) % 1;
+    return this._shape.getPosition(t, 0);
+  }
+
+  /** True while the entry/lead-in pan should follow _camT along the racing line. */
+  _panFollowsCamT() {
+    return this._camT !== null && this._shape && this._observerPhase !== 'follow';
+  }
+
+  /**
+   * CAMERA-FRAMING-1: THE framing rule, once, for every state.
+   *
+   * The owner's design: a state is described by three things and only three — ANCHOR (who the camera
+   * is on), GUARANTEE (who must stay in frame; the zoom widens to honour it) and the per-state ZOOM
+   * in track widths. Frame POSITION is not a fourth setting: it follows from "is there anything
+   * worth seeing ahead of the subject?", answered once per state in framingRule.js.
+   *
+   * What stood here before was a six-case switch in which each state resolved its own pan target, only
+   * LEADER received the forward bias, LEAD_CHANGE had no case at all (it fell through `panTarget`'s
+   * default centroid branch), and PHOTO_FINISH borrowed BATTLE's numbers. The per-state part is now
+   * only `_framingSubjects` — WHO — and everything after it is common.
+   *
+   * OVERVIEW keeps three anchor exceptions (start-of-race, finish lookback, entry-phase T-space pan):
+   * they choose a DIFFERENT ANCHOR for good reasons, not a different rule, and they run through the
+   * same guarantee and the same position step as everything else.
+   */
   _setTargets(racers, canvasW, canvasH, raceState) {
     const focusRacers = this._focusRacers(racers);
     const frameSize = { width: canvasW, height: canvasH };
+    const framing = framingFor(this.state);
+    const stateZoom = this._stateCamZoom();
 
-    switch (this.state) {
-      case CAM_STATE.OVERVIEW: {
-        // Normalized snap zoom committed at OVERVIEW entry — same for open and closed tracks.
-        // Falls back to _overviewStateZoom before the first OVERVIEW transition fires.
-        const _ovSnapZoom = this._overviewSnapZoom ?? this._overviewStateZoom;
+    // ── WHO ────────────────────────────────────────────────────────────────────────────────────
+    const subjects = this._framingSubjects(racers, focusRacers);
+    let panTarget = subjects.point;
+    let headingT = subjects.t;
+    let pinAcross = true;
 
-        // Entry phase with T-space lerp active: pan follows _camT along the track curve,
-        // matching LEADER/BATTLE/COMEBACK — prevents hard snap to leader position on frame 1.
-        if (this._lerpPhase === 'entry' && this._camT !== null && this._shape) {
-          const entryPanTarget = this._isOpenTrack
-            ? this._shape.getPosition(Math.max(0, Math.min(1, this._camT)), 0)
-            : this._shape.getPosition(((this._camT % 1) + 1) % 1, 0);
-          if (entryPanTarget) {
-            if (this._isOpenTrack) {
-              this._setOpenTrackTargets(
-                entryPanTarget,
-                _ovSnapZoom,
-                frameSize,
-                this._overviewMinEffZoom
-              );
-            } else {
-              this._setClosedTrackTargets(
-                entryPanTarget,
-                _ovSnapZoom * this._bsX,
-                frameSize,
-                canvasH
-              );
-            }
-          }
-          break;
+    // OVERVIEW's anchor exceptions, in priority order. Each REPLACES the anchor and then rejoins.
+    if (this.state === CAM_STATE.OVERVIEW) {
+      const startPhase = raceState && raceState.raceElapsed < START_PHASE_DURATION;
+      if (this._inFinishMode && this._shape && raceState?.finishT > 0) {
+        // Hold a fixed point behind the line so the approach stays visible while the winner runs out.
+        const lookbackT = this._finishLookbackT(raceState.finishT);
+        const target = lookbackT === null ? null : this._shape.getPosition(lookbackT, 0);
+        if (target) {
+          panTarget = target;
+          headingT = lookbackT;
         }
-        // finishMode: center camera on a fixed point finishOverviewLookbackPx before the finish
-        // line. Using the winner's live position as anchor caused the camera to drift forward
-        // with the runout movement — this approach keeps the target stationary so the
-        // approach section to the finish stays visible throughout FINISH_OVERVIEW.
-        if (this._inFinishMode && this._shape && raceState?.finishT > 0) {
-          const normT = this._isOpenTrack
-            ? Math.min(1, raceState.finishT)
-            : ((raceState.finishT % 1) + 1) % 1;
-          const pathLen = this._shape.getTotalLength?.() ?? 0;
-          const lookbackFrac = pathLen > 0 ? this._finishOverviewLookbackPx / pathLen : 0;
-          const lookbackT = this._isOpenTrack
-            ? Math.max(0, normT - lookbackFrac)
-            : (((normT - lookbackFrac) % 1) + 1) % 1;
-          const target = this._shape.getPosition(lookbackT, 0);
-          if (target) {
-            if (this._isOpenTrack) {
-              this._setOpenTrackTargets(target, _ovSnapZoom, frameSize, this._overviewMinEffZoom);
-            } else {
-              this._setClosedTrackTargets(target, _ovSnapZoom * this._bsX, frameSize, canvasH);
-            }
-            break;
-          }
-        }
-        const isStartPhase = raceState && raceState.raceElapsed < START_PHASE_DURATION;
-        if (isStartPhase) {
-          // Start phase: centroid of the full field at the overview snap zoom, so no racer is cropped
-          // at the gun (before a leader has emerged).
-          const startTarget = getPanTarget(
-            CAM_STATE.OVERVIEW,
-            racers.length ? racers : focusRacers,
-            this._shape
-          );
-          if (this._isOpenTrack) {
-            this._setOpenTrackTargets(
-              startTarget,
-              _ovSnapZoom,
-              frameSize,
-              this._overviewMinEffZoom
-            );
-          } else {
-            this._setClosedTrackTargets(startTarget, _ovSnapZoom * this._bsX, frameSize, canvasH);
-          }
-        } else if (!this._isOpenTrack) {
-          // OVERVIEW-FRAMING-1 (CLOSED tracks — the defect case, where the field WRAPS and the old
-          // whole-world overview + toward-shape-centre radial offset pushed the leader off the edge):
-          // frame the leader + next N−1 with a derived zoom (floored at the min sprite size), the centre
-          // behind the leader, and the leader ALWAYS kept in frame.
-          const sortedByT = [...racers].sort((a, b) => b.t - a.t);
-          this._setOverviewGroupTargets(sortedByT.length ? sortedByT : focusRacers, frameSize);
-        } else {
-          // OPEN tracks: the whole-track overview already frames the leader + the full field (no wrap, no
-          // off-edge problem), so it already satisfies "show the leader + N". Keep it — leader-centred at
-          // the overview snap zoom (the dead radial offset removed). The new derived-group framing is
-          // neither needed nor validated for the open-track uniform-zoom path; see OVERVIEW-FRAMING-1.md.
-          const leaderPos =
-            focusRacers.length > 0 ? { x: focusRacers[0].x, y: focusRacers[0].y } : { x: 0, y: 0 };
-          this._setOpenTrackTargets(leaderPos, _ovSnapZoom, frameSize, this._overviewMinEffZoom);
-        }
-        break;
-      }
-
-      case CAM_STATE.LEADER_ZOOM: {
-        this.targetZoom = this._leaderZoom;
-        const leaderT = focusRacers[0]?.t ?? null;
-        if (this._isOpenTrack) {
-          let panTarget;
-          if (this._camT !== null && this._shape && this._observerPhase !== 'follow') {
-            panTarget = this._shape.getPosition(Math.max(0, Math.min(1, this._camT)), 0);
-          } else {
-            const raw = getPanTarget(CAM_STATE.LEADER_ZOOM, focusRacers, this._shape);
-            panTarget = this._smoothFocal(raw.x, raw.y);
-          }
-          // CAMERA-FOCUS-3 forward-framing: shift the pan target backward along the leader's motion so
-          // the leader sits FORWARD in frame with the pack behind him (only in the steady follow phase).
-          // Open tracks use a uniform zoom on both axes.
-          if (panTarget && this._observerPhase === 'follow') {
-            const ez = this._leaderZoom * OPEN_TRACK_BASE_ZOOM;
-            panTarget = this._applyLeaderForwardBias(panTarget, leaderT, ez, ez, canvasW, canvasH);
-          }
-          if (panTarget) this._setOpenTrackTargets(panTarget, this._leaderZoom, frameSize);
-        } else {
-          let panTarget;
-          if (this._camT !== null && this._shape && this._observerPhase !== 'follow') {
-            panTarget = this._shape.getPosition(((this._camT % 1) + 1) % 1, 0);
-          } else {
-            const raw = getPanTarget(CAM_STATE.LEADER_ZOOM, focusRacers, this._shape);
-            panTarget = this._smoothFocal(raw.x, raw.y);
-          }
-          if (panTarget && this._observerPhase === 'follow') {
-            // closed tracks: per-axis zoom (bsX on X, bsY on Y) — matches the live ctx.scale.
-            panTarget = this._applyLeaderForwardBias(
-              panTarget,
-              leaderT,
-              this._leaderZoom * this._bsX,
-              this._leaderZoom * this._bsY,
-              canvasW,
-              canvasH
-            );
-          }
-          if (panTarget) {
-            this._setClosedTrackTargets(
-              panTarget,
-              this._leaderZoom * this._bsX,
-              frameSize,
-              canvasH
-            );
-          }
-        }
-        break;
-      }
-
-      case CAM_STATE.BATTLE_ZOOM: {
-        this.targetZoom = this._battleZoom;
-        // Tracking-phase pan target: follow centroid of live battle group.
-        // When group is empty (direct state assignment in tests) fall back to shape midpoint.
-        const liveGroup = this._findGroupRacers(racers);
-        const battleFallback =
-          liveGroup.length > 0
-            ? {
-                x: liveGroup.reduce((s, r) => s + r.x, 0) / liveGroup.length,
-                y: liveGroup.reduce((s, r) => s + r.y, 0) / liveGroup.length,
-              }
-            : getPanTarget(CAM_STATE.BATTLE_ZOOM, focusRacers, this._shape);
-        if (this._isOpenTrack) {
-          const panTarget =
-            this._camT !== null && this._shape && this._observerPhase !== 'follow'
-              ? this._shape.getPosition(Math.max(0, Math.min(1, this._camT)), 0)
-              : battleFallback;
-          if (panTarget) this._setOpenTrackTargets(panTarget, this._battleZoom, frameSize);
-        } else {
-          const panTarget =
-            this._camT !== null && this._shape && this._observerPhase !== 'follow'
-              ? this._shape.getPosition(((this._camT % 1) + 1) % 1, 0)
-              : battleFallback;
-          if (panTarget) {
-            this._setClosedTrackTargets(
-              panTarget,
-              this._battleZoom * this._bsX,
-              frameSize,
-              canvasH
-            );
-          }
-        }
-        break;
-      }
-
-      case CAM_STATE.PHOTO_FINISH: {
-        // 15a: tight top-2 group shot. Reuses BATTLE's fixed group zoom and the arc-midpoint pan
-        // primitive, but on the DETERMINISTIC top-2 focus racers (getPanTarget of focusRacers[0..1])
-        // — NOT the live battle-group detection. _camT (top-2 midpoint T, set on entry/tracking)
-        // pans along the racing line; falls back to the arc-midpoint when _camT is unset.
-        this.targetZoom = this._battleZoom;
-        const pfFallback = getPanTarget(CAM_STATE.BATTLE_ZOOM, focusRacers, this._shape);
-        if (this._isOpenTrack) {
-          const panTarget =
-            this._camT !== null && this._shape && this._observerPhase !== 'follow'
-              ? this._shape.getPosition(Math.max(0, Math.min(1, this._camT)), 0)
-              : pfFallback;
-          if (panTarget) this._setOpenTrackTargets(panTarget, this._battleZoom, frameSize);
-        } else {
-          const panTarget =
-            this._camT !== null && this._shape && this._observerPhase !== 'follow'
-              ? this._shape.getPosition(((this._camT % 1) + 1) % 1, 0)
-              : pfFallback;
-          if (panTarget) {
-            this._setClosedTrackTargets(
-              panTarget,
-              this._battleZoom * this._bsX,
-              frameSize,
-              canvasH
-            );
-          }
-        }
-        break;
-      }
-
-      case CAM_STATE.COMEBACK_ZOOM: {
-        this.targetZoom = this._comebackZoom;
-        // When a comeback racer was locked at state entry, follow them; otherwise fall back to
-        // rank-3 racer (existing behavior, keeps tests passing without a locked racer).
-        const lockedCBRacer = this._findByIndex(
-          racers,
-          this._comebackLockedRacerIndex,
-          this._comebackLockedRacer
+      } else if (startPhase) {
+        // Before a leader exists, hold the whole field so nobody is cropped at the gun. The field
+        // spans the whole corridor here and there is no single subject, so the across-track pin does
+        // not apply — this branch keeps the centroid it always had.
+        panTarget = getPanTarget(
+          CAM_STATE.OVERVIEW,
+          racers.length ? racers : focusRacers,
+          this._shape
         );
-        // Raw focal position: locked racer's physics x,y (or rank-3 fallback).
-        // Smoothed via _smoothFocal in follow phase to remove brake-induced velocity oscillation.
-        const rawFocal = lockedCBRacer
-          ? { x: lockedCBRacer.x, y: lockedCBRacer.y }
-          : getPanTarget(CAM_STATE.COMEBACK_ZOOM, focusRacers, this._shape);
-        if (this._isOpenTrack) {
-          let panTarget;
-          if (this._camT !== null && this._shape && this._observerPhase !== 'follow') {
-            panTarget = this._shape.getPosition(Math.max(0, Math.min(1, this._camT)), 0);
-          } else {
-            panTarget = this._smoothFocal(rawFocal.x, rawFocal.y);
-          }
-          if (panTarget) this._setOpenTrackTargets(panTarget, this._comebackZoom, frameSize);
-        } else {
-          let panTarget;
-          if (this._camT !== null && this._shape && this._observerPhase !== 'follow') {
-            panTarget = this._shape.getPosition(((this._camT % 1) + 1) % 1, 0);
-          } else {
-            panTarget = this._smoothFocal(rawFocal.x, rawFocal.y);
-          }
-          if (panTarget) {
-            this._setClosedTrackTargets(
-              panTarget,
-              this._comebackZoom * this._bsX,
-              frameSize,
-              canvasH
-            );
-          }
-        }
-        break;
-      }
-
-      case CAM_STATE.LEAD_CHANGE: {
-        this.targetZoom = this._leadChangeZoom;
-        if (this._isOpenTrack) {
-          const panTarget =
-            this._camT !== null && this._shape && this._observerPhase !== 'follow'
-              ? this._shape.getPosition(Math.max(0, Math.min(1, this._camT)), 0)
-              : getPanTarget(CAM_STATE.LEADER_ZOOM, focusRacers, this._shape);
-          if (panTarget) this._setOpenTrackTargets(panTarget, this._leadChangeZoom, frameSize);
-        } else {
-          const panTarget =
-            this._camT !== null && this._shape && this._observerPhase !== 'follow'
-              ? this._shape.getPosition(((this._camT % 1) + 1) % 1, 0)
-              : getPanTarget(CAM_STATE.LEADER_ZOOM, focusRacers, this._shape);
-          if (panTarget) {
-            this._setClosedTrackTargets(
-              panTarget,
-              this._leadChangeZoom * this._bsX,
-              frameSize,
-              canvasH
-            );
-          }
-        }
-        break;
+        pinAcross = false;
       }
     }
 
-    // Min-visible zoom floor (LEADER-MINVIS-1): in LEADER_ZOOM / LEAD_CHANGE the camera may zoom to the
-    // profile value BUT is clamped so it never zooms TIGHTER than the zoom that keeps min(minRacersVisible,
-    // active field) racers on canvas around the pan focus. This floor is computed DIRECTLY each frame from
-    // the racers' geometry (self-consistent — no dependence on the lagging live zoom/offset), so the rule
-    // holds instantly and survives state transitions. It replaces the old slow per-frame ratchet, which
-    // first zoomed all the way in to the tight profile (dropping to ~1 visible on a strung field) and only
-    // crawled back out over several seconds at zoomOutStepPerFrame, restarting on every transition — so in a
-    // live race the LEADER view sat at the tight zoom showing too few racers. minRacersVisible = 0 disables
-    // the feature (byte-compatible with the pre-feature world). The visual change is still smoothed by the
-    // normal zoom lerp (this.zoom → targetZoom).
-    if (
-      this._minRacersVisible > 0 &&
-      (this.state === CAM_STATE.LEADER_ZOOM || this.state === CAM_STATE.LEAD_CHANGE)
-    ) {
-      const activeCount = racers ? racers.reduce((n, r) => n + (r.finished ? 0 : 1), 0) : 0;
-      const visTarget = Math.min(this._minRacersVisible, activeCount);
-      const focus = getPanTarget(CAM_STATE.LEADER_ZOOM, focusRacers, this._shape);
-      // World-size-independent hard floor: leaderMinZoomFraction × leaderZoom bounds how far out the camera
-      // may go (identical visual scale on every world). On closed tracks cam.zoom must also stay >= 1.0:
-      // below that, _setClosedTrackTargets computes the pan offset at minEffZoom = bsX but rendering uses the
-      // lower effZoom, squeezing the world into the top-left corner (the black-screen bug).
-      const fractionFloor = this._leaderMinZoomFraction * this._leaderZoom;
-      const effectiveFloor = this._isOpenTrack
-        ? Math.max(this._leaderMinZoom, fractionFloor)
-        : Math.max(1.0, fractionFloor);
-      if (visTarget > 0 && focus) {
-        const divisor = this._isOpenTrack ? OPEN_TRACK_BASE_ZOOM : this._bsX;
-        const minVisZoom = this._zoomFloorForMinVisible(
-          racers,
-          focus.x,
-          focus.y,
-          visTarget,
-          divisor,
-          canvasW,
-          canvasH
-        );
-        // Never tighter than min-visible; never looser than the hard floor.
-        const rawFloor = Math.max(effectiveFloor, Math.min(this.targetZoom, minVisZoom));
-        // CAMERA-JITTER-1: the raw floor is recomputed from the visTarget-th nearest racer, which flips
-        // frame-to-frame in the dense COMBO15 field — feeding it to targetZoom raw makes the zoom (and the
-        // coupled pan) swim. Smooth it ASYMMETRICALLY: LOOSEN (zoom out, lower floor) immediately so a racer
-        // is never cropped, but TIGHTEN (zoom in, raise floor) only slowly (≤ zoomOutStepPerFrame per frame,
-        // dt-scaled) so a transient flip can never snap the camera inward. The result pins to the loosest
-        // recent value and creeps in gently, giving the zoom lerp a STABLE target. First frame of the phase
-        // (floor === null after a state transition) snaps to the raw value — correct framing on entry.
-        if (this._leaderPhaseZoomFloor === null || rawFloor <= this._leaderPhaseZoomFloor) {
-          this._leaderPhaseZoomFloor = rawFloor;
-        } else {
-          const dtScale = (this._lastDt * FRAME_RATE) / 1000;
-          this._leaderPhaseZoomFloor = Math.min(
-            rawFloor,
-            this._leaderPhaseZoomFloor + this._zoomOutStepPerFrame * dtScale
-          );
-        }
-        this.targetZoom = Math.min(this.targetZoom, this._leaderPhaseZoomFloor);
+    // Entry-phase T-space pan: the camera travels along the racing line to its new subject rather
+    // than cutting across the infield. Same anchor, different route to it.
+    const followsCamT = this._panFollowsCamT();
+    if (followsCamT) {
+      const camTPos = this._shapePosAtCamT();
+      if (camTPos) {
+        panTarget = camTPos;
+        headingT = this._camT;
+        pinAcross = false; // the T-space pan is already ON the centreline by construction
       }
+    }
+
+    // ── ACROSS THE TRACK: the corridor centreline. ALONG the track: unchanged. ─────────────────
+    // CAMERA-LATERAL-1. Done BEFORE the focal smoothing, so the smoothing keeps doing its job on the
+    // along-track motion, and before the guarantees, so each of them measures from the anchor the
+    // camera will actually use. See _centrelineAt for why this is NOT the CAMERA-FOCUS-3 defect.
+    if (pinAcross) {
+      const onCentre = this._centrelineAt(headingT);
+      if (onCentre) {
+        panTarget = onCentre;
+        subjects.point = onCentre;
+      }
+    }
+
+    if (
+      panTarget &&
+      !followsCamT &&
+      (this.state === CAM_STATE.LEADER_ZOOM || this.state === CAM_STATE.COMEBACK_ZOOM)
+    ) {
+      // Focal smoothing removes the brake-induced velocity oscillation on single-racer anchors.
+      panTarget = this._smoothFocal(panTarget.x, panTarget.y);
+    }
+
+    if (!panTarget) return;
+
+    // ── HOW FAR IN: the state setting, WIDENED by the guarantees (never tightened) ─────────────
+    // A LIMIT, not a correction: the target is min(setting, geometric, dramaturgical) computed
+    // BEFORE the camera moves, so it never zooms in and then backs out. In-then-out is pumping.
+    const guaranteed = Math.min(
+      stateZoom,
+      this._guaranteeCeiling(subjects, frameSize),
+      this._companyCeiling(subjects, racers, frameSize)
+    );
+
+    // ── WHERE IN FRAME: from the principle, not from a slider ──────────────────────────────────
+    if (framing.position === POSITION.FORWARD && this._observerPhase === 'follow') {
+      panTarget = this._applyLeaderForwardBias(
+        panTarget,
+        headingT,
+        this._proj.effX(guaranteed),
+        this._proj.effY(guaranteed),
+        canvasW,
+        canvasH
+      );
+    }
+
+    // ── AND ACROSS IT: shift off the centreline only when a guaranteed subject needs it ────────
+    panTarget = this._applyLateralGuarantee(panTarget, headingT, subjects, guaranteed, frameSize);
+
+    this._setTrackTargets(panTarget, guaranteed, frameSize);
+  }
+
+  /** The per-state zoom setting, in cam.zoom. One lookup, so no state can silently borrow another's. */
+  _stateCamZoom() {
+    switch (this.state) {
+      case CAM_STATE.OVERVIEW:
+        return this._overviewSnapZoom ?? this._overviewStateZoom;
+      case CAM_STATE.BATTLE_ZOOM:
+        return this._battleZoom;
+      case CAM_STATE.COMEBACK_ZOOM:
+        return this._comebackZoom;
+      case CAM_STATE.LEAD_CHANGE:
+        return this._leadChangeZoom;
+      case CAM_STATE.PHOTO_FINISH:
+        return this._photoFinishZoom;
+      case CAM_STATE.LEADER_ZOOM:
+      default:
+        return this._leaderZoom;
     }
   }
+
+  // CAMERA-FRAMING-1: the min-visible zoom FLOOR that stood here is GONE, and with it the
+  // per-axis defect it carried (it fed `_countVisibleRacers` / `_zoomFloorForMinVisible` a single
+  // effZoom for BOTH axes, over-stating screen Y by 18.5% on every closed track — the bsX/bsY
+  // family, third occurrence). It was a second zoom authority that STEERED: it read where the
+  // racers happened to be and pulled the zoom out around them, fighting the state's own setting and
+  // ratcheting frame to frame. Its job — "do not crop what matters" — is now the GUARANTEE, which
+  // widens for named subjects and never for a headcount. See framingRule.js and the report.
 
   /**
    * Phased observer: time-based lead-in / follow / lead-out for zoom states (both track types).
@@ -2819,7 +2349,6 @@ export class CameraDirector {
     ) {
       this._observerPhase = 'lead-out';
       this._leadOutStartCamT = this._camT;
-      this._leadOutStartTs = ts;
       // Camera moves at ~half racer speed during lead-out, decelerating via EMA.
       // _prevFocusT here is update()'s first write this frame (~line 723); _computePhasedPanTarget
       // has not yet written it on this code path — all its writes come at the exits below.
@@ -2903,36 +2432,17 @@ export class CameraDirector {
       cy = racers.reduce((s, r) => s + (r.y ?? cy), 0) / racers.length;
     }
 
-    if (this._isOpenTrack) {
-      const effZoom = targetZoom * OPEN_TRACK_BASE_ZOOM;
-      const camXMax = Math.max(this._worldBounds.minX, this._worldBounds.maxX - canvasW / effZoom);
-      const camX = Math.max(
-        this._worldBounds.minX,
-        Math.min(camXMax, cx - canvasW / (2 * effZoom))
-      );
-      this.offsetX = -camX * effZoom;
-      const camYMax = Math.max(this._worldBounds.minY, this._worldBounds.maxY - canvasH / effZoom);
-      const camY = Math.max(
-        this._worldBounds.minY,
-        Math.min(camYMax, cy - canvasH / (2 * effZoom))
-      );
-      this.offsetY = -camY * effZoom;
-    } else {
-      const effZoomX = targetZoom * this._bsX;
-      const camXMax = Math.max(this._worldBounds.minX, this._worldBounds.maxX - canvasW / effZoomX);
-      const camX = Math.max(
-        this._worldBounds.minX,
-        Math.min(camXMax, cx - canvasW / (2 * effZoomX))
-      );
-      this.offsetX = -camX * effZoomX;
-      const effZoomY = targetZoom * this._bsY;
-      const camYMax = Math.max(this._worldBounds.minY, this._worldBounds.maxY - canvasH / effZoomY);
-      const camY = Math.max(
-        this._worldBounds.minY,
-        Math.min(camYMax, cy - canvasH / (2 * effZoomY))
-      );
-      this.offsetY = -camY * effZoomY;
-    }
+    // CAMERA-PROJECTION-1: one centring computation per axis, from the projection. The former
+    // open/closed branches were the same eight lines twice — open used one scale on both axes,
+    // closed used bsX on X and bsY on Y. `effY == effX` on open, so this reduces to it exactly.
+    const effZoomX = this._proj.effX(targetZoom);
+    const effZoomY = this._proj.effY(targetZoom);
+    const camXMax = Math.max(this._worldBounds.minX, this._worldBounds.maxX - canvasW / effZoomX);
+    const camX = Math.max(this._worldBounds.minX, Math.min(camXMax, cx - canvasW / (2 * effZoomX)));
+    this.offsetX = -camX * effZoomX;
+    const camYMax = Math.max(this._worldBounds.minY, this._worldBounds.maxY - canvasH / effZoomY);
+    const camY = Math.max(this._worldBounds.minY, Math.min(camYMax, cy - canvasH / (2 * effZoomY)));
+    this.offsetY = -camY * effZoomY;
     this.targetOffsetX = this.offsetX;
     this.targetOffsetY = this.offsetY;
     // Keep stateEnteredAt current so the first RACING update() sees a small stateAge.

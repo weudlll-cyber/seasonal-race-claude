@@ -3,12 +3,16 @@
 // Path:        client/src/modules/camera/panTarget.js
 // Project:     RaceArena
 // Created:     2026-05-07
-// Description: Layer 1 of the camera pan reform — pure function that identifies
-//              the world-coordinate point the camera should center on, given
-//              the current camera state and racer positions.
 //
-//              No camera knowledge, no pipeline knowledge.
-//              Racers must be sorted descending by t (leader = racers[0]).
+// WHAT THIS IS FOR: the WORLD POINT a state centres on, given its subjects. One pure function,
+// one answer per state, no knowledge of cameras or the pipeline.
+//
+// WHAT IT IS NOT FOR: zoom, framing, or which subjects those are — the caller has already decided
+// who matters and passes them in. On a closed track BATTLE's midpoint is taken along the RACING
+// LINE rather than as a euclidean average, because the euclidean midpoint of two racers on opposite
+// sides of a bend sits in the infield.
+//
+// CONTRACT: racers arrive sorted descending by t, so racers[0] is the leader.
 // ============================================================
 
 /**

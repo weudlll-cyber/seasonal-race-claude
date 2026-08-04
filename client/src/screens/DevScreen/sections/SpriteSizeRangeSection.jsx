@@ -6,7 +6,8 @@
 // Description: Dev-Screen tuning UI for the sprite size ceiling (§6.2).
 //              Controls the maximum sprite size in pixels, preventing sprites
 //              from becoming too large during dramatic close-ups.
-//              The minimum floor moved to Camera Behavior (spritePctOfCanvas.overview).
+//              The matching FLOOR is `minDrawnFrameFrac` under Camera Behavior
+//              (CAMERA-MIN-DRAW-1) — expressed as a share of the frame, not px.
 // ============================================================
 
 import { useState, useEffect } from 'react';

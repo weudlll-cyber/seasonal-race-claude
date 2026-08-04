@@ -109,6 +109,172 @@ still-easing zoom instead of the destination zoom). Presentation-only — the wo
   the leader, leader always in-frame — replacing the fixed toward-shape-centre radial offset). Sits at the
   CAMERA-GLIDE-TARGET-1 (cause-D) commit; restores the shipped world `dc4647be0f55ebdb` (presentation only).
 
+### Camera projection refactor — CAMERA-PROJECTION-1 (2026-08-01, branch `camera-refactor`)
+Return point captured before the camera gained a single world↔screen projection and lost the ~28 open/closed
+branches that existed only because closed computed world-relative and open computed fixed-absolute. The refactor
+is behaviour-preserving by construction — proven by a frame-by-frame replay diff, not by a fingerprint (the
+simulation is untouched and no simulation file is in the diff).
+- `pre/projection` (`54cbe5d4`, 2026-08-01) — the pre-refactor state: the two CAMERA-REFACTOR measurement
+  reports, before `projection.js` existed and while `_setClosedTrackTargets` / `_setOpenTrackTargets` /
+  `_closedOffsetY` were still three separate functions. Camera-only; the shipped world `dc4647be0f55ebdb` is
+  untouched on both sides of this tag.
+
+### Camera zoom unit — CAMERA-ZOOM-UNIT-1 (2026-08-02, branch `camera-refactor`)
+Return point captured before the camera's five separate zoom formulas — four states on an absolute
+`spriteScale` screen-scale, OVERVIEW on a target SPRITE SIZE normalised by a start-grid packing quantity —
+became ONE rule whose parameter is TRACK WIDTHS. The picture deliberately CHANGES here: the owner chose
+clean round defaults over reproducing the old framing, so this tag is the only way back to the old picture.
+- `pre/zoom-unit` (`2488124f`, 2026-08-02) — the pre-change state: `spriteScale` per state, OVERVIEW's
+  `overviewTargetScreenPx / (2 x W_ref / racersPerRow)` derivation, and the retired `overviewClosedTrackZoom`
+  / `overviewMinEffZoom` keys still present. Camera-only; the shipped world `dc4647be0f55ebdb` is untouched
+  on both sides of this tag. Config schema v17 (v18 is the track-widths schema).
+
+### Camera picture fixes — CAMERA-PICTURE-FIXES-1 (2026-08-02, branch `camera-refactor`)
+Return point captured before two MEASURED defects that both move the picture were cleared, ahead of the
+framing block so its effect is not judged through a known error: the forward-bias span formula
+(`|cos|·W + |sin|·H`, 1.436x over the geometric extent at the owner's 74 deg heading) and the render-time
+sprite floor (`Math.max(proportionalScreenPx, minTargetScreenPx)`, which the owner does not want).
+- `pre/picture-fixes` (`854e2f87`, 2026-08-02) — the post-zoom-unit state: `leaderForwardFrac` 0.66
+  displacing 23.0pp instead of 16.0pp on a diagonal heading, the sprite floor still binding, and
+  `overviewOffsetPx` still present as a dead key. Camera/render only; the shipped world
+  `dc4647be0f55ebdb` is untouched on both sides of this tag. Config schema v18.
+
+### Camera framing — CAMERA-FRAMING-1 (2026-08-02, branch `camera-refactor`)
+Return point captured before the second half of the owner's camera design: every state described by
+ANCHOR (who the camera is on) + GUARANTEE (who must stay in frame) + the already-shipped track-widths
+zoom, with frame position derived from one principle rather than being a fourth setting. The picture
+CHANGES here, most of all in LEAD_CHANGE — which holds 37.6% of all frames and had never been designed
+(it fell into `panTarget`'s default centroid branch and never received the forward bias).
+- `pre/framing` (`74bf88b1`, 2026-08-02) — the pre-change state: LEAD_CHANGE undefined in `panTarget.js`,
+  PHOTO_FINISH borrowing BATTLE's zoom, the min-visible floor and the containment clamp both STEERING,
+  and the floor's single-effZoom per-axis defect still live. Camera-only; the shipped world
+  `dc4647be0f55ebdb` is untouched on both sides. Config schema v19.
+
+### Camera company guarantee — CAMERA-COMPANY-1 (2026-08-02, branch `camera-refactor`)
+Return point captured before the min-racers floor came BACK, as a guarantee rather than a floor. It was
+deleted in CAMERA-FRAMING-1 as "a guarantee phrased as a headcount"; the owner corrected that reading —
+it was a DRAMATURGICAL guarantee ("do not show emptiness"), and its absence is visible in his
+post-framing screenshot: the leader huge and alone, *"das ist nicht spannend"*. The concept was right,
+the arithmetic was broken (one axis scale on both axes — the bsX/bsY family — competing with a zoom
+number that meant something different on every track). Both are fixed, so the idea returns cleanly.
+- `pre/company` (`5383750b`, 2026-08-02) — the state with corridor and pair guarantees only, where
+  nothing catches a LEADER setting of 1 or below when the shot goes empty. Camera-only; the shipped
+  world `dc4647be0f55ebdb` is untouched on both sides. Config schema v20.
+
+### Camera company guarantee, made proportionate — CAMERA-COMPANY-2 (2026-08-02, branch `camera-refactor`)
+Return point captured before the guarantee stopped being over-cautious. CAMERA-COMPANY-1 shipped it
+correct in KIND and too strong in DEGREE: `innerFramePct` (0.7) and `reach` (0.66) multiplied, so a
+companion was allowed only 46% of the frame chord, and the owner's 40-racer break-away widened to 2.32
+track widths where he asked for 1.0. The owner's decision here: **visible with a margin is enough** —
+a guaranteed companion does not have to sit inside the subject's safe region.
+- `pre/company-2` (`cfd47cd5`, 2026-08-02) — the state where the company guarantee reads
+  `innerFramePct` and applies ONE scalar `reach` in every direction, so it promises company inside the
+  safe region and delivers one racer fewer. Camera-only; the shipped world `dc4647be0f55ebdb` is
+  untouched on both sides. Config schema v20.
+
+### Camera zoom unit becomes a standard corridor — CAMERA-REFERENCE-WIDTH-1 (2026-08-03, branch `camera-refactor`)
+Return point captured before the zoom unit stopped dividing by each track's OWN corridor. Measurement
+found the reason the owner could see: a racer's height on screen came out as 1.9 / (racers per row) on
+all ten tracks, because the track width cancels on both sides — the camera divides by it and the
+start-grid packing sizes the sprite from it. Searound is the extreme on both counts (narrowest
+corridor, biggest animal) so its racer filled 31.7% of the frame against Mountainstreet's 9.5%. The
+unit now divides by a Dev Screen reference width instead, applied as `max(reference, actual)`.
+- `pre/reference-width` (`1abc9383`, 2026-08-03) — the last state where `trackWidths` means the
+  track's own corridor, the zoom unit carries its own full-track-width clamp, and the setting's range
+  starts at 1.0. Camera-only; the shipped world `dc4647be0f55ebdb` is untouched on both sides. Config
+  schema v20 (this block ships v21, which discards a stored v20 camera config).
+
+### Camera follows along the track, sits on the centreline across it — CAMERA-LATERAL-1 (2026-08-03, branch `camera-refactor`)
+Return point captured before the anchor stopped carrying the subject's LANE. The reference-width block
+tightened the shot (600 -> 225 world px on the 300 px tracks), which made an old defect visible rather
+than causing it: a lead change between racers in different lanes threw the picture sideways by 62-84
+world px, 28-37% of the shot. The camera now follows ALONG the track exactly as before and sits on the
+corridor CENTRELINE across it, with a lateral guarantee that shifts only when a guaranteed subject
+would otherwise leave the frame.
+- `pre/lateral` (`3b06f78f`, 2026-08-03) — the state where the pan anchor carries the subject's lateral
+  position on both axes. Camera-only; the shipped world `dc4647be0f55ebdb` is untouched on both sides.
+  Config schema v21 on both sides.
+
+### Config schema removed for good — CAMERA-NO-SCHEMA-1 (2026-08-03, branch `camera-refactor`)
+Return point captured before the camera config's `schemaVersion` was deleted. The owner's standing
+instruction, given four times: no schema, no version bumps, no migrations — he is the only person
+testing, there is nothing to migrate from and nobody to migrate for. The versioning was actively
+harmful: v20 and v21 each DISCARDED his stored camera config and he retyped it. Replaced by sane
+loading — defaults underneath, stored values on top, unknown or retired keys ignored — which gives the
+Lesson 193 protection with no versioning at all. `WORLD_SCHEMA_VERSION` in `raceConfigWorld.js` is a
+different thing and STAYS: a browser<->sim handshake on the exported world, which must abort loudly
+rather than be half-honoured, and which never touches his settings.
+- `pre/no-schema` (`41d2ed38`, 2026-08-03) — the last state carrying `schemaVersion: 21`, its equality
+  check in the loader and its save-time stamp. Camera-only; the shipped world `dc4647be0f55ebdb` is
+  untouched on both sides.
+
+### The readability floor returns — CAMERA-MIN-DRAW-1 (2026-08-03, branch `camera-refactor`)
+Return point captured before the minimum drawn size came back. CAMERA-PICTURE-FIXES-1 removed the
+render sprite floor on the reading that a racer's size should say how far in the camera is and nothing
+else — right about the implementation, wrong about the purpose. The owner found the cost himself: the
+Space Sprint START formation used to overlap slightly and no longer did, because the rockets had
+shrunk 29% (32.0 -> 22.8 screen px). The floor returns as a FRACTION OF THE FRAME and drawing-only,
+with a test pinning that it cannot reach the zoom. First block to run the new MINT TRIPWIRE: minted
+`dc4647be0f55ebdb`, unchanged.
+- `pre/min-draw` (`766a6f94`, 2026-08-03) — the state with no minimum drawn size at all, where a racer
+  on the three widest tracks is drawn at 3.17% of frame height in OVERVIEW. Shipped world
+  `dc4647be0f55ebdb` untouched on both sides.
+
+### Name tags: the unit, and readability before count — CAMERA-TAGS-1 (2026-08-03, branch `camera-refactor`)
+Return point captured before name tags stopped being "top N by race position". Three independent
+designs converged on the same skeleton; the accepted reframe is that the owner's two goals are not in
+tension — ten labels on a clump are unreadable AND cover more racers than one would, so decluttering
+buys both. Stage 1 of three: the unit and label-vs-label occlusion. Stages 2 (priority from the
+director's anchor + guarantee set) and 3 (multi-slot placement, sprite avoidance) are named in the
+module header. Minted `dc4647be0f55ebdb`, unchanged.
+- `pre/tags` (`77a7812d`, 2026-08-03) — the state where `tagVisibleMaxCount` selects the top 10 by
+  race position with no decluttering at all, and the label size is `max(8, round(11/effZoom))`.
+  Shipped world `dc4647be0f55ebdb` untouched on both sides.
+
+### The camera deep clean, before the merge — CAMERA-HYGIENE-1 (2026-08-03, branch `camera-refactor`)
+Return point captured before the hygiene pass the owner asked for BEFORE the merge, so master gets one
+clean landing. Its acceptance test is the good kind: hygiene must not move the picture, and that is
+PROVABLE — `scripts/camera-fingerprint.mjs` hashes every camera decision over ten seeded races, and
+every commit in this block holds it bit-identical at `deddc4b483a0689b`.
+- `pre/camera-hygiene` (`48069246`, 2026-08-03) — the pre-clean state: `QUICK_TEST_NAMES` duplicated
+  in two files, four independent reference-canvas constants, a dead `_clampCentreToBounds`. Shipped
+  world `dc4647be0f55ebdb` and camera fingerprint `deddc4b483a0689b` on both sides.
+
+### The four weights made to work — CAMERA-WEIGHTS-1 (2026-08-04, branch `camera-refactor`)
+Return point captured before the state-selection weights became an acceptance propensity. The HUD
+audit found all four inert; the diagnosis was not a dead wire but a dead EFFECT — 73.2% of selections
+had no candidate and 16.7% had exactly one, and a single candidate was returned without its weight
+being read, so eligibility decided 90% of the state distribution. **This block deliberately MOVES the
+camera fingerprint** — it is a change detector, not a prohibition. Camera `deddc4b483a0689b` ->
+`4b33c4d31bec93ea`; the shipped world `dc4647be0f55ebdb` is untouched.
+- `pre/weights` (`0c875e08`, 2026-08-04) — the state where a weight is a tie-break among coincidences,
+  `overviewWeight` 0.3 -> 10 moves OVERVIEW's share by 1.8pp, and the endgame exception fires
+  LEAD_CHANGE even with its weight at 0.
+
+### The unattended night — CAMERA-HYGIENE-2 (2026-08-04, branch `camera-refactor`)
+Return point captured before the deep clean that finished what CAMERA-HYGIENE-1 parked: four
+extractions out of `CameraDirector.js` (2935 -> 2487), sixteen dead constants, twenty redundant
+timing mirrors, and the HUD's "is the label true / is it needed" columns. **Camera fingerprint
+`4b33c4d31bec93ea` held BIT-IDENTICAL at every one of the eight commits** — unlike CAMERA-WEIGHTS-1
+before it, this block moves nothing. The mint tripwire fired twice (defaults.js and the Dev Screen
+section left `camera/`); shipped world `dc4647be0f55ebdb` unmoved both times.
+- `pre/camera-hygiene-2` (`be649aa9`, 2026-08-04) — the state where sixteen timing fallbacks are
+  duplicated between `CameraDirector.js` and `cameraTimingComputation.js`, `clampActiveCount` is a
+  getter returning a literal 0 with a test asserting it, and eighteen gate tests are coin flips
+  because a weight became a propensity one commit earlier.
+
+### The picture becomes a measurement — RENDER-FINGERPRINT-1 (2026-08-04, branch `camera-refactor`)
+Return point captured before the render path got its own change detector. Every camera block until
+now ended with "the picture did not move" as an ARGUMENT: the camera fingerprint covers what the
+DIRECTOR decides and stops at the edge of the canvas, which is why the battle-focus darkening had to
+be checked by eye. **New instrument `RENDER ae7e9243bd2add8b`** (`scripts/render-fingerprint.mjs`) —
+it hashes the SEQUENCE of draw calls, not the pixels, so it needs no browser and holds on any
+machine. Camera `4b33c4d31bec93ea` and world `dc4647be0f55ebdb` unmoved; mint tripwire fired and was
+checked.
+- `pre/render-fingerprint` (`9ae13a4e`, 2026-08-04) — the state where the draw sequence is ~210
+  lines inside RaceScreen's rAF callback closed over 42 pieces of component state, so nothing but a
+  browser can drive it; and `PHASE` is declared in three separate files.
+
 ## Active-phase tags (temporary scaffolding — to collapse later)
 
 Step-tags from the runaway phase (now CLOSED 2026-07-29, see below) and any later work — safe return points, not permanent anchors. They collapse into
@@ -523,5 +689,19 @@ The full list of the 177 retired tags is recorded below for the archive.
 - `pre/surge-telemetry-agg`
 - `pre/sweep-instrumentation-pulklr`
 - `pre/v4-choreography`
+- `pre/weights`
+- `pre/camera-hygiene`
+- `pre/camera-hygiene-2`
+- `pre/render-fingerprint`
+- `pre/company`
+- `pre/company-2`
+- `pre/framing`
+- `pre/lateral`
+- `pre/min-draw`
+- `pre/no-schema`
+- `pre/reference-width`
+- `pre/tags`
+- `pre/picture-fixes`
 - `pre/v4-on-trunk`
+- `pre/zoom-unit`
 
