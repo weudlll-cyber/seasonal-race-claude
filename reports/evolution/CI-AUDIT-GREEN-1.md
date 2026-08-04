@@ -208,6 +208,7 @@ file, same count, same cause — three months before this block.
 The two timeouts are a local-hardware artifact, not a regression, and CI is on record passing the
 step they failed. What I cannot do from here is promise the *next* CI run is green — but every step
 in `ci.yml` has now been reproduced locally, and the only one that was failing now passes.
+**§9 closes that last gap by measurement: the next CI run was green.**
 
 ---
 
@@ -361,8 +362,91 @@ remove-when — which §7.3's expiry would finally make enforceable.
 
 ## 8. Status
 
+Superseded by §9 — CI is no longer *expected* green, it **is** green, measured. Left as written so
+the prediction and the result can be read against each other.
+
 CI is expected green at `028f1eb6`: the audit gate passes, both blocking advisories are gone, the
 allowlist is untouched, and every step in `ci.yml` has been reproduced locally — including the full
 3494-test suite, once the local clock artefact in §5.1 is taken out of the picture. The one step that
 was failing is the one that now passes. Nothing else in this repository changed. **Owner's eye: none
 needed** — this block changes no pixel, no number the engine reads, and no behaviour.
+
+---
+
+## 9. CLOSED — pushed, and CI is green (the real acceptance)
+
+`3b857d05..f7635aab  master -> master`. Run **30948211250** at `f7635aab`, **`completed/success`**,
+both jobs, every step — this is the block's acceptance, not the local gate:
+
+```
+JOB: Client checks = success                    JOB: Living-doc guards + script tests = success
+  4. Install dependencies          = success      4. Check living-doc links            = success
+  5. ESLint                        = success      5. Check every report is indexed     = success
+  6. Prettier format check         = success      6. Check every origin tag registered = success
+  7. Run tests with coverage       = success      7. Run script test suite             = success
+  8. Security audit gate ...       = SUCCESS
+```
+
+Step 8 was the sole red step at `3b857d05` (§5.1) and is now green with the allowlist untouched.
+Step 7 passing again on GitHub's runner re-confirms §5.1 from the other side: the two local failures
+were this machine's clock, not the tests.
+
+## 10. The deployment question, answered by observation
+
+The push was used as the experiment. **Everything in the table is MEASURED; the two inferences at the
+end are labelled.** Nothing was changed — no `main` branch, no trigger edit, no deploy script, no
+configuration. Every call was a read.
+
+**Which workflows ran: only `CI`. `Deploy` did not appear.**
+
+| Probe | Result |
+|---|---|
+| `git ls-remote --heads origin` | **one head, `master`** — no `main` |
+| `gh workflow list --all` | CI *active*; **`Deploy` *active*** (id 272257209) — registered and enabled |
+| Deploy runs, ever (`actions/workflows/272257209/runs`) | **0** |
+| Last 100 runs grouped by workflow | **100 CI, 0 anything else** |
+| `repos/…/deployments` | **0, ever** — also 0 after this push |
+| `repos/…/environments` | **0** |
+| `repos/…/pages` | **404 — Pages not enabled** |
+| `repos/…/hooks` | **0 webhooks** |
+| `repos/…/keys` | **0 deploy keys** |
+| `repos/…/actions/secrets` | **0 — `DEPLOY_HOST`, `DEPLOY_USER`, `DEPLOY_KEY` do not exist** |
+| `schedule` / `workflow_dispatch` / `repository_dispatch` | none in either workflow |
+
+**So there are FOUR independent blockers, not the two the spec named.** (1) the trigger is
+`branches: [main]` and only `master` exists; (2) `scripts/deploy.sh` is not in the repo; (3) **all
+three secrets the workflow consumes are absent**, so even a corrected trigger with a written script
+would hand `appleboy/ssh-action` an empty host and key; (4) there is no alternative path at all —
+no webhook, environment, Pages site, deployment record, or other trigger.
+
+**On `docs/DEPLOYMENT.md` — the spec's framing needs one correction.** It does **not** claim an
+automatic path, so it does **not** disagree with the repo. It documents a **manual** one: a "Minimal
+production start" shell command (`NODE_ENV=production … node server/src/index.js`) run by hand on a
+host, plus reverse-proxy, cookie and session-rotation notes. It never mentions Actions, `git pull`,
+or `deploy.sh`. The repo and DEPLOYMENT.md **agree**. What they contradict is the owner's belief.
+
+**INFERRED — why the belief formed** (a reading, not a measurement): two in-repo artefacts read as
+automatic. `deploy.yml` exists, is named "Deploy", and describes an SSH `git pull` + `deploy.sh`; and
+`docs/ARCHITECTURE.md:117` labels it `# Deploy on merge to main` in its file tree. Both describe an
+**intent that was never wired up**. A grep of all living docs for auto-deploy language returns
+nothing else.
+
+**INFERRED, and this is the limit worth stating plainly**: zero deployments, zero secrets and zero
+Deploy runs are consistent with "this repository has never deployed anything" — but they **cannot**
+rule out the owner deploying **by hand** from the host, which is exactly what DEPLOYMENT.md
+describes. The host is not observable from here. So the claim is deliberately narrow:
+**automatic deployment from this repository has never happened, once, ever.** Whether the live site
+is stale depends on manual habit, which this evidence does not reach.
+
+**How to find out which build is live** (named, not done, per the spec). The first obstacle is that
+**the live address is not recorded anywhere** — `RA_PUBLIC_ORIGIN` appears only as the placeholder
+`racearena.example.com`, and with 0 secrets there is no host stored at origin. Given a URL from the
+owner: the app exposes **no build identifier** (checked: no `__APP_VERSION__`, `BUILD_ID` or
+build-time constant, and the world fingerprint is not surfaced in the UI), so the route is
+(a) fetch the live `index.html`, read Vite's hashed asset name `index-<hash>.js`, then `npm run build`
+at candidate commits and compare — a match pins the deployed commit; failing that (b) `Last-Modified`
+/ `ETag` on the served bundle dates the build. Both need the owner's URL first.
+
+**NOT FIXED, deliberately.** Whether the live site has been serving a stale build is the owner's
+decision to act on, and a repair here would quietly start publishing to production from a block
+chartered to clear an audit gate.
