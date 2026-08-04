@@ -40,6 +40,29 @@ whose values reach `createRaceFromIdentity` / `stepRacePhysics`, kept beside `WO
 scheduled for the hygiene phase (see [BACKLOG.md](BACKLOG.md)). Keep both: the mint rule catches what
 a person remembers, the list catches what nobody does.
 
+### THE THREE FINGERPRINTS — which one a block owes
+
+They are CHANGE DETECTORS, not prohibitions. A block may move one deliberately; what it may not do
+is move one without noticing.
+
+| | covers | run it when | cost |
+|---|---|---|---|
+| `scripts/fingerprint-default.mjs` — **world** `dc4647be0f55ebdb` | the RACE: physics, plan, outcome | any behaviour change, and per the mint tripwire above | ~2 min |
+| `scripts/camera-fingerprint.mjs` — **camera** `4b33c4d31bec93ea` | the DIRECTOR's decisions: state, phase, anchor, zoom, offsets, camT, targets | any block touching `client/src/modules/camera/` | ~85 s |
+| `scripts/render-fingerprint.mjs` — **render** `ae7e9243bd2add8b` | the DRAW CALL SEQUENCE: sprite placement, text, styles, transforms, layer order | any block touching the drawing path — `RaceScreen/renderRaceFrame.js`, `RaceScreen/drawing/`, `nameTagLayout.js`, `Minimap.js`, the racer types' `drawRacer` | ~30 s |
+
+**Why the render one earns its cost only on drawing blocks.** The camera fingerprint already covers
+every decision the director makes, and it is the cheaper answer for camera-only work. The render
+fingerprint answers the question the camera one structurally cannot — *did the picture change?* —
+and until RENDER-FINGERPRINT-1 that was an argument every camera block ended on. Run it whenever the
+diff can reach a `ctx.` call.
+
+**Read [RENDER-FINGERPRINT-1](../reports/evolution/RENDER-FINGERPRINT-1.md) §"blind to" before
+trusting it.** It is blind to the rasteriser, to the artwork, and — measured, not assumed — to the
+sprite blit itself, because node has no `Image` and the racer body falls back to its procedural
+branch. Placement, order, text, styles and every other layer are covered. The owner's eye remains
+the instrument for artwork.
+
 ## The checklist
 
 Work top to bottom. Steps that are marked **ONE step** are a single unit of work with two artefacts —

@@ -239,6 +239,12 @@ test at both ends.
 
 ## 6. What is protected by tests, and what only by convention
 
+**The render path is no longer convention-only.** `scripts/render-fingerprint.mjs`
+(**`ae7e9243bd2add8b`**) hashes the SEQUENCE of draw calls — sprite placement, text, styles,
+transforms and layer order — at six fixed frames across all ten tracks, by driving the real
+`renderRaceFrame()` through a recording context. It covers what the camera fingerprint structurally
+cannot: what actually reaches the canvas. Run it on any block whose diff can reach a `ctx.` call.
+
 **Protected — a change breaks a test:** the zoom unit's invariance; the six-state framing table;
 corridor / pair / company guarantees on every heading; the company guarantee inside its region; the
 lateral guarantee's arithmetic and its one-dimensionality; the min-draw floor and its
@@ -256,8 +262,11 @@ render path's `detectBattleGroup` contract; and every camera decision at once, v
 - **Slow motion.** Physics-time scaling in the render loop has no camera-side test.
 - **The HUD overlay and every diagnostic flag.** Read-only by design, unasserted by consequence.
 - **The world-bounds clamp.** Named as the cause of two measured residuals; nothing pins it.
-- **Anything render-path.** Sprite drawing, trails, name-tag drawing. The fingerprint excludes it
-  deliberately and nothing else covers it.
+- **The rasteriser, the artwork, and the sprite blit.** What is left of the render hole after
+  RENDER-FINGERPRINT-1.
+- **Particles and surface trails.** Their draw calls run but the render fingerprint's harness never
+  fills their buffers, so both layers are no-ops in it. Found by a sabotage that swapped them and
+  did NOT move the hash.
 
 ---
 

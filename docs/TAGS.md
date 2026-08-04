@@ -263,6 +263,18 @@ section left `camera/`); shipped world `dc4647be0f55ebdb` unmoved both times.
   getter returning a literal 0 with a test asserting it, and eighteen gate tests are coin flips
   because a weight became a propensity one commit earlier.
 
+### The picture becomes a measurement — RENDER-FINGERPRINT-1 (2026-08-04, branch `camera-refactor`)
+Return point captured before the render path got its own change detector. Every camera block until
+now ended with "the picture did not move" as an ARGUMENT: the camera fingerprint covers what the
+DIRECTOR decides and stops at the edge of the canvas, which is why the battle-focus darkening had to
+be checked by eye. **New instrument `RENDER ae7e9243bd2add8b`** (`scripts/render-fingerprint.mjs`) —
+it hashes the SEQUENCE of draw calls, not the pixels, so it needs no browser and holds on any
+machine. Camera `4b33c4d31bec93ea` and world `dc4647be0f55ebdb` unmoved; mint tripwire fired and was
+checked.
+- `pre/render-fingerprint` (`9ae13a4e`, 2026-08-04) — the state where the draw sequence is ~210
+  lines inside RaceScreen's rAF callback closed over 42 pieces of component state, so nothing but a
+  browser can drive it; and `PHASE` is declared in three separate files.
+
 ## Active-phase tags (temporary scaffolding — to collapse later)
 
 Step-tags from the runaway phase (now CLOSED 2026-07-29, see below) and any later work — safe return points, not permanent anchors. They collapse into
@@ -680,6 +692,7 @@ The full list of the 177 retired tags is recorded below for the archive.
 - `pre/weights`
 - `pre/camera-hygiene`
 - `pre/camera-hygiene-2`
+- `pre/render-fingerprint`
 - `pre/company`
 - `pre/company-2`
 - `pre/framing`
