@@ -23,9 +23,12 @@ If you need to do it again:
 **How you know it worked.** Start a race. Top right, under the grey `cfg …` badge, there is now a
 third line:
 
-> **build 77919708 · anchor-truth**
+> **build 0af6c34b · anchor-truth**
 
-If it says a different branch, you are not on the branch. If it ends in **`+dirty`** (amber), the
+**Read the BRANCH, not the commit.** The commit moves every time anything lands — as it did four
+times while this report was being written, which is the same failure this whole night was about, so
+this report will not pretend to know tonight's last sha. If the branch says `anchor-truth`, you are
+looking at the right thing. If it says `master`, you are not. If it ends in **`+dirty`** (amber), the
 screen is showing something that no commit describes — that is not an error, it just means don't
 trust a screenshot of it to be reproducible.
 
