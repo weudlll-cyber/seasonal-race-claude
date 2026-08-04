@@ -2,8 +2,8 @@
 
 **Date:** 2026-08-04 → 05 · **Branch:** `anchor-truth` (nothing pushed, nothing merged)
 **Base confirmed:** `git rev-parse` → **`fac83f1a`**, clean, which is the tip the spec named.
-**Stages done:** A (complete), C3 (complete), B2/B3/B6 (complete).
-**Stages NOT done, at a deliberate stage boundary:** C1/C2 pictures, B1, B4, B5, D, E, F. §8 says why.
+**Stages done:** A (complete), C3, B1, B2, B3, B6.
+**Stages NOT done, at a deliberate stage boundary:** C1/C2 pictures, B4, B5, D, E, F. §7 says why.
 
 ---
 
@@ -76,14 +76,32 @@ next, and §9.1 says why I think it is the honest answer.
 
 ### 5. Is the cost permanent, or dissolved by the change you parked?
 
-**Not measured** (B1 and B4 were not reached). I will not guess at it — that arithmetic is exactly
-the kind I have got wrong before.
+**Half answered — and the half I have changes the question.**
+
+**Your readability floor is already doing most of the work.** At n = 65, `minDrawnFrameFrac 0.04`
+**binds on 22–79% of frames depending on the track**, and on five of the ten tracks the *median*
+racer is pinned at exactly **4.00%** of frame height — your floor, not the zoom unit, is setting the
+size you see. The size argument is therefore much less about the unit than it looks.
+
+And your unit makes size uniformity **worse**, not better, for the same reason it makes the breathing
+worse:
+
+| | racer-size spread across tracks | biggest | smallest |
+|---|---|---|---|
+| shipped unit | **1.500×** | dirt-oval 6.00% | five tracks at 4.00% |
+| your unit | **2.132×** | searound **8.53%** | mountainstreet 4.00% |
+
+On searound your unit gives a much tighter shot, so racers there get **twice** the screen height they
+get on Mountainstreet. **Not measured:** B4, whether normalising all racer types to one body size
+dissolves that. So I cannot yet tell you whether it is permanent — only that the floor, not the unit,
+is the current author of racer size.
 
 ### 6. What else got done while you slept
 
 The build badge and the mechanism behind it (§2 — this was the point of the night), your settings
-verified safe, the road-width question settled (§5), and my own 1.82× / 1.384× discrepancy settled
-(§6). Nothing was pushed. No default was changed. No design decision was made.
+verified safe, the road-width question settled (§5), the racer-size price measured (§5b), and my own
+1.82× / 1.384× discrepancy settled (§6). **Full suite green: 3555/3555.** Nothing was pushed. No
+default was changed. No design decision was made.
 
 ---
 
@@ -101,7 +119,8 @@ verified safe, the road-width question settled (§5), and my own 1.82× / 1.384�
 | **B2** whose number wins | **BUILT** for unit A×corridor and unit B×corridor; arm 4 (company) NOT done |
 | **B3** is uneven width real | **BUILT** — §5 |
 | **B6** the 1.82× / 1.384× discrepancy | **BUILT** — §6 |
-| **B1, B4, B5** | **NOT DONE** — §8 |
+| **B1** racer size, the price | **BUILT** — §5b; the `3.33×/2.21×` re-derivation NOT done |
+| **B4, B5** | **NOT DONE** — §8 |
 | **D** shared race driver | **NOT DONE** — §8 |
 | **E** finish-lifecycle seam | **NOT DONE** — §8 |
 | **F** residuals | **NOT DONE** — §8 |
@@ -244,6 +263,40 @@ field size at which it starts to bind — that is unfinished.
 
 ---
 
+## 5b. B1 — THE PRICE, AND WHO IS ACTUALLY SETTING IT
+
+Drawn racer height as a percentage of frame height, his settings, n = 65, boarder, across a whole
+race on all ten tracks.
+
+| track | TW | median, shipped unit | median, his unit | floor binds (shipped → his) |
+|---|---|---|---|---|
+| searound | 131 | 4.47% | **8.53%** | 40.0% → 2.1% |
+| dirt-oval | 178 | **6.00%** | 7.12% | 21.9% → 1.6% |
+| city-circuit | 197 | 4.48% | 5.26% | 37.1% → 32.2% |
+| garden-path | 198 | 4.20% | 4.54% | 47.2% → 41.0% |
+| ice-track | 211 | 4.00% | 4.09% | 65.0% → 48.0% |
+| luger-hill | 250 | 4.00% | 4.00% | 79.2% → 73.7% |
+| mountainstreet | 300 | 4.00% | 4.00% | 75.4% → 75.4% |
+| river-run | 300 | 4.00% | 4.00% | 69.8% |
+| seatrack | 300 | 4.00% | 4.00% | 54.3% |
+| space-sprint | 300 | 4.61% | 4.61% | 40.9% |
+| **spread** | | **1.500×** | **2.132×** | |
+
+**THE HEADLINE IS NOT THE SPREAD, IT IS THE FLOOR.** `minDrawnFrameFrac 0.04` binds on **22–79%** of
+frames, and on five tracks the median racer sits at exactly 4.00% — pinned to his own readability
+floor. **At n = 65 the floor, not the zoom unit, is the author of racer size on most tracks.** That
+reframes the size debate: the unit is being argued about while the floor is doing the work.
+
+**His unit makes size uniformity worse too** — 1.500× → 2.132× — and for the same mechanism as the
+breathing: on a narrow road his unit asks for a tighter shot, so searound racers grow to 8.53% while
+Mountainstreet stays pinned at 4.00%.
+
+**NOT DONE:** the `zoomUnit` header's 3.33× / 2.21× figures were not re-derived, so they are neither
+confirmed nor challenged here. B4 (one body size for all racer types) was not reached, so whether
+this price is permanent or dissolved is still open.
+
+---
+
 ## 5. B3 — THE ROAD IS NOT UNEVEN
 
 All ten tracks, 200 samples each, local width from the geometry against the declared `width`:
@@ -280,8 +333,9 @@ half-built extraction is worse than none. I stopped at a boundary rather than st
   temporary unit switch. I judged the measurement more valuable per hour than a rushed pipeline, and
   the measurement answers the same question C2 asks — for arms 1 and 2. **Arm 4 remains genuinely
   unanswered, in numbers as well as pictures.**
-- **B1, B4, B5.** Not reached. B1 and B4 are the "what does it cost in racer size, and does the
-  parked change dissolve it" pair, which is why §READ-THIS §5 is blank rather than guessed.
+- **B1 is done** (§5b) but its 3.33×/2.21× re-derivation is not. **B4 and B5 not reached** — B4 is
+  the "does the parked change dissolve the price" half, which is why §READ-THIS §5 is half-answered
+  rather than guessed.
 - **D, E, F.** Not started. Both D and E are behaviour-free work behind a hard fingerprint gate;
   starting either with the time left would have meant either rushing a gate that exists precisely to
   not be rushed, or leaving a half-extraction in the tree overnight.
@@ -328,6 +382,11 @@ build matches the branch it claims — the comparison is one string equality now
 ---
 
 ## 9. STATUS
+
+**Full suite green at the branch tip: 3555 passed / 3555, 175 files, vitest exit 0** (+18 tonight —
+12 for the badge, 6 for settings survival). Run with `--testTimeout=120000` to remove the known local
+5 s artefact (CI-AUDIT-GREEN-1 §5.1); no test touched tonight is near the limit. Guards green: 321
+links, 97 reports, 63 tags.
 
 Nothing pushed, nothing merged, tree clean, six commits on `anchor-truth` tonight. The dev server is
 running on the branch so the badge is there when he opens it. **No default was changed, no design

@@ -36,6 +36,9 @@ const { computeRacerLayout, computeBodyNarrowRef } = await import(
   u('client/src/modules/rowLayout.js')
 );
 const { visibleWorldPx } = await import(u('client/src/modules/camera/zoomUnit.js'));
+const { computeRenderDisplayScale, getEffectiveMaxTargetScreenPx } = await import(
+  u('client/src/modules/autoSpriteScale.js')
+);
 const RT = await (async () => {
   const re = console.error;
   console.error = () => {};
@@ -168,6 +171,11 @@ function measure(geo, cfgIn) {
 
   const byState = new Map();
   const bindByState = new Map();
+  // B1 — the PRICE: how big is a racer actually drawn, as a percentage of frame height?
+  const drawnPct = [];
+  let floorBound = 0;
+  let drawnN = 0;
+  const dsScale = br.bodyNarrow / ds;
 
   while (st.finishedCount < N && ts - raceStart < 200000) {
     accum += RAW;
@@ -206,9 +214,40 @@ function measure(geo, cfgIn) {
         b[1] += 1;
       }
     }
+    // B1 sample, on the same frames
+    if (cd.zoom > 0) {
+      const frameEffZoom = cd._proj.effX(cd.zoom);
+      const maxTarget = getEffectiveMaxTargetScreenPx(
+        rt.config?.maxTargetScreenPx,
+        cfg.maxTargetScreenPx
+      );
+      const scale = computeRenderDisplayScale(
+        ds,
+        dsScale,
+        frameEffZoom,
+        maxTarget,
+        cfg.minDrawnFrameFrac,
+        CH
+      );
+      const px = ds * scale * frameEffZoom;
+      if (Number.isFinite(px) && px > 0) {
+        drawnPct.push((100 * px) / CH);
+        drawnN++;
+        const proportional = ds * dsScale * frameEffZoom;
+        if (proportional < (cfg.minDrawnFrameFrac ?? 0) * CH) floorBound++;
+      }
+    }
     ts += RAW;
   }
-  return { id: geo.id, open: shape.isOpen, TW, byState, bindByState };
+  return {
+    id: geo.id,
+    open: shape.isOpen,
+    TW,
+    byState,
+    bindByState,
+    drawnPct,
+    floorPct: drawnN ? (100 * floorBound) / drawnN : 0,
+  };
 }
 
 const geos = [];
@@ -230,8 +269,10 @@ console.log(`seed ${SEED}, n=${N}, ${RACER_TYPE}, ${SECONDS}s, camSeed ${CAM_SEE
 console.log(
   'track            TW   state             frames    min      median      max     breath   guarantee binds'
 );
+const B1 = [];
 for (const geo of geos) {
   const r = measure(geo, cfg);
+  B1.push(r);
   const states = [...r.byState.keys()].sort();
   for (const s of states) {
     const a = r.byState.get(s);
@@ -244,4 +285,28 @@ for (const geo of geos) {
         `${(mx / mn).toFixed(3).padStart(6)}x   ${((100 * bound) / tot).toFixed(1).padStart(5)}%`
     );
   }
+}
+
+console.log('\nB1 - DRAWN RACER HEIGHT as % of frame height (the price)\n');
+console.log('track            TW    min%     median%    max%     floor binds');
+const meds = [];
+for (const r of B1) {
+  if (!r.drawnPct.length) continue;
+  const mn = Math.min(...r.drawnPct);
+  const mx = Math.max(...r.drawnPct);
+  const m = med(r.drawnPct);
+  meds.push({ id: r.id, m });
+  console.log(
+    '  ' + r.id.padEnd(15) + String(r.TW).padStart(3) + ' ' + mn.toFixed(2).padStart(7) +
+    '  ' + m.toFixed(2).padStart(8) + '  ' + mx.toFixed(2).padStart(7) + '   ' +
+    r.floorPct.toFixed(1).padStart(6) + '%'
+  );
+}
+if (meds.length) {
+  meds.sort((a, b) => a.m - b.m);
+  const lo = meds[0];
+  const hi = meds[meds.length - 1];
+  console.log('\n  SMALLEST racer: ' + lo.id + ' at ' + lo.m.toFixed(2) + '% of frame height');
+  console.log('  BIGGEST  racer: ' + hi.id + ' at ' + hi.m.toFixed(2) + '%');
+  console.log('  SPREAD across tracks = ' + (hi.m / lo.m).toFixed(3) + 'x');
 }
