@@ -17,6 +17,9 @@
 // director-level block at the end of this file. Net: 62 tests removed, 34 added on the new rule.
 
 import { describe, it, expect, vi } from 'vitest';
+import { readFileSync } from 'node:fs';
+import { fileURLToPath } from 'node:url';
+import { dirname, join } from 'node:path';
 import {
   CameraDirector,
   CAM_STATE,
@@ -26,6 +29,8 @@ import {
 import { effectiveZoom } from './openTrackCamera.js';
 import { lapProgress, currentLap } from './lapUtils.js';
 import { DEFAULT_CAMERA_CONFIG } from '../cameraConfig.js';
+
+const HERE = dirname(fileURLToPath(import.meta.url));
 
 // CAMERA-HYGIENE-2 — WHY THESE TESTS PIN THEIR WEIGHTS.
 // Since CAMERA-WEIGHTS-1 a weight is a PROPENSITY: `battleWeight` 0.8 means "when this shot is
@@ -6238,5 +6243,56 @@ describe('CAMERA-WEIGHTS-1 — a weight means how often you take the shot when i
     expect(bypassed).toBe(true);
     // the guarded form, which is what ships, refuses
     expect(bypassed && cd._acceptsOffer(cd._leadChangeWeight)).toBe(false);
+  });
+});
+
+// ── CAMERA-HYGIENE-2: the render path's one reach into the director ──────────────────────────────
+//
+// RaceScreen draws the battle-focus darkening around the racers currently in a battle, and it asks
+// the director who they are. The call site is
+//
+//     camDirRef.current?.detectBattleGroup?.(st.racers) ?? null
+//
+// and that second `?.` is the problem this guards. If the method is renamed, moved or made private
+// again, the expression does not throw — it evaluates to null forever, the darkening quietly stops
+// happening, and every test in this file still passes because the DIRECTOR is fine. The camera
+// fingerprint would not see it either: darkening is render, not direction.
+//
+// So the contract is asserted from both ends: the name the render path uses must exist and behave,
+// and the render path must still be using that name.
+describe('CAMERA-HYGIENE-2 — the detectBattleGroup contract with RaceScreen', () => {
+  const RACE_SCREEN = readFileSync(
+    join(HERE, '..', '..', 'screens', 'RaceScreen', 'index.jsx'),
+    'utf8'
+  );
+
+  it('RaceScreen asks for the group by the public name (not a private method)', () => {
+    // Matched as a CALL, with the word boundary at the end. `toContain('detectBattleGroup')` was
+    // the first draft and it passed while the call site said `detectBattleGroupRenamed?.(` —
+    // a guard against renames that any rename with the old name as a prefix walks straight past.
+    expect(RACE_SCREEN).toMatch(/\bdetectBattleGroup\?\?*\.?\(/);
+    // The reason the name went public in the first place: a render file reaching into an engine
+    // `_private` is the shape of the mint tripwire's motivating case.
+    expect(RACE_SCREEN).not.toContain('_detectPulkGroup');
+  });
+
+  it('the director answers to that name, and gives the same group as the internal path', () => {
+    const cd = new CameraDirector(1280, 720, false, ALWAYS_TAKE);
+    expect(typeof cd.detectBattleGroup).toBe('function');
+    const racers = tightBattleRacers;
+    const viaPublic = cd.detectBattleGroup(racers);
+    expect(viaPublic).not.toBeNull(); // this fixture IS a battle — otherwise the test proves nothing
+    expect(viaPublic).toEqual(cd._detectPulkGroup(racers));
+  });
+
+  it('and it is a real question, not a constant: no battle means no group', () => {
+    const cd = new CameraDirector(1280, 720, false, ALWAYS_TAKE);
+    const spread = [
+      { t: 0.9, x: 900, y: 300, index: 0 },
+      { t: 0.6, x: 600, y: 300, index: 1 },
+      { t: 0.3, x: 300, y: 300, index: 2 },
+      { t: 0.05, x: 50, y: 300, index: 3 },
+    ];
+    expect(cd.detectBattleGroup(spread)).toBeNull();
   });
 });
