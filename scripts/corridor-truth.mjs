@@ -24,42 +24,34 @@
 // Usage:  node scripts/corridor-truth.mjs [--json]
 // ============================================================
 
-import { readFileSync, readdirSync, existsSync } from "node:fs";
-import { join, dirname } from "node:path";
-import { fileURLToPath, pathToFileURL } from "node:url";
+import { readFileSync, readdirSync, existsSync } from 'node:fs';
+import { join, dirname } from 'node:path';
+import { fileURLToPath, pathToFileURL } from 'node:url';
 
-const ROOT = join(dirname(fileURLToPath(import.meta.url)), "..");
+const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
 const u = (p) => pathToFileURL(join(ROOT, p)).href;
 
 const { DEFAULT_CAMERA_CONFIG, DEFAULT_CONFIG_WORLD } = await import(
-  u("client/src/modules/storage/defaults.js")
+  u('client/src/modules/storage/defaults.js')
 );
-const { EditorShape } = await import(
-  u("client/src/modules/track-editor/EditorShape.js")
-);
-const { CameraDirector } = await import(
-  u("client/src/modules/camera/CameraDirector.js")
-);
+const { EditorShape } = await import(u('client/src/modules/track-editor/EditorShape.js'));
+const { CameraDirector } = await import(u('client/src/modules/camera/CameraDirector.js'));
 const { createRaceFromIdentity, stepRacePhysics, FIXED_DT } = await import(
-  u("client/src/modules/raceCore.js")
+  u('client/src/modules/raceCore.js')
 );
-const { normalSpeedFrom } = await import(
-  u("client/src/modules/durationModel.js")
-);
+const { normalSpeedFrom } = await import(u('client/src/modules/durationModel.js'));
 const { computeRacerLayout, computeBodyNarrowRef } = await import(
-  u("client/src/modules/rowLayout.js")
+  u('client/src/modules/rowLayout.js')
 );
-const { roomFromPointAlong } = await import(
-  u("client/src/modules/camera/frameGeometry.js")
-);
+const { roomFromPointAlong } = await import(u('client/src/modules/camera/frameGeometry.js'));
 const { framingFor, GUARANTEE, POSITION, anchorScreenPoint } = await import(
-  u("client/src/modules/camera/framingRule.js")
+  u('client/src/modules/camera/framingRule.js')
 );
 const RT = await (async () => {
   const re = console.error;
   console.error = () => {};
   try {
-    return await import(u("client/src/modules/racer-types/index.js"));
+    return await import(u('client/src/modules/racer-types/index.js'));
   } finally {
     console.error = re;
   }
@@ -70,11 +62,11 @@ const CH = 720;
 const N = 40;
 const SEED = 5601;
 const CAM_SEED = 1439767152;
-const JSON_OUT = process.argv.includes("--json");
+const JSON_OUT = process.argv.includes('--json');
 
-const dir = existsSync(join(ROOT, "server/data/tracks"))
-  ? join(ROOT, "server/data/tracks")
-  : join(ROOT, "server/seeds/tracks");
+const dir = existsSync(join(ROOT, 'server/data/tracks'))
+  ? join(ROOT, 'server/data/tracks')
+  : join(ROOT, 'server/seeds/tracks');
 
 const median = (a) => {
   if (!a.length) return NaN;
@@ -85,9 +77,7 @@ const median = (a) => {
 const pct = (a, p) => {
   if (!a.length) return NaN;
   const s = [...a].sort((x, y) => x - y);
-  return s[
-    Math.min(s.length - 1, Math.max(0, Math.round((p / 100) * (s.length - 1))))
-  ];
+  return s[Math.min(s.length - 1, Math.max(0, Math.round((p / 100) * (s.length - 1))))];
 };
 
 function measureTrack(geo) {
@@ -95,19 +85,13 @@ function measureTrack(geo) {
   const TW = geo.width ?? shape.getActualTrackWidth();
   const W = DEFAULT_CONFIG_WORLD;
   const behaviorConfig = { ...W.raceBehaviorConfig, isOpen: shape.isOpen };
-  const rt = RT.getRacerType(geo.defaultRacerTypeId ?? "horse");
+  const rt = RT.getRacerType(geo.defaultRacerTypeId ?? 'horse');
   const ds = rt.config.displaySize;
   const bfN = Math.min(rt.config.bodyFillX, rt.config.bodyFillY);
   const bfL = Math.max(rt.config.bodyFillX, rt.config.bodyFillY);
   const effW = TW * behaviorConfig.startSpreadRange;
   const pss = computeRacerLayout(effW, N, ds, W.autoScaleConfig).spriteSize;
-  const br = computeBodyNarrowRef(
-    Math.min(285, effW),
-    N,
-    ds,
-    bfN,
-    W.autoScaleConfig,
-  );
+  const br = computeBodyNarrowRef(Math.min(285, effW), N, ds, bfN, W.autoScaleConfig);
   const bodyRef = ds * (br.bodyNarrow / ds);
   const built = createRaceFromIdentity({
     shape,
@@ -141,7 +125,7 @@ function measureTrack(geo) {
     DEFAULT_CAMERA_CONFIG,
     bodyRef,
     shape,
-    TW,
+    TW
   );
   cd.setRandomSeed(CAM_SEED);
   if (meta.racePlanEnabled && meta.rpPlanInfo?.b1Indices) {
@@ -188,7 +172,7 @@ function measureTrack(geo) {
       },
       CW,
       CH,
-      RAW,
+      RAW
     );
 
     const p = cd._framingProbe;
@@ -209,30 +193,12 @@ function measureTrack(geo) {
           const at = anchorScreenPoint(
             p.frameW,
             p.frameH,
-            framing.position === POSITION.FORWARD
-              ? cd._leaderForwardFrac
-              : null,
-            cd._headingScreen(p.t),
+            framing.position === POSITION.FORWARD ? cd._leaderForwardFrac : null,
+            cd._headingScreen(p.t)
           );
           const inner = cd._innerFramePct ?? 1;
-          const roomPlus = roomFromPointAlong(
-            at.x,
-            at.y,
-            sx,
-            sy,
-            p.frameW,
-            p.frameH,
-            inner,
-          );
-          const roomMinus = roomFromPointAlong(
-            at.x,
-            at.y,
-            -sx,
-            -sy,
-            p.frameW,
-            p.frameH,
-            inner,
-          );
+          const roomPlus = roomFromPointAlong(at.x, at.y, sx, sy, p.frameW, p.frameH, inner);
+          const roomMinus = roomFromPointAlong(at.x, at.y, -sx, -sy, p.frameW, p.frameH, inner);
           const halfWorld = Math.min(roomPlus, roomMinus) / scalePerp;
           const corridors = (2 * halfWorld) / TW;
           delivered.push(corridors);
@@ -277,8 +243,8 @@ function measureTrack(geo) {
 
 const geos = [];
 for (const f of readdirSync(dir)) {
-  if (!f.endsWith(".json")) continue;
-  const j = JSON.parse(readFileSync(join(dir, f), "utf8"));
+  if (!f.endsWith('.json')) continue;
+  const j = JSON.parse(readFileSync(join(dir, f), 'utf8'));
   if (j.id) geos.push(j);
 }
 geos.sort((a, b) => a.id.localeCompare(b.id));
@@ -291,29 +257,27 @@ const allBroken =
   rows.reduce((s, r) => s + r.frames, 0);
 
 if (JSON_OUT) {
-  console.log(
-    JSON.stringify({ rows, spread, brokenPct: 100 * allBroken }, null, 2),
-  );
+  console.log(JSON.stringify({ rows, spread, brokenPct: 100 * allBroken }, null, 2));
 } else {
   console.log(
-    "CORRIDOR TRUTH — delivered track widths across, on CORRIDOR-guarantee frames only\n",
+    'CORRIDOR TRUTH — delivered track widths across, on CORRIDOR-guarantee frames only\n'
   );
   console.log(
-    "track            open  frames   median   p05    p95   broken%   | TARGET median  TARGET broken%",
+    'track            open  frames   median   p05    p95   broken%   | TARGET median  TARGET broken%'
   );
   for (const r of rows) {
     console.log(
       `  ${r.id.padEnd(15)} ${String(r.open).padEnd(5)} ${String(r.frames).padStart(6)}  ` +
         `${r.medianCorridors.toFixed(3)}  ${r.p05.toFixed(3)}  ${r.p95.toFixed(3)}   ` +
-        `${r.brokenPromisePct.toFixed(1).padStart(5)}%   |  ${r.medianTarget.toFixed(3)}        ${r.brokenTargetPct.toFixed(1).padStart(5)}%`,
+        `${r.brokenPromisePct.toFixed(1).padStart(5)}%   |  ${r.medianTarget.toFixed(3)}        ${r.brokenTargetPct.toFixed(1).padStart(5)}%`
     );
   }
   console.log(
     `\n  SPREAD ACROSS TRACKS (max median / min median) = ${spread.toFixed(3)}x   ` +
-      `(the owner's "same amount of world on every track" wants 1.000x)`,
+      `(the owner's "same amount of world on every track" wants 1.000x)`
   );
   console.log(
-    `  PROMISE BROKEN on ${(100 * allBroken).toFixed(1)}% of corridor frames overall (LIVE zoom)`,
+    `  PROMISE BROKEN on ${(100 * allBroken).toFixed(1)}% of corridor frames overall (LIVE zoom)`
   );
   const allBrokenT =
     rows.reduce((s, r) => s + (r.brokenTargetPct * r.frames) / 100, 0) /
@@ -324,17 +288,17 @@ if (JSON_OUT) {
   })();
   console.log(
     `  ON THE SHOT THE GUARANTEE SIZED (target zoom): broken ${(100 * allBrokenT).toFixed(1)}%, spread ${spreadT.toFixed(3)}x` +
-      ` — the gap between this and the line above IS the tracking lag`,
+      ` — the gap between this and the line above IS the tracking lag`
   );
-  const mtn = rows.find((r) => r.id.includes("mountain"));
+  const mtn = rows.find((r) => r.id.includes('mountain'));
   if (mtn) {
     console.log(
       `\n  MOUNTAINSTREET on its own: median ${mtn.medianCorridors.toFixed(3)} corridors, ` +
-        `promise broken ${mtn.brokenPromisePct.toFixed(1)}% of frames`,
+        `promise broken ${mtn.brokenPromisePct.toFixed(1)}% of frames`
     );
     for (const s of mtn.byState) {
       console.log(
-        `     ${s.state.padEnd(16)} n=${String(s.n).padStart(5)}  median ${s.median.toFixed(3)}  broken ${s.brokenPct.toFixed(1)}%`,
+        `     ${s.state.padEnd(16)} n=${String(s.n).padStart(5)}  median ${s.median.toFixed(3)}  broken ${s.brokenPct.toFixed(1)}%`
       );
     }
   }

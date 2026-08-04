@@ -67,7 +67,13 @@ const PROFILE_FIELDS = [
     min: 0.05,
     max: 5,
     step: 0.05,
-    tip: (v) => `Lerp time-constant during stable tracking. ${v.toFixed(2)}s.`,
+    // Renders the LIVE value, so it cannot drift from the shipped default the way a quoted
+    // constant can. What it was missing is the MEANING: measured in percentage points of frame,
+    // OVERVIEW at 1.5 left its subject 13.78 pp from where the framing rule put him against 3.78 pp
+    // everywhere else; 0.25 (now the default on every state) halves that. See defaults.js.
+    tip: (v) =>
+      `Lerp time-constant during stable tracking. ${v.toFixed(2)}s. Higher = the subject drifts ` +
+      `further from its framed position before the camera catches up; every state ships 0.25s.`,
   },
   {
     key: 'entryTC',

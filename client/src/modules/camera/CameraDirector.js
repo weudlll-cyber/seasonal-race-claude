@@ -2251,6 +2251,8 @@ export class CameraDirector {
       frameH: frameSize.height,
       stateZoom,
       guaranteed,
+      point: subjects.point, // the anchor world point (§4b: is its BODY inside, or just its centre?)
+      pair: subjects.pair, // the two guaranteed contenders, when the state guarantees a pair
     };
 
     // ── WHERE IN FRAME: from the principle, not from a slider ──────────────────────────────────
