@@ -293,6 +293,19 @@ until somebody decides that, they are the cheapest way back into any single bloc
 `pre/company-2`, `pre/reference-width`, `pre/lateral`, `pre/no-schema`, `pre/min-draw`, `pre/tags`,
 `pre/camera-hygiene`, `pre/weights`, `pre/camera-hygiene-2`, `pre/render-fingerprint`.
 
+### The framing measures from where things are — CAMERA-ANCHOR-TRUTH-1 (2026-08-04, branch `anchor-truth`)
+Return point captured before the first post-merge camera block. Three defects measured during the
+refactor and never repaired turned out to share one root: **the framing computes from an idealised
+point at the centre of the frame instead of from where things actually are** — `corridorGuarantee`
+divides by the chord THROUGH THE CENTRE while `companyGuarantee` and the lateral guarantee already
+measure from the anchor's real screen position. The block is staged so the proof is the order:
+Stage 1 (behaviour-free — the transition decision becomes a testable return value, and the documents
+that describe an INTENT stop being read as a STATE) must hold **both** fingerprints bit-identical,
+so any later movement is attributable to a named Stage 2 commit.
+- `pre/anchor-truth` (`c299fdf7`, 2026-08-04) — master's tip after CI-AUDIT-GREEN-1, verified before
+  branching. Baselines recorded on the untouched tree and both matched: camera
+  `4b33c4d31bec93ea`, render `ae7e9243bd2add8b`, world `dc4647be0f55ebdb`.
+
 ## Active-phase tags (temporary scaffolding — to collapse later)
 
 Step-tags from the runaway phase (now CLOSED 2026-07-29, see below) and any later work — safe return points, not permanent anchors. They collapse into
