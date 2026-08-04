@@ -3,9 +3,33 @@
 // Path:        client/src/modules/camera/CameraDirector.js
 // Project:     RaceArena
 // Created:     2026-04-22
-// Description: TV-style camera state machine for both open and closed track races.
-//              Switches between OVERVIEW / LEADER_ZOOM / BATTLE_ZOOM /
-//              COMEBACK_ZOOM states, lerp-smoothed zoom and pan.
+//
+// WHAT THIS IS FOR: two things, and only these two.
+//   1. WHICH SHOT are we on — the state machine: eligibility, the holds and cooldowns, the weighted
+//      pick, the finish sequence's scripted lifecycle.
+//   2. WHERE IS THE CAMERA this frame — its own motion: `zoom`, `offsetX`, `offsetY`, `camT`, the
+//      lerp phases and the three branches (glide / cut / follow) that may write the offset.
+//
+// WHAT THIS IS NOT FOR: anything answerable without a camera. Those questions have their own files
+// and this one only asks them —
+//   who is fighting whom .................. battleGroup.js       (pure, stateless)
+//   who is coming through the field ....... comebackDetector.js  (owns the rank history)
+//   how wide is each shot, and how ........ framingConfig.js     (defaults + validation bands)
+//   when does anything happen ............. cameraTimingComputation.js
+//   who must stay in frame ................ framingRule.js       (guarantees WIDEN; never steer)
+//   world <-> screen ...................... projection.js        (the ONLY mapping)
+//   how much world is in shot ............. zoomUnit.js          (standard corridors)
+//   where did the camera go wrong ......... detourRecorder.js    (never writes a camera value)
+//
+// THE ACCEPTANCE TEST, and it is the good kind. `node scripts/camera-fingerprint.mjs` hashes every
+// decision this file makes on every frame of a seeded race across ten tracks. A refactor that
+// tidies code must not move the picture, and unlike a tuning change that is PROVABLE rather than
+// arguable. Current: 4b33c4d31bec93ea. If your change is meant to move the picture, it is not
+// hygiene — say so, and re-baseline deliberately.
+//
+// READ FIRST, if you are changing behaviour: docs/CAMERA_DIRECTOR.md. The ordering inside update()
+// is load-bearing in two places that look arbitrary (the zoom lerp before _setTargets, and
+// _setTargets owning targetOffsetX/Y alone), and both are explained there and at the call sites.
 // ============================================================
 
 import { getPanTarget } from './panTarget.js';

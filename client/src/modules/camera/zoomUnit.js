@@ -1,6 +1,4 @@
 // ============================================================
-
-import { REFERENCE_CANVAS_W, REFERENCE_CANVAS_H } from './projection.js';
 // File:        zoomUnit.js
 // Path:        client/src/modules/camera/zoomUnit.js
 // Project:     RaceArena
@@ -57,9 +55,14 @@ import { REFERENCE_CANVAS_W, REFERENCE_CANVAS_H } from './projection.js';
 //              Math.min alongside the pair and company guarantees. One place where a shot is
 //              widened, not two.
 //
-//              Pure: no state, no config reads, no imports. Everything the caller needs to test it
-//              is an argument.
+//              Pure: no state and no config reads. Everything the caller needs to test it is an
+//              argument. The one import is the reference canvas, which has a single home in
+//              projection.js — CAMERA-HYGIENE-1 removed the second copy that used to be declared
+//              here, and CAMERA-HYGIENE-2 moved the import line out of the middle of this header,
+//              where that edit had left it.
 // ============================================================
+
+import { REFERENCE_CANVAS_W, REFERENCE_CANVAS_H } from './projection.js';
 
 /** Reference canvas the projection's axis scales are defined against. */
 const CANVAS_W = REFERENCE_CANVAS_W;

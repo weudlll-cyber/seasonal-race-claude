@@ -4,6 +4,11 @@
 **Date:** 2026-05-04  
 **Scope:** Read-only analysis. No code changes. Verifies/refutes four hypotheses (H1–H4) raised after PR-C browser testing.
 
+> **Historical.** The zoom unit this report reasons in — `spritePctOfCanvas`, sprite-size-derived
+> zoom — no longer exists; CAMERA-ZOOM-UNIT-1 and CAMERA-REFERENCE-WIDTH-1 replaced it with standard
+> corridors. The measurements and the reasoning stand as a record; the formulas do not describe the
+> shipped camera. Current architecture: **[CAMERA_DIRECTOR.md](CAMERA_DIRECTOR.md)**.
+
 ---
 
 ## Executive Summary

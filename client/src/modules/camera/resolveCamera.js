@@ -3,9 +3,13 @@
 // Path:        client/src/modules/camera/resolveCamera.js
 // Project:     RaceArena
 // Created:     2026-05-07
-// Description: Layer 2 of the camera pan reform — pure function that resolves
-//              the final camera pan position and effective zoom, given a world-
-//              coordinate target and background bounds.
+//
+// WHAT THIS IS FOR: fitting a DESIRED shot inside the world. Given a world target and the bounds,
+// it returns where the camera actually sits and at what effective zoom, backing the zoom off in
+// steps when the target cannot otherwise be framed.
+//
+// WHAT IT IS NOT FOR: choosing the desired shot. The state's setting and the guarantees have
+// already decided that, before this is called — this is the last step and it only ever loosens.
 //
 //              Guarantees:
 //              1. Background never shows black borders (pan clamped to world bounds).

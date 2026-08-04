@@ -2,11 +2,20 @@
 // File:        cameraTimingComputation.js
 // Path:        client/src/modules/camera/cameraTimingComputation.js
 // Project:     RaceArena
-// Description: Pure function for computing CameraDirector timing
-//              parameters from a config object. Extracted from
-//              CameraDirector._computeTimingConfig() so the logic
-//              can be unit-tested without a full class instance.
-//              Does NOT import from CameraDirector.js — no circular dep.
+//
+// WHAT THIS IS FOR: resolving a raw camera config into every TIMING number the director trusts —
+// holds, caps, cooldowns, lerp time-constants, the phased-observer durations, the weights. Every
+// timing default and every fallback lives here and nowhere else, so a director built with no config
+// at all gets its behaviour by calling this with `null`.
+//
+// WHAT IT IS NOT FOR: anything spatial. It has no idea how wide a shot is. Its sibling
+// framingConfig.js resolves HOW WIDE and HOW; this one resolves WHEN. Both are pure, both are
+// called on construction and again on every live-apply, and neither imports from CameraDirector.js.
+//
+// A NOTE ON WHAT IT RETURNS. It returns the per-state MAPS (`tcByState`, `lfByState`,
+// `lfEntryByState`) and not the per-state scalars. It used to return both — forty numbers that had
+// to agree with twenty — and the scalars were read by nothing but their own assertions, which is
+// the arrangement where a wrongly-built map stays green (CAMERA-HYGIENE-2).
 // ============================================================
 
 // THE fallback constants for every timing tunable. A director built with no config at all gets

@@ -1,5 +1,20 @@
 # CameraDirector — Target Computation Architecture
 
+> **SUPERSEDED — this is a dated diagnostic record, not a description of the current camera.**
+> Kept because the diagnosis is worth reading; headed like this because it had no date and read as a
+> live reference, and two of its findings have since been ANSWERED in ways that invert them:
+>
+> - **"Who owns `targetOffsetX/Y`?"** — resolved. `_setTargets` owns them outright and
+>   `_computePhasedPanTarget` no longer writes them at all; it only advances `_camT`. The
+>   double-write described in §1 and §2 step [E] does not exist any more.
+> - **"a centerline approximation during tracking — it ignores the racer's lane offset"** — this is
+>   now DELIBERATE and only on the across-track axis (CAMERA-LATERAL-1). Carrying the subject's lane
+>   was measured throwing the picture 62–84 world px sideways at every lead change. Along the track
+>   the camera follows the subject exactly as before. Do not "fix" it; see the warning block on
+>   `_centrelineAt` in `CameraDirector.js`.
+>
+> Current architecture: **[CAMERA_DIRECTOR.md](CAMERA_DIRECTOR.md)**.
+
 ## 1. Intended Responsibilities
 
 ### `_setTargets`

@@ -2,11 +2,23 @@
 // File:        CameraDirectorDiag.js
 // Path:        client/src/modules/camera/CameraDirectorDiag.js
 // Project:     RaceArena
-// Description: Diagnostics mixin for CameraDirector. Installed onto
-//              CameraDirector.prototype via Object.defineProperties at
-//              the bottom of CameraDirector.js. All methods use this.*
-//              and are resolved against CameraDirector instances at call
-//              time. No import from CameraDirector.js — avoids circular dep.
+//
+// WHAT THIS IS FOR: everything the Dev Screen and the frame log need to SEE what the camera is
+// doing — the BATTLE / COMEBACK / LEAD_CHANGE panels, the per-frame ring buffer and its export.
+//
+// WHAT IT IS NOT FOR, and this is the rule the file lives by: it is READ-ONLY on the camera. It
+// may compute, format and buffer; it may not write a camera value or change a decision. That is
+// why the camera fingerprint is identical with every diagnostic flag on and off, and it is what
+// makes this file safe to edit without a re-baseline.
+//
+// A panel must also never re-implement a rule it is displaying. `getComebackDiagData` used to
+// carry its own copy of the window-start scan, so the HUD and the gate could in principle disagree
+// about which history entry "the start of the window" is; it calls the detector's own
+// `earliestAtOrAfter` now.
+//
+// HOW IT IS INSTALLED: `Object.defineProperties` onto CameraDirector.prototype at the bottom of
+// CameraDirector.js. Every method resolves `this.*` against a live director at call time. It does
+// not import from CameraDirector.js, which is what keeps the dependency one-way.
 // ============================================================
 
 import { shortestArcDeltaT } from '../../utils/mathUtils.js';

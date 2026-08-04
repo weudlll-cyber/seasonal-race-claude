@@ -3,9 +3,12 @@
 // Path:        client/src/modules/camera/Minimap.js
 // Project:     RaceArena
 // Created:     2026-04-26
-// Description: Picture-in-picture minimap renderer (Phase 2.5 F6b).
-//              Draws a scaled world overview in the bottom-left corner
-//              of the race canvas with a leader indicator dot.
+//
+// WHAT THIS IS FOR: the picture-in-picture overview in the corner of the race canvas — the whole
+// track at a glance, with the racers on it, so a viewer can see where the shot currently is.
+//
+// WHAT IT IS NOT FOR: the camera. It is pure render and reads nothing the director owns; it draws
+// in canvas pixels directly and takes no part in the world<->screen projection.
 // ============================================================
 
 export const MINIMAP_W = 280;
