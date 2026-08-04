@@ -14,7 +14,7 @@ sit next to the value they describe and move with it. This file does not repeat 
 
 **The acceptance test for any change here.** `node scripts/camera-fingerprint.mjs` hashes every
 decision the director makes — state, lerp phase, anchor, zoom, both offsets, `camT`, both targets —
-on every frame of a seeded race across all ten tracks. Current: **`4b33c4d31bec93ea`**. A refactor
+on every frame of a seeded race across all ten tracks. Current: **`1db71e7fffc1c9f6`**. A refactor
 that tidies code must not move the picture, and that is provable rather than arguable. It covers the
 DIRECTOR only; the render path (sprite scale, name-tag layout, drawing) is out of scope by
 construction and must be argued another way.
@@ -134,7 +134,10 @@ A state is described by three things and only three:
 
 - **ANCHOR** — who the camera is on. The only genuinely per-state part (`_framingSubjects`).
 - **GUARANTEE** — who must stay in frame. Applied as a zoom CEILING: it WIDENS the shot and never
-  moves a centre.
+  moves a centre. **Every guarantee measures the room from where the ANCHOR actually sits**, not
+  from the frame's centre — the corridor was the last one still dividing by the centre chord, which
+  made it too permissive for a forward-framed anchor and broke its own promise on 69% of frames
+  (CAMERA-ANCHOR-TRUTH-1).
 - **ZOOM** — how much world is in shot, in standard corridors.
 
 Frame POSITION is not a fourth setting. It follows from "is there anything worth seeing ahead of the
@@ -242,7 +245,7 @@ test at both ends.
 ## 6. What is protected by tests, and what only by convention
 
 **The render path is no longer convention-only.** `scripts/render-fingerprint.mjs`
-(**`ae7e9243bd2add8b`**) hashes the SEQUENCE of draw calls — sprite placement, text, styles,
+(**`a10bf3f293f2ee06`**) hashes the SEQUENCE of draw calls — sprite placement, text, styles,
 transforms and layer order — at six fixed frames across all ten tracks, by driving the real
 `renderRaceFrame()` through a recording context. It covers what the camera fingerprint structurally
 cannot: what actually reaches the canvas. Run it on any block whose diff can reach a `ctx.` call.
@@ -255,12 +258,19 @@ defaults-under / stored-over / unknown-ignored rule; every framing validation ba
 reject-not-clamp behaviour; the engine-input list; the detour recorder's non-interference; the
 render path's `detectBattleGroup` contract; and every camera decision at once, via the fingerprint.
 
+Added by CAMERA-ANCHOR-TRUTH-1: **the state machine's five transition reasons and its hold gate**
+(`decideTransition` returns `{action, reason}`, and precedence — which was behaviour hiding in the
+order of five OR-ed conditions — is pinned); **the photo-finish gate predicate**; and **the OVERVIEW
+time-constant defaults**, with the reason for each attached to the assertion.
+
 **Convention only — nothing fails if it breaks:**
 
-- **The tracking lag.** Measured repeatedly (5.8–7.9 pp in LEADER, 25.2 pp in OVERVIEW), never
-  asserted. Change a `trackingTC` default and no test notices.
-- **The state machine's transition reasons.** Which state fires when is covered only where a
-  specific block wrote a case.
+- **The tracking lag ITSELF.** Still unasserted as a quantity — no test fails if the camera trails
+  further. But the two entries that used to sit here have moved up into the protected list
+  (CAMERA-ANCHOR-TRUTH-1): the `trackingTC` DEFAULTS are now pinned with their reasons, and the
+  transition REASONS are now return values. Current figures, re-measured with
+  `scripts/tracking-lag.mjs`: LEADER 2.05 pp, OVERVIEW 6.78 pp (was 13.78 at `trackingTC` 1.5),
+  every other state pooled 3.78 pp.
 - **Slow motion.** Physics-time scaling in the render loop has no camera-side test.
 - **The HUD overlay and every diagnostic flag.** Read-only by design, unasserted by consequence.
 - **The world-bounds clamp.** Named as the cause of two measured residuals; nothing pins it.

@@ -48,8 +48,8 @@ is move one without noticing.
 | | covers | run it when | cost |
 |---|---|---|---|
 | `scripts/fingerprint-default.mjs` — **world** `dc4647be0f55ebdb` | the RACE: physics, plan, outcome | any behaviour change, and per the mint tripwire above | ~2 min |
-| `scripts/camera-fingerprint.mjs` — **camera** `4b33c4d31bec93ea` | the DIRECTOR's decisions: state, phase, anchor, zoom, offsets, camT, targets | any block touching `client/src/modules/camera/` | ~85 s |
-| `scripts/render-fingerprint.mjs` — **render** `ae7e9243bd2add8b` | the DRAW CALL SEQUENCE: sprite placement, text, styles, transforms, layer order | any block touching the drawing path — `RaceScreen/renderRaceFrame.js`, `RaceScreen/drawing/`, `nameTagLayout.js`, `Minimap.js`, the racer types' `drawRacer` | ~30 s |
+| `scripts/camera-fingerprint.mjs` — **camera** `1db71e7fffc1c9f6` | the DIRECTOR's decisions: state, phase, anchor, zoom, offsets, camT, targets | any block touching `client/src/modules/camera/` | ~85 s |
+| `scripts/render-fingerprint.mjs` — **render** `a10bf3f293f2ee06` | the DRAW CALL SEQUENCE: sprite placement, text, styles, transforms, layer order | any block touching the drawing path — `RaceScreen/renderRaceFrame.js`, `RaceScreen/drawing/`, `nameTagLayout.js`, `Minimap.js`, the racer types' `drawRacer` | ~30 s |
 
 **Why the render one earns its cost only on drawing blocks.** The camera fingerprint already covers
 every decision the director makes, and it is the cheaper answer for camera-only work. The render
