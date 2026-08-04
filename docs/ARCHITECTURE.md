@@ -743,6 +743,16 @@ The snapshot (`_prevT/_prevX/_prevY/_prevAngle`) is taken at the **start of each
 
 ## Camera System
 
+> **STALE — superseded by [CAMERA_DIRECTOR.md](CAMERA_DIRECTOR.md), which is the canonical camera
+> reference.** Kept as a record of the pre-refactor design; do NOT read it as a description of the
+> shipped camera. Surfaced by CAMERA-MERGE-1 and headed rather than rewritten, because rewriting it
+> is a docs block of its own. Known-wrong here, as examples rather than an exhaustive list: there
+> are SIX director states (PHOTO_FINISH is missing below); the director does NOT pick the
+> highest-weight candidate — it draws one at random by weight and then ACCEPTS it with probability
+> equal to that weight (CAMERA-WEIGHTS-1); battle isolation is an ARC fraction, not
+> `battleIsolationPx: 300`; `_frozenBattleGroup`, `overviewCooldownMin/Max` and the spriteScale zoom
+> chain no longer exist.
+
 The race camera lives in `modules/camera/` and supports five director modes:
 
 - **OVERVIEW** — wide shot showing the full track; zoom equals `overviewZoom` (full track fits). On open tracks `_overviewStateZoom = overviewZoom` (direct, not computed from spriteScale — see Lesson 83). After the first finisher crosses the line, OVERVIEW enters **FINISH_OVERVIEW mode**: smooth zoom-out + T-space pan to `finishOverviewLookbackPx` (300 world-px, L88) before the finish line. `_camT` stays at winner.t on entry; `_transitionTargetT = lookbackT`; a dedicated `else if` branch lerps `_camT` toward it in parallel with the zoom-out (L89). The mode waits until all racers have finished.
@@ -1138,6 +1148,13 @@ remains at default 0/off and is a candidate for future removal.
 ## Camera — LEADER_ZOOM Entry Zoom Consistency (Fix A)
 
 *(Added 2026-06-10.)*
+
+> **STALE — the mechanisms this section reasons about are gone.** `_setOpenTrackTargets` was
+> replaced by the single projection in CAMERA-PROJECTION-1, and `_leaderPhaseZoomFloor` — the
+> ratcheting min-visible floor — was deleted in CAMERA-FRAMING-1 and its job given to the COMPANY
+> guarantee, which widens before the camera moves instead of correcting after. The invariant it
+> describes is not wrong; the code it describes does not exist. Current behaviour:
+> [CAMERA_DIRECTOR.md](CAMERA_DIRECTOR.md) §3.
 
 ### The invariant
 

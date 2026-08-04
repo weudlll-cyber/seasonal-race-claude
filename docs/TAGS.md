@@ -275,6 +275,24 @@ checked.
   lines inside RaceScreen's rAF callback closed over 42 pieces of component state, so nothing but a
   browser can drive it; and `PHASE` is declared in three separate files.
 
+### THE CAMERA REFACTOR LANDED — CAMERA-MERGE-1 (2026-08-04)
+`camera-refactor` merged to master with full history at `87961ca6` (41 commits, ~20 blocks, four
+days), then the branch deleted. Master's previous tip `e5f0afa6` was OVERVIEW-FRAMING-1, which the
+owner rejected and CAMERA-FRAMING-1 superseded; it is an ancestor of the merge, so the record stays
+while the code does not — verified, see the report.
+
+- `archive/camera-refactor` (`202772c2`, 2026-08-04) — the branch tip, preserved permanently before
+  the branch was deleted. **Do not delete.**
+
+**The fifteen `pre/*` tags this branch produced STAY VALID and stay registered.** They are listed
+individually above, block by block, and each still names a real return point in master's history now
+that the branch is merged with its commits intact — a merge with history does not orphan them. They
+are step-tags rather than permanent anchors, so they may be collapsed onto a phase endpoint later;
+until somebody decides that, they are the cheapest way back into any single block of the refactor:
+`pre/projection`, `pre/zoom-unit`, `pre/picture-fixes`, `pre/framing`, `pre/company`,
+`pre/company-2`, `pre/reference-width`, `pre/lateral`, `pre/no-schema`, `pre/min-draw`, `pre/tags`,
+`pre/camera-hygiene`, `pre/weights`, `pre/camera-hygiene-2`, `pre/render-fingerprint`.
+
 ## Active-phase tags (temporary scaffolding — to collapse later)
 
 Step-tags from the runaway phase (now CLOSED 2026-07-29, see below) and any later work — safe return points, not permanent anchors. They collapse into
