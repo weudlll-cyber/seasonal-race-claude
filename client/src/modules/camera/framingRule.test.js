@@ -816,3 +816,127 @@ describe('CAMERA-LATERAL-1 — the two axes, through the director', () => {
     }
   });
 });
+
+// ============================================================
+// CAMERA-ANCHOR-TRUTH-1 §4a — the corridor is measured from the ANCHOR, not the frame centre.
+//
+// The equality test below is the cheapest possible proof that nothing ELSE changed: with the anchor
+// centred, the new two-sided form must reduce to the old chord expression exactly. Every corridor
+// test above calls the function without an anchor, so they are all that same proof by default.
+// ============================================================
+describe('the corridor measures from the anchor (CAMERA-ANCHOR-TRUTH-1)', () => {
+  const centre = { x: W / 2, y: H / 2 };
+
+  it.each(TRACKS)(
+    '$name: a CENTRED anchor gives exactly the old centre-chord answer, every 1° of heading',
+    (t) => {
+      for (let deg = 0; deg < 360; deg += 1) {
+        const perp = { x: -Math.sin((deg * Math.PI) / 180), y: Math.cos((deg * Math.PI) / 180) };
+        const needed = Math.hypot(perp.x * t.axisX * t.tw, perp.y * t.axisY * t.tw);
+        const old = frameExtentAlong(perp.x * t.axisX, perp.y * t.axisY, W, H) / needed;
+        const now = corridorGuarantee(headingAt(deg), t.tw, t.axisX, t.axisY, W, H, 1, centre);
+        expect(now, `heading ${deg}° on ${t.name}`).toBeCloseTo(old, 10);
+      }
+    }
+  );
+
+  it('the centred equality holds under an inner-frame fraction too', () => {
+    for (let deg = 0; deg < 360; deg += 3) {
+      const perp = { x: -Math.sin((deg * Math.PI) / 180), y: Math.cos((deg * Math.PI) / 180) };
+      const needed = Math.hypot(
+        perp.x * CLOSED.axisX * CLOSED.tw,
+        perp.y * CLOSED.axisY * CLOSED.tw
+      );
+      const old =
+        (frameExtentAlong(perp.x * CLOSED.axisX, perp.y * CLOSED.axisY, W, H) * SUBJECT_INNER_PCT) /
+        needed;
+      const now = corridorGuarantee(
+        headingAt(deg),
+        CLOSED.tw,
+        CLOSED.axisX,
+        CLOSED.axisY,
+        W,
+        H,
+        SUBJECT_INNER_PCT,
+        centre
+      );
+      expect(now, `heading ${deg}°`).toBeCloseTo(old, 10);
+    }
+  });
+
+  it('omitting the anchor is the same as centring it — the default is not a different rule', () => {
+    for (let deg = 0; deg < 360; deg += 11) {
+      const withNone = corridorGuarantee(headingAt(deg), OPEN.tw, OPEN.axisX, OPEN.axisY, W, H, 1);
+      const withCentre = corridorGuarantee(
+        headingAt(deg),
+        OPEN.tw,
+        OPEN.axisX,
+        OPEN.axisY,
+        W,
+        H,
+        1,
+        centre
+      );
+      expect(withCentre).toBeCloseTo(withNone, 10);
+    }
+  });
+
+  it.each(TRACKS)(
+    '$name: a FORWARD-framed anchor never widens the ceiling — WIDEN-ONLY (Lesson 192)',
+    (t) => {
+      for (let deg = 0; deg < 360; deg += 3) {
+        const at = anchorScreenPoint(W, H, 0.66, headingAt(deg));
+        const centred = corridorGuarantee(headingAt(deg), t.tw, t.axisX, t.axisY, W, H, 1, centre);
+        const anchored = corridorGuarantee(headingAt(deg), t.tw, t.axisX, t.axisY, W, H, 1, at);
+        // A smaller ceiling is a WIDER shot. It may never come out bigger than the centred answer,
+        // which is what "the old form was too permissive" means.
+        expect(anchored, `heading ${deg}° on ${t.name}`).toBeLessThanOrEqual(centred * (1 + 1e-12));
+      }
+    }
+  );
+
+  it('the corridor actually fits from the anchor, on BOTH sides, at the returned zoom', () => {
+    for (const t of TRACKS) {
+      for (let deg = 0; deg < 360; deg += 5) {
+        const at = anchorScreenPoint(W, H, 0.66, headingAt(deg));
+        const z = corridorGuarantee(headingAt(deg), t.tw, t.axisX, t.axisY, W, H, 1, at);
+        if (!Number.isFinite(z)) continue;
+        const perp = { x: -Math.sin((deg * Math.PI) / 180), y: Math.cos((deg * Math.PI) / 180) };
+        const sx = perp.x * t.axisX;
+        const sy = perp.y * t.axisY;
+        const halfNeeded = Math.hypot(sx, sy) * (t.tw / 2) * z;
+        const plus = roomFromPointAlong(at.x, at.y, sx, sy, W, H, 1);
+        const minus = roomFromPointAlong(at.x, at.y, -sx, -sy, W, H, 1);
+        // 1e-9 slack for float noise only.
+        expect(halfNeeded, `+side ${deg}° ${t.name}`).toBeLessThanOrEqual(plus + 1e-9);
+        expect(halfNeeded, `-side ${deg}° ${t.name}`).toBeLessThanOrEqual(minus + 1e-9);
+      }
+    }
+  });
+
+  it('a degenerate heading still honours the anchor rather than falling back to the centre', () => {
+    const at = anchorScreenPoint(W, H, 0.66, { x: 1, y: 0 });
+    const anchored = corridorGuarantee(
+      { x: 0, y: 0 },
+      OPEN.tw,
+      OPEN.axisX,
+      OPEN.axisY,
+      W,
+      H,
+      1,
+      at
+    );
+    const centred = corridorGuarantee(
+      { x: 0, y: 0 },
+      OPEN.tw,
+      OPEN.axisX,
+      OPEN.axisY,
+      W,
+      H,
+      1,
+      centre
+    );
+    expect(anchored).toBeLessThanOrEqual(centred * (1 + 1e-12));
+    expect(Number.isFinite(anchored)).toBe(true);
+  });
+});

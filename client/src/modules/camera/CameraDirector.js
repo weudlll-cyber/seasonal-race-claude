@@ -1808,6 +1808,17 @@ export class CameraDirector {
       // corridor so the shot is still bounded by something real.
       if (Number.isFinite(ceiling)) return ceiling;
     }
+    // WHERE THE ANCHOR WILL SIT, from the framing rule — the same zoom-independent position the
+    // company guarantee uses, for the same reason: the corridor runs half a track width to each
+    // side of the anchor, so the room that matters is the room from THERE, not the chord through
+    // the frame's centre. Reusing `anchorScreenPoint` keeps the two guarantees from disagreeing
+    // about where the subject is about to be.
+    const at = anchorScreenPoint(
+      frameSize.width,
+      frameSize.height,
+      framingFor(this.state).position === POSITION.FORWARD ? this._leaderForwardFrac : null,
+      this._headingScreen(subjects.t)
+    );
     return corridorGuarantee(
       this._headingAt(subjects.t),
       this._trackWidthPx,
@@ -1815,7 +1826,8 @@ export class CameraDirector {
       axisY,
       frameSize.width,
       frameSize.height,
-      inner
+      inner,
+      at
     );
   }
 
@@ -2228,6 +2240,18 @@ export class CameraDirector {
       this._guaranteeCeiling(subjects, frameSize),
       this._companyCeiling(subjects, racers, frameSize)
     );
+
+    // READ-ONLY PROBE (CAMERA-ANCHOR-TRUTH-1 §4a). The framing inputs this frame actually used, so
+    // the corridor measurement reads the REAL path instead of reconstructing it — a harness that
+    // measures a COPY is the failure mode this repo has hit six times. Written every frame and read
+    // by NOTHING in the camera, so it cannot move a fingerprint.
+    this._framingProbe = {
+      t: subjects.t,
+      frameW: frameSize.width,
+      frameH: frameSize.height,
+      stateZoom,
+      guaranteed,
+    };
 
     // ── WHERE IN FRAME: from the principle, not from a slider ──────────────────────────────────
     if (framing.position === POSITION.FORWARD && this._observerPhase === 'follow') {
