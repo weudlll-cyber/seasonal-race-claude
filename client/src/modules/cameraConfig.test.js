@@ -94,7 +94,11 @@ describe('loadCameraConfig', () => {
     expect(cfg.cameraStateProfiles.LEADER_ZOOM.visibleCorridors).toBe(
       DEFAULT_CAMERA_CONFIG.cameraStateProfiles.LEADER_ZOOM.visibleCorridors
     );
-    expect(cfg.spritePctOfCanvas.leader).toBe(0.1);
+    // CAMERA-HYGIENE-2: `expect(cfg.spritePctOfCanvas.leader).toBe(0.1)` used to follow. It
+    // guaranteed that a legacy key SURVIVED the load — and the loader keeps a stored key only
+    // while the defaults still declare it. Now that the two dead legacy keys are gone from
+    // defaults, the loader drops them, which is the "unknown ignored" rule doing its job.
+    expect(cfg.spritePctOfCanvas).toBeUndefined();
   });
 
   it('missing spritePctOfCanvas sub-keys fall back to scale defaults', () => {

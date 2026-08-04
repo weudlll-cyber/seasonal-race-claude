@@ -27,6 +27,20 @@ import { effectiveZoom } from './openTrackCamera.js';
 import { lapProgress, currentLap } from './lapUtils.js';
 import { DEFAULT_CAMERA_CONFIG } from '../cameraConfig.js';
 
+// CAMERA-HYGIENE-2 — WHY THESE TESTS PIN THEIR WEIGHTS.
+// Since CAMERA-WEIGHTS-1 a weight is a PROPENSITY: `battleWeight` 0.8 means "when this shot is
+// offered, take it about 8 times in 10". So a test that says "the gate opened, therefore the state
+// was entered" stopped being a statement about the gate and became a coin flip — eighteen of them,
+// failing together about one full-suite run in ten even with vitest's 3 retries (COMEBACK, at
+// weight 0.6, fails 0.4^4 = 2.6% of runs on its own). ALWAYS_TAKE says "take every offered shot",
+// which is exactly what a GATE test means to assert. The lottery itself has its own tests, below.
+const ALWAYS_TAKE = Object.freeze({
+  battleWeight: 1,
+  leadChangeWeight: 1,
+  comebackWeight: 1,
+  overviewWeight: 1,
+});
+
 // ── lapProgress ───────────────────────────────────────────────────────────────
 
 describe('lapProgress', () => {
@@ -437,7 +451,7 @@ describe('CameraDirector — §5.3 attention hierarchy', () => {
   });
 
   it('Priority 4: battle (pulk of 3 within 200px) → BATTLE_ZOOM', () => {
-    const cd = new CameraDirector();
+    const cd = new CameraDirector(1280, 720, false, ALWAYS_TAKE);
     cd.state = CAM_STATE.LEADER_ZOOM;
     cd.stateEnteredAt = 0;
     cd._lastOverviewExitTs = 3000; // cooldown not expired → Priority 3 skipped
@@ -465,7 +479,7 @@ describe('CameraDirector — §5.3 attention hierarchy', () => {
   });
 
   it('COMEBACK_ZOOM when a B1 racer gains ≥ minPositions in outcome phase', () => {
-    const cd = new CameraDirector();
+    const cd = new CameraDirector(1280, 720, false, ALWAYS_TAKE);
     cd.state = CAM_STATE.LEADER_ZOOM;
     cd.stateEnteredAt = 0;
     cd._lastOverviewExitTs = 3000; // cooldown not expired → Priority 3 skipped
@@ -825,6 +839,7 @@ describe('CameraDirector — battle trigger tunables (Block X)', () => {
       ...pctConfig,
       maxStateDuration: 4000,
       endgameThreshold: 0.85,
+      ...ALWAYS_TAKE,
     };
     const cd = new CameraDirector(1280, 720, false, cfg);
     cd.state = CAM_STATE.LEADER_ZOOM;
@@ -873,6 +888,7 @@ describe('CameraDirector — battle trigger tunables (Block X)', () => {
       ...pctConfig,
       maxStateDuration: 4000,
       endgameThreshold: 0.95,
+      ...ALWAYS_TAKE,
     };
     const cd = new CameraDirector(1280, 720, false, cfg);
     cd.state = CAM_STATE.LEADER_ZOOM;
@@ -964,7 +980,7 @@ describe('CameraDirector — D1: postStartLeaderHold', () => {
   });
 
   it('BATTLE allowed after postStartHold window (raceElapsed=10001)', () => {
-    const cd = new CameraDirector();
+    const cd = new CameraDirector(1280, 720, false, ALWAYS_TAKE);
     cd.state = CAM_STATE.LEADER_ZOOM;
     cd.stateEnteredAt = 0;
     cd._lastOverviewExitTs = 5000; // cooldown not expired (10001-5000=5001 < 8000) → P3 skipped
@@ -999,7 +1015,7 @@ describe('CameraDirector — D2: battleCooldown', () => {
   });
 
   it('BATTLE fires after 8s battle cooldown', () => {
-    const cd = new CameraDirector();
+    const cd = new CameraDirector(1280, 720, false, ALWAYS_TAKE);
     cd.state = CAM_STATE.LEADER_ZOOM;
     cd.stateEnteredAt = 0;
     cd._lastBattleExitTs = 3000; // ts=11001: 11001-3000=8001 >= 8000 → cooled
@@ -1636,7 +1652,7 @@ const profileConfig = {
 
 describe('CameraDirector — Phase 1: dt-scaled lerp', () => {
   it('no dt arg (default 16.67ms): lerp factor equals lf60 (behavior-equivalent)', () => {
-    const cd = new CameraDirector(1280, 720, false, null, 36);
+    const cd = new CameraDirector(1280, 720, false, ALWAYS_TAKE, 36);
     cd.state = CAM_STATE.LEADER_ZOOM;
     cd.stateEnteredAt = 0;
     const startZoom = 1.0;
@@ -1650,13 +1666,13 @@ describe('CameraDirector — Phase 1: dt-scaled lerp', () => {
   });
 
   it('double dt (33.33ms) produces larger lerp step than single dt', () => {
-    const cd1 = new CameraDirector(1280, 720, false, null, 36);
+    const cd1 = new CameraDirector(1280, 720, false, ALWAYS_TAKE, 36);
     cd1.state = CAM_STATE.LEADER_ZOOM;
     cd1.stateEnteredAt = 0;
     cd1.zoom = 1.0;
     cd1.targetZoom = 3.0;
 
-    const cd2 = new CameraDirector(1280, 720, false, null, 36);
+    const cd2 = new CameraDirector(1280, 720, false, ALWAYS_TAKE, 36);
     cd2.state = CAM_STATE.LEADER_ZOOM;
     cd2.stateEnteredAt = 0;
     cd2.zoom = 1.0;
@@ -2039,7 +2055,7 @@ describe('CameraDirector — Etappe 9: observer phase (time-based)', () => {
 
   it('_transition() sets _camT = focusT and _transitionTargetT = focusT+leadAhead for LEADER_ZOOM', () => {
     const shape = makeShape(4000);
-    const cd = new CameraDirector(1280, 720, false, phasedConfig, 36, shape);
+    const cd = new CameraDirector(1280, 720, false, { ...phasedConfig, ...ALWAYS_TAKE }, 36, shape);
     const racers = [
       { x: 800, y: 360, t: 0.5 },
       { x: 700, y: 360, t: 0.4 },
@@ -2059,7 +2075,7 @@ describe('CameraDirector — Etappe 9: observer phase (time-based)', () => {
 
   it('_transition() to OVERVIEW sets _camT = leader.t and _transitionTargetT = leader.t (no lead-ahead)', () => {
     const shape = makeShape(4000);
-    const cd = new CameraDirector(1280, 720, false, phasedConfig, 36, shape);
+    const cd = new CameraDirector(1280, 720, false, { ...phasedConfig, ...ALWAYS_TAKE }, 36, shape);
     const racers = [{ x: 100, y: 360, t: 0.1 }];
     cd._transition(racers, 1000, {
       raceElapsed: 1000,
@@ -2076,7 +2092,7 @@ describe('CameraDirector — Etappe 9: observer phase (time-based)', () => {
 
   it('_transition() resets _observerPhase to "idle" and sets _transitionTargetT for LEADER_ZOOM', () => {
     const shape = makeShape(4000);
-    const cd = new CameraDirector(1280, 720, false, phasedConfig, 36, shape);
+    const cd = new CameraDirector(1280, 720, false, { ...phasedConfig, ...ALWAYS_TAKE }, 36, shape);
     cd._observerPhase = 'follow';
     const racers = [
       { x: 800, y: 360, t: 0.5 },
@@ -2101,7 +2117,7 @@ describe('CameraDirector — Etappe 9: observer phase (time-based)', () => {
     // many frames of racer movement, inflating leadAhead and causing _shortestTDelta to
     // return a negative value (camera moves backward briefly before correcting forward).
     const shape = makeShape(4000);
-    const cd = new CameraDirector(1280, 720, false, phasedConfig, 36, shape);
+    const cd = new CameraDirector(1280, 720, false, { ...phasedConfig, ...ALWAYS_TAKE }, 36, shape);
     cd._prevFocusT = 2.38; // stale value from a previous tracking phase
     const racers = [
       { x: 800, y: 360, t: 0.5 },
@@ -2139,7 +2155,7 @@ describe('CameraDirector — Etappe 9: observer phase (time-based)', () => {
 
   it('convergence gate: when zoom+T both converge, switches to lead-in with _camT at lead-ahead pos', () => {
     const shape = makeShape(4000);
-    const cd = new CameraDirector(1280, 720, false, phasedConfig, 36, shape);
+    const cd = new CameraDirector(1280, 720, false, { ...phasedConfig, ...ALWAYS_TAKE }, 36, shape);
     // Simulate T-space lerp having already positioned _camT at focusT+leadAhead (= 0.56).
     // speed=0.001, FRAME_RATE=60, leadInDuration=1.0s → leadAhead=0.06, target=0.5+0.06=0.56
     cd.state = CAM_STATE.LEADER_ZOOM;
@@ -2175,7 +2191,7 @@ describe('CameraDirector — Etappe 9: observer phase (time-based)', () => {
 
   it('T-space lerp: _camT moves along shorter track arc (0.3→0.7), stays in [0.3, 0.76]', () => {
     const shape = makeShape(4000);
-    const cd = new CameraDirector(1280, 720, false, phasedConfig, 36, shape);
+    const cd = new CameraDirector(1280, 720, false, { ...phasedConfig, ...ALWAYS_TAKE }, 36, shape);
     cd.state = CAM_STATE.LEADER_ZOOM;
     cd.stateEnteredAt = 0;
     cd._lerpPhase = 'entry';
@@ -2195,7 +2211,7 @@ describe('CameraDirector — Etappe 9: observer phase (time-based)', () => {
 
   it('T-space lerp: wrap-around takes shorter arc (t=0.95→t=0.05, forward not backward)', () => {
     const shape = makeShape(4000);
-    const cd = new CameraDirector(1280, 720, false, phasedConfig, 36, shape);
+    const cd = new CameraDirector(1280, 720, false, { ...phasedConfig, ...ALWAYS_TAKE }, 36, shape);
     cd.state = CAM_STATE.LEADER_ZOOM;
     cd.stateEnteredAt = 0;
     cd._lerpPhase = 'entry';
@@ -2218,7 +2234,7 @@ describe('CameraDirector — Etappe 9: observer phase (time-based)', () => {
 
   it('lead-in: stays in "lead-in" phase until leadInDuration seconds elapsed', () => {
     const shape = makeShape(4000);
-    const cd = new CameraDirector(1280, 720, false, phasedConfig, 36, shape);
+    const cd = new CameraDirector(1280, 720, false, { ...phasedConfig, ...ALWAYS_TAKE }, 36, shape);
     cd.state = CAM_STATE.LEADER_ZOOM;
     cd.stateEnteredAt = 10000;
     cd._lerpPhase = 'tracking';
@@ -2232,7 +2248,7 @@ describe('CameraDirector — Etappe 9: observer phase (time-based)', () => {
 
   it('lead-in: transitions to "follow" after leadInDuration seconds elapsed', () => {
     const shape = makeShape(4000);
-    const cd = new CameraDirector(1280, 720, false, phasedConfig, 36, shape);
+    const cd = new CameraDirector(1280, 720, false, { ...phasedConfig, ...ALWAYS_TAKE }, 36, shape);
     cd.state = CAM_STATE.LEADER_ZOOM;
     cd.stateEnteredAt = 10000;
     cd._lerpPhase = 'tracking';
@@ -2246,7 +2262,7 @@ describe('CameraDirector — Etappe 9: observer phase (time-based)', () => {
 
   it('follow: _camT tracks focusT each frame (pin-lock)', () => {
     const shape = makeShape(4000);
-    const cd = new CameraDirector(1280, 720, false, phasedConfig, 36, shape);
+    const cd = new CameraDirector(1280, 720, false, { ...phasedConfig, ...ALWAYS_TAKE }, 36, shape);
     cd.state = CAM_STATE.LEADER_ZOOM;
     cd.stateEnteredAt = 10000;
     cd._lerpPhase = 'tracking';
@@ -2263,7 +2279,7 @@ describe('CameraDirector — Etappe 9: observer phase (time-based)', () => {
     // targetOffsetX/Y are owned by _setTargets (runs at the top of update() next frame).
     // offsetX must remain unchanged — pixel-lerp closes the gap from the next frame onward.
     const shape = makeShape(4000);
-    const cd = new CameraDirector(1280, 720, false, phasedConfig, 36, shape);
+    const cd = new CameraDirector(1280, 720, false, { ...phasedConfig, ...ALWAYS_TAKE }, 36, shape);
     cd.state = CAM_STATE.LEADER_ZOOM;
     cd.stateEnteredAt = 10000;
     cd._lerpPhase = 'tracking';
@@ -2283,7 +2299,7 @@ describe('CameraDirector — Etappe 9: observer phase (time-based)', () => {
 
   it('lead-out triggered when remainingMs <= leadOutDuration * 1000', () => {
     const shape = makeShape(4000);
-    const cd = new CameraDirector(1280, 720, false, phasedConfig, 36, shape);
+    const cd = new CameraDirector(1280, 720, false, { ...phasedConfig, ...ALWAYS_TAKE }, 36, shape);
     cd.state = CAM_STATE.LEADER_ZOOM;
     cd.stateEnteredAt = 10000;
     cd._lerpPhase = 'tracking';
@@ -2300,7 +2316,7 @@ describe('CameraDirector — Etappe 9: observer phase (time-based)', () => {
 
   it('lead-out: sticky — does not revert once triggered', () => {
     const shape = makeShape(4000);
-    const cd = new CameraDirector(1280, 720, false, phasedConfig, 36, shape);
+    const cd = new CameraDirector(1280, 720, false, { ...phasedConfig, ...ALWAYS_TAKE }, 36, shape);
     cd.state = CAM_STATE.LEADER_ZOOM;
     cd.stateEnteredAt = 10000;
     cd._lerpPhase = 'tracking';
@@ -2316,7 +2332,7 @@ describe('CameraDirector — Etappe 9: observer phase (time-based)', () => {
 
   it('no-op when _lerpPhase === "entry"', () => {
     const shape = makeShape(4000);
-    const cd = new CameraDirector(1280, 720, false, phasedConfig, 36, shape);
+    const cd = new CameraDirector(1280, 720, false, { ...phasedConfig, ...ALWAYS_TAKE }, 36, shape);
     cd._camT = 0.5;
     cd._lerpPhase = 'entry';
     cd.state = CAM_STATE.LEADER_ZOOM;
@@ -2327,7 +2343,7 @@ describe('CameraDirector — Etappe 9: observer phase (time-based)', () => {
 
   it('OVERVIEW: _computePhasedPanTarget exits immediately (no phase change)', () => {
     const shape = makeShape(4000);
-    const cd = new CameraDirector(1280, 720, false, phasedConfig, 36, shape);
+    const cd = new CameraDirector(1280, 720, false, { ...phasedConfig, ...ALWAYS_TAKE }, 36, shape);
     cd._camT = 0.5;
     cd._lerpPhase = 'tracking';
     cd.state = CAM_STATE.OVERVIEW;
@@ -2337,7 +2353,7 @@ describe('CameraDirector — Etappe 9: observer phase (time-based)', () => {
 
   it('follow: _camT wraps correctly when focusT crosses lap boundary', () => {
     const shape = makeShape(4000);
-    const cd = new CameraDirector(1280, 720, false, phasedConfig, 36, shape);
+    const cd = new CameraDirector(1280, 720, false, { ...phasedConfig, ...ALWAYS_TAKE }, 36, shape);
     cd.state = CAM_STATE.LEADER_ZOOM;
     cd.stateEnteredAt = 10000;
     cd._lerpPhase = 'tracking';
@@ -2460,7 +2476,7 @@ describe('CameraDirector — Etappe 10: diagnostic fields', () => {
 
   it('battle-diag snapshot is pushed on frame 1 of BATTLE_ZOOM', () => {
     const shape = makeShape(4000);
-    const cd = new CameraDirector(1280, 720, false, phasedConfig, 36, shape);
+    const cd = new CameraDirector(1280, 720, false, { ...phasedConfig, ...ALWAYS_TAKE }, 36, shape);
     cd.state = CAM_STATE.BATTLE_ZOOM;
     cd.stateEnteredAt = 1000;
     cd._camT = 0.5;
@@ -2483,7 +2499,7 @@ describe('CameraDirector — Etappe 10: diagnostic fields', () => {
 
   it('battle-diag collects 5 snapshots and freezes after 60 frames', () => {
     const shape = makeShape(4000);
-    const cd = new CameraDirector(1280, 720, false, phasedConfig, 36, shape);
+    const cd = new CameraDirector(1280, 720, false, { ...phasedConfig, ...ALWAYS_TAKE }, 36, shape);
     cd.state = CAM_STATE.BATTLE_ZOOM;
     cd.stateEnteredAt = 1000;
     cd._camT = 0.5;
@@ -2509,7 +2525,7 @@ describe('CameraDirector — Etappe 10: diagnostic fields', () => {
 
   it('battle-diag resets automatically on new BATTLE_ZOOM entry', () => {
     const shape = makeShape(4000);
-    const cd = new CameraDirector(1280, 720, false, phasedConfig, 36, shape);
+    const cd = new CameraDirector(1280, 720, false, { ...phasedConfig, ...ALWAYS_TAKE }, 36, shape);
     cd._battleDiagSnapshots = [{ f: 1, phase: 'entry' }];
     cd._battleDiagFrozen = true;
     cd._battleDiagFrameCount = 60;
@@ -2544,7 +2560,7 @@ describe('CameraDirector — Etappe 11: BATTLE_ZOOM pin-lock convergence', () =>
 
   it('BATTLE_ZOOM with phasedConfig: entry phase converges to tracking as zoom settles', () => {
     const shape = makeShape(4000);
-    const cd = new CameraDirector(1280, 720, false, phasedConfig, 36, shape);
+    const cd = new CameraDirector(1280, 720, false, { ...phasedConfig, ...ALWAYS_TAKE }, 36, shape);
     cd.state = CAM_STATE.BATTLE_ZOOM;
     cd.stateEnteredAt = 1000;
     cd._camT = 0.5;
@@ -2615,7 +2631,7 @@ describe('CameraDirector — Etappe 11: BATTLE_ZOOM pin-lock convergence', () =>
 
   it('_leadInStartTs is reset to ts when entry transitions to tracking', () => {
     const shape = makeShape(4000);
-    const cd = new CameraDirector(1280, 720, false, phasedConfig, 36, shape);
+    const cd = new CameraDirector(1280, 720, false, { ...phasedConfig, ...ALWAYS_TAKE }, 36, shape);
     cd.state = CAM_STATE.BATTLE_ZOOM;
     cd.stateEnteredAt = 0;
     cd._camT = 0.5;
@@ -2648,7 +2664,7 @@ describe('CameraDirector — Etappe 11: BATTLE_ZOOM pin-lock convergence', () =>
 
   it('BATTLE_ZOOM transitions to follow phase after lead-in expires', () => {
     const shape = makeShape(4000);
-    const cd = new CameraDirector(1280, 720, false, phasedConfig, 36, shape);
+    const cd = new CameraDirector(1280, 720, false, { ...phasedConfig, ...ALWAYS_TAKE }, 36, shape);
     cd.state = CAM_STATE.BATTLE_ZOOM;
     cd.stateEnteredAt = 1000;
     cd._camT = 0.5;
@@ -2672,7 +2688,7 @@ describe('CameraDirector — Etappe 11: BATTLE_ZOOM pin-lock convergence', () =>
 
   it('LEADER_ZOOM regression: still converges entry → tracking', () => {
     const shape = makeShape(4000);
-    const cd = new CameraDirector(1280, 720, false, phasedConfig, 36, shape);
+    const cd = new CameraDirector(1280, 720, false, { ...phasedConfig, ...ALWAYS_TAKE }, 36, shape);
     cd.state = CAM_STATE.LEADER_ZOOM;
     cd.stateEnteredAt = 1000;
     cd._camT = 0.5;
@@ -2699,7 +2715,7 @@ describe('CameraDirector — Etappe 11: BATTLE_ZOOM pin-lock convergence', () =>
 
   it('_camT tracks focusT during entry (not frozen at initial lead-in position)', () => {
     const shape = makeShape(4000);
-    const cd = new CameraDirector(1280, 720, false, phasedConfig, 36, shape);
+    const cd = new CameraDirector(1280, 720, false, { ...phasedConfig, ...ALWAYS_TAKE }, 36, shape);
     cd.state = CAM_STATE.BATTLE_ZOOM;
     cd.stateEnteredAt = 1000;
     cd._camT = 0.5; // initial position before T-space lerp runs
@@ -2827,7 +2843,7 @@ describe('CameraDirector — Stage 13: Pulk condition for BATTLE_ZOOM', () => {
   // ── State machine: BATTLE entry via pulk ─────────────────────────────────
 
   it('BATTLE triggers via Priority 4 when pulk exists at ranks 3/4/5', () => {
-    const cd = new CameraDirector();
+    const cd = new CameraDirector(1280, 720, false, ALWAYS_TAKE);
     cd.state = CAM_STATE.LEADER_ZOOM;
     cd.stateEnteredAt = 0;
     cd._lastOverviewExitTs = 3000; // cooldown not expired
@@ -3036,7 +3052,7 @@ describe('CameraDirector — Phase 3B: 3-condition BATTLE detection', () => {
   });
 
   it('camera lock: _battleLockedRacer is set to frontmost group racer on BATTLE_ZOOM entry', () => {
-    const cd = new CameraDirector();
+    const cd = new CameraDirector(1280, 720, false, ALWAYS_TAKE);
     cd.state = CAM_STATE.LEADER_ZOOM;
     cd.stateEnteredAt = 0;
     cd._lastOverviewExitTs = 3000;
@@ -3059,7 +3075,7 @@ describe('CameraDirector — Phase 3B: 3-condition BATTLE detection', () => {
   });
 
   it('getBattleDiagData: returns active=true with locked/group info during BATTLE_ZOOM', () => {
-    const cd = new CameraDirector();
+    const cd = new CameraDirector(1280, 720, false, ALWAYS_TAKE);
     cd.state = CAM_STATE.LEADER_ZOOM;
     cd.stateEnteredAt = 0;
     cd._lastOverviewExitTs = 3000;
@@ -3180,7 +3196,7 @@ describe('CameraDirector — Phase 3B: 3-condition BATTLE detection', () => {
   // ── getBattleDiagData extended fields ────────────────────────────────────
 
   it('getBattleDiagData: groupRacerRanks, originalGroupValid, currentGroupRacers present', () => {
-    const cd = new CameraDirector();
+    const cd = new CameraDirector(1280, 720, false, ALWAYS_TAKE);
     cd.state = CAM_STATE.LEADER_ZOOM;
     cd.stateEnteredAt = 0;
     cd._lastOverviewExitTs = 3000;
@@ -3233,7 +3249,7 @@ describe('CameraDirector — Phase 3B: 3-condition BATTLE detection', () => {
   // creating NEW objects every frame. Without index-based lookup, all === comparisons fail
   // after Frame N+1 and the camera silently falls back to the leader.
   it('index-based lookup: camera lock survives renderInterpolation spread-copy (r.index stable)', () => {
-    const cd = new CameraDirector();
+    const cd = new CameraDirector(1280, 720, false, ALWAYS_TAKE);
     cd.state = CAM_STATE.LEADER_ZOOM;
     cd.stateEnteredAt = 0;
     cd._lastOverviewExitTs = 3000;
@@ -3675,7 +3691,7 @@ describe('CameraDirector.updateCountdown', () => {
   const countdownRacers = Array.from({ length: 6 }, (_, i) => ({ x: 100 + i * 20, y: 360, t: 0 }));
 
   it('COUNTDOWN phase: camera starts in OVERVIEW state and first update() keeps OVERVIEW', () => {
-    const cd = new CameraDirector(1280, 720, false, null, 36);
+    const cd = new CameraDirector(1280, 720, false, ALWAYS_TAKE, 36);
     expect(cd.state).toBe(CAM_STATE.OVERVIEW);
     // Simulate countdown frames
     for (let i = 0; i < 60; i++) {
@@ -3688,14 +3704,14 @@ describe('CameraDirector.updateCountdown', () => {
   });
 
   it('COUNTDOWN zoom at t=0 equals countdownStartZoom (min zoom = whole track visible)', () => {
-    const cd = new CameraDirector(1280, 720, false, null, 36);
+    const cd = new CameraDirector(1280, 720, false, ALWAYS_TAKE, 36);
     const cam = cd.updateCountdown(countdownRacers, 1000, 0, 4000, 1280, 720);
     // countdownStartZoom for spriteScale=1/36 is clamped to minimum (1.0 for 1280px closed track)
     expect(cam.zoom).toBeCloseTo(cd._countdownStartZoom, 5);
   });
 
   it('COUNTDOWN zoom at t=duration equals overviewStateZoom — seamless OVERVIEW transition', () => {
-    const cd = new CameraDirector(1280, 720, false, null, 36);
+    const cd = new CameraDirector(1280, 720, false, ALWAYS_TAKE, 36);
     const cam = cd.updateCountdown(countdownRacers, 5000, 4000, 4000, 1280, 720);
     // At full progress=1, ease-out(1)=1 → zoom must equal _overviewStateZoom exactly
     expect(cam.zoom).toBeCloseTo(cd._overviewStateZoom, 5);
@@ -3853,7 +3869,7 @@ describe('CameraDirector — T-Space zoom-mismatch fix', () => {
 
 describe('LEAD_CHANGE camera state', () => {
   it('transitions to LEAD_CHANGE from LEADER_ZOOM on confirmed leader swap', () => {
-    const cd = new CameraDirector(1280, 720, false, null, 36);
+    const cd = new CameraDirector(1280, 720, false, ALWAYS_TAKE, 36);
     const _racers = [
       { index: 0, name: 'Alice', t: 0.6, x: 400, y: 360 },
       { index: 1, name: 'Bob', t: 0.5, x: 300, y: 360 },
@@ -3893,7 +3909,7 @@ describe('LEAD_CHANGE camera state', () => {
   });
 
   it('does not fire LEAD_CHANGE during debounce window', () => {
-    const cd = new CameraDirector(1280, 720, false, null, 36);
+    const cd = new CameraDirector(1280, 720, false, ALWAYS_TAKE, 36);
     cd._currentLeaderIndex = 0;
     cd._currentLeaderName = 'Alice';
     cd.state = CAM_STATE.LEADER_ZOOM;
@@ -3911,7 +3927,7 @@ describe('LEAD_CHANGE camera state', () => {
   });
 
   it('does not fire when gap is below minGap threshold', () => {
-    const cd = new CameraDirector(1280, 720, false, null, 36);
+    const cd = new CameraDirector(1280, 720, false, ALWAYS_TAKE, 36);
     cd._currentLeaderIndex = 0;
     cd._currentLeaderName = 'Alice';
     cd.state = CAM_STATE.LEADER_ZOOM;
@@ -3929,7 +3945,7 @@ describe('LEAD_CHANGE camera state', () => {
   });
 
   it('LEAD_CHANGE fires during endgame when pending and cooldown elapsed', () => {
-    const cd = new CameraDirector(1280, 720, false, null, 36);
+    const cd = new CameraDirector(1280, 720, false, ALWAYS_TAKE, 36);
     cd._currentLeaderIndex = 0;
     cd._currentLeaderName = 'Alice';
     cd._leadChangePending = true;
@@ -3951,7 +3967,7 @@ describe('LEAD_CHANGE camera state', () => {
   });
 
   it('LEAD_CHANGE blocked during endgame when cooldown not elapsed', () => {
-    const cd = new CameraDirector(1280, 720, false, null, 36);
+    const cd = new CameraDirector(1280, 720, false, ALWAYS_TAKE, 36);
     cd._leadChangePending = true;
     cd._prevLeaderName = 'Alice';
     cd._currentLeaderName = 'Bob';
@@ -4010,7 +4026,7 @@ describe('CameraDirector — Q3: _isOriginalGroupStillValid', () => {
   });
 
   it('fires early BATTLE exit when original group disperses after battleMinDurationMs', () => {
-    const cd = new CameraDirector(1280, 720, false, null, 36);
+    const cd = new CameraDirector(1280, 720, false, ALWAYS_TAKE, 36);
     // Use update() to transition into BATTLE, then disperse the group.
     // Leaders at t=0.7/0.65 (leaderProgress=0.7<0.85 endgameThreshold — no endgame block).
     const leader1 = { index: 10, t: 0.7, x: 9000, y: 300, finished: false };
@@ -4157,7 +4173,7 @@ describe('CameraDirector — Q4: centroid camera', () => {
   });
 
   it('_battleLockT is set to group centroid T at BATTLE entry', () => {
-    const cd = new CameraDirector(1280, 720, false, null, 36);
+    const cd = new CameraDirector(1280, 720, false, ALWAYS_TAKE, 36);
     // Leaders at t=0.7/0.65 — leaderProgress=0.7<0.85 endgameThreshold, no endgame block
     const leader1 = { index: 10, t: 0.7, x: 9000, y: 300, finished: false };
     const leader2 = { index: 11, t: 0.65, x: 8500, y: 300, finished: false };
@@ -4182,7 +4198,7 @@ describe('CameraDirector — Q4: centroid camera', () => {
   });
 
   it('_battleLockT is cleared when BATTLE exits', () => {
-    const cd = new CameraDirector(1280, 720, false, null, 36);
+    const cd = new CameraDirector(1280, 720, false, ALWAYS_TAKE, 36);
     // Leaders at t=0.7/0.65 — leaderProgress=0.7<0.85 endgameThreshold, no endgame block
     const leader1 = { index: 10, t: 0.7, x: 9000, y: 300, finished: false };
     const leader2 = { index: 11, t: 0.65, x: 8500, y: 300, finished: false };
@@ -4879,7 +4895,7 @@ describe('CameraDirector — LEAD_CHANGE pan snap', () => {
   }
 
   function makeCD() {
-    return new CameraDirector(WORLD_W, CANVAS_H, true, {}, 36, makeShape());
+    return new CameraDirector(WORLD_W, CANVAS_H, true, { ...ALWAYS_TAKE }, 36, makeShape());
   }
 
   it('_leadChangeSnapPending initialises to false', () => {
@@ -4888,8 +4904,10 @@ describe('CameraDirector — LEAD_CHANGE pan snap', () => {
   });
 
   it('_camT is snapped to new leader T at LEAD_CHANGE entry (endgame path)', () => {
-    // Use leaderProgress > endgameThreshold (0.9) for a deterministic LEAD_CHANGE selection
-    // that bypasses the post-start hold and random candidate pool.
+    // leaderProgress > endgameThreshold (0.9) takes the endgame path, which bypasses the
+    // post-start hold and the random candidate pool. CAMERA-HYGIENE-2: it does NOT bypass the
+    // weight — CAMERA-WEIGHTS-1 deliberately removed that exception, because a leadChangeWeight
+    // of 0 was still producing LEAD_CHANGE near the line. Determinism comes from ALWAYS_TAKE.
     const cd = makeCD();
     const FINISH_T = 0.9;
     const LEADER_T = 0.85; // leaderProgress = 0.85/0.9 ≈ 0.944 > 0.90 → endgame path

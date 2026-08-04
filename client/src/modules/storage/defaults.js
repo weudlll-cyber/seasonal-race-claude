@@ -311,17 +311,9 @@ export const DEFAULT_CAMERA_CONFIG = {
   // State overlay: narrative text shown during first seconds of OVERVIEW / BATTLE / COMEBACK.
   stateOverlayEnabled: true,
   stateOverlayDurationMs: 3500,
-  // Legacy fields kept for v3→v4 migration reads. CameraDirector no longer reads these.
-  spritePctOfCanvas: {
-    overview: 0.05,
-    leader: 0.08,
-    battle: 0.12,
-    comeback: 0.065,
-  },
   maxStateDuration: 4000,
   battleMaxDurationMs: 6000,
   minStateHoldMs: 5000,
-  cameraTransitionSeconds: { overview: 1.5, leader: 0.3, battle: 0.3, comeback: 0.3 },
   targetInnerFramePct: 0.7,
   // CAMERA-FOCUS-3 leader framing: where the leader sits along the motion axis in LEADER_ZOOM. 0.5 =
   // dead-centre; > 0.5 = FORWARD (leader toward the leading edge, so most of the frame shows the pack

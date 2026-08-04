@@ -742,19 +742,6 @@ function CameraAdvancedSection() {
             tip="Where the leader sits along the motion axis. 0.50 = dead centre; 0.66 = about two-thirds forward toward the leading edge so most of the frame shows the pack behind (the action). Range 0.50–0.80. Default 0.66."
           />
         </div>
-
-        <p
-          style={{
-            fontSize: '0.78rem',
-            color: 'var(--color-muted)',
-            margin: '0.75rem 0 0.4rem',
-          }}
-        >
-          <strong>Adaptive Zoom Floor</strong> — during LEADER_ZOOM and LEAD_CHANGE, if fewer than
-          Min racers visible are on screen the camera pulls back each frame until enough appear or
-          the floor is reached. 0 = disabled.
-        </p>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem' }}></div>
       </div>
 
       {/* ── 4. LEAD_CHANGE ── */}
@@ -918,7 +905,7 @@ function CameraAdvancedSection() {
               if (v >= 0.5 && v <= 0.95) set('outcomePhaseThreshold', v);
             }}
             display={`${((config.outcomePhaseThreshold ?? 0.75) * 100).toFixed(0)}%`}
-            tip="Leader progress from which COMEBACK is considered active internally (independent of the external isOutcomePhase flag). Default 75%."
+            tip="Leader progress from which COMEBACK is considered active internally (independent of the external isOutcomePhase flag). Default 65%."
           />
           <SliderRow
             label="Min. starting gap"
@@ -932,7 +919,7 @@ function CameraAdvancedSection() {
               if (v >= 0.1 && v <= 0.9) set('comebackMinStartGap', v);
             }}
             display={`${((config.comebackMinStartGap ?? 0.4) * 100).toFixed(0)}%`}
-            tip="The racer must have had at least this normalised gap to P1 at the start of the observation window (field fraction). 0.40 = must have been in the back 60% of the field. Default 40%."
+            tip="The racer must have had at least this normalised gap to P1 at the start of the observation window (field fraction). 0.25 = must have been in the back 75% of the field. Default 25%."
           />
           <SliderRow
             label="Max. current rank (lead-group filter)"
@@ -946,7 +933,7 @@ function CameraAdvancedSection() {
               if (v >= 0.05 && v <= 0.5) set('comebackMaxCurrentRankPct', v);
             }}
             display={`${((config.comebackMaxCurrentRankPct ?? 0.1) * 100).toFixed(0)}%`}
-            tip="Racer must not have a better normalised rank than this at trigger time. 0.10 = top 10% excluded (e.g. P1–P4 with 40 racers). Default 10%."
+            tip="Racer must not have a better normalised rank than this at trigger time. 0.20 = top 20% excluded (e.g. P1–P8 with 40 racers). Default 20%."
           />
         </div>
       </div>
