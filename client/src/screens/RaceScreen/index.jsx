@@ -10,37 +10,22 @@
 
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { validateActiveRace } from './raceSession.js';
-import {
-  drawEditorBackground,
-  drawEditorTrackSurface,
-  drawOpenTrackFinishLine,
-  getBgCanvasReady,
-} from './drawing/trackRendering.js';
+import { PHASE } from './racePhase.js';
+import { renderRaceFrame } from './renderRaceFrame.js';
+import { attachRenderState, attachRacerRenderState, stepFocusFade } from './renderState.js';
+import { getBgCanvasReady } from './drawing/trackRendering.js';
 import { getBackgroundImage } from '../../modules/track-effects/bgImageCache.js';
-import {
-  drawTitle,
-  drawTitleOpen,
-  drawLapInfo,
-  drawFinalLapOverlay,
-  drawCountdownOverlay,
-  drawFinishedOverlay,
-} from './drawing/overlayRendering.js';
-import { emitBurst, drawParticles, drawSurfaceTrails } from './drawing/particleRendering.js';
-import { computeTagLayout, tagFontScreenPx } from './nameTagLayout.js';
-import { drawRacers } from './drawing/racerRendering.js';
+import { emitBurst } from './drawing/particleRendering.js';
 import { formatRaceTime } from '../../utils/formatRaceTime.js';
 import { lerp, lerpAngle } from '../../utils/mathUtils.js';
 import { resolveActiveBrandProfile } from '../../modules/branding/useActiveBrandProfile.js';
-import { drawBattleDiagMarkers } from './drawing/battleDiagRendering.js';
 import { getRacerType, getCoatsByType } from '../../modules/racer-types/index.js';
 import {
   assignCoat,
   assignPattern,
   PATTERN_IDS,
 } from '../../modules/racer-types/coatAssignment.js';
-import { CameraDirector, OPEN_TRACK_BASE_ZOOM } from '../../modules/camera/CameraDirector.js';
-import { effectiveZoom } from '../../modules/camera/openTrackCamera.js';
-import { renderMinimap } from '../../modules/camera/Minimap.js';
+import { CameraDirector } from '../../modules/camera/CameraDirector.js';
 import { lapProgress } from '../../modules/camera/lapUtils.js';
 import { loadBaseSpeedConfig } from '../../modules/baseSpeedConfig.js';
 import { normalSpeedFrom, MIN_LAPS } from '../../modules/durationModel.js';
@@ -55,11 +40,7 @@ import { EditorShape } from '../../modules/track-editor/EditorShape.js';
 import { getTrack } from '../../modules/track-editor/trackStorage.js';
 import { getEffect } from '../../modules/track-effects/index.js';
 import { extractEffects } from '../TrackEditor/trackEditorSave.js';
-import {
-  loadAutoScaleConfig,
-  computeRenderDisplayScale,
-  getEffectiveMaxTargetScreenPx,
-} from '../../modules/autoSpriteScale.js';
+import { loadAutoScaleConfig } from '../../modules/autoSpriteScale.js';
 import { loadCameraConfig, cameraConfigProvenance } from '../../modules/cameraConfig.js';
 import { configFingerprintBadge, buildWorldConfig } from '../../modules/exportRaceConfig.js';
 import { buildCameraMarker, configDiffWithValues } from '../../modules/camera/cameraMarker.js';
@@ -86,7 +67,6 @@ import {
   DEFAULT_TRACK_LIGHTS,
   LIGHT_SPACING_PX,
   sampleBoundaryAtInterval,
-  drawTrackLights,
 } from '../../modules/trackLights.js';
 import { resolveTrailEmitter } from '../../modules/surface-effects/trailResolver.js';
 import { getCachedServerSurfaceClasses } from '../../modules/storage/surfaceClassLoader.js';
@@ -98,22 +78,10 @@ import './RaceScreen.css';
 const CANVAS_W = 1280;
 const CANVAS_H = 720;
 
-const RACER_COLORS = [
-  '#ff6b35',
-  '#4fc3f7',
-  '#a5d6a7',
-  '#ffcc02',
-  '#ce93d8',
-  '#f48fb1',
-  '#80cbc4',
-  '#ffab40',
-  '#90caf9',
-  '#ef9a9a',
-];
-
 const RANK_PALETTE = ['#ffd700', '#c0c0c0', '#cd7f32'];
 
-const PHASE = { COUNTDOWN: 0, RACING: 1, FINISHED: 2 };
+// PHASE has one home now (racePhase.js) — it used to be declared here AND twice more as
+// `PHASE_RACING = 1` in the drawing modules.
 
 // Fixed physics timestep in ms. Physics advances in discrete FIXED_DT steps
 // regardless of browser frame rate, eliminating the 2:1 speed oscillation seen
@@ -630,35 +598,17 @@ export default function RaceScreen() {
       const src = raceData.racers[i];
       for (const k in src) if (!(k in r)) r[k] = src[k];
       r.icon = trackEmoji ?? src.icon;
-      r.color = RACER_COLORS[i % RACER_COLORS.length];
       r.coatId = getCoatsByType(typeId) ? assignCoat(src.name, getCoatsByType(typeId)) : undefined;
       r.patternId = assignPattern(src.name, PATTERN_IDS);
-      r.trail = [];
       // VRE-4: one emitter instance per racer (stateful generators must not be shared)
       r.surfaceEmitter = resolveTrailEmitter(racerType, trackSurfaceClasses);
-      r.surfaceParticles = [];
     }
+    attachRacerRenderState(raceState.racers);
 
     // g.current IS the extracted physics state (racers, finishT, maxLaps, finishedCount, raceProgress,
     // physicsTs) with the render/phase fields added on top — one object, so stepRacePhysics and the
     // renderer share it.
-    g.current = Object.assign(raceState, {
-      phase: PHASE.COUNTDOWN,
-      countdownStart: null,
-      raceStart: null,
-      lastTs: null,
-      physicsAccum: 0,
-      smoothDt: 16,
-      slowmoFadeProgress: 0,
-      slowmoActive: false,
-      slowmoStartWallTs: 0,
-      slowmoIsPhotoFinish: false, // 15a-predictive: PHOTO_FINISH slowmo (releases without min-duration)
-      slowmoTs: null,
-      focusFadeProgress: 0,
-      dustParticles: [],
-      burstParticles: [],
-      finalLapStartTs: null,
-    });
+    g.current = attachRenderState(raceState);
 
     // ── Config flags for canvas-loop use ────────────────────────────────────
     const showRpMinimapBadgesCfg = cameraConfigRef.current.showRpMinimapBadges ?? false;
@@ -790,10 +740,7 @@ export default function RaceScreen() {
             : Math.max(0, st.slowmoFadeProgress - fadeStep);
           const effectiveSlowmoFactor = 1.0 - (1.0 - smFactor) * st.slowmoFadeProgress;
           // ── BATTLE focus fade (same duration as slowmo fade) ─────────────────
-          const focusFadeStep = smFadeDurMs > 0 ? rawDt / smFadeDurMs : Infinity;
-          st.focusFadeProgress = isBattleZoom
-            ? Math.min(1, st.focusFadeProgress + focusFadeStep)
-            : Math.max(0, st.focusFadeProgress - focusFadeStep);
+          stepFocusFade(st, isBattleZoom, rawDt, smFadeDurMs);
           if (st.slowmoTs === null) st.slowmoTs = ts;
           st.slowmoTs += rawDt * effectiveSlowmoFactor;
           // ── Fixed-timestep physics accumulator ─────────────────────────────
@@ -1231,44 +1178,12 @@ export default function RaceScreen() {
       // Perf-log bracket 4: after camera director update.
       const tCam = enablePerfLog ? performance.now() : 0;
 
-      // ── Draw world ──
-      // Background, effects, track, and racers are all in world space (1280×720).
-      // A single save/transform/restore wraps every world-space layer so they all
-      // move together when the camera pans or zooms. HUD draws after ctx.restore()
-      // so it stays in fixed screen space.
-      //
-      // Sprite scaling (D7a proportional): sprites scale naturally with the camera
-      // zoom — closer = bigger — with a readability floor so a racer is never drawn
-      // too small to recognise (CAMERA-MIN-DRAW-1).
-      //
-      // frameEffZoom is the raw canvas scale (cam.zoom×bsX closed, BASE×cam.zoom open).
-      // It's used by labels/trail (via 1/frameEffZoom) to stay constant screen-size.
-      const frameEffZoom = isOpenTrack
-        ? effectiveZoom(cam.zoom, OPEN_TRACK_BASE_ZOOM)
-        : cam.zoom * bsX;
-      // CAMERA-REPRO-1: hand the marker the values this frame is about to draw with. BOTH axis
-      // scales — the ctx.scale() below is (zoom×bsX, zoom×bsY) on a closed track, and those differ
-      // whenever the world is not 16:9.
-      markerFrame.ts = ts;
-      markerFrame.effZoomX = frameEffZoom;
-      markerFrame.effZoomY = isOpenTrack ? frameEffZoom : cam.zoom * bsY;
-      markerFrame.camZoom = cam.zoom;
-      markerFrame.offsetX = cam.offsetX;
-      markerFrame.offsetY = cam.offsetY;
-      // CAMERA-MIN-DRAW-1: the readability FLOOR is back, as a fraction of the frame — never draw a
-      // racer too small to recognise. It is a bound on THIS multiplication and nothing else; the
-      // camera above has already chosen its zoom without ever reading the value.
-      const frameDisplayScale = computeRenderDisplayScale(
-        displaySize,
-        displaySizeScale,
-        frameEffZoom,
-        getEffectiveMaxTargetScreenPx(
-          racerTypeRef.current?.config?.maxTargetScreenPx,
-          cameraConfigRef.current.maxTargetScreenPx
-        ),
-        cameraConfigRef.current.minDrawnFrameFrac,
-        canvas.height
-      );
+      // ── Draw the frame ─────────────────────────────────────────────────────────────────────
+      // RENDER-FINGERPRINT-1: the whole draw sequence lives in renderRaceFrame.js now. It used to
+      // be ~210 lines inlined here, closed over forty-two pieces of component state, which is why
+      // the render path could not be driven headlessly and therefore had no protection at all.
+      // What stays behind is what genuinely belongs to React and the DOM: the background canvas's
+      // CSS transform, the countdown state setter, and the perf log.
 
       // ── Bg canvas: lazy-draw once on first available frame; CSS transform each frame ──
       if (!bgCanvasReady && bgCanvasRef.current && bgImagePath) {
@@ -1281,176 +1196,65 @@ export default function RaceScreen() {
           }
         }
       }
-      if (bgCanvasRef.current && bgImagePath && bgCanvasReady) {
-        const bgScaleX = isOpenTrack ? frameEffZoom * (worldWidth / CANVAS_W) : cam.zoom;
-        const bgScaleY = isOpenTrack ? frameEffZoom * (worldHeight / CANVAS_H) : cam.zoom;
-        bgCanvasRef.current.style.transform = `translate3d(${cam.offsetX * (100 / CANVAS_W)}%, ${cam.offsetY * (100 / CANVAS_H)}%, 0) scale3d(${bgScaleX}, ${bgScaleY}, 1)`;
-      }
 
-      // Pan and zoom are now computed by CameraDirector for both open and closed tracks.
-      // cam.offsetX/offsetY are the canvas-space offsets; the scale differs by track topology.
-      ctx.save();
-      ctx.translate(cam.offsetX, cam.offsetY);
-      if (isOpenTrack) {
-        const effZoom = effectiveZoom(cam.zoom, OPEN_TRACK_BASE_ZOOM);
-        ctx.scale(effZoom, effZoom);
-      } else {
-        ctx.scale(cam.zoom * bsX, cam.zoom * bsY);
-      }
-      drawEditorBackground(ctx, ts, bgImagePath, worldWidth, worldHeight, bgCanvasReady);
-      for (const inst of effectsRef.current) {
-        ctx.save();
-        inst.render(ctx);
-        ctx.restore();
-      }
-      if (!isOpenTrack) drawEditorTrackSurface(ctx, shape);
-      drawTrackLights(ctx, cachedLightPts, trackLightsConfig, ts, !isOpenTrack, frameEffZoom);
-      if (isOpenTrack && st.finishT < 1)
-        drawOpenTrackFinishLine(ctx, shape, st.finishT, openTrackHW);
-      drawParticles(ctx, st.dustParticles, st.burstParticles);
-      drawSurfaceTrails(ctx, st.racers);
-      const focusFactor = st.focusFadeProgress ?? 0;
-      const livePulkGroup =
-        focusFactor > 0 ? (camDirRef.current?.detectBattleGroup?.(st.racers) ?? null) : null;
-      // ── CAMERA-TAGS-1: WHICH names are drawn, decided in SCREEN space before anything is drawn ──
-      // Eligibility is "on canvas"; label-vs-label occlusion decides the rest, so the count is an
-      // output. The START-FORMATION exception shows every name through the countdown and for
-      // `nameTagAllUntilMs` after the gun — the owner's requirement, so a spectator can find their
-      // racer once. `tagIncumbentsRef` carries last frame's set: a label already on screen is
-      // offered its pixels first, which is what keeps the layout from churning (Lesson 190).
-      const tagFontPx = tagFontScreenPx(cameraConfigRef.current.nameTagFrameFrac, canvas.height);
-      const raceElapsedMs = st.raceStart != null ? ts - st.raceStart : 0;
-      const showAllTags =
-        st.phase !== PHASE.RACING ||
-        raceElapsedMs < (cameraConfigRef.current.nameTagAllUntilMs ?? 0);
-      ctx.save();
-      ctx.font = `bold ${tagFontPx}px sans-serif`;
-      const measureTagText = (txt) => ctx.measureText(txt).width;
-      const tagLayout = computeTagLayout({
-        racers: st.racers,
-        effX: frameEffZoom,
-        effY: markerFrame.effZoomY,
-        offsetX: cam.offsetX,
-        offsetY: cam.offsetY,
+      const frame = renderRaceFrame(ctx, {
+        ts,
+        st,
+        cam,
+        shape,
+        raceData,
+        isOpenTrack,
+        bsX,
+        bsY,
+        worldWidth,
+        worldHeight,
+        openTrackHW,
+        bgImagePath,
+        bgCanvasReady,
+        effects: effectsRef.current,
+        cachedLightPts,
+        trackLightsConfig,
+        racerType: racerTypeRef.current,
+        cameraConfig: cameraConfigRef.current,
+        camera: {
+          hudState: camDirRef.current?.hudState ?? null,
+          comebackLockedRacerIndex: camDirRef.current?.comebackLockedRacerIndex ?? null,
+          detectBattleGroup: (racers) => camDirRef.current?.detectBattleGroup?.(racers) ?? null,
+        },
+        displaySize,
+        displaySizeScale,
+        assignmentByRacer,
+        showRpStartRow: showRpStartRowCfg,
+        showRpMinimapBadges: showRpMinimapBadgesCfg,
+        rpPlanInfo,
+        renderAlpha,
+        interpolationEnabled: frameTimingConfig.renderInterpolation,
+        tagIncumbents: tagIncumbentsRef.current,
+        leaderDiag: leaderDiagRef.current,
+        cfgBadge,
+        racePlanActive: !!racePlanController,
+        racePlanSeed,
+        gapRerollDevMarker: dynamicsConfig.gapRerollDevMarker ?? false,
         canvasW: canvas.width,
         canvasH: canvas.height,
-        fontPx: tagFontPx,
-        measureText: measureTagText,
-        showAll: showAllTags,
-        incumbents: tagIncumbentsRef.current,
-        labelOf: (r) =>
-          showRpStartRowCfg
-            ? r.name + ' (R' + (assignmentByRacer.get(r.index)?.rowIndex ?? 0) + ')'
-            : r.name,
       });
-      ctx.restore();
-      tagIncumbentsRef.current = tagLayout.shown;
+      tagIncumbentsRef.current = frame.tagShown;
+      if (frame.countdownNumber !== null) setCountdown(frame.countdownNumber);
 
-      drawRacers(
-        ctx,
-        st,
-        racerTypeRef.current,
-        tagLayout,
-        cameraConfigRef.current.battleFocusDarkening,
-        camDirRef.current?.hudState ?? null,
-        camDirRef.current?.comebackLockedRacerIndex ?? null,
-        focusFactor,
-        livePulkGroup,
-        showRpStartRowCfg,
-        assignmentByRacer,
-        frameDisplayScale,
-        frameEffZoom,
-        markerFrame.effZoomY,
-        tagFontPx,
-        renderAlpha,
-        frameTimingConfig.renderInterpolation,
-        cameraConfigRef.current.highlightHeroes ?? false,
-        dynamicsConfig.gapRerollDevMarker ?? false
-      );
-      drawBattleDiagMarkers(
-        ctx,
-        st,
-        camDirRef.current?.hudState ?? null,
-        cam,
-        frameEffZoom,
-        renderAlpha,
-        frameTimingConfig.renderInterpolation,
-        isOpenTrack,
-        bsY,
-        leaderDiagRef.current
-      );
-      ctx.restore();
-      if (isOpenTrack) {
-        drawTitleOpen(ctx, raceData);
-      } else {
-        drawTitle(ctx, shape, raceData);
-        drawLapInfo(ctx, st.racers, st.maxLaps);
-        drawFinalLapOverlay(ctx, ts, st.finalLapStartTs);
-      }
+      // CAMERA-REPRO-1: hand the marker the values this frame was DRAWN with. Read back from the
+      // renderer rather than recomputed here — a marker that re-derives its own numbers would
+      // describe a frame that was never drawn.
+      markerFrame.ts = ts;
+      markerFrame.effZoomX = frame.effZoomX;
+      markerFrame.effZoomY = frame.effZoomY;
+      markerFrame.camZoom = cam.zoom;
+      markerFrame.offsetX = cam.offsetX;
+      markerFrame.offsetY = cam.offsetY;
 
-      // ── Phase overlays ──
-      if (st.phase === PHASE.COUNTDOWN) {
-        setCountdown(drawCountdownOverlay(ctx, ts - st.countdownStart));
-      } else if (st.phase === PHASE.FINISHED) {
-        drawFinishedOverlay(ctx);
-      }
-
-      // ── Top-right HUD info pills (race-plan/seed + config-fingerprint) ──────────────
-      // Each row is a pill that HUGS its text: the label sits INSIDE the block, left-aligned and
-      // vertically centered, with the block right-anchored so the two rows line up. The explicit
-      // textAlign/textBaseline are REQUIRED — earlier render helpers (racer name tags, overlays)
-      // leave the shared context at textAlign='center'/'right', which previously pushed these labels
-      // out to the LEFT of their bars. One helper draws both rows so they can never drift apart.
-      const HUD_PILL_RIGHT = CANVAS_W - 8;
-      const drawHudPill = (label, y, h, bg, fg, fontPx) => {
-        ctx.save();
-        ctx.font = `${fontPx}px monospace`;
-        ctx.textAlign = 'left';
-        ctx.textBaseline = 'middle';
-        const pad = 8;
-        const w = Math.ceil(ctx.measureText(label).width) + pad * 2;
-        const x = HUD_PILL_RIGHT - w;
-        ctx.fillStyle = bg;
-        ctx.fillRect(x, y, w, h);
-        ctx.fillStyle = fg;
-        ctx.fillText(label, x + pad, y + h / 2 + 0.5);
-        ctx.restore();
-      };
-
-      // Row 1 — Race Plan status (dev/sightcheck aid). Truthful label: with a seed > 0 the number is
-      // the seed of the plan AND the dynamics (the race replays exactly); at 0 nothing is seeded.
-      if (racePlanController && st.phase !== PHASE.COUNTDOWN) {
-        const label =
-          racePlanSeed > 0 ? `Race Plan: ON  seed:${racePlanSeed}` : 'Race Plan: ON  unseeded';
-        drawHudPill(label, 8, 22, 'rgba(0,0,0,0.65)', '#4fc3f7', 11);
-      }
-
-      // Row 2 — config-fingerprint badge (fix-plan step 4). RED means "NOT apples-to-apples with a
-      // default-config sim run" — that is RACE-relevant drift only. Cosmetic (camera / frame-timing)
-      // drift is reported quietly and never turns the badge red. `hashShort` is the race-relevant world
-      // hash, comparable 1:1 to a sim invocation's identity.
-      if (st.phase !== PHASE.COUNTDOWN) {
-        const off = cfgBadge.raceCount > 0;
-        const label =
-          cfgBadge.raceCount === 0 && cfgBadge.cosmeticCount === 0
-            ? `cfg ${cfgBadge.hashShort} · defaults`
-            : `cfg ${cfgBadge.hashShort} · ${cfgBadge.raceCount} race / ${cfgBadge.cosmeticCount} cosmetic`;
-        drawHudPill(
-          label,
-          34,
-          20,
-          off ? 'rgba(120,20,20,0.82)' : 'rgba(0,0,0,0.5)',
-          off ? '#ff8a80' : '#9e9e9e',
-          10
-        );
-      }
-
-      // ── PiP minimap (RACING and FINISHED only) ──
-      if (st.phase !== PHASE.COUNTDOWN) {
-        const leaderIdx = st.racers.reduce((best, r, i) => (r.t > st.racers[best].t ? i : best), 0);
-        const minimapHighlights =
-          showRpMinimapBadgesCfg && rpPlanInfo ? rpPlanInfo.b1Indices : null;
-        renderMinimap(ctx, shape, st.racers, leaderIdx, CANVAS_W, CANVAS_H, minimapHighlights);
+      if (bgCanvasRef.current && bgImagePath && bgCanvasReady) {
+        const bgScaleX = isOpenTrack ? frame.effZoomX * (worldWidth / CANVAS_W) : cam.zoom;
+        const bgScaleY = isOpenTrack ? frame.effZoomX * (worldHeight / CANVAS_H) : cam.zoom;
+        bgCanvasRef.current.style.transform = `translate3d(${cam.offsetX * (100 / CANVAS_W)}%, ${cam.offsetY * (100 / CANVAS_H)}%, 0) scale3d(${bgScaleX}, ${bgScaleY}, 1)`;
       }
 
       // Perf-log bracket 5: after all drawing — record the completed frame.

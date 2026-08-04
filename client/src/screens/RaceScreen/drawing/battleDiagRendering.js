@@ -13,7 +13,8 @@ import { lerp } from '../../../utils/mathUtils.js';
 
 const CANVAS_W = REFERENCE_CANVAS_W;
 const CANVAS_H = REFERENCE_CANVAS_H;
-const PHASE_RACING = 1;
+import { PHASE } from '../racePhase.js';
+const PHASE_RACING = PHASE.RACING;
 
 /**
  * Draws battle-diagnostics world-space markers on the leader and records

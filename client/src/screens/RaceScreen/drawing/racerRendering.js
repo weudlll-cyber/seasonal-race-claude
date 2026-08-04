@@ -9,7 +9,8 @@
 
 import { lerp, lerpAngle } from '../../../utils/mathUtils.js';
 
-const PHASE_RACING = 1;
+import { PHASE } from '../racePhase.js';
+const PHASE_RACING = PHASE.RACING;
 
 /**
  * Draws the name tag above a racer.
