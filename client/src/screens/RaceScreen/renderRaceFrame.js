@@ -51,9 +51,15 @@ import {
   getEffectiveMaxTargetScreenPx,
 } from '../../modules/autoSpriteScale.js';
 import { PHASE } from './racePhase.js';
+import { formatBuildLabel, isBuildUncertain } from '../../modules/buildInfo.js';
 
 const CANVAS_W = 1280;
 const CANVAS_H = 720;
+
+// The bottom edge of the config badge (row 2), which is historical fixed-px: y 34, height 20. The
+// build row anchors below it rather than duplicating those numbers, so if row 2 ever moves this
+// follows instead of overlapping it.
+const HUD_ROW2_BOTTOM = 54;
 
 /**
  * Draw one frame.
@@ -96,6 +102,7 @@ export function renderRaceFrame(ctx, f) {
     tagIncumbents,
     leaderDiag,
     cfgBadge,
+    buildBadge,
     racePlanActive,
     racePlanSeed,
     gapRerollDevMarker,
@@ -234,7 +241,7 @@ export function renderRaceFrame(ctx, f) {
     drawFinishedOverlay(ctx);
   }
 
-  drawHudPills(ctx, { st, cfgBadge, racePlanActive, racePlanSeed, canvasW });
+  drawHudPills(ctx, { st, cfgBadge, buildBadge, racePlanActive, racePlanSeed, canvasW, canvasH });
 
   // ── PiP minimap (RACING and FINISHED only) ──
   if (st.phase !== PHASE.COUNTDOWN) {
@@ -255,7 +262,10 @@ export function renderRaceFrame(ctx, f) {
  * the shared context at textAlign='center'/'right', which previously pushed these labels out to the
  * LEFT of their bars. One helper draws both rows so they can never drift apart.
  */
-function drawHudPills(ctx, { st, cfgBadge, racePlanActive, racePlanSeed, canvasW }) {
+function drawHudPills(
+  ctx,
+  { st, cfgBadge, buildBadge, racePlanActive, racePlanSeed, canvasW, canvasH }
+) {
   const right = canvasW - 8;
   const pill = (label, y, h, bg, fg, fontPx) => {
     ctx.save();
@@ -296,6 +306,28 @@ function drawHudPills(ctx, { st, cfgBadge, racePlanActive, racePlanSeed, canvasW
       off ? 'rgba(120,20,20,0.82)' : 'rgba(0,0,0,0.5)',
       off ? '#ff8a80' : '#9e9e9e',
       10
+    );
+  }
+
+  // Row 3 — BUILD IDENTITY (BUILD-TRUTH-1). Which commit is on screen, on which branch, and whether
+  // the tree is dirty. It exists because the owner judged the picture twice without being able to
+  // tell which code drew it. AMBER when the build is uncertain — dirty means this exact frame is not
+  // reproducible from any commit, and `unknown` means the identity could not be read at all.
+  //
+  // SIZED RELATIVE TO THE FRAME, per the standing rule: the two rows above are historical fixed-px
+  // and are deliberately not touched here, so this row anchors below their fixed extent and then
+  // scales itself. At the reference 720-px canvas it lands at the same weight as the cfg badge.
+  if (buildBadge && st.phase !== PHASE.COUNTDOWN) {
+    const fontPx = Math.max(8, Math.round(canvasH * 0.0139)); // 10 px at the 720 reference
+    const h = Math.max(14, Math.round(canvasH * 0.0278)); // 20 px at the 720 reference
+    const uncertain = isBuildUncertain(buildBadge);
+    pill(
+      formatBuildLabel(buildBadge),
+      HUD_ROW2_BOTTOM + Math.round(canvasH * 0.0056), // 4 px gap at the reference
+      h,
+      uncertain ? 'rgba(120,80,0,0.82)' : 'rgba(0,0,0,0.5)',
+      uncertain ? '#ffcc80' : '#9e9e9e',
+      fontPx
     );
   }
 }

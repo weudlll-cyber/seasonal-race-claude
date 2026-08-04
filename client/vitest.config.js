@@ -9,9 +9,12 @@
 
 import { defineConfig } from 'vitest/config';
 import react from '@vitejs/plugin-react';
+import { raBuildInfo } from './vite-plugin-ra-build.js';
 
 export default defineConfig({
-  plugins: [react()],
+  // BUILD-TRUTH-1: the same plugin the app uses, so `virtual:ra-build` resolves in tests through the
+  // real mechanism rather than a stub that could drift from it.
+  plugins: [react(), raBuildInfo()],
   test: {
     environment: 'jsdom',
     // Expose describe/it/expect/vi globally so tests don't need to import them

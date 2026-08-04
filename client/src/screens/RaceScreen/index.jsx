@@ -44,6 +44,11 @@ import { loadAutoScaleConfig } from '../../modules/autoSpriteScale.js';
 import { loadCameraConfig, cameraConfigProvenance } from '../../modules/cameraConfig.js';
 import { configFingerprintBadge, buildWorldConfig } from '../../modules/exportRaceConfig.js';
 import { buildCameraMarker, configDiffWithValues } from '../../modules/camera/cameraMarker.js';
+// BUILD-TRUTH-1: the ONLY import of the virtual module. It is re-read and the page force-reloaded
+// whenever the identity changes, so this value cannot be older than the code around it. It stays
+// out of `modules/` on purpose: scripts/render-fingerprint.mjs drives the renderer directly in node,
+// where a bare `virtual:` specifier cannot resolve.
+import RA_BUILD from 'virtual:ra-build';
 import { DEFAULT_CONFIG_WORLD } from '../../modules/storage/defaults.js';
 import CameraStateHUD from './CameraStateHUD.jsx';
 import CameraDiagnosticsHUD from './CameraDiagnosticsHUD.jsx';
@@ -1232,6 +1237,7 @@ export default function RaceScreen() {
         tagIncumbents: tagIncumbentsRef.current,
         leaderDiag: leaderDiagRef.current,
         cfgBadge,
+        buildBadge: RA_BUILD,
         racePlanActive: !!racePlanController,
         racePlanSeed,
         gapRerollDevMarker: dynamicsConfig.gapRerollDevMarker ?? false,
