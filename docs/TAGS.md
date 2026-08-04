@@ -251,6 +251,18 @@ camera fingerprint** — it is a change detector, not a prohibition. Camera `ded
   `overviewWeight` 0.3 -> 10 moves OVERVIEW's share by 1.8pp, and the endgame exception fires
   LEAD_CHANGE even with its weight at 0.
 
+### The unattended night — CAMERA-HYGIENE-2 (2026-08-04, branch `camera-refactor`)
+Return point captured before the deep clean that finished what CAMERA-HYGIENE-1 parked: four
+extractions out of `CameraDirector.js` (2935 -> 2487), sixteen dead constants, twenty redundant
+timing mirrors, and the HUD's "is the label true / is it needed" columns. **Camera fingerprint
+`4b33c4d31bec93ea` held BIT-IDENTICAL at every one of the eight commits** — unlike CAMERA-WEIGHTS-1
+before it, this block moves nothing. The mint tripwire fired twice (defaults.js and the Dev Screen
+section left `camera/`); shipped world `dc4647be0f55ebdb` unmoved both times.
+- `pre/camera-hygiene-2` (`be649aa9`, 2026-08-04) — the state where sixteen timing fallbacks are
+  duplicated between `CameraDirector.js` and `cameraTimingComputation.js`, `clampActiveCount` is a
+  getter returning a literal 0 with a test asserting it, and eighteen gate tests are coin flips
+  because a weight became a propensity one commit earlier.
+
 ## Active-phase tags (temporary scaffolding — to collapse later)
 
 Step-tags from the runaway phase (now CLOSED 2026-07-29, see below) and any later work — safe return points, not permanent anchors. They collapse into
@@ -667,6 +679,7 @@ The full list of the 177 retired tags is recorded below for the archive.
 - `pre/v4-choreography`
 - `pre/weights`
 - `pre/camera-hygiene`
+- `pre/camera-hygiene-2`
 - `pre/company`
 - `pre/company-2`
 - `pre/framing`
