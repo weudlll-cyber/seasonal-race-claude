@@ -114,8 +114,14 @@ seasonal-race-claude/
 └── .github/
     └── workflows/
         ├── ci.yml                  # Lint + test on PR
-        └── deploy.yml              # Deploy on merge to main
+        └── deploy.yml              # INERT — has never run; see its header comment
 ```
+
+`deploy.yml` describes an intent that was never wired up. Measured 2026-08-04: it triggers on
+`branches: [main]` and the only branch at origin is `master`; it runs `scripts/deploy.sh`, which is
+not in this repository; and all three secrets it consumes are absent. Deployment today is MANUAL —
+[DEPLOYMENT.md](DEPLOYMENT.md) documents the by-hand production start, and the server currently runs
+only on the owner's machine. See BACKLOG.md, "Before the VPS migration".
 
 ## Data Flow (current)
 
@@ -743,62 +749,10 @@ The snapshot (`_prevT/_prevX/_prevY/_prevAngle`) is taken at the **start of each
 
 ## Camera System
 
-> **STALE — superseded by [CAMERA_DIRECTOR.md](CAMERA_DIRECTOR.md), which is the canonical camera
-> reference.** Kept as a record of the pre-refactor design; do NOT read it as a description of the
-> shipped camera. Surfaced by CAMERA-MERGE-1 and headed rather than rewritten, because rewriting it
-> is a docs block of its own. Known-wrong here, as examples rather than an exhaustive list: there
-> are SIX director states (PHOTO_FINISH is missing below); the director does NOT pick the
-> highest-weight candidate — it draws one at random by weight and then ACCEPTS it with probability
-> equal to that weight (CAMERA-WEIGHTS-1); battle isolation is an ARC fraction, not
-> `battleIsolationPx: 300`; `_frozenBattleGroup`, `overviewCooldownMin/Max` and the spriteScale zoom
-> chain no longer exist.
-
-The race camera lives in `modules/camera/` and supports five director modes:
-
-- **OVERVIEW** — wide shot showing the full track; zoom equals `overviewZoom` (full track fits). On open tracks `_overviewStateZoom = overviewZoom` (direct, not computed from spriteScale — see Lesson 83). After the first finisher crosses the line, OVERVIEW enters **FINISH_OVERVIEW mode**: smooth zoom-out + T-space pan to `finishOverviewLookbackPx` (300 world-px, L88) before the finish line. `_camT` stays at winner.t on entry; `_transitionTargetT = lookbackT`; a dedicated `else if` branch lerps `_camT` toward it in parallel with the zoom-out (L89). The mode waits until all racers have finished.
-- **LEADER_ZOOM** — follows the leading racer at elevated zoom
-- **BATTLE_ZOOM** — centres on the Greedy-Expansion cluster of racers in close proximity. Isolation phase (brief fixed window) → Expansion phase (grow cluster by proximity). Camera position uses a frozen group snapshot (`_frozenBattleGroup`) so the view stays stable as racers reorder; visual highlights use the live group (Lesson 85). Guards: top-10 racers only, rank span ≤ 5, isolation zone `battleIsolationPx: 300`. P2-drift exit: if the second-place racer drifts > `battleGapThreshold` from 3rd, the cluster dissolves and BATTLE exits.
-- **COMEBACK_ZOOM** — tracks the furthest-behind unfinished racer; green highlight ring rendered via `globalAlpha` (not `ctx.filter` — see Lesson 86). Tuned thresholds (Phase 3D): `outcomePhaseThreshold: 0.65`, `comebackMinStartGap: 0.25`, `comebackMaxCurrentRankPct: 0.20`. DIAG shows gainOk / startGapOk / currentRankOk per B1 racer, plus phase gate + leaderProgress.
-- **LEAD_CHANGE_ZOOM** — activates when the race leader changes; frames the new and former leader briefly before handing off to LEADER_ZOOM. Pan-snap fix on entry: `_camT` set to leader.t at transition point to avoid jump artifact.
-
-### Director System (Phase 3B)
-
-The director chooses the next camera state from a **weighted candidate pool**. Each state contributes a candidate with a weight derived from recency, race tension, and cooldown timers. The highest-weight candidate wins.
-
-**OVERVIEW-Scheduler:** OVERVIEW is injected periodically as a forced candidate with a configurable cooldown window `[overviewCooldownMin, overviewCooldownMax]`. This guarantees occasional wide shots without requiring OVERVIEW to outcompete other candidates on weight alone.
-
-**Same-state repeat rule (Phase 3D):** If the highest-weight candidate is the same state that is currently active, the transition is immediately interruptible — no minimum dwell time enforced for same-to-same transitions.
-
-**Endgame threshold (Phase 3D):** Leader progress must exceed 90% (was 85%) before the FINISH_OVERVIEW drama fires.
-
-**Entry-phase T-space lerp:** During `_lerpPhase === 'entry'` all states (including OVERVIEW) use `shape.getPosition(_camT)` as the pan target to avoid a hard snap on frame 1 (Lesson 84). `tSpaceLerpActive = true` in this phase means `offsetX = targetOffsetX` (no pixel lerp), so a wrong pan target causes an instant camera jump.
-
-**Pan target ownership (`_setTargets` sole owner — camera refactor 2026-05-26):** `_setTargets` is the single authoritative writer of `targetOffsetX/Y` every frame. During follow phase (`_observerPhase === 'follow'`), it targets the racer's actual world position (leader `x/y`, battle group centroid `x/y`, or comeback racer `x/y`) rather than the track centerline `shape.getPosition(_camT, 0)`. In lead-in and lead-out phases it continues to use `shape.getPosition(_camT, 0)` as a stable anchor. `_computePhasedPanTarget` is a state-controller only — it advances `_camT` and manages phase transitions but writes nothing to `targetOffsetX/Y`. See `docs/camera-target-architecture.md` for the full ownership analysis and execution-order diagram. (Lesson 37)
-
-All modes apply a single world-space affine transform (translate + scale) before the rAF draw. The main camera position is clamped to world bounds so the canvas edge is never exposed. The picture-in-picture minimap (Phase 2.5 F6b) renders a separate scaled view of the full world in the top-right corner with a leader indicator dot.
-
-`CameraDirector.update()` receives `renderRacers` (interpolated racer positions, see Frame-Timing Architecture above) for the RACING phase. COUNTDOWN uses raw `st.racers` (no physics accumulator active during countdown). The steady-state pixel-space lerp in `CameraDirector` (tracking phase, `offsetX += (targetOffsetX - offsetX) × lf`) naturally tracks interpolated targets once `renderRacers` is passed as input.
-
-### Zoom Calibration per State (Schema v14 — Phase 3C)
-
-Camera zoom per state is configured via `spriteScale` — a dimensionless relative factor replacing the former absolute `spritePx` value (Schema v14, migration `chore/sprite-scale-relative`).
-
-```
-zoom = spriteScale × FALLBACK_REFERENCE_SPRITE_SIZE / (bsX × displaySize)
-
-Where:
-  spriteScale                  — tunable per state (default: OVERVIEW 1.00, LEADER 1.81,
-                                   BATTLE 2.81, COMEBACK 1.39, LEAD_CHANGE 1.81)
-  FALLBACK_REFERENCE_SPRITE_SIZE — 36 px anchor point (calibrated for a reference track density)
-  bsX                          — canvas-to-world scale (CANVAS_W / worldW)
-  displaySize                  — effective sprite display size in world pixels
-```
-
-`spriteScale = 1.0` produces the same screen size as the natural auto-scaled density result for the current racer count. Values > 1.0 zoom in; values < 1.0 zoom out relative to that baseline.
-
-This replaces the old absolute `spritePx` field which was racer-count-dependent: the same pixel value produced different zooms at 10 vs. 70 racers because `displaySize × displaySizeScale` (the denominator) shifts with racer count (see Lesson 82, Lesson 87).
-
-Config stored in `racearena:cameraZoomConfig` (key `spriteScale` per state). Editable via Dev Screen → **Camera Advanced** section (Phase 3D: two camera sections merged into `CameraAdvancedSection`). Schema version: 14.
+Canonical reference: **[CAMERA_DIRECTOR.md](CAMERA_DIRECTOR.md)**. The description that used to sit
+here was removed rather than rewritten — one canonical home per subject (docs/SHIP-CEREMONY.md). A
+second description of the camera would go stale again, and next time without a STALE header to warn
+anyone.
 
 ## Visual Racer Effects System (Phase VRE)
 
@@ -1145,54 +1099,16 @@ remains at default 0/off and is a candidate for future removal.
 
 ---
 
-## Camera — LEADER_ZOOM Entry Zoom Consistency (Fix A)
+## Camera — LEADER_ZOOM Entry Zoom Consistency (Fix A) — REMOVED
 
-*(Added 2026-06-10.)*
+This section described `_leaderPhaseZoomFloor` and `_setOpenTrackTargets`, and the wobble that
+followed when entry zoom overshot `targetZoom`. Both mechanisms are gone: the projection replaced
+the coupled pan-target computation (CAMERA-PROJECTION-1) and the ratcheting min-visible floor was
+deleted in CAMERA-FRAMING-1, its job given to the COMPANY guarantee. The failure mode it guarded
+against was a property of that coupling, so it went with it.
 
-> **STALE — the mechanisms this section reasons about are gone.** `_setOpenTrackTargets` was
-> replaced by the single projection in CAMERA-PROJECTION-1, and `_leaderPhaseZoomFloor` — the
-> ratcheting min-visible floor — was deleted in CAMERA-FRAMING-1 and its job given to the COMPANY
-> guarantee, which widens before the camera moves instead of correcting after. The invariant it
-> describes is not wrong; the code it describes does not exist. Current behaviour:
-> [CAMERA_DIRECTOR.md](CAMERA_DIRECTOR.md) §3.
-
-### The invariant
-
-When the camera transitions to `LEADER_ZOOM` (or `LEAD_CHANGE`) and enters the tracking phase,
-`this.zoom` must be at or below `this.targetZoom`. If zoom enters tracking above targetZoom
-(overshoot), the coupled pan-target computation (`_setOpenTrackTargets`, call 2) shifts the
-pan target every frame as zoom corrects downward, producing a visible camera wobble ("unrund").
-
-### The root cause (before Fix A)
-
-`_leaderPhaseZoomFloor` uses `this.zoom` (the in-flight zoom, low during entry from OVERVIEW
-≈ 0.533) to count visible racers. At low zoom the whole field is visible → `visCount ≥ visTarget`
-→ the floor never decrements during entry → `targetZoom` stays at the full resolved leaderZoom
-(≈ 1.0–1.2). The entry phase chases this high target. When T-space convergence fires (camera
-reaches the leadAhead position), `targetZoom` may drop due to world-edge clamping in
-`resolveCamera`, while `this.zoom` has already risen past the new lower target. The delta
-falls within the `entryConvergenceZoom = 0.05` threshold → entry ends with `zoom > targetZoom`.
-
-### The fix
-
-Change the visibility check in the `_leaderPhaseZoomFloor` block to use `this.targetZoom`:
-
-```js
-// CameraDirector.js — _setTargets, inside the _leaderPhaseZoomFloor block
-const effZoom = this._isOpenTrack
-  ? this.targetZoom * OPEN_TRACK_BASE_ZOOM   // was: this.zoom * ...
-  : this.targetZoom * this._bsX;
-```
-
-Effect: the floor evaluates visibility at the *intended* zoom (leaderZoom) from frame 1 of
-LEADER_ZOOM. During entry, the target zoom is high → fewer racers visible → floor decrements
-immediately. By the time entry converges, `targetZoom` has already stepped down toward the
-correct tracking value. Entry ends with `zoom ≤ targetZoom` — no overshoot, no correction tail.
-
-**During tracking:** `this.zoom ≈ this.targetZoom` (lerped close), so the change is minimal.
-
-**Verification (camTrace, 2026-06-10):** First tracking frame `z = 0.9876 < tz = 1.0318` (was
-`z = 0.985 > tz = 0.957`). Pan error converges in 217 ms vs 1 066 ms in the bad trace.
+Canonical camera reference: [CAMERA_DIRECTOR.md](CAMERA_DIRECTOR.md) — §3 for the framing rule and
+§3.4 for the min-visible floor, which is recorded there as a thing that must not come back.
 
 ---
 

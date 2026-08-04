@@ -62,7 +62,9 @@ construction and must be argued another way.
 Two finish sub-phases are flags rather than states, because they are OVERVIEW and LEADER_ZOOM with a
 different anchor and a lock: `_inFinishDrama` (the pulse on the winner) and `_inFinishMode`
 (FINISH_OVERVIEW, held on a fixed point behind the line so later finishers cross in shot).
-`hudState` reports them.
+`hudState` reports them. That fixed point is `finishOverviewLookbackPx` (default **300** world px
+before the line) — moved here from ARCHITECTURE.md's deleted camera section, which was the only
+place the knob was named.
 
 ### 2.2 The priority chain (`_pickNextState`)
 
