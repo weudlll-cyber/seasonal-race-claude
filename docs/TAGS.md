@@ -348,6 +348,16 @@ touched anywhere in this work. CI green at origin before the merge: run `3099793
 - `pre/anchor-truth` (`c299fdf7`) stays valid and stays registered above; a merge with history does
   not orphan it.
 
+### THE END OF A RACE BECOMES SAYABLE — FINISH-SEAM-1 (2026-08-05)
+The finish sequence existed only as six latches and three if-chains split across `update()` and
+`_pickNextState()`. Two earlier blocks named this seam as the precondition for extracting the state
+selection and stopped at it. `finishPhase.js` now states the whole ending — approach, the moment,
+the aftermath — with every transition carrying a machine-readable reason. Behaviour-free: all three
+fingerprints bit-identical at the one source commit.
+- `pre/finish-seam` (`b363bd94`, 2026-08-05) — master's tip before the branch, baselines measured on
+  the untouched tree: camera `7a33faf2ec131437`, render `73ba53ba9fea12c7`, world
+  `dc4647be0f55ebdb`.
+
 ## Active-phase tags (temporary scaffolding — to collapse later)
 
 Step-tags from the runaway phase (now CLOSED 2026-07-29, see below) and any later work — safe return points, not permanent anchors. They collapse into
