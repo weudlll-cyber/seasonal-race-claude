@@ -451,7 +451,6 @@ export class CameraDirector {
 
     this._innerFramePct = f.innerFramePct;
     this._minRacersVisible = f.minRacersVisible;
-    this._companyOnlyFraming = f.companyOnlyFraming;
     this._transitionGrammar = f.transitionGrammar;
     this._glideDurationMs = f.glideDurationMs;
     this._leaderForwardFrac = f.leaderForwardFrac;
@@ -1809,12 +1808,22 @@ export class CameraDirector {
       // corridor so the shot is still bounded by something real.
       if (Number.isFinite(ceiling)) return ceiling;
     }
-    // CAMERA-COMPANY-ONLY-1: with the switch ON, the CORRIDOR guarantee is not applied in the three
-    // single-anchor states — the state's own setting and the COMPANY guarantee become the only
-    // limits, so his number is not overruled by the road width. Placed AFTER the PAIR branch on
-    // purpose: a pair state that falls through to the corridor (only one contender present) keeps
-    // it, because the pair states are deliberately untouched by this switch.
-    if (this._companyOnlyFraming && kind === GUARANTEE.CORRIDOR) return Infinity;
+    // CAMERA-COMPANY-ONLY-3: THE SINGLE-ANCHOR STATES ARE NOT BOUNDED BY THE ROAD.
+    //
+    // LEADER, OVERVIEW and COMEBACK are limited by the owner's own setting and by the COMPANY
+    // guarantee, and by nothing else. The corridor used to be their ceiling and it silently overruled
+    // his number on six of ten tracks — on Mountainstreet his 1.0 became anything from 300 to 688
+    // world px as the road turned, which is the "restless" picture he complained about. His words for
+    // why the road lost: THE ROAD IS NOT WHO MATTERS, THE RACERS ARE.
+    //
+    // Owner-approved 2026-08-05 on `exp/company-only` @ d2ecc27c, mountainstreet seed 5601, having
+    // seen BOTH regimes — a torn-apart field where the company guarantee opens the shot wide, and a
+    // tight pack where the camera stays at his 1.0.
+    //
+    // The corridor is still reached from the PAIR branch above when a pair state has fewer than two
+    // contenders. Measured: that fallback fired on 0 of 11,813 pair frames across ten tracks, so it
+    // is DEFENSIVE, not load-bearing — kept deliberately, and said out loud rather than assumed.
+    if (kind !== GUARANTEE.PAIR) return Infinity;
 
     // WHERE THE ANCHOR WILL SIT, from the framing rule — the same zoom-independent position the
     // company guarantee uses, for the same reason: the corridor runs half a track width to each

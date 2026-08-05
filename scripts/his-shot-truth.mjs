@@ -186,6 +186,9 @@ function measure(geo, cfgIn) {
   // M3 — THE PRICE: on CORRIDOR-guarantee states, how much of the road actually fits across the
   // frame from where the anchor sits. < 1 means the road edge is out of frame.
   const roadFrac = [];
+  // CAMERA-COMPANY-ONLY-3 §3 verification: does a PAIR state ever fall through to the corridor?
+  let pairFrames = 0;
+  let pairFallback = 0;
   let floorBound = 0;
   let drawnN = 0;
   const dsScale = br.bodyNarrow / ds;
@@ -225,6 +228,14 @@ function measure(geo, cfgIn) {
         const b = bindByState.get(cd.state);
         b[0] += bound ? 1 : 0;
         b[1] += 1;
+      }
+    }
+    {
+      const pp = cd._framingProbe;
+      if (pp && framingFor(cd.state).guarantee === GUARANTEE.PAIR) {
+        pairFrames++;
+        const pr = pp.pair;
+        if (!Array.isArray(pr) || !pr[0] || !pr[1]) pairFallback++;
       }
     }
     // M3 sample — same method as corridor-truth.mjs, on corridor-guarantee states only.
@@ -288,6 +299,8 @@ function measure(geo, cfgIn) {
     drawnPct,
     floorPct: drawnN ? (100 * floorBound) / drawnN : 0,
     roadFrac,
+    pairFrames,
+    pairFallback,
   };
 }
 
@@ -383,3 +396,27 @@ for (const r of B1) {
       ' px'
   );
 }
+
+console.log('');
+console.log('PAIR-STATE CORRIDOR FALLBACK (does corridorGuarantee stay reachable?)');
+let tf = 0,
+  tb = 0;
+for (const r of B1) {
+  tf += r.pairFrames || 0;
+  tb += r.pairFallback || 0;
+  if (r.pairFrames)
+    console.log(
+      '  ' +
+        r.id.padEnd(15) +
+        ' pair frames ' +
+        String(r.pairFrames).padStart(6) +
+        '   fell back to corridor ' +
+        String(r.pairFallback).padStart(6) +
+        '  (' +
+        ((100 * r.pairFallback) / r.pairFrames).toFixed(2) +
+        '%)'
+    );
+}
+console.log(
+  '  TOTAL ' + tb + ' of ' + tf + ' pair frames = ' + ((100 * tb) / (tf || 1)).toFixed(3) + '%'
+);

@@ -354,22 +354,6 @@ export const DEFAULT_CAMERA_CONFIG = {
   // was opened to fix. On searound 5 does buy a little (thin 4% → 2%) for +0.22 rev/s, which is the
   // one honest reason to raise it. See reports/evolution/CAMERA-COMPANY-2.md.
   minRacersVisible: 3,
-  // CAMERA-COMPANY-ONLY-1 — A SWITCH, NOT A DECISION. OFF is today's picture, exactly.
-  //
-  // ON removes the CORRIDOR guarantee from the three single-anchor states (LEADER, OVERVIEW,
-  // COMEBACK), leaving the state's own setting and the COMPANY guarantee (minRacersVisible) as the
-  // only limits. It builds nothing new: the company guarantee already runs in those states and
-  // already reads his minRacersVisible — on wide tracks it is simply drowned out by the stricter
-  // corridor. This lets an existing guarantee be heard.
-  //
-  // WHY IT EXISTS: the owner tested the unit change himself and rejected it for a reason nobody had
-  // named — a smaller window means the world moves through it faster, and the picture went restless.
-  // So the unit stays; what is in question is who may OVERRULE his number. His eye decides that, not
-  // a measurement, which is why this is a live toggle and why OFF is the default.
-  //
-  // The PAIR states (BATTLE, LEAD_CHANGE, PHOTO_FINISH) are deliberately untouched — they guarantee
-  // a pair, which is what he likes about the photo finish.
-  companyOnlyFraming: false,
   // Focal-position smoothing: EMA time-constant (seconds) applied to the camera's world-space
   // pan target during follow phase. Reduces velocity-oscillation artefacts (COMEBACK speedBrake
   // cycling) and per-physics-step quantisation jitter (LEADER_ZOOM). 0 = disabled.

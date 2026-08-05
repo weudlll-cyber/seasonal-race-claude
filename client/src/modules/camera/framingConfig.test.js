@@ -189,33 +189,22 @@ describe('OVERVIEW time constants (CAMERA-ANCHOR-TRUTH-1 §4c)', () => {
 });
 
 // ============================================================
-// CAMERA-COMPANY-ONLY-1 — the switch. OFF must be today's behaviour, exactly.
+// CAMERA-COMPANY-ONLY-3 — the switch is GONE and must not come back as a config key.
+//
+// It existed for one afternoon so the owner could judge the change with his own eye. He passed it
+// (mountainstreet seed 5601, build d2ecc27c) and company-only became simply the behaviour, so the
+// key, the Dev Screen control and the OFF branch all went with it — when something loses its value
+// in the Dev Portal, the control goes too.
 // ============================================================
-describe('companyOnlyFraming — a switch, not a decision', () => {
-  it('ships OFF, so today’s picture is the default', () => {
-    expect(DEFAULT_CAMERA_CONFIG.companyOnlyFraming).toBe(false);
-    expect(resolveFramingConfig(DEFAULT_CAMERA_CONFIG).companyOnlyFraming).toBe(false);
+describe('the company-only switch is gone (CAMERA-COMPANY-ONLY-3)', () => {
+  it('no longer exists as a default', () => {
+    expect(DEFAULT_CAMERA_CONFIG).not.toHaveProperty('companyOnlyFraming');
   });
 
-  it('an absent key resolves to OFF — no schema, no migration', () => {
-    expect(resolveFramingConfig({}).companyOnlyFraming).toBe(false);
-    expect(resolveFramingConfig(null).companyOnlyFraming).toBe(false);
-    expect(resolveFramingConfig(undefined).companyOnlyFraming).toBe(false);
-  });
-
-  it('a stored value is honoured, both ways', () => {
-    expect(resolveFramingConfig({ companyOnlyFraming: true }).companyOnlyFraming).toBe(true);
-    expect(resolveFramingConfig({ companyOnlyFraming: false }).companyOnlyFraming).toBe(false);
-  });
-
-  it('is a boolean whatever was stored — it can never resolve to a number or a string', () => {
-    for (const v of [1, 'yes', {}, [], 'false']) {
-      expect(typeof resolveFramingConfig({ companyOnlyFraming: v }).companyOnlyFraming).toBe(
-        'boolean'
-      );
-    }
-    // Note the trap this pins: the STRING 'false' is truthy. Storing that would turn the probe ON.
-    expect(resolveFramingConfig({ companyOnlyFraming: 'false' }).companyOnlyFraming).toBe(true);
-    expect(resolveFramingConfig({ companyOnlyFraming: 0 }).companyOnlyFraming).toBe(false);
+  it('is not resolved, even if an old stored config still carries it', () => {
+    // The standing rule: unknown keys are ignored. Somebody who flipped the probe on that afternoon
+    // has the key in localStorage forever; it must not resurrect a branch that no longer exists.
+    const resolved = resolveFramingConfig({ companyOnlyFraming: false });
+    expect(resolved).not.toHaveProperty('companyOnlyFraming');
   });
 });

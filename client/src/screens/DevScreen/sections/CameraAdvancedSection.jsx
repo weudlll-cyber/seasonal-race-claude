@@ -693,29 +693,6 @@ function CameraAdvancedSection() {
             }
             tip="The DRAMATURGICAL guarantee — 'do not show emptiness'. At least this many racers stay in frame, counting the subject, so a tight LEADER shot never goes empty: leader alone, no reference, no tension. It is a LIMIT, not a correction — the camera does not zoom in and then back out, it simply does not go that far. 0 or 1 turns it off. Applies to the single-subject shots (LEADER, COMEBACK, OVERVIEW); BATTLE, LEAD_CHANGE and PHOTO_FINISH already guarantee their pair. Default 3: measured to halve the frames where the leader is alone at a LEADER setting of 1, at almost no cost in restlessness."
           />
-          <div style={{ gridColumn: '1 / -1' }}>
-            <label
-              className={s.label}
-              style={{ display: 'flex', alignItems: 'flex-start', gap: '0.5rem' }}
-            >
-              <input
-                type="checkbox"
-                checked={config.companyOnlyFraming ?? false}
-                onChange={(e) => set('companyOnlyFraming', e.target.checked)}
-                data-testid="company-only-framing-toggle"
-              />
-              <span>
-                <strong>Let my number decide (company only)</strong> — probe, default OFF
-                <InfoTooltip text="OFF is today's picture, exactly. ON stops the ROAD WIDTH overruling your setting in the single-subject shots (LEADER, OVERVIEW, COMEBACK): your 'World in shot' number is then limited only by 'Company: min racers in frame' above. It builds nothing new — that company guarantee already runs in these shots and already reads your number; on wide tracks it is simply drowned out by the stricter road-width rule, and this lets it be heard. THE PRICE: the edge of the road may leave the frame in the sharpest curves, which is exactly what the road-width rule existed to prevent. BATTLE, LEAD_CHANGE and PHOTO_FINISH are untouched — they already guarantee their pair, which is what makes the photo finish work." />
-                <span
-                  style={{ display: 'block', fontSize: '0.72rem', color: 'var(--color-muted)' }}
-                >
-                  Stops the road width overruling your setting in LEADER / OVERVIEW / COMEBACK. The
-                  road edge may leave frame in sharp curves — that is the trade you are judging.
-                </span>
-              </span>
-            </label>
-          </div>
         </div>
 
         <p

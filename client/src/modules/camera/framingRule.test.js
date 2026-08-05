@@ -781,32 +781,40 @@ describe('CAMERA-LATERAL-1 — the two axes, through the director', () => {
 
   // FAILURE PROOF for the lateral guarantee — his second question, and the one that decides it:
   // "do we still see everything important on the track?"
-  it('WORST CASE: outermost lane, tightest setting, corridor across the SHORT screen axis', () => {
-    // t = 0.25 on this oval is the top of the arc, where the track runs horizontally on screen, so
-    // the corridor is measured up-down — the short axis, the least room there is.
-    const T = 0.25;
-    const tight = {
-      minRacersVisible: 0,
+  //
+  // CAMERA-COMPANY-ONLY-3 CHANGED THE ANSWER, and this test now records the change honestly rather
+  // than being deleted. It used to run with `minRacersVisible: 0` and rely on the CORRIDOR to keep
+  // the outermost-lane racer on screen. The corridor no longer bounds LEADER, so with the company
+  // guarantee also off, nothing does — the outer lane CAN leave frame, and the owner accepted that
+  // price knowingly (measured: the road edge is out of frame on 70% of Mountainstreet frames, worst
+  // case 236 px of road missing).
+  //
+  // What protects him now is the COMPANY guarantee at his own value, so that is what this asserts.
+  it('WORST CASE: the outermost lane is kept by the COMPANY guarantee, not by the road', () => {
+    const T = 0.25; // top of the arc: the corridor is measured up-down, the least room there is
+    const tightWithCompany = {
+      minRacersVisible: 5, // HIS value — the thing that now does the keeping
       cameraStateProfiles: Object.fromEntries(
         Object.entries(DEFAULT_CAMERA_CONFIG.cameraStateProfiles).map(([k, v]) => [
           k,
-          { ...v, visibleCorridors: 0.25 }, // the tightest the control allows
+          { ...v, visibleCorridors: 0.25 },
         ])
       ),
     };
     for (const lane of [+TW / 2, -TW / 2]) {
       const outer = atLane(T, lane);
+      // The company the guarantee must keep in frame sits just behind him, in his lane.
       const racers = [
         { index: 0, name: 'OUTER', t: T, x: outer.x, y: outer.y, finished: false },
         ...field(0)
           .slice(1)
           .map((r, i) => {
-            const tt = T - 0.03 * (i + 1);
-            const p = atLane(tt, 0);
+            const tt = T - 0.006 * (i + 1);
+            const p = atLane(tt, lane);
             return { ...r, t: tt, x: p.x, y: p.y };
           }),
       ];
-      const cd = settle(mk(tight), racers, CAM_STATE.LEADER_ZOOM);
+      const cd = settle(mk(tightWithCompany), racers, CAM_STATE.LEADER_ZOOM);
       const sx = outer.x * cd._proj.effX(cd.zoom) + cd.offsetX;
       const sy = outer.y * cd._proj.effY(cd.zoom) + cd.offsetY;
       expect(sx, `lane ${lane} x`).toBeGreaterThanOrEqual(0);
@@ -967,5 +975,33 @@ describe('the switch’s reach is exactly the corridor states (CAMERA-COMPANY-ON
     for (const s of states) {
       expect([GUARANTEE.CORRIDOR, GUARANTEE.PAIR]).toContain(FRAMING_BY_STATE[s].guarantee);
     }
+  });
+});
+
+// ============================================================
+// CAMERA-COMPANY-ONLY-3 — what limits each state now.
+//
+// The corridor is no longer the ceiling of the single-anchor states. This pins the CONSEQUENCE of
+// that, not just the table: which states may be bounded by the road, and which may not.
+// ============================================================
+describe('the road no longer bounds the single-anchor states (CAMERA-COMPANY-ONLY-3)', () => {
+  it('LEADER, OVERVIEW and COMEBACK are the states the corridor used to bound', () => {
+    for (const state of ['LEADER_ZOOM', 'OVERVIEW', 'COMEBACK_ZOOM']) {
+      expect(framingFor(state).guarantee, state).toBe(GUARANTEE.CORRIDOR);
+    }
+  });
+
+  it('the pair states are untouched by the change — they still guarantee their pair', () => {
+    for (const state of ['BATTLE_ZOOM', 'LEAD_CHANGE', 'PHOTO_FINISH']) {
+      expect(framingFor(state).guarantee, state).toBe(GUARANTEE.PAIR);
+    }
+  });
+
+  it('corridorGuarantee is STILL EXPORTED and still works — it is the pair fallback, not dead', () => {
+    // Measured: that fallback fired on 0 of 11,813 pair frames, so it is defensive rather than
+    // load-bearing. It is kept on purpose, and this test is what keeps it honest if it is ever hit.
+    const z = corridorGuarantee({ x: 1, y: 0 }, CLOSED.tw, CLOSED.axisX, CLOSED.axisY, W, H);
+    expect(Number.isFinite(z)).toBe(true);
+    expect(z).toBeGreaterThan(0);
   });
 });
