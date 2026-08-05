@@ -18,146 +18,46 @@
 // Reads the director's own `_framingProbe`, like corridor-truth.mjs, so it measures the live path.
 //
 // Usage:  node scripts/edge-crossing.mjs
+//
+// RACE IDENTITY (ONE-DRIVER-1): n=40, raceSeed 5601, camSeed 1439767152, each track's OWN default
+// racer type, 60 s. Printed with the results, because a number is only comparable to another number
+// from the same identity.
 // ============================================================
 
-import { readFileSync, readdirSync, existsSync } from 'node:fs';
-import { join, dirname } from 'node:path';
-import { fileURLToPath, pathToFileURL } from 'node:url';
+import {
+  resolveIdentity,
+  formatIdentity,
+  loadTracks,
+  buildRace,
+  runRace,
+  TRACK_DEFAULT_RACER,
+} from './lib/raceDriver.mjs';
+import { DEFAULT_CAMERA_CONFIG } from '../client/src/modules/storage/defaults.js';
 
-const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
-const u = (p) => pathToFileURL(join(ROOT, p)).href;
-
-const { DEFAULT_CAMERA_CONFIG, DEFAULT_CONFIG_WORLD } = await import(
-  u('client/src/modules/storage/defaults.js')
-);
-const { EditorShape } = await import(u('client/src/modules/track-editor/EditorShape.js'));
-const { CameraDirector } = await import(u('client/src/modules/camera/CameraDirector.js'));
-const { createRaceFromIdentity, stepRacePhysics, FIXED_DT } = await import(
-  u('client/src/modules/raceCore.js')
-);
-const { normalSpeedFrom } = await import(u('client/src/modules/durationModel.js'));
-const { computeRacerLayout, computeBodyNarrowRef } = await import(
-  u('client/src/modules/rowLayout.js')
-);
-const RT = await (async () => {
-  const re = console.error;
-  console.error = () => {};
-  try {
-    return await import(u('client/src/modules/racer-types/index.js'));
-  } finally {
-    console.error = re;
-  }
-})();
-
-const CW = 1280;
-const CH = 720;
-const N = 40;
-const SEED = 5601;
-const CAM_SEED = 1439767152;
-
-const dir = existsSync(join(ROOT, 'server/data/tracks'))
-  ? join(ROOT, 'server/data/tracks')
-  : join(ROOT, 'server/seeds/tracks');
+const IDENTITY = resolveIdentity({
+  racers: 40,
+  raceSeed: 5601,
+  cameraSeed: 1439767152,
+  racerType: TRACK_DEFAULT_RACER,
+  seconds: 60,
+  note: 'the CAMERA-ANCHOR-TRUTH-1 measurement context',
+});
 
 function measureTrack(geo) {
-  const shape = new EditorShape(geo);
-  const TW = geo.width ?? shape.getActualTrackWidth();
-  const W = DEFAULT_CONFIG_WORLD;
-  const behaviorConfig = { ...W.raceBehaviorConfig, isOpen: shape.isOpen };
-  const rt = RT.getRacerType(geo.defaultRacerTypeId ?? 'horse');
-  const ds = rt.config.displaySize;
-  const bfN = Math.min(rt.config.bodyFillX, rt.config.bodyFillY);
-  const bfL = Math.max(rt.config.bodyFillX, rt.config.bodyFillY);
-  const effW = TW * behaviorConfig.startSpreadRange;
-  const pss = computeRacerLayout(effW, N, ds, W.autoScaleConfig).spriteSize;
-  const br = computeBodyNarrowRef(Math.min(285, effW), N, ds, bfN, W.autoScaleConfig);
-  const bodyRef = ds * (br.bodyNarrow / ds);
-  const built = createRaceFromIdentity({
-    shape,
-    isOpenTrack: shape.isOpen,
-    pathLengthPx: geo.pathLengthPx ?? 0,
-    trackWidthPx: TW,
-    speedMultiplier: rt.getSpeedMultiplier(),
-    baseSpeedConfig: W.baseSpeedConfig,
-    behaviorConfig,
-    rowConfig: W.rowLayoutConfig,
-    dynamicsConfig: W.raceDynamicsConfig,
-    normalSpeedPxPerSec: normalSpeedFrom(W.baseSpeedConfig),
-    laps: shape.isOpen ? 1 : 2,
-    requestedSeconds: 60,
-    nRacers: N,
-    racePlanSeed: SEED,
-    racePlanEnabledFlag: true,
-    physicalSpriteSize: pss,
-    drawnBodyWidthRefPx: bodyRef,
-    bodyFillNarrow: bfN,
-    bodyFillLong: bfL,
-    constSpeedActive: false,
-  });
-  const st = built.state;
-  const raceCfg = built.config;
-  const meta = built.meta;
-  const cd = new CameraDirector(
-    geo.worldWidth,
-    geo.worldHeight,
-    shape.isOpen,
-    DEFAULT_CAMERA_CONFIG,
-    bodyRef,
-    shape,
-    TW
-  );
-  cd.setRandomSeed(CAM_SEED);
-  if (meta.racePlanEnabled && meta.rpPlanInfo?.b1Indices) {
-    cd.updateRacePlan(meta.rpPlanInfo.b1Indices);
-  }
-  raceCfg.computePositions();
-
-  const RAW = 1000 / 60;
-  let ts = 0;
-  let accum = 0;
-  const cdMs = DEFAULT_CAMERA_CONFIG.countdownDurationMs ?? 4000;
-  while (ts < cdMs) {
-    cd.updateCountdown(st.racers, ts, ts, cdMs, CW, CH);
-    ts += RAW;
-  }
-  const raceStart = ts;
-  st.physicsTs = 0;
+  const race = buildRace(geo, IDENTITY, DEFAULT_CAMERA_CONFIG);
+  const { cd, st, trackWidthPx: TW, displaySize: ds, bodyRef } = race;
 
   const byState = new Map();
   let checked = 0;
   let crossing = 0;
   let centreOut = 0;
   let worstOverhangPct = 0;
-
   const halfBody = bodyRef / 2; // world px
 
-  while (st.finishedCount < N && ts - raceStart < 200000) {
-    accum += RAW;
-    let steps = 0;
-    while (accum >= FIXED_DT && steps++ < 2) {
-      stepRacePhysics(st, raceCfg);
-      accum -= FIXED_DT;
-    }
-    cd.update(
-      st.racers,
-      ts,
-      {
-        raceElapsed: ts - raceStart,
-        finishedCount: st.finishedCount,
-        winner: st.racers.find((r) => r.finishRank === 1) ?? null,
-        finishT: st.finishT,
-        isOutcomePhase: false,
-        physicsRacers: st.racers,
-      },
-      CW,
-      CH,
-      RAW
-    );
-
+  runRace(race, IDENTITY, DEFAULT_CAMERA_CONFIG, () => {
     const p = cd._framingProbe;
     if (!p || !(cd.zoom > 0)) {
-      ts += RAW;
-      continue;
+      return;
     }
     // Every GUARANTEED subject this frame: the anchor, plus both contenders in a pair state.
     const subs = [p.point, ...(Array.isArray(p.pair) ? p.pair : [])].filter(
@@ -191,8 +91,7 @@ function measureTrack(geo) {
         byState.set(cd.state, byState.get(cd.state) + 1);
       }
     }
-    ts += RAW;
-  }
+  });
 
   return {
     id: geo.id,
@@ -206,17 +105,12 @@ function measureTrack(geo) {
   };
 }
 
-const geos = [];
-for (const f of readdirSync(dir)) {
-  if (!f.endsWith('.json')) continue;
-  const j = JSON.parse(readFileSync(join(dir, f), 'utf8'));
-  if (j.id) geos.push(j);
-}
-geos.sort((a, b) => a.id.localeCompare(b.id));
+const geos = loadTracks();
 
 console.log(
   'EDGE CROSSING — a GUARANTEED subject drawn with part of its body past the frame edge\n'
 );
+console.log(formatIdentity(IDENTITY));
 console.log(
   'track            subject-frames   crossing%   worst overhang (% of short side)   centre-already-out%'
 );

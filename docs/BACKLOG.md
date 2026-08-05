@@ -9,16 +9,34 @@ Items ranked by urgency within each bucket. ✅ = done, 🔜 = next, ⏳ = waiti
 
 ## Measurement and guard residuals (2026-08-05)
 
-- [ ] **Four measurement scripts each carry their own copy of the race driver.**
-      `scripts/corridor-truth.mjs`, `edge-crossing.mjs`, `tracking-lag.mjs` and `his-shot-truth.mjs`
-      each build a race from scratch (`createRaceFromIdentity` + the countdown/step loop, ~100 lines
-      apiece). **Nothing asserts the four stay identical, and their numbers are compared as if they
-      were** — the corridor, edge-crossing, lag and delivered-window figures are read side by side in
-      CAMERA-ANCHOR-TRUTH-1 and NIGHT-1. Chartered as NIGHT-1 stage D; never ran.
-      **The fix is one shared module behind a HARD GATE: camera, render and world fingerprints all
-      bit-identical**, because a measurement tool that changes what it measures is this project's
-      oldest failure. **If the four turn out NOT to be equivalent, stop** — that is a finding about
-      every number they have ever produced and it outranks the refactor.
+- [x] **DONE (ONE-DRIVER-1) — four measurement scripts now share one driver, and the race identity
+      is printed.** `scripts/lib/raceDriver.mjs`; `corridor-truth`, `edge-crossing`, `tracking-lag`
+      and `his-shot-truth` ported with all seven captured outputs reproducing exactly and all three
+      fingerprints bit-identical. The deliverable turned out to be the IDENTITY, not the
+      deduplication: the four were never meant to be identical (`his-shot-truth` runs the owner's
+      n=65 context), and the defect was that nothing said so where the numbers are read.
+- [ ] **THREE DRIVER COPIES REMAIN, BY DELIBERATE CHOICE — meet the argument before "finishing the
+      job".** `camera-fingerprint.mjs` and `render-fingerprint.mjs` are **the gate the consolidation
+      is measured against**: a tool that changes in the same commit it is meant to validate cannot
+      validate it, so folding them in would make the fingerprint table meaningless — the only safe
+      order is to port them in a block whose gate is something else. `camera-replay.mjs` takes its
+      identity from the **owner's marker** rather than from constants, so it has no drift to fix and
+      it is his live repro tool; the cost of touching it exceeds one fewer copy. **Neither is an
+      oversight. Anyone closing this must answer both arguments, not just count the copies.**
+- [ ] **The race-identity HASH: `sha(identity + canonical(cameraConfig))`.** Printing the identity
+      made "did these two numbers come from the same race?" readable; a hash would make it
+      mechanical, which matters because this project has been bitten three times by a human check
+      everyone believed was happening. **The config must be in the hash, not just the identity** —
+      `corridor-truth` and `corridor-truth --company-only` print the SAME identity line and produce
+      different numbers, so identity alone is insufficient. Caveat: a hash nobody quotes is a dead
+      instrument (Lesson 196), so it is only worth adding alongside the convention below.
+- [ ] **The juxtaposition rule for reports.** Not "every number carries its identity", which is
+      ceremony — most figures sit under a shared header that already covers them. The narrow rule
+      that catches the real failure: **when a report puts two numbers side by side, they must either
+      share one stated identity or carry different ones visibly.** The hazard lives in comparison, not
+      in isolation — a number alone can be wrong, but it cannot mislead by comparison. In practice: a
+      table gets one identity line above it; a table mixing arms gets an identity column. NIGHT-1
+      needed the second and did not have it, which is the instance this comes from.
 - [ ] **`check-index` is one-directional.** It walks `reports/evolution/*.md` and asserts each is
       referenced from `INDEX.md`; **an INDEX line naming a report that does not exist is invisible to
       it.** Same shape as the `check-tags` gap closed in TAG-GUARD-2/3, and the same corollary
