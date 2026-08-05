@@ -5,13 +5,22 @@
 //              (docs/ + top-level *.md) resolves to a real file. Exits non-zero on any dangling link.
 //              `reports/` is EXCLUDED by design — it is the lab journal (historical, allowed to rot).
 //              No dependencies (plain Node). Run from the repo root: `node scripts/check-doc-links.mjs`.
+//
+// WHAT THIS GUARD DOES **NOT** CHECK:
+//   - ANCHORS. `file.md#section` is verified only as far as `file.md`; a dead #anchor passes.
+//   - EXTERNAL links. http(s) targets are never fetched — a 404 on the web is invisible here.
+//   - `reports/**`, by design (the lab journal is allowed to rot), so a dangling link INSIDE a
+//     report is not seen. reports/evolution/INDEX.md's own targets are check-index's job.
+//   - Whether a link points at the RIGHT file — only that the path resolves.
+//   - Images and any non-markdown asset reference.
+//   - The reverse direction: a living doc that nothing links TO is not reported as an orphan.
 // ============================================================
 
 // VERIFY-FAST-1: every guard prints its own elapsed time. The ceremony's cost column was wrong
 // in BOTH directions (camera claimed ~85 s and costs 47; render claimed ~30 s and costs 15) and
 // nothing checked it. A number the script measures itself cannot go stale.
 const __t0 = Date.now();
-process.on('exit', () => {
+process.on("exit", () => {
   // NIGHT-TOOLS-1: MACHINE-READABLE, because a human string has to be re-parsed by
   // whatever generates the ceremony's cost column, and a parser of prose is the defect
   // that column already had. `scripts/gen-ceremony-costs.mjs` reads exactly this token.
@@ -20,23 +29,23 @@ process.on('exit', () => {
 `);
 });
 
-import { readFileSync, existsSync } from 'node:fs';
-import { join, dirname, resolve } from 'node:path';
-import { execSync } from 'node:child_process';
+import { readFileSync, existsSync } from "node:fs";
+import { join, dirname, resolve } from "node:path";
+import { execSync } from "node:child_process";
 
 const ROOT = process.cwd();
 
 // The living-doc set: every tracked .md under docs/, plus the repo-ROOT-level *.md files (README, etc.).
 // Nested result/experiment/report trees are the lab journal and are excluded (they are allowed to rot):
 // reports/, and any other tracked .md that is neither under docs/ nor at the repo root.
-const tracked = execSync('git ls-files "*.md"', { cwd: ROOT, encoding: 'utf8' })
-  .split('\n')
+const tracked = execSync('git ls-files "*.md"', { cwd: ROOT, encoding: "utf8" })
+  .split("\n")
   .map((f) => f.trim())
   .filter(Boolean);
 const files = tracked.filter((f) => {
-  if (f.includes('node_modules/') || f.includes('/dist/')) return false;
-  if (f.startsWith('docs/')) return true; // all of docs/ is living
-  if (!f.includes('/')) return true; // repo-root-level *.md (README.md, KRAEFTE-LANDKARTE.md, …)
+  if (f.includes("node_modules/") || f.includes("/dist/")) return false;
+  if (f.startsWith("docs/")) return true; // all of docs/ is living
+  if (!f.includes("/")) return true; // repo-root-level *.md (README.md, KRAEFTE-LANDKARTE.md, …)
   return false; // nested trees (reports/, results dirs, client/, server/, scripts/) = not living docs
 });
 
@@ -47,15 +56,15 @@ let checked = 0;
 for (const f of files) {
   const abs = join(ROOT, f);
   // Strip HTML comments and fenced code blocks — links inside them are not live references.
-  const text = readFileSync(abs, 'utf8')
-    .replace(/<!--[\s\S]*?-->/g, '')
-    .replace(/```[\s\S]*?```/g, '');
+  const text = readFileSync(abs, "utf8")
+    .replace(/<!--[\s\S]*?-->/g, "")
+    .replace(/```[\s\S]*?```/g, "");
   let m;
   while ((m = linkRe.exec(text))) {
     let target = m[1].trim();
     // Strip an optional "title" and any #anchor / line-anchor (#L123). Code line-anchors are
     // best-effort pointers; we verify the file exists, not the line.
-    target = target.split(/\s+/)[0].split('#')[0];
+    target = target.split(/\s+/)[0].split("#")[0];
     if (!target) continue; // pure in-page anchor
     if (/^(https?:|mailto:|tel:|data:)/.test(target)) continue; // external
     checked++;
@@ -68,11 +77,11 @@ for (const f of files) {
 }
 
 console.log(
-  `check-doc-links: ${checked} relative links across ${files.length} living-doc files; ${dangling} dangling.`
+  `check-doc-links: ${checked} relative links across ${files.length} living-doc files; ${dangling} dangling.`,
 );
 if (dangling > 0) {
   console.error(
-    `\nFAIL: ${dangling} dangling link(s) in living docs. Fix or remove them (reports/ is excluded as lab journal).`
+    `\nFAIL: ${dangling} dangling link(s) in living docs. Fix or remove them (reports/ is excluded as lab journal).`,
   );
   process.exit(1);
 }

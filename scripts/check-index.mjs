@@ -7,6 +7,22 @@
 //              it is an ORPHAN). Read-only, no dependencies. Run from the repo root:
 //              `node scripts/check-index.mjs`. Test/fixture overrides: --dir=<path> --index=<path>.
 //
+// TWO DIRECTIONS since NIGHT-TOOLS-1, and only the first existed before:
+//   FILE -> INDEX   every report is referenced from INDEX.md (the ORPHAN it was built for)
+//   INDEX -> FILE   every report INDEX.md links to actually exists (the DANGLING entry)
+// The second was checked by NOTHING: check-doc-links scans docs/ and the repo-root *.md only, so
+// reports/evolution/INDEX.md is outside its set entirely.
+//
+// WHAT THIS GUARD DOES **NOT** CHECK, stated here rather than discovered later:
+//   - Whether an index ENTRY describes the report it links to. A correct link to the wrong summary
+//     passes both directions.
+//   - Links in INDEX.md that are not sibling reports — docs/, reports/parity/, URLs. Those belong to
+//     check-doc-links; counting them here would create a second home.
+//   - Duplicate entries: a report linked twice passes, and arguably should.
+//   - Ordering, grouping, or whether a report sits under the right heading.
+//   - Any report in a SUBDIRECTORY of the reports dir (see REACH below).
+//   - Whether the report itself is any good. This is a wiring check, not a review.
+//
 // LOUD-FAILURE RULE (Lesson 187, proof-of-live): a guard that passes because it found nothing to
 // check is indistinguishable from a no-op. So an unreadable dir, an unreadable index, or ZERO
 // reports all FAIL — never a silent green.
@@ -20,7 +36,7 @@
 // in BOTH directions (camera claimed ~85 s and costs 47; render claimed ~30 s and costs 15) and
 // nothing checked it. A number the script measures itself cannot go stale.
 const __t0 = Date.now();
-process.on('exit', () => {
+process.on("exit", () => {
   // NIGHT-TOOLS-1: MACHINE-READABLE, because a human string has to be re-parsed by
   // whatever generates the ceremony's cost column, and a parser of prose is the defect
   // that column already had. `scripts/gen-ceremony-costs.mjs` reads exactly this token.

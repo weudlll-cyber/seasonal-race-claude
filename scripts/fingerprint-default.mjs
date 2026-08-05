@@ -25,6 +25,16 @@
 // exactly ONCE per world, on the FINAL COMMITTED state, after lint and commit. No pre-change and no
 // intermediate measurements in any report. See docs/SIM.md -> Fingerprint rule.
 //
+// WHAT THIS FINGERPRINT DOES **NOT** COVER, stated so nobody over-trusts a green hash:
+//   - Anything the CAMERA decides, and anything DRAWN. Those are the camera and render
+//     fingerprints; this one stops at the race outcome.
+//   - Configs other than the shipped default. It proves the DEFAULT world is unchanged; a change
+//     that only moves a non-default arm passes here.
+//   - Seeds other than seed=1 x 3 races per track. A defect that needs a fourth race to appear is
+//     outside the sample.
+//   - Timing, performance and frame pacing. It hashes outcomes, not how long they took.
+//   - Any track not in the fixed ten-track list below.
+//
 // Usage: node scripts/fingerprint-default.mjs [label]     (label only names the temp out dir)
 //   Reference hashes (shipped-default byte-identity):
 //     Stage-1 AFTER:                        fa4e3796e1e5f1a5 (historical)
@@ -43,7 +53,7 @@
 // in BOTH directions (camera claimed ~85 s and costs 47; render claimed ~30 s and costs 15) and
 // nothing checked it. A number the script measures itself cannot go stale.
 const __t0 = Date.now();
-process.on('exit', () => {
+process.on("exit", () => {
   // NIGHT-TOOLS-1: MACHINE-READABLE, because a human string has to be re-parsed by
   // whatever generates the ceremony's cost column, and a parser of prose is the defect
   // that column already had. `scripts/gen-ceremony-costs.mjs` reads exactly this token.
