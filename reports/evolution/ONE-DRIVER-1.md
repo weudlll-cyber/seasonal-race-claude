@@ -231,3 +231,82 @@ is what a reader trusts and nothing checks it.
 **It earns its place** — a bare `n=65` invites someone to "fix" it to 40 for consistency, and the note
 is what stops them — **but it is prose next to machine-checked values, which is exactly the shape that
 has failed here twice.** Worth knowing when reading it; not worth a mechanism today.
+
+---
+
+## 9. MERGED
+
+| | |
+|---|---|
+| CI green at origin **before** the merge | run **`31007061482`** at `f121787d`, both jobs, every step |
+| merge commit | **`c16a987b`**, `--no-ff`, full history, never the button |
+| master after | `c16a987b`; **CI green on master** at the same sha |
+| branch | deleted at origin; **`master` is the only head** |
+| tag | **none minted** — a harness consolidation is not a phase endpoint |
+
+**Fingerprints re-run on the final committed state**, not merely on the working tree: camera
+`7a33faf2ec131437`, render `73ba53ba9fea12c7`, world `dc4647be0f55ebdb` — all bit-identical. Guards
+on master: 321 links / 0 dangling, 104 reports / 0 unindexed, 66 tags in both directions, script
+suite **136/136**.
+
+**Backlog updated in the same commit:** the driver line is closed, and three findings recorded as
+actionable lines — the three remaining copies **with their arguments**, the identity hash including
+the config, and the juxtaposition rule.
+
+**Lessons 202 and 203 added** from your two proposals; §10.1 and §10.2 argue them rather than assume
+they were right.
+
+---
+
+## 10. PROPOSALS ON THE MERGE
+
+### 10.1 On your proposal 1 — yes, and it needed a second clause
+
+**Lesson 202, The Capture Law.** Your framing was right, and I wrote it with the reason attached:
+**a measurement tool's previous output IS its test, and it is the only one that exists.** Ordinary
+code announces a bad refactor by throwing or looking wrong; a tool whose product is numbers nobody
+has seen yet cannot look wrong.
+
+**The clause I added, because it nearly cost me an hour:** compare against the CAPTURE, not against a
+memory. I very nearly reported a false finding on `corridor-truth` because a remembered 0.999 turned
+out to be a figure from a pre-company-only arm. **A remembered number is not a baseline** — and that
+is the half a careful person skips, precisely because they remember it confidently.
+
+### 10.2 On your proposal 2 — a test pattern DOES catch it, and it is narrower than it looks
+
+**Lesson 203, The Late-Write Law.** You asked whether a test could catch it generally or whether it
+only ever falls to someone checking the switch moved something. **The honest answer is the second,
+made mechanical.**
+
+No lint or type can see it: the assignment is valid, the object is real, the field exists, and the
+code reads correctly top to bottom. The defect is in the ordering. But the *consequence* is always
+the same shape — the switch does nothing — and that is testable:
+
+> A switch is tested by proving its two positions differ. A test that only asserts the switch is ON
+> passes just as happily when the switch is disconnected.
+
+All three instances this week — `--owner-unit`, the camera toggle that never reached a running race,
+and the frozen build define — would have failed that test on the day they were written. It does not
+prevent the write-after-read; it makes it fail loudly the first time, which is all a test can
+honestly promise. **I would not add a lint. I would add the habit of never testing a flag's state
+without testing its effect.**
+
+### 10.3 (mine) The three remaining copies now carry an argument, and that is the durable part
+
+The backlog line records the *reasoning*, not just the count — that the fingerprint scripts are the
+gate the consolidation is measured against, and that porting them is only safe in a block whose gate
+is something else. **A line saying "three copies remain" invites someone to remove them; a line
+saying why invites them to answer first.** That distinction is worth more than the line itself, and
+it is the shape I would use for every deliberately-unfinished item.
+
+### 10.4 (mine) This week produced five lessons and four are one family
+
+199 (a guarantee overruling the owner), 201 (one value, several readers, one repaired), 202 (a
+measurement tool with no baseline), 203 (configuring after the read) — **all four are the same
+failure in different clothes: something was true at one moment and assumed to be true later, with
+nothing checking the gap.** A frozen define, a stale count in a comment, a config read once at mount,
+a guard covering the neighbouring direction, a remembered number standing in for a capture.
+
+I am **not** proposing they be merged. They are useful precisely because each names a concrete place
+the gap opens, and one abstract law about "staleness" would be true and unusable. But it is worth
+noticing that this project's dominant defect class is not logic errors. **It is time.**

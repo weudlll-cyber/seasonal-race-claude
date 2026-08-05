@@ -3402,3 +3402,59 @@ What works: assert there is exactly one source (no reader may reference the old 
 must not be declarable), and assert that **the artefacts cannot disagree** — derive each the way the
 app derives it and compare them to each other. That test is stronger than three separate tests of
 three readers.
+
+## Lesson 202 — The Capture Law: Refactoring A MEASUREMENT Tool Without Capturing Its Output First Is Not A Refactor, It Is A Rewrite With No Test
+
+**What happened, three times in one week.** A change that looked clean, ran without error and produced
+no warning was wrong, and each time only a BEFORE capture caught it:
+
+- `edge-crossing` returned **230 crossings of 90102 frames** where it had returned **215 of 90237** —
+  a blanket `continue` → `return` had turned a `continue` that skipped to the next SUBJECT inside a
+  `for` loop into a `return` that abandoned the whole FRAME. 7% wrong, silently.
+- `--owner-unit` set `referenceCorridorPx` **after** the camera director had been constructed from the
+  config, so an entire measurement arm would have silently measured the unmodified default.
+- The build-identity pill was repaired while two other readers of the same value were not, and the
+  tests covered the repaired one (Lesson 201).
+
+**Why a measurement tool is the special case.** Ordinary code announces a bad refactor: it throws, a
+test fails, a screen looks wrong. A measurement tool's output is *numbers nobody has seen yet* — it
+cannot look wrong, because the only thing that knows what it should say is the version you just
+replaced. **Its previous output IS its test, and it is the only one that exists.**
+
+**The law.** Before changing a script whose product is numbers, capture its current output verbatim,
+at its current parameters, including every flag variant. After the change each must reproduce its own
+output EXACTLY — not "close", not "within rounding". A number that moved is a finding to REPORT before
+it is a bug to fix: it may be the refactor that is wrong, or it may be that every figure the tool has
+ever produced was.
+
+**And compare against the CAPTURE, not against a memory.** The same week a remembered figure (0.999)
+nearly produced a false alarm about a correct port; the capture said the run was exact, and the memory
+was a number from a different arm. **A remembered number is not a baseline** — and this is the half a
+careful person skips, precisely because they remember it confidently.
+
+## Lesson 203 — The Late-Write Law: Configuring An Object After It Has Read Its Config Fails Silently, And Only A CONSEQUENCE Test Catches It
+
+**What happened.** `his-shot-truth --owner-unit` set `cfg.referenceCorridorPx = trackWidth` one line
+*after* `buildRace(geo, identity, cfg)` had constructed the `CameraDirector`, which reads the config
+once and computes every zoom level from it. The assignment landed on an object nobody would read
+again. **That arm would have run, printed a full table, and measured the unmodified default.**
+
+Same shape as the camera toggle that never reached a running race (`RaceScreen` reads its config once
+at mount) and as the `__RA_COMMIT__` define that froze at dev-server start. **Write-after-read, where
+the reader has already finished.**
+
+**The law.** When a value is consumed at construction, writing it afterwards is a no-op that looks
+exactly like configuration. Nothing throws, nothing warns, and the code reads correctly top to bottom
+— the defect is in the ORDERING, which is invisible at the call site.
+
+**Can a test catch it generally? Partly, and the honest answer matters.** No lint or type can see it:
+the assignment is valid, the object is real, the field exists. What catches it is a **consequence
+test** — assert that flipping the switch CHANGES SOMETHING. Not that the flag is set, not that the
+config carries the value, but that the output moves:
+
+> A switch is tested by proving its two positions differ. A test that only asserts the switch is ON
+> passes just as happily when the switch is disconnected.
+
+All three instances would have failed that test on the day they were written. It does not prevent the
+write-after-read; it makes the write-after-read *fail loudly the first time*, which is all a test can
+honestly promise.
