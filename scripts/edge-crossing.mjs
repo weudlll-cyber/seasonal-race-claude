@@ -1,27 +1,25 @@
 // ============================================================
-// File:        scripts/camera-fingerprint.mjs
-// Project:     RaceArena — CAMERA-HYGIENE-1
+// File:        scripts/edge-crossing.mjs
+// Project:     RaceArena — CAMERA-ANCHOR-TRUTH-1 §4b
 //
-// THE CAMERA'S OWN FINGERPRINT: one hash over everything the camera decides, across ten tracks and
-// every frame of a seeded race. It exists because hygiene has an unusual and very good acceptance
-// test — a refactor that tidies code must not move the picture, and unlike a tuning change that is
-// PROVABLE rather than arguable.
+// THE QUESTION: the guarantees compare CENTRE POINTS. A racer whose centre is inside the frame can
+// still be DRAWN with half his body outside it. How often does that actually happen to a GUARANTEED
+// subject — the anchor, and both contenders in a pair state?
 //
-// WHAT IT HASHES, per frame: the camera state, the lerp phase, the anchor, the zoom, both offsets,
-// the camera's track parameter, and the resolved targets. Rounded to 1e-6 so IEEE noise in an
-// unchanged expression cannot register as a change, but nothing coarser — a refactor that alters a
-// zoom by a thousandth has altered the picture and must say so.
+// This is a DIAGNOSIS-FIRST measurement with a pre-registered stop: if the before-number is already
+// ~0, nothing ships for §4b and that is reported as a refuted hypothesis. `pairGuarantee` already
+// takes `_drawnBodyWidthRefPx` as padding and `COMPANY_FRAME_PCT` 0.9 was sized against exactly this
+// failure, so the honest prior is that the work is already done and a second margin would be the
+// second pair of braces the owner has ruled against.
 //
-// WHAT IT DOES NOT COVER, stated so nobody over-trusts it: the RENDER path. Sprite scale, name-tag
-// layout and the drawing itself are not in this hash, because they are not the director's output.
-// A change to those must be argued another way.
+// A subject COUNTS AS CROSSING when its centre is inside the frame but centre ± half a drawn body
+// reaches past the frame edge, measured on the real screen axes at the live camera.
 //
-// Usage:
-//   node scripts/camera-fingerprint.mjs            # the hash, plus a per-track breakdown
-//   node scripts/camera-fingerprint.mjs --quiet    # just the combined hash
+// Reads the director's own `_framingProbe`, like corridor-truth.mjs, so it measures the live path.
+//
+// Usage:  node scripts/edge-crossing.mjs
 // ============================================================
 
-import { createHash } from 'node:crypto';
 import { readFileSync, readdirSync, existsSync } from 'node:fs';
 import { join, dirname } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
@@ -56,21 +54,12 @@ const CH = 720;
 const N = 40;
 const SEED = 5601;
 const CAM_SEED = 1439767152;
-const QUIET = process.argv.includes('--quiet');
-// CAMERA-COMPANY-ONLY-1 probe. Off by default, so the DEFAULT invocation — the one the ceremony and
-// every gate use — is untouched. With it, the hash is a PROBE VALUE, not a baseline.
-const COMPANY_ONLY = process.argv.includes('--company-only');
-const CAM_CFG = COMPANY_ONLY
-  ? { ...DEFAULT_CAMERA_CONFIG, companyOnlyFraming: true }
-  : DEFAULT_CAMERA_CONFIG;
 
 const dir = existsSync(join(ROOT, 'server/data/tracks'))
   ? join(ROOT, 'server/data/tracks')
   : join(ROOT, 'server/seeds/tracks');
 
-const r6 = (v) => (v == null || !Number.isFinite(v) ? 'n' : (Math.round(v * 1e6) / 1e6).toString());
-
-function trackHash(geo) {
+function measureTrack(geo) {
   const shape = new EditorShape(geo);
   const TW = geo.width ?? shape.getActualTrackWidth();
   const W = DEFAULT_CONFIG_WORLD;
@@ -112,7 +101,7 @@ function trackHash(geo) {
     geo.worldWidth,
     geo.worldHeight,
     shape.isOpen,
-    CAM_CFG,
+    DEFAULT_CAMERA_CONFIG,
     bodyRef,
     shape,
     TW
@@ -123,19 +112,25 @@ function trackHash(geo) {
   }
   raceCfg.computePositions();
 
-  const h = createHash('sha256');
   const RAW = 1000 / 60;
   let ts = 0;
   let accum = 0;
   const cdMs = DEFAULT_CAMERA_CONFIG.countdownDurationMs ?? 4000;
   while (ts < cdMs) {
     cd.updateCountdown(st.racers, ts, ts, cdMs, CW, CH);
-    h.update(`c|${r6(cd.zoom)}|${r6(cd.offsetX)}|${r6(cd.offsetY)}\n`);
     ts += RAW;
   }
   const raceStart = ts;
   st.physicsTs = 0;
-  let frames = 0;
+
+  const byState = new Map();
+  let checked = 0;
+  let crossing = 0;
+  let centreOut = 0;
+  let worstOverhangPct = 0;
+
+  const halfBody = bodyRef / 2; // world px
+
   while (st.finishedCount < N && ts - raceStart < 200000) {
     accum += RAW;
     let steps = 0;
@@ -158,24 +153,57 @@ function trackHash(geo) {
       CH,
       RAW
     );
-    h.update(
-      [
-        cd.state,
-        cd.lerpPhase,
-        cd.anchorRacerLabel ?? '-',
-        r6(cd.zoom),
-        r6(cd.offsetX),
-        r6(cd.offsetY),
-        r6(cd.targetZoom),
-        r6(cd.targetOffsetX),
-        r6(cd.targetOffsetY),
-        r6(cd.camT),
-      ].join('|') + '\n'
+
+    const p = cd._framingProbe;
+    if (!p || !(cd.zoom > 0)) {
+      ts += RAW;
+      continue;
+    }
+    // Every GUARANTEED subject this frame: the anchor, plus both contenders in a pair state.
+    const subs = [p.point, ...(Array.isArray(p.pair) ? p.pair : [])].filter(
+      (s) => s && Number.isFinite(s.x) && Number.isFinite(s.y)
     );
-    frames++;
+    const effX = cd._proj.effX(cd.zoom);
+    const effY = cd._proj.effY(cd.zoom);
+    for (const s of subs) {
+      // World -> screen using the live camera transform (offsets are already screen px).
+      const sxPix = s.x * effX + cd.offsetX;
+      const syPix = s.y * effY + cd.offsetY;
+      const hbX = halfBody * effX;
+      const hbY = halfBody * effY;
+      const centreIn = sxPix >= 0 && sxPix <= p.frameW && syPix >= 0 && syPix <= p.frameH;
+      checked++;
+      if (!centreIn) {
+        centreOut++;
+        continue; // a centre already outside is not the point-vs-nose defect; counted separately
+      }
+      const over = Math.max(
+        0 - (sxPix - hbX),
+        sxPix + hbX - p.frameW,
+        0 - (syPix - hbY),
+        syPix + hbY - p.frameH
+      );
+      if (over > 0) {
+        crossing++;
+        const pctOver = (100 * over) / Math.min(p.frameW, p.frameH);
+        if (pctOver > worstOverhangPct) worstOverhangPct = pctOver;
+        if (!byState.has(cd.state)) byState.set(cd.state, 0);
+        byState.set(cd.state, byState.get(cd.state) + 1);
+      }
+    }
     ts += RAW;
   }
-  return { hash: h.digest('hex').slice(0, 16), frames };
+
+  return {
+    id: geo.id,
+    checked,
+    crossing,
+    centreOut,
+    crossPct: checked ? (100 * crossing) / checked : 0,
+    centreOutPct: checked ? (100 * centreOut) / checked : 0,
+    worstOverhangPct,
+    byState: [...byState.entries()],
+  };
 }
 
 const geos = [];
@@ -186,25 +214,28 @@ for (const f of readdirSync(dir)) {
 }
 geos.sort((a, b) => a.id.localeCompare(b.id));
 
-const combined = createHash('sha256');
-const rows = [];
+console.log(
+  'EDGE CROSSING — a GUARANTEED subject drawn with part of its body past the frame edge\n'
+);
+console.log(
+  'track            subject-frames   crossing%   worst overhang (% of short side)   centre-already-out%'
+);
+let totC = 0;
+let totN = 0;
 for (const geo of geos) {
-  const { hash, frames } = trackHash(geo);
-  combined.update(geo.id + ':' + hash + '\n');
-  rows.push({ id: geo.id, hash, frames });
-}
-const COMBINED = combined.digest('hex').slice(0, 16);
-
-if (QUIET) {
-  console.log(COMBINED);
-} else {
+  const r = measureTrack(geo);
+  totC += r.crossing;
+  totN += r.checked;
   console.log(
-    `CAMERA ${COMBINED} (seed=${SEED} camSeed=${CAM_SEED}, ${geos.length} tracks, ${N} racers, ` +
-      `${COMPANY_ONLY ? 'PROBE: companyOnlyFraming=true — NOT a baseline' : 'default config'})`
-  );
-  for (const r of rows) console.log(`  ${r.id.padEnd(16)} ${r.hash}  ${r.frames} frames`);
-  console.log(
-    '\n  Covers the DIRECTOR only — state, phase, anchor, zoom, offsets, camT, targets.\n' +
-      '  Not the render path (sprite scale, name-tag layout, drawing).'
+    `  ${r.id.padEnd(15)} ${String(r.checked).padStart(9)}   ${r.crossPct.toFixed(2).padStart(7)}%   ` +
+      `${r.worstOverhangPct.toFixed(2).padStart(10)}%                        ${r.centreOutPct.toFixed(2)}%` +
+      (r.byState.length ? `   states: ${r.byState.map(([s, n]) => `${s}=${n}`).join(' ')}` : '')
   );
 }
+console.log(
+  `\n  OVERALL: ${totC} crossing of ${totN} guaranteed-subject frames = ${((100 * totC) / totN).toFixed(3)}%`
+);
+console.log(
+  '  PRE-REGISTERED STOP: if this is ~0, §4b ships NOTHING — pairGuarantee already pads by the\n' +
+    '  drawn body and COMPANY_FRAME_PCT 0.9 was sized against this exact failure.'
+);

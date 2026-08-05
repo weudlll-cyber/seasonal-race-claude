@@ -145,3 +145,66 @@ describe('resolveFramingConfig — the bands REJECT, they do not clamp', () => {
     expect(band({ minRacersVisible: 1 }).minRacersVisible).toBe(1);
   });
 });
+
+// ============================================================
+// CAMERA-ANCHOR-TRUTH-1 §4c — the two OVERVIEW time constants.
+//
+// CAMERA_DIRECTOR.md §6 listed the tracking lag as protected by CONVENTION ONLY: "change a
+// trackingTC default and no test notices." These are the tests that notice. They are deliberately
+// value assertions with the REASON attached, because the reason is the part that was missing from
+// the code for both numbers.
+// ============================================================
+describe('OVERVIEW time constants (CAMERA-ANCHOR-TRUTH-1 §4c)', () => {
+  const OVERVIEW = DEFAULT_CAMERA_CONFIG.cameraStateProfiles.OVERVIEW;
+  const STATES = Object.keys(DEFAULT_CAMERA_CONFIG.cameraStateProfiles);
+
+  it('OVERVIEW tracks as quickly as every other state — trackingTC 0.25', () => {
+    // Measured: at 1.5 the OVERVIEW subject sat a median 13.78 pp of frame from its framed position,
+    // 3.65x every other state pooled (3.78 pp). At 0.25 that halves to 6.78 pp.
+    expect(OVERVIEW.trackingTC).toBe(0.25);
+  });
+
+  it('every state now ships the same trackingTC — there is no slow state left', () => {
+    for (const s of STATES) {
+      expect(DEFAULT_CAMERA_CONFIG.cameraStateProfiles[s].trackingTC, `${s} trackingTC`).toBe(0.25);
+    }
+  });
+
+  it('OVERVIEW keeps its SLOW ENTRY on purpose — entryTC 1.5, and this is not an oversight', () => {
+    // The lag metric samples the TRACKING phase, so it cannot adjudicate entry: entryTC 0.8 vs 1.5
+    // moved the OVERVIEW median by 0.09 pp. The glide into the wide shot is deliberate and stays
+    // until an ENTRY-phase instrument exists to argue otherwise. If you are changing this, measure
+    // entry convergence first — do not reason from the tracking number.
+    expect(OVERVIEW.entryTC).toBe(1.5);
+    expect(OVERVIEW.entryTC).toBeGreaterThan(OVERVIEW.trackingTC);
+  });
+
+  it('OVERVIEW is the only state whose entry is slower than its tracking', () => {
+    for (const s of STATES) {
+      const p = DEFAULT_CAMERA_CONFIG.cameraStateProfiles[s];
+      if (s === 'OVERVIEW') continue;
+      expect(p.entryTC, `${s} entryTC`).toBe(0.8);
+    }
+  });
+});
+
+// ============================================================
+// CAMERA-COMPANY-ONLY-3 — the switch is GONE and must not come back as a config key.
+//
+// It existed for one afternoon so the owner could judge the change with his own eye. He passed it
+// (mountainstreet seed 5601, build d2ecc27c) and company-only became simply the behaviour, so the
+// key, the Dev Screen control and the OFF branch all went with it — when something loses its value
+// in the Dev Portal, the control goes too.
+// ============================================================
+describe('the company-only switch is gone (CAMERA-COMPANY-ONLY-3)', () => {
+  it('no longer exists as a default', () => {
+    expect(DEFAULT_CAMERA_CONFIG).not.toHaveProperty('companyOnlyFraming');
+  });
+
+  it('is not resolved, even if an old stored config still carries it', () => {
+    // The standing rule: unknown keys are ignored. Somebody who flipped the probe on that afternoon
+    // has the key in localStorage forever; it must not resurrect a branch that no longer exists.
+    const resolved = resolveFramingConfig({ companyOnlyFraming: false });
+    expect(resolved).not.toHaveProperty('companyOnlyFraming');
+  });
+});

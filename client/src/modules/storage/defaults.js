@@ -83,7 +83,16 @@ export const DEFAULT_CAMERA_CONFIG = {
   cameraStateProfiles: {
     OVERVIEW: {
       visibleCorridors: 1.5, // 450 world px — the widest shot, double LEADER
-      trackingTC: 1.5,
+      // TRACKING made as quick as every other state (CAMERA-ANCHOR-TRUTH-1 §4c). At 1.5 the
+      // OVERVIEW subject sat a median 13.78 pp of the frame away from where the framing rule put
+      // him — 3.65x every other state pooled (3.78 pp) — and the old value carried no reason in the
+      // code. At 0.25 that halves to 6.78 pp (p95 25.57 -> 19.64) and nothing else moves.
+      trackingTC: 0.25,
+      // ENTRY DELIBERATELY LEFT SLOW. The glide into the wide shot is intentional, and the
+      // measurement CANNOT condemn it: the lag metric samples the tracking phase only, so entryTC
+      // 0.8 vs 1.5 moved the OVERVIEW median by 0.09 pp (6.78 vs 6.69) — inside the noise of the
+      // thing it is not measuring. Changing it would be taste dressed as evidence. If it is ever
+      // revisited, the missing instrument is an ENTRY-phase convergence measurement, not this one.
       entryTC: 1.5,
       leadInDuration: 0, // seconds camera holds lead-in position before following racer
       leadOutDuration: 0, // seconds camera decelerates before state exit

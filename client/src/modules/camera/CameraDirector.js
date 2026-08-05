@@ -54,6 +54,12 @@ import { mulberry32 } from '../racePlanner.js';
 import { shortestArcDeltaT } from '../../utils/mathUtils.js';
 import { computeTimingFromConfig } from './cameraTimingComputation.js';
 import {
+  decideTransition,
+  evaluatePhotoFinishGate,
+  TRANSITION_ACTION,
+  TRANSITION_REASON,
+} from './transitionDecision.js';
+import {
   projectionForTrack,
   OPEN_TRACK_BASE_ZOOM as _PROJ_OPEN_BASE,
   REFERENCE_CANVAS_W,
@@ -245,6 +251,9 @@ export class CameraDirector {
     // Diagnostic: how often _transition() fires per 60-frame window
     this._transitionRingBuf = new Uint8Array(60);
     this._transitionRingIdx = 0;
+    // WHY the last transition decision went the way it did — a value, so a test can assert it.
+    // Read by nothing in the camera math; see transitionDecision.js.
+    this._lastTransitionReason = TRANSITION_REASON.HELD;
     // Diagnostic: entry-phase convergence tracking
     this._entryStartTs = null;
     this._lastTs = 0;
@@ -725,70 +734,65 @@ export class CameraDirector {
     // bypassed ONLY on entry (top-2 close) — a not-close result sets the latch but leaves
     // minStateHold behaviour untouched. The actual PHOTO_FINISH transition is produced by
     // _pickNextState via the _photoFinishEnterPending flag.
-    let photoFinishGateReady = false;
-    if (
-      !this._photoFinishGateDone &&
-      this._photoFinishEnabled &&
-      raceState.finishedCount === 0 &&
-      this._diagLeaderProgress >= this._photoFinishLeadProgress
-    ) {
+    // The PREDICATE is pure (transitionDecision.js); the two latch writes stay here, because a pure
+    // function must not assign. `close` implies `evaluated`, so the mapping is exact.
+    const photoFinishGate = evaluatePhotoFinishGate({
+      gateDone: this._photoFinishGateDone,
+      enabled: this._photoFinishEnabled,
+      finishedCount: raceState.finishedCount,
+      leaderProgress: this._diagLeaderProgress,
+      leadProgressThreshold: this._photoFinishLeadProgress,
+      racers,
+      closeThresholdT: this._photoFinishCloseThresholdT,
+    });
+    if (photoFinishGate.evaluated) {
       this._photoFinishGateDone = true; // single check — never re-evaluated
-      const ord = [...racers].sort((a, b) => b.t - a.t);
-      if (
-        ord.length >= 2 &&
-        shortestArcDeltaT(ord[0].t, ord[1].t) <= this._photoFinishCloseThresholdT
-      ) {
-        this._photoFinishEnterPending = true; // consumed by _pickNextState to enter PHOTO_FINISH
-        photoFinishGateReady = true; // bypass holdGate so the entry is frame-exact
-      }
     }
+    if (photoFinishGate.close) {
+      this._photoFinishEnterPending = true; // consumed by _pickNextState to enter PHOTO_FINISH
+    }
+    const photoFinishGateReady = photoFinishGate.close; // bypass holdGate so the entry is frame-exact
     const photoFinishEndReady =
       this._inPhotoFinish &&
       (raceState.finishedCount >= 2 || raceState.finishedCount >= racers.length);
     const prevState = this.state;
-    let _diagTransitioned = false;
-    // Early BATTLE exit: leave when the original group disperses after battleMinDurationMs.
-    if (
-      this.state === CAM_STATE.BATTLE_ZOOM &&
-      stateAge >= this._battleMinDurationMs &&
-      !this._isOriginalGroupStillValid(racers)
-    ) {
-      this._exitBattle(ts, racers, raceState, canvasW, canvasH);
-      _diagTransitioned = true;
-    }
-    // P2-drift exit: a locked group member moved into P1/P2 — exit after minHold (no hard-cut).
-    if (
-      !_diagTransitioned &&
-      this.state === CAM_STATE.BATTLE_ZOOM &&
-      stateAge >= this._battleMinDurationMs &&
-      this._isBattleGroupP2Drifted(racers)
-    ) {
-      this._exitBattle(ts, racers, raceState, canvasW, canvasH);
-      _diagTransitioned = true;
-    }
-    // Early LEAD_CHANGE interrupt: confirmed leader change while in LEADER_ZOOM.
-    if (!_diagTransitioned && this.state === CAM_STATE.LEADER_ZOOM && this._leadChangePending) {
-      this._transition(racers, ts, raceState, canvasW, canvasH);
-      _diagTransitioned = true;
-    }
+    const inBattleZoom = this.state === CAM_STATE.BATTLE_ZOOM;
     // When minHold=0 (same-state repeat), holdGate=0 so _transition() fires every frame
     // until a different state is detected — no stateCap blocker.
     const holdGate = minHold === 0 ? 0 : Math.max(minHold, stateCap);
-    if (
-      !_diagTransitioned &&
-      (stateAge >= holdGate ||
-        finishDramaExpired ||
-        forceFinishDrama ||
-        photoFinishGateReady ||
-        photoFinishEndReady)
-    ) {
+    // The DECISION is pure and carries its reason; the ACTIONS and every assignment stay here.
+    // The two battle predicates keep the original's short-circuit: they are consulted ONLY once
+    // BATTLE_ZOOM has held for battleMinDurationMs. Both are pure reads (group resolution +
+    // cohesion / P1-P2 tests), so the guard is about cost, not correctness — evaluating them
+    // unconditionally would run a group search on every frame of every other state.
+    const battleExitEligible = inBattleZoom && stateAge >= this._battleMinDurationMs;
+    const decision = decideTransition({
+      inBattleZoom,
+      inLeaderZoom: this.state === CAM_STATE.LEADER_ZOOM,
+      stateAge,
+      battleMinDurationMs: this._battleMinDurationMs,
+      holdGate,
+      originalGroupStillValid: battleExitEligible ? this._isOriginalGroupStillValid(racers) : true,
+      battleGroupP2Drifted: battleExitEligible ? this._isBattleGroupP2Drifted(racers) : false,
+      leadChangePending: this._leadChangePending,
+      finishDramaExpired,
+      forceFinishDrama,
+      photoFinishGateReady,
+      photoFinishEndReady,
+    });
+    this._lastTransitionReason = decision.reason; // observable; nothing in the camera math reads it
+    let _diagTransitioned = decision.action !== TRANSITION_ACTION.NONE;
+    if (decision.action === TRANSITION_ACTION.EXIT_BATTLE) {
+      this._exitBattle(ts, racers, raceState, canvasW, canvasH);
+    } else if (decision.action === TRANSITION_ACTION.TRANSITION) {
       // Pre-set the battle exit timestamp so the cooldown blocks immediate BATTLE re-entry
-      // when battleMaxDurationMs expires while hasBattle is still true.
-      if (this.state === CAM_STATE.BATTLE_ZOOM) {
+      // when battleMaxDurationMs expires while hasBattle is still true. This guard used to sit
+      // only in the hold-gate branch; folding it in is exact, because the one other reason that
+      // reaches here — LEAD_CHANGE_INTERRUPT — requires LEADER_ZOOM and so can never be BATTLE_ZOOM.
+      if (inBattleZoom) {
         this._lastBattleExitTs = ts;
       }
       this._transition(racers, ts, raceState, canvasW, canvasH);
-      _diagTransitioned = true;
     }
     this._transitionRingBuf[this._transitionRingIdx % 60] = _diagTransitioned ? 1 : 0;
     this._transitionRingIdx++;
@@ -1804,6 +1808,34 @@ export class CameraDirector {
       // corridor so the shot is still bounded by something real.
       if (Number.isFinite(ceiling)) return ceiling;
     }
+    // CAMERA-COMPANY-ONLY-3: THE SINGLE-ANCHOR STATES ARE NOT BOUNDED BY THE ROAD.
+    //
+    // LEADER, OVERVIEW and COMEBACK are limited by the owner's own setting and by the COMPANY
+    // guarantee, and by nothing else. The corridor used to be their ceiling and it silently overruled
+    // his number on six of ten tracks — on Mountainstreet his 1.0 became anything from 300 to 688
+    // world px as the road turned, which is the "restless" picture he complained about. His words for
+    // why the road lost: THE ROAD IS NOT WHO MATTERS, THE RACERS ARE.
+    //
+    // Owner-approved 2026-08-05 on `exp/company-only` @ d2ecc27c, mountainstreet seed 5601, having
+    // seen BOTH regimes — a torn-apart field where the company guarantee opens the shot wide, and a
+    // tight pack where the camera stays at his 1.0.
+    //
+    // The corridor is still reached from the PAIR branch above when a pair state has fewer than two
+    // contenders. Measured: that fallback fired on 0 of 11,813 pair frames across ten tracks, so it
+    // is DEFENSIVE, not load-bearing — kept deliberately, and said out loud rather than assumed.
+    if (kind !== GUARANTEE.PAIR) return Infinity;
+
+    // WHERE THE ANCHOR WILL SIT, from the framing rule — the same zoom-independent position the
+    // company guarantee uses, for the same reason: the corridor runs half a track width to each
+    // side of the anchor, so the room that matters is the room from THERE, not the chord through
+    // the frame's centre. Reusing `anchorScreenPoint` keeps the two guarantees from disagreeing
+    // about where the subject is about to be.
+    const at = anchorScreenPoint(
+      frameSize.width,
+      frameSize.height,
+      framingFor(this.state).position === POSITION.FORWARD ? this._leaderForwardFrac : null,
+      this._headingScreen(subjects.t)
+    );
     return corridorGuarantee(
       this._headingAt(subjects.t),
       this._trackWidthPx,
@@ -1811,7 +1843,8 @@ export class CameraDirector {
       axisY,
       frameSize.width,
       frameSize.height,
-      inner
+      inner,
+      at
     );
   }
 
@@ -2224,6 +2257,20 @@ export class CameraDirector {
       this._guaranteeCeiling(subjects, frameSize),
       this._companyCeiling(subjects, racers, frameSize)
     );
+
+    // READ-ONLY PROBE (CAMERA-ANCHOR-TRUTH-1 §4a). The framing inputs this frame actually used, so
+    // the corridor measurement reads the REAL path instead of reconstructing it — a harness that
+    // measures a COPY is the failure mode this repo has hit six times. Written every frame and read
+    // by NOTHING in the camera, so it cannot move a fingerprint.
+    this._framingProbe = {
+      t: subjects.t,
+      frameW: frameSize.width,
+      frameH: frameSize.height,
+      stateZoom,
+      guaranteed,
+      point: subjects.point, // the anchor world point (§4b: is its BODY inside, or just its centre?)
+      pair: subjects.pair, // the two guaranteed contenders, when the state guarantees a pair
+    };
 
     // ── WHERE IN FRAME: from the principle, not from a slider ──────────────────────────────────
     if (framing.position === POSITION.FORWARD && this._observerPhase === 'follow') {

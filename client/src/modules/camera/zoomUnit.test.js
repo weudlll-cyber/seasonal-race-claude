@@ -295,29 +295,39 @@ describe('5. the guarantee still reads the REAL corridor, not the reference', ()
     return cd;
   };
 
-  it('a setting too tight for a WIDE corridor is widened; the same setting on a narrow one is not', () => {
+  // CAMERA-COMPANY-ONLY-3 REWROTE BOTH OF THESE, and the inversion is the point.
+  //
+  // They used to assert that the CORRIDOR widened a too-tight setting, and by more on a wider road.
+  // That was the behaviour the owner rejected: his 1.0 became anything from 300 to 688 world px on
+  // Mountainstreet as the road turned. The single-anchor states are no longer bounded by the road,
+  // so the same two scenarios must now show the OPPOSITE — and saying so here is how the change
+  // stays visible to whoever reads these next.
+  it('a tight setting is DELIVERED on a wide road, not widened to fit it', () => {
     const tight = 0.5; // 150 world px — below a 300 px corridor, above a 131 px one
     const wide = settle(mkAt(300, tight));
     const narrow = settle(mkAt(131, tight));
-    expect(wide.visibleWorldPx).toBeGreaterThan(1.8 * 150); // widened, and by a lot
-    expect(narrow.visibleWorldPx).toBeCloseTo(150, 0); // the setting is honoured untouched
+    // Both now honour the number. The wide road no longer overrules it.
+    expect(wide.visibleWorldPx).toBeCloseTo(150, 0);
+    expect(narrow.visibleWorldPx).toBeCloseTo(150, 0);
   });
 
-  it('the guarantee scales with the REAL corridor, so a wider track demands more world', () => {
+  it('THE SAME NUMBER MEANS THE SAME AMOUNT OF WORLD ON EVERY TRACK — the owner’s requirement', () => {
     const at = (tw) => settle(mkAt(tw, 0.25)).visibleWorldPx;
     const a = at(131);
     const b = at(211);
     const c = at(300);
-    // 0.25 corridors is 75 world px — too tight for every corridor here, so each is widened…
-    for (const [tw, v] of [
-      [131, a],
-      [211, b],
-      [300, c],
-    ])
-      expect(v, `tw=${tw}`).toBeGreaterThan(75);
-    // …and by MORE the wider the real corridor is, which is the content of the guarantee.
-    expect(b).toBeGreaterThan(a);
-    expect(c).toBeGreaterThan(b);
+    // 0.25 corridors is 75 world px. It used to be widened, and by MORE the wider the road — that
+    // was the road overruling him. Now the road has no say, so all three deliver the SAME window,
+    // which is the whole requirement: the same number means the same amount of world everywhere,
+    // and that is what makes the camera feel like it moves at one speed on every track.
+    //
+    // The absolute value is 85.3, not 75, and the reason is worth naming rather than rounding away:
+    // MAX_CAM_ZOOM (24.0) binds at this extreme setting — 720 / (24 x 720/2047) = 85.29. So at the
+    // tightest end of the control the limiter is the projection's zoom cap, not the corridor and not
+    // the company guarantee. All three tracks hit the SAME cap, which is why they now agree exactly.
+    expect(a).toBeCloseTo(b, 6);
+    expect(b).toBeCloseTo(c, 6);
+    expect(a).toBeCloseTo(85.29, 1);
     // Deliberately not asserting `visibleWorldPx >= trackWidth`: that reads the SHORT screen axis,
     // while the corridor is kept in frame across ITS OWN direction. Where the corridor lies along
     // the frame's long axis it fits with less vertical extent than its own width, correctly.

@@ -7,6 +7,68 @@ Items ranked by urgency within each bucket. ✅ = done, 🔜 = next, ⏳ = waiti
 
 ---
 
+## Camera residuals after CAMERA-COMPANY-ONLY-3 (2026-08-05)
+
+Named rather than fixed. Nothing here is urgent; all of it is cheap.
+
+- [ ] **The company guarantee on a SPREAD field has never been measured.** The owner approved the
+      new behaviour having seen both regimes — a torn-apart field where the guarantee opens the shot
+      wide, and a tight pack where the camera stays at his 1.0. My measurement only covered the pack
+      case (n = 65), where it binds ~0%, and on that basis I recommended raising his 5 to 15. **His
+      observation corrects mine**: on a spread field it clearly binds and widens a lot at 5.
+      **Measure the spread-field case across field sizes BEFORE anyone changes his value**, and show
+      him the result. `minRacersVisible` stays at 5 until then.
+- [ ] **No artefact ties a verdict to the BEHAVIOUR judged.** The `[RA CAMERA LIVE TRUTH]` line names
+      the build and the camera path, never which guarantee ran. That gap is what made
+      CAMERA-COMPANY-ONLY-2 halt a shippable block. The HUD `cfg` fingerprint may already separate
+      behaviours — if it does, putting it in the line is the cheap honest fix. **An owner's PASS is
+      the most expensive input this project consumes and it is currently recorded nowhere.**
+- [ ] **A Dev Screen change does not reach a running race.** `RaceScreen` reads the camera config
+      once at mount (`useState(() => loadCameraConfig())`, no setter), although the director fully
+      supports live-apply via `updateConfig`. **Every A/B the owner has ever run has been two races
+      when it could have been one race and a toggle.** One line, and it is the highest-leverage
+      change on this list.
+- [ ] **"Road edge out of frame" should be a standing measurement.** The control number is the
+      argument: with the corridor guarantee fully active it was ALREADY out of frame on 45.9% of
+      Mountainstreet frames. A guarantee should be judged by whether the thing it guarantees actually
+      happens, and this one was never measured that way — only its effect on zoom was.
+- [ ] **`MAX_CAM_ZOOM` (24.0) is the real limiter at the tight end of the control.** At 0.25
+      corridors every track delivers 85.3 world px rather than the nominal 75, because the projection
+      cap binds before any guarantee does. Surfaced while inverting a test; harmless, undocumented
+      until now, and worth knowing before anyone tunes the low end.
+
+---
+
+## Before the VPS migration
+
+**This is a LIST, not a work item.** Nothing here is urgent and nothing here should be "fixed" now.
+The server currently runs only on the owner's machine — **nothing is online**, and a VPS migration
+happens only after development is finished. Every entry below is harmless while that is true and
+becomes a real question the moment it is not. Recorded 2026-08-04 (CAMERA-ANCHOR-TRUTH-1); the
+measurements are from [CI-AUDIT-GREEN-1](../reports/evolution/CI-AUDIT-GREEN-1.md) §10.
+
+- [ ] **`server/` is audited by nothing.** `scripts/audit-gate.mjs` hard-codes `client/`, and no CI
+      job covers the server at all — its own `vitest` suite runs nowhere either. It currently carries
+      **2 highs**: `ip-address` (**runtime**, via `express-rate-limit`, SSRF / trust-boundary bypass
+      in IP classification — and the production config enables trust-proxy, so the IP it classifies
+      comes from a header) and `postcss` (dev-only, via `vite`). Both clear with a plain
+      `npm audit fix` — no `--force`, no breaking change. Not urgent while nothing is reachable; a
+      **blocker** before anything is.
+- [ ] **`deploy.yml` cannot run — four independent blockers.** (1) triggers on `branches: [main]`,
+      the only branch at origin is `master`; (2) runs `scripts/deploy.sh`, which is not in the repo;
+      (3) all three secrets are absent (`DEPLOY_HOST`, `DEPLOY_USER`, `DEPLOY_KEY`); (4) no
+      alternative path exists — 0 deployments, 0 environments, 0 webhooks, 0 deploy keys, no Pages.
+      The file is kept on purpose as the record of an intent; its header says all of this.
+- [ ] **`RA_PUBLIC_ORIGIN` exists only as the placeholder `racearena.example.com`.** It is the
+      canonical self-origin the CSRF guard compares incoming `Origin` headers against, so it must be
+      a real value before the app is reachable.
+- [ ] **The app ships no build identifier.** No `__APP_VERSION__`, no `BUILD_ID`, no build-time
+      constant, and the world fingerprint is not surfaced in the UI — so "which build is live?"
+      cannot be answered from outside. Harmless on one machine; the first question anybody asks about
+      a server. The cheapest fix is a build-time constant surfaced in the HUD or `/api/health`.
+
+---
+
 ## Evolution Act 2 — finale front-compression (CLOSED 2026-07-26, all three builds reverted)
 
 - ❌ **Three flag-gated finale builds (fixed dice overlay → DevScreen toggle → adaptive spread-scaled

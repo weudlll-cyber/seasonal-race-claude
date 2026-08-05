@@ -40,6 +40,9 @@
 // ============================================================
 
 import { frameExtentAlong, roomFromPointAlong } from './frameGeometry.js';
+// frameExtentAlong is still the right measure for anchorScreenPoint (a fraction ALONG the frame's
+// own chord) and for pairGuarantee (a span between two things that must both be in frame). Only the
+// corridor changed, because only the corridor is measured OUTWARD from the anchor to each side.
 
 /** Where the subject sits in frame, and why. */
 export const POSITION = {
@@ -163,8 +166,25 @@ export function zoomCeilingToFit(worldVec, axisX, axisY, frameW, frameH, innerFr
  * of an oval this asks for vertical room and at the ends it asks for horizontal room, and it never
  * asks for both at once the way an axis-blind bound must.
  *
+ * MEASURED FROM THE ANCHOR, NOT FROM THE CENTRE — CAMERA-ANCHOR-TRUTH-1. This used to divide by
+ * `frameExtentAlong`, the frame's chord THROUGH ITS CENTRE, which is only the room available when
+ * the anchor happens to be centred. A FORWARD-framed anchor (LEADER and OVERVIEW at
+ * `leaderForwardFrac`) is not, and the corridor runs half a track width to EACH side of where the
+ * anchor actually sits — so the binding side is whichever has less room, not the average the chord
+ * implies. Measured before the fix, the old form broke its own promise on 69.0% of corridor frames
+ * and on 100% of Mountainstreet's, delivering a median 0.781 corridors where it promised 1.
+ *
+ * The two halves are honoured SEPARATELY and the tighter one wins, because a corridor that fits on
+ * one side and is cropped on the other is still cropped. When the anchor IS centred the two rooms
+ * are equal and each is exactly half the chord, so this reduces to the old expression identically —
+ * asserted by a test, and the cheapest possible proof that nothing else changed.
+ *
+ * Still a CEILING and still WIDEN-ONLY (Lesson 192): measuring the real room can only return a
+ * smaller ceiling than the centre chord did, and a smaller ceiling means a wider shot.
+ *
  * @param {{x:number,y:number}} headingWorld  the track tangent at the anchor (any length)
  * @param {number} trackWidthPx  corridor width in world px
+ * @param {{x:number,y:number}|null} [anchorAt=null]  the anchor's SCREEN position; frame centre when null
  * @returns {number} cam.zoom ceiling
  */
 export function corridorGuarantee(
@@ -174,7 +194,8 @@ export function corridorGuarantee(
   axisY,
   frameW,
   frameH,
-  innerFramePct = 1
+  innerFramePct = 1,
+  anchorAt = null
 ) {
   if (!(trackWidthPx > 0)) return Infinity;
   const perp = perpendicularOf(headingWorld);
@@ -182,18 +203,69 @@ export function corridorGuarantee(
     // No heading available: fall back to the worst orientation, which is what a heading-blind
     // guarantee would have to assume everywhere. Conservative, never wrong, just wider.
     return Math.min(
-      zoomCeilingToFit({ x: trackWidthPx, y: 0 }, axisX, axisY, frameW, frameH, innerFramePct),
-      zoomCeilingToFit({ x: 0, y: trackWidthPx }, axisX, axisY, frameW, frameH, innerFramePct)
+      halfCorridorCeiling(
+        { x: 1, y: 0 },
+        trackWidthPx,
+        axisX,
+        axisY,
+        frameW,
+        frameH,
+        innerFramePct,
+        anchorAt
+      ),
+      halfCorridorCeiling(
+        { x: 0, y: 1 },
+        trackWidthPx,
+        axisX,
+        axisY,
+        frameW,
+        frameH,
+        innerFramePct,
+        anchorAt
+      )
     );
   }
-  return zoomCeilingToFit(
-    { x: perp.x * trackWidthPx, y: perp.y * trackWidthPx },
+  return halfCorridorCeiling(
+    perp,
+    trackWidthPx,
     axisX,
     axisY,
     frameW,
     frameH,
-    innerFramePct
+    innerFramePct,
+    anchorAt
   );
+}
+
+/**
+ * Half a corridor to each side of the anchor along `perp`, each against the room that direction
+ * actually has. Split out so the no-heading fallback runs the identical rule on both axes.
+ */
+function halfCorridorCeiling(
+  perp,
+  trackWidthPx,
+  axisX,
+  axisY,
+  frameW,
+  frameH,
+  innerFramePct,
+  anchorAt
+) {
+  const sx = perp.x * axisX;
+  const sy = perp.y * axisY;
+  const neededHalf = Math.hypot(sx, sy) * (trackWidthPx / 2);
+  if (!(neededHalf > 0)) return Infinity;
+  const at = anchorAt ?? { x: frameW / 2, y: frameH / 2 };
+  const pct = clamp01(innerFramePct);
+  const rooms = [
+    roomFromPointAlong(at.x, at.y, sx, sy, frameW, frameH, pct),
+    roomFromPointAlong(at.x, at.y, -sx, -sy, frameW, frameH, pct),
+  ].filter((r) => r > 0);
+  // Room 0 means the anchor is already outside the safe region on that side. No zoom repairs that,
+  // and returning a ceiling of 0 would collapse the shot — so that side is skipped, the same
+  // decision companyGuarantee makes for the same reason. Both sides zero: nothing to constrain.
+  if (rooms.length === 0) return Infinity;
+  return Math.min(...rooms) / neededHalf;
 }
 
 /**

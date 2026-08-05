@@ -7,22 +7,16 @@
 
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
-import { execSync } from 'node:child_process';
+import { raBuildInfo } from './vite-plugin-ra-build.js';
 
-// CAMERA-FOCUS-4 LIVE TRUTH: stamp the short commit into the bundle so the dev-console race-start line
-// reports exactly which build the browser is running — this ends stale-bundle ghost hunts for good.
-let __commit = 'unknown';
-try {
-  __commit = execSync('git rev-parse --short HEAD').toString().trim();
-} catch {
-  /* not a git checkout / git unavailable — leave 'unknown' */
-}
-
+// BUILD-TRUTH-1 / CAMERA-COMPANY-ONLY-3: there is no `__RA_COMMIT__` define any more, and there must
+// not be one again. It was resolved ONCE when Vite loaded its config — i.e. when the dev server
+// started — so in a long-running dev server it was structurally unable to stay true. The HUD pill was
+// moved to `virtual:ra-build` (read live, force-reloaded when the identity changes); the LIVE TRUTH
+// console line was not, and kept printing the frozen value for two more days until it halted a ship.
+// One value, one source: everything reads the virtual module.
 export default defineConfig({
-  plugins: [react()],
-  define: {
-    __RA_COMMIT__: JSON.stringify(__commit),
-  },
+  plugins: [react(), raBuildInfo()],
   server: {
     port: 5173,
     allowedHosts: 'all',

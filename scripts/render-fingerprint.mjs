@@ -120,7 +120,12 @@ const RUN_FRAMES = 3400;
 const SAMPLE_AT = [0, 90, 600, 1500, 2400, 3300];
 
 // Pinned so the badge reports the run's own fixed config rather than varying with it.
-const CFG_BADGE = { hashShort: "renderfp0", raceCount: 0, cosmeticCount: 0 };
+const CFG_BADGE = { hashShort: 'renderfp0', raceCount: 0, cosmeticCount: 0 };
+// BUILD-TRUTH-1: a FIXED build identity, never the live one. The badge draws the real commit in the
+// browser, but this hash must be a change detector for the DRAWING, not a counter that moves on every
+// commit. A synthetic value keeps the new pill covered (its position, font and layout are hashed)
+// while leaving the hash stable across commits — which is the whole point of the instrument.
+const BUILD_BADGE = { commit: 'renderfp', branch: 'renderfp', dirty: false };
 
 const dir = existsSync(join(ROOT, "server/data/tracks"))
   ? join(ROOT, "server/data/tracks")
@@ -301,6 +306,7 @@ function trackHash(geo, wantOps) {
         // one would freeze after the first track and change what later tracks draw).
         leaderDiag,
         cfgBadge: CFG_BADGE,
+        buildBadge: BUILD_BADGE,
         racePlanActive: true,
         racePlanSeed: SEED,
         gapRerollDevMarker: false,

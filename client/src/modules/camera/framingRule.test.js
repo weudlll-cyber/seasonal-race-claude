@@ -781,32 +781,40 @@ describe('CAMERA-LATERAL-1 — the two axes, through the director', () => {
 
   // FAILURE PROOF for the lateral guarantee — his second question, and the one that decides it:
   // "do we still see everything important on the track?"
-  it('WORST CASE: outermost lane, tightest setting, corridor across the SHORT screen axis', () => {
-    // t = 0.25 on this oval is the top of the arc, where the track runs horizontally on screen, so
-    // the corridor is measured up-down — the short axis, the least room there is.
-    const T = 0.25;
-    const tight = {
-      minRacersVisible: 0,
+  //
+  // CAMERA-COMPANY-ONLY-3 CHANGED THE ANSWER, and this test now records the change honestly rather
+  // than being deleted. It used to run with `minRacersVisible: 0` and rely on the CORRIDOR to keep
+  // the outermost-lane racer on screen. The corridor no longer bounds LEADER, so with the company
+  // guarantee also off, nothing does — the outer lane CAN leave frame, and the owner accepted that
+  // price knowingly (measured: the road edge is out of frame on 70% of Mountainstreet frames, worst
+  // case 236 px of road missing).
+  //
+  // What protects him now is the COMPANY guarantee at his own value, so that is what this asserts.
+  it('WORST CASE: the outermost lane is kept by the COMPANY guarantee, not by the road', () => {
+    const T = 0.25; // top of the arc: the corridor is measured up-down, the least room there is
+    const tightWithCompany = {
+      minRacersVisible: 5, // HIS value — the thing that now does the keeping
       cameraStateProfiles: Object.fromEntries(
         Object.entries(DEFAULT_CAMERA_CONFIG.cameraStateProfiles).map(([k, v]) => [
           k,
-          { ...v, visibleCorridors: 0.25 }, // the tightest the control allows
+          { ...v, visibleCorridors: 0.25 },
         ])
       ),
     };
     for (const lane of [+TW / 2, -TW / 2]) {
       const outer = atLane(T, lane);
+      // The company the guarantee must keep in frame sits just behind him, in his lane.
       const racers = [
         { index: 0, name: 'OUTER', t: T, x: outer.x, y: outer.y, finished: false },
         ...field(0)
           .slice(1)
           .map((r, i) => {
-            const tt = T - 0.03 * (i + 1);
-            const p = atLane(tt, 0);
+            const tt = T - 0.006 * (i + 1);
+            const p = atLane(tt, lane);
             return { ...r, t: tt, x: p.x, y: p.y };
           }),
       ];
-      const cd = settle(mk(tight), racers, CAM_STATE.LEADER_ZOOM);
+      const cd = settle(mk(tightWithCompany), racers, CAM_STATE.LEADER_ZOOM);
       const sx = outer.x * cd._proj.effX(cd.zoom) + cd.offsetX;
       const sy = outer.y * cd._proj.effY(cd.zoom) + cd.offsetY;
       expect(sx, `lane ${lane} x`).toBeGreaterThanOrEqual(0);
@@ -814,5 +822,186 @@ describe('CAMERA-LATERAL-1 — the two axes, through the director', () => {
       expect(sy, `lane ${lane} y`).toBeGreaterThanOrEqual(0);
       expect(sy, `lane ${lane} y`).toBeLessThanOrEqual(FRAME.height);
     }
+  });
+});
+
+// ============================================================
+// CAMERA-ANCHOR-TRUTH-1 §4a — the corridor is measured from the ANCHOR, not the frame centre.
+//
+// The equality test below is the cheapest possible proof that nothing ELSE changed: with the anchor
+// centred, the new two-sided form must reduce to the old chord expression exactly. Every corridor
+// test above calls the function without an anchor, so they are all that same proof by default.
+// ============================================================
+describe('the corridor measures from the anchor (CAMERA-ANCHOR-TRUTH-1)', () => {
+  const centre = { x: W / 2, y: H / 2 };
+
+  it.each(TRACKS)(
+    '$name: a CENTRED anchor gives exactly the old centre-chord answer, every 1° of heading',
+    (t) => {
+      for (let deg = 0; deg < 360; deg += 1) {
+        const perp = { x: -Math.sin((deg * Math.PI) / 180), y: Math.cos((deg * Math.PI) / 180) };
+        const needed = Math.hypot(perp.x * t.axisX * t.tw, perp.y * t.axisY * t.tw);
+        const old = frameExtentAlong(perp.x * t.axisX, perp.y * t.axisY, W, H) / needed;
+        const now = corridorGuarantee(headingAt(deg), t.tw, t.axisX, t.axisY, W, H, 1, centre);
+        expect(now, `heading ${deg}° on ${t.name}`).toBeCloseTo(old, 10);
+      }
+    }
+  );
+
+  it('the centred equality holds under an inner-frame fraction too', () => {
+    for (let deg = 0; deg < 360; deg += 3) {
+      const perp = { x: -Math.sin((deg * Math.PI) / 180), y: Math.cos((deg * Math.PI) / 180) };
+      const needed = Math.hypot(
+        perp.x * CLOSED.axisX * CLOSED.tw,
+        perp.y * CLOSED.axisY * CLOSED.tw
+      );
+      const old =
+        (frameExtentAlong(perp.x * CLOSED.axisX, perp.y * CLOSED.axisY, W, H) * SUBJECT_INNER_PCT) /
+        needed;
+      const now = corridorGuarantee(
+        headingAt(deg),
+        CLOSED.tw,
+        CLOSED.axisX,
+        CLOSED.axisY,
+        W,
+        H,
+        SUBJECT_INNER_PCT,
+        centre
+      );
+      expect(now, `heading ${deg}°`).toBeCloseTo(old, 10);
+    }
+  });
+
+  it('omitting the anchor is the same as centring it — the default is not a different rule', () => {
+    for (let deg = 0; deg < 360; deg += 11) {
+      const withNone = corridorGuarantee(headingAt(deg), OPEN.tw, OPEN.axisX, OPEN.axisY, W, H, 1);
+      const withCentre = corridorGuarantee(
+        headingAt(deg),
+        OPEN.tw,
+        OPEN.axisX,
+        OPEN.axisY,
+        W,
+        H,
+        1,
+        centre
+      );
+      expect(withCentre).toBeCloseTo(withNone, 10);
+    }
+  });
+
+  it.each(TRACKS)(
+    '$name: a FORWARD-framed anchor never widens the ceiling — WIDEN-ONLY (Lesson 192)',
+    (t) => {
+      for (let deg = 0; deg < 360; deg += 3) {
+        const at = anchorScreenPoint(W, H, 0.66, headingAt(deg));
+        const centred = corridorGuarantee(headingAt(deg), t.tw, t.axisX, t.axisY, W, H, 1, centre);
+        const anchored = corridorGuarantee(headingAt(deg), t.tw, t.axisX, t.axisY, W, H, 1, at);
+        // A smaller ceiling is a WIDER shot. It may never come out bigger than the centred answer,
+        // which is what "the old form was too permissive" means.
+        expect(anchored, `heading ${deg}° on ${t.name}`).toBeLessThanOrEqual(centred * (1 + 1e-12));
+      }
+    }
+  );
+
+  it('the corridor actually fits from the anchor, on BOTH sides, at the returned zoom', () => {
+    for (const t of TRACKS) {
+      for (let deg = 0; deg < 360; deg += 5) {
+        const at = anchorScreenPoint(W, H, 0.66, headingAt(deg));
+        const z = corridorGuarantee(headingAt(deg), t.tw, t.axisX, t.axisY, W, H, 1, at);
+        if (!Number.isFinite(z)) continue;
+        const perp = { x: -Math.sin((deg * Math.PI) / 180), y: Math.cos((deg * Math.PI) / 180) };
+        const sx = perp.x * t.axisX;
+        const sy = perp.y * t.axisY;
+        const halfNeeded = Math.hypot(sx, sy) * (t.tw / 2) * z;
+        const plus = roomFromPointAlong(at.x, at.y, sx, sy, W, H, 1);
+        const minus = roomFromPointAlong(at.x, at.y, -sx, -sy, W, H, 1);
+        // 1e-9 slack for float noise only.
+        expect(halfNeeded, `+side ${deg}° ${t.name}`).toBeLessThanOrEqual(plus + 1e-9);
+        expect(halfNeeded, `-side ${deg}° ${t.name}`).toBeLessThanOrEqual(minus + 1e-9);
+      }
+    }
+  });
+
+  it('a degenerate heading still honours the anchor rather than falling back to the centre', () => {
+    const at = anchorScreenPoint(W, H, 0.66, { x: 1, y: 0 });
+    const anchored = corridorGuarantee(
+      { x: 0, y: 0 },
+      OPEN.tw,
+      OPEN.axisX,
+      OPEN.axisY,
+      W,
+      H,
+      1,
+      at
+    );
+    const centred = corridorGuarantee(
+      { x: 0, y: 0 },
+      OPEN.tw,
+      OPEN.axisX,
+      OPEN.axisY,
+      W,
+      H,
+      1,
+      centre
+    );
+    expect(anchored).toBeLessThanOrEqual(centred * (1 + 1e-12));
+    expect(Number.isFinite(anchored)).toBe(true);
+  });
+});
+
+// ============================================================
+// CAMERA-COMPANY-ONLY-1 — which states the switch may touch, and which it may NOT.
+//
+// The switch removes the CORRIDOR guarantee from the single-anchor states. That is only safe to
+// describe as "LEADER / OVERVIEW / COMEBACK" for as long as those are exactly the corridor states,
+// so this pins the mapping rather than trusting the sentence in the tooltip.
+// ============================================================
+describe('the switch’s reach is exactly the corridor states (CAMERA-COMPANY-ONLY-1)', () => {
+  it('the three single-anchor states are the CORRIDOR states', () => {
+    for (const state of ['LEADER_ZOOM', 'OVERVIEW', 'COMEBACK_ZOOM']) {
+      expect(framingFor(state).guarantee, state).toBe(GUARANTEE.CORRIDOR);
+    }
+  });
+
+  it('the pair states are NOT corridor states, so the switch cannot reach them', () => {
+    for (const state of ['BATTLE_ZOOM', 'LEAD_CHANGE', 'PHOTO_FINISH']) {
+      expect(framingFor(state).guarantee, state).toBe(GUARANTEE.PAIR);
+    }
+  });
+
+  it('there are exactly six states and no seventh has appeared unclassified', () => {
+    const states = Object.keys(FRAMING_BY_STATE);
+    expect(states).toHaveLength(6);
+    for (const s of states) {
+      expect([GUARANTEE.CORRIDOR, GUARANTEE.PAIR]).toContain(FRAMING_BY_STATE[s].guarantee);
+    }
+  });
+});
+
+// ============================================================
+// CAMERA-COMPANY-ONLY-3 — what limits each state now.
+//
+// The corridor is no longer the ceiling of the single-anchor states. This pins the CONSEQUENCE of
+// that, not just the table: which states may be bounded by the road, and which may not.
+// ============================================================
+describe('the road no longer bounds the single-anchor states (CAMERA-COMPANY-ONLY-3)', () => {
+  it('LEADER, OVERVIEW and COMEBACK are the states the corridor used to bound', () => {
+    for (const state of ['LEADER_ZOOM', 'OVERVIEW', 'COMEBACK_ZOOM']) {
+      expect(framingFor(state).guarantee, state).toBe(GUARANTEE.CORRIDOR);
+    }
+  });
+
+  it('the pair states are untouched by the change — they still guarantee their pair', () => {
+    for (const state of ['BATTLE_ZOOM', 'LEAD_CHANGE', 'PHOTO_FINISH']) {
+      expect(framingFor(state).guarantee, state).toBe(GUARANTEE.PAIR);
+    }
+  });
+
+  it('corridorGuarantee is STILL EXPORTED and still works — it is the pair fallback, not dead', () => {
+    // Measured: that fallback fired on 0 of 11,813 pair frames, so it is defensive rather than
+    // load-bearing. It is kept on purpose, and this test is what keeps it honest if it is ever hit.
+    const z = corridorGuarantee({ x: 1, y: 0 }, CLOSED.tw, CLOSED.axisX, CLOSED.axisY, W, H);
+    expect(Number.isFinite(z)).toBe(true);
+    expect(z).toBeGreaterThan(0);
   });
 });

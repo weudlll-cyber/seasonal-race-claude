@@ -3,7 +3,25 @@
 # Path:        .github/workflows/deploy.yml
 # Project:     RaceArena
 # Created:     2026-04-19
-# Description: Deploys to production when a commit is merged to main
+# Description: INTENT ONLY — this workflow has NEVER RUN, not once, and cannot run as written.
+#
+# THIS FILE IS A RECORD, NOT A PIPELINE. It is kept deliberately: deleting it would delete the
+# record of a decision, and this project's rule is that doing so is how a project forgets why.
+#
+# Measured at origin on 2026-08-04 (CI-AUDIT-GREEN-1 §10): the Deploy workflow is registered and
+# ACTIVE but has 0 runs in its entire history; the last 100 Actions runs are 100% CI; and the repo
+# has 0 deployments, 0 environments, 0 webhooks, 0 deploy keys and no Pages site.
+#
+# FOUR things would have to change before it could work:
+#   1. the trigger is `branches: [main]`; the only branch at origin is `master`
+#   2. `scripts/deploy.sh` does not exist in this repository
+#   3. all three secrets it consumes are absent — DEPLOY_HOST, DEPLOY_USER, DEPLOY_KEY
+#   4. RA_PUBLIC_ORIGIN exists only as the placeholder racearena.example.com
+#
+# Deployment today is MANUAL and the server runs only on the owner's machine — nothing is online.
+# See docs/DEPLOYMENT.md for the by-hand production start and docs/BACKLOG.md, "Before the VPS
+# migration", for what must be settled first. Do not "fix" this file into life by accident: making
+# it run would start publishing to production.
 # ============================================================
 
 name: Deploy

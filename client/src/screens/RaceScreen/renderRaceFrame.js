@@ -36,7 +36,7 @@ import { drawBattleDiagMarkers } from './drawing/battleDiagRendering.js';
 import {
   drawTitle,
   drawTitleOpen,
-  drawLapInfo,
+  lapInfoText,
   drawFinalLapOverlay,
   drawCountdownOverlay,
   drawFinishedOverlay,
@@ -51,6 +51,8 @@ import {
   getEffectiveMaxTargetScreenPx,
 } from '../../modules/autoSpriteScale.js';
 import { PHASE } from './racePhase.js';
+import { formatBuildLabel, isBuildUncertain } from '../../modules/buildInfo.js';
+import { hudRightColumn } from './hudLayout.js';
 
 const CANVAS_W = 1280;
 const CANVAS_H = 720;
@@ -96,6 +98,7 @@ export function renderRaceFrame(ctx, f) {
     tagIncumbents,
     leaderDiag,
     cfgBadge,
+    buildBadge,
     racePlanActive,
     racePlanSeed,
     gapRerollDevMarker,
@@ -223,7 +226,6 @@ export function renderRaceFrame(ctx, f) {
     drawTitleOpen(ctx, raceData);
   } else {
     drawTitle(ctx, shape, raceData);
-    drawLapInfo(ctx, st.racers, st.maxLaps);
     drawFinalLapOverlay(ctx, ts, st.finalLapStartTs);
   }
 
@@ -234,7 +236,18 @@ export function renderRaceFrame(ctx, f) {
     drawFinishedOverlay(ctx);
   }
 
-  drawHudPills(ctx, { st, cfgBadge, racePlanActive, racePlanSeed, canvasW });
+  // The lap counter is now part of the right-hand HUD stack (hudLayout.js) instead of drawing
+  // itself at a hardcoded y. Open tracks have no laps, so it is simply absent there.
+  drawHudPills(ctx, {
+    st,
+    cfgBadge,
+    buildBadge,
+    racePlanActive,
+    racePlanSeed,
+    canvasW,
+    canvasH,
+    lapText: isOpenTrack ? null : lapInfoText(st.racers, st.maxLaps),
+  });
 
   // ── PiP minimap (RACING and FINISHED only) ──
   if (st.phase !== PHASE.COUNTDOWN) {
@@ -255,47 +268,84 @@ export function renderRaceFrame(ctx, f) {
  * the shared context at textAlign='center'/'right', which previously pushed these labels out to the
  * LEFT of their bars. One helper draws both rows so they can never drift apart.
  */
-function drawHudPills(ctx, { st, cfgBadge, racePlanActive, racePlanSeed, canvasW }) {
-  const right = canvasW - 8;
-  const pill = (label, y, h, bg, fg, fontPx) => {
+function drawHudPills(
+  ctx,
+  { st, cfgBadge, buildBadge, racePlanActive, racePlanSeed, canvasW, canvasH, lapText }
+) {
+  // ONE owner of this column (hudLayout.js). Every row is placed after the one above it, so the
+  // build line cannot land on the lap counter the way it did on the owner's screenshot.
+  const showRacePlan = racePlanActive && st.phase !== PHASE.COUNTDOWN;
+  const showRest = st.phase !== PHASE.COUNTDOWN;
+  const rows = hudRightColumn(canvasW, canvasH, {
+    racePlan: showRacePlan,
+    cfg: showRest,
+    lap: showRest && !!lapText,
+    build: showRest && !!buildBadge,
+  });
+
+  const pill = (label, row, bg, fg) => {
     ctx.save();
-    ctx.font = `${fontPx}px monospace`;
+    ctx.font = `${row.fontPx}px monospace`;
     ctx.textAlign = 'left';
     ctx.textBaseline = 'middle';
-    const pad = 8;
+    const pad = Math.max(4, Math.round(row.fontPx * 0.8));
     const w = Math.ceil(ctx.measureText(label).width) + pad * 2;
-    const x = right - w;
+    const x = row.right - w;
     ctx.fillStyle = bg;
-    ctx.fillRect(x, y, w, h);
+    ctx.fillRect(x, row.y, w, row.h);
     ctx.fillStyle = fg;
-    ctx.fillText(label, x + pad, y + h / 2 + 0.5);
+    ctx.fillText(label, x + pad, row.y + row.h / 2 + 0.5);
     ctx.restore();
   };
 
-  // Row 1 — Race Plan status (dev/sightcheck aid). Truthful label: with a seed > 0 the number is
-  // the seed of the plan AND the dynamics (the race replays exactly); at 0 nothing is seeded.
-  if (racePlanActive && st.phase !== PHASE.COUNTDOWN) {
+  // Row 1 - Race Plan status. With a seed > 0 the number seeds the plan AND the dynamics.
+  if (showRacePlan) {
     const label =
       racePlanSeed > 0 ? `Race Plan: ON  seed:${racePlanSeed}` : 'Race Plan: ON  unseeded';
-    pill(label, 8, 22, 'rgba(0,0,0,0.65)', '#4fc3f7', 11);
+    pill(label, rows.racePlan, 'rgba(0,0,0,0.65)', '#4fc3f7');
   }
 
-  // Row 2 — config-fingerprint badge. RED means "NOT apples-to-apples with a default-config sim
-  // run" — that is RACE-relevant drift only. Cosmetic (camera / frame-timing) drift is reported
-  // quietly and never turns the badge red.
-  if (st.phase !== PHASE.COUNTDOWN) {
+  // Row 2 - config-fingerprint badge. RED means "NOT apples-to-apples with a default-config sim
+  // run" - RACE-relevant drift only. Cosmetic drift is reported quietly and never turns it red.
+  if (showRest) {
     const off = cfgBadge.raceCount > 0;
     const label =
       cfgBadge.raceCount === 0 && cfgBadge.cosmeticCount === 0
-        ? `cfg ${cfgBadge.hashShort} · defaults`
-        : `cfg ${cfgBadge.hashShort} · ${cfgBadge.raceCount} race / ${cfgBadge.cosmeticCount} cosmetic`;
+        ? `cfg ${cfgBadge.hashShort} \u00b7 defaults`
+        : `cfg ${cfgBadge.hashShort} \u00b7 ${cfgBadge.raceCount} race / ${cfgBadge.cosmeticCount} cosmetic`;
     pill(
       label,
-      34,
-      20,
+      rows.cfg,
       off ? 'rgba(120,20,20,0.82)' : 'rgba(0,0,0,0.5)',
-      off ? '#ff8a80' : '#9e9e9e',
-      10
+      off ? '#ff8a80' : '#9e9e9e'
+    );
+  }
+
+  // Row 3 - the LAP counter. Game information, not diagnostics, so it keeps its own look (bold
+  // sans, blue glow) - but it is placed by the same stack, which is the entire point of hudLayout.
+  if (showRest && lapText) {
+    const row = rows.lap;
+    ctx.save();
+    ctx.textAlign = 'right';
+    ctx.textBaseline = 'middle';
+    ctx.font = `bold ${row.fontPx}px sans-serif`;
+    ctx.fillStyle = '#fff';
+    ctx.shadowBlur = 8;
+    ctx.shadowColor = '#0088ff';
+    ctx.fillText(lapText, row.right, row.y + row.h / 2);
+    ctx.shadowBlur = 0;
+    ctx.restore();
+  }
+
+  // Row 4 - BUILD IDENTITY (BUILD-TRUTH-1). AMBER when uncertain: dirty means this frame is not
+  // reproducible from any commit; unknown means the identity could not be read at all.
+  if (showRest && buildBadge) {
+    const uncertain = isBuildUncertain(buildBadge);
+    pill(
+      formatBuildLabel(buildBadge),
+      rows.build,
+      uncertain ? 'rgba(120,80,0,0.82)' : 'rgba(0,0,0,0.5)',
+      uncertain ? '#ffcc80' : '#9e9e9e'
     );
   }
 }
