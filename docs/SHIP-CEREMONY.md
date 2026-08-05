@@ -17,9 +17,32 @@ whether a change moves the fingerprint, mint before and after (#3) and compare �
 
 Camera and other presentation work still skips this whole ceremony. But it does not skip the mint:
 
-> **Mint once at the end of any block whose diff touches a file under `client/src/modules/` that is
-> NOT under `client/src/modules/camera/`.** One `node scripts/fingerprint-default.mjs`, compare
+> **Mint once at the end of any block whose diff touches a file the race engine can REACH.** Ask the
+> repo, do not remember: `node scripts/engine-reach.mjs --check <your changed paths>` exits 0 if any
+> of them can change the race. If it does, run `node scripts/fingerprint-default.mjs`, compare
 > against the shipped fingerprint, and say the result in the report. About two minutes.
+
+**The trigger is a computed set, not a folder (VERIFY-COST-1).** It is the transitive closure of
+`raceCore.js`'s imports — **19 files** — against the **103** files under `client/src/modules/`
+outside `camera/` that the old folder rule fired on. The other 84 cannot reach the engine, so minting
+for them proved what the diff already proved; that is where the wasted three minutes went.
+
+**WHAT THE NEW TRIGGER DOES NOT CATCH, stated so nobody over-trusts it:**
+
+- **Anything reaching the engine other than through `raceCore.js`'s import graph** — a value passed
+  in as an ARGUMENT by a caller. `drawnBodyWidthRefPx` is exactly that: computed in a screen file and
+  handed to the engine. The closure contains the file that *consumes* it (`raceBehavior.js`) but not
+  the screen that *computes* it. **If your diff changes a number that is passed into the race, mint —
+  the tripwire will not tell you to.**
+- **Dynamic imports.** A static walk cannot follow `import()`. There are none in the closure today and
+  `scripts/engine-reach.test.mjs` fails if one appears, at which point this rule needs revisiting.
+- **The seeds and track JSON**, which are data rather than modules.
+
+`ENGINE_INPUT_MODULES` in `raceConfigWorld.js` remains, and remains guarded — it is the DIRECT-import
+list, and it stays useful as the "did a new engine input appear" alarm. It is deliberately **not** the
+trigger: it names eleven files, and the eight in the gap between it and the closure include
+`autoSpriteScale.js`, which is the precise file this tripwire was created for. Triggering on it would
+have stopped catching the incident that produced the rule.
 
 **Why it exists.** The old test was "no simulation file in the diff" — but that is a test of FOLDERS,
 and the engine's inputs are not confined to one. `drawnBodyWidthRefPx` is computed in a screen file
