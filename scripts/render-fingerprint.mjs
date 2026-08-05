@@ -45,6 +45,13 @@
 //   node scripts/render-fingerprint.mjs             # the hash, plus a per-track breakdown
 //   node scripts/render-fingerprint.mjs --quiet     # just the combined hash
 //   node scripts/render-fingerprint.mjs --ops=<track>  # dump the call stream for one track
+//   node scripts/render-fingerprint.mjs --phases    # where each camera phase begins, per track
+//   node scripts/render-fingerprint.mjs --coverage  # what each sample point CATCHES, per track
+//
+// COST: ~77 s, up from ~28 s (FINISH-WINDOW-1). Almost all of the increase is the longer RUN — the
+// frame loop to 5600 alone costs ~71 s, and the ten extra DRAWN frames add only ~7 s. So if this
+// ever needs to get cheaper, the loop is where to spend, not the sample count: the frames between
+// the samples are the expensive part and only exist to advance the race to the next one.
 // ============================================================
 
 import { createHash } from "node:crypto";
@@ -106,6 +113,22 @@ const OPS_FOR = (process.argv.find((a) => a.startsWith("--ops=")) ?? "").slice(
   6,
 );
 
+// FINISH-WINDOW-1 diagnostic. Reports, per track, the frame at which each camera phase FIRST
+// appears and when the race actually ends — the numbers the sample points below have to be chosen
+// against. It runs THIS harness's own loop rather than a copy of it, because a sampler chosen
+// against a reconstruction of the run is exactly how the window came to miss the ending in the
+// first place. Hashing is skipped; the hash path is untouched when the flag is absent.
+//   node scripts/render-fingerprint.mjs --phases            # at the shipped RUN_FRAMES
+//   node scripts/render-fingerprint.mjs --phases --frames=6000
+const PHASES = process.argv.includes("--phases");
+// FINISH-WINDOW-1: what each SAMPLE point actually catches, per track. The sample points are fixed
+// indices and the finish moves around, so "the window now covers the ending" is a claim that has to
+// be measured per track rather than reasoned about — this prints the matrix the report quotes.
+const COVERAGE = process.argv.includes("--coverage");
+const FRAMES_OVERRIDE = Number(
+  (process.argv.find((a) => a.startsWith("--frames=")) ?? "").slice(9),
+);
+
 // THE SAMPLED FRAMES, and why these. Fixed indices, never events: "at the third lead change" is not
 // reproducible, "at frame 600" is. Every race is driven for exactly RUN_FRAMES so the sample points
 // exist on every track regardless of how long that track's race actually lasts.
@@ -116,16 +139,46 @@ const OPS_FOR = (process.argv.find((a) => a.startsWith("--ops=")) ?? "").slice(
 //   1500 25 s: mid-race, field spread, battles plausible
 //   2400 40 s
 //   3300 55 s: late, and on the shorter tracks past the finish, so the FINISHED overlay is covered
-const RUN_FRAMES = 3400;
-const SAMPLE_AT = [0, 90, 600, 1500, 2400, 3300];
+//
+// FINISH-WINDOW-1 EXTENDED THE RUN TO REACH THE ENDING. The run stopped at 3400 while the finish
+// sits at frames 3330–5587 depending on the track, so this instrument had NEVER seen the photo
+// finish, the drama pulse, the zoom-out or the lookback framing — the region where FINISH-MOTION-1
+// found a 2708 px jump and three false comments that had survived every refactor. It could not
+// confirm that block, and said so.
+//
+// THE EXTENSION IS ADDITIVE, and that was proved rather than asserted: raising RUN_FRAMES to 5600
+// with the original six sample points reproduced `73ba53ba9fea12c7` exactly, so frames 0–3300 sample
+// the same moments they always did and the hash move below is attributable purely to the new points.
+//
+// THE NEW POINTS ARE FIXED INDICES, never events — same rule as the originals, and it is why they
+// look arbitrary. A fixed index cannot mean "the crossing" on every track, because the finish
+// arrives at frame 3330 on luger-hill and 5063 on dirt-oval. They are chosen against the MEASURED
+// phase map (`--phases`) so that each track gets its finish shot, its zoom-out and its resting frame
+// covered by SOME point; `--coverage` prints what each point actually catches on each track, and the
+// report states plainly which behaviours are covered and which are not.
+//   3450 the fast group's photo finish (luger, mountainstreet, river-run, seatrack, space-sprint)
+//   3580 the fast group mid zoom-out
+//   3650 searound's photo finish, which starts later than the rest of that group
+//   3900 the fast group AT REST on the lookback point; searound mid zoom-out
+//   4300 ice-track's photo finish
+//   4520 ice-track mid zoom-out; city-circuit's photo finish
+//   4750 city-circuit mid zoom-out; ice-track at rest
+//   5100 dirt-oval's photo finish; city-circuit at rest
+//   5300 dirt-oval mid zoom-out
+//   5450 dirt-oval at rest — the last track to finish, and the reason the run ends at 5600
+const RUN_FRAMES = 5600;
+const SAMPLE_AT = [
+  0, 90, 600, 1500, 2400, 3300, 3450, 3580, 3650, 3900, 4300, 4520, 4750, 5100,
+  5300, 5450,
+];
 
 // Pinned so the badge reports the run's own fixed config rather than varying with it.
-const CFG_BADGE = { hashShort: 'renderfp0', raceCount: 0, cosmeticCount: 0 };
+const CFG_BADGE = { hashShort: "renderfp0", raceCount: 0, cosmeticCount: 0 };
 // BUILD-TRUTH-1: a FIXED build identity, never the live one. The badge draws the real commit in the
 // browser, but this hash must be a change detector for the DRAWING, not a counter that moves on every
 // commit. A synthetic value keeps the new pill covered (its position, font and layout are hashed)
 // while leaving the hash stable across commits — which is the whole point of the instrument.
-const BUILD_BADGE = { commit: 'renderfp', branch: 'renderfp', dirty: false };
+const BUILD_BADGE = { commit: "renderfp", branch: "renderfp", dirty: false };
 
 const dir = existsSync(join(ROOT, "server/data/tracks"))
   ? join(ROOT, "server/data/tracks")
@@ -235,7 +288,13 @@ function trackHash(geo, wantOps) {
   let tagIncumbents = null;
   const leaderDiag = { snapshots: [], frozen: false };
   let drawn = 0;
-  for (let frame = 0; frame < RUN_FRAMES; frame++) {
+  const runFrames =
+    PHASES && FRAMES_OVERRIDE > 0 ? FRAMES_OVERRIDE : RUN_FRAMES;
+  const phaseFirstSeen = new Map();
+  const sampleState = new Map();
+  let firstCrossingFrame = -1;
+  let allHomeFrame = -1;
+  for (let frame = 0; frame < runFrames; frame++) {
     accum += RAW;
     let steps = 0;
     while (accum >= FIXED_DT && steps++ < 2) {
@@ -264,7 +323,28 @@ function trackHash(geo, wantOps) {
     if (st.phase === PHASE.RACING && st.finishedCount >= N)
       st.phase = PHASE.FINISHED;
 
-    if (sample.has(frame)) {
+    if (PHASES || COVERAGE) {
+      if (!phaseFirstSeen.has(cd.hudState))
+        phaseFirstSeen.set(cd.hudState, frame);
+      if (firstCrossingFrame < 0 && st.finishedCount >= 1)
+        firstCrossingFrame = frame;
+      if (allHomeFrame < 0 && st.finishedCount >= N) allHomeFrame = frame;
+      if (COVERAGE && sample.has(frame)) {
+        // `moving` distinguishes a frame DURING the zoom-out from one at rest on the lookback
+        // point — the difference the window exists to be able to see.
+        const moving = Math.abs(cd.zoom - cd.targetZoom) > 1e-4;
+        sampleState.set(
+          frame,
+          cd.hudState === "FINISH_OVERVIEW"
+            ? moving
+              ? "FIN_OV/move"
+              : "FIN_OV/rest"
+            : cd.hudState,
+        );
+      }
+    }
+
+    if (!PHASES && !COVERAGE && sample.has(frame)) {
       // The frame marker keeps two sampled frames from hashing identically by accident, so a
       // fingerprint that "did not move" cannot be a sampler that silently stopped sampling.
       rec.fillText("##frame", frame, 0);
@@ -324,6 +404,16 @@ function trackHash(geo, wantOps) {
     ops: rec.opCount,
     drawn,
     opsList: wantOps ? rec.ops : null,
+    phases:
+      PHASES || COVERAGE
+        ? {
+            phaseFirstSeen,
+            sampleState,
+            firstCrossingFrame,
+            allHomeFrame,
+            runFrames,
+          }
+        : null,
   };
 }
 
@@ -345,6 +435,69 @@ if (OPS_FOR) {
   }
   const { opsList } = trackHash(geo, true);
   for (const line of opsList) console.log(line);
+  process.exit(0);
+}
+
+if (COVERAGE) {
+  const late = SAMPLE_AT.filter((f) => f >= 3300);
+  console.log(
+    `SAMPLE COVERAGE — what each late sample point actually catches (${geos.length} tracks)`,
+  );
+  console.log(
+    `  ${"track".padEnd(16)}${late.map((f) => String(f).padStart(14)).join("")}`,
+  );
+  const tally = { shot: 0, move: 0, rest: 0, none: 0 };
+  for (const geo of geos) {
+    const { phases } = trackHash(geo, false);
+    const cells = late.map((f) =>
+      (phases.sampleState.get(f) ?? "—").padStart(14),
+    );
+    const seen = late.map((f) => phases.sampleState.get(f) ?? "");
+    const hasShot = seen.some((v) => v === "PHOTO_FINISH" || v === "FINISH");
+    const hasMove = seen.some((v) => v === "FIN_OV/move");
+    const hasRest = seen.some((v) => v === "FIN_OV/rest");
+    if (hasShot) tally.shot++;
+    if (hasMove) tally.move++;
+    if (hasRest) tally.rest++;
+    if (!hasShot && !hasMove && !hasRest) tally.none++;
+    console.log(
+      `  ${geo.id.padEnd(16)}${cells.join("")}   ${hasShot ? "shot " : "     "}${hasMove ? "move " : "     "}${hasRest ? "rest" : ""}`,
+    );
+  }
+  console.log(
+    `\n  tracks with the finish SHOT sampled: ${tally.shot}/${geos.length}` +
+      `   mid-MOVE: ${tally.move}/${geos.length}` +
+      `   AT REST: ${tally.rest}/${geos.length}` +
+      `   nothing: ${tally.none}/${geos.length}`,
+  );
+  process.exit(0);
+}
+
+if (PHASES) {
+  const want = ["PHOTO_FINISH", "FINISH", "FINISH_OVERVIEW"];
+  console.log(
+    `PHASE MAP — where the ending sits in THIS harness's run (${geos.length} tracks, ${N} racers, seed ${SEED})`,
+  );
+  console.log(
+    `  ${"track".padEnd(16)} ${"1st cross".padStart(9)} ${want
+      .map((w) => w.padStart(15))
+      .join("")} ${"all home".padStart(9)}`,
+  );
+  for (const geo of geos) {
+    const { phases } = trackHash(geo, false);
+    const at = (k) =>
+      phases.phaseFirstSeen.has(k)
+        ? String(phases.phaseFirstSeen.get(k)).padStart(15)
+        : "—".padStart(15);
+    console.log(
+      `  ${geo.id.padEnd(16)} ${String(phases.firstCrossingFrame).padStart(9)} ` +
+        want.map(at).join("") +
+        ` ${String(phases.allHomeFrame).padStart(9)}`,
+    );
+  }
+  console.log(
+    "\n  -1 = never reached inside the run. Frame indices, not seconds.",
+  );
   process.exit(0);
 }
 

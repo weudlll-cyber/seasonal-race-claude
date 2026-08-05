@@ -1053,21 +1053,23 @@ function CameraAdvancedSection() {
               className={s.label}
               style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}
             >
-              Drama pulse duration (ms)
+              Finish pause (ms)
               <InfoTooltip
-                text={`Duration of the LEADER_ZOOM pulse at the first finish crossing before FINISH_OVERVIEW begins. Currently: ${config.finishDramaDurationMs ?? 1500}ms.`}
+                text={`How long the camera HOLDS before the zoom-out to the finish overview begins. It applies to both endings and it is the same dial for both: after an ordinary finish it holds on the winner from the moment he crosses; after a PHOTO FINISH it holds the pair shot from the moment BOTH contenders are home — not merely when two racers have crossed, since the second across is often neither of them. 0 means no pause at all: the zoom-out starts on the same frame, with no held shot. Currently: ${config.finishDramaDurationMs ?? 1500}ms.`}
               />
             </label>
             <input
               type="number"
               className={s.input}
-              min={100}
+              // FINISH-WINDOW-1: the floor is 0, and it lived in TWO places here — this attribute
+              // and the guard below. Opening only one would have let his 0 be silently ignored.
+              min={0}
               max={5000}
               step={100}
               value={config.finishDramaDurationMs ?? 1500}
               onChange={(e) => {
                 const v = Number(e.target.value);
-                if (v >= 100 && v <= 5000) set('finishDramaDurationMs', v);
+                if (v >= 0 && v <= 5000) set('finishDramaDurationMs', v);
               }}
             />
           </div>

@@ -94,8 +94,8 @@ Mechanism (parity step 1, 2026-07-23): the race-init effect in `RaceScreen/index
 |---|---|
 | `scripts/sim-fairness.mjs` | Main headless simulator and flag-driven harness — single run, full metric report; shares its physics modules with the browser (the single source for both) |
 | `scripts/fingerprint-default.mjs` | Byte-identity gate — hashes the shipped-default sim run across all 10 tracks to prove a change left the default game byte-identical |
-| `scripts/camera-fingerprint.mjs` | The CAMERA's change detector — every director decision on every frame across all 10 tracks. Current **`7a33faf2ec131437`** |
-| `scripts/render-fingerprint.mjs` | The RENDER path's change detector — the draw-call SEQUENCE at six fixed frames. Current **`73ba53ba9fea12c7`** |
+| `scripts/camera-fingerprint.mjs` | The CAMERA's change detector — every director decision on every frame across all 10 tracks. Current **`6480c2e0b2f612b5`** |
+| `scripts/render-fingerprint.mjs` | The RENDER path's change detector — the draw-call SEQUENCE at sixteen fixed frames, reaching the finish. Current **`b6591e74102152bd`** |
 | `scripts/exp-runaway-leader.mjs` | Living reference sweep orchestrator (spawn per track → classify → CSV + `SUMMARY.md`); see [SWEEP-HARNESS.md](SWEEP-HARNESS.md) |
 
 > The standalone `param-sweep*` scripts (5-axis, 8-axis LHS+Phase-2, braking, lateral) that older

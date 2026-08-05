@@ -26,7 +26,7 @@
 // THE ACCEPTANCE TEST, and it is the good kind. `node scripts/camera-fingerprint.mjs` hashes every
 // decision this file makes on every frame of a seeded race across ten tracks. A refactor that
 // tidies code must not move the picture, and unlike a tuning change that is PROVABLE rather than
-// arguable. Current: ab731df15724ab5d. If your change is meant to move the picture, it is not
+// arguable. Current: 6480c2e0b2f612b5. If your change is meant to move the picture, it is not
 // hygiene — say so, and re-baseline deliberately.
 //
 // READ FIRST, if you are changing behaviour: docs/CAMERA_DIRECTOR.md. The ordering inside update()
@@ -215,6 +215,11 @@ export class CameraDirector {
     this._inPhotoFinish = false; // 15a: true while the PHOTO_FINISH shot holds (kept distinct from _inFinishDrama so hudState reports 'PHOTO_FINISH')
     this._photoFinishGateDone = false; // 15a-predictive: once-only latch — the pre-line close-check fires exactly once
     this._photoFinishEnterPending = false; // 15a-predictive: set by update() when the gate decides to enter; consumed by _pickNextState
+    // FINISH-WINDOW-1: the stable indices of the TWO racers the photo-finish shot is following,
+    // captured at entry. The shot ends when THESE are home — measured to differ from
+    // `finishedCount >= 2` by 6–57 frames on every finishing track, because the second racer across
+    // the line is frequently not one of the pair.
+    this._photoFinishContenders = null;
     this._inFinishMode = false; // FINISH_OVERVIEW has begun — absolute for state, and read by four framing sites
     this.zoom = this.overviewZoom;
     this.targetZoom = this.overviewZoom;
@@ -645,6 +650,29 @@ export class CameraDirector {
    */
   setCameraPlan(cameraPlan) {
     this._comeback.setPlan(cameraPlan);
+  }
+
+  /**
+   * Are BOTH racers the photo-finish shot is following across the line?
+   *
+   * A pure read, and the definition the owner asked for in his own words — "the pause only starts
+   * running once the TRIGGERS of the photo finish are home". Not `finishedCount >= 2`: measured on
+   * every finishing track, the second racer across is usually a third party and the two conditions
+   * are 6–57 frames apart.
+   *
+   * False when no shot is running, so it can never end something that has not started.
+   *
+   * @param {Array} racers
+   * @returns {boolean}
+   */
+  _photoFinishContendersHome(racers) {
+    const pair = this._photoFinishContenders;
+    if (!pair?.length || !racers) return false;
+    // A contender that cannot be resolved counts as NOT home. The first draft treated an unknown
+    // index as "nobody to wait for" and so reported the pair home on the first frame of every shot —
+    // caught by a director test, and the safe direction is the other one: the everybody-home net
+    // still ends the shot if a contender genuinely never arrives.
+    return pair.every((c) => !!findByIndex(racers, c.index, c.ref)?.finished);
   }
 
   /** The best current comeback, or null. See comebackDetector.js for what "best" means. */
@@ -1112,6 +1140,8 @@ export class CameraDirector {
       ts,
       finishedCount: raceState.finishedCount,
       racerCount: ordered.length,
+      contendersHome: this._photoFinishContendersHome(racers),
+      dramaDurationMs: this._finishDramaDurationMs,
       leaderT: ordered[0]?.t,
       secondT: ordered[1]?.t,
       photoFinishEnabled: this._photoFinishEnabled,
@@ -1127,13 +1157,30 @@ export class CameraDirector {
         this._inPhotoFinish = false;
         this._inFinishMode = true;
         return { nextState: CAM_STATE.OVERVIEW, reason: finish.text, data: {} };
+      case FINISH_ACTION.PAUSE_AFTER_PHOTO_FINISH:
+        // THE PAUSE, on the photo-finish path. The shot is over — its contenders are home — but the
+        // camera HOLDS the same framing for the pulse before the zoom-out begins. Returning the
+        // state it is already in makes this a repeat, so nothing re-enters and nothing cuts: it is
+        // a pause in the picture, not a new shot. `hudState` reports 'FINISH' from here, which also
+        // releases RaceScreen's photo-finish slow motion so the pause and the zoom-out run at
+        // normal speed; the winner text has already fired on the frame the shot resolved.
+        this._inPhotoFinish = false;
+        this._finishMomentExpiry = ts + this._finishDramaDurationMs;
+        this._inFinishDrama = true;
+        return { nextState: CAM_STATE.PHOTO_FINISH, reason: finish.text, data: {} };
       case FINISH_ACTION.ENTER_PHOTO_FINISH:
         // Two doors, one shot. Only the pre-line door has a pending flag to consume; at the
         // crossing there is none (it is provably already false — see finishPhase.js block 3).
         if (finish.reason === FINISH_REASON.PHOTO_FINISH_PRE_LINE) {
           this._photoFinishEnterPending = false;
         }
-        this._inPhotoFinish = true; // ends on crossings only (hoisted guard) — no wall-clock cap
+        this._inPhotoFinish = true;
+        // WHO the shot is following, captured once at entry. Index AND reference, the same dual
+        // lookup the battle lock uses: the render path hands out spread-copies every frame so a
+        // bare reference does not survive, and a harness racer may carry no index at all.
+        this._photoFinishContenders = ordered
+          .slice(0, 2)
+          .map((r) => ({ index: r.index ?? null, ref: r }));
         return { nextState: CAM_STATE.PHOTO_FINISH, reason: finish.text, data: {} };
       case FINISH_ACTION.ENTER_DRAMA:
         this._finishMomentExpiry = ts + this._finishDramaDurationMs;

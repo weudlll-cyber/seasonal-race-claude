@@ -17,9 +17,12 @@
 //                               (pre-line, predictive) and the first crossing (reactive fallback,
 //                               fires only when the gate did not). Same shot, same exit.
 //                DRAMA        — the classic single-winner pulse on the leader, finishDramaDurationMs long.
-//   AFTERMATH  FINISH_OVERVIEW. Absolute: once entered, no further camera state is chosen. Both
-//              shots hand off to it — the photo finish on the SECOND crossing, the drama on its
-//              own expiry.
+//   THE PAUSE  both shots then HOLD for `finishDramaDurationMs` before the zoom-out — the drama
+//              from the moment the winner crosses, the photo finish from the moment BOTH ITS
+//              CONTENDERS are home (FINISH-WINDOW-1; the owner's words were "the pause only starts
+//              running once the triggers of the photo finish are home"). One dial for both, and a
+//              value of 0 means no held frame at all on either path.
+//   AFTERMATH  FINISH_OVERVIEW. Absolute: once entered, no further camera state is chosen.
 //
 // WHAT IT IS NOT FOR: performing any of it. Every function here is pure. It assigns nothing,
 // touches no `this`, and names no camera state (CAM_STATE lives in CameraDirector.js, so naming it
@@ -51,6 +54,11 @@ export const FINISH_ACTION = {
   ENTER_PHOTO_FINISH: 'enter-photo-finish',
   /** Enter the single-winner drama pulse. */
   ENTER_DRAMA: 'enter-drama',
+  /**
+   * The photo-finish contenders are home: hold the shot for the pause, THEN hand off.
+   * The call site stays on the same camera state, so this is a pause, not a cut.
+   */
+  PAUSE_AFTER_PHOTO_FINISH: 'pause-after-photo-finish',
   /** Leave the photo finish for FINISH_OVERVIEW. */
   END_PHOTO_FINISH: 'end-photo-finish',
   /** Leave the drama pulse for FINISH_OVERVIEW. */
@@ -63,8 +71,12 @@ export const FINISH_REASON = {
   NOT_FINISHING: 'not-finishing',
   /** The photo-finish shot holds — no other transition may fire. */
   PHOTO_FINISH_HOLDS: 'photo-finish-holds',
-  /** Second crossing (or every racer home): the photo finish is over. */
+  /** The contenders are home (or every racer is): the photo finish is over. */
   PHOTO_FINISH_END: 'photo-finish-end',
+  /** The contenders are home and a pause is configured: hold the shot before handing off. */
+  PHOTO_FINISH_PAUSE: 'photo-finish-pause',
+  /** The pause is set to zero, so the aftermath begins immediately with no pulse at all. */
+  PAUSE_DISABLED: 'pause-disabled',
   /** The pre-line gate said the top two were close; the entry was pending and is now taken. */
   PHOTO_FINISH_PRE_LINE: 'photo-finish-pre-line',
   /** No pre-line entry happened and the top two crossed together — the reactive fallback. */
@@ -87,7 +99,10 @@ export const FINISH_REASON = {
  */
 const FINISH_TEXT = {
   [FINISH_REASON.PHOTO_FINISH_END]:
-    'photo-finish: end (2nd crossing / all finished) → FINISH_OVERVIEW',
+    'photo-finish: end (contenders home / all finished) → FINISH_OVERVIEW',
+  [FINISH_REASON.PHOTO_FINISH_PAUSE]:
+    'photo-finish: contenders home → pause before FINISH_OVERVIEW',
+  [FINISH_REASON.PAUSE_DISABLED]: 'finish: pause is 0 → FINISH_OVERVIEW immediately',
   [FINISH_REASON.PHOTO_FINISH_PRE_LINE]: 'photo-finish: pre-line gate (top-2 close)',
   [FINISH_REASON.PHOTO_FINISH_FIRST_CROSSING]: 'finish: photo-finish (top-2 close)',
   [FINISH_REASON.DRAMA_FIRST_CROSSING]: 'finish: drama pulse on first finish',
@@ -135,17 +150,30 @@ export function decideFinishPhase({
   ts,
   finishedCount,
   racerCount,
+  contendersHome,
+  dramaDurationMs,
   leaderT,
   secondT,
   photoFinishEnabled,
   closeThresholdT,
 }) {
-  // 1. The photo-finish lifecycle guard. Ends on the SECOND crossing (covers 1→2 and 0→2 in the
-  //    same frame) or on the logical safety net that everybody is home. Hoisted above the
-  //    finishedCount block so it also governs a pre-line entry while finishedCount is still 0.
+  // 1. The photo-finish lifecycle guard. Hoisted above the finishedCount block so it also governs a
+  //    pre-line entry while finishedCount is still 0.
+  //
+  //    IT ENDS WHEN THE CONTENDERS ARE HOME — the two racers the shot was actually following —
+  //    not on `finishedCount >= 2`. Those are different conditions and MEASURABLY so: on all nine
+  //    finishing tracks they differ by 6–57 frames, and on most of them the second racer across the
+  //    line is not one of the pair at all. The old condition could therefore end the shot BEFORE the
+  //    pair it exists to show had both crossed. Still crossings only — a more precise crossing —
+  //    with everybody-home kept as the logical safety net for a contender who never arrives.
   if (inPhotoFinish) {
-    if (finishedCount >= 2 || finishedCount >= racerCount) {
-      return decision(FINISH_ACTION.END_PHOTO_FINISH, FINISH_REASON.PHOTO_FINISH_END);
+    if (contendersHome || finishedCount >= racerCount) {
+      // The pause runs HERE on this path (the owner's words: "the pause only starts running once
+      // the triggers of the photo finish are home"), on the same dial as the drama pulse. A pause
+      // of zero is not a one-frame pause: it hands off immediately, exactly as it did before.
+      return dramaDurationMs > 0
+        ? decision(FINISH_ACTION.PAUSE_AFTER_PHOTO_FINISH, FINISH_REASON.PHOTO_FINISH_PAUSE)
+        : decision(FINISH_ACTION.END_PHOTO_FINISH, FINISH_REASON.PHOTO_FINISH_END);
     }
     return decision(FINISH_ACTION.HOLD, FINISH_REASON.PHOTO_FINISH_HOLDS);
   }
@@ -163,9 +191,17 @@ export function decideFinishPhase({
         photoFinishEnabled &&
         racerCount >= 2 &&
         shortestArcDeltaT(leaderT, secondT) <= closeThresholdT;
-      return close
-        ? decision(FINISH_ACTION.ENTER_PHOTO_FINISH, FINISH_REASON.PHOTO_FINISH_FIRST_CROSSING)
-        : decision(FINISH_ACTION.ENTER_DRAMA, FINISH_REASON.DRAMA_FIRST_CROSSING);
+      if (close) {
+        return decision(
+          FINISH_ACTION.ENTER_PHOTO_FINISH,
+          FINISH_REASON.PHOTO_FINISH_FIRST_CROSSING
+        );
+      }
+      // A pause of zero means no pulse at all on this path either — not a one-frame pulse. Both
+      // paths read the same dial, so both must honour the same zero.
+      return dramaDurationMs > 0
+        ? decision(FINISH_ACTION.ENTER_DRAMA, FINISH_REASON.DRAMA_FIRST_CROSSING)
+        : decision(FINISH_ACTION.END_DRAMA, FINISH_REASON.PAUSE_DISABLED);
     }
     if (ts >= finishMomentExpiry) {
       return decision(FINISH_ACTION.END_DRAMA, FINISH_REASON.DRAMA_EXPIRED);

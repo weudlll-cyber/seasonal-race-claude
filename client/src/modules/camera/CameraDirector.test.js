@@ -903,32 +903,99 @@ describe('CameraDirector — the finish lifecycle (FINISH-SEAM-1)', () => {
     expect(off._inFinishDrama).toBe(true);
   });
 
-  // ── THE MOMENT: the photo finish owns the state until the second crossing ─────────────────────
+  // ── THE MOMENT: the shot owns the state until ITS CONTENDERS are home ────────────────────────
+  //
+  // FINISH-WINDOW-1 inverted the end of this test. It used to assert the hand-off at
+  // `finishedCount >= 2`; the shot now waits for the two racers it is FOLLOWING, and then holds the
+  // pause before handing off. Both changes are the owner's, and the first is also a repair: the old
+  // condition could end the shot before the pair it exists to show had both crossed.
 
-  it('the pre-line shot survives the crossing it was waiting for, then ends on the second', () => {
+  it('the pre-line shot survives the crossing, waits for ITS pair, then pauses, then hands off', () => {
     const cd = new CameraDirector();
     cd.stateEnteredAt = 0;
-    cd.update(field(0.98, 0.001), 10_000, rs(), CW, CH);
+    // Indexed racers, so the shot can identify the pair it locks onto.
+    const pair = (leadT, gap, finished = []) => [
+      { t: leadT, x: 640, y: 360, index: 0, finished: finished.includes(0) },
+      { t: leadT - gap, x: 600, y: 350, index: 1, finished: finished.includes(1) },
+      { t: leadT - 0.4, x: 300, y: 300, index: 2, finished: finished.includes(2) },
+    ];
+    cd.update(pair(0.98, 0.001), 10_000, rs(), CW, CH);
     expect(cd.state).toBe(CAM_STATE.PHOTO_FINISH);
-    expect(cd._inPhotoFinish).toBe(true);
-    expect(cd.hudState).toBe('PHOTO_FINISH');
-    expect(cd._photoFinishEnterPending).toBe(false); // consumed on the frame it was set
+    expect(cd._photoFinishContenders.map((c) => c.index)).toEqual([0, 1]);
 
-    // First crossing — the shot holds. This is the IMPOSSIBLE ORDER: no drama may start here.
-    cd.update(field(1.0, 0.001), 10_100, rs({ finishedCount: 1 }), CW, CH);
+    // The winner crosses — the shot holds. IMPOSSIBLE ORDER: no drama may start here.
+    cd.update(pair(1.0, 0.001, [0]), 10_100, rs({ finishedCount: 1 }), CW, CH);
     expect(cd.state).toBe(CAM_STATE.PHOTO_FINISH);
     expect(cd._lastFinishReason).toBe(FINISH_REASON.PHOTO_FINISH_HOLDS);
     expect(cd._finishMomentExpiry).toBe(null);
-    expect(cd._inFinishDrama).toBe(false);
     expect(cd.hudState).toBe('PHOTO_FINISH'); // not 'FINISH'
 
-    // Second crossing — hand off to FINISH_OVERVIEW.
-    cd.update(field(1.01, 0.001), 10_200, rs({ finishedCount: 2 }), CW, CH);
-    expect(cd.state).toBe(CAM_STATE.OVERVIEW);
-    expect(cd._lastFinishReason).toBe(FINISH_REASON.PHOTO_FINISH_END);
+    // A THIRD racer crosses second. Two are home — but not the pair, so the shot still holds. This
+    // is the case the old `finishedCount >= 2` got wrong, and it is measured on 9 of 9 tracks.
+    cd.update(pair(1.01, 0.001, [0, 2]), 10_200, rs({ finishedCount: 2 }), CW, CH);
+    expect(cd.state).toBe(CAM_STATE.PHOTO_FINISH);
+    expect(cd._lastFinishReason).toBe(FINISH_REASON.PHOTO_FINISH_HOLDS);
+
+    // The second CONTENDER is home — the pause begins, on the same shot. No cut: the state does
+    // not change, and the HUD says FINISH because this is the pause, not the shot.
+    cd.update(pair(1.02, 0.001, [0, 2, 1]), 10_300, rs({ finishedCount: 3 }), CW, CH);
+    expect(cd.state).toBe(CAM_STATE.PHOTO_FINISH);
+    expect(cd._lastFinishReason).toBe(FINISH_REASON.PHOTO_FINISH_PAUSE);
     expect(cd._inPhotoFinish).toBe(false);
+    expect(cd._inFinishDrama).toBe(true);
+    expect(cd._finishMomentExpiry).toBe(10_300 + cd._finishDramaDurationMs);
+    expect(cd.hudState).toBe('FINISH');
+
+    // The pause expires — NOW the zoom-out begins.
+    cd.update(
+      pair(1.05, 0.001, [0, 2, 1]),
+      10_300 + cd._finishDramaDurationMs,
+      rs({ finishedCount: 3 }),
+      CW,
+      CH
+    );
+    expect(cd.state).toBe(CAM_STATE.OVERVIEW);
+    expect(cd._lastFinishReason).toBe(FINISH_REASON.DRAMA_EXPIRED);
     expect(cd._inFinishMode).toBe(true);
     expect(cd.hudState).toBe('FINISH_OVERVIEW');
+  });
+
+  it('a pause of ZERO hands off on the same frame — no held shot on the photo-finish path', () => {
+    const cd = new CameraDirector(1280, 720, false, { finishDramaDurationMs: 0 });
+    cd.stateEnteredAt = 0;
+    const pair = (leadT, finished) => [
+      { t: leadT, x: 640, y: 360, index: 0, finished: finished },
+      { t: leadT - 0.001, x: 600, y: 350, index: 1, finished: finished },
+    ];
+    cd.update(pair(0.98, false), 10_000, rs(), CW, CH);
+    expect(cd.state).toBe(CAM_STATE.PHOTO_FINISH);
+    cd.update(pair(1.0, true), 10_100, rs({ finishedCount: 2 }), CW, CH);
+    expect(cd.state).toBe(CAM_STATE.OVERVIEW); // no pause frame at all
+    expect(cd._inFinishDrama).toBe(false);
+    expect(cd._finishMomentExpiry).toBe(null);
+    expect(cd._lastFinishReason).toBe(FINISH_REASON.PHOTO_FINISH_END);
+  });
+
+  it('a pause of ZERO skips the drama pulse entirely on the ordinary path too', () => {
+    const cd = new CameraDirector(1280, 720, false, { finishDramaDurationMs: 0 });
+    cd.update(field(1.0, 0.4), 10_000, rs({ finishedCount: 1 }), CW, CH);
+    expect(cd.state).toBe(CAM_STATE.OVERVIEW); // never enters LEADER_ZOOM for a pulse
+    expect(cd._inFinishDrama).toBe(false);
+    expect(cd._inFinishMode).toBe(true);
+    expect(cd._lastFinishReason).toBe(FINISH_REASON.PAUSE_DISABLED);
+  });
+
+  it('a NON-DEFAULT pause is honoured end to end — the dial reaches the director', () => {
+    // L203 against the "one value, two consumers, one fixed" defect this project keeps hitting:
+    // the bound lived in the Dev Screen twice, and the value has to survive the resolution path.
+    for (const ms of [0, 250, 4200]) {
+      const cd = new CameraDirector(1280, 720, false, { finishDramaDurationMs: ms });
+      expect(cd._finishDramaDurationMs).toBe(ms);
+    }
+    // ...and it is the number the window is actually built from.
+    const cd = new CameraDirector(1280, 720, false, { finishDramaDurationMs: 4200 });
+    cd.update(field(1.0, 0.4), 10_000, rs({ finishedCount: 1 }), CW, CH);
+    expect(cd._finishMomentExpiry).toBe(10_000 + 4200);
   });
 
   it('the photo finish has no wall-clock cap — a long hold between crossings still holds', () => {
@@ -5142,6 +5209,43 @@ describe('CameraDirector — FINISH_OVERVIEW lookback', () => {
     const slow = read(6000);
     expect(quick.pan).toBeGreaterThan(slow.pan);
     expect(quick.zoom).toBeGreaterThan(slow.zoom);
+  });
+
+  // ── THE TARGET POINT — driven from the SETTING, never from the default (FINISH-WINDOW-1 C) ──
+  //
+  // The owner's instruction was "read the value, never hardcode it", and it is not pedantry: a test
+  // pinned to 300 passes on a build that ignores the slider entirely. Both values below are
+  // non-default, and each is asserted against ITS OWN expectation, so the pair fails if the setting
+  // stops reaching the camera.
+  //
+  // The contract (from `finishOverviewLookbackPx`'s own documentation): when the move completes the
+  // camera CENTRE sits that many world pixels before the finish line. Measured on the real tracks it
+  // holds to within 26 px at the shipped 300 on all nine finishing tracks — and stops holding beyond
+  // a track-dependent limit where the world-bounds clamp takes over, which is reported rather than
+  // repaired because the alternative is showing world that does not exist.
+  it('the camera settles at the CONFIGURED lookback distance, and a different value moves it', () => {
+    const settleAt = (lookbackPx) => {
+      const s = setupSmoothPan({ finishOverviewLookbackPx: lookbackPx });
+      s.cd.update(
+        s.racers,
+        s.startTs + s.cd._finishOverviewZoomOutDurationMs,
+        { ...s.rs, raceElapsed: 30000 },
+        CANVAS_W,
+        CANVAS_H
+      );
+      return s.cd;
+    };
+    // 480 and 240 — neither is the 300 default, and both are inside this synthetic world's reach.
+    for (const lookbackPx of [480, 240]) {
+      const cd = settleAt(lookbackPx);
+      // The world X the CONTRACT names: that many pixels before the line, on this linear shape.
+      const wantX = (FINISH_T - lookbackPx / WORLD_W) * WORLD_W;
+      expect(cd.targetOffsetX).toBeCloseTo(expectedOffsetX(wantX, cd), 1);
+    }
+    // L203: the two settings do not merely each satisfy their own formula — they land in DIFFERENT
+    // places. Without this, a camera that ignored the slider could still pass the loop above if the
+    // expectation happened to be clamped to the same value.
+    expect(settleAt(480).targetOffsetX).not.toBeCloseTo(settleAt(240).targetOffsetX, 1);
   });
 
   it('the runout still cannot pull the camera past the line, once the move has landed', () => {
