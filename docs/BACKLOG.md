@@ -7,6 +7,28 @@ Items ranked by urgency within each bucket. ✅ = done, 🔜 = next, ⏳ = waiti
 
 ---
 
+## Measurement and guard residuals (2026-08-05)
+
+- [ ] **Four measurement scripts each carry their own copy of the race driver.**
+      `scripts/corridor-truth.mjs`, `edge-crossing.mjs`, `tracking-lag.mjs` and `his-shot-truth.mjs`
+      each build a race from scratch (`createRaceFromIdentity` + the countdown/step loop, ~100 lines
+      apiece). **Nothing asserts the four stay identical, and their numbers are compared as if they
+      were** — the corridor, edge-crossing, lag and delivered-window figures are read side by side in
+      CAMERA-ANCHOR-TRUTH-1 and NIGHT-1. Chartered as NIGHT-1 stage D; never ran.
+      **The fix is one shared module behind a HARD GATE: camera, render and world fingerprints all
+      bit-identical**, because a measurement tool that changes what it measures is this project's
+      oldest failure. **If the four turn out NOT to be equivalent, stop** — that is a finding about
+      every number they have ever produced and it outranks the refactor.
+- [ ] **`check-index` is one-directional.** It walks `reports/evolution/*.md` and asserts each is
+      referenced from `INDEX.md`; **an INDEX line naming a report that does not exist is invisible to
+      it.** Same shape as the `check-tags` gap closed in TAG-GUARD-2/3, and the same corollary
+      applies: **until it is closed, the guard should say inside itself which direction it does not
+      check** — a partial guard is indistinguishable from a complete one while everything is clean
+      (Lesson 201). Note `check-doc-links` already catches a *dangling link*, so the uncovered case is
+      an INDEX entry that names a report in prose, or links a path that resolves to something else.
+
+---
+
 ## Worktree stubs — a helper that cleans up after itself (2026-08-05)
 
 - [ ] **Ten `.git/worktrees` stubs exist and `git worktree prune` cannot remove them** — every one is a
