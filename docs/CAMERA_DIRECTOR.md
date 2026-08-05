@@ -36,6 +36,8 @@ construction and must be argued another way.
 | `panTarget.js` | The world point a state centres on, given its subjects. | Zoom. |
 | `battleGroup.js` | Who is fighting whom, from positions and thresholds. | Cameras. Pure, stateless. |
 | `comebackDetector.js` | Who is coming through the field, from rank history. | Whether the camera cuts to them. |
+| `transitionDecision.js` | Whether the camera changes state this frame, and why — as a value a test can read. | Performing the transition. It decides; it does not act. |
+| `finishPhase.js` | HOW A RACE ENDS: the whole finish sequence — the approach gate, the fork between the photo finish and the drama, both ends, and the three hold-gate bypasses. Pure. | Owning any of the six finish latches. It answers; the director remembers. |
 | `detourRecorder.js` | The per-transition diagnostic frame log. | Anything. It never writes a camera value — that is the whole point. |
 | `CameraDirectorDiag.js` | The diagnostics mixin: the HUD panels and the frame-log ring buffer. | Direction. Read-only by design. |
 | `lapUtils.js`, `openTrackCamera.js`, `Minimap.js`, `cameraMarker.js` | Lap arithmetic; the open-track base zoom for the render transform; the minimap; the reproducible-moment marker. | — |
@@ -65,6 +67,13 @@ different anchor and a lock: `_inFinishDrama` (the pulse on the winner) and `_in
 `hudState` reports them. That fixed point is `finishOverviewLookbackPx` (default **300** world px
 before the line) — moved here from ARCHITECTURE.md's deleted camera section, which was the only
 place the knob was named.
+
+**The whole ending is stated in one place: [`finishPhase.js`](../client/src/modules/camera/finishPhase.js).**
+Approach → the moment (photo finish OR drama, never both) → aftermath, with every transition carrying
+a machine-readable reason. Six latches drive it; five of them decide only which shot (plus the HUD
+label) and `_inFinishMode` is the one that also FRAMES. If you are changing how a race ends, read
+that file and `reports/evolution/FINISH-SEAM-1.md` first — the latter lists every knob and what is
+and is not covered by a test.
 
 ### 2.2 The priority chain (`_pickNextState`)
 

@@ -17,13 +17,17 @@
 // director. CAMERA-HYGIENE-2 rejected that seam and the argument still holds — their correctness IS
 // an ordering, and a file boundary would hide it. This module decides; it does not act.
 //
+// WHERE THE FINISH WENT (FINISH-SEAM-1): the photo-finish gate predicate used to live here, which
+// put half the finish sequence in the transition file and the other half in the director. All of it
+// is in finishPhase.js now — the gate, the phase decision and the three bypasses fed into
+// `decideTransition` below. This file keeps only the question it is named for: does the camera
+// change state this frame?
+//
 // PRECEDENCE IS THE BEHAVIOUR. The five reasons were OR-ed in a fixed order and the first match won.
 // That order is reproduced exactly below, so this function is a restatement and not a redesign:
 //   1. battle group dispersed      2. battle group P2 drift      3. lead-change interrupt
 //   4. hold elapsed / finish-drama expired / finish-drama forced / photo-finish gate / photo-finish end
 // ============================================================
-
-import { shortestArcDeltaT } from '../../utils/mathUtils.js';
 
 /** What the call site should do. */
 export const TRANSITION_ACTION = {
@@ -106,34 +110,4 @@ export function decideTransition({
     return { action: TRANSITION_ACTION.TRANSITION, reason: TRANSITION_REASON.PHOTO_FINISH_END };
   }
   return { action: TRANSITION_ACTION.NONE, reason: TRANSITION_REASON.HELD };
-}
-
-/**
- * The 15a-predictive photo-finish gate, as a PREDICATE.
- *
- * The original evaluated this inline and SET TWO LATCHES while doing so, which is exactly what a
- * pure function must not do. The split is honest rather than cosmetic: everything here is a
- * question about the field, and both latch writes stay at the call site, keyed off the two booleans
- * returned. `close` can only be true when `evaluated` is true, which is what makes the mapping exact
- * — the caller sets `_photoFinishGateDone` on `evaluated` and `_photoFinishEnterPending` on `close`,
- * in that order, and nothing else changes.
- *
- * @returns {{evaluated: boolean, close: boolean}} `evaluated` = the one-shot check ran this frame
- *   (the caller must latch it done); `close` = the top two are within the threshold.
- */
-export function evaluatePhotoFinishGate({
-  gateDone,
-  enabled,
-  finishedCount,
-  leaderProgress,
-  leadProgressThreshold,
-  racers,
-  closeThresholdT,
-}) {
-  if (gateDone || !enabled || finishedCount !== 0 || leaderProgress < leadProgressThreshold) {
-    return { evaluated: false, close: false };
-  }
-  const ord = [...racers].sort((a, b) => b.t - a.t);
-  const close = ord.length >= 2 && shortestArcDeltaT(ord[0].t, ord[1].t) <= closeThresholdT;
-  return { evaluated: true, close };
 }
