@@ -306,6 +306,30 @@ so any later movement is attributable to a named Stage 2 commit.
   branching. Baselines recorded on the untouched tree and both matched: camera
   `4b33c4d31bec93ea`, render `ae7e9243bd2add8b`, world `dc4647be0f55ebdb`.
 
+### THE ROAD STOPS BOUNDING THE LEADER SHOT — CAMERA-COMPANY-ONLY-3 (2026-08-05)
+`anchor-truth` merged to master WITH FULL HISTORY at `bf74d6ec` (sixteen commits, four blocks:
+CAMERA-ANCHOR-TRUTH-1, BUILD-TRUTH-1, NIGHT-1, CAMERA-COMPANY-ONLY-3). Never squashed — several
+commits in the line CORRECT earlier ones, and that record is how this project reasons about itself.
+
+**OWNER-APPROVED** on `exp/company-only` @ `d2ecc27c`, mountainstreet seed 5601, toggle ON,
+*"nein das passt"* — having seen BOTH regimes, a torn-apart field where the company guarantee opens
+the shot wide and a tight pack where the camera holds his 1.0. His approval also covers the
+anchor-truth work, which had had no eye test until then.
+
+**FINGERPRINTS**: camera `1db71e7fffc1c9f6` → **`7a33faf2ec131437`** — exactly the probe value minted
+with his toggle ON, which is the cross-check that nothing else moved with the fold; render
+`ae7e9243bd2add8b` → **`73ba53ba9fea12c7`**; world **`dc4647be0f55ebdb` UNMOVED** — no engine was
+touched anywhere in this work. CI green at origin before the merge: run `30997930991` at `bfe51bc7`.
+
+- `v-company-only-complete` (`bf74d6ec`, 2026-08-05) — the phase endpoint: the merge commit itself.
+  **Permanent.**
+- `archive/company-only` (`5c8dea3c`, 2026-08-05) — the entire `exp/company-only` probe branch,
+  preserved before the branch is retired. It holds the switch as it existed while he judged it, which
+  is the state his PASS refers to. **Do not delete** — deleting the record of a decision is how a
+  project forgets why.
+- `pre/anchor-truth` (`c299fdf7`) stays valid and stays registered above; a merge with history does
+  not orphan it.
+
 ## Active-phase tags (temporary scaffolding — to collapse later)
 
 Step-tags from the runaway phase (now CLOSED 2026-07-29, see below) and any later work — safe return points, not permanent anchors. They collapse into

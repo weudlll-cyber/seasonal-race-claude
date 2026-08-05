@@ -14,7 +14,7 @@ sit next to the value they describe and move with it. This file does not repeat 
 
 **The acceptance test for any change here.** `node scripts/camera-fingerprint.mjs` hashes every
 decision the director makes — state, lerp phase, anchor, zoom, both offsets, `camT`, both targets —
-on every frame of a seeded race across all ten tracks. Current: **`1db71e7fffc1c9f6`**. A refactor
+on every frame of a seeded race across all ten tracks. Current: **`7a33faf2ec131437`**. A refactor
 that tidies code must not move the picture, and that is provable rather than arguable. It covers the
 DIRECTOR only; the render path (sprite scale, name-tag layout, drawing) is out of scope by
 construction and must be argued another way.
@@ -257,7 +257,7 @@ test at both ends.
 ## 6. What is protected by tests, and what only by convention
 
 **The render path is no longer convention-only.** `scripts/render-fingerprint.mjs`
-(**`a10bf3f293f2ee06`**) hashes the SEQUENCE of draw calls — sprite placement, text, styles,
+(**`73ba53ba9fea12c7`**) hashes the SEQUENCE of draw calls — sprite placement, text, styles,
 transforms and layer order — at six fixed frames across all ten tracks, by driving the real
 `renderRaceFrame()` through a recording context. It covers what the camera fingerprint structurally
 cannot: what actually reaches the canvas. Run it on any block whose diff can reach a `ctx.` call.

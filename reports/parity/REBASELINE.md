@@ -7,6 +7,20 @@ and — on the committed honest world — screens whether the shipped gap-reroll
 sit at their optimum. No owner input was available; every choice is recorded with its reason. Nothing was
 tuned or shipped from the G/s sweep — it MEASURES; the owner decides in the morning.
 
+> ## ⇒ THE THREE FINGERPRINTS — 2026-08-05, after CAMERA-COMPANY-ONLY-3
+>
+> This document has always carried the WORLD fingerprint. It now carries all three, because two of
+> them moved this week and a reader looking for "the current baseline" should not have to know which
+> document owns which hash.
+>
+> | | value | what moved it |
+> |---|---|---|
+> | **world** | **`dc4647be0f55ebdb`** | UNMOVED since RACER-MOTION-2. No engine was touched all week. |
+> | **camera** | **`7a33faf2ec131437`** | the corridor measured from the anchor (CAMERA-ANCHOR-TRUTH-1 §4a), OVERVIEW tracking (§4c), and the road no longer bounding the single-anchor states (CAMERA-COMPANY-ONLY-3) |
+> | **render** | **`73ba53ba9fea12c7`** | the build-identity HUD line (BUILD-TRUTH-1) and the HUD column relayout that stopped it covering the lap counter |
+>
+> Canonical home for how and when to run them: [docs/SHIP-CEREMONY.md](../../docs/SHIP-CEREMONY.md).
+
 > ## ⇒ CURRENT BASELINE — 2026-07-31: RACER-MOTION-2 (lateral acceleration cap). Read this first.
 >
 > **The shipped world is COMBO15 + margin hysteresis + a per-tick lateral acceleration cap** — the SECOND
