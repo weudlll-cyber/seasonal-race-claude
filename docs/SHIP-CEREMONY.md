@@ -63,6 +63,16 @@ whose values reach `createRaceFromIdentity` / `stepRacePhysics`, kept beside `WO
 scheduled for the hygiene phase (see [BACKLOG.md](BACKLOG.md)). Keep both: the mint rule catches what
 a person remembers, the list catches what nobody does.
 
+
+### WHEN CI MUST BE GREEN — and when it may report afterwards
+
+**Default: merge on a green local `npm run verify`; CI runs on the push and reports.** The full rule,
+with its four safety conditions and what the ordering does NOT catch (a different environment,
+time-dependent checks like the security gate, and coverage) is in
+[VERIFY-RULES.md](VERIFY-RULES.md) R8-R9. **Two exceptions where CI must be green FIRST:** a change
+that touches CI, the guards or the verify path itself (the local run would be marking its own
+homework), and the state immediately before an unattended night block.
+
 ### THE THREE FINGERPRINTS — which one a block owes
 
 They are CHANGE DETECTORS, not prohibitions. A block may move one deliberately; what it may not do

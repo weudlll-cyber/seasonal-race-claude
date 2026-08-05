@@ -38,6 +38,13 @@
 //    the speed/duration ship: the shipped race is now each track's canonical default (laps for
 //    closed, seconds for open) at ONE normal speed, and the method switched --dur=60 → --track-defaults.)
 // ============================================================
+
+// VERIFY-FAST-1: every guard prints its own elapsed time. The ceremony's cost column was wrong
+// in BOTH directions (camera claimed ~85 s and costs 47; render claimed ~30 s and costs 15) and
+// nothing checked it. A number the script measures itself cannot go stale.
+const __t0 = Date.now();
+process.on('exit', () => process.stderr.write(`[${__t0 && ''}elapsed ${((Date.now() - __t0) / 1000).toFixed(1)}s]
+`));
 import { execFile } from "child_process";
 import { readFileSync } from "fs";
 import { createHash } from "crypto";

@@ -26,6 +26,13 @@
 // see the tags must break the build, never bless it.
 // ============================================================
 
+// VERIFY-FAST-1: every guard prints its own elapsed time. The ceremony's cost column was wrong
+// in BOTH directions (camera claimed ~85 s and costs 47; render claimed ~30 s and costs 15) and
+// nothing checked it. A number the script measures itself cannot go stale.
+const __t0 = Date.now();
+process.on('exit', () => process.stderr.write(`[${__t0 && ''}elapsed ${((Date.now() - __t0) / 1000).toFixed(1)}s]
+`));
+
 import { readFileSync } from 'node:fs';
 import { execSync } from 'node:child_process';
 import { resolve } from 'node:path';
