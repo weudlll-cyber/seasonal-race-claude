@@ -7,6 +7,32 @@ Items ranked by urgency within each bucket. ✅ = done, 🔜 = next, ⏳ = waiti
 
 ---
 
+## Instrument coverage residuals (2026-08-05, from FINISH-MOTION-1)
+
+- [ ] **THE RENDER FINGERPRINT CANNOT SEE THE FINISH PHASE — it did not confirm "no render change",
+      it could not have.** `render-fingerprint.mjs` drives `RUN_FRAMES = 3400` and samples at
+      `[0, 90, 600, 1500, 2400, 3300]`; the finish occurs at frames **3466–5218** on the tracks
+      measured. So the most authored moment in the game is entirely outside its coverage. The fix
+      needs a DECISION, not a patch: a second sample set that runs past the finish, or one
+      event-anchored sample ("the frame after FINISH_OVERVIEW begins") — which the harness's own
+      header argues against on reproducibility grounds ("fixed indices, never events").
+- [ ] **NOTHING MEASURES MOTION, only per-frame VALUES.** A 2708 px one-frame step was invisible to
+      the camera fingerprint (which hashes state, and duly hashed it as just another frame) and
+      survived repeated refactoring of `CameraDirector.js`. `scripts/finish-motion-truth.mjs` is now
+      that instrument for one phase. **Proposed as its own measurement block:** a motion-continuity
+      check across the whole race, flagging any frame whose pan displacement exceeds N× the local
+      median outside the enumerable deliberate cuts (the `cut` grammar, LEAD_CHANGE's snap). The same
+      pinned-offset-plus-moving-target pattern exists at every entry into a T-space-lerped state.
+- [ ] **A FINGERPRINT EXPECTED TO MOVE STOPS GUARDING WHAT MOVED WITH IT.** FINISH-MOTION-1 caught a
+      108 px regression in the RESTING frame only by accident, while measuring something else — the
+      camera fingerprint moved, as intended, so the regression would have been read as intended too.
+      **Proposed convention:** any block that re-mints a fingerprint names one or two specific
+      invariants that must NOT move, and measures them. Costs a few lines per block.
+- [ ] **Garden Path does not finish** within the shared driver's 200 s ceiling at n=40 / 60 s
+      requested (`finishedCount` still 0 at frame 12000), so it is unmeasurable for any finish-phase
+      harness — 9 of 10 tracks. Not a camera fault; worth asking why a 60-second race exceeds 200
+      seconds of simulation.
+
 ## Build-identity residuals (2026-08-05, from BUILD-UNKNOWN-1)
 
 - [x] **DONE — the build badge's failure path carries its reason.** `git()` captured stderr and the
