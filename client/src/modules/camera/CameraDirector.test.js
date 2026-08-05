@@ -4936,6 +4936,70 @@ describe('CameraDirector — FINISH_OVERVIEW lookback', () => {
     return racers;
   }
 
+  // ── THE COMPANY GUARANTEE RETIRES ONCE THE COMPANY IS HOME (FINISH-COMPANY-1) ───────────────
+  //
+  // Both positions, because the whole change is a switch: with enough finishers the ceiling stops
+  // moving, with too few it still applies. A test of only the first would pass against a guarantee
+  // that had been deleted outright.
+  describe('company guarantee at the finish', () => {
+    /** A finish-mode frame with `finishedCount` home and one straggler far from the anchor. */
+    function finishFrame(cd, finishedCount) {
+      const racers = [
+        { t: FINISH_T, x: LEADER_X, y: LEADER_Y, finished: true, index: 0 },
+        // The back-marker, far enough away that the guarantee would widen a long way for him.
+        { t: 0.2, x: 400, y: LEADER_Y + 300, finished: false, index: 1 },
+      ];
+      const rs = { raceElapsed: 10000, finishedCount, finishT: FINISH_T };
+      cd.update(racers, 1000, rs, CANVAS_W, CANVAS_H);
+      cd.stateEnteredAt = 0;
+      cd.update(racers, 3000, { ...rs, raceElapsed: 12000 }, CANVAS_W, CANVAS_H);
+      cd.stateEnteredAt = 0;
+      cd.update(racers, 9000, { ...rs, raceElapsed: 18000 }, CANVAS_W, CANVAS_H);
+      return cd._framingProbe;
+    }
+
+    it('with the leader plus minRacersVisible home, the ceiling stops moving', () => {
+      // minRacersVisible 3 → the guarantee retires at finishedCount >= 4.
+      const cd = makeCD(300, { minRacersVisible: 3 });
+      const probe = finishFrame(cd, 4);
+      expect(cd._inFinishMode).toBe(true);
+      expect(probe.guaranteed).toBeCloseTo(probe.stateZoom, 6);
+    });
+
+    it('with too FEW home, it still applies — the promise is not simply gone', () => {
+      const cd = makeCD(300, { minRacersVisible: 3 });
+      const probe = finishFrame(cd, 2); // 2 < 1 + 3
+      expect(probe.guaranteed).toBeLessThan(probe.stateZoom);
+    });
+
+    it('the threshold follows HIS number, not a constant', () => {
+      // At minRacersVisible 5 the same 4 finishers are no longer enough; at 3 they are.
+      const few = makeCD(300, { minRacersVisible: 5 });
+      expect(finishFrame(few, 4).guaranteed).toBeLessThan(few._framingProbe.stateZoom);
+      const enough = makeCD(300, { minRacersVisible: 3 });
+      const p = finishFrame(enough, 4);
+      expect(p.guaranteed).toBeCloseTo(p.stateZoom, 6);
+    });
+
+    it('it is scoped to the finish — mid-race the guarantee is untouched', () => {
+      // Same field, same headcount, but never in finish mode: the guarantee must still bind.
+      const cd = makeCD(300, { minRacersVisible: 3 });
+      const racers = [
+        { t: 0.5, x: LEADER_X, y: LEADER_Y, finished: false, index: 0 },
+        { t: 0.2, x: 400, y: LEADER_Y + 300, finished: false, index: 1 },
+      ];
+      cd.update(
+        racers,
+        1000,
+        { raceElapsed: 20000, finishedCount: 0, finishT: FINISH_T },
+        CANVAS_W,
+        CANVAS_H
+      );
+      expect(cd._inFinishMode).toBe(false);
+      expect(cd._framingProbe.guaranteed).toBeLessThan(cd._framingProbe.stateZoom);
+    });
+  });
+
   it('config round-trip: finishOverviewLookbackPx is stored from config', () => {
     const cd = new CameraDirector(1280, 720, false, { finishOverviewLookbackPx: 450 });
     expect(cd._finishOverviewLookbackPx).toBe(450);

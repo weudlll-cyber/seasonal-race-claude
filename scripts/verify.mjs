@@ -75,7 +75,13 @@ const isScript = (f) => f.startsWith("scripts/");
 const isClient = (f) => f.startsWith("client/src/");
 const isCamera = (f) => f.startsWith("client/src/modules/camera/");
 // The drawing path, from SHIP-CEREMONY's own list — anything whose diff can reach a `ctx.` call.
+// CAMERA COUNTS, and this was a real gap found by FINISH-COMPANY-1: a camera-only diff moved the
+// render fingerprint (b6591e74102152bd -> 1f83ecc1fcb6fa9a) while this matcher had told the block it
+// could not reach a `ctx.` call. Of course it can — the director decides the transform every drawn
+// frame, so the draw sequence is downstream of it. The ceremony's list was written when the render
+// fingerprint was new and camera work was assumed to be covered by the camera one; it is not.
 const isRender = (f) =>
+  f.startsWith("client/src/modules/camera/") ||
   /client\/src\/screens\/RaceScreen\/(renderRaceFrame|drawing\/|renderState)/.test(
     f,
   ) ||
