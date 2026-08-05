@@ -161,6 +161,27 @@ is a claim about a human being present to read it. A push followed by walking aw
 three-minute wait into an overnight red master, which is the one case where the cost stops being
 small — and it is exactly the situation R8's second exception exists for.
 
+## R10 — An eye test OWNS the dev server until the owner releases it
+
+**Rule.** While an eye test is pending, port **5173** serves the branch and commit being judged, and
+nothing else touches it. Your own work runs on a **different port** — `npm run dev -- --port 5273
+--strictPort`. Before handing an eye test over, state the exact pill (`<sha> · <branch>`, no
+`+dirty`), and confirm it by reading `http://localhost:5173/@id/__x00__virtual:ra-build` rather than
+by assuming. When the owner releases it, 5173 is free again.
+
+**Why it is safe — and why it is not optional.** This has now cost him two test runs in one evening.
+The failure mode is silent by construction: the dev server serves the WORKING TREE, so a branch
+switch or a stray edit re-points it with no warning, and the picture still looks plausible. His
+verdict then applies to a build that was never the one under test, which is worthless in exactly the
+way BUILD-TRUTH-1 and BUILD-UNKNOWN-1 were written to prevent — the pill was doing its job both
+times, and it was not read.
+
+**The practical consequence for the agent:** if a block needs the tree on a different branch while an
+eye test is pending, use a `git worktree` at a SHORT path outside the OneDrive tree
+(`git worktree add C:/ra-wt <branch>`), not a checkout in the main tree. Long paths under the
+scratchpad fail on this machine, and `git worktree prune` cannot delete the stale stubs here — both
+are the reparse-point condition recorded in the backlog.
+
 ---
 
 ## The instruments, and what each costs
