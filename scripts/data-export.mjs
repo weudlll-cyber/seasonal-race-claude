@@ -50,6 +50,18 @@ const arg = (k, d) => {
   return p ? p.slice(k.length + 3) : d;
 };
 const LIST_ONLY = process.argv.slice(2).includes("--list");
+/**
+ * `--minimal` drops `sessions.sqlite` and NOTHING else.
+ *
+ * It is the one file here that is both REGENERABLE and SENSITIVE: it holds live login tokens and
+ * rebuilds itself on the next login, so an archive that is going to travel — over email, onto a disk
+ * that leaves the house — should not carry it. Everything else stays in, deliberately: deciding what
+ * counts as the owner's data is not a script's call, and this is the only file where the answer is
+ * not a judgement.
+ */
+const MINIMAL = process.argv.slice(2).includes("--minimal");
+const MINIMAL_EXCLUDE = new Set(["sessions.sqlite"]);
+const excluded = [];
 
 /**
  * WHERE THE ARCHIVE GOES BY DEFAULT — and the honest limit on the choice.
@@ -103,6 +115,10 @@ for (const rel of files) {
   let why;
   if (!existsSync(sPath)) why = "no counterpart in seeds";
   else if (sha(dPath) !== sha(sPath)) why = "differs from seeds";
+  if (why && MINIMAL && MINIMAL_EXCLUDE.has(rel)) {
+    excluded.push({ rel, size });
+    continue;
+  }
   if (why) unique.push({ rel, size, why });
   else shared.push({ rel, size });
 }
@@ -141,6 +157,14 @@ if (unique.length) {
 }
 
 // ── THE TWO-LINE HUMAN SUMMARY ──────────────────────────────────────────────────────────────────
+// A SILENT EXCLUSION is the shape this project keeps paying for, so it is printed.
+if (excluded.length)
+  console.log(
+    `
+  --minimal EXCLUDED ${excluded.length} file(s): ` +
+      excluded.map((f) => `${f.rel} (${human(f.size)})`).join(", ") +
+      ` — live login tokens, rebuilt on the next login.`,
+  );
 console.log(
   `\n  ${unique.length} file(s) exist ONLY on this machine — ${human(uniqueBytes)}.\n` +
     `  ${shared.length} file(s) (${human(sharedBytes)}) are byte-identical to server/seeds and are NOT archived.`,
