@@ -361,16 +361,19 @@ with its date and — where one exists — the measurement that framed it.
 
 ### 7.2 Rejected by him — and both are natural ideas that will return
 
-These live in [DEAD-ENDS.md](DEAD-ENDS.md) with their full reasoning; they are listed here so a
-reader of the camera reference finds them at all. **DEAD-ENDS is the authority — if the two ever
-disagree, it wins.** This is a deliberate, declared duplication of two numbers: a bare pointer would
-not stop somebody who reads only this file from re-proposing the idea, and stopping that is the whole
-point of recording a rejection.
+These live in [DEAD-ENDS.md](DEAD-ENDS.md) with their full reasoning **and all their numbers**; they
+are listed here so a reader of the camera reference finds them at all.
+
+**What is repeated here is the REASON, never the measurement — deliberately.** A bare pointer does
+not stop the idea being re-proposed; the reason does, and the reason is the part that cannot go
+stale. A number in two homes drifts, and the ceremony's own cost column proved that this week: it sat
+at `~85 s` for the camera fingerprint through two mints because it was only ever corrected where
+somebody happened to be looking. So the numbers live in DEAD-ENDS alone.
 
 | what he rejected | when | why, in one line |
 |---|---|---|
-| **The zoom unit as a fraction of each track's own width** ([§I](DEAD-ENDS.md)) | 2026-08-05 | Tested by him on searound at the values his unit delivers (LEADER **0.62** / OVERVIEW **1.25**) and rejected: **a smaller window means the world moves through it faster, and the picture became restless.** The fixed reference has a virtue nobody had written down — a fixed amount of world means the same SENSE OF CAMERA SPEED on all ten tracks. The measurements agreed afterwards (breathing 1.000× → 2.032× on searound) but were run *because* he had already rejected it; they did not find it. |
-| **Counting finished racers as company at the finish** ([§J](DEAD-ENDS.md)) | 2026-08-05 | Refuted by measurement, not by eye: **54/58 widening frames baseline against 55/59 with it**, widening *further*. The FINISH_OVERVIEW anchor is the fixed lookback point, **not the field**, so finished racers run out *away* from it exactly as stragglers fall *back* from it. The idea assumes the anchor sits where the racers are; it deliberately does not. |
+| **The zoom unit as a fraction of each track's own width** ([§I](DEAD-ENDS.md)) | 2026-08-05 | Tested by him on searound and rejected: **a smaller window means the world moves through it faster, and the picture became restless.** The fixed reference has a virtue nobody had written down — a fixed amount of world means the same SENSE OF CAMERA SPEED on all ten tracks. The measurements agreed afterwards, but were run *because* he had already rejected it; they did not find it. |
+| **Counting finished racers as company at the finish** ([§J](DEAD-ENDS.md)) | 2026-08-05 | Refuted by measurement, not by eye: it widens the shot **further**, not less. The FINISH_OVERVIEW anchor is the fixed lookback point, **not the field**, so finished racers run out *away* from it exactly as stragglers fall *back* from it. The idea assumes the anchor sits where the racers are; it deliberately does not. |
 
 ### 7.3 THE STANDING GAP — what his eye has NOT seen
 
