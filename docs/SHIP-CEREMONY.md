@@ -20,7 +20,8 @@ Camera and other presentation work still skips this whole ceremony. But it does 
 > **Mint once at the end of any block whose diff touches a file the race engine can REACH.** Ask the
 > repo, do not remember: `node scripts/engine-reach.mjs --check <your changed paths>` exits 0 if any
 > of them can change the race. If it does, run `node scripts/fingerprint-default.mjs`, compare
-> against the shipped fingerprint, and say the result in the report. About two minutes.
+> against the shipped fingerprint, and say the result in the report. Its cost is in the generated
+> table below — this sentence deliberately quotes no duration.
 
 **The trigger is a computed set, not a folder (VERIFY-COST-1).** It is the transitive closure of
 `raceCore.js`'s imports — **19 files** — against the **103** files under `client/src/modules/`
@@ -78,11 +79,29 @@ homework), and the state immediately before an unattended night block.
 They are CHANGE DETECTORS, not prohibitions. A block may move one deliberately; what it may not do
 is move one without noticing.
 
-| | covers | run it when | cost |
-|---|---|---|---|
-| `scripts/fingerprint-default.mjs` — **world** `dc4647be0f55ebdb` | the RACE: physics, plan, outcome | any behaviour change, and per the mint tripwire above | ~2 min |
-| `scripts/camera-fingerprint.mjs` — **camera** `00cafa2432add0f7` | the DIRECTOR's decisions: state, phase, anchor, zoom, offsets, camT, targets | any block touching `client/src/modules/camera/` | ~47 s |
-| `scripts/render-fingerprint.mjs` — **render** `1f83ecc1fcb6fa9a` | the DRAW CALL SEQUENCE: sprite placement, text, styles, transforms, layer order | any block touching the drawing path — **`modules/camera/`**, `RaceScreen/renderRaceFrame.js`, `RaceScreen/drawing/`, `nameTagLayout.js`, `Minimap.js`, the racer types' `drawRacer`. **Camera counts** (FINISH-COMPANY-1): a camera-only diff moved this hash `b6591e74102152bd` → `1f83ecc1fcb6fa9a`, because the director decides the transform on every drawn frame. `scripts/verify.mjs` had copied this list's omission and told a block it could not reach a `ctx.` call. | ~77 s |
+| | covers | run it when |
+|---|---|---|
+| `scripts/fingerprint-default.mjs` — **world** `dc4647be0f55ebdb` | the RACE: physics, plan, outcome | any behaviour change, and per the mint tripwire above |
+| `scripts/camera-fingerprint.mjs` — **camera** `00cafa2432add0f7` | the DIRECTOR's decisions: state, phase, anchor, zoom, offsets, camT, targets | any block touching `client/src/modules/camera/` |
+| `scripts/render-fingerprint.mjs` — **render** `1f83ecc1fcb6fa9a` | the DRAW CALL SEQUENCE: sprite placement, text, styles, transforms, layer order | any block touching the drawing path — **`modules/camera/`**, `RaceScreen/renderRaceFrame.js`, `RaceScreen/drawing/`, `nameTagLayout.js`, `Minimap.js`, the racer types' `drawRacer`. **Camera counts** (FINISH-COMPANY-1): a camera-only diff moved this hash `b6591e74102152bd` → `1f83ecc1fcb6fa9a`, because the director decides the transform on every drawn frame. `scripts/verify.mjs` had copied this list's omission and told a block it could not reach a `ctx.` call. |
+
+<!-- BEGIN GENERATED: guard costs — gen-ceremony-costs.mjs -->
+
+**Costs below are GENERATED, never typed** — measured on commit `703b5b6e`, 2026-08-05 22:30 UTC, on `Testrechner`,
+by `node scripts/gen-ceremony-costs.mjs`. Each guard times ITSELF and prints `[ra-elapsed-ms N]`;
+this table quotes those numbers. A duration here that nobody measured is a bug in the generator,
+not a typo. `--check` warns once the block is more than 40 commits old.
+
+| guard | cost |
+|---|---|
+| `scripts/fingerprint-default.mjs` — **world** | 120 s |
+| `scripts/camera-fingerprint.mjs` — **camera** | 39 s |
+| `scripts/render-fingerprint.mjs` — **render** | 32 s |
+| `scripts/check-doc-links.mjs` | 0 s |
+| `scripts/check-index.mjs` | 0 s |
+| `scripts/check-tags.mjs` | 1 s |
+
+<!-- END GENERATED: guard costs -->
 
 **Why the render one earns its cost only on drawing blocks.** The camera fingerprint already covers
 every decision the director makes, and it is the cheaper answer for camera-only work. The render
