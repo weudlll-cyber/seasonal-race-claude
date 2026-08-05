@@ -1,4 +1,23 @@
 #!/usr/bin/env sh
 # Run lint-staged on the client package before every commit.
 # lint-staged auto-fixes ESLint errors and Prettier formatting on staged files.
-cd client && npx lint-staged
+cd client && npx lint-staged || exit 1
+cd ..
+
+# VERIFY-FAST-1: the mint tripwire, delivered at the moment it applies.
+#
+# The rule lives in docs/SHIP-CEREMONY.md, and a rule a human reads on a busy day is exactly what
+# stage 2 of the original tripwire was built to replace. This PRINTS — it never blocks — because
+# "can this diff change the race?" is information the committer needs, not a veto: plenty of
+# legitimate commits touch the engine and mint afterwards.
+staged=$(git diff --cached --name-only)
+if [ -n "$staged" ]; then
+  if node scripts/engine-reach.mjs --check $staged >/dev/null 2>&1; then
+    echo ""
+    echo "  !  THIS DIFF CAN CHANGE THE RACE - mint before you ship:"
+    node scripts/engine-reach.mjs --check $staged 2>/dev/null | sed 's/^/     /'
+    echo "     node scripts/fingerprint-default.mjs   (world dc4647be0f55ebdb)"
+    echo ""
+  fi
+fi
+exit 0

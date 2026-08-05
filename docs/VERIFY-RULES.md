@@ -13,6 +13,27 @@ quietly dropped, which is worse than not having it.
 
 ---
 
+## R0 — One command: `npm run verify`
+
+**Rule.** Run `npm run verify`. It reads the diff, chooses the guards that can possibly have
+something to say about it, runs them concurrently, and prints what it chose AND what it skipped with
+a reason for each. `--dry` prints the plan without running anything.
+
+**Why it is safe.** Nothing is removed — CI still runs the full set including coverage. What changes
+is which guards run LOCALLY on a diff that cannot reach them. And a skip is printed as loudly as a
+run: a verifier that silently does less is indistinguishable from one that is broken, which is the
+failure mode this project has already paid for twice.
+
+## R0b — Format, then measure, then commit
+
+**Rule.** Formatting happens BEFORE the fingerprints are measured. `npm run verify` enforces the
+order itself; `--no-format` opts out and says so.
+
+**Why it is safe.** The pre-commit hook reformats. Until this rule, it did so AFTER the block had
+measured, so every measurement described a tree that was never committed and had to be taken again.
+Behaviour, not formatting, sets a fingerprint — so the second pass never changed a number, it only
+cost the time. Formatting first removes an entire measuring pass with no loss of certainty.
+
 ## R1 — The world fingerprint runs when the engine can reach the diff
 
 **Rule.** Run `node scripts/fingerprint-default.mjs` when your diff touches a file the race engine can
@@ -104,6 +125,62 @@ with both positions beats six instance tests with neither.
 
 **Reporting rule.** Report tests DELETED or MERGED alongside tests added. A block that reports only
 additions cannot demonstrate restraint even when it exercised it.
+
+## R8 — Merge on a green LOCAL verify; CI runs after and reports
+
+**Rule.** Do not wait on CI before merging. Merge when `npm run verify` is green locally; CI runs on
+the push and reports. **Two exceptions, and they are not negotiable:**
+
+1. **The change touches CI, the guards, or the verify path itself.** Then the local run is marking its
+   own homework and CI must be green FIRST.
+2. **Immediately before an unattended night block.** Master must be provably good, because hours of
+   work will be built on it with nobody watching.
+
+**Why it is safe here, and the "here" is load-bearing.** A red master costs this project almost
+nothing: nothing is deployed, the owner's dev server runs from the working tree, there is no second
+developer building on it, and he is notified within minutes either way. Waiting costs three to four
+minutes per block of nobody doing anything. That trade is only correct under those four conditions —
+if any of them stops being true, this rule stops being safe.
+
+**WHAT THIS ORDERING DOES NOT CATCH**, and it is the real cost:
+
+- **A different environment.** CI runs on a clean Linux runner; the local verify runs on Windows with
+  the owner's node and an OneDrive-synced tree. Path handling, line endings and case-sensitivity
+  differ, and only CI sees the first one to break.
+- **Time-dependent checks.** The security-audit gate went red two days ago because an advisory
+  appeared upstream, not because of any commit. Nothing local can anticipate that.
+- **Coverage.** It runs only in CI (see below), so a coverage regression is invisible until after the
+  merge.
+
+## R9 — Do not walk away before the notification has been seen
+
+**Rule.** After pushing, stay until the CI result has arrived and been read.
+
+**Why it is safe.** R8's entire safety argument is "he is notified within minutes either way". That
+is a claim about a human being present to read it. A push followed by walking away converts a
+three-minute wait into an overnight red master, which is the one case where the cost stops being
+small — and it is exactly the situation R8's second exception exists for.
+
+## R10 — An eye test OWNS the dev server until the owner releases it
+
+**Rule.** While an eye test is pending, port **5173** serves the branch and commit being judged, and
+nothing else touches it. Your own work runs on a **different port** — `npm run dev -- --port 5273
+--strictPort`. Before handing an eye test over, state the exact pill (`<sha> · <branch>`, no
+`+dirty`), and confirm it by reading `http://localhost:5173/@id/__x00__virtual:ra-build` rather than
+by assuming. When the owner releases it, 5173 is free again.
+
+**Why it is safe — and why it is not optional.** This has now cost him two test runs in one evening.
+The failure mode is silent by construction: the dev server serves the WORKING TREE, so a branch
+switch or a stray edit re-points it with no warning, and the picture still looks plausible. His
+verdict then applies to a build that was never the one under test, which is worthless in exactly the
+way BUILD-TRUTH-1 and BUILD-UNKNOWN-1 were written to prevent — the pill was doing its job both
+times, and it was not read.
+
+**The practical consequence for the agent:** if a block needs the tree on a different branch while an
+eye test is pending, use a `git worktree` at a SHORT path outside the OneDrive tree
+(`git worktree add C:/ra-wt <branch>`), not a checkout in the main tree. Long paths under the
+scratchpad fail on this machine, and `git worktree prune` cannot delete the stale stubs here — both
+are the reparse-point condition recorded in the backlog.
 
 ---
 

@@ -54,6 +54,13 @@
 // the samples are the expensive part and only exist to advance the race to the next one.
 // ============================================================
 
+// VERIFY-FAST-1: every guard prints its own elapsed time. The ceremony's cost column was wrong
+// in BOTH directions (camera claimed ~85 s and costs 47; render claimed ~30 s and costs 15) and
+// nothing checked it. A number the script measures itself cannot go stale.
+const __t0 = Date.now();
+process.on('exit', () => process.stderr.write(`[${__t0 && ''}elapsed ${((Date.now() - __t0) / 1000).toFixed(1)}s]
+`));
+
 import { createHash } from "node:crypto";
 import { readFileSync, readdirSync, existsSync } from "node:fs";
 import { join, dirname } from "node:path";
