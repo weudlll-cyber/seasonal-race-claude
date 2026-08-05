@@ -24,49 +24,29 @@
 //   node scripts/tracking-lag.mjs --overview-tc=1.5,0.25  # slow ENTRY kept, slow TRACKING dropped
 // ============================================================
 
-import { readFileSync, readdirSync, existsSync } from 'node:fs';
-import { join, dirname } from 'node:path';
-import { fileURLToPath, pathToFileURL } from 'node:url';
-
-const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
-const u = (p) => pathToFileURL(join(ROOT, p)).href;
-
-const { DEFAULT_CAMERA_CONFIG, DEFAULT_CONFIG_WORLD } = await import(
-  u('client/src/modules/storage/defaults.js')
-);
-const { EditorShape } = await import(u('client/src/modules/track-editor/EditorShape.js'));
-const { CameraDirector } = await import(u('client/src/modules/camera/CameraDirector.js'));
-const { createRaceFromIdentity, stepRacePhysics, FIXED_DT } = await import(
-  u('client/src/modules/raceCore.js')
-);
-const { normalSpeedFrom } = await import(u('client/src/modules/durationModel.js'));
-const { computeRacerLayout, computeBodyNarrowRef } = await import(
-  u('client/src/modules/rowLayout.js')
-);
-const { frameExtentAlong } = await import(u('client/src/modules/camera/frameGeometry.js'));
-const { framingFor, POSITION } = await import(u('client/src/modules/camera/framingRule.js'));
-const RT = await (async () => {
-  const re = console.error;
-  console.error = () => {};
-  try {
-    return await import(u('client/src/modules/racer-types/index.js'));
-  } finally {
-    console.error = re;
-  }
-})();
-
-const CW = 1280;
-const CH = 720;
-const N = 40;
-const SEED = 5601;
-const CAM_SEED = 1439767152;
+import {
+  resolveIdentity,
+  formatIdentity,
+  loadTracks,
+  buildRace,
+  runRace,
+  TRACK_DEFAULT_RACER,
+} from './lib/raceDriver.mjs';
+import { DEFAULT_CAMERA_CONFIG } from '../client/src/modules/storage/defaults.js';
+import { frameExtentAlong } from '../client/src/modules/camera/frameGeometry.js';
+import { framingFor, POSITION } from '../client/src/modules/camera/framingRule.js';
 
 const tcArg = process.argv.find((a) => a.startsWith('--overview-tc='));
 const OVERRIDE = tcArg ? tcArg.split('=')[1].split(',').map(Number) : null;
 
-const dir = existsSync(join(ROOT, 'server/data/tracks'))
-  ? join(ROOT, 'server/data/tracks')
-  : join(ROOT, 'server/seeds/tracks');
+const IDENTITY = resolveIdentity({
+  racers: 40,
+  raceSeed: 5601,
+  cameraSeed: 1439767152,
+  racerType: TRACK_DEFAULT_RACER,
+  seconds: 60,
+  note: 'the CAMERA-ANCHOR-TRUTH-1 measurement context',
+});
 
 const median = (a) => {
   if (!a.length) return NaN;
@@ -94,104 +74,20 @@ function cameraConfig() {
 }
 
 function measureTrack(geo, cfg) {
-  const shape = new EditorShape(geo);
-  const TW = geo.width ?? shape.getActualTrackWidth();
-  const W = DEFAULT_CONFIG_WORLD;
-  const behaviorConfig = { ...W.raceBehaviorConfig, isOpen: shape.isOpen };
-  const rt = RT.getRacerType(geo.defaultRacerTypeId ?? 'horse');
-  const ds = rt.config.displaySize;
-  const bfN = Math.min(rt.config.bodyFillX, rt.config.bodyFillY);
-  const bfL = Math.max(rt.config.bodyFillX, rt.config.bodyFillY);
-  const effW = TW * behaviorConfig.startSpreadRange;
-  const pss = computeRacerLayout(effW, N, ds, W.autoScaleConfig).spriteSize;
-  const br = computeBodyNarrowRef(Math.min(285, effW), N, ds, bfN, W.autoScaleConfig);
-  const bodyRef = ds * (br.bodyNarrow / ds);
-  const built = createRaceFromIdentity({
-    shape,
-    isOpenTrack: shape.isOpen,
-    pathLengthPx: geo.pathLengthPx ?? 0,
-    trackWidthPx: TW,
-    speedMultiplier: rt.getSpeedMultiplier(),
-    baseSpeedConfig: W.baseSpeedConfig,
-    behaviorConfig,
-    rowConfig: W.rowLayoutConfig,
-    dynamicsConfig: W.raceDynamicsConfig,
-    normalSpeedPxPerSec: normalSpeedFrom(W.baseSpeedConfig),
-    laps: shape.isOpen ? 1 : 2,
-    requestedSeconds: 60,
-    nRacers: N,
-    racePlanSeed: SEED,
-    racePlanEnabledFlag: true,
-    physicalSpriteSize: pss,
-    drawnBodyWidthRefPx: bodyRef,
-    bodyFillNarrow: bfN,
-    bodyFillLong: bfL,
-    constSpeedActive: false,
-  });
-  const st = built.state;
-  const raceCfg = built.config;
-  const meta = built.meta;
-  const cd = new CameraDirector(
-    geo.worldWidth,
-    geo.worldHeight,
-    shape.isOpen,
-    cfg,
-    bodyRef,
-    shape,
-    TW
-  );
-  cd.setRandomSeed(CAM_SEED);
-  if (meta.racePlanEnabled && meta.rpPlanInfo?.b1Indices) {
-    cd.updateRacePlan(meta.rpPlanInfo.b1Indices);
-  }
-  raceCfg.computePositions();
-
-  const RAW = 1000 / 60;
-  let ts = 0;
-  let accum = 0;
-  const cdMs = cfg.countdownDurationMs ?? 4000;
-  while (ts < cdMs) {
-    cd.updateCountdown(st.racers, ts, ts, cdMs, CW, CH);
-    ts += RAW;
-  }
-  const raceStart = ts;
-  st.physicsTs = 0;
+  const race = buildRace(geo, IDENTITY, cfg);
+  const { cd, st } = race;
 
   const byState = new Map();
 
-  while (st.finishedCount < N && ts - raceStart < 200000) {
-    accum += RAW;
-    let steps = 0;
-    while (accum >= FIXED_DT && steps++ < 2) {
-      stepRacePhysics(st, raceCfg);
-      accum -= FIXED_DT;
-    }
-    cd.update(
-      st.racers,
-      ts,
-      {
-        raceElapsed: ts - raceStart,
-        finishedCount: st.finishedCount,
-        winner: st.racers.find((r) => r.finishRank === 1) ?? null,
-        finishT: st.finishT,
-        isOutcomePhase: false,
-        physicsRacers: st.racers,
-      },
-      CW,
-      CH,
-      RAW
-    );
-
+  runRace(race, IDENTITY, cfg, () => {
     const p = cd._framingProbe;
     if (!p || !p.point || !(cd.zoom > 0) || cd.lerpPhase !== 'tracking') {
-      ts += RAW;
-      continue;
+      return;
     }
     const hs = cd._headingScreen(p.t);
     const hlen = hs ? Math.hypot(hs.x, hs.y) : 0;
     if (!(hlen > 0)) {
-      ts += RAW;
-      continue;
+      return;
     }
     const ux = hs.x / hlen;
     const uy = hs.y / hlen;
@@ -201,32 +97,25 @@ function measureTrack(geo, cfg) {
     const syPix = p.point.y * cd._proj.effY(cd.zoom) + cd.offsetY;
     const chord = frameExtentAlong(ux, uy, p.frameW, p.frameH);
     if (!(chord > 0)) {
-      ts += RAW;
-      continue;
+      return;
     }
     const along = (sxPix - p.frameW / 2) * ux + (syPix - p.frameH / 2) * uy;
     const actual = 0.5 + along / chord;
     const lagPp = Math.abs(intended - actual) * 100;
     if (!byState.has(cd.state)) byState.set(cd.state, []);
     byState.get(cd.state).push(lagPp);
-    ts += RAW;
-  }
+  });
   return byState;
 }
 
-const geos = [];
-for (const f of readdirSync(dir)) {
-  if (!f.endsWith('.json')) continue;
-  const j = JSON.parse(readFileSync(join(dir, f), 'utf8'));
-  if (j.id) geos.push(j);
-}
-geos.sort((a, b) => a.id.localeCompare(b.id));
+const geos = loadTracks();
 
 const cfg = cameraConfig();
 const prof = cfg.cameraStateProfiles?.OVERVIEW ?? cfg.stateProfiles?.OVERVIEW;
 console.log(
   `TRACKING LAG (percentage points of frame, tracking phase only) — OVERVIEW trackingTC=${prof.trackingTC} entryTC=${prof.entryTC}\n`
 );
+console.log(formatIdentity(IDENTITY));
 
 const pooled = new Map();
 for (const geo of geos) {

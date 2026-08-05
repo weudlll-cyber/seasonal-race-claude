@@ -16,62 +16,51 @@
 //         --defaults  run the shipped defaults arm instead of his settings
 // ============================================================
 
-import { readFileSync, readdirSync, existsSync } from 'node:fs';
-import { join, dirname } from 'node:path';
-import { fileURLToPath, pathToFileURL } from 'node:url';
+import {
+  resolveIdentity,
+  formatIdentity,
+  loadTracks,
+  buildRace,
+  runRace,
+  trackWidthOf,
+} from './lib/raceDriver.mjs';
+import { DEFAULT_CAMERA_CONFIG } from '../client/src/modules/storage/defaults.js';
+import { visibleWorldPx } from '../client/src/modules/camera/zoomUnit.js';
+import { roomFromPointAlong } from '../client/src/modules/camera/frameGeometry.js';
+import {
+  framingFor,
+  GUARANTEE,
+  POSITION,
+  anchorScreenPoint,
+} from '../client/src/modules/camera/framingRule.js';
+import {
+  computeRenderDisplayScale,
+  getEffectiveMaxTargetScreenPx,
+} from '../client/src/modules/autoSpriteScale.js';
 
-const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
-const u = (p) => pathToFileURL(join(ROOT, p)).href;
-
-const { DEFAULT_CAMERA_CONFIG, DEFAULT_CONFIG_WORLD } = await import(
-  u('client/src/modules/storage/defaults.js')
-);
-const { EditorShape } = await import(u('client/src/modules/track-editor/EditorShape.js'));
-const { CameraDirector } = await import(u('client/src/modules/camera/CameraDirector.js'));
-const { createRaceFromIdentity, stepRacePhysics, FIXED_DT } = await import(
-  u('client/src/modules/raceCore.js')
-);
-const { normalSpeedFrom } = await import(u('client/src/modules/durationModel.js'));
-const { computeRacerLayout, computeBodyNarrowRef } = await import(
-  u('client/src/modules/rowLayout.js')
-);
-const { visibleWorldPx } = await import(u('client/src/modules/camera/zoomUnit.js'));
-const { roomFromPointAlong } = await import(u('client/src/modules/camera/frameGeometry.js'));
-const { framingFor, GUARANTEE, POSITION, anchorScreenPoint } = await import(
-  u('client/src/modules/camera/framingRule.js')
-);
-const { computeRenderDisplayScale, getEffectiveMaxTargetScreenPx } = await import(
-  u('client/src/modules/autoSpriteScale.js')
-);
-const RT = await (async () => {
-  const re = console.error;
-  console.error = () => {};
-  try {
-    return await import(u('client/src/modules/racer-types/index.js'));
-  } finally {
-    console.error = re;
-  }
-})();
-
-const CW = 1280;
 const CH = 720;
-const N = 65;
-const SEED = 5601;
-const CAM_SEED = 882944666;
-const RACER_TYPE = 'boarder';
-const SECONDS = 60;
-
 const USE_DEFAULTS = process.argv.includes('--defaults');
 // ARM B — THE OWNER'S UNIT: 1.0 means "this track's own road width", not the fixed 300 reference.
 // It needs NO code change: `referenceWidthFor` returns max(referenceCorridorPx, trackWidthPx), so
 // setting referenceCorridorPx to the track's own width IS his unit, expressed in the shipped config.
 const OWNER_UNIT = process.argv.includes('--owner-unit');
-// CAMERA-COMPANY-ONLY-1: the probe switch.
 const COMPANY_ONLY = process.argv.includes('--company-only');
 const mrArg = process.argv.find((a) => a.startsWith('--min-racers='));
 const MIN_RACERS = mrArg ? Number(mrArg.split('=')[1]) : null;
 const trackArg = process.argv.find((a) => a.startsWith('--track='));
 const ONLY = trackArg ? trackArg.split('=')[1] : null;
+
+// THE OWNER'S REAL RACE CONTEXT, taken from his marker — deliberately NOT the n=40 context the other
+// three harnesses use. That is the point of this script, and it is why the identity prints: NIGHT-1
+// once put a figure measured here beside figures measured at n=40.
+const IDENTITY = resolveIdentity({
+  racers: 65,
+  raceSeed: 5601,
+  cameraSeed: 882944666,
+  racerType: 'boarder',
+  seconds: 60,
+  note: "the owner's own race context, from his marker",
+});
 
 /** The owner's settings as of 2026-08-04. A measurement fixture — nothing here is written anywhere. */
 const HIS_TOP = {
@@ -102,10 +91,6 @@ function cameraConfig() {
   return cfg;
 }
 
-const dir = existsSync(join(ROOT, 'server/data/tracks'))
-  ? join(ROOT, 'server/data/tracks')
-  : join(ROOT, 'server/seeds/tracks');
-
 const med = (a) => {
   if (!a.length) return NaN;
   const s = [...a].sort((x, y) => x - y);
@@ -115,69 +100,12 @@ const med = (a) => {
 
 function measure(geo, cfgIn) {
   const cfg = JSON.parse(JSON.stringify(cfgIn));
-  const shape = new EditorShape(geo);
-  const TW = geo.width ?? shape.getActualTrackWidth();
+  // The reference width must be set BEFORE the director is constructed: buildRace reads the config
+  // to compute every zoom level, so mutating it afterwards would silently do nothing.
+  const TW = trackWidthOf(geo);
   if (OWNER_UNIT) cfg.referenceCorridorPx = TW;
-  const W = DEFAULT_CONFIG_WORLD;
-  const behaviorConfig = { ...W.raceBehaviorConfig, isOpen: shape.isOpen };
-  const rt = RT.getRacerType(RACER_TYPE);
-  const ds = rt.config.displaySize;
-  const bfN = Math.min(rt.config.bodyFillX, rt.config.bodyFillY);
-  const bfL = Math.max(rt.config.bodyFillX, rt.config.bodyFillY);
-  const effW = TW * behaviorConfig.startSpreadRange;
-  const pss = computeRacerLayout(effW, N, ds, W.autoScaleConfig).spriteSize;
-  const br = computeBodyNarrowRef(Math.min(285, effW), N, ds, bfN, W.autoScaleConfig);
-  const bodyRef = ds * (br.bodyNarrow / ds);
-  const built = createRaceFromIdentity({
-    shape,
-    isOpenTrack: shape.isOpen,
-    pathLengthPx: geo.pathLengthPx ?? 0,
-    trackWidthPx: TW,
-    speedMultiplier: rt.getSpeedMultiplier(),
-    baseSpeedConfig: W.baseSpeedConfig,
-    behaviorConfig,
-    rowConfig: W.rowLayoutConfig,
-    dynamicsConfig: W.raceDynamicsConfig,
-    normalSpeedPxPerSec: normalSpeedFrom(W.baseSpeedConfig),
-    laps: shape.isOpen ? 1 : 2,
-    requestedSeconds: SECONDS,
-    nRacers: N,
-    racePlanSeed: SEED,
-    racePlanEnabledFlag: true,
-    physicalSpriteSize: pss,
-    drawnBodyWidthRefPx: bodyRef,
-    bodyFillNarrow: bfN,
-    bodyFillLong: bfL,
-    constSpeedActive: false,
-  });
-  const st = built.state;
-  const raceCfg = built.config;
-  const meta = built.meta;
-  const cd = new CameraDirector(
-    geo.worldWidth,
-    geo.worldHeight,
-    shape.isOpen,
-    cfg,
-    bodyRef,
-    shape,
-    TW
-  );
-  cd.setRandomSeed(CAM_SEED);
-  if (meta.racePlanEnabled && meta.rpPlanInfo?.b1Indices) {
-    cd.updateRacePlan(meta.rpPlanInfo.b1Indices);
-  }
-  raceCfg.computePositions();
-
-  const RAW = 1000 / 60;
-  let ts = 0;
-  let accum = 0;
-  const cdMs = cfg.countdownDurationMs ?? 4000;
-  while (ts < cdMs) {
-    cd.updateCountdown(st.racers, ts, ts, cdMs, CW, CH);
-    ts += RAW;
-  }
-  const raceStart = ts;
-  st.physicsTs = 0;
+  const race = buildRace(geo, IDENTITY, cfg);
+  const { cd, st, shape, displaySize: ds, bodyRef, racerType: rt } = race;
 
   const byState = new Map();
   const bindByState = new Map();
@@ -191,30 +119,11 @@ function measure(geo, cfgIn) {
   let pairFallback = 0;
   let floorBound = 0;
   let drawnN = 0;
-  const dsScale = br.bodyNarrow / ds;
+  // bodyRef IS br.bodyNarrow by construction (ds * (bodyNarrow / ds)), so this is the same value
+  // the old prologue computed — the driver returns the reference rather than the intermediate.
+  const dsScale = bodyRef / ds;
 
-  while (st.finishedCount < N && ts - raceStart < 200000) {
-    accum += RAW;
-    let steps = 0;
-    while (accum >= FIXED_DT && steps++ < 2) {
-      stepRacePhysics(st, raceCfg);
-      accum -= FIXED_DT;
-    }
-    cd.update(
-      st.racers,
-      ts,
-      {
-        raceElapsed: ts - raceStart,
-        finishedCount: st.finishedCount,
-        winner: st.racers.find((r) => r.finishRank === 1) ?? null,
-        finishT: st.finishT,
-        isOutcomePhase: false,
-        physicsRacers: st.racers,
-      },
-      CW,
-      CH,
-      RAW
-    );
+  runRace(race, IDENTITY, cfg, () => {
     const p = cd._framingProbe;
     if (p && cd.targetZoom > 0 && cd.lerpPhase === 'tracking') {
       // The shot the camera is AIMING at, so the tracking lag does not blur the reading.
@@ -288,8 +197,7 @@ function measure(geo, cfgIn) {
         if (proportional < (cfg.minDrawnFrameFrac ?? 0) * CH) floorBound++;
       }
     }
-    ts += RAW;
-  }
+  });
   return {
     id: geo.id,
     open: shape.isOpen,
@@ -304,13 +212,7 @@ function measure(geo, cfgIn) {
   };
 }
 
-const geos = [];
-for (const f of readdirSync(dir)) {
-  if (!f.endsWith('.json')) continue;
-  const j = JSON.parse(readFileSync(join(dir, f), 'utf8'));
-  if (j.id && (!ONLY || j.id === ONLY)) geos.push(j);
-}
-geos.sort((a, b) => a.id.localeCompare(b.id));
+const geos = loadTracks({ only: ONLY });
 
 const cfg = cameraConfig();
 console.log(
@@ -319,7 +221,7 @@ console.log(
       ? '  ·  ARM B: HIS UNIT (1.0 = this track own width)'
       : '  ·  ARM A: shipped unit (fixed 300 reference)')
 );
-console.log(`seed ${SEED}, n=${N}, ${RACER_TYPE}, ${SECONDS}s, camSeed ${CAM_SEED}\n`);
+console.log(formatIdentity(IDENTITY));
 console.log(
   'track            TW   state             frames    min      median      max     breath   guarantee binds'
 );
