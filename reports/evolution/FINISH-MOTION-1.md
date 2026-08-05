@@ -356,10 +356,12 @@ not", at the cost of a few lines per block.
 
 ## 9. HANDOVER — the owner's eye test
 
-**Read the build pill first.** It must say **`build a65c013c · feat/finish-motion-1`**. If it says
-anything else, or `build unknown`, stop and restart the dev server — a verdict on an unidentifiable
-build is what this project has already paid for twice. The dev server has been restarted for you and
-was serving that exact identity a moment ago.
+**Read the build pill first.** It must say **`build a65c013c`** or **`build 548cea15`**, on branch
+`feat/finish-motion-1`. Both are correct: `a65c013c` is the camera change and `548cea15` adds only
+this report, so the behaviour you are judging is identical. If it says anything else — a different
+branch, an older sha, `+dirty`, or `build unknown` — stop and restart the dev server, because a
+verdict on an unidentifiable build is what this project has already paid for twice. The dev server
+has been restarted for you and was serving `a65c013c` a moment ago.
 
 Three lines:
 
