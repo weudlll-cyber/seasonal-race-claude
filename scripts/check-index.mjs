@@ -20,19 +20,22 @@
 // in BOTH directions (camera claimed ~85 s and costs 47; render claimed ~30 s and costs 15) and
 // nothing checked it. A number the script measures itself cannot go stale.
 const __t0 = Date.now();
-process.on('exit', () => process.stderr.write(`[${__t0 && ''}elapsed ${((Date.now() - __t0) / 1000).toFixed(1)}s]
-`));
+process.on("exit", () =>
+  process.stderr
+    .write(`[${__t0 && ""}elapsed ${((Date.now() - __t0) / 1000).toFixed(1)}s]
+`),
+);
 
-import { readFileSync, readdirSync } from 'node:fs';
-import { join, resolve, basename } from 'node:path';
+import { readFileSync, readdirSync } from "node:fs";
+import { join, resolve, basename } from "node:path";
 
 const argVal = (k, d) => {
   const p = process.argv.slice(2).find((a) => a.startsWith(`--${k}=`));
   return p ? p.slice(k.length + 3) : d;
 };
 
-const DIR = resolve(argVal('dir', 'reports/evolution'));
-const INDEX = resolve(argVal('index', join(DIR, 'INDEX.md')));
+const DIR = resolve(argVal("dir", "reports/evolution"));
+const INDEX = resolve(argVal("index", join(DIR, "INDEX.md")));
 const INDEX_NAME = basename(INDEX);
 
 function fail(msg) {
@@ -48,16 +51,16 @@ try {
 }
 
 // The reports are the flat *.md files in the dir; the index itself is exempt.
-const reports = entries.filter((f) => f.endsWith('.md') && f !== INDEX_NAME);
+const reports = entries.filter((f) => f.endsWith(".md") && f !== INDEX_NAME);
 if (reports.length === 0) {
   fail(
-    `zero reports found in ${DIR}. A guard that finds nothing to check is a no-op (Lesson 187); refusing to pass.`
+    `zero reports found in ${DIR}. A guard that finds nothing to check is a no-op (Lesson 187); refusing to pass.`,
   );
 }
 
 let indexText;
 try {
-  indexText = readFileSync(INDEX, 'utf8');
+  indexText = readFileSync(INDEX, "utf8");
 } catch (e) {
   fail(`cannot read index ${INDEX}: ${e.message}`);
 }
@@ -65,15 +68,38 @@ try {
 // A report is indexed iff its filename appears as a markdown LINK TARGET — i.e. immediately after
 // `(` (a sibling link `(NAME.md)`) or `/` (a pathed link `(dir/NAME.md)`). Matching the bare
 // filename anywhere would false-pass on substrings (e.g. "A.md" inside "DATA.md").
-const isIndexed = (f) => indexText.includes(`(${f}`) || indexText.includes(`/${f}`);
+const isIndexed = (f) =>
+  indexText.includes(`(${f}`) || indexText.includes(`/${f}`);
 const unindexed = reports.filter((f) => !isIndexed(f));
 
-console.log(`check-index: ${reports.length} reports checked, ${unindexed.length} unindexed.`);
+// DIRECTION 2 (NIGHT-TOOLS-1): every sibling report INDEX.md links to must EXIST. Only `(NAME.md)`
+// sibling targets are considered — a pathed link points outside this guard's relationship and is
+// `check-doc-links`' business, not ours. Anchors are stripped before the check.
+const linked = [
+  ...new Set(
+    [...indexText.matchAll(/\(([A-Za-z0-9._-]+\.md)(?:#[^)]*)?\)/g)].map(
+      (m) => m[1],
+    ),
+  ),
+].filter((f) => f !== INDEX_NAME);
+const present = new Set(reports);
+const missing = linked.filter((f) => !present.has(f));
+
+console.log(
+  `check-index: ${reports.length} reports checked, ${unindexed.length} unindexed; ` +
+    `${linked.length} index links checked, ${missing.length} pointing at a missing file.`,
+);
 
 if (unindexed.length > 0) {
   console.error(
-    `\nFAIL: ${unindexed.length} report(s) in ${DIR} not referenced from ${INDEX_NAME}:`
+    `\nFAIL: ${unindexed.length} report(s) in ${DIR} not referenced from ${INDEX_NAME}:`,
   );
   for (const f of unindexed) console.error(f);
-  process.exit(1);
 }
+if (missing.length > 0) {
+  console.error(
+    `\nFAIL: ${missing.length} link(s) in ${INDEX_NAME} point at a report that does not exist:`,
+  );
+  for (const f of missing) console.error(f);
+}
+if (unindexed.length > 0 || missing.length > 0) process.exit(1);
