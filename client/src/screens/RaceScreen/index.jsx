@@ -521,11 +521,17 @@ export default function RaceScreen() {
     // per-key source (stored vs default) for the two FOCUS-3 keys. Reload once and paste this to
     // settle any stale-bundle / stale-config ghost hunt in a single glance. This line stays forever.
     {
-      const commit = typeof __RA_COMMIT__ !== 'undefined' ? __RA_COMMIT__ : 'dev';
+      // ONE SOURCE. This used to read the `__RA_COMMIT__` Vite define — the frozen value
+      // BUILD-TRUTH-1 diagnosed — while the HUD pill read the live git identity. One value, two
+      // consumers, and only the consumer with a test got fixed: the line then printed 77919708
+      // twice, hours apart, across two different pills, and halted a ship on its own falsehood.
+      // Both artefacts now come from `RA_BUILD` and CANNOT disagree, which is asserted by a test.
+      const commit = RA_BUILD.commit;
       const prov = cameraConfigProvenance();
       // eslint-disable-next-line no-console
       console.info(
-        `[RA CAMERA LIVE TRUTH] commit=${commit} ` +
+        `[RA CAMERA LIVE TRUTH] commit=${commit} branch=${RA_BUILD.branch}` +
+          `${RA_BUILD.dirty ? ' DIRTY' : ''} ` +
           `resolvedGrammar=${camDirRef.current.transitionGrammar} ` +
           `leaderForwardFrac=${camDirRef.current.leaderForwardFrac ?? 'null'} ` +
           `hadStoredConfig=${prov.hadStored} ` +
@@ -577,7 +583,9 @@ export default function RaceScreen() {
           diff: cfgDiff,
           racerTypeOverrides: cfgWorld.racerTypeOverrides,
         },
-        build: typeof __RA_COMMIT__ !== 'undefined' ? __RA_COMMIT__ : 'dev',
+        // The THIRD consumer of the same value, and the one that started all of this: the marker's
+        // "build" field is what reported be649aa9 while the tree was 22 hours ahead of it.
+        build: RA_BUILD.commit,
         at: new Date().toISOString(),
       });
     };
