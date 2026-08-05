@@ -64,13 +64,14 @@ test("a retried test is named, with its file, its ATTEMPT count and its final st
     ]),
   ]);
   assert.equal(rows.length, 1);
-  assert.deepEqual(rows[0], {
-    file: "flaky.test.js",
-    name: "shaky",
-    attempts: 3, // 2 retries = 3 attempts; the off-by-one that would make this useless
-    state: "passed",
-    flaky: true,
-  });
+  // Asserted FIELD BY FIELD, not as a whole-object deepEqual. The row gained `attemptsDetail` and
+  // `totalMs` in stage 2 and a deepEqual broke on that addition — an instance assertion that objects
+  // to honest growth, which is the shape this project keeps replacing with property assertions.
+  assert.equal(rows[0].file, "flaky.test.js");
+  assert.equal(rows[0].name, "shaky");
+  assert.equal(rows[0].attempts, 3); // 2 retries = 3 attempts; the off-by-one that would matter
+  assert.equal(rows[0].state, "passed");
+  assert.equal(rows[0].flaky, true);
   const text = formatLedger(rows).join("\n");
   assert.match(text, /flaky\.test\.js/);
   assert.match(text, /3 attempts/);
