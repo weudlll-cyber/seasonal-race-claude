@@ -68,6 +68,7 @@ const DEFAULT_GLIDE_DURATION_MS = 500;
  *   countdownCorridors: number|undefined,
  *   innerFramePct: number,
  *   minRacersVisible: number,
+ *   companyOnlyFraming: boolean,
  *   transitionGrammar: 'cut'|'glide'|'legacy',
  *   glideDurationMs: number,
  *   leaderForwardFrac: number|null,
@@ -105,6 +106,8 @@ export function resolveFramingConfig(config) {
     countdownCorridors: config?.countdownStartCorridors,
     innerFramePct: config?.targetInnerFramePct ?? DEFAULT_INNER_FRAME_PCT,
     minRacersVisible: config?.minRacersVisible ?? DEFAULT_MIN_RACERS_VISIBLE,
+    // A boolean, so there is no band to validate — anything truthy is ON, absent is OFF (today).
+    companyOnlyFraming: !!config?.companyOnlyFraming,
     transitionGrammar: g === 'cut' ? 'cut' : g === 'glide' ? 'glide' : 'legacy',
     glideDurationMs: Number.isFinite(gd) && gd >= 300 && gd <= 900 ? gd : DEFAULT_GLIDE_DURATION_MS,
     leaderForwardFrac: Number.isFinite(lff) && lff > 0.5 && lff <= 0.8 ? lff : null,

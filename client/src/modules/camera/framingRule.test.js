@@ -940,3 +940,32 @@ describe('the corridor measures from the anchor (CAMERA-ANCHOR-TRUTH-1)', () => 
     expect(Number.isFinite(anchored)).toBe(true);
   });
 });
+
+// ============================================================
+// CAMERA-COMPANY-ONLY-1 — which states the switch may touch, and which it may NOT.
+//
+// The switch removes the CORRIDOR guarantee from the single-anchor states. That is only safe to
+// describe as "LEADER / OVERVIEW / COMEBACK" for as long as those are exactly the corridor states,
+// so this pins the mapping rather than trusting the sentence in the tooltip.
+// ============================================================
+describe('the switch’s reach is exactly the corridor states (CAMERA-COMPANY-ONLY-1)', () => {
+  it('the three single-anchor states are the CORRIDOR states', () => {
+    for (const state of ['LEADER_ZOOM', 'OVERVIEW', 'COMEBACK_ZOOM']) {
+      expect(framingFor(state).guarantee, state).toBe(GUARANTEE.CORRIDOR);
+    }
+  });
+
+  it('the pair states are NOT corridor states, so the switch cannot reach them', () => {
+    for (const state of ['BATTLE_ZOOM', 'LEAD_CHANGE', 'PHOTO_FINISH']) {
+      expect(framingFor(state).guarantee, state).toBe(GUARANTEE.PAIR);
+    }
+  });
+
+  it('there are exactly six states and no seventh has appeared unclassified', () => {
+    const states = Object.keys(FRAMING_BY_STATE);
+    expect(states).toHaveLength(6);
+    for (const s of states) {
+      expect([GUARANTEE.CORRIDOR, GUARANTEE.PAIR]).toContain(FRAMING_BY_STATE[s].guarantee);
+    }
+  });
+});

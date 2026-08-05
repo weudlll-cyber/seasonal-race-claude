@@ -36,6 +36,10 @@ const { computeRacerLayout, computeBodyNarrowRef } = await import(
   u('client/src/modules/rowLayout.js')
 );
 const { visibleWorldPx } = await import(u('client/src/modules/camera/zoomUnit.js'));
+const { roomFromPointAlong } = await import(u('client/src/modules/camera/frameGeometry.js'));
+const { framingFor, GUARANTEE, POSITION, anchorScreenPoint } = await import(
+  u('client/src/modules/camera/framingRule.js')
+);
 const { computeRenderDisplayScale, getEffectiveMaxTargetScreenPx } = await import(
   u('client/src/modules/autoSpriteScale.js')
 );
@@ -62,6 +66,10 @@ const USE_DEFAULTS = process.argv.includes('--defaults');
 // It needs NO code change: `referenceWidthFor` returns max(referenceCorridorPx, trackWidthPx), so
 // setting referenceCorridorPx to the track's own width IS his unit, expressed in the shipped config.
 const OWNER_UNIT = process.argv.includes('--owner-unit');
+// CAMERA-COMPANY-ONLY-1: the probe switch.
+const COMPANY_ONLY = process.argv.includes('--company-only');
+const mrArg = process.argv.find((a) => a.startsWith('--min-racers='));
+const MIN_RACERS = mrArg ? Number(mrArg.split('=')[1]) : null;
 const trackArg = process.argv.find((a) => a.startsWith('--track='));
 const ONLY = trackArg ? trackArg.split('=')[1] : null;
 
@@ -86,6 +94,8 @@ function cameraConfig() {
   const cfg = JSON.parse(JSON.stringify(DEFAULT_CAMERA_CONFIG));
   if (USE_DEFAULTS) return cfg;
   Object.assign(cfg, HIS_TOP);
+  if (COMPANY_ONLY) cfg.companyOnlyFraming = true;
+  if (MIN_RACERS != null) cfg.minRacersVisible = MIN_RACERS;
   for (const [state, v] of Object.entries(HIS_CORRIDORS)) {
     if (cfg.cameraStateProfiles[state]) cfg.cameraStateProfiles[state].visibleCorridors = v;
   }
@@ -173,6 +183,9 @@ function measure(geo, cfgIn) {
   const bindByState = new Map();
   // B1 — the PRICE: how big is a racer actually drawn, as a percentage of frame height?
   const drawnPct = [];
+  // M3 — THE PRICE: on CORRIDOR-guarantee states, how much of the road actually fits across the
+  // frame from where the anchor sits. < 1 means the road edge is out of frame.
+  const roadFrac = [];
   let floorBound = 0;
   let drawnN = 0;
   const dsScale = br.bodyNarrow / ds;
@@ -214,6 +227,33 @@ function measure(geo, cfgIn) {
         b[1] += 1;
       }
     }
+    // M3 sample — same method as corridor-truth.mjs, on corridor-guarantee states only.
+    {
+      const pp = cd._framingProbe;
+      const fr = framingFor(cd.state);
+      if (pp && fr.guarantee === GUARANTEE.CORRIDOR && cd.zoom > 0) {
+        const h = cd._headingAt(pp.t);
+        const hl = h ? Math.hypot(h.x, h.y) : 0;
+        if (hl > 0) {
+          const perp = { x: -h.y / hl, y: h.x / hl };
+          const sxp = perp.x * cd._proj.axisX;
+          const syp = perp.y * cd._proj.axisY;
+          const scaleP = cd.zoom * Math.hypot(sxp, syp);
+          if (scaleP > 0) {
+            const at = anchorScreenPoint(
+              pp.frameW,
+              pp.frameH,
+              fr.position === POSITION.FORWARD ? cd._leaderForwardFrac : null,
+              cd._headingScreen(pp.t)
+            );
+            const inner = cd._innerFramePct ?? 1;
+            const rp = roomFromPointAlong(at.x, at.y, sxp, syp, pp.frameW, pp.frameH, inner);
+            const rm = roomFromPointAlong(at.x, at.y, -sxp, -syp, pp.frameW, pp.frameH, inner);
+            roadFrac.push((2 * (Math.min(rp, rm) / scaleP)) / TW);
+          }
+        }
+      }
+    }
     // B1 sample, on the same frames
     if (cd.zoom > 0) {
       const frameEffZoom = cd._proj.effX(cd.zoom);
@@ -247,6 +287,7 @@ function measure(geo, cfgIn) {
     bindByState,
     drawnPct,
     floorPct: drawnN ? (100 * floorBound) / drawnN : 0,
+    roadFrac,
   };
 }
 
@@ -297,9 +338,18 @@ for (const r of B1) {
   const m = med(r.drawnPct);
   meds.push({ id: r.id, m });
   console.log(
-    '  ' + r.id.padEnd(15) + String(r.TW).padStart(3) + ' ' + mn.toFixed(2).padStart(7) +
-    '  ' + m.toFixed(2).padStart(8) + '  ' + mx.toFixed(2).padStart(7) + '   ' +
-    r.floorPct.toFixed(1).padStart(6) + '%'
+    '  ' +
+      r.id.padEnd(15) +
+      String(r.TW).padStart(3) +
+      ' ' +
+      mn.toFixed(2).padStart(7) +
+      '  ' +
+      m.toFixed(2).padStart(8) +
+      '  ' +
+      mx.toFixed(2).padStart(7) +
+      '   ' +
+      r.floorPct.toFixed(1).padStart(6) +
+      '%'
   );
 }
 if (meds.length) {
@@ -309,4 +359,27 @@ if (meds.length) {
   console.log('\n  SMALLEST racer: ' + lo.id + ' at ' + lo.m.toFixed(2) + '% of frame height');
   console.log('  BIGGEST  racer: ' + hi.id + ' at ' + hi.m.toFixed(2) + '%');
   console.log('  SPREAD across tracks = ' + (hi.m / lo.m).toFixed(3) + 'x');
+}
+
+// M3 — THE PRICE: how often is the road edge out of frame, and by how much?
+console.log('\nM3 - ROAD EDGE OUT OF FRAME (corridor states only; 1.00 = whole road fits)\n');
+console.log(
+  'track            TW   frames   out-of-frame%   worst (road fraction shown)   worst missing px'
+);
+for (const r of B1) {
+  if (!r.roadFrac || !r.roadFrac.length) continue;
+  const out = r.roadFrac.filter((v) => v < 1).length;
+  const worst = Math.min(...r.roadFrac);
+  const missing = worst < 1 ? (1 - worst) * r.TW : 0;
+  console.log(
+    '  ' +
+      r.id.padEnd(15) +
+      String(r.TW).padStart(3) +
+      String(r.roadFrac.length).padStart(8) +
+      ((100 * out) / r.roadFrac.length).toFixed(1).padStart(13) +
+      '%' +
+      worst.toFixed(3).padStart(24) +
+      missing.toFixed(0).padStart(20) +
+      ' px'
+  );
 }

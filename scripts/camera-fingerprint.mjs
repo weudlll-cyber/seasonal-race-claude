@@ -57,6 +57,12 @@ const N = 40;
 const SEED = 5601;
 const CAM_SEED = 1439767152;
 const QUIET = process.argv.includes('--quiet');
+// CAMERA-COMPANY-ONLY-1 probe. Off by default, so the DEFAULT invocation — the one the ceremony and
+// every gate use — is untouched. With it, the hash is a PROBE VALUE, not a baseline.
+const COMPANY_ONLY = process.argv.includes('--company-only');
+const CAM_CFG = COMPANY_ONLY
+  ? { ...DEFAULT_CAMERA_CONFIG, companyOnlyFraming: true }
+  : DEFAULT_CAMERA_CONFIG;
 
 const dir = existsSync(join(ROOT, 'server/data/tracks'))
   ? join(ROOT, 'server/data/tracks')
@@ -106,7 +112,7 @@ function trackHash(geo) {
     geo.worldWidth,
     geo.worldHeight,
     shape.isOpen,
-    DEFAULT_CAMERA_CONFIG,
+    CAM_CFG,
     bodyRef,
     shape,
     TW
@@ -193,7 +199,8 @@ if (QUIET) {
   console.log(COMBINED);
 } else {
   console.log(
-    `CAMERA ${COMBINED} (seed=${SEED} camSeed=${CAM_SEED}, ${geos.length} tracks, ${N} racers, default config)`
+    `CAMERA ${COMBINED} (seed=${SEED} camSeed=${CAM_SEED}, ${geos.length} tracks, ${N} racers, ` +
+      `${COMPANY_ONLY ? 'PROBE: companyOnlyFraming=true — NOT a baseline' : 'default config'})`
   );
   for (const r of rows) console.log(`  ${r.id.padEnd(16)} ${r.hash}  ${r.frames} frames`);
   console.log(

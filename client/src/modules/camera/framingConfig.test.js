@@ -187,3 +187,35 @@ describe('OVERVIEW time constants (CAMERA-ANCHOR-TRUTH-1 §4c)', () => {
     }
   });
 });
+
+// ============================================================
+// CAMERA-COMPANY-ONLY-1 — the switch. OFF must be today's behaviour, exactly.
+// ============================================================
+describe('companyOnlyFraming — a switch, not a decision', () => {
+  it('ships OFF, so today’s picture is the default', () => {
+    expect(DEFAULT_CAMERA_CONFIG.companyOnlyFraming).toBe(false);
+    expect(resolveFramingConfig(DEFAULT_CAMERA_CONFIG).companyOnlyFraming).toBe(false);
+  });
+
+  it('an absent key resolves to OFF — no schema, no migration', () => {
+    expect(resolveFramingConfig({}).companyOnlyFraming).toBe(false);
+    expect(resolveFramingConfig(null).companyOnlyFraming).toBe(false);
+    expect(resolveFramingConfig(undefined).companyOnlyFraming).toBe(false);
+  });
+
+  it('a stored value is honoured, both ways', () => {
+    expect(resolveFramingConfig({ companyOnlyFraming: true }).companyOnlyFraming).toBe(true);
+    expect(resolveFramingConfig({ companyOnlyFraming: false }).companyOnlyFraming).toBe(false);
+  });
+
+  it('is a boolean whatever was stored — it can never resolve to a number or a string', () => {
+    for (const v of [1, 'yes', {}, [], 'false']) {
+      expect(typeof resolveFramingConfig({ companyOnlyFraming: v }).companyOnlyFraming).toBe(
+        'boolean'
+      );
+    }
+    // Note the trap this pins: the STRING 'false' is truthy. Storing that would turn the probe ON.
+    expect(resolveFramingConfig({ companyOnlyFraming: 'false' }).companyOnlyFraming).toBe(true);
+    expect(resolveFramingConfig({ companyOnlyFraming: 0 }).companyOnlyFraming).toBe(false);
+  });
+});

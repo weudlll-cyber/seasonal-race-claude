@@ -451,6 +451,7 @@ export class CameraDirector {
 
     this._innerFramePct = f.innerFramePct;
     this._minRacersVisible = f.minRacersVisible;
+    this._companyOnlyFraming = f.companyOnlyFraming;
     this._transitionGrammar = f.transitionGrammar;
     this._glideDurationMs = f.glideDurationMs;
     this._leaderForwardFrac = f.leaderForwardFrac;
@@ -1808,6 +1809,13 @@ export class CameraDirector {
       // corridor so the shot is still bounded by something real.
       if (Number.isFinite(ceiling)) return ceiling;
     }
+    // CAMERA-COMPANY-ONLY-1: with the switch ON, the CORRIDOR guarantee is not applied in the three
+    // single-anchor states — the state's own setting and the COMPANY guarantee become the only
+    // limits, so his number is not overruled by the road width. Placed AFTER the PAIR branch on
+    // purpose: a pair state that falls through to the corridor (only one contender present) keeps
+    // it, because the pair states are deliberately untouched by this switch.
+    if (this._companyOnlyFraming && kind === GUARANTEE.CORRIDOR) return Infinity;
+
     // WHERE THE ANCHOR WILL SIT, from the framing rule — the same zoom-independent position the
     // company guarantee uses, for the same reason: the corridor runs half a track width to each
     // side of the anchor, so the room that matters is the room from THERE, not the chord through
