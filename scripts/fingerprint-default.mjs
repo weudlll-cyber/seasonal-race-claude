@@ -38,55 +38,124 @@
 //    the speed/duration ship: the shipped race is now each track's canonical default (laps for
 //    closed, seconds for open) at ONE normal speed, and the method switched --dur=60 → --track-defaults.)
 // ============================================================
-import { execFileSync } from 'child_process';
-import { readFileSync } from 'fs';
-import { createHash } from 'crypto';
-import { join, dirname } from 'path';
-import { fileURLToPath } from 'url';
-import { tmpdir } from 'os';
+import { execFile } from "child_process";
+import { readFileSync } from "fs";
+import { createHash } from "crypto";
+import { join, dirname } from "path";
+import { fileURLToPath } from "url";
+import { tmpdir, cpus } from "os";
 
-const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
+const ROOT = join(dirname(fileURLToPath(import.meta.url)), "..");
 // Scratch off the (OneDrive-synced) repo tree by default; env-overridable. Matches sim-fairness.mjs.
-const SCRATCH = process.env.RA_SCRATCH_DIR || join(tmpdir(), 'racearena-scratch');
-const LABEL = process.argv[2] || 'run';
+const SCRATCH =
+  process.env.RA_SCRATCH_DIR || join(tmpdir(), "racearena-scratch");
+const LABEL = process.argv[2] || "run";
 // Any further argv entries are passed straight through to the sim. Needed since a mechanism can now
 // ship ON by default: `node scripts/fingerprint-default.mjs off --gapRerollEnabled=false` measures the
 // pre-feature world. With no extra args this is exactly the shipped-default fingerprint, as before.
-const EXTRA = process.argv.slice(3).filter((a) => a.startsWith('--'));
-const SEED = 1, RACES = 3;
+const EXTRA = process.argv.slice(3).filter((a) => a.startsWith("--"));
+const SEED = 1,
+  RACES = 3;
 // 10 standard tracks × default racer (fixed order — never reorder; it feeds the combined hash).
 const TRACKS = [
-  ['city-circuit', 'motorbike'], ['dirt-oval', 'horse'], ['garden-path', 'snail'],
-  ['ice-track', 'snowmobile'], ['luger-hill', 'luge'], ['mountainstreet', 'boarder'],
-  ['river-run', 'duck'], ['searound', 'manta'], ['seatrack', 'dolphin'], ['space-sprint', 'rocket'],
+  ["city-circuit", "motorbike"],
+  ["dirt-oval", "horse"],
+  ["garden-path", "snail"],
+  ["ice-track", "snowmobile"],
+  ["luger-hill", "luge"],
+  ["mountainstreet", "boarder"],
+  ["river-run", "duck"],
+  ["searound", "manta"],
+  ["seatrack", "dolphin"],
+  ["space-sprint", "rocket"],
 ];
 
 // Stable stringify: sort object keys recursively so key order never affects the hash.
 function canon(v) {
-  if (Array.isArray(v)) return '[' + v.map(canon).join(',') + ']';
-  if (v && typeof v === 'object') return '{' + Object.keys(v).sort().map((k) => JSON.stringify(k) + ':' + canon(v[k])).join(',') + '}';
+  if (Array.isArray(v)) return "[" + v.map(canon).join(",") + "]";
+  if (v && typeof v === "object")
+    return (
+      "{" +
+      Object.keys(v)
+        .sort()
+        .map((k) => JSON.stringify(k) + ":" + canon(v[k]))
+        .join(",") +
+      "}"
+    );
   return JSON.stringify(v);
 }
 
-if (EXTRA.length) console.log('extra sim args:', EXTRA.join(' '));
-const combined = createHash('sha256');
+if (EXTRA.length) console.log("extra sim args:", EXTRA.join(" "));
+// VERIFY-COST-1: the ten tracks run IN PARALLEL. This cannot move the hash, and the reason is
+// structural rather than hopeful: each track was already an isolated child process with its own
+// `--out` directory and its own fixed seed, and the combining loop below still walks `TRACKS` in
+// the same fixed order. Nothing is shared, nothing is ordered by completion. Verified anyway — the
+// acceptance for this change was a byte-identical `COMBINED`, not an argument.
+//
+// The cap is the machine's cores, because these are CPU-bound simulations: oversubscribing turns
+// ten fast runs into ten slow ones and would have made the change look worthless.
+const JOBS = Math.max(1, Math.min(TRACKS.length, cpus().length));
+const runOne = ([track, racer]) => {
+  const out = join(SCRATCH, "fp", `${LABEL}__${track}`);
+  return new Promise((resolve, reject) => {
+    execFile(
+      process.execPath,
+      [
+        "scripts/sim-fairness.mjs",
+        `--track=${track}`,
+        `--racer=${racer}`,
+        `--seed=${SEED}`,
+        `--races=${RACES}`,
+        "--track-defaults",
+        `--out=${out}`,
+        ...EXTRA,
+      ],
+      { cwd: ROOT, maxBuffer: 1 << 26 },
+      (err) =>
+        err ? reject(new Error(`${track}: ${err.message}`)) : resolve(out),
+    );
+  });
+};
+
+// A simple worker pool: `JOBS` in flight, next track picked up as a slot frees.
+const queue = [...TRACKS];
+const outputs = new Map();
+await Promise.all(
+  Array.from({ length: JOBS }, async () => {
+    for (;;) {
+      const item = queue.shift();
+      if (!item) return;
+      outputs.set(item[0], await runOne(item));
+    }
+  }),
+);
+
+const combined = createHash("sha256");
 const perTrack = [];
-for (const [track, racer] of TRACKS) {
-  const out = join(SCRATCH, 'fp', `${LABEL}__${track}`);
-  execFileSync(process.execPath, [
-    'scripts/sim-fairness.mjs', `--track=${track}`, `--racer=${racer}`,
-    `--seed=${SEED}`, `--races=${RACES}`, '--track-defaults', `--out=${out}`, ...EXTRA,
-  ], { cwd: ROOT, stdio: 'ignore' });
-  const d = JSON.parse(readFileSync(join(out, 'fairness-data.json'), 'utf8'));
-  const rows = [...d.rawData].sort((a, b) => (a.raceIdx - b.raceIdx) || (a.index - b.index));
+for (const [track] of TRACKS) {
+  const out = outputs.get(track);
+  const d = JSON.parse(readFileSync(join(out, "fairness-data.json"), "utf8"));
+  const rows = [...d.rawData].sort(
+    (a, b) => a.raceIdx - b.raceIdx || a.index - b.index,
+  );
   const rawStr = canon(rows);
-  combined.update(track + ':' + rawStr);
+  combined.update(track + ":" + rawStr);
   const bias = (d.results || []).map((r) => ({
     planBiasDeltaMean: r.avgNaturalness?.planBiasDeltaMean ?? null,
     pulkBiasEventCount: r.avgNaturalness?.pulkBiasEventCount ?? null,
   }));
-  perTrack.push({ track, rows: rows.length, hash: createHash('sha256').update(rawStr).digest('hex').slice(0, 12), bias });
+  perTrack.push({
+    track,
+    rows: rows.length,
+    hash: createHash("sha256").update(rawStr).digest("hex").slice(0, 12),
+    bias,
+  });
 }
-const combinedHash = combined.digest('hex').slice(0, 16);
-console.log('COMBINED', combinedHash, `(seed=${SEED} races=${RACES} track-defaults, ${TRACKS.length} tracks, default config)`);
-for (const t of perTrack) console.log(' ', t.track.padEnd(15), t.hash, 'bias', JSON.stringify(t.bias));
+const combinedHash = combined.digest("hex").slice(0, 16);
+console.log(
+  "COMBINED",
+  combinedHash,
+  `(seed=${SEED} races=${RACES} track-defaults, ${TRACKS.length} tracks, default config)`,
+);
+for (const t of perTrack)
+  console.log(" ", t.track.padEnd(15), t.hash, "bias", JSON.stringify(t.bias));
