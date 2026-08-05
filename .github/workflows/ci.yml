@@ -78,6 +78,12 @@ jobs:
       - name: Check every origin tag is registered
         run: node scripts/check-tags.mjs
 
+      # Fails if any document disagrees with docs/fingerprints.json about a CURRENT fingerprint, if
+      # a declared site has lost its anchor, or if an undeclared file has started stating one.
+      # It compares documents to the RECORD; it does not re-run the six-minute fingerprint scripts.
+      - name: Check the fingerprint record and every site that copies it
+        run: node scripts/check-fingerprints.mjs
+
       # The guards' own liveness tests (proving they CAN fail) PLUS the sim-observer tests. All are
       # plain node:test with only relative imports — no external deps, so no `npm ci` is needed.
       # `find` enumerates the files so a newly added *.test.mjs is picked up automatically.

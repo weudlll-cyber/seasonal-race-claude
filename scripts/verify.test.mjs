@@ -173,3 +173,15 @@ test("A SKIP NAMES THE RULE, so the map is visible without reading the code", ()
     );
   }
 });
+
+// ── THE FINGERPRINT RECORD ROUTES ITSELF (ONE-TRUTH-1 stage 4) ─────────────────────────────────
+
+test("THE RECORD and its NON-MARKDOWN sites select the doc guards, read from the record itself", () => {
+  // `.husky/pre-commit` states the world fingerprint and is not markdown, so the old `.md` matcher
+  // routed a change to it NOWHERE. The route now reads the record's own site list, which means
+  // adding a site wires up its routing in the same edit.
+  assert.equal(runs(["docs/fingerprints.json"], "doc-guards"), true);
+  assert.equal(runs([".husky/pre-commit"], "doc-guards"), true);
+  // A neighbouring husky hook is NOT a site and must still route nowhere.
+  assert.equal(runs([".husky/pre-push"], "doc-guards"), false);
+});

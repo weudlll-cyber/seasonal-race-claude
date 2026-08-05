@@ -30,12 +30,31 @@
 // ============================================================
 
 import { execFile, execFileSync } from "node:child_process";
+import { readFileSync } from "node:fs";
 import { join, dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { cpus } from "node:os";
 import { engineReach } from "./engine-reach.mjs";
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), "..");
+
+// The fingerprint record's declared sites, so a change to one of them runs the guard that owns it.
+// Read lazily and defensively: verify must still be able to run if the record is missing or being
+// edited — a routing table that cannot load is not a reason to refuse to test anything.
+const FINGERPRINT_RECORD = "docs/fingerprints.json";
+let _fpSites = null;
+function fingerprintSites() {
+  if (_fpSites) return _fpSites;
+  try {
+    const rec = JSON.parse(
+      readFileSync(join(ROOT, FINGERPRINT_RECORD), "utf8"),
+    );
+    _fpSites = new Set((rec.sites ?? []).map((s) => s.file));
+  } catch {
+    _fpSites = new Set();
+  }
+  return _fpSites;
+}
 const arg = (k, d) => {
   const p = process.argv.slice(2).find((a) => a.startsWith(`--${k}=`));
   return p ? p.slice(k.length + 3) : d;
@@ -90,8 +109,14 @@ function changedFiles() {
 export const ROUTES = [
   {
     guard: "doc-guards",
-    what: "markdown anywhere",
-    match: (f) => f.endsWith(".md"),
+    // The fingerprint sites are read FROM THE RECORD, not listed here. Two of them are not markdown
+    // at all (`.husky/pre-commit`, `CameraDirector.js`), and a second hand-kept list of them is the
+    // very thing ONE-TRUTH-1 stage 4 removed.
+    what: "markdown anywhere, plus the fingerprint record and every site it declares",
+    match: (f) =>
+      f.endsWith(".md") ||
+      f === FINGERPRINT_RECORD ||
+      fingerprintSites().has(f),
   },
   {
     guard: "script-suite",
@@ -160,6 +185,7 @@ export function plan(files) {
       also: [
         ["node", "scripts/check-index.mjs"],
         ["node", "scripts/check-tags.mjs"],
+        ["node", "scripts/check-fingerprints.mjs"],
       ],
     },
     "script-suite": { cmd: ["node", "--test", ...scriptTestFiles()] },

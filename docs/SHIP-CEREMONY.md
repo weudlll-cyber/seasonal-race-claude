@@ -79,6 +79,15 @@ homework), and the state immediately before an unattended night block.
 They are CHANGE DETECTORS, not prohibitions. A block may move one deliberately; what it may not do
 is move one without noticing.
 
+**The VALUES below are copies. Their one home is [docs/fingerprints.json](fingerprints.json)** — the
+value, the commit it was minted on, the date, and the script that reproduces it. Do not type a
+fingerprint into this table or anywhere else: put it in the record and run
+`node scripts/check-fingerprints.mjs --fix`, which writes it into all seventeen places that state it.
+The guard fails if any of them disagrees, if a site loses the wording it is found by, or if a new
+file starts stating a value without being declared. This document still owns the PROCEDURE for
+minting; [SIM.md](SIM.md) owns the lineage; [REBASELINE.md](../reports/parity/REBASELINE.md) owns the
+baseline statistics behind the current world.
+
 | | covers | run it when |
 |---|---|---|
 | `scripts/fingerprint-default.mjs` — **world** `dc4647be0f55ebdb` | the RACE: physics, plan, outcome | any behaviour change, and per the mint tripwire above |
