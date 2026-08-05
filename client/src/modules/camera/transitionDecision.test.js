@@ -12,12 +12,7 @@
 // ============================================================
 
 import { describe, it, expect } from 'vitest';
-import {
-  decideTransition,
-  evaluatePhotoFinishGate,
-  TRANSITION_ACTION,
-  TRANSITION_REASON,
-} from './transitionDecision.js';
+import { decideTransition, TRANSITION_ACTION, TRANSITION_REASON } from './transitionDecision.js';
 
 /** A frame on which nothing should happen: held, no bypass, no battle, no lead change. */
 const held = (over = {}) => ({
@@ -209,91 +204,5 @@ describe('decideTransition — precedence is behaviour', () => {
     expect(
       decideTransition(held({ photoFinishGateReady: true, photoFinishEndReady: true })).reason
     ).toBe(TRANSITION_REASON.PHOTO_FINISH_GATE);
-  });
-});
-
-describe('evaluatePhotoFinishGate — the predicate, with the latches left to the caller', () => {
-  const base = (over = {}) => ({
-    gateDone: false,
-    enabled: true,
-    finishedCount: 0,
-    leaderProgress: 0.9,
-    leadProgressThreshold: 0.85,
-    racers: [{ t: 10.0 }, { t: 10.001 }],
-    closeThresholdT: 0.01,
-    ...over,
-  });
-
-  it('does not evaluate once the gate is done — it is a one-shot', () => {
-    expect(evaluatePhotoFinishGate(base({ gateDone: true }))).toEqual({
-      evaluated: false,
-      close: false,
-    });
-  });
-
-  it('does not evaluate when disabled', () => {
-    expect(evaluatePhotoFinishGate(base({ enabled: false })).evaluated).toBe(false);
-  });
-
-  it('does not evaluate once anybody has finished', () => {
-    expect(evaluatePhotoFinishGate(base({ finishedCount: 1 })).evaluated).toBe(false);
-  });
-
-  it('does not evaluate before the leader reaches the progress threshold', () => {
-    expect(evaluatePhotoFinishGate(base({ leaderProgress: 0.84 })).evaluated).toBe(false);
-  });
-
-  it('evaluates AND reports close when the top two are within the threshold', () => {
-    expect(evaluatePhotoFinishGate(base())).toEqual({ evaluated: true, close: true });
-  });
-
-  it('evaluates but reports NOT close when the top two are apart — the caller still latches done', () => {
-    // Half a lap apart: tFrac 0.0 vs 0.5, the maximum possible shortest-arc separation.
-    const r = evaluatePhotoFinishGate(base({ racers: [{ t: 10.0 }, { t: 9.5 }] }));
-    expect(r).toEqual({ evaluated: true, close: false });
-  });
-
-  it('measures TRACK POSITION, not race distance — exactly one lap apart reads as CLOSE', () => {
-    // PRE-EXISTING behaviour, pinned here rather than changed: the gate uses shortestArcDeltaT,
-    // which compares fractional t, so a leader a whole lap ahead sits at the same point on the
-    // track and the gate calls it a photo finish. This block did not introduce it and does not
-    // repair it — the helper is the same one BATTLE uses, and changing it is a behaviour change
-    // outside a behaviour-free stage. Recorded in the report's noticed-but-left list.
-    const r = evaluatePhotoFinishGate(base({ racers: [{ t: 10.0 }, { t: 9.0 }] }));
-    expect(r).toEqual({ evaluated: true, close: true });
-  });
-
-  it('a field of one cannot be close', () => {
-    expect(evaluatePhotoFinishGate(base({ racers: [{ t: 10 }] }))).toEqual({
-      evaluated: true,
-      close: false,
-    });
-  });
-
-  it('close implies evaluated — the property that makes the caller mapping exact', () => {
-    const cases = [
-      base(),
-      base({ gateDone: true }),
-      base({ enabled: false }),
-      base({ finishedCount: 3 }),
-      base({ leaderProgress: 0 }),
-      base({ racers: [{ t: 10 }, { t: 1 }] }),
-    ];
-    for (const c of cases) {
-      const r = evaluatePhotoFinishGate(c);
-      if (r.close) expect(r.evaluated).toBe(true);
-    }
-  });
-
-  it('ranks by t rather than trusting array order', () => {
-    const r = evaluatePhotoFinishGate(base({ racers: [{ t: 5.0 }, { t: 10.0 }, { t: 10.001 }] }));
-    expect(r).toEqual({ evaluated: true, close: true });
-  });
-
-  it('does not mutate the caller’s racer array', () => {
-    const racers = [{ t: 1 }, { t: 9 }, { t: 5 }];
-    const before = racers.map((r) => r.t);
-    evaluatePhotoFinishGate(base({ racers }));
-    expect(racers.map((r) => r.t)).toEqual(before);
   });
 });

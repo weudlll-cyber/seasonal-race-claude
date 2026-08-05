@@ -26,6 +26,7 @@ import {
   OPEN_TRACK_BASE_ZOOM,
   tcToLerpFactor,
 } from './CameraDirector.js';
+import { FINISH_REASON } from './finishPhase.js';
 import { effectiveZoom } from './openTrackCamera.js';
 import { lapProgress, currentLap } from './lapUtils.js';
 import { DEFAULT_CAMERA_CONFIG } from '../cameraConfig.js';
@@ -818,6 +819,210 @@ describe('CameraDirector — finish drama pulse (Block W)', () => {
     cd.stateEnteredAt = 10600;
     cd.update(racers, 18600 + 1, rs, 1280, 720);
     expect(cd.state).toBe(CAM_STATE.OVERVIEW);
+  });
+});
+
+// ── FINISH-SEAM-1: the finish LIFECYCLE, driven through the real director ─────────────────────
+//
+// finishPhase.test.js proves the DECISION. These prove the LATCHES — the four memories that make
+// the sequence a sequence, each asserted in BOTH positions (L203), because a latch whose test would
+// pass with the latch disconnected is not tested. Before this block, `_inPhotoFinish`,
+// `_photoFinishGateDone` and `_photoFinishEnterPending` had ZERO test references anywhere in the
+// repo: the entire photo-finish path was protected by neither test nor eye.
+
+describe('CameraDirector — the finish lifecycle (FINISH-SEAM-1)', () => {
+  const CW = 1280;
+  const CH = 720;
+  /** A field whose top two are `gap` apart at track position `leadT`. Progress = leadT / finishT(1). */
+  const field = (leadT, gap) => [
+    { t: leadT, x: 640, y: 360 },
+    { t: leadT - gap, x: 600, y: 350 },
+    { t: leadT - 0.4, x: 300, y: 300 },
+  ];
+  const rs = (over = {}) => ({
+    raceElapsed: 60_000,
+    finishedCount: 0,
+    winner: null,
+    finishT: 1.0,
+    ...over,
+  });
+
+  // ── The APPROACH gate: a ONE-SHOT, and provably so ───────────────────────────────────────────
+
+  it('the pre-line gate fires EXACTLY ONCE — a later close pair cannot re-open it', () => {
+    const cd = new CameraDirector();
+    cd.stateEnteredAt = 0;
+    // Frame 1: past the 0.97 progress threshold, but the top two are 0.08 apart — NOT close.
+    // The gate runs, answers "no", and latches itself done.
+    expect(cd._photoFinishGateDone).toBe(false);
+    cd.update(field(0.98, 0.08), 10_000, rs(), CW, CH);
+    expect(cd._photoFinishGateDone).toBe(true);
+    expect(cd.state).not.toBe(CAM_STATE.PHOTO_FINISH);
+
+    // Frame 2: the field has closed right up. The question is never asked again.
+    cd.stateEnteredAt = 0; // let a transition fire, so only the latch can be the reason
+    cd.update(field(0.99, 0.001), 10_500, rs({ raceElapsed: 60_500 }), CW, CH);
+    expect(cd._photoFinishEnterPending).toBe(false);
+    expect(cd._inPhotoFinish).toBe(false);
+    expect(cd.state).not.toBe(CAM_STATE.PHOTO_FINISH);
+  });
+
+  it('...and the latch is what does it: the SAME frame-2 field enters on a fresh director', () => {
+    // L203's other position. Without this, the test above would pass with the latch disconnected —
+    // it would only be proving that a not-close field does not produce a photo finish.
+    const cd = new CameraDirector();
+    cd.stateEnteredAt = 0;
+    cd.update(field(0.99, 0.001), 10_500, rs({ raceElapsed: 60_500 }), CW, CH);
+    expect(cd.state).toBe(CAM_STATE.PHOTO_FINISH);
+    expect(cd._lastFinishReason).toBe(FINISH_REASON.PHOTO_FINISH_PRE_LINE);
+  });
+
+  it('the gate does not run before the progress threshold, and does run after it', () => {
+    const early = new CameraDirector();
+    early.stateEnteredAt = 0;
+    early.update(field(0.9, 0.001), 10_000, rs(), CW, CH); // progress 0.90 < 0.97
+    expect(early._photoFinishGateDone).toBe(false);
+    expect(early.state).not.toBe(CAM_STATE.PHOTO_FINISH);
+
+    const late = new CameraDirector();
+    late.stateEnteredAt = 0;
+    late.update(field(0.98, 0.001), 10_000, rs(), CW, CH); // progress 0.98 >= 0.97
+    expect(late._photoFinishGateDone).toBe(true);
+    expect(late.state).toBe(CAM_STATE.PHOTO_FINISH);
+  });
+
+  it('photoFinishEnabled is a real switch — the same close approach takes neither door when off', () => {
+    const off = new CameraDirector(1280, 720, false, { photoFinishEnabled: false });
+    off.stateEnteredAt = 0;
+    off.update(field(0.98, 0.001), 10_000, rs(), CW, CH);
+    expect(off._photoFinishGateDone).toBe(false); // the gate does not even evaluate
+    expect(off.state).not.toBe(CAM_STATE.PHOTO_FINISH);
+    // ...and the first crossing gives the drama, not the photo finish.
+    off.update(field(1.0, 0.001), 10_100, rs({ finishedCount: 1 }), CW, CH);
+    expect(off.state).toBe(CAM_STATE.LEADER_ZOOM);
+    expect(off._inFinishDrama).toBe(true);
+  });
+
+  // ── THE MOMENT: the photo finish owns the state until the second crossing ─────────────────────
+
+  it('the pre-line shot survives the crossing it was waiting for, then ends on the second', () => {
+    const cd = new CameraDirector();
+    cd.stateEnteredAt = 0;
+    cd.update(field(0.98, 0.001), 10_000, rs(), CW, CH);
+    expect(cd.state).toBe(CAM_STATE.PHOTO_FINISH);
+    expect(cd._inPhotoFinish).toBe(true);
+    expect(cd.hudState).toBe('PHOTO_FINISH');
+    expect(cd._photoFinishEnterPending).toBe(false); // consumed on the frame it was set
+
+    // First crossing — the shot holds. This is the IMPOSSIBLE ORDER: no drama may start here.
+    cd.update(field(1.0, 0.001), 10_100, rs({ finishedCount: 1 }), CW, CH);
+    expect(cd.state).toBe(CAM_STATE.PHOTO_FINISH);
+    expect(cd._lastFinishReason).toBe(FINISH_REASON.PHOTO_FINISH_HOLDS);
+    expect(cd._finishMomentExpiry).toBe(null);
+    expect(cd._inFinishDrama).toBe(false);
+    expect(cd.hudState).toBe('PHOTO_FINISH'); // not 'FINISH'
+
+    // Second crossing — hand off to FINISH_OVERVIEW.
+    cd.update(field(1.01, 0.001), 10_200, rs({ finishedCount: 2 }), CW, CH);
+    expect(cd.state).toBe(CAM_STATE.OVERVIEW);
+    expect(cd._lastFinishReason).toBe(FINISH_REASON.PHOTO_FINISH_END);
+    expect(cd._inPhotoFinish).toBe(false);
+    expect(cd._inFinishMode).toBe(true);
+    expect(cd.hudState).toBe('FINISH_OVERVIEW');
+  });
+
+  it('the photo finish has no wall-clock cap — a long hold between crossings still holds', () => {
+    const cd = new CameraDirector();
+    cd.stateEnteredAt = 0;
+    cd.update(field(0.98, 0.001), 10_000, rs(), CW, CH);
+    expect(cd.state).toBe(CAM_STATE.PHOTO_FINISH);
+    // 30 seconds of slow-motion approach, far past every minHold and stateCap in the config.
+    cd.update(field(1.0, 0.001), 40_000, rs({ finishedCount: 1 }), CW, CH);
+    expect(cd.state).toBe(CAM_STATE.PHOTO_FINISH);
+  });
+
+  it('the first-crossing door is a FALLBACK — it fires only when the gate did not', () => {
+    // The leader jumps from below the progress threshold straight across the line, so the pre-line
+    // gate never evaluated. The reactive door catches it.
+    const cd = new CameraDirector();
+    cd.stateEnteredAt = 0;
+    cd.update(field(0.9, 0.001), 10_000, rs(), CW, CH); // below 0.97 — gate does not run
+    expect(cd._photoFinishGateDone).toBe(false);
+    cd.stateEnteredAt = 0;
+    cd.update(field(1.0, 0.001), 10_100, rs({ finishedCount: 1 }), CW, CH);
+    expect(cd.state).toBe(CAM_STATE.PHOTO_FINISH);
+    expect(cd._lastFinishReason).toBe(FINISH_REASON.PHOTO_FINISH_FIRST_CROSSING);
+  });
+
+  // ── THE DRAMA WINDOW: it opens, it holds, and it ENDS ─────────────────────────────────────────
+
+  it('the drama window ends — and the duration setting is what ends it', () => {
+    const drive = (durationMs, endTs) => {
+      const cd = new CameraDirector(1280, 720, false, { finishDramaDurationMs: durationMs });
+      cd.update(field(1.0, 0.4), 10_000, rs({ finishedCount: 1 }), CW, CH);
+      expect(cd.state).toBe(CAM_STATE.LEADER_ZOOM);
+      expect(cd._inFinishDrama).toBe(true);
+      expect(cd.hudState).toBe('FINISH');
+      expect(cd._lastFinishReason).toBe(FINISH_REASON.DRAMA_FIRST_CROSSING);
+      // `_lastFinishReason` records the last decision MADE, and a decision is only made when a
+      // transition is attempted. Clear the hold so the second frame actually asks the question —
+      // otherwise the long arm would simply never reach `_pickNextState` and the assertion below
+      // would be reading a stale answer from frame 1.
+      cd.stateEnteredAt = 0;
+      cd.update(field(1.02, 0.4), endTs, rs({ finishedCount: 1 }), CW, CH);
+      return cd;
+    };
+    // At ts=12000 a 1500ms window has expired and a 5000ms one has not. Same frames, same field.
+    const short = drive(1500, 12_000);
+    expect(short._inFinishDrama).toBe(false);
+    expect(short.state).toBe(CAM_STATE.OVERVIEW);
+    expect(short._lastFinishReason).toBe(FINISH_REASON.DRAMA_EXPIRED);
+    expect(short.hudState).toBe('FINISH_OVERVIEW');
+
+    const long = drive(5000, 12_000);
+    expect(long._inFinishDrama).toBe(true);
+    expect(long.state).toBe(CAM_STATE.LEADER_ZOOM);
+    expect(long._lastFinishReason).toBe(FINISH_REASON.DRAMA_HOLDS);
+    expect(long.hudState).toBe('FINISH');
+  });
+
+  // ── THE AFTERMATH: absolute ───────────────────────────────────────────────────────────────────
+
+  it('IMPOSSIBLE ORDER: nothing follows FINISH_OVERVIEW, however long the race runs on', () => {
+    const cd = new CameraDirector();
+    cd.update(field(1.0, 0.4), 10_000, rs({ finishedCount: 1 }), CW, CH); // drama
+    cd.update(field(1.02, 0.4), 12_000, rs({ finishedCount: 1 }), CW, CH); // → FINISH_OVERVIEW
+    expect(cd._inFinishMode).toBe(true);
+    // A pulk, a lead change and every hold elapsing: none of it may take the camera off OVERVIEW.
+    cd._leadChangePending = true;
+    for (let i = 1; i <= 5; i++) {
+      cd.stateEnteredAt = 0;
+      cd.update(field(1.02 + i * 0.01, 0.001), 12_000 + i * 5000, rs({ finishedCount: 2 }), CW, CH);
+      expect(cd.state).toBe(CAM_STATE.OVERVIEW);
+      expect(cd._lastFinishReason).toBe(FINISH_REASON.FINISH_MODE_LOCKED);
+    }
+  });
+
+  it('IMPOSSIBLE ORDER: a race never runs both shots — the drama leaves the photo-finish latch cold', () => {
+    const cd = new CameraDirector();
+    cd.update(field(1.0, 0.4), 10_000, rs({ finishedCount: 1 }), CW, CH); // drama, top two apart
+    // The field bunches up behind the winner. The photo finish must not open now: the fork was
+    // asked once and `_finishMomentExpiry` is what keeps it asked once.
+    for (const ts of [10_100, 10_500, 11_000]) {
+      cd.stateEnteredAt = 0;
+      cd.update(field(1.0, 0.001), ts, rs({ finishedCount: 1 }), CW, CH);
+      expect(cd._inPhotoFinish).toBe(false);
+      expect(cd.state).not.toBe(CAM_STATE.PHOTO_FINISH);
+    }
+  });
+
+  it('the drama pulse bypasses every hold — no state can block it from starting', () => {
+    const cd = new CameraDirector();
+    cd.state = CAM_STATE.BATTLE_ZOOM;
+    cd.stateEnteredAt = 9_900; // stateAge 100ms, far inside minStateHold
+    cd.update(field(1.0, 0.4), 10_000, rs({ finishedCount: 1 }), CW, CH);
+    expect(cd.state).toBe(CAM_STATE.LEADER_ZOOM);
+    expect(cd._inFinishDrama).toBe(true);
   });
 });
 
