@@ -7,6 +7,14 @@ Items ranked by urgency within each bucket. ✅ = done, 🔜 = next, ⏳ = waiti
 
 ---
 
+## Dev Screen labels (2026-08-05, from FINISH-COMPANY-1)
+
+- [ ] **The two finish knobs read alike and govern different moments.** `finishDramaDurationMs` is
+      labelled **"Finish pause (ms)"** (the camera HOLD before the zoom-out) and `finishPauseMs` is
+      **"Pause after last finisher"** (the delay before the leaderboard). Both tooltips state which
+      moment they govern; the labels do not distinguish themselves at a glance. FINISH-WINDOW-1
+      introduced the collision by renaming the first from "Drama pulse duration". Rename one.
+
 ## Instrument coverage residuals (2026-08-05, from FINISH-MOTION-1)
 
 - [ ] **THE RENDER FINGERPRINT CANNOT SEE THE FINISH PHASE — it did not confirm "no render change",

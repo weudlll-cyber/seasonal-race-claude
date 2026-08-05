@@ -166,6 +166,15 @@ and 1 disable it; asking for more company than the field contains takes what exi
 zooming to a point; finished racers are not company; the inner-frame fraction and `reach` both scale
 it as stated.
 
+> **Why finished racers are not company — written down 2026-08-05, three days late, by
+> [FINISH-COMPANY-1](FINISH-COMPANY-1.md).** This property was tested here but its reason was never
+> recorded, so the next block had to re-derive it. It is NOT that their positions go stale: measured,
+> a finished racer keeps advancing (`t` +0.010–0.012, 62–75 world px over the 60 frames after
+> crossing). The real reason is that including them does not help — the finish anchor is the FIXED
+> lookback point, so finished racers run out *away* from it exactly as stragglers fall *back* from
+> it, and counting them widens the shot MORE (54 → 55 frames, 2.9752 → 2.8760). See
+> [DEAD-ENDS §J](../../docs/DEAD-ENDS.md).
+
 **Failure proof 1 — ranking by raw distance** picks the wrong companion (the nearer-in-world-px one
 above the anchor rather than the cheaper one beside it) and crops it at its own zoom. That is exactly
 what the old floor did.

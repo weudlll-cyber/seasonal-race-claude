@@ -200,6 +200,30 @@ run because he had already rejected it; they did not find it.
 person within a month, and its flaw is invisible from the code — it lives entirely in how the result
 FEELS. What shipped instead was Lesson 199's fix: keep the unit, and stop the road overruling him.
 
+## J. Counting finished racers as company at the finish (2026-08-05)
+
+**The idea, and it is a natural one — expect it to be proposed again.** `companyGuarantee` skips
+finished racers (`if (!r || r.finished) continue;`). At the finish 32–38 of 39 are home, so a promise
+named "do not show emptiness" computes against 1–7 racers while the screen is full, and widens the
+shot for a single back-marker. The obvious repair is to let finished racers COUNT: then the promise
+satisfies itself once enough are home, with no finish-specific special case.
+
+**MEASURED, AND IT IS WORSE.** On the owner's marked race and on dirt-oval:
+
+| | widening frames | widest |
+|---|---:|---:|
+| baseline | 54 / 58 | 2.9752 / 2.9592 |
+| finished racers count as company | **55 / 59** | **2.8760 / 2.8443** |
+
+**WHY, and this is the part to remember.** The anchor in FINISH_OVERVIEW is the FIXED lookback point
+— `finishOverviewLookbackPx` behind the line — not the field. Finished racers run out *away* from
+that point exactly as stragglers fall *back* from it, so including them adds more distant company
+rather than nearer company. The idea assumes the anchor sits where the racers are; it deliberately
+does not, and that is the whole reason the finish shot works.
+
+**What was shipped instead** (FINISH-COMPANY-1, the owner's own proposal): the guarantee stops
+applying once the leader plus `minRacersVisible` are home — 0 widening frames on both tracks.
+
 ## What this leaves open (not tried, not excluded)
 Formats that make a breakaway irrelevant rather than catching it: **elimination** (last-at-call out of
 contention), **sector / intermediate scoring** (winner = best across several lines), a **mandatory

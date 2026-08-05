@@ -16,8 +16,8 @@ tuned or shipped from the G/s sweep — it MEASURES; the owner decides in the mo
 > | | value | what moved it |
 > |---|---|---|
 > | **world** | **`dc4647be0f55ebdb`** | UNMOVED since RACER-MOTION-2. No engine was touched all week. |
-> | **camera** | **`6480c2e0b2f612b5`** | the corridor measured from the anchor (CAMERA-ANCHOR-TRUTH-1 §4a), OVERVIEW tracking (§4c), the road no longer bounding the single-anchor states (CAMERA-COMPANY-ONLY-3), and the finish becoming one glided motion (FINISH-MOTION-1) |
-> | **render** | **`b6591e74102152bd`** | the build-identity HUD line (BUILD-TRUTH-1), the HUD column relayout that stopped it covering the lap counter, and FINISH-WINDOW-1 extending the run to 5600 frames with ten late sample points — a LONGER RUN, not a changed picture |
+> | **camera** | **`00cafa2432add0f7`** | the corridor measured from the anchor (CAMERA-ANCHOR-TRUTH-1 §4a), OVERVIEW tracking (§4c), the road no longer bounding the single-anchor states (CAMERA-COMPANY-ONLY-3), and the finish becoming one glided motion (FINISH-MOTION-1) |
+> | **render** | **`1f83ecc1fcb6fa9a`** | the build-identity HUD line (BUILD-TRUTH-1), the HUD column relayout that stopped it covering the lap counter, and FINISH-WINDOW-1 extending the run to 5600 frames with ten late sample points — a LONGER RUN, not a changed picture |
 >
 > Canonical home for how and when to run them: [docs/SHIP-CEREMONY.md](../../docs/SHIP-CEREMONY.md).
 

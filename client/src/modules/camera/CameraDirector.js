@@ -26,7 +26,7 @@
 // THE ACCEPTANCE TEST, and it is the good kind. `node scripts/camera-fingerprint.mjs` hashes every
 // decision this file makes on every frame of a seeded race across ten tracks. A refactor that
 // tidies code must not move the picture, and unlike a tuning change that is PROVABLE rather than
-// arguable. Current: 6480c2e0b2f612b5. If your change is meant to move the picture, it is not
+// arguable. Current: 00cafa2432add0f7. If your change is meant to move the picture, it is not
 // hygiene — say so, and re-baseline deliberately.
 //
 // READ FIRST, if you are changing behaviour: docs/CAMERA_DIRECTOR.md. The ordering inside update()
@@ -2325,10 +2325,32 @@ export class CameraDirector {
     // ── HOW FAR IN: the state setting, WIDENED by the guarantees (never tightened) ─────────────
     // A LIMIT, not a correction: the target is min(setting, geometric, dramaturgical) computed
     // BEFORE the camera moves, so it never zooms in and then backs out. In-then-out is pumping.
+    // FINISH-COMPANY-1 — the COMPANY guarantee retires once the company is home.
+    //
+    // The promise is "do not show emptiness": it widens the shot to keep `minRacersVisible` racers
+    // in frame so a tight shot never goes empty. At the finish that promise inverts. FINISH_OVERVIEW
+    // holds a FIXED point behind the line while `companyGuarantee` counts only racers who have NOT
+    // finished — so with 38 of 39 home, a promise about a full screen is being computed against one
+    // back-marker, and the camera widens for him alone. Measured on the owner's marked race: the
+    // shot came to rest, held for 96 frames, then drifted from 4.5489 to 2.9752 over 54 frames.
+    //
+    // So it stops applying once the leader plus his `minRacersVisible` are across: at that point the
+    // company the promise exists to guarantee is, literally, already home. His proposal, his number.
+    //
+    // WHY NOT "count finished racers as company", which sounds more principled: MEASURED AND WORSE.
+    // The anchor is `finishOverviewLookbackPx` BEHIND the line, so finished racers run out AWAY from
+    // it just as stragglers fall back from it — including them widened the shot MORE (2.8760 on
+    // city-circuit, 2.8443 on dirt-oval) rather than satisfying the promise. The idea that it
+    // "resolves itself" is wrong, and the fixed anchor is why.
+    //
+    // Scoped to `_inFinishMode` deliberately: during the race nothing is finished, so this branch
+    // cannot fire, and the guarantee everywhere else is untouched.
+    const _companyIsHome =
+      this._inFinishMode && (raceState?.finishedCount ?? 0) >= 1 + this._minRacersVisible;
     const guaranteed = Math.min(
       stateZoom,
       this._guaranteeCeiling(subjects, frameSize),
-      this._companyCeiling(subjects, racers, frameSize)
+      _companyIsHome ? Infinity : this._companyCeiling(subjects, racers, frameSize)
     );
 
     // READ-ONLY PROBE (CAMERA-ANCHOR-TRUTH-1 §4a). The framing inputs this frame actually used, so
