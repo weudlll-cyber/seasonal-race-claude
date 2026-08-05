@@ -7,6 +7,36 @@ Items ranked by urgency within each bucket. ✅ = done, 🔜 = next, ⏳ = waiti
 
 ---
 
+## Build-identity residuals (2026-08-05, from BUILD-UNKNOWN-1)
+
+- [x] **DONE — the build badge's failure path carries its reason.** `git()` captured stderr and the
+      exit status instead of discarding both; every failure returns the unknown identity WITH a
+      one-line cause; the dev server prints the identity it will serve at start-up and warns when the
+      reason changes. Also fixed two things the tests found: a failing `status --porcelain` used to
+      be reported as `dirty: false` (a clean tree it had never looked at), and the `|| 'detached'`
+      fallback was dead because git prints the literal `HEAD`.
+- [ ] **THE BADGE STILL HAS NO WATCHER — both of its failures were found by the owner's eye.**
+      It lied confidently (BUILD-TRUTH-1), then failed silently (BUILD-UNKNOWN-1), and in both cases
+      the alarm was a human noticing something on screen. The start-up line helps only if somebody
+      reads the terminal. **Owner decision:** should `npm run dev` REFUSE to start when the identity
+      is unreadable? Cheap to build, and it converts "a colour fifteen hours later" into "it did not
+      start". The argument against is that it blocks work on a machine with a transient git fault —
+      which is exactly the fault we just had. See BUILD-UNKNOWN-1 §P1.
+- [ ] **`0xC0000142` on this machine — watch for a second occurrence before treating it as a
+      pattern.** A 15-hour dev server became permanently unable to spawn ANY child process
+      (STATUS_DLL_INIT_FAILED) while the machine was otherwise healthy: 1485 handles, 485 MB, 9.7 GB
+      free. Restarting the process cleared it. The plugin spawns three `git` children per watcher
+      re-check, throttled to 400 ms, which over fifteen hours is a lot of process creation — the
+      leading suspect is a session-level resource (desktop heap) rather than anything in this repo.
+      **Not acted on:** one occurrence is an anecdote. If it happens again, the fix is to stop
+      spawning per-event — read `.git/HEAD` and `.git/index` directly for the common case and shell
+      out only when they change.
+- [ ] **NOT the OneDrive/ReparsePoint condition — recorded so it is not blamed by default.**
+      `.git` IS a reparse point on this machine and ten worktree stubs already resist deletion for
+      that reason, so it was the natural suspect and was tested: a fresh process on the same tree,
+      with the failing server's exact 104-variable environment, read the identity correctly. The exit
+      code names a process-creation failure, not a filesystem one. Two OneDrive findings, not three.
+
 ## Measurement and guard residuals (2026-08-05)
 
 - [x] **DONE (ONE-DRIVER-1) — four measurement scripts now share one driver, and the race identity

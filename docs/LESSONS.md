@@ -3458,3 +3458,33 @@ config carries the value, but that the output moves:
 All three instances would have failed that test on the day they were written. It does not prevent the
 write-after-read; it makes the write-after-read *fail loudly the first time*, which is all a test can
 honestly promise.
+
+## Lesson 204 — The Mute-Instrument Law: An Instrument That Can Detect Its Own Failure Must Be Able To Report It, Or The Diagnosis Costs A Day
+
+**What happened.** The build badge went amber — `build unknown` — on a running dev server, and blocked
+an eye test, because a verdict on an unidentifiable build is worthless. The badge was working exactly
+as designed: BUILD-TRUTH-1 had made it refuse to print a stale value with confidence, and it refused.
+But `readBuildInfo()`'s git helper discarded `stderr` (`stdio: [_, _, 'ignore']`) and its catch
+returned `''`, so the instrument could detect that it had failed and could say nothing about why.
+
+**What that cost.** The diagnosis had to work from outside. Six hypotheses were refuted by
+experiment — repository state, PATH, the process environment (all 104 variables, reproduced exactly),
+resource exhaustion, Defender ASR, and the file watcher — and every one came back clean, which
+narrowed the answer to "something about that process" and stopped there. The evidence that would have
+named it had existed for a few microseconds inside a `catch` block fifteen hours earlier and been
+thrown away on purpose.
+
+**How it ended.** Capturing the exit status took four lines. The moment the reason existed, the live
+server printed it: `exit 3221225794` = `0xC0000142`, STATUS_DLL_INIT_FAILED — a Windows
+process-creation failure. git never started. Six refuted hypotheses collapsed into one line, and the
+one-sentence fix (restart the process; a file save is not enough) followed from it directly.
+
+**The law.** *Detecting* a failure and *explaining* it are two different features, and shipping the
+first without the second builds an instrument that can only ever say "no". The test is not "does it
+notice when it breaks" but **"if it breaks at 3 a.m. and nobody is watching, does the artefact it
+leaves behind name the cause?"** A colour is not an artefact. A status code is.
+
+Note the shape against [Lesson 201](#lesson-201--the-half-repair-law-one-value-several-readers-one-fixed--and-the-test-covers-the-fixed-one):
+the half-repair made the system confidently wrong; this makes it honestly useless. Honestly useless
+is much better — and it is still not finished. The rule for anything that guards correctness here:
+**the failure path carries its reason, and the reason reaches a human without being asked.**
