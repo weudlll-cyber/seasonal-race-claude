@@ -14,7 +14,7 @@ sit next to the value they describe and move with it. This file does not repeat 
 
 **The acceptance test for any change here.** `node scripts/camera-fingerprint.mjs` hashes every
 decision the director makes — state, lerp phase, anchor, zoom, both offsets, `camT`, both targets —
-on every frame of a seeded race across all ten tracks. Current: **`ab731df15724ab5d`**. A refactor
+on every frame of a seeded race across all ten tracks. Current: **`6480c2e0b2f612b5`**. A refactor
 that tidies code must not move the picture, and that is provable rather than arguable. It covers the
 DIRECTOR only; the render path (sprite scale, name-tag layout, drawing) is out of scope by
 construction and must be argued another way.
@@ -87,11 +87,16 @@ and is not covered by a test.
 
 Evaluated in strict order on every `_transition()`:
 
-0. **Photo-finish lifecycle.** Once entered, the director owns the state until the second racer
-   crosses (or all have). There is deliberately NO wall-clock cap: under photo-finish slow motion a
+0. **Photo-finish lifecycle.** Once entered, the director owns the state until **the two contenders
+   the shot is following are home** (or everybody is — the safety net). Not `finishedCount >= 2`:
+   measured, those differ by 6–57 frames on every finishing track and the second racer across is
+   usually neither of the pair, so the old condition could end the shot before the pair it exists to
+   show had both crossed. There is deliberately NO wall-clock cap: under photo-finish slow motion a
    wall-time timer expired during the approach, before the winner crossed, and ate the winner text.
-1. **Finish.** First crossing → either PHOTO_FINISH (top two close) or the LEADER_ZOOM drama pulse;
-   pulse expired → FINISH_OVERVIEW, which is absolute and admits no further transitions.
+1. **Finish.** First crossing → either PHOTO_FINISH (top two close) or the drama pulse. **Both then
+   PAUSE** for `finishDramaDurationMs` before the zoom-out — the drama from the crossing, the photo
+   finish from the moment its contenders are home. One dial for both; 0 means no held frame at all.
+   Then → FINISH_OVERVIEW, which is absolute and admits no further transitions.
 2. **Pre-line photo-finish entry**, a once-only latch evaluated in `update()` and consumed here.
 3. **Start phase** (`raceElapsed < 3000 ms`) → OVERVIEW.
 4. **Post-start hold** (`+ postStartHoldMs`) → LEADER_ZOOM, so BATTLE cannot fire on the natural
@@ -274,7 +279,7 @@ test at both ends.
 ## 6. What is protected by tests, and what only by convention
 
 **The render path is no longer convention-only.** `scripts/render-fingerprint.mjs`
-(**`1da1a5b392879293`**) hashes the SEQUENCE of draw calls — sprite placement, text, styles,
+(**`b6591e74102152bd`**) hashes the SEQUENCE of draw calls — sprite placement, text, styles,
 transforms and layer order — at **sixteen** fixed frames across all ten tracks, by driving the real
 `renderRaceFrame()` through a recording context. FINISH-WINDOW-1 extended the run from 3400 to 5600
 frames and added ten late sample points, because the ending sits at frames 3330–5587 and the

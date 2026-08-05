@@ -51,9 +51,30 @@ const has = (k) => process.argv.slice(2).includes(`--${k}`);
 const ONLY = argVal("only", null);
 const WINDOW = Number(argVal("window", 10));
 const AS_JSON = has("json");
+// FINISH-WINDOW-1 B1: the pause decomposition. `--pause` reports where the wall-clock time between
+// the first crossing and the first frame of the zoom-out actually goes, which is the thing the owner
+// experiences as "one to two seconds pass".
+const PAUSE = has("pause");
+// `--set k=v` (repeatable) so a run can be made under HIS settings rather than the shipped defaults.
+// Numbers are parsed as numbers, `true`/`false` as booleans — a string "0.15" for a threshold would
+// compare wrongly and silently.
+const OVERRIDES = {};
+for (const a of process.argv.slice(2)) {
+  if (!a.startsWith("--set=")) continue;
+  const [k, ...rest] = a.slice(6).split("=");
+  const raw = rest.join("=");
+  OVERRIDES[k] =
+    raw === "true"
+      ? true
+      : raw === "false"
+        ? false
+        : Number.isNaN(Number(raw))
+          ? raw
+          : Number(raw);
+}
 
 const identity = resolveIdentity({ racerType: TRACK_DEFAULT_RACER });
-const cameraConfig = { ...DEFAULT_CAMERA_CONFIG };
+const cameraConfig = { ...DEFAULT_CAMERA_CONFIG, ...OVERRIDES };
 
 const hyp = (a, b) => Math.sqrt(a * a + b * b);
 const median = (xs) => {
@@ -64,6 +85,7 @@ const median = (xs) => {
 };
 
 const results = [];
+const pauseRows = [];
 
 for (const geo of loadTracks({ only: ONLY })) {
   const race = buildRace(geo, identity, cameraConfig);
@@ -120,6 +142,44 @@ for (const geo of loadTracks({ only: ONLY })) {
     frames.push(row);
     prev = row;
   });
+
+  if (PAUSE) {
+    const firstIdx = frames.findIndex((f) => f.finished >= 1);
+    const secondIdx = frames.findIndex((f) => f.finished >= 2);
+    const pfIdx = frames.findIndex((f) => f.hud === "PHOTO_FINISH");
+    const dramaIdx = frames.findIndex((f) => f.hud === "FINISH");
+    const ovIdx = frames.findIndex(
+      (f, i) =>
+        f.hud === "FINISH_OVERVIEW" &&
+        i > 0 &&
+        frames[i - 1].hud !== "FINISH_OVERVIEW",
+    );
+    const ms = (a, b) =>
+      a < 0 || b < 0 ? null : Math.round(frames[b].ts - frames[a].ts);
+    pauseRows.push({
+      track: geo.name ?? geo.id,
+      // The PATH is which shot ran, not which pause followed. Since FINISH-WINDOW-1 the pause runs
+      // on both paths and reports `hudState === 'FINISH'`, so keying the label on the pause would
+      // relabel every photo finish as a drama — which it did, until this line was corrected.
+      path: pfIdx >= 0 ? "photo-finish" : dramaIdx >= 0 ? "drama" : "neither",
+      // The whole thing the owner feels: crossing -> the picture starts pulling back.
+      totalMs: ms(firstIdx, ovIdx),
+      // (1) the drama pulse. Only runs on the drama path; 0 frames means it never ran at all.
+      dramaMs: dramaIdx >= 0 ? ms(dramaIdx, ovIdx) : 0,
+      // (2) the photo-finish shot holding for the SECOND contender.
+      holdToSecondMs: pfIdx >= 0 ? ms(firstIdx, secondIdx) : 0,
+      // What is left over once (1) and (2) are accounted for — where a minStateHold effect would
+      // have to show up if it were contributing at all.
+      residualMs:
+        ovIdx < 0 || firstIdx < 0
+          ? null
+          : secondIdx >= 0 && pfIdx >= 0
+            ? ms(secondIdx, ovIdx)
+            : null,
+      configuredDramaMs: cameraConfig.finishDramaDurationMs ?? 1500,
+    });
+    continue;
+  }
 
   // The frame FINISH_OVERVIEW begins: the first frame reporting it after any frame that did not.
   const entryIdx = frames.findIndex(
@@ -206,6 +266,37 @@ for (const geo of loadTracks({ only: ONLY })) {
       const cy = f.camY + identity.canvasH / 2 / f.effZoom;
       return hyp(cx - lookbackPt.x, cy - lookbackPt.y);
     })(),
+    // STAGE C: the acceptance test, as a number. `lookbackPx` is documented as the world-pixel
+    // distance BEFORE the finish line at which the camera centres, so the error is how far the
+    // settled centre is from that promise — and `maxBeyondFinalPx` answers the second half of the
+    // requirement, that no frame of the move places the camera further back than where it ends.
+    settledErrorPx: (() => {
+      const f = frames[frames.length - 1];
+      if (!Number.isFinite(f.camX) || !lookbackPt) return NaN;
+      const cx = f.camX + identity.canvasW / 2 / f.effZoom;
+      const cy = f.camY + identity.canvasH / 2 / f.effZoom;
+      return hyp(cx - lookbackPt.x, cy - lookbackPt.y);
+    })(),
+    maxBeyondFinalPx: (() => {
+      const last = frames[frames.length - 1];
+      if (!Number.isFinite(last.camX) || !finishPt) return NaN;
+      const centre = (f) => ({
+        x: f.camX + identity.canvasW / 2 / f.effZoom,
+        y: f.camY + identity.canvasH / 2 / f.effZoom,
+      });
+      const end = centre(last);
+      const endDist = hyp(end.x - finishPt.x, end.y - finishPt.y);
+      let worst = 0;
+      for (let i = entryIdx; i < frames.length; i++) {
+        if (!Number.isFinite(frames[i].camX)) continue;
+        const c = centre(frames[i]);
+        worst = Math.max(
+          worst,
+          hyp(c.x - finishPt.x, c.y - finishPt.y) - endDist,
+        );
+      }
+      return worst;
+    })(),
     endCentreToFinishPx: (() => {
       const f = frames[frames.length - 1];
       if (!Number.isFinite(f.camX) || !finishPt) return NaN;
@@ -219,6 +310,53 @@ for (const geo of loadTracks({ only: ONLY })) {
         : NaN,
     context,
   });
+}
+
+if (PAUSE) {
+  console.log(
+    "THE PAUSE — from the first crossing to the first frame of the zoom-out",
+  );
+  console.log(formatIdentity(identity));
+  console.log(
+    `  config: photoFinishCloseThresholdT=${cameraConfig.photoFinishCloseThresholdT} ` +
+      `photoFinishLeadProgress=${cameraConfig.photoFinishLeadProgress} ` +
+      `finishDramaDurationMs=${cameraConfig.finishDramaDurationMs}`,
+  );
+  console.log("");
+  console.log(
+    `  ${"track".padEnd(16)} ${"path".padEnd(13)} ${"TOTAL".padStart(8)} ${"(1) drama".padStart(10)} ${"(2) hold for P2".padStart(16)} ${"residual".padStart(9)}`,
+  );
+  for (const r of pauseRows) {
+    if (r.totalMs === null) {
+      console.log(
+        `  ${r.track.padEnd(16)} ${r.path.padEnd(13)} ${"—".padStart(8)}  (no finish observed)`,
+      );
+      continue;
+    }
+    const pct = (v) =>
+      r.totalMs > 0 ? ` ${((v / r.totalMs) * 100).toFixed(0)}%` : "";
+    console.log(
+      `  ${r.track.padEnd(16)} ${r.path.padEnd(13)} ${String(r.totalMs).padStart(6)}ms ` +
+        `${String(r.dramaMs).padStart(7)}ms${pct(r.dramaMs).padStart(5)} ` +
+        `${String(r.holdToSecondMs).padStart(11)}ms${pct(r.holdToSecondMs).padStart(5)} ` +
+        `${String(r.residualMs ?? "—").padStart(6)}ms`,
+    );
+  }
+  const done = pauseRows.filter((r) => r.totalMs !== null);
+  if (done.length) {
+    const avg = (f) =>
+      Math.round(done.reduce((a, r) => a + f(r), 0) / done.length);
+    console.log(
+      `
+  mean over ${done.length} tracks: TOTAL ${avg((r) => r.totalMs)}ms = ` +
+        `drama ${avg((r) => r.dramaMs)}ms + hold-for-P2 ${avg((r) => r.holdToSecondMs)}ms + ` +
+        `residual ${avg((r) => r.residualMs ?? 0)}ms`,
+    );
+    console.log(
+      `  configured drama duration: ${done[0].configuredDramaMs}ms — compare with the (1) column.`,
+    );
+  }
+  process.exit(0);
 }
 
 if (AS_JSON) {
@@ -250,7 +388,8 @@ if (AS_JSON) {
     );
     console.log(
       `   END POSITION     centre is ${r.endCentreToLookbackPx.toFixed(0)} px from the lookback point,` +
-        ` ${r.endCentreToFinishPx.toFixed(0)} px from the line (they are ${r.lookbackToFinishPx.toFixed(0)} px apart)`,
+        ` ${r.endCentreToFinishPx.toFixed(0)} px from the line (asked for ${r.lookbackToFinishPx.toFixed(0)})` +
+        ` | error ${r.settledErrorPx.toFixed(0)} px, max drift behind final ${r.maxBeyondFinalPx.toFixed(0)} px`,
     );
     console.log(
       `   frame  hud                 lerp      obs         dPan  dTarget      lag   dZoom%   zoom      camT     targetT`,

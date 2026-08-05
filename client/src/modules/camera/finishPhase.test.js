@@ -30,6 +30,8 @@ const frame = (over = {}) => ({
   ts: 10_000,
   finishedCount: 0,
   racerCount: 4,
+  contendersHome: false,
+  dramaDurationMs: 1500,
   leaderT: 3.5, // a close pair by default: 0.001 apart, well inside the 0.03 threshold
   secondT: 3.499,
   photoFinishEnabled: true,
@@ -124,19 +126,33 @@ describe('decideFinishPhase — the sequence, branch by branch', () => {
     expect(d.reason).toBe(FINISH_REASON.PHOTO_FINISH_HOLDS);
   });
 
-  it('the photo finish ends on the SECOND crossing — the first does not end it', () => {
-    expect(decideFinishPhase(frame({ inPhotoFinish: true, finishedCount: 1 })).action).toBe(
-      FINISH_ACTION.HOLD
-    );
-    const end = decideFinishPhase(frame({ inPhotoFinish: true, finishedCount: 2 }));
-    expect(end.action).toBe(FINISH_ACTION.END_PHOTO_FINISH);
-    expect(end.reason).toBe(FINISH_REASON.PHOTO_FINISH_END);
+  it('the photo finish ends when THE CONTENDERS are home — not when two racers have crossed', () => {
+    // The distinction is not academic: measured on all nine finishing tracks these differ by 6–57
+    // frames, and the second racer across is usually neither of the pair. Both positions asserted.
+    const twoCrossedButNotThePair = frame({
+      inPhotoFinish: true,
+      finishedCount: 2,
+      contendersHome: false,
+    });
+    expect(decideFinishPhase(twoCrossedButNotThePair).action).toBe(FINISH_ACTION.HOLD);
+
+    const pairHome = frame({ inPhotoFinish: true, finishedCount: 2, contendersHome: true });
+    expect(decideFinishPhase(pairHome).reason).toBe(FINISH_REASON.PHOTO_FINISH_PAUSE);
   });
 
-  it('the safety net: everybody home ends it even when that is fewer than two', () => {
-    expect(
-      decideFinishPhase(frame({ inPhotoFinish: true, finishedCount: 1, racerCount: 1 })).action
-    ).toBe(FINISH_ACTION.END_PHOTO_FINISH);
+  it('the safety net: everybody home ends it even if a contender never arrives', () => {
+    const d = decideFinishPhase(
+      frame({ inPhotoFinish: true, finishedCount: 1, racerCount: 1, contendersHome: false })
+    );
+    expect(d.action).toBe(FINISH_ACTION.PAUSE_AFTER_PHOTO_FINISH);
+  });
+
+  it('THE PAUSE runs on the photo-finish path, on the same dial as the drama pulse', () => {
+    const d = decideFinishPhase(
+      frame({ inPhotoFinish: true, finishedCount: 2, contendersHome: true })
+    );
+    expect(d.action).toBe(FINISH_ACTION.PAUSE_AFTER_PHOTO_FINISH);
+    expect(d.reason).toBe(FINISH_REASON.PHOTO_FINISH_PAUSE);
   });
 
   it('there is NO wall-clock cap — an arbitrarily late ts still holds the shot', () => {
@@ -230,7 +246,9 @@ describe('decideFinishPhase — precedence, and the orders that must stay imposs
     const withText = [
       frame({ finishedCount: 1 }),
       frame({ finishedCount: 1, secondT: 3.2 }),
-      frame({ inPhotoFinish: true, finishedCount: 2 }),
+      frame({ inPhotoFinish: true, finishedCount: 2, contendersHome: true }),
+      frame({ inPhotoFinish: true, contendersHome: true, dramaDurationMs: 0 }),
+      frame({ finishedCount: 1, secondT: 3.2, dramaDurationMs: 0 }),
       frame({ finishedCount: 1, finishMomentExpiry: 11_000, ts: 11_000 }),
       frame({ photoFinishEnterPending: true }),
     ];
@@ -241,6 +259,41 @@ describe('decideFinishPhase — precedence, and the orders that must stay imposs
       expect(d.text).not.toBe(d.reason); // a real sentence, not the slug
     }
     expect(decideFinishPhase(frame()).text).toBe(FINISH_REASON.NOT_FINISHING);
+  });
+
+  it('A PAUSE OF ZERO means NO pause on BOTH paths — not a one-frame one', () => {
+    // The owner asked for 0 specifically so he can find his own value by playing. A one-frame pulse
+    // would still be a state entry, a hold and a hand-off, i.e. a visible hitch — so zero has to
+    // mean the aftermath begins on the same frame, on each path independently.
+    const pfZero = decideFinishPhase(
+      frame({ inPhotoFinish: true, finishedCount: 2, contendersHome: true, dramaDurationMs: 0 })
+    );
+    expect(pfZero.action).toBe(FINISH_ACTION.END_PHOTO_FINISH); // straight to the aftermath
+    expect(pfZero.action).not.toBe(FINISH_ACTION.PAUSE_AFTER_PHOTO_FINISH);
+
+    const dramaZero = decideFinishPhase(
+      frame({ finishedCount: 1, secondT: 3.2, dramaDurationMs: 0 })
+    );
+    expect(dramaZero.action).toBe(FINISH_ACTION.END_DRAMA); // never enters the pulse at all
+    expect(dramaZero.reason).toBe(FINISH_REASON.PAUSE_DISABLED);
+  });
+
+  it('...and any NON-ZERO value takes the pause, on both paths (L203 pair for the above)', () => {
+    for (const ms of [1, 100, 1500, 5000]) {
+      expect(
+        decideFinishPhase(
+          frame({
+            inPhotoFinish: true,
+            finishedCount: 2,
+            contendersHome: true,
+            dramaDurationMs: ms,
+          })
+        ).action
+      ).toBe(FINISH_ACTION.PAUSE_AFTER_PHOTO_FINISH);
+      expect(
+        decideFinishPhase(frame({ finishedCount: 1, secondT: 3.2, dramaDurationMs: ms })).action
+      ).toBe(FINISH_ACTION.ENTER_DRAMA);
+    }
   });
 
   it('is pure — the same inputs give the same answer and nothing is mutated', () => {
