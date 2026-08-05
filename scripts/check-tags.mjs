@@ -1,7 +1,19 @@
 // ============================================================
 // File:        scripts/check-tags.mjs
 // Project:     RaceArena
-// Description: Tag-register guard. Every tag that exists at origin must be named in docs/TAGS.md.
+// Description: Tag-register guard. It checks TWO DIRECTIONS, and the second was added after the
+//              first was found to cover the drift class NEXT TO the incident it was built for:
+//
+//                ORIGIN -> REGISTER   every tag at origin must be named in docs/TAGS.md
+//                REGISTER -> ORIGIN   every tag DECLARED in docs/TAGS.md must exist at origin
+//
+//              The second is the one that actually bit this project: the register once named a
+//              return tag that existed on no machine but the owner's, and the guard written
+//              afterwards could not see it (TAG-GUARD-2). A LOCAL-only tag is the third direction and
+//              is deliberately NOT checked here — CI runs on a runner with nobody's local tags, so
+//              the question is unanswerable in CI; `scripts/audit-local.mjs` owns it.
+//
+//              Every tag that exists at origin must be named in docs/TAGS.md.
 //              Catches the "unregistered tag" drift class that check-doc-links cannot see (a tag
 //              missing from the register is not a broken link — it is an undocumented anchor).
 //              Read-only, no dependencies. Run from the repo root: `node scripts/check-tags.mjs`.
@@ -81,10 +93,73 @@ const isRegistered = (name) =>
 
 const unregistered = tags.filter((t) => !isRegistered(t.name));
 
-console.log(`check-tags: ${tags.length} origin tags checked, ${unregistered.length} unregistered.`);
+// ── DIRECTION 2: REGISTER -> ORIGIN ───────────────────────────────────────────────────────────────
+//
+// WHY THIS IS NOT A NAIVE NAME SCAN. The register is PROSE, not a list, and a tag name is
+// indistinguishable from a BRANCH name — `pre/anchor-truth` is a tag, `pre/greenfield-proto` is a
+// branch, and both are backticked in running text. Measured on the real register: scanning for
+// tag-SHAPED backticked tokens finds 292 candidates of which only 66 are tags — a 77% false-positive
+// rate. A guard that cries wolf is worse than the gap it closes, so that is not how this works.
+//
+// WHAT IS PARSED INSTEAD: a DECLARATION — the form the register already uses when it registers a
+// tag, and the form every new registration is written in:
+//
+//     - `pre/anchor-truth` (`c299fdf7`, 2026-08-04) — master's tip after CI-AUDIT-GREEN-1 …
+//
+// i.e. a list item whose first token is a backticked NAME immediately followed by a backticked SHA.
+// Measured on the real register: 48 declarations, all 48 real tags, ZERO false positives. It does not
+// reach the 18 legacy tags recorded in flat lists without a sha — those are covered by direction 1,
+// which passes. Precision is what matters here: a missed line is a far smaller sin than a false alarm.
+const DECLARATION = /^\s*[-*]\s+\*{0,2}`([A-Za-z0-9._/-]+)`\*{0,2}\s*\(\s*`[0-9a-f]{6,40}`/;
+
+// RETIRED TAGS ARE EXCLUDED EXPLICITLY, NOT BY ACCIDENT. The lifecycle collapses tags onto a phase
+// endpoint by an owner-approved keep-list, so the register legitimately names tags that no longer
+// exist. The mechanism is the SECTION HEADING: anything under a heading marked RETIRED or COLLAPSED
+// is history and must never fail the build. Today no declaration sits under such a heading, so this
+// excludes nothing — it is written down so the exclusion is a RULE rather than a coincidence that
+// somebody later relies on without knowing it was one.
+const RETIRED_SECTION = /RETIRED|COLLAPSED/i;
+
+const originNames = new Set(tags.map((t) => t.name));
+const declaredMissing = [];
+// DISTINCT names, not lines. A tag may legitimately be declared once and then restated elsewhere —
+// `pre/anchor-truth` is registered in its own block and named again in a later one as still valid —
+// and counting lines would let the register's own cross-references inflate the number. That exact
+// ambiguity is why two counts of "the same thing" disagreed (TAG-GUARD-3 §1).
+const declaredSeen = new Set();
+let currentHeading = '';
+for (const [idx, line] of tagsMd.split('\n').entries()) {
+  if (/^#{1,6}\s/.test(line)) currentHeading = line.replace(/^#+\s*/, '').trim();
+  const m = DECLARATION.exec(line);
+  if (!m) continue;
+  if (RETIRED_SECTION.test(currentHeading)) continue;
+  if (declaredSeen.has(m[1])) continue;
+  declaredSeen.add(m[1]);
+  if (!originNames.has(m[1])) {
+    declaredMissing.push({ name: m[1], line: idx + 1, heading: currentHeading });
+  }
+}
+const declaredChecked = declaredSeen.size;
+
+console.log(
+  `check-tags: ${tags.length} origin tags checked, ${unregistered.length} unregistered; ` +
+    `${declaredChecked} declared in the register, ${declaredMissing.length} missing at origin.`
+);
 
 if (unregistered.length > 0) {
   console.error(`\nFAIL: ${unregistered.length} tag(s) at origin not registered in ${TAGS_MD}:`);
   for (const t of unregistered) console.error(`${t.name} -> ${t.sha}`);
-  process.exit(1);
 }
+
+if (declaredMissing.length > 0) {
+  console.error(
+    `\nFAIL: ${declaredMissing.length} tag(s) declared in ${TAGS_MD} do NOT exist at origin.` +
+      `\nA registered tag that exists nowhere is the failure this guard was built after — either push` +
+      `\nthe tag, or move its entry under a RETIRED/COLLAPSED heading if it was deliberately collapsed.`
+  );
+  for (const d of declaredMissing) {
+    console.error(`${d.name} -> declared at ${TAGS_MD}:${d.line} under "${d.heading}"`);
+  }
+}
+
+if (unregistered.length > 0 || declaredMissing.length > 0) process.exit(1);
