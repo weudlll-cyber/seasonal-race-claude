@@ -26,6 +26,14 @@ export default defineConfig({
     exclude: ['e2e/**', 'node_modules/**'],
     // Auto-retry flaky tests once before failing the suite.
     retry: 3,
+    // NIGHT-TOOLS-1: the retry LEDGER. With `retry: 3` above, a test that failed twice and passed
+    // on the third attempt is reported as a pass and is indistinguishable from one that passed
+    // first time. The reporter prints which tests needed more than one attempt — and an explicit
+    // zero line when none did, so a MISSING ledger is itself a defect signal rather than a silent
+    // pass. It lives in scripts/ because it is tooling, and it is loaded HERE rather than wrapped
+    // around `verify` because CI runs `npm run test:coverage` directly and would never see a
+    // wrapper. See the reporter's header for what it does NOT check.
+    reporters: ['default', '../scripts/retry-ledger-reporter.mjs'],
     coverage: {
       provider: 'v8',
       reporter: ['text', 'lcov', 'html'],

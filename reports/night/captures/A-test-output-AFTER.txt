@@ -1,0 +1,45 @@
+ ✓ src/modules/cameraConfigSurvival.test.js (6 tests) 93ms
+ ✓ src/modules/racer-types/spriteLoader.test.js (12 tests) 108ms
+ ✓ src/modules/racer-types/giraffe.test.js (11 tests) 155ms
+ ✓ src/modules/racer-types/turtle.test.js (18 tests) 162ms
+ ✓ src/modules/raceLengths.test.js (17 tests) 41ms
+ ✓ src/services/racerApi.test.js (15 tests) 102ms
+ ✓ src/screens/RaceScreen/drawing/particleRendering.test.js (3 tests) 88ms
+ ✓ src/modules/racer-types/elephant.test.js (11 tests) 100ms
+ ✓ src/modules/racer-types/coatAssignment.test.js (13 tests) 69ms
+ ✓ src/modules/raceStep.test.js (125 tests) 183ms
+ ✓ src/modules/track-effects/effects/fireflies.test.js (7 tests) 49ms
+ ✓ src/modules/buildInfo.test.js (12 tests) 111ms
+ ✓ src/utils/formatRaceTime.test.js (5 tests) 12ms
+ ✓ src/modules/camera/finishPhase.test.js (46 tests) 230ms
+ ✓ src/modules/exportRaceConfig.test.js (7 tests) 141ms
+ ✓ src/modules/racer-types/luge.test.js (16 tests) 52ms
+ ✓ src/modules/racer-types/standardCoats.test.js (6 tests) 76ms
+ ✓ src/modules/racer-types/buggy.test.js (10 tests) 50ms
+ ✓ src/modules/engineInputs.test.js (5 tests) 23ms
+ ✓ src/modules/branding/useActiveBrandProfile.test.js (5 tests) 16ms
+ ✓ src/modules/camera/openTrackCamera.test.js (4 tests) 14ms
+ ✓ src/modules/track-effects/index.test.js (10 tests) 33ms
+ ✓ src/screens/RaceScreen/drawing/overlayRendering.test.js (5 tests) 19ms
+ ✓ src/modules/camera/lapUtils.test.js (8 tests) 14ms
+ ✓ src/modules/parity/goldenEquality.test.js (14 tests) 225218ms
+     ✓ searound/manta/closed/n=20/seed=1: outcome hashes are exactly equal  23112ms
+     ✓ dirt-oval/horse/closed/n=20/seed=7: outcome hashes are exactly equal  30604ms
+     ✓ river-run/duck/open-in-range/n=20/seed=3: outcome hashes are exactly equal  24715ms
+     ✓ seatrack/dolphin/open-slowdown/n=20/seed=11: outcome hashes are exactly equal  33621ms
+     ✓ is not vacuous: a perturbed identity produces a DIFFERENT outcome hash, and the divergence locator finds where  29085ms
+     ✓ searound/manta/40/seed=1: real browser arm and sim are byte-identical  19732ms
+     ✓ searound/manta/40/seed=7: real browser arm and sim are byte-identical  15779ms
+     ✓ searound/manta/40/seed=42: real browser arm and sim are byte-identical  13735ms
+     ✓ holds across topologies, the plan gate, and the D-ROWCOUNT small-sprite case  19320ms
+     ✓ is not vacuous: a perturbed identity produces a DIFFERENT real-arm hash  15468ms
+
+ Test Files  179 passed (179)
+      Tests  3645 passed (3645)
+   Start at  00:11:39
+   Duration  239.87s (transform 86.31s, setup 140.61s, import 205.88s, tests 605.78s, environment 996.91s)
+
+
+RETRY LEDGER: 1 test(s) needed more than one attempt (1 eventually passed — vitest calls those FLAKY).
+  src/modules/sim-fairness.test.js  — 1 test(s)
+      2 attempts, final passed (flaky): runSingleRace > different seeds → (usually) different winners
