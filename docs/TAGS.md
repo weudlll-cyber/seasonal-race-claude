@@ -1,5 +1,18 @@
 # Git tags — permanent anchors and cleanup record
 
+> **HOW TO REGISTER A TAG, because a guard depends on it.** Write it as a list item whose first
+> token is the backticked name followed immediately by the backticked short SHA:
+>
+> ```
+> - `pre/example` (`abc1234`, 2026-08-05) — why this return point exists.
+> ```
+>
+> `scripts/check-tags.mjs` parses exactly that shape, in both directions. An entry written any other
+> way is **silently unchecked** — not a failure, which is worse. A tag name in running prose is NOT a
+> declaration, deliberately: a tag name is indistinguishable from a BRANCH name, and this register
+> discusses branches at length. A declaration under a heading marked RETIRED or COLLAPSED is treated
+> as history and skipped, so **never record a LIVE tag under one**.
+
 This repo uses a lot of `pre/*` and `backup/*` working-session step-tags. They are scaffolding: safe
 return points captured before/after a risky step. Once a phase closes, that history lives in the commit
 messages and the phase docs, so the step-tags are collapsed. This file records which tags are permanent
@@ -8,18 +21,23 @@ and what was retired.
 ## Permanent anchors (do NOT delete)
 
 ### stable/*
-- `stable/pre-overlap-closed-20jun` (commit `712f334`) — the stable return point for the entire
+- `stable/pre-overlap-closed-20jun` (`712f334`) — the stable return point for the entire
   overlap-closed state. Owner-designated permanent anchor.
-- `stable/pre-governor-04jul` (commit `d9c9cd3`) — pre-governor baseline (surge + rubber-band intact,
+- `stable/pre-governor-04jul` (`d9c9cd3`) — pre-governor baseline (surge + rubber-band intact,
   no governor), captured before the race-action director work.
 
 ### race-action-complete
-- `race-action-complete` — end of the race-action phase: choreography + PulkLeadRotation
+- `race-action-complete` (`7af058b`) — end of the race-action phase: choreography + PulkLeadRotation
   shipped, cleaned, documented (see [RACE-ACTION.md](RACE-ACTION.md)), and tested. The stable baseline for
   the Stage-7 merge to master (no longer the tip — master has moved on through the post-race-action work).
 - `v1-race-action-merged` (`e1d5a2b`) — the race-action arc merged to master.
 
 ### v-*-complete (phase endpoints, retained)
+- `v-parity-complete` (`2e27850`) — the sim↔browser parity phase endpoint. Its thirteen `pre/*`+`backup/*`
+  step-tags were collapsed onto it and deleted; **this anchor survived and is live at origin.** It is
+  declared HERE, not in the *Parity phase — COLLAPSED* section below, because a declaration under a
+  RETIRED/COLLAPSED heading is deliberately skipped by `check-tags` — so recording a LIVE tag there
+  would have left it unguarded in both directions. (TAG-GUARD-3.)
 - `v-perf-complete` (`858bc4f`) — performance phase.
 - `v-camera-perf-complete` (`36ddc9c`) — camera performance / autorun.
 - `v-branding-phase1-complete` (`b9a2f03`) — branding phase 1.
@@ -42,7 +60,7 @@ and what was retired.
   completed-phase anchor; retained).
 
 ### Cleanup + archive endpoints (2026-07-20)
-- `v-cleanup-complete` — the 5-step repository cleanup arc endpoint: archived closed experiments +
+- `v-cleanup-complete` (`8b98f0a`) — the 5-step repository cleanup arc endpoint: archived closed experiments +
   concept reviews (step 1), removed closed sweep/diag drivers (step 2), salvaged `results/` `.md` docs +
   freed ~1 GB local scratch (step 3), docs catch-up + pulklr retirement (step 4), branch/tag hygiene
   (step 5). The `pre/cleanup-step1..4` scaffolding tags were collapsed onto this and deleted.
@@ -346,6 +364,9 @@ that phase's `*-complete` endpoint when it closes (incremental history then live
   experiment artifact and lives only at that archived SHA; the reusable overlap-free traffic core is
   documented in LESSONS #183 for the peloton line.
 
+Declared (TAG-GUARD-3 backfill):
+- `archive/handicap-pursuit-089c7d2` (`089c7d2`) — the entire `exp/handicap-pursuit` branch history, preserved before deletion.
+
 ### Evolution Act 2 — finale front-compression (CLOSED 2026-07-26)
 - **Act 2 finale builds recoverable @`8d5e9fd`/@`7404bd9`/@`197763d`, reverted** (three `git revert`
   commits, newest first). The flag-gated finale front-compression arc — a scheduled-dice overlay on the
@@ -358,6 +379,13 @@ that phase's `*-complete` endpoint when it closes (incremental history then live
   `pre/finale-remove`. The living code reads as if Act 2 was never built; the builds are recoverable at the
   three SHAs above. Permanent close anchor on origin: **`backup/finale-closed-26b2c34`** (→ `26b2c34`).
 
+Declared, so both directions of `check-tags` can see them (TAG-GUARD-3 backfill):
+- `pre/finale-compression` (`37971d6`) — before the fixed dice overlay on the gap-cap re-roll.
+- `pre/finale-devscreen` (`8d5e9fd`) — before the DevScreen toggle build.
+- `pre/finale-adaptive` (`98e9e5f`) — before the adaptive spread-scaled gates, the decisive screen.
+- `pre/finale-remove` (`197763d`) — before the three reverts that closed Act 2.
+- `backup/finale-closed-26b2c34` (`26b2c34`) — the permanent close anchor for Act 2.
+
 ### Evolution Act 1 — assignment-follows-field (CLOSED 2026-07-26)
 - **AFF build recoverable @`cd520e0`, reverted** (`git revert cd520e0`). The flag-gated
   assignment-follows-field build (Act 1) was verified byte-identical (ON `7c70b1eae7d31e22` / OFF
@@ -366,6 +394,11 @@ that phase's `*-complete` endpoint when it closes (incremental history then live
   three `reports/evolution/AFF-*.md` kept as the lab journal. Scaffolding tags: `pre/aff-build`
   (`86e0d6d`) and `pre/aff-remove` (`0fed3ee`). The living code reads as if AFF was never built; the full
   build is recoverable at `cd520e0`. Permanent close anchor on origin: **`backup/aff-closed-fc6afbf`** (→ `fc6afbf`).
+
+Declared, so both directions of `check-tags` can see them (TAG-GUARD-3 backfill):
+- `pre/aff-build` (`86e0d6d`) — before the assignment-follows-field build.
+- `pre/aff-remove` (`0fed3ee`) — before the revert that closed Act 1.
+- `backup/aff-closed-fc6afbf` (`fc6afbf`) — the permanent close anchor for Act 1.
 
 ### Runaway phase — CLOSED (2026-07-29)
 **Status: CLOSED.** The runaway problem was SOLVED by the **gap-reroll cohesion mechanism** (shipped default
@@ -507,8 +540,8 @@ phase — COLLAPSED* record above); everything else is a permanent keeper:
 - `archive/diag-look-before-brake`
 - `archive/greenfield-proto-final`
 - `b4-complete`
-- `backup/browser-seed-complete`
-- `backup/exp-runaway-baseline-complete` *(runaway phase CLOSED 2026-07-29 — permanent close anchor; the gap-reroll shipped the fix)*
+- `backup/browser-seed-complete` (`869615b`)
+- `backup/exp-runaway-baseline-complete` (`f40a7a6`) *(runaway phase CLOSED 2026-07-29 — permanent close anchor; the gap-reroll shipped the fix)*
 - `backup/lbb-gate-complete`
 - `race-action-complete`
 - `stable/pre-governor-04jul` *(permanent anchor — NEVER delete)*
@@ -554,6 +587,11 @@ The 16 tags added after the parity-phase snapshot above (to DOC-SYNC-1):
   *Evolution Act 1/Act 2 CLOSED* sections above.
 - **Greenfield experiment archive:** `archive/handicap-pursuit-089c7d2` — see the *Evolution — greenfield
   experiments* section.
+
+Declared in the parseable form (TAG-GUARD-3 backfill — both were already recorded with their
+SHAs above, but inside a sentence rather than at the start of a list item, so the guard could not see them):
+- `pre/hygiene` (`a4103bb`) — the DOC-SYNC-1 report commit; a docs-only return point.
+- `pre/router-7` (`83f5c8d`) — the HYGIENE-1 STEP 4 commit; a tooling/hygiene return point.
 
 ## Retired in Step 6d (race-action arc tag collapse)
 

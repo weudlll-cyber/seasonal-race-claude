@@ -7,6 +7,19 @@ Items ranked by urgency within each bucket. ✅ = done, 🔜 = next, ⏳ = waiti
 
 ---
 
+## Worktree stubs — a helper that cleans up after itself (2026-08-05)
+
+- [ ] **Ten `.git/worktrees` stubs exist and `git worktree prune` cannot remove them** — every one is a
+      OneDrive Files-On-Demand placeholder carrying `ReadOnly`, which blocks the delete. Not a lock, an
+      attribute. They are inert metadata pointing at directories that no longer exist.
+      **Do not add `prune` to the ship ceremony** — it already fails here, and a ritual that cannot
+      succeed teaches people rituals are optional (TAG-GUARD-2 §6.2). **The upstream fix instead:**
+      whatever creates a throwaway worktree should remove it in a `finally`, so the stub is never
+      created. Even that leaves the ReadOnly directory, so the OneDrive attribute question has to be
+      settled before any of this is worth doing.
+
+---
+
 ## Camera residuals after CAMERA-COMPANY-ONLY-3 (2026-08-05)
 
 Named rather than fixed. Nothing here is urgent; all of it is cheap.

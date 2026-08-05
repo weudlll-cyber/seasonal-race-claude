@@ -122,18 +122,24 @@ const RETIRED_SECTION = /RETIRED|COLLAPSED/i;
 
 const originNames = new Set(tags.map((t) => t.name));
 const declaredMissing = [];
-let declaredChecked = 0;
+// DISTINCT names, not lines. A tag may legitimately be declared once and then restated elsewhere —
+// `pre/anchor-truth` is registered in its own block and named again in a later one as still valid —
+// and counting lines would let the register's own cross-references inflate the number. That exact
+// ambiguity is why two counts of "the same thing" disagreed (TAG-GUARD-3 §1).
+const declaredSeen = new Set();
 let currentHeading = '';
 for (const [idx, line] of tagsMd.split('\n').entries()) {
   if (/^#{1,6}\s/.test(line)) currentHeading = line.replace(/^#+\s*/, '').trim();
   const m = DECLARATION.exec(line);
   if (!m) continue;
   if (RETIRED_SECTION.test(currentHeading)) continue;
-  declaredChecked++;
+  if (declaredSeen.has(m[1])) continue;
+  declaredSeen.add(m[1]);
   if (!originNames.has(m[1])) {
     declaredMissing.push({ name: m[1], line: idx + 1, heading: currentHeading });
   }
 }
+const declaredChecked = declaredSeen.size;
 
 console.log(
   `check-tags: ${tags.length} origin tags checked, ${unregistered.length} unregistered; ` +
