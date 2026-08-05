@@ -4842,7 +4842,7 @@ describe('CameraDirector — FINISH_OVERVIEW lookback', () => {
     };
   }
 
-  function makeCD(lookbackPx) {
+  function makeCD(lookbackPx, configOver = {}) {
     return new CameraDirector(
       WORLD_W,
       CANVAS_H,
@@ -4851,7 +4851,7 @@ describe('CameraDirector — FINISH_OVERVIEW lookback', () => {
       // camera centres in FINISH_OVERVIEW (a fixed point behind the line, not the winner's live
       // position). The guarantee legitimately responds to the winner moving — it is company — so
       // leaving it on would test two things at once.
-      { finishOverviewLookbackPx: lookbackPx, minRacersVisible: 0 },
+      { finishOverviewLookbackPx: lookbackPx, minRacersVisible: 0, ...configOver },
       36,
       makeShape()
     );
@@ -5025,61 +5025,136 @@ describe('CameraDirector — FINISH_OVERVIEW lookback', () => {
     expect(cd._inFinishMode).toBe(true);
   });
 
-  // ── Entry-phase smooth-pan tests ─────────────────────────────────────────────
-  // The smooth-pan fix: _transitionTargetT is set to lookbackT in _transition() but
-  // _camT is left at the winner's current T. The T-lerp then glides _camT from the
-  // winner's position toward lookbackT in parallel with the zoom-out.
+  // ── THE FINISH MOVE — one motion, asserted as a PATH (FINISH-MOTION-1) ─────────────────────
+  //
+  // These replace three tests that asserted the MECHANISM which used to produce this motion
+  // (`_lerpPhase === 'entry'` with `_camT` lerping toward lookbackT). Inverted rather than deleted:
+  // their intent — "the camera glides rather than cuts" — is still the intent, and it is now
+  // asserted where the owner actually sees it, on the PICTURE.
+  //
+  // WHY THE PATH AND NOT THE ENDPOINT. A test that only asserts the camera ends at the lookback
+  // point passes just as happily when it teleports there — which is exactly what it was doing, and
+  // the old tests could not see it because they watched `_camT`, which never jumped. What jumped was
+  // the pan TARGET: measured at 2708 px in one frame on dirt-oval, 144x the median of the frames
+  // before it.
   //
   // Three-frame setup to control dt on the FINISH_OVERVIEW transition frame:
   //   Frame 1 (ts=1000): triggers _inFinishMode + LEADER_ZOOM drama
   //                       _finishMomentExpiry = 1000 + 1500 = 2500
   //   Frame 2 (ts=2400): dt=1400ms — drama not expired (2400 < 2500) → stays LEADER_ZOOM
   //   Frame 3 (ts=2600): dt=200ms — drama expired (2600 >= 2500) → FINISH_OVERVIEW fires
-  function setupSmoothPan() {
+  function setupSmoothPan(configOver = {}) {
     const RUNOUT_T = FINISH_T + 0.05; // 0.85
     const LOOKBACK_T = FINISH_T - 480 / WORLD_W; // 0.72
     const racers = [
       { t: RUNOUT_T, x: RUNOUT_T * WORLD_W, y: LEADER_Y, finished: true, index: 0 },
       { t: 0.5, x: 2000, y: LEADER_Y, finished: false, index: 1 },
     ];
-    const cd = makeCD(480); // lookbackFrac = 480/6000 = 0.08 → lookbackT = 0.72
+    const cd = makeCD(480, configOver); // lookbackFrac = 480/6000 = 0.08 → lookbackT = 0.72
     const rs = { raceElapsed: 10000, finishedCount: 1, finishT: FINISH_T };
     cd.update(racers, 1000, rs, CANVAS_W, CANVAS_H); // _finishMomentExpiry = 2500
     cd.update(racers, 2400, { ...rs, raceElapsed: 11400 }, CANVAS_W, CANVAS_H); // stays LEADER_ZOOM
     // Set zoom to leaderZoom so the FINISH_OVERVIEW zoom convergence doesn't immediately fire
     cd.zoom = cd._leaderZoom;
     cd.targetZoom = cd._leaderZoom;
-    cd.update(racers, 2600, { ...rs, raceElapsed: 11600 }, CANVAS_W, CANVAS_H); // FINISH_OVERVIEW
-    return { cd, racers, rs, RUNOUT_T, LOOKBACK_T };
+    // The framing the move STARTS from, captured before the transition frame — without this,
+    // "did it jump on frame 1?" is not an answerable question.
+    const from = { zoom: cd.zoom, offsetX: cd.offsetX, offsetY: cd.offsetY };
+    cd.update(racers, 2600, { ...rs, raceElapsed: 11600 }, CANVAS_W, CANVAS_H); // the move begins
+    return { cd, racers, rs, RUNOUT_T, LOOKBACK_T, from, startTs: 2600 };
   }
 
-  it('entry smooth: _transitionTargetT is set to lookbackT at FINISH_OVERVIEW entry', () => {
+  /** Where the move ends: a clone of the same setup, run all the way out. */
+  function endFraming(configOver = {}) {
+    const s = setupSmoothPan(configOver);
+    const dur = s.cd._finishOverviewZoomOutDurationMs;
+    s.cd.update(s.racers, s.startTs + dur, { ...s.rs, raceElapsed: 30000 }, CANVAS_W, CANVAS_H);
+    return { zoom: s.cd.zoom, offsetX: s.cd.offsetX, offsetY: s.cd.offsetY };
+  }
+
+  /** Advance to `ts` and report how far pan and zoom have travelled, each as a 0..1 fraction. */
+  function progressAt(s, to, ts) {
+    s.cd.update(s.racers, ts, { ...s.rs, raceElapsed: 9000 + ts }, CANVAS_W, CANVAS_H);
+    const panTotal = Math.hypot(to.offsetX - s.from.offsetX, to.offsetY - s.from.offsetY);
+    const zoomTotal = Math.abs(to.zoom - s.from.zoom);
+    return {
+      pan:
+        panTotal === 0
+          ? 1
+          : Math.hypot(s.cd.offsetX - s.from.offsetX, s.cd.offsetY - s.from.offsetY) / panTotal,
+      zoom: zoomTotal === 0 ? 1 : Math.abs(s.cd.zoom - s.from.zoom) / zoomTotal,
+    };
+  }
+
+  it('the finish move is ONE glide on the finish duration — not an entry lerp', () => {
     const { cd } = setupSmoothPan();
     expect(cd.state).toBe(CAM_STATE.OVERVIEW);
     expect(cd._inFinishMode).toBe(true);
-    expect(cd._lerpPhase).toBe('entry');
-    // lookbackFrac = 480/6000 = 0.08 → lookbackT = 0.72
-    expect(cd._transitionTargetT).toBeCloseTo(0.72, 3);
+    expect(cd._lerpPhase).toBe('glide');
+    // The whole move runs on the knob that has always meant "how long the finish zoom-out takes".
+    expect(cd._glideDurationActiveMs).toBe(cd._finishOverviewZoomOutDurationMs);
+    // No T-space anchor: the destination is a fixed world point, which is what keeps the winner's
+    // runout from pulling the camera past the line.
+    expect(cd._camT).toBe(null);
   });
 
-  it('entry smooth: _camT starts near winner.t, has not jumped instantly to lookbackT', () => {
-    // With the fix, _camT = winner.t at transition, _transitionTargetT = lookbackT.
-    // After one 400ms dt frame the lerp has moved _camT partway — still above lookbackT+0.03,
-    // proving the camera is gliding rather than cutting. (Without the fix _camT would be 0.72.)
-    const { cd, LOOKBACK_T, RUNOUT_T } = setupSmoothPan();
-    expect(cd._lerpPhase).toBe('entry');
-    expect(cd._camT).toBeGreaterThan(LOOKBACK_T + 0.03); // not yet in lookback convergence zone
-    expect(cd._camT).toBeLessThan(RUNOUT_T); // has started moving from winner position
+  it('IT DOES NOT JUMP: frame 1 is still at the outgoing framing — and it DOES move later', () => {
+    const { cd, racers, rs, from, startTs } = setupSmoothPan();
+    // Position one: the transition frame has not displaced the picture at all.
+    expect(cd.offsetX).toBeCloseTo(from.offsetX, 3);
+    expect(cd.offsetY).toBeCloseTo(from.offsetY, 3);
+    expect(cd.zoom).toBeCloseTo(from.zoom, 6);
+
+    // L203 position two, and it is the half that makes the first half mean anything: a camera that
+    // never moved at all would satisfy the assertions above perfectly.
+    cd.update(racers, startTs + 3000, { ...rs, raceElapsed: 14600 }, CANVAS_W, CANVAS_H);
+    expect(Math.hypot(cd.offsetX - from.offsetX, cd.offsetY - from.offsetY)).toBeGreaterThan(50);
+    expect(Math.abs(cd.zoom - from.zoom)).toBeGreaterThan(1e-3);
   });
 
-  it('entry smooth: _camT continues moving toward lookbackT on subsequent frames', () => {
-    const { cd, racers, rs, LOOKBACK_T } = setupSmoothPan();
-    expect(cd._lerpPhase).toBe('entry');
-    const camTAfterTransition = cd._camT;
-    // One more 16ms frame — _camT should advance toward lookbackT
-    cd.update(racers, 1616, { ...rs, raceElapsed: 11616 }, CANVAS_W, CANVAS_H);
-    expect(cd._camT).toBeLessThan(camTAfterTransition); // moved toward lookbackT (decreasing T)
-    expect(cd._camT).toBeGreaterThan(LOOKBACK_T); // has not overshot the target
+  it('THE PATH: intermediate frames lie between, and pan and zoom progress TOGETHER', () => {
+    const s = setupSmoothPan();
+    const dur = s.cd._finishOverviewZoomOutDurationMs;
+    const to = endFraming();
+
+    let prevPan = 0;
+    for (const frac of [0.25, 0.5, 0.75]) {
+      const p = progressAt(s, to, s.startTs + dur * frac);
+      // BETWEEN, not at either end — the assertion a teleport fails.
+      expect(p.pan).toBeGreaterThan(0);
+      expect(p.pan).toBeLessThan(1);
+      expect(p.pan).toBeGreaterThan(prevPan); // and always forward
+      prevPan = p.pan;
+      // TOGETHER: one ease drives both, so neither may be substantially complete while the other is
+      // still starting. That is the owner's actual complaint, as an assertion.
+      expect(Math.abs(p.pan - p.zoom)).toBeLessThan(0.1);
+    }
+  });
+
+  it('the duration times the WHOLE move — both halves stretch together', () => {
+    // L203 on the knob: at the same wall-clock moment, a move given a longer duration has covered
+    // materially less of its journey — in BOTH pan and zoom, which is what "one motion" means.
+    const read = (ms) => {
+      const s = setupSmoothPan({ finishOverviewZoomOutDurationMs: ms });
+      return progressAt(s, endFraming({ finishOverviewZoomOutDurationMs: ms }), s.startTs + 1500);
+    };
+    const quick = read(2000);
+    const slow = read(6000);
+    expect(quick.pan).toBeGreaterThan(slow.pan);
+    expect(quick.zoom).toBeGreaterThan(slow.zoom);
+  });
+
+  it('the runout still cannot pull the camera past the line, once the move has landed', () => {
+    const { cd, racers, rs, startTs } = setupSmoothPan();
+    const dur = cd._finishOverviewZoomOutDurationMs;
+    cd.update(racers, startTs + dur, { ...rs, raceElapsed: 20000 }, CANVAS_W, CANVAS_H);
+    const settled = { x: cd.targetOffsetX, y: cd.targetOffsetY };
+    // The winner runs on, well past the line.
+    racers[0] = { ...racers[0], t: FINISH_T + 0.3, x: (FINISH_T + 0.3) * WORLD_W };
+    cd.update(racers, startTs + dur + 17, { ...rs, raceElapsed: 20017 }, CANVAS_W, CANVAS_H);
+    cd.update(racers, startTs + dur + 34, { ...rs, raceElapsed: 20034 }, CANVAS_W, CANVAS_H);
+    expect(cd.targetOffsetX).toBeCloseTo(settled.x, 1);
+    expect(cd.targetOffsetY).toBeCloseTo(settled.y, 1);
   });
 });
 

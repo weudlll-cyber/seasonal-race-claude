@@ -26,7 +26,7 @@
 // THE ACCEPTANCE TEST, and it is the good kind. `node scripts/camera-fingerprint.mjs` hashes every
 // decision this file makes on every frame of a seeded race across ten tracks. A refactor that
 // tidies code must not move the picture, and unlike a tuning change that is PROVABLE rather than
-// arguable. Current: 7a33faf2ec131437. If your change is meant to move the picture, it is not
+// arguable. Current: ab731df15724ab5d. If your change is meant to move the picture, it is not
 // hygiene — say so, and re-baseline deliberately.
 //
 // READ FIRST, if you are changing behaviour: docs/CAMERA_DIRECTOR.md. The ordering inside update()
@@ -239,6 +239,9 @@ export class CameraDirector {
     // CAMERA-GRAMMAR-1 grammar (B) glide: start-of-transition framing captured on entry; pan+zoom ease
     // from here to the moving target over glideDurationMs.
     this._glideStartTs = null;
+    // How long the CURRENT glide runs. Set at every glide start; null means "use the configured
+    // glideDurationMs". The finish move is the one transition with its own duration (FINISH-MOTION-1).
+    this._glideDurationActiveMs = null;
     this._glideStartZoom = null;
     this._glideStartOffsetX = null;
     this._glideStartOffsetY = null;
@@ -858,10 +861,12 @@ export class CameraDirector {
           fT = fr.length > 1 ? (fr[0].t + fr[1].t) / 2 : (fr[0]?.t ?? null);
           break;
         case CAM_STATE.OVERVIEW:
-          // FINISH_OVERVIEW: _camT is anchored to lookbackT (set in _transition).
-          // Skip T-space tracking so the leader's runout movement does not overwrite
-          // _transitionTargetT and pull the camera past the finish line.
-          fT = this._inFinishMode ? null : (fr[0]?.t ?? null);
+          // FINISH-MOTION-1 removed a `_inFinishMode ? null : ...` here. It existed to stop the
+          // winner's runout dragging the T-anchor past the line, and the finish move has no
+          // T-anchor at all now (`_camT` is released at the transition), so this branch cannot be
+          // reached in finish mode. The runout constraint is kept structurally instead — the
+          // destination is a fixed world point — and is asserted directly by a test.
+          fT = fr[0]?.t ?? null;
           break;
       }
       if (fT !== null) {
@@ -886,12 +891,13 @@ export class CameraDirector {
           : rawTarget;
         // Lerp _camT toward _transitionTargetT. Closed: shortest circular arc. Open: linear.
         this._camT += this._tDelta(this._camT, this._transitionTargetT) * lf;
-      } else if (this._inFinishMode && this._camT !== null && this._transitionTargetT !== null) {
-        // FINISH_OVERVIEW: _transitionTargetT is fixed at lookbackT (set in _transition, not
-        // overwritten because fT=null). Still lerp _camT toward it so the pan glides from the
-        // winner's position to the lookback point in parallel with the zoom-out.
-        this._camT += this._tDelta(this._camT, this._transitionTargetT) * lf;
       }
+      // FINISH-MOTION-1 removed a second branch here, and the comment on it is the reason this
+      // block exists. It claimed the finish "pans from the winner's position to the lookback point
+      // IN PARALLEL WITH THE ZOOM-OUT" — an assertion no test could make, and one the owner could
+      // see was false: the T-anchor did glide, but the pan the screen showed was not derived from
+      // it on the frame that mattered, so the picture stepped 2708 px and only then zoomed. The
+      // parallel motion the comment described is now real, and it is the glide, not this lerp.
     }
     // During entry with T-space lerp active: pan is pinned to _camT's world position (already
     // set in targetOffsetX/Y by _setTargets). No pixel lerp — the camera path follows the track.
@@ -926,7 +932,7 @@ export class CameraDirector {
     // choose one (read-only diagnosis — records WHICH branch wrote offsetX/offsetY this frame).
     this._detour?.beginFrame();
     if (this._lerpPhase === 'glide') {
-      const dur = this._glideDurationMs;
+      const dur = this._glideDurationActiveMs ?? this._glideDurationMs;
       const s = dur > 0 ? Math.min(1, Math.max(0, (ts - this._glideStartTs) / dur)) : 1;
       const e = s * s * (3 - 2 * s); // smoothstep ease
       this._detour?.noteBranch('glide', s, e);
@@ -1340,25 +1346,27 @@ export class CameraDirector {
         this.targetZoom = this._leadChangeZoom;
       }
 
-      // OVERVIEW: normally snap zoom immediately to avoid slow lerp down from previous zoom state.
-      // Exception: in finishMode the zoom-out is intentionally gradual — skip the hard-cut and
-      // temporarily override the entry TC to achieve the configured zoom-out duration.
-      if (nextState === CAM_STATE.OVERVIEW) {
-        if (!this._inFinishMode) {
-          // CAMERA-ZOOM-UNIT-1: OVERVIEW snaps to its TRACK-WIDTHS setting, the same rule the other
-          // four states run. What stood here before derived the zoom from a target sprite size
-          // divided by `2 x W_ref / racersPerRow`, which made the widest shot in the camera depend
-          // on how many racers were in the race — non-monotonically. There is no sprite size and no
-          // racer count in this path any more.
-          const snapZoom = this._overviewStateZoom;
-          this._overviewSnapZoom = snapZoom; // stored so _setTargets uses the same zoom
-          this.zoom = snapZoom;
-          this.targetZoom = snapZoom;
-        } else {
-          // finishMode smooth zoom-out: derive TC from configured duration (90% convergence ≈ 3.45×TC).
-          const tc = Math.max(0.1, this._finishOverviewZoomOutDurationMs / 3450);
-          this._lfEntryByState[CAM_STATE.OVERVIEW] = tcToLerpFactor(tc);
-        }
+      // OVERVIEW: snap zoom immediately to avoid a slow lerp down from the previous zoom state.
+      // The finish is the exception and always was — its zoom-out is the authored move above, so it
+      // must not hard-cut here.
+      //
+      // FINISH-MOTION-1 REMOVED THE SECOND HALF OF THIS BRANCH, and it is worth saying why rather
+      // than just deleting it. It used to write `_lfEntryByState[OVERVIEW] = tcToLerpFactor(...)` —
+      // a SECOND representation of "how long the finish zoom-out takes", expressed as an exponential
+      // time-constant on the shared lerp map, next to the duration the glide now owns. Two
+      // representations of one intent is the defect family this repair exists to end. It was also a
+      // permanent mutation of a shared map: nothing ever restored it, so every later OVERVIEW entry
+      // in that race inherited the finish's slow entry TC.
+      if (nextState === CAM_STATE.OVERVIEW && !this._inFinishMode) {
+        // CAMERA-ZOOM-UNIT-1: OVERVIEW snaps to its TRACK-WIDTHS setting, the same rule the other
+        // four states run. What stood here before derived the zoom from a target sprite size
+        // divided by `2 x W_ref / racersPerRow`, which made the widest shot in the camera depend
+        // on how many racers were in the race — non-monotonically. There is no sprite size and no
+        // racer count in this path any more.
+        const snapZoom = this._overviewStateZoom;
+        this._overviewSnapZoom = snapZoom; // stored so _setTargets uses the same zoom
+        this.zoom = snapZoom;
+        this.targetZoom = snapZoom;
       }
 
       // Reset per-phase zoom-out floor on every state transition.
@@ -1476,19 +1484,12 @@ export class CameraDirector {
         this._leadInStartTs = null;
       }
 
-      // FINISH_OVERVIEW entry: set _transitionTargetT to the lookback point before the finish
-      // line. _camT is intentionally left at the winner's current T so the entry-phase T-lerp
-      // smoothly pans from the winner's position to lookbackT in parallel with the zoom-out.
-      // (Previously _camT was also snapped to lookbackT here, causing a hard-cut on frame 1.)
-      if (
-        nextState === CAM_STATE.OVERVIEW &&
-        this._inFinishMode &&
-        raceState?.finishT > 0 &&
-        this._shape
-      ) {
-        const lookbackT = this._finishLookbackT(raceState.finishT);
-        if (lookbackT !== null) this._transitionTargetT = lookbackT;
-      }
+      // FINISH-MOTION-1 removed a `_transitionTargetT = lookbackT` assignment here — the THIRD
+      // representation of one intent. The lookback point was expressed as a T-space target (this),
+      // as a pan anchor (`_setTargets`), and its duration as an exponential TC on the shared lerp
+      // map; the finish move now owns all three as one glide toward one anchor over one duration.
+      // The assignment was already inert: the finish-move block below releases `_camT`, and a
+      // target for an anchor that does not exist steers nothing.
 
       // LEAD_CHANGE hard cut: snap _camT to new leader and flag pan snap in update().
       // Without this, _setTargets runs on frame 0 with stale _camT from the previous state
@@ -1512,8 +1513,50 @@ export class CameraDirector {
       //   'cut'             — pan AND zoom snap to that framing on frame 1 (crisp, zero acquisition).
       // 'legacy' is the bare-caller fallback and is left on the pre-existing entry-glide path (still used by
       // finish-mode OVERVIEW). The finish-mode OVERVIEW zoom-out stays a mandatory dramatic glide, exempt.
-      const finishGlide = nextState === CAM_STATE.OVERVIEW && this._inFinishMode;
-      if (!finishGlide && this._transitionGrammar !== 'legacy') {
+      // THE FINISH MOVE (FINISH-MOTION-1) — ONE motion, not two.
+      //
+      // What the owner saw: at the crossing the picture jumped several frame-widths toward the
+      // pursuers, and only then began to zoom out. Measured before the repair: the pan target moved
+      // **2820 px in a single frame** on dirt-oval (144x the median of the frames before it), and the
+      // pan then settled in 63 frames while the zoom took 109 — so the two halves neither started
+      // together nor ended together.
+      //
+      // The cause was this exemption. FINISH_OVERVIEW was held out of the transition grammar because
+      // it "already had" its own slow zoom-out, which left it on the entry path — where `offsetX` is
+      // PINNED to `targetOffsetX` every frame (no pixel lerp, by design) while the target itself
+      // steps discontinuously from the outgoing shot's framing to the lookback framing. A pinned
+      // offset cannot absorb a moving target; it reproduces it exactly.
+      //
+      // So the finish move now glides like every other transition — and the glide is the right shape
+      // for it, because pan and zoom share ONE ease factor by construction, which is precisely the
+      // "at the same time" the owner asked for. It gets its own DURATION rather than its own
+      // mechanism: `finishOverviewZoomOutDurationMs`, the knob that has always meant "how long the
+      // finish zoom-out takes", now times the whole move. One finish move, one shape, one knob.
+      //
+      // It is deliberately NOT subject to `transitionGrammar`: a 'cut' finish is not a thing anyone
+      // wants, and the finish is an authored moment rather than an ordinary state change.
+      const isFinishMove = nextState === CAM_STATE.OVERVIEW && this._inFinishMode;
+      if (isFinishMove) {
+        // THE DESTINATION IS A FIXED WORLD POINT, so the finish move has no T-space anchor: releasing
+        // `_camT` is what makes `_setTargets` take its lookback branch instead of following the
+        // camera's track parameter, and it is also HOW THE RUNOUT CONSTRAINT IS KEPT. The winner
+        // cannot pull the camera past the line because the winner is not the anchor — the lookback
+        // point is. That is stronger than the old arrangement, which followed the leader's T and
+        // suppressed him with a `fT = null` special case one function away.
+        //
+        // `_observerPhase` deliberately stays 'idle'. Setting it to 'follow' (as the ordinary glide
+        // does) would switch OVERVIEW's FORWARD framing on, and measurement showed that moves the
+        // RESTING frame 108 px off the lookback point — a quarter of the widest shot. The owner's
+        // complaint is how the camera GETS there; where it comes to rest must not change.
+        this._camT = null;
+        this._transitionTargetT = null;
+        this._lerpPhase = 'glide';
+        this._glideStartTs = ts;
+        this._glideStartZoom = _preZoom;
+        this._glideStartOffsetX = _preOffsetX;
+        this._glideStartOffsetY = _preOffsetY;
+        this._glideDurationActiveMs = this._finishOverviewZoomOutDurationMs;
+      } else if (this._transitionGrammar !== 'legacy') {
         this._observerPhase = 'follow';
         if (this._transitionGrammar === 'cut') {
           this._lerpPhase = 'tracking';
@@ -1525,6 +1568,11 @@ export class CameraDirector {
           this._glideStartZoom = _preZoom;
           this._glideStartOffsetX = _preOffsetX;
           this._glideStartOffsetY = _preOffsetY;
+          // The duration THIS glide runs on, chosen at its start. One field rather than a knob per
+          // sub-motion: the finish move is long and authored, every other transition is short.
+          this._glideDurationActiveMs = isFinishMove
+            ? this._finishOverviewZoomOutDurationMs
+            : this._glideDurationMs;
         }
       }
     }

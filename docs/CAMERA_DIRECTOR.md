@@ -14,7 +14,7 @@ sit next to the value they describe and move with it. This file does not repeat 
 
 **The acceptance test for any change here.** `node scripts/camera-fingerprint.mjs` hashes every
 decision the director makes — state, lerp phase, anchor, zoom, both offsets, `camT`, both targets —
-on every frame of a seeded race across all ten tracks. Current: **`7a33faf2ec131437`**. A refactor
+on every frame of a seeded race across all ten tracks. Current: **`ab731df15724ab5d`**. A refactor
 that tidies code must not move the picture, and that is provable rather than arguable. It covers the
 DIRECTOR only; the render path (sprite scale, name-tag layout, drawing) is out of scope by
 construction and must be argued another way.
@@ -67,6 +67,14 @@ different anchor and a lock: `_inFinishDrama` (the pulse on the winner) and `_in
 `hudState` reports them. That fixed point is `finishOverviewLookbackPx` (default **300** world px
 before the line) — moved here from ARCHITECTURE.md's deleted camera section, which was the only
 place the knob was named.
+
+**The finish MOVE is one motion (FINISH-MOTION-1).** At the hand-off to FINISH_OVERVIEW the camera
+glides — pan and zoom together, on one smoothstep ease, over `finishOverviewZoomOutDurationMs` — from
+the framing it was in to the lookback framing. It is deliberately outside `transitionGrammar`: the
+finish is an authored moment, and a 'cut' finish is not a thing anyone wants. It has no T-space
+anchor; releasing `_camT` is what keeps the winner's runout from dragging the camera past the line,
+structurally rather than by a special case. Before this, the finish was exempt from the grammar and
+the pan target stepped **2708 px in one frame** while the zoom eased separately.
 
 **The whole ending is stated in one place: [`finishPhase.js`](../client/src/modules/camera/finishPhase.js).**
 Approach → the moment (photo finish OR drama, never both) → aftermath, with every transition carrying
