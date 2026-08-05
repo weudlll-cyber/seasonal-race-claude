@@ -67,19 +67,12 @@ export function drawTitleOpen(ctx, raceData) {
  * @param {Array} racers  Array of racer state objects (each has `.t`).
  * @param {number} maxLaps
  */
-export function drawLapInfo(ctx, racers, maxLaps) {
-  if (maxLaps <= 1) return;
+export function lapInfoText(racers, maxLaps) {
+  if (maxLaps <= 1) return null;
+  if (!racers || racers.length === 0) return null;
   const leader = racers.reduce((a, b) => (b.t > a.t ? b : a));
   const lapNum = currentLap(leader.t, maxLaps);
-  const text = `LAP ${lapNum} / ${maxLaps}`;
-  ctx.textAlign = 'right';
-  ctx.textBaseline = 'top';
-  ctx.font = 'bold 18px sans-serif';
-  ctx.fillStyle = '#fff';
-  ctx.shadowBlur = 8;
-  ctx.shadowColor = '#0088ff';
-  ctx.fillText(text, CW - 14, 66);
-  ctx.shadowBlur = 0;
+  return `LAP ${lapNum} / ${maxLaps}`;
 }
 
 /**
