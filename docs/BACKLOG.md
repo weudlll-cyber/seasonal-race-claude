@@ -7,6 +7,16 @@ Items ranked by urgency within each bucket. ✅ = done, 🔜 = next, ⏳ = waiti
 
 ---
 
+## Owner eye-test coverage (2026-08-05, from CAMERA-DOC-CLOSE-1)
+
+- [ ] **PROPOSED OWNER SESSION — his time, not scheduled here.** Writing §7.3 down made the gap
+      concrete: his eye has covered **three of ten tracks** (mountainstreet, searound, City Circuit),
+      and **COMEBACK_ZOOM and LEAD_CHANGE have never had a targeted pass**. Every "owner-approved"
+      claim in the repo is evidence about the track and state it was given on, and nothing more.
+      **The session, if he wants it:** one race per unseen track (dirt-oval, garden-path, ice-track,
+      luger-hill, river-run, seatrack, space-sprint) plus one pass watching the two unseen states.
+      Reference: [CAMERA_DIRECTOR.md §7.3](CAMERA_DIRECTOR.md).
+
 ## Dev Screen labels (2026-08-05, from FINISH-COMPANY-1)
 
 - [ ] **The two finish knobs read alike and govern different moments.** `finishDramaDurationMs` is

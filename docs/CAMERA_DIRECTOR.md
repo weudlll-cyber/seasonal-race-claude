@@ -333,3 +333,61 @@ time-constant defaults**, with the reason for each attached to the assertion.
   caller sees the fallbacks, so this is latent rather than active.
 - **`START_PHASE_DURATION = 3000`** is a constant, not a control, and CAMERA-TAGS-1 measured it about
   five seconds short of when the field actually spreads.
+
+---
+
+## 7. THE OWNER'S VERDICTS — what his eye has actually judged
+
+**What this section is FOR, and why it is not §6.** §6 records what a *test* protects. This records
+what a *person* decided. They are different kinds of fact and neither substitutes for the other: a
+green fingerprint says nothing moved, and only his eye says the picture is right. Before this
+existed, that record lived in a chat-side document outside the repo — one camera with two
+descriptions, which is the failure this project keeps paying for. The description lives above; the
+judgements live here.
+
+**What this is NOT.** Not a chronicle. The block-by-block history is `reports/evolution/` and the git
+log, and duplicating it is what retiring the chat document was meant to end. One line per judgement,
+with its date and — where one exists — the measurement that framed it.
+
+### 7.1 Approved by his eye
+
+| what he judged | when | the evidence, and the measurement behind it |
+|---|---|---|
+| **The road no longer bounds the leader shot** — LEADER/OVERVIEW/COMEBACK limited by his setting and the COMPANY guarantee only | 2026-08-05 | mountainstreet, seed 5601, toggle ON, *"nein das passt"* — and decisive because he saw **both regimes**: a torn-apart field where the guarantee opens the shot, and a tight pack where the camera holds his 1.0. His approval also covers the CAMERA-ANCHOR-TRUTH-1 work (§4a, §4c, stages 1a/1b), which had had no eye test until then. |
+| **`minRacersVisible` stays at 5** | 2026-08-05 | His observation corrected the measurement: I reported the company guarantee binding ~0% at n=65 and recommended raising it. That held for the PACK case only — on a spread field it binds and widens a lot at 5. The spread-field sweep is owed before anyone changes it. |
+| **The finish is ONE motion** — pan and zoom on one ease, no jump at the crossing | 2026-08-05 | The measured defect was a **2708 px pan-target step in one frame** (dirt-oval, 144× the median of the frames before it); after, peak per-frame motion 2708 → 72 px with total travel unchanged. |
+| **The finish pause, the travel and the resting point** | 2026-08-05 | His photo-finish settings, watching the moment the pair shot ends. The pause now runs after a photo finish too, starting when the two contenders the shot was FOLLOWING are home — measured 6–57 frames later than `finishedCount >= 2`, and on 5 of 9 tracks the second racer across is neither of the pair. |
+| **The company guarantee retires once the company is home** | 2026-08-05 | City Circuit, last thirty seconds, *"schaut besser aus jetzt"*. Baseline widened for 54 frames (4.5489 → 2.9752) after the shot had already come to rest; after, 0. Cost he accepted: the last back-marker sits 11% inside the frame instead of 23%. |
+
+### 7.2 Rejected by him — and both are natural ideas that will return
+
+These live in [DEAD-ENDS.md](DEAD-ENDS.md) with their full reasoning **and all their numbers**; they
+are listed here so a reader of the camera reference finds them at all.
+
+**What is repeated here is the REASON, never the measurement — deliberately.** A bare pointer does
+not stop the idea being re-proposed; the reason does, and the reason is the part that cannot go
+stale. A number in two homes drifts, and the ceremony's own cost column proved that this week: it sat
+at `~85 s` for the camera fingerprint through two mints because it was only ever corrected where
+somebody happened to be looking. So the numbers live in DEAD-ENDS alone.
+
+| what he rejected | when | why, in one line |
+|---|---|---|
+| **The zoom unit as a fraction of each track's own width** ([§I](DEAD-ENDS.md)) | 2026-08-05 | Tested by him on searound and rejected: **a smaller window means the world moves through it faster, and the picture became restless.** The fixed reference has a virtue nobody had written down — a fixed amount of world means the same SENSE OF CAMERA SPEED on all ten tracks. The measurements agreed afterwards, but were run *because* he had already rejected it; they did not find it. |
+| **Counting finished racers as company at the finish** ([§J](DEAD-ENDS.md)) | 2026-08-05 | Refuted by measurement, not by eye: it widens the shot **further**, not less. The FINISH_OVERVIEW anchor is the fixed lookback point, **not the field**, so finished racers run out *away* from it exactly as stragglers fall *back* from it. The idea assumes the anchor sits where the racers are; it deliberately does not. |
+
+### 7.3 THE STANDING GAP — what his eye has NOT seen
+
+**This is the honest limit on every "owner-approved" claim above, and it should be read before
+quoting one.**
+
+- **Tracks: three of ten.** mountainstreet, searound and City Circuit carry every judgement in §7.1
+  and §7.2; dirt-oval appears only in measurements. The other six have never been eye-checked at all.
+- **States:** he has seen LEADER, OVERVIEW, BATTLE and — since the finish work — PHOTO_FINISH and
+  FINISH_OVERVIEW. **COMEBACK_ZOOM and LEAD_CHANGE have had no targeted pass**, and he declined one
+  over the finish states before FINISH-WINDOW-1 gave him endings on nearly every race.
+- **Nothing at the START has been judged since the framing rewrite.** The start formation is the
+  frame he looks at first and it is sampled by the render fingerprint, but "sampled" is not "judged".
+
+**The consequence, stated so nobody over-reads the table:** an approval is evidence about the track
+and the state it was given on. It is not a general certificate, and a change that alters a state he
+has never watched has no eye behind it at all.
