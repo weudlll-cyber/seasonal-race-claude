@@ -174,6 +174,32 @@ lateral acceleration cap `maxLateralAccelPerStep` 0.0005). Two related avoidance
   must be independent. Replaced by per-agent geometric margin hysteresis (RACER-FLAPPING-2). Cross-reference
   **Lesson 190** (the Synchronization Law). Proof: reports/evolution/RACER-FLAPPING-1.md.
 
+## I. The camera unit redefined as a fraction of each track's own width (2026-08-05)
+
+**The idea, and it is a good one.** `visibleCorridors: 1.0` should mean "one width of *this* road",
+not "one fixed 300 px reference". It makes the number mean the same THING everywhere, it is what the
+owner originally assumed it meant, and it removes the oddity that a narrow track shows more than two
+of its own road widths at his LEADER 1.0.
+
+**Built as a probe and measured.** No code change was even needed to test it — `referenceWidthFor`
+returns `max(referenceCorridorPx, trackWidthPx)`, so setting the reference to each track's own width
+IS his unit, expressed in the shipped config.
+
+**KILLED BY THE OWNER'S EYE, for a reason no measurement here would have produced.** He ran it on
+searound at the values his unit delivers (LEADER 0.62 / OVERVIEW 1.25) and rejected it: **a smaller
+window means the world moves through it faster, and the picture became restless.** The fixed
+reference has a virtue nobody had written down — a fixed amount of world means the same SENSE OF
+CAMERA SPEED on all ten tracks. See Lesson 200.
+
+**The measurements agreed with him afterwards, on a different axis:** under his unit the breathing
+got *worse* on every track (searound 1.000x -> 2.032x, and the corridor guarantee went from binding
+0% of frames to 100%), and racer-size spread widened from 1.500x to 2.132x. But the measurements were
+run because he had already rejected it; they did not find it.
+
+**Why this is recorded rather than forgotten.** It is the obvious proposal, it will occur to the next
+person within a month, and its flaw is invisible from the code — it lives entirely in how the result
+FEELS. What shipped instead was Lesson 199's fix: keep the unit, and stop the road overruling him.
+
 ## What this leaves open (not tried, not excluded)
 Formats that make a breakaway irrelevant rather than catching it: **elimination** (last-at-call out of
 contention), **sector / intermediate scoring** (winner = best across several lines), a **mandatory

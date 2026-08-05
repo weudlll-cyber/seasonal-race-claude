@@ -3328,3 +3328,77 @@ for a real answer.
 sabotage — rename each side in turn and watch the right assertion go red. Match the call AS a call, never as a
 substring: a `toContain` on the method name passes happily while the call site says `nameRenamed?.(`. Evidence:
 reports/evolution/CAMERA-HYGIENE-2.md, the contract test at the foot of `CameraDirector.test.js`.
+
+## Lesson 199 — The Overrule Law: A Guarantee That Can Silently Beat The Owner's Own Control Is Not A Guardrail, It Is Steering
+
+**What happened.** `visibleCorridors` is the owner's control: it says how much world he wants in
+shot. The CORRIDOR guarantee — "the whole road stays in frame" — was applied as a ceiling on top of
+it. On six of ten tracks it won, and it won *silently*: his LEADER 1.0 asked for 300 world px and
+delivered anything from 300 to 688 as the road turned (Mountainstreet, 96.2% of frames). Nothing in
+the UI said his number had been overruled; the shot simply breathed, and he described the result as
+restless without being able to name the cause.
+
+Worse, a second guarantee — the COMPANY guarantee, reading his own `minRacersVisible` — was live in
+that same shot the entire time and **could not be heard**, because the corridor was always stricter.
+He had a control that did nothing on most of the map and did not know it.
+
+**The law.** A guarantee may *widen* what the owner asked for only when it protects something he
+would agree matters more, and he must be able to tell that it did. A guarantee that routinely
+overrules a control, on most content, with no visible trace, has stopped being a guardrail and
+become the actual author of the shot. **Guardrails bind at the edges; if yours binds in the middle,
+it is steering.**
+
+**The test that would have caught it.** Not a unit test on the guarantee — that passed. The number
+nobody computed: *how often does this ceiling, rather than the user's setting, decide the result?*
+Any guarantee applied via `Math.min` against a user value should report its bind rate.
+
+**See also** Lesson 192 (clamps are guardrails, never steering) — this is its config-facing twin:
+192 is about a clamp steering the *camera*, 199 about a guarantee steering the *owner*.
+
+## Lesson 200 — The Window Law: Perceived Camera Speed Comes From The Size Of The Window, Not From What The Number Means
+
+**What happened.** The proposed fix for Lesson 199 was to redefine the unit: `1.0` would mean "this
+track's own road width" instead of a fixed 300 px reference. It is a better-sounding definition — the
+number would mean the same *thing* everywhere — and the measurements supported it as far as they
+went.
+
+The owner built it, watched it on searound at the values his unit would deliver (0.62 / 1.25), and
+rejected it for a reason no measurement in this project would have produced: **a smaller window means
+the world moves through it faster.** Same racer speed, same physics, smaller frame — and the picture
+became restless. The virtue of the fixed reference, which nobody had written down, is that a fixed
+amount of world means the same *sense of camera speed* on every track.
+
+**The law.** How fast a camera feels is a function of world-units-per-second crossing the frame,
+i.e. of the WINDOW SIZE — not of the semantics of the setting that produced it. Two definitions that
+are equally principled can feel completely different, and the difference lives in perception, not in
+geometry.
+
+**Why this is a lesson and not a note.** Everything measurable pointed the other way. The
+project has ten tracks, three fingerprints and a dozen harnesses, and **not one of them measures
+apparent speed.** The constraint that decided the whole design arrived through the owner's eye in a
+single sentence. When a design question is about how something FEELS, the eye is not a slower
+substitute for a measurement — it is the only instrument that exists.
+
+## Lesson 201 — The Half-Repair Law: One Value, Several Readers, One Fixed — And The Test Covers The Fixed One
+
+**What happened, twice in one week.** The build identity had **three** readers: the HUD pill, the
+`[RA CAMERA LIVE TRUTH]` console line, and the camera marker's `build` field, all reading a
+`__RA_COMMIT__` Vite define that froze when the dev server started. BUILD-TRUTH-1 diagnosed the
+freeze correctly, moved **one** reader (the pill) to a live source, and wrote tests — for the reader
+it had just fixed. The other two kept printing the frozen value.
+
+The consequence was not a cosmetic bug. The console line printed `77919708` twice, hours apart,
+across two *different* pills, and that contradiction halted a shippable, owner-approved block
+(CAMERA-COMPANY-ONLY-2) on its own falsehood. **The instrument lied, the code was fine, and the
+stop rule fired on the instrument.** The same shape appeared in the corridor guarantee (see 199): one
+concept, two consumers, only one heard.
+
+**The law.** When a value has several readers, repairing one and testing that one produces a system
+that is *more* confidently wrong than before — because the fixed reader now vouches for the broken
+ones by association. **The unit of repair is the VALUE, not the call site.**
+
+**The test that catches it is the RELATIONSHIP, not the artefact.** Testing any single reader passes.
+What works: assert there is exactly one source (no reader may reference the old one, and the old one
+must not be declarable), and assert that **the artefacts cannot disagree** — derive each the way the
+app derives it and compare them to each other. That test is stronger than three separate tests of
+three readers.

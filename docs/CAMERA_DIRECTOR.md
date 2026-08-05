@@ -135,9 +135,21 @@ A state is described by three things and only three:
 - **ANCHOR** — who the camera is on. The only genuinely per-state part (`_framingSubjects`).
 - **GUARANTEE** — who must stay in frame. Applied as a zoom CEILING: it WIDENS the shot and never
   moves a centre. **Every guarantee measures the room from where the ANCHOR actually sits**, not
-  from the frame's centre — the corridor was the last one still dividing by the centre chord, which
-  made it too permissive for a forward-framed anchor and broke its own promise on 69% of frames
-  (CAMERA-ANCHOR-TRUTH-1).
+  from the frame's centre (CAMERA-ANCHOR-TRUTH-1).
+
+  **WHICH GUARANTEE BINDS WHICH STATE — changed 2026-08-05, CAMERA-COMPANY-ONLY-3.** The
+  single-anchor states (LEADER, OVERVIEW, COMEBACK) are limited by **the owner's own setting and the
+  COMPANY guarantee, and by nothing else**. The CORRIDOR is no longer their ceiling. **The reason in
+  his words: the road is not who matters, the racers are.**
+
+  It was removed because it silently overruled him — his LEADER 1.0 delivered anything from 300 to
+  688 world px on Mountainstreet as the road turned (96.2% of frames), which is the restlessness he
+  complained about, while the COMPANY guarantee reading his own `minRacersVisible` could not be heard
+  underneath it. See Lesson 199.
+
+  The corridor still exists and is still the PAIR states' fallback when fewer than two contenders are
+  present — but **measured: that fallback fired on 0 of 11,813 pair frames**, so it is defensive
+  rather than load-bearing, and it is kept knowingly on that basis.
 - **ZOOM** — how much world is in shot, in standard corridors.
 
 Frame POSITION is not a fourth setting. It follows from "is there anything worth seeing ahead of the
