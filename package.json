@@ -5,7 +5,8 @@
   "description": "Monorepo root \u2014 manages git hooks via Husky",
   "scripts": {
     "prepare": "husky",
-    "verify": "node scripts/verify.mjs"
+    "verify": "node scripts/verify.mjs",
+    "data:export": "node scripts/data-export.mjs"
   },
   "devDependencies": {
     "husky": "^9.0.0",

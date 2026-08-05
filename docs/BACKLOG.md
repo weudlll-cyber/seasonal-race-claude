@@ -168,6 +168,12 @@ Named rather than fixed. Nothing here is urgent; all of it is cheap.
 
 ## Before the VPS migration
 
+- [ ] **`npm run data:export` is what carries his data to the VPS, and the same comparison tells the
+      migration what actually has to move.** Measured on his machine: **247 files / 14.4 MB** differ
+      from `server/seeds/` (three uploaded backgrounds 9.0 MB, the brand logo 2.8 MB, 222 track-editor
+      backups 2.4 MB, 10 schema-differing tracks, and ~15 KB of accounts, brand and player groups);
+      **12 files / 51.7 MB are byte-identical to the seeds and do not need to travel at all.**
+
 **This is a LIST, not a work item.** Nothing here is urgent and nothing here should be "fixed" now.
 The server currently runs only on the owner's machine — **nothing is online**, and a VPS migration
 happens only after development is finished. Every entry below is harmless while that is true and
