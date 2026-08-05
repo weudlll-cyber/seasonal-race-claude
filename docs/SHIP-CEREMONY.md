@@ -49,7 +49,7 @@ is move one without noticing.
 |---|---|---|---|
 | `scripts/fingerprint-default.mjs` — **world** `dc4647be0f55ebdb` | the RACE: physics, plan, outcome | any behaviour change, and per the mint tripwire above | ~2 min |
 | `scripts/camera-fingerprint.mjs` — **camera** `7a33faf2ec131437` | the DIRECTOR's decisions: state, phase, anchor, zoom, offsets, camT, targets | any block touching `client/src/modules/camera/` | ~85 s |
-| `scripts/render-fingerprint.mjs` — **render** `73ba53ba9fea12c7` | the DRAW CALL SEQUENCE: sprite placement, text, styles, transforms, layer order | any block touching the drawing path — `RaceScreen/renderRaceFrame.js`, `RaceScreen/drawing/`, `nameTagLayout.js`, `Minimap.js`, the racer types' `drawRacer` | ~30 s |
+| `scripts/render-fingerprint.mjs` — **render** `1da1a5b392879293` | the DRAW CALL SEQUENCE: sprite placement, text, styles, transforms, layer order | any block touching the drawing path — `RaceScreen/renderRaceFrame.js`, `RaceScreen/drawing/`, `nameTagLayout.js`, `Minimap.js`, the racer types' `drawRacer` | ~77 s |
 
 **Why the render one earns its cost only on drawing blocks.** The camera fingerprint already covers
 every decision the director makes, and it is the cheaper answer for camera-only work. The render

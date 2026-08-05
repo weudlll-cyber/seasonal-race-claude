@@ -274,9 +274,12 @@ test at both ends.
 ## 6. What is protected by tests, and what only by convention
 
 **The render path is no longer convention-only.** `scripts/render-fingerprint.mjs`
-(**`73ba53ba9fea12c7`**) hashes the SEQUENCE of draw calls — sprite placement, text, styles,
-transforms and layer order — at six fixed frames across all ten tracks, by driving the real
-`renderRaceFrame()` through a recording context. It covers what the camera fingerprint structurally
+(**`1da1a5b392879293`**) hashes the SEQUENCE of draw calls — sprite placement, text, styles,
+transforms and layer order — at **sixteen** fixed frames across all ten tracks, by driving the real
+`renderRaceFrame()` through a recording context. FINISH-WINDOW-1 extended the run from 3400 to 5600
+frames and added ten late sample points, because the ending sits at frames 3330–5587 and the
+instrument had never reached it — on 9 of 10 tracks it now samples the finish shot, a frame mid
+zoom-out and the resting frame (`--coverage` prints the matrix; garden-path never finishes). It covers what the camera fingerprint structurally
 cannot: what actually reaches the canvas. Run it on any block whose diff can reach a `ctx.` call.
 
 **Protected — a change breaks a test:** the zoom unit's invariance; the six-state framing table;
