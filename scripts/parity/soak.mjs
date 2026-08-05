@@ -15,7 +15,7 @@
 //   node scripts/parity/soak.mjs --json=path     # also write the raw result rows
 // ============================================================
 
-import { writeFileSync } from 'fs';
+import { writeFileSync } from "fs";
 import {
   TRACKS,
   RACER_CONFIGS,
@@ -23,30 +23,33 @@ import {
   buildIdentity,
   realArm,
   simArm,
-} from './goldenRunner.mjs';
-import { firstDivergence, hashIdentity } from '../../client/src/modules/parity/raceIdentity.js';
+} from "./goldenRunner.mjs";
+import {
+  firstDivergence,
+  hashIdentity,
+} from "../../client/src/modules/parity/raceIdentity.js";
 
 const argv = process.argv.slice(2);
 const argVal = (k, d) => {
   const m = argv.find((a) => a.startsWith(`--${k}=`));
   return m ? m.slice(k.length + 3) : d;
 };
-const LIMIT = Number(argVal('limit', '0')) || 0;
-const JSON_OUT = argVal('json', null);
+const LIMIT = Number(argVal("limit", "0")) || 0;
+const JSON_OUT = argVal("json", null);
 
 // A surface-compatible alternate type per track, so every track is exercised by a type that is
 // NOT its default — the multiplier is part of the pace now, so a second M per track matters.
 const ALT_TYPE = {
-  'city-circuit': 'horse', // asphalt track, earth racer — surface rules are a SETUP concern,
-  'dirt-oval': 'motorbike', // not a physics one; the model must not care either way.
-  'garden-path': 'horse',
-  'ice-track': 'luge',
-  'luger-hill': 'snowmobile',
-  mountainstreet: 'luge',
-  'river-run': 'dolphin',
-  searound: 'dolphin',
-  seatrack: 'duck',
-  'space-sprint': 'horse',
+  "city-circuit": "horse", // asphalt track, earth racer — surface rules are a SETUP concern,
+  "dirt-oval": "motorbike", // not a physics one; the model must not care either way.
+  "garden-path": "horse",
+  "ice-track": "luge",
+  "luger-hill": "snowmobile",
+  mountainstreet: "luge",
+  "river-run": "dolphin",
+  searound: "dolphin",
+  seatrack: "duck",
+  "space-sprint": "horse",
 };
 
 const SEEDS = [1, 7, 42, 101, 2024];
@@ -57,10 +60,11 @@ export function buildMatrix() {
   const out = [];
   for (const [trackId, defaultType] of TRACKS) {
     const ctx = loadTrack(trackId);
-    const shapes = ctx.isOpen ? ['open-in-range', 'open-slowdown'] : ['closed'];
+    const shapes = ctx.isOpen ? ["open-in-range", "open-slowdown"] : ["closed"];
     const types = [defaultType, ALT_TYPE[trackId]];
     for (const racerType of types) {
-      if (!RACER_CONFIGS[racerType]) throw new Error(`unknown racer type ${racerType}`);
+      if (!RACER_CONFIGS[racerType])
+        throw new Error(`unknown racer type ${racerType}`);
       for (const shape of shapes) {
         for (const seed of SEEDS) {
           for (const nRacers of COUNTS) {
@@ -83,10 +87,14 @@ function main() {
   const cases = LIMIT > 0 ? matrix.slice(0, LIMIT) : matrix;
   const started = Date.now();
 
-  console.log('=== GOLDEN EQUALITY SOAK ===');
-  console.log(`identities: ${cases.length}${LIMIT ? ` (limited from ${matrix.length})` : ''}`);
-  console.log(`tracks: ${TRACKS.length}   seeds: ${SEEDS.join(',')}   counts: ${COUNTS.join(',')}`);
-  console.log('');
+  console.log("=== GOLDEN EQUALITY SOAK ===");
+  console.log(
+    `identities: ${cases.length}${LIMIT ? ` (limited from ${matrix.length})` : ""}`,
+  );
+  console.log(
+    `tracks: ${TRACKS.length}   seeds: ${SEEDS.join(",")}   counts: ${COUNTS.join(",")}`,
+  );
+  console.log("");
 
   const rows = [];
   const mismatches = [];
@@ -95,7 +103,7 @@ function main() {
   for (let i = 0; i < cases.length; i++) {
     const c = cases[i];
     const label = `${c.trackId}/${c.racerType}/${c.shape}/n=${c.nRacers}/seed=${c.seed}${
-      c.laps ? `/laps=${c.laps}` : ''
+      c.laps ? `/laps=${c.laps}` : ""
     }`;
     let row;
     try {
@@ -123,9 +131,11 @@ function main() {
         row.firstDivergence = d;
         mismatches.push(row);
         console.log(`  MISMATCH  ${label}`);
-        console.log(`            identity ${row.identityHash}  real ${a.hash}  sim ${b.hash}`);
         console.log(
-          `            first divergence: ${d ? `${d.kind} @ ${d.at} — ${d.detail}` : 'none located'}`
+          `            identity ${row.identityHash}  real ${a.hash}  sim ${b.hash}`,
+        );
+        console.log(
+          `            first divergence: ${d ? `${d.kind} @ ${d.at} — ${d.detail}` : "none located"}`,
         );
       }
     } catch (err) {
@@ -137,21 +147,42 @@ function main() {
 
     if ((i + 1) % 25 === 0 || i === cases.length - 1) {
       const el = ((Date.now() - started) / 1000).toFixed(0);
-      console.log(`  … ${i + 1}/${cases.length}   pass=${pass}   mismatch=${mismatches.length}   ${el}s`);
+      console.log(
+        `  … ${i + 1}/${cases.length}   pass=${pass}   mismatch=${mismatches.length}   ${el}s`,
+      );
     }
   }
 
   const elapsed = ((Date.now() - started) / 1000).toFixed(1);
-  console.log('');
-  console.log('=== RESULT ===');
+  console.log("");
+  console.log("=== RESULT ===");
   console.log(`identities checked : ${cases.length}`);
   console.log(`equal              : ${pass}`);
   console.log(`mismatched         : ${mismatches.length}`);
   console.log(`runtime            : ${elapsed}s`);
-  console.log(mismatches.length === 0 ? 'ALL EQUAL — parity holds across the matrix.' : 'MISMATCHES FOUND — see the list above.');
+  console.log(
+    mismatches.length === 0
+      ? "ALL EQUAL — parity holds across the matrix."
+      : "MISMATCHES FOUND — see the list above.",
+  );
 
   if (JSON_OUT) {
-    writeFileSync(JSON_OUT, JSON.stringify({ meta: { cases: cases.length, pass, mismatches: mismatches.length, elapsed: Number(elapsed) }, rows }, null, 2));
+    writeFileSync(
+      JSON_OUT,
+      JSON.stringify(
+        {
+          meta: {
+            cases: cases.length,
+            pass,
+            mismatches: mismatches.length,
+            elapsed: Number(elapsed),
+          },
+          rows,
+        },
+        null,
+        2,
+      ),
+    );
     console.log(`\nrows -> ${JSON_OUT}`);
   }
 
@@ -160,4 +191,4 @@ function main() {
 
 // Only run when invoked directly — importing this module (e.g. to reuse buildMatrix)
 // must not launch a full soak.
-if (process.argv[1] && process.argv[1].endsWith('soak.mjs')) main();
+if (process.argv[1] && process.argv[1].endsWith("soak.mjs")) main();

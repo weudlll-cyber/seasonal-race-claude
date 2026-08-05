@@ -184,6 +184,7 @@ Where:
 ```
 
 What was eliminated in D7a:
+
 - `cameraZoomFactor` — per-frame compensating multiplier that kept sprites constant-size
 - `REFERENCE_CAMERA_ZOOM = 1.4` — magic constant the above aimed to match
 - Pixel floor inside `computeAutoScaleFactor` — floor is now in the render pipeline only
@@ -198,6 +199,7 @@ Implemented in `modules/rowLayout.js`. Called once at race start in `RaceScreen`
 racer init map.
 
 **Algorithm:**
+
 1. Track width source: `trackWidthPx = track.width ?? shape.getActualTrackWidth()`. The stored
    `track.width` field (set by the Track Editor from `_centerWidth`, the true physical lane width)
    is read first. `getActualTrackWidth()` is the spline-based fallback for tracks that predate
@@ -214,9 +216,9 @@ racer init map.
 5. `computeRowPhysicalY(indexInRow, rowSize, spreadRange)` — distributes racers evenly across
    `[-spreadRange, +spreadRange]`, including partial last rows (full spread, not clustered).
 6. **t-start (track-type dependent):**
-   - *Closed tracks*: Row k at `t = -(k × rowGapPx / pathLengthPx)`. `tPos` wraps negative t
+   - _Closed tracks_: Row k at `t = -(k × rowGapPx / pathLengthPx)`. `tPos` wraps negative t
      correctly (e.g. -0.008 → 0.992 = just before start line).
-   - *Open tracks*: Row k at `t = (totalRows − k) × rowGapPx / pathLengthPx`. All rows start
+   - _Open tracks_: Row k at `t = (totalRows − k) × rowGapPx / pathLengthPx`. All rows start
      at t > 0 within the path (assembly area). Front row at `totalRows × deltaT`, last row at
      `1 × deltaT`. No clamping needed.
 7. `computeSpeedBonus(rowIndex, rowGapPx, pathLengthPx, speedBonusFactor, finishT, isOpen, totalRows)` —
@@ -236,7 +238,7 @@ Config: row-layout params in `racearena:rowLayoutConfig` (`rowGapMultiplier`, `s
 
 ## Scale & Size — Single Sources of Truth
 
-*(Added 2026-06-07, feat/open-track-overlap scale-cleanup. This section is load-bearing — read before touching any lateral distance or body-size calculation.)*
+_(Added 2026-06-07, feat/open-track-overlap scale-cleanup. This section is load-bearing — read before touching any lateral distance or body-size calculation.)_
 
 ### The bug this fixed
 
@@ -272,18 +274,18 @@ Conversion helpers (raceBehavior.js, top of file):
 
 ### Naming map (old → new, feat/open-track-overlap)
 
-| Old name | New name | Notes |
-|---|---|---|
-| `geometricTrackWidthPx` | `trackWidthPx` | racer field; now from track.width not getActualTrackWidth |
-| `getTrackWidthPx(racer)` | `getTrackWidthAtTpx(racer)` | single branch; non-uniform track hook in comment |
-| `honestBodyWidthPx` | `drawnBodyWidthPx` | true per-type visible body width, not frame × fill |
-| `honestBodyLat` (sim) | `drawnBodyWidthPx` | aligned with game field name |
-| `honestBodyLong` (sim) | `drawnBodyLengthPx` | aligned with game convention |
-| `referenceSpriteSize` | `drawnBodyWidthRefPx` | clarifies it is the camera reference (same value as drawnBodyWidthPx) |
-| `spriteWorldSizePx` | `frameSizePx` | it is the full frame envelope, not a "sprite world size" |
-| `visibleWidthPx` | `frameSizePx` | merged with spriteWorldSizePx; one field, one name |
-| `getSpriteWorldSizePx` | `getFrameSizePx` | getter for frameSizePx |
-| `displaySizeScale_physical` | *(inlined)* | was only used to compute physicalSpriteSize; deleted |
+| Old name                    | New name                    | Notes                                                                 |
+| --------------------------- | --------------------------- | --------------------------------------------------------------------- |
+| `geometricTrackWidthPx`     | `trackWidthPx`              | racer field; now from track.width not getActualTrackWidth             |
+| `getTrackWidthPx(racer)`    | `getTrackWidthAtTpx(racer)` | single branch; non-uniform track hook in comment                      |
+| `honestBodyWidthPx`         | `drawnBodyWidthPx`          | true per-type visible body width, not frame × fill                    |
+| `honestBodyLat` (sim)       | `drawnBodyWidthPx`          | aligned with game field name                                          |
+| `honestBodyLong` (sim)      | `drawnBodyLengthPx`         | aligned with game convention                                          |
+| `referenceSpriteSize`       | `drawnBodyWidthRefPx`       | clarifies it is the camera reference (same value as drawnBodyWidthPx) |
+| `spriteWorldSizePx`         | `frameSizePx`               | it is the full frame envelope, not a "sprite world size"              |
+| `visibleWidthPx`            | `frameSizePx`               | merged with spriteWorldSizePx; one field, one name                    |
+| `getSpriteWorldSizePx`      | `getFrameSizePx`            | getter for frameSizePx                                                |
+| `displaySizeScale_physical` | _(inlined)_                 | was only used to compute physicalSpriteSize; deleted                  |
 
 ### Do NOT touch — invariants
 
@@ -313,8 +315,8 @@ There is exactly **one** speed normalisation and **one** duration derivation, in
 `deriveRaceDuration` and use the returned scalars verbatim — nothing re-derives a duration.
 
 **The pace.** One number — `baseSpeedConfig.normalSpeedPxPerSec`, the **normal track speed** in
-world pixels per second, the same for every track (Dev Screen → Dynamics → Speed → *Normal Track
-Speed*, shipped **150 px/s** — the owner's pick, see [reports/parity/REBASELINE.md](../reports/parity/REBASELINE.md)) — times the race type's multiplier:
+world pixels per second, the same for every track (Dev Screen → Dynamics → Speed → _Normal Track
+Speed_, shipped **150 px/s** — the owner's pick, see [reports/parity/REBASELINE.md](../reports/parity/REBASELINE.md)) — times the race type's multiplier:
 
 ```
 P = paceSpeed = normalSpeedPxPerSec × speedMultiplier       [world px/s]
@@ -322,9 +324,10 @@ P = paceSpeed = normalSpeedPxPerSec × speedMultiplier       [world px/s]
 
 `paceSpeedPxPerSec()` is the single definition; every derivation below reads its result, never the
 bare normal speed. A mean racer of that type travels exactly `P` px/s **on a closed and an open
-track alike** — the owner's law, pinned by `durationModel.test.js` → *the owner's law*.
+track alike** — the owner's law, pinned by `durationModel.test.js` → _the owner's law_.
 
 **Formula:**
+
 ```
 // CLOSED: the operator picks LAPS; the duration is derived.
 finishT             = laps                                  (integer >= 1)
@@ -358,7 +361,7 @@ r.baseSpeed = race_baseSpeed × speedMultiplier × spreadFactor × speedBonusMul
   laps. On open tracks, which are time-bounded, it moves the finish line instead:
   `finishT(M) = finishT(1) × M`.
 - `spreadFactor = random[BASE_SPEED_MIN, BASE_SPEED_MAX] / BASE_SPEED_MEAN` — per-racer deviation
-  around the pace; tunable in Dev Screen → Dynamics → Speed → *Speed Range*. **Re-rolled
+  around the pace; tunable in Dev Screen → Dynamics → Speed → _Speed Range_. **Re-rolled
   periodically during the race** (see Re-Roll Mechanism below); only this field changes between rolls.
 - `speedBonusMult = 1 + speedBonus` — positional back-row compensation from D7c row layout.
   **Constant over the whole race** — re-rolls never touch it (see speedBonus below).
@@ -373,7 +376,7 @@ the pace, so the pace no longer depends on the racer count.
 `computeSpeedScaleFactor` and its hidden `_MIN_SCALE = 0.5` clamp (open `pathLengthPx/2000`),
 `computeFinishT` (the sim's open finish-line formula), `estimateClosedTrackDurationSec`,
 `openTrackDurationRange`, and the `expectedMinSpreadFactor` term **in the pace**. See
-[SIM.md](SIM.md) → *THE canonical speed/duration model* and
+[SIM.md](SIM.md) → _THE canonical speed/duration model_ and
 [reports/parity/MICRO-DIVERGENCE.md](../reports/parity/MICRO-DIVERGENCE.md) (the D-DUR seam this closed).
 
 ### Setup screen behaviour
@@ -413,18 +416,18 @@ change with the normal-speed pick. The realized durations they produce at the sh
 luger-hill 59.0 s, mountainstreet 60.0 s; garden-path far longer at the snail's 0.30×). The multiplier `M`
 is the type-intrinsic speed multiplier (part of the pace), not a speed.
 
-| track | topology | default type (M) | old `defaultDuration` | new default |
-|---|---|---|---|---|
-| city-circuit | closed | motorbike (1.05) | 60 s | 2 laps |
-| dirt-oval | closed | horse (1.00) | 60 s | 2 laps |
-| garden-path | closed | snail (0.30) | 120 s | 4 laps |
-| ice-track | closed | snowmobile (1.10) | 60 s | 2 laps |
-| searound | closed | manta (1.10) | 60 s | 2 laps |
-| luger-hill | open | luge (1.10) | 90 s | 90 s stored |
-| mountainstreet | open | boarder (1.00) | 60 s | 60 s stored |
-| river-run | open | duck (0.85) | 60 s | 60 s stored |
-| seatrack | open | dolphin (1.15) | 60 s | 60 s stored |
-| space-sprint | open | rocket (1.25) | 90 s | 90 s stored |
+| track          | topology | default type (M)  | old `defaultDuration` | new default |
+| -------------- | -------- | ----------------- | --------------------- | ----------- |
+| city-circuit   | closed   | motorbike (1.05)  | 60 s                  | 2 laps      |
+| dirt-oval      | closed   | horse (1.00)      | 60 s                  | 2 laps      |
+| garden-path    | closed   | snail (0.30)      | 120 s                 | 4 laps      |
+| ice-track      | closed   | snowmobile (1.10) | 60 s                  | 2 laps      |
+| searound       | closed   | manta (1.10)      | 60 s                  | 2 laps      |
+| luger-hill     | open     | luge (1.10)       | 90 s                  | 90 s stored |
+| mountainstreet | open     | boarder (1.00)    | 60 s                  | 60 s stored |
+| river-run      | open     | duck (0.85)       | 60 s                  | 60 s stored |
+| seatrack       | open     | dolphin (1.15)    | 60 s                  | 60 s stored |
+| space-sprint   | open     | rocket (1.25)     | 90 s                  | 90 s stored |
 
 Closed defaults use the old staircase (< 60 s → 1, 60–89 → 2, 90–119 → 3, ≥ 120 → 4), preserved as
 `legacyLapsFromDefaultDuration()` — a migration helper only; nothing in a running race calls it.
@@ -484,8 +487,8 @@ expected field window `(field A–Bs)` beside it (`fieldFinishWindow`, display o
 is on the mean racer, not on any individual run.
 
 `naturalMaxSeconds` (durationModel.js) derives the open-track picker's full-pace ceiling from
-track physics; the slider deliberately runs past it into the slowdown region (see *Setup screen
-behaviour* above).
+track physics; the slider deliberately runs past it into the slowdown region (see _Setup screen
+behaviour_ above).
 
 **Re-Roll Mechanism (PR-A2.6):**
 During a race each racer's `spreadFactor` is periodically re-drawn to create natural lead
@@ -498,11 +501,11 @@ rollInterval = (reRollLastPositionPercent/100 × realizedDurationSec × 1000ms) 
 ```
 
 | Realized duration | rollCount | rollInterval | Last Roll at |
-|---|---|---|---|
-| 30s | 3 | 9.5s | 28.5s (95%) |
-| 45s | 4 | 10.7s | 42.8s (95%) |
-| 60s | 6 | 9.5s | 57s (95%) |
-| 120s | 12 | 9.5s | 114s (95%) |
+| ----------------- | --------- | ------------ | ------------ |
+| 30s               | 3         | 9.5s         | 28.5s (95%)  |
+| 45s               | 4         | 10.7s        | 42.8s (95%)  |
+| 60s               | 6         | 9.5s         | 57s (95%)    |
+| 120s              | 12        | 9.5s         | 114s (95%)   |
 
 (at the shipped `reRollIntervalDivisor = 10`, `reRollLastPositionPercent = 95`.)
 
@@ -528,14 +531,15 @@ The Race Plan gives each racer a target finishing area and nudges their speed to
 At race start, `createRacePlan(racers, finishT, durationMs, config, seed)` in `modules/racePlanner.js` assigns each racer a **unique target rank** (1..N) via Fisher-Yates shuffle. The shuffle is **completely row-blind** — a racer from the last row is equally likely to draw targetRank=1 as one from row 0. Every racer receives exactly one target; there is no "selected subset." Target ranks are then mapped to five areas:
 
 | Area | Target rank range | Base bonus delta |
-|---|---|---|
-| B1 | 1–5 (top 7%) | +0.03 |
-| B2 | 6–15 (next 14%) | +0.02 |
-| B3 | 16–25 (mid 14%) | +0.01 |
-| B4 | 26–40 (mid 21%) | 0.00 |
-| B5 | 41–N (bottom 44%) | −0.01 |
+| ---- | ----------------- | ---------------- |
+| B1   | 1–5 (top 7%)      | +0.03            |
+| B2   | 6–15 (next 14%)   | +0.02            |
+| B3   | 16–25 (mid 14%)   | +0.01            |
+| B4   | 26–40 (mid 21%)   | 0.00             |
+| B5   | 41–N (bottom 44%) | −0.01            |
 
 Two special subsets are identified from the shuffle:
+
 - **Winner** (`winnerRacerId`): the racer who drew targetRank=1.
 - **Pulk racers**: 3 racers shuffled from rows 1–3 (middle field, never the winner) — the only selection that uses row position explicitly.
 
@@ -584,15 +588,17 @@ Racers are distributed bottom-up, center-out: Row 0 occupies the middle position
 `scripts/sim-fairness.mjs` mirrors the Race Plan logic using `--race-plan=true` and `--bonusMult=<x>`. Every mechanics change must be reflected in both the browser and the sim (Sim-Browser Parity Rule, commit `b9c96d0`). See `reference_sim_fairness_flags.md` in project memory for exact CLI flags.
 
 **Exported metrics from `sim-fairness.mjs`:**
+
 - `computeFairnessStats(raceResults, totalRows, rowSizes)` — chi-square goodness-of-fit across start rows
 - `computeZoneSuccessRate(raceEntries)` — per-zone (B1–B5) hit rate: how often does a racer finish in the zone their race plan assigned them? Zone boundaries mirror `racePlanner.js getAreaBounds()` at `bonusStrengthMultiplier=2.0` (B1: ranks 1–5 +6%, B2: 6–15 +4%, B3: 16–25 +2%, B4: 26–40 ±0%, B5: 41+ −2%)
 
 **Per-race lite metrics** (on each `runSingleRace` result):
+
 - `liteZigzagScore` — mean |Δ(physicalYVelocity)| per racer-frame after 4 s warmup. Target: < 0.003. High values indicate excessive lateral oscillation.
 - `liteLatSpeedScore` — mean |physicalYVelocity| per racer-frame. Measures overall lateral agitation.
 - `liteBrakeRate` — fraction of racer-frames with speed brake active. Expected ~50–85% on dense tracks.
 - `liteStableOvertakes` — t-order changes (A passes B) that persist ≥ 5 frames. High values indicate clean passing. Low values indicate "flicker" overtakes from frame-rate noise.
-- `liteOverlapRate` — fraction of active racer-pair-frames where racer *centers* are within 10% of each body-fill diameter of each other. **Blind to rendered-body overlap during overtaking** — physics never allows centers that close (L126). Target ≈ 0%; a non-zero value would indicate avoidance has completely broken down.
+- `liteOverlapRate` — fraction of active racer-pair-frames where racer _centers_ are within 10% of each body-fill diameter of each other. **Blind to rendered-body overlap during overtaking** — physics never allows centers that close (L126). Target ≈ 0%; a non-zero value would indicate avoidance has completely broken down.
 - `honestOverlapRate` — fraction of active racer-pair-frames (after 4 s warmup) where the rendered body boxes actually overlap (both longitudinal and lateral axes simultaneously). Covers open and closed tracks. Typical open-track values: 0.5–4%; closed short-oval values: 5–8% (pack crowding — not lapping, see Lesson 127).
 - `outcomeReached` — fraction of races where the OUTCOME phase was reached (leader past `racePlanCorridorStart`). Expected ~100%; low values indicate racers DNF before the corridor activates.
 - `fairChanceExactRate` — fraction of B1-designated racers (targetRank 1–5) finishing at their exact assigned rank. Typical ~18–20%.
@@ -604,16 +610,17 @@ Racers are distributed bottom-up, center-out: Row 0 occupies the middle position
 - **Trapped/trembling** — operationally identified as a combo of high zigzagScore (> 0.003), low stableOvt, and near-zero net progress over a time window. **No dedicated counter in the sim; always inferred from lateral quality metrics above — not directly measured.** A result of "no trapped/trembling events" means none of the indirect indicators triggered, not that trapping was directly ruled out. The stuckModeSuppress system (bilateral avoidance suppression) was added specifically to prevent this pattern (L108).
 
 **Key files:**
+
 - `modules/racePlanner.js` — `createRacePlan`, `createTrajectoryController`, `computeBereichsBonusMap`
 - `screens/RaceScreen/index.jsx` — Race Plan activation, `areaBonusMult` in physics loop, fade logic
 - `modules/raceDynamicsConfig.js` — `racePlanBonusStrengthMultiplier` storage CRUD
 - `screens/RaceScreen/CameraDiagnosticsHUD.jsx` — RP DIAG overlay (5 toggleable panels)
 - `scripts/sim-fairness.mjs` — flag-driven fairness/metrics harness (single source shared with the browser); see `docs/SWEEP-HARNESS.md` for the observer + orchestrator stack
-- *(retired 2026-07-20, cleanup step 4)* `scripts/overnight-pulklr-sweep.sh` + `scripts/pp-pulklr-sweep.mjs` — the PulkLeadRotation sweep pair; PulkLeadRotation shipped, pair recoverable at commit `0bb639d~1`
+- _(retired 2026-07-20, cleanup step 4)_ `scripts/overnight-pulklr-sweep.sh` + `scripts/pp-pulklr-sweep.mjs` — the PulkLeadRotation sweep pair; PulkLeadRotation shipped, pair recoverable at commit `0bb639d~1`
 
 ## Pre-OUTCOME Shaping — one steering path (choreo + PulkLeadRotation)
 
-> **Naming.** This section covers the pre-OUTCOME *physics* shaping. It is **DISTINCT from the CameraDirector** (the camera state machine under "Camera System → Director System" below, which only chooses shots and never touches physics).
+> **Naming.** This section covers the pre-OUTCOME _physics_ shaping. It is **DISTINCT from the CameraDirector** (the camera state machine under "Camera System → Director System" below, which only chooses shots and never touches physics).
 
 The pre-OUTCOME race is shaped by **exactly one steering path** with two unconditional halves — there are **no enable flags**; both run every race. The classic reactive layer (a field-cohesion director plus its separate seeded front-action injector) was **removed entirely**; its only surviving trace is a storage-migration alias in `raceDynamicsConfig.js` that re-homes legacy config keys into the `pulk*` namespace. The two live halves are:
 
@@ -637,7 +644,7 @@ The front-action feature (`v-b2-heroes-complete`, master `8bf54ca`). Beyond the 
 
 COMBO15 (`v-ship-combo15`, master `175a475`) promoted the FAIR-ARRIVAL candidate to the default game via two cooperating config keys, both flag-gated so OFF reproduces the pre-combo15 world byte-identically. Since then the shipped world has advanced through two avoidance engine changes (§(a.3)) to the current world **`dc4647be0f55ebdb`** (fingerprint lineage in [SIM.md](SIM.md)). The two fair-arrival keys:
 
-- **Chaos steer** (`chaosSteer` true, `chaosSteerGain` 0.06): a continuous, gentle, clamped pull during the CHAOS phase `[0, pulkStart]` toward each racer's DRAWN band — a *target* nudge, slew-eased (`_setTarget`), not a positional force; in-band racers are untouched. It seats the field near its drawn bands by the chaos boundary so the honest finish lands more racers in-band.
+- **Chaos steer** (`chaosSteer` true, `chaosSteerGain` 0.06): a continuous, gentle, clamped pull during the CHAOS phase `[0, pulkStart]` toward each racer's DRAWN band — a _target_ nudge, slew-eased (`_setTarget`), not a positional force; in-band racers are untouched. It seats the field near its drawn bands by the chaos boundary so the honest finish lands more racers in-band.
 - **Band-aware re-roll draw bias** (`bandBias` true, `bandBiasR` 0.60, `bandBiasGain` 0.10): from progress `R=0.60`, each racer's re-roll DRAW (not its position) is re-aimed toward its drawn band, clamped to the honest `[spreadMin, spreadMax]` range, so nothing is fought and in-band racers keep free dice. This is the fairness win — the Cliff Law's correct sign (correct the draw, never the motion after the dice; [LESSONS.md](LESSONS.md) L184).
 
 Together with the narrower `pulkStart=0.15` chaos window (which keeps the mid-race lively, PULK-SPECTACLE), COMBO15 lifts **absolute band arrival to 85–90%/track** (from 69–83%) while holding the per-row floor and frontContest. The canonical definition (two-layer fairness, arrival headline, the v2 duration-relative pulk watchdog `chaosGap ≤ ship×1.5`, and the documented residuals) is [docs/FAIRNESS.md](FAIRNESS.md); the ship record is [reports/evolution/MERGE-SHIP-1.md](../reports/evolution/MERGE-SHIP-1.md). COMBO15 fingerprint `ded0a126048e4cdb` (OFF invariant `f8f7d9c2fd3283e9`). Config (`storage/defaults.js`): `chaosSteer` (true), `chaosSteerGain` (0.06), `bandBias` (true), `bandBiasR` (0.6), `bandBiasGain` (0.1), `racePlanPulkStart` (0.15).
@@ -705,6 +712,7 @@ renderAlpha = physicsAccum / FIXED_DT    // fraction of next step already elapse
 ```
 
 Key properties:
+
 - A 50 ms frame fires at most 2 physics steps (catch-up cap); a 5 ms frame fires 0. Total physics time is never lost.
 - `physicsTs` is the authoritative race clock — independent of display FPS.
 - Re-roll timestamps use `physicsTs`-relative offsets, not wall-time, so race duration is deterministic.
@@ -762,12 +770,12 @@ Trail rendering will be data-driven by a **Surface Class system**. Instead of a 
 
 Four generator modules under `client/src/modules/surface-effects/generators/`:
 
-| Generator | Description |
-|---|---|
+| Generator  | Description                                                      |
+| ---------- | ---------------------------------------------------------------- |
 | `particle` | Individual point/circle particles (e.g. asphalt dust, ice chips) |
-| `cloud` | Soft, growing, fading blobs (e.g. sand, snow, earth) |
-| `splash` | Fast particles with gravity (e.g. mud splatter, water drops) |
-| `line` | Persistent ground-level streaks (e.g. ice scratches) |
+| `cloud`    | Soft, growing, fading blobs (e.g. sand, snow, earth)             |
+| `splash`   | Fast particles with gravity (e.g. mud splatter, water drops)     |
+| `line`     | Persistent ground-level streaks (e.g. ice scratches)             |
 
 Each generator exports a factory:
 
@@ -781,17 +789,17 @@ A Surface Class references one generator and configures its parameters (color, s
 
 **9 Default Surface Classes (code constants in `defaultClasses.js`):**
 
-| id | Display Label | Generator |
-|---|---|---|
-| `asphalt` | Asphalt | `particle` |
-| `sand` | Sand | `cloud` |
-| `earth` | Earth | `cloud` |
-| `mud` | Mud | `splash` |
-| `grass` | Grass | `particle` |
-| `snow` | Snow | `cloud` |
-| `ice` | Ice | `line` |
-| `water` | Water | `splash` |
-| `air` | Air | `particle` |
+| id        | Display Label | Generator  |
+| --------- | ------------- | ---------- |
+| `asphalt` | Asphalt       | `particle` |
+| `sand`    | Sand          | `cloud`    |
+| `earth`   | Earth         | `cloud`    |
+| `mud`     | Mud           | `splash`   |
+| `grass`   | Grass         | `particle` |
+| `snow`    | Snow          | `cloud`    |
+| `ice`     | Ice           | `line`     |
+| `water`   | Water         | `splash`   |
+| `air`     | Air           | `particle` |
 
 Default classes are code constants (single source of truth, analogous to racer types). Custom classes and default overrides are stored in the backend.
 
@@ -811,16 +819,19 @@ RaceScreen init: resolveTrailEmitter(racerType, trackSurfaceClasses)
 ```
 
 **rAF loop (per unfinished racer):**
+
 - `r.surfaceEmitter` present → `spawn(x, y, speed, angle)` + `update(particles, dt/16)` on per-racer particle list
 - `r.surfaceEmitter` is null (no match) → `rt.getTrailParticles(...)` → global `dustParticles` pool (native trail, unchanged)
 
 **Render (inside camera transform, world space):**
+
 - `drawSurfaceTrails()` calls `r.surfaceEmitter.render(ctx, r.surfaceParticles)` per racer
 - `drawParticles()` renders global `dustParticles` (native trail path)
 
 **native trail Fallback:** If no class from the racer type's `surfaceClasses` list intersects the current track's `surfaceClasses`, the racer falls back to its static `trailFactory` (current behavior, unchanged).
 
 **Key files:**
+
 - `modules/surface-effects/trailResolver.js` — `resolveTrailEmitter(racerType, trackSurfaceClasses)`
 - `screens/SetupScreen/SetupScreen.jsx` — writes `trackSurfaceClasses` into `activeRace`
 - `screens/RaceScreen/index.jsx` — consumes emitter per racer; falls back to native trail
@@ -842,12 +853,12 @@ The backend seeds the defaults on first boot if storage is empty. The frontend c
 
 ### Sub-PR Structure
 
-| Sub-PR | Scope |
-|---|---|
-| ✅ VRE-1 — Foundation | Generator modules, Surface-Class data model, `/api/surface-classes` backend, storage. No UI, no race integration. |
-| ✅ VRE-2 — Class Editor | "Surface Classes" section in Dev Screen (sidebar, after Tracks). Master-detail layout: class list with Default / Modified / Custom badges on the left; animated live-preview canvas + config editor on the right. `SurfaceClassManager.jsx`, `SurfaceClassPreview.jsx`, `useSurfaceClasses.js`. |
+| Sub-PR                         | Scope                                                                                                                                                                                                                                                                                                                         |
+| ------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| ✅ VRE-1 — Foundation          | Generator modules, Surface-Class data model, `/api/surface-classes` backend, storage. No UI, no race integration.                                                                                                                                                                                                             |
+| ✅ VRE-2 — Class Editor        | "Surface Classes" section in Dev Screen (sidebar, after Tracks). Master-detail layout: class list with Default / Modified / Custom badges on the left; animated live-preview canvas + config editor on the right. `SurfaceClassManager.jsx`, `SurfaceClassPreview.jsx`, `useSurfaceClasses.js`.                               |
 | ✅ VRE-3 — Racer/Track Linking | `surfaceClasses: string[]` on SpriteRacerType + `getSurfaceClasses()`. All 20 racer types assigned. Added to TUNABLE_FIELDS (8 total). `filterRacerTypesForTrack()` in registry.js. Pill multi-selects in RacerEditModal + TrackManager. SetupScreen filter + surface hint. Server startup migration patches existing tracks. |
-| ✅ VRE-4 — Race Integration | `trailResolver.js` resolves per-racer emitter at race start. RaceScreen rAF loop drives spawn/update/render via emitter; native trail fallback (trailFactory) when no class matches. `trackSurfaceClasses` added to raceData in SetupScreen. |
+| ✅ VRE-4 — Race Integration    | `trailResolver.js` resolves per-racer emitter at race start. RaceScreen rAF loop drives spawn/update/render via emitter; native trail fallback (trailFactory) when no class matches. `trackSurfaceClasses` added to raceData in SetupScreen.                                                                                  |
 
 ### Future: Surface Zones
 
@@ -883,22 +894,26 @@ seasonal-race-claude/
 ```
 
 **Track Read API (L.2):**
+
 - `GET /api/tracks` → array of custom track summaries (no geometry arrays)
 - `GET /api/tracks/:id` → full track including `innerPoints`/`outerPoints`/`centerPoints`
 - `GET /api/tracks/:id/background` → binary JPEG/PNG
 
 **Frontend loading strategy (L.3):**
+
 1. `useServerTracks()` hook fires on component mount (SetupScreen, TrackManager, RaceHistory)
 2. `fetchServerTracks()` fetches the list, caches it, then eagerly calls `cacheTrackGeometry()` for each track
 3. `cacheTrackGeometry()` stores the full geometry in `racearena:trackGeometries:<geometryId>`. Uses spread+exclusion (`{ ...full }` minus server `id`, `geometryId`, `backgroundImageFile`) so new data-model fields (e.g. `trackLights`, `surfaceClasses`) flow through automatically without code changes here — see Lesson 37. Existing `getTrack(geometryId)` calls in RaceScreen/PresetThumbnail work unchanged.
 4. `backgroundImage` in the cached geometry = the live server URL (computed from server track `id`)
 
 **Offline fallback strategy (L.4):**
+
 - Background images are served live from the server URL stored in `geometry.backgroundImage`; no local cache (images 4–10 MB exceed localStorage limits). Offline races run without background.
 
 **Atomic writes:** All JSON writes use `server/utils/atomicWriteJson.js` (write to `.tmp`, then rename; falls back to direct write on OneDrive where `renameSync` can transiently fail).
 
 **Input validation (Sec-1 — C1/C2/H4):** POST and PUT requests to `/api/tracks` are validated before writing:
+
 - `name` — non-empty string, max 100 characters
 - `effects[*].config.count` — must be a finite integer, 0–1000
 - Geometry coordinates (`centerPoints`, `innerPoints`, `outerPoints`) — must be finite numbers with `|coord| ≤ 10000`
@@ -907,6 +922,7 @@ seasonal-race-claude/
 **Upload validation (Sec-2 — C4):** `POST /api/tracks/:id/background` validates the upload against magic bytes (PNG: `89 50 4E 47`, JPEG: `FF D8 FF`, WebP: `RIFF????WEBP`). Non-image MIME types are rejected by multer before buffering; magic-byte check is the authoritative guard. Response includes `X-Content-Type-Options: nosniff`.
 
 **Track Write API (L.5):**
+
 - `POST /api/tracks` — creates track (validates name, closed, worldWidth/worldHeight, geometry arrays); atomic write (temp + rename); returns new track object
 - `PUT /api/tracks/:id` — updates track; preserves `geometryId`, `createdAt`, `backgroundImageFile`; atomic write; 404 if not found
 - `DELETE /api/tracks/:id` — removes JSON file + background image; 404 if not found
@@ -915,6 +931,7 @@ seasonal-race-claude/
 - `DELETE /api/tracks/:id` returns **403** if `isDefault: true` — default tracks cannot be deleted via API
 
 **Frontend write strategy (L.5):**
+
 - `trackApi.js` — all write ops throw on server error; 8 s timeout wraps every fetch; error message includes `docker-compose up` hint for local dev
 - TrackEditor: Save → `createTrackOnServer` / `updateTrackOnServer` → `uploadTrackBackground` if new background file → `cacheTrackGeometry` + `refresh`; `serverError` state shows "Retry" button
 - TrackManager: Save (server track) → `updateTrackOnServer` + `refresh`; Save (local track) → `setTracks` (localStorage); Delete (server) → `deleteTrackFromServer` + `refresh` (no client-side geometry cache purge); Geometry edit → `/track-editor?load=<serverId>`
@@ -922,11 +939,13 @@ seasonal-race-claude/
 - **PUT validation is partial:** `validateTrackBodyForUpdate` only validates fields actually present in the request body. Geometry fields (`closed`, `centerPoints`, `innerPoints`, `outerPoints`) are optional in PUT — if omitted they are merged from the existing track. POST uses `validateTrackBodyForCreate` which is strict (all geometry fields required). This allows TrackManager to send metadata-only PUTs without re-sending the full geometry.
 
 **Migration strategy (L.5):**
+
 - On first server connection, `migrateLocalTracksToServer()` runs once per browser
 - Reads all custom (non-default) tracks from `KEYS.TRACKS`; POSTs each to server; converts data-URL backgrounds to Blob via `fetch(dataUrl).then(r => r.blob())` and uploads
 - Removes each track from localStorage on success; marker key `racearena:migration:tracks-to-server-v1` set only after all tracks migrated successfully
 
 **Phase L scope:**
+
 - **L.1–L.5** — ✅ all complete (see BACKLOG.md)
 
 ⚠️ **Before VPS deployment: add auth.** Currently any browser visitor has full write access. See Phase 5.
@@ -940,13 +959,13 @@ See `docs/TRACK_LIFECYCLE.md` for the full lifecycle spec. This section summaris
 
 ### Terminology
 
-| Term | Meaning |
-|---|---|
-| **Track-Preset** | Metadata record: name, icon, color, default racer, surface classes, track lights. Stored in `server/data/tracks/<id>.json`. |
-| **Track-Geometry** | Spatial data: background image, inner/outer boundary points, effects, closed flag. Stored in the same JSON file, referenced by `geometryId`. |
-| **Server-Track** | A Track-Preset that exists as a real server record (has a `server/data/tracks/<id>.json` file). |
-| **Default-Track** | One of the 10 built-in tracks (Dirt Oval, River Run, Space Sprint, Garden Path, City Circuit, Mountainstreet, Ice Track, Seatrack, Searound, Luger Hill). After TLH-1 these are Server-Tracks with empty geometry fields at boot. |
-| **Code-Bundle** | `client/src/modules/storage/defaultTracks.js` — the in-code fallback snapshot. Used as last resort when server is unreachable and cache is empty. |
+| Term               | Meaning                                                                                                                                                                                                                           |
+| ------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Track-Preset**   | Metadata record: name, icon, color, default racer, surface classes, track lights. Stored in `server/data/tracks/<id>.json`.                                                                                                       |
+| **Track-Geometry** | Spatial data: background image, inner/outer boundary points, effects, closed flag. Stored in the same JSON file, referenced by `geometryId`.                                                                                      |
+| **Server-Track**   | A Track-Preset that exists as a real server record (has a `server/data/tracks/<id>.json` file).                                                                                                                                   |
+| **Default-Track**  | One of the 10 built-in tracks (Dirt Oval, River Run, Space Sprint, Garden Path, City Circuit, Mountainstreet, Ice Track, Seatrack, Searound, Luger Hill). After TLH-1 these are Server-Tracks with empty geometry fields at boot. |
+| **Code-Bundle**    | `client/src/modules/storage/defaultTracks.js` — the in-code fallback snapshot. Used as last resort when server is unreachable and cache is empty.                                                                                 |
 
 ### Persistence Layer (after TLH)
 
@@ -1032,15 +1051,15 @@ A small set of core physics parameters control racer avoidance, lateral motion, 
 
 ### Current Values (Phase 5 winner, established 2026-06-03; speed-brake body-based 2026-06-08)
 
-| Parameter | Value | Description |
-|---|---|---|
-| `lateralForce` | 0.011400 | Sideways steering force applied per frame during avoidance |
-| `lateralDamping` | 0.160000 | Fraction of lateral velocity retained each frame |
-| `avoidanceBufferPct` | 0.200000 | Buffer beyond body contact before avoidance gate fires (20% lead time) |
-| `speedBrakeFactor` | 0.945000 | Speed multiplier applied to the trailing racer when side-by-side |
-| `speedBrakeTMultiplier` | 1.500000 | Longitudinal lead-time multiplier: brake fires at `bodyContactLength × 1.5` before contact |
-| `avoidanceDistance` | 0.180000 | *Retired from browser gate (report 39). Kept for sim-script backward compat.* |
-| `speedBrakeYThreshold` | 0.180000 | *Retired from browser brake gate (report 45 — body-based same-lane filter). Kept for sim compat.* |
+| Parameter               | Value    | Description                                                                                       |
+| ----------------------- | -------- | ------------------------------------------------------------------------------------------------- |
+| `lateralForce`          | 0.011400 | Sideways steering force applied per frame during avoidance                                        |
+| `lateralDamping`        | 0.160000 | Fraction of lateral velocity retained each frame                                                  |
+| `avoidanceBufferPct`    | 0.200000 | Buffer beyond body contact before avoidance gate fires (20% lead time)                            |
+| `speedBrakeFactor`      | 0.945000 | Speed multiplier applied to the trailing racer when side-by-side                                  |
+| `speedBrakeTMultiplier` | 1.500000 | Longitudinal lead-time multiplier: brake fires at `bodyContactLength × 1.5` before contact        |
+| `avoidanceDistance`     | 0.180000 | _Retired from browser gate (report 39). Kept for sim-script backward compat._                     |
+| `speedBrakeYThreshold`  | 0.180000 | _Retired from browser brake gate (report 45 — body-based same-lane filter). Kept for sim compat._ |
 
 ### Where They Live
 
@@ -1070,7 +1089,7 @@ The values CAN be changed but only in `defaults.js` directly, and only after run
 
 ## Background Layer — GPU Compositor Promotion
 
-*(Added 2026-06-09, after bg-layer/promotion investigation.)*
+_(Added 2026-06-09, after bg-layer/promotion investigation.)_
 
 The race canvas is split into two sibling `<canvas>` elements, stacked with CSS `position: absolute`:
 

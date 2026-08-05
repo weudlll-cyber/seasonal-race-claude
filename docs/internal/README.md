@@ -11,6 +11,7 @@ tuning configs (autoScaleConfig, rowLayoutConfig, raceBehaviorConfig, etc.).
 ### Purpose
 
 Some bugs are only reproducible when the exact browser configuration is known — in particular:
+
 - Track geometry dimensions (affects `getActualTrackWidth()`)
 - `autoScaleConfig` (affects `displaySizeScale` → `spriteSize` → `racersPerRow`)
 - `rowLayoutConfig` (affects row spacing and speed bonus)
@@ -38,6 +39,7 @@ which is slow and error-prone.
 ### What is included
 
 All `racearena:*` keys from localStorage, including:
+
 - `racearena:tracks` — track presets
 - `racearena:trackGeometries:<id>` — geometry data (inner/outer splines)
 - `racearena:trackGeometries:index` — geometry index

@@ -31,13 +31,16 @@ import {
   buildRace,
   runRace,
   TRACK_DEFAULT_RACER,
-} from './lib/raceDriver.mjs';
-import { DEFAULT_CAMERA_CONFIG } from '../client/src/modules/storage/defaults.js';
-import { frameExtentAlong } from '../client/src/modules/camera/frameGeometry.js';
-import { framingFor, POSITION } from '../client/src/modules/camera/framingRule.js';
+} from "./lib/raceDriver.mjs";
+import { DEFAULT_CAMERA_CONFIG } from "../client/src/modules/storage/defaults.js";
+import { frameExtentAlong } from "../client/src/modules/camera/frameGeometry.js";
+import {
+  framingFor,
+  POSITION,
+} from "../client/src/modules/camera/framingRule.js";
 
-const tcArg = process.argv.find((a) => a.startsWith('--overview-tc='));
-const OVERRIDE = tcArg ? tcArg.split('=')[1].split(',').map(Number) : null;
+const tcArg = process.argv.find((a) => a.startsWith("--overview-tc="));
+const OVERRIDE = tcArg ? tcArg.split("=")[1].split(",").map(Number) : null;
 
 const IDENTITY = resolveIdentity({
   racers: 40,
@@ -45,7 +48,7 @@ const IDENTITY = resolveIdentity({
   cameraSeed: 1439767152,
   racerType: TRACK_DEFAULT_RACER,
   seconds: 60,
-  note: 'the CAMERA-ANCHOR-TRUTH-1 measurement context',
+  note: "the CAMERA-ANCHOR-TRUTH-1 measurement context",
 });
 
 const median = (a) => {
@@ -65,8 +68,9 @@ const p95 = (a) => {
 function cameraConfig() {
   const cfg = JSON.parse(JSON.stringify(DEFAULT_CAMERA_CONFIG));
   if (OVERRIDE) {
-    const prof = cfg.cameraStateProfiles?.OVERVIEW ?? cfg.stateProfiles?.OVERVIEW;
-    if (!prof) throw new Error('cannot find the OVERVIEW profile to override');
+    const prof =
+      cfg.cameraStateProfiles?.OVERVIEW ?? cfg.stateProfiles?.OVERVIEW;
+    if (!prof) throw new Error("cannot find the OVERVIEW profile to override");
     prof.trackingTC = OVERRIDE[0];
     prof.entryTC = OVERRIDE[1];
   }
@@ -81,7 +85,7 @@ function measureTrack(geo, cfg) {
 
   runRace(race, IDENTITY, cfg, () => {
     const p = cd._framingProbe;
-    if (!p || !p.point || !(cd.zoom > 0) || cd.lerpPhase !== 'tracking') {
+    if (!p || !p.point || !(cd.zoom > 0) || cd.lerpPhase !== "tracking") {
       return;
     }
     const hs = cd._headingScreen(p.t);
@@ -92,7 +96,10 @@ function measureTrack(geo, cfg) {
     const ux = hs.x / hlen;
     const uy = hs.y / hlen;
     const framing = framingFor(cd.state);
-    const intended = framing.position === POSITION.FORWARD ? (cd._leaderForwardFrac ?? 0.5) : 0.5;
+    const intended =
+      framing.position === POSITION.FORWARD
+        ? (cd._leaderForwardFrac ?? 0.5)
+        : 0.5;
     const sxPix = p.point.x * cd._proj.effX(cd.zoom) + cd.offsetX;
     const syPix = p.point.y * cd._proj.effY(cd.zoom) + cd.offsetY;
     const chord = frameExtentAlong(ux, uy, p.frameW, p.frameH);
@@ -113,7 +120,7 @@ const geos = loadTracks();
 const cfg = cameraConfig();
 const prof = cfg.cameraStateProfiles?.OVERVIEW ?? cfg.stateProfiles?.OVERVIEW;
 console.log(
-  `TRACKING LAG (percentage points of frame, tracking phase only) — OVERVIEW trackingTC=${prof.trackingTC} entryTC=${prof.entryTC}\n`
+  `TRACKING LAG (percentage points of frame, tracking phase only) — OVERVIEW trackingTC=${prof.trackingTC} entryTC=${prof.entryTC}\n`,
 );
 console.log(formatIdentity(IDENTITY));
 
@@ -126,17 +133,19 @@ for (const geo of geos) {
   }
 }
 
-console.log('state              frames    median pp    p95 pp');
+console.log("state              frames    median pp    p95 pp");
 const order = [...pooled.keys()].sort();
 for (const s of order) {
   const a = pooled.get(s);
   console.log(
-    `  ${s.padEnd(16)} ${String(a.length).padStart(7)}   ${median(a).toFixed(2).padStart(8)}  ${p95(a).toFixed(2).padStart(8)}`
+    `  ${s.padEnd(16)} ${String(a.length).padStart(7)}   ${median(a).toFixed(2).padStart(8)}  ${p95(a).toFixed(2).padStart(8)}`,
   );
 }
-const ov = pooled.get('OVERVIEW') ?? [];
-const others = order.filter((s) => s !== 'OVERVIEW').flatMap((s) => pooled.get(s));
+const ov = pooled.get("OVERVIEW") ?? [];
+const others = order
+  .filter((s) => s !== "OVERVIEW")
+  .flatMap((s) => pooled.get(s));
 console.log(
   `\n  OVERVIEW median ${median(ov).toFixed(2)} pp vs every other state pooled ${median(others).toFixed(2)} pp` +
-    `  (ratio ${(median(ov) / median(others)).toFixed(2)}x)`
+    `  (ratio ${(median(ov) / median(others)).toFixed(2)}x)`,
 );

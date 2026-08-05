@@ -17,9 +17,10 @@ Free-lane firing rate and direction distribution measured.
 identified as home-force-dominated system — led to Sprint 2.
 
 **Files:**
+
 - [free-lane-separation-report.md](free-lane-separation-report.md) — Implementation report PR #98 (free-lane logic)
 - [free-lane-firing-summary.md](free-lane-firing-summary.md) — Sprint 1 measurement: firing rate, framing
-- `free-lane-firing-trace.ndjson` — Raw data (1800 frames) *(gitignored trace, not committed)*
+- `free-lane-firing-trace.ndjson` — Raw data (1800 frames) _(gitignored trace, not committed)_
 
 ---
 
@@ -36,10 +37,11 @@ racers back before free-lane could separate them. Fix: `homeForceReductionOnOver
 reduces home-force to 30% during geometric overlap.
 
 **Files:**
+
 - [free-lane-force-attribution-summary.md](free-lane-force-attribution-summary.md) — Analysis report with force breakdown
-- `free-lane-force-attribution-trace.ndjson` — Raw data (1800 frames, per-force) *(gitignored trace, not committed)*
-- `scripts/diag-free-lane-force-attribution.mjs` — Simulation script *(removed from tracking in cleanup step 2, 2026-07-20; recoverable at commit `c441e7c~1` (git history). Investigation CLOSED — the home-force reduction fix below shipped.)*
-- `scripts/diag-free-lane-force-attribution-summary.mjs` — Aggregation script *(removed from tracking in cleanup step 2, 2026-07-20; recoverable at commit `c441e7c~1` (git history).)*
+- `free-lane-force-attribution-trace.ndjson` — Raw data (1800 frames, per-force) _(gitignored trace, not committed)_
+- `scripts/diag-free-lane-force-attribution.mjs` — Simulation script _(removed from tracking in cleanup step 2, 2026-07-20; recoverable at commit `c441e7c~1` (git history). Investigation CLOSED — the home-force reduction fix below shipped.)_
+- `scripts/diag-free-lane-force-attribution-summary.mjs` — Aggregation script _(removed from tracking in cleanup step 2, 2026-07-20; recoverable at commit `c441e7c~1` (git history).)_
 
 ---
 
@@ -55,6 +57,7 @@ verification by user.
 confirmed: clusters dissolve, separation works.
 
 **Files:**
+
 - [home-force-reduction-report.md](home-force-reduction-report.md) — Implementation report
 
 ---
@@ -71,6 +74,7 @@ mechanics, only value adjustments.
 draftingBoost, draftingMaxDistance). Separated into PR #97 (not PR #98).
 
 **Files:**
+
 - [relaxed-defaults-report.md](relaxed-defaults-report.md) — Change report
 
 ---
@@ -81,12 +85,14 @@ draftingBoost, draftingMaxDistance). Separated into PR #97 (not PR #98).
 test quality, security, documentation status.
 
 **Result:**
+
 - 1 bug found: `homeForceReductionOnOverlap` in wrong DevScreen block (fixed)
 - 1 language convention violation: German tooltip (fixed)
 - 0 ghost tests, 0 ghost UI bindings, 0 security issues
 - All 18 config fields 100% HOT (UI ↔ backend fully wired)
 
 **Files:**
+
 - [cleanup-audit-pr98.md](cleanup-audit-pr98.md) — Full audit report
 
 ---

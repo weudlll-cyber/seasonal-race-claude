@@ -32,8 +32,8 @@ for them proved what the diff already proved; that is where the wasted three min
 
 - **Anything reaching the engine other than through `raceCore.js`'s import graph** — a value passed
   in as an ARGUMENT by a caller. `drawnBodyWidthRefPx` is exactly that: computed in a screen file and
-  handed to the engine. The closure contains the file that *consumes* it (`raceBehavior.js`) but not
-  the screen that *computes* it. **If your diff changes a number that is passed into the race, mint —
+  handed to the engine. The closure contains the file that _consumes_ it (`raceBehavior.js`) but not
+  the screen that _computes_ it. **If your diff changes a number that is passed into the race, mint —
   the tripwire will not tell you to.**
 - **Dynamic imports.** A static walk cannot follow `import()`. There are none in the closure today and
   `scripts/engine-reach.test.mjs` fails if one appears, at which point this rule needs revisiting.
@@ -64,7 +64,6 @@ whose values reach `createRaceFromIdentity` / `stepRacePhysics`, kept beside `WO
 scheduled for the hygiene phase (see [BACKLOG.md](BACKLOG.md)). Keep both: the mint rule catches what
 a person remembers, the list catches what nobody does.
 
-
 ### WHEN CI MUST BE GREEN — and when it may report afterwards
 
 **Default: merge on a green local `npm run verify`; CI runs on the push and reports.** The full rule,
@@ -82,16 +81,16 @@ is move one without noticing.
 **The VALUES below are copies. Their one home is [docs/fingerprints.json](fingerprints.json)** — the
 value, the commit it was minted on, the date, and the script that reproduces it. Do not type a
 fingerprint into this table or anywhere else: put it in the record and run
-`node scripts/check-fingerprints.mjs --fix`, which writes it into all seventeen places that state it.
+`node scripts/check-fingerprints.mjs --fix`, which writes it into every place that states it.
 The guard fails if any of them disagrees, if a site loses the wording it is found by, or if a new
 file starts stating a value without being declared. This document still owns the PROCEDURE for
 minting; [SIM.md](SIM.md) owns the lineage; [REBASELINE.md](../reports/parity/REBASELINE.md) owns the
 baseline statistics behind the current world.
 
-| | covers | run it when |
-|---|---|---|
-| `scripts/fingerprint-default.mjs` — **world** `dc4647be0f55ebdb` | the RACE: physics, plan, outcome | any behaviour change, and per the mint tripwire above |
-| `scripts/camera-fingerprint.mjs` — **camera** `00cafa2432add0f7` | the DIRECTOR's decisions: state, phase, anchor, zoom, offsets, camT, targets | any block touching `client/src/modules/camera/` |
+|                                                                  | covers                                                                          | run it when                                                                                                                                                                                                                                                                                                                                                                                                                                                                     |
+| ---------------------------------------------------------------- | ------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `scripts/fingerprint-default.mjs` — **world** `dc4647be0f55ebdb` | the RACE: physics, plan, outcome                                                | any behaviour change, and per the mint tripwire above                                                                                                                                                                                                                                                                                                                                                                                                                           |
+| `scripts/camera-fingerprint.mjs` — **camera** `00cafa2432add0f7` | the DIRECTOR's decisions: state, phase, anchor, zoom, offsets, camT, targets    | any block touching `client/src/modules/camera/`                                                                                                                                                                                                                                                                                                                                                                                                                                 |
 | `scripts/render-fingerprint.mjs` — **render** `1f83ecc1fcb6fa9a` | the DRAW CALL SEQUENCE: sprite placement, text, styles, transforms, layer order | any block touching the drawing path — **`modules/camera/`**, `RaceScreen/renderRaceFrame.js`, `RaceScreen/drawing/`, `nameTagLayout.js`, `Minimap.js`, the racer types' `drawRacer`. **Camera counts** (FINISH-COMPANY-1): a camera-only diff moved this hash `b6591e74102152bd` → `1f83ecc1fcb6fa9a`, because the director decides the transform on every drawn frame. `scripts/verify.mjs` had copied this list's omission and told a block it could not reach a `ctx.` call. |
 
 <!-- BEGIN GENERATED: guard costs — gen-ceremony-costs.mjs -->
@@ -101,20 +100,20 @@ by `node scripts/gen-ceremony-costs.mjs`. Each guard times ITSELF and prints `[r
 this table quotes those numbers. A duration here that nobody measured is a bug in the generator,
 not a typo. `--check` warns once the block is more than 40 commits old.
 
-| guard | cost |
-|---|---|
+| guard                                         | cost  |
+| --------------------------------------------- | ----- |
 | `scripts/fingerprint-default.mjs` — **world** | 120 s |
-| `scripts/camera-fingerprint.mjs` — **camera** | 39 s |
-| `scripts/render-fingerprint.mjs` — **render** | 32 s |
-| `scripts/check-doc-links.mjs` | 0 s |
-| `scripts/check-index.mjs` | 0 s |
-| `scripts/check-tags.mjs` | 1 s |
+| `scripts/camera-fingerprint.mjs` — **camera** | 39 s  |
+| `scripts/render-fingerprint.mjs` — **render** | 32 s  |
+| `scripts/check-doc-links.mjs`                 | 0 s   |
+| `scripts/check-index.mjs`                     | 0 s   |
+| `scripts/check-tags.mjs`                      | 1 s   |
 
 <!-- END GENERATED: guard costs -->
 
 **Why the render one earns its cost only on drawing blocks.** The camera fingerprint already covers
 every decision the director makes, and it is the cheaper answer for camera-only work. The render
-fingerprint answers the question the camera one structurally cannot — *did the picture change?* —
+fingerprint answers the question the camera one structurally cannot — _did the picture change?_ —
 and until RENDER-FINGERPRINT-1 that was an argument every camera block ended on. Run it whenever the
 diff can reach a `ctx.` call.
 
@@ -131,59 +130,59 @@ never do one artefact and defer the other (that is exactly how the INDEX entry a
 went missing).
 
 - [ ] **0. Pre-flight.** Confirm the change is UI-configurable (a config key, not a hard-coded edit).
-  `eslint` clean, `build` green, the full test suite green on the working tree before you measure.
+      `eslint` clean, `build` green, the full test suite green on the working tree before you measure.
 - [ ] **1. Paired measurement — the gate.** Run the **N=100 quartet, paired seeds, against the CURRENT
-  shipped world** (`scripts/exp-flapping-gate.mjs --nlist=100`). Paired means the same seed sequence
-  for both arms; the baseline is the fingerprint that is shipped RIGHT NOW, **never gold numbers
-  copied from another run** (a stale gold number silently compares against the wrong world). Gate is
-  green when: band arrival holds within noise on every track, runaway 0%, per-row floor (rowMin)
-  holds, and Holm does not gain a newly-unfair track versus the current ship. Do not proceed on a red
-  gate.
+      shipped world** (`scripts/exp-flapping-gate.mjs --nlist=100`). Paired means the same seed sequence
+      for both arms; the baseline is the fingerprint that is shipped RIGHT NOW, **never gold numbers
+      copied from another run** (a stale gold number silently compares against the wrong world). Gate is
+      green when: band arrival holds within noise on every track, runaway 0%, per-row floor (rowMin)
+      holds, and Holm does not gain a newly-unfair track versus the current ship. Do not proceed on a red
+      gate.
 - [ ] **2. Set the default + re-confirm the mechanical gates.** Flip the default in `defaults.js` to
-  the chosen value; re-run `eslint` + the parity/golden tests (they will move — see #6).
+      the chosen value; re-run `eslint` + the parity/golden tests (they will move — see #6).
 - [ ] **3. Mint the fingerprints — ONE measurement per world, on the FINAL committed state.** Mint
-  the ON world (`node scripts/fingerprint-default.mjs`) and the OFF world
-  (`… off --gapRerollEnabled=false`). Mint on the state you are actually committing — behaviour, not
-  formatting, sets the hash, so a lint/prettier pass in the commit hook does not move it, but a stray
-  code edit does. An avoidance/engine change usually moves **both** ON and OFF (it runs in both
-  worlds); record old → new for each.
+      the ON world (`node scripts/fingerprint-default.mjs`) and the OFF world
+      (`… off --gapRerollEnabled=false`). Mint on the state you are actually committing — behaviour, not
+      formatting, sets the hash, so a lint/prettier pass in the commit hook does not move it, but a stray
+      code edit does. An avoidance/engine change usually moves **both** ON and OFF (it runs in both
+      worlds); record old → new for each.
 - [ ] **4. REBASELINE top block** ([reports/parity/REBASELINE.md](../reports/parity/REBASELINE.md)).
-  Add the new **current-baseline** entry (world, fingerprints, gate table, any residual status) and
-  **demote the previous** current-baseline block to "previous". This file's top block is the canonical
-  current baseline (see ONE CANONICAL HOME below).
+      Add the new **current-baseline** entry (world, fingerprints, gate table, any residual status) and
+      **demote the previous** current-baseline block to "previous". This file's top block is the canonical
+      current baseline (see ONE CANONICAL HOME below).
 - [ ] **5. Fingerprint lineage** ([docs/SIM.md](SIM.md)). Extend the ON/OFF lineage chain with the new
-  hashes and the "set `--behavior='{…:0}'` to reproduce the predecessor world" reproduction note.
-  SIM.md is the canonical home for the fingerprint lineage.
+      hashes and the "set `--behavior='{…:0}'` to reproduce the predecessor world" reproduction note.
+      SIM.md is the canonical home for the fingerprint lineage.
 - [ ] **6. Golden / replay / parity tests.** The engine change moves race outcomes, so re-pin the
-  `WINNERS` map in `goldenEquality.test.js` and the finishing order in `replay.test.js` to the new
-  results (run them, read the actual values, update). If a behaviour-isolating test (e.g. an
-  escape-hatch test) now also trips your new limiter, disable your limiter in that one test so it
-  keeps testing its own thing.
+      `WINNERS` map in `goldenEquality.test.js` and the finishing order in `replay.test.js` to the new
+      results (run them, read the actual values, update). If a behaviour-isolating test (e.g. an
+      escape-hatch test) now also trips your new limiter, disable your limiter in that one test so it
+      keeps testing its own thing.
 - [ ] **7. Return tag + its register entry — ONE step.** Tag the pre-ship state `pre/<name>` AND add
-  its entry to [docs/TAGS.md](TAGS.md) (commit, date, the world it restores) in the SAME unit of work.
-  The tag and the register are one step, never two — an unregistered tag is invisible until a guard
-  or a human trips over it.
+      its entry to [docs/TAGS.md](TAGS.md) (commit, date, the world it restores) in the SAME unit of work.
+      The tag and the register are one step, never two — an unregistered tag is invisible until a guard
+      or a human trips over it.
 - [ ] **8. Report + its INDEX entry — ONE step.** Write `reports/evolution/<NAME>.md` AND add its line
-  to [reports/evolution/INDEX.md](../reports/evolution/INDEX.md) in the SAME unit of work. A report
-  with no INDEX line is an orphan (`check-index.mjs` now catches it, but write the line yourself).
+      to [reports/evolution/INDEX.md](../reports/evolution/INDEX.md) in the SAME unit of work. A report
+      with no INDEX line is an orphan (`check-index.mjs` now catches it, but write the line yourself).
 - [ ] **9. Canonical-doc sweep — required whenever the SHIPPED WORLD CHANGES.** Update the shipped-world
-  identifier and any affected definitions in [docs/FAIRNESS.md](FAIRNESS.md),
-  [docs/PROJECT-PRINCIPLES.md](PROJECT-PRINCIPLES.md), and [docs/ARCHITECTURE.md](ARCHITECTURE.md).
-  Identify the world by its **fingerprint (+ tag)**, never by a bare `master @<hash>` — the master
-  hash goes stale the next commit (SHIP-GUARD-1 STEP 6c).
+      identifier and any affected definitions in [docs/FAIRNESS.md](FAIRNESS.md),
+      [docs/PROJECT-PRINCIPLES.md](PROJECT-PRINCIPLES.md), and [docs/ARCHITECTURE.md](ARCHITECTURE.md).
+      Identify the world by its **fingerprint (+ tag)**, never by a bare `master @<hash>` — the master
+      hash goes stale the next commit (SHIP-GUARD-1 STEP 6c).
 - [ ] **10. Owner's eye on a live trace.** The owner eye-tests the change on a real running session.
-  For any **UI or camera** change this includes the **LIVE-TRUTH console proof line from the owner's
-  OWN browser** — tests measure the code, the truth line measures the session, and the harness is
-  trusted only while live == replay ([LESSONS.md L191](LESSONS.md)). Restart the dev server for the
-  eye-test rather than letting a stale bundle be judged.
+      For any **UI or camera** change this includes the **LIVE-TRUTH console proof line from the owner's
+      OWN browser** — tests measure the code, the truth line measures the session, and the harness is
+      trusted only while live == replay ([LESSONS.md L191](LESSONS.md)). Restart the dev server for the
+      eye-test rather than letting a stale bundle be judged.
 - [ ] **11. Run the three guards before the commit.** `node scripts/check-doc-links.mjs`,
-  `node scripts/check-index.mjs`, `node scripts/check-tags.mjs` — all three green. Plus the full test
-  suite + `eslint` + `build`. These are the cheap catches for the drift a human reviewer cannot see.
+      `node scripts/check-index.mjs`, `node scripts/check-tags.mjs` — all three green. Plus the full test
+      suite + `eslint` + `build`. These are the cheap catches for the drift a human reviewer cannot see.
 - [ ] **12. Commit, push, verify.** One clear commit; push; confirm with `git log origin/master
-  --oneline -3` that the push landed. **Any verification transcript pasted into the report must come
-  from the state ACTUALLY being committed** — re-run the guards after the commit if that is the only
-  way to make it honest, and say that you did. A transcript from an intermediate state (guards still
-  untracked, a doc not yet written) does not prove the state it is filed under, even when it is green.
+--oneline -3` that the push landed. **Any verification transcript pasted into the report must come
+      from the state ACTUALLY being committed** — re-run the guards after the commit if that is the only
+      way to make it honest, and say that you did. A transcript from an intermediate state (guards still
+      untracked, a doc not yet written) does not prove the state it is filed under, even when it is green.
 
 ## The ONE CANONICAL HOME rule
 
@@ -195,14 +194,14 @@ put it in its canonical home and link from everywhere else.
 
 Canonical homes currently in force:
 
-| Fact | Canonical home |
-|---|---|
-| Fairness definition + gate lines + documented residuals | [docs/FAIRNESS.md](FAIRNESS.md) |
-| Fingerprint lineage (ON/OFF hashes, reproduction notes) | [docs/SIM.md](SIM.md) |
-| Current baseline (shipped world, gate numbers) | [reports/parity/REBASELINE.md](../reports/parity/REBASELINE.md) top block |
-| Tags (permanent anchors + register) | [docs/TAGS.md](TAGS.md) |
-| Report map (what each evolution report is) | [reports/evolution/INDEX.md](../reports/evolution/INDEX.md) |
-| Laws / lessons | [docs/LESSONS.md](LESSONS.md) |
-| Closed approaches / dead ends | [docs/DEAD-ENDS.md](DEAD-ENDS.md) |
+| Fact                                                    | Canonical home                                                            |
+| ------------------------------------------------------- | ------------------------------------------------------------------------- |
+| Fairness definition + gate lines + documented residuals | [docs/FAIRNESS.md](FAIRNESS.md)                                           |
+| Fingerprint lineage (ON/OFF hashes, reproduction notes) | [docs/SIM.md](SIM.md)                                                     |
+| Current baseline (shipped world, gate numbers)          | [reports/parity/REBASELINE.md](../reports/parity/REBASELINE.md) top block |
+| Tags (permanent anchors + register)                     | [docs/TAGS.md](TAGS.md)                                                   |
+| Report map (what each evolution report is)              | [reports/evolution/INDEX.md](../reports/evolution/INDEX.md)               |
+| Laws / lessons                                          | [docs/LESSONS.md](LESSONS.md)                                             |
+| Closed approaches / dead ends                           | [docs/DEAD-ENDS.md](DEAD-ENDS.md)                                         |
 
 If a fact needs to appear in a second place, link to its home — do not paste it.

@@ -18,12 +18,15 @@
 //                   and overwrite dolphin-swim.png in-place.
 // ============================================================
 
-import sharp from 'sharp';
-import path from 'path';
-import { fileURLToPath } from 'url';
+import sharp from "sharp";
+import path from "path";
+import { fileURLToPath } from "url";
 
-const ROOT = path.resolve(fileURLToPath(import.meta.url), '../../');
-const SPRITE_PATH = path.join(ROOT, 'client/public/assets/racers/dolphin-swim.png');
+const ROOT = path.resolve(fileURLToPath(import.meta.url), "../../");
+const SPRITE_PATH = path.join(
+  ROOT,
+  "client/public/assets/racers/dolphin-swim.png",
+);
 
 const FRAME_COUNT = 16;
 const OUT_FRAME_SIZE = 256;
@@ -36,10 +39,15 @@ const totalH = meta.height;
 const frameW = Math.round(totalW / FRAME_COUNT);
 const frameH = totalH;
 
-console.log(`Input: ${totalW}×${totalH}  (${FRAME_COUNT} frames of ${frameW}×${frameH})`);
+console.log(
+  `Input: ${totalW}×${totalH}  (${FRAME_COUNT} frames of ${frameW}×${frameH})`,
+);
 
 // --- Step 1: find union bounding box across all frames ---
-let uMinX = frameW, uMaxX = 0, uMinY = frameH, uMaxY = 0;
+let uMinX = frameW,
+  uMaxX = 0,
+  uMinY = frameH,
+  uMaxY = 0;
 
 for (let i = 0; i < FRAME_COUNT; i++) {
   const { data } = await sharp(SPRITE_PATH)
@@ -59,7 +67,9 @@ for (let i = 0; i < FRAME_COUNT; i++) {
   }
 }
 
-console.log(`Union bbox:  (${uMinX},${uMinY}) → (${uMaxX},${uMaxY})  body ${uMaxX - uMinX + 1}×${uMaxY - uMinY + 1}`);
+console.log(
+  `Union bbox:  (${uMinX},${uMinY}) → (${uMaxX},${uMaxY})  body ${uMaxX - uMinX + 1}×${uMaxY - uMinY + 1}`,
+);
 
 // --- Step 2: expand by padding, clamp to frame ---
 const cropX = Math.max(0, uMinX - PADDING);
@@ -75,10 +85,15 @@ console.log(`Crop region: x=${cropX} y=${cropY}  ${cropW}×${cropH}`);
 const frameBufs = [];
 for (let i = 0; i < FRAME_COUNT; i++) {
   const buf = await sharp(SPRITE_PATH)
-    .extract({ left: i * frameW + cropX, top: cropY, width: cropW, height: cropH })
+    .extract({
+      left: i * frameW + cropX,
+      top: cropY,
+      width: cropW,
+      height: cropH,
+    })
     .resize(OUT_FRAME_SIZE, OUT_FRAME_SIZE, {
       kernel: sharp.kernel.lanczos3,
-      fit: 'contain',
+      fit: "contain",
       background: { r: 0, g: 0, b: 0, alpha: 0 },
     })
     .png()
@@ -111,4 +126,6 @@ const outBuf = await sharp({
 await sharp(outBuf).toFile(SPRITE_PATH);
 
 const outMeta = await sharp(SPRITE_PATH).metadata();
-console.log(`Written:  ${outMeta.width}×${outMeta.height}  (${FRAME_COUNT} frames of ${OUT_FRAME_SIZE}×${OUT_FRAME_SIZE})  ${(outBuf.length / 1024).toFixed(0)} KB`);
+console.log(
+  `Written:  ${outMeta.width}×${outMeta.height}  (${FRAME_COUNT} frames of ${OUT_FRAME_SIZE}×${OUT_FRAME_SIZE})  ${(outBuf.length / 1024).toFixed(0)} KB`,
+);

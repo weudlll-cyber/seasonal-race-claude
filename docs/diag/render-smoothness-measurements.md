@@ -11,11 +11,11 @@
 
 ## Measurements
 
-| State | Zoom (Ø) | Δscreen Ø | Δscreen P95 | Δscreen max¹ | Cam-Lag Ø | Cam-Lag max¹ | Steady-State Jitter StdDev² |
-|---|---|---|---|---|---|---|---|
-| OVERVIEW | ~1.0× | –³ | –³ | –³ | –³ | –³ | –³ |
-| LEADER_ZOOM | 2.23× | 3.46 px/frame | 8.75 px/frame | 83.01 px/frame | 18.18 px | 245.65 px | **2.49 px/frame** |
-| BATTLE_ZOOM | 3.30× | 6.02 px/frame | 12.35 px/frame | 284.01 px/frame | 32.80 px | 308.41 px | **3.52 px/frame** |
+| State       | Zoom (Ø) | Δscreen Ø     | Δscreen P95    | Δscreen max¹    | Cam-Lag Ø | Cam-Lag max¹ | Steady-State Jitter StdDev² |
+| ----------- | -------- | ------------- | -------------- | --------------- | --------- | ------------ | --------------------------- |
+| OVERVIEW    | ~1.0×    | –³            | –³             | –³              | –³        | –³           | –³                          |
+| LEADER_ZOOM | 2.23×    | 3.46 px/frame | 8.75 px/frame  | 83.01 px/frame  | 18.18 px  | 245.65 px    | **2.49 px/frame**           |
+| BATTLE_ZOOM | 3.30×    | 6.02 px/frame | 12.35 px/frame | 284.01 px/frame | 32.80 px  | 308.41 px    | **3.52 px/frame**           |
 
 ¹ Max values include transition spikes (state-change artifacts).  
 ² Steady-state: leader-jitter StdDev after excluding ±50 frames around each state change.  
@@ -23,11 +23,11 @@
 
 **Frame timing (both states combined, 1210 frames total):**
 
-| Metric | Value |
-|---|---|
-| dt Ø | 17.02 ms (target 16.67 ms @ 60fps) |
-| dt max | 33.4 ms |
-| Frames > 20 ms | 26 of 1210 (2.1 %) |
+| Metric         | Value                              |
+| -------------- | ---------------------------------- |
+| dt Ø           | 17.02 ms (target 16.67 ms @ 60fps) |
+| dt max         | 33.4 ms                            |
+| Frames > 20 ms | 26 of 1210 (2.1 %)                 |
 
 ## Mathematical justification (aliasing threshold)
 
@@ -36,6 +36,7 @@ peaks up to ~14 px/frame are normal in steady state (≈ 97th percentile: Ø + 1
 A horse number shield (jersey number) measures approximately 25 px screen width at this zoom factor.
 
 **Ratio movement / object width:**
+
 - Average case: 3.46 / 25 ≈ **14 %** per frame — smooth
 - Peak 14 px: 14 / 25 ≈ **56 %** per frame — object moves more than half its own width in one
   frame; the eye cannot interpolate a continuous motion → visible ratcheting / aliasing stutter

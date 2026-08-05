@@ -101,6 +101,7 @@ The editor loads the existing preset data from the server, including any previou
 The Track Editor behaves differently depending on whether a `?load=<serverId>` URL parameter is present.
 
 **Load mode** (`/track-editor?load=<serverId>`):
+
 - Header shows `"Editing: <track name>"` (`data-testid="editor-title"`)
 - Name input field is hidden (the preset name is managed in the Track Manager)
 - Canvas is pre-populated with existing geometry if available, or starts empty if the track has `geometryId: null`
@@ -108,6 +109,7 @@ The Track Editor behaves differently depending on whether a `?load=<serverId>` U
 - On first save (track had `geometryId: null`), a new UUID is generated (`custom-${crypto.randomUUID()}`) and included in the PUT body so the server stores it permanently
 
 **New track mode** (`/track-editor` — no param):
+
 - Header shows `"New Track"` (`data-testid="editor-title"`)
 - Name input field is visible (`data-testid="track-name-input"`)
 - Canvas starts empty
@@ -115,8 +117,8 @@ The Track Editor behaves differently depending on whether a `?load=<serverId>` U
 
 **Two-path load (load mode):**
 
-1. *Geometry cache path* — if the server track has a `geometryId` and that geometry is cached in localStorage, load from cache (fast, works offline).
-2. *Direct server-track path* — if the server track has `geometryId: null` or the cache entry is missing, load directly from the server tracks state. The editor starts empty; the `loadedServerId` is set so Save routes to PUT.
+1. _Geometry cache path_ — if the server track has a `geometryId` and that geometry is cached in localStorage, load from cache (fast, works offline).
+2. _Direct server-track path_ — if the server track has `geometryId: null` or the cache entry is missing, load directly from the server tracks state. The editor starts empty; the `loadedServerId` is set so Save routes to PUT.
 
 ### Track-Delete and Geometry Preservation
 
@@ -174,6 +176,7 @@ Stored as JSON in `localStorage` under key `racearena:trackGeometries:<trackId>`
 ### Migration
 
 `getTrack()` normalises legacy geometries on load (no stored data is mutated):
+
 - If `effects` array is missing and `effectId` is present → migrated to `[{id, config}]`
 - If `effects` array is missing and no `effectId` → migrated to `[]`
 
@@ -187,19 +190,21 @@ Each track stores a `trackLights` object controlling how boundary lights appear 
 { "color": "#3aa0ff", "style": "sequence", "speed": 1.0 }
 ```
 
-| Field | Type | Description |
-|---|---|---|
-| `color` | `#RRGGBB` string | Light color (hex). |
-| `style` | string | Animation style: `steady`, `sequence`, `sync_pulse`, `random_flash`. |
-| `speed` | number | Animation speed multiplier 0.1–3.0. Ignored when `style` is `steady`. |
+| Field   | Type             | Description                                                           |
+| ------- | ---------------- | --------------------------------------------------------------------- |
+| `color` | `#RRGGBB` string | Light color (hex).                                                    |
+| `style` | string           | Animation style: `steady`, `sequence`, `sync_pulse`, `random_flash`.  |
+| `speed` | number           | Animation speed multiplier 0.1–3.0. Ignored when `style` is `steady`. |
 
 **Styles:**
+
 - `steady` — lights glow at constant base brightness (0.4 alpha), no animation.
 - `sequence` — a wave of bright light travels along the track in race direction. Wave is ~10 lights wide with smooth falloff. Lights not under the wave dim to base (never off).
 - `sync_pulse` — all lights pulse together between base (0.4) and full brightness (1.0) using a sine wave.
 - `random_flash` — individual lights flash briefly to full brightness at random intervals (~8% chance per time window); others stay at base.
 
 **Track Editor UI:** The "Track Lights" section in the Track Editor toolbar (below Effects) provides:
+
 - Color picker (`<input type="color">`) + hex display
 - Style dropdown (Steady / Sequence / Sync Pulse / Random Flash)
 - Speed slider 0.1–3.0 (disabled when style is Steady)
@@ -247,17 +252,17 @@ Each track stores a `surfaceClasses` array of Surface-Class IDs. These IDs deter
 
 ### Initial Surface-Class Assignments — 9 Default Tracks
 
-| Track | surfaceClasses |
-|---|---|
-| Dirt Oval | `['earth']` |
-| River Run | `['water']` |
-| Space Sprint | `['air']` |
-| Garden Path | `['grass', 'earth']` |
-| City Circuit | `['asphalt']` |
-| Mountainstreet | `['asphalt']` |
-| Ice Track | `['ice', 'snow']` |
-| Seatrack | `['water']` |
-| Searound | `['water']` |
+| Track          | surfaceClasses       |
+| -------------- | -------------------- |
+| Dirt Oval      | `['earth']`          |
+| River Run      | `['water']`          |
+| Space Sprint   | `['air']`            |
+| Garden Path    | `['grass', 'earth']` |
+| City Circuit   | `['asphalt']`        |
+| Mountainstreet | `['asphalt']`        |
+| Ice Track      | `['ice', 'snow']`    |
+| Seatrack       | `['water']`          |
+| Searound       | `['water']`          |
 
 ### Track Manager UI (VRE-3)
 
@@ -327,6 +332,7 @@ The old `client/src/modules/environments/` folder was deleted. `getEnvironment` 
 All sub-steps are complete. Branch `feat/track-editor` is open as a PR (CI green).
 
 **Original spec (A–F) — all done:**
+
 - A — Track CRUD, Catmull-Rom math, tests
 - B — EditorShape adapter, race-engine integration
 - C — Editor canvas base (background, points, render)
@@ -335,6 +341,7 @@ All sub-steps are complete. Branch `feat/track-editor` is open as a PR (CI green
 - F — Race engine integration, environment refactor, track-effects module
 
 **Post-spec features built on branch:**
+
 - F1–F5: Camera director, minimap, world-space transforms, camera clamping
 - F6: Picture-in-picture minimap
 - F7: Six new track-effects (bubbles, dust, fireflies, mud, rain, wave) with universal parameter pool
@@ -351,13 +358,13 @@ All sub-steps are complete. Branch `feat/track-editor` is open as a PR (CI green
 
 ## localStorage Keys
 
-| Key | Type | Description |
-|-----|------|-------------|
-| `racearena:trackGeometries:<uuid>` | JSON object | Full geometry record (points, effects, timestamps) |
-| `racearena:trackGeometries:index` | JSON array of strings | Index of all geometry UUIDs, sorted by updatedAt desc |
-| `racearena:tracks` | JSON array | Preset definitions (name, icon, geometryId, color, duration, etc.) |
-| `racearena:racers` | JSON array | Custom racer definitions |
-| `racearena:dataVersion` | string | Storage schema version marker |
+| Key                                | Type                  | Description                                                        |
+| ---------------------------------- | --------------------- | ------------------------------------------------------------------ |
+| `racearena:trackGeometries:<uuid>` | JSON object           | Full geometry record (points, effects, timestamps)                 |
+| `racearena:trackGeometries:index`  | JSON array of strings | Index of all geometry UUIDs, sorted by updatedAt desc              |
+| `racearena:tracks`                 | JSON array            | Preset definitions (name, icon, geometryId, color, duration, etc.) |
+| `racearena:racers`                 | JSON array            | Custom racer definitions                                           |
+| `racearena:dataVersion`            | string                | Storage schema version marker                                      |
 
 All keys follow the `racearena:*` convention. The `trackGeometries:index` is updated atomically with every save/delete via `trackStorage.js`.
 
@@ -366,6 +373,7 @@ All keys follow the `racearena:*` convention. The `trackGeometries:index` is upd
 ## Future Extensions
 
 **Editor UX:**
+
 - Track duplication as a starting template for a variant
 - JSON export / import for sharing tracks between installations
 - Variable width along a boundary-mode track (per-segment width markers)
@@ -374,21 +382,25 @@ All keys follow the `racearena:*` convention. The `trackGeometries:index` is upd
 - Catmull-Rom tension slider
 
 **Race-Time Rendering:**
+
 - Visible lane markers (dashed center line, lane dividers) drawn over the image
 - Per-track choice of racer-trail style
 - `drawEditorBackground` / `drawEditorTrackSurface` inline functions in `RaceScreen` are candidates for extraction into `modules/track-renderer/` (deferred refactor)
 
 **Asset Pipeline:**
+
 - Image upload via editor (file chooser), with server-side storage (Phase 5)
 - Automatic image resizing to 1280×720 on upload
 - Image library management (list, rename, delete uploaded images)
 
 **Track Effects:**
+
 - Effect trigger conditions (e.g. fireworks on final lap)
 - Performance optimisation for high particle counts with multiple stacked effects
 - Additional effect types (snow, confetti, heat shimmer)
 
 **Surface Zones (Folge-Phase nach Visual Racer Effects):**
+
 - Local surface-class overrides within a track — e.g. a mud patch on an asphalt circuit, a puddle on a garden path.
 - Zone definition: `{ id, type: surfaceClassId, tStart, tEnd, lateralRange }` stored in the track geometry.
 - Track Editor gains a Zones tab: click on the canvas to set zone start/end, select class from dropdown.
@@ -396,6 +408,7 @@ All keys follow the `racearena:*` convention. The `trackGeometries:index` is upd
 - `EditorShape.getZonesAtPosition(t, offset) → Zone[]` — used by RaceScreen to query the active zone for each racer per frame.
 
 **Integration:**
+
 - Track metadata: difficulty rating, recommended racer types, recommended race length
 - Track ratings / usage statistics
 

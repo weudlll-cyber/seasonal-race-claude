@@ -17,7 +17,7 @@ makes about it. Two layers, both binding:
 
 1. **Row-blind draw, before the start.** Every racer is assigned a target finishing PLACE by a draw that is
    blind to its start row. No start row is advantaged or disadvantaged in the assignment — a racer on the back
-   row is as likely to draw a winning place as one on the front. This is the *equal-win-chance-from-every-row*
+   row is as likely to draw a winning place as one on the front. This is the _equal-win-chance-from-every-row_
    promise, and it is measured by the operational gate: **band-reach ≥ 70%** (overall zone-success rate,
    `computeZoneSuccessRate`) **AND zero Holm-unfair start rows** (per-start-row win χ² with Holm correction),
    on every standard track.
@@ -59,7 +59,7 @@ A race-dynamics change ships only if it holds ALL of these on the standard track
   (PROJECT-PRINCIPLES §8). A change must not WORSEN Holm on any track.
 - **Layer 2 — arrival:** absolute band arrival must not regress; the headline target is **85–90% / track**.
 - **The v2 duration-relative PULK watchdog (permanent gate line).** The chaos-window P1–P2 maximum gap must
-  stay proportionate to the shipped world: **chaos maxGap ≤ ship × 1.5**. This catches a *disproportionate*
+  stay proportionate to the shipped world: **chaos maxGap ≤ ship × 1.5**. This catches a _disproportionate_
   early breakaway (one racer running away from the field in the chaos window) without punishing an honest
   chase. It is **v2 = duration-relative** deliberately: the earlier v1 used an absolute `ship + 1.0L`
   tolerance, which tripped falsely at long durations purely because all gaps scale with race length while the
@@ -104,7 +104,7 @@ dated exception.
 - **It is PRE-EXISTING.** The gradient predates both engine changes: the acceleration cap changes the Holm
   verdict on **0 of 4 tracks** (identical UNFAIR/ok verdict with the cap on vs off), so seatrack's flip versus
   the underpowered N=100 quartet is statistical power revealing a standing gradient, not a motion regression.
-- **The owner's verdict (2026-07-31): DOCUMENT AND SHELF.** The watchdog only hears *better* — nothing got
+- **The owner's verdict (2026-07-31): DOCUMENT AND SHELF.** The watchdog only hears _better_ — nothing got
   worse. A dedicated start-row fairness project opens **only on the owner's explicit word**.
 
 Evidence: [reports/evolution/HOLM-300-COMBINED.md](../reports/evolution/HOLM-300-COMBINED.md).

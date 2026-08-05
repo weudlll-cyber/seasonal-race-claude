@@ -28,6 +28,7 @@ camera, trail, and coat-assignment logic.
 
 Each domain concept has exactly one field name, one storage key, and one code path.
 Examples:
+
 - `racerTypeId` — not `racerId`, `racerType`, or `type`.
 - `racearena:racerTypes` — one key for racer-type cosmetics.
 - `defaultRacerTypeId` on Track — one field for the default, not two dropdowns.
@@ -85,8 +86,8 @@ the documented residuals — is the canonical [FAIRNESS.md](FAIRNESS.md); its
 
 ## 9. The camera is not a solution for missing action
 
-Action must exist in the *physics* — real lead changes, real closing, real overtakes. The camera
-(BATTLE/LEADER/COMEBACK framing, zoom, slowmo) only *frames* action that is already there; it can
+Action must exist in the _physics_ — real lead changes, real closing, real overtakes. The camera
+(BATTLE/LEADER/COMEBACK framing, zoom, slowmo) only _frames_ action that is already there; it can
 never manufacture a contest that the race did not produce. If the eye sees a dead race, the fix is
 in the race mechanism, not the camera. (A limiter cannot create a contest either — LESSONS 160.)
 

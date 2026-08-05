@@ -23,12 +23,13 @@
 //     rather than inferred afterwards.
 // ============================================================
 
-import { BAND_EDGES } from '../../../client/src/modules/racePlanner.js';
+import { BAND_EDGES } from "../../../client/src/modules/racePlanner.js";
 
 // zoneIdxOf — 0-based band index of a finishing rank (0=B1 … 4=B5). Mirrors racePlanner's
 // rankToBandIndex; duplicated here only because that one is module-private.
 export function zoneIdxOf(rank) {
-  for (let i = 0; i < BAND_EDGES.length; i++) if (rank <= BAND_EDGES[i]) return i;
+  for (let i = 0; i < BAND_EDGES.length; i++)
+    if (rank <= BAND_EDGES[i]) return i;
   return BAND_EDGES.length;
 }
 
@@ -76,7 +77,11 @@ export function makeLateContestTracker(windowStart = 0.9) {
       current = leader;
     },
     result() {
-      return { leadChangeCount: changes, leaderIdxAtEnd: current, distinctLeaders: leaders.size };
+      return {
+        leadChangeCount: changes,
+        leaderIdxAtEnd: current,
+        distinctLeaders: leaders.size,
+      };
     },
   };
 }
@@ -120,7 +125,12 @@ export function bandExitAfterRelease(rows, bands = [1, 2]) {
   const out = {};
   for (const b of bands) out[b] = { inside: 0, exited: 0, rate: null };
   for (const r of rows ?? []) {
-    if (r?.sollBereich == null || r.rankAtRelease == null || r.finalRank == null) continue;
+    if (
+      r?.sollBereich == null ||
+      r.rankAtRelease == null ||
+      r.finalRank == null
+    )
+      continue;
     const acc = out[r.sollBereich];
     if (!acc) continue;
     const target = r.sollBereich - 1;

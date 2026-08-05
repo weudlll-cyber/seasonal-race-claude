@@ -364,6 +364,7 @@ perceptibly. Three options were presented (Constant, Proportional, Proportional+
 
 User decided for Option 3: natural "closer = larger" behavior with minimum visibility
 as a safety floor. Correction in the same PR:
+
 - `cameraZoomFactor` + `REFERENCE_CAMERA_ZOOM` completely removed
 - `computeRenderDisplayScale` as single source of the render pipeline
 - `autoSpriteScale.js` massively simplified (19 obsolete tests removed, 10 new ones added)
@@ -373,6 +374,7 @@ not more complex. Browser test revealed UX problem → diagnosis understood the 
 decision produced clean architecture. 4 scaling factors → 1 pipeline.
 
 **Pattern for future visual phases:**
+
 1. Implementation with mathematical correctness
 2. Browser test with honest user perception
 3. On problems: diagnostic task (don't guess, don't tune)
@@ -591,6 +593,7 @@ to debug because code and routes look correct — the error lies in the deployme
 (`./server/src:/app/src`) and persistent data (`./server/data:/app/data`). With live mount,
 `docker compose restart server` is sufficient instead of `docker compose build`. Rebuild is still needed for
 `package.json` changes (new dependencies) or Dockerfile changes. Rules:
+
 - Code change (`src/`): `docker compose restart server`
 - New npm dependency: `docker compose up --build -d`
 - Fresh start: `docker compose down && docker compose up -d`
@@ -629,7 +632,7 @@ to debug because code and routes look correct — the error lies in the deployme
 
 **Context:** `_setTargets` and `_computePhasedPanTarget` both wrote `targetOffsetX/Y` in `CameraDirector`. The intent was for `_computePhasedPanTarget` to override `_setTargets`'s centerline value during the follow phase. In practice `_setTargets` ran first, the lerp consumed that value, then `_computePhasedPanTarget` wrote its override — which was immediately overwritten by `_setTargets` on the next frame before the lerp could consume it. Two separate fix attempts (physicalY lane offset, then direct world position override) were both silently inert for the same structural reason. The problem was only diagnosed via architectural review.
 
-**Insight:** When two functions write the same variable, the frame-by-frame execution order determines which write the lerp actually consumes. Unit tests pass green for both writes: they test that each function *sets* the variable, not that the *lerp reads the right frame's value*. This class of bug is invisible to unit tests and only manifests as visual drift in the browser.
+**Insight:** When two functions write the same variable, the frame-by-frame execution order determines which write the lerp actually consumes. Unit tests pass green for both writes: they test that each function _sets_ the variable, not that the _lerp reads the right frame's value_. This class of bug is invisible to unit tests and only manifests as visual drift in the browser.
 
 **Consequence:** Before adding a second writer to any shared variable (targetOffsetX, targetZoom, any lerp input): (1) draw the per-frame execution order explicitly; (2) identify which write survives into the lerp. If two functions write the same variable, make one the authoritative owner and remove the write from the other. Architecture reviews must verify execution order of all writers to shared lerp inputs — silent overwrites are not caught by unit tests.
 
@@ -644,10 +647,12 @@ to debug because code and routes look correct — the error lies in the deployme
 **Anti-Pattern:** Raising the threshold globally (e.g. 50ms → 200ms) resolves the CI problem but loses the dev-side regression protection. At 200ms, a quadratic regression on dev would only be noticed at ~40× degradation — effectively no guard anymore.
 
 **Consequence:** Use an environment-dependent threshold:
+
 ```js
 const threshold = process.env.CI ? 200 : 50;
 expect(elapsed).toBeLessThan(threshold);
 ```
+
 - Dev: 50ms = sensible guard (10× above ~5ms baseline)
 - CI: 200ms = sensible guard (2.7× above ~74ms measured CI baseline)
 - `process.env.CI` is automatically set on GitHub Actions
@@ -659,6 +664,7 @@ expect(elapsed).toBeLessThan(threshold);
 **Symptom:** User changes `trackLights.style` in the track editor, saves, opens the track again — style is back at the default. No error, no warning. The change looks functionally correct (server saves correctly, tests green), but is silently lost on the next load.
 
 **Cause:** `cacheTrackGeometry` in `trackLoader.js` built a `geometry` object from an explicit field list:
+
 ```js
 const geometry = {
   id: full.geometryId,
@@ -668,22 +674,26 @@ const geometry = {
   // ❌ trackLights missing — never added
 };
 ```
+
 New data model field (`trackLights`) was correctly implemented in the server, editor, and save path — but forgotten in this one cache function. `surfaceClasses` had the same problem, just wasn't noticed because it goes through a different read path.
 
 **Consequence — Spread Pattern with Intentional Exclusions:**
+
 ```js
 // Instead of whitelist: spread + explicit exclusions for fields that should NOT be cached
 const { id: serverId, geometryId, backgroundImageFile, ...rest } = full;
 const geometry = {
-  ...rest,                         // all fields pass through automatically
-  id: geometryId,                  // renaming
-  backgroundImage: computedUrl,   // override
+  ...rest, // all fields pass through automatically
+  id: geometryId, // renaming
+  backgroundImage: computedUrl, // override
 };
 ```
+
 New data model fields flow through automatically — no code change in the cache function needed.
 
 **Test Pattern as Safety Net:**
 Round-trip tests per field guarantee that `cacheTrackGeometry` doesn't drop any server response content:
+
 ```js
 for (const field of PASSTHROUGH_FIELDS) {
   it(`preserves field "${field}" from server response`, () => {
@@ -691,6 +701,7 @@ for (const field of PASSTHROUGH_FIELDS) {
   });
 }
 ```
+
 Catches regressions even in the spread pattern (e.g. if `backgroundImageFile` is accidentally NOT excluded anymore).
 
 **When whitelist is legitimate:** Build functions that produce a defined output shape (e.g. `buildTrackFromEditorState` — only editor-known fields should be saved). Cache/passthrough functions, on the other hand, should be transparent — whitelist is wrong there.
@@ -704,6 +715,7 @@ Catches regressions even in the spread pattern (e.g. if `backgroundImageFile` is
 **Symptom:** User performs a UI action that corresponds to the desired result (re-link geometry), receives no error message, and in doing so loses work that cannot be recovered.
 
 **Cause:** Two independent errors, both with the same root cause:
+
 1. The "Geometry = none" dropdown in the edit modal suggests that the preset can be decoupled from a geometry — but the backend never implemented this path.
 2. The "Draw Geometry" button in the edit modal suggests that the geometry is being drawn for this preset — but the navigation path transports no preset context.
 
@@ -712,6 +724,7 @@ Catches regressions even in the spread pattern (e.g. if `backgroundImageFile` is
 **Key Question for UI Design:** "If the user operates this button / dropdown and saves — does the server do exactly what the UI indicates?" If not: remove the option or show a warning, never silently diverge.
 
 **Derived Decisions (TLH):**
+
 - "Geometry = none" option: review conceptually — if "no geometry link" is a supported state, the server must also support it; otherwise remove the option
 - "Draw Geometry" button: now sends preset context (`/track-editor?load=<serverId>`) so the editor knows which preset it is working for
 - Backend PUT: respects `geometryId` from client when present in body
@@ -731,6 +744,7 @@ Catches regressions even in the spread pattern (e.g. if `backgroundImageFile` is
 **Key Question:** "Which fields are delivered by the list API? Are all frontend reads on fields that are guaranteed to be in the response?"
 
 **Audit Pattern After toSummary Changes:** For every field that is removed from `toSummary` or replaced by a compact equivalent:
+
 1. `grep -r "srv\.<field>\|track\.<field>\|geom\.<field>"` in `client/src/` for all read locations of the field
 2. Check each location: does the object come from the list API (`serverTracks`, `tracks` array) or from a complete source (localStorage cache, GET `:id`)?
 3. List API consumers must be updated to the new compact fields
@@ -803,10 +817,22 @@ useEffect(() => {
   bgRef.current = null;
   const img = new Image();
   let cancelled = false;
-  img.onload = () => { if (!cancelled) { bgRef.current = img; setBgReady(true); } };
-  img.onerror = () => { if (!cancelled) { bgRef.current = null; setBgReady(true); } };
+  img.onload = () => {
+    if (!cancelled) {
+      bgRef.current = img;
+      setBgReady(true);
+    }
+  };
+  img.onerror = () => {
+    if (!cancelled) {
+      bgRef.current = null;
+      setBgReady(true);
+    }
+  };
   img.src = backgroundImage;
-  return () => { cancelled = true; };
+  return () => {
+    cancelled = true;
+  };
 }, [backgroundImage]);
 ```
 
@@ -821,6 +847,7 @@ Additionally: null guard at the beginning prevents `img.src = "null"` entirely w
 **Context:** Camera Director concept sprint (PR #60). When translating user direction guidelines into a specification, a consistent drift pattern emerged over several addendum rounds: tendency statements were gradually solidified into rigid algorithms.
 
 **Symptom (chain that emerged in PR #60):**
+
 1. User statement: "Leader should be on screen most often" (tendency)
 2. Concept doc: "Leader must be visible in every frame — hard constraint"
 3. Result: rigid priority hierarchy 1–4
@@ -874,6 +901,7 @@ Additionally: null guard at the beginning prevents `img.src = "null"` entirely w
 **Context:** Camera Director concept sprint (PR #60). The final review before merge found 10 correction points (K1–K10) that had gone undetected in 5 previous commits.
 
 **Observation:** User review and strategy Claude review found different problems:
+
 - **User** found K1+K2+K3: wording sensitivity ("I didn't say that"), hierarchy logic, obvious numerical contradictions
 - **Strategy Claude** found K4–K10: technical variable inconsistencies, algorithmic contradictions in trigger logic, follow-on effects of architecture changes in dependent sections
 
@@ -921,7 +949,7 @@ E2: "Race Duration 30s" was de facto a median promise, not a last-finisher promi
 **Update PR-A2.6:** Empirical measurement in the diagnostic phase showed: only 39-63% of races actually landed
 within ±5% of the target at race end. The ±5% guarantee applied implicitly to the
 median racer. Race-end deviation is 1σ ≈ 4-6% depending on N — intrinsic to the
-spread mechanic (minimum of N stochastic draws). The guarantee is on the *expected* last
+spread mechanic (minimum of N stochastic draws). The guarantee is on the _expected_ last
 finisher, not on every individual run. Documented in ARCHITECTURE.md § Speed Pipeline.
 Important: always explicitly assign guarantees — median racer vs. race end are different.
 
@@ -932,10 +960,12 @@ Important: always explicitly assign guarantees — median racer vs. race end are
 2. **What speedMultiplier does the calibration have?** If `computeRaceBaseSpeed` is calibrated for sm=1.0, the call must multiply T by sm so that the racer's own sm cancels out.
 
 **Correct Formula (Last-Finisher + sm-normalized):**
+
 ```
 T = targetDuration × spreadMinFactor × speedMultiplier
 race_baseSpeed = finishT / (REFERENCE_FPS × T)
 ```
+
 The slowest racer draws BASE_SPEED_MIN → spreadFactor = BASE_SPEED_MIN/MEAN = spreadMinFactor.
 Their finish: `finishT / (race_baseSpeed × sm × spreadMinFactor × FPS)` = targetDuration ✓.
 The median racer finishes at `targetDuration × spreadMinFactor ≈ 87%` of targetDuration.
@@ -946,12 +976,12 @@ are only achievable with multiplication. Always check the validation numbers aga
 not just the formula line in the spec text.
 
 **Consequence:** When implementing a duration-driven speed architecture:
+
 1. Explicitly define the duration semantics and comment in the code (last-finisher vs. median).
 2. `speedMultiplier` normalization at the call site, not in the pure function — the pure function stays generic.
 3. Write pipeline contract tests that verify end-to-end that the slowest and median racer arrive at the right time.
 
 **Reference:** PR-A2-fix-commit (2026-05-04), `raceBaseSpeed.test.js` describe block "pipeline contract — last-finisher semantics".
-
 
 ---
 
@@ -962,6 +992,7 @@ not just the formula line in the spec text.
 **Insight:** T-parameter uniformity ≠ pixel uniformity. Spline segments in T-space can have different arc lengths — e.g. when the editor user places many points in curves (short segments) and few in straights (long segments). Every simulation that increments `t` uniformly and then maps T→pixel has this problem.
 
 **Solution:** Arc-length reparameterization as a one-shot step during sampling:
+
 1. Dense sampling in T-space (5× target samples, min 1000)
 2. Calculate cumulative arc lengths → lookup table
 3. For each output sample: target arc length = `i/N × totalLength`, binary search in LUT → T value → spline point
@@ -1021,13 +1052,16 @@ For all standard durations (30–120s) this gives a consistent ~12s between roll
 **Context:** CameraDirector receives **canvas-space** coordinates from RaceScreen via `scaledRacersForCam`: `r.x = worldX × bsX`, `r.y = worldY × bsY`. The render pipeline draws racers at world coordinates under `ctx.scale(cam.zoom × bsX, cam.zoom × bsY)`. Thus: `screenX = offsetX + worldX × zoom × bsX = offsetX + r.x × zoom`.
 
 **The trivial pan formula is correct:**
+
 ```
 targetOffsetX = hw - r.x × zoom
 targetOffsetY = hh - r.y × zoom
 ```
+
 Proof: `screenX = (hw - r.x×zoom) + worldX×zoom×bsX = hw - worldX×bsX×zoom + worldX×bsX×zoom = hw ✓`. Valid for all bsX/bsY combinations.
 
 **Finding C (Phase 4) was an error:** Commit C introduced `_computePanScale(zoom) = zoom × bsX` with the argument that the render pipeline needs bsX in the pan. That was wrong: bsX is **already in `r.x`**. `r.x × zoom × bsX = worldX × bsX² × zoom` — a double bsX factor. For Dirt Oval (bsX=0.833, bsY=1.0) this gave:
+
 - X error: `screenX = hw + worldX × zoom × bsX × (1-bsX) ≈ +36px`
 - Y error (bsX instead of bsY): `screenY = hh + worldY × zoom × (1-bsX) ≈ +138px`
 
@@ -1166,6 +1200,7 @@ Vite's Hot-Module-Replacement fails or the dev server was restarted. The first
 "visual check" after a code change can silently run on old code.
 
 **Consequence:** Checklist before every visual smoke test:
+
 1. Hard Refresh (Ctrl+Shift+R)
 2. Vite dev server runs without errors (check terminal)
 3. DevTools Network tab → enable "Disable Cache" when systematic verification is needed
@@ -1196,19 +1231,23 @@ Pattern: Commit → Push → Verify-Push (`git log origin/<branch>`) → `gh pr 
 closed and open tracks — and that this asymmetry was the root cause of the double-bsX error.
 
 **Closed Track Render Pipeline** (`RaceScreen/index.jsx` L1022–1024):
+
 ```js
 ctx.translate(cam.offsetX, cam.offsetY);
 ctx.scale(cam.zoom * bsX, cam.zoom * bsY);
 // Racer drawn at world-coordinates (r.x_world, r.y_world)
 ```
+
 → `screenX = cam.offsetX + worldX × cam.zoom × bsX`
 
 **Open Track Render Pipeline** (`RaceScreen/index.jsx` L1005–1006):
+
 ```js
 ctx.translate(-st.camX * effZoom, -st.camY * effZoom);
 ctx.scale(effZoom, effZoom);
 // Racer drawn at world-coordinates (r.x_world, r.y_world)
 ```
+
 → `screenX = -camX × effZoom + worldX × effZoom`
 
 **Key Asymmetry:** Closed track has `cam.offsetX/Y` as camera position; open track has `st.camX/Y`.
@@ -1242,7 +1281,7 @@ calibrated too strictly, the state is functionally inactive. This is invisible t
 set the state directly, without firing the real trigger) and undetectable through code review.
 
 **Consequence:** For every new camera state after implementation: a measurement commit that logs state transitions
-in real 60s races. Format: `[CAMERA] transition: LEADER_ZOOM→BATTLE_ZOOM at t=12.4s`. 
+in real 60s races. Format: `[CAMERA] transition: LEADER_ZOOM→BATTLE_ZOOM at t=12.4s`.
 If BATTLE_ZOOM never appears in 10 races: adjust threshold. Lesson 67 describes the measurement sprint.
 
 ---
@@ -1259,6 +1298,7 @@ long sessions. But the timing is controllable: compression in the middle of a co
 step costs more than compression between natural pauses.
 
 **Consequence:** In long sessions, set natural stop points as mental checkpoints:
+
 - After every commit: brief summary of what is open (in commit message or HANDOFF note)
 - After diagnostic phase: commit result before fix phase begins
 - Before doc update phase: ensure all code commits are done
@@ -1280,6 +1320,7 @@ fully simulated by browser state. A bisect on a browser state artifact finds
 no "bad commit" — because there is none. This is frustrating and wastes time.
 
 **Consequence:** Before every visual bisect — 5-point checklist:
+
 1. Browser zoom 100% (Ctrl+0 / Cmd+0 — confirm in address bar: "100%")
 2. Hard Refresh (Ctrl+Shift+R)
 3. DevTools closed
@@ -1294,11 +1335,13 @@ If the phenomenon has disappeared after steps 1–4: abort bisect, browser state
 
 **Context:** The trivial pan formula `targetOffsetX = hw - r.x × zoom` is not obviously
 correct until you write out the algebra:
+
 ```
 screenX = cam.offsetX + worldX × cam.zoom × bsX
         = (hw - worldX×bsX×zoom) + worldX×bsX×zoom
         = hw  ✓
 ```
+
 Writing this 3-line proof takes 30 seconds and makes the formula beyond discussion.
 `_computePanScale(zoom) = zoom × bsX` could have been immediately recognized as wrong with the same proof:
 `(hw - r.x×zoom×bsX) + worldX×zoom×bsX×bsX ≠ hw` — bsX² instead of bsX.
@@ -1330,6 +1373,7 @@ is never active in practice (too strict trigger) or feature that is permanently 
 crowds out other states (too wide a band).
 
 **Consequence:** For every new state machine transition, plan a measurement sprint:
+
 1. Build in temporary logs: `console.log('[CAM]', newState, Date.now(), trigger_value)`
 2. Run a real race (30s Dirt Oval, 60s Space Sprint, 30s City Circuit)
 3. Evaluate log: How often does each state occur? How long? At what trigger value?
@@ -1351,6 +1395,7 @@ tab isolation) is part of the "environment" that must be reproduced. Uncontrolle
 bisect finds no "bad commit" → frustrating false negatives.
 
 **Consequence:** Before every bisect:
+
 1. Precisely document the phenomenon (screenshot + measurement value, e.g. "sprite is 24px, expected 56px")
 2. Stabilize environment (L65 checklist)
 3. Reproduce phenomenon at HEAD → only then `git bisect start`
@@ -1374,6 +1419,7 @@ and still be wrong. This is particularly dangerous in systems where multiple coo
 spaces (world-space, canvas-space, screen-space) simultaneously exist and are transformed into each other.
 
 **Consequence:** For every new camera concept that transforms coordinates:
+
 1. Write algebraic proof (L66)
 2. If proof is not clear: empirical measurement with log output (5 minutes effort)
 3. Only when proof AND measurement agree: commit
@@ -1514,6 +1560,7 @@ a fragile line reference that becomes obsolete after every merge.
 the content task, not the location: "update AUDIT.md".
 
 **Workflow for every squash-merge to master:**
+
 1. Run tests on master — capture total count + number of failures.
 2. Test count history in AUDIT.md: possibly correct last entry (branch count ≠ master count possible), update master HEAD SHA.
 3. If branch HEAD line is present: remove or rewrite to master.
@@ -1633,17 +1680,19 @@ not through a distorted cost picture.
 ## Lesson 81 — Compensation Formulas Must Match the Race Geometry, Not the Unit Measurement (Phase 1B / feat/fairness-simulation)
 
 **Context:** The `computeSpeedBonus` formula in `rowLayout.js` had been since D7c:
+
 ```
 bonus = rowIndex × rowGapPx / pathLengthPx × speedBonusFactor
       = N × tOffset × speedBonusFactor
 ```
+
 This formula compensates for the spatial starting disadvantage of a back row — but only exactly at
 `finishT = 1.0`. For multi-lap tracks (finishT = 2–10+), the bonus was 2–10× too large (rear bias);
 for open tracks and slow racers with short target distance, it was too small (front bias).
 The simulation `sim-fairness.mjs` revealed this: all 144 track×racer×duration combinations
 failed, sometimes with row-0 win rates of 0% or 100%.
 
-**Insight:** A distance compensation formula must be normalized to the *actual target distance*,
+**Insight:** A distance compensation formula must be normalized to the _actual target distance_,
 not to the track length. The correct compensation factor is:
 
 ```
@@ -1660,8 +1709,17 @@ it was extensively tested for.
 — not just the unit case. Statistical simulation is the only reliable
 way to make such systematic errors visible: visual tests and unit tests cannot
 detect the error at finishT=1.0. New signature:
+
 ```javascript
-computeSpeedBonus(rowIndex, rowGapPx, pathLengthPx, speedBonusFactor, finishT, isOpen, totalRows)
+computeSpeedBonus(
+  rowIndex,
+  rowGapPx,
+  pathLengthPx,
+  speedBonusFactor,
+  finishT,
+  isOpen,
+  totalRows,
+);
 ```
 
 **Reference:** feat/fairness-simulation, Phase-1A analysis (mathematics derivation), sim-fairness.mjs.
@@ -1685,10 +1743,14 @@ computeSpeedBonus(rowIndex, rowGapPx, pathLengthPx, speedBonusFactor, finishT, i
 **Insight:** On open tracks, `overviewZoom` is the defined "full track visible" value. Any zoom above `overviewZoom` shows only a section and contradicts the OVERVIEW concept. `_computeZoomForTargetSize` is correct for LEADER/BATTLE/COMEBACK (there a racer should occupy a certain screen size), but not for OVERVIEW.
 
 **Consequence:** In all three paths of `_computeZoomLevels()`, for open tracks: `this._overviewStateZoom = this.overviewZoom` (direct value, no calculation). Only for closed tracks is `_computeZoomForTargetSize` called. Corresponding guard condition:
+
 ```js
 this._overviewStateZoom = this._isOpenTrack
   ? this.overviewZoom
-  : this._computeZoomForTargetSize(profiles.OVERVIEW?.spriteScale ?? 1.0, FALLBACK_REFERENCE_SPRITE_SIZE);
+  : this._computeZoomForTargetSize(
+      profiles.OVERVIEW?.spriteScale ?? 1.0,
+      FALLBACK_REFERENCE_SPRITE_SIZE,
+    );
 ```
 
 ---
@@ -1710,6 +1772,7 @@ this._overviewStateZoom = this._isOpenTrack
 **Context:** Phase 3B BATTLE_ZOOM implementation. The camera should stay locked on a group of racers in a duel, even if the race order within the group changes. For this the battle group is frozen on state entry (`_frozenBattleGroup`). At the same time, visual focus effects (highlight ring, comeback ring) must reflect the current duel participants — not the frozen group from state entry.
 
 **Insight:** Two semantically different groups are needed:
+
 - **Frozen Group** (for camera centroid calculation): Set at BATTLE_ZOOM entry and remains constant. Prevents camera drift when racers fall out of the group.
 - **Live Group** (for visual highlights): Recalculated every frame from the current race position. Shows which racers are actually in a duel.
 
@@ -1868,6 +1931,7 @@ The user observation was the decisive hint: "OVERVIEW badge at tight zoom" — z
 **Insight:** Two curves of different arc lengths, each parameterized by their own arc-length, will be at physically different positions at the same T fraction. This destroys the invariant that `physicalY = 0` should place a racer on the track centerline. The zigzag magnitude is proportional to the inner-to-outer arc-length ratio difference and grows with U-turn curvature. Minimum circumradius (measured for Luger Hill: ~315 px >> 125 px half-width) rules out self-intersection as a cause — the mismatch is purely a re-sampling artifact.
 
 **Consequence (fix direction):** `getPosition(T, physicalY)` must use a single shared parameterization anchored to the centerline. Two options:
+
 - **(a) Store and re-sample centerPoints** — use the saved 25-point `centerPoints` array (present in the track JSON) directly as the T→position source for physicalY=0, and derive lateral offsets geometrically.
 - **(b) Center-arc-length parameterization** — at track save time, resample inner and outer by center arc-length so that inner[T] and outer[T] are laterally co-aligned at every T.
 
@@ -1928,6 +1992,7 @@ The user observation was the decisive hint: "OVERVIEW badge at tight zoom" — z
 **Insight:** Multiply blend: `result = base × tint`. A dark or saturated base color clamps the result toward that color regardless of the tint applied. Screen blend: `result = 1 − (1−base)×(1−tint)`. A dark base with screen tinting lets the tint color shine through because the base contributes little opacity. For sprites with a prominent dark helmet or dark sled runners, those regions should be near-black in the PNG so screen blending leaves them uncolored.
 
 **Consequence:** Choose tintMode based on the base sprite's luminance distribution:
+
 - `multiply` — sprite has light/white regions where tint should appear (horse body, fur, fabric).
 - `screen` — sprite has dark/black regions that define the shape; tint fills the mid-tones.
 - Darken any region that should NOT be colored by the tint (e.g. helmet, metal parts) to near-black in the PNG regardless of tintMode.
@@ -1997,10 +2062,12 @@ The user observation was the decisive hint: "OVERVIEW badge at tight zoom" — z
 **Context:** feat/lateral-velocity (2026-05-31). Prior implementation applied net lateral force directly to `physicalY` each frame. With opposing forces (home force pulling left, avoidance pushing right), the sign could flip frame-to-frame, producing visible zigzag oscillation — especially in tight packs.
 
 **Fix:** Accumulate forces into `physicalYVelocity`, then apply velocity to position with damping:
+
 ```
 physicalYVelocity = physicalYVelocity * lateralDamping + netForce
 physicalY += physicalYVelocity
 ```
+
 `lateralDamping = 0.25` means velocity decays to 25% per frame — enough inertia to smooth over single-frame sign reversals, not enough to prevent real avoidance from working.
 
 **Sim result:** −37% `lateralSpeedScore`, −44% `zigzagScore` at same or lower `overlapRate` (targeted sweep d=0.25, f=0.012 vs. baseline d=0.45, f=0.010). Zone success rates: +0.3pp overall — indistinguishable from noise. Smoother lateral motion is orthogonal to race-plan targeting effectiveness.
@@ -2018,6 +2085,7 @@ physicalY += physicalYVelocity
 **Key finding:** The extension phase found substantially better scores (−5.5) than the uniform LHS phase (−2.8), even when the initial sweep had 1000 combos. The reason: LHS guarantees one sample per stratum but does not densify around promising regions. Extension around the top-10 provides local density without requiring exponentially more combos.
 
 **Pattern:**
+
 1. LHS Phase 1 — broad coverage (N ≥ 500 combos per track)
 2. Extension condition — if top-10 mean is within 18% of any range boundary, extend
 3. Extension Phase — 200 combos centered on top-10 centroid with ±20% range
@@ -2246,6 +2314,7 @@ Note: Mountainstreet itself has `"closed": false` and is an open track — the `
 **Consequence:** A static code analysis that shows "label X not present in component Y" tells you only that the label is absent from that component. It does not tell you whether the test is failing for that reason or for a completely different reason (wrong helper, wrong route, wrong test structure). When a shared setup function is broken, all tests that use it cascade-fail, masquerading as individual feature removals. Only after the helper is fixed does genuine element-not-found separate from collateral failure. The live run also found two issues the code-reading missed: an InfoTooltip matching `getByLabel('Enabled')` (strict mode violation) and the reset button saying "Reset All Defaults" not "Reset Defaults."
 
 **Fix / Rule:** Never delete E2E assertions based on a code reading alone. The workflow is:
+
 1. Run the spec live against the running server.
 2. Fix any cascading infrastructure failures first (wrong helper, wrong server, wrong route).
 3. Re-run and read per-test error types: "element not found" authorizes deletion; "wrong value" authorizes update; "strict mode violation" authorizes selector fix.
@@ -2278,9 +2347,10 @@ The 91.3% fairness sweep optimized the 8 physics parameters around a metric that
 The browser's own `tPos(t) = ((t % 1) + 1) % 1` uses modulo-1 (one lap = 1.0 t-unit). The correct wrapping for the sim is the same: normalize to the position within the current lap, then take the shorter arc. With mod-1, two racers at the seam (one at t=0.02, another at t=0.98) correctly show dT_px = 0.04 × pathLengthPx instead of 0.96 × pathLengthPx.
 
 **Fix:**
+
 ```javascript
 // WRONG — finishT is multiple laps, not one
-const wrapDt = Math.min(rawDt % finishT, finishT - rawDt % finishT);
+const wrapDt = Math.min(rawDt % finishT, finishT - (rawDt % finishT));
 
 // CORRECT — one lap = 1.0 t-unit, matching the browser's tPos()
 const tPosA = ((ra.t % 1) + 1) % 1;
@@ -2314,6 +2384,7 @@ Report 03 added direct measurement: `maxRealSpread` (maximum t-gap between leadi
 **Context:** Scale cleanup, `feat/open-track-overlap`, 2026-06-07. Physics was computing avoidance forces in a 449 px world while the screen drew 300 px (Space Sprint). Body-overlap thresholds used 34 px instead of the 28.5 px actually rendered. Racer overlap stayed flat through many behavior improvements; the sim metric showed no improvement through Stages A–C, even after correct avoidance logic was added.
 
 **The root cause:** Three separate sources of truth had each silently drifted to wrong values:
+
 - Track width: `getActualTrackWidth()` returned 449 px (spline envelope estimate) while the true physical lane width was 300 px (stored as `track.width` by the Track Editor).
 - Body width: `physicalSpriteSize × bodyFillX` used the frame-scale physics sprite size × a fill fraction, not the actual drawn body width from `computeBodyNarrowRef`.
 - Lateral conversion: raw `physicalY × trackWidth` missed the factor-of-2 baked into `EditorShape.getPosition` (which uses `physicalY / 2`).
@@ -2610,7 +2681,7 @@ Each name carried the wrong mental model into every reader of that code. Copilot
 
 **Context:** feat/race-action, 2026-06-30. Three documented/suspected bugs this session — the §4a asymmetry, the controller-on-closed phase timing, and a sim-determinism blocker — were each scheduled for an implementation spec. A cheap read-only design review run first found that all three were already fixed or never real: §4a was already asymmetric in source (`aef203a`), the controller already used a `closedSsf`-immune leader-progress clock, and determinism was no longer reproducible.
 
-**Insight:** The expensive failure mode is not writing a wrong fix; it is writing a correct fix for a bug that is no longer there. The cost asymmetry is stark — a read-only review that reads the current source and confirms the defect is minutes of work, while an unnecessary implementation spec plus its review, commit, and verification is most of a session. The review also produces the artifact (line numbers, current behavior) that a real fix would have needed anyway, so it is never wasted even when the bug *is* real.
+**Insight:** The expensive failure mode is not writing a wrong fix; it is writing a correct fix for a bug that is no longer there. The cost asymmetry is stark — a read-only review that reads the current source and confirms the defect is minutes of work, while an unnecessary implementation spec plus its review, commit, and verification is most of a session. The review also produces the artifact (line numbers, current behavior) that a real fix would have needed anyway, so it is never wasted even when the bug _is_ real.
 
 **Consequence:** Gate every "fix a known bug" task behind a read-only review that reproduces or re-locates the defect in the current source first. Treat a documented bug as a hypothesis to test, not a fact to act on — especially when the documentation predates recent merges.
 
@@ -2665,26 +2736,33 @@ Each name carried the wrong mental model into every reader of that code. Copilot
 **Reference:** `server/seeds/tracks/searound.json` (200 index-aligned `innerPoints`/`outerPoints` pairs measured at exactly 131.0px, matching the declared `width: 131`), consumed via `EditorShape`; searound width-bump decision (distinct from the four geometry-expansion tracks). Session 2026-06-30.
 
 ## Lesson 157 — A Fixed Seed Does Not Guarantee Determinism If Any Randomness Runs Outside the Seeded Scope
-The fairness sim replaced `Math.random` with a seeded PRNG *inside* each race, but the start-row shuffle ran in the per-combo setup BEFORE that scope, using global `Math.random`. So `--seed=1` produced different start-row assignments every run, and two "identical" runs were never comparable — a subtle non-determinism that silently injected noise into every re-gate. Lesson: seeding one hot loop is not enough; a seed only guarantees reproducibility if EVERY randomness source is inside the seeded scope. Prove determinism empirically with a same-seed double-run (bit-identical SHA256) before trusting ANY run-to-run comparison — and never diagnose a "regression" from a single pair of unseeded runs.
+
+The fairness sim replaced `Math.random` with a seeded PRNG _inside_ each race, but the start-row shuffle ran in the per-combo setup BEFORE that scope, using global `Math.random`. So `--seed=1` produced different start-row assignments every run, and two "identical" runs were never comparable — a subtle non-determinism that silently injected noise into every re-gate. Lesson: seeding one hot loop is not enough; a seed only guarantees reproducibility if EVERY randomness source is inside the seeded scope. Prove determinism empirically with a same-seed double-run (bit-identical SHA256) before trusting ANY run-to-run comparison — and never diagnose a "regression" from a single pair of unseeded runs.
 
 ## Lesson 158 — A Hard Threshold Gate on One Small Run Is a Coin-Flip Near the Threshold
+
 A "band-reach ≥70% per track" gate on one 50-race run produced a RED that did not survive proper measurement: mid-field B3 sits right at ~70% on several tracks with ±1.5–2.5pp seed variance, so a single run flips pass/fail by luck. The apparent 3.4pp "regression" (5.7σ on a broken n=3 variance estimate) collapsed to z≈1.4 once variance was estimated from enough deterministic seeds. Lesson: near a hard threshold, one small run is noise; pool multi-seed data (~300 races) and use paired per-seed comparison to isolate a change's real effect. A regression only counts if it exceeds the run-to-run noise band.
 
 ## Lesson 159 — The Most Expensive Canvas-2D Op Is High-Quality Resampling of Rotated, Downscaled Sprites — Isolate the Real Cost by Measurement
+
 A framerate-dependent race speed traced to `imageSmoothingQuality='high'` on 40 racer sprites drawn rotated and downscaled (128px→~40px) every frame — the single line `'high'→'low'` dropped the frame from 50ms to 17ms. Five plausible suspects (background canvas, surface/dust/racer-trail particles) were each ruled out by measurement (temporary per-piece draw toggles + the physics-ms-per-real-second HUD metric); only hiding the sprites collapsed the cost, most of which showed up as GPU-flush "other" outside the measured draw bracket. Lesson: don't guess the expensive draw — isolate it by toggling pieces and reading real numbers (in a prod/preview build, not dev). Rotated+downscaled high-quality blits are a prime suspect.
 
 ## Lesson 160 — Define the Target Experience Before Building the Mechanism; a Bounding Force Cannot Create a Contest
-**Context:** feat/race-action governor arc, July 2026. Weeks of governor work went into *bounding the field* — a median-cohesion / leader-brake tuned in racer-lengths to stop the leader running away — before anyone had written down the actual target: an exciting, unpredictable **front contest** (lead changes at P1/P2/P3) whose result you can't read early. Once the target was stated, the mechanism was obviously wrong: a limiter can hold a gap *closed*, but "field is close together" ≠ "field is contesting the lead." A tight-enough cohesion to bound the front just produces a **dead, evenly-spaced procession** — the opposite of action. The fix was a **pivot**: retire the ahead-median leader-brake (Stage C, `a0105ed`) and add a **contest-injector director** (Stage A1, `a7e4a64`) that actively features a rotating cast at the front so the re-roll trades the lead.
 
-**Insight:** A bounding/limiting force is *subtractive* (it removes divergence); a contest is *generative* (it must actively create lead changes). No amount of tuning a subtractive force yields a generative outcome. **Write the target experience — in observable terms — before choosing the mechanism**, and check the mechanism's *category* (bound vs. generate) against it before tuning a single parameter.
+**Context:** feat/race-action governor arc, July 2026. Weeks of governor work went into _bounding the field_ — a median-cohesion / leader-brake tuned in racer-lengths to stop the leader running away — before anyone had written down the actual target: an exciting, unpredictable **front contest** (lead changes at P1/P2/P3) whose result you can't read early. Once the target was stated, the mechanism was obviously wrong: a limiter can hold a gap _closed_, but "field is close together" ≠ "field is contesting the lead." A tight-enough cohesion to bound the front just produces a **dead, evenly-spaced procession** — the opposite of action. The fix was a **pivot**: retire the ahead-median leader-brake (Stage C, `a0105ed`) and add a **contest-injector director** (Stage A1, `a7e4a64`) that actively features a rotating cast at the front so the re-roll trades the lead.
+
+**Insight:** A bounding/limiting force is _subtractive_ (it removes divergence); a contest is _generative_ (it must actively create lead changes). No amount of tuning a subtractive force yields a generative outcome. **Write the target experience — in observable terms — before choosing the mechanism**, and check the mechanism's _category_ (bound vs. generate) against it before tuning a single parameter.
 
 **Reference:** governor arc `307d6dc`…`a0105ed` (bounding, retired) → `a7e4a64` (director). ROADMAP §R.7.
 
 ## Lesson 161 — Build the Measurement of the Target Before Tuning Toward It
-Every governor/director eye-test in this arc ended in "I see nothing" — because the sim could not **measure** front action: there was no lead-change / podium-shuffle metric, and the governor's own racer-length telemetry was computed but never reached the JSON (set on the per-race result *array*, emitted per-racer *element* — silently dropped). We were tuning blind toward an outcome we hadn't instrumented. Sim-1 (`b930b1b`) added the read-only `--front-action` metric (leadChanges, podiumShuffleRate, front-reach gaps, and a targetRank-vs-front **unpredictability** counter-metric) and fixed the propagation, then **calibrated it against a known-bad case** (seed-1 Searound×Manta lone breakaway must score LOW) before trusting it. Lesson: when the goal is a subjective experience, **build and calibrate the objective metric first** — an eye-test without a metric is not repeatable, not sweepable, and cannot tell a null result from a broken observer. Calibrate the metric against a case whose answer you already know before using it to judge new ones.
+
+Every governor/director eye-test in this arc ended in "I see nothing" — because the sim could not **measure** front action: there was no lead-change / podium-shuffle metric, and the governor's own racer-length telemetry was computed but never reached the JSON (set on the per-race result _array_, emitted per-racer _element_ — silently dropped). We were tuning blind toward an outcome we hadn't instrumented. Sim-1 (`b930b1b`) added the read-only `--front-action` metric (leadChanges, podiumShuffleRate, front-reach gaps, and a targetRank-vs-front **unpredictability** counter-metric) and fixed the propagation, then **calibrated it against a known-bad case** (seed-1 Searound×Manta lone breakaway must score LOW) before trusting it. Lesson: when the goal is a subjective experience, **build and calibrate the objective metric first** — an eye-test without a metric is not repeatable, not sweepable, and cannot tell a null result from a broken observer. Calibrate the metric against a case whose answer you already know before using it to judge new ones.
 
 ## Lesson 162 — Governor Arc: Confirmed Dead-Ends (So They Aren't Re-Tried)
+
 Three approaches were tried and empirically rejected in the governor arc; record them so a future session doesn't burn the same cycles:
+
 - **Tight median-cohesion strong enough to bound the field = a dead field.** Cohesion stiff enough to prevent a front breakaway also flattens the natural re-roll groups/battles into an evenly-spaced procession. The resolution was the **dead zone** (middle runs free; force only past the bound) plus retiring the leader side entirely — not a stronger spring.
 - **Neighbour-gap "rip-closer" relocates the rip, it doesn't remove it.** Closing the largest adjacent gap just moves the discontinuity elsewhere in the field; the **median-relative** bound was the effective lever, not the neighbour gap (`24c99b6`).
 - **Length-bound / `finishT` mis-scaling under-reported closed multi-lap gaps.** Bounding a gap as a fraction of `finishT` divided out ~`maxLaps` on closed tracks, so the same physical gap read differently by duration/track. Fixed by measuring in **true racer-lengths** (arc-px ÷ mean body length) — lap-count- and track-independent (`9947892`).
@@ -2708,15 +2786,15 @@ Plain language. Each lesson is why a whole week went into measurement, not featu
   metric named for the thing it does not measure is worse than no metric.
 
 - **Byte-identity proves that nothing changed. It proves nothing was ever right.** A frozen wrong
-  baseline converts an error into a guarantee. Keep the two questions and two tools separate: *did this
-  deletion change the race?* → exact regression diff (byte-identity). *Is the race any good?* →
+  baseline converts an error into a guarantee. Keep the two questions and two tools separate: _did this
+  deletion change the race?_ → exact regression diff (byte-identity). _Is the race any good?_ →
   gap-space metrics in racer lengths + the owner's eye. Never let the first answer the second.
 
 - **The unreadable file produced the wrong measurement.** The clean-baseline audit enumerated forces in
   `racePlanner.js` — a readable file — while the actual speed formula sat deep in a 5000-line file among
   four dormant experiments. That is why a browser-only brake zone was never found. Untangling was not
   tidiness; it was the fix. (The sim is now ~3522 lines with observers factored into
-  `scripts/sim/observers/`; the physics is *imported* from the shipped modules, not re-implemented.)
+  `scripts/sim/observers/`; the physics is _imported_ from the shipped modules, not re-implemented.)
 
 - **The sim silently assumed the owner's browser was at defaults. It was not.** That precondition was
   unstated for months. The answer was not access — it was accountability: the **world hash**
@@ -2729,18 +2807,18 @@ Plain language. Each lesson is why a whole week went into measurement, not featu
   now in **racer lengths**, via one shared conversion (`client/src/modules/raceLengths.js`).
 
 - **Three independent concepts converged on the same mechanism** (bias the re-roll, not a per-frame
-  brake) — and the fourth-best idea (the early re-draw) was found only *after* all three were written.
+  brake) — and the fourth-best idea (the early re-draw) was found only _after_ all three were written.
   Convergence is a strong signal, not a proof. Keep challenging after agreement.
 
 - **The one who runs the code catches what the one who writes the spec cannot.** Every challenge round
-  in this project corrected the *spec*, not the implementation: the bimodal field, the actuator
+  in this project corrected the _spec_, not the implementation: the bimodal field, the actuator
   hierarchy (the servo has more speed authority than the re-roll), the withdrawal of a hero exemption
   that would have hidden the motivating failure. Read the source before trusting the claim.
 
 - **A stale comment is a lie with authority.** A comment that claims a mechanism is active — when the
   code under it is gone — reads as truth and misleads the next reader, human or model. It has caught
   this project three times: `"Falls back to frameSizePx/2 (sim racers)"`; `"Replicates the core race
-  loop from RaceScreen/index.jsx"`; and an orphaned `"TIER-2 … attached ONLY when --tier2 active"`
+loop from RaceScreen/index.jsx"`; and an orphaned `"TIER-2 … attached ONLY when --tier2 active"`
   header with the `STRIP_METRICS` block sitting under it — which was read as a live `--tier2` path and
   written into a doc as a mechanism that does not exist. The fix each time: **verify against the code,
   not the comment; and when you delete a mechanism, delete its comment in the same breath.** Grep
@@ -2756,16 +2834,18 @@ stale-comment/functionless-key lessons are already captured above (2026-07-10 se
 what follows is what was not.
 
 ## Lesson 163 — The Race Is a Cast, Not a Controller
-Weeks went into building a *controller* to steer the field (bound the leader, spread the pack). The
+
+Weeks went into building a _controller_ to steer the field (bound the leader, spread the pack). The
 measurement showed the existing servo + curve machinery **already** delivered the target — a deep-cast
 hero reached the front 92–100% of the time on all 10 tracks and still finished fair; the front could be
 made to trade the lead inside the fair envelope. The engine was never the problem; the **casting** was
 (heroes drawn only from the future top-5, pulled front before the race opened, drama clamped away). The
-fix was to rebuild the *caster* — author a small cast dramatic journeys decoupled from their fixed
+fix was to rebuild the _caster_ — author a small cast dramatic journeys decoupled from their fixed
 finish — not to add a new steering machine. Before building a mechanism, check whether the existing one
-can already produce the target with better *inputs*.
+can already produce the target with better _inputs_.
 
 ## Lesson 164 — Gentle Levers Only; a Strong One Backfires
+
 The in-envelope levers that create action are **gentle**: a ~−6% brake on the 1–2 cars directly ahead
 of a charging hero halves its stuck-in-traffic time (churn → clean pass); a ~−6% brake on whichever
 front hero is momentarily leading provokes a lead change. Their **strong** versions backfire — a hard
@@ -2774,12 +2854,14 @@ authored curves: bound the instantaneous cross-rate to ≈1 rank per servo-settl
 instantaneous differential pins one racer at the +cap and another at the −cap = the same flicker.
 
 ## Lesson 165 — Keep the Field at the Shipped ±8% Spread
+
 Tighter density buys a higher band-reach number but costs the show: a "comeback" in a tight bunch is a
 few car-lengths in a scrum. The shipped ±8% spread is the fairest on the native per-row-win test **and**
-leaves real distance between cars, so a hero closing that distance is *visible movement*. Do not chase a
+leaves real distance between cars, so a hero closing that distance is _visible movement_. Do not chase a
 band-reach metric into a density that erases the thing the metric can't see.
 
 ## Lesson 166 — Shipped == Measured
+
 Every governor/director sweep ran with `--governorDirectorEnabled=false`, while the shipped default was
 `true` — so months of measurements described a world the game never shipped. The general rule: **measure
 the exact config you ship.** A sweep that flips a shipped-on mechanism off (or a flagless sim run that
@@ -2787,35 +2869,41 @@ omits the shipped split flags) proves nothing about the shipped race. Make the h
 world (the `raceConfigWorld.js` world-hash) so "measured == shipped" is verifiable, not assumed.
 
 ## Lesson 167 — Anchor a New Phase Boundary to a Measured Boundary, Not a Literal
+
 When a new boundary must line up with an existing one, anchor it to that boundary's **variable**
 (`pulkStart`), never to an independent literal that happens to share its value today. `pulkStart` and
 `choreoOutcomeStart` were both 0.25 by default but are independent; a measurement anchored to the wrong
 one silently diverges the moment the owner raises the other. Anchor to the thing you actually measured.
 
 ## Lesson 168 — A Feasibility Table Measured at 40 Racers Does Not Transfer to ~100
-The reach-front / cast-depth table was measured at 40 racers and expressed as a field *fraction*. The
+
+The reach-front / cast-depth table was measured at 40 racers and expressed as a field _fraction_. The
 fraction is position-invariant but NOT climb-difficulty-invariant: a 50%-back cast on a ~100-racer open
 track is ~2.5× the ranks of traffic to clear, and traffic is the dominant churn source — it scales up
 with the field. Re-measure depth feasibility at the large field before trusting the table there.
 
 ## Lesson 169 — Turn a Bonus Off With an Instant Cut at the Boundary, Not a Fade
-The measured world zeroed the areaBonus *instantly* at the chaos boundary. Re-anchoring an
+
+The measured world zeroed the areaBonus _instantly_ at the chaos boundary. Re-anchoring an
 `easeInOutCubic` fade to the boundary instead lets the bonus linger ~1.5 s past it — an unmeasured,
 pointless tail. When a phase ends a contribution, cut it at the boundary; don't fade across it.
 
 ## Lesson 170 — An Unguarded Duplicate Is a Latent Seam
-The sim carried a hand-copied `RACER_CONFIGS` table with zero drift *today* — a seam that will drift
+
+The sim carried a hand-copied `RACER_CONFIGS` table with zero drift _today_ — a seam that will drift
 silently the moment the shipped source changes, with no test to catch it. Either import the single
 source or add a guarding parity test; "identical right now" is not a guarantee, it is a countdown.
 
 ## Lesson 171 — Hand-Mirrored Orchestration Is Untrusted Without a Per-Frame Parity Harness
-The sim shares the shipped physics *modules*, but the main race-loop **orchestration** (order of forces,
+
+The sim shares the shipped physics _modules_, but the main race-loop **orchestration** (order of forces,
 re-roll timing, pass sequencing) is hand-mirrored from the browser with no automated per-frame position
 comparison. Shared modules give factor-level parity (see FORCE-PARITY.md), but frame-level fidelity of
 the loop that calls them stays UNTRUSTED until a per-frame harness passes at HEAD. Know which level your
 parity guarantee actually covers.
 
 ## Lesson 172 — Audit Every Metric by the Space the Viewer Perceives; Separate MECHANISM from QUALITY
+
 Generalises the rank-vs-gap lesson. A **mechanism** metric (overtake count, closing-speed ratio, a
 per-frame flag) is valid even when the outcome space is wrong. A **quality** claim (comeback, "good
 race", fairness) in the wrong space is void by construction — a 5th-place finish 15 lengths back scores
@@ -2823,6 +2911,7 @@ like a real close comeback. For every metric ask: what space does the viewer per
 the metric live in that space? Quality lives in gap space (racer lengths), never rank space.
 
 ## Lesson 173 — Coupled Actuators in Overlapping Windows Cannot Be Tuned in Isolation
+
 When two mechanisms act in the same time window on the same outcome (the cohesion dice and the servo
 sorting both shape gap size, overlapping temporally), there is no servo-free regime to tune the dice in.
 Only ~37–45% of over-wide holes were servo-driven — the dice still have a real job (the rest are
@@ -2830,6 +2919,7 @@ drift/brake holes), but any tuning must account for the other actuator's interfe
 pretend it can be isolated.
 
 ## Lesson 174 — A Hero's `peakRank` Is Not the Peak of the Story
+
 For a comebacker the cast sets `peakRank` = its DEEP post-chaos rank (identical to its anchor rank);
 `finalRank` is the front cluster. So the curve HOLDS deep until the `peak` beat and only THEN climbs to
 `resolve`. The "peak" beat is the START of the comeback, not its climax. Reading the name instead of the
@@ -2839,6 +2929,7 @@ appeared after running the generator's own `feasibleTiming` on real values. Beat
 at the casting site, never inferred from the beat's name.
 
 ## Lesson 175 — The Camera Has One Lens: Foresight Does Not Create Screen Time
+
 Giving the director perfect advance knowledge of a comebacker changed nothing visible, because the
 resulting shot still had to win a weighted candidate contest it loses (comeback 0.6 vs battle 0.8).
 Camera work is zero-sum allocation: to show something earlier, something else must be given up. Before
@@ -2846,6 +2937,7 @@ building any new "the camera should notice X sooner" mechanism, first ask what X
 and whether that trade is wanted.
 
 ## Lesson 176 — Justify the Work with the Reason That Survives Measurement
+
 The per-frame comeback scan "obviously" looked wasteful (a full array copy + sort every frame, times
 three). Measured: ~0.02 ms against a ~17 ms render frame — 0.1% of budget, ~900× cheaper than rendering.
 The change (plan identity instead of a b1 scan) was still right, but for a completely different reason:
@@ -2854,14 +2946,15 @@ next person to "optimise" the wrong axis. Also: two independent concept reviews 
 question to a standstill; a 200-race measurement settled it in one run.
 
 ## Lesson 177 — Distributed Smoothers Are Load-Bearing, Not Redundant Abstraction
+
 Three separate smoothers exist in the per-frame speed path — `governorMult` slew (1%/frame), `trajectoryMult`
-easeInOutCubic (1s), `spreadFactor` easeInOutCubic (3s). They *look* like fragmentation begging to be unified
+easeInOutCubic (1s), `spreadFactor` easeInOutCubic (3s). They _look_ like fragmentation begging to be unified
 into one global acceleration cap. Measured: removing all three and replacing them with a single 0.5%/frame
 cap on the final speed cost **−5pp B2 and −9pp B3 band-reach** (4 tracks × 100 races), with no action gain, at
-every cap value tested (so it was the *removal* that hurt, not the cap tightness). Each smoother smooths a
-DIFFERENT quantity at a DIFFERENT timescale — governor reaction, servo *target* transition, re-roll *luck*
+every cap value tested (so it was the _removal_ that hurt, not the cap tightness). Each smoother smooths a
+DIFFERENT quantity at a DIFFERENT timescale — governor reaction, servo _target_ transition, re-roll _luck_
 change — and the rank servo specifically needs its target to move gradually to steer accurately; a cap on the
-*final* speed does not substitute for smoothing the *inputs*. Corollary confirmed the same session: band-reach
+_final_ speed does not substitute for smoothing the _inputs_. Corollary confirmed the same session: band-reach
 is **endpoint-determined** (the servo drives to the assigned target rank over the OUTCOME window), so levers
 that only reshape the mid-race trajectory — band-resolve checkpoints, a speed-change cap — cannot move it
 (band-checkpoint proportionalization: +0.3pp = noise). Before "unifying" or "cleaning up" apparent duplication
@@ -2870,9 +2963,11 @@ intentional. (The one genuinely-safe cosmetic smoothing from the same investigat
 step at the boundary — held fairness because it is a tiny, isolated input, not a load-bearing one.)
 
 ## Lesson 178 — Action Lives in Orchestration, Not Liberation
+
 The proven principle behind the whole front-action arc: **steering racers along authored curves CREATES
 top-5 churn; freeing them (releasing the servo, running strictness-0 inside a band) SETTLES the field and
 REDUCES action.** Confirmed three independent ways:
+
 - **B2-Heroes "Attack & Fall" (author) → +21% top-5 OUTCOME action.** Casting 3 extra heroes on a scripted
   climb-to-~5-then-fall-and-free-reorder curve manufactures front drama without touching fairness (B1/B2
   band-reach ≥70% all four tracks, Holm at the 2/4 baseline). Shipped ON.
@@ -2881,11 +2976,12 @@ REDUCES action.** Confirmed three independent ways:
   (92% of leaks after progress 0.90 — freed racers at the band edge shuffle out with no runway). Shelved, then removed.
 - **Universal band-arrival (liberate) → −6% action.** Freeing B1-heroes + pack inside their assigned band
   held fairness (immediate re-steer) but the field just settled — less churn, not more. Shelved, then removed.
-**Rule for future front-action work: AUTHOR scenarios (curves, casting, timing), do not liberate constraints
-(release the servo).** Liberation reduces the very thing it feels like it should increase. Both losing
-mechanisms were deleted on 2026-07-23 (Lesson 180) — the measurement is the reference, not the flag.
+  **Rule for future front-action work: AUTHOR scenarios (curves, casting, timing), do not liberate constraints
+  (release the servo).** Liberation reduces the very thing it feels like it should increase. Both losing
+  mechanisms were deleted on 2026-07-23 (Lesson 180) — the measurement is the reference, not the flag.
 
 ## Lesson 179 — The Runaway Gap Forms BEFORE Progress 0.90
+
 Baseline measurement (2026-07-20, `--runaway-parade` observer, N=100 seeded races × 4 tracks): the game
 produces a **runaway winner in 23.5% of races overall** (open tracks 18%, closed tracks 28–30%) and a
 **parade finish in only 2%**. The decisive finding for any future "keep the leader catchable" work: **the
@@ -2898,6 +2994,7 @@ occur, are genuinely paced (leading-group internal speed spread ≤0.10 over the
 phenomenon, not a problem to chase. Method + numbers: `exp-runaway-leader-results/`; see also SWEEP-HARNESS.md.
 
 ## Lesson 180 — A Control for a Shelved Mechanism Is a Loaded Gun
+
 Three mechanisms were deleted outright on 2026-07-23 (dead-mechanisms cleanup): the B1 lead rotation with
 its role-biased dice, the pack strictness release, and universal band-arrival. All three had been built,
 measured, and kept as default-OFF flags "as documentation" — one of them with a live DevScreen checkbox.
@@ -2924,6 +3021,7 @@ which is itself the proof the mechanisms had never been on a live path — and t
 would have cost nothing to measure and everything to trust.
 
 ## Lesson 181 — The Target Must Never Follow the Field (Evolution Act 1, assignment-follows-field)
+
 Assignment-follows-field reassigned each pack racer's intra-band target rank to the LIVE order every servo
 tick, on the theory that "letting targets follow the field" would make the front fight for live positions.
 The SCREEN did the opposite of the theory: it broke the fairness floor (pooled band-reach 71.1%→66.8%) AND
@@ -2950,6 +3048,7 @@ honest dice-draw tilts on the scheduled re-roll), and must NEVER modify what the
 is the proof the mechanism was never on a live path.
 
 ## Lesson 182 — No Single Track-Agnostic Finale-Dice Law Lifts Both Topologies (Evolution Act 2, finale front-compression)
+
 Act 2 took Lesson 181's advice — leave the servo alone, add contest as a scheduled-dice overlay on the
 gap-cap re-roll, front-band only, in the finale window `[0.80,0.90]`. It was built twice: with FIXED
 length-gates, then with ADAPTIVE gates scaled to the live front spread `S` (`G_c = c·S`, `G_b = b·S`). The
@@ -2978,6 +3077,7 @@ mechanism lifts BOTH topologies at once. Evidence: `reports/evolution/FINALE-SCR
 all fingerprints byte-identical (default OFF) throughout.
 
 ## Lesson 183 — A Start-Position Handicap Is Moot for Identical Racers — and an Overlap-Free Traffic Core Is Buildable (handicap-pursuit experiment)
+
 The blank-page "handicap pursuit" concept (stagger the grid by ability so every racer's expected arrival is
 equal, then let honest motion run) was prototyped on a dropped experiment branch. PROTO-1 (longitudinal,
 traffic-free) PASSED cleanly — one global handicap slope gave a class-uniform win distribution (chi²=3.3)
@@ -2999,13 +3099,14 @@ clearance-checked lane changes + honest holding when no lane is open, provably 0
 honest blocking (a desired feature, not a defect) is cleanly buildable and reusable.
 
 **Consequence.** Do not re-attempt ability handicaps or pursuit-by-ability; the identical-racer world makes
-them moot. Reuse the overlap-free traffic core for the identical-racer *mixing* experiments (the peloton /
+them moot. Reuse the overlap-free traffic core for the identical-racer _mixing_ experiments (the peloton /
 drafting line, where the field is kept together by honest physics and the start row is washed out by
 mixing, not by steering). The experiment branch was dropped, not reverted — its two reports are the lab
 journal. Evidence: reports/evolution/PURSUIT-PROTO-1.md + PURSUIT-PROTO-2.md; recoverable at the archive tag
 `archive/handicap-pursuit-089c7d2`.
 
 ## Lesson 184 — The Cliff Law: Correct the DRAW, Never the Motion After the Dice
+
 Every mechanism that tried to make racers reach the band of their drawn place by ACTING ON THEIR MOTION —
 a hard positional wall, a soft band spring, an authored finale curve — created a force the racer's honest
 physics then had to fight, and the fairness↔action frontier came out a **cliff**, not a slope. The one
@@ -3014,15 +3115,15 @@ the honest `[spreadMin, spreadMax]` range, so nothing was ever fought.
 
 **Context.** The free-band line swept the corridor dial from hard wall to soft spring: hardening it lifted
 arrival only to 69% (already below ship's 72–75%) while crushing frontContest to 28–36%; softening it dropped
-arrival off a cliff (69→46%) *without* the contest rising (28→29%). There was no middle cell trading a little
+arrival off a cliff (69→46%) _without_ the contest rising (28→29%). There was no middle cell trading a little
 fairness for meaningful action. FAIR-ARRIVAL's B-vs-C comparison isolated why: ARM C (a literal band wall from
 `R`) posted arrival 68/70% DOWN and frontContest crushed to 27/55 (the pin); ARM B (aim the DRAW) posted
 arrival 89/89% (+14/+17pp) with frontContest within 1–2pp of ship AND the per-row floor UP 65→86.
 
-**Insight.** A correction applied *after* the dice have been rolled is an opponent force — it fights the
+**Insight.** A correction applied _after_ the dice have been rolled is an opponent force — it fights the
 racer's spread draw, its re-roll, and the servo all at once, so it can only buy fairness by spending action
-(and often loses both). A correction applied *to* the dice — shaping the draw before it becomes motion —
-changes what the racer *is*, so the honest physics that follows carries the fairness for free. Same goal,
+(and often loses both). A correction applied _to_ the dice — shaping the draw before it becomes motion —
+changes what the racer _is_, so the honest physics that follows carries the fairness for free. Same goal,
 opposite sign: load the draw, don't wall the position.
 
 **Consequence.** Do not re-attempt band-arrival via any post-dice positional force (wall, spring, authored
@@ -3032,7 +3133,8 @@ reports/evolution/ACTION-FREEBAND-1.md + ACTION-FREEBAND-2.md (the cliff) and re
 (B-vs-C: aim the dice works, wall the position fails).
 
 ## Lesson 185 — The Decidedness Law: The Fight IS the Undecidedness; Sort PARTIALLY, Not FULLY
-Action is not a thing you add on top of a plan — it is the plan being *not yet decided*. Every attempt to
+
+Action is not a thing you add on top of a plan — it is the plan being _not yet decided_. Every attempt to
 choreograph a livelier finish onto an already-decided outcome stayed flat, because a race whose result is
 fixed has nothing left to contest. The corollary is a timing law: the live re-roll is where the undecidedness
 lives, so FULL pre-sorting (deciding early) empties the pulk phase, while PARTIAL sorting leaves enough
@@ -3047,17 +3149,18 @@ mid-race pulk (leaderIsDrawnB1_mid 0.57–0.75, distinctLeaders down); shrinking
 (COMBO15) made the sort PARTIAL, and the pulk came alive (maxLeadHoldShare_mid 0.42→0.27, distinctLeaders →~11).
 
 **Insight.** "Planned" and "decided" are the same thing, and a decided race is a flat race regardless of how
-its motion is dressed. The knob is not *how much* choreography but *how much stays undecided going into the
-window you want lively* — a FULL sort spends the pulk's uncertainty to buy chaos-end fairness; a PARTIAL sort
+its motion is dressed. The knob is not _how much_ choreography but _how much stays undecided going into the
+window you want lively_ — a FULL sort spends the pulk's uncertainty to buy chaos-end fairness; a PARTIAL sort
 banks the fairness and leaves the pulk something to fight over.
 
 **Consequence.** Never add action by scripting motion onto a fixed result; instead protect a live re-roll
-window where the order is genuinely still open, and tune the *fraction* sorted, not the amount of overlay.
+window where the order is genuinely still open, and tune the _fraction_ sorted, not the amount of overlay.
 The shipped 0.15 chaos window is this law applied. Evidence: reports/evolution/CHOREO-RELEASE-1.md +
 CHOREO-RELEASE-2.md (decided = flat, three confirmations) and reports/evolution/PULK-SPECTACLE-1.md
 (full sort empties the pulk, partial sort feeds it).
 
 ## Lesson 186 — The Proximity Floor Is a FAIRNESS Asset, Not Only an Action Tool
+
 Band-centre bunching — pulling each racer toward the middle of its drawn band through the approach — was
 carried as an action/closeness helper. When it was finally removed as a "stowaway" in a clean preregistered
 screen, band ARRIVAL fell. The closeness mechanism was quietly delivering fairness the whole time.
@@ -3072,12 +3175,13 @@ seating them in the centre of their band, from where the honest finish lands the
 because a racer already near its band centre needs the least post-draw motion to finish in-band — the same
 "correct the position early, not late" logic as the Cliff Law, expressed as a floor.
 
-**Consequence.** Before removing a mechanism because its *stated* purpose is served elsewhere, measure it
+**Consequence.** Before removing a mechanism because its _stated_ purpose is served elsewhere, measure it
 against the OTHER scoreboards first — a closeness tool may be a fairness tool wearing the wrong label. Evidence:
 reports/evolution/ACTION-FREEBAND-2.md §2 (the stowaway was a fairness asset: removing the proximity floor
 lowered arrival).
 
 ## Lesson 187 — The Whitelist Trap and the Proof-of-Live Standard for Viewing Tools
+
 A plan flag set in `dynamicsConfig` does nothing in the browser unless it also passes `raceCore`'s explicit
 plan-config WHITELIST — and a dev viewing tool that silently no-ops looks exactly like a working one. Both
 together cost two evenings of blind eye-tests that were never actually running the candidate.
@@ -3101,6 +3205,7 @@ tool ships with a proof-of-live triple: visible badge + console echo + runtime a
 silent no-op. Evidence: reports/evolution/EYE-SETUP-2.md (the whitelist root cause + the badge that caught it).
 
 ## Lesson 188 — Judge Fronts on the DUAL Scoreboard and Whole Races on the THREE-WINDOW Readout
+
 The dead-finale counter sees only COMPLETED P1 passes, so it scored genuine thrillers — a P2 pinned half a
 length behind for the whole finish — as "dead," and it scored the shipped game as duller than it is. The
 owner's eye caught mid-race flatness that every finale-only metric had passed.
@@ -3113,7 +3218,7 @@ LAW (longest-actionless-window) and pulk-hold means lived in the middle window t
 
 **Insight.** A single completed-pass counter conflates "no contest" with "contest that didn't resolve," and a
 finale-only readout is blind to where a mid-race race actually goes flat. Fronts need a dual scoreboard
-(lead-CHANGES *and* sustained-proximity/hold), and whole races need the three-window split, or the metric will
+(lead-CHANGES _and_ sustained-proximity/hold), and whole races need the three-window split, or the metric will
 disagree with the eye — and the eye is right.
 
 **Consequence.** Score front liveliness on both axes (changes + hold), and gate whole-race liveliness on the
@@ -3122,6 +3227,7 @@ permanent gate line. Evidence: reports/evolution/ACTION-BUILD-7.md (the dual-sco
 reports/evolution/PULK-SPECTACLE-1.md (the three-window readout that found what finale metrics missed).
 
 ## Lesson 189 — The Wrong-Lever Law: The Chaos P1–P2 Gap Is Set by the CHASERS, Not the Leader's Knob
+
 To close a modest early breakaway, the obvious lever is to cap how hard the steer boosts the leader. It
 backfired on every cell: capping the boost WIDENED the gap, because the boost is what lets the deep-drawn
 chasers climb and CLOSE — throttle it and the pursuers fall back instead.
@@ -3131,7 +3237,7 @@ shrink space-sprint's ~3.3L chaos hole. It fired correctly, and chaos maxGap INC
 both caps (6/6 cells): space-sprint 3.1→3.8/3.4, ice 2.5→2.8/2.7, searound 2.8→3.0/2.9 — the exact opposite of
 the intent, plus a two-sided loss (frontContest and in-band both fell).
 
-**Insight.** The chaos P1–P2 gap is the distance from the leader to the *field behind it*, and that distance
+**Insight.** The chaos P1–P2 gap is the distance from the leader to the _field behind it_, and that distance
 is governed by how fast the chasers are climbing, not by the leader's own speed. The boost is a chaser's knob
 as much as a leader's; capping it slows the people trying to close the gap, so the gap grows. Diagnose which
 side of a gap a lever actually acts on before assuming it shrinks the gap.
@@ -3143,6 +3249,7 @@ breakaway without punishing honest chase. Evidence: reports/evolution/STEER-CAP-
 the mechanism named).
 
 ## Lesson 190 — The Synchronization Law: Commitment in Mutual Avoidance Must Be Per-Agent and Geometric, Never Timed
+
 To stop racers flip-flopping left-right in traffic (the §4a soft-steer re-picking the most-constraining
 obstacle every tick between two comparable gaps), the obvious fix is to make a racer COMMIT to a chosen side
 for a short window. A fixed-time commit window backfired: it fixed the one targeted racer but made the FIELD
@@ -3153,7 +3260,7 @@ worse.
 count (racers with ≥5 reversals/2 s at ≥0.18 amplitude) rose from 1 to 6 and the worst episode from 6 to 10.
 Earned kill; nothing shipped.
 
-**Insight.** A *clock* is shared wall-time. When many racers each hold a side for the same fixed window, their
+**Insight.** A _clock_ is shared wall-time. When many racers each hold a side for the same fixed window, their
 windows overlap: the field freezes its mutual avoidance together, over-approaches while frozen, then all
 re-decide at the same moment — one racer's fast flap becomes several racers' synchronized larger flaps. The
 timer couples agents that should be independent. Hysteresis in a mutual system must be **per-agent and
@@ -3170,6 +3277,7 @@ regression until the field guard exposed it. Evidence: reports/evolution/RACER-F
 and RACER-FLAPPING-2.md (the margin fix + the field guard that caught margin 0.30's seed-5602 regression).
 
 ## Lesson 191 — The Live-Truth Law: A Behaviour-Changing UI/Camera Fix Ships Only on the Owner's Live Console Proof
+
 Tests measure the CODE; they cannot measure the SESSION. A camera or UI fix can pass every automated check and
 still be wrong on screen, because the measurement harness and the defect can share the same mistaken assumption.
 
@@ -3189,6 +3297,7 @@ owner produced, plus a live==replay frame-exact check on the harness before its 
 Evidence: reports/evolution/CAMERA-FOCUS-5.md.
 
 ## Lesson 192 — Clamps Are Guardrails, Never Steering
+
 A containment clamp keeps the camera inside bounds; it must never be the thing that AIMS the camera. If the
 clamp is doing the aiming, the intended steering was never actually wired.
 
@@ -3206,6 +3315,7 @@ containment clamp fires only at the bounds, so a regression where the clamp beco
 CI instead of shipping. Evidence: reports/evolution/CAMERA-FOCUS-3.md.
 
 ## Lesson 193 — The Living-Config Law: A Stored Config Must Never Silently Disable New Machinery
+
 A change to a default is not live until it reaches the STORED config the running session reads. A stored config
 from before the change can silently strip new keys, so the new machinery is present in code but absent at runtime.
 
@@ -3224,11 +3334,12 @@ FIRST, fix-logic doubt second. Related: the same "prove the live path" disciplin
 Lesson 191's live==replay trust rule.
 
 ## Lesson 194 — The Unit Law: A Number Compared Against The Frame Must Be Expressed As A Fraction Of The Frame
+
 An absolute pixel value that lives in a coordinate space somebody will later change is a defect with a delay
 fuse. It is correct on the day it is written and wrong on the day the space moves, and nothing announces it.
 
 **Context.** Four separate defects on the camera branch were the same mistake wearing different clothes: the
-sprite floor written as `32 px`; the name-tag size as `max(8, …)` px; the zoom unit measured in *this track's*
+sprite floor written as `32 px`; the name-tag size as `max(8, …)` px; the zoom unit measured in _this track's_
 width, so one setting meant a different picture on every track; and the reference canvas declared independently
 in four files that all had to agree, with nothing making them agree. Each was found separately, diagnosed
 separately and fixed separately before anyone noticed they were one family.
@@ -3246,6 +3357,7 @@ Sibling of the bsX/bsY family: same shape, different quantity. Evidence:
 reports/evolution/CAMERA-MIN-DRAW-1.md, CAMERA-TAGS-1.md, CAMERA-ZOOM-UNIT-1.md, CAMERA-REFERENCE-WIDTH-1.md.
 
 ## Lesson 195 — The Chord Law: A Formula Right On The Axes And Wrong Between Them Passes Every Axis-Aligned Test
+
 Test fixtures gravitate to horizontal and vertical because they are easy to reason about. A geometry bug that is
 exactly right at 0° and 90° and wrong at 74° will therefore never be caught.
 
@@ -3265,6 +3377,7 @@ wrong in the space it is used), different axis. Evidence: reports/evolution/CAME
 `frameGeometry.js`.
 
 ## Lesson 196 — The Dead-Instrument Law: A Reading Nobody Has Seen Move Is Indistinguishable From No Reading
+
 A counter, a control or an assertion that has not been observed to CHANGE is not evidence of anything. It looks
 like coverage on the page and provides none.
 
@@ -3287,6 +3400,7 @@ a mirror of it. Prefer a test that can be SHOWN to fail: sabotage it once, watch
 reports/evolution/CAMERA-HYGIENE-2.md.
 
 ## Lesson 197 — The Propensity Law: Making A Dial Real Turns Every Downstream Assertion Into A Coin Flip
+
 When a setting stops being decorative and starts genuinely deciding something probabilistic, every test that
 depended on the old determinism silently becomes a sampling experiment — and a suite that fails one run in ten
 trains people to press re-run instead of reading.
@@ -3309,6 +3423,7 @@ the suite. At "always decline", every test that was really asserting the gate go
 and it takes minutes. Evidence: reports/evolution/CAMERA-HYGIENE-2.md.
 
 ## Lesson 198 — The Silent-Seam Law: An Optional Call Across A Module Boundary Fails Quietly Forever
+
 `a?.b?.()` does not throw when `b` is renamed. It evaluates to `undefined`, the caller's `?? null` turns that
 into a plausible-looking answer, and the feature stops working with no error, no failing test, and no
 fingerprint movement.
@@ -3333,7 +3448,7 @@ reports/evolution/CAMERA-HYGIENE-2.md, the contract test at the foot of `CameraD
 
 **What happened.** `visibleCorridors` is the owner's control: it says how much world he wants in
 shot. The CORRIDOR guarantee — "the whole road stays in frame" — was applied as a ceiling on top of
-it. On six of ten tracks it won, and it won *silently*: his LEADER 1.0 asked for 300 world px and
+it. On six of ten tracks it won, and it won _silently_: his LEADER 1.0 asked for 300 world px and
 delivered anything from 300 to 688 as the road turned (Mountainstreet, 96.2% of frames). Nothing in
 the UI said his number had been overruled; the shot simply breathed, and he described the result as
 restless without being able to name the cause.
@@ -3342,31 +3457,31 @@ Worse, a second guarantee — the COMPANY guarantee, reading his own `minRacersV
 that same shot the entire time and **could not be heard**, because the corridor was always stricter.
 He had a control that did nothing on most of the map and did not know it.
 
-**The law.** A guarantee may *widen* what the owner asked for only when it protects something he
+**The law.** A guarantee may _widen_ what the owner asked for only when it protects something he
 would agree matters more, and he must be able to tell that it did. A guarantee that routinely
 overrules a control, on most content, with no visible trace, has stopped being a guardrail and
 become the actual author of the shot. **Guardrails bind at the edges; if yours binds in the middle,
 it is steering.**
 
 **The test that would have caught it.** Not a unit test on the guarantee — that passed. The number
-nobody computed: *how often does this ceiling, rather than the user's setting, decide the result?*
+nobody computed: _how often does this ceiling, rather than the user's setting, decide the result?_
 Any guarantee applied via `Math.min` against a user value should report its bind rate.
 
 **See also** Lesson 192 (clamps are guardrails, never steering) — this is its config-facing twin:
-192 is about a clamp steering the *camera*, 199 about a guarantee steering the *owner*.
+192 is about a clamp steering the _camera_, 199 about a guarantee steering the _owner_.
 
 ## Lesson 200 — The Window Law: Perceived Camera Speed Comes From The Size Of The Window, Not From What The Number Means
 
 **What happened.** The proposed fix for Lesson 199 was to redefine the unit: `1.0` would mean "this
 track's own road width" instead of a fixed 300 px reference. It is a better-sounding definition — the
-number would mean the same *thing* everywhere — and the measurements supported it as far as they
+number would mean the same _thing_ everywhere — and the measurements supported it as far as they
 went.
 
 The owner built it, watched it on searound at the values his unit would deliver (0.62 / 1.25), and
 rejected it for a reason no measurement in this project would have produced: **a smaller window means
 the world moves through it faster.** Same racer speed, same physics, smaller frame — and the picture
 became restless. The virtue of the fixed reference, which nobody had written down, is that a fixed
-amount of world means the same *sense of camera speed* on every track.
+amount of world means the same _sense of camera speed_ on every track.
 
 **The law.** How fast a camera feels is a function of world-units-per-second crossing the frame,
 i.e. of the WINDOW SIZE — not of the semantics of the setting that produced it. Two definitions that
@@ -3388,13 +3503,13 @@ freeze correctly, moved **one** reader (the pill) to a live source, and wrote te
 it had just fixed. The other two kept printing the frozen value.
 
 The consequence was not a cosmetic bug. The console line printed `77919708` twice, hours apart,
-across two *different* pills, and that contradiction halted a shippable, owner-approved block
+across two _different_ pills, and that contradiction halted a shippable, owner-approved block
 (CAMERA-COMPANY-ONLY-2) on its own falsehood. **The instrument lied, the code was fine, and the
 stop rule fired on the instrument.** The same shape appeared in the corridor guarantee (see 199): one
 concept, two consumers, only one heard.
 
 **The law.** When a value has several readers, repairing one and testing that one produces a system
-that is *more* confidently wrong than before — because the fixed reader now vouches for the broken
+that is _more_ confidently wrong than before — because the fixed reader now vouches for the broken
 ones by association. **The unit of repair is the VALUE, not the call site.**
 
 **The test that catches it is the RELATIONSHIP, not the artefact.** Testing any single reader passes.
@@ -3417,7 +3532,7 @@ no warning was wrong, and each time only a BEFORE capture caught it:
   tests covered the repaired one (Lesson 201).
 
 **Why a measurement tool is the special case.** Ordinary code announces a bad refactor: it throws, a
-test fails, a screen looks wrong. A measurement tool's output is *numbers nobody has seen yet* — it
+test fails, a screen looks wrong. A measurement tool's output is _numbers nobody has seen yet_ — it
 cannot look wrong, because the only thing that knows what it should say is the version you just
 replaced. **Its previous output IS its test, and it is the only one that exists.**
 
@@ -3435,7 +3550,7 @@ careful person skips, precisely because they remember it confidently.
 ## Lesson 203 — The Late-Write Law: Configuring An Object After It Has Read Its Config Fails Silently, And Only A CONSEQUENCE Test Catches It
 
 **What happened.** `his-shot-truth --owner-unit` set `cfg.referenceCorridorPx = trackWidth` one line
-*after* `buildRace(geo, identity, cfg)` had constructed the `CameraDirector`, which reads the config
+_after_ `buildRace(geo, identity, cfg)` had constructed the `CameraDirector`, which reads the config
 once and computes every zoom level from it. The assignment landed on an object nobody would read
 again. **That arm would have run, printed a full table, and measured the unmodified default.**
 
@@ -3456,7 +3571,7 @@ config carries the value, but that the output moves:
 > passes just as happily when the switch is disconnected.
 
 All three instances would have failed that test on the day they were written. It does not prevent the
-write-after-read; it makes the write-after-read *fail loudly the first time*, which is all a test can
+write-after-read; it makes the write-after-read _fail loudly the first time_, which is all a test can
 honestly promise.
 
 ## Lesson 204 — The Mute-Instrument Law: An Instrument That Can Detect Its Own Failure Must Be Able To Report It, Or The Diagnosis Costs A Day
@@ -3479,7 +3594,7 @@ server printed it: `exit 3221225794` = `0xC0000142`, STATUS_DLL_INIT_FAILED — 
 process-creation failure. git never started. Six refuted hypotheses collapsed into one line, and the
 one-sentence fix (restart the process; a file save is not enough) followed from it directly.
 
-**The law.** *Detecting* a failure and *explaining* it are two different features, and shipping the
+**The law.** _Detecting_ a failure and _explaining_ it are two different features, and shipping the
 first without the second builds an instrument that can only ever say "no". The test is not "does it
 notice when it breaks" but **"if it breaks at 3 a.m. and nobody is watching, does the artefact it
 leaves behind name the cause?"** A colour is not an artefact. A status code is.

@@ -20,7 +20,7 @@
 // repeats it.
 // ============================================================
 
-import { arcT } from '../../../client/src/modules/raceLengths.js';
+import { arcT } from "../../../client/src/modules/raceLengths.js";
 
 // Hold threshold for a top-5 overtake, in LEADER-PROGRESS fraction. 0.02 ≈ 1.2 s of a 60 s race — long
 // enough to reject a one-frame lateral-jitter order flicker, short enough to catch a real pass inside
@@ -67,7 +67,10 @@ export function fullSpreadLengths(orderDescByT, lenScale) {
 // framesOverThresholdShare: share of a per-frame max-link-gap SERIES whose value exceeds `threshold`
 // racer lengths — i.e. the fraction of frames in which SOME adjacent-link gap tore past the threshold.
 // Directly answers "how OFTEN is there a gap bigger than N lengths". Pure.
-export function framesOverThresholdShare(linkGaps, threshold = GAP_THRESHOLD_LENGTHS) {
+export function framesOverThresholdShare(
+  linkGaps,
+  threshold = GAP_THRESHOLD_LENGTHS,
+) {
   const n = linkGaps.length;
   if (n === 0) return 0;
   let over = 0;
@@ -83,7 +86,8 @@ export function maxLinkGapLengths(orderDescByT, isOpen, lenScale) {
   if (n < 2 || !(lenScale > 0)) return 0;
   let max = 0;
   for (let i = 0; i < n - 1; i++) {
-    const gap = arcT(orderDescByT[i].t, orderDescByT[i + 1].t, isOpen) * lenScale;
+    const gap =
+      arcT(orderDescByT[i].t, orderDescByT[i + 1].t, isOpen) * lenScale;
     if (gap > max) max = gap;
   }
   return max;
@@ -103,7 +107,7 @@ export function maxLinkGapLengths(orderDescByT, isOpen, lenScale) {
 // the progress at which the order first disagreed with the confirmed order.
 export function makeHeldOvertakeTracker(holdProgress = HELD_HOLD_PROGRESS) {
   const confirmedAhead = new Map(); // pairKey -> index confirmed to be ahead
-  const pendingSince = new Map();   // pairKey -> progress at which the current disagreement began
+  const pendingSince = new Map(); // pairKey -> progress at which the current disagreement began
   let count = 0;
   const api = {
     get count() {

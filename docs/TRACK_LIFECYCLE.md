@@ -21,14 +21,14 @@ This document captures the agreed solution before implementation begins.
 
 ## Terminology
 
-| Term | Meaning |
-|---|---|
-| **Track-Preset** | Metadata for a race: name, icon, color, default racer type, surface classes, track lights, `geometryId` link. |
-| **Track-Geometry** | Spatial path data: background image, inner/outer/center boundary points, closed flag, effects, surface classes, track lights config. |
-| **Server-Track** | A Track-Preset with a backing `server/data/tracks/<id>.json` file. Authoritative source of truth. |
-| **Default-Track** | One of the 10 built-in tracks (Dirt Oval, River Run, Space Sprint, Garden Path, City Circuit, Mountainstreet, Ice Track, Seatrack, Searound, Luger Hill). After TLH-1, these are Server-Tracks seeded at boot. |
-| **Code-Bundle** | `client/src/modules/storage/defaultTracks.js` — in-code fallback snapshot, used when server is unreachable and cache is empty. |
-| **Orphaned Geometry** | A geometry cache entry whose linked Track-Preset no longer exists. Harmless — preserved indefinitely. |
+| Term                  | Meaning                                                                                                                                                                                                        |
+| --------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Track-Preset**      | Metadata for a race: name, icon, color, default racer type, surface classes, track lights, `geometryId` link.                                                                                                  |
+| **Track-Geometry**    | Spatial path data: background image, inner/outer/center boundary points, closed flag, effects, surface classes, track lights config.                                                                           |
+| **Server-Track**      | A Track-Preset with a backing `server/data/tracks/<id>.json` file. Authoritative source of truth.                                                                                                              |
+| **Default-Track**     | One of the 10 built-in tracks (Dirt Oval, River Run, Space Sprint, Garden Path, City Circuit, Mountainstreet, Ice Track, Seatrack, Searound, Luger Hill). After TLH-1, these are Server-Tracks seeded at boot. |
+| **Code-Bundle**       | `client/src/modules/storage/defaultTracks.js` — in-code fallback snapshot, used when server is unreachable and cache is empty.                                                                                 |
+| **Orphaned Geometry** | A geometry cache entry whose linked Track-Preset no longer exists. Harmless — preserved indefinitely.                                                                                                          |
 
 ---
 
@@ -143,6 +143,7 @@ TrackManager "Delete" → DELETE /api/tracks/<id>
 **Goal:** Make the system safe. Prevent data loss. Establish Default-Tracks as server records.
 
 **Changes:**
+
 - **Boot migration** — One-shot: if `server/data/.default-tracks-seeded` absent, create server records for all 10 default tracks. Each record includes full metadata (name, icon, color, defaultRacerType, surfaceClasses, trackLights) and empty geometry arrays (`innerPoints: [], outerPoints: [], centerPoints: [], closed: false`). Write marker file on completion. Idempotent — safe to run twice.
 - **PUT handler** — When `geometryId` is present in request body: use client value. When absent: keep `existing.geometryId`. Remove the hardcoded `existing.geometryId` override.
 - **DELETE handler** — Removes track JSON + background image only. Does not call `removeCachedTrackData` for geometry. On the frontend, `removeCachedTrackData(geometryId)` is called only from TrackEditor Delete (useTrackIO); TrackManager Delete calls only `refresh()`.
@@ -151,6 +152,7 @@ TrackManager "Delete" → DELETE /api/tracks/<id>
 **Test scope:** Backend unit tests for PUT geometryId behavior, DELETE non-geometry-deletion, backup file creation, migration idempotency.
 
 **PR #58 Followup — Track-Delete-Safeguards (2026-05-02):**
+
 - `DELETE /api/tracks/:id` returns **403** for `isDefault: true` tracks — default tracks cannot be deleted via API
 - `DELETE /api/tracks/:id/background` new endpoint — removes only the background image, leaves track record intact
 - `migrateDefaultTracks()` changed from one-shot (marker file) to **idempotent boot routine** — re-seeds any missing default records on every server start; prevents permanent data loss after accidental deletion (Lesson 42)
@@ -166,10 +168,11 @@ TrackManager "Delete" → DELETE /api/tracks/<id>
 **Status:** Implemented and merged 2026-05-02. PR #56 (initial) + PR #57 (post-merge bug-fixes), squash-merged to master.
 
 **Changes:**
+
 - **"Draw Geometry" / "Edit Geometry" button** — Edit-Modal geometry `<select>` dropdown replaced with a status display for server tracks: "Geometry: drawn (XX pts)" or "Geometry: not yet drawn". Button navigates to `/track-editor?load=<serverId>`.
 - **Track Editor two modes:**
-  - *Load mode* (`?load=<serverId>`): header "Editing: [track name]", name input hidden, Save = `PUT /api/tracks/<serverId>`. Two-path load: (1) geometry cache path for tracks with existing geometry, (2) direct server-track state path for `geometryId: null` tracks.
-  - *New track mode* (no param): header "New Track", name input visible, Save = `POST /api/tracks`.
+  - _Load mode_ (`?load=<serverId>`): header "Editing: [track name]", name input hidden, Save = `PUT /api/tracks/<serverId>`. Two-path load: (1) geometry cache path for tracks with existing geometry, (2) direct server-track state path for `geometryId: null` tracks.
+  - _New track mode_ (no param): header "New Track", name input visible, Save = `POST /api/tracks`.
 - **geometryId on first save** — When saving geometry for the first time on an existing server track (`geometryId: null`), generates `custom-${crypto.randomUUID()}` and includes it in the PUT body. Server stores it. Subsequent saves preserve the existing `geometryId`.
 - **Edit-Modal cleanup** — Removed geometry dropdown for server tracks. "Background image and effects are managed in the Track Editor" hint retained.
 
@@ -186,6 +189,7 @@ TrackManager "Delete" → DELETE /api/tracks/<id>
 **Status:** Planned but deferred. TLH-3 dependency (TLH-2 merged ✅) is partially met — but implementation is postponed until after the Camera-Director phase. Note: the default-track count has grown to 10 (Seatrack, Searound, and Luger Hill added after TLH-2). The system is currently functional without TLH-3 (server is always reachable in local-only use).
 
 **Changes:**
+
 - **Frontend loading chain** — `useServerTracks()` / `fetchServerTracks()`: if server unreachable → try geometry cache → if cache empty → fall back to Code-Bundle (`defaultTracks.js`). Emit `fallbackMode: 'code-bundle'` flag.
 - **Status-Banner** — When `fallbackMode === 'code-bundle'`: render top-of-page banner: "Server unavailable — showing default tracks (limited functionality)". Banner disappears when server becomes reachable again and tracks refresh successfully.
 - **Write disable in fallback mode** — Save and Delete operations in TrackManager / Track Editor show "Server required" state when in code-bundle mode.
@@ -233,6 +237,7 @@ Each of the 10 default tracks is seeded with the following structure:
 **Trigger:** Every `POST /api/tracks` and `PUT /api/tracks/:id` — before writing the authoritative file.
 
 **Path pattern:**
+
 ```
 server/data/tracks-backups/
   2026-05-01/

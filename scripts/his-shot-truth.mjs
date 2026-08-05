@@ -23,32 +23,32 @@ import {
   buildRace,
   runRace,
   trackWidthOf,
-} from './lib/raceDriver.mjs';
-import { DEFAULT_CAMERA_CONFIG } from '../client/src/modules/storage/defaults.js';
-import { visibleWorldPx } from '../client/src/modules/camera/zoomUnit.js';
-import { roomFromPointAlong } from '../client/src/modules/camera/frameGeometry.js';
+} from "./lib/raceDriver.mjs";
+import { DEFAULT_CAMERA_CONFIG } from "../client/src/modules/storage/defaults.js";
+import { visibleWorldPx } from "../client/src/modules/camera/zoomUnit.js";
+import { roomFromPointAlong } from "../client/src/modules/camera/frameGeometry.js";
 import {
   framingFor,
   GUARANTEE,
   POSITION,
   anchorScreenPoint,
-} from '../client/src/modules/camera/framingRule.js';
+} from "../client/src/modules/camera/framingRule.js";
 import {
   computeRenderDisplayScale,
   getEffectiveMaxTargetScreenPx,
-} from '../client/src/modules/autoSpriteScale.js';
+} from "../client/src/modules/autoSpriteScale.js";
 
 const CH = 720;
-const USE_DEFAULTS = process.argv.includes('--defaults');
+const USE_DEFAULTS = process.argv.includes("--defaults");
 // ARM B — THE OWNER'S UNIT: 1.0 means "this track's own road width", not the fixed 300 reference.
 // It needs NO code change: `referenceWidthFor` returns max(referenceCorridorPx, trackWidthPx), so
 // setting referenceCorridorPx to the track's own width IS his unit, expressed in the shipped config.
-const OWNER_UNIT = process.argv.includes('--owner-unit');
-const COMPANY_ONLY = process.argv.includes('--company-only');
-const mrArg = process.argv.find((a) => a.startsWith('--min-racers='));
-const MIN_RACERS = mrArg ? Number(mrArg.split('=')[1]) : null;
-const trackArg = process.argv.find((a) => a.startsWith('--track='));
-const ONLY = trackArg ? trackArg.split('=')[1] : null;
+const OWNER_UNIT = process.argv.includes("--owner-unit");
+const COMPANY_ONLY = process.argv.includes("--company-only");
+const mrArg = process.argv.find((a) => a.startsWith("--min-racers="));
+const MIN_RACERS = mrArg ? Number(mrArg.split("=")[1]) : null;
+const trackArg = process.argv.find((a) => a.startsWith("--track="));
+const ONLY = trackArg ? trackArg.split("=")[1] : null;
 
 // THE OWNER'S REAL RACE CONTEXT, taken from his marker — deliberately NOT the n=40 context the other
 // three harnesses use. That is the point of this script, and it is why the identity prints: NIGHT-1
@@ -57,7 +57,7 @@ const IDENTITY = resolveIdentity({
   racers: 65,
   raceSeed: 5601,
   cameraSeed: 882944666,
-  racerType: 'boarder',
+  racerType: "boarder",
   seconds: 60,
   note: "the owner's own race context, from his marker",
 });
@@ -86,7 +86,8 @@ function cameraConfig() {
   if (COMPANY_ONLY) cfg.companyOnlyFraming = true;
   if (MIN_RACERS != null) cfg.minRacersVisible = MIN_RACERS;
   for (const [state, v] of Object.entries(HIS_CORRIDORS)) {
-    if (cfg.cameraStateProfiles[state]) cfg.cameraStateProfiles[state].visibleCorridors = v;
+    if (cfg.cameraStateProfiles[state])
+      cfg.cameraStateProfiles[state].visibleCorridors = v;
   }
   return cfg;
 }
@@ -125,7 +126,7 @@ function measure(geo, cfgIn) {
 
   runRace(race, IDENTITY, cfg, () => {
     const p = cd._framingProbe;
-    if (p && cd.targetZoom > 0 && cd.lerpPhase === 'tracking') {
+    if (p && cd.targetZoom > 0 && cd.lerpPhase === "tracking") {
       // The shot the camera is AIMING at, so the tracking lag does not blur the reading.
       const px = visibleWorldPx(cd.targetZoom, cd._proj.axisY, CH);
       if (Number.isFinite(px)) {
@@ -164,11 +165,27 @@ function measure(geo, cfgIn) {
               pp.frameW,
               pp.frameH,
               fr.position === POSITION.FORWARD ? cd._leaderForwardFrac : null,
-              cd._headingScreen(pp.t)
+              cd._headingScreen(pp.t),
             );
             const inner = cd._innerFramePct ?? 1;
-            const rp = roomFromPointAlong(at.x, at.y, sxp, syp, pp.frameW, pp.frameH, inner);
-            const rm = roomFromPointAlong(at.x, at.y, -sxp, -syp, pp.frameW, pp.frameH, inner);
+            const rp = roomFromPointAlong(
+              at.x,
+              at.y,
+              sxp,
+              syp,
+              pp.frameW,
+              pp.frameH,
+              inner,
+            );
+            const rm = roomFromPointAlong(
+              at.x,
+              at.y,
+              -sxp,
+              -syp,
+              pp.frameW,
+              pp.frameH,
+              inner,
+            );
             roadFrac.push((2 * (Math.min(rp, rm) / scaleP)) / TW);
           }
         }
@@ -179,7 +196,7 @@ function measure(geo, cfgIn) {
       const frameEffZoom = cd._proj.effX(cd.zoom);
       const maxTarget = getEffectiveMaxTargetScreenPx(
         rt.config?.maxTargetScreenPx,
-        cfg.maxTargetScreenPx
+        cfg.maxTargetScreenPx,
       );
       const scale = computeRenderDisplayScale(
         ds,
@@ -187,7 +204,7 @@ function measure(geo, cfgIn) {
         frameEffZoom,
         maxTarget,
         cfg.minDrawnFrameFrac,
-        CH
+        CH,
       );
       const px = ds * scale * frameEffZoom;
       if (Number.isFinite(px) && px > 0) {
@@ -216,14 +233,14 @@ const geos = loadTracks({ only: ONLY });
 
 const cfg = cameraConfig();
 console.log(
-  `VISIBLE WORLD PX (canvasH / (camZoom x axisY)) — ${USE_DEFAULTS ? 'SHIPPED DEFAULTS' : "THE OWNER'S SETTINGS"}` +
+  `VISIBLE WORLD PX (canvasH / (camZoom x axisY)) — ${USE_DEFAULTS ? "SHIPPED DEFAULTS" : "THE OWNER'S SETTINGS"}` +
     (OWNER_UNIT
-      ? '  ·  ARM B: HIS UNIT (1.0 = this track own width)'
-      : '  ·  ARM A: shipped unit (fixed 300 reference)')
+      ? "  ·  ARM B: HIS UNIT (1.0 = this track own width)"
+      : "  ·  ARM A: shipped unit (fixed 300 reference)"),
 );
 console.log(formatIdentity(IDENTITY));
 console.log(
-  'track            TW   state             frames    min      median      max     breath   guarantee binds'
+  "track            TW   state             frames    min      median      max     breath   guarantee binds",
 );
 const B1 = [];
 for (const geo of geos) {
@@ -238,13 +255,13 @@ for (const geo of geos) {
     console.log(
       `  ${r.id.padEnd(15)} ${String(r.TW).padStart(3)}  ${s.padEnd(16)} ${String(a.length).padStart(6)}  ` +
         `${mn.toFixed(1).padStart(7)}  ${med(a).toFixed(1).padStart(8)}  ${mx.toFixed(1).padStart(8)}  ` +
-        `${(mx / mn).toFixed(3).padStart(6)}x   ${((100 * bound) / tot).toFixed(1).padStart(5)}%`
+        `${(mx / mn).toFixed(3).padStart(6)}x   ${((100 * bound) / tot).toFixed(1).padStart(5)}%`,
     );
   }
 }
 
-console.log('\nB1 - DRAWN RACER HEIGHT as % of frame height (the price)\n');
-console.log('track            TW    min%     median%    max%     floor binds');
+console.log("\nB1 - DRAWN RACER HEIGHT as % of frame height (the price)\n");
+console.log("track            TW    min%     median%    max%     floor binds");
 const meds = [];
 for (const r of B1) {
   if (!r.drawnPct.length) continue;
@@ -253,33 +270,41 @@ for (const r of B1) {
   const m = med(r.drawnPct);
   meds.push({ id: r.id, m });
   console.log(
-    '  ' +
+    "  " +
       r.id.padEnd(15) +
       String(r.TW).padStart(3) +
-      ' ' +
+      " " +
       mn.toFixed(2).padStart(7) +
-      '  ' +
+      "  " +
       m.toFixed(2).padStart(8) +
-      '  ' +
+      "  " +
       mx.toFixed(2).padStart(7) +
-      '   ' +
+      "   " +
       r.floorPct.toFixed(1).padStart(6) +
-      '%'
+      "%",
   );
 }
 if (meds.length) {
   meds.sort((a, b) => a.m - b.m);
   const lo = meds[0];
   const hi = meds[meds.length - 1];
-  console.log('\n  SMALLEST racer: ' + lo.id + ' at ' + lo.m.toFixed(2) + '% of frame height');
-  console.log('  BIGGEST  racer: ' + hi.id + ' at ' + hi.m.toFixed(2) + '%');
-  console.log('  SPREAD across tracks = ' + (hi.m / lo.m).toFixed(3) + 'x');
+  console.log(
+    "\n  SMALLEST racer: " +
+      lo.id +
+      " at " +
+      lo.m.toFixed(2) +
+      "% of frame height",
+  );
+  console.log("  BIGGEST  racer: " + hi.id + " at " + hi.m.toFixed(2) + "%");
+  console.log("  SPREAD across tracks = " + (hi.m / lo.m).toFixed(3) + "x");
 }
 
 // M3 — THE PRICE: how often is the road edge out of frame, and by how much?
-console.log('\nM3 - ROAD EDGE OUT OF FRAME (corridor states only; 1.00 = whole road fits)\n');
 console.log(
-  'track            TW   frames   out-of-frame%   worst (road fraction shown)   worst missing px'
+  "\nM3 - ROAD EDGE OUT OF FRAME (corridor states only; 1.00 = whole road fits)\n",
+);
+console.log(
+  "track            TW   frames   out-of-frame%   worst (road fraction shown)   worst missing px",
 );
 for (const r of B1) {
   if (!r.roadFrac || !r.roadFrac.length) continue;
@@ -287,20 +312,22 @@ for (const r of B1) {
   const worst = Math.min(...r.roadFrac);
   const missing = worst < 1 ? (1 - worst) * r.TW : 0;
   console.log(
-    '  ' +
+    "  " +
       r.id.padEnd(15) +
       String(r.TW).padStart(3) +
       String(r.roadFrac.length).padStart(8) +
       ((100 * out) / r.roadFrac.length).toFixed(1).padStart(13) +
-      '%' +
+      "%" +
       worst.toFixed(3).padStart(24) +
       missing.toFixed(0).padStart(20) +
-      ' px'
+      " px",
   );
 }
 
-console.log('');
-console.log('PAIR-STATE CORRIDOR FALLBACK (does corridorGuarantee stay reachable?)');
+console.log("");
+console.log(
+  "PAIR-STATE CORRIDOR FALLBACK (does corridorGuarantee stay reachable?)",
+);
 let tf = 0,
   tb = 0;
 for (const r of B1) {
@@ -308,17 +335,23 @@ for (const r of B1) {
   tb += r.pairFallback || 0;
   if (r.pairFrames)
     console.log(
-      '  ' +
+      "  " +
         r.id.padEnd(15) +
-        ' pair frames ' +
+        " pair frames " +
         String(r.pairFrames).padStart(6) +
-        '   fell back to corridor ' +
+        "   fell back to corridor " +
         String(r.pairFallback).padStart(6) +
-        '  (' +
+        "  (" +
         ((100 * r.pairFallback) / r.pairFrames).toFixed(2) +
-        '%)'
+        "%)",
     );
 }
 console.log(
-  '  TOTAL ' + tb + ' of ' + tf + ' pair frames = ' + ((100 * tb) / (tf || 1)).toFixed(3) + '%'
+  "  TOTAL " +
+    tb +
+    " of " +
+    tf +
+    " pair frames = " +
+    ((100 * tb) / (tf || 1)).toFixed(3) +
+    "%",
 );

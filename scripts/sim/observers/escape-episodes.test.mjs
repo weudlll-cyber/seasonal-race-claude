@@ -9,14 +9,17 @@
 // verdict rests on, so a drift here must fail loudly rather than quietly re-label a cause.
 // ============================================================
 
-import { test } from 'node:test';
-import assert from 'node:assert/strict';
-import { makeEscapeEpisodeTracker, summarizeEpisodes } from './escape-episodes.mjs';
+import { test } from "node:test";
+import assert from "node:assert/strict";
+import {
+  makeEscapeEpisodeTracker,
+  summarizeEpisodes,
+} from "./escape-episodes.mjs";
 
 const G = 0.75;
 const WIN = 54000; // window end in ms
 
-test('no episode while the gap stays at or below G', () => {
+test("no episode while the gap stays at or below G", () => {
   const t = makeEscapeEpisodeTracker({ G, windowEndMs: WIN });
   t.observe(0.5, 0.1, 1000, 3, 2000, 0);
   t.observe(G, 0.2, 2000, 3, 2000, 0); // exactly G is NOT an escape
@@ -24,11 +27,11 @@ test('no episode while the gap stays at or below G', () => {
   assert.equal(t.result().episodes.length, 0);
 });
 
-test('an episode opens above G and closes when the gap returns to G', () => {
+test("an episode opens above G and closes when the gap returns to G", () => {
   const t = makeEscapeEpisodeTracker({ G, windowEndMs: WIN });
-  t.observe(1.0, 0.30, 10000, 3, 12000, 0); // open
-  t.observe(2.5, 0.40, 14000, 3, 12000, 0); // deepen
-  t.observe(0.7, 0.50, 18000, 3, 20000, 1); // close (a tilt landed → corrected)
+  t.observe(1.0, 0.3, 10000, 3, 12000, 0); // open
+  t.observe(2.5, 0.4, 14000, 3, 12000, 0); // deepen
+  t.observe(0.7, 0.5, 18000, 3, 20000, 1); // close (a tilt landed → corrected)
   const eps = t.result().episodes;
   assert.equal(eps.length, 1);
   assert.equal(eps[0].resolved, true);
@@ -40,9 +43,9 @@ test('an episode opens above G and closes when the gap returns to G', () => {
   assert.equal(eps[0].endP, 0.5);
 });
 
-test('an episode still open at the line is UNRESOLVED — ran free', () => {
+test("an episode still open at the line is UNRESOLVED — ran free", () => {
   const t = makeEscapeEpisodeTracker({ G, windowEndMs: WIN });
-  t.observe(1.5, 0.80, 48000, 7, Infinity, 0);
+  t.observe(1.5, 0.8, 48000, 7, Infinity, 0);
   t.observe(4.0, 0.95, 57000, 7, Infinity, 0);
   t.finish(1.0, 60000, 0);
   const e = t.result().episodes[0];
@@ -51,7 +54,7 @@ test('an episode still open at the line is UNRESOLVED — ran free', () => {
   assert.equal(e.peakGapLen, 4.0);
 });
 
-test('OUT-OF-ROLLS: no scheduled roll remains inside the window at episode start', () => {
+test("OUT-OF-ROLLS: no scheduled roll remains inside the window at episode start", () => {
   const t = makeEscapeEpisodeTracker({ G, windowEndMs: WIN });
   // next roll is AFTER the window end → structurally uncorrectable
   t.observe(1.2, 0.85, 50000, 7, 56000, 0);
@@ -60,33 +63,33 @@ test('OUT-OF-ROLLS: no scheduled roll remains inside the window at episode start
   assert.equal(e.hadCorrectableRollAhead, false);
 });
 
-test('a roll inside the window counts as correctable, even late', () => {
+test("a roll inside the window counts as correctable, even late", () => {
   const t = makeEscapeEpisodeTracker({ G, windowEndMs: WIN });
-  t.observe(1.2, 0.80, 45000, 7, 53000, 0); // 53000 <= 54000 → still correctable
+  t.observe(1.2, 0.8, 45000, 7, 53000, 0); // 53000 <= 54000 → still correctable
   t.finish(1.0, 60000, 0);
   assert.equal(t.result().episodes[0].hadCorrectableRollAhead, true);
 });
 
-test('startedAfterWindowEnd flags escapes beginning past the last correctable instant', () => {
+test("startedAfterWindowEnd flags escapes beginning past the last correctable instant", () => {
   const t = makeEscapeEpisodeTracker({ G, windowEndMs: WIN });
   t.observe(1.2, 0.93, 55000, 7, Infinity, 0);
   t.finish(1.0, 60000, 0);
   assert.equal(t.result().episodes[0].startedAfterWindowEnd, true);
 });
 
-test('a null next-roll time is treated as no roll ahead, not as roll-at-zero', () => {
+test("a null next-roll time is treated as no roll ahead, not as roll-at-zero", () => {
   const t = makeEscapeEpisodeTracker({ G, windowEndMs: WIN });
   t.observe(1.2, 0.5, 20000, 7, null, 0);
   t.finish(1.0, 60000, 0);
   assert.equal(t.result().episodes[0].hadCorrectableRollAhead, false);
 });
 
-test('separate escapes produce separate episodes', () => {
+test("separate escapes produce separate episodes", () => {
   const t = makeEscapeEpisodeTracker({ G, windowEndMs: WIN });
   t.observe(1.0, 0.2, 5000, 1, 6000, 0);
-  t.observe(0.2, 0.3, 9000, 1, 12000, 1);  // close #1 corrected
+  t.observe(0.2, 0.3, 9000, 1, 12000, 1); // close #1 corrected
   t.observe(1.4, 0.7, 40000, 2, Infinity, 1);
-  t.finish(1.0, 60000, 1);                  // close #2 unresolved, uncorrected
+  t.finish(1.0, 60000, 1); // close #2 unresolved, uncorrected
   const eps = t.result().episodes;
   assert.equal(eps.length, 2);
   assert.equal(eps[0].corrected, true);
@@ -97,7 +100,7 @@ test('separate escapes produce separate episodes', () => {
 // ── Equality boundaries. Both fields are decided by a comparison against windowEndMs, and each uses
 // a DIFFERENT operator (<= for the roll, > for the start). The exactly-equal frame is therefore the
 // one place a silent operator flip would change a classification without any other test noticing.
-test('boundary: nextRoll EXACTLY at windowEndMs still counts as correctable (<=, not <)', () => {
+test("boundary: nextRoll EXACTLY at windowEndMs still counts as correctable (<=, not <)", () => {
   const t = makeEscapeEpisodeTracker({ G, windowEndMs: WIN });
   t.observe(1.2, 0.8, 45000, 7, WIN, 0); // nextRoll === windowEndMs
   t.finish(1.0, 60000, 0);
@@ -121,7 +124,7 @@ test('boundary: an episode starting EXACTLY at windowEndMs is NOT "after window 
 // guard in sim-fairness.mjs exists to prevent, and it is the one that would silently manufacture the
 // exact signal this observer is meant to test — so it is pinned here against a replica of the sim's
 // call pattern rather than trusted to a comment.
-test('the finishedCount guard excludes the post-finish cascade (the failure mode it exists for)', () => {
+test("the finishedCount guard excludes the post-finish cascade (the failure mode it exists for)", () => {
   // Replica of the sim's per-frame loop. After the leader crosses the line, racers drop out of the
   // live set one by one and the "leader gap" churns violently — a burst of spurious sub-second
   // episodes pinned near progress 1.0, every one necessarily uncorrected and out-of-rolls.
@@ -153,7 +156,11 @@ test('the finishedCount guard excludes the post-finish cascade (the failure mode
   const unguarded = run(false);
   assert.equal(unguarded.length, 4);
   const phantoms = unguarded.slice(1);
-  assert.ok(phantoms.every((e) => e.corrected === false && e.hadCorrectableRollAhead === false));
+  assert.ok(
+    phantoms.every(
+      (e) => e.corrected === false && e.hadCorrectableRollAhead === false,
+    ),
+  );
   assert.ok(phantoms.every((e) => e.startP === 1));
   // WITH the guard only the genuine pre-finish escape survives, correctly classified.
   const guarded = run(true);
@@ -169,18 +176,56 @@ test('the finishedCount guard excludes the post-finish cascade (the failure mode
   // verdict rests on. The cascade drags it from 0 (the genuine escape had a correctable roll ahead —
   // nothing structural about it) to 0.75, purely from frames after the race was decided. That is not
   // noise around a finding; it is a fabricated finding.
-  assert.equal(summarizeEpisodes([{ episodes: guarded }]).outOfRollsShareOfUncorrected, 0);
-  assert.equal(summarizeEpisodes([{ episodes: unguarded }]).outOfRollsShareOfUncorrected, 0.75);
+  assert.equal(
+    summarizeEpisodes([{ episodes: guarded }]).outOfRollsShareOfUncorrected,
+    0,
+  );
+  assert.equal(
+    summarizeEpisodes([{ episodes: unguarded }]).outOfRollsShareOfUncorrected,
+    0.75,
+  );
 });
 
-test('summarizeEpisodes splits corrected / out-of-rolls / other', () => {
-  const recs = [{
-    episodes: [
-      { startP: 0.3, endP: 0.4, durationMs: 1000, peakGapLen: 2, resolved: true, corrected: true, downTiltsDuring: 1, hadCorrectableRollAhead: true, startedAfterWindowEnd: false },
-      { startP: 0.9, endP: 1.0, durationMs: 5000, peakGapLen: 5, resolved: false, corrected: false, downTiltsDuring: 0, hadCorrectableRollAhead: false, startedAfterWindowEnd: true },
-      { startP: 0.5, endP: 0.6, durationMs: 2000, peakGapLen: 3, resolved: true, corrected: false, downTiltsDuring: 0, hadCorrectableRollAhead: true, startedAfterWindowEnd: false },
-    ],
-  }];
+test("summarizeEpisodes splits corrected / out-of-rolls / other", () => {
+  const recs = [
+    {
+      episodes: [
+        {
+          startP: 0.3,
+          endP: 0.4,
+          durationMs: 1000,
+          peakGapLen: 2,
+          resolved: true,
+          corrected: true,
+          downTiltsDuring: 1,
+          hadCorrectableRollAhead: true,
+          startedAfterWindowEnd: false,
+        },
+        {
+          startP: 0.9,
+          endP: 1.0,
+          durationMs: 5000,
+          peakGapLen: 5,
+          resolved: false,
+          corrected: false,
+          downTiltsDuring: 0,
+          hadCorrectableRollAhead: false,
+          startedAfterWindowEnd: true,
+        },
+        {
+          startP: 0.5,
+          endP: 0.6,
+          durationMs: 2000,
+          peakGapLen: 3,
+          resolved: true,
+          corrected: false,
+          downTiltsDuring: 0,
+          hadCorrectableRollAhead: true,
+          startedAfterWindowEnd: false,
+        },
+      ],
+    },
+  ];
   const s = summarizeEpisodes(recs);
   assert.equal(s.nEpisodes, 3);
   assert.equal(s.correctedRate, 1 / 3);
@@ -192,7 +237,7 @@ test('summarizeEpisodes splits corrected / out-of-rolls / other', () => {
   assert.ok(s.uncorrectedStartPMed > s.correctedStartPMed);
 });
 
-test('summarizeEpisodes is safe on an empty set', () => {
+test("summarizeEpisodes is safe on an empty set", () => {
   const s = summarizeEpisodes([]);
   assert.equal(s.nEpisodes, 0);
   assert.equal(s.correctedRate, null);

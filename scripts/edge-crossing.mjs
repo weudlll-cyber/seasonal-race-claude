@@ -31,8 +31,8 @@ import {
   buildRace,
   runRace,
   TRACK_DEFAULT_RACER,
-} from './lib/raceDriver.mjs';
-import { DEFAULT_CAMERA_CONFIG } from '../client/src/modules/storage/defaults.js';
+} from "./lib/raceDriver.mjs";
+import { DEFAULT_CAMERA_CONFIG } from "../client/src/modules/storage/defaults.js";
 
 const IDENTITY = resolveIdentity({
   racers: 40,
@@ -40,7 +40,7 @@ const IDENTITY = resolveIdentity({
   cameraSeed: 1439767152,
   racerType: TRACK_DEFAULT_RACER,
   seconds: 60,
-  note: 'the CAMERA-ANCHOR-TRUTH-1 measurement context',
+  note: "the CAMERA-ANCHOR-TRUTH-1 measurement context",
 });
 
 function measureTrack(geo) {
@@ -61,7 +61,7 @@ function measureTrack(geo) {
     }
     // Every GUARANTEED subject this frame: the anchor, plus both contenders in a pair state.
     const subs = [p.point, ...(Array.isArray(p.pair) ? p.pair : [])].filter(
-      (s) => s && Number.isFinite(s.x) && Number.isFinite(s.y)
+      (s) => s && Number.isFinite(s.x) && Number.isFinite(s.y),
     );
     const effX = cd._proj.effX(cd.zoom);
     const effY = cd._proj.effY(cd.zoom);
@@ -71,7 +71,8 @@ function measureTrack(geo) {
       const syPix = s.y * effY + cd.offsetY;
       const hbX = halfBody * effX;
       const hbY = halfBody * effY;
-      const centreIn = sxPix >= 0 && sxPix <= p.frameW && syPix >= 0 && syPix <= p.frameH;
+      const centreIn =
+        sxPix >= 0 && sxPix <= p.frameW && syPix >= 0 && syPix <= p.frameH;
       checked++;
       if (!centreIn) {
         centreOut++;
@@ -81,7 +82,7 @@ function measureTrack(geo) {
         0 - (sxPix - hbX),
         sxPix + hbX - p.frameW,
         0 - (syPix - hbY),
-        syPix + hbY - p.frameH
+        syPix + hbY - p.frameH,
       );
       if (over > 0) {
         crossing++;
@@ -108,11 +109,11 @@ function measureTrack(geo) {
 const geos = loadTracks();
 
 console.log(
-  'EDGE CROSSING — a GUARANTEED subject drawn with part of its body past the frame edge\n'
+  "EDGE CROSSING — a GUARANTEED subject drawn with part of its body past the frame edge\n",
 );
 console.log(formatIdentity(IDENTITY));
 console.log(
-  'track            subject-frames   crossing%   worst overhang (% of short side)   centre-already-out%'
+  "track            subject-frames   crossing%   worst overhang (% of short side)   centre-already-out%",
 );
 let totC = 0;
 let totN = 0;
@@ -123,13 +124,15 @@ for (const geo of geos) {
   console.log(
     `  ${r.id.padEnd(15)} ${String(r.checked).padStart(9)}   ${r.crossPct.toFixed(2).padStart(7)}%   ` +
       `${r.worstOverhangPct.toFixed(2).padStart(10)}%                        ${r.centreOutPct.toFixed(2)}%` +
-      (r.byState.length ? `   states: ${r.byState.map(([s, n]) => `${s}=${n}`).join(' ')}` : '')
+      (r.byState.length
+        ? `   states: ${r.byState.map(([s, n]) => `${s}=${n}`).join(" ")}`
+        : ""),
   );
 }
 console.log(
-  `\n  OVERALL: ${totC} crossing of ${totN} guaranteed-subject frames = ${((100 * totC) / totN).toFixed(3)}%`
+  `\n  OVERALL: ${totC} crossing of ${totN} guaranteed-subject frames = ${((100 * totC) / totN).toFixed(3)}%`,
 );
 console.log(
-  '  PRE-REGISTERED STOP: if this is ~0, §4b ships NOTHING — pairGuarantee already pads by the\n' +
-    '  drawn body and COMPANY_FRAME_PCT 0.9 was sized against this exact failure.'
+  "  PRE-REGISTERED STOP: if this is ~0, §4b ships NOTHING — pairGuarantee already pads by the\n" +
+    "  drawn body and COMPANY_FRAME_PCT 0.9 was sized against this exact failure.",
 );

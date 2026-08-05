@@ -25,19 +25,22 @@
 //  in-process store lock only covers within a single process).
 // ============================================================
 
-import { createInterface } from 'node:readline';
-import { promoteOrCreate, rearmSetup } from '../server/src/auth/recoverAdmin.js';
+import { createInterface } from "node:readline";
+import {
+  promoteOrCreate,
+  rearmSetup,
+} from "../server/src/auth/recoverAdmin.js";
 
 // ── Argument parsing ──────────────────────────────────────────────────────────
 
 const ACTION = process.argv[2];
 const USERNAME = process.argv[3];
 
-const VALID_ACTIONS = ['promote', 'rearm-setup'];
+const VALID_ACTIONS = ["promote", "rearm-setup"];
 
 if (!VALID_ACTIONS.includes(ACTION)) {
   process.stderr.write(`
-[recover-admin] ERROR: unknown action "${ACTION ?? '(none provided)'}"
+[recover-admin] ERROR: unknown action "${ACTION ?? "(none provided)"}"
 
 Usage:
   node scripts/recover-admin.mjs promote <username>
@@ -47,7 +50,7 @@ Usage:
   process.exit(1);
 }
 
-if (ACTION === 'promote' && !USERNAME) {
+if (ACTION === "promote" && !USERNAME) {
   process.stderr.write(`
 [recover-admin] ERROR: "promote" requires a <username> argument.
 
@@ -65,40 +68,44 @@ if (ACTION === 'promote' && !USERNAME) {
 async function readPassword() {
   const fromEnv = process.env.RA_RECOVERY_PASSWORD;
   if (fromEnv) {
-    process.stderr.write('[recover-admin] Using password from RA_RECOVERY_PASSWORD env var.\n');
+    process.stderr.write(
+      "[recover-admin] Using password from RA_RECOVERY_PASSWORD env var.\n",
+    );
     return fromEnv;
   }
 
   if (process.stdin.isTTY) {
     // TTY path: suppress terminal echo while reading, then restore it.
     return new Promise((resolve, reject) => {
-      process.stderr.write('New password (not a CLI arg — not in shell history): ');
+      process.stderr.write(
+        "New password (not a CLI arg — not in shell history): ",
+      );
       process.stdin.setRawMode(true);
       process.stdin.resume();
-      process.stdin.setEncoding('utf8');
+      process.stdin.setEncoding("utf8");
 
-      let buf = '';
+      let buf = "";
 
       function cleanup() {
         process.stdin.setRawMode(false);
         process.stdin.pause();
-        process.stdin.removeListener('data', onData);
-        process.stdin.removeListener('error', onError);
-        process.stdin.removeListener('end', onEnd);
-        process.stdin.removeListener('close', onEnd);
+        process.stdin.removeListener("data", onData);
+        process.stdin.removeListener("error", onError);
+        process.stdin.removeListener("end", onEnd);
+        process.stdin.removeListener("close", onEnd);
       }
 
       function onData(ch) {
-        if (ch === '\r' || ch === '\n') {
+        if (ch === "\r" || ch === "\n") {
           cleanup();
-          process.stderr.write('\n');
+          process.stderr.write("\n");
           resolve(buf);
-        } else if (ch === '') {
+        } else if (ch === "") {
           // Ctrl-C
           cleanup();
-          process.stderr.write('\n[recover-admin] Aborted.\n');
-          reject(new Error('Aborted by user'));
-        } else if (ch === '' || ch === '\b') {
+          process.stderr.write("\n[recover-admin] Aborted.\n");
+          reject(new Error("Aborted by user"));
+        } else if (ch === "" || ch === "\b") {
           // Backspace
           buf = buf.slice(0, -1);
         } else {
@@ -113,41 +120,55 @@ async function readPassword() {
 
       function onEnd() {
         cleanup();
-        reject(new Error('stdin closed before password entered'));
+        reject(new Error("stdin closed before password entered"));
       }
 
-      process.stdin.on('data', onData);
-      process.stdin.on('error', onError);
-      process.stdin.on('end', onEnd);
-      process.stdin.on('close', onEnd);
+      process.stdin.on("data", onData);
+      process.stdin.on("error", onError);
+      process.stdin.on("end", onEnd);
+      process.stdin.on("close", onEnd);
     });
   }
 
   // Non-TTY fallback (piped/scripted): visible readline prompt.
   // Use RA_RECOVERY_PASSWORD env var for fully non-echoed scripted use.
   return new Promise((resolve) => {
-    const rl = createInterface({ input: process.stdin, output: process.stderr });
-    rl.question('New password (not a CLI arg — not in shell history): ', (answer) => {
-      rl.close();
-      resolve(answer);
+    const rl = createInterface({
+      input: process.stdin,
+      output: process.stderr,
     });
+    rl.question(
+      "New password (not a CLI arg — not in shell history): ",
+      (answer) => {
+        rl.close();
+        resolve(answer);
+      },
+    );
   });
 }
 
 // ── Main ──────────────────────────────────────────────────────────────────────
 
 async function main() {
-  process.stderr.write('\n[recover-admin] RaceArena local admin-recovery CLI (AUTH.md §9a)\n');
-  process.stderr.write('[recover-admin] WARNING: Prefer running with the server stopped.\n\n');
+  process.stderr.write(
+    "\n[recover-admin] RaceArena local admin-recovery CLI (AUTH.md §9a)\n",
+  );
+  process.stderr.write(
+    "[recover-admin] WARNING: Prefer running with the server stopped.\n\n",
+  );
 
-  if (ACTION === 'promote') {
+  if (ACTION === "promote") {
     const newPassword = await readPassword();
     if (!newPassword || !newPassword.trim()) {
-      process.stderr.write('[recover-admin] ERROR: Password must not be empty.\n');
+      process.stderr.write(
+        "[recover-admin] ERROR: Password must not be empty.\n",
+      );
       process.exit(1);
     }
 
-    process.stderr.write(`[recover-admin] Promoting/creating "${USERNAME}" as admin…\n`);
+    process.stderr.write(
+      `[recover-admin] Promoting/creating "${USERNAME}" as admin…\n`,
+    );
     const { action, user } = await promoteOrCreate(USERNAME, newPassword);
 
     process.stdout.write(`
@@ -162,8 +183,8 @@ async function main() {
     return;
   }
 
-  if (ACTION === 'rearm-setup') {
-    process.stderr.write('[recover-admin] Removing setup-complete marker…\n');
+  if (ACTION === "rearm-setup") {
+    process.stderr.write("[recover-admin] Removing setup-complete marker…\n");
     const result = rearmSetup();
 
     process.stdout.write(`

@@ -2,7 +2,7 @@
 
 > Status: **DESIGN / not built.** v3.2 (completeness): §7 route inventory now lists
 > `logout`/`me`; §10 spells out E2E test prerequisites (isolated state, setup-state, user
-> fixtures). v3.1 added §10 *Automated testing & verification*
+> fixtures). v3.1 added §10 _Automated testing & verification_
 > (server Vitest + Playwright E2E auth flow, with the honest boundary). v3 added the
 > delta-review precisions (2026-06-13):
 > bootstrap-secret lifecycle (§5), a concrete auditable admin-lockout recovery path (§9a),
@@ -17,16 +17,16 @@
 ## 1. Goals & scope
 
 1. **Per-install closed tenant.** One server installation = one self-contained world; many
-   installs possible; each isolated. *This isolation already exists structurally* (separate
+   installs possible; each isolated. _This isolation already exists structurally_ (separate
    `server/data/`, separate port; no shared DB).
 2. **Two race-director tiers** — `operator` (Stufe 1) and `admin` (Stufe 2). See §2.
 3. **Real enforcement on the server** for server-backed resources. Client gating is UX, not
    security.
 4. **Secure by default & hard to break on extension** — adding a route or screen must
-   default to *locked* (§6).
+   default to _locked_ (§6).
 
 **Deployment assumption (drives CSRF & cookies, §4a):** the default target is a
-**same-origin deployment** — the client is served from the *same* origin as the API
+**same-origin deployment** — the client is served from the _same_ origin as the API
 (reverse-proxy or the server serving the built client). This is the simplest and safest
 posture. Cross-origin deployment is supported but needs the CSRF-token variant (§4a) and is
 called out where it differs.
@@ -35,17 +35,17 @@ called out where it differs.
 maintained session middleware + a maintained CSRF middleware); this is **not** the full
 security audit (general rate-limit tuning, full CORS lockdown, HTTPS, secret management,
 audit-log retention belong to the deferred Security-Audit at release run-up — the pieces
-required for auth to *function safely* are included here, the rest is flagged).
+required for auth to _function safely_ are included here, the rest is flagged).
 
 ---
 
 ## 2. Role model
 
-| Capability | `operator` (Stufe 1) | `admin` (Stufe 2) |
-|---|:---:|:---:|
-| Normal operation + operator DevScreen sections (Race Defaults, Player Groups, Racer Types, Tracks, Branding, Race History) | ✓ | ✓ |
-| ADVANCED DevScreen sections (Race Tuning, Rubber Band, Priority System, Sprite Size Range, Camera Advanced, Name Tag Visibility, Auto-Scale, Surface Classes, System/Import) | ✗ | ✓ |
-| Create/manage other race directors & assign tier | ✗ | ✓ |
+| Capability                                                                                                                                                                   | `operator` (Stufe 1) | `admin` (Stufe 2) |
+| ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | :------------------: | :---------------: |
+| Normal operation + operator DevScreen sections (Race Defaults, Player Groups, Racer Types, Tracks, Branding, Race History)                                                   |          ✓           |         ✓         |
+| ADVANCED DevScreen sections (Race Tuning, Rubber Band, Priority System, Sprite Size Range, Camera Advanced, Name Tag Visibility, Auto-Scale, Surface Classes, System/Import) |          ✗           |         ✓         |
+| Create/manage other race directors & assign tier                                                                                                                             |          ✗           |         ✓         |
 
 - Split maps onto the existing per-section `tier` field in `DevScreen.jsx`
   (`'operator' | 'advanced'`): `operator`→any logged-in user; `advanced`→`admin`.
@@ -89,21 +89,22 @@ Flat JSON array (consistent with existing stores):
 
 ### Auth endpoints (`authRouter` at `/api/auth`)
 
-| Method | Path | Access | Purpose |
-|---|---|---|---|
-| GET  | `/api/auth/setup-needed` | public | `true` if zero users (client → setup vs login) |
-| POST | `/api/auth/setup`        | public **only while zero users** + bootstrap secret (§5) | create first `admin` |
-| POST | `/api/auth/login`        | public (rate-limited §7.1) | verify (bcrypt) → session |
-| POST | `/api/auth/logout`       | authenticated | destroy session |
-| GET  | `/api/auth/me`           | authenticated | `{ username, role }` of current user |
+| Method | Path                     | Access                                                   | Purpose                                        |
+| ------ | ------------------------ | -------------------------------------------------------- | ---------------------------------------------- |
+| GET    | `/api/auth/setup-needed` | public                                                   | `true` if zero users (client → setup vs login) |
+| POST   | `/api/auth/setup`        | public **only while zero users** + bootstrap secret (§5) | create first `admin`                           |
+| POST   | `/api/auth/login`        | public (rate-limited §7.1)                               | verify (bcrypt) → session                      |
+| POST   | `/api/auth/logout`       | authenticated                                            | destroy session                                |
+| GET    | `/api/auth/me`           | authenticated                                            | `{ username, role }` of current user           |
 
 ### 4a. CSRF strategy (MUST — was missing in v1)
 
 **Default profile (binding): same-origin only.** The shipped/standard deployment is
-same-origin (§1); cross-origin is an *explicit, opt-in exception* that MUST enable the
+same-origin (§1); cross-origin is an _explicit, opt-in exception_ that MUST enable the
 CSRF-token flow below. We do not ship a cross-origin-without-token mode.
 
 Cookie-authenticated **mutating** requests need CSRF protection:
+
 - **Primary (same-origin deployment — the default):** set the session cookie `SameSite=Lax`
   (or `Strict`), which blocks cross-site form/posts; combined with same-origin this covers
   the common case.
@@ -114,7 +115,7 @@ Cookie-authenticated **mutating** requests need CSRF protection:
   the same central place as auth (§6.1) — not per-handler.
 - **Defense-in-depth (added per review):** the central mutating-request middleware also
   performs an `Origin`/`Referer` check against the configured allowed origin and rejects
-  mismatches. This is layered *on top of* the SameSite/token strategy (not a replacement) and
+  mismatches. This is layered _on top of_ the SameSite/token strategy (not a replacement) and
   makes misconfiguration or stray cross-origin calls fail fast and visibly.
 
 ---
@@ -134,6 +135,7 @@ Cookie-authenticated **mutating** requests need CSRF protection:
 - After setup, `/setup-admin` is unreachable; the app shows `/login`.
 
 **Bootstrap-secret lifecycle (explicit):**
+
 - **Provisioning:** the operator who installs the server sets `RA_BOOTSTRAP_TOKEN` at
   install time (environment variable / install config) — a value of their choosing or one
   the installer generates. It lives only in the server environment, never in `users.json`,
@@ -150,11 +152,12 @@ Cookie-authenticated **mutating** requests need CSRF protection:
 ## 6. Secure-by-default & "no forgetting on extension" (core requirement)
 
 ### 6.1 Server: deny-by-default + ONE guarded entry point (MUST)
+
 - A single `requireAuth` middleware is applied **globally** to the `/api` router; **every**
   route is protected unless its **exact** path+method is in an explicit `PUBLIC_PATHS`
   allowlist (health, login, setup, setup-needed). **No wildcards/prefixes in the allowlist** —
   exact entries only, so a too-broad pattern cannot silently open routes.
-- **Hard architectural rule:** *all* API routes are registered behind this one guarded
+- **Hard architectural rule:** _all_ API routes are registered behind this one guarded
   registration point. **No `app.get/app.post/...` for API outside the guarded router stack,
   no separately-mounted sub-apps that bypass it.** A new route therefore inherits protection
   by default; forgetting fails **closed** (too strict, caught in tests), never open.
@@ -163,29 +166,31 @@ Cookie-authenticated **mutating** requests need CSRF protection:
   so a policy entry cannot be silently missed.
 
 ### 6.2 Client: deny-by-default guard + explicit per-route role matrix (MUST)
+
 - `<ProtectedRoute>` wraps **all** client routes except `/login` and `/setup-admin`.
-- **Per-route role matrix** — standalone pages are gated explicitly, *not* only via DevScreen
+- **Per-route role matrix** — standalone pages are gated explicitly, _not_ only via DevScreen
   tier (which only covers DevScreen sections):
 
-  | Route (`App.jsx`) | Required role |
-  |---|---|
-  | `/login`, `/setup-admin` | public |
-  | `/setup`, `/race`, `/results` | operator+ |
-  | `/track-editor` | operator+ (track CRUD is operator-level) |
-  | `/racer-editor` | operator+ |
-  | `/dev` | operator+ to enter; **ADVANCED sections gated to `admin` by `tier`** |
-  | `/diagnose-verteilung` | **admin** (internal diagnostic/headless-sim tool) |
+  | Route (`App.jsx`)             | Required role                                                        |
+  | ----------------------------- | -------------------------------------------------------------------- |
+  | `/login`, `/setup-admin`      | public                                                               |
+  | `/setup`, `/race`, `/results` | operator+                                                            |
+  | `/track-editor`               | operator+ (track CRUD is operator-level)                             |
+  | `/racer-editor`               | operator+                                                            |
+  | `/dev`                        | operator+ to enter; **ADVANCED sections gated to `admin` by `tier`** |
+  | `/diagnose-verteilung`        | **admin** (internal diagnostic/headless-sim tool)                    |
 
 - DevScreen sections render by `tier`; a section with **missing/unknown tier is treated as
   `advanced` (locked)** → a new, unclassified section is hidden until consciously tiered.
 
 ### 6.3 Tests that fail red (MUST — presence **and** behaviour)
+
 - **Route-presence test:** enumerate all registered Express routes; assert each non-public
   route sits behind `requireAuth` and each admin route behind `requireAdmin`. New
   unclassified route → suite red.
 - **Behavioural authz tests (added per review):** for representative routes — anonymous →
   `401`; `operator` on an `admin` route → `403`; `admin` → expected access. These verify the
-  guard *works*, not merely that it is present.
+  guard _works_, not merely that it is present.
 - **Policy-matching tests:** unit-test the `ROUTE_POLICY`/`PUBLIC_PATHS` matcher against the
   tricky cases — parameterised paths (`/api/tracks/:id`), trailing-slash variants
   (`/api/x` vs `/api/x/`), and method case/normalisation — so a route cannot slip past the
@@ -196,10 +201,12 @@ Cookie-authenticated **mutating** requests need CSRF protection:
   security-relevant diffs get independent (Copilot) review and a final owner eye-check (§10).
 
 ### 6.4 Living documentation + standing discipline
+
 - This `docs/AUTH.md` is the SoT (role model, `ROUTE_POLICY` table, client role matrix) plus
   the **Extension Checklist** below. A Handoff STANDING DISCIPLINE entry points here.
 
 #### Extension Checklist
+
 - **New server route** → add to `ROUTE_POLICY` (role) or `PUBLIC_PATHS` (exact, with reason).
   Run presence + behavioural tests. Confirm it is mounted inside the guarded stack.
 - **New client page/route** → add a row to the §6.2 role matrix; wrap in `<ProtectedRoute>`.
@@ -212,21 +219,22 @@ Cookie-authenticated **mutating** requests need CSRF protection:
 
 ## 7. Current route inventory → required level
 
-| Method | Path | Level | Note |
-|---|---|---|---|
-| GET | `/api/health` | public | liveness |
-| POST | `/api/auth/login` | public | rate-limited (§7.1) |
-| POST | `/api/auth/setup` | public | only while zero users + bootstrap secret (§5), rate-limited |
-| GET | `/api/auth/setup-needed` | public | client routing only |
-| POST | `/api/auth/logout` | authenticated | destroy session |
-| GET | `/api/auth/me` | authenticated | current `{ username, role }` |
-| GET | `/api/tracks`, `/api/tracks/:id`, `/api/tracks/:id/background` | operator+ | read |
-| POST/PUT/DELETE | `/api/tracks/...` (incl. background) | operator+ | Tracks = Stufe 1 |
-| GET | `/api/surface-classes`, `/api/surface-classes/:id` | operator+ | read |
-| POST/PUT/DELETE | `/api/surface-classes/...` | **admin** | ADVANCED |
-| GET/POST/PUT/DELETE | `/api/users/...` | **admin** | user mgmt (§9) |
+| Method              | Path                                                           | Level         | Note                                                        |
+| ------------------- | -------------------------------------------------------------- | ------------- | ----------------------------------------------------------- |
+| GET                 | `/api/health`                                                  | public        | liveness                                                    |
+| POST                | `/api/auth/login`                                              | public        | rate-limited (§7.1)                                         |
+| POST                | `/api/auth/setup`                                              | public        | only while zero users + bootstrap secret (§5), rate-limited |
+| GET                 | `/api/auth/setup-needed`                                       | public        | client routing only                                         |
+| POST                | `/api/auth/logout`                                             | authenticated | destroy session                                             |
+| GET                 | `/api/auth/me`                                                 | authenticated | current `{ username, role }`                                |
+| GET                 | `/api/tracks`, `/api/tracks/:id`, `/api/tracks/:id/background` | operator+     | read                                                        |
+| POST/PUT/DELETE     | `/api/tracks/...` (incl. background)                           | operator+     | Tracks = Stufe 1                                            |
+| GET                 | `/api/surface-classes`, `/api/surface-classes/:id`             | operator+     | read                                                        |
+| POST/PUT/DELETE     | `/api/surface-classes/...`                                     | **admin**     | ADVANCED                                                    |
+| GET/POST/PUT/DELETE | `/api/users/...`                                               | **admin**     | user mgmt (§9)                                              |
 
-### 7.1 Adjustments that come *with* auth (not optional)
+### 7.1 Adjustments that come _with_ auth (not optional)
+
 - **CORS:** wildcard → explicit client origin + `credentials: true` (wildcard+cookies is
   rejected by browsers).
 - **Client transport:** `apiClient.js` sends `credentials: 'include'`; `401` → `/login`.
@@ -236,6 +244,7 @@ Cookie-authenticated **mutating** requests need CSRF protection:
 ---
 
 ## 8. What stays client-only (for now)
+
 Pure-localStorage ADVANCED sections (Race Tuning, Rubber Band, Priority System, Sprite Size
 Range, Camera Advanced, Name Tag Visibility, Auto-Scale, System export/import) have no server
 to protect today — data lives in the operator's browser. They are **client-gated only**
@@ -247,12 +256,12 @@ local privilege (`importAllStorage` overwrites every `racearena:*` key at once) 
 
 ## 9. User management (`admin` only)
 
-| Method | Path | Purpose |
-|---|---|---|
-| GET | `/api/users` | list (no password hashes returned) |
-| POST | `/api/users` | create `{ username, password, role }` |
-| PUT | `/api/users/:id` | change role / reset password |
-| DELETE | `/api/users/:id` | remove |
+| Method | Path             | Purpose                               |
+| ------ | ---------------- | ------------------------------------- |
+| GET    | `/api/users`     | list (no password hashes returned)    |
+| POST   | `/api/users`     | create `{ username, password, role }` |
+| PUT    | `/api/users/:id` | change role / reset password          |
+| DELETE | `/api/users/:id` | remove                                |
 
 - **Last-admin protection (all paths):** the server refuses any operation that would leave
   zero admins — delete, demote, deactivate, or role-change of the last `admin`.
@@ -268,6 +277,7 @@ local privilege (`importAllStorage` overwrites every `racearena:*` key at once) 
 
 If an install ends up with no usable admin (lost password, accidental state), recovery is a
 **local, server-side operation only** — never a network-exposed endpoint:
+
 - A maintenance CLI shipped with the server (e.g. `node scripts/recover-admin.mjs`) that runs
   **on the server host** and requires local filesystem access to `server/data/`. It can
   either (a) promote/reset a named user to `admin` with a new password, or (b) re-arm the
@@ -286,6 +296,7 @@ Goal: verify as much of auth as possible **automatically, without owner interven
 every test run — while being honest about where automation stops.
 
 **Server-side, automated (Vitest, runs in `npm test`):**
+
 - Route-presence test, behavioural authz tests (401/403/access), and policy-matching tests —
   all defined in §6.3. These run headless on every suite run; a new unprotected or
   mis-classified route turns the suite red without anyone remembering to check.
@@ -295,6 +306,7 @@ every test run — while being honest about where automation stops.
   inert after setup-complete, session-ID regenerated on login, session invalidated on logout.
 
 **End-to-end, automated (Playwright — already in the project):**
+
 - The full browser auth flow as scripted E2E tests, no manual clicking: first-run setup page;
   login with correct vs wrong password; visiting a protected route while logged out →
   redirect to `/login`; an `operator` does not see ADVANCED DevScreen sections while an
@@ -309,7 +321,8 @@ every test run — while being honest about where automation stops.
   State is reset between runs so tests are deterministic and order-independent.
 
 **Honest boundary (L126 — does NOT remove the owner/audit role):**
-- Tests prove the *tested* behaviour is correct; they do **not** prove the absence of
+
+- Tests prove the _tested_ behaviour is correct; they do **not** prove the absence of
   vulnerabilities. Passing E2E auth tests ≠ "secure".
 - A final owner eye-check still happens once per phase (especially the real login/logout feel
   and that nothing legitimate got locked out).
@@ -322,6 +335,7 @@ Each build phase (§12) ships its automated server + E2E tests **with** the feat
 ---
 
 ## 11. Honest limitations
+
 - Client gating is convenience, not security; the server is the only real boundary, and only
   for server-backed resources.
 - Tests prove presence/behaviour on tested routes, not the correctness of every guard's
@@ -329,12 +343,13 @@ Each build phase (§12) ships its automated server + E2E tests **with** the feat
 - No crypto is hand-written; safety rests on correct use of the chosen libraries.
 - Full hardening (general rate limiting, CORS lockdown beyond cookie needs, HTTPS, secret
   management, audit-log retention/rotation) = deferred Security-Audit at release run-up.
-  (The admin-lockout recovery *flow* is defined here in §9a; its long-term audit-log
+  (The admin-lockout recovery _flow_ is defined here in §9a; its long-term audit-log
   retention policy is part of that later hardening.)
 
 ---
 
 ## 12. Proposed build order (each phase: small, verified, Copilot-reviewed)
+
 - **Phase A — server auth foundation.** `users.json` + `bcrypt`; session middleware with
   persistent store + ID-regeneration + logout invalidation; `/api/auth/*` (login/logout/me/
   setup with atomic+secret bootstrap); global `requireAuth` + exact `PUBLIC_PATHS`;

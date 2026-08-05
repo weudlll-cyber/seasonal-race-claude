@@ -16,28 +16,28 @@ Dynamically extensible via sprite upload at `/racer-editor` (Racer Editor Phase 
 
 ### Canonical list of the 20 built-in racer types (source of truth)
 
-| ID | Label | Speed | Surface classes |
-|---|---|---|---|
-| `horse` | Horse 🐴 | 1.00 | sand, earth, grass, asphalt, snow, mud |
-| `duck` | Duck 🦆 | 0.85 | water, grass |
-| `snail` | Snail 🐌 | 0.30 | grass |
-| `elephant` | Elephant 🐘 | 0.60 | sand, earth, grass |
-| `giraffe` | Giraffe 🦒 | 0.90 | sand, earth, grass |
-| `snake` | Snake 🐍 | 0.75 | sand, earth, grass |
-| `dragon` | Dragon 🐉 | 1.10 | air, asphalt, earth, water |
-| `f1` | F1 🏎️ | 1.20 | asphalt |
-| `rocket` | Rocket 🚀 | 1.25 | air, water |
-| `buggy` | Buggy 🚙 | 0.95 | sand, earth, mud |
-| `motorbike` | Motorbike 🏍️ | 1.05 | asphalt, earth |
-| `plane` | Plane ✈️ | 1.15 | air |
-| `luge` | Luge 🛷 | 1.10 | ice, snow |
-| `beetle` | Beetle 🪲 | 0.90 | asphalt, cobble, earth |
-| `boarder` | Boarder 🛹 | 1.00 | asphalt, cobble, earth |
-| `koi` | Koi 🐟 | 0.95 | water |
-| `turtle` | Turtle 🐢 | 0.85 | water |
-| `manta` | Manta 🦈 | 1.10 | water |
-| `dolphin` | Dolphin 🐬 | 1.15 | water |
-| `snowmobile` | Snowmobile 🏂 | 1.10 | snow, ice, earth |
+| ID           | Label         | Speed | Surface classes                        |
+| ------------ | ------------- | ----- | -------------------------------------- |
+| `horse`      | Horse 🐴      | 1.00  | sand, earth, grass, asphalt, snow, mud |
+| `duck`       | Duck 🦆       | 0.85  | water, grass                           |
+| `snail`      | Snail 🐌      | 0.30  | grass                                  |
+| `elephant`   | Elephant 🐘   | 0.60  | sand, earth, grass                     |
+| `giraffe`    | Giraffe 🦒    | 0.90  | sand, earth, grass                     |
+| `snake`      | Snake 🐍      | 0.75  | sand, earth, grass                     |
+| `dragon`     | Dragon 🐉     | 1.10  | air, asphalt, earth, water             |
+| `f1`         | F1 🏎️         | 1.20  | asphalt                                |
+| `rocket`     | Rocket 🚀     | 1.25  | air, water                             |
+| `buggy`      | Buggy 🚙      | 0.95  | sand, earth, mud                       |
+| `motorbike`  | Motorbike 🏍️  | 1.05  | asphalt, earth                         |
+| `plane`      | Plane ✈️      | 1.15  | air                                    |
+| `luge`       | Luge 🛷       | 1.10  | ice, snow                              |
+| `beetle`     | Beetle 🪲     | 0.90  | asphalt, cobble, earth                 |
+| `boarder`    | Boarder 🛹    | 1.00  | asphalt, cobble, earth                 |
+| `koi`        | Koi 🐟        | 0.95  | water                                  |
+| `turtle`     | Turtle 🐢     | 0.85  | water                                  |
+| `manta`      | Manta 🦈      | 1.10  | water                                  |
+| `dolphin`    | Dolphin 🐬    | 1.15  | water                                  |
+| `snowmobile` | Snowmobile 🏂 | 1.10  | snow, ice, earth                       |
 
 > **Note:** The racer types `penguin` and `ufo` never existed in the codebase. They appeared in
 > a stale HANDOFF document (now obsolete) as a naming artifact. The correct types at those
@@ -97,20 +97,20 @@ Race   --(has-many)---------->  Player (each gets a coat)
 
 ## 12 Racer Types — Config overview
 
-| id | Emoji | frameCount | basePeriodMs | displaySize | speedMultiplier | tintMode |
-|---|---|---|---|---|---|---|
-| `horse` | 🐴 | 8 | 700 | 40 | 1.00 | multiply |
-| `duck` | 🦆 | 8 | 700 | 36 | 0.85 | multiply |
-| `snail` | 🐌 | 4 | 1500 | 35 | 0.30 | multiply |
-| `elephant` | 🐘 | 8 | 800 | 44 | 0.60 | multiply |
-| `giraffe` | 🦒 | 8 | 750 | 48 | 0.90 | multiply |
-| `snake` | 🐍 | 8 | 600 | 36 | 0.75 | multiply |
-| `dragon` | 🐉 | 16 | 700 | 50 | 1.10 | multiply |
-| `f1` | 🏎️ | 8 | 400 | 38 | 1.20 | multiply |
-| `rocket` | 🚀 | 8 | 500 | 40 | 1.25 | multiply |
-| `buggy` | 🚙 | 8 | 500 | 38 | 0.95 | **mask** |
-| `motorbike` | 🏍️ | 8 | 500 | 36 | 1.05 | **mask** |
-| `plane` | ✈️ | 8 | 600 | 42 | 1.15 | **mask** |
+| id          | Emoji | frameCount | basePeriodMs | displaySize | speedMultiplier | tintMode |
+| ----------- | ----- | ---------- | ------------ | ----------- | --------------- | -------- |
+| `horse`     | 🐴    | 8          | 700          | 40          | 1.00            | multiply |
+| `duck`      | 🦆    | 8          | 700          | 36          | 0.85            | multiply |
+| `snail`     | 🐌    | 4          | 1500         | 35          | 0.30            | multiply |
+| `elephant`  | 🐘    | 8          | 800          | 44          | 0.60            | multiply |
+| `giraffe`   | 🦒    | 8          | 750          | 48          | 0.90            | multiply |
+| `snake`     | 🐍    | 8          | 600          | 36          | 0.75            | multiply |
+| `dragon`    | 🐉    | 16         | 700          | 50          | 1.10            | multiply |
+| `f1`        | 🏎️    | 8          | 400          | 38          | 1.20            | multiply |
+| `rocket`    | 🚀    | 8          | 500          | 40          | 1.25            | multiply |
+| `buggy`     | 🚙    | 8          | 500          | 38          | 0.95            | **mask** |
+| `motorbike` | 🏍️    | 8          | 500          | 36          | 1.05            | **mask** |
+| `plane`     | ✈️    | 8          | 600          | 42          | 1.15            | **mask** |
 
 > **speedMultiplier:** Acts since D9 (PR #19) as a linear multiplier on `baseSpeed`.
 > Formula: `baseSpeed = (BASE_SPEED_MIN + random * (BASE_SPEED_MAX - BASE_SPEED_MIN)) * speedMultiplier`.
@@ -124,19 +124,19 @@ Race   --(has-many)---------->  Player (each gets a coat)
 
 ## Persistence — Storage Keys
 
-| Storage Key | Content | Status |
-|---|---|---|
-| `racearena:tracks` | Array of tracks. Fields: `id, name, description, geometryId, defaultRacerTypeId, defaultDuration, defaultWinners, color, worldWidth, worldHeight, maxRacers (null=no limit), ...` — `trackWidth` removed in D7c-fix-v2; old entries may still contain the field, it is ignored. | Active |
-| `racearena:rowLayoutConfig` | Row-start tuning config. Fields: `rowGapMultiplier, speedBonusFactor, maxCapacityFactor`. Defaults in `DEFAULT_ROW_LAYOUT_CONFIG`. (`pixelsPerRacer` was present in D7c, removed since D7c-fix — racersPerRow is now auto-computed from geometry.) | Active (post D7c) |
-| `racearena:racerTypeOverrides` | Override map `{[typeId]: { isActive: false, speedMultiplier?: number, ... }}` for deactivated types and tuning overrides (post D3.5.5). Legacy format `{[typeId]: false}` is migrated on-read via `normalizeOverrideMap()`. | Active (post D3.5.5) |
-| `racearena:racerTypes` | Legacy — empty/removed after migration to `racerTypeOverrides` | Legacy/null |
-| `racearena:trackGeometries:<id>` | Track geometry records (Catmull-Rom spline points) | Active |
-| `racearena:trackGeometries:index` | Geometry index | Active |
-| `sessionStorage['activeRace']` | Race setup data for Setup → Race Screen transition. Fields: `trackId, racerTypeId, racers[], duration, winners, geometryId, worldWidth, timestamp, raceMode, targetLaps, targetDuration, trackSurfaceClasses` | Active |
-| `sessionStorage['activeRace'].racerTypeId` | **W3 Race-Override:** session-only, reset on track change. No persistence. | Active (post W3) |
-| `sessionStorage['activeRace'].raceMode` | `'laps'` (Closed-Track) or `'time'` (Open-Track). Controls race end logic in RaceScreen. | Active (post D9) |
-| `sessionStorage['activeRace'].targetLaps` | Selected lap count (integer, 1–4). Only set when `raceMode='laps'`. Fallback: `lapsFromDuration(duration)`. | Active (post D9) |
-| `sessionStorage['activeRace'].targetDuration` | Selected race duration in seconds. Only set when `raceMode='time'`. Fallback: `duration`. | Active (post D9) |
+| Storage Key                                   | Content                                                                                                                                                                                                                                                                         | Status               |
+| --------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------- |
+| `racearena:tracks`                            | Array of tracks. Fields: `id, name, description, geometryId, defaultRacerTypeId, defaultDuration, defaultWinners, color, worldWidth, worldHeight, maxRacers (null=no limit), ...` — `trackWidth` removed in D7c-fix-v2; old entries may still contain the field, it is ignored. | Active               |
+| `racearena:rowLayoutConfig`                   | Row-start tuning config. Fields: `rowGapMultiplier, speedBonusFactor, maxCapacityFactor`. Defaults in `DEFAULT_ROW_LAYOUT_CONFIG`. (`pixelsPerRacer` was present in D7c, removed since D7c-fix — racersPerRow is now auto-computed from geometry.)                              | Active (post D7c)    |
+| `racearena:racerTypeOverrides`                | Override map `{[typeId]: { isActive: false, speedMultiplier?: number, ... }}` for deactivated types and tuning overrides (post D3.5.5). Legacy format `{[typeId]: false}` is migrated on-read via `normalizeOverrideMap()`.                                                     | Active (post D3.5.5) |
+| `racearena:racerTypes`                        | Legacy — empty/removed after migration to `racerTypeOverrides`                                                                                                                                                                                                                  | Legacy/null          |
+| `racearena:trackGeometries:<id>`              | Track geometry records (Catmull-Rom spline points)                                                                                                                                                                                                                              | Active               |
+| `racearena:trackGeometries:index`             | Geometry index                                                                                                                                                                                                                                                                  | Active               |
+| `sessionStorage['activeRace']`                | Race setup data for Setup → Race Screen transition. Fields: `trackId, racerTypeId, racers[], duration, winners, geometryId, worldWidth, timestamp, raceMode, targetLaps, targetDuration, trackSurfaceClasses`                                                                   | Active               |
+| `sessionStorage['activeRace'].racerTypeId`    | **W3 Race-Override:** session-only, reset on track change. No persistence.                                                                                                                                                                                                      | Active (post W3)     |
+| `sessionStorage['activeRace'].raceMode`       | `'laps'` (Closed-Track) or `'time'` (Open-Track). Controls race end logic in RaceScreen.                                                                                                                                                                                        | Active (post D9)     |
+| `sessionStorage['activeRace'].targetLaps`     | Selected lap count (integer, 1–4). Only set when `raceMode='laps'`. Fallback: `lapsFromDuration(duration)`.                                                                                                                                                                     | Active (post D9)     |
+| `sessionStorage['activeRace'].targetDuration` | Selected race duration in seconds. Only set when `raceMode='time'`. Fallback: `duration`.                                                                                                                                                                                       | Active (post D9)     |
 
 ---
 
@@ -162,6 +162,7 @@ Race   --(has-many)---------->  Player (each gets a coat)
 ### Runout behavior (both track types)
 
 After crossing the finish line all players continue moving with decaying speed:
+
 - `r.runoutDecay *= 0.97` per frame (approx. 62.5 FPS)
 - Effective speed: `baseSpeed × runoutDecay` — decays over several seconds
 - Prevents abrupt freezing at the finish line
@@ -188,39 +189,39 @@ listAllRacerTypes()                   →  Code-Registry + Overrides merged
 
 ### API
 
-| Function | Description |
-|---|---|
-| `listAllRacerTypes()` | Array of all 20 built-in types (+ user-created types) with `isActive` resolved from override map |
-| `getRacerType(id)` | Single type instance, falls back to Horse for unknown IDs |
-| `getRacerTypeById(id)` | Alias for `getRacerType` — preferred where ID semantics matter |
-| `setRacerTypeOverride(id, fieldName, value)` | Set override: `fieldName='isActive', value=false` deactivates; tunable fields (TUNABLE_FIELDS) also mutate live config |
-| `resetRacerTypeOverride(id, fieldName?)` | Without fieldName: remove all overrides for id. With fieldName: only that one field. Restores live config from CONFIG_SNAPSHOT. |
-| `normalizeOverrideMap(raw)` | Migrates legacy format `{id: false}` → `{id: {isActive: false}}`; returns `{}` for null/undefined |
-| `applyTunableOverride(id, fieldName, value)` | Directly mutates `RACER_TYPES[id].config[fieldName]` without a storage write |
-| `restoreTunableDefault(id, fieldName)` | Restores `RACER_TYPES[id].config[fieldName]` from CONFIG_SNAPSHOT |
-| `TUNABLE_FIELDS` | `['speedMultiplier', 'displaySize', 'basePeriodMs', 'leaderRingColor', 'leaderEllipseRx', 'leaderEllipseRy', 'minTargetScreenPx', 'surfaceClasses']` — 8 fields since VRE-3 |
-| `CONFIG_SNAPSHOT` | Frozen copy of code defaults for all 8 TUNABLE_FIELDS (since VRE-3), captured before boot-override application. Arrays are deep-copied (no reference sharing) |
+| Function                                                                       | Description                                                                                                                                                                        |
+| ------------------------------------------------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `listAllRacerTypes()`                                                          | Array of all 20 built-in types (+ user-created types) with `isActive` resolved from override map                                                                                   |
+| `getRacerType(id)`                                                             | Single type instance, falls back to Horse for unknown IDs                                                                                                                          |
+| `getRacerTypeById(id)`                                                         | Alias for `getRacerType` — preferred where ID semantics matter                                                                                                                     |
+| `setRacerTypeOverride(id, fieldName, value)`                                   | Set override: `fieldName='isActive', value=false` deactivates; tunable fields (TUNABLE_FIELDS) also mutate live config                                                             |
+| `resetRacerTypeOverride(id, fieldName?)`                                       | Without fieldName: remove all overrides for id. With fieldName: only that one field. Restores live config from CONFIG_SNAPSHOT.                                                    |
+| `normalizeOverrideMap(raw)`                                                    | Migrates legacy format `{id: false}` → `{id: {isActive: false}}`; returns `{}` for null/undefined                                                                                  |
+| `applyTunableOverride(id, fieldName, value)`                                   | Directly mutates `RACER_TYPES[id].config[fieldName]` without a storage write                                                                                                       |
+| `restoreTunableDefault(id, fieldName)`                                         | Restores `RACER_TYPES[id].config[fieldName]` from CONFIG_SNAPSHOT                                                                                                                  |
+| `TUNABLE_FIELDS`                                                               | `['speedMultiplier', 'displaySize', 'basePeriodMs', 'leaderRingColor', 'leaderEllipseRx', 'leaderEllipseRy', 'minTargetScreenPx', 'surfaceClasses']` — 8 fields since VRE-3        |
+| `CONFIG_SNAPSHOT`                                                              | Frozen copy of code defaults for all 8 TUNABLE_FIELDS (since VRE-3), captured before boot-override application. Arrays are deep-copied (no reference sharing)                      |
 | `filterRacerTypesForTrack(racerTypes, trackSurfaceClasses, getRacerClassesFn)` | Filters racer types to those with ≥1 class overlap with the track. Empty `trackSurfaceClasses` → return all (Legacy). Empty racer classes → always included (Heimat-Trail). VRE-3. |
-| `RACER_TYPE_IDS` | Sorted array of all 20 built-in type IDs |
-| `RACER_TYPE_LABELS` | Map `{id → "Name Emoji"}` for UI display |
-| `COATS_BY_TYPE` | Map `{id → coats[]}` for RaceScreen coat assignment; auto-derived from type configs |
-| `getSurfaceClasses()` on SpriteRacerType | Returns `surfaceClasses` array (surface class IDs of this type, default: `[]`). Read by RaceScreen + SetupScreen in VRE-3. |
+| `RACER_TYPE_IDS`                                                               | Sorted array of all 20 built-in type IDs                                                                                                                                           |
+| `RACER_TYPE_LABELS`                                                            | Map `{id → "Name Emoji"}` for UI display                                                                                                                                           |
+| `COATS_BY_TYPE`                                                                | Map `{id → coats[]}` for RaceScreen coat assignment; auto-derived from type configs                                                                                                |
+| `getSurfaceClasses()` on SpriteRacerType                                       | Returns `surfaceClasses` array (surface class IDs of this type, default: `[]`). Read by RaceScreen + SetupScreen in VRE-3.                                                         |
 
 ### SpriteRacerType — config fields
 
 `SpriteRacerType` is a config-driven class. All 20 built-in types are singleton instances; user-created types are also `SpriteRacerType` instances created at runtime.
 No subclasses. Required config fields:
 
-| Field | Type | Description |
-|---|---|---|
-| `id` | string | Unique racer type identifier |
-| `spriteUrl` | string | Path to sprite sheet PNG |
-| `frameCount` | number | Animation frame count |
-| `basePeriodMs` | number | Base animation period at speed 1.0 |
-| `displaySize` | number | Bounding box size in px |
-| `coats` | `{id, name, tint}[]` | Color variant definitions |
-| `trailFactory` | function | `(x, y, speed, angle, frame) => particle[]` — Heimat-Trail (fallback when no surface class match) |
-| `surfaceClasses` | `string[]` | Surface class IDs of this type (Visual Racer Effects). Default: `[]` = all tracks compatible, always Heimat-Trail. |
+| Field            | Type                 | Description                                                                                                        |
+| ---------------- | -------------------- | ------------------------------------------------------------------------------------------------------------------ |
+| `id`             | string               | Unique racer type identifier                                                                                       |
+| `spriteUrl`      | string               | Path to sprite sheet PNG                                                                                           |
+| `frameCount`     | number               | Animation frame count                                                                                              |
+| `basePeriodMs`   | number               | Base animation period at speed 1.0                                                                                 |
+| `displaySize`    | number               | Bounding box size in px                                                                                            |
+| `coats`          | `{id, name, tint}[]` | Color variant definitions                                                                                          |
+| `trailFactory`   | function             | `(x, y, speed, angle, frame) => particle[]` — Heimat-Trail (fallback when no surface class match)                  |
+| `surfaceClasses` | `string[]`           | Surface class IDs of this type (Visual Racer Effects). Default: `[]` = all tracks compatible, always Heimat-Trail. |
 
 Optional: `frameWidth/Height` (default 128), `silhouetteScale`, `speedMultiplier` (default 1.0),
 `baseRotationOffset`, `tintMode` (`'multiply'` or `'mask'`), `maskUrl` (required when
@@ -229,10 +230,12 @@ Optional: `frameWidth/Height` (default 128), `silhouetteScale`, `speedMultiplier
 ### Mask-Tinting (Buggy, Motorbike, Plane)
 
 Mask types have two sprite files:
+
 - `<type>-<anim>.png` — full sprite
 - `<type>-<anim>-mask.png` — PNG mask, defines which pixels are tinted
 
 Tinting algorithm (`tintSpriteWithMask`):
+
 1. Load sprite + mask via `loadSprite()`
 2. Draw sprite onto offscreen canvas
 3. Draw mask onto second offscreen canvas
@@ -248,10 +251,12 @@ for older localStorage entries: `defaultRacerTypeId ?? racerTypeId ?? racerId ??
 ### Race Init
 
 RaceScreen reads from `sessionStorage['activeRace']`:
+
 - `racerTypeId` → determines which racer instance is used for all players
 - `racers[]` → all get the same type, each assigned a coat via djb2 hash of their name
 
 Per-racer runtime fields (D7b/D7c, set by `initRacerBehavior` + RaceScreen init):
+
 - `physicalY` — normalized lateral position, ∈ [-1.0, +1.0]: -1=inner boundary, 0=centerline, +1=outer boundary. D7b: all racers in a row distributed evenly via `computeRowPhysicalY`. D7c: applies per row, including incomplete last rows (full-spread). Subsequently mutated each frame by home force + avoidance + soft repulsion.
 - `t` — race progress ∈ [0, finishT]. D7c: Closed tracks: rear rows at negative t (e.g. -0.008 for row 1) — `tPos` wraps correctly behind the start line. D7c-Phase4: Open tracks: staging area — all rows start at positive t: row k at `(totalRows − k) × rowGapPx / pathLengthPx`. No negative t, no clamp. Speed bonus applies on open tracks the same as on closed tracks.
 - `baseSpeed` — since D7c multiplied by `(1 + speedBonus)` for rear rows. Speed bonus compensates for the physical start distance. `speedBonusFactor=1.0` → pole position mathematically neutral.
@@ -279,41 +284,42 @@ Surface Classes replace the static trail system. Instead of a fixed `trailFactor
 ```javascript
 // Example: Horse — can race on sand, earth, grass, asphalt, snow, mud
 const HorseRacerType = new SpriteRacerType({
-  id: 'horse',
+  id: "horse",
   // ... other fields ...
-  surfaceClasses: ['sand', 'earth', 'grass', 'asphalt', 'snow', 'mud'],
-  trailFactory: horseTrailFactory,  // Heimat-Trail (fallback)
+  surfaceClasses: ["sand", "earth", "grass", "asphalt", "snow", "mud"],
+  trailFactory: horseTrailFactory, // Heimat-Trail (fallback)
 });
 ```
 
 ### Surface class assignment — all 20 racer types
 
-| Racer type | surfaceClasses |
-|---|---|
-| `snail` | `['grass']` |
-| `horse` | `['sand', 'earth', 'grass', 'asphalt', 'snow', 'mud']` |
-| `duck` | `['water', 'grass']` |
-| `elephant` | `['sand', 'earth', 'grass']` |
-| `giraffe` | `['sand', 'earth', 'grass']` |
-| `snake` | `['sand', 'earth', 'grass']` |
-| `dragon` | `['air', 'asphalt', 'earth', 'water']` |
-| `buggy` | `['sand', 'earth', 'mud']` |
-| `motorbike` | `['asphalt', 'earth']` |
-| `f1` | `['asphalt']` |
-| `plane` | `['air']` |
-| `rocket` | `['air', 'water']` |
-| `luge` | `['ice', 'snow']` |
-| `beetle` | `['asphalt', 'cobble', 'earth']` |
-| `boarder` | `['asphalt', 'cobble', 'earth']` |
-| `koi` | `['water']` |
-| `turtle` | `['water']` |
-| `manta` | `['water']` |
-| `dolphin` | `['water']` |
-| `snowmobile` | `['snow', 'ice', 'earth']` |
+| Racer type   | surfaceClasses                                         |
+| ------------ | ------------------------------------------------------ |
+| `snail`      | `['grass']`                                            |
+| `horse`      | `['sand', 'earth', 'grass', 'asphalt', 'snow', 'mud']` |
+| `duck`       | `['water', 'grass']`                                   |
+| `elephant`   | `['sand', 'earth', 'grass']`                           |
+| `giraffe`    | `['sand', 'earth', 'grass']`                           |
+| `snake`      | `['sand', 'earth', 'grass']`                           |
+| `dragon`     | `['air', 'asphalt', 'earth', 'water']`                 |
+| `buggy`      | `['sand', 'earth', 'mud']`                             |
+| `motorbike`  | `['asphalt', 'earth']`                                 |
+| `f1`         | `['asphalt']`                                          |
+| `plane`      | `['air']`                                              |
+| `rocket`     | `['air', 'water']`                                     |
+| `luge`       | `['ice', 'snow']`                                      |
+| `beetle`     | `['asphalt', 'cobble', 'earth']`                       |
+| `boarder`    | `['asphalt', 'cobble', 'earth']`                       |
+| `koi`        | `['water']`                                            |
+| `turtle`     | `['water']`                                            |
+| `manta`      | `['water']`                                            |
+| `dolphin`    | `['water']`                                            |
+| `snowmobile` | `['snow', 'ice', 'earth']`                             |
 
 ### Heimat-Trail (Fallback)
 
 The existing `trailFactory` function remains and is the **Heimat-Trail** of the type. It is used in two cases:
+
 1. `surfaceClasses: []` (empty) — type has no class assignment yet → always Heimat-Trail.
 2. No match — the chosen track has no class that matches the racer type → Heimat-Trail instead of no trail.
 
@@ -324,6 +330,7 @@ The Heimat-Trail guarantees backward compatibility: tracks without a `surfaceCla
 `trailFactory` remains in every racer type config as the **Heimat-Trail** — the static default effect of the type.
 
 After VRE-4, RaceScreen dispatches via `resolveTrailEmitter()`:
+
 ```javascript
 // trailResolver.js
 const emitter = resolveTrailEmitter(racerType, raceData.trackSurfaceClasses);
@@ -332,12 +339,17 @@ const emitter = resolveTrailEmitter(racerType, raceData.trackSurfaceClasses);
 // In RaceScreen rAF loop (per racer):
 if (r.surfaceEmitter) {
   r.surfaceParticles = r.surfaceEmitter.update(
-    [...r.surfaceParticles, ...r.surfaceEmitter.spawn(r.x, r.y, r.baseSpeed, r.angle, ts)],
-    dt / 16
+    [
+      ...r.surfaceParticles,
+      ...r.surfaceEmitter.spawn(r.x, r.y, r.baseSpeed, r.angle, ts),
+    ],
+    dt / 16,
   );
 } else {
   // Heimat-Trail: trailFactory particles in global dustParticles pool
-  st.dustParticles.push(...rt.getTrailParticles(r.x, r.y, r.baseSpeed, r.angle, ts));
+  st.dustParticles.push(
+    ...rt.getTrailParticles(r.x, r.y, r.baseSpeed, r.angle, ts),
+  );
 }
 ```
 
@@ -348,7 +360,7 @@ if (r.surfaceEmitter) {
 `SpriteRacerType` gets the new accessor:
 
 ```javascript
-getSurfaceClasses()  // → string[] (IDs of the surface classes of this type)
+getSurfaceClasses(); // → string[] (IDs of the surface classes of this type)
 ```
 
 The former `rteDefinitions` placeholder (`getRteDefinitions()`) is removed in VRE-1.
@@ -358,6 +370,7 @@ The former `rteDefinitions` placeholder (`getRteDefinitions()`) is removed in VR
 ## Phase 7 preview
 
 When sprite upload arrives:
+
 1. Dev Panel UI gets a "+ New Racer Type" button
 2. User uploads sprite sheet + fills in metadata (name, frame count, coats)
 3. Server saves sprite at `client/public/assets/racers/<custom-id>.png`

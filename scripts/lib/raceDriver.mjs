@@ -30,29 +30,37 @@
 // than from constants, so it has no drift to fix and it is his live repro tool.
 // ============================================================
 
-import { readFileSync, readdirSync, existsSync } from 'node:fs';
-import { join, dirname } from 'node:path';
-import { fileURLToPath, pathToFileURL } from 'node:url';
+import { readFileSync, readdirSync, existsSync } from "node:fs";
+import { join, dirname } from "node:path";
+import { fileURLToPath, pathToFileURL } from "node:url";
 
-const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..', '..');
+const ROOT = join(dirname(fileURLToPath(import.meta.url)), "..", "..");
 const u = (p) => pathToFileURL(join(ROOT, p)).href;
 
-const { DEFAULT_CONFIG_WORLD } = await import(u('client/src/modules/storage/defaults.js'));
-const { EditorShape } = await import(u('client/src/modules/track-editor/EditorShape.js'));
-const { CameraDirector } = await import(u('client/src/modules/camera/CameraDirector.js'));
-const { createRaceFromIdentity, stepRacePhysics, FIXED_DT } = await import(
-  u('client/src/modules/raceCore.js')
+const { DEFAULT_CONFIG_WORLD } = await import(
+  u("client/src/modules/storage/defaults.js")
 );
-const { normalSpeedFrom } = await import(u('client/src/modules/durationModel.js'));
+const { EditorShape } = await import(
+  u("client/src/modules/track-editor/EditorShape.js")
+);
+const { CameraDirector } = await import(
+  u("client/src/modules/camera/CameraDirector.js")
+);
+const { createRaceFromIdentity, stepRacePhysics, FIXED_DT } = await import(
+  u("client/src/modules/raceCore.js")
+);
+const { normalSpeedFrom } = await import(
+  u("client/src/modules/durationModel.js")
+);
 const { computeRacerLayout, computeBodyNarrowRef } = await import(
-  u('client/src/modules/rowLayout.js')
+  u("client/src/modules/rowLayout.js")
 );
 const RT = await (async () => {
   // The racer-type registry logs to stderr on load; silenced here so a harness's output is its own.
   const re = console.error;
   console.error = () => {};
   try {
-    return await import(u('client/src/modules/racer-types/index.js'));
+    return await import(u("client/src/modules/racer-types/index.js"));
   } finally {
     console.error = re;
   }
@@ -61,7 +69,7 @@ const RT = await (async () => {
 export { RT, DEFAULT_CONFIG_WORLD };
 
 /** The racer-type sentinel meaning "whatever this track declares as its own default". */
-export const TRACK_DEFAULT_RACER = 'track-default';
+export const TRACK_DEFAULT_RACER = "track-default";
 
 /**
  * The RACE IDENTITY — everything that makes two runs comparable or not.
@@ -80,7 +88,7 @@ export function resolveIdentity(partial = {}) {
     canvasW: partial.canvasW ?? 1280,
     canvasH: partial.canvasH ?? 720,
     // A free-text note naming WHY this identity is what it is; printed with the rest.
-    note: partial.note ?? '',
+    note: partial.note ?? "",
   };
 }
 
@@ -94,7 +102,7 @@ export function formatIdentity(id) {
     `${id.seconds}s`,
     `${id.canvasW}x${id.canvasH}`,
   ];
-  return `RACE IDENTITY: ${parts.join(' · ')}${id.note ? `  (${id.note})` : ''}`;
+  return `RACE IDENTITY: ${parts.join(" · ")}${id.note ? `  (${id.note})` : ""}`;
 }
 
 /**
@@ -110,13 +118,13 @@ export function trackWidthOf(geo) {
 
 /** Every track geometry, sorted by id. Prefers the owner's live data dir over the shipped seeds. */
 export function loadTracks({ only = null } = {}) {
-  const dir = existsSync(join(ROOT, 'server/data/tracks'))
-    ? join(ROOT, 'server/data/tracks')
-    : join(ROOT, 'server/seeds/tracks');
+  const dir = existsSync(join(ROOT, "server/data/tracks"))
+    ? join(ROOT, "server/data/tracks")
+    : join(ROOT, "server/seeds/tracks");
   const geos = [];
   for (const f of readdirSync(dir)) {
-    if (!f.endsWith('.json')) continue;
-    const j = JSON.parse(readFileSync(join(dir, f), 'utf8'));
+    if (!f.endsWith(".json")) continue;
+    const j = JSON.parse(readFileSync(join(dir, f), "utf8"));
     if (j.id && (!only || j.id === only)) geos.push(j);
   }
   geos.sort((a, b) => a.id.localeCompare(b.id));
@@ -136,15 +144,26 @@ export function buildRace(geo, identity, cameraConfig) {
   const behaviorConfig = { ...W.raceBehaviorConfig, isOpen: shape.isOpen };
   const racerTypeId =
     identity.racerType === TRACK_DEFAULT_RACER
-      ? (geo.defaultRacerTypeId ?? 'horse')
+      ? (geo.defaultRacerTypeId ?? "horse")
       : identity.racerType;
   const rt = RT.getRacerType(racerTypeId);
   const ds = rt.config.displaySize;
   const bfN = Math.min(rt.config.bodyFillX, rt.config.bodyFillY);
   const bfL = Math.max(rt.config.bodyFillX, rt.config.bodyFillY);
   const effW = trackWidthPx * behaviorConfig.startSpreadRange;
-  const pss = computeRacerLayout(effW, identity.racers, ds, W.autoScaleConfig).spriteSize;
-  const br = computeBodyNarrowRef(Math.min(285, effW), identity.racers, ds, bfN, W.autoScaleConfig);
+  const pss = computeRacerLayout(
+    effW,
+    identity.racers,
+    ds,
+    W.autoScaleConfig,
+  ).spriteSize;
+  const br = computeBodyNarrowRef(
+    Math.min(285, effW),
+    identity.racers,
+    ds,
+    bfN,
+    W.autoScaleConfig,
+  );
   const bodyRef = ds * (br.bodyNarrow / ds);
 
   const built = createRaceFromIdentity({
@@ -177,7 +196,7 @@ export function buildRace(geo, identity, cameraConfig) {
     cameraConfig,
     bodyRef,
     shape,
-    trackWidthPx
+    trackWidthPx,
   );
   cd.setRandomSeed(identity.cameraSeed);
   if (built.meta.racePlanEnabled && built.meta.rpPlanInfo?.b1Indices) {
@@ -245,7 +264,7 @@ export function runRace(race, identity, cameraConfig, onFrame) {
       },
       CW,
       CH,
-      RAW
+      RAW,
     );
     onFrame({ cd, st, ts, raceStart, frame });
     frame++;

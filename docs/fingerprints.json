@@ -139,6 +139,16 @@
     },
 
     {
+      "file": "docs/SIM.md",
+      "role": "camera",
+      "anchor": "across all 10 tracks. Current **`"
+    },
+    {
+      "file": "docs/SIM.md",
+      "role": "render",
+      "anchor": "reaching the finish. Current **`"
+    },
+    {
       "file": "reports/parity/REBASELINE.md",
       "role": "world",
       "anchor": "| **world** | **`"
@@ -155,18 +165,23 @@
     }
   ],
 
-  "historyAllowed": ["docs/SIM.md", "docs/TAGS.md", "reports/"],
+  "historyAllowed": ["docs/TAGS.md", "reports/"],
 
   "_historyNote": [
     "These files may state a current value WITHOUT being written or checked, because for them it is",
     "history rather than a claim about now:",
-    "  docs/SIM.md   the lineage. Its newest entry naming today's value is the point of it.",
     "  docs/TAGS.md  the tag register. A tag's fingerprint is what it was when the tag was cut.",
     "  reports/      the lab journal. A report records what was true on the day it was written and",
     "                must never be rewritten — except reports/parity/REBASELINE.md, which is the",
     "                LIVE baseline and is therefore a site above.",
     "",
-    "The cost of this allowance, stated rather than discovered: if the SIM.md lineage's newest entry",
-    "goes stale, nothing here notices."
+    "docs/SIM.md WAS on this list and has been taken off (ONE-TRUTH-1 stage 5). It holds the lineage,",
+    "which is history — but its File-locations table also states the CURRENT camera and render values,",
+    "and calling the whole file history exempted those two live claims from every check. They are now",
+    "declared sites. Declaring a site file also exempts the rest of that file from the coverage scan,",
+    "so the lineage inside it is still free to name every superseded value.",
+    "",
+    "The cost, stated rather than discovered: nothing checks that the LINEAGE's newest entry is",
+    "current. A guard cannot tell a stale 'latest' from an honest historical row."
   ]
 }

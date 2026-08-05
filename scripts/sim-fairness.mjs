@@ -49,20 +49,30 @@
 //   <out>/fairness-report.md   — human-readable Markdown report
 // ============================================================
 
-import { readFileSync, mkdirSync, writeFileSync, existsSync, readdirSync, rmSync } from 'fs';
-import { join, dirname, isAbsolute } from 'path';
-import { fileURLToPath } from 'url';
-import { tmpdir } from 'os';
+import {
+  readFileSync,
+  mkdirSync,
+  writeFileSync,
+  existsSync,
+  readdirSync,
+  rmSync,
+} from "fs";
+import { join, dirname, isAbsolute } from "path";
+import { fileURLToPath } from "url";
+import { tmpdir } from "os";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dir = dirname(__filename);
-const ROOT = join(__dir, '..');
+const ROOT = join(__dir, "..");
 
 // ── Game modules (same code the browser uses) ─────────────────────────────────
 // Imported above the CLI-arg block so the arg defaults below can read from the
 // shared DevScreen config objects directly (no hand-mirrored literals).
-import { EditorShape } from '../client/src/modules/track-editor/EditorShape.js';
-import { applyRacerBehavior, initRacerBehavior } from '../client/src/modules/raceBehavior.js';
+import { EditorShape } from "../client/src/modules/track-editor/EditorShape.js";
+import {
+  applyRacerBehavior,
+  initRacerBehavior,
+} from "../client/src/modules/raceBehavior.js";
 import {
   computeBodyNarrowRef,
   computeEvenRowLayout,
@@ -70,9 +80,9 @@ import {
   computeRowPhysicalY,
   computeSpeedBonus,
   computeStartRowCount,
-} from '../client/src/modules/rowLayout.js';
-import { REFERENCE_FPS } from '../client/src/modules/camera/lapUtils.js';
-import { computeRaceBaseSpeed } from '../client/src/modules/raceBaseSpeed.js';
+} from "../client/src/modules/rowLayout.js";
+import { REFERENCE_FPS } from "../client/src/modules/camera/lapUtils.js";
+import { computeRaceBaseSpeed } from "../client/src/modules/raceBaseSpeed.js";
 // THE canonical speed/duration model — the same module the browser imports, used verbatim.
 import {
   deriveRaceDuration,
@@ -83,25 +93,50 @@ import {
   trackDefaultSeconds,
   naturalMaxSeconds,
   MIN_LAPS,
-} from '../client/src/modules/durationModel.js';
+} from "../client/src/modules/durationModel.js";
 import {
   DEFAULT_BASE_SPEED_CONFIG as _DEFAULT_BASE_SPEED_CONFIG,
   DEFAULT_RACE_BEHAVIOR_CONFIG as _DEFAULT_RACE_BEHAVIOR_CONFIG,
   DEFAULT_RACE_DYNAMICS_CONFIG as _DEFAULT_RACE_DYNAMICS_CONFIG,
   DEFAULT_ROW_LAYOUT_CONFIG as _DEFAULT_ROW_LAYOUT_CONFIG,
-} from '../client/src/modules/storage/defaults.js';
+} from "../client/src/modules/storage/defaults.js";
 // Stage 0: the ONE shared source for the exported-world schema + hash + simulatability. Imported here
 // AND by the browser DevScreen export, so a hash produced in the browser matches one recomputed here.
-import { WORLD_SCHEMA_VERSION, hashWorld, unsimulatableReasons, worldStamp } from '../client/src/modules/raceConfigWorld.js';
-import { perTrackReport, renderMarkdown as renderComebackMarkdown } from './sim/observers/comeback-reality.mjs';
+import {
+  WORLD_SCHEMA_VERSION,
+  hashWorld,
+  unsimulatableReasons,
+  worldStamp,
+} from "../client/src/modules/raceConfigWorld.js";
+import {
+  perTrackReport,
+  renderMarkdown as renderComebackMarkdown,
+} from "./sim/observers/comeback-reality.mjs";
 // STEP-ORDER ALIGNMENT: the sim's single-race stepping IS the browser's real per-step advance
 // (raceCore.stepRacePhysics). advanceRacerT / computeRowEnvMult / computeRowEnvSmoothed /
 // computeEffectiveBrakeFactor are consumed INSIDE that shared step now, so the sim no longer imports
 // them directly.
-import { stepRacePhysics } from '../client/src/modules/raceCore.js';
-import { createRacePlan, createTrajectoryController, BAND_EDGES, makeRaceRng } from '../client/src/modules/racePlanner.js';
-import { computeFairnessStats, computeZoneSuccessRate, bandIntegrityOK, computeExtendedFairnessStats, spearman, chiSqPValue } from './sim/observers/fairness-stats.mjs';
-import { buildReport, printDiagnosticReport, printComebackReport, fmtPct } from './sim/observers/report.mjs';
+import { stepRacePhysics } from "../client/src/modules/raceCore.js";
+import {
+  createRacePlan,
+  createTrajectoryController,
+  BAND_EDGES,
+  makeRaceRng,
+} from "../client/src/modules/racePlanner.js";
+import {
+  computeFairnessStats,
+  computeZoneSuccessRate,
+  bandIntegrityOK,
+  computeExtendedFairnessStats,
+  spearman,
+  chiSqPValue,
+} from "./sim/observers/fairness-stats.mjs";
+import {
+  buildReport,
+  printDiagnosticReport,
+  printComebackReport,
+  fmtPct,
+} from "./sim/observers/report.mjs";
 // GAP-SPACE observers (INFRA 5C): read-only, flag-gated. See gap-metrics.mjs header.
 import {
   secondsBehindLeader,
@@ -112,16 +147,40 @@ import {
   deadRaceFlag,
   percentile,
   PROPOSED_THRESHOLDS as GM_THRESHOLDS,
-} from './sim/observers/gap-metrics.mjs';
-import { maxLinkGapLengths, makeHeldOvertakeTracker, fullSpreadLengths, framesOverThresholdShare, GAP_THRESHOLD_LENGTHS, leaderSnapshot, RUNAWAY_LARGE_LENGTHS } from './sim/observers/pulk-contest.mjs';
-import { RUNAWAY_PARADE_DEFAULTS, leaderGapLengths, makeFormationTracker, SPEED_SOURCE_SAMPLES } from './sim/observers/runaway-parade.mjs';
-import { makeLateContestTracker, makeReleaseRankTracker } from './sim/observers/release-contest.mjs';
-import { makeFrontBattleTracker } from './sim/observers/outcome-front-battle.mjs';
-import { makeFrontLivelinessTracker } from './sim/observers/front-liveliness.mjs';
-import { makePhysicsTaxTracker } from './sim/observers/physics-tax.mjs';
-import { makeEscapeEpisodeTracker } from './sim/observers/escape-episodes.mjs';
-import { applyPulkLeadRotation, arcT, computeDirectorCeiling } from '../client/src/modules/raceGovernor.js';
-import { lenScaleFrom, arcLengths, meanDrawnBodyLen } from '../client/src/modules/raceLengths.js';
+} from "./sim/observers/gap-metrics.mjs";
+import {
+  maxLinkGapLengths,
+  makeHeldOvertakeTracker,
+  fullSpreadLengths,
+  framesOverThresholdShare,
+  GAP_THRESHOLD_LENGTHS,
+  leaderSnapshot,
+  RUNAWAY_LARGE_LENGTHS,
+} from "./sim/observers/pulk-contest.mjs";
+import {
+  RUNAWAY_PARADE_DEFAULTS,
+  leaderGapLengths,
+  makeFormationTracker,
+  SPEED_SOURCE_SAMPLES,
+} from "./sim/observers/runaway-parade.mjs";
+import {
+  makeLateContestTracker,
+  makeReleaseRankTracker,
+} from "./sim/observers/release-contest.mjs";
+import { makeFrontBattleTracker } from "./sim/observers/outcome-front-battle.mjs";
+import { makeFrontLivelinessTracker } from "./sim/observers/front-liveliness.mjs";
+import { makePhysicsTaxTracker } from "./sim/observers/physics-tax.mjs";
+import { makeEscapeEpisodeTracker } from "./sim/observers/escape-episodes.mjs";
+import {
+  applyPulkLeadRotation,
+  arcT,
+  computeDirectorCeiling,
+} from "../client/src/modules/raceGovernor.js";
+import {
+  lenScaleFrom,
+  arcLengths,
+  meanDrawnBodyLen,
+} from "../client/src/modules/raceLengths.js";
 
 // Local field-median for the sim's READ-ONLY diagnostics only (governor field-shape telemetry +
 // breakaway-diag). The director mechanism no longer uses the field median, so computeMedianT was
@@ -134,7 +193,7 @@ function simMedianT(racers) {
   const n = ts.length;
   return n % 2 ? ts[(n - 1) / 2] : (ts[n / 2 - 1] + ts[n / 2]) / 2;
 }
-import { DEFAULT_AUTO_SCALE_CONFIG as _DEFAULT_AUTO_SCALE_CONFIG } from '../client/src/modules/autoSpriteScale.js';
+import { DEFAULT_AUTO_SCALE_CONFIG as _DEFAULT_AUTO_SCALE_CONFIG } from "../client/src/modules/autoSpriteScale.js";
 
 // ── CLI args ──────────────────────────────────────────────────────────────────
 const argv = process.argv.slice(2);
@@ -150,66 +209,105 @@ function argVal(key, def) {
 // + every result stamped provisional; (c) the sim refuses to STAMP a world it does not fully HONOUR —
 // any config field it hasn't wired that differs from default ABORTS, so a stamp never over-claims.
 function abortStage0(msg) {
-  console.error('\n══════════════════════════════════════════════════════════════════════════════');
-  console.error('  STAGE-0 ABORT — the sim will NOT run and quietly produce a misleading number.');
-  console.error('══════════════════════════════════════════════════════════════════════════════');
+  console.error(
+    "\n══════════════════════════════════════════════════════════════════════════════",
+  );
+  console.error(
+    "  STAGE-0 ABORT — the sim will NOT run and quietly produce a misleading number.",
+  );
+  console.error(
+    "══════════════════════════════════════════════════════════════════════════════",
+  );
   console.error(msg);
-  console.error('══════════════════════════════════════════════════════════════════════════════\n');
+  console.error(
+    "══════════════════════════════════════════════════════════════════════════════\n",
+  );
   process.exit(2);
 }
 function loadWorldOrNull() {
-  const p = argVal('config', null);
+  const p = argVal("config", null);
   if (p === null) return null;
   let raw;
-  try { raw = JSON.parse(readFileSync(isAbsolute(p) ? p : join(ROOT, p), 'utf8')); }
-  catch (e) { abortStage0(`--config could not be read/parsed: ${p}\n  ${e.message}`); }
+  try {
+    raw = JSON.parse(readFileSync(isAbsolute(p) ? p : join(ROOT, p), "utf8"));
+  } catch (e) {
+    abortStage0(`--config could not be read/parsed: ${p}\n  ${e.message}`);
+  }
   if (raw.schemaVersion !== WORLD_SCHEMA_VERSION) {
-    abortStage0(`[WORLD_SCHEMA_MISMATCH] --config schemaVersion ${raw.schemaVersion} != this sim's ${WORLD_SCHEMA_VERSION}. ` +
-      `The world SHAPE changed (e.g. race-zones removed at v2); an old export cannot be trusted. Re-export from the browser.`);
+    abortStage0(
+      `[WORLD_SCHEMA_MISMATCH] --config schemaVersion ${raw.schemaVersion} != this sim's ${WORLD_SCHEMA_VERSION}. ` +
+        `The world SHAPE changed (e.g. race-zones removed at v2); an old export cannot be trusted. Re-export from the browser.`,
+    );
   }
   const reasons = unsimulatableReasons(raw);
-  if (reasons.length) abortStage0('this world CANNOT be simulated:\n' + reasons.map((r) => `  [${r.code}] ${r.message}`).join('\n'));
+  if (reasons.length)
+    abortStage0(
+      "this world CANNOT be simulated:\n" +
+        reasons.map((r) => `  [${r.code}] ${r.message}`).join("\n"),
+    );
   // HONOURED configs (merged into the sim's config bases below): raceDynamicsConfig, raceBehaviorConfig,
   // rowLayoutConfig, baseSpeedConfig, autoScaleConfig. NOT yet honoured → abort if present/non-default:
   const unhonoured = [];
   if (raw.racerTypeOverrides && Object.keys(raw.racerTypeOverrides).length) {
-    unhonoured.push(`racerTypeOverrides (${Object.keys(raw.racerTypeOverrides).join(',')}): the sim uses the shipped RACER_CONFIGS and does not yet apply per-type overrides.`);
+    unhonoured.push(
+      `racerTypeOverrides (${Object.keys(raw.racerTypeOverrides).join(",")}): the sim uses the shipped RACER_CONFIGS and does not yet apply per-type overrides.`,
+    );
   }
   if (unhonoured.length) {
-    abortStage0('this world contains config the sim does NOT yet honour (refusing to stamp a hash it does not honour):\n' +
-      unhonoured.map((u) => '  ' + u).join('\n') + '\n  Fix: wire these into the sim, or export a world without them.');
+    abortStage0(
+      "this world contains config the sim does NOT yet honour (refusing to stamp a hash it does not honour):\n" +
+        unhonoured.map((u) => "  " + u).join("\n") +
+        "\n  Fix: wire these into the sim, or export a world without them.",
+    );
   }
   return raw;
 }
 const WORLD = loadWorldOrNull();
-const mergeCfg = (key, def) => (WORLD?.configs?.[key] ? { ...def, ...WORLD.configs[key] } : def);
+const mergeCfg = (key, def) =>
+  WORLD?.configs?.[key] ? { ...def, ...WORLD.configs[key] } : def;
 // Config bases: the OWNER'S world when --config honoured it, else the shipped defaults. All existing
 // reads of these names transparently pick up the world (zero call-site changes).
-const DEFAULT_RACE_DYNAMICS_CONFIG = mergeCfg('raceDynamicsConfig', _DEFAULT_RACE_DYNAMICS_CONFIG);
-const DEFAULT_RACE_BEHAVIOR_CONFIG = mergeCfg('raceBehaviorConfig', _DEFAULT_RACE_BEHAVIOR_CONFIG);
-const DEFAULT_ROW_LAYOUT_CONFIG    = mergeCfg('rowLayoutConfig',    _DEFAULT_ROW_LAYOUT_CONFIG);
-const DEFAULT_BASE_SPEED_CONFIG    = mergeCfg('baseSpeedConfig',    _DEFAULT_BASE_SPEED_CONFIG);
-const DEFAULT_AUTO_SCALE_CONFIG    = mergeCfg('autoScaleConfig',    _DEFAULT_AUTO_SCALE_CONFIG);
+const DEFAULT_RACE_DYNAMICS_CONFIG = mergeCfg(
+  "raceDynamicsConfig",
+  _DEFAULT_RACE_DYNAMICS_CONFIG,
+);
+const DEFAULT_RACE_BEHAVIOR_CONFIG = mergeCfg(
+  "raceBehaviorConfig",
+  _DEFAULT_RACE_BEHAVIOR_CONFIG,
+);
+const DEFAULT_ROW_LAYOUT_CONFIG = mergeCfg(
+  "rowLayoutConfig",
+  _DEFAULT_ROW_LAYOUT_CONFIG,
+);
+const DEFAULT_BASE_SPEED_CONFIG = mergeCfg(
+  "baseSpeedConfig",
+  _DEFAULT_BASE_SPEED_CONFIG,
+);
+const DEFAULT_AUTO_SCALE_CONFIG = mergeCfg(
+  "autoScaleConfig",
+  _DEFAULT_AUTO_SCALE_CONFIG,
+);
 const WORLD_STAMP = worldStamp(WORLD); // { schemaVersion, worldHash: <short>|'ASSUMED-DEFAULTS', provisional }
 
 // --replay-seed=S: the documented alias for `--seed=S --races=1` — run exactly the one race a browser
 // Quick-Test on seed S runs (fix-plan step 3 / D-SEED). Overrides --seed and --races when present.
-const REPLAY_SEED    = argVal('replay-seed', null);
-const N_RACES        = REPLAY_SEED != null ? 1 : Number(argVal('races', '50'));
-const N_RACERS       = Number(argVal('racers', '40'));
+const REPLAY_SEED = argVal("replay-seed", null);
+const N_RACES = REPLAY_SEED != null ? 1 : Number(argVal("races", "50"));
+const N_RACERS = Number(argVal("racers", "40"));
 // --openRacers / --closedRacers: per-topology racer count (Phase-1 matrix).
 // Fall back to N_RACERS when not specified so existing --racers= still works.
-const N_RACERS_OPEN   = Number(argVal('openRacers',   String(N_RACERS)));
-const N_RACERS_CLOSED = Number(argVal('closedRacers', String(N_RACERS)));
+const N_RACERS_OPEN = Number(argVal("openRacers", String(N_RACERS)));
+const N_RACERS_CLOSED = Number(argVal("closedRacers", String(N_RACERS)));
 // Scratch output. Default is an ABSOLUTE dir OUTSIDE the (OneDrive-synced) repo tree so heavy sweeps do
 // not thrash the sync client; override with env RA_SCRATCH_DIR or a `--out=` path. An absolute --out is
 // honoured as-is; a relative --out is still resolved under the repo ROOT (back-compat, e.g. --out=client/tmp).
-const RA_SCRATCH_DIR = process.env.RA_SCRATCH_DIR || join(tmpdir(), 'racearena-scratch');
-const _outArg        = argVal('out', RA_SCRATCH_DIR);
-const OUT_DIR        = isAbsolute(_outArg) ? _outArg : join(ROOT, _outArg);
-const PURGE_TMP      = argv.includes('--purge-tmp'); // wipe OUT_DIR before the run (artifacts are reproducible)
-const TRACK_FILTER   = argVal('track', null);   // e.g. --track=river-run
-const RACER_FILTER   = argVal('racer', null);   // e.g. --racer=horse
+const RA_SCRATCH_DIR =
+  process.env.RA_SCRATCH_DIR || join(tmpdir(), "racearena-scratch");
+const _outArg = argVal("out", RA_SCRATCH_DIR);
+const OUT_DIR = isAbsolute(_outArg) ? _outArg : join(ROOT, _outArg);
+const PURGE_TMP = argv.includes("--purge-tmp"); // wipe OUT_DIR before the run (artifacts are reproducible)
+const TRACK_FILTER = argVal("track", null); // e.g. --track=river-run
+const RACER_FILTER = argVal("racer", null); // e.g. --racer=horse
 // ── Canonical race-length inputs (speed/duration ship) ────────────────────────
 // The sim takes the SAME two operator inputs the browser takes, so any browser race is
 // expressible as a sim invocation:
@@ -221,16 +319,16 @@ const RACER_FILTER   = argVal('racer', null);   // e.g. --racer=horse
 // inverse — lapsForApproxSeconds() — to the lap count whose derived duration is closest to
 // <s> on that track. That mapping is the model read backwards, not a staircase constant, so
 // it tracks the normal speed automatically.
-const DUR_FILTER     = argVal('dur', null);     // e.g. --dur=30  (protocol input, see above)
-const LAPS_FILTER    = argVal('laps', null);    // e.g. --laps=2  (closed tracks)
-const SECONDS_FILTER = argVal('seconds', null); // e.g. --seconds=45 (open tracks)
+const DUR_FILTER = argVal("dur", null); // e.g. --dur=30  (protocol input, see above)
+const LAPS_FILTER = argVal("laps", null); // e.g. --laps=2  (closed tracks)
+const SECONDS_FILTER = argVal("seconds", null); // e.g. --seconds=45 (open tracks)
 const NORMAL_SPEED_PX_PER_SEC = Number(
-  argVal('normalSpeed', String(normalSpeedFrom()))
+  argVal("normalSpeed", String(normalSpeedFrom())),
 ); // --normalSpeed=<px/s> overrides the one normal track speed for a sweep
 // --track-defaults: run each track at ITS OWN shipped canonical default (defaultLaps for closed,
 // defaultDurationSec for open) as a single variant. This is the shipped-default game — what the
 // byte-identity fingerprint measures. Without it the sweep loops the DURATION_VARIANTS grid.
-const USE_TRACK_DEFAULTS = argv.includes('--track-defaults');
+const USE_TRACK_DEFAULTS = argv.includes("--track-defaults");
 
 // ── Phase-3A: global seed + Race Plan activation ──────────────────────────────
 // --seed=<n>  n>0: deterministic batch (race i uses seed (n-1)*N_RACES+i+1)
@@ -243,63 +341,192 @@ const USE_TRACK_DEFAULTS = argv.includes('--track-defaults');
 // (DEFAULT_RACE_DYNAMICS_CONFIG), not hand-mirrored here — so a change to the shared default
 // propagates automatically and these defaults can never silently drift from the browser.
 // The argVal(name, default) override is preserved, so --bonusMult / --corridorEnd etc. still work.
-const GLOBAL_SEED             = REPLAY_SEED != null ? Number(REPLAY_SEED) : Number(argVal('seed', '0'));
-const RACE_PLAN_ACTIVE        = argVal('race-plan', 'true') !== 'false';
-const BONUS_MULT              = Number(argVal('bonusMult',          String(DEFAULT_RACE_DYNAMICS_CONFIG.racePlanBonusStrengthMultiplier)));
-const RP_BONUS_TRANSITION_END = Number(argVal('bonusTransitionEnd', String(DEFAULT_RACE_DYNAMICS_CONFIG.racePlanBonusTransitionEnd)));
-const RP_BONUS_FADE_MS        = Number(argVal('bonusFadeDuration',  String(DEFAULT_RACE_DYNAMICS_CONFIG.racePlanBonusFadeDuration)));
-const RP_PULK_START           = Number(argVal('pulkStart',          String(DEFAULT_RACE_DYNAMICS_CONFIG.racePlanPulkStart)));
-const RP_CORRIDOR_START       = Number(argVal('corridorStart',      String(DEFAULT_RACE_DYNAMICS_CONFIG.racePlanCorridorStart)));
-const RP_CORRIDOR_END         = Number(argVal('corridorEnd',        String(DEFAULT_RACE_DYNAMICS_CONFIG.racePlanCorridorEnd)));
-const RP_PULK_BIAS_GAIN       = Number(argVal('pulkBiasGain',       String(DEFAULT_RACE_DYNAMICS_CONFIG.pulkBiasGain)));
+const GLOBAL_SEED =
+  REPLAY_SEED != null ? Number(REPLAY_SEED) : Number(argVal("seed", "0"));
+const RACE_PLAN_ACTIVE = argVal("race-plan", "true") !== "false";
+const BONUS_MULT = Number(
+  argVal(
+    "bonusMult",
+    String(DEFAULT_RACE_DYNAMICS_CONFIG.racePlanBonusStrengthMultiplier),
+  ),
+);
+const RP_BONUS_TRANSITION_END = Number(
+  argVal(
+    "bonusTransitionEnd",
+    String(DEFAULT_RACE_DYNAMICS_CONFIG.racePlanBonusTransitionEnd),
+  ),
+);
+const RP_BONUS_FADE_MS = Number(
+  argVal(
+    "bonusFadeDuration",
+    String(DEFAULT_RACE_DYNAMICS_CONFIG.racePlanBonusFadeDuration),
+  ),
+);
+const RP_PULK_START = Number(
+  argVal("pulkStart", String(DEFAULT_RACE_DYNAMICS_CONFIG.racePlanPulkStart)),
+);
+const RP_CORRIDOR_START = Number(
+  argVal(
+    "corridorStart",
+    String(DEFAULT_RACE_DYNAMICS_CONFIG.racePlanCorridorStart),
+  ),
+);
+const RP_CORRIDOR_END = Number(
+  argVal(
+    "corridorEnd",
+    String(DEFAULT_RACE_DYNAMICS_CONFIG.racePlanCorridorEnd),
+  ),
+);
+const RP_PULK_BIAS_GAIN = Number(
+  argVal("pulkBiasGain", String(DEFAULT_RACE_DYNAMICS_CONFIG.pulkBiasGain)),
+);
 // FAIR-ARRIVAL flags. bandBias + chaosSteer are the SHIPPED DEFAULTS (COMBO15, MERGE-SHIP-1): a flagless sim
 // run reproduces the shipped world, so their defaults read from DEFAULT_RACE_DYNAMICS_CONFIG (same shared-
 // default pattern as pulkStart). `--bandBias=false` / `--chaosSteer=false` restore the pre-combo15 world.
 // (The two never-shipped FAIR-ARRIVAL-1 arms — the chaos-phase position anchor (A) and the hard band
 // corridor (C) — were removed in CLEAN-SWEEP-1; only the shipped steer + draw-bias remain.)
-const FA_BAND_BIAS            = argVal('bandBias', String(DEFAULT_RACE_DYNAMICS_CONFIG.bandBias)) === 'true';
-const FA_BAND_R               = Number(argVal('bandR', String(DEFAULT_RACE_DYNAMICS_CONFIG.bandBiasR)));
-const FA_BAND_BIAS_GAIN       = Number(argVal('bandBiasGain', String(DEFAULT_RACE_DYNAMICS_CONFIG.bandBiasGain)));
+const FA_BAND_BIAS =
+  argVal("bandBias", String(DEFAULT_RACE_DYNAMICS_CONFIG.bandBias)) === "true";
+const FA_BAND_R = Number(
+  argVal("bandR", String(DEFAULT_RACE_DYNAMICS_CONFIG.bandBiasR)),
+);
+const FA_BAND_BIAS_GAIN = Number(
+  argVal("bandBiasGain", String(DEFAULT_RACE_DYNAMICS_CONFIG.bandBiasGain)),
+);
 // CHAOS-STEER (SHIPPED default in COMBO15). Continuous chaos-phase pull toward the drawn band.
-const FA_CHAOS_STEER          = argVal('chaosSteer', String(DEFAULT_RACE_DYNAMICS_CONFIG.chaosSteer)) === 'true';
-const FA_CHAOS_STEER_GAIN     = Number(argVal('chaosSteerGain', String(DEFAULT_RACE_DYNAMICS_CONFIG.chaosSteerGain)));
+const FA_CHAOS_STEER =
+  argVal("chaosSteer", String(DEFAULT_RACE_DYNAMICS_CONFIG.chaosSteer)) ===
+  "true";
+const FA_CHAOS_STEER_GAIN = Number(
+  argVal("chaosSteerGain", String(DEFAULT_RACE_DYNAMICS_CONFIG.chaosSteerGain)),
+);
 // Hero choreography — master flag + drama intensity + loose-pack bandStrictness. Passed into
 // createRacePlan (flag OFF → byte-identical; the intensity/strictness only apply when ON).
-const CHOREO_ENABLED     = true; // choreography is UNCONDITIONAL (de-flagged S3); classic gates below are now statically false (Stage-4 removal)
+const CHOREO_ENABLED = true; // choreography is UNCONDITIONAL (de-flagged S3); classic gates below are now statically false (Stage-4 removal)
 // Stage 1 spoiler switch (parity with racePlanner/index.jsx). Default off → the shipped default.
-const CHOREO_SUPPRESS_CHAOS_BONUS_B1 = argVal('choreoSuppressChaosBonusB1', String(DEFAULT_RACE_DYNAMICS_CONFIG.choreoSuppressChaosBonusB1)) === 'true';
-const CHOREO_INTENSITY   = Number(argVal('choreoIntensity', String(DEFAULT_RACE_DYNAMICS_CONFIG.choreoIntensity)));
-const CHOREO_PACK_BAND_STRICTNESS = Number(argVal('choreoPackBandStrictness', String(DEFAULT_RACE_DYNAMICS_CONFIG.choreoPackBandStrictness)));
-const CHOREO_RELEASE_PROGRESS = Number(argVal('choreoReleaseProgress', String(DEFAULT_RACE_DYNAMICS_CONFIG.choreoReleaseProgress)));
-const CHOREO_RESOLVE_B2 = Number(argVal('choreoResolveB2', String(DEFAULT_RACE_DYNAMICS_CONFIG.choreoResolveB2)));
-const CHOREO_RESOLVE_B3 = Number(argVal('choreoResolveB3', String(DEFAULT_RACE_DYNAMICS_CONFIG.choreoResolveB3)));
-const CHOREO_RESOLVE_B4 = Number(argVal('choreoResolveB4', String(DEFAULT_RACE_DYNAMICS_CONFIG.choreoResolveB4)));
-const CHOREO_RESOLVE_B5 = Number(argVal('choreoResolveB5', String(DEFAULT_RACE_DYNAMICS_CONFIG.choreoResolveB5)));
-const CHOREO_OUTCOME_START = Number(argVal('choreoOutcomeStart', String(DEFAULT_RACE_DYNAMICS_CONFIG.choreoOutcomeStart)));
+const CHOREO_SUPPRESS_CHAOS_BONUS_B1 =
+  argVal(
+    "choreoSuppressChaosBonusB1",
+    String(DEFAULT_RACE_DYNAMICS_CONFIG.choreoSuppressChaosBonusB1),
+  ) === "true";
+const CHOREO_INTENSITY = Number(
+  argVal(
+    "choreoIntensity",
+    String(DEFAULT_RACE_DYNAMICS_CONFIG.choreoIntensity),
+  ),
+);
+const CHOREO_PACK_BAND_STRICTNESS = Number(
+  argVal(
+    "choreoPackBandStrictness",
+    String(DEFAULT_RACE_DYNAMICS_CONFIG.choreoPackBandStrictness),
+  ),
+);
+const CHOREO_RELEASE_PROGRESS = Number(
+  argVal(
+    "choreoReleaseProgress",
+    String(DEFAULT_RACE_DYNAMICS_CONFIG.choreoReleaseProgress),
+  ),
+);
+const CHOREO_RESOLVE_B2 = Number(
+  argVal(
+    "choreoResolveB2",
+    String(DEFAULT_RACE_DYNAMICS_CONFIG.choreoResolveB2),
+  ),
+);
+const CHOREO_RESOLVE_B3 = Number(
+  argVal(
+    "choreoResolveB3",
+    String(DEFAULT_RACE_DYNAMICS_CONFIG.choreoResolveB3),
+  ),
+);
+const CHOREO_RESOLVE_B4 = Number(
+  argVal(
+    "choreoResolveB4",
+    String(DEFAULT_RACE_DYNAMICS_CONFIG.choreoResolveB4),
+  ),
+);
+const CHOREO_RESOLVE_B5 = Number(
+  argVal(
+    "choreoResolveB5",
+    String(DEFAULT_RACE_DYNAMICS_CONFIG.choreoResolveB5),
+  ),
+);
+const CHOREO_OUTCOME_START = Number(
+  argVal(
+    "choreoOutcomeStart",
+    String(DEFAULT_RACE_DYNAMICS_CONFIG.choreoOutcomeStart),
+  ),
+);
 // ── FRONT ACT window ──────────────────────────────────────────────────────────────────────────────
 // contestWindowStart is the front act's OWN key: the outcome-front-battle observer reads it, so the
 // measurement window no longer rides on B2's resolve checkpoint. It defaults to the shipped value
 // (= today's choreoResolveB2), so every committed baseline stays comparable.
-const CONTEST_WINDOW_START = Number(argVal('contestWindowStart', String(DEFAULT_RACE_DYNAMICS_CONFIG.contestWindowStart)));
+const CONTEST_WINDOW_START = Number(
+  argVal(
+    "contestWindowStart",
+    String(DEFAULT_RACE_DYNAMICS_CONFIG.contestWindowStart),
+  ),
+);
 // Spatial re-steer threshold for a released B2-attacker (parity with racePlanner/defaults).
-const PACK_RESTEER_THRESHOLD = Number(argVal('pack-resteer-threshold', String(DEFAULT_RACE_DYNAMICS_CONFIG.packReSteerThreshold)));
+const PACK_RESTEER_THRESHOLD = Number(
+  argVal(
+    "pack-resteer-threshold",
+    String(DEFAULT_RACE_DYNAMICS_CONFIG.packReSteerThreshold),
+  ),
+);
 // B2-attacker "Attack & Fall" (parity with racePlanner/heroCurveGenerator/defaults). OFF (heroes 0) →
 // byte-identical (proven via fingerprint-default). Threaded into createRacePlan → the hero generator.
-const B2_ATTACK_HEROES = Number(argVal('b2-attack-heroes', String(DEFAULT_RACE_DYNAMICS_CONFIG.b2AttackHeroes)));
-const B2_ATTACK_PEAK_RANK = Number(argVal('b2-attack-peak-rank', String(DEFAULT_RACE_DYNAMICS_CONFIG.b2AttackPeakRank)));
-const B2_ATTACK_FINAL_RANK = Number(argVal('b2-attack-final-rank', String(DEFAULT_RACE_DYNAMICS_CONFIG.b2AttackFinalRank)));
-const B2_ATTACK_PROGRESS_START = Number(argVal('b2-attack-progress-start', String(DEFAULT_RACE_DYNAMICS_CONFIG.b2AttackProgress.start)));
-const B2_ATTACK_PROGRESS_END = Number(argVal('b2-attack-progress-end', String(DEFAULT_RACE_DYNAMICS_CONFIG.b2AttackProgress.end)));
-const B2_ATTACK_RESOLVE_PROGRESS = Number(argVal('b2-attack-resolve-progress', String(DEFAULT_RACE_DYNAMICS_CONFIG.b2AttackResolveProgress)));
-const B2_ATTACK_BAND_ARRIVAL = argVal('b2-attack-band-arrival', String(DEFAULT_RACE_DYNAMICS_CONFIG.b2AttackBandArrival)) === 'true';
+const B2_ATTACK_HEROES = Number(
+  argVal(
+    "b2-attack-heroes",
+    String(DEFAULT_RACE_DYNAMICS_CONFIG.b2AttackHeroes),
+  ),
+);
+const B2_ATTACK_PEAK_RANK = Number(
+  argVal(
+    "b2-attack-peak-rank",
+    String(DEFAULT_RACE_DYNAMICS_CONFIG.b2AttackPeakRank),
+  ),
+);
+const B2_ATTACK_FINAL_RANK = Number(
+  argVal(
+    "b2-attack-final-rank",
+    String(DEFAULT_RACE_DYNAMICS_CONFIG.b2AttackFinalRank),
+  ),
+);
+const B2_ATTACK_PROGRESS_START = Number(
+  argVal(
+    "b2-attack-progress-start",
+    String(DEFAULT_RACE_DYNAMICS_CONFIG.b2AttackProgress.start),
+  ),
+);
+const B2_ATTACK_PROGRESS_END = Number(
+  argVal(
+    "b2-attack-progress-end",
+    String(DEFAULT_RACE_DYNAMICS_CONFIG.b2AttackProgress.end),
+  ),
+);
+const B2_ATTACK_RESOLVE_PROGRESS = Number(
+  argVal(
+    "b2-attack-resolve-progress",
+    String(DEFAULT_RACE_DYNAMICS_CONFIG.b2AttackResolveProgress),
+  ),
+);
+const B2_ATTACK_BAND_ARRIVAL =
+  argVal(
+    "b2-attack-band-arrival",
+    String(DEFAULT_RACE_DYNAMICS_CONFIG.b2AttackBandArrival),
+  ) === "true";
 // ── Front distance leash (SIM-ONLY; no DevScreen/defaults entry — activated only here) ──────────────
 // --frontLeashMaxLengths engages the leash (gap-space brake on the runaway leader); --frontLeashGainPct
 // sets the brake per excess length (default 3). Absent --frontLeashMaxLengths → FRONT_LEASH off → the
 // controller is never passed the leader→P2 length and never sets leash config → byte-identical.
-const FRONT_LEASH_MAX = argVal('frontLeashMaxLengths', null);
+const FRONT_LEASH_MAX = argVal("frontLeashMaxLengths", null);
 const FRONT_LEASH = FRONT_LEASH_MAX !== null;
 const FRONT_LEASH_MAX_LEN = FRONT_LEASH ? Number(FRONT_LEASH_MAX) : null;
-const FRONT_LEASH_GAIN_PCT = FRONT_LEASH ? Number(argVal('frontLeashGainPct', '3')) : null;
+const FRONT_LEASH_GAIN_PCT = FRONT_LEASH
+  ? Number(argVal("frontLeashGainPct", "3"))
+  : null;
 // ── Gap-cap re-roll bias (SIM-ONLY; docs/CONCEPT-COHESION.md) ────────────────────────────────────
 // --gapRerollThresholdLengths engages the bias; --gapRerollMode symmetric|down; --gapRerollStrength.
 // Absent --gapRerollThresholdLengths → GAP_REROLL off → the roll loop never calls the transform →
@@ -310,50 +537,152 @@ const FRONT_LEASH_GAIN_PCT = FRONT_LEASH ? Number(argVal('frontLeashGainPct', '3
 // `--gapRerollEnabled=false` restores the pre-feature world byte-identically (fingerprint
 // 72c3360fb75225ef). An explicit --gapRerollThresholdLengths still engages the transform on its own,
 // so every existing sweep arm that passes it keeps working unchanged.
-const GAP_REROLL_ON = argVal('gapRerollEnabled', String(DEFAULT_RACE_DYNAMICS_CONFIG.gapRerollEnabled)) === 'true';
+const GAP_REROLL_ON =
+  argVal(
+    "gapRerollEnabled",
+    String(DEFAULT_RACE_DYNAMICS_CONFIG.gapRerollEnabled),
+  ) === "true";
 const GAP_REROLL_THRESH = argVal(
-  'gapRerollThresholdLengths',
-  GAP_REROLL_ON ? String(DEFAULT_RACE_DYNAMICS_CONFIG.gapRerollThresholdLengths) : null
+  "gapRerollThresholdLengths",
+  GAP_REROLL_ON
+    ? String(DEFAULT_RACE_DYNAMICS_CONFIG.gapRerollThresholdLengths)
+    : null,
 );
 const GAP_REROLL = GAP_REROLL_THRESH !== null;
 const GAP_REROLL_THRESH_LEN = GAP_REROLL ? Number(GAP_REROLL_THRESH) : null;
 // PULK-SPECTACLE-1 (read-only): front-liveliness observer — LAW + chaos/pulk window metrics + gap-cap
 // brake-armed share. Piggybacks on --runaway-parade's rp object. OFF → not allocated.
-const PULK_WINDOW = argv.includes('--pulk-window');
+const PULK_WINDOW = argv.includes("--pulk-window");
 // Mode + strength now default to the SHIPPED values (symmetric / 1.0) rather than the old
 // experiment defaults, so a flagless run is the shipped game exactly. Explicit flags still override.
-const GAP_REROLL_MODE = GAP_REROLL ? argVal('gapRerollMode', String(DEFAULT_RACE_DYNAMICS_CONFIG.gapRerollMode)) : null;
-const GAP_REROLL_STRENGTH = GAP_REROLL ? Number(argVal('gapRerollStrength', String(DEFAULT_RACE_DYNAMICS_CONFIG.gapRerollStrength))) : null;
+const GAP_REROLL_MODE = GAP_REROLL
+  ? argVal("gapRerollMode", String(DEFAULT_RACE_DYNAMICS_CONFIG.gapRerollMode))
+  : null;
+const GAP_REROLL_STRENGTH = GAP_REROLL
+  ? Number(
+      argVal(
+        "gapRerollStrength",
+        String(DEFAULT_RACE_DYNAMICS_CONFIG.gapRerollStrength),
+      ),
+    )
+  : null;
 // B2-leak trace (read-only diagnostic): adds b2LastInside to rawData rows. No-flag → byte-identical.
-const B2_TRACE = argv.includes('--b2-trace');
+const B2_TRACE = argv.includes("--b2-trace");
 // reRoll / trajectory dynamics overrides — same shared-default + argVal pattern. Lets a sweep
 // test DevScreen-tuned (localStorage-only) values WITHOUT changing the shared defaults.js.
 // Defaults read from DEFAULT_RACE_DYNAMICS_CONFIG → no drift; spread into dynamicsConfig below.
 const DYNAMICS_OVERRIDES = {
-  reRollVariationPercent:        Number(argVal('reRollVariationPercent',     String(DEFAULT_RACE_DYNAMICS_CONFIG.reRollVariationPercent))),
-  reRollTransitionDuration:      Number(argVal('reRollTransitionDuration',   String(DEFAULT_RACE_DYNAMICS_CONFIG.reRollTransitionDuration))),
-  reRollIntervalDivisor:         Number(argVal('reRollIntervalDivisor',      String(DEFAULT_RACE_DYNAMICS_CONFIG.reRollIntervalDivisor))),
-  reRollLastPositionPercent:     Number(argVal('reRollLastPositionPercent',  String(DEFAULT_RACE_DYNAMICS_CONFIG.reRollLastPositionPercent))),
-  trajectoryTransitionDuration:  Number(argVal('trajectoryTransitionDuration', String(DEFAULT_RACE_DYNAMICS_CONFIG.trajectoryTransitionDuration))),
+  reRollVariationPercent: Number(
+    argVal(
+      "reRollVariationPercent",
+      String(DEFAULT_RACE_DYNAMICS_CONFIG.reRollVariationPercent),
+    ),
+  ),
+  reRollTransitionDuration: Number(
+    argVal(
+      "reRollTransitionDuration",
+      String(DEFAULT_RACE_DYNAMICS_CONFIG.reRollTransitionDuration),
+    ),
+  ),
+  reRollIntervalDivisor: Number(
+    argVal(
+      "reRollIntervalDivisor",
+      String(DEFAULT_RACE_DYNAMICS_CONFIG.reRollIntervalDivisor),
+    ),
+  ),
+  reRollLastPositionPercent: Number(
+    argVal(
+      "reRollLastPositionPercent",
+      String(DEFAULT_RACE_DYNAMICS_CONFIG.reRollLastPositionPercent),
+    ),
+  ),
+  trajectoryTransitionDuration: Number(
+    argVal(
+      "trajectoryTransitionDuration",
+      String(DEFAULT_RACE_DYNAMICS_CONFIG.trajectoryTransitionDuration),
+    ),
+  ),
   // Pulk realism envelope (±maxEffect clamp + slew) — same shared-default + argVal pattern (no drift).
-  pulkEnvelopeMaxEffect:  Number(argVal('pulkEnvelopeMaxEffect',    String(DEFAULT_RACE_DYNAMICS_CONFIG.pulkEnvelopeMaxEffect))),
-  pulkEnvelopeMaxStepPerFrame: Number(argVal('pulkEnvelopeMaxStepPerFrame', String(DEFAULT_RACE_DYNAMICS_CONFIG.pulkEnvelopeMaxStepPerFrame))),
+  pulkEnvelopeMaxEffect: Number(
+    argVal(
+      "pulkEnvelopeMaxEffect",
+      String(DEFAULT_RACE_DYNAMICS_CONFIG.pulkEnvelopeMaxEffect),
+    ),
+  ),
+  pulkEnvelopeMaxStepPerFrame: Number(
+    argVal(
+      "pulkEnvelopeMaxStepPerFrame",
+      String(DEFAULT_RACE_DYNAMICS_CONFIG.pulkEnvelopeMaxStepPerFrame),
+    ),
+  ),
   // Pulk contest strengths the lead rotation reads (pulk* namespace).
-  pulkLeaderBrake:     Number(argVal('pulkLeaderBrake',     String(DEFAULT_RACE_DYNAMICS_CONFIG.pulkLeaderBrake))),
-  pulkChallengerBoost: Number(argVal('pulkChallengerBoost', String(DEFAULT_RACE_DYNAMICS_CONFIG.pulkChallengerBoost))),
-  pulkFrontPool:        Number(argVal('pulkFrontPool',        String(DEFAULT_RACE_DYNAMICS_CONFIG.pulkFrontPool))),
-  pulkCeilingCap:       argVal('pulkCeilingCap', String(DEFAULT_RACE_DYNAMICS_CONFIG.pulkCeilingCap)) === 'true',
+  pulkLeaderBrake: Number(
+    argVal(
+      "pulkLeaderBrake",
+      String(DEFAULT_RACE_DYNAMICS_CONFIG.pulkLeaderBrake),
+    ),
+  ),
+  pulkChallengerBoost: Number(
+    argVal(
+      "pulkChallengerBoost",
+      String(DEFAULT_RACE_DYNAMICS_CONFIG.pulkChallengerBoost),
+    ),
+  ),
+  pulkFrontPool: Number(
+    argVal("pulkFrontPool", String(DEFAULT_RACE_DYNAMICS_CONFIG.pulkFrontPool)),
+  ),
+  pulkCeilingCap:
+    argVal(
+      "pulkCeilingCap",
+      String(DEFAULT_RACE_DYNAMICS_CONFIG.pulkCeilingCap),
+    ) === "true",
   // Additive boost-headroom above the natural band max for the pulk ceiling (0 = shipped baseline).
-  pulkBoostHeadroom:    Number(argVal('pulkBoostHeadroom', String(DEFAULT_RACE_DYNAMICS_CONFIG.pulkBoostHeadroom))),
+  pulkBoostHeadroom: Number(
+    argVal(
+      "pulkBoostHeadroom",
+      String(DEFAULT_RACE_DYNAMICS_CONFIG.pulkBoostHeadroom),
+    ),
+  ),
   // Ease the rowEnvMult step at the PULK->OUTCOME boundary (1s easeInOutCubic). Default TRUE = eased
   // (shipped 2026-07-19). --enableRowEnvSmooth=false forces the old instant step (byte-identical to pre-flip).
-  enableRowEnvSmooth:  argVal('enableRowEnvSmooth', String(DEFAULT_RACE_DYNAMICS_CONFIG.enableRowEnvSmooth ?? true)) === 'true',
+  enableRowEnvSmooth:
+    argVal(
+      "enableRowEnvSmooth",
+      String(DEFAULT_RACE_DYNAMICS_CONFIG.enableRowEnvSmooth ?? true),
+    ) === "true",
   // PulkLeadRotation (the PULK-phase lead-rotation core loop). Default OFF.
-  pulkLeadRotationAttackerSlots: Number(argVal('pulkLeadRotationAttackerSlots', String(DEFAULT_RACE_DYNAMICS_CONFIG.pulkLeadRotationAttackerSlots))),
-  pulkLeadRotationDropDepthLengths: Number(argVal('pulkLeadRotationDropDepthLengths', String(DEFAULT_RACE_DYNAMICS_CONFIG.pulkLeadRotationDropDepthLengths))),
-  pulkLeadRotationOutsiderMaxReachLengths: Number(argVal('pulkLeadRotationOutsiderMaxReachLengths', String(DEFAULT_RACE_DYNAMICS_CONFIG.pulkLeadRotationOutsiderMaxReachLengths))),
-  pulkLeadRotationDeadlockTimeoutMs: Number(argVal('pulkLeadRotationDeadlockTimeoutMs', String(DEFAULT_RACE_DYNAMICS_CONFIG.pulkLeadRotationDeadlockTimeoutMs))),
-  pulkLeadRotationMinHoldMs: Number(argVal('pulkLeadRotationMinHoldMs', String(DEFAULT_RACE_DYNAMICS_CONFIG.pulkLeadRotationMinHoldMs))),
+  pulkLeadRotationAttackerSlots: Number(
+    argVal(
+      "pulkLeadRotationAttackerSlots",
+      String(DEFAULT_RACE_DYNAMICS_CONFIG.pulkLeadRotationAttackerSlots),
+    ),
+  ),
+  pulkLeadRotationDropDepthLengths: Number(
+    argVal(
+      "pulkLeadRotationDropDepthLengths",
+      String(DEFAULT_RACE_DYNAMICS_CONFIG.pulkLeadRotationDropDepthLengths),
+    ),
+  ),
+  pulkLeadRotationOutsiderMaxReachLengths: Number(
+    argVal(
+      "pulkLeadRotationOutsiderMaxReachLengths",
+      String(
+        DEFAULT_RACE_DYNAMICS_CONFIG.pulkLeadRotationOutsiderMaxReachLengths,
+      ),
+    ),
+  ),
+  pulkLeadRotationDeadlockTimeoutMs: Number(
+    argVal(
+      "pulkLeadRotationDeadlockTimeoutMs",
+      String(DEFAULT_RACE_DYNAMICS_CONFIG.pulkLeadRotationDeadlockTimeoutMs),
+    ),
+  ),
+  pulkLeadRotationMinHoldMs: Number(
+    argVal(
+      "pulkLeadRotationMinHoldMs",
+      String(DEFAULT_RACE_DYNAMICS_CONFIG.pulkLeadRotationMinHoldMs),
+    ),
+  ),
 };
 
 // ── STRIP-DOWN harness (read-only, sim-only; every flag defaults → byte-identical) ───────────
@@ -369,7 +698,7 @@ const DYNAMICS_OVERRIDES = {
 //                             are clamped to the natural band by the SAME existing clamp below.
 //   --strip-metrics       attach dual-window action (PULK 0.25→0.55, OUTCOME 0.55→1.0) + worst-case
 //                         assigned-winner + bonus↔leader sample. Raw per-combo → results/strip-down/.
-const REROLL_VARIANT      = Number(argVal('rerollVariant', '1'));
+const REROLL_VARIANT = Number(argVal("rerollVariant", "1"));
 // ── areaBonus phase-split (INFRA 5A) ────────────────────────────────────────────────────────────
 // The phase-split rescale is now applied NATIVELY by the shared controller (racePlanner.js) for the
 // browser AND the sim, from the shipped dynamics config — threaded into createRacePlan below. This
@@ -379,33 +708,34 @@ const REROLL_VARIANT      = Number(argVal('rerollVariant', '1'));
 // applied the split-down bonus (+3%). Strengths are read from the (world-merged)
 // DEFAULT_RACE_DYNAMICS_CONFIG — the SAME source the browser reads — so no drift. Fallbacks mirror
 // DEFAULT_RACE_DYNAMICS_CONFIG (phaseSplitBonusEnabled true, early 1.0 / pulk 0 / post 1.0).
-const PHASE_SPLIT_BONUS_ENABLED = DEFAULT_RACE_DYNAMICS_CONFIG.phaseSplitBonusEnabled ?? false;
-const AREA_BONUS_EARLY    = DEFAULT_RACE_DYNAMICS_CONFIG.areaBonusEarly ?? 1.0;
-const AREA_BONUS_PULK     = DEFAULT_RACE_DYNAMICS_CONFIG.areaBonusPulk  ?? 0;
-const AREA_BONUS_POST     = DEFAULT_RACE_DYNAMICS_CONFIG.areaBonusPost  ?? 1.0;
+const PHASE_SPLIT_BONUS_ENABLED =
+  DEFAULT_RACE_DYNAMICS_CONFIG.phaseSplitBonusEnabled ?? false;
+const AREA_BONUS_EARLY = DEFAULT_RACE_DYNAMICS_CONFIG.areaBonusEarly ?? 1.0;
+const AREA_BONUS_PULK = DEFAULT_RACE_DYNAMICS_CONFIG.areaBonusPulk ?? 0;
+const AREA_BONUS_POST = DEFAULT_RACE_DYNAMICS_CONFIG.areaBonusPost ?? 1.0;
 // PRE-STAGE-1 Q2 (--heroChaosAreaBonus=on|off, default on = byte-neutral): suppress the HERO POOL's
 // areaBonus during CHAOS ONLY (raceProgress < pulkStartLive = choreo boundary 0.25). §4b: the CHAOS
 // areaBonus is band-graded (B1 = +6% at bonusMult 2.0), so it washes the future B1 heroes forward
 // BEFORE the race opens up — they never start deep. Setting this OFF zeros the B1-target racers' bonus
 // only in chaos (the rest of the field keeps its wash-forward → assigned-winner reachability intact),
 // so the deep-charger casting pool stays buried at the release. Read-only measurement flag; sim only.
-const HERO_CHAOS_AREABONUS_OFF = argVal('heroChaosAreaBonus', 'on') === 'off';
-const STRIP_METRICS       = argv.includes('--strip-metrics');
+const HERO_CHAOS_AREABONUS_OFF = argVal("heroChaosAreaBonus", "on") === "off";
+const STRIP_METRICS = argv.includes("--strip-metrics");
 // ACTION-METRICS (read-only, --action-metrics): whole-field PULK-window movement metrics
 // (rank churn, rank travel, risers/fallers, top-5 turnover, p10–p90 spread) + PULK naturalness
 // + per-racer rows for pooled band-reach / corrP1 in the analyze step. Fully flag-gated → a
 // no-flag run does zero extra work and is byte-identical. Measurement tooling only.
-const ACTION_METRICS      = argv.includes('--action-metrics');
+const ACTION_METRICS = argv.includes("--action-metrics");
 // --action-from-start: widen the ACTION-METRICS window from [pulkStartLive, pulkEndLive) to
 // [0, pulkEndLive) (race start through the END of PULK) for the PULK-window BASELINE measurement.
 // Lower bound only; upper bound (live pulkEnd) unchanged. Default OFF → window unchanged (the prior
 // sweep's [pulkStart, pulkEnd) semantics are preserved). Read-only; window-threading, no new math.
-const ACTION_FROM_START   = argv.includes('--action-from-start');
+const ACTION_FROM_START = argv.includes("--action-from-start");
 // --runaway-leader: RUNAWAY-LEADER measurement (read-only). Two one-shot boundary snapshots per race
 // (leader identity + isHero + lead-over-P2 in racer lengths) at the first frame past pulkStart and past
 // pulkEnd, to measure how often the post-chaos leader is already uncatchable and whether it is a hero.
 // Rides in the action-metrics per-race dump (pass --action-metrics too). Read-only; no new physics.
-const RUNAWAY_LEADER      = argv.includes('--runaway-leader');
+const RUNAWAY_LEADER = argv.includes("--runaway-leader");
 // HERO-MAP (read-only, --hero-map): NIGHT-SWEEP TIER-1 observer. For every racer the choreo controller
 // tags isHeroChoreographed, records the climb-feasibility signals over the race: anchor rank (at the
 // choreo boundary), target rank, final rank, REAL whole-field overtakes (near-behind then cross —
@@ -413,24 +743,24 @@ const RUNAWAY_LEADER      = argv.includes('--runaway-leader');
 // (speed-limited, trajectoryMult≥1.09) and avoidance-brake frac (traffic-limited, avoidanceActive),
 // and progress at which the front group / target rank is reached. Fully flag-gated → a no-flag run
 // does zero extra work and is byte-identical. Measurement tooling only; nothing here mutates state.
-const HERO_MAP            = argv.includes('--hero-map');
-const heroMapRaces        = [];   // per-race hero observations (filled only when HERO_MAP)
+const HERO_MAP = argv.includes("--hero-map");
+const heroMapRaces = []; // per-race hero observations (filled only when HERO_MAP)
 // GAP-METRICS (read-only, --gap-metrics): INFRA 5C. Samples the race in TIME behind the leader
 // (secondsBehindLeader, leader→P2 gap, top-5 spread, field p10–p90) at progress 0.50/0.75/0.90 and
 // at the line, plus visibleComeback / deadRaceFlag. Every RANK-space metric the project owns is
 // blind to a dead race (a racer can be "reachedFront" fifteen lengths behind a lone winner); these
 // GAP-space metrics are not. Fully flag-gated → a no-flag run does zero extra work and is
 // byte-identical. RAW distributions only — X/Y/Z await the owner's calibration (see gap-metrics.mjs).
-const GAP_METRICS         = argv.includes('--gap-metrics');
-const gmRaces             = [];   // per-race gap-space observations (filled only when GAP_METRICS)
+const GAP_METRICS = argv.includes("--gap-metrics");
+const gmRaces = []; // per-race gap-space observations (filled only when GAP_METRICS)
 // RUNAWAY-PARADE (read-only, --runaway-parade): baseline measurement of two dead-endgame phenomena —
 // RUNAWAY_WINNER (leader >= 3L clear at progress 0.90, wins, never challenged in [0.90,1.0]) and
 // PARADE_FINISH (a side-by-side leading group >= 2 detached >= 3L from the field). Collects the RAW
 // per-race record (leader identity + lead at 0.90, min lead across the window, the finish-snapshot
 // front gaps, per-racer final-window speed); the classifiers live in sim/observers/runaway-parade.mjs.
 // Fully flag-gated → a no-flag run does zero extra work and is byte-identical.
-const RUNAWAY_PARADE      = argv.includes('--runaway-parade');
-const rpRaces             = [];   // per-race runaway/parade raw records (filled only when RUNAWAY_PARADE)
+const RUNAWAY_PARADE = argv.includes("--runaway-parade");
+const rpRaces = []; // per-race runaway/parade raw records (filled only when RUNAWAY_PARADE)
 // PHYSICS-TAX (read-only, --physics-tax): GREENFIELD P0. Per racer, the cumulative longitudinal
 // distance lost to avoidance braking, as a fraction of the distance it would otherwise have covered,
 // plus a per-decile-of-progress profile. Feeds sigma — the share of the natural speed band that live
@@ -441,35 +771,35 @@ const rpRaces             = [];   // per-race runaway/parade raw records (filled
 // reached BEFORE the first gap-reroll DOWN-tilt landed on it, plus the per-event tilt magnitudes.
 // Answers "how far does the escapee get before the brake arrives, and how hard is that brake".
 // Flag-gated because it costs a leader-gap computation per frame; absent → zero extra work.
-const ESCAPE_LATENCY      = argv.includes('--escape-latency');
-const PHYSICS_TAX         = argv.includes('--physics-tax');
-const ptRaces             = [];   // per-race physics-tax raw records (filled only when PHYSICS_TAX)
-const elRaces             = [];   // per-race escape-latency records (filled only when ESCAPE_LATENCY)
+const ESCAPE_LATENCY = argv.includes("--escape-latency");
+const PHYSICS_TAX = argv.includes("--physics-tax");
+const ptRaces = []; // per-race physics-tax raw records (filled only when PHYSICS_TAX)
+const elRaces = []; // per-race escape-latency records (filled only when ESCAPE_LATENCY)
 // SPEED-SOURCE (read-only, --speed-source): decompose the late-race speed of the top-15 live ranks into
 // its multiplicative factors at fixed samples (0.70..0.95), with clamp saturation + headroom. Pure
 // read-only capture at the advanceRacerT call site (harness Pass-2). No sim file changes; no fingerprint.
-const SPEED_SOURCE        = argv.includes('--speed-source');
-const ssRaces             = [];   // per-race top-15 speed decomposition (filled only when SPEED_SOURCE)
+const SPEED_SOURCE = argv.includes("--speed-source");
+const ssRaces = []; // per-race top-15 speed decomposition (filled only when SPEED_SOURCE)
 // --dump-frames=<path>: read-only per-frame POSITION recorder for the FIRST race only. Installs a
 // frameHook that captures [{index,x,y,t,finished}] per frame (after the shared step's computePositions,
 // exactly the array the browser hands the camera) plus race meta, then writes <path> as JSON. Purpose:
 // a faithful camera replay — feed the SAME real race into any CameraDirector version (CAMERA-FOCUS-2
 // bisect ladder). Observer only: no engine touched, no fingerprint. Pair with --races=1 --tracks=<one>.
-const DUMP_FRAMES         = argVal('dump-frames', null);
+const DUMP_FRAMES = argVal("dump-frames", null);
 // RACER-FLAPPING-1: optional browser roster names (comma-separated, index order) for faithful repro.
-const _rn                 = argVal('racer-names', null);
-const RACER_NAMES         = _rn ? _rn.split(',').map((s) => s.trim()) : null;
-const _dumpFrames         = [];   // per-frame position snapshots (filled only when DUMP_FRAMES, first race)
-let   _dumpDone           = false;
+const _rn = argVal("racer-names", null);
+const RACER_NAMES = _rn ? _rn.split(",").map((s) => s.trim()) : null;
+const _dumpFrames = []; // per-frame position snapshots (filled only when DUMP_FRAMES, first race)
+let _dumpDone = false;
 // --skip-main-output: skip writing the large fairness-data.json + fairness-report.md. For a batch
 // runner that reads only hero-map.json, to avoid heavy concurrent writes into the OneDrive-synced
 // tree. Read-only measurement runs only; a normal run (flag absent) is unchanged.
-const SKIP_MAIN_OUTPUT    = argv.includes('--skip-main-output');
+const SKIP_MAIN_OUTPUT = argv.includes("--skip-main-output");
 // COMEBACK-REALITY (read-only, --comeback-reality): reuses the --hero-map per-race observations to
 // measure whether hero-cast COMEBACKERS actually climb near their authored finalRank, and how reliably
 // the designation points at real climbing. Requires --hero-map. Writes a separate, uncommitted report
 // dir (results/comeback-reality-sweep-<date>/). Adds zero per-frame work; pure post-race aggregation.
-const COMEBACK_REALITY    = argv.includes('--comeback-reality');
+const COMEBACK_REALITY = argv.includes("--comeback-reality");
 
 // PULK-action-2: ceiling-capped challenger boost (naturalness). '0' = off (byte-identical additive boost);
 // the shared director strengths (leaderBrake / challengerBoost / frontPool / ceilingCap + the
@@ -477,14 +807,14 @@ const COMEBACK_REALITY    = argv.includes('--comeback-reality');
 // pattern (--governorDirector* overrides), so a no-flag sim run mirrors the shipped director default.
 // Pinned strip-down phase/window boundaries (progress fractions). 0.25 chaos-end + 0.5 PULK-end are
 // the anchor values the task fixes; 0.55 OUTCOME-start reuses corridorStart so it can never drift.
-const SD_PULK_START   = 0.25;                 // chaos → PULK boundary — strip-metrics OBSERVATION only
-const SD_PULK_END     = 0.5;                  // PULK → post boundary — strip-metrics OBSERVATION only
+const SD_PULK_START = 0.25; // chaos → PULK boundary — strip-metrics OBSERVATION only
+const SD_PULK_END = 0.5; // PULK → post boundary — strip-metrics OBSERVATION only
 // NOTE: the phase-split MECHANIC (areaBonus/rowBonus) reads the LIVE plan pulkStart/pulkEnd fractions
 // per race (see pulkStartLive/pulkEndLive) so bonuses follow the phases; SD_* above are the pinned
 // strip-down observation checkpoints. Both equal 0.25/0.5 by default → byte-identical.
-const SD_CORR_START   = RP_CORRIDOR_START;    // 0.55 — PULK action-window upper bound = OUTCOME start
-const SM_HOLD_MS      = 750;                   // a P1 change counts as a CLEAN overtake only if the new
-                                               // leader holds P1 ≥ this long (filters flicker vs raw leadΔ)
+const SD_CORR_START = RP_CORRIDOR_START; // 0.55 — PULK action-window upper bound = OUTCOME start
+const SM_HOLD_MS = 750; // a P1 change counts as a CLEAN overtake only if the new
+// leader holds P1 ≥ this long (filters flicker vs raw leadΔ)
 
 // ── Action axis (--action=<0..1>) — SINGLE source of the coupling ──────────
 // One owner-facing scalar `action` ∈ [0,1] (0 = calm → 1 = wild), the prototype of the future
@@ -492,8 +822,9 @@ const SM_HOLD_MS      = 750;                   // a P1 change counts as a CLEAN 
 // no-op). STAGE-4: the classic couplings (pullStrength / maxParallelBoosts) were removed with the
 // reactive director. The axis is an empty stub until Stage-5b re-targets it to the re-homed rotation
 // strengths (leaderBrake / challengerBoost / frontPool).
-const ACTION_RAW = argVal('action', null);
-const ACTION = ACTION_RAW !== null ? Math.max(0, Math.min(1, Number(ACTION_RAW))) : null;
+const ACTION_RAW = argVal("action", null);
+const ACTION =
+  ACTION_RAW !== null ? Math.max(0, Math.min(1, Number(ACTION_RAW))) : null;
 function actionToDirectorKnobs() {
   return {}; // no couplings yet — Stage-5b re-targets the Action axis to the rotation strengths
 }
@@ -502,34 +833,44 @@ const ACTION_KNOBS = ACTION !== null ? actionToDirectorKnobs(ACTION) : null;
 if (ACTION_KNOBS) Object.assign(DYNAMICS_OVERRIDES, ACTION_KNOBS);
 
 // ── Phase-3B: COMEBACK analysis mode ─────────────────────────────────────────
-const COMEBACK_ANALYSIS = argVal('comeback-analysis', 'false') === 'true';
-const CB_MIN_POSITIONS  = Number(argVal('cbMinPositions', '3'));
-const CB_WINDOW_SEC     = Number(argVal('cbWindowSec', '5'));
-const CB_ENDGAME_THRESH = Number(argVal('cbEndgameThresh', '0.85'));
+const COMEBACK_ANALYSIS = argVal("comeback-analysis", "false") === "true";
+const CB_MIN_POSITIONS = Number(argVal("cbMinPositions", "3"));
+const CB_WINDOW_SEC = Number(argVal("cbWindowSec", "5"));
+const CB_ENDGAME_THRESH = Number(argVal("cbEndgameThresh", "0.85"));
 
 // Lateral-proximity threshold for a REAL overtake (course-fraction units). Read by the hero-map
 // observer (--hero-map). Formerly also the V4 start-row experiment's constant; kept here after that
 // experiment was deleted because it is SHARED, not V4-private. Flag name is historical.
-const V4_LATERAL_PROXIMITY = Number(argVal('v4LateralProximity', '0.3'));
+const V4_LATERAL_PROXIMITY = Number(argVal("v4LateralProximity", "0.3"));
 
 // ── Phase-2L: behaviorConfig overrides via CLI ────────────────────────────────
-const WARMUP_MS_RAW      = argVal('avoidanceWarmupMs', null);
-const WARMUP_MS_OVERRIDE = WARMUP_MS_RAW !== null ? Number(WARMUP_MS_RAW) : null;
+const WARMUP_MS_RAW = argVal("avoidanceWarmupMs", null);
+const WARMUP_MS_OVERRIDE =
+  WARMUP_MS_RAW !== null ? Number(WARMUP_MS_RAW) : null;
 // --behavior='{"lateralForce":0.016,"lateralDamping":0.30}' — JSON object merged into behaviorConfig
-const BEHAVIOR_OVERRIDE_RAW = argVal('behavior', null);
-const BEHAVIOR_OVERRIDE = BEHAVIOR_OVERRIDE_RAW ? (() => {
-  try { return JSON.parse(BEHAVIOR_OVERRIDE_RAW); }
-  catch { console.error('⚠️  --behavior: invalid JSON, ignoring'); return {}; }
-})() : {};
+const BEHAVIOR_OVERRIDE_RAW = argVal("behavior", null);
+const BEHAVIOR_OVERRIDE = BEHAVIOR_OVERRIDE_RAW
+  ? (() => {
+      try {
+        return JSON.parse(BEHAVIOR_OVERRIDE_RAW);
+      } catch {
+        console.error("⚠️  --behavior: invalid JSON, ignoring");
+        return {};
+      }
+    })()
+  : {};
 // Dedicated per-run overrides for the two look-before-brake knobs swept during tuning.
 // Fold into BEHAVIOR_OVERRIDE so they flow through the same behaviorConfig merge path as
 // --behavior. Absent → no key added → default (0.005 / 1.2) preserved byte-identically.
-const LBB_MINDIFF_RAW  = argVal('lbbMinDiff', null);
-const LBB_REENGAGE_RAW = argVal('lbbReengage', null);
-if (LBB_MINDIFF_RAW  !== null) BEHAVIOR_OVERRIDE.lookBeforeBrakeMinDifferential     = Number(LBB_MINDIFF_RAW);
-if (LBB_REENGAGE_RAW !== null) BEHAVIOR_OVERRIDE.lookBeforeBrakeReengageTMultiplier = Number(LBB_REENGAGE_RAW);
+const LBB_MINDIFF_RAW = argVal("lbbMinDiff", null);
+const LBB_REENGAGE_RAW = argVal("lbbReengage", null);
+if (LBB_MINDIFF_RAW !== null)
+  BEHAVIOR_OVERRIDE.lookBeforeBrakeMinDifferential = Number(LBB_MINDIFF_RAW);
+if (LBB_REENGAGE_RAW !== null)
+  BEHAVIOR_OVERRIDE.lookBeforeBrakeReengageTMultiplier =
+    Number(LBB_REENGAGE_RAW);
 // --selfcheck: run synthetic validation of BS-1 fairness metrics and exit (no sim run).
-const SELFCHECK = argv.includes('--selfcheck');
+const SELFCHECK = argv.includes("--selfcheck");
 
 // ── Base-speed band override (flag/test config; read-only measurement) ────────
 // --baseSpeedMin / --baseSpeedMax let a fairness sweep test a widened Speed Range WITHOUT
@@ -538,11 +879,15 @@ const SELFCHECK = argv.includes('--selfcheck');
 // open-track natural base, re-roll clamps, AND the director ceiling-cap = BASE_SPEED_MAX/MEAN)
 // flows from the two module-level constants below, so overriding them here propagates the tested
 // band consistently. When a tested band is promoted to the default, this flag simply matches it.
-const BASE_SPEED_MIN_OVR = Number(argVal('baseSpeedMin', String(DEFAULT_BASE_SPEED_CONFIG.min)));
-const BASE_SPEED_MAX_OVR = Number(argVal('baseSpeedMax', String(DEFAULT_BASE_SPEED_CONFIG.max)));
+const BASE_SPEED_MIN_OVR = Number(
+  argVal("baseSpeedMin", String(DEFAULT_BASE_SPEED_CONFIG.min)),
+);
+const BASE_SPEED_MAX_OVR = Number(
+  argVal("baseSpeedMax", String(DEFAULT_BASE_SPEED_CONFIG.max)),
+);
 
 // ── Phase-2K v4: diagnostic snapshot mode ────────────────────────────────────
-const DIAG_MODE         = argVal('diagnosticMode', null) === 'true';
+const DIAG_MODE = argVal("diagnosticMode", null) === "true";
 const DIAG_SNAP_TIMES_S = [0.0, 0.2, 0.4, 0.6, 0.8, 1.0, 2.0, 5.0];
 
 // ── Breakaway causal diagnostic (--breakaway-diag) ───────────────────────────
@@ -552,8 +897,8 @@ const DIAG_SNAP_TIMES_S = [0.0, 0.2, 0.4, 0.6, 0.8, 1.0, 2.0, 5.0];
 // peak pre-OUTCOME gap, and WHO leads at that peak (target rank +
 // multiplier decomposition). Raw output → results/breakaway-diag/. --diagLabel
 // names the output file so ablation arms don't overwrite each other.
-const BREAKAWAY_DIAG = argv.includes('--breakaway-diag');
-const DIAG_LABEL     = argVal('diagLabel', 'run');
+const BREAKAWAY_DIAG = argv.includes("--breakaway-diag");
+const DIAG_LABEL = argVal("diagLabel", "run");
 // Progress boundary below which a gap counts as "pre-OUTCOME" — read from config
 // (racePlanCorridorStart) so it tracks the same OUTCOME onset the controller uses.
 const BREAKAWAY_CORRIDOR_START = RP_CORRIDOR_START;
@@ -566,8 +911,7 @@ const BREAKAWAY_CORRIDOR_START = RP_CORRIDOR_START;
 // is byte-identical (no extra per-step work, no extra columns, no extra output). Front-reach
 // reuses the governor's leader→2nd / leader→median racer-length gaps (governor must be on for
 // those to be non-zero). Raw aggregates → results/front-action/ (named by --diagLabel).
-const FRONT_ACTION = argv.includes('--front-action');
-
+const FRONT_ACTION = argv.includes("--front-action");
 
 // ── Seeded PRNG (mulberry32) ──────────────────────────────────────────────────
 export function makePRNG(seed) {
@@ -592,26 +936,146 @@ function easeInOutCubic(t) {
 // bodyFillX/Y: fraction of frame occupied by body pixels (measured from spritesheet).
 // surfaceClasses mirrors each *RacerType.js — used to filter racers by track surface.
 export const RACER_CONFIGS = {
-  horse:      { speedMultiplier: 1.00, displaySize: 47, bodyFillX: 0.353, bodyFillY: 0.800, surfaceClasses: ['sand', 'earth', 'grass', 'asphalt', 'snow', 'mud'] },
-  duck:       { speedMultiplier: 0.85, displaySize: 36, bodyFillX: 0.875, bodyFillY: 0.875, surfaceClasses: ['water', 'grass'] },
-  snail:      { speedMultiplier: 0.30, displaySize: 35, bodyFillX: 0.727, bodyFillY: 0.938, surfaceClasses: ['grass'] },
-  elephant:   { speedMultiplier: 0.60, displaySize: 44, bodyFillX: 0.539, bodyFillY: 0.938, surfaceClasses: ['sand', 'earth', 'grass'] },
-  giraffe:    { speedMultiplier: 0.90, displaySize: 48, bodyFillX: 0.271, bodyFillY: 0.767, surfaceClasses: ['sand', 'earth', 'grass'] },
-  snake:      { speedMultiplier: 0.75, displaySize: 44, bodyFillX: 0.374, bodyFillY: 0.806, surfaceClasses: ['sand', 'earth', 'grass'] },
-  dragon:     { speedMultiplier: 1.10, displaySize: 50, bodyFillX: 0.836, bodyFillY: 0.898, surfaceClasses: ['air', 'asphalt', 'earth', 'water'] },
-  f1:         { speedMultiplier: 1.20, displaySize: 38, bodyFillX: 0.555, bodyFillY: 0.953, surfaceClasses: ['asphalt'] },
-  rocket:     { speedMultiplier: 1.25, displaySize: 47, bodyFillX: 0.278, bodyFillY: 0.801, surfaceClasses: ['air', 'water'] },
-  buggy:      { speedMultiplier: 0.95, displaySize: 38, bodyFillX: 0.844, bodyFillY: 0.875, surfaceClasses: ['sand', 'earth', 'mud'] },
-  motorbike:  { speedMultiplier: 1.05, displaySize: 42, bodyFillX: 0.400, bodyFillY: 0.800, surfaceClasses: ['asphalt', 'earth'] },
-  plane:      { speedMultiplier: 1.15, displaySize: 42, bodyFillX: 0.836, bodyFillY: 0.930, surfaceClasses: ['air'] },
-  luge:       { speedMultiplier: 1.10, displaySize: 80, bodyFillX: 0.313, bodyFillY: 0.641, surfaceClasses: ['ice', 'snow'] },
-  beetle:     { speedMultiplier: 0.90, displaySize: 38, bodyFillX: 0.398, bodyFillY: 0.672, surfaceClasses: ['asphalt', 'cobble', 'earth'] },
-  boarder:    { speedMultiplier: 1.00, displaySize: 40, bodyFillX: 0.398, bodyFillY: 0.719, surfaceClasses: ['asphalt', 'cobble', 'earth'] },
-  koi:        { speedMultiplier: 0.95, displaySize: 52, bodyFillX: 0.578, bodyFillY: 0.914, surfaceClasses: ['water'] },
-  turtle:     { speedMultiplier: 0.85, displaySize: 48, bodyFillX: 0.578, bodyFillY: 0.734, surfaceClasses: ['water'] },
-  manta:      { speedMultiplier: 1.10, displaySize: 56, bodyFillX: 0.633, bodyFillY: 0.805, surfaceClasses: ['water'] },
-  dolphin:    { speedMultiplier: 1.15, displaySize: 52, bodyFillX: 0.402, bodyFillY: 0.887, surfaceClasses: ['water'] },
-  snowmobile: { speedMultiplier: 1.10, displaySize: 52, bodyFillX: 0.459, bodyFillY: 0.797, surfaceClasses: ['snow', 'ice', 'earth'] },
+  horse: {
+    speedMultiplier: 1.0,
+    displaySize: 47,
+    bodyFillX: 0.353,
+    bodyFillY: 0.8,
+    surfaceClasses: ["sand", "earth", "grass", "asphalt", "snow", "mud"],
+  },
+  duck: {
+    speedMultiplier: 0.85,
+    displaySize: 36,
+    bodyFillX: 0.875,
+    bodyFillY: 0.875,
+    surfaceClasses: ["water", "grass"],
+  },
+  snail: {
+    speedMultiplier: 0.3,
+    displaySize: 35,
+    bodyFillX: 0.727,
+    bodyFillY: 0.938,
+    surfaceClasses: ["grass"],
+  },
+  elephant: {
+    speedMultiplier: 0.6,
+    displaySize: 44,
+    bodyFillX: 0.539,
+    bodyFillY: 0.938,
+    surfaceClasses: ["sand", "earth", "grass"],
+  },
+  giraffe: {
+    speedMultiplier: 0.9,
+    displaySize: 48,
+    bodyFillX: 0.271,
+    bodyFillY: 0.767,
+    surfaceClasses: ["sand", "earth", "grass"],
+  },
+  snake: {
+    speedMultiplier: 0.75,
+    displaySize: 44,
+    bodyFillX: 0.374,
+    bodyFillY: 0.806,
+    surfaceClasses: ["sand", "earth", "grass"],
+  },
+  dragon: {
+    speedMultiplier: 1.1,
+    displaySize: 50,
+    bodyFillX: 0.836,
+    bodyFillY: 0.898,
+    surfaceClasses: ["air", "asphalt", "earth", "water"],
+  },
+  f1: {
+    speedMultiplier: 1.2,
+    displaySize: 38,
+    bodyFillX: 0.555,
+    bodyFillY: 0.953,
+    surfaceClasses: ["asphalt"],
+  },
+  rocket: {
+    speedMultiplier: 1.25,
+    displaySize: 47,
+    bodyFillX: 0.278,
+    bodyFillY: 0.801,
+    surfaceClasses: ["air", "water"],
+  },
+  buggy: {
+    speedMultiplier: 0.95,
+    displaySize: 38,
+    bodyFillX: 0.844,
+    bodyFillY: 0.875,
+    surfaceClasses: ["sand", "earth", "mud"],
+  },
+  motorbike: {
+    speedMultiplier: 1.05,
+    displaySize: 42,
+    bodyFillX: 0.4,
+    bodyFillY: 0.8,
+    surfaceClasses: ["asphalt", "earth"],
+  },
+  plane: {
+    speedMultiplier: 1.15,
+    displaySize: 42,
+    bodyFillX: 0.836,
+    bodyFillY: 0.93,
+    surfaceClasses: ["air"],
+  },
+  luge: {
+    speedMultiplier: 1.1,
+    displaySize: 80,
+    bodyFillX: 0.313,
+    bodyFillY: 0.641,
+    surfaceClasses: ["ice", "snow"],
+  },
+  beetle: {
+    speedMultiplier: 0.9,
+    displaySize: 38,
+    bodyFillX: 0.398,
+    bodyFillY: 0.672,
+    surfaceClasses: ["asphalt", "cobble", "earth"],
+  },
+  boarder: {
+    speedMultiplier: 1.0,
+    displaySize: 40,
+    bodyFillX: 0.398,
+    bodyFillY: 0.719,
+    surfaceClasses: ["asphalt", "cobble", "earth"],
+  },
+  koi: {
+    speedMultiplier: 0.95,
+    displaySize: 52,
+    bodyFillX: 0.578,
+    bodyFillY: 0.914,
+    surfaceClasses: ["water"],
+  },
+  turtle: {
+    speedMultiplier: 0.85,
+    displaySize: 48,
+    bodyFillX: 0.578,
+    bodyFillY: 0.734,
+    surfaceClasses: ["water"],
+  },
+  manta: {
+    speedMultiplier: 1.1,
+    displaySize: 56,
+    bodyFillX: 0.633,
+    bodyFillY: 0.805,
+    surfaceClasses: ["water"],
+  },
+  dolphin: {
+    speedMultiplier: 1.15,
+    displaySize: 52,
+    bodyFillX: 0.402,
+    bodyFillY: 0.887,
+    surfaceClasses: ["water"],
+  },
+  snowmobile: {
+    speedMultiplier: 1.1,
+    displaySize: 52,
+    bodyFillX: 0.459,
+    bodyFillY: 0.797,
+    surfaceClasses: ["snow", "ice", "earth"],
+  },
 };
 
 // ── Race-length variants ──────────────────────────────────────────────────────
@@ -628,7 +1092,6 @@ export const DURATION_VARIANTS = USE_TRACK_DEFAULTS
     : SECONDS_FILTER
       ? [Number(SECONDS_FILTER)]
       : [30, 60, 120];
-
 
 // ── Single race simulation ────────────────────────────────────────────────────
 /**
@@ -666,26 +1129,26 @@ export function runSingleRace({
   nRacers,
   diagnosticMode = false,
   behaviorConfigOverrides = {},
-  racePlanController = null,   // Phase-3A: TrajectoryController instance or null
-  comebackAnalysisConfig = null,  // Phase-3B: { b1Indices, minPositions, windowSec, endgameThresh }
-  frameHook = null,            // diag: called after applyRacerBehavior each frame — (raceTs, diagOut, racers)
-  breakawayDiag = false,       // --breakaway-diag: record the pre-OUTCOME breakaway signal (read-only)
-  frontAction = false,         // --front-action: record pre-OUTCOME front-action metric (read-only)
-  racerTargetRankMap = null,   // plan._racerTargetRank; lets the diag name the peak-gap leader's target rank
-  heroMap = false,             // --hero-map: record per-hero climb-feasibility signals (read-only)
-  gapMetrics = false,          // --gap-metrics: record gap-space (time-behind-leader) signals (read-only)
-  runawayParade = false,       // --runaway-parade: record runaway-winner / parade-finish raw signals (read-only)
-  speedSource = false,         // --speed-source: record top-15 late-race speed decomposition (read-only)
-  physicsTax = false,          // --physics-tax: record per-racer avoidance-braking distance loss (read-only)
-  raceRng: raceRngParam = null,   // D-GRID: the batch loop's shared per-race physics stream (already past the
-                                  // row-shuffle draw) — passed so the plan and the racers share ONE shuffle.
+  racePlanController = null, // Phase-3A: TrajectoryController instance or null
+  comebackAnalysisConfig = null, // Phase-3B: { b1Indices, minPositions, windowSec, endgameThresh }
+  frameHook = null, // diag: called after applyRacerBehavior each frame — (raceTs, diagOut, racers)
+  breakawayDiag = false, // --breakaway-diag: record the pre-OUTCOME breakaway signal (read-only)
+  frontAction = false, // --front-action: record pre-OUTCOME front-action metric (read-only)
+  racerTargetRankMap = null, // plan._racerTargetRank; lets the diag name the peak-gap leader's target rank
+  heroMap = false, // --hero-map: record per-hero climb-feasibility signals (read-only)
+  gapMetrics = false, // --gap-metrics: record gap-space (time-behind-leader) signals (read-only)
+  runawayParade = false, // --runaway-parade: record runaway-winner / parade-finish raw signals (read-only)
+  speedSource = false, // --speed-source: record top-15 late-race speed decomposition (read-only)
+  physicsTax = false, // --physics-tax: record per-racer avoidance-braking distance loss (read-only)
+  raceRng: raceRngParam = null, // D-GRID: the batch loop's shared per-race physics stream (already past the
+  // row-shuffle draw) — passed so the plan and the racers share ONE shuffle.
   rowLayout: rowLayoutParam = null, // D-GRID: the one row shuffle the batch loop drew from raceRngParam, so the
-                                    // physical placement here equals the plan's start-row view. Absent (direct
-                                    // callers / tests) → computed internally below, byte-identical to before.
-  racerNames = null,           // D-NAME: the browser's roster names. applyRacerBehavior's symmetry tiebreak
-                               // (raceBehavior.js) keys on r.name — so to reproduce a BROWSER race the sim must
-                               // carry the browser's names. Absent (combo loop / fingerprint) → the self-consistent
-                               // `R{i+1}` baseline, as before.
+  // physical placement here equals the plan's start-row view. Absent (direct
+  // callers / tests) → computed internally below, byte-identical to before.
+  racerNames = null, // D-NAME: the browser's roster names. applyRacerBehavior's symmetry tiebreak
+  // (raceBehavior.js) keys on r.name — so to reproduce a BROWSER race the sim must
+  // carry the browser's names. Absent (combo loop / fingerprint) → the self-consistent
+  // `R{i+1}` baseline, as before.
 }) {
   // Parity step 1: the race's physics RNG is an EXPLICIT stream threaded through every physics draw
   // site below (row shuffle, spreadFactor/rollJitter init, scheduled re-roll target + jitter) — the
@@ -697,12 +1160,18 @@ export function runSingleRace({
   const raceRng = raceRngParam ?? makeRaceRng(seed).physics;
 
   try {
-    const BASE_SPEED_MIN  = BASE_SPEED_MIN_OVR;
-    const BASE_SPEED_MAX  = BASE_SPEED_MAX_OVR;
+    const BASE_SPEED_MIN = BASE_SPEED_MIN_OVR;
+    const BASE_SPEED_MAX = BASE_SPEED_MAX_OVR;
     const BASE_SPEED_MEAN = (BASE_SPEED_MIN + BASE_SPEED_MAX) / 2;
-    const behaviorConfig  = { ...DEFAULT_RACE_BEHAVIOR_CONFIG, ...behaviorConfigOverrides };
-    const rowConfig       = { ...DEFAULT_ROW_LAYOUT_CONFIG };
-    const dynamicsConfig  = { ...DEFAULT_RACE_DYNAMICS_CONFIG, ...DYNAMICS_OVERRIDES };
+    const behaviorConfig = {
+      ...DEFAULT_RACE_BEHAVIOR_CONFIG,
+      ...behaviorConfigOverrides,
+    };
+    const rowConfig = { ...DEFAULT_ROW_LAYOUT_CONFIG };
+    const dynamicsConfig = {
+      ...DEFAULT_RACE_DYNAMICS_CONFIG,
+      ...DYNAMICS_OVERRIDES,
+    };
 
     // ── THE canonical speed/duration derivation (client/src/modules/durationModel.js) ─────────
     // The SAME shared call the browser makes, with the same inputs, so finishT, race_baseSpeed
@@ -718,36 +1187,61 @@ export function runSingleRace({
       speedMultiplier,
       runoutZone: behaviorConfig.runoutZone,
     });
-    const finishT        = durationModel.finishT;
+    const finishT = durationModel.finishT;
     const race_baseSpeed = durationModel.raceBaseSpeed;
 
     // Row layout — mirrors browser's bottom-up computeRacerLayout path (Sim adjusted to match)
-    const effectiveWidth      = geometricTrackWidth * behaviorConfig.startSpreadRange;
-    const { spriteSize: effectiveDisplaySize, rowCount } = computeRacerLayout(effectiveWidth, nRacers, displaySize, DEFAULT_AUTO_SCALE_CONFIG);
+    const effectiveWidth =
+      geometricTrackWidth * behaviorConfig.startSpreadRange;
+    const { spriteSize: effectiveDisplaySize, rowCount } = computeRacerLayout(
+      effectiveWidth,
+      nRacers,
+      displaySize,
+      DEFAULT_AUTO_SCALE_CONFIG,
+    );
     // Body narrow/long references — mirror index.jsx W_REF + computeBodyNarrowRef call.
     // bodyFillNarrow = min(X,Y); bodyFillLong = max(X,Y) — narrow axis identified by fill fraction.
     // W_REF cap at 285 matches the game's cap for the camera reference width.
     const bodyFillNarrow = Math.min(bodyFillX, bodyFillY);
-    const bodyFillLong   = Math.max(bodyFillX, bodyFillY);
+    const bodyFillLong = Math.max(bodyFillX, bodyFillY);
     const W_REF = Math.min(285, effectiveWidth);
-    const bodyRef = computeBodyNarrowRef(W_REF, nRacers, displaySize, bodyFillNarrow, DEFAULT_AUTO_SCALE_CONFIG);
-    const rowGapPx            = effectiveDisplaySize * rowConfig.rowGapMultiplier;
-    const deltaT              = pathLengthPx > 0 ? rowGapPx / pathLengthPx : 0.01;
+    const bodyRef = computeBodyNarrowRef(
+      W_REF,
+      nRacers,
+      displaySize,
+      bodyFillNarrow,
+      DEFAULT_AUTO_SCALE_CONFIG,
+    );
+    const rowGapPx = effectiveDisplaySize * rowConfig.rowGapMultiplier;
+    const deltaT = pathLengthPx > 0 ? rowGapPx / pathLengthPx : 0.01;
     // D-GRID: use the batch loop's shuffle when provided (so it equals the plan's start-row view);
     // otherwise draw it here as raceRng's first draw — byte-identical to the pre-unification path.
-    const rowLayout           = rowLayoutParam ?? computeEvenRowLayout(nRacers, rowCount, raceRng);
+    const rowLayout =
+      rowLayoutParam ?? computeEvenRowLayout(nRacers, rowCount, raceRng);
 
     const rowSizeByRow = new Map();
     for (const a of rowLayout.assignments) {
       rowSizeByRow.set(a.rowIndex, (rowSizeByRow.get(a.rowIndex) ?? 0) + 1);
     }
-    const assignmentByRacer = new Map(rowLayout.assignments.map((a) => [a.racerIndex, a]));
+    const assignmentByRacer = new Map(
+      rowLayout.assignments.map((a) => [a.racerIndex, a]),
+    );
 
     // Re-roll schedule keyed to THE canonical clock — the one scalar the browser also keys on.
     const realizedDurationSec = durationModel.realizedDurationSec;
-    const rollCount        = Math.max(2, Math.floor(realizedDurationSec / dynamicsConfig.reRollIntervalDivisor));
-    const rollInterval     = ((dynamicsConfig.reRollLastPositionPercent / 100) * realizedDurationSec * 1000) / rollCount;
-    const lastRollDeadline = realizedDurationSec * 1000 * (dynamicsConfig.reRollLastPositionPercent / 100);
+    const rollCount = Math.max(
+      2,
+      Math.floor(realizedDurationSec / dynamicsConfig.reRollIntervalDivisor),
+    );
+    const rollInterval =
+      ((dynamicsConfig.reRollLastPositionPercent / 100) *
+        realizedDurationSec *
+        1000) /
+      rollCount;
+    const lastRollDeadline =
+      realizedDurationSec *
+      1000 *
+      (dynamicsConfig.reRollLastPositionPercent / 100);
     // Episode-level view (state machine + definitions in sim/observers/escape-episodes.mjs).
     // Declared HERE, immediately before its assignment, because the assignment needs
     // lastRollDeadline (just above) — declaring it further down would put this line in the
@@ -759,68 +1253,85 @@ export function runSingleRace({
     if (ESCAPE_LATENCY && GAP_REROLL_THRESH_LEN != null) {
       escapeEpisodes = makeEscapeEpisodeTracker({
         G: GAP_REROLL_THRESH_LEN,
-        windowEndMs: lastRollDeadline - dynamicsConfig.reRollTransitionDuration * 1000,
+        windowEndMs:
+          lastRollDeadline - dynamicsConfig.reRollTransitionDuration * 1000,
       });
     }
 
     // Init racers
     const racers = Array.from({ length: nRacers }, (_, i) => {
-      const assignment    = assignmentByRacer.get(i) ?? { rowIndex: 0, indexInRow: 0 };
-      const rowSize       = rowSizeByRow.get(assignment.rowIndex) ?? 1;
-      const speedBonus    = computeSpeedBonus(
-        assignment.rowIndex, rowGapPx, pathLengthPx, rowConfig.speedBonusFactor,
-        finishT, isOpen, rowLayout.totalRows
+      const assignment = assignmentByRacer.get(i) ?? {
+        rowIndex: 0,
+        indexInRow: 0,
+      };
+      const rowSize = rowSizeByRow.get(assignment.rowIndex) ?? 1;
+      const speedBonus = computeSpeedBonus(
+        assignment.rowIndex,
+        rowGapPx,
+        pathLengthPx,
+        rowConfig.speedBonusFactor,
+        finishT,
+        isOpen,
+        rowLayout.totalRows,
       );
       // Open track: front row has the largest positive tStart (assembly area).
       // Closed track: row 0 starts at 0, rear rows at negative t (behind start).
       const tStart = isOpen
         ? (rowLayout.totalRows - assignment.rowIndex) * deltaT
         : -(assignment.rowIndex * deltaT);
-      const spreadFactor  = (BASE_SPEED_MIN + raceRng() * (BASE_SPEED_MAX - BASE_SPEED_MIN)) / BASE_SPEED_MEAN;
+      const spreadFactor =
+        (BASE_SPEED_MIN + raceRng() * (BASE_SPEED_MAX - BASE_SPEED_MIN)) /
+        BASE_SPEED_MEAN;
       const speedBonusMult = 1 + speedBonus;
-      const rollJitter    = (raceRng() - 0.5) * 2 * rollInterval * 0.2;
+      const rollJitter = (raceRng() - 0.5) * 2 * rollInterval * 0.2;
 
       const r = {
-        index:                 i,
-        name:                  racerNames?.[i] ?? `R${i + 1}`,
-        t:                     tStart,
+        index: i,
+        name: racerNames?.[i] ?? `R${i + 1}`,
+        t: tStart,
         tStart,
-        rawRowBonus:           speedBonus, // STRIP-DOWN: raw start-row speed bonus (speedBonusMult−1) for the phase envelope
+        rawRowBonus: speedBonus, // STRIP-DOWN: raw start-row speed bonus (speedBonusMult−1) for the phase envelope
         spreadFactor,
         speedBonusMult,
-        baseSpeed:           race_baseSpeed * speedMultiplier * spreadFactor * speedBonusMult,
-        spreadFactorPrev:    spreadFactor,
-        spreadFactorTarget:  spreadFactor,
+        baseSpeed:
+          race_baseSpeed * speedMultiplier * spreadFactor * speedBonusMult,
+        spreadFactorPrev: spreadFactor,
+        spreadFactorTarget: spreadFactor,
         transitionStartTime: 0,
-        transitionDuration:  dynamicsConfig.reRollTransitionDuration * 1000,
-        nextRollTime:        rollInterval + rollJitter,
-        finished:            false,
-        finishRank:          null,
-        finishTime:          null,
-        startRowIndex:       assignment.rowIndex,
-        indexInRow:          assignment.indexInRow,
-        runoutDecay:         1,
-        x: 0, y: 0, angle:   0,
-        frameSizePx:         effectiveDisplaySize,
-        drawnBodyWidthPx:    bodyRef.bodyNarrow,
+        transitionDuration: dynamicsConfig.reRollTransitionDuration * 1000,
+        nextRollTime: rollInterval + rollJitter,
+        finished: false,
+        finishRank: null,
+        finishTime: null,
+        startRowIndex: assignment.rowIndex,
+        indexInRow: assignment.indexInRow,
+        runoutDecay: 1,
+        x: 0,
+        y: 0,
+        angle: 0,
+        frameSizePx: effectiveDisplaySize,
+        drawnBodyWidthPx: bodyRef.bodyNarrow,
         // Same formula as RaceScreen/index.jsx line 610-612 (report 39 parity fix):
         // drawnBodyLengthPx = drawnBodyWidthRefPx × bodyFillLong / bodyFillNarrow.
-        drawnBodyLengthPx:   bodyFillNarrow > 0
-          ? bodyRef.bodyNarrow * bodyFillLong / bodyFillNarrow
-          : bodyRef.bodyNarrow,
-        trackWidthPx:  geometricTrackWidth,
+        drawnBodyLengthPx:
+          bodyFillNarrow > 0
+            ? (bodyRef.bodyNarrow * bodyFillLong) / bodyFillNarrow
+            : bodyRef.bodyNarrow,
+        trackWidthPx: geometricTrackWidth,
         pathLengthPx,
-        rerollCount:              0, // total speed re-rolls fired for this racer
-        trajectoryMult:           1.0, // Phase-3A: smoothed by easeInOutCubic transition; 1.0 when Race Plan inactive
-        trajectoryMultTarget:     1.0,
-        trajectoryMultPrev:       1.0,
+        rerollCount: 0, // total speed re-rolls fired for this racer
+        trajectoryMult: 1.0, // Phase-3A: smoothed by easeInOutCubic transition; 1.0 when Race Plan inactive
+        trajectoryMultTarget: 1.0,
+        trajectoryMultPrev: 1.0,
         trajectoryMultTransStart: 0,
-        areaBonusMult:            1.0, // Phase-3A: set by controller.update(); 1.0 when Race Plan inactive
-        governorMult:             1.0, // Stage B governor; slew-limited in-place (1.0 when disabled)
+        areaBonusMult: 1.0, // Phase-3A: set by controller.update(); 1.0 when Race Plan inactive
+        governorMult: 1.0, // Stage B governor; slew-limited in-place (1.0 when disabled)
       };
       initRacerBehavior(r);
       r.physicalY = computeRowPhysicalY(
-        assignment.indexInRow, rowSize, behaviorConfig.startSpreadRange
+        assignment.indexInRow,
+        rowSize,
+        behaviorConfig.startSpreadRange,
       );
       return r;
     });
@@ -834,57 +1345,92 @@ export function runSingleRace({
       for (const r of racers) {
         const tNorm = isOpen ? Math.min(r.t, 1) : tPos(r.t);
         const p = shape.getPosition(tNorm, r.physicalY / 2);
-        r.x = p.x; r.y = p.y; r.angle = p.angle;
+        r.x = p.x;
+        r.y = p.y;
+        r.angle = p.angle;
       }
     }
 
-    const DT          = 16; // ms per frame — matches game FIXED_DT (index.jsx:138)
-    const maxTime     = Math.max(realizedDurationSec * 3, 600) * 1000; // safety cap: 3× or 10 min
-    let raceTs        = 0;
+    const DT = 16; // ms per frame — matches game FIXED_DT (index.jsx:138)
+    const maxTime = Math.max(realizedDurationSec * 3, 600) * 1000; // safety cap: 3× or 10 min
+    let raceTs = 0;
     let raceProgress = 0; // monotonic leader track-progress [0,1]; drives WHEN phases switch
-                          // (route-based, mirrors index.jsx). Distinct from raceTs (stopwatch ms).
+    // (route-based, mirrors index.jsx). Distinct from raceTs (stopwatch ms).
     let finishedCount = 0;
 
     // Mixing-quota: fraction of Row-1 racers that have overtaken at least one Row-0
     // racer in t-space by the time avoidanceWarmupMs elapses.
-    let mixingQuota    = null;
+    let mixingQuota = null;
     let warmupMeasured = false;
-
 
     computePositions();
 
     // ── Diagnostic snapshot state ─────────────────────────────────────────────
     const diagSnapshots = [];
     let diagSnapIdx = 0;
-    const DIAG_SNAP_MS   = diagnosticMode ? DIAG_SNAP_TIMES_S.map((s) => s * 1000) : [];
+    const DIAG_SNAP_MS = diagnosticMode
+      ? DIAG_SNAP_TIMES_S.map((s) => s * 1000)
+      : [];
     let diagIntLateralPushes = 0;
-    let diagIntBrakeActs     = 0;
+    let diagIntBrakeActs = 0;
 
     function diagTakeSnapshot(nominalTimeS, actualTimeMs) {
       const snap = {
-        timeS: nominalTimeS, actualTimeMs,
-        interval: { lateralPushes: diagIntLateralPushes, brakeActivations: diagIntBrakeActs },
+        timeS: nominalTimeS,
+        actualTimeMs,
+        interval: {
+          lateralPushes: diagIntLateralPushes,
+          brakeActivations: diagIntBrakeActs,
+        },
         racers: racers.map((r) => ({
-          idx: r.index, row: r.startRowIndex,
-          t: +r.t.toFixed(6), physY: +r.physicalY.toFixed(4),
-          speed: +r.baseSpeed.toFixed(6), avoidance: r.avoidanceActive,
+          idx: r.index,
+          row: r.startRowIndex,
+          t: +r.t.toFixed(6),
+          physY: +r.physicalY.toFixed(4),
+          speed: +r.baseSpeed.toFixed(6),
+          avoidance: r.avoidanceActive,
         })),
         brakeZonePairs: [],
         closePairs: [],
       };
       for (let a = 0; a < racers.length; a++) {
         for (let b = a + 1; b < racers.length; b++) {
-          const ra = racers[a], rb = racers[b];
+          const ra = racers[a],
+            rb = racers[b];
           const dT = rb.t - ra.t;
           const dY = Math.abs(ra.physicalY - rb.physicalY);
-          if (dT > 0 && dT < 0.015 && dY < 0.2)  snap.brakeZonePairs.push({ follower: ra.index, followerRow: ra.startRowIndex, leader: rb.index, leaderRow: rb.startRowIndex, dT: +dT.toFixed(5), dY: +dY.toFixed(4) });
-          if (dT < 0 && -dT < 0.015 && dY < 0.2) snap.brakeZonePairs.push({ follower: rb.index, followerRow: rb.startRowIndex, leader: ra.index, leaderRow: ra.startRowIndex, dT: +(-dT).toFixed(5), dY: +dY.toFixed(4) });
-          if (Math.abs(dT) < 0.005 && dY < 0.3)  snap.closePairs.push({ a: ra.index, aRow: ra.startRowIndex, b: rb.index, bRow: rb.startRowIndex, dT: +dT.toFixed(5), dY: +dY.toFixed(4) });
+          if (dT > 0 && dT < 0.015 && dY < 0.2)
+            snap.brakeZonePairs.push({
+              follower: ra.index,
+              followerRow: ra.startRowIndex,
+              leader: rb.index,
+              leaderRow: rb.startRowIndex,
+              dT: +dT.toFixed(5),
+              dY: +dY.toFixed(4),
+            });
+          if (dT < 0 && -dT < 0.015 && dY < 0.2)
+            snap.brakeZonePairs.push({
+              follower: rb.index,
+              followerRow: rb.startRowIndex,
+              leader: ra.index,
+              leaderRow: ra.startRowIndex,
+              dT: +(-dT).toFixed(5),
+              dY: +dY.toFixed(4),
+            });
+          if (Math.abs(dT) < 0.005 && dY < 0.3)
+            snap.closePairs.push({
+              a: ra.index,
+              aRow: ra.startRowIndex,
+              b: rb.index,
+              bRow: rb.startRowIndex,
+              dT: +dT.toFixed(5),
+              dY: +dY.toFixed(4),
+            });
         }
       }
       diagSnapshots.push(snap);
       diagIntLateralPushes = 0;
-      diagIntBrakeActs     = 0;
+      diagIntBrakeActs = 0;
     }
 
     if (diagnosticMode) {
@@ -893,32 +1439,32 @@ export function runSingleRace({
     }
 
     // ── Phase-3B: COMEBACK rank tracking state ────────────────────────────────
-    const cbCfg            = comebackAnalysisConfig;
-    const cbRankHistory    = cbCfg ? new Map() : null; // b1Idx → [{ts, rank}]
-    const cbLastTriggerTs  = cbCfg ? new Map() : null; // b1Idx → last trigger raceTs (ms)
-    let   cbOutcomeStartMs = null;
-    let   cbOutcomeEndMs   = null;
-    let   cbEndgameStartMs = null;
-    const cbTriggers       = cbCfg ? [] : null;
+    const cbCfg = comebackAnalysisConfig;
+    const cbRankHistory = cbCfg ? new Map() : null; // b1Idx → [{ts, rank}]
+    const cbLastTriggerTs = cbCfg ? new Map() : null; // b1Idx → last trigger raceTs (ms)
+    let cbOutcomeStartMs = null;
+    let cbOutcomeEndMs = null;
+    let cbEndgameStartMs = null;
+    const cbTriggers = cbCfg ? [] : null;
     const cbMaxGainByRacer = cbCfg ? new Map() : null;
 
     // ── Lightweight per-race stats (always collected, low overhead) ───────────
-    let liteRow1BrakeFrames = 0;  // racer-frames where startRowIndex=1 AND avoidanceActive
-    let liteRow0BrakeFrames = 0;  // racer-frames where startRowIndex=0 AND avoidanceActive
-    let liteRow2BrakeFrames = 0;  // racer-frames where startRowIndex=2 AND avoidanceActive
-    let liteLateralMoves    = 0;  // racer-frames where |physicalY delta| > 1e-4
+    let liteRow1BrakeFrames = 0; // racer-frames where startRowIndex=1 AND avoidanceActive
+    let liteRow0BrakeFrames = 0; // racer-frames where startRowIndex=0 AND avoidanceActive
+    let liteRow2BrakeFrames = 0; // racer-frames where startRowIndex=2 AND avoidanceActive
+    let liteLateralMoves = 0; // racer-frames where |physicalY delta| > 1e-4
     const liteRow1EverAhead = new Set(); // row-1 racer indices that at any point had t > some row-0 t
-    let litePrevPhysY       = null;
+    let litePrevPhysY = null;
     // Overlap thresholds: 10% of body diameter in normalised track-space.
     // bodyDiameterX/Y are in world pixels; divide by track dimensions to get normalised units.
-    const bodyDiameterX       = displaySize * bodyFillX;
-    const bodyDiameterY       = displaySize * bodyFillY;
-    const overlapThreshold_t  = 0.10 * bodyDiameterY / pathLengthPx;
-    const overlapThreshold_y  = 0.10 * bodyDiameterX / geometricTrackWidth;
+    const bodyDiameterX = displaySize * bodyFillX;
+    const bodyDiameterY = displaySize * bodyFillY;
+    const overlapThreshold_t = (0.1 * bodyDiameterY) / pathLengthPx;
+    const overlapThreshold_y = (0.1 * bodyDiameterX) / geometricTrackWidth;
 
     // Lateral quality metrics
-    let liteOverlapPairFrames    = 0;   // pair-frames with |dT|<overlapThreshold_t AND |dY|<overlapThreshold_y
-    let liteOverlapPairTotal     = 0;   // total pair-frames checked
+    let liteOverlapPairFrames = 0; // pair-frames with |dT|<overlapThreshold_t AND |dY|<overlapThreshold_y
+    let liteOverlapPairTotal = 0; // total pair-frames checked
     // Honest overlap metric: actual body-extent collision.
     // Both dimensions sourced from render primitives independently (not one from the other).
     // Isotropic renderer: scale = bodyRef.bodyNarrow / (displaySize × bodyFillNarrow).
@@ -926,12 +1472,13 @@ export function runSingleRace({
     // so the general ×(frameWidth/frameHeight) factor equals 1 and is omitted.
     // Overlap fires when both axes touch simultaneously.
     // For closed tracks: t is wrapped mod finishT so lapping pairs are correctly detected.
-    const drawnBodyWidthPx  = bodyRef.bodyNarrow;                                              // px drawn width
-    const drawnBodyLengthPx = bodyFillNarrow > 0
-      ? bodyRef.bodyNarrow * bodyFillLong / bodyFillNarrow                                  // px drawn length
-      : bodyRef.bodyNarrow;
+    const drawnBodyWidthPx = bodyRef.bodyNarrow; // px drawn width
+    const drawnBodyLengthPx =
+      bodyFillNarrow > 0
+        ? (bodyRef.bodyNarrow * bodyFillLong) / bodyFillNarrow // px drawn length
+        : bodyRef.bodyNarrow;
     let honestOverlapPairFrames = 0;
-    let honestOverlapPairTotal  = 0;
+    let honestOverlapPairTotal = 0;
     // ── passThroughCount (sim-only telemetry) ────────────────────────────────────
     // Counts lateral pass-through events: the sign of a pair's lateral gap (dY) FLIPS
     // while their bodies are longitudinally overlapping (dT_px < drawnBodyLengthPx) —
@@ -939,61 +1486,67 @@ export function runSingleRace({
     // as opposed to a legal overtake (which happens with longitudinal clearance).
     // Window: [behaviorConfig.avoidanceWarmupMs, race end] — the first warmup window is
     // intentionally uncontrolled (start pack), so it is excluded.
-    let passThroughCount        = 0;
-    const passThroughPrevSign   = new Map(); // pairKey → last non-zero sign of (ra.physicalY - rb.physicalY)
+    let passThroughCount = 0;
+    const passThroughPrevSign = new Map(); // pairKey → last non-zero sign of (ra.physicalY - rb.physicalY)
     // Lapping instrumentation (closed tracks only, Part 1 verification):
     // maxRealSpread: max(t_leading - t_trailing) seen during the race, in laps (1.0 = one full lap).
     // honestSameLapFrames: honest overlap where |ra.t - rb.t| < 1.0 (same or seam-adjacent lap).
     // honestCrossLapFrames: honest overlap where |ra.t - rb.t| >= 1.0 (genuine lapping: 1+ lap ahead).
-    let maxRealSpread        = 0;
-    let honestSameLapFrames  = 0;
+    let maxRealSpread = 0;
+    let honestSameLapFrames = 0;
     let honestCrossLapFrames = 0;
-    let liteZigzagSum            = 0;   // sum of |physicalYVelocity change| per racer-frame (after 4s)
-    let liteZigzagFrames         = 0;   // racer-frames counted for zigzag (after 4s warmup)
-    let litePrevPhysYVel         = null;// previous physicalYVelocity per racer index
-    const liteOverlapPairState   = new Map(); // pairKey → consecutive overlapping frame count
-    let liteOverlapResolutionSum = 0;   // sum of resolved overlap-run lengths (frames)
-    let liteOverlapResolutionN   = 0;   // count of resolved overlap runs
+    let liteZigzagSum = 0; // sum of |physicalYVelocity change| per racer-frame (after 4s)
+    let liteZigzagFrames = 0; // racer-frames counted for zigzag (after 4s warmup)
+    let litePrevPhysYVel = null; // previous physicalYVelocity per racer index
+    const liteOverlapPairState = new Map(); // pairKey → consecutive overlapping frame count
+    let liteOverlapResolutionSum = 0; // sum of resolved overlap-run lengths (frames)
+    let liteOverlapResolutionN = 0; // count of resolved overlap runs
     // New metrics: lateralSpeedScore, brakeRate, stableOvertakes
-    let liteLatSpeedSum          = 0;   // sum of |physicalYVelocity| per active racer-frame (after 4s)
-    let liteLatSpeedFrames       = 0;
-    let liteBrakeSum             = 0;   // racer-frames where avoidanceActive=true (after 4s)
-    let liteBrakeFrames          = 0;
+    let liteLatSpeedSum = 0; // sum of |physicalYVelocity| per active racer-frame (after 4s)
+    let liteLatSpeedFrames = 0;
+    let liteBrakeSum = 0; // racer-frames where avoidanceActive=true (after 4s)
+    let liteBrakeFrames = 0;
     // brakeMatchFailureCount: events where brake-to-match is engaged (brakeMatchFactor<1)
     // but the trailer still out-advances its locked leader for 5 consecutive frames while
     // both remain in the longitudinal brake zone (report 06 §7 metric).
-    let brakeMatchFailureCount   = 0;
-    let brakeMatchLeaderBraked   = 0; // bypass events where the leader was itself braked (bmFactor<1)
-    const brakeMatchFailState    = new Map(); // pairKey → consecutive qualifying frames
+    let brakeMatchFailureCount = 0;
+    let brakeMatchLeaderBraked = 0; // bypass events where the leader was itself braked (bmFactor<1)
+    const brakeMatchFailState = new Map(); // pairKey → consecutive qualifying frames
     // stableOvertakes: confirmed lead-swaps (3s+ duration) in 20%–80% of race, per racer
-    const SO_CONFIRM_FRAMES      = Math.round(3000 / DT); // 3 s at 60 fps ≈ 180 frames
-    const soPairLeader           = new Map(); // pairKey → currentLeaderIdx
-    const soPairSince            = new Map(); // pairKey → consecutive frames at current lead
-    const soPairConfirmed        = new Map(); // pairKey → confirmed (≥3s) leader idx
-    let soCount                  = 0;
+    const SO_CONFIRM_FRAMES = Math.round(3000 / DT); // 3 s at 60 fps ≈ 180 frames
+    const soPairLeader = new Map(); // pairKey → currentLeaderIdx
+    const soPairSince = new Map(); // pairKey → consecutive frames at current lead
+    const soPairConfirmed = new Map(); // pairKey → confirmed (≥3s) leader idx
+    let soCount = 0;
 
     // ── Phase-3A: Naturalness metrics state ──────────────────────────────────
     const JERK_BASESPEED_EPSILON = 1e-5;
-    const JERK_HIGH_THRESHOLD    = 0.05; // calibrated post-baseline; ≈ 95th-pct jerk
+    const JERK_HIGH_THRESHOLD = 0.05; // calibrated post-baseline; ≈ 95th-pct jerk
     // Diagnostic-only windows (telemetry counters, NOT control) — based on the realized race
     // duration so post-fix re-gate telemetry lines up with the actual race timeline on closed
     // tracks. Reuses realizedDurationSec (same source as the re-roll schedule). Does not affect
     // race behavior or fairness stats (band-reach/Holm use finish ranks).
-    const stablePhaseStartMs     = Math.max(0, 0.25 * realizedDurationSec * 1000);
-    const stablePhaseEndMs       = 0.95 * realizedDurationSec * 1000;
-    const PULK_T_THRESHOLD       = pathLengthPx > 0 ? 200 / pathLengthPx : 0.01;
-    const pulkWindowStartMs      = 0.25 * realizedDurationSec * 1000;
-    const pulkWindowEndMs        = 0.50 * realizedDurationSec * 1000;
-    const natPrevEffSpeed        = new Map(); // racerIndex → prev effective speed
-    const natPrevT               = new Map(); // racerIndex → t before Pass-2
-    let natJerkSum = 0, natJerkMax = 0, natJerkSteps = 0, natJerkHighCount = 0;
+    const stablePhaseStartMs = Math.max(0, 0.25 * realizedDurationSec * 1000);
+    const stablePhaseEndMs = 0.95 * realizedDurationSec * 1000;
+    const PULK_T_THRESHOLD = pathLengthPx > 0 ? 200 / pathLengthPx : 0.01;
+    const pulkWindowStartMs = 0.25 * realizedDurationSec * 1000;
+    const pulkWindowEndMs = 0.5 * realizedDurationSec * 1000;
+    const natPrevEffSpeed = new Map(); // racerIndex → prev effective speed
+    const natPrevT = new Map(); // racerIndex → t before Pass-2
+    let natJerkSum = 0,
+      natJerkMax = 0,
+      natJerkSteps = 0,
+      natJerkHighCount = 0;
     // Δ5s ring buffers: track trajectoryMult during OUTCOME; detect controller oscillation
     const TM_RING_SIZE = 313; // ≈5s at 16ms/step
     const tmRings = new Map(); // racerIndex → { buf: Float32Array, idx: number }
-    let natOvertakeCount = 0, natNaturalOvertakeCount = 0;
-    let natPulkFrames = 0, natStableFrames = 0;
+    let natOvertakeCount = 0,
+      natNaturalOvertakeCount = 0;
+    let natPulkFrames = 0,
+      natStableFrames = 0;
     let natPulkWasActive = false;
-    let natPulkTriggersInWindow = 0, natPulkTriggersOutOfWindow = 0;
+    let natPulkTriggersInWindow = 0,
+      natPulkTriggersOutOfWindow = 0;
 
     // frameHook support: reusable Map cleared before each applyRacerBehavior call
     const _frameDiagOut = frameHook ? new Map() : null;
@@ -1002,13 +1555,13 @@ export function runSingleRace({
     // bkGapBins: one snapshot per 5% progress bin (leader gap to median + to 2nd).
     // bkPeak*: the max gap-to-median seen while progress < corridorStart, plus WHO
     // led there and their multiplier decomposition at that frame.
-    const bkGapBins   = breakawayDiag ? [] : null;
-    let   bkNextBin   = 0;                 // next 5% bin index (0..20) still to record
-    let   bkPeakGap   = -Infinity;         // max pre-OUTCOME (leaderT - medianT)/finishT
-    let   bkPeakProgress   = 0;
-    let   bkPeakLeaderIdx  = -1;
-    let   bkPeakGap2nd     = 0;
-    let   bkPeakDecomp     = null;
+    const bkGapBins = breakawayDiag ? [] : null;
+    let bkNextBin = 0; // next 5% bin index (0..20) still to record
+    let bkPeakGap = -Infinity; // max pre-OUTCOME (leaderT - medianT)/finishT
+    let bkPeakProgress = 0;
+    let bkPeakLeaderIdx = -1;
+    let bkPeakGap2nd = 0;
+    let bkPeakDecomp = null;
 
     // ── PULK-phase contest director — parity with the browser ─────────────────────
     // Phase fractions + seed come from the controller (live boundaries, single source).
@@ -1022,24 +1575,31 @@ export function runSingleRace({
       enabled: pulkLeadRotationOn,
       attackerSlots: dynamicsConfig.pulkLeadRotationAttackerSlots ?? 2,
       dropDepthLengths: dynamicsConfig.pulkLeadRotationDropDepthLengths ?? 2,
-      outsiderMaxReachLengths: dynamicsConfig.pulkLeadRotationOutsiderMaxReachLengths ?? 15,
-      deadlockTimeoutMs: dynamicsConfig.pulkLeadRotationDeadlockTimeoutMs ?? 12000,
+      outsiderMaxReachLengths:
+        dynamicsConfig.pulkLeadRotationOutsiderMaxReachLengths ?? 15,
+      deadlockTimeoutMs:
+        dynamicsConfig.pulkLeadRotationDeadlockTimeoutMs ?? 12000,
       minHoldMs: dynamicsConfig.pulkLeadRotationMinHoldMs ?? 750,
       frontPool: dynamicsConfig.pulkFrontPool ?? 8,
       leaderBrake: dynamicsConfig.pulkLeaderBrake ?? 0,
       challengerBoost: dynamicsConfig.pulkChallengerBoost ?? 0,
       maxEffect: dynamicsConfig.pulkEnvelopeMaxEffect ?? 0.12,
       maxStepPerFrame: dynamicsConfig.pulkEnvelopeMaxStepPerFrame ?? 0.01,
-      ceilingCap: (dynamicsConfig.pulkCeilingCap ?? false)
-        ? computeDirectorCeiling(BASE_SPEED_MAX, BASE_SPEED_MEAN, dynamicsConfig.pulkBoostHeadroom ?? 0)
-        : 0,
+      ceilingCap:
+        (dynamicsConfig.pulkCeilingCap ?? false)
+          ? computeDirectorCeiling(
+              BASE_SPEED_MAX,
+              BASE_SPEED_MEAN,
+              dynamicsConfig.pulkBoostHeadroom ?? 0,
+            )
+          : 0,
     };
     // Phase-split MECHANIC boundaries follow the LIVE plan phase fractions (single source: the
     // controller), mirroring the browser — so the bonuses move with the PULK phase if it is edited.
     // Defaults (pulkStart 0.25 / pulkEnd 0.5) are unchanged → byte-identical to the pinned SD_* values.
     // (The strip-metrics OBSERVATION windows below intentionally stay on the pinned SD_* constants.)
     const pulkStartLive = govFractions?.pulkStartFrac ?? SD_PULK_START;
-    const pulkEndLive   = govFractions?.pulkEndFrac ?? SD_PULK_END;
+    const pulkEndLive = govFractions?.pulkEndFrac ?? SD_PULK_END;
     // Row-bonus phase envelope config for the shared t-update (raceStep.js). Reads the
     // SHIPPED dynamics config — the SAME source the browser reads (phaseSplitBonusEnabled +
     // rowBonus{Early,Pulk,Post}) — so the sim applies rowEnvMult natively, exactly as the game
@@ -1049,8 +1609,8 @@ export function runSingleRace({
       chaosEndFrac: pulkStartLive,
       pulkEndFrac: pulkEndLive,
       early: dynamicsConfig.rowBonusEarly ?? 1,
-      pulk:  dynamicsConfig.rowBonusPulk  ?? 1,
-      post:  dynamicsConfig.rowBonusPost  ?? 1,
+      pulk: dynamicsConfig.rowBonusPulk ?? 1,
+      post: dynamicsConfig.rowBonusPost ?? 1,
       smooth: dynamicsConfig.enableRowEnvSmooth ?? false, // ease the step over 1s (default false = instant)
     };
     // Per-race director state. applyPulkLeadRotation lazily attaches its own leadRot sub-state on
@@ -1066,31 +1626,48 @@ export function runSingleRace({
     // Pre-OUTCOME P1/top-3 churn + per-racer front-running fractions. All gated on the
     // flag: when off the Sets/Maps stay null and the per-step block below is skipped,
     // so a no-flag run does zero extra work and is byte-identical.
-    let   faSteps            = 0;   // pre-OUTCOME steps observed
-    let   faLeadChanges      = 0;   // P1 identity changes step-to-step
-    let   faPrevP1           = -1;  // previous step's P1 racer index
-    const faP1Set            = frontAction ? new Set() : null; // distinct P1 holders
-    const faP1StepsByIdx     = frontAction ? new Map() : null; // index → steps spent in P1
-    const faTop3StepsByIdx   = frontAction ? new Map() : null; // index → steps spent in top-3
-    let   faPrevTop3         = null; // previous step's ordered top-3 indices
-    let   faTop3ShuffleCount = 0;   // steps where the ordered top-3 changed
-    let   faTop3CompareSteps = 0;   // steps compared against a previous top-3
+    let faSteps = 0; // pre-OUTCOME steps observed
+    let faLeadChanges = 0; // P1 identity changes step-to-step
+    let faPrevP1 = -1; // previous step's P1 racer index
+    const faP1Set = frontAction ? new Set() : null; // distinct P1 holders
+    const faP1StepsByIdx = frontAction ? new Map() : null; // index → steps spent in P1
+    const faTop3StepsByIdx = frontAction ? new Map() : null; // index → steps spent in top-3
+    let faPrevTop3 = null; // previous step's ordered top-3 indices
+    let faTop3ShuffleCount = 0; // steps where the ordered top-3 changed
+    let faTop3CompareSteps = 0; // steps compared against a previous top-3
 
     // ── STRIP-DOWN dual-window observer state (--strip-metrics; read-only) ─────
     // Two separate action windows: PULK [0.25,0.55) and OUTCOME [0.55,1.0). Plus worst-case
     // assigned-winner tracking (rank entering OUTCOME + late-surge proxy) and a per-racer
     // areaBonus sample for the bonus↔leader correlation. Gated on the flag → no-flag = byte-identical.
-    const mkWin = () => ({ steps: 0, leadChanges: 0, prevP1: -1, p1Set: new Set(),
-      p1Steps: new Map(), top3Steps: new Map(), prevTop3: null, shuffle: 0, compareSteps: 0,
-      curP1: -1, curSince: 0, confirmed: -1, cleanOv: 0, chargerDepths: [] });
+    const mkWin = () => ({
+      steps: 0,
+      leadChanges: 0,
+      prevP1: -1,
+      p1Set: new Set(),
+      p1Steps: new Map(),
+      top3Steps: new Map(),
+      prevTop3: null,
+      shuffle: 0,
+      compareSteps: 0,
+      curP1: -1,
+      curSince: 0,
+      confirmed: -1,
+      cleanOv: 0,
+      chargerDepths: [],
+    });
     const smRankAt025 = STRIP_METRICS ? new Map() : null; // index → live rank at PULK entry (~0.25); charger start-depth
     const smPulk = STRIP_METRICS ? mkWin() : null; // action window 0.25→0.55
-    const smOut  = STRIP_METRICS ? mkWin() : null; // action window 0.55→1.0
+    const smOut = STRIP_METRICS ? mkWin() : null; // action window 0.55→1.0
     const smAreaSample = STRIP_METRICS ? new Map() : null; // index → areaBonusMult sampled once in PULK
     // Assigned winner = the racer with targetRank 1 (null when no plan / not passed).
-    let   smWinnerIdx = -1;
+    let smWinnerIdx = -1;
     if (STRIP_METRICS && racerTargetRankMap) {
-      for (const [idx, rank] of racerTargetRankMap.entries()) if (rank === 1) { smWinnerIdx = idx; break; }
+      for (const [idx, rank] of racerTargetRankMap.entries())
+        if (rank === 1) {
+          smWinnerIdx = idx;
+          break;
+        }
     }
     // ── HERO-MAP observer state (read-only; --hero-map) ──────────────────────────
     // Per hero (index → accumulator). Populated lazily the first frame a racer is tagged
@@ -1099,13 +1676,13 @@ export function runSingleRace({
     // ── GAP-METRICS per-race state (read-only; only allocated when --gap-metrics) ──
     // PRIMARY unit = RACER LENGTHS (arc distance to the leader × govLenScale, the shared HUD scale).
     // Seconds kept as a SECONDARY column (needs the leader trace); never a headline / threshold basis.
-    const gmTrace = gapMetrics ? [] : null;         // ascending {ts, t} leader-position-vs-time trace (SEC)
-    const gmCheckpoints = gapMetrics ? [] : null;   // snapshots at progress 0.25 / 0.50 / 0.75 / 0.90
+    const gmTrace = gapMetrics ? [] : null; // ascending {ts, t} leader-position-vs-time trace (SEC)
+    const gmCheckpoints = gapMetrics ? [] : null; // snapshots at progress 0.25 / 0.50 / 0.75 / 0.90
     const gmPerRacer = gapMetrics ? new Map() : null; // index → {maxBehindLen, inContentionSteps, totalSteps, maxBehindSec}
-    const gmDeadSeries = gapMetrics ? [] : null;    // final-third leader→P2 gap, LENGTHS (primary deadRace)
+    const gmDeadSeries = gapMetrics ? [] : null; // final-third leader→P2 gap, LENGTHS (primary deadRace)
     const gmDeadSeriesSec = gapMetrics ? [] : null; // same, SECONDS (secondary)
-    const gmFrontSeries = gapMetrics ? [] : null;   // final-third FRONTMOST consecutive gap, LENGTHS (lead-group detach)
-    let gmLineSnap = null;                           // field lengths-behind snapshot at the leader-finish instant
+    const gmFrontSeries = gapMetrics ? [] : null; // final-third FRONTMOST consecutive gap, LENGTHS (lead-group detach)
+    let gmLineSnap = null; // field lengths-behind snapshot at the leader-finish instant
     // FRONTMOST-GAP window: the largest consecutive-racer gap among the front FRONT_K racers, and how
     // many sit ahead of it — the detached-lead-GROUP signal (leaderGapToP2 sees only a lone leader).
     // K=10 caps a 40-field's plausible lead group; racers beyond rank 10 are not part of the "front"
@@ -1114,7 +1691,7 @@ export function runSingleRace({
     const GM_FRONT_K = 10;
     // NIGHT-SWEEP (gap-space): 0.25 added to match the spec sample points (0.25/0.50/0.75/0.90 + line);
     // 0.25 = the choreo/chaos boundary — the earliest "is the field already strung out?" snapshot.
-    const GM_CPS = [0.25, 0.5, 0.75, 0.9];          // sample checkpoints (leader progress)
+    const GM_CPS = [0.25, 0.5, 0.75, 0.9]; // sample checkpoints (leader progress)
     let gmNextCp = 0;
     // ── RUNAWAY-PARADE per-race state (read-only; only allocated when --runaway-parade) ──
     // Collects the RAW signals the two classifiers (sim/observers/runaway-parade.mjs) consume. All
@@ -1122,48 +1699,52 @@ export function runSingleRace({
     // + lead), at 0.95 (final-window speed baseline) and at the leader-crossing instant (finish
     // snapshot front gaps); a running MIN of the 0.90-leader's lead over the field across [0.90, its
     // own finish] (the "never challenged" signal). Never mutates race state.
-    const RP_WINDOW_START = RUNAWAY_PARADE_DEFAULTS.windowStart;             // 0.90
-    const RP_SPEED_START  = 1 - RUNAWAY_PARADE_DEFAULTS.speedWindow;         // 0.95
-    const rp = runawayParade ? {
-      leaderIdxAt090:      null,       // frontmost LIVE racer at the first frame >= windowStart
-      leaderGapP2At090Len: null,       // its lead over P2 at that frame (lengths)
-      within3P1At090:      null,       // # live racers within leadLen (3.0) lengths behind P1 at windowStart
+    const RP_WINDOW_START = RUNAWAY_PARADE_DEFAULTS.windowStart; // 0.90
+    const RP_SPEED_START = 1 - RUNAWAY_PARADE_DEFAULTS.speedWindow; // 0.95
+    const rp = runawayParade
+      ? {
+          leaderIdxAt090: null, // frontmost LIVE racer at the first frame >= windowStart
+          leaderGapP2At090Len: null, // its lead over P2 at that frame (lengths)
+          within3P1At090: null, // # live racers within leadLen (3.0) lengths behind P1 at windowStart
 
-      minLeadFrom090Len:   Infinity,   // MIN lead over the field across [windowStart, its own finish]
-      t095ByIndex:         null,       // per-racer t at the first frame >= (1 - speedWindow)
-      ts095:               null,       // raceTs at that frame
-      line:                null,       // finish snapshot { order:[idx], gaps:[len] } at leader-crossing
-      speed095ByIndex:     null,       // per-racer avg speed over [~0.95, line] (relative-spread source)
-      formation:           makeFormationTracker(), // WHEN the leader→P2 gap forms (read-only per-frame)
-      // ── Release-sweep metrics (read-only; definitions in sim/observers/release-contest.mjs) ──
-      // lateContest: how many times the lead actually changed hands in [windowStart, 1.0] — the
-      //   companion to p1SwapAfter090, which alone cannot tell one pass from a five-way scrap.
-      // releaseRanks: one-shot rank snapshot at the LIVE choreoReleaseProgress, so post-release band
-      //   drift can be separated from "never reached the band" (see bandExitAfterRelease).
-      lateContest:         makeLateContestTracker(RP_WINDOW_START),
-      releaseRanks:        makeReleaseRankTracker(CHOREO_RELEASE_PROGRESS),
-      // ── Sustained P1 battle (read-only; definitions in sim/observers/outcome-front-battle.mjs) ──
-      // Window starts at the LIVE contestWindowStart — the front act's own key, no longer B2's
-      // resolve checkpoint. No hardcoded progress constant.
-      frontBattle:         makeFrontBattleTracker({ windowStart: CONTEST_WINDOW_START }),
-      // PULK-SPECTACLE-1 front-liveliness (read-only): LAW + chaos[0,0.25]/pulk[0.25,0.60] metrics.
-      // drawnRank from the plan's fair draw; gapCapG = the shipped gap-cap threshold (lengths) or null.
-      frontLiveliness:     PULK_WINDOW
-        ? makeFrontLivelinessTracker({
-            drawnRank: (i) => racerTargetRankMap?.get(i) ?? null,
-            // chaosEnd tracks the LIVE pulkStart so the chaos window / handover snapshot align with the
-            // real chaos→pulk boundary (STAGE 3: --pulkStart=0.15 measures the 0.15 handover, not 0.25).
-            chaosEnd: RP_PULK_START,
-            windowHi: 0.6,
-            breakawayLen: 2.0,
-            gapCapG: GAP_REROLL_THRESH_LEN,
-          })
-        : null,
-    } : null;
+          minLeadFrom090Len: Infinity, // MIN lead over the field across [windowStart, its own finish]
+          t095ByIndex: null, // per-racer t at the first frame >= (1 - speedWindow)
+          ts095: null, // raceTs at that frame
+          line: null, // finish snapshot { order:[idx], gaps:[len] } at leader-crossing
+          speed095ByIndex: null, // per-racer avg speed over [~0.95, line] (relative-spread source)
+          formation: makeFormationTracker(), // WHEN the leader→P2 gap forms (read-only per-frame)
+          // ── Release-sweep metrics (read-only; definitions in sim/observers/release-contest.mjs) ──
+          // lateContest: how many times the lead actually changed hands in [windowStart, 1.0] — the
+          //   companion to p1SwapAfter090, which alone cannot tell one pass from a five-way scrap.
+          // releaseRanks: one-shot rank snapshot at the LIVE choreoReleaseProgress, so post-release band
+          //   drift can be separated from "never reached the band" (see bandExitAfterRelease).
+          lateContest: makeLateContestTracker(RP_WINDOW_START),
+          releaseRanks: makeReleaseRankTracker(CHOREO_RELEASE_PROGRESS),
+          // ── Sustained P1 battle (read-only; definitions in sim/observers/outcome-front-battle.mjs) ──
+          // Window starts at the LIVE contestWindowStart — the front act's own key, no longer B2's
+          // resolve checkpoint. No hardcoded progress constant.
+          frontBattle: makeFrontBattleTracker({
+            windowStart: CONTEST_WINDOW_START,
+          }),
+          // PULK-SPECTACLE-1 front-liveliness (read-only): LAW + chaos[0,0.25]/pulk[0.25,0.60] metrics.
+          // drawnRank from the plan's fair draw; gapCapG = the shipped gap-cap threshold (lengths) or null.
+          frontLiveliness: PULK_WINDOW
+            ? makeFrontLivelinessTracker({
+                drawnRank: (i) => racerTargetRankMap?.get(i) ?? null,
+                // chaosEnd tracks the LIVE pulkStart so the chaos window / handover snapshot align with the
+                // real chaos→pulk boundary (STAGE 3: --pulkStart=0.15 measures the 0.15 handover, not 0.25).
+                chaosEnd: RP_PULK_START,
+                windowHi: 0.6,
+                breakawayLen: 2.0,
+                gapCapG: GAP_REROLL_THRESH_LEN,
+              })
+            : null,
+        }
+      : null;
     // ── PHYSICS-TAX per-race tracker (read-only; only allocated when --physics-tax) ──
     // Fed once per racer per frame at the advanceRacerT call site below. Never mutates race state.
     const pt = physicsTax ? makePhysicsTaxTracker() : null;
-    let ptPrevMeanT = null;   // prev-frame mean live-racer t, for the field-speed sample (physics-tax)
+    let ptPrevMeanT = null; // prev-frame mean live-racer t, for the field-speed sample (physics-tax)
     // ── SCREEN escape-latency (read-only) ──────────────────────────────────────────────────────
     // escapeDepth answers the owner's eye finding: "a racer escapes to a sizeable lead and is THEN
     // visibly braked". It is the max P1->P2 gap (racer lengths) the leader reached BEFORE the first
@@ -1179,53 +1760,55 @@ export function runSingleRace({
     // ceiling (controllerParams.maxMult 1.10 at defaults); NAT_CEIL (below) = the natural spreadFactor max.
     const SS_TRAJ_MAX = 1.1;
     const ss = speedSource ? { samples: {}, nextSample: 0, cap: null } : null;
-    const HM_CEIL  = 1.09;                 // servo ceiling (maxMult 1.10) — parity with smWinnerCeilSteps
-    const HM_LAT   = V4_LATERAL_PROXIMITY; // lateral proximity for a REAL overtake (0.3) — parity with physical_overtake
+    const HM_CEIL = 1.09; // servo ceiling (maxMult 1.10) — parity with smWinnerCeilSteps
+    const HM_LAT = V4_LATERAL_PROXIMITY; // lateral proximity for a REAL overtake (0.3) — parity with physical_overtake
     const hmBandOf = (rank) => {
       if (rank == null) return null;
-      for (let i = 0; i < BAND_EDGES.length; i++) if (rank <= BAND_EDGES[i]) return i;
+      for (let i = 0; i < BAND_EDGES.length; i++)
+        if (rank <= BAND_EDGES[i]) return i;
       return BAND_EDGES.length;
     };
-    let   smWinnerRankAt025    = null; // winner's live rank at PULK start (0.25) — is he already deep before the scramble?
-    let   smWinnerRankAt050    = null; // winner's live rank at PULK end (0.50) — did the PULK contest push him deep?
-    let   smWinnerRankAt055    = null; // winner's live rank at the first OUTCOME step (far back = drew badly)
-    let   smWinnerMaxTraj      = 1.0;  // winner's peak trajectoryMult during OUTCOME (late-surge proxy)
-    let   smWinnerOutcomeSteps = 0;    // winner OUTCOME steps observed
-    let   smWinnerCeilSteps    = 0;    // winner OUTCOME steps at controller ceiling (≥1.09 = straining)
+    let smWinnerRankAt025 = null; // winner's live rank at PULK start (0.25) — is he already deep before the scramble?
+    let smWinnerRankAt050 = null; // winner's live rank at PULK end (0.50) — did the PULK contest push him deep?
+    let smWinnerRankAt055 = null; // winner's live rank at the first OUTCOME step (far back = drew badly)
+    let smWinnerMaxTraj = 1.0; // winner's peak trajectoryMult during OUTCOME (late-surge proxy)
+    let smWinnerOutcomeSteps = 0; // winner OUTCOME steps observed
+    let smWinnerCeilSteps = 0; // winner OUTCOME steps at controller ceiling (≥1.09 = straining)
     // Naturalness: does an action tool push a racer's speed past the +8% natural re-roll ceiling?
     // natFactor = spreadFactor × tool mults (governor boost/brake + areaBonus), excluding
     // the row bonus (0 in PULK anyway) and drafting/brake physics. >1.08 = faster than the fastest
     // natural (re-roll-only) racer → the eye may read "too fast". Sampled over PULK racer-steps.
-    const NAT_CEIL    = BASE_SPEED_MAX / BASE_SPEED_MEAN; // natural re-roll ceiling (max spreadFactor ≈ 1.081)
-    let   smNatMax    = 1.0;
-    let   smNatSteps  = 0;
-    let   smNatExceed = 0; // racer-steps whose speed factor beats the natural ceiling (tool over-speed)
+    const NAT_CEIL = BASE_SPEED_MAX / BASE_SPEED_MEAN; // natural re-roll ceiling (max spreadFactor ≈ 1.081)
+    let smNatMax = 1.0;
+    let smNatSteps = 0;
+    let smNatExceed = 0; // racer-steps whose speed factor beats the natural ceiling (tool over-speed)
 
     // ── ACTION-METRICS observer state (--action-metrics; read-only) ────────────
     // Whole-field movement inside the PULK window [pulkStartLive, pulkEndLive). All gated on the
     // flag → no-flag = zero extra work = byte-identical. NAT_CEIL (above) is reused for maxSpeedFactor.
     const amStartRank = ACTION_METRICS ? new Map() : null; // index → live rank at first window frame
-    const amEndRank   = ACTION_METRICS ? new Map() : null; // index → live rank at last window frame
-    const amMinRank   = ACTION_METRICS ? new Map() : null; // index → best (lowest) rank in window
-    const amMaxRank   = ACTION_METRICS ? new Map() : null; // index → worst (highest) rank in window
-    const amTop5      = ACTION_METRICS ? new Set() : null; // distinct racers who held a top-5 position
-    const amP1Steps   = ACTION_METRICS ? new Map() : null; // index → window steps spent at rank 1 (corrP1)
-    let   amPrevRank  = null;  // Map(index → rank) from the previous window frame (for swap counting)
-    let   amFrames    = 0;     // window frames observed
-    let   amSwaps     = 0;     // adjacent rank-order swaps summed over the window (raw reshuffle volume)
-    let   amSpreadSum = 0;     // sum over frames of the p10→p90 on-track distance (racer-lengths)
-    let   amNatMax    = 1.0;   // peak spreadFactor × tool mults in the PULK window (naturalness)
+    const amEndRank = ACTION_METRICS ? new Map() : null; // index → live rank at last window frame
+    const amMinRank = ACTION_METRICS ? new Map() : null; // index → best (lowest) rank in window
+    const amMaxRank = ACTION_METRICS ? new Map() : null; // index → worst (highest) rank in window
+    const amTop5 = ACTION_METRICS ? new Set() : null; // distinct racers who held a top-5 position
+    const amP1Steps = ACTION_METRICS ? new Map() : null; // index → window steps spent at rank 1 (corrP1)
+    let amPrevRank = null; // Map(index → rank) from the previous window frame (for swap counting)
+    let amFrames = 0; // window frames observed
+    let amSwaps = 0; // adjacent rank-order swaps summed over the window (raw reshuffle volume)
+    let amSpreadSum = 0; // sum over frames of the p10→p90 on-track distance (racer-lengths)
+    let amNatMax = 1.0; // peak spreadFactor × tool mults in the PULK window (naturalness)
     // NEW (pulk-contest observer): held top-5 overtakes + per-frame max consecutive-link gap (lengths).
-    const amHeld      = ACTION_METRICS ? makeHeldOvertakeTracker() : null; // held top-5 overtake tracker
-    const amLinkGaps  = ACTION_METRICS ? [] : null; // per-frame max adjacent-rank gap (racer-lengths)
+    const amHeld = ACTION_METRICS ? makeHeldOvertakeTracker() : null; // held top-5 overtake tracker
+    const amLinkGaps = ACTION_METRICS ? [] : null; // per-frame max adjacent-rank gap (racer-lengths)
     const amFullSpread = ACTION_METRICS ? [] : null; // per-frame leader→last full spread (racer-lengths, Q3b)
-    let   amEndFullSpread   = 0; // leader→last spread at the LAST PULK frame (end-of-PULK snapshot, lengths)
-    let   amEndSpreadP10P90 = 0; // p10→p90 spread at the LAST PULK frame (end-of-PULK snapshot, lengths)
-    let   amPrevP1     = -1;  // previous window frame's P1 index (for the raw lead-change counter)
-    let   amLeadChanges = 0;  // raw count of P1 hand-overs across the window (unguarded action density)
+    let amEndFullSpread = 0; // leader→last spread at the LAST PULK frame (end-of-PULK snapshot, lengths)
+    let amEndSpreadP10P90 = 0; // p10→p90 spread at the LAST PULK frame (end-of-PULK snapshot, lengths)
+    let amPrevP1 = -1; // previous window frame's P1 index (for the raw lead-change counter)
+    let amLeadChanges = 0; // raw count of P1 hand-overs across the window (unguarded action density)
     // RUNAWAY-LEADER one-shot boundary snapshots (--runaway-leader). Captured at the first frame past
     // pulkStart / pulkEnd; each stays null until its crossing. Per-race (reset by this per-race scope).
-    let rlStartSnap = null, rlEndSnap = null;
+    let rlStartSnap = null,
+      rlEndSnap = null;
 
     // ── OUTCOME rank-change observer (UNCONDITIONAL; read-only) ─────────────────
     // The OUTCOME reordering signal: how much reordering happens in the OUTCOME
@@ -1235,7 +1818,9 @@ export function runSingleRace({
     // Read-only: it only reads live ranks, never touches physics → cannot change the fingerprint hash
     // (that hashes finish order, not naturalness). Cost: one sort per OUTCOME frame, negligible.
     let ocPrevRank = null; // Map(index → rank) from the previous OUTCOME frame
-    let ocTotalSwaps = 0, ocTop5Swaps = 0, ocFrames = 0;
+    let ocTotalSwaps = 0,
+      ocTop5Swaps = 0,
+      ocFrames = 0;
     // B2-leak trace (--b2-trace): per B2-TARGET racer, the LAST OUTCOME progress it sat inside B2
     // (ranks 6-15). For racers that MISS B2 at the finish, a high lastInside ⇒ late exit (timing/runway);
     // a low lastInside ⇒ early exit the re-steer never re-caught (authority). Read-only.
@@ -1259,23 +1844,40 @@ export function runSingleRace({
       physicsTs: 0,
     };
     const _stepCfg = {
-      BASE_SPEED_MIN, BASE_SPEED_MAX, BASE_SPEED_MEAN,
-      race_baseSpeed, speedMultiplier,
-      behaviorConfig, isOpenTrack: isOpen, pathLengthPx,
+      BASE_SPEED_MIN,
+      BASE_SPEED_MAX,
+      BASE_SPEED_MEAN,
+      race_baseSpeed,
+      speedMultiplier,
+      behaviorConfig,
+      isOpenTrack: isOpen,
+      pathLengthPx,
       maxLaps: isOpen ? 1 : finishT,
-      raceRng, racePlanController,
-      rowPhaseCfg, pulkLeadRotCfg, pulkLeadRotationOn,
-      govFractions, govMeanBodyLen, dirState,
-      rollInterval, lastRollDeadline,
-      halfWidth: ((BASE_SPEED_MAX - BASE_SPEED_MIN) / BASE_SPEED_MEAN) * (dynamicsConfig.reRollVariationPercent / 100),
-      trajectoryTransitionDurationMs: dynamicsConfig.trajectoryTransitionDuration * 1000,
+      raceRng,
+      racePlanController,
+      rowPhaseCfg,
+      pulkLeadRotCfg,
+      pulkLeadRotationOn,
+      govFractions,
+      govMeanBodyLen,
+      dirState,
+      rollInterval,
+      lastRollDeadline,
+      halfWidth:
+        ((BASE_SPEED_MAX - BASE_SPEED_MIN) / BASE_SPEED_MEAN) *
+        (dynamicsConfig.reRollVariationPercent / 100),
+      trajectoryTransitionDurationMs:
+        dynamicsConfig.trajectoryTransitionDuration * 1000,
       gapRerollEnabled: GAP_REROLL,
       gapRerollDevMarker: false,
       constSpeedActive: false,
       computePositions,
     };
 
-    while (_stepState.finishedCount < nRacers && _stepState.physicsTs < maxTime) {
+    while (
+      _stepState.finishedCount < nRacers &&
+      _stepState.physicsTs < maxTime
+    ) {
       // PRE-STEP snapshot: pre-advance t for overtake / brake detection (was the natPrevT line that
       // sat just before Pass 2; t only ever changes inside the step, so this is the same value).
       for (const r of racers) natPrevT.set(r.index, r.t);
@@ -1284,17 +1886,22 @@ export function runSingleRace({
       // PulkLeadRotation → re-roll (PULK + gap bias) → advanceRacerT (interleaved) → computePositions →
       // applyRacerBehavior → finish + runout, in the BROWSER's order. Replaces the sim's Pass1/Pass2.
       stepRacePhysics(_stepState, _stepCfg);
-      raceTs        = _stepState.physicsTs;
-      raceProgress  = _stepState.raceProgress;
+      raceTs = _stepState.physicsTs;
+      raceProgress = _stepState.raceProgress;
       finishedCount = _stepState.finishedCount;
       // stepRacePhysics stamps finishTimeMs (ms, at the crossing step); the results + observers read
       // finishTime (seconds). Locked once per racer at its crossing.
-      for (const r of racers) if (r.finished && r.finishTime == null) r.finishTime = r.finishTimeMs / 1000;
+      for (const r of racers)
+        if (r.finished && r.finishTime == null)
+          r.finishTime = r.finishTimeMs / 1000;
 
       // speed-source sample gate — kept DEFINED so the top-15 build below never references an undefined
       // var. Under the shared step the per-racer advance-site capture is unavailable, so ss.cap stays
       // empty (--speed-source degrades to no factors; a sweep-only diagnostic, unused by any parity proof).
-      const ssSample = ss && ss.nextSample < SPEED_SOURCE_SAMPLES.length && raceProgress >= SPEED_SOURCE_SAMPLES[ss.nextSample];
+      const ssSample =
+        ss &&
+        ss.nextSample < SPEED_SOURCE_SAMPLES.length &&
+        raceProgress >= SPEED_SOURCE_SAMPLES[ss.nextSample];
       if (ssSample) ss.cap = new Map();
 
       // ── SCREEN escape-latency sample (read-only; --escape-latency) ──────────────────────────
@@ -1306,7 +1913,8 @@ export function runSingleRace({
         const gLen = leaderGapLengths(racers, isOpen, govLenScale);
         if (gLen > escapeRunningMaxLen) escapeRunningMaxLen = gLen;
         const downs = racePlanController.getGapLeaderDownCount();
-        if (escapeDepthLen === null && downs > escapePrevLeaderDowns) escapeDepthLen = escapeRunningMaxLen;
+        if (escapeDepthLen === null && downs > escapePrevLeaderDowns)
+          escapeDepthLen = escapeRunningMaxLen;
         escapePrevLeaderDowns = downs;
         // Episode view: needs the CURRENT leader's own next scheduled roll, since "were there dice
         // left" is a property of that racer, not of the field.
@@ -1317,10 +1925,18 @@ export function runSingleRace({
         // and out-of-rolls. Counting those would manufacture exactly the structural signal this
         // analysis is meant to test. Same convention the front-battle observer already uses.
         if (escapeEpisodes && finishedCount === 0) {
-          const live = racers.filter((r) => !r.finished).sort((a, b) => (b.t - a.t) || (a.index - b.index));
+          const live = racers
+            .filter((r) => !r.finished)
+            .sort((a, b) => b.t - a.t || a.index - b.index);
           const ldr = live[0] ?? null;
-          escapeEpisodes.observe(gLen, raceProgress, raceTs, ldr ? ldr.index : null,
-            ldr ? ldr.nextRollTime : null, downs);
+          escapeEpisodes.observe(
+            gLen,
+            raceProgress,
+            raceTs,
+            ldr ? ldr.index : null,
+            ldr ? ldr.nextRollTime : null,
+            downs,
+          );
         }
       }
 
@@ -1337,7 +1953,9 @@ export function runSingleRace({
       // force, no state written back to racers; pure observation (mirrors the governor's own
       // live-order read at :894). Front-reach gaps are reused from the governor block above.
       if (frontAction && raceProgress < BREAKAWAY_CORRIDOR_START) {
-        const live = racers.filter((r) => !r.finished).sort((a, b) => b.t - a.t); // desc by t
+        const live = racers
+          .filter((r) => !r.finished)
+          .sort((a, b) => b.t - a.t); // desc by t
         if (live.length > 0) {
           faSteps++;
           const p1 = live[0].index;
@@ -1353,7 +1971,8 @@ export function runSingleRace({
             faTop3StepsByIdx.set(idx, (faTop3StepsByIdx.get(idx) ?? 0) + 1);
           }
           if (faPrevTop3) {
-            const changed = top3.length !== faPrevTop3.length ||
+            const changed =
+              top3.length !== faPrevTop3.length ||
               top3.some((idx, i) => idx !== faPrevTop3[i]);
             if (changed) faTop3ShuffleCount++;
             faTop3CompareSteps++;
@@ -1366,14 +1985,18 @@ export function runSingleRace({
       // Same pre-Pass-2 live-order read as front-action, but split into two pinned windows and
       // extended with worst-case-winner tracking. Pure observation; nothing written back to racers.
       if (STRIP_METRICS) {
-        const inPulk = raceProgress >= SD_PULK_START && raceProgress < SD_CORR_START;
-        const inOut  = raceProgress >= SD_CORR_START && raceProgress < 1.0;
+        const inPulk =
+          raceProgress >= SD_PULK_START && raceProgress < SD_CORR_START;
+        const inOut = raceProgress >= SD_CORR_START && raceProgress < 1.0;
         if (inPulk || inOut) {
-          const live = racers.filter((r) => !r.finished).sort((a, b) => b.t - a.t); // desc by t
+          const live = racers
+            .filter((r) => !r.finished)
+            .sort((a, b) => b.t - a.t); // desc by t
           if (live.length > 0) {
             const W = inPulk ? smPulk : smOut;
             // Snapshot each racer's rank at PULK entry (first PULK step) → charger start-depth reference.
-            if (inPulk && smRankAt025.size === 0) live.forEach((r, i) => smRankAt025.set(r.index, i + 1));
+            if (inPulk && smRankAt025.size === 0)
+              live.forEach((r, i) => smRankAt025.set(r.index, i + 1));
             W.steps++;
             const p1 = live[0].index;
             if (W.prevP1 >= 0 && p1 !== W.prevP1) W.leadChanges++;
@@ -1381,11 +2004,17 @@ export function runSingleRace({
             // Hold-based clean overtake: confirm a leader once it holds P1 ≥ SM_HOLD_MS, and count a
             // clean pass each time the CONFIRMED leader changes. A flicker P1 (held < SM_HOLD_MS) never
             // confirms, so it is not counted — this separates real passes from the boiling-front flicker.
-            if (p1 !== W.curP1) { W.curP1 = p1; W.curSince = raceTs; }
+            if (p1 !== W.curP1) {
+              W.curP1 = p1;
+              W.curSince = raceTs;
+            }
             if (raceTs - W.curSince >= SM_HOLD_MS && W.confirmed !== p1) {
               // A new racer has held P1 ≥ SM_HOLD_MS = a clean overtake. Record how deep this charger
               // started (its rank at PULK entry) — a deep start reaching P1 = a visible charge.
-              if (W.confirmed >= 0) { W.cleanOv++; if (inPulk) W.chargerDepths.push(smRankAt025.get(p1) ?? null); }
+              if (W.confirmed >= 0) {
+                W.cleanOv++;
+                if (inPulk) W.chargerDepths.push(smRankAt025.get(p1) ?? null);
+              }
               W.confirmed = p1;
             }
             W.p1Set.add(p1);
@@ -1398,37 +2027,52 @@ export function runSingleRace({
               W.top3Steps.set(idx, (W.top3Steps.get(idx) ?? 0) + 1);
             }
             if (W.prevTop3) {
-              const changed = top3.length !== W.prevTop3.length || top3.some((idx, i) => idx !== W.prevTop3[i]);
+              const changed =
+                top3.length !== W.prevTop3.length ||
+                top3.some((idx, i) => idx !== W.prevTop3[i]);
               if (changed) W.shuffle++;
               W.compareSteps++;
             }
             W.prevTop3 = top3;
             // areaBonus sample: capture each racer's applied areaBonusMult once, during PULK.
-            if (inPulk) for (const r of racers) if (!smAreaSample.has(r.index)) smAreaSample.set(r.index, r.areaBonusMult);
+            if (inPulk)
+              for (const r of racers)
+                if (!smAreaSample.has(r.index))
+                  smAreaSample.set(r.index, r.areaBonusMult);
             // Naturalness (PULK-proper [0.25,0.5) only — before the areaBonus restore at 0.5, so this
             // isolates the ACTION TOOLS' contribution cleanly): re-roll advantage × tool mults. In this
             // window bonuses are 0, so natFactor = spreadFactor × governor × areaBonus. >1.08 = a tool
             // pushed the racer past the natural re-roll ceiling (max spreadFactor ≈ 1.081).
-            if (inPulk && raceProgress < SD_PULK_END) for (const r of racers) if (!r.finished) {
-              const nf = r.spreadFactor * (r.governorMult ?? 1.0) * (r.areaBonusMult ?? 1.0);
-              smNatSteps++;
-              if (nf > smNatMax) smNatMax = nf;
-              if (nf > NAT_CEIL * 1.001) smNatExceed++; // > natural ceiling (+0.1% float margin) = tool over-speed
-            }
+            if (inPulk && raceProgress < SD_PULK_END)
+              for (const r of racers)
+                if (!r.finished) {
+                  const nf =
+                    r.spreadFactor *
+                    (r.governorMult ?? 1.0) *
+                    (r.areaBonusMult ?? 1.0);
+                  smNatSteps++;
+                  if (nf > smNatMax) smNatMax = nf;
+                  if (nf > NAT_CEIL * 1.001) smNatExceed++; // > natural ceiling (+0.1% float margin) = tool over-speed
+                }
             // Assigned-winner journey: capture his live rank at PULK start (0.25) and PULK end (0.50)
             // so we can see whether he starts deep or the PULK contest buries him.
             if (smWinnerIdx >= 0) {
               const wrank = live.findIndex((r) => r.index === smWinnerIdx) + 1; // 0 if finished/not live
-              if (smWinnerRankAt025 === null && raceProgress >= SD_PULK_START) smWinnerRankAt025 = wrank;
-              if (smWinnerRankAt050 === null && raceProgress >= SD_PULK_END) smWinnerRankAt050 = wrank;
+              if (smWinnerRankAt025 === null && raceProgress >= SD_PULK_START)
+                smWinnerRankAt025 = wrank;
+              if (smWinnerRankAt050 === null && raceProgress >= SD_PULK_END)
+                smWinnerRankAt050 = wrank;
             }
             // Worst-case assigned winner: rank entering OUTCOME + peak controller boost (late surge).
             if (smWinnerIdx >= 0 && inOut) {
               const w = racers.find((r) => r.index === smWinnerIdx);
               if (w && !w.finished) {
-                if (smWinnerRankAt055 === null) smWinnerRankAt055 = live.findIndex((r) => r.index === smWinnerIdx) + 1;
+                if (smWinnerRankAt055 === null)
+                  smWinnerRankAt055 =
+                    live.findIndex((r) => r.index === smWinnerIdx) + 1;
                 smWinnerOutcomeSteps++;
-                if (w.trajectoryMult > smWinnerMaxTraj) smWinnerMaxTraj = w.trajectoryMult;
+                if (w.trajectoryMult > smWinnerMaxTraj)
+                  smWinnerMaxTraj = w.trajectoryMult;
                 if (w.trajectoryMult >= 1.09) smWinnerCeilSteps++;
               }
             }
@@ -1440,8 +2084,10 @@ export function runSingleRace({
       // Fire once at the first frame past pulkStart / pulkEnd (live plan fractions), capturing the
       // leader's identity + isHero + lead-over-P2 (racer lengths). Not a per-frame loop.
       if (RUNAWAY_LEADER) {
-        if (!rlStartSnap && raceProgress >= pulkStartLive) rlStartSnap = leaderSnapshot(racers, isOpen, govLenScale);
-        if (!rlEndSnap && raceProgress >= pulkEndLive) rlEndSnap = leaderSnapshot(racers, isOpen, govLenScale);
+        if (!rlStartSnap && raceProgress >= pulkStartLive)
+          rlStartSnap = leaderSnapshot(racers, isOpen, govLenScale);
+        if (!rlEndSnap && raceProgress >= pulkEndLive)
+          rlEndSnap = leaderSnapshot(racers, isOpen, govLenScale);
       }
 
       // ── ACTION-METRICS observer (--action-metrics; read-only) ──────
@@ -1450,7 +2096,11 @@ export function runSingleRace({
       // through PULK end, the baseline-measurement window). Upper bound is the LIVE plan pulkEnd (never
       // a literal). No P1-only, no hold requirement. Pure observation on the pre-Pass-2 live order.
       const amWindowFrom = ACTION_FROM_START ? 0 : pulkStartLive;
-      if (ACTION_METRICS && raceProgress >= amWindowFrom && raceProgress < pulkEndLive) {
+      if (
+        ACTION_METRICS &&
+        raceProgress >= amWindowFrom &&
+        raceProgress < pulkEndLive
+      ) {
         const order = racers
           .filter((r) => !r.finished)
           .sort((a, b) => (b.t !== a.t ? b.t - a.t : a.index - b.index)); // rank 1 = leader
@@ -1470,8 +2120,10 @@ export function runSingleRace({
             curRank.set(idx, rank);
             if (!amStartRank.has(idx)) amStartRank.set(idx, rank);
             amEndRank.set(idx, rank);
-            const mn = amMinRank.get(idx); if (mn === undefined || rank < mn) amMinRank.set(idx, rank);
-            const mx = amMaxRank.get(idx); if (mx === undefined || rank > mx) amMaxRank.set(idx, rank);
+            const mn = amMinRank.get(idx);
+            if (mn === undefined || rank < mn) amMinRank.set(idx, rank);
+            const mx = amMaxRank.get(idx);
+            if (mx === undefined || rank > mx) amMaxRank.set(idx, rank);
             if (rank <= 5) amTop5.add(idx);
             if (rank === 1) amP1Steps.set(idx, (amP1Steps.get(idx) ?? 0) + 1);
           }
@@ -1488,25 +2140,35 @@ export function runSingleRace({
           // NEW density + held-overtake (pulk-contest observer; math in the observer, not here).
           amLinkGaps.push(maxLinkGapLengths(order, isOpen, govLenScale)); // max adjacent-rank gap (lengths)
           amFullSpread.push(fullSpreadLengths(order, govLenScale)); // leader→last full spread (lengths, Q3b)
-          amHeld.observe(order.slice(0, 5).map((r) => r.index), raceProgress); // held top-5 overtakes
+          amHeld.observe(
+            order.slice(0, 5).map((r) => r.index),
+            raceProgress,
+          ); // held top-5 overtakes
           // p10→p90 on-track spread in racer-lengths (front-percentile minus back-percentile racer).
           const p10 = order[Math.floor(0.1 * (n - 1))];
           const p90 = order[Math.floor(0.9 * (n - 1))];
           amSpreadSum += (p10.t - p90.t) * govLenScale;
           // End-of-PULK snapshot (read-only): overwrite each window frame so these hold the LAST PULK
           // frame's value (last frame with raceProgress < pulkEndLive) when the race loop exits.
-          amEndFullSpread   = amFullSpread[amFullSpread.length - 1];
+          amEndFullSpread = amFullSpread[amFullSpread.length - 1];
           amEndSpreadP10P90 = (p10.t - p90.t) * govLenScale;
           // PULK naturalness (same natFactor as strip-metrics; director is off in this sweep anyway).
-          for (const r of racers) if (!r.finished) {
-            const nf = r.spreadFactor * (r.governorMult ?? 1.0) * (r.areaBonusMult ?? 1.0);
-            if (nf > amNatMax) amNatMax = nf;
-          }
+          for (const r of racers)
+            if (!r.finished) {
+              const nf =
+                r.spreadFactor *
+                (r.governorMult ?? 1.0) *
+                (r.areaBonusMult ?? 1.0);
+              if (nf > amNatMax) amNatMax = nf;
+            }
         }
       }
 
       // ── Δ5s ring buffers: sample trajectoryMult during OUTCOME for oscillation detection ──
-      if (racePlanController && racePlanController.getPhase(raceTs, raceProgress) === 'OUTCOME') {
+      if (
+        racePlanController &&
+        racePlanController.getPhase(raceTs, raceProgress) === "OUTCOME"
+      ) {
         for (const r of racers) {
           if (r.finished) continue;
           let ring = tmRings.get(r.index);
@@ -1520,7 +2182,10 @@ export function runSingleRace({
       }
 
       // ── OUTCOME rank-change accumulation (read-only; the experiment's primary action signal) ──
-      if (racePlanController && racePlanController.getPhase(raceTs, raceProgress) === 'OUTCOME') {
+      if (
+        racePlanController &&
+        racePlanController.getPhase(raceTs, raceProgress) === "OUTCOME"
+      ) {
         const order = racers
           .filter((r) => !r.finished)
           .sort((a, b) => (b.t !== a.t ? b.t - a.t : a.index - b.index)); // rank 1 = leader
@@ -1543,7 +2208,8 @@ export function runSingleRace({
             for (let i = 0; i < n; i++) {
               const idx = order[i].index;
               const tr = racerTargetRankMap.get(idx);
-              if (tr >= 6 && tr <= 15 && i + 1 >= 6 && i + 1 <= 15) b2LastInside.set(idx, raceProgress);
+              if (tr >= 6 && tr <= 15 && i + 1 >= 6 && i + 1 <= 15)
+                b2LastInside.set(idx, raceProgress);
             }
           }
         }
@@ -1555,11 +2221,14 @@ export function runSingleRace({
         for (const r of racers) {
           if (r.finished) continue;
           const effSpeed = r.baseSpeed * r.trajectoryMult;
-          const prev     = natPrevEffSpeed.get(r.index);
+          const prev = natPrevEffSpeed.get(r.index);
           if (prev !== undefined) {
-            const jerkStep = Math.abs(effSpeed - prev) / DT / Math.max(r.baseSpeed, JERK_BASESPEED_EPSILON);
+            const jerkStep =
+              Math.abs(effSpeed - prev) /
+              DT /
+              Math.max(r.baseSpeed, JERK_BASESPEED_EPSILON);
             natJerkSum += jerkStep;
-            natJerkMax  = Math.max(natJerkMax, jerkStep);
+            natJerkMax = Math.max(natJerkMax, jerkStep);
             natJerkSteps++;
             if (jerkStep > JERK_HIGH_THRESHOLD) natJerkHighCount++;
           }
@@ -1576,12 +2245,18 @@ export function runSingleRace({
       // frame's final value. fullSpreadLengths + govLenScale = the SAME lap-aware length unit every
       // other observer uses. Field speed = the frame's mean live-racer t advance × govLenScale / dt.
       if (pt) {
-        const live = racers.filter((r) => !r.finished).sort((a, b) => (b.t - a.t) || (a.index - b.index));
-        const spreadLen = live.length >= 2 ? fullSpreadLengths(live, govLenScale) : 0;
-        const meanT = live.length ? live.reduce((s, r) => s + r.t, 0) / live.length : 0;
-        const fieldSpeedLenPerSec = (ptPrevMeanT != null && live.length)
-          ? ((meanT - ptPrevMeanT) * govLenScale) / (DT / 1000)
+        const live = racers
+          .filter((r) => !r.finished)
+          .sort((a, b) => b.t - a.t || a.index - b.index);
+        const spreadLen =
+          live.length >= 2 ? fullSpreadLengths(live, govLenScale) : 0;
+        const meanT = live.length
+          ? live.reduce((s, r) => s + r.t, 0) / live.length
           : 0;
+        const fieldSpeedLenPerSec =
+          ptPrevMeanT != null && live.length
+            ? ((meanT - ptPrevMeanT) * govLenScale) / (DT / 1000)
+            : 0;
         ptPrevMeanT = live.length ? meanT : ptPrevMeanT;
         pt.sampleField(spreadLen, fieldSpeedLenPerSec, live.length);
       }
@@ -1597,17 +2272,24 @@ export function runSingleRace({
         // the SATURATION view the runaway diagnostics need is still measurable here between steps —
         // observe-only, it never steers. This block runs ONLY under --speed-source, so the shipped-default
         // byte-identity fingerprint (measured without the flag) is untouched by construction.
-        const order = racers.filter((r) => !r.finished).sort((a, b) => (b.t - a.t) || (a.index - b.index));
+        const order = racers
+          .filter((r) => !r.finished)
+          .sort((a, b) => b.t - a.t || a.index - b.index);
         const top = order.slice(0, 15);
         const recs = [];
         for (let i = 0; i < top.length; i++) {
           const r = top[i];
           const trajectoryMult = r.trajectoryMult ?? 1.0; // servo output this frame
           const spreadFactor = r.spreadFactor ?? 1.0; // natural re-roll draw this frame
-          const gapAhead = i > 0 ? +(arcT(top[i - 1].t, r.t, isOpen) * govLenScale).toFixed(4) : 0;
+          const gapAhead =
+            i > 0
+              ? +(arcT(top[i - 1].t, r.t, isOpen) * govLenScale).toFixed(4)
+              : 0;
           recs.push({
-            rank: i + 1, index: r.index,
-            trajectoryMult: +trajectoryMult.toFixed(6), spreadFactor: +spreadFactor.toFixed(6),
+            rank: i + 1,
+            index: r.index,
+            trajectoryMult: +trajectoryMult.toFixed(6),
+            spreadFactor: +spreadFactor.toFixed(6),
             // servoSaturated: the servo is pinned at its ceiling (maxMult) → it can push the leader no
             // faster. servoHeadroom / bandHeadroom = remaining room in the servo / the natural draw.
             servoSaturated: trajectoryMult >= SS_TRAJ_MAX - 1e-6 ? 1 : 0,
@@ -1626,20 +2308,33 @@ export function runSingleRace({
       // final values. Only touches the hmHeroes accumulator — never race state.
       if (heroMap) {
         // Live on-track rank by t (rank 1 = furthest along). Includes finished racers (high t).
-        const hmOrder = [...racers].sort((a, b) => (b.t - a.t) || (a.index - b.index));
+        const hmOrder = [...racers].sort(
+          (a, b) => b.t - a.t || a.index - b.index,
+        );
         const hmRankOf = new Map();
-        for (let i = 0; i < hmOrder.length; i++) hmRankOf.set(hmOrder[i].index, i + 1);
+        for (let i = 0; i < hmOrder.length; i++)
+          hmRankOf.set(hmOrder[i].index, i + 1);
         for (const r of racers) {
           if (!r.isHeroChoreographed || r.finished) continue;
           const cur = hmRankOf.get(r.index);
           let h = hmHeroes.get(r.index);
           if (!h) {
             h = {
-              index: r.index, anchorRank: cur, anchorProgress: +raceProgress.toFixed(4),
+              index: r.index,
+              anchorRank: cur,
+              anchorProgress: +raceProgress.toFixed(4),
               targetRank: racerTargetRankMap?.get(r.index) ?? null,
-              frames: 0, climbFrames: 0, ceilFrames: 0, trafficFrames: 0, bothFrames: 0,
-              bestRank: cur, maxTraj: 1.0, passed: new Set(), nb: new Set(),
-              reachedFrontProg: null, reachedTargetProg: null,
+              frames: 0,
+              climbFrames: 0,
+              ceilFrames: 0,
+              trafficFrames: 0,
+              bothFrames: 0,
+              bestRank: cur,
+              maxTraj: 1.0,
+              passed: new Set(),
+              nb: new Set(),
+              reachedFrontProg: null,
+              reachedTargetProg: null,
             };
             hmHeroes.set(r.index, h);
           }
@@ -1647,22 +2342,32 @@ export function runSingleRace({
           const traj = r.trajectoryMult ?? 1.0;
           const climbing = h.targetRank != null && cur > h.targetRank; // still behind its target
           if (climbing) h.climbFrames++;
-          const atCeil  = traj >= HM_CEIL;   // servo pinned at +10% ceiling → SPEED-limited
+          const atCeil = traj >= HM_CEIL; // servo pinned at +10% ceiling → SPEED-limited
           const braking = !!r.avoidanceActive; // braking behind a leader, no free lane → TRAFFIC-limited
-          if (atCeil)  h.ceilFrames++;
+          if (atCeil) h.ceilFrames++;
           if (braking) h.trafficFrames++;
           if (atCeil && braking) h.bothFrames++;
           if (traj > h.maxTraj) h.maxTraj = traj;
           if (cur < h.bestRank) h.bestRank = cur;
-          if (h.reachedFrontProg == null && cur <= BAND_EDGES[0]) h.reachedFrontProg = +raceProgress.toFixed(4);
-          if (h.reachedTargetProg == null && h.targetRank != null && cur <= h.targetRank) h.reachedTargetProg = +raceProgress.toFixed(4);
+          if (h.reachedFrontProg == null && cur <= BAND_EDGES[0])
+            h.reachedFrontProg = +raceProgress.toFixed(4);
+          if (
+            h.reachedTargetProg == null &&
+            h.targetRank != null &&
+            cur <= h.targetRank
+          )
+            h.reachedTargetProg = +raceProgress.toFixed(4);
           // REAL whole-field overtakes: hero was laterally near+behind another racer, THEN crossed
           // ahead. Once per pair (physical_overtake convention). This is the corrected places-gained.
           for (const o of racers) {
             if (o.index === r.index || o.finished) continue;
             if (h.passed.has(o.index)) continue;
             if (!h.nb.has(o.index)) {
-              if (Math.abs((r.physicalY ?? 0) - (o.physicalY ?? 0)) < HM_LAT && r.t < o.t) h.nb.add(o.index);
+              if (
+                Math.abs((r.physicalY ?? 0) - (o.physicalY ?? 0)) < HM_LAT &&
+                r.t < o.t
+              )
+                h.nb.add(o.index);
             } else if (r.t > o.t) {
               h.passed.add(o.index);
             }
@@ -1676,38 +2381,45 @@ export function runSingleRace({
       // computeMedianT) and to 2nd place, binned by progress, and captures the
       // pre-OUTCOME peak-gap frame (who + why). No mutation of race state.
       if (breakawayDiag) {
-        let leader = null, second = null;
+        let leader = null,
+          second = null;
         for (const r of racers) {
           if (r.finished) continue;
-          if (!leader || r.t > leader.t) { second = leader; leader = r; }
-          else if (!second || r.t > second.t) { second = r; }
+          if (!leader || r.t > leader.t) {
+            second = leader;
+            leader = r;
+          } else if (!second || r.t > second.t) {
+            second = r;
+          }
         }
         if (leader) {
-          const medT   = simMedianT(racers);
-          const gapMed = medT !== null && finishT > 0 ? (leader.t - medT) / finishT : 0;
-          const gap2nd = second && finishT > 0 ? (leader.t - second.t) / finishT : 0;
+          const medT = simMedianT(racers);
+          const gapMed =
+            medT !== null && finishT > 0 ? (leader.t - medT) / finishT : 0;
+          const gap2nd =
+            second && finishT > 0 ? (leader.t - second.t) / finishT : 0;
           // 5% progress bins — record each bin at its first crossing (raceProgress is
           // the monotonic start-of-frame leader progress computed at the top of the loop).
           while (bkNextBin <= 20 && raceProgress >= bkNextBin * 0.05) {
             bkGapBins.push({
-              bin:       +(bkNextBin * 0.05).toFixed(2),
-              progress:  +raceProgress.toFixed(4),
+              bin: +(bkNextBin * 0.05).toFixed(2),
+              progress: +raceProgress.toFixed(4),
               gapMedian: +gapMed.toFixed(5),
-              gap2nd:    +gap2nd.toFixed(5),
+              gap2nd: +gap2nd.toFixed(5),
               leaderIdx: leader.index,
             });
             bkNextBin++;
           }
           // Peak pre-OUTCOME gap-to-median + decomposition of the leader's multipliers.
           if (raceProgress < BREAKAWAY_CORRIDOR_START && gapMed > bkPeakGap) {
-            bkPeakGap        = gapMed;
-            bkPeakProgress   = raceProgress;
-            bkPeakLeaderIdx  = leader.index;
-            bkPeakGap2nd     = gap2nd;
+            bkPeakGap = gapMed;
+            bkPeakProgress = raceProgress;
+            bkPeakLeaderIdx = leader.index;
+            bkPeakGap2nd = gap2nd;
             bkPeakDecomp = {
-              spreadFactor:   +leader.spreadFactor.toFixed(4),   // base-speed spread/re-roll component
+              spreadFactor: +leader.spreadFactor.toFixed(4), // base-speed spread/re-roll component
               speedBonusMult: +(leader.speedBonusMult ?? 1.0).toFixed(4),
-              areaBonusMult:  +(leader.areaBonusMult ?? 1.0).toFixed(4),
+              areaBonusMult: +(leader.areaBonusMult ?? 1.0).toFixed(4),
             };
           }
         }
@@ -1740,14 +2452,25 @@ export function runSingleRace({
       }
       // Pulk state (any time — window check uses absolute ms)
       {
-        const active = racers.filter((r) => !r.finished).sort((a, b) => b.t - a.t);
+        const active = racers
+          .filter((r) => !r.finished)
+          .sort((a, b) => b.t - a.t);
         let isPulk = false;
         for (let i = 0; i + 2 < active.length; i++) {
-          if (active[i].t - active[i + 2].t <= PULK_T_THRESHOLD) { isPulk = true; break; }
+          if (active[i].t - active[i + 2].t <= PULK_T_THRESHOLD) {
+            isPulk = true;
+            break;
+          }
         }
-        if (raceTs >= stablePhaseStartMs && raceTs <= stablePhaseEndMs && isPulk) natPulkFrames++;
+        if (
+          raceTs >= stablePhaseStartMs &&
+          raceTs <= stablePhaseEndMs &&
+          isPulk
+        )
+          natPulkFrames++;
         if (!natPulkWasActive && isPulk) {
-          if (raceTs >= pulkWindowStartMs && raceTs <= pulkWindowEndMs) natPulkTriggersInWindow++;
+          if (raceTs >= pulkWindowStartMs && raceTs <= pulkWindowEndMs)
+            natPulkTriggersInWindow++;
           else natPulkTriggersOutOfWindow++;
         }
         natPulkWasActive = isPulk;
@@ -1755,23 +2478,29 @@ export function runSingleRace({
 
       // Phase-3B: COMEBACK rank tracking (during OUTCOME phase)
       if (cbCfg && racePlanController) {
-        const phase     = racePlanController.getPhase(raceTs, raceProgress);
-        const isOutcome = phase === 'OUTCOME';
+        const phase = racePlanController.getPhase(raceTs, raceProgress);
+        const isOutcome = phase === "OUTCOME";
 
-        if (isOutcome && cbOutcomeStartMs === null)                              cbOutcomeStartMs = raceTs;
-        if (!isOutcome && cbOutcomeStartMs !== null && cbOutcomeEndMs === null)  cbOutcomeEndMs   = raceTs;
+        if (isOutcome && cbOutcomeStartMs === null) cbOutcomeStartMs = raceTs;
+        if (!isOutcome && cbOutcomeStartMs !== null && cbOutcomeEndMs === null)
+          cbOutcomeEndMs = raceTs;
 
         if (cbEndgameStartMs === null) {
           let leaderT = -Infinity;
-          for (const r of racers) { if (!r.finished && r.t > leaderT) leaderT = r.t; }
-          if (finishT > 0 && leaderT / finishT >= cbCfg.endgameThresh) cbEndgameStartMs = raceTs;
+          for (const r of racers) {
+            if (!r.finished && r.t > leaderT) leaderT = r.t;
+          }
+          if (finishT > 0 && leaderT / finishT >= cbCfg.endgameThresh)
+            cbEndgameStartMs = raceTs;
         }
 
         if (isOutcome) {
-          const active  = racers.filter((r) => !r.finished).sort((a, b) => b.t - a.t);
+          const active = racers
+            .filter((r) => !r.finished)
+            .sort((a, b) => b.t - a.t);
           const rankMap = new Map(active.map((r, i) => [r.index, i + 1]));
           const windowMs = cbCfg.windowSec * 1000;
-          const cutoff   = raceTs - windowMs;
+          const cutoff = raceTs - windowMs;
 
           for (const b1Idx of cbCfg.b1Indices) {
             const racer = racers[b1Idx];
@@ -1784,11 +2513,17 @@ export function runSingleRace({
 
             if (hist.length >= 2) {
               const gain = hist[0].rank - currentRank; // positive = positions gained
-              if (gain > (cbMaxGainByRacer.get(b1Idx) ?? 0)) cbMaxGainByRacer.set(b1Idx, gain);
+              if (gain > (cbMaxGainByRacer.get(b1Idx) ?? 0))
+                cbMaxGainByRacer.set(b1Idx, gain);
               if (gain >= cbCfg.minPositions) {
                 const lastTs = cbLastTriggerTs.get(b1Idx) ?? -Infinity;
                 if (raceTs - lastTs > windowMs) {
-                  cbTriggers.push({ ts: raceTs / 1000, racerIdx: b1Idx, name: racer.name, gain });
+                  cbTriggers.push({
+                    ts: raceTs / 1000,
+                    racerIdx: b1Idx,
+                    name: racer.name,
+                    gain,
+                  });
                   cbLastTriggerTs.set(b1Idx, raceTs);
                 }
               }
@@ -1798,26 +2533,35 @@ export function runSingleRace({
       }
 
       // Mixing-quota snapshot: taken at the first frame at or after avoidanceWarmupMs
-      if (!warmupMeasured && isOpen && raceTs >= behaviorConfig.avoidanceWarmupMs) {
-        const row0Ts   = racers.filter((r) => r.startRowIndex === 0 && !r.finished).map((r) => r.t);
-        const row1     = racers.filter((r) => r.startRowIndex === 1);
+      if (
+        !warmupMeasured &&
+        isOpen &&
+        raceTs >= behaviorConfig.avoidanceWarmupMs
+      ) {
+        const row0Ts = racers
+          .filter((r) => r.startRowIndex === 0 && !r.finished)
+          .map((r) => r.t);
+        const row1 = racers.filter((r) => r.startRowIndex === 1);
         const minRow0T = row0Ts.length > 0 ? Math.min(...row0Ts) : Infinity;
-        const mixed    = row1.filter((r) => r.t > minRow0T).length;
-        mixingQuota    = row1.length > 0 ? mixed / row1.length : null;
+        const mixed = row1.filter((r) => r.t > minRow0T).length;
+        mixingQuota = row1.length > 0 ? mixed / row1.length : null;
         warmupMeasured = true;
       }
 
       // Diagnostic: save pre-frame state for lateral-push and brake-activation counting
       let diagPrevPhysY, diagPrevAvoidance;
       if (diagnosticMode) {
-        diagPrevPhysY     = racers.map((r) => r.physicalY);
+        diagPrevPhysY = racers.map((r) => r.physicalY);
         diagPrevAvoidance = racers.map((r) => r.avoidanceActive);
       }
       // (computePositions + applyRacerBehavior now run INSIDE stepRacePhysics. _frameDiagOut is no
       // longer populated by applyRacerBehavior's 4th arg — the shared step calls it with 3 args, as
       // the browser does — so the frame diag map passed to frameHook is empty; the golden harness's
       // frameHook reads only the racer array, so this is inert for parity.)
-      if (frameHook) { _frameDiagOut.clear(); frameHook(raceTs, _frameDiagOut, racers); }
+      if (frameHook) {
+        _frameDiagOut.clear();
+        frameHook(raceTs, _frameDiagOut, racers);
+      }
       // Lite stats: always-on, low-overhead per-frame counters
       {
         for (let ri = 0; ri < racers.length; ri++) {
@@ -1825,10 +2569,12 @@ export function runSingleRace({
           if (r.avoidanceActive && r.startRowIndex === 1) liteRow1BrakeFrames++;
           if (r.avoidanceActive && r.startRowIndex === 0) liteRow0BrakeFrames++;
           if (r.avoidanceActive && r.startRowIndex === 2) liteRow2BrakeFrames++;
-          if (litePrevPhysY && Math.abs(r.physicalY - litePrevPhysY[ri]) > 1e-4) liteLateralMoves++;
+          if (litePrevPhysY && Math.abs(r.physicalY - litePrevPhysY[ri]) > 1e-4)
+            liteLateralMoves++;
         }
         if (!litePrevPhysY) litePrevPhysY = new Array(racers.length);
-        for (let ri = 0; ri < racers.length; ri++) litePrevPhysY[ri] = racers[ri].physicalY;
+        for (let ri = 0; ri < racers.length; ri++)
+          litePrevPhysY[ri] = racers[ri].physicalY;
         // Lateral quality: zigzag score (avg |Δv| per racer-frame, after 4s warmup)
         // Measures jerk-like lateral oscillation: large when params cause oscillation,
         // near-zero when motion is smooth. Sign reversals alone are misleading in a
@@ -1837,68 +2583,81 @@ export function runSingleRace({
         if (litePrevPhysYVel && raceTs > 4000) {
           for (let ri = 0; ri < racers.length; ri++) {
             if (!racers[ri].finished) {
-              liteZigzagSum += Math.abs((racers[ri].physicalYVelocity ?? 0) - litePrevPhysYVel[ri]);
+              liteZigzagSum += Math.abs(
+                (racers[ri].physicalYVelocity ?? 0) - litePrevPhysYVel[ri],
+              );
               liteZigzagFrames++;
             }
           }
         }
-        if (!litePrevPhysYVel) litePrevPhysYVel = new Array(racers.length).fill(0);
-        for (let ri = 0; ri < racers.length; ri++) litePrevPhysYVel[ri] = racers[ri].physicalYVelocity ?? 0;
+        if (!litePrevPhysYVel)
+          litePrevPhysYVel = new Array(racers.length).fill(0);
+        for (let ri = 0; ri < racers.length; ri++)
+          litePrevPhysYVel[ri] = racers[ri].physicalYVelocity ?? 0;
         // Lateral quality: overlap rate + resolution
         // Skip the first 4 s — start-phase packing always produces overlaps before
         // avoidance kicks in; counting them would inflate overlapRate artificially.
-        if (raceTs > 4000) for (let a = 0; a < racers.length; a++) {
-          if (racers[a].finished) continue;
-          for (let b = a + 1; b < racers.length; b++) {
-            if (racers[b].finished) continue;
-            const ra = racers[a], rb = racers[b];
-            const dY = Math.abs(ra.physicalY - rb.physicalY);
-            const dT = Math.abs(ra.t - rb.t);
-            const pairKey = ra.index * 100 + rb.index;
-            liteOverlapPairTotal++;
-            if (dT < overlapThreshold_t && dY < overlapThreshold_y) {
-              liteOverlapPairFrames++;
-              liteOverlapPairState.set(pairKey, (liteOverlapPairState.get(pairKey) ?? 0) + 1);
-            } else if (liteOverlapPairState.has(pairKey)) {
-              liteOverlapResolutionSum += liteOverlapPairState.get(pairKey);
-              liteOverlapResolutionN++;
-              liteOverlapPairState.delete(pairKey);
+        if (raceTs > 4000)
+          for (let a = 0; a < racers.length; a++) {
+            if (racers[a].finished) continue;
+            for (let b = a + 1; b < racers.length; b++) {
+              if (racers[b].finished) continue;
+              const ra = racers[a],
+                rb = racers[b];
+              const dY = Math.abs(ra.physicalY - rb.physicalY);
+              const dT = Math.abs(ra.t - rb.t);
+              const pairKey = ra.index * 100 + rb.index;
+              liteOverlapPairTotal++;
+              if (dT < overlapThreshold_t && dY < overlapThreshold_y) {
+                liteOverlapPairFrames++;
+                liteOverlapPairState.set(
+                  pairKey,
+                  (liteOverlapPairState.get(pairKey) ?? 0) + 1,
+                );
+              } else if (liteOverlapPairState.has(pairKey)) {
+                liteOverlapResolutionSum += liteOverlapPairState.get(pairKey);
+                liteOverlapResolutionN++;
+                liteOverlapPairState.delete(pairKey);
+              }
             }
           }
-        }
         // Honest overlap: body-extent check (all pairs, open + closed, after 4s warmup).
         // dT_px: path-pixel gap along track (wraps for closed tracks so lapping is detected).
         // dY_px: lateral pixel gap (physicalY × trackWidth/2).
         // Fires when both rendered bodies physically overlap or touch.
-        if (raceTs > 4000) for (let a = 0; a < racers.length; a++) {
-          if (racers[a].finished) continue;
-          for (let b = a + 1; b < racers.length; b++) {
-            if (racers[b].finished) continue;
-            const ra = racers[a], rb = racers[b];
-            // Closed tracks: wrap by 1.0 (one lap), not finishT (which is several laps).
-            // tPos = ((t % 1) + 1) % 1 gives the racer's position within the current lap.
-            // Two racers at the same tPos are visually co-located even if on different laps.
-            let dT_px;
-            if (isOpen) {
-              dT_px = Math.abs(ra.t - rb.t) * pathLengthPx;
-            } else {
-              const tPosA = ((ra.t % 1) + 1) % 1;
-              const tPosB = ((rb.t % 1) + 1) % 1;
-              const dtNorm = Math.abs(tPosA - tPosB);
-              dT_px = Math.min(dtNorm, 1 - dtNorm) * pathLengthPx;
-            }
-            const dY_px  = Math.abs(ra.physicalY - rb.physicalY) * geometricTrackWidth / 2;
-            honestOverlapPairTotal++;
-            if (dT_px < drawnBodyLengthPx && dY_px < drawnBodyWidthPx) {
-              honestOverlapPairFrames++;
-              if (!isOpen) {
-                // Decompose: same-lap (|Δt| < 1.0) vs genuine lapping (|Δt| ≥ 1.0).
-                if (Math.abs(ra.t - rb.t) >= 1.0) honestCrossLapFrames++;
-                else honestSameLapFrames++;
+        if (raceTs > 4000)
+          for (let a = 0; a < racers.length; a++) {
+            if (racers[a].finished) continue;
+            for (let b = a + 1; b < racers.length; b++) {
+              if (racers[b].finished) continue;
+              const ra = racers[a],
+                rb = racers[b];
+              // Closed tracks: wrap by 1.0 (one lap), not finishT (which is several laps).
+              // tPos = ((t % 1) + 1) % 1 gives the racer's position within the current lap.
+              // Two racers at the same tPos are visually co-located even if on different laps.
+              let dT_px;
+              if (isOpen) {
+                dT_px = Math.abs(ra.t - rb.t) * pathLengthPx;
+              } else {
+                const tPosA = ((ra.t % 1) + 1) % 1;
+                const tPosB = ((rb.t % 1) + 1) % 1;
+                const dtNorm = Math.abs(tPosA - tPosB);
+                dT_px = Math.min(dtNorm, 1 - dtNorm) * pathLengthPx;
+              }
+              const dY_px =
+                (Math.abs(ra.physicalY - rb.physicalY) * geometricTrackWidth) /
+                2;
+              honestOverlapPairTotal++;
+              if (dT_px < drawnBodyLengthPx && dY_px < drawnBodyWidthPx) {
+                honestOverlapPairFrames++;
+                if (!isOpen) {
+                  // Decompose: same-lap (|Δt| < 1.0) vs genuine lapping (|Δt| ≥ 1.0).
+                  if (Math.abs(ra.t - rb.t) >= 1.0) honestCrossLapFrames++;
+                  else honestSameLapFrames++;
+                }
               }
             }
           }
-        }
         // ── passThroughCount detector (sim-only) ─────────────────────────────────
         // Window starts after the configured warmup (avoidanceWarmupMs), not a fixed 5s.
         if (raceTs >= behaviorConfig.avoidanceWarmupMs) {
@@ -1906,17 +2665,24 @@ export function runSingleRace({
             if (racers[a].finished) continue;
             for (let b = a + 1; b < racers.length; b++) {
               if (racers[b].finished) continue;
-              const ra = racers[a], rb = racers[b];
+              const ra = racers[a],
+                rb = racers[b];
               const diff = ra.physicalY - rb.physicalY;
               const sign = diff > 0 ? 1 : diff < 0 ? -1 : 0;
               const key = ra.index * 1000 + rb.index;
               const prev = passThroughPrevSign.get(key);
-              if (sign !== 0 && prev !== undefined && prev !== 0 && sign !== prev) {
+              if (
+                sign !== 0 &&
+                prev !== undefined &&
+                prev !== 0 &&
+                sign !== prev
+              ) {
                 let dT_px;
                 if (isOpen) {
                   dT_px = Math.abs(ra.t - rb.t) * pathLengthPx;
                 } else {
-                  const ta = ((ra.t % 1) + 1) % 1, tb = ((rb.t % 1) + 1) % 1;
+                  const ta = ((ra.t % 1) + 1) % 1,
+                    tb = ((rb.t % 1) + 1) % 1;
                   const dn = Math.abs(ta - tb);
                   dT_px = Math.min(dn, 1 - dn) * pathLengthPx;
                 }
@@ -1934,23 +2700,36 @@ export function runSingleRace({
           for (let ri = 0; ri < racers.length; ri++) {
             const trailer = racers[ri];
             if (trailer.finished) continue;
-            if (!(trailer.brakeMatchFactor < 1.0)) { brakeMatchFailState.delete(trailer.index * 10000); continue; }
+            if (!(trailer.brakeMatchFactor < 1.0)) {
+              brakeMatchFailState.delete(trailer.index * 10000);
+              continue;
+            }
             const leaderIdx = trailer.brakeMatchLeaderIndex;
             if (leaderIdx === -1) continue;
             let leader = null;
             for (let lj = 0; lj < racers.length; lj++) {
-              if (racers[lj].index === leaderIdx && !racers[lj].finished) { leader = racers[lj]; break; }
+              if (racers[lj].index === leaderIdx && !racers[lj].finished) {
+                leader = racers[lj];
+                break;
+              }
             }
             if (!leader) continue;
             // Longitudinal zone check: same dynamicBrakeT gate as raceBehavior.js.
-            const sizeT = (trailer.frameSizePx ?? 0) > 0 && pathLengthPx > 0
-              ? (trailer.frameSizePx / pathLengthPx) * behaviorConfig.speedBrakeTMultiplier
-              : 0.014;
+            const sizeT =
+              (trailer.frameSizePx ?? 0) > 0 && pathLengthPx > 0
+                ? (trailer.frameSizePx / pathLengthPx) *
+                  behaviorConfig.speedBrakeTMultiplier
+                : 0.014;
             const dT = Math.abs(trailer.t - leader.t);
-            if (dT > sizeT) { brakeMatchFailState.delete(trailer.index * 10000 + leaderIdx); continue; }
+            if (dT > sizeT) {
+              brakeMatchFailState.delete(trailer.index * 10000 + leaderIdx);
+              continue;
+            }
             // 1-frame advance delta: natPrevT holds t before the t-update this frame.
-            const trailerDelta = trailer.t - (natPrevT.get(trailer.index) ?? trailer.t);
-            const leaderDelta  = leader.t  - (natPrevT.get(leader.index)  ?? leader.t);
+            const trailerDelta =
+              trailer.t - (natPrevT.get(trailer.index) ?? trailer.t);
+            const leaderDelta =
+              leader.t - (natPrevT.get(leader.index) ?? leader.t);
             const pairKey = trailer.index * 10000 + leaderIdx;
             if (trailerDelta > leaderDelta) {
               const consec = (brakeMatchFailState.get(pairKey) ?? 0) + 1;
@@ -1972,7 +2751,8 @@ export function runSingleRace({
 
         // Track max real progress spread (closed tracks, for lapping verification)
         if (!isOpen && raceTs > 4000) {
-          let tMin = Infinity, tMax = -Infinity;
+          let tMin = Infinity,
+            tMax = -Infinity;
           for (const r of racers) {
             if (r.finished) continue;
             if (r.t < tMin) tMin = r.t;
@@ -2002,8 +2782,11 @@ export function runSingleRace({
               if (racers[a].finished) continue;
               for (let b = a + 1; b < racers.length; b++) {
                 if (racers[b].finished) continue;
-                const pairKey  = racers[a].index * 100 + racers[b].index;
-                const curLeader = racers[a].t >= racers[b].t ? racers[a].index : racers[b].index;
+                const pairKey = racers[a].index * 100 + racers[b].index;
+                const curLeader =
+                  racers[a].t >= racers[b].t
+                    ? racers[a].index
+                    : racers[b].index;
                 const prevLeader = soPairLeader.get(pairKey);
                 if (prevLeader === undefined) {
                   soPairLeader.set(pairKey, curLeader);
@@ -2011,7 +2794,10 @@ export function runSingleRace({
                 } else if (prevLeader === curLeader) {
                   const newSince = (soPairSince.get(pairKey) ?? 0) + 1;
                   soPairSince.set(pairKey, newSince);
-                  if (newSince >= SO_CONFIRM_FRAMES && soPairConfirmed.get(pairKey) !== curLeader) {
+                  if (
+                    newSince >= SO_CONFIRM_FRAMES &&
+                    soPairConfirmed.get(pairKey) !== curLeader
+                  ) {
                     if (soPairConfirmed.has(pairKey)) soCount++;
                     soPairConfirmed.set(pairKey, curLeader);
                   }
@@ -2024,11 +2810,14 @@ export function runSingleRace({
           }
         }
         if (isOpen) {
-          const row0Live = racers.filter((r) => r.startRowIndex === 0 && !r.finished);
+          const row0Live = racers.filter(
+            (r) => r.startRowIndex === 0 && !r.finished,
+          );
           if (row0Live.length > 0) {
             const minRow0T = Math.min(...row0Live.map((r) => r.t));
             for (const r of racers) {
-              if (r.startRowIndex === 1 && !r.finished && r.t > minRow0T) liteRow1EverAhead.add(r.index);
+              if (r.startRowIndex === 1 && !r.finished && r.t > minRow0T)
+                liteRow1EverAhead.add(r.index);
             }
           }
         }
@@ -2036,10 +2825,15 @@ export function runSingleRace({
       // Diagnostic: post-frame counting + snapshot check
       if (diagnosticMode) {
         for (let ri = 0; ri < racers.length; ri++) {
-          if (Math.abs(racers[ri].physicalY - diagPrevPhysY[ri]) > 1e-4) diagIntLateralPushes++;
-          if (!diagPrevAvoidance[ri] && racers[ri].avoidanceActive)       diagIntBrakeActs++;
+          if (Math.abs(racers[ri].physicalY - diagPrevPhysY[ri]) > 1e-4)
+            diagIntLateralPushes++;
+          if (!diagPrevAvoidance[ri] && racers[ri].avoidanceActive)
+            diagIntBrakeActs++;
         }
-        while (diagSnapIdx < DIAG_SNAP_MS.length && raceTs >= DIAG_SNAP_MS[diagSnapIdx]) {
+        while (
+          diagSnapIdx < DIAG_SNAP_MS.length &&
+          raceTs >= DIAG_SNAP_MS[diagSnapIdx]
+        ) {
           diagTakeSnapshot(DIAG_SNAP_TIMES_S[diagSnapIdx], raceTs);
           diagSnapIdx++;
         }
@@ -2057,24 +2851,41 @@ export function runSingleRace({
         for (const r of racers) if (r.t > leaderMaxT) leaderMaxT = r.t;
         gmTrace.push({ ts: raceTs, t: leaderMaxT });
         // Live order by t desc (finished racers included — their clamped t stays at the front).
-        const gmOrder = [...racers].sort((a, b) => (b.t - a.t) || (a.index - b.index));
+        const gmOrder = [...racers].sort(
+          (a, b) => b.t - a.t || a.index - b.index,
+        );
         // Lengths behind the leader for a given position (0 for the leader; ≥0). Shared HUD scale.
-        const lenBehind = (t) => lengthsBehindLeader(t, leaderMaxT, isOpen, govLenScale);
+        const lenBehind = (t) =>
+          lengthsBehindLeader(t, leaderMaxT, isOpen, govLenScale);
         // Frontmost-gap info: the widest consecutive gap (lengths) among the front GM_FRONT_K racers,
         // and how many racers sit AHEAD of it (= the detached lead-group size). Also the raw front-gap
         // array (P1→P2, P2→P3, …) so any threshold/definition is recoverable. RAW, no pass/fail.
         const frontGapInfo = () => {
           const lim = Math.min(GM_FRONT_K, gmOrder.length - 1);
           const gaps = [];
-          for (let i = 0; i < lim; i++) gaps.push(arcT(gmOrder[i].t, gmOrder[i + 1].t, isOpen) * govLenScale);
-          let maxG = 0, at = 0;
-          for (let i = 0; i < gaps.length; i++) if (gaps[i] > maxG) { maxG = gaps[i]; at = i; }
-          return { frontmostGapLen: +maxG.toFixed(4), nAhead: gaps.length ? at + 1 : 0, gaps: gaps.map((g) => +g.toFixed(4)) };
+          for (let i = 0; i < lim; i++)
+            gaps.push(
+              arcT(gmOrder[i].t, gmOrder[i + 1].t, isOpen) * govLenScale,
+            );
+          let maxG = 0,
+            at = 0;
+          for (let i = 0; i < gaps.length; i++)
+            if (gaps[i] > maxG) {
+              maxG = gaps[i];
+              at = i;
+            }
+          return {
+            frontmostGapLen: +maxG.toFixed(4),
+            nAhead: gaps.length ? at + 1 : 0,
+            gaps: gaps.map((g) => +g.toFixed(4)),
+          };
         };
         // Final-third signals: leader→P2 gap (deadRace) + frontmost front gap (lead-group detach).
         if (raceProgress >= 2 / 3 && gmOrder.length >= 2) {
           gmDeadSeries.push(lenBehind(gmOrder[1].t));
-          gmDeadSeriesSec.push(secondsBehindLeader(gmOrder[1].t, gmTrace, raceTs));
+          gmDeadSeriesSec.push(
+            secondsBehindLeader(gmOrder[1].t, gmTrace, raceTs),
+          );
           gmFrontSeries.push(frontGapInfo().frontmostGapLen);
         }
         // At-the-line snapshot: the field's lengths-behind at the instant the leader reaches finishT
@@ -2083,14 +2894,24 @@ export function runSingleRace({
         // lengths-behind is the spatial FINAL gap (a finisher's own gap at its OWN crossing is ~0).
         if (!gmLineSnap && finishT > 0 && leaderMaxT >= finishT) {
           const perRacerLen = {};
-          for (const r of racers) perRacerLen[r.index] = +lenBehind(r.t).toFixed(4);
+          for (const r of racers)
+            perRacerLen[r.index] = +lenBehind(r.t).toFixed(4);
           const fg = frontGapInfo();
           gmLineSnap = {
-            leaderGapToP2Len: gmOrder.length >= 2 ? +lenBehind(gmOrder[1].t).toFixed(4) : 0,
-            top5SpreadLen: gmOrder.length >= 5 ? +lenBehind(gmOrder[4].t).toFixed(4) : 0,
-            fieldMedianBehindLen: +percentile(gmOrder.map((r) => lenBehind(r.t)), 0.5).toFixed(4),
-            fieldSpreadP10P90Len: +fieldSpreadP10P90(gmOrder.map((r) => lenBehind(r.t))).toFixed(4),
-            frontmostGapLen: fg.frontmostGapLen, frontmostGapNAhead: fg.nAhead, frontGaps: fg.gaps,
+            leaderGapToP2Len:
+              gmOrder.length >= 2 ? +lenBehind(gmOrder[1].t).toFixed(4) : 0,
+            top5SpreadLen:
+              gmOrder.length >= 5 ? +lenBehind(gmOrder[4].t).toFixed(4) : 0,
+            fieldMedianBehindLen: +percentile(
+              gmOrder.map((r) => lenBehind(r.t)),
+              0.5,
+            ).toFixed(4),
+            fieldSpreadP10P90Len: +fieldSpreadP10P90(
+              gmOrder.map((r) => lenBehind(r.t)),
+            ).toFixed(4),
+            frontmostGapLen: fg.frontmostGapLen,
+            frontmostGapNAhead: fg.nAhead,
+            frontGaps: fg.gaps,
             perRacerLen,
           };
         }
@@ -2100,10 +2921,19 @@ export function runSingleRace({
             const behindLen = lenBehind(r.t);
             const behindSec = secondsBehindLeader(r.t, gmTrace, raceTs);
             let g = gmPerRacer.get(r.index);
-            if (!g) { g = { maxBehindLen: 0, maxBehindSec: 0, inContentionSteps: 0, totalSteps: 0 }; gmPerRacer.set(r.index, g); }
+            if (!g) {
+              g = {
+                maxBehindLen: 0,
+                maxBehindSec: 0,
+                inContentionSteps: 0,
+                totalSteps: 0,
+              };
+              gmPerRacer.set(r.index, g);
+            }
             if (behindLen > g.maxBehindLen) g.maxBehindLen = behindLen;
             if (behindSec > g.maxBehindSec) g.maxBehindSec = behindSec;
-            if (behindLen <= GM_THRESHOLDS.inContentionLen) g.inContentionSteps++;
+            if (behindLen <= GM_THRESHOLDS.inContentionLen)
+              g.inContentionSteps++;
             g.totalSteps++;
           }
         }
@@ -2111,20 +2941,32 @@ export function runSingleRace({
         // p10–p90, PRIMARY lengths + secondary seconds (so lengths-per-second is derivable per sample).
         while (gmNextCp < GM_CPS.length && raceProgress >= GM_CPS[gmNextCp]) {
           const lenArr = gmOrder.map((r) => lenBehind(r.t));
-          const secArr = gmOrder.map((r) => secondsBehindLeader(r.t, gmTrace, raceTs));
+          const secArr = gmOrder.map((r) =>
+            secondsBehindLeader(r.t, gmTrace, raceTs),
+          );
           const fg = frontGapInfo();
           gmCheckpoints.push({
             progress: GM_CPS[gmNextCp],
             // PRIMARY (lengths):
-            leaderGapToP2Len: gmOrder.length >= 2 ? +lenBehind(gmOrder[1].t).toFixed(4) : 0,
-            top5SpreadLen: gmOrder.length >= 5 ? +lenBehind(gmOrder[4].t).toFixed(4) : 0,
+            leaderGapToP2Len:
+              gmOrder.length >= 2 ? +lenBehind(gmOrder[1].t).toFixed(4) : 0,
+            top5SpreadLen:
+              gmOrder.length >= 5 ? +lenBehind(gmOrder[4].t).toFixed(4) : 0,
             fieldMedianBehindLen: +percentile(lenArr, 0.5).toFixed(4),
             fieldSpreadP10P90Len: +fieldSpreadP10P90(lenArr).toFixed(4),
             // FRONTMOST GAP (lead-group detach — the limiter's raw material):
-            frontmostGapLen: fg.frontmostGapLen, frontmostGapNAhead: fg.nAhead, frontGaps: fg.gaps,
+            frontmostGapLen: fg.frontmostGapLen,
+            frontmostGapNAhead: fg.nAhead,
+            frontGaps: fg.gaps,
             // SECONDARY (seconds) — reporting only:
-            leaderGapToP2Sec: gmOrder.length >= 2 ? +secondsBehindLeader(gmOrder[1].t, gmTrace, raceTs).toFixed(4) : 0,
-            top5SpreadSec: gmOrder.length >= 5 ? +secondsBehindLeader(gmOrder[4].t, gmTrace, raceTs).toFixed(4) : 0,
+            leaderGapToP2Sec:
+              gmOrder.length >= 2
+                ? +secondsBehindLeader(gmOrder[1].t, gmTrace, raceTs).toFixed(4)
+                : 0,
+            top5SpreadSec:
+              gmOrder.length >= 5
+                ? +secondsBehindLeader(gmOrder[4].t, gmTrace, raceTs).toFixed(4)
+                : 0,
             fieldMedianBehindSec: +percentile(secArr, 0.5).toFixed(4),
             fieldSpreadP10P90Sec: +fieldSpreadP10P90(secArr).toFixed(4),
           });
@@ -2140,9 +2982,18 @@ export function runSingleRace({
         // (0) FORMATION diagnostic (read-only): feed the per-frame leader→P2 gap + live leader identity
         // to the pure tracker (WHEN the gap forms). Same shared length as every other measurement.
         {
-          const fLive = racers.filter((r) => !r.finished).sort((a, b) => (b.t - a.t) || (a.index - b.index));
-          const fGap = fLive.length >= 2 ? arcT(fLive[0].t, fLive[1].t, isOpen) * govLenScale : 0;
-          rp.formation.observe(fGap, raceProgress, fLive.length ? fLive[0].index : -1);
+          const fLive = racers
+            .filter((r) => !r.finished)
+            .sort((a, b) => b.t - a.t || a.index - b.index);
+          const fGap =
+            fLive.length >= 2
+              ? arcT(fLive[0].t, fLive[1].t, isOpen) * govLenScale
+              : 0;
+          rp.formation.observe(
+            fGap,
+            raceProgress,
+            fLive.length ? fLive[0].index : -1,
+          );
           // Release-sweep: same live ordering, two more read-only trackers. Both self-gate on
           // progress, so feeding them every frame is correct and costs one comparison outside
           // their windows.
@@ -2151,22 +3002,42 @@ export function runSingleRace({
           // Sustained-P1-battle primitives. The gap callback is the SAME lap-aware length path every
           // other observer here uses (arcT x govLenScale) — one shared definition, no duplicate arc
           // maths inside the observer.
-          rp.frontBattle.observe(racers, raceProgress, raceTs, (aT, bT) => arcT(aT, bT, isOpen) * govLenScale);
+          rp.frontBattle.observe(
+            racers,
+            raceProgress,
+            raceTs,
+            (aT, bT) => arcT(aT, bT, isOpen) * govLenScale,
+          );
           // PULK-SPECTACLE-1 front-liveliness — same shared length path; self-gates on progress windows.
-          if (rp.frontLiveliness) rp.frontLiveliness.observe(racers, raceProgress, (aT, bT) => arcT(aT, bT, isOpen) * govLenScale);
+          if (rp.frontLiveliness)
+            rp.frontLiveliness.observe(
+              racers,
+              raceProgress,
+              (aT, bT) => arcT(aT, bT, isOpen) * govLenScale,
+            );
         }
         // (1) One-shot at windowStart: the frontmost LIVE racer's identity + its lead over P2 (lengths).
         if (rp.leaderIdxAt090 === null && raceProgress >= RP_WINDOW_START) {
-          const live = racers.filter((r) => !r.finished).sort((a, b) => (b.t - a.t) || (a.index - b.index));
+          const live = racers
+            .filter((r) => !r.finished)
+            .sort((a, b) => b.t - a.t || a.index - b.index);
           if (live.length >= 2) {
             rp.leaderIdxAt090 = live[0].index;
             // Single source with the front-leash input: leaderGapLengths (arcT × lenScale, lap-aware).
-            rp.leaderGapP2At090Len = +leaderGapLengths(racers, isOpen, govLenScale).toFixed(4);
+            rp.leaderGapP2At090Len = +leaderGapLengths(
+              racers,
+              isOpen,
+              govLenScale,
+            ).toFixed(4);
             // "In the fight": how many live racers sit within runawayParade.leadLen (3.0) lengths behind
             // P1 at the window (the product metric — median 0 in runaways today, target ≥2).
             let w3 = 0;
             for (let i = 1; i < live.length; i++) {
-              if (arcT(live[0].t, live[i].t, isOpen) * govLenScale <= RUNAWAY_PARADE_DEFAULTS.leadLen) w3++;
+              if (
+                arcT(live[0].t, live[i].t, isOpen) * govLenScale <=
+                RUNAWAY_PARADE_DEFAULTS.leadLen
+              )
+                w3++;
             }
             rp.within3P1At090 = w3;
           } else if (live.length === 1) {
@@ -2177,12 +3048,21 @@ export function runSingleRace({
         // (2) Challenge window [windowStart, 1.0]: running MIN lead of the 0.90-leader over the WHOLE
         // field, only while that racer is still on track (its finish seals the win). SIGNED in lengths:
         // the arc gap when it leads, 0 when the field has drawn level or passed it (= challenged).
-        if (rp.leaderIdxAt090 !== null && rp.leaderIdxAt090 >= 0 && raceProgress >= RP_WINDOW_START) {
+        if (
+          rp.leaderIdxAt090 !== null &&
+          rp.leaderIdxAt090 >= 0 &&
+          raceProgress >= RP_WINDOW_START
+        ) {
           const leaderR = racers.find((r) => r.index === rp.leaderIdxAt090);
           if (leaderR && !leaderR.finished) {
             let bestOtherT = -Infinity;
-            for (const r of racers) if (r.index !== leaderR.index && r.t > bestOtherT) bestOtherT = r.t;
-            const lead = bestOtherT >= leaderR.t ? 0 : arcT(leaderR.t, bestOtherT, isOpen) * govLenScale;
+            for (const r of racers)
+              if (r.index !== leaderR.index && r.t > bestOtherT)
+                bestOtherT = r.t;
+            const lead =
+              bestOtherT >= leaderR.t
+                ? 0
+                : arcT(leaderR.t, bestOtherT, isOpen) * govLenScale;
             if (lead < rp.minLeadFrom090Len) rp.minLeadFrom090Len = lead;
           }
         }
@@ -2199,10 +3079,16 @@ export function runSingleRace({
           let leaderMaxT = -Infinity;
           for (const r of racers) if (r.t > leaderMaxT) leaderMaxT = r.t;
           if (leaderMaxT >= finishT) {
-            const order = [...racers].sort((a, b) => (b.t - a.t) || (a.index - b.index));
+            const order = [...racers].sort(
+              (a, b) => b.t - a.t || a.index - b.index,
+            );
             const gaps = [];
             for (let i = 0; i < order.length - 1; i++) {
-              gaps.push(+(arcT(order[i].t, order[i + 1].t, isOpen) * govLenScale).toFixed(4));
+              gaps.push(
+                +(
+                  arcT(order[i].t, order[i + 1].t, isOpen) * govLenScale
+                ).toFixed(4),
+              );
             }
             rp.line = { order: order.map((r) => r.index), gaps };
             const speed095ByIndex = {};
@@ -2210,7 +3096,8 @@ export function runSingleRace({
               const dtSec = (raceTs - rp.ts095) / 1000;
               for (const r of racers) {
                 const t0 = rp.t095ByIndex[r.index];
-                if (t0 != null) speed095ByIndex[r.index] = +(((r.t - t0) / dtSec)).toFixed(6);
+                if (t0 != null)
+                  speed095ByIndex[r.index] = +((r.t - t0) / dtSec).toFixed(6);
               }
             }
             rp.speed095ByIndex = speed095ByIndex;
@@ -2236,34 +3123,46 @@ export function runSingleRace({
     }
 
     const results = racers.map((r) => ({
-      racerIndex:    r.index,
+      racerIndex: r.index,
       startRowIndex: r.startRowIndex,
-      indexInRow:    r.indexInRow,
-      finalT:        r.t,
-      finalRank:     r.finishRank,
-      finishTime:    r.finishTime,
+      indexInRow: r.indexInRow,
+      finalT: r.t,
+      finalRank: r.finishRank,
+      finishTime: r.finishTime,
     }));
     // Attach mixing-quota and choreo diagnostics as non-iterable properties.
-    results.mixingQuota     = mixingQuota;
-    results.diagSnapshots   = diagnosticMode ? diagSnapshots : null;
+    results.mixingQuota = mixingQuota;
+    results.diagSnapshots = diagnosticMode ? diagSnapshots : null;
     results.liteRow1BrakeFrames = liteRow1BrakeFrames;
     results.liteRow0BrakeFrames = liteRow0BrakeFrames;
     results.liteRow2BrakeFrames = liteRow2BrakeFrames;
-    results.liteLateralMoves    = liteLateralMoves;
-    results.liteRow1EverAheadCount       = liteRow1EverAhead.size;
-    results.liteOverlapRate              = liteOverlapPairTotal > 0 ? liteOverlapPairFrames / liteOverlapPairTotal : 0;
-    results.honestOverlapRate            = honestOverlapPairTotal > 0 ? honestOverlapPairFrames / honestOverlapPairTotal : 0;
-    results.passThroughCount             = passThroughCount;        // sim-only: lateral pass-through events (post-warmup)
-    results.maxRealSpread                = maxRealSpread;           // laps; 0 on open tracks
-    results.honestSameLapFrames          = honestSameLapFrames;     // closed tracks only
-    results.honestCrossLapFrames         = honestCrossLapFrames;    // closed tracks only
-    results.liteOverlapResolutionFrames  = liteOverlapResolutionN > 0 ? liteOverlapResolutionSum / liteOverlapResolutionN : 0;
-    results.liteZigzagScore              = liteZigzagFrames > 0 ? liteZigzagSum / liteZigzagFrames : 0;
-    results.liteLatSpeedScore            = liteLatSpeedFrames > 0 ? liteLatSpeedSum / liteLatSpeedFrames : 0;
-    results.liteBrakeRate                = liteBrakeFrames > 0 ? liteBrakeSum / liteBrakeFrames : 0;
-    results.liteStableOvertakes          = soCount / racers.length;
-    results.brakeMatchFailureCount       = brakeMatchFailureCount;
-    results.brakeMatchLeaderBraked       = brakeMatchLeaderBraked;
+    results.liteLateralMoves = liteLateralMoves;
+    results.liteRow1EverAheadCount = liteRow1EverAhead.size;
+    results.liteOverlapRate =
+      liteOverlapPairTotal > 0
+        ? liteOverlapPairFrames / liteOverlapPairTotal
+        : 0;
+    results.honestOverlapRate =
+      honestOverlapPairTotal > 0
+        ? honestOverlapPairFrames / honestOverlapPairTotal
+        : 0;
+    results.passThroughCount = passThroughCount; // sim-only: lateral pass-through events (post-warmup)
+    results.maxRealSpread = maxRealSpread; // laps; 0 on open tracks
+    results.honestSameLapFrames = honestSameLapFrames; // closed tracks only
+    results.honestCrossLapFrames = honestCrossLapFrames; // closed tracks only
+    results.liteOverlapResolutionFrames =
+      liteOverlapResolutionN > 0
+        ? liteOverlapResolutionSum / liteOverlapResolutionN
+        : 0;
+    results.liteZigzagScore =
+      liteZigzagFrames > 0 ? liteZigzagSum / liteZigzagFrames : 0;
+    results.liteLatSpeedScore =
+      liteLatSpeedFrames > 0 ? liteLatSpeedSum / liteLatSpeedFrames : 0;
+    results.liteBrakeRate =
+      liteBrakeFrames > 0 ? liteBrakeSum / liteBrakeFrames : 0;
+    results.liteStableOvertakes = soCount / racers.length;
+    results.brakeMatchFailureCount = brakeMatchFailureCount;
+    results.brakeMatchLeaderBraked = brakeMatchLeaderBraked;
     // Phase-3A: Δ5s per-racer oscillation metric
     let tmDelta5sMax = 0;
     let tmOscillatingCount = 0;
@@ -2271,7 +3170,8 @@ export function runSingleRace({
       for (const [, ring] of tmRings) {
         const filled = Math.min(ring.idx, TM_RING_SIZE);
         if (filled < 2) continue;
-        let mn = Infinity, mx = -Infinity;
+        let mn = Infinity,
+          mx = -Infinity;
         for (let j = 0; j < filled; j++) {
           if (ring.buf[j] < mn) mn = ring.buf[j];
           if (ring.buf[j] > mx) mx = ring.buf[j];
@@ -2284,19 +3184,23 @@ export function runSingleRace({
 
     // Phase-3A: Naturalness metrics
     results.naturalness = {
-      meanJerk:               natJerkSteps > 0 ? natJerkSum  / natJerkSteps : 0,
-      maxJerkSpike:           natJerkMax,
-      jerkFraction_high:      natJerkSteps > 0 ? natJerkHighCount / natJerkSteps : 0,
-      naturalOvertakeFraction: natOvertakeCount > 0 ? natNaturalOvertakeCount / natOvertakeCount : 1,
-      pulkTimeFraction:        natStableFrames > 0 ? natPulkFrames / natStableFrames : 0,
-      pulkTriggersInWindow:   natPulkTriggersInWindow,
+      meanJerk: natJerkSteps > 0 ? natJerkSum / natJerkSteps : 0,
+      maxJerkSpike: natJerkMax,
+      jerkFraction_high: natJerkSteps > 0 ? natJerkHighCount / natJerkSteps : 0,
+      naturalOvertakeFraction:
+        natOvertakeCount > 0 ? natNaturalOvertakeCount / natOvertakeCount : 1,
+      pulkTimeFraction:
+        natStableFrames > 0 ? natPulkFrames / natStableFrames : 0,
+      pulkTriggersInWindow: natPulkTriggersInWindow,
       pulkTriggersOutOfWindow: natPulkTriggersOutOfWindow,
       // From controller telemetry (0 when Race Plan inactive)
-      ...(racePlanController ? racePlanController.collectTelemetry() : {
-        winnerBlockedFractionInOutcome: 0,
-        planBiasDeltaMean: 0,
-        pulkBiasEventCount: 0,
-      }),
+      ...(racePlanController
+        ? racePlanController.collectTelemetry()
+        : {
+            winnerBlockedFractionInOutcome: 0,
+            planBiasDeltaMean: 0,
+            pulkBiasEventCount: 0,
+          }),
       // Δ5s oscillation: max trajectoryMult swing over any 5s window during OUTCOME
       tmDelta5sMax,
       tmOscillatingCount,
@@ -2305,8 +3209,11 @@ export function runSingleRace({
       outcomeTotalSwaps: ocTotalSwaps,
       outcomeFrames: ocFrames,
     };
-    results.physicalDurationS   = Math.max(...racers.map((r) => r.finishTime ?? 0));
-    results.avgRerollsPerRacer  = racers.reduce((s, r) => s + r.rerollCount, 0) / racers.length;
+    results.physicalDurationS = Math.max(
+      ...racers.map((r) => r.finishTime ?? 0),
+    );
+    results.avgRerollsPerRacer =
+      racers.reduce((s, r) => s + r.rerollCount, 0) / racers.length;
     // outcomeReached: true if at least one racer crossed the finish line (race didn't time out)
     results.outcomeReached = finishedCount > 0;
     results.b2LastInside = b2LastInside; // B2-leak trace: index → last OUTCOME progress inside B2
@@ -2314,20 +3221,29 @@ export function runSingleRace({
     // Phase-3B: COMEBACK analysis result
     if (cbCfg) {
       const finalTs = raceTs;
-      const effectiveOutcomeEndMs = cbEndgameStartMs !== null
-        ? Math.min(cbEndgameStartMs, cbOutcomeEndMs ?? finalTs)
-        : (cbOutcomeEndMs ?? finalTs);
-      const outcomeDurS   = cbOutcomeStartMs != null ? ((cbOutcomeEndMs   ?? finalTs) - cbOutcomeStartMs) / 1000 : 0;
-      const effectiveDurS = cbOutcomeStartMs != null ? (effectiveOutcomeEndMs - cbOutcomeStartMs) / 1000          : 0;
+      const effectiveOutcomeEndMs =
+        cbEndgameStartMs !== null
+          ? Math.min(cbEndgameStartMs, cbOutcomeEndMs ?? finalTs)
+          : (cbOutcomeEndMs ?? finalTs);
+      const outcomeDurS =
+        cbOutcomeStartMs != null
+          ? ((cbOutcomeEndMs ?? finalTs) - cbOutcomeStartMs) / 1000
+          : 0;
+      const effectiveDurS =
+        cbOutcomeStartMs != null
+          ? (effectiveOutcomeEndMs - cbOutcomeStartMs) / 1000
+          : 0;
       results.comebackDiag = {
-        outcomeStartS:  cbOutcomeStartMs != null ? cbOutcomeStartMs / 1000 : null,
-        outcomeEndS:    cbOutcomeEndMs   != null ? cbOutcomeEndMs   / 1000 : null,
-        outcomeDurS:    Math.max(0, outcomeDurS),
-        endgameStartS:  cbEndgameStartMs != null ? cbEndgameStartMs / 1000 : null,
-        effectiveDurS:  Math.max(0, effectiveDurS),
-        triggerCount:   cbTriggers.length,
-        triggers:       cbTriggers,
-        allMaxGains:    [...cbMaxGainByRacer.values()],
+        outcomeStartS:
+          cbOutcomeStartMs != null ? cbOutcomeStartMs / 1000 : null,
+        outcomeEndS: cbOutcomeEndMs != null ? cbOutcomeEndMs / 1000 : null,
+        outcomeDurS: Math.max(0, outcomeDurS),
+        endgameStartS:
+          cbEndgameStartMs != null ? cbEndgameStartMs / 1000 : null,
+        effectiveDurS: Math.max(0, effectiveDurS),
+        triggerCount: cbTriggers.length,
+        triggers: cbTriggers,
+        allMaxGains: [...cbMaxGainByRacer.values()],
       };
     } else {
       results.comebackDiag = null;
@@ -2337,18 +3253,20 @@ export function runSingleRace({
     // (and every downstream column) is unchanged for a normal fairness run.
     if (breakawayDiag) {
       const targetRankOf = (idx) =>
-        racerTargetRankMap && idx >= 0 ? (racerTargetRankMap.get(idx) ?? null) : null;
+        racerTargetRankMap && idx >= 0
+          ? (racerTargetRankMap.get(idx) ?? null)
+          : null;
       results.breakawayDiag = {
-        gapBins:              bkGapBins,
-        peakPreOutcomeGap:    bkPeakGap > -Infinity ? +bkPeakGap.toFixed(5) : 0,
-        peakProgress:         +bkPeakProgress.toFixed(4),
-        peakGap2nd:           +bkPeakGap2nd.toFixed(5),
-        peakLeaderIdx:        bkPeakLeaderIdx,
+        gapBins: bkGapBins,
+        peakPreOutcomeGap: bkPeakGap > -Infinity ? +bkPeakGap.toFixed(5) : 0,
+        peakProgress: +bkPeakProgress.toFixed(4),
+        peakGap2nd: +bkPeakGap2nd.toFixed(5),
+        peakLeaderIdx: bkPeakLeaderIdx,
         peakLeaderTargetRank: targetRankOf(bkPeakLeaderIdx),
-        peakDecomposition:    bkPeakDecomp,
-        corridorStart:        BREAKAWAY_CORRIDOR_START,
+        peakDecomposition: bkPeakDecomp,
+        corridorStart: BREAKAWAY_CORRIDOR_START,
         // breakaway flag: peak gap exceeds the ~0.03·finishT lead-group spread tolerance.
-        isBreakaway:          bkPeakGap > 0.03,
+        isBreakaway: bkPeakGap > 0.03,
       };
     }
 
@@ -2357,19 +3275,24 @@ export function runSingleRace({
     // lead-change / podium-shuffle counters accumulated above.
     if (frontAction) {
       const targetRankOf = (idx) =>
-        racerTargetRankMap && idx >= 0 ? (racerTargetRankMap.get(idx) ?? null) : null;
+        racerTargetRankMap && idx >= 0
+          ? (racerTargetRankMap.get(idx) ?? null)
+          : null;
       results.frontAction = {
-        steps:             faSteps,
-        leadChanges:       faLeadChanges,
-        distinctP1:        faP1Set.size,
-        leadChangeRate:    faSteps > 0 ? faLeadChanges / faSteps : 0,        // P1 changes / step
-        podiumShuffleRate: faTop3CompareSteps > 0 ? faTop3ShuffleCount / faTop3CompareSteps : 0,
+        steps: faSteps,
+        leadChanges: faLeadChanges,
+        distinctP1: faP1Set.size,
+        leadChangeRate: faSteps > 0 ? faLeadChanges / faSteps : 0, // P1 changes / step
+        podiumShuffleRate:
+          faTop3CompareSteps > 0 ? faTop3ShuffleCount / faTop3CompareSteps : 0,
         // Per-racer front-running time vs assigned targetRank → unpredictability correlation.
         perRacer: racers.map((r) => ({
-          index:      r.index,
+          index: r.index,
           targetRank: targetRankOf(r.index),
-          p1Frac:     faSteps > 0 ? (faP1StepsByIdx.get(r.index) ?? 0) / faSteps : 0,
-          top3Frac:   faSteps > 0 ? (faTop3StepsByIdx.get(r.index) ?? 0) / faSteps : 0,
+          p1Frac:
+            faSteps > 0 ? (faP1StepsByIdx.get(r.index) ?? 0) / faSteps : 0,
+          top3Frac:
+            faSteps > 0 ? (faTop3StepsByIdx.get(r.index) ?? 0) / faSteps : 0,
         })),
       };
     }
@@ -2377,26 +3300,29 @@ export function runSingleRace({
     // ── HERO-MAP results — attached ONLY when --hero-map (else results unchanged) ──
     if (heroMap && hmHeroes) {
       results.heroObs = [...hmHeroes.values()].map((h) => {
-        const finalRank = racers.find((r) => r.index === h.index)?.finishRank ?? null;
+        const finalRank =
+          racers.find((r) => r.index === h.index)?.finishRank ?? null;
         return {
-          index:            h.index,
-          anchorRank:       h.anchorRank,
-          anchorProgress:   h.anchorProgress,
-          targetRank:       h.targetRank,
+          index: h.index,
+          anchorRank: h.anchorRank,
+          anchorProgress: h.anchorProgress,
+          targetRank: h.targetRank,
           finalRank,
-          placesGainedNet:  finalRank != null ? h.anchorRank - finalRank : null, // + = climbed
-          realOvertakes:    h.passed.size,     // corrected headline: real whole-field overtakes
-          bestRank:         h.bestRank,
+          placesGainedNet: finalRank != null ? h.anchorRank - finalRank : null, // + = climbed
+          realOvertakes: h.passed.size, // corrected headline: real whole-field overtakes
+          bestRank: h.bestRank,
           reachedFrontProg: h.reachedFrontProg,
           reachedTargetProg: h.reachedTargetProg,
-          reachedTargetBand: (h.targetRank != null && finalRank != null)
-            ? (hmBandOf(finalRank) === hmBandOf(h.targetRank)) : null,
-          frames:           h.frames,
-          climbFrames:      h.climbFrames,
-          ceilFrac:         h.frames ? +(h.ceilFrames / h.frames).toFixed(4) : 0,   // speed-limited
-          trafficFrac:      h.frames ? +(h.trafficFrames / h.frames).toFixed(4) : 0, // traffic-limited
-          bothFrac:         h.frames ? +(h.bothFrames / h.frames).toFixed(4) : 0,
-          maxTraj:          +h.maxTraj.toFixed(4),
+          reachedTargetBand:
+            h.targetRank != null && finalRank != null
+              ? hmBandOf(finalRank) === hmBandOf(h.targetRank)
+              : null,
+          frames: h.frames,
+          climbFrames: h.climbFrames,
+          ceilFrac: h.frames ? +(h.ceilFrames / h.frames).toFixed(4) : 0, // speed-limited
+          trafficFrac: h.frames ? +(h.trafficFrames / h.frames).toFixed(4) : 0, // traffic-limited
+          bothFrac: h.frames ? +(h.bothFrames / h.frames).toFixed(4) : 0,
+          maxTraj: +h.maxTraj.toFixed(4),
         };
       });
     }
@@ -2405,14 +3331,25 @@ export function runSingleRace({
     // RAW distributions only. deadRaceFlag / visibleComeback use the PROPOSED thresholds, which
     // AWAIT the owner's calibration — treat every boolean here as provisional, never a gate.
     if (gapMetrics) {
-      const finishSecs = racers.map((r) => r.finishTime).filter((x) => x != null).sort((a, b) => a - b);
-      const line = gapsAtLine(finishSecs);                 // SECONDS at the line (secondary)
+      const finishSecs = racers
+        .map((r) => r.finishTime)
+        .filter((x) => x != null)
+        .sort((a, b) => a - b);
+      const line = gapsAtLine(finishSecs); // SECONDS at the line (secondary)
       const leaderFinish = finishSecs.length ? finishSecs[0] : null;
-      const lineLen = gmLineSnap ?? {};                    // LENGTHS at the leader-finish instant (primary)
+      const lineLen = gmLineSnap ?? {}; // LENGTHS at the leader-finish instant (primary)
       const perRacerLen = lineLen.perRacerLen ?? {};
       const perRacer = racers.map((r) => {
-        const g = gmPerRacer.get(r.index) ?? { maxBehindLen: 0, maxBehindSec: 0, inContentionSteps: 0, totalSteps: 0 };
-        const finalBehindSec = (r.finishTime != null && leaderFinish != null) ? r.finishTime - leaderFinish : null;
+        const g = gmPerRacer.get(r.index) ?? {
+          maxBehindLen: 0,
+          maxBehindSec: 0,
+          inContentionSteps: 0,
+          totalSteps: 0,
+        };
+        const finalBehindSec =
+          r.finishTime != null && leaderFinish != null
+            ? r.finishTime - leaderFinish
+            : null;
         // FINAL gap in lengths = this racer's lengths-behind at the LEADER-finish instant (a finisher's
         // own gap at its OWN crossing is ~0; the spatial "final gap" is measured when the winner crosses).
         const finalBehindLen = perRacerLen[r.index] ?? null;
@@ -2422,31 +3359,48 @@ export function runSingleRace({
           // PRIMARY (lengths):
           finalBehindLen,
           maxBehindAfterChaosLen: +g.maxBehindLen.toFixed(4),
-          inContentionFraction: g.totalSteps > 0 ? +(g.inContentionSteps / g.totalSteps).toFixed(4) : 0, // X in lengths
-          visibleComeback: finalBehindLen != null
-            ? visibleComeback(g.maxBehindLen, finalBehindLen, GM_THRESHOLDS.comebackDepthLen, GM_THRESHOLDS.comebackFinishLen)
-            : false,
+          inContentionFraction:
+            g.totalSteps > 0
+              ? +(g.inContentionSteps / g.totalSteps).toFixed(4)
+              : 0, // X in lengths
+          visibleComeback:
+            finalBehindLen != null
+              ? visibleComeback(
+                  g.maxBehindLen,
+                  finalBehindLen,
+                  GM_THRESHOLDS.comebackDepthLen,
+                  GM_THRESHOLDS.comebackFinishLen,
+                )
+              : false,
           // SECONDARY (seconds) — reporting only:
-          finalBehindSec: finalBehindSec != null ? +finalBehindSec.toFixed(4) : null,
+          finalBehindSec:
+            finalBehindSec != null ? +finalBehindSec.toFixed(4) : null,
           maxBehindAfterChaosSec: +g.maxBehindSec.toFixed(4),
         };
       });
       const overFrac = gmDeadSeries.length
-        ? gmDeadSeries.filter((x) => x > GM_THRESHOLDS.deadRaceGapLen).length / gmDeadSeries.length
+        ? gmDeadSeries.filter((x) => x > GM_THRESHOLDS.deadRaceGapLen).length /
+          gmDeadSeries.length
         : 0;
       const frontOverFrac = gmFrontSeries.length
-        ? gmFrontSeries.filter((x) => x > GM_THRESHOLDS.deadRaceGapLen).length / gmFrontSeries.length
+        ? gmFrontSeries.filter((x) => x > GM_THRESHOLDS.deadRaceGapLen).length /
+          gmFrontSeries.length
         : 0;
       // Final-third distributions (lengths) — RAW material for the owner's calibration, per race. The
       // frontmost-gap fraction is emitted at BOTH 3 lengths (the owner's stated target) and the proposed
       // deadGap, so no single threshold is baked in. NOT a pass/fail.
-      const fracOver = (arr, t) => (arr.length ? arr.filter((x) => x > t).length / arr.length : 0);
+      const fracOver = (arr, t) =>
+        arr.length ? arr.filter((x) => x > t).length / arr.length : 0;
       const pctSummary = (arr) => ({
-        p50: +percentile(arr, 0.5).toFixed(4), p75: +percentile(arr, 0.75).toFixed(4),
-        p90: +percentile(arr, 0.9).toFixed(4), max: arr.length ? +Math.max(...arr).toFixed(4) : 0,
+        p50: +percentile(arr, 0.5).toFixed(4),
+        p75: +percentile(arr, 0.75).toFixed(4),
+        p90: +percentile(arr, 0.9).toFixed(4),
+        max: arr.length ? +Math.max(...arr).toFixed(4) : 0,
       });
       results.gapMetrics = {
-        lenScale: +govLenScale.toFixed(4), meanBodyLenPx: +govMeanBodyLen.toFixed(3), pathLengthPx: +pathLengthPx.toFixed(1),
+        lenScale: +govLenScale.toFixed(4),
+        meanBodyLenPx: +govMeanBodyLen.toFixed(3),
+        pathLengthPx: +pathLengthPx.toFixed(1),
         // PRIMARY at-the-line (lengths, at the leader-finish instant):
         leaderGapToP2LineLen: lineLen.leaderGapToP2Len ?? null,
         top5SpreadLineLen: lineLen.top5SpreadLen ?? null,
@@ -2455,12 +3409,20 @@ export function runSingleRace({
         frontmostGapLineLen: lineLen.frontmostGapLen ?? null,
         frontmostGapLineNAhead: lineLen.frontmostGapNAhead ?? null,
         // deadRace (leader→P2) + frontmost-gap (lead-group) over the final third — lengths primary:
-        deadRaceFlag: deadRaceFlag(gmDeadSeries, GM_THRESHOLDS.deadRaceGapLen, GM_THRESHOLDS.deadRaceMajorityFrac),
+        deadRaceFlag: deadRaceFlag(
+          gmDeadSeries,
+          GM_THRESHOLDS.deadRaceGapLen,
+          GM_THRESHOLDS.deadRaceMajorityFrac,
+        ),
         deadRaceFinalThirdOverFrac: +overFrac.toFixed(4),
         frontGapFinalThirdOverFrac: +frontOverFrac.toFixed(4),
         // Final-third leader→P2 (deadRace) + frontmost-gap (lead-group) distributions, lengths:
         deadRaceFinalThird: pctSummary(gmDeadSeries),
-        frontGapFinalThird: { ...pctSummary(gmFrontSeries), fracOver3: +fracOver(gmFrontSeries, 3).toFixed(4), fracOver5: +fracOver(gmFrontSeries, 5).toFixed(4) },
+        frontGapFinalThird: {
+          ...pctSummary(gmFrontSeries),
+          fracOver3: +fracOver(gmFrontSeries, 3).toFixed(4),
+          fracOver5: +fracOver(gmFrontSeries, 5).toFixed(4),
+        },
         // SECONDARY at-the-line (seconds):
         leaderGapToP2LineSec: +line.leaderGapToP2.toFixed(4),
         top5SpreadLineSec: +line.top5Spread.toFixed(4),
@@ -2475,64 +3437,91 @@ export function runSingleRace({
       const finalRankByIndex = {};
       for (const r of racers) finalRankByIndex[r.index] = r.finishRank;
       results.runawayParade = {
-        lenScale:            +govLenScale.toFixed(4),
-        leaderIdxAt090:      rp.leaderIdxAt090,
+        lenScale: +govLenScale.toFixed(4),
+        leaderIdxAt090: rp.leaderIdxAt090,
         // Infinity (lone survivor) is not JSON-representable → emit null (classifier treats it as "not clear").
-        leaderGapP2At090Len: isFinite(rp.leaderGapP2At090Len) ? rp.leaderGapP2At090Len : null,
-        within3P1At090:      rp.within3P1At090,
-        minLeadFrom090Len:   isFinite(rp.minLeadFrom090Len) ? +rp.minLeadFrom090Len.toFixed(4) : null,
-        line:                rp.line,            // { order, gaps } or null (race timed out before any finish)
-        speed095ByIndex:     rp.speed095ByIndex, // { idx: speed } or null
+        leaderGapP2At090Len: isFinite(rp.leaderGapP2At090Len)
+          ? rp.leaderGapP2At090Len
+          : null,
+        within3P1At090: rp.within3P1At090,
+        minLeadFrom090Len: isFinite(rp.minLeadFrom090Len)
+          ? +rp.minLeadFrom090Len.toFixed(4)
+          : null,
+        line: rp.line, // { order, gaps } or null (race timed out before any finish)
+        speed095ByIndex: rp.speed095ByIndex, // { idx: speed } or null
         finalRankByIndex,
         // FORMATION diagnostic: firstCross15/30 + sustained flags, gapAt030/060, leaderIdxAtCross30.
-        formation:           rp.formation.result(),
+        formation: rp.formation.result(),
         // Release-sweep metrics: lead changes in [0.90, 1.0], and the rank snapshot at the LIVE
         // release point (null when the race never got there). releaseProgress is echoed so a
         // record is self-describing — the arm it came from is recoverable from the file alone.
-        leadChangeCount:     rp.lateContest.result().leadChangeCount,
+        leadChangeCount: rp.lateContest.result().leadChangeCount,
         // Read-only companion over the SAME [0.90, 1.0] window: how many DIFFERENT racers held the
         // lead there. leadChangeCount alone cannot tell two racers trading it four times from four
         // racers leading once each — the finale audit needs both.
         lateDistinctLeaders: rp.lateContest.result().distinctLeaders,
-        releaseProgress:     CHOREO_RELEASE_PROGRESS,
+        releaseProgress: CHOREO_RELEASE_PROGRESS,
         rankAtReleaseByIndex: rp.releaseRanks.result(),
         // Sustained-P1-battle primitives over [choreoResolveB2, first finish]. contestWindowStart is echoed
         // so a record is self-describing — the window it was measured in is recoverable from the
         // file alone. classifyFrontBattle() turns these into the REAL P1 ACTION boolean downstream.
-        contestWindowStart:  CONTEST_WINDOW_START,
-        frontBattle:         rp.frontBattle.result(),
+        contestWindowStart: CONTEST_WINDOW_START,
+        frontBattle: rp.frontBattle.result(),
         // PULK-SPECTACLE-1 front-liveliness: LAW + chaos/pulk metrics, plus the leader-at-0.25 identity
         // enriched with start-row + steer, the windowed gap-cap brake-fire events, and the gate fraction
         // (the gap-cap is inactive below corrStartFrac → the chaos/pulk breakaway is unpoliced by design).
-        frontLiveliness:     (rp.frontLiveliness) ? (() => {
-          const r = rp.frontLiveliness.result();
-          const li = r.leaderIdxAtChaosEnd;
-          const leaderRow = li != null ? (racers.find((x) => x.index === li)?.startRowIndex ?? null) : null;
-          const css = racePlanController?.getChaosSteerStats ? racePlanController.getChaosSteerStats() : null;
-          const byR = css?.byRacer ? new Map(css.byRacer) : null;
-          const st = (li != null && byR) ? byR.get(li) : null;
-          const leaderSteered = st ? (st.ticks > 0) : false;
-          const leaderSteerMeanMult = st && st.ticks > 0 ? +(st.multSum / st.ticks).toFixed(3) : null;
-          // Gap-cap brake-fire events on the LIVE LEADER, windowed by progress (p). chaos [0,0.25], pulk [0.25,0.60].
-          const ev = racePlanController?.getGapLeaderDownEvents ? racePlanController.getGapLeaderDownEvents() : [];
-          const inWin = (lo, hi) => ev.filter((e) => e.p != null && e.p >= lo && e.p < hi);
-          const meanGap = (arr) => (arr.length ? +(arr.reduce((a, e) => a + (e.gapLen ?? 0), 0) / arr.length).toFixed(3) : null);
-          const chaosEv = inWin(0, 0.25), pulkEv = inWin(0.25, 0.6);
-          const pf = racePlanController?.getPhaseFractions ? racePlanController.getPhaseFractions() : null;
-          return {
-            ...r,
-            leaderRowAtChaosEnd: leaderRow,
-            leaderSteeredAtChaosEnd: leaderSteered,
-            leaderSteerMeanMult,
-            brakeFires_chaos: chaosEv.length, brakeMeanGap_chaos: meanGap(chaosEv),
-            brakeFires_mid: pulkEv.length, brakeMeanGap_mid: meanGap(pulkEv),
-            gapCapGateFrac: pf?.corrStartFrac ?? null, // gap-cap inactive below this → chaos unpoliced
-          };
-        })() : null,
+        frontLiveliness: rp.frontLiveliness
+          ? (() => {
+              const r = rp.frontLiveliness.result();
+              const li = r.leaderIdxAtChaosEnd;
+              const leaderRow =
+                li != null
+                  ? (racers.find((x) => x.index === li)?.startRowIndex ?? null)
+                  : null;
+              const css = racePlanController?.getChaosSteerStats
+                ? racePlanController.getChaosSteerStats()
+                : null;
+              const byR = css?.byRacer ? new Map(css.byRacer) : null;
+              const st = li != null && byR ? byR.get(li) : null;
+              const leaderSteered = st ? st.ticks > 0 : false;
+              const leaderSteerMeanMult =
+                st && st.ticks > 0 ? +(st.multSum / st.ticks).toFixed(3) : null;
+              // Gap-cap brake-fire events on the LIVE LEADER, windowed by progress (p). chaos [0,0.25], pulk [0.25,0.60].
+              const ev = racePlanController?.getGapLeaderDownEvents
+                ? racePlanController.getGapLeaderDownEvents()
+                : [];
+              const inWin = (lo, hi) =>
+                ev.filter((e) => e.p != null && e.p >= lo && e.p < hi);
+              const meanGap = (arr) =>
+                arr.length
+                  ? +(
+                      arr.reduce((a, e) => a + (e.gapLen ?? 0), 0) / arr.length
+                    ).toFixed(3)
+                  : null;
+              const chaosEv = inWin(0, 0.25),
+                pulkEv = inWin(0.25, 0.6);
+              const pf = racePlanController?.getPhaseFractions
+                ? racePlanController.getPhaseFractions()
+                : null;
+              return {
+                ...r,
+                leaderRowAtChaosEnd: leaderRow,
+                leaderSteeredAtChaosEnd: leaderSteered,
+                leaderSteerMeanMult,
+                brakeFires_chaos: chaosEv.length,
+                brakeMeanGap_chaos: meanGap(chaosEv),
+                brakeFires_mid: pulkEv.length,
+                brakeMeanGap_mid: meanGap(pulkEv),
+                gapCapGateFrac: pf?.corrStartFrac ?? null, // gap-cap inactive below this → chaos unpoliced
+              };
+            })()
+          : null,
         // CHAOS-STEER-1 scorecard (attached for EVERY arm — the in-band-at-chaos-end capture is read-only):
         // in-band-at-chaos-end count + field size, steer grip (ticks, mean mult), and Sanftheits (maxTickΔ).
-        chaosSteer:          (() => {
-          const s = racePlanController?.getChaosSteerStats ? racePlanController.getChaosSteerStats() : null;
+        chaosSteer: (() => {
+          const s = racePlanController?.getChaosSteerStats
+            ? racePlanController.getChaosSteerStats()
+            : null;
           if (!s) return null;
           const inBandEnd = s.inBandEnd.filter(([, ok]) => ok).length;
           // ROW-SKEW DIAGNOSIS: join per-racer steer exposure + in-band-at-chaos-end to each racer's START
@@ -2542,13 +3531,33 @@ export function runSingleRace({
           const perRow = {};
           for (const r of racers) {
             const row = r.startRowIndex ?? 0;
-            const pr = perRow[row] ?? (perRow[row] = { n: 0, steered: 0, ticks: 0, multSum: 0, inBandEnd: 0 });
+            const pr =
+              perRow[row] ??
+              (perRow[row] = {
+                n: 0,
+                steered: 0,
+                ticks: 0,
+                multSum: 0,
+                inBandEnd: 0,
+              });
             pr.n++;
             const st = byR.get(r.index);
-            if (st) { pr.steered++; pr.ticks += st.ticks; pr.multSum += st.multSum; }
+            if (st) {
+              pr.steered++;
+              pr.ticks += st.ticks;
+              pr.multSum += st.multSum;
+            }
             if (ibe.get(r.index)) pr.inBandEnd++;
           }
-          return { inBandEnd, nField: s.inBandEnd.length, steeredTicks: s.steeredTicks, steeredRacers: s.steeredRacers, meanMult: s.meanMult, maxTickDelta: s.maxTickDelta, perRow };
+          return {
+            inBandEnd,
+            nField: s.inBandEnd.length,
+            steeredTicks: s.steeredTicks,
+            steeredRacers: s.steeredRacers,
+            meanMult: s.meanMult,
+            maxTickDelta: s.maxTickDelta,
+            perRow,
+          };
         })(),
       };
     }
@@ -2566,13 +3575,26 @@ export function runSingleRace({
     // max rather than a pre-correction depth — reported explicitly so the two cases are never mixed.
     if (ESCAPE_LATENCY && racePlanController) {
       const evs = racePlanController.getGapLeaderDownEvents();
-      if (escapeEpisodes) escapeEpisodes.finish(raceProgress, raceTs, racePlanController.getGapLeaderDownCount());
+      if (escapeEpisodes)
+        escapeEpisodes.finish(
+          raceProgress,
+          raceTs,
+          racePlanController.getGapLeaderDownCount(),
+        );
       results.escapeLatency = {
-        escapeDepthLen: escapeDepthLen !== null ? +escapeDepthLen.toFixed(4) : +escapeRunningMaxLen.toFixed(4),
+        escapeDepthLen:
+          escapeDepthLen !== null
+            ? +escapeDepthLen.toFixed(4)
+            : +escapeRunningMaxLen.toFixed(4),
         escapeDepthCapped: escapeDepthLen !== null,
         maxLeaderGapLen: +escapeRunningMaxLen.toFixed(4),
         leaderDownCount: evs.length,
-        events: evs.map((e) => ({ p: +e.p.toFixed(4), gapLen: +e.gapLen.toFixed(4), frac: +e.frac.toFixed(4), delta: +e.delta.toFixed(6) })),
+        events: evs.map((e) => ({
+          p: +e.p.toFixed(4),
+          gapLen: +e.gapLen.toFixed(4),
+          frac: +e.frac.toFixed(4),
+          delta: +e.delta.toFixed(6),
+        })),
         // Episode view (definitions in sim/observers/escape-episodes.mjs).
         ...(escapeEpisodes ? escapeEpisodes.result() : {}),
       };
@@ -2580,42 +3602,58 @@ export function runSingleRace({
 
     // ── SPEED-SOURCE record — attached ONLY when --speed-source (else results unchanged) ──
     if (speedSource && ss) {
-      results.speedSource = { trajMax: SS_TRAJ_MAX, natCeil: +NAT_CEIL.toFixed(6), samples: ss.samples };
+      results.speedSource = {
+        trajMax: SS_TRAJ_MAX,
+        natCeil: +NAT_CEIL.toFixed(6),
+        samples: ss.samples,
+      };
     }
 
     // ── STRIP-DOWN metrics — attached ONLY when --strip-metrics is on (else results unchanged) ──
     if (STRIP_METRICS) {
       const targetRankOf = (idx) =>
-        racerTargetRankMap && idx >= 0 ? (racerTargetRankMap.get(idx) ?? null) : null;
+        racerTargetRankMap && idx >= 0
+          ? (racerTargetRankMap.get(idx) ?? null)
+          : null;
       const bandOf = (rank) => {
         if (rank == null) return null;
-        for (let i = 0; i < BAND_EDGES.length; i++) if (rank <= BAND_EDGES[i]) return i; // 0-based, 0 = B1
+        for (let i = 0; i < BAND_EDGES.length; i++)
+          if (rank <= BAND_EDGES[i]) return i; // 0-based, 0 = B1
         return BAND_EDGES.length;
       };
       const winStats = (W) => ({
-        steps:         W.steps,
-        leadChanges:   W.leadChanges,
-        distinctP1:    W.p1Set.size,
+        steps: W.steps,
+        leadChanges: W.leadChanges,
+        distinctP1: W.p1Set.size,
         // dominant-leader time-share: fraction of window steps held by the single most-frequent P1.
-        leaderShare:   W.steps > 0 ? Math.max(0, ...[...W.p1Steps.values()]) / W.steps : 0,
+        leaderShare:
+          W.steps > 0 ? Math.max(0, ...[...W.p1Steps.values()]) / W.steps : 0,
         top3ShuffleRate: W.compareSteps > 0 ? W.shuffle / W.compareSteps : 0,
         cleanOvertakes: W.cleanOv, // hold-based lead changes (new leader held P1 ≥ 750 ms) — clean-pass signal
-        chargerDepthMax: W.chargerDepths.filter((x) => x != null).length ? Math.max(...W.chargerDepths.filter((x) => x != null)) : null, // deepest start-rank of a clean overtaker
+        chargerDepthMax: W.chargerDepths.filter((x) => x != null).length
+          ? Math.max(...W.chargerDepths.filter((x) => x != null))
+          : null, // deepest start-rank of a clean overtaker
         nChargers: W.chargerDepths.length, // number of clean overtakes with a recorded start-depth
-
       });
       results.stripMetrics = {
-        pulk:    winStats(smPulk),
+        pulk: winStats(smPulk),
         outcome: winStats(smOut),
         winner: {
-          idx:            smWinnerIdx,
-          targetRank:     targetRankOf(smWinnerIdx),
-          rankAt025:      smWinnerRankAt025,
-          rankAt050:      smWinnerRankAt050,
-          rankAt055:      smWinnerRankAt055,
-          finalRank:      smWinnerIdx >= 0 ? (racers.find((r) => r.index === smWinnerIdx)?.finishRank ?? null) : null,
-          maxTrajMult:    +smWinnerMaxTraj.toFixed(4),
-          outcomeCeilFrac: smWinnerOutcomeSteps > 0 ? +(smWinnerCeilSteps / smWinnerOutcomeSteps).toFixed(4) : 0,
+          idx: smWinnerIdx,
+          targetRank: targetRankOf(smWinnerIdx),
+          rankAt025: smWinnerRankAt025,
+          rankAt050: smWinnerRankAt050,
+          rankAt055: smWinnerRankAt055,
+          finalRank:
+            smWinnerIdx >= 0
+              ? (racers.find((r) => r.index === smWinnerIdx)?.finishRank ??
+                null)
+              : null,
+          maxTrajMult: +smWinnerMaxTraj.toFixed(4),
+          outcomeCeilFrac:
+            smWinnerOutcomeSteps > 0
+              ? +(smWinnerCeilSteps / smWinnerOutcomeSteps).toFixed(4)
+              : 0,
         },
         // FINISH CONTEST (Step-4 observer, read-only — no race behavior). The leader→2nd finish-time
         // gap: a cruising winner opens a large gap; a fought finish keeps it small. top5SpreadSec is
@@ -2623,35 +3661,59 @@ export function runSingleRace({
         // fieldSpreadP10P90Sec (Step 5): the p10→p90 finish-time spread across the WHOLE field — the
         // "did the field tighten?" signal (a denser, band-held field finishes closer in time).
         finish: (() => {
-          const at = (rk) => racers.find((r) => r.finishRank === rk)?.finishTime;
-          const t1 = at(1), t2 = at(2), t5 = at(5);
-          const times = racers.map((r) => r.finishTime).filter((x) => x != null).sort((a, b) => a - b);
-          const pct = (p) => (times.length ? times[Math.min(times.length - 1, Math.floor(p * (times.length - 1)))] : null);
-          const p10 = pct(0.1), p90 = pct(0.9);
+          const at = (rk) =>
+            racers.find((r) => r.finishRank === rk)?.finishTime;
+          const t1 = at(1),
+            t2 = at(2),
+            t5 = at(5);
+          const times = racers
+            .map((r) => r.finishTime)
+            .filter((x) => x != null)
+            .sort((a, b) => a - b);
+          const pct = (p) =>
+            times.length
+              ? times[
+                  Math.min(times.length - 1, Math.floor(p * (times.length - 1)))
+                ]
+              : null;
+          const p10 = pct(0.1),
+            p90 = pct(0.9);
           return {
-            gapP1P2Sec:   t1 != null && t2 != null ? +(t2 - t1).toFixed(3) : null,
-            top5SpreadSec: t1 != null && t5 != null ? +(t5 - t1).toFixed(3) : null,
-            fieldSpreadP10P90Sec: p10 != null && p90 != null ? +(p90 - p10).toFixed(3) : null,
+            gapP1P2Sec: t1 != null && t2 != null ? +(t2 - t1).toFixed(3) : null,
+            top5SpreadSec:
+              t1 != null && t5 != null ? +(t5 - t1).toFixed(3) : null,
+            fieldSpreadP10P90Sec:
+              p10 != null && p90 != null ? +(p90 - p10).toFixed(3) : null,
           };
         })(),
         naturalness: {
-          maxSpeedFactor: +smNatMax.toFixed(4),                                  // peak spreadFactor×tool-mults in PULK
-          exceedFrac:     smNatSteps > 0 ? +(smNatExceed / smNatSteps).toFixed(4) : 0, // racer-steps > 1.08 (over ceiling)
+          maxSpeedFactor: +smNatMax.toFixed(4), // peak spreadFactor×tool-mults in PULK
+          exceedFrac:
+            smNatSteps > 0 ? +(smNatExceed / smNatSteps).toFixed(4) : 0, // racer-steps > 1.08 (over ceiling)
         },
         // Per-racer rows for band-reach, start-row fairness, and bonus↔leader correlation (computed
         // downstream). pulk/outcome shares are per-window; areaSample is the applied areaBonusMult in
         // PULK; rowBonus is the raw start-row speed bonus. All read-only observations.
         perRacer: racers.map((r) => ({
-          index:        r.index,
+          index: r.index,
           startRowIndex: r.startRowIndex,
-          targetRank:   targetRankOf(r.index),
-          targetBand:   bandOf(targetRankOf(r.index)), // 0-based band index
-          finalRank:    r.finishRank,
-          pulkP1Frac:   smPulk.steps > 0 ? (smPulk.p1Steps.get(r.index) ?? 0) / smPulk.steps : 0,
-          pulkTop3Frac: smPulk.steps > 0 ? (smPulk.top3Steps.get(r.index) ?? 0) / smPulk.steps : 0,
-          outP1Frac:    smOut.steps  > 0 ? (smOut.p1Steps.get(r.index) ?? 0)  / smOut.steps  : 0,
-          areaSample:   +((smAreaSample.get(r.index) ?? 1.0)).toFixed(4),
-          rowBonus:     +(r.rawRowBonus ?? 0).toFixed(5),
+          targetRank: targetRankOf(r.index),
+          targetBand: bandOf(targetRankOf(r.index)), // 0-based band index
+          finalRank: r.finishRank,
+          pulkP1Frac:
+            smPulk.steps > 0
+              ? (smPulk.p1Steps.get(r.index) ?? 0) / smPulk.steps
+              : 0,
+          pulkTop3Frac:
+            smPulk.steps > 0
+              ? (smPulk.top3Steps.get(r.index) ?? 0) / smPulk.steps
+              : 0,
+          outP1Frac:
+            smOut.steps > 0
+              ? (smOut.p1Steps.get(r.index) ?? 0) / smOut.steps
+              : 0,
+          areaSample: +(smAreaSample.get(r.index) ?? 1.0).toFixed(4),
+          rowBonus: +(r.rawRowBonus ?? 0).toFixed(5),
         })),
       };
     }
@@ -2659,67 +3721,98 @@ export function runSingleRace({
     // ── ACTION-METRICS — attached ONLY when --action-metrics is on (else results unchanged) ──
     if (ACTION_METRICS) {
       const targetRankOf = (idx) =>
-        racerTargetRankMap && idx >= 0 ? (racerTargetRankMap.get(idx) ?? null) : null;
+        racerTargetRankMap && idx >= 0
+          ? (racerTargetRankMap.get(idx) ?? null)
+          : null;
       const bandOf = (rank) => {
         if (rank == null) return null;
-        for (let i = 0; i < BAND_EDGES.length; i++) if (rank <= BAND_EDGES[i]) return i; // 0-based, 0 = B1
+        for (let i = 0; i < BAND_EDGES.length; i++)
+          if (rank <= BAND_EDGES[i]) return i; // 0-based, 0 = B1
         return BAND_EDGES.length;
       };
-      const travels = [...amMinRank.keys()].map((idx) => amMaxRank.get(idx) - amMinRank.get(idx));
-      const meanTravel = travels.length ? travels.reduce((s, v) => s + v, 0) / travels.length : 0;
+      const travels = [...amMinRank.keys()].map(
+        (idx) => amMaxRank.get(idx) - amMinRank.get(idx),
+      );
+      const meanTravel = travels.length
+        ? travels.reduce((s, v) => s + v, 0) / travels.length
+        : 0;
       const sortedTravels = [...travels].sort((a, b) => a - b);
       const p90Travel = sortedTravels.length
-        ? sortedTravels[Math.min(sortedTravels.length - 1, Math.ceil(0.9 * sortedTravels.length) - 1)]
+        ? sortedTravels[
+            Math.min(
+              sortedTravels.length - 1,
+              Math.ceil(0.9 * sortedTravels.length) - 1,
+            )
+          ]
         : 0;
-      let risers = 0, fallers = 0;
+      let risers = 0,
+        fallers = 0;
       for (const idx of amStartRank.keys()) {
         const start = amStartRank.get(idx);
         const end = amEndRank.get(idx);
         if (end === undefined) continue;
-        if (start - end >= 3) risers++;   // ended ≥3 ranks BETTER (lower rank number)
-        if (end - start >= 3) fallers++;  // ended ≥3 ranks WORSE
+        if (start - end >= 3) risers++; // ended ≥3 ranks BETTER (lower rank number)
+        if (end - start >= 3) fallers++; // ended ≥3 ranks WORSE
       }
       results.actionMetrics = {
-        frames:            amFrames,
-        rankChurn:         amSwaps,
-        meanRankTravel:    +meanTravel.toFixed(3),
-        p90RankTravel:     p90Travel,
+        frames: amFrames,
+        rankChurn: amSwaps,
+        meanRankTravel: +meanTravel.toFixed(3),
+        p90RankTravel: p90Travel,
         risers,
         fallers,
         frontTop5Turnover: amTop5.size,
-        spreadLenP10P90:   amFrames > 0 ? +(amSpreadSum / amFrames).toFixed(3) : 0,
-        maxSpeedFactor:    +amNatMax.toFixed(4),
+        spreadLenP10P90:
+          amFrames > 0 ? +(amSpreadSum / amFrames).toFixed(3) : 0,
+        maxSpeedFactor: +amNatMax.toFixed(4),
         // NEW (pulk-contest observer): PULK-window front action + density.
-        distinctP1Pulk:    amP1Steps ? amP1Steps.size : 0,          // distinct P1 holders over the window (b)
-        leadChangesPulk:   amLeadChanges,                           // raw P1 hand-over count over the window (a)
-        heldTop5Overtakes: amHeld ? amHeld.count : 0,               // REAL top-5 overtakes (hold-filtered ≥750ms)
-        maxLinkGapLenP90:  amLinkGaps.length ? +percentile(amLinkGaps, 0.9).toFixed(3) : 0, // density p90 (lengths)
-        maxLinkGapLenMax:  amLinkGaps.length ? +Math.max(...amLinkGaps).toFixed(3) : 0,      // density max (lengths)
+        distinctP1Pulk: amP1Steps ? amP1Steps.size : 0, // distinct P1 holders over the window (b)
+        leadChangesPulk: amLeadChanges, // raw P1 hand-over count over the window (a)
+        heldTop5Overtakes: amHeld ? amHeld.count : 0, // REAL top-5 overtakes (hold-filtered ≥750ms)
+        maxLinkGapLenP90: amLinkGaps.length
+          ? +percentile(amLinkGaps, 0.9).toFixed(3)
+          : 0, // density p90 (lengths)
+        maxLinkGapLenMax: amLinkGaps.length
+          ? +Math.max(...amLinkGaps).toFixed(3)
+          : 0, // density max (lengths)
         // NEW (PULK-window baseline): the window bound + the owner's three direct answers.
-        windowFromStart:   ACTION_FROM_START,                       // true ⇒ window = [0, pulkEnd)
-        gapThresholdLen:   GAP_THRESHOLD_LENGTHS,                    // the "3 racer lengths" threshold (single source)
-        framesOver3LShare: amLinkGaps.length ? +framesOverThresholdShare(amLinkGaps).toFixed(4) : 0, // Q1: how OFTEN a gap > 3L
-        p1MaxHoldShare:    amFrames > 0 && amP1Steps.size ? +(Math.max(...amP1Steps.values()) / amFrames).toFixed(4) : 0, // Q2: most-dominant leader's hold
-        fullSpreadLenP90:  amFullSpread.length ? +percentile(amFullSpread, 0.9).toFixed(3) : 0, // Q3b: leader→last p90 (lengths)
-        fullSpreadLenMax:  amFullSpread.length ? +Math.max(...amFullSpread).toFixed(3) : 0,     // Q3b: leader→last max (lengths)
-        endFullSpreadLen:   +amEndFullSpread.toFixed(3),    // leader→last spread at the LAST PULK frame (end-of-PULK snapshot)
-        endSpreadP10P90Len: +amEndSpreadP10P90.toFixed(3),  // p10→p90 spread at the LAST PULK frame (end-of-PULK snapshot)
+        windowFromStart: ACTION_FROM_START, // true ⇒ window = [0, pulkEnd)
+        gapThresholdLen: GAP_THRESHOLD_LENGTHS, // the "3 racer lengths" threshold (single source)
+        framesOver3LShare: amLinkGaps.length
+          ? +framesOverThresholdShare(amLinkGaps).toFixed(4)
+          : 0, // Q1: how OFTEN a gap > 3L
+        p1MaxHoldShare:
+          amFrames > 0 && amP1Steps.size
+            ? +(Math.max(...amP1Steps.values()) / amFrames).toFixed(4)
+            : 0, // Q2: most-dominant leader's hold
+        fullSpreadLenP90: amFullSpread.length
+          ? +percentile(amFullSpread, 0.9).toFixed(3)
+          : 0, // Q3b: leader→last p90 (lengths)
+        fullSpreadLenMax: amFullSpread.length
+          ? +Math.max(...amFullSpread).toFixed(3)
+          : 0, // Q3b: leader→last max (lengths)
+        endFullSpreadLen: +amEndFullSpread.toFixed(3), // leader→last spread at the LAST PULK frame (end-of-PULK snapshot)
+        endSpreadP10P90Len: +amEndSpreadP10P90.toFixed(3), // p10→p90 spread at the LAST PULK frame (end-of-PULK snapshot)
         // RUNAWAY-LEADER (--runaway-leader): pulkStart + pulkEnd leader snapshots (identity/isHero/
         // lead-over-P2 in lengths) + did the SAME racer still lead at pulkEnd. Null when the flag is off.
-        runawayLargeLen:   RUNAWAY_LEADER ? RUNAWAY_LARGE_LENGTHS : null, // the LARGE threshold (single source)
-        runawayStart:      rlStartSnap,
-        runawayEnd:        rlEndSnap,
-        runawaySameLeader: rlStartSnap && rlEndSnap ? rlStartSnap.leaderIndex === rlEndSnap.leaderIndex : null,
+        runawayLargeLen: RUNAWAY_LEADER ? RUNAWAY_LARGE_LENGTHS : null, // the LARGE threshold (single source)
+        runawayStart: rlStartSnap,
+        runawayEnd: rlEndSnap,
+        runawaySameLeader:
+          rlStartSnap && rlEndSnap
+            ? rlStartSnap.leaderIndex === rlEndSnap.leaderIndex
+            : null,
         // Per-racer rows for pooled band-reach (finalBand vs targetBand) + corrP1
         // (Spearman targetRank vs PULK-window P1-time), computed downstream in the analyze step.
         perRacer: racers.map((r) => ({
-          index:         r.index,
+          index: r.index,
           startRowIndex: r.startRowIndex,
-          targetRank:    targetRankOf(r.index),
-          targetBand:    bandOf(targetRankOf(r.index)),
-          finalRank:     r.finishRank,
-          finalBand:     bandOf(r.finishRank),
-          p1FracWindow:  amFrames > 0 ? (amP1Steps.get(r.index) ?? 0) / amFrames : 0,
+          targetRank: targetRankOf(r.index),
+          targetBand: bandOf(targetRankOf(r.index)),
+          finalRank: r.finishRank,
+          finalBand: bandOf(r.finishRank),
+          p1FracWindow:
+            amFrames > 0 ? (amP1Steps.get(r.index) ?? 0) / amFrames : 0,
         })),
       };
     }
@@ -2734,7 +3827,12 @@ export function runSingleRace({
 // ── Statistics + fairness stats: MOVED (INFRA STEP 1, PURE MOVE) to
 //    scripts/sim/observers/fairness-stats.mjs. Imported at the top of this file and
 //    re-exported below to preserve the public API. runFairnessSelfCheck stays here.
-export { computeFairnessStats, computeZoneSuccessRate, bandIntegrityOK, computeExtendedFairnessStats };
+export {
+  computeFairnessStats,
+  computeZoneSuccessRate,
+  bandIntegrityOK,
+  computeExtendedFairnessStats,
+};
 
 function runFairnessSelfCheck() {
   const SC_SEED = 42;
@@ -2742,7 +3840,7 @@ function runFairnessSelfCheck() {
   const SC_N = 50;
   const ROW_SIZES = [17, 17, 16];
   const N_PERM = 499;
-  const TID = 'synth';
+  const TID = "synth";
 
   function scShuffle(arr, prng) {
     const a = [...arr];
@@ -2754,7 +3852,8 @@ function runFairnessSelfCheck() {
   }
 
   function bandIdxOf(rank) {
-    for (let i = 0; i < BAND_EDGES.length; i++) if (rank <= BAND_EDGES[i]) return i;
+    for (let i = 0; i < BAND_EDGES.length; i++)
+      if (rank <= BAND_EDGES[i]) return i;
     return BAND_EDGES.length;
   }
 
@@ -2790,7 +3889,12 @@ function runFairnessSelfCheck() {
         prng,
       );
       racers.forEach((r, i) =>
-        entries.push({ ...r, finalRank: finalRanks[i], raceKey: `A-${race}`, trackId: TID }),
+        entries.push({
+          ...r,
+          finalRank: finalRanks[i],
+          raceKey: `A-${race}`,
+          trackId: TID,
+        }),
       );
     }
     return entries;
@@ -2802,10 +3906,17 @@ function runFairnessSelfCheck() {
     for (let race = 0; race < SC_RACES; race++) {
       const racers = withTargets(prng);
       const sorted = [...racers].sort((a, b) =>
-        a.startRowIndex !== b.startRowIndex ? a.startRowIndex - b.startRowIndex : prng() - 0.5,
+        a.startRowIndex !== b.startRowIndex
+          ? a.startRowIndex - b.startRowIndex
+          : prng() - 0.5,
       );
       sorted.forEach((r, i) =>
-        entries.push({ ...r, finalRank: i + 1, raceKey: `B-${race}`, trackId: TID }),
+        entries.push({
+          ...r,
+          finalRank: i + 1,
+          raceKey: `B-${race}`,
+          trackId: TID,
+        }),
       );
     }
     return entries;
@@ -2826,7 +3937,9 @@ function runFairnessSelfCheck() {
       for (const [bi, group] of byBand) {
         const lo = bi === 0 ? 1 : BAND_EDGES[bi - 1] + 1;
         const sorted = [...group].sort((a, b) =>
-          a.startRowIndex !== b.startRowIndex ? a.startRowIndex - b.startRowIndex : prng() - 0.5,
+          a.startRowIndex !== b.startRowIndex
+            ? a.startRowIndex - b.startRowIndex
+            : prng() - 0.5,
         );
         sorted.forEach((r, pos) => finalRankOf.set(r.racerIndex, lo + pos));
       }
@@ -2855,123 +3968,172 @@ function runFairnessSelfCheck() {
 
   // ── Run all three conditions ───────────────────────────────────────────────
   process.stdout.write(
-    '\nBS-1 self-check: generating conditions A/B/C (' +
+    "\nBS-1 self-check: generating conditions A/B/C (" +
       SC_RACES +
-      ' races × 3)...',
+      " races × 3)...",
   );
   const prngMain = makePRNG(SC_SEED);
   const entriesA = genFair(prngMain);
   const entriesB = genUnfair(prngMain);
   const entriesC = genWithinBand(prngMain);
-  process.stdout.write(' done.\nRunning extended stats (3 conditions × ' + N_PERM + ' permutations × 5 bands)...\n');
+  process.stdout.write(
+    " done.\nRunning extended stats (3 conditions × " +
+      N_PERM +
+      " permutations × 5 bands)...\n",
+  );
 
   const resA = computeExtendedFairnessStats(entriesA, ROW_SIZES, {
     nPerm: N_PERM,
     prng: makePRNG(SC_SEED + 10),
   });
-  process.stdout.write('  Condition A done\n');
+  process.stdout.write("  Condition A done\n");
   const resB = computeExtendedFairnessStats(entriesB, ROW_SIZES, {
     nPerm: N_PERM,
     prng: makePRNG(SC_SEED + 20),
   });
-  process.stdout.write('  Condition B done\n');
+  process.stdout.write("  Condition B done\n");
   const resC = computeExtendedFairnessStats(entriesC, ROW_SIZES, {
     nPerm: N_PERM,
     prng: makePRNG(SC_SEED + 30),
   });
-  process.stdout.write('  Condition C done\n');
+  process.stdout.write("  Condition C done\n");
 
   const zrA = zoneSuccess(entriesA);
   const zrB = zoneSuccess(entriesB);
   const zrC = zoneSuccess(entriesC);
 
   // ── Report ────────────────────────────────────────────────────────────────
-  const SEP = '═'.repeat(72);
+  const SEP = "═".repeat(72);
 
-  console.log('\n' + SEP);
-  console.log('BS-1 SYNTHETIC VALIDATION RESULTS');
+  console.log("\n" + SEP);
+  console.log("BS-1 SYNTHETIC VALIDATION RESULTS");
   console.log(
-    '  Races/condition: ' +
+    "  Races/condition: " +
       SC_RACES +
-      '  Racers: ' +
+      "  Racers: " +
       SC_N +
-      '  Rows: ' +
-      ROW_SIZES.join('/') +
-      '  Seed: ' +
+      "  Rows: " +
+      ROW_SIZES.join("/") +
+      "  Seed: " +
       SC_SEED,
   );
-  console.log('  Permutations: ' + N_PERM + '  α=0.05  Correction: Holm (confirmatory), BH (exploratory)');
+  console.log(
+    "  Permutations: " +
+      N_PERM +
+      "  α=0.05  Correction: Holm (confirmatory), BH (exploratory)",
+  );
   console.log(SEP);
 
   function printCond(label, desc, res, zr) {
-    console.log('\n── Condition ' + label + ': ' + desc);
+    console.log("\n── Condition " + label + ": " + desc);
     const flagged = res.confirmatory.filter((c) => c.pHolm < 0.05);
     console.log(
-      '  Confirmatory (Holm): ' +
+      "  Confirmatory (Holm): " +
         res.confirmatory.length +
-        ' tests  →  ' +
+        " tests  →  " +
         flagged.length +
-        ' flagged at α=0.05',
+        " flagged at α=0.05",
     );
     if (flagged.length > 0) {
       for (const c of flagged) {
-        const rStr = c.r != null ? '  r=' + c.r.toFixed(3) : '';
+        const rStr = c.r != null ? "  r=" + c.r.toFixed(3) : "";
         console.log(
-          '    ✗ ' + c.label + rStr + '  pRaw=' + c.p.toFixed(3) + '  pHolm=' + c.pHolm.toFixed(3),
+          "    ✗ " +
+            c.label +
+            rStr +
+            "  pRaw=" +
+            c.p.toFixed(3) +
+            "  pHolm=" +
+            c.pHolm.toFixed(3),
         );
       }
     } else {
-      console.log('    ✓ none flagged (all clear)');
+      console.log("    ✓ none flagged (all clear)");
     }
     const t3 = res.pooled.top3;
     console.log(
-      '  Top-3-by-row (pooled, screening):  obs=[' +
-        t3.obs.join(',') +
-        ']  exp=[' +
-        t3.exp.map((v) => v.toFixed(1)).join(',') +
-        ']  χ²=' +
+      "  Top-3-by-row (pooled, screening):  obs=[" +
+        t3.obs.join(",") +
+        "]  exp=[" +
+        t3.exp.map((v) => v.toFixed(1)).join(",") +
+        "]  χ²=" +
         t3.chiSq.toFixed(2) +
-        '  pRaw=' +
+        "  pRaw=" +
         t3.pRaw.toFixed(3),
     );
-    const ordSig = res.pooled.ordinal.filter((b) => b.r != null && b.pRaw < 0.05);
+    const ordSig = res.pooled.ordinal.filter(
+      (b) => b.r != null && b.pRaw < 0.05,
+    );
     if (ordSig.length > 0) {
       console.log(
-        '  Per-band ordinal (pooled pre-Holm signals): ' +
-          ordSig.map((b) => 'B' + (b.bandIdx + 1) + ' r=' + b.r.toFixed(3) + ' p=' + b.pRaw.toFixed(3)).join('  '),
+        "  Per-band ordinal (pooled pre-Holm signals): " +
+          ordSig
+            .map(
+              (b) =>
+                "B" +
+                (b.bandIdx + 1) +
+                " r=" +
+                b.r.toFixed(3) +
+                " p=" +
+                b.pRaw.toFixed(3),
+            )
+            .join("  "),
       );
     } else {
-      console.log('  Per-band ordinal (pooled pre-Holm): no signals (p≥0.05 all bands)');
+      console.log(
+        "  Per-band ordinal (pooled pre-Holm): no signals (p≥0.05 all bands)",
+      );
     }
     const emg = res.pooled.emergence.filter((e) => e.meanAbsDelta != null);
     if (emg.length > 0) {
       console.log(
-        '  Within-band emergence (meanAbsDelta): ' +
-          emg.map((e) => 'B' + (e.bandIdx + 1) + '=' + e.meanAbsDelta.toFixed(2)).join('  '),
+        "  Within-band emergence (meanAbsDelta): " +
+          emg
+            .map((e) => "B" + (e.bandIdx + 1) + "=" + e.meanAbsDelta.toFixed(2))
+            .join("  "),
       );
     }
     if (zr != null) {
-      console.log('  Zone success rate: ' + (zr * 100).toFixed(1) + '%');
+      console.log("  Zone success rate: " + (zr * 100).toFixed(1) + "%");
     }
   }
 
-  printCond('A', 'FAIR — no row effect', resA, zrA);
-  printCond('B', 'UNFAIR — row order determines final rank', resB, zrB);
-  printCond('C', 'WITHIN-BAND-ONLY — band assignment proportional, within-band ordered by row', resC, zrC);
+  printCond("A", "FAIR — no row effect", resA, zrA);
+  printCond("B", "UNFAIR — row order determines final rank", resB, zrB);
+  printCond(
+    "C",
+    "WITHIN-BAND-ONLY — band assignment proportional, within-band ordered by row",
+    resC,
+    zrC,
+  );
 
   // Verdict
   const aPass = !resA.anyConfirmatoryFlagged;
   const bPass = resB.anyConfirmatoryFlagged;
   const cPass = resC.anyConfirmatoryFlagged && zrC != null && zrC >= 0.98;
 
-  console.log('\n' + SEP);
-  console.log('VERDICT');
-  console.log('  A) FAIR → no flag (no false positive):      ' + (aPass ? '✓ PASS' : '✗ FAIL'));
-  console.log('  B) UNFAIR → flagged:                        ' + (bPass ? '✓ PASS' : '✗ FAIL (effect not detected)'));
-  console.log('  C) WITHIN-BAND → flagged + zone≥98%:        ' + (cPass ? '✓ PASS' : '✗ FAIL'));
+  console.log("\n" + SEP);
+  console.log("VERDICT");
+  console.log(
+    "  A) FAIR → no flag (no false positive):      " +
+      (aPass ? "✓ PASS" : "✗ FAIL"),
+  );
+  console.log(
+    "  B) UNFAIR → flagged:                        " +
+      (bPass ? "✓ PASS" : "✗ FAIL (effect not detected)"),
+  );
+  console.log(
+    "  C) WITHIN-BAND → flagged + zone≥98%:        " +
+      (cPass ? "✓ PASS" : "✗ FAIL"),
+  );
   const allPass = aPass && bPass && cPass;
-  console.log('\n  Overall: ' + (allPass ? '✓ ALL PASS — metrics have real detection power' : '✗ ONE OR MORE FAILED'));
-  console.log(SEP + '\n');
+  console.log(
+    "\n  Overall: " +
+      (allPass
+        ? "✓ ALL PASS — metrics have real detection power"
+        : "✗ ONE OR MORE FAILED"),
+  );
+  console.log(SEP + "\n");
 
   if (!allPass) process.exit(1);
 }
@@ -2984,74 +4146,121 @@ function runFairnessSelfCheck() {
 //    are imported at the top of this file. buildReport receives nRaces/nRacers/worldStamp/
 //    rowLayoutConfig as arguments (formerly module globals).
 
-
 // ── Main ──────────────────────────────────────────────────────────────────────
 const isMain =
-  typeof process !== 'undefined' &&
+  typeof process !== "undefined" &&
   process.argv[1] &&
-  (process.argv[1].endsWith('sim-fairness.mjs') ||
-   process.argv[1].replace(/\\/g, '/').endsWith('scripts/sim-fairness.mjs'));
+  (process.argv[1].endsWith("sim-fairness.mjs") ||
+    process.argv[1].replace(/\\/g, "/").endsWith("scripts/sim-fairness.mjs"));
 
 if (isMain) {
-  if (SELFCHECK) { runFairnessSelfCheck(); process.exit(0); }
+  if (SELFCHECK) {
+    runFairnessSelfCheck();
+    process.exit(0);
+  }
   // ── Stage 0: world banner — every run says, up front, whether it describes the owner's world ──
   if (WORLD) {
-    console.log('══════════════════════════════════════════════════════════════════════════════');
-    console.log(`  WORLD CONFIG HONOURED — world: ${WORLD_STAMP.worldHash}  (schema v${WORLD_STAMP.schemaVersion})`);
-    console.log('  Honoured from --config: raceDynamicsConfig, raceBehaviorConfig, rowLayoutConfig,');
-    console.log('    baseSpeedConfig, autoScaleConfig. Not simulated (rendering): frameTiming, camera.');
-    console.log('══════════════════════════════════════════════════════════════════════════════');
+    console.log(
+      "══════════════════════════════════════════════════════════════════════════════",
+    );
+    console.log(
+      `  WORLD CONFIG HONOURED — world: ${WORLD_STAMP.worldHash}  (schema v${WORLD_STAMP.schemaVersion})`,
+    );
+    console.log(
+      "  Honoured from --config: raceDynamicsConfig, raceBehaviorConfig, rowLayoutConfig,",
+    );
+    console.log(
+      "    baseSpeedConfig, autoScaleConfig. Not simulated (rendering): frameTiming, camera.",
+    );
+    console.log(
+      "══════════════════════════════════════════════════════════════════════════════",
+    );
   } else {
-    console.log('══════════════════════════════════════════════════════════════════════════════');
-    console.log('  ⚠️  ASSUMED-DEFAULTS — no --config given. This run uses the SHIPPED defaults, NOT');
-    console.log('     the owner\'s browser world. Every result is stamped PROVISIONAL. It describes the');
-    console.log('     owner\'s race ONLY if his browser is at defaults (which has repeatedly not held).');
-    console.log('     Export the browser world and pass --config=world.json to remove this warning.');
-    console.log('══════════════════════════════════════════════════════════════════════════════');
+    console.log(
+      "══════════════════════════════════════════════════════════════════════════════",
+    );
+    console.log(
+      "  ⚠️  ASSUMED-DEFAULTS — no --config given. This run uses the SHIPPED defaults, NOT",
+    );
+    console.log(
+      "     the owner's browser world. Every result is stamped PROVISIONAL. It describes the",
+    );
+    console.log(
+      "     owner's race ONLY if his browser is at defaults (which has repeatedly not held).",
+    );
+    console.log(
+      "     Export the browser world and pass --config=world.json to remove this warning.",
+    );
+    console.log(
+      "══════════════════════════════════════════════════════════════════════════════",
+    );
   }
-  const trackDataDir = join(ROOT, 'server/seeds/tracks');
+  const trackDataDir = join(ROOT, "server/seeds/tracks");
   const trackFiles = [
-    'dirt-oval', 'river-run', 'space-sprint', 'garden-path', 'city-circuit',
-    'luger-hill',    // Luger hill (open)
-    'ice-track',       // Ice Track (closed)
-    'mountainstreet',  // Mountainstreet (open)
-    'searound',        // Searound (closed)
-    'seatrack',        // Seatrack (open)
+    "dirt-oval",
+    "river-run",
+    "space-sprint",
+    "garden-path",
+    "city-circuit",
+    "luger-hill", // Luger hill (open)
+    "ice-track", // Ice Track (closed)
+    "mountainstreet", // Mountainstreet (open)
+    "searound", // Searound (closed)
+    "seatrack", // Seatrack (open)
   ];
 
-  console.log('\n=== sim-fairness — RaceArena Fairness Simulation ===');
+  console.log("\n=== sim-fairness — RaceArena Fairness Simulation ===");
   console.log(`Rennen pro Kombination : ${N_RACES}`);
   console.log(`Teilnehmer pro Rennen  : ${N_RACERS}`);
   console.log(`Racer-Typen            : ${Object.keys(RACER_CONFIGS).length}`);
   console.log(`Tracks                 : ${trackFiles.length}`);
   console.log(
     `Gesamt-Rennen          : ${N_RACES} × ${Object.keys(RACER_CONFIGS).length} × ${trackFiles.length} × ${DURATION_VARIANTS.length} = ` +
-    `${N_RACES * Object.keys(RACER_CONFIGS).length * trackFiles.length * DURATION_VARIANTS.length}`
+      `${N_RACES * Object.keys(RACER_CONFIGS).length * trackFiles.length * DURATION_VARIANTS.length}`,
   );
   console.log(`Output                 : ${OUT_DIR}`);
-  console.log(`Seed                   : ${GLOBAL_SEED > 0 ? GLOBAL_SEED + ' (deterministisch)' : '0 (Math.random, Exploration)'}`);
-  console.log(`Race Plan              : ${RACE_PLAN_ACTIVE ? '✅ aktiv' : '❌ inaktiv (Baseline-Modus)'}`);
+  console.log(
+    `Seed                   : ${GLOBAL_SEED > 0 ? GLOBAL_SEED + " (deterministisch)" : "0 (Math.random, Exploration)"}`,
+  );
+  console.log(
+    `Race Plan              : ${RACE_PLAN_ACTIVE ? "✅ aktiv" : "❌ inaktiv (Baseline-Modus)"}`,
+  );
   if (RACE_PLAN_ACTIVE) {
-    console.log(`  bonusUntil=${(RP_BONUS_TRANSITION_END * 100).toFixed(0)}%  fade=${RP_BONUS_FADE_MS}ms  corridor=${(RP_CORRIDOR_START * 100).toFixed(0)}%→${(RP_CORRIDOR_END * 100).toFixed(0)}%`);
+    console.log(
+      `  bonusUntil=${(RP_BONUS_TRANSITION_END * 100).toFixed(0)}%  fade=${RP_BONUS_FADE_MS}ms  corridor=${(RP_CORRIDOR_START * 100).toFixed(0)}%→${(RP_CORRIDOR_END * 100).toFixed(0)}%`,
+    );
   }
-  console.log(`Dynamics (reRoll/traj) : variation=${DYNAMICS_OVERRIDES.reRollVariationPercent}% transition=${DYNAMICS_OVERRIDES.reRollTransitionDuration}s divisor=${DYNAMICS_OVERRIDES.reRollIntervalDivisor} lastPos=${DYNAMICS_OVERRIDES.reRollLastPositionPercent}% trajTrans=${DYNAMICS_OVERRIDES.trajectoryTransitionDuration}s`);
+  console.log(
+    `Dynamics (reRoll/traj) : variation=${DYNAMICS_OVERRIDES.reRollVariationPercent}% transition=${DYNAMICS_OVERRIDES.reRollTransitionDuration}s divisor=${DYNAMICS_OVERRIDES.reRollIntervalDivisor} lastPos=${DYNAMICS_OVERRIDES.reRollLastPositionPercent}% trajTrans=${DYNAMICS_OVERRIDES.trajectoryTransitionDuration}s`,
+  );
   // The sim's t-update chain is:
   //   t += baseSpeed·boost·brake·rowEnvMult·trajectoryMult·areaBonusMult·governorMult·(DT/16)
   // factor-for-factor identical to the browser's (index.jsx) modulo (DT/16)=1.0. See docs/FORCE-PARITY.md.
   if (ACTION !== null) {
-    console.log(`Action axis            : action=${ACTION.toFixed(3)} → empty stub (no couplings; Stage-5b re-targets to the rotation strengths)`);
+    console.log(
+      `Action axis            : action=${ACTION.toFixed(3)} → empty stub (no couplings; Stage-5b re-targets to the rotation strengths)`,
+    );
   }
   if (WARMUP_MS_OVERRIDE !== null) {
-    console.log(`⚠️  Phase-2L: avoidanceWarmupMs=${WARMUP_MS_OVERRIDE} (Override; Default=${DEFAULT_RACE_BEHAVIOR_CONFIG.avoidanceWarmupMs})`);
+    console.log(
+      `⚠️  Phase-2L: avoidanceWarmupMs=${WARMUP_MS_OVERRIDE} (Override; Default=${DEFAULT_RACE_BEHAVIOR_CONFIG.avoidanceWarmupMs})`,
+    );
   }
   if (Object.keys(BEHAVIOR_OVERRIDE).length > 0) {
-    console.log(`⚠️  --behavior override: ${JSON.stringify(BEHAVIOR_OVERRIDE)}`);
+    console.log(
+      `⚠️  --behavior override: ${JSON.stringify(BEHAVIOR_OVERRIDE)}`,
+    );
   }
   if (COMEBACK_ANALYSIS) {
-    if (!RACE_PLAN_ACTIVE) console.warn('⚠️  --comeback-analysis benötigt --race-plan=true — B1-Daten fehlen');
-    console.log(`Phase-3B COMEBACK Analyse aktiv: minPositions=${CB_MIN_POSITIONS}  windowSec=${CB_WINDOW_SEC}  endgameThresh=${(CB_ENDGAME_THRESH * 100).toFixed(0)}%`);
+    if (!RACE_PLAN_ACTIVE)
+      console.warn(
+        "⚠️  --comeback-analysis benötigt --race-plan=true — B1-Daten fehlen",
+      );
+    console.log(
+      `Phase-3B COMEBACK Analyse aktiv: minPositions=${CB_MIN_POSITIONS}  windowSec=${CB_WINDOW_SEC}  endgameThresh=${(CB_ENDGAME_THRESH * 100).toFixed(0)}%`,
+    );
   }
-  console.log('');
+  console.log("");
 
   if (PURGE_TMP && existsSync(OUT_DIR)) {
     rmSync(OUT_DIR, { recursive: true, force: true });
@@ -3059,21 +4268,29 @@ if (isMain) {
   }
   mkdirSync(OUT_DIR, { recursive: true });
 
-  const BASE_SPEED_MIN  = BASE_SPEED_MIN_OVR;
-  const BASE_SPEED_MAX  = BASE_SPEED_MAX_OVR;
+  const BASE_SPEED_MIN = BASE_SPEED_MIN_OVR;
+  const BASE_SPEED_MAX = BASE_SPEED_MAX_OVR;
   const BASE_SPEED_MEAN = (BASE_SPEED_MIN + BASE_SPEED_MAX) / 2;
-  if (BASE_SPEED_MIN !== DEFAULT_BASE_SPEED_CONFIG.min || BASE_SPEED_MAX !== DEFAULT_BASE_SPEED_CONFIG.max) {
-    const spreadPct = (((BASE_SPEED_MAX - BASE_SPEED_MIN) / BASE_SPEED_MEAN) * 100).toFixed(1);
-    console.log(`⚠️  Base-speed band OVERRIDE: min=${BASE_SPEED_MIN} max=${BASE_SPEED_MAX} (±${(spreadPct/2)}% / ${spreadPct}% total; default min=${DEFAULT_BASE_SPEED_CONFIG.min} max=${DEFAULT_BASE_SPEED_CONFIG.max})`);
+  if (
+    BASE_SPEED_MIN !== DEFAULT_BASE_SPEED_CONFIG.min ||
+    BASE_SPEED_MAX !== DEFAULT_BASE_SPEED_CONFIG.max
+  ) {
+    const spreadPct = (
+      ((BASE_SPEED_MAX - BASE_SPEED_MIN) / BASE_SPEED_MEAN) *
+      100
+    ).toFixed(1);
+    console.log(
+      `⚠️  Base-speed band OVERRIDE: min=${BASE_SPEED_MIN} max=${BASE_SPEED_MAX} (±${spreadPct / 2}% / ${spreadPct}% total; default min=${DEFAULT_BASE_SPEED_CONFIG.min} max=${DEFAULT_BASE_SPEED_CONFIG.max})`,
+    );
   }
 
   const allResults = [];
-  const rawData    = [];
-  const breakawayAgg = BREAKAWAY_DIAG ? [] : null;  // per-combo breakaway aggregates (--breakaway-diag)
-  const frontActionAgg = FRONT_ACTION ? [] : null;  // per-combo front-action aggregates (--front-action)
-  const stripAgg = STRIP_METRICS ? [] : null;       // per-combo raw strip-down dumps (--strip-metrics)
-  const actionAgg = ACTION_METRICS ? [] : null;     // per-combo raw action-metrics dumps (--action-metrics)
-  const startTime  = Date.now();
+  const rawData = [];
+  const breakawayAgg = BREAKAWAY_DIAG ? [] : null; // per-combo breakaway aggregates (--breakaway-diag)
+  const frontActionAgg = FRONT_ACTION ? [] : null; // per-combo front-action aggregates (--front-action)
+  const stripAgg = STRIP_METRICS ? [] : null; // per-combo raw strip-down dumps (--strip-metrics)
+  const actionAgg = ACTION_METRICS ? [] : null; // per-combo raw action-metrics dumps (--action-metrics)
+  const startTime = Date.now();
 
   for (const trackId of trackFiles) {
     if (TRACK_FILTER && trackId !== TRACK_FILTER) continue;
@@ -3082,22 +4299,26 @@ if (isMain) {
       console.warn(`  [SKIP] Track nicht gefunden: ${trackPath}`);
       continue;
     }
-    const track  = JSON.parse(readFileSync(trackPath, 'utf8'));
-    const shape  = new EditorShape(track);
+    const track = JSON.parse(readFileSync(trackPath, "utf8"));
+    const shape = new EditorShape(track);
     const isOpen = !!shape.isOpen;
-    const pathLengthPx       = track.pathLengthPx ?? shape.getTotalLength();
+    const pathLengthPx = track.pathLengthPx ?? shape.getTotalLength();
     // Read stored width first; getActualTrackWidth() overestimates for open tracks.
     const geometricTrackWidth = track.width ?? shape.getActualTrackWidth();
     const trackName = track.name ?? trackId;
 
-    console.log(`── ${trackName} (${trackId}) — open=${isOpen} path=${Math.round(pathLengthPx)}px width=${Math.round(geometricTrackWidth)}px`);
+    console.log(
+      `── ${trackName} (${trackId}) — open=${isOpen} path=${Math.round(pathLengthPx)}px width=${Math.round(geometricTrackWidth)}px`,
+    );
 
     const trackSurfaces = track.surfaceClasses ?? [];
     for (const [racerType, cfg] of Object.entries(RACER_CONFIGS)) {
       if (RACER_FILTER && racerType !== RACER_FILTER) continue;
       // Racers incompatible with this track's surface (empty surfaceClasses = no restriction).
-      const surfaceIncompatible = cfg.surfaceClasses.length > 0 && trackSurfaces.length > 0 &&
-          !cfg.surfaceClasses.some((s) => trackSurfaces.includes(s));
+      const surfaceIncompatible =
+        cfg.surfaceClasses.length > 0 &&
+        trackSurfaces.length > 0 &&
+        !cfg.surfaceClasses.some((s) => trackSurfaces.includes(s));
       if (surfaceIncompatible) {
         // An EXPLICITLY requested racer (--racer=<id>) must ERROR, never silently skip — a silent
         // skip would yield 0 combos and a misleading "all fair" run. The default all-racers loop
@@ -3105,8 +4326,8 @@ if (isMain) {
         if (RACER_FILTER) {
           throw new Error(
             `Racer '${racerType}' is surface-incompatible with track '${trackId}': ` +
-            `racer surfaces [${cfg.surfaceClasses.join(', ')}] ∩ track [${trackSurfaces.join(', ')}] = ∅. ` +
-            `Refusing to silently skip an explicitly-requested racer.`
+              `racer surfaces [${cfg.surfaceClasses.join(", ")}] ∩ track [${trackSurfaces.join(", ")}] = ∅. ` +
+              `Refusing to silently skip an explicitly-requested racer.`,
           );
         }
         continue;
@@ -3120,7 +4341,10 @@ if (isMain) {
         // ── Canonical inputs for this combo ────────────────────────────────────────────
         // THIS combo's pace: the one normal speed times THIS racer type's multiplier. Every
         // per-combo derivation below reads it, so the sim and the browser agree term for term.
-        const comboPaceSpeed = paceSpeedPxPerSec(NORMAL_SPEED_PX_PER_SEC, speedMultiplier);
+        const comboPaceSpeed = paceSpeedPxPerSec(
+          NORMAL_SPEED_PX_PER_SEC,
+          speedMultiplier,
+        );
         // CLOSED: a lap count — explicit (--laps), else the protocol mapping of durationSec,
         //         else the track's own default. OPEN: seconds, straight from durationSec.
         const comboLaps = isOpen
@@ -3130,7 +4354,11 @@ if (isMain) {
             : LAPS_FILTER
               ? Math.max(MIN_LAPS, Number(LAPS_FILTER))
               : DUR_FILTER || !Number.isFinite(track.defaultLaps)
-                ? lapsForApproxSeconds(durationSec, pathLengthPx, comboPaceSpeed)
+                ? lapsForApproxSeconds(
+                    durationSec,
+                    pathLengthPx,
+                    comboPaceSpeed,
+                  )
                 : trackDefaultLaps(track);
         const comboSeconds = !isOpen
           ? 0
@@ -3139,7 +4367,7 @@ if (isMain) {
                 track,
                 pathLengthPx,
                 comboPaceSpeed,
-                DEFAULT_RACE_BEHAVIOR_CONFIG.runoutZone
+                DEFAULT_RACE_BEHAVIOR_CONFIG.runoutZone,
               )
             : durationSec;
         // THE canonical derivation, made once per combo for the plan + the printout. Every race
@@ -3162,16 +4390,29 @@ if (isMain) {
         // the two disagree for small sprites (e.g. dolphin: 4 vs 3), so this is the browser's start grid.
         // rowSizes is the matching even distribution (bigCount rows of ceil, the rest floor), exactly
         // what computeEvenRowLayout below produces — so the fairness bucketing lines up with the grid.
-        const effectiveWidth       = geometricTrackWidth * DEFAULT_RACE_BEHAVIOR_CONFIG.startSpreadRange;
-        const comboLayout          = computeRacerLayout(effectiveWidth, nRacersForCombo, displaySize, DEFAULT_AUTO_SCALE_CONFIG);
-        const comboEffDisplaySize  = comboLayout.spriteSize;
-        const comboAutoScale       = comboEffDisplaySize / displaySize;
-        const rowGapPx             = comboEffDisplaySize * DEFAULT_ROW_LAYOUT_CONFIG.rowGapMultiplier;
-        const totalRows            = computeStartRowCount(effectiveWidth, nRacersForCombo, comboEffDisplaySize);
-        const _bigRPR              = Math.ceil(nRacersForCombo / totalRows);
-        const _smallRPR            = Math.floor(nRacersForCombo / totalRows);
-        const _bigCount            = nRacersForCombo - _smallRPR * totalRows;
-        const rowSizes             = Array.from({ length: totalRows }, (_, i) => (i < _bigCount ? _bigRPR : _smallRPR));
+        const effectiveWidth =
+          geometricTrackWidth * DEFAULT_RACE_BEHAVIOR_CONFIG.startSpreadRange;
+        const comboLayout = computeRacerLayout(
+          effectiveWidth,
+          nRacersForCombo,
+          displaySize,
+          DEFAULT_AUTO_SCALE_CONFIG,
+        );
+        const comboEffDisplaySize = comboLayout.spriteSize;
+        const comboAutoScale = comboEffDisplaySize / displaySize;
+        const rowGapPx =
+          comboEffDisplaySize * DEFAULT_ROW_LAYOUT_CONFIG.rowGapMultiplier;
+        const totalRows = computeStartRowCount(
+          effectiveWidth,
+          nRacersForCombo,
+          comboEffDisplaySize,
+        );
+        const _bigRPR = Math.ceil(nRacersForCombo / totalRows);
+        const _smallRPR = Math.floor(nRacersForCombo / totalRows);
+        const _bigCount = nRacersForCombo - _smallRPR * totalRows;
+        const rowSizes = Array.from({ length: totalRows }, (_, i) =>
+          i < _bigCount ? _bigRPR : _smallRPR,
+        );
         // D-GRID: the start-row shuffle is drawn PER RACE from the shared physics stream, inside the
         // raceIdx loop below — NOT once per combo. The old per-combo FNV shuffle (comboLayoutSeed) is
         // gone: it keyed the plan to a grid the racers did not stand in, and it froze one grid across
@@ -3179,19 +4420,24 @@ if (isMain) {
         // exactly as the browser does.
 
         process.stdout.write(
-          `   ${racerType.padEnd(10)} ${isOpen ? `${comboSeconds}s` : `${comboLaps}lap`}  finishT=${finishT.toFixed(3)}  dur=${realizedDurationSecCombo.toFixed(1)}s${comboModel.slowdownActive ? ` (pace ${Math.round(comboModel.paceScale*100)}%)` : ''}  rows=${totalRows}  sf=${comboAutoScale.toFixed(2)}  `
+          `   ${racerType.padEnd(10)} ${isOpen ? `${comboSeconds}s` : `${comboLaps}lap`}  finishT=${finishT.toFixed(3)}  dur=${realizedDurationSecCombo.toFixed(1)}s${comboModel.slowdownActive ? ` (pace ${Math.round(comboModel.paceScale * 100)}%)` : ""}  rows=${totalRows}  sf=${comboAutoScale.toFixed(2)}  `,
         );
 
-        const raceResults   = [];
-        const mixingQuotas  = [];
+        const raceResults = [];
+        const mixingQuotas = [];
         for (let raceIdx = 0; raceIdx < N_RACES; raceIdx++) {
           // seed=0 → non-deterministic (exploration); seed>0 → reproducible batch
-          const seed = GLOBAL_SEED > 0 ? (GLOBAL_SEED - 1) * N_RACES + raceIdx + 1 : 0;
+          const seed =
+            GLOBAL_SEED > 0 ? (GLOBAL_SEED - 1) * N_RACES + raceIdx + 1 : 0;
           // D-GRID: ONE per-race shuffle, drawn as the shared physics stream's first draw, feeds BOTH
           // the plan's start-row view (planRacers below) AND the physical placement inside
           // runSingleRace (raceRng + rowLayout passed in). This is the browser's shape exactly.
           const raceRng = makeRaceRng(seed).physics;
-          const rowLayout = computeEvenRowLayout(nRacersForCombo, totalRows, raceRng);
+          const rowLayout = computeEvenRowLayout(
+            nRacersForCombo,
+            totalRows,
+            raceRng,
+          );
           // Phase-3A: create Race Plan + TrajectoryController for this race when active
           let racePlanController = null;
           let raceSollRankMap = null;
@@ -3204,56 +4450,66 @@ if (isMain) {
             const planRacers = rowLayout.assignments
               .map((a) => ({ index: a.racerIndex, startRowIndex: a.rowIndex }))
               .sort((x, y) => x.index - y.index);
-            const plan = createRacePlan(planRacers, finishT, realizedDurationSecCombo * 1000, {
-              bonusStrengthMultiplier: BONUS_MULT,
-              // areaBonus phase-split (INFRA 5A): threaded into the plan so the shared controller
-              // applies the rescale from ONE source (browser + sim), from the shipped dynamics config.
-              phaseSplitBonusEnabled:  PHASE_SPLIT_BONUS_ENABLED,
-              areaBonusEarly:          AREA_BONUS_EARLY,
-              areaBonusPulk:           AREA_BONUS_PULK,
-              areaBonusPost:           AREA_BONUS_POST,
-              pulkStart:               RP_PULK_START,
-              bonusTransitionEnd:      RP_BONUS_TRANSITION_END,
-              bonusFadeDuration:       RP_BONUS_FADE_MS,
-              corridorStart:           RP_CORRIDOR_START,
-              corridorEnd:             RP_CORRIDOR_END,
-              pulkBiasGain:            RP_PULK_BIAS_GAIN,
-              // COMBO15 fair-arrival mechanism (SHIPPED default): band-aware draw bias (B) + chaos steer.
-              bandBias:                FA_BAND_BIAS,
-              bandBiasR:               FA_BAND_R,
-              bandBiasGain:            FA_BAND_BIAS_GAIN,
-              chaosSteer:              FA_CHAOS_STEER,
-              chaosSteerGain:          FA_CHAOS_STEER_GAIN,
-              choreoSuppressChaosBonusB1: CHOREO_SUPPRESS_CHAOS_BONUS_B1,
-              choreoIntensity:     CHOREO_INTENSITY,
-              choreoPackBandStrictness: CHOREO_PACK_BAND_STRICTNESS,
-              choreoReleaseProgress: CHOREO_RELEASE_PROGRESS,
-              choreoResolveB2:     CHOREO_RESOLVE_B2,
-              choreoResolveB3:     CHOREO_RESOLVE_B3,
-              choreoResolveB4:     CHOREO_RESOLVE_B4,
-              choreoResolveB5:     CHOREO_RESOLVE_B5,
-              choreoOutcomeStart:  CHOREO_OUTCOME_START,
-              packReSteerThreshold: PACK_RESTEER_THRESHOLD,
-              b2AttackHeroes:      B2_ATTACK_HEROES,
-              b2AttackPeakRank:    B2_ATTACK_PEAK_RANK,
-              b2AttackFinalRank:   B2_ATTACK_FINAL_RANK,
-              b2AttackProgress:    { start: B2_ATTACK_PROGRESS_START, end: B2_ATTACK_PROGRESS_END },
-              b2AttackResolveProgress: B2_ATTACK_RESOLVE_PROGRESS,
-              b2AttackBandArrival: B2_ATTACK_BAND_ARRIVAL,
-              // Front distance leash (SIM-ONLY): null when the flag is absent → controller leash off.
-              frontLeashMaxLengths: FRONT_LEASH_MAX_LEN,
-              frontLeashGainPct:    FRONT_LEASH_GAIN_PCT,
-              // Gap-cap re-roll bias (SIM-ONLY): null threshold → transform passthrough. The window
-              // derivation reads reRollLastPositionPercent + reRollTransitionDuration (shipped dynamics).
-              gapRerollThresholdLengths: GAP_REROLL_THRESH_LEN,
-              gapRerollMode:             GAP_REROLL_MODE ?? undefined,
-              gapRerollStrength:         GAP_REROLL_STRENGTH ?? undefined,
-              // Window END is derived from the harness's own lastRollDeadline (passed per-frame to the
-              // transform); only the transition duration is needed in the plan.
-              reRollTransitionDuration:  DYNAMICS_OVERRIDES.reRollTransitionDuration,
-              // Front act window (the sustained-P1-battle measurement window's own key).
-              contestWindowStart:        CONTEST_WINDOW_START,
-            }, seed);
+            const plan = createRacePlan(
+              planRacers,
+              finishT,
+              realizedDurationSecCombo * 1000,
+              {
+                bonusStrengthMultiplier: BONUS_MULT,
+                // areaBonus phase-split (INFRA 5A): threaded into the plan so the shared controller
+                // applies the rescale from ONE source (browser + sim), from the shipped dynamics config.
+                phaseSplitBonusEnabled: PHASE_SPLIT_BONUS_ENABLED,
+                areaBonusEarly: AREA_BONUS_EARLY,
+                areaBonusPulk: AREA_BONUS_PULK,
+                areaBonusPost: AREA_BONUS_POST,
+                pulkStart: RP_PULK_START,
+                bonusTransitionEnd: RP_BONUS_TRANSITION_END,
+                bonusFadeDuration: RP_BONUS_FADE_MS,
+                corridorStart: RP_CORRIDOR_START,
+                corridorEnd: RP_CORRIDOR_END,
+                pulkBiasGain: RP_PULK_BIAS_GAIN,
+                // COMBO15 fair-arrival mechanism (SHIPPED default): band-aware draw bias (B) + chaos steer.
+                bandBias: FA_BAND_BIAS,
+                bandBiasR: FA_BAND_R,
+                bandBiasGain: FA_BAND_BIAS_GAIN,
+                chaosSteer: FA_CHAOS_STEER,
+                chaosSteerGain: FA_CHAOS_STEER_GAIN,
+                choreoSuppressChaosBonusB1: CHOREO_SUPPRESS_CHAOS_BONUS_B1,
+                choreoIntensity: CHOREO_INTENSITY,
+                choreoPackBandStrictness: CHOREO_PACK_BAND_STRICTNESS,
+                choreoReleaseProgress: CHOREO_RELEASE_PROGRESS,
+                choreoResolveB2: CHOREO_RESOLVE_B2,
+                choreoResolveB3: CHOREO_RESOLVE_B3,
+                choreoResolveB4: CHOREO_RESOLVE_B4,
+                choreoResolveB5: CHOREO_RESOLVE_B5,
+                choreoOutcomeStart: CHOREO_OUTCOME_START,
+                packReSteerThreshold: PACK_RESTEER_THRESHOLD,
+                b2AttackHeroes: B2_ATTACK_HEROES,
+                b2AttackPeakRank: B2_ATTACK_PEAK_RANK,
+                b2AttackFinalRank: B2_ATTACK_FINAL_RANK,
+                b2AttackProgress: {
+                  start: B2_ATTACK_PROGRESS_START,
+                  end: B2_ATTACK_PROGRESS_END,
+                },
+                b2AttackResolveProgress: B2_ATTACK_RESOLVE_PROGRESS,
+                b2AttackBandArrival: B2_ATTACK_BAND_ARRIVAL,
+                // Front distance leash (SIM-ONLY): null when the flag is absent → controller leash off.
+                frontLeashMaxLengths: FRONT_LEASH_MAX_LEN,
+                frontLeashGainPct: FRONT_LEASH_GAIN_PCT,
+                // Gap-cap re-roll bias (SIM-ONLY): null threshold → transform passthrough. The window
+                // derivation reads reRollLastPositionPercent + reRollTransitionDuration (shipped dynamics).
+                gapRerollThresholdLengths: GAP_REROLL_THRESH_LEN,
+                gapRerollMode: GAP_REROLL_MODE ?? undefined,
+                gapRerollStrength: GAP_REROLL_STRENGTH ?? undefined,
+                // Window END is derived from the harness's own lastRollDeadline (passed per-frame to the
+                // transform); only the transition duration is needed in the plan.
+                reRollTransitionDuration:
+                  DYNAMICS_OVERRIDES.reRollTransitionDuration,
+                // Front act window (the sustained-P1-battle measurement window's own key).
+                contestWindowStart: CONTEST_WINDOW_START,
+              },
+              seed,
+            );
             racePlanController = createTrajectoryController(plan);
             raceSollRankMap = plan._racerTargetRank;
             if (COMEBACK_ANALYSIS) {
@@ -3277,125 +4533,233 @@ if (isMain) {
             normalSpeedPxPerSec: NORMAL_SPEED_PX_PER_SEC,
             seed,
             nRacers: nRacersForCombo,
-            raceRng,     // D-GRID: the shared per-race stream (past the row-shuffle draw)
-            rowLayout,   // D-GRID: the one shuffle the plan above was built from
+            raceRng, // D-GRID: the shared per-race stream (past the row-shuffle draw)
+            rowLayout, // D-GRID: the one shuffle the plan above was built from
             diagnosticMode: DIAG_MODE,
             behaviorConfigOverrides: {
               isOpen,
-              ...(WARMUP_MS_OVERRIDE !== null ? { avoidanceWarmupMs: WARMUP_MS_OVERRIDE } : {}),
+              ...(WARMUP_MS_OVERRIDE !== null
+                ? { avoidanceWarmupMs: WARMUP_MS_OVERRIDE }
+                : {}),
               ...BEHAVIOR_OVERRIDE,
             },
             racePlanController,
-            comebackAnalysisConfig: COMEBACK_ANALYSIS && RACE_PLAN_ACTIVE
-              ? { b1Indices, minPositions: CB_MIN_POSITIONS, windowSec: CB_WINDOW_SEC, endgameThresh: CB_ENDGAME_THRESH }
-              : null,
-            breakawayDiag:      BREAKAWAY_DIAG,
-            frontAction:        FRONT_ACTION,
+            comebackAnalysisConfig:
+              COMEBACK_ANALYSIS && RACE_PLAN_ACTIVE
+                ? {
+                    b1Indices,
+                    minPositions: CB_MIN_POSITIONS,
+                    windowSec: CB_WINDOW_SEC,
+                    endgameThresh: CB_ENDGAME_THRESH,
+                  }
+                : null,
+            breakawayDiag: BREAKAWAY_DIAG,
+            frontAction: FRONT_ACTION,
             // RACER-FLAPPING-1: reproduce the browser's roster names (D-NAME) so the avoidance symmetry
             // tiebreak matches the owner's race. --racer-names=a,b,c (comma-separated, index order).
-            racerNames:         RACER_NAMES,
+            racerNames: RACER_NAMES,
             racerTargetRankMap: raceSollRankMap,
-            heroMap:            HERO_MAP,
-            gapMetrics:         GAP_METRICS,
-            runawayParade:      RUNAWAY_PARADE,
-            speedSource:        SPEED_SOURCE,
-            physicsTax:         PHYSICS_TAX,
+            heroMap: HERO_MAP,
+            gapMetrics: GAP_METRICS,
+            runawayParade: RUNAWAY_PARADE,
+            speedSource: SPEED_SOURCE,
+            physicsTax: PHYSICS_TAX,
             // CAMERA-FOCUS-2: capture the exact per-frame racer array the browser feeds the camera,
             // for the FIRST race only. Read-only observer — cannot alter the race.
-            frameHook: (DUMP_FRAMES && !_dumpDone)
-              ? ((raceTs, _diag, racers) => {
-                  _dumpFrames.push({
-                    t: raceTs,
-                    racers: racers.map((r) => ({
-                      index: r.index, x: r.x, y: r.y, t: r.t, finished: !!r.finished,
-                      // RACER-FLAPPING-1: raw SIM lateral state (physicalY ∈ [-1,+1]) + its velocity and
-                      // the avoidance flag — lets a trace decide if a left-right flap is sim-side or render.
-                      pY: r.physicalY, pYv: r.physicalYVelocity, avoid: !!r.avoidanceActive,
-                    })),
-                  });
-                })
-              : null,
+            frameHook:
+              DUMP_FRAMES && !_dumpDone
+                ? (raceTs, _diag, racers) => {
+                    _dumpFrames.push({
+                      t: raceTs,
+                      racers: racers.map((r) => ({
+                        index: r.index,
+                        x: r.x,
+                        y: r.y,
+                        t: r.t,
+                        finished: !!r.finished,
+                        // RACER-FLAPPING-1: raw SIM lateral state (physicalY ∈ [-1,+1]) + its velocity and
+                        // the avoidance flag — lets a trace decide if a left-right flap is sim-side or render.
+                        pY: r.physicalY,
+                        pYv: r.physicalYVelocity,
+                        avoid: !!r.avoidanceActive,
+                      })),
+                    });
+                  }
+                : null,
           });
           // CAMERA-FOCUS-2: write the recorded replay once (first race), then stop capturing.
           if (DUMP_FRAMES && !_dumpDone && _dumpFrames.length) {
-            writeFileSync(DUMP_FRAMES, JSON.stringify({
-              meta: {
-                track: trackId, seed, nRacers: nRacersForCombo, isOpen, finishT,
-                worldW: track.worldWidth ?? 1280, worldH: track.worldHeight ?? 720,
-                frames: _dumpFrames.length,
-              },
-              frames: _dumpFrames,
-            }));
+            writeFileSync(
+              DUMP_FRAMES,
+              JSON.stringify({
+                meta: {
+                  track: trackId,
+                  seed,
+                  nRacers: nRacersForCombo,
+                  isOpen,
+                  finishT,
+                  worldW: track.worldWidth ?? 1280,
+                  worldH: track.worldHeight ?? 720,
+                  frames: _dumpFrames.length,
+                },
+                frames: _dumpFrames,
+              }),
+            );
             _dumpDone = true;
-            console.log(`  [dump-frames] wrote ${_dumpFrames.length} frames → ${DUMP_FRAMES}`);
+            console.log(
+              `  [dump-frames] wrote ${_dumpFrames.length} frames → ${DUMP_FRAMES}`,
+            );
           }
           // HERO-MAP (--hero-map): stash this race's per-hero observations, tagged with combo meta.
           if (HERO_MAP && result.heroObs) {
-            heroMapRaces.push({ trackId, racerType, durationSec, seed, raceIdx, isOpen, heroObs: result.heroObs });
+            heroMapRaces.push({
+              trackId,
+              racerType,
+              durationSec,
+              seed,
+              raceIdx,
+              isOpen,
+              heroObs: result.heroObs,
+            });
           }
           // GAP-METRICS (--gap-metrics): stash this race's gap-space observations, tagged with combo meta.
           if (GAP_METRICS && result.gapMetrics) {
-            gmRaces.push({ trackId, racerType, durationSec, seed, raceIdx, isOpen, gapMetrics: result.gapMetrics });
+            gmRaces.push({
+              trackId,
+              racerType,
+              durationSec,
+              seed,
+              raceIdx,
+              isOpen,
+              gapMetrics: result.gapMetrics,
+            });
           }
           // RUNAWAY-PARADE (--runaway-parade): stash this race's raw record, tagged with combo meta.
           if (RUNAWAY_PARADE && result.runawayParade) {
-            rpRaces.push({ trackId, racerType, durationSec, seed, raceIdx, isOpen, runawayParade: result.runawayParade });
+            rpRaces.push({
+              trackId,
+              racerType,
+              durationSec,
+              seed,
+              raceIdx,
+              isOpen,
+              runawayParade: result.runawayParade,
+            });
           }
           // SPEED-SOURCE (--speed-source): stash this race's top-15 decomposition, tagged with combo meta.
           if (SPEED_SOURCE && result.speedSource) {
-            ssRaces.push({ trackId, racerType, durationSec, seed, raceIdx, isOpen, speedSource: result.speedSource });
+            ssRaces.push({
+              trackId,
+              racerType,
+              durationSec,
+              seed,
+              raceIdx,
+              isOpen,
+              speedSource: result.speedSource,
+            });
           }
           // PHYSICS-TAX (--physics-tax): stash this race's per-racer braking-loss record, tagged with combo meta.
           if (PHYSICS_TAX && result.physicsTax) {
-            ptRaces.push({ trackId, racerType, durationSec, seed, raceIdx, isOpen, physicsTax: result.physicsTax });
+            ptRaces.push({
+              trackId,
+              racerType,
+              durationSec,
+              seed,
+              raceIdx,
+              isOpen,
+              physicsTax: result.physicsTax,
+            });
           }
           // SCREEN escape-latency (--escape-latency): stash this race's escape depth + leader-tilt log.
           if (ESCAPE_LATENCY && result.escapeLatency) {
-            elRaces.push({ trackId, racerType, durationSec, seed, raceIdx, isOpen, escapeLatency: result.escapeLatency });
+            elRaces.push({
+              trackId,
+              racerType,
+              durationSec,
+              seed,
+              raceIdx,
+              isOpen,
+              escapeLatency: result.escapeLatency,
+            });
           }
           // Step 1: fair-chance placement metrics (requires race-plan target ranks)
           if (raceSollRankMap) {
-            const b1Entries = [...raceSollRankMap.entries()].filter(([, sr]) => sr <= 5);
-            let fcExact = 0, fcTop5 = 0;
+            const b1Entries = [...raceSollRankMap.entries()].filter(
+              ([, sr]) => sr <= 5,
+            );
+            let fcExact = 0,
+              fcTop5 = 0;
             // Gap B: per-starting-row breakdown (rowIndex → {b1Count, exactHits, top5Hits})
             const fcByRow = new Map();
             for (const [racerIdx, sollRank] of b1Entries) {
               const rr = result.find((x) => x.racerIndex === racerIdx);
               if (!rr) continue;
               const row = rr.startRowIndex;
-              if (!fcByRow.has(row)) fcByRow.set(row, { b1Count: 0, exactHits: 0, top5Hits: 0 });
+              if (!fcByRow.has(row))
+                fcByRow.set(row, { b1Count: 0, exactHits: 0, top5Hits: 0 });
               const rd = fcByRow.get(row);
               rd.b1Count++;
-              if (rr.finalRank === sollRank) { fcExact++; rd.exactHits++; }
-              if (rr.finalRank <= 5) { fcTop5++; rd.top5Hits++; }
+              if (rr.finalRank === sollRank) {
+                fcExact++;
+                rd.exactHits++;
+              }
+              if (rr.finalRank <= 5) {
+                fcTop5++;
+                rd.top5Hits++;
+              }
             }
-            result.fairChanceB1Count   = b1Entries.length;
-            result.fairChanceExactHits  = fcExact;
-            result.fairChanceTop5Hits   = fcTop5;
-            result.fairChanceByRow      = fcByRow;
+            result.fairChanceB1Count = b1Entries.length;
+            result.fairChanceExactHits = fcExact;
+            result.fairChanceTop5Hits = fcTop5;
+            result.fairChanceByRow = fcByRow;
           } else {
-            result.fairChanceB1Count   = 0;
-            result.fairChanceExactHits  = 0;
-            result.fairChanceTop5Hits   = 0;
-            result.fairChanceByRow      = new Map();
+            result.fairChanceB1Count = 0;
+            result.fairChanceExactHits = 0;
+            result.fairChanceTop5Hits = 0;
+            result.fairChanceByRow = new Map();
           }
           raceResults.push(result);
           if (COMEBACK_ANALYSIS) result._seed = seed;
           if (result.mixingQuota != null) mixingQuotas.push(result.mixingQuota);
           if (DIAG_MODE && result.diagSnapshots) {
-            const diagText = printDiagnosticReport(result.diagSnapshots, trackName, racerType, durationSec, seed);
+            const diagText = printDiagnosticReport(
+              result.diagSnapshots,
+              trackName,
+              racerType,
+              durationSec,
+              seed,
+            );
             console.log(diagText);
-            const diagPath = join(OUT_DIR, `diag-${trackId}-${racerType}-${durationSec}s-seed${seed}.json`);
-            writeFileSync(diagPath, JSON.stringify({ trackId, trackName, racerType, durationSec, seed, snapshots: result.diagSnapshots }, null, 2));
+            const diagPath = join(
+              OUT_DIR,
+              `diag-${trackId}-${racerType}-${durationSec}s-seed${seed}.json`,
+            );
+            writeFileSync(
+              diagPath,
+              JSON.stringify(
+                {
+                  trackId,
+                  trackName,
+                  racerType,
+                  durationSec,
+                  seed,
+                  snapshots: result.diagSnapshots,
+                },
+                null,
+                2,
+              ),
+            );
             console.log(`Diagnostic JSON → ${diagPath}`);
           }
 
           // Collect raw data
           for (const r of result) {
             const sollRank = raceSollRankMap?.get(r.racerIndex) ?? null;
-            const sollBereich = sollRank != null
-              ? (BAND_EDGES.findIndex((e) => sollRank <= e) + 1 || BAND_EDGES.length + 1)
-              : null;
+            const sollBereich =
+              sollRank != null
+                ? BAND_EDGES.findIndex((e) => sollRank <= e) + 1 ||
+                  BAND_EDGES.length + 1
+                : null;
             rawData.push({
               trackId,
               trackName,
@@ -3408,123 +4772,373 @@ if (isMain) {
               sollRank,
               sollBereich,
               // B2-leak trace field: only added under --b2-trace, so no-flag rawData stays byte-identical.
-              ...(B2_TRACE ? { b2LastInside: result.b2LastInside?.get(r.racerIndex) ?? -1 } : {}),
+              ...(B2_TRACE
+                ? { b2LastInside: result.b2LastInside?.get(r.racerIndex) ?? -1 }
+                : {}),
               ...r,
             });
           }
         }
 
         const stats = computeFairnessStats(raceResults, totalRows, rowSizes);
-        const avgMixingQuota = mixingQuotas.length > 0
-          ? mixingQuotas.reduce((s, v) => s + v, 0) / mixingQuotas.length
-          : null;
+        const avgMixingQuota =
+          mixingQuotas.length > 0
+            ? mixingQuotas.reduce((s, v) => s + v, 0) / mixingQuotas.length
+            : null;
         // Aggregate naturalness metrics over all races in this combo
         // OUTCOME rank-change: keep mean AND std across races (the spec asks for both).
-        const _ocTop5  = raceResults.map((r) => r.naturalness?.outcomeTop5Swaps ?? 0);
-        const _ocTotal = raceResults.map((r) => r.naturalness?.outcomeTotalSwaps ?? 0);
-        const _amean = (a) => (a.length ? a.reduce((s, v) => s + v, 0) / a.length : 0);
-        const _astd  = (a) => { if (a.length < 2) return 0; const m = _amean(a); return Math.sqrt(a.reduce((s, v) => s + (v - m) ** 2, 0) / (a.length - 1)); };
-        const avgNaturalness = raceResults.length > 0 ? {
-          meanJerk:               raceResults.reduce((s, r) => s + (r.naturalness?.meanJerk ?? 0), 0) / raceResults.length,
-          maxJerkSpike:           Math.max(...raceResults.map((r) => r.naturalness?.maxJerkSpike ?? 0)),
-          jerkFraction_high:      raceResults.reduce((s, r) => s + (r.naturalness?.jerkFraction_high ?? 0), 0) / raceResults.length,
-          naturalOvertakeFraction: raceResults.reduce((s, r) => s + (r.naturalness?.naturalOvertakeFraction ?? 0), 0) / raceResults.length,
-          pulkTimeFraction:       raceResults.reduce((s, r) => s + (r.naturalness?.pulkTimeFraction ?? 0), 0) / raceResults.length,
-          pulkTriggersInWindow:   raceResults.reduce((s, r) => s + (r.naturalness?.pulkTriggersInWindow ?? 0), 0) / raceResults.length,
-          pulkTriggersOutOfWindow: raceResults.reduce((s, r) => s + (r.naturalness?.pulkTriggersOutOfWindow ?? 0), 0) / raceResults.length,
-          winnerBlockedFractionInOutcome: raceResults.reduce((s, r) => s + (r.naturalness?.winnerBlockedFractionInOutcome ?? 0), 0) / raceResults.length,
-          planBiasDeltaMean:      raceResults.reduce((s, r) => s + (r.naturalness?.planBiasDeltaMean ?? 0), 0) / raceResults.length,
-          pulkBiasEventCount:     raceResults.reduce((s, r) => s + (r.naturalness?.pulkBiasEventCount ?? 0), 0) / raceResults.length,
-          racersInCorridorFraction: raceResults.reduce((s, r) => s + (r.naturalness?.racersInCorridorFraction ?? 0), 0) / raceResults.length,
-          corridorViolationMean:  raceResults.reduce((s, r) => s + (r.naturalness?.corridorViolationMean ?? 0), 0) / raceResults.length,
-          corridorViolationMax:   Math.max(...raceResults.map((r) => r.naturalness?.corridorViolationMax ?? 0)),
-          bidirectionalBoostFraction: raceResults.reduce((s, r) => s + (r.naturalness?.bidirectionalBoostFraction ?? 0), 0) / raceResults.length,
-          bidirectionalBrakeFraction: raceResults.reduce((s, r) => s + (r.naturalness?.bidirectionalBrakeFraction ?? 0), 0) / raceResults.length,
-          racersBlockedInOutcome: raceResults.reduce((s, r) => s + (r.naturalness?.racersBlockedInOutcome ?? 0), 0) / raceResults.length,
-          tmDelta5sMax:           Math.max(...raceResults.map((r) => r.naturalness?.tmDelta5sMax ?? 0)),
-          tmOscillatingCount:     raceResults.reduce((s, r) => s + (r.naturalness?.tmOscillatingCount ?? 0), 0) / raceResults.length,
-          // OUTCOME rank-change (mean+std) + servo release diagnostics.
-          outcomeTop5SwapsMean:   _amean(_ocTop5),
-          outcomeTop5SwapsStd:    _astd(_ocTop5),
-          outcomeTotalSwapsMean:  _amean(_ocTotal),
-          outcomeTotalSwapsStd:   _astd(_ocTotal),
-          packReleaseEvents:      raceResults.reduce((s, r) => s + (r.naturalness?.packReleaseEvents ?? 0), 0) / raceResults.length,
-          packReSteerEvents:      raceResults.reduce((s, r) => s + (r.naturalness?.packReSteerEvents ?? 0), 0) / raceResults.length,
-          packReleasedFrameFraction: raceResults.reduce((s, r) => s + (r.naturalness?.packReleasedFrameFraction ?? 0), 0) / raceResults.length,
-          // B2-attacker: per-race means of cast count / peak-reached count / freed (completed) count.
-          attackerCast:           raceResults.reduce((s, r) => s + (r.naturalness?.attackerCast ?? 0), 0) / raceResults.length,
-          attackerPeakReached:    raceResults.reduce((s, r) => s + (r.naturalness?.attackerPeakReached ?? 0), 0) / raceResults.length,
-          attackerFreed:          raceResults.reduce((s, r) => s + (r.naturalness?.attackerFreed ?? 0), 0) / raceResults.length,
-          // Front-leash diagnostic: per-race mean of frames the leader brake was applied (0 when OFF).
-          leashFrames:            raceResults.reduce((s, r) => s + (r.naturalness?.leashFrames ?? 0), 0) / raceResults.length,
-          // Gap-cap re-roll diagnostics (0 when OFF): mean biased rolls/race + mean leader duty-cycle.
-          gapBiasedRolls:         raceResults.reduce((s, r) => s + (r.naturalness?.gapBiasedRolls ?? 0), 0) / raceResults.length,
-          gapWindowRolls:         raceResults.reduce((s, r) => s + (r.naturalness?.gapWindowRolls ?? 0), 0) / raceResults.length,
-          gapLeaderDutyCycle:     raceResults.reduce((s, r) => s + (r.naturalness?.gapLeaderDutyCycle ?? 0), 0) / raceResults.length,
-          // Branch-fire split (small-G chase-suppression diagnostic). SUMS across the run, not means —
-          // gapDownAheadGtBehind is a raw event count and must stay countable.
-          gapDownTilts:           raceResults.reduce((s, r) => s + (r.naturalness?.gapDownTilts ?? 0), 0),
-          gapUpTilts:             raceResults.reduce((s, r) => s + (r.naturalness?.gapUpTilts ?? 0), 0),
-          gapDownAheadGtBehind:   raceResults.reduce((s, r) => s + (r.naturalness?.gapDownAheadGtBehind ?? 0), 0),
-          gapDownLeader:          raceResults.reduce((s, r) => s + (r.naturalness?.gapDownLeader ?? 0), 0),
-          gapDownChaser:          raceResults.reduce((s, r) => s + (r.naturalness?.gapDownChaser ?? 0), 0),
-          gapDownPack:            raceResults.reduce((s, r) => s + (r.naturalness?.gapDownPack ?? 0), 0),
-          gapDownGapAheadMean:    _amean(raceResults.map((r) => r.naturalness?.gapDownGapAheadMean ?? 0).filter((v) => v > 0)),
-          gapDownGapBehindMean:   _amean(raceResults.map((r) => r.naturalness?.gapDownGapBehindMean ?? 0).filter((v) => v > 0)),
-          overlapRate:             raceResults.reduce((s, r) => s + (r.liteOverlapRate ?? 0), 0) / raceResults.length,
-          honestOverlapRate:       raceResults.reduce((s, r) => s + (r.honestOverlapRate ?? 0), 0) / raceResults.length,
-          passThroughCount:        raceResults.reduce((s, r) => s + (r.passThroughCount ?? 0), 0) / raceResults.length,
-          // Lapping instrumentation (closed tracks):
-          maxRealSpreadMean:       raceResults.reduce((s, r) => s + (r.maxRealSpread ?? 0), 0) / raceResults.length,
-          maxRealSpreadMax:        Math.max(...raceResults.map((r) => r.maxRealSpread ?? 0)),
-          honestSameLapFraction:   (() => {
-            const tot = raceResults.reduce((s, r) => s + (r.honestSameLapFrames ?? 0) + (r.honestCrossLapFrames ?? 0), 0);
-            return tot > 0 ? raceResults.reduce((s, r) => s + (r.honestSameLapFrames ?? 0), 0) / tot : null;
-          })(),
-          honestCrossLapFraction:  (() => {
-            const tot = raceResults.reduce((s, r) => s + (r.honestSameLapFrames ?? 0) + (r.honestCrossLapFrames ?? 0), 0);
-            return tot > 0 ? raceResults.reduce((s, r) => s + (r.honestCrossLapFrames ?? 0), 0) / tot : null;
-          })(),
-          overlapResolutionFrames: raceResults.reduce((s, r) => s + (r.liteOverlapResolutionFrames ?? 0), 0) / raceResults.length,
-          zigzagScore:             raceResults.reduce((s, r) => s + (r.liteZigzagScore ?? 0), 0) / raceResults.length,
-          lateralSpeedScore:       raceResults.reduce((s, r) => s + (r.liteLatSpeedScore ?? 0), 0) / raceResults.length,
-          brakeRate:               raceResults.reduce((s, r) => s + (r.liteBrakeRate ?? 0), 0) / raceResults.length,
-          stableOvertakes:         raceResults.reduce((s, r) => s + (r.liteStableOvertakes ?? 0), 0) / raceResults.length,
-          outcomeReached:          raceResults.reduce((s, r) => s + (r.outcomeReached ? 1 : 0), 0) / raceResults.length,
-          // Sum (not average): total pass-through events over all races in this combo.
-          brakeMatchFailureCount:  raceResults.reduce((s, r) => s + (r.brakeMatchFailureCount ?? 0), 0),
-          brakeMatchLeaderBraked:  raceResults.reduce((s, r) => s + (r.brakeMatchLeaderBraked ?? 0), 0),
-          // Step 1: fair-chance placement (fraction of B1-assigned racers hitting exact rank / top-5)
-          fairChanceExactRate:     raceResults.length > 0
-            ? raceResults.reduce((s, r) => s + (r.fairChanceB1Count > 0 ? r.fairChanceExactHits / r.fairChanceB1Count : 0), 0) / raceResults.length
-            : null,
-          fairChanceTop5Rate:      raceResults.length > 0
-            ? raceResults.reduce((s, r) => s + (r.fairChanceB1Count > 0 ? r.fairChanceTop5Hits  / r.fairChanceB1Count : 0), 0) / raceResults.length
-            : null,
-          fairChanceB1Count:       raceResults.reduce((s, r) => s + (r.fairChanceB1Count ?? 0), 0) / raceResults.length,
-          // Gap B: per-row fair-chance aggregated across all races (sorted by rowIndex)
-          fairChanceByRow: (() => {
-            const rowSet = new Set(raceResults.flatMap((r) => r.fairChanceByRow ? [...r.fairChanceByRow.keys()] : []));
-            return [...rowSet].sort((a, b) => a - b).map((row) => {
-              let b1Count = 0, exactHits = 0, top5Hits = 0;
-              for (const r of raceResults) {
-                const rd = r.fairChanceByRow?.get(row);
-                if (!rd) continue;
-                b1Count  += rd.b1Count;
-                exactHits += rd.exactHits;
-                top5Hits  += rd.top5Hits;
+        const _ocTop5 = raceResults.map(
+          (r) => r.naturalness?.outcomeTop5Swaps ?? 0,
+        );
+        const _ocTotal = raceResults.map(
+          (r) => r.naturalness?.outcomeTotalSwaps ?? 0,
+        );
+        const _amean = (a) =>
+          a.length ? a.reduce((s, v) => s + v, 0) / a.length : 0;
+        const _astd = (a) => {
+          if (a.length < 2) return 0;
+          const m = _amean(a);
+          return Math.sqrt(
+            a.reduce((s, v) => s + (v - m) ** 2, 0) / (a.length - 1),
+          );
+        };
+        const avgNaturalness =
+          raceResults.length > 0
+            ? {
+                meanJerk:
+                  raceResults.reduce(
+                    (s, r) => s + (r.naturalness?.meanJerk ?? 0),
+                    0,
+                  ) / raceResults.length,
+                maxJerkSpike: Math.max(
+                  ...raceResults.map((r) => r.naturalness?.maxJerkSpike ?? 0),
+                ),
+                jerkFraction_high:
+                  raceResults.reduce(
+                    (s, r) => s + (r.naturalness?.jerkFraction_high ?? 0),
+                    0,
+                  ) / raceResults.length,
+                naturalOvertakeFraction:
+                  raceResults.reduce(
+                    (s, r) => s + (r.naturalness?.naturalOvertakeFraction ?? 0),
+                    0,
+                  ) / raceResults.length,
+                pulkTimeFraction:
+                  raceResults.reduce(
+                    (s, r) => s + (r.naturalness?.pulkTimeFraction ?? 0),
+                    0,
+                  ) / raceResults.length,
+                pulkTriggersInWindow:
+                  raceResults.reduce(
+                    (s, r) => s + (r.naturalness?.pulkTriggersInWindow ?? 0),
+                    0,
+                  ) / raceResults.length,
+                pulkTriggersOutOfWindow:
+                  raceResults.reduce(
+                    (s, r) => s + (r.naturalness?.pulkTriggersOutOfWindow ?? 0),
+                    0,
+                  ) / raceResults.length,
+                winnerBlockedFractionInOutcome:
+                  raceResults.reduce(
+                    (s, r) =>
+                      s + (r.naturalness?.winnerBlockedFractionInOutcome ?? 0),
+                    0,
+                  ) / raceResults.length,
+                planBiasDeltaMean:
+                  raceResults.reduce(
+                    (s, r) => s + (r.naturalness?.planBiasDeltaMean ?? 0),
+                    0,
+                  ) / raceResults.length,
+                pulkBiasEventCount:
+                  raceResults.reduce(
+                    (s, r) => s + (r.naturalness?.pulkBiasEventCount ?? 0),
+                    0,
+                  ) / raceResults.length,
+                racersInCorridorFraction:
+                  raceResults.reduce(
+                    (s, r) =>
+                      s + (r.naturalness?.racersInCorridorFraction ?? 0),
+                    0,
+                  ) / raceResults.length,
+                corridorViolationMean:
+                  raceResults.reduce(
+                    (s, r) => s + (r.naturalness?.corridorViolationMean ?? 0),
+                    0,
+                  ) / raceResults.length,
+                corridorViolationMax: Math.max(
+                  ...raceResults.map(
+                    (r) => r.naturalness?.corridorViolationMax ?? 0,
+                  ),
+                ),
+                bidirectionalBoostFraction:
+                  raceResults.reduce(
+                    (s, r) =>
+                      s + (r.naturalness?.bidirectionalBoostFraction ?? 0),
+                    0,
+                  ) / raceResults.length,
+                bidirectionalBrakeFraction:
+                  raceResults.reduce(
+                    (s, r) =>
+                      s + (r.naturalness?.bidirectionalBrakeFraction ?? 0),
+                    0,
+                  ) / raceResults.length,
+                racersBlockedInOutcome:
+                  raceResults.reduce(
+                    (s, r) => s + (r.naturalness?.racersBlockedInOutcome ?? 0),
+                    0,
+                  ) / raceResults.length,
+                tmDelta5sMax: Math.max(
+                  ...raceResults.map((r) => r.naturalness?.tmDelta5sMax ?? 0),
+                ),
+                tmOscillatingCount:
+                  raceResults.reduce(
+                    (s, r) => s + (r.naturalness?.tmOscillatingCount ?? 0),
+                    0,
+                  ) / raceResults.length,
+                // OUTCOME rank-change (mean+std) + servo release diagnostics.
+                outcomeTop5SwapsMean: _amean(_ocTop5),
+                outcomeTop5SwapsStd: _astd(_ocTop5),
+                outcomeTotalSwapsMean: _amean(_ocTotal),
+                outcomeTotalSwapsStd: _astd(_ocTotal),
+                packReleaseEvents:
+                  raceResults.reduce(
+                    (s, r) => s + (r.naturalness?.packReleaseEvents ?? 0),
+                    0,
+                  ) / raceResults.length,
+                packReSteerEvents:
+                  raceResults.reduce(
+                    (s, r) => s + (r.naturalness?.packReSteerEvents ?? 0),
+                    0,
+                  ) / raceResults.length,
+                packReleasedFrameFraction:
+                  raceResults.reduce(
+                    (s, r) =>
+                      s + (r.naturalness?.packReleasedFrameFraction ?? 0),
+                    0,
+                  ) / raceResults.length,
+                // B2-attacker: per-race means of cast count / peak-reached count / freed (completed) count.
+                attackerCast:
+                  raceResults.reduce(
+                    (s, r) => s + (r.naturalness?.attackerCast ?? 0),
+                    0,
+                  ) / raceResults.length,
+                attackerPeakReached:
+                  raceResults.reduce(
+                    (s, r) => s + (r.naturalness?.attackerPeakReached ?? 0),
+                    0,
+                  ) / raceResults.length,
+                attackerFreed:
+                  raceResults.reduce(
+                    (s, r) => s + (r.naturalness?.attackerFreed ?? 0),
+                    0,
+                  ) / raceResults.length,
+                // Front-leash diagnostic: per-race mean of frames the leader brake was applied (0 when OFF).
+                leashFrames:
+                  raceResults.reduce(
+                    (s, r) => s + (r.naturalness?.leashFrames ?? 0),
+                    0,
+                  ) / raceResults.length,
+                // Gap-cap re-roll diagnostics (0 when OFF): mean biased rolls/race + mean leader duty-cycle.
+                gapBiasedRolls:
+                  raceResults.reduce(
+                    (s, r) => s + (r.naturalness?.gapBiasedRolls ?? 0),
+                    0,
+                  ) / raceResults.length,
+                gapWindowRolls:
+                  raceResults.reduce(
+                    (s, r) => s + (r.naturalness?.gapWindowRolls ?? 0),
+                    0,
+                  ) / raceResults.length,
+                gapLeaderDutyCycle:
+                  raceResults.reduce(
+                    (s, r) => s + (r.naturalness?.gapLeaderDutyCycle ?? 0),
+                    0,
+                  ) / raceResults.length,
+                // Branch-fire split (small-G chase-suppression diagnostic). SUMS across the run, not means —
+                // gapDownAheadGtBehind is a raw event count and must stay countable.
+                gapDownTilts: raceResults.reduce(
+                  (s, r) => s + (r.naturalness?.gapDownTilts ?? 0),
+                  0,
+                ),
+                gapUpTilts: raceResults.reduce(
+                  (s, r) => s + (r.naturalness?.gapUpTilts ?? 0),
+                  0,
+                ),
+                gapDownAheadGtBehind: raceResults.reduce(
+                  (s, r) => s + (r.naturalness?.gapDownAheadGtBehind ?? 0),
+                  0,
+                ),
+                gapDownLeader: raceResults.reduce(
+                  (s, r) => s + (r.naturalness?.gapDownLeader ?? 0),
+                  0,
+                ),
+                gapDownChaser: raceResults.reduce(
+                  (s, r) => s + (r.naturalness?.gapDownChaser ?? 0),
+                  0,
+                ),
+                gapDownPack: raceResults.reduce(
+                  (s, r) => s + (r.naturalness?.gapDownPack ?? 0),
+                  0,
+                ),
+                gapDownGapAheadMean: _amean(
+                  raceResults
+                    .map((r) => r.naturalness?.gapDownGapAheadMean ?? 0)
+                    .filter((v) => v > 0),
+                ),
+                gapDownGapBehindMean: _amean(
+                  raceResults
+                    .map((r) => r.naturalness?.gapDownGapBehindMean ?? 0)
+                    .filter((v) => v > 0),
+                ),
+                overlapRate:
+                  raceResults.reduce(
+                    (s, r) => s + (r.liteOverlapRate ?? 0),
+                    0,
+                  ) / raceResults.length,
+                honestOverlapRate:
+                  raceResults.reduce(
+                    (s, r) => s + (r.honestOverlapRate ?? 0),
+                    0,
+                  ) / raceResults.length,
+                passThroughCount:
+                  raceResults.reduce(
+                    (s, r) => s + (r.passThroughCount ?? 0),
+                    0,
+                  ) / raceResults.length,
+                // Lapping instrumentation (closed tracks):
+                maxRealSpreadMean:
+                  raceResults.reduce((s, r) => s + (r.maxRealSpread ?? 0), 0) /
+                  raceResults.length,
+                maxRealSpreadMax: Math.max(
+                  ...raceResults.map((r) => r.maxRealSpread ?? 0),
+                ),
+                honestSameLapFraction: (() => {
+                  const tot = raceResults.reduce(
+                    (s, r) =>
+                      s +
+                      (r.honestSameLapFrames ?? 0) +
+                      (r.honestCrossLapFrames ?? 0),
+                    0,
+                  );
+                  return tot > 0
+                    ? raceResults.reduce(
+                        (s, r) => s + (r.honestSameLapFrames ?? 0),
+                        0,
+                      ) / tot
+                    : null;
+                })(),
+                honestCrossLapFraction: (() => {
+                  const tot = raceResults.reduce(
+                    (s, r) =>
+                      s +
+                      (r.honestSameLapFrames ?? 0) +
+                      (r.honestCrossLapFrames ?? 0),
+                    0,
+                  );
+                  return tot > 0
+                    ? raceResults.reduce(
+                        (s, r) => s + (r.honestCrossLapFrames ?? 0),
+                        0,
+                      ) / tot
+                    : null;
+                })(),
+                overlapResolutionFrames:
+                  raceResults.reduce(
+                    (s, r) => s + (r.liteOverlapResolutionFrames ?? 0),
+                    0,
+                  ) / raceResults.length,
+                zigzagScore:
+                  raceResults.reduce(
+                    (s, r) => s + (r.liteZigzagScore ?? 0),
+                    0,
+                  ) / raceResults.length,
+                lateralSpeedScore:
+                  raceResults.reduce(
+                    (s, r) => s + (r.liteLatSpeedScore ?? 0),
+                    0,
+                  ) / raceResults.length,
+                brakeRate:
+                  raceResults.reduce((s, r) => s + (r.liteBrakeRate ?? 0), 0) /
+                  raceResults.length,
+                stableOvertakes:
+                  raceResults.reduce(
+                    (s, r) => s + (r.liteStableOvertakes ?? 0),
+                    0,
+                  ) / raceResults.length,
+                outcomeReached:
+                  raceResults.reduce(
+                    (s, r) => s + (r.outcomeReached ? 1 : 0),
+                    0,
+                  ) / raceResults.length,
+                // Sum (not average): total pass-through events over all races in this combo.
+                brakeMatchFailureCount: raceResults.reduce(
+                  (s, r) => s + (r.brakeMatchFailureCount ?? 0),
+                  0,
+                ),
+                brakeMatchLeaderBraked: raceResults.reduce(
+                  (s, r) => s + (r.brakeMatchLeaderBraked ?? 0),
+                  0,
+                ),
+                // Step 1: fair-chance placement (fraction of B1-assigned racers hitting exact rank / top-5)
+                fairChanceExactRate:
+                  raceResults.length > 0
+                    ? raceResults.reduce(
+                        (s, r) =>
+                          s +
+                          (r.fairChanceB1Count > 0
+                            ? r.fairChanceExactHits / r.fairChanceB1Count
+                            : 0),
+                        0,
+                      ) / raceResults.length
+                    : null,
+                fairChanceTop5Rate:
+                  raceResults.length > 0
+                    ? raceResults.reduce(
+                        (s, r) =>
+                          s +
+                          (r.fairChanceB1Count > 0
+                            ? r.fairChanceTop5Hits / r.fairChanceB1Count
+                            : 0),
+                        0,
+                      ) / raceResults.length
+                    : null,
+                fairChanceB1Count:
+                  raceResults.reduce(
+                    (s, r) => s + (r.fairChanceB1Count ?? 0),
+                    0,
+                  ) / raceResults.length,
+                // Gap B: per-row fair-chance aggregated across all races (sorted by rowIndex)
+                fairChanceByRow: (() => {
+                  const rowSet = new Set(
+                    raceResults.flatMap((r) =>
+                      r.fairChanceByRow ? [...r.fairChanceByRow.keys()] : [],
+                    ),
+                  );
+                  return [...rowSet]
+                    .sort((a, b) => a - b)
+                    .map((row) => {
+                      let b1Count = 0,
+                        exactHits = 0,
+                        top5Hits = 0;
+                      for (const r of raceResults) {
+                        const rd = r.fairChanceByRow?.get(row);
+                        if (!rd) continue;
+                        b1Count += rd.b1Count;
+                        exactHits += rd.exactHits;
+                        top5Hits += rd.top5Hits;
+                      }
+                      return {
+                        row,
+                        b1Count,
+                        exactHits,
+                        top5Hits,
+                        exactRate: b1Count > 0 ? exactHits / b1Count : null,
+                        top5Rate: b1Count > 0 ? top5Hits / b1Count : null,
+                      };
+                    });
+                })(),
               }
-              return {
-                row,
-                b1Count,
-                exactHits,
-                top5Hits,
-                exactRate: b1Count > 0 ? exactHits / b1Count : null,
-                top5Rate:  b1Count > 0 ? top5Hits  / b1Count : null,
-              };
-            });
-          })(),
-        } : null;
+            : null;
 
         // ── Front-action aggregation (per combo; --front-action) ────────────────
         // Aggregates the per-race front-action metric + a pooled unpredictability correlation
@@ -3532,33 +5146,45 @@ if (isMain) {
         // correlation = the early leader is not secretly the assigned winner. null when off.
         let frontActionCombo = null;
         if (FRONT_ACTION) {
-          const fas  = raceResults.map((r) => r.frontAction).filter(Boolean);
-          const nF   = fas.length;
-          const mean = (arr) => (arr.length ? arr.reduce((s, v) => s + v, 0) / arr.length : 0);
+          const fas = raceResults.map((r) => r.frontAction).filter(Boolean);
+          const nF = fas.length;
+          const mean = (arr) =>
+            arr.length ? arr.reduce((s, v) => s + v, 0) / arr.length : 0;
           // Pool (targetRank, front-time) pairs across every racer in every race of the combo.
-          const tr = [], p1f = [], t3f = [];
+          const tr = [],
+            p1f = [],
+            t3f = [];
           for (const fa of fas) {
             for (const pr of fa.perRacer) {
               if (pr.targetRank == null) continue;
-              tr.push(pr.targetRank); p1f.push(pr.p1Frac); t3f.push(pr.top3Frac);
+              tr.push(pr.targetRank);
+              p1f.push(pr.p1Frac);
+              t3f.push(pr.top3Frac);
             }
           }
           // spearman() is tie-safe (returns 0 when a side has no variance) → no NaN. Need ≥4
           // pairs for a meaningful rank correlation, else report 0 (undetermined).
-          const corrP1   = tr.length >= 4 ? Math.abs(spearman(tr, p1f)) : 0;
+          const corrP1 = tr.length >= 4 ? Math.abs(spearman(tr, p1f)) : 0;
           const corrTop3 = tr.length >= 4 ? Math.abs(spearman(tr, t3f)) : 0;
           frontActionCombo = {
-            trackId, trackName, isOpen, racerType, durationSec, nRaces: nF,
-            leadChangesMean:   +mean(fas.map((d) => d.leadChanges)).toFixed(3),
-            distinctP1Mean:    +mean(fas.map((d) => d.distinctP1)).toFixed(3),
-            leadChangeRate:    +mean(fas.map((d) => d.leadChangeRate)).toFixed(5),
-            podiumShuffleRate: +mean(fas.map((d) => d.podiumShuffleRate)).toFixed(5),
-            gap2ndLenMean:     +mean(fas.map((d) => d.gap2ndLenMean)).toFixed(3),  // leader→2nd
-            gapMedLenMean:     +mean(fas.map((d) => d.gapMedLenMean)).toFixed(3),  // leader→median
+            trackId,
+            trackName,
+            isOpen,
+            racerType,
+            durationSec,
+            nRaces: nF,
+            leadChangesMean: +mean(fas.map((d) => d.leadChanges)).toFixed(3),
+            distinctP1Mean: +mean(fas.map((d) => d.distinctP1)).toFixed(3),
+            leadChangeRate: +mean(fas.map((d) => d.leadChangeRate)).toFixed(5),
+            podiumShuffleRate: +mean(
+              fas.map((d) => d.podiumShuffleRate),
+            ).toFixed(5),
+            gap2ndLenMean: +mean(fas.map((d) => d.gap2ndLenMean)).toFixed(3), // leader→2nd
+            gapMedLenMean: +mean(fas.map((d) => d.gapMedLenMean)).toFixed(3), // leader→median
             unpredictability: {
-              rankVsP1Frac:   +corrP1.toFixed(3),
+              rankVsP1Frac: +corrP1.toFixed(3),
               rankVsTop3Frac: +corrTop3.toFixed(3),
-              nPairs:         tr.length,
+              nPairs: tr.length,
             },
           };
           frontActionAgg.push(frontActionCombo);
@@ -3570,161 +5196,246 @@ if (isMain) {
         // from this dump so the fairness definitions stay explicit and inspectable.
         if (STRIP_METRICS) {
           stripAgg.push({
-            trackId, trackName, isOpen, racerType, durationSec, nRacers: nRacersForCombo,
+            trackId,
+            trackName,
+            isOpen,
+            racerType,
+            durationSec,
+            nRacers: nRacersForCombo,
             races: raceResults.map((r) => r.stripMetrics).filter(Boolean),
           });
         }
 
         if (ACTION_METRICS) {
           actionAgg.push({
-            trackId, trackName, isOpen, racerType, durationSec, nRacers: nRacersForCombo,
+            trackId,
+            trackName,
+            isOpen,
+            racerType,
+            durationSec,
+            nRacers: nRacersForCombo,
             pulkBiasGain: RP_PULK_BIAS_GAIN,
             reRollVariationPercent: DYNAMICS_OVERRIDES.reRollVariationPercent,
             races: raceResults.map((r) => r.actionMetrics).filter(Boolean),
           });
         }
 
-        allResults.push({ trackId, trackName, racerType, durationSec, finishT, isOpen, stats, avgMixingQuota, avgNaturalness, frontAction: frontActionCombo, nRacers: nRacersForCombo });
+        allResults.push({
+          trackId,
+          trackName,
+          racerType,
+          durationSec,
+          finishT,
+          isOpen,
+          stats,
+          avgMixingQuota,
+          avgNaturalness,
+          frontAction: frontActionCombo,
+          nRacers: nRacersForCombo,
+        });
 
         // ── Breakaway causal diagnostic aggregation (per combo) ─────────────────
         if (BREAKAWAY_DIAG) {
           const diags = raceResults.map((r) => r.breakawayDiag).filter(Boolean);
-          const nD    = diags.length;
-          const mean  = (arr) => (arr.length ? arr.reduce((s, v) => s + v, 0) / arr.length : 0);
+          const nD = diags.length;
+          const mean = (arr) =>
+            arr.length ? arr.reduce((s, v) => s + v, 0) / arr.length : 0;
           const median = (arr) => {
             if (!arr.length) return 0;
             const s = [...arr].sort((a, b) => a - b);
             const m = Math.floor(s.length / 2);
             return s.length % 2 ? s[m] : (s[m - 1] + s[m]) / 2;
           };
-          const peaks   = diags.map((d) => d.peakPreOutcomeGap);
-          const ranks   = diags.map((d) => d.peakLeaderTargetRank).filter((v) => v != null);
-          const rankHist = {};                       // targetRank → count of races where that rank led the peak
+          const peaks = diags.map((d) => d.peakPreOutcomeGap);
+          const ranks = diags
+            .map((d) => d.peakLeaderTargetRank)
+            .filter((v) => v != null);
+          const rankHist = {}; // targetRank → count of races where that rank led the peak
           for (const rk of ranks) rankHist[rk] = (rankHist[rk] ?? 0) + 1;
           const breakawayN = diags.filter((d) => d.isBreakaway).length;
-          const decomps    = diags.map((d) => d.peakDecomposition).filter(Boolean);
+          const decomps = diags.map((d) => d.peakDecomposition).filter(Boolean);
           // Mean gap curve over the 5% progress bins (averaged across races that reached each bin).
-          const binMap = new Map();                  // bin → { gapMedianSum, gap2ndSum, n }
+          const binMap = new Map(); // bin → { gapMedianSum, gap2ndSum, n }
           for (const d of diags) {
             for (const b of d.gapBins) {
-              const e = binMap.get(b.bin) ?? { gapMedianSum: 0, gap2ndSum: 0, n: 0 };
-              e.gapMedianSum += b.gapMedian; e.gap2ndSum += b.gap2nd; e.n++;
+              const e = binMap.get(b.bin) ?? {
+                gapMedianSum: 0,
+                gap2ndSum: 0,
+                n: 0,
+              };
+              e.gapMedianSum += b.gapMedian;
+              e.gap2ndSum += b.gap2nd;
+              e.n++;
               binMap.set(b.bin, e);
             }
           }
-          const gapCurve = [...binMap.entries()].sort((a, b) => a[0] - b[0]).map(([bin, e]) => ({
-            bin,
-            gapMedianMean: +(e.gapMedianSum / e.n).toFixed(5),
-            gap2ndMean:    +(e.gap2ndSum / e.n).toFixed(5),
-            nRaces:        e.n,
-          }));
+          const gapCurve = [...binMap.entries()]
+            .sort((a, b) => a[0] - b[0])
+            .map(([bin, e]) => ({
+              bin,
+              gapMedianMean: +(e.gapMedianSum / e.n).toFixed(5),
+              gap2ndMean: +(e.gap2ndSum / e.n).toFixed(5),
+              nRaces: e.n,
+            }));
           breakawayAgg.push({
-            trackId, trackName, isOpen, racerType, durationSec, nRaces: nD,
-            breakawayRate:      nD ? +(breakawayN / nD).toFixed(3) : 0,
-            peakGapMean:        +mean(peaks).toFixed(5),
-            peakGapMedian:      +median(peaks).toFixed(5),
+            trackId,
+            trackName,
+            isOpen,
+            racerType,
+            durationSec,
+            nRaces: nD,
+            breakawayRate: nD ? +(breakawayN / nD).toFixed(3) : 0,
+            peakGapMean: +mean(peaks).toFixed(5),
+            peakGapMedian: +median(peaks).toFixed(5),
             peakLeaderRankDist: rankHist,
-            rank1Share:         ranks.length ? +(( rankHist[1] ?? 0) / ranks.length).toFixed(3) : 0,
-            rankGe4Share:       ranks.length ? +(ranks.filter((r) => r >= 4).length / ranks.length).toFixed(3) : 0,
+            rank1Share: ranks.length
+              ? +((rankHist[1] ?? 0) / ranks.length).toFixed(3)
+              : 0,
+            rankGe4Share: ranks.length
+              ? +(ranks.filter((r) => r >= 4).length / ranks.length).toFixed(3)
+              : 0,
             meanDecompositionAtPeak: {
-              spreadFactor:   +mean(decomps.map((d) => d.spreadFactor)).toFixed(4),
-              speedBonusMult: +mean(decomps.map((d) => d.speedBonusMult)).toFixed(4),
-              areaBonusMult:  +mean(decomps.map((d) => d.areaBonusMult)).toFixed(4),
+              spreadFactor: +mean(decomps.map((d) => d.spreadFactor)).toFixed(
+                4,
+              ),
+              speedBonusMult: +mean(
+                decomps.map((d) => d.speedBonusMult),
+              ).toFixed(4),
+              areaBonusMult: +mean(decomps.map((d) => d.areaBonusMult)).toFixed(
+                4,
+              ),
             },
             gapCurve,
             // Context only (nothing ships): band-reach exact/top-5 for B1 target racers.
             bandReachContext: {
               fairChanceExactRate: avgNaturalness?.fairChanceExactRate ?? null,
-              fairChanceTop5Rate:  avgNaturalness?.fairChanceTop5Rate ?? null,
-              chiSqP:              stats?.pValue ?? null,
+              fairChanceTop5Rate: avgNaturalness?.fairChanceTop5Rate ?? null,
+              chiSqP: stats?.pValue ?? null,
             },
           });
         }
 
         // Phase-3B: COMEBACK analysis report (printed per combo when flag active)
         if (COMEBACK_ANALYSIS && raceResults.some((r) => r.comebackDiag)) {
-          printComebackReport(raceResults, { trackName, racerType, durationSec, minPositions: CB_MIN_POSITIONS, windowSec: CB_WINDOW_SEC, endgameThresh: CB_ENDGAME_THRESH });
+          printComebackReport(raceResults, {
+            trackName,
+            racerType,
+            durationSec,
+            minPositions: CB_MIN_POSITIONS,
+            windowSec: CB_WINDOW_SEC,
+            endgameThresh: CB_ENDGAME_THRESH,
+          });
         }
 
         const elapsed = ((Date.now() - startTime) / 1000).toFixed(0);
-        console.log(`χ²=${stats.chiSq.toFixed(1)} p=${stats.pValue.toFixed(3)} [${elapsed}s]`);
+        console.log(
+          `χ²=${stats.chiSq.toFixed(1)} p=${stats.pValue.toFixed(3)} [${elapsed}s]`,
+        );
 
         // 1.5× gate: each row win-rate within [expectedWinRate/1.5, expectedWinRate×1.5]
         // Rows with expectedWins < 3 are excluded (too small for meaningful gate check at N=50)
         if (isOpen) {
-          const gateRows = stats.rowStats.filter((rs) => rs.expectedWinRate * stats.nRaces >= 3);
+          const gateRows = stats.rowStats.filter(
+            (rs) => rs.expectedWinRate * stats.nRaces >= 3,
+          );
           const gatePass = gateRows.every(
-            (rs) => rs.winRate >= rs.expectedWinRate / 1.5 && rs.winRate <= rs.expectedWinRate * 1.5
+            (rs) =>
+              rs.winRate >= rs.expectedWinRate / 1.5 &&
+              rs.winRate <= rs.expectedWinRate * 1.5,
           );
           const rateStr = stats.rowStats
             .map((rs) => {
               const expectedWins = rs.expectedWinRate * stats.nRaces;
-              const tag = expectedWins < 3 ? '(skip)' : (rs.winRate >= rs.expectedWinRate / 1.5 && rs.winRate <= rs.expectedWinRate * 1.5 ? '✓' : '✗');
+              const tag =
+                expectedWins < 3
+                  ? "(skip)"
+                  : rs.winRate >= rs.expectedWinRate / 1.5 &&
+                      rs.winRate <= rs.expectedWinRate * 1.5
+                    ? "✓"
+                    : "✗";
               return `R${rs.rowIndex}=${(rs.winRate * 100).toFixed(0)}%(e${(rs.expectedWinRate * 100).toFixed(0)}%)${tag}`;
             })
-            .join(' ');
-          console.log(`     1.5×-Gate: ${gatePass ? '✅ PASS' : '❌ FAIL'}  (${rateStr})`);
+            .join(" ");
+          console.log(
+            `     1.5×-Gate: ${gatePass ? "✅ PASS" : "❌ FAIL"}  (${rateStr})`,
+          );
         }
 
         // Lite stats: avoidance activity and lateral dynamics
         if (isOpen && raceResults.length > 0) {
-          const avgRow1Brake    = raceResults.reduce((s, r) => s + (r.liteRow1BrakeFrames ?? 0), 0) / raceResults.length;
-          const avgRow0Brake    = raceResults.reduce((s, r) => s + (r.liteRow0BrakeFrames ?? 0), 0) / raceResults.length;
-          const avgRow2Brake    = raceResults.reduce((s, r) => s + (r.liteRow2BrakeFrames ?? 0), 0) / raceResults.length;
-          const avgLateralMoves = raceResults.reduce((s, r) => s + (r.liteLateralMoves ?? 0), 0) / raceResults.length;
-          const avgRow1EverAhead = raceResults.reduce((s, r) => s + (r.liteRow1EverAheadCount ?? 0), 0) / raceResults.length;
+          const avgRow1Brake =
+            raceResults.reduce((s, r) => s + (r.liteRow1BrakeFrames ?? 0), 0) /
+            raceResults.length;
+          const avgRow0Brake =
+            raceResults.reduce((s, r) => s + (r.liteRow0BrakeFrames ?? 0), 0) /
+            raceResults.length;
+          const avgRow2Brake =
+            raceResults.reduce((s, r) => s + (r.liteRow2BrakeFrames ?? 0), 0) /
+            raceResults.length;
+          const avgLateralMoves =
+            raceResults.reduce((s, r) => s + (r.liteLateralMoves ?? 0), 0) /
+            raceResults.length;
+          const avgRow1EverAhead =
+            raceResults.reduce(
+              (s, r) => s + (r.liteRow1EverAheadCount ?? 0),
+              0,
+            ) / raceResults.length;
           const rowSize0 = Math.ceil(N_RACERS / totalRows);
-          const avgRerolls  = raceResults.reduce((s, r) => s + (r.avgRerollsPerRacer ?? 0), 0) / raceResults.length;
-          const avgPhysDur  = raceResults.reduce((s, r) => s + (r.physicalDurationS ?? 0), 0) / raceResults.length;
+          const avgRerolls =
+            raceResults.reduce((s, r) => s + (r.avgRerollsPerRacer ?? 0), 0) /
+            raceResults.length;
+          const avgPhysDur =
+            raceResults.reduce((s, r) => s + (r.physicalDurationS ?? 0), 0) /
+            raceResults.length;
           console.log(
             `     Avoidance: R0=${avgRow0Brake.toFixed(0)}Ø  R1=${avgRow1Brake.toFixed(0)}Ø  R2=${avgRow2Brake.toFixed(0)}Ø` +
-            `  Lateral=${avgLateralMoves.toFixed(0)}Ø  R1≥1×vorne=${avgRow1EverAhead.toFixed(1)}/${rowSize0}Ø`
+              `  Lateral=${avgLateralMoves.toFixed(0)}Ø  R1≥1×vorne=${avgRow1EverAhead.toFixed(1)}/${rowSize0}Ø`,
           );
           console.log(
             `     Re-Rolls: Ø ${avgRerolls.toFixed(1)} pro Racer  Physische Renndauer: Ø ${avgPhysDur.toFixed(1)}s` +
-            `  (target=${durationSec}s)`
+              `  (target=${durationSec}s)`,
           );
           // Phase-3A: Naturalness metrics summary
           if (avgNaturalness) {
             console.log(
               `     Naturalness: jerk=${avgNaturalness.meanJerk.toFixed(4)}Ø  max=${avgNaturalness.maxJerkSpike.toFixed(4)}` +
-              `  highFrac=${(avgNaturalness.jerkFraction_high * 100).toFixed(1)}%` +
-              `  natOvt=${(avgNaturalness.naturalOvertakeFraction * 100).toFixed(1)}%` +
-              `  pulk=${(avgNaturalness.pulkTimeFraction * 100).toFixed(1)}%` +
-              `  pulkTrig=[${avgNaturalness.pulkTriggersInWindow.toFixed(1)}in/${avgNaturalness.pulkTriggersOutOfWindow.toFixed(1)}out]`
+                `  highFrac=${(avgNaturalness.jerkFraction_high * 100).toFixed(1)}%` +
+                `  natOvt=${(avgNaturalness.naturalOvertakeFraction * 100).toFixed(1)}%` +
+                `  pulk=${(avgNaturalness.pulkTimeFraction * 100).toFixed(1)}%` +
+                `  pulkTrig=[${avgNaturalness.pulkTriggersInWindow.toFixed(1)}in/${avgNaturalness.pulkTriggersOutOfWindow.toFixed(1)}out]`,
             );
             if (RACE_PLAN_ACTIVE) {
               console.log(
                 `     M2v2: corridor=${(avgNaturalness.racersInCorridorFraction * 100).toFixed(1)}%` +
-                `  viol=Ø${avgNaturalness.corridorViolationMean.toFixed(1)}/max${avgNaturalness.corridorViolationMax.toFixed(0)}` +
-                `  boost=${(avgNaturalness.bidirectionalBoostFraction * 100).toFixed(1)}%` +
-                `  brake=${(avgNaturalness.bidirectionalBrakeFraction * 100).toFixed(1)}%` +
-                `  blocked=${(avgNaturalness.racersBlockedInOutcome * 100).toFixed(1)}%` +
-                `  wBlocked=${(avgNaturalness.winnerBlockedFractionInOutcome * 100).toFixed(1)}%` +
-                `  Δ5sMax=${(avgNaturalness.tmDelta5sMax ?? 0).toFixed(3)}` +
-                `  oscN=${(avgNaturalness.tmOscillatingCount ?? 0).toFixed(1)}Ø`
+                  `  viol=Ø${avgNaturalness.corridorViolationMean.toFixed(1)}/max${avgNaturalness.corridorViolationMax.toFixed(0)}` +
+                  `  boost=${(avgNaturalness.bidirectionalBoostFraction * 100).toFixed(1)}%` +
+                  `  brake=${(avgNaturalness.bidirectionalBrakeFraction * 100).toFixed(1)}%` +
+                  `  blocked=${(avgNaturalness.racersBlockedInOutcome * 100).toFixed(1)}%` +
+                  `  wBlocked=${(avgNaturalness.winnerBlockedFractionInOutcome * 100).toFixed(1)}%` +
+                  `  Δ5sMax=${(avgNaturalness.tmDelta5sMax ?? 0).toFixed(3)}` +
+                  `  oscN=${(avgNaturalness.tmOscillatingCount ?? 0).toFixed(1)}Ø`,
               );
               const fcExact = avgNaturalness.fairChanceExactRate;
-              const fcTop5  = avgNaturalness.fairChanceTop5Rate;
+              const fcTop5 = avgNaturalness.fairChanceTop5Rate;
               if (fcExact != null) {
                 console.log(
                   `     FairChance: B1exact=${(fcExact * 100).toFixed(1)}%` +
-                  `  B1top5=${(fcTop5 * 100).toFixed(1)}%` +
-                  `  (gap: top5-exact=${((fcTop5 - fcExact) * 100).toFixed(1)}%)`
+                    `  B1top5=${(fcTop5 * 100).toFixed(1)}%` +
+                    `  (gap: top5-exact=${((fcTop5 - fcExact) * 100).toFixed(1)}%)`,
                 );
               }
             }
             // LateralQ — printed for open tracks in this block (closed tracks: printed in block below)
             console.log(
               `     LateralQ: overlap=${((avgNaturalness.overlapRate ?? 0) * 100).toFixed(1)}%` +
-              `  honest=${((avgNaturalness.honestOverlapRate ?? 0) * 100).toFixed(1)}%` +
-              `  resolution=Ø${(avgNaturalness.overlapResolutionFrames ?? 0).toFixed(1)}fr` +
-              `  zigzag=${(avgNaturalness.zigzagScore ?? 0).toFixed(6)}` +
-              `  latSpd=${(avgNaturalness.lateralSpeedScore ?? 0).toFixed(6)}` +
-              `  brake=${((avgNaturalness.brakeRate ?? 0) * 100).toFixed(1)}%` +
-              `  bmFail=${avgNaturalness.brakeMatchFailureCount ?? 0}(leaderBraked=${avgNaturalness.brakeMatchLeaderBraked ?? 0})` +
-              `  stableOvt=${(avgNaturalness.stableOvertakes ?? 0).toFixed(3)}` +
-              `  outcomeReached=${((avgNaturalness.outcomeReached ?? 1) * 100).toFixed(0)}%`
+                `  honest=${((avgNaturalness.honestOverlapRate ?? 0) * 100).toFixed(1)}%` +
+                `  resolution=Ø${(avgNaturalness.overlapResolutionFrames ?? 0).toFixed(1)}fr` +
+                `  zigzag=${(avgNaturalness.zigzagScore ?? 0).toFixed(6)}` +
+                `  latSpd=${(avgNaturalness.lateralSpeedScore ?? 0).toFixed(6)}` +
+                `  brake=${((avgNaturalness.brakeRate ?? 0) * 100).toFixed(1)}%` +
+                `  bmFail=${avgNaturalness.brakeMatchFailureCount ?? 0}(leaderBraked=${avgNaturalness.brakeMatchLeaderBraked ?? 0})` +
+                `  stableOvt=${(avgNaturalness.stableOvertakes ?? 0).toFixed(3)}` +
+                `  outcomeReached=${((avgNaturalness.outcomeReached ?? 1) * 100).toFixed(0)}%`,
             );
           }
         }
@@ -3732,40 +5443,47 @@ if (isMain) {
         // Gap A + Gap B + lapping: for CLOSED tracks, emit LateralQ and FairChance here
         // (open tracks already printed these inside the isOpen block above)
         if (!isOpen && avgNaturalness) {
-          const sameLapPct  = avgNaturalness.honestSameLapFraction  != null ? (avgNaturalness.honestSameLapFraction  * 100).toFixed(1) + '%' : '—';
-          const crossLapPct = avgNaturalness.honestCrossLapFraction != null ? (avgNaturalness.honestCrossLapFraction * 100).toFixed(1) + '%' : '—';
-          const maxSpreadLaps = avgNaturalness.maxRealSpreadMax?.toFixed(3) ?? '—';
+          const sameLapPct =
+            avgNaturalness.honestSameLapFraction != null
+              ? (avgNaturalness.honestSameLapFraction * 100).toFixed(1) + "%"
+              : "—";
+          const crossLapPct =
+            avgNaturalness.honestCrossLapFraction != null
+              ? (avgNaturalness.honestCrossLapFraction * 100).toFixed(1) + "%"
+              : "—";
+          const maxSpreadLaps =
+            avgNaturalness.maxRealSpreadMax?.toFixed(3) ?? "—";
           console.log(
             `     LateralQ: honest=${((avgNaturalness.honestOverlapRate ?? 0) * 100).toFixed(1)}%` +
-            `  overlap=${((avgNaturalness.overlapRate ?? 0) * 100).toFixed(1)}%` +
-            `  maxSpread=${maxSpreadLaps}laps  sameLap=${sameLapPct}  crossLap=${crossLapPct}`
+              `  overlap=${((avgNaturalness.overlapRate ?? 0) * 100).toFixed(1)}%` +
+              `  maxSpread=${maxSpreadLaps}laps  sameLap=${sameLapPct}  crossLap=${crossLapPct}`,
           );
           if (RACE_PLAN_ACTIVE) {
             const fcExact = avgNaturalness.fairChanceExactRate;
-            const fcTop5  = avgNaturalness.fairChanceTop5Rate;
+            const fcTop5 = avgNaturalness.fairChanceTop5Rate;
             if (fcExact != null) {
               console.log(
                 `     FairChance: B1exact=${(fcExact * 100).toFixed(1)}%` +
-                `  B1top5=${(fcTop5 * 100).toFixed(1)}%` +
-                `  (gap: top5-exact=${((fcTop5 - fcExact) * 100).toFixed(1)}%)`
+                  `  B1top5=${(fcTop5 * 100).toFixed(1)}%` +
+                  `  (gap: top5-exact=${((fcTop5 - fcExact) * 100).toFixed(1)}%)`,
               );
             }
           }
         }
         // FairChance per-row breakdown (all tracks, when race-plan active)
         if (RACE_PLAN_ACTIVE && avgNaturalness?.fairChanceByRow?.length > 0) {
-          const rowParts = avgNaturalness.fairChanceByRow.map((rd) =>
-            `R${rd.row}:` +
-            `exact=${rd.exactRate != null ? (rd.exactRate * 100).toFixed(0) + '%' : '—'}` +
-            `/top5=${rd.top5Rate != null ? (rd.top5Rate * 100).toFixed(0) + '%' : '—'}` +
-            `(n=${rd.b1Count})`
+          const rowParts = avgNaturalness.fairChanceByRow.map(
+            (rd) =>
+              `R${rd.row}:` +
+              `exact=${rd.exactRate != null ? (rd.exactRate * 100).toFixed(0) + "%" : "—"}` +
+              `/top5=${rd.top5Rate != null ? (rd.top5Rate * 100).toFixed(0) + "%" : "—"}` +
+              `(n=${rd.b1Count})`,
           );
-          console.log(`     FairChance by row: ${rowParts.join('  ')}`);
+          console.log(`     FairChance by row: ${rowParts.join("  ")}`);
         }
-
       }
     }
-    console.log('');
+    console.log("");
   }
 
   const totalElapsed = ((Date.now() - startTime) / 1000).toFixed(1);
@@ -3780,58 +5498,112 @@ if (isMain) {
       }
       return BAND_EDGES.length;
     }
-    const ZNAMES = ['B1 (1–5)', 'B2 (6–15)', 'B3 (16–25)', 'B4 (26–40)', 'B5 (41+)'];
+    const ZNAMES = [
+      "B1 (1–5)",
+      "B2 (6–15)",
+      "B3 (16–25)",
+      "B4 (26–40)",
+      "B5 (41+)",
+    ];
 
-    console.log('\n=== Zone Success Rate (Race Plan) ===');
-    console.log('| Zone      | Open Hits | Open Tot | Open %  | Closed Hits | Closed Tot | Closed % | All %   |');
-    console.log('|-----------|-----------|----------|---------|-------------|------------|----------|---------|');
+    console.log("\n=== Zone Success Rate (Race Plan) ===");
+    console.log(
+      "| Zone      | Open Hits | Open Tot | Open %  | Closed Hits | Closed Tot | Closed % | All %   |",
+    );
+    console.log(
+      "|-----------|-----------|----------|---------|-------------|------------|----------|---------|",
+    );
 
     for (let zi = 0; zi < 5; zi++) {
       const b = zi + 1;
-      const grp    = zoneRows.filter((r) => r.sollBereich === b);
-      const openG  = grp.filter((r) =>  r.isOpen);
-      const closG  = grp.filter((r) => !r.isOpen);
-      const oHits  = openG.filter((r) => zoneIdxOf(r.finalRank) === zi).length;
-      const cHits  = closG.filter((r) => zoneIdxOf(r.finalRank) === zi).length;
+      const grp = zoneRows.filter((r) => r.sollBereich === b);
+      const openG = grp.filter((r) => r.isOpen);
+      const closG = grp.filter((r) => !r.isOpen);
+      const oHits = openG.filter((r) => zoneIdxOf(r.finalRank) === zi).length;
+      const cHits = closG.filter((r) => zoneIdxOf(r.finalRank) === zi).length;
       const allHit = oHits + cHits;
-      const oPct   = openG.length ? (oHits  / openG.length  * 100).toFixed(1) + '%' : '—';
-      const cPct   = closG.length ? (cHits  / closG.length  * 100).toFixed(1) + '%' : '—';
-      const allPct = grp.length   ? (allHit / grp.length    * 100).toFixed(1) + '%' : '—';
-      console.log(`| ${ZNAMES[zi].padEnd(9)} | ${String(oHits).padStart(9)} | ${String(openG.length).padStart(8)} | ${oPct.padStart(7)} | ${String(cHits).padStart(11)} | ${String(closG.length).padStart(10)} | ${cPct.padStart(8)} | ${allPct.padStart(7)} |`);
+      const oPct = openG.length
+        ? ((oHits / openG.length) * 100).toFixed(1) + "%"
+        : "—";
+      const cPct = closG.length
+        ? ((cHits / closG.length) * 100).toFixed(1) + "%"
+        : "—";
+      const allPct = grp.length
+        ? ((allHit / grp.length) * 100).toFixed(1) + "%"
+        : "—";
+      console.log(
+        `| ${ZNAMES[zi].padEnd(9)} | ${String(oHits).padStart(9)} | ${String(openG.length).padStart(8)} | ${oPct.padStart(7)} | ${String(cHits).padStart(11)} | ${String(closG.length).padStart(10)} | ${cPct.padStart(8)} | ${allPct.padStart(7)} |`,
+      );
     }
 
     // Overall row
-    const allHits2  = zoneRows.filter((r) => zoneIdxOf(r.finalRank) === (r.sollBereich - 1)).length;
-    const overallPct = (allHits2 / zoneRows.length * 100).toFixed(1) + '%';
-    console.log(`| ${'OVERALL'.padEnd(9)} | ${' '.repeat(9)} | ${' '.repeat(8)} | ${' '.repeat(7)} | ${' '.repeat(11)} | ${' '.repeat(10)} | ${' '.repeat(8)} | ${overallPct.padStart(7)} |`);
+    const allHits2 = zoneRows.filter(
+      (r) => zoneIdxOf(r.finalRank) === r.sollBereich - 1,
+    ).length;
+    const overallPct = ((allHits2 / zoneRows.length) * 100).toFixed(1) + "%";
+    console.log(
+      `| ${"OVERALL".padEnd(9)} | ${" ".repeat(9)} | ${" ".repeat(8)} | ${" ".repeat(7)} | ${" ".repeat(11)} | ${" ".repeat(10)} | ${" ".repeat(8)} | ${overallPct.padStart(7)} |`,
+    );
 
     // Per-track breakdown
     const trackIds = [...new Set(zoneRows.map((r) => r.trackId))];
-    console.log('\n--- Per-Track Zone Success ---');
+    console.log("\n--- Per-Track Zone Success ---");
     for (const tid of trackIds) {
       const tRows = zoneRows.filter((r) => r.trackId === tid);
       const tName = tRows[0].trackName;
       const tOpen = tRows[0].isOpen;
       const parts = [];
       for (let zi = 0; zi < 5; zi++) {
-        const grp  = tRows.filter((r) => r.sollBereich === zi + 1);
-        if (grp.length === 0) { parts.push('—'); continue; }
+        const grp = tRows.filter((r) => r.sollBereich === zi + 1);
+        if (grp.length === 0) {
+          parts.push("—");
+          continue;
+        }
         const hits = grp.filter((r) => zoneIdxOf(r.finalRank) === zi).length;
-        parts.push((hits / grp.length * 100).toFixed(0) + '%');
+        parts.push(((hits / grp.length) * 100).toFixed(0) + "%");
       }
-      console.log(`  ${tName.padEnd(16)} (${tOpen ? 'open  ' : 'closed'})  B1=${parts[0]}  B2=${parts[1]}  B3=${parts[2]}  B4=${parts[3]}  B5=${parts[4]}`);
+      console.log(
+        `  ${tName.padEnd(16)} (${tOpen ? "open  " : "closed"})  B1=${parts[0]}  B2=${parts[1]}  B3=${parts[2]}  B4=${parts[3]}  B5=${parts[4]}`,
+      );
     }
-    console.log('');
+    console.log("");
   }
 
   // Write JSON + Markdown report — skipped under --skip-main-output (a batch runner reads only hero-map.json).
   if (!SKIP_MAIN_OUTPUT) {
-    const jsonPath = join(OUT_DIR, 'fairness-data.json');
-    writeFileSync(jsonPath, JSON.stringify({ meta: { world: WORLD_STAMP, nRaces: N_RACES, nRacers: N_RACERS, durationVariants: DURATION_VARIANTS, ...(ACTION !== null ? { action: ACTION, directorKnobs: { ...ACTION_KNOBS } } : {}) }, results: allResults, rawData }, null, 2));
+    const jsonPath = join(OUT_DIR, "fairness-data.json");
+    writeFileSync(
+      jsonPath,
+      JSON.stringify(
+        {
+          meta: {
+            world: WORLD_STAMP,
+            nRaces: N_RACES,
+            nRacers: N_RACERS,
+            durationVariants: DURATION_VARIANTS,
+            ...(ACTION !== null
+              ? { action: ACTION, directorKnobs: { ...ACTION_KNOBS } }
+              : {}),
+          },
+          results: allResults,
+          rawData,
+        },
+        null,
+        2,
+      ),
+    );
     console.log(`JSON → ${jsonPath}`);
     const runDate = new Date().toISOString().slice(0, 10);
-    const report  = buildReport(allResults, rawData, runDate, N_RACES, N_RACERS, WORLD_STAMP, DEFAULT_ROW_LAYOUT_CONFIG);
-    const mdPath  = join(OUT_DIR, 'fairness-report.md');
+    const report = buildReport(
+      allResults,
+      rawData,
+      runDate,
+      N_RACES,
+      N_RACERS,
+      WORLD_STAMP,
+      DEFAULT_ROW_LAYOUT_CONFIG,
+    );
+    const mdPath = join(OUT_DIR, "fairness-report.md");
     writeFileSync(mdPath, report);
     console.log(`Bericht → ${mdPath}`);
   }
@@ -3843,85 +5615,166 @@ if (isMain) {
   if (HERO_MAP) {
     // Band-reach OVERALL — identical definition to the report's OVERALL row (rawData, sollBereich).
     const zoneIdxOf = (rank) => {
-      for (let i = 0; i < BAND_EDGES.length; i++) if (rank <= BAND_EDGES[i]) return i;
+      for (let i = 0; i < BAND_EDGES.length; i++)
+        if (rank <= BAND_EDGES[i]) return i;
       return BAND_EDGES.length;
     };
     const zr = rawData.filter((r) => r.sollBereich != null);
-    const bandReach = zr.length ? zr.filter((r) => zoneIdxOf(r.finalRank) === (r.sollBereich - 1)).length / zr.length : null;
+    const bandReach = zr.length
+      ? zr.filter((r) => zoneIdxOf(r.finalRank) === r.sollBereich - 1).length /
+        zr.length
+      : null;
     // Start-row fairness (Holm) via the validated in-file function over this run's rawData.
     const byRace = new Map();
-    for (const r of rawData) { if (!byRace.has(r.raceIdx)) byRace.set(r.raceIdx, []); byRace.get(r.raceIdx).push(r); }
+    for (const r of rawData) {
+      if (!byRace.has(r.raceIdx)) byRace.set(r.raceIdx, []);
+      byRace.get(r.raceIdx).push(r);
+    }
     const race0 = [...byRace.values()][0] ?? [];
     const rowSizeMap = new Map();
-    for (const r of race0) rowSizeMap.set(r.startRowIndex, (rowSizeMap.get(r.startRowIndex) ?? 0) + 1);
+    for (const r of race0)
+      rowSizeMap.set(
+        r.startRowIndex,
+        (rowSizeMap.get(r.startRowIndex) ?? 0) + 1,
+      );
     const totalRows = rowSizeMap.size ? Math.max(...rowSizeMap.keys()) + 1 : 0;
-    const rowSizes = Array.from({ length: totalRows }, (_, i) => rowSizeMap.get(i) ?? 0);
-    let startRowUnfair = null, startRowMinPHolm = null;
+    const rowSizes = Array.from(
+      { length: totalRows },
+      (_, i) => rowSizeMap.get(i) ?? 0,
+    );
+    let startRowUnfair = null,
+      startRowMinPHolm = null;
     try {
-      const entries = rawData.map((r) => ({ ...r, raceKey: r.raceIdx, targetBandIdx: r.sollBereich != null ? r.sollBereich - 1 : null }));
-      const ext = computeExtendedFairnessStats(entries, rowSizes, { nPerm: 299, prng: makePRNG(((GLOBAL_SEED || 1) * 131 + 7) >>> 0) });
+      const entries = rawData.map((r) => ({
+        ...r,
+        raceKey: r.raceIdx,
+        targetBandIdx: r.sollBereich != null ? r.sollBereich - 1 : null,
+      }));
+      const ext = computeExtendedFairnessStats(entries, rowSizes, {
+        nPerm: 299,
+        prng: makePRNG(((GLOBAL_SEED || 1) * 131 + 7) >>> 0),
+      });
       startRowUnfair = ext.anyConfirmatoryFlagged ?? null;
       if (Array.isArray(ext.confirmatory) && ext.confirmatory.length) {
-        startRowMinPHolm = +Math.min(...ext.confirmatory.map((c) => c.pHolm ?? 1)).toFixed(4);
+        startRowMinPHolm = +Math.min(
+          ...ext.confirmatory.map((c) => c.pHolm ?? 1),
+        ).toFixed(4);
       }
-    } catch (e) { console.log(`[hero-map] start-row fairness failed: ${e.message}`); }
+    } catch (e) {
+      console.log(`[hero-map] start-row fairness failed: ${e.message}`);
+    }
     // NATIVE per-row WINS chi-square + per-row win distribution (uncontaminated: hero-map runs plain
     // choreo, nothing injected). This is the BINDING win-bias gate for GAP-2.
     const totalRacersHM = rowSizes.reduce((s, v) => s + v, 0);
     const nRacesHM = byRace.size;
     const winsByRowHM = new Array(totalRows).fill(0);
-    for (const rows of byRace.values()) { const w = rows.reduce((b, r) => (r.finalRank < b.finalRank ? r : b)); if (w.startRowIndex < totalRows) winsByRowHM[w.startRowIndex]++; }
-    const expWinsHM = rowSizes.map((s) => nRacesHM * s / totalRacersHM);
-    let chiSqHM = 0; for (let i = 0; i < totalRows; i++) if (expWinsHM[i] > 0) chiSqHM += (winsByRowHM[i] - expWinsHM[i]) ** 2 / expWinsHM[i];
+    for (const rows of byRace.values()) {
+      const w = rows.reduce((b, r) => (r.finalRank < b.finalRank ? r : b));
+      if (w.startRowIndex < totalRows) winsByRowHM[w.startRowIndex]++;
+    }
+    const expWinsHM = rowSizes.map((s) => (nRacesHM * s) / totalRacersHM);
+    let chiSqHM = 0;
+    for (let i = 0; i < totalRows; i++)
+      if (expWinsHM[i] > 0)
+        chiSqHM += (winsByRowHM[i] - expWinsHM[i]) ** 2 / expWinsHM[i];
     const nativeWinP = chiSqPValue(chiSqHM, Math.max(1, totalRows - 1));
-    const perRowWins = winsByRowHM.map((w, i) => ({ row: i, wins: w, winRate: +(w / nRacesHM).toFixed(4), expRate: +(rowSizes[i] / totalRacersHM).toFixed(4), n: rowSizes[i] }));
+    const perRowWins = winsByRowHM.map((w, i) => ({
+      row: i,
+      wins: w,
+      winRate: +(w / nRacesHM).toFixed(4),
+      expRate: +(rowSizes[i] / totalRacersHM).toFixed(4),
+      n: rowSizes[i],
+    }));
     // Aggregate hero observations across all races.
-    const allH  = heroMapRaces.flatMap((rr) => rr.heroObs);
-    const num   = (v) => typeof v === 'number' && isFinite(v);
-    const mean  = (arr) => (arr.length ? +(arr.reduce((s, v) => s + v, 0) / arr.length).toFixed(4) : null);
-    const rate  = (arr) => (arr.length ? +(arr.filter(Boolean).length / arr.length).toFixed(4) : null);
+    const allH = heroMapRaces.flatMap((rr) => rr.heroObs);
+    const num = (v) => typeof v === "number" && isFinite(v);
+    const mean = (arr) =>
+      arr.length
+        ? +(arr.reduce((s, v) => s + v, 0) / arr.length).toFixed(4)
+        : null;
+    const rate = (arr) =>
+      arr.length ? +(arr.filter(Boolean).length / arr.length).toFixed(4) : null;
     const short = allH.filter((h) => h.reachedTargetBand === false); // heroes that fell short of band
     const heroAgg = {
       nHeroRows: allH.length,
       nRaces: heroMapRaces.length,
-      heroesPerRace: heroMapRaces.length ? +(allH.length / heroMapRaces.length).toFixed(3) : null,
-      anchorRankMean:        mean(allH.map((h) => h.anchorRank).filter(num)),
-      finalRankMean:         mean(allH.map((h) => h.finalRank).filter(num)),
-      placesGainedNetMean:   mean(allH.map((h) => h.placesGainedNet).filter(num)),
-      realOvertakesMean:     mean(allH.map((h) => h.realOvertakes).filter(num)),
-      bestRankMean:          mean(allH.map((h) => h.bestRank).filter(num)),
-      reachedTargetBandRate: rate(allH.map((h) => h.reachedTargetBand).filter((v) => v !== null)),
-      reachedFrontRate:      rate(allH.map((h) => h.reachedFrontProg != null)),
-      reachedFrontProgMean:  mean(allH.map((h) => h.reachedFrontProg).filter(num)),
-      reachedTargetProgMean: mean(allH.map((h) => h.reachedTargetProg).filter(num)),
-      ceilFracMean:          mean(allH.map((h) => h.ceilFrac).filter(num)),
-      trafficFracMean:       mean(allH.map((h) => h.trafficFrac).filter(num)),
-      bothFracMean:          mean(allH.map((h) => h.bothFrac).filter(num)),
-      maxTrajMean:           mean(allH.map((h) => h.maxTraj).filter(num)),
-      shortfallRate:         rate(allH.map((h) => h.reachedTargetBand === false)),
+      heroesPerRace: heroMapRaces.length
+        ? +(allH.length / heroMapRaces.length).toFixed(3)
+        : null,
+      anchorRankMean: mean(allH.map((h) => h.anchorRank).filter(num)),
+      finalRankMean: mean(allH.map((h) => h.finalRank).filter(num)),
+      placesGainedNetMean: mean(allH.map((h) => h.placesGainedNet).filter(num)),
+      realOvertakesMean: mean(allH.map((h) => h.realOvertakes).filter(num)),
+      bestRankMean: mean(allH.map((h) => h.bestRank).filter(num)),
+      reachedTargetBandRate: rate(
+        allH.map((h) => h.reachedTargetBand).filter((v) => v !== null),
+      ),
+      reachedFrontRate: rate(allH.map((h) => h.reachedFrontProg != null)),
+      reachedFrontProgMean: mean(
+        allH.map((h) => h.reachedFrontProg).filter(num),
+      ),
+      reachedTargetProgMean: mean(
+        allH.map((h) => h.reachedTargetProg).filter(num),
+      ),
+      ceilFracMean: mean(allH.map((h) => h.ceilFrac).filter(num)),
+      trafficFracMean: mean(allH.map((h) => h.trafficFrac).filter(num)),
+      bothFracMean: mean(allH.map((h) => h.bothFrac).filter(num)),
+      maxTrajMean: mean(allH.map((h) => h.maxTraj).filter(num)),
+      shortfallRate: rate(allH.map((h) => h.reachedTargetBand === false)),
       // Of the heroes that fell short: which wall dominated (ceil frac ≥ traffic frac → SPEED wall).
-      speedWallShare:        short.length ? +(short.filter((h) => h.ceilFrac >= h.trafficFrac).length / short.length).toFixed(4) : null,
-      trafficWallShare:      short.length ? +(short.filter((h) => h.trafficFrac > h.ceilFrac).length / short.length).toFixed(4) : null,
+      speedWallShare: short.length
+        ? +(
+            short.filter((h) => h.ceilFrac >= h.trafficFrac).length /
+            short.length
+          ).toFixed(4)
+        : null,
+      trafficWallShare: short.length
+        ? +(
+            short.filter((h) => h.trafficFrac > h.ceilFrac).length /
+            short.length
+          ).toFixed(4)
+        : null,
     };
-    const heroMapPath = join(OUT_DIR, 'hero-map.json');
-    writeFileSync(heroMapPath, JSON.stringify({
-      meta: {
-        world: WORLD_STAMP,
-        track: TRACK_FILTER, racer: RACER_FILTER, dur: DUR_FILTER, races: N_RACES, seed: GLOBAL_SEED,
-        choreoIntensity: CHOREO_INTENSITY,
-        choreoOutcomeStart: CHOREO_OUTCOME_START, choreoReleaseProgress: CHOREO_RELEASE_PROGRESS,
-        choreoPackBandStrictness: CHOREO_PACK_BAND_STRICTNESS, bonusMult: BONUS_MULT,
-        pulkBiasGain: RP_PULK_BIAS_GAIN,
-        baseSpeedMin: BASE_SPEED_MIN_OVR, baseSpeedMax: BASE_SPEED_MAX_OVR,
-      },
-      fairness: { bandReach, startRowUnfair, startRowMinPHolm,
-        nativeWinChiSqP: +nativeWinP.toFixed(4), nativeWinUnfair: nativeWinP < 0.05, perRowWins },
-      heroAgg,
-      perHero: allH,
-    }, null, 2));
-    console.log(`[hero-map] → ${heroMapPath} | bandReach=${bandReach != null ? (bandReach * 100).toFixed(1) + '%' : 'n/a'} startRowUnfair=${startRowUnfair} realOvertakes=${heroAgg.realOvertakesMean ?? 'n/a'} netGain=${heroAgg.placesGainedNetMean ?? 'n/a'} heroes/race=${heroAgg.heroesPerRace ?? 'n/a'} shortfall=${heroAgg.shortfallRate ?? 'n/a'}`);
+    const heroMapPath = join(OUT_DIR, "hero-map.json");
+    writeFileSync(
+      heroMapPath,
+      JSON.stringify(
+        {
+          meta: {
+            world: WORLD_STAMP,
+            track: TRACK_FILTER,
+            racer: RACER_FILTER,
+            dur: DUR_FILTER,
+            races: N_RACES,
+            seed: GLOBAL_SEED,
+            choreoIntensity: CHOREO_INTENSITY,
+            choreoOutcomeStart: CHOREO_OUTCOME_START,
+            choreoReleaseProgress: CHOREO_RELEASE_PROGRESS,
+            choreoPackBandStrictness: CHOREO_PACK_BAND_STRICTNESS,
+            bonusMult: BONUS_MULT,
+            pulkBiasGain: RP_PULK_BIAS_GAIN,
+            baseSpeedMin: BASE_SPEED_MIN_OVR,
+            baseSpeedMax: BASE_SPEED_MAX_OVR,
+          },
+          fairness: {
+            bandReach,
+            startRowUnfair,
+            startRowMinPHolm,
+            nativeWinChiSqP: +nativeWinP.toFixed(4),
+            nativeWinUnfair: nativeWinP < 0.05,
+            perRowWins,
+          },
+          heroAgg,
+          perHero: allH,
+        },
+        null,
+        2,
+      ),
+    );
+    console.log(
+      `[hero-map] → ${heroMapPath} | bandReach=${bandReach != null ? (bandReach * 100).toFixed(1) + "%" : "n/a"} startRowUnfair=${startRowUnfair} realOvertakes=${heroAgg.realOvertakesMean ?? "n/a"} netGain=${heroAgg.placesGainedNetMean ?? "n/a"} heroes/race=${heroAgg.heroesPerRace ?? "n/a"} shortfall=${heroAgg.shortfallRate ?? "n/a"}`,
+    );
   }
-
 
   // ── Comeback-reality output (--comeback-reality; requires --hero-map) ───────
   // Reuses this run's heroMapRaces (per-race hero observations). Groups by track, writes one
@@ -3929,7 +5782,9 @@ if (isMain) {
   // per-track invocations), then re-aggregates ALL comeback-*.json there into report.md + detail.json.
   if (COMEBACK_REALITY) {
     if (!HERO_MAP) {
-      console.warn('[comeback-reality] requires --hero-map (no hero observations collected) — skipping.');
+      console.warn(
+        "[comeback-reality] requires --hero-map (no hero observations collected) — skipping.",
+      );
     } else {
       const byTrack = new Map();
       for (const rr of heroMapRaces) {
@@ -3937,21 +5792,47 @@ if (isMain) {
         byTrack.get(rr.trackId).push(rr);
       }
       const date = new Date().toISOString().slice(0, 10); // YYYY-MM-DD (stable across a same-day sweep)
-      const cbDir = join(ROOT, 'results', `comeback-reality-sweep-${date}`);
+      const cbDir = join(ROOT, "results", `comeback-reality-sweep-${date}`);
       mkdirSync(cbDir, { recursive: true });
       for (const [trackId, races] of byTrack) {
         const isOpen = races[0]?.isOpen ?? null;
         const rep = perTrackReport(trackId, isOpen, races);
-        writeFileSync(join(cbDir, `comeback-${trackId}.json`), JSON.stringify({ ...rep, _races: races }, null, 2));
+        writeFileSync(
+          join(cbDir, `comeback-${trackId}.json`),
+          JSON.stringify({ ...rep, _races: races }, null, 2),
+        );
       }
       // Re-aggregate every per-track file in the dir (open first, then track id).
       const perTrack = readdirSync(cbDir)
-        .filter((f) => f.startsWith('comeback-') && f.endsWith('.json'))
-        .map((f) => JSON.parse(readFileSync(join(cbDir, f), 'utf8')))
-        .sort((a, b) => (a.isOpen === b.isOpen ? a.trackId.localeCompare(b.trackId) : a.isOpen ? -1 : 1));
-      const meta = { date, seed: GLOBAL_SEED, racesPerTrack: N_RACES, racer: RACER_FILTER, dur: DUR_FILTER, world: WORLD_STAMP?.worldHash ?? 'unknown' };
-      writeFileSync(join(cbDir, 'report.md'), renderComebackMarkdown(perTrack, meta));
-      writeFileSync(join(cbDir, 'detail.json'), JSON.stringify({ meta, perTrack: perTrack.map(({ _races, ...t }) => t) }, null, 2));
+        .filter((f) => f.startsWith("comeback-") && f.endsWith(".json"))
+        .map((f) => JSON.parse(readFileSync(join(cbDir, f), "utf8")))
+        .sort((a, b) =>
+          a.isOpen === b.isOpen
+            ? a.trackId.localeCompare(b.trackId)
+            : a.isOpen
+              ? -1
+              : 1,
+        );
+      const meta = {
+        date,
+        seed: GLOBAL_SEED,
+        racesPerTrack: N_RACES,
+        racer: RACER_FILTER,
+        dur: DUR_FILTER,
+        world: WORLD_STAMP?.worldHash ?? "unknown",
+      };
+      writeFileSync(
+        join(cbDir, "report.md"),
+        renderComebackMarkdown(perTrack, meta),
+      );
+      writeFileSync(
+        join(cbDir, "detail.json"),
+        JSON.stringify(
+          { meta, perTrack: perTrack.map(({ _races, ...t }) => t) },
+          null,
+          2,
+        ),
+      );
       console.log(`[comeback-reality] → ${cbDir} | tracks=${perTrack.length}`);
     }
   }
@@ -3960,25 +5841,36 @@ if (isMain) {
   // Self-contained: only runs when the flag is on. Raw aggregates → results/breakaway-diag/
   // (a dir outside OUT_DIR, not committed). One file per arm, named by --diagLabel.
   if (BREAKAWAY_DIAG) {
-    const bkDir = join(ROOT, 'results', 'breakaway-diag');
+    const bkDir = join(ROOT, "results", "breakaway-diag");
     mkdirSync(bkDir, { recursive: true });
     const bkPath = join(bkDir, `breakaway-${DIAG_LABEL}.json`);
-    writeFileSync(bkPath, JSON.stringify({
-      meta: {
-        label: DIAG_LABEL, nRaces: N_RACES, seed: GLOBAL_SEED, corridorStart: BREAKAWAY_CORRIDOR_START,
-        arms: {
-          bonusMult: BONUS_MULT, reRollVariationPercent: DYNAMICS_OVERRIDES.reRollVariationPercent,
+    writeFileSync(
+      bkPath,
+      JSON.stringify(
+        {
+          meta: {
+            label: DIAG_LABEL,
+            nRaces: N_RACES,
+            seed: GLOBAL_SEED,
+            corridorStart: BREAKAWAY_CORRIDOR_START,
+            arms: {
+              bonusMult: BONUS_MULT,
+              reRollVariationPercent: DYNAMICS_OVERRIDES.reRollVariationPercent,
+            },
+          },
+          combos: breakawayAgg,
         },
-      },
-      combos: breakawayAgg,
-    }, null, 2));
+        null,
+        2,
+      ),
+    );
     console.log(`\n=== Breakaway-Diag (${DIAG_LABEL}) ===  → ${bkPath}`);
     for (const c of breakawayAgg) {
       console.log(
-        `  ${c.trackName.padEnd(16)} (${c.isOpen ? 'open  ' : 'closed'})  ` +
-        `breakawayRate=${(c.breakawayRate * 100).toFixed(0)}%  peakGapØ=${c.peakGapMean.toFixed(4)}  ` +
-        `rank1=${(c.rank1Share * 100).toFixed(0)}%  rank≥4=${(c.rankGe4Share * 100).toFixed(0)}%  ` +
-        `decomp[spread=${c.meanDecompositionAtPeak.spreadFactor} area=${c.meanDecompositionAtPeak.areaBonusMult}]`
+        `  ${c.trackName.padEnd(16)} (${c.isOpen ? "open  " : "closed"})  ` +
+          `breakawayRate=${(c.breakawayRate * 100).toFixed(0)}%  peakGapØ=${c.peakGapMean.toFixed(4)}  ` +
+          `rank1=${(c.rank1Share * 100).toFixed(0)}%  rank≥4=${(c.rankGe4Share * 100).toFixed(0)}%  ` +
+          `decomp[spread=${c.meanDecompositionAtPeak.spreadFactor} area=${c.meanDecompositionAtPeak.areaBonusMult}]`,
       );
     }
   }
@@ -3987,25 +5879,39 @@ if (isMain) {
   // Self-contained: only runs when the flag is on. Raw aggregates → results/front-action/
   // (a dir outside OUT_DIR, not committed). One file per arm, named by --diagLabel.
   if (FRONT_ACTION) {
-    const faDir = join(ROOT, 'results', 'front-action');
+    const faDir = join(ROOT, "results", "front-action");
     mkdirSync(faDir, { recursive: true });
     const faPath = join(faDir, `front-action-${DIAG_LABEL}.json`);
-    writeFileSync(faPath, JSON.stringify({
-      meta: {
-        label: DIAG_LABEL, nRaces: N_RACES, seed: GLOBAL_SEED, corridorStart: BREAKAWAY_CORRIDOR_START,
-      },
-      combos: frontActionAgg,
-    }, null, 2));
+    writeFileSync(
+      faPath,
+      JSON.stringify(
+        {
+          meta: {
+            label: DIAG_LABEL,
+            nRaces: N_RACES,
+            seed: GLOBAL_SEED,
+            corridorStart: BREAKAWAY_CORRIDOR_START,
+          },
+          combos: frontActionAgg,
+        },
+        null,
+        2,
+      ),
+    );
     console.log(`\n=== Front-Action (${DIAG_LABEL}) ===  → ${faPath}`);
-    console.log('  (leadΔ = P1 changes/race; distinctP1 = # racers who ever led; shuffle = top-3 churn/step;');
-    console.log('   gap2nd/gapMed = leader→2nd / leader→median in racer-lengths; corr = |Spearman(targetRank, front-time)|, LOW=fair)');
+    console.log(
+      "  (leadΔ = P1 changes/race; distinctP1 = # racers who ever led; shuffle = top-3 churn/step;",
+    );
+    console.log(
+      "   gap2nd/gapMed = leader→2nd / leader→median in racer-lengths; corr = |Spearman(targetRank, front-time)|, LOW=fair)",
+    );
     for (const c of frontActionAgg) {
       console.log(
-        `  ${c.trackName.padEnd(16)} (${c.isOpen ? 'open  ' : 'closed'})  ` +
-        `leadΔ=${c.leadChangesMean.toFixed(1)}  distinctP1=${c.distinctP1Mean.toFixed(1)}  ` +
-        `shuffle=${(c.podiumShuffleRate * 100).toFixed(1)}%  ` +
-        `gap2nd=${c.gap2ndLenMean.toFixed(1)}  gapMed=${c.gapMedLenMean.toFixed(1)}  ` +
-        `corr[P1=${c.unpredictability.rankVsP1Frac.toFixed(2)} top3=${c.unpredictability.rankVsTop3Frac.toFixed(2)}]`
+        `  ${c.trackName.padEnd(16)} (${c.isOpen ? "open  " : "closed"})  ` +
+          `leadΔ=${c.leadChangesMean.toFixed(1)}  distinctP1=${c.distinctP1Mean.toFixed(1)}  ` +
+          `shuffle=${(c.podiumShuffleRate * 100).toFixed(1)}%  ` +
+          `gap2nd=${c.gap2ndLenMean.toFixed(1)}  gapMed=${c.gapMedLenMean.toFixed(1)}  ` +
+          `corr[P1=${c.unpredictability.rankVsP1Frac.toFixed(2)} top3=${c.unpredictability.rankVsTop3Frac.toFixed(2)}]`,
       );
     }
   }
@@ -4014,60 +5920,93 @@ if (isMain) {
   // Self-contained: only when the flag is on. Raw per-combo dumps → results/strip-down/ (not
   // committed). One file per arm, named by --diagLabel. Analysis is done downstream from these.
   if (STRIP_METRICS) {
-    const sdDir = join(ROOT, 'results', 'strip-down');
+    const sdDir = join(ROOT, "results", "strip-down");
     mkdirSync(sdDir, { recursive: true });
     const sdPath = join(sdDir, `strip-${DIAG_LABEL}.json`);
-    writeFileSync(sdPath, JSON.stringify({
-      meta: {
-        label: DIAG_LABEL, nRaces: N_RACES, seed: GLOBAL_SEED,
-        pulkStart: SD_PULK_START, pulkEnd: SD_PULK_END, corridorStart: SD_CORR_START,
-        rerollVariant: REROLL_VARIANT,
-        reRoll: {
-          variationPercent: DYNAMICS_OVERRIDES.reRollVariationPercent,
-          transitionDuration: DYNAMICS_OVERRIDES.reRollTransitionDuration,
-          intervalDivisor: DYNAMICS_OVERRIDES.reRollIntervalDivisor,
-          lastPositionPercent: DYNAMICS_OVERRIDES.reRollLastPositionPercent,
+    writeFileSync(
+      sdPath,
+      JSON.stringify(
+        {
+          meta: {
+            label: DIAG_LABEL,
+            nRaces: N_RACES,
+            seed: GLOBAL_SEED,
+            pulkStart: SD_PULK_START,
+            pulkEnd: SD_PULK_END,
+            corridorStart: SD_CORR_START,
+            rerollVariant: REROLL_VARIANT,
+            reRoll: {
+              variationPercent: DYNAMICS_OVERRIDES.reRollVariationPercent,
+              transitionDuration: DYNAMICS_OVERRIDES.reRollTransitionDuration,
+              intervalDivisor: DYNAMICS_OVERRIDES.reRollIntervalDivisor,
+              lastPositionPercent: DYNAMICS_OVERRIDES.reRollLastPositionPercent,
+            },
+            areaSplit: {
+              enabled: PHASE_SPLIT_BONUS_ENABLED,
+              early: AREA_BONUS_EARLY,
+              pulk: AREA_BONUS_PULK,
+              post: AREA_BONUS_POST,
+              refStrength: BONUS_MULT,
+            },
+          },
+          combos: stripAgg,
         },
-        areaSplit: { enabled: PHASE_SPLIT_BONUS_ENABLED, early: AREA_BONUS_EARLY, pulk: AREA_BONUS_PULK, post: AREA_BONUS_POST, refStrength: BONUS_MULT },
-      },
-      combos: stripAgg,
-    }, null, 2));
+        null,
+        2,
+      ),
+    );
     console.log(`\n=== Strip-Down (${DIAG_LABEL}) ===  → ${sdPath}`);
     for (const c of stripAgg) {
       const nR = c.races.length;
       const mean = (f) => (nR ? c.races.reduce((s, r) => s + f(r), 0) / nR : 0);
       console.log(
-        `  ${c.trackName.padEnd(16)} (${c.isOpen ? 'open  ' : 'closed'})  ` +
-        `PULK[leadΔ=${mean((r) => r.pulk.leadChanges).toFixed(1)} distinctP1=${mean((r) => r.pulk.distinctP1).toFixed(1)} lShare=${(mean((r) => r.pulk.leaderShare) * 100).toFixed(0)}%]  ` +
-        `OUT[leadΔ=${mean((r) => r.outcome.leadChanges).toFixed(1)} distinctP1=${mean((r) => r.outcome.distinctP1).toFixed(1)}]  ` +
-        `winRankAt055=${mean((r) => r.winner.rankAt055 ?? 0).toFixed(1)}`
+        `  ${c.trackName.padEnd(16)} (${c.isOpen ? "open  " : "closed"})  ` +
+          `PULK[leadΔ=${mean((r) => r.pulk.leadChanges).toFixed(1)} distinctP1=${mean((r) => r.pulk.distinctP1).toFixed(1)} lShare=${(mean((r) => r.pulk.leaderShare) * 100).toFixed(0)}%]  ` +
+          `OUT[leadΔ=${mean((r) => r.outcome.leadChanges).toFixed(1)} distinctP1=${mean((r) => r.outcome.distinctP1).toFixed(1)}]  ` +
+          `winRankAt055=${mean((r) => r.winner.rankAt055 ?? 0).toFixed(1)}`,
       );
     }
   }
 
   // ── ACTION-METRICS raw output (--action-metrics) → results/action-metrics/ (gitignored) ──
   if (ACTION_METRICS) {
-    const amDir = join(ROOT, 'results', 'action-metrics');
+    const amDir = join(ROOT, "results", "action-metrics");
     mkdirSync(amDir, { recursive: true });
     const amPath = join(amDir, `am-${DIAG_LABEL}.json`);
-    writeFileSync(amPath, JSON.stringify({
-      meta: {
-        label: DIAG_LABEL, nRaces: N_RACES, seed: GLOBAL_SEED,
-        pulkBiasGain: RP_PULK_BIAS_GAIN,
-        reRollVariationPercent: DYNAMICS_OVERRIDES.reRollVariationPercent,
-        areaSplit: { enabled: PHASE_SPLIT_BONUS_ENABLED, early: AREA_BONUS_EARLY, pulk: AREA_BONUS_PULK, post: AREA_BONUS_POST },
-      },
-      combos: actionAgg,
-    }, null, 2));
-    console.log(`\n=== Action-Metrics (${DIAG_LABEL}, pulkBiasGain=${RP_PULK_BIAS_GAIN}) ===  → ${amPath}`);
+    writeFileSync(
+      amPath,
+      JSON.stringify(
+        {
+          meta: {
+            label: DIAG_LABEL,
+            nRaces: N_RACES,
+            seed: GLOBAL_SEED,
+            pulkBiasGain: RP_PULK_BIAS_GAIN,
+            reRollVariationPercent: DYNAMICS_OVERRIDES.reRollVariationPercent,
+            areaSplit: {
+              enabled: PHASE_SPLIT_BONUS_ENABLED,
+              early: AREA_BONUS_EARLY,
+              pulk: AREA_BONUS_PULK,
+              post: AREA_BONUS_POST,
+            },
+          },
+          combos: actionAgg,
+        },
+        null,
+        2,
+      ),
+    );
+    console.log(
+      `\n=== Action-Metrics (${DIAG_LABEL}, pulkBiasGain=${RP_PULK_BIAS_GAIN}) ===  → ${amPath}`,
+    );
     for (const c of actionAgg) {
       const nR = c.races.length;
       const mean = (f) => (nR ? c.races.reduce((s, r) => s + f(r), 0) / nR : 0);
       console.log(
-        `  ${c.trackName.padEnd(16)} (${c.isOpen ? 'open  ' : 'closed'})  ` +
-        `churn=${mean((r) => r.rankChurn).toFixed(0)} travelØ=${mean((r) => r.meanRankTravel).toFixed(1)} travelP90=${mean((r) => r.p90RankTravel).toFixed(1)}  ` +
-        `risers=${mean((r) => r.risers).toFixed(1)} fallers=${mean((r) => r.fallers).toFixed(1)} top5turn=${mean((r) => r.frontTop5Turnover).toFixed(1)}  ` +
-        `spread=${mean((r) => r.spreadLenP10P90).toFixed(1)}len maxSF=${mean((r) => r.maxSpeedFactor).toFixed(3)}`
+        `  ${c.trackName.padEnd(16)} (${c.isOpen ? "open  " : "closed"})  ` +
+          `churn=${mean((r) => r.rankChurn).toFixed(0)} travelØ=${mean((r) => r.meanRankTravel).toFixed(1)} travelP90=${mean((r) => r.p90RankTravel).toFixed(1)}  ` +
+          `risers=${mean((r) => r.risers).toFixed(1)} fallers=${mean((r) => r.fallers).toFixed(1)} top5turn=${mean((r) => r.frontTop5Turnover).toFixed(1)}  ` +
+          `spread=${mean((r) => r.spreadLenP10P90).toFixed(1)}len maxSF=${mean((r) => r.maxSpeedFactor).toFixed(3)}`,
       );
     }
   }
@@ -4077,27 +6016,40 @@ if (isMain) {
   // calibration against a race he watches, so the deadRaceFlag / visibleComeback booleans here are
   // provisional, never a pass/fail gate. A no-flag run writes nothing and is byte-identical.
   if (GAP_METRICS) {
-    const gmDir = join(ROOT, 'results', 'gap-metrics');
+    const gmDir = join(ROOT, "results", "gap-metrics");
     mkdirSync(gmDir, { recursive: true });
     const gmPath = join(gmDir, `gm-${DIAG_LABEL}.json`);
-    writeFileSync(gmPath, JSON.stringify({
-      meta: {
-        label: DIAG_LABEL, nRaces: N_RACES, seed: GLOBAL_SEED,
-        note: 'GAP-SPACE observers (INFRA 5C). RAW distributions only. X/Y/Z are PROPOSALS awaiting owner calibration.',
-        proposedThresholds: GM_THRESHOLDS,
-      },
-      races: gmRaces,
-    }, null, 2));
-    console.log(`\n=== Gap-Metrics (${DIAG_LABEL}) ===  → ${gmPath}  (${gmRaces.length} races)`);
-    console.log(`  ⚠ RAW distributions in RACER LENGTHS (primary) — proposed X=${GM_THRESHOLDS.inContentionLen}L Y=${GM_THRESHOLDS.comebackDepthLen}L Z=${GM_THRESHOLDS.comebackFinishLen}L deadGap=${GM_THRESHOLDS.deadRaceGapLen}L AWAIT owner calibration; booleans provisional.`);
+    writeFileSync(
+      gmPath,
+      JSON.stringify(
+        {
+          meta: {
+            label: DIAG_LABEL,
+            nRaces: N_RACES,
+            seed: GLOBAL_SEED,
+            note: "GAP-SPACE observers (INFRA 5C). RAW distributions only. X/Y/Z are PROPOSALS awaiting owner calibration.",
+            proposedThresholds: GM_THRESHOLDS,
+          },
+          races: gmRaces,
+        },
+        null,
+        2,
+      ),
+    );
+    console.log(
+      `\n=== Gap-Metrics (${DIAG_LABEL}) ===  → ${gmPath}  (${gmRaces.length} races)`,
+    );
+    console.log(
+      `  ⚠ RAW distributions in RACER LENGTHS (primary) — proposed X=${GM_THRESHOLDS.inContentionLen}L Y=${GM_THRESHOLDS.comebackDepthLen}L Z=${GM_THRESHOLDS.comebackFinishLen}L deadGap=${GM_THRESHOLDS.deadRaceGapLen}L AWAIT owner calibration; booleans provisional.`,
+    );
     // Terse per-race headline (lengths): leader→P2, frontmost front gap (n ahead), deadRace over-fraction.
     for (const gr of gmRaces.slice(0, 12)) {
       const g = gr.gapMetrics;
       const comebacks = g.perRacer.filter((p) => p.visibleComeback).length;
       console.log(
-        `  ${String(gr.trackId).padEnd(16)} (${gr.isOpen ? 'open  ' : 'closed'}) r${gr.raceIdx}  ` +
-        `line[P1→P2=${(g.leaderGapToP2LineLen ?? 0).toFixed(2)}L front=${(g.frontmostGapLineLen ?? 0).toFixed(2)}L/${g.frontmostGapLineNAhead ?? 0}ahead]  ` +
-        `dead=${g.deadRaceFlag ? 'YES' : 'no '}(${(g.deadRaceFinalThirdOverFrac * 100).toFixed(0)}%) frontOver=${(g.frontGapFinalThirdOverFrac * 100).toFixed(0)}%  comebacks=${comebacks}`
+        `  ${String(gr.trackId).padEnd(16)} (${gr.isOpen ? "open  " : "closed"}) r${gr.raceIdx}  ` +
+          `line[P1→P2=${(g.leaderGapToP2LineLen ?? 0).toFixed(2)}L front=${(g.frontmostGapLineLen ?? 0).toFixed(2)}L/${g.frontmostGapLineNAhead ?? 0}ahead]  ` +
+          `dead=${g.deadRaceFlag ? "YES" : "no "}(${(g.deadRaceFinalThirdOverFrac * 100).toFixed(0)}%) frontOver=${(g.frontGapFinalThirdOverFrac * 100).toFixed(0)}%  comebacks=${comebacks}`,
       );
     }
   }
@@ -4106,47 +6058,89 @@ if (isMain) {
   // RAW per-race records only (the two booleans are derived downstream by the classifier module, so the
   // definitions stay in ONE place). A no-flag run writes nothing and is byte-identical.
   if (RUNAWAY_PARADE) {
-    const rpPath = join(OUT_DIR, 'runaway-parade.json');
-    writeFileSync(rpPath, JSON.stringify({
-      meta: {
-        label: DIAG_LABEL, nRaces: N_RACES, seed: GLOBAL_SEED,
-        note: 'RUNAWAY-WINNER & PARADE-FINISH raw per-race records (read-only baseline measurement). '
-            + 'Booleans derived by scripts/sim/observers/runaway-parade.mjs classifyRace().',
-        thresholds: RUNAWAY_PARADE_DEFAULTS,
-      },
-      races: rpRaces,
-    }, null, 2));
-    console.log(`\n=== Runaway/Parade (${DIAG_LABEL}) ===  → ${rpPath}  (${rpRaces.length} races)`);
+    const rpPath = join(OUT_DIR, "runaway-parade.json");
+    writeFileSync(
+      rpPath,
+      JSON.stringify(
+        {
+          meta: {
+            label: DIAG_LABEL,
+            nRaces: N_RACES,
+            seed: GLOBAL_SEED,
+            note:
+              "RUNAWAY-WINNER & PARADE-FINISH raw per-race records (read-only baseline measurement). " +
+              "Booleans derived by scripts/sim/observers/runaway-parade.mjs classifyRace().",
+            thresholds: RUNAWAY_PARADE_DEFAULTS,
+          },
+          races: rpRaces,
+        },
+        null,
+        2,
+      ),
+    );
+    console.log(
+      `\n=== Runaway/Parade (${DIAG_LABEL}) ===  → ${rpPath}  (${rpRaces.length} races)`,
+    );
   }
 
   // ── SPEED-SOURCE raw output (--speed-source) → OUT_DIR/speed-source.json ──
   // RAW per-race top-15 decompositions at samples 0.70..0.95. A no-flag run writes nothing.
   if (SPEED_SOURCE) {
-    const ssPath = join(OUT_DIR, 'speed-source.json');
-    writeFileSync(ssPath, JSON.stringify({
-      meta: {
-        label: DIAG_LABEL, nRaces: N_RACES, seed: GLOBAL_SEED, samples: SPEED_SOURCE_SAMPLES,
-        note: 'Top-15 late-race speed decomposition (read-only). Factor chain: baseSpeed·boost·brake·'
-            + 'rowEnvMult(=rowBonusPost)·trajectoryMult·areaBonusMult(=areaBonusPost)·governorMult. '
-            + 'product == effSpeed unless finishClamp. Only per-factor ceilings (no single speed clamp).',
-      },
-      races: ssRaces,
-    }, null, 2));
-    console.log(`\n=== Speed-Source (${DIAG_LABEL}) ===  → ${ssPath}  (${ssRaces.length} races)`);
+    const ssPath = join(OUT_DIR, "speed-source.json");
+    writeFileSync(
+      ssPath,
+      JSON.stringify(
+        {
+          meta: {
+            label: DIAG_LABEL,
+            nRaces: N_RACES,
+            seed: GLOBAL_SEED,
+            samples: SPEED_SOURCE_SAMPLES,
+            note:
+              "Top-15 late-race speed decomposition (read-only). Factor chain: baseSpeed·boost·brake·" +
+              "rowEnvMult(=rowBonusPost)·trajectoryMult·areaBonusMult(=areaBonusPost)·governorMult. " +
+              "product == effSpeed unless finishClamp. Only per-factor ceilings (no single speed clamp).",
+          },
+          races: ssRaces,
+        },
+        null,
+        2,
+      ),
+    );
+    console.log(
+      `\n=== Speed-Source (${DIAG_LABEL}) ===  → ${ssPath}  (${ssRaces.length} races)`,
+    );
   }
 
   // ── SCREEN escape-latency output (--escape-latency) → OUT_DIR/escape-latency.json ──
   if (ESCAPE_LATENCY) {
-    const elPath = join(OUT_DIR, 'escape-latency.json');
-    writeFileSync(elPath, JSON.stringify({
-      meta: { label: DIAG_LABEL, nRaces: N_RACES, seed: GLOBAL_SEED, nRacers: N_RACERS,
-        gapRerollThresholdLengths: GAP_REROLL_THRESH_LEN, gapRerollStrength: GAP_REROLL_STRENGTH, gapRerollMode: GAP_REROLL_MODE,
-        note: 'escapeDepthLen = max P1->P2 gap (racer lengths) reached BEFORE the first gap-reroll '
-            + 'DOWN-tilt landed on the leader (escapeDepthCapped=false => none ever fired, value is the '
-            + 'whole-race max). events = per leader-down-tilt {p, gapLen, frac, delta}.' },
-      races: elRaces,
-    }, null, 2));
-    console.log(`\n=== Escape-Latency (${DIAG_LABEL}) ===  → ${elPath}  (${elRaces.length} races)`);
+    const elPath = join(OUT_DIR, "escape-latency.json");
+    writeFileSync(
+      elPath,
+      JSON.stringify(
+        {
+          meta: {
+            label: DIAG_LABEL,
+            nRaces: N_RACES,
+            seed: GLOBAL_SEED,
+            nRacers: N_RACERS,
+            gapRerollThresholdLengths: GAP_REROLL_THRESH_LEN,
+            gapRerollStrength: GAP_REROLL_STRENGTH,
+            gapRerollMode: GAP_REROLL_MODE,
+            note:
+              "escapeDepthLen = max P1->P2 gap (racer lengths) reached BEFORE the first gap-reroll " +
+              "DOWN-tilt landed on the leader (escapeDepthCapped=false => none ever fired, value is the " +
+              "whole-race max). events = per leader-down-tilt {p, gapLen, frac, delta}.",
+          },
+          races: elRaces,
+        },
+        null,
+        2,
+      ),
+    );
+    console.log(
+      `\n=== Escape-Latency (${DIAG_LABEL}) ===  → ${elPath}  (${elRaces.length} races)`,
+    );
   }
 
   // ── PHYSICS-TAX raw output (--physics-tax) → OUT_DIR/physics-tax.json ──
@@ -4154,21 +6148,35 @@ if (isMain) {
   // summarizePhysicsTax(), so the definitions stay in ONE place). A no-flag run writes nothing.
   // bandHalfWidth is echoed because sigma is meaningless without the band the run actually used.
   if (PHYSICS_TAX) {
-    const ptPath = join(OUT_DIR, 'physics-tax.json');
-    const bandHalfWidth = BASE_SPEED_MAX_OVR / ((BASE_SPEED_MIN_OVR + BASE_SPEED_MAX_OVR) / 2) - 1;
-    writeFileSync(ptPath, JSON.stringify({
-      meta: {
-        label: DIAG_LABEL, nRaces: N_RACES, seed: GLOBAL_SEED,
-        baseSpeedMin: BASE_SPEED_MIN_OVR, baseSpeedMax: BASE_SPEED_MAX_OVR,
-        bandHalfWidth: +bandHalfWidth.toFixed(9),
-        note: 'PHYSICS TAX raw per-racer records (read-only, GREENFIELD P0). lostFrac = share of the '
-            + 'distance a racer would have covered that avoidance braking removed; sigma = lostFrac / '
-            + 'bandHalfWidth = the share of natural-band authority live physics already consumes. '
-            + 'Aggregates via scripts/sim/observers/physics-tax.mjs summarizePhysicsTax().',
-      },
-      races: ptRaces,
-    }, null, 2));
-    console.log(`\n=== Physics-Tax (${DIAG_LABEL}) ===  → ${ptPath}  (${ptRaces.length} races)`);
+    const ptPath = join(OUT_DIR, "physics-tax.json");
+    const bandHalfWidth =
+      BASE_SPEED_MAX_OVR / ((BASE_SPEED_MIN_OVR + BASE_SPEED_MAX_OVR) / 2) - 1;
+    writeFileSync(
+      ptPath,
+      JSON.stringify(
+        {
+          meta: {
+            label: DIAG_LABEL,
+            nRaces: N_RACES,
+            seed: GLOBAL_SEED,
+            baseSpeedMin: BASE_SPEED_MIN_OVR,
+            baseSpeedMax: BASE_SPEED_MAX_OVR,
+            bandHalfWidth: +bandHalfWidth.toFixed(9),
+            note:
+              "PHYSICS TAX raw per-racer records (read-only, GREENFIELD P0). lostFrac = share of the " +
+              "distance a racer would have covered that avoidance braking removed; sigma = lostFrac / " +
+              "bandHalfWidth = the share of natural-band authority live physics already consumes. " +
+              "Aggregates via scripts/sim/observers/physics-tax.mjs summarizePhysicsTax().",
+          },
+          races: ptRaces,
+        },
+        null,
+        2,
+      ),
+    );
+    console.log(
+      `\n=== Physics-Tax (${DIAG_LABEL}) ===  → ${ptPath}  (${ptRaces.length} races)`,
+    );
   }
 
   // Print quick summary
@@ -4178,11 +6186,13 @@ if (isMain) {
   console.log(`Fair (p≥0.05)        : ${allResults.length - unfair.length}`);
   console.log(`Unfair (p<0.05)      : ${unfair.length}`);
   if (unfair.length > 0) {
-    console.log('\nUnfaire Kombinationen:');
+    console.log("\nUnfaire Kombinationen:");
     for (const r of unfair) {
       const r0 = r.stats.rowStats[0];
-      const exp = r0?.expectedWinRate ?? (1 / r.stats.totalRows);
-      console.log(`  ${r.trackName} × ${r.racerType} × ${r.durationSec}s  Row0=${fmtPct(r0?.winRate ?? 0)} (erw. ${fmtPct(exp)})  p=${r.stats.pValue.toFixed(3)}`);
+      const exp = r0?.expectedWinRate ?? 1 / r.stats.totalRows;
+      console.log(
+        `  ${r.trackName} × ${r.racerType} × ${r.durationSec}s  Row0=${fmtPct(r0?.winRate ?? 0)} (erw. ${fmtPct(exp)})  p=${r.stats.pValue.toFixed(3)}`,
+      );
     }
   }
 }

@@ -12,11 +12,18 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
-import { mkdtempSync, mkdirSync, writeFileSync, rmSync } from "node:fs";
+import {
+  mkdtempSync,
+  mkdirSync,
+  writeFileSync,
+  rmSync,
+  readFileSync,
+} from "node:fs";
 import { tmpdir } from "node:os";
 import { join, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
 
+const ROOT = join(dirname(fileURLToPath(import.meta.url)), "..");
 const GUARD = join(
   dirname(fileURLToPath(import.meta.url)),
   "check-fingerprints.mjs",
@@ -220,8 +227,21 @@ test("A ROLE MUST CARRY ITS PROVENANCE — a value with no mint commit is not a 
 
 // ── the real tree ─────────────────────────────────────────────────────────────────────────────
 
-test("THE REAL REPOSITORY passes its own guard", () => {
+test("THE REAL REPOSITORY passes its own guard, and reads EVERY site the record declares", () => {
+  // The counts are DERIVED from the record, not typed here. An earlier version of this test pinned
+  // "17/17"; stage 5 declared two more sites and the test failed for being right. A literal that
+  // has to be edited whenever the thing it describes grows is a maintenance tax, not a check.
+  const record = JSON.parse(
+    readFileSync(join(ROOT, "docs", "fingerprints.json"), "utf8"),
+  );
+  const roles = Object.keys(record.roles).length;
+  const sites = record.sites.length;
+
   const r = spawnSync(process.execPath, [GUARD], { encoding: "utf8" });
   assert.equal(r.status, 0, r.stderr);
-  assert.match(r.stdout, /4 roles, 17\/17 sites read/);
+  // sites READ must equal sites DECLARED: a site skipped for any reason would show as a shortfall.
+  assert.match(
+    r.stdout,
+    new RegExp(`${roles} roles, ${sites}/${sites} sites read`),
+  );
 });

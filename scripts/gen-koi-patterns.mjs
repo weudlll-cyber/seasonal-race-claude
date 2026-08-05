@@ -22,21 +22,21 @@
 //                ogon   — near-full-body with subtle radial shimmer
 // ============================================================
 
-import { createRequire } from 'module';
-import fs from 'fs';
-import path from 'path';
-import { fileURLToPath } from 'url';
+import { createRequire } from "module";
+import fs from "fs";
+import path from "path";
+import { fileURLToPath } from "url";
 
 const require = createRequire(import.meta.url);
-const { PNG } = require('pngjs');
+const { PNG } = require("pngjs");
 
-const ROOT   = path.resolve(fileURLToPath(import.meta.url), '../../');
-const OUT    = path.join(ROOT, 'client/public/assets/racers');
-const FW     = 565;
-const FH     = 565;
-const FC     = 16;
-const CX     = FW / 2;
-const CY     = FH / 2;
+const ROOT = path.resolve(fileURLToPath(import.meta.url), "../../");
+const OUT = path.join(ROOT, "client/public/assets/racers");
+const FW = 565;
+const FH = 565;
+const FC = 16;
+const CX = FW / 2;
+const CY = FH / 2;
 const BODY_R = 220; // approximate fish body radius in the 565px frame
 
 // ── PRNG (Mulberry32) ────────────────────────────────────────────────────────
@@ -72,7 +72,10 @@ function renderBlobs(blobs) {
     for (let x = 0; x < FW; x++) {
       let v = 0;
       for (const b of blobs) {
-        v = Math.max(v, blobBrightness(x, y, b.cx, b.cy, b.rx, b.ry, b.edge ?? 0.3));
+        v = Math.max(
+          v,
+          blobBrightness(x, y, b.cx, b.cy, b.rx, b.ry, b.edge ?? 0.3),
+        );
       }
       buf[y * FW + x] = v;
     }
@@ -114,7 +117,7 @@ function tileToSheet(frameBuf) {
 function save(sheet, name) {
   const outPath = path.join(OUT, name);
   fs.writeFileSync(outPath, PNG.sync.write(sheet));
-  console.log(`Written: ${outPath}  (${(FW * FC)}×${FH})`);
+  console.log(`Written: ${outPath}  (${FW * FC}×${FH})`);
 }
 
 // ── Pattern generators ───────────────────────────────────────────────────────
@@ -127,12 +130,12 @@ function genKohaku() {
   for (let i = 0; i < count; i++) {
     // Place in the central 60% of the body
     const angle = rng() * Math.PI * 2;
-    const dist  = rng() * BODY_R * 0.55;
+    const dist = rng() * BODY_R * 0.55;
     blobs.push({
-      cx:   CX + Math.cos(angle) * dist,
-      cy:   CY + Math.sin(angle) * dist * 0.7,
-      rx:   70 + rng() * 60,
-      ry:   50 + rng() * 50,
+      cx: CX + Math.cos(angle) * dist,
+      cy: CY + Math.sin(angle) * dist * 0.7,
+      rx: 70 + rng() * 60,
+      ry: 50 + rng() * 50,
       edge: 0.35,
     });
   }
@@ -146,12 +149,12 @@ function genSanke() {
   const patchCount = 3 + Math.floor(rng() * 2);
   for (let i = 0; i < patchCount; i++) {
     const angle = rng() * Math.PI * 2;
-    const dist  = rng() * BODY_R * 0.6;
+    const dist = rng() * BODY_R * 0.6;
     blobs.push({
-      cx:   CX + Math.cos(angle) * dist,
-      cy:   CY + Math.sin(angle) * dist * 0.7,
-      rx:   45 + rng() * 40,
-      ry:   35 + rng() * 35,
+      cx: CX + Math.cos(angle) * dist,
+      cy: CY + Math.sin(angle) * dist * 0.7,
+      rx: 45 + rng() * 40,
+      ry: 35 + rng() * 35,
       edge: 0.28,
     });
   }
@@ -159,12 +162,12 @@ function genSanke() {
   const dotCount = 8 + Math.floor(rng() * 5);
   for (let i = 0; i < dotCount; i++) {
     const angle = rng() * Math.PI * 2;
-    const dist  = rng() * BODY_R * 0.75;
+    const dist = rng() * BODY_R * 0.75;
     blobs.push({
-      cx:   CX + Math.cos(angle) * dist,
-      cy:   CY + Math.sin(angle) * dist * 0.75,
-      rx:   12 + rng() * 14,
-      ry:   10 + rng() * 12,
+      cx: CX + Math.cos(angle) * dist,
+      cy: CY + Math.sin(angle) * dist * 0.75,
+      rx: 12 + rng() * 14,
+      ry: 10 + rng() * 12,
       edge: 0.4,
     });
   }
@@ -174,12 +177,15 @@ function genSanke() {
 function genShowa() {
   const rng = mulberry32(0xc0de_0003);
   // Large base coverage — start with full body oval then cut out white patches
-  const baseBlobs = [{
-    cx: CX, cy: CY,
-    rx: BODY_R * 0.88,
-    ry: BODY_R * 0.78,
-    edge: 0.15,
-  }];
+  const baseBlobs = [
+    {
+      cx: CX,
+      cy: CY,
+      rx: BODY_R * 0.88,
+      ry: BODY_R * 0.78,
+      edge: 0.15,
+    },
+  ];
   const baseBuf = renderBlobs(baseBlobs);
 
   // Cut-out white patches (subtract via inversion trick: use separate blob set)
@@ -187,12 +193,12 @@ function genShowa() {
   const cutCount = 3 + Math.floor(rng() * 3);
   for (let i = 0; i < cutCount; i++) {
     const angle = rng() * Math.PI * 2;
-    const dist  = rng() * BODY_R * 0.5;
+    const dist = rng() * BODY_R * 0.5;
     cutBlobs.push({
-      cx:   CX + Math.cos(angle) * dist,
-      cy:   CY + Math.sin(angle) * dist * 0.7,
-      rx:   55 + rng() * 50,
-      ry:   45 + rng() * 45,
+      cx: CX + Math.cos(angle) * dist,
+      cy: CY + Math.sin(angle) * dist * 0.7,
+      rx: 55 + rng() * 50,
+      ry: 45 + rng() * 45,
       edge: 0.3,
     });
   }
@@ -213,8 +219,11 @@ function genOgon() {
     for (let x = 0; x < FW; x++) {
       const dx = (x - CX) / (BODY_R * 0.9);
       const dy = (y - CY) / (BODY_R * 0.85);
-      const d  = Math.sqrt(dx * dx + dy * dy);
-      if (d >= 1) { buf[y * FW + x] = 0; continue; }
+      const d = Math.sqrt(dx * dx + dy * dy);
+      if (d >= 1) {
+        buf[y * FW + x] = 0;
+        continue;
+      }
       // Shimmer: bright center fading to ~60% at edge
       const shimmer = 0.6 + 0.4 * (1 - d * d);
       buf[y * FW + x] = Math.round(255 * shimmer);
@@ -226,16 +235,16 @@ function genOgon() {
 // ── Main ─────────────────────────────────────────────────────────────────────
 
 const patterns = [
-  { name: 'koi-mask-kohaku.png', gen: genKohaku },
-  { name: 'koi-mask-sanke.png',  gen: genSanke  },
-  { name: 'koi-mask-showa.png',  gen: genShowa  },
-  { name: 'koi-mask-ogon.png',   gen: genOgon   },
+  { name: "koi-mask-kohaku.png", gen: genKohaku },
+  { name: "koi-mask-sanke.png", gen: genSanke },
+  { name: "koi-mask-showa.png", gen: genShowa },
+  { name: "koi-mask-ogon.png", gen: genOgon },
 ];
 
 for (const { name, gen } of patterns) {
   const frameBuf = gen();
-  const sheet    = tileToSheet(frameBuf);
+  const sheet = tileToSheet(frameBuf);
   save(sheet, name);
 }
 
-console.log('\nAll 4 koi pattern masks generated.');
+console.log("\nAll 4 koi pattern masks generated.");

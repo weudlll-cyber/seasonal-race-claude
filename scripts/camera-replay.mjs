@@ -35,44 +35,66 @@
 //   --no-png         skip the pictures, print numbers only
 // ============================================================
 
-import { readFileSync, writeFileSync, mkdirSync, existsSync, readdirSync } from 'node:fs';
-import { join, dirname } from 'node:path';
-import { fileURLToPath, pathToFileURL } from 'node:url';
+import {
+  readFileSync,
+  writeFileSync,
+  mkdirSync,
+  existsSync,
+  readdirSync,
+} from "node:fs";
+import { join, dirname } from "node:path";
+import { fileURLToPath, pathToFileURL } from "node:url";
 
-const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
+const ROOT = join(dirname(fileURLToPath(import.meta.url)), "..");
 const u = (p) => pathToFileURL(p).href;
 
 // ── Client modules — the REAL ones the browser runs. ─────────────────────────────────────────
 const { parseMarkerLine, applyConfigDiff, isReplayable } = await import(
-  u(join(ROOT, 'client/src/modules/camera/cameraMarker.js'))
+  u(join(ROOT, "client/src/modules/camera/cameraMarker.js"))
 );
-const { DEFAULT_CONFIG_WORLD } = await import(u(join(ROOT, 'client/src/modules/storage/defaults.js')));
-const { CameraDirector } = await import(u(join(ROOT, 'client/src/modules/camera/CameraDirector.js')));
-const { OPEN_TRACK_BASE_ZOOM } = await import(u(join(ROOT, 'client/src/modules/camera/projection.js')));
-const { effectiveZoom } = await import(u(join(ROOT, 'client/src/modules/camera/openTrackCamera.js')));
-const { EditorShape } = await import(u(join(ROOT, 'client/src/modules/track-editor/EditorShape.js')));
+const { DEFAULT_CONFIG_WORLD } = await import(
+  u(join(ROOT, "client/src/modules/storage/defaults.js"))
+);
+const { CameraDirector } = await import(
+  u(join(ROOT, "client/src/modules/camera/CameraDirector.js"))
+);
+const { OPEN_TRACK_BASE_ZOOM } = await import(
+  u(join(ROOT, "client/src/modules/camera/projection.js"))
+);
+const { effectiveZoom } = await import(
+  u(join(ROOT, "client/src/modules/camera/openTrackCamera.js"))
+);
+const { EditorShape } = await import(
+  u(join(ROOT, "client/src/modules/track-editor/EditorShape.js"))
+);
 const { createRaceFromIdentity, stepRacePhysics, FIXED_DT } = await import(
-  u(join(ROOT, 'client/src/modules/raceCore.js'))
+  u(join(ROOT, "client/src/modules/raceCore.js"))
 );
-const { normalSpeedFrom, MIN_LAPS } = await import(u(join(ROOT, 'client/src/modules/durationModel.js')));
+const { normalSpeedFrom, MIN_LAPS } = await import(
+  u(join(ROOT, "client/src/modules/durationModel.js"))
+);
 const { computeRacerLayout, computeBodyNarrowRef } = await import(
-  u(join(ROOT, 'client/src/modules/rowLayout.js'))
+  u(join(ROOT, "client/src/modules/rowLayout.js"))
 );
 // racer-types warms sprite images at import time; headless there is no Image, and it says so 31
 // times. The failures are cosmetic (this replay draws no sprites) — mute the boot, not the module.
 const { getRacerType, applyTunableOverride } = await (async () => {
   const realError = console.error;
   console.error = (...a) => {
-    if (!String(a[0] ?? '').startsWith('[warmup]')) realError(...a);
+    if (!String(a[0] ?? "").startsWith("[warmup]")) realError(...a);
   };
   try {
-    return await import(u(join(ROOT, 'client/src/modules/racer-types/index.js')));
+    return await import(
+      u(join(ROOT, "client/src/modules/racer-types/index.js"))
+    );
   } finally {
     console.error = realError;
   }
 })();
-const { lerp, lerpAngle } = await import(u(join(ROOT, 'client/src/utils/mathUtils.js')));
-const { Frame } = await import(u(join(ROOT, 'scripts/lib/pngFrame.mjs')));
+const { lerp, lerpAngle } = await import(
+  u(join(ROOT, "client/src/utils/mathUtils.js"))
+);
+const { Frame } = await import(u(join(ROOT, "scripts/lib/pngFrame.mjs")));
 
 const CANVAS_W = 1280;
 const CANVAS_H = 720;
@@ -84,21 +106,22 @@ const arg = (k, d) => {
   return m ? m.slice(k.length + 3) : d;
 };
 const has = (k) => argv.includes(`--${k}`);
-const OUT_DIR = arg('out', join(ROOT, 'client/tmp/camera-replay'));
-const WINDOW = Number(arg('window', '8'));
-const WRITE_PNG = !has('no-png');
+const OUT_DIR = arg("out", join(ROOT, "client/tmp/camera-replay"));
+const WINDOW = Number(arg("window", "8"));
+const WRITE_PNG = !has("no-png");
 
 async function readMarkerLine() {
-  const inline = arg('marker', null);
+  const inline = arg("marker", null);
   if (inline) return inline;
-  const file = arg('marker-file', null);
-  if (file) return readFileSync(file, 'utf8');
-  const positional = argv.find((a) => !a.startsWith('--'));
-  if (positional && existsSync(positional)) return readFileSync(positional, 'utf8');
+  const file = arg("marker-file", null);
+  if (file) return readFileSync(file, "utf8");
+  const positional = argv.find((a) => !a.startsWith("--"));
+  if (positional && existsSync(positional))
+    return readFileSync(positional, "utf8");
   if (positional) return positional;
   const chunks = [];
   for await (const c of process.stdin) chunks.push(c);
-  return Buffer.concat(chunks).toString('utf8');
+  return Buffer.concat(chunks).toString("utf8");
 }
 
 // ── Track geometry ────────────────────────────────────────────────────────────────────────────
@@ -107,28 +130,34 @@ async function readMarkerLine() {
 // served, edits included) and the committed seed snapshot. Live first, seeds as fallback, and if
 // the id is in neither we say so rather than replaying a different track.
 function resolveGeometry(geometryId) {
-  const dirs = [join(ROOT, 'server/data/tracks'), join(ROOT, 'server/seeds/tracks')];
+  const dirs = [
+    join(ROOT, "server/data/tracks"),
+    join(ROOT, "server/seeds/tracks"),
+  ];
   for (const dir of dirs) {
     if (!existsSync(dir)) continue;
     for (const file of readdirSync(dir)) {
-      if (!file.endsWith('.json')) continue;
+      if (!file.endsWith(".json")) continue;
       let json;
       try {
-        json = JSON.parse(readFileSync(join(dir, file), 'utf8'));
+        json = JSON.parse(readFileSync(join(dir, file), "utf8"));
       } catch {
         continue;
       }
       if (json.geometryId === geometryId || json.id === geometryId) {
         // trackLoader.js re-keys the server payload before caching it; mirror that so the shape
         // this script builds is the shape the browser built.
-        return { geometry: { ...json, id: json.geometryId ?? json.id }, source: join(dir, file) };
+        return {
+          geometry: { ...json, id: json.geometryId ?? json.id },
+          source: join(dir, file),
+        };
       }
     }
   }
   throw new Error(
     `track geometry ${geometryId} not found in server/data/tracks or server/seeds/tracks — ` +
       `this replay would otherwise run a DIFFERENT track. Start the API once so it seeds its data ` +
-      `root, or export the geometry from the Track Editor into server/data/tracks/.`
+      `root, or export the geometry from the Track Editor into server/data/tracks/.`,
   );
 }
 
@@ -155,30 +184,39 @@ function buildRace(marker, world, geometry) {
   // browser's boot does, so speedMultiplier / body geometry match his world.
   for (const [id, fields] of Object.entries(marker.cfg?.types ?? {})) {
     for (const [field, value] of Object.entries(fields ?? {})) {
-      if (field === 'isActive') continue;
+      if (field === "isActive") continue;
       applyTunableOverride(id, field, value);
     }
   }
-  const racerType = getRacerType(race.type ?? 'horse');
+  const racerType = getRacerType(race.type ?? "horse");
   const speedMultiplier = racerType.getSpeedMultiplier();
   const displaySize = racerType.config.displaySize;
-  const _bfNarrowRaw = Math.min(racerType.config.bodyFillX, racerType.config.bodyFillY);
-  const _bfLongRaw = Math.max(racerType.config.bodyFillX, racerType.config.bodyFillY);
-  const bodyFillNarrow = Number.isFinite(_bfNarrowRaw) && _bfNarrowRaw > 0 ? _bfNarrowRaw : 1.0;
-  const bodyFillLong = Number.isFinite(_bfLongRaw) && _bfLongRaw > 0 ? _bfLongRaw : 1.0;
+  const _bfNarrowRaw = Math.min(
+    racerType.config.bodyFillX,
+    racerType.config.bodyFillY,
+  );
+  const _bfLongRaw = Math.max(
+    racerType.config.bodyFillX,
+    racerType.config.bodyFillY,
+  );
+  const bodyFillNarrow =
+    Number.isFinite(_bfNarrowRaw) && _bfNarrowRaw > 0 ? _bfNarrowRaw : 1.0;
+  const bodyFillLong =
+    Number.isFinite(_bfLongRaw) && _bfLongRaw > 0 ? _bfLongRaw : 1.0;
   const effectiveWidth = trackWidthPx * behaviorConfig.startSpreadRange;
   const nRacers = race.n;
 
   let physicalSpriteSize = displaySize;
   let displaySizeScale = 1;
   if (autoScaleConfig.enabled) {
-    const hasDisplaySizeOverride = 'displaySize' in (marker.cfg?.types?.[race.type] ?? {});
+    const hasDisplaySizeOverride =
+      "displaySize" in (marker.cfg?.types?.[race.type] ?? {});
     if (!hasDisplaySizeOverride) {
       physicalSpriteSize = computeRacerLayout(
         effectiveWidth,
         nRacers,
         displaySize,
-        autoScaleConfig
+        autoScaleConfig,
       ).spriteSize;
       const W_REF = Math.min(285, effectiveWidth);
       const bodyRef = computeBodyNarrowRef(
@@ -186,7 +224,7 @@ function buildRace(marker, world, geometry) {
         nRacers,
         displaySize,
         bodyFillNarrow,
-        autoScaleConfig
+        autoScaleConfig,
       );
       displaySizeScale = bodyRef.bodyNarrow / displaySize;
     }
@@ -235,7 +273,15 @@ function buildRace(marker, world, geometry) {
 
 // ── The replay loop — RaceScreen's rAF loop, driven at a canonical 60 fps ──────────────────────
 function replayTo(marker, built, cameraConfig, frameTimingConfig) {
-  const { state: st, config: raceCfg, meta, shape, isOpenTrack, worldWidth, worldHeight } = built;
+  const {
+    state: st,
+    config: raceCfg,
+    meta,
+    shape,
+    isOpenTrack,
+    worldWidth,
+    worldHeight,
+  } = built;
   const bsX = CANVAS_W / worldWidth;
   const bsY = CANVAS_H / worldHeight;
   const cd = new CameraDirector(
@@ -244,11 +290,12 @@ function replayTo(marker, built, cameraConfig, frameTimingConfig) {
     isOpenTrack,
     cameraConfig,
     built.drawnBodyWidthRefPx,
-    shape
+    shape,
   );
   // THE reason a camera replay is possible at all: the director's own dice, replayed.
   cd.setRandomSeed(marker.cam?.seed ?? 0);
-  if (meta.racePlanEnabled && meta.rpPlanInfo?.b1Indices) cd.updateRacePlan(meta.rpPlanInfo.b1Indices);
+  if (meta.racePlanEnabled && meta.rpPlanInfo?.b1Indices)
+    cd.updateRacePlan(meta.rpPlanInfo.b1Indices);
 
   const RAW_DT = 1000 / 60;
   const countdownMs = cameraConfig.countdownDurationMs ?? 4000;
@@ -283,8 +330,8 @@ function replayTo(marker, built, cameraConfig, frameTimingConfig) {
     // ── slow-motion (BATTLE / PHOTO_FINISH) — it scales physics time, so the replay needs it to
     // keep physics ms and wall ms in the same relation the browser had.
     const hud = cd.hudState;
-    const isBattleZoom = hud === 'BATTLE_ZOOM';
-    const isPhotoFinish = hud === 'PHOTO_FINISH';
+    const isBattleZoom = hud === "BATTLE_ZOOM";
+    const isPhotoFinish = hud === "PHOTO_FINISH";
     const isSlowmoState = isBattleZoom || isPhotoFinish;
     const smFactor = isPhotoFinish
       ? (cameraConfig.photoFinishSlowmoFactor ?? 0.5)
@@ -319,7 +366,10 @@ function replayTo(marker, built, cameraConfig, frameTimingConfig) {
         }
       }
       if (meta.racePlanController && st.racers.some((r) => !r.finished)) {
-        rpPhase = meta.racePlanController.getPhase(st.physicsTs, st.raceProgress);
+        rpPhase = meta.racePlanController.getPhase(
+          st.physicsTs,
+          st.raceProgress,
+        );
       }
       physicsAccum -= FIXED_DT;
     }
@@ -335,7 +385,11 @@ function replayTo(marker, built, cameraConfig, frameTimingConfig) {
         renderBuf[i].t = lerp(r._prevT ?? r.t, r.t, renderAlpha);
         renderBuf[i].x = lerp(r._prevX ?? r.x, r.x, renderAlpha);
         renderBuf[i].y = lerp(r._prevY ?? r.y, r.y, renderAlpha);
-        renderBuf[i].angle = lerpAngle(r._prevAngle ?? r.angle, r.angle, renderAlpha);
+        renderBuf[i].angle = lerpAngle(
+          r._prevAngle ?? r.angle,
+          r.angle,
+          renderAlpha,
+        );
       }
       renderRacers = renderBuf;
     }
@@ -348,14 +402,16 @@ function replayTo(marker, built, cameraConfig, frameTimingConfig) {
         finishedCount: st.finishedCount,
         winner: st.racers.find((r) => r.finishRank === 1) ?? null,
         finishT: st.finishT,
-        isOutcomePhase: rpPhase === 'OUTCOME',
+        isOutcomePhase: rpPhase === "OUTCOME",
         physicsRacers: st.racers,
       },
       CANVAS_W,
       CANVAS_H,
-      RAW_DT
+      RAW_DT,
     );
-    const effZoomX = isOpenTrack ? effectiveZoom(cam.zoom, OPEN_TRACK_BASE_ZOOM) : cam.zoom * bsX;
+    const effZoomX = isOpenTrack
+      ? effectiveZoom(cam.zoom, OPEN_TRACK_BASE_ZOOM)
+      : cam.zoom * bsX;
     const effZoomY = isOpenTrack ? effZoomX : cam.zoom * bsY;
     const row = {
       pts: st.physicsTs,
@@ -385,7 +441,11 @@ function replayTo(marker, built, cameraConfig, frameTimingConfig) {
       // moment and failed every racer by a uniform +8 frames of travel, which reads exactly like a
       // physics divergence. The physics was never wrong — at step 584 the leader is at 0.235445, the
       // marker's value to six decimals. Only the reader was standing in the wrong frame.
-      hit = { row, frames: trace.length, racers: st.racers.map((r) => ({ ...r })) };
+      hit = {
+        row,
+        frames: trace.length,
+        racers: st.racers.map((r) => ({ ...r })),
+      };
       // Keep going for WINDOW more frames so the trace shows what happened NEXT.
       if (WINDOW <= 0) break;
     }
@@ -444,7 +504,8 @@ function renderCameraFrame(shape, racers, cam, innerFramePct) {
   for (const r of racers) {
     const cx = sx(r.x);
     const cy = sy(r.y);
-    if (cx < -30 || cx > CANVAS_W + 30 || cy < -30 || cy > CANVAS_H + 30) continue;
+    if (cx < -30 || cx > CANVAS_W + 30 || cy < -30 || cy > CANVAS_H + 30)
+      continue;
     f.circle(cx, cy, 8, COL.halo);
     f.circle(cx, cy, 6, r === leader ? COL.leader : COL.racer);
   }
@@ -458,40 +519,43 @@ function renderCameraFrame(shape, racers, cam, innerFramePct) {
 }
 
 // ── Report helpers ────────────────────────────────────────────────────────────────────────────
-const pad = (s, n) => String(s ?? '—').padEnd(n);
-const num = (v, d = 3) => (typeof v === 'number' ? v.toFixed(d) : '—');
+const pad = (s, n) => String(s ?? "—").padEnd(n);
+const num = (v, d = 3) => (typeof v === "number" ? v.toFixed(d) : "—");
 
 function compareRow(label, markerVal, replayVal, tol) {
-  const both = typeof markerVal === 'number' && typeof replayVal === 'number';
+  const both = typeof markerVal === "number" && typeof replayVal === "number";
   const delta = both ? replayVal - markerVal : null;
-  const ok =
-    both ? Math.abs(delta) <= tol : String(markerVal ?? '') === String(replayVal ?? '');
+  const ok = both
+    ? Math.abs(delta) <= tol
+    : String(markerVal ?? "") === String(replayVal ?? "");
   return `  ${pad(label, 16)} ${pad(both ? num(markerVal) : markerVal, 14)} ${pad(
     both ? num(replayVal) : replayVal,
-    14
-  )} ${pad(delta === null ? '' : (delta >= 0 ? '+' : '') + num(delta), 12)} ${ok ? 'match' : 'DIFF'}`;
+    14,
+  )} ${pad(delta === null ? "" : (delta >= 0 ? "+" : "") + num(delta), 12)} ${ok ? "match" : "DIFF"}`;
 }
 
 // ── Main ──────────────────────────────────────────────────────────────────────────────────────
 const marker = parseMarkerLine(await readMarkerLine());
 
-console.log('CAMERA-REPRO-1 replay');
-console.log(`  marker taken at ${marker.at ?? '?'} on build ${marker.build ?? '?'}`);
+console.log("CAMERA-REPRO-1 replay");
 console.log(
-  `  race    ${marker.race.track ?? '?'} · ${marker.race.n} × ${marker.race.type} · seed ${marker.race.seed}`
+  `  marker taken at ${marker.at ?? "?"} on build ${marker.build ?? "?"}`,
 );
 console.log(
-  `  moment  physicsTs=${marker.moment.pts} ms (${((marker.moment.prog ?? 0) * 100).toFixed(1)}% of race) · cameraSeed=${marker.cam?.seed ?? 0}`
+  `  race    ${marker.race.track ?? "?"} · ${marker.race.n} × ${marker.race.type} · seed ${marker.race.seed}`,
 );
 console.log(
-  `  logs    frameLog=${marker.moment.log?.frame ? 'ON' : 'off'} detourLog=${marker.moment.log?.detour ? 'ON' : 'off'}`
+  `  moment  physicsTs=${marker.moment.pts} ms (${((marker.moment.prog ?? 0) * 100).toFixed(1)}% of race) · cameraSeed=${marker.cam?.seed ?? 0}`,
+);
+console.log(
+  `  logs    frameLog=${marker.moment.log?.frame ? "ON" : "off"} detourLog=${marker.moment.log?.detour ? "ON" : "off"}`,
 );
 
 if (!isReplayable(marker)) {
   console.error(
-    '\nSTOP — this race ran with racePlanSeed 0 (unseeded). Its physics came from an unseeded\n' +
-      'Math.random and CANNOT be reproduced by anything, including this script. Mark a Quick Test\n' +
-      'race (which always draws and records a seed) to get a replayable moment.'
+    "\nSTOP — this race ran with racePlanSeed 0 (unseeded). Its physics came from an unseeded\n" +
+      "Math.random and CANNOT be reproduced by anything, including this script. Mark a Quick Test\n" +
+      "race (which always draws and records a seed) to get a replayable moment.",
   );
   process.exit(2);
 }
@@ -502,15 +566,24 @@ console.log(`  track   ${source}`);
 const world = applyConfigDiff(DEFAULT_CONFIG_WORLD, marker.cfg?.diff ?? {});
 const diffCount = Object.values(marker.cfg?.diff ?? {}).reduce(
   (n, block) => n + Object.keys(block).length,
-  0
+  0,
 );
-console.log(`  config  defaults + ${diffCount} off-default key(s) from the marker · fp ${marker.cfg?.fp ?? '?'}`);
+console.log(
+  `  config  defaults + ${diffCount} off-default key(s) from the marker · fp ${marker.cfg?.fp ?? "?"}`,
+);
 
 const built = buildRace(marker, world, geometry);
-const { hit, trace, bsX } = replayTo(marker, built, world.cameraConfig, world.frameTimingConfig);
+const { hit, trace, bsX } = replayTo(
+  marker,
+  built,
+  world.cameraConfig,
+  world.frameTimingConfig,
+);
 
 if (!hit) {
-  console.error(`\nFAILED — the replay never reached physicsTs ${marker.moment.pts}.`);
+  console.error(
+    `\nFAILED — the replay never reached physicsTs ${marker.moment.pts}.`,
+  );
   process.exit(1);
 }
 
@@ -530,10 +603,16 @@ const nameOk = (leader?.name ?? null) === (w.leader ?? null);
 const tOk = Math.abs(leader.t - (w.lt ?? 0)) < 1e-6;
 const sumOk = Math.abs(tSum - (w.tsum ?? 0)) < 1e-4;
 
-console.log('\nWITNESS — is this the same race, at the same moment?');
-console.log(`  leader name   marker ${pad(w.leader, 14)} replay ${pad(leader?.name, 14)} ${nameOk ? 'match' : 'DIFF'}`);
-console.log(`  leader t      marker ${pad(num(w.lt, 6), 14)} replay ${pad(num(leader.t, 6), 14)} ${tOk ? 'match' : 'DIFF'}`);
-console.log(`  field t-sum   marker ${pad(num(w.tsum, 6), 14)} replay ${pad(num(tSum, 6), 14)} ${sumOk ? 'match' : 'DIFF'}`);
+console.log("\nWITNESS — is this the same race, at the same moment?");
+console.log(
+  `  leader name   marker ${pad(w.leader, 14)} replay ${pad(leader?.name, 14)} ${nameOk ? "match" : "DIFF"}`,
+);
+console.log(
+  `  leader t      marker ${pad(num(w.lt, 6), 14)} replay ${pad(num(leader.t, 6), 14)} ${tOk ? "match" : "DIFF"}`,
+);
+console.log(
+  `  field t-sum   marker ${pad(num(w.tsum, 6), 14)} replay ${pad(num(tSum, 6), 14)} ${sumOk ? "match" : "DIFF"}`,
+);
 
 // Per-racer check. The leader alone is a weak witness — an authored plan pins the front-runner, so
 // it can match while the field behind it does not. Name the racers that differ; a witness that only
@@ -545,105 +624,130 @@ if (Array.isArray(w.tvec)) {
   for (let i = 0; i < w.tvec.length; i++) {
     const mine = byIndex.get(i);
     const d = mine ? mine.t - w.tvec[i] : NaN;
-    if (!(Math.abs(d) < 1e-4)) off.push({ i, name: mine?.name ?? `#${i}`, marker: w.tvec[i], replay: mine?.t, d });
+    if (!(Math.abs(d) < 1e-4))
+      off.push({
+        i,
+        name: mine?.name ?? `#${i}`,
+        marker: w.tvec[i],
+        replay: mine?.t,
+        d,
+      });
   }
   vecOk = off.length === 0;
   console.log(
     `  per-racer t   ${w.tvec.length - off.length} of ${w.tvec.length} racers match to 1e-4` +
-      (vecOk ? '' : ` — ${off.length} DIFFER:`)
+      (vecOk ? "" : ` — ${off.length} DIFFER:`),
   );
   for (const o of off.slice(0, 12)) {
     console.log(
       `      #${String(o.i).padStart(2)} ${pad(o.name, 10)} marker ${pad(num(o.marker, 5), 10)} replay ${pad(
         num(o.replay, 5),
-        10
-      )} Δ ${(o.d >= 0 ? '+' : '') + num(o.d, 5)}`
+        10,
+      )} Δ ${(o.d >= 0 ? "+" : "") + num(o.d, 5)}`,
     );
   }
   if (off.length > 12) console.log(`      … and ${off.length - 12} more`);
 } else {
-  console.log('  per-racer t   not in this marker (line was too long — tsum is the only field witness)');
+  console.log(
+    "  per-racer t   not in this marker (line was too long — tsum is the only field witness)",
+  );
 }
 
 const witnessOk = nameOk && tOk && sumOk && vecOk;
-console.log(`  → ${witnessOk ? 'REPRODUCED — the world below is the world he saw.' : 'REPRODUCTION FAILED — do not trust anything below.'}`);
+console.log(
+  `  → ${witnessOk ? "REPRODUCED — the world below is the world he saw." : "REPRODUCTION FAILED — do not trust anything below."}`,
+);
 
 // ── The camera: how close did the reconstruction land? ────────────────────────────────────────
 const s = marker.shot;
 const h = hit.row;
-console.log('\nCAMERA at the marked frame        marker         replay         delta');
-console.log(compareRow('state', s.st, h.st, 0));
-console.log(compareRow('lerpPhase', s.lp, h.lp, 0));
-console.log(compareRow('observerPhase', s.op, h.op, 0));
-console.log(compareRow('anchor', s.anchor, h.anchor, 0));
-console.log(compareRow('zoom', s.z, h.z, 0.02));
-console.log(compareRow('offsetX px', s.ox, h.ox, 20));
-console.log(compareRow('offsetY px', s.oy, h.oy, 20));
-console.log(compareRow('targetZoom', s.tz, h.tz, 0.02));
-console.log(compareRow('targetOffX px', s.tox, h.tox, 20));
-console.log(compareRow('targetOffY px', s.toy, h.toy, 20));
-console.log(compareRow('camT', s.ct, h.ct, 0.01));
-console.log(compareRow('effZoomX', s.ezx, h.ezx, 0.02));
-console.log(compareRow('effZoomY', s.ezy, h.ezy, 0.02));
+console.log(
+  "\nCAMERA at the marked frame        marker         replay         delta",
+);
+console.log(compareRow("state", s.st, h.st, 0));
+console.log(compareRow("lerpPhase", s.lp, h.lp, 0));
+console.log(compareRow("observerPhase", s.op, h.op, 0));
+console.log(compareRow("anchor", s.anchor, h.anchor, 0));
+console.log(compareRow("zoom", s.z, h.z, 0.02));
+console.log(compareRow("offsetX px", s.ox, h.ox, 20));
+console.log(compareRow("offsetY px", s.oy, h.oy, 20));
+console.log(compareRow("targetZoom", s.tz, h.tz, 0.02));
+console.log(compareRow("targetOffX px", s.tox, h.tox, 20));
+console.log(compareRow("targetOffY px", s.toy, h.toy, 20));
+console.log(compareRow("camT", s.ct, h.ct, 0.01));
+console.log(compareRow("effZoomX", s.ezx, h.ezx, 0.02));
+console.log(compareRow("effZoomY", s.ezy, h.ezy, 0.02));
 console.log(
   `  (tolerances: state/anchor exact; zoom ±0.02; pan ±20 px. The camera is a wall-clock follower —\n` +
-    `   see the header of this file for why exact pan equality is not on offer.)`
+    `   see the header of this file for why exact pan equality is not on offer.)`,
 );
 
 // ── The moment in context ─────────────────────────────────────────────────────────────────────
 if (WINDOW > 0) {
-  console.log(`\nTRACE — ${WINDOW} frames either side of the mark (▶ = the marked frame)`);
-  console.log('    physicsTs  state            lerp      zoom     offsetX    offsetY   anchor');
+  console.log(
+    `\nTRACE — ${WINDOW} frames either side of the mark (▶ = the marked frame)`,
+  );
+  console.log(
+    "    physicsTs  state            lerp      zoom     offsetX    offsetY   anchor",
+  );
   for (const r of trace) {
     if (Math.abs(r.pts - h.pts) > WINDOW * FIXED_DT) continue;
     console.log(
-      `  ${r.pts === h.pts ? '▶' : ' '} ${pad(r.pts, 10)} ${pad(r.st, 16)} ${pad(r.lp, 9)} ${pad(
+      `  ${r.pts === h.pts ? "▶" : " "} ${pad(r.pts, 10)} ${pad(r.st, 16)} ${pad(r.lp, 9)} ${pad(
         num(r.z, 4),
-        8
-      )} ${pad(num(r.ox, 1), 10)} ${pad(num(r.oy, 1), 10)} ${r.anchor ?? '—'}`
+        8,
+      )} ${pad(num(r.ox, 1), 10)} ${pad(num(r.oy, 1), 10)} ${r.anchor ?? "—"}`,
     );
   }
 }
 
 // ── What is on screen ─────────────────────────────────────────────────────────────────────────
 // Screen positions under the MARKER's own camera — the honest answer to "was the leader in frame".
-const inner = world.cameraConfig.cameraStateProfiles?.[s.st]?.innerFramePct ?? 0.7;
+const inner =
+  world.cameraConfig.cameraStateProfiles?.[s.st]?.innerFramePct ?? 0.7;
 const mx = ((1 - inner) / 2) * CANVAS_W;
 const my = ((1 - inner) / 2) * CANVAS_H;
 const onScreen = markRacers
   .map((r) => ({ r, x: r.x * s.ezx + s.ox, y: r.y * s.ezy + s.oy }))
   .sort((a, b) => b.r.t - a.r.t);
-const inCanvas = onScreen.filter((p) => p.x >= 0 && p.x <= CANVAS_W && p.y >= 0 && p.y <= CANVAS_H);
+const inCanvas = onScreen.filter(
+  (p) => p.x >= 0 && p.x <= CANVAS_W && p.y >= 0 && p.y <= CANVAS_H,
+);
 const lead = onScreen[0];
-console.log('\nON SCREEN under the marker\'s own camera');
-console.log(`  racers in the 1280×720 frame : ${inCanvas.length} of ${markRacers.length}`);
+console.log("\nON SCREEN under the marker's own camera");
+console.log(
+  `  racers in the 1280×720 frame : ${inCanvas.length} of ${markRacers.length}`,
+);
 console.log(
   `  leader ${lead.r.name} at (${lead.x.toFixed(0)}, ${lead.y.toFixed(0)}) — ` +
-    `${lead.x >= 0 && lead.x <= CANVAS_W && lead.y >= 0 && lead.y <= CANVAS_H ? 'in frame' : 'OFF FRAME'}` +
-    `, ${lead.x >= mx && lead.x <= CANVAS_W - mx && lead.y >= my && lead.y <= CANVAS_H - my ? 'inside' : 'OUTSIDE'} the inner-${Math.round(inner * 100)} region`
+    `${lead.x >= 0 && lead.x <= CANVAS_W && lead.y >= 0 && lead.y <= CANVAS_H ? "in frame" : "OFF FRAME"}` +
+    `, ${lead.x >= mx && lead.x <= CANVAS_W - mx && lead.y >= my && lead.y <= CANVAS_H - my ? "inside" : "OUTSIDE"} the inner-${Math.round(inner * 100)} region`,
 );
 
 // SIM-NAMES-1: the field BY NAME. The whole point of the marker loop is that the owner says "Storm
 // drifted off the left edge" and the answer comes back about Storm — not about racer #7. The names
 // come from the marker, which took them from his own roster.
-const FIELD_ROWS = Number(arg('field', '8'));
+const FIELD_ROWS = Number(arg("field", "8"));
 if (FIELD_ROWS > 0) {
-  console.log(`\nFIELD AT THE MARK — top ${Math.min(FIELD_ROWS, onScreen.length)} by position, as he saw them`);
-  console.log('    pos  racer        screen x,y      in frame   inner-region');
+  console.log(
+    `\nFIELD AT THE MARK — top ${Math.min(FIELD_ROWS, onScreen.length)} by position, as he saw them`,
+  );
+  console.log("    pos  racer        screen x,y      in frame   inner-region");
   onScreen.slice(0, FIELD_ROWS).forEach((p, i) => {
     const onCanvas = p.x >= 0 && p.x <= CANVAS_W && p.y >= 0 && p.y <= CANVAS_H;
-    const inInner = p.x >= mx && p.x <= CANVAS_W - mx && p.y >= my && p.y <= CANVAS_H - my;
+    const inInner =
+      p.x >= mx && p.x <= CANVAS_W - mx && p.y >= my && p.y <= CANVAS_H - my;
     console.log(
       `    ${String(i + 1).padStart(3)}  ${pad(p.r.name, 12)} ${pad(
         `${p.x.toFixed(0)},${p.y.toFixed(0)}`,
-        15
-      )} ${pad(onCanvas ? 'yes' : 'NO', 10)} ${inInner ? 'inside' : 'outside'}`
+        15,
+      )} ${pad(onCanvas ? "yes" : "NO", 10)} ${inInner ? "inside" : "outside"}`,
     );
   });
   if (marker.race.namesOmitted) {
     console.log(
       `    (the marker's roster was dropped to keep the line short — ${marker.race.namesOmitted} racers,\n` +
-        `     so these are index placeholders, NOT the names he saw)`
+        `     so these are index placeholders, NOT the names he saw)`,
     );
   }
 }
@@ -651,28 +755,43 @@ if (FIELD_ROWS > 0) {
 // ── Pictures ──────────────────────────────────────────────────────────────────────────────────
 if (WRITE_PNG) {
   mkdirSync(OUT_DIR, { recursive: true });
-  const tag = `${marker.race.track ?? 'track'}-seed${marker.race.seed}-${marker.moment.pts}ms`.replace(
-    /[^\w.-]+/g,
-    '_'
-  );
+  const tag =
+    `${marker.race.track ?? "track"}-seed${marker.race.seed}-${marker.moment.pts}ms`.replace(
+      /[^\w.-]+/g,
+      "_",
+    );
   const ownerPng = join(OUT_DIR, `${tag}-OWNER.png`);
   const replayPng = join(OUT_DIR, `${tag}-REPLAY.png`);
   writeFileSync(
     ownerPng,
-    renderCameraFrame(built.shape, markRacers, { ox: s.ox, oy: s.oy, ezx: s.ezx, ezy: s.ezy }, inner)
+    renderCameraFrame(
+      built.shape,
+      markRacers,
+      { ox: s.ox, oy: s.oy, ezx: s.ezx, ezy: s.ezy },
+      inner,
+    ),
   );
   writeFileSync(
     replayPng,
-    renderCameraFrame(built.shape, markRacers, { ox: h.ox, oy: h.oy, ezx: h.ezx, ezy: h.ezy }, inner)
+    renderCameraFrame(
+      built.shape,
+      markRacers,
+      { ox: h.ox, oy: h.oy, ezx: h.ezx, ezy: h.ezy },
+      inner,
+    ),
   );
-  console.log('\nPICTURES');
+  console.log("\nPICTURES");
   console.log(`  ${ownerPng}`);
-  console.log('    exact world positions drawn with the camera FROM THE MARKER — his frame.');
-  console.log(`  ${replayPng}`);
-  console.log('    same world, camera as this replay reconstructed it — the difference is the drift.');
   console.log(
-    '  Both are FRAMING views (track outline, racer dots, leader cross, inner-frame guide).\n' +
-      '  No sprites, no background: what they answer is where things sat in the viewport.'
+    "    exact world positions drawn with the camera FROM THE MARKER — his frame.",
+  );
+  console.log(`  ${replayPng}`);
+  console.log(
+    "    same world, camera as this replay reconstructed it — the difference is the drift.",
+  );
+  console.log(
+    "  Both are FRAMING views (track outline, racer dots, leader cross, inner-frame guide).\n" +
+      "  No sprites, no background: what they answer is where things sat in the viewport.",
   );
 }
 
@@ -680,13 +799,13 @@ if (marker.moment.log?.detour) {
   console.log(
     `\nDETOUR LOG — it was ON in that session. Its window frames now carry a \`ts\` field on the same\n` +
       `clock as this marker's moment.cms=${num(marker.moment.cms, 0)} ms, so the [RA CAMERA DETOUR] line\n` +
-      `whose frames bracket that value is the one describing this moment.`
+      `whose frames bracket that value is the one describing this moment.`,
   );
 } else {
   console.log(
-    '\nDETOUR LOG — it was OFF in that session, so there is no per-transition WHAT to go with this\n' +
-      'WHERE. Turn on Dev Screen → Camera Advanced → cameraDetourLog before the next eye-test if the\n' +
-      'question is why the camera moved, not just where it was.'
+    "\nDETOUR LOG — it was OFF in that session, so there is no per-transition WHAT to go with this\n" +
+      "WHERE. Turn on Dev Screen → Camera Advanced → cameraDetourLog before the next eye-test if the\n" +
+      "question is why the camera moved, not just where it was.",
   );
 }
 

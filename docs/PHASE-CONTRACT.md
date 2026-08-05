@@ -138,7 +138,7 @@ pre-COMBO15 world where `pulkStart` was 0.25 == the `choreoOutcomeStart` minimum
   is `released` when `phaseProgress >= plan._choreoReleaseProgress` and its target rank ≤ `BAND_EDGES[0]`).
 - **What it gates.** When the leading (B1) heroes are RELEASED from their tight front cluster to natural
   speed for the final run-out (racePlanner.js:559-573): past release, `targetRank = currentRank ⇒
-  rankError 0 ⇒ servo 1.0 ⇒ natural speed`.
+rankError 0 ⇒ servo 1.0 ⇒ natural speed`.
 - **When it MOVES.** Earlier release = a longer natural run-out fight to the line; later = held in the
   cluster longer. Companions `choreoResolveB2..B5` (0.8/0.7/0.65/0.6) are the per-band resolve
   checkpoints for the non-B1 heroes.

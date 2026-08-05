@@ -12,29 +12,29 @@
 //              Output: 1024×64 px (16 frames × 64 wide).
 // ============================================================
 
-import { createRequire } from 'module';
-import fs from 'fs';
-import path from 'path';
-import { fileURLToPath } from 'url';
+import { createRequire } from "module";
+import fs from "fs";
+import path from "path";
+import { fileURLToPath } from "url";
 
 const require = createRequire(import.meta.url);
-const { PNG } = require('pngjs');
+const { PNG } = require("pngjs");
 
-const ROOT = path.resolve(fileURLToPath(import.meta.url), '../../');
-const SRC  = path.join(ROOT, 'client/public/assets/racers/Luger.png');
-const OUT  = path.join(ROOT, 'client/public/assets/racers/luge-slide.png');
+const ROOT = path.resolve(fileURLToPath(import.meta.url), "../../");
+const SRC = path.join(ROOT, "client/public/assets/racers/Luger.png");
+const OUT = path.join(ROOT, "client/public/assets/racers/luge-slide.png");
 
 const FRAME_COUNT = 16;
-const MAX_EXPAND  = 0.15;  // max 15% torso vertical scale
-const MAX_WOBBLE  = 2;     // max 2px horizontal shift (body excl. head)
-const TORSO_TOP_F = 0.25;  // torso starts at 25% of frame height
-const TORSO_BOT_F = 0.75;  // torso ends   at 75% of frame height
+const MAX_EXPAND = 0.15; // max 15% torso vertical scale
+const MAX_WOBBLE = 2; // max 2px horizontal shift (body excl. head)
+const TORSO_TOP_F = 0.25; // torso starts at 25% of frame height
+const TORSO_BOT_F = 0.75; // torso ends   at 75% of frame height
 
 // ---- load source ----
 const srcBuf = fs.readFileSync(SRC);
-const src    = PNG.sync.read(srcBuf);
-const W      = src.width;
-const H      = src.height;
+const src = PNG.sync.read(srcBuf);
+const W = src.width;
+const H = src.height;
 
 console.log(`Source: ${SRC}`);
 console.log(`Frame size: ${W} × ${H}  |  frames: ${FRAME_COUNT}`);
@@ -53,16 +53,18 @@ for (let y = 0; y < H; y++) {
     }
   }
 }
-console.log('Source rotated 180°');
+console.log("Source rotated 180°");
 
 // ---- zone boundaries ----
-const torsoTop = Math.round(H * TORSO_TOP_F);  // first torso row (inclusive)
-const torsoBot = Math.round(H * TORSO_BOT_F);  // first legs row  (exclusive)
+const torsoTop = Math.round(H * TORSO_TOP_F); // first torso row (inclusive)
+const torsoBot = Math.round(H * TORSO_BOT_F); // first legs row  (exclusive)
 const torsoMid = (torsoTop + torsoBot - 1) / 2;
-const headBot  = torsoTop;                      // head = rows 0 .. headBot-1
+const headBot = torsoTop; // head = rows 0 .. headBot-1
 
 console.log(`Head rows:  0 – ${headBot - 1}`);
-console.log(`Torso rows: ${torsoTop} – ${torsoBot - 1}  (center ${torsoMid.toFixed(1)})`);
+console.log(
+  `Torso rows: ${torsoTop} – ${torsoBot - 1}  (center ${torsoMid.toFixed(1)})`,
+);
 console.log(`Legs rows:  ${torsoBot} – ${H - 1}`);
 
 // ---- helpers ----
@@ -75,7 +77,7 @@ function readSrc(x, y) {
 function sampleBilinear(x, srcY) {
   const y0 = Math.floor(srcY);
   const y1 = Math.min(y0 + 1, H - 1);
-  const t  = srcY - y0;
+  const t = srcY - y0;
   const [r0, g0, b0, a0] = readSrc(x, y0);
   const [r1, g1, b1, a1] = readSrc(x, y1);
   return [
@@ -88,7 +90,7 @@ function sampleBilinear(x, srcY) {
 
 function writeDst(sheet, frame, x, y, rgba) {
   const i = (y * (W * FRAME_COUNT) + frame * W + x) * 4;
-  sheet.data[i]     = rgba[0];
+  sheet.data[i] = rgba[0];
   sheet.data[i + 1] = rgba[1];
   sheet.data[i + 2] = rgba[2];
   sheet.data[i + 3] = rgba[3];
@@ -104,19 +106,19 @@ for (let f = 0; f < FRAME_COUNT; f++) {
 
   // Breathing: sine curve — positive = expand, negative = slight compression.
   const breatheExpansion = MAX_EXPAND * Math.sin(phase);
-  const breatheScale     = 1 + breatheExpansion;
+  const breatheScale = 1 + breatheExpansion;
 
   // Wobble: cosine curve (90° ahead of breathing) — peaks when breath is at zero.
   const wobbleShift = Math.round(MAX_WOBBLE * Math.cos(phase));
 
   console.log(
     `  frame ${String(f).padStart(2)}: ` +
-    `breathe=${(breatheExpansion * 100).toFixed(1).padStart(5)}%  ` +
-    `wobble=${String(wobbleShift).padStart(3)}px`
+      `breathe=${(breatheExpansion * 100).toFixed(1).padStart(5)}%  ` +
+      `wobble=${String(wobbleShift).padStart(3)}px`,
   );
 
   for (let y = 0; y < H; y++) {
-    const inHead  = y < headBot;
+    const inHead = y < headBot;
     const inTorso = y >= torsoTop && y < torsoBot;
 
     for (let x = 0; x < W; x++) {
@@ -134,8 +136,11 @@ for (let f = 0; f < FRAME_COUNT; f++) {
 
         if (inTorso) {
           // Torso: apply breathing scale (centred on torsoMid) + wobble.
-          const srcYFloat   = torsoMid + (y - torsoMid) / breatheScale;
-          const srcYClamped = Math.max(torsoTop, Math.min(torsoBot - 1, srcYFloat));
+          const srcYFloat = torsoMid + (y - torsoMid) / breatheScale;
+          const srcYClamped = Math.max(
+            torsoTop,
+            Math.min(torsoBot - 1, srcYFloat),
+          );
           writeDst(sheet, f, x, y, sampleBilinear(srcX, srcYClamped));
         } else {
           // Legs: wobble only, pixel-exact vertical copy.

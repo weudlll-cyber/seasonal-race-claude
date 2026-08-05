@@ -10,7 +10,7 @@
 //              nothing else.
 // ============================================================
 
-import { deflateSync } from 'node:zlib';
+import { deflateSync } from "node:zlib";
 
 const CRC_TABLE = (() => {
   const t = new Uint32Array(256);
@@ -24,12 +24,13 @@ const CRC_TABLE = (() => {
 
 function crc32(buf) {
   let c = 0xffffffff;
-  for (let i = 0; i < buf.length; i++) c = CRC_TABLE[(c ^ buf[i]) & 0xff] ^ (c >>> 8);
+  for (let i = 0; i < buf.length; i++)
+    c = CRC_TABLE[(c ^ buf[i]) & 0xff] ^ (c >>> 8);
   return (c ^ 0xffffffff) >>> 0;
 }
 
 function chunk(type, data) {
-  const tb = Buffer.from(type, 'ascii');
+  const tb = Buffer.from(type, "ascii");
   const len = Buffer.allocUnsafe(4);
   len.writeUInt32BE(data.length, 0);
   const crc = Buffer.allocUnsafe(4);
@@ -64,7 +65,10 @@ export class Frame {
     // Reject segments that are wildly off-canvas: at high zoom a track edge can project to
     // millions of pixels and Bresenham would walk every one of them.
     const LIMIT = 1e5;
-    if (![x0, y0, x1, y1].every((v) => Number.isFinite(v) && Math.abs(v) < LIMIT)) return;
+    if (
+      ![x0, y0, x1, y1].every((v) => Number.isFinite(v) && Math.abs(v) < LIMIT)
+    )
+      return;
     x0 = Math.round(x0);
     y0 = Math.round(y0);
     x1 = Math.round(x1);
@@ -131,9 +135,9 @@ export class Frame {
     ihdr[12] = 0;
     return Buffer.concat([
       Buffer.from([137, 80, 78, 71, 13, 10, 26, 10]),
-      chunk('IHDR', ihdr),
-      chunk('IDAT', deflateSync(raw, { level: 6 })),
-      chunk('IEND', Buffer.alloc(0)),
+      chunk("IHDR", ihdr),
+      chunk("IDAT", deflateSync(raw, { level: 6 })),
+      chunk("IEND", Buffer.alloc(0)),
     ]);
   }
 }

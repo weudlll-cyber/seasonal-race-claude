@@ -30,7 +30,7 @@
 // in BOTH directions (camera claimed ~85 s and costs 47; render claimed ~30 s and costs 15) and
 // nothing checked it. A number the script measures itself cannot go stale.
 const __t0 = Date.now();
-process.on('exit', () => {
+process.on("exit", () => {
   // NIGHT-TOOLS-1: MACHINE-READABLE, because a human string has to be re-parsed by
   // whatever generates the ceremony's cost column, and a parser of prose is the defect
   // that column already had. `scripts/gen-ceremony-costs.mjs` reads exactly this token.
@@ -39,17 +39,17 @@ process.on('exit', () => {
 `);
 });
 
-import { readFileSync } from 'node:fs';
-import { execSync } from 'node:child_process';
-import { resolve } from 'node:path';
+import { readFileSync } from "node:fs";
+import { execSync } from "node:child_process";
+import { resolve } from "node:path";
 
 const argVal = (k, d) => {
   const p = process.argv.slice(2).find((a) => a.startsWith(`--${k}=`));
   return p ? p.slice(k.length + 3) : d;
 };
 
-const TAGS_MD = resolve(argVal('tags-md', 'docs/TAGS.md'));
-const TAGS_FILE = argVal('tags-file', null); // test override: a file in `git ls-remote --tags` format
+const TAGS_MD = resolve(argVal("tags-md", "docs/TAGS.md"));
+const TAGS_FILE = argVal("tags-file", null); // test override: a file in `git ls-remote --tags` format
 
 function fail(msg) {
   console.error(`check-tags: FAIL — ${msg}`);
@@ -60,11 +60,11 @@ function fail(msg) {
 // "<name>^{}" lines that annotated tags emit.
 function parseLsRemote(raw) {
   const tags = [];
-  for (const line of raw.split('\n')) {
+  for (const line of raw.split("\n")) {
     const m = line.match(/^(\S+)\s+refs\/tags\/(.+)$/);
     if (!m) continue;
     const [, sha, name] = m;
-    if (name.endsWith('^{}')) continue;
+    if (name.endsWith("^{}")) continue;
     tags.push({ sha: sha.slice(0, 7), name });
   }
   return tags;
@@ -73,24 +73,24 @@ function parseLsRemote(raw) {
 let tags;
 try {
   const raw = TAGS_FILE
-    ? readFileSync(resolve(TAGS_FILE), 'utf8')
-    : execSync('git ls-remote --tags origin', { encoding: 'utf8' });
+    ? readFileSync(resolve(TAGS_FILE), "utf8")
+    : execSync("git ls-remote --tags origin", { encoding: "utf8" });
   tags = parseLsRemote(raw);
 } catch (e) {
   fail(
-    `could not obtain the tag list (${TAGS_FILE ? `file ${TAGS_FILE}` : 'git ls-remote --tags origin'}): ${e.message}. A run that cannot see the tags must break the build, not bless it (Lesson 187).`
+    `could not obtain the tag list (${TAGS_FILE ? `file ${TAGS_FILE}` : "git ls-remote --tags origin"}): ${e.message}. A run that cannot see the tags must break the build, not bless it (Lesson 187).`,
   );
 }
 
 if (tags.length === 0) {
   fail(
-    `tag list is EMPTY. A CI checkout that omits tags must fail, never pass silently (Lesson 187).`
+    `tag list is EMPTY. A CI checkout that omits tags must fail, never pass silently (Lesson 187).`,
   );
 }
 
 let tagsMd;
 try {
-  tagsMd = readFileSync(TAGS_MD, 'utf8');
+  tagsMd = readFileSync(TAGS_MD, "utf8");
 } catch (e) {
   fail(`cannot read tag register ${TAGS_MD}: ${e.message}`);
 }
@@ -99,10 +99,12 @@ try {
 // longer name (so `pre/motion` is NOT satisfied by `pre/motion-2` in the register). Tag names are
 // made of [A-Za-z0-9_./-]; a match must be bounded by a character outside that set (or string edge).
 // Mirrors the link-target discipline check-index uses for report filenames.
-const TAG_CHAR = 'A-Za-z0-9_./-';
-const escapeRe = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+const TAG_CHAR = "A-Za-z0-9_./-";
+const escapeRe = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 const isRegistered = (name) =>
-  new RegExp(`(?<![${TAG_CHAR}])${escapeRe(name)}(?![${TAG_CHAR}])`).test(tagsMd);
+  new RegExp(`(?<![${TAG_CHAR}])${escapeRe(name)}(?![${TAG_CHAR}])`).test(
+    tagsMd,
+  );
 
 const unregistered = tags.filter((t) => !isRegistered(t.name));
 
@@ -123,7 +125,8 @@ const unregistered = tags.filter((t) => !isRegistered(t.name));
 // Measured on the real register: 48 declarations, all 48 real tags, ZERO false positives. It does not
 // reach the 18 legacy tags recorded in flat lists without a sha — those are covered by direction 1,
 // which passes. Precision is what matters here: a missed line is a far smaller sin than a false alarm.
-const DECLARATION = /^\s*[-*]\s+\*{0,2}`([A-Za-z0-9._/-]+)`\*{0,2}\s*\(\s*`[0-9a-f]{6,40}`/;
+const DECLARATION =
+  /^\s*[-*]\s+\*{0,2}`([A-Za-z0-9._/-]+)`\*{0,2}\s*\(\s*`[0-9a-f]{6,40}`/;
 
 // RETIRED TAGS ARE EXCLUDED EXPLICITLY, NOT BY ACCIDENT. The lifecycle collapses tags onto a phase
 // endpoint by an owner-approved keep-list, so the register legitimately names tags that no longer
@@ -140,27 +143,34 @@ const declaredMissing = [];
 // and counting lines would let the register's own cross-references inflate the number. That exact
 // ambiguity is why two counts of "the same thing" disagreed (TAG-GUARD-3 §1).
 const declaredSeen = new Set();
-let currentHeading = '';
-for (const [idx, line] of tagsMd.split('\n').entries()) {
-  if (/^#{1,6}\s/.test(line)) currentHeading = line.replace(/^#+\s*/, '').trim();
+let currentHeading = "";
+for (const [idx, line] of tagsMd.split("\n").entries()) {
+  if (/^#{1,6}\s/.test(line))
+    currentHeading = line.replace(/^#+\s*/, "").trim();
   const m = DECLARATION.exec(line);
   if (!m) continue;
   if (RETIRED_SECTION.test(currentHeading)) continue;
   if (declaredSeen.has(m[1])) continue;
   declaredSeen.add(m[1]);
   if (!originNames.has(m[1])) {
-    declaredMissing.push({ name: m[1], line: idx + 1, heading: currentHeading });
+    declaredMissing.push({
+      name: m[1],
+      line: idx + 1,
+      heading: currentHeading,
+    });
   }
 }
 const declaredChecked = declaredSeen.size;
 
 console.log(
   `check-tags: ${tags.length} origin tags checked, ${unregistered.length} unregistered; ` +
-    `${declaredChecked} declared in the register, ${declaredMissing.length} missing at origin.`
+    `${declaredChecked} declared in the register, ${declaredMissing.length} missing at origin.`,
 );
 
 if (unregistered.length > 0) {
-  console.error(`\nFAIL: ${unregistered.length} tag(s) at origin not registered in ${TAGS_MD}:`);
+  console.error(
+    `\nFAIL: ${unregistered.length} tag(s) at origin not registered in ${TAGS_MD}:`,
+  );
   for (const t of unregistered) console.error(`${t.name} -> ${t.sha}`);
 }
 
@@ -168,10 +178,12 @@ if (declaredMissing.length > 0) {
   console.error(
     `\nFAIL: ${declaredMissing.length} tag(s) declared in ${TAGS_MD} do NOT exist at origin.` +
       `\nA registered tag that exists nowhere is the failure this guard was built after — either push` +
-      `\nthe tag, or move its entry under a RETIRED/COLLAPSED heading if it was deliberately collapsed.`
+      `\nthe tag, or move its entry under a RETIRED/COLLAPSED heading if it was deliberately collapsed.`,
   );
   for (const d of declaredMissing) {
-    console.error(`${d.name} -> declared at ${TAGS_MD}:${d.line} under "${d.heading}"`);
+    console.error(
+      `${d.name} -> declared at ${TAGS_MD}:${d.line} under "${d.heading}"`,
+    );
   }
 }
 

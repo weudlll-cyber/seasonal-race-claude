@@ -27,10 +27,10 @@ export const ROLE_MARGIN_RANKS = 2;
 // heroRole: infer the authored role from anchor vs target rank. Rank 1 = front (lower is better), so
 // anchor > target ⇒ must CLIMB (comeback); anchor < target ⇒ must DROP (faller).
 export function heroRole(h, margin = ROLE_MARGIN_RANKS) {
-  if (h.anchorRank == null || h.targetRank == null) return 'unknown';
-  if (h.anchorRank - h.targetRank > margin) return 'comeback';
-  if (h.targetRank - h.anchorRank > margin) return 'faller';
-  return 'hold';
+  if (h.anchorRank == null || h.targetRank == null) return "unknown";
+  if (h.anchorRank - h.targetRank > margin) return "comeback";
+  if (h.targetRank - h.anchorRank > margin) return "faller";
+  return "hold";
 }
 
 // roleRealized: did the hero actually play its role AND finish in its assigned band?
@@ -40,8 +40,14 @@ export function heroRole(h, margin = ROLE_MARGIN_RANKS) {
 export function roleRealized(h, role = heroRole(h)) {
   const inBand = h.reachedTargetBand === true;
   if (!inBand) return false;
-  if (role === 'comeback') return h.bestRank != null && h.targetRank != null && h.bestRank <= h.targetRank;
-  if (role === 'faller') return h.finalRank != null && h.anchorRank != null && h.finalRank > h.anchorRank;
+  if (role === "comeback")
+    return (
+      h.bestRank != null && h.targetRank != null && h.bestRank <= h.targetRank
+    );
+  if (role === "faller")
+    return (
+      h.finalRank != null && h.anchorRank != null && h.finalRank > h.anchorRank
+    );
   return true; // hold
 }
 
@@ -73,11 +79,24 @@ export function summarizeHeroAdherence(perHero) {
   return {
     nHeroes: recs.length,
     resolvedBandRate: round(rate(recs.map((r) => r.reachedTargetBand))), // (a)
-    roleRealizedRate: round(rate(recs.map((r) => r.roleRealized))),      // (c)
-    meanClimbFrac: round(mean(recs.map((r) => r.climbFrac).filter((v) => v != null))), // (b) proxy
-    meanReachedTargetProg: round(mean(recs.map((r) => r.reachedTargetProg).filter((v) => v != null))),
-    comeback: { n: byRole('comeback').length, realizedRate: round(rate(byRole('comeback').map((r) => r.roleRealized))) },
-    faller: { n: byRole('faller').length, realizedRate: round(rate(byRole('faller').map((r) => r.roleRealized))) },
-    hold: { n: byRole('hold').length, realizedRate: round(rate(byRole('hold').map((r) => r.roleRealized))) },
+    roleRealizedRate: round(rate(recs.map((r) => r.roleRealized))), // (c)
+    meanClimbFrac: round(
+      mean(recs.map((r) => r.climbFrac).filter((v) => v != null)),
+    ), // (b) proxy
+    meanReachedTargetProg: round(
+      mean(recs.map((r) => r.reachedTargetProg).filter((v) => v != null)),
+    ),
+    comeback: {
+      n: byRole("comeback").length,
+      realizedRate: round(rate(byRole("comeback").map((r) => r.roleRealized))),
+    },
+    faller: {
+      n: byRole("faller").length,
+      realizedRate: round(rate(byRole("faller").map((r) => r.roleRealized))),
+    },
+    hold: {
+      n: byRole("hold").length,
+      realizedRate: round(rate(byRole("hold").map((r) => r.roleRealized))),
+    },
   };
 }
