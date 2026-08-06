@@ -15,7 +15,7 @@ merged, so both appear in this branch and in PR **#131**. Review #129, then #130
 | All three fingerprints byte-identical at the end                                      | **Verified against the ENGINE, not recalled** — `check-fingerprints --mint` re-ran every role's reproduce command. All four match.                                                            |
 | No exploratory race series; only stage 2's ten runs                                   | Held. The only repeated running is stage 2(d). The world fingerprint ran for the `world-off` verification and for `--mint`; those are single mints, not a series.                             |
 | A change visible to his eye is a finding, not an edit                                 | Three were recorded and not acted on — see §7.                                                                                                                                                |
-| Consequence test · sabotage test · capture before editing a tool whose output changes | Every guard added or changed here has both positions tested; **14 sabotages** are listed in §5.                                                                                               |
+| Consequence test · sabotage test · capture before editing a tool whose output changes | Every guard added or changed here has both positions tested; **15 sabotages** are listed in §5.                                                                                               |
 | Every guard states IN ITSELF what it does not check                                   | Done for all four guards touched. **One exception, named:** `scripts/engine-reach.mjs` has no such section and I may not modify it. Its limits are stated in `docs/SHIP-CEREMONY.md` instead. |
 
 ### The three fingerprints
@@ -212,22 +212,48 @@ citation in BACKLOG, which still lands on THE STANDING GAP.
 
 ## 5. SABOTAGES — every one, and its revert
 
-| #   | Sabotage                                                                                    | Result                                                                                                                                 |
-| --- | ------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------- |
-| 1   | Paste a current value into `docs/FAIRNESS.md`                                               | Containment FAILS, naming file and role. Reverted.                                                                                     |
-| 2   | Blank the record's camera value, run `--mint`                                               | FAILS: "the ENGINE says … the record says 0000…". Reverted.                                                                            |
-| 3   | Doc carries a stale value (fixture)                                                         | FAILS with both values named.                                                                                                          |
-| 4   | An **old** value in a document (fixture)                                                    | **PASSES** — the pair that makes containment honest.                                                                                   |
-| 5   | Current value in a declared history home vs outside one                                     | Passes inside, FAILS outside.                                                                                                          |
-| 6   | A machine exception honoured by name                                                        | Named file silent; un-excepted sibling FAILS.                                                                                          |
-| 7   | Record disagrees with the reproduce command                                                 | `--mint` FAILS; containment alone still passes — the split, proven.                                                                    |
-| 8   | A broken reproduce command                                                                  | FAILS loudly rather than reading as agreement.                                                                                         |
-| 9   | Zero roles / unreadable record / role with no reproduce                                     | All FAIL.                                                                                                                              |
-| 10  | Flag in the label position of `fingerprint-default.mjs`                                     | REFUSED, exit 2, prints the corrected command. Pair: the same flag after a label is accepted.                                          |
-| 11  | Bypass the clamp in `zoomUnit.js`                                                           | FAILS 2 of 3 new tests (+1 pre-existing). Reverted, 34/34.                                                                             |
-| 12  | Stamp predating a camera change / non-existent commit / unknown `depends` / no stamp at all | All four FAIL. Reverted from a copy.                                                                                                   |
-| 13  | A real `git clone --depth 1`                                                                | The stamp guard REFUSES to give a verdict. Verified end-to-end.                                                                        |
-| 14  | Stray value present at commit time                                                          | Hook prints `GUARDS: PASS 1 FAIL 1` then `COMMIT BLOCKED`, exit 1. Reverted → exit 0. Same for `verify`: exit 1 with the verdict last. |
+| #   | Sabotage                                                                                    | Result                                                                                                                                                                   |
+| --- | ------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| 1   | Paste a current value into `docs/FAIRNESS.md`                                               | Containment FAILS, naming file and role. Reverted.                                                                                                                       |
+| 2   | Blank the record's camera value, run `--mint`                                               | FAILS: "the ENGINE says … the record says 0000…". Reverted.                                                                                                              |
+| 3   | Doc carries a stale value (fixture)                                                         | FAILS with both values named.                                                                                                                                            |
+| 4   | An **old** value in a document (fixture)                                                    | **PASSES** — the pair that makes containment honest.                                                                                                                     |
+| 5   | Current value in a declared history home vs outside one                                     | Passes inside, FAILS outside.                                                                                                                                            |
+| 6   | A machine exception honoured by name                                                        | Named file silent; un-excepted sibling FAILS.                                                                                                                            |
+| 7   | Record disagrees with the reproduce command                                                 | `--mint` FAILS; containment alone still passes — the split, proven.                                                                                                      |
+| 8   | A broken reproduce command                                                                  | FAILS loudly rather than reading as agreement.                                                                                                                           |
+| 9   | Zero roles / unreadable record / role with no reproduce                                     | All FAIL.                                                                                                                                                                |
+| 10  | Flag in the label position of `fingerprint-default.mjs`                                     | REFUSED, exit 2, prints the corrected command. Pair: the same flag after a label is accepted.                                                                            |
+| 11  | Bypass the clamp in `zoomUnit.js`                                                           | FAILS 2 of 3 new tests (+1 pre-existing). Reverted, 34/34.                                                                                                               |
+| 12  | Stamp predating a camera change / non-existent commit / unknown `depends` / no stamp at all | All four FAIL. Reverted from a copy.                                                                                                                                     |
+| 13  | A real `git clone --depth 1`                                                                | The stamp guard REFUSES to give a verdict. Verified end-to-end.                                                                                                          |
+| 15  | `--doc` pointed at an UNTRANSFORMED copy of the stamped document                            | Must behave identically to the original. It did not — this is the case that caught `join` vs `resolve`, under which all five stamp sabotages had been passing vacuously. |
+| 14  | Stray value present at commit time                                                          | Hook prints `GUARDS: PASS 1 FAIL 1` then `COMMIT BLOCKED`, exit 1. Reverted → exit 0. Same for `verify`: exit 1 with the verdict last.                                   |
+
+**A TEST THAT BROKE `verify`, found by `verify` itself.** The first version of
+`check-measured-stamps.test.mjs` sabotaged the REAL `docs/CAMERA_DIRECTOR.md` and restored it in a
+`finally` — safe when run alone. `npm run verify` runs the doc guards and the script suite
+CONCURRENTLY, so the guard read the document inside the window its own test had it mutated, and
+verify failed reporting a `depends` path that exists in no commit. **A test that mutates a tracked
+file cannot coexist with a guard that reads it.** The guard gained a `--doc=` override; every case
+now works on a temp copy, and a final test asserts the real document's bytes are unchanged after a
+full sabotage round-trip. It was `verify`'s new `PASS 6 FAIL 1` line that surfaced it.
+
+That fix had its own bug, caught by the one test written to catch exactly it: `join(ROOT, doc)`
+concatenates an absolute path on Windows instead of honouring it, so `--doc` silently read nothing
+and every sabotage "passed". The BASELINE-via-`--doc` case — an _untransformed_ copy must behave
+identically to the original — failed, and `resolve()` fixed it. Without that pairing, five green
+sabotages would have been proving nothing.
+
+**AND I HIT STAGE 6(a)'s TRAP WHILE COMMITTING THE FIX FOR IT.** The commit that added
+`write-verified.mjs` — the whole point of which is "never use an assertion for a step whose side
+effect matters" — was followed by a commit whose report edits were applied by a Python helper that
+`assert`ed, failed, and aborted **before** writing. The shell chained the commit with `;` rather than
+`&&`, so the commit went in with none of the edits. Exactly the shape stage 6 exists to prevent, one
+commit later, because the RULE was mechanised for repository scripts and I then hand-rolled a helper
+outside them. The edits were re-applied with a tool that cannot silently no-op. **The lesson stage 6
+recorded is right and incomplete: the guard covers `scripts/`, and the thing that keeps biting is
+the throwaway helper nobody counts as a script.**
 
 **A revert that went wrong, recorded because it nearly cost work:** sabotage 1 was first reverted with
 `git checkout -- docs/FAIRNESS.md`, which also discarded that stage's _uncommitted_ edits to the same
@@ -237,7 +263,7 @@ file. Re-applied. Every sabotage after that reverts from a copy.
 
 ## 6. TESTS — added, deleted, and both questions
 
-**Added 35. Deleted 13.** Counted from the files, not from memory.
+**Added 37. Deleted 13.** Counted from the files, not from memory.
 
 Deleted, with both questions answered:
 
@@ -257,7 +283,7 @@ was wrong: containment matches every PATH, so an empty diff still selects nothin
 whenever anything changed", not "always runs", and both halves are now pinned separately.
 
 Added, by group: 11 containment/mint sabotages · 4 argv-guard · 3 ledger DISABLED wording · 3 zoom
-clamp contract · 6 measured-stamp · 4 write-verified · 4 verify routing.
+clamp contract · 6 measured-stamp · 4 write-verified · 4 verify routing · 2 stamp-override (the `--doc` baseline, and the guarantee that no test writes a tracked file).
 
 ## 7. WHAT I DID NOT DO, and why
 
