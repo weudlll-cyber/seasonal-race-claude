@@ -8,6 +8,12 @@ report here could be orphaned, or an index link could dangle, with nothing notic
 `node scripts/check-index.mjs --dir=reports/night --index=reports/night/INDEX.md` now checks both
 directions.
 
+- [CLEAN-STATE-1.md](CLEAN-STATE-1.md) — merge, then one green master with no loose ends. The three
+  ONE-TRUTH branches merged as merge commits (a squash would have destroyed the SHA a stamp names),
+  three branches deleted, tracking-lag re-measured independently and reproducing cell for cell. A
+  wrapper so an ad-hoc helper can prove its edit landed — and the line-ending trap its own sabotage
+  found. A test that wrote the TRACKED SIM.md fixed at the cause, not with a retry. Lessons 205 and 206. Config contradictions: seven keys stated as current and wrong, five of them in one document —
+  findings only, nothing changed. CI on master unproven: GitHub Actions outage.
 - [ONE-TRUTH-2.md](ONE-TRUTH-2.md) — one home, references everywhere else. The owner’s rule:
   all 19 generated fingerprint copies DELETED, documents reference the record or say nothing. The
   containment guard ONE-TRUTH-1 discarded as unsound is now sound and built. Retries to zero, ten
