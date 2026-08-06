@@ -24,8 +24,12 @@ export default defineConfig({
     css: true,
     // Exclude Playwright e2e specs — they use @playwright/test, not Vitest
     exclude: ['e2e/**', 'node_modules/**'],
-    // Auto-retry flaky tests once before failing the suite.
-    retry: 3,
+    // ZERO, by owner decision (ONE-TRUTH-2 stage 2). It was 3 for months and it hid a suite that
+    // failed 3 runs in 10 with the machine to itself. ONE-TRUTH-1 measured 113 attempt-failures
+    // across 20 full runs: every single one was class `timeout`, not one was an assertion, and
+    // after two measured budgets 3646 tests ran with zero retries. A retry does not fix a slow
+    // test; it hides it, and it makes a green run and a nearly-red run look identical.
+    retry: 0,
     // NIGHT-TOOLS-1: the retry LEDGER. With `retry: 3` above, a test that failed twice and passed
     // on the third attempt is reported as a pass and is indistinguishable from one that passed
     // first time. The reporter prints which tests needed more than one attempt — and an explicit

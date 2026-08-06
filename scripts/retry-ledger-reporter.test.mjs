@@ -209,3 +209,31 @@ test("DISCONNECTION: the ledger is what carries the difference, not the pass/fai
     /0 tests retried/,
   );
 });
+
+// ── RETRIES DISABLED IS ITS OWN SENTENCE (ONE-TRUTH-2 stage 2) ─────────────────────────────────
+
+test("DISABLED: with retry 0 the ledger says the mechanism is OFF, not that nothing retried", () => {
+  const lines = formatLedger([], 0);
+  assert.equal(lines.length, 1);
+  assert.match(lines[0], /RETRY LEDGER: DISABLED/);
+  assert.match(lines[0], /A first-attempt failure fails the suite/);
+  // The two wordings must not be confusable — that is the whole point of having both.
+  assert.doesNotMatch(lines[0], /0 tests retried/);
+});
+
+test("CONSEQUENCE: the SAME empty row set with retries ENABLED prints the zero line instead", () => {
+  // L203 in one pair: identical input, different config, different sentence. Without this, DISABLED
+  // could have been printed unconditionally and nobody would know.
+  const lines = formatLedger([], 3);
+  assert.match(
+    lines[0],
+    /0 tests retried — every test passed on its first attempt/,
+  );
+  assert.doesNotMatch(lines[0], /DISABLED/);
+});
+
+test("An UNKNOWN retry config falls back to counting, never to claiming DISABLED", () => {
+  // If the reporter cannot read the config, saying "DISABLED" would be an invention. Counting is
+  // the honest default: it describes what was observed rather than what was configured.
+  assert.match(formatLedger([], undefined)[0], /0 tests retried/);
+});
