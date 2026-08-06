@@ -460,7 +460,7 @@ N=4–100 considered; lead group = clamp(round(N×0.1), 3, 10). Cross-reference:
 **Sub-PR plan (9 PRs):**
 
 - ✅ PR-A1: Q-25 fix (maxScale=10) + duration slider + finishT for open tracks (2026-05-03)
-- ✅ PR-A2-Diagnose: read-only PR → `docs/SPEED_REFACTOR_ANALYSIS.md` (no code change) (2026-05-03)
+- ✅ PR-A2-Diagnose: read-only PR → `archive/SPEED_REFACTOR_ANALYSIS.md` (no code change) (2026-05-03)
 - ✅ PR-A2: Speed pipeline architecture refactor — `computeRaceBaseSpeed`, speedScaleFactor removed, closed-track duration slider (Model D), SpeedScaleSection removed (2026-05-03). **Fix commit 2026-05-04:** speedMultiplier normalization + spreadMinFactor (E1+E2).
 - ✅ PR-A2.5: Arc-length-uniform spline resampling + relative jitter (2026-05-04)
 - ✅ PR-A2.6: Race dynamics — spreadFactor re-roll (±85%, 5s transition) + speedBonusMult separation (2026-05-04). draftingBoost unchanged 1.10.
@@ -687,7 +687,7 @@ race. Typed values persist for the browser session. Status of the follow-ups:
 | ------------------------------------ | ------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | ✅ **chore/sprite-scale-relative**   | Done `6a9dcfc` 2026-05-24 | `spritePx` → `spriteScale` (schema v14). Relative factor, racer-count-independent (L82). Defaults: OVERVIEW 1.00, LEADER 1.81, BATTLE 2.81, COMEBACK 1.39, LEAD_CHANGE 1.81. FALLBACK_REFERENCE_SPRITE_SIZE = 36 px. Side fix: LEAD_CHANGE was missing from `CameraStateHUD.STATE_CONFIG` — fallback `?? OVERVIEW` showed wrong badge (L87). |
 | ✅ **Phase 3D**                      | Done `bcdedb8` 2026-05-25 | FINISH_OVERVIEW, BATTLE/COMEBACK fixes. See Phase 3D — Open Follow-up Items.                                                                                                                                                                                                                                                                 |
-| ✅ **Camera centering architecture** | Done 2026-05-26           | Root cause fix: all four phasedEnabled states (LEADER_ZOOM, BATTLE_ZOOM, COMEBACK_ZOOM, LEAD_CHANGE) now center on racer world position during follow phase. `_setTargets` sole owner of `targetOffsetX/Y`; `_computePhasedPanTarget` state-controller only. See `docs/camera-target-architecture.md`. Lesson 37. 2134/2134 tests ✅.        |
+| ✅ **Camera centering architecture** | Done 2026-05-26           | Root cause fix: all four phasedEnabled states (LEADER_ZOOM, BATTLE_ZOOM, COMEBACK_ZOOM, LEAD_CHANGE) now center on racer world position during follow phase. `_setTargets` sole owner of `targetOffsetX/Y`; `_computePhasedPanTarget` state-controller only. See `archive/camera-target-architecture.md`. Lesson 37. 2134/2134 tests ✅.        |
 | ✅ **Bug A**                         | Done 2026-05-27 `749c2a4` | OVERVIEW pan no-op on closed tracks — `overviewClosedTrackZoom=1.3` multiplier in all three closed-track OVERVIEW branches + transition snap. Schema v15. DevScreen slider. 2134/2134 tests ✅.                                                                                                                                              |
 | ✅ **Bug 1**                         | Done 2026-05-27 `2f417ba` | LEAD_CHANGE spriteScale dead config — `_leadChangeZoom` added to all three `_computeZoomLevels` branches; `_transition` hard-cut and `_setTargets` LEAD_CHANGE now use `_leadChangeZoom` instead of `_leaderZoom`. No config or schema change (schema v14 LEAD_CHANGE spriteScale field now takes effect). +3 tests. 2137/2137 ✅.           |
 | **COMEBACK vs LEADER_ZOOM priority** | Medium                    | COMEBACK_ZOOM activates even when a racer is only slightly behind. Threshold calibration: how far back does a racer need to be to justify COMEBACK? Measurement in real races: how often is COMEBACK activated vs displacing LEADER_ZOOM?                                                                                                    |
@@ -1213,7 +1213,7 @@ Items deferred from Racer Editor Phase 1+2 (merged 2026-05-28).
 
 ## 2026-07-10 — added (INFRA: sim-trust)
 
-- **FORCE-PARITY latent seams** (`docs/FORCE-PARITY.md`, O1–O6). **O1 is the sharpest:** the sim's
+- **FORCE-PARITY latent seams** (`archive/FORCE-PARITY.md`, O1–O6). **O1 is the sharpest:** the sim's
   `computeFinishT` hardcodes its own `runoutZone` while the browser reads `behaviorConfig.runoutZone` —
   identical at default, diverges if the owner ever changes it (open tracks only). O2 (`--rerollVariant=2`
   sim-only), O3 (lap-normalisation duplicated), O4 (browser-only run-out decay, no outcome impact),

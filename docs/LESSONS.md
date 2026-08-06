@@ -1458,7 +1458,7 @@ stoppable: as soon as a diagnostic session skips the quantitative measurement an
 visual impressions or bisect, §6 is violated.
 
 **Reference:** PROJECT-PRINCIPLES.md §6, §7; LESSONS.md L46, L50, L65, L66, L68, L69;
-`docs/diag/render-smoothness-measurements.md`; commits `c8538e0`, `7333ec4`, `b53d7d6`.
+`archive/render-smoothness-measurements.md`; commits `c8538e0`, `7333ec4`, `b53d7d6`.
 
 ## Lesson 71 — Symmetric Avoidance Default Was a Regression
 

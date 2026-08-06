@@ -19,14 +19,14 @@ This index maps the documents under `docs/`.
 - [TRACK_LIFECYCLE.md](TRACK_LIFECYCLE.md) — track lifecycle and hybrid persistence (TLH-1/2 done, TLH-3 deferred).
 - [RACER_DATA_MODEL.md](RACER_DATA_MODEL.md) — racer data model and type definitions.
 - [CAMERA_DIRECTOR.md](CAMERA_DIRECTOR.md) — CameraDirector technical reference (state machine, zoom modes).
-- [camera-target-architecture.md](camera-target-architecture.md) — camera target-computation architecture (per-frame target writers).
+- [camera-target-architecture.md](archive/camera-target-architecture.md) — camera target-computation architecture (per-frame target writers).
 - [SIM.md](SIM.md) — simulation system documentation (physics, forces, race loop).
 - [branding.md](branding.md) — branding system (Phase 1 complete).
 
 ## Diagnoses, analyses & history
 
-- [CAMERA_TUNING_DIAGNOSIS.md](CAMERA_TUNING_DIAGNOSIS.md) — camera tuning effectiveness diagnosis report.
-- [SPEED_REFACTOR_ANALYSIS.md](SPEED_REFACTOR_ANALYSIS.md) — PR-A2 speed-pipeline refactor analysis.
+- [CAMERA_TUNING_DIAGNOSIS.md](archive/CAMERA_TUNING_DIAGNOSIS.md) — camera tuning effectiveness diagnosis report.
+- [SPEED_REFACTOR_ANALYSIS.md](archive/SPEED_REFACTOR_ANALYSIS.md) — PR-A2 speed-pipeline refactor analysis.
 - [LESSONS.md](LESSONS.md) — accumulated development lessons (L-numbered).
 - [AUDIT.md](AUDIT.md) — security & quality audit log (per-cycle entries).
 - [AUTH.md](AUTH.md) — authentication & authorization architecture (DESIGN, not built yet).

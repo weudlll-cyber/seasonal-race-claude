@@ -3,7 +3,7 @@
 > ℹ️ **Dated audit log — read rows as history.** Older entries describe the code as it was on their
 > date and may name since-removed forces (home force, rubber-band, race-zones, the classic reactive
 > director). That is correct for a log. For the CURRENT force set / mechanisms see
-> `KRAEFTE-LANDKARTE.md`, `docs/ARCHITECTURE.md`, and `docs/PHASE-CONTRACT.md`.
+> `FORCE-MAP.md`, `docs/ARCHITECTURE.md`, and `docs/PHASE-CONTRACT.md`.
 
 ## Audit Log Template
 
@@ -748,7 +748,7 @@ Configuration: avoidanceDistance=0.15, racePlanBonusStrengthMultiplier=2.0, drag
 | `_computePhasedPanTarget` | Converted to state-controller only — removed `focusPosOverride`, `focusOffset`, and the 44-line follow-phase camPos/targetOffsetX/Y write block. Now only advances `_camT` and manages phase transitions |
 | Per-state follow-phase pan | LEADER_ZOOM, BATTLE_ZOOM, COMEBACK_ZOOM, LEAD_CHANGE: camera now centers on actual racer world position during follow phase (not track centerline) |
 | `_prevFocusT` ownership | Split-ownership execution-order dependency documented with inline comments at write site in `update()`, read site in lead-out transition, and both follow-path exit writes |
-| `docs/camera-target-architecture.md` | New architecture document: intended vs. actual responsibilities, per-frame execution order diagram, per-state effective driver table, double-write variable analysis, recommended clean architecture |
+| `archive/camera-target-architecture.md` | New architecture document: intended vs. actual responsibilities, per-frame execution order diagram, per-state effective driver table, double-write variable analysis, recommended clean architecture |
 | `LESSONS.md` | Lesson 37 added: shared lerp-input variables need a single declared owner; silent overwrites not caught by unit tests |
 
 ### Root Cause Addressed

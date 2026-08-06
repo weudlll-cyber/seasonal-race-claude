@@ -1152,7 +1152,7 @@ verified at the cited source.
   applies `t += baseSpeed · boost · brake · rowEnvMult · trajectoryMult · areaBonusMult · governorMult`
   with the finish clamp. **Imported by BOTH** the browser engine (`RaceScreen/index.jsx`) and the
   fairness sim (`scripts/sim-fairness.mjs`) — factors 4–8, the multiplication order and the clamp are
-  identical by construction. See `docs/FORCE-PARITY.md` for the force-by-force audit.
+  identical by construction. See `archive/FORCE-PARITY.md` for the force-by-force audit.
 - **Shared racer-length conversion — `client/src/modules/raceLengths.js`.** `arcT`, `lenScaleFrom`,
   `arcLengths`, `meanDrawnBodyLen` — the one source for "racer lengths" (arc distance ÷ mean body px).
   Imported by the HUD (`GovernorDiagHUD.jsx`), the engine (`index.jsx`), `raceGovernor.js` (which

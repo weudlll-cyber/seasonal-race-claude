@@ -1,6 +1,6 @@
 # FORCE-PARITY — browser vs. fairness sim (INFRA 5B)
 
-> **⚠️ Pre-unification baseline.** Any absolute sim figures/fingerprints referenced here predate the plan-grid unification (parity step 2a, 2026-07-23) — see [reports/BASELINE-INVALIDATED.md](../reports/BASELINE-INVALIDATED.md). The force-by-force parity verdicts below still hold; only absolute numbers moved.
+> **⚠️ Pre-unification baseline.** Any absolute sim figures/fingerprints referenced here predate the plan-grid unification (parity step 2a, 2026-07-23) — see [reports/BASELINE-INVALIDATED.md](../../reports/BASELINE-INVALIDATED.md). The force-by-force parity verdicts below still hold; only absolute numbers moved.
 
 **Read-only audit. Nothing here was fixed — everything is named.** Date: 2026-07-10, on
 `chore/sim-trust` at the Stage-5A commit (`de66798`).
@@ -8,7 +8,7 @@
 ## Method
 
 Every force that changes a racer's forward motion (`r.t`) funnels through ONE shared
-function — `advanceRacerT` in [raceStep.js](../client/src/modules/raceStep.js#L72-L86):
+function — `advanceRacerT` in [raceStep.js](../../client/src/modules/raceStep.js#L72-L86):
 
 ```
 t += baseSpeed · boost · brake · rowEnvMult · trajectoryMult · areaBonusMult · governorMult · dt
@@ -45,7 +45,7 @@ Every row was verified against the source directly (not only via the inventory s
 | 1   | `baseSpeed` assembly `= race_baseSpeed·speedMultiplier·spreadFactor·speedBonusMult`    | index.jsx:618                                                                 | sim-fairness.mjs:629                                                 | **IDENTICAL** — same factors, same order                                                                                                                                                                                             |
 | 2   | `race_baseSpeed` (N-calibrated back-solve)                                             | index.jsx:500-503 → raceBaseSpeed.js `computeRaceBaseSpeed`                   | sim-fairness.mjs:569-572 → same helper, same args                    | **IDENTICAL** (shared helper)                                                                                                                                                                                                        |
 | 3   | `speedMultiplier` (racer-type constant)                                                | racerType / RACER config                                                      | sim-fairness.mjs RACER_CONFIGS:449-470                               | **IDENTICAL** (per-type constant)                                                                                                                                                                                                    |
-| 4   | `BASE_SPEED_MIN/MAX/MEAN` band = 0.00096 / 0.00113                                     | index.jsx:423-425 via `loadBaseSpeedConfig()`                                 | sim-fairness.mjs:549-551 via `DEFAULT_BASE_SPEED_CONFIG`             | **IDENTICAL** — same SOT ([defaults.js:29-30](../client/src/modules/storage/defaults.js#L29-L30)); spread ±8.1% both                                                                                                                 |
+| 4   | `BASE_SPEED_MIN/MAX/MEAN` band = 0.00096 / 0.00113                                     | index.jsx:423-425 via `loadBaseSpeedConfig()`                                 | sim-fairness.mjs:549-551 via `DEFAULT_BASE_SPEED_CONFIG`             | **IDENTICAL** — same SOT ([defaults.js:29-30](../../client/src/modules/storage/defaults.js#L29-L30)); spread ±8.1% both                                                                                                                 |
 | 5   | `spreadFactor` init `= (MIN+rand·(MAX−MIN))/MEAN`                                      | index.jsx:604                                                                 | sim-fairness.mjs:617                                                 | **IDENTICAL** formula (RNG stream differs _by design_: sim seeds `Math.random`, browser uses system RNG)                                                                                                                             |
 | 6   | `speedBonusMult` / `rawRowBonus` (start-row bonus)                                     | index.jsx:587 `computeSpeedBonus`                                             | sim-fairness.mjs:608 same shared fn                                  | **IDENTICAL-BY-SHARED-MODULE** (depends on identical row layout — a maintained invariant)                                                                                                                                            |
 | 7   | `finishT` (closed: `laps`; open: `min(pace·seconds/L, 1−runoutZone)`)                  | shared `durationModel.deriveRaceDuration`                                     | shared `durationModel.deriveRaceDuration` (sim-fairness.mjs:677-684) | **IDENTICAL-BY-SHARED-MODULE** — the speed/duration ship replaced the two normalisations + `computeFinishT` with one `deriveRaceDuration` on both sides; the sim passes `runoutZone: behaviorConfig.runoutZone`. Seam **O1 closed**. |

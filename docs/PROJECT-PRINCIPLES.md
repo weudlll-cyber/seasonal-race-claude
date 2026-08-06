@@ -234,7 +234,7 @@ trace tools during active diagnosis (Etappe-23-Pattern: temporary, isolated comm
 together with the fix). Diagnose reports are committed to the repo so that Strategic Claude
 and future sessions can read the data without running the code.
 
-Example: `docs/diag/render-smoothness-measurements.md`, Phase-4 diagnostics HUD deliverable.
+Example: `archive/render-smoothness-measurements.md`, Phase-4 diagnostics HUD deliverable.
 
 ### Tests-green Convention
 

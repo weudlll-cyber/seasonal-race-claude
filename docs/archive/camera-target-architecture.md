@@ -13,7 +13,7 @@
 >   the camera follows the subject exactly as before. Do not "fix" it; see the warning block on
 >   `_centrelineAt` in `CameraDirector.js`.
 >
-> Current architecture: **[CAMERA_DIRECTOR.md](CAMERA_DIRECTOR.md)**.
+> Current architecture: **[CAMERA_DIRECTOR.md](../CAMERA_DIRECTOR.md)**.
 
 ## 1. Intended Responsibilities
 
