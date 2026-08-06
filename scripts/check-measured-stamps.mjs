@@ -47,20 +47,32 @@
 //
 // Usage:
 //   node scripts/check-measured-stamps.mjs
+//   node scripts/check-measured-stamps.mjs --doc=<path>   # check a copy instead (used by its test)
 // ============================================================
 
 const started = Date.now();
 
 import { readFileSync } from "node:fs";
 import { execFileSync } from "node:child_process";
-import { join, dirname } from "node:path";
+import { join, dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), "..");
 
 // The documents scanned for stamps. A short explicit list, not a glob: a stamp is a deliberate act,
 // and a guard that hunts for them everywhere would encourage sprinkling them about.
-const DOCS = ["docs/CAMERA_DIRECTOR.md"];
+//
+// `--doc=<path>` overrides the list, and exists for ONE reason worth writing down. The first version
+// of this guard's test sabotaged the REAL `docs/CAMERA_DIRECTOR.md` and restored it in a `finally`.
+// That is safe alone and unsafe in this repository: `npm run verify` runs the doc guards and the
+// script suite CONCURRENTLY, so the guard read the document during the window its own test had it
+// mutated, and verify failed reporting a `depends` path that exists in no commit. A test that
+// mutates a tracked file cannot coexist with a guard that reads it. The test now copies the document
+// to a temp file and points here instead — nothing tracked is ever written.
+const DOC_OVERRIDE = process.argv
+  .filter((a) => a.startsWith("--doc="))
+  .map((a) => a.slice("--doc=".length));
+const DOCS = DOC_OVERRIDE.length ? DOC_OVERRIDE : ["docs/CAMERA_DIRECTOR.md"];
 
 const STAMP =
   /<!--\s*MEASURED:\s*(.+?)\s+@\s+([0-9a-f]{7,40})\s+(\d{4}-\d{2}-\d{2})\s+depends=([^\s]+)\s*-->/g;
@@ -98,7 +110,9 @@ let found = 0;
 for (const doc of DOCS) {
   let text;
   try {
-    text = readFileSync(join(ROOT, doc), "utf8");
+    // resolve(), not join(): an absolute --doc path must be honoured, and join() would concatenate
+    // it onto ROOT. Caught by the test that pins --doc against an UNTRANSFORMED copy.
+    text = readFileSync(resolve(ROOT, doc), "utf8");
   } catch {
     fail(
       `${doc} cannot be read. It is in this guard's document list, so that is a hole.`,

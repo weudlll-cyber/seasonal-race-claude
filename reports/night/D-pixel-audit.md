@@ -14,8 +14,8 @@ exists anywhere under `client/src/` or `scripts/`. `git log -S` shows the string
 nothing.
 
 - **Severity: harmless** — it was deleted, and the deletion is what should have happened.
-- **Why it is reported anyway:** the brief called it a *confirmed* starting point that *exists
-  twice*. It exists zero times. Working from a remembered inventory rather than the tree is the same
+- **Why it is reported anyway:** the brief called it a _confirmed_ starting point that _exists
+  twice_. It exists zero times. Working from a remembered inventory rather than the tree is the same
   failure class this project keeps recording, and it cost the first ten minutes of this stage.
 
 ---
@@ -39,11 +39,13 @@ RaceScreen drawing path.
   correctness.
 - **The real defect is the test.** `client/src/modules/trackLights.test.js:101`:
   ```js
-  it('LIGHT_SPACING_PX is 30', () => { expect(LIGHT_SPACING_PX).toBe(30); });
+  it("LIGHT_SPACING_PX is 30", () => {
+    expect(LIGHT_SPACING_PX).toBe(30);
+  });
   ```
   This asserts the constant equals itself. It cannot fail for any reason that matters: changing the
   spacing changes the test, so it never objects; and it protects no behaviour, because nothing about
-  the spacing's *effect* is asserted. It is the shape L203 exists to name.
+  the spacing's _effect_ is asserted. It is the shape L203 exists to name.
 - **Proposed fix (one line):** replace it with a consequence test — halving the spacing must roughly
   double the light count on a fixed boundary.
 - **SEVERITY: trap.** Not a live defect; a test that looks like coverage and is not.
@@ -64,7 +66,7 @@ const DIRT_OVAL_TRACK_WIDTH_PX = 93;
   `trackConfig?.pathLengthPx ?? DIRT_OVAL_PATH_LENGTH_PX` (line 150) and the same for width (151).
 - **Duplicated?** The values also exist, authoritatively, in `server/seeds/tracks/dirt-oval.json`.
   So yes: **one track's geometry has two homes**, and only one of them is the track.
-- **What breaks on the first track with different dimensions:** nothing *automatically* — a caller
+- **What breaks on the first track with different dimensions:** nothing _automatically_ — a caller
   that passes `trackConfig` never touches these. The trap is a caller that does NOT pass one and
   silently simulates dirt-oval's geometry while believing it simulated the track it named. That is a
   wrong ANSWER, not a crash, which is the expensive kind.
@@ -77,11 +79,11 @@ const DIRT_OVAL_TRACK_WIDTH_PX = 93;
 
 ## D3 — `CANVAS_W = 1280` is defined independently in THREE places, not two
 
-| where | how |
-|---|---|
-| `client/src/modules/camera/projection.js:37` | `export const REFERENCE_CANVAS_W = 1280` — **the canonical home** |
-| `client/src/screens/RaceScreen/index.jsx:83` | `const CANVAS_W = 1280` — independent literal |
-| `client/src/screens/RaceScreen/CameraDiagnosticsHUD.jsx:14` | `const CANVAS_W = 1280` — independent literal |
+| where                                                       | how                                                               |
+| ----------------------------------------------------------- | ----------------------------------------------------------------- |
+| `client/src/modules/camera/projection.js:37`                | `export const REFERENCE_CANVAS_W = 1280` — **the canonical home** |
+| `client/src/screens/RaceScreen/index.jsx:83`                | `const CANVAS_W = 1280` — independent literal                     |
+| `client/src/screens/RaceScreen/CameraDiagnosticsHUD.jsx:14` | `const CANVAS_W = 1280` — independent literal                     |
 
 Three other sites do it correctly by importing: `camera/CameraDirector.js:115`,
 `camera/zoomUnit.js:68`, `RaceScreen/drawing/trackRendering.js:14`,

@@ -8,6 +8,10 @@ report here could be orphaned, or an index link could dangle, with nothing notic
 `node scripts/check-index.mjs --dir=reports/night --index=reports/night/INDEX.md` now checks both
 directions.
 
+- [ONE-TRUTH-2.md](ONE-TRUTH-2.md) — one home, references everywhere else. The owner’s rule:
+  all 19 generated fingerprint copies DELETED, documents reference the record or say nothing. The
+  containment guard ONE-TRUTH-1 discarded as unsound is now sound and built. Retries to zero, ten
+  clean runs. Two silent traps made loud: a swallowed CLI flag and a write that did not land.
 - [ONE-TRUTH-1.md](ONE-TRUTH-1.md) — one fact, one home. The three fingerprints got a single
   machine-readable record and 19 documented copies were machine-written and machine-checked.
   Superseded by ONE-TRUTH-2, which deleted all 19 copies instead. Also: the 20-run retry study that
