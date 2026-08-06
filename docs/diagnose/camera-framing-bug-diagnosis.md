@@ -1,16 +1,17 @@
 # Camera Framing Bug — Diagnosis Report
+
 **Status:** 2026-05-14 | Branch: master (`5088639`) | Read-only
 
 ---
 
 ## Files examined
 
-| File | Relevant lines |
-|-------|-----------------|
-| `CameraDirector.js` | 389–514 (`update`), 517–684 (`_transition`), 629–683 (observer init), 429–450 (entry align), 460–476 (convergence gate), 738–762 (`_setClosedTrackTargets`), 864–978 (`_computePhasedPanTarget`) |
-| `RaceScreen/index.jsx` | 1120–1177 (open-track pan + canvas transform) |
-| `panTarget.js` | Complete (75 lines) |
-| `resolveCamera.js` | Complete (118 lines) |
+| File                   | Relevant lines                                                                                                                                                                                   |
+| ---------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `CameraDirector.js`    | 389–514 (`update`), 517–684 (`_transition`), 629–683 (observer init), 429–450 (entry align), 460–476 (convergence gate), 738–762 (`_setClosedTrackTargets`), 864–978 (`_computePhasedPanTarget`) |
+| `RaceScreen/index.jsx` | 1120–1177 (open-track pan + canvas transform)                                                                                                                                                    |
+| `panTarget.js`         | Complete (75 lines)                                                                                                                                                                              |
+| `resolveCamera.js`     | Complete (118 lines)                                                                                                                                                                             |
 
 ---
 
@@ -21,7 +22,7 @@
 ### Hypothesis 1: Lead-in start position is destroyed in the same frame
 
 **Claim:**
-`_transition()` sets `_camT = focusT + leadInDt` (a lead-in distance *ahead of* the racer). Still within the *same* `update()` call, this value is immediately overwritten by the entry-alignment logic (lines 429–450). The pan target during the lead-in phase therefore points *behind* the racer, not ahead.
+`_transition()` sets `_camT = focusT + leadInDt` (a lead-in distance _ahead of_ the racer). Still within the _same_ `update()` call, this value is immediately overwritten by the entry-alignment logic (lines 429–450). The pan target during the lead-in phase therefore points _behind_ the racer, not ahead.
 
 **Code path in detail (one `update()` iteration after transition):**
 
@@ -44,28 +45,33 @@ _setTargets() → lines 802–803:
 **What happens next:**
 
 After convergence (Entry→Tracking, line 473–474):
+
 ```javascript
-this._lerpPhase = 'tracking';
-this._leadInStartTs = ts;  // ← Timer RESET to now
+this._lerpPhase = "tracking";
+this._leadInStartTs = ts; // ← Timer RESET to now
 ```
 
 `_computePhasedPanTarget()` checks (line 931):
+
 ```javascript
-const elapsed = ts - (this._leadInStartTs ?? ts);  // elapsed ≈ 0 (just reset)
-if (elapsed >= prof.leadInDuration * 1000) { /* follow */ }
-else {
+const elapsed = ts - (this._leadInStartTs ?? ts); // elapsed ≈ 0 (just reset)
+if (elapsed >= prof.leadInDuration * 1000) {
+  /* follow */
+} else {
   this._prevFocusT = focusT;
-  return;  // ← does nothing for 1.0s
+  return; // ← does nothing for 1.0s
 }
 ```
 
 During the lead-in phase (tracking phase, 1.0 s):
+
 - `_computePhasedPanTarget()` returns early
 - `_camT` is NOT updated (entry alignment only runs when `_lerpPhase === 'entry'`)
 - `_setTargets()` uses frozen `_camT` = racer's position at tracking start
 - Racer keeps moving; camera looks at the old position
 
 **Evidence:**
+
 - `_transition()` line 659–660: `this._camT = focusT + leadInDt`
 - `update()` line 429–448: entry alignment overwrites `_camT = fT` in same call
 - `update()` line 474: `this._leadInStartTs = ts` — timer reset after convergence
@@ -83,7 +89,7 @@ In 1.0s lead-in on a straight: racer moves ≈ 720px along world X. At zoom 2.16
 Even for slow racers (e.g. 200px/s): 200px in 1.0s. At zoom 2.16 the visible half-width is 297px. Racer remains visible but immediately leaves the inner frame (70% × 297px = 208px).
 
 **Falsifiable by:**
-If the problem also occurs with `leadInDuration = 0` (set to 0 in DevPanel), H1 is *not* the cause (no lead-in freeze exists). If the problem disappears at `leadInDuration = 0`, H1 is confirmed.
+If the problem also occurs with `leadInDuration = 0` (set to 0 in DevPanel), H1 is _not_ the cause (no lead-in freeze exists). If the problem disappears at `leadInDuration = 0`, H1 is confirmed.
 
 **Confidence: High**
 
@@ -92,9 +98,10 @@ If the problem also occurs with `leadInDuration = 0` (set to 0 in DevPanel), H1 
 ### Hypothesis 2: Convergence gate bypasses pan check when phased observer is active
 
 **Claim:**
-When `phasedActive = true` (closed track with shape + `_camT !== null`), the pan convergence condition in the entry gate is completely skipped. The Entry→Tracking transition fires as soon as only the *zoom* has converged, regardless of how far the camera still is from the pan target.
+When `phasedActive = true` (closed track with shape + `_camT !== null`), the pan convergence condition in the entry gate is completely skipped. The Entry→Tracking transition fires as soon as only the _zoom_ has converged, regardless of how far the camera still is from the pan target.
 
 **Code (lines 468–472):**
+
 ```javascript
 const phasedActive = this._camT !== null && !this._isOpenTrack && this._shape;
 const zoomConverged = this._lastEntryDeltaZoom < this._entryConvergenceZoom;
@@ -108,6 +115,7 @@ if (zoomConverged && xConverged && yConverged) {
 When `phasedActive = true`: `xConverged = true` and `yConverged = true` always, regardless of `_lastEntryDeltaX` and `_lastEntryDeltaY`.
 
 **Reason for the bypass (comment lines 465–467):**
+
 ```
 // When phased observer is active, _camT tracks focusT (above), so targetOffsetX
 // moves with the racers every frame — the pixel lag cannot converge to the fixed
@@ -116,9 +124,10 @@ When `phasedActive = true`: `xConverged = true` and `yConverged = true` always, 
 
 The reasoning is correct: during entry `_camT = fT` moves with the racer every frame → `targetOffsetX` always equals the running racer's position → the delta measurement (`_lastEntryDeltaX`) stays high because it measures pan vs. target every frame, not convergence to a resting position.
 
-**Problem:** The bypass flag remains `true` on the same `_camT` variable that is later frozen during the lead-in. This means: the convergence claim "if phasedActive, then pan is considered converged" is correct for the *entry phase*, but it also means that **tracking starts before the camera has spatially caught up with the racer** — and so the lead-in freeze begins with a potentially large spatial offset.
+**Problem:** The bypass flag remains `true` on the same `_camT` variable that is later frozen during the lead-in. This means: the convergence claim "if phasedActive, then pan is considered converged" is correct for the _entry phase_, but it also means that **tracking starts before the camera has spatially caught up with the racer** — and so the lead-in freeze begins with a potentially large spatial offset.
 
 **Evidence:**
+
 - Lines 468–472: `phasedActive` short-circuit for `xConverged`/`yConverged`
 - Lines 429–450: entry alignment correctly justifies the bypass (target is moving)
 - Line 474: `_leadInStartTs = ts` directly after convergence → lead-in starts with existing lag
@@ -136,9 +145,10 @@ If the problem disappears at very low racer speeds (slow tracks), H2 is the main
 ### Hypothesis 3: Pan-target lag during zoom transition (zoom-pan race)
 
 **Claim:**
-`_setClosedTrackTargets()` computes `targetOffsetX` with `currEffZoom = this.zoom * this._bsX` — the *current* zoom before the lerp step. Since zoom and pan lerp with the same factor but the pan target is a function of the currently-lerping zoom, a systematic one-frame lag is introduced.
+`_setClosedTrackTargets()` computes `targetOffsetX` with `currEffZoom = this.zoom * this._bsX` — the _current_ zoom before the lerp step. Since zoom and pan lerp with the same factor but the pan target is a function of the currently-lerping zoom, a systematic one-frame lag is introduced.
 
 **Code (lines 750–760):**
+
 ```javascript
 const currEffZoom = Math.max(this.zoom * this._bsX, minEffZoom);  // ← pre-lerp zoom
 const panResolved = resolveCamera({ desiredEffZoom: currEffZoom, ... });
@@ -173,13 +183,13 @@ Below 1.10: targetOffset = 0. Directly above: targetOffset jumps to > 100px. The
 Calculation: racer worldX=700, OVERVIEW→LEADER (zoom 1.0→2.16, lf=0.047/frame):
 
 | Frame | effZoom | targetOffset (px) | offsetX (px) | Racer screen X |
-|-------|---------|-------------------|--------------|----------------|
-| 0 | 1.000 | 0 | 0 | 700 |
-| 1 | 1.054 | –69 | –3.2 | 1082→ |
-| 10 | 1.475 | –405 | –98 | 1079→ |
-| 20 | 1.840 | –681 | –267 | 1117→ |
-| 30 | 2.077 | –856 | –443 | 873 |
-| 48 | 2.155 | –930 | –634 | 605 ✓ |
+| ----- | ------- | ----------------- | ------------ | -------------- |
+| 0     | 1.000   | 0                 | 0            | 700            |
+| 1     | 1.054   | –69               | –3.2         | 1082→          |
+| 10    | 1.475   | –405              | –98          | 1079→          |
+| 20    | 1.840   | –681              | –267         | 1117→          |
+| 30    | 2.077   | –856              | –443         | 873            |
+| 48    | 2.155   | –930              | –634         | 605 ✓          |
 
 Racer at worldX=700 stays on screen in this example (screen x < 1280) but comes very close. At worldX=900 (260px right of center) the racer would be right of screen x=1280 at frames 10–20: **off-screen**.
 
@@ -198,6 +208,7 @@ If the problem only occurs for racers that are far outside the screen center (ne
 The transition from lead-in to follow sets `this.offsetX` and `this.targetOffsetX` directly (no lerp). If the camera lost the racer during the lead-in phase, the snap corrects the camera abruptly back to the racer. Visually: racer jumps back into frame from off-screen.
 
 **Code (lines 970–975):**
+
 ```javascript
 // Follow phase in _computePhasedPanTarget():
 this.offsetX = this.targetOffsetX = -resolved.camX * resolved.effectiveZoom;
@@ -207,11 +218,13 @@ this.offsetY = this.targetOffsetY = this._closedOffsetY(camPos.y, ...);
 These are direct assignments to the live values `this.offsetX` and `this.targetOffsetX` — no lerp interpolation. In the same render function, after returning to `update()`, the already-snapped `offsetX/Y` are returned.
 
 **Interaction with H1:**
+
 - Lead-in (1.0s): racer runs out of frame
 - Follow transition: camera snaps back to racer
 - User perception: "racer briefly disappears, then reappears"
 
 **Evidence:**
+
 - `_computePhasedPanTarget()` line 970: `this.offsetX = this.targetOffsetX = ...`
 - `update()` returns `{ zoom: this.zoom, offsetX: this.offsetX, offsetY: this.offsetY }` (line 514)
 - No interpolation step between lead-in exit and follow entry
@@ -232,6 +245,7 @@ If the "reappearance" moment is abrupt (racer jumps instantly to center, not zoo
 On open tracks, pan smoothing is not calculated from the CameraDirector TC system but uses a fixed factor of 0.05 per frame in `RaceScreen/index.jsx:1132`. This corresponds to an effective time constant of ~3.3s — about 4× slower than entry TC=0.8s on closed tracks.
 
 **Code (`RaceScreen/index.jsx` line 1132):**
+
 ```javascript
 st.camX = isFinite(st.camX)
   ? st.camX + (resolved.camX - st.camX) * 0.05
@@ -241,6 +255,7 @@ st.camX = isFinite(st.camX)
 `tcToLerpFactor(tc) = 0.05` → `tc ≈ 1/FRAME_RATE × log(0.1)/log(1-0.05) ≈ 3.3s`
 
 The phased observer (lead-in/follow/lead-out) is DISABLED on open tracks (lines 485–487):
+
 ```javascript
 if (!this._isOpenTrack && this._camT !== null && this._shape) {
   this._computePhasedPanTarget(...);
@@ -250,6 +265,7 @@ if (!this._isOpenTrack && this._camT !== null && this._shape) {
 H1–H4 therefore apply exclusively to **closed tracks**. On open tracks there is instead a permanent slow pan lag after every transition.
 
 **Evidence:**
+
 - `RaceScreen/index.jsx:1132`: hardcoded 0.05
 - `CameraDirector.js:485`: `if (!this._isOpenTrack && ...)`
 - No `dt` scaling on open track (pan TC not framerate-independent)
@@ -263,13 +279,13 @@ If the bug occurs exclusively on closed tracks, this rules out H5 as the cause o
 
 ## Ranking by likelihood
 
-| Rank | Hypothesis | Confidence | Independent? | Explains off-screen? | Explains snap back? |
-|------|-----------|-----------|-------------|--------------------|--------------------|
-| 1 | H1: Lead-in freeze looks behind racer | High | Yes | Yes (fast racers) | No (but H4 explains that) |
-| 2 | H4: Follow-phase snap | High | No (consequence of H1) | No | Yes |
-| 3 | H2: Convergence gate bypass | High | No (sharpens H1) | No alone | No |
-| 4 | H3: Pan-target lag / world-edge clamp | Medium | Yes | Only at extreme off-center position | No |
-| 5 | H5: Open track hardcoded lerp | Low | Yes (different problem) | No | No |
+| Rank | Hypothesis                            | Confidence | Independent?            | Explains off-screen?                | Explains snap back?       |
+| ---- | ------------------------------------- | ---------- | ----------------------- | ----------------------------------- | ------------------------- |
+| 1    | H1: Lead-in freeze looks behind racer | High       | Yes                     | Yes (fast racers)                   | No (but H4 explains that) |
+| 2    | H4: Follow-phase snap                 | High       | No (consequence of H1)  | No                                  | Yes                       |
+| 3    | H2: Convergence gate bypass           | High       | No (sharpens H1)        | No alone                            | No                        |
+| 4    | H3: Pan-target lag / world-edge clamp | Medium     | Yes                     | Only at extreme off-center position | No                        |
+| 5    | H5: Open track hardcoded lerp         | Low        | Yes (different problem) | No                                  | No                        |
 
 **Most likely explanation for the reported bug pattern:**
 

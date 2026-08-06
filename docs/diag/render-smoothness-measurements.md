@@ -1,5 +1,10 @@
 # Render-Smoothness — Measurements
 
+<!-- HISTORICAL: 2026-05-08 — render-smoothness measurements taken before the shared t-update and the corridor zoom unit -->
+
+> **Read this as HISTORY.** It records what was measured or true on 2026-05-08. Config values in it are
+> that day's values, not today's; today's live in `client/src/modules/storage/defaults.js`.
+
 ## Setup Conditions
 
 - **Track**: Dirt Oval (Closed, 1280×720)

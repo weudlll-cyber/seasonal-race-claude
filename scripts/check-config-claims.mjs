@@ -115,6 +115,13 @@ const EXCEPT = new Map([
       "it is history by construction. It cannot carry a HISTORICAL mark because the register itself " +
       "is live — new tags are added to it.",
   ],
+  [
+    "docs/AUDIT.md",
+    "the append-only audit log. Every entry records what an audit measured on ITS date, with the " +
+      "config of that day; its own banner already tells the reader to read rows as history and " +
+      "points at the living documents for the current force set. Same shape as TAGS.md: history by " +
+      "construction, but a live register, so a whole-document HISTORICAL mark would be a lie.",
+  ],
 ]);
 
 // KEYS WHOSE NAMES ARE ORDINARY ENGLISH WORDS. Listed BY NAME with the reason, never by pattern,

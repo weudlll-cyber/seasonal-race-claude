@@ -1,5 +1,10 @@
 # Phase 2N — Tuning Log: Open Track Fairness
 
+<!-- HISTORICAL: 2026-05-20 — Phase 2N tuning log — the configs and gates of that sweep, superseded by the shipped world -->
+
+> **Read this as HISTORY.** It records what was measured or true on 2026-05-20. Config values in it are
+> that day's values, not today's; today's live in `client/src/modules/storage/defaults.js`.
+
 **Goal:** All 9 configs (3 compatible racers × r40/r70/r100) pass the 1.5× gate at N=50 (min. 8/9).
 
 **Fixed parameters (all iterations):**

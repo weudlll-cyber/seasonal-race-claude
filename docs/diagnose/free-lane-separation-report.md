@@ -8,6 +8,7 @@ Worktree: c:\Users\weudl\OneDrive\Dokumente\Seasonal race claude-master-merge
 ## 1. What was implemented
 
 Changed files:
+
 - client/src/modules/raceBehavior.js (+133/-0)
 - client/src/screens/RaceScreen/index.jsx (+3/-0)
 - client/src/modules/storage/defaults.js (+1/-1)
@@ -16,6 +17,7 @@ Changed files:
 - client/src/screens/DevScreen/sections/RaceTuningSection.test.jsx (+4/-4)
 
 Algorithm (Free-Lane Separation, additive):
+
 - Per racer pair the existing force logic continues to be applied.
 - Additionally, when active overlap is detected, left/right space is checked.
 - Space check uses existing geometry derivation (spriteWorldSizePx, trackWidthPx, pathLengthPx), no new tuning defaults.
@@ -26,10 +28,10 @@ Algorithm (Free-Lane Separation, additive):
 
 ## 2. Before/after values table
 
-| Value | Old | New | Rationale |
-|---|---:|---:|---|
-| reRollVariationPercent | 45 | 58 | More race drama/position changes, within target range 55-60 |
-| all other defaults | unchanged | unchanged | Only the requested increase for reRoll |
+| Value                  |       Old |       New | Rationale                                                   |
+| ---------------------- | --------: | --------: | ----------------------------------------------------------- |
+| reRollVariationPercent |        45 |        58 | More race drama/position changes, within target range 55-60 |
+| all other defaults     | unchanged | unchanged | Only the requested increase for reRoll                      |
 
 ## 3. Test results
 
@@ -38,6 +40,7 @@ Algorithm (Free-Lane Separation, additive):
 - New tests: 6 free-lane unit tests in client/src/modules/raceBehavior.test.js
 
 New test cases:
+
 - Overlap, both sides free → Y-geometry rule separates left/right
 - Overlap, one racer only one side free → one-sided yielding + geometry for the other
 - A only left free, B only right free → A left, B right
@@ -58,18 +61,22 @@ New test cases:
 ## 5. Visual test — notes for user
 
 Before test, mandatory:
+
 - DevScreen → click "Reset All Defaults" (otherwise old localStorage values remain active).
 
 Observe:
+
 - Do overlapping racers separate earlier/more reliably into lateral free areas?
 - Does movement stay smooth (no jumps, no double images)?
 - Is re-roll-driven race action visibly higher than at default 45?
 - Do drafting effects remain recognizably active?
 
 If too little action:
+
 - Increase reRollVariationPercent slightly further (e.g. 60 → 65) in DevScreen.
 
 If packs become too strong again:
+
 - Decrease reRollVariationPercent slightly (e.g. 58 → 55).
 - Fine-tune drafting values from PR #97 instead of introducing new mechanics.
 
