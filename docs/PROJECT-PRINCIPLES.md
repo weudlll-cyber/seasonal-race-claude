@@ -71,9 +71,10 @@ See LESSONS.md L48; SPEED_REFACTOR_ANALYSIS.md.
 ## 8. Fairness is a binding gate
 
 A race-dynamics change ships only if it holds the fairness gate on the standard tracks:
-**band-reach ≥ 70%** (the overall zone-success rate, `computeZoneSuccessRate`) **AND zero
-Holm-unfair start rows** (native per-start-row win χ² with Holm correction). Both conditions,
-every track. `corrP1` (bonus↔leader correlation) is **action-quality context, not a gate** — it
+**band-reach** (the overall zone-success rate, `computeZoneSuccessRate`) **AND zero Holm-unfair
+start rows** (native per-start-row win χ² with Holm correction). Both conditions, every track.
+**The thresholds live in [FAIRNESS.md](FAIRNESS.md) and are stated there and nowhere else** — this file
+binds the rule, that file owns the numbers. `corrP1` (bonus↔leader correlation) is **action-quality context, not a gate** — it
 has no target. Measure fairness in the shipped config (see §"shipped == measured", LESSONS 166),
 and quality in gap space / racer lengths, never rank space (LESSONS 172).
 
@@ -105,7 +106,7 @@ current realisation of this goal.
 
 **Race-action phase shipped 2026-07-14 (commits `e1d5a2b` / `361a8cd`).** Choreography (hero curve
 casting + min-jerk interpolation) + PulkLeadRotation (non-hero front action via attacker / settle-brake /
-outsider slots) + the fairness gate (band-reach ≥70% + 0 Holm-unfair start rows) are now live on master.
+outsider slots) + the fairness gate (band-reach + 0 Holm-unfair start rows, [FAIRNESS.md](FAIRNESS.md)) are now live on master.
 See [RACE-ACTION.md](RACE-ACTION.md) for the shipped mechanism description. E2E acceptance specs retired
 (14 DEAD_IN_SPIRIT removed, `361a8cd`); 8 LIVE/UNCERTAIN specs remain for active regression coverage.
 

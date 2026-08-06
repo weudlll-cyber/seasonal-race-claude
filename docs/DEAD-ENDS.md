@@ -9,7 +9,7 @@ docs/LESSONS.md (183 lessons), and reports/. Living document — append, never s
 ## The frame (read first)
 
 - **The servo is NOT a failure.** The shipped servo world (`@ce73592`) is the ONLY working solution
-  to date: fair (band-reach ≥70%, zero Holm-unfair rows), _some_ action, physics envelope respected.
+  to date: fair (band-reach and zero Holm-unfair rows, both to the gate in [FAIRNESS.md](FAIRNESS.md)), _some_ action, physics envelope respected.
   Every attempt to replace or substantially improve it has so far produced nothing measurably better.
   It stays shipped until something beats it on a measurement. The goal is to IMPROVE it, not disprove it.
 - **The pillars (non-negotiable).** Identical racers (one type per race). Simultaneous mass start from

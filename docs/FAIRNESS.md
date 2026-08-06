@@ -1,9 +1,9 @@
 # FAIRNESS.md — what "fair" means in RaceArena, and how it is measured
 
 **This is the canonical definition of fairness for the race dynamics.** It states the owner's definition,
-names the ONE headline number, and pins the permanent gate lines a race-dynamics change must clear. The
-operational start-row gate in [PROJECT-PRINCIPLES.md §8](PROJECT-PRINCIPLES.md) is layer 1 of this definition;
-this document is the whole of it. Current shipped world (value: [docs/fingerprints.json](fingerprints.json)) = COMBO15 + margin hysteresis
+names the ONE headline number, and pins the permanent gate lines a race-dynamics change must clear. [PROJECT-PRINCIPLES.md §8](PROJECT-PRINCIPLES.md)
+BINDS the operational start-row gate as layer 1 of this definition; **this document states the thresholds,
+and is the only document that states them.** Current shipped world (value: [docs/fingerprints.json](fingerprints.json)) = COMBO15 + margin hysteresis
 (`softSteeringObstacleMargin` 0.5, RACER-FLAPPING-2) + lateral acceleration cap (`maxLateralAccelPerStep` 0.0005,
 RACER-MOTION-2). Fingerprint lineage: [docs/SIM.md](SIM.md).
 

@@ -29,8 +29,8 @@ produces the same race.
 
 Three properties are ranked and non-negotiable. When they conflict, the higher one wins, always.
 
-**Fairness is sacred.** The gate is band-reach of at least 70 percent (how many racers finish inside their
-assigned fairness band) together with zero start-rows flagged unfair by the Holm test. No amount of
+**Fairness is sacred.** The gate is band-reach (how many racers finish inside their assigned fairness
+band) together with zero start-rows flagged unfair by the Holm test; the thresholds live in [FAIRNESS.md](FAIRNESS.md). No amount of
 spectacle justifies a race that systematically advantages some racers over others. Fairness is measured, and
 the measurement is the gate for shipping a change.
 
@@ -162,10 +162,10 @@ prefers a missed pass to a breach of naturalness.
 
 Fairness is defined by measurement, and the measurement is the gate.
 
-**Band-reach of at least 70 percent.** Every racer is assigned a target fairness band by rank: band 1 is
+**Band-reach.** Every racer is assigned a target fairness band by rank: band 1 is
 ranks 1–5, band 2 is ranks 6–15, band 3 is ranks 16–25, band 4 is ranks 26–40, and band 5 is ranks 41 and
-beyond. Band-reach is the fraction of racers that finish inside their assigned band. At least 70 percent must
-land in-band for a configuration to be considered fair.
+beyond. Band-reach is the fraction of racers that finish inside their assigned band. The share that must
+land in-band for a configuration to be considered fair is the gate in [FAIRNESS.md](FAIRNESS.md).
 
 **Zero Holm-unfair start rows.** The starting grid must not systematically help or hurt racers by row. Each
 start row's outcomes are tested for a significant advantage, with a Holm correction across rows to control
