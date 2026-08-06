@@ -13,7 +13,7 @@ is built as `computeGapBiasedTarget` in `client/src/modules/racePlanner.js` (a s
 transform beside `computePulkBiasedTarget`, whose behavior is untouched), activated ONLY from the sim
 harness (`scripts/sim-fairness.mjs --gapRerollThresholdLengths / --gapRerollMode / --gapRerollStrength`);
 turning it OFF (`--gapRerollEnabled=false`) makes the browser and a default sim run byte-identical (OFF
-invariant `f8f7d9c2fd3283e9`). **Owner fairness decision (binding): SCHEDULED ROLLS ONLY — never an
+invariant `f8f7d9c2fd3283e9`, **HISTORICAL — the COMBO15-era value, superseded 2026-07-31; current values in [docs/fingerprints.json](fingerprints.json)**). **Owner fairness decision (binding): SCHEDULED ROLLS ONLY — never an
 off-schedule/early re-roll.** The window is derived from config at runtime (`[choreoOutcomeStart,
 reRollLastPositionPercent·dur − reRollTransitionDuration]`), zero hardcoded constants. **UPDATE 2026-07-26 —
 SHIPPED ON by default and browser-wired** (DevScreen Dynamics → Speed → Gap-Cap Re-Roll), at the confirmed

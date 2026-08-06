@@ -135,20 +135,34 @@ async function clearBaseSpeedConfig(page) {
 // ── V1 — Adaptive Zoom 1280-Track (backward compat) ──────────────────────────
 
 /**
- * The zoom-formula constants, stated ONCE (ONE-TRUTH-1 stage 6). They were written out in full in
- * three separate `page.evaluate` callbacks below; a value repeated three times in one file is three
- * chances to be wrong and no way to notice.
+ * THE THREE ZOOM-FORMULA TESTS BELOW ASSERT A FORMULA THIS PRODUCT NO LONGER HAS.
+ * Established by measurement in ONE-TRUTH-2 stage 3, not by reading:
  *
- * A LARGER PROBLEM IS RECORDED AND NOT FIXED HERE, because fixing it means deleting tests and that
- * is the owner's call. These three tests re-implement the zoom formula inside the browser and then
- * assert their own arithmetic. They navigate to `/` and never reach the app's zoom code at all:
- *   What would break if they were deleted? Nothing in the product. They would still pass if
- *   `zoomUnit.js` and `projection.js` were deleted from the repository.
- *   What do they protect? Only this file's copy of the formula — the same defect class as an
- *   `expect(CONSTANT).toBe(<its own literal>)`, but wearing an end-to-end test's clothes, which
- *   makes it read as coverage it does not provide.
- * The real zoom invariants are unit-tested in `client/src/modules/camera/`. See the ONE-TRUTH-1
- * report.
+ *   `LEADER_VIEW_W`, `MIN_ZOOM` and `MAX_ZOOM` appear NOWHERE in `client/src`. The zoom model they
+ *   describe was replaced by the corridor unit in CAMERA-REFERENCE-WIDTH-1 (`zoomUnit.js`, created
+ *   2026-08-02), whose API is `camZoomForCorridors` / `resolveZoomForCorridors` and takes none of
+ *   these inputs. There is no real function of this shape left to call.
+ *
+ * So the brief's instruction — "make them call the real function in zoomUnit.js" — has no target.
+ * They were not merely re-implementing a formula; they were re-implementing a RETIRED one, inside
+ * `page.evaluate`, after a `goto('/')` that touches no application code. They pass today, they
+ * would pass with `zoomUnit.js` deleted, and they would pass if the camera never zoomed at all.
+ *
+ * WHAT WAS DONE INSTEAD, because the honest answer to "make them real" was to make the coverage
+ * real: the CLAMP CONTRACT they gestured at — the one thing here that was covered by nothing — is
+ * now asserted against the actual shipped function in
+ * `client/src/modules/camera/zoomUnit.test.js` ("the clamp contract"), where it can be run and was
+ * proven by sabotage. Every other test in that file injects an identity `clampCamZoom`, so the
+ * wiring had never been checked.
+ *
+ * WHY THEY ARE STILL HERE: deleting three tests is the owner's call and the brief said not to.
+ * They are also NOT rewritten, deliberately — the e2e suite cannot be run from this block (its
+ * Playwright browsers are not installed, and its `webServer` wants port 5173, which the owner's
+ * dev server currently holds), and rewriting tests I cannot execute would replace a known-empty
+ * check with an unverified one. See the ONE-TRUTH-2 report.
+ *
+ * The constants are stated once rather than three times, which is the only defect here that could
+ * be fixed without running anything.
  */
 const ZOOM_CONSTANTS = {
   CANVAS_W: 1280,

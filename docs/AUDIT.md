@@ -973,5 +973,5 @@ surface-class master-detail flow (`vre-2-ux-verification`). (The perf baseline `
 initially UNCERTAIN, was superseded and deleted in the follow-up close-out, along with its two dedicated
 `playwright.perf-dev/prod.config.js` files.)
 
-Default-behaviour fingerprint `fa4e3796e1e5f1a5` unchanged (e2e deletion touches no runtime); the unit
+Default-behaviour fingerprint `fa4e3796e1e5f1a5` (**HISTORICAL — the shipped world at the time of this audit entry; several engine changes have moved it since**) unchanged (e2e deletion touches no runtime); the unit
 suite is unaffected (e2e excluded from vitest). Per-spec verdicts + reasoning: `results/audit-e2e-queue.json`.

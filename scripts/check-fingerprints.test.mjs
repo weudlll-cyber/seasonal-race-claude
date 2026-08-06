@@ -1,12 +1,14 @@
 // ============================================================
 // File:        scripts/check-fingerprints.test.mjs
-// Project:     RaceArena — ONE-TRUTH-1 stage 4
+// Project:     RaceArena — ONE-TRUTH-2 stage 1
 //
-// The guard is driven as a REAL PROCESS against a throwaway tree, not imitated in-process. Every
-// test below is a SABOTAGE: it breaks one thing and asserts the guard notices. A guard that has
-// only ever been run on a passing tree has not been shown to be able to fail (Lesson 187), and the
-// switch is tested by proving its two positions differ (Lesson 203) — so each sabotage is paired
-// with the unsabotaged run that passes.
+// The guard is driven as a REAL PROCESS against a throwaway git repository, not imitated in-process.
+// Every test is a SABOTAGE paired with the unsabotaged position, because a switch is tested by
+// proving its two positions differ (L203) and a guard that has only ever passed has not been shown
+// able to fail (L187).
+//
+// The MINT path is exercised with a cheap fake `reproduce` command. The real one costs two minutes;
+// what needs testing is the comparison and its failure message, not the race engine.
 // ============================================================
 
 import { test } from "node:test";
@@ -24,18 +26,19 @@ import { join, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), "..");
-const GUARD = join(
-  dirname(fileURLToPath(import.meta.url)),
-  "check-fingerprints.mjs",
-);
+const GUARD = join(ROOT, "scripts", "check-fingerprints.mjs");
 
 const VALUE = "aaaabbbbccccdddd";
-const OTHER = "1111222233334444";
+const OLD = "1111222233334444";
 
-/** A minimal but REAL tree: a record, and one document that states the value. */
-function makeTree({ record, doc } = {}) {
-  const root = mkdtempSync(join(tmpdir(), "ra-fp-"));
+/** Prints VALUE and exits — a stand-in for a two-minute fingerprint script. */
+const fakeReproduce = (v) => `node -e "console.log('${v}')"`;
+
+function makeRepo({ record, doc, history, extra } = {}) {
+  const root = mkdtempSync(join(tmpdir(), "ra-fp2-"));
   mkdirSync(join(root, "docs"), { recursive: true });
+  mkdirSync(join(root, "reports"), { recursive: true });
+
   writeFileSync(
     join(root, "docs", "fingerprints.json"),
     JSON.stringify(
@@ -43,22 +46,36 @@ function makeTree({ record, doc } = {}) {
         roles: {
           world: {
             value: VALUE,
-            script: "scripts/fingerprint-default.mjs",
+            reproduce: fakeReproduce(VALUE),
             mintedOn: "abc1234",
             date: "2026-08-06",
           },
         },
-        sites: [{ file: "docs/THING.md", role: "world", anchor: "Current: `" }],
-        historyAllowed: [],
+        historyHomes: ["reports/"],
+        machineExceptions: [],
       },
       null,
       2,
     ),
   );
+  // A document that REFERENCES the record and carries no value — the shape this block enforces.
   writeFileSync(
     join(root, "docs", "THING.md"),
-    doc ?? `Current: \`${VALUE}\` is the world.\n`,
+    doc ?? "The world fingerprint's value lives in docs/fingerprints.json.\n",
   );
+  // History: a report may legitimately contain the current value.
+  writeFileSync(
+    join(root, "reports", "OLD-BLOCK.md"),
+    history ?? `fp was \`${VALUE}\` that day.\n`,
+  );
+  if (extra)
+    for (const [rel, body] of Object.entries(extra))
+      writeFileSync(join(root, rel), body);
+
+  // The guard reads `git ls-files`, so the fixture must be a real repository.
+  const git = (...a) => spawnSync("git", a, { cwd: root, encoding: "utf8" });
+  git("init", "-q");
+  git("add", "-A");
   return root;
 }
 
@@ -69,8 +86,8 @@ function run(root, ...extra) {
   return { code: r.status, out: r.stdout ?? "", err: r.stderr ?? "" };
 }
 
-function withTree(opts, fn) {
-  const root = makeTree(opts);
+function withRepo(opts, fn) {
+  const root = makeRepo(opts);
   try {
     return fn(root);
   } finally {
@@ -80,168 +97,191 @@ function withTree(opts, fn) {
 
 // ── the unsabotaged position ──────────────────────────────────────────────────────────────────
 
-test("BASELINE: a record and a document that agree PASS", () => {
-  withTree({}, (root) => {
+test("BASELINE: a record, a document that only REFERENCES it, and a report that cites it — PASS", () => {
+  withRepo({}, (root) => {
     const r = run(root);
     assert.equal(r.code, 0, r.err);
-    assert.match(r.out, /1\/1 sites read/);
+    assert.match(r.out, /0 stray copies/);
   });
 });
 
-// ── sabotage 1: the two directions of disagreement ────────────────────────────────────────────
+// ── SABOTAGE 1: the owner's rule — a value pasted into a document ──────────────────────────────
 
-test("SABOTAGE, doc side: a document carrying a STALE value fails, and both values are named", () => {
-  withTree({ doc: `Current: \`${OTHER}\` is the world.\n` }, (root) => {
-    const r = run(root);
-    assert.equal(r.code, 1);
-    assert.match(r.err, new RegExp(`says ${OTHER}`));
-    assert.match(r.err, new RegExp(`record says ${VALUE}`));
-  });
-});
-
-test("SABOTAGE, record side: moving the RECORD makes the untouched document fail", () => {
-  // The same disagreement from the other end. This is the direction that matters after a mint:
-  // the new value lands in the record and every document is instantly, loudly, out of date.
-  const record = {
-    roles: {
-      world: {
-        value: OTHER,
-        script: "s.mjs",
-        mintedOn: "abc1234",
-        date: "2026-08-06",
-      },
-    },
-    sites: [{ file: "docs/THING.md", role: "world", anchor: "Current: `" }],
-    historyAllowed: [],
-  };
-  withTree({ record }, (root) => {
-    assert.equal(run(root).code, 1);
-    // ...and --fix resolves it in the record's favour, which is what "one home" means.
-    assert.equal(run(root, "--fix").code, 0);
-    assert.equal(run(root).code, 0);
-  });
-});
-
-// ── sabotage 2: the site stops being checkable ────────────────────────────────────────────────
-
-test("SABOTAGE: rewording prose so the ANCHOR is gone fails — it does not silently check nothing", () => {
-  withTree({ doc: `The world is presently \`${VALUE}\`.\n` }, (root) => {
-    const r = run(root);
-    assert.equal(r.code, 1);
-    assert.match(r.err, /is GONE/);
-  });
-});
-
-test("SABOTAGE: an anchor that matches TWICE fails — it no longer identifies one value", () => {
-  withTree(
-    { doc: `Current: \`${VALUE}\` and also Current: \`${VALUE}\`.\n` },
+test("SABOTAGE: pasting the CURRENT value into a document FAILS, and the message says what to do", () => {
+  withRepo(
+    { doc: `The current world is \`${VALUE}\`, obviously.\n` },
     (root) => {
       const r = run(root);
       assert.equal(r.code, 1);
-      assert.match(r.err, /matches 2 times/);
+      assert.match(
+        r.err,
+        /docs\/THING\.md contains the CURRENT world fingerprint/,
+      );
+      assert.match(r.err, /One truth lives in one place/);
     },
   );
 });
 
-// ── sabotage 3: coverage — a new copy nobody wired up ─────────────────────────────────────────
+test("CONSEQUENCE: an OLD value in the same document is fine — citing history is not a defect", () => {
+  // This is the pair that makes the containment check honest. ONE-TRUTH-1 discarded a guard that
+  // could not tell these apart; this one does not have to, because it only ever looks for CURRENT
+  // values. Ablation targets and lineage narrative must stay legal.
+  withRepo(
+    { doc: `Setting it to 0 restores the pre-motion world \`${OLD}\`.\n` },
+    (root) => {
+      assert.equal(run(root).code, 0);
+    },
+  );
+});
 
-test("SABOTAGE: a NEW file stating the current value, declared nowhere, fails", () => {
-  withTree({}, (root) => {
-    assert.equal(run(root).code, 0, "precondition: clean before the new file");
-    writeFileSync(
-      join(root, "docs", "NEWDOC.md"),
-      `The world is \`${VALUE}\` today.\n`,
-    );
+test("CONSEQUENCE: the same value in a declared HISTORY home passes, and outside one fails", () => {
+  withRepo({ extra: { "docs/NOTES.md": `see \`${VALUE}\`\n` } }, (root) => {
+    // reports/OLD-BLOCK.md already holds it and passes; docs/NOTES.md holds it and must not.
     const r = run(root);
     assert.equal(r.code, 1);
-    assert.match(r.err, /neither a declared site nor declared history/);
+    assert.match(r.err, /docs\/NOTES\.md/);
+    assert.doesNotMatch(r.err, /reports\/OLD-BLOCK\.md/);
   });
 });
 
-test("CONSEQUENCE: the same new file PASSES once it is declared as history", () => {
-  // The pair to the test above: coverage is a routing question, not a ban. Declaring the file is
-  // the fix, and it must actually work — otherwise the guard would push people to delete facts.
+test("A MACHINE EXCEPTION is honoured BY NAME, not by pattern", () => {
   const record = {
     roles: {
       world: {
         value: VALUE,
-        script: "s.mjs",
+        reproduce: fakeReproduce(VALUE),
         mintedOn: "abc1234",
         date: "2026-08-06",
       },
     },
-    sites: [{ file: "docs/THING.md", role: "world", anchor: "Current: `" }],
-    historyAllowed: ["docs/NEWDOC.md"],
+    historyHomes: ["reports/"],
+    machineExceptions: [
+      { file: "docs/NOTES.md", reason: "a test reads this literal" },
+    ],
   };
-  withTree({ record }, (root) => {
-    writeFileSync(
-      join(root, "docs", "NEWDOC.md"),
-      `The world was \`${VALUE}\` back then.\n`,
+  withRepo(
+    {
+      record,
+      extra: { "docs/NOTES.md": `${VALUE}\n`, "docs/OTHER.md": `${VALUE}\n` },
+    },
+    (root) => {
+      const r = run(root);
+      assert.equal(r.code, 1, "the un-excepted sibling must still fail");
+      assert.match(r.err, /docs\/OTHER\.md/);
+      assert.doesNotMatch(
+        r.err,
+        /docs\/NOTES\.md/,
+        "the named exception must be silent",
+      );
+    },
+  );
+});
+
+// ── SABOTAGE 2: the record edited without re-minting ───────────────────────────────────────────
+
+test("SABOTAGE: --mint FAILS when the record disagrees with what the command produces", () => {
+  const record = {
+    roles: {
+      // The record claims VALUE; the reproduce command produces OLD. That is exactly the state of a
+      // record someone edited without re-minting.
+      world: {
+        value: VALUE,
+        reproduce: fakeReproduce(OLD),
+        mintedOn: "abc1234",
+        date: "2026-08-06",
+      },
+    },
+    historyHomes: ["reports/"],
+    machineExceptions: [],
+  };
+  withRepo({ record }, (root) => {
+    assert.equal(
+      run(root).code,
+      0,
+      "containment alone must still pass — that is the point of the split",
     );
-    assert.equal(run(root).code, 0);
+    const r = run(root, "--mint");
+    assert.equal(r.code, 1);
+    assert.match(
+      r.err,
+      new RegExp(`the ENGINE says ${OLD}, the record says ${VALUE}`),
+    );
   });
 });
 
-// ── sabotage 4: the loud-failure rule ─────────────────────────────────────────────────────────
+test("CONSEQUENCE: --mint PASSES when they agree, and says how many roles it re-minted", () => {
+  withRepo({}, (root) => {
+    const r = run(root, "--mint");
+    assert.equal(r.code, 0, r.err);
+    assert.match(r.out, /1 role\(s\) re-minted/);
+  });
+});
 
-test("LOUD FAILURE: a record with zero sites FAILS rather than passing with nothing to check", () => {
+test("A BROKEN reproduce command FAILS loudly rather than being read as agreement", () => {
   const record = {
     roles: {
       world: {
         value: VALUE,
-        script: "s.mjs",
+        reproduce: 'node -e "process.exit(3)"',
         mintedOn: "abc1234",
         date: "2026-08-06",
       },
     },
-    sites: [],
-    historyAllowed: [],
+    historyHomes: ["reports/"],
+    machineExceptions: [],
   };
-  withTree({ record }, (root) => {
-    const r = run(root);
+  withRepo({ record }, (root) => {
+    const r = run(root, "--mint");
     assert.equal(r.code, 1);
-    assert.match(r.err, /ZERO sites/);
+    assert.match(r.err, /reproduce command FAILED/);
   });
 });
 
-test("LOUD FAILURE: an unreadable record FAILS, and says the record is the home", () => {
-  withTree({}, (root) => {
-    const r = run(root, "--record=" + join(root, "docs", "nope.json"));
+test("THE DEFAULT RUN SAYS IT DID NOT CHECK THE ENGINE — the limit is printed, not buried", () => {
+  withRepo({}, (root) => {
+    assert.match(run(root).out, /Record NOT verified against the engine/);
+  });
+});
+
+// ── the loud-failure rule ─────────────────────────────────────────────────────────────────────
+
+test("LOUD FAILURE: zero roles, an unreadable record, and a role with no reproduce command", () => {
+  withRepo({ record: { roles: {}, historyHomes: [] } }, (root) => {
+    const r = run(root);
+    assert.equal(r.code, 1);
+    assert.match(r.err, /ZERO roles/);
+  });
+  withRepo({}, (root) => {
+    const r = run(root, `--record=${join(root, "docs", "nope.json")}`);
     assert.equal(r.code, 1);
     assert.match(r.err, /cannot read the fingerprint record/);
   });
-});
-
-test("A ROLE MUST CARRY ITS PROVENANCE — a value with no mint commit is not a record", () => {
   const record = {
-    roles: { world: { value: VALUE, script: "s.mjs", date: "2026-08-06" } },
-    sites: [{ file: "docs/THING.md", role: "world", anchor: "Current: `" }],
-    historyAllowed: [],
+    roles: { world: { value: VALUE, mintedOn: "abc1234", date: "2026-08-06" } },
+    historyHomes: [],
+    machineExceptions: [],
   };
-  withTree({ record }, (root) => {
-    const r = run(root);
-    assert.equal(r.code, 1);
-    assert.match(r.err, /does not name the commit it was minted on/);
+  withRepo({ record }, (root) => {
+    assert.match(run(root).err, /does not name the command that reproduces it/);
   });
 });
 
-// ── the real tree ─────────────────────────────────────────────────────────────────────────────
+// ── the real repository ───────────────────────────────────────────────────────────────────────
 
-test("THE REAL REPOSITORY passes its own guard, and reads EVERY site the record declares", () => {
-  // The counts are DERIVED from the record, not typed here. An earlier version of this test pinned
-  // "17/17"; stage 5 declared two more sites and the test failed for being right. A literal that
-  // has to be edited whenever the thing it describes grows is a maintenance tax, not a check.
+test("THE REAL REPOSITORY holds NO copy of any current fingerprint outside the record", () => {
+  const r = spawnSync(process.execPath, [GUARD], {
+    cwd: ROOT,
+    encoding: "utf8",
+  });
+  assert.equal(r.status, 0, r.stderr);
+  assert.match(r.stdout, /0 stray copies/);
+  // Counts derived from the record, never typed: a literal here would fail for being right the
+  // moment a role is added. (That happened in ONE-TRUTH-1 and is not repeated.)
   const record = JSON.parse(
     readFileSync(join(ROOT, "docs", "fingerprints.json"), "utf8"),
   );
-  const roles = Object.keys(record.roles).length;
-  const sites = record.sites.length;
-
-  const r = spawnSync(process.execPath, [GUARD], { encoding: "utf8" });
-  assert.equal(r.status, 0, r.stderr);
-  // sites READ must equal sites DECLARED: a site skipped for any reason would show as a shortfall.
   assert.match(
     r.stdout,
-    new RegExp(`${roles} roles, ${sites}/${sites} sites read`),
+    new RegExp(`${Object.keys(record.roles).length} roles`),
   );
 });

@@ -73,6 +73,24 @@ const ROOT = join(dirname(fileURLToPath(import.meta.url)), "..");
 const SCRATCH =
   process.env.RA_SCRATCH_DIR || join(tmpdir(), "racearena-scratch");
 const LABEL = process.argv[2] || "run";
+
+// A FLAG IN THE LABEL POSITION IS ALWAYS A MISTAKE, and it used to be a SILENT one (ONE-TRUTH-2).
+// `argv[2]` is the label and EXTRA starts at `argv[3]`, so
+//   node scripts/fingerprint-default.mjs --gapRerollEnabled=false
+// consumed the flag AS the label, passed nothing to the sim, printed "default config", and returned
+// the shipped-default hash — a completely legitimate-looking answer to a question nobody asked. It
+// cost this block a wrong `reproduce` command in the fingerprint record, written on the strength of
+// that output. Nobody wants a temp directory named `--gapRerollEnabled=false`, so refusing loses no
+// legitimate use.
+if (process.argv[2]?.startsWith("--")) {
+  console.error(
+    `FAIL: "${process.argv[2]}" looks like a flag, but it is in the LABEL position.\n` +
+      "       argv[2] is a label (it only names the temp output dir); sim flags start at argv[3].\n" +
+      `       You almost certainly meant:  node scripts/fingerprint-default.mjs off ${process.argv.slice(2).join(" ")}\n` +
+      "       Refusing rather than silently measuring the DEFAULT world and printing a hash that looks right.",
+  );
+  process.exit(2);
+}
 // Any further argv entries are passed straight through to the sim. Needed since a mechanism can now
 // ship ON by default: `node scripts/fingerprint-default.mjs off --gapRerollEnabled=false` measures the
 // pre-feature world. With no extra args this is exactly the shipped-default fingerprint, as before.

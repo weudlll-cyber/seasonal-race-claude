@@ -35,8 +35,8 @@ raceDynamicsConfig.js   storage.js   RandomHelper.js   mathUtils.js
 
 Two of these matter more than the others and are the actionable half:
 
-- **`raceBehaviorConfig.js` and `raceDynamicsConfig.js`** are *configuration surfaces the race core
-  reads*. A document that claims to describe the shipped world and never names them is incomplete in
+- **`raceBehaviorConfig.js` and `raceDynamicsConfig.js`** are _configuration surfaces the race core
+  reads_. A document that claims to describe the shipped world and never names them is incomplete in
   the way that matters — those are knobs, not plumbing.
 - **`autoSpriteScale.js`** is the file the mint tripwire was created for (CAMERA-MINT-TRIPWIRE-1). It
   reaches the engine and SIM.md does not mention it.
@@ -61,18 +61,18 @@ because it is unimportant or because nobody updated the list.
 **Could someone run a camera check tomorrow using only this document? PARTLY — and the gap is
 specific.**
 
-| what a runner needs | present? |
-|---|---|
-| which script | **yes** — `camera-fingerprint.mjs` and `render-fingerprint.mjs` both named |
-| the current expected hashes | **yes**, both correct |
-| what it covers | **yes**, and well |
+| what a runner needs          | present?                                                                          |
+| ---------------------------- | --------------------------------------------------------------------------------- |
+| which script                 | **yes** — `camera-fingerprint.mjs` and `render-fingerprint.mjs` both named        |
+| the current expected hashes  | **yes**, both correct                                                             |
+| what it covers               | **yes**, and well                                                                 |
 | the three render blind spots | **yes** — line 314 names the rasteriser, the artwork and the sprite blit together |
-| **which ARGUMENTS to pass** | **NO** |
-| **what it EMITS** | **NO** |
+| **which ARGUMENTS to pass**  | **NO**                                                                            |
+| **what it EMITS**            | **NO**                                                                            |
 
 `--quiet`, `--ops=<track>`, `--phases` and `--coverage` appear nowhere in the document; there are
-three matches for the script names and none for any flag. A reader is told *that* the fingerprint
-exists and *what it means*, but not *how to invoke it* or *what a passing run looks like on screen*.
+three matches for the script names and none for any flag. A reader is told _that_ the fingerprint
+exists and _what it means_, but not _how to invoke it_ or _what a passing run looks like on screen_.
 They would have to open the script. **MISSING, and it is the cheapest fix in this audit:** four lines
 giving the exact command, its flags, and one line of sample output.
 
@@ -85,19 +85,19 @@ render fingerprint, which was only corrected yesterday.
 
 **THE ANSWER THE BRIEF ASKED FOR, with evidence: the CURRENT FINGERPRINTS live in FOUR documents.**
 
-| document | camera | render | world |
-|---|---|---|---|
-| `docs/SIM.md` | 1 | 1 | 2 |
-| `docs/SHIP-CEREMONY.md` | 1 | 1 | 1 |
-| `reports/parity/REBASELINE.md` | 1 | 1 | 2 |
-| `docs/CAMERA_DIRECTOR.md` | 1 | 1 | — |
-| `docs/ARCHITECTURE.md` | — | — | 2 |
+| document                       | camera | render | world |
+| ------------------------------ | ------ | ------ | ----- |
+| `docs/SIM.md`                  | 1      | 1      | 2     |
+| `docs/SHIP-CEREMONY.md`        | 1      | 1      | 1     |
+| `reports/parity/REBASELINE.md` | 1      | 1      | 2     |
+| `docs/CAMERA_DIRECTOR.md`      | 1      | 1      | —     |
+| `docs/ARCHITECTURE.md`         | —      | —      | 2     |
 
 **The two that most directly claim to be the truth about the same thing are `REBASELINE.md` and
 `SHIP-CEREMONY.md`.** The ceremony itself says at line 144 that REBASELINE's top block "is the
 canonical current baseline" — and then carries its own copy of all three hashes in the table above
 it. It also declares (line 147) that "SIM.md is the canonical home for the fingerprint lineage", so
-the rule names *two* canonical homes for two nearly-identical facts, while four documents actually
+the rule names _two_ canonical homes for two nearly-identical facts, while four documents actually
 hold the values.
 
 They agree today only because I have been updating all of them by hand in every block this week.
@@ -105,12 +105,12 @@ That is precisely the arrangement stage B just removed from the cost column.
 
 **GONE — seven references to scripts that no longer exist:**
 
-| script | cited by |
-|---|---|
-| `sim-sweep.mjs` | BACKLOG.md, LESSONS.md, ROADMAP.md |
-| `diag-locks.mjs`, `param-sweep-full.mjs`, `sweep-dyn-sbt.mjs`, `sweep-lateral.mjs` | LESSONS.md |
-| `exp-b2-attack.mjs` | BACKLOG.md |
-| `pp-pulklr-sweep.mjs` | ARCHITECTURE.md |
+| script                                                                             | cited by                           |
+| ---------------------------------------------------------------------------------- | ---------------------------------- |
+| `sim-sweep.mjs`                                                                    | BACKLOG.md, LESSONS.md, ROADMAP.md |
+| `diag-locks.mjs`, `param-sweep-full.mjs`, `sweep-dyn-sbt.mjs`, `sweep-lateral.mjs` | LESSONS.md                         |
+| `exp-b2-attack.mjs`                                                                | BACKLOG.md                         |
+| `pp-pulklr-sweep.mjs`                                                              | ARCHITECTURE.md                    |
 
 Most sit inside historical narrative in LESSONS.md, where naming a since-deleted tool is arguably
 correct — the lesson happened. **ARCHITECTURE.md and BACKLOG.md are the two where it reads as a live
@@ -125,7 +125,7 @@ the remaining time went there. **That is the largest unexamined surface this aud
 
 ## §4 — retirement candidate (planner proposal 2)
 
-**No document met the bar.** CAMERA.md was retired because a *newer, better* document owned the same
+**No document met the bar.** CAMERA.md was retired because a _newer, better_ document owned the same
 subject. Nothing here is in that position: the stale documents (`API.md`, `AUTH.md`, `SETUP.md`) are
 old but have no rival, and retiring them would leave the subject undescribed rather than
 single-homed. **The defect-density case is instead the FINGERPRINT TABLES**, where four homes exist
@@ -137,4 +137,4 @@ and three could be replaced by a pointer — the same shape, one level down.
   documents were **not read against source**. Only inventoried.
 - FAIRNESS.md, LESSONS.md, DEAD-ENDS.md, TAGS.md, VERIFY-RULES.md were checked for fingerprint and
   script-name claims only, not read end to end.
-- No document's *prose* was assessed for accuracy of reasoning — only claims a command can settle.
+- No document's _prose_ was assessed for accuracy of reasoning — only claims a command can settle.

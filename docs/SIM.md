@@ -90,13 +90,13 @@ Mechanism (parity step 1, 2026-07-23): the race-init effect in `RaceScreen/index
 
 ### File locations
 
-| File                              | Purpose                                                                                                                                                    |
-| --------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `scripts/sim-fairness.mjs`        | Main headless simulator and flag-driven harness — single run, full metric report; shares its physics modules with the browser (the single source for both) |
-| `scripts/fingerprint-default.mjs` | Byte-identity gate — hashes the shipped-default sim run across all 10 tracks to prove a change left the default game byte-identical                        |
-| `scripts/camera-fingerprint.mjs`  | The CAMERA's change detector — every director decision on every frame across all 10 tracks. Current **`00cafa2432add0f7`**                                 |
-| `scripts/render-fingerprint.mjs`  | The RENDER path's change detector — the draw-call SEQUENCE at sixteen fixed frames, reaching the finish. Current **`1f83ecc1fcb6fa9a`**                    |
-| `scripts/exp-runaway-leader.mjs`  | Living reference sweep orchestrator (spawn per track → classify → CSV + `SUMMARY.md`); see [SWEEP-HARNESS.md](SWEEP-HARNESS.md)                            |
+| File                              | Purpose                                                                                                                                                        |
+| --------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `scripts/sim-fairness.mjs`        | Main headless simulator and flag-driven harness — single run, full metric report; shares its physics modules with the browser (the single source for both)     |
+| `scripts/fingerprint-default.mjs` | Byte-identity gate — hashes the shipped-default sim run across all 10 tracks to prove a change left the default game byte-identical                            |
+| `scripts/camera-fingerprint.mjs`  | The CAMERA's change detector — every director decision on every frame across all 10 tracks. Current value: [fingerprints.json](fingerprints.json)              |
+| `scripts/render-fingerprint.mjs`  | The RENDER path's change detector — the draw-call SEQUENCE at sixteen fixed frames, reaching the finish. Current value: [fingerprints.json](fingerprints.json) |
+| `scripts/exp-runaway-leader.mjs`  | Living reference sweep orchestrator (spawn per track → classify → CSV + `SUMMARY.md`); see [SWEEP-HARNESS.md](SWEEP-HARNESS.md)                                |
 
 > The standalone `param-sweep*` scripts (5-axis, 8-axis LHS+Phase-2, braking, lateral) that older
 > revisions of this doc listed have all been **deleted**. Sweeping is now done through the
@@ -853,17 +853,18 @@ lateral step so a dodge eases in/out instead of snapping to full swerve; the har
 untouched). This is the SECOND engine change since COMBO15. Because the cap is in the avoidance integrator
 (which runs in BOTH worlds), **both** hashes moved. The current print is:
 
-| world                                                                      | fingerprint            |
-| -------------------------------------------------------------------------- | ---------------------- |
-| ON (flagless — the shipped game = COMBO15 + margin hysteresis + accel cap) | **`dc4647be0f55ebdb`** |
-| OFF (`--gapRerollEnabled=false` — pre-feature world)                       | **`854018ee5d3d83e1`** |
+| world                                                                      | fingerprint                                          |
+| -------------------------------------------------------------------------- | ---------------------------------------------------- |
+| ON (flagless — the shipped game = COMBO15 + margin hysteresis + accel cap) | **current — [fingerprints.json](fingerprints.json)** |
+| OFF (`--gapRerollEnabled=false` — pre-feature world)                       | **current — [fingerprints.json](fingerprints.json)** |
 
 The ON hash moved by design at each world change (retune `e93ffa70dad562a1` → plan-grid `0ecca5e2dbe6526e`
 → speed/duration `e80f78a0da6a9993` → type-mult `eda28d614f5e47d9` → step-order `8b13ccbe96992cc0` →
 speed-150 `6fdfe851dbb4ca72` → gap-flip `7c70b1eae7d31e22` → COMBO15 `ded0a126048e4cdb` → RACER-FLAPPING-2
-`62400c8e88cdbe59` (**the pre-motion anchor**) → **RACER-MOTION-2 `dc4647be0f55ebdb`**). The OFF invariant
-moved again (`8d0bd4d2d92ded24` → **`854018ee5d3d83e1`**) because the accel cap is present with gap-reroll OFF
-too. To reproduce the pre-motion world set `--behavior='{"maxLateralAccelPerStep":0}'` (a valid slider
+`62400c8e88cdbe59` (**the pre-motion anchor, SUPERSEDED 2026-07-31**) → **RACER-MOTION-2, which produced the
+CURRENT world — its value is in [fingerprints.json](fingerprints.json), not here**). The OFF invariant moved
+again at the same time (`8d0bd4d2d92ded24`, **superseded 2026-07-31**, → the current OFF invariant, same
+record) because the accel cap is present with gap-reroll OFF too. To reproduce the pre-motion world set `--behavior='{"maxLateralAccelPerStep":0}'` (a valid slider
 position, parity rule) — that returns `62400c8e88cdbe59` (ON) / `8d0bd4d2d92ded24` (OFF). To reproduce the
 pre-flapping world additionally set `--behavior='{"maxLateralAccelPerStep":0,"softSteeringObstacleMargin":0}'`
 — that returns `ded0a126048e4cdb` (ON) / `f8f7d9c2fd3283e9` (OFF). To

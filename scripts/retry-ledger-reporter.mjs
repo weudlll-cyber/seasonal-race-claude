@@ -2,12 +2,17 @@
 // File:        scripts/retry-ledger-reporter.mjs
 // Project:     RaceArena — NIGHT-TOOLS-1 stage A
 //
-// THE RETRY LEDGER. `vitest.config.js` sets `retry: 3`, so a test that fails twice and passes on the
-// third attempt reports as a pass — indistinguishable from one that passed first time. That is the
-// mute-instrument shape (Lesson 204) applied to the suite itself: the run knows something happened
-// and says nothing. It already cost a real diagnosis — VERIFY-FAST-1's first concurrent run spent
-// wall clock retrying a test that was failing for an environmental reason, and the retries were
-// invisible in the summary.
+// THE RETRY LEDGER. It was built when `vitest.config.js` set `retry: 3`: a test that failed twice
+// and passed on the third attempt reported as a pass, indistinguishable from one that passed first
+// time. That is the mute-instrument shape (Lesson 204) applied to the suite itself — the run knows
+// something happened and says nothing. It cost a real diagnosis (VERIFY-FAST-1's first concurrent
+// run spent wall clock retrying an environmental failure, invisible in the summary), and then it
+// earned its keep: ONE-TRUTH-1 used it to find that the suite was failing 3 runs in 10.
+//
+// **RETRY IS NOW 0** (ONE-TRUTH-2 stage 2, owner decision on that evidence). The ledger therefore
+// prints DISABLED rather than a zero count — see `formatLedger`. It is deliberately NOT deleted:
+// the retry count is a config value that can be raised again in one line, and the instrument that
+// would make that visible should already be in place when it happens.
 //
 // WHY A REPORTER AND NOT A `verify` WRAPPER — the decision, made alone and for two reasons:
 //   1. ONLY VITEST KNOWS. `retryCount` lives on the task result. A wrapper sees stdout and an exit
@@ -25,7 +30,11 @@
 // and a run that is silent because all was well would be indistinguishable from it.
 //
 // WHAT THIS LEDGER DOES **NOT** CHECK, stated here per the block's own safety bar:
-//   - It does not know WHY a test retried. A timeout, a race and a genuine flake look identical.
+//   - It classifies the FAILURE REASON but not the CAUSE. `timeout` says the attempt exceeded its
+//     limit; it cannot tell you whether that was a slow machine, a real hang, or a test that is
+//     simply too big. (This line used to read "it does not know WHY a test retried" — that became
+//     FALSE when ONE-TRUTH-1 added the reason class, and the header went on claiming a blindness
+//     the tool no longer had. A limits list that is not maintained is a lie with a good reputation.)
 //   - It does not see retries that ended in FAILURE beyond the attempt count: a test that exhausted
 //     its retries is reported by vitest as a failure, and this only adds how many attempts it took.
 //   - It does not cover the `scripts/` suite (`node --test`), which has no retry mechanism at all.
@@ -141,7 +150,17 @@ export function rowsFromModules(modules) {
 }
 
 /** The printed ledger, as lines. Always non-empty: the zero case is a line, not silence. */
-export function formatLedger(rows) {
+export function formatLedger(rows, retryConfig) {
+  // RETRIES DISABLED AND "NOTHING RETRIED" ARE DIFFERENT FACTS AND MUST NOT SHARE A SENTENCE
+  // (ONE-TRUTH-2 stage 2). With `retry: 0` a zero line would be trivially true every single run,
+  // and a reader who has learned to skim past "0 tests retried" would never notice that the number
+  // can no longer be anything else. Saying DISABLED tells them the mechanism is off, which is the
+  // thing they would actually want to know.
+  if (retryConfig === 0)
+    return [
+      "RETRY LEDGER: DISABLED — retry is 0, so no test can be retried and this run had nothing to " +
+        "count. A first-attempt failure fails the suite.",
+    ];
   if (!rows.length)
     return [
       "RETRY LEDGER: 0 tests retried — every test passed on its first attempt.",
@@ -184,8 +203,14 @@ export function formatLedger(rows) {
 }
 
 export default class RetryLedgerReporter {
+  // The resolved retry count, read from vitest rather than from the config FILE: what matters is
+  // what actually applied to this run, and a CLI flag or a per-test override would beat the file.
+  onInit(ctx) {
+    this._retry = ctx?.config?.retry;
+  }
+
   onTestRunEnd(modules) {
-    const lines = formatLedger(rowsFromModules(modules));
+    const lines = formatLedger(rowsFromModules(modules), this._retry);
     // stderr, so it survives `| tail` and `--silent` the way a warning does, and cannot be mistaken
     // for part of vitest's own summary.
     const NL = String.fromCharCode(10);

@@ -39,7 +39,8 @@
 
 const started = Date.now();
 
-import { readFileSync, writeFileSync } from "node:fs";
+import { readFileSync } from "node:fs";
+import { writeVerified } from "./lib/write-verified.mjs";
 import { join, dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { engineReach } from "./engine-reach.mjs";
@@ -234,10 +235,11 @@ function main() {
     return;
   }
 
-  writeFileSync(
+  // VERIFIED, not assumed (ONE-TRUTH-2 stage 6). See scripts/lib/write-verified.mjs.
+  writeVerified(
     SIM,
     text.slice(0, b) + block + text.slice(e + END.length),
-    "utf8",
+    "the engine-reach block in docs/SIM.md",
   );
   console.log(
     `gen-engine-reach-doc: wrote ${rows.length} files into docs/SIM.md, ${unknown} with no stated purpose.`,

@@ -13,13 +13,15 @@ tuned or shipped from the G/s sweep — it MEASURES; the owner decides in the mo
 > them moved this week and a reader looking for "the current baseline" should not have to know which
 > document owns which hash.
 >
-> | | value | what moved it |
-> |---|---|---|
-> | **world** | **`dc4647be0f55ebdb`** | UNMOVED since RACER-MOTION-2. No engine was touched all week. |
-> | **camera** | **`00cafa2432add0f7`** | the corridor measured from the anchor (CAMERA-ANCHOR-TRUTH-1 §4a), OVERVIEW tracking (§4c), the road no longer bounding the single-anchor states (CAMERA-COMPANY-ONLY-3), and the finish becoming one glided motion (FINISH-MOTION-1) |
-> | **render** | **`1f83ecc1fcb6fa9a`** | the build-identity HUD line (BUILD-TRUTH-1), the HUD column relayout that stopped it covering the lap counter, and FINISH-WINDOW-1 extending the run to 5600 frames with ten late sample points — a LONGER RUN, not a changed picture |
+> |            | what moved it                                                                                                                                                                                                                         |
+> | ---------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+> | **world**  | UNMOVED since RACER-MOTION-2. No engine was touched all week.                                                                                                                                                                         |
+> | **camera** | the corridor measured from the anchor (CAMERA-ANCHOR-TRUTH-1 §4a), OVERVIEW tracking (§4c), the road no longer bounding the single-anchor states (CAMERA-COMPANY-ONLY-3), and the finish becoming one glided motion (FINISH-MOTION-1) |
+> | **render** | the build-identity HUD line (BUILD-TRUTH-1), the HUD column relayout that stopped it covering the lap counter, and FINISH-WINDOW-1 extending the run to 5600 frames with ten late sample points — a LONGER RUN, not a changed picture |
 >
-> Canonical home for how and when to run them: [docs/SHIP-CEREMONY.md](../../docs/SHIP-CEREMONY.md).
+> The VALUES live in [docs/fingerprints.json](../../docs/fingerprints.json) and nowhere else; this
+> table deliberately carries no copy of them, only what moved each one. How and when to run them:
+> [docs/SHIP-CEREMONY.md](../../docs/SHIP-CEREMONY.md).
 
 > ## ⇒ CURRENT BASELINE — 2026-07-31: RACER-MOTION-2 (lateral acceleration cap). Read this first.
 >
@@ -34,7 +36,7 @@ tuned or shipped from the G/s sweep — it MEASURES; the owner decides in the mo
 > **New shipped-default fingerprints** (minted once on the committed state; the cap runs in BOTH worlds, so
 > both moved): **ON `dc4647be0f55ebdb`** (replaces the pre-motion anchor `62400c8e88cdbe59`); **OFF
 > `854018ee5d3d83e1`** (replaces `8d0bd4d2d92ded24`). Pre-ship state tagged `pre/motion` (`e99b034d`). Full
-> lineage in [docs/SIM.md](../../docs/SIM.md) *Fingerprint rule*.
+> lineage in [docs/SIM.md](../../docs/SIM.md) _Fingerprint rule_.
 >
 > **STEP-1 pick — ε=0.0005** is the strongest cap that keeps every gate (seed-5601 dense-traffic sweep): accel
 > p99 drops 2.7× and max 2.1×, solo overtake still completes, body-overlap falls to 56083 (well under the 72303
@@ -78,7 +80,7 @@ tuned or shipped from the G/s sweep — it MEASURES; the owner decides in the mo
 > the avoidance code that runs in BOTH worlds, so both moved): **ON `62400c8e88cdbe59`** (replaces the
 > pre-flapping anchor `ded0a126048e4cdb`); **OFF `8d0bd4d2d92ded24`** (replaces `f8f7d9c2fd3283e9` — the OFF
 > invariant moved for the first time since speed-150). Pre-merge state tagged `pre/flapping` (`d0870326`).
-> Full lineage in [docs/SIM.md](../../docs/SIM.md) *Fingerprint rule*.
+> Full lineage in [docs/SIM.md](../../docs/SIM.md) _Fingerprint rule_.
 >
 > **Gate — N=100 quartet paired vs the COMBO15 ship (all four GREEN):** band arrival holds within noise
 > (searound 89.2→89.8, luger-hill 91.6→91.6, seatrack 90.9→89.6, space-sprint 88.3→88.8), **runaway 0%** on
@@ -107,26 +109,26 @@ tuned or shipped from the G/s sweep — it MEASURES; the owner decides in the mo
 > **New shipped-default fingerprint** (minted once on the committed state, `fingerprint-default.mjs on`,
 > seed=1 races=3 track-defaults, 10 tracks): **ON `ded0a126048e4cdb`** (replaces the pre-combo15 anchor
 > `7c70b1eae7d31e22`); **OFF invariant `f8f7d9c2fd3283e9`** unchanged. Full lineage in
-> [docs/SIM.md](../../docs/SIM.md) *Fingerprint rule*.
+> [docs/SIM.md](../../docs/SIM.md) _Fingerprint rule_.
 >
 > **Golden numbers — the binding N=100 gate record** ([FAIR-ARRIVAL-GATE.md](../evolution/FAIR-ARRIVAL-GATE.md),
 > 10 tracks, track-defaults, paired seeds). COMBO15 is a NEAR-PASS (7/10 full-pass; 3 characterised misses,
 > none of them pulk-flatness):
 >
-> | metric (COMBO15 vs pre-combo15 ship) | value |
-> |---|---|
-> | band arrival | **85–90% / track** (OR-form 9/10; was 69–83%) — miss: garden-path 86% (ship-ceiling track, 2pp under the 88% floor) |
-> | per-row floor (rowMin) | **≥ ship on all 10 tracks** (e.g. luger 67→88, ice 72→89, dirt 75→90) |
-> | frontContest | **≥ ship on all 10** (+7 to +17pp) |
-> | DEAD-BORING finales | **≤ ship+2 on all 10** |
-> | Holm-unfair start rows | **worsened on ZERO tracks** (space-sprint even improved UNF→ok) |
-> | pulk mid-race (the fix) | maxLeadHoldShare_mid 0.42→**0.27** (≤ship); distinctLeaders_mid →**~11** (≫ship); leaderIsDrawnB1_mid ~0.60→**~0.35** |
+> | metric (COMBO15 vs pre-combo15 ship) | value                                                                                                                 |
+> | ------------------------------------ | --------------------------------------------------------------------------------------------------------------------- |
+> | band arrival                         | **85–90% / track** (OR-form 9/10; was 69–83%) — miss: garden-path 86% (ship-ceiling track, 2pp under the 88% floor)   |
+> | per-row floor (rowMin)               | **≥ ship on all 10 tracks** (e.g. luger 67→88, ice 72→89, dirt 75→90)                                                 |
+> | frontContest                         | **≥ ship on all 10** (+7 to +17pp)                                                                                    |
+> | DEAD-BORING finales                  | **≤ ship+2 on all 10**                                                                                                |
+> | Holm-unfair start rows               | **worsened on ZERO tracks** (space-sprint even improved UNF→ok)                                                       |
+> | pulk mid-race (the fix)              | maxLeadHoldShare_mid 0.42→**0.27** (≤ship); distinctLeaders_mid →**~11** (≫ship); leaderIsDrawnB1_mid ~0.60→**~0.35** |
 >
 > **PULK watchdog — the permanent gate line (now v2, duration-relative).** The owner's mid-race-flatness
 > finding is a standing gate: chaos-window maxGap must not blow out into a lone breakaway. **v1** was an
 > absolute `ship + 1.0L` tolerance; it tripped searound/space-sprint at 60s and 4 tracks at 180s **purely
 > because gaps scale with race length** while the true flatness signals passed. **v2 reads the chaos maxGap as
-> a RATIO to ship (`≤ ship × 1.5`)** so it measures *disproportionate* breakaway, not absolute lengths.
+> a RATIO to ship (`≤ ship × 1.5`)** so it measures _disproportionate_ breakaway, not absolute lengths.
 > Documented residuals at v2: **space-sprint ~1.6× ship** (a genuine chaos-gap overshoot, just over the 1.5×
 > line — the one real miss) and **garden-path arrival ceiling 86%** (that track's structural cap; ship sits at
 > 83%). Both are characterised, not regressions.
@@ -178,12 +180,12 @@ commit so the gate, the fingerprint and the docs all describe the same committed
 
 **Default-duration table at 150 px/s** (canonical per-track default; `deriveRaceDuration`, exact):
 
-| track | topo | racer (M) | laps | realized duration | paceScale | slowdown |
-|---|---|---|---|---|---|---|
-| luger-hill | open | luge (1.1) | 1 | **59.0 s** | 1.000 | no |
-| mountainstreet | open | boarder (1.0) | 1 | **60.0 s** | 1.000 | no |
-| searound | closed | manta (1.1) | 2 | **62.4 s** | 1.000 | no |
-| dirt-oval | closed | horse (1.0) | 2 | **87.2 s** | 1.000 | no |
+| track          | topo   | racer (M)     | laps | realized duration | paceScale | slowdown |
+| -------------- | ------ | ------------- | ---- | ----------------- | --------- | -------- |
+| luger-hill     | open   | luge (1.1)    | 1    | **59.0 s**        | 1.000     | no       |
+| mountainstreet | open   | boarder (1.0) | 1    | **60.0 s**        | 1.000     | no       |
+| searound       | closed | manta (1.1)   | 2    | **62.4 s**        | 1.000     | no       |
+| dirt-oval      | closed | horse (1.0)   | 2    | **87.2 s**        | 1.000     | no       |
 
 `paceScale = 1` on every track — no open track is forced into a uniform slowdown at 150. The slower pace
 lengthens every race vs the 225-era numbers (as designed).
@@ -207,26 +209,26 @@ Machine-readable output: [`rebaseline-data/rebaseline-150.json`](rebaseline-data
 
 ### Pooled (400 races), racer-row weighted
 
-| metric | value |
-|---|---|
-| **band-reach (racer-row weighted)** | **71.0% — CLEARS 70%** |
-| Holm-unfair start-row tracks | 3 / 4 |
-| runaway / parade / duo | 12.8% / 2.5% / 4.8% |
-| dead finales | 15.5% |
-| front group @ line | 3.65 |
-| finale lead-changes / distinct leaders | 1.80 / 2.77 |
-| escape depth med / P90 / max (racer-lengths) | 2.19 / 4.59 / 10.15 |
-| saturated-correction rate | 7.1% |
-| mean derived duration | 67.2 s |
+| metric                                       | value                  |
+| -------------------------------------------- | ---------------------- |
+| **band-reach (racer-row weighted)**          | **71.0% — CLEARS 70%** |
+| Holm-unfair start-row tracks                 | 3 / 4                  |
+| runaway / parade / duo                       | 12.8% / 2.5% / 4.8%    |
+| dead finales                                 | 15.5%                  |
+| front group @ line                           | 3.65                   |
+| finale lead-changes / distinct leaders       | 1.80 / 2.77            |
+| escape depth med / P90 / max (racer-lengths) | 2.19 / 4.59 / 10.15    |
+| saturated-correction rate                    | 7.1%                   |
+| mean derived duration                        | 67.2 s                 |
 
 ### Per track
 
-| track | topo | N | band-reach | Holm | dead | front@line | runaway | parade | duo | escDep med / P90 | servoSat | dur |
-|---|---|---|---|---|---|---|---|---|---|---|---|---|
-| luger-hill | open | 100 | 68.1% | **UNF** | 7.0% | 3.60 | 15.0% | 3.0% | 6.0% | 2.26 / 4.09 | 6.4% | 59.0 s |
-| mountainstreet | open | 100 | 70.0% | ok | 14.0% | 3.96 | 6.0% | 3.0% | 6.0% | 2.05 / 4.15 | 5.3% | 60.0 s |
-| searound | closed | 100 | 72.5% | **UNF** | 22.0% | 2.82 | 19.0% | 3.0% | 4.0% | 2.41 / 5.48 | 9.2% | 62.4 s |
-| dirt-oval | closed | 100 | 75.6% | **UNF** | 19.0% | 4.22 | 11.0% | 1.0% | 3.0% | 2.15 / 4.61 | 7.7% | 87.2 s |
+| track          | topo   | N   | band-reach | Holm    | dead  | front@line | runaway | parade | duo  | escDep med / P90 | servoSat | dur    |
+| -------------- | ------ | --- | ---------- | ------- | ----- | ---------- | ------- | ------ | ---- | ---------------- | -------- | ------ |
+| luger-hill     | open   | 100 | 68.1%      | **UNF** | 7.0%  | 3.60       | 15.0%   | 3.0%   | 6.0% | 2.26 / 4.09      | 6.4%     | 59.0 s |
+| mountainstreet | open   | 100 | 70.0%      | ok      | 14.0% | 3.96       | 6.0%    | 3.0%   | 6.0% | 2.05 / 4.15      | 5.3%     | 60.0 s |
+| searound       | closed | 100 | 72.5%      | **UNF** | 22.0% | 2.82       | 19.0%   | 3.0%   | 4.0% | 2.41 / 5.48      | 9.2%     | 62.4 s |
+| dirt-oval      | closed | 100 | 75.6%      | **UNF** | 19.0% | 4.22       | 11.0%   | 1.0%   | 3.0% | 2.15 / 4.61      | 7.7%     | 87.2 s |
 
 ### The 70% verdict — plainly
 
@@ -252,11 +254,11 @@ Reduced N (**N=25 per track per duration**), the same four tracks, at protocol s
 (the 300 s shape is the long-race stress). Confirms the baseline is not an artefact of the ~60–87 s default
 durations.
 
-| dur | pooled band-reach | runaway | parade | dead | servoSat |
-|---|---|---|---|---|---|
-| 30 s | 65.8% | 21.0% | 2.0% | 27.0% | 7.8% |
-| 120 s | 74.9% | 2.0% | 3.0% | 11.0% | 6.3% |
-| 300 s | 76.8% | 0.0% | 0.0% | 8.0% | 5.7% |
+| dur   | pooled band-reach | runaway | parade | dead  | servoSat |
+| ----- | ----------------- | ------- | ------ | ----- | -------- |
+| 30 s  | 65.8%             | 21.0%   | 2.0%   | 27.0% | 7.8%     |
+| 120 s | 74.9%             | 2.0%    | 3.0%   | 11.0% | 6.3%     |
+| 300 s | 76.8%             | 0.0%    | 0.0%   | 8.0%  | 5.7%     |
 
 Per-track detail is in the JSON; the pooled shape is the story.
 
@@ -281,10 +283,10 @@ again (the race the sim runs is genuinely different at a different speed). Per t
 committed state (`scripts/fingerprint-default.mjs`, seed=1 races=3 `--track-defaults`, 10 standard tracks;
 OFF = extra arg `--gapRerollEnabled=false`).
 
-| World | Pre-150 (step-order alignment, 225) | **Post-150 (shipped, committed)** |
-|---|---|---|
-| ON (flagless) | `8b13ccbe96992cc0` | **`6fdfe851dbb4ca72`** |
-| OFF (`--gapRerollEnabled=false`) | `e07150f936361a73` | **`f8f7d9c2fd3283e9`** |
+| World                            | Pre-150 (step-order alignment, 225) | **Post-150 (shipped, committed)** |
+| -------------------------------- | ----------------------------------- | --------------------------------- |
+| ON (flagless)                    | `8b13ccbe96992cc0`                  | **`6fdfe851dbb4ca72`**            |
+| OFF (`--gapRerollEnabled=false`) | `e07150f936361a73`                  | **`f8f7d9c2fd3283e9`**            |
 
 _(Minted on commit `13b654d` — the speed-150 ship — and recorded here in the immediate docs-only
 follow-up, per the once-only fingerprint rule: the docs commit cannot move a behaviour hash.)_
@@ -303,17 +305,17 @@ inconclusive and short of 70% on the stress pool.
 
 Ranked (band-reach; guardrail = dead finales / front@line / runaway vs ship):
 
-| rank | arm | band-reach | Δ vs ship | dead | front@line | runaway | guardrail |
-|---|---|---|---|---|---|---|---|
-| 1 | **G0.5 s1.0** | **71.1%** | **+2.5 pp** | 8.0% | 4.14 | 14.0% | **clean** |
-| 2 | G0.75 s1.0 | 69.8% | +1.2 pp | 14.0% | 3.68 | 12.0% | clean |
-| 3 | G0.75 s0.75 | 69.0% | +0.4 pp | 18.0% | 3.54 | 18.0% | clean |
-| 4 | G0.75 s0.5 (SHIP) | 68.6% | — | 20.0% | 3.36 | 18.0% | — |
-| 5 | G1.0 s1.0 | 68.6% | +0.0 pp | 12.0% | 3.64 | 18.0% | clean |
+| rank | arm               | band-reach | Δ vs ship   | dead  | front@line | runaway | guardrail |
+| ---- | ----------------- | ---------- | ----------- | ----- | ---------- | ------- | --------- |
+| 1    | **G0.5 s1.0**     | **71.1%**  | **+2.5 pp** | 8.0%  | 4.14       | 14.0%   | **clean** |
+| 2    | G0.75 s1.0        | 69.8%      | +1.2 pp     | 14.0% | 3.68       | 12.0%   | clean     |
+| 3    | G0.75 s0.75       | 69.0%      | +0.4 pp     | 18.0% | 3.54       | 18.0%   | clean     |
+| 4    | G0.75 s0.5 (SHIP) | 68.6%      | —           | 20.0% | 3.36       | 18.0%   | —         |
+| 5    | G1.0 s1.0         | 68.6%      | +0.0 pp     | 12.0% | 3.64       | 18.0%   | clean     |
 
 **Recommendation: the shipped G=0.75 / s=0.5 is NOT confirmed optimal — a candidate (G=0.5, s=1.0) screens
 better.** It lifts band-reach +2.5 pp on the stress pool and, crucially, does so by making the finale
-*livelier*, not deader: it has the FEWEST dead finales of any arm (8% vs the ship's 20%), the most
+_livelier_, not deader: it has the FEWEST dead finales of any arm (8% vs the ship's 20%), the most
 front-group finishes (4.14), and lower runaway (14%). The pull is **monotonic on both axes** (lower G +
 higher s → more band-reach AND a cleaner finale), which is more trustworthy than any single N=25 arm.
 
@@ -327,12 +329,12 @@ G=0.5 s=1.0) before flipping the Dev Screen defaults. Full detail:
 
 ## 5. Commit SHAs
 
-| ref | SHA | what |
-|---|---|---|
-| `pre/speed-150-rebaseline` (tag) | `bde0bc0` | master before the ship — the pre-150 return point (already on origin) |
-| commit A | `13b654d` | the speed-150 ship (STEPs 1–3) + the re-baseline gate results |
-| commit B | `a75e66e` | records the shipped-default fingerprints (once-only, post-commit docs) |
-| commit C | this commit | the G/s screen (HONEST-WORLD-GS-SCREEN.md) + this §4/§5 fill — report-only |
+| ref                              | SHA         | what                                                                       |
+| -------------------------------- | ----------- | -------------------------------------------------------------------------- |
+| `pre/speed-150-rebaseline` (tag) | `bde0bc0`   | master before the ship — the pre-150 return point (already on origin)      |
+| commit A                         | `13b654d`   | the speed-150 ship (STEPs 1–3) + the re-baseline gate results              |
+| commit B                         | `a75e66e`   | records the shipped-default fingerprints (once-only, post-commit docs)     |
+| commit C                         | this commit | the G/s screen (HONEST-WORLD-GS-SCREEN.md) + this §4/§5 fill — report-only |
 
 Commits A and B are pushed to `origin/master`; commit C carries this report and is report-only (no
 shipped-behaviour change, so the fingerprints in §3 still describe HEAD).

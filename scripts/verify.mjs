@@ -38,23 +38,11 @@ import { engineReach } from "./engine-reach.mjs";
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), "..");
 
-// The fingerprint record's declared sites, so a change to one of them runs the guard that owns it.
-// Read lazily and defensively: verify must still be able to run if the record is missing or being
-// edited — a routing table that cannot load is not a reason to refuse to test anything.
+// ONE-TRUTH-2 deleted the `sites` array from docs/fingerprints.json — no document carries a copy of
+// a fingerprint any more, so there is nothing to route to. The reader that resolved those sites is
+// gone with them rather than left returning an empty set "in case".
 const FINGERPRINT_RECORD = "docs/fingerprints.json";
-let _fpSites = null;
-function fingerprintSites() {
-  if (_fpSites) return _fpSites;
-  try {
-    const rec = JSON.parse(
-      readFileSync(join(ROOT, FINGERPRINT_RECORD), "utf8"),
-    );
-    _fpSites = new Set((rec.sites ?? []).map((s) => s.file));
-  } catch {
-    _fpSites = new Set();
-  }
-  return _fpSites;
-}
+
 const arg = (k, d) => {
   const p = process.argv.slice(2).find((a) => a.startsWith(`--${k}=`));
   return p ? p.slice(k.length + 3) : d;
@@ -109,14 +97,19 @@ function changedFiles() {
 export const ROUTES = [
   {
     guard: "doc-guards",
-    // The fingerprint sites are read FROM THE RECORD, not listed here. Two of them are not markdown
-    // at all (`.husky/pre-commit`, `CameraDirector.js`), and a second hand-kept list of them is the
-    // very thing ONE-TRUTH-1 stage 4 removed.
-    what: "markdown anywhere, plus the fingerprint record and every site it declares",
-    match: (f) =>
-      f.endsWith(".md") ||
-      f === FINGERPRINT_RECORD ||
-      fingerprintSites().has(f),
+    what: "markdown anywhere, plus the fingerprint record itself",
+    match: (f) => f.endsWith(".md") || f === FINGERPRINT_RECORD,
+  },
+  {
+    guard: "fingerprint-containment",
+    // RUNS WHENEVER ANYTHING CHANGED — precisely that, not "always". Since ONE-TRUTH-2 a current
+    // fingerprint may exist only in the record, and a stray copy can be pasted into ANY file — a
+    // comment, a shell hook, a JSON fixture — so no subset of paths would be safe to skip. It
+    // matches every path; an EMPTY diff still selects nothing, which is coherent (nothing changed,
+    // so nothing can have introduced a copy). It scans all tracked files in ~2 s, cheap enough that
+    // routing it more finely could only ever be wrong. It does NOT re-mint — see the guard's header.
+    what: "every changed file, of any kind — a stray copy can appear anywhere; the scan is ~2 s",
+    match: () => true,
   },
   {
     guard: "script-suite",
@@ -184,9 +177,26 @@ export function plan(files) {
       cmd: ["node", "scripts/check-doc-links.mjs"],
       also: [
         ["node", "scripts/check-index.mjs"],
+        // reports/night/ and reports/parity/ were outside every guard until ONE-TRUTH-2 stage 5.
+        // Same guard, three directories — one index discipline, not three implementations.
+        [
+          "node",
+          "scripts/check-index.mjs",
+          "--dir=reports/night",
+          "--index=reports/night/INDEX.md",
+        ],
+        [
+          "node",
+          "scripts/check-index.mjs",
+          "--dir=reports/parity",
+          "--index=reports/parity/INDEX.md",
+        ],
         ["node", "scripts/check-tags.mjs"],
-        ["node", "scripts/check-fingerprints.mjs"],
+        ["node", "scripts/check-measured-stamps.mjs"],
       ],
+    },
+    "fingerprint-containment": {
+      cmd: ["node", "scripts/check-fingerprints.mjs"],
     },
     "script-suite": { cmd: ["node", "--test", ...scriptTestFiles()] },
     "client-suite": {
@@ -211,13 +221,18 @@ export function plan(files) {
 
 function scriptTestFiles() {
   try {
-    return execFileSync("git", ["ls-files", "scripts/*.test.mjs"], {
+    // `git ls-files scripts` and then FILTER — not the pathspec `scripts/*.test.mjs`, which is what
+    // this used to be. That glob matched 17 files while CI's `find scripts -name '*.test.mjs'`
+    // matched 18: it missed `scripts/lib/write-verified.test.mjs` the moment a subdirectory
+    // appeared. Two discovery mechanisms disagreeing about which tests exist is the same defect
+    // class this whole block is about, and the one that loses is always the quieter one.
+    return execFileSync("git", ["ls-files", "scripts"], {
       cwd: ROOT,
       encoding: "utf8",
     })
       .split("\n")
       .map((s) => s.trim())
-      .filter(Boolean);
+      .filter((f) => f.endsWith(".test.mjs"));
   } catch {
     return [];
   }
@@ -381,7 +396,28 @@ if (IS_ENTRY) {
   const sum = done.reduce((a, d) => a + d.ms, 0);
   console.log(
     `\n  wall clock ${secs(wallMs)} — sequential would have been ${secs(sum)} ` +
-      `(${sum > 0 ? (sum / wallMs).toFixed(1) : "1.0"}x)\n`,
+      `(${sum > 0 ? (sum / wallMs).toFixed(1) : "1.0"}x)`,
   );
-  process.exit(done.every((d) => d.ok) ? 0 : 1);
+
+  // THE COUNTS ARE EXPLICIT, AND A FAILURE COUNT IS THE LAST LINE (ONE-TRUTH-2 stage 6b).
+  // A commit went in with a failing test because a SUMMARY LINE was read instead of a count: the
+  // script suite printed 168/169 in the same command as the commit, and the eye took the commit
+  // line. Prose can be skimmed; three labelled numbers cannot be mistaken for each other. And when
+  // anything failed, the verdict is the LAST thing printed — the position a terminal leaves on
+  // screen — so it cannot scroll away above a wall-clock line that reads like success.
+  const passed = done.filter((d) => d.ok).length;
+  const failed = done.filter((d) => !d.ok).length;
+  console.log(`\n  PASS ${passed}   FAIL ${failed}   SKIP ${skipped.length}`);
+  if (failed > 0) {
+    const names = done
+      .filter((d) => !d.ok)
+      .map((d) => d.id)
+      .join(", ");
+    console.log(
+      `\n  VERIFY FAILED — ${failed} guard(s) failed: ${names}. Do not commit.\n`,
+    );
+  } else {
+    console.log("");
+  }
+  process.exit(failed === 0 ? 0 : 1);
 }
