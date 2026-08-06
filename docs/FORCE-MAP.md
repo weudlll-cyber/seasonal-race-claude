@@ -1,10 +1,14 @@
-# KRAEFTE-LANDKARTE — Complete Force Map of Racer Motion
+# FORCE-MAP — the complete force map of racer motion
 
 **Owns:** every force that acts on a racer — which exist, when each fires, what it acts on, and a source line for each. It states STRUCTURE, never values.
 
-> Analysis only. Every force is backed by a source line so it can be verified against the
-> source. Content is in English per the project language rule (`CLAUDE.md` → no German
-> anywhere in code or documents); only the requested filename is kept.
+> Analysis only. Every force is backed by a source line so it can be verified against the source.
+>
+> **Renamed 2026-08-07** (DOC-ORDER-1). This file was `KRAEFTE-LANDKARTE.md` at the repo root, and
+> its header recorded an earlier decision of the owner's to keep that German name as an exception to
+> the language rule. He superseded that decision — no German anywhere in the new structure — so the
+> exception is gone and the name is English like everything else. Searching the history for the old
+> name still finds it.
 
 > **WHAT THIS DOCUMENT GUARANTEES, AND WHAT IT DOES NOT** (CONFIG-TRUTH-1). It guarantees the
 > STRUCTURE: which forces exist, when each fires, what it acts on, and a source line for every one.
@@ -96,7 +100,7 @@ All multipliers are **purely longitudinal**; none is sqrt(N)-diluted. They compo
 - **When**: re-roll fires when `physicsTs ≥ nextRollTime && physicsTs < lastRollDeadline` ([`index.jsx:927`](../client/src/screens/RaceScreen/index.jsx#L927)). Stops at `reRollLastPositionPercent` of the race.
 - **Magnitude**: spread ≈ ±17.7% of mean (min 0.00096 → max 0.00113). Re-roll step half-width = `spreadRange × reRollVariationPercent/100` ([`index.jsx:799`](../client/src/screens/RaceScreen/index.jsx#L799)), default 58%.
 - **Config**: `DEFAULT_BASE_SPEED_CONFIG.min/max`; `reRollVariationPercent` **58**, `reRollTransitionDuration` **5.0**, `reRollIntervalDivisor` **15**, `reRollLastPositionPercent` **80**.
-- **Note**: Sine jitter was removed (Etappe 19); race feel now comes _only_ from these re-rolls.
+- **Note**: Sine jitter was removed (Stage 19); race feel now comes _only_ from these re-rolls.
 
 ### A3. `speedBonusMult` — positional back-row compensation
 
@@ -479,7 +483,7 @@ backstop (L0b). The additive multi-force stack — and the conflicts it produced
 
 Two force documents that can disagree is how `zoneMult` hid for months. Division of labour, decided:
 
-- **This document (KRAEFTE-LANDKARTE) is the FORCE MAP** — the complete inventory of what forces exist
+- **This document is the FORCE MAP** — the complete inventory of what forces exist
   and act on a racer, with the **lateral layers** (Layer 1 soft steering, Layer 2 hard separation,
   L7/L8/L11, and the Commit A/B removal history) as its unique, load-bearing content.
 - **`archive/FORCE-PARITY.md` is the browser↔sim PARITY AUDIT** — the 22-row table of verdicts

@@ -1437,9 +1437,9 @@ Measurements are cheaper than diagnostic sprints. Diagnostic sprints are cheaper
 ## Lesson 70 — EditorShape Double-Image Marathon: Diagnostic Discipline as Prevention Principle (Phase 1)
 
 **Context:** The EditorShape staircase bug (double image / jagged jumps in racer positions)
-occupied development over Etappe 20–23. Root cause: `Math.round()` in
+occupied development over Stage 20–23. Root cause: `Math.round()` in
 `EditorShape.getPosition()` mapped arc-length-t to the nearest sample index instead of
-interpolating linearly. Quantitatively measured (Etappe 23 trace): 26.5–27.1 px jumps at 500 samples
+interpolating linearly. Quantitatively measured (Stage 23 trace): 26.5–27.1 px jumps at 500 samples
 on a ~2000px oval at zoom 4×. Fix: 3 lines of linear interpolation + angle wrap.
 
 **Process:** Before the root cause was identified, Python frame analysis scripts,
@@ -1452,10 +1452,10 @@ hypothesis roulette.
 pixel invariance) would have identified the root cause in under 30 minutes. The ~14-hour
 diagnosis arose through repeated omission of the "measurement before bisect" step.
 
-**Consequence (principles extension):** This Etappe was the direct occasion for the extension
+**Consequence (principles extension):** This stage was the direct occasion for the extension
 of PROJECT-PRINCIPLES.md by §6 (diagnose before fix) and §7 (no hotfixes) as well as the five
 diagnosis-related conventions (quantitative diagnosis, data trace, output medium,
-Etappe 23 pattern). The principles are formulated so that a similar marathon is recognizable and
+Stage 23 pattern). The principles are formulated so that a similar marathon is recognizable and
 stoppable: as soon as a diagnostic session skips the quantitative measurement and starts with
 visual impressions or bisect, §6 is violated.
 

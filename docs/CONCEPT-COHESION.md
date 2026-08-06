@@ -195,7 +195,8 @@ C3 satisfied for free).
      exempt it from the duty-cycle failure (D7-d).
 3. **Bounded brake — fallback ONLY (D2).** Dead-zoned, slew-limited, brake-only, faded before the release.
    Build this **only if the owner's eye still sees chasms after 1 and 2 are tuned.** The owner's judgement
-   ("um eine Bremse werden wir nicht weg kommen") stands as the fallback, not the premise.
+   ("we will not get around having a brake" — his words, translated) stands as the fallback,
+   not the premise.
 
 **Whatever fires, its DUTY CYCLE is a first-class reported number.** If the leader is corrected most of the
 time, it is a spring and the concept has failed (D7-d, D6).

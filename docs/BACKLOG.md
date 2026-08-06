@@ -402,7 +402,7 @@ verified against `git log` / `git tag`.
   - **DevScreen knob-reduction** — ✅ **DONE, on the new world (2026-07-14 audit)** — realised in PULK CLEANUP Stage 5b-ii/5b-iii (`399c266`/`0b42f72`): DevScreen collapsed to one PULK Phase card with 5 visible controls and pinned internals (see DynamicsTuningSection.jsx:128-130, "reset only the 5 VISIBLE controls … pinned internals … have no DevScreen control"). Realised on choreo+pulk, NOT the removed governor knobs listed here.
   - ~~**OUTCOME decompression**~~ — superseded (the reactive director that clustered the front is gone).
 - **`results/` not gitignored** (hygiene, reported by Sim-1) — ✅ **DONE (2026-07-14 audit)** — `results/` IS gitignored (`.gitignore:37`).
-- **Doc-sync (governor pivot)** ✅ — this task; core docs synced to HEAD `b930b1b` (ARCHITECTURE, KRAEFTE-LANDKARTE, ROADMAP, BACKLOG, LESSONS, SIM, README).
+- **Doc-sync (governor pivot)** ✅ — this task; core docs synced to HEAD `b930b1b` (ARCHITECTURE, FORCE-MAP — then named KRAEFTE-LANDKARTE, ROADMAP, BACKLOG, LESSONS, SIM, README).
 
 ---
 
