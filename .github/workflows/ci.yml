@@ -74,6 +74,12 @@ jobs:
       - name: Check every report is indexed
         run: node scripts/check-index.mjs
 
+      # reports/night/ and reports/parity/ were outside every guard until ONE-TRUTH-2 stage 5.
+      - name: Check night + parity reports are indexed
+        run: |
+          node scripts/check-index.mjs --dir=reports/night --index=reports/night/INDEX.md
+          node scripts/check-index.mjs --dir=reports/parity --index=reports/parity/INDEX.md
+
       # Fails if any tag at origin is not registered in docs/TAGS.md (undocumented anchor).
       - name: Check every origin tag is registered
         run: node scripts/check-tags.mjs

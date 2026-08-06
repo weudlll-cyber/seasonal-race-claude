@@ -15,7 +15,7 @@ Items ranked by urgency within each bucket. ✅ = done, 🔜 = next, ⏳ = waiti
       claim in the repo is evidence about the track and state it was given on, and nothing more.
       **The session, if he wants it:** one race per unseen track (dirt-oval, garden-path, ice-track,
       luger-hill, river-run, seatrack, space-sprint) plus one pass watching the two unseen states.
-      Reference: [CAMERA_DIRECTOR.md §7.3](CAMERA_DIRECTOR.md).
+      Reference: [CAMERA_DIRECTOR.md §8.3](CAMERA_DIRECTOR.md) (was §7.3 until ONE-TRUTH-2 renumbered a duplicated section 7).
 
 ## Dev Screen labels (2026-08-05, from FINISH-COMPANY-1)
 

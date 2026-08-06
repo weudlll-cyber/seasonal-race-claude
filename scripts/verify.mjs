@@ -177,6 +177,20 @@ export function plan(files) {
       cmd: ["node", "scripts/check-doc-links.mjs"],
       also: [
         ["node", "scripts/check-index.mjs"],
+        // reports/night/ and reports/parity/ were outside every guard until ONE-TRUTH-2 stage 5.
+        // Same guard, three directories — one index discipline, not three implementations.
+        [
+          "node",
+          "scripts/check-index.mjs",
+          "--dir=reports/night",
+          "--index=reports/night/INDEX.md",
+        ],
+        [
+          "node",
+          "scripts/check-index.mjs",
+          "--dir=reports/parity",
+          "--index=reports/parity/INDEX.md",
+        ],
         ["node", "scripts/check-tags.mjs"],
         ["node", "scripts/check-measured-stamps.mjs"],
       ],

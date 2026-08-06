@@ -459,7 +459,7 @@ time-constant defaults**, with the reason for each attached to the assertion.
 
 ---
 
-## 7. THE OWNER'S VERDICTS — what his eye has actually judged
+## 8. THE OWNER'S VERDICTS — what his eye has actually judged
 
 **What this section is FOR, and why it is not §6.** §6 records what a _test_ protects. This records
 what a _person_ decided. They are different kinds of fact and neither substitutes for the other: a
@@ -472,7 +472,7 @@ judgements live here.
 log, and duplicating it is what retiring the chat document was meant to end. One line per judgement,
 with its date and — where one exists — the measurement that framed it.
 
-### 7.1 Approved by his eye
+### 8.1 Approved by his eye
 
 | what he judged                                                                                                                 | when       | the evidence, and the measurement behind it                                                                                                                                                                                                                                                                                              |
 | ------------------------------------------------------------------------------------------------------------------------------ | ---------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -482,7 +482,7 @@ with its date and — where one exists — the measurement that framed it.
 | **The finish pause, the travel and the resting point**                                                                         | 2026-08-05 | His photo-finish settings, watching the moment the pair shot ends. The pause now runs after a photo finish too, starting when the two contenders the shot was FOLLOWING are home — measured 6–57 frames later than `finishedCount >= 2`, and on 5 of 9 tracks the second racer across is neither of the pair.                            |
 | **The company guarantee retires once the company is home**                                                                     | 2026-08-05 | City Circuit, last thirty seconds, _"schaut besser aus jetzt"_. Baseline widened for 54 frames (4.5489 → 2.9752) after the shot had already come to rest; after, 0. Cost he accepted: the last back-marker sits 11% inside the frame instead of 23%.                                                                                     |
 
-### 7.2 Rejected by him — and both are natural ideas that will return
+### 8.2 Rejected by him — and both are natural ideas that will return
 
 These live in [DEAD-ENDS.md](DEAD-ENDS.md) with their full reasoning **and all their numbers**; they
 are listed here so a reader of the camera reference finds them at all.
@@ -498,13 +498,13 @@ somebody happened to be looking. So the numbers live in DEAD-ENDS alone.
 | **The zoom unit as a fraction of each track's own width** ([§I](DEAD-ENDS.md)) | 2026-08-05 | Tested by him on searound and rejected: **a smaller window means the world moves through it faster, and the picture became restless.** The fixed reference has a virtue nobody had written down — a fixed amount of world means the same SENSE OF CAMERA SPEED on all ten tracks. The measurements agreed afterwards, but were run _because_ he had already rejected it; they did not find it. |
 | **Counting finished racers as company at the finish** ([§J](DEAD-ENDS.md))     | 2026-08-05 | Refuted by measurement, not by eye: it widens the shot **further**, not less. The FINISH_OVERVIEW anchor is the fixed lookback point, **not the field**, so finished racers run out _away_ from it exactly as stragglers fall _back_ from it. The idea assumes the anchor sits where the racers are; it deliberately does not.                                                                 |
 
-### 7.3 THE STANDING GAP — what his eye has NOT seen
+### 8.3 THE STANDING GAP — what his eye has NOT seen
 
 **This is the honest limit on every "owner-approved" claim above, and it should be read before
 quoting one.**
 
-- **Tracks: three of ten.** mountainstreet, searound and City Circuit carry every judgement in §7.1
-  and §7.2; dirt-oval appears only in measurements. The other six have never been eye-checked at all.
+- **Tracks: three of ten.** mountainstreet, searound and City Circuit carry every judgement in §8.1
+  and §8.2; dirt-oval appears only in measurements. The other six have never been eye-checked at all.
 - **States:** he has seen LEADER, OVERVIEW, BATTLE and — since the finish work — PHOTO_FINISH and
   FINISH_OVERVIEW. **COMEBACK_ZOOM and LEAD_CHANGE have had no targeted pass**, and he declined one
   over the finish states before FINISH-WINDOW-1 gave him endings on nearly every race.
