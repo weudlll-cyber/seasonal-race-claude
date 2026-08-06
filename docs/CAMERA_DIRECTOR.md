@@ -366,6 +366,14 @@ a verbatim transcript of one run on one commit, which is a historical record, no
 
 ### The tracking lag, as measured today — and it had drifted
 
+<!-- MEASURED: tracking-lag (median/p95 pp per state) @ 3e756a31 2026-08-06 depends=client/src/modules/camera/ -->
+
+**These figures carry a stamp, and fails if the camera
+changes after it.** They are hand-copied on purpose: the measurement takes about seven minutes, so
+generating them would put seven minutes inside a documentation guard, and a guard that slow gets
+disabled. The guard therefore checks FRESHNESS, not accuracy — it never re-runs the measurement,
+and it says so itself. It also covers nothing else on this page; see its header for the list.
+
 `scripts/tracking-lag.mjs`, default invocation (n=40, raceSeed 5601, camSeed 1439767152, 60 s,
 1280×720 — the CAMERA-ANCHOR-TRUTH-1 measurement context), `OVERVIEW trackingTC=0.25 entryTC=1.5`:
 

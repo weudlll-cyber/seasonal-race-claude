@@ -84,6 +84,11 @@ jobs:
       - name: Check no document carries a copy of a current fingerprint
         run: node scripts/check-fingerprints.mjs
 
+      # Fails if a stamped measured number in a document predates a change to the source it measures.
+      # FRESHNESS only — it never re-runs the measurement (tracking-lag alone takes ~7 minutes).
+      - name: Check measured numbers have not gone stale
+        run: node scripts/check-measured-stamps.mjs
+
       # The guards' own liveness tests (proving they CAN fail) PLUS the sim-observer tests. All are
       # plain node:test with only relative imports — no external deps, so no `npm ci` is needed.
       # `find` enumerates the files so a newly added *.test.mjs is picked up automatically.

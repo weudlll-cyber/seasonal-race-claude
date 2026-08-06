@@ -178,6 +178,7 @@ export function plan(files) {
       also: [
         ["node", "scripts/check-index.mjs"],
         ["node", "scripts/check-tags.mjs"],
+        ["node", "scripts/check-measured-stamps.mjs"],
       ],
     },
     "fingerprint-containment": {
