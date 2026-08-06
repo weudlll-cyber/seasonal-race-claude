@@ -14,7 +14,8 @@ sit next to the value they describe and move with it. This file does not repeat 
 
 **The acceptance test for any change here.** `node scripts/camera-fingerprint.mjs` hashes every
 decision the director makes — state, lerp phase, anchor, zoom, both offsets, `camT`, both targets —
-on every frame of a seeded race across all ten tracks. Current: **`00cafa2432add0f7`**. A refactor
+on every frame of a seeded race across all ten tracks. The value it must match is in
+[docs/fingerprints.json](fingerprints.json) — this document deliberately does not carry a copy. A refactor
 that tidies code must not move the picture, and that is provable rather than arguable. It covers the
 DIRECTOR only; the render path (sprite scale, name-tag layout, drawing) is out of scope by
 construction and must be argued another way.
@@ -394,7 +395,7 @@ minimum a remembered number owes.
 ### What is protected, and what only by convention
 
 **The render path is no longer convention-only.** `scripts/render-fingerprint.mjs`
-(**`1f83ecc1fcb6fa9a`**) hashes the SEQUENCE of draw calls — sprite placement, text, styles,
+hashes the SEQUENCE of draw calls — sprite placement, text, styles,
 transforms and layer order — at **sixteen** fixed frames across all ten tracks, by driving the real
 `renderRaceFrame()` through a recording context. FINISH-WINDOW-1 extended the run from 3400 to 5600
 frames and added ten late sample points, because the ending sits at frames 3330–5587 and the

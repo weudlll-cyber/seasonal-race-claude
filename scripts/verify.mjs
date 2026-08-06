@@ -38,23 +38,11 @@ import { engineReach } from "./engine-reach.mjs";
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), "..");
 
-// The fingerprint record's declared sites, so a change to one of them runs the guard that owns it.
-// Read lazily and defensively: verify must still be able to run if the record is missing or being
-// edited — a routing table that cannot load is not a reason to refuse to test anything.
+// ONE-TRUTH-2 deleted the `sites` array from docs/fingerprints.json — no document carries a copy of
+// a fingerprint any more, so there is nothing to route to. The reader that resolved those sites is
+// gone with them rather than left returning an empty set "in case".
 const FINGERPRINT_RECORD = "docs/fingerprints.json";
-let _fpSites = null;
-function fingerprintSites() {
-  if (_fpSites) return _fpSites;
-  try {
-    const rec = JSON.parse(
-      readFileSync(join(ROOT, FINGERPRINT_RECORD), "utf8"),
-    );
-    _fpSites = new Set((rec.sites ?? []).map((s) => s.file));
-  } catch {
-    _fpSites = new Set();
-  }
-  return _fpSites;
-}
+
 const arg = (k, d) => {
   const p = process.argv.slice(2).find((a) => a.startsWith(`--${k}=`));
   return p ? p.slice(k.length + 3) : d;
@@ -109,14 +97,19 @@ function changedFiles() {
 export const ROUTES = [
   {
     guard: "doc-guards",
-    // The fingerprint sites are read FROM THE RECORD, not listed here. Two of them are not markdown
-    // at all (`.husky/pre-commit`, `CameraDirector.js`), and a second hand-kept list of them is the
-    // very thing ONE-TRUTH-1 stage 4 removed.
-    what: "markdown anywhere, plus the fingerprint record and every site it declares",
-    match: (f) =>
-      f.endsWith(".md") ||
-      f === FINGERPRINT_RECORD ||
-      fingerprintSites().has(f),
+    what: "markdown anywhere, plus the fingerprint record itself",
+    match: (f) => f.endsWith(".md") || f === FINGERPRINT_RECORD,
+  },
+  {
+    guard: "fingerprint-containment",
+    // RUNS WHENEVER ANYTHING CHANGED — precisely that, not "always". Since ONE-TRUTH-2 a current
+    // fingerprint may exist only in the record, and a stray copy can be pasted into ANY file — a
+    // comment, a shell hook, a JSON fixture — so no subset of paths would be safe to skip. It
+    // matches every path; an EMPTY diff still selects nothing, which is coherent (nothing changed,
+    // so nothing can have introduced a copy). It scans all tracked files in ~2 s, cheap enough that
+    // routing it more finely could only ever be wrong. It does NOT re-mint — see the guard's header.
+    what: "every changed file, of any kind — a stray copy can appear anywhere; the scan is ~2 s",
+    match: () => true,
   },
   {
     guard: "script-suite",
@@ -185,8 +178,10 @@ export function plan(files) {
       also: [
         ["node", "scripts/check-index.mjs"],
         ["node", "scripts/check-tags.mjs"],
-        ["node", "scripts/check-fingerprints.mjs"],
       ],
+    },
+    "fingerprint-containment": {
+      cmd: ["node", "scripts/check-fingerprints.mjs"],
     },
     "script-suite": { cmd: ["node", "--test", ...scriptTestFiles()] },
     "client-suite": {

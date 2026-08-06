@@ -1,6 +1,6 @@
 # RaceArena — Backlog
 
-> **✅ Baseline — see REBASELINE.** Absolute sim numbers scattered in this document (band-reach, runaway, P1-contest, physics-tax, gate results) are retired history from before the current shipped world. The live baseline is the [reports/parity/REBASELINE.md](../reports/parity/REBASELINE.md) top block — the shipped world `dc4647be0f55ebdb` (COMBO15 + margin hysteresis + lateral acceleration cap).
+> **✅ Baseline — see REBASELINE.** Absolute sim numbers scattered in this document (band-reach, runaway, P1-contest, physics-tax, gate results) are retired history from before the current shipped world. The live baseline is the [reports/parity/REBASELINE.md](../reports/parity/REBASELINE.md) top block — the shipped world (COMBO15 + margin hysteresis + lateral acceleration cap).
 
 Living list. See ROADMAP.md for phase context and completion status.
 Items ranked by urgency within each bucket. ✅ = done, 🔜 = next, ⏳ = waiting on dependency.

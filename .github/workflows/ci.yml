@@ -78,10 +78,10 @@ jobs:
       - name: Check every origin tag is registered
         run: node scripts/check-tags.mjs
 
-      # Fails if any document disagrees with docs/fingerprints.json about a CURRENT fingerprint, if
-      # a declared site has lost its anchor, or if an undeclared file has started stating one.
-      # It compares documents to the RECORD; it does not re-run the six-minute fingerprint scripts.
-      - name: Check the fingerprint record and every site that copies it
+      # Fails if a CURRENT fingerprint value appears in any tracked file outside docs/fingerprints.json,
+      # the declared history homes and the named machine exceptions. Since ONE-TRUTH-2 no document
+      # carries a copy at all. This does NOT re-mint against the engine (`--mint` does, ~2 min).
+      - name: Check no document carries a copy of a current fingerprint
         run: node scripts/check-fingerprints.mjs
 
       # The guards' own liveness tests (proving they CAN fail) PLUS the sim-observer tests. All are

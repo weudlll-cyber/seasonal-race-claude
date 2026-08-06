@@ -16,7 +16,7 @@ if [ -n "$staged" ]; then
     echo ""
     echo "  !  THIS DIFF CAN CHANGE THE RACE - mint before you ship:"
     node scripts/engine-reach.mjs --check $staged 2>/dev/null | sed 's/^/     /'
-    echo "     node scripts/fingerprint-default.mjs   (world dc4647be0f55ebdb)"
+    echo "     node scripts/fingerprint-default.mjs   (compare against docs/fingerprints.json)"
     echo ""
   fi
 fi

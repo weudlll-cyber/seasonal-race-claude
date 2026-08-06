@@ -26,7 +26,8 @@
 // THE ACCEPTANCE TEST, and it is the good kind. `node scripts/camera-fingerprint.mjs` hashes every
 // decision this file makes on every frame of a seeded race across ten tracks. A refactor that
 // tidies code must not move the picture, and unlike a tuning change that is PROVABLE rather than
-// arguable. Current: 00cafa2432add0f7. If your change is meant to move the picture, it is not
+// arguable. The value it must match lives in docs/fingerprints.json and nowhere else — this
+// comment deliberately carries no copy. If your change is meant to move the picture, it is not
 // hygiene — say so, and re-baseline deliberately.
 //
 // READ FIRST, if you are changing behaviour: docs/CAMERA_DIRECTOR.md. The ordering inside update()

@@ -88,10 +88,29 @@ test("EVERY guard carries a reason, whether it runs or not — a skip is a decis
   }
 });
 
-test("an empty diff runs nothing, and says so for all six", () => {
+test("an EMPTY diff runs nothing at all — including containment, which matches paths, not runs", () => {
+  // Worth pinning precisely, because I got it wrong first: `fingerprint-containment` matches EVERY
+  // path, but matching is applied to the changed-file list, so an empty diff selects it too. That
+  // is coherent — nothing changed, so nothing can have introduced a stray copy — but it means the
+  // guard is "runs whenever anything changed", not "always runs". The distinction is the whole
+  // difference between a claim that is true and one that sounds true.
   const p = plan([]);
-  assert.equal(p.filter((t) => t.run).length, 0);
-  assert.equal(p.length, 6);
+  assert.deepEqual(
+    p.filter((t) => t.run).map((t) => t.id),
+    [],
+  );
+  assert.equal(
+    p.length,
+    ROUTES.length,
+    "the plan must list every route, run or not",
+  );
+});
+
+test("ANY single changed file, of any kind, selects containment", () => {
+  // The pair to the test above, and the one that carries the guarantee: one touched file anywhere
+  // is enough. Together they say exactly when it runs.
+  assert.equal(runs(["README.md"], "fingerprint-containment"), true);
+  assert.equal(runs(["server/index.js"], "fingerprint-containment"), true);
 });
 
 // ── THE ROUTE TABLE, BOTH DIRECTIONS (ONE-TRUTH-1 stage 3) ────────────────────────────────────
@@ -133,8 +152,11 @@ test("ROUTED NOWHERE: the paths the table deliberately ignores select nothing at
     "client/e2e/smoke.spec.js",
     "package-lock.json",
   ]) {
+    // `fingerprint-containment` is excluded: it is deliberately always-on, so "routes nowhere"
+    // means "selects no guard that CAN be skipped". Excluding it here rather than weakening the
+    // assertion keeps the test able to catch a matcher that has quietly widened.
     const selected = plan([f])
-      .filter((t) => t.run)
+      .filter((t) => t.run && t.id !== "fingerprint-containment")
       .map((t) => t.id);
     assert.deepEqual(
       selected,
@@ -176,12 +198,29 @@ test("A SKIP NAMES THE RULE, so the map is visible without reading the code", ()
 
 // ── THE FINGERPRINT RECORD ROUTES ITSELF (ONE-TRUTH-1 stage 4) ─────────────────────────────────
 
-test("THE RECORD and its NON-MARKDOWN sites select the doc guards, read from the record itself", () => {
-  // `.husky/pre-commit` states the world fingerprint and is not markdown, so the old `.md` matcher
-  // routed a change to it NOWHERE. The route now reads the record's own site list, which means
-  // adding a site wires up its routing in the same edit.
+test("THE RECORD selects the doc guards; a husky hook no longer does (ONE-TRUTH-2)", () => {
+  // ONE-TRUTH-1 routed `.husky/pre-commit` here because it CARRIED a fingerprint. ONE-TRUTH-2
+  // deleted that copy, so the reason is gone and so is the route. The record itself still selects
+  // the doc guards, because editing it is a documentation act.
   assert.equal(runs(["docs/fingerprints.json"], "doc-guards"), true);
-  assert.equal(runs([".husky/pre-commit"], "doc-guards"), true);
-  // A neighbouring husky hook is NOT a site and must still route nowhere.
-  assert.equal(runs([".husky/pre-push"], "doc-guards"), false);
+  assert.equal(runs([".husky/pre-commit"], "doc-guards"), false);
+});
+
+test("FINGERPRINT CONTAINMENT runs for EVERYTHING, including paths routed nowhere else", () => {
+  // The one guard with no skip condition. A stray copy can be pasted into any file at all, so any
+  // path that selected nothing would be a hole. Asserted against paths the table deliberately
+  // ignores everywhere else — if those select it, the always-on rule is genuinely always on.
+  for (const f of [
+    "server/index.js",
+    ".github/workflows/ci.yml",
+    "client/e2e/smoke.spec.js",
+    "package-lock.json",
+    "reports/evolution/X.md",
+  ]) {
+    assert.equal(
+      runs([f], "fingerprint-containment"),
+      true,
+      `${f} must select containment`,
+    );
+  }
 });
