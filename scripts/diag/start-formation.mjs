@@ -28,33 +28,49 @@
 //   node scripts/diag/start-formation.mjs --racers=20  # override the per-track maximum
 // ============================================================
 
-import { readFileSync, readdirSync, existsSync } from 'node:fs';
-import { join, dirname } from 'node:path';
-import { fileURLToPath, pathToFileURL } from 'node:url';
+import { readFileSync, readdirSync, existsSync } from "node:fs";
+import { join, dirname } from "node:path";
+import { fileURLToPath, pathToFileURL } from "node:url";
 
-const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..', '..');
+const ROOT = join(dirname(fileURLToPath(import.meta.url)), "..", "..");
 const u = (p) => pathToFileURL(join(ROOT, p)).href;
 
-const { DEFAULT_CAMERA_CONFIG, DEFAULT_CONFIG_WORLD, DEFAULT_RACE_DEFAULTS } = await import(
-  u('client/src/modules/storage/defaults.js')
+const { DEFAULT_CAMERA_CONFIG, DEFAULT_CONFIG_WORLD, DEFAULT_RACE_DEFAULTS } =
+  await import(u("client/src/modules/storage/defaults.js"));
+const { EditorShape } = await import(
+  u("client/src/modules/track-editor/EditorShape.js")
 );
-const { EditorShape } = await import(u('client/src/modules/track-editor/EditorShape.js'));
-const { CameraDirector } = await import(u('client/src/modules/camera/CameraDirector.js'));
-const { createRaceFromIdentity } = await import(u('client/src/modules/raceCore.js'));
-const { normalSpeedFrom } = await import(u('client/src/modules/durationModel.js'));
-const { computeRacerLayout, computeBodyNarrowRef } = await import(u('client/src/modules/rowLayout.js'));
-const { computeRenderDisplayScale, getEffectiveMaxTargetScreenPx } = await import(
-  u('client/src/modules/autoSpriteScale.js')
+const { CameraDirector } = await import(
+  u("client/src/modules/camera/CameraDirector.js")
 );
-const { tagFontScreenPx } = await import(u('client/src/screens/RaceScreen/nameTagLayout.js'));
-const { effectiveZoom } = await import(u('client/src/modules/camera/openTrackCamera.js'));
-const { OPEN_TRACK_BASE_ZOOM } = await import(u('client/src/modules/camera/CameraDirector.js'));
-const { QUICK_TEST_NAMES } = await import(u('client/src/modules/racerNames.js'));
+const { createRaceFromIdentity } = await import(
+  u("client/src/modules/raceCore.js")
+);
+const { normalSpeedFrom } = await import(
+  u("client/src/modules/durationModel.js")
+);
+const { computeRacerLayout, computeBodyNarrowRef } = await import(
+  u("client/src/modules/rowLayout.js")
+);
+const { computeRenderDisplayScale, getEffectiveMaxTargetScreenPx } =
+  await import(u("client/src/modules/autoSpriteScale.js"));
+const { tagFontScreenPx } = await import(
+  u("client/src/screens/RaceScreen/nameTagLayout.js")
+);
+const { effectiveZoom } = await import(
+  u("client/src/modules/camera/openTrackCamera.js")
+);
+const { OPEN_TRACK_BASE_ZOOM } = await import(
+  u("client/src/modules/camera/CameraDirector.js")
+);
+const { QUICK_TEST_NAMES } = await import(
+  u("client/src/modules/racerNames.js")
+);
 const RT = await (async () => {
   const re = console.error;
   console.error = () => {};
   try {
-    return await import(u('client/src/modules/racer-types/index.js'));
+    return await import(u("client/src/modules/racer-types/index.js"));
   } finally {
     console.error = re;
   }
@@ -67,25 +83,78 @@ const CH = 720;
 // formation is at its tightest and a label overlap either happens or provably cannot. A 40-racer
 // open track is a half-empty grid and answers a question nobody asked. Read from the shipped
 // defaults rather than typed here, so the two cannot drift apart.
-const N_OVERRIDE = Number((process.argv.find((a) => a.startsWith('--racers=')) ?? '').slice(9)) || 0;
+const N_OVERRIDE =
+  Number(
+    (process.argv.find((a) => a.startsWith("--racers=")) ?? "").slice(9),
+  ) || 0;
 const racersFor = (isOpen) =>
   N_OVERRIDE ||
-  (isOpen ? DEFAULT_RACE_DEFAULTS.maxPlayersOpen : DEFAULT_RACE_DEFAULTS.maxPlayersClosed);
+  (isOpen
+    ? DEFAULT_RACE_DEFAULTS.maxPlayersOpen
+    : DEFAULT_RACE_DEFAULTS.maxPlayersClosed);
 const SEED = 5601;
 const CAM_SEED = 1439767152;
-const ALL = process.argv.includes('--all');
+const ALL = process.argv.includes("--all");
 /** The four tracks the owner watched, in the order he named them. */
-const WATCHED = ['ice-track', 'river-run', 'seatrack', 'space-sprint'];
+const WATCHED = ["ice-track", "river-run", "seatrack", "space-sprint"];
 
 /** Helvetica-Bold advance widths, AFM units per 1000 em. Arial Bold shares these. */
 const ADV = {
-  ' ': 278, '(': 333, ')': 333,
-  A: 722, B: 722, C: 722, D: 722, E: 667, F: 611, G: 778, H: 722, I: 278, J: 556, K: 722,
-  L: 611, M: 833, N: 722, O: 778, P: 667, Q: 778, R: 722, S: 667, T: 611, U: 722, V: 667,
-  W: 944, X: 667, Y: 667, Z: 611,
-  a: 556, b: 611, c: 556, d: 611, e: 556, f: 333, g: 611, h: 611, i: 278, j: 278, k: 556,
-  l: 278, m: 889, n: 611, o: 611, p: 611, q: 611, r: 389, s: 556, t: 333, u: 611, v: 556,
-  w: 778, x: 556, y: 556, z: 500,
+  " ": 278,
+  "(": 333,
+  ")": 333,
+  A: 722,
+  B: 722,
+  C: 722,
+  D: 722,
+  E: 667,
+  F: 611,
+  G: 778,
+  H: 722,
+  I: 278,
+  J: 556,
+  K: 722,
+  L: 611,
+  M: 833,
+  N: 722,
+  O: 778,
+  P: 667,
+  Q: 778,
+  R: 722,
+  S: 667,
+  T: 611,
+  U: 722,
+  V: 667,
+  W: 944,
+  X: 667,
+  Y: 667,
+  Z: 611,
+  a: 556,
+  b: 611,
+  c: 556,
+  d: 611,
+  e: 556,
+  f: 333,
+  g: 611,
+  h: 611,
+  i: 278,
+  j: 278,
+  k: 556,
+  l: 278,
+  m: 889,
+  n: 611,
+  o: 611,
+  p: 611,
+  q: 611,
+  r: 389,
+  s: 556,
+  t: 333,
+  u: 611,
+  v: 556,
+  w: 778,
+  x: 556,
+  y: 556,
+  z: 500,
 };
 for (let d = 0; d <= 9; d++) ADV[String(d)] = 556;
 const textWidth = (s, fontPx) => {
@@ -99,9 +168,9 @@ const BOX_PAD_X = 8;
 const BOX_H_FACTOR = 1.18;
 const BOX_OFFSET_FACTOR = 2.0;
 
-const dir = existsSync(join(ROOT, 'server/data/tracks'))
-  ? join(ROOT, 'server/data/tracks')
-  : join(ROOT, 'server/seeds/tracks');
+const dir = existsSync(join(ROOT, "server/data/tracks"))
+  ? join(ROOT, "server/data/tracks")
+  : join(ROOT, "server/seeds/tracks");
 
 function measure(geo, nRequested) {
   const shape = new EditorShape(geo);
@@ -109,7 +178,7 @@ function measure(geo, nRequested) {
   const TW = geo.width ?? shape.getActualTrackWidth();
   const W = DEFAULT_CONFIG_WORLD;
   const behaviorConfig = { ...W.raceBehaviorConfig, isOpen: shape.isOpen };
-  const rt = RT.getRacerType(geo.defaultRacerTypeId ?? 'horse');
+  const rt = RT.getRacerType(geo.defaultRacerTypeId ?? "horse");
   const ds = rt.config.displaySize;
   const bfX = rt.config.bodyFillX;
   const bfY = rt.config.bodyFillY;
@@ -118,7 +187,13 @@ function measure(geo, nRequested) {
   const effW = TW * behaviorConfig.startSpreadRange;
   const layout = computeRacerLayout(effW, N, ds, W.autoScaleConfig);
   const pss = layout.spriteSize;
-  const br = computeBodyNarrowRef(Math.min(285, effW), N, ds, bfN, W.autoScaleConfig);
+  const br = computeBodyNarrowRef(
+    Math.min(285, effW),
+    N,
+    ds,
+    bfN,
+    W.autoScaleConfig,
+  );
   const bodyRef = ds * (br.bodyNarrow / ds);
 
   const built = createRaceFromIdentity({
@@ -157,7 +232,7 @@ function measure(geo, nRequested) {
     DEFAULT_CAMERA_CONFIG,
     bodyRef,
     shape,
-    TW
+    TW,
   );
   cd.setRandomSeed(CAM_SEED);
   const RAW = 1000 / 60;
@@ -171,16 +246,21 @@ function measure(geo, nRequested) {
 
   const bsX = CW / geo.worldWidth;
   const bsY = CH / geo.worldHeight;
-  const effX = shape.isOpen ? effectiveZoom(cam.zoom, OPEN_TRACK_BASE_ZOOM) : cam.zoom * bsX;
+  const effX = shape.isOpen
+    ? effectiveZoom(cam.zoom, OPEN_TRACK_BASE_ZOOM)
+    : cam.zoom * bsX;
   const effY = shape.isOpen ? effX : cam.zoom * bsY;
 
   const displayScale = computeRenderDisplayScale(
     ds,
     br.bodyNarrow / ds,
     effX,
-    getEffectiveMaxTargetScreenPx(rt.config?.maxTargetScreenPx, DEFAULT_CAMERA_CONFIG.maxTargetScreenPx),
+    getEffectiveMaxTargetScreenPx(
+      rt.config?.maxTargetScreenPx,
+      DEFAULT_CAMERA_CONFIG.maxTargetScreenPx,
+    ),
     DEFAULT_CAMERA_CONFIG.minDrawnFrameFrac,
-    CH
+    CH,
   );
   const fontPx = tagFontScreenPx(DEFAULT_CAMERA_CONFIG.nameTagFrameFrac, CH);
   const boxH = fontPx * BOX_H_FACTOR;
@@ -211,7 +291,12 @@ function measure(geo, nRequested) {
       name: r.name,
       sx,
       sy,
-      label: { left: sx - w / 2, right: sx + w / 2, top: sy - offsetAbove - boxH, bottom: sy - offsetAbove },
+      label: {
+        left: sx - w / 2,
+        right: sx + w / 2,
+        top: sy - offsetAbove - boxH,
+        bottom: sy - offsetAbove,
+      },
       frameW: frameWorld * effX,
       frameH: frameWorld * effY,
       bodyW: 2 * halfWx,
@@ -228,10 +313,17 @@ function measure(geo, nRequested) {
     for (let j = i + 1; j < items.length; j++) {
       const s = items[j];
       const box = {
-        left: s.sx - s.bodyW / 2, right: s.sx + s.bodyW / 2,
-        top: s.sy - s.bodyH / 2, bottom: s.sy + s.bodyH / 2,
+        left: s.sx - s.bodyW / 2,
+        right: s.sx + s.bodyW / 2,
+        top: s.sy - s.bodyH / 2,
+        bottom: s.sy + s.bodyH / 2,
       };
-      if (box.left < L.right && box.right > L.left && box.top < L.bottom && box.bottom > L.top) {
+      if (
+        box.left < L.right &&
+        box.right > L.left &&
+        box.top < L.bottom &&
+        box.bottom > L.top
+      ) {
         coveredByLater++;
         coveredNames.push(items[i].name);
         break;
@@ -265,7 +357,9 @@ function measure(geo, nRequested) {
     if (!rows.has(a.rowIndex)) rows.set(a.rowIndex, []);
     rows.get(a.rowIndex).push(a);
   }
-  const front = (rows.get(0) ?? []).slice().sort((p, q) => p.indexInRow - q.indexInRow);
+  const front = (rows.get(0) ?? [])
+    .slice()
+    .sort((p, q) => p.indexInRow - q.indexInRow);
   const gaps = [];
   const gapsX = [];
   const gapsY = [];
@@ -292,7 +386,9 @@ function measure(geo, nRequested) {
   const bbH = Math.max(...ys) - Math.min(...ys);
 
   const widest = Math.max(...items.map((i) => i.label.right - i.label.left));
-  const meanLabel = items.reduce((s, i) => s + (i.label.right - i.label.left), 0) / items.length;
+  const meanLabel =
+    items.reduce((s, i) => s + (i.label.right - i.label.left), 0) /
+    items.length;
 
   return {
     id: geo.id,
@@ -347,12 +443,14 @@ function measure(geo, nRequested) {
 
 const geos = [];
 for (const f of readdirSync(dir)) {
-  if (!f.endsWith('.json')) continue;
-  const j = JSON.parse(readFileSync(join(dir, f), 'utf8'));
+  if (!f.endsWith(".json")) continue;
+  const j = JSON.parse(readFileSync(join(dir, f), "utf8"));
   if (j.id && (ALL || WATCHED.includes(j.id))) geos.push(j);
 }
 geos.sort((a, b) =>
-  ALL ? a.id.localeCompare(b.id) : WATCHED.indexOf(a.id) - WATCHED.indexOf(b.id)
+  ALL
+    ? a.id.localeCompare(b.id)
+    : WATCHED.indexOf(a.id) - WATCHED.indexOf(b.id),
 );
 
 const r2 = (v) => (Math.round(v * 100) / 100).toFixed(2);
@@ -361,59 +459,66 @@ const rows = geos.map((g) => measure(g));
 console.log(
   `START FORMATION at the gun — ${rows.length} tracks at the FULL grid ` +
     `(closed ${DEFAULT_RACE_DEFAULTS.maxPlayersClosed}, open ${DEFAULT_RACE_DEFAULTS.maxPlayersOpen})` +
-    `${N_OVERRIDE ? ` OVERRIDDEN to ${N_OVERRIDE}` : ''}, seed ${SEED}, camSeed ${CAM_SEED}, ${CW}x${CH}\n`
+    `${N_OVERRIDE ? ` OVERRIDDEN to ${N_OVERRIDE}` : ""}, seed ${SEED}, camSeed ${CAM_SEED}, ${CW}x${CH}\n`,
 );
 
 const cols = [
-  ['track', (r) => r.id, 15],
-  ['open', (r) => (r.open ? 'yes' : 'no'), 5],
-  ['N', (r) => String(r.nRacers), 5],
-  ['type', (r) => r.racerType, 11],
-  ['TW', (r) => String(r.trackWidthPx), 5],
-  ['dispSz', (r) => String(r.displaySizeCfg), 7],
-  ['fillX', (r) => r2(r.bodyFillX), 6],
-  ['rows', (r) => String(r.rowCount), 5],
-  ['per row', (r) => String(r.frontRowSize), 8],
-  ['sprite w.px', (r) => r2(r.spriteWorldPx), 12],
-  ['camZoom', (r) => r2(r.camZoom), 8],
-  ['eff px/w', (r) => r2(r.effX), 9],
+  ["track", (r) => r.id, 15],
+  ["open", (r) => (r.open ? "yes" : "no"), 5],
+  ["N", (r) => String(r.nRacers), 5],
+  ["type", (r) => r.racerType, 11],
+  ["TW", (r) => String(r.trackWidthPx), 5],
+  ["dispSz", (r) => String(r.displaySizeCfg), 7],
+  ["fillX", (r) => r2(r.bodyFillX), 6],
+  ["rows", (r) => String(r.rowCount), 5],
+  ["per row", (r) => String(r.frontRowSize), 8],
+  ["sprite w.px", (r) => r2(r.spriteWorldPx), 12],
+  ["camZoom", (r) => r2(r.camZoom), 8],
+  ["eff px/w", (r) => r2(r.effX), 9],
 ];
-console.log('── GEOMETRY: what the layout and the camera decide ──');
-console.log(cols.map(([h, , w]) => h.padEnd(w)).join(''));
-for (const r of rows) console.log(cols.map(([, f, w]) => String(f(r)).padEnd(w)).join(''));
+console.log("── GEOMETRY: what the layout and the camera decide ──");
+console.log(cols.map(([h, , w]) => h.padEnd(w)).join(""));
+for (const r of rows)
+  console.log(cols.map(([, f, w]) => String(f(r)).padEnd(w)).join(""));
 
 const cols2 = [
-  ['track', (r) => r.id, 15],
-  ['frame scr', (r) => r2(r.spriteScreenW), 10],
-  ['body scr', (r) => r2(r.bodyScreenW), 9],
-  ['gap scr', (r) => r2(r.meanGap), 8],
-  ['gap dx', (r) => r2(r.meanGapX), 7],
-  ['gap dy', (r) => r2(r.meanGapY), 7],
-  ['tilt°', (r) => r2(r.rowTiltDeg), 6],
-  ['label w', (r) => r2(r.meanLabelW), 8],
-  ['box h', (r) => r2(r.boxH), 6],
-  ['clear dx', (r) => r2(r.clearX), 9],
-  ['clear dy', (r) => r2(r.clearY), 9],
-  ['form %W', (r) => r2(100 * r.frameFracW), 8],
-  ['form %H', (r) => r2(100 * r.frameFracH), 8],
+  ["track", (r) => r.id, 15],
+  ["frame scr", (r) => r2(r.spriteScreenW), 10],
+  ["body scr", (r) => r2(r.bodyScreenW), 9],
+  ["gap scr", (r) => r2(r.meanGap), 8],
+  ["gap dx", (r) => r2(r.meanGapX), 7],
+  ["gap dy", (r) => r2(r.meanGapY), 7],
+  ["tilt°", (r) => r2(r.rowTiltDeg), 6],
+  ["label w", (r) => r2(r.meanLabelW), 8],
+  ["box h", (r) => r2(r.boxH), 6],
+  ["clear dx", (r) => r2(r.clearX), 9],
+  ["clear dy", (r) => r2(r.clearY), 9],
+  ["form %W", (r) => r2(100 * r.frameFracW), 8],
+  ["form %H", (r) => r2(100 * r.frameFracH), 8],
 ];
 console.log(
-  '\n── READABILITY: screen px. headroom < 1 means neighbouring labels must overlap ──\n' +
-    '   (tilt 0° = the start row runs ACROSS the screen, 90° = straight DOWN it)'
+  "\n── READABILITY: screen px. headroom < 1 means neighbouring labels must overlap ──\n" +
+    "   (tilt 0° = the start row runs ACROSS the screen, 90° = straight DOWN it)",
 );
-console.log(cols2.map(([h, , w]) => h.padEnd(w)).join(''));
-for (const r of rows) console.log(cols2.map(([, f, w]) => String(f(r)).padEnd(w)).join(''));
+console.log(cols2.map(([h, , w]) => h.padEnd(w)).join(""));
+for (const r of rows)
+  console.log(cols2.map(([, f, w]) => String(f(r)).padEnd(w)).join(""));
 
 const cols3 = [
-  ['track', (r) => r.id, 15],
-  ['A: name under sprite', (r) => `${r.coveredByLater}/${r.nRacers}  (${r2(r.coveredPct)}%)`, 22],
-  ['B: label pairs', (r) => String(r.pairOverlaps), 15],
-  ['B: labels hit %', (r) => r2(r.labelsHitPct), 16],
-  ['worst overlap', (r) => r2(100 * r.worstFrac) + '%', 14],
+  ["track", (r) => r.id, 15],
+  [
+    "A: name under sprite",
+    (r) => `${r.coveredByLater}/${r.nRacers}  (${r2(r.coveredPct)}%)`,
+    22,
+  ],
+  ["B: label pairs", (r) => String(r.pairOverlaps), 15],
+  ["B: labels hit %", (r) => r2(r.labelsHitPct), 16],
+  ["worst overlap", (r) => r2(100 * r.worstFrac) + "%", 14],
 ];
-console.log('\n── THE TWO DEFECTS, counted ──');
-console.log(cols3.map(([h, , w]) => h.padEnd(w)).join(''));
-for (const r of rows) console.log(cols3.map(([, f, w]) => String(f(r)).padEnd(w)).join(''));
+console.log("\n── THE TWO DEFECTS, counted ──");
+console.log(cols3.map(([h, , w]) => h.padEnd(w)).join(""));
+for (const r of rows)
+  console.log(cols3.map(([, f, w]) => String(f(r)).padEnd(w)).join(""));
 
 // ── THE SWEEP ────────────────────────────────────────────────────────────────────────────────────
 // THE OWNER'S ACCEPTANCE, in his words: there must be NO overlap at ANY racer count. So a single
@@ -436,40 +541,63 @@ const sweeps = geos.map((geo) => {
   return { id: geo.id, max, points, overlapping, tightest, worstA, clearOf };
 });
 
-console.log(`\n── THE SWEEP: every racer count from ${SWEEP_MIN} to the track maximum ──`);
+console.log(
+  `\n── THE SWEEP: every racer count from ${SWEEP_MIN} to the track maximum ──`,
+);
 const cols4 = [
-  ['track', (s) => s.id, 15],
-  ['N tested', (s) => `${SWEEP_MIN}..${s.max}`, 10],
-  ['counts WITH overlap', (s) => `${s.overlapping.length}/${s.points.length}`, 20],
-  ['first N', (s) => (s.overlapping.length ? String(s.overlapping[0].nRacers) : '—'), 8],
-  ['tightest at N', (s) => String(s.tightest.nRacers), 14],
-  ['its clear air', (s) => r2(s.clearOf(s.tightest)) + ' px', 14],
+  ["track", (s) => s.id, 15],
+  ["N tested", (s) => `${SWEEP_MIN}..${s.max}`, 10],
+  [
+    "counts WITH overlap",
+    (s) => `${s.overlapping.length}/${s.points.length}`,
+    20,
+  ],
+  [
+    "first N",
+    (s) => (s.overlapping.length ? String(s.overlapping[0].nRacers) : "—"),
+    8,
+  ],
+  ["tightest at N", (s) => String(s.tightest.nRacers), 14],
+  ["its clear air", (s) => r2(s.clearOf(s.tightest)) + " px", 14],
 ];
-console.log(cols4.map(([h, , w]) => h.padEnd(w)).join(''));
-for (const s of sweeps) console.log(cols4.map(([, f, w]) => String(f(s)).padEnd(w)).join(''));
+console.log(cols4.map(([h, , w]) => h.padEnd(w)).join(""));
+for (const s of sweeps)
+  console.log(cols4.map(([, f, w]) => String(f(s)).padEnd(w)).join(""));
 
 for (const s of sweeps) {
   if (!s.overlapping.length) continue;
   const list = s.overlapping.map((p) => p.nRacers);
   console.log(
-    `\n  ${s.id}: labels overlap at N = ${list.join(', ')}` +
+    `\n  ${s.id}: labels overlap at N = ${list.join(", ")}` +
       `\n    worst: N=${s.overlapping.reduce((a, b) => (b.labelsHitPct > a.labelsHitPct ? b : a)).nRacers}` +
-      ` → ${r2(s.overlapping.reduce((a, b) => (b.labelsHitPct > a.labelsHitPct ? b : a)).labelsHitPct)}% of labels hit`
+      ` → ${r2(s.overlapping.reduce((a, b) => (b.labelsHitPct > a.labelsHitPct ? b : a)).labelsHitPct)}% of labels hit`,
   );
 }
 
-console.log(`\n── DEFECT A ACROSS THE SWEEP: the worst count for names under sprites ──`);
+console.log(
+  `\n── DEFECT A ACROSS THE SWEEP: the worst count for names under sprites ──`,
+);
 const cols5 = [
-  ['track', (s) => s.id, 15],
-  ['worst at N', (s) => String(s.worstA.nRacers), 12],
-  ['names covered', (s) => `${s.worstA.coveredByLater}/${s.worstA.nRacers} (${r2(s.worstA.coveredPct)}%)`, 22],
-  ['at the maximum', (s) => r2(s.points[s.points.length - 1].coveredPct) + '%', 16],
+  ["track", (s) => s.id, 15],
+  ["worst at N", (s) => String(s.worstA.nRacers), 12],
+  [
+    "names covered",
+    (s) =>
+      `${s.worstA.coveredByLater}/${s.worstA.nRacers} (${r2(s.worstA.coveredPct)}%)`,
+    22,
+  ],
+  [
+    "at the maximum",
+    (s) => r2(s.points[s.points.length - 1].coveredPct) + "%",
+    16,
+  ],
 ];
-console.log(cols5.map(([h, , w]) => h.padEnd(w)).join(''));
-for (const s of sweeps) console.log(cols5.map(([, f, w]) => String(f(s)).padEnd(w)).join(''));
+console.log(cols5.map(([h, , w]) => h.padEnd(w)).join(""));
+for (const s of sweeps)
+  console.log(cols5.map(([, f, w]) => String(f(s)).padEnd(w)).join(""));
 
 console.log(
-  '\n  A = a name whose box is covered by the drawn BODY of a racer painted LATER in the same loop.\n' +
-    '  B = label-on-label overlap, no sprite involved. Label widths are the Helvetica-Bold table,\n' +
-    '  not a browser measurement — see the file header.'
+  "\n  A = a name whose box is covered by the drawn BODY of a racer painted LATER in the same loop.\n" +
+    "  B = label-on-label overlap, no sprite involved. Label widths are the Helvetica-Bold table,\n" +
+    "  not a browser measurement — see the file header.",
 );
