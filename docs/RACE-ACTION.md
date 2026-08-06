@@ -29,8 +29,8 @@ produces the same race.
 
 Three properties are ranked and non-negotiable. When they conflict, the higher one wins, always.
 
-**Fairness is sacred.** The gate is band-reach of at least 70 percent (how many racers finish inside their
-assigned fairness band) together with zero start-rows flagged unfair by the Holm test. No amount of
+**Fairness is sacred.** The gate is band-reach (how many racers finish inside their assigned fairness
+band) together with zero start-rows flagged unfair by the Holm test; the thresholds live in [FAIRNESS.md](FAIRNESS.md). No amount of
 spectacle justifies a race that systematically advantages some racers over others. Fairness is measured, and
 the measurement is the gate for shipping a change.
 
@@ -162,10 +162,10 @@ prefers a missed pass to a breach of naturalness.
 
 Fairness is defined by measurement, and the measurement is the gate.
 
-**Band-reach of at least 70 percent.** Every racer is assigned a target fairness band by rank: band 1 is
+**Band-reach.** Every racer is assigned a target fairness band by rank: band 1 is
 ranks 1–5, band 2 is ranks 6–15, band 3 is ranks 16–25, band 4 is ranks 26–40, and band 5 is ranks 41 and
-beyond. Band-reach is the fraction of racers that finish inside their assigned band. At least 70 percent must
-land in-band for a configuration to be considered fair.
+beyond. Band-reach is the fraction of racers that finish inside their assigned band. The share that must
+land in-band for a configuration to be considered fair is the gate in [FAIRNESS.md](FAIRNESS.md).
 
 **Zero Holm-unfair start rows.** The starting grid must not systematically help or hurt racers by row. Each
 start row's outcomes are tested for a significant advantage, with a Holm correction across rows to control
@@ -202,13 +202,13 @@ stored configuration; none require code changes to adjust.
 - `pulkLeadRotationDropDepthLengths` — the settle-brake release depth in racer lengths; the depth
   lever described in section 5.
 
-Supporting knobs include the PULK realism envelope (`pulkEnvelopeMaxEffect`, default 0.12, and
-`pulkEnvelopeMaxStepPerFrame`, default 0.01, the slew limit), `pulkCeilingCap` (default on, capping a
+Supporting knobs include the PULK realism envelope (`pulkEnvelopeMaxEffect`, and
+`pulkEnvelopeMaxStepPerFrame`, the slew limit), `pulkCeilingCap` (capping a
 boosted racer at the band maximum before headroom), the attacker-slot count
-(`pulkLeadRotationAttackerSlots`, default 2), the outsider reach cap
-(`pulkLeadRotationOutsiderMaxReachLengths`, default 15), the fresh-leader hold
-(`pulkLeadRotationMinHoldMs`, default 750, which suppresses sub-750-millisecond lead flicker), and the
-per-boost safety net (`pulkLeadRotationDeadlockTimeoutMs`, default 12000).
+(`pulkLeadRotationAttackerSlots`), the outsider reach cap
+(`pulkLeadRotationOutsiderMaxReachLengths`), the fresh-leader hold
+(`pulkLeadRotationMinHoldMs`, which suppresses brief lead flicker), and the
+per-boost safety net (`pulkLeadRotationDeadlockTimeoutMs`). Values live in `storage/defaults.js`.
 
 Some internals are pinned to constants rather than exposed as tuning knobs, on purpose. The naturalness
 ceiling (1.20) and the phase-weight fade are fixed guarantees, not dials — exposing them would invite a

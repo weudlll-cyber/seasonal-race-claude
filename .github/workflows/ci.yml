@@ -112,6 +112,11 @@ jobs:
       - name: Check no document states a config value
         run: node scripts/check-config-claims.mjs
 
+      # Fails if a living document restates the fairness threshold, whose one home is docs/FAIRNESS.md.
+      # It does NOT guard the track count — see the header of the guard for why that is unbuildable.
+      - name: Check no document restates the fairness threshold
+        run: node scripts/check-doc-facts.mjs
+
       # Fails if a stamped measured number in a document predates a change to the source it measures.
       # FRESHNESS only — it never re-runs the measurement (tracking-lag alone takes ~7 minutes).
       - name: Check measured numbers have not gone stale

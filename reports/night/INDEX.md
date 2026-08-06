@@ -8,6 +8,15 @@ report here could be orphaned, or an index link could dangle, with nothing notic
 `node scripts/check-index.mjs --dir=reports/night --index=reports/night/INDEX.md` now checks both
 directions.
 
+- [MERGE-AND-GUARD-1.md](MERGE-AND-GUARD-1.md) — merge what is ready, then the next one-truth target.
+  CONFIG-TRUTH-1 and the owner's backup tool merged to master (merge commits, containment proved);
+  the backup tool RUN and confirmed at its documented 247 files / 12.0 MB, `--minimal` still dropping
+  exactly `sessions.sqlite`. Rebase merging disabled — merge commits are now the only way in. The
+  fairness threshold gets one home in `docs/FAIRNESS.md` (19 restatements → 0). **The track-count
+  check was built, run and ABANDONED as unbuildable** — the evidence is in the guard's header, and
+  R11 now records that abandoning a guard is a legitimate outcome. Nine config claims found that
+  CONFIG-TRUTH-1's narrower shape had missed. CI still owed: the Actions outage ran all evening,
+  though the new `workflow_dispatch` hand crank does now create runs.
 - [CONFIG-TRUTH-1.md](CONFIG-TRUTH-1.md) — the owner's values land, and documents stop stating
   numbers. 94 current config claims across 11 living documents → 0, enforced by
   `check-config-claims.mjs` in CI, the commit hook and verify; nine archives now declare themselves

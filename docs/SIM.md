@@ -620,7 +620,7 @@ in the PULK phase `[chaos boundary, choreoOutcomeStart]`, faded to 1.0 by OUTCOM
 Optimizing the PulkLeadRotation strengths (`--pulkLeadRotationDropDepthLengths`, `--pulkChallengerBoost`,
 `--pulkBoostHeadroom`, `--pulkLeaderBrake`, …) means driving the harness directly for
 **front-action / pulk-contest** (the `--action-metrics` observer) subject to the **unpredictability**
-counter-metric staying LOW and the fairness gate (band-reach ≥ 70%, 0 Holm-unfair start rows) holding vs
+counter-metric staying LOW and the fairness gate (band-reach, 0 Holm-unfair start rows — [FAIRNESS.md](FAIRNESS.md)) holding vs
 the mechanism-off floor (`--race-plan=false`). Compare an A0 floor against drop-depth 2/8 across the 10
 standard tracks by hand or a small orchestrator (see [SWEEP-HARNESS.md](SWEEP-HARNESS.md)).
 
@@ -1037,7 +1037,7 @@ Extra choreographed heroes cast from FRONT-post-chaos B2-finishers that **climb 
 then fall back and free-reorder in B2**. Shipped defaults: **count slider 0–5 (default 3)**,
 `b2AttackPeakRank`, attack window **timing 0.40–0.70**, `b2AttackFinalRank`, **band-arrival
 release** (`b2AttackBandArrival=true` — the servo frees an attacker the moment it re-enters B2 on the
-way down). Result: **+21% top-5 OUTCOME action** vs the no-attacker floor, B1/B2 band-reach ≥70% on all
+way down). Result: **+21% top-5 OUTCOME action** vs the no-attacker floor, B1/B2 band-reach clearing the gate on all
 four tracks, Holm at the pre-existing 2/4 baseline. `count=0` restores the pre-feature game
 byte-identical (fingerprint `4ec8e64dd2641ad3`); the shipped `count=3` default is `72c3360fb75225ef`.
 The action knob is `finalRank` (release HEIGHT), not peak depth; count scales super-additively
@@ -1104,7 +1104,7 @@ leader duty-cycle (max share of one racer's window rolls that were biased — th
 
 ### 2026-07-21 — Browser wiring + DevScreen controls (default OFF, eye-test)
 
-After the N=200 confirmation on all 10 tracks (V0 23% → symmetric/G=1.5/strength=1.0 8.3%, action +, band-reach ≥70% held), the shared transform was wired into the BROWSER re-roll loop (`RaceScreen/index.jsx`) exactly as the sim does — the browser threads ITS OWN realized-duration `lastRollDeadline` + `physicsTs` + the shared `lenScaleFrom(pathLengthPx, meanDrawnBodyLen)` / `isOpen` into `computeGapBiasedTarget` (the ONE-CLOCK principle; the transform never re-derives a duration). The transform behavior is FROZEN.
+After the N=200 confirmation on all 10 tracks (V0 23% → symmetric/G=1.5/strength=1.0 8.3%, action +, band-reach held the gate), the shared transform was wired into the BROWSER re-roll loop (`RaceScreen/index.jsx`) exactly as the sim does — the browser threads ITS OWN realized-duration `lastRollDeadline` + `physicsTs` + the shared `lenScaleFrom(pathLengthPx, meanDrawnBodyLen)` / `isOpen` into `computeGapBiasedTarget` (the ONE-CLOCK principle; the transform never re-derives a duration). The transform behavior is FROZEN.
 
 **Config keys (`DEFAULT_RACE_DYNAMICS_CONFIG`), current shipped values:** `gapRerollEnabled: true`, `gapRerollThresholdLengths: 0.5`, `gapRerollStrength: 1.0`, `gapRerollMode: 'symmetric'`, `gapRerollDevMarker: false` — shipped ON 2026-07-22, retuned 2026-07-23 (from G=1.5 / strength=1.0), **flipped 2026-07-26 to G=0.5 / strength=1.0** (confirmed candidate). When `gapRerollEnabled` is false the browser passes `gapRerollThresholdLengths: null` into `createRacePlan` → the transform early-returns the raw draw → **the shipped game is byte-identical** (OFF invariant `f8f7d9c2fd3283e9`; the pre-unification `72c3360fb75225ef` is historical). The sim harness keeps its CLI semantics (`--gapReroll*` override, unchanged); it does not read these browser defaults.
 

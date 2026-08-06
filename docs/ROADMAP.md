@@ -567,7 +567,7 @@ controls + pinned internals (Stage 5b), not on the removed governor knobs.
   pushed to origin). Extra choreographed heroes cast from front-post-chaos B2-finishers that climb to
   ~rank 5 mid-race then fall back and free-reorder in B2 (**band-arrival** release). Shipped
   the swept winner (2026-07-20) — **+21% top-5 OUTCOME action** vs the no-attacker
-  floor, B1/B2 band-reach ≥70% on all four tracks, Holm at the pre-existing 2/4 baseline. `count=0` is
+  floor, B1/B2 band-reach cleared the gate on all four tracks, Holm at the pre-existing 2/4 baseline. `count=0` is
   byte-identical (`4ec8e64…`); the new count=3 default fingerprint is `72c3360fb75225ef`. 3-phase
   validation + owner eye-test PASS; tests 3203/3203. Detail in BACKLOG.md and ARCHITECTURE.md §(a.1);
   reports under `exp-b2-attack-results/`. _(Annotation 2026-07-20: those reports were archived to
@@ -590,7 +590,7 @@ controls + pinned internals (Stage 5b), not on the removed governor knobs.
 
 - **Act 1 CLOSED, mechanism REVERTED.** The flag-gated assignment-follows-field build (cd520e0, default
   OFF, verified byte-identical: ON 7c70b1eae7d31e22 / OFF f8f7d9c2fd3283e9) SCREENed NEGATIVE — pooled
-  band-reach 71.1%→66.8% (below the 70% floor), dead finales + runaway up, lead changes down. Diagnosis
+  band-reach 71.1%→66.8% (below the floor), dead finales + runaway up, lead changes down. Diagnosis
   (code-verified): a live-following target drives rankError→0, REMOVING the servo's within-band restoring
   force instead of adding contest — the same "liberation settles the field / breaks band-reach" family as
   the retired B2 pack-release + universal band-arrival. Reverted for source hygiene (git revert cd520e0);

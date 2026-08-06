@@ -57,14 +57,14 @@ The race logic runs entirely in the browser on a Canvas 2D engine with a fixed-t
 
 ## Tech stack
 
-| Layer   | Technology                                                     |
-|---------|----------------------------------------------------------------|
-| Client  | React 18, Vite, React Router v6, CSS Modules                   |
-| Engine  | Canvas 2D, requestAnimationFrame, fixed-timestep physics       |
-| Tests   | vitest (full unit suite), Playwright (e2e)                     |
+| Layer   | Technology                                                       |
+| ------- | ---------------------------------------------------------------- |
+| Client  | React 18, Vite, React Router v6, CSS Modules                     |
+| Engine  | Canvas 2D, requestAnimationFrame, fixed-timestep physics         |
+| Tests   | vitest (full unit suite), Playwright (e2e)                       |
 | Storage | Browser `localStorage` + local Express backend for tracks/images |
-| Backend | Node / Express (Phase L, port 4000)                            |
-| CI/CD   | GitHub Actions (lint → test → audit on every PR)               |
+| Backend | Node / Express (Phase L, port 4000)                              |
+| CI/CD   | GitHub Actions (lint → test → audit on every PR)                 |
 
 ## Project structure
 

@@ -276,7 +276,7 @@ front. Controlling any of these trades the owner's drama for a tidy metric — t
 
 ## 10. The four kill conditions — FALSIFIED if any holds (D7, verbatim)
 
-- **(a)** band-reach < 70 % on any track — the bias moved endpoints, not just paths;
+- **(a)** band-reach below the gate on any track — the bias moved endpoints, not just paths;
 - **(b)** the frontmost-gap fraction-over-cap barely changes — too weak, or a rip-closer in disguise;
 - **(c)** held overtakes collapse and traffic-braking spikes — the field is glued;
 - **(d)** the leader's correction duty cycle is high or continuous — it will read as a rubber band.

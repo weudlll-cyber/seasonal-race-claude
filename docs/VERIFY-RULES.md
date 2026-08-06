@@ -182,6 +182,34 @@ eye test is pending, use a `git worktree` at a SHORT path outside the OneDrive t
 scratchpad fail on this machine, and `git worktree prune` cannot delete the stale stubs here — both
 are the reparse-point condition recorded in the backlog.
 
+## R11 — If a guard disagrees with a sentence, the GUARD is the first suspect
+
+**Rule.** When a guard fails on a document, the first question is not "how do I fix the sentence" but
+"is the sentence true?" If it is, **fix the guard** — narrow it, or exempt that sentence by name with
+a reason recorded in the guard itself. Never make a true sentence vaguer or false in order to get a
+green tick. Every exemption a guard grants must be PRINTED when it runs, so that a decision to yield
+is visible rather than buried.
+
+**Why it is safe — and why the opposite is not.** A guard is a lexical approximation of an intent; a
+sentence is somebody's understanding written down. The approximation is much more likely to be wrong,
+and it is far cheaper to correct. The failure mode this prevents has a name here already: Lesson 206,
+where a guard blamed `docs/CAMERA_DIRECTOR.md` for being stale when the real cause was a shallow
+clone, and the cheapest response to its message would have been to destroy a correct stamp.
+
+**It has nearly happened twice, both recorded so nobody thinks this is theoretical:**
+
+- CONFIG-TRUTH-1 — `check-config-claims.mjs` flagged _"the minimum tested duration is 30 seconds"_,
+  a true statement about test COVERAGE, because `duration` is both an English word and a config key.
+  The fix was to declare `duration` unscannable, by name, with the reason. The sentence stands.
+- MERGE-AND-GUARD-1 — a track-count check flagged _"Gate: 400 races/arm, 4 tracks, paired seeds"_,
+  where four tracks really were used. Narrowing it to "all N tracks" did not help, because
+  `all four tracks` and `all 10 tracks` are the same construction. **The check was abandoned rather
+  than shipped**, and the reasoning lives in `scripts/check-doc-facts.mjs`.
+
+**The corollary, which is the part people skip:** abandoning a guard is a legitimate outcome. A check
+that can only be satisfied by damaging the documents is not a check, and shipping it anyway to have
+built something is how a suite stops being trusted.
+
 ---
 
 ## The instruments, and what each costs

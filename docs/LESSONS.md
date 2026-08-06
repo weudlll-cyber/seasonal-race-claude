@@ -2971,7 +2971,7 @@ REDUCES action.** Confirmed three independent ways:
 
 - **B2-Heroes "Attack & Fall" (author) → +21% top-5 OUTCOME action.** Casting 3 extra heroes on a scripted
   climb-to-~5-then-fall-and-free-reorder curve manufactures front drama without touching fairness (B1/B2
-  band-reach ≥70% all four tracks, Holm at the 2/4 baseline). Shipped ON.
+  band-reach cleared the gate on all four tracks, Holm at the 2/4 baseline). Shipped ON.
 - **Pack strictness release (liberate) → BROKE B2 fairness.** Letting the non-hero pack run strictness-0 inside
   its band leaked B2 band-reach to 67–69% on luger-hill + searound and Holm 3/4 via an endgame edge-leak
   (92% of leaks after progress 0.90 — freed racers at the band edge shuffle out with no runway). Shelved, then removed.

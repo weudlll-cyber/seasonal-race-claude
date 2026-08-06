@@ -7,6 +7,27 @@ Items ranked by urgency within each bucket. ✅ = done, 🔜 = next, ⏳ = waiti
 
 ---
 
+## The owner's camera-defaults session (2026-08-06, from MERGE-AND-GUARD-1)
+
+> **His words:** once the camera is finished, all camera defaults get set to his taste **in one
+> sitting**. This section exists so that sitting costs ONE ceremony instead of one per knob.
+
+- [ ] **FIRST ITEM — `minRacersVisible` is already done and waiting.** Branch
+      **`feat/min-racers-visible-5`** (`c57e37d4`) sets the shipped default to the value his own
+      recorded verdict names — his words on 2026-08-05, _"`minRacersVisible` stays at 5"_, against a
+      source that said 3 ([CAMERA_DIRECTOR.md §8.1](CAMERA_DIRECTOR.md)). It is **committed,
+      measured, NOT minted and NOT merged**, deliberately.
+      **What it costs, and why it belongs in the sitting rather than alone:** it moves **TWO**
+      fingerprints, not one — the camera one AND the **render** one, because
+      `scripts/render-fingerprint.mjs` builds a real `CameraDirector`, so any change to the shot
+      changes the draw-call transform on every sampled frame. **Any camera-default change has this
+      property**, which is the whole argument for batching them: one re-mint of two fingerprints and
+      one eye test can cover every knob he changes that day, where doing them one at a time pays the
+      ceremony over and over.
+      Already measured on that branch: the world fingerprint does NOT move, and the full client
+      suite passes unchanged. What is still owed is the mint, and his eye on the state the knob
+      governs (the company guarantee, in both the torn-apart and tight-pack regimes he named).
+
 ## Owner eye-test coverage (2026-08-05, from CAMERA-DOC-CLOSE-1)
 
 - [ ] **PROPOSED OWNER SESSION — his time, not scheduled here.** Writing §7.3 down made the gap
@@ -1266,7 +1287,7 @@ boundary-anchored generator; near-empty feasibility budget that late; rank-space
 measurement after A ships shows the front present in RANK but still not contesting in LENGTH at the line.
 
 **Success metrics:** runawayWinnerRate 23.5% → <10% (no track >15%); top-5 action ≥ baseline;
-paradeFinishRate ≤ 2%; B1/B2 band-reach ≥70%, Holm ≤2/4; flags OFF → fingerprint `72c3360fb75225ef`.
+paradeFinishRate ≤ 2%; B1/B2 band-reach clearing the gate, Holm ≤2/4; flags OFF → fingerprint `72c3360fb75225ef`.
 _(Casting-yield criterion dropped for A — A casts nothing and no `castingYield` metric exists; it
 re-applies only if B is ever built. Note: leash brake authority is −15% / minMult 0.85, not "+10%".)_
 Measure with the runaway-parade observer + `exp-runaway-leader` on the f40a7a6 seeds; determinism per sweep.
@@ -1294,7 +1315,7 @@ duration basis, both engines. N=200 confirmation on ALL 10 tracks (`3464295`): *
 controls now DONE (default OFF, fingerprint `72c3360fb75225ef` re-verified, one-clock window in both engines)
 — OWNER EYE-TEST PENDING.** _(Secondary open observations, NOT gate-blockers for the eye-test: **searound
 sits at ~15.5%**, just over the 15% per-track cap — the only track over; **Holm 3/10** (V0 2/10, one extra
-flagged track). Band-reach — the PRIMARY fairness gate — HOLDS ≥70% on all tracks for strength 1.0; s075
+flagged track). Band-reach — the PRIMARY fairness gate — HOLDS above the floor on all tracks for strength 1.0; s075
 dips to 69.7% so s10 is the cleaner candidate.)_ Next after eye-test: owner ship decision → backup tag.
 
 </details>

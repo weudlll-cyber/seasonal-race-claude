@@ -46,6 +46,11 @@
 //   - **Dated rows.** A line carrying a `YYYY-MM-DD` date is a changelog entry — history at the
 //     point of use — and is allowed its number. It cannot tell an honest dated row from a current
 //     claim that happens to sit on a dated line.
+//   - **THE DATE AND THE CLAIM MUST SHARE A LINE**, and prettier decides where lines break. Writing
+//     a dated sentence is not enough: reflowing a paragraph can put the date on one line and the
+//     value on the next, and then the value is unexempted. Found by this guard failing on a BACKLOG
+//     entry written for MERGE-AND-GUARD-1 whose date prettier had just moved one line up. The fix
+//     is to write the date beside the number, not merely nearby.
 //   - It does not verify that `defaults.js` is itself correct, or that any value ever shipped.
 //
 // LOUD-FAILURE RULE (Lesson 187): zero keys extracted, zero documents scanned, or an unreadable
@@ -185,7 +190,10 @@ const SHAPES = [
   // the rule matched `duration(M) = duration(1) / M`, which is a FORMULA, not a claim — the exact
   // false positive the narrow-versus-broad decision was meant to avoid, found by running it.
   "\\s+\\(\\s*(?:default\\s+)?",
-  "\\s+(?:default|stays at|set to|at|to|of|is|was|now)\\s+",
+  // Optional punctuation before the verb: "`referenceCorridorPx`, shipped at 300" slipped past the
+  // first version because the comma broke adjacency. Found by surveying what facts still live in
+  // more than one document, not by the guard itself — which is the honest way round to say it.
+  "[,;]?\\s+(?:shipped default|default|defaults to|stays at|set to|shipped at|shipped|at|to|of|is|was|now)\\s+",
 ];
 
 // A DATED ROW IS HISTORY AT THE POINT OF USE (stage 2c). A changelog line carries its own date, so a

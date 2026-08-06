@@ -186,7 +186,7 @@ pumping.
 ### 3.1 The unit
 
 `visibleCorridors` is how much world is across the frame in STANDARD corridors — a fixed reference
-width (`referenceCorridorPx`, shipped at 300), not this track's own. That is what makes one number
+width (`referenceCorridorPx`), not this track's own. That is what makes one number
 mean the same picture on a narrow track and a wide one. A track wider than the reference keeps its
 own width, so a setting can never ask to crop the corridor it is measured in.
 
