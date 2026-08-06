@@ -112,6 +112,12 @@ jobs:
       - name: Check no document states a config value
         run: node scripts/check-config-claims.mjs
 
+      # Fails if a key the renderer or the Dev Screen reads has NO default. loadCameraConfig()
+      # rebuilds the live config key-by-key from the defaults, so such a key is silently dropped —
+      # the control appears to work and the value never arrives. See DEV-MARKERS-1.
+      - name: Check every camera key read has a default
+        run: node scripts/check-config-keys.mjs
+
       # Fails if a stamped measured number in a document predates a change to the source it measures.
       # FRESHNESS only — it never re-runs the measurement (tracking-lag alone takes ~7 minutes).
       - name: Check measured numbers have not gone stale

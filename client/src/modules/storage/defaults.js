@@ -228,6 +228,13 @@ export const DEFAULT_CAMERA_CONFIG = {
   showComebackDiag: false, // COMEBACK diagnostics overlay: B1 racers, rank history, active comeback // BATTLE diagnostics overlay: detection status, group racers, locked racer
   showLeadChangeDiag: false, // LEAD_CHANGE diagnostics overlay: current/previous leader, pending state
   showGovernorDiag: false, // GOVERNOR diagnostics overlay: resolved phase fade + leader/straggler cohesion/shuffle/mult
+  // Dev rings on the racers themselves: green = a choreographed B1 hero, red = a B2 attacker.
+  // Read by the DRAW path (`renderRaceFrame.js` → `racerRendering.js`), toggled in Dev Screen →
+  // Camera Advanced. It had NO DEFAULT until DEV-MARKERS-1, and since `loadCameraConfig()` rebuilds
+  // the config key-by-key from THESE keys (d94a7b9d), a stored `true` was dropped on every load —
+  // the checkbox appeared to work and the rings never came back. A key the renderer reads must
+  // exist here or it cannot survive loading; `scripts/check-config-keys.mjs` now fails if one does not.
+  highlightHeroes: false,
   endgameThreshold: 0.9,
   // Pulk closeness (15b): BATTLE triggers when ≥3 of the top-10 racers are within this
   // lap-normalized arc distance (fraction of a lap) of each other — scale-independent, so one

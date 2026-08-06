@@ -194,6 +194,7 @@ export function plan(files) {
         ["node", "scripts/check-tags.mjs"],
         ["node", "scripts/check-measured-stamps.mjs"],
         ["node", "scripts/check-config-claims.mjs"],
+        ["node", "scripts/check-config-keys.mjs"],
       ],
     },
     "fingerprint-containment": {
