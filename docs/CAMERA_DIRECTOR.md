@@ -65,7 +65,7 @@ construction and must be argued another way.
 Two finish sub-phases are flags rather than states, because they are OVERVIEW and LEADER_ZOOM with a
 different anchor and a lock: `_inFinishDrama` (the pulse on the winner) and `_inFinishMode`
 (FINISH_OVERVIEW, held on a fixed point behind the line so later finishers cross in shot).
-`hudState` reports them. That fixed point is `finishOverviewLookbackPx` (default **300** world px
+`hudState` reports them. That fixed point is `finishOverviewLookbackPx` (world px
 before the line) — moved here from ARCHITECTURE.md's deleted camera section, which was the only
 place the knob was named.
 
@@ -231,7 +231,7 @@ rather than papered over. See §6.
 `battleGroup.js`. A group qualifies when all four hold at once:
 
 1. **Closeness** — all pairwise arc distances ≤ `battlePulkThresholdT`.
-2. **Isolation** — no non-member within `battleIsolationThresholdT` (0 disables).
+2. **Isolation** — no non-member within `battleIsolationThresholdT` (zero disables it).
 3. **Positional** — frontmost at rank 3 or worse (P1/P2 are LEADER territory), seed rank span ≤ 3,
    frontmost inside `battleMinTopN`.
 4. **Expansion** — greedy, capped by `battleMaxGroupSize` and `battleMaxGroupRankSpan`.

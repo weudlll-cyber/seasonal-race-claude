@@ -1362,7 +1362,8 @@ lesson. If the proof doesn't work out: reconsider the formula instead of committ
 ## Lesson 67 — Value Roulette: Without Baseline Measurement, Tuning Is Blind (Phase 4)
 
 **Context:** Phase 4 adopted default values from the concept doc: `battleGapThreshold=0.05`,
-`battleGapHysteresis=0.02`, `battleMaxDurationMs=4000ms`, `overviewCooldownMin=15s/Max=25s`.
+`battleGapHysteresis=0.02`, `battleMaxDurationMs=4000ms` (2026-05-06), `overviewCooldownMin=15s/Max=25s`
+— the values as adopted that day; none of them is today's.
 These values "sound sensible" but were not calibrated against real race data.
 Without measurement it is unknown whether BATTLE_ZOOM is even activated in typical races
 or whether OVERVIEW fires every 15–25s or every 5 minutes.
@@ -1816,11 +1817,11 @@ The user observation was the decisive hint: "OVERVIEW badge at tight zoom" — z
 
 **Cause:** T-space parameters scale linearly with track length. An operator who sets 0.08 on Space Sprint gets a completely different visual effect on another track — the camera looks back much too far on Space Sprint and too little on short tracks.
 
-**Fix:** `finishOverviewLookbackPx: 300` (world pixels). Formula: `lookbackFrac = lookbackPx / pathLen`; then `lookbackT = normT − lookbackFrac`. `shape.getTotalLength()` provides the track-specific path length at runtime.
+**Fix:** a `finishOverviewLookbackPx` setting, in world pixels. Formula: `lookbackFrac = lookbackPx / pathLen`; then `lookbackT = normT − lookbackFrac`. `shape.getTotalLength()` provides the track-specific path length at runtime.
 
 **Consequence:** Always check whether a parameter makes sense in T-space or world pixels. If the visual effect is a physical distance (e.g. "how far before the finish line"), then world pixels is the right unit — track-independent, intuitive for operator tuning.
 
-**Reference:** `CameraDirector.js` `_finishOverviewLookbackPx`, `_transition()` + `_setTargets()`, `defaults.js` `finishOverviewLookbackPx: 300`. Phase 3D.
+**Reference:** `CameraDirector.js` `_finishOverviewLookbackPx`, `_transition()` + `_setTargets()`, `defaults.js` `finishOverviewLookbackPx`. Phase 3D.
 
 ---
 
@@ -2068,7 +2069,7 @@ physicalYVelocity = physicalYVelocity * lateralDamping + netForce
 physicalY += physicalYVelocity
 ```
 
-`lateralDamping = 0.25` means velocity decays to 25% per frame — enough inertia to smooth over single-frame sign reversals, not enough to prevent real avoidance from working.
+As measured on 2026-05-31, a `lateralDamping` of 0.25 meant velocity decayed to 25% per frame — enough inertia to smooth over single-frame sign reversals, not enough to prevent real avoidance from working.
 
 **Sim result:** −37% `lateralSpeedScore`, −44% `zigzagScore` at same or lower `overlapRate` (targeted sweep d=0.25, f=0.012 vs. baseline d=0.45, f=0.010). Zone success rates: +0.3pp overall — indistinguishable from noise. Smoother lateral motion is orthogonal to race-plan targeting effectiveness.
 
@@ -2275,7 +2276,7 @@ Note: Mountainstreet itself has `"closed": false` and is an open track — the `
 
 **Context:** feat/dynamic-speed-brake (2026-06-04). The original `speedBrakeTThreshold` was a fixed absolute value in track-parameter space. Because track-parameter distance is `pixelDistance / pathLengthPx`, the same threshold corresponds to very different pixel distances on tracks of different lengths. On Ice Track (luge sprite, displaySize=80, pathLengthPx=3037), the threshold of 0.013838 fired 13.1 px after sprite overlap had already begun — the brake was too late. On Space Sprint (pathLengthPx=19772), the same threshold fired 231 px before sprite contact — unnecessary drag on the entire field for most of the race.
 
-**Fix:** Replace with a dimensionless `speedBrakeTMultiplier` (default 1.5). Dynamic threshold computed per pair as `(spriteWorldSizePx / pathLengthPx) × multiplier`. This fires at the same relative proximity — 1.5 sprite-widths before contact — on every track and racer type regardless of path length or sprite size. Sim validation (700 races across 5 multiplier values × 7 tracks) confirmed 1.5 passes all cutoffs with the cleanest lateral-motion scores (lowest mean zigzag and lat).
+**Fix:** Replace with a dimensionless `speedBrakeTMultiplier`. Dynamic threshold computed per pair as `(spriteWorldSizePx / pathLengthPx) × multiplier`. This fires at the same relative proximity — 1.5 sprite-widths before contact — on every track and racer type regardless of path length or sprite size. Sim validation (700 races across 5 multiplier values × 7 tracks) confirmed 1.5 passes all cutoffs with the cleanest lateral-motion scores (lowest mean zigzag and lat).
 
 **Consequence:** Any physics threshold expressed in track-parameter space must account for the fact that `dT = 1 / pathLengthPx` in pixel space. Thresholds that feel like small dimensionless fractions are actually large pixel distances on short tracks and tiny pixel distances on long tracks. Use `spriteWorldSizePx / pathLengthPx` as the natural unit so the threshold scales correctly with both sprite size and path length.
 

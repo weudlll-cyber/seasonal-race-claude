@@ -566,7 +566,7 @@ controls + pinned internals (Stage 5b), not on the removed governor knobs.
 - **Done — B2-attacker "Attack & Fall" heroes SHIPPED ON** (`v-b2-heroes-complete` = master `8bf54ca`,
   pushed to origin). Extra choreographed heroes cast from front-post-chaos B2-finishers that climb to
   ~rank 5 mid-race then fall back and free-reorder in B2 (**band-arrival** release). Shipped
-  `b2AttackHeroes=3, peak=5, final=7, band-arrival` — **+21% top-5 OUTCOME action** vs the no-attacker
+  the swept winner (2026-07-20) — **+21% top-5 OUTCOME action** vs the no-attacker
   floor, B1/B2 band-reach ≥70% on all four tracks, Holm at the pre-existing 2/4 baseline. `count=0` is
   byte-identical (`4ec8e64…`); the new count=3 default fingerprint is `72c3360fb75225ef`. 3-phase
   validation + owner eye-test PASS; tests 3203/3203. Detail in BACKLOG.md and ARCHITECTURE.md §(a.1);

@@ -190,16 +190,16 @@ standard a change must meet, evaluated outside the runtime rather than enforced 
 The following knobs, with their shipped defaults, control race-action behavior. All are configurable through
 stored configuration; none require code changes to adjust.
 
-- `choreoIntensity` (default 0.6) — how strongly the hero curves pull their heroes toward the authored
+- `choreoIntensity` — how strongly the hero curves pull their heroes toward the authored
   position.
-- `choreoOutcomeStart` (default 0.5) — the fraction at which the OUTCOME backstop begins. At the shipped 0.5
-  the PULK contest window is open across the first half of the choreographed phase.
-- `pulkLeaderBrake` (default 0.1) — the flat brake applied to the live leader, i.e. −10 percent.
-- `pulkChallengerBoost` (default 0.06) — the forward boost strength applied to a catching challenger.
-- `pulkFrontPool` (default 8) — how many front racers are scanned as candidate attackers.
-- `pulkBoostHeadroom` (default 0.1) — the additive allowance above the band maximum for a boosted racer,
+- `choreoOutcomeStart` — the fraction at which the OUTCOME backstop begins. The PULK contest window
+  is open from the chaos boundary up to it.
+- `pulkLeaderBrake` — the flat brake applied to the live leader.
+- `pulkChallengerBoost` — the forward boost strength applied to a catching challenger.
+- `pulkFrontPool` — how many front racers are scanned as candidate attackers.
+- `pulkBoostHeadroom` — the additive allowance above the band maximum for a boosted racer,
   hard-clamped so the resulting speed never exceeds 1.20 (the ±20 percent ceiling).
-- `pulkLeadRotationDropDepthLengths` (default 8) — the settle-brake release depth in racer lengths; the depth
+- `pulkLeadRotationDropDepthLengths` — the settle-brake release depth in racer lengths; the depth
   lever described in section 5.
 
 Supporting knobs include the PULK realism envelope (`pulkEnvelopeMaxEffect`, default 0.12, and

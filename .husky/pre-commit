@@ -15,7 +15,7 @@ cd ..
 # yes/no questions with no legitimate failing state. `git commit --no-verify` remains the escape.
 fast_fail=0
 fast_pass=0
-for guard in   "scripts/check-fingerprints.mjs"   "scripts/check-measured-stamps.mjs"
+for guard in   "scripts/check-fingerprints.mjs"   "scripts/check-measured-stamps.mjs"   "scripts/check-config-claims.mjs"
 do
   if node "$guard" >/tmp/ra-guard.out 2>&1; then
     fast_pass=$((fast_pass + 1))

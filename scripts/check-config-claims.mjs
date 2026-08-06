@@ -129,6 +129,14 @@ const EXCEPT = new Map([
 const UNSCANNABLE_KEYS = new Map([
   ["min", "an English word; matches 'min 8', 'min 1000' in unrelated prose"],
   ["max", "an English word; matches 'max 100 characters' in every document"],
+  [
+    "duration",
+    "an English word (and a real key in DEFAULT_RACE_DEFAULTS): matches 'the minimum tested " +
+      "duration is 30 seconds', which is a statement about test COVERAGE, not about the default. " +
+      "The alternative was rewording a true sentence to appease the guard, which is the L206 " +
+      "failure — the guard blames the document and the document gets edited. Its real claims in " +
+      "KRAEFTE-LANDKARTE.md were fixed by hand and are NOT enforced from here.",
+  ],
 ]);
 
 let failures = 0;
@@ -173,7 +181,10 @@ const NUM = "(-?\\d+(?:\\.\\d+)?)";
 const SHAPES = [
   "\\s*=\\s*",
   "\\s*:\\s*",
-  "\\s*\\(\\s*(?:default\\s+)?",
+  // The parenthesised form REQUIRES a space before the bracket: `choreoIntensity` (0.6). Without it
+  // the rule matched `duration(M) = duration(1) / M`, which is a FORMULA, not a claim — the exact
+  // false positive the narrow-versus-broad decision was meant to avoid, found by running it.
+  "\\s+\\(\\s*(?:default\\s+)?",
   "\\s+(?:default|stays at|set to|at|to|of|is|was|now)\\s+",
 ];
 

@@ -95,6 +95,12 @@ jobs:
       - name: Check no document carries a copy of a current fingerprint
         run: node scripts/check-fingerprints.mjs
 
+      # Fails if a LIVING document states a config value. Values live in defaults.js and nowhere else,
+      # so changing a default can no longer make a document stale. History is allowed its numbers: a
+      # dated row, or a document carrying its own `<!-- HISTORICAL: ... -->` mark.
+      - name: Check no document states a config value
+        run: node scripts/check-config-claims.mjs
+
       # Fails if a stamped measured number in a document predates a change to the source it measures.
       # FRESHNESS only — it never re-runs the measurement (tracking-lag alone takes ~7 minutes).
       - name: Check measured numbers have not gone stale
