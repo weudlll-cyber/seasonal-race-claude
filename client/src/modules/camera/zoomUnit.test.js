@@ -402,3 +402,66 @@ describe('the min-draw floor cannot reach the zoom', () => {
     for (const key of Object.keys(a)) expect(b[key]).toBe(a[key]);
   });
 });
+
+// ── THE CLAMP CONTRACT (ONE-TRUTH-2 stage 3) ──────────────────────────────────────────────────
+//
+// WHY THESE EXIST. Three e2e tests in `camera-polish-ux-verification.spec.js` claimed to check a
+// MIN_ZOOM/MAX_ZOOM clamp. They re-implemented `CANVAS_W²/(LEADER_VIEW_W×worldW)` inside
+// `page.evaluate` and asserted their own arithmetic — and that formula has not existed in this
+// codebase since CAMERA-REFERENCE-WIDTH-1 replaced it with the corridor unit on 2026-08-02.
+// `LEADER_VIEW_W`, `MIN_ZOOM` and `MAX_ZOOM` appear nowhere in `client/src`.
+//
+// So the clamp they gestured at was covered by nothing. Every existing test in this file injects an
+// IDENTITY `clampCamZoom: (z) => z`, which is the right call for testing the formula and means the
+// clamp WIRING itself was never asserted. These three assert it.
+
+describe('the clamp contract — resolveZoomForCorridors never returns an unclamped number', () => {
+  const args = (clampCamZoom) => ({
+    referenceWidthPx: 300,
+    axisY: 1,
+    clampCamZoom,
+  });
+
+  it('EVERY result goes through clampCamZoom — not just out-of-range ones', () => {
+    // A clamp applied only when the caller thinks it is needed is the bug this pins: the sentinel
+    // is returned for a perfectly ordinary input, so nothing about the value can excuse skipping it.
+    const seen = [];
+    const out = resolveZoomForCorridors(
+      1.0,
+      args((z) => {
+        seen.push(z);
+        return -999;
+      })
+    );
+    expect(seen).toHaveLength(1);
+    expect(out).toBe(-999);
+  });
+
+  it('a NON-FINITE raw zoom is still clamped, rather than escaping as NaN', () => {
+    // axisY 0 makes the formula non-finite. The dangerous outcome is not a big number — it is NaN
+    // reaching the render transform, where it silently blanks the canvas instead of failing.
+    const out = resolveZoomForCorridors(1.0, {
+      referenceWidthPx: 300,
+      axisY: 0,
+      clampCamZoom: (z) => (Number.isFinite(z) ? z : 0.15),
+    });
+    expect(out).toBe(0.15);
+  });
+
+  it('corridors that are absent, zero or negative fall back — and the fallback is clamped too', () => {
+    const seen = [];
+    const clamp = (z) => {
+      seen.push(z);
+      return z;
+    };
+    const viaFallback = resolveZoomForCorridors(0, {
+      ...args(clamp),
+      fallbackCorridors: 0.75,
+    });
+    const explicit = resolveZoomForCorridors(0.75, args(clamp));
+    // The fallback path must produce exactly what asking for 0.75 produces, and must be clamped:
+    // a fallback that bypassed the clamp would be an unguarded number nobody chose.
+    expect(viaFallback).toBeCloseTo(explicit, 12);
+    expect(seen).toHaveLength(2);
+  });
+});
