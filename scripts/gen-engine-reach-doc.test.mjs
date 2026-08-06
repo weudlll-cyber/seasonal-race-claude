@@ -10,7 +10,14 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
-import { readFileSync, writeFileSync } from "node:fs";
+import {
+  readFileSync,
+  writeFileSync,
+  mkdtempSync,
+  rmSync,
+  copyFileSync,
+} from "node:fs";
+import { tmpdir } from "node:os";
 import { join, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
 import { purposeOf } from "./gen-engine-reach-doc.mjs";
@@ -21,6 +28,32 @@ const SIM = join(ROOT, "docs", "SIM.md");
 
 const run = (...args) =>
   spawnSync(process.execPath, [GEN, ...args], { cwd: ROOT, encoding: "utf8" });
+
+/**
+ * A TEST NEVER WRITES THE TRACKED DOCUMENT. It sabotages a COPY and runs the generator against it
+ * with `--doc=`.
+ *
+ * These three tests used to write `docs/SIM.md` directly and restore it in a `finally`. Two things
+ * were wrong with that, both observed rather than imagined:
+ *   - `npm run verify` runs the doc guards and the script suite CONCURRENTLY. On Windows,
+ *     `check-fingerprints.mjs` reading SIM.md while this wrote it produced `UNKNOWN: -4094` and
+ *     failed the suite — 1 run in 8 under load, 0 in 25 idle, which is exactly the shape that gets
+ *     called "flaky" and re-run instead of fixed. The suite has NO retries by design (ONE-TRUTH-2
+ *     stage 2), so it fails the build.
+ *   - Worse than the flake: a crash between the sabotage and the `finally` leaves the TRACKED file
+ *     corrupted in the working tree, with no test failing to say so.
+ * Same fix, same reason, as `check-measured-stamps.test.mjs` (ONE-TRUTH-2).
+ */
+const withCopy = (fn) => {
+  const d = mkdtempSync(join(tmpdir(), "ra-sim-"));
+  const copy = join(d, "SIM.md");
+  copyFileSync(SIM, copy);
+  try {
+    return fn(copy, readFileSync(copy, "utf8"));
+  } finally {
+    rmSync(d, { recursive: true, force: true });
+  }
+};
 
 test("STYLE 1 — the house `Description:` header, joined across continuation lines", () => {
   const src = [
@@ -83,22 +116,23 @@ test("--check PASSES on the tree as committed", () => {
 });
 
 test("CONSEQUENCE: --check FAILS once the generated block is edited by hand", () => {
-  const before = readFileSync(SIM, "utf8");
-  try {
+  withCopy((copy, before) => {
     writeFileSync(
-      SIM,
+      copy,
       before.replace(
         "19 files, 1 of them UNKNOWN.",
         "19 files, 0 of them UNKNOWN.",
       ),
     );
-    const r = run("--check");
+    const r = run("--check", `--doc=${copy}`);
     assert.equal(r.status, 1);
     assert.match(r.stderr, /OUT OF DATE/);
-  } finally {
-    writeFileSync(SIM, before);
-  }
-  assert.equal(run("--check").status, 0, "the tree must be restored");
+  });
+  assert.equal(
+    run("--check").status,
+    0,
+    "the TRACKED document was never touched",
+  );
 });
 
 test("--dry WRITES NOTHING", () => {
@@ -115,36 +149,34 @@ test("PRETTIER'S FORMATTING IS NOT DRIFT — column padding must not fail --chec
   // first ran, which would have taught everyone to ignore this guard. Content is compared; layout
   // is not. The generated table's own separator row is used as the sabotage because it is the exact
   // shape prettier rewrites.
-  const before = readFileSync(SIM, "utf8");
-  try {
+  withCopy((copy, before) => {
     writeFileSync(
-      SIM,
+      copy,
       before.replace(
         "| `modules/raceStep.js` |",
         "|   `modules/raceStep.js`    |",
       ),
     );
-    assert.equal(run("--check").status, 0, "re-padding a cell must still pass");
-  } finally {
-    writeFileSync(SIM, before);
-  }
+    assert.equal(
+      run("--check", `--doc=${copy}`).status,
+      0,
+      "re-padding a cell must still pass",
+    );
+  });
 });
 
 test("...but a changed PURPOSE is drift, and --check says so", () => {
-  const before = readFileSync(SIM, "utf8");
-  try {
+  withCopy((copy, before) => {
     writeFileSync(
-      SIM,
+      copy,
       before.replace(
         "**UNKNOWN** — the file's header states no purpose",
         "Lap arithmetic for the camera",
       ),
     );
-    const r = run("--check");
+    const r = run("--check", `--doc=${copy}`);
     assert.equal(r.status, 1, "filling in an UNKNOWN by hand must fail");
     assert.match(r.stderr, /OUT OF DATE/);
-  } finally {
-    writeFileSync(SIM, before);
-  }
+  });
   assert.equal(run("--check").status, 0);
 });

@@ -35,6 +35,15 @@
 //   node scripts/gen-engine-reach-doc.mjs           # rewrite the block in docs/SIM.md
 //   node scripts/gen-engine-reach-doc.mjs --dry     # print it, write nothing
 //   node scripts/gen-engine-reach-doc.mjs --check   # exit 1 if the block is missing or out of date
+//   node scripts/gen-engine-reach-doc.mjs --doc=<p> # act on a COPY instead (used by its test)
+//
+// `--doc=` exists for ONE reason, and it is the same one `check-measured-stamps.mjs` records: this
+// file's own test used to SABOTAGE the tracked `docs/SIM.md` and restore it in a `finally`. That is
+// safe alone and unsafe here. `npm run verify` runs the doc guards and the script suite
+// CONCURRENTLY, and on Windows `check-fingerprints.mjs` holding SIM.md open makes the test's write
+// fail outright (`UNKNOWN: -4094`) — measured at 1 run in 8 under load. Worse than the flake: if the
+// process dies between the sabotage and the `finally`, the TRACKED file is left corrupted. The test
+// now copies the document and points here instead; nothing tracked is ever written by a test.
 // ============================================================
 
 const started = Date.now();
@@ -46,7 +55,14 @@ import { fileURLToPath } from "node:url";
 import { engineReach } from "./engine-reach.mjs";
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), "..");
-const SIM = join(ROOT, "docs", "SIM.md");
+const DOC_OVERRIDE = process.argv
+  .filter((a) => a.startsWith("--doc="))
+  .map((a) => a.slice("--doc=".length));
+const SIM = DOC_OVERRIDE.length
+  ? resolve(DOC_OVERRIDE[0])
+  : join(ROOT, "docs", "SIM.md");
+// What the messages call it. Under `--doc=` they must not claim to be talking about the real file.
+const SIM_LABEL = DOC_OVERRIDE.length ? SIM : "docs/SIM.md";
 const BEGIN =
   "<!-- BEGIN GENERATED: engine reach — gen-engine-reach-doc.mjs -->";
 const END = "<!-- END GENERATED: engine reach -->";
@@ -181,7 +197,7 @@ function main() {
 
   if (b === -1 || e === -1) {
     console.error(
-      "FAIL: docs/SIM.md has no generated engine-reach block. Add the two markers:\n" +
+      `FAIL: ${SIM_LABEL} has no generated engine-reach block. Add the two markers:\n` +
         `  ${BEGIN}\n  ${END}`,
     );
     process.exit(1);
@@ -212,7 +228,7 @@ function main() {
   if (CHECK) {
     if (normalize(current) !== normalize(block)) {
       console.error(
-        "FAIL: the engine-reach block in docs/SIM.md is OUT OF DATE.\n" +
+        `FAIL: the engine-reach block in ${SIM_LABEL} is OUT OF DATE.\n` +
           "      The closure or a file's header changed and the document did not follow.\n" +
           "      Run: node scripts/gen-engine-reach-doc.mjs",
       );
@@ -229,7 +245,7 @@ function main() {
   // and leave a diff that means nothing, which is how a generator becomes noise people ignore.
   if (normalize(current) === normalize(block)) {
     console.log(
-      `gen-engine-reach-doc: docs/SIM.md is already current (${rows.length} files, ${unknown} UNKNOWN). Nothing written.`,
+      `gen-engine-reach-doc: ${SIM_LABEL} is already current (${rows.length} files, ${unknown} UNKNOWN). Nothing written.`,
     );
     console.log(`[ra-elapsed-ms ${Date.now() - started}]`);
     return;
@@ -239,10 +255,10 @@ function main() {
   writeVerified(
     SIM,
     text.slice(0, b) + block + text.slice(e + END.length),
-    "the engine-reach block in docs/SIM.md",
+    `the engine-reach block in ${SIM_LABEL}`,
   );
   console.log(
-    `gen-engine-reach-doc: wrote ${rows.length} files into docs/SIM.md, ${unknown} with no stated purpose.`,
+    `gen-engine-reach-doc: wrote ${rows.length} files into ${SIM_LABEL}, ${unknown} with no stated purpose.`,
   );
   console.log(`[ra-elapsed-ms ${Date.now() - started}]`);
 }
