@@ -190,7 +190,10 @@ const SHAPES = [
   // the rule matched `duration(M) = duration(1) / M`, which is a FORMULA, not a claim — the exact
   // false positive the narrow-versus-broad decision was meant to avoid, found by running it.
   "\\s+\\(\\s*(?:default\\s+)?",
-  "\\s+(?:default|stays at|set to|at|to|of|is|was|now)\\s+",
+  // Optional punctuation before the verb: "`referenceCorridorPx`, shipped at 300" slipped past the
+  // first version because the comma broke adjacency. Found by surveying what facts still live in
+  // more than one document, not by the guard itself — which is the honest way round to say it.
+  "[,;]?\\s+(?:shipped default|default|defaults to|stays at|set to|shipped at|shipped|at|to|of|is|was|now)\\s+",
 ];
 
 // A DATED ROW IS HISTORY AT THE POINT OF USE (stage 2c). A changelog line carries its own date, so a

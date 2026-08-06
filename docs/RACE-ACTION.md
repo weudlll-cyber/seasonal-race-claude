@@ -202,13 +202,13 @@ stored configuration; none require code changes to adjust.
 - `pulkLeadRotationDropDepthLengths` — the settle-brake release depth in racer lengths; the depth
   lever described in section 5.
 
-Supporting knobs include the PULK realism envelope (`pulkEnvelopeMaxEffect`, default 0.12, and
-`pulkEnvelopeMaxStepPerFrame`, default 0.01, the slew limit), `pulkCeilingCap` (default on, capping a
+Supporting knobs include the PULK realism envelope (`pulkEnvelopeMaxEffect`, and
+`pulkEnvelopeMaxStepPerFrame`, the slew limit), `pulkCeilingCap` (capping a
 boosted racer at the band maximum before headroom), the attacker-slot count
-(`pulkLeadRotationAttackerSlots`, default 2), the outsider reach cap
-(`pulkLeadRotationOutsiderMaxReachLengths`, default 15), the fresh-leader hold
-(`pulkLeadRotationMinHoldMs`, default 750, which suppresses sub-750-millisecond lead flicker), and the
-per-boost safety net (`pulkLeadRotationDeadlockTimeoutMs`, default 12000).
+(`pulkLeadRotationAttackerSlots`), the outsider reach cap
+(`pulkLeadRotationOutsiderMaxReachLengths`), the fresh-leader hold
+(`pulkLeadRotationMinHoldMs`, which suppresses brief lead flicker), and the
+per-boost safety net (`pulkLeadRotationDeadlockTimeoutMs`). Values live in `storage/defaults.js`.
 
 Some internals are pinned to constants rather than exposed as tuning knobs, on purpose. The naturalness
 ceiling (1.20) and the phase-weight fade are fixed guarantees, not dials — exposing them would invite a
