@@ -74,6 +74,26 @@ const fail = (msg) => {
   failures++;
 };
 
+// A SHALLOW CLONE CANNOT ANSWER A HISTORY QUESTION, and must not be allowed to look like a verdict.
+// CI checks out with depth 1 by default, so the stamped commit is simply absent and every stamp
+// reported "which does not exist" — technically the observed state, and misleading about the cause.
+// This guard's whole question is historical, so it says exactly what is wrong and how to fix it.
+let shallow = false;
+try {
+  shallow = git("rev-parse", "--is-shallow-repository") === "true";
+} catch {
+  shallow = false;
+}
+if (shallow) {
+  console.error(
+    "FAIL: this is a SHALLOW clone, so git cannot see the commits these stamps name.\n" +
+      "      Nothing is wrong with the document. Deepen the checkout — in GitHub Actions that is\n" +
+      "      `actions/checkout@v4` with `fetch-depth: 0` — or run this locally.\n" +
+      "      Refusing to report a verdict from a repository that cannot answer the question.",
+  );
+  process.exit(1);
+}
+
 let found = 0;
 for (const doc of DOCS) {
   let text;

@@ -55,11 +55,16 @@ jobs:
     name: Living-doc guards + script tests
     runs-on: ubuntu-latest
     steps:
-      # A default (shallow) checkout is sufficient: check-tags.mjs reads the tag list from the REMOTE
-      # (`git ls-remote --tags origin`), not from the local checkout, so fetching tags here is
-      # unnecessary — and a shallow checkout is faster. If the remote query returns nothing the guard
-      # FAILS LOUD by design (see scripts/check-tags.mjs), so a broken remote breaks the build.
+      # FULL HISTORY IS NOW REQUIRED (ONE-TRUTH-2 stage 4). It was not before, and the note that
+      # used to sit here said so: check-tags.mjs reads the tag list from the REMOTE, so a shallow
+      # checkout was faster and sufficient. `check-measured-stamps.mjs` changed that — it asks
+      # whether a stamped commit predates a change to the source it measures, which is a question
+      # only real history can answer. Under depth 1 every stamp reported its commit as missing, so
+      # the guard failed for an environmental reason and said something untrue about the document.
+      # The guard now refuses to give a verdict in a shallow clone; this is the other half of it.
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - uses: actions/setup-node@v4
         with:
