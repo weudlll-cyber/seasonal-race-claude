@@ -33,7 +33,8 @@
 // ============================================================
 
 import { execFileSync, spawnSync } from "node:child_process";
-import { readFileSync, writeFileSync } from "node:fs";
+import { readFileSync } from "node:fs";
+import { writeVerified } from "./lib/write-verified.mjs";
 import { join, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
 import { hostname } from "node:os";
@@ -198,7 +199,13 @@ if (text.includes(BEGIN) && text.includes(END)) {
   );
   process.exit(1);
 }
-writeFileSync(CEREMONY, next, "utf8");
+// VERIFIED, not assumed (ONE-TRUTH-2 stage 6): this rewrites a living document, and a
+// write that silently did not happen has already put a false claim into a report twice.
+writeVerified(
+  CEREMONY,
+  next,
+  "the ceremony cost table in docs/SHIP-CEREMONY.md",
+);
 console.log(
   `\n  wrote the generated cost block to docs/SHIP-CEREMONY.md (commit ${commit}, ${machine})`,
 );

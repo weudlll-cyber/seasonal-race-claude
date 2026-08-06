@@ -4,6 +4,37 @@
 cd client && npx lint-staged || exit 1
 cd ..
 
+# ONE-TRUTH-2 stage 6b: THE FAST GUARDS RUN HERE, AND THEIR COUNTS ARE PRINTED EXPLICITLY.
+#
+# A commit went in with a failing test because a SUMMARY LINE was read instead of a count. The hook
+# is where that is cheapest to prevent, so the cheap guards run at commit time and the result is
+# three labelled numbers rather than a wall of prose. Only guards costing well under a second are
+# here — the suites and the fingerprints belong to `npm run verify`, not to every commit.
+#
+# It BLOCKS on failure (unlike the mint tripwire below, which only informs): these guards answer
+# yes/no questions with no legitimate failing state. `git commit --no-verify` remains the escape.
+fast_fail=0
+fast_pass=0
+for guard in   "scripts/check-fingerprints.mjs"   "scripts/check-measured-stamps.mjs"
+do
+  if node "$guard" >/tmp/ra-guard.out 2>&1; then
+    fast_pass=$((fast_pass + 1))
+  else
+    fast_fail=$((fast_fail + 1))
+    echo ""
+    sed 's/^/     /' /tmp/ra-guard.out
+  fi
+done
+rm -f /tmp/ra-guard.out
+echo ""
+echo "  GUARDS: PASS $fast_pass   FAIL $fast_fail"
+if [ "$fast_fail" -gt 0 ]; then
+  # LAST LINE ON FAILURE, deliberately: it is the line the terminal leaves on screen.
+  echo ""
+  echo "  COMMIT BLOCKED - $fast_fail guard(s) failed. Fix them, or commit with --no-verify."
+  exit 1
+fi
+
 # VERIFY-FAST-1: the mint tripwire, delivered at the moment it applies.
 #
 # The rule lives in docs/SHIP-CEREMONY.md, and a rule a human reads on a busy day is exactly what

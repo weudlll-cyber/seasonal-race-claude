@@ -221,13 +221,18 @@ export function plan(files) {
 
 function scriptTestFiles() {
   try {
-    return execFileSync("git", ["ls-files", "scripts/*.test.mjs"], {
+    // `git ls-files scripts` and then FILTER — not the pathspec `scripts/*.test.mjs`, which is what
+    // this used to be. That glob matched 17 files while CI's `find scripts -name '*.test.mjs'`
+    // matched 18: it missed `scripts/lib/write-verified.test.mjs` the moment a subdirectory
+    // appeared. Two discovery mechanisms disagreeing about which tests exist is the same defect
+    // class this whole block is about, and the one that loses is always the quieter one.
+    return execFileSync("git", ["ls-files", "scripts"], {
       cwd: ROOT,
       encoding: "utf8",
     })
       .split("\n")
       .map((s) => s.trim())
-      .filter(Boolean);
+      .filter((f) => f.endsWith(".test.mjs"));
   } catch {
     return [];
   }
@@ -391,7 +396,28 @@ if (IS_ENTRY) {
   const sum = done.reduce((a, d) => a + d.ms, 0);
   console.log(
     `\n  wall clock ${secs(wallMs)} — sequential would have been ${secs(sum)} ` +
-      `(${sum > 0 ? (sum / wallMs).toFixed(1) : "1.0"}x)\n`,
+      `(${sum > 0 ? (sum / wallMs).toFixed(1) : "1.0"}x)`,
   );
-  process.exit(done.every((d) => d.ok) ? 0 : 1);
+
+  // THE COUNTS ARE EXPLICIT, AND A FAILURE COUNT IS THE LAST LINE (ONE-TRUTH-2 stage 6b).
+  // A commit went in with a failing test because a SUMMARY LINE was read instead of a count: the
+  // script suite printed 168/169 in the same command as the commit, and the eye took the commit
+  // line. Prose can be skimmed; three labelled numbers cannot be mistaken for each other. And when
+  // anything failed, the verdict is the LAST thing printed — the position a terminal leaves on
+  // screen — so it cannot scroll away above a wall-clock line that reads like success.
+  const passed = done.filter((d) => d.ok).length;
+  const failed = done.filter((d) => !d.ok).length;
+  console.log(`\n  PASS ${passed}   FAIL ${failed}   SKIP ${skipped.length}`);
+  if (failed > 0) {
+    const names = done
+      .filter((d) => !d.ok)
+      .map((d) => d.id)
+      .join(", ");
+    console.log(
+      `\n  VERIFY FAILED — ${failed} guard(s) failed: ${names}. Do not commit.\n`,
+    );
+  } else {
+    console.log("");
+  }
+  process.exit(failed === 0 ? 0 : 1);
 }
