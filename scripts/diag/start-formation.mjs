@@ -304,13 +304,20 @@ function measure(geo, nRequested) {
     };
   });
 
-  // ── DEFECT A: a name covered by a sprite drawn LATER. `drawRacers` walks st.racers in order and
-  // draws sprite-then-tag per racer, so racer j > i can land on racer i's label.
+  // ── DEFECT A, as the owner restated it: a name tag must never be covered BY A RACER. Not "at
+  // the start formation" and not "by a later one" — ever, by any of them. So this counts a name
+  // whose box is touched by ANY racer's drawn body, and separately by one drawn LATER, which is
+  // the subset the old single-pass order actually put on screen. After the two-pass fix the second
+  // number stops meaning anything about the picture; the first is the standing requirement, and it
+  // is a LAYOUT question that stage 3 owns.
+  let coveredByAny = 0;
   let coveredByLater = 0;
-  const coveredNames = [];
   for (let i = 0; i < items.length; i++) {
     const L = items[i].label;
-    for (let j = i + 1; j < items.length; j++) {
+    let any = false;
+    let later = false;
+    for (let j = 0; j < items.length; j++) {
+      if (j === i) continue;
       const s = items[j];
       const box = {
         left: s.sx - s.bodyW / 2,
@@ -324,15 +331,25 @@ function measure(geo, nRequested) {
         box.top < L.bottom &&
         box.bottom > L.top
       ) {
-        coveredByLater++;
-        coveredNames.push(items[i].name);
-        break;
+        any = true;
+        if (j > i) later = true;
       }
     }
+    if (any) coveredByAny++;
+    if (later) coveredByLater++;
   }
 
-  // ── DEFECT B: label-on-label. Every unordered pair that overlaps at all.
+  // ── DEFECT B: label-on-label. Every unordered pair that overlaps at all — AND which START ROW
+  // each half of the pair came from, because that is what names the mechanism. Two labels in the
+  // SAME row are separated by the lateral spacing across the corridor; two in NEIGHBOURING rows are
+  // separated by the row gap along the track. They are different numbers with different owners, and
+  // guessing which one binds is how a fix lands on the wrong knob.
+  const rowOf = new Map();
+  for (const a of built.meta.assignmentByRacer.values())
+    rowOf.set(a.racerIndex, a.rowIndex);
   let pairOverlaps = 0;
+  let sameRowPairs = 0;
+  let crossRowPairs = 0;
   let labelsHit = new Set();
   let worstFrac = 0;
   for (let i = 0; i < items.length; i++) {
@@ -343,6 +360,9 @@ function measure(geo, nRequested) {
       const oy = Math.min(a.bottom, b.bottom) - Math.max(a.top, b.top);
       if (ox > 0 && oy > 0) {
         pairOverlaps++;
+        if (rowOf.get(items[i].index) === rowOf.get(items[j].index))
+          sameRowPairs++;
+        else crossRowPairs++;
         labelsHit.add(i);
         labelsHit.add(j);
         const area = (a.right - a.left) * (a.bottom - a.top);
@@ -433,9 +453,13 @@ function measure(geo, nRequested) {
     bbH,
     frameFracW: bbW / CW,
     frameFracH: bbH / CH,
+    coveredByAny,
     coveredByLater,
-    coveredPct: (100 * coveredByLater) / items.length,
+    coveredPct: (100 * coveredByAny) / items.length,
+    coveredLaterPct: (100 * coveredByLater) / items.length,
     pairOverlaps,
+    sameRowPairs,
+    crossRowPairs,
     labelsHitPct: (100 * labelsHit.size) / items.length,
     worstFrac,
   };
@@ -511,7 +535,9 @@ const cols3 = [
     (r) => `${r.coveredByLater}/${r.nRacers}  (${r2(r.coveredPct)}%)`,
     22,
   ],
-  ["B: label pairs", (r) => String(r.pairOverlaps), 15],
+  ["B: pairs", (r) => String(r.pairOverlaps), 10],
+  ["same row", (r) => String(r.sameRowPairs), 10],
+  ["cross row", (r) => String(r.crossRowPairs), 11],
   ["B: labels hit %", (r) => r2(r.labelsHitPct), 16],
   ["worst overlap", (r) => r2(100 * r.worstFrac) + "%", 14],
 ];
@@ -597,7 +623,9 @@ for (const s of sweeps)
   console.log(cols5.map(([, f, w]) => String(f(s)).padEnd(w)).join(""));
 
 console.log(
-  "\n  A = a name whose box is covered by the drawn BODY of a racer painted LATER in the same loop.\n" +
+  "\n  A = a name whose box is touched by ANY racer's drawn body. The owner's requirement is that a\n" +
+    "  name tag is NEVER covered by a racer, so this is the standing number; the draw order (now\n" +
+    "  fixed) only decided which of them the viewer actually SAW.\n" +
     "  B = label-on-label overlap, no sprite involved. Label widths are the Helvetica-Bold table,\n" +
     "  not a browser measurement — see the file header.",
 );
