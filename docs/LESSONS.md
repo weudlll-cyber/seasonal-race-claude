@@ -3603,3 +3603,66 @@ Note the shape against [Lesson 201](#lesson-201--the-half-repair-law-one-value-s
 the half-repair made the system confidently wrong; this makes it honestly useless. Honestly useless
 is much better — and it is still not finished. The rule for anything that guards correctness here:
 **the failure path carries its reason, and the reason reaches a human without being asked.**
+
+## Lesson 205 — The Shared-File Law: A Test That Mutates A TRACKED File Cannot Coexist With A Guard That Reads It
+
+**What happened, twice, in two different files.** A guard's test needs to prove the guard FAILS, so it
+sabotages the document the guard reads. The obvious way is to edit the real file and put it back in a
+`finally`. `check-measured-stamps.test.mjs` did it to `docs/CAMERA_DIRECTOR.md`; `gen-engine-reach-doc.test.mjs`
+did it to `docs/SIM.md`. Both worked perfectly when run alone.
+
+**Why alone is the wrong test.** `npm run verify` runs the doc guards and the script suite
+CONCURRENTLY — that is the whole point of it. So the guard reads the document during the window its
+own test has it mutated. The first instance failed verify with a `depends` path that exists in no
+commit. The second failed with `UNKNOWN: -4094, open .../docs/SIM.md`: on Windows a concurrent reader
+holding the file makes the write fail outright. **Measured: 0 failures in 25 runs idle, 1 in 8 under
+the load verify itself creates.** With retries at zero, that is a red build, not a wobble.
+
+**And the flake is the lesser half.** A crash between the sabotage and the `finally` leaves the
+TRACKED document corrupted in the working tree, and nothing fails to say so. The damage lands on a
+file the test does not own, after the test is over.
+
+**The law.** A test owns only what it created. If proving a guard can fail requires a broken
+document, the test makes a COPY and points the tool at it — which means the tool needs a way to be
+pointed, and that flag (`--doc=`) is a test-visibility feature worth adding rather than a smell. The
+`finally` is not the fix: it narrows the window and cannot close it, because the window is another
+process's read, not this process's control flow.
+
+**The tell, so it can be spotted in review:** a test that reads a path it did not create, writes it,
+and restores it. Three lines that look responsible and are not.
+
+## Lesson 206 — The Complete-Input Law: A Guard That Names A Cause Must First Prove Its Own Input Is Complete
+
+**What happened.** `check-measured-stamps.mjs` asks a HISTORY question: is the commit a measured
+number is stamped at an ancestor of the newest change to what it measures? It turned CI red with:
+
+> FAIL: docs/CAMERA_DIRECTOR.md: "tracking-lag (median/p95 pp per state)" is stamped at commit
+> 3e756a31, which does not exist.
+
+Every word of that is what the guard observed, and the conclusion it points at — _the document is
+wrong_ — was false. `actions/checkout@v4` clones at depth 1. The commit existed; the guard could not
+see it. The document had nothing wrong with it at all.
+
+**Why this is worse than a guard that simply breaks.** It named a party, and the named party was
+innocent. The cheapest response to that message is to edit the document until the guard stops
+complaining, which would have destroyed a correct stamp to appease a broken environment. A guard that
+misattributes trains people to make the codebase worse.
+
+**The law.** Before a guard reports a verdict, it must establish that it can SEE what the verdict is
+about. `git rev-parse --is-shallow-repository` is one line; the guard now refuses to answer in a
+shallow clone and names `fetch-depth: 0` as the fix. Refusing is the correct third state — not
+passing (which would be a silent no-op, Lesson 187) and not failing against the content.
+
+**Against [Lesson 204](#lesson-204--the-mute-instrument-law-an-instrument-that-can-detect-its-own-failure-must-be-able-to-report-it-or-the-diagnosis-costs-a-day).** L204's instrument knew it had failed
+and could not say why — honestly useless. This one did not know it had failed, so it explained
+confidently, and blamed the wrong thing. **Detecting a failure, explaining it, and knowing whether
+you are entitled to an opinion at all are three features. L204 added the second. This is the third,
+and it comes first in execution order:** an instrument with incomplete input has no verdict to
+report, however well it can describe what it saw.
+
+**Also recorded from ONE-TRUTH-2, and deliberately NOT laws — two observations, one line each:**
+
+- The `PASS n FAIL n SKIP n` counts added in stage 6 caught a defect built in the same block, which is
+  the earliest a new instrument can pay for itself.
+- Stage 6 mechanised the write-proof for `scripts/`, and the very next commit lost an edit in a
+  throwaway helper — mechanisation reached the named place while the error lived in the unnamed one.
