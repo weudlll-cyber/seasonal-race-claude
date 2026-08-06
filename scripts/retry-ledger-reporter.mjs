@@ -25,7 +25,11 @@
 // and a run that is silent because all was well would be indistinguishable from it.
 //
 // WHAT THIS LEDGER DOES **NOT** CHECK, stated here per the block's own safety bar:
-//   - It does not know WHY a test retried. A timeout, a race and a genuine flake look identical.
+//   - It classifies the FAILURE REASON but not the CAUSE. `timeout` says the attempt exceeded its
+//     limit; it cannot tell you whether that was a slow machine, a real hang, or a test that is
+//     simply too big. (This line used to read "it does not know WHY a test retried" — that became
+//     FALSE when ONE-TRUTH-1 added the reason class, and the header went on claiming a blindness
+//     the tool no longer had. A limits list that is not maintained is a lie with a good reputation.)
 //   - It does not see retries that ended in FAILURE beyond the attempt count: a test that exhausted
 //     its retries is reported by vitest as a failure, and this only adds how many attempts it took.
 //   - It does not cover the `scripts/` suite (`node --test`), which has no retry mechanism at all.

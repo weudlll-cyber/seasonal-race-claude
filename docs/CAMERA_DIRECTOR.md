@@ -281,20 +281,87 @@ test at both ends.
 
 ### The camera check — four commands, and they are runnable
 
-Everything below was RUN on 2026-08-06 at commit `c0c17df1`, and the output quoted is what it
-printed. A documented command that nobody has executed is a guess about your own repository.
+Every command below was RUN on 2026-08-06 at commit `e8db4bf1` on an OTHERWISE IDLE machine, and the
+output is pasted verbatim, not summarised. A documented command that nobody has executed is a guess
+about your own repository.
 
-| #   | Command                                          | What it answers                                 | What it printed                                                          |
-| --- | ------------------------------------------------ | ----------------------------------------------- | ------------------------------------------------------------------------ |
-| 1   | `node scripts/camera-fingerprint.mjs --quiet`    | did any DIRECTOR decision move?                 | the camera value in [docs/fingerprints.json](fingerprints.json) — ~223 s |
-| 2   | `node scripts/render-fingerprint.mjs --quiet`    | did anything that reaches the CANVAS move?      | the render value in the same record — ~224 s                             |
-| 3   | `cd client && npx vitest run src/modules/camera` | do the camera's own units still hold?           | **17 files, 721 tests, all passing** — ~34 s                             |
-| 4   | `node scripts/tracking-lag.mjs`                  | how far behind its subject does the camera sit? | the table below — ~7 min                                                 |
+**A correction to the costs first, because it matters more than the numbers.** The durations in the
+first version of this section (~223 s, ~224 s, ~34 s) were measured while a twenty-run test study was
+saturating the CPU, and were then presented as what the commands cost. They are 5–6× the idle
+figures below. A duration measured under contention and quoted as a cost is not a cost.
 
-**The expected fingerprint values are deliberately NOT printed here.** They live in
-[docs/fingerprints.json](fingerprints.json), and `node scripts/check-fingerprints.mjs` fails if any
-document disagrees with it. Restating them in this table would have created the twelfth hand-typed
-copy of a number that already drifted once (ONE-TRUTH-1).
+**The pasted output is real, with ONE substitution.** Every line, count and frame number is exactly what the command printed; the HASHES are replaced by a pointer. That is not a hedge — it is the same rule this document follows everywhere else: a current fingerprint value has exactly one home, and a transcript in a document is still a copy. Run the command to see the digits.
+
+**1. Did any DIRECTOR decision move?**
+
+```
+$ node scripts/camera-fingerprint.mjs
+CAMERA <camera value — see docs/fingerprints.json> (seed=5601 camSeed=1439767152, 10 tracks, 40 racers, default config)
+  city-circuit     <per-track hash>  5046 frames
+  dirt-oval        <per-track hash>  5588 frames
+  garden-path      <per-track hash>  12001 frames
+  ...
+  space-sprint     <per-track hash>  3777 frames
+
+  Covers the DIRECTOR only — state, phase, anchor, zoom, offsets, camT, targets.
+  Not the render path (sprite scale, name-tag layout, drawing).
+[ra-elapsed-ms 35414] (35.4s)
+```
+
+**The flags that matter:** `--quiet` prints the combined hash alone and nothing else, which is what
+you want in a script. Without it you get the per-track breakdown above, which is what you want when
+the hash HAS moved — it tells you on which of the ten tracks, and a single track moving means
+something quite different from all ten moving. `--company-only` is a PROBE and its output is
+explicitly not a baseline; the header says so on the line.
+
+**2. Did anything that reaches the CANVAS move?**
+
+```
+$ node scripts/render-fingerprint.mjs
+RENDER <render value — see docs/fingerprints.json> (seed=5601 camSeed=1439767152, 10 tracks, 40 racers,
+  frames [0, 90, 600, 1500, 2400, 3300, 3450, 3580, 3650, 3900, 4300, 4520, 4750, 5100, 5300, 5450] of 5600)
+  ...
+  space-sprint     <per-track hash>  227176 ops / 16 frames
+
+  Covers the DRAW CALL SEQUENCE — sprites, text, styles, transforms, order.
+  Blind to the rasteriser and to the artwork itself (sprites are hashed by identity).
+[ra-elapsed-ms 33442] (33.4s)
+```
+
+`--coverage` prints which of the sixteen sample frames landed in the finish on each track. The
+`[warmup] … FAILED: Image is not defined` lines are EXPECTED and not an error: there is no DOM image
+loader in the harness, so sprites are hashed by identity instead of by pixels — which is exactly the
+blindness the next paragraph is about.
+
+**WHAT THE RENDER FINGERPRINT DOES NOT SEE**, stated here because a change detector people trust is
+more dangerous than one they do not:
+
+- **The rasteriser and the artwork.** Sprites are hashed by IDENTITY, not by pixels. Replace the
+  artwork inside `duck.png` and this hash does not move.
+- **Particles and surface trails.** Their draw calls run, but the harness never fills their buffers,
+  so both layers are no-ops in it. Found by a sabotage that swapped them and did NOT move the hash.
+- **Anything between two sample frames.** Sixteen frames out of 5600. A flicker lasting less than a
+  sample interval is invisible to it by construction.
+- **`garden-path`'s ending** — that track never finishes inside the window, so the late sample points
+  measure nothing there. `--coverage` prints the matrix.
+- **Slow motion**, and every diagnostic overlay: read-only by design, unasserted by consequence.
+
+**3. Do the camera's own units still hold?**
+
+```
+$ cd client && npx vitest run src/modules/camera
+ Test Files  17 passed (17)
+      Tests  721 passed (721)
+   Duration  17.06s
+```
+
+**4. How far behind its subject does the camera sit?** `node scripts/tracking-lag.mjs` — output in
+the next section. ~7 minutes; it is the only one of the four you would not run casually.
+
+**The expected fingerprint values are deliberately NOT printed in this document.** There is exactly
+one home for them — [docs/fingerprints.json](fingerprints.json) — and `node scripts/check-fingerprints.mjs`
+fails if a current value appears anywhere else. The hashes inside the pasted output above are part of
+a verbatim transcript of one run on one commit, which is a historical record, not a live claim.
 
 ### The tracking lag, as measured today — and it had drifted
 
