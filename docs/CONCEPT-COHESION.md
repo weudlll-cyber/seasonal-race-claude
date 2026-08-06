@@ -146,7 +146,7 @@ C3 satisfied for free).
 
 1. **Re-roll bias — the primary mechanism.** At each re-roll the draw is
    `spreadFactor + U(−halfWidth, +halfWidth)` (halfWidth = 0.75·spreadRange, index.jsx:931,1083), eased to
-   the new value over `reRollTransitionDuration = 3.0 s` (defaults.js:259; index.jsx:623,1109-1122), then
+   the new value over `reRollTransitionDuration` (defaults.js; index.jsx:623,1109-1122), then
    clamped to `[spreadMin, spreadMax]` (±8.1 %). **Symmetric bias (D3) — per the NORMATIVE DIRECTION table
    in §0:** a car whose gap **to the racer behind** > G (it has opened a hole behind itself) tilts the draw
    **down** (slower); in symmetric mode a car whose gap **to the racer ahead** > G (it has been dropped)

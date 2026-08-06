@@ -1,5 +1,10 @@
 # Camera Tuning Effectiveness — Diagnosis Report
 
+<!-- HISTORICAL: 2026-05-06 — camera-tuning diagnosis written against the pre-corridor zoom model; its numbers are that model's -->
+
+> **Read this as HISTORY.** It records what was measured or true on 2026-05-06. Config values in it are
+> that day's values, not today's; today's live in `client/src/modules/storage/defaults.js`.
+
 **Branch:** `diagnosis/camera-tuning-effectiveness`  
 **Date:** 2026-05-04  
 **Scope:** Read-only analysis. No code changes. Verifies/refutes four hypotheses (H1–H4) raised after PR-C browser testing.

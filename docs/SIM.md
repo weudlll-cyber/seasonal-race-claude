@@ -240,7 +240,7 @@ draws on, and the determinism rule are documented in **[SWEEP-HARNESS.md](SWEEP-
 
 ```sh
 node scripts/sim-fairness.mjs --track=searound --racer=manta --dur=60 \
-     --races=100 --seed=1 --pulkLeadRotationDropDepthLengths=4
+     --races=100 --seed=1 --pulkLeadRotationDropDepthLengths=<lengths>
 ```
 
 **Byte-identity gate (before/after any change to prove the default game is unchanged):**
@@ -256,7 +256,7 @@ node scripts/fingerprint-default.mjs after      # run after the change; compare 
 # Override specific behavior fields via JSON
 node scripts/sim-fairness.mjs \
   --behavior='{"lateralForce":0.016,"lateralDamping":0.30}' \
-  --avoidanceWarmupMs=800
+  --avoidanceWarmupMs=<ms>
 ```
 
 > The `--tef*` (tStart-Equalization-Feedback) and `--v4Threshold*` / `--v4InitialBoost` /
@@ -615,7 +615,7 @@ The classic governor/director knob-reduction sweep this section once described i
 that director and its ~15 DevScreen knobs (`governorK0`, `governorRampWidth`, `governorMaxEffect`,
 director cast/dwell/pull, etc.) were deleted. The shipped world has exactly one action mechanism:
 the unconditional choreography + **PulkLeadRotation** (`applyPulkLeadRotation` writes `governorMult`
-in the PULK phase `[0.25, choreoOutcomeStart=0.5]`, faded to 1.0 by OUTCOME).
+in the PULK phase `[chaos boundary, choreoOutcomeStart]`, faded to 1.0 by OUTCOME).
 
 Optimizing the PulkLeadRotation strengths (`--pulkLeadRotationDropDepthLengths`, `--pulkChallengerBoost`,
 `--pulkBoostHeadroom`, `--pulkLeaderBrake`, …) means driving the harness directly for
@@ -634,7 +634,7 @@ standard tracks by hand or a small orchestrator (see [SWEEP-HARNESS.md](SWEEP-HA
 
 The following parameters control lateral collision avoidance and speed braking. They must be tuned together — changing one in isolation typically breaks another.
 
-The values below are the **Phase 5 winners** — locked into `storage/defaults.js` after the `feat/open-track-overlap` sweep. One parameter (`avoidanceDistance`) is retired from the browser gate. `speedBrakeYThreshold` (0.18) is still read by the browser as a same-lane fallback when track width is unavailable (`raceBehavior.js`); kept for both browser and sim use.
+The values below are the **Phase 5 winners** — locked into `storage/defaults.js` after the `feat/open-track-overlap` sweep. One parameter (`avoidanceDistance`) is retired from the browser gate. `speedBrakeYThreshold` is still read by the browser as a same-lane fallback when track width is unavailable (`raceBehavior.js`); kept for both browser and sim use.
 
 > **Home force is gone.** The `homeForceStrength` / `homeForceReductionOnOverlap` home-lane
 > restoring spring that older revisions of this table listed was **removed** (Commit A of the
@@ -847,8 +847,8 @@ design, each get one measurement of the pair on their final state; record old �
 
 **Current shipped-default fingerprint (2026-07-31 — RACER-MOTION-2, lateral acceleration cap).** The shipped
 world is COMBO15 (speed 150 px/s + gap-reroll ON G=0.5/s=1.0 + FAIR-ARRIVAL chaos steer + faB60 draw-bias,
-chaos window 0.15) PLUS the **avoidance margin hysteresis** (`softSteeringObstacleMargin:0.5`, RACER-FLAPPING-2)
-PLUS the **lateral acceleration cap** (`maxLateralAccelPerStep:0.0005` — bounds the per-tick change in a racer's
+chaos window 0.15) PLUS the **avoidance margin hysteresis** (`softSteeringObstacleMargin`, RACER-FLAPPING-2)
+PLUS the **lateral acceleration cap** (`maxLateralAccelPerStep` — bounds the per-tick change in a racer's
 lateral step so a dodge eases in/out instead of snapping to full swerve; the hard-separation safety is
 untouched). This is the SECOND engine change since COMBO15. Because the cap is in the avoidance integrator
 (which runs in BOTH worlds), **both** hashes moved. The current print is:
@@ -915,13 +915,13 @@ DevScreen config objects at module load**, not from hardcoded literals — so a 
 default propagates to the sim automatically and can never silently drift from the browser. The
 `argVal(name, default)` override is preserved (e.g. `--corridorEnd=0.9` still works for experiments):
 
-| CLI flag               | default source                                                       |
-| ---------------------- | -------------------------------------------------------------------- |
-| `--bonusMult`          | `DEFAULT_RACE_DYNAMICS_CONFIG.racePlanBonusStrengthMultiplier` (2.0) |
-| `--bonusTransitionEnd` | `DEFAULT_RACE_DYNAMICS_CONFIG.racePlanBonusTransitionEnd` (0.75)     |
-| `--bonusFadeDuration`  | `DEFAULT_RACE_DYNAMICS_CONFIG.racePlanBonusFadeDuration` (1500)      |
-| `--corridorStart`      | `DEFAULT_RACE_DYNAMICS_CONFIG.racePlanCorridorStart` (0.55)          |
-| `--corridorEnd`        | `DEFAULT_RACE_DYNAMICS_CONFIG.racePlanCorridorEnd` (1.0)             |
+| CLI flag               | default source                                                 |
+| ---------------------- | -------------------------------------------------------------- |
+| `--bonusMult`          | `DEFAULT_RACE_DYNAMICS_CONFIG.racePlanBonusStrengthMultiplier` |
+| `--bonusTransitionEnd` | `DEFAULT_RACE_DYNAMICS_CONFIG.racePlanBonusTransitionEnd`      |
+| `--bonusFadeDuration`  | `DEFAULT_RACE_DYNAMICS_CONFIG.racePlanBonusFadeDuration`       |
+| `--corridorStart`      | `DEFAULT_RACE_DYNAMICS_CONFIG.racePlanCorridorStart`           |
+| `--corridorEnd`        | `DEFAULT_RACE_DYNAMICS_CONFIG.racePlanCorridorEnd`             |
 
 Before `9cfa953`, `corridorEnd` defaulted to a hardcoded `0.95` (vs shared `1.0`) and `bonusMult`
 to `1.0` (vs shared `2.0`) — both silently wrong vs the browser. This is now structurally
@@ -1031,11 +1031,11 @@ This document was the most stale; the items below correct it against source.
 
 State of the shipped action model after the B2-Heroes work, for anyone reading the sim in isolation.
 
-### B2-Heroes "Attack & Fall" (SHIPPED ON, default `b2AttackHeroes=3`)
+### B2-Heroes "Attack & Fall" (SHIPPED ON, cast size `b2AttackHeroes`)
 
 Extra choreographed heroes cast from FRONT-post-chaos B2-finishers that **climb to ~rank 5 mid-race,
 then fall back and free-reorder in B2**. Shipped defaults: **count slider 0–5 (default 3)**,
-`b2AttackPeakRank=5`, attack window **timing 0.40–0.70**, `b2AttackFinalRank=7`, **band-arrival
+`b2AttackPeakRank`, attack window **timing 0.40–0.70**, `b2AttackFinalRank`, **band-arrival
 release** (`b2AttackBandArrival=true` — the servo frees an attacker the moment it re-enters B2 on the
 way down). Result: **+21% top-5 OUTCOME action** vs the no-attacker floor, B1/B2 band-reach ≥70% on all
 four tracks, Holm at the pre-existing 2/4 baseline. `count=0` restores the pre-feature game
@@ -1050,7 +1050,7 @@ The action knob is `finalRank` (release HEIGHT), not peak depth; count scales su
   1.0** (fully steered along their curve). **Pack** runs at `choreoPackBandStrictness` (the shipped
   pack corridor strength).
 - **Front-contest release** — the front group is released from strict steering at
-  `_choreoReleaseProgress = 0.97`, so the leaders can free-contest the very end.
+  `_choreoReleaseProgress`, so the leaders can free-contest the very end.
 - **Attacker path** — an `attacker-b2` hero is **Tracked to its FinalRank, then Freed** (band-arrival):
   steered down toward `b2AttackFinalRank`, then released to free-reorder the instant it re-enters B2,
   bypassing the 0.80 B2 resolve.

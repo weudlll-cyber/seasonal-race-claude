@@ -1,5 +1,10 @@
 # Race-Dynamics Stage Cleanup
 
+<!-- HISTORICAL: 2026-07-07 — the race-dynamics stage-cleanup plan and its readings, as they stood during that cleanup -->
+
+> **Read this as HISTORY.** It records what was measured or true on 2026-07-07. Config values in it are
+> that day's values, not today's; today's live in `client/src/modules/storage/defaults.js`.
+
 Goal: reduce the race-dynamics source to the WINNING mechanism only, in verified reversible
 stages. The winning mechanism = re-roll (speed engine) + two-sided contest smart-boost
 (leaderBrake / challengerBoost / frontPool / boostOncePerRace / lingerBrake / ceilingCap) +

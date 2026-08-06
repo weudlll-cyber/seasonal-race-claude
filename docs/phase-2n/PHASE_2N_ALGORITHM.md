@@ -1,5 +1,10 @@
 # Phase 2N — Algorithm Summary & Structural Analysis
 
+<!-- HISTORICAL: 2026-05-20 — Phase 2N algorithm summary, written against the then-current open-track fairness gate -->
+
+> **Read this as HISTORY.** It records what was measured or true on 2026-05-20. Config values in it are
+> that day's values, not today's; today's live in `client/src/modules/storage/defaults.js`.
+
 **Goal:** 8/9 configs (3 racers × r40/r70/r100) pass the 1.5× gate at N=50 for every open track.
 
 **Gate:** Every row in the range [exp./1.5, exp.×1.5]  

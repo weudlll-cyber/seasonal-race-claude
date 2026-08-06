@@ -27,7 +27,7 @@ frame-by-frame in `_setTargets()` via:
 
 ```js
 // CameraDirector.js:803, 822, 841
-this._shape.getPosition(((this._camT % 1) + 1) % 1, 0)
+this._shape.getPosition(((this._camT % 1) + 1) % 1, 0);
 ```
 
 `EditorShape.getPosition()` normalizes `t` internally once more (`((t % 1) + 1) % 1`) — T > 1
@@ -55,7 +55,7 @@ The camera position (`offsetX`, `offsetY`) is steered toward the target **in scr
 
 ```js
 // CameraDirector.js:457-459
-this.zoom    += (this.targetZoom    - this.zoom)    * lf;
+this.zoom += (this.targetZoom - this.zoom) * lf;
 this.offsetX += (this.targetOffsetX - this.offsetX) * lf;
 this.offsetY += (this.targetOffsetY - this.offsetY) * lf;
 ```
@@ -177,6 +177,7 @@ on angle difference between battle midpoint and leader position.
 `EditorShape.js`). This means T values > 1 (lap 2+) and transitions t=0.99 → t=1.01 are handled correctly.
 
 Concretely at start/finish crossing:
+
 - t=0.99 → world: e.g. (1000, 300) — just before the line
 - t=1.01 → `tNorm=0.01` → world: e.g. (1000, 270) — just after
 
@@ -199,11 +200,13 @@ an infield problem — the world positions on both sides of the line are adjacen
 **Finding:**
 
 Closed track (this diagnosis):
+
 - Lerp in `CameraDirector.js:458`: `offsetX += (targetOffsetX - offsetX) * lf`
 - Euclidean in world pixel space
 - Bug occurs when old and new pan position are on different oval sides
 
 Open track:
+
 - Separate code path in `RaceScreen/index.jsx:1120-1134`
 - `st.camX = st.camX + (resolved.camX - st.camX) * 0.05` (hardcoded 0.05 lerp)
 - Open tracks have no cyclic topology → no infield equivalent
@@ -235,11 +238,11 @@ world pixel space.
 
 ## Root code
 
-| File | Line | Description |
-|---|---|---|
-| `CameraDirector.js` | 457-459 | Exponential lerp in pixel space — Euclidean, no track knowledge |
+| File                | Line    | Description                                                                                    |
+| ------------------- | ------- | ---------------------------------------------------------------------------------------------- |
+| `CameraDirector.js` | 457-459 | Exponential lerp in pixel space — Euclidean, no track knowledge                                |
 | `CameraDirector.js` | 604-605 | `_transition()` does NOT reset `offsetX`/`offsetY` — old value remains, lerp starts from there |
-| `CameraDirector.js` | 759-760 | `targetOffsetX` is correctly derived from world coordinates — but the path to it is Euclidean |
+| `CameraDirector.js` | 759-760 | `targetOffsetX` is correctly derived from world coordinates — but the path to it is Euclidean  |
 
 **Secondary cause:** `_transition()` sets `_lerpPhase = 'entry'` (line 605) but not
 `offsetX = targetOffsetX`. This is by design (no hard cut at transition), but it means
@@ -252,10 +255,10 @@ the lerp starts from the old state position — arbitrarily far from the new tar
 Linear: `viewport_width_world = CANVAS_W / (leaderZoom × bsX)`
 
 | leaderZoom | World pixels in viewport |
-|---|---|
-| 2.5× | ~512 px |
-| 3.5× | ~366 px |
-| 5.0× | ~256 px |
+| ---------- | ------------------------ |
+| 2.5×       | ~512 px                  |
+| 3.5×       | ~366 px                  |
+| 5.0×       | ~256 px                  |
 
 The smaller the viewport, the sooner (= smaller distance from track center) the camera shows
 only infield. At 3.5× only ~183 world pixels from the track are enough to lose the track
@@ -296,4 +299,4 @@ This is **not a Euclidean path bug**, but pure TC lag in the entry-phase design.
 
 ---
 
-*Report based exclusively on static code analysis. No tests, no browser, no code changes.*
+_Report based exclusively on static code analysis. No tests, no browser, no code changes._

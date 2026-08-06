@@ -1,5 +1,10 @@
 # Cleanup Audit — PR #98 (Free-Lane Separation + Home-Force Reduction)
 
+<!-- HISTORICAL: 2026-05-14 — the cleanup audit for PR #98, describing the code as it was that day -->
+
+> **Read this as HISTORY.** It records what was measured or true on 2026-05-14. Config values in it are
+> that day's values, not today's; today's live in `client/src/modules/storage/defaults.js`.
+
 **Date:** 2026-05-14  
 **Branch:** `claude/free-lane-separation`  
 **Scope:** All files changed in PR #98 (code, tests, DevScreen UI)
@@ -57,6 +62,7 @@
 The input field for `homeForceReductionOnOverlap` is in the `formGrid` of **Block 2 (Start Layout)** (lines 399–421), but semantically belongs to **Block 9 (Home Force)**.
 
 Consequence:
+
 - The "Reset" button of Block 2 (`resetStartLayout`) does **not** reset `homeForceReductionOnOverlap` (only `startSpreadRange` and `runoutZone`).
 - The "Reset" button of Block 9 (`resetHomeForce`) resets `homeForceReductionOnOverlap` — but the field sits three blocks higher up.
 - User sees the field in "Start Layout", presses Reset there → field remains unchanged.
@@ -66,9 +72,11 @@ Consequence:
 #### Error 2 — InfoTooltip text in German (App-Language-Convention)
 
 Line 405:
+
 ```
 text="Home-Force-Faktor bei aktivem Overlap. 0.3 = 30% normale Starke wenn Racer uberlappt."
 ```
+
 All other InfoTooltips in the same file are in English. This text was apparently added quickly during the diagnostic sprint and not adjusted.
 
 **Fix:** Set English text, consistent with other tooltips.
@@ -112,26 +120,26 @@ All other InfoTooltips in the same file are in English. This text was apparently
 
 ### Classification of all `DEFAULT_RACE_BEHAVIOR_CONFIG` fields
 
-| Field | UI block | Wired? | Class |
-|------|----------|--------|--------|
-| `enabled` | Checkbox (bottom) | ✅ | HOT |
-| `startSpreadRange` | Block 2 | ✅ | HOT |
-| `runoutZone` | Block 2 | ✅ | HOT |
-| `homeForceStrength` | Block 9 | ✅ | HOT |
-| `homeForceReductionOnOverlap` | Block 2 (wrong) → Block 9 (after fix) | ✅ | HOT (misplaced → fixed) |
-| `comfortThreshold` | Block 6 | ✅ | HOT |
-| `softRepulsionStrength` | Block 6 | ✅ | HOT |
-| `avoidanceDistance` | Block 7 | ✅ | HOT |
-| `tWeight` | Block 7 | ✅ | HOT |
-| `yWeight` | Block 7 | ✅ | HOT |
-| `lateralForce` | Block 7 | ✅ | HOT |
-| `maxLateral` | Block 7 | ✅ | HOT |
-| `speedBrakeYThreshold` | Block 8 | ✅ | HOT |
-| `speedBrakeTThreshold` | Block 8 | ✅ | HOT |
-| `speedBrakeFactor` | Block 8 | ✅ | HOT |
-| `draftingMaxDistance` | Block 5 | ✅ | HOT |
-| `draftingConeAngle` | Block 5 | ✅ | HOT |
-| `draftingBoost` | Block 5 | ✅ | HOT |
+| Field                         | UI block                              | Wired? | Class                   |
+| ----------------------------- | ------------------------------------- | ------ | ----------------------- |
+| `enabled`                     | Checkbox (bottom)                     | ✅     | HOT                     |
+| `startSpreadRange`            | Block 2                               | ✅     | HOT                     |
+| `runoutZone`                  | Block 2                               | ✅     | HOT                     |
+| `homeForceStrength`           | Block 9                               | ✅     | HOT                     |
+| `homeForceReductionOnOverlap` | Block 2 (wrong) → Block 9 (after fix) | ✅     | HOT (misplaced → fixed) |
+| `comfortThreshold`            | Block 6                               | ✅     | HOT                     |
+| `softRepulsionStrength`       | Block 6                               | ✅     | HOT                     |
+| `avoidanceDistance`           | Block 7                               | ✅     | HOT                     |
+| `tWeight`                     | Block 7                               | ✅     | HOT                     |
+| `yWeight`                     | Block 7                               | ✅     | HOT                     |
+| `lateralForce`                | Block 7                               | ✅     | HOT                     |
+| `maxLateral`                  | Block 7                               | ✅     | HOT                     |
+| `speedBrakeYThreshold`        | Block 8                               | ✅     | HOT                     |
+| `speedBrakeTThreshold`        | Block 8                               | ✅     | HOT                     |
+| `speedBrakeFactor`            | Block 8                               | ✅     | HOT                     |
+| `draftingMaxDistance`         | Block 5                               | ✅     | HOT                     |
+| `draftingConeAngle`           | Block 5                               | ✅     | HOT                     |
+| `draftingBoost`               | Block 5                               | ✅     | HOT                     |
 
 **Result:** 18/18 fields HOT. 0 GHOST, 0 MISSING. 1 MISPLACED (fixed in the same commit).
 
@@ -153,11 +161,11 @@ All other InfoTooltips in the same file are in English. This text was apparently
 
 ## Monitoring Metrics
 
-| Metric | Value |
-|--------|------|
-| Ghost tests removed | 0 |
-| Ghost UI bindings removed | 0 |
-| Misplaced UI fields fixed | 1 (homeForceReductionOnOverlap → Block 9) |
-| Language-Convention fixes | 1 (Tooltip German → English) |
-| raceBehavior.js: dead code paths | 0 |
-| New zombie comments | 0 |
+| Metric                           | Value                                     |
+| -------------------------------- | ----------------------------------------- |
+| Ghost tests removed              | 0                                         |
+| Ghost UI bindings removed        | 0                                         |
+| Misplaced UI fields fixed        | 1 (homeForceReductionOnOverlap → Block 9) |
+| Language-Convention fixes        | 1 (Tooltip German → English)              |
+| raceBehavior.js: dead code paths | 0                                         |
+| New zombie comments              | 0                                         |

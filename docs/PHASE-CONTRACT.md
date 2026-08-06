@@ -53,7 +53,7 @@ pre-COMBO15 world where `pulkStart` was 0.25 == the `choreoOutcomeStart` minimum
   the CHAOS→PULK boundary AND the hero-curve anchor; the live resolved value is threaded into the generator,
   so there is no second copy of the anchor. (It is a pinned config key surfaced by no live control — see
   [DEVSCREEN-INVENTORY.md](DEVSCREEN-INVENTORY.md).)
-- **Calibrated for it.** 0.15 as the chaos→choreo boundary; `areaBonusEarly=1.0`, `rowBonusEarly=1`. The
+- **Calibrated for it.** 0.15 as the chaos→choreo boundary; `areaBonusEarly` and `rowBonusEarly` both at their shipped defaults. The
   COMBO15 chaos steer + band-aware re-roll bias run over this `[0, 0.15]` chaos window (see
   [FAIRNESS.md](FAIRNESS.md)).
 
@@ -78,9 +78,9 @@ pre-COMBO15 world where `pulkStart` was 0.25 == the `choreoOutcomeStart` minimum
   value moves both seams together.
 - **DevScreen.** "PULK end / OUTCOME begins (0.25–0.55)", config key `choreoOutcomeStart`, in the PULK
   Phase card (DynamicsTuningSection.jsx:925-930). Default 0.5.
-- **Calibrated for it.** `pulkBiasGain=2.0`, `pulkLeaderBrake=0.1`, `pulkChallengerBoost=0.06` and the
+- **Calibrated for it.** `pulkBiasGain`, `pulkLeaderBrake`, `pulkChallengerBoost` and the
   rest of the `pulk*` contest strengths are all calibrated for the PULK window this boundary defines.
-  The PULK phase-split bonuses (`areaBonusPulk=0`, `rowBonusPulk=0`, gated by the Phase-Split master
+  The PULK phase-split bonuses (`areaBonusPulk`, `rowBonusPulk`, gated by the Phase-Split master
   switch, default OFF) also live against it.
 
 ## 3. `corridorStart` = `pulkEnd` — the OUTCOME start (DERIVED from `choreoOutcomeStart`, not a literal)
@@ -131,7 +131,7 @@ pre-COMBO15 world where `pulkStart` was 0.25 == the `choreoOutcomeStart` minimum
 - **Naming trap.** `transitionEnd` (0.75) is NOT where any phase ends — there is no live TRANSITION phase.
   It is a misleadingly named, currently inert literal.
 
-## 6. `choreoReleaseProgress` = 0.97 — the B1 hero release (config key `choreoReleaseProgress`)
+## 6. `choreoReleaseProgress` — the B1 hero release
 
 - **Who reads it.** racePlanner.js:284 (`_choreoReleaseProgress` on the plan) and :285-291 (band-index 0
   of `_choreoBandResolve`); :524 (threaded into the generator as `releaseProgress`); :563-566 (a B1 hero

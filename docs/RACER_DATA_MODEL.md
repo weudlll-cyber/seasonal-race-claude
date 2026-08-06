@@ -259,7 +259,7 @@ Per-racer runtime fields (D7b/D7c, set by `initRacerBehavior` + RaceScreen init)
 
 - `physicalY` — normalized lateral position, ∈ [-1.0, +1.0]: -1=inner boundary, 0=centerline, +1=outer boundary. D7b: all racers in a row distributed evenly via `computeRowPhysicalY`. D7c: applies per row, including incomplete last rows (full-spread). Subsequently mutated each frame by home force + avoidance + soft repulsion.
 - `t` — race progress ∈ [0, finishT]. D7c: Closed tracks: rear rows at negative t (e.g. -0.008 for row 1) — `tPos` wraps correctly behind the start line. D7c-Phase4: Open tracks: staging area — all rows start at positive t: row k at `(totalRows − k) × rowGapPx / pathLengthPx`. No negative t, no clamp. Speed bonus applies on open tracks the same as on closed tracks.
-- `baseSpeed` — since D7c multiplied by `(1 + speedBonus)` for rear rows. Speed bonus compensates for the physical start distance. `speedBonusFactor=1.0` → pole position mathematically neutral.
+- `baseSpeed` — since D7c multiplied by `(1 + speedBonus)` for rear rows. Speed bonus compensates for the physical start distance. At the neutral `speedBonusFactor`, pole position is mathematically neutral.
 - `avoidanceActive` — boolean: true when racer triggers the adjacent speed-brake condition
 - `draftingBoostActive` — boolean: true when racer is in the slipstream cone of a leader
 

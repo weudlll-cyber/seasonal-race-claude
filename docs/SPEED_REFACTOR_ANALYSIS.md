@@ -1,5 +1,10 @@
 # PR-A2 Diagnosis — Speed Pipeline Refactor Analysis
 
+<!-- HISTORICAL: 2026-05-03 — PR-A2 speed-pipeline analysis, a snapshot of the pipeline before the refactor it proposes -->
+
+> **Read this as HISTORY.** It records what was measured or true on 2026-05-03. Config values in it are
+> that day's values, not today's; today's live in `client/src/modules/storage/defaults.js`.
+
 **Branch:** `docs/pr-a2-diagnose`
 **Status:** 2026-05-03
 **Context:** PR-A1 merged (master `ba7dd7f`). Q-25 fixed (maxScale=10). Architectural gap remains: `openTrackFinishT` does not invert `speedScaleFactor` → Open-Track duration slider has no effect on long tracks.

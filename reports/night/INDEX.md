@@ -8,6 +8,14 @@ report here could be orphaned, or an index link could dangle, with nothing notic
 `node scripts/check-index.mjs --dir=reports/night --index=reports/night/INDEX.md` now checks both
 directions.
 
+- [CONFIG-TRUTH-1.md](CONFIG-TRUTH-1.md) — the owner's values land, and documents stop stating
+  numbers. 94 current config claims across 11 living documents → 0, enforced by
+  `check-config-claims.mjs` in CI, the commit hook and verify; nine archives now declare themselves
+  HISTORICAL. Squash merging disabled at repo level (rebase still on — his call).
+  `minRacersVisible` 3 → 5 hit its stop rule: it moves the camera fingerprint AND the render one, so
+  it sits unmerged and unminted on its own branch awaiting the ceremony and his eye. The
+  `choreoOutcomeStart` premise verified three ways from history. CI on master still owed — the
+  GitHub Actions outage ran all evening.
 - [CLEAN-STATE-1.md](CLEAN-STATE-1.md) — merge, then one green master with no loose ends. The three
   ONE-TRUTH branches merged as merge commits (a squash would have destroyed the SHA a stamp names),
   three branches deleted, tracking-lag re-measured independently and reproducing cell for cell. A
