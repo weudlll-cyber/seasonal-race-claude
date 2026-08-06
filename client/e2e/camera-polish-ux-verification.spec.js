@@ -24,12 +24,20 @@ const CLOSED_GEOM_1280 = {
   worldHeight: 720,
   pathLengthPx: 2000,
   innerPoints: [
-    { x: 280, y: 220 }, { x: 680, y: 220 }, { x: 860, y: 400 },
-    { x: 680, y: 580 }, { x: 280, y: 580 }, { x: 120, y: 400 },
+    { x: 280, y: 220 },
+    { x: 680, y: 220 },
+    { x: 860, y: 400 },
+    { x: 680, y: 580 },
+    { x: 280, y: 580 },
+    { x: 120, y: 400 },
   ],
   outerPoints: [
-    { x: 240, y: 180 }, { x: 720, y: 180 }, { x: 940, y: 400 },
-    { x: 720, y: 620 }, { x: 240, y: 620 }, { x: 80, y: 400 },
+    { x: 240, y: 180 },
+    { x: 720, y: 180 },
+    { x: 940, y: 400 },
+    { x: 720, y: 620 },
+    { x: 240, y: 620 },
+    { x: 80, y: 400 },
   ],
 };
 
@@ -43,12 +51,20 @@ const CLOSED_GEOM_6000 = {
   worldHeight: 720,
   pathLengthPx: 9000,
   innerPoints: [
-    { x: 800, y: 220 }, { x: 4200, y: 220 }, { x: 5200, y: 400 },
-    { x: 4200, y: 580 }, { x: 800, y: 580 }, { x: 200, y: 400 },
+    { x: 800, y: 220 },
+    { x: 4200, y: 220 },
+    { x: 5200, y: 400 },
+    { x: 4200, y: 580 },
+    { x: 800, y: 580 },
+    { x: 200, y: 400 },
   ],
   outerPoints: [
-    { x: 750, y: 180 }, { x: 4250, y: 180 }, { x: 5300, y: 400 },
-    { x: 4250, y: 620 }, { x: 750, y: 620 }, { x: 150, y: 400 },
+    { x: 750, y: 180 },
+    { x: 4250, y: 180 },
+    { x: 5300, y: 400 },
+    { x: 4250, y: 620 },
+    { x: 750, y: 620 },
+    { x: 150, y: 400 },
   ],
 };
 
@@ -62,10 +78,16 @@ const OPEN_GEOM = {
   worldHeight: 720,
   pathLengthPx: 1800,
   innerPoints: [
-    { x: 100, y: 340 }, { x: 400, y: 340 }, { x: 700, y: 360 }, { x: 1000, y: 340 },
+    { x: 100, y: 340 },
+    { x: 400, y: 340 },
+    { x: 700, y: 360 },
+    { x: 1000, y: 340 },
   ],
   outerPoints: [
-    { x: 100, y: 380 }, { x: 400, y: 380 }, { x: 700, y: 400 }, { x: 1000, y: 380 },
+    { x: 100, y: 380 },
+    { x: 400, y: 380 },
+    { x: 700, y: 400 },
+    { x: 1000, y: 380 },
   ],
 };
 
@@ -112,6 +134,29 @@ async function clearBaseSpeedConfig(page) {
 
 // ── V1 — Adaptive Zoom 1280-Track (backward compat) ──────────────────────────
 
+/**
+ * The zoom-formula constants, stated ONCE (ONE-TRUTH-1 stage 6). They were written out in full in
+ * three separate `page.evaluate` callbacks below; a value repeated three times in one file is three
+ * chances to be wrong and no way to notice.
+ *
+ * A LARGER PROBLEM IS RECORDED AND NOT FIXED HERE, because fixing it means deleting tests and that
+ * is the owner's call. These three tests re-implement the zoom formula inside the browser and then
+ * assert their own arithmetic. They navigate to `/` and never reach the app's zoom code at all:
+ *   What would break if they were deleted? Nothing in the product. They would still pass if
+ *   `zoomUnit.js` and `projection.js` were deleted from the repository.
+ *   What do they protect? Only this file's copy of the formula — the same defect class as an
+ *   `expect(CONSTANT).toBe(<its own literal>)`, but wearing an end-to-end test's clothes, which
+ *   makes it read as coverage it does not provide.
+ * The real zoom invariants are unit-tested in `client/src/modules/camera/`. See the ONE-TRUTH-1
+ * report.
+ */
+const ZOOM_CONSTANTS = {
+  CANVAS_W: 1280,
+  LEADER_VIEW_W: 910,
+  MIN_ZOOM: 0.15,
+  MAX_ZOOM: 2.5,
+};
+
 test.describe('V1 — Adaptive Zoom 1280-Track backward compat', () => {
   test('race on 1280px track renders without JS errors', async ({ page }) => {
     await seedRace(page, CLOSED_GEOM_1280);
@@ -125,14 +170,11 @@ test.describe('V1 — Adaptive Zoom 1280-Track backward compat', () => {
 
   test('zoom formula at worldW=1280: CANVAS_W²/(LEADER_VIEW_W×worldW) ≈ 1.40', async ({ page }) => {
     await page.goto('/');
-    const leaderZoom = await page.evaluate(() => {
-      const CANVAS_W = 1280;
-      const LEADER_VIEW_W = 910;
-      const worldW = 1280;
-      const MIN_ZOOM = 0.15;
-      const MAX_ZOOM = 2.5;
-      return Math.max(MIN_ZOOM, Math.min(MAX_ZOOM, (CANVAS_W * CANVAS_W) / (LEADER_VIEW_W * worldW)));
-    });
+    const leaderZoom = await page.evaluate(
+      ({ CANVAS_W, LEADER_VIEW_W, MIN_ZOOM, MAX_ZOOM }) =>
+        Math.max(MIN_ZOOM, Math.min(MAX_ZOOM, (CANVAS_W * CANVAS_W) / (LEADER_VIEW_W * 1280))),
+      ZOOM_CONSTANTS
+    );
     expect(leaderZoom).toBeCloseTo(1.406, 2);
   });
 });
@@ -152,28 +194,22 @@ test.describe('V2 — Adaptive Zoom 6000-Track', () => {
 
   test('zoom formula at worldW=6000: leaderZoom ≈ 0.30 (zoom-out)', async ({ page }) => {
     await page.goto('/');
-    const leaderZoom = await page.evaluate(() => {
-      const CANVAS_W = 1280;
-      const LEADER_VIEW_W = 910;
-      const worldW = 6000;
-      const MIN_ZOOM = 0.15;
-      const MAX_ZOOM = 2.5;
-      return Math.max(MIN_ZOOM, Math.min(MAX_ZOOM, (CANVAS_W * CANVAS_W) / (LEADER_VIEW_W * worldW)));
-    });
+    const leaderZoom = await page.evaluate(
+      ({ CANVAS_W, LEADER_VIEW_W, MIN_ZOOM, MAX_ZOOM }) =>
+        Math.max(MIN_ZOOM, Math.min(MAX_ZOOM, (CANVAS_W * CANVAS_W) / (LEADER_VIEW_W * 6000))),
+      ZOOM_CONSTANTS
+    );
     expect(leaderZoom).toBeCloseTo(0.301, 2);
     expect(leaderZoom).toBeLessThan(1); // zoom-out confirmed
   });
 
   test('MIN_ZOOM clamp: worldW=15000 (very large) gives MIN_ZOOM=0.15', async ({ page }) => {
     await page.goto('/');
-    const zoom = await page.evaluate(() => {
-      const CANVAS_W = 1280;
-      const LEADER_VIEW_W = 910;
-      const worldW = 15000; // formula gives ~0.12 < MIN_ZOOM → clamped to 0.15
-      const MIN_ZOOM = 0.15;
-      const MAX_ZOOM = 2.5;
-      return Math.max(MIN_ZOOM, Math.min(MAX_ZOOM, (CANVAS_W * CANVAS_W) / (LEADER_VIEW_W * worldW)));
-    });
+    const zoom = await page.evaluate(
+      ({ CANVAS_W, LEADER_VIEW_W, MIN_ZOOM, MAX_ZOOM }) =>
+        Math.max(MIN_ZOOM, Math.min(MAX_ZOOM, (CANVAS_W * CANVAS_W) / (LEADER_VIEW_W * 15000))),
+      ZOOM_CONSTANTS
+    );
     expect(zoom).toBeCloseTo(0.15, 5);
   });
 });
@@ -188,7 +224,9 @@ test.describe('V3 — clampOffset math for zoom<1 and zoom>1', () => {
   // Unified formula: a = 0 - bboxMin*zoom; b = canvasSize - bboxMax*zoom
   //   clamp(val, min(a,b), max(a,b))
 
-  test('zoom=0.3 (6000px track): camera can pan — negative target returns edge', async ({ page }) => {
+  test('zoom=0.3 (6000px track): camera can pan — negative target returns edge', async ({
+    page,
+  }) => {
     const result = await page.evaluate(() => {
       function clampOffset(val, bboxMin, bboxMax, canvasSize, zoom) {
         const a = 0 - bboxMin * zoom;
@@ -202,10 +240,12 @@ test.describe('V3 — clampOffset math for zoom<1 and zoom>1', () => {
       return { atRightEdge, farRight };
     });
     expect(result.atRightEdge).toBe(-520); // at pan limit, no clamp
-    expect(result.farRight).toBe(-520);    // clamped to right edge
+    expect(result.farRight).toBe(-520); // clamped to right edge
   });
 
-  test('zoom=2.0 (small track): track fits in canvas — offset kept within bounds', async ({ page }) => {
+  test('zoom=2.0 (small track): track fits in canvas — offset kept within bounds', async ({
+    page,
+  }) => {
     const result = await page.evaluate(() => {
       function clampOffset(val, bboxMin, bboxMax, canvasSize, zoom) {
         const a = 0 - bboxMin * zoom;
@@ -219,8 +259,8 @@ test.describe('V3 — clampOffset math for zoom<1 and zoom>1', () => {
       const tooFarRight = clampOffset(600, 0, 400, 1280, 2.0);
       return { centered, tooFarLeft, tooFarRight };
     });
-    expect(result.centered).toBe(240);   // in range, no clamp
-    expect(result.tooFarLeft).toBe(0);   // clamped to a=0
+    expect(result.centered).toBe(240); // in range, no clamp
+    expect(result.tooFarLeft).toBe(0); // clamped to a=0
     expect(result.tooFarRight).toBe(480); // clamped to b=480
   });
 
@@ -251,25 +291,35 @@ test.describe('V4 — Top-3 focus: camera targets top-N racers by position', () 
         return [...racers].sort((a, b) => b.t - a.t).slice(0, Math.min(TOP_N, racers.length));
       }
       const racers = [
-        { id: 'a', t: 0.1 }, { id: 'b', t: 0.7 }, { id: 'c', t: 0.2 },
-        { id: 'd', t: 0.9 }, { id: 'e', t: 0.5 }, { id: 'f', t: 0.8 },
+        { id: 'a', t: 0.1 },
+        { id: 'b', t: 0.7 },
+        { id: 'c', t: 0.2 },
+        { id: 'd', t: 0.9 },
+        { id: 'e', t: 0.5 },
+        { id: 'f', t: 0.8 },
       ];
       const top = focusRacers(racers);
-      return { ids: top.map(r => r.id), ts: top.map(r => r.t) };
+      return { ids: top.map((r) => r.id), ts: top.map((r) => r.t) };
     });
     expect(result.ids).toEqual(['d', 'f', 'b']); // t=0.9, 0.8, 0.7
     expect(result.ts[0]).toBe(0.9);
     expect(result.ts[2]).toBe(0.7); // 3rd-place boundary
   });
 
-  test('COMEBACK_ZOOM targets 3rd-place (last of focusRacers), not last-place', async ({ page }) => {
+  test('COMEBACK_ZOOM targets 3rd-place (last of focusRacers), not last-place', async ({
+    page,
+  }) => {
     const result = await page.evaluate(() => {
       function focusRacers(racers, TOP_N = 3) {
         return [...racers].sort((a, b) => b.t - a.t).slice(0, Math.min(TOP_N, racers.length));
       }
       const racers = [
-        { id: 'last', t: 0.05 }, { id: 'mid', t: 0.5 }, { id: 'front', t: 0.95 },
-        { id: 'second', t: 0.85 }, { id: 'third', t: 0.70 }, { id: 'back', t: 0.2 },
+        { id: 'last', t: 0.05 },
+        { id: 'mid', t: 0.5 },
+        { id: 'front', t: 0.95 },
+        { id: 'second', t: 0.85 },
+        { id: 'third', t: 0.7 },
+        { id: 'back', t: 0.2 },
       ];
       const focus = focusRacers(racers);
       const comebackTarget = focus[focus.length - 1]; // 3rd place, not last
@@ -296,7 +346,10 @@ test.describe('V5 — Top-3 edge cases: 1/2/3 racers', () => {
 
   test('2 racers: focusRacers returns both', async ({ page }) => {
     const count = await page.evaluate(() => {
-      const racers = [{ id: 'a', t: 0.5 }, { id: 'b', t: 0.8 }];
+      const racers = [
+        { id: 'a', t: 0.5 },
+        { id: 'b', t: 0.8 },
+      ];
       return [...racers].sort((a, b) => b.t - a.t).slice(0, Math.min(3, racers.length)).length;
     });
     expect(count).toBe(2);
@@ -304,7 +357,11 @@ test.describe('V5 — Top-3 edge cases: 1/2/3 racers', () => {
 
   test('exactly 3 racers: all 3 are in focusRacers', async ({ page }) => {
     const count = await page.evaluate(() => {
-      const racers = [{ id: 'a', t: 0.3 }, { id: 'b', t: 0.6 }, { id: 'c', t: 0.9 }];
+      const racers = [
+        { id: 'a', t: 0.3 },
+        { id: 'b', t: 0.6 },
+        { id: 'c', t: 0.9 },
+      ];
       return [...racers].sort((a, b) => b.t - a.t).slice(0, Math.min(3, racers.length)).length;
     });
     expect(count).toBe(3);
@@ -339,7 +396,7 @@ test.describe('V6 — cameraZoomFactor: on-screen size invariant', () => {
   test('invariant: factor × zoom = 1.4 for all zoom values', async ({ page }) => {
     const results = await page.evaluate(() => {
       const REFERENCE = 1.4;
-      return [0.3, 0.45, 0.9, 1.4, 2.0].map(zoom => ({
+      return [0.3, 0.45, 0.9, 1.4, 2.0].map((zoom) => ({
         zoom,
         onScreen: (REFERENCE / zoom) * zoom,
       }));
@@ -365,31 +422,37 @@ test.describe('V6 — cameraZoomFactor: on-screen size invariant', () => {
 
 test.describe('V7 — Sprite-Scale: override hierarchy, race starts cleanly', () => {
   test('race with D3.5.5 displaySize override active starts without errors', async ({ page }) => {
-    await page.addInitScript(({ geom }) => {
-      localStorage.setItem(`racearena:trackGeometries:${geom.id}`, JSON.stringify(geom));
-      // Set a D3.5.5 override for rocket: displaySize=60
-      localStorage.setItem(
-        'racearena:racerTypeOverrides',
-        JSON.stringify({ rocket: { displaySize: 60 } })
-      );
-      sessionStorage.setItem('activeRace', JSON.stringify({
-        geometryId: geom.id,
-        racerTypeId: 'rocket',
-        worldWidth: geom.worldWidth,
-        worldHeight: geom.worldHeight,
-        trackWidth: 140,
-        duration: 60,
-        winners: 3,
-        raceMode: 'laps',
-        targetLaps: 2,
-        eventName: 'V7 Test',
-        timestamp: new Date().toISOString(),
-        racers: [
-          { id: 'r1', name: 'Alpha', color: '#ff0000', icon: '🚀' },
-          { id: 'r2', name: 'Beta', color: '#00ff00', icon: '🚀' },
-        ],
-      }));
-    }, { geom: CLOSED_GEOM_1280 });
+    await page.addInitScript(
+      ({ geom }) => {
+        localStorage.setItem(`racearena:trackGeometries:${geom.id}`, JSON.stringify(geom));
+        // Set a D3.5.5 override for rocket: displaySize=60
+        localStorage.setItem(
+          'racearena:racerTypeOverrides',
+          JSON.stringify({ rocket: { displaySize: 60 } })
+        );
+        sessionStorage.setItem(
+          'activeRace',
+          JSON.stringify({
+            geometryId: geom.id,
+            racerTypeId: 'rocket',
+            worldWidth: geom.worldWidth,
+            worldHeight: geom.worldHeight,
+            trackWidth: 140,
+            duration: 60,
+            winners: 3,
+            raceMode: 'laps',
+            targetLaps: 2,
+            eventName: 'V7 Test',
+            timestamp: new Date().toISOString(),
+            racers: [
+              { id: 'r1', name: 'Alpha', color: '#ff0000', icon: '🚀' },
+              { id: 'r2', name: 'Beta', color: '#00ff00', icon: '🚀' },
+            ],
+          })
+        );
+      },
+      { geom: CLOSED_GEOM_1280 }
+    );
 
     const errors = [];
     page.on('pageerror', (e) => errors.push(e.message));
@@ -400,27 +463,33 @@ test.describe('V7 — Sprite-Scale: override hierarchy, race starts cleanly', ()
   });
 
   test('race without override: auto-scale active, still starts cleanly', async ({ page }) => {
-    await page.addInitScript(({ geom }) => {
-      localStorage.setItem(`racearena:trackGeometries:${geom.id}`, JSON.stringify(geom));
-      localStorage.removeItem('racearena:racerTypeOverrides');
-      sessionStorage.setItem('activeRace', JSON.stringify({
-        geometryId: geom.id,
-        racerTypeId: 'rocket',
-        worldWidth: geom.worldWidth,
-        worldHeight: geom.worldHeight,
-        trackWidth: 140,
-        duration: 60,
-        winners: 3,
-        raceMode: 'laps',
-        targetLaps: 2,
-        eventName: 'V7 No-Override Test',
-        timestamp: new Date().toISOString(),
-        racers: [
-          { id: 'r1', name: 'Alpha', color: '#ff0000', icon: '🚀' },
-          { id: 'r2', name: 'Beta', color: '#00ff00', icon: '🚀' },
-        ],
-      }));
-    }, { geom: CLOSED_GEOM_1280 });
+    await page.addInitScript(
+      ({ geom }) => {
+        localStorage.setItem(`racearena:trackGeometries:${geom.id}`, JSON.stringify(geom));
+        localStorage.removeItem('racearena:racerTypeOverrides');
+        sessionStorage.setItem(
+          'activeRace',
+          JSON.stringify({
+            geometryId: geom.id,
+            racerTypeId: 'rocket',
+            worldWidth: geom.worldWidth,
+            worldHeight: geom.worldHeight,
+            trackWidth: 140,
+            duration: 60,
+            winners: 3,
+            raceMode: 'laps',
+            targetLaps: 2,
+            eventName: 'V7 No-Override Test',
+            timestamp: new Date().toISOString(),
+            racers: [
+              { id: 'r1', name: 'Alpha', color: '#ff0000', icon: '🚀' },
+              { id: 'r2', name: 'Beta', color: '#00ff00', icon: '🚀' },
+            ],
+          })
+        );
+      },
+      { geom: CLOSED_GEOM_1280 }
+    );
 
     const errors = [];
     page.on('pageerror', (e) => errors.push(e.message));
@@ -543,27 +612,35 @@ test.describe('V11 — Open track: sprite scale unaffected by camera zoom', () =
     await expect(page.locator('canvas')).toBeVisible();
   });
 
-  test('open-track race uses raceMode=open or duration-based finish, still loads', async ({ page }) => {
-    await page.addInitScript(({ geom }) => {
-      localStorage.setItem(`racearena:trackGeometries:${geom.id}`, JSON.stringify(geom));
-      sessionStorage.setItem('activeRace', JSON.stringify({
-        geometryId: geom.id,
-        racerTypeId: 'horse',
-        worldWidth: geom.worldWidth,
-        worldHeight: geom.worldHeight,
-        trackWidth: 140,
-        duration: 30,
-        winners: 3,
-        raceMode: 'time',
-        targetDuration: 30,
-        eventName: 'V11 Open Test',
-        timestamp: new Date().toISOString(),
-        racers: [
-          { id: 'r1', name: 'Horse1', color: '#c8a46a', icon: '🐴' },
-          { id: 'r2', name: 'Horse2', color: '#a07040', icon: '🐴' },
-        ],
-      }));
-    }, { geom: OPEN_GEOM });
+  test('open-track race uses raceMode=open or duration-based finish, still loads', async ({
+    page,
+  }) => {
+    await page.addInitScript(
+      ({ geom }) => {
+        localStorage.setItem(`racearena:trackGeometries:${geom.id}`, JSON.stringify(geom));
+        sessionStorage.setItem(
+          'activeRace',
+          JSON.stringify({
+            geometryId: geom.id,
+            racerTypeId: 'horse',
+            worldWidth: geom.worldWidth,
+            worldHeight: geom.worldHeight,
+            trackWidth: 140,
+            duration: 30,
+            winners: 3,
+            raceMode: 'time',
+            targetDuration: 30,
+            eventName: 'V11 Open Test',
+            timestamp: new Date().toISOString(),
+            racers: [
+              { id: 'r1', name: 'Horse1', color: '#c8a46a', icon: '🐴' },
+              { id: 'r2', name: 'Horse2', color: '#a07040', icon: '🐴' },
+            ],
+          })
+        );
+      },
+      { geom: OPEN_GEOM }
+    );
     const errors = [];
     page.on('pageerror', (e) => errors.push(e.message));
     await page.goto('/race');

@@ -92,14 +92,35 @@ describe('sampleBoundaryAtInterval', () => {
       { x: 100, y: 100 },
     ];
     const diag = Math.sqrt(2) * 100;
-    const spacing = 30;
+    const spacing = LIGHT_SPACING_PX; // was a second literal 30 — the shipped interval, not a copy
     const expectedCount = Math.floor(diag / spacing) + 1;
     const result = sampleBoundaryAtInterval(pts, spacing);
     expect(result).toHaveLength(expectedCount);
   });
 
-  it('LIGHT_SPACING_PX is 30', () => {
-    expect(LIGHT_SPACING_PX).toBe(30);
+  // REPLACED (ONE-TRUTH-1 stage 6). This was `expect(LIGHT_SPACING_PX).toBe(30)` — a constant
+  // asserted against its own literal.
+  //   What would break if it were deleted? Nothing. No behaviour is pinned by it.
+  //   What did it protect? Only itself: the single way to fail it was to change the constant, and
+  //   the only possible response was to change the number here to match. A test whose failure has
+  //   exactly one correct fix — edit the test — is a copy of the value, not a check on it.
+  // What the constant actually OWES is a consequence: it is the interval the boundary sampler is
+  // driven at from RaceScreen/index.jsx, so a change to it must change how many lights appear.
+  it('LIGHT_SPACING_PX is the interval the sampler is actually driven at — halve it and the lights double', () => {
+    const pts = [
+      { x: 0, y: 0 },
+      { x: 600, y: 0 },
+    ];
+    // 600px at the shipped 30px interval gives lights at 0,30,...,570 — TWENTY, not twenty-one.
+    // The endpoint is excluded when the length is an exact multiple, which is why the 120px case
+    // above expects 4 and not 5. Writing `floor(d/s)+1` here first produced 21 and failed; the
+    // arithmetic was wrong, not the sampler.
+    const atSpacing = sampleBoundaryAtInterval(pts, LIGHT_SPACING_PX).length;
+    expect(atSpacing).toBe(600 / LIGHT_SPACING_PX);
+
+    // The consequence, and it is the whole point: the constant is load-bearing, not decorative.
+    const atHalf = sampleBoundaryAtInterval(pts, LIGHT_SPACING_PX / 2).length;
+    expect(atHalf).toBe(2 * atSpacing);
   });
 });
 

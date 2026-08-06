@@ -18,7 +18,27 @@
 // none of them would pass with the reason plumbing disconnected.
 // ============================================================
 
-import { describe, it, expect, beforeAll, afterAll } from 'vitest';
+import { describe, it, expect, beforeAll, afterAll, vi } from 'vitest';
+
+/**
+ * THIS FILE SPAWNS REAL PROCESSES, so vitest's 5-second default is the wrong budget for it — and
+ * that was measured, not guessed (ONE-TRUTH-1 stages 2 and 6).
+ *
+ * Every case here copies the plugin into a temp tree, runs `git init`/`add`/`commit`/`checkout`
+ * against it, and evaluates the plugin in a CHILD NODE PROCESS. The detached-HEAD case alone is
+ * five git spawns plus a node spawn. On this Windows/OneDrive checkout that costs ~5 s when the
+ * machine is idle and ~13 s when the full suite is running beside it.
+ *
+ * The consequence, before this line existed: the retry ledger recorded the detached-HEAD case
+ * burning all four attempts on `timeout — Test timed out in 5000ms` and FAILING the suite, while
+ * the same test passed on attempt 2 or 3 when run alone. Nothing about the product was wrong; the
+ * test was being asked to spawn a dozen processes inside five seconds.
+ *
+ * 30 s, because the worst measured attempt was ~13 s and a timeout that sits just above the
+ * observed maximum is a flake generator. This buys latency on a genuinely failing run and nothing
+ * else — a passing run still takes what it takes.
+ */
+vi.setConfig({ testTimeout: 30_000, hookTimeout: 30_000 });
 import { execFileSync } from 'node:child_process';
 import { mkdtempSync, mkdirSync, copyFileSync, rmSync, writeFileSync, readFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
