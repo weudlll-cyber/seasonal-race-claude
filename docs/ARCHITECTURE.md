@@ -870,7 +870,7 @@ Phase L introduces a local backend running in Docker alongside the existing Reac
 
 ```
 seasonal-race-claude/
-├── client/          # React frontend, port 3000
+├── client/          # React frontend, port 5173
 │   └── src/
 │       ├── services/
 │       │   ├── api.js               # API_BASE_URL — single config point

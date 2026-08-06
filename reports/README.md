@@ -1,0 +1,49 @@
+# reports/ — the lab journal
+
+**What this directory owns:** the record of what was done, measured and decided, block by block.
+**It is not documentation.** Nothing here is maintained, and nothing here should be read as a
+description of how RaceArena works today.
+
+**The rule that makes it useful and also makes it rot: it is APPEND-ONLY.** A report records what was
+true on the day it was written and is never rewritten. That is deliberate — a lab journal you can
+edit afterwards is worthless, because you can no longer tell what was actually known at the time. The
+price is that a report from June may state a threshold, a fingerprint or a mechanism that has since
+changed, and it will not have been corrected. **Assume anything here is stale until you check it
+against a living document.**
+
+**Where the current answers are:** [../docs/README.md](../docs/README.md) is the map of the
+maintained set. Config values live in `client/src/modules/storage/defaults.js`; the current
+fingerprints live in [../docs/fingerprints.json](../docs/fingerprints.json); the fairness thresholds
+live in [../docs/FAIRNESS.md](../docs/FAIRNESS.md). If a report disagrees with one of those, the
+report is old and the living document wins.
+
+**How big it is:** around 460 files. Most are per-block reports; the rest are raw result tables and
+captured tool output kept as evidence.
+
+---
+
+## The parts, and what each is for
+
+| area                                     | what is in it                                                                                  |
+| ---------------------------------------- | ------------------------------------------------------------------------------------------------ |
+| [night/](night/INDEX.md)                 | Unattended work blocks. One file per block, newest first. **Indexed and guarded.**             |
+| [evolution/](evolution/INDEX.md)         | Experiments and gates on the race dynamics — the arc of how the shipped world was arrived at. **Indexed and guarded.** |
+| [parity/](parity/INDEX.md)               | Browser-vs-sim parity work, and the re-baselines. **Indexed and guarded.**                     |
+| `exp-archive/`, `results-salvage/`, `greenfield/`, `phase1-metrics/`, `speed-candidates/`, `perf/`, `proposals/`, `audit/`, `diag-*`, `closed-track-overview/`, `open-track-overlap/`, `standings-leader-mismatch.md` | Result tables, captured output and one-off write-ups from closed investigations. Not indexed, not maintained. |
+| `BASELINE-INVALIDATED.md`                | The standing note about which absolute numbers were retired by a re-baseline, and when.        |
+
+Three of those directories have an `INDEX.md` that `scripts/check-index.mjs` checks in both
+directions — every report is linked, and every link points at a file that exists. The rest have no
+index and no guard, which is the honest state of them.
+
+---
+
+## If you are looking for something specific
+
+- **Why is the shipped world the way it is?** → `evolution/`, newest first. The gates are the turning
+  points.
+- **What happened in a particular overnight block?** → [night/INDEX.md](night/INDEX.md).
+- **Does the sim agree with the browser?** → `parity/`, and `parity/REBASELINE.md` for the current
+  baseline.
+- **Why was an approach abandoned?** → [../docs/DEAD-ENDS.md](../docs/DEAD-ENDS.md) first. It is the
+  maintained summary; the reports are the evidence behind it.

@@ -20,7 +20,7 @@ cd client && npm install
 cd client && npm run dev
 ```
 
-The app will be at `http://localhost:3000`.
+The app will be at `http://localhost:5173` (the port is pinned in `client/vite.config.js`).
 
 ## 3. Running CI locally
 

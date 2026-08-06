@@ -20,7 +20,7 @@ npm install
 npm run dev
 ```
 
-Open `http://localhost:3000` and you're in — that's enough to explore every built-in track and racer.
+Open `http://localhost:5173` and you're in — that's enough to explore every built-in track and racer.
 
 To save your own hand-drawn tracks and their background images, also start the local backend (optional):
 
@@ -79,12 +79,28 @@ seasonal-race-claude/
 
 ## Documentation
 
-Start with the **[documentation index](docs/README.md)**, which maps every document under `docs/`. Most useful first stops:
+**[docs/README.md](docs/README.md) is the map** — every maintained document, what it owns, and the
+order to read them in. If you read nothing else, read that.
 
-- [Setup Guide](docs/SETUP.md) — full local setup, backend, and troubleshooting.
-- [Architecture](docs/ARCHITECTURE.md) — how the client, engine, and backend fit together.
-- [API Reference](docs/API.md) — the backend endpoints.
-- [Roadmap](docs/ROADMAP.md) — what's done and what's next.
+The reading order it recommends, so you can start without a second click:
+
+1. This file — what RaceArena is.
+2. [Setup Guide](docs/SETUP.md) — get it running.
+3. **[Glossary](docs/GLOSSARY.md)** — the vocabulary. **Read it early.** This project has heavy
+   private jargon (band, corridor, pulk, chaos phase, fingerprint), and three of those words mean two
+   different things each. A newcomer fails on the words before the details.
+4. [Architecture](docs/ARCHITECTURE.md) — how it is built.
+5. [Project Principles](docs/PROJECT-PRINCIPLES.md) — the rules that override convenience.
+6. [Fairness](docs/FAIRNESS.md) — what the game is actually trying to do. Every racer is identical, so
+   "fair" here means something specific and unobvious, and the race design will not make sense
+   without it.
+
+Also useful: [API Reference](docs/API.md) · [Roadmap](docs/ROADMAP.md) ·
+[Backlog](docs/BACKLOG.md) · [Dead ends](docs/DEAD-ENDS.md) (required reading before proposing any
+race-mechanism change).
+
+`reports/` is the lab journal, not documentation — see [reports/README.md](reports/README.md) for what
+it is and why it may have rotted. `docs/archive/` is history and says so.
 
 ## Status
 

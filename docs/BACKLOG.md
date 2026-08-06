@@ -870,7 +870,7 @@ race. Typed values persist for the browser session. Status of the follow-ups:
 - **Q-16** — CORS wildcard on all backend endpoints
   `app.use(cors())` without origin restriction — any browser tab can access all API write endpoints
   (POST/PUT/DELETE tracks + surface classes). Deliberately accepted for local operation.
-  Fix: `cors({ origin: 'http://localhost:3000' })` for dev, env var for VPS.
+  Fix: `cors({ origin: 'http://localhost:5173' })` for dev, env var for VPS.
   **Priority: VPS phase / Phase 5.** Not an acute blocker for single-user local operation.
   _(Deep audit 2026-05-01, Severity: HIGH — accepted for local-only)_
 

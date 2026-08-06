@@ -22,7 +22,7 @@ which is slow and error-prone.
 
 ### How to export
 
-1. Open browser → `http://localhost:3000`
+1. Open browser → `http://localhost:5173`
 2. Dev Panel → **System** tab
 3. Click button **"🔬 Export Diagnostic Snapshot"**
 4. File is downloaded as `racearena-snapshot-YYYYMMDD-HHmm.json`
