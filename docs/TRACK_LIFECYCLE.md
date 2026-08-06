@@ -1,5 +1,7 @@
 # RaceArena — Track Lifecycle and Hybrid Persistence
 
+**Owns:** how a track is created, stored and persisted across the browser and the backend. What the editor DOES is [TRACK_EDITOR.md](TRACK_EDITOR.md)'s.
+
 **Status:** Partially implemented — TLH-1 ✅ (PR #55), TLH-2 ✅ (PR #56/#57), Track-Delete-Safeguards ✅ (PR #58), TLH-3 ⏳ deferred until camera phase
 **Phase:** Track Lifecycle Hybrid (TLH) — three Sub-PRs: TLH-1 ✅, TLH-2 ✅, TLH-3 ⏳
 **Related:** `docs/ARCHITECTURE.md — Track Lifecycle and Hybrid Persistence`, `docs/TRACK_EDITOR.md`

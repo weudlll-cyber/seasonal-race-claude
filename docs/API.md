@@ -1,5 +1,7 @@
 # RaceArena — API Reference
 
+**Owns:** the backend's HTTP surface — every endpoint, its shape, and what it persists. The client's use of them is [ARCHITECTURE.md](ARCHITECTURE.md).
+
 The backend runs on port 4000 (`docker-compose up`). All endpoints are prefixed with `/api/`.
 
 ---

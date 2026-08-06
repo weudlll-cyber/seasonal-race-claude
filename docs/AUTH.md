@@ -1,5 +1,7 @@
 # RaceArena — Authentication & Authorization Architecture (DESIGN v3.2)
 
+**Owns:** the authentication and authorization DESIGN. Nothing here is built.
+
 > Status: **DESIGN / not built.** v3.2 (completeness): §7 route inventory now lists
 > `logout`/`me`; §10 spells out E2E test prerequisites (isolated state, setup-state, user
 > fixtures). v3.1 added §10 _Automated testing & verification_

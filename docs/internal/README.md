@@ -1,5 +1,7 @@
 # docs/internal/
 
+**Owns:** the diagnostic-snapshot export procedure. The Dev Panel's System tab names this directory on screen, which is why it is a live path and not an archive.
+
 Internal diagnostic and analysis documents. Not for public consumption.
 
 ## current-config-snapshot.json

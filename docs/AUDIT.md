@@ -1,5 +1,7 @@
 # RaceArena — Security & Quality Audit Log
 
+**Owns:** the dated security-and-quality audit log. Append-only; every row is history, not a claim about now.
+
 > ℹ️ **Dated audit log — read rows as history.** Older entries describe the code as it was on their
 > date and may name since-removed forces (home force, rubber-band, race-zones, the classic reactive
 > director). That is correct for a log. For the CURRENT force set / mechanisms see

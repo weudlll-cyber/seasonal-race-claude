@@ -1,5 +1,7 @@
 # RaceArena — Branding System
 
+**Owns:** the event-branding system — what is built, and which surfaces it reaches.
+
 **Status:** Phase 1 complete (`v-branding-phase1-complete` → `b9a2f03`, 2026-06-12).
 
 - Step 1 (`backup/brand-step1` → `0ba867f`): active session key, profile selector, CSS-var injection, transition tint.

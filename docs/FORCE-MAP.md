@@ -1,5 +1,7 @@
 # KRAEFTE-LANDKARTE — Complete Force Map of Racer Motion
 
+**Owns:** every force that acts on a racer — which exist, when each fires, what it acts on, and a source line for each. It states STRUCTURE, never values.
+
 > Analysis only. Every force is backed by a source line so it can be verified against the
 > source. Content is in English per the project language rule (`CLAUDE.md` → no German
 > anywhere in code or documents); only the requested filename is kept.

@@ -1,5 +1,7 @@
 # RaceArena — Setup Guide
 
+**Owns:** getting RaceArena running locally — client, backend, ports, and the rules for restarting them. Deploying it is [DEPLOYMENT.md](DEPLOYMENT.md)'s.
+
 ## Prerequisites
 
 - Node.js 20+

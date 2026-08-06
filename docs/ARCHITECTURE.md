@@ -1,5 +1,7 @@
 # RaceArena — Architecture
 
+**Owns:** the system's shape — which layer holds what, how the client, the in-browser race engine and the backend fit together, and where each subsystem lives. Not values, not the ceremony, not the vocabulary ([GLOSSARY.md](GLOSSARY.md)).
+
 ## Overview
 
 RaceArena has a React client and a local backend (Phase L). Race logic runs in the browser. Custom tracks and background images persist server-side; `localStorage` remains in use for settings, race config, and offline geometry cache. A Phase 5 server for race-integrity, leaderboard, and Socket.IO multiplayer is planned.

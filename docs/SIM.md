@@ -1,5 +1,7 @@
 # SIM.md — Simulation System Documentation
 
+**Owns:** the headless simulator — how to run it, what every metric means, and the fingerprint lineage. The measurement stack built on top of it is [SWEEP-HARNESS.md](SWEEP-HARNESS.md)'s.
+
 > **⚠️ Pre-unification baseline.** Absolute sim numbers anywhere in this document (band-reach, runaway, P1-contest, physics-tax, gate results) predate the plan-grid unification (parity step 2a, 2026-07-23) and are pending re-measurement — see [reports/BASELINE-INVALIDATED.md](../reports/BASELINE-INVALIDATED.md). They remain as history.
 
 ## Table of Contents

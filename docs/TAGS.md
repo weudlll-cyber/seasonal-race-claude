@@ -1,5 +1,7 @@
 # Git tags — permanent anchors and cleanup record
 
+**Owns:** the git-tag register — every permanent anchor and return point, and the record of what was cleaned up. A guard depends on the entry format below.
+
 > **HOW TO REGISTER A TAG, because a guard depends on it.** Write it as a list item whose first
 > token is the backticked name followed immediately by the backticked short SHA:
 >

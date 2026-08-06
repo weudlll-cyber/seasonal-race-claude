@@ -1,5 +1,7 @@
 # Field-cohesion concept — bound every gap with loaded dice
 
+**Owns:** the design rationale for field cohesion — why the shipped gap-reroll exists and what it is meant to prevent. The shipped values and their evidence are elsewhere; this is the argument.
+
 > **✅ Baseline re-measured (2026-07-26).** Absolute sim numbers in this document (band-reach, runaway, P1-contest, physics-tax, gate results) predate the plan-grid unification + speed/duration ship and are retired history. The current baseline is [reports/parity/REBASELINE.md](../reports/parity/REBASELINE.md) (speed-150, pooled band-reach 71.0%) and the CANDIDATE column of [reports/parity/GS-CONFIRM-GATE.md](../reports/parity/GS-CONFIRM-GATE.md) (band-reach 72.7%, dead finales 10.0%, runaway 6.8%).
 
 **Status:** SHIPPED ON by default (2026-07-26). The mechanism below is live in both the browser and the

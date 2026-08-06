@@ -1,5 +1,7 @@
 # DEVSCREEN INVENTORY — the race-dynamics controls, verified at source
 
+**Owns:** what the Dev Panel actually renders, verified against source.
+
 **Read-only inventory of what the DevScreen actually renders.** Rebuilt completely against
 `client/src/screens/DevScreen/sections/DynamicsTuningSection.jsx` as rendered (dead-mechanisms cleanup,
 2026-07-23; re-checked after the DevScreen reorg the same day) — every control in the file appears below,

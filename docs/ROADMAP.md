@@ -1,5 +1,7 @@
 # RaceArena — Development Roadmap
 
+**Owns:** the phases and their completion status. The open work inside them is [BACKLOG.md](BACKLOG.md)'s.
+
 > **✅ Baseline — see REBASELINE.** Absolute sim numbers scattered in this document (band-reach, runaway, P1-contest, physics-tax, gate results) are retired history from before the current shipped world. **So is every 16-hex FINGERPRINT below**: each one is the value at the moment that entry was written, not a claim about now. The current values live in [docs/fingerprints.json](fingerprints.json) and in no document. The live baseline is the [reports/parity/REBASELINE.md](../reports/parity/REBASELINE.md) top block — the shipped world (COMBO15 + margin hysteresis + lateral acceleration cap).
 
 ## Phase 1 — Setup Screen ✅ 100% complete
