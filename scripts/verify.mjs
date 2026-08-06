@@ -313,6 +313,15 @@ if (IS_ENTRY) {
     console.log(r.out.split("\n").slice(-25).join("\n"));
     console.log("");
   }
+  // NIGHT-TOOLS-1: the RETRY LEDGER is surfaced even on a green run. vitest writes it to stderr,
+  // which `verify` captures but only printed on FAILURE — so a suite that needed three attempts
+  // looked exactly like one that passed first time, which is the silence the ledger exists to end.
+  for (const r of done) {
+    const line = r.out
+      .split(String.fromCharCode(10))
+      .find((l) => l.includes("RETRY LEDGER"));
+    if (line) console.log(`  ${r.id.padEnd(19)} ${line.trim()}`);
+  }
   // The hashes are the point of the fingerprint guards, so surface them even when green.
   for (const r of done.filter((d) => d.ok && /fingerprint/.test(d.id))) {
     // CAMERA had to be added after the first full run surfaced only two of the three hashes — a
