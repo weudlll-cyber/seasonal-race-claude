@@ -25,7 +25,7 @@
 // in BOTH directions (camera claimed ~85 s and costs 47; render claimed ~30 s and costs 15) and
 // nothing checked it. A number the script measures itself cannot go stale.
 const __t0 = Date.now();
-process.on('exit', () => {
+process.on("exit", () => {
   // NIGHT-TOOLS-1: MACHINE-READABLE, because a human string has to be re-parsed by
   // whatever generates the ceremony's cost column, and a parser of prose is the defect
   // that column already had. `scripts/gen-ceremony-costs.mjs` reads exactly this token.
@@ -34,31 +34,37 @@ process.on('exit', () => {
 `);
 });
 
-import { createHash } from 'node:crypto';
-import { readFileSync, readdirSync, existsSync } from 'node:fs';
-import { join, dirname } from 'node:path';
-import { fileURLToPath, pathToFileURL } from 'node:url';
+import { createHash } from "node:crypto";
+import { readFileSync, readdirSync, existsSync } from "node:fs";
+import { join, dirname } from "node:path";
+import { fileURLToPath, pathToFileURL } from "node:url";
 
-const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
+const ROOT = join(dirname(fileURLToPath(import.meta.url)), "..");
 const u = (p) => pathToFileURL(join(ROOT, p)).href;
 
 const { DEFAULT_CAMERA_CONFIG, DEFAULT_CONFIG_WORLD } = await import(
-  u('client/src/modules/storage/defaults.js')
+  u("client/src/modules/storage/defaults.js")
 );
-const { EditorShape } = await import(u('client/src/modules/track-editor/EditorShape.js'));
-const { CameraDirector } = await import(u('client/src/modules/camera/CameraDirector.js'));
+const { EditorShape } = await import(
+  u("client/src/modules/track-editor/EditorShape.js")
+);
+const { CameraDirector } = await import(
+  u("client/src/modules/camera/CameraDirector.js")
+);
 const { createRaceFromIdentity, stepRacePhysics, FIXED_DT } = await import(
-  u('client/src/modules/raceCore.js')
+  u("client/src/modules/raceCore.js")
 );
-const { normalSpeedFrom } = await import(u('client/src/modules/durationModel.js'));
+const { normalSpeedFrom } = await import(
+  u("client/src/modules/durationModel.js")
+);
 const { computeRacerLayout, computeBodyNarrowRef } = await import(
-  u('client/src/modules/rowLayout.js')
+  u("client/src/modules/rowLayout.js")
 );
 const RT = await (async () => {
   const re = console.error;
   console.error = () => {};
   try {
-    return await import(u('client/src/modules/racer-types/index.js'));
+    return await import(u("client/src/modules/racer-types/index.js"));
   } finally {
     console.error = re;
   }
@@ -69,32 +75,41 @@ const CH = 720;
 const N = 40;
 const SEED = 5601;
 const CAM_SEED = 1439767152;
-const QUIET = process.argv.includes('--quiet');
+const QUIET = process.argv.includes("--quiet");
 // CAMERA-COMPANY-ONLY-1 probe. Off by default, so the DEFAULT invocation — the one the ceremony and
 // every gate use — is untouched. With it, the hash is a PROBE VALUE, not a baseline.
-const COMPANY_ONLY = process.argv.includes('--company-only');
+const COMPANY_ONLY = process.argv.includes("--company-only");
 const CAM_CFG = COMPANY_ONLY
   ? { ...DEFAULT_CAMERA_CONFIG, companyOnlyFraming: true }
   : DEFAULT_CAMERA_CONFIG;
 
-const dir = existsSync(join(ROOT, 'server/data/tracks'))
-  ? join(ROOT, 'server/data/tracks')
-  : join(ROOT, 'server/seeds/tracks');
+const dir = existsSync(join(ROOT, "server/data/tracks"))
+  ? join(ROOT, "server/data/tracks")
+  : join(ROOT, "server/seeds/tracks");
 
-const r6 = (v) => (v == null || !Number.isFinite(v) ? 'n' : (Math.round(v * 1e6) / 1e6).toString());
+const r6 = (v) =>
+  v == null || !Number.isFinite(v)
+    ? "n"
+    : (Math.round(v * 1e6) / 1e6).toString();
 
 function trackHash(geo) {
   const shape = new EditorShape(geo);
   const TW = geo.width ?? shape.getActualTrackWidth();
   const W = DEFAULT_CONFIG_WORLD;
   const behaviorConfig = { ...W.raceBehaviorConfig, isOpen: shape.isOpen };
-  const rt = RT.getRacerType(geo.defaultRacerTypeId ?? 'horse');
+  const rt = RT.getRacerType(geo.defaultRacerTypeId ?? "horse");
   const ds = rt.config.displaySize;
   const bfN = Math.min(rt.config.bodyFillX, rt.config.bodyFillY);
   const bfL = Math.max(rt.config.bodyFillX, rt.config.bodyFillY);
   const effW = TW * behaviorConfig.startSpreadRange;
   const pss = computeRacerLayout(effW, N, ds, W.autoScaleConfig).spriteSize;
-  const br = computeBodyNarrowRef(Math.min(285, effW), N, ds, bfN, W.autoScaleConfig);
+  const br = computeBodyNarrowRef(
+    Math.min(285, effW),
+    N,
+    ds,
+    bfN,
+    W.autoScaleConfig,
+  );
   const bodyRef = ds * (br.bodyNarrow / ds);
   const built = createRaceFromIdentity({
     shape,
@@ -128,7 +143,7 @@ function trackHash(geo) {
     CAM_CFG,
     bodyRef,
     shape,
-    TW
+    TW,
   );
   cd.setRandomSeed(CAM_SEED);
   if (meta.racePlanEnabled && meta.rpPlanInfo?.b1Indices) {
@@ -136,7 +151,7 @@ function trackHash(geo) {
   }
   raceCfg.computePositions();
 
-  const h = createHash('sha256');
+  const h = createHash("sha256");
   const RAW = 1000 / 60;
   let ts = 0;
   let accum = 0;
@@ -169,13 +184,13 @@ function trackHash(geo) {
       },
       CW,
       CH,
-      RAW
+      RAW,
     );
     h.update(
       [
         cd.state,
         cd.lerpPhase,
-        cd.anchorRacerLabel ?? '-',
+        cd.anchorRacerLabel ?? "-",
         r6(cd.zoom),
         r6(cd.offsetX),
         r6(cd.offsetY),
@@ -183,41 +198,42 @@ function trackHash(geo) {
         r6(cd.targetOffsetX),
         r6(cd.targetOffsetY),
         r6(cd.camT),
-      ].join('|') + '\n'
+      ].join("|") + "\n",
     );
     frames++;
     ts += RAW;
   }
-  return { hash: h.digest('hex').slice(0, 16), frames };
+  return { hash: h.digest("hex").slice(0, 16), frames };
 }
 
 const geos = [];
 for (const f of readdirSync(dir)) {
-  if (!f.endsWith('.json')) continue;
-  const j = JSON.parse(readFileSync(join(dir, f), 'utf8'));
+  if (!f.endsWith(".json")) continue;
+  const j = JSON.parse(readFileSync(join(dir, f), "utf8"));
   if (j.id) geos.push(j);
 }
 geos.sort((a, b) => a.id.localeCompare(b.id));
 
-const combined = createHash('sha256');
+const combined = createHash("sha256");
 const rows = [];
 for (const geo of geos) {
   const { hash, frames } = trackHash(geo);
-  combined.update(geo.id + ':' + hash + '\n');
+  combined.update(geo.id + ":" + hash + "\n");
   rows.push({ id: geo.id, hash, frames });
 }
-const COMBINED = combined.digest('hex').slice(0, 16);
+const COMBINED = combined.digest("hex").slice(0, 16);
 
 if (QUIET) {
   console.log(COMBINED);
 } else {
   console.log(
     `CAMERA ${COMBINED} (seed=${SEED} camSeed=${CAM_SEED}, ${geos.length} tracks, ${N} racers, ` +
-      `${COMPANY_ONLY ? 'PROBE: companyOnlyFraming=true — NOT a baseline' : 'default config'})`
+      `${COMPANY_ONLY ? "PROBE: companyOnlyFraming=true — NOT a baseline" : "default config"})`,
   );
-  for (const r of rows) console.log(`  ${r.id.padEnd(16)} ${r.hash}  ${r.frames} frames`);
+  for (const r of rows)
+    console.log(`  ${r.id.padEnd(16)} ${r.hash}  ${r.frames} frames`);
   console.log(
-    '\n  Covers the DIRECTOR only — state, phase, anchor, zoom, offsets, camT, targets.\n' +
-      '  Not the render path (sprite scale, name-tag layout, drawing).'
+    "\n  Covers the DIRECTOR only — state, phase, anchor, zoom, offsets, camT, targets.\n" +
+      "  Not the render path (sprite scale, name-tag layout, drawing).",
   );
 }

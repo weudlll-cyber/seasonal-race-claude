@@ -27,6 +27,7 @@ For each mechanism to remove, classify: (a) used by the winning config, (b) shar
 of something used (must survive / be extracted), (c) truly dead.
 
 ### RUBBER-BAND (`raceRubberBand.js`)
+
 - `applyRubberBand`, `rubberBandTargetMult` — (c) truly dead. Off in the winning config
   (`rubberBandConfig.enabled=false`). Remove the mechanism, `DEFAULT_RUBBER_BAND_CONFIG`,
   all `rubberBand*` keys, `r.rubberBandMult*` state, the t-update factor, DevScreen controls,
@@ -37,6 +38,7 @@ of something used (must survive / be extracted), (c) truly dead.
   before deleting the file. Stage 1.
 
 ### SURGE (`pulkSurge*`)
+
 - Surge pass in `racePlanner.update` + `surgeRacerIds` selection + `pulkSurge*` config +
   `pulkBrakeExemptStrength` + `r.pulkSurgeMult*` state + `pulkSurgeEnabled` gating — (c) dead.
 - **`computePulkBiasedTarget` + `pulkBiasGain`** (the "surge-off fallback" cohesion bias) —
@@ -45,13 +47,15 @@ of something used (must survive / be extracted), (c) truly dead.
   unconditional. Stage 2.
 
 ### SHOW-TARGET (`showTargetMode`, Rank-Proto)
+
 - `computeShowRanks`, `showStreamKey`, `actionToShowLevers`, `SHOW_SEED_XOR`,
   `DEFAULT_SHOW_*`, the show branch in `racePlanner.update` (~L462 areaBonus decouple + the
   pre-OUTCOME show controller), `_show*` plan fields, `showTargetMode/showEngagement/
-  showFrontBand/showWanderDwell/showFrontConcentration` config, sim `SHOW_TARGET_MODE`,
+showFrontBand/showWanderDwell/showFrontConcentration` config, sim `SHOW_TARGET_MODE`,
   DevScreen controls — (c) truly dead (a proven dead end). Stage 3.
 
 ### GOVERNOR TAIL-LIFT (Stage-C field governor)
+
 - Tail-lift + shuffle: `governorEnabled/Drama/K0/Length*/RampWidth/A*/Frequency` config,
   `governorRestoringForce`, `governorShufflePhase`, `governorActionToParams`, the
   `cohesion + shuffle` block in `applyGovernor` — (c) dead (tail-lift off in winning config).
@@ -77,14 +81,14 @@ of something used (must survive / be extracted), (c) truly dead.
 
 ## Per-stage log
 
-| Stage | HEAD | Removed | Fingerprint match | Tests | Kept-because-shared |
-|-------|------|---------|-------------------|-------|---------------------|
-| 0 | — | — (map + baseline only) | ref `72cfbdb4…` | 3067 ✓ | — |
-| 1 | ec06b92 | `raceRubberBand.js`, `rubberBandConfig.js`, `RubberBandSection`, `RubberBandDiagHUD`, `DEFAULT_RUBBER_BAND_CONFIG`, `RUBBER_BAND_CONFIG` key, `showRubberBandDiag`, all `r.rubberBandMult*` state + t-update factor, sim rubber-band + telemetry, DevScreen/HUD controls, 2 test files | `72cfbdb4…` ✓ | 3040 ✓ | `computeMedianT` relocated into `raceGovernor.js` (director's field-median source) |
-| 2 | e1b376e | `pulkSurge*` selection + update pass + config keys + `pulkBrakeExemptStrength`, `surgeRacerIds`, `r.pulkSurgeMult*` state + t-update factor, surge telemetry, sim surge path, config validation + DevScreen "PULK Surge" SubCard, surge test cases | `72cfbdb4…` ✓ | 3031 ✓ | `computePulkBiasedTarget` + `pulkBiasGain` PROMOTED from surge-off fallback to the always-on PULK cohesion mechanism (gate `!pulkSurgeEnabled` removed → unconditional) |
-| 3 | b3fd343 | show-target: `computeShowRanks`, `showStreamKey`, `actionToShowLevers`, `SHOW_SEED_XOR`, `DEFAULT_SHOW_*`, `_show*` plan fields, the show branch in `racePlanner.update` (areaBonus decouple + pre-OUTCOME show controller), `showTargetMode/showEngagement/showFrontBand/showWanderDwell/showFrontConcentration` config, sim `SHOW_*`, DevScreen "Rank-Action" SubCard, show test blocks | `72cfbdb4…` ✓ | 3019 ✓ | — (dead end; nothing shared) |
-| 4 | 2fb4424 | governor TAIL-LIFT: `governorRestoringForce`, `governorShufflePhase`, `governorActionToParams`, `GOVERNOR_SEED_XOR`, cohesion+shuffle block in `applyGovernor`, `cfg.enabled` master, config `governorEnabled/Drama/K0/Length*/RampWidth/A*/Frequency`, sim + DevScreen tail-lift controls, tail-lift tests. GovernorDiagHUD rewritten director-only. | `72cfbdb4…` ✓ | 3009 ✓ | **EXTRACTED realism envelope kept:** `governorMaxEffect` (±12% clamp) + `governorMaxStepPerFrame` (slew) + `governorPhaseWeight`/`governorFadeStart`/`getPhaseFractions` fade — the director rides all of it. Director master is now `directorEnabled` alone. |
-| 5 | (this commit) | pulkActionPreview shim (index.jsx) + `pulkActionPreview` config key. Promoted the N8/D0.6 winning set to `DEFAULT_RACE_DYNAMICS_CONFIG` defaults (director on, frontPool 8, linger 0.6, boost 0.06, leaderBrake 0.10, ceilingCap on, phase-split on: area 1.0/0/1.0 + row 1/0/1). Phase-boundary fix: browser + sim phase-split now read the LIVE plan `pulkStart/pulkEnd` fractions, not hardcoded 0.25/0.5. | `72cfbdb4…` ✓ (flagged) | 3009 ✓ | Phase-boundary fix byte-identical (defaults still 0.25/0.5). "Default = winning" proven transitively: config-default test asserts default config == winning set; flagged fingerprint proves winning config → winning action. |
+| Stage | HEAD          | Removed                                                                                                                                                                                                                                                                                                                                                                                                       | Fingerprint match       | Tests  | Kept-because-shared                                                                                                                                                                                                                                           |
+| ----- | ------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------- | ------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 0     | —             | — (map + baseline only)                                                                                                                                                                                                                                                                                                                                                                                       | ref `72cfbdb4…`         | 3067 ✓ | —                                                                                                                                                                                                                                                             |
+| 1     | ec06b92       | `raceRubberBand.js`, `rubberBandConfig.js`, `RubberBandSection`, `RubberBandDiagHUD`, `DEFAULT_RUBBER_BAND_CONFIG`, `RUBBER_BAND_CONFIG` key, `showRubberBandDiag`, all `r.rubberBandMult*` state + t-update factor, sim rubber-band + telemetry, DevScreen/HUD controls, 2 test files                                                                                                                        | `72cfbdb4…` ✓           | 3040 ✓ | `computeMedianT` relocated into `raceGovernor.js` (director's field-median source)                                                                                                                                                                            |
+| 2     | e1b376e       | `pulkSurge*` selection + update pass + config keys + `pulkBrakeExemptStrength`, `surgeRacerIds`, `r.pulkSurgeMult*` state + t-update factor, surge telemetry, sim surge path, config validation + DevScreen "PULK Surge" SubCard, surge test cases                                                                                                                                                            | `72cfbdb4…` ✓           | 3031 ✓ | `computePulkBiasedTarget` + `pulkBiasGain` PROMOTED from surge-off fallback to the always-on PULK cohesion mechanism (gate `!pulkSurgeEnabled` removed → unconditional)                                                                                       |
+| 3     | b3fd343       | show-target: `computeShowRanks`, `showStreamKey`, `actionToShowLevers`, `SHOW_SEED_XOR`, `DEFAULT_SHOW_*`, `_show*` plan fields, the show branch in `racePlanner.update` (areaBonus decouple + pre-OUTCOME show controller), `showTargetMode/showEngagement/showFrontBand/showWanderDwell/showFrontConcentration` config, sim `SHOW_*`, DevScreen "Rank-Action" SubCard, show test blocks                     | `72cfbdb4…` ✓           | 3019 ✓ | — (dead end; nothing shared)                                                                                                                                                                                                                                  |
+| 4     | 2fb4424       | governor TAIL-LIFT: `governorRestoringForce`, `governorShufflePhase`, `governorActionToParams`, `GOVERNOR_SEED_XOR`, cohesion+shuffle block in `applyGovernor`, `cfg.enabled` master, config `governorEnabled/Drama/K0/Length*/RampWidth/A*/Frequency`, sim + DevScreen tail-lift controls, tail-lift tests. GovernorDiagHUD rewritten director-only.                                                         | `72cfbdb4…` ✓           | 3009 ✓ | **EXTRACTED realism envelope kept:** `governorMaxEffect` (±12% clamp) + `governorMaxStepPerFrame` (slew) + `governorPhaseWeight`/`governorFadeStart`/`getPhaseFractions` fade — the director rides all of it. Director master is now `directorEnabled` alone. |
+| 5     | (this commit) | pulkActionPreview shim (index.jsx) + `pulkActionPreview` config key. Promoted the N8/D0.6 winning set to `DEFAULT_RACE_DYNAMICS_CONFIG` defaults (director on, frontPool 8, linger 0.6, boost 0.06, leaderBrake 0.10, ceilingCap on, phase-split on: area 1.0/0/1.0 + row 1/0/1). Phase-boundary fix: browser + sim phase-split now read the LIVE plan `pulkStart/pulkEnd` fractions, not hardcoded 0.25/0.5. | `72cfbdb4…` ✓ (flagged) | 3009 ✓ | Phase-boundary fix byte-identical (defaults still 0.25/0.5). "Default = winning" proven transitively: config-default test asserts default config == winning set; flagged fingerprint proves winning config → winning action.                                  |
 
 **Stage 5 note (phase-boundary naming):** the phase-split's two boundaries are the plan's
 `pulkStart` (0.25 = chaos→PULK) and `pulkEnd` (0.5 = PULK→post) fractions — the fix reads those
@@ -137,11 +141,12 @@ median — so in principle the legacy **one-sided anchor pull** (`directorAnchor
 whole-field **`directorFeaturedSet`** + **`directorCastSize`**, and with them the field-median
 dependency (**`computeMedianT`** / `sharedMedianT` / `gapLengths`) are dead in the shipped config.
 They were **KEPT** this stage because:
+
 - Removing the one-sided anchor pull cascades into removing `computeMedianT`/`sharedMedianT`, which
   Stage 1 was explicitly told to preserve as a shared dependency; and `directorCastSize` is named in
   the task's VERIFIED-DEPENDENCIES note to keep.
 - `directorFeaturedSet` + `directorCastSize` still back the two-sided **non-smart** `isFeatured`
   path (frontPool = 0), so they are not unconditionally dead.
-Per the DO-NOT ("keep if unsure, flag for Plan-Claude"), these are flagged as a candidate follow-up
-prune rather than removed here. Removing them would be byte-identical for the shipped two-sided
-config but is a larger, median-dependency-touching change best done deliberately.
+  Per the DO-NOT ("keep if unsure, flag for Plan-Claude"), these are flagged as a candidate follow-up
+  prune rather than removed here. Removing them would be byte-identical for the shipped two-sided
+  config but is a larger, median-dependency-touching change best done deliberately.

@@ -1,0 +1,187 @@
+{
+  "_": [
+    "THE SINGLE HOME for the three current fingerprints. ONE-TRUTH-1 stage 4.",
+    "",
+    "Before this file the values were typed independently in eleven places across seven files, and",
+    "nothing connected them. They drifted exactly as you would predict: the ceremony carried a stale",
+    "camera baseline until a block happened to look at it, and its render row was current only",
+    "because the block that wrote it had just touched that row.",
+    "",
+    "Every other statement of these values is now a COPY. `node scripts/check-fingerprints.mjs`",
+    "checks them; `--fix` writes them. Nobody types a fingerprint into a document again.",
+    "",
+    "WHICH DOCUMENT IS CANONICAL, resolved here because three of them claimed it:",
+    "  - THIS FILE owns the CURRENT VALUES. Nothing else does.",
+    "  - docs/SIM.md owns the LINEAGE — which change moved which value to which, in order. History,",
+    "    not current state, and it is allowed to hold every superseded value.",
+    "  - reports/parity/REBASELINE.md owns the measured BASELINE STATISTICS behind the current world",
+    "    (band reach, Holm, runaway). It states the values too, so it is a checked site here.",
+    "  - docs/SHIP-CEREMONY.md owns the PROCEDURE for minting. Its table is a checked site.",
+    "",
+    "TO RE-MINT: run the role's script, put the new value here with the commit and the date, run",
+    "`node scripts/check-fingerprints.mjs --fix`, and commit the record and the sites together."
+  ],
+
+  "roles": {
+    "world": {
+      "value": "dc4647be0f55ebdb",
+      "covers": "the RACE: physics, plan, outcome",
+      "script": "scripts/fingerprint-default.mjs",
+      "reproduce": "node scripts/fingerprint-default.mjs",
+      "mintedOn": "3518ee0b",
+      "mintedBy": "RACER-MOTION-2 — ship lateral acceleration cap (maxLateralAccelPerStep 0.0005)",
+      "recordedIn": "c65db3ae",
+      "date": "2026-07-31",
+      "lastMeasured": "2026-08-06 at c300f0ac — RE-RUN in this block, agreed with every site"
+    },
+    "camera": {
+      "value": "00cafa2432add0f7",
+      "covers": "the DIRECTOR's decisions: state, phase, anchor, zoom, offsets, camT, targets",
+      "script": "scripts/camera-fingerprint.mjs",
+      "reproduce": "node scripts/camera-fingerprint.mjs --quiet",
+      "mintedOn": "e39c9483",
+      "mintedBy": "FINISH-COMPANY-1 — the company guarantee retires once the company is home",
+      "recordedIn": "e39c9483",
+      "date": "2026-08-05",
+      "lastMeasured": "2026-08-06 at c300f0ac — RE-RUN in this block, agreed with every site"
+    },
+    "render": {
+      "value": "1f83ecc1fcb6fa9a",
+      "covers": "the DRAW CALL SEQUENCE: sprite placement, text, styles, transforms, layer order",
+      "script": "scripts/render-fingerprint.mjs",
+      "reproduce": "node scripts/render-fingerprint.mjs --quiet",
+      "mintedOn": "e39c9483",
+      "mintedBy": "FINISH-COMPANY-1 — a camera-only diff moves this one; the director decides the transform on every drawn frame",
+      "recordedIn": "e39c9483",
+      "date": "2026-08-05",
+      "lastMeasured": "2026-08-06 at c300f0ac — RE-RUN in this block, agreed with every site"
+    },
+    "world-off": {
+      "value": "854018ee5d3d83e1",
+      "covers": "the world with the shipped lateral acceleration cap set to 0 — the OFF invariant that proves the cap is the only thing that moved",
+      "script": "scripts/fingerprint-default.mjs",
+      "reproduce": "UNKNOWN. The flag that reproduces it was not established in ONE-TRUTH-1 and is not written down anywhere this block could find. Until somebody establishes it, this value is a REMEMBERED number, not a reproducible one.",
+      "mintedOn": "3518ee0b",
+      "mintedBy": "RACER-MOTION-2",
+      "recordedIn": "c65db3ae",
+      "date": "2026-07-31",
+      "lastMeasured": "NOT re-measured in this block — see `reproduce`. It is guarded for AGREEMENT across its two sites, which is all a record can do for a number nobody can re-derive."
+    }
+  },
+
+  "sites": [
+    {
+      "file": "docs/SHIP-CEREMONY.md",
+      "role": "world",
+      "anchor": "— **world** `"
+    },
+    {
+      "file": "docs/SHIP-CEREMONY.md",
+      "role": "camera",
+      "anchor": "— **camera** `"
+    },
+    {
+      "file": "docs/SHIP-CEREMONY.md",
+      "role": "render",
+      "anchor": "— **render** `"
+    },
+
+    {
+      "file": "docs/CAMERA_DIRECTOR.md",
+      "role": "camera",
+      "anchor": "Current: **`"
+    },
+    { "file": "docs/CAMERA_DIRECTOR.md", "role": "render", "anchor": "(**`" },
+
+    {
+      "file": "docs/ARCHITECTURE.md",
+      "role": "world",
+      "anchor": "the current world **`"
+    },
+    {
+      "file": "docs/ARCHITECTURE.md",
+      "role": "world",
+      "anchor": "shipped the current world `"
+    },
+    {
+      "file": "docs/ARCHITECTURE.md",
+      "role": "world-off",
+      "anchor": "(current OFF invariant `"
+    },
+
+    {
+      "file": "docs/FAIRNESS.md",
+      "role": "world",
+      "anchor": "Current shipped world: **`"
+    },
+    {
+      "file": "docs/FAIRNESS.md",
+      "role": "world-off",
+      "anchor": "OFF invariant `"
+    },
+
+    {
+      "file": "docs/ROADMAP.md",
+      "role": "world",
+      "anchor": "the shipped world `"
+    },
+    {
+      "file": "docs/BACKLOG.md",
+      "role": "world",
+      "anchor": "the shipped world `"
+    },
+
+    { "file": ".husky/pre-commit", "role": "world", "anchor": "(world " },
+    {
+      "file": "client/src/modules/camera/CameraDirector.js",
+      "role": "camera",
+      "anchor": "arguable. Current: "
+    },
+
+    {
+      "file": "docs/SIM.md",
+      "role": "camera",
+      "anchor": "across all 10 tracks. Current **`"
+    },
+    {
+      "file": "docs/SIM.md",
+      "role": "render",
+      "anchor": "reaching the finish. Current **`"
+    },
+    {
+      "file": "reports/parity/REBASELINE.md",
+      "role": "world",
+      "anchor": "| **world** | **`"
+    },
+    {
+      "file": "reports/parity/REBASELINE.md",
+      "role": "camera",
+      "anchor": "| **camera** | **`"
+    },
+    {
+      "file": "reports/parity/REBASELINE.md",
+      "role": "render",
+      "anchor": "| **render** | **`"
+    }
+  ],
+
+  "historyAllowed": ["docs/TAGS.md", "reports/"],
+
+  "_historyNote": [
+    "These files may state a current value WITHOUT being written or checked, because for them it is",
+    "history rather than a claim about now:",
+    "  docs/TAGS.md  the tag register. A tag's fingerprint is what it was when the tag was cut.",
+    "  reports/      the lab journal. A report records what was true on the day it was written and",
+    "                must never be rewritten — except reports/parity/REBASELINE.md, which is the",
+    "                LIVE baseline and is therefore a site above.",
+    "",
+    "docs/SIM.md WAS on this list and has been taken off (ONE-TRUTH-1 stage 5). It holds the lineage,",
+    "which is history — but its File-locations table also states the CURRENT camera and render values,",
+    "and calling the whole file history exempted those two live claims from every check. They are now",
+    "declared sites. Declaring a site file also exempts the rest of that file from the coverage scan,",
+    "so the lineage inside it is still free to name every superseded value.",
+    "",
+    "The cost, stated rather than discovered: nothing checks that the LINEAGE's newest entry is",
+    "current. A guard cannot tell a stale 'latest' from an honest historical row."
+  ]
+}

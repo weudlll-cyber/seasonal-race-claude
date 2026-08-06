@@ -16,29 +16,29 @@
 //                Carving     : body horizontal shift ±3px (cosine, 90° offset)
 // ============================================================
 
-import { createRequire } from 'module';
-import fs from 'fs';
-import path from 'path';
-import { fileURLToPath } from 'url';
+import { createRequire } from "module";
+import fs from "fs";
+import path from "path";
+import { fileURLToPath } from "url";
 
 const require = createRequire(import.meta.url);
-const { PNG } = require('pngjs');
+const { PNG } = require("pngjs");
 
-const ROOT = path.resolve(fileURLToPath(import.meta.url), '../../');
-const SRC  = path.join(ROOT, 'client/public/assets/racers/boarder.png');
-const OUT  = path.join(ROOT, 'client/public/assets/racers/boarder-sprite.png');
+const ROOT = path.resolve(fileURLToPath(import.meta.url), "../../");
+const SRC = path.join(ROOT, "client/public/assets/racers/boarder.png");
+const OUT = path.join(ROOT, "client/public/assets/racers/boarder-sprite.png");
 
 const FRAME_COUNT = 12;
-const MAX_EXPAND  = 0.04;   // ±4% body vertical scale (push rhythm)
-const MAX_CARVE   = 3;      // ±3px horizontal shift   (carving)
-const HEAD_F      = 0.20;   // head  = top 20% of height
-const FEET_F      = 0.80;   // feet  = bottom 20% of height
+const MAX_EXPAND = 0.04; // ±4% body vertical scale (push rhythm)
+const MAX_CARVE = 3; // ±3px horizontal shift   (carving)
+const HEAD_F = 0.2; // head  = top 20% of height
+const FEET_F = 0.8; // feet  = bottom 20% of height
 
 // ---- load source and rotate 180° ----
-const srcBuf  = fs.readFileSync(SRC);
+const srcBuf = fs.readFileSync(SRC);
 const srcOrig = PNG.sync.read(srcBuf);
-const W       = srcOrig.width;
-const H       = srcOrig.height;
+const W = srcOrig.width;
+const H = srcOrig.height;
 
 // Rotate 180°: pixel (x,y) ← original pixel (W-1-x, H-1-y)
 const src = new PNG({ width: W, height: H });
@@ -46,22 +46,24 @@ for (let y = 0; y < H; y++) {
   for (let x = 0; x < W; x++) {
     const si = ((H - 1 - y) * W + (W - 1 - x)) * 4;
     const di = (y * W + x) * 4;
-    src.data[di]     = srcOrig.data[si];
+    src.data[di] = srcOrig.data[si];
     src.data[di + 1] = srcOrig.data[si + 1];
     src.data[di + 2] = srcOrig.data[si + 2];
     src.data[di + 3] = srcOrig.data[si + 3];
   }
 }
 
-const headBot  = Math.round(H * HEAD_F);        // first body row (inclusive)
-const feetTop  = Math.round(H * FEET_F);        // first feet row (inclusive)
-const bodyMid  = (headBot + feetTop - 1) / 2;  // centre of body zone
+const headBot = Math.round(H * HEAD_F); // first body row (inclusive)
+const feetTop = Math.round(H * FEET_F); // first feet row (inclusive)
+const bodyMid = (headBot + feetTop - 1) / 2; // centre of body zone
 
 console.log(`Source: ${SRC}`);
 console.log(`Frame size: ${W} × ${H}  |  frames: ${FRAME_COUNT}`);
 console.log(`Output:  ${OUT}  (${W * FRAME_COUNT} × ${H})`);
 console.log(`Head rows:  0 – ${headBot - 1}`);
-console.log(`Body rows:  ${headBot} – ${feetTop - 1}  (centre ${bodyMid.toFixed(1)})`);
+console.log(
+  `Body rows:  ${headBot} – ${feetTop - 1}  (centre ${bodyMid.toFixed(1)})`,
+);
 console.log(`Feet rows:  ${feetTop} – ${H - 1}`);
 
 // ---- helpers ----
@@ -74,7 +76,7 @@ function sampleBilinear(x, srcY) {
   if (srcY < 0 || srcY > H - 1) return [0, 0, 0, 0];
   const y0 = Math.floor(srcY);
   const y1 = Math.min(y0 + 1, H - 1);
-  const t  = srcY - y0;
+  const t = srcY - y0;
   const [r0, g0, b0, a0] = readSrc(x, y0);
   const [r1, g1, b1, a1] = readSrc(x, y1);
   return [
@@ -87,7 +89,7 @@ function sampleBilinear(x, srcY) {
 
 function writeDst(sheet, frame, x, y, rgba) {
   const i = (y * (W * FRAME_COUNT) + frame * W + x) * 4;
-  sheet.data[i]     = rgba[0];
+  sheet.data[i] = rgba[0];
   sheet.data[i + 1] = rgba[1];
   sheet.data[i + 2] = rgba[2];
   sheet.data[i + 3] = rgba[3];
@@ -100,14 +102,14 @@ sheet.data.fill(0);
 for (let f = 0; f < FRAME_COUNT; f++) {
   const phase = (f / FRAME_COUNT) * 2 * Math.PI;
 
-  const pushExpansion = MAX_EXPAND * Math.sin(phase);   // push rhythm
-  const pushScale     = 1 + pushExpansion;
-  const carveShift    = Math.round(MAX_CARVE * Math.cos(phase));  // carving
+  const pushExpansion = MAX_EXPAND * Math.sin(phase); // push rhythm
+  const pushScale = 1 + pushExpansion;
+  const carveShift = Math.round(MAX_CARVE * Math.cos(phase)); // carving
 
   console.log(
     `  frame ${String(f).padStart(2)}: ` +
-    `push=${(pushExpansion * 100).toFixed(1).padStart(5)}%  ` +
-    `carve=${String(carveShift).padStart(3)}px`
+      `push=${(pushExpansion * 100).toFixed(1).padStart(5)}%  ` +
+      `carve=${String(carveShift).padStart(3)}px`,
   );
 
   for (let y = 0; y < H; y++) {
@@ -126,7 +128,7 @@ for (let f = 0; f < FRAME_COUNT; f++) {
           writeDst(sheet, f, x, y, [0, 0, 0, 0]);
           continue;
         }
-        const srcYFloat   = bodyMid + (y - bodyMid) / pushScale;
+        const srcYFloat = bodyMid + (y - bodyMid) / pushScale;
         const srcYClamped = Math.max(headBot, Math.min(feetTop - 1, srcYFloat));
         writeDst(sheet, f, x, y, sampleBilinear(srcX, srcYClamped));
       }

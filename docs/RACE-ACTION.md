@@ -2,14 +2,14 @@
 
 > **⚠️ Pre-unification baseline.** Absolute sim numbers in this document (band-reach, runaway, P1-contest, physics-tax, gate results) were measured before the plan-grid unification (parity step 2a, 2026-07-23) and are pending re-measurement — see [reports/BASELINE-INVALIDATED.md](../reports/BASELINE-INVALIDATED.md). They remain as history.
 
-*Definitive reference for the shipped race-action mechanism (tip 68f71b5). Forward-looking: this document
-describes only what exists today. It does not carry the historical rationale of the earlier concept notes.*
+_Definitive reference for the shipped race-action mechanism (tip 68f71b5). Forward-looking: this document
+describes only what exists today. It does not carry the historical rationale of the earlier concept notes._
 
 ## 1. Quick overview
 
 Race-Action is the system that creates genuine overtakes and lead changes during the race. Without it a
 field of racers with fixed speeds would spread out once and hold formation to the line — technically a
-race, but visually dead. Race-Action continuously reshapes who is where, so that the race *reads* as a
+race, but visually dead. Race-Action continuously reshapes who is where, so that the race _reads_ as a
 contest: positions cross, a leader is caught, a straggler surges through the pack, and the outcome stays in
 doubt.
 
@@ -39,7 +39,7 @@ motion must respect the per-frame slew limit — speed changes ramp smoothly fra
 racer that teleports, snaps, or visibly rubber-bands has broken naturalness even if the numbers balance.
 
 **Action is the goal.** Visible, varied, unpredictable racing is what the system exists to produce — but it
-is the goal, not a sacred property. Action is always pursued *underneath* fairness and naturalness. If a
+is the goal, not a sacred property. Action is always pursued _underneath_ fairness and naturalness. If a
 pass cannot be delivered without breaching the speed envelope, the pass is abandoned. A missed overtake is
 always preferable to a physics breach.
 
@@ -61,7 +61,7 @@ which — together with the band-aware re-roll draw bias from progress 0.60 — 
 (see [FAIRNESS.md](FAIRNESS.md)); the chaos window was narrowed from 0.25 to **0.15** at the same ship to keep
 the mid-race lively.
 
-At the 0.15 boundary — the *chaos boundary* — two things happen. Heroes are cast from the racers standing up
+At the 0.15 boundary — the _chaos boundary_ — two things happen. Heroes are cast from the racers standing up
 front, and their position curves are generated for the remainder of the race. From this instant the area
 bonus is cut to neutral for every racer.
 
@@ -74,7 +74,7 @@ This two-phase shape is a deliberate collapse of an older four-phase structure (
 contest window, a buffer, and OUTCOME). Those phases were merged into a single choreographed window with an
 OUTCOME backstop layered on top. The most important consequence of the collapse is the area-bonus rule: the
 bonus is neutralized across the entire choreographed phase. If it were left running it would keep nudging
-racers by band and manufacture *false* leaders — racers who lead only because their bonus is high, not
+racers by band and manufacture _false_ leaders — racers who lead only because their bonus is high, not
 because the race put them there. Cutting it at the chaos boundary means that, once choreography takes over,
 position is earned by the choreography and the contest, not by a hidden per-racer handicap.
 
@@ -90,10 +90,10 @@ race; the cast emerges from how the chaos phase actually played out, which keeps
 **Curves.** Each hero receives a target curve: a small set of waypoints mapping time to a position band,
 interpolated with a minimum-jerk profile so the motion between waypoints is smooth. The curves are authored
 to guarantee ordered positions with real separation between heroes. Overtakes are not commanded as discrete
-events — they *emerge* where two heroes' curves cross. Because the curves are separated and smooth, the
+events — they _emerge_ where two heroes' curves cross. Because the curves are separated and smooth, the
 crossings look like genuine passes rather than snaps.
 
-**Loose field.** Only the 2–4 heroes are choreographed. Every other racer runs *loose within its band* under
+**Loose field.** Only the 2–4 heroes are choreographed. Every other racer runs _loose within its band_ under
 a gentle constant-target controller that keeps it broadly where it belongs without pinning it to an exact
 rank. This looseness is essential: it leaves the non-heroes room to weave, which is exactly the room
 PulkLeadRotation uses to create front action.
@@ -109,20 +109,20 @@ Hero choreography produces the authored storyline; PulkLeadRotation produces the
 among the non-hero racers. It is the engine of genuine lead changes.
 
 **Attacker slots.** One or two attacker slots each target the live second-place racer (and third place, when
-two slots are active) and boost it forward until it *takes the lead*. Success is defined as taking the lead,
+two slots are active) and boost it forward until it _takes the lead_. Success is defined as taking the lead,
 not merely closing the gap — a chase that stalls just behind the leader is not a success. When an attacker
 succeeds, its slot advances to the new second-place racer and the pursuit begins again. This is what keeps
 lead changes coming rather than producing a single pass and then stasis.
 
 **Settle-brake set.** A racer that takes the lead is immediately placed under a flat, unconditional brake.
 It stays braked until it has fallen a configured depth — `dropDepthLengths`, measured in racer lengths —
-behind the *current* leader, at which point it is released. This is a membership set, not a single slot:
+behind the _current_ leader, at which point it is released. This is a membership set, not a single slot:
 many former leaders can be braking at once, each easing back toward its own release depth. The settle-brake
 is what turns raw churn into readable racing. Without it, a racer that just took the lead would immediately
 be re-boosted or would drift, and the front would oscillate — the dreaded flicker where the lead changes
 several times a second. The brake makes each pass settle before the next one begins.
 
-**Outsider slot.** Alongside the attacker slots, one outsider slot reaches *outside* the front group and
+**Outsider slot.** Alongside the attacker slots, one outsider slot reaches _outside_ the front group and
 boosts the deepest racer that can still plausibly reach the lead, again until it takes it. The outsider slot
 never draws from the front group; its entire purpose is to inject fresh blood, so that the lead fight is not
 always between the same two or three racers at the front.
@@ -172,7 +172,7 @@ start row's outcomes are tested for a significant advantage, with a Holm correct
 for multiple comparisons; any row flagged unfair fails the gate.
 
 **The eye is the final gate.** The metrics are necessary but never sufficient. A configuration that passes
-band-reach and the Holm test still fails if the race *reads* wrong — if it looks like a fairground ride, a scripted
+band-reach and the Holm test still fails if the race _reads_ wrong — if it looks like a fairground ride, a scripted
 parade, or a dead procession, no passing number rescues it. Conversely, if the eye says "this is real
 racing," that judgment stands. Metrics exist to catch what the eye might miss over many races, not to
 overrule it.
@@ -259,5 +259,4 @@ slider remains inside the fairness and naturalness guarantees by construction.
 
 This is a design target, not a shipped feature. The underlying depth lever exists and works, but the
 developer-screen pinning of the supporting knobs and the setup-screen wiring of the slider itself are not yet
-built. Until they are, race-action is tuned through the individual configuration knobs described in section
-8.
+built. Until they are, race-action is tuned through the individual configuration knobs described in section 8.

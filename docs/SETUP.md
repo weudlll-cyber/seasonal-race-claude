@@ -41,6 +41,7 @@ docker compose up
 The backend runs at `http://localhost:4000`.
 
 Without it:
+
 - Track Editor shows "Server not reachable", only default tracks available
 - Custom-track background images do NOT load during Race (silent fail)
 
@@ -73,4 +74,4 @@ docker compose build            # package.json change — rebuild first
 
 ---
 
-*Phase 5 will add race-integrity, leaderboard, and Socket.IO multiplayer (separate server implementation).*
+_Phase 5 will add race-integrity, leaderboard, and Socket.IO multiplayer (separate server implementation)._

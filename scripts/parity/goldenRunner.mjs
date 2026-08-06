@@ -32,42 +32,48 @@
 // Imported by client/src/modules/parity/goldenEquality.test.js and scripts/parity/soak.mjs.
 // ============================================================
 
-import { readFileSync } from 'fs';
-import { join, dirname } from 'path';
-import { fileURLToPath } from 'url';
+import { readFileSync } from "fs";
+import { join, dirname } from "path";
+import { fileURLToPath } from "url";
 
-import { EditorShape } from '../../client/src/modules/track-editor/EditorShape.js';
-import { runSingleRace } from '../sim-fairness.mjs';
+import { EditorShape } from "../../client/src/modules/track-editor/EditorShape.js";
+import { runSingleRace } from "../sim-fairness.mjs";
 import {
   makeRaceRng,
   createRacePlan,
   createTrajectoryController,
-} from '../../client/src/modules/racePlanner.js';
+} from "../../client/src/modules/racePlanner.js";
 import {
   computeEvenRowLayout,
   computeRacerLayout,
   computeBodyNarrowRef,
   computeStartRowCount,
-} from '../../client/src/modules/rowLayout.js';
-import { loadRowLayoutConfig } from '../../client/src/modules/rowLayoutConfig.js';
-import { createRaceFromIdentity, stepRacePhysics } from '../../client/src/modules/raceCore.js';
+} from "../../client/src/modules/rowLayout.js";
+import { loadRowLayoutConfig } from "../../client/src/modules/rowLayoutConfig.js";
+import {
+  createRaceFromIdentity,
+  stepRacePhysics,
+} from "../../client/src/modules/raceCore.js";
 import {
   deriveRaceDuration,
   normalSpeedFrom,
   paceSpeedPxPerSec,
   trackDefaultLaps,
   trackDefaultSeconds,
-} from '../../client/src/modules/durationModel.js';
-import { loadBaseSpeedConfig } from '../../client/src/modules/baseSpeedConfig.js';
-import { loadRaceDynamicsConfig } from '../../client/src/modules/raceDynamicsConfig.js';
-import { loadRaceBehaviorConfig } from '../../client/src/modules/raceBehaviorConfig.js';
+} from "../../client/src/modules/durationModel.js";
+import { loadBaseSpeedConfig } from "../../client/src/modules/baseSpeedConfig.js";
+import { loadRaceDynamicsConfig } from "../../client/src/modules/raceDynamicsConfig.js";
+import { loadRaceBehaviorConfig } from "../../client/src/modules/raceBehaviorConfig.js";
 import {
   DEFAULT_RACE_DYNAMICS_CONFIG,
   DEFAULT_RACE_BEHAVIOR_CONFIG,
   DEFAULT_BASE_SPEED_CONFIG,
-} from '../../client/src/modules/storage/defaults.js';
-import { DEFAULT_AUTO_SCALE_CONFIG } from '../../client/src/modules/autoSpriteScale.js';
-import { hashWorld, WORLD_SCHEMA_VERSION } from '../../client/src/modules/raceConfigWorld.js';
+} from "../../client/src/modules/storage/defaults.js";
+import { DEFAULT_AUTO_SCALE_CONFIG } from "../../client/src/modules/autoSpriteScale.js";
+import {
+  hashWorld,
+  WORLD_SCHEMA_VERSION,
+} from "../../client/src/modules/raceConfigWorld.js";
 import {
   CHECKPOINT_INTERVAL_MS,
   hashTrackGeometry,
@@ -75,37 +81,97 @@ import {
   makeRaceIdentity,
   makeRaceOutcome,
   hashOutcome,
-} from '../../client/src/modules/parity/raceIdentity.js';
-import { QUICK_TEST_NAMES } from '../../client/src/modules/racerNames.js';
+} from "../../client/src/modules/parity/raceIdentity.js";
+import { QUICK_TEST_NAMES } from "../../client/src/modules/racerNames.js";
 
-const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..', '..');
+const ROOT = join(dirname(fileURLToPath(import.meta.url)), "..", "..");
 
 /** The 10 shipped tracks with their default racer type — the soak's track axis. */
 export const TRACKS = [
-  ['city-circuit', 'motorbike'],
-  ['dirt-oval', 'horse'],
-  ['garden-path', 'snail'],
-  ['ice-track', 'snowmobile'],
-  ['luger-hill', 'luge'],
-  ['mountainstreet', 'boarder'],
-  ['river-run', 'duck'],
-  ['searound', 'manta'],
-  ['seatrack', 'dolphin'],
-  ['space-sprint', 'rocket'],
+  ["city-circuit", "motorbike"],
+  ["dirt-oval", "horse"],
+  ["garden-path", "snail"],
+  ["ice-track", "snowmobile"],
+  ["luger-hill", "luge"],
+  ["mountainstreet", "boarder"],
+  ["river-run", "duck"],
+  ["searound", "manta"],
+  ["seatrack", "dolphin"],
+  ["space-sprint", "rocket"],
 ];
 
 /** Racer-type physical config — mirrors sim-fairness's RACER_CONFIGS for the types the soak uses. */
 export const RACER_CONFIGS = {
-  horse: { speedMultiplier: 1.0, displaySize: 47, bodyFillX: 0.353, bodyFillY: 0.8, surfaceClasses: ['earth'] },
-  rocket: { speedMultiplier: 1.25, displaySize: 47, bodyFillX: 0.278, bodyFillY: 0.801, surfaceClasses: ['space'] },
-  snail: { speedMultiplier: 0.3, displaySize: 44, bodyFillX: 0.75, bodyFillY: 0.5, surfaceClasses: ['garden'] },
-  motorbike: { speedMultiplier: 1.05, displaySize: 44, bodyFillX: 0.35, bodyFillY: 0.8, surfaceClasses: ['asphalt'] },
-  duck: { speedMultiplier: 0.85, displaySize: 44, bodyFillX: 0.5, bodyFillY: 0.75, surfaceClasses: ['water'] },
-  luge: { speedMultiplier: 1.1, displaySize: 50, bodyFillX: 0.3, bodyFillY: 0.85, surfaceClasses: ['ice', 'snow'] },
-  boarder: { speedMultiplier: 1.0, displaySize: 48, bodyFillX: 0.4, bodyFillY: 0.8, surfaceClasses: ['snow'] },
-  manta: { speedMultiplier: 1.1, displaySize: 56, bodyFillX: 0.633, bodyFillY: 0.805, surfaceClasses: ['water'] },
-  dolphin: { speedMultiplier: 1.15, displaySize: 52, bodyFillX: 0.402, bodyFillY: 0.887, surfaceClasses: ['water'] },
-  snowmobile: { speedMultiplier: 1.1, displaySize: 52, bodyFillX: 0.459, bodyFillY: 0.797, surfaceClasses: ['snow', 'ice', 'earth'] },
+  horse: {
+    speedMultiplier: 1.0,
+    displaySize: 47,
+    bodyFillX: 0.353,
+    bodyFillY: 0.8,
+    surfaceClasses: ["earth"],
+  },
+  rocket: {
+    speedMultiplier: 1.25,
+    displaySize: 47,
+    bodyFillX: 0.278,
+    bodyFillY: 0.801,
+    surfaceClasses: ["space"],
+  },
+  snail: {
+    speedMultiplier: 0.3,
+    displaySize: 44,
+    bodyFillX: 0.75,
+    bodyFillY: 0.5,
+    surfaceClasses: ["garden"],
+  },
+  motorbike: {
+    speedMultiplier: 1.05,
+    displaySize: 44,
+    bodyFillX: 0.35,
+    bodyFillY: 0.8,
+    surfaceClasses: ["asphalt"],
+  },
+  duck: {
+    speedMultiplier: 0.85,
+    displaySize: 44,
+    bodyFillX: 0.5,
+    bodyFillY: 0.75,
+    surfaceClasses: ["water"],
+  },
+  luge: {
+    speedMultiplier: 1.1,
+    displaySize: 50,
+    bodyFillX: 0.3,
+    bodyFillY: 0.85,
+    surfaceClasses: ["ice", "snow"],
+  },
+  boarder: {
+    speedMultiplier: 1.0,
+    displaySize: 48,
+    bodyFillX: 0.4,
+    bodyFillY: 0.8,
+    surfaceClasses: ["snow"],
+  },
+  manta: {
+    speedMultiplier: 1.1,
+    displaySize: 56,
+    bodyFillX: 0.633,
+    bodyFillY: 0.805,
+    surfaceClasses: ["water"],
+  },
+  dolphin: {
+    speedMultiplier: 1.15,
+    displaySize: 52,
+    bodyFillX: 0.402,
+    bodyFillY: 0.887,
+    surfaceClasses: ["water"],
+  },
+  snowmobile: {
+    speedMultiplier: 1.1,
+    displaySize: 52,
+    bodyFillX: 0.459,
+    bodyFillY: 0.797,
+    surfaceClasses: ["snow", "ice", "earth"],
+  },
 };
 
 const trackCache = new Map();
@@ -113,7 +179,9 @@ const trackCache = new Map();
 /** Load a shipped track seed + its EditorShape, memoised. */
 export function loadTrack(trackId) {
   if (trackCache.has(trackId)) return trackCache.get(trackId);
-  const track = JSON.parse(readFileSync(join(ROOT, `server/seeds/tracks/${trackId}.json`), 'utf8'));
+  const track = JSON.parse(
+    readFileSync(join(ROOT, `server/seeds/tracks/${trackId}.json`), "utf8"),
+  );
   const shape = new EditorShape(track);
   const ctx = {
     trackId,
@@ -130,13 +198,18 @@ export function loadTrack(trackId) {
 
 /** A deterministic roster of N names — the browser's Quick-Test fill, in order. */
 export function rosterOf(n) {
-  return Array.from({ length: n }, (_, i) => ({ name: QUICK_TEST_NAMES[i] ?? `Racer${i}` }));
+  return Array.from({ length: n }, (_, i) => ({
+    name: QUICK_TEST_NAMES[i] ?? `Racer${i}`,
+  }));
 }
 export const RACER_NAMES = QUICK_TEST_NAMES;
 
 /** The world hash both arms stamp into the identity (shipped defaults — no export loaded). */
 export function shippedWorldHash() {
-  return hashWorld({ schemaVersion: WORLD_SCHEMA_VERSION, note: 'shipped-defaults' }).full;
+  return hashWorld({
+    schemaVersion: WORLD_SCHEMA_VERSION,
+    note: "shipped-defaults",
+  }).full;
 }
 
 /**
@@ -151,7 +224,14 @@ export function shippedWorldHash() {
  * @param {number} [p.laps]  explicit lap count for closed shapes
  * @returns {object} identity
  */
-export function buildIdentity({ trackId, racerType, seed, nRacers, shape, laps }) {
+export function buildIdentity({
+  trackId,
+  racerType,
+  seed,
+  nRacers,
+  shape,
+  laps,
+}) {
   const ctx = loadTrack(trackId);
   const cfg = RACER_CONFIGS[racerType];
   const V = normalSpeedFrom(DEFAULT_BASE_SPEED_CONFIG);
@@ -163,7 +243,7 @@ export function buildIdentity({ trackId, racerType, seed, nRacers, shape, laps }
   if (ctx.isOpen) {
     const natMax = ((1 - runout) * ctx.pathLengthPx) / pace;
     requestedSeconds =
-      shape === 'open-slowdown'
+      shape === "open-slowdown"
         ? Math.ceil(natMax * 1.5) // deliberately past the ceiling → uniform slowdown
         : Math.max(10, Math.floor(natMax * 0.6)); // comfortably in range
   } else {
@@ -181,7 +261,8 @@ export function buildIdentity({ trackId, racerType, seed, nRacers, shape, laps }
     runoutZone: runout,
   });
   const racePlanEnabled =
-    model.realizedDurationSec >= (DEFAULT_RACE_DYNAMICS_CONFIG.racePlanMinDurationSec ?? 30);
+    model.realizedDurationSec >=
+    (DEFAULT_RACE_DYNAMICS_CONFIG.racePlanMinDurationSec ?? 30);
 
   return {
     ...makeRaceIdentity({
@@ -210,12 +291,15 @@ export function buildIdentity({ trackId, racerType, seed, nRacers, shape, laps }
 
 function browserPlanConfig(dynamicsConfig) {
   return {
-    bonusStrengthMultiplier: dynamicsConfig.racePlanBonusStrengthMultiplier ?? 2.0,
+    bonusStrengthMultiplier:
+      dynamicsConfig.racePlanBonusStrengthMultiplier ?? 2.0,
     phaseSplitBonusEnabled: dynamicsConfig.phaseSplitBonusEnabled ?? false,
     areaBonusEarly: dynamicsConfig.areaBonusEarly ?? 1.0,
     areaBonusPulk: dynamicsConfig.areaBonusPulk ?? 0,
     areaBonusPost: dynamicsConfig.areaBonusPost ?? 1.0,
-    pulkStart: dynamicsConfig.racePlanPulkStart ?? DEFAULT_RACE_DYNAMICS_CONFIG.racePlanPulkStart,
+    pulkStart:
+      dynamicsConfig.racePlanPulkStart ??
+      DEFAULT_RACE_DYNAMICS_CONFIG.racePlanPulkStart,
     bonusTransitionEnd: dynamicsConfig.racePlanBonusTransitionEnd ?? 0.75,
     bonusFadeDuration: dynamicsConfig.racePlanBonusFadeDuration ?? 1500,
     corridorStart: dynamicsConfig.racePlanCorridorStart ?? 0.55,
@@ -229,20 +313,27 @@ function browserPlanConfig(dynamicsConfig) {
     choreoResolveB4: dynamicsConfig.choreoResolveB4 ?? 0.65,
     choreoResolveB5: dynamicsConfig.choreoResolveB5 ?? 0.6,
     choreoOutcomeStart:
-      dynamicsConfig.choreoOutcomeStart ?? DEFAULT_RACE_DYNAMICS_CONFIG.choreoOutcomeStart,
+      dynamicsConfig.choreoOutcomeStart ??
+      DEFAULT_RACE_DYNAMICS_CONFIG.choreoOutcomeStart,
     packReSteerThreshold: dynamicsConfig.packReSteerThreshold ?? 1.0,
-    b2AttackHeroes: dynamicsConfig.b2AttackHeroes ?? DEFAULT_RACE_DYNAMICS_CONFIG.b2AttackHeroes,
+    b2AttackHeroes:
+      dynamicsConfig.b2AttackHeroes ??
+      DEFAULT_RACE_DYNAMICS_CONFIG.b2AttackHeroes,
     b2AttackPeakRank: dynamicsConfig.b2AttackPeakRank ?? 5,
     b2AttackFinalRank:
-      dynamicsConfig.b2AttackFinalRank ?? DEFAULT_RACE_DYNAMICS_CONFIG.b2AttackFinalRank,
-    b2AttackProgress: dynamicsConfig.b2AttackProgress ?? { start: 0.4, end: 0.7 },
+      dynamicsConfig.b2AttackFinalRank ??
+      DEFAULT_RACE_DYNAMICS_CONFIG.b2AttackFinalRank,
+    b2AttackProgress: dynamicsConfig.b2AttackProgress ?? {
+      start: 0.4,
+      end: 0.7,
+    },
     b2AttackResolveProgress: dynamicsConfig.b2AttackResolveProgress ?? 0.85,
     b2AttackBandArrival: dynamicsConfig.b2AttackBandArrival ?? true,
     gapRerollThresholdLengths: dynamicsConfig.gapRerollEnabled
       ? (dynamicsConfig.gapRerollThresholdLengths ??
         DEFAULT_RACE_DYNAMICS_CONFIG.gapRerollThresholdLengths)
       : null,
-    gapRerollMode: dynamicsConfig.gapRerollMode ?? 'symmetric',
+    gapRerollMode: dynamicsConfig.gapRerollMode ?? "symmetric",
     gapRerollStrength: dynamicsConfig.gapRerollStrength ?? 1.0,
     reRollTransitionDuration: dynamicsConfig.reRollTransitionDuration,
     // COMBO15 fair-arrival mechanism — mirror of raceCore's createRacePlan wiring (kept in sync per the
@@ -283,7 +374,9 @@ function simPlanConfig(DYN) {
     b2AttackProgress: DYN.b2AttackProgress,
     b2AttackResolveProgress: DYN.b2AttackResolveProgress,
     b2AttackBandArrival: DYN.b2AttackBandArrival,
-    gapRerollThresholdLengths: DYN.gapRerollEnabled ? DYN.gapRerollThresholdLengths : null,
+    gapRerollThresholdLengths: DYN.gapRerollEnabled
+      ? DYN.gapRerollThresholdLengths
+      : null,
     gapRerollMode: DYN.gapRerollMode,
     gapRerollStrength: DYN.gapRerollStrength,
     reRollTransitionDuration: DYN.reRollTransitionDuration,
@@ -299,18 +392,32 @@ function simPlanConfig(DYN) {
 }
 
 /** Shared execution: identical from here down — the per-frame loop is single-sourced. */
-function execute({ ctx, cfg, identity, model, planConfig, behaviorConfig, laps, requestedSeconds }) {
+function execute({
+  ctx,
+  cfg,
+  identity,
+  model,
+  planConfig,
+  behaviorConfig,
+  laps,
+  requestedSeconds,
+}) {
   const { seed, nRacers } = identity;
-  const effectiveWidth = ctx.geometricTrackWidth * behaviorConfig.startSpreadRange;
+  const effectiveWidth =
+    ctx.geometricTrackWidth * behaviorConfig.startSpreadRange;
   // D-ROWCOUNT: use the ONE shared start-row count (rowLayout.js) — the browser's formula, which disagrees
   // with computeRacerLayout.rowCount for small sprites (dolphin: 4 vs 3). createRaceFromIdentity uses it too.
   const physicalSpriteSize = computeRacerLayout(
     effectiveWidth,
     nRacers,
     cfg.displaySize,
-    DEFAULT_AUTO_SCALE_CONFIG
+    DEFAULT_AUTO_SCALE_CONFIG,
   ).spriteSize;
-  const totalRows = computeStartRowCount(effectiveWidth, nRacers, physicalSpriteSize);
+  const totalRows = computeStartRowCount(
+    effectiveWidth,
+    nRacers,
+    physicalSpriteSize,
+  );
 
   const raceRng = makeRaceRng(seed).physics;
   const rowLayout = computeEvenRowLayout(nRacers, totalRows, raceRng);
@@ -326,7 +433,7 @@ function execute({ ctx, cfg, identity, model, planConfig, behaviorConfig, laps, 
       model.finishT,
       model.realizedDurationSec * 1000,
       planConfig,
-      seed
+      seed,
     );
     racePlanController = createTrajectoryController(plan);
     racerTargetRankMap = plan._racerTargetRank;
@@ -392,7 +499,12 @@ export function browserModel(identity) {
     laps: identity.isOpen ? 1 : (identity.laps ?? trackDefaultLaps(ctx.track)),
     requestedSeconds: identity.isOpen
       ? (identity.requestedSeconds ??
-        trackDefaultSeconds(ctx.track, ctx.pathLengthPx, pace, behaviorConfig.runoutZone))
+        trackDefaultSeconds(
+          ctx.track,
+          ctx.pathLengthPx,
+          pace,
+          behaviorConfig.runoutZone,
+        ))
       : 0,
     normalSpeedPxPerSec: V,
     speedMultiplier: cfg.speedMultiplier,
@@ -413,7 +525,12 @@ export function simModel(identity) {
     laps: ctx.isOpen ? 1 : (identity.laps ?? trackDefaultLaps(ctx.track)),
     requestedSeconds: ctx.isOpen
       ? (identity.requestedSeconds ??
-        trackDefaultSeconds(ctx.track, ctx.pathLengthPx, pace, behaviorConfig.runoutZone))
+        trackDefaultSeconds(
+          ctx.track,
+          ctx.pathLengthPx,
+          pace,
+          behaviorConfig.runoutZone,
+        ))
       : 0,
     normalSpeedPxPerSec: V,
     speedMultiplier: cfg.speedMultiplier,
@@ -435,10 +552,17 @@ export function browserArm(identity) {
 
   // SetupScreen resolves the operator inputs from the track defaults at THIS race's pace.
   const pace = paceSpeedPxPerSec(V, cfg.speedMultiplier);
-  const browserLaps = identity.isOpen ? 1 : (identity.laps ?? trackDefaultLaps(ctx.track));
+  const browserLaps = identity.isOpen
+    ? 1
+    : (identity.laps ?? trackDefaultLaps(ctx.track));
   const browserSeconds = identity.isOpen
     ? (identity.requestedSeconds ??
-      trackDefaultSeconds(ctx.track, ctx.pathLengthPx, pace, behaviorConfig.runoutZone))
+      trackDefaultSeconds(
+        ctx.track,
+        ctx.pathLengthPx,
+        pace,
+        behaviorConfig.runoutZone,
+      ))
     : 0;
 
   // RaceScreen re-derives the model from the payload's canonical inputs.
@@ -482,20 +606,28 @@ export function realArm(identity) {
   const V = normalSpeedFrom(baseSpeedConfig);
   const pace = paceSpeedPxPerSec(V, cfg.speedMultiplier);
 
-  const browserLaps = identity.isOpen ? 1 : (identity.laps ?? trackDefaultLaps(ctx.track));
+  const browserLaps = identity.isOpen
+    ? 1
+    : (identity.laps ?? trackDefaultLaps(ctx.track));
   const browserSeconds = identity.isOpen
     ? (identity.requestedSeconds ??
-      trackDefaultSeconds(ctx.track, ctx.pathLengthPx, pace, behaviorConfig.runoutZone))
+      trackDefaultSeconds(
+        ctx.track,
+        ctx.pathLengthPx,
+        pace,
+        behaviorConfig.runoutZone,
+      ))
     : 0;
 
   // Auto-scale exactly as RaceScreen/the sim compute it (no D3.5.5 override in a headless run — the
   // 600-identity soak already proved the browser and sim body dims agree on every identity).
-  const effectiveWidth = ctx.geometricTrackWidth * behaviorConfig.startSpreadRange;
+  const effectiveWidth =
+    ctx.geometricTrackWidth * behaviorConfig.startSpreadRange;
   const { spriteSize: physicalSpriteSize } = computeRacerLayout(
     effectiveWidth,
     identity.nRacers,
     cfg.displaySize,
-    DEFAULT_AUTO_SCALE_CONFIG
+    DEFAULT_AUTO_SCALE_CONFIG,
   );
   const bodyFillNarrow = Math.min(cfg.bodyFillX, cfg.bodyFillY);
   const bodyFillLong = Math.max(cfg.bodyFillX, cfg.bodyFillY);
@@ -505,7 +637,7 @@ export function realArm(identity) {
     identity.nRacers,
     cfg.displaySize,
     bodyFillNarrow,
-    DEFAULT_AUTO_SCALE_CONFIG
+    DEFAULT_AUTO_SCALE_CONFIG,
   );
 
   // Build the REAL browser race via the shared core, then AUGMENT each racer with the browser's roster
@@ -550,7 +682,8 @@ export function realArm(identity) {
     }
   }
   const dnf = state.racers.filter((r) => !r.finished).sort((a, b) => b.t - a.t);
-  for (let k = 0; k < dnf.length; k++) dnf[k].finishRank = state.finishedCount + 1 + k;
+  for (let k = 0; k < dnf.length; k++)
+    dnf[k].finishRank = state.finishedCount + 1 + k;
   const results = state.racers.map((r) => ({
     racerIndex: r.index,
     finalRank: r.finishRank,
@@ -558,7 +691,12 @@ export function realArm(identity) {
   }));
 
   const outcome = makeRaceOutcome({ results, checkpoints });
-  return { outcome, hash: hashOutcome(outcome), model: meta.durationModel, results };
+  return {
+    outcome,
+    hash: hashOutcome(outcome),
+    model: meta.durationModel,
+    results,
+  };
 }
 
 /**
@@ -573,10 +711,17 @@ export function simArm(identity) {
   const pace = paceSpeedPxPerSec(V, cfg.speedMultiplier);
 
   // The combo loop's --track-defaults resolution.
-  const comboLaps = ctx.isOpen ? 1 : (identity.laps ?? trackDefaultLaps(ctx.track));
+  const comboLaps = ctx.isOpen
+    ? 1
+    : (identity.laps ?? trackDefaultLaps(ctx.track));
   const comboSeconds = ctx.isOpen
     ? (identity.requestedSeconds ??
-      trackDefaultSeconds(ctx.track, ctx.pathLengthPx, pace, behaviorConfig.runoutZone))
+      trackDefaultSeconds(
+        ctx.track,
+        ctx.pathLengthPx,
+        pace,
+        behaviorConfig.runoutZone,
+      ))
     : 0;
 
   const model = deriveRaceDuration({

@@ -14,8 +14,8 @@
 // STAGE 0 IS MEASURE-ONLY: no correction is applied. Where a hypothetical correction WOULD apply we
 // only COUNT (duty-cycle projection, servo-conflict) — we never act.
 // ============================================================
-import { arcT } from '../../../client/src/modules/raceLengths.js';
-import { percentile } from './gap-metrics.mjs';
+import { arcT } from "../../../client/src/modules/raceLengths.js";
+import { percentile } from "./gap-metrics.mjs";
 
 export const COHESION_CAPS = [2, 3, 4, 5]; // candidate gap caps (racer lengths)
 const CPS = [0.25, 0.5, 0.75, 0.9]; // checkpoint progress fractions (+ the line)
@@ -29,7 +29,11 @@ export function consecutiveLinks(racers, isOpen, lenScale) {
     .sort((a, b) => (b.t !== a.t ? b.t - a.t : a.index - b.index));
   const links = [];
   for (let i = 0; i < live.length - 1; i++) {
-    links.push({ len: arcT(live[i].t, live[i + 1].t, isOpen) * lenScale, ahead: live[i], behind: live[i + 1] });
+    links.push({
+      len: arcT(live[i].t, live[i + 1].t, isOpen) * lenScale,
+      ahead: live[i],
+      behind: live[i + 1],
+    });
   }
   return { live, links };
 }
@@ -65,7 +69,14 @@ export function makeCohesionObserver({ isOpen, lenScale, finishT }) {
   const minLinks = []; // per-frame minimum link (the "glued" detector)
   let lineSnap = null;
   // Per candidate cap: framesOver (≥1 link over cap), candidate counts (duty), servo-conflict counts.
-  const perCap = COHESION_CAPS.map((cap) => ({ cap, framesOver: 0, candSum: 0, candMax: 0, totalCand: 0, servoConflictCand: 0 }));
+  const perCap = COHESION_CAPS.map((cap) => ({
+    cap,
+    framesOver: 0,
+    candSum: 0,
+    candMax: 0,
+    totalCand: 0,
+    servoConflictCand: 0,
+  }));
   // Hero adjacency of the frontmost link over the reference cap, tallied per frame it exists.
   const heroTally = { frames: 0, hh: 0, hp: 0, ph: 0, pp: 0 };
 
@@ -108,7 +119,8 @@ export function makeCohesionObserver({ isOpen, lenScale, finishT }) {
         cps.push({ progress: CPS[nextCp], ...snapshot(links) });
         nextCp++;
       }
-      if (!lineSnap && finishT > 0 && live[0].t >= finishT) lineSnap = snapshot(links);
+      if (!lineSnap && finishT > 0 && live[0].t >= finishT)
+        lineSnap = snapshot(links);
     },
 
     result() {
@@ -118,14 +130,21 @@ export function makeCohesionObserver({ isOpen, lenScale, finishT }) {
         checkpoints: cps,
         line: lineSnap,
         // The "glued" detector: how tight is the tightest gap each frame.
-        minLinkPerFrame: { median: +percentile(minLinks, 0.5).toFixed(3), p10: +percentile(minLinks, 0.1).toFixed(3) },
+        minLinkPerFrame: {
+          median: +percentile(minLinks, 0.5).toFixed(3),
+          p10: +percentile(minLinks, 0.1).toFixed(3),
+        },
         // The limiter-vs-spring numbers, per candidate cap.
         perCap: perCap.map((pc) => ({
           cap: pc.cap,
           fracTimeExceeded: frames ? +(pc.framesOver / frames).toFixed(4) : 0, // fraction of frames with ≥1 over-cap link
-          dutyMeanCandidates: pc.framesOver ? +(pc.candSum / pc.framesOver).toFixed(2) : 0, // mean racers corrected WHEN active
+          dutyMeanCandidates: pc.framesOver
+            ? +(pc.candSum / pc.framesOver).toFixed(2)
+            : 0, // mean racers corrected WHEN active
           dutyMaxCandidates: pc.candMax, // most racers corrected at once
-          servoConflictFrac: pc.totalCand ? +(pc.servoConflictCand / pc.totalCand).toFixed(4) : 0, // of correction-instances, share where the servo pushes up
+          servoConflictFrac: pc.totalCand
+            ? +(pc.servoConflictCand / pc.totalCand).toFixed(4)
+            : 0, // of correction-instances, share where the servo pushes up
         })),
         // Hero adjacency of the frontmost over-(refCap) link: settles whether the chasm is hero→hero.
         heroFrontmost: {

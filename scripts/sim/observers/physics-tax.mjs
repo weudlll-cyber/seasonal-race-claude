@@ -82,9 +82,9 @@ export function makePhysicsTaxTracker(opts = {}) {
     if (!a) {
       a = {
         index,
-        applied: 0,       // sum vAppl        (distance actually covered)
-        brakeLoss: 0,     // sum brakeLoss    (distance braking removed)
-        draftGain: 0,     // sum draftGain    (distance drafting added)
+        applied: 0, // sum vAppl        (distance actually covered)
+        brakeLoss: 0, // sum brakeLoss    (distance braking removed)
+        draftGain: 0, // sum draftGain    (distance drafting added)
         frames: 0,
         brakeFrames: 0,
         decApplied: new Array(nDec).fill(0),
@@ -100,8 +100,10 @@ export function makePhysicsTaxTracker(opts = {}) {
   // lengths and the field mean speed in lengths/second — accumulated as a mean over the race so the
   // audit's "mean adjacent-rank gap" and "field speed" are measured, not assumed. Pure sums.
   const geom = {
-    spreadLenSum: 0, spreadFrames: 0,
-    speedLenPerSecSum: 0, speedFrames: 0,
+    spreadLenSum: 0,
+    spreadFrames: 0,
+    speedLenPerSecSum: 0,
+    speedFrames: 0,
     nLiveSum: 0,
   };
 
@@ -147,15 +149,23 @@ export function makePhysicsTaxTracker(opts = {}) {
 
     /** Race-mean field geometry — the measured density the P1 audit consumes. */
     fieldGeom() {
-      const meanSpread = geom.spreadFrames > 0 ? geom.spreadLenSum / geom.spreadFrames : null;
-      const meanNLive = geom.spreadFrames > 0 ? geom.nLiveSum / geom.spreadFrames : null;
+      const meanSpread =
+        geom.spreadFrames > 0 ? geom.spreadLenSum / geom.spreadFrames : null;
+      const meanNLive =
+        geom.spreadFrames > 0 ? geom.nLiveSum / geom.spreadFrames : null;
       const r6 = (x) => (x == null ? null : +Number(x).toFixed(6));
       return {
         meanFullSpreadLen: r6(meanSpread),
         meanNLive: r6(meanNLive),
         // Mean adjacent-rank gap = full spread / (live count - 1). The density the audit divides by.
-        meanRankGapLen: meanSpread != null && meanNLive > 1 ? r6(meanSpread / (meanNLive - 1)) : null,
-        meanFieldSpeedLenPerSec: geom.speedFrames > 0 ? r6(geom.speedLenPerSecSum / geom.speedFrames) : null,
+        meanRankGapLen:
+          meanSpread != null && meanNLive > 1
+            ? r6(meanSpread / (meanNLive - 1))
+            : null,
+        meanFieldSpeedLenPerSec:
+          geom.speedFrames > 0
+            ? r6(geom.speedLenPerSecSum / geom.speedFrames)
+            : null,
       };
     },
 
@@ -193,10 +203,14 @@ const asc = (a, b) => a - b;
 export const pctl = (arr, p) => {
   if (!arr.length) return null;
   const s = [...arr].sort(asc);
-  const i = Math.min(s.length - 1, Math.max(0, Math.ceil((p / 100) * s.length) - 1));
+  const i = Math.min(
+    s.length - 1,
+    Math.max(0, Math.ceil((p / 100) * s.length) - 1),
+  );
   return s[i];
 };
-export const mean = (a) => (a.length ? a.reduce((s, x) => s + x, 0) / a.length : 0);
+export const mean = (a) =>
+  a.length ? a.reduce((s, x) => s + x, 0) / a.length : 0;
 
 /**
  * Turn a set of raw per-race records into the three answers P0 must produce:
@@ -220,7 +234,8 @@ export function summarizePhysicsTax(races, bandHalfWidth) {
       lost.push(p.lostFrac);
       draft.push(p.draftGainFrac);
       brakeShare.push(p.brakeFrameShare);
-      for (let i = 0; i < nDec; i++) if (p.decLostFrac[i] != null) decLost[i].push(p.decLostFrac[i]);
+      for (let i = 0; i < nDec; i++)
+        if (p.decLostFrac[i] != null) decLost[i].push(p.decLostFrac[i]);
     }
   }
 
@@ -235,21 +250,36 @@ export function summarizePhysicsTax(races, bandHalfWidth) {
     bandHalfWidth,
     // The tax itself, as a fraction of distance.
     lostFrac: {
-      mean: mean(lost), p50: pctl(lost, 50), p90: pctl(lost, 90),
-      p95: pctl(lost, 95), max: lost.length ? Math.max(...lost) : null,
+      mean: mean(lost),
+      p50: pctl(lost, 50),
+      p90: pctl(lost, 90),
+      p95: pctl(lost, 95),
+      max: lost.length ? Math.max(...lost) : null,
     },
     // The same thing expressed as band authority consumed — this is sigma.
     sigma: {
-      mean: sigmaOf(mean(lost)), p50: sigmaOf(pctl(lost, 50)), p90: sigmaOf(pctl(lost, 90)),
-      p95: sigmaOf(pctl(lost, 95)), max: lost.length ? sigmaOf(Math.max(...lost)) : null,
+      mean: sigmaOf(mean(lost)),
+      p50: sigmaOf(pctl(lost, 50)),
+      p90: sigmaOf(pctl(lost, 90)),
+      p95: sigmaOf(pctl(lost, 95)),
+      max: lost.length ? sigmaOf(Math.max(...lost)) : null,
     },
     draftGainFrac: { mean: mean(draft), p95: pctl(draft, 95) },
-    brakeFrameShare: { mean: mean(brakeShare), p50: pctl(brakeShare, 50), p95: pctl(brakeShare, 95) },
+    brakeFrameShare: {
+      mean: mean(brakeShare),
+      p50: pctl(brakeShare, 50),
+      p95: pctl(brakeShare, 95),
+    },
     decileMeanLostFrac: decileMeans,
     // Last decile — the residual exposure after the final re-plan.
-    tailLostFrac: decileMeans.length ? decileMeans[decileMeans.length - 1] : null,
-    tailSigma: decileMeans.length ? sigmaOf(decileMeans[decileMeans.length - 1]) : null,
+    tailLostFrac: decileMeans.length
+      ? decileMeans[decileMeans.length - 1]
+      : null,
+    tailSigma: decileMeans.length
+      ? sigmaOf(decileMeans[decileMeans.length - 1])
+      : null,
     // 1.0 = perfectly uniform drag; higher = concentrated in a few places.
-    concentration: worst != null && overallMean > 0 ? worst / overallMean : null,
+    concentration:
+      worst != null && overallMean > 0 ? worst / overallMean : null,
   };
 }

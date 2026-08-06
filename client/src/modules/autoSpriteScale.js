@@ -42,8 +42,25 @@ export function computeAutoScaleFactor(trackWidth, racerCount, config) {
   return Math.max(minScale, Math.min(maxScale, densityFactor));
 }
 
-/** The reference canvas height the frame fractions below are expressed against. */
-const CANVAS_H_REF = 720;
+/**
+ * The reference canvas height the frame fractions below are expressed against.
+ *
+ * THIS IS A DELIBERATE DUPLICATE OF `camera/projection.js`'s `REFERENCE_CANVAS_H`, and it stays one
+ * (ONE-TRUTH-1 stage 6). It is the same 720 and the same fact, but it cannot be imported from there:
+ *
+ *   1. This file is inside the ENGINE REACH — the transitive closure of `raceCore.js`'s imports,
+ *      the set the mint tripwire and `npm run verify` both route on. Importing from `camera/` would
+ *      pull the projection module INTO that closure, growing it from 19 files and changing what
+ *      every future block is asked to mint for.
+ *   2. It would breach the one-way rule (CAMERA_DIRECTOR.md §1): the camera imports from the
+ *      modules, never the reverse.
+ *
+ * So the duplication is kept and GUARDED instead: `autoSpriteScale.test.js` asserts this constant
+ * equals `REFERENCE_CANVAS_H`, and fails the moment they diverge. A test may import from anywhere;
+ * it is not in the closure. Exporting the value costs nothing and changes no behaviour — it only
+ * makes the fact reachable by the guard.
+ */
+export const CANVAS_H_REF = 720;
 
 /**
  * Compute the final world-space sprite scale for rendering.

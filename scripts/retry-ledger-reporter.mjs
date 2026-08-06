@@ -32,8 +32,68 @@
 //   - It does not persist across runs, so it cannot tell you a test retried yesterday too.
 //   - It reports vitest's own `flaky` flag; it does not independently verify that a pass after a
 //     retry is a real pass rather than a test that only passes when warm.
-//   - It counts ATTEMPTS, not wall clock: it cannot say how much time the retries cost.
+//   - It cannot split the DURATION per attempt — vitest 4 exposes only the test's total, so the
+//     ledger prints the total and does not guess how the retries divided it.
 // ============================================================
+
+/**
+ * THE REASON CLASS for one failed attempt. A retry count without a cause is not an artifact — this
+ * is the difference between "the machine was busy" and "a result changed", and those have opposite
+ * answers.
+ *
+ *   timeout     — the attempt exceeded its limit. A SCHEDULING fact, not a correctness one.
+ *   assertion   — an expectation failed. With fixed seeds that means a RESULT MOVED; escalate.
+ *   process     — spawn/permission/OS-level failure. Neither the test nor the machine's speed.
+ *   error       — the test threw something else.
+ *   unavailable — vitest recorded no error for this attempt. Printed as "reason unavailable",
+ *                 NEVER as a blank: a blank reads as "no reason" rather than "not recorded".
+ */
+export function reasonClass(err) {
+  if (!err) return "unavailable";
+  const name = String(err.name ?? "");
+  const msg = String(err.message ?? "");
+  if (!name && !msg) return "unavailable";
+  if (/timed out in \d+\s*ms/i.test(msg) || /timeout/i.test(name))
+    return "timeout";
+  if (
+    /assertion/i.test(name) ||
+    /^expected /i.test(msg) ||
+    /toBe|toEqual|toMatch/.test(msg)
+  )
+    return "assertion";
+  if (/spawn|ENOENT|EPERM|EACCES|EBUSY|0xC0000142|child process/i.test(msg))
+    return "process";
+  return "error";
+}
+
+/**
+ * Per-ATTEMPT reasons for one test.
+ *
+ * WHAT IS AVAILABLE, PROBED RATHER THAN ASSUMED: `result().errors` holds ONE entry per FAILED
+ * attempt, in order, so attempt N's reason is `errors[N]`. Per-attempt DURATION is NOT exposed
+ * anywhere in the vitest 4 reporter API — only the test's total. Rather than invent a split, the
+ * ledger prints the total and says nothing it cannot know.
+ */
+export function attemptReasons(errors, attempts) {
+  const out = [];
+  const failed = errors?.length ?? 0;
+  for (let i = 0; i < attempts; i++) {
+    const err = errors?.[i];
+    // A passing test's LAST attempt has no error: it succeeded.
+    const passedHere = i === attempts - 1 && failed < attempts;
+    out.push({
+      attempt: i + 1,
+      status: passedHere ? "passed" : "failed",
+      reason: passedHere ? "passed" : reasonClass(err),
+      detail: err
+        ? String(err.message ?? "")
+            .split("\n")[0]
+            .slice(0, 90)
+        : "",
+    });
+  }
+  return out;
+}
 
 /**
  * The ledger rows for a finished run, from vitest 4's reporter API.
@@ -63,13 +123,16 @@ export function rowsFromModules(modules) {
       const d = typeof t.diagnostic === "function" ? t.diagnostic() : null;
       const retries = d?.retryCount ?? 0;
       if (retries > 0) {
+        const res = typeof t.result === "function" ? t.result() : null;
         rows.push({
           file,
           name: t.fullName ?? "(unnamed test)",
           // retryCount is the number of RE-tries, so attempts is one more.
           attempts: retries + 1,
-          state: t.result?.()?.state ?? "unknown",
+          state: res?.state ?? "unknown",
           flaky: !!d?.flaky,
+          totalMs: d?.duration ?? null,
+          attemptsDetail: attemptReasons(res?.errors, retries + 1),
         });
       }
     }
@@ -100,10 +163,22 @@ export function formatLedger(rows) {
     (a, b) => b[1].length - a[1].length,
   )) {
     out.push(`  ${file}  — ${rs.length} test(s)`);
-    for (const r of rs)
+    for (const r of rs) {
+      const total =
+        r.totalMs != null ? `, ${Math.round(r.totalMs)} ms total` : "";
       out.push(
-        `      ${r.attempts} attempts, final ${r.state}${r.flaky ? " (flaky)" : ""}: ${r.name}`,
+        `      ${r.attempts} attempts, final ${r.state}${r.flaky ? " (flaky)" : ""}${total}: ${r.name}`,
       );
+      for (const a of r.attemptsDetail ?? []) {
+        const why =
+          a.reason === "passed"
+            ? "passed"
+            : a.reason === "unavailable"
+              ? "reason unavailable"
+              : `${a.reason}${a.detail ? ` — ${a.detail}` : ""}`;
+        out.push(`          attempt ${a.attempt}: ${a.status}, ${why}`);
+      }
+    }
   }
   return out;
 }

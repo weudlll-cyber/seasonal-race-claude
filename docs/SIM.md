@@ -68,13 +68,13 @@ Both sides import the identical physics modules:
 
 Since 2026-07, the browser can replay a race exactly — the same mechanism the sim uses.
 
-| Quick-Test seed field | behavior |
-|---|---|
-| **empty** (default) | **Random but replayable.** Each race draws a fresh seed (1–9999) *before* it starts, then runs fully deterministic with it. Every race differs — the normal Quick-Test case, no input needed — and the HUD shows the drawn value, so any race can be replayed afterwards by typing that number. |
-| **a typed number** | **Fixed.** Every run with that number is the same race, move-for-move. |
-| ~~0~~ | Not reachable from Quick-Test: 0 is clamped up to 1, and an empty field means *random*, not *unseeded*. |
+| Quick-Test seed field | behavior                                                                                                                                                                                                                                                                                        |
+| --------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **empty** (default)   | **Random but replayable.** Each race draws a fresh seed (1–9999) _before_ it starts, then runs fully deterministic with it. Every race differs — the normal Quick-Test case, no input needed — and the HUD shows the drawn value, so any race can be replayed afterwards by typing that number. |
+| **a typed number**    | **Fixed.** Every run with that number is the same race, move-for-move.                                                                                                                                                                                                                          |
+| ~~0~~                 | Not reachable from Quick-Test: 0 is clamped up to 1, and an empty field means _random_, not _unseeded_.                                                                                                                                                                                         |
 
-In both Quick-Test cases the seed drives the plan *and* the dynamics: start rows, initial `spreadFactor`s, every scheduled re-roll, and both roll jitters.
+In both Quick-Test cases the seed drives the plan _and_ the dynamics: start rows, initial `spreadFactor`s, every scheduled re-roll, and both roll jitters.
 
 The normal **"Start Race"** path still sends `racePlanSeed: 0` — the unseeded legacy path, where the plan is unseeded too (`seed > 0` is the condition for using mulberry32) and the dynamics come from the native `Math.random()`. Only Quick-Test is reproducible today; seeding "Start Race" is an open owner decision (see BACKLOG).
 
@@ -82,21 +82,21 @@ The random draw happens once in `SetupScreen/quickTestSeed.js` (`resolveQuickTes
 
 Mechanism (parity step 1, 2026-07-23): the race-init effect in `RaceScreen/index.jsx` builds ONE explicit seeded stream, `makeRaceRng(racePlanSeed).physics`, and threads it through every physics draw site — start-row shuffle, initial `spreadFactor`s, both roll jitters, and every scheduled re-roll — the same shared `makeRaceRng` (racePlanner.js) the sim now uses. This **replaces the former global-`Math.random` swap**, whose defect was that per-frame render draws (camera framing, trail/particle spawns) consumed the same global and shifted the physics stream by frame rate, camera state and slow-mo. With an explicit stream those render draws stay on the native `Math.random` and can no longer touch the race. With `seed <= 0` (the "Start Race" path) `makeRaceRng` returns the native generator, so every pre-existing unseeded path is byte-identical to before.
 
-> **Practical note.** Before this change the HUD showed `seed:1` on every Quick-Test while the races clearly differed — the number was the *plan* seed only, and the dynamics were unseeded. The HUD now reads `seed:N` only when the race really is reproducible (which, in Quick-Test, is always), and `unseeded` on the legacy `racePlanSeed: 0` path.
+> **Practical note.** Before this change the HUD showed `seed:1` on every Quick-Test while the races clearly differed — the number was the _plan_ seed only, and the dynamics were unseeded. The HUD now reads `seed:N` only when the race really is reproducible (which, in Quick-Test, is always), and `unseeded` on the legacy `racePlanSeed: 0` path.
 >
 > **The seeded browser race is now frame-rate independent** — a given seed replays move-for-move regardless of frame pacing, camera state or slow-mo (proven by `RaceScreen/seedDeterminism.test.js`, which asserts identical finishing order + checkpointed progress across wildly different pacing profiles). This is the property parity step 1 delivered by isolating the physics RNG from render.
 >
-> **Cross-tool parity (updated 2026-07-23, parity step 2a — D-GRID unified).** The browser and sim now draw the *same physics stream* AND the *same start-row grid* for a seed: one per-race shuffle feeds both the race plan's target-ranks and the physical placement, on both sides (the sim's former per-combo FNV grid is deleted). To reproduce a browser seed `S` in the sim, run `--seed=S --races=1` (the sim derives race `i` as `(N−1)×N_RACES + i + 1`, which is `S` at `N=1, i=0`) with the same track, racer count and shipped default config. With those matched, the finishing order should agree. The **speed/duration model is now shared too** (2026-07 ship): both sides call `deriveRaceDuration` in `client/src/modules/durationModel.js`, so finishT, `race_baseSpeed`, the re-roll schedule and the plan duration are identical by construction — `scripts/diag/micro-divergence.mjs` reports a checkpoint diff of exactly zero. Reproduce a browser race with `--laps=N` (closed) or `--seconds=S` (open), or `--track-defaults` for the shipped defaults. The remaining known gap is any config the sim reads from defaults rather than an exported world; a full headless golden-test harness is deferred. The pre-unification absolute baselines are retired — see [reports/BASELINE-INVALIDATED.md](../reports/BASELINE-INVALIDATED.md).
+> **Cross-tool parity (updated 2026-07-23, parity step 2a — D-GRID unified).** The browser and sim now draw the _same physics stream_ AND the _same start-row grid_ for a seed: one per-race shuffle feeds both the race plan's target-ranks and the physical placement, on both sides (the sim's former per-combo FNV grid is deleted). To reproduce a browser seed `S` in the sim, run `--seed=S --races=1` (the sim derives race `i` as `(N−1)×N_RACES + i + 1`, which is `S` at `N=1, i=0`) with the same track, racer count and shipped default config. With those matched, the finishing order should agree. The **speed/duration model is now shared too** (2026-07 ship): both sides call `deriveRaceDuration` in `client/src/modules/durationModel.js`, so finishT, `race_baseSpeed`, the re-roll schedule and the plan duration are identical by construction — `scripts/diag/micro-divergence.mjs` reports a checkpoint diff of exactly zero. Reproduce a browser race with `--laps=N` (closed) or `--seconds=S` (open), or `--track-defaults` for the shipped defaults. The remaining known gap is any config the sim reads from defaults rather than an exported world; a full headless golden-test harness is deferred. The pre-unification absolute baselines are retired — see [reports/BASELINE-INVALIDATED.md](../reports/BASELINE-INVALIDATED.md).
 
 ### File locations
 
-| File | Purpose |
-|---|---|
-| `scripts/sim-fairness.mjs` | Main headless simulator and flag-driven harness — single run, full metric report; shares its physics modules with the browser (the single source for both) |
-| `scripts/fingerprint-default.mjs` | Byte-identity gate — hashes the shipped-default sim run across all 10 tracks to prove a change left the default game byte-identical |
-| `scripts/camera-fingerprint.mjs` | The CAMERA's change detector — every director decision on every frame across all 10 tracks. Current **`00cafa2432add0f7`** |
-| `scripts/render-fingerprint.mjs` | The RENDER path's change detector — the draw-call SEQUENCE at sixteen fixed frames, reaching the finish. Current **`1f83ecc1fcb6fa9a`** |
-| `scripts/exp-runaway-leader.mjs` | Living reference sweep orchestrator (spawn per track → classify → CSV + `SUMMARY.md`); see [SWEEP-HARNESS.md](SWEEP-HARNESS.md) |
+| File                              | Purpose                                                                                                                                                    |
+| --------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `scripts/sim-fairness.mjs`        | Main headless simulator and flag-driven harness — single run, full metric report; shares its physics modules with the browser (the single source for both) |
+| `scripts/fingerprint-default.mjs` | Byte-identity gate — hashes the shipped-default sim run across all 10 tracks to prove a change left the default game byte-identical                        |
+| `scripts/camera-fingerprint.mjs`  | The CAMERA's change detector — every director decision on every frame across all 10 tracks. Current **`00cafa2432add0f7`**                                 |
+| `scripts/render-fingerprint.mjs`  | The RENDER path's change detector — the draw-call SEQUENCE at sixteen fixed frames, reaching the finish. Current **`1f83ecc1fcb6fa9a`**                    |
+| `scripts/exp-runaway-leader.mjs`  | Living reference sweep orchestrator (spawn per track → classify → CSV + `SUMMARY.md`); see [SWEEP-HARNESS.md](SWEEP-HARNESS.md)                            |
 
 > The standalone `param-sweep*` scripts (5-axis, 8-axis LHS+Phase-2, braking, lateral) that older
 > revisions of this doc listed have all been **deleted**. Sweeping is now done through the
@@ -109,6 +109,44 @@ Mechanism (parity step 1, 2026-07-23): the race-init effect in `RaceScreen/index
 > regression pair. Standing gates are now `fingerprint-default.mjs` (byte-identity) + the
 > `sim-fairness.mjs` harness driven by flags; ad-hoc single-knob sweeps remain (below). Recoverable at
 > commit `0bb639d~1` (the state before the step-4 deletion).
+
+### What the race engine can reach
+
+<!-- BEGIN GENERATED: engine reach — gen-engine-reach-doc.mjs -->
+
+**This list is GENERATED, never typed** — `node scripts/gen-engine-reach-doc.mjs` reads the
+closure from `scripts/engine-reach.mjs` and each purpose from the FILE'S OWN header. These are the
+**19 files that can change the race**: touch one and the world fingerprint is owed, which
+is exactly what the pre-commit tripwire and `npm run verify` route on.
+
+A file whose header states no purpose is listed as **UNKNOWN**. That is a true statement about the
+repository rather than a guess — give the FILE a header line and this table improves by itself.
+
+| File                            | What it is, in its own words                                                                                                                                                  |
+| ------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `modules/autoSpriteScale.js`    | Auto-sprite-scaling formula and config storage (D10).                                                                                                                         |
+| `modules/camera/lapUtils.js`    | **UNKNOWN** — the file's header states no purpose                                                                                                                             |
+| `modules/durationModel.js`      | THE canonical speed/duration derivation — ONE model, used verbatim by the browser (RaceScreen/SetupScreen) and by the headless sims.                                          |
+| `modules/heroChoreography.js`   | Pure hero position-curve helper for the choreo choreographed director (Step 1).                                                                                               |
+| `modules/heroCurveGenerator.js` | choreo Step 2 — PURE hero-curve GENERATOR.                                                                                                                                    |
+| `modules/raceBaseSpeed.js`      | Duration-driven base speed for the race engine (PR-A2).                                                                                                                       |
+| `modules/raceBehavior.js`       | Pure racer-behavior logic for D7b: lane-free avoidance and drafting on continuous physicalY in normalized track-width space.                                                  |
+| `modules/raceBehaviorConfig.js` | Storage CRUD for race-behavior tuning config (D7b).                                                                                                                           |
+| `modules/raceCore.js`           | the REAL race init + per-step advance, extracted from screens/RaceScreen/index.jsx so it is importable WITHOUT the DOM.                                                       |
+| `modules/raceDynamicsConfig.js` | Storage CRUD for race-dynamics (re-roll) tuning config.                                                                                                                       |
+| `modules/raceGovernor.js`       | The PULK-phase contest director.                                                                                                                                              |
+| `modules/raceLengths.js`        | the ONE source for the racer-LENGTH unit.                                                                                                                                     |
+| `modules/racePlanner.js`        | Race Plan / Trajectory Generator — Phase 3A M2v2 Pure JS, no DOM/React dependencies.                                                                                          |
+| `modules/raceStep.js`           | the ONE per-frame t-update, imported by BOTH the browser race loop (screens/RaceScreen/index.jsx) AND the fairness sim (scripts/sim-fairness.mjs).                            |
+| `modules/rowLayout.js`          | D7c row-start layout logic: racer-to-row assignment (shuffled), physicalY distribution within a row, speed-bonus compensation for rear rows, and track-capacity auto-default. |
+| `modules/storage/defaults.js`   | Default data for all storage keys — seeded on first launch                                                                                                                    |
+| `modules/storage/storage.js`    | localStorage key registry and low-level read/write helpers                                                                                                                    |
+| `modules/utils/RandomHelper.js` | Shuffle and random assignment utilities used in the setup flow                                                                                                                |
+| `utils/mathUtils.js`            | Shared interpolation helpers — single source of truth (see Lessons on "one source").                                                                                          |
+
+19 files, 1 of them UNKNOWN.
+
+<!-- END GENERATED: engine reach -->
 
 ---
 
@@ -155,11 +193,11 @@ With `--seed=N` (N > 0), race `i` uses seed `(N−1)×N_RACES + i + 1`. This mak
 
 > **Determinism fix (2026-07, commit `3f9a055`).** Before this fix, `--seed` did NOT
 > fully control a run: the start-row shuffle (`rowLayout.js` → `RandomHelper.shuffle`)
-> used global `Math.random()` and ran *before* the per-race seeded scope, so two runs
+> used global `Math.random()` and ran _before_ the per-race seeded scope, so two runs
 > with the same `--seed` produced different start-row assignments. The fix makes
 > `shuffle(array, rng = Math.random)` take an optional RNG (default `Math.random`, so the
 > **browser game is byte-for-byte unchanged**); the sim now seeds the combo row-layout RNG
-> before the race loop. `--seed=N` now controls the *whole* batch. Verify with a same-seed
+> before the race loop. `--seed=N` now controls the _whole_ batch. Verify with a same-seed
 > double-run: two runs at the same seed must be **bit-identical** (identical SHA256).
 >
 > **Gate methodology.** A hard "band-reach ≥70% per track on ONE 50-race run" gate is a
@@ -279,12 +317,12 @@ Writes per-race JSON snapshots at 0.0s, 0.2s, 0.4s, 0.6s, 0.8s, 1.0s, 2.0s, 5.0s
 **Zone boundaries:**
 
 | Zone | Rank range | Speed bonus |
-|---|---|---|
-| B1 | 1–5 | +6% |
-| B2 | 6–15 | +4% |
-| B3 | 16–25 | +2% |
-| B4 | 26–40 | ±0% |
-| B5 | 41+ | −2% |
+| ---- | ---------- | ----------- |
+| B1   | 1–5        | +6%         |
+| B2   | 6–15       | +4%         |
+| B3   | 16–25      | +2%         |
+| B4   | 26–40      | ±0%         |
+| B5   | 41+        | −2%         |
 
 **What it measures:** Whether the Race Plan system works uniformly across all target positions or favors front/rear zones.
 
@@ -346,17 +384,18 @@ Writes per-race JSON snapshots at 0.0s, 0.2s, 0.4s, 0.6s, 0.8s, 1.0s, 2.0s, 5.0s
 
 **Formula:** Fraction of racer-pair-frames where `|dT| < 0.10 × bodyFillY × displaySize / pathLengthPx` AND `|dY| < 0.10 × bodyFillX × displaySize / trackWidth`. Thresholds are 10% of each body-fill diameter, converting to normalized track coordinates.
 
-**What it measures:** Whether any pair of racer *centers* are nearly coincident — roughly within 3–4 px in both axes simultaneously.
+**What it measures:** Whether any pair of racer _centers_ are nearly coincident — roughly within 3–4 px in both axes simultaneously.
 
 **Good:** Lower is better. No hard cutoff.
 
-**Limitations — IMPORTANT:** This metric is **blind to rendered-body overlap during overtaking** (Lesson 126). Physics keeps centers at least `physSlot` apart (≈30–40 px), so the threshold (~3–4 px) is never reached under normal avoidance. The metric reads 0% even while racers' *rendered bodies* (which can be 20–40 px long) visually cross during a pass. Use `honestOverlapRate` to detect real body-box intersections.
+**Limitations — IMPORTANT:** This metric is **blind to rendered-body overlap during overtaking** (Lesson 126). Physics keeps centers at least `physSlot` apart (≈30–40 px), so the threshold (~3–4 px) is never reached under normal avoidance. The metric reads 0% even while racers' _rendered bodies_ (which can be 20–40 px long) visually cross during a pass. Use `honestOverlapRate` to detect real body-box intersections.
 
 ---
 
 ### honestOverlapRate (new body-extent metric)
 
 **Formula:** Fraction of active racer-pair-frames (after 4 s warmup) where both of the following hold simultaneously:
+
 - Longitudinal gap `< effectiveDisplaySize × bodyFillY` (rendered bodies touch or overlap lengthwise)
 - Lateral gap `< effectiveDisplaySize × bodyFillX` (rendered bodies touch or overlap laterally)
 
@@ -366,15 +405,16 @@ For closed tracks, the longitudinal distance wraps by one lap (`tPos mod 1`) so 
 
 **Good:** Lower is better. Typical values: open tracks 0.5–4% (dragon-type wide bodies); closed short ovals 5–8% (pack crowding — see Known Limitations). A value of 0% means no body-box intersections at any moment after warmup.
 
-**Limitations:** A non-zero value on *closed tracks* is almost always **same-lap pack crowding** (many bodies on a short perimeter), not lapping — measured directly: max progress spread in 60s homogeneous races is 0.2–0.55 laps, well below the 1.0-lap threshold for a genuine lap-over. The open-track counterpart (Lesson P-1 BACKLOG) is actual body-crossing during overtaking and is a physics bug under investigation.
+**Limitations:** A non-zero value on _closed tracks_ is almost always **same-lap pack crowding** (many bodies on a short perimeter), not lapping — measured directly: max progress spread in 60s homogeneous races is 0.2–0.55 laps, well below the 1.0-lap threshold for a genuine lap-over. The open-track counterpart (Lesson P-1 BACKLOG) is actual body-crossing during overtaking and is a physics bug under investigation.
 
 ---
 
 ### fairChanceExactRate / fairChanceTop5Rate / fairChanceByRow
 
 **Formula:**
-- `fairChanceExactRate`: of all B1-assigned racers (targetRank 1–5) across all races in the combo, what fraction finished at their *exact* assigned rank?
-- `fairChanceTop5Rate`: same denominator, what fraction finished *anywhere* in positions 1–5?
+
+- `fairChanceExactRate`: of all B1-assigned racers (targetRank 1–5) across all races in the combo, what fraction finished at their _exact_ assigned rank?
+- `fairChanceTop5Rate`: same denominator, what fraction finished _anywhere_ in positions 1–5?
 - `fairChanceByRow`: same rates broken down by each racer's **starting row**. Answers whether back-row designated racers reach top-5 as often as front-row ones.
 
 **What it measures:** Whether the race plan's B1 designation actually delivers racers to the top positions, and whether the row-blind lottery is truly row-blind in practice.
@@ -390,6 +430,7 @@ For closed tracks, the longitudinal distance wraps by one lap (`tPos mod 1`) so 
 ### maxRealSpread / honestSameLapFraction / honestCrossLapFraction (closed tracks only)
 
 **Formula:**
+
 - `maxRealSpread`: maximum `(t_leading − t_trailing)` observed across all active racer pairs and all frames during the race, in laps (1.0 = one full lap).
 - `honestSameLapFraction`: fraction of honest-overlap events where `|ra.t − rb.t| < 1.0` (same lap or seam-adjacent).
 - `honestCrossLapFraction`: fraction where `|ra.t − rb.t| ≥ 1.0` (genuine lapping: leader is 1+ full lap ahead).
@@ -400,7 +441,7 @@ For closed tracks, the longitudinal distance wraps by one lap (`tPos mod 1`) so 
 
 **Requires:** Closed track (`isOpen = false`). Returns 0 / null for open tracks.
 
-**Limitations:** Open tracks always show `maxRealSpread = 0` and `honestSameLapFraction = null` — the lapping metrics are meaningless there. Lapping *could* occur on closed tracks if the race is long enough or racer speeds differ greatly; `maxRealSpread ≥ 1.0` would confirm it.
+**Limitations:** Open tracks always show `maxRealSpread = 0` and `honestSameLapFraction = null` — the lapping metrics are meaningless there. Lapping _could_ occur on closed tracks if the race is long enough or racer speeds differ greatly; `maxRealSpread ≥ 1.0` would confirm it.
 
 ---
 
@@ -448,12 +489,12 @@ For closed tracks, the longitudinal distance wraps by one lap (`tPos mod 1`) so 
 
 ---
 
-### Field-shape / gap metrics (in *racer-lengths*)
+### Field-shape / gap metrics (in _racer-lengths_)
 
 The former governor telemetry is now covered by the front-action gap fields
 (`gap2ndLenMean` / `gapMedLenMean`, below) and by the dedicated **gap-space observers**
 (`--gap-metrics`, `scripts/sim/observers/gap-metrics.mjs`) documented in §8. All are reported in
-*racer-lengths* (arc-distance ÷ mean drawn body length), so they are lap-count- and
+_racer-lengths_ (arc-distance ÷ mean drawn body length), so they are lap-count- and
 track-independent.
 
 ---
@@ -462,19 +503,19 @@ track-independent.
 
 **Flag:** `--front-action` (read-only observer, breakaway-diag pattern — a run without the flag is byte-identical). Raw per-combo aggregates are also written to `results/front-action/front-action-<diagLabel>.json`.
 
-**What it measures:** the owner's priority-1 experience — a *contested, lead-changing FRONT* — over the **pre-OUTCOME window only** (`progress < corridorStart`). It is the sweep's action objective.
+**What it measures:** the owner's priority-1 experience — a _contested, lead-changing FRONT_ — over the **pre-OUTCOME window only** (`progress < corridorStart`). It is the sweep's action objective.
 
-| Field | Meaning | Static procession | Contested front |
-|---|---|---|---|
-| `leadChangesMean` | P1-identity changes per race | ~0–1 | many |
-| `distinctP1Mean` | # of racers who ever hold P1 | 1–2 | several |
-| `leadChangeRate` | P1 changes ÷ pre-OUTCOME step | ~0 | high |
-| `podiumShuffleRate` | fraction of steps where the ordered top-3 changes (a fight for the LEAD vs churn deep in the field) | ~0 | high |
-| `gap2ndLenMean` / `gapMedLenMean` | **front reach** — leader→2nd / leader→median in racer-lengths; a close front is small gap2nd, a lone breakaway is large gapMed | — | small gap2nd |
-| `unpredictability.rankVsP1Frac` / `rankVsTop3Frac` | **counter-metric:** \|Spearman\| between a racer's assigned `targetRank` and its early front-running time, pooled across all races/seeds. **LOW = fair** — the early leader is *not* secretly the assigned winner. Action must not come from bias. | — | must stay LOW |
+| Field                                              | Meaning                                                                                                                                                                                                                                            | Static procession | Contested front |
+| -------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------- | --------------- |
+| `leadChangesMean`                                  | P1-identity changes per race                                                                                                                                                                                                                       | ~0–1              | many            |
+| `distinctP1Mean`                                   | # of racers who ever hold P1                                                                                                                                                                                                                       | 1–2               | several         |
+| `leadChangeRate`                                   | P1 changes ÷ pre-OUTCOME step                                                                                                                                                                                                                      | ~0                | high            |
+| `podiumShuffleRate`                                | fraction of steps where the ordered top-3 changes (a fight for the LEAD vs churn deep in the field)                                                                                                                                                | ~0                | high            |
+| `gap2ndLenMean` / `gapMedLenMean`                  | **front reach** — leader→2nd / leader→median in racer-lengths; a close front is small gap2nd, a lone breakaway is large gapMed                                                                                                                     | —                 | small gap2nd    |
+| `unpredictability.rankVsP1Frac` / `rankVsTop3Frac` | **counter-metric:** \|Spearman\| between a racer's assigned `targetRank` and its early front-running time, pooled across all races/seeds. **LOW = fair** — the early leader is _not_ secretly the assigned winner. Action must not come from bias. | —                 | must stay LOW   |
 
 **Calibration reference (acceptance check — the metric must agree with the owner's eye):**
-The **seed-1 Searound × Manta** case is a **known "no action" race** — a lone breakaway with no real front fight. The metric scores it LOW, confirming it measures what the eye sees. The reference is **pinned to exact parameters** (below) because the gap measures are *means over the pre-OUTCOME window* and therefore depend on `--dur` — an unpinned reference is ambiguous.
+The **seed-1 Searound × Manta** case is a **known "no action" race** — a lone breakaway with no real front fight. The metric scores it LOW, confirming it measures what the eye sees. The reference is **pinned to exact parameters** (below) because the gap measures are _means over the pre-OUTCOME window_ and therefore depend on `--dur` — an unpinned reference is ambiguous.
 
 ```
 node scripts/sim-fairness.mjs --track=searound --racer=manta --dur=120 --races=1 --seed=1 \
@@ -493,7 +534,7 @@ Exact pinned parameters: **track=searound, racer=manta, seed=1, dur=120, races=1
 
 **Flag:** `--action=<0..1>` (read-only sweep hypothesis — **not** a shipped default). One owner-facing scalar `action` (0 = calm → 1 = wild), intended as the prototype of a future SetupScreen "Action" slider. Unset → no-op (byte-identical run).
 
-**Current state: the axis is an empty stub.** Its original coupling drove the *classic reactive director* knobs (cast size / dwell / pull / anchor). That director was **deleted** in the pulk cleanup (Stage-4), and the coupling went with it — `--action` no longer maps to anything and has no effect on a race. The flag is retained as a placeholder for a future re-target onto the PulkLeadRotation strengths (`pulkChallengerBoost`, `pulkLeaderBrake`, drop-depth, etc.); until then, sweep the individual `--pulk*` flags directly.
+**Current state: the axis is an empty stub.** Its original coupling drove the _classic reactive director_ knobs (cast size / dwell / pull / anchor). That director was **deleted** in the pulk cleanup (Stage-4), and the coupling went with it — `--action` no longer maps to anything and has no effect on a race. The flag is retained as a placeholder for a future re-target onto the PulkLeadRotation strengths (`pulkChallengerBoost`, `pulkLeaderBrake`, drop-depth, etc.); until then, sweep the individual `--pulk*` flags directly.
 
 ---
 
@@ -525,12 +566,12 @@ The sweep uses two phases to balance coverage and confidence.
 
 ### Hard cutoffs and rationale
 
-| Metric | Cutoff | Rationale |
-|---|---|---|
-| `outcomeReached` | < 1.0 | All races must complete — a partial run cannot be scored |
-| `natOvt` | < 1.0 (strict) | All position changes must be physically close-quarters |
-| `natOvt` | < 0.90 (relaxed fallback) | Used if the strict cutoff eliminates all survivors |
-| `zigzagScore` | ≥ 0.005 | Visible lateral oscillation — disqualifies any combo immediately |
+| Metric           | Cutoff                    | Rationale                                                        |
+| ---------------- | ------------------------- | ---------------------------------------------------------------- |
+| `outcomeReached` | < 1.0                     | All races must complete — a partial run cannot be scored         |
+| `natOvt`         | < 1.0 (strict)            | All position changes must be physically close-quarters           |
+| `natOvt`         | < 0.90 (relaxed fallback) | Used if the strict cutoff eliminates all survivors               |
+| `zigzagScore`    | ≥ 0.005                   | Visible lateral oscillation — disqualifies any combo immediately |
 
 There are no hard cutoffs on `overlapRate`, `brakeRate`, or `stableOvertakes` — these are soft penalties in the scoring formula.
 
@@ -604,15 +645,15 @@ The values below are the **Phase 5 winners** — locked into `storage/defaults.j
 
 ### Parameter table
 
-| Parameter | Default | Range (sweep) | What it controls |
-|---|---|---|---|
-| `lateralForce` | 0.0114 | 0.006–0.024 | Force applied to `physicalYVelocity` per frame when another racer is within the geometric avoidance gate |
-| `lateralDamping` | 0.16 | 0.05–0.45 | Velocity retention per frame: `velocity *= lateralDamping`. Hard cap < 0.50 (code constraint) |
-| `avoidanceBufferPct` | 0.20 | — | Buffer fraction beyond body contact before the avoidance gate fires (20% lead time); replaces the old fixed `avoidanceDistance` in the browser gate |
-| `speedBrakeFactor` | 0.945 | 0.87–0.995 | Speed multiplier applied when braking; 0.945 = 5.5% speed reduction per brake frame |
-| `speedBrakeTMultiplier` | 1.5 | 0.5–3.0 | Longitudinal lead-time multiplier for the body-based brake zone (replaces the old fixed `speedBrakeTThreshold`) |
-| `avoidanceDistance` *(retired from browser gate)* | 0.18 | 0.07–0.28 | Former fixed proximity threshold in normalized track coordinates; replaced by body-based geometric gate + `avoidanceBufferPct`. Kept for sim script backward compat. |
-| `speedBrakeYThreshold` | 0.18 | 0.05–0.22 | Default same-lane lateral threshold; still read by the browser as a fallback when track width is unavailable (`raceBehavior.js`). Body-based detection takes precedence when `trackWidth > 0`. |
+| Parameter                                         | Default | Range (sweep) | What it controls                                                                                                                                                                               |
+| ------------------------------------------------- | ------- | ------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `lateralForce`                                    | 0.0114  | 0.006–0.024   | Force applied to `physicalYVelocity` per frame when another racer is within the geometric avoidance gate                                                                                       |
+| `lateralDamping`                                  | 0.16    | 0.05–0.45     | Velocity retention per frame: `velocity *= lateralDamping`. Hard cap < 0.50 (code constraint)                                                                                                  |
+| `avoidanceBufferPct`                              | 0.20    | —             | Buffer fraction beyond body contact before the avoidance gate fires (20% lead time); replaces the old fixed `avoidanceDistance` in the browser gate                                            |
+| `speedBrakeFactor`                                | 0.945   | 0.87–0.995    | Speed multiplier applied when braking; 0.945 = 5.5% speed reduction per brake frame                                                                                                            |
+| `speedBrakeTMultiplier`                           | 1.5     | 0.5–3.0       | Longitudinal lead-time multiplier for the body-based brake zone (replaces the old fixed `speedBrakeTThreshold`)                                                                                |
+| `avoidanceDistance` _(retired from browser gate)_ | 0.18    | 0.07–0.28     | Former fixed proximity threshold in normalized track coordinates; replaced by body-based geometric gate + `avoidanceBufferPct`. Kept for sim script backward compat.                           |
+| `speedBrakeYThreshold`                            | 0.18    | 0.05–0.22     | Default same-lane lateral threshold; still read by the browser as a fallback when track width is unavailable (`raceBehavior.js`). Body-based detection takes precedence when `trackWidth > 0`. |
 
 ### Why they must be changed together
 
@@ -672,7 +713,7 @@ Even after a sim winner is found and validated with 100 races per track at fixed
 
 ### L106 — Velocity-based physics eliminates zigzag at zero overlap cost
 
-*(docs/LESSONS.md, Lesson 106)*
+_(docs/LESSONS.md, Lesson 106)_
 
 Prior to feat/lateral-velocity, lateral forces were applied directly to `physicalY`. With opposing forces (home force vs. avoidance), the sign could flip frame-to-frame, producing visible oscillation in tight packs.
 
@@ -689,13 +730,14 @@ physicalY += physicalYVelocity;
 
 ### L107 — LHS extension outperforms uniform coverage
 
-*(docs/LESSONS.md, Lesson 107)*
+_(docs/LESSONS.md, Lesson 107)_
 
 The 8-parameter sweep used Latin Hypercube Sampling (LHS) for Phase 1. LHS guarantees one sample per stratum but does not densify around promising regions. After Phase 1, the top-10 centroid was used to generate 200 extension combos within a ±20% window.
 
 **Finding:** The extension phase found better scores (−5.5) than the initial 1000-combo LHS phase (−2.8), even though 1000 combos is a large Phase 1 by any standard.
 
 **Pattern codified:**
+
 1. LHS Phase 1 — broad coverage (≥ 500 combos)
 2. Check whether top-10 mean is within 18% of any range boundary
 3. If yes: generate 200 extension combos centered on the top-10 centroid with ±20% range
@@ -730,7 +772,7 @@ There is exactly **one** speed normalisation and **one** duration derivation in 
 returned scalars verbatim. Nothing downstream re-derives a duration.
 
 **The pace.** One number, `baseSpeedConfig.normalSpeedPxPerSec` (adjustable in Dev Screen →
-Dynamics → Speed → *Normal Track Speed*, shipped **150 px/s** — the owner's pick; see
+Dynamics → Speed → _Normal Track Speed_, shipped **150 px/s** — the owner's pick; see
 [reports/parity/REBASELINE.md](../reports/parity/REBASELINE.md)), times the race type's multiplier:
 
 ```
@@ -740,14 +782,14 @@ paceSpeed = normalSpeedPxPerSec × speedMultiplier          [world px/s]
 `paceSpeedPxPerSec()` is the single definition; every helper below takes its result, never the
 bare normal speed. A mean racer of that type travels exactly `paceSpeed` px/s — **on a closed
 track and on an open track alike**. That cross-topology equality is the owner's law and is pinned
-by `durationModel.test.js` → *the owner's law*.
+by `durationModel.test.js` → _the owner's law_.
 
 **The derivation** (`deriveRaceDuration`), with `P = paceSpeed`:
 
-| | operator picks | finishT | duration |
-|---|---|---|---|
-| **CLOSED** | `laps` (integer ≥ 1) | `laps` | **derived**: `laps × pathLengthPx / P` |
-| **OPEN** | `seconds` | **derived**: `P × seconds / pathLengthPx`, capped at `1 − runoutZone` | the chosen seconds |
+|            | operator picks       | finishT                                                               | duration                               |
+| ---------- | -------------------- | --------------------------------------------------------------------- | -------------------------------------- |
+| **CLOSED** | `laps` (integer ≥ 1) | `laps`                                                                | **derived**: `laps × pathLengthPx / P` |
+| **OPEN**   | `seconds`            | **derived**: `P × seconds / pathLengthPx`, capped at `1 − runoutZone` | the chosen seconds                     |
 
 For open tracks, `naturalMaxSeconds = (1 − runoutZone) × pathLengthPx / P` is the longest race the
 track holds at pace. Choosing **more** time than that is allowed: the finish line pins to the
@@ -757,7 +799,7 @@ shortest closed race is one lap, whatever it lasts.
 
 Because the pace carries the type factor, **a slower type takes proportionally longer** over the
 same laps: `duration(M) = duration(1) / M`. A snail race and an F1 race are not the same length.
-On open tracks, which are time-bounded, the type moves the *finish line* instead:
+On open tracks, which are time-bounded, the type moves the _finish line_ instead:
 `finishT(M) = finishT(1) × M`. The pace is defined by the **mean** racer; the base-speed spread
 only widens the finishing field around it, and enters the setup **display** via
 `fieldFinishWindow()` — never an engine input.
@@ -771,22 +813,22 @@ schedule (`rollCount` / `rollInterval` / `lastRollDeadline`), the plan's `target
 
 #### What this deleted
 
-| deleted | was |
-|---|---|
-| `lapsFromDuration` | the closed-track laps staircase (< 60 s → 1, 60–89 → 2, 90–119 → 3, ≥ 120 → 4) |
-| `computeClosedTrackSsf` / `REFERENCE_CLOSED_PATH_PX` | closed normalisation `pathLengthPx / 3200` |
-| `computeSpeedScaleFactor` (+ hidden `_MIN_SCALE = 0.5` clamp) | open normalisation `pathLengthPx / 2000` |
-| `computeFinishT` | the sim's open-track finish-line formula |
-| `estimateClosedTrackDurationSec`, `openTrackDurationRange` | display-only mirrors of the above |
-| the N-calibrated expected-minimum spread factor **in the pace** | made the pace depend on racer count |
+| deleted                                                         | was                                                                            |
+| --------------------------------------------------------------- | ------------------------------------------------------------------------------ |
+| `lapsFromDuration`                                              | the closed-track laps staircase (< 60 s → 1, 60–89 → 2, 90–119 → 3, ≥ 120 → 4) |
+| `computeClosedTrackSsf` / `REFERENCE_CLOSED_PATH_PX`            | closed normalisation `pathLengthPx / 3200`                                     |
+| `computeSpeedScaleFactor` (+ hidden `_MIN_SCALE = 0.5` clamp)   | open normalisation `pathLengthPx / 2000`                                       |
+| `computeFinishT`                                                | the sim's open-track finish-line formula                                       |
+| `estimateClosedTrackDurationSec`, `openTrackDurationRange`      | display-only mirrors of the above                                              |
+| the N-calibrated expected-minimum spread factor **in the pace** | made the pace depend on racer count                                            |
 
 The staircase survives **only** as `legacyLapsFromDefaultDuration()`, a migration helper for
 tracks still carrying a pre-ship `defaultDuration`. Nothing in a running race calls it.
 
 #### The seam this closed
 
-Before this ship the browser derived `finishT` from the *setting* (60 → 2 laps) but derived
-`race_baseSpeed`, the re-roll schedule and the plan duration from a *nominal* traversal time
+Before this ship the browser derived `finishT` from the _setting_ (60 → 2 laps) but derived
+`race_baseSpeed`, the re-roll schedule and the plan duration from a _nominal_ traversal time
 (`estimatedSecondsPerLap × laps ≈ 28 s`), while the sim keyed all of them to the raw
 `durationSec = 60`. Same seed, two different races — a 2.14× pace ratio on searound/manta.
 `scripts/diag/micro-divergence.mjs` now re-runs its A/B arms through the shared model and reports
@@ -811,10 +853,10 @@ lateral step so a dodge eases in/out instead of snapping to full swerve; the har
 untouched). This is the SECOND engine change since COMBO15. Because the cap is in the avoidance integrator
 (which runs in BOTH worlds), **both** hashes moved. The current print is:
 
-| world | fingerprint |
-|---|---|
+| world                                                                      | fingerprint            |
+| -------------------------------------------------------------------------- | ---------------------- |
 | ON (flagless — the shipped game = COMBO15 + margin hysteresis + accel cap) | **`dc4647be0f55ebdb`** |
-| OFF (`--gapRerollEnabled=false` — pre-feature world) | **`854018ee5d3d83e1`** |
+| OFF (`--gapRerollEnabled=false` — pre-feature world)                       | **`854018ee5d3d83e1`** |
 
 The ON hash moved by design at each world change (retune `e93ffa70dad562a1` → plan-grid `0ecca5e2dbe6526e`
 → speed/duration `e80f78a0da6a9993` → type-mult `eda28d614f5e47d9` → step-order `8b13ccbe96992cc0` →
@@ -872,13 +914,13 @@ DevScreen config objects at module load**, not from hardcoded literals — so a 
 default propagates to the sim automatically and can never silently drift from the browser. The
 `argVal(name, default)` override is preserved (e.g. `--corridorEnd=0.9` still works for experiments):
 
-| CLI flag | default source |
-|----------|----------------|
-| `--bonusMult` | `DEFAULT_RACE_DYNAMICS_CONFIG.racePlanBonusStrengthMultiplier` (2.0) |
-| `--bonusTransitionEnd` | `DEFAULT_RACE_DYNAMICS_CONFIG.racePlanBonusTransitionEnd` (0.75) |
-| `--bonusFadeDuration` | `DEFAULT_RACE_DYNAMICS_CONFIG.racePlanBonusFadeDuration` (1500) |
-| `--corridorStart` | `DEFAULT_RACE_DYNAMICS_CONFIG.racePlanCorridorStart` (0.55) |
-| `--corridorEnd` | `DEFAULT_RACE_DYNAMICS_CONFIG.racePlanCorridorEnd` (1.0) |
+| CLI flag               | default source                                                       |
+| ---------------------- | -------------------------------------------------------------------- |
+| `--bonusMult`          | `DEFAULT_RACE_DYNAMICS_CONFIG.racePlanBonusStrengthMultiplier` (2.0) |
+| `--bonusTransitionEnd` | `DEFAULT_RACE_DYNAMICS_CONFIG.racePlanBonusTransitionEnd` (0.75)     |
+| `--bonusFadeDuration`  | `DEFAULT_RACE_DYNAMICS_CONFIG.racePlanBonusFadeDuration` (1500)      |
+| `--corridorStart`      | `DEFAULT_RACE_DYNAMICS_CONFIG.racePlanCorridorStart` (0.55)          |
+| `--corridorEnd`        | `DEFAULT_RACE_DYNAMICS_CONFIG.racePlanCorridorEnd` (1.0)             |
 
 Before `9cfa953`, `corridorEnd` defaulted to a hardcoded `0.95` (vs shared `1.0`) and `bonusMult`
 to `1.0` (vs shared `2.0`) — both silently wrong vs the browser. This is now structurally
@@ -887,7 +929,7 @@ impossible for these fields.
 > The rubber-band CLI flags (`--rubber-band` / `--rbFlatBoost` / `--rbGapThreshold` / `--rbRampMs`)
 > that a `9cfa953`-era revision of this table listed are **gone**: the rubber-band speed force and
 > its `DEFAULT_RUBBER_BAND_CONFIG` were removed from both the browser and the sim, so no `--rubber-band*`
-> flag exists any longer. (The CameraDirector's `endgameThreshold` is a *different*, still-live camera
+> flag exists any longer. (The CameraDirector's `endgameThreshold` is a _different_, still-live camera
 > gate — see the Camera section in ARCHITECTURE.md — not the removed speed force.)
 
 ### `--race-plan` default is now `true` (browser-faithful)
@@ -898,7 +940,7 @@ experiments (baseline / controller-off comparisons).
 
 ---
 
-*Last updated: 2026-07-14 (sim-trust: sweep-scripts table, usage, governor/director sections, and tier2/golden-stage0 refs corrected to the shipped choreography + PulkLeadRotation world). See also: [LESSONS.md](LESSONS.md), [ARCHITECTURE.md](ARCHITECTURE.md), [ROADMAP.md](ROADMAP.md).*
+_Last updated: 2026-07-14 (sim-trust: sweep-scripts table, usage, governor/director sections, and tier2/golden-stage0 refs corrected to the shipped choreography + PulkLeadRotation world). See also: [LESSONS.md](LESSONS.md), [ARCHITECTURE.md](ARCHITECTURE.md), [ROADMAP.md](ROADMAP.md)._
 
 ---
 
@@ -916,6 +958,7 @@ comebacker is a hero whose anchor rank is behind its target by more than `ROLE_M
 `hero-adherence.mjs` — one source; rank 1 = front, so it must CLIMB).
 
 **Per-comebacker metrics** (rank 1 = front, lower is better):
+
 - `climbPlanned` = `anchorRank − targetRank` (how far it was authored to climb).
 - `climbAchieved` = `max(0, anchorRank − finalRank)` (how far it really climbed).
 - `targetReached` = `finalRank ≤ targetRank` (landed at or better than target).
@@ -932,13 +975,14 @@ ranking is **among the cast**, not against the full field — a full-field compa
 anchor ranks the sim does not collect (adding that would enlarge the byte-identity surface). Read the
 reliability rates as "within the cast".
 
-**Interpretation / acceptance (for the B4 go/no-go).** Plan is *sound* if comebacker `finalRank` lands
-within mean ±2–3 of `targetRank` (|Δ→target| ≥ 5 ⇒ unreliable); designation is *reliable* if the comebacker
+**Interpretation / acceptance (for the B4 go/no-go).** Plan is _sound_ if comebacker `finalRank` lands
+within mean ±2–3 of `targetRank` (|Δ→target| ≥ 5 ⇒ unreliable); designation is _reliable_ if the comebacker
 is a top-3 climber (in the cast) in ≥60% of races. Note the top-3-in-cast bar is near-trivial for a 2–4
 hero cast — read the stronger `topClimberRate` (rank-1 in the cast) in `detail.json` alongside it.
 
 **Standard run** (one invocation per track with its surface-compatible default racer, since `--track` is
 single-valued and a forced `--racer` errors on surface-incompatible tracks):
+
 ```
 node scripts/sim-fairness.mjs --track=<id> --racer=<trackDefault> --dur=60 --races=50 --seed=1 \
      --hero-map --comeback-reality --skip-main-output
@@ -963,7 +1007,7 @@ This document was the most stale; the items below correct it against source.
   `applyPulkLeadRotation` / `arcT` / `computeDirectorCeiling` (raceGovernor.js — the classic
   `applyGovernor` reactive director is deleted; only the unconditional lead-rotation path remains),
   `raceLengths.js`, `racePlanner.js` (`createRacePlan` / `createTrajectoryController`) are all
-  imported. The divergence risk lives only in the *inputs* each engine computes before the shared
+  imported. The divergence risk lives only in the _inputs_ each engine computes before the shared
   t-update — audited in `docs/FORCE-PARITY.md`.
 - **Stage-0 config pipeline:** `--config=world.json` is honoured or the run **ABORTS loud**
   (`WORLD_SCHEMA_MISMATCH`, exit 2) — never runs-and-ignores. With no `--config`, a prominent
@@ -1042,6 +1086,7 @@ symmetric mode a **dropped** racer (gap > G to the racer ahead) draws faster —
 ±8.1% band. All gaps ≤ G → bit-exact no-op.
 
 **Flags (sim only):**
+
 - `--gapRerollThresholdLengths=<G>` — engages the bias (absent → OFF → byte-identical).
 - `--gapRerollMode=symmetric|down` — `down` biases only the escapee slower; `symmetric` also lifts dropped racers.
 - `--gapRerollStrength=<s>` (default 0.5) — fraction-to-edge = `min(1, s·(gap−G))`.
@@ -1068,7 +1113,7 @@ After the N=200 confirmation on all 10 tracks (V0 23% → symmetric/G=1.5/streng
 
 **`contestWindowStart` — the front act own key. LIVE, KEPT.** The sustained-P1-battle observer
 (`scripts/sim/observers/outcome-front-battle.mjs`) reads `contestWindowStart`. It previously rode on
-`choreoResolveB2`, which is *B2 own* resolve checkpoint: tuning B2 for a B2 reason silently moved the
+`choreoResolveB2`, which is _B2 own_ resolve checkpoint: tuning B2 for a B2 reason silently moved the
 front-battle measurement window and would have invalidated every committed baseline. It is initialised
 to the shipped `choreoResolveB2` value (0.8), so the `p1-contest-baseline` numbers stay exactly
 comparable; from here the two are independent. Sim flag: `--contestWindowStart=<0..1>`. Validation
@@ -1100,12 +1145,12 @@ The measured winner setting is now the shipped configuration. No other tuning va
 
 **Fingerprints — the shipped default moved; record both.**
 
-| world | fingerprint | status |
-|---|---|---|
-| shipped default (gap-reroll **ON**, retuned G=0.75 s=0.5) | **`e93ffa70dad562a1`** | at 2026-07-23 — **SUPERSEDED** (see the current pair under *Fingerprint rule* above; ON is now `7c70b1eae7d31e22` after the speed-150 ship + the 2026-07-26 flip) |
-| gap-reroll OFF (`--gapRerollEnabled=false`) | `72c3360fb75225ef` | pre-unification OFF — **superseded**; the OFF invariant is now `f8f7d9c2fd3283e9` |
-| previous shipped default (ON, G=1.5 s=1.0) | `efd0f4ad8eca08fa` | **SUPERSEDED** by `e93ffa70dad562a1` |
-| pre-feature default | `72c3360fb75225ef` | superseded as a *default*; still the OFF world |
+| world                                                     | fingerprint            | status                                                                                                                                                            |
+| --------------------------------------------------------- | ---------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| shipped default (gap-reroll **ON**, retuned G=0.75 s=0.5) | **`e93ffa70dad562a1`** | at 2026-07-23 — **SUPERSEDED** (see the current pair under _Fingerprint rule_ above; ON is now `7c70b1eae7d31e22` after the speed-150 ship + the 2026-07-26 flip) |
+| gap-reroll OFF (`--gapRerollEnabled=false`)               | `72c3360fb75225ef`     | pre-unification OFF — **superseded**; the OFF invariant is now `f8f7d9c2fd3283e9`                                                                                 |
+| previous shipped default (ON, G=1.5 s=1.0)                | `efd0f4ad8eca08fa`     | **SUPERSEDED** by `e93ffa70dad562a1`                                                                                                                              |
+| pre-feature default                                       | `72c3360fb75225ef`     | superseded as a _default_; still the OFF world                                                                                                                    |
 
 Turning the feature off restores the pre-feature game **byte-identically** — the OFF fingerprint is
 bit-for-bit the value it has always been. That is the guarantee that survives the default flip.
@@ -1116,24 +1161,24 @@ Only the two tuning values changed; the transform itself is untouched.
 
 **Why.** `frac = min(1, strength·(gap−G))` saturates once the gap exceeds `G+1`, so at s=1.0 **46% of
 all corrections applied to the leader were full slams to the band floor** — visible braking. G alone
-cannot soften that (lowering G lowers the saturation point too; measured: corrections got *harder*).
+cannot soften that (lowering G lowers the saturation point too; measured: corrections got _harder_).
 Strength is the only knob that reduces the magnitude of an individual correction.
 
 **Gate** (400 races/arm, 4 standard tracks, paired seeds, 40 closed / 60 open fields, 60 s):
 
-| metric | G=0.75 s=0.5 | G=1.5 s=1.0 |
-|---|---|---|
-| pooled band-reach (PRIMARY, racer-row weighted) | **71.6%** | 71.6% |
-| Holm-flagged tracks | 2/4 | 2/4 |
-| tiltSaturated | **18.7%** | 46.0% |
-| tilt frac median | **0.371** | 0.906 |
-| escapeDepth median / worst | **1.97 / 7.29 L** | 2.71 / 12.07 L |
-| front-group-at-line | **4.05** | 3.86 |
-| runaway / parade / duo | **8.3% / 0.8% / 4.0%** | 9.5% / 1.3% / 6.3% |
-| dead finales | 14.5% | 14.7% |
+| metric                                          | G=0.75 s=0.5           | G=1.5 s=1.0        |
+| ----------------------------------------------- | ---------------------- | ------------------ |
+| pooled band-reach (PRIMARY, racer-row weighted) | **71.6%**              | 71.6%              |
+| Holm-flagged tracks                             | 2/4                    | 2/4                |
+| tiltSaturated                                   | **18.7%**              | 46.0%              |
+| tilt frac median                                | **0.371**              | 0.906              |
+| escapeDepth median / worst                      | **1.97 / 7.29 L**      | 2.71 / 12.07 L     |
+| front-group-at-line                             | **4.05**               | 3.86               |
+| runaway / parade / duo                          | **8.3% / 0.8% / 4.0%** | 9.5% / 1.3% / 6.3% |
+| dead finales                                    | 14.5%                  | 14.7%              |
 
 Fairness is **exactly neutral** (identical pooled band-reach and Holm count); the change buys
-correction *softness* and a shallower worst-case escape. Duration sanity (30/120/300 s, N=25):
+correction _softness_ and a shallower worst-case escape. Duration sanity (30/120/300 s, N=25):
 candidate ≥ current on band-reach at every duration. At 30 s both arms sit at ~66% band-reach — a
 pre-existing short-race limitation, not introduced here.
 
@@ -1171,5 +1216,5 @@ merged `DEFAULT_RACE_DYNAMICS_CONFIG`, so no separate default was needed).
 **runaway 23.0% → 8.3%** (N=200, all 10 tracks) — was measured **before** the gap-reroll
 branch-priority fix. The fix was re-qualified afterwards on a 4-track paired test at the same seeds
 (A0, `67a1053`): runaway **8.3% → 7.5%**, only **5/400 seed flips**, −0.55 sd — within noise, and every
-flip moved *away* from runaway. The 6 tracks outside that test are untested post-fix. Quote the
+flip moved _away_ from runaway. The 6 tracks outside that test are untested post-fix. Quote the
 headline with this qualifier.

@@ -13,12 +13,12 @@
 
 ## Executive Summary
 
-| # | Hypothesis | Verdict | Severity |
-|---|---|---|---|
-| H1 | Closed-track state multipliers never fire | **Refuted** | — |
-| H2 | Open-track BATTLE over-zoom (double-multiplication) | **Confirmed** | Critical |
-| H3 | `maxTargetScreenPx` ceiling not applied | **Refuted** | — |
-| H4 | Pan target loses leader at N=20 | **Partially confirmed** | Low (design trade-off) |
+| #   | Hypothesis                                          | Verdict                 | Severity               |
+| --- | --------------------------------------------------- | ----------------------- | ---------------------- |
+| H1  | Closed-track state multipliers never fire           | **Refuted**             | —                      |
+| H2  | Open-track BATTLE over-zoom (double-multiplication) | **Confirmed**           | Critical               |
+| H3  | `maxTargetScreenPx` ceiling not applied             | **Refuted**             | —                      |
+| H4  | Pan target loses leader at N=20                     | **Partially confirmed** | Low (design trade-off) |
 
 **Critical finding:** H2 is a genuine bug. `openTrackBaseZoom` is baked into `cam.zoom` inside `CameraDirector._computeZoomLevels()`, then the render path multiplies `cam.zoom` by the hardcoded `OPEN_TRACK_BASE_ZOOM = 1.5` constant a second time. On a standard 1280 px world with default config (`openTrackBaseZoom=1.5`, `battleZoomMultiplier=2.5`), the effective render scale hits `1.5 × 2.5 = 3.75` — the world is magnified ≈2.5× more than intended.
 
@@ -29,31 +29,41 @@ H1 and H3 are correct as implemented. H4 is a known design trade-off (centroid-o
 ## H1 — Closed-track state multipliers never fire
 
 ### Claim
+
 Configuring `leaderZoomMultiplier=1.8` on a closed track produces no visible zoom change; the camera appears stuck at 1.0.
 
 ### Code path
 
 `CameraDirector._computeZoomLevels` ([CameraDirector.js:97–113](../client/src/modules/camera/CameraDirector.js)):
+
 ```js
-const openBase = this._isOpenTrack && config ? (config.openTrackBaseZoom ?? 1.0) : 1.0;
+const openBase =
+  this._isOpenTrack && config ? (config.openTrackBaseZoom ?? 1.0) : 1.0;
 const leaderRatio = config?.leaderZoomMultiplier ?? LEADER_ZOOM_RATIO;
-this._leaderZoom = Math.max(MIN_ZOOM, Math.min(MAX_ZOOM, this.overviewZoom * openBase * leaderRatio));
+this._leaderZoom = Math.max(
+  MIN_ZOOM,
+  Math.min(MAX_ZOOM, this.overviewZoom * openBase * leaderRatio),
+);
 ```
 
 On a **closed** 1280 px track with default config:
+
 - `openBase = 1.0` (guard: `this._isOpenTrack = false`)
 - `overviewZoom = 1280 / 1280 = 1.0`
 - `_leaderZoom = clamp(1.0 × 1.0 × 1.8, 0.15, 2.5) = 1.8`
 
 `_setTargets` LEADER_ZOOM case ([CameraDirector.js:224](../client/src/modules/camera/CameraDirector.js)):
+
 ```js
 this.targetZoom = this._leaderZoom; // 1.8
 ```
 
 Render path for closed track ([index.jsx:987](../client/src/screens/RaceScreen/index.jsx)):
+
 ```js
 ctx.scale(cam.zoom * bsX, cam.zoom * bsY);
 ```
+
 `cam.zoom` lerps toward 1.8 → visible zoom change of 1.8× applied correctly.
 
 ### Verdict: **Refuted**
@@ -65,6 +75,7 @@ Multipliers fire and are rendered. The "no difference" observation during browse
 ## H2 — Open-track BATTLE over-zoom (double-multiplication of openTrackBaseZoom)
 
 ### Claim
+
 On an open track, BATTLE zoom is far stronger than intended. The effective canvas scale reaches 3.75 instead of 2.5.
 
 ### Root cause
@@ -72,41 +83,49 @@ On an open track, BATTLE zoom is far stronger than intended. The effective canva
 `openTrackBaseZoom` is applied in **two places** at once:
 
 **Place 1 — `CameraDirector._computeZoomLevels`** ([CameraDirector.js:98, 108](../client/src/modules/camera/CameraDirector.js)):
+
 ```js
-const openBase = this._isOpenTrack && config ? (config.openTrackBaseZoom ?? 1.0) : 1.0;
-this._battleZoom = Math.max(MIN_ZOOM, Math.min(MAX_ZOOM, this.overviewZoom * openBase * battleRatio));
+const openBase =
+  this._isOpenTrack && config ? (config.openTrackBaseZoom ?? 1.0) : 1.0;
+this._battleZoom = Math.max(
+  MIN_ZOOM,
+  Math.min(MAX_ZOOM, this.overviewZoom * openBase * battleRatio),
+);
 //                                                                           ^^^^^^^^ first application
 ```
 
 With `overviewZoom=1.0`, `openBase=1.5`, `battleRatio=2.5`:
+
 - `_battleZoom = clamp(1.0 × 1.5 × 2.5, 0.15, 2.5) = clamp(3.75, …) = 2.5` (hits MAX_ZOOM ceiling)
 
 **Place 2 — open-track render path** ([index.jsx:916, 966–969](../client/src/screens/RaceScreen/index.jsx) and [openTrackCamera.js:19–21](../client/src/modules/camera/openTrackCamera.js)):
+
 ```js
 // effectiveZoom always multiplies cam.zoom by the hardcoded constant:
 export const OPEN_TRACK_BASE_ZOOM = 1.5;
 export function effectiveZoom(directorZoom, baseZoom = OPEN_TRACK_BASE_ZOOM) {
-  return baseZoom * (directorZoom || 1);  // ^^^^^^^^ second application
+  return baseZoom * (directorZoom || 1); // ^^^^^^^^ second application
 }
 // Render:
-const effZoom = effectiveZoom(cam.zoom);  // 1.5 * 2.5 = 3.75
+const effZoom = effectiveZoom(cam.zoom); // 1.5 * 2.5 = 3.75
 ctx.scale(effZoom, effZoom);
 ```
 
 ### Numeric example (1280 px open track, default config)
 
-| Parameter | Value |
-|---|---|
-| `overviewZoom` | 1.0 |
-| `config.openTrackBaseZoom` | 1.5 |
-| `config.battleZoomMultiplier` | 2.5 |
-| `_battleZoom` (after `_computeZoomLevels`) | 2.5 (clamped from 3.75) |
-| `cam.zoom` at BATTLE_ZOOM state | lerps to 2.5 |
-| `effectiveZoom(2.5)` at render | **3.75** |
-| Canvas scale applied | **3.75×** |
-| Visible world width | 1280 / 3.75 = **341 px** of the world |
+| Parameter                                  | Value                                 |
+| ------------------------------------------ | ------------------------------------- |
+| `overviewZoom`                             | 1.0                                   |
+| `config.openTrackBaseZoom`                 | 1.5                                   |
+| `config.battleZoomMultiplier`              | 2.5                                   |
+| `_battleZoom` (after `_computeZoomLevels`) | 2.5 (clamped from 3.75)               |
+| `cam.zoom` at BATTLE_ZOOM state            | lerps to 2.5                          |
+| `effectiveZoom(2.5)` at render             | **3.75**                              |
+| Canvas scale applied                       | **3.75×**                             |
+| Visible world width                        | 1280 / 3.75 = **341 px** of the world |
 
 **Without config** (old behavior, no `openTrackBaseZoom` baked in):
+
 - `_battleZoom = clamp(1.0 × 1.0 × 1.6) = 1.6`
 - `effZoom = 1.5 × 1.6 = 2.4` → 1280 / 2.4 = 533 px visible (sensible)
 
@@ -126,7 +145,10 @@ The config path produces 56% less visible world area than the no-config path.
 
 ```js
 // CameraDirector._computeZoomLevels — remove openBase:
-this._battleZoom = Math.max(MIN_ZOOM, Math.min(MAX_ZOOM, this.overviewZoom * battleRatio));
+this._battleZoom = Math.max(
+  MIN_ZOOM,
+  Math.min(MAX_ZOOM, this.overviewZoom * battleRatio),
+);
 // Render path — pass base zoom from config:
 const base = cameraConfig.openTrackBaseZoom ?? OPEN_TRACK_BASE_ZOOM;
 const effZoom = effectiveZoom(cam.zoom, base);
@@ -138,11 +160,13 @@ const effZoom = effectiveZoom(cam.zoom, base);
 Actually, the fix needs a companion adjustment: the `battleZoomMultiplier` is designed to be the final effective zoom relative to `overviewZoom`, not a sub-factor below `openTrackBaseZoom`. See **Option B**.
 
 **Option B (cleaner):** Keep `openBase` out of `_computeZoomLevels` entirely. Define zoom multipliers as ratios on top of `overviewZoom` regardless of track type. In `effectiveZoom()`, use `config.openTrackBaseZoom` rather than the hardcoded constant. Resulting formula:
+
 ```
 effZoom = config.openTrackBaseZoom × cam.zoom
 cam.zoom → config.battleZoomMultiplier × overviewZoom
 effZoom_BATTLE = 1.5 × (2.5 × 1.0) = 3.75
 ```
+
 This is still 3.75. The default `battleZoomMultiplier=2.5` was set assuming the old `1.6×overviewZoom` behavior. It needs to be lowered to `~1.6` to match the original feel, or the spec defaults need revision.
 
 **Option C (minimal):** Remove the `openBase` factor from `_computeZoomLevels` and do not pass it to `effectiveZoom`. This makes zoom multipliers independent of open/closed track type (consistent behavior), and the hardcoded `OPEN_TRACK_BASE_ZOOM=1.5` constant in the render path remains unchanged. `openTrackBaseZoom` in the config has no effect (the config field becomes a no-op). This restores old behavior without the double-multiplication.
@@ -156,11 +180,13 @@ The double-multiplication produces an effZoom 2.34× larger than intended on def
 ## H3 — `maxTargetScreenPx` ceiling not applied
 
 ### Claim
+
 Sprites grow unconstrained at high zoom levels because the `maxTargetScreenPx` parameter is not passed to `computeRenderDisplayScale`.
 
 ### Code path
 
 RaceScreen render loop ([index.jsx:950–962](../client/src/screens/RaceScreen/index.jsx)):
+
 ```js
 const frameDisplayScale = computeRenderDisplayScale(
   displaySize,
@@ -168,19 +194,24 @@ const frameDisplayScale = computeRenderDisplayScale(
   frameEffZoom,
   getEffectiveMinTargetScreenPx(
     racerTypeRef.current?.config?.minTargetScreenPx,
-    cameraConfig.minTargetScreenPx
+    cameraConfig.minTargetScreenPx,
   ),
-  getEffectiveMaxTargetScreenPx(          // ← 5th param: ceiling passed
+  getEffectiveMaxTargetScreenPx(
+    // ← 5th param: ceiling passed
     racerTypeRef.current?.config?.maxTargetScreenPx,
-    cameraConfig.maxTargetScreenPx
-  )
+    cameraConfig.maxTargetScreenPx,
+  ),
 );
 ```
 
 `computeRenderDisplayScale` ([autoSpriteScale.js:78–82](../client/src/modules/autoSpriteScale.js)):
+
 ```js
-const applyMax = maxTargetScreenPx != null && maxTargetScreenPx > minTargetScreenPx;
-const targetScreenPx = applyMax ? Math.min(flooredScreenPx, maxTargetScreenPx) : flooredScreenPx;
+const applyMax =
+  maxTargetScreenPx != null && maxTargetScreenPx > minTargetScreenPx;
+const targetScreenPx = applyMax
+  ? Math.min(flooredScreenPx, maxTargetScreenPx)
+  : flooredScreenPx;
 ```
 
 With default config `maxTargetScreenPx=160` and `minTargetScreenPx=32`, `applyMax=true` and the ceiling clamps screen pixels at 160.
@@ -194,15 +225,26 @@ Both the 5th parameter wiring (in `index.jsx`) and the ceiling clamp logic (in `
 ## H4 — Pan target loses leader at N=20 (FOCUS_GROUP_SIZE=3)
 
 ### Claim
+
 With 20 racers, the pan target (centroid of top-3) lags so far behind the leader that the leader exits the visible frame.
 
 ### Code path
 
 Open-track pan target ([index.jsx:924–931](../client/src/screens/RaceScreen/index.jsx)):
+
 ```js
-const FOCUS_GROUP_SIZE = 3;  // line 72
-const focusRacers = [...st.racers].sort((a, b) => b.t - a.t).slice(0, FOCUS_GROUP_SIZE);
-const { targetX, targetY } = openTrackPanTarget(focusRacers, CW, CH, effZoom, camXMax, camYMax);
+const FOCUS_GROUP_SIZE = 3; // line 72
+const focusRacers = [...st.racers]
+  .sort((a, b) => b.t - a.t)
+  .slice(0, FOCUS_GROUP_SIZE);
+const { targetX, targetY } = openTrackPanTarget(
+  focusRacers,
+  CW,
+  CH,
+  effZoom,
+  camXMax,
+  camYMax,
+);
 ```
 
 `openTrackPanTarget` returns the centroid of those 3 racers, centered in the viewport ([openTrackCamera.js:57–65](../client/src/modules/camera/openTrackCamera.js)).
@@ -211,12 +253,12 @@ const { targetX, targetY } = openTrackPanTarget(focusRacers, CW, CH, effZoom, ca
 
 Scenario: leader at world x=1800, 2nd at x=1200, 3rd at x=1000 (N=20, effZoom=2.1 without config):
 
-| | Value |
-|---|---|
-| Pan centroid x | (1800 + 1200 + 1000) / 3 = **1333** |
-| Visible world width at effZoom=2.1 | 1280 / 2.1 = **610 px** |
-| Camera window: `[centroid - visW/2, centroid + visW/2]` | [1028, 1638] |
-| Leader at x=1800 | **162 px outside right edge** |
+|                                                         | Value                               |
+| ------------------------------------------------------- | ----------------------------------- |
+| Pan centroid x                                          | (1800 + 1200 + 1000) / 3 = **1333** |
+| Visible world width at effZoom=2.1                      | 1280 / 2.1 = **610 px**             |
+| Camera window: `[centroid - visW/2, centroid + visW/2]` | [1028, 1638]                        |
+| Leader at x=1800                                        | **162 px outside right edge**       |
 
 The leader is off-screen whenever the gap from leader to 3rd-place exceeds `visibleWidth / 2`.
 
@@ -276,16 +318,17 @@ Branch `diagnosis/camera-tuning-effectiveness` → applied as hotfix on same bra
 - **Closed-tracks:** `_leaderZoom = clamp(lr)` — pure ratio. `bsX` at render time (`cam.zoom × bsX`) carries the world-size scaling. Hierarchy `OVERVIEW(1×bsX) < LEADER(lr×bsX) < BATTLE(br×bsX)` holds at any worldW.
 
 **Render path fix in [`RaceScreen/index.jsx`](../client/src/screens/RaceScreen/index.jsx):**
+
 - `openTrackBaseZoom` read from `cameraConfig` and passed to all three `effectiveZoom()` callsites (lines 916, ~953, ~970 after edit).
 - `effectiveZoom(cam.zoom)` → `effectiveZoom(cam.zoom, openTrackBaseZoom)` at all three sites.
 
 **Verified zoom values after fix (worldW=1280, defaults leaderMult=1.8, openBase=1.5):**
 
-| State | Open-track effZoom | Closed-track eff scale |
-|---|---|---|
-| OVERVIEW | 1.5 × 1.0 = **1.5** | 1 × 1.0 = **1.0** |
-| LEADER | 1.5 × 1.8 = **2.7** (was 4.05) | 1.8 × 1.0 = **1.8** |
-| BATTLE | 1.5 × 2.5 = **3.75** (was MAX_ZOOM-clamped) | 2.5 × 1.0 = **2.5** |
+| State    | Open-track effZoom                          | Closed-track eff scale |
+| -------- | ------------------------------------------- | ---------------------- |
+| OVERVIEW | 1.5 × 1.0 = **1.5**                         | 1 × 1.0 = **1.0**      |
+| LEADER   | 1.5 × 1.8 = **2.7** (was 4.05)              | 1.8 × 1.0 = **1.8**    |
+| BATTLE   | 1.5 × 2.5 = **3.75** (was MAX_ZOOM-clamped) | 2.5 × 1.0 = **2.5**    |
 
 Defaults (`leaderZoomMultiplier=1.8`, `battleZoomMultiplier=2.5`, `comebackZoomMultiplier=1.5`) **were not changed** — they were tuned for closed-track drama independently and were never affected by the H2 double-factor bug (open-track state multiplier was inactive on closed tracks).
 
@@ -296,6 +339,7 @@ In LEADER_ZOOM state, `panRacers` is set to `focusRacers.slice(0, 1)` (solo lead
 ### Test coverage added
 
 7 new tests in [`CameraDirector.test.js`](../client/src/modules/camera/CameraDirector.test.js) (describe: "Effective render-zoom — scale invariance"):
+
 1. Closed-track hierarchy scale-invariant across `worldW ∈ {1280, 2000, 3000, 6000}`
 2. Open-track hierarchy scale-invariant across `worldW ∈ {1280, 3000, 6000, 8000}`
 3. Closed-track LEADER not contaminated by `overviewZoom` (H1 regression guard)
@@ -310,15 +354,15 @@ In LEADER_ZOOM state, `panRacers` is set to `focusRacers.slice(0, 1)` (solo lead
 
 ## File References
 
-| File | Relevant for |
-|---|---|
-| [CameraDirector.js:97–113](../client/src/modules/camera/CameraDirector.js) | H1, H2 — `_computeZoomLevels`, `openBase` |
-| [CameraDirector.js:215](../client/src/modules/camera/CameraDirector.js) | H1 — OVERVIEW targetZoom |
+| File                                                                        | Relevant for                                   |
+| --------------------------------------------------------------------------- | ---------------------------------------------- |
+| [CameraDirector.js:97–113](../client/src/modules/camera/CameraDirector.js)  | H1, H2 — `_computeZoomLevels`, `openBase`      |
+| [CameraDirector.js:215](../client/src/modules/camera/CameraDirector.js)     | H1 — OVERVIEW targetZoom                       |
 | [openTrackCamera.js:11–21](../client/src/modules/camera/openTrackCamera.js) | H2 — `OPEN_TRACK_BASE_ZOOM`, `effectiveZoom()` |
-| [index.jsx:916, 949, 966–969](../client/src/screens/RaceScreen/index.jsx) | H2 — render effZoom callsites |
-| [index.jsx:950–962](../client/src/screens/RaceScreen/index.jsx) | H3 — `computeRenderDisplayScale` with ceiling |
-| [autoSpriteScale.js:78–82](../client/src/modules/autoSpriteScale.js) | H3 — ceiling clamp logic |
-| [index.jsx:72, 924–931](../client/src/screens/RaceScreen/index.jsx) | H4 — `FOCUS_GROUP_SIZE`, pan centroid |
+| [index.jsx:916, 949, 966–969](../client/src/screens/RaceScreen/index.jsx)   | H2 — render effZoom callsites                  |
+| [index.jsx:950–962](../client/src/screens/RaceScreen/index.jsx)             | H3 — `computeRenderDisplayScale` with ceiling  |
+| [autoSpriteScale.js:78–82](../client/src/modules/autoSpriteScale.js)        | H3 — ceiling clamp logic                       |
+| [index.jsx:72, 924–931](../client/src/screens/RaceScreen/index.jsx)         | H4 — `FOCUS_GROUP_SIZE`, pan centroid          |
 
 ---
 
@@ -340,22 +384,23 @@ NEW: cam.zoom = (spritePctOfCanvas.leader × CANVAS_H_REF) / (referenceSpriteSiz
 ```
 
 The `bsX = CANVAS_W / worldW` term cancels out worldW from the effective screen size:
+
 ```
 screenPx = referenceSpriteSize × bsX × cam.zoom = targetPx   (constant, any worldW)
 ```
 
 ### Config shape change
 
-| Field | Old | New |
-|---|---|---|
-| `leaderZoomMultiplier` | 1.8 | removed |
-| `battleZoomMultiplier` | 2.5 | removed |
-| `comebackZoomMultiplier` | 1.5 | removed |
-| `openTrackBaseZoom` | 1.5 (config) | `OPEN_TRACK_BASE_ZOOM = 1.5` (constant) |
-| `minSpritePctOfCanvas` | 0.05 | `spritePctOfCanvas.overview = 0.05` |
-| `spritePctOfCanvas.leader` | — | **0.08** (new) |
-| `spritePctOfCanvas.battle` | — | **0.12** (new) |
-| `spritePctOfCanvas.comeback` | — | **0.065** (new) |
+| Field                        | Old          | New                                     |
+| ---------------------------- | ------------ | --------------------------------------- |
+| `leaderZoomMultiplier`       | 1.8          | removed                                 |
+| `battleZoomMultiplier`       | 2.5          | removed                                 |
+| `comebackZoomMultiplier`     | 1.5          | removed                                 |
+| `openTrackBaseZoom`          | 1.5 (config) | `OPEN_TRACK_BASE_ZOOM = 1.5` (constant) |
+| `minSpritePctOfCanvas`       | 0.05         | `spritePctOfCanvas.overview = 0.05`     |
+| `spritePctOfCanvas.leader`   | —            | **0.08** (new)                          |
+| `spritePctOfCanvas.battle`   | —            | **0.12** (new)                          |
+| `spritePctOfCanvas.comeback` | —            | **0.065** (new)                         |
 
 Schema version bumped to `2`. Old stored configs (missing `schemaVersion` or `schemaVersion ≠ 2`) are discarded and replaced with defaults — no partial migration.
 
@@ -366,6 +411,7 @@ The Round 1/2 diagnosis tables remain valid as **historical learning material**.
 ### Test coverage added (Round 3)
 
 18 new tests in [`CameraDirector.test.js`](../client/src/modules/camera/CameraDirector.test.js):
+
 - `_computeZoomForTargetSize`: closed formula, open formula, safety nets (min 1.0 / overviewZoom, max 5.0), fallback when `referenceSpriteSize=0`
 - `_computeZoomLevels`: inverse path activation, 36px fallback when `referenceSpriteSize=0`, battle>leader ordering, `updateConfig()` live-apply
 - Cross-track invariance: closed worldW=1280 vs 6000, open worldW=6000, all produce `targetPx ± 0.01`
@@ -377,6 +423,7 @@ The Round 1/2 diagnosis tables remain valid as **historical learning material**.
 A "Drama-Floor" mechanism was designed and partially implemented during this branch. The idea: if `effectiveOverviewPx` (what OVERVIEW actually renders) exceeds a state's configured target, boost that target to preserve zoom hierarchy.
 
 **Rejected because:**
+
 - The aggressive variant (boost all states by the same factor when `effectiveOverviewPx > 36px`) silently overrides user-configured `spritePctOfCanvas` values on the primary track (Garden Path, closed worldW=1280) when `referenceSpriteSize > 36px`. User sets `leader=0.08` (57.6px), gets 80px instead — contradicts the predictability goal of Round 3.
 - The gentle variant (boost only states where `desiredPx < effectiveOverviewPx`) produces ordering inversions: on Garden Path with `referenceSpriteSize=50`, COMEBACK gets boosted to 65px while LEADER stays at 57.6px — COMEBACK visually tighter than LEADER.
 - The actual edge case that motivated Drama-Floor (narrow open-track worldW≈1280 with large sprites) does not exist in this repo's track set.

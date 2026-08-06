@@ -113,8 +113,8 @@ of 0.01" is not.
 
 ## R7 — Ask what a test is for BEFORE writing it
 
-**Rule.** Two questions, before the test exists: *what breaks if I delete it*, and *what goes
-unnoticed if it is missing*. If neither has an answer, do not write it. Prefer one test that asserts a
+**Rule.** Two questions, before the test exists: _what breaks if I delete it_, and _what goes
+unnoticed if it is missing_. If neither has an answer, do not write it. Prefer one test that asserts a
 PROPERTY over several that assert instances.
 
 **Why it is safe.** A thing tested to death is also dead: tests that assert instances have to be
@@ -189,14 +189,14 @@ are the reparse-point condition recorded in the backlog.
 Timings on the owner's machine, and they vary with load — treat them as the right order of magnitude,
 not as constants.
 
-| instrument | answers | cost |
-|---|---|---|
-| `fingerprint-default.mjs` | did the shipped RACE change | **113 s** (was 195 s before VERIFY-COST-1 parallelised it) |
-| `camera-fingerprint.mjs` | did the DIRECTOR's decisions change | ~47 s |
-| `render-fingerprint.mjs` | did the DRAW CALL SEQUENCE change | ~15 s at 3400 frames; ~77 s once the window reaches the finish |
-| `client` test suite (`npm test`) | did anything assert-able break | **~185 s**, no coverage |
-| `client` suite with coverage (`npm run test:coverage`) | the same, plus the coverage report | CI only — see below |
-| `check-index` / `check-doc-links` / `check-tags` | are the living docs self-consistent | < 5 s each |
+| instrument                                             | answers                             | cost                                                           |
+| ------------------------------------------------------ | ----------------------------------- | -------------------------------------------------------------- |
+| `fingerprint-default.mjs`                              | did the shipped RACE change         | **113 s** (was 195 s before VERIFY-COST-1 parallelised it)     |
+| `camera-fingerprint.mjs`                               | did the DIRECTOR's decisions change | ~47 s                                                          |
+| `render-fingerprint.mjs`                               | did the DRAW CALL SEQUENCE change   | ~15 s at 3400 frames; ~77 s once the window reaches the finish |
+| `client` test suite (`npm test`)                       | did anything assert-able break      | **~185 s**, no coverage                                        |
+| `client` suite with coverage (`npm run test:coverage`) | the same, plus the coverage report  | CI only — see below                                            |
+| `check-index` / `check-doc-links` / `check-tags`       | are the living docs self-consistent | < 5 s each                                                     |
 
 **Do not run an instrument out of habit.** If nothing drawn changed, the render fingerprint has no
 question to answer, and saying so in the report is better than a number nobody needed.
@@ -204,7 +204,7 @@ question to answer, and saying so in the report is better than a number nobody n
 ### Where coverage runs, so nobody discovers later that it stopped
 
 **Locally: it does not, and it never did.** `npm test` is `vitest run`. The `coverage:` block in
-`client/vitest.config.js` is *configuration for when coverage is asked for*, not an enable — V8
+`client/vitest.config.js` is _configuration for when coverage is asked for_, not an enable — V8
 coverage is collected only under `--coverage`.
 
 **In CI: every run, on every push to master and every PR targeting it** — `.github/workflows/ci.yml`

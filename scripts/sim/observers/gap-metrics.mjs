@@ -27,7 +27,7 @@
 // distributions, never pass/fail, until the owner fixes the thresholds.
 // ============================================================
 
-import { arcT } from '../../../client/src/modules/raceLengths.js';
+import { arcT } from "../../../client/src/modules/raceLengths.js";
 
 // Proposed thresholds — AWAITING OWNER CALIBRATION. Do not treat as gates. PRIMARY = lengths.
 //   inContentionLen (X): within this many racer-lengths of the leader counts as "in contention".
@@ -92,7 +92,10 @@ export function secondsBehindLeader(racerT, leaderTrace, nowTs) {
 // percentile(values, q) with linear interpolation between order statistics; q in [0,1].
 // Non-mutating (copies before sort). Returns NaN for an empty array.
 export function percentile(values, q) {
-  const v = values.filter((x) => Number.isFinite(x)).slice().sort((a, b) => a - b);
+  const v = values
+    .filter((x) => Number.isFinite(x))
+    .slice()
+    .sort((a, b) => a - b);
   const n = v.length;
   if (n === 0) return NaN;
   if (n === 1) return v[0];
@@ -105,7 +108,9 @@ export function percentile(values, q) {
 
 // fieldSpreadP10P90: p90 − p10 of the field's seconds-behind-leader at one instant.
 export function fieldSpreadP10P90(behindSecondsArray) {
-  return percentile(behindSecondsArray, 0.9) - percentile(behindSecondsArray, 0.1);
+  return (
+    percentile(behindSecondsArray, 0.9) - percentile(behindSecondsArray, 0.1)
+  );
 }
 
 // gapsAtLine: from finish times (seconds) sorted ascending, the finish-order spreads.
@@ -138,7 +143,11 @@ export function visibleComeback(maxBehindAfterChaos, finalBehindSeconds, Y, Z) {
 
 // deadRaceFlag: the leader→P2 gap exceeds `thresholdSeconds` through MORE THAN
 // `majorityFrac` of the final third (a processional run-in).
-export function deadRaceFlag(gapToP2SeriesFinalThird, thresholdSeconds, majorityFrac = 0.5) {
+export function deadRaceFlag(
+  gapToP2SeriesFinalThird,
+  thresholdSeconds,
+  majorityFrac = 0.5,
+) {
   const n = gapToP2SeriesFinalThird.length;
   if (n === 0) return false;
   let over = 0;

@@ -21,21 +21,24 @@ and what was retired.
 ## Permanent anchors (do NOT delete)
 
 ### stable/*
+
 - `stable/pre-overlap-closed-20jun` (`712f334`) — the stable return point for the entire
   overlap-closed state. Owner-designated permanent anchor.
 - `stable/pre-governor-04jul` (`d9c9cd3`) — pre-governor baseline (surge + rubber-band intact,
   no governor), captured before the race-action director work.
 
 ### race-action-complete
+
 - `race-action-complete` (`7af058b`) — end of the race-action phase: choreography + PulkLeadRotation
   shipped, cleaned, documented (see [RACE-ACTION.md](RACE-ACTION.md)), and tested. The stable baseline for
   the Stage-7 merge to master (no longer the tip — master has moved on through the post-race-action work).
 - `v1-race-action-merged` (`e1d5a2b`) — the race-action arc merged to master.
 
 ### v-*-complete (phase endpoints, retained)
+
 - `v-parity-complete` (`2e27850`) — the sim↔browser parity phase endpoint. Its thirteen `pre/*`+`backup/*`
   step-tags were collapsed onto it and deleted; **this anchor survived and is live at origin.** It is
-  declared HERE, not in the *Parity phase — COLLAPSED* section below, because a declaration under a
+  declared HERE, not in the _Parity phase — COLLAPSED_ section below, because a declaration under a
   RETIRED/COLLAPSED heading is deliberately skipped by `check-tags` — so recording a LIVE tag there
   would have left it unguarded in both directions. (TAG-GUARD-3.)
 - `v-perf-complete` (`858bc4f`) — performance phase.
@@ -60,6 +63,7 @@ and what was retired.
   completed-phase anchor; retained).
 
 ### Cleanup + archive endpoints (2026-07-20)
+
 - `v-cleanup-complete` (`8b98f0a`) — the 5-step repository cleanup arc endpoint: archived closed experiments +
   concept reviews (step 1), removed closed sweep/diag drivers (step 2), salvaged `results/` `.md` docs +
   freed ~1 GB local scratch (step 3), docs catch-up + pulklr retirement (step 4), branch/tag hygiene
@@ -80,11 +84,13 @@ and what was retired.
   justified deleting the lead-rotation mechanism from master.
 
 ### COMBO15 ship + the action/fair-arrival line (2026-07-29)
+
 COMBO15 (chaos steer + band-aware re-roll bias + 0.15 chaos window) was the shipped world **at this ship**; it
 has since advanced through two avoidance engine changes to the current world `dc4647be0f55ebdb` (see the
-*Engine changes since COMBO15* subsection below). The ship
+_Engine changes since COMBO15_ subsection below). The ship
 anchors are permanent; the four experiment branches that fed the multi-week action/fair-arrival hunt were
 archived as permanent `archive/*` tags and their remote branches deleted (branch hygiene, owner-approved).
+
 - `v-ship-combo15` (`175a475`) — **the ship: COMBO15 as the default world merged to master.** New shipped
   fingerprint `ded0a126048e4cdb` (replaces the pre-combo15 anchor `7c70b1eae7d31e22`; OFF invariant
   `f8f7d9c2fd3283e9` unchanged). See [../reports/evolution/MERGE-SHIP-1.md](../reports/evolution/MERGE-SHIP-1.md)
@@ -104,10 +110,12 @@ archived as permanent `archive/*` tags and their remote branches deleted (branch
   release: arrival-safe but decided-finale-flat; CHOREO-RELEASE-1/2). Reports copied to master. DEAD.
 
 ### Engine changes since COMBO15 — RACER-FLAPPING-2 + RACER-MOTION-2 (2026-07-31)
+
 Two `pre/*` return points captured before the two avoidance engine changes that followed COMBO15. Each restores
 a distinct shipped world by fingerprint; registered here in DOC-SYNC-2 (they were live at origin but had no
 entry). Full fingerprint lineage: [SIM.md](SIM.md); reports:
 [../reports/evolution/INDEX.md](../reports/evolution/INDEX.md) (RACER-FLAPPING-2, RACER-MOTION-2, HOLM-300-COMBINED).
+
 - `pre/flapping` (`d0870326`, 2026-07-31) — the pre-RACER-FLAPPING-2 state: restores plain **COMBO15**
   (`ded0a126048e4cdb`), before the avoidance margin hysteresis (`softSteeringObstacleMargin` 0.5).
   RACER-FLAPPING-2 shipped `62400c8e88cdbe59`.
@@ -116,9 +124,11 @@ entry). Full fingerprint lineage: [SIM.md](SIM.md); reports:
   shipped the current world `dc4647be0f55ebdb`.
 
 ### Camera detour fix — CAMERA-GLIDE-TARGET-1 (2026-08-01)
+
 Return point captured before the first CAMERA-DETOUR fix (cause D: the glide endpoint was computed at the live,
 still-easing zoom instead of the destination zoom). Presentation-only — the world fingerprint is unchanged
 (`dc4647be0f55ebdb`); cause C (the containment clamp) is deliberately left for the next block.
+
 - `pre/glide-target` (`2e20e1f3`, 2026-08-01) — the pre-fix state: the two CAMERA-DETOUR diagnosis reports +
   the gated frame log, before `_setClosedTrackTargets`/`_setOpenTrackTargets` were changed to resolve the pan
   endpoint at the destination zoom. Restores the shipped world `dc4647be0f55ebdb` (the fix moves no fingerprint).
@@ -128,92 +138,109 @@ still-easing zoom instead of the destination zoom). Presentation-only — the wo
   CAMERA-GLIDE-TARGET-1 (cause-D) commit; restores the shipped world `dc4647be0f55ebdb` (presentation only).
 
 ### Camera projection refactor — CAMERA-PROJECTION-1 (2026-08-01, branch `camera-refactor`)
+
 Return point captured before the camera gained a single world↔screen projection and lost the ~28 open/closed
 branches that existed only because closed computed world-relative and open computed fixed-absolute. The refactor
 is behaviour-preserving by construction — proven by a frame-by-frame replay diff, not by a fingerprint (the
 simulation is untouched and no simulation file is in the diff).
+
 - `pre/projection` (`54cbe5d4`, 2026-08-01) — the pre-refactor state: the two CAMERA-REFACTOR measurement
   reports, before `projection.js` existed and while `_setClosedTrackTargets` / `_setOpenTrackTargets` /
   `_closedOffsetY` were still three separate functions. Camera-only; the shipped world `dc4647be0f55ebdb` is
   untouched on both sides of this tag.
 
 ### Camera zoom unit — CAMERA-ZOOM-UNIT-1 (2026-08-02, branch `camera-refactor`)
+
 Return point captured before the camera's five separate zoom formulas — four states on an absolute
 `spriteScale` screen-scale, OVERVIEW on a target SPRITE SIZE normalised by a start-grid packing quantity —
 became ONE rule whose parameter is TRACK WIDTHS. The picture deliberately CHANGES here: the owner chose
 clean round defaults over reproducing the old framing, so this tag is the only way back to the old picture.
+
 - `pre/zoom-unit` (`2488124f`, 2026-08-02) — the pre-change state: `spriteScale` per state, OVERVIEW's
   `overviewTargetScreenPx / (2 x W_ref / racersPerRow)` derivation, and the retired `overviewClosedTrackZoom`
   / `overviewMinEffZoom` keys still present. Camera-only; the shipped world `dc4647be0f55ebdb` is untouched
   on both sides of this tag. Config schema v17 (v18 is the track-widths schema).
 
 ### Camera picture fixes — CAMERA-PICTURE-FIXES-1 (2026-08-02, branch `camera-refactor`)
+
 Return point captured before two MEASURED defects that both move the picture were cleared, ahead of the
 framing block so its effect is not judged through a known error: the forward-bias span formula
 (`|cos|·W + |sin|·H`, 1.436x over the geometric extent at the owner's 74 deg heading) and the render-time
 sprite floor (`Math.max(proportionalScreenPx, minTargetScreenPx)`, which the owner does not want).
+
 - `pre/picture-fixes` (`854e2f87`, 2026-08-02) — the post-zoom-unit state: `leaderForwardFrac` 0.66
   displacing 23.0pp instead of 16.0pp on a diagonal heading, the sprite floor still binding, and
   `overviewOffsetPx` still present as a dead key. Camera/render only; the shipped world
   `dc4647be0f55ebdb` is untouched on both sides of this tag. Config schema v18.
 
 ### Camera framing — CAMERA-FRAMING-1 (2026-08-02, branch `camera-refactor`)
+
 Return point captured before the second half of the owner's camera design: every state described by
 ANCHOR (who the camera is on) + GUARANTEE (who must stay in frame) + the already-shipped track-widths
 zoom, with frame position derived from one principle rather than being a fourth setting. The picture
 CHANGES here, most of all in LEAD_CHANGE — which holds 37.6% of all frames and had never been designed
 (it fell into `panTarget`'s default centroid branch and never received the forward bias).
+
 - `pre/framing` (`74bf88b1`, 2026-08-02) — the pre-change state: LEAD_CHANGE undefined in `panTarget.js`,
   PHOTO_FINISH borrowing BATTLE's zoom, the min-visible floor and the containment clamp both STEERING,
   and the floor's single-effZoom per-axis defect still live. Camera-only; the shipped world
   `dc4647be0f55ebdb` is untouched on both sides. Config schema v19.
 
 ### Camera company guarantee — CAMERA-COMPANY-1 (2026-08-02, branch `camera-refactor`)
+
 Return point captured before the min-racers floor came BACK, as a guarantee rather than a floor. It was
 deleted in CAMERA-FRAMING-1 as "a guarantee phrased as a headcount"; the owner corrected that reading —
 it was a DRAMATURGICAL guarantee ("do not show emptiness"), and its absence is visible in his
-post-framing screenshot: the leader huge and alone, *"das ist nicht spannend"*. The concept was right,
+post-framing screenshot: the leader huge and alone, _"das ist nicht spannend"_. The concept was right,
 the arithmetic was broken (one axis scale on both axes — the bsX/bsY family — competing with a zoom
 number that meant something different on every track). Both are fixed, so the idea returns cleanly.
+
 - `pre/company` (`5383750b`, 2026-08-02) — the state with corridor and pair guarantees only, where
   nothing catches a LEADER setting of 1 or below when the shot goes empty. Camera-only; the shipped
   world `dc4647be0f55ebdb` is untouched on both sides. Config schema v20.
 
 ### Camera company guarantee, made proportionate — CAMERA-COMPANY-2 (2026-08-02, branch `camera-refactor`)
+
 Return point captured before the guarantee stopped being over-cautious. CAMERA-COMPANY-1 shipped it
 correct in KIND and too strong in DEGREE: `innerFramePct` (0.7) and `reach` (0.66) multiplied, so a
 companion was allowed only 46% of the frame chord, and the owner's 40-racer break-away widened to 2.32
 track widths where he asked for 1.0. The owner's decision here: **visible with a margin is enough** —
 a guaranteed companion does not have to sit inside the subject's safe region.
+
 - `pre/company-2` (`cfd47cd5`, 2026-08-02) — the state where the company guarantee reads
   `innerFramePct` and applies ONE scalar `reach` in every direction, so it promises company inside the
   safe region and delivers one racer fewer. Camera-only; the shipped world `dc4647be0f55ebdb` is
   untouched on both sides. Config schema v20.
 
 ### Camera zoom unit becomes a standard corridor — CAMERA-REFERENCE-WIDTH-1 (2026-08-03, branch `camera-refactor`)
+
 Return point captured before the zoom unit stopped dividing by each track's OWN corridor. Measurement
 found the reason the owner could see: a racer's height on screen came out as 1.9 / (racers per row) on
 all ten tracks, because the track width cancels on both sides — the camera divides by it and the
 start-grid packing sizes the sprite from it. Searound is the extreme on both counts (narrowest
 corridor, biggest animal) so its racer filled 31.7% of the frame against Mountainstreet's 9.5%. The
 unit now divides by a Dev Screen reference width instead, applied as `max(reference, actual)`.
+
 - `pre/reference-width` (`1abc9383`, 2026-08-03) — the last state where `trackWidths` means the
   track's own corridor, the zoom unit carries its own full-track-width clamp, and the setting's range
   starts at 1.0. Camera-only; the shipped world `dc4647be0f55ebdb` is untouched on both sides. Config
   schema v20 (this block ships v21, which discards a stored v20 camera config).
 
 ### Camera follows along the track, sits on the centreline across it — CAMERA-LATERAL-1 (2026-08-03, branch `camera-refactor`)
+
 Return point captured before the anchor stopped carrying the subject's LANE. The reference-width block
 tightened the shot (600 -> 225 world px on the 300 px tracks), which made an old defect visible rather
 than causing it: a lead change between racers in different lanes threw the picture sideways by 62-84
 world px, 28-37% of the shot. The camera now follows ALONG the track exactly as before and sits on the
 corridor CENTRELINE across it, with a lateral guarantee that shifts only when a guaranteed subject
 would otherwise leave the frame.
+
 - `pre/lateral` (`3b06f78f`, 2026-08-03) — the state where the pan anchor carries the subject's lateral
   position on both axes. Camera-only; the shipped world `dc4647be0f55ebdb` is untouched on both sides.
   Config schema v21 on both sides.
 
 ### Config schema removed for good — CAMERA-NO-SCHEMA-1 (2026-08-03, branch `camera-refactor`)
+
 Return point captured before the camera config's `schemaVersion` was deleted. The owner's standing
 instruction, given four times: no schema, no version bumps, no migrations — he is the only person
 testing, there is nothing to migrate from and nobody to migrate for. The versioning was actively
@@ -222,11 +249,13 @@ loading — defaults underneath, stored values on top, unknown or retired keys i
 Lesson 193 protection with no versioning at all. `WORLD_SCHEMA_VERSION` in `raceConfigWorld.js` is a
 different thing and STAYS: a browser<->sim handshake on the exported world, which must abort loudly
 rather than be half-honoured, and which never touches his settings.
+
 - `pre/no-schema` (`41d2ed38`, 2026-08-03) — the last state carrying `schemaVersion: 21`, its equality
   check in the loader and its save-time stamp. Camera-only; the shipped world `dc4647be0f55ebdb` is
   untouched on both sides.
 
 ### The readability floor returns — CAMERA-MIN-DRAW-1 (2026-08-03, branch `camera-refactor`)
+
 Return point captured before the minimum drawn size came back. CAMERA-PICTURE-FIXES-1 removed the
 render sprite floor on the reading that a racer's size should say how far in the camera is and nothing
 else — right about the implementation, wrong about the purpose. The owner found the cost himself: the
@@ -234,54 +263,64 @@ Space Sprint START formation used to overlap slightly and no longer did, because
 shrunk 29% (32.0 -> 22.8 screen px). The floor returns as a FRACTION OF THE FRAME and drawing-only,
 with a test pinning that it cannot reach the zoom. First block to run the new MINT TRIPWIRE: minted
 `dc4647be0f55ebdb`, unchanged.
+
 - `pre/min-draw` (`766a6f94`, 2026-08-03) — the state with no minimum drawn size at all, where a racer
   on the three widest tracks is drawn at 3.17% of frame height in OVERVIEW. Shipped world
   `dc4647be0f55ebdb` untouched on both sides.
 
 ### Name tags: the unit, and readability before count — CAMERA-TAGS-1 (2026-08-03, branch `camera-refactor`)
+
 Return point captured before name tags stopped being "top N by race position". Three independent
 designs converged on the same skeleton; the accepted reframe is that the owner's two goals are not in
 tension — ten labels on a clump are unreadable AND cover more racers than one would, so decluttering
 buys both. Stage 1 of three: the unit and label-vs-label occlusion. Stages 2 (priority from the
 director's anchor + guarantee set) and 3 (multi-slot placement, sprite avoidance) are named in the
 module header. Minted `dc4647be0f55ebdb`, unchanged.
+
 - `pre/tags` (`77a7812d`, 2026-08-03) — the state where `tagVisibleMaxCount` selects the top 10 by
   race position with no decluttering at all, and the label size is `max(8, round(11/effZoom))`.
   Shipped world `dc4647be0f55ebdb` untouched on both sides.
 
 ### The camera deep clean, before the merge — CAMERA-HYGIENE-1 (2026-08-03, branch `camera-refactor`)
+
 Return point captured before the hygiene pass the owner asked for BEFORE the merge, so master gets one
 clean landing. Its acceptance test is the good kind: hygiene must not move the picture, and that is
 PROVABLE — `scripts/camera-fingerprint.mjs` hashes every camera decision over ten seeded races, and
 every commit in this block holds it bit-identical at `deddc4b483a0689b`.
+
 - `pre/camera-hygiene` (`48069246`, 2026-08-03) — the pre-clean state: `QUICK_TEST_NAMES` duplicated
   in two files, four independent reference-canvas constants, a dead `_clampCentreToBounds`. Shipped
   world `dc4647be0f55ebdb` and camera fingerprint `deddc4b483a0689b` on both sides.
 
 ### The four weights made to work — CAMERA-WEIGHTS-1 (2026-08-04, branch `camera-refactor`)
+
 Return point captured before the state-selection weights became an acceptance propensity. The HUD
 audit found all four inert; the diagnosis was not a dead wire but a dead EFFECT — 73.2% of selections
 had no candidate and 16.7% had exactly one, and a single candidate was returned without its weight
 being read, so eligibility decided 90% of the state distribution. **This block deliberately MOVES the
 camera fingerprint** — it is a change detector, not a prohibition. Camera `deddc4b483a0689b` ->
 `4b33c4d31bec93ea`; the shipped world `dc4647be0f55ebdb` is untouched.
+
 - `pre/weights` (`0c875e08`, 2026-08-04) — the state where a weight is a tie-break among coincidences,
   `overviewWeight` 0.3 -> 10 moves OVERVIEW's share by 1.8pp, and the endgame exception fires
   LEAD_CHANGE even with its weight at 0.
 
 ### The unattended night — CAMERA-HYGIENE-2 (2026-08-04, branch `camera-refactor`)
+
 Return point captured before the deep clean that finished what CAMERA-HYGIENE-1 parked: four
 extractions out of `CameraDirector.js` (2935 -> 2487), sixteen dead constants, twenty redundant
 timing mirrors, and the HUD's "is the label true / is it needed" columns. **Camera fingerprint
 `4b33c4d31bec93ea` held BIT-IDENTICAL at every one of the eight commits** — unlike CAMERA-WEIGHTS-1
 before it, this block moves nothing. The mint tripwire fired twice (defaults.js and the Dev Screen
 section left `camera/`); shipped world `dc4647be0f55ebdb` unmoved both times.
+
 - `pre/camera-hygiene-2` (`be649aa9`, 2026-08-04) — the state where sixteen timing fallbacks are
   duplicated between `CameraDirector.js` and `cameraTimingComputation.js`, `clampActiveCount` is a
   getter returning a literal 0 with a test asserting it, and eighteen gate tests are coin flips
   because a weight became a propensity one commit earlier.
 
 ### The picture becomes a measurement — RENDER-FINGERPRINT-1 (2026-08-04, branch `camera-refactor`)
+
 Return point captured before the render path got its own change detector. Every camera block until
 now ended with "the picture did not move" as an ARGUMENT: the camera fingerprint covers what the
 DIRECTOR decides and stops at the edge of the canvas, which is why the battle-focus darkening had to
@@ -289,11 +328,13 @@ be checked by eye. **New instrument `RENDER ae7e9243bd2add8b`** (`scripts/render
 it hashes the SEQUENCE of draw calls, not the pixels, so it needs no browser and holds on any
 machine. Camera `4b33c4d31bec93ea` and world `dc4647be0f55ebdb` unmoved; mint tripwire fired and was
 checked.
+
 - `pre/render-fingerprint` (`9ae13a4e`, 2026-08-04) — the state where the draw sequence is ~210
   lines inside RaceScreen's rAF callback closed over 42 pieces of component state, so nothing but a
   browser can drive it; and `PHASE` is declared in three separate files.
 
 ### THE CAMERA REFACTOR LANDED — CAMERA-MERGE-1 (2026-08-04)
+
 `camera-refactor` merged to master with full history at `87961ca6` (41 commits, ~20 blocks, four
 days), then the branch deleted. Master's previous tip `e5f0afa6` was OVERVIEW-FRAMING-1, which the
 owner rejected and CAMERA-FRAMING-1 superseded; it is an ancestor of the merge, so the record stays
@@ -312,6 +353,7 @@ until somebody decides that, they are the cheapest way back into any single bloc
 `pre/camera-hygiene`, `pre/weights`, `pre/camera-hygiene-2`, `pre/render-fingerprint`.
 
 ### The framing measures from where things are — CAMERA-ANCHOR-TRUTH-1 (2026-08-04, branch `anchor-truth`)
+
 Return point captured before the first post-merge camera block. Three defects measured during the
 refactor and never repaired turned out to share one root: **the framing computes from an idealised
 point at the centre of the frame instead of from where things actually are** — `corridorGuarantee`
@@ -320,17 +362,19 @@ measure from the anchor's real screen position. The block is staged so the proof
 Stage 1 (behaviour-free — the transition decision becomes a testable return value, and the documents
 that describe an INTENT stop being read as a STATE) must hold **both** fingerprints bit-identical,
 so any later movement is attributable to a named Stage 2 commit.
+
 - `pre/anchor-truth` (`c299fdf7`, 2026-08-04) — master's tip after CI-AUDIT-GREEN-1, verified before
   branching. Baselines recorded on the untouched tree and both matched: camera
   `4b33c4d31bec93ea`, render `ae7e9243bd2add8b`, world `dc4647be0f55ebdb`.
 
 ### THE ROAD STOPS BOUNDING THE LEADER SHOT — CAMERA-COMPANY-ONLY-3 (2026-08-05)
+
 `anchor-truth` merged to master WITH FULL HISTORY at `bf74d6ec` (sixteen commits, four blocks:
 CAMERA-ANCHOR-TRUTH-1, BUILD-TRUTH-1, NIGHT-1, CAMERA-COMPANY-ONLY-3). Never squashed — several
 commits in the line CORRECT earlier ones, and that record is how this project reasons about itself.
 
 **OWNER-APPROVED** on `exp/company-only` @ `d2ecc27c`, mountainstreet seed 5601, toggle ON,
-*"nein das passt"* — having seen BOTH regimes, a torn-apart field where the company guarantee opens
+_"nein das passt"_ — having seen BOTH regimes, a torn-apart field where the company guarantee opens
 the shot wide and a tight pack where the camera holds his 1.0. His approval also covers the
 anchor-truth work, which had had no eye test until then.
 
@@ -349,11 +393,13 @@ touched anywhere in this work. CI green at origin before the merge: run `3099793
   not orphan it.
 
 ### THE END OF A RACE BECOMES SAYABLE — FINISH-SEAM-1 (2026-08-05)
+
 The finish sequence existed only as six latches and three if-chains split across `update()` and
 `_pickNextState()`. Two earlier blocks named this seam as the precondition for extracting the state
 selection and stopped at it. `finishPhase.js` now states the whole ending — approach, the moment,
 the aftermath — with every transition carrying a machine-readable reason. Behaviour-free: all three
 fingerprints bit-identical at the one source commit.
+
 - `pre/finish-seam` (`b363bd94`, 2026-08-05) — master's tip before the branch, baselines measured on
   the untouched tree: camera `7a33faf2ec131437`, render `73ba53ba9fea12c7`, world
   `dc4647be0f55ebdb`.
@@ -364,6 +410,7 @@ Step-tags from the runaway phase (now CLOSED 2026-07-29, see below) and any late
 that phase's `*-complete` endpoint when it closes (incremental history then lives in commits + docs).
 
 ### Evolution — greenfield experiments (new regime: branch, drop-not-revert)
+
 - **handicap-pursuit experiment recoverable @`089c7d2` (branch retired 2026-07-26).** First greenfield
   experiment (`exp/handicap-pursuit`, off master): a standalone sim-only prototype of the handicap-pursuit
   concept. PROTO-1 (longitudinal) PASSED, PROTO-2 (lateral traffic) KILLED, and the world clarification
@@ -375,9 +422,11 @@ that phase's `*-complete` endpoint when it closes (incremental history then live
   documented in LESSONS #183 for the peloton line.
 
 Declared (TAG-GUARD-3 backfill):
+
 - `archive/handicap-pursuit-089c7d2` (`089c7d2`) — the entire `exp/handicap-pursuit` branch history, preserved before deletion.
 
 ### Evolution Act 2 — finale front-compression (CLOSED 2026-07-26)
+
 - **Act 2 finale builds recoverable @`8d5e9fd`/@`7404bd9`/@`197763d`, reverted** (three `git revert`
   commits, newest first). The flag-gated finale front-compression arc — a scheduled-dice overlay on the
   gap-cap re-roll (fixed gates `8d5e9fd`, DevScreen toggle `7404bd9`, adaptive spread-scaled gates
@@ -390,6 +439,7 @@ Declared (TAG-GUARD-3 backfill):
   three SHAs above. Permanent close anchor on origin: **`backup/finale-closed-26b2c34`** (→ `26b2c34`).
 
 Declared, so both directions of `check-tags` can see them (TAG-GUARD-3 backfill):
+
 - `pre/finale-compression` (`37971d6`) — before the fixed dice overlay on the gap-cap re-roll.
 - `pre/finale-devscreen` (`8d5e9fd`) — before the DevScreen toggle build.
 - `pre/finale-adaptive` (`98e9e5f`) — before the adaptive spread-scaled gates, the decisive screen.
@@ -397,6 +447,7 @@ Declared, so both directions of `check-tags` can see them (TAG-GUARD-3 backfill)
 - `backup/finale-closed-26b2c34` (`26b2c34`) — the permanent close anchor for Act 2.
 
 ### Evolution Act 1 — assignment-follows-field (CLOSED 2026-07-26)
+
 - **AFF build recoverable @`cd520e0`, reverted** (`git revert cd520e0`). The flag-gated
   assignment-follows-field build (Act 1) was verified byte-identical (ON `7c70b1eae7d31e22` / OFF
   `f8f7d9c2fd3283e9`) but SCREENed NEGATIVE (pooled band-reach 71.1%→66.8%, below the 70% floor —
@@ -406,11 +457,13 @@ Declared, so both directions of `check-tags` can see them (TAG-GUARD-3 backfill)
   build is recoverable at `cd520e0`. Permanent close anchor on origin: **`backup/aff-closed-fc6afbf`** (→ `fc6afbf`).
 
 Declared, so both directions of `check-tags` can see them (TAG-GUARD-3 backfill):
+
 - `pre/aff-build` (`86e0d6d`) — before the assignment-follows-field build.
 - `pre/aff-remove` (`0fed3ee`) — before the revert that closed Act 1.
 - `backup/aff-closed-fc6afbf` (`fc6afbf`) — the permanent close anchor for Act 1.
 
 ### Runaway phase — CLOSED (2026-07-29)
+
 **Status: CLOSED.** The runaway problem was SOLVED by the **gap-reroll cohesion mechanism** (shipped default
 `gapRerollEnabled` ON, G=0.5 / strength=1.0, 2026-07-26): the N=200 × 10-track confirm cut runaway-winner
 **23% → 8.3%** and generalized cleanly. The two flagged follow-ups were resolved WITHOUT new mechanisms: the
@@ -440,21 +493,21 @@ commit messages, and this file's git history (where the per-tag prose is preserv
 **Collapse record — every tag deleted here, name → SHA (the commits stay findable forever; this table is the
 index).**
 
-| Deleted tag | SHA |
-|---|---|
-| `pre/rng-isolation` | `285c6e5` |
-| `pre/plan-grid-unification` | `fe8565e` |
-| `pre/race-init-extraction` | `72b8605` |
-| `pre/step-order-alignment` | `0bd146f` |
-| `pre/speed-duration-model` | `34584f7` |
-| `pre/speed-150-rebaseline` | `bde0bc0` |
-| `pre/gs-flip` | `6d246d0` |
-| `backup/rng-isolation-64e0f65` | `64e0f65` |
+| Deleted tag                            | SHA       |
+| -------------------------------------- | --------- |
+| `pre/rng-isolation`                    | `285c6e5` |
+| `pre/plan-grid-unification`            | `fe8565e` |
+| `pre/race-init-extraction`             | `72b8605` |
+| `pre/step-order-alignment`             | `0bd146f` |
+| `pre/speed-duration-model`             | `34584f7` |
+| `pre/speed-150-rebaseline`             | `bde0bc0` |
+| `pre/gs-flip`                          | `6d246d0` |
+| `backup/rng-isolation-64e0f65`         | `64e0f65` |
 | `backup/plan-grid-unification-05a5d14` | `05a5d14` |
-| `backup/parity-arc-48f92d9` | `48f92d9` |
-| `backup/speed-150-rebaseline-4b707cb` | `4b707cb` |
-| `backup/gs-confirm-evidence-1865990` | `1865990` |
-| `backup/gs-flip-6f438ea` | `6f438ea` |
+| `backup/parity-arc-48f92d9`            | `48f92d9` |
+| `backup/speed-150-rebaseline-4b707cb`  | `4b707cb` |
+| `backup/gs-confirm-evidence-1865990`   | `1865990` |
+| `backup/gs-flip-6f438ea`               | `6f438ea` |
 
 13 tags deleted (local + origin), collapsed onto **`v-parity-complete`** — the annotated parity phase
 endpoint anchor on the phase-close commit (150 px/s, gap-reroll G=0.5/s=1.0, fingerprints
@@ -475,40 +528,41 @@ recoverable at `git show pre/dead-mechanisms-cleanup`'s SHA (see table) and the 
 **Collapse record — every tag deleted here, name → SHA (the insurance: the commits stay findable
 forever, this file is the index).**
 
-| Deleted tag | SHA |
-|---|---|
-| `pre/browser-seed` | `ffbd214` |
-| `pre/browser-seed-ux` | `7830bb2` |
-| `pre/carousel-build` | `9c5af2f` |
-| `pre/carousel-sweep-base` | `45516fc` |
-| `pre/dead-mechanisms-cleanup` | `0555f9d` |
-| `pre/devscreen-reorg` | `a7c662e` |
-| `pre/exp-runaway-baseline` | `2e14663` |
-| `pre/g-retune-ship` | `7d0db3e` |
-| `pre/gapreroll-browser` | `3464295` |
-| `pre/gapreroll-confirm` | `2e5f121` |
-| `pre/gapreroll-default-on` | `45e774b` |
-| `pre/gapreroll-smallG-diag` | `ddb847d` |
-| `pre/gapreroll-windowfix` | `5163215` |
-| `pre/greenfield-wrap` | `aa1f128` |
-| `pre/leash-phase1` | `fa76916` |
-| `pre/p1-contest-baseline` | `4196367` |
-| `pre/release-sweep` | `869615b` |
-| `pre/runaway-concept` | `8b98f0a` |
-| `pre/runaway-formation-diag` | `cff7474` |
-| `pre/runaway-gapreroll` | `adc54c7` |
-| `pre/runaway-speed-source` | `b4a1327` |
-| `backup/gapreroll-shipped-1594f39` | `1594f39` |
-| `backup/g-retune-shipped-247b843` | `247b843` |
+| Deleted tag                              | SHA       |
+| ---------------------------------------- | --------- |
+| `pre/browser-seed`                       | `ffbd214` |
+| `pre/browser-seed-ux`                    | `7830bb2` |
+| `pre/carousel-build`                     | `9c5af2f` |
+| `pre/carousel-sweep-base`                | `45516fc` |
+| `pre/dead-mechanisms-cleanup`            | `0555f9d` |
+| `pre/devscreen-reorg`                    | `a7c662e` |
+| `pre/exp-runaway-baseline`               | `2e14663` |
+| `pre/g-retune-ship`                      | `7d0db3e` |
+| `pre/gapreroll-browser`                  | `3464295` |
+| `pre/gapreroll-confirm`                  | `2e5f121` |
+| `pre/gapreroll-default-on`               | `45e774b` |
+| `pre/gapreroll-smallG-diag`              | `ddb847d` |
+| `pre/gapreroll-windowfix`                | `5163215` |
+| `pre/greenfield-wrap`                    | `aa1f128` |
+| `pre/leash-phase1`                       | `fa76916` |
+| `pre/p1-contest-baseline`                | `4196367` |
+| `pre/release-sweep`                      | `869615b` |
+| `pre/runaway-concept`                    | `8b98f0a` |
+| `pre/runaway-formation-diag`             | `cff7474` |
+| `pre/runaway-gapreroll`                  | `adc54c7` |
+| `pre/runaway-speed-source`               | `b4a1327` |
+| `backup/gapreroll-shipped-1594f39`       | `1594f39` |
+| `backup/g-retune-shipped-247b843`        | `247b843` |
 | `backup/dead-mechanisms-cleanup-08b09b7` | `08b09b7` |
-| `backup/devscreen-reorg-e529411` | `e529411` |
-| `backup/greenfield-wrap-79ac945` | `79ac945` |
+| `backup/devscreen-reorg-e529411`         | `e529411` |
+| `backup/greenfield-wrap-79ac945`         | `79ac945` |
 
 26 tags deleted (local + origin). The two analysis branches `pre/greenfield-proto` and
 `pre/carousel-sweep` were deleted in the same close, their history preserved as
 `archive/greenfield-proto-final` and `archive/carousel-sweep-final` (see Permanent anchors + Branches).
 
 ### Cleanup arc — COLLAPSED (2026-07-20)
+
 The four `pre/cleanup-step1..4` scaffolding tags were **collapsed onto `v-cleanup-complete`** and deleted
 (local + origin) at the end of cleanup step 5. Permanent recovery is by commit hash, which never expires:
 the step-2 deletions are recoverable at `c441e7c~1`, the step-4 deletions at `0bb639d~1`.
@@ -532,6 +586,7 @@ by explicit keep-list, never by merge. Earlier, `diag/look-before-brake` was arc
 preserved first as a permanent `archive/*` tag (owner-approved branch hygiene, per the handicap-pursuit
 precedent). `exp/fair-arrival` was MERGED to master (its work ships as COMBO15); the other three are DEAD
 lines whose reports were copied to master in DOCS-1 STAGE 1:
+
 - `exp/fair-arrival` → `archive/fair-arrival-merged` (`215afde`) — merged via `175a475`.
 - `exp/chain-choreo` → `archive/chain-choreo-final` (`15c1d58`).
 - `exp/free-band` → `archive/free-band-final` (`aa21576`).
@@ -543,19 +598,19 @@ No non-master branches remain.
 
 This was the FULL tag set **at the 2026-07-25 parity-phase close — 25 tags**. It is a dated snapshot;
 the current origin set is **41 tags** (the 16 additions since are listed in the addendum below). The 13
-parity `pre/*`+`backup/*` step-tags were collapsed onto **`v-parity-complete`** and deleted (see the *Parity
-phase — COLLAPSED* record above); everything else is a permanent keeper:
+parity `pre/*`+`backup/*` step-tags were collapsed onto **`v-parity-complete`** and deleted (see the _Parity
+phase — COLLAPSED_ record above); everything else is a permanent keeper:
 
 - `archive/carousel-sweep-final`
 - `archive/diag-look-before-brake`
 - `archive/greenfield-proto-final`
 - `b4-complete`
 - `backup/browser-seed-complete` (`869615b`)
-- `backup/exp-runaway-baseline-complete` (`f40a7a6`) *(runaway phase CLOSED 2026-07-29 — permanent close anchor; the gap-reroll shipped the fix)*
+- `backup/exp-runaway-baseline-complete` (`f40a7a6`) _(runaway phase CLOSED 2026-07-29 — permanent close anchor; the gap-reroll shipped the fix)_
 - `backup/lbb-gate-complete`
 - `race-action-complete`
-- `stable/pre-governor-04jul` *(permanent anchor — NEVER delete)*
-- `stable/pre-overlap-closed-20jun` *(permanent anchor — NEVER delete)*
+- `stable/pre-governor-04jul` _(permanent anchor — NEVER delete)_
+- `stable/pre-overlap-closed-20jun` _(permanent anchor — NEVER delete)_
 - `v-b2-heroes-complete`
 - `v-branding-phase1-complete`
 - `v-camera-perf-complete`
@@ -563,7 +618,7 @@ phase — COLLAPSED* record above); everything else is a permanent keeper:
 - `v-cleanup-complete`
 - `v-datadir-complete`
 - `v-outcome-0.6-complete`
-- `v-parity-complete` *(new — sim↔browser parity phase endpoint; 150 px/s, gap-reroll G=0.5/s=1.0, fingerprints ON `7c70b1eae7d31e22` / OFF `f8f7d9c2fd3283e9`)*
+- `v-parity-complete` _(new — sim↔browser parity phase endpoint; 150 px/s, gap-reroll G=0.5/s=1.0, fingerprints ON `7c70b1eae7d31e22` / OFF `f8f7d9c2fd3283e9`)_
 - `v-perf-complete`
 - `v-phaseD-complete`
 - `v-retune-cleanup-complete`
@@ -576,13 +631,14 @@ phase — COLLAPSED* record above); everything else is a permanent keeper:
 
 Reconciled against `git ls-remote --tags origin` on 2026-07-31 (DOC-SYNC-2); the 2026-07-29 (DOC-SYNC-1) count
 was 41. The 4 tags added since DOC-SYNC-1:
+
 - **Engine changes since COMBO15 (2026-07-31):** `pre/flapping` (`d0870326`) and `pre/motion` (`e99b034d`) —
-  registered above in the *Engine changes since COMBO15* subsection.
+  registered above in the _Engine changes since COMBO15_ subsection.
 - **HYGIENE-1-era return points (registered SHIP-GUARD-1, 2026-07-31):** `pre/hygiene` (`a4103bb4`,
   2026-07-29) — sits at the DOC-SYNC-1 report commit (`docs(evolution): DOC-SYNC-1 report — living docs synced
-  to COMBO15`); a docs-only return point, restores the COMBO15 world unchanged (no fingerprint move).
+to COMBO15`); a docs-only return point, restores the COMBO15 world unchanged (no fingerprint move).
   `pre/router-7` (`83f5c8d9`, 2026-07-29) — sits at the HYGIENE-1 STEP 4 commit (`chore(hygiene): local audit
-  tool + --purge-tmp + scratch off the OneDrive tree`); a tooling/hygiene return point from the HYGIENE-1 arc
+tool + --purge-tmp + scratch off the OneDrive tree`); a tooling/hygiene return point from the HYGIENE-1 arc
   (react-router 6→7, audit tooling), restores the COMBO15 world unchanged (no fingerprint move).
 
 The 16 tags added after the parity-phase snapshot above (to DOC-SYNC-1):
@@ -590,16 +646,17 @@ The 16 tags added after the parity-phase snapshot above (to DOC-SYNC-1):
 - **COMBO15 ship + fair-arrival line (2026-07-29):** `v-ship-combo15` (`175a475`), `pre/ship-combo15`
   (`215afde`), `pre/clean-sweep` (`dad4077`), and the four experiment archives
   `archive/{chain-choreo-final,free-band-final,choreo-release-final,fair-arrival-merged}` — see the
-  *COMBO15 ship + the action/fair-arrival line* subsection under Permanent anchors.
+  _COMBO15 ship + the action/fair-arrival line_ subsection under Permanent anchors.
 - **Evolution Act 1/Act 2 close anchors + scaffolding (2026-07-26):** `backup/aff-closed-fc6afbf`,
   `backup/finale-closed-26b2c34`, and the scaffolding tags `pre/aff-build`, `pre/aff-remove`,
   `pre/finale-compression`, `pre/finale-devscreen`, `pre/finale-adaptive`, `pre/finale-remove` — see the
-  *Evolution Act 1/Act 2 CLOSED* sections above.
-- **Greenfield experiment archive:** `archive/handicap-pursuit-089c7d2` — see the *Evolution — greenfield
-  experiments* section.
+  _Evolution Act 1/Act 2 CLOSED_ sections above.
+- **Greenfield experiment archive:** `archive/handicap-pursuit-089c7d2` — see the _Evolution — greenfield
+  experiments_ section.
 
 Declared in the parseable form (TAG-GUARD-3 backfill — both were already recorded with their
 SHAs above, but inside a sentence rather than at the start of a list item, so the guard could not see them):
+
 - `pre/hygiene` (`a4103bb`) — the DOC-SYNC-1 report commit; a docs-only return point.
 - `pre/router-7` (`83f5c8d`) — the HYGIENE-1 STEP 4 commit; a tooling/hygiene return point.
 
@@ -616,6 +673,7 @@ touched.
 The full list of the 177 retired tags is recorded below for the archive.
 
 ### Retired tags (177)
+
 - `backup/4a-asymmetric-fix`
 - `backup/4a-cleanup-docs-and-test`
 - `backup/battle-isolation-default-0`
@@ -807,4 +865,3 @@ The full list of the 177 retired tags is recorded below for the archive.
 - `pre/picture-fixes`
 - `pre/v4-on-trunk`
 - `pre/zoom-unit`
-

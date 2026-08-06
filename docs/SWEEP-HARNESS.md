@@ -2,9 +2,9 @@
 
 > **✅ Baseline re-measured (2026-07-26).** Absolute sim numbers in this document (band-reach, runaway, P1-contest, physics-tax, gate results) predate the plan-grid unification + speed/duration ship and are retired history. The current baseline is [reports/parity/REBASELINE.md](../reports/parity/REBASELINE.md) (speed-150, pooled band-reach 71.0%) and the CANDIDATE column of [reports/parity/GS-CONFIRM-GATE.md](../reports/parity/GS-CONFIRM-GATE.md) (band-reach 72.7%, dead finales 10.0%, runaway 6.8%).
 
-*(Added 2026-07-20, cleanup step 4. Describes the permanent sim-measurement stack as a whole: the
+_(Added 2026-07-20, cleanup step 4. Describes the permanent sim-measurement stack as a whole: the
 observers, the orchestrator pattern for a new sweep, the determinism rule, and the output conventions.
-For how to RUN the base harness and what each metric means, see [SIM.md](SIM.md).)*
+For how to RUN the base harness and what each metric means, see [SIM.md](SIM.md).)_
 
 The sim is one headless simulator — `scripts/sim-fairness.mjs` — that shares its physics modules with
 the browser (the single source for both). Everything else here is **read-only instrumentation**: pure
@@ -97,7 +97,7 @@ when they were arithmetic.
 
 **1. G-coupled metrics are comparable only at fixed G.** Everything derived from escape EPISODES —
 episode count, duration, peak gap, corrected/out-of-rolls rates — is defined by the threshold `G`: an
-episode *is* "the leader gap exceeded G". Lowering G makes episodes start earlier, last longer and
+episode _is_ "the leader gap exceeded G". Lowering G makes episodes start earlier, last longer and
 occur more often, mechanically, with no change in how the field actually behaves. The same trap
 applies to the `tiltFrac` / saturation family: `frac = min(1, strength·(gap−G))` moves with **both**
 G and strength by construction. So:
@@ -111,17 +111,17 @@ G and strength by construction. So:
   with the knob under test would be measuring its own definition.
 
 **2. Holm is reported as a flagged-track COUNT, not a full multiple-testing procedure.** What the
-drivers print as "Holm" is *how many tracks came back flagged unfair by the per-track start-row Holm
-test*, e.g. `Holm-flagged tracks: 2/4`. There is no cross-track family-wise correction on top. Read it
+drivers print as "Holm" is _how many tracks came back flagged unfair by the per-track start-row Holm
+test_, e.g. `Holm-flagged tracks: 2/4`. There is no cross-track family-wise correction on top. Read it
 as a tally, and never as "the family-wise error rate across tracks is controlled" — it is not.
 
 ## Output conventions
 
-| Location | Contents | Tracked? |
-|---|---|---|
-| `client/tmp/` | Regenerable sim scratch — the raw `fairness-data.json` / per-run observer JSON a sweep spawns and re-reads | **gitignored** (deletable; recreated on next run) |
-| `exp-<name>-results/` | The small final CSVs + `SUMMARY.md` / `REPORT.md` of a sweep | **tracked** |
-| `reports/` | Archived investigation evidence — concept reviews, closed-experiment result tables (`reports/exp-archive/`), salvaged one-off docs (`reports/results-salvage/`) | **tracked** — never moved once cited by a doc |
+| Location              | Contents                                                                                                                                                        | Tracked?                                          |
+| --------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------- |
+| `client/tmp/`         | Regenerable sim scratch — the raw `fairness-data.json` / per-run observer JSON a sweep spawns and re-reads                                                      | **gitignored** (deletable; recreated on next run) |
+| `exp-<name>-results/` | The small final CSVs + `SUMMARY.md` / `REPORT.md` of a sweep                                                                                                    | **tracked**                                       |
+| `reports/`            | Archived investigation evidence — concept reviews, closed-experiment result tables (`reports/exp-archive/`), salvaged one-off docs (`reports/results-salvage/`) | **tracked** — never moved once cited by a doc     |
 
 The sim writes its run artifacts under repo ROOT (`--out` is resolved relative to ROOT), so scratch
 lands in `client/tmp/` rather than an external temp dir — a known hygiene limitation, not a per-sweep
@@ -151,9 +151,9 @@ blocker in 27 / 38 races) while proximity was the least binding term.
 
 Passed straight through to the sim by any sweep mode:
 
-| flag | default | meaning |
-|---|---|---|
-| `--contestWindowStart` | 0.8 | front-act window start, read by the sustained-P1-battle observer |
+| flag                   | default | meaning                                                          |
+| ---------------------- | ------- | ---------------------------------------------------------------- |
+| `--contestWindowStart` | 0.8     | front-act window start, read by the sustained-P1-battle observer |
 
 `--contestWindowStart` moves the MEASUREMENT window, so an arm that changes it is not directly
 comparable to a baseline measured at a different value — state the value in the arm table.
@@ -170,7 +170,7 @@ on exact multiples of the interval. The real scheduler **jitters every roll**
 (`nextRollTime = raceTs + rollInterval + jOff`, with `jOff` up to ±20% of the interval), so an
 individual race's actual roll times scatter around those cut points and can fall on either side of one.
 
-Use the schedule math as the *expected* boundary when reasoning about a population — never as a
+Use the schedule math as the _expected_ boundary when reasoning about a population — never as a
 per-race fact, and never to conclude that a specific race did or did not have a roll available. The
 episode observer answers that per race from the leader's own `nextRollTime`
 (`hadCorrectableRollAhead`), which is the jittered truth rather than the grid.

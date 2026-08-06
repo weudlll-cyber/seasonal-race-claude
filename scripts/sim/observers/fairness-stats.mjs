@@ -4,7 +4,7 @@
 // character-for-character. These functions read race RESULTS and return numbers; they
 // never touch race state. Depends only on BAND_EDGES (same source the race core imports).
 // ============================================================
-import { BAND_EDGES } from '../../../client/src/modules/racePlanner.js';
+import { BAND_EDGES } from "../../../client/src/modules/racePlanner.js";
 
 // ── Statistics ────────────────────────────────────────────────────────────────
 /**
@@ -16,39 +16,44 @@ import { BAND_EDGES } from '../../../client/src/modules/racePlanner.js';
  * @returns {{ nRaces, totalRows, rowStats, chiSq, df, pValue }}
  */
 export function computeFairnessStats(raceResults, totalRows, rowSizes = null) {
-  const nRaces     = raceResults.length;
-  const winsByRow  = new Array(totalRows).fill(0);
+  const nRaces = raceResults.length;
+  const winsByRow = new Array(totalRows).fill(0);
   const ranksByRow = Array.from({ length: totalRows }, () => []);
 
   for (const race of raceResults) {
-    const winner = race.reduce((best, r) => (r.finalRank < best.finalRank ? r : best));
+    const winner = race.reduce((best, r) =>
+      r.finalRank < best.finalRank ? r : best,
+    );
     if (winner.startRowIndex < totalRows) winsByRow[winner.startRowIndex]++;
     for (const r of race) {
-      if (r.startRowIndex < totalRows) ranksByRow[r.startRowIndex].push(r.finalRank);
+      if (r.startRowIndex < totalRows)
+        ranksByRow[r.startRowIndex].push(r.finalRank);
     }
   }
 
   // Weighted expected wins: proportional to row size; fall back to uniform if no sizes given
-  const totalRacers = rowSizes ? rowSizes.reduce((s, v) => s + v, 0) : totalRows;
+  const totalRacers = rowSizes
+    ? rowSizes.reduce((s, v) => s + v, 0)
+    : totalRows;
   const expectedWinsByRow = Array.from({ length: totalRows }, (_, i) =>
-    rowSizes ? nRaces * rowSizes[i] / totalRacers : nRaces / totalRows
+    rowSizes ? (nRaces * rowSizes[i]) / totalRacers : nRaces / totalRows,
   );
 
   const rowStats = Array.from({ length: totalRows }, (_, rowIdx) => {
-    const ranks   = ranksByRow[rowIdx];
-    const n       = ranks.length;
-    const wins    = winsByRow[rowIdx];
+    const ranks = ranksByRow[rowIdx];
+    const n = ranks.length;
+    const wins = winsByRow[rowIdx];
     const avgRank = n > 0 ? ranks.reduce((s, v) => s + v, 0) / n : null;
     const variance =
       n > 1 ? ranks.reduce((s, v) => s + (v - avgRank) ** 2, 0) / (n - 1) : 0;
     return {
       rowIndex: rowIdx,
       wins,
-      winRate:         wins / nRaces,
+      winRate: wins / nRaces,
       expectedWinRate: expectedWinsByRow[rowIdx] / nRaces,
       n,
       avgRank,
-      stdRank:  Math.sqrt(variance),
+      stdRank: Math.sqrt(variance),
     };
   });
 
@@ -57,8 +62,8 @@ export function computeFairnessStats(raceResults, totalRows, rowSizes = null) {
     const exp = expectedWinsByRow[i];
     return exp > 0 ? s + (obs - exp) ** 2 / exp : s;
   }, 0);
-  const df       = totalRows - 1;
-  const pValue   = chiSqPValue(chiSq, df);
+  const df = totalRows - 1;
+  const pValue = chiSqPValue(chiSq, df);
 
   return { nRaces, totalRows, rowStats, chiSq, df, pValue };
 }
@@ -72,11 +77,11 @@ export function computeFairnessStats(raceResults, totalRows, rowSizes = null) {
  */
 export function computeZoneSuccessRate(raceEntries) {
   const ZONES = [
-    { zone: 'B1', lo: 1,  hi: 5,        bonus: '+6%' },
-    { zone: 'B2', lo: 6,  hi: 15,       bonus: '+4%' },
-    { zone: 'B3', lo: 16, hi: 25,       bonus: '+2%' },
-    { zone: 'B4', lo: 26, hi: 40,       bonus: '±0%' },
-    { zone: 'B5', lo: 41, hi: Infinity, bonus: '−2%' },
+    { zone: "B1", lo: 1, hi: 5, bonus: "+6%" },
+    { zone: "B2", lo: 6, hi: 15, bonus: "+4%" },
+    { zone: "B3", lo: 16, hi: 25, bonus: "+2%" },
+    { zone: "B4", lo: 26, hi: 40, bonus: "±0%" },
+    { zone: "B5", lo: 41, hi: Infinity, bonus: "−2%" },
   ];
 
   function getZoneIdx(rank) {
@@ -86,9 +91,10 @@ export function computeZoneSuccessRate(raceEntries) {
     return BAND_EDGES.length;
   }
 
-  const hits  = [0, 0, 0, 0, 0];
+  const hits = [0, 0, 0, 0, 0];
   const total = [0, 0, 0, 0, 0];
-  let overallHits = 0, overallTotal = 0;
+  let overallHits = 0,
+    overallTotal = 0;
 
   for (const { result, targetRankMap } of raceEntries) {
     for (const racer of result) {
@@ -98,21 +104,24 @@ export function computeZoneSuccessRate(raceEntries) {
       const fz = getZoneIdx(racer.finalRank);
       total[tz]++;
       overallTotal++;
-      if (fz === tz) { hits[tz]++; overallHits++; }
+      if (fz === tz) {
+        hits[tz]++;
+        overallHits++;
+      }
     }
   }
 
   return {
     zones: ZONES.map((z, i) => ({
       ...z,
-      hits:  hits[i],
+      hits: hits[i],
       total: total[i],
-      rate:  total[i] > 0 ? hits[i] / total[i] : null,
+      rate: total[i] > 0 ? hits[i] / total[i] : null,
     })),
     overall: {
-      hits:  overallHits,
+      hits: overallHits,
       total: overallTotal,
-      rate:  overallTotal > 0 ? overallHits / overallTotal : null,
+      rate: overallTotal > 0 ? overallHits / overallTotal : null,
     },
   };
 }
@@ -274,7 +283,7 @@ export function computeExtendedFairnessStats(entries, rowSizes, opts = {}) {
 
   const totalRacers = rowSizes.reduce((s, v) => s + v, 0);
   const nRows = rowSizes.length;
-  const trackIds = [...new Set(entries.map((e) => e.trackId ?? 'unknown'))];
+  const trackIds = [...new Set(entries.map((e) => e.trackId ?? "unknown"))];
 
   // ── 1. Top-3-by-row (screening stat) ──────────────────────────────────────
   // NOTE: top-3 within a race are correlated — treat as a signal, not an independence proof.
@@ -287,8 +296,16 @@ export function computeExtendedFairnessStats(entries, rowSizes, opts = {}) {
     }
     const exp = rowSizes.map((sz) => (nR * 3 * sz) / totalRacers);
     let chiSq = 0;
-    for (let i = 0; i < nRows; i++) if (exp[i] > 0) chiSq += (obs[i] - exp[i]) ** 2 / exp[i];
-    return { obs, exp, chiSq, df: nRows - 1, pRaw: chiSqPValue(chiSq, nRows - 1), nRaces: nR };
+    for (let i = 0; i < nRows; i++)
+      if (exp[i] > 0) chiSq += (obs[i] - exp[i]) ** 2 / exp[i];
+    return {
+      obs,
+      exp,
+      chiSq,
+      df: nRows - 1,
+      pRaw: chiSqPValue(chiSq, nRows - 1),
+      nRaces: nR,
+    };
   }
 
   // ── 2. Per-band Spearman ordinal trend ─────────────────────────────────────
@@ -297,7 +314,8 @@ export function computeExtendedFairnessStats(entries, rowSizes, opts = {}) {
   function computePerBandOrdinal(subset) {
     return Array.from({ length: nBands }, (_, bi) => {
       const band = subset.filter((e) => e.targetBandIdx === bi);
-      if (band.length < 4) return { bandIdx: bi, n: band.length, r: null, pRaw: 1 };
+      if (band.length < 4)
+        return { bandIdx: bi, n: band.length, r: null, pRaw: 1 };
 
       const byRace = new Map();
       for (const e of band) {
@@ -314,7 +332,12 @@ export function computeExtendedFairnessStats(entries, rowSizes, opts = {}) {
         });
       }
       const r = spearman(startRows, withinPos);
-      return { bandIdx: bi, n: band.length, r, pRaw: spearmanPermP(startRows, withinPos, r, nPerm, prng) };
+      return {
+        bandIdx: bi,
+        n: band.length,
+        r,
+        pRaw: spearmanPermP(startRows, withinPos, r, nPerm, prng),
+      };
     });
   }
 
@@ -324,7 +347,9 @@ export function computeExtendedFairnessStats(entries, rowSizes, opts = {}) {
   // Matched by targetRank (unique per racer per race since targetRanks form a permutation).
   function computeWithinBandEmergence(subset) {
     return Array.from({ length: nBands }, (_, bi) => {
-      const band = subset.filter((e) => e.targetBandIdx === bi && e.targetRank != null);
+      const band = subset.filter(
+        (e) => e.targetBandIdx === bi && e.targetRank != null,
+      );
       if (band.length < 2) return { bandIdx: bi, n: 0, meanAbsDelta: null };
 
       const byRace = new Map();
@@ -338,8 +363,12 @@ export function computeExtendedFairnessStats(entries, rowSizes, opts = {}) {
         if (group.length < 2) continue;
         const byTarget = [...group].sort((a, b) => a.targetRank - b.targetRank);
         const byActual = [...group].sort((a, b) => a.finalRank - b.finalRank);
-        const targetPos = new Map(byTarget.map((e, i) => [e.targetRank, i + 1]));
-        const actualPos = new Map(byActual.map((e, i) => [e.targetRank, i + 1]));
+        const targetPos = new Map(
+          byTarget.map((e, i) => [e.targetRank, i + 1]),
+        );
+        const actualPos = new Map(
+          byActual.map((e, i) => [e.targetRank, i + 1]),
+        );
         for (const [tr, tp] of targetPos) {
           const ap = actualPos.get(tr);
           if (ap != null) {
@@ -348,7 +377,11 @@ export function computeExtendedFairnessStats(entries, rowSizes, opts = {}) {
           }
         }
       }
-      return { bandIdx: bi, n: totalN, meanAbsDelta: totalN > 0 ? totalDelta / totalN : null };
+      return {
+        bandIdx: bi,
+        n: totalN,
+        meanAbsDelta: totalN > 0 ? totalDelta / totalN : null,
+      };
     });
   }
 
@@ -360,7 +393,7 @@ export function computeExtendedFairnessStats(entries, rowSizes, opts = {}) {
   };
 
   const perTrack = trackIds.map((tid) => {
-    const sub = entries.filter((e) => (e.trackId ?? 'unknown') === tid);
+    const sub = entries.filter((e) => (e.trackId ?? "unknown") === tid);
     return {
       trackId: tid,
       top3: computeTop3ByRow(sub),
@@ -378,7 +411,7 @@ export function computeExtendedFairnessStats(entries, rowSizes, opts = {}) {
       label: `${tr.trackId}|top3`,
       p: tr.top3.pRaw,
       trackId: tr.trackId,
-      test: 'top3',
+      test: "top3",
       r: null,
     });
     for (const b of tr.ordinal) {
@@ -386,7 +419,7 @@ export function computeExtendedFairnessStats(entries, rowSizes, opts = {}) {
         label: `${tr.trackId}|B${b.bandIdx + 1}|ordinal`,
         p: b.pRaw,
         trackId: tr.trackId,
-        test: 'ordinal',
+        test: "ordinal",
         bandIdx: b.bandIdx,
         r: b.r,
       });
@@ -399,8 +432,11 @@ export function computeExtendedFairnessStats(entries, rowSizes, opts = {}) {
 
   // Exploratory: pooled + all confirmatory, BH-corrected (drill-down only — not for pass/fail).
   const exploratory = [
-    { label: 'pooled|top3', p: pooled.top3.pRaw },
-    ...pooled.ordinal.map((b) => ({ label: `pooled|B${b.bandIdx + 1}|ordinal`, p: b.pRaw ?? 1 })),
+    { label: "pooled|top3", p: pooled.top3.pRaw },
+    ...pooled.ordinal.map((b) => ({
+      label: `pooled|B${b.bandIdx + 1}|ordinal`,
+      p: b.pRaw ?? 1,
+    })),
     ...confirmatory.map((c) => ({ label: c.label, p: c.p })),
   ];
   const bhAdj = bhCorrect(exploratory.map((e) => e.p));
@@ -430,21 +466,21 @@ export function computeExtendedFairnessStats(entries, rowSizes, opts = {}) {
 
 function chiSqPValue(x, k) {
   if (k <= 0 || x < 0) return 1;
-  const mu  = 1 - 2 / (9 * k);
+  const mu = 1 - 2 / (9 * k);
   const sig = Math.sqrt(2 / (9 * k));
-  const z   = ((x / k) ** (1 / 3) - mu) / sig;
+  const z = ((x / k) ** (1 / 3) - mu) / sig;
   return 1 - normalCDF(z);
 }
 
 // Abramowitz & Stegun normal CDF approximation (max error 7.5e-8)
 function normalCDF(z) {
-  const t    = 1 / (1 + 0.2316419 * Math.abs(z));
+  const t = 1 / (1 + 0.2316419 * Math.abs(z));
   const poly =
-    t * (0.319381530 +
-    t * (-0.356563782 +
-    t * (1.781477937 +
-    t * (-1.821255978 +
-    t * 1.330274429))));
+    t *
+    (0.31938153 +
+      t *
+        (-0.356563782 +
+          t * (1.781477937 + t * (-1.821255978 + t * 1.330274429))));
   const phi = 1 - (1 / Math.sqrt(2 * Math.PI)) * Math.exp(-0.5 * z * z) * poly;
   return z >= 0 ? phi : 1 - phi;
 }

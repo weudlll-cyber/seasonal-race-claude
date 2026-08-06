@@ -116,7 +116,7 @@ Items ranked by urgency within each bucket. ✅ = done, 🔜 = next, ⏳ = waiti
       it.** Same shape as the `check-tags` gap closed in TAG-GUARD-2/3, and the same corollary
       applies: **until it is closed, the guard should say inside itself which direction it does not
       check** — a partial guard is indistinguishable from a complete one while everything is clean
-      (Lesson 201). Note `check-doc-links` already catches a *dangling link*, so the uncovered case is
+      (Lesson 201). Note `check-doc-links` already catches a _dangling link_, so the uncovered case is
       an INDEX entry that names a report in prose, or links a path that resolves to something else.
 
 ---
@@ -218,7 +218,7 @@ measurements are from [CI-AUDIT-GREEN-1](../reports/evolution/CI-AUDIT-GREEN-1.m
 
 - ❌ **AFF built flag-gated (default OFF, byte-identical) then REVERTED after a NEGATIVE SCREEN.** The
   code-verified diagnosis: making the pack's target rank follow the live field drives `rankError→0`, which
-  *removes* the servo's within-band restoring force rather than adding contest — so band-reach fell below
+  _removes_ the servo's within-band restoring force rather than adding contest — so band-reach fell below
   the 70% floor (71.1%→66.8%) and finales went deader/runaway-ier (same "liberation settles the field"
   family as the retired B2 pack-release / universal band-arrival). Build reverted for source hygiene,
   recoverable @`cd520e0`; the lab journal stays in [reports/evolution/](../reports/evolution/)
@@ -237,18 +237,18 @@ measurements are from [CI-AUDIT-GREEN-1](../reports/evolution/CI-AUDIT-GREEN-1.m
 - ✅ **Retune gate (2026-07-23): G 1.5→0.75, strength 1.0→0.5.** Cause: at s=1.0 the correction
   `frac = min(1, strength·(gap−G))` saturates above `G+1`, so **46% of leader corrections were full
   slams to the band floor** — the "escapes, then gets visibly braked" the owner reported. G alone
-  cannot fix it (lowering G lowers the saturation point too; measured: corrections got *harder*).
+  cannot fix it (lowering G lowers the saturation point too; measured: corrections got _harder_).
   Gate: 400 races/arm, 4 tracks, paired seeds, 40 closed / 60 open fields —
   **pooled band-reach 71.6% vs 71.6% (fairness exactly neutral), Holm 2/4 in both arms**;
   **tiltSaturated 46.0%→18.7%**, tilt frac median 0.906→0.371, escapeDepth median 2.71→1.97 L and
   **worst case 12.07→7.29 L (−40%)**, front-group-at-line 3.86→4.05, runaway 9.5%→8.3%,
   parade 1.3%→0.8%, duo 6.3%→4.0%, dead finales 14.7%→14.5%.
   Duration sanity (30/120/300 s): candidate ≥ current on band-reach at every duration.
-  *(At 30 s both arms sit at ~66% band-reach — a pre-existing short-race limitation, not caused by
-  this change.)* Evidence: `reports/greenfield/gate-retune/`, driver `scripts/exp-gate-retune.mjs`
-  — both now on **master** (ported in the greenfield wrap, 2026-07-23). *(These retune-gate figures are
+  _(At 30 s both arms sit at ~66% band-reach — a pre-existing short-race limitation, not caused by
+  this change.)_ Evidence: `reports/greenfield/gate-retune/`, driver `scripts/exp-gate-retune.mjs`
+  — both now on **master** (ported in the greenfield wrap, 2026-07-23). _(These retune-gate figures are
   PRE-UNIFICATION and retained only as the 2026-07-23 decision record; the current baseline is
-  [reports/parity/REBASELINE.md](../reports/parity/REBASELINE.md) + GS-CONFIRM-GATE.md.)*
+  [reports/parity/REBASELINE.md](../reports/parity/REBASELINE.md) + GS-CONFIRM-GATE.md.)_
 - **Shipped-default fingerprints (current):** the ON hash moved with every world change since the retune
   (plan-grid unification → speed/duration ship → step-order alignment → speed-150 → the 2026-07-26 flip) —
   the current pair is recorded in [reports/parity/REBASELINE.md](../reports/parity/REBASELINE.md) §3 and
@@ -273,7 +273,7 @@ measurements are from [CI-AUDIT-GREEN-1](../reports/evolution/CI-AUDIT-GREEN-1.m
   `ENGINE_INPUT_MODULES` in `raceConfigWorld.js` with `client/src/modules/engineInputs.test.js`, which
   reads `raceCore.js`'s own imports and fails when it names a module the list does not — so adding an
   engine input forces a decision instead of a silence. Original entry:
-- ⛔️ *(superseded by the line above)* **HYGIENE PHASE — the engine-input module list, beside `WORLD_CONFIG_KEYS`.** Stage 2 of the mint
+- ⛔️ _(superseded by the line above)_ **HYGIENE PHASE — the engine-input module list, beside `WORLD_CONFIG_KEYS`.** Stage 2 of the mint
   tripwire ([SHIP-CEREMONY.md](SHIP-CEREMONY.md) → "THE MINT TRIPWIRE"). Enumerate, in
   `client/src/modules/raceConfigWorld.js` next to `WORLD_CONFIG_KEYS` and under the same "keep them in
   lock-step" rule, the MODULES whose values reach `createRaceFromIdentity` / `stepRacePhysics` — plus a
@@ -298,7 +298,7 @@ measurements are from [CI-AUDIT-GREEN-1](../reports/evolution/CI-AUDIT-GREEN-1.m
   only because someone diffed the world; the badge surfaces that class of drift live.
 - 🔜 **Paired per-seed delta evaluation in the gate driver.** `exp-gate-retune.mjs` already runs
   **truly paired** arms — identical seed sequence per track, per-race seeds recorded — but then
-  aggregates each arm *independently* and compares the aggregates. The pairing is currently an
+  aggregates each arm _independently_ and compares the aggregates. The pairing is currently an
   experimental control, not a statistical estimator. Computing per-seed deltas (arm A minus arm B on
   the SAME race) and reporting their distribution would cut the variance the comparison has to see
   through, and would surface the flip-level detail the branch-priority A0 check had to be run by hand
@@ -337,6 +337,7 @@ ROADMAP.md (**Phase D** and **Phase R** sections); only hashes are repeated here
 verified against `git log` / `git tag`.
 
 **✅ Completed**
+
 - **Phase D — server-side storage migration** (groups/brands/racers): D1 `999f45e`, D2 `c263106`, D3 `6f4deb3`, D4 `ee3735d`, D5 `6aa8bc1`, D6a `5d75d12`, D6b `d22ecee` (2026-06-14/15).
 - **Lateral physics redesign** — Layer 1 Soft Steering (`35b6b29` → default `8ad6a62`) + Layer 2 Hard Separation (`82c1806`/`f535fc2`/`0815aac`/`07bf2f1`/`bf44a8b`); legacy forces removed in Commit A `bc68c37` + Commit B `f311622` (2026-06-25/28).
 - **Controller on closed tracks** — C0 leader-progress phase clock `14f3c6f`, C0-fix `712f334` (2026-06-21/22).
@@ -348,15 +349,16 @@ verified against `git log` / `git tag`.
 - **Governor vision-pivot → race-action director** — ⚠️ **SUPERSEDED/HISTORICAL:** this reactive governor/director was replaced by choreo + PulkLeadRotation and then **removed entirely** in THE GREAT PULK CLEANUP (Stages 1–6); the commits below are history, none of the governor/director knobs or streams survive. (anchor `d9c9cd3` = `stable/pre-governor-04jul`). Governor core `307d6dc`/`294550a`/`0da9048`/`24c99b6`/`9947892`; **Stage C** leader-brake retired → pure tail-lift `a0105ed`; **Stage A1** contest-injector director (rank-blind, own master + `DIRECTOR_SEED_XOR`) `a7e4a64`; **Sim-1** front-action metric + governor telemetry propagation fix (read-only) `b930b1b`. Full detail in ROADMAP §R.7. The pivot idea (a limiter cannot create a contest) endures — see LESSONS 160.
 
 **🔜 / ⏳ Open**
+
 - **Re-Gate on `9cfa953`** ✅ **CLOSED — SUPERSEDED (owner-approved 2026-07-31).** It would have re-run all four closed tracks under a `corridorEnd=1.0` / `bonusMult=2.0` browser-faithful config — but that configuration **predates the plan-grid unification AND the speed-150 re-baseline**, so the world it would have gated no longer exists. Four full gates have since run over the successor worlds: the speed-150 [REBASELINE](../reports/parity/REBASELINE.md), the gap-reroll ten-track confirm gate, the COMBO15 N=100 gate ([FAIR-ARRIVAL-GATE](../reports/evolution/FAIR-ARRIVAL-GATE.md)), and the definitive N=300 [HOLM-300-COMBINED](../reports/evolution/HOLM-300-COMBINED.md). **Superseded, not abandoned** — the fairness question it raised has been answered on the worlds that actually shipped, at higher power (N=300) than it asked for. (Historical: `9cfa953` is an ancestor of master; it discarded the provisional `8f57cba`-era sweeps.)
 - **Master-merge** of `feat/race-action` → `master` — ✅ **DONE (confirmed 2026-07-14)** — merged to `master` by fast-forward at `e1d5a2b`, anchored by tags `race-action-complete` and `v1-race-action-merged`; `feat/race-action` deleted (local + remote); the repo is now master-only. Later cleanup (e2e retirement, doc refresh, planning-audit) continued on `master` past the merge point.
-- **B2 — per-hero intensity budget** 🔜 *(added 2026-07-14 reconciliation)* — `clampIntensityToBudget` (heroCurveGenerator.js:147/154) reduces the WHOLE cast's realized intensity from the assigned winner's geometry alone (winner feasibility → one `realizedIntensity`, applied to every hero at :457). Concern: one hero's tight geometry throttles every other hero's drama. **Done =** the budget is computed per-hero so a single constrained hero no longer flattens the rest. Eye-test whether it visibly matters before building. Owner-approved step.
+- **B2 — per-hero intensity budget** 🔜 _(added 2026-07-14 reconciliation)_ — `clampIntensityToBudget` (heroCurveGenerator.js:147/154) reduces the WHOLE cast's realized intensity from the assigned winner's geometry alone (winner feasibility → one `realizedIntensity`, applied to every hero at :457). Concern: one hero's tight geometry throttles every other hero's drama. **Done =** the budget is computed per-hero so a single constrained hero no longer flattens the rest. Eye-test whether it visibly matters before building. Owner-approved step.
 - **B4 — camera foresight (consume the authored cameraPlan)** ✅ **DONE (`b4-complete` = master `03e28cf`, 2026-07-15)** — the authored `cameraPlan` is now plumbed generator → `racePlanner` (`_cameraPlan` + `getCameraPlan`) → `RaceScreen` (`setCameraPlan`, delivered mid-race: heroes are cast mid-race, so the plan is null at init) → `CameraDirector` (`updateRacePlan(b1Indices, cameraPlan)` + storage). **First consumer:** in `_detectComebackRacer` the cast comebacker set (heroes with `role: 'comebacker'`) is the PRIMARY candidate; the `b1Indices` scan stays the FALLBACK when the plan names no comebacker (assigned winner already up front ⇒ cast `sovereign-lead`) or no plan exists. **Why:** the old scan searched ALL front-band finishers, which include the sovereign-leads — one that dips and recovers reads as a large gain and could win the scan, so the camera cut to a "comeback" that was noise. Only WHO is watched changed; the reality bar (window, min-gain, start-gap, current-rank, largest-real-gain tiebreak) is untouched. **Evidence:** comeback-reality sweep (200 races / 367 comebackers, seed=1) — the cast comebacker is the top climber in 94–100% of races and lands within ~0.45 ranks of its authored target. Tooling: `scripts/sim/observers/comeback-reality.mjs` + `--comeback-reality` (needs `--hero-map`), see docs/SIM.md; full numbers in `results/comeback-reality-sweep-2026-07-14/report.md` (gitignored). Owner eye-test PASS. **NOT shipped (tried, measured, removed):** a foresight PRE-ARM + `cameraForesight` flag + DevScreen toggle — the Owner eye-test (ON vs OFF, same seed) showed no visible difference, so it was trimmed out (branch history `7c50605`, `be71a26`, `bccc171`).
-- **Camera timing levers — comeback shot appears late (tune by eye, no code)** 🔜 *(added 2026-07-15, from B4)* — the comeback shot only appears late, and the cause is NOT the plan but two existing DevScreen sliders. `outcomePhaseThreshold` (default 0.65) gates reactive comeback detection, but the authored climb starts around progress ~0.28, and the slider floor is 0.5 — so the first ~0.28–0.5 of the climb is unreachable by slider alone. `comebackWeight` (0.6) loses the weighted candidate contest to `battleWeight` (0.8) during PULK, so even a fired comeback candidate does not win the lens. Verified beat timing (from the generator itself): a comebacker HOLDS its deep rank from `anchorProgress` (0.25) until its `peak` beat (~0.28–0.67, usually in PULK), then climbs to its `resolve` beat (~0.69–0.91, in OUTCOME). **Owner decision needed:** tune the two sliders by eye (does showing the climb beat keeping the front battle?) before any further code.
-- **B4c — faller shot (now unblocked by B4)** 🔜 *(added 2026-07-15)* — a faller is cast front-post-chaos with a deep target band, so its target rank is > 5 and it is **structurally absent from `b1Indices`** — the camera literally cannot see it today. The stored `cameraPlan` carries `role: 'faller'` + beats and is the only channel that can. Same design as B4b: the plan names WHO, a reality check still authorises the cut. The camera-timing-levers item above applies here too — a faller shot hits the same weight contest.
-- **E3 — PULK→OUTCOME speed differential** 🔽 **NARROWED (owner-approved 2026-07-31): the rowBonus half SHIPPED; the OPEN remainder is ONLY the `trajectoryMult` half.** Do NOT re-open the shipped rowBonus/rowEnvMult smoothing (default ON, `v-rowenv-default-on-complete`) — that part is done and fairness-verified. The single open question is the larger `trajectoryMult` differential (pack pinned 1.0 in PULK → P-controller in OUTCOME): accept-as-design or smooth. Full history: *(added 2026-07-14 reconciliation)* — verified design: in PULK the pack's `trajectoryMult` is pinned to 1.0 and rowBonus is 0 (racePlanner.js:474); in OUTCOME both return (trajectory rises via the P-controller gain 2.0, rowBonus full). Racers are genuinely faster in OUTCOME than in PULK — a real speed step at the boundary, not an onset artifact. **Owner decision:** intended dramaturgy (accept + document as design) or a seam to smooth? Log the decision either way. **UPDATE 2026-07-18/19:** the **rowBonus/rowEnvMult sub-step** (~0.5–1.5% on back rows) is smoothed by a 1s `easeInOutCubic` in the SHARED `raceStep.js` (`computeRowEnvSmoothed`; config `enableRowEnvSmooth` + DevScreen toggle). Sim sweep (SLEW 1%/frame vs EASING 1s, 4 tracks × 100 races) confirmed both fairness-neutral (B1/B2 within 0.6pp, Holm 0). Shipped dormant first (`v-rowenv-easing-complete`), then **flipped to DEFAULT ON 2026-07-19** after owner eye-test (`v-rowenv-default-on-complete`; re-gate B1 −0.4pp, B2 −0.2pp vs instant, both within noise; DevScreen toggle flips OFF for comparison). The larger **`trajectoryMult` differential** (pack pinned 1.0 → P-controller in OUTCOME) is untouched and remains the open part of E3.
-- **OUTCOME climb-capacity investigation (2026-07-17/18) — deep-band band-reach vs `choreoOutcomeStart`** 🔜 — B3–B5 band-reach degrades as `choreoOutcomeStart` rises (SWEEP 2). **Two fixes MEASURED + REJECTED:** (a) *band-checkpoint proportionalization* (Phase 1 dry-run, 6 variants × 4 tracks × 40 races): max +0.3pp B3 = noise — band-reach is **endpoint-determined** (the servo steers to the Fisher-Yates target over [choreoOutcomeStart→finish]); the checkpoint only reshapes the mid-race curve, not the destination. (b) *unified speed-ramping* (remove the distributed smoothers, replace with one global 0.5%/frame cap; 4 variants × 4 tracks × 100 races): **−5pp B2, −9pp B3** — the distributed smoothers are load-bearing for servo accuracy (Lesson 177). **Faller diagnosis (mountainstreet, N=100):** fallers **UNDERSHOOT** (a climb-capacity deficit, NOT "enter OUTCOME too fast"); worst on the long open 60-racer track. **Open lever:** add OUTCOME servo runway/authority for deep bands — earlier per-band steering onset and/or higher `trajectoryMult` authority for B3–B5 — measured against band-reach. Reports under `results/` (gitignored). **NOTE (2026-07-20):** this is the remaining open action item after B2-Heroes shipped (below); the two share the "deep bands need more servo authority" diagnosis but B2-Heroes solves front-action a different way (authored attackers, not deep-band climb-capacity). Deferred pending owner decision on drama-at-leader vs. deep-band reach.
-- **B2-attacker "Attack & Fall" heroes — front-action feature** ✅ **SHIPPED ON (`v-b2-heroes-complete` = master `8bf54ca`, 2026-07-20)** — extra choreographed heroes cast from FRONT-post-chaos B2-finishers (`heroCurveGenerator.js castHeroes` + `attackerTiming`, bypasses the 0.80 B2 resolve for role `attacker-b2`) that climb to ~rank 5 mid-race then fall back and free-reorder in B2 (**band-arrival** release: the servo frees them the moment they re-enter B2 on the way down — `racePlanner.js` `atkParams` branch). **Shipped ON: `b2AttackHeroes=3`, `b2AttackPeakRank=5`, `b2AttackFinalRank=7`, `b2AttackBandArrival=true`** — the sim-validated winner: **+21% top-5 OUTCOME action** vs the no-attacker floor, with **B1/B2 band-reach ≥70% on all four tracks** and **Holm at the pre-existing 2/4 baseline** (no regression). count=0 restores the pre-feature game byte-identical. **New shipped-default fingerprint `72c3360fb75225ef`** (count=3); count=0 is still `4ec8e64dd2641ad3`. **3-phase validation** (exploration N=50 → count-confirm N=100 → hybrid N=100): finalRank (release height) is the action knob, NOT peak depth; count scales super-additively (1→+7%, 2→+10%, 3→+21%); band-arrival ties fixed-final on fairness and is simpler (no finalRank pinning). Web: DevScreen B2-count slider (PULK card) + hero-highlight rings (Camera Advanced). Tooling: `scripts/exp-b2-attack.mjs` (`--phase 1a/1b/holm3/2/fr/ba/uba`); reports in `exp-b2-attack-results/PHASE{1A,1B,2}-REPORT.md`. Owner eye-test PASS. Tests 3203/3203. *(Cleanup 2026-07-20: the `exp-b2-attack.mjs` driver was removed from tracking — recoverable at commit `c441e7c~1` (git history) — and the result tables were archived to `reports/exp-archive/exp-b2-attack-results/`. Investigation CLOSED; findings preserved.)*
+- **Camera timing levers — comeback shot appears late (tune by eye, no code)** 🔜 _(added 2026-07-15, from B4)_ — the comeback shot only appears late, and the cause is NOT the plan but two existing DevScreen sliders. `outcomePhaseThreshold` (default 0.65) gates reactive comeback detection, but the authored climb starts around progress ~0.28, and the slider floor is 0.5 — so the first ~0.28–0.5 of the climb is unreachable by slider alone. `comebackWeight` (0.6) loses the weighted candidate contest to `battleWeight` (0.8) during PULK, so even a fired comeback candidate does not win the lens. Verified beat timing (from the generator itself): a comebacker HOLDS its deep rank from `anchorProgress` (0.25) until its `peak` beat (~0.28–0.67, usually in PULK), then climbs to its `resolve` beat (~0.69–0.91, in OUTCOME). **Owner decision needed:** tune the two sliders by eye (does showing the climb beat keeping the front battle?) before any further code.
+- **B4c — faller shot (now unblocked by B4)** 🔜 _(added 2026-07-15)_ — a faller is cast front-post-chaos with a deep target band, so its target rank is > 5 and it is **structurally absent from `b1Indices`** — the camera literally cannot see it today. The stored `cameraPlan` carries `role: 'faller'` + beats and is the only channel that can. Same design as B4b: the plan names WHO, a reality check still authorises the cut. The camera-timing-levers item above applies here too — a faller shot hits the same weight contest.
+- **E3 — PULK→OUTCOME speed differential** 🔽 **NARROWED (owner-approved 2026-07-31): the rowBonus half SHIPPED; the OPEN remainder is ONLY the `trajectoryMult` half.** Do NOT re-open the shipped rowBonus/rowEnvMult smoothing (default ON, `v-rowenv-default-on-complete`) — that part is done and fairness-verified. The single open question is the larger `trajectoryMult` differential (pack pinned 1.0 in PULK → P-controller in OUTCOME): accept-as-design or smooth. Full history: _(added 2026-07-14 reconciliation)_ — verified design: in PULK the pack's `trajectoryMult` is pinned to 1.0 and rowBonus is 0 (racePlanner.js:474); in OUTCOME both return (trajectory rises via the P-controller gain 2.0, rowBonus full). Racers are genuinely faster in OUTCOME than in PULK — a real speed step at the boundary, not an onset artifact. **Owner decision:** intended dramaturgy (accept + document as design) or a seam to smooth? Log the decision either way. **UPDATE 2026-07-18/19:** the **rowBonus/rowEnvMult sub-step** (~0.5–1.5% on back rows) is smoothed by a 1s `easeInOutCubic` in the SHARED `raceStep.js` (`computeRowEnvSmoothed`; config `enableRowEnvSmooth` + DevScreen toggle). Sim sweep (SLEW 1%/frame vs EASING 1s, 4 tracks × 100 races) confirmed both fairness-neutral (B1/B2 within 0.6pp, Holm 0). Shipped dormant first (`v-rowenv-easing-complete`), then **flipped to DEFAULT ON 2026-07-19** after owner eye-test (`v-rowenv-default-on-complete`; re-gate B1 −0.4pp, B2 −0.2pp vs instant, both within noise; DevScreen toggle flips OFF for comparison). The larger **`trajectoryMult` differential** (pack pinned 1.0 → P-controller in OUTCOME) is untouched and remains the open part of E3.
+- **OUTCOME climb-capacity investigation (2026-07-17/18) — deep-band band-reach vs `choreoOutcomeStart`** 🔜 — B3–B5 band-reach degrades as `choreoOutcomeStart` rises (SWEEP 2). **Two fixes MEASURED + REJECTED:** (a) _band-checkpoint proportionalization_ (Phase 1 dry-run, 6 variants × 4 tracks × 40 races): max +0.3pp B3 = noise — band-reach is **endpoint-determined** (the servo steers to the Fisher-Yates target over [choreoOutcomeStart→finish]); the checkpoint only reshapes the mid-race curve, not the destination. (b) _unified speed-ramping_ (remove the distributed smoothers, replace with one global 0.5%/frame cap; 4 variants × 4 tracks × 100 races): **−5pp B2, −9pp B3** — the distributed smoothers are load-bearing for servo accuracy (Lesson 177). **Faller diagnosis (mountainstreet, N=100):** fallers **UNDERSHOOT** (a climb-capacity deficit, NOT "enter OUTCOME too fast"); worst on the long open 60-racer track. **Open lever:** add OUTCOME servo runway/authority for deep bands — earlier per-band steering onset and/or higher `trajectoryMult` authority for B3–B5 — measured against band-reach. Reports under `results/` (gitignored). **NOTE (2026-07-20):** this is the remaining open action item after B2-Heroes shipped (below); the two share the "deep bands need more servo authority" diagnosis but B2-Heroes solves front-action a different way (authored attackers, not deep-band climb-capacity). Deferred pending owner decision on drama-at-leader vs. deep-band reach.
+- **B2-attacker "Attack & Fall" heroes — front-action feature** ✅ **SHIPPED ON (`v-b2-heroes-complete` = master `8bf54ca`, 2026-07-20)** — extra choreographed heroes cast from FRONT-post-chaos B2-finishers (`heroCurveGenerator.js castHeroes` + `attackerTiming`, bypasses the 0.80 B2 resolve for role `attacker-b2`) that climb to ~rank 5 mid-race then fall back and free-reorder in B2 (**band-arrival** release: the servo frees them the moment they re-enter B2 on the way down — `racePlanner.js` `atkParams` branch). **Shipped ON: `b2AttackHeroes=3`, `b2AttackPeakRank=5`, `b2AttackFinalRank=7`, `b2AttackBandArrival=true`** — the sim-validated winner: **+21% top-5 OUTCOME action** vs the no-attacker floor, with **B1/B2 band-reach ≥70% on all four tracks** and **Holm at the pre-existing 2/4 baseline** (no regression). count=0 restores the pre-feature game byte-identical. **New shipped-default fingerprint `72c3360fb75225ef`** (count=3); count=0 is still `4ec8e64dd2641ad3`. **3-phase validation** (exploration N=50 → count-confirm N=100 → hybrid N=100): finalRank (release height) is the action knob, NOT peak depth; count scales super-additively (1→+7%, 2→+10%, 3→+21%); band-arrival ties fixed-final on fairness and is simpler (no finalRank pinning). Web: DevScreen B2-count slider (PULK card) + hero-highlight rings (Camera Advanced). Tooling: `scripts/exp-b2-attack.mjs` (`--phase 1a/1b/holm3/2/fr/ba/uba`); reports in `exp-b2-attack-results/PHASE{1A,1B,2}-REPORT.md`. Owner eye-test PASS. Tests 3203/3203. _(Cleanup 2026-07-20: the `exp-b2-attack.mjs` driver was removed from tracking — recoverable at commit `c441e7c~1` (git history) — and the result tables were archived to `reports/exp-archive/exp-b2-attack-results/`. Investigation CLOSED; findings preserved.)_
 - **Built, measured, shelved — then REMOVED (dead-mechanisms cleanup, 2026-07-23):** the **pack strictness release** — non-hero pack runs strictness-0 inside band — **broke B2 band-reach** on luger-hill + searound (67–69%) + Holm 3/4 via an **endgame edge-leak** (92% of leaks after progress 0.90; free racers at the band edge get shuffled out with no runway — diagnosis archived under `reports/exp-archive/`). Dominated by B2-attackers (more action, cleaner fairness). The **universal band-arrival** variant — free B1-heroes + normal pack inside their assigned band — held fairness (immediate re-steer) but cost **−6% action**. Both were deleted with their config keys and DevScreen control; the re-steer threshold survives because the live B2-attacker release reads it. Recoverable at tag `pre/dead-mechanisms-cleanup`.
 - **Closure principle (validated 3 ways): action lives in ORCHESTRATION, not liberation.** Servo steering along authored curves CREATES top-5 churn; freeing racers (strictness 0 inside band) causes SETTLEMENT and REDUCES action. Evidence: B2-attackers +21% (scripted climb-and-fall); the pack strictness release broke B2 fairness (free); universal band-arrival −6% action (free). **Future front-action work must AUTHOR scenarios (curves/casting), not liberate constraints (release the servo).** See LESSONS if extended.
 - **sim-fairness.mjs telemetry comment cleanup** — ✅ **DONE (2026-07-14 audit)** — the `passThroughCount` declaration comment now reads "sim-only telemetry" (scripts/sim-fairness.mjs:772); the stale "NOT committed to the feature branch" clause is gone.
@@ -377,22 +379,22 @@ verified against `git log` / `git tag`.
 
 ## Phase L — Local Backend
 
-| Item | Status | Description |
-|---|---|---|
-| ✅ **L.1** | PR #43 | Backend skeleton: `server/` (Express, Port 4000), Dockerfile, docker-compose.yml, `GET /api/health`, frontend config hook in `client/src/services/api.js`. |
-| ✅ **L.2** | PR #44 | Track API: `GET /api/tracks`, `GET /api/tracks/:id`, `GET /api/tracks/:id/background`. Space track migrated from snapshot. 12 backend tests. |
-| ✅ **L.3** | PR #44 | Frontend integration: `trackLoader.js`, `useServerTracks` hook. SetupScreen + TrackManager + RaceHistory use combined list. Geometry caching in localStorage. 14 tests. |
-| ✅ **L.4** | PR #44 | Offline cache: `trackCache.js` — background images as data-URLs, 3 MB limit with LRU eviction, quota guard. `getTrackBackgroundUrl` offline-aware. 6 tests. |
-| ✅ **L.4-BgCacheRemoved** | 2026-06-18 | Background-image caching removed entirely (trackCache.js deleted). Default backgrounds are 4–10 MB; localStorage quota is 5–10 MB — structurally too small even after JPEG downscale. Geometry cache kept; offline races run without background image. One-time localStorage cleanup in main.jsx removes legacy `racearena:cache:backgrounds` key. |
-| ✅ **L.5** | PR #44 | Write path: POST/PUT/DELETE + background upload endpoints (server). TrackEditor async-save to server, retry UI when server not reachable. Migration on first connect (localStorage custom tracks → server, markers). Cache cleanup: deleted server tracks are removed from localStorage + background cache. TrackManager Edit opens TrackEditor (/track-editor?load=), Delete calls API. Server badge removed. 10 MB image limit. +23 frontend tests, +16 backend tests. |
-| ✅ **L.6-Bug1** | PR #44 | Edit consistency: Edit now opens the metadata modal for ALL track types (Default, Local, Server). In the modal the "Edit Geometry" / "Draw Geometry" button navigates to the track editor. +8 tests. |
-| ✅ **L.6-Bug2** | PR #44 | Geometry index sync: `cacheTrackGeometry` now registers server geometries in `racearena:trackGeometries:index` via `registerInIndex`. `removeCachedTrackData` deregisters via `unregisterFromIndex`. As a result server geometries appear in the modal dropdown + "📐 Edit Geometry" button correctly. Edit-Geometry button in button row without marginLeft:auto. +7 tests. |
-| ✅ **L.6-Bug2-UX** | PR #44 | Edit modal UX: Edit-Geometry button below track geometry dropdown (not in action row). Effects display removed; note "Background image and effects are managed in the Track Editor" added. Action row now only contains Save/Cancel. +5 tests. |
-| ✅ **L.6-VIS** | PR #44 | Track editor visibility improvement (iter 2): A1 — 60% black overlay. A2 — lines magenta (#FF00FF) instead of light blue. A3 — white outline behind each line (outline 5–6px, color 3–4px). A4 — width boundaries 1→3, center line + curves 3→4. A5 — control points white/dark unchanged. `drawStaticScene` in `trackEditorDraw.js` (testability). +18 tests. |
-| ✅ **L.6-BgBug** | PR #44 | Image upload reset track: `handleBgUpload` deleted `centerPoints`/`innerPoints`/`outerPoints` when image dimensions differed from editor world. Fix: reset block + `window.confirm` dialog removed — dimension change accepted, track preserved. +1 regression test. |
-| ✅ **L.7-Bug2** | PR #62 | Default tracks without geometry: all 5 default tracks (Dirt Oval, River Run, Space Sprint, Garden Path, City Circuit) had `geometryId: null` — never playable. All 5 geometries drawn in the track editor and committed as server JSON + background images (2026-05-02). Tracks remain editable. |
-| ⏳ **L.8-Hybrid** | planned | Hybrid concept: default tracks should work "offline-first" (without backend). Currently default tracks are metadata-only in code, server tracks fully on backend. When backend is unreachable, custom tracks are not playable. Discussed 2026-04-29. |
-| ⏳ **L.9-Status** | planned | Server connection status visible in UI: display whether backend is reachable (green/red dot or similar), so the user knows why custom tracks are not loading. Discussed 2026-04-29. |
+| Item                      | Status     | Description                                                                                                                                                                                                                                                                                                                                                                                                                                                              |
+| ------------------------- | ---------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| ✅ **L.1**                | PR #43     | Backend skeleton: `server/` (Express, Port 4000), Dockerfile, docker-compose.yml, `GET /api/health`, frontend config hook in `client/src/services/api.js`.                                                                                                                                                                                                                                                                                                               |
+| ✅ **L.2**                | PR #44     | Track API: `GET /api/tracks`, `GET /api/tracks/:id`, `GET /api/tracks/:id/background`. Space track migrated from snapshot. 12 backend tests.                                                                                                                                                                                                                                                                                                                             |
+| ✅ **L.3**                | PR #44     | Frontend integration: `trackLoader.js`, `useServerTracks` hook. SetupScreen + TrackManager + RaceHistory use combined list. Geometry caching in localStorage. 14 tests.                                                                                                                                                                                                                                                                                                  |
+| ✅ **L.4**                | PR #44     | Offline cache: `trackCache.js` — background images as data-URLs, 3 MB limit with LRU eviction, quota guard. `getTrackBackgroundUrl` offline-aware. 6 tests.                                                                                                                                                                                                                                                                                                              |
+| ✅ **L.4-BgCacheRemoved** | 2026-06-18 | Background-image caching removed entirely (trackCache.js deleted). Default backgrounds are 4–10 MB; localStorage quota is 5–10 MB — structurally too small even after JPEG downscale. Geometry cache kept; offline races run without background image. One-time localStorage cleanup in main.jsx removes legacy `racearena:cache:backgrounds` key.                                                                                                                       |
+| ✅ **L.5**                | PR #44     | Write path: POST/PUT/DELETE + background upload endpoints (server). TrackEditor async-save to server, retry UI when server not reachable. Migration on first connect (localStorage custom tracks → server, markers). Cache cleanup: deleted server tracks are removed from localStorage + background cache. TrackManager Edit opens TrackEditor (/track-editor?load=), Delete calls API. Server badge removed. 10 MB image limit. +23 frontend tests, +16 backend tests. |
+| ✅ **L.6-Bug1**           | PR #44     | Edit consistency: Edit now opens the metadata modal for ALL track types (Default, Local, Server). In the modal the "Edit Geometry" / "Draw Geometry" button navigates to the track editor. +8 tests.                                                                                                                                                                                                                                                                     |
+| ✅ **L.6-Bug2**           | PR #44     | Geometry index sync: `cacheTrackGeometry` now registers server geometries in `racearena:trackGeometries:index` via `registerInIndex`. `removeCachedTrackData` deregisters via `unregisterFromIndex`. As a result server geometries appear in the modal dropdown + "📐 Edit Geometry" button correctly. Edit-Geometry button in button row without marginLeft:auto. +7 tests.                                                                                             |
+| ✅ **L.6-Bug2-UX**        | PR #44     | Edit modal UX: Edit-Geometry button below track geometry dropdown (not in action row). Effects display removed; note "Background image and effects are managed in the Track Editor" added. Action row now only contains Save/Cancel. +5 tests.                                                                                                                                                                                                                           |
+| ✅ **L.6-VIS**            | PR #44     | Track editor visibility improvement (iter 2): A1 — 60% black overlay. A2 — lines magenta (#FF00FF) instead of light blue. A3 — white outline behind each line (outline 5–6px, color 3–4px). A4 — width boundaries 1→3, center line + curves 3→4. A5 — control points white/dark unchanged. `drawStaticScene` in `trackEditorDraw.js` (testability). +18 tests.                                                                                                           |
+| ✅ **L.6-BgBug**          | PR #44     | Image upload reset track: `handleBgUpload` deleted `centerPoints`/`innerPoints`/`outerPoints` when image dimensions differed from editor world. Fix: reset block + `window.confirm` dialog removed — dimension change accepted, track preserved. +1 regression test.                                                                                                                                                                                                     |
+| ✅ **L.7-Bug2**           | PR #62     | Default tracks without geometry: all 5 default tracks (Dirt Oval, River Run, Space Sprint, Garden Path, City Circuit) had `geometryId: null` — never playable. All 5 geometries drawn in the track editor and committed as server JSON + background images (2026-05-02). Tracks remain editable.                                                                                                                                                                         |
+| ⏳ **L.8-Hybrid**         | planned    | Hybrid concept: default tracks should work "offline-first" (without backend). Currently default tracks are metadata-only in code, server tracks fully on backend. When backend is unreachable, custom tracks are not playable. Discussed 2026-04-29.                                                                                                                                                                                                                     |
+| ⏳ **L.9-Status**         | planned    | Server connection status visible in UI: display whether backend is reachable (green/red dot or similar), so the user knows why custom tracks are not loading. Discussed 2026-04-29.                                                                                                                                                                                                                                                                                      |
 
 > ⚠️ **Add auth before VPS deployment!** Currently every browser visitor has full write access to all tracks (no auth on write endpoints). Phase 5 must implement JWT/auth before go-live. |
 
@@ -412,11 +414,13 @@ verified against `git log` / `git tag`.
 Authoritative specification in `docs/CAMERA_DIRECTOR.md` (13 sections, all §13.2 questions UI-1–UI-8 answered).
 
 **3 structural bugs identified** (empirically from code analysis):
+
 - ✅ **Bug A** (Garden Path P1): OVERVIEW pan is a no-op — **fixed** `overviewClosedTrackZoom=1.3` multiplier, schema v15, DevScreen slider. (2026-05-27, squash `749c2a4`)
 - ✅ **Bug B** (River Run P2): zoom inversion on large open tracks — **fixed** action camera for open tracks with 1.5× base zoom. (2026-05-04, PR #73 `2d79678`)
 - ✅ **Bug C** (River Run P3): `openTrackPanTarget` uses all racers instead of focus group — **fixed** top-3 focus group. (2026-05-04, PR #73 `80dcb8d`)
 
 **Q-25 root cause identified and solution decided:**
+
 - `DEFAULT_SPEED_SCALE_CONFIG.maxScale=4.0` in `defaults.js:112` → Fix: `maxScale=10.0`
 - Space Sprint at ~131 px/s (reference), race duration ~144s
 - Open tracks: duration slider in setup screen, finishT dynamically from track physics
@@ -427,6 +431,7 @@ sprite corridor [min, max] as hard camera constraints, OVERVIEW random jitter [1
 N=4–100 considered; lead group = clamp(round(N×0.1), 3, 10). Cross-reference: D7d.
 
 **Sub-PR plan (9 PRs):**
+
 - ✅ PR-A1: Q-25 fix (maxScale=10) + duration slider + finishT for open tracks (2026-05-03)
 - ✅ PR-A2-Diagnose: read-only PR → `docs/SPEED_REFACTOR_ANALYSIS.md` (no code change) (2026-05-03)
 - ✅ PR-A2: Speed pipeline architecture refactor — `computeRaceBaseSpeed`, speedScaleFactor removed, closed-track duration slider (Model D), SpeedScaleSection removed (2026-05-03). **Fix commit 2026-05-04:** speedMultiplier normalization + spreadMinFactor (E1+E2).
@@ -449,11 +454,13 @@ The game master selects in setup which player group enters the race (e.g. "Group
 Currently all configured players are always shown — there is no mechanism for subgroups.
 
 **Use cases:**
+
 - Tournament with multiple groups: only Group A races in round 1, Group B in round 2
 - Ad-hoc race with participants from the full roster
 - Quick selection without manually deselecting all inactive players
 
 **Requirements (spec still pending):**
+
 - Player groups definable in `PlayerGroupsManager` (group name + player assignment)
 - Setup screen: selection filter "Which group races?" before race start
 - No change to the race engine — only which players end up in `sessionStorage.activeRace`
@@ -472,6 +479,7 @@ deviate ±6–8% from `targetDuration` — intrinsically due to the spread mecha
 from U[spreadMin, spreadMax]).
 
 If user complaints about race duration deviations ever arise:
+
 - Calibrate `race_baseSpeed` formula to **race end** instead of median (different `E[min_n]` correction)
 - Race end would then be within a ±5% guarantee
 
@@ -490,6 +498,7 @@ Three conceptual problems were uncovered while attempting to draw default track 
 4. Default tracks exist only as code constants, not as server records → UI flow for them does not work
 
 **TLH-1 — Backend Fixes + Migration (Sub-PR 1) ✅**
+
 - ✅ Server boot migration: 5 default tracks created as server records (idempotent via one-shot marker `.tlh1-defaults-migrated`)
 - ✅ PUT `/api/tracks/:id`: `geometryId` taken from client if present in body; otherwise `existing.geometryId` kept
 - ✅ DELETE + `removeCachedTrackData`: geometry is NEVER automatically deleted — only background cache
@@ -498,6 +507,7 @@ Three conceptual problems were uncovered while attempting to draw default track 
 - ✅ 10 new backend tests (geometryId ×3, backup ×3, default seed ×4), 1 new client unit test
 
 **TLH-2 — UI Flow + Cleanup (Sub-PR 2) ✅**
+
 - ✅ Edit modal: geometry dropdown replaced with status display ("Geometry: drawn (XX pts)" / "Geometry: not yet drawn" + "Draw/Edit Geometry" button)
 - ✅ Track editor: two-mode — load mode (`?load=<id>`) shows "Editing: X" without name input, new mode shows "New Track" with name input
 - ✅ Track editor load path: two-path load — (1) geometry cache, (2) direct server track state for `geometryId: null` tracks
@@ -505,6 +515,7 @@ Three conceptual problems were uncovered while attempting to draw default track 
 - ✅ 17 new unit tests (12 TrackEditor.loadmode.test.jsx + 5 net TrackManager.test.jsx)
 
 **TLH-2 Post-Merge Bug Fixes (branch extension after browser test)**
+
 - ✅ F2: `hasGeo` read `innerPoints.length` (always 0 due to `toSummary` strip) → now `geometryId != null` + `pointCount` via extended `toSummary`
 - ✅ F4: track editor opened scrolled to canvas (no scroll reset on navigation) → `window.scrollTo(0,0)` on mount + `scrollIntoView` on `serverError`
 - ✅ F1-revised: save in load mode was blocked when no background → background only required in new mode; load mode always saveable
@@ -512,6 +523,7 @@ Three conceptual problems were uncovered while attempting to draw default track 
 - ✅ F2 follow-up: `autoMaxRacers` in `handleEdit` used `isServer ? track` as EditorShape input → crash (TypeError: `undefined.length`) because `toSummary` strips `innerPoints`. Fix: always use geometry cache instead of server summary. L39 extended with audit pattern.
 
 **Track Delete Safeguards (PR #58) ✅**
+
 - ✅ "Remove background" button in track editor (next to background upload, appears when image is loaded)
 - ✅ `DELETE /api/tracks/:id/background` endpoint — removes only the image, leaves track record intact
 - ✅ `DELETE /api/tracks/:id` returns 403 for default tracks (`isDefault: true`) — prevents accidental deletion
@@ -520,6 +532,7 @@ Three conceptual problems were uncovered while attempting to draw default track 
 - ✅ Background image useEffect race condition fix (L43) — cancelled flag prevents stale onerror callbacks
 
 **TLH-3 — Code Fallback + Status Banner + Export (Sub-PR 3) ⏳ deferred until after Camera Phase**
+
 - Frontend load order: server → cache → code bundle (`defaultTracks.js`)
 - Code bundle initially with empty geometries (bootstrap)
 - Status banner when code bundle mode is active: "Server unavailable — showing default tracks (limited functionality)"
@@ -530,6 +543,7 @@ Three conceptual problems were uncovered while attempting to draw default track 
 ### 1a — Draw Default Tracks ✅ Completed 2026-05-02
 
 All 5 geometries drawn and saved in the track editor:
+
 - ✅ Dirt Oval
 - ✅ River Run
 - ✅ Space Sprint
@@ -563,7 +577,7 @@ GHSA-3jxr-9vmj-r5cp). Fixed lockfile-only in `869615b`.
 
 ### Browser seed — follow-ups (noted, NOT built; owner decision)
 
-Quick-Test races are seed-deterministic as of 2026-07 (see `docs/SIM.md` → *Browser determinism*).
+Quick-Test races are seed-deterministic as of 2026-07 (see `docs/SIM.md` → _Browser determinism_).
 An empty seed field draws a fresh seed per race and shows it in the HUD; a typed number fixes the
 race. Typed values persist for the browser session. Status of the follow-ups:
 
@@ -576,7 +590,7 @@ race. Typed values persist for the browser session. Status of the follow-ups:
 - **Seed persistence beyond the session.** ⏳ OPEN — owner decision. Currently `sessionStorage`, so a
   fresh browser session starts from an empty (random) field. Promote to `localStorage` or a URL
   parameter only if eye-tests need a pinned seed to survive a restart.
-- **Replaying a browser seed in the sim.** The two engines are deterministic *individually*, but a
+- **Replaying a browser seed in the sim.** The two engines are deterministic _individually_, but a
   browser seed does not reproduce frame-for-frame in the sim (different per-race seed derivation and
   timestep). Making one seed mean one race in both engines is a separate, larger piece of work.
 
@@ -590,32 +604,32 @@ race. Typed values persist for the browser session. Status of the follow-ups:
 
 ## Completed Items (Phase Completions)
 
-| Item | PR | Description |
-|---|---|---|
-| ✅ **D3.5.1** | #13 | SpriteRacerType config-driven base class, tintSpriteWithMask |
-| ✅ **D3.5.2** | #15(?) | Horse/Duck/Snail → SpriteRacerType migrated, `_createTrail` removed |
-| ✅ **D3.5.3** | #16 | 9 new racer types (Elephant, Dragon, Snake, Giraffe, Buggy, Motorbike, Plane, F1, Rocket) |
-| ✅ **B-7** | #17 | Dev screen UI drift: code registry as single source of truth, racerTypeOverrides map |
-| ✅ **B-8** | #17 | SetupScreen footer/pills emoji mapping: from getRacerType().getEmoji() instead of hardcoded map |
-| ✅ **W3** | #17 | Session-only racer override selector in setup track tab, filters disabled types |
-| ✅ **B-9** | #17 | Test-3.1 filter: override selector shows only active types |
-| ✅ **Q-1 to Q-5** | #17 | Dead exports, unused imports, TODO tags, JSON.parse hygiene, file headers |
-| ✅ **D9** | #19 | Race engine speed refactor: speedMultiplier affects race speed, explicit lap/time choice, dynamic finish line for open tracks, runout behavior, 2s result delay, 22 Playwright e2e tests. Master `dad3300`. |
-| ✅ **D3.5.5** | #21 | Per-type tuning UI in dev screen: 6 fields (speedMultiplier, displaySize, basePeriodMs, leaderRingColor, leaderEllipseRx, leaderEllipseRy) live-apply via edit modal. CONFIG_SNAPSHOT, normalizeOverrideMap (legacy migration), InfoTooltip component. 678 unit + 36 e2e tests. Master `2d76bc3`. |
-| ✅ **D10** | #23 | Track size variability + auto sprite scaling + image-first workflow. worldWidth/worldHeight automatically from image dimensions (naturalWidth/naturalHeight). Hard limit 8000×4096. Image required to save. Dimension mismatch dialog. TrackEditor zoom+pan. trackWidth variable. Auto sprite scaling formula. All 8 requirements (A1-A8) met. Hotfix `13a2dd2` (🏁 default icon). 694 unit + 75 e2e tests. Master `13a2dd2`. |
-| ✅ **B-Wave** | #25 | UX polish sweep: B-1 (player group load StrictMode fix), B-3 (winners max 5→20), B-10 (InfoTooltip auto boundary), B-11 (display size tooltip), B-12 (maxPlayers configurable), B-13 (language selector removed), B-14 (TrackManager hint), B-15 (all German UI strings → English). 694 unit + 88 e2e tests. Master `697e081`. |
-| ✅ **B-16 + B-17** | #26 | Large tracks: B-16 CameraDirector adaptive zoom (zoom = worldW/VIEW_W, max 6), B-17 track speed scaling (baseSpeed ÷ pathLengthPx/referencePathLength). pathLengthPx calculated on track save + migration for existing geometries. SpeedScaleSection in dev screen. 719 unit + 100 e2e tests. Master `7cdde15`. |
-| ✅ **fix/list-tracks** | #27 | Root cause fix for large-track render bug: `listTracks()` did not return worldWidth/worldHeight → bsX=1.0 → only ~549px visible on 6000px world. A1: 2-line fix in trackStorage.js. A2: migration IIFE in storage.js. 723 unit + 103 e2e tests. |
-| ✅ **fix/camera-polish + Q-14** | #28 | CameraDirector: adaptive zoom (zoom=worldW²/VIEW_W/worldW, clamp 0.15–6), clampOffset 2-anchor formula, top-3 focus. cameraZoomFactor invariant (REFERENCE_CAMERA_ZOOM/cam.zoom, closed tracks only). BaseSpeedSection in dev screen: tunable min/max baseSpeed, spread preview, 2-lap gap estimate. Q-14 lapUtils SoT: DEFAULT_BASE_SPEED_CONFIG from defaults.js, private constants, optional params on openTrackFinishT/estimatedSecondsPerLap. camera-polish-ux-verification.spec.js (31 tests, permanent). 759 unit + 157 e2e tests. Master `750d826`. |
-| ✅ **D11** | #30 | Racer behavior: soft avoidance + drafting. Asymmetric avoidance (trailer yields, leader holds lane) — eliminates symmetric force cancellation in packs. Proximity-scaled force, configurable avoidanceDistance/lateralForce/maxLateral. Speed brake for adjacent racers. Drafting boost for close followers in same lane. World-edge camera clamp (finding 2, prevents black strips at high zoom). Camera-zoom-aware sprite scaling for open tracks: `computeOpenTrackCameraZoomFactor()` produces identical on-screen size as closed-track reference at any zoom. Pixel-floor logic: `minVisiblePixels` (default 32) ensures sprites never vanish on wide tracks. All 5 params tunable in dev screen. 809 unit + 183 e2e tests. Master `d46cab2`. |
-| ✅ **D7a** | #33 | Proportional sprite scaling + min-size floor + relative zoom ratios + label scaling. cameraZoomFactor + REFERENCE_CAMERA_ZOOM removed. computeRenderDisplayScale as single source of render pipeline: max(proportionalScreenPx, minTargetScreenPx). CameraDirector: overviewZoom × ratio per state (LEADER:1.4, BATTLE:1.6, COMEBACK:1.3). Label scaling with effZoom. Q-15 structurally addressed: 4 scaling factors → 1 pipeline. 808 unit + 183 e2e tests. Master `a49baa0`. |
-| ✅ **D7a-Plus** | #35 | Per-type minTargetScreenPx with live preview. Slider + animated canvas preview in RacerEditModal. Global default hint, modified badge, reset. getEffectiveMinTargetScreenPx() in render pipeline. Scroll indicator follow-up (fade gradient). CC smoke test convention: verification sources clarification. Master `27cba65`. |
-| ✅ **D7b** | #37 | Lane-free: physicalY system fully replaces currentLaneY/targetLaneY. physicalY ∈ [-1,+1] (0=centerline). Home force spring, anisotropic avoidance distance (t×tWeight + physicalY×yWeight), cone drafting (world coordinates), speed brake for adjacent racers, soft repulsion + hard clamp. 13 new/updated tunable parameters in dev screen. Lane code hard removed. Unit + e2e tests updated. |
-| ✅ **D7b-fix B1+B2** | #37 | Follow-up commit on branch D7b: B1 — start spread: racers start evenly distributed over [-startSpreadRange, +startSpreadRange] instead of all at physicalY=0 (computeStartPhysicalY, new dev screen parameter). B2 — yDiff=0 edge case: when both racers have the same physicalY, no lateral force is applied (prevents all trailers flying toward +1). |
-| ✅ **D7b-fix B3** | #37 | Anti-stacking (force imbalance, was listed as D11 finding in backlog): avoidance forces are normalized by sqrt(neighborCount) — prevents boundary clinging with 20+ racers where linear force accumulation overwhelmed restoring forces. New defaults: homeForceStrength=0.04 (+122%), softRepulsionStrength=0.10 (+67%), lateralForce=0.010 (−33%). |
-| ✅ **D7c** | #39 | Row start + speed bonus + track capacity. `computeRowLayout` (shuffled, row assignments), `computeRowPhysicalY` (full spread also for last incomplete row), `computeSpeedBonus` (factor 1.0 = pole-neutral), `computeMaxRacersDefault` (auto capacity from pathLengthPx). Closed tracks: back rows start at negative t (tPos wraps correctly). Open tracks: t=0 through EditorShape clamp. `maxRacers` on track with "modified" badge. Setup screen: row hint + capacity warning. Dev screen row start section: 4 parameters. 21 unit + 6 e2e tests. |
-| ✅ **D7c-fix** | #39 | Bug: `trackWidth` metadata (140 px, calibrated for 1280px world) gave `racersPerRow=1` on large worlds (6000px) → all 20 racers in single rows → single vertical line. Fix phase 1: `EditorShape.getActualTrackWidth()` measures real geometric width (median, cached). Fix phase 2 (D7c-fix-v2): formula completely in world pixel space: `computeRacersPerRow(trackWidthPx, frameSizePx)` = `floor(2×trackWidthPx/frameSizePx)`. `trackWidth` field completely removed from track data model — TrackManager dropdown removed, `raceData.trackWidth` and `track.trackWidth` removed. Fix phase 3 (D7c-fix-v3): floating-point rounding. **Note (scale-cleanup 2026-06-07):** `getActualTrackWidth()` is now the FALLBACK only. Physics reads `track.width` first (`track.width ?? getActualTrackWidth()`). The Track Editor stores the true physical lane width as `track.width`; `getActualTrackWidth()` can overestimate (e.g. Space Sprint: 449 px spline vs 300 px stored). |
-| ✅ **D7c-Phase4** | #39 | Three fixes on feat/d7c-row-start-with-speed-bonus. (1) **startSpreadRange 0.7→0.95**: default increased; migration: saved value 0.7 is updated to 0.95 on load. (2) **Formula mismatch fix**: `computeRacersPerRow` now receives `effectiveWidth = geometricWidth × startSpreadRange` — packing calculation now matches actual racer distribution (before: formula used 100% of track width, distribution only 70%). Updated in RaceScreen, TrackManager, SetupScreen. (3) **Open track layout**: a) Assembly area — rows start at `t = (totalRows − rowIndex) × deltaT_per_row` instead of negative t → no more clamping, all rows within track. b) `runoutZone` parameter (default 0.05) — finish line on open tracks at `1.0 − runoutZone` (tunable in dev screen). No more `openTrackFinishT` in RaceScreen. Setup screen shows finish % from runoutZone. Migration for startSpreadRange + runoutZone validation in loadRaceBehaviorConfig. |
+| Item                            | PR     | Description                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      |
+| ------------------------------- | ------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| ✅ **D3.5.1**                   | #13    | SpriteRacerType config-driven base class, tintSpriteWithMask                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     |
+| ✅ **D3.5.2**                   | #15(?) | Horse/Duck/Snail → SpriteRacerType migrated, `_createTrail` removed                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              |
+| ✅ **D3.5.3**                   | #16    | 9 new racer types (Elephant, Dragon, Snake, Giraffe, Buggy, Motorbike, Plane, F1, Rocket)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        |
+| ✅ **B-7**                      | #17    | Dev screen UI drift: code registry as single source of truth, racerTypeOverrides map                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                             |
+| ✅ **B-8**                      | #17    | SetupScreen footer/pills emoji mapping: from getRacerType().getEmoji() instead of hardcoded map                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  |
+| ✅ **W3**                       | #17    | Session-only racer override selector in setup track tab, filters disabled types                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  |
+| ✅ **B-9**                      | #17    | Test-3.1 filter: override selector shows only active types                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       |
+| ✅ **Q-1 to Q-5**               | #17    | Dead exports, unused imports, TODO tags, JSON.parse hygiene, file headers                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        |
+| ✅ **D9**                       | #19    | Race engine speed refactor: speedMultiplier affects race speed, explicit lap/time choice, dynamic finish line for open tracks, runout behavior, 2s result delay, 22 Playwright e2e tests. Master `dad3300`.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      |
+| ✅ **D3.5.5**                   | #21    | Per-type tuning UI in dev screen: 6 fields (speedMultiplier, displaySize, basePeriodMs, leaderRingColor, leaderEllipseRx, leaderEllipseRy) live-apply via edit modal. CONFIG_SNAPSHOT, normalizeOverrideMap (legacy migration), InfoTooltip component. 678 unit + 36 e2e tests. Master `2d76bc3`.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                |
+| ✅ **D10**                      | #23    | Track size variability + auto sprite scaling + image-first workflow. worldWidth/worldHeight automatically from image dimensions (naturalWidth/naturalHeight). Hard limit 8000×4096. Image required to save. Dimension mismatch dialog. TrackEditor zoom+pan. trackWidth variable. Auto sprite scaling formula. All 8 requirements (A1-A8) met. Hotfix `13a2dd2` (🏁 default icon). 694 unit + 75 e2e tests. Master `13a2dd2`.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    |
+| ✅ **B-Wave**                   | #25    | UX polish sweep: B-1 (player group load StrictMode fix), B-3 (winners max 5→20), B-10 (InfoTooltip auto boundary), B-11 (display size tooltip), B-12 (maxPlayers configurable), B-13 (language selector removed), B-14 (TrackManager hint), B-15 (all German UI strings → English). 694 unit + 88 e2e tests. Master `697e081`.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   |
+| ✅ **B-16 + B-17**              | #26    | Large tracks: B-16 CameraDirector adaptive zoom (zoom = worldW/VIEW_W, max 6), B-17 track speed scaling (baseSpeed ÷ pathLengthPx/referencePathLength). pathLengthPx calculated on track save + migration for existing geometries. SpeedScaleSection in dev screen. 719 unit + 100 e2e tests. Master `7cdde15`.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  |
+| ✅ **fix/list-tracks**          | #27    | Root cause fix for large-track render bug: `listTracks()` did not return worldWidth/worldHeight → bsX=1.0 → only ~549px visible on 6000px world. A1: 2-line fix in trackStorage.js. A2: migration IIFE in storage.js. 723 unit + 103 e2e tests.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  |
+| ✅ **fix/camera-polish + Q-14** | #28    | CameraDirector: adaptive zoom (zoom=worldW²/VIEW_W/worldW, clamp 0.15–6), clampOffset 2-anchor formula, top-3 focus. cameraZoomFactor invariant (REFERENCE_CAMERA_ZOOM/cam.zoom, closed tracks only). BaseSpeedSection in dev screen: tunable min/max baseSpeed, spread preview, 2-lap gap estimate. Q-14 lapUtils SoT: DEFAULT_BASE_SPEED_CONFIG from defaults.js, private constants, optional params on openTrackFinishT/estimatedSecondsPerLap. camera-polish-ux-verification.spec.js (31 tests, permanent). 759 unit + 157 e2e tests. Master `750d826`.                                                                                                                                                                                                                                                                                                                                                                                                                      |
+| ✅ **D11**                      | #30    | Racer behavior: soft avoidance + drafting. Asymmetric avoidance (trailer yields, leader holds lane) — eliminates symmetric force cancellation in packs. Proximity-scaled force, configurable avoidanceDistance/lateralForce/maxLateral. Speed brake for adjacent racers. Drafting boost for close followers in same lane. World-edge camera clamp (finding 2, prevents black strips at high zoom). Camera-zoom-aware sprite scaling for open tracks: `computeOpenTrackCameraZoomFactor()` produces identical on-screen size as closed-track reference at any zoom. Pixel-floor logic: `minVisiblePixels` (default 32) ensures sprites never vanish on wide tracks. All 5 params tunable in dev screen. 809 unit + 183 e2e tests. Master `d46cab2`.                                                                                                                                                                                                                               |
+| ✅ **D7a**                      | #33    | Proportional sprite scaling + min-size floor + relative zoom ratios + label scaling. cameraZoomFactor + REFERENCE_CAMERA_ZOOM removed. computeRenderDisplayScale as single source of render pipeline: max(proportionalScreenPx, minTargetScreenPx). CameraDirector: overviewZoom × ratio per state (LEADER:1.4, BATTLE:1.6, COMEBACK:1.3). Label scaling with effZoom. Q-15 structurally addressed: 4 scaling factors → 1 pipeline. 808 unit + 183 e2e tests. Master `a49baa0`.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  |
+| ✅ **D7a-Plus**                 | #35    | Per-type minTargetScreenPx with live preview. Slider + animated canvas preview in RacerEditModal. Global default hint, modified badge, reset. getEffectiveMinTargetScreenPx() in render pipeline. Scroll indicator follow-up (fade gradient). CC smoke test convention: verification sources clarification. Master `27cba65`.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    |
+| ✅ **D7b**                      | #37    | Lane-free: physicalY system fully replaces currentLaneY/targetLaneY. physicalY ∈ [-1,+1] (0=centerline). Home force spring, anisotropic avoidance distance (t×tWeight + physicalY×yWeight), cone drafting (world coordinates), speed brake for adjacent racers, soft repulsion + hard clamp. 13 new/updated tunable parameters in dev screen. Lane code hard removed. Unit + e2e tests updated.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  |
+| ✅ **D7b-fix B1+B2**            | #37    | Follow-up commit on branch D7b: B1 — start spread: racers start evenly distributed over [-startSpreadRange, +startSpreadRange] instead of all at physicalY=0 (computeStartPhysicalY, new dev screen parameter). B2 — yDiff=0 edge case: when both racers have the same physicalY, no lateral force is applied (prevents all trailers flying toward +1).                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          |
+| ✅ **D7b-fix B3**               | #37    | Anti-stacking (force imbalance, was listed as D11 finding in backlog): avoidance forces are normalized by sqrt(neighborCount) — prevents boundary clinging with 20+ racers where linear force accumulation overwhelmed restoring forces. New defaults: homeForceStrength=0.04 (+122%), softRepulsionStrength=0.10 (+67%), lateralForce=0.010 (−33%).                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                             |
+| ✅ **D7c**                      | #39    | Row start + speed bonus + track capacity. `computeRowLayout` (shuffled, row assignments), `computeRowPhysicalY` (full spread also for last incomplete row), `computeSpeedBonus` (factor 1.0 = pole-neutral), `computeMaxRacersDefault` (auto capacity from pathLengthPx). Closed tracks: back rows start at negative t (tPos wraps correctly). Open tracks: t=0 through EditorShape clamp. `maxRacers` on track with "modified" badge. Setup screen: row hint + capacity warning. Dev screen row start section: 4 parameters. 21 unit + 6 e2e tests.                                                                                                                                                                                                                                                                                                                                                                                                                             |
+| ✅ **D7c-fix**                  | #39    | Bug: `trackWidth` metadata (140 px, calibrated for 1280px world) gave `racersPerRow=1` on large worlds (6000px) → all 20 racers in single rows → single vertical line. Fix phase 1: `EditorShape.getActualTrackWidth()` measures real geometric width (median, cached). Fix phase 2 (D7c-fix-v2): formula completely in world pixel space: `computeRacersPerRow(trackWidthPx, frameSizePx)` = `floor(2×trackWidthPx/frameSizePx)`. `trackWidth` field completely removed from track data model — TrackManager dropdown removed, `raceData.trackWidth` and `track.trackWidth` removed. Fix phase 3 (D7c-fix-v3): floating-point rounding. **Note (scale-cleanup 2026-06-07):** `getActualTrackWidth()` is now the FALLBACK only. Physics reads `track.width` first (`track.width ?? getActualTrackWidth()`). The Track Editor stores the true physical lane width as `track.width`; `getActualTrackWidth()` can overestimate (e.g. Space Sprint: 449 px spline vs 300 px stored). |
+| ✅ **D7c-Phase4**               | #39    | Three fixes on feat/d7c-row-start-with-speed-bonus. (1) **startSpreadRange 0.7→0.95**: default increased; migration: saved value 0.7 is updated to 0.95 on load. (2) **Formula mismatch fix**: `computeRacersPerRow` now receives `effectiveWidth = geometricWidth × startSpreadRange` — packing calculation now matches actual racer distribution (before: formula used 100% of track width, distribution only 70%). Updated in RaceScreen, TrackManager, SetupScreen. (3) **Open track layout**: a) Assembly area — rows start at `t = (totalRows − rowIndex) × deltaT_per_row` instead of negative t → no more clamping, all rows within track. b) `runoutZone` parameter (default 0.05) — finish line on open tracks at `1.0 − runoutZone` (tunable in dev screen). No more `openTrackFinishT` in RaceScreen. Setup screen shows finish % from runoutZone. Migration for startSpreadRange + runoutZone validation in loadRaceBehaviorConfig.                                 |
 
 | ✅ **D7b-fix B4** | #98 | Free-lane separation + home force reduction. Additive impulse logic on geometric overlap: `isSideFree()` checks left/right space against all other active racers; deterministic direction choice via `stablePairBit` when exactly equal physicalY. `homeForceReductionOnOverlap: 0.3` — home force reduced to 30% during geometric overlap so free-lane can complete the separation. Geometry metadata (`frameSizePx`, `trackWidthPx`, `pathLengthPx` — field names from scale-cleanup rename) passed from RaceScreen to racer. `reRollVariationPercent: 45 → 58`. 13 new unit tests. 94 files / 1741 tests. |
 | ✅ **Scale Cleanup** | `feat/open-track-overlap` | Foundation fix: physics now measures the world that is drawn. Three sources of truth corrected: (1) `trackWidthPx` reads `track.width` (stored by Track Editor, e.g. 300 px for Space Sprint) first, `getActualTrackWidth()` only as fallback for legacy tracks without stored width. (2) `drawnBodyWidthPx` = `bodyRef.bodyNarrow` from `computeBodyNarrowRef` (true visible body width), not `physicalSpriteSize × bodyFillX`. (3) `drawnBodyLengthPx` from render primitives independently. (4) physicalY ↔ px helpers `pxToPhysicalY` / `physicalYToPx` route ALL lateral conversions; raw `× trackWidth` was off by 2×. Six denominator/BLOCKED sites in `raceBehavior.js` fixed. Naming cleanup: 9 field renames, 2 getter renames, dead branches removed. All 19 sweep scripts + diag scripts updated. 2629/2629 tests. See `docs/ARCHITECTURE.md` § Scale & Size and `reports/open-track-overlap/34-scale-build.md`. |
@@ -642,25 +656,25 @@ race. Typed values persist for the browser session. Status of the follow-ups:
 
 ## Phase 3B — Open Follow-up Items
 
-| Item | Priority | Description |
-|---|---|---|
-| ✅ **chore/sprite-scale-relative** | Done `6a9dcfc` 2026-05-24 | `spritePx` → `spriteScale` (schema v14). Relative factor, racer-count-independent (L82). Defaults: OVERVIEW 1.00, LEADER 1.81, BATTLE 2.81, COMEBACK 1.39, LEAD_CHANGE 1.81. FALLBACK_REFERENCE_SPRITE_SIZE = 36 px. Side fix: LEAD_CHANGE was missing from `CameraStateHUD.STATE_CONFIG` — fallback `?? OVERVIEW` showed wrong badge (L87). |
-| ✅ **Phase 3D** | Done `bcdedb8` 2026-05-25 | FINISH_OVERVIEW, BATTLE/COMEBACK fixes. See Phase 3D — Open Follow-up Items. |
-| ✅ **Camera centering architecture** | Done 2026-05-26 | Root cause fix: all four phasedEnabled states (LEADER_ZOOM, BATTLE_ZOOM, COMEBACK_ZOOM, LEAD_CHANGE) now center on racer world position during follow phase. `_setTargets` sole owner of `targetOffsetX/Y`; `_computePhasedPanTarget` state-controller only. See `docs/camera-target-architecture.md`. Lesson 37. 2134/2134 tests ✅. |
-| ✅ **Bug A** | Done 2026-05-27 `749c2a4` | OVERVIEW pan no-op on closed tracks — `overviewClosedTrackZoom=1.3` multiplier in all three closed-track OVERVIEW branches + transition snap. Schema v15. DevScreen slider. 2134/2134 tests ✅. |
-| ✅ **Bug 1** | Done 2026-05-27 `2f417ba` | LEAD_CHANGE spriteScale dead config — `_leadChangeZoom` added to all three `_computeZoomLevels` branches; `_transition` hard-cut and `_setTargets` LEAD_CHANGE now use `_leadChangeZoom` instead of `_leaderZoom`. No config or schema change (schema v14 LEAD_CHANGE spriteScale field now takes effect). +3 tests. 2137/2137 ✅. |
-| **COMEBACK vs LEADER_ZOOM priority** | Medium | COMEBACK_ZOOM activates even when a racer is only slightly behind. Threshold calibration: how far back does a racer need to be to justify COMEBACK? Measurement in real races: how often is COMEBACK activated vs displacing LEADER_ZOOM? |
-| **Sim parity open track ranking** | Medium | Open track ranking (projected world position) is not yet mirrored in sim-fairness.mjs. Sim still uses raw t-value for standings. For correct fairness statements on open tracks, the sim standings must match the browser standings (sim-browser parity rule). |
+| Item                                 | Priority                  | Description                                                                                                                                                                                                                                                                                                                                  |
+| ------------------------------------ | ------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| ✅ **chore/sprite-scale-relative**   | Done `6a9dcfc` 2026-05-24 | `spritePx` → `spriteScale` (schema v14). Relative factor, racer-count-independent (L82). Defaults: OVERVIEW 1.00, LEADER 1.81, BATTLE 2.81, COMEBACK 1.39, LEAD_CHANGE 1.81. FALLBACK_REFERENCE_SPRITE_SIZE = 36 px. Side fix: LEAD_CHANGE was missing from `CameraStateHUD.STATE_CONFIG` — fallback `?? OVERVIEW` showed wrong badge (L87). |
+| ✅ **Phase 3D**                      | Done `bcdedb8` 2026-05-25 | FINISH_OVERVIEW, BATTLE/COMEBACK fixes. See Phase 3D — Open Follow-up Items.                                                                                                                                                                                                                                                                 |
+| ✅ **Camera centering architecture** | Done 2026-05-26           | Root cause fix: all four phasedEnabled states (LEADER_ZOOM, BATTLE_ZOOM, COMEBACK_ZOOM, LEAD_CHANGE) now center on racer world position during follow phase. `_setTargets` sole owner of `targetOffsetX/Y`; `_computePhasedPanTarget` state-controller only. See `docs/camera-target-architecture.md`. Lesson 37. 2134/2134 tests ✅.        |
+| ✅ **Bug A**                         | Done 2026-05-27 `749c2a4` | OVERVIEW pan no-op on closed tracks — `overviewClosedTrackZoom=1.3` multiplier in all three closed-track OVERVIEW branches + transition snap. Schema v15. DevScreen slider. 2134/2134 tests ✅.                                                                                                                                              |
+| ✅ **Bug 1**                         | Done 2026-05-27 `2f417ba` | LEAD_CHANGE spriteScale dead config — `_leadChangeZoom` added to all three `_computeZoomLevels` branches; `_transition` hard-cut and `_setTargets` LEAD_CHANGE now use `_leadChangeZoom` instead of `_leaderZoom`. No config or schema change (schema v14 LEAD_CHANGE spriteScale field now takes effect). +3 tests. 2137/2137 ✅.           |
+| **COMEBACK vs LEADER_ZOOM priority** | Medium                    | COMEBACK_ZOOM activates even when a racer is only slightly behind. Threshold calibration: how far back does a racer need to be to justify COMEBACK? Measurement in real races: how often is COMEBACK activated vs displacing LEADER_ZOOM?                                                                                                    |
+| **Sim parity open track ranking**    | Medium                    | Open track ranking (projected world position) is not yet mirrored in sim-fairness.mjs. Sim still uses raw t-value for standings. For correct fairness statements on open tracks, the sim standings must match the browser standings (sim-browser parity rule).                                                                               |
 
 ---
 
 ## Phase 3D — Open Follow-up Items
 
-| Item | Priority | Description |
-|---|---|---|
-| **FINISH_OVERVIEW timing calibration** | Medium | `finishOverviewLookbackPx` (300) and `finishOverviewZoomOutDurationMs` are starting defaults. Check in real races: is the leader visible at the edge of the frame when the pan ends? Is the zoom-out speed appropriate? Adjust if needed. |
-| **COMEBACK frequency analysis** | Medium | After threshold relaxations (outcomePhaseThreshold 0.75→0.65, comebackMinStartGap 0.40→0.25) check: how often does COMEBACK activate now? Too frequent = operator irritation. Sim parity for COMEBACK trigger not yet achieved. |
-| **BATTLE rank span empirical validation** | Low | `battleMaxRankSpan: 5` is a starting default. Measure in 20-racer races with real pack situations whether rank span 5 filters correctly or is too restrictive. |
+| Item                                      | Priority | Description                                                                                                                                                                                                                               |
+| ----------------------------------------- | -------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **FINISH_OVERVIEW timing calibration**    | Medium   | `finishOverviewLookbackPx` (300) and `finishOverviewZoomOutDurationMs` are starting defaults. Check in real races: is the leader visible at the edge of the frame when the pan ends? Is the zoom-out speed appropriate? Adjust if needed. |
+| **COMEBACK frequency analysis**           | Medium   | After threshold relaxations (outcomePhaseThreshold 0.75→0.65, comebackMinStartGap 0.40→0.25) check: how often does COMEBACK activate now? Too frequent = operator irritation. Sim parity for COMEBACK trigger not yet achieved.           |
+| **BATTLE rank span empirical validation** | Low      | `battleMaxRankSpan: 5` is a starting default. Measure in 20-racer races with real pack situations whether rank span 5 filters correctly or is too restrictive.                                                                            |
 
 ---
 
@@ -674,8 +688,8 @@ race. Typed values persist for the browser session. Status of the follow-ups:
   within a track (e.g. puddle on asphalt, mud pit on dirt). Track editor gets a
   zone drawing tool; `EditorShape` gets `getZonesAtPosition(t, offset) → Zone[]`. Planned
   once Visual Racer Effects is complete.
-  *(Previously tracked as D6 / RTE reservation — `rteDefinitions` placeholder on SpriteRacerType will be
-  replaced by Surface Classes; old placeholder cleaned up in VRE-1.)*
+  _(Previously tracked as D6 / RTE reservation — `rteDefinitions` placeholder on SpriteRacerType will be
+  replaced by Surface Classes; old placeholder cleaned up in VRE-1.)_
 - ✅ **D7a** — Proportional sprite scaling + min-size floor + zoom ratios + label scaling (PR #33, master `a49baa0`)
 - ✅ **D7a-Plus** — Per-type minTargetScreenPx with live preview (PR #35, master `27cba65`)
 - ✅ **D7b** — Lane-free: physicalY replaces lane system (PR #37)
@@ -742,7 +756,7 @@ race. Typed values persist for the browser session. Status of the follow-ups:
     Can also be created as a pure documentation sprint before B-UX2, then B-UX2 uses the content.
 
 - **B-UX-MinMax** — Dev panel min/max pairs UX: replace silent rejection with visual warning, consistent for speed range (RaceTuningSection) + overviewCooldownMin/Max (CameraZoomTuningSection) + any future min/max pairs. Currently an invalid value (min > max or max < min) is silently ignored — no feedback for the user. Fix: red border or inline text ("Min must be less than Max") when limit is violated. Small standalone PR.
-  *(Arose during Phase 4 slider implementation 2026-05-06, Severity: LOW — currently consistent with existing speed range convention)*
+  _(Arose during Phase 4 slider implementation 2026-05-06, Severity: LOW — currently consistent with existing speed range convention)_
 
 - **B-UX4** — Sprite size system overhaul
   - Current behavior: per-type overrides (e.g. `displaySize: 50` for Rocket) are absolute
@@ -759,7 +773,6 @@ race. Typed values persist for the browser session. Status of the follow-ups:
 - **B-2** — TrackSelector: custom track behavior when geometry is missing
 - **B-4** — Apply branding profiles to race/result screen (UI exists, wiring missing)
 - **B-5** — System backup/restore/reset: end-to-end verified (UI-only so far)
-
 
 ### Phase Q (Quality Hygiene)
 
@@ -793,7 +806,7 @@ race. Typed values persist for the browser session. Status of the follow-ups:
   (all tracks, not just defaults). Separate planning and solution alternatives there — see
   **"Background cache for offline play"** below.
 
-- **Background cache for offline play** *(Low priority)*
+- **Background cache for offline play** _(Low priority)_
 
   Currently all tracks (default + custom) require the running backend server for background images.
   When server is offline → console warning (since PR-A2.8) and black/gradient background in race.
@@ -815,10 +828,10 @@ race. Typed values persist for the browser session. Status of the follow-ups:
 
   **Priority:** Not planned (structural impossibility resolved by removal).
 
-- **Q-27** — Background PNG compression *(Audit 2026-05-04, Severity: HIGH — deferred)*
+- **Q-27** — Background PNG compression _(Audit 2026-05-04, Severity: HIGH — deferred)_
   The 5 background images (Dirt Oval, River Run, Space Sprint, Garden Path, City Circuit) are together ~11.7 MB uncompressed PNGs. Optimization to ≤500 KB/image possible (pngquant, tinypng, etc.).
   Deliberately deferred in PR-A2.9 — no acute UX blocker. Fix: compression + git replace of originals. Small standalone PR.
-  *(Priority: low)*
+  _(Priority: low)_
 
 - **Q-11** — `reader.onerror` missing in `handleBgUpload` (TrackEditor.jsx)
   FileReader errors are silently swallowed; only `img.onerror` catches load errors.
@@ -832,25 +845,25 @@ race. Typed values persist for the browser session. Status of the follow-ups:
   (POST/PUT/DELETE tracks + surface classes). Deliberately accepted for local operation.
   Fix: `cors({ origin: 'http://localhost:3000' })` for dev, env var for VPS.
   **Priority: VPS phase / Phase 5.** Not an acute blocker for single-user local operation.
-  *(Deep audit 2026-05-01, Severity: HIGH — accepted for local-only)*
+  _(Deep audit 2026-05-01, Severity: HIGH — accepted for local-only)_
 
 - **Q-17** — Missing `reader.onerror` handlers in SystemSettings.jsx and TrackEditor.jsx
   `FileReader.onload` handlers are without `onerror` counterpart. Errors when reading (corrupt file,
   permission problem) are silently ignored. Q-11 is specific to TrackEditor background images;
   Q-17 extends to SystemSettings JSON import. Low priority — no data loss, just poor
   UX (no error message on import error).
-  *(Deep audit 2026-05-01, Severity: LOW)*
+  _(Deep audit 2026-05-01, Severity: LOW)_
 
 - **Q-18** — RaceScreen integration test infrastructure
   RaceScreen has 0 unit tests despite core game logic (finish detection, phase transitions, storage write).
   Blocker: canvas + rAF in jsdom requires `vi.stubGlobal` + mock rAF. Suggestion: 3 minimal tests
   (session load → race init, finish detection, sessionStorage write on race end).
-  *(Deep audit 2026-05-01, Severity: MEDIUM — confirmed in TEST-RaceScreen backlog)*
+  _(Deep audit 2026-05-01, Severity: MEDIUM — confirmed in TEST-RaceScreen backlog)_
 
 - ✅ **Q-19** — TrackEditor.effects.test.jsx flaky — **fixed PR #55 (2026-05-01)**
   Root cause: `fetch` stub from `trackLoader.test.js` leaked into TrackEditor worker via missing
   `vi.unstubAllGlobals()` in `beforeEach`. Fix: `vi.unstubAllGlobals()` added in `beforeEach`.
-  *(Discovered PR #50, fixed PR #55)*
+  _(Discovered PR #50, fixed PR #55)_
 
 - **Q-20** — Server test backup cleanup not crash-resistant (TLH-1)
   `afterAll` in `tracks.test.js` cleans up backup files via `rmSync`, but only on normal
@@ -858,7 +871,7 @@ race. Typed values persist for the browser session. Status of the follow-ups:
   `server/data/tracks-backups/` directory. During TLH-1 development ~41 orphan files
   were created. Possible approach: `process.on('exit', cleanup)` + `process.on('SIGINT', cleanup)` as
   guard, or switch tests to a temporary directory (DATA_DIR override via env var).
-  *(Discovered TLH-1 2026-05-01, Severity: LOW)*
+  _(Discovered TLH-1 2026-05-01, Severity: LOW)_
 
 - **Q-21** — `.json.tmp` orphans on OneDrive EPERM fallback (TLH-1)
   `atomicWriteJson` writes `.tmp` first, then `renameSync`. If `renameSync` fails (OneDrive
@@ -867,7 +880,7 @@ race. Typed values persist for the browser session. Status of the follow-ups:
   searches for `endsWith('.json')` and does not find `.json.tmp` — such orphans are never cleaned up.
   Possible approach: server boot routine scans `tracks-backups/` for `*.json.tmp` and deletes them,
   or `findBackupFiles` includes `.json.tmp`.
-  *(Discovered TLH-1 2026-05-01, Severity: LOW)*
+  _(Discovered TLH-1 2026-05-01, Severity: LOW)_
 
 - **Q-22** — TrackEditor frontend draft snapshot
   localStorage snapshot of the drawn geometry (key: `racearena:trackEditor:draft:<serverId>` for
@@ -875,11 +888,11 @@ race. Typed values persist for the browser session. Status of the follow-ups:
   ~30s, deleted after successful server save. Protects against data loss on silent
   server errors (F3 scenario from TLH-2 browser test) or browser crash. Effort: small (~50 LOC).
   Small standalone PR.
-  *(Arose from TLH-2 browser test 2026-05-02, Severity: MEDIUM)*
+  _(Arose from TLH-2 browser test 2026-05-02, Severity: MEDIUM)_
 
 - **Q-24** — isDefault immutability via PUT explicitly tested
   Audit found: `PUT /api/tracks/:id` handler explicitly sets `isDefault: existing.isDefault` and thereby overrides any client-sent value — `isDefault` is thus de facto immutable via API. But there is no explicit backend test protecting this behavior. If someone restructures the PUT handler, this protection could silently disappear. Standalone backend test case: "PUT with `isDefault: false` on default track does not change `isDefault`".
-  *(Arose during audit in City Circuit bug fix 2026-05-02, Severity: LOW)*
+  _(Arose during audit in City Circuit bug fix 2026-05-02, Severity: LOW)_
 
 - **Q-23** — Two-step save: no differentiated error message on background upload failure
   Track save is two-step: step 1 `PUT /api/tracks/:id` (geometry), step 2 `POST /api/tracks/:id/background`
@@ -887,7 +900,7 @@ race. Typed values persist for the browser session. Status of the follow-ups:
   save error — not "geometry saved, background not". The background file remains permanently
   without upload in this case. Possible solutions: (a) separate error message per step with "Retry Background"
   option, (b) atomic save (rollback geometry if background fails). Effort: small–medium.
-  *(Arose 2026-05-02 after background diagnosis dirt-oval, Severity: MEDIUM)*
+  _(Arose 2026-05-02 after background diagnosis dirt-oval, Severity: MEDIUM)_
 
 - ✅ **Q-25** — Open track too fast / race duration too short (PR-A1)
   Root cause (canvas hypothesis empirically disproved): `DEFAULT_SPEED_SCALE_CONFIG.maxScale=4.0` in
@@ -895,7 +908,7 @@ race. Typed values persist for the browser session. Status of the follow-ups:
   ran at 323 px/s instead of ~131 px/s and lasted ~58s instead of ~144s.
   Fix: `maxScale=10.0` + duration slider for open tracks + `openTrackFinishT` integration in RaceScreen.
   Canvas coordinate system hypothesis disproved — Space Sprint geometry uses world coordinates 256..5707,
-  not canvas-bound. *(Fixed in PR-A1, 2026-05-03)*
+  not canvas-bound. _(Fixed in PR-A1, 2026-05-03)_
 
 - **Q-13** — Sprite frame animation stutters with large sprites
   On 6000-tracks sprites become very large — frame changes appear jerky.
@@ -910,19 +923,19 @@ race. Typed values persist for the browser session. Status of the follow-ups:
   cameraZoomFactor + REFERENCE_CAMERA_ZOOM eliminated. Closed/open track math pipelines unified
   through consistent effZoom-based calculation.
 
-- **Q-28** — Shared HTTP helper for API services *(Post-Phase-4 audit 2026-05-06, Severity: MEDIUM)*
+- **Q-28** — Shared HTTP helper for API services _(Post-Phase-4 audit 2026-05-06, Severity: MEDIUM)_
   `client/src/services/surfaceClassApi.js` and `client/src/services/trackApi.js` share 48 lines of
   identical `apiCall`/`withTimeout` infrastructure — both services copied the same HTTP wrapper.
   Fix: extract shared helper (e.g. `services/apiUtils.js`), update both callers.
   Estimated effort: ~1h.
 
-- **Q-29** — Shared RangeSliderSection component *(Post-Phase-4 audit 2026-05-06, Severity: LOW)*
+- **Q-29** — Shared RangeSliderSection component _(Post-Phase-4 audit 2026-05-06, Severity: LOW)_
   Three Phase-4 Dev-Screen sections share a 36-line slider pattern:
   `NameTagVisibilitySection.jsx`, `SpriteSizeRangeSection.jsx`, `CameraZoomTuningSection.jsx`.
   Extract into a shared `RangeSliderSection` component before more Dev-Screen sections are added.
   Estimated effort: ~2h.
 
-- **Q-30** — React 18 → 19 + react-router-dom 6 → 7 migration *(Post-Phase-4 audit 2026-05-06, Severity: MEDIUM)*
+- **Q-30** — React 18 → 19 + react-router-dom 6 → 7 migration _(Post-Phase-4 audit 2026-05-06, Severity: MEDIUM)_
   Current: `react@18.3.1`, `react-dom@18.3.1`, `react-router-dom@6.30.3`. Latest: `react@19.2.6`,
   `react-router-dom@7.15.0`. Both have breaking API changes — no npm-audit vulnerability, but the
   version gap grows with each feature phase. Recommended: migrate before Phase 6 (Pan-Refactor) to
@@ -976,16 +989,18 @@ from D3.5.5.
 11. ✅ **Quick wins post-VRE** (server vitest v4, backend validation, window.alert, JSON.parse, doc drift)
 12. ✅ **Error boundary** (deep audit HIGH finding addressed — top-level React error boundary, PR #51)
 13. ✅ **Race track lights** — boundary lines + lane fill removed, replaced by glowing track lights. `trackLights` field in data model, track editor UI, server migration, `trackLights.js` module with animation styles (steady / sequence / sync_pulse / random_flash). Cache bug (L37) + CSS fix in same PR.
-   - **L37 drift risk (not fixed in PR #52):** `buildTrackFromEditorState` in `trackEditorSave.js` contains an explicit output field list — intentional there (form only knows its own fields), but new editor features require an explicit update of this function. Not an acute bug, but a reminder for future features.
+
+- **L37 drift risk (not fixed in PR #52):** `buildTrackFromEditorState` in `trackEditorSave.js` contains an explicit output field list — intentional there (form only knows its own fields), but new editor features require an explicit update of this function. Not an acute bug, but a reminder for future features.
+
 14. ✅ **TLH-1 — backend fixes + migration** — geometryId client-authoritative, delete preserves geometry, auto-backup, default track seed migration. PR #55.
-14b. ✅ **TLH-2 — UI flow + cleanup** — edit modal geometry status display, track editor two-mode (load/new), two-path load, geometryId first draw. PR #56/#57, squash-merged.
-14c. ✅ **Track delete safeguards + background race condition fix** — remove background button, DELETE background endpoint, isDefault 403 guard, migrateDefaultTracks idempotent, useEffect cancelled flag (L43). PR #58, squash-merged `fc5690f`.
-14a. ✅ **Draw default tracks** — all 5 geometries drawn and saved (2026-05-02): Dirt Oval, River Run, Space Sprint, Garden Path, City Circuit.
-14d. ✅ **PR-A2.5 — Visual Race Naturalness** — arc-length-uniform spline resampling (`catmullRomSpline` default) + jitter amplitude ±5% relative (`race_baseSpeed * 0.05`). T-uniform max/min ratio was 1.36–7.72×; after fix ≤1.01×. +28 tests (1314 total). UX vision "constant pixel velocity" from 2026-05-03 browser test addressed. UX-1…UX-4 (Setup-Screen layout/settings) remain open in UX_FOLLOWUPS.md — planned for B-Wave after Camera-Director phase.
+    14b. ✅ **TLH-2 — UI flow + cleanup** — edit modal geometry status display, track editor two-mode (load/new), two-path load, geometryId first draw. PR #56/#57, squash-merged.
+    14c. ✅ **Track delete safeguards + background race condition fix** — remove background button, DELETE background endpoint, isDefault 403 guard, migrateDefaultTracks idempotent, useEffect cancelled flag (L43). PR #58, squash-merged `fc5690f`.
+    14a. ✅ **Draw default tracks** — all 5 geometries drawn and saved (2026-05-02): Dirt Oval, River Run, Space Sprint, Garden Path, City Circuit.
+    14d. ✅ **PR-A2.5 — Visual Race Naturalness** — arc-length-uniform spline resampling (`catmullRomSpline` default) + jitter amplitude ±5% relative (`race_baseSpeed * 0.05`). T-uniform max/min ratio was 1.36–7.72×; after fix ≤1.01×. +28 tests (1314 total). UX vision "constant pixel velocity" from 2026-05-03 browser test addressed. UX-1…UX-4 (Setup-Screen layout/settings) remain open in UX_FOLLOWUPS.md — planned for B-Wave after Camera-Director phase.
 15. 🔜 **Camera phase + RaceScreen refactor** — revise CameraDirector, split RaceScreen (Q-7). Concept documentation sprint first. Q-25 (track canvas size) as parallel consideration in concept sprint.
-15b. ✅ **Phase 3A — Race plan + area bonus** (feat/phase-3a, 2026-05-19) — `racePlanner.js` (B1–B5 area assignment, P-controller trajectoryMult [0.85,1.10], seeded PRNG), `areaBonusMult` in physics loop (fade after OUTCOME), symmetric start rows (bottom-up), dynamic finish line open tracks (ssf-based), 5 HUD overlays (RP DIAG), `racePlanBonusStrengthMultiplier` DevPanel + Sim. Defaults: avoidanceDistance=0.15, bonusMult=2.0. Sim smoke 120s: χ²=0.3–0.6 ✅. User-validated.
-16 (shifted). **TLH-3 — code fallback + status banner + export** — deferred until after Camera Phase.
-15c. ✅ **STUCK mode** (master `50c9740`, 2352 tests) — bilateral avoidance suppression. When `totalPressure > 0.008`, `imbalance < 25%`, `|physicalYVelocity| < 0.0015`: set `delta = 0` so racer holds position silently until pack geometry resolves. `stuckModeSuppress: true` (default). Sim: −18% zigzag / −10% overlap / −25% lateralSpeedScore (Space Sprint); −29% lateralSpeedScore (Dirt Oval). Lesson L108.
+    15b. ✅ **Phase 3A — Race plan + area bonus** (feat/phase-3a, 2026-05-19) — `racePlanner.js` (B1–B5 area assignment, P-controller trajectoryMult [0.85,1.10], seeded PRNG), `areaBonusMult` in physics loop (fade after OUTCOME), symmetric start rows (bottom-up), dynamic finish line open tracks (ssf-based), 5 HUD overlays (RP DIAG), `racePlanBonusStrengthMultiplier` DevPanel + Sim. Defaults: avoidanceDistance=0.15, bonusMult=2.0. Sim smoke 120s: χ²=0.3–0.6 ✅. User-validated.
+    16 (shifted). **TLH-3 — code fallback + status banner + export** — deferred until after Camera Phase.
+    15c. ✅ **STUCK mode** (master `50c9740`, 2352 tests) — bilateral avoidance suppression. When `totalPressure > 0.008`, `imbalance < 25%`, `|physicalYVelocity| < 0.0015`: set `delta = 0` so racer holds position silently until pack geometry resolves. `stuckModeSuppress: true` (default). Sim: −18% zigzag / −10% overlap / −25% lateralSpeedScore (Space Sprint); −29% lateralSpeedScore (Dirt Oval). Lesson L108.
 
 15d. ✅ **Adaptive zoom + rubber-band catch-up** (master `b5947b2`, 2382 tests) — Per-frame visibility ratchet ensures `minRacersVisible=8` on screen simultaneously; slow zoom-out floor (`leaderMinZoom=0.4`), phase-locked. Rubber band: flat boost (`flatBoost=0.10`) for all non-leaders when gap > `gapThreshold=0.003`; deactivates at OUTCOME phase. Lessons L109 (phase-locked zoom floor), L110 (flat boost vs. proportional formula).
 
@@ -1018,19 +1033,19 @@ from D3.5.5.
 
 Items surfaced by the clean-state audit on branch `chore/clean-state-2026-06-04`.
 
-| Item | Priority | Description |
-|---|---|---|
-| **Fix d11-ux-verification.spec.js** | Medium | V1–V3 E2E tests assert stale physics default values (homeForceStrength=0.018, avoidanceDistance=0.35, etc.). These will fail when run against the current app. Fix: update `DEFAULT_CFG` constants and test assertions to match current `DEFAULT_RACE_BEHAVIOR_CONFIG`. Requires browser verification. Lesson L124. |
-| ✅ **npm audit fix (react-router)** | Done | Patched in follow-up commit on `chore/clean-state-2026-06-04`. 0 vulnerabilities. |
-| ✅ **Dead fallback constants in CameraDirector.js** | Done | 18 constants prefixed with `_` in follow-up commit on `chore/clean-state-2026-06-04`. |
-| **Speed-bonus Rear-Bias calibration** | Medium | 4 of 5 fairness failures in the Phase 2 sim are Rear-Bias (back rows winning more often than expected): elephant×DirtOval, dragon×GardenPath, plane×LugerHill, horse×IceTrack. Root cause is NOT the 8 physics avoidance params — investigate `speedBonusFactor` and `maxCapacityFactor` in `DEFAULT_ROW_LAYOUT_CONFIG` (rowLayout.js). A targeted sim sweep on those two params (not a full 8-param LHS) is the next step. |
-| **Browser-check Ice Track × horse geometry** | Medium | The 100-race sim found p=0.001 Rear-Bias for horse on Ice Track (χ²=21.3, df=5) — the strongest single failure. Horse has adequate laps (~4.5) and the track is slightly WIDER than Dirt Oval where horse passes. Track geometry (specific corner sequence or straight layout) is the suspected cause. Open Ice Track in a browser, run a race with horse, and observe whether any starting position shows a systematic advantage. If confirmed, consider a geometry edit. |
+| Item                                                | Priority | Description                                                                                                                                                                                                                                                                                                                                                                                                                                                                |
+| --------------------------------------------------- | -------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Fix d11-ux-verification.spec.js**                 | Medium   | V1–V3 E2E tests assert stale physics default values (homeForceStrength=0.018, avoidanceDistance=0.35, etc.). These will fail when run against the current app. Fix: update `DEFAULT_CFG` constants and test assertions to match current `DEFAULT_RACE_BEHAVIOR_CONFIG`. Requires browser verification. Lesson L124.                                                                                                                                                        |
+| ✅ **npm audit fix (react-router)**                 | Done     | Patched in follow-up commit on `chore/clean-state-2026-06-04`. 0 vulnerabilities.                                                                                                                                                                                                                                                                                                                                                                                          |
+| ✅ **Dead fallback constants in CameraDirector.js** | Done     | 18 constants prefixed with `_` in follow-up commit on `chore/clean-state-2026-06-04`.                                                                                                                                                                                                                                                                                                                                                                                      |
+| **Speed-bonus Rear-Bias calibration**               | Medium   | 4 of 5 fairness failures in the Phase 2 sim are Rear-Bias (back rows winning more often than expected): elephant×DirtOval, dragon×GardenPath, plane×LugerHill, horse×IceTrack. Root cause is NOT the 8 physics avoidance params — investigate `speedBonusFactor` and `maxCapacityFactor` in `DEFAULT_ROW_LAYOUT_CONFIG` (rowLayout.js). A targeted sim sweep on those two params (not a full 8-param LHS) is the next step.                                                |
+| **Browser-check Ice Track × horse geometry**        | Medium   | The 100-race sim found p=0.001 Rear-Bias for horse on Ice Track (χ²=21.3, df=5) — the strongest single failure. Horse has adequate laps (~4.5) and the track is slightly WIDER than Dirt Oval where horse passes. Track geometry (specific corner sequence or straight layout) is the suspected cause. Open Ice Track in a browser, run a race with horse, and observe whether any starting position shows a systematic advantage. If confirmed, consider a geometry edit. |
 
 ---
 
 ## Physics — Open Issues
 
-### P-1 — Longitudinal overlap during passing on open tracks *(backlogged 2026-06-05)* — ⚠️ **ROOT-CAUSE PARTIALLY MOOT — RE-VERIFY (2026-07-14 audit)**
+### P-1 — Longitudinal overlap during passing on open tracks _(backlogged 2026-06-05)_ — ⚠️ **ROOT-CAUSE PARTIALLY MOOT — RE-VERIFY (2026-07-14 audit)**
 
 > **2026-07-14 audit note:** The stated root cause below leans on "rubber-band boost (+10%) exceeds
 > the speed-brake reduction," but the rubber-band FORCE is now REMOVED (`raceRubberBand.js` deleted; no
@@ -1051,7 +1066,7 @@ Items surfaced by the clean-state audit on branch `chore/clean-state-2026-06-04`
 
 **Reference:** `reports/closed-track-overview/15-topdown-overlap.md`
 
-### P-3 — Speed-brake lateral: body-based same-lane filter on narrow tracks *(backlogged 2026-06-08)*
+### P-3 — Speed-brake lateral: body-based same-lane filter on narrow tracks _(backlogged 2026-06-08)_
 
 **Resolved in report 45:** Speed-brake lateral now uses `contactWidth × 1.0` (body-based same-lane filter). The ×1.5 attempt (report 43 revert) failed because the multiplier expanded the zone into adjacent rows for wide-body racers on narrow tracks (luge/250px: 22.5px→37.5px, caught all adjacent pairs).
 
@@ -1063,7 +1078,7 @@ Items surfaced by the clean-state audit on branch `chore/clean-state-2026-06-04`
 
 ---
 
-### P-4 — getWidthAtT: non-uniform track width *(backlogged 2026-06-07)*
+### P-4 — getWidthAtT: non-uniform track width _(backlogged 2026-06-07)_
 
 `getTrackWidthAtTpx` returns a single track-width value per racer (the stored `track.width` constant). For tracks with variable lane width (e.g. banked curves, chicanes), avoidance thresholds should scale with the local width at `racer.t`. Extension hook is documented in `raceBehavior.js`. Implement by querying `EditorShape._centerWidth(t)` or equivalent per frame.
 
@@ -1071,13 +1086,13 @@ Items surfaced by the clean-state audit on branch `chore/clean-state-2026-06-04`
 
 ---
 
-### ✅ P-5 — Luger Hill hex track-ID rename *(completed commit 2410d78, 2026-06-08)*
+### ✅ P-5 — Luger Hill hex track-ID rename _(completed commit 2410d78, 2026-06-08)_
 
 Luger Hill's track ID was the hex UUID `90d3020197da`. Renamed to `luger-hill` in commit `2410d78` (`refactor(data): rename Luger Hill track id to slug (luger-hill)`): `90d3020197da.json` → `luger-hill.json`, `90d3020197da.png` → `luger-hill.png`, all script references updated. Live server confirms `"id": "luger-hill"` in the JSON.
 
 ---
 
-### P-6 — Spatial grid for O(N) avoidance (D7d) *(backlogged)*
+### P-6 — Spatial grid for O(N) avoidance (D7d) _(backlogged)_
 
 Current avoidance loop is O(N²) over all active pairs. At N=100 this is 4950 pair checks per frame. A spatial grid (cell size ≈ avoidance gate threshold) would reduce to O(N) average by only checking pairs in adjacent grid cells.
 
@@ -1087,16 +1102,18 @@ Current avoidance loop is O(N²) over all active pairs. At N=100 this is 4950 pa
 
 ---
 
-### P-2 — liteOverlapRate metric blind to longitudinal passing overlap *(backlogged 2026-06-05, partially resolved 2026-06-05)*
+### P-2 — liteOverlapRate metric blind to longitudinal passing overlap _(backlogged 2026-06-05, partially resolved 2026-06-05)_
 
 The sim's `liteOverlapRate` measures center-to-center proximity (threshold ~3.5 px lateral, ~3.9 px longitudinal). The physics never allows centers that close. Real visual overlap at `dT = 0` (31.7 px body) is invisible to the metric — it reported 0% while ~89 px on-screen overlap was occurring.
 
 **Fix direction — status:**
+
 1. ✅ **Longitudinal + lateral body-extent overlap metric** — `honestOverlapRate` added to sim: uses `effectiveDisplaySize × bodyFillX/Y` as thresholds, checks all active pairs every frame after 4 s warmup. Covers open AND closed tracks.
 2. ✅ **Closed-track overlap coverage** — honest overlap now emits for both topologies (wrapping uses `tPos mod 1`, matching the browser's own normalization — see Lesson 127).
 3. ⏳ **Dead-zone guard metric** `physSlot / trackWidth > avoidanceDistance` — not yet added to sim.
 
 **Two distinct phenomena — do not conflate:**
+
 - **(a) Same-lap pack crowding on short closed tracks** (5–8% honest overlap): many bodies on a short perimeter (path ≤ 3300 px). Measured directly: max spread is 0.2–0.55 laps, 100% same-lap events, 0% cross-lap. NOT caused by lapping — lapping does not occur in 60s homogeneous fields. Not a physics bug.
 - **(b) Longitudinal rendered-body overlap during open-track overtaking** (P-1 bug): rubber-band overcomes speed brake, dT → 0 at crossing, ~31.7 px body overlap per pair on screen. Pre-existing physics issue, still open.
 
@@ -1106,7 +1123,7 @@ The sim's `liteOverlapRate` measures center-to-center proximity (threshold ~3.5 
 
 ## Known Limitations — Deliberately Accepted
 
-- **SEC-2 — Race state manipulation via React DevTools** *(audit-2026-04-29, Severity: High — accepted)*
+- **SEC-2 — Race state manipulation via React DevTools** _(audit-2026-04-29, Severity: High — accepted)_
   `g.current.racers` in RaceScreen lives as a mutable `useRef`. Technically proficient guests can use
   React DevTools / `__reactFiber$` to access racer objects and set fields like `t`, `baseSpeed`,
   `finished` directly. `Object.freeze()` only protects direct properties and is bypassable through DevTools.
@@ -1116,23 +1133,23 @@ The sim's `liteOverlapRate` measures center-to-center proximity (threshold ~3.5 
   SEC-4 file size guard) were addressed in PR cleanup/security-and-crash-protection
   (audit report: docs/internal/audit-2026-04-29.md).
 
-- **TEST-RaceScreen** — RaceScreen integration test for `isOpenTrack` propagation *(Priority: low)*
+- **TEST-RaceScreen** — RaceScreen integration test for `isOpenTrack` propagation _(Priority: low)_
   Requires canvas + `requestAnimationFrame` mocking in jsdom. Currently no test infrastructure for the
   animation loop. Was tracked as TODO in `RaceScreen/index.jsx` and moved to backlog in cleanup PR 2/3
   (audit-2026-04-29.md).
 
-- **DIAG-OpenTrackPan** — Open track pan verification after Phase 4 merge *(Priority: low)*
+- **DIAG-OpenTrackPan** — Open track pan verification after Phase 4 merge _(Priority: low)_
   Diagnosis session 2026-05-06: Space Sprint browser test showed BATTLE pan possibly outside
   the racer cluster. Unclear whether real bug in `openTrackCamera.js` / `openTrackPanTarget()` or
   browser state artifact (browser zoom was known as error source in the same session).
   CameraDirector's `cam.offsetX/Y` are irrelevant for open tracks — `st.camX/Y` via
   `openTrackPanTarget()` control the pan. Clarify with separate browser test after Phase 4 merge.
 
-- **Snowmobile sprite improvement** — The current snowmobile spritesheet (`snowboard-ride.png`, downscaled to 192×192) is a generic snowboard-riding animation not specifically designed for a snowmobile racer. A dedicated snowmobile sprite with clearer vehicle silhouette and more distinct rider/chassis separation would improve tinting results and visual identity. *(Priority: low — cosmetic)*
+- **Snowmobile sprite improvement** — The current snowmobile spritesheet (`snowboard-ride.png`, downscaled to 192×192) is a generic snowboard-riding animation not specifically designed for a snowmobile racer. A dedicated snowmobile sprite with clearer vehicle silhouette and more distinct rider/chassis separation would improve tinting results and visual identity. _(Priority: low — cosmetic)_
 
-- **Mountainstreet OVERVIEW inversion fix** — The Mountainstreet track is a steep downhill open course. The OVERVIEW camera shows the track with the finish line at the bottom of the canvas and the start at the top, which is counter-intuitive for a downhill track (should feel like racers are descending toward the viewer). Consider adding an `overviewFlip` or `baseRotationOffset` field to the track config that rotates the OVERVIEW camera 180°. *(Priority: low — cosmetic)*
+- **Mountainstreet OVERVIEW inversion fix** — The Mountainstreet track is a steep downhill open course. The OVERVIEW camera shows the track with the finish line at the bottom of the canvas and the start at the top, which is counter-intuitive for a downhill track (should feel like racers are descending toward the viewer). Consider adding an `overviewFlip` or `baseRotationOffset` field to the track config that rotates the OVERVIEW camera 180°. _(Priority: low — cosmetic)_
 
-- **Pan target identification** — Camera does not reliably show the race leader *(Priority: medium)*
+- **Pan target identification** — Camera does not reliably show the race leader _(Priority: medium)_
   LEADER_ZOOM and BATTLE_ZOOM zoom onto the centroid of the top-N lead group (`focusRacers.slice(0, N)`).
   That is the t-value centroid — not necessarily the standings leader (position 1 by lap logic).
   In tight packs with multiple lap changes, the "geometric centroid" can diverge from "who is actually leading".
@@ -1146,13 +1163,13 @@ The sim's `liteOverlapRate` measures center-to-center proximity (threshold ~3.5 
 
 Items deferred from Racer Editor Phase 1+2 (merged 2026-05-28).
 
-| Item | Priority | Description |
-|---|---|---|
-| ✅ **RE-1** Extended coat palette | Done 2026-05-30 | `STANDARD_COAT_PALETTE` expanded to 20 colors for all vehicle types. Pattern infrastructure (solid/stripes/dots) implemented in `spriteTinter.js` + `coatAssignment.js`; patterns disabled (`assignPattern` always returns `'solid'`) — too visually dominant at 40 px display size (Lesson 105). Re-enable by updating `assignPattern` when sprite display sizes are larger or tiles are retuned. |
-| **RE-2** Frame-sequence mode | Low | Alternative to spritesheet upload: import individual PNG frames (1–16). Builder stitches them into a sheet internally. Useful for frame-by-frame artwork. |
-| **RE-3** Speed equalization | Low | Option in RacerMetadataPanel to normalize speedMultiplier so user-created types race at the same average pace as built-in types. Auto-computes from median built-in `speedMultiplier`. |
-| **RE-4** D3.6 migration refactor | Medium | Migrate all built-in types (HorseRacerType, DuckRacerType, SnailRacerType, …) from class files to `SpriteRacerType` config objects. Remove per-type class files. See ROADMAP.md D3.6. |
-| **RE-5** Mask-mode support in Editor | Low | Expose tintMode='mask' option in SpriteGeneratorPanel; add mask PNG upload field. Currently mask mode is available in code but not exposed in the Racer Editor UI. |
+| Item                                 | Priority        | Description                                                                                                                                                                                                                                                                                                                                                                                        |
+| ------------------------------------ | --------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| ✅ **RE-1** Extended coat palette    | Done 2026-05-30 | `STANDARD_COAT_PALETTE` expanded to 20 colors for all vehicle types. Pattern infrastructure (solid/stripes/dots) implemented in `spriteTinter.js` + `coatAssignment.js`; patterns disabled (`assignPattern` always returns `'solid'`) — too visually dominant at 40 px display size (Lesson 105). Re-enable by updating `assignPattern` when sprite display sizes are larger or tiles are retuned. |
+| **RE-2** Frame-sequence mode         | Low             | Alternative to spritesheet upload: import individual PNG frames (1–16). Builder stitches them into a sheet internally. Useful for frame-by-frame artwork.                                                                                                                                                                                                                                          |
+| **RE-3** Speed equalization          | Low             | Option in RacerMetadataPanel to normalize speedMultiplier so user-created types race at the same average pace as built-in types. Auto-computes from median built-in `speedMultiplier`.                                                                                                                                                                                                             |
+| **RE-4** D3.6 migration refactor     | Medium          | Migrate all built-in types (HorseRacerType, DuckRacerType, SnailRacerType, …) from class files to `SpriteRacerType` config objects. Remove per-type class files. See ROADMAP.md D3.6.                                                                                                                                                                                                              |
+| **RE-5** Mask-mode support in Editor | Low             | Expose tintMode='mask' option in SpriteGeneratorPanel; add mask PNG upload field. Currently mask mode is available in code but not exposed in the Racer Editor UI.                                                                                                                                                                                                                                 |
 
 ---
 
@@ -1186,6 +1203,7 @@ Items deferred from Racer Editor Phase 1+2 (merged 2026-05-28).
 - **Hero-count as a DevScreen range** — expose the 2–4 hero count as a tunable range.
 
 ### Re-apply --jobs parallelism cleanly (perf)
+
 worker_threads parallelism for the sweep race loop (~5x speedup at jobs=8). Originally on
 `diag/look-before-brake` commit `0c20f9b`, but a clean cherry-pick isn't possible — master's per-race
 body diverged (3 extra observers: COMEBACK_ANALYSIS, HERO_MAP, GAP_METRICS), making it a ~1-2h manual
@@ -1204,6 +1222,7 @@ branch.
 ## 2026-07-20 — added (runaway baseline + cleanup)
 
 ### Runaway phase — ✅ CLOSED 2026-07-29 (solved by the shipped gap-reroll; Distance Leash REJECTED)
+
 **CLOSED.** The runaway problem was solved by the **gap-reroll cohesion mechanism** shipped as a default
 (`gapRerollEnabled` ON, G=0.5 / strength=1.0, 2026-07-26): the N=200 × 10-track confirm cut runaway-winner
 **23.5% → 8.3%** and generalized cleanly across tracks. The **Distance Leash** below was built sim-only and
@@ -1242,8 +1261,8 @@ measurement after A ships shows the front present in RANK but still not contesti
 
 **Success metrics:** runawayWinnerRate 23.5% → <10% (no track >15%); top-5 action ≥ baseline;
 paradeFinishRate ≤ 2%; B1/B2 band-reach ≥70%, Holm ≤2/4; flags OFF → fingerprint `72c3360fb75225ef`.
-*(Casting-yield criterion dropped for A — A casts nothing and no `castingYield` metric exists; it
-re-applies only if B is ever built. Note: leash brake authority is −15% / minMult 0.85, not "+10%".)*
+_(Casting-yield criterion dropped for A — A casts nothing and no `castingYield` metric exists; it
+re-applies only if B is ever built. Note: leash brake authority is −15% / minMult 0.85, not "+10%".)_
 Measure with the runaway-parade observer + `exp-runaway-leader` on the f40a7a6 seeds; determinism per sweep.
 Per Lesson 178, AUTHOR the contest (leash the leader), don't LIBERATE constraints.
 
@@ -1267,19 +1286,21 @@ duration basis, both engines. N=200 confirmation on ALL 10 tracks (`3464295`): *
 → runawayWinnerRate 23%→8.3%**, generalizes cleanly (6 new tracks behave like their groups), action IMPROVED
 (+0.53), 73% of V0-runaways converted (escapee still wins/podiums in a contest). **Browser wiring + DevScreen
 controls now DONE (default OFF, fingerprint `72c3360fb75225ef` re-verified, one-clock window in both engines)
-— OWNER EYE-TEST PENDING.** *(Secondary open observations, NOT gate-blockers for the eye-test: **searound
+— OWNER EYE-TEST PENDING.** _(Secondary open observations, NOT gate-blockers for the eye-test: **searound
 sits at ~15.5%**, just over the 15% per-track cap — the only track over; **Holm 3/10** (V0 2/10, one extra
 flagged track). Band-reach — the PRIMARY fairness gate — HOLDS ≥70% on all tracks for strength 1.0; s075
-dips to 69.7% so s10 is the cleaner candidate.)* Next after eye-test: owner ship decision → backup tag.
+dips to 69.7% so s10 is the cleaner candidate.)_ Next after eye-test: owner ship decision → backup tag.
 
 </details>
 
-### Parade-finish — observe only 🔍 *(no action)*
+### Parade-finish — observe only 🔍 _(no action)_
+
 `paradeFinishRate = 2%` baseline, and when it happens the leading group is genuinely paced (internal speed
 spread ≤0.10 over the final 5%). Rare and not obviously bad — **track it via `--runaway-parade`, do not
 chase it.** Revisit only if a runaway fix pushes it up.
 
 ### Sim `--out` forced under repo ROOT 🔧 — ✅ DONE (HYGIENE-1 STEP 4, 2026-07-29)
+
 `sim-fairness.mjs` now honours an absolute `--out` (skips the ROOT join when the path is absolute), and its
 scratch OUT_DIR **defaults off the OneDrive tree** (`$RA_SCRATCH_DIR` or `<os-tmp>/racearena-scratch`,
 env-overridable); a relative `--out` still resolves under repo ROOT for back-compat. Added `--purge-tmp` to

@@ -30,12 +30,31 @@
 // ============================================================
 
 import { execFile, execFileSync } from "node:child_process";
+import { readFileSync } from "node:fs";
 import { join, dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { cpus } from "node:os";
 import { engineReach } from "./engine-reach.mjs";
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), "..");
+
+// The fingerprint record's declared sites, so a change to one of them runs the guard that owns it.
+// Read lazily and defensively: verify must still be able to run if the record is missing or being
+// edited — a routing table that cannot load is not a reason to refuse to test anything.
+const FINGERPRINT_RECORD = "docs/fingerprints.json";
+let _fpSites = null;
+function fingerprintSites() {
+  if (_fpSites) return _fpSites;
+  try {
+    const rec = JSON.parse(
+      readFileSync(join(ROOT, FINGERPRINT_RECORD), "utf8"),
+    );
+    _fpSites = new Set((rec.sites ?? []).map((s) => s.file));
+  } catch {
+    _fpSites = new Set();
+  }
+  return _fpSites;
+}
 const arg = (k, d) => {
   const p = process.argv.slice(2).find((a) => a.startsWith(`--${k}=`));
   return p ? p.slice(k.length + 3) : d;
@@ -69,99 +88,125 @@ function changedFiles() {
   return [...set].sort();
 }
 
-// ── WHICH GUARD CARES ───────────────────────────────────────────────────────────────────────────
-const isDoc = (f) => f.endsWith(".md");
-const isScript = (f) => f.startsWith("scripts/");
-const isClient = (f) => f.startsWith("client/src/");
-const isCamera = (f) => f.startsWith("client/src/modules/camera/");
-// The drawing path, from SHIP-CEREMONY's own list — anything whose diff can reach a `ctx.` call.
-// CAMERA COUNTS, and this was a real gap found by FINISH-COMPANY-1: a camera-only diff moved the
-// render fingerprint (b6591e74102152bd -> 1f83ecc1fcb6fa9a) while this matcher had told the block it
-// could not reach a `ctx.` call. Of course it can — the director decides the transform every drawn
-// frame, so the draw sequence is downstream of it. The ceremony's list was written when the render
-// fingerprint was new and camera work was assumed to be covered by the camera one; it is not.
-const isRender = (f) =>
-  f.startsWith("client/src/modules/camera/") ||
-  /client\/src\/screens\/RaceScreen\/(renderRaceFrame|drawing\/|renderState)/.test(
-    f,
-  ) ||
-  /nameTagLayout|Minimap|racer-types\//.test(f) ||
-  f.startsWith("client/src/modules/parity/recordingContext");
+// ── THE ROUTE TABLE — ONE map, read from one place ──────────────────────────────────────────────
+//
+// This replaced five scattered predicates. Three separate times the routing was too narrow and each
+// time the entry was fixed while the MAP stayed invisible: camera files did not select the render
+// fingerprint (FINISH-COMPANY-1), and `client/vitest.config.js` did not select the client suite even
+// though it decides how the whole suite runs (NIGHT-TOOLS-1). Three occurrences is a defect in the
+// map, not in the entries — so the map is now a single table, it is printed with every skip, and it
+// is tested in both directions.
+//
+// WHICH PATHS THIS DELIBERATELY ROUTES NOWHERE, stated here rather than left to be discovered:
+//   - `reports/**` — the lab journal. It is allowed to rot; no guard reads it.
+//   - `server/**`, `e2e/**`, `.github/**`, `*.json` lockfiles — nothing in the local guard set
+//     inspects them. CI covers what it covers; `verify` does not pretend to.
+//   - `client/src/**/*.test.{js,jsx}` — a test file DOES select the client suite (it is client
+//     source), but it deliberately selects NO fingerprint: a test cannot change the picture.
+//   - Anything not matched below runs nothing, and the plan says so by omission.
+//
+// Each rule: which guard it selects, and a MATCHER. A path may select several.
+export const ROUTES = [
+  {
+    guard: "doc-guards",
+    // The fingerprint sites are read FROM THE RECORD, not listed here. Two of them are not markdown
+    // at all (`.husky/pre-commit`, `CameraDirector.js`), and a second hand-kept list of them is the
+    // very thing ONE-TRUTH-1 stage 4 removed.
+    what: "markdown anywhere, plus the fingerprint record and every site it declares",
+    match: (f) =>
+      f.endsWith(".md") ||
+      f === FINGERPRINT_RECORD ||
+      fingerprintSites().has(f),
+  },
+  {
+    guard: "script-suite",
+    what: "anything under scripts/",
+    match: (f) => f.startsWith("scripts/"),
+  },
+  {
+    guard: "client-suite",
+    // `client/`, NOT `client/src/`: vitest.config.js, package.json and the setup files decide how
+    // the suite RUNS, and a change to them is exactly a reason to run it. That was the third miss.
+    what: "anything under client/ EXCEPT e2e — including the configs that decide how the suite runs",
+    // `client/e2e/` is Playwright and is excluded from vitest by vitest.config.js, so a change
+    // there must NOT select the vitest suite. Caught by the routed-nowhere test when this rule was
+    // first widened from `client/src/` — widening a matcher can overshoot as easily as it can miss.
+    match: (f) => f.startsWith("client/") && !f.startsWith("client/e2e/"),
+  },
+  {
+    guard: "world-fingerprint",
+    what: "any file the race engine can reach (engine-reach closure)",
+    match: (f, reach) => reach.has(f),
+  },
+  {
+    guard: "camera-fingerprint",
+    what: "the camera director and its modules",
+    match: (f) => f.startsWith("client/src/modules/camera/"),
+  },
+  {
+    guard: "render-fingerprint",
+    // Camera counts: the director decides the transform on every drawn frame.
+    what: "anything that can reach a ctx. call — including the camera",
+    match: (f) =>
+      f.startsWith("client/src/modules/camera/") ||
+      /client\/src\/screens\/RaceScreen\/(renderRaceFrame|drawing\/|renderState)/.test(
+        f,
+      ) ||
+      /nameTagLayout|Minimap|racer-types\//.test(f) ||
+      f.startsWith("client/src/modules/parity/recordingContext"),
+  },
+];
+
+/** The files that select a given guard, using the one table above. */
+export function selectedBy(guard, files, reach) {
+  const rule = ROUTES.find((r) => r.guard === guard);
+  if (!rule) return [];
+  return files.filter((f) => rule.match(f, reach ?? new Set()));
+}
 
 /** The plan: every guard, whether it runs, and WHY — including the ones that do not. */
 export function plan(files) {
   const reach = new Set(engineReach().files);
-  const engineHits = files.filter((f) => reach.has(f));
-  const docs = files.filter(isDoc);
-  const scripts = files.filter(isScript);
-  const client = files.filter(isClient);
-  const camera = files.filter(isCamera);
-  const render = files.filter(isRender);
+  const hits = Object.fromEntries(
+    ROUTES.map((r) => [r.guard, files.filter((f) => r.match(f, reach))]),
+  );
+  const why = (guard) => {
+    const h = hits[guard];
+    const rule = ROUTES.find((r) => r.guard === guard);
+    if (h.length)
+      return `${h.length} file(s) matched (${h.slice(0, 2).join(", ")}${h.length > 2 ? ", …" : ""})`;
+    // The skip reason NAMES THE RULE, so what the map believes is visible without reading the code.
+    return `nothing matched — this guard covers: ${rule.what}`;
+  };
 
-  const why = (hits, what) =>
-    hits.length
-      ? `${hits.length} ${what} changed (${hits.slice(0, 2).join(", ")}${hits.length > 2 ? ", …" : ""})`
-      : null;
-
-  return [
-    {
-      id: "doc-guards",
+  const cmd = {
+    "doc-guards": {
       cmd: ["node", "scripts/check-doc-links.mjs"],
       also: [
         ["node", "scripts/check-index.mjs"],
         ["node", "scripts/check-tags.mjs"],
+        ["node", "scripts/check-fingerprints.mjs"],
       ],
-      run: docs.length > 0,
-      reason: why(docs, "doc/report file(s)") ?? "no .md file changed",
     },
-    {
-      id: "script-suite",
-      cmd: ["node", "--test", ...scriptTestFiles()],
-      run: scripts.length > 0,
-      reason: why(scripts, "script(s)") ?? "nothing under scripts/ changed",
-    },
-    {
-      id: "client-suite",
+    "script-suite": { cmd: ["node", "--test", ...scriptTestFiles()] },
+    "client-suite": {
       cmd: ["npm", "test", "--silent"],
       cwd: join(ROOT, "client"),
-      // EXCLUSIVE, and this was measured rather than assumed. Run concurrently with the
-      // fingerprints, the suite FAILS: `sim-fairness.test.js` carries a 5 s timeout and four
-      // CPU-saturating siblings push it past it. A guard that goes red because of what is running
-      // beside it is worse than a slow one — it teaches people to re-run until green. So the suite
-      // gets the machine to itself and everything else overlaps after it.
+      // EXCLUSIVE, measured rather than assumed: run beside the fingerprints the suite FAILS —
+      // sim-fairness.test.js carries a 5 s timeout and four CPU-saturating siblings push it past it.
       exclusive: true,
-      run: client.length > 0,
-      reason:
-        why(client, "client source file(s)") ??
-        "nothing under client/src/ changed",
     },
-    {
-      id: "world-fingerprint",
-      cmd: ["node", "scripts/fingerprint-default.mjs"],
-      run: engineHits.length > 0,
-      reason: engineHits.length
-        ? `inside the engine's reach: ${engineHits.join(", ")}`
-        : client.length
-          ? `${client.length} client file(s) changed but NONE is inside engine-reach's closure — the race cannot see them`
-          : "nothing under client/src/ changed",
-    },
-    {
-      id: "camera-fingerprint",
-      cmd: ["node", "scripts/camera-fingerprint.mjs"],
-      run: camera.length > 0,
-      reason:
-        why(camera, "camera file(s)") ??
-        "nothing under modules/camera/ changed",
-    },
-    {
-      id: "render-fingerprint",
-      cmd: ["node", "scripts/render-fingerprint.mjs"],
-      run: render.length > 0,
-      reason:
-        why(render, "drawing-path file(s)") ??
-        "the diff cannot reach a ctx. call",
-    },
-  ];
+    "world-fingerprint": { cmd: ["node", "scripts/fingerprint-default.mjs"] },
+    "camera-fingerprint": { cmd: ["node", "scripts/camera-fingerprint.mjs"] },
+    "render-fingerprint": { cmd: ["node", "scripts/render-fingerprint.mjs"] },
+  };
+
+  return ROUTES.map((r) => ({
+    id: r.guard,
+    ...cmd[r.guard],
+    run: hits[r.guard].length > 0,
+    reason: why(r.guard),
+  }));
 }
 
 function scriptTestFiles() {

@@ -23,9 +23,14 @@
 //   node scripts/parity/replay.mjs --replay=identity.json
 // ============================================================
 
-import { readFileSync, writeFileSync } from 'fs';
-import { buildIdentity, realArm, simArm, RACER_NAMES } from './goldenRunner.mjs';
-import { hashIdentity } from '../../client/src/modules/parity/raceIdentity.js';
+import { readFileSync, writeFileSync } from "fs";
+import {
+  buildIdentity,
+  realArm,
+  simArm,
+  RACER_NAMES,
+} from "./goldenRunner.mjs";
+import { hashIdentity } from "../../client/src/modules/parity/raceIdentity.js";
 
 const argv = process.argv.slice(2);
 const has = (k) => argv.includes(`--${k}`);
@@ -36,34 +41,36 @@ const val = (k, d = null) => {
 
 /** Parse a golden/soak row label "track/type/shape/n=N/seed=S[/laps=L]" into a case spec. */
 export function specFromLabel(label) {
-  const p = label.split('/');
+  const p = label.split("/");
   const trackId = p[0];
   const racerType = p[1];
   const shape = p[2];
   const spec = { trackId, racerType, shape, nRacers: 20, seed: 1 };
   for (const seg of p.slice(3)) {
-    const [k, v] = seg.split('=');
-    if (k === 'n') spec.nRacers = Number(v);
-    else if (k === 'seed') spec.seed = Number(v);
-    else if (k === 'laps') spec.laps = Number(v);
+    const [k, v] = seg.split("=");
+    if (k === "n") spec.nRacers = Number(v);
+    else if (k === "seed") spec.seed = Number(v);
+    else if (k === "laps") spec.laps = Number(v);
   }
   return spec;
 }
 
 /** Build the case spec from CLI flags (or --from-label). */
 function specFromArgs() {
-  const fromLabel = val('from-label');
+  const fromLabel = val("from-label");
   if (fromLabel) return specFromLabel(fromLabel);
   const spec = {
-    trackId: val('track'),
-    racerType: val('racer'),
-    seed: Number(val('seed', '1')),
-    nRacers: Number(val('racers', '20')),
-    shape: val('shape', 'closed'),
+    trackId: val("track"),
+    racerType: val("racer"),
+    seed: Number(val("seed", "1")),
+    nRacers: Number(val("racers", "20")),
+    shape: val("shape", "closed"),
   };
-  if (val('laps') != null) spec.laps = Number(val('laps'));
+  if (val("laps") != null) spec.laps = Number(val("laps"));
   if (!spec.trackId || !spec.racerType) {
-    throw new Error('replay --emit needs --track and --racer (or --from-label=...)');
+    throw new Error(
+      "replay --emit needs --track and --racer (or --from-label=...)",
+    );
   }
   return spec;
 }
@@ -94,7 +101,8 @@ export function replayIdentityFile(file) {
   const spec = file.spec;
   const identity = buildIdentity(spec);
   const nowHash = hashIdentity(identity);
-  const identityMatches = file.identityHash == null || nowHash === file.identityHash;
+  const identityMatches =
+    file.identityHash == null || nowHash === file.identityHash;
 
   const roster = RACER_NAMES.slice(0, spec.nRacers);
   const real = realArm(identity);
@@ -112,40 +120,51 @@ export function replayIdentityFile(file) {
     realHash: real.hash,
     simHash: sim.hash,
     order,
-    winnerMarginSec: winnerMs != null && secondMs != null ? +(secondMs - winnerMs).toFixed(3) : null,
+    winnerMarginSec:
+      winnerMs != null && secondMs != null
+        ? +(secondMs - winnerMs).toFixed(3)
+        : null,
   };
 }
 
 // ── CLI ────────────────────────────────────────────────────────────────────────────────────────
 function main() {
-  if (has('emit')) {
+  if (has("emit")) {
     const spec = specFromArgs();
     const file = identityFileFor(spec);
-    const out = val('out', 'identity.json');
+    const out = val("out", "identity.json");
     writeFileSync(out, JSON.stringify(file, null, 2));
     console.log(`identity → ${out}`);
     console.log(`  ${JSON.stringify(file.spec)}`);
-    console.log(`  identityHash ${file.identityHash}   racePlanEnabled ${file.racePlanEnabled}`);
+    console.log(
+      `  identityHash ${file.identityHash}   racePlanEnabled ${file.racePlanEnabled}`,
+    );
     return;
   }
-  const replayPath = val('replay');
+  const replayPath = val("replay");
   if (replayPath) {
-    const file = JSON.parse(readFileSync(replayPath, 'utf8'));
+    const file = JSON.parse(readFileSync(replayPath, "utf8"));
     const r = replayIdentityFile(file);
     console.log(`=== REPLAY ${replayPath} ===`);
     console.log(`  ${JSON.stringify(r.spec)}`);
     console.log(
-      `  identity ${r.identityHash} ${r.identityMatches ? '(matches saved)' : '*** DRIFTED from saved ' + file.identityHash + ' ***'}`
+      `  identity ${r.identityHash} ${r.identityMatches ? "(matches saved)" : "*** DRIFTED from saved " + file.identityHash + " ***"}`,
     );
-    console.log(`  real ${r.realHash}   sim ${r.simHash}   ${r.equal ? 'EQUAL' : '*** MISMATCH ***'}`);
+    console.log(
+      `  real ${r.realHash}   sim ${r.simHash}   ${r.equal ? "EQUAL" : "*** MISMATCH ***"}`,
+    );
     console.log(`  winner ${r.order[0]}   margin ${r.winnerMarginSec}s`);
-    console.log(`  order: ${r.order.join(', ')}`);
+    console.log(`  order: ${r.order.join(", ")}`);
     if (!r.identityMatches || !r.equal) process.exitCode = 1;
     return;
   }
-  console.log('usage: --emit --track= --racer= [--seed= --racers= --shape= --laps=] --out=file');
-  console.log('       --emit --from-label="track/type/shape/n=N/seed=S[/laps=L]" --out=file');
-  console.log('       --replay=file');
+  console.log(
+    "usage: --emit --track= --racer= [--seed= --racers= --shape= --laps=] --out=file",
+  );
+  console.log(
+    '       --emit --from-label="track/type/shape/n=N/seed=S[/laps=L]" --out=file',
+  );
+  console.log("       --replay=file");
 }
 
-if (process.argv[1] && process.argv[1].endsWith('replay.mjs')) main();
+if (process.argv[1] && process.argv[1].endsWith("replay.mjs")) main();

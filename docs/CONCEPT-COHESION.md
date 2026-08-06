@@ -20,9 +20,10 @@ SHIPPED ON by default and browser-wired** (DevScreen Dynamics → Speed → Gap-
 candidate G=0.5/strength=1.0. See docs/SIM.md and reports/proposals/GAP-REROLL-CONCEPT.md.
 
 **NORMATIVE DIRECTION TABLE (canonical — supersedes any older §1/§4 phrasing):**
+
 - A racer whose lap-aware arc gap **to the racer BEHIND** exceeds G (it has opened a hole behind itself)
   → its next re-roll draw is shifted toward the **SLOWER** end of its own honest ±8.1 % band.
-- *symmetric mode only:* a racer whose gap **to the racer AHEAD** exceeds G (it has been dropped)
+- _symmetric mode only:_ a racer whose gap **to the racer AHEAD** exceeds G (it has been dropped)
   → shifted toward the **FASTER** end — always within its own honest band, never above.
 - All gaps ≤ G → **bit-exact no-op** (the draw passes through unchanged).
 
@@ -35,13 +36,13 @@ metric; every number is set by the owner's eye, in racer lengths.
 ## 0. FOR THE OWNER — read this first (two minutes)
 
 - **Nothing in the race looks at gaps today.** A car's speed comes from its own dice-roll and a servo
-  that only asks "am I in the right *place in the order*?" — never "how big is the hole in front of me?"
-  So the field's spacing is nobody's job; it drifts. *Verified: racePlanner.js:566,577,579; raceStep.js.*
+  that only asks "am I in the right _place in the order_?" — never "how big is the hole in front of me?"
+  So the field's spacing is nobody's job; it drifts. _Verified: racePlanner.js:566,577,579; raceStep.js._
 - **The field is not spreading evenly — it is a tight bunch with one or two cars broken off the front.**
   The typical gap between neighbours is about **one-tenth of a car length**; only ~1–2 gaps out of 39 are
   wide. The dead race you watched was a lone leader **seventeen car-lengths** up the road from a packed
-  field. *Verified from the frozen data (§2, S1).*
-- **The rule you chose is the right shape:** *no car may be more than G lengths behind the car ahead.* One
+  field. _Verified from the frozen data (§2, S1)._
+- **The rule you chose is the right shape:** _no car may be more than G lengths behind the car ahead._ One
   number, one rule. A leader running away is one over-wide gap; a lead group breaking away is one over-wide
   gap behind the group; a rear detachment is one over-wide gap in the middle. Bound every gap ⇒ no part of
   the field can cut off from any other part. It cannot glue the field, because the rule does **nothing at
@@ -49,16 +50,16 @@ metric; every number is set by the owner's eye, in racer lengths.
 - **How we enforce it: we load the dice the field already rolls.** A car that has opened a gap bigger than
   G draws its next natural speed from the slower end of its own honest ±8.1 % band; a car stuck in a hole
   draws from the faster end. Nobody is ever given a speed it could not have rolled anyway. On screen it
-  looks like ordinary racing luck — not a brake, not a rubber band. *This is the whole point.*
-- **The honest caveat, stated up front (not a footnote):** "no rubber band" is true of the *force* —
+  looks like ordinary racing luck — not a brake, not a rubber band. _This is the whole point._
+- **The honest caveat, stated up front (not a footnote):** "no rubber band" is true of the _force_ —
   every speed is one the car could have rolled — but a car that stays over the cap is pulled down again
   and again, and **repeated invisibility becomes visible**: on screen it looks held. So the correction's
-  *duty cycle* is a first-class number we watch. If the leader is corrected most of the time, it reads as
+  _duty cycle_ is a first-class number we watch. If the leader is corrected most of the time, it reads as
   a spring and the concept has failed — that is a kill condition, not a detail.
 - **The heroes obey the same rule.** They are not exempt (an earlier draft wrongly exempted them — see §8).
-  It does not hurt their stories: their drama is about *rank* (who passes whom); the cap is about *gap*; a
-  hero can be "rank 1" whether it leads by 3 lengths or 17. We only ever slow a car that is *opening* a
-  hole, never one that is *closing* one — so cohesion and a comeback point the same way.
+  It does not hurt their stories: their drama is about _rank_ (who passes whom); the cap is about _gap_; a
+  hero can be "rank 1" whether it leads by 3 lengths or 17. We only ever slow a car that is _opening_ a
+  hole, never one that is _closing_ one — so cohesion and a comeback point the same way.
 - **You set ONE number by eye: the gap cap G, in car-lengths.** Start around 3. Turn it down and the pack
   tightens; up and it loosens. A second, explained control trims how hard the dice are loaded. Nothing else.
 - **The abort rule:** if, after you have set G by eye, you still see a dead race — **we discard this
@@ -87,20 +88,21 @@ Owner-facing name: **loaded dice within the honest range.** Mechanism name: **ga
 
 Measured over all 12 frozen night-sweep cells (4 tracks × 3 arms, 100 races each, in racer lengths):
 
-| | median gap (link) | p90 link | links > 3 L (of 39) |
-|---|---|---|---|
-| At the line, full field | **0.10–0.18 L** | 0.9–1.3 L | **~1–2** |
-| Front-10, v4-OFF | 0.21–0.29 L | 1.1–1.5 L | few |
-| Front-10, v4-ON | 0.26–0.43 L | 1.5–2.3 L | more |
+|                         | median gap (link) | p90 link  | links > 3 L (of 39) |
+| ----------------------- | ----------------- | --------- | ------------------- |
+| At the line, full field | **0.10–0.18 L**   | 0.9–1.3 L | **~1–2**            |
+| Front-10, v4-OFF        | 0.21–0.29 L       | 1.1–1.5 L | few                 |
+| Front-10, v4-ON         | 0.26–0.43 L       | 1.5–2.3 L | more                |
 
 **The field is a near-bumper-to-bumper bunch plus 1–2 cars broken off the front.** Consequences that
 shaped this concept:
-- **The owner's two worries are two different problems.** "The leader/lead-group runs away" is a *gap*
+
+- **The owner's two worries are two different problems.** "The leader/lead-group runs away" is a _gap_
   problem at the front — cohesion's job. "The field tears apart from the middle back" is **not what the
-  data shows**: the middle and rear are a *wall*, not torn. Whether that wall is "too tight to overtake"
-  is a **lateral-lane** question (traffic), not a gap question — *needs-measurement* (traffic-braking
-  fraction), and cohesion must **not** try to fix it. *Verified (link distribution); the "middle-back
-  tears" premise is refuted by the data.*
+  data shows**: the middle and rear are a _wall_, not torn. Whether that wall is "too tight to overtake"
+  is a **lateral-lane** question (traffic), not a gap question — _needs-measurement_ (traffic-braking
+  fraction), and cohesion must **not** try to fix it. _Verified (link distribution); the "middle-back
+  tears" premise is refuted by the data._
 - **An absolute cap is surgical, not a field-rebuild.** Because 37–38 of 39 links are already far below any
   sane G, the cap bites only the 1–2 chasms. A cap of 2 L would start biting ordinary front racing
   (front-10 p90 = 1.4–2.3 L); **3 L cleanly separates chasms from normal spacing — start there** (S2).
@@ -118,9 +120,9 @@ lengths, as an **upper bound with a dead zone** — below G, the mechanism is a 
   (S1) shows the simpler absolute rule is enough: the field is bunched, so an absolute cap only ever
   touches the 1–2 chasms. Simpler rule, one knob (C6). I concede the point to the owner's framing.
 - **It cannot glue the field:** the dead zone means sub-cap gaps are never touched. Equilibrium is "gaps ≤
-  G", never "gaps → 0". The tight rear (median 0.1 L) is below any G, so it is untouched *by construction*
+  G", never "gaps → 0". The tight rear (median 0.1 L) is below any G, so it is untouched _by construction_
   (this answers the glue worry directly — D3).
-- **On "(N−1)·G is a 117-length snake":** bounding each link ≤ G *permits* a long uniform snake in theory,
+- **On "(N−1)·G is a 117-length snake":** bounding each link ≤ G _permits_ a long uniform snake in theory,
   but the field is bunched (S1), so total spread is never regulated and never approaches that — the cap
   only closes chasms. **Total spread is explicitly NOT controlled** (owner's ask): overtaking is local — a
   car gains a place by closing exactly one link.
@@ -128,7 +130,7 @@ lengths, as an **upper bound with a dead zone** — below G, the mechanism is a 
 **NOT controlled (§9 restated):** total field length; within-band finishing order (fairness is
 endpoint-only; regulating order would flatten the rank-churn overtaking rides on); the rear wall's
 tightness (that is lateral, not gaps); the lateral rule itself; the leader's mere existence at the front
-(only a leader→P2 gap *over G*).
+(only a leader→P2 gap _over G_).
 
 ---
 
@@ -137,7 +139,7 @@ tightness (that is lateral, not gaps); the lateral rule itself; the leader's mer
 The per-frame advance is one shared function (raceStep.js), identical in browser and sim:
 `t += baseSpeed · boost · brake · rowEnvMult · trajectoryMult · areaBonusMult · governorMult`.
 The mechanism acts on **`baseSpeed` via `spreadFactor` (the re-roll)** — upstream of, and independent from,
-the servo's `trajectoryMult`. It is an existing factor's *input distribution*, not a new factor (constraint
+the servo's `trajectoryMult`. It is an existing factor's _input distribution_, not a new factor (constraint
 C3 satisfied for free).
 
 **Three channels, in strict order of preference (owner's decision D2):**
@@ -150,8 +152,8 @@ C3 satisfied for free).
    **down** (slower); in symmetric mode a car whose gap **to the racer ahead** > G (it has been dropped)
    tilts it **up** (faster) — always inside the honest band. This is the
    generalisation of the existing `computePulkBiasedTarget` (racePlanner.js:615) from `slice(0,3)`/PULK
-   (racePlanner.js:208) to the whole pack, whole race, with a dead zone. *Continuous, invisible, no new
-   force.*
+   (racePlanner.js:208) to the whole pack, whole race, with a dead zone. _Continuous, invisible, no new
+   force._
 2. **Early re-draw — when the interval is too slow (S3/S7).** A band-edge car drifts **2.4–4.4 lengths per
    9.5 s interval** (0.081 × 3.1–5.7 L/s × 9.5 s; rollInterval verified index.jsx:535-540, defaults.js:260-261).
    That exceeds a 3 L cap between draws. Fix: a car over the cap re-draws **early** (biased down), so the
@@ -166,28 +168,28 @@ C3 satisfied for free).
      `reRollVariationPercent`; e.g. transition editable 0.5–10 s, :444-447). State the behaviour **as a
      function of the knobs**: the achievable overshoot above the cap ≈ **bandEdge × lengthsPerSecond ×
      `reRollTransitionDuration`** — it scales with a slider the owner can move. **Double the transition
-     duration and the cap holds twice as loosely.** *Verified: the four controls are live (DynamicsTuningSection);
-     interval/overshoot arithmetic re-derived at source.*
+     duration and the cap holds twice as loosely.** _Verified: the four controls are live (DynamicsTuningSection);
+     interval/overshoot arithmetic re-derived at source._
    - **(a) An early re-draw is ADDITIONAL, not a consume.** Firing the block early resets
      `nextRollTime = raceTs + rollInterval + jOff` (sim-fairness.mjs:1086; index.jsx:1086), so a chronic
-     offender receives **more total draws than the field**. *Verified.* Fairness argument: the endpoint is
-     still owned by the servo (band-reach), and *which* car breaks away is transient and uncorrelated with
+     offender receives **more total draws than the field**. _Verified._ Fairness argument: the endpoint is
+     still owned by the servo (band-reach), and _which_ car breaks away is transient and uncorrelated with
      start-row or identity over many races, so the extra draws are symmetric at the endpoint — **but this
      is endpoint-only fairness and must be MEASURED, not assumed** (kill condition (a)). And note the
      unification: a high rate of extra draws on the leader **IS** the duty-cycle rubber band (kill (d)) —
-     the same failure counted two ways. *needs-measurement.*
+     the same failure counted two ways. _needs-measurement._
    - **(b) The sim draws re-rolls from ONE shared seeded stream** — `Math.random = makePRNG(seed)`
-     (sim-fairness.mjs:566-567), consumed at :1066-1067,1085. *Verified.* An early re-draw taking from that
+     (sim-fairness.mjs:566-567), consumed at :1066-1067,1085. _Verified._ An early re-draw taking from that
      shared stream would shift **every** downstream draw for the whole field, so per the addendum's own
      rule the early re-draw **MUST draw from a dedicated per-racer stream**, or it cannot be built as
      designed. This is buildable and has a proven precedent: the governor already keys a `mulberry32`
      stream on `index ^ (seed ^ XOR)` without touching `Math.random` (raceGovernor.js:82). A per-racer
      early-draw stream keeps the shared stream — and therefore the exact regression diff every deletion
      depends on — untouched. **If that per-racer stream is not built, channel 2 is dropped and we fall to
-     channel 3.** *Verified feasible via the governor precedent.*
-   - **⚠ The S7 framing corrected:** "no rubber band" is true for the *force* (every value is drawable) but
+     channel 3.** _Verified feasible via the governor precedent._
+   - **⚠ The S7 framing corrected:** "no rubber band" is true for the _force_ (every value is drawable) but
      **not for the perception** — a car pinned over the cap re-draws down every ~3 s and sits near the floor
-     for the run-in, which *looks* held. The early re-draw makes the correction faster; it does **not**
+     for the run-in, which _looks_ held. The early re-draw makes the correction faster; it does **not**
      exempt it from the duty-cycle failure (D7-d).
 3. **Bounded brake — fallback ONLY (D2).** Dead-zoned, slew-limited, brake-only, faded before the release.
    Build this **only if the owner's eye still sees chasms after 1 and 2 are tuned.** The owner's judgement
@@ -197,7 +199,7 @@ C3 satisfied for free).
 time, it is a spring and the concept has failed (D7-d, D6).
 
 **Why the re-roll and not a per-frame brake as primary** (all three concepts converged here — the strongest
-signal this project has produced): the disease is *slow drift*, so the medicine must be slow; a per-frame
+signal this project has produced): the disease is _slow drift_, so the medicine must be slow; a per-frame
 brake is a fast tool for a slow problem and brings every failure mode we fear (rubber-band, concertina,
 servo-fight, a new unbounded force). It is **not** a "rip-closer": a rip-closer brakes one car to close one
 gap and relocates the gap; this is a distributed symmetric draw-tilt — the neighbourhood relaxes toward
@@ -212,7 +214,7 @@ gap and relocates the gap; this is a distributed symmetric draw-tilt — the nei
   (must not fall), adjacent-rank-swap rate (must not collapse), traffic-braking fraction (must not spike).
 - **VISIBLE RUBBER BAND.** Avoided at the force level (no brake; ≤6 draws/race + early re-draws, all inside
   the band). **Detect:** the correction's **duty cycle** and **magnitude** per race, especially on the
-  leader. The early-re-draw caveat (§4.2) makes this the *binding* detector, not a formality.
+  leader. The early-re-draw caveat (§4.2) makes this the _binding_ detector, not a formality.
 
 ---
 
@@ -235,8 +237,9 @@ rank 1 while P2 closes is exactly the win; they meet only when a rank actually f
 
 **But the hierarchy is load-bearing (S5, verified):** the servo clamp is `[0.85, 1.10]`
 (racePlanner.js:74-75) — **more speed authority (−15 %/+10 %) than the ±8.1 % re-roll band.** Therefore:
+
 - A gap the servo **actively drives** (a hero curve boosting a car toward the front at +10 %) **cannot be
-  policed by the dice** — the re-roll is the weaker actuator. Only *drift* gaps can (a rank-1 leader gets
+  policed by the dice** — the re-roll is the weaker actuator. Only _drift_ gaps can (a rank-1 leader gets
   servo ≈ 1.0, so its runaway is drift and the dice can hold it).
 - ⇒ **The hero curves must be authored inside the cap** (§8). The re-roll can never police a servo-driven
   gap; the curve constraint is the only lever there.
@@ -250,15 +253,15 @@ pushes it up. Rare ⇒ harmless. Constant ⇒ the servo must yield at the front,
 
 Heroes are cast from the B1 pool (`finalRanks.get(p.index) <= BAND_EDGES[0]`, heroCurveGenerator.js:407-408);
 the winner sits at cluster rank 2 and rank 1 is left to the run-out (:378-382). **So the front band IS
-heroes**, and the 17-length chasm is leader→P2 — *between two front-cluster heroes*. An earlier draft
+heroes**, and the 17-length chasm is leader→P2 — _between two front-cluster heroes_. An earlier draft
 exempted heroes from the reference; that would make the **motivating failure invisible**. **Withdrawn.**
 
 Heroes are subject to the cap and count in the reference. This does **not** fight their stories, because the
-cap is a *gap* rule and their drama is a *rank* rule: a hero satisfies "rank 1" at a 3-length or a 17-length
+cap is a _gap_ rule and their drama is a _rank_ rule: a hero satisfies "rank 1" at a 3-length or a 17-length
 gap, so slowing it to close the gap does not break its curve. The mechanism only ever slows a car that is
-*opening* a hole, never one *closing* one — so cohesion and a comeback point the same way. Where a curve
+_opening_ a hole, never one _closing_ one — so cohesion and a comeback point the same way. Where a curve
 genuinely demands a gap over G (a servo-driven front break, §7/S5), **the constraint belongs on the curve**,
-authored inside the cap — the dice cannot police it. *Not gameable by casting:* heroes are 2–4, bounded, and
+authored inside the cap — the dice cannot police it. _Not gameable by casting:_ heroes are 2–4, bounded, and
 must still finish in band; subjecting them to the cap means casting cannot open a protected hole.
 
 ---
@@ -278,13 +281,13 @@ front. Controlling any of these trades the owner's drama for a tidy metric — t
 - **(c)** held overtakes collapse and traffic-braking spikes — the field is glued;
 - **(d)** the leader's correction duty cycle is high or continuous — it will read as a rubber band.
 
-The cheapest experiment is a *falsification*, not a confirmation: generalise the existing
+The cheapest experiment is a _falsification_, not a confirmation: generalise the existing
 `computePulkBiasedTarget` to the whole pack with a dead zone at one eye-chosen G, run 4 tracks × {v4 on/off},
 seed=1, 100 races; any one of (a)–(d) kills it. The hook and every observer (gap-space + frontmost-gap +
 band-reach, in lengths) already exist.
 
-**The abort rule (D6, verbatim):** *"If, after calibration, the owner still sees a dead race — DISCARD THE
-CONCEPT. Do not keep tuning."*
+**The abort rule (D6, verbatim):** _"If, after calibration, the owner still sees a dead race — DISCARD THE
+CONCEPT. Do not keep tuning."_
 
 ---
 
@@ -306,25 +309,25 @@ CONCEPT. Do not keep tuning."*
 
 - **Stage 0 — instrument, no behaviour change.** Confirm the chasm/link distribution and baseline
   band-reach with the existing front-gap observer; **emit the hero flag per racer** so "the wide link is
-  hero→hero" is *measured*, not inferred (converts the one remaining inference in §8). *Gate: band-reach
-  recorded per track.*
+  hero→hero" is _measured_, not inferred (converts the one remaining inference in §8). _Gate: band-reach
+  recorded per track._
 - **Stage 1 — generalise the re-roll bias (channel 1), symmetric, small gain, dead zone at G.**
-  `computePulkBiasedTarget` → whole pack, whole race, gap-cap reference, heroes included. *Gate: band-reach
+  `computePulkBiasedTarget` → whole pack, whole race, gap-cap reference, heroes included. _Gate: band-reach
   ≥ 70 % all tracks (fairness cannot regress); frontmost-gap fraction-over-G drops; held overtakes
-  unchanged; duty cycle reported.* **Owner eye-test:** less torn without looking glued? If fairness breaks
+  unchanged; duty cycle reported._ **Owner eye-test:** less torn without looking glued? If fairness breaks
   here, the whole approach is falsified — stop.
 - **Stage 2 — add the early re-draw (channel 2)** for cars the interval cannot hold. **Build requirements
   (non-negotiable, from source):** it draws from a **dedicated per-racer PRNG stream**
   (its own seeded stream, separate from the shared re-roll stream) so the shared stream and the regression diff stay intact; it reads the four re-roll
-  controls **live** (never a race-start snapshot). *Gate: same fairness; the exact regression diff still
+  controls **live** (never a race-start snapshot). _Gate: same fairness; the exact regression diff still
   reproduces a no-feature race byte-for-byte; overshoot-over-G shrinks; duty cycle stays low (watch the
-  leader — §4.2 caveat and the "additional draws" fairness measurement).* **Owner eye-test.** If the
+  leader — §4.2 caveat and the "additional draws" fairness measurement)._ **Owner eye-test.** If the
   per-racer stream is not built, **drop channel 2 and go to Stage 5 (the brake fallback).**
 - **Stage 3 — hero-curve constraint (author inside the cap; S5/§8), and the servo-conflict measurement
-  (D8).** *Gate: fairness; heroes still complete their curves (comeback/duel intact); servo↔bias conflict
-  frames rare.* **Owner eye-test:** do the heroes still weave and win?
+  (D8).** _Gate: fairness; heroes still complete their curves (comeback/duel intact); servo↔bias conflict
+  frames rare._ **Owner eye-test:** do the heroes still weave and win?
 - **Stage 4 — expose ONE Action knob (G) + a bias-strength trim (D5), with the duty-cycle/magnitude
-  telemetry on the DevScreen.** *Gate: C6 — ≤ ~5 explained controls + 1 Action slider.* **Owner eye-test is
+  telemetry on the DevScreen.** _Gate: C6 — ≤ ~5 explained controls + 1 Action slider._ **Owner eye-test is
   the final judge; the abort rule (D6) applies.**
 - **Only if the eye still sees chasms after Stages 1–2:** Stage 5 — the bounded brake fallback (channel 3).
 - Until the owner's eye passes (C4), the abort rule reverts to the current shipped world (choreo +

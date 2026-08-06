@@ -17,16 +17,16 @@
 //                dolphin-mask-belly.png   4096×256  (16 frames × 256×256)
 // ============================================================
 
-import { createRequire } from 'module';
-import fs from 'fs';
-import path from 'path';
-import { fileURLToPath } from 'url';
+import { createRequire } from "module";
+import fs from "fs";
+import path from "path";
+import { fileURLToPath } from "url";
 
 const require = createRequire(import.meta.url);
-const { PNG } = require('pngjs');
+const { PNG } = require("pngjs");
 
-const ROOT = path.resolve(fileURLToPath(import.meta.url), '../../');
-const OUT = path.join(ROOT, 'client/public/assets/racers');
+const ROOT = path.resolve(fileURLToPath(import.meta.url), "../../");
+const OUT = path.join(ROOT, "client/public/assets/racers");
 const FC = 16;
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
@@ -47,7 +47,10 @@ function renderBlobs(blobs, fw, fh) {
     for (let x = 0; x < fw; x++) {
       let v = 0;
       for (const b of blobs) {
-        v = Math.max(v, blobBrightness(x, y, b.cx, b.cy, b.rx, b.ry, b.edge ?? 0.3));
+        v = Math.max(
+          v,
+          blobBrightness(x, y, b.cx, b.cy, b.rx, b.ry, b.edge ?? 0.3),
+        );
       }
       buf[y * fw + x] = v;
     }
@@ -154,8 +157,8 @@ function genDolphinBelly() {
   const buf = new Uint8Array(DFW * DFH);
   const yMin = 40;
   const yMax = 220;
-  const yMid = (yMin + yMax) / 2;   // 130
-  const yHalf = (yMax - yMin) / 2;  // 90
+  const yMid = (yMin + yMax) / 2; // 130
+  const yHalf = (yMax - yMin) / 2; // 90
 
   for (let y = 0; y < DFH; y++) {
     for (let x = 0; x < DFW; x++) {
@@ -168,8 +171,8 @@ function genDolphinBelly() {
       // dark back — brightening outward to full white at the ventral sides.
       const rx = x / DFW;
       const sigma = 0.09;
-      const leftG = Math.exp(-Math.pow((rx - 0.30) / sigma, 2) / 2);
-      const rightG = Math.exp(-Math.pow((rx - 0.70) / sigma, 2) / 2);
+      const leftG = Math.exp(-Math.pow((rx - 0.3) / sigma, 2) / 2);
+      const rightG = Math.exp(-Math.pow((rx - 0.7) / sigma, 2) / 2);
       const h = Math.max(leftG, rightG);
 
       buf[y * DFW + x] = Math.round(255 * Math.min(1, h * vertFactor));
@@ -181,10 +184,15 @@ function genDolphinBelly() {
 // ── Generate all masks ────────────────────────────────────────────────────────
 
 const masks = [
-  { name: 'turtle-mask-plates.png', gen: genTurtlePlates, fw: TFW, fh: TFH },
-  { name: 'turtle-mask-borders.png', gen: genTurtleBorders, fw: TFW, fh: TFH },
-  { name: 'manta-mask-shoulders.png', gen: genMantaShoulders, fw: MFW, fh: MFH },
-  { name: 'dolphin-mask-belly.png', gen: genDolphinBelly, fw: DFW, fh: DFH },
+  { name: "turtle-mask-plates.png", gen: genTurtlePlates, fw: TFW, fh: TFH },
+  { name: "turtle-mask-borders.png", gen: genTurtleBorders, fw: TFW, fh: TFH },
+  {
+    name: "manta-mask-shoulders.png",
+    gen: genMantaShoulders,
+    fw: MFW,
+    fh: MFH,
+  },
+  { name: "dolphin-mask-belly.png", gen: genDolphinBelly, fw: DFW, fh: DFH },
 ];
 
 for (const { name, gen, fw, fh } of masks) {
@@ -193,4 +201,4 @@ for (const { name, gen, fw, fh } of masks) {
   save(sheet, name, fw);
 }
 
-console.log('\nAll aquatic masks generated.');
+console.log("\nAll aquatic masks generated.");

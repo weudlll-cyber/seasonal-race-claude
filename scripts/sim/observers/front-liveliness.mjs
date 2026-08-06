@@ -20,7 +20,8 @@
 
 const longestGap = (points) => {
   let m = 0;
-  for (let i = 1; i < points.length; i++) m = Math.max(m, points[i] - points[i - 1]);
+  for (let i = 1; i < points.length; i++)
+    m = Math.max(m, points[i] - points[i - 1]);
   return +m.toFixed(4);
 };
 
@@ -78,7 +79,10 @@ export function makeFrontLivelinessTracker({
       if (!snapDone && progress >= chaosEnd) {
         snapDone = true;
         gapAtChaosEnd = +gap.toFixed(3);
-        fieldSpreadAtChaosEnd = +gapLen(live[0].t, live[live.length - 1].t).toFixed(3);
+        fieldSpreadAtChaosEnd = +gapLen(
+          live[0].t,
+          live[live.length - 1].t,
+        ).toFixed(3);
         leaderIdxAtChaosEnd = leader.index;
         leaderDrawnRankAtChaosEnd = drawnRank ? drawnRank(leader.index) : null;
       }
@@ -86,8 +90,12 @@ export function makeFrontLivelinessTracker({
       // PULK window.
       if (progress < chaosEnd || progress > windowHi) return;
       winFrames++;
-      winLeaderFrames.set(leader.index, (winLeaderFrames.get(leader.index) ?? 0) + 1);
-      if (prevLeaderWin != null && leader.index !== prevLeaderWin) winLeadChanges++;
+      winLeaderFrames.set(
+        leader.index,
+        (winLeaderFrames.get(leader.index) ?? 0) + 1,
+      );
+      if (prevLeaderWin != null && leader.index !== prevLeaderWin)
+        winLeadChanges++;
       prevLeaderWin = leader.index;
       winGapSum += gap;
       if (gap > winGapMax) winGapMax = gap;
@@ -104,7 +112,11 @@ export function makeFrontLivelinessTracker({
       return {
         // STAGE 0 — LAW.
         LAW_full: longestGap([0, ...leadChangesAll, 1]),
-        LAW_last50: longestGap([0.5, ...leadChangesAll.filter((x) => x >= 0.5), 1]),
+        LAW_last50: longestGap([
+          0.5,
+          ...leadChangesAll.filter((x) => x >= 0.5),
+          1,
+        ]),
         leadChangesTotal: leadChangesAll.length,
         // ADDENDUM v2 — CHAOS window [0, chaosEnd].
         maxGapP1P2_chaos: +chaosGapMax.toFixed(3),
@@ -114,17 +126,28 @@ export function makeFrontLivelinessTracker({
         leaderDrawnRankAtChaosEnd,
         // STAGE 1 — PULK window [chaosEnd, windowHi] (null when no window frames).
         windowFrames: winFrames,
-        maxLeadHoldShare_mid: winFrames ? +(maxHold / winFrames).toFixed(4) : null,
+        maxLeadHoldShare_mid: winFrames
+          ? +(maxHold / winFrames).toFixed(4)
+          : null,
         distinctLeaders_mid: winLeaderFrames.size,
         leadChanges_mid: winLeadChanges,
         meanGapP1P2_mid: winFrames ? +(winGapSum / winFrames).toFixed(3) : null,
         maxGapP1P2_mid: +winGapMax.toFixed(3),
-        earlyBreakaway: winFrames ? winBreakawayFrames / winFrames >= 0.5 : false,
-        leaderIsDrawnB1_mid: winFrames ? +(winLeaderB1Frames / winFrames).toFixed(4) : null,
+        earlyBreakaway: winFrames
+          ? winBreakawayFrames / winFrames >= 0.5
+          : false,
+        leaderIsDrawnB1_mid: winFrames
+          ? +(winLeaderB1Frames / winFrames).toFixed(4)
+          : null,
         // brake TRIGGER armed (gap ≥ G) share — pair with the sim-side actual fire events + the design gate.
-        brakeArmed_mid: gapCapG != null && winFrames ? +(winBrakeArmedFrames / winFrames).toFixed(4) : null,
+        brakeArmed_mid:
+          gapCapG != null && winFrames
+            ? +(winBrakeArmedFrames / winFrames).toFixed(4)
+            : null,
         firstLeadChangeFromChaosEnd:
-          firstChangeAfterChaos != null ? +(firstChangeAfterChaos - chaosEnd).toFixed(4) : null,
+          firstChangeAfterChaos != null
+            ? +(firstChangeAfterChaos - chaosEnd).toFixed(4)
+            : null,
       };
     },
   };

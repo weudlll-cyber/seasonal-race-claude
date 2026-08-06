@@ -52,10 +52,18 @@ export function makeEscapeEpisodeTracker({ G, windowEndMs }) {
      * leader — the tracker only differences it, so it never needs to know how tilts are computed.
      * `leaderNextRollMs` is the leader's next scheduled roll time (Infinity/null if it has none).
      */
-    observe(gapLen, raceProgress, raceTs, leaderIdx, leaderNextRollMs, leaderDownCount) {
+    observe(
+      gapLen,
+      raceProgress,
+      raceTs,
+      leaderIdx,
+      leaderNextRollMs,
+      leaderDownCount,
+    ) {
       if (gapLen > G) {
         if (!open) {
-          const nextRoll = leaderNextRollMs == null ? Infinity : leaderNextRollMs;
+          const nextRoll =
+            leaderNextRollMs == null ? Infinity : leaderNextRollMs;
           open = {
             startP: raceProgress,
             startMs: raceTs,
@@ -123,11 +131,14 @@ export function summarizeEpisodes(records) {
   const outOfRolls = uncorrected.filter((e) => !e.hadCorrectableRollAhead);
   const other = uncorrected.filter((e) => e.hadCorrectableRollAhead);
   const unresolved = all.filter((e) => !e.resolved);
-  const mean = (a) => (a.length ? a.reduce((s, x) => s + x, 0) / a.length : null);
+  const mean = (a) =>
+    a.length ? a.reduce((s, x) => s + x, 0) / a.length : null;
   const pctl = (a, p) => {
     if (!a.length) return null;
     const s = [...a].sort((x, y) => x - y);
-    return s[Math.min(s.length - 1, Math.max(0, Math.ceil((p / 100) * s.length) - 1))];
+    return s[
+      Math.min(s.length - 1, Math.max(0, Math.ceil((p / 100) * s.length) - 1))
+    ];
   };
   return {
     nEpisodes: n,
@@ -136,16 +147,41 @@ export function summarizeEpisodes(records) {
     outOfRollsRate: n ? outOfRolls.length / n : null,
     uncorrectedOtherRate: n ? other.length / n : null,
     // Of the UNCORRECTED ones specifically, what share is structural?
-    outOfRollsShareOfUncorrected: uncorrected.length ? outOfRolls.length / uncorrected.length : null,
+    outOfRollsShareOfUncorrected: uncorrected.length
+      ? outOfRolls.length / uncorrected.length
+      : null,
     unresolvedRate: n ? unresolved.length / n : null,
-    durationMsMed: pctl(all.map((e) => e.durationMs), 50),
-    durationMsP90: pctl(all.map((e) => e.durationMs), 90),
-    peakGapMed: pctl(all.map((e) => e.peakGapLen), 50),
-    peakGapP90: pctl(all.map((e) => e.peakGapLen), 90),
-    startPMed: pctl(all.map((e) => e.startP), 50),
+    durationMsMed: pctl(
+      all.map((e) => e.durationMs),
+      50,
+    ),
+    durationMsP90: pctl(
+      all.map((e) => e.durationMs),
+      90,
+    ),
+    peakGapMed: pctl(
+      all.map((e) => e.peakGapLen),
+      50,
+    ),
+    peakGapP90: pctl(
+      all.map((e) => e.peakGapLen),
+      90,
+    ),
+    startPMed: pctl(
+      all.map((e) => e.startP),
+      50,
+    ),
     // Phase split: escapes that began after the gap-reroll window had already closed.
-    startedAfterWindowEndRate: n ? all.filter((e) => e.startedAfterWindowEnd).length / n : null,
-    correctedStartPMed: pctl(corrected.map((e) => e.startP), 50),
-    uncorrectedStartPMed: pctl(uncorrected.map((e) => e.startP), 50),
+    startedAfterWindowEndRate: n
+      ? all.filter((e) => e.startedAfterWindowEnd).length / n
+      : null,
+    correctedStartPMed: pctl(
+      corrected.map((e) => e.startP),
+      50,
+    ),
+    uncorrectedStartPMed: pctl(
+      uncorrected.map((e) => e.startP),
+      50,
+    ),
   };
 }

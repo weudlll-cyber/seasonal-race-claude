@@ -13,6 +13,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import {
   computeAutoScaleFactor,
+  CANVAS_H_REF,
   computeRenderDisplayScale,
   getEffectiveMaxTargetScreenPx,
   DEFAULT_AUTO_SCALE_CONFIG,
@@ -320,5 +321,27 @@ describe('computeRenderDisplayScale — the readability FLOOR', () => {
       OVERVIEW_EFF;
     expect(floored).toBeCloseTo(32.4, 1); // back to the size in his reference image (32.0)
     expect(floored / bare).toBeCloseTo(1.42, 2);
+  });
+});
+
+// ── THE REFERENCE CANVAS HEIGHT IS DUPLICATED ON PURPOSE, AND GUARDED (ONE-TRUTH-1 stage 6) ──────
+
+describe('the reference canvas height, and why it is not imported', () => {
+  it('equals the camera projection\u2019s REFERENCE_CANVAS_H \u2014 the duplicate cannot silently diverge', async () => {
+    // 720 is stated in TWO files: here and in camera/projection.js. That is not an oversight.
+    // autoSpriteScale.js sits inside the ENGINE REACH (the closure of raceCore.js's imports, the
+    // set the mint tripwire routes on), so importing from camera/ would drag the projection module
+    // into the engine's closure and breach the camera's one-way rule at the same time.
+    //
+    // A TEST may import from anywhere, because a test is not in the closure. So the fact gets one
+    // guard instead of one home, and this assertion is what makes the duplication honest rather
+    // than merely tolerated: change either number and this fails.
+    const { REFERENCE_CANVAS_H } = await import('./camera/projection.js');
+    expect(CANVAS_H_REF).toBe(REFERENCE_CANVAS_H);
+
+    // CONSEQUENCE, so this cannot pass by both being undefined \u2014 the failure mode that makes a
+    // cross-module equality check worthless.
+    expect(typeof CANVAS_H_REF).toBe('number');
+    expect(CANVAS_H_REF).toBeGreaterThan(0);
   });
 });

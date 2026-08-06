@@ -173,6 +173,11 @@ describe('runSingleRace', () => {
     }
   });
 
+  // 30 s, MEASURED (ONE-TRUTH-1 stage 6). This runs TEN full ten-racer races; at vitest's 5-second
+  // default it sat just under the line when the machine was idle and over it whenever anything else
+  // was running. Across a 20-run study it was the second most retried test in the suite — 9 of 10
+  // CONTENDED runs and 2 of 10 ALONE runs — always on `timeout`, never once on an assertion. Its
+  // result was never in question; its budget was. See the ONE-TRUTH-1 report §2(c).
   it('different seeds → (usually) different winners', () => {
     // Run 10 races and check there is more than 1 unique winner
     const winners = new Set();
@@ -182,7 +187,7 @@ describe('runSingleRace', () => {
       winners.add(winner.racerIndex ?? winner.startRowIndex);
     }
     expect(winners.size).toBeGreaterThan(1);
-  });
+  }, 30_000);
 
   it('speedBonusMult applied: rear-row racer gets nonzero bonus', () => {
     // With multiple rows, some racers must be in row > 0

@@ -23,24 +23,24 @@ construction and must be argued another way.
 
 ## 1. The files, and what each one is FOR
 
-| File | For | Not for |
-|---|---|---|
-| `CameraDirector.js` | The state machine and the camera's own motion: which shot we are on, and where the camera is this frame. | Anything answerable without a camera — see the rows below. |
-| `projection.js` | THE world↔screen mapping. Every zoom formula, guardrail and diagnostic goes through it. | Deciding anything. It converts. |
-| `zoomUnit.js` | The corridor unit: turning "how much world is in shot" into a `cam.zoom`, and back. | The per-state settings themselves. |
-| `framingConfig.js` | Resolving a raw config into framing numbers, with every default and validation band. | Producing a `cam.zoom` — it knows nothing of the projection or the track. |
-| `cameraTimingComputation.js` | Resolving a raw config into timing numbers, with every timing fallback. | Anything spatial. |
-| `framingRule.js` | The framing rule: who must stay in frame, where the subject sits, and the zoom ceilings that honour it. | Moving a centre. The guarantees WIDEN; they never steer. |
-| `frameGeometry.js` | Rectangle geometry: how far the frame reaches along a direction. | Cameras. |
-| `resolveCamera.js` | Viewport clamping: fitting a desired shot inside the world bounds. | Choosing the desired shot. |
-| `panTarget.js` | The world point a state centres on, given its subjects. | Zoom. |
-| `battleGroup.js` | Who is fighting whom, from positions and thresholds. | Cameras. Pure, stateless. |
-| `comebackDetector.js` | Who is coming through the field, from rank history. | Whether the camera cuts to them. |
-| `transitionDecision.js` | Whether the camera changes state this frame, and why — as a value a test can read. | Performing the transition. It decides; it does not act. |
-| `finishPhase.js` | HOW A RACE ENDS: the whole finish sequence — the approach gate, the fork between the photo finish and the drama, both ends, and the three hold-gate bypasses. Pure. | Owning any of the six finish latches. It answers; the director remembers. |
-| `detourRecorder.js` | The per-transition diagnostic frame log. | Anything. It never writes a camera value — that is the whole point. |
-| `CameraDirectorDiag.js` | The diagnostics mixin: the HUD panels and the frame-log ring buffer. | Direction. Read-only by design. |
-| `lapUtils.js`, `openTrackCamera.js`, `Minimap.js`, `cameraMarker.js` | Lap arithmetic; the open-track base zoom for the render transform; the minimap; the reproducible-moment marker. | — |
+| File                                                                 | For                                                                                                                                                                 | Not for                                                                   |
+| -------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------- |
+| `CameraDirector.js`                                                  | The state machine and the camera's own motion: which shot we are on, and where the camera is this frame.                                                            | Anything answerable without a camera — see the rows below.                |
+| `projection.js`                                                      | THE world↔screen mapping. Every zoom formula, guardrail and diagnostic goes through it.                                                                             | Deciding anything. It converts.                                           |
+| `zoomUnit.js`                                                        | The corridor unit: turning "how much world is in shot" into a `cam.zoom`, and back.                                                                                 | The per-state settings themselves.                                        |
+| `framingConfig.js`                                                   | Resolving a raw config into framing numbers, with every default and validation band.                                                                                | Producing a `cam.zoom` — it knows nothing of the projection or the track. |
+| `cameraTimingComputation.js`                                         | Resolving a raw config into timing numbers, with every timing fallback.                                                                                             | Anything spatial.                                                         |
+| `framingRule.js`                                                     | The framing rule: who must stay in frame, where the subject sits, and the zoom ceilings that honour it.                                                             | Moving a centre. The guarantees WIDEN; they never steer.                  |
+| `frameGeometry.js`                                                   | Rectangle geometry: how far the frame reaches along a direction.                                                                                                    | Cameras.                                                                  |
+| `resolveCamera.js`                                                   | Viewport clamping: fitting a desired shot inside the world bounds.                                                                                                  | Choosing the desired shot.                                                |
+| `panTarget.js`                                                       | The world point a state centres on, given its subjects.                                                                                                             | Zoom.                                                                     |
+| `battleGroup.js`                                                     | Who is fighting whom, from positions and thresholds.                                                                                                                | Cameras. Pure, stateless.                                                 |
+| `comebackDetector.js`                                                | Who is coming through the field, from rank history.                                                                                                                 | Whether the camera cuts to them.                                          |
+| `transitionDecision.js`                                              | Whether the camera changes state this frame, and why — as a value a test can read.                                                                                  | Performing the transition. It decides; it does not act.                   |
+| `finishPhase.js`                                                     | HOW A RACE ENDS: the whole finish sequence — the approach gate, the fork between the photo finish and the drama, both ends, and the three hold-gate bypasses. Pure. | Owning any of the six finish latches. It answers; the director remembers. |
+| `detourRecorder.js`                                                  | The per-transition diagnostic frame log.                                                                                                                            | Anything. It never writes a camera value — that is the whole point.       |
+| `CameraDirectorDiag.js`                                              | The diagnostics mixin: the HUD panels and the frame-log ring buffer.                                                                                                | Direction. Read-only by design.                                           |
+| `lapUtils.js`, `openTrackCamera.js`, `Minimap.js`, `cameraMarker.js` | Lap arithmetic; the open-track base zoom for the render transform; the minimap; the reproducible-moment marker.                                                     | —                                                                         |
 
 **The one-way rule.** The director imports from the modules; no module imports from the director.
 `CameraDirectorDiag.js` is installed onto the prototype by `Object.defineProperties` at the bottom of
@@ -52,14 +52,14 @@ construction and must be argued another way.
 
 ### 2.1 States
 
-| State | Shot |
-|---|---|
-| `OVERVIEW` | The establishing shot — the widest setting of the same rule every other state runs. |
-| `LEADER_ZOOM` | The current leader, framed forward so the pack behind him fills the frame. |
-| `BATTLE_ZOOM` | A detected group fighting behind the lead. |
-| `COMEBACK_ZOOM` | A racer climbing through the field. |
-| `LEAD_CHANGE` | The racer who has just taken the lead, with the racer he passed. |
-| `PHOTO_FINISH` | The top two contesting the line. The tightest shot in the race, and it has its own setting — it used to borrow BATTLE's, so the most dramatic moment was never closer than an ordinary battle. |
+| State           | Shot                                                                                                                                                                                           |
+| --------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `OVERVIEW`      | The establishing shot — the widest setting of the same rule every other state runs.                                                                                                            |
+| `LEADER_ZOOM`   | The current leader, framed forward so the pack behind him fills the frame.                                                                                                                     |
+| `BATTLE_ZOOM`   | A detected group fighting behind the lead.                                                                                                                                                     |
+| `COMEBACK_ZOOM` | A racer climbing through the field.                                                                                                                                                            |
+| `LEAD_CHANGE`   | The racer who has just taken the lead, with the racer he passed.                                                                                                                               |
+| `PHOTO_FINISH`  | The top two contesting the line. The tightest shot in the race, and it has its own setting — it used to borrow BATTLE's, so the most dramatic moment was never closer than an ordinary battle. |
 
 Two finish sub-phases are flags rather than states, because they are OVERVIEW and LEADER_ZOOM with a
 different anchor and a lock: `_inFinishDrama` (the pulse on the winner) and `_inFinishMode`
@@ -172,6 +172,7 @@ A state is described by three things and only three:
   The corridor still exists and is still the PAIR states' fallback when fewer than two contenders are
   present — but **measured: that fallback fired on 0 of 11,813 pair frames**, so it is defensive
   rather than load-bearing, and it is kept knowingly on that basis.
+
 - **ZOOM** — how much world is in shot, in standard corridors.
 
 Frame POSITION is not a fourth setting. It follows from "is there anything worth seeing ahead of the
@@ -278,6 +279,53 @@ test at both ends.
 
 ## 6. What is protected by tests, and what only by convention
 
+### The camera check — four commands, and they are runnable
+
+Everything below was RUN on 2026-08-06 at commit `c0c17df1`, and the output quoted is what it
+printed. A documented command that nobody has executed is a guess about your own repository.
+
+| #   | Command                                          | What it answers                                 | What it printed                                                          |
+| --- | ------------------------------------------------ | ----------------------------------------------- | ------------------------------------------------------------------------ |
+| 1   | `node scripts/camera-fingerprint.mjs --quiet`    | did any DIRECTOR decision move?                 | the camera value in [docs/fingerprints.json](fingerprints.json) — ~223 s |
+| 2   | `node scripts/render-fingerprint.mjs --quiet`    | did anything that reaches the CANVAS move?      | the render value in the same record — ~224 s                             |
+| 3   | `cd client && npx vitest run src/modules/camera` | do the camera's own units still hold?           | **17 files, 721 tests, all passing** — ~34 s                             |
+| 4   | `node scripts/tracking-lag.mjs`                  | how far behind its subject does the camera sit? | the table below — ~7 min                                                 |
+
+**The expected fingerprint values are deliberately NOT printed here.** They live in
+[docs/fingerprints.json](fingerprints.json), and `node scripts/check-fingerprints.mjs` fails if any
+document disagrees with it. Restating them in this table would have created the twelfth hand-typed
+copy of a number that already drifted once (ONE-TRUTH-1).
+
+### The tracking lag, as measured today — and it had drifted
+
+`scripts/tracking-lag.mjs`, default invocation (n=40, raceSeed 5601, camSeed 1439767152, 60 s,
+1280×720 — the CAMERA-ANCHOR-TRUTH-1 measurement context), `OVERVIEW trackingTC=0.25 entryTC=1.5`:
+
+| state         | frames | median pp | p95 pp |
+| ------------- | ------ | --------- | ------ |
+| BATTLE_ZOOM   | 9657   | 5.71      | 9.98   |
+| COMEBACK_ZOOM | 2103   | 8.33      | 15.57  |
+| LEADER_ZOOM   | 17522  | 4.46      | 8.66   |
+| LEAD_CHANGE   | 7064   | 4.45      | 7.17   |
+| OVERVIEW      | 5199   | 3.08      | 16.00  |
+| PHOTO_FINISH  | 1864   | 6.37      | 20.73  |
+
+OVERVIEW median 3.08 pp against every other state pooled 4.86 pp (ratio 0.63×).
+
+**These numbers replace stale ones, and the staleness is the point.** The convention list below previously stated
+"LEADER 2.05 pp, OVERVIEW 6.78 pp, every other state pooled 3.78 pp" as CURRENT figures. Running the
+command they cite produces none of those. Nothing had lied: the camera moved twice since they were
+written (FINISH-MOTION-1, FINISH-COMPANY-1 — both moved the camera fingerprint), the figures did not
+follow, and no guard could notice because a prose number has no home. Note also that OVERVIEW is now
+the TIGHTEST state rather than the loosest, which reverses the reading the old figures supported.
+
+They are still hand-copied here, and that is a known gap rather than an oversight: making them
+generated means a seven-minute measurement in the loop, which is more than a documentation guard
+should cost. What they now carry is a DATE and a COMMIT, so a reader can see how old they are — the
+minimum a remembered number owes.
+
+### What is protected, and what only by convention
+
 **The render path is no longer convention-only.** `scripts/render-fingerprint.mjs`
 (**`1f83ecc1fcb6fa9a`**) hashes the SEQUENCE of draw calls — sprite placement, text, styles,
 transforms and layer order — at **sixteen** fixed frames across all ten tracks, by driving the real
@@ -305,9 +353,8 @@ time-constant defaults**, with the reason for each attached to the assertion.
 - **The tracking lag ITSELF.** Still unasserted as a quantity — no test fails if the camera trails
   further. But the two entries that used to sit here have moved up into the protected list
   (CAMERA-ANCHOR-TRUTH-1): the `trackingTC` DEFAULTS are now pinned with their reasons, and the
-  transition REASONS are now return values. Current figures, re-measured with
-  `scripts/tracking-lag.mjs`: LEADER 2.05 pp, OVERVIEW 6.78 pp (was 13.78 at `trackingTC` 1.5),
-  every other state pooled 3.78 pp.
+  transition REASONS are now return values. **The figures live under "The tracking lag, as measured today" above**, measured on a stated date
+  at a stated commit; the ones that used to sit here were stale by the time anyone read them.
 - **Slow motion.** Physics-time scaling in the render loop has no camera-side test.
 - **The HUD overlay and every diagnostic flag.** Read-only by design, unasserted by consequence.
 - **The world-bounds clamp.** Named as the cause of two measured residuals; nothing pins it.
@@ -338,8 +385,8 @@ time-constant defaults**, with the reason for each attached to the assertion.
 
 ## 7. THE OWNER'S VERDICTS — what his eye has actually judged
 
-**What this section is FOR, and why it is not §6.** §6 records what a *test* protects. This records
-what a *person* decided. They are different kinds of fact and neither substitutes for the other: a
+**What this section is FOR, and why it is not §6.** §6 records what a _test_ protects. This records
+what a _person_ decided. They are different kinds of fact and neither substitutes for the other: a
 green fingerprint says nothing moved, and only his eye says the picture is right. Before this
 existed, that record lived in a chat-side document outside the repo — one camera with two
 descriptions, which is the failure this project keeps paying for. The description lives above; the
@@ -351,13 +398,13 @@ with its date and — where one exists — the measurement that framed it.
 
 ### 7.1 Approved by his eye
 
-| what he judged | when | the evidence, and the measurement behind it |
-|---|---|---|
-| **The road no longer bounds the leader shot** — LEADER/OVERVIEW/COMEBACK limited by his setting and the COMPANY guarantee only | 2026-08-05 | mountainstreet, seed 5601, toggle ON, *"nein das passt"* — and decisive because he saw **both regimes**: a torn-apart field where the guarantee opens the shot, and a tight pack where the camera holds his 1.0. His approval also covers the CAMERA-ANCHOR-TRUTH-1 work (§4a, §4c, stages 1a/1b), which had had no eye test until then. |
-| **`minRacersVisible` stays at 5** | 2026-08-05 | His observation corrected the measurement: I reported the company guarantee binding ~0% at n=65 and recommended raising it. That held for the PACK case only — on a spread field it binds and widens a lot at 5. The spread-field sweep is owed before anyone changes it. |
-| **The finish is ONE motion** — pan and zoom on one ease, no jump at the crossing | 2026-08-05 | The measured defect was a **2708 px pan-target step in one frame** (dirt-oval, 144× the median of the frames before it); after, peak per-frame motion 2708 → 72 px with total travel unchanged. |
-| **The finish pause, the travel and the resting point** | 2026-08-05 | His photo-finish settings, watching the moment the pair shot ends. The pause now runs after a photo finish too, starting when the two contenders the shot was FOLLOWING are home — measured 6–57 frames later than `finishedCount >= 2`, and on 5 of 9 tracks the second racer across is neither of the pair. |
-| **The company guarantee retires once the company is home** | 2026-08-05 | City Circuit, last thirty seconds, *"schaut besser aus jetzt"*. Baseline widened for 54 frames (4.5489 → 2.9752) after the shot had already come to rest; after, 0. Cost he accepted: the last back-marker sits 11% inside the frame instead of 23%. |
+| what he judged                                                                                                                 | when       | the evidence, and the measurement behind it                                                                                                                                                                                                                                                                                              |
+| ------------------------------------------------------------------------------------------------------------------------------ | ---------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **The road no longer bounds the leader shot** — LEADER/OVERVIEW/COMEBACK limited by his setting and the COMPANY guarantee only | 2026-08-05 | mountainstreet, seed 5601, toggle ON, _"nein das passt"_ — and decisive because he saw **both regimes**: a torn-apart field where the guarantee opens the shot, and a tight pack where the camera holds his 1.0. His approval also covers the CAMERA-ANCHOR-TRUTH-1 work (§4a, §4c, stages 1a/1b), which had had no eye test until then. |
+| **`minRacersVisible` stays at 5**                                                                                              | 2026-08-05 | His observation corrected the measurement: I reported the company guarantee binding ~0% at n=65 and recommended raising it. That held for the PACK case only — on a spread field it binds and widens a lot at 5. The spread-field sweep is owed before anyone changes it.                                                                |
+| **The finish is ONE motion** — pan and zoom on one ease, no jump at the crossing                                               | 2026-08-05 | The measured defect was a **2708 px pan-target step in one frame** (dirt-oval, 144× the median of the frames before it); after, peak per-frame motion 2708 → 72 px with total travel unchanged.                                                                                                                                          |
+| **The finish pause, the travel and the resting point**                                                                         | 2026-08-05 | His photo-finish settings, watching the moment the pair shot ends. The pause now runs after a photo finish too, starting when the two contenders the shot was FOLLOWING are home — measured 6–57 frames later than `finishedCount >= 2`, and on 5 of 9 tracks the second racer across is neither of the pair.                            |
+| **The company guarantee retires once the company is home**                                                                     | 2026-08-05 | City Circuit, last thirty seconds, _"schaut besser aus jetzt"_. Baseline widened for 54 frames (4.5489 → 2.9752) after the shot had already come to rest; after, 0. Cost he accepted: the last back-marker sits 11% inside the frame instead of 23%.                                                                                     |
 
 ### 7.2 Rejected by him — and both are natural ideas that will return
 
@@ -370,10 +417,10 @@ stale. A number in two homes drifts, and the ceremony's own cost column proved t
 at `~85 s` for the camera fingerprint through two mints because it was only ever corrected where
 somebody happened to be looking. So the numbers live in DEAD-ENDS alone.
 
-| what he rejected | when | why, in one line |
-|---|---|---|
-| **The zoom unit as a fraction of each track's own width** ([§I](DEAD-ENDS.md)) | 2026-08-05 | Tested by him on searound and rejected: **a smaller window means the world moves through it faster, and the picture became restless.** The fixed reference has a virtue nobody had written down — a fixed amount of world means the same SENSE OF CAMERA SPEED on all ten tracks. The measurements agreed afterwards, but were run *because* he had already rejected it; they did not find it. |
-| **Counting finished racers as company at the finish** ([§J](DEAD-ENDS.md)) | 2026-08-05 | Refuted by measurement, not by eye: it widens the shot **further**, not less. The FINISH_OVERVIEW anchor is the fixed lookback point, **not the field**, so finished racers run out *away* from it exactly as stragglers fall *back* from it. The idea assumes the anchor sits where the racers are; it deliberately does not. |
+| what he rejected                                                               | when       | why, in one line                                                                                                                                                                                                                                                                                                                                                                               |
+| ------------------------------------------------------------------------------ | ---------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **The zoom unit as a fraction of each track's own width** ([§I](DEAD-ENDS.md)) | 2026-08-05 | Tested by him on searound and rejected: **a smaller window means the world moves through it faster, and the picture became restless.** The fixed reference has a virtue nobody had written down — a fixed amount of world means the same SENSE OF CAMERA SPEED on all ten tracks. The measurements agreed afterwards, but were run _because_ he had already rejected it; they did not find it. |
+| **Counting finished racers as company at the finish** ([§J](DEAD-ENDS.md))     | 2026-08-05 | Refuted by measurement, not by eye: it widens the shot **further**, not less. The FINISH_OVERVIEW anchor is the fixed lookback point, **not the field**, so finished racers run out _away_ from it exactly as stragglers fall _back_ from it. The idea assumes the anchor sits where the racers are; it deliberately does not.                                                                 |
 
 ### 7.3 THE STANDING GAP — what his eye has NOT seen
 

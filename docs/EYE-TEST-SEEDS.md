@@ -1,7 +1,7 @@
 # Eye-test seeds — what a seed means
 
 **Status: binding practice. Rewritten 2026-07-26.** An earlier version of this note warned that a typed
-browser seed was *never* a cross-tool identifier. That was true before the parity arc; it is **no longer
+browser seed was _never_ a cross-tool identifier. That was true before the parity arc; it is **no longer
 true**. After the RNG isolation, the plan-grid unification, the canonical speed/duration model and the
 step-order alignment, **a typed seed reproduces the SAME race in the browser and in the sim.** This doc is
 the current practice.

@@ -64,13 +64,14 @@ test("a retried test is named, with its file, its ATTEMPT count and its final st
     ]),
   ]);
   assert.equal(rows.length, 1);
-  assert.deepEqual(rows[0], {
-    file: "flaky.test.js",
-    name: "shaky",
-    attempts: 3, // 2 retries = 3 attempts; the off-by-one that would make this useless
-    state: "passed",
-    flaky: true,
-  });
+  // Asserted FIELD BY FIELD, not as a whole-object deepEqual. The row gained `attemptsDetail` and
+  // `totalMs` in stage 2 and a deepEqual broke on that addition — an instance assertion that objects
+  // to honest growth, which is the shape this project keeps replacing with property assertions.
+  assert.equal(rows[0].file, "flaky.test.js");
+  assert.equal(rows[0].name, "shaky");
+  assert.equal(rows[0].attempts, 3); // 2 retries = 3 attempts; the off-by-one that would matter
+  assert.equal(rows[0].state, "passed");
+  assert.equal(rows[0].flaky, true);
   const text = formatLedger(rows).join("\n");
   assert.match(text, /flaky\.test\.js/);
   assert.match(text, /3 attempts/);
@@ -147,4 +148,64 @@ test("missing or malformed results do not crash the ledger", () => {
   assert.doesNotThrow(() => rowsFromModules([odd]));
   assert.equal(rowsFromModules([odd]).length, 0);
   assert.equal(rowsFromModules(undefined).length, 0);
+});
+
+// ── THE DISCONNECTION SABOTAGE (ONE-TRUTH-1 stage 1b) ─────────────────────────────────────────
+//
+// The sabotages in NIGHT-TOOLS-1 broke the ledger's COUNTING. This one breaks its CONNECTION, which
+// is the defect the ledger exists for and the one the night block never demonstrated: with the
+// reporter absent from vitest.config.js, a run that retried is byte-identical to one that did not.
+//
+// WHAT BREAKS IF THIS IS DELETED: the reporter could be dropped from the config — by a merge, by a
+// vitest upgrade rewriting `reporters`, by anyone tidying — and every run would go back to hiding
+// retries, with nothing to notice. That is precisely how the suite spent months not saying so.
+//
+// WHAT GOES UNNOTICED IF IT IS MISSING: the difference between "no test retried" and "nobody is
+// looking". Those two produce the same silence, and only this test tells them apart.
+
+test("DISCONNECTION: with no reporter, a retried run is INDISTINGUISHABLE from a clean one", () => {
+  // Simulate the two runs as vitest would report them WITHOUT the ledger: the default reporter
+  // shows counts and states, and retryCount appears nowhere in them.
+  const summaryWithout = (mods) =>
+    mods
+      .flatMap((m) => [...m.children.allTests()])
+      .map((t) => `${t.fullName}:${t.result().state}`)
+      .join("|");
+
+  const clean = [
+    mod("t.test.js", [
+      ["a", 0],
+      ["b", 0],
+    ]),
+  ];
+  const retried = [
+    mod("t.test.js", [
+      ["a", 0],
+      ["b", 2],
+    ]),
+  ]; // b needed three attempts
+
+  // THE DEFECT, stated as an assertion: without the ledger the two runs look the same.
+  assert.equal(summaryWithout(clean), summaryWithout(retried));
+
+  // THE CONSEQUENCE PAIR: with the ledger they do not. If this half ever matched, the ledger would
+  // be decorative and the test above would be describing the shipped behaviour, not a defect.
+  assert.notEqual(
+    formatLedger(rowsFromModules(clean)).join("|"),
+    formatLedger(rowsFromModules(retried)).join("|"),
+  );
+});
+
+test("DISCONNECTION: the ledger is what carries the difference, not the pass/fail state", () => {
+  // Both runs PASS. A guard keyed on exit status could never separate them; only the ledger can.
+  const clean = [mod("t.test.js", [["b", 0]])];
+  const retried = [mod("t.test.js", [["b", 3]])];
+  for (const m of [clean, retried])
+    for (const t of m[0].children.allTests())
+      assert.equal(t.result().state, "passed");
+  assert.match(formatLedger(rowsFromModules(retried)).join(" "), /4 attempts/);
+  assert.match(
+    formatLedger(rowsFromModules(clean)).join(" "),
+    /0 tests retried/,
+  );
 });

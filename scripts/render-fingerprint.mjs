@@ -58,7 +58,7 @@
 // in BOTH directions (camera claimed ~85 s and costs 47; render claimed ~30 s and costs 15) and
 // nothing checked it. A number the script measures itself cannot go stale.
 const __t0 = Date.now();
-process.on('exit', () => {
+process.on("exit", () => {
   // NIGHT-TOOLS-1: MACHINE-READABLE, because a human string has to be re-parsed by
   // whatever generates the ceremony's cost column, and a parser of prose is the defect
   // that column already had. `scripts/gen-ceremony-costs.mjs` reads exactly this token.

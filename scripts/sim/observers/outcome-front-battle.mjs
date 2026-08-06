@@ -48,17 +48,17 @@
 // are printed so the two are never read as the same number.
 // ============================================================
 
-import { makeLateContestTracker } from './release-contest.mjs';
+import { makeLateContestTracker } from "./release-contest.mjs";
 
 // FRONT_BATTLE_DEFAULTS — every threshold in one place, so the orchestrator can echo them into the
 // report header. No progress constant lives here: contestWindowStart is always passed in.
 export const FRONT_BATTLE_DEFAULTS = {
-  nearLen: 3.0,                   // lengths behind P1 that still count as "in the front group"
-  minGroup: 3,                    // group size (INCLUDING P1) that counts as contested
-  minDistinctLeaders: 3,          // classifier: CHANGE
-  minLeadChanges: 3,              // classifier: CHANGE
-  maxLeadHoldShare: 0.70,         // classifier: SUSTAIN (<= this)
-  minFrontContestFraction: 0.50,  // classifier: PROXIMITY (>= this)
+  nearLen: 3.0, // lengths behind P1 that still count as "in the front group"
+  minGroup: 3, // group size (INCLUDING P1) that counts as contested
+  minDistinctLeaders: 3, // classifier: CHANGE
+  minLeadChanges: 3, // classifier: CHANGE
+  maxLeadHoldShare: 0.7, // classifier: SUSTAIN (<= this)
+  minFrontContestFraction: 0.5, // classifier: PROXIMITY (>= this)
 };
 
 /**
@@ -80,21 +80,28 @@ export function makeFrontBattleTracker({
   minGroup = FRONT_BATTLE_DEFAULTS.minGroup,
 } = {}) {
   const leaderFrames = new Map(); // racer index -> frames held at live rank 1
-  let frames = 0;                 // W-frames observed (frames with at least one live racer)
-  let contestFrames = 0;          // of those, frames whose front group reached minGroup
+  let frames = 0; // W-frames observed (frames with at least one live racer)
+  let contestFrames = 0; // of those, frames whose front group reached minGroup
   // Longest continuous contested stretch. runStartMs = when the current run began, runLastMs = the
   // most recent contested frame in it; a non-contested frame (or a frame with no live racers)
   // closes the run. Duration is measured between FRAMES, so a single isolated contested frame is
   // 0s — one instant is not a stretch.
-  let runStartMs = null, runLastMs = null, longestMs = 0;
-  let frozen = false;             // set by the first frame containing a finished racer (see header)
+  let runStartMs = null,
+    runLastMs = null,
+    longestMs = 0;
+  let frozen = false; // set by the first frame containing a finished racer (see header)
   const lateContest = makeLateContestTracker(windowStart);
 
   const closeRun = () => {
-    if (runStartMs != null && runLastMs != null && runLastMs - runStartMs > longestMs) {
+    if (
+      runStartMs != null &&
+      runLastMs != null &&
+      runLastMs - runStartMs > longestMs
+    ) {
       longestMs = runLastMs - runStartMs;
     }
-    runStartMs = null; runLastMs = null;
+    runStartMs = null;
+    runLastMs = null;
   };
 
   return {
@@ -108,7 +115,11 @@ export function makeFrontBattleTracker({
       if (frozen || progress < windowStart) return;
       // The flag has fallen: the front act is decided, and everything past here is the finish
       // procession inheriting rank 1 downwards. Close the open stretch and take no further frames.
-      if ((racers ?? []).some((r) => r.finished)) { closeRun(); frozen = true; return; }
+      if ((racers ?? []).some((r) => r.finished)) {
+        closeRun();
+        frozen = true;
+        return;
+      }
 
       // Lead changes: delegated verbatim, fed the same unfiltered field it expects.
       lateContest.observe(racers, progress);
@@ -116,7 +127,10 @@ export function makeFrontBattleTracker({
       const live = (racers ?? [])
         .filter((r) => !r.finished)
         .sort((a, b) => b.t - a.t || a.index - b.index);
-      if (!live.length) { closeRun(); return; } // defensive: no live racers, not a W-frame
+      if (!live.length) {
+        closeRun();
+        return;
+      } // defensive: no live racers, not a W-frame
 
       frames++;
       const leader = live[0];
@@ -150,7 +164,8 @@ export function makeFrontBattleTracker({
       let maxHold = 0;
       for (const n of leaderFrames.values()) if (n > maxHold) maxHold = n;
       // Non-destructive close: a run still open at race end must count.
-      const openMs = runStartMs != null && runLastMs != null ? runLastMs - runStartMs : 0;
+      const openMs =
+        runStartMs != null && runLastMs != null ? runLastMs - runStartMs : 0;
       const bestMs = Math.max(longestMs, openMs);
       return {
         windowFrames: frames,
