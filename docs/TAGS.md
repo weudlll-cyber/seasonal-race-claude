@@ -1,5 +1,7 @@
 # Git tags — permanent anchors and cleanup record
 
+**Owns:** the git-tag register — every permanent anchor and return point, and the record of what was cleaned up. A guard depends on the entry format below.
+
 > **HOW TO REGISTER A TAG, because a guard depends on it.** Write it as a list item whose first
 > token is the backticked name followed immediately by the backticked short SHA:
 >
@@ -196,7 +198,9 @@ CHANGES here, most of all in LEAD_CHANGE — which holds 37.6% of all frames and
 Return point captured before the min-racers floor came BACK, as a guarantee rather than a floor. It was
 deleted in CAMERA-FRAMING-1 as "a guarantee phrased as a headcount"; the owner corrected that reading —
 it was a DRAMATURGICAL guarantee ("do not show emptiness"), and its absence is visible in his
-post-framing screenshot: the leader huge and alone, _"das ist nicht spannend"_. The concept was right,
+post-framing screenshot: the leader huge and alone, _"das ist nicht spannend"_ ("that is not
+exciting"). The
+concept was right,
 the arithmetic was broken (one axis scale on both axes — the bsX/bsY family — competing with a zoom
 number that meant something different on every track). Both are fixed, so the idea returns cleanly.
 

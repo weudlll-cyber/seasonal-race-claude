@@ -1,5 +1,7 @@
 # RaceArena — Setup Guide
 
+**Owns:** getting RaceArena running locally — client, backend, ports, and the rules for restarting them. Deploying it is [DEPLOYMENT.md](DEPLOYMENT.md)'s.
+
 ## Prerequisites
 
 - Node.js 20+
@@ -20,7 +22,7 @@ cd client && npm install
 cd client && npm run dev
 ```
 
-The app will be at `http://localhost:3000`.
+The app will be at `http://localhost:5173` (the port is pinned in `client/vite.config.js`).
 
 ## 3. Running CI locally
 

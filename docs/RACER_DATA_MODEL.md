@@ -1,5 +1,7 @@
 # RaceArena — Racer Data Model
 
+**Owns:** what a racer type is — its fields, where the definition lives, and which parts are live-tunable.
+
 **Status:** Updated 2026-06-04 (clean-state audit). Original: 2026-04-26 post D3.5.5 merge (PR #21).
 All 20 built-in racer types are `SpriteRacerType` instances. Code registry is Single Source of Truth.
 `speedMultiplier` has effectively affected race speed since D9.

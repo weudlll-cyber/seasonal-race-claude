@@ -1,5 +1,7 @@
 # docs/internal/
 
+**Owns:** the diagnostic-snapshot export procedure. The Dev Panel's System tab names this directory on screen, which is why it is a live path and not an archive.
+
 Internal diagnostic and analysis documents. Not for public consumption.
 
 ## current-config-snapshot.json
@@ -22,7 +24,7 @@ which is slow and error-prone.
 
 ### How to export
 
-1. Open browser → `http://localhost:3000`
+1. Open browser → `http://localhost:5173`
 2. Dev Panel → **System** tab
 3. Click button **"🔬 Export Diagnostic Snapshot"**
 4. File is downloaded as `racearena-snapshot-YYYYMMDD-HHmm.json`

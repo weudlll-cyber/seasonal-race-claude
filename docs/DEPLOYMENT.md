@@ -1,5 +1,7 @@
 # RaceArena — Deployment Environment Guide
 
+**Owns:** deploying RaceArena to a public same-origin host, and the environment variables that requires. Local development is [SETUP.md](SETUP.md)'s.
+
 ## Public same-origin hosting
 
 In this model the Node.js server serves **both** the built SPA (from `client/dist/`) and

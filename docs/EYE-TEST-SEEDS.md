@@ -1,5 +1,7 @@
 # Eye-test seeds — what a seed means
 
+**Owns:** what a seed guarantees and what it does not — the binding practice for reproducible eye tests.
+
 **Status: binding practice. Rewritten 2026-07-26.** An earlier version of this note warned that a typed
 browser seed was _never_ a cross-tool identifier. That was true before the parity arc; it is **no longer
 true**. After the RNG isolation, the plan-grid unification, the canonical speed/duration model and the

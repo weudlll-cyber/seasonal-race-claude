@@ -1,5 +1,7 @@
 # SIM.md — Simulation System Documentation
 
+**Owns:** the headless simulator — how to run it, what every metric means, and the fingerprint lineage. The measurement stack built on top of it is [SWEEP-HARNESS.md](SWEEP-HARNESS.md)'s.
+
 > **⚠️ Pre-unification baseline.** Absolute sim numbers anywhere in this document (band-reach, runaway, P1-contest, physics-tax, gate results) predate the plan-grid unification (parity step 2a, 2026-07-23) and are pending re-measurement — see [reports/BASELINE-INVALIDATED.md](../reports/BASELINE-INVALIDATED.md). They remain as history.
 
 ## Table of Contents
@@ -640,7 +642,7 @@ The values below are the **Phase 5 winners** — locked into `storage/defaults.j
 > restoring spring that older revisions of this table listed was **removed** (Commit A of the
 > lateral-physics cleanup); the config keys no longer exist in `storage/defaults.js` and neither
 > engine reads them. The live lateral model is Soft Steering (a single target spring) plus a Hard
-> Separation backstop — see the KRAEFTE-LANDKARTE force map. The `lateralForce` / `lateralDamping`
+> Separation backstop — see the FORCE-MAP force map. The `lateralForce` / `lateralDamping`
 > / brake parameters below are still read by `raceBehavior.js`.
 
 ### Parameter table
@@ -1009,7 +1011,7 @@ This document was the most stale; the items below correct it against source.
   `applyGovernor` reactive director is deleted; only the unconditional lead-rotation path remains),
   `raceLengths.js`, `racePlanner.js` (`createRacePlan` / `createTrajectoryController`) are all
   imported. The divergence risk lives only in the _inputs_ each engine computes before the shared
-  t-update — audited in `docs/FORCE-PARITY.md`.
+  t-update — audited in `archive/FORCE-PARITY.md`.
 - **Stage-0 config pipeline:** `--config=world.json` is honoured or the run **ABORTS loud**
   (`WORLD_SCHEMA_MISMATCH`, exit 2) — never runs-and-ignores. With no `--config`, a prominent
   **ASSUMED-DEFAULTS** banner prints and every result is stamped provisional. `WORLD_SCHEMA_VERSION` +

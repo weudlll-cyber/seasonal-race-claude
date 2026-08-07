@@ -102,6 +102,52 @@ current realisation of this goal.
 
 ---
 
+## The fixed points — what nobody may casually break
+
+**Why this list is here and not spread across the process documents.** The two-year test for this
+documentation is: hand tier 1 to a stranger and see whether they can say what the project is, why it
+is built this way, and what the fixed points are. The first two were answerable; this one was not,
+because every entry below lived in a document a stranger had no reason to open. Each rule is stated
+in one line and points at its real home — this is a checklist, not a second copy.
+
+**About the race**
+
+1. **Every racer in a race is identical.** Fairness is therefore about the DRAW, not about ability
+   (§3 above, and [FAIRNESS.md](FAIRNESS.md)). Any proposal that makes one racer "better" has
+   misunderstood the game.
+2. **A racer's NAME is physics.** `stablePairBit` hashes `r.name` into a tie-break, so renaming a
+   racer can change who wins a race. Never "just rename" a roster. Home: `racerNames.js`.
+3. **The fairness gate is binding and its thresholds have one home.** §8 above binds the gate;
+   [FAIRNESS.md](FAIRNESS.md) is the only document that states the numbers.
+4. **A phase boundary is a contract.** Whoever moves one inherits every value calibrated against it.
+   Home: [PHASE-CONTRACT.md](PHASE-CONTRACT.md).
+5. **The geometry invariants in [ARCHITECTURE.md](ARCHITECTURE.md) § "Do NOT touch"** — seven rules
+   about track width, `physicalY`, and body-vs-frame measurement, each of which has already been
+   broken once and cost a bug.
+
+**About changing anything**
+
+6. **Everything must be UI-configurable** (§1 above). No code edit to change a setting.
+7. **One fact, one home.** Every fact has exactly one authoritative place and everywhere else points
+   at it. Config values live in `client/src/modules/storage/defaults.js`; fingerprints live in
+   [fingerprints.json](fingerprints.json); fairness thresholds live in [FAIRNESS.md](FAIRNESS.md).
+   Three guards enforce this, and they will fail your commit.
+8. **Never mint a fingerprint on your own authority.** A change that alters what the owner can SEE
+   needs his eye before its new value becomes official. Home: [SHIP-CEREMONY.md](SHIP-CEREMONY.md).
+9. **A behaviour-moving change follows the ship ceremony.** Not optionally, and not partially.
+   Home: [SHIP-CEREMONY.md](SHIP-CEREMONY.md).
+10. **The sim and the browser must stay in parity.** A mechanics change that lands in one and not the
+    other silently invalidates every measurement. Home: [SIM.md](SIM.md).
+11. **If a guard disagrees with a sentence, the GUARD is the first suspect.** Never make a true
+    sentence vaguer to get a green tick; fix or retire the guard, and record why. Home:
+    [VERIFY-RULES.md](VERIFY-RULES.md) R11.
+12. **English everywhere** — code, comments, documents, and file names. Home: `CLAUDE.md`.
+
+**Read before proposing a race-mechanism change:** [DEAD-ENDS.md](DEAD-ENDS.md). Most ideas in this
+area have already been built, measured and retired, and it says which.
+
+---
+
 ## Shipped Phases
 
 **Race-action phase shipped 2026-07-14 (commits `e1d5a2b` / `361a8cd`).** Choreography (hero curve
@@ -230,11 +276,11 @@ See LESSONS.md L53, L65, L67, L68, L69.
 
 Persistent diagnose results belong in Markdown reports under `docs/diagnose/` or in the
 in-screen diagnose HUD — not in `console.log`. Console output is permitted for one-shot
-trace tools during active diagnosis (Etappe-23-Pattern: temporary, isolated commit, removed
+trace tools during active diagnosis (Stage-23 pattern: temporary, isolated commit, removed
 together with the fix). Diagnose reports are committed to the repo so that Strategic Claude
 and future sessions can read the data without running the code.
 
-Example: `docs/diag/render-smoothness-measurements.md`, Phase-4 diagnostics HUD deliverable.
+Example: `archive/render-smoothness-measurements.md`, Phase-4 diagnostics HUD deliverable.
 
 ### Tests-green Convention
 
@@ -280,7 +326,7 @@ correct behavior must not be silently deleted to make a PR green.
 
 See LESSONS.md L19; docs/internal/D3-5-1-diagnose.md §5.
 
-### Diagnose-Tool-Lifecycle Convention (Etappe-23-Pattern)
+### Diagnose-Tool-Lifecycle Convention (Stage-23 pattern)
 
 Diagnose instrumentation (trace code, frame loggers, measurement scripts, HUD extensions)
 is added in an isolated `diag:` commit — separate from the fix commit. Once the diagnosed
@@ -288,7 +334,7 @@ bug is fixed, the instrumentation is removed in the same merge or the immediatel
 commit. This keeps the repo free of diagnostic dead weight and makes the `diag:` commit a
 clean revert point if a refactor fails.
 
-Example: Commits `7333ec4` + `b53d7d6` (EditorShape staircase, Etappe 23).
+Example: Commits `7333ec4` + `b53d7d6` (EditorShape staircase, Stage 23).
 Confirmed in: docs/audit/audit-pre-merge.md §5.3.
 
 ### DevScreen Block-Placement Convention
@@ -305,7 +351,7 @@ When adding a new config field to the DevScreen (RaceTuningSection or any other 
 Rationale: Silent reset-coverage gaps — where a field appears in block A but is reset by
 block B's handler — are invisible to standard render tests and create confusing UX.
 
-Siehe LESSONS.md L72.
+See [LESSONS.md](LESSONS.md) L72.
 
 ### localStorage Staleness Convention
 
@@ -322,7 +368,7 @@ Rationale: localStorage overrides take precedence over code defaults. Silent def
 changes appear to have no effect on machines with stored values, leading to confusion
 in QA and support.
 
-Siehe docs/diagnose/relaxed-defaults-report.md; docs/diagnose/cleanup-audit-pr98.md.
+See [archive/relaxed-defaults-report.md](archive/relaxed-defaults-report.md) and [archive/cleanup-audit-pr98.md](archive/cleanup-audit-pr98.md).
 
 ### Commit-Naming Convention
 
@@ -334,7 +380,7 @@ prefixes:
 - `refactor:` — restructuring without behavior change
 - `docs:` — documentation updates (Markdown files)
 - `chore:` — housekeeping (lint, dependency bumps, file moves without logic)
-- `diag:` — diagnose instrumentation (subject to Etappe-23-Pattern above)
+- `diag:` — diagnose instrumentation (subject to Stage-23 pattern above)
 - `test:` — test changes without code change to the subject under test
 
 Optional scope in parentheses, e.g. `fix(camera): …`. Any other prefix requires a

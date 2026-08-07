@@ -1,5 +1,7 @@
 # RaceArena — Architecture
 
+**Owns:** the system's shape — which layer holds what, how the client, the in-browser race engine and the backend fit together, and where each subsystem lives. Not values, not the ceremony, not the vocabulary ([GLOSSARY.md](GLOSSARY.md)).
+
 ## Overview
 
 RaceArena has a React client and a local backend (Phase L). Race logic runs in the browser. Custom tracks and background images persist server-side; `localStorage` remains in use for settings, race config, and offline geometry cache. A Phase 5 server for race-integrity, leaderboard, and Socket.IO multiplayer is planned.
@@ -870,7 +872,7 @@ Phase L introduces a local backend running in Docker alongside the existing Reac
 
 ```
 seasonal-race-claude/
-├── client/          # React frontend, port 3000
+├── client/          # React frontend, port 5173
 │   └── src/
 │       ├── services/
 │       │   ├── api.js               # API_BASE_URL — single config point
@@ -1152,7 +1154,7 @@ verified at the cited source.
   applies `t += baseSpeed · boost · brake · rowEnvMult · trajectoryMult · areaBonusMult · governorMult`
   with the finish clamp. **Imported by BOTH** the browser engine (`RaceScreen/index.jsx`) and the
   fairness sim (`scripts/sim-fairness.mjs`) — factors 4–8, the multiplication order and the clamp are
-  identical by construction. See `docs/FORCE-PARITY.md` for the force-by-force audit.
+  identical by construction. See `archive/FORCE-PARITY.md` for the force-by-force audit.
 - **Shared racer-length conversion — `client/src/modules/raceLengths.js`.** `arcT`, `lenScaleFrom`,
   `arcLengths`, `meanDrawnBodyLen` — the one source for "racer lengths" (arc distance ÷ mean body px).
   Imported by the HUD (`GovernorDiagHUD.jsx`), the engine (`index.jsx`), `raceGovernor.js` (which

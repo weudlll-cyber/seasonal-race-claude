@@ -1,5 +1,7 @@
 # LESSONS.md — Insights from Development
 
+**Owns:** the numbered lessons (L-numbers), which the rest of the codebase cites by number. Append-only.
+
 > **✅ Baseline re-measured (2026-07-26).** Absolute sim numbers in this document (band-reach, runaway, P1-contest, physics-tax, gate results) predate the plan-grid unification + speed/duration ship and are retired history. The current baseline is [reports/parity/REBASELINE.md](../reports/parity/REBASELINE.md) (speed-150, pooled band-reach 71.0%) and the CANDIDATE column of [reports/parity/GS-CONFIRM-GATE.md](../reports/parity/GS-CONFIRM-GATE.md) (band-reach 72.7%, dead finales 10.0%, runaway 6.8%).
 
 Lessons learned in the past that are relevant for future phases.
@@ -1435,9 +1437,9 @@ Measurements are cheaper than diagnostic sprints. Diagnostic sprints are cheaper
 ## Lesson 70 — EditorShape Double-Image Marathon: Diagnostic Discipline as Prevention Principle (Phase 1)
 
 **Context:** The EditorShape staircase bug (double image / jagged jumps in racer positions)
-occupied development over Etappe 20–23. Root cause: `Math.round()` in
+occupied development over Stage 20–23. Root cause: `Math.round()` in
 `EditorShape.getPosition()` mapped arc-length-t to the nearest sample index instead of
-interpolating linearly. Quantitatively measured (Etappe 23 trace): 26.5–27.1 px jumps at 500 samples
+interpolating linearly. Quantitatively measured (Stage 23 trace): 26.5–27.1 px jumps at 500 samples
 on a ~2000px oval at zoom 4×. Fix: 3 lines of linear interpolation + angle wrap.
 
 **Process:** Before the root cause was identified, Python frame analysis scripts,
@@ -1450,15 +1452,15 @@ hypothesis roulette.
 pixel invariance) would have identified the root cause in under 30 minutes. The ~14-hour
 diagnosis arose through repeated omission of the "measurement before bisect" step.
 
-**Consequence (principles extension):** This Etappe was the direct occasion for the extension
+**Consequence (principles extension):** This stage was the direct occasion for the extension
 of PROJECT-PRINCIPLES.md by §6 (diagnose before fix) and §7 (no hotfixes) as well as the five
 diagnosis-related conventions (quantitative diagnosis, data trace, output medium,
-Etappe 23 pattern). The principles are formulated so that a similar marathon is recognizable and
+Stage 23 pattern). The principles are formulated so that a similar marathon is recognizable and
 stoppable: as soon as a diagnostic session skips the quantitative measurement and starts with
 visual impressions or bisect, §6 is violated.
 
 **Reference:** PROJECT-PRINCIPLES.md §6, §7; LESSONS.md L46, L50, L65, L66, L68, L69;
-`docs/diag/render-smoothness-measurements.md`; commits `c8538e0`, `7333ec4`, `b53d7d6`.
+`archive/render-smoothness-measurements.md`; commits `c8538e0`, `7333ec4`, `b53d7d6`.
 
 ## Lesson 71 — Symmetric Avoidance Default Was a Regression
 

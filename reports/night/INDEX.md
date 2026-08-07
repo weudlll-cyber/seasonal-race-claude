@@ -8,10 +8,21 @@ report here could be orphaned, or an index link could dangle, with nothing notic
 `node scripts/check-index.mjs --dir=reports/night --index=reports/night/INDEX.md` now checks both
 directions.
 
+- [DOC-ORDER-1.md](DOC-ORDER-1.md) — documentation a stranger could actually be handed. The evidence
+  for his own suspicion that most documents were never asked for: twenty of fifty-three were the
+  by-product of one work session and had had no substantive change since a bulk German-to-English
+  translation pass in May — they are now in `docs/archive/`, whose first line says nothing there is
+  current. A three-tier map (the project · how we work · history) replaces an index that listed 15 of
+  51 documents. New: `docs/GLOSSARY.md`, which caught three words that each mean two unrelated things
+  (corridor, band, pulk). The two-year test was run for real and **failed one of three questions** —
+  the fixed points lived only in tier 2, so `PROJECT-PRINCIPLES.md` now owns them — and it failed on
+  step ONE, because the README told a newcomer the wrong dev-server port, as did four other places
+  including a live backlog recommendation. Six weakest spots named; BACKLOG/ROADMAP still half-own a
+  subject and that is the bluntest of them.
 - [START-FORMATION-1.md](START-FORMATION-1.md) — the start formation, from his eye test. Names now
   draw LAST, after every sprite, so no racer can cover one — render fingerprint moved (expected, the
-  order is what it hashes), camera unchanged, world not run and not needed; unminted and unmerged
-  awaiting his eye. The label overlap on river-run is NOT lateral crowding: every overlapping pair,
+  order is what it hashes), camera unchanged, world not run and not needed; his eye PASSED, so it was minted
+  (render cf716cbdf37b2077) and merged as 81f9b908; return point `pre/start-formation`. The label overlap on river-run is NOT lateral crowding: every overlapping pair,
   on every track, at every racer count, is between neighbouring START ROWS, and the row gap follows
   the racer type's `displaySize`. Swept every count from 2 to the full grid on his instruction —
   river-run fails 56 of 99, the other three fail none. Also found: the start has NO framing rule,

@@ -1,11 +1,32 @@
 # RaceArena — Backlog
 
+**Owns:** the living list of open work, with the evidence behind each item. Phase context and completion status are [ROADMAP.md](ROADMAP.md)'s.
+
 > **✅ Baseline — see REBASELINE.** Absolute sim numbers scattered in this document (band-reach, runaway, P1-contest, physics-tax, gate results) are retired history from before the current shipped world. **So is every 16-hex FINGERPRINT below**: each one is the value at the moment that entry was written, not a claim about now. The current values live in [docs/fingerprints.json](fingerprints.json) and in no document. The live baseline is the [reports/parity/REBASELINE.md](../reports/parity/REBASELINE.md) top block — the shipped world (COMBO15 + margin hysteresis + lateral acceleration cap).
 
 Living list. See ROADMAP.md for phase context and completion status.
 Items ranked by urgency within each bucket. ✅ = done, 🔜 = next, ⏳ = waiting on dependency.
 
 ---
+
+## Documentation (2026-08-07, from DOC-ORDER-1)
+
+- [ ] **Authentication and authorization — DESIGN EXISTS, nothing is built.** The full v3.2 design
+      (route inventory, session model, CSRF posture, the E2E test prerequisites) is
+      [archive/AUTH.md](archive/AUTH.md). It was moved to the archive on 2026-08-07 because it
+      described a RaceArena that does not exist while sitting among the documents that describe the
+      one that does — **archived is not abandoned**: if auth is built, that document is the starting
+      point and this line is how you find it. Related: **Q-16** below (the CORS wildcard, deliberately
+      accepted for local-only operation) becomes binding the moment this is built.
+- [ ] **Merge ROADMAP into BACKLOG — DECIDED, and deliberately NOT done here.** The two documents
+      half-own "what is done and what is next": this file owns the open work with its evidence,
+      [ROADMAP.md](ROADMAP.md) owns the phases and their completion status. DOC-ORDER-1 documented
+      that boundary in both files' `**Owns:**` lines rather than merging them, **on the owner's
+      instruction that the merge is a separate order.** The reason it is separate: ROADMAP is 618
+      lines and this file is over 1300, a real merge is a careful pass with a high chance of silently
+      dropping an item, and a half-finished merge leaves two documents half-owning a subject — which
+      is worse than the boundary that exists today. When it happens, the intended landing is that
+      **BACKLOG owns both**, with ROADMAP reduced to a phase-status table.
 
 ## The owner's camera-defaults session (2026-08-06, from MERGE-AND-GUARD-1)
 
@@ -400,7 +421,7 @@ verified against `git log` / `git tag`.
   - **DevScreen knob-reduction** — ✅ **DONE, on the new world (2026-07-14 audit)** — realised in PULK CLEANUP Stage 5b-ii/5b-iii (`399c266`/`0b42f72`): DevScreen collapsed to one PULK Phase card with 5 visible controls and pinned internals (see DynamicsTuningSection.jsx:128-130, "reset only the 5 VISIBLE controls … pinned internals … have no DevScreen control"). Realised on choreo+pulk, NOT the removed governor knobs listed here.
   - ~~**OUTCOME decompression**~~ — superseded (the reactive director that clustered the front is gone).
 - **`results/` not gitignored** (hygiene, reported by Sim-1) — ✅ **DONE (2026-07-14 audit)** — `results/` IS gitignored (`.gitignore:37`).
-- **Doc-sync (governor pivot)** ✅ — this task; core docs synced to HEAD `b930b1b` (ARCHITECTURE, KRAEFTE-LANDKARTE, ROADMAP, BACKLOG, LESSONS, SIM, README).
+- **Doc-sync (governor pivot)** ✅ — this task; core docs synced to HEAD `b930b1b` (ARCHITECTURE, FORCE-MAP — then named KRAEFTE-LANDKARTE, ROADMAP, BACKLOG, LESSONS, SIM, README).
 
 ---
 
@@ -460,7 +481,7 @@ N=4–100 considered; lead group = clamp(round(N×0.1), 3, 10). Cross-reference:
 **Sub-PR plan (9 PRs):**
 
 - ✅ PR-A1: Q-25 fix (maxScale=10) + duration slider + finishT for open tracks (2026-05-03)
-- ✅ PR-A2-Diagnose: read-only PR → `docs/SPEED_REFACTOR_ANALYSIS.md` (no code change) (2026-05-03)
+- ✅ PR-A2-Diagnose: read-only PR → `archive/SPEED_REFACTOR_ANALYSIS.md` (no code change) (2026-05-03)
 - ✅ PR-A2: Speed pipeline architecture refactor — `computeRaceBaseSpeed`, speedScaleFactor removed, closed-track duration slider (Model D), SpeedScaleSection removed (2026-05-03). **Fix commit 2026-05-04:** speedMultiplier normalization + spreadMinFactor (E1+E2).
 - ✅ PR-A2.5: Arc-length-uniform spline resampling + relative jitter (2026-05-04)
 - ✅ PR-A2.6: Race dynamics — spreadFactor re-roll (±85%, 5s transition) + speedBonusMult separation (2026-05-04). draftingBoost unchanged 1.10.
@@ -687,7 +708,7 @@ race. Typed values persist for the browser session. Status of the follow-ups:
 | ------------------------------------ | ------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | ✅ **chore/sprite-scale-relative**   | Done `6a9dcfc` 2026-05-24 | `spritePx` → `spriteScale` (schema v14). Relative factor, racer-count-independent (L82). Defaults: OVERVIEW 1.00, LEADER 1.81, BATTLE 2.81, COMEBACK 1.39, LEAD_CHANGE 1.81. FALLBACK_REFERENCE_SPRITE_SIZE = 36 px. Side fix: LEAD_CHANGE was missing from `CameraStateHUD.STATE_CONFIG` — fallback `?? OVERVIEW` showed wrong badge (L87). |
 | ✅ **Phase 3D**                      | Done `bcdedb8` 2026-05-25 | FINISH_OVERVIEW, BATTLE/COMEBACK fixes. See Phase 3D — Open Follow-up Items.                                                                                                                                                                                                                                                                 |
-| ✅ **Camera centering architecture** | Done 2026-05-26           | Root cause fix: all four phasedEnabled states (LEADER_ZOOM, BATTLE_ZOOM, COMEBACK_ZOOM, LEAD_CHANGE) now center on racer world position during follow phase. `_setTargets` sole owner of `targetOffsetX/Y`; `_computePhasedPanTarget` state-controller only. See `docs/camera-target-architecture.md`. Lesson 37. 2134/2134 tests ✅.        |
+| ✅ **Camera centering architecture** | Done 2026-05-26           | Root cause fix: all four phasedEnabled states (LEADER_ZOOM, BATTLE_ZOOM, COMEBACK_ZOOM, LEAD_CHANGE) now center on racer world position during follow phase. `_setTargets` sole owner of `targetOffsetX/Y`; `_computePhasedPanTarget` state-controller only. See `archive/camera-target-architecture.md`. Lesson 37. 2134/2134 tests ✅.        |
 | ✅ **Bug A**                         | Done 2026-05-27 `749c2a4` | OVERVIEW pan no-op on closed tracks — `overviewClosedTrackZoom=1.3` multiplier in all three closed-track OVERVIEW branches + transition snap. Schema v15. DevScreen slider. 2134/2134 tests ✅.                                                                                                                                              |
 | ✅ **Bug 1**                         | Done 2026-05-27 `2f417ba` | LEAD_CHANGE spriteScale dead config — `_leadChangeZoom` added to all three `_computeZoomLevels` branches; `_transition` hard-cut and `_setTargets` LEAD_CHANGE now use `_leadChangeZoom` instead of `_leaderZoom`. No config or schema change (schema v14 LEAD_CHANGE spriteScale field now takes effect). +3 tests. 2137/2137 ✅.           |
 | **COMEBACK vs LEADER_ZOOM priority** | Medium                    | COMEBACK_ZOOM activates even when a racer is only slightly behind. Threshold calibration: how far back does a racer need to be to justify COMEBACK? Measurement in real races: how often is COMEBACK activated vs displacing LEADER_ZOOM?                                                                                                    |
@@ -870,7 +891,7 @@ race. Typed values persist for the browser session. Status of the follow-ups:
 - **Q-16** — CORS wildcard on all backend endpoints
   `app.use(cors())` without origin restriction — any browser tab can access all API write endpoints
   (POST/PUT/DELETE tracks + surface classes). Deliberately accepted for local operation.
-  Fix: `cors({ origin: 'http://localhost:3000' })` for dev, env var for VPS.
+  Fix: `cors({ origin: 'http://localhost:5173' })` for dev, env var for VPS.
   **Priority: VPS phase / Phase 5.** Not an acute blocker for single-user local operation.
   _(Deep audit 2026-05-01, Severity: HIGH — accepted for local-only)_
 
@@ -1213,7 +1234,7 @@ Items deferred from Racer Editor Phase 1+2 (merged 2026-05-28).
 
 ## 2026-07-10 — added (INFRA: sim-trust)
 
-- **FORCE-PARITY latent seams** (`docs/FORCE-PARITY.md`, O1–O6). **O1 is the sharpest:** the sim's
+- **FORCE-PARITY latent seams** (`archive/FORCE-PARITY.md`, O1–O6). **O1 is the sharpest:** the sim's
   `computeFinishT` hardcodes its own `runoutZone` while the browser reads `behaviorConfig.runoutZone` —
   identical at default, diverges if the owner ever changes it (open tracks only). O2 (`--rerollVariant=2`
   sim-only), O3 (lap-normalisation duplicated), O4 (browser-only run-out decay, no outcome impact),
