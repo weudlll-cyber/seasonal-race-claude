@@ -63,9 +63,14 @@ const { effectiveZoom } = await import(
 const { OPEN_TRACK_BASE_ZOOM } = await import(
   u("client/src/modules/camera/CameraDirector.js")
 );
-const { QUICK_TEST_NAMES } = await import(
-  u("client/src/modules/racerNames.js")
-);
+const { resolveNameSet } = await import(u("client/src/modules/racerNames.js"));
+// QUICKTEST-NAMES-1: which roster this run measures. A label box is as wide as the name inside it,
+// so the ROSTER IS PART OF THE GEOMETRY — every overlap number this script printed before today was
+// a statement about `current` and about nothing else.
+const NAME_SET =
+  (process.argv.find((a) => a.startsWith("--nameset=")) ?? "").slice(10) ||
+  "current";
+const NAMES = resolveNameSet(NAME_SET);
 const RT = await (async () => {
   const re = console.error;
   console.error = () => {};
@@ -222,7 +227,7 @@ function measure(geo, nRequested) {
   built.config.computePositions();
   // The names are real, because the label width is the whole question. Same roster, same order.
   st.racers.forEach((r, i) => {
-    r.name = QUICK_TEST_NAMES[i % QUICK_TEST_NAMES.length];
+    r.name = NAMES[i % NAMES.length];
   });
 
   const cd = new CameraDirector(
@@ -480,6 +485,9 @@ geos.sort((a, b) =>
 const r2 = (v) => (Math.round(v * 100) / 100).toFixed(2);
 const rows = geos.map((g) => measure(g));
 
+console.log(
+  `NAME SET: ${NAME_SET} (${NAMES.length} names, ${Math.min(...NAMES.map((n) => n.length))}-${Math.max(...NAMES.map((n) => n.length))} chars, mean ${(NAMES.reduce((x, n) => x + n.length, 0) / NAMES.length).toFixed(1)})`,
+);
 console.log(
   `START FORMATION at the gun — ${rows.length} tracks at the FULL grid ` +
     `(closed ${DEFAULT_RACE_DEFAULTS.maxPlayersClosed}, open ${DEFAULT_RACE_DEFAULTS.maxPlayersOpen})` +
