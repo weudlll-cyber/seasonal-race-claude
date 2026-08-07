@@ -8,6 +8,20 @@ report here could be orphaned, or an index link could dangle, with nothing notic
 `node scripts/check-index.mjs --dir=reports/night --index=reports/night/INDEX.md` now checks both
 directions.
 
+- [CEREMONY-HOLD-TARGET-1.md](CEREMONY-HOLD-TARGET-1.md) — the hold becomes a TARGET. The
+  hand-over sat in `_transition`, which a race never reaches at the gun (the director is already in
+  OVERVIEW), so the ceremony only set where the camera STARTED and OVERVIEW's own setting pulled it
+  away from frame one. It is now read from `_stateCamZoom()` every frame and released at the first
+  **view change**, not the first entry. river-run: travel ALONG over the first second **37.4 → 6.4
+  world px** (master 4.8), the field's y in frame **0.427 → 0.486** (master 0.50), zoom held at
+  1.1650 instead of easing to 1.0667; mountainstreet **0.389 → 0.505**. A second, unnoticed defect
+  closed: the hand-over was never consumed at all, so the first MID-RACE OVERVIEW would have snapped
+  to the ceremony's zoom. **The pan half of the prescription was built, measured and REJECTED** —
+  it satisfies all three predicted columns and leaves 37 of 40 racers off-screen at the release,
+  because the hold lasts 4983 ms and `_fieldCeiling` measures around the ANCHOR, not around the
+  camera. The window trace is a committed tool now (`scripts/gun-window-truth.mjs`); the two blocks
+  before it measured from patched copies in a scratch worktree that no longer exists. Camera and
+  render moved, world unchanged. Not minted, not merged.
 - [CEREMONY-HANDOVER-1.md](CEREMONY-HANDOVER-1.md) — the field guarantee no longer stops at the gun,
   and the settled beat became a control instead of a remainder. The racing-time promise is the COMPANY
   guarantee with the WHOLE FIELD as its company — reuse that is correctness, not economy, because the
