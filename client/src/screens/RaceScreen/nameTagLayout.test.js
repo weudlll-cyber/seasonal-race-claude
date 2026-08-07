@@ -180,9 +180,31 @@ describe('3. THE START-FORMATION EXCEPTION — every name, so a spectator can fi
     return racers;
   };
 
-  it('showAll labels everyone on canvas, with no decluttering at all', () => {
+  // MODIFIED by START-SEQUENCE-1, because the OWNER changed this contract rather than because the
+  // test was wrong. It used to assert that showAll labels everyone in one frame. On a clump of 40
+  // that is 40 unreadable overlapping labels, so the roll call now spreads them over waves: every
+  // name still appears, at full size, but across the countdown instead of all at once. What is
+  // asserted here is the part that did NOT change — the promise that nobody is left out.
+  it('showAll spreads a clump over waves, and still names every racer', () => {
     const r = layout(clump(), { showAll: true });
-    expect(r.shown.size).toBe(40);
+    expect(r.waveCount).toBeGreaterThan(1);
+    // this frame shows one wave...
+    expect(r.shown.size).toBeLessThan(40);
+    expect(r.shown.size).toBe(r.placed);
+    // ...and walking the waves names all 40, which is the promise.
+    const named = new Set();
+    for (let w = 0; w < r.waveCount; w++) {
+      for (const i of layout(clump(), { showAll: true, waveIndex: w }).shown) named.add(i);
+    }
+    expect(named.size).toBe(40);
+  });
+
+  it('showAll with room to spare is ONE wave and still labels everyone at once', () => {
+    // The untouched case: no overlaps, so the roll call cannot engage and the picture is as before.
+    const spread = Array.from({ length: 6 }, (_, i) => at(i, 120 + i * 190, 300));
+    const r = layout(spread, { showAll: true });
+    expect(r.waveCount).toBe(1);
+    expect(r.shown.size).toBe(6);
     expect(r.dropped).toBe(0);
   });
 
