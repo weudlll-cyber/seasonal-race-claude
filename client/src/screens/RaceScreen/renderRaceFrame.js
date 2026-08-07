@@ -32,6 +32,7 @@ import {
 } from './drawing/trackRendering.js';
 import { drawParticles, drawSurfaceTrails } from './drawing/particleRendering.js';
 import { drawRacers } from './drawing/racerRendering.js';
+import { drawCorridorOverlay, drawFrameCentreCross } from './drawing/corridorOverlay.js';
 import { drawBattleDiagMarkers } from './drawing/battleDiagRendering.js';
 import {
   drawTitle,
@@ -148,6 +149,12 @@ export function renderRaceFrame(ctx, f) {
     ctx.restore();
   }
   if (!isOpenTrack) drawEditorTrackSurface(ctx, shape);
+  // CORRIDOR-OVERLAY-1 (Dev Screen, default OFF): the LOGICAL corridor, drawn from the same
+  // `shape.getPosition` the camera measures against. Before the racers, so it can never hide one —
+  // the question is where they sit relative to it.
+  if (cameraConfig.showCorridorOverlay) {
+    drawCorridorOverlay(ctx, shape, camera._trackWidthPx, effZoomX);
+  }
   drawTrackLights(ctx, cachedLightPts, trackLightsConfig, ts, !isOpenTrack, effZoomX);
   if (isOpenTrack && st.finishT < 1) drawOpenTrackFinishLine(ctx, shape, st.finishT, openTrackHW);
   drawParticles(ctx, st.dustParticles, st.burstParticles);
@@ -242,6 +249,12 @@ export function renderRaceFrame(ctx, f) {
   ctx.restore();
 
   // ── Screen space ─────────────────────────────────────────────────────────────────────────────
+  // CORRIDOR-OVERLAY-1: the cross sits on the FRAME's centre, so it belongs here rather than in the
+  // world layer — the claim under test is about where the frame's centre lands, not about a world
+  // point that happens to be near it.
+  if (cameraConfig.showCorridorOverlay) {
+    drawFrameCentreCross(ctx, canvasW, canvasH);
+  }
   if (isOpenTrack) {
     drawTitleOpen(ctx, raceData);
   } else {

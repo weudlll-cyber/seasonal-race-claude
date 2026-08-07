@@ -231,6 +231,11 @@ export const DEFAULT_CAMERA_CONFIG = {
   nameTagMarginPx: 6,
   nameTagAllUntilMs: 8000,
   showCameraStateHud: true,
+  // CORRIDOR-OVERLAY-1: draw the LOGICAL corridor — centreline, both edges, and a cross on the
+  // frame's centre — over the race. A DIAGNOSTIC, default OFF, so the shipped picture is untouched.
+  // It exists because a measurement and a screenshot disagreed about where the corridor is, and the
+  // corridor is a quantity nothing draws, so nobody had ever seen it.
+  showCorridorOverlay: false,
   showCameraDiagnostics: false,
   showRpDiag: false,
   showRpWinnerList: false,

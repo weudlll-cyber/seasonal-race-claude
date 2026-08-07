@@ -1444,6 +1444,12 @@ function CameraAdvancedSection() {
             tip: 'Diagnostics panel bottom-left: live zoom values. Logs state transitions to the browser console.',
           },
           {
+            key: 'showCorridorOverlay',
+            testId: 'corridor-overlay-toggle',
+            label: 'Show track corridor (debug)',
+            tip: 'Draws the LOGICAL corridor over the race: the centreline dashed in cyan, both corridor edges in red, and a yellow cross on the frame centre. It is the corridor every camera setting in "track widths" is measured against — normally invisible, which is how a measurement and a screenshot came to disagree about where it is. Diagnostic only; default off.',
+          },
+          {
             key: 'showRpDiag',
             testId: 'rp-diag-toggle',
             label: 'Show Race Plan diagnostics',
