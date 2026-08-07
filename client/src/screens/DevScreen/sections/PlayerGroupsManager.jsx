@@ -26,6 +26,8 @@ import {
 } from '../../../services/playerGroupApi.js';
 import { DefaultControls } from '../components/DefaultControls.jsx';
 import { migrateLocalPlayerGroupsToServer } from '../../../modules/storage/playerGroupMigration.js';
+// NAME-LIMIT-1: the limit's one home, the same module the server reads.
+import { tooLongNames, nameTooLongMessage } from '../../../../../shared/nameLimits.mjs';
 import s from '../DevScreen.module.css';
 
 const BLANK_FORM = { name: '', playersText: '' };
@@ -88,6 +90,15 @@ function PlayerGroupsManager() {
   async function handleSave() {
     const names = parseNames(form.playersText);
     if (!form.name.trim() || names.length === 0) return;
+    // NAME-LIMIT-1: the comma-separated field had NO length guard of any kind — the textarea has no
+    // `maxLength`, so before this the only thing standing between a 500-character name and stored
+    // state was the server. Checked here so the operator is told before a round trip; the server
+    // still checks, because a client is a convenience and never the enforcement.
+    const overLong = tooLongNames(names);
+    if (overLong.length > 0) {
+      setActionError(nameTooLongMessage(overLong));
+      return;
+    }
     setActionError(null);
     try {
       if (editId) {

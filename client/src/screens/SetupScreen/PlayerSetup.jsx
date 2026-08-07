@@ -9,14 +9,30 @@
 
 import { useState } from 'react';
 import { assignRacers } from '../../modules/utils/RandomHelper.js';
+// NAME-LIMIT-1: the limit's one home, shared with the server so both sides of the boundary agree.
+import {
+  PLAYER_NAME_MAX_LENGTH,
+  isNameLengthValid,
+  nameTooLongMessage,
+} from '../../../../shared/nameLimits.mjs';
 import styles from './SetupScreen.module.css';
 
 function PlayerSetup({ players, onChange, maxPlayers = 20 }) {
   const [inputValue, setInputValue] = useState('');
+  const [nameError, setNameError] = useState('');
 
   function handleAdd() {
     const name = inputValue.trim();
     if (!name || players.length >= maxPlayers) return;
+    // NAME-LIMIT-1: checked HERE, not left to the input's `maxLength`. The attribute stops typing;
+    // it does not stop a paste or a programmatic value, and it does not exist on the server. The
+    // name is REJECTED with a reason and never trimmed — a trimmed name is a label the person it
+    // belongs to does not recognise, and the operator is never told it happened.
+    if (!isNameLengthValid(name)) {
+      setNameError(nameTooLongMessage([name]));
+      return;
+    }
+    setNameError('');
 
     // Re-shuffle racer assignments every time the roster changes
     const newNames = [...players.map((p) => p.name), name];
@@ -48,8 +64,11 @@ function PlayerSetup({ players, onChange, maxPlayers = 20 }) {
           placeholder={atMax ? `Maximum ${maxPlayers} players reached` : 'Enter player name…'}
           value={inputValue}
           disabled={atMax}
-          maxLength={32}
-          onChange={(e) => setInputValue(e.target.value)}
+          maxLength={PLAYER_NAME_MAX_LENGTH}
+          onChange={(e) => {
+            setInputValue(e.target.value);
+            if (nameError) setNameError('');
+          }}
           onKeyDown={handleKeyDown}
         />
         <button
@@ -60,6 +79,14 @@ function PlayerSetup({ players, onChange, maxPlayers = 20 }) {
           Add
         </button>
       </div>
+
+      {/* NAME-LIMIT-1: the VISIBLE reason. A rejection the operator cannot see is indistinguishable
+          from a broken Add button. */}
+      {nameError && (
+        <p role="alert" data-testid="player-name-error" className={styles.emptyHint}>
+          {nameError}
+        </p>
+      )}
 
       <p className={styles.playerCount}>
         {players.length} / {maxPlayers} players
