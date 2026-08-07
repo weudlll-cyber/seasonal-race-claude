@@ -54,9 +54,12 @@ const { computeRacerLayout, computeBodyNarrowRef } = await import(
 );
 const { computeRenderDisplayScale, getEffectiveMaxTargetScreenPx } =
   await import(u("client/src/modules/autoSpriteScale.js"));
-const { tagFontScreenPx } = await import(
-  u("client/src/screens/RaceScreen/nameTagLayout.js")
-);
+const {
+  tagFontScreenPx,
+  formationNeedsStagger,
+  labelStaggerStep,
+  assignLabelLevels,
+} = await import(u("client/src/screens/RaceScreen/nameTagLayout.js"));
 const { effectiveZoom } = await import(
   u("client/src/modules/camera/openTrackCamera.js")
 );
@@ -347,6 +350,62 @@ function measure(geo, nRequested) {
   const rowOf = new Map();
   for (const a of built.meta.assignmentByRacer.values())
     rowOf.set(a.racerIndex, a.rowIndex);
+  // ── LABEL-STAGGER-1 VERIFICATION. The decision comes from the SHIPPED function, never a copy, so
+  // this cannot certify a rule the game does not actually run. The boxes are then moved the way the
+  // renderer moves them — row parity, one step — and re-tested. Two numbers matter: does it fire
+  // only where an overlap existed, and is nothing left once it has.
+  const staggerFires = formationNeedsStagger(items.map((i) => i.label));
+  const step = labelStaggerStep(fontPx);
+  let pairOverlapsAfter = 0;
+  const afterByRowDist = new Map();
+  {
+    const levelOf = staggerFires
+      ? assignLabelLevels(
+          items.map((i) => ({ index: i.index, ...i.label })),
+          rowOf,
+          step,
+          Number(process.env.RA_LEVELS || 2),
+        )
+      : null;
+    const moved = items.map((i) => {
+      const d = (staggerFires ? (levelOf.get(i.index) ?? 0) : 0) * step;
+      return {
+        left: i.label.left,
+        right: i.label.right,
+        top: i.label.top - d,
+        bottom: i.label.bottom - d,
+      };
+    });
+    for (let i = 0; i < moved.length; i++)
+      for (let j = i + 1; j < moved.length; j++) {
+        const a2 = moved[i];
+        const b2 = moved[j];
+        if (
+          Math.min(a2.right, b2.right) > Math.max(a2.left, b2.left) &&
+          Math.min(a2.bottom, b2.bottom) > Math.max(a2.top, b2.top)
+        ) {
+          pairOverlapsAfter++;
+          const rd = Math.abs(
+            (rowOf.get(items[i].index) ?? 0) - (rowOf.get(items[j].index) ?? 0),
+          );
+          afterByRowDist.set(rd, (afterByRowDist.get(rd) ?? 0) + 1);
+          if (
+            process.env.RA_PROBE &&
+            geo.id === "river-run" &&
+            N === 72 &&
+            pairOverlapsAfter <= 3
+          ) {
+            console.error(
+              `PROBE rows ${rowOf.get(items[i].index)}/${rowOf.get(items[j].index)} ` +
+                `fires=${staggerFires} step=${step.toFixed(2)} ` +
+                `A[${a2.top.toFixed(1)},${a2.bottom.toFixed(1)}] B[${b2.top.toFixed(1)},${b2.bottom.toFixed(1)}] ` +
+                `Ax[${a2.left.toFixed(1)},${a2.right.toFixed(1)}] Bx[${b2.left.toFixed(1)},${b2.right.toFixed(1)}]`,
+            );
+          }
+        }
+      }
+  }
+
   let pairOverlaps = 0;
   let sameRowPairs = 0;
   let crossRowPairs = 0;
@@ -462,6 +521,9 @@ function measure(geo, nRequested) {
     crossRowPairs,
     labelsHitPct: (100 * labelsHit.size) / items.length,
     worstFrac,
+    staggerFires,
+    pairOverlapsAfter,
+    afterByRowDist: [...afterByRowDist.entries()].sort((x, y) => x[0] - y[0]),
   };
 }
 
@@ -598,6 +660,96 @@ for (const s of sweeps) {
       `\n    worst: N=${s.overlapping.reduce((a, b) => (b.labelsHitPct > a.labelsHitPct ? b : a)).nRacers}` +
       ` → ${r2(s.overlapping.reduce((a, b) => (b.labelsHitPct > a.labelsHitPct ? b : a)).labelsHitPct)}% of labels hit`,
   );
+}
+
+// ── LABEL-STAGGER-1: the acceptance table. Three questions, and all three must come out clean.
+console.log(
+  `\n── LABEL-STAGGER-1: does the rule fire only where needed, and does it work? ──`,
+);
+const cols6 = [
+  ["track", (s) => s.id, 15],
+  ["counts", (s) => `${SWEEP_MIN}..${s.max}`, 9],
+  [
+    "overlapped before",
+    (s) => String(s.points.filter((p) => p.pairOverlaps > 0).length),
+    19,
+  ],
+  [
+    "rule fires",
+    (s) => String(s.points.filter((p) => p.staggerFires).length),
+    12,
+  ],
+  [
+    "fires w/o need",
+    (s) =>
+      String(
+        s.points.filter((p) => p.staggerFires && p.pairOverlaps === 0).length,
+      ),
+    16,
+  ],
+  [
+    "misses",
+    (s) =>
+      String(
+        s.points.filter((p) => !p.staggerFires && p.pairOverlaps > 0).length,
+      ),
+    8,
+  ],
+  [
+    "OVERLAP LEFT",
+    (s) => String(s.points.filter((p) => p.pairOverlapsAfter > 0).length),
+    14,
+  ],
+  [
+    "first fires at",
+    (s) => {
+      const f = s.points.find((p) => p.staggerFires);
+      return f ? String(f.nRacers) : "never";
+    },
+    14,
+  ],
+];
+console.log(cols6.map(([h, , w]) => h.padEnd(w)).join(""));
+for (const s of sweeps)
+  console.log(cols6.map(([, f, w]) => String(f(s)).padEnd(w)).join(""));
+{
+  const tot = (fn) =>
+    sweeps.reduce((a, s) => a + s.points.filter(fn).length, 0);
+  console.log(
+    `\n  TOTALS — fired where NOT needed: ${tot((p) => p.staggerFires && p.pairOverlaps === 0)}` +
+      `   missed a real overlap: ${tot((p) => !p.staggerFires && p.pairOverlaps > 0)}` +
+      `   overlap remaining after the rule: ${tot((p) => p.pairOverlapsAfter > 0)}`,
+  );
+  // A rule that switched on and off between adjacent field sizes would look unstable to anyone who
+  // changes the roster by one. Reported because it is worth knowing BEFORE he sees it, not after.
+  for (const s of sweeps) {
+    const flips = [];
+    for (let k = 1; k < s.points.length; k++)
+      if (s.points[k].staggerFires !== s.points[k - 1].staggerFires)
+        flips.push(`${s.points[k - 1].nRacers}->${s.points[k].nRacers}`);
+    if (flips.length > 1)
+      console.log(
+        `  ${s.id}: the rule TOGGLES ${flips.length} times — ${flips.join(", ")}`,
+      );
+    else if (flips.length === 1)
+      console.log(`  ${s.id}: switches on once, at ${flips[0]}`);
+  }
+  // WHAT IS LEFT OVER, classified by how many rows apart the two labels are. This is the number that
+  // decides whether two levels can ever be enough: a residual at row distance 2 is two labels the
+  // parity put back on the SAME level, and no choice of step fixes that.
+  for (const s of sweeps) {
+    const agg = new Map();
+    for (const p of s.points)
+      for (const [d, c] of p.afterByRowDist) agg.set(d, (agg.get(d) ?? 0) + c);
+    if (agg.size)
+      console.log(
+        `  RESIDUAL ${s.id}: overlapping pairs by ROW DISTANCE -> ` +
+          [...agg.entries()]
+            .sort((x, y) => x[0] - y[0])
+            .map(([d, c]) => `${d}:${c}`)
+            .join("  "),
+      );
+  }
 }
 
 console.log(
