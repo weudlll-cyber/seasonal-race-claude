@@ -8,6 +8,14 @@ report here could be orphaned, or an index link could dangle, with nothing notic
 `node scripts/check-index.mjs --dir=reports/night --index=reports/night/INDEX.md` now checks both
 directions.
 
+- [START-FORMATION-1.md](START-FORMATION-1.md) — the start formation, from his eye test. Names now
+  draw LAST, after every sprite, so no racer can cover one — render fingerprint moved (expected, the
+  order is what it hashes), camera unchanged, world not run and not needed; unminted and unmerged
+  awaiting his eye. The label overlap on river-run is NOT lateral crowding: every overlapping pair,
+  on every track, at every racer count, is between neighbouring START ROWS, and the row gap follows
+  the racer type's `displaySize`. Swept every count from 2 to the full grid on his instruction —
+  river-run fails 56 of 99, the other three fail none. Also found: the start has NO framing rule,
+  COUNTDOWN is absent from the six-state table. Four routes for the overlap, none implemented.
 - [MERGE-AND-GUARD-1.md](MERGE-AND-GUARD-1.md) — merge what is ready, then the next one-truth target.
   CONFIG-TRUTH-1 and the owner's backup tool merged to master (merge commits, containment proved);
   the backup tool RUN and confirmed at its documented 247 files / 12.0 MB, `--minimal` still dropping
