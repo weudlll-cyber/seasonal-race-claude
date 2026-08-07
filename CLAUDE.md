@@ -22,8 +22,14 @@ Before changing anything: [docs/VERIFY-RULES.md](docs/VERIFY-RULES.md) (what to 
 
 All user-facing text, source code comments, variable names, log messages, UI labels, Dev Screen
 labels, document strings, and repository documents must be in **English**. No German text anywhere in
-the codebase or documents — including file names. This rule applies to all future changes without
-exception.
+the codebase or documents — including file names.
+
+**ONE exception, and it is narrow: a VERBATIM QUOTATION of the owner.** His own words are evidence
+for a decision, and translating them destroys the evidence — so the original stays and an English
+translation goes beside it, never instead of it. His ruling, 2026-08-07. It covers quotations only;
+it is not licence for German anywhere else, and there are exactly two such quotations today
+(`docs/CONCEPT-COHESION.md` on the bounded brake, `docs/TAGS.md` on the company guarantee).
+**Do not "fix" either of them.**
 
 ## Ship ceremony (permanent)
 

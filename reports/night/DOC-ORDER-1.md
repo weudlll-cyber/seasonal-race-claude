@@ -289,6 +289,32 @@ different things, which nothing had ever written down.
 reverse), whether `AUTH.md` should be archived since it documents something unbuilt (§6.4), and
 whether BACKLOG should eventually absorb ROADMAP (§6.1).
 
+## 8b. Three owner decisions after delivery (2026-08-07)
+
+He read the report and ruled on three of its open points. All three are applied on this branch,
+BEFORE the merge — recorded here rather than by rewriting the sections above, because a report says
+what was true when it was written.
+
+1. **The two German owner quotations keep their ORIGINAL wording**, with the English translation
+   BESIDE them rather than instead of them (§3.3 had translated them and flagged the call). The
+   evidence is his exact words, so the words stay. This puts German back into two living documents,
+   which contradicts the standing language rule — so **the rule itself now carries the exception**,
+   narrow and named, in `CLAUDE.md`: verbatim owner quotations only, translation required alongside,
+   exactly two in existence today, do not "fix" them. Without that, the next language sweep would
+   have undone his decision and been right to, by the rule as written.
+
+2. **`AUTH.md` moves to the archive** (§6.4). It documented something unbuilt while sitting among the
+   documents that describe what exists. **Archived is not abandoned:** a live BACKLOG item now points
+   at it as the starting point if authentication is ever built, and notes that Q-16 (the accepted
+   CORS wildcard) becomes binding the moment it is.
+
+3. **BACKLOG and ROADMAP are NOT merged** (§6.1) — his instruction that the merge is a separate
+   order. Only the boundary is documented, and now from BOTH sides: each file's `**Owns:**` line, plus
+   a short block in ROADMAP stating the test for which document an item belongs in, and a BACKLOG
+   entry recording the decision, the reason it is separate, and the intended landing (BACKLOG owns
+   both; ROADMAP becomes a phase-status table). §6.1 stands as written — it named this as the weakest
+   remaining spot, and it still is; it is now a scheduled piece of work rather than an observation.
+
 ## 9. What I did NOT do, and why
 
 - **Did not merge `ROADMAP` into `BACKLOG`.** §6.1 — too large to do safely inside this block, and a

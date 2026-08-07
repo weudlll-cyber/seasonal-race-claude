@@ -9,6 +9,25 @@ Items ranked by urgency within each bucket. ✅ = done, 🔜 = next, ⏳ = waiti
 
 ---
 
+## Documentation (2026-08-07, from DOC-ORDER-1)
+
+- [ ] **Authentication and authorization — DESIGN EXISTS, nothing is built.** The full v3.2 design
+      (route inventory, session model, CSRF posture, the E2E test prerequisites) is
+      [archive/AUTH.md](archive/AUTH.md). It was moved to the archive on 2026-08-07 because it
+      described a RaceArena that does not exist while sitting among the documents that describe the
+      one that does — **archived is not abandoned**: if auth is built, that document is the starting
+      point and this line is how you find it. Related: **Q-16** below (the CORS wildcard, deliberately
+      accepted for local-only operation) becomes binding the moment this is built.
+- [ ] **Merge ROADMAP into BACKLOG — DECIDED, and deliberately NOT done here.** The two documents
+      half-own "what is done and what is next": this file owns the open work with its evidence,
+      [ROADMAP.md](ROADMAP.md) owns the phases and their completion status. DOC-ORDER-1 documented
+      that boundary in both files' `**Owns:**` lines rather than merging them, **on the owner's
+      instruction that the merge is a separate order.** The reason it is separate: ROADMAP is 618
+      lines and this file is over 1300, a real merge is a careful pass with a high chance of silently
+      dropping an item, and a half-finished merge leaves two documents half-owning a subject — which
+      is worse than the boundary that exists today. When it happens, the intended landing is that
+      **BACKLOG owns both**, with ROADMAP reduced to a phase-status table.
+
 ## The owner's camera-defaults session (2026-08-06, from MERGE-AND-GUARD-1)
 
 > **His words:** once the camera is finished, all camera defaults get set to his taste **in one

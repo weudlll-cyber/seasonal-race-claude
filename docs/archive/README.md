@@ -88,6 +88,15 @@ been rewritten since; [../CAMERA_DIRECTOR.md](../CAMERA_DIRECTOR.md) is the live
 - [D3-5-1-diagnose.md](D3-5-1-diagnose.md) — 2026-04-26, the sprite racer-type class field matrix
 - [audit-pre-merge.md](audit-pre-merge.md) — 2026-05-12, a pre-merge audit of the camera phase-1 branch
 
+## Design work for something that was never built
+
+- [AUTH.md](AUTH.md) — the authentication and authorization architecture, v3.2, 2026-06-13. **Nothing
+  in it is built**, and it says so in its own first line. It is a design, not a description, so it
+  described a RaceArena that does not exist while sitting among the documents that describe the one
+  that does. Archived on the owner's decision, 2026-08-07. **It is not dead** — if authentication is
+  built, this is the starting point, and [../BACKLOG.md](../BACKLOG.md) carries the live item that
+  points here.
+
 ---
 
 **Nothing was moved here that anything still points at as current.** The one document that looked

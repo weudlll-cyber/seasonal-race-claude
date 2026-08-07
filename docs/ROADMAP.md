@@ -2,6 +2,13 @@
 
 **Owns:** the phases and their completion status. The open work inside them is [BACKLOG.md](BACKLOG.md)'s.
 
+> **The boundary, because these two documents have overlapped for months.** This file answers _which
+> phase is a thing in, and is that phase done_. BACKLOG answers _what is still open, and what is the
+> evidence behind it_. If you are about to add an item with evidence attached, it belongs in BACKLOG.
+> A merge of the two is a **decided, separate order** and is not scheduled here — see the entry under
+> "Documentation" in [BACKLOG.md](BACKLOG.md) for the intended landing and why it was not done inside
+> DOC-ORDER-1.
+
 > **✅ Baseline — see REBASELINE.** Absolute sim numbers scattered in this document (band-reach, runaway, P1-contest, physics-tax, gate results) are retired history from before the current shipped world. **So is every 16-hex FINGERPRINT below**: each one is the value at the moment that entry was written, not a claim about now. The current values live in [docs/fingerprints.json](fingerprints.json) and in no document. The live baseline is the [reports/parity/REBASELINE.md](../reports/parity/REBASELINE.md) top block — the shipped world (COMBO15 + margin hysteresis + lateral acceleration cap).
 
 ## Phase 1 — Setup Screen ✅ 100% complete

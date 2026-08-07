@@ -60,7 +60,6 @@ What a stranger needs in order to understand and change RaceArena.
 | [ARCHITECTURE.md](ARCHITECTURE.md) | System shape: client, in-browser race logic, backend, persistence. |
 | [API.md](API.md)                   | The backend HTTP endpoints.                                        |
 | [DEPLOYMENT.md](DEPLOYMENT.md)     | Public same-origin hosting and the environment it needs.           |
-| [AUTH.md](AUTH.md)                 | Authentication design. **DESIGN ONLY — not built.**                |
 
 ### The data model
 
