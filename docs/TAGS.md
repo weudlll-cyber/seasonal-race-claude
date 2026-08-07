@@ -95,6 +95,11 @@ archived as permanent `archive/*` tags and their remote branches deleted (branch
   fingerprint `ded0a126048e4cdb` (replaces the pre-combo15 anchor `7c70b1eae7d31e22`; OFF invariant
   `f8f7d9c2fd3283e9` unchanged). See [../reports/evolution/MERGE-SHIP-1.md](../reports/evolution/MERGE-SHIP-1.md)
   and [FAIRNESS.md](FAIRNESS.md).
+- `pre/start-formation` (`b62ffc0b`, 2026-08-07) — the return point: master state right BEFORE the start
+  formation shipped, i.e. the last build in which a racer sprite could be drawn ON TOP of a name tag.
+  Restores render fingerprint `1f83ecc1fcb6fa9a`; the world and camera fingerprints are the same on
+  both sides of the ship, because the change is presentation-only.
+  See [../reports/night/START-FORMATION-1.md](../reports/night/START-FORMATION-1.md).
 - `pre/ship-combo15` (`215afde`) — the return point: master state right BEFORE COMBO15 shipped.
 - `pre/clean-sweep` (`dad4077`) — the return point before CLEAN-SWEEP-1 (dead-arm removal + local audit) and
   the DOC-SYNC-1 doc pass that followed. Master state at the end of DOCS-1.

@@ -47,13 +47,13 @@
       "lastVerified": "2026-08-06 — re-run and unchanged"
     },
     "render": {
-      "value": "1f83ecc1fcb6fa9a",
+      "value": "cf716cbdf37b2077",
       "covers": "the DRAW CALL SEQUENCE: sprite placement, text, styles, transforms, layer order",
       "reproduce": "node scripts/render-fingerprint.mjs --quiet",
-      "mintedOn": "e39c9483",
-      "mintedBy": "FINISH-COMPANY-1 — a camera-only diff moves this one; the director decides the transform on every drawn frame",
-      "date": "2026-08-05",
-      "lastVerified": "2026-08-06 — re-run and unchanged"
+      "mintedOn": "e5022bff",
+      "mintedBy": "START-FORMATION-1 — name tags are drawn LAST, after every sprite, so no racer can cover one. The layer order is exactly what this hash covers, so it moved by construction. Presentation-only: no default and no engine file changed, so the world and camera fingerprints did NOT move and were not re-minted (camera re-run and confirmed unchanged). Replaces 1f83ecc1fcb6fa9a.",
+      "date": "2026-08-07",
+      "lastVerified": "2026-08-07 — measured on e5022bff, the exact commit merged, AFTER the owner's eye passed"
     },
     "world-off": {
       "value": "854018ee5d3d83e1",
