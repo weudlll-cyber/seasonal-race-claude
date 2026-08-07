@@ -114,7 +114,10 @@ export function drawRacers(
   renderAlpha,
   interpolationEnabled,
   highlightHeroes = false,
-  gapDevMarker = false
+  gapDevMarker = false,
+  pairingAid = false,
+  markDimming = 0,
+  connectorsOn = true
 ) {
   const leader = st.racers.reduce((a, b) => (b.t > a.t ? b : a));
   const inv = 1 / ezoom;
@@ -229,6 +232,35 @@ export function drawRacers(
     );
   }
 
+  /**
+   * ROLL-CALL-PAIRING-1 (b): THE CONNECTION between a label and its own racer.
+   *
+   * A LEADER LINE, drawn from the bottom edge of the label down to the racer's head, and the choice
+   * is against a tail or an arrow on the box. A tail decorates the BOX, which re-states the thing
+   * that already failed: that the box's own position identifies the racer. A line has two ends, and
+   * the end that matters lands ON the body — it does not describe the pairing, it exhibits it.
+   *
+   * It is vertical, because a label is centred on its racer, and short — the gap between the label
+   * and the body, no more. That is exactly enough: the box may span five racers, and the line says
+   * which of the five, which is the whole question the owner asked.
+   */
+  function paintConnector(r) {
+    if (!namedNow(r)) return;
+    const renderX = doInterp ? lerp(r._prevX ?? r.x, r.x, renderAlpha) : r.x;
+    const renderY = doInterp ? lerp(r._prevY ?? r.y, r.y, renderAlpha) : r.y;
+    ctx.save();
+    ctx.translate(renderX, renderY);
+    ctx.scale(1 / ezoom, 1 / (ezoomY ?? ezoom)); // one unit is one screen pixel
+    ctx.globalAlpha = 1;
+    ctx.strokeStyle = 'rgba(255,255,255,0.75)';
+    ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    ctx.moveTo(0, -labelOffsetAbove(tagFontPx));
+    ctx.lineTo(0, -tagFontPx * 0.45);
+    ctx.stroke();
+    ctx.restore();
+  }
+
   // ── TWO PASSES, AND THE ORDER IS THE WHOLE POINT (START-FORMATION-1) ─────────────────────────
   // Every sprite first, every name second. Interleaved — sprite-then-tag per racer, which is what
   // this was — racer j paints over racer i's name whenever j comes later in the list, and at the
@@ -241,9 +273,24 @@ export function drawRacers(
   // own. Nothing else in the frame changes, and nothing here reads the camera.
   const dark = (battleFocusDarkening ?? 0.4) * focusFactor;
   const dimming = focusFactor > 0 && battleGroupIndices && battleGroupIndices.size > 0;
-  const alphaOf = (r) => (dimming && !battleGroupIndices.has(r.index) ? 1 - dark : 1);
+
+  // ── ROLL-CALL-PAIRING-1 (a): MARK THE RACER WHOSE NAME IS UP ────────────────────────────────
+  // The SAME dimming the battle focus uses, given a second reason to fire, rather than a second
+  // darkening mechanism beside it. `pairingAid` is nameTagLayout's one answer for this formation:
+  // false on every formation whose labels already point at exactly one racer, and there it costs
+  // nothing and changes nothing.
+  const rollCallDark = pairingAid ? Math.min(1, Math.max(0, markDimming)) : 0;
+  const namedNow = (r) => tagShown?.has(r.index) ?? false;
+  const alphaOf = (r) => {
+    if (dimming && !battleGroupIndices.has(r.index)) return 1 - dark;
+    if (rollCallDark > 0 && !namedNow(r)) return 1 - rollCallDark;
+    return 1;
+  };
 
   for (const r of st.racers) paintRacer(r, alphaOf(r));
+  // The connectors go BETWEEN the sprites and the names: over the bodies so the line is not buried
+  // under a racer, under the labels so it never crosses the text it belongs to.
+  if (pairingAid && connectorsOn) for (const r of st.racers) paintConnector(r);
   for (const r of st.racers) paintTag(r, alphaOf(r));
   ctx.globalAlpha = 1;
 }

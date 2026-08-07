@@ -42,7 +42,14 @@ import {
   drawFinishedOverlay,
 } from './drawing/overlayRendering.js';
 import { drawTrackLights } from '../../modules/trackLights.js';
-import { computeTagLayout, tagFontScreenPx, rollCallWaveIndex } from './nameTagLayout.js';
+import {
+  computeTagLayout,
+  tagFontScreenPx,
+  rollCallWaveIndex,
+  formationNeedsPairingAid,
+  labelBoxWidth,
+  labelOffsetAbove,
+} from './nameTagLayout.js';
 import { renderMinimap } from '../../modules/camera/Minimap.js';
 import { effectiveZoom } from '../../modules/camera/openTrackCamera.js';
 import { OPEN_TRACK_BASE_ZOOM } from '../../modules/camera/CameraDirector.js';
@@ -198,6 +205,33 @@ export function renderRaceFrame(ctx, f) {
   });
   ctx.restore();
 
+  // ── ROLL-CALL-PAIRING-1 (c): does this formation need the pairing aids AT ALL? ───────────────
+  // Asked in SCREEN space, from the same boxes the layout used, and only while the roll call is on.
+  // A formation whose labels each sit over exactly one racer answers false, and then nothing below
+  // is dimmed and no connector is drawn — the owner's "only where necessary", derived rather than
+  // configured.
+  const racerScreen = st.racers.map((r) => ({
+    index: r.index,
+    x: r.x * effZoomX + cam.offsetX,
+    y: r.y * effZoomY + cam.offsetY,
+  }));
+  const racerScreenById = new Map(racerScreen.map((r) => [r.index, r]));
+  let pairingAid = false;
+  if (showAllTags && tagLayout.shown.size > 0) {
+    ctx.save();
+    ctx.font = `bold ${tagFontPx}px sans-serif`;
+    const shownBoxes = [];
+    for (const r of st.racers) {
+      if (!tagLayout.shown.has(r.index)) continue;
+      const p = racerScreenById.get(r.index);
+      if (!p) continue;
+      const w = labelBoxWidth(ctx.measureText(r.name ?? '').width);
+      shownBoxes.push({ index: r.index, left: p.x - w / 2, right: p.x + w / 2 });
+    }
+    ctx.restore();
+    pairingAid = formationNeedsPairingAid(shownBoxes, racerScreenById, racerScreen, tagFontPx);
+  }
+
   drawRacers(
     ctx,
     st,
@@ -217,7 +251,10 @@ export function renderRaceFrame(ctx, f) {
     renderAlpha,
     interpolationEnabled,
     cameraConfig.highlightHeroes ?? false,
-    gapRerollDevMarker ?? false
+    gapRerollDevMarker ?? false,
+    pairingAid,
+    cameraConfig.rollCallMarkDimming ?? 0.55,
+    cameraConfig.rollCallConnectors ?? true
   );
   drawBattleDiagMarkers(
     ctx,

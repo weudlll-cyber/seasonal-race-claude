@@ -342,6 +342,18 @@ export const DEFAULT_CAMERA_CONFIG = {
   // wave can never stretch anything. 900 ms is reasoned against reading rather than taste: a short
   // name is legible in well under half a second, and the rest of the beat is for the eye to FIND it.
   rollCallMsPerWave: 900,
+  // ROLL-CALL-PAIRING-1 (a): how far the racers WITHOUT a name this wave recede, 0..1. It reuses the
+  // dimming the battle focus already owns rather than adding a second darkening mechanism — one way
+  // to say "this one, not those" is worth more than two that can drift apart.
+  // 0.55 is stronger than the battle focus's 0.4 on purpose: a battle dims a handful of bystanders
+  // around a subject the camera has already framed, whereas a roll-call wave has to pick a few
+  // racers out of a whole grid with nothing else helping.
+  rollCallMarkDimming: 0.55,
+  // ROLL-CALL-PAIRING-1 (b/d): draw the line from a label to its own racer. A toggle, so the owner
+  // can judge whether the dimming alone already answers "which one is mine" — see the report's
+  // answer to planner proposal 1. Default ON because dimming narrows the candidates but does not
+  // pick one: a wide label can still span two racers that are BOTH named in this wave.
+  rollCallConnectors: true,
   // State overlay: narrative text shown during first seconds of OVERVIEW / BATTLE / COMEBACK.
   stateOverlayEnabled: true,
   stateOverlayDurationMs: 3500,

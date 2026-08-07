@@ -186,6 +186,82 @@ export function tagFontScreenPx(frameFrac, canvasH) {
  * @param {Array<{index:number,left:number,right:number,top:number,bottom:number}>} boxes
  * @returns {Array<Array<object>>} waves, each a list of mutually non-overlapping boxes
  */
+/**
+ * IS THIS LABEL AMBIGUOUS — does it fail to point at exactly one racer? (ROLL-CALL-PAIRING-1)
+ *
+ * THE OWNER'S COMPLAINT, after watching river-run: *"you see a name but have no idea which racer it
+ * belongs to."* The roll call delivered what it was asked for — every name readable, none forgotten
+ * — against a requirement that was never readability. It was always that a viewer can FIND HIS
+ * RACER. Readability is not pairing, and nothing here had ever measured pairing.
+ *
+ * THE GEOMETRY OF THE FAILURE. A label is centred on its own racer, so the box's centre IS a pointer
+ * — as long as the box is about one racer wide. With a four-character name it was. With a realistic
+ * name the box is ~170 px against a racer spacing of ~24, so it spans a handful of racers and its
+ * centre becomes a claim the eye cannot verify. Nothing is wrong with the label; there is simply no
+ * longer any visible evidence of WHICH racer it names.
+ *
+ * SO THE TEST IS: how many racers lie underneath this label? Exactly one — its own — and it points
+ * unambiguously. More than one, and as far as a viewer can tell the name belongs to any of them.
+ *
+ * WHY NOT "which racer is nearest the box centre": the label is centred on its owner, so the owner
+ * is at distance zero by construction and that test can never fire. It would look principled and
+ * measure nothing.
+ *
+ * NO NEW CONSTANT. The horizontal reach is the box's own width. The vertical window is
+ * `labelOffsetAbove`, which exists already because it is how far a label sits above its racer — a
+ * racer a row away is not confusable with this one and is not counted.
+ *
+ * @param {{index:number,left:number,right:number}} box  the label, screen px
+ * @param {{x:number,y:number}} owner  its racer's screen position
+ * @param {Array<{index:number,x:number,y:number}>} racers  every racer on screen
+ * @param {number} fontPx
+ * @returns {boolean} true when more than one racer sits under this label
+ */
+export function labelIsAmbiguous(box, owner, racers, fontPx) {
+  if (!box || !owner || !Array.isArray(racers)) return false;
+  const halfW = (box.right - box.left) / 2;
+  const cx = (box.left + box.right) / 2;
+  const band = labelOffsetAbove(fontPx);
+  let under = 0;
+  for (const r of racers) {
+    if (Math.abs(r.x - cx) <= halfW && Math.abs(r.y - owner.y) <= band) {
+      under++;
+      if (under > 1) return true;
+    }
+  }
+  return false;
+}
+
+/**
+ * DOES THIS FORMATION NEED THE PAIRING AIDS AT ALL? (ROLL-CALL-PAIRING-1)
+ *
+ * The owner's standing rule: only where necessary. Where every shown label already sits over exactly
+ * one racer — a short name, a roomy formation, the 86.5% of field sizes that need a single wave —
+ * nothing is dimmed and no connector is drawn, and the picture is exactly what it has always been.
+ *
+ * ONE ANSWER PER FORMATION, not per label, and it is the same call this project already made about
+ * the wave partition, for the same stated reason: a formation where half the names have a connector
+ * and half do not reads as an accident rather than as a rule.
+ *
+ * Derived from geometry and nothing else — no track name, no track id, no racer type, and no
+ * wave-count threshold. A one-wave formation gets no aids because each of its labels sits over one
+ * racer, not because anything counted its waves.
+ *
+ * @param {Array<object>} shownBoxes  the labels actually on screen this frame
+ * @param {Map<number,{x:number,y:number}>} racerById  screen position by racer index
+ * @param {Array<{index:number,x:number,y:number}>} racers  every racer on screen
+ * @param {number} fontPx
+ * @returns {boolean}
+ */
+export function formationNeedsPairingAid(shownBoxes, racerById, racers, fontPx) {
+  if (!Array.isArray(shownBoxes) || shownBoxes.length === 0) return false;
+  for (const box of shownBoxes) {
+    const owner = racerById?.get(box.index);
+    if (owner && labelIsAmbiguous(box, owner, racers, fontPx)) return true;
+  }
+  return false;
+}
+
 export function partitionIntoWaves(boxes) {
   const waves = [];
   if (!Array.isArray(boxes) || boxes.length === 0) return waves;
