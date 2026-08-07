@@ -43,7 +43,6 @@ import { ComebackDetector } from './comebackDetector.js';
 import {
   resolveFramingConfig,
   DEFAULT_CORRIDORS,
-  DEFAULT_COUNTDOWN_CORRIDORS,
   DEFAULT_INNER_FRAME_PCT,
 } from './framingConfig.js';
 import {
@@ -478,13 +477,6 @@ export class CameraDirector {
     this._photoFinishZoom = this._computeZoomForCorridors(c.PHOTO_FINISH);
     // OVERVIEW is the same rule at the widest setting — no sprite size, no racer count.
     this._overviewStateZoom = this._computeZoomForCorridors(c.OVERVIEW, DEFAULT_CORRIDORS.OVERVIEW);
-    // The countdown opens wide on the SAME unit and eases into OVERVIEW. It is clamped by the
-    // projection like every other setting, so on a small world it simply means "the whole world".
-    this._countdownStartZoom = this._computeZoomForCorridors(
-      f.countdownCorridors,
-      DEFAULT_COUNTDOWN_CORRIDORS
-    );
-
     this._innerFramePct = f.innerFramePct;
     this._minRacersVisible = f.minRacersVisible;
     this._transitionGrammar = f.transitionGrammar;

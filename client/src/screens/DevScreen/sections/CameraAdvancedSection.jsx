@@ -365,29 +365,6 @@ function CameraAdvancedSection() {
               className={s.label}
               style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}
             >
-              Countdown opening shot (corridors)
-              <InfoTooltip
-                text={`How wide the countdown opens, in standard corridors, before easing into Overview. Clamped to the widest the world allows, so on a small world it simply means "the whole world". Currently: ${config.countdownStartCorridors ?? 3} = ${Math.round((config.countdownStartCorridors ?? 3) * (config.referenceCorridorPx ?? 300))} world pixels.`}
-              />
-            </label>
-            <input
-              type="number"
-              className={s.input}
-              min={0.25}
-              max={30}
-              step={0.25}
-              value={config.countdownStartCorridors ?? 3}
-              onChange={(e) => {
-                const v = Number(e.target.value);
-                if (v >= 0.25 && v <= 30) set('countdownStartCorridors', v);
-              }}
-            />
-          </div>
-          <div className={s.formGroup}>
-            <label
-              className={s.label}
-              style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}
-            >
               Countdown Duration (ms)
               <InfoTooltip
                 text={`Duration of the pre-race countdown. Currently: ${config.countdownDurationMs ?? 4000}ms.`}

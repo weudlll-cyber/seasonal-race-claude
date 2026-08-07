@@ -335,10 +335,6 @@ export const DEFAULT_CAMERA_CONFIG = {
   photoFinishCloseThresholdT: 0.03, // max lap-normalized |t| gap between the top-2 finishers to count as "close" (same unit family as battlePulkThresholdT)
   photoFinishSlowmoFactor: 0.5, // physics slow-motion factor during the photo-finish shot (1.0 = normal, 0.5 = half speed)
   photoFinishLeadProgress: 0.97, // predictive gate: leader progress (fraction of finishT, 0..1) at which the one-shot close-check fires BEFORE the line
-  // Countdown camera phase: zooms from start-zoom to OVERVIEW zoom during the pre-race countdown.
-  // CAMERA-REFERENCE-WIDTH-1: the countdown opens on the same unit — a wide establishing shot that
-  // eases into OVERVIEW. Clamped by the projection, so on a small world it means "the whole world".
-  countdownStartCorridors: 3,
   // THE COUNTDOWN'S ONE HOME (CLEANUP-BEFORE-NUMBERS-1, salvaged from START-SEQUENCE-1 stage 0).
   //
   // The comment that stood here claimed this "matches the default race countdown duration". It was
