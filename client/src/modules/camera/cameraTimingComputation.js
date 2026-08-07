@@ -25,6 +25,17 @@ const MAX_STATE_DURATION = 8000;
 const BATTLE_PULK_THRESHOLD_T = 0.05; // lap fraction (15b: arc closeness, was 0.12 px-era)
 const BATTLE_MIN_DURATION_MS = 3000;
 const POST_START_HOLD_MS = 7000;
+// START-CEREMONY-CAMERA-1 — the ceremony's RHYTHM, and only the rhythm. Both ends of the move are
+// GEOMETRY (the track's extent, the field's extent) and are not settings at all.
+//
+// These three are duplicated in `storage/defaults.js`, which is this module's established
+// arrangement rather than an oversight — see the header: it holds the fallback for a director built
+// with NO config, and defaults.js holds the shipped value. The duplication is GUARDED by a test that
+// asserts the two agree, the same answer `autoSpriteScale.js` gives for CANVAS_H_REF. That is one
+// better than `POST_START_HOLD_MS` beside it, which is duplicated and unguarded.
+const CEREMONY_VENUE_MS = 1400;
+const CEREMONY_PUSH_MS = 2000;
+const CEREMONY_EASING = 'easeInOutCubic';
 const BATTLE_COOLDOWN_MS = 8000;
 const BATTLE_MAX_DURATION = 6000;
 const MIN_STATE_HOLD_MS = 5000;
@@ -72,6 +83,12 @@ export function computeTimingFromConfig(config) {
   const battleMinTopN = config?.battleMinTopN ?? 10;
   const endgameThreshold = config?.endgameThreshold ?? ENDGAME_PROGRESS_THRESHOLD;
   const postStartHoldMs = config?.postStartHoldMs ?? POST_START_HOLD_MS;
+  // Clamped to a sane band so a corrupt stored config cannot produce a ceremony that never ends or
+  // one with a negative beat. The easing NAME is not validated here: `ceremonyEasing` resolves an
+  // unknown name to the shipped curve, so validating it twice would be a second authority on it.
+  const ceremonyVenueMs = ceremonyMs(config?.ceremonyVenueMs, CEREMONY_VENUE_MS);
+  const ceremonyPushMs = ceremonyMs(config?.ceremonyPushMs, CEREMONY_PUSH_MS);
+  const ceremonyEasing = config?.ceremonyEasing ?? CEREMONY_EASING;
   const battleCooldownMs = config?.battleCooldownMs ?? BATTLE_COOLDOWN_MS;
   const showDiagnostics = config?.showCameraDiagnostics ?? false;
   const diagEnabled = config?.enableFrameLog ?? false;
@@ -303,6 +320,9 @@ export function computeTimingFromConfig(config) {
     battleMinTopN,
     endgameThreshold,
     postStartHoldMs,
+    ceremonyVenueMs,
+    ceremonyPushMs,
+    ceremonyEasing,
     battleCooldownMs,
     showDiagnostics,
     diagEnabled,
@@ -348,4 +368,10 @@ export function computeTimingFromConfig(config) {
     overviewTargetCount,
     overviewStartDelay,
   };
+}
+
+/** A ceremony beat length: finite, non-negative, and never longer than any countdown would be. */
+function ceremonyMs(v, fallback) {
+  if (!Number.isFinite(v) || v < 0) return fallback;
+  return Math.min(v, 30000);
 }

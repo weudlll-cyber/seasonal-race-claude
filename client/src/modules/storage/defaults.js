@@ -352,6 +352,25 @@ export const DEFAULT_CAMERA_CONFIG = {
   // lasts 4000 ms, so "GO!" stands for an extra second. That is a VISIBLE change and was left for
   // work the owner's eye is on. See reports/night/START-SEQUENCE-1.md.
   countdownDurationMs: 4000,
+  // ── THE START CEREMONY (START-CEREMONY-CAMERA-1) ───────────────────────────────────────────────
+  // The race opens on the whole track, held still, then eases in to the starting formation until it
+  // is as large as it can be with every racer still in frame. Both ends are GEOMETRY and neither is
+  // a setting: the venue shot is the track's own extent, and the target is the field's own extent
+  // through `fieldGuarantee`. These three numbers are the RHYTHM, which is the part that is taste.
+  //
+  // They live inside `countdownDurationMs` above. If the two beats ask for more than the countdown
+  // has, they are scaled proportionally rather than truncated, so the push always completes before
+  // the gun — see `ceremonySchedule`. Whatever is left is a SETTLED beat: the formation held
+  // motionless before the start, which is what keeps the arrival from reading as an interruption.
+  //
+  // 1400 + 2000 inside 4000 leaves 600 ms of stillness. My judgement, not a measurement; all three
+  // are for the owner's eye.
+  ceremonyVenueMs: 1400,
+  ceremonyPushMs: 2000,
+  // Ease-in-out: begins at rest, gathers, arrives at rest. The countdown used ease-OUT cubic, which
+  // starts at full speed — that reads as the camera catching up to something rather than as
+  // ceremony. 'easeOutCubic' is on the list so the old feel can be put back beside the new one.
+  ceremonyEasing: 'easeInOutCubic',
   // State overlay: narrative text shown during first seconds of OVERVIEW / BATTLE / COMEBACK.
   stateOverlayEnabled: true,
   stateOverlayDurationMs: 3500,

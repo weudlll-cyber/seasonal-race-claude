@@ -406,6 +406,78 @@ function CameraAdvancedSection() {
               }}
             />
           </div>
+          {/* START-CEREMONY-CAMERA-1 — the RHYTHM of the opening. Both ENDS of the move are
+              geometry (the track's extent, the field's extent) and are deliberately not settings. */}
+          <div className={s.formGroup}>
+            <label
+              className={s.label}
+              style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}
+            >
+              Venue Shot (ms)
+              <InfoTooltip
+                text={`How long the opening shot of the whole track is held STILL before the camera begins to move. This and the push-in live inside the countdown above; if together they ask for more than the countdown has, both are scaled down proportionally so the move always completes before the gun. Whatever is left over is held on the formation, motionless. Currently: ${config.ceremonyVenueMs ?? 1400}ms.`}
+              />
+            </label>
+            <input
+              type="number"
+              className={s.input}
+              data-testid="ceremony-venue-ms"
+              min={0}
+              max={6000}
+              step={100}
+              value={config.ceremonyVenueMs ?? 1400}
+              onChange={(e) => {
+                const v = Number(e.target.value);
+                if (v >= 0 && v <= 6000) set('ceremonyVenueMs', v);
+              }}
+            />
+          </div>
+          <div className={s.formGroup}>
+            <label
+              className={s.label}
+              style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}
+            >
+              Push In (ms)
+              <InfoTooltip
+                text={`How long the camera takes to ease from the venue shot in to the starting formation. Where it ARRIVES is not a setting: it is the largest zoom at which every racer is still in frame, measured from the formation itself, so it is right on every track and at every field size. Currently: ${config.ceremonyPushMs ?? 2000}ms.`}
+              />
+            </label>
+            <input
+              type="number"
+              className={s.input}
+              data-testid="ceremony-push-ms"
+              min={0}
+              max={6000}
+              step={100}
+              value={config.ceremonyPushMs ?? 2000}
+              onChange={(e) => {
+                const v = Number(e.target.value);
+                if (v >= 0 && v <= 6000) set('ceremonyPushMs', v);
+              }}
+            />
+          </div>
+          <div className={s.formGroup}>
+            <label
+              className={s.label}
+              style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}
+            >
+              Push Easing
+              <InfoTooltip
+                text={`The SHAPE of the push in. Ease in-out begins at rest, gathers, and arrives at rest — the ceremonial shape. Ease out cubic is what the countdown did before this block: it starts at full speed, which reads as the camera catching up to something rather than as ceremony. Quint is the same shape held longer at both ends, the most deliberate of the four.`}
+              />
+            </label>
+            <select
+              className={s.input}
+              data-testid="ceremony-easing"
+              value={config.ceremonyEasing ?? 'easeInOutCubic'}
+              onChange={(e) => set('ceremonyEasing', e.target.value)}
+            >
+              <option value="easeInOutCubic">Ease in-out (cubic) — ceremonial</option>
+              <option value="easeInOutQuint">Ease in-out (quint) — most deliberate</option>
+              <option value="easeOutCubic">Ease out (cubic) — the old feel</option>
+              <option value="linear">Linear — constant speed</option>
+            </select>
+          </div>
         </div>
       </div>
 
