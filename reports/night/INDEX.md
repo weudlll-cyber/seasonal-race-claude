@@ -8,6 +8,36 @@ report here could be orphaned, or an index link could dangle, with nothing notic
 `node scripts/check-index.mjs --dir=reports/night --index=reports/night/INDEX.md` now checks both
 directions.
 
+- [QUICKTEST-NAMES-1.md](QUICKTEST-NAMES-1.md) — testing with realistic name lengths, and **the
+  shrink rule does not survive it**. Every overlap number this project had measured was a statement
+  about a 4-8 character roster. With realistic names (mean 19.4) the picture inverts: 3 affected
+  tracks become **10 of 10**, the 0.6 legibility floor is hit on **9 of 10**, and **365 field sizes
+  still overlap after the shrink has done everything it can** — headroom 0.096 -> 0.000. The numbers
+  point at the roll-call-in-waves proposal, not at more shrink. QUICK_TEST_NAMES is byte-identical
+  (world fingerprint `dc4647be0f55ebdb` unchanged, golden parity 14/14); LONG and MIXED are additional
+  and selectable, defaulting to the original BY IDENTITY. Also found: the maximum name length has
+  **three different answers** — 32 at the input, 100 at the server, and no limit at all in the
+  renderer, where a 100-character name draws a box over half the frame wide.
+  **it works**: zero overlaps at every field size on all ten tracks, zero formations touched that did
+  not need it, floor never reached. The factor is closed-form from the formation's own geometry
+  (0.896 garden-path / 0.805 mountainstreet / 0.696 river-run); smallest anywhere 0.696 against a
+  0.6 floor, so **headroom is 0.096** — one denser racer type from needing proposal A. Two things to
+  read before minting: requirement (f) is **NOT met** (26.1% size step between 72 and 73 racers,
+  because the START GRID steps there, 3x24 -> 4x19 — every way of smoothing it breaks "only where
+  necessary"); and proving rule (c) exposed that **the render fingerprint harness draws NAMELESS
+  racers**, so the hash moves for all ten tracks while only three change in the browser. Rule (c)
+  itself is proven byte-exact: with the shrink bypassed the branch reproduces master's combined AND
+  per-track hashes exactly.
+  not work**. The TRIGGER shipped and is exact — across all ten tracks at every field size it fires on
+  0 formations with no overlap and misses 0 that have one — but the rule as specified could not be
+  implemented: comparing row separation against the label's HEIGHT fires 153 times where nothing
+  overlaps, because a label is a rectangle and two of them miss on either axis. The PLACEMENT did not
+  ship: four variants measured (row parity at one and two box heights, greedy by screen order at two
+  and six levels) and none reaches zero — it is not vertical room, six levels is no better than two.
+  A whole-row stagger walks the collision into the next row and CREATES overlaps, proved on a probe.
+  Render fingerprint deliberately UNCHANGED, which is the evidence that nothing moved. Found on the
+  way: mountainstreet also overlaps (33 field sizes) — the first ten-track sweep; and the rule
+  toggles on and off between adjacent racer counts, 17 times on mountainstreet.
 - [NAME-LIMIT-1.md](NAME-LIMIT-1.md) — one player-name limit (32), enforced where names ENTER rather
   than by an input attribute. **His data is safe: 0 of 304 stored names exceed 32, longest is 22**,
   so nothing was migrated and nothing needed to be. One home in `shared/nameLimits.mjs` — at the repo
@@ -18,6 +48,7 @@ directions.
   The renderer still has no guard and would draw a 100-character name ~750px wide — proposed, not
   built. A 32-character name measures ~283px realistically, 486px worst case, against the current
   roster's 55px mean.
+||||||| parent of 9a0673ad (report(QUICKTEST-NAMES-1): realistic names break the shrink rule, with the numbers)
 - [DOC-ORDER-1.md](DOC-ORDER-1.md) — documentation a stranger could actually be handed. The evidence
   for his own suspicion that most documents were never asked for: twenty of fifty-three were the
   by-product of one work session and had had no substantive change since a bulk German-to-English

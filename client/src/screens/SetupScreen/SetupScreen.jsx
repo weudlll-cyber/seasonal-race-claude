@@ -52,7 +52,7 @@ import {
   QUICK_TEST_SEED_MAX,
 } from './quickTestSeed.js';
 import styles from './SetupScreen.module.css';
-import { QUICK_TEST_NAMES } from '../../modules/racerNames.js';
+import { resolveNameSet, DEFAULT_NAME_SET } from '../../modules/racerNames.js';
 
 const TABS = ['Players', 'Track', 'Settings'];
 
@@ -335,6 +335,10 @@ function SetupScreen() {
   }, [quickTestSeed]);
   // Racer type selected for Quick Test (null = use quickTrack.defaultRacerTypeId)
   const [quickTestRacerTypeId, setQuickTestRacerTypeId] = useState(null);
+  // QUICKTEST-NAMES-1: which roster Quick Test fills empty slots from. The default is the original
+  // list, so a Quick Test nobody has touched produces exactly the race it always did — a racer's
+  // name is an engine input, so this selector changes the RACE, not only the picture.
+  const [quickTestNameSet, setQuickTestNameSet] = useState(DEFAULT_NAME_SET);
 
   // Surface-compatible racer types for the currently selected Quick Test track.
   // Same logic as filteredRacerTypeIds for the main SetupScreen selector.
@@ -419,7 +423,9 @@ function SetupScreen() {
 
     const needed = Math.max(0, quickTestCount - players.length);
     const existingNames = new Set(players.map((p) => p.name));
-    const fillNames = QUICK_TEST_NAMES.filter((n) => !existingNames.has(n)).slice(0, needed);
+    const fillNames = resolveNameSet(quickTestNameSet)
+      .filter((n) => !existingNames.has(n))
+      .slice(0, needed);
     const testPlayers = [...players, ...fillNames.map((name) => ({ name }))];
 
     // Quick Test runs the track's own canonical defaults: its lap count (closed) or its
@@ -1025,6 +1031,40 @@ function SetupScreen() {
                         {id === (quickTrack?.defaultRacerTypeId ?? 'horse') ? ' (default)' : ''}
                       </option>
                     ))}
+                  </select>
+                </label>
+                {/* QUICKTEST-NAMES-1: the roster Quick Test fills empty slots from. A label box is
+                    as wide as the name inside it, so this is the control that sets the
+                    start-formation geometry — and because a racer's name is an engine input, it
+                    changes the RACE too, exactly as editing the roster would. Default = original. */}
+                <label
+                  style={{
+                    fontSize: '11px',
+                    color: '#aaa',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '3px',
+                  }}
+                  title="Which roster fills empty Quick Test slots. Names are an engine input - changing this changes the race, not only the labels."
+                >
+                  Names:
+                  <select
+                    data-testid="quick-test-nameset-select"
+                    value={quickTestNameSet}
+                    onChange={(e) => setQuickTestNameSet(e.target.value)}
+                    style={{
+                      fontSize: '11px',
+                      padding: '1px 4px',
+                      background: 'rgba(255,255,255,0.08)',
+                      border: '1px solid rgba(255,255,255,0.2)',
+                      borderRadius: '3px',
+                      color: 'inherit',
+                      cursor: 'pointer',
+                    }}
+                  >
+                    <option value="current">current (default)</option>
+                    <option value="long">long</option>
+                    <option value="mixed">mixed</option>
                   </select>
                 </label>
               </div>
