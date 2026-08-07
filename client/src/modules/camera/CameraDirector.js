@@ -314,13 +314,11 @@ export class CameraDirector {
     // Reset to null on every non-repeat state transition so cuts stay crisp.
     this._smoothedFocalX = null;
     this._smoothedFocalY = null;
-    // Normalized OVERVIEW snap zoom — computed from _drawnBodyWidthRefPx at each OVERVIEW entry.
-    // Null until first non-repeat OVERVIEW transition on open tracks with drawnBodyWidthRefPx>0.
-    // _setTargets reads this; falls back to _overviewStateZoom when null.
-    this._overviewSnapZoom = null;
-    // START-CEREMONY-CAMERA-1: the framing the ceremony arrived at, handed to the first OVERVIEW of
-    // the race and cleared there. null means "no ceremony ran" — a race entered without a countdown
-    // (a test, a resumed race) gets OVERVIEW's ordinary setting rather than a stale hold.
+    // START-CEREMONY-CAMERA-1 / CEREMONY-HOLD-TARGET-1: THE HAND-OVER — the framing the ceremony
+    // arrived at, carried past the gun and released at the first view change (`_transition`).
+    // `null` means "no ceremony ran": a race entered without a countdown (a test, a resumed race)
+    // gets OVERVIEW's ordinary setting rather than a stale hold, and so does every OVERVIEW after
+    // the release.
     this._ceremonyHoldZoom = null;
     this._ceremonyBeat = null;
     // CEREMONY-HANDOVER-1: the ceremony's promise, carried past the gun. ARMED by the countdown, so
@@ -405,8 +403,6 @@ export class CameraDirector {
   updateConfig(config) {
     this._computeZoomLevels(config);
     this._computeTimingConfig(config);
-    // Invalidate the stored snap so a changed OVERVIEW setting takes effect on the next cut.
-    this._overviewSnapZoom = null;
   }
 
   /**
@@ -1361,6 +1357,16 @@ export class CameraDirector {
       this._comebackLockedRacerIndex = data.comebackRacer.index ?? null;
     }
 
+    // CEREMONY-HOLD-TARGET-1 — THE RELEASE, and the only place the hand-over ends. The hold lasts
+    // until the FIRST VIEW CHANGE, so the test is "the state actually changed", NOT "a transition
+    // was committed" and NOT "a state was entered". The start phase forces OVERVIEW, and the
+    // director commits an OVERVIEW→OVERVIEW entry inside it: that is not a view change, and
+    // releasing on it would end the hold seconds before the picture changes — the same shape of
+    // defect as putting the hand-over itself where a race never reaches it.
+    if (nextState !== prevState) {
+      this._ceremonyHoldZoom = null;
+    }
+
     // Commit state transition
     // isRepeat: true only when the same state is chosen as last time AND a full entry has
     // already occurred (null on first call so constructor-state never counts as a repeat).
@@ -1426,23 +1432,11 @@ export class CameraDirector {
         // on how many racers were in the race — non-monotonically. There is no sprite size and no
         // racer count in this path any more.
         //
-        // START-CEREMONY-CAMERA-1 (d) — THE HOLD. The FIRST OVERVIEW of the race is the one the gun
-        // hands over to, and it keeps the framing the ceremony arrived at instead of snapping out to
-        // OVERVIEW's own setting. Without this the whole push in is undone in a single frame at the
-        // exact moment the race begins, which is the one moment it must not be.
-        //
-        // IT IS A DESIRED ZOOM, NOT A FREEZE. This value goes into `_stateCamZoom`, and `_setTargets`
-        // combines it with the guarantees through `Math.min` — so CORRIDOR and COMPANY can still
-        // WIDEN it as the field spreads, and nothing can narrow it. A guarantee widens, it never
-        // steers (Lesson 192), and the hold is on the widening side of that Math.min by construction.
-        //
-        // It lasts until the first view change: the state machine holds OVERVIEW for
-        // START_PHASE_DURATION and then moves on, and the next OVERVIEW entry finds
-        // `_ceremonyHoldZoom` cleared and takes the ordinary setting.
-        const heldZoom = this._ceremonyHoldZoom;
-        const snapZoom = heldZoom != null ? heldZoom : this._overviewStateZoom;
-        this._ceremonyHoldZoom = null; // one hand-over only; every later OVERVIEW is an ordinary one
-        this._overviewSnapZoom = snapZoom; // stored so _setTargets uses the same zoom
+        // CEREMONY-HOLD-TARGET-1: the hold is read from ONE place — `_stateCamZoom` — and this snap
+        // asks it rather than resolving the hand-over itself. An OVERVIEW re-entry inside the start
+        // phase therefore snaps to the framing the ceremony arrived at, not out of it; after the
+        // release the hand-over is null and this is OVERVIEW's ordinary setting, exactly as before.
+        const snapZoom = this._stateCamZoom();
         this.zoom = snapZoom;
         this.targetZoom = snapZoom;
       }
@@ -2503,7 +2497,24 @@ export class CameraDirector {
   _stateCamZoom() {
     switch (this.state) {
       case CAM_STATE.OVERVIEW:
-        return this._overviewSnapZoom ?? this._overviewStateZoom;
+        // START-CEREMONY-CAMERA-1 (d) / CEREMONY-HOLD-TARGET-1 — THE HOLD, on the path a race
+        // actually takes. `_setTargets` calls this EVERY frame, so for the duration of the hold the
+        // framing the ceremony arrived at is the state's TARGET — not merely the value the camera
+        // was left sitting at when the gun went. It used to be applied in `_transition` only, which
+        // a race never reaches at the gun (the director is already in OVERVIEW, so there is no
+        // transition to make): the ceremony set `this.zoom`, the state kept asking for its own
+        // setting, and the camera glided away from the ceremony framing from the first frame — in
+        // zoom, and ACROSS the track with it, because the pan is resolved against the world edge AT
+        // THE ZOOM and a wider frame is clamped harder. One number, two axes of drift.
+        //
+        // IT IS A DESIRED ZOOM, NOT A FREEZE. This value goes into `_setTargets`, which combines it
+        // with the guarantees through `Math.min` — so CORRIDOR, COMPANY and the ceremony's own FIELD
+        // guarantee can still WIDEN it as the field spreads, and nothing can narrow it. A guarantee
+        // widens, it never steers (Lesson 192), and the hold is on the widening side of that
+        // Math.min by construction. That is also what makes the hold the ceremony's RULE rather than
+        // its frozen picture: as the grid strings out, the field guarantee is what opens the shot,
+        // which is the same computation the ceremony framed the grid with.
+        return this._ceremonyHoldZoom ?? this._overviewStateZoom;
       case CAM_STATE.BATTLE_ZOOM:
         return this._battleZoom;
       case CAM_STATE.COMEBACK_ZOOM:
