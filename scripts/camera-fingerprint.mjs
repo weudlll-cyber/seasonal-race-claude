@@ -39,6 +39,41 @@ import { readFileSync, readdirSync, existsSync } from "node:fs";
 import { join, dirname } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 
+// -- THE DECLARATION (VERIFY-ROUTING-1) ----------------------------------------------------------
+// What this guard depends on, stated HERE rather than in a routing table somewhere else. Its own
+// source and everything that source statically imports are added by the collector and are NOT
+// declared: a guard that cannot route on a change to its own instrument was the third of the four
+// misses, and self-dependency by construction closes it for every guard at once.
+// `blind` is required and non-empty - every guard states in itself what it does not cover.
+export const GUARD = {
+  id: "camera-fingerprint",
+  covers:
+    "the DIRECTOR's decisions: state, phase, anchor, zoom, offsets, camT, targets",
+  blind: [
+    "the render path - sprite scale, name-tag layout, drawing",
+    "it reports a hash; it never decides whether the hash MAY move",
+  ],
+  dirs: [],
+  files: [],
+  // Reached at RUNTIME through `await import(u("..."))`, which a static walk of `from "..."`
+  // cannot follow. routing.test.mjs extracts every such literal from THIS file and fails if
+  // one is not inside the resolved set, so this list cannot drift from the script.
+  reach: [
+    "client/src/modules/camera/CameraDirector.js",
+    "client/src/modules/storage/defaults.js",
+    "client/src/modules/track-editor/EditorShape.js",
+    "client/src/modules/raceCore.js",
+    "client/src/modules/durationModel.js",
+    "client/src/modules/rowLayout.js",
+    "client/src/modules/racer-types/index.js",
+  ],
+  cmd: ["node", "scripts/camera-fingerprint.mjs"],
+};
+if (process.argv.includes("--declare")) {
+  console.log(JSON.stringify(GUARD));
+  process.exit(0);
+}
+
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), "..");
 const u = (p) => pathToFileURL(join(ROOT, p)).href;
 

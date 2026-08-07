@@ -56,6 +56,33 @@ import { execFileSync, execSync } from "node:child_process";
 import { join, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
 
+// -- THE DECLARATION (VERIFY-ROUTING-1) ----------------------------------------------------------
+// What this guard depends on, stated HERE rather than in a routing table somewhere else. Its own
+// source and everything that source statically imports are added by the collector and are NOT
+// declared: a guard that cannot route on a change to its own instrument was the third of the four
+// misses, and self-dependency by construction closes it for every guard at once.
+// `blind` is required and non-empty - every guard states in itself what it does not cover.
+export const GUARD = {
+  id: "fingerprint-containment",
+  covers:
+    "a current fingerprint value appearing anywhere but its one home",
+  blind: [
+    "it does not check that the values in the record are CORRECT - it never runs an instrument",
+    "a fingerprint written with different spacing or split across lines",
+  ],
+  dirs: [],
+  files: ["docs/fingerprints.json"],
+  reach: [],
+  // ALWAYS-ON: a stray copy can appear in a file of any kind, so no subset of paths would be
+  // safe to skip. An EMPTY diff still selects nothing, which is coherent.
+  everything: true,
+  cmd: ["node", "scripts/check-fingerprints.mjs"],
+};
+if (process.argv.includes("--declare")) {
+  console.log(JSON.stringify(GUARD));
+  process.exit(0);
+}
+
 const argOf = (name) =>
   process.argv
     .find((a) => a.startsWith(`--${name}=`))

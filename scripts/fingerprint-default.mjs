@@ -68,6 +68,35 @@ import { join, dirname } from "path";
 import { fileURLToPath } from "url";
 import { tmpdir, cpus } from "os";
 
+// -- THE DECLARATION (VERIFY-ROUTING-1) ----------------------------------------------------------
+// What this guard depends on, stated HERE rather than in a routing table somewhere else. Its own
+// source and everything that source statically imports are added by the collector and are NOT
+// declared: a guard that cannot route on a change to its own instrument was the third of the four
+// misses, and self-dependency by construction closes it for every guard at once.
+// `blind` is required and non-empty - every guard states in itself what it does not cover.
+export const GUARD = {
+  id: "world-fingerprint",
+  covers:
+    "the RACE: physics, plan, outcome - every file the engine can reach",
+  blind: [
+    "the camera and the render path, which cannot change the race and are covered by their own instruments",
+    "it reports a hash; it never decides whether the hash MAY move",
+  ],
+  dirs: [],
+  files: [],
+  // Reached at RUNTIME through `await import(u("..."))`, which a static walk of `from "..."`
+  // cannot follow. routing.test.mjs extracts every such literal from THIS file and fails if
+  // one is not inside the resolved set, so this list cannot drift from the script.
+  reach: [
+    "client/src/modules/raceCore.js",
+  ],
+  cmd: ["node", "scripts/fingerprint-default.mjs"],
+};
+if (process.argv.includes("--declare")) {
+  console.log(JSON.stringify(GUARD));
+  process.exit(0);
+}
+
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), "..");
 // Scratch off the (OneDrive-synced) repo tree by default; env-overridable. Matches sim-fairness.mjs.
 const SCRATCH =

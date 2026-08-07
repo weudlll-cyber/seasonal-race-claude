@@ -57,7 +57,61 @@ import { execFileSync } from "node:child_process";
 import { join, dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
-const ROOT = join(dirname(fileURLToPath(import.meta.url)), "..");
+// Hoisted above the declaration because the declare branch reads the stamps to derive its own
+// dependency set. Everything below re-uses these; there is one definition of each.
+const DECLARE_ROOT = join(dirname(fileURLToPath(import.meta.url)), "..");
+const DECLARE_DOCS = ["docs/CAMERA_DIRECTOR.md"];
+const DECLARE_STAMP =
+  /<!--\s*MEASURED:\s*(.+?)\s+@\s+([0-9a-f]{7,40})\s+(\d{4}-\d{2}-\d{2})\s+depends=([^\s]+)\s*-->/g;
+
+// -- THE DECLARATION (VERIFY-ROUTING-1) ----------------------------------------------------------
+// What this guard depends on, stated HERE rather than in a routing table somewhere else. Its own
+// source and everything that source statically imports are added by the collector and are NOT
+// declared: a guard that cannot route on a change to its own instrument was the third of the four
+// misses, and self-dependency by construction closes it for every guard at once.
+// `blind` is required and non-empty - every guard states in itself what it does not cover.
+export const GUARD = {
+  id: "measured-stamps",
+  covers:
+    "measured numbers in documents that carry a stamp, against whether the thing they measure has changed since",
+  blind: [
+    "it never re-runs the measurement: a stamp on the right commit with wrong digits under it passes",
+    "numbers in the same document that carry NO stamp are invisible to it",
+    "it cannot tell a change that matters from one that does not - a comment-only edit trips it",
+    "the commit BEING MADE does not exist yet, so no stamp can be checked against it; the working-tree PENDING line is what it can say instead",
+  ],
+  dirs: [],
+  files: ["docs/CAMERA_DIRECTOR.md"],
+  reach: [],
+  // THE FOURTH MISS, and it is a routing bug as much as a reporting one: this guard was
+  // selected by 'markdown changed', while what it actually depends on is whatever its stamps
+  // say depends= - on this repo, the camera. A camera-only commit never ran it. The paths
+  // are read from the stamps below and appended to `files`, so the declaration follows the
+  // document instead of remembering it.
+  cmd: ["node", "scripts/check-measured-stamps.mjs"],
+};
+if (process.argv.includes("--declare")) {
+  // The dependency set is READ FROM THE STAMPS, not remembered beside them. Every `depends=` path
+  // in every stamped document becomes a routing dependency, so adding a stamp routes this guard on
+  // whatever that stamp measures, with nobody editing a table.
+  const declared = new Set(GUARD.dirs);
+  for (const doc of DECLARE_DOCS) {
+    let text = "";
+    try {
+      text = readFileSync(join(DECLARE_ROOT, doc), "utf8");
+    } catch {
+      // A document this guard cannot read is a FAILURE when it RUNS (below). At declare time it is
+      // not this branch's job to decide that; it contributes no paths and says so by omission.
+      continue;
+    }
+    for (const m of text.matchAll(DECLARE_STAMP))
+      for (const d of m[4].split(",").filter(Boolean)) declared.add(d);
+  }
+  console.log(JSON.stringify({ ...GUARD, dirs: [...declared].sort() }));
+  process.exit(0);
+}
+
+const ROOT = DECLARE_ROOT;
 
 // The documents scanned for stamps. A short explicit list, not a glob: a stamp is a deliberate act,
 // and a guard that hunts for them everywhere would encourage sprinkling them about.
@@ -72,10 +126,9 @@ const ROOT = join(dirname(fileURLToPath(import.meta.url)), "..");
 const DOC_OVERRIDE = process.argv
   .filter((a) => a.startsWith("--doc="))
   .map((a) => a.slice("--doc=".length));
-const DOCS = DOC_OVERRIDE.length ? DOC_OVERRIDE : ["docs/CAMERA_DIRECTOR.md"];
+const DOCS = DOC_OVERRIDE.length ? DOC_OVERRIDE : DECLARE_DOCS;
 
-const STAMP =
-  /<!--\s*MEASURED:\s*(.+?)\s+@\s+([0-9a-f]{7,40})\s+(\d{4}-\d{2}-\d{2})\s+depends=([^\s]+)\s*-->/g;
+const STAMP = DECLARE_STAMP;
 
 const git = (...args) =>
   execFileSync("git", args, { cwd: ROOT, encoding: "utf8" }).trim();
@@ -107,6 +160,9 @@ if (shallow) {
 }
 
 let found = 0;
+// Every stamp seen, so the working-tree check below can speak about all of them — including the
+// ones that passed the history check, which are exactly the ones the limit applies to.
+const pending = [];
 for (const doc of DOCS) {
   let text;
   try {
@@ -124,6 +180,7 @@ for (const doc of DOCS) {
     const [, what, stampCommit, date, depends] = m;
     found++;
     const paths = depends.split(",").filter(Boolean);
+    pending.push({ doc, what, stampCommit, paths });
 
     // The stamped commit must exist. A typo here would otherwise disable the check silently.
     let resolved;
@@ -178,6 +235,66 @@ for (const doc of DOCS) {
       );
     }
   }
+}
+
+// ── WHAT THIS GUARD CANNOT KNOW, REPORTED INSTEAD OF PASSED OVER (VERIFY-ROUTING-1) ─────────────
+//
+// Everything above is a question about COMMITTED history: "did the dependency change after the
+// commit the stamp names?" The commit being made right now does not exist yet, so it is invisible
+// to that question — and a stamp can be perfectly fresh against history while the working tree
+// already invalidates it. A report once said PASS for exactly that reason: true, and incomplete.
+//
+// THE LIMIT IS NOT REPAIRABLE, and pretending otherwise would be worse than stating it. The repair
+// a stale stamp needs is a NEW stamp naming the LAST commit that touched the dependency — and that
+// commit is the one being written. There is no value that could be typed here that would be
+// correct at the moment it is typed. So this cannot be a failure: it is a PENDING line, printed
+// every run, that says what the next commit will do to the stamp.
+const LF = String.fromCharCode(10);
+const dirty = (() => {
+  try {
+    const tracked = git("diff", "--name-only", "HEAD").split(LF);
+    const untracked = git("ls-files", "--others", "--exclude-standard").split(LF);
+    return [...tracked, ...untracked].map((f) => f.trim()).filter(Boolean);
+  } catch {
+    return null; // no HEAD yet (a fresh repo) — say so rather than claim a clean tree
+  }
+})();
+if (dirty === null) {
+  console.log(
+    "PENDING: the working tree could not be read (no HEAD?), so nothing can be said about the" +
+      LF +
+      "         commit being made. That is this guard's blind spot, not a pass.",
+  );
+} else {
+  let pendingCount = 0;
+  for (const { doc, what, stampCommit, paths } of pending) {
+    const hits = dirty.filter((f) => paths.some((p) => f === p || f.startsWith(p)));
+    if (!hits.length) continue;
+    pendingCount++;
+    console.log(
+      `PENDING: ${doc}: "${what}" is stamped at ${stampCommit} and is fresh against COMMITTED` +
+        LF +
+        `         history — but ${hits.length} uncommitted change(s) under ${paths.join(",")} will` +
+        LF +
+        `         make it stale the moment they are committed:` +
+        LF +
+        hits
+          .slice(0, 5)
+          .map((h) => `           ${h}`)
+          .join(LF) +
+        (hits.length > 5 ? `${LF}           … and ${hits.length - 5} more` : "") +
+        LF +
+        `         This guard CANNOT check a commit that does not exist yet, so this is a REPORT` +
+        LF +
+        `         and not a failure. Re-measure and re-stamp in a follow-up commit that names` +
+        LF +
+        `         the one you are about to make.`,
+    );
+  }
+  console.log(
+    `check-measured-stamps: ${pendingCount} stamp(s) PENDING against uncommitted work. ` +
+      "(A stamp cannot name a commit that does not exist yet — see the guard's `blind` list.)",
+  );
 }
 
 if (found === 0) {
