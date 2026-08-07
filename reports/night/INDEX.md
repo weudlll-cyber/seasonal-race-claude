@@ -8,6 +8,17 @@ report here could be orphaned, or an index link could dangle, with nothing notic
 `node scripts/check-index.mjs --dir=reports/night --index=reports/night/INDEX.md` now checks both
 directions.
 
+- [LABEL-STAGGER-1.md](LABEL-STAGGER-1.md) — one rule for every track, and **the half of it that does
+  not work**. The TRIGGER shipped and is exact — across all ten tracks at every field size it fires on
+  0 formations with no overlap and misses 0 that have one — but the rule as specified could not be
+  implemented: comparing row separation against the label's HEIGHT fires 153 times where nothing
+  overlaps, because a label is a rectangle and two of them miss on either axis. The PLACEMENT did not
+  ship: four variants measured (row parity at one and two box heights, greedy by screen order at two
+  and six levels) and none reaches zero — it is not vertical room, six levels is no better than two.
+  A whole-row stagger walks the collision into the next row and CREATES overlaps, proved on a probe.
+  Render fingerprint deliberately UNCHANGED, which is the evidence that nothing moved. Found on the
+  way: mountainstreet also overlaps (33 field sizes) — the first ten-track sweep; and the rule
+  toggles on and off between adjacent racer counts, 17 times on mountainstreet.
 - [DOC-ORDER-1.md](DOC-ORDER-1.md) — documentation a stranger could actually be handed. The evidence
   for his own suspicion that most documents were never asked for: twenty of fifty-three were the
   by-product of one work session and had had no substantive change since a bulk German-to-English
