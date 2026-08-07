@@ -366,7 +366,7 @@ a verbatim transcript of one run on one commit, which is a historical record, no
 
 ### The tracking lag, as measured today — and it had drifted
 
-<!-- MEASURED: tracking-lag (median/p95 pp per state) @ 3e756a31 2026-08-06 depends=client/src/modules/camera/ -->
+<!-- MEASURED: tracking-lag (median/p95 pp per state) @ b66c0d39 2026-08-07 depends=client/src/modules/camera/ -->
 
 **These figures carry a stamp, and fails if the camera
 changes after it.** They are hand-copied on purpose: the measurement takes about seven minutes, so
@@ -379,14 +379,20 @@ and it says so itself. It also covers nothing else on this page; see its header 
 
 | state         | frames | median pp | p95 pp |
 | ------------- | ------ | --------- | ------ |
-| BATTLE_ZOOM   | 9657   | 5.71      | 9.98   |
+| BATTLE_ZOOM   | 9657   | 5.72      | 9.98   |
 | COMEBACK_ZOOM | 2103   | 8.33      | 15.57  |
-| LEADER_ZOOM   | 17522  | 4.46      | 8.66   |
+| LEADER_ZOOM   | 17522  | 3.92      | 8.66   |
 | LEAD_CHANGE   | 7064   | 4.45      | 7.17   |
-| OVERVIEW      | 5199   | 3.08      | 16.00  |
+| OVERVIEW      | 3603   | 3.27      | 16.00  |
 | PHOTO_FINISH  | 1864   | 6.37      | 20.73  |
 
-OVERVIEW median 3.08 pp against every other state pooled 4.86 pp (ratio 0.63×).
+OVERVIEW median 3.27 pp against every other state pooled 4.78 pp (ratio 0.68×).
+
+**Re-measured for CEREMONY-HANDOVER-1, and two of these moved for a reason worth naming.** OVERVIEW's
+frame count fell from 5199 to 3603 and LEADER's median lag from 4.46 to 3.92 pp. Neither is a
+tracking change: the start ceremony and the field guarantee that now carries past the gun changed
+what the camera is DOING in those early seconds, so the same 60 s of race divides differently between
+the states. The lag itself is, if anything, slightly better.
 
 **These numbers replace stale ones, and the staleness is the point.** The convention list below previously stated
 "LEADER 2.05 pp, OVERVIEW 6.78 pp, every other state pooled 3.78 pp" as CURRENT figures. Running the
