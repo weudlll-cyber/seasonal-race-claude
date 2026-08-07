@@ -224,9 +224,19 @@ export function buildRace(geo, identity, cameraConfig) {
  * The loop is the one all four harnesses already ran: a 60 Hz frame clock, at most two fixed physics
  * steps per frame, and a 200 s wall-clock ceiling so a stuck race cannot hang a sweep.
  *
- * @param {(ctx: {cd, st, ts, raceStart, frame}) => void} onFrame  called AFTER cd.update()
+ * TWO ADDITIVE HOOKS, for harnesses that measure a WINDOW rather than a race. `onCountdownFrame`
+ * sees the ceremony (the frame before the gun is the reference every start-window measurement is
+ * expressed against, and it is unreachable from outside because the countdown runs in here), and an
+ * `onFrame` that returns exactly `false` stops the loop. Both are opt-in: an existing caller returns
+ * `undefined` and passes no countdown hook, so it runs the identical loop it always ran. The
+ * alternative was a second frame loop in the window harness, and two loops disagreeing about dt or
+ * the physics-step cap is precisely the drift this one driver exists to prevent.
+ *
+ * @param {(ctx: {cd, st, ts, raceStart, frame}) => void|false} onFrame  called AFTER cd.update();
+ *   return `false` to stop the run
+ * @param {{onCountdownFrame?: (ctx: {cd, st, ts, elapsed, countdownMs}) => void}} [hooks]
  */
-export function runRace(race, identity, cameraConfig, onFrame) {
+export function runRace(race, identity, cameraConfig, onFrame, hooks = {}) {
   const { st, raceCfg, cd } = race;
   const { canvasW: CW, canvasH: CH } = identity;
   const RAW = 1000 / 60;
@@ -238,6 +248,7 @@ export function runRace(race, identity, cameraConfig, onFrame) {
   const cdMs = cameraConfig.countdownDurationMs ?? 4000;
   while (ts < cdMs) {
     cd.updateCountdown(st.racers, ts, ts, cdMs, CW, CH);
+    hooks.onCountdownFrame?.({ cd, st, ts, elapsed: ts, countdownMs: cdMs });
     ts += RAW;
   }
 
@@ -266,9 +277,10 @@ export function runRace(race, identity, cameraConfig, onFrame) {
       CH,
       RAW,
     );
-    onFrame({ cd, st, ts, raceStart, frame });
+    const verdict = onFrame({ cd, st, ts, raceStart, frame });
     frame++;
     ts += RAW;
+    if (verdict === false) break;
   }
   return { frames: frame, endTs: ts };
 }

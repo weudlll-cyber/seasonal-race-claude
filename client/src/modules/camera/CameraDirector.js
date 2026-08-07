@@ -2472,6 +2472,12 @@ export class CameraDirector {
     };
 
     // ── WHERE IN FRAME: from the principle, not from a slider ──────────────────────────────────
+    // The three world points either side of the two authorities that MOVE the anchor are recorded
+    // on the probe (see above). A trace can then say which authority spent which world pixel
+    // instead of inferring it from the total — the question CEREMONY-REGRESSION-BISECT-1 could only
+    // answer by patching a throwaway copy of this file, which is the failure mode the probe exists
+    // to remove. Read by nothing in the camera.
+    const anchorPoint = panTarget;
     if (framing.position === POSITION.FORWARD && this._observerPhase === 'follow') {
       panTarget = this._applyLeaderForwardBias(
         panTarget,
@@ -2482,9 +2488,13 @@ export class CameraDirector {
         canvasH
       );
     }
+    const afterBias = panTarget;
 
     // ── AND ACROSS IT: shift off the centreline only when a guaranteed subject needs it ────────
     panTarget = this._applyLateralGuarantee(panTarget, headingT, subjects, guaranteed, frameSize);
+    this._framingProbe.anchorPoint = anchorPoint;
+    this._framingProbe.afterBias = afterBias;
+    this._framingProbe.afterLateral = panTarget;
 
     this._setTrackTargets(panTarget, guaranteed, frameSize);
   }
