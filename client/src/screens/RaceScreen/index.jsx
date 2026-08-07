@@ -20,8 +20,8 @@ import { formatRaceTime } from '../../utils/formatRaceTime.js';
 import { lerp, lerpAngle } from '../../utils/mathUtils.js';
 import { resolveActiveBrandProfile } from '../../modules/branding/useActiveBrandProfile.js';
 import { getRacerType, getCoatsByType } from '../../modules/racer-types/index.js';
-import {
 import { countdownDurationFor } from './nameTagLayout.js';
+import {
   assignCoat,
   assignPattern,
   PATTERN_IDS,
