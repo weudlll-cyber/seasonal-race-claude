@@ -223,3 +223,80 @@ different there. The same block of racers on the same bias would land in the cor
 its start line were on a bend. **Both tracks run the identical rule**; only the geometry differs. Any
 fix should be verified on a track whose start line is on a curve — of the ten, river-run and
 mountainstreet are the serpentines, and mountainstreet was not looked at in this block.
+
+---
+
+## 12. ADDENDUM — the owner disputed §2 at the picture, and he is right
+
+He is right, and the correction matters more than the original finding. **My §1/§2 number measures a
+different object from the one he is judging.**
+
+### The measurement in image coordinates, river-run, at the gun
+
+| moment | frame in world px | frame ÷ track width | frame centre → corridor (world / screen) | % of picture inside the corridor |
+| --- | --- | --- | --- | --- |
+| ceremony, last frame | 732 × 412 | **2.44×** | 34 / **60 px** | 70.9% |
+| +0 ms (the gun) | 732 × 412 | 2.44× | 34 / 60 px | 70.9% |
+| +100 ms | 741 × 417 | 2.47× | 20 / 35 px | 70.9% |
+| +300 ms | 756 × 425 | 2.52× | 2 / **3 px** | 69.5% |
+| +1000 ms | 785 × 441 | 2.62× | 19 / 31 px | 67.1% |
+
+searound, the same moments: frame **5.24×** the track width, centre 1–3 screen px from the corridor,
+**31.6%** of the picture inside it — and he likes that one.
+
+### Which of the two statements holds
+
+**The second: my first number measures something other than what he is judging.** Not "the camera
+stays on the track and the frame is merely wider".
+
+The reason is concrete and checkable, and I should have found it before reporting §2:
+
+```js
+// renderRaceFrame.js:150
+if (!isOpenTrack) drawEditorTrackSurface(ctx, shape);
+```
+
+**On an OPEN track the engine draws no track surface at all.** river-run is open. What he sees as the
+river is the **background artwork** (`backgroundImageFile`); the `width: 300` in the track geometry is
+a **physics and camera** number — it sets the corridor the racers run in and the unit the zoom
+settings are expressed in. Nothing makes the painted river and the 300 px logical corridor coincide,
+and on an open track nothing ever checks that they do.
+
+So the two statements are about two different objects:
+
+- **My number** — the camera centre sits within 2–34 world px of the **logical centreline**, and 67–71%
+  of the frame lies inside the **logical corridor**. That is true, and it is what a guarantee written
+  in track widths can see.
+- **His eye** — the frame centre sits on the **painted bank**, and the lower half of the picture is
+  bank. That is about the artwork, which my measurement never touched and the camera never reads.
+
+**Both can be true at once**, and on river-run they evidently are. His screenshot is not contradicted
+by my number; it is outside its reach.
+
+### What this changes
+
+**§2's conclusion is withdrawn.** I wrote that the camera "does not go into the bank". I could not
+have known that from what I measured — the corridor I checked against is not the thing that is
+painted. The honest form is: *the camera stays within the logical corridor, and on river-run the
+logical corridor is not the visible river.*
+
+**§4's diagnosis stands and is unaffected** — that the field lands at frame x = 0.27 in the first
+frame after the gun, against 0.50 on searound, is measured in image coordinates and does not depend on
+where the corridor is. It is still a discontinuity at the gun caused by the forward bias arriving
+before the field is strung out.
+
+**But there may now be a second, independent defect**, and it is his, not mine to close: if the
+logical corridor and the painted river disagree on river-run, then every camera guarantee expressed in
+track widths — the corridor guarantee, the zoom unit, the lateral guarantee — is keeping a promise
+about a corridor the viewer cannot see. That would explain why the same rule reads correctly on
+searound (closed, surface drawn from the same shape the camera measures, so they cannot disagree) and
+wrongly on river-run (open, artwork independent of the shape).
+
+**I have not measured the artwork**, and I am not going to guess at it. The check that would settle it
+is: overlay the logical corridor on river-run's background image and see whether they line up. If they
+do not, the fix is in the track geometry, not in the camera — and that is a different block.
+
+### What I did not do
+
+Nothing was repaired, as instructed. No source file was touched by this addendum; no fingerprint ran
+and none could move.

@@ -20,6 +20,13 @@ directions.
   left third. The across-track guarantee applies and correctly returns zero. Stage 2's premise is
   confirmed but it was NOT built — the stop rule asks for stage 1 first and the diagnosis differs from
   the hypothesis stage 2 was written against.
+  **ADDENDUM: the owner disputed the "does not leave the track" claim at the picture and was right.**
+  Open tracks draw NO track surface (`renderRaceFrame.js:150`), so on river-run the visible river is
+  the background ARTWORK while `width: 300` is a physics/camera number — my figure measured the
+  logical corridor, his eye judges the painted one, and nothing makes them agree. §2's conclusion is
+  withdrawn; §4's diagnosis is measured in image coordinates and stands. Possible second defect named
+  for him: every guarantee expressed in track widths may be keeping a promise about a corridor the
+  viewer cannot see.
 - [CEREMONY-HANDOVER-1.md](CEREMONY-HANDOVER-1.md) — the field guarantee no longer stops at the gun,
   and the settled beat became a control instead of a remainder. The racing-time promise is the COMPANY
   guarantee with the WHOLE FIELD as its company — reuse that is correctness, not economy, because the
