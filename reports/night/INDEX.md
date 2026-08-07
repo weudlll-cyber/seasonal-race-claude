@@ -8,6 +8,17 @@ report here could be orphaned, or an index link could dangle, with nothing notic
 `node scripts/check-index.mjs --dir=reports/night --index=reports/night/INDEX.md` now checks both
 directions.
 
+- [RACE-NUMBERS-1.md](RACE-NUMBERS-1.md) — the racer wears a NUMBER on the track (at most three
+  characters) and the standings list carries the number before the name. The draw cannot shift the
+  race and the guarantee is structural: `assignRaceNumbers` takes no rng argument, builds its own
+  generator and discards it. **The trap that would have caught a careful implementation:** an unseeded
+  race runs off `Math.random` directly, so a "fall back to Math.random" numbering would consume from
+  the race's own stream in exactly the case it thought was safe — the fallback is a constant, and a
+  test asserts `Math.random` is never called. Proved three ways (world unchanged, engine-reach clear,
+  and an independent generator lands where it would have). Render moved on all ten tracks as expected;
+  the op counts went UP, because shorter labels collide less so MORE labels survive decluttering.
+  Caught on the way: the harness knew nothing of `raceNumber` and would have gone straight back to
+  measuring empty label boxes.
 - [HARNESS-NAMES-1.md](HARNESS-NAMES-1.md) — the render harness never set `r.name`, so every label
   box in it was 8px of padding: it measured a geometry the game cannot produce. Fixed with the MIXED
   roster, by index, imported from the one home; render **re-minted deliberately** to
