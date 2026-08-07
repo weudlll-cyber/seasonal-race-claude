@@ -8,6 +8,16 @@ report here could be orphaned, or an index link could dangle, with nothing notic
 `node scripts/check-index.mjs --dir=reports/night --index=reports/night/INDEX.md` now checks both
 directions.
 
+- [CEREMONY-REGRESSION-BISECT-1.md](CEREMONY-REGRESSION-BISECT-1.md) — **the commit is `ffa68d94`
+  (START-CEREMONY-CAMERA-1); CEREMONY-HANDOVER-1 changed nothing here**, its column is identical to
+  the digit. Two corrections: the **x = 0.27 figure is NOT the regression** (master is 0.26 — the
+  field was always in the left third), and what actually changed is the OTHER axis and the motion —
+  the field is walked UP the frame (y 0.50 held on master vs 0.42 after), the centre now travels
+  **4.8 -> 37.1 world px** along the track (7.7x), and its approach to the centreline changes from
+  monotonic to an overshoot-and-return. **The frame-fraction hypothesis is CONTRADICTED**: the
+  ceremony's held frame is 8.4% NARROWER (732 vs 800 world px), so a frame-fraction bias would shift
+  less, not more. Inference named but not isolated: the first OVERVIEW is now handed the field-derived
+  hold instead of its own setting, so a settled state became a zoom transition.
 - [CORRIDOR-OVERLAY-1.md](CORRIDOR-OVERLAY-1.md) — a Dev Screen overlay (default OFF) drawing the
   logical corridor and a cross on the frame centre. **The deciding picture is NOT delivered** — the
   background does not blit in the capture and the red edges still do not draw, so no verdict is
