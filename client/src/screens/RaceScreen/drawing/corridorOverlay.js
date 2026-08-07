@@ -34,14 +34,18 @@ const SAMPLES = 400;
  *
  * @param {CanvasRenderingContext2D} ctx
  * @param {object} shape  EditorShape
- * @param {number} trackWidthPx  the corridor width in WORLD px — the number every camera setting in
- *        track widths is expressed against
+ * @param {number} trackWidthPx  kept for the caller's clarity; the edges come from the shape's own
+ *        normalised offset, which is what actually defines them
  * @param {number} effZoomX  effective world→screen scale, for constant-thickness lines
  */
 export function drawCorridorOverlay(ctx, shape, trackWidthPx, effZoomX) {
-  if (!shape || !(trackWidthPx > 0)) return;
+  if (!shape) return;
   const inv = 1 / (effZoomX > 0 ? effZoomX : 1);
-  const half = trackWidthPx / 2;
+  // THE OFFSET IS NORMALISED, NOT WORLD PIXELS. `EditorShape.getPosition(t, offset)` computes
+  // `offset * this._centerWidth`, so +/-1 IS the corridor edge and a world-px value sent here goes
+  // that many half-widths off the map. Passing `trackWidthPx / 2` drew the edges 150 half-widths
+  // away — off the world entirely, which is why they were invisible in the first capture.
+  const EDGE = 1;
 
   const path = (lateral) => {
     ctx.beginPath();
@@ -65,8 +69,8 @@ export function drawCorridorOverlay(ctx, shape, trackWidthPx, effZoomX) {
   ctx.strokeStyle = '#ff2d55';
   ctx.lineWidth = 3 * inv;
   ctx.setLineDash([]);
-  path(half);
-  path(-half);
+  path(EDGE);
+  path(-EDGE);
   // The centreline, dashed, so it cannot be mistaken for an edge.
   ctx.strokeStyle = '#00e5ff';
   ctx.lineWidth = 2 * inv;
