@@ -8,6 +8,15 @@ report here could be orphaned, or an index link could dangle, with nothing notic
 `node scripts/check-index.mjs --dir=reports/night --index=reports/night/INDEX.md` now checks both
 directions.
 
+- [CORRIDOR-OVERLAY-1.md](CORRIDOR-OVERLAY-1.md) — a Dev Screen overlay (default OFF) drawing the
+  logical corridor and a cross on the frame centre. **The deciding picture is NOT delivered** — the
+  background does not blit in the capture and the red edges still do not draw, so no verdict is
+  claimed. What it DID find: `EditorShape.getPosition(t, offset)` treats the offset as NORMALISED
+  against `track.width`, and the same `width: 300` is a FULL width in the physics and the camera
+  (racers at 0.5 -> 150 px; `_trackWidthPx / 2`) but a HALF width in the code that draws the track
+  edges (`getPosition(0, 1.0)` -> 300 px). **A factor of two between what is drawn and what the
+  camera guarantees** — a strong candidate for the root of the river-run dispute, deliberately not
+  fixed here.
 - [CEREMONY-HOLD-CENTRE-1.md](CEREMONY-HOLD-CENTRE-1.md) — **STAGE 1 ONLY, nothing built.** First
   second after the gun, camera centre split along/across the track: river-run **along 37.1 / across
   52.7** (ratio 1.42), searound **along 73.9 / across 0.5** (ratio 0.01) — a 142x difference, which is
