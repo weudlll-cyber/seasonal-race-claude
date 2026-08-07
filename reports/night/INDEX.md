@@ -8,6 +8,18 @@ report here could be orphaned, or an index link could dangle, with nothing notic
 `node scripts/check-index.mjs --dir=reports/night --index=reports/night/INDEX.md` now checks both
 directions.
 
+- [START-CEREMONY-CAMERA-1.md](START-CEREMONY-CAMERA-1.md) — the race opens on the whole track, held
+  still, then eases in to the formation until it is as large as it can be with every racer still in
+  frame, and that framing is held into the race. **Both ends of the move are GEOMETRY and neither is
+  a setting** — the track's own extent and the field's own extent, the latter through a new
+  `fieldGuarantee`; only the rhythm is sliders. The hold is a DESIRED zoom, not a freeze: it enters
+  `Math.min` with the guarantees, so they can widen it and cannot narrow it (L192 by construction).
+  COUNTDOWN did NOT become a row in FRAMING_BY_STATE — the table is read only for states the machine
+  reaches during RACING, so a row would be a setting nothing reads; the value came from the GUARANTEE
+  instead and both halves arrived. Measured on 10 tracks x 5 field sizes from real formations: all 50
+  keep every racer in frame, target ranges 0.632 to 13.784. Camera moved on all ten, render moved,
+  world unchanged. **Open question for the owner: at 100 racers the first view change is a 2.6-4.1x
+  jump** — named with numbers, no mechanism added, his taste to decide.
 - [LABEL-OFFSET-1.md](LABEL-OFFSET-1.md) — the label's distance from its racer was `fontPx * 2.0`, a
   property of the TEXT, so it stayed put while the racer changed size. It is now half the racer's
   DRAWN height plus a margin slider (`nameTagMarginPx`, 6 px), which needs no per-track constant
