@@ -45,6 +45,37 @@ const BOX_H_FACTOR = 1.18;
 const BOX_OFFSET_FACTOR = 2.0;
 
 /**
+ * THE LABEL BOX'S SHAPE — one home (CLEANUP-BEFORE-NUMBERS-1, salvaged from LABEL-SHRINK-1).
+ *
+ * These three numbers had TWO homes: this module named them in order to lay labels out, and
+ * `racerRendering.js` re-typed them as literals (`fontPx * 1.18`, `fontPx * 2.0`, `+ 8`) in order to
+ * draw one. Two copies of the shape of a single rectangle — the layout could have been reasoning
+ * about a box the renderer never drew, and nothing would have failed.
+ *
+ * Nothing had drifted, which is the argument for fixing it while that is still true. The merge is
+ * arithmetically identical, and the render fingerprint being unchanged is what proves it rather than
+ * an argument that it must be.
+ *
+ * The renderer imports these. If the box changes shape, it changes here and the layout and the
+ * drawing move together by construction.
+ */
+
+/** The label box height in screen px. */
+export function labelBoxHeight(fontPx) {
+  return fontPx * BOX_H_FACTOR;
+}
+
+/** How far above the racer's centre the BOTTOM of the label sits, in screen px. */
+export function labelOffsetAbove(fontPx) {
+  return fontPx * BOX_OFFSET_FACTOR;
+}
+
+/** The label box width for a measured text width, in screen px. */
+export function labelBoxWidth(textWidth) {
+  return textWidth + BOX_PAD_X;
+}
+
+/**
  * STABILITY, and both numbers are measured rather than chosen. A first-fit layout recomputed every
  * frame churns: across the ten tracks at 40 racers it changed 12.06 labels per second, and a name
  * that appears and vanishes twice a second cannot be read at all.
@@ -129,8 +160,8 @@ export function computeTagLayout({
     return { shown, eligible: 0, placed: 0, dropped: 0 };
   }
 
-  const boxH = fontPx * BOX_H_FACTOR;
-  const offsetAbove = fontPx * BOX_OFFSET_FACTOR;
+  const boxH = labelBoxHeight(fontPx);
+  const offsetAbove = labelOffsetAbove(fontPx);
   const edgeMargin = Math.max(0, edgeMarginFrac) * canvasH;
 
   // ── ELIGIBLE: on canvas. Not "top N by position" — a label answers "who is that on screen". ──
@@ -146,7 +177,7 @@ export function computeTagLayout({
     const isIncumbent = incumbents ? incumbents.has(r.index) : false;
     const m = isIncumbent ? -edgeMargin : edgeMargin;
     if (sx < m || sx > canvasW - m || sy < m || sy > canvasH - m) continue;
-    const w = Math.max(1, measureText(labelOf(r)) + BOX_PAD_X);
+    const w = Math.max(1, labelBoxWidth(measureText(labelOf(r))));
     // The box, in screen px, exactly where it will be drawn.
     eligible.push({
       index: r.index,

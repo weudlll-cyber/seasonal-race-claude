@@ -97,6 +97,22 @@ archived as permanent `archive/*` tags and their remote branches deleted (branch
   fingerprint `ded0a126048e4cdb` (replaces the pre-combo15 anchor `7c70b1eae7d31e22`; OFF invariant
   `f8f7d9c2fd3283e9` unchanged). See [../reports/evolution/MERGE-SHIP-1.md](../reports/evolution/MERGE-SHIP-1.md)
   and [FAIRNESS.md](FAIRNESS.md).
+### The label line — archived when the race-number design replaced it (2026-08-07)
+
+Four branches built to solve "names ON racers". The owner chose the race-number design, which removes
+that problem, so all four were archived as tags and their branches deleted (CLEANUP-BEFORE-NUMBERS-1).
+**Their reports are on master as history**; these tags preserve the CODE, which is not.
+
+- `archive/label-stagger-1` (`7368f58d`, 2026-08-07) — the stagger placement that measurably creates
+  as many overlaps as it removes, plus the exact overlap trigger, which was dropped for having no job
+  left once labels are 2-3 characters.
+- `archive/label-shrink-1` (`7a2f1750`, 2026-08-07) — the shrink rule: cleared every overlap at every
+  field size and was rejected by the owner at the picture. Its label-box unification IS on master.
+- `archive/start-sequence-1` (`d84c7205`, 2026-08-07) — the roll call in waves. Its countdown finding
+  IS on master; the wave partition and wave clock are here only.
+- `archive/roll-call-pairing-1` (`8cc12197`, 2026-08-07) — leader lines and wave dimming. **The most
+  likely to be plundered again:** pairing a label to its racer is the same problem a race number has.
+
 - `pre/start-formation` (`b62ffc0b`, 2026-08-07) — the return point: master state right BEFORE the start
   formation shipped, i.e. the last build in which a racer sprite could be drawn ON TOP of a name tag.
   Restores render fingerprint `1f83ecc1fcb6fa9a`; the world and camera fingerprints are the same on
