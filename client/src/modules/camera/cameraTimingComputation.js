@@ -35,6 +35,7 @@ const POST_START_HOLD_MS = 7000;
 // better than `POST_START_HOLD_MS` beside it, which is duplicated and unguarded.
 const CEREMONY_VENUE_MS = 1400;
 const CEREMONY_PUSH_MS = 2000;
+const CEREMONY_SETTLED_MS = 600;
 const CEREMONY_EASING = 'easeInOutCubic';
 const BATTLE_COOLDOWN_MS = 8000;
 const BATTLE_MAX_DURATION = 6000;
@@ -88,6 +89,7 @@ export function computeTimingFromConfig(config) {
   // unknown name to the shipped curve, so validating it twice would be a second authority on it.
   const ceremonyVenueMs = ceremonyMs(config?.ceremonyVenueMs, CEREMONY_VENUE_MS);
   const ceremonyPushMs = ceremonyMs(config?.ceremonyPushMs, CEREMONY_PUSH_MS);
+  const ceremonySettledMs = ceremonyMs(config?.ceremonySettledMs, CEREMONY_SETTLED_MS);
   const ceremonyEasing = config?.ceremonyEasing ?? CEREMONY_EASING;
   const battleCooldownMs = config?.battleCooldownMs ?? BATTLE_COOLDOWN_MS;
   const showDiagnostics = config?.showCameraDiagnostics ?? false;
@@ -322,6 +324,7 @@ export function computeTimingFromConfig(config) {
     postStartHoldMs,
     ceremonyVenueMs,
     ceremonyPushMs,
+    ceremonySettledMs,
     ceremonyEasing,
     battleCooldownMs,
     showDiagnostics,

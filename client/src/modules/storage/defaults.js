@@ -363,10 +363,16 @@ export const DEFAULT_CAMERA_CONFIG = {
   // the gun — see `ceremonySchedule`. Whatever is left is a SETTLED beat: the formation held
   // motionless before the start, which is what keeps the arrival from reading as an interruption.
   //
-  // 1400 + 2000 inside 4000 leaves 600 ms of stillness. My judgement, not a measurement; all three
-  // are for the owner's eye.
+  // 1400 + 2000 + 600 fills 4000 exactly. My judgement, not a measurement; all four are for the
+  // owner's eye.
   ceremonyVenueMs: 1400,
   ceremonyPushMs: 2000,
+  // The formation held motionless before the gun. CEREMONY-HANDOVER-1 made this a CONTROL: it used
+  // to be the remainder of the countdown after the other two, so the one beat whose job is stillness
+  // could only be set indirectly. The owner watched it last "VERY briefly" and had no slider for it.
+  // Any slack left in the countdown is still added HERE, so this is a floor rather than an exact
+  // figure — see `ceremonySchedule`.
+  ceremonySettledMs: 600,
   // Ease-in-out: begins at rest, gathers, arrives at rest. The countdown used ease-OUT cubic, which
   // starts at full speed — that reads as the camera catching up to something rather than as
   // ceremony. 'easeOutCubic' is on the list so the old feel can be put back beside the new one.

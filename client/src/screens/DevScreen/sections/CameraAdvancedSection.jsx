@@ -461,6 +461,30 @@ function CameraAdvancedSection() {
               className={s.label}
               style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}
             >
+              Settled Hold (ms)
+              <InfoTooltip
+                text={`How long the finished formation is held STILL before the gun. This used to be whatever was left of the countdown after the other two beats, so it could only be set indirectly; it is now its own control and means what it says. If the three beats ask for more than the countdown has, all three are scaled proportionally. Currently: ${config.ceremonySettledMs ?? 600}ms.`}
+              />
+            </label>
+            <input
+              type="number"
+              className={s.input}
+              data-testid="ceremony-settled-ms"
+              min={0}
+              max={6000}
+              step={100}
+              value={config.ceremonySettledMs ?? 600}
+              onChange={(e) => {
+                const v = Number(e.target.value);
+                if (v >= 0 && v <= 6000) set('ceremonySettledMs', v);
+              }}
+            />
+          </div>
+          <div className={s.formGroup}>
+            <label
+              className={s.label}
+              style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}
+            >
               Push Easing
               <InfoTooltip
                 text={`The SHAPE of the push in. Ease in-out begins at rest, gathers, and arrives at rest — the ceremonial shape. Ease out cubic is what the countdown did before this block: it starts at full speed, which reads as the camera catching up to something rather than as ceremony. Quint is the same shape held longer at both ends, the most deliberate of the four.`}

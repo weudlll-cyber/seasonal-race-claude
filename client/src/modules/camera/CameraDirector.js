@@ -324,6 +324,11 @@ export class CameraDirector {
     // (a test, a resumed race) gets OVERVIEW's ordinary setting rather than a stale hold.
     this._ceremonyHoldZoom = null;
     this._ceremonyBeat = null;
+    // CEREMONY-HANDOVER-1: the ceremony's promise, carried past the gun. ARMED by the countdown, so
+    // a race entered without one (a test, a resumed race) never acquires a guarantee it was never
+    // given — and RETIRED, one way, by `_fieldCeiling` when it can no longer be kept.
+    this._fieldGuaranteeActive = false;
+    this._fieldGuaranteeRetiredAt = null;
     // LEAD_CHANGE: leader-tracking state
     this._currentLeaderIndex = null;
     this._currentLeaderName = null;
@@ -508,6 +513,7 @@ export class CameraDirector {
     this._postStartHoldMs = t.postStartHoldMs;
     this._ceremonyVenueMs = t.ceremonyVenueMs;
     this._ceremonyPushMs = t.ceremonyPushMs;
+    this._ceremonySettledMs = t.ceremonySettledMs;
     this._ceremonyEasing = t.ceremonyEasing;
     this._battleCooldownMs = t.battleCooldownMs;
     this._showDiagnostics = t.showDiagnostics;
@@ -2000,6 +2006,76 @@ export class CameraDirector {
   }
 
   /**
+   * THE FIELD GUARANTEE, CARRIED PAST THE GUN — CEREMONY-HANDOVER-1 (b).
+   *
+   * THE DEFECT IT ENDS, in the owner's words: the camera "zooms out again and moves the focus so far
+   * while zooming out that for a short time we can no longer see all the racers". At the gun the
+   * ceremony's promise simply stopped and the COMPANY guarantee took over — five racers instead of
+   * forty — so the very next move was free to drop the other thirty-five out of frame, immediately
+   * after a shot that had just shown everyone.
+   *
+   * IT IS THE COMPANY GUARANTEE WITH THE WHOLE FIELD AS ITS COMPANY. Not a new geometry: the same
+   * `companyGuarantee`, at the same anchor, through the same `roomFromPointAlong`, with `minVisible`
+   * set past the end of the field so the tightest ceiling — the FARTHEST racer — is the one returned.
+   * That matters for more than economy. The ceremony's own `fieldGuarantee` measures from the
+   * formation's CENTRE, which is exactly right while the camera is centred on the formation and
+   * exactly wrong afterwards: during the race the camera sits on the leader, forward-framed, and a
+   * promise measured from the centre would under-widen by the whole of that offset and drop the back
+   * of the field — the defect, rebuilt inside its own fix.
+   *
+   * A CEILING, SO IT WIDENS AND NEVER STEERS (Lesson 192). It joins the existing `Math.min` beside
+   * the other two. It cannot move a centre, choose an anchor or read a clock.
+   *
+   * @returns {number} cam.zoom ceiling, or Infinity once the guarantee has retired
+   */
+  _fieldCeiling(subjects, racers, frameSize) {
+    if (!this._fieldGuaranteeActive) return Infinity;
+    if (!subjects?.point || !Array.isArray(racers) || racers.length === 0) return Infinity;
+    const at = anchorScreenPoint(
+      frameSize.width,
+      frameSize.height,
+      framingFor(this.state).position === POSITION.FORWARD ? this._leaderForwardFrac : null,
+      this._headingScreen(subjects.t)
+    );
+    // `racers.length + 1` asks for more company than exists, and `companyGuarantee` answers that by
+    // taking what exists — the tightest ceiling in the list, which is every racer in frame.
+    const ceiling = companyGuarantee(
+      subjects.point,
+      racers,
+      racers.length + 1,
+      this._proj.axisX,
+      this._proj.axisY,
+      frameSize.width,
+      frameSize.height,
+      COMPANY_FRAME_PCT,
+      at
+    );
+
+    // ── RETIREMENT ───────────────────────────────────────────────────────────────────────────────
+    // IT RETIRES WHEN IT CAN NO LONGER BE KEPT, and the measure of "kept" is the camera's own widest
+    // named shot. OVERVIEW is defined in this project as the same shot at the widest setting — the
+    // widest framing the design admits and the owner sets. A guarantee demanding more than that is
+    // asking for a picture this camera does not have a name for; carrying on would quietly make
+    // every state a de-facto OVERVIEW and replace the whole vocabulary with one shot.
+    //
+    // FROM GEOMETRY, NEVER FROM A CLOCK. Both sides are zooms: one falls out of where the racers
+    // actually are, the other is the owner's OVERVIEW setting. No timer, no lap count, no field size
+    // appears in it — a tight field keeps its guarantee for longer than a scattered one on the same
+    // track, which is the behaviour asked for.
+    //
+    // LATCHED, one way. A field that re-converges — after a crash-back, or a lap boundary on a
+    // closed track — would otherwise re-impose the wide shot mid-race and the picture would breathe
+    // in and out. Retirement is a statement about the START being over, and the start does not
+    // resume.
+    if (!(ceiling >= this._overviewStateZoom)) {
+      this._fieldGuaranteeActive = false;
+      this._fieldGuaranteeRetiredAt = subjects.t ?? null;
+      return Infinity;
+    }
+    return ceiling;
+  }
+
+  /**
    * CAMERA-FOCUS-3 leader forward-framing. Shifts a pan target BACKWARD along the leader's motion tangent
    * so the leader lands at screen fraction `_leaderForwardFrac` (> 0.5) along the motion axis — i.e. FORWARD,
    * with the trailing pack filling the rest of the frame (the action is behind the leader). Returns the
@@ -2383,7 +2459,10 @@ export class CameraDirector {
     const guaranteed = Math.min(
       stateZoom,
       this._guaranteeCeiling(subjects, frameSize),
-      _companyIsHome ? Infinity : this._companyCeiling(subjects, racers, frameSize)
+      _companyIsHome ? Infinity : this._companyCeiling(subjects, racers, frameSize),
+      // CEREMONY-HANDOVER-1: the ceremony's promise, still standing. Infinity once it has retired,
+      // so this line costs nothing for the rest of the race.
+      this._fieldCeiling(subjects, racers, frameSize)
     );
 
     // READ-ONLY PROBE (CAMERA-ANCHOR-TRUTH-1 §4a). The framing inputs this frame actually used, so
@@ -2669,7 +2748,12 @@ export class CameraDirector {
     const cx = centre.x;
     const cy = centre.y;
 
-    const schedule = ceremonySchedule(this._ceremonyVenueMs, this._ceremonyPushMs, duration);
+    const schedule = ceremonySchedule(
+      this._ceremonyVenueMs,
+      this._ceremonyPushMs,
+      this._ceremonySettledMs,
+      duration
+    );
     const venueZoom = this._venueCamZoom(canvasW, canvasH);
     const formationZoom = this._ceremonyTargetCamZoom(racers, centre, canvasW, canvasH);
     // THE PUSH IS MONOTONE OR IT IS NOTHING. Where the formation fills the world, or where the
@@ -2693,6 +2777,10 @@ export class CameraDirector {
     // the ceremony was travelling towards instead of freezing halfway.
     this._ceremonyHoldZoom = targetZoom;
     this._ceremonyBeat = ceremonyAt(elapsed, schedule).beat;
+    // ARM THE GUARANTEE. The ceremony has just shown every racer; the promise it made is that they
+    // stay shown. It is armed here rather than at the gun so there is no frame between the two in
+    // which it is not held — the gap the owner watched racers fall through.
+    this._fieldGuaranteeActive = true;
 
     // CAMERA-PROJECTION-1: one centring computation per axis, from the projection. The former
     // open/closed branches were the same eight lines twice — open used one scale on both axes,

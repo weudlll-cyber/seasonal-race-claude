@@ -183,46 +183,46 @@ describe('the venue shot shows the whole track (START-CEREMONY-CAMERA-1)', () =>
 });
 
 describe('the ceremony always completes before the gun (START-CEREMONY-CAMERA-1)', () => {
-  // What breaks if deleted: the two beats could outrun the countdown.
-  // What goes unnoticed: the whole of element (d). The hold keeps the framing the ceremony ARRIVED
-  // at; if the push were still travelling when the gun went, the held shot would be a half-finished
-  // one, and it would look like a deliberate framing rather than like a bug.
-  it('fits inside the countdown and leaves the remainder as a settled beat', () => {
-    const s = ceremonySchedule(1400, 2000, 4000);
+  // What breaks if deleted: the beats could outrun the countdown.
+  // What goes unnoticed: the whole of the hold. It keeps the framing the ceremony ARRIVED at; if the
+  // push were still travelling when the gun went, the held shot would be a half-finished one, and it
+  // would look like a deliberate framing rather than like a bug.
+  it('fits inside the countdown when the three beats fill it exactly', () => {
+    const s = ceremonySchedule(1400, 2000, 600, 4000);
     expect(s.venueMs).toBe(1400);
     expect(s.pushMs).toBe(2000);
     expect(s.settledMs).toBe(600);
     expect(s.scaled).toBe(false);
   });
 
-  it('scales both beats proportionally rather than truncating one', () => {
+  it('scales all three beats proportionally rather than truncating one', () => {
     // Truncation would cut the push off mid-move. Scaling keeps the RATIO the owner set, which is
     // what he was actually expressing.
-    const s = ceremonySchedule(3000, 3000, 4000);
-    expect(s.venueMs + s.pushMs).toBeCloseTo(4000, 9);
+    const s = ceremonySchedule(3000, 3000, 3000, 4000);
+    expect(s.venueMs + s.pushMs + s.settledMs).toBeCloseTo(4000, 9);
     expect(s.venueMs / s.pushMs).toBeCloseTo(1, 9);
-    expect(s.settledMs).toBe(0);
+    expect(s.settledMs / s.pushMs).toBeCloseTo(1, 9);
     expect(s.scaled).toBe(true);
-    const uneven = ceremonySchedule(1000, 3000, 2000);
-    expect(uneven.venueMs + uneven.pushMs).toBeCloseTo(2000, 9);
+    const uneven = ceremonySchedule(1000, 3000, 1000, 2500);
+    expect(uneven.venueMs + uneven.pushMs + uneven.settledMs).toBeCloseTo(2500, 9);
     expect(uneven.pushMs / uneven.venueMs).toBeCloseTo(3, 9);
   });
 
   it('has arrived at the target by the gun, for every schedule', () => {
-    for (const [v, p, total] of [
-      [1400, 2000, 4000],
-      [3000, 3000, 4000],
-      [0, 4000, 4000],
-      [4000, 0, 4000],
-      [0, 0, 4000],
+    for (const [v, p, st, total] of [
+      [1400, 2000, 600, 4000],
+      [3000, 3000, 3000, 4000],
+      [0, 4000, 0, 4000],
+      [4000, 0, 0, 4000],
+      [0, 0, 0, 4000],
     ]) {
-      const s = ceremonySchedule(v, p, total);
+      const s = ceremonySchedule(v, p, st, total);
       expect(ceremonyZoom(1, 5, total, s, CEREMONY_EASINGS.easeInOutCubic)).toBeCloseTo(5, 9);
     }
   });
 
   it('holds the venue shot still through the first beat, then moves', () => {
-    const s = ceremonySchedule(1400, 2000, 4000);
+    const s = ceremonySchedule(1400, 2000, 600, 4000);
     expect(ceremonyAt(0, s).beat).toBe(CEREMONY_BEAT.VENUE);
     expect(ceremonyAt(1399, s).beat).toBe(CEREMONY_BEAT.VENUE);
     expect(ceremonyZoom(1, 5, 0, s, CEREMONY_EASINGS.linear)).toBe(1);
@@ -233,7 +233,7 @@ describe('the ceremony always completes before the gun (START-CEREMONY-CAMERA-1)
 
   it('never moves backwards during the push', () => {
     // A curve that overshot or dipped would show as the camera pulling back mid-ceremony.
-    const s = ceremonySchedule(1400, 2000, 4000);
+    const s = ceremonySchedule(1400, 2000, 600, 4000);
     for (const name of Object.keys(CEREMONY_EASINGS)) {
       let prev = -Infinity;
       for (let t = 0; t <= 4000; t += 25) {
@@ -242,6 +242,53 @@ describe('the ceremony always completes before the gun (START-CEREMONY-CAMERA-1)
         prev = z;
       }
     }
+  });
+});
+
+describe('the settled beat is a control, not a remainder (CEREMONY-HANDOVER-1)', () => {
+  // What breaks if deleted: the settled beat could quietly go back to being whatever was left of the
+  // countdown — it was written that way once, and the shorter expression is the wrong one.
+  // What goes unnoticed: the owner setting the slider and the picture not changing, or changing by
+  // the wrong amount, because the other two beats had eaten the time. He watched the formation shot
+  // last "VERY briefly" and had no control over it; a silent regression would put him back there
+  // with a slider on screen that appears to do nothing.
+  it('honours the slider rather than recomputing it from what is left', () => {
+    // The proof that it is not a remainder: the venue and the push are held constant while the
+    // COUNTDOWN grows. A remainder would grow with it; a control does not.
+    const a = ceremonySchedule(1000, 1000, 500, 2500);
+    expect(a.settledMs).toBe(500);
+    // The same beats in a countdown with room to spare. A remainder would swell to fill it; a
+    // control does not move. This is the assertion that caught the first attempt, which handed the
+    // slack to the settled beat and so made the slider a no-op exactly here.
+    const b = ceremonySchedule(1000, 1000, 500, 6000);
+    expect(b.settledMs).toBe(500);
+    expect(b.venueMs).toBe(1000);
+    expect(b.pushMs).toBe(1000);
+  });
+
+  it('lengthens the stillness without moving the push, which is the point of the slider', () => {
+    const short = ceremonySchedule(1400, 2000, 200, 5000);
+    const long = ceremonySchedule(1400, 2000, 1400, 5000);
+    expect(long.settledMs).toBeGreaterThan(short.settledMs);
+    // The move itself is untouched — the owner tunes the pause without retuning the ceremony.
+    expect(long.venueMs).toBe(short.venueMs);
+    expect(long.pushMs).toBe(short.pushMs);
+  });
+
+  it('is scaled with the others when the three overrun, not sacrificed to them', () => {
+    // The failure this rules out: making room by zeroing the settled beat, which would restore the
+    // old behaviour under a new name.
+    const s = ceremonySchedule(2000, 2000, 2000, 3000);
+    expect(s.settledMs).toBeGreaterThan(0);
+    expect(s.settledMs).toBeCloseTo(1000, 9);
+    expect(s.venueMs + s.pushMs + s.settledMs).toBeCloseTo(3000, 9);
+  });
+
+  it('still fills the countdown when the settled beat is set to zero', () => {
+    const s = ceremonySchedule(1400, 2000, 0, 4000);
+    expect(s.venueMs).toBe(1400);
+    expect(s.pushMs).toBe(2000);
+    expect(s.settledMs).toBe(0); // asked for none, given none — the remaining 600 ms is simply still
   });
 });
 
@@ -277,6 +324,7 @@ describe('the easing curves and their settings (START-CEREMONY-CAMERA-1)', () =>
     const t = computeTimingFromConfig(null);
     expect(t.ceremonyVenueMs).toBe(DEFAULT_CAMERA_CONFIG.ceremonyVenueMs);
     expect(t.ceremonyPushMs).toBe(DEFAULT_CAMERA_CONFIG.ceremonyPushMs);
+    expect(t.ceremonySettledMs).toBe(DEFAULT_CAMERA_CONFIG.ceremonySettledMs);
     expect(t.ceremonyEasing).toBe(DEFAULT_CAMERA_CONFIG.ceremonyEasing);
   });
 });

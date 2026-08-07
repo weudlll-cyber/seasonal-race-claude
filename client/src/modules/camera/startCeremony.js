@@ -64,38 +64,44 @@ export const CEREMONY_BEAT = {
 };
 
 /**
- * Fit the two tunable beats inside the countdown, and say what is left over.
+ * Fit the THREE tunable beats inside the countdown.
  *
- * THE CONSTRAINT THAT MAKES THIS NECESSARY: the countdown's length is its own setting with its own
- * home (`countdownDurationMs`), and the two ceremony durations are separate sliders. Nothing stops
- * the owner asking for a 3 s venue and a 3 s push inside a 4 s countdown.
+ * CEREMONY-HANDOVER-1 MADE THE SETTLED BEAT A CONTROL. It used to be a REMAINDER — whatever was left
+ * of the countdown after the venue and the push — so the one beat whose whole job is stillness could
+ * only be set indirectly, by making the other two shorter. The owner watched the formation shot last
+ * "VERY briefly" and had no slider for it. It is now its own number, and the invariant that keeps it
+ * one is stated here: a beat that is a control must never silently become a leftover again.
  *
- * When that happens the two beats are SCALED PROPORTIONALLY rather than truncated. Truncation would
- * cut the push off mid-move, so the camera would still be travelling when the gun went and the
- * framing the hold is supposed to keep would never have been reached. Scaling preserves the RATIO
- * the owner set — which is the thing he was actually expressing — and guarantees the move always
- * completes before the start.
+ * THE CONSTRAINT: the countdown's length is its own setting (`countdownDurationMs`), and nothing
+ * stops the three beats asking for more than it has. When they do, all THREE are scaled
+ * proportionally rather than truncated. Truncation would cut the push off mid-move, so the camera
+ * would still be travelling when the gun went and the framing the hold keeps would never have been
+ * reached. Scaling preserves the RATIO the owner set, which is what he was actually expressing, and
+ * guarantees the move always completes before the start.
  *
- * When they fit, the remainder is a SETTLED beat: the formation held, motionless, before the gun.
- * That is a feature and not slack. It is the moment the shot is allowed to be still, and without it
- * the push would arrive exactly as the race begins, which reads as an interruption.
+ * SLACK IS NOT REDISTRIBUTED, AND THAT WAS A CORRECTION MADE UNDER TEST. Giving the leftover to the
+ * settled beat looks generous and reads well — and it makes the settled slider a NO-OP in the common
+ * case, because whenever the countdown is longer than the three beats the leftover swamps whatever
+ * the owner set. That is the same defect this block exists to remove, rebuilt one line lower down.
+ * The beats are what they say. If they do not fill the countdown, the remaining time is the same
+ * still frame the settled beat already is, so nothing is seen to change — but the number on the
+ * slider means what it says.
  *
- * @param {number} venueMs  requested venue-shot duration
- * @param {number} pushMs   requested push-in duration
+ * @param {number} venueMs    requested venue-shot duration
+ * @param {number} pushMs     requested push-in duration
+ * @param {number} settledMs  requested settled duration — the formation held before the gun
  * @param {number} countdownMs  the countdown's total length
  * @returns {{venueMs:number, pushMs:number, settledMs:number, scaled:boolean}} the fitted beats
  */
-export function ceremonySchedule(venueMs, pushMs, countdownMs) {
+export function ceremonySchedule(venueMs, pushMs, settledMs, countdownMs) {
   const total = Math.max(0, countdownMs) || 0;
   const v = Math.max(0, Number.isFinite(venueMs) ? venueMs : 0);
   const p = Math.max(0, Number.isFinite(pushMs) ? pushMs : 0);
-  const asked = v + p;
-  if (asked <= 0) return { venueMs: 0, pushMs: 0, settledMs: total, scaled: false };
-  if (asked <= total) {
-    return { venueMs: v, pushMs: p, settledMs: total - asked, scaled: false };
-  }
-  const k = total / asked;
-  return { venueMs: v * k, pushMs: p * k, settledMs: 0, scaled: true };
+  const st = Math.max(0, Number.isFinite(settledMs) ? settledMs : 0);
+  const asked = v + p + st;
+  if (asked <= 0) return { venueMs: 0, pushMs: 0, settledMs: 0, scaled: false };
+  const k = asked <= total ? 1 : total / asked;
+  return { venueMs: v * k, pushMs: p * k, settledMs: st * k, scaled: k !== 1 };
 }
 
 /**
