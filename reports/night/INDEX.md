@@ -8,6 +8,17 @@ report here could be orphaned, or an index link could dangle, with nothing notic
 `node scripts/check-index.mjs --dir=reports/night --index=reports/night/INDEX.md` now checks both
 directions.
 
+- [LABEL-OFFSET-1.md](LABEL-OFFSET-1.md) — the label's distance from its racer was `fontPx * 2.0`, a
+  property of the TEXT, so it stayed put while the racer changed size. It is now half the racer's
+  DRAWN height plus a margin slider (`nameTagMarginPx`, 6 px), which needs no per-track constant
+  because it falls out of the drawn size. **The measurement found a second, worse defect nobody had
+  named:** the old 31.7 px offset meant any racer drawn taller than 63.4 px had the bottom of its
+  label INSIDE its own sprite, and all ten tracks reach 82-160 px at close zoom — so at the tight end
+  of every track the labels were sitting on the racers. Drawn racers run 27.4 px to 160.0 px; the
+  VISIBLE space between sprite and label is now one constant everywhere. Declutter drops measured as
+  an A/B in one run: identical on all ten tracks and op counts identical to the digit, because every
+  racer in a frame is drawn at one size so the change is a pure translation. Render moved on all ten,
+  world unchanged (engine-reach said it was owed, so it was run).
 - [RACE-NUMBERS-1.md](RACE-NUMBERS-1.md) — the racer wears a NUMBER on the track (at most three
   characters) and the standings list carries the number before the name. The draw cannot shift the
   race and the guarantee is structural: `assignRaceNumbers` takes no rng argument, builds its own
