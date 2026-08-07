@@ -50,6 +50,7 @@ import {
   computeRenderDisplayScale,
   getEffectiveMaxTargetScreenPx,
 } from '../../modules/autoSpriteScale.js';
+import { raceNumberLabel } from '../../modules/raceNumbers.js';
 import { PHASE } from './racePhase.js';
 import { formatBuildLabel, isBuildUncertain } from '../../modules/buildInfo.js';
 import { hudRightColumn } from './hudLayout.js';
@@ -179,10 +180,15 @@ export function renderRaceFrame(ctx, f) {
     measureText: measureTagText,
     showAll: showAllTags,
     incumbents: tagIncumbents,
+    // RACE-NUMBERS-1: the layout must measure the SAME string the renderer draws, or every box it
+    // reasons about is the wrong width — the defect HARNESS-NAMES-1 was created to end.
     labelOf: (r) =>
       showRpStartRow
-        ? r.name + ' (R' + (assignmentByRacer.get(r.index)?.rowIndex ?? 0) + ')'
-        : r.name,
+        ? raceNumberLabel(r.raceNumber) +
+          ' (R' +
+          (assignmentByRacer.get(r.index)?.rowIndex ?? 0) +
+          ')'
+        : raceNumberLabel(r.raceNumber),
   });
   ctx.restore();
 

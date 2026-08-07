@@ -23,6 +23,7 @@ import { lerp, lerpAngle } from '../../../utils/mathUtils.js';
 // three numbers were re-typed here as literals, so the module that LAID OUT the box and the one that
 // DREW it each owned a copy of the same rectangle.
 import { labelBoxHeight, labelOffsetAbove, labelBoxWidth } from '../nameTagLayout.js';
+import { raceNumberLabel } from '../../../modules/raceNumbers.js';
 
 import { PHASE } from '../racePhase.js';
 const PHASE_RACING = PHASE.RACING;
@@ -212,9 +213,14 @@ export function drawRacers(
     const renderX = doInterp ? lerp(r._prevX ?? r.x, r.x, renderAlpha) : r.x;
     const renderY = doInterp ? lerp(r._prevY ?? r.y, r.y, renderAlpha) : r.y;
     ctx.globalAlpha = dimAlpha;
+    // RACE-NUMBERS-1: the track label is the racer's NUMBER, never its name. At most three
+    // characters, which is the whole design — a label about one racer wide points at the racer under
+    // it, where a 170 px name points at nothing a viewer can check (ROLL-CALL-PAIRING-1). The name
+    // is untouched in the data and still feeds the tie-break and the coat.
+    const numberText = raceNumberLabel(r.raceNumber);
     const tagName = showRpStartRowCfg
-      ? r.name + ' (R' + (assignmentByRacer.get(r.index)?.rowIndex ?? 0) + ')'
-      : r.name;
+      ? numberText + ' (R' + (assignmentByRacer.get(r.index)?.rowIndex ?? 0) + ')'
+      : numberText;
     drawNameTag(
       ctx,
       renderX,

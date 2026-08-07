@@ -110,6 +110,9 @@ const { DEFAULT_TRACK_LIGHTS, sampleBoundaryAtInterval, LIGHT_SPACING_PX } =
 const { QUICK_TEST_NAMES_MIXED: HARNESS_NAMES } = await import(
   u("client/src/modules/racerNames.js")
 );
+const { assignRaceNumbers } = await import(
+  u("client/src/modules/raceNumbers.js")
+);
 const RT = await (async () => {
   const re = console.error;
   console.error = () => {};
@@ -269,6 +272,17 @@ function trackHash(geo, wantOps) {
   // every track. A measuring instrument that varies between runs is not an instrument.
   st.racers.forEach((r, i) => {
     r.name = HARNESS_NAMES[i % HARNESS_NAMES.length];
+  });
+  // RACE-NUMBERS-1: and the NUMBER, because that is what the track label now draws. Without this the
+  // harness would go straight back to measuring EMPTY label boxes — the exact defect HARNESS-NAMES-1
+  // was created to end, re-created one block later by a change that had nothing to do with it. The
+  // rule the harness keeps failing is simple: every input the component sets, it must set too.
+  //
+  // Through the same shipped function and the same seed, so the instrument draws the numbers the
+  // game would draw rather than a plausible-looking substitute.
+  const harnessNumbers = assignRaceNumbers(st.racers.length, SEED);
+  st.racers.forEach((r) => {
+    r.raceNumber = harnessNumbers[r.index] ?? null;
   });
   const raceCfg = built.config;
   const meta = built.meta;
