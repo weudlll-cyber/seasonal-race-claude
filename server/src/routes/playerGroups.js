@@ -24,12 +24,20 @@ import { attachPromoteExport } from './_defaultPromote.js';
 import { DATA_ROOT } from '../dataPaths.js';
 import { seedTypeFromSnapshot } from '../seedRuntime.js';
 import { isValidId } from '../../utils/isValidId.js';
+import {
+  PLAYER_NAME_MAX_LENGTH,
+  tooLongNames,
+  nameTooLongMessage,
+} from '../../../shared/nameLimits.mjs';
 
 export const DATA_DIR = join(DATA_ROOT, 'player-groups');
 
 const NAME_MAX = 100;
 const PLAYER_MAX = 200;
-const PLAYER_NAME_MAX = 100;
+// NAME-LIMIT-1: the limit has ONE home, above both packages, because it must be identical on both
+// sides of this HTTP boundary. This route is the ONLY place a name can be enforced for real — a
+// client is untrusted and an input attribute is a hint to a browser.
+const PLAYER_NAME_MAX = PLAYER_NAME_MAX_LENGTH;
 
 if (!existsSync(DATA_DIR)) mkdirSync(DATA_DIR, { recursive: true });
 
@@ -81,8 +89,11 @@ export function validateBody(body) {
     if (body.players.some((p) => typeof p !== 'string' || !p.trim())) {
       errors.push('all player names must be non-empty strings');
     }
-    if (body.players.some((p) => typeof p === 'string' && p.trim().length > PLAYER_NAME_MAX)) {
-      errors.push(`each player name must be ${PLAYER_NAME_MAX} characters or fewer`);
+    const overLong = tooLongNames(body.players);
+    if (overLong.length > 0) {
+      // REJECT, never trim — the shared module's rule, and its reasoning. The message names the
+      // offenders because the operator has to know WHICH one to shorten.
+      errors.push(nameTooLongMessage(overLong));
     }
   }
 

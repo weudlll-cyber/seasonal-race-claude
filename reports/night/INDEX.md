@@ -8,6 +8,16 @@ report here could be orphaned, or an index link could dangle, with nothing notic
 `node scripts/check-index.mjs --dir=reports/night --index=reports/night/INDEX.md` now checks both
 directions.
 
+- [NAME-LIMIT-1.md](NAME-LIMIT-1.md) — one player-name limit (32), enforced where names ENTER rather
+  than by an input attribute. **His data is safe: 0 of 304 stored names exceed 32, longest is 22**,
+  so nothing was migrated and nothing needed to be. One home in `shared/nameLimits.mjs` — at the repo
+  root because the limit must match on both sides of an HTTP boundary and neither package can import
+  from the other. Three entry points wired; the real hole was the player-group editor, whose
+  comma-separated field had **no length guard at all**, leaving the server's 100 as the only defence.
+  Over-length names are REJECTED with a visible reason naming the offenders, never silently trimmed.
+  The renderer still has no guard and would draw a 100-character name ~750px wide — proposed, not
+  built. A 32-character name measures ~283px realistically, 486px worst case, against the current
+  roster's 55px mean.
 - [DOC-ORDER-1.md](DOC-ORDER-1.md) — documentation a stranger could actually be handed. The evidence
   for his own suspicion that most documents were never asked for: twenty of fifty-three were the
   by-product of one work session and had had no substantive change since a bulk German-to-English
