@@ -8,6 +8,17 @@ report here could be orphaned, or an index link could dangle, with nothing notic
 `node scripts/check-index.mjs --dir=reports/night --index=reports/night/INDEX.md` now checks both
 directions.
 
+- [LABEL-SHRINK-1.md](LABEL-SHRINK-1.md) — smaller labels only where they would otherwise collide, and
+  **it works**: zero overlaps at every field size on all ten tracks, zero formations touched that did
+  not need it, floor never reached. The factor is closed-form from the formation's own geometry
+  (0.896 garden-path / 0.805 mountainstreet / 0.696 river-run); smallest anywhere 0.696 against a
+  0.6 floor, so **headroom is 0.096** — one denser racer type from needing proposal A. Two things to
+  read before minting: requirement (f) is **NOT met** (26.1% size step between 72 and 73 racers,
+  because the START GRID steps there, 3x24 -> 4x19 — every way of smoothing it breaks "only where
+  necessary"); and proving rule (c) exposed that **the render fingerprint harness draws NAMELESS
+  racers**, so the hash moves for all ten tracks while only three change in the browser. Rule (c)
+  itself is proven byte-exact: with the shrink bypassed the branch reproduces master's combined AND
+  per-track hashes exactly.
 - [LABEL-STAGGER-1.md](LABEL-STAGGER-1.md) — one rule for every track, and **the half of it that does
   not work**. The TRIGGER shipped and is exact — across all ten tracks at every field size it fires on
   0 formations with no overlap and misses 0 that have one — but the rule as specified could not be
