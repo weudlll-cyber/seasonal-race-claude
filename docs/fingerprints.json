@@ -47,13 +47,13 @@
       "lastVerified": "2026-08-06 — re-run and unchanged"
     },
     "render": {
-      "value": "cf716cbdf37b2077",
+      "value": "f2e170d17ccf84e9",
       "covers": "the DRAW CALL SEQUENCE: sprite placement, text, styles, transforms, layer order",
       "reproduce": "node scripts/render-fingerprint.mjs --quiet",
-      "mintedOn": "e5022bff",
-      "mintedBy": "START-FORMATION-1 — name tags are drawn LAST, after every sprite, so no racer can cover one. The layer order is exactly what this hash covers, so it moved by construction. Presentation-only: no default and no engine file changed, so the world and camera fingerprints did NOT move and were not re-minted (camera re-run and confirmed unchanged). Replaces 1f83ecc1fcb6fa9a.",
+      "mintedOn": "harness-names-1",
+      "mintedBy": "HARNESS-NAMES-1 — an INSTRUMENT change, not a behaviour change. The harness never set r.name, so every label box in it was 8 px of padding and it measured a geometry the game cannot produce. It now names its racers from QUICK_TEST_NAMES_MIXED by index. NOTHING THE GAME DRAWS CHANGED: the world and camera fingerprints are unchanged and engine-reach reports the diff cannot reach the engine. No ship ceremony and no eye test — there is nothing for the owner to look at. Replaces cf716cbdf37b2077",
       "date": "2026-08-07",
-      "lastVerified": "2026-08-07 — measured on e5022bff, the exact commit merged, AFTER the owner's eye passed"
+      "lastVerified": "2026-08-07 — re-minted deliberately by HARNESS-NAMES-1. The old value described a harness drawing nameless racers."
     },
     "world-off": {
       "value": "854018ee5d3d83e1",
