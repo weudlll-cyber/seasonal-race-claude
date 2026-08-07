@@ -8,6 +8,26 @@ report here could be orphaned, or an index link could dangle, with nothing notic
 `node scripts/check-index.mjs --dir=reports/night --index=reports/night/INDEX.md` now checks both
 directions.
 
+- [ROLL-CALL-PAIRING-1.md](ROLL-CALL-PAIRING-1.md) — **NOT SHIPPED (recorded result).** A label
+  centred on its racer only POINTS at it while it is about one racer wide; with realistic names it
+  spans a handful and identifies none. That finding is why the race-number design exists, and it
+  applies to any label wide enough. Measured: dimming everyone else still leaves 74-100% of labels
+  ambiguous, and pairing is a LONG-NAME problem, not a crowded-formation one — a one-wave formation
+  at 30 racers was 100% ambiguous.
+- [START-SEQUENCE-1.md](START-SEQUENCE-1.md) — **ROLL CALL NOT SHIPPED (recorded result).** Waves of
+  names during the countdown: 0 overlaps, 0 names missed, 86.5% of cases needing one wave. Its stage
+  0 finding IS on master — the countdown was a three-way disagreement where only `countdownDurationMs`
+  governed anything. Still open and deliberately not salvaged: the overlay counts from a hard-coded 3
+  while the phase lasts 4000 ms, so "GO!" stands an extra second.
+- [LABEL-SHRINK-1.md](LABEL-SHRINK-1.md) — **BUILT AND REJECTED AT THE PICTURE (recorded result).**
+  It cleared every overlap at every field size and the owner judged the result unacceptable to look
+  at — a rule can pass every number it was given and still be wrong. Two findings outlive it: the
+  render-fingerprint harness draws NAMELESS racers and cannot see this class of change, and stability
+  between adjacent field sizes cannot hold while the start grid is a staircase. Its label-box
+  unification IS on master.
+- [LABEL-STAGGER-1.md](LABEL-STAGGER-1.md) — **NEVER SHIPPED (recorded negative result).** A stagger
+  CREATES as many overlaps as it removes: start rows are not monotonic in screen y, so shifting a
+  whole row walks the collision into the next one. Four variants measured, none reaching zero.
 - [QUICKTEST-NAMES-1.md](QUICKTEST-NAMES-1.md) — testing with realistic name lengths, and **the
   shrink rule does not survive it**. Every overlap number this project had measured was a statement
   about a 4-8 character roster. With realistic names (mean 19.4) the picture inverts: 3 affected
