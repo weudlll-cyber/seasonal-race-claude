@@ -50,10 +50,12 @@ function makeRecordingCtx() {
     stroke() {},
     fillRect() {},
     measureText: (t) => ({ width: String(t).length * 6 }),
-    fillText(text) {
+    fillText(text, x, y) {
       // The name tag is the only text this module draws; the crown is an emoji through the same
       // call, so it is filtered by content rather than by call count.
-      if (text !== '\u{1F451}') log.push({ op: 'tag', text, alpha: ctx.globalAlpha });
+      // `y` is recorded because LABEL-OFFSET-1 made WHERE the tag lands the thing under test: the
+      // module translates to the racer first, so this y IS the gap, negated.
+      if (text !== '\u{1F451}') log.push({ op: 'tag', text, y, alpha: ctx.globalAlpha });
     },
   };
   return { ctx, log };
@@ -87,7 +89,19 @@ function makeState(n, phase = PHASE.RACING) {
 }
 
 /** The shipped call, with the arguments that do not matter to the order pinned to neutral values. */
-function draw(ctx, st, racerType, { shown, focusFactor = 0, pulk = null, darkening = 0.4 } = {}) {
+function draw(
+  ctx,
+  st,
+  racerType,
+  {
+    shown,
+    focusFactor = 0,
+    pulk = null,
+    darkening = 0.4,
+    racerScreenH = 40,
+    labelMarginPx = 6,
+  } = {}
+) {
   drawRacers(
     ctx,
     st,
@@ -105,7 +119,11 @@ function draw(ctx, st, racerType, { shown, focusFactor = 0, pulk = null, darkeni
     1, // ezoomY
     12, // tagFontPx
     0, // renderAlpha
-    false // interpolationEnabled
+    false, // interpolationEnabled
+    false, // highlightHeroes
+    false, // gapDevMarker
+    racerScreenH,
+    labelMarginPx
   );
 }
 
@@ -155,3 +173,70 @@ describe('drawRacers layer order (START-FORMATION-1)', () => {
     expect(tags[1].alpha).toBeCloseTo(0.6, 6); // dimmed by 0.4
   });
 });
+
+describe('the renderer places the tag from the racer, not the font (LABEL-OFFSET-1)', () => {
+  // What breaks if deleted: the plumbing. `labelOffsetAbove` could keep its racer-derived contract
+  // while `drawRacers` quietly stopped passing the size through — the helper's own tests would all
+  // still pass.
+  // What goes unnoticed: the gap collapsing to the bare margin, so every label sits ON its racer.
+  // Visible, but only to somebody looking at a race; no guard would say a word.
+  const tagY = (log) => log.find((e) => e.op === 'tag').y;
+
+  it('moves the tag further out when the racer is drawn bigger', () => {
+    const small = makeRecordingCtx();
+    draw(small.ctx, makeState(1), makeRacerType(small.log), { racerScreenH: 32, labelMarginPx: 6 });
+    const large = makeRecordingCtx();
+    draw(large.ctx, makeState(1), makeRacerType(large.log), { racerScreenH: 96, labelMarginPx: 6 });
+
+    // The tag is drawn at -offset after translating to the racer, so further out is more negative.
+    expect(tagY(large.log)).toBeLessThan(tagY(small.log));
+    // And by exactly half the size difference — the margin cancels.
+    expect(tagY(small.log) - tagY(large.log)).toBeCloseTo((96 - 32) / 2, 6);
+  });
+
+  it('does not move the tag when only the font size changes', () => {
+    // The precise defect: the old rule was fontPx × 2.0, so a bigger font pushed every label away
+    // from a racer that had not changed size at all.
+    const a = makeRecordingCtx();
+    drawWithFont(a.ctx, a.log, 12);
+    const b = makeRecordingCtx();
+    drawWithFont(b.ctx, b.log, 30);
+    expect(tagY(a.log)).toBeCloseTo(tagY(b.log), 6);
+  });
+
+  it('carries the margin through to the drawn position', () => {
+    const zero = makeRecordingCtx();
+    draw(zero.ctx, makeState(1), makeRacerType(zero.log), { racerScreenH: 40, labelMarginPx: 0 });
+    const wide = makeRecordingCtx();
+    draw(wide.ctx, makeState(1), makeRacerType(wide.log), { racerScreenH: 40, labelMarginPx: 10 });
+    expect(tagY(zero.log) - tagY(wide.log)).toBeCloseTo(10, 6);
+  });
+});
+
+/** The shipped call with the font varied and everything else held, for the font-independence test. */
+function drawWithFont(ctx, log, tagFontPx) {
+  const st = makeState(1);
+  drawRacers(
+    ctx,
+    st,
+    makeRacerType(log),
+    { shown: new Set([0]) },
+    0.4,
+    null,
+    null,
+    0,
+    null,
+    false,
+    new Map(),
+    1,
+    1,
+    1,
+    tagFontPx,
+    0,
+    false,
+    false,
+    false,
+    40,
+    6
+  );
+}

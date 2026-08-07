@@ -10,6 +10,7 @@ vi.mock('../../../modules/cameraConfig.js', () => ({
     comebackZoomMultiplier: 1.5,
     openTrackBaseZoom: 1.5,
     nameTagFrameFrac: 0.022,
+    nameTagMarginPx: 6,
     nameTagAllUntilMs: 8000,
   })),
   saveCameraConfig: vi.fn(),
@@ -21,6 +22,7 @@ vi.mock('../../../modules/cameraConfig.js', () => ({
     comebackZoomMultiplier: 1.5,
     openTrackBaseZoom: 1.5,
     nameTagFrameFrac: 0.022,
+    nameTagMarginPx: 6,
     nameTagAllUntilMs: 8000,
   },
 }));
@@ -38,6 +40,7 @@ beforeEach(() => {
     comebackZoomMultiplier: 1.5,
     openTrackBaseZoom: 1.5,
     nameTagFrameFrac: 0.022,
+    nameTagMarginPx: 6,
     nameTagAllUntilMs: 8000,
   });
 });
@@ -53,17 +56,23 @@ describe('NameTagVisibilitySection — default rendering', () => {
     expect(screen.getByText(/Every racer on screen is offered a name tag/)).toBeTruthy();
   });
 
-  it('renders the two name-tag labels', () => {
+  it('renders the three name-tag labels', () => {
     render(<NameTagVisibilitySection />);
     expect(screen.getByText('Name size (% of frame)')).toBeTruthy();
+    expect(screen.getByText('Gap above racer (px)')).toBeTruthy();
     expect(screen.getByText('Show all names for (s)')).toBeTruthy();
   });
 
-  it('shows the shipped defaults: 2.2% of frame, all names for 8 s', () => {
+  it('shows the shipped defaults: 2.2% of frame, a 6 px gap, all names for 8 s', () => {
     render(<NameTagVisibilitySection />);
+    // Addressed by POSITION before LABEL-OFFSET-1, which is why inserting a third field between the
+    // two broke it. A test that fails because a neighbouring control was added is reporting on the
+    // order of the DOM, not on the defaults it is named after.
     const inputs = screen.getAllByRole('spinbutton');
+    expect(inputs).toHaveLength(3);
     expect(inputs[0].value).toBe('2.2');
-    expect(inputs[1].value).toBe('8');
+    expect(screen.getByTestId('nametag-margin-px').value).toBe('6');
+    expect(inputs[inputs.length - 1].value).toBe('8');
   });
 
   it('renders Reset Name Tag Visibility button', () => {
@@ -73,7 +82,7 @@ describe('NameTagVisibilitySection — default rendering', () => {
 });
 
 describe('NameTagVisibilitySection — reset (L58: start from non-default value)', () => {
-  it('reset restores both name-tag defaults', () => {
+  it('reset restores every name-tag default', () => {
     loadCameraConfig.mockReturnValue({
       minSpritePctOfCanvas: 0.05,
       maxTargetScreenPx: 160,
@@ -82,12 +91,17 @@ describe('NameTagVisibilitySection — reset (L58: start from non-default value)
       comebackZoomMultiplier: 1.5,
       openTrackBaseZoom: 1.5,
       nameTagFrameFrac: 0.03,
+      nameTagMarginPx: 20,
       nameTagAllUntilMs: 2000,
     });
     render(<NameTagVisibilitySection />);
     fireEvent.click(screen.getByTestId('reset-nametag-visibility'));
     expect(saveCameraConfig).toHaveBeenCalledWith(
-      expect.objectContaining({ nameTagFrameFrac: 0.022, nameTagAllUntilMs: 8000 })
+      expect.objectContaining({
+        nameTagFrameFrac: 0.022,
+        nameTagMarginPx: 6,
+        nameTagAllUntilMs: 8000,
+      })
     );
   });
 
@@ -100,6 +114,7 @@ describe('NameTagVisibilitySection — reset (L58: start from non-default value)
       comebackZoomMultiplier: 1.5,
       openTrackBaseZoom: 1.5,
       nameTagFrameFrac: 0.03,
+      nameTagMarginPx: 20,
       nameTagAllUntilMs: 2000,
     });
     render(<NameTagVisibilitySection />);

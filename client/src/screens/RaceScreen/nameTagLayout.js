@@ -41,13 +41,11 @@
 const BOX_PAD_X = 8;
 /** The label box height as a multiple of the font size. */
 const BOX_H_FACTOR = 1.18;
-/** How far above the racer's centre the label sits, as a multiple of the font size. */
-const BOX_OFFSET_FACTOR = 2.0;
 
 /**
  * THE LABEL BOX'S SHAPE — one home (CLEANUP-BEFORE-NUMBERS-1, salvaged from LABEL-SHRINK-1).
  *
- * These three numbers had TWO homes: this module named them in order to lay labels out, and
+ * These numbers had TWO homes: this module named them in order to lay labels out, and
  * `racerRendering.js` re-typed them as literals (`fontPx * 1.18`, `fontPx * 2.0`, `+ 8`) in order to
  * draw one. Two copies of the shape of a single rectangle — the layout could have been reasoning
  * about a box the renderer never drew, and nothing would have failed.
@@ -58,6 +56,11 @@ const BOX_OFFSET_FACTOR = 2.0;
  *
  * The renderer imports these. If the box changes shape, it changes here and the layout and the
  * drawing move together by construction.
+ *
+ * LABEL-OFFSET-1 collected the first dividend: `labelOffsetAbove` changed from a font multiple to a
+ * racer-derived gap, and because there was one home the layout's idea of where a label sits and the
+ * renderer's could not part company. Had the literal still been in both files, the boxes the
+ * decluttering reasons about would have moved and the boxes drawn would not.
  */
 
 /** The label box height in screen px. */
@@ -65,9 +68,37 @@ export function labelBoxHeight(fontPx) {
   return fontPx * BOX_H_FACTOR;
 }
 
-/** How far above the racer's centre the BOTTOM of the label sits, in screen px. */
-export function labelOffsetAbove(fontPx) {
-  return fontPx * BOX_OFFSET_FACTOR;
+/**
+ * How far above the racer's CENTRE the BOTTOM of the label sits, in screen px.
+ *
+ * ── THE GAP FOLLOWS THE RACER, NOT THE FONT (LABEL-OFFSET-1) ─────────────────────────────────────
+ * It used to be `fontPx × 2.0`. That is the defect the owner saw on river-run: the distance between
+ * a racer and its label was a property of the TEXT, so it stayed the same while the racer changed
+ * size. On a large sprite two font-heights reads as snug; on a small one the same absolute gap reads
+ * as detached, and the label stops looking like it belongs to anything.
+ *
+ * The gap is now HALF THE RACER'S DRAWN HEIGHT — which puts the label's bottom edge exactly at the
+ * top of the racer — PLUS a margin. Two terms doing two jobs:
+ *
+ *   racerScreenH / 2   reaches the top of the racer. Not a constant anywhere: it falls out of the
+ *                      drawn size, so it is automatically right on every track, at every zoom, for
+ *                      every racer type, and it needs no per-track or per-type number to be so.
+ *   marginPx           the breathing space above that edge, and the owner's slider.
+ *
+ * WHY THE MARGIN IS NOT ALSO DERIVED FROM THE RACER. It would then be `racerScreenH × k`, the two
+ * terms would collapse into one factor, and the owner's slider would no longer be a gap — it would be
+ * a second size multiplier. It is also the term that absorbs what the first term cannot know:
+ * `racerScreenH` is the visible NARROW BODY, and sprite extremities (a giraffe's neck, a rocket's
+ * fin) reach past it. A fixed screen-px margin clears those without pretending to measure them.
+ *
+ * @param {number} racerScreenH  the racer's drawn height in screen px (drawnRacerScreenPx, Y axis)
+ * @param {number} marginPx      breathing space above the racer's top edge, in screen px
+ * @returns {number} screen px from the racer's centre to the bottom of its label
+ */
+export function labelOffsetAbove(racerScreenH, marginPx) {
+  const h = Number.isFinite(racerScreenH) && racerScreenH > 0 ? racerScreenH : 0;
+  const m = Number.isFinite(marginPx) && marginPx > 0 ? marginPx : 0;
+  return h / 2 + m;
 }
 
 /** The label box width for a measured text width, in screen px. */
@@ -130,6 +161,10 @@ export function tagFontScreenPx(frameFrac, canvasH) {
  * @param {number} p.canvasW
  * @param {number} p.canvasH
  * @param {number} p.fontPx      label font size in screen px (from tagFontScreenPx)
+ * @param {number} [p.racerScreenH=0]  LABEL-OFFSET-1: the racer's DRAWN height in screen px, which is
+ *        what the label's distance from it is derived from. The layout must be given the same number
+ *        the renderer draws with, or it reasons about boxes that are not where the labels are.
+ * @param {number} [p.labelMarginPx=0]  breathing space above the racer's top edge, in screen px
  * @param {(name:string)=>number} p.measureText  text width in screen px at that font size
  * @param {Set<number>|null} [p.incumbents]  racer indices labelled last frame (stability)
  * @param {number} [p.edgeMarginFrac=0]  canvas-edge hysteresis band, as a fraction of frame height
@@ -148,6 +183,8 @@ export function computeTagLayout({
   canvasW,
   canvasH,
   fontPx,
+  racerScreenH = 0,
+  labelMarginPx = 0,
   measureText,
   showAll = false,
   labelOf = (r) => r.name ?? '',
@@ -161,7 +198,7 @@ export function computeTagLayout({
   }
 
   const boxH = labelBoxHeight(fontPx);
-  const offsetAbove = labelOffsetAbove(fontPx);
+  const offsetAbove = labelOffsetAbove(racerScreenH, labelMarginPx);
   const edgeMargin = Math.max(0, edgeMarginFrac) * canvasH;
 
   // ── ELIGIBLE: on canvas. Not "top N by position" — a label answers "who is that on screen". ──

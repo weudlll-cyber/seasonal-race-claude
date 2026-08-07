@@ -49,6 +49,7 @@ import { OPEN_TRACK_BASE_ZOOM } from '../../modules/camera/CameraDirector.js';
 import {
   computeRenderDisplayScale,
   getEffectiveMaxTargetScreenPx,
+  drawnRacerScreenPx,
 } from '../../modules/autoSpriteScale.js';
 import { raceNumberLabel } from '../../modules/raceNumbers.js';
 import { PHASE } from './racePhase.js';
@@ -162,6 +163,15 @@ export function renderRaceFrame(ctx, f) {
   // racer once. `tagIncumbents` carries last frame's set: a label already on screen is offered its
   // pixels first, which is what keeps the layout from churning (Lesson 190).
   const tagFontPx = tagFontScreenPx(cameraConfig.nameTagFrameFrac, canvasH);
+  // LABEL-OFFSET-1: how far a label sits above its racer follows the RACER'S DRAWN SIZE, so that size
+  // is computed ONCE, here, and handed to both the layout and the renderer. Evaluating the formula
+  // twice would be two homes for one distance, and the failure is silent — the decluttering would
+  // reason about boxes that are not where the labels get drawn.
+  //
+  // effZoomY, not effZoomX. This is a VERTICAL distance, and on a closed track the world→screen scale
+  // is anisotropic: the sprite is squashed on Y, so the gap has to be squashed with it.
+  const racerScreenH = drawnRacerScreenPx(displaySize, displayScale, effZoomY);
+  const labelMarginPx = cameraConfig.nameTagMarginPx;
   const raceElapsedMs = st.raceStart != null ? ts - st.raceStart : 0;
   const showAllTags =
     st.phase !== PHASE.RACING || raceElapsedMs < (cameraConfig.nameTagAllUntilMs ?? 0);
@@ -177,6 +187,8 @@ export function renderRaceFrame(ctx, f) {
     canvasW,
     canvasH,
     fontPx: tagFontPx,
+    racerScreenH,
+    labelMarginPx,
     measureText: measureTagText,
     showAll: showAllTags,
     incumbents: tagIncumbents,
@@ -211,7 +223,9 @@ export function renderRaceFrame(ctx, f) {
     renderAlpha,
     interpolationEnabled,
     cameraConfig.highlightHeroes ?? false,
-    gapRerollDevMarker ?? false
+    gapRerollDevMarker ?? false,
+    racerScreenH,
+    labelMarginPx
   );
   drawBattleDiagMarkers(
     ctx,

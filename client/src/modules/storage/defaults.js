@@ -212,6 +212,23 @@ export const DEFAULT_CAMERA_CONFIG = {
   // that moment, the switch is INVISIBLE and needs no transition. Note this is well past the
   // camera's own 3 s start hold: handing over when the camera does would take ~20% of the names
   // away at the densest moment.
+  // LABEL-OFFSET-1 — THE GAP FOLLOWS THE RACER, AND THIS IS THE PART THAT DOES NOT.
+  //
+  // A label sits half the racer's DRAWN height above its centre — which lands its bottom edge exactly
+  // on the racer's top edge — plus this margin. The first term needs no setting: it falls out of the
+  // drawn size, so it is right on every track and at every zoom by construction. This is the second
+  // term, the breathing space, and it is the owner's knob.
+  //
+  // It is deliberately NOT a share of the racer. That would collapse the two terms into one factor
+  // and turn the knob into a second size multiplier rather than a gap. It is the term that absorbs
+  // what the first cannot know: the drawn height is the visible NARROW BODY, and sprite extremities
+  // — a giraffe's neck, a rocket's fin — reach past it.
+  //
+  // 6 px is my judgement, not a measurement, and it is the number the owner is expected to tune by
+  // eye. It replaces a gap that was `fontPx × 2.0` = 31.7 px at the default font, fixed no matter how
+  // big the racer was; at the smallest a racer is ever drawn (the readability floor, 0.045 × 720 =
+  // 32.4 px) the gap becomes 22.2 px, and at the largest it grows instead of staying put.
+  nameTagMarginPx: 6,
   nameTagAllUntilMs: 8000,
   showCameraStateHud: true,
   showCameraDiagnostics: false,

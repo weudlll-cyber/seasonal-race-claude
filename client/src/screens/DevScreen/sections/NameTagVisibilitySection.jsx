@@ -31,6 +31,7 @@ function NameTagVisibilitySection() {
     setConfig((prev) => ({
       ...prev,
       nameTagFrameFrac: DEFAULT_CAMERA_CONFIG.nameTagFrameFrac,
+      nameTagMarginPx: DEFAULT_CAMERA_CONFIG.nameTagMarginPx,
       nameTagAllUntilMs: DEFAULT_CAMERA_CONFIG.nameTagAllUntilMs,
     }));
   }
@@ -85,6 +86,30 @@ function NameTagVisibilitySection() {
               onChange={(e) => {
                 const v = Number(e.target.value);
                 if (v >= 1.0 && v <= 5.0) set('nameTagFrameFrac', v / 100);
+              }}
+            />
+          </div>
+          <div className={s.formGroup}>
+            <label
+              className={s.label}
+              style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}
+            >
+              Gap above racer (px)
+              <InfoTooltip
+                text={`The breathing space between the top of a racer and the bottom of its tag. The rest of the distance is not a setting: a tag sits half the racer's DRAWN height above its centre, so the gap follows the RACER — a bigger racer gets a bigger gap, on every track and at every zoom, with no per-track number. This margin is only the space above that edge, and it exists because the drawn height measures the racer's narrow body while a neck or a fin reaches past it. Value: ${config.nameTagMarginPx ?? 6} px.`}
+              />
+            </label>
+            <input
+              type="number"
+              className={s.input}
+              data-testid="nametag-margin-px"
+              min={0}
+              max={40}
+              step={1}
+              value={config.nameTagMarginPx ?? 6}
+              onChange={(e) => {
+                const v = Number(e.target.value);
+                if (v >= 0 && v <= 40) set('nameTagMarginPx', v);
               }}
             />
           </div>
