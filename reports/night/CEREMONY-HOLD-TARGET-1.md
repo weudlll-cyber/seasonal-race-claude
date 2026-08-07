@@ -382,10 +382,12 @@ camera fingerprint moved, so the numbers could have moved, and one of them did.
 
 ## 11. How to see it
 
-**5173 is on this branch**, `feat/ceremony-hold-target-1`. The build pill reads:
+**5173 is on this branch**, `feat/ceremony-hold-target-1` — one backend on 4000, one Vite on 5173,
+verified one listener per port. The build pill reads (the SHA is whatever HEAD is when Vite starts;
+it read `e13deeeb` at the first start-up, and this correction commit moved it):
 
 ```
-[ra-build] start-up: serving build 51ec6f7f · feat/ceremony-hold-target-1
+[ra-build] start-up: serving build <HEAD> · feat/ceremony-hold-target-1
 ```
 
 **What to look at, in one sentence:** start a race on **river-run** and watch the first second after
