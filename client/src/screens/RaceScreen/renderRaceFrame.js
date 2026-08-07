@@ -205,7 +205,8 @@ export function renderRaceFrame(ctx, f) {
     renderAlpha,
     interpolationEnabled,
     cameraConfig.highlightHeroes ?? false,
-    gapRerollDevMarker ?? false
+    gapRerollDevMarker ?? false,
+    tagLayout.labelScale ?? 1
   );
   drawBattleDiagMarkers(
     ctx,

@@ -57,8 +57,8 @@ const { computeRenderDisplayScale, getEffectiveMaxTargetScreenPx } =
 const {
   tagFontScreenPx,
   formationNeedsStagger,
-  labelStaggerStep,
-  assignLabelLevels,
+  computeLabelShrink,
+  LABEL_MIN_SCALE,
 } = await import(u("client/src/screens/RaceScreen/nameTagLayout.js"));
 const { effectiveZoom } = await import(
   u("client/src/modules/camera/openTrackCamera.js")
@@ -350,59 +350,42 @@ function measure(geo, nRequested) {
   const rowOf = new Map();
   for (const a of built.meta.assignmentByRacer.values())
     rowOf.set(a.racerIndex, a.rowIndex);
-  // ── LABEL-STAGGER-1 VERIFICATION. The decision comes from the SHIPPED function, never a copy, so
-  // this cannot certify a rule the game does not actually run. The boxes are then moved the way the
-  // renderer moves them — row parity, one step — and re-tested. Two numbers matter: does it fire
-  // only where an overlap existed, and is nothing left once it has.
+  // ── LABEL-SHRINK-1 VERIFICATION. The trigger AND the factor both come from the SHIPPED
+  // functions, never a copy, so this cannot certify a rule the game does not actually run. The boxes
+  // are then scaled the way the renderer scales them and re-tested. Three numbers matter: does it
+  // fire only where an overlap existed, is nothing left once it has, and did it hit the floor.
   const staggerFires = formationNeedsStagger(items.map((i) => i.label));
-  const step = labelStaggerStep(fontPx);
+  const shrink = computeLabelShrink(
+    items.map((i) => i.label),
+    fontPx,
+  );
   let pairOverlapsAfter = 0;
-  const afterByRowDist = new Map();
   {
-    const levelOf = staggerFires
-      ? assignLabelLevels(
-          items.map((i) => ({ index: i.index, ...i.label })),
-          rowOf,
-          step,
-          Number(process.env.RA_LEVELS || 2),
-        )
-      : null;
-    const moved = items.map((i) => {
-      const d = (staggerFires ? (levelOf.get(i.index) ?? 0) : 0) * step;
+    // Scale exactly as drawNameTag does: the box height and the text scale by f, the offset above
+    // the racer scales by f, and the horizontal centre does not move.
+    const f = shrink.scale;
+    const scaled = items.map((i) => {
+      const cx = (i.label.left + i.label.right) / 2;
+      const t = i.label.right - i.label.left - BOX_PAD_X;
+      const w = t * f + BOX_PAD_X;
+      const sy = i.label.bottom + fontPx * BOX_OFFSET_FACTOR; // racer centre, from the full-size box
+      const bottom = sy - fontPx * BOX_OFFSET_FACTOR * f;
       return {
-        left: i.label.left,
-        right: i.label.right,
-        top: i.label.top - d,
-        bottom: i.label.bottom - d,
+        left: cx - w / 2,
+        right: cx + w / 2,
+        top: bottom - fontPx * BOX_H_FACTOR * f,
+        bottom,
       };
     });
-    for (let i = 0; i < moved.length; i++)
-      for (let j = i + 1; j < moved.length; j++) {
-        const a2 = moved[i];
-        const b2 = moved[j];
+    for (let i = 0; i < scaled.length; i++)
+      for (let j = i + 1; j < scaled.length; j++) {
+        const a2 = scaled[i];
+        const b2 = scaled[j];
         if (
           Math.min(a2.right, b2.right) > Math.max(a2.left, b2.left) &&
           Math.min(a2.bottom, b2.bottom) > Math.max(a2.top, b2.top)
-        ) {
+        )
           pairOverlapsAfter++;
-          const rd = Math.abs(
-            (rowOf.get(items[i].index) ?? 0) - (rowOf.get(items[j].index) ?? 0),
-          );
-          afterByRowDist.set(rd, (afterByRowDist.get(rd) ?? 0) + 1);
-          if (
-            process.env.RA_PROBE &&
-            geo.id === "river-run" &&
-            N === 72 &&
-            pairOverlapsAfter <= 3
-          ) {
-            console.error(
-              `PROBE rows ${rowOf.get(items[i].index)}/${rowOf.get(items[j].index)} ` +
-                `fires=${staggerFires} step=${step.toFixed(2)} ` +
-                `A[${a2.top.toFixed(1)},${a2.bottom.toFixed(1)}] B[${b2.top.toFixed(1)},${b2.bottom.toFixed(1)}] ` +
-                `Ax[${a2.left.toFixed(1)},${a2.right.toFixed(1)}] Bx[${b2.left.toFixed(1)},${b2.right.toFixed(1)}]`,
-            );
-          }
-        }
       }
   }
 
@@ -523,7 +506,8 @@ function measure(geo, nRequested) {
     worstFrac,
     staggerFires,
     pairOverlapsAfter,
-    afterByRowDist: [...afterByRowDist.entries()].sort((x, y) => x[0] - y[0]),
+    labelScale: shrink.scale,
+    hitFloor: !shrink.clears,
   };
 }
 
@@ -734,22 +718,60 @@ for (const s of sweeps)
     else if (flips.length === 1)
       console.log(`  ${s.id}: switches on once, at ${flips[0]}`);
   }
-  // WHAT IS LEFT OVER, classified by how many rows apart the two labels are. This is the number that
-  // decides whether two levels can ever be enough: a residual at row distance 2 is two labels the
-  // parity put back on the SAME level, and no choice of step fixes that.
+  // THE FACTOR ITSELF, per track: how far the shrink had to go, and whether it ever hit the floor.
+  // Planner proposal 1 — the SMALLEST factor anywhere is the headroom before the floor binds, and
+  // the owner should hear it now rather than the first time a new racer type makes it bind.
+  let globalMin = 1;
+  let globalMinAt = "";
   for (const s of sweeps) {
-    const agg = new Map();
-    for (const p of s.points)
-      for (const [d, c] of p.afterByRowDist) agg.set(d, (agg.get(d) ?? 0) + c);
-    if (agg.size)
-      console.log(
-        `  RESIDUAL ${s.id}: overlapping pairs by ROW DISTANCE -> ` +
-          [...agg.entries()]
-            .sort((x, y) => x[0] - y[0])
-            .map(([d, c]) => `${d}:${c}`)
-            .join("  "),
-      );
+    const fired = s.points.filter((p) => p.labelScale < 1);
+    if (!fired.length) continue;
+    const worst = fired.reduce((a, b) => (b.labelScale < a.labelScale ? b : a));
+    if (worst.labelScale < globalMin) {
+      globalMin = worst.labelScale;
+      globalMinAt = `${s.id} at N=${worst.nRacers}`;
+    }
+    const floors = s.points.filter((p) => p.hitFloor);
+    console.log(
+      `  ${s.id}: fires at ${fired.length} counts; smallest factor ${worst.labelScale.toFixed(3)} ` +
+        `(N=${worst.nRacers})` +
+        (floors.length
+          ? `; HIT THE FLOOR at ${floors.length} counts — STILL OVERLAPPING there`
+          : "; never hit the floor"),
+    );
   }
+  console.log(
+    `\n  SMALLEST FACTOR ANYWHERE: ${globalMin.toFixed(3)}${globalMinAt ? ` (${globalMinAt})` : ""}` +
+      `   floor is ${LABEL_MIN_SCALE}  ->  headroom ${(globalMin - LABEL_MIN_SCALE).toFixed(3)}`,
+  );
+  // RULE (f) — STABILITY. The size must not visibly JUMP between adjacent field sizes. The factor is
+  // derived from geometry, and the start grid has a staircase, so this has to be measured rather
+  // than assumed. Reported as the largest single step in the factor between N and N+1.
+  console.log(
+    `\n  STABILITY — largest change in the factor between adjacent field sizes:`,
+  );
+  let worstStep = 0;
+  let worstAt = "";
+  for (const s of sweeps) {
+    let mx = 0;
+    let at = "";
+    for (let k = 1; k < s.points.length; k++) {
+      const d = Math.abs(s.points[k].labelScale - s.points[k - 1].labelScale);
+      if (d > mx) {
+        mx = d;
+        at = `${s.points[k - 1].nRacers}->${s.points[k].nRacers}`;
+      }
+    }
+    if (mx > 0)
+      console.log(`    ${s.id.padEnd(16)} ${mx.toFixed(3)}  at ${at}`);
+    if (mx > worstStep) {
+      worstStep = mx;
+      worstAt = `${s.id} ${at}`;
+    }
+  }
+  console.log(
+    `    WORST STEP ANYWHERE: ${worstStep.toFixed(3)} (${worstAt}) — as a share of the label, ${(worstStep * 100).toFixed(1)}%`,
+  );
 }
 
 console.log(

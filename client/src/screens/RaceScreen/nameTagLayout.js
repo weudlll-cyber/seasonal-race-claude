@@ -214,6 +214,84 @@ export function formationNeedsStagger(boxes) {
   return false;
 }
 
+/**
+ * THE LEGIBILITY FLOOR — how small a name label may ever be drawn, as a fraction of the shipped size.
+ *
+ * **This number is a JUDGEMENT, not a measurement, and it is the owner's to move.** Nothing in this
+ * repository establishes a text-legibility threshold, so there was nothing to derive it from and
+ * inventing a measurement would have been worse than saying so.
+ *
+ * How it was set. The label ships at `nameTagFrameFrac` of the frame height, which is 15.8 screen px
+ * on a 720-px frame. 0.6 of that is ~9.5 px. Below roughly 9–10 px, bold sans-serif on a busy
+ * background stops being something a viewer reads at a glance and becomes something they decode —
+ * and the whole purpose of the start roll call is that a spectator finds their racer AT A GLANCE. It
+ * is expressed as a FRACTION rather than in pixels for the same reason the label itself is: an
+ * absolute pixel floor does not survive a change of frame size (CAMERA-TAGS-1 was that bug).
+ *
+ * What it is FOR, and it matters more than its exact value: it is a STOP. Where a formation would
+ * need to go under it, the shrink stops here, that formation is reported as STILL OVERLAPPING, and
+ * nothing silently becomes unreadable. That case belongs to proposal A (thinning the roll call) and
+ * is the owner's decision, not this file's.
+ */
+export const LABEL_MIN_SCALE = 0.6;
+
+/**
+ * THE SHRINK FACTOR — the largest scale at or below 1 that clears every collision in a formation.
+ *
+ * ONE ANSWER PER FORMATION (the owner's rule (e)), derived from THIS formation's geometry and
+ * nothing else. No track name, no track id, no open/closed flag, no racer type, no racer count.
+ *
+ * THE ALGEBRA, IN CLOSED FORM — which is why this needs no search and cannot converge on the wrong
+ * answer. Scaling the font by `f` scales the box height and the text width by `f`, and it scales the
+ * offset above the racer by `f` as well. That last one matters and is easy to get wrong: because
+ * BOTH labels of a pair move down by the same amount, the VERTICAL SEPARATION of two boxes is
+ * unchanged by `f` — only their heights shrink. Their horizontal centres never move at all.
+ *
+ * So for a pair with screen separations `dx`, `dy` and unscaled text widths `ti`, `tj`, the two ways
+ * out are independent and exact:
+ *
+ *   vertical    they clear when   f * H <= |dy|            ->  f <= |dy| / H
+ *   horizontal  they clear when   (f*ti + P + f*tj + P)/2 <= |dx|
+ *                                                          ->  f <= (2|dx| - 2P) / (ti + tj)
+ *
+ * A pair is clear if EITHER holds, so the pair permits `max` of the two; the formation must satisfy
+ * every pair, so it takes the `min` across pairs. The padding `P` does not scale — it is a fixed
+ * inset of the drawn box — which is why it appears as a constant subtraction and why a pair closer
+ * together than the padding alone can never be separated horizontally at any size.
+ *
+ * @param {Array<{left:number,right:number,top:number,bottom:number}>} boxes  at FULL size, screen px
+ * @param {number} fontPx  the unscaled font size these boxes were measured at
+ * @param {number} [minScale=LABEL_MIN_SCALE]  the floor; the result never goes below it
+ * @returns {{scale:number, clears:boolean}}  `clears` is false when the floor stopped it short
+ */
+export function computeLabelShrink(boxes, fontPx, minScale = LABEL_MIN_SCALE) {
+  if (!Array.isArray(boxes) || boxes.length < 2 || !(fontPx > 0)) {
+    return { scale: 1, clears: true };
+  }
+  const H = labelBoxHeight(fontPx);
+  let f = 1;
+  for (let i = 0; i < boxes.length; i++) {
+    const a = boxes[i];
+    for (let j = i + 1; j < boxes.length; j++) {
+      const b = boxes[j];
+      if (!boxesIntersect(a, b)) continue; // already clear at full size — it constrains nothing
+      const dy = Math.abs((a.top + a.bottom) / 2 - (b.top + b.bottom) / 2);
+      const dx = Math.abs((a.left + a.right) / 2 - (b.left + b.right) / 2);
+      const ti = a.right - a.left - BOX_PAD_X;
+      const tj = b.right - b.left - BOX_PAD_X;
+      const fVert = H > 0 ? dy / H : 1;
+      const sumText = ti + tj;
+      const fHorz = sumText > 0 ? (2 * dx - 2 * BOX_PAD_X) / sumText : -Infinity;
+      f = Math.min(f, Math.max(fVert, fHorz));
+    }
+  }
+  if (f >= 1) return { scale: 1, clears: true };
+  // A hair under the exact solution, because the exact one leaves the boxes touching and the test
+  // above is a strict inequality — a rounding error either way would decide it.
+  const exact = f * 0.995;
+  return exact < minScale ? { scale: minScale, clears: false } : { scale: exact, clears: true };
+}
+
 /** Do two screen-space label boxes intersect? The one definition; everything here calls it. */
 function boxesIntersect(a, b) {
   return (
@@ -329,7 +407,15 @@ export function computeTagLayout({
 }) {
   const shown = new Set();
   if (!Array.isArray(racers) || racers.length === 0 || !(fontPx > 0)) {
-    return { shown, eligible: 0, placed: 0, dropped: 0, stagger: false };
+    return {
+      shown,
+      eligible: 0,
+      placed: 0,
+      dropped: 0,
+      stagger: false,
+      labelScale: 1,
+      labelShrinkClears: true,
+    };
   }
 
   const boxH = labelBoxHeight(fontPx);
@@ -368,6 +454,7 @@ export function computeTagLayout({
   // roll call away the moment it shipped. No decluttering runs while it holds.
   if (showAll) {
     for (const e of eligible) shown.add(e.index);
+    const shrink = computeLabelShrink(eligible, fontPx);
     return {
       shown,
       eligible: eligible.length,
@@ -376,10 +463,13 @@ export function computeTagLayout({
       // THE STAGGER DECISION, and it is asked ONLY here — see formationNeedsStagger. The LEVELS are
       // computed only when it fires, so a roomy formation does no extra work and gets an empty map,
       // which the renderer reads as "every label where it has always been".
-      // MEASURED, NOT WIRED. Reported so the diagnostic gates on the same predicate the game would
-      // use; nothing in the render path reads it. See the header on why the placement half did not
-      // ship.
-      stagger: formationNeedsStagger(eligible),
+      // THE TRIGGER, and it is the same predicate LABEL-STAGGER-1 established: exact, 0 false
+      // positives and 0 misses across ten tracks at every field size. It gates the SHRINK now.
+      stagger: shrink.scale < 1,
+      // LABEL-SHRINK-1: one scale for the whole formation, or exactly 1 when nothing collides —
+      // and 1 must mean "changed nothing", which is what makes rule (c) provable.
+      labelScale: shrink.scale,
+      labelShrinkClears: shrink.clears,
     };
   }
 
@@ -432,6 +522,11 @@ export function computeTagLayout({
     eligible: eligible.length,
     placed: placed.length,
     dropped: eligible.length - placed.length,
+    // Full size outside the roll-call window — the owner's rule (d). Once the race is running the
+    // decluttering above has already removed every overlap by DROPPING a label, so there is nothing
+    // for a shrink to fix, and shrinking would change a picture that has no defect in it.
+    labelScale: 1,
+    labelShrinkClears: true,
     // NOT staggered outside the start formation, and that is deliberate rather than an omission.
     // Here the decluttering above has already removed every overlap by DROPPING a label, so there is
     // nothing left for a stagger to fix — and moving labels mid-race would change a picture that has

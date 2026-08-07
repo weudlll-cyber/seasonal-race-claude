@@ -51,13 +51,29 @@ const PHASE_RACING = PHASE.RACING;
  * @param {number} fontPx  label font size in SCREEN px
  * @param {boolean} isRacing  True when phase === RACING (enables crown icon).
  */
-function drawNameTag(ctx, px, py, name, isLeader, isComeback, effX, effY, fontPx, isRacing) {
-  const bgH = labelBoxHeight(fontPx);
-  const offsetY = labelOffsetAbove(fontPx);
+function drawNameTag(
+  ctx,
+  px,
+  py,
+  name,
+  isLeader,
+  isComeback,
+  effX,
+  effY,
+  fontPx,
+  isRacing,
+  labelScale = 1
+) {
+  // LABEL-SHRINK-1: one scale for the whole formation. At 1 every expression below is arithmetically
+  // what it was, so an untouched track draws byte-identical calls — the owner's rule (c), and the
+  // PER-TRACK render fingerprint is what proves it rather than an argument.
+  const f = fontPx * labelScale;
+  const bgH = labelBoxHeight(f);
+  const offsetY = labelOffsetAbove(f);
   ctx.save();
   ctx.translate(px, py);
   ctx.scale(1 / effX, 1 / effY); // one unit is now one screen pixel
-  ctx.font = `bold ${fontPx}px sans-serif`;
+  ctx.font = `bold ${f}px sans-serif`;
   const nameW = labelBoxWidth(ctx.measureText(name).width);
   ctx.fillStyle = 'rgba(0,0,0,0.65)';
   ctx.fillRect(-nameW / 2, -offsetY - bgH, nameW, bgH);
@@ -66,7 +82,7 @@ function drawNameTag(ctx, px, py, name, isLeader, isComeback, effX, effY, fontPx
   ctx.fillStyle = isLeader ? '#ffd700' : isComeback ? '#00dd55' : '#eee';
   ctx.fillText(name, 0, -offsetY);
   if (isLeader && isRacing) {
-    ctx.font = `${fontPx * 1.27}px serif`;
+    ctx.font = `${f * 1.27}px serif`;
     ctx.textBaseline = 'bottom';
     ctx.fillText('👑', 0, -offsetY - bgH);
   }
@@ -114,7 +130,8 @@ export function drawRacers(
   renderAlpha,
   interpolationEnabled,
   highlightHeroes = false,
-  gapDevMarker = false
+  gapDevMarker = false,
+  labelScale = 1
 ) {
   const leader = st.racers.reduce((a, b) => (b.t > a.t ? b : a));
   const inv = 1 / ezoom;
@@ -225,7 +242,8 @@ export function drawRacers(
       ezoom,
       ezoomY ?? ezoom,
       tagFontPx,
-      isRacing
+      isRacing,
+      labelScale
     );
   }
 
