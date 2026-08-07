@@ -8,6 +8,16 @@ report here could be orphaned, or an index link could dangle, with nothing notic
 `node scripts/check-index.mjs --dir=reports/night --index=reports/night/INDEX.md` now checks both
 directions.
 
+- [START-SEQUENCE-1.md](START-SEQUENCE-1.md) — the roll call in waves. **Stages 0 and 1 built and
+  measured; STAGE 2, the camera sequence, is NOT built** — the camera fingerprint is unchanged, which
+  is the honest signal rather than a surprise. Stage 0 found a THREE-way countdown disagreement, not
+  two: `countdownDurationMs` governs everything, `countdownDuration` is read by NOTHING while a live
+  Dev control writes it, and the overlay hard-codes 3 — so "GO!" sits on screen for a full extra
+  second. Stage 1 partitions a formation into the fewest non-overlapping groups at FULL label size;
+  "only where necessary" falls out of the mechanism rather than a special case. Measured over 2070
+  field sizes: **0 overlaps inside a wave, 0 names never shown**, and on the shipped roster
+  **86.5% of field sizes need exactly one wave** — the roll call is a rare fallback, and the worst
+  case anywhere stretches the countdown only from 4.0s to 4.5s. Render moved, world unchanged.
 - [QUICKTEST-NAMES-1.md](QUICKTEST-NAMES-1.md) — testing with realistic name lengths, and **the
   shrink rule does not survive it**. Every overlap number this project had measured was a statement
   about a 4-8 character roster. With realistic names (mean 19.4) the picture inverts: 3 affected
