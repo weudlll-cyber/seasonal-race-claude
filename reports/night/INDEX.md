@@ -8,6 +8,17 @@ report here could be orphaned, or an index link could dangle, with nothing notic
 `node scripts/check-index.mjs --dir=reports/night --index=reports/night/INDEX.md` now checks both
 directions.
 
+- [ROLL-CALL-PAIRING-1.md](ROLL-CALL-PAIRING-1.md) — a name must POINT at its racer. The roll call
+  passed its own acceptance test and was still wrong: it delivered readability against a requirement
+  that was always "a viewer can find his racer", and nothing had measured pairing. A label is centred
+  on its racer, so the box centre is a pointer only while the box is ~one racer wide — with realistic
+  names it is 170px against 24px spacing. Trigger derived from geometry: count the racers under a
+  label; one is unambiguous, more is not. **A wave-count rule would have missed space-sprint at N=30,
+  which needs ONE wave and is 100% ambiguous** — pairing is a long-name problem, not a crowded-
+  formation one. Marking reuses the battle-focus dimming; the connector is a leader line ending ON
+  the body. Planner proposal 1 answered **NO with evidence**: dimming alone leaves 74-100% of labels
+  still ambiguous, so both are needed. Render moved; camera and world RUN rather than assumed
+  (defaults.js is inside the engine-reach closure) and both unchanged.
 - [START-SEQUENCE-1.md](START-SEQUENCE-1.md) — the roll call in waves. **Stages 0 and 1 built and
   measured; STAGE 2, the camera sequence, is NOT built** — the camera fingerprint is unchanged, which
   is the honest signal rather than a surprise. Stage 0 found a THREE-way countdown disagreement, not
