@@ -8,6 +8,16 @@ report here could be orphaned, or an index link could dangle, with nothing notic
 `node scripts/check-index.mjs --dir=reports/night --index=reports/night/INDEX.md` now checks both
 directions.
 
+- [HARNESS-NAMES-1.md](HARNESS-NAMES-1.md) — the render harness never set `r.name`, so every label
+  box in it was 8px of padding: it measured a geometry the game cannot produce. Fixed with the MIXED
+  roster, by index, imported from the one home; render **re-minted deliberately** to
+  `f2e170d17ccf84e9` as an INSTRUMENT change (world and camera unchanged, engine-reach says the diff
+  cannot reach the engine). **The block's own proof did not come out as predicted and the report
+  leads with that:** attribution was never broken — a one-track change moved one hash both before and
+  after. What was broken is narrower, and the second probe found something new: with MIXED at 40
+  racers every track genuinely overlaps, so the instrument now SATURATES for the class of rule it was
+  fixed to measure. Two further harness blind spots named, including that `verify` does not run the
+  render guard when the harness itself changes.
 - [CLEANUP-BEFORE-NUMBERS-1.md](CLEANUP-BEFORE-NUMBERS-1.md) — salvage what lasts, then drop the
   rest. The four label branches land as history FIRST, then the two invisible pieces are salvaged
   (the countdown gets one home and its dead-but-live Dev control is removed; the label box gets one

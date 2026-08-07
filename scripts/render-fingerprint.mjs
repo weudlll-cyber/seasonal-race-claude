@@ -104,6 +104,12 @@ const { createRecordingContext } = await import(
 );
 const { DEFAULT_TRACK_LIGHTS, sampleBoundaryAtInterval, LIGHT_SPACING_PX } =
   await import(u("client/src/modules/trackLights.js"));
+// HARNESS-NAMES-1: the roster comes from racerNames.js, the ONE home, rather than a list typed here.
+// A second copy of a name list is the exact bug that file's own header was written about — and in
+// this project a racer's NAME is an engine input, so a divergent copy is not a tidiness problem.
+const { QUICK_TEST_NAMES_MIXED: HARNESS_NAMES } = await import(
+  u("client/src/modules/racerNames.js")
+);
 const RT = await (async () => {
   const re = console.error;
   console.error = () => {};
@@ -243,6 +249,27 @@ function trackHash(geo, wantOps) {
   // shape the browser never produces.
   const st = attachRenderState(built.state);
   attachRacerRenderState(st.racers);
+  // HARNESS-NAMES-1: THE RACERS GET REAL NAMES, and until this line they had none.
+  //
+  // `labelOf` falls back to `r.name ?? ''`, so every label box in this harness was 8 px of padding
+  // and nothing else — a geometry the game cannot produce, because a racer always has a name. The
+  // consequence was not that labels were missing; it was that any rule CONDITIONAL ON LABEL
+  // GEOMETRY misfired here. Measured with a probe that marks a formation whose labels overlap: on
+  // the nameless harness it moved all TEN per-track hashes; with real names it moves only the
+  // tracks whose labels actually overlap. The instrument could say that something changed and not
+  // where — and it is the instrument that must certify the race-number work, which is entirely a
+  // label change.
+  //
+  // THE MIXED ROSTER, because a label instrument wants the extremes: 2 to 23 characters with the
+  // lengths interleaved, so adjacent racers differ and both the widest and the narrowest pairings a
+  // real field can contain are exercised. `current` is 4-8 and would under-state every width;
+  // `long` is uniformly wide and would never produce a narrow pair.
+  //
+  // BY RACER INDEX, modulo the roster, so the same racer takes the same name on every run and on
+  // every track. A measuring instrument that varies between runs is not an instrument.
+  st.racers.forEach((r, i) => {
+    r.name = HARNESS_NAMES[i % HARNESS_NAMES.length];
+  });
   const raceCfg = built.config;
   const meta = built.meta;
 
