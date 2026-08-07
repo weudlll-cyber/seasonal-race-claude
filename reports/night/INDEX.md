@@ -8,6 +8,13 @@ report here could be orphaned, or an index link could dangle, with nothing notic
 `node scripts/check-index.mjs --dir=reports/night --index=reports/night/INDEX.md` now checks both
 directions.
 
+- [CLEANUP-BEFORE-NUMBERS-1.md](CLEANUP-BEFORE-NUMBERS-1.md) — salvage what lasts, then drop the
+  rest. The four label branches land as history FIRST, then the two invisible pieces are salvaged
+  (the countdown gets one home and its dead-but-live Dev control is removed; the label box gets one
+  home), then the branches are archived as tags and deleted. The overlap trigger was dropped
+  deliberately: exact, and out of a job once race numbers make its condition unreachable. Both
+  fingerprints unchanged — asked of `engine-reach` rather than assumed, which said the world one was
+  owed. Master afterwards: one open branch, `feat/min-racers-visible-5`.
 - [ROLL-CALL-PAIRING-1.md](ROLL-CALL-PAIRING-1.md) — **NOT SHIPPED (recorded result).** A label
   centred on its racer only POINTS at it while it is about one racer wide; with realistic names it
   spans a handful and identifies none. That finding is why the race-number design exists, and it
