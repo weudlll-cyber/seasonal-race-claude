@@ -8,6 +8,18 @@ report here could be orphaned, or an index link could dangle, with nothing notic
 `node scripts/check-index.mjs --dir=reports/night --index=reports/night/INDEX.md` now checks both
 directions.
 
+- [CEREMONY-HANDOVER-1.md](CEREMONY-HANDOVER-1.md) — the field guarantee no longer stops at the gun,
+  and the settled beat became a control instead of a remainder. The racing-time promise is the COMPANY
+  guarantee with the WHOLE FIELD as its company — reuse that is correctness, not economy, because the
+  ceremony's own version measures from the formation's CENTRE while the racing camera sits on the
+  leader, forward-framed. Retires when its ceiling falls below OVERVIEW's zoom: the widest shot the
+  design has a name for. **river-run 23/40 → 4/40 racers lost, frames losing anybody 884 → 488**;
+  mountainstreet 19/40 → 4/40. **Two tracks get nothing** — ice-track and space-sprint retire on frame
+  one, hashes byte-identical to the parent. (c) HOLDS and searound was not a coincidence: measuring
+  from a moving anchor is what makes the centre travel with the field. Camera moved on 8 of 10, render
+  moved, world unchanged. My first attempt at the settled slider re-created the very defect it was
+  fixing and a test caught it. A stale measured stamp from the PREVIOUS block is re-measured here —
+  verify could not have seen it, because the guard compares against committed history.
 - [START-CEREMONY-CAMERA-1.md](START-CEREMONY-CAMERA-1.md) — the race opens on the whole track, held
   still, then eases in to the formation until it is as large as it can be with every racer still in
   frame, and that framing is held into the race. **Both ends of the move are GEOMETRY and neither is
