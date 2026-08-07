@@ -308,6 +308,15 @@ if (IS_ENTRY) {
       .find((l) => l.includes("RETRY LEDGER"));
     if (line) console.log(`  ${r.id.padEnd(19)} ${line.trim()}`);
   }
+  // VERIFY-ROUTING-1: a guard's PENDING lines are surfaced on a GREEN run too. A guard that can see
+  // a limit on what it is able to answer must not have that answer disappear because the exit code
+  // was zero — which is what happened when a report said PASS about a stamp the commit being made
+  // was about to invalidate. True, and incomplete.
+  for (const r of done) {
+    for (const line of r.out.split(String.fromCharCode(10)))
+      if (line.startsWith("PENDING:") || line.includes("PENDING against uncommitted"))
+        console.log(`  ${r.id.padEnd(19)} ${line.trim()}`);
+  }
   // The hashes are the point of the fingerprint guards, so surface them even when green.
   for (const r of done.filter((d) => d.ok && /fingerprint/.test(d.id))) {
     // CAMERA had to be added after the first full run surfaced only two of the three hashes — a
