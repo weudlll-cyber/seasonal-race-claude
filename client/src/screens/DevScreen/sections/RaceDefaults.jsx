@@ -14,7 +14,6 @@ import { InfoTooltip } from '../../../components/InfoTooltip/index.js';
 import s from '../DevScreen.module.css';
 
 const DURATIONS = [30, 60, 90, 120];
-const COUNTDOWNS = [3, 5, 10];
 
 function RaceDefaults() {
   const [defaults, setDefaults] = useStorage(KEYS.RACE_DEFAULTS, DEFAULT_RACE_DEFAULTS);
@@ -142,28 +141,6 @@ function RaceDefaults() {
               if (Number.isInteger(v) && v >= 1 && v <= 100) set({ maxPlayersOpen: v });
             }}
           />
-        </div>
-
-        {/* Countdown */}
-        <div className={s.formGroup}>
-          <label
-            className={s.label}
-            style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}
-          >
-            Countdown Duration
-            <InfoTooltip text="How long the pre-race countdown lasts in seconds. Gives the operator and audience time to focus before the race begins. 3 seconds is the classic countdown." />
-          </label>
-          <div className={s.optionPills}>
-            {COUNTDOWNS.map((c) => (
-              <button
-                key={c}
-                className={`${s.optionPill} ${defaults.countdownDuration === c ? s.optionPillActive : ''}`}
-                onClick={() => set({ countdownDuration: c })}
-              >
-                {c}s
-              </button>
-            ))}
-          </div>
         </div>
 
         <hr className={s.divider} />

@@ -14,7 +14,6 @@ export const DEFAULT_RACE_DEFAULTS = {
   maxPlayers: 20,
   maxPlayersClosed: 40,
   maxPlayersOpen: 100,
-  countdownDuration: 3,
   autoAdvance: false,
   autoAdvanceDelay: 5,
   soundEffects: true,
@@ -323,7 +322,19 @@ export const DEFAULT_CAMERA_CONFIG = {
   // CAMERA-REFERENCE-WIDTH-1: the countdown opens on the same unit — a wide establishing shot that
   // eases into OVERVIEW. Clamped by the projection, so on a small world it means "the whole world".
   countdownStartCorridors: 3,
-  countdownDurationMs: 4000, // matches the default race countdown duration
+  // THE COUNTDOWN'S ONE HOME (CLEANUP-BEFORE-NUMBERS-1, salvaged from START-SEQUENCE-1 stage 0).
+  //
+  // The comment that stood here claimed this "matches the default race countdown duration". It was
+  // FALSE for as long as both keys existed — this is 4000 ms and `countdownDuration` said 3 seconds.
+  // And they were never two homes for one fact: `countdownDuration` was read by NOTHING. It was
+  // written by a live Dev Panel control and consumed nowhere, so moving it there never did anything.
+  // Both the key and that control are gone; this is the only countdown number there is, and it is
+  // the one RaceScreen's phase advance actually compares against.
+  //
+  // STILL OPEN, deliberately: `drawCountdownOverlay` counts from a hard-coded 3 while this phase
+  // lasts 4000 ms, so "GO!" stands for an extra second. That is a VISIBLE change and was left for
+  // work the owner's eye is on. See reports/night/START-SEQUENCE-1.md.
+  countdownDurationMs: 4000,
   // State overlay: narrative text shown during first seconds of OVERVIEW / BATTLE / COMEBACK.
   stateOverlayEnabled: true,
   stateOverlayDurationMs: 3500,
