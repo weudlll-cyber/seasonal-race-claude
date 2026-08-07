@@ -54,9 +54,8 @@ const { computeRacerLayout, computeBodyNarrowRef } = await import(
 );
 const { computeRenderDisplayScale, getEffectiveMaxTargetScreenPx } =
   await import(u("client/src/modules/autoSpriteScale.js"));
-const { tagFontScreenPx } = await import(
-  u("client/src/screens/RaceScreen/nameTagLayout.js")
-);
+const { tagFontScreenPx, partitionIntoWaves, countdownDurationFor } =
+  await import(u("client/src/screens/RaceScreen/nameTagLayout.js"));
 const { effectiveZoom } = await import(
   u("client/src/modules/camera/openTrackCamera.js")
 );
@@ -352,6 +351,27 @@ function measure(geo, nRequested) {
   const rowOf = new Map();
   for (const a of built.meta.assignmentByRacer.values())
     rowOf.set(a.racerIndex, a.rowIndex);
+  // ── START-SEQUENCE-1: the roll call in waves. Driven by the SHIPPED partitioner, never a copy,
+  // so this cannot certify a grouping the game does not actually produce. Then every wave is checked
+  // for internal overlap — the promise is that within a wave nothing collides.
+  const waves = partitionIntoWaves(
+    items.map((i) => ({ index: i.index, ...i.label })),
+  );
+  let overlapWithinAnyWave = 0;
+  for (const w of waves)
+    for (let i = 0; i < w.length; i++)
+      for (let j = i + 1; j < w.length; j++) {
+        const a2 = w[i];
+        const b2 = w[j];
+        if (
+          Math.min(a2.right, b2.right) > Math.max(a2.left, b2.left) &&
+          Math.min(a2.bottom, b2.bottom) > Math.max(a2.top, b2.top)
+        )
+          overlapWithinAnyWave++;
+      }
+  // Every racer named at least once, which is the owner's promise.
+  const namedOnce = new Set(waves.flat().map((b2) => b2.index)).size;
+
   let pairOverlaps = 0;
   let sameRowPairs = 0;
   let crossRowPairs = 0;
@@ -467,6 +487,11 @@ function measure(geo, nRequested) {
     crossRowPairs,
     labelsHitPct: (100 * labelsHit.size) / items.length,
     worstFrac,
+    waveCount: waves.length,
+    overlapWithinAnyWave,
+    namedOnce,
+    eligibleCount: items.length,
+    countdownMs: countdownDurationFor(waves.length, 4000, 900),
   };
 }
 
@@ -605,6 +630,75 @@ for (const s of sweeps) {
     `\n  ${s.id}: labels overlap at N = ${list.join(", ")}` +
       `\n    worst: N=${s.overlapping.reduce((a, b) => (b.labelsHitPct > a.labelsHitPct ? b : a)).nRacers}` +
       ` → ${r2(s.overlapping.reduce((a, b) => (b.labelsHitPct > a.labelsHitPct ? b : a)).labelsHitPct)}% of labels hit`,
+  );
+}
+
+console.log(`\n── START-SEQUENCE-1: the roll call in waves ──`);
+{
+  const c7 = [
+    ["track", (s) => s.id, 15],
+    ["counts", (s) => `${SWEEP_MIN}..${s.max}`, 9],
+    [
+      "1 wave",
+      (s) => String(s.points.filter((p) => p.waveCount === 1).length),
+      8,
+    ],
+    [
+      "needs >1",
+      (s) => String(s.points.filter((p) => p.waveCount > 1).length),
+      10,
+    ],
+    [
+      "MAX waves",
+      (s) => String(Math.max(...s.points.map((p) => p.waveCount))),
+      11,
+    ],
+    [
+      "at N",
+      (s) =>
+        String(
+          s.points.reduce((a, b) => (b.waveCount > a.waveCount ? b : a))
+            .nRacers,
+        ),
+      7,
+    ],
+    [
+      "countdown",
+      (s) =>
+        (
+          s.points.reduce((a, b) => (b.waveCount > a.waveCount ? b : a))
+            .countdownMs / 1000
+        ).toFixed(1) + "s",
+      11,
+    ],
+    [
+      "OVERLAP IN WAVE",
+      (s) => String(s.points.reduce((a, p) => a + p.overlapWithinAnyWave, 0)),
+      16,
+    ],
+    [
+      "names lost",
+      (s) =>
+        String(s.points.filter((p) => p.namedOnce !== p.eligibleCount).length),
+      11,
+    ],
+  ];
+  console.log(c7.map(([h, , w]) => h.padEnd(w)).join(""));
+  for (const s of sweeps)
+    console.log(c7.map(([, f, w]) => String(f(s)).padEnd(w)).join(""));
+  const tot = (fn) =>
+    sweeps.reduce((a, s) => a + s.points.filter(fn).length, 0);
+  const worst = sweeps
+    .flatMap((s) => s.points.map((p) => ({ ...p, id: s.id })))
+    .reduce((a, b) => (b.waveCount > a.waveCount ? b : a));
+  console.log(
+    `\n  TOTALS — overlap inside a wave: ${sweeps.reduce((a, s) => a + s.points.reduce((x, p) => x + p.overlapWithinAnyWave, 0), 0)}` +
+      `   field sizes losing a name: ${tot((p) => p.namedOnce !== p.eligibleCount)}` +
+      `   needing exactly 1 wave: ${tot((p) => p.waveCount === 1)}/${tot(() => true)}`,
+  );
+  console.log(
+    `  WORST CASE: ${worst.id} at N=${worst.nRacers} needs ${worst.waveCount} waves` +
+      ` -> countdown ${(worst.countdownMs / 1000).toFixed(1)}s`,
   );
 }
 

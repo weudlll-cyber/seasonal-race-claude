@@ -42,7 +42,7 @@ import {
   drawFinishedOverlay,
 } from './drawing/overlayRendering.js';
 import { drawTrackLights } from '../../modules/trackLights.js';
-import { computeTagLayout, tagFontScreenPx } from './nameTagLayout.js';
+import { computeTagLayout, tagFontScreenPx, rollCallWaveIndex } from './nameTagLayout.js';
 import { renderMinimap } from '../../modules/camera/Minimap.js';
 import { effectiveZoom } from '../../modules/camera/openTrackCamera.js';
 import { OPEN_TRACK_BASE_ZOOM } from '../../modules/camera/CameraDirector.js';
@@ -96,6 +96,10 @@ export function renderRaceFrame(ctx, f) {
     renderAlpha,
     interpolationEnabled,
     tagIncumbents,
+    // START-SEQUENCE-1: last frame's wave count. The count is an OUTPUT of the layout, so the wave
+    // being shown this frame is chosen from what the previous frame measured — one frame of lag on a
+    // number that only changes when the formation does, which during a countdown is never.
+    tagIncumbentWaveCount,
     leaderDiag,
     cfgBadge,
     buildBadge,
@@ -178,6 +182,14 @@ export function renderRaceFrame(ctx, f) {
     fontPx: tagFontPx,
     measureText: measureTagText,
     showAll: showAllTags,
+    // START-SEQUENCE-1: which wave of the roll call is on screen. Derived from the countdown clock,
+    // so a formation that needs only one wave ignores it entirely and nothing about those tracks
+    // changes. `rollCallWaveIndex` clamps, so an elapsed time past the end holds the last wave.
+    waveIndex: rollCallWaveIndex(
+      st.phase === PHASE.COUNTDOWN ? ts - (st.countdownStart ?? ts) : raceElapsedMs,
+      cameraConfig.rollCallMsPerWave ?? 900,
+      tagIncumbentWaveCount ?? 1
+    ),
     incumbents: tagIncumbents,
     labelOf: (r) =>
       showRpStartRow
@@ -256,7 +268,14 @@ export function renderRaceFrame(ctx, f) {
     renderMinimap(ctx, shape, st.racers, leaderIdx, canvasW, canvasH, minimapHighlights);
   }
 
-  return { effZoomX, effZoomY, displayScale, tagShown: tagLayout.shown, countdownNumber };
+  return {
+    effZoomX,
+    effZoomY,
+    displayScale,
+    tagShown: tagLayout.shown,
+    countdownNumber,
+    waveCount: tagLayout.waveCount ?? 1,
+  };
 }
 
 /**

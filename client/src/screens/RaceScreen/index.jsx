@@ -21,6 +21,7 @@ import { lerp, lerpAngle } from '../../utils/mathUtils.js';
 import { resolveActiveBrandProfile } from '../../modules/branding/useActiveBrandProfile.js';
 import { getRacerType, getCoatsByType } from '../../modules/racer-types/index.js';
 import {
+import { countdownDurationFor } from './nameTagLayout.js';
   assignCoat,
   assignPattern,
   PATTERN_IDS,
@@ -101,6 +102,10 @@ export default function RaceScreen() {
   const canvasRef = useRef(null);
   // CAMERA-TAGS-1: the set of racer indices that carried a name tag last frame.
   const tagIncumbentsRef = useRef(null);
+  // START-SEQUENCE-1: how many waves the roll call needs for THIS formation. An output of the tag
+  // layout, fed back so the countdown can be long enough to show them all. 1 on every formation
+  // whose names already fit, which is why those countdowns are untouched.
+  const rollCallWavesRef = useRef(1);
   const bgCanvasRef = useRef(null);
   const screenRef = useRef(null);
   const rafRef = useRef(null);
@@ -699,7 +704,16 @@ export default function RaceScreen() {
       if (st.phase === PHASE.COUNTDOWN) {
         if (!st.countdownStart) st.countdownStart = ts;
         computePositions();
-        if (ts - st.countdownStart >= (cameraConfigRef.current.countdownDurationMs ?? 4000)) {
+        // START-SEQUENCE-1: the countdown lasts long enough for the whole roll call. ONE HOME for
+        // the derivation (countdownDurationFor) so this and the camera cannot disagree about how
+        // long the countdown is. It STRETCHES only where it must — a one-wave formation gets exactly
+        // the configured minimum, to the millisecond.
+        const countdownMs = countdownDurationFor(
+          rollCallWavesRef.current,
+          cameraConfigRef.current.countdownDurationMs ?? 4000,
+          cameraConfigRef.current.rollCallMsPerWave ?? 900
+        );
+        if (ts - st.countdownStart >= countdownMs) {
           st.phase = PHASE.RACING;
           st.raceStart = ts;
           // physicsTs starts at 0 when racing begins; nextRollTime is already a
@@ -1243,6 +1257,7 @@ export default function RaceScreen() {
         renderAlpha,
         interpolationEnabled: frameTimingConfig.renderInterpolation,
         tagIncumbents: tagIncumbentsRef.current,
+        tagIncumbentWaveCount: rollCallWavesRef.current,
         leaderDiag: leaderDiagRef.current,
         cfgBadge,
         buildBadge: RA_BUILD,
@@ -1253,6 +1268,7 @@ export default function RaceScreen() {
         canvasH: canvas.height,
       });
       tagIncumbentsRef.current = frame.tagShown;
+      rollCallWavesRef.current = frame.waveCount ?? 1;
       if (frame.countdownNumber !== null) setCountdown(frame.countdownNumber);
 
       // CAMERA-REPRO-1: hand the marker the values this frame was DRAWN with. Read back from the

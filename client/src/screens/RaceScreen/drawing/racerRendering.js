@@ -19,6 +19,10 @@
 // ============================================================
 
 import { lerp, lerpAngle } from '../../../utils/mathUtils.js';
+// LABEL-STAGGER-1: the label box's shape has ONE home, and it is nameTagLayout.js. These numbers
+// were re-typed here as literals, so the module that LAID OUT the boxes and the module that DREW
+// them each owned a copy of the same rectangle and could have disagreed without anything failing.
+import { labelBoxHeight, labelOffsetAbove, labelBoxWidth } from '../nameTagLayout.js';
 
 import { PHASE } from '../racePhase.js';
 const PHASE_RACING = PHASE.RACING;
@@ -48,13 +52,13 @@ const PHASE_RACING = PHASE.RACING;
  * @param {boolean} isRacing  True when phase === RACING (enables crown icon).
  */
 function drawNameTag(ctx, px, py, name, isLeader, isComeback, effX, effY, fontPx, isRacing) {
-  const bgH = fontPx * 1.18;
-  const offsetY = fontPx * 2.0;
+  const bgH = labelBoxHeight(fontPx);
+  const offsetY = labelOffsetAbove(fontPx);
   ctx.save();
   ctx.translate(px, py);
   ctx.scale(1 / effX, 1 / effY); // one unit is now one screen pixel
   ctx.font = `bold ${fontPx}px sans-serif`;
-  const nameW = ctx.measureText(name).width + 8;
+  const nameW = labelBoxWidth(ctx.measureText(name).width);
   ctx.fillStyle = 'rgba(0,0,0,0.65)';
   ctx.fillRect(-nameW / 2, -offsetY - bgH, nameW, bgH);
   ctx.textBaseline = 'bottom';

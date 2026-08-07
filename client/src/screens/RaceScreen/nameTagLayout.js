@@ -35,6 +35,18 @@
 //
 //              Pure: no canvas, no state, no clock. Text measurement comes in as a function so the
 //              caller can hand it a real ctx and a test can hand it a ruler.
+//
+//              ── WHAT CAME FROM WHERE (START-SEQUENCE-1) ──────────────────────────
+//              Two things were PLUNDERED from branches the owner did not merge, rather than
+//              re-typed, because a second copy of either would be the duplication this module has
+//              already been cleaned of once:
+//                • `formationNeedsStagger` — the overlap TRIGGER, from feat/label-stagger-1. Measured
+//                  exact across ten tracks at every field size: 0 false positives, 0 misses.
+//                • the label-box geometry helpers — the one home for the box's shape, so the module
+//                  that LAYS OUT a label and the one that DRAWS it cannot disagree about it.
+//              What was deliberately NOT taken: the stagger PLACEMENT (measured, does not work — it
+//              creates as many overlaps as it removes) and the SHRINK behaviour (built, and rejected
+//              by the owner at the picture). Neither is in this file.
 // ============================================================
 
 /** Screen-px padding around the text inside the label's background box. */
@@ -43,6 +55,34 @@ const BOX_PAD_X = 8;
 const BOX_H_FACTOR = 1.18;
 /** How far above the racer's centre the label sits, as a multiple of the font size. */
 const BOX_OFFSET_FACTOR = 2.0;
+
+/**
+ * THE LABEL'S OWN GEOMETRY — one home, because there used to be two (LABEL-STAGGER-1).
+ *
+ * This module decided WHERE a label box is in order to lay the labels out, and `racerRendering.js`
+ * re-typed the same three numbers as literals (`fontPx * 1.18`, `fontPx * 2.0`, `+ 8`) in order to
+ * DRAW it. Two copies of the shape of one rectangle: the layout could have been reasoning about a
+ * box the renderer never drew, and nothing would have failed. Nothing had drifted yet — that is the
+ * point of fixing it while it is still true.
+ *
+ * The renderer now imports these. If the label box changes shape, it changes here and the layout and
+ * the drawing move together by construction.
+ */
+
+/** The label box height in screen px. */
+export function labelBoxHeight(fontPx) {
+  return fontPx * BOX_H_FACTOR;
+}
+
+/** How far above the racer's centre the BOTTOM of the label sits, in screen px. */
+export function labelOffsetAbove(fontPx) {
+  return fontPx * BOX_OFFSET_FACTOR;
+}
+
+/** The label box width for a measured text width, in screen px. */
+export function labelBoxWidth(textWidth) {
+  return textWidth + BOX_PAD_X;
+}
 
 /**
  * STABILITY, and both numbers are measured rather than chosen. A first-fit layout recomputed every
@@ -88,6 +128,111 @@ export function tagFontScreenPx(frameFrac, canvasH) {
 }
 
 /**
+ * DOES THIS FORMATION NEED ITS LABELS STAGGERED? (LABEL-STAGGER-1)
+ *
+ * The owner's rule: ONE rule for every track, fired by the local geometry, only where the room runs
+ * out. Never keyed on track name, track id, open vs closed, racer type or a racer count — the goal
+ * is explicitly not to make another exception for one track. Nothing below reads any of those; it
+ * sees a list of boxes in screen pixels and nothing else.
+ *
+ * ONE ANSWER PER FORMATION, not per label. A formation with half its names staggered and half not
+ * reads as an accident, so this returns a single boolean for the whole field.
+ *
+ * WHY IT COMPARES AGAINST THE WHOLE BOX AND NOT AGAINST THE LABEL'S HEIGHT. The rule was specified
+ * as "compare the separation between adjacent start rows against the height of one label". Measured
+ * across all ten tracks at every field size from 2 to the maximum, that test is wrong in both
+ * directions, and badly: taken on the vertical axis it fires **153 times where no labels overlapped
+ * at all**, and taken as a centre-to-centre distance it never fires and misses **120** real
+ * overlaps. Neither can pass this block's own acceptance test, which is that the rule must never
+ * fire where it was not needed.
+ *
+ * The reason is that a label is a RECTANGLE. Two of them miss each other if they are clear on
+ * EITHER axis — separated horizontally by their widths, or vertically by one height. A height-only
+ * test is blind to the horizontal escape, so it condemns every formation whose rows sit side by side
+ * on screen, which is most of them. So the comparison is against the box: do any two labels in this
+ * formation actually intersect? That is the same question the specification asked, asked about the
+ * shape the label really has.
+ *
+ * It is exact by construction — no false positives and no false negatives are possible, because the
+ * predicate IS the condition rather than a proxy for it. That is what makes "it never fires where it
+ * was not needed" a property rather than a measurement that could drift.
+ *
+ * @param {Array<{left:number,right:number,top:number,bottom:number}>} boxes  label boxes, screen px
+ * @returns {boolean} true when at least one pair intersects
+ */
+/**
+ * THE ROLL CALL IN WAVES — split a formation into the FEWEST groups in which no two labels overlap.
+ *
+ * The owner's promise is that every spectator can find their racer once. When every name fits at
+ * once, that is one group and the picture is exactly what it has always been. When they do not fit,
+ * the promise is kept over TIME instead of in one frame: each name still appears, at full size,
+ * fully readable, in its turn.
+ *
+ * "ONLY WHERE NECESSARY" FALLS OUT OF THE MECHANISM rather than being a special case bolted on. A
+ * formation with no overlaps produces exactly one wave by construction — the first box opens wave 0
+ * and every subsequent box finds no conflict there. There is no branch that asks "does this track
+ * need it"; the answer is the shape of the result.
+ *
+ * WHAT THIS IS, precisely: minimum colouring of the labels' conflict graph, solved greedily. Optimal
+ * colouring is NP-hard in general, so "fewest" is greedy-fewest, not proven-fewest. That is an honest
+ * limit and it is the right trade here — the alternative costs exponential time to save, at most, a
+ * wave, and the measured group counts are small.
+ *
+ * NOTHING IS SHRUNK AND NOTHING IS MOVED. Labels stay at full size, in the place they have always
+ * been drawn. The only thing that varies is WHICH of them is on screen at a given moment, which is
+ * the same lever the decluttering already owns — so this adds a rule to that lever rather than a new
+ * mechanism beside it.
+ *
+ * @param {Array<{index:number,left:number,right:number,top:number,bottom:number}>} boxes
+ * @returns {Array<Array<object>>} waves, each a list of mutually non-overlapping boxes
+ */
+export function partitionIntoWaves(boxes) {
+  const waves = [];
+  if (!Array.isArray(boxes) || boxes.length === 0) return waves;
+
+  // WIDEST FIRST, and the order is not cosmetic. Greedy colouring's result depends on the order it
+  // visits: the widest label conflicts with the most others, so placing it while the waves are still
+  // empty gives it the best chance of sharing one, and placing it last forces a wave of its own.
+  // Ties break on `index` so the same formation always yields the same waves — a roll call that
+  // reshuffles between two identical frames is churn, and Lesson 190 requires a DECISIVE decision.
+  const order = [...boxes].sort(
+    (a, b) => b.right - b.left - (a.right - a.left) || a.index - b.index
+  );
+
+  for (const box of order) {
+    let placed = false;
+    for (const wave of waves) {
+      if (!wave.some((other) => boxesIntersect(box, other))) {
+        wave.push(box);
+        placed = true;
+        break;
+      }
+    }
+    if (!placed) waves.push([box]);
+  }
+  return waves;
+}
+
+export function formationNeedsStagger(boxes) {
+  if (!Array.isArray(boxes) || boxes.length < 2) return false;
+  for (let i = 0; i < boxes.length; i++) {
+    const a = boxes[i];
+    for (let j = i + 1; j < boxes.length; j++) {
+      if (boxesIntersect(a, boxes[j])) return true;
+    }
+  }
+  return false;
+}
+
+/** Do two screen-space label boxes intersect? The one definition; everything here calls it. */
+function boxesIntersect(a, b) {
+  return (
+    Math.min(a.right, b.right) > Math.max(a.left, b.left) &&
+    Math.min(a.bottom, b.bottom) > Math.max(a.top, b.top)
+  );
+}
+
+/**
  * Decide which racers get a name tag this frame.
  *
  * @param {object} p
@@ -123,14 +268,18 @@ export function computeTagLayout({
   incumbents = null,
   edgeMarginFrac = EDGE_MARGIN_FRAC,
   yieldOverlapFrac = YIELD_OVERLAP_FRAC,
+  rowOf = null,
+  // START-SEQUENCE-1: which wave of the roll call is on screen right now. Ignored entirely when the
+  // formation needs only one — which is why a roomy track cannot be affected by it.
+  waveIndex = 0,
 }) {
   const shown = new Set();
   if (!Array.isArray(racers) || racers.length === 0 || !(fontPx > 0)) {
-    return { shown, eligible: 0, placed: 0, dropped: 0 };
+    return { shown, eligible: 0, placed: 0, dropped: 0, stagger: false, waveCount: 1 };
   }
 
-  const boxH = fontPx * BOX_H_FACTOR;
-  const offsetAbove = fontPx * BOX_OFFSET_FACTOR;
+  const boxH = labelBoxHeight(fontPx);
+  const offsetAbove = labelOffsetAbove(fontPx);
   const edgeMargin = Math.max(0, edgeMarginFrac) * canvasH;
 
   // ── ELIGIBLE: on canvas. Not "top N by position" — a label answers "who is that on screen". ──
@@ -146,7 +295,7 @@ export function computeTagLayout({
     const isIncumbent = incumbents ? incumbents.has(r.index) : false;
     const m = isIncumbent ? -edgeMargin : edgeMargin;
     if (sx < m || sx > canvasW - m || sy < m || sy > canvasH - m) continue;
-    const w = Math.max(1, measureText(labelOf(r)) + BOX_PAD_X);
+    const w = Math.max(1, labelBoxWidth(measureText(labelOf(r))));
     // The box, in screen px, exactly where it will be drawn.
     eligible.push({
       index: r.index,
@@ -164,8 +313,23 @@ export function computeTagLayout({
   // to survive the new rule — it is a feature, and the decluttering below would otherwise take the
   // roll call away the moment it shipped. No decluttering runs while it holds.
   if (showAll) {
-    for (const e of eligible) shown.add(e.index);
-    return { shown, eligible: eligible.length, placed: eligible.length, dropped: 0 };
+    // ── THE ROLL CALL, IN WAVES ────────────────────────────────────────────────────────────────
+    // Every name still appears, at full size. When they all fit, `waves` has ONE entry and this is
+    // byte-for-byte what it has always been. When they do not, the promise is kept over time.
+    const waves = partitionIntoWaves(eligible);
+    const wave =
+      waves.length > 1 ? waves[Math.min(waveIndex, waves.length - 1) % waves.length] : eligible;
+    for (const e of wave) shown.add(e.index);
+    return {
+      shown,
+      eligible: eligible.length,
+      placed: wave.length,
+      dropped: eligible.length - wave.length,
+      waveCount: waves.length,
+      // The trigger is still reported: `waveCount > 1` and it agree by construction, and the
+      // diagnostic gates on the same predicate the game runs.
+      stagger: waves.length > 1,
+    };
   }
 
   // ── PRIORITY: race position, highest t first. Stage 2 replaces this with the director's anchor
@@ -217,5 +381,54 @@ export function computeTagLayout({
     eligible: eligible.length,
     placed: placed.length,
     dropped: eligible.length - placed.length,
+    // One "wave" outside the roll call: the decluttering above has already removed every overlap by
+    // DROPPING a label, so there is nothing to spread over time.
+    waveCount: 1,
+    // NOT staggered outside the start formation, and that is deliberate rather than an omission.
+    // Here the decluttering above has already removed every overlap by DROPPING a label, so there is
+    // nothing left for a stagger to fix — and moving labels mid-race would change a picture that has
+    // no defect in it. The stagger exists because the start formation is the one place decluttering
+    // is switched off (the owner's roll-call requirement), which is exactly where overlaps survive.
+    stagger: false,
   };
+}
+
+/**
+ * HOW LONG THE COUNTDOWN LASTS — one home, so the phase advance and the camera cannot disagree.
+ *
+ * `max(configured minimum, waves x per-wave)`. It STRETCHES only where it must: a formation whose
+ * names all fit is one wave, one wave times any per-wave value is at most the minimum in practice,
+ * and the max() makes that exact rather than approximate. So the tracks that never needed a roll
+ * call keep the countdown they have always had, to the millisecond.
+ *
+ * @param {number} waveCount     how many waves the roll call needs (>= 1)
+ * @param {number} minimumMs     cameraConfig.countdownDurationMs
+ * @param {number} msPerWave     cameraConfig.rollCallMsPerWave
+ * @returns {number} countdown length in ms
+ */
+export function countdownDurationFor(waveCount, minimumMs, msPerWave) {
+  const waves = Math.max(1, Math.floor(waveCount) || 1);
+  const min = Math.max(0, minimumMs || 0);
+  const per = Math.max(0, msPerWave || 0);
+  return Math.max(min, waves * per);
+}
+
+/**
+ * WHICH WAVE IS ON SCREEN at a given moment of the countdown.
+ *
+ * Keyed on elapsed time and the per-wave beat rather than on the countdown's total length, so the
+ * wave a viewer sees does not change when the total stretches for an unrelated reason. Clamped to
+ * the last wave: once the roll call has finished, it stays on the final group rather than looping,
+ * because a name reappearing after the call has ended reads as a glitch rather than a repeat.
+ *
+ * @param {number} elapsedMs   ms since the countdown began
+ * @param {number} msPerWave
+ * @param {number} waveCount
+ * @returns {number} wave index, 0-based
+ */
+export function rollCallWaveIndex(elapsedMs, msPerWave, waveCount) {
+  const waves = Math.max(1, Math.floor(waveCount) || 1);
+  if (waves === 1) return 0;
+  const per = Math.max(1, msPerWave || 1);
+  return Math.min(waves - 1, Math.max(0, Math.floor((elapsedMs || 0) / per)));
 }

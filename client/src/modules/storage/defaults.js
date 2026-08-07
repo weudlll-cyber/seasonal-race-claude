@@ -323,7 +323,25 @@ export const DEFAULT_CAMERA_CONFIG = {
   // CAMERA-REFERENCE-WIDTH-1: the countdown opens on the same unit — a wide establishing shot that
   // eases into OVERVIEW. Clamped by the projection, so on a small world it means "the whole world".
   countdownStartCorridors: 3,
-  countdownDurationMs: 4000, // matches the default race countdown duration
+  // THE COUNTDOWN'S ONE HOME (START-SEQUENCE-1). It is the MINIMUM now, not a fixed length — the
+  // roll call may stretch it, never shorten it.
+  //
+  // The comment that used to sit here claimed this "matches the default race countdown duration".
+  // That was FALSE for as long as both keys existed: this is 4000 ms and `countdownDuration` says 3
+  // seconds. And they were never two homes for one fact — `countdownDuration` is read by NOTHING. It
+  // is written by a live Dev Panel control and consumed nowhere, so changing it there has never done
+  // anything. THIS key is the one the viewer experiences: RaceScreen's phase advancement compares
+  // against it, and it is now the only countdown number there is.
+  countdownDurationMs: 4000,
+  // START-SEQUENCE-1, the establishing shot: how long the whole-track view is held before the ease
+  // in to the start formation begins. A slider — the owner tunes it by eye. 1200 ms is a beat long
+  // enough to read a track's shape and short enough not to delay a race people are waiting for.
+  establishingShotMs: 1200,
+  // START-SEQUENCE-1, the roll call: how long each wave of names is held. The countdown becomes
+  // max(countdownDurationMs, waves x this), so a formation whose names all fit is untouched — one
+  // wave can never stretch anything. 900 ms is reasoned against reading rather than taste: a short
+  // name is legible in well under half a second, and the rest of the beat is for the eye to FIND it.
+  rollCallMsPerWave: 900,
   // State overlay: narrative text shown during first seconds of OVERVIEW / BATTLE / COMEBACK.
   stateOverlayEnabled: true,
   stateOverlayDurationMs: 3500,
