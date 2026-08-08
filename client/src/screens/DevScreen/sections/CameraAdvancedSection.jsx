@@ -349,11 +349,13 @@ function CameraAdvancedSection() {
           <InfoTooltip
             text={
               'During the race, a label shows the racer’s NAME when the name would cover ' +
-              'neither another label nor another racer, and the NUMBER otherwise. A form is ' +
-              'held for 2 s before it may change, so a jostling pack cannot make the labels ' +
-              'strobe. Measured at 100 racers: about 21% of labels show a name on searound and ' +
-              '13% on river-run, changing form 2.2–2.8 times per label per race. OFF by ' +
-              'default — your eye decides whether that share is worth it.'
+              'neither another label nor another racer, and the NUMBER otherwise. A name is ' +
+              'EARNED by 2 s of clear geometry and given up the instant it stops being clear, so ' +
+              'a name is never drawn on a racer. Two exceptions: the racer the camera is ON keeps ' +
+              'its name throughout, and at the photo finish every racer in frame carries one. ' +
+              'Measured at 100 racers: 17.2% of labels show a name on searound and 9.5% on ' +
+              'river-run, changing form 7.8 and 4.8 times per label per race. OFF by default — ' +
+              'your eye decides whether that share is worth that much switching.'
             }
           />
         </label>

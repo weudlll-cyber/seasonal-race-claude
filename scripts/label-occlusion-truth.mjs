@@ -133,6 +133,9 @@ function runOne(geo, n, demoteHoldMs) {
   let drawnOverlaps = 0; // name-on-racer, over what was DRAWN (includes the hold's lag)
   let criterionOverlaps = 0; // name-on-racer, over what the CRITERION granted — must be 0
   let prevWide = null;
+  let exemptNameFrames = 0; // label-frames whose name was drawn BY EXEMPTION
+  let exemptOverlaps = 0; // …of which overlapped a racer, which is allowed and is counted anyway
+  let focusSwitches = 0; // the focused racer's own form changes — must fall to zero
   const perLabelSwitches = new Map();
 
   runRace(race, identity, cameraConfig, ({ st: s, ts, raceStart }) => {
@@ -155,6 +158,18 @@ function runOne(geo, n, demoteHoldMs) {
     const racerScreenH = drawnRacerScreenPx(race.displaySize, displayScale, effY);
     const racerScreenW = drawnRacerScreenPx(race.displaySize, displayScale, effX);
 
+    // LABEL-FOCUS-1: the same exemptions the renderer applies, derived the same way — the
+    // director's own subject where it has one, the leader where it does not (BATTLE_ZOOM and
+    // OVERVIEW frame a group and name nobody).
+    let focusIndex = cd.anchorRacerIndex ?? null;
+    if (focusIndex == null && s.racers.length) {
+      let leader = s.racers[0];
+      for (const r of s.racers) if ((r?.t ?? 0) > (leader?.t ?? 0)) leader = r;
+      focusIndex = leader?.index ?? null;
+    }
+    const atFinish = cd.state === "PHOTO_FINISH";
+    const exempt = focusIndex != null ? new Set([focusIndex]) : null;
+
     const out = computeTagLayout({
       racers: s.racers,
       effX,
@@ -173,6 +188,8 @@ function runOne(geo, n, demoteHoldMs) {
       labelOf: (r) => raceNumberLabel(r.raceNumber),
       wideLabelOf: (r) => r.name ?? "",
       wideForms,
+      exempt,
+      exemptAll: atFinish,
     });
 
     frames++;
@@ -227,8 +244,18 @@ function runOne(geo, n, demoteHoldMs) {
           }
         }
         if (!over) continue;
-        if (drawnWide) drawnOverlaps++;
-        if (grantedWide) criterionOverlaps++;
+        // ── THE INVARIANT NARROWED WITH THE FEATURE (LABEL-FOCUS-1) ──────────────────────────
+        // "No drawn name overlaps a racer" is now true only of NON-EXEMPT names. An exempt name
+        // that covers something is the owner's choice, not a regression, and counting the two
+        // together would let the next block read his decision as a defect. So they are two
+        // columns, and the pass/fail is only ever the first one.
+        const isExempt = atFinish || (exempt ? exempt.has(r.index) : false);
+        if (drawnWide && isExempt) exemptOverlaps++;
+        else if (drawnWide) drawnOverlaps++;
+        if (grantedWide && !isExempt) criterionOverlaps++;
+      }
+      for (const i of out.wide) {
+        if (atFinish || (exempt ? exempt.has(i) : false)) exemptNameFrames++;
       }
     }
 
@@ -242,6 +269,10 @@ function runOne(geo, n, demoteHoldMs) {
         if ((prevWide ? prevWide.has(i) : false) !== out.wide.has(i)) {
           switches++;
           perLabelSwitches.set(i, (perLabelSwitches.get(i) ?? 0) + 1);
+          // The focused racer's own switches, which the exemption should drive to zero. It is
+          // counted rather than assumed, because "should" is a prediction and this project has just
+          // been shown what one of those is worth.
+          if (exempt && exempt.has(i)) focusSwitches++;
         }
       }
     }
@@ -270,6 +301,10 @@ function runOne(geo, n, demoteHoldMs) {
     sampled,
     drawnOverlaps,
     criterionOverlaps,
+    exemptOverlaps,
+    exemptNameFrames,
+    exemptShare: labelFrames ? exemptNameFrames / labelFrames : 0,
+    focusSwitches,
   };
 }
 
@@ -278,7 +313,7 @@ console.log(
 );
 console.log(`hold=${HOLD_MS}ms   sample every ${SAMPLE_EVERY} frames\n`);
 console.log(
-  "track        demote  labels  name%   switches  /label/race  worst  churn/s   CRITERION  DRAWN",
+  "track        demote  labels  name%   switches  /label/race  worst  churn/s   NON-EXEMPT  exempt-ovl  focus-sw",
 );
 for (const id of TRACKS) {
   const geo = loadTracks({ only: id })[0];
@@ -299,13 +334,19 @@ for (const id of TRACKS) {
       `${id.padEnd(13)}${label.padStart(6)}  ${r.meanLabels.toFixed(1).padStart(6)}  ` +
         `${(r.nameShare * 100).toFixed(1).padStart(5)}  ${String(r.switches).padStart(8)}  ` +
         `${r.switchesPerLabelPerRace.toFixed(2).padStart(11)}  ${String(r.worstLabel).padStart(5)}  ` +
-        `${r.churnPerSecond.toFixed(2).padStart(7)}  ${String(r.criterionOverlaps).padStart(10)}  ` +
-        `${String(r.drawnOverlaps).padStart(5)}   (${r.sampled} samples)`,
+        `${r.churnPerSecond.toFixed(2).padStart(7)}  ${String(r.drawnOverlaps).padStart(10)}  ` +
+        `${String(r.exemptOverlaps).padStart(10)}  ${String(r.focusSwitches).padStart(8)}   ` +
+        `(crit ${r.criterionOverlaps}, exempt ${(r.exemptShare * 100).toFixed(1)}% of names, ${r.sampled} samples)`,
     );
   }
 }
 console.log(
-  "\n  CRITERION = names the rule GRANTED that overlap a racer. MUST be 0.\n" +
+  "\n  NON-EXEMPT = drawn names overlapping a racer, EXCLUDING the exempt ones. MUST be 0 — this is\n" +
+    "               the pass/fail, and LABEL-FOCUS-1 narrowed it: an exempt name that covers\n" +
+    "               something is the owner's choice, so it is counted in its own column instead.\n" +
+    "  exempt-ovl = exempt names overlapping a racer. Expected to be non-zero; not a defect.\n" +
+    "  focus-sw   = the focused racer's OWN form switches. The exemption should drive it to 0.\n" +
+    "  crit       = names the rule GRANTED (non-exempt) that overlap a racer. MUST be 0.\n" +
     "  DRAWN     = names actually on screen overlapping a racer, sampled. The 'hold' arm carries the\n" +
     "              window's lag by construction; the '0ms' arm is what removing that lag costs.\n" +
     "  switches counted only while a label STAYED on screen; vanish-and-return is churn, not a switch.",

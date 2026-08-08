@@ -51,6 +51,19 @@
 //              showing a name — judging only what is drawn would trap a label on the number forever,
 //              because the narrow number is almost always clear.
 //
+//              TWO EXEMPTIONS, AND THEY ARE EXEMPTIONS RATHER THAN PRIVILEGES (LABEL-FOCUS-1).
+//              The owner accepts the rule and wants two racers out of it entirely — not favoured
+//              inside it, which would still leave them silent whenever the pack closed up:
+//                • THE RACER THE CAMERA IS ON carries its name for the whole race. The director has
+//                  a named subject already (`anchorRacerIndex`, CAMERA-FOCUS-1); it is null in
+//                  BATTLE_ZOOM and OVERVIEW, where the shot genuinely has no single subject, and the
+//                  caller falls back to the leader there. No notion of focus was invented here.
+//                • AT THE PHOTO FINISH every labelled racer carries its name. His reasoning is the
+//                  design: at that zoom everything stays recognisable even when labels overlap, so
+//                  overlap is ACCEPTABLE there and is not a defect.
+//              An exempt name is drawn whatever it covers and whatever the hold says, and its box
+//              still enters `claimed`, so everyone decided after it avoids it.
+//
 //              THE HOLD GOVERNS PROMOTION ONLY (LABEL-OCCLUSION-2). A name is EARNED by two seconds
 //              of clear geometry and GIVEN UP the instant it stops being clear: this module refuses
 //              to draw a name that is not clear in the frame being drawn, whatever the hold says. A
@@ -209,6 +222,10 @@ export function tagFontScreenPx(frameFrac, canvasH) {
  * @param {Set<number>|null} [p.wideForms]  racer indices ENTITLED to their name, as decided by
  *        `labelFormHold` from earlier frames. It is a necessary condition, not a sufficient one:
  *        LABEL-OCCLUSION-2 draws the name only if it is ALSO clear in this frame.
+ * @param {Set<number>|null} [p.exempt]  LABEL-FOCUS-1: racer indices whose name is drawn regardless
+ *        of the criterion and of the hold — the racer the camera is on.
+ * @param {boolean} [p.exemptAll=false]  the same for EVERY labelled racer, which is the photo
+ *        finish: at that zoom overlap is acceptable and is not a defect.
  * @param {number} [p.edgeMarginFrac=0]  canvas-edge hysteresis band, as a fraction of frame height
  * @param {number} [p.yieldOverlapFrac=0]  how much of its own box an incumbent tolerates before yielding
  * @param {boolean} [p.showAll=false]  the START-FORMATION exception: label everyone, no decluttering
@@ -235,6 +252,8 @@ export function computeTagLayout({
   labelOf = (r) => r.name ?? '',
   wideLabelOf = null,
   wideForms = null,
+  exempt = null,
+  exemptAll = false,
   incumbents = null,
   edgeMarginFrac = EDGE_MARGIN_FRAC,
   yieldOverlapFrac = YIELD_OVERLAP_FRAC,
@@ -394,6 +413,19 @@ export function computeTagLayout({
     // A granted name occupies its FULL WIDTH for everything decided after it, because the wide box
     // is what goes into `placed`. So the criterion is evaluated against the picture as it is being
     // built, not against a hypothetical frame in which everyone is narrow.
+    // ── THE EXEMPTIONS (LABEL-FOCUS-1) ────────────────────────────────────────────────────────
+    // Decided FIRST and in the same priority order, so an exempt name's box is in `claimed` before
+    // anyone else is judged against it. It is an exemption from the criterion, not a better score
+    // within it: the name is drawn whatever it covers and whatever the hold says, which is the only
+    // way the owner's "for the whole race" can be true when the pack closes up around the leader.
+    if (e.wide && (exemptAll || (exempt ? exempt.has(e.index) : false))) {
+      placed.push(e.wide);
+      claimed.push(e.wide);
+      shown.add(e.index);
+      wide.add(e.index);
+      continue;
+    }
+
     let nameClear = false;
     if (e.wide) {
       let clear = true;

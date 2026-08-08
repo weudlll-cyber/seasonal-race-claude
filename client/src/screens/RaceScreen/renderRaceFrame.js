@@ -191,6 +191,14 @@ export function renderRaceFrame(ctx, f) {
   const raceElapsedMs = st.raceStart != null ? ts - st.raceStart : 0;
   const showAllTags =
     st.phase !== PHASE.RACING || raceElapsedMs < (cameraConfig.nameTagAllUntilMs ?? 0);
+  // LABEL-FOCUS-1: who the camera is on. The director's own answer first; the leader only where it
+  // genuinely has none, which is BATTLE_ZOOM and OVERVIEW.
+  let focusRacerIndex = camera?.anchorRacerIndex ?? null;
+  if (focusRacerIndex == null && st.racers?.length) {
+    let leader = st.racers[0];
+    for (const r of st.racers) if ((r?.t ?? 0) > (leader?.t ?? 0)) leader = r;
+    focusRacerIndex = leader?.index ?? null;
+  }
   ctx.save();
   ctx.font = `bold ${tagFontPx}px sans-serif`;
   const measureTagText = (txt) => ctx.measureText(txt).width;
@@ -223,6 +231,15 @@ export function renderRaceFrame(ctx, f) {
     // comparison rather than two code paths that merely look alike.
     wideLabelOf: cameraConfig?.labelNamesWhenRoom ? (r) => r.name ?? '' : null,
     wideForms: tagWideForms,
+    // LABEL-FOCUS-1: the racer the camera is ON keeps its name for the whole race. The director
+    // already names its subject — `anchorRacerIndex`, from CAMERA-FOCUS-1 — and it is deliberately
+    // NULL in BATTLE_ZOOM and OVERVIEW, where the shot is a group and there is no single subject.
+    // The leader is the fallback there, and that is a choice made here rather than a notion of
+    // focus invented inside the director.
+    exempt: focusRacerIndex != null ? new Set([focusRacerIndex]) : null,
+    // …and at the photo finish, everyone. At that zoom every racer stays recognisable even when the
+    // labels overlap, so overlap is acceptable there — the owner's reasoning, and it is the design.
+    exemptAll: camera?.state === 'PHOTO_FINISH',
   });
   ctx.restore();
 

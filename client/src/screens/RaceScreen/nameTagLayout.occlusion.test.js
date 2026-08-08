@@ -331,6 +331,88 @@ describe('THE TWO TOGETHER — the layout draws the form the hold settled on', (
   });
 });
 
+describe('THE EXEMPTIONS (LABEL-FOCUS-1)', () => {
+  // Racer 0's name box covers racer 1 (25 px above it), so the criterion refuses it. That is the
+  // whole point: the exemption has to survive a frame the rule would have lost.
+  const covering = () =>
+    at([
+      [400, 400],
+      [400, 375],
+    ]);
+
+  // WHAT BREAKS IF DELETED: the owner's first exception. The racer the camera is ON would go
+  // anonymous exactly when the pack closes around it — which is exactly when it is being watched.
+  // WHAT GOES UNNOTICED: nothing in a still frame; it looks like the occlusion rule working.
+  it('the focused racer keeps its name across a frame where it covers another racer', () => {
+    const out = layout(covering(), { exempt: new Set([0]) });
+    expect(out.wideClear.has(0), 'the criterion would have refused it').toBe(false);
+    expect(out.wide.has(0), 'and it is drawn anyway').toBe(true);
+  });
+
+  // WHAT BREAKS IF DELETED: the word EXEMPTION. If the focus merely improved a racer's standing
+  // inside the rule, the exemption would leak to its neighbours and the rule would be gone.
+  // WHAT GOES UNNOTICED: a general loosening sold as a focus feature.
+  it('a NON-focused racer in the same frame does not', () => {
+    const racers = at([
+      [400, 400],
+      [400, 375],
+      [900, 400],
+      [900, 375],
+    ]);
+    const out = layout(racers, { exempt: new Set([0]) });
+    expect(out.wide.has(0)).toBe(true); // exempt
+    expect(out.wideClear.has(2)).toBe(false); // the same geometry, no exemption…
+    expect(out.wide.has(2)).toBe(false); // …and no name
+  });
+
+  // WHAT BREAKS IF DELETED: the owner's second exception, and his reasoning with it — at the finish
+  // zoom everything is recognisable, so overlap is acceptable and is not a defect.
+  // WHAT GOES UNNOTICED: the one moment a viewer most wants every name, showing numbers.
+  it('at the finish state every labelled racer is wide', () => {
+    const racers = at([
+      [600, 360],
+      [610, 360],
+      [620, 360],
+    ]);
+    const out = layout(racers, { exemptAll: true });
+    expect(out.shown.size).toBeGreaterThan(0);
+    for (const i of out.shown) expect(out.wide.has(i), `racer ${i} wide at the finish`).toBe(true);
+  });
+
+  // WHAT BREAKS IF DELETED: "for the whole race". A focused racer that had to earn its two seconds
+  // would be nameless for the first two seconds of every shot it is the subject of — and the camera
+  // changes subject far more often than that.
+  // WHAT GOES UNNOTICED: the feature appearing to work, two seconds late, every time.
+  it('the focused racer does not wait out the promotion hold', () => {
+    const alone = at([[400, 400]]);
+    // Nobody is entitled — an empty hold state, i.e. the very first frame of the race.
+    const out = layout(alone, { wideForms: new Set(), exempt: new Set([0]) });
+    expect(out.wide.has(0)).toBe(true);
+    // …and the same racer without the exemption is not drawn wide on that frame.
+    expect(layout(alone, { wideForms: new Set() }).wide.has(0)).toBe(false);
+  });
+
+  it('an exempt name still reserves its box, so nobody is judged clear underneath it', () => {
+    const out = layout(
+      at([
+        [600, 360],
+        [640, 360],
+      ]),
+      { exempt: new Set([0]) }
+    );
+    expect(out.wide.has(0)).toBe(true);
+    expect(out.wideClear.has(1), "racer 1 is judged against racer 0's NAME box").toBe(false);
+  });
+
+  it('an exemption cannot invent a name for a racer that has none', () => {
+    const racers = at([[400, 400]]);
+    delete racers[0].name;
+    const out = layout(racers, { exempt: new Set([0]), exemptAll: true });
+    expect(out.shown.has(0)).toBe(true);
+    expect(out.wide.has(0)).toBe(false);
+  });
+});
+
 describe('CASCADE — one decision per label per cycle, in a fixed order', () => {
   // WHAT BREAKS IF DELETED: the owner's second risk from LABEL-DEGRADE-1, which the new criterion
   // inherits: granting A's name displaces B, which frees room, which would let A widen again.
