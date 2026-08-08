@@ -134,6 +134,12 @@ const ROW_BOX = 30;
 // The rule is drawn in the MIDDLE of the gutter rather than on the cell edge, so the space either
 // side of it is equal and it reads as a boundary between two entries rather than as part of one.
 const COL_GUTTER = 10;
+// The rule's own weight. 2 px at 32 % white, up from a 1 px hairline at 14 % that the owner reported
+// as hardly visible. It still fits the 10 px gutter with 4 px of clear space either side, so THE
+// NAME GIVES UP NOTHING for this change — worth stating, because it has already given up 18 px
+// across three blocks and that is not a trade to make quietly.
+const RULE_W = 2;
+const RULE_ALPHA = 0.32;
 
 // The block's shape. Rows are chosen first and columns follow: it is the row count that decides
 // whether a block reads as a list, and a rule that picks columns first turns a small field into a
@@ -381,12 +387,20 @@ export function drawStartBoard(
   ctx.fillStyle = `rgba(0,0,0,${PANEL_ALPHA})`;
   ctx.fillRect(L.panel.x, L.panel.y, L.panel.w, L.panel.h);
 
-  // 3. THE COLUMN RULES, drawn UNDER the entries because they are furniture. Dim on purpose: this is
-  //    a boundary, and anything bright enough to be noticed on its own would compete with the number
-  //    chip it sits beside. Its job is to be found by the eye that is already looking for the edge.
-  ctx.fillStyle = 'rgba(255,255,255,0.14)';
+  // 3. THE COLUMN RULES, drawn UNDER the entries because they are furniture.
+  //
+  //    IT WAS A HAIRLINE AT 14 % AND HE COULD HARDLY SEE IT (START-BOARD-8). The first version
+  //    reasoned that a boundary should be found only by an eye already looking for it. That is the
+  //    wrong standard for this job: the rule exists because a viewer scanning five columns does NOT
+  //    know where to look, and a separator that has to be hunted for has not separated anything.
+  //
+  //    2 px at 32 %, from 1 px at 14 %. The constraint it was protecting is still met and is what
+  //    keeps it from becoming decoration: 32 % against the number chip's 92 % and the name's solid
+  //    white, and no colour of its own. It reads as an edge; it cannot be read as content.
+  ctx.fillStyle = `rgba(255,255,255,${RULE_ALPHA})`;
+  const ruleW = Math.max(1, RULE_W * L.scale);
   for (const rule of L.rules) {
-    ctx.fillRect(rule.x, rule.top, Math.max(1, L.scale), rule.bottom - rule.top);
+    ctx.fillRect(rule.x - ruleW / 2, rule.top, ruleW, rule.bottom - rule.top);
   }
 
   ctx.textBaseline = 'middle';

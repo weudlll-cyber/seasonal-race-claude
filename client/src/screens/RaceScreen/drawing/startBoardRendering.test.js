@@ -264,16 +264,26 @@ describe('A VISIBLE EDGE BETWEEN COLUMNS (START-BOARD-7)', () => {
   // WHAT BREAKS IF DELETED: the drawing, as opposed to the arithmetic. Every test above passes with
   // a layout that computes rules nobody paints.
   // WHAT GOES UNNOTICED: the feature existing only in the geometry.
-  it('the rules are actually drawn — dim, and under the entries', () => {
+  // START-BOARD-8 widened and brightened it: the hairline at 14 % was reported as hardly visible.
+  // The band below is the whole argument — bright enough to be FOUND without being hunted for, and
+  // still clearly fainter than anything that carries meaning.
+  it('the rules are actually drawn — readable, still furniture, and under the entries', () => {
     const ctx = draw(100);
     const L = startBoardLayout(100, CW, CH);
-    const drawn = ctx.rects.filter((r) => L.rules.some((q) => Math.abs(q.x - r.x) < 0.5));
+    const drawn = ctx.rects.filter((r) => L.rules.some((q) => Math.abs(q.x - r.x - r.w / 2) < 0.6));
     expect(drawn.length).toBe(L.rules.length);
+    const numCall = ctx.textCalls.find((c) => c.t === '1');
     for (const r of drawn) {
       expect(r.h).toBeCloseTo(L.blockH, 6);
-      // Dim enough to be furniture: fainter than the number chip it sits beside.
-      expect(alphaOf(r.style)).toBeLessThan(0.3);
-      expect(alphaOf(r.style)).toBeGreaterThan(0);
+      expect(r.w, 'wider than the hairline it replaced').toBeGreaterThanOrEqual(2);
+      // Findable at a glance…
+      expect(alphaOf(r.style)).toBeGreaterThan(0.25);
+      // …and never competing with the two things that carry meaning: the chip and the name.
+      expect(alphaOf(r.style)).toBeLessThan(0.5);
+      expect(numCall.style).toBe('#ffffff');
+      expect(r.w, 'and it still fits its gutter with clear space either side').toBeLessThan(
+        L.gutterW / 2
+      );
     }
     // UNDER the entries, which is what makes them furniture: every rect painted after the last rule
     // is a number chip, so nothing about an entry was drawn before the boundary it sits beside.
