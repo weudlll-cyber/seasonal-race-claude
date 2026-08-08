@@ -1,7 +1,7 @@
 // ============================================================
 // File:        startBoardRendering.test.js
 // Path:        client/src/screens/RaceScreen/drawing/startBoardRendering.test.js
-// Project:     RaceArena — START-BOARD-1, extended by -2, corrected by -3
+// Project:     RaceArena — START-BOARD-1, extended by -2, corrected by -3 and -4
 //
 // WHAT THIS GUARDS: that the board a viewer scans is COMPLETE and READABLE, and that every entry
 // carries the three things it exists to pair — a number, a racer and a name — plus the row.
@@ -22,6 +22,8 @@ import {
   startBoardLayout,
   startBoardEntries,
   startBoardNumberBox,
+  startBoardBackdrop,
+  fitTextToWidth,
   startRowOf,
   drawStartBoard,
   NO_NAME_LABEL,
@@ -45,27 +47,33 @@ const field = (n, names = null) =>
 const rows = (n, perRow = 8) =>
   new Map(Array.from({ length: n }, (_, i) => [i, { rowIndex: Math.floor(i / perRow) }]));
 
-/** A ctx that records what was drawn, so completeness can be asserted on the OUTPUT. */
-function makeRecordingCtx() {
+/**
+ * A ctx that records what was drawn, so completeness can be asserted on the OUTPUT.
+ *
+ * It records the FILL STYLE AND FONT IN FORCE at each call, not only the geometry: START-BOARD-4 is
+ * about whether the board can be READ, and every one of its three findings is a question about a
+ * style rather than about a position.
+ *
+ * `measure` is injectable because the default — a constant 40 px for any string — can never make a
+ * name too long, so it could not exercise the ellipsis at all.
+ */
+function makeRecordingCtx(measure = () => 40) {
   const texts = [];
   const textCalls = [];
-  return {
+  const rects = [];
+  const ctx = {
     texts,
     textCalls,
+    rects,
     save: vi.fn(),
     restore: vi.fn(),
     beginPath: vi.fn(),
     rect: vi.fn(),
     clip: vi.fn(),
-    fillRect: vi.fn(),
     moveTo: vi.fn(),
     lineTo: vi.fn(),
     stroke: vi.fn(),
-    fillText: vi.fn((t, x, y) => {
-      texts.push(String(t));
-      textCalls.push({ t: String(t), x, y });
-    }),
-    measureText: vi.fn().mockReturnValue({ width: 40 }),
+    measureText: vi.fn((t) => ({ width: measure(String(t)) })),
     translate: vi.fn(),
     rotate: vi.fn(),
     arc: vi.fn(),
@@ -78,10 +86,23 @@ function makeRecordingCtx() {
     font: '',
     fillStyle: '',
   };
+  ctx.fillRect = vi.fn((x, y, w, h) => rects.push({ x, y, w, h, style: ctx.fillStyle }));
+  ctx.fillText = vi.fn((t, x, y) => {
+    texts.push(String(t));
+    textCalls.push({ t: String(t), x, y, font: ctx.font, style: ctx.fillStyle });
+  });
+  return ctx;
 }
 
-const draw = (n, extra = {}) => {
-  const ctx = makeRecordingCtx();
+/** The alpha of an `rgba(0,0,0,a)` fill, so the two backdrop layers can be compared as numbers. */
+const alphaOf = (style) =>
+  Number(/rgba\(\s*\d+\s*,\s*\d+\s*,\s*\d+\s*,\s*([\d.]+)\s*\)/.exec(style)?.[1] ?? NaN);
+
+/** The px size out of a `bold 16px sans-serif` font string. */
+const fontPx = (f) => Number(/(\d+(?:\.\d+)?)px/.exec(f)?.[1] ?? NaN);
+
+const draw = (n, extra = {}, measure = undefined) => {
+  const ctx = makeRecordingCtx(measure);
   drawStartBoard(ctx, {
     racers: field(n),
     racerType: null,
@@ -94,6 +115,129 @@ const draw = (n, extra = {}) => {
   });
   return ctx;
 };
+
+describe('THE BOARD IS READ OVER A MOVING TRACK (START-BOARD-4)', () => {
+  // WHAT BREAKS IF DELETED: finding A. One flat scrim was the whole backdrop, and at 100 starters on
+  // mountainstreet the racers' own bright numbers came through it exactly where the list is.
+  // WHAT GOES UNNOTICED: a later simplification that drops the panel as redundant — the board would
+  // still draw correctly and still be hard to read, which is the failure this file exists to catch.
+  it('the board sits on its own backdrop, deeper than the scrim over the rest of the frame', () => {
+    const ctx = draw(100);
+    const scrim = ctx.rects.find((r) => r.x === 0 && r.y === 0 && r.w === CW && r.h === CH);
+    const panel = ctx.rects.find((r) => r !== scrim && r.w > CW * 0.5);
+    expect(scrim, 'the frame is still dimmed as a whole').toBeTruthy();
+    expect(panel, 'the board has a backdrop of its own').toBeTruthy();
+    expect(alphaOf(panel.style)).toBeGreaterThan(alphaOf(scrim.style));
+    // …and the two together are near-opaque, which is what "nothing competes with a name" means.
+    const composite = 1 - (1 - alphaOf(scrim.style)) * (1 - alphaOf(panel.style));
+    expect(composite).toBeGreaterThan(0.9);
+    // The relation is pinned at the source too, so it survives a change to how the fill is written.
+    const { scrimAlpha, panelAlpha } = startBoardBackdrop();
+    expect(panelAlpha).toBeGreaterThan(scrimAlpha);
+  });
+
+  // WHAT BREAKS IF DELETED: the backdrop covering only PART of what it must cover.
+  // WHAT GOES UNNOTICED: a panel sized to the cells alone. The title would then sit on the thin
+  // scrim, and the first row would have a bright edge running along it.
+  it('the backdrop covers every entry, the title and padding around both — and stays in frame', () => {
+    for (const n of [8, 40, 100, 140]) {
+      const L = startBoardLayout(n, CW, CH);
+      const p = L.panel;
+      expect(p.x, `panel left at n=${n}`).toBeGreaterThanOrEqual(0);
+      expect(p.y, `panel top at n=${n}`).toBeGreaterThanOrEqual(0);
+      expect(p.x + p.w, `panel right at n=${n}`).toBeLessThanOrEqual(CW);
+      expect(p.y + p.h, `panel bottom at n=${n}`).toBeLessThanOrEqual(CH);
+      // the title's line is inside it, with room above
+      expect(L.titleY, `title inside the panel at n=${n}`).toBeGreaterThan(p.y);
+      // every cell is inside it, with padding on all four sides
+      for (let i = 0; i < n; i++) {
+        const c = L.cellAt(i);
+        expect(c.x, `cell ${i} left at n=${n}`).toBeGreaterThan(p.x);
+        expect(c.y, `cell ${i} top at n=${n}`).toBeGreaterThan(p.y);
+        expect(c.x + L.cellW, `cell ${i} right at n=${n}`).toBeLessThan(p.x + p.w);
+        expect(c.y + L.cellH, `cell ${i} bottom at n=${n}`).toBeLessThan(p.y + p.h);
+      }
+    }
+  });
+
+  // WHAT BREAKS IF DELETED: finding B. "Barely readable, too small and too dark" was his report on a
+  // number matched to the name at 13 px on a 16 % tint.
+  // WHAT GOES UNNOTICED: a later tidy-up that unifies the two font sizes "for consistency" — the
+  // board would look tidier and lose the one thing a viewer has to memorise.
+  it('the number is drawn LARGER than the name, in white, on a chip with real opacity', () => {
+    const ctx = draw(40);
+    const numCall = ctx.textCalls.find((c) => c.t === '1');
+    const nameCall = ctx.textCalls.find((c) => c.t === 'Racer 000');
+    expect(fontPx(numCall.font)).toBeGreaterThan(fontPx(nameCall.font));
+    expect(numCall.font).toMatch(/bold/);
+    expect(numCall.style).toBe('#ffffff');
+    // The chip behind it is opaque enough to BE a chip, not a 16 % tint.
+    const L = startBoardLayout(40, CW, CH);
+    const chip = ctx.rects.find((r) => Math.abs(r.x - (L.cellAt(0).x + 2 * L.scale)) < 0.5);
+    expect(chip, 'the number sits on a chip').toBeTruthy();
+    expect(alphaOf(chip.style)).toBeGreaterThan(0.5);
+  });
+
+  // WHAT BREAKS IF DELETED: the constraint the spec attached to the bigger number — that the room
+  // comes from the NAME and never from the sprite.
+  // WHAT GOES UNNOTICED: a portrait quietly shrinking every time the number grows.
+  it('the wider number column took its room from the name, not from the portrait', () => {
+    const drawRacer = vi.fn();
+    const ctx = makeRecordingCtx();
+    drawStartBoard(ctx, {
+      racers: field(40),
+      racerType: { drawRacer },
+      displaySize: 40,
+      assignmentByRacer: rows(40),
+      alpha: 1,
+      canvasW: CW,
+      canvasH: CH,
+    });
+    // The portrait is still drawn at the size START-BOARD-2 gave it (~30 px, well over the old 21).
+    expect(drawRacer.mock.calls[0][7] * 40).toBeGreaterThan(28);
+    // …and the name now begins further right, i.e. it is the name's room that was spent.
+    const L = startBoardLayout(40, CW, CH);
+    const nameCall = ctx.textCalls.find((c) => c.t === 'Racer 000');
+    expect(nameCall.x - L.cellAt(0).x).toBeGreaterThanOrEqual(startBoardNumberBox() * L.scale);
+  });
+});
+
+describe('A CUT NAME LOOKS CUT (START-BOARD-4)', () => {
+  // WHAT BREAKS IF DELETED: finding C. The clip rect is still there and would still stop a name
+  // bleeding into the next column — silently, mid-word, which is exactly what he saw.
+  // WHAT GOES UNNOTICED: the board claiming to show a name it only showed part of. This project
+  // rejects an over-long name at the input rather than trimming it quietly; a frame owes the same.
+  it('a name too long for its column is ellipsised, and one that fits is not', () => {
+    // 9 px per character: 'Racer 000' (9 chars) fits the ~127 px column, a 40-character name does not.
+    const wide = (t) => t.length * 9;
+    const names = Array.from({ length: 4 }, (_, i) => (i === 1 ? 'W'.repeat(40) : `Racer ${i}`));
+    const ctx = makeRecordingCtx(wide);
+    drawStartBoard(ctx, {
+      racers: field(4, names),
+      racerType: null,
+      displaySize: 40,
+      assignmentByRacer: rows(4, 4),
+      alpha: 1,
+      canvasW: CW,
+      canvasH: CH,
+    });
+    expect(ctx.texts, 'the long name was not drawn whole').not.toContain(names[1]);
+    const cut = ctx.texts.find((t) => t.endsWith('…'));
+    expect(cut, 'it ends in an ellipsis instead').toBeTruthy();
+    expect(names[1].startsWith(cut.slice(0, -1))).toBe(true);
+    expect(ctx.texts, 'a name that fits is left alone').toContain('Racer 0');
+  });
+
+  it('measures against the width it actually has, and degrades rather than throwing', () => {
+    const ctx = makeRecordingCtx((t) => t.length * 10);
+    expect(fitTextToWidth(ctx, 'abcdefgh', 1000)).toBe('abcdefgh');
+    expect(fitTextToWidth(ctx, 'abcdefgh', 45)).toBe('abc…');
+    expect(fitTextToWidth(ctx, 'abcdefgh', 5)).toBe('…');
+    expect(fitTextToWidth(ctx, 'abcdefgh', 0)).toBe('');
+    // A context that cannot measure gets the name whole rather than an exception.
+    expect(fitTextToWidth({}, 'abcdefgh', 10)).toBe('abcdefgh');
+  });
+});
 
 describe('EVERY ENTRY CARRIES ITS NUMBER (START-BOARD-3)', () => {
   // WHAT BREAKS IF DELETED: the owner's reported defect, with nothing left to catch it. The board's
