@@ -41,6 +41,8 @@ import {
   drawCountdownOverlay,
   drawFinishedOverlay,
 } from './drawing/overlayRendering.js';
+import { drawStartBoard, startBoardAlpha } from './drawing/startBoardRendering.js';
+import { ceremonyAt, ceremonySchedule } from '../../modules/camera/startCeremony.js';
 import { drawTrackLights } from '../../modules/trackLights.js';
 import { computeTagLayout, tagFontScreenPx } from './nameTagLayout.js';
 import { renderMinimap } from '../../modules/camera/Minimap.js';
@@ -251,7 +253,32 @@ export function renderRaceFrame(ctx, f) {
 
   let countdownNumber = null;
   if (st.phase === PHASE.COUNTDOWN) {
-    countdownNumber = drawCountdownOverlay(ctx, ts - st.countdownStart);
+    const cdElapsed = ts - st.countdownStart;
+    const cdMs = cameraConfig?.countdownDurationMs ?? 4000;
+    // START-BOARD-1 — THE RUNNERS' BOARD, under the digits and over everything else.
+    //
+    // The beat comes from `ceremonyAt`, the same pure function the camera asks: the board lives in
+    // the PUSH and is gone before the settled beat, so the gun fires on a clean picture. Asking the
+    // rhythm module rather than re-deriving a schedule here is the point — two homes for "how long
+    // is the push" is the defect the ceremony block spent a night removing.
+    const beat = ceremonyAt(
+      cdElapsed,
+      ceremonySchedule(
+        cameraConfig?.ceremonyVenueMs ?? 0,
+        cameraConfig?.ceremonyPushMs ?? 0,
+        cameraConfig?.ceremonySettledMs ?? 0,
+        cdMs
+      )
+    );
+    drawStartBoard(ctx, {
+      racers: st.racers,
+      racerType,
+      displaySize,
+      alpha: startBoardAlpha(beat.beat, beat.progress),
+      canvasW,
+      canvasH,
+    });
+    countdownNumber = drawCountdownOverlay(ctx, cdElapsed, cdMs);
   } else if (st.phase === PHASE.FINISHED) {
     drawFinishedOverlay(ctx);
   }

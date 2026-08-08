@@ -344,9 +344,10 @@ export const DEFAULT_CAMERA_CONFIG = {
   // Both the key and that control are gone; this is the only countdown number there is, and it is
   // the one RaceScreen's phase advance actually compares against.
   //
-  // STILL OPEN, deliberately: `drawCountdownOverlay` counts from a hard-coded 3 while this phase
-  // lasts 4000 ms, so "GO!" stands for an extra second. That is a VISIBLE change and was left for
-  // work the owner's eye is on. See reports/night/START-SEQUENCE-1.md.
+  // CLOSED by START-BOARD-1: the overlay used to count from a hard-coded 3 while this phase lasted
+  // 4000 ms, so "GO!" stood for an extra second before anything moved. The digits are DERIVED from
+  // this number now — `countdownDigit` in overlayRendering.js — so 4000 shows 4-3-2-1 with GO! at
+  // zero, and changing this number changes the count without touching any source.
   countdownDurationMs: 4000,
   // ── THE START CEREMONY (START-CEREMONY-CAMERA-1) ───────────────────────────────────────────────
   // The race opens on the whole track, held still, then eases in to the starting formation until it
