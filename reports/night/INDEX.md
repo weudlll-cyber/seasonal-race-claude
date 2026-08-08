@@ -20,7 +20,7 @@ directions.
   a real tokenizer, fail-safe in every direction — and its own trap test caught a false positive
   (acorn represents a regex token value as an object, so two different regexes compared equal).
   client-suite runs alone deliberately (retry:0 + timeouts under contention) and stays that way.
-  The routine-subset split is argued AGAINST and not built. Not merged.
+  The routine-subset split is argued AGAINST and not built.
 - [HARNESS-NAMES-1.md](HARNESS-NAMES-1.md) — the render harness never set `r.name`, so every label
   box in it was 8px of padding: it measured a geometry the game cannot produce. Fixed with the MIXED
   roster, by index, imported from the one home; render **re-minted deliberately** to
