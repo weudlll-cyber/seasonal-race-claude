@@ -21,6 +21,18 @@ directions.
   (acorn represents a regex token value as an object, so two different regexes compared equal).
   client-suite runs alone deliberately (retry:0 + timeouts under contention) and stays that way.
   The routine-subset split is argued AGAINST and not built.
+- [START-BOARD-2.md](START-BOARD-2.md) — the board becomes usable, after his eye test. Its own
+  duration max(3000, 80 x n): 3.2 s at 40 and 8.0 s at 100 against 1.46 s for both — and THE
+  COUNTDOWN NOW FOLLOWS THE BEATS instead of capping them. `countdownDurationMs` is gone, key and
+  slider: `ceremonySchedule` returns `totalMs` and the proportional rescale that made every beat a
+  function of every other beat is deleted. The push is NEVER stretched — a new BOARD beat holds the
+  arrived camera still. Entry order NUMBER . SPRITE . NAME with nothing between the sprite and the
+  name; grouped by START ROW, alphabetical within; portraits ~21 -> ~30 px, free once the number
+  moved out of the middle. THE 70-OF-100 DEFECT DIAGNOSED AND THE HYPOTHESIS WAS WRONG: the board
+  drops nobody and no racer is unnamed — SetupScreen fills from a 70-entry roster with
+  slice(0, needed), so a Quick Test at 100 STARTS 70 racers. Not fixed: a roster change is an engine
+  input and his decision. Layout 8/20/40/100 all at scale 1.0, no overlap, no clipping. Camera and
+  render moved (one subsystem — the rhythm drives both), world unchanged. Not minted.
 - [START-BOARD-1.md](START-BOARD-1.md) — the runners' board: every racer once, during the push, as
   name + number + its own sprite, alphabetical in columns and scannable at a glance. THE STILL POSE
   WAS FREE: `_getFrameIndex` is floor(((frame % period)/period) x frameCount), so frame 0 selects

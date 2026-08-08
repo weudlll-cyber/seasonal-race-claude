@@ -238,9 +238,7 @@ describe('the ceremony always completes before the gun (START-CEREMONY-CAMERA-1)
       expect(ceremonyZoom(1, 5, s.totalMs, s, CEREMONY_EASINGS.easeInOutCubic)).toBeCloseTo(5, 9);
       // …and it has arrived by the END OF THE PUSH, not merely by the gun: the board hold that
       // follows is time the camera spends already there.
-      expect(
-        ceremonyZoom(1, 5, v + p, s, CEREMONY_EASINGS.easeInOutCubic)
-      ).toBeCloseTo(5, 9);
+      expect(ceremonyZoom(1, 5, v + p, s, CEREMONY_EASINGS.easeInOutCubic)).toBeCloseTo(5, 9);
     }
   });
 

@@ -366,7 +366,7 @@ a verbatim transcript of one run on one commit, which is a historical record, no
 
 ### The tracking lag, as measured today — and it had drifted
 
-<!-- MEASURED: tracking-lag (median/p95 pp per state) @ c3f294d1 2026-08-08 depends=client/src/modules/camera/ -->
+<!-- MEASURED: tracking-lag (median/p95 pp per state) @ e92ba468 2026-08-09 depends=client/src/modules/camera/ -->
 
 **These figures carry a stamp, and fails if the camera
 changes after it.** They are hand-copied on purpose: the measurement takes about seven minutes, so
@@ -379,12 +379,12 @@ and it says so itself. It also covers nothing else on this page; see its header 
 
 | state         | frames | median pp | p95 pp |
 | ------------- | ------ | --------- | ------ |
-| BATTLE_ZOOM   | 9657   | 5.72      | 9.98   |
-| COMEBACK_ZOOM | 2103   | 8.33      | 15.57  |
-| LEADER_ZOOM   | 17522  | 3.92      | 8.66   |
-| LEAD_CHANGE   | 7064   | 4.45      | 7.17   |
-| OVERVIEW      | 4302   | 2.60      | 16.00  |
-| PHOTO_FINISH  | 1864   | 6.37      | 20.73  |
+| BATTLE_ZOOM   | 9651   | 5.72      | 9.98   |
+| COMEBACK_ZOOM | 2103   | 8.33      | 15.58  |
+| LEADER_ZOOM   | 17514  | 3.92      | 8.66   |
+| LEAD_CHANGE   | 7066   | 4.45      | 7.17   |
+| OVERVIEW      | 4305   | 2.60      | 16.00  |
+| PHOTO_FINISH  | 1865   | 6.37      | 20.73  |
 
 OVERVIEW median 2.60 pp against every other state pooled 4.78 pp (ratio 0.54×).
 
@@ -393,6 +393,13 @@ frame count fell from 5199 to 3603 and LEADER's median lag from 4.46 to 3.92 pp.
 tracking change: the start ceremony and the field guarantee that now carries past the gun changed
 what the camera is DOING in those early seconds, so the same 60 s of race divides differently between
 the states. The lag itself is, if anything, slightly better.
+
+**Re-measured for START-BOARD-2, and nothing moved that matters.** The ceremony's beats changed
+length (the board got its own duration and the countdown became their sum), so the camera
+fingerprint moved and this stamp had to be renewed. Every median and every p95 is IDENTICAL to the
+digit; the frame counts move by a handful (BATTLE 9657 -> 9651, LEADER 17522 -> 17514, OVERVIEW
+4302 -> 4305) because a longer countdown shifts where in the race the 60 s window lands. The
+tracking path itself was not touched.
 
 **Re-measured again for CEREMONY-HOLD-TARGET-1, and ONE row moved.** OVERVIEW: 3603 → 4302 frames,
 median 3.27 → 2.60 pp. Every other row is identical to the digit. The reason is the mechanism that
