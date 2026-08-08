@@ -54,10 +54,17 @@
 //              TWO EXEMPTIONS, AND THEY ARE EXEMPTIONS RATHER THAN PRIVILEGES (LABEL-FOCUS-1).
 //              The owner accepts the rule and wants two racers out of it entirely — not favoured
 //              inside it, which would still leave them silent whenever the pack closed up:
-//                • THE RACER THE CAMERA IS ON carries its name for the whole race. The director has
-//                  a named subject already (`anchorRacerIndex`, CAMERA-FOCUS-1); it is null in
-//                  BATTLE_ZOOM and OVERVIEW, where the shot genuinely has no single subject, and the
-//                  caller falls back to the leader there. No notion of focus was invented here.
+//                • THE RACER THE CAMERA IS ON carries its name for the whole race — LEADER,
+//                  LEAD_CHANGE and COMEBACK alike. The director has a named subject already
+//                  (`anchorRacerIndex`, CAMERA-FOCUS-1); it is null in BATTLE_ZOOM and OVERVIEW,
+//                  where the shot genuinely has no single subject, and the caller falls back to the
+//                  leader there. No notion of focus was invented here.
+//
+//                  "FOR THE WHOLE RACE" WAS NOT TRUE AT THE START OF A SHOT (LABEL-COMEBACK-1). The
+//                  exemptions are applied in the placement pass, which only sees racers that passed
+//                  ELIGIBILITY — so a subject still crossing the entry margin was refused a label
+//                  and never reached the rule that says he must have one. Exempt racers are now held
+//                  to the incumbent's margin instead. See the eligibility loop.
 //                • AT THE PHOTO FINISH every labelled racer carries its name. His reasoning is the
 //                  design: at that zoom everything stays recognisable even when labels overlap, so
 //                  overlap is ACCEPTABLE there and is not a defect.
@@ -318,8 +325,20 @@ export function computeTagLayout({
     // ELIGIBILITY HYSTERESIS. A racer must be comfortably INSIDE to gain a label, and stays until
     // it is comfortably OUTSIDE. Without this a racer hovering on the frame edge gains and loses its
     // name every few frames, and that was 45% of all label churn — more than occlusion caused.
+    // AN EXEMPT RACER IS NOT HELD TO THE ENTRY MARGIN (LABEL-COMEBACK-1). The exemptions are applied
+    // in the placement pass below, which only ever sees racers that got this far — so a subject who
+    // is still crossing the edge band is refused a label here and never reaches the rule that says
+    // he must have one. Measured on searound: the comeback subject was anchored correctly on all 480
+    // frames of the shot and drawn wide on 459 of them; the 21 that failed were the FIRST 21, while
+    // the camera was still travelling to him and he had not yet cleared the band.
+    //
+    // The margin exists to stop a racer hovering at the frame edge from gaining and losing a label
+    // every few frames. That cannot happen to the racer the camera is ON: the shot is moving to put
+    // him in the middle of it. He is treated like an incumbent, which is the same generosity, for
+    // the same reason.
     const isIncumbent = incumbents ? incumbents.has(r.index) : false;
-    const m = isIncumbent ? -edgeMargin : edgeMargin;
+    const isExempt = exemptAll || (exempt ? exempt.has(r.index) : false);
+    const m = isIncumbent || isExempt ? -edgeMargin : edgeMargin;
     if (sx < m || sx > canvasW - m || sy < m || sy > canvasH - m) continue;
     const w = Math.max(1, labelBoxWidth(measureText(labelOf(r))));
     // LABEL-DEGRADE-1: the WIDE form's box too, when a wider text is on offer for this racer. It is

@@ -411,6 +411,24 @@ describe('THE EXEMPTIONS (LABEL-FOCUS-1)', () => {
     expect(out.wideClear.has(1), "racer 1 is judged against racer 0's NAME box").toBe(false);
   });
 
+  // WHAT BREAKS IF DELETED: the owner's report — in the comeback view the subject shows no name.
+  // The exemptions live in the PLACEMENT pass, which only sees racers that passed eligibility, so a
+  // subject still crossing the entry margin was refused a label and never reached the rule granting
+  // him one. Measured on searound: anchored correctly on all 480 frames of the shot, drawn wide on
+  // 459 — the 21 that failed were the FIRST 21, while the camera was still travelling to him.
+  // WHAT GOES UNNOTICED: every comeback shot opening on a number and switching to a name, which
+  // reads as the feature being slow rather than as the subject being refused.
+  it('the subject carries his name while still entering frame, where a normal racer would not', () => {
+    // 1 % of 720 is a 7.2 px entry band; this racer sits 3 px inside the left edge, i.e. within it.
+    const entering = [{ index: 0, x: 3, y: 360, t: 0.9, name: 'Comebacker', raceNumber: 7 }];
+    const cold = layout(entering, { edgeMarginFrac: 0.01 });
+    expect(cold.shown.has(0), 'a normal racer is refused while crossing the band').toBe(false);
+
+    const subject = layout(entering, { edgeMarginFrac: 0.01, exempt: new Set([0]) });
+    expect(subject.shown.has(0), 'the subject is not').toBe(true);
+    expect(subject.wide.has(0), 'and he carries his NAME, not his number').toBe(true);
+  });
+
   it('an exemption cannot invent a name for a racer that has none', () => {
     const racers = at([[400, 400]]);
     delete racers[0].name;
