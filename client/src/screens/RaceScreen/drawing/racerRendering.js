@@ -144,6 +144,8 @@ export function drawRacers(
   const inv = 1 / ezoom;
   const isRacing = st.phase === PHASE_RACING;
   const tagShown = tagLayout?.shown ?? null;
+  // LABEL-DEGRADE-1: which of them earned the NAME rather than the number, decided by the layout.
+  const tagWide = tagLayout?.wide ?? null;
   const doInterp = interpolationEnabled && isRacing;
 
   const isInComeback = hudState === 'COMEBACK_ZOOM';
@@ -236,14 +238,23 @@ export function drawRacers(
     const renderX = doInterp ? lerp(r._prevX ?? r.x, r.x, renderAlpha) : r.x;
     const renderY = doInterp ? lerp(r._prevY ?? r.y, r.y, renderAlpha) : r.y;
     ctx.globalAlpha = dimAlpha;
-    // RACE-NUMBERS-1: the track label is the racer's NUMBER, never its name. At most three
-    // characters, which is the whole design — a label about one racer wide points at the racer under
-    // it, where a 170 px name points at nothing a viewer can check (ROLL-CALL-PAIRING-1). The name
-    // is untouched in the data and still feeds the tie-break and the coat.
+    // RACE-NUMBERS-1: the track label is the racer's NUMBER by default. At most three characters,
+    // which is the whole design — a label about one racer wide points at the racer under it, where a
+    // 170 px name points at nothing a viewer can check (ROLL-CALL-PAIRING-1). The name is untouched
+    // in the data and still feeds the tie-break and the coat.
+    //
+    // LABEL-DEGRADE-1: …unless the LAYOUT decided this racer's NAME fits without displacing
+    // anything, in which case it says so in `tagLayout.wide`. The renderer does not re-decide: the
+    // box the decluttering reasoned about is the box that gets drawn, which is the one-home rule
+    // that `labelBoxWidth` exists to keep. A second opinion here would be a label drawn at a width
+    // the layout never checked.
     const numberText = raceNumberLabel(r.raceNumber);
-    const tagName = showRpStartRowCfg
-      ? numberText + ' (R' + (assignmentByRacer.get(r.index)?.rowIndex ?? 0) + ')'
-      : numberText;
+    const wideText = tagWide?.has(r.index) ? (r.name ?? '') : '';
+    const tagName = wideText
+      ? wideText
+      : showRpStartRowCfg
+        ? numberText + ' (R' + (assignmentByRacer.get(r.index)?.rowIndex ?? 0) + ')'
+        : numberText;
     drawNameTag(
       ctx,
       renderX,

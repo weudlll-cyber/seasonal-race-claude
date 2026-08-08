@@ -102,6 +102,9 @@ export default function RaceScreen() {
   const canvasRef = useRef(null);
   // CAMERA-TAGS-1: the set of racer indices that carried a name tag last frame.
   const tagIncumbentsRef = useRef(null);
+  // LABEL-DEGRADE-1: which labels showed the NAME last frame. Tracked separately from label tenure,
+  // because a racer can hold its label while losing the room for its name.
+  const tagWideIncumbentsRef = useRef(null);
   const bgCanvasRef = useRef(null);
   const screenRef = useRef(null);
   const rafRef = useRef(null);
@@ -1253,6 +1256,7 @@ export default function RaceScreen() {
         renderAlpha,
         interpolationEnabled: frameTimingConfig.renderInterpolation,
         tagIncumbents: tagIncumbentsRef.current,
+        tagWideIncumbents: tagWideIncumbentsRef.current,
         leaderDiag: leaderDiagRef.current,
         cfgBadge,
         buildBadge: RA_BUILD,
@@ -1263,6 +1267,7 @@ export default function RaceScreen() {
         canvasH: canvas.height,
       });
       tagIncumbentsRef.current = frame.tagShown;
+      tagWideIncumbentsRef.current = frame.tagWide;
       if (frame.countdownNumber !== null) setCountdown(frame.countdownNumber);
 
       // CAMERA-REPRO-1: hand the marker the values this frame was DRAWN with. Read back from the
