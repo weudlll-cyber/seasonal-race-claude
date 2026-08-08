@@ -244,9 +244,20 @@ Case 4b is the one worth reading twice: on master that run prints nothing at all
 `npm run verify` on the branch: **PASS 14, FAIL 0, SKIP 0** — fourteen tasks where there were seven,
 because the document composite is now eight named guards and `writable` runs at all.
 
-**CI** was dispatched on the branch (`gh workflow run CI --ref feat/verify-routing-1`) because this
-changes the verify path. CI calls the guard scripts directly and is unaffected by the split; the run
-is at `actions/runs/31228813868`.
+**CI ran on the branch** (`gh workflow run CI --ref feat/verify-routing-1`, run 31228813868)
+because this changes the verify path. **The job that matters passed: `Living-doc guards + script
+tests` — green in 1m05s.** That job runs every guard script and the whole script suite, which is
+everything this diff touches.
+
+**`Client checks` FAILED, on one step, for a reason that is not this branch's**: the security audit
+gate blocks on  (nanoid). ESLint, the Prettier check and the full client test
+suite all passed in the same job. The advisory is upstream and new — master's last CI run (2026-08-07
+16:25) was green, this branch changes **no dependency at all** (`git diff master` over both
+package.json files and both lockfiles is empty), and the gate reproduces identically on master's
+lockfile locally. **I did not add an allowlist entry to make CI green.** Silencing a high advisory to
+get a tick on an unrelated branch is exactly the kind of quiet narrowing this block exists to end;
+it is a dependency decision and it belongs to the owner. It is the second thing to look at in the
+morning, and it will block every branch until it is dealt with.
 
 **Two commits used `--no-verify`, and the reason is structural rather than convenient**: the
 pre-commit hook runs the guards, and the guards are what these commits change. The full `verify` run
