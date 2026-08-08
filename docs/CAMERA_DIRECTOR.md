@@ -366,7 +366,7 @@ a verbatim transcript of one run on one commit, which is a historical record, no
 
 ### The tracking lag, as measured today — and it had drifted
 
-<!-- MEASURED: tracking-lag (median/p95 pp per state) @ 2df4e199 2026-08-09 depends=client/src/modules/camera/ -->
+<!-- MEASURED: tracking-lag (median/p95 pp per state) @ 8e3fcce7 2026-08-09 depends=client/src/modules/camera/ -->
 
 **These figures carry a stamp, and fails if the camera
 changes after it.** They are hand-copied on purpose: the measurement takes about seven minutes, so
@@ -379,11 +379,11 @@ and it says so itself. It also covers nothing else on this page; see its header 
 
 | state         | frames | median pp | p95 pp |
 | ------------- | ------ | --------- | ------ |
-| BATTLE_ZOOM   | 9652   | 5.72      | 9.98   |
-| COMEBACK_ZOOM | 2104   | 8.33      | 15.58  |
-| LEADER_ZOOM   | 17512  | 3.91      | 8.66   |
+| BATTLE_ZOOM   | 9655   | 5.72      | 9.99   |
+| COMEBACK_ZOOM | 2103   | 8.34      | 15.57  |
+| LEADER_ZOOM   | 17522  | 3.91      | 8.66   |
 | LEAD_CHANGE   | 7069   | 4.45      | 7.17   |
-| OVERVIEW      | 4308   | 2.60      | 16.00  |
+| OVERVIEW      | 4303   | 2.60      | 16.00  |
 | PHOTO_FINISH  | 1865   | 6.37      | 20.73  |
 
 OVERVIEW median 2.60 pp against every other state pooled 4.78 pp (ratio 0.54×).
@@ -393,6 +393,14 @@ frame count fell from 5199 to 3603 and LEADER's median lag from 4.46 to 3.92 pp.
 tracking change: the start ceremony and the field guarantee that now carries past the gun changed
 what the camera is DOING in those early seconds, so the same 60 s of race divides differently between
 the states. The lag itself is, if anything, slightly better.
+
+**Re-measured for CEREMONY-TRUTH-1, and it moved again the same way.** Giving the director the
+digits beat lengthened the planned ceremony by 3 s, so the same 60 s of race divides differently once
+more: BATTLE 9652 → 9655, LEADER 17512 → 17522, OVERVIEW 4308 → 4303, and BATTLE's p95 9.98 → 9.99,
+COMEBACK's median 8.33 → 8.34 and p95 15.58 → 15.57. Nothing about tracking changed. **This is now
+twice in two blocks that a ceremony change moved these numbers**, which is worth stating plainly:
+any change to the opening's LENGTH owes this measurement, and it costs about 90 seconds, not the
+seven minutes below.
 
 **Re-measured for CEREMONY-TIME-1, and the re-measurement is the point.** The opening grew from
 5.2 s to 14.4 s at a small field, which touches `client/src/modules/camera/` and made this stamp

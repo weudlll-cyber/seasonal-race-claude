@@ -110,9 +110,14 @@ const NUMBER_BOX = 46;
 const SPRITE_BOX = 28;
 const PORTRAIT_FRAC = 0.94; // how much of its column the portrait actually fills
 const NAME_PAD = 5;
-// The row marker's column, now between the portrait and the name. Small — `R12` at 10 px is about
-// 20 px, and the marker is left-aligned in it so the NAME always starts at the same x.
-const ROW_BOX = 26;
+// The row marker's column, between the portrait and the name. `R12` at 12 px is about 24 px, and the
+// marker is left-aligned in it so the NAME always starts at the same x.
+//
+// 26 → 30 IN START-BOARD-6, because the marker itself grew. His words on the 10 px version, with a
+// screenshot: legible only if you already know it is there. The 4 px come from the NAME, which is
+// the only column that can give them — the number and the portrait are the two things he has to
+// carry away from the board.
+const ROW_BOX = 30;
 
 // The block's shape. Rows are chosen first and columns follow: it is the row count that decides
 // whether a block reads as a list, and a rule that picks columns first turns a small field into a
@@ -356,7 +361,15 @@ export function drawStartBoard(
   // have to memorise and carry into the race, and it has three characters to the name's twenty to
   // make its case with. 16 px bold, white, on a chip with real opacity.
   const numFont = Math.round(16 * L.scale);
-  const rowFont = Math.round(10 * L.scale);
+  // THE MARKER READS AS A MARKER (START-BOARD-6). 10 px at 42 % white was a watermark: his report,
+  // with a screenshot, was that it is legible only if you already know it is there. 12 px at 72 %.
+  //
+  // IT IS STILL BELOW THE NAME IN WEIGHT, which is the constraint that keeps it from becoming a
+  // second number: 12 px against the name's 13 and the number's 16 bold, 72 % against the name's
+  // solid white and the number's white-on-a-chip. Bigger and brighter than it was, smaller and
+  // dimmer than both things it must not be confused with — and the portrait still stands between it
+  // and the number chip.
+  const rowFont = Math.round(12 * L.scale);
   const portraitPx = spriteBox * PORTRAIT_FRAC;
   const spriteScale = displaySize > 0 ? portraitPx / displaySize : 1;
 
@@ -408,7 +421,7 @@ export function drawStartBoard(
     //    a character's width would undo what the alphabetical list is for.
     //
     //    IT IS STILL UNLIKE THE NUMBER, and three of the four separations survive the move: SMALLER
-    //    (10 px against 16), DIM GREY with no chip against the number's white on deep blue, and an
+    //    (12 px against 16), DIMMER with no chip against the number's white on deep blue, and an
     //    `R` PREFIX. The fourth was position, and the portrait now does that job — the marker never
     //    comes to sit beside the race number, which is the confusion the badge removed.
     const row = startRowOf(r, assignmentByRacer);
@@ -416,7 +429,7 @@ export function drawStartBoard(
     if (row != null) {
       ctx.textAlign = 'left';
       ctx.font = `${rowFont}px sans-serif`;
-      ctx.fillStyle = 'rgba(255,255,255,0.42)';
+      ctx.fillStyle = 'rgba(255,255,255,0.72)';
       ctx.fillText(`R${row}`, rowX, midY);
     }
 

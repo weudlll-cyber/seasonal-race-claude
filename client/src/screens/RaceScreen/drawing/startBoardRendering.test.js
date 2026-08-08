@@ -375,6 +375,16 @@ describe('ONE ALPHABETICAL LIST, and the row rides along (START-BOARD-3)', () =>
     expect(rowCall.x).toBeGreaterThan(spriteX); // …the PORTRAIT stands between it and the marker…
     expect(rowCall.x).toBeLessThan(nameCall.x); // …and the marker leads its own name
     expect(rowCall.t.startsWith('R')).toBe(true); // …and it is not a bare digit
+    // START-BOARD-6: bigger and brighter than the watermark it was, and STILL below the name in
+    // weight — which is the constraint that keeps it from reading as a second number.
+    const rowPx = fontPx(rowCall.font);
+    const namePx = fontPx(nameCall.font);
+    expect(rowPx, 'the marker is readable').toBeGreaterThanOrEqual(12);
+    expect(rowPx, 'and still below the name').toBeLessThan(namePx);
+    expect(fontPx(numCall.font), 'and well below the number').toBeGreaterThan(rowPx);
+    expect(alphaOf(rowCall.style), 'brighter than the 0.42 watermark').toBeGreaterThan(0.6);
+    expect(alphaOf(rowCall.style), 'and not solid white like the name').toBeLessThan(1);
+    expect(nameCall.style).toBe('#ffffff');
     // The marker is left-aligned in its own column, so the NAME starts at the same x on every line.
     const xs = new Set(
       entries.map((e) => ctx.textCalls.find((c) => c.t === e.name)?.x).map((v) => Math.round(v))
