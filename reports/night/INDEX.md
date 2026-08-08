@@ -8,6 +8,17 @@ report here could be orphaned, or an index link could dangle, with nothing notic
 `node scripts/check-index.mjs --dir=reports/night --index=reports/night/INDEX.md` now checks both
 directions.
 
+- [START-BOARD-1.md](START-BOARD-1.md) — the runners' board: every racer once, during the push, as
+  name + number + its own sprite, alphabetical in columns and scannable at a glance. THE STILL POSE
+  WAS FREE: `_getFrameIndex` is floor(((frame % period)/period) x frameCount), so frame 0 selects
+  sheet frame 0 for any speed and any racer type — the shipped drawRacer needed no change. Layout is
+  a pure function: 8 -> 2x6, 40 -> 5x8, 100 -> 5x20 all at full size, and past 100 it shrinks rather
+  than clips. The countdown digits stop owning a count — derived from countdownDurationMs, so 4000
+  shows 4-3-2-1 with GO! at zero instead of GO! standing for an extra second. AND THE RENDER
+  FINGERPRINT HAD NEVER DRAWN A COUNTDOWN FRAME: the harness rendered its first frame AT the gun, so
+  a three-second full-screen overlay could have shipped without moving the hash — window extended
+  backwards, and the move is split into instrument (bc56f111) and content (ffe568e2). Camera and
+  world unchanged. Measured and open: 100 names cannot be scanned in the push's 1.46 s. Not minted.
 - [CEREMONY-HOLD-TARGET-1.md](CEREMONY-HOLD-TARGET-1.md) — the hold becomes a TARGET. The
   hand-over sat in `_transition`, which a race never reaches at the gun (the director is already in
   OVERVIEW), so the ceremony only set where the camera STARTED and OVERVIEW's own setting pulled it
