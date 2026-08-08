@@ -21,6 +21,20 @@ directions.
   (acorn represents a regex token value as an object, so two different regexes compared equal).
   client-suite runs alone deliberately (retry:0 + timeouts under contention) and stays that way.
   The routine-subset split is argued AGAINST and not built.
+- [LABEL-OCCLUSION-2.md](LABEL-OCCLUSION-2.md) — a name is earned slowly and given up instantly. The
+  layout refuses to DRAW a name that is not clear in the frame being drawn, whatever the hold says,
+  so `labelFormHold` governs PROMOTION only and its set is now an ENTITLEMENT, not a picture — a
+  label can be entitled and drawn as a number in the same frame. THE PASS/FAIL IS MET: drawn
+  name-on-racer 592/1006 → **0 on all four arms**. AND THE PREDICTION "at no cost in switches" WAS
+  WRONG BY 2.6x: 2.84/2.20 → 7.48/4.30 against a 1.24–3.89 band, with the name share 20.7/12.5 →
+  15.7/8.2 %. The cause is structural — the entitlement SURVIVES the cover, so the name returns the
+  frame after the pack breathes and every breath is two switches; the symmetric rule absorbed them by
+  leaving the name up, which was the defect. STOPPED at the measurement rather than tuning:
+  `demoteHoldMs=0` is measured at 4.74/3.10 (calmer, because a lost entitlement must re-earn its two
+  seconds) and a re-promotion cost and stage 3 are named unmeasured. `fits` is no longer consulted
+  for the wide box — `nameClear` is strictly stronger. The sabotage is LABEL-OCCLUSION-1's own
+  placement rule restored verbatim, and exactly ONE test goes red. The Dev Screen tooltip is
+  knowingly stale until the owner settles the arm.
 - [LABEL-OCCLUSION-1.md](LABEL-OCCLUSION-1.md) — the NAME only when it covers nothing. The owner's
   rule replaces LABEL-DEGRADE-1's "does it fit" and supersedes that report's area-budget proposal:
   a name is granted when its box overlaps neither a placed label NOR the drawn box of any OTHER
