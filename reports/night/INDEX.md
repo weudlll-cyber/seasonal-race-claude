@@ -8,6 +8,17 @@ report here could be orphaned, or an index link could dangle, with nothing notic
 `node scripts/check-index.mjs --dir=reports/night --index=reports/night/INDEX.md` now checks both
 directions.
 
+- [VERIFY-ROUTING-1.md](VERIFY-ROUTING-1.md) — verify stops guessing. The hand-maintained route
+  table is GONE: each guard declares its own dependencies in its own file, and routing.mjs collects
+  them. Self-dependency is COMPUTED (the import closure of the declaring file), so no guard can fail
+  to route on a change to its own instrument — miss 3 closed for every guard at once. The runtime
+  entry points a static walk cannot follow are declared but CROSS-CHECKED against the script, and
+  the check caught a wrong path in the render declaration the first time it ran. The four misses are
+  tests, one each, both directions, each shown false-before / true-after. Two guards that ran NOWHERE
+  now run: check-writable, and check-measured-stamps for the very change that invalidates it. What
+  verify cannot know about the commit being made is a PENDING line printed on green runs instead of
+  a silent PASS. Skip reasons are counts, not prose; every guard states its own blind spots and
+  verify prints them. All three fingerprints unchanged. Not merged.
 - [HARNESS-NAMES-1.md](HARNESS-NAMES-1.md) — the render harness never set `r.name`, so every label
   box in it was 8px of padding: it measured a geometry the game cannot produce. Fixed with the MIXED
   roster, by index, imported from the one home; render **re-minted deliberately** to
