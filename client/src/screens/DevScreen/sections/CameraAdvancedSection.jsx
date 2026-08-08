@@ -332,8 +332,9 @@ function CameraAdvancedSection() {
           Highlight heroes — <span style={{ color: '#34c759' }}>green ring = normal hero</span>,{' '}
           <span style={{ color: '#ff3b30' }}>red ring = B2-attacker</span>
         </label>
-        {/* LABEL-DEGRADE-1 — the name on the track when it fits. DEFAULT OFF on measurement; see
-            reports/night/LABEL-DEGRADE-1.md for the numbers and why. */}
+        {/* LABEL-OCCLUSION-1 — the name on the track when it covers nothing. The KEY and the OFF
+            default are LABEL-DEGRADE-1's and are deliberately unchanged; what the switch DOES is
+            not, so its text is. See reports/night/LABEL-OCCLUSION-1.md. */}
         <label
           className={s.label}
           style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginTop: '0.5rem' }}
@@ -344,15 +345,15 @@ function CameraAdvancedSection() {
             onChange={(e) => set('labelNamesWhenRoom', e.target.checked)}
             data-testid="label-names-when-room-toggle"
           />
-          Track labels show the NAME when it fits
+          Track labels show the NAME when it covers nothing
           <InfoTooltip
             text={
-              'During the race, a label shows the racer’s NAME when its wider box lands on ' +
-              'free pixels, and falls back to the NUMBER when it does not. OFF by default on ' +
-              'measurement: the switching itself is calm (1.2–3.9 changes per label per race) ' +
-              'but the wider labels cost 7% of the labels and up to 32% more label churn, and the ' +
-              'name fits 92–99% of the time — so this is closer to "names instead of ' +
-              'numbers" than to "the name when there is room". Your eye decides.'
+              'During the race, a label shows the racer’s NAME when the name would cover ' +
+              'neither another label nor another racer, and the NUMBER otherwise. A form is ' +
+              'held for 2 s before it may change, so a jostling pack cannot make the labels ' +
+              'strobe. Measured at 100 racers: about 21% of labels show a name on searound and ' +
+              '13% on river-run, changing form 2.2–2.8 times per label per race. OFF by ' +
+              'default — your eye decides whether that share is worth it.'
             }
           />
         </label>
