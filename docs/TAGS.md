@@ -97,6 +97,20 @@ archived as permanent `archive/*` tags and their remote branches deleted (branch
   fingerprint `ded0a126048e4cdb` (replaces the pre-combo15 anchor `7c70b1eae7d31e22`; OFF invariant
   `f8f7d9c2fd3283e9` unchanged). See [../reports/evolution/MERGE-SHIP-1.md](../reports/evolution/MERGE-SHIP-1.md)
   and [FAIRNESS.md](FAIRNESS.md).
+
+### Reversal points for a rewritten master (do NOT delete)
+
+- `archive/master-9d025aa9-accidental-chain-merge` (`9d025aa9`, 2026-08-08) — master as it briefly
+  stood after `feat/verify-cost-2` was merged into it. That branch was cut from
+  `feat/start-board-1`, not from master, so the merge carried **50 files** of unapproved ceremony
+  work — the camera hold, the runners' board, the race numbers — onto master with no eye test and
+  no ship ceremony. Master was reset to `434501af` and force-pushed under the owner's explicit
+  one-time authorisation; **this tag is what makes that reset reversible, and it is the only place
+  that state exists.** The tooling the merge was supposed to carry was re-landed from
+  `feat/verify-cost-2-tooling`, which was cut from master. The lesson is in
+  [SHIP-CEREMONY.md](SHIP-CEREMONY.md): a branch's content is what it changes relative to MASTER,
+  not relative to the branch it was cut from.
+
 ### The label line — archived when the race-number design replaced it (2026-08-07)
 
 Four branches built to solve "names ON racers". The owner chose the race-number design, which removes
