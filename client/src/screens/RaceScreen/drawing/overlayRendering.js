@@ -125,12 +125,27 @@ export function countdownDigit(elapsed, durationMs) {
 /**
  * Draws the countdown number in the top-right corner.
  * Returns the current countdown integer so the caller can update React state.
+ *
+ * ── THE DIGITS HAVE A WINDOW NOW (CEREMONY-TIME-1) ─────────────────────────────────────────────
+ * They used to run for the whole ceremony, so a longer opening just meant counting from a bigger
+ * number — at 100 racers the sequence would have started at 20. The owner asked for a stretch of
+ * formation with NO count on it, so the viewer can find the number the board just taught them
+ * before the clock starts pressing. `startMs` is where the digits appear; before it nothing is
+ * drawn and `null` is returned, so the caller leaves its state alone rather than showing a number
+ * nobody can see.
+ *
+ * The DIGIT is still derived from the phase's own length, not from the window — the count has to
+ * reach zero at the gun, and only the gun knows when that is.
+ *
  * @param {CanvasRenderingContext2D} ctx
  * @param {number} elapsed  ms since countdown started.
  * @param {number} durationMs  the countdown phase's length — the digits are derived from it.
- * @returns {number} n — seconds remaining; 0 renders as "GO!".
+ * @param {number} [startMs=0]  ms into the phase at which the digits become visible.
+ * @returns {number|null} n — seconds remaining; 0 renders as "GO!"; null before the window opens.
  */
-export function drawCountdownOverlay(ctx, elapsed, durationMs) {
+export function drawCountdownOverlay(ctx, elapsed, durationMs, startMs = 0) {
+  const from = Number.isFinite(startMs) && startMs > 0 ? startMs : 0;
+  if (Number.isFinite(elapsed) && elapsed < from) return null;
   const n = countdownDigit(elapsed, durationMs);
   // The palette is indexed by urgency, not by the digit: it has four entries and a countdown may
   // now be longer than four seconds. Clamping keeps the shipped colours for the last three seconds

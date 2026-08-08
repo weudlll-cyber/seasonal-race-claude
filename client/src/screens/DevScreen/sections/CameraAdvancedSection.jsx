@@ -399,7 +399,7 @@ function CameraAdvancedSection() {
                 text={
                   `The SHORTEST the starters' board is ever shown, however small the field. ` +
                   `The board is up for max(this, per-name × racers). Currently: ` +
-                  `${config.startBoardFloorMs ?? 3000}ms.`
+                  `${config.startBoardFloorMs ?? 6000}ms.`
                 }
               />
             </label>
@@ -409,7 +409,7 @@ function CameraAdvancedSection() {
               min={0}
               max={20000}
               step={250}
-              value={config.startBoardFloorMs ?? 3000}
+              value={config.startBoardFloorMs ?? 6000}
               onChange={(e) => {
                 const v = Number(e.target.value);
                 if (v >= 0 && v <= 20000) set('startBoardFloorMs', v);
@@ -426,9 +426,9 @@ function CameraAdvancedSection() {
                 text={
                   `Reading time allowed per racer. The board is up for ` +
                   `max(floor, this × racers), and the camera HOLDS on the formation until it is ` +
-                  `done — the push keeps its own speed. At ${config.startBoardMsPerName ?? 80}ms ` +
-                  `that is ${(((config.startBoardMsPerName ?? 80) * 40) / 1000).toFixed(1)}s at 40 ` +
-                  `racers and ${(((config.startBoardMsPerName ?? 80) * 100) / 1000).toFixed(1)}s at 100.`
+                  `done — the push keeps its own speed. At ${config.startBoardMsPerName ?? 120}ms ` +
+                  `that is ${(((config.startBoardMsPerName ?? 120) * 40) / 1000).toFixed(1)}s at 40 ` +
+                  `racers and ${(((config.startBoardMsPerName ?? 120) * 100) / 1000).toFixed(1)}s at 100.`
                 }
               />
             </label>
@@ -438,7 +438,7 @@ function CameraAdvancedSection() {
               min={0}
               max={500}
               step={10}
-              value={config.startBoardMsPerName ?? 80}
+              value={config.startBoardMsPerName ?? 120}
               onChange={(e) => {
                 const v = Number(e.target.value);
                 if (v >= 0 && v <= 500) set('startBoardMsPerName', v);
@@ -454,7 +454,7 @@ function CameraAdvancedSection() {
             >
               Venue Shot (ms)
               <InfoTooltip
-                text={`How long the opening shot of the whole track is held STILL before the camera begins to move. This and the push-in live inside the countdown above; if together they ask for more than the countdown has, both are scaled down proportionally so the move always completes before the gun. Whatever is left over is held on the formation, motionless. Currently: ${config.ceremonyVenueMs ?? 1400}ms.`}
+                text={`How long the opening shot of the whole track is held STILL before the camera begins to move. It means exactly what it says: since START-BOARD-2 the opening's total length is the SUM of these beats, so raising this makes the opening longer and changes no other beat. Currently: ${config.ceremonyVenueMs ?? 1400}ms.`}
               />
             </label>
             <input
@@ -500,9 +500,9 @@ function CameraAdvancedSection() {
               className={s.label}
               style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}
             >
-              Settled Hold (ms)
+              Settled Hold — the searching time (ms)
               <InfoTooltip
-                text={`How long the finished formation is held STILL before the gun. This used to be whatever was left of the countdown after the other two beats, so it could only be set indirectly; it is now its own control and means what it says. If the three beats ask for more than the countdown has, all three are scaled proportionally. Currently: ${config.ceremonySettledMs ?? 600}ms.`}
+                text={`THE BEAT THAT MAKES THE BOARD WORTH SHOWING: the formation held still, board gone and no digits yet, so a viewer can take the number the board just taught them and FIND it on the track. Raised from 600 to 4000 after the searound eye test, where the race began almost the moment the board vanished. It is ADDED to the opening, never taken out of it. Currently: ${config.ceremonySettledMs ?? 4000}ms.`}
               />
             </label>
             <input
@@ -510,12 +510,36 @@ function CameraAdvancedSection() {
               className={s.input}
               data-testid="ceremony-settled-ms"
               min={0}
-              max={6000}
+              max={15000}
               step={100}
-              value={config.ceremonySettledMs ?? 600}
+              value={config.ceremonySettledMs ?? 4000}
               onChange={(e) => {
                 const v = Number(e.target.value);
-                if (v >= 0 && v <= 6000) set('ceremonySettledMs', v);
+                if (v >= 0 && v <= 15000) set('ceremonySettledMs', v);
+              }}
+            />
+          </div>
+          <div className={s.formGroup}>
+            <label
+              className={s.label}
+              style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}
+            >
+              Countdown digits (ms)
+              <InfoTooltip
+                text={`How long the 3-2-1 digits are on screen, at the very END of the opening. Before this window there are no digits at all — that is what gives the searching time above a stretch with no clock on it. NOT a cap: it is added to the opening like every other beat, and the count still reaches zero exactly at the gun. Currently: ${config.countdownDigitsMs ?? 3000}ms.`}
+              />
+            </label>
+            <input
+              type="number"
+              className={s.input}
+              data-testid="countdown-digits-ms"
+              min={0}
+              max={10000}
+              step={250}
+              value={config.countdownDigitsMs ?? 3000}
+              onChange={(e) => {
+                const v = Number(e.target.value);
+                if (v >= 0 && v <= 10000) set('countdownDigitsMs', v);
               }}
             />
           </div>

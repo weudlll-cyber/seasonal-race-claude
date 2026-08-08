@@ -35,12 +35,12 @@ const POST_START_HOLD_MS = 7000;
 // better than `POST_START_HOLD_MS` beside it, which is duplicated and unguarded.
 const CEREMONY_VENUE_MS = 1400;
 const CEREMONY_PUSH_MS = 2000;
-const CEREMONY_SETTLED_MS = 600;
+const CEREMONY_SETTLED_MS = 4000;
 const CEREMONY_EASING = 'easeInOutCubic';
 // START-BOARD-2. Duplicated from defaults.js like the three beats above it, and guarded the same
 // way: cameraTimingComputation.test.js asserts the two agree.
-const START_BOARD_FLOOR_MS = 3000;
-const START_BOARD_MS_PER_NAME = 80;
+const START_BOARD_FLOOR_MS = 6000;
+const START_BOARD_MS_PER_NAME = 120;
 const BATTLE_COOLDOWN_MS = 8000;
 const BATTLE_MAX_DURATION = 6000;
 const MIN_STATE_HOLD_MS = 5000;

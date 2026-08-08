@@ -69,7 +69,17 @@ export const CEREMONY_BEAT = {
    * Zero when the board is shorter than the push.
    */
   BOARD: 'board',
-  /** Board gone, formation held clean, until the gun. */
+  /**
+   * Board gone, formation held clean. THIS IS THE SEARCHING TIME (CEREMONY-TIME-1).
+   *
+   * The board teaches the number-to-name assignment; this beat is when the viewer takes that number
+   * and finds it ON THE TRACK. The owner watching searound: the race started almost immediately
+   * after the board disappeared, and nobody can find their racer that fast. It is the beat that
+   * makes the board worth showing at all — a board with no searching time after it teaches something
+   * the viewer has no chance to use.
+   *
+   * The digits do not run during it. See `countdownMs` in `ceremonySchedule`.
+   */
   SETTLED: 'settled',
 };
 
@@ -80,6 +90,10 @@ export const CEREMONY_BEAT = {
  * that flashes past is worse than no board), and the per-name term is what makes a hundred names
  * readable at all. His words after the first eye test: *"in that time it is absolutely impossible to
  * find your own racer."*
+ *
+ * BOTH TERMS WERE ROUGHLY DOUBLED IN CEREMONY-TIME-1 (3000/80 → 6000/120) after his second eye test
+ * on searound, where the board was still shown too briefly. The shape did not change; only the
+ * numbers, and they are starting values for his eye rather than measured truth.
  *
  * @param {number} n  racers on the board
  * @param {number} floorMs
@@ -120,29 +134,46 @@ export function boardDurationMs(n, floorMs, msPerName) {
  *   - **The camera's rhythm is untouched.** The push is still exactly `pushMs`; the extra time goes
  *     into a new BOARD beat in which the camera has already arrived and holds still.
  *
- * @param {number} venueMs    venue-shot duration
- * @param {number} pushMs     push-in duration — the camera's own travel, never stretched
- * @param {number} settledMs  formation held CLEAN (board gone) before the gun
- * @param {number} boardMs    how long the board must be up, from `boardDurationMs`
- * @returns {{venueMs, pushMs, boardHoldMs, settledMs, boardStartMs, boardEndMs, totalMs}}
+ * ── THE DIGITS BECAME A BEAT OF THEIR OWN (CEREMONY-TIME-1) ─────────────────────────────────────
+ * The digits used to run for the WHOLE ceremony, because they are derived from `totalMs` — so a
+ * longer opening simply meant counting from a bigger number, and there was no moment that could be
+ * called "before the countdown begins". The owner asked for exactly that moment: the formation
+ * standing in view, searchable, and only then the count.
+ *
+ * So the digits get their own tail window. It is NOT a cap and it must never become one — that is
+ * the mistake `countdownDurationMs` made and START-BOARD-2 removed. It adds to `totalMs` like every
+ * other beat; it only decides when the digits become VISIBLE, and the camera does not know it exists.
+ *
+ * @param {number} venueMs     venue-shot duration
+ * @param {number} pushMs      push-in duration — the camera's own travel, never stretched
+ * @param {number} settledMs   formation held CLEAN (board gone), for searching, before the digits
+ * @param {number} boardMs     how long the board must be up, from `boardDurationMs`
+ * @param {number} countdownMs the tail in which the DIGITS are shown. Added to the total, not taken
+ *                             out of it.
+ * @returns {{venueMs, pushMs, boardHoldMs, settledMs, countdownMs, boardStartMs, boardEndMs,
+ *   countdownStartMs, totalMs}}
  */
-export function ceremonySchedule(venueMs, pushMs, settledMs, boardMs = 0) {
+export function ceremonySchedule(venueMs, pushMs, settledMs, boardMs = 0, countdownMs = 0) {
   const v = Math.max(0, Number.isFinite(venueMs) ? venueMs : 0);
   const p = Math.max(0, Number.isFinite(pushMs) ? pushMs : 0);
   const st = Math.max(0, Number.isFinite(settledMs) ? settledMs : 0);
   const b = Math.max(0, Number.isFinite(boardMs) ? boardMs : 0);
+  const cd = Math.max(0, Number.isFinite(countdownMs) ? countdownMs : 0);
   // The board is up for the whole push and then for as long again as it still needs. When it is
   // SHORTER than the push it needs no extra hold at all and this beat is zero — a small field does
   // not make the ceremony longer.
   const boardHoldMs = Math.max(0, b - p);
+  const boardEndMs = v + p + boardHoldMs;
   return {
     venueMs: v,
     pushMs: p,
     boardHoldMs,
     settledMs: st,
+    countdownMs: cd,
     boardStartMs: v,
-    boardEndMs: v + p + boardHoldMs,
-    totalMs: v + p + boardHoldMs + st,
+    boardEndMs,
+    countdownStartMs: boardEndMs + st,
+    totalMs: boardEndMs + st + cd,
   };
 }
 
@@ -163,7 +194,8 @@ export function ceremonyTotalMs(cfg, n) {
     cfg?.ceremonyVenueMs ?? 0,
     cfg?.ceremonyPushMs ?? 0,
     cfg?.ceremonySettledMs ?? 0,
-    boardDurationMs(n, cfg?.startBoardFloorMs ?? 0, cfg?.startBoardMsPerName ?? 0)
+    boardDurationMs(n, cfg?.startBoardFloorMs ?? 0, cfg?.startBoardMsPerName ?? 0),
+    cfg?.countdownDigitsMs ?? 0
   ).totalMs;
 }
 

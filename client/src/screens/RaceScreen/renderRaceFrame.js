@@ -300,7 +300,8 @@ export function renderRaceFrame(ctx, f) {
         st.racers?.length ?? 0,
         cameraConfig?.startBoardFloorMs ?? 0,
         cameraConfig?.startBoardMsPerName ?? 0
-      )
+      ),
+      cameraConfig?.countdownDigitsMs ?? 0
     );
     drawStartBoard(ctx, {
       racers: st.racers,
@@ -311,7 +312,12 @@ export function renderRaceFrame(ctx, f) {
       canvasW,
       canvasH,
     });
-    countdownNumber = drawCountdownOverlay(ctx, cdElapsed, schedule.totalMs);
+    countdownNumber = drawCountdownOverlay(
+      ctx,
+      cdElapsed,
+      schedule.totalMs,
+      schedule.countdownStartMs
+    );
   } else if (st.phase === PHASE.FINISHED) {
     drawFinishedOverlay(ctx);
   }

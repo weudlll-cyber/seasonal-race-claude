@@ -350,10 +350,29 @@ export const DEFAULT_CAMERA_CONFIG = {
   // means exactly the beat it names.
   ceremonyVenueMs: 1400,
   ceremonyPushMs: 2000,
-  // The formation held motionless before the gun, with the board GONE. It is a control, not a
-  // remainder: CEREMONY-HANDOVER-1 made it one, and now that the countdown follows the beats there
-  // is no slack left anywhere to quietly land in it.
-  ceremonySettledMs: 600,
+  // ── THE SEARCHING TIME (CEREMONY-TIME-1) ──────────────────────────────────────────────────────
+  // The formation held motionless, board GONE and no digits yet. It is a control, not a remainder:
+  // CEREMONY-HANDOVER-1 made it one, and now that the countdown follows the beats there is no slack
+  // left anywhere to quietly land in it.
+  //
+  // 600 → 4000 after the owner's searound eye test. The board teaches the number-to-name assignment
+  // and this is when the viewer USES it — takes the number they just learned and finds it on the
+  // track. At 600 ms the race started almost immediately after the board vanished, which made the
+  // board itself close to pointless: it taught something nobody had time to apply. This time is ADDED
+  // to the opening rather than taken out of it, which is what "the countdown follows the beats"
+  // means.
+  ceremonySettledMs: 4000,
+  // ── THE DIGITS' OWN WINDOW (CEREMONY-TIME-1) ──────────────────────────────────────────────────
+  // How long the 3-2-1 digits are on screen, at the very end. NOT a cap on anything: it is added to
+  // the total like every other beat, and the camera does not know it exists. It exists because the
+  // digits are derived from the phase's whole length, so before this they ran for the ENTIRE opening
+  // — a longer ceremony just meant counting from a bigger number, and there was no such moment as
+  // "before the countdown begins" for the searching time above to sit in.
+  //
+  // This is the one new key in CEREMONY-TIME-1, and it is why that block puts defaults.js in its
+  // diff. Nothing about it can reach the race engine's arithmetic — but the guard is a reachability
+  // hull, not a judgement, and it is right to report the key rather than argue with it.
+  countdownDigitsMs: 3000,
   // ── THE RUNNERS' BOARD'S OWN DURATION (START-BOARD-2) ──────────────────────────────────────────
   // `max(startBoardFloorMs, startBoardMsPerName × n)`. The owner's shape, after his eye test at 40
   // racers: "in that time it is absolutely impossible to find your own racer."
@@ -363,12 +382,15 @@ export const DEFAULT_CAMERA_CONFIG = {
   // worse than a short board. This is how long a field takes to READ, which scales with the field.
   // The camera therefore arrives on `ceremonyPushMs` and then HOLDS while the board finishes.
   //
-  // 80 ms per name is my judgement and is meant for his eye, not a measurement of him. It comes from
-  // the shape of the task: the board is grouped by start row and alphabetical inside each row, so
-  // finding a known name is a jump to a heading plus a short scan, not a read of every entry. At his
-  // 40 it gives 3.2 s against the 1.46 s that failed; at 100 it gives 8.0 s.
-  startBoardFloorMs: 3000,
-  startBoardMsPerName: 80,
+  // BOTH TERMS ROUGHLY DOUBLED IN CEREMONY-TIME-1, after his second eye test on searound: the board
+  // was STILL shown too briefly. The first pair (3000 / 80) came from a task model — one alphabetical
+  // list, so finding a known name is a jump plus a short scan — and the model was optimistic. These
+  // are STARTING VALUES for his eye, not measured truth; the two sliders below are what settle them.
+  //
+  // At 6000 / 120: 6.0 s at 8 racers and at 20 (the floor binds), 6.0 s at 40, 12.0 s at 100 — against
+  // 3.2 s and 8.0 s before, and against the 1.46 s that failed his first eye test.
+  startBoardFloorMs: 6000,
+  startBoardMsPerName: 120,
   // ── LABEL-DEGRADE-1: the NAME on the track when there is room for it ───────────────────────────
   // The owner's idea: during the race, check per racer whether the NAME fits without overlapping
   // anything; show it if it does, fall back to the number when it does not. The decluttering's

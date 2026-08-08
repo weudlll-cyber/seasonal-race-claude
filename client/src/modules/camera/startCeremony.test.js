@@ -434,4 +434,36 @@ describe('the board gets its own duration, and the countdown follows it', () => 
     expect(ceremonyTotalMs(cfg, 40)).toBe(5200);
     expect(ceremonyTotalMs(cfg, 100)).toBe(10000);
   });
+
+  // WHAT BREAKS IF DELETED: the sum. `countdownDigitsMs` is a WINDOW and the one thing it must never
+  // become is a cap — that is the mistake `countdownDurationMs` made and START-BOARD-2 removed.
+  // WHAT GOES UNNOTICED: the digits' window silently shortening the opening instead of extending it,
+  // which would take the searching time back out of the ceremony that just gained it.
+  it('the digits window ADDS to the total, and never caps a beat', () => {
+    const base = { ceremonyVenueMs: 1400, ceremonyPushMs: 2000, ceremonySettledMs: 4000 };
+    const cfg = { ...base, startBoardFloorMs: 6000, startBoardMsPerName: 120 };
+    // 1400 + 2000 + (6000 - 2000) + 4000 = 11400 without digits…
+    expect(ceremonyTotalMs({ ...cfg, countdownDigitsMs: 0 }, 8)).toBe(11400);
+    // …and exactly the window more with them.
+    expect(ceremonyTotalMs({ ...cfg, countdownDigitsMs: 3000 }, 8)).toBe(14400);
+    // At 100 the board's per-name term binds instead of the floor: 120 x 100 = 12000.
+    expect(ceremonyTotalMs({ ...cfg, countdownDigitsMs: 3000 }, 100)).toBe(20400);
+    // Every other beat is untouched by the window — no scaling factor is left in this file.
+    const withDigits = ceremonySchedule(1400, 2000, 4000, 6000, 3000);
+    const without = ceremonySchedule(1400, 2000, 4000, 6000, 0);
+    for (const k of ['venueMs', 'pushMs', 'boardHoldMs', 'settledMs', 'boardEndMs']) {
+      expect(withDigits[k], k).toBe(without[k]);
+    }
+  });
+
+  // WHAT BREAKS IF DELETED: the moment the owner asked for — formation in view, with no clock on it.
+  // WHAT GOES UNNOTICED: the digits creeping back over the searching time, which is the exact state
+  // this block was built to leave behind.
+  it('the digits start only after the searching time, and the count still ends at the gun', () => {
+    const sch = ceremonySchedule(1400, 2000, 4000, 6000, 3000);
+    expect(sch.boardEndMs).toBe(7400); // the board is gone…
+    expect(sch.countdownStartMs).toBe(11400); // …4000 ms before the first digit
+    expect(sch.countdownStartMs - sch.boardEndMs).toBe(sch.settledMs);
+    expect(sch.totalMs - sch.countdownStartMs).toBe(sch.countdownMs);
+  });
 });
