@@ -121,6 +121,32 @@ export function computeRenderDisplayScale(
 }
 
 /**
+ * HOW BIG THE RACER IS ACTUALLY DRAWN, in screen pixels — one home (LABEL-OFFSET-1).
+ *
+ * `screenPx = displaySize × displayScale × frameEffZoom` is the formula this file's header states and
+ * that `computeRenderDisplayScale` is built to satisfy: both of its bounds are expressed by solving
+ * that equation for the scale. It was, until now, only a sentence in a comment — nothing evaluated
+ * it, so anything that needed the drawn size had to re-type the multiplication and hope.
+ *
+ * LABEL-OFFSET-1 needs it, because a label's distance from a racer should follow the RACER. Giving
+ * the formula a name means the size the label reasons about and the size the sprite is drawn at
+ * cannot drift apart: they are the same expression, evaluated once.
+ *
+ * WHICH AXIS. Pass `effZoomX` for the drawn WIDTH and `effZoomY` for the drawn HEIGHT. On a closed
+ * track the world→screen scale is anisotropic and the two genuinely differ — a caller that wants the
+ * vertical extent and passes the X zoom gets a number that is wrong by exactly the squash.
+ *
+ * @param {number} displaySize     racer type base display size in world px
+ * @param {number} displayScale    the result of computeRenderDisplayScale
+ * @param {number} frameEffZoom    the world→screen scale on the axis being asked about
+ * @returns {number} the drawn extent in screen px on that axis, or 0 if any input is unusable
+ */
+export function drawnRacerScreenPx(displaySize, displayScale, frameEffZoom) {
+  const px = displaySize * displayScale * frameEffZoom;
+  return Number.isFinite(px) && px > 0 ? px : 0;
+}
+
+/**
  * Resolve the effective maxTargetScreenPx for a single racer type.
  * Returns the type-specific override if set, otherwise the global default.
  *

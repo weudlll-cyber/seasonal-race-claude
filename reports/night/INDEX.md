@@ -8,6 +8,90 @@ report here could be orphaned, or an index link could dangle, with nothing notic
 `node scripts/check-index.mjs --dir=reports/night --index=reports/night/INDEX.md` now checks both
 directions.
 
+- [VERIFY-COST-2.md](VERIFY-COST-2.md) — cut the overhead, not the coverage. Measured first:
+  `npm run verify` 504.9 s -> 417.8 s, the client suite 260.9 s -> 196.3 s, no fingerprint moved.
+  THE FINDING: goldenEquality.test.js takes 67.6 s ALONE and 244.9 s in the suite — not slow,
+  STARVED, because vitest parallelises across FILES and one file is one worker. Split into four
+  (same cases, same assertions, one test added, case list in one home): 39.5 s. `it.concurrent`
+  would have bought nothing — the races are synchronous and CPU-bound. CHEAP MODE on the three
+  fingerprint scripts (one track): world 229 -> 17.8 s, camera 169 -> 2.5 s, render 160 -> 2.9 s,
+  with a CHEAP- prefixed hash that cannot impersonate a real one and a refusal to combine with
+  --quiet. The world fingerprint no longer runs for a COMMENT: a mechanical token-stream test with
+  a real tokenizer, fail-safe in every direction — and its own trap test caught a false positive
+  (acorn represents a regex token value as an object, so two different regexes compared equal).
+  client-suite runs alone deliberately (retry:0 + timeouts under contention) and stays that way.
+  The routine-subset split is argued AGAINST and not built. Not merged.
+- [START-BOARD-1.md](START-BOARD-1.md) — the runners' board: every racer once, during the push, as
+  name + number + its own sprite, alphabetical in columns and scannable at a glance. THE STILL POSE
+  WAS FREE: `_getFrameIndex` is floor(((frame % period)/period) x frameCount), so frame 0 selects
+  sheet frame 0 for any speed and any racer type — the shipped drawRacer needed no change. Layout is
+  a pure function: 8 -> 2x6, 40 -> 5x8, 100 -> 5x20 all at full size, and past 100 it shrinks rather
+  than clips. The countdown digits stop owning a count — derived from countdownDurationMs, so 4000
+  shows 4-3-2-1 with GO! at zero instead of GO! standing for an extra second. AND THE RENDER
+  FINGERPRINT HAD NEVER DRAWN A COUNTDOWN FRAME: the harness rendered its first frame AT the gun, so
+  a three-second full-screen overlay could have shipped without moving the hash — window extended
+  backwards, and the move is split into instrument (bc56f111) and content (ffe568e2). Camera and
+  world unchanged. Measured and open: 100 names cannot be scanned in the push's 1.46 s. Not minted.
+- [CEREMONY-HOLD-TARGET-1.md](CEREMONY-HOLD-TARGET-1.md) — the hold becomes a TARGET. The
+  hand-over sat in `_transition`, which a race never reaches at the gun (the director is already in
+  OVERVIEW), so the ceremony only set where the camera STARTED and OVERVIEW's own setting pulled it
+  away from frame one. It is now read from `_stateCamZoom()` every frame and released at the first
+  **view change**, not the first entry. river-run: travel ALONG over the first second **37.4 → 6.4
+  world px** (master 4.8), the field's y in frame **0.427 → 0.486** (master 0.50), zoom held at
+  1.1650 instead of easing to 1.0667; mountainstreet **0.389 → 0.505**. A second, unnoticed defect
+  closed: the hand-over was never consumed at all, so the first MID-RACE OVERVIEW would have snapped
+  to the ceremony's zoom. **The pan half of the prescription was built, measured and REJECTED** —
+  it satisfies all three predicted columns and leaves 37 of 40 racers off-screen at the release,
+  because the hold lasts 4983 ms and `_fieldCeiling` measures around the ANCHOR, not around the
+  camera. The window trace is a committed tool now (`scripts/gun-window-truth.mjs`); the two blocks
+  before it measured from patched copies in a scratch worktree that no longer exists. Camera and
+  render moved, world unchanged. Not minted, not merged.
+- [CEREMONY-HANDOVER-1.md](CEREMONY-HANDOVER-1.md) — the field guarantee no longer stops at the gun,
+  and the settled beat became a control instead of a remainder. The racing-time promise is the COMPANY
+  guarantee with the WHOLE FIELD as its company — reuse that is correctness, not economy, because the
+  ceremony's own version measures from the formation's CENTRE while the racing camera sits on the
+  leader, forward-framed. Retires when its ceiling falls below OVERVIEW's zoom: the widest shot the
+  design has a name for. **river-run 23/40 → 4/40 racers lost, frames losing anybody 884 → 488**;
+  mountainstreet 19/40 → 4/40. **Two tracks get nothing** — ice-track and space-sprint retire on frame
+  one, hashes byte-identical to the parent. (c) HOLDS and searound was not a coincidence: measuring
+  from a moving anchor is what makes the centre travel with the field. Camera moved on 8 of 10, render
+  moved, world unchanged. My first attempt at the settled slider re-created the very defect it was
+  fixing and a test caught it. A stale measured stamp from the PREVIOUS block is re-measured here —
+  verify could not have seen it, because the guard compares against committed history.
+- [START-CEREMONY-CAMERA-1.md](START-CEREMONY-CAMERA-1.md) — the race opens on the whole track, held
+  still, then eases in to the formation until it is as large as it can be with every racer still in
+  frame, and that framing is held into the race. **Both ends of the move are GEOMETRY and neither is
+  a setting** — the track's own extent and the field's own extent, the latter through a new
+  `fieldGuarantee`; only the rhythm is sliders. The hold is a DESIRED zoom, not a freeze: it enters
+  `Math.min` with the guarantees, so they can widen it and cannot narrow it (L192 by construction).
+  COUNTDOWN did NOT become a row in FRAMING_BY_STATE — the table is read only for states the machine
+  reaches during RACING, so a row would be a setting nothing reads; the value came from the GUARANTEE
+  instead and both halves arrived. Measured on 10 tracks x 5 field sizes from real formations: all 50
+  keep every racer in frame, target ranges 0.632 to 13.784. Camera moved on all ten, render moved,
+  world unchanged. **Open question for the owner: at 100 racers the first view change is a 2.6-4.1x
+  jump** — named with numbers, no mechanism added, his taste to decide.
+- [LABEL-OFFSET-1.md](LABEL-OFFSET-1.md) — the label's distance from its racer was `fontPx * 2.0`, a
+  property of the TEXT, so it stayed put while the racer changed size. It is now half the racer's
+  DRAWN height plus a margin slider (`nameTagMarginPx`, 6 px), which needs no per-track constant
+  because it falls out of the drawn size. **The measurement found a second, worse defect nobody had
+  named:** the old 31.7 px offset meant any racer drawn taller than 63.4 px had the bottom of its
+  label INSIDE its own sprite, and all ten tracks reach 82-160 px at close zoom — so at the tight end
+  of every track the labels were sitting on the racers. Drawn racers run 27.4 px to 160.0 px; the
+  VISIBLE space between sprite and label is now one constant everywhere. Declutter drops measured as
+  an A/B in one run: identical on all ten tracks and op counts identical to the digit, because every
+  racer in a frame is drawn at one size so the change is a pure translation. Render moved on all ten,
+  world unchanged (engine-reach said it was owed, so it was run).
+- [RACE-NUMBERS-1.md](RACE-NUMBERS-1.md) — the racer wears a NUMBER on the track (at most three
+  characters) and the standings list carries the number before the name. The draw cannot shift the
+  race and the guarantee is structural: `assignRaceNumbers` takes no rng argument, builds its own
+  generator and discards it. **The trap that would have caught a careful implementation:** an unseeded
+  race runs off `Math.random` directly, so a "fall back to Math.random" numbering would consume from
+  the race's own stream in exactly the case it thought was safe — the fallback is a constant, and a
+  test asserts `Math.random` is never called. Proved three ways (world unchanged, engine-reach clear,
+  and an independent generator lands where it would have). Render moved on all ten tracks as expected;
+  the op counts went UP, because shorter labels collide less so MORE labels survive decluttering.
+  Caught on the way: the harness knew nothing of `raceNumber` and would have gone straight back to
+  measuring empty label boxes.
 - [HARNESS-NAMES-1.md](HARNESS-NAMES-1.md) — the render harness never set `r.name`, so every label
   box in it was 8px of padding: it measured a geometry the game cannot produce. Fixed with the MIXED
   roster, by index, imported from the one home; render **re-minted deliberately** to

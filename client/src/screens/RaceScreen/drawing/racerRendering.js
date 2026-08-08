@@ -23,6 +23,7 @@ import { lerp, lerpAngle } from '../../../utils/mathUtils.js';
 // three numbers were re-typed here as literals, so the module that LAID OUT the box and the one that
 // DREW it each owned a copy of the same rectangle.
 import { labelBoxHeight, labelOffsetAbove, labelBoxWidth } from '../nameTagLayout.js';
+import { raceNumberLabel } from '../../../modules/raceNumbers.js';
 
 import { PHASE } from '../racePhase.js';
 const PHASE_RACING = PHASE.RACING;
@@ -50,10 +51,26 @@ const PHASE_RACING = PHASE.RACING;
  * @param {number} effY  world->screen scale on Y
  * @param {number} fontPx  label font size in SCREEN px
  * @param {boolean} isRacing  True when phase === RACING (enables crown icon).
+ * @param {number} racerScreenH  LABEL-OFFSET-1: the racer's DRAWN height in SCREEN px. The gap
+ *        follows the racer, so this — not the font — sets how far above it the label sits.
+ * @param {number} labelMarginPx  breathing space above the racer's top edge, in SCREEN px.
  */
-function drawNameTag(ctx, px, py, name, isLeader, isComeback, effX, effY, fontPx, isRacing) {
+function drawNameTag(
+  ctx,
+  px,
+  py,
+  name,
+  isLeader,
+  isComeback,
+  effX,
+  effY,
+  fontPx,
+  isRacing,
+  racerScreenH,
+  labelMarginPx
+) {
   const bgH = labelBoxHeight(fontPx);
-  const offsetY = labelOffsetAbove(fontPx);
+  const offsetY = labelOffsetAbove(racerScreenH, labelMarginPx);
   ctx.save();
   ctx.translate(px, py);
   ctx.scale(1 / effX, 1 / effY); // one unit is now one screen pixel
@@ -92,6 +109,11 @@ function drawNameTag(ctx, px, py, name, isLeader, isComeback, effX, effY, fontPx
  * @param {number} ezoom  Effective canvas zoom (X axis).
  * @param {number} ezoomY  Effective canvas zoom on Y (differs on closed tracks).
  * @param {number} tagFontPx  Name-tag font size in SCREEN px.
+ * @param {number} racerScreenH  LABEL-OFFSET-1: the racer's DRAWN height in SCREEN px, from
+ *        `drawnRacerScreenPx` on the Y axis. It must be the SAME number handed to
+ *        `computeTagLayout`, or the decluttering reasons about boxes that are not where the labels
+ *        get drawn — the two-homes failure `nameTagLayout` exists to prevent.
+ * @param {number} labelMarginPx  Breathing space above the racer's top edge, in SCREEN px.
  * @param {number} renderAlpha  Render-interpolation alpha (0 = no interp).
  * @param {boolean} interpolationEnabled  Whether render interpolation is active.
  */
@@ -114,7 +136,9 @@ export function drawRacers(
   renderAlpha,
   interpolationEnabled,
   highlightHeroes = false,
-  gapDevMarker = false
+  gapDevMarker = false,
+  racerScreenH = 0,
+  labelMarginPx = 0
 ) {
   const leader = st.racers.reduce((a, b) => (b.t > a.t ? b : a));
   const inv = 1 / ezoom;
@@ -212,9 +236,14 @@ export function drawRacers(
     const renderX = doInterp ? lerp(r._prevX ?? r.x, r.x, renderAlpha) : r.x;
     const renderY = doInterp ? lerp(r._prevY ?? r.y, r.y, renderAlpha) : r.y;
     ctx.globalAlpha = dimAlpha;
+    // RACE-NUMBERS-1: the track label is the racer's NUMBER, never its name. At most three
+    // characters, which is the whole design — a label about one racer wide points at the racer under
+    // it, where a 170 px name points at nothing a viewer can check (ROLL-CALL-PAIRING-1). The name
+    // is untouched in the data and still feeds the tie-break and the coat.
+    const numberText = raceNumberLabel(r.raceNumber);
     const tagName = showRpStartRowCfg
-      ? r.name + ' (R' + (assignmentByRacer.get(r.index)?.rowIndex ?? 0) + ')'
-      : r.name;
+      ? numberText + ' (R' + (assignmentByRacer.get(r.index)?.rowIndex ?? 0) + ')'
+      : numberText;
     drawNameTag(
       ctx,
       renderX,
@@ -225,7 +254,9 @@ export function drawRacers(
       ezoom,
       ezoomY ?? ezoom,
       tagFontPx,
-      isRacing
+      isRacing,
+      racerScreenH,
+      labelMarginPx
     );
   }
 

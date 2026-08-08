@@ -71,6 +71,16 @@ export const GUARANTEE = {
   PAIR: 'pair',
   /** DRAMATURGICAL: enough of the field in frame that the shot has tension. See companyGuarantee. */
   COMPANY: 'company',
+  /**
+   * GEOMETRIC: EVERY racer, not a corridor and not a chosen pair. See `fieldGuarantee`.
+   *
+   * It exists for the start ceremony (START-CEREMONY-CAMERA-1), where the subject is the formation
+   * itself and "who matters" is literally everyone. During the race no state guarantees the FIELD —
+   * that would be a promise the camera cannot keep once the pack is a lap long — so it appears in
+   * no row of the table below. It is a guarantee rather than a bespoke fitting because it is the
+   * same promise in the same words: it returns a CEILING, so it widens and never steers.
+   */
+  FIELD: 'field',
 };
 
 /**
@@ -482,6 +492,58 @@ export function lateralShiftToFit(lateralOffsets, roomPlus, roomMinus, scale) {
   if (lo > hi) return (lo + hi) / 2;
   if (lo <= 0 && hi >= 0) return 0; // the centreline already works — hold it
   return lo > 0 ? lo : hi; // the smallest move that reaches the admissible interval
+}
+
+/**
+ * GUARANTEE 4 — THE FIELD. The largest cam.zoom at which EVERY racer is inside the frame.
+ *
+ * This is the start ceremony's target (START-CEREMONY-CAMERA-1 (c)) and it is deliberately written
+ * as a guarantee rather than as a bespoke "fit the formation" helper: it returns a CEILING built
+ * from the same `zoomCeilingToFit`, so it widens and never steers, and the hold that follows the gun
+ * combines it with the other guarantees through the ordinary `Math.min`.
+ *
+ * DERIVED FROM THE FORMATION'S OWN EXTENT. There is no track name, no field size and no constant in
+ * it — it reads where the racers actually are. A 4-racer grid on Searound and a 100-racer grid on
+ * river-run go through the identical arithmetic and come out at different zooms because the two
+ * formations are different sizes, which is the whole point.
+ *
+ * WHY TWO AXIS-ALIGNED CALLS RATHER THAN ONE DIAGONAL. The camera is CENTRED on `centre` here, so
+ * the question is whether a rectangle fits inside a rectangle — and that is answered per axis. A
+ * single call with the bounding box's diagonal would fit the diagonal ALONG ITS OWN DIRECTION, which
+ * is a different and weaker condition: a wide, flat grid would pass it and still be cropped left and
+ * right. Each call is the one guarantee computation; only the vectors differ, as with every other
+ * guarantee in this file.
+ *
+ * The half-extents are DOUBLED because the camera sits at `centre`: a racer `d` to the left needs
+ * `d` of room on the left and its mirror needs `d` on the right, so the span that must fit is `2d`
+ * even when no racer sits at the mirror position.
+ *
+ * @param {Array<{x:number,y:number}>} racers  every racer that must stay in frame
+ * @param {{x:number,y:number}} centre  the world point the camera is centred on
+ * @param {number} axisX  projection world→screen scale on X at cam.zoom = 1
+ * @param {number} axisY
+ * @param {number} frameW
+ * @param {number} frameH
+ * @param {number} [innerFramePct=1]  fit inside this fraction of the frame
+ * @returns {number} cam.zoom ceiling; Infinity when there is nothing to keep in frame
+ */
+export function fieldGuarantee(racers, centre, axisX, axisY, frameW, frameH, innerFramePct = 1) {
+  if (!Array.isArray(racers) || racers.length === 0 || !centre) return Infinity;
+  let maxDx = 0;
+  let maxDy = 0;
+  for (const r of racers) {
+    if (!r || !Number.isFinite(r.x) || !Number.isFinite(r.y)) continue;
+    const dx = Math.abs(r.x - centre.x);
+    const dy = Math.abs(r.y - centre.y);
+    if (dx > maxDx) maxDx = dx;
+    if (dy > maxDy) maxDy = dy;
+  }
+  // A single racer, or a formation with no extent on an axis, constrains nothing on that axis —
+  // zoomCeilingToFit returns Infinity for a zero vector and `min` ignores it.
+  return Math.min(
+    zoomCeilingToFit({ x: 2 * maxDx, y: 0 }, axisX, axisY, frameW, frameH, innerFramePct),
+    zoomCeilingToFit({ x: 0, y: 2 * maxDy }, axisX, axisY, frameW, frameH, innerFramePct)
+  );
 }
 
 /** Unit perpendicular to a world heading, or null when the heading is degenerate. */

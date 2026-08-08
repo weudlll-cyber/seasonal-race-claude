@@ -26,8 +26,10 @@
 // ============================================================
 
 import { readFileSync, existsSync } from "node:fs";
+import { execFileSync } from "node:child_process";
 import { join, dirname, resolve, relative, sep } from "node:path";
 import { fileURLToPath } from "node:url";
+import { isInertChange } from "./lib/inertChange.mjs";
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), "..");
 export const MODULES_DIR = join(ROOT, "client", "src", "modules");
@@ -38,6 +40,48 @@ export function importSpecifiers(src) {
   return [...src.matchAll(/from\s+["']([^"']+)["']/g)]
     .map((m) => m[1])
     .filter((s) => s.startsWith("."));
+}
+
+/**
+ * Split hull paths into the ones that really carry a change and the ones whose edit is INERT —
+ * comments and whitespace only, so the engine computes the identical thing.
+ *
+ * VERIFY-COST-1. The world fingerprint is 229 s and it ran, on the night this was written, for a
+ * paragraph of prose in `defaults.js`. The decision is mechanical rather than a judgement (see
+ * `scripts/lib/inertChange.mjs`) and every uncertainty — an unreadable base, an unparseable file,
+ * a missing tokenizer, a directive comment — resolves to "it counts", i.e. to running the guard.
+ *
+ * @param {string[]} paths  repo-relative paths already known to be in the hull
+ * @param {string} base  the git ref to compare against
+ * @returns {{hit: string[], inert: {path: string, reason: string}[]}}
+ */
+export function splitInert(paths, base = "master") {
+  const hit = [];
+  const inert = [];
+  for (const p of paths) {
+    let before = null;
+    try {
+      before = execFileSync("git", ["show", `${base}:${p}`], {
+        cwd: ROOT,
+        encoding: "utf8",
+        maxBuffer: 1 << 26,
+      });
+    } catch {
+      hit.push(p); // no base version to compare — it counts
+      continue;
+    }
+    let after = null;
+    try {
+      after = readFileSync(join(ROOT, p), "utf8");
+    } catch {
+      hit.push(p);
+      continue;
+    }
+    const r = isInertChange(before, after, p);
+    if (r.inert) inert.push({ path: p, reason: r.reason });
+    else hit.push(p);
+  }
+  return { hit, inert };
 }
 
 /** True if a file contains a DYNAMIC import, which a static walk cannot follow. */
@@ -76,8 +120,15 @@ if (
   if (checkIdx >= 0) {
     const wanted = process.argv
       .slice(checkIdx + 1)
+      .filter((p) => !p.startsWith("--"))
       .map((p) => p.replace(/\\/g, "/").replace(/^\.\//, ""));
-    const hit = wanted.filter((w) => files.includes(w));
+    const inHull = wanted.filter((w) => files.includes(w));
+    // VERIFY-COST-1: a hull file whose edit is comments and whitespace ONLY cannot change what the
+    // engine computes, so it does not count as reach. Printed, never silent.
+    const baseArg = process.argv.find((a) => a.startsWith("--base="));
+    const { hit, inert } = splitInert(inHull, baseArg ? baseArg.slice(7) : "master");
+    for (const i of inert)
+      console.log(`ENGINE REACH: ${i.path} is in the hull but INERT — ${i.reason}`);
     if (hit.length) {
       console.log(
         `ENGINE REACH: ${hit.length} of ${wanted.length} path(s) can change the race:`,

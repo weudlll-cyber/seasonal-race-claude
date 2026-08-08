@@ -212,6 +212,23 @@ export const DEFAULT_CAMERA_CONFIG = {
   // that moment, the switch is INVISIBLE and needs no transition. Note this is well past the
   // camera's own 3 s start hold: handing over when the camera does would take ~20% of the names
   // away at the densest moment.
+  // LABEL-OFFSET-1 — THE GAP FOLLOWS THE RACER, AND THIS IS THE PART THAT DOES NOT.
+  //
+  // A label sits half the racer's DRAWN height above its centre — which lands its bottom edge exactly
+  // on the racer's top edge — plus this margin. The first term needs no setting: it falls out of the
+  // drawn size, so it is right on every track and at every zoom by construction. This is the second
+  // term, the breathing space, and it is the owner's knob.
+  //
+  // It is deliberately NOT a share of the racer. That would collapse the two terms into one factor
+  // and turn the knob into a second size multiplier rather than a gap. It is the term that absorbs
+  // what the first cannot know: the drawn height is the visible NARROW BODY, and sprite extremities
+  // — a giraffe's neck, a rocket's fin — reach past it.
+  //
+  // 6 px is my judgement, not a measurement, and it is the number the owner is expected to tune by
+  // eye. It replaces a gap that was `fontPx × 2.0` = 31.7 px at the default font, fixed no matter how
+  // big the racer was; at the smallest a racer is ever drawn (the readability floor, 0.045 × 720 =
+  // 32.4 px) the gap becomes 22.2 px, and at the largest it grows instead of staying put.
+  nameTagMarginPx: 6,
   nameTagAllUntilMs: 8000,
   showCameraStateHud: true,
   showCameraDiagnostics: false,
@@ -318,10 +335,6 @@ export const DEFAULT_CAMERA_CONFIG = {
   photoFinishCloseThresholdT: 0.03, // max lap-normalized |t| gap between the top-2 finishers to count as "close" (same unit family as battlePulkThresholdT)
   photoFinishSlowmoFactor: 0.5, // physics slow-motion factor during the photo-finish shot (1.0 = normal, 0.5 = half speed)
   photoFinishLeadProgress: 0.97, // predictive gate: leader progress (fraction of finishT, 0..1) at which the one-shot close-check fires BEFORE the line
-  // Countdown camera phase: zooms from start-zoom to OVERVIEW zoom during the pre-race countdown.
-  // CAMERA-REFERENCE-WIDTH-1: the countdown opens on the same unit — a wide establishing shot that
-  // eases into OVERVIEW. Clamped by the projection, so on a small world it means "the whole world".
-  countdownStartCorridors: 3,
   // THE COUNTDOWN'S ONE HOME (CLEANUP-BEFORE-NUMBERS-1, salvaged from START-SEQUENCE-1 stage 0).
   //
   // The comment that stood here claimed this "matches the default race countdown duration". It was
@@ -331,10 +344,36 @@ export const DEFAULT_CAMERA_CONFIG = {
   // Both the key and that control are gone; this is the only countdown number there is, and it is
   // the one RaceScreen's phase advance actually compares against.
   //
-  // STILL OPEN, deliberately: `drawCountdownOverlay` counts from a hard-coded 3 while this phase
-  // lasts 4000 ms, so "GO!" stands for an extra second. That is a VISIBLE change and was left for
-  // work the owner's eye is on. See reports/night/START-SEQUENCE-1.md.
+  // CLOSED by START-BOARD-1: the overlay used to count from a hard-coded 3 while this phase lasted
+  // 4000 ms, so "GO!" stood for an extra second before anything moved. The digits are DERIVED from
+  // this number now — `countdownDigit` in overlayRendering.js — so 4000 shows 4-3-2-1 with GO! at
+  // zero, and changing this number changes the count without touching any source.
   countdownDurationMs: 4000,
+  // ── THE START CEREMONY (START-CEREMONY-CAMERA-1) ───────────────────────────────────────────────
+  // The race opens on the whole track, held still, then eases in to the starting formation until it
+  // is as large as it can be with every racer still in frame. Both ends are GEOMETRY and neither is
+  // a setting: the venue shot is the track's own extent, and the target is the field's own extent
+  // through `fieldGuarantee`. These three numbers are the RHYTHM, which is the part that is taste.
+  //
+  // They live inside `countdownDurationMs` above. If the two beats ask for more than the countdown
+  // has, they are scaled proportionally rather than truncated, so the push always completes before
+  // the gun — see `ceremonySchedule`. Whatever is left is a SETTLED beat: the formation held
+  // motionless before the start, which is what keeps the arrival from reading as an interruption.
+  //
+  // 1400 + 2000 + 600 fills 4000 exactly. My judgement, not a measurement; all four are for the
+  // owner's eye.
+  ceremonyVenueMs: 1400,
+  ceremonyPushMs: 2000,
+  // The formation held motionless before the gun. CEREMONY-HANDOVER-1 made this a CONTROL: it used
+  // to be the remainder of the countdown after the other two, so the one beat whose job is stillness
+  // could only be set indirectly. The owner watched it last "VERY briefly" and had no slider for it.
+  // Any slack left in the countdown is still added HERE, so this is a floor rather than an exact
+  // figure — see `ceremonySchedule`.
+  ceremonySettledMs: 600,
+  // Ease-in-out: begins at rest, gathers, arrives at rest. The countdown used ease-OUT cubic, which
+  // starts at full speed — that reads as the camera catching up to something rather than as
+  // ceremony. 'easeOutCubic' is on the list so the old feel can be put back beside the new one.
+  ceremonyEasing: 'easeInOutCubic',
   // State overlay: narrative text shown during first seconds of OVERVIEW / BATTLE / COMEBACK.
   stateOverlayEnabled: true,
   stateOverlayDurationMs: 3500,

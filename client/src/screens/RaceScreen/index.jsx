@@ -20,6 +20,7 @@ import { formatRaceTime } from '../../utils/formatRaceTime.js';
 import { lerp, lerpAngle } from '../../utils/mathUtils.js';
 import { resolveActiveBrandProfile } from '../../modules/branding/useActiveBrandProfile.js';
 import { getRacerType, getCoatsByType } from '../../modules/racer-types/index.js';
+import { assignRaceNumbers, raceNumberLabel } from '../../modules/raceNumbers.js';
 import {
   assignCoat,
   assignPattern,
@@ -606,6 +607,8 @@ export default function RaceScreen() {
     // are the SAME objects. `for (k in src) if (!(k in r))` copies the roster's display fields without
     // ever overwriting a physics field — reproducing the former `{ ...r, ...physics }` spread exactly.
     // None of these draw from raceRng (coat/pattern hash the name), so the physics stream is untouched.
+    // RACE-NUMBERS-1: one permutation for the whole field, drawn from the seed on its own generator.
+    const raceNumbers = assignRaceNumbers(raceState.racers.length, racePlanSeed);
     for (let i = 0; i < raceState.racers.length; i++) {
       const r = raceState.racers[i];
       const src = raceData.racers[i];
@@ -613,6 +616,11 @@ export default function RaceScreen() {
       r.icon = trackEmoji ?? src.icon;
       r.coatId = getCoatsByType(typeId) ? assignCoat(src.name, getCoatsByType(typeId)) : undefined;
       r.patternId = assignPattern(src.name, PATTERN_IDS);
+      // RACE-NUMBERS-1: the start number is a RENDER-ONLY field, attached here beside the coat and
+      // the pattern — AFTER the race has been built, so it cannot participate in building it. The
+      // draw itself consumes no shared stream (see raceNumbers.js); attaching it here as well means
+      // there is no ordering by which it could.
+      r.raceNumber = raceNumbers[r.index] ?? null;
       // VRE-4: one emitter instance per racer (stateful generators must not be shared)
       r.surfaceEmitter = resolveTrailEmitter(racerType, trackSurfaceClasses);
     }
@@ -1451,6 +1459,11 @@ export default function RaceScreen() {
                 </span>
                 <span className="sb-icon">{r.icon}</span>
                 <span className="sb-name" style={{ color: RANK_PALETTE[i] ?? '#ddd' }}>
+                  {/* RACE-NUMBERS-1: the number comes BEFORE the name. The track shows only the
+                      number, so the list is where a viewer reads the two together. */}
+                  {r.raceNumber != null && (
+                    <span className="sb-number">{raceNumberLabel(r.raceNumber)}</span>
+                  )}
                   {r.name}
                 </span>
                 {r.finished && r.finishTimeMs != null && (
