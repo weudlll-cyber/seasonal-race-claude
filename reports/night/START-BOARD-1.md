@@ -342,11 +342,13 @@ is added to that beat.
 
 ## 13. How to see it
 
-**5173 is on this branch.** The build pill reads:
+**5173 is on this branch**, with one backend on 4000 and one Vite on 5173. The build pill reads:
 
 ```
-[ra-build] start-up: serving build 8b41f8b7 · feat/start-board-1
+[ra-build] start-up: serving build <HEAD> · feat/start-board-1
 ```
+
+The SHA is whatever HEAD was when Vite started; the branch name is the part that matters.
 
 **What to look at:** river-run at your open field size, end to end — the board comes up as the camera
 starts down towards the grid, and should be gone before the formation settles. Can you find a name
