@@ -335,41 +335,40 @@ export const DEFAULT_CAMERA_CONFIG = {
   photoFinishCloseThresholdT: 0.03, // max lap-normalized |t| gap between the top-2 finishers to count as "close" (same unit family as battlePulkThresholdT)
   photoFinishSlowmoFactor: 0.5, // physics slow-motion factor during the photo-finish shot (1.0 = normal, 0.5 = half speed)
   photoFinishLeadProgress: 0.97, // predictive gate: leader progress (fraction of finishT, 0..1) at which the one-shot close-check fires BEFORE the line
-  // THE COUNTDOWN'S ONE HOME (CLEANUP-BEFORE-NUMBERS-1, salvaged from START-SEQUENCE-1 stage 0).
-  //
-  // The comment that stood here claimed this "matches the default race countdown duration". It was
-  // FALSE for as long as both keys existed — this is 4000 ms and `countdownDuration` said 3 seconds.
-  // And they were never two homes for one fact: `countdownDuration` was read by NOTHING. It was
-  // written by a live Dev Panel control and consumed nowhere, so moving it there never did anything.
-  // Both the key and that control are gone; this is the only countdown number there is, and it is
-  // the one RaceScreen's phase advance actually compares against.
-  //
-  // CLOSED by START-BOARD-1: the overlay used to count from a hard-coded 3 while this phase lasted
-  // 4000 ms, so "GO!" stood for an extra second before anything moved. The digits are DERIVED from
-  // this number now — `countdownDigit` in overlayRendering.js — so 4000 shows 4-3-2-1 with GO! at
-  // zero, and changing this number changes the count without touching any source.
-  countdownDurationMs: 4000,
   // ── THE START CEREMONY (START-CEREMONY-CAMERA-1) ───────────────────────────────────────────────
   // The race opens on the whole track, held still, then eases in to the starting formation until it
   // is as large as it can be with every racer still in frame. Both ends are GEOMETRY and neither is
   // a setting: the venue shot is the track's own extent, and the target is the field's own extent
-  // through `fieldGuarantee`. These three numbers are the RHYTHM, which is the part that is taste.
+  // through `fieldGuarantee`. These numbers are the RHYTHM, which is the part that is taste.
   //
-  // They live inside `countdownDurationMs` above. If the two beats ask for more than the countdown
-  // has, they are scaled proportionally rather than truncated, so the push always completes before
-  // the gun — see `ceremonySchedule`. Whatever is left is a SETTLED beat: the formation held
-  // motionless before the start, which is what keeps the arrival from reading as an interruption.
-  //
-  // 1400 + 2000 + 600 fills 4000 exactly. My judgement, not a measurement; all four are for the
-  // owner's eye.
+  // ── THE COUNTDOWN NO LONGER HAS A LENGTH OF ITS OWN (START-BOARD-2) ────────────────────────────
+  // `countdownDurationMs` is GONE. It used to be a fixed 4000 ms that CAPPED the beats: when they
+  // asked for more, all of them were scaled proportionally, so raising the push silently shortened
+  // the venue shot and the settled beat and nothing said so. The countdown is now the SUM of the
+  // beats — `ceremonyTotalMs` in startCeremony.js is the one place that adds them up, and the phase
+  // advance, the camera, the digits and both fingerprint harnesses all ask it. Each slider below now
+  // means exactly the beat it names.
   ceremonyVenueMs: 1400,
   ceremonyPushMs: 2000,
-  // The formation held motionless before the gun. CEREMONY-HANDOVER-1 made this a CONTROL: it used
-  // to be the remainder of the countdown after the other two, so the one beat whose job is stillness
-  // could only be set indirectly. The owner watched it last "VERY briefly" and had no slider for it.
-  // Any slack left in the countdown is still added HERE, so this is a floor rather than an exact
-  // figure — see `ceremonySchedule`.
+  // The formation held motionless before the gun, with the board GONE. It is a control, not a
+  // remainder: CEREMONY-HANDOVER-1 made it one, and now that the countdown follows the beats there
+  // is no slack left anywhere to quietly land in it.
   ceremonySettledMs: 600,
+  // ── THE RUNNERS' BOARD'S OWN DURATION (START-BOARD-2) ──────────────────────────────────────────
+  // `max(startBoardFloorMs, startBoardMsPerName × n)`. The owner's shape, after his eye test at 40
+  // racers: "in that time it is absolutely impossible to find your own racer."
+  //
+  // THE BOARD'S LENGTH AND THE CAMERA'S ARE DIFFERENT QUESTIONS, which is why this is not just a
+  // longer push. The push is how long a good camera move takes — taste, fixed, and a crawling one is
+  // worse than a short board. This is how long a field takes to READ, which scales with the field.
+  // The camera therefore arrives on `ceremonyPushMs` and then HOLDS while the board finishes.
+  //
+  // 80 ms per name is my judgement and is meant for his eye, not a measurement of him. It comes from
+  // the shape of the task: the board is grouped by start row and alphabetical inside each row, so
+  // finding a known name is a jump to a heading plus a short scan, not a read of every entry. At his
+  // 40 it gives 3.2 s against the 1.46 s that failed; at 100 it gives 8.0 s.
+  startBoardFloorMs: 3000,
+  startBoardMsPerName: 80,
   // Ease-in-out: begins at rest, gathers, arrives at rest. The countdown used ease-OUT cubic, which
   // starts at full speed — that reads as the camera catching up to something rather than as
   // ceremony. 'easeOutCubic' is on the list so the old feel can be put back beside the new one.

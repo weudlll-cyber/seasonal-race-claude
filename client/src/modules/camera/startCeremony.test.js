@@ -19,6 +19,9 @@ import {
   ceremonyAt,
   ceremonyZoom,
   CEREMONY_BEAT,
+  boardDurationMs,
+  boardAlphaAt,
+  ceremonyTotalMs,
 } from './startCeremony.js';
 import { fieldGuarantee } from './framingRule.js';
 import { projectionForTrack, REFERENCE_CANVAS_W, REFERENCE_CANVAS_H } from './projection.js';
@@ -187,42 +190,62 @@ describe('the ceremony always completes before the gun (START-CEREMONY-CAMERA-1)
   // What goes unnoticed: the whole of the hold. It keeps the framing the ceremony ARRIVED at; if the
   // push were still travelling when the gun went, the held shot would be a half-finished one, and it
   // would look like a deliberate framing rather than like a bug.
-  it('fits inside the countdown when the three beats fill it exactly', () => {
-    const s = ceremonySchedule(1400, 2000, 600, 4000);
+  // WHAT BREAKS IF DELETED: the beats' independence. START-BOARD-2 removed the proportional
+  // rescale; without this nothing would notice it coming back.
+  // WHAT GOES UNNOTICED: raising one slider quietly shortening two others — which is exactly what
+  // stopped anyone lengthening the push before this change.
+  it('each beat is EXACTLY what it was asked for — no beat rescales another', () => {
+    const s = ceremonySchedule(1400, 2000, 600, 0);
     expect(s.venueMs).toBe(1400);
     expect(s.pushMs).toBe(2000);
     expect(s.settledMs).toBe(600);
-    expect(s.scaled).toBe(false);
+    // Ask for beats that would have overrun the old 4000 ms cap: they are still exact.
+    const big = ceremonySchedule(3000, 3000, 3000, 0);
+    expect(big.venueMs).toBe(3000);
+    expect(big.pushMs).toBe(3000);
+    expect(big.settledMs).toBe(3000);
+    expect(big.totalMs).toBe(9000);
   });
 
-  it('scales all three beats proportionally rather than truncating one', () => {
-    // Truncation would cut the push off mid-move. Scaling keeps the RATIO the owner set, which is
-    // what he was actually expressing.
-    const s = ceremonySchedule(3000, 3000, 3000, 4000);
-    expect(s.venueMs + s.pushMs + s.settledMs).toBeCloseTo(4000, 9);
-    expect(s.venueMs / s.pushMs).toBeCloseTo(1, 9);
-    expect(s.settledMs / s.pushMs).toBeCloseTo(1, 9);
-    expect(s.scaled).toBe(true);
-    const uneven = ceremonySchedule(1000, 3000, 1000, 2500);
-    expect(uneven.venueMs + uneven.pushMs + uneven.settledMs).toBeCloseTo(2500, 9);
-    expect(uneven.pushMs / uneven.venueMs).toBeCloseTo(3, 9);
+  // WHAT BREAKS IF DELETED: the countdown's length. It is the SUM now, and nothing else defines it.
+  // WHAT GOES UNNOTICED: a gun that fires before the ceremony finishes, or long after it.
+  it('the countdown FOLLOWS the beats: totalMs is their sum, and the board adds its own hold', () => {
+    // A board shorter than the push needs no hold at all — a small field is not made longer.
+    const small = ceremonySchedule(1400, 2000, 600, 1500);
+    expect(small.boardHoldMs).toBe(0);
+    expect(small.totalMs).toBe(4000);
+    // A board longer than the push holds the camera still for the difference.
+    const big = ceremonySchedule(1400, 2000, 600, 8000);
+    expect(big.boardHoldMs).toBe(6000);
+    expect(big.totalMs).toBe(10000);
+    // and the push itself is untouched in both — the camera's rhythm is never stretched
+    expect(small.pushMs).toBe(2000);
+    expect(big.pushMs).toBe(2000);
   });
 
   it('has arrived at the target by the gun, for every schedule', () => {
-    for (const [v, p, st, total] of [
-      [1400, 2000, 600, 4000],
-      [3000, 3000, 3000, 4000],
-      [0, 4000, 0, 4000],
-      [4000, 0, 0, 4000],
-      [0, 0, 0, 4000],
+    // The gun is at `totalMs` now rather than at a countdown handed in from outside, and a board
+    // that outlasts the push must not delay the ARRIVAL — only the departure.
+    for (const [v, p, st, board] of [
+      [1400, 2000, 600, 0],
+      [3000, 3000, 3000, 0],
+      [0, 4000, 0, 0],
+      [4000, 0, 0, 0],
+      [0, 0, 0, 0],
+      [1400, 2000, 600, 8000],
     ]) {
-      const s = ceremonySchedule(v, p, st, total);
-      expect(ceremonyZoom(1, 5, total, s, CEREMONY_EASINGS.easeInOutCubic)).toBeCloseTo(5, 9);
+      const s = ceremonySchedule(v, p, st, board);
+      expect(ceremonyZoom(1, 5, s.totalMs, s, CEREMONY_EASINGS.easeInOutCubic)).toBeCloseTo(5, 9);
+      // …and it has arrived by the END OF THE PUSH, not merely by the gun: the board hold that
+      // follows is time the camera spends already there.
+      expect(
+        ceremonyZoom(1, 5, v + p, s, CEREMONY_EASINGS.easeInOutCubic)
+      ).toBeCloseTo(5, 9);
     }
   });
 
   it('holds the venue shot still through the first beat, then moves', () => {
-    const s = ceremonySchedule(1400, 2000, 600, 4000);
+    const s = ceremonySchedule(1400, 2000, 600, 0);
     expect(ceremonyAt(0, s).beat).toBe(CEREMONY_BEAT.VENUE);
     expect(ceremonyAt(1399, s).beat).toBe(CEREMONY_BEAT.VENUE);
     expect(ceremonyZoom(1, 5, 0, s, CEREMONY_EASINGS.linear)).toBe(1);
@@ -233,7 +256,7 @@ describe('the ceremony always completes before the gun (START-CEREMONY-CAMERA-1)
 
   it('never moves backwards during the push', () => {
     // A curve that overshot or dipped would show as the camera pulling back mid-ceremony.
-    const s = ceremonySchedule(1400, 2000, 600, 4000);
+    const s = ceremonySchedule(1400, 2000, 600, 0);
     for (const name of Object.keys(CEREMONY_EASINGS)) {
       let prev = -Infinity;
       for (let t = 0; t <= 4000; t += 25) {
@@ -255,37 +278,46 @@ describe('the settled beat is a control, not a remainder (CEREMONY-HANDOVER-1)',
   it('honours the slider rather than recomputing it from what is left', () => {
     // The proof that it is not a remainder: the venue and the push are held constant while the
     // COUNTDOWN grows. A remainder would grow with it; a control does not.
-    const a = ceremonySchedule(1000, 1000, 500, 2500);
+    const a = ceremonySchedule(1000, 1000, 500, 0);
     expect(a.settledMs).toBe(500);
     // The same beats in a countdown with room to spare. A remainder would swell to fill it; a
     // control does not move. This is the assertion that caught the first attempt, which handed the
     // slack to the settled beat and so made the slider a no-op exactly here.
-    const b = ceremonySchedule(1000, 1000, 500, 6000);
+    const b = ceremonySchedule(1000, 1000, 500, 0);
     expect(b.settledMs).toBe(500);
     expect(b.venueMs).toBe(1000);
     expect(b.pushMs).toBe(1000);
   });
 
   it('lengthens the stillness without moving the push, which is the point of the slider', () => {
-    const short = ceremonySchedule(1400, 2000, 200, 5000);
-    const long = ceremonySchedule(1400, 2000, 1400, 5000);
+    const short = ceremonySchedule(1400, 2000, 200, 0);
+    const long = ceremonySchedule(1400, 2000, 1400, 0);
     expect(long.settledMs).toBeGreaterThan(short.settledMs);
     // The move itself is untouched — the owner tunes the pause without retuning the ceremony.
     expect(long.venueMs).toBe(short.venueMs);
     expect(long.pushMs).toBe(short.pushMs);
   });
 
-  it('is scaled with the others when the three overrun, not sacrificed to them', () => {
-    // The failure this rules out: making room by zeroing the settled beat, which would restore the
-    // old behaviour under a new name.
-    const s = ceremonySchedule(2000, 2000, 2000, 3000);
-    expect(s.settledMs).toBeGreaterThan(0);
-    expect(s.settledMs).toBeCloseTo(1000, 9);
-    expect(s.venueMs + s.pushMs + s.settledMs).toBeCloseTo(3000, 9);
+  // REWRITTEN BY START-BOARD-2. This used to assert that the settled beat was SCALED with the other
+  // two when the three overran the countdown — the behaviour that is gone. The intent it was
+  // protecting survives and is stronger now: the settled beat is never sacrificed to make room,
+  // because there is no longer any room to make.
+  // WHAT BREAKS IF DELETED: the settled beat could quietly become a remainder again, which is the
+  // defect CEREMONY-HANDOVER-1 removed.
+  // WHAT GOES UNNOTICED: the gun firing while the board is still up.
+  it('is never sacrificed to the others, however long they are', () => {
+    const s = ceremonySchedule(2000, 2000, 2000, 0);
+    expect(s.settledMs).toBe(2000);
+    expect(s.totalMs).toBe(6000);
+    // And with a board that outlasts everything, the settled beat is STILL exactly what was asked.
+    const withBoard = ceremonySchedule(2000, 2000, 2000, 20000);
+    expect(withBoard.settledMs).toBe(2000);
+    // The board's window ends where the settled beat begins — the gun fires on a clean picture.
+    expect(withBoard.boardEndMs).toBe(withBoard.totalMs - 2000);
   });
 
   it('still fills the countdown when the settled beat is set to zero', () => {
-    const s = ceremonySchedule(1400, 2000, 0, 4000);
+    const s = ceremonySchedule(1400, 2000, 0, 0);
     expect(s.venueMs).toBe(1400);
     expect(s.pushMs).toBe(2000);
     expect(s.settledMs).toBe(0); // asked for none, given none — the remaining 600 ms is simply still
@@ -326,5 +358,82 @@ describe('the easing curves and their settings (START-CEREMONY-CAMERA-1)', () =>
     expect(t.ceremonyPushMs).toBe(DEFAULT_CAMERA_CONFIG.ceremonyPushMs);
     expect(t.ceremonySettledMs).toBe(DEFAULT_CAMERA_CONFIG.ceremonySettledMs);
     expect(t.ceremonyEasing).toBe(DEFAULT_CAMERA_CONFIG.ceremonyEasing);
+    // START-BOARD-2 added two more to the same duplication, so they join the same guard.
+    expect(t.startBoardFloorMs).toBe(DEFAULT_CAMERA_CONFIG.startBoardFloorMs);
+    expect(t.startBoardMsPerName).toBe(DEFAULT_CAMERA_CONFIG.startBoardMsPerName);
+  });
+});
+
+// ── THE BOARD'S OWN DURATION, AND WHAT THE CEREMONY COSTS AT EACH FIELD SIZE (START-BOARD-2) ────
+describe('the board gets its own duration, and the countdown follows it', () => {
+  // WHAT BREAKS IF DELETED: finding 1 — the owner could not find his racer in the time given, and
+  // this is the arithmetic that fixes it. A floor that stopped scaling would look fine at 8 racers
+  // and fail again at 100, which is exactly the field he reported on.
+  // WHAT GOES UNNOTICED: nothing by eye at a small field — the defect only appears where the board
+  // is longest, and that is the case nobody runs by hand.
+  it('is max(floor, per-name × n), so it scales with the field and never below the floor', () => {
+    expect(boardDurationMs(8, 3000, 80)).toBe(3000); // the floor binds
+    expect(boardDurationMs(20, 3000, 80)).toBe(3000);
+    expect(boardDurationMs(40, 3000, 80)).toBe(3200); // the per-name term takes over
+    expect(boardDurationMs(100, 3000, 80)).toBe(8000);
+    // and it is monotone — a bigger field never gets LESS reading time
+    let prev = 0;
+    for (const n of [1, 8, 20, 40, 70, 100, 200]) {
+      const d = boardDurationMs(n, 3000, 80);
+      expect(d).toBeGreaterThanOrEqual(prev);
+      prev = d;
+    }
+  });
+
+  // WHAT BREAKS IF DELETED: requirement 1(b) — the camera's rhythm. Stretching the push to cover a
+  // hundred names is the obvious wrong fix, and it would look like a working board.
+  // WHAT GOES UNNOTICED: a crawling push, which reads as the game being slow rather than as a
+  // setting being wrong.
+  it('the PUSH never stretches — the extra time is a HOLD after the camera has arrived', () => {
+    for (const n of [8, 40, 100, 400]) {
+      const s = ceremonySchedule(1400, 2000, 600, boardDurationMs(n, 3000, 80));
+      expect(s.pushMs, `push at n=${n}`).toBe(2000);
+      expect(s.venueMs).toBe(1400);
+      expect(s.settledMs).toBe(600);
+    }
+  });
+
+  // WHAT BREAKS IF DELETED: requirement 1(d), which is the one the owner would see instantly.
+  // WHAT GOES UNNOTICED: the gun firing with the board still on screen.
+  it('the board is GONE before the settled beat ends, at every field size', () => {
+    for (const n of [1, 8, 40, 100, 400]) {
+      const s = ceremonySchedule(1400, 2000, 600, boardDurationMs(n, 3000, 80));
+      expect(boardAlphaAt(s.totalMs - 1, s), `alpha just before the gun at n=${n}`).toBe(0);
+      expect(boardAlphaAt(s.boardEndMs, s)).toBe(0);
+      // …and it was genuinely up before that, or the assertion above is vacuous.
+      expect(boardAlphaAt((s.boardStartMs + s.boardEndMs) / 2, s)).toBe(1);
+    }
+  });
+
+  // WHAT BREAKS IF DELETED: the fade would be a fraction of the window, so a ten-second board would
+  // spend three seconds fading — reading time spent on nothing.
+  // WHAT GOES UNNOTICED: it only shows at the largest field.
+  it('the fade is a fixed time, not a fraction — a long board does not fade for longer', () => {
+    const small = ceremonySchedule(1400, 2000, 600, 3000);
+    const big = ceremonySchedule(1400, 2000, 600, 8000);
+    // 60 ms into the window both are at the same point of the same fade.
+    expect(boardAlphaAt(small.boardStartMs + 60, small)).toBeCloseTo(
+      boardAlphaAt(big.boardStartMs + 60, big),
+      9
+    );
+  });
+
+  it('the totals are what the report states: 5.0 s at 8 and 20, 5.2 s at 40, 10.0 s at 100', () => {
+    const cfg = {
+      ceremonyVenueMs: 1400,
+      ceremonyPushMs: 2000,
+      ceremonySettledMs: 600,
+      startBoardFloorMs: 3000,
+      startBoardMsPerName: 80,
+    };
+    expect(ceremonyTotalMs(cfg, 8)).toBe(5000);
+    expect(ceremonyTotalMs(cfg, 20)).toBe(5000);
+    expect(ceremonyTotalMs(cfg, 40)).toBe(5200);
+    expect(ceremonyTotalMs(cfg, 100)).toBe(10000);
   });
 });

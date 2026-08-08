@@ -41,8 +41,12 @@ import {
   drawCountdownOverlay,
   drawFinishedOverlay,
 } from './drawing/overlayRendering.js';
-import { drawStartBoard, startBoardAlpha } from './drawing/startBoardRendering.js';
-import { ceremonyAt, ceremonySchedule } from '../../modules/camera/startCeremony.js';
+import { drawStartBoard } from './drawing/startBoardRendering.js';
+import {
+  ceremonySchedule,
+  boardDurationMs,
+  boardAlphaAt,
+} from '../../modules/camera/startCeremony.js';
 import { drawTrackLights } from '../../modules/trackLights.js';
 import { computeTagLayout, tagFontScreenPx } from './nameTagLayout.js';
 import { renderMinimap } from '../../modules/camera/Minimap.js';
@@ -254,31 +258,32 @@ export function renderRaceFrame(ctx, f) {
   let countdownNumber = null;
   if (st.phase === PHASE.COUNTDOWN) {
     const cdElapsed = ts - st.countdownStart;
-    const cdMs = cameraConfig?.countdownDurationMs ?? 4000;
-    // START-BOARD-1 — THE RUNNERS' BOARD, under the digits and over everything else.
+    // START-BOARD-1/2 — THE RUNNERS' BOARD, under the digits and over everything else.
     //
-    // The beat comes from `ceremonyAt`, the same pure function the camera asks: the board lives in
-    // the PUSH and is gone before the settled beat, so the gun fires on a clean picture. Asking the
-    // rhythm module rather than re-deriving a schedule here is the point — two homes for "how long
-    // is the push" is the defect the ceremony block spent a night removing.
-    const beat = ceremonyAt(
-      cdElapsed,
-      ceremonySchedule(
-        cameraConfig?.ceremonyVenueMs ?? 0,
-        cameraConfig?.ceremonyPushMs ?? 0,
-        cameraConfig?.ceremonySettledMs ?? 0,
-        cdMs
+    // ONE SCHEDULE, asked from the rhythm module rather than re-derived here. It now decides three
+    // things at once and they cannot disagree: how long the board is up, how long the countdown
+    // lasts, and therefore what the digits read. Two homes for "how long is the push" is the defect
+    // the ceremony work spent a night removing; this is the same rule applied to the board.
+    const schedule = ceremonySchedule(
+      cameraConfig?.ceremonyVenueMs ?? 0,
+      cameraConfig?.ceremonyPushMs ?? 0,
+      cameraConfig?.ceremonySettledMs ?? 0,
+      boardDurationMs(
+        st.racers?.length ?? 0,
+        cameraConfig?.startBoardFloorMs ?? 0,
+        cameraConfig?.startBoardMsPerName ?? 0
       )
     );
     drawStartBoard(ctx, {
       racers: st.racers,
       racerType,
       displaySize,
-      alpha: startBoardAlpha(beat.beat, beat.progress),
+      assignmentByRacer,
+      alpha: boardAlphaAt(cdElapsed, schedule),
       canvasW,
       canvasH,
     });
-    countdownNumber = drawCountdownOverlay(ctx, cdElapsed, cdMs);
+    countdownNumber = drawCountdownOverlay(ctx, cdElapsed, schedule.totalMs);
   } else if (st.phase === PHASE.FINISHED) {
     drawFinishedOverlay(ctx);
   }

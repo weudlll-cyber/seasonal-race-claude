@@ -154,7 +154,17 @@ const PHASES = process.argv.includes("--phases");
 // be measured per track rather than reasoned about — this prints the matrix the report quotes.
 const COVERAGE = process.argv.includes("--coverage");
 // The countdown sample points, at module scope so the summary can print the window it covered.
-const CD_SAMPLE_MS = [0, 1500, 2400, 3300, 3700];
+//
+// RE-PICKED BY START-BOARD-2 against the new beats. At this harness's n=40 the ceremony is
+// venue 0–1400, push 1400–3400, BOARD HOLD 3400–4600, settled 4600–5200 — the countdown is the sum
+// of the beats now, not a flat 4000, so the old points would have landed in the wrong beats. One
+// point per beat, two inside the board's window:
+//   0     the venue shot, board not yet up
+//   1500  just after the push begins — the board fading in, camera travelling
+//   2400  mid-push, board at full alpha, camera still travelling
+//   3800  the BOARD HOLD: camera ARRIVED and still, board still up. The beat that is new.
+//   4900  the settled beat: formation held, board GONE — "it ends before the gun" as a frame
+const CD_SAMPLE_MS = [0, 1500, 2400, 3800, 4900];
 
 const FRAMES_OVERRIDE = Number(
   (process.argv.find((a) => a.startsWith("--frames=")) ?? "").slice(9),
@@ -390,7 +400,10 @@ function trackHash(geo, wantOps) {
   const RAW = 1000 / 60;
   let ts = 0;
   let accum = 0;
-  const cdMs = DEFAULT_CAMERA_CONFIG.countdownDurationMs ?? 4000;
+  // START-BOARD-2: the countdown has no length of its own any more — it is the SUM of the
+  // ceremony beats, one of which scales with the field. The director is asked, so this harness
+  // cannot drift from the game the way a second copy of a duration would.
+  const cdMs = cd.ceremonySchedule(st.racers).totalMs;
   // START-BOARD-1 EXTENDED THE WINDOW BACKWARDS, TO BEFORE THE GUN, and it is the same defect
   // FINISH-WINDOW-1 repaired at the other end: this harness set `st.phase = RACING` and rendered
   // its first frame AT the gun, so it had never drawn a single COUNTDOWN frame. Everything the
@@ -411,7 +424,7 @@ function trackHash(geo, wantOps) {
   st.countdownStart = 0;
   let cdIdx = 0;
   while (ts < cdMs) {
-    const cdCam = cd.updateCountdown(st.racers, ts, ts, cdMs, CW, CH);
+    const cdCam = cd.updateCountdown(st.racers, ts, ts, CW, CH);
     if (!PHASES && !COVERAGE && cdIdx < CD_SAMPLE_MS.length && ts >= CD_SAMPLE_MS[cdIdx]) {
       // A marker in the SAME shape the racing frames use, with its own prefix so a countdown frame
       // and a racing frame can never hash alike by accident.

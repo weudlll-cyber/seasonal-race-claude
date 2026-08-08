@@ -92,6 +92,7 @@ import {
   ceremonyZoom,
   ceremonyEasing,
   ceremonyAt,
+  boardDurationMs,
   CEREMONY_BEAT,
 } from './startCeremony.js';
 
@@ -502,6 +503,8 @@ export class CameraDirector {
     this._ceremonyVenueMs = t.ceremonyVenueMs;
     this._ceremonyPushMs = t.ceremonyPushMs;
     this._ceremonySettledMs = t.ceremonySettledMs;
+    this._startBoardFloorMs = t.startBoardFloorMs;
+    this._startBoardMsPerName = t.startBoardMsPerName;
     this._ceremonyEasing = t.ceremonyEasing;
     this._battleCooldownMs = t.battleCooldownMs;
     this._showDiagnostics = t.showDiagnostics;
@@ -2721,6 +2724,27 @@ export class CameraDirector {
     return this._proj.clampCamZoom(ceiling);
   }
 
+  /**
+   * THE CEREMONY'S SCHEDULE for this field — the one place its four beats and its total length are
+   * decided (START-BOARD-2).
+   *
+   * PUBLIC, because three things outside the camera need the same answer and must not compute their
+   * own: RaceScreen's phase advance (when the gun fires), the renderer (when the board is up and
+   * what the digits read), and both fingerprint harnesses (how long to drive the countdown). The
+   * previous arrangement had each of them reading a flat `countdownDurationMs`, which is how the
+   * beats came to be capped by a number that knew nothing about them.
+   *
+   * @param {Array} racers  the field — its SIZE sets the board's duration
+   */
+  ceremonySchedule(racers) {
+    return ceremonySchedule(
+      this._ceremonyVenueMs,
+      this._ceremonyPushMs,
+      this._ceremonySettledMs,
+      boardDurationMs(racers?.length ?? 0, this._startBoardFloorMs, this._startBoardMsPerName)
+    );
+  }
+
   /** The geometric centre of the formation — the point the ceremony frames on. */
   _formationCentre(racers) {
     let cx = (this._worldBounds.minX + this._worldBounds.maxX) / 2;
@@ -2751,8 +2775,14 @@ export class CameraDirector {
    * @param {number} canvasH  Canvas height in pixels.
    * @returns {{ zoom: number, offsetX: number, offsetY: number }}
    */
-  updateCountdown(racers, ts, countdownElapsed, countdownDurationMs, canvasW, canvasH) {
-    const duration = Math.max(1, countdownDurationMs);
+  updateCountdown(racers, ts, countdownElapsed, canvasW, canvasH) {
+    // START-BOARD-2: THE SCHEDULE IS DERIVED HERE, from the config and the size of the field, and
+    // the countdown's length is its total. It used to be handed in as `countdownDurationMs` and used
+    // as a CAP that rescaled the beats — so the caller and the beats were two authorities on one
+    // length. There is one now: `ceremonySchedule`, asked here and by everything else through
+    // `ceremonyTotalMs`.
+    const schedule = this.ceremonySchedule(racers);
+    const duration = Math.max(1, schedule.totalMs);
     const elapsed = Math.min(duration, Math.max(0, countdownElapsed));
 
     // The centre comes FIRST, because the target zoom is measured from it: the field's extent is
@@ -2760,13 +2790,6 @@ export class CameraDirector {
     const centre = this._formationCentre(racers);
     const cx = centre.x;
     const cy = centre.y;
-
-    const schedule = ceremonySchedule(
-      this._ceremonyVenueMs,
-      this._ceremonyPushMs,
-      this._ceremonySettledMs,
-      duration
-    );
     const venueZoom = this._venueCamZoom(canvasW, canvasH);
     const formationZoom = this._ceremonyTargetCamZoom(racers, centre, canvasW, canvasH);
     // THE PUSH IS MONOTONE OR IT IS NOTHING. Where the formation fills the world, or where the

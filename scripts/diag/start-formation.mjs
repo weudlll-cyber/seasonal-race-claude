@@ -241,11 +241,14 @@ function measure(geo, nRequested) {
   );
   cd.setRandomSeed(CAM_SEED);
   const RAW = 1000 / 60;
-  const cdMs = DEFAULT_CAMERA_CONFIG.countdownDurationMs ?? 4000;
+  // START-BOARD-2: the countdown has no length of its own any more — it is the SUM of the
+  // ceremony beats, one of which scales with the field. The director is asked, so this harness
+  // cannot drift from the game the way a second copy of a duration would.
+  const cdMs = cd.ceremonySchedule(st.racers).totalMs;
   let ts = 0;
   let cam = null;
   while (ts < cdMs) {
-    cam = cd.updateCountdown(st.racers, ts, ts, cdMs, CW, CH);
+    cam = cd.updateCountdown(st.racers, ts, ts, CW, CH);
     ts += RAW;
   }
 

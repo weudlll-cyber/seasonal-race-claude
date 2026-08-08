@@ -707,7 +707,10 @@ export default function RaceScreen() {
       if (st.phase === PHASE.COUNTDOWN) {
         if (!st.countdownStart) st.countdownStart = ts;
         computePositions();
-        if (ts - st.countdownStart >= (cameraConfigRef.current.countdownDurationMs ?? 4000)) {
+        // START-BOARD-2: the gun fires when the CEREMONY is over, not at a fixed 4000 ms. The
+        // ceremony's total is the sum of its beats and one of them scales with the field, so the
+        // director is asked rather than a config key read — one home for the length.
+        if (ts - st.countdownStart >= camDirRef.current.ceremonySchedule(st.racers).totalMs) {
           st.phase = PHASE.RACING;
           st.raceStart = ts;
           // physicsTs starts at 0 when racing begins; nextRollTime is already a
@@ -1139,7 +1142,6 @@ export default function RaceScreen() {
                 st.racers,
                 ts,
                 ts - st.countdownStart,
-                cameraConfigRef.current.countdownDurationMs ?? 4000,
                 CANVAS_W,
                 CANVAS_H
               )

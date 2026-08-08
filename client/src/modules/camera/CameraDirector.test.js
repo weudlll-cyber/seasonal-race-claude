@@ -3972,7 +3972,7 @@ describe('CameraDirector.updateCountdown', () => {
     expect(cd.state).toBe(CAM_STATE.OVERVIEW);
     // Simulate countdown frames
     for (let i = 0; i < 60; i++) {
-      cd.updateCountdown(countdownRacers, 1000 + i * 16, i * 16, 4000, 1280, 720);
+      cd.updateCountdown(countdownRacers, 1000 + i * 16, i * 16, 1280, 720);
     }
     // First RACING update — raceElapsed=0 so start-phase priority keeps OVERVIEW
     const raceState = { raceElapsed: 0, finishedCount: 0, winner: null, finishT: 1 };
@@ -3988,7 +3988,7 @@ describe('CameraDirector.updateCountdown', () => {
   // whole track, and it arrives exactly, with no jump into the first RACING frame.
   it('COUNTDOWN opens on the VENUE shot — the whole track, from the track’s own extent', () => {
     const cd = new CameraDirector(1280, 720, false, ALWAYS_TAKE, 36);
-    const cam = cd.updateCountdown(countdownRacers, 1000, 0, 4000, 1280, 720);
+    const cam = cd.updateCountdown(countdownRacers, 1000, 0, 1280, 720);
     expect(cam.zoom).toBeCloseTo(cd._venueCamZoom(1280, 720), 5);
     // On a closed track the venue shot IS the whole world — the claim that actually matters.
     expect(cd._proj.visibleWorldW(cam.zoom, 1280)).toBeGreaterThanOrEqual(1280 - 1e-6);
@@ -3997,7 +3997,10 @@ describe('CameraDirector.updateCountdown', () => {
 
   it('COUNTDOWN arrives on the FORMATION at the gun — no jump into the first RACING frame', () => {
     const cd = new CameraDirector(1280, 720, false, ALWAYS_TAKE, 36);
-    const cam = cd.updateCountdown(countdownRacers, 5000, 4000, 4000, 1280, 720);
+    // START-BOARD-2: the gun is at the ceremony's OWN total now, not at a fixed 4000 — the board's
+    // hold scales with the field, so the schedule is asked rather than a duration typed in here.
+    const gunAt = cd.ceremonySchedule(countdownRacers).totalMs;
+    const cam = cd.updateCountdown(countdownRacers, 5000, gunAt, 1280, 720);
     const centre = cd._formationCentre(countdownRacers);
     const target = Math.max(
       cd._venueCamZoom(1280, 720),
@@ -6812,7 +6815,7 @@ describe('the hold keeps the ceremony framing (CEREMONY-HOLD-TARGET-1)', () => {
    * frame after `update()`; returning `false` stops the drive.
    */
   function driveGun(cd, racers, frames, onFrame) {
-    for (let e = 0; e <= 4000; e += FRAME) cd.updateCountdown(racers, 1000 + e, e, 4000, CW, CH);
+    for (let e = 0; e <= 4000; e += FRAME) cd.updateCountdown(racers, 1000 + e, e, CW, CH);
     const arrived = cd.zoom; // the framing the ceremony arrived at, before a single race frame
     let ts = 5000;
     let el = 0;
@@ -6980,7 +6983,7 @@ describe('the hold keeps the ceremony framing (CEREMONY-HOLD-TARGET-1)', () => {
     const racers = grid(40);
     let prev = -Infinity;
     for (let e = 0; e <= 4000; e += 50) {
-      const out = cd.updateCountdown(racers, 1000 + e, e, 4000, CW, CH);
+      const out = cd.updateCountdown(racers, 1000 + e, e, CW, CH);
       expect(out.zoom).toBeGreaterThanOrEqual(prev - 1e-9);
       prev = out.zoom;
     }

@@ -245,9 +245,12 @@ export function runRace(race, identity, cameraConfig, onFrame, hooks = {}) {
 
   // THE COUNTDOWN SOURCE, decided in this file's header: the config being RUN, not the shipped
   // default. A harness that overrides camera settings must warm up under the settings it measures.
-  const cdMs = cameraConfig.countdownDurationMs ?? 4000;
+  // START-BOARD-2: the countdown has no length of its own any more — it is the SUM of the
+  // ceremony beats, one of which scales with the field. The director is asked, so this harness
+  // cannot drift from the game the way a second copy of a duration would.
+  const cdMs = cd.ceremonySchedule(st.racers).totalMs;
   while (ts < cdMs) {
-    cd.updateCountdown(st.racers, ts, ts, cdMs, CW, CH);
+    cd.updateCountdown(st.racers, ts, ts, CW, CH);
     hooks.onCountdownFrame?.({ cd, st, ts, elapsed: ts, countdownMs: cdMs });
     ts += RAW;
   }

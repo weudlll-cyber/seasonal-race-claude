@@ -37,6 +37,10 @@ const CEREMONY_VENUE_MS = 1400;
 const CEREMONY_PUSH_MS = 2000;
 const CEREMONY_SETTLED_MS = 600;
 const CEREMONY_EASING = 'easeInOutCubic';
+// START-BOARD-2. Duplicated from defaults.js like the three beats above it, and guarded the same
+// way: cameraTimingComputation.test.js asserts the two agree.
+const START_BOARD_FLOOR_MS = 3000;
+const START_BOARD_MS_PER_NAME = 80;
 const BATTLE_COOLDOWN_MS = 8000;
 const BATTLE_MAX_DURATION = 6000;
 const MIN_STATE_HOLD_MS = 5000;
@@ -90,6 +94,14 @@ export function computeTimingFromConfig(config) {
   const ceremonyVenueMs = ceremonyMs(config?.ceremonyVenueMs, CEREMONY_VENUE_MS);
   const ceremonyPushMs = ceremonyMs(config?.ceremonyPushMs, CEREMONY_PUSH_MS);
   const ceremonySettledMs = ceremonyMs(config?.ceremonySettledMs, CEREMONY_SETTLED_MS);
+  // START-BOARD-2: the board's own duration, clamped through the same guard as the beats. The board
+  // is drawn by the renderer, not the camera — but the camera needs these two numbers because the
+  // countdown's LENGTH is now the sum of the beats and one of the beats is the board's hold.
+  const startBoardFloorMs = ceremonyMs(config?.startBoardFloorMs, START_BOARD_FLOOR_MS);
+  const startBoardMsPerName = Math.max(
+    0,
+    Math.min(1000, config?.startBoardMsPerName ?? START_BOARD_MS_PER_NAME)
+  );
   const ceremonyEasing = config?.ceremonyEasing ?? CEREMONY_EASING;
   const battleCooldownMs = config?.battleCooldownMs ?? BATTLE_COOLDOWN_MS;
   const showDiagnostics = config?.showCameraDiagnostics ?? false;
@@ -325,6 +337,8 @@ export function computeTimingFromConfig(config) {
     ceremonyVenueMs,
     ceremonyPushMs,
     ceremonySettledMs,
+    startBoardFloorMs,
+    startBoardMsPerName,
     ceremonyEasing,
     battleCooldownMs,
     showDiagnostics,

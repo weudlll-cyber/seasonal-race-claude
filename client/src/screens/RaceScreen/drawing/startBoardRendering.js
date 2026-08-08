@@ -1,32 +1,44 @@
 // ============================================================
 // File:        startBoardRendering.js
 // Path:        client/src/screens/RaceScreen/drawing/startBoardRendering.js
-// Project:     RaceArena — START-BOARD-1
+// Project:     RaceArena — START-BOARD-1, rebuilt by START-BOARD-2 after the owner's eye test
 //
-// THE RUNNERS' BOARD: every racer's NAME, its NUMBER, and the racer itself, shown once during the
-// push in — the beat where the camera travels from the venue shot down to the formation.
+// THE RUNNERS' BOARD: every racer's NUMBER, the racer itself, and its NAME, shown once during the
+// start ceremony so a viewer can find their name and carry its number into the race.
 //
-// WHAT IT IS FOR: a viewer arrives knowing a name and has to leave the board knowing a NUMBER and a
-// COAT, because those are the two things they can follow once the race starts. The number is drawn
-// on the track (RACE-NUMBERS-1) and the coat is derived from the player's name, so it is the same in
-// every race — this is the one place the pairing is stated.
+// ── WHAT THE EYE TEST CHANGED ───────────────────────────────────────────────────────────────────
+// Three of his four findings are here (the fourth, TIME, is in startCeremony.js — the board now has
+// its own duration and the countdown follows it):
 //
-// WHY A BLOCK IN COLUMNS AND NOT A ROLL. It is meant to be SCANNED, not read: a viewer looks for one
-// name among up to a hundred. A list that scrolls or reveals one entry at a time makes finding your
-// own name a matter of luck about when you looked. Everything is on screen at once, alphabetical,
-// reading DOWN each column and then across — the order a start list has always used.
+//   PAIRING. *"The little symbols are hard to attribute to the right racer, they sit far from the
+//   name."* The entry was SPRITE · NUMBER · NAME, so the number sat between a racer and its own
+//   name. It is now **NUMBER · SPRITE · NAME with nothing between the sprite and the name**: the
+//   number is the row's left anchor, and the two things that must read as one thing are adjacent.
+//
+//   GROUPING BY START ROW. His idea, and a good one: *"first all racers of start row 1, then row 2
+//   — then the viewers already know which row their racer is in."* The board is now one block per
+//   start row, in row order, alphabetical WITHIN each row so a name is still findable. It turns one
+//   hundred-name search into a heading jump plus a short scan, which is also what makes the
+//   80 ms-per-name budget in defaults.js defensible.
+//
+//   PORTRAIT SIZE. He said the symbols are hard to attribute and named the distance; part of it is
+//   SIZE. Moving the number out of the middle freed its whole gutter, so the portrait grew from
+//   ~21 px to ~30 px — a 1.4x in each direction, about double the area — inside a cell that is
+//   otherwise unchanged. It cost nothing, so it was taken.
+//
+// ── EVERY RACER THAT STARTS APPEARS, NAMED OR NOT ───────────────────────────────────────────────
+// A racer with no name gets its number, its portrait and an explicit `— no name —` placeholder. A
+// blank row is indistinguishable from a bug, and this board's whole promise is that the field on
+// screen is the field in the race. (Today no racer reaches it unnamed — see the block's report for
+// what actually causes a short field — but the board must not be the thing that hides it if one
+// ever does.)
 //
 // ── THE SPRITE IS THE SHIPPED DRAWING FUNCTION, AND THE STILL POSE IS FREE ───────────────────────
-// It calls `racerType.drawRacer` — the same function the race uses — rather than a copy. The one
-// thing a portrait needs that a race does not is a POSE: the racer is not moving, so "which frame of
-// the walk cycle" has no natural answer.
-//
-// It needed no change to the drawing function, and it is worth writing down why rather than leaving
-// the next reader to re-derive it. `SpriteRacerType._getFrameIndex(frame, speed)` is
-// `floor(((frame % period) / period) * frameCount)`, so **`frame = 0` selects sheet frame 0 for any
-// speed and any racer type**. Passing 0 is therefore a neutral, deterministic portrait pose, and no
-// racer type had to learn what "standing still" means. The board also asks for `isLeader = false`
-// and `isComeback = false`, so neither ring is drawn: on the board nobody is leading yet.
+// It calls `racerType.drawRacer` — the same function the race uses — rather than a copy.
+// `SpriteRacerType._getFrameIndex(frame, speed)` is `floor(((frame % period) / period) *
+// frameCount)`, so **`frame = 0` selects sheet frame 0 for any speed and any racer type**. Passing 0
+// is a neutral, deterministic portrait pose, and no racer type had to learn what standing still
+// means. `isLeader` and `isComeback` are false: nobody is leading before the gun.
 //
 // ── SCREEN SPACE ────────────────────────────────────────────────────────────────────────────────
 // Drawn with NO camera transform, so one unit is one screen pixel. `drawRacer` sizes its sprite as
@@ -37,62 +49,135 @@
 import { raceNumberLabel } from '../../../modules/raceNumbers.js';
 
 // ── THE CELL, and the block it tiles ────────────────────────────────────────────────────────────
-// One row of the board. The three parts are laid out left to right and never overlap, because the
-// name is CLIPPED to what is left rather than allowed to run into the next column.
-const CELL_W = 236;
-const CELL_H = 26;
-const SPRITE_BOX = 26; // the portrait's own column within the cell
-const NUMBER_BOX = 34; // right-aligned gutter for "#12"
-const NAME_PAD = 6;
+// One row of the board: NUMBER · SPRITE · NAME, left to right, never overlapping, because the name
+// is CLIPPED to what is left rather than allowed to run into the next column.
+// CELL_W 200 IS SET BY THE WORST CASE, NOT BY TASTE. Grouping costs a heading slot per start row,
+// so a hundred racers in ten rows is 110 slots, not 100 — and the previous 236 px cell could only
+// fit 100 at full size, so 100 racers came out at scale 0.73. The owner's rule is that he would
+// rather lengthen a beat than shrink the type, so the cell narrows instead: 6 x 200 px is exactly
+// the width available, and 6 x 20 rows holds 120 slots at scale 1.0.
+//
+// WHAT 200 COSTS: the name gets 129 px, about 19 characters at 13 px. The shipped roster's longest
+// name is 8 characters and the two long rosters reach 23, so the long ones clip their last few
+// characters at the very worst case. A clipped tail on one name beats a shrunken board for all of
+// them — and the ROW GROUPING means a viewer is scanning ~10 names, not 100, so a partial name is
+// still identifiable.
+const CELL_W = 200;
+const CELL_H = 30;
+const NUMBER_BOX = 34; // right-aligned gutter for "#12" — the row's left anchor
+const SPRITE_BOX = 32; // the portrait, immediately left of the name
+const NAME_PAD = 5;
 
-// The block's shape. MAX_COLS × MAX_ROWS is 100 entries at full size, which is the field size the
-// owner asked it to hold; beyond that `fit` shrinks rather than clips (see `startBoardLayout`).
-const MAX_COLS = 5;
+// The block's shape. Rows are chosen first and columns follow: it is the row count that decides
+// whether a block reads as a list, and a rule that picks columns first turns a small field into a
+// strip across the screen.
+const MAX_COLS = 6;
 const MAX_ROWS = 20;
-// A small field must not become a one-row strip across the whole screen. Six is the shortest column
-// that still reads as a list rather than as a caption.
 const MIN_ROWS = 6;
 
-const HEADING_H = 30;
-const MARGIN_X = 40;
-const MARGIN_Y = 44;
+const HEADING_H = 26; // the "ROW 1" heading above each group
+const TITLE_H = 26; // the board's own title
+const MARGIN_X = 34;
+const MARGIN_Y = 34;
+
+/** The placeholder for a racer that reached the start line without a name. */
+export const NO_NAME_LABEL = '— no name —';
 
 /**
- * Where every entry goes, for a given field size and canvas.
+ * Group the field by START ROW, in row order, alphabetical within each row.
+ *
+ * ALPHABETICAL BY LOWERCASED NAME, NOT `localeCompare`: its result depends on the host's ICU data,
+ * and this ordering is drawn into a frame the render fingerprint hashes — an order that differs
+ * between two machines would make that instrument report a difference that is not a change. Ties
+ * break on racer index, so the sort is total. Unnamed racers sort last within their row, because a
+ * placeholder is not a name and should not sit among the As.
+ *
+ * @param {Array} racers
+ * @param {Map|null} assignmentByRacer  racer.index → { rowIndex }; absent means one group
+ * @returns {Array<{row:number, label:string, racers:Array}>} groups in row order
+ */
+export function startBoardGroups(racers, assignmentByRacer = null) {
+  if (!Array.isArray(racers) || racers.length === 0) return [];
+  const rowOf = (r) => {
+    const a = assignmentByRacer?.get?.(r?.index);
+    const row = a?.rowIndex;
+    return Number.isFinite(row) ? row : 0;
+  };
+  const byRow = new Map();
+  for (const r of racers) {
+    const row = rowOf(r);
+    if (!byRow.has(row)) byRow.set(row, []);
+    byRow.get(row).push(r);
+  }
+  const sortKey = (r) => String(r?.name ?? '').toLowerCase();
+  return [...byRow.keys()]
+    .sort((a, b) => a - b)
+    .map((row) => ({
+      row,
+      label: `ROW ${row + 1}`,
+      racers: byRow.get(row).sort((a, b) => {
+        const an = sortKey(a);
+        const bn = sortKey(b);
+        // An unnamed racer sorts after every named one, then by index so it is still deterministic.
+        if (!an !== !bn) return an ? -1 : 1;
+        if (an < bn) return -1;
+        if (an > bn) return 1;
+        return (a?.index ?? 0) - (b?.index ?? 0);
+      }),
+    }));
+}
+
+/**
+ * Where every entry goes.
  *
  * PURE, and separated from the drawing on purpose: "does the board overlap or clip at 100 racers"
- * is a question about arithmetic, and a test that has to rasterise a canvas to answer it would be
- * measuring the wrong thing.
+ * is a question about arithmetic, and a test that had to rasterise a canvas to answer it would be
+ * measuring the rasteriser.
  *
- * @param {number} count  number of racers
+ * THE GROUPS ARE LAID OUT AS ONE CONTINUOUS COLUMN-MAJOR RUN with a heading slot before each group,
+ * rather than a fresh block per row. A block per row would leave ragged half-empty columns whenever
+ * a row's size did not divide the column height — at 40 racers in 5 rows of 8 that is five stubs
+ * across the screen. Treating headings as entries that happen to be wide keeps the block dense and
+ * keeps every promise the flat version made.
+ *
+ * @param {Array<{racers:Array}>} groups  from `startBoardGroups`
  * @param {number} canvasW
  * @param {number} canvasH
- * @returns {{cols, rows, cellW, cellH, scale, originX, originY, blockW, blockH, cellAt}}
- *   `cellAt(i)` gives the top-left of the i-th entry in COLUMN-MAJOR order.
+ * @returns {object} geometry plus `slots`, one per heading and per racer, in draw order
  */
-export function startBoardLayout(count, canvasW, canvasH) {
-  const n = Math.max(0, count | 0);
-  // Rows first, columns from rows: it is the row count that decides whether the block reads as a
-  // list, and the column count that follows from how many there are.
-  let rows = Math.min(MAX_ROWS, Math.max(MIN_ROWS, Math.ceil(n / MAX_COLS)));
-  rows = Math.max(1, Math.min(rows, n || 1));
-  const cols = Math.max(1, Math.ceil(n / rows));
+export function startBoardLayout(groups, canvasW, canvasH) {
+  // Every group costs one heading slot plus one slot per racer.
+  const slotCount = groups.reduce((n, g) => n + 1 + g.racers.length, 0);
 
-  // FIT RATHER THAN CLIP. Past 100 racers the block would run off the canvas; everything is scaled
-  // by the limiting ratio instead, so "no overlap, no clipping" holds for any field size rather
-  // than for the ones that were tried.
+  let rows = Math.min(MAX_ROWS, Math.max(MIN_ROWS, Math.ceil(slotCount / MAX_COLS)));
+  rows = Math.max(1, Math.min(rows, slotCount || 1));
+  const cols = Math.max(1, Math.ceil(slotCount / rows));
+
+  // FIT RATHER THAN CLIP. Past the size the grid was built for, everything is scaled by the
+  // limiting ratio instead, so "no overlap, no clipping" holds for any field rather than for the
+  // ones that were tried.
   const availW = canvasW - MARGIN_X * 2;
-  const availH = canvasH - MARGIN_Y * 2 - HEADING_H;
-  const rawW = cols * CELL_W;
-  const rawH = rows * CELL_H;
-  const scale = Math.min(1, availW / rawW, availH / rawH);
+  const availH = canvasH - MARGIN_Y * 2 - TITLE_H;
+  const scale = Math.min(1, availW / (cols * CELL_W), availH / (rows * CELL_H));
 
   const cellW = CELL_W * scale;
   const cellH = CELL_H * scale;
   const blockW = cols * cellW;
   const blockH = rows * cellH;
   const originX = (canvasW - blockW) / 2;
-  const originY = (canvasH - blockH) / 2 + HEADING_H * scale * 0.5;
+  const originY = (canvasH - blockH) / 2 + TITLE_H * scale * 0.5;
+
+  const at = (i) => ({
+    x: originX + Math.floor(i / rows) * cellW,
+    y: originY + (i % rows) * cellH,
+  });
+
+  const slots = [];
+  let i = 0;
+  for (const g of groups) {
+    slots.push({ kind: 'heading', label: g.label, ...at(i++) });
+    for (const r of g.racers) slots.push({ kind: 'racer', racer: r, ...at(i++) });
+  }
 
   return {
     cols,
@@ -104,60 +189,10 @@ export function startBoardLayout(count, canvasW, canvasH) {
     originY,
     blockW,
     blockH,
-    headingY: originY - HEADING_H * scale * 0.9,
-    // COLUMN-MAJOR: entry i sits at column floor(i/rows), row i%rows — so an alphabetical list
-    // reads DOWN a column and then across, which is how a start list is read.
-    cellAt(i) {
-      const col = Math.floor(i / rows);
-      const row = i % rows;
-      return { x: originX + col * cellW, y: originY + row * cellH };
-    },
+    slotCount,
+    titleY: originY - TITLE_H * scale * 0.85,
+    slots,
   };
-}
-
-/**
- * The board's entries, in the order they are shown.
- *
- * ALPHABETICAL BY NAME, case-insensitively, tie-broken by the racer's index. `localeCompare` is
- * deliberately NOT used: its result depends on the host's ICU data, and this ordering is drawn into
- * a frame the render fingerprint hashes — an ordering that can differ between two machines would
- * make that instrument report a difference that is not a change.
- *
- * @param {Array} racers
- * @returns {Array} the same racer objects, sorted; never a copy of their contents
- */
-export function startBoardEntries(racers) {
-  if (!Array.isArray(racers)) return [];
-  return [...racers].sort((a, b) => {
-    const an = String(a?.name ?? '').toLowerCase();
-    const bn = String(b?.name ?? '').toLowerCase();
-    if (an < bn) return -1;
-    if (an > bn) return 1;
-    return (a?.index ?? 0) - (b?.index ?? 0);
-  });
-}
-
-/**
- * How visible the board is at a moment of the ceremony, 0..1.
- *
- * IT LIVES IN THE PUSH AND NOWHERE ELSE. `progress` is the push beat's own 0..1, which
- * `startCeremony.ceremonyAt` already computes for the camera — the board asks the same function the
- * same question rather than owning a second schedule. It fades in as the camera leaves the venue
- * shot and is GONE before the push ends, so the settled beat holds the formation clean and the gun
- * fires on a picture with nothing over it.
- *
- * @param {string} beat  CEREMONY_BEAT value
- * @param {number} progress  0..1 within that beat
- * @returns {number} alpha
- */
-export function startBoardAlpha(beat, progress) {
-  if (beat !== 'push') return 0;
-  const p = Math.min(1, Math.max(0, progress));
-  const FADE_IN = 0.12;
-  const FADE_OUT = 0.15; // gone at p = 1 - FADE_OUT + FADE_OUT = 1, i.e. before the settled beat
-  if (p < FADE_IN) return p / FADE_IN;
-  if (p > 1 - FADE_OUT) return Math.max(0, (1 - p) / FADE_OUT);
-  return 1;
 }
 
 /**
@@ -166,86 +201,106 @@ export function startBoardAlpha(beat, progress) {
  * @param {CanvasRenderingContext2D} ctx  screen space; no camera transform is applied here
  * @param {object} p
  * @param {Array} p.racers  every racer in the race
- * @param {object} p.racerType  the race's racer type — its `drawRacer` is called, not a copy of it
+ * @param {object} p.racerType  the race's racer type — its `drawRacer` is called, not a copy
  * @param {number} p.displaySize  the racer type's own displaySize, to size the portrait
- * @param {number} p.alpha  0..1 from `startBoardAlpha`
+ * @param {Map|null} p.assignmentByRacer  racer.index → { rowIndex }, for the grouping
+ * @param {number} p.alpha  0..1 from `boardAlphaAt`
  * @param {number} p.canvasW
  * @param {number} p.canvasH
  */
-export function drawStartBoard(ctx, { racers, racerType, displaySize, alpha, canvasW, canvasH }) {
+export function drawStartBoard(
+  ctx,
+  { racers, racerType, displaySize, assignmentByRacer = null, alpha, canvasW, canvasH }
+) {
   if (!(alpha > 0) || !Array.isArray(racers) || racers.length === 0) return;
-  const entries = startBoardEntries(racers);
-  const L = startBoardLayout(entries.length, canvasW, canvasH);
+  const groups = startBoardGroups(racers, assignmentByRacer);
+  const L = startBoardLayout(groups, canvasW, canvasH);
 
   ctx.save();
   ctx.globalAlpha = alpha;
 
   // The scrim. It is what makes a name readable over a moving track; without it the board would be
   // legible on the venue shot and illegible by the end of the push.
-  ctx.fillStyle = 'rgba(0,0,0,0.62)';
+  ctx.fillStyle = 'rgba(0,0,0,0.66)';
   ctx.fillRect(0, 0, canvasW, canvasH);
 
   ctx.textBaseline = 'middle';
   ctx.textAlign = 'center';
   ctx.font = `bold ${Math.round(17 * L.scale)}px sans-serif`;
   ctx.fillStyle = '#ffd700';
-  ctx.fillText(`STARTERS · ${entries.length}`, canvasW / 2, L.headingY);
+  ctx.fillText(`STARTERS · ${racers.length}`, canvasW / 2, L.titleY);
 
-  const spriteBox = SPRITE_BOX * L.scale;
   const numberBox = NUMBER_BOX * L.scale;
+  const spriteBox = SPRITE_BOX * L.scale;
   const namePad = NAME_PAD * L.scale;
   const nameFont = Math.round(13 * L.scale);
   const numFont = Math.round(12 * L.scale);
+  const headFont = Math.round(12 * L.scale);
   // `drawRacer` sizes the sprite as displaySize × scale in CURRENT units, and current units are
   // screen pixels here — so the scale is "the portrait height I want" over "the type's own size".
-  const portraitPx = spriteBox * 0.82;
+  const portraitPx = spriteBox * 0.94;
   const spriteScale = displaySize > 0 ? portraitPx / displaySize : 1;
 
-  for (let i = 0; i < entries.length; i++) {
-    const r = entries[i];
-    const { x, y } = L.cellAt(i);
-    const midY = y + L.cellH / 2;
+  for (const slot of L.slots) {
+    const midY = slot.y + L.cellH / 2;
 
-    // The portrait, through the shipped drawing function. frame = 0 is the neutral pose (header).
+    if (slot.kind === 'heading') {
+      ctx.textAlign = 'left';
+      ctx.font = `bold ${headFont}px sans-serif`;
+      ctx.fillStyle = '#ffd700';
+      ctx.fillText(slot.label, slot.x + 2 * L.scale, midY);
+      // A rule under the heading, so a group reads as a group rather than as a bold entry.
+      ctx.strokeStyle = 'rgba(255,215,0,0.45)';
+      ctx.lineWidth = Math.max(1, 1 * L.scale);
+      ctx.beginPath();
+      ctx.moveTo(slot.x + 2 * L.scale, midY + L.cellH * 0.34);
+      ctx.lineTo(slot.x + L.cellW - 8 * L.scale, midY + L.cellH * 0.34);
+      ctx.stroke();
+      continue;
+    }
+
+    const r = slot.racer;
+
+    // 1. THE NUMBER — the row's left anchor, right-aligned in its gutter so every number in a
+    //    column lines up whatever its width.
+    ctx.textAlign = 'right';
+    ctx.font = `bold ${numFont}px sans-serif`;
+    ctx.fillStyle = '#9fe8ff';
+    if (r?.raceNumber != null) {
+      ctx.fillText(raceNumberLabel(r.raceNumber), slot.x + numberBox, midY);
+    }
+
+    // 2. THE PORTRAIT, through the shipped drawing function. frame = 0 is the neutral pose.
     if (racerType?.drawRacer) {
       ctx.save();
       ctx.globalAlpha = alpha;
       racerType.drawRacer(
         ctx,
-        x + spriteBox / 2,
+        slot.x + numberBox + spriteBox / 2,
         midY,
-        0, // angle: facing along the row, the way the type's own baseRotationOffset intends
+        0,
         r,
         false, // no leader ring — nobody is leading before the gun
         0, // THE NEUTRAL POSE: sheet frame 0, for any speed and any racer type
         spriteScale,
-        false // no comeback ring either
+        false
       );
       ctx.restore();
     }
 
-    ctx.textAlign = 'right';
-    ctx.font = `bold ${numFont}px sans-serif`;
-    ctx.fillStyle = '#9fe8ff';
-    if (r?.raceNumber != null) {
-      ctx.fillText(raceNumberLabel(r.raceNumber), x + spriteBox + numberBox, midY);
-    }
-
-    // The name is CLIPPED to its own cell, so a long name can never run into the next column. The
-    // alternative — letting it overflow — turns one long name into two unreadable entries.
+    // 3. THE NAME, immediately after the portrait with NOTHING between them, and CLIPPED to its own
+    //    cell so a long name can never run into the next column. Clipping loses the tail of one
+    //    name; overflow loses two whole rows.
+    const nameX = slot.x + numberBox + spriteBox + namePad;
     ctx.save();
     ctx.beginPath();
-    ctx.rect(
-      x + spriteBox + numberBox + namePad,
-      y,
-      L.cellW - spriteBox - numberBox - namePad,
-      L.cellH
-    );
+    ctx.rect(nameX, slot.y, L.cellW - numberBox - spriteBox - namePad, L.cellH);
     ctx.clip();
     ctx.textAlign = 'left';
-    ctx.font = `${nameFont}px sans-serif`;
-    ctx.fillStyle = '#ffffff';
-    ctx.fillText(String(r?.name ?? ''), x + spriteBox + numberBox + namePad, midY);
+    const named = r?.name != null && String(r.name).length > 0;
+    ctx.font = named ? `${nameFont}px sans-serif` : `italic ${nameFont}px sans-serif`;
+    ctx.fillStyle = named ? '#ffffff' : 'rgba(255,255,255,0.45)';
+    ctx.fillText(named ? String(r.name) : NO_NAME_LABEL, nameX, midY);
     ctx.restore();
   }
 

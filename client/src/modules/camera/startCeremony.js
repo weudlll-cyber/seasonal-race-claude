@@ -53,55 +53,118 @@ export function ceremonyEasing(name) {
   return CEREMONY_EASINGS[name] ?? CEREMONY_EASINGS[DEFAULT_CEREMONY_EASING];
 }
 
-/** The three beats. `settled` is a real beat, not an afterthought — see `ceremonySchedule`. */
+/** The four beats. None of them is a remainder — see `ceremonySchedule`. */
 export const CEREMONY_BEAT = {
   /** The whole track, held still. */
   VENUE: 'venue',
   /** Easing from the venue shot to the formation. */
   PUSH: 'push',
-  /** Arrived, holding the formation until the gun. */
+  /**
+   * ARRIVED, AND WAITING FOR THE READER (START-BOARD-2). The camera has finished travelling and
+   * holds the formation while the runners' board is still up. It exists because the board's length
+   * and the camera's are two different requirements: the push is how long a nice camera move takes
+   * (taste, fixed), the board is how long a hundred names take to scan (arithmetic, scales with the
+   * field). Stretching the push to cover a hundred names would make the camera crawl, which the
+   * owner ruled out; so the camera arrives on its own schedule and this beat absorbs the rest.
+   * Zero when the board is shorter than the push.
+   */
+  BOARD: 'board',
+  /** Board gone, formation held clean, until the gun. */
   SETTLED: 'settled',
 };
 
 /**
- * Fit the THREE tunable beats inside the countdown.
+ * How long the runners' board must be up, from the size of the field.
+ *
+ * `max(floorMs, msPerName × n)` — the owner's shape. The floor is what a SMALL field needs (a board
+ * that flashes past is worse than no board), and the per-name term is what makes a hundred names
+ * readable at all. His words after the first eye test: *"in that time it is absolutely impossible to
+ * find your own racer."*
+ *
+ * @param {number} n  racers on the board
+ * @param {number} floorMs
+ * @param {number} msPerName
+ * @returns {number} ms the board is visible, fades included
+ */
+export function boardDurationMs(n, floorMs, msPerName) {
+  const count = Number.isFinite(n) && n > 0 ? n : 0;
+  const f = Math.max(0, Number.isFinite(floorMs) ? floorMs : 0);
+  const per = Math.max(0, Number.isFinite(msPerName) ? msPerName : 0);
+  return Math.max(f, per * count);
+}
+
+/**
+ * The FOUR beats, and the countdown's length, which is now their SUM.
  *
  * CEREMONY-HANDOVER-1 MADE THE SETTLED BEAT A CONTROL. It used to be a REMAINDER — whatever was left
  * of the countdown after the venue and the push — so the one beat whose whole job is stillness could
  * only be set indirectly, by making the other two shorter. The owner watched the formation shot last
- * "VERY briefly" and had no slider for it. It is now its own number, and the invariant that keeps it
- * one is stated here: a beat that is a control must never silently become a leftover again.
+ * "VERY briefly" and had no slider for it. A beat that is a control must never silently become a
+ * leftover again.
  *
- * THE CONSTRAINT: the countdown's length is its own setting (`countdownDurationMs`), and nothing
- * stops the three beats asking for more than it has. When they do, all THREE are scaled
- * proportionally rather than truncated. Truncation would cut the push off mid-move, so the camera
- * would still be travelling when the gun went and the framing the hold keeps would never have been
- * reached. Scaling preserves the RATIO the owner set, which is what he was actually expressing, and
- * guarantees the move always completes before the start.
+ * ── START-BOARD-2 INVERTED THE CONSTRAINT, AND THAT IS THE CHANGE HERE ──────────────────────────
+ * This function used to take `countdownMs` as a CAP and scale all three beats proportionally when
+ * they overran it. That made every beat a function of every other beat: raising the push shortened
+ * the venue shot and the settled beat by the same ratio, silently, with nothing saying so. The
+ * previous block measured it and named it as the reason "just lengthen the push" was not a change
+ * anyone could make safely.
  *
- * SLACK IS NOT REDISTRIBUTED, AND THAT WAS A CORRECTION MADE UNDER TEST. Giving the leftover to the
- * settled beat looks generous and reads well — and it makes the settled slider a NO-OP in the common
- * case, because whenever the countdown is longer than the three beats the leftover swamps whatever
- * the owner set. That is the same defect this block exists to remove, rebuilt one line lower down.
- * The beats are what they say. If they do not fill the countdown, the remaining time is the same
- * still frame the settled beat already is, so nothing is seen to change — but the number on the
- * slider means what it says.
+ * **The countdown now FOLLOWS the beats instead of capping them.** `totalMs` is simply their sum,
+ * and it is what the race counts down. The consequences are deliberate and worth stating plainly:
  *
- * @param {number} venueMs    requested venue-shot duration
- * @param {number} pushMs     requested push-in duration
- * @param {number} settledMs  requested settled duration — the formation held before the gun
- * @param {number} countdownMs  the countdown's total length
- * @returns {{venueMs:number, pushMs:number, settledMs:number, scaled:boolean}} the fitted beats
+ *   - **No beat can change another.** Each slider means exactly the beat it names. There is no
+ *     scaling factor left in this file, which is why `scaled` is gone from the return.
+ *   - **The ceremony gets LONGER at a large field**, because `boardMs` does. That is intended: a
+ *     hundred names cannot be read in two seconds, and the alternative — a crawling push — was
+ *     ruled out.
+ *   - **The camera's rhythm is untouched.** The push is still exactly `pushMs`; the extra time goes
+ *     into a new BOARD beat in which the camera has already arrived and holds still.
+ *
+ * @param {number} venueMs    venue-shot duration
+ * @param {number} pushMs     push-in duration — the camera's own travel, never stretched
+ * @param {number} settledMs  formation held CLEAN (board gone) before the gun
+ * @param {number} boardMs    how long the board must be up, from `boardDurationMs`
+ * @returns {{venueMs, pushMs, boardHoldMs, settledMs, boardStartMs, boardEndMs, totalMs}}
  */
-export function ceremonySchedule(venueMs, pushMs, settledMs, countdownMs) {
-  const total = Math.max(0, countdownMs) || 0;
+export function ceremonySchedule(venueMs, pushMs, settledMs, boardMs = 0) {
   const v = Math.max(0, Number.isFinite(venueMs) ? venueMs : 0);
   const p = Math.max(0, Number.isFinite(pushMs) ? pushMs : 0);
   const st = Math.max(0, Number.isFinite(settledMs) ? settledMs : 0);
-  const asked = v + p + st;
-  if (asked <= 0) return { venueMs: 0, pushMs: 0, settledMs: 0, scaled: false };
-  const k = asked <= total ? 1 : total / asked;
-  return { venueMs: v * k, pushMs: p * k, settledMs: st * k, scaled: k !== 1 };
+  const b = Math.max(0, Number.isFinite(boardMs) ? boardMs : 0);
+  // The board is up for the whole push and then for as long again as it still needs. When it is
+  // SHORTER than the push it needs no extra hold at all and this beat is zero — a small field does
+  // not make the ceremony longer.
+  const boardHoldMs = Math.max(0, b - p);
+  return {
+    venueMs: v,
+    pushMs: p,
+    boardHoldMs,
+    settledMs: st,
+    boardStartMs: v,
+    boardEndMs: v + p + boardHoldMs,
+    totalMs: v + p + boardHoldMs + st,
+  };
+}
+
+/**
+ * The countdown's length for a field of `n`, from the config alone.
+ *
+ * ONE PLACE COMPUTES IT, and everything that needs it asks here: the camera, the phase advance that
+ * fires the gun, the digits, and both fingerprint harnesses. It used to be a config value
+ * (`countdownDurationMs`) that four of those five read independently of the beats — which is how the
+ * beats came to be capped by a number that knew nothing about them.
+ *
+ * @param {object} cfg  a camera config
+ * @param {number} n    racers in the race
+ * @returns {number} ms
+ */
+export function ceremonyTotalMs(cfg, n) {
+  return ceremonySchedule(
+    cfg?.ceremonyVenueMs ?? 0,
+    cfg?.ceremonyPushMs ?? 0,
+    cfg?.ceremonySettledMs ?? 0,
+    boardDurationMs(n, cfg?.startBoardFloorMs ?? 0, cfg?.startBoardMsPerName ?? 0)
+  ).totalMs;
 }
 
 /**
@@ -113,7 +176,7 @@ export function ceremonySchedule(venueMs, pushMs, settledMs, countdownMs) {
  */
 export function ceremonyAt(elapsedMs, schedule) {
   const e = Number.isFinite(elapsedMs) && elapsedMs > 0 ? elapsedMs : 0;
-  const { venueMs, pushMs } = schedule;
+  const { venueMs, pushMs, boardHoldMs = 0 } = schedule;
   if (e < venueMs) {
     return { beat: CEREMONY_BEAT.VENUE, progress: venueMs > 0 ? e / venueMs : 1 };
   }
@@ -121,8 +184,45 @@ export function ceremonyAt(elapsedMs, schedule) {
   if (pushMs > 0 && intoPush < pushMs) {
     return { beat: CEREMONY_BEAT.PUSH, progress: intoPush / pushMs };
   }
+  const intoBoard = intoPush - pushMs;
+  if (boardHoldMs > 0 && intoBoard < boardHoldMs) {
+    return { beat: CEREMONY_BEAT.BOARD, progress: intoBoard / boardHoldMs };
+  }
   return { beat: CEREMONY_BEAT.SETTLED, progress: 1 };
 }
+
+/**
+ * How visible the runners' board is at a moment, 0..1.
+ *
+ * COMPUTED FROM THE ELAPSED TIME AND THE SCHEDULE, not from a beat and a progress. The board now
+ * spans TWO beats (the push and the board hold), and a per-beat fade would have restarted at the
+ * boundary — a visible pulse in the middle of the thing whose whole job is to be steady enough to
+ * read. One window with one fade at each end has no seam in it by construction.
+ *
+ * IT IS GONE BEFORE THE SETTLED BEAT, which is the owner's requirement (d): the gun fires on a
+ * clean picture. `boardEndMs` is where the settled beat starts, and the fade-out completes there.
+ *
+ * @param {number} elapsedMs
+ * @param {object} schedule  from `ceremonySchedule`
+ * @returns {number} alpha
+ */
+export function boardAlphaAt(elapsedMs, schedule) {
+  const e = Number.isFinite(elapsedMs) && elapsedMs > 0 ? elapsedMs : 0;
+  const { boardStartMs = 0, boardEndMs = 0 } = schedule ?? {};
+  const span = boardEndMs - boardStartMs;
+  if (!(span > 0) || e < boardStartMs || e >= boardEndMs) return 0;
+  // A fixed fade in MILLISECONDS, not a fraction of the window: as a fraction, a long board at 100
+  // racers would fade for a second and a half at each end, which is reading time spent on nothing.
+  const fade = Math.min(BOARD_FADE_MS, span / 2);
+  const since = e - boardStartMs;
+  const until = boardEndMs - e;
+  if (since < fade) return since / fade;
+  if (until < fade) return until / fade;
+  return 1;
+}
+
+/** How long the board takes to arrive and to leave. Short enough not to eat reading time. */
+export const BOARD_FADE_MS = 220;
 
 /**
  * The cam.zoom at a moment in the ceremony.
@@ -143,7 +243,9 @@ export function ceremonyAt(elapsedMs, schedule) {
 export function ceremonyZoom(venueZoom, targetZoom, elapsedMs, schedule, easing) {
   const { beat, progress } = ceremonyAt(elapsedMs, schedule);
   if (beat === CEREMONY_BEAT.VENUE) return venueZoom;
-  if (beat === CEREMONY_BEAT.SETTLED) return targetZoom;
+  // BOARD and SETTLED are both "arrived": the camera has finished its travel and holds. That is the
+  // whole point of the BOARD beat — the board gets its time without the push getting slower.
+  if (beat === CEREMONY_BEAT.BOARD || beat === CEREMONY_BEAT.SETTLED) return targetZoom;
   const eased = easing(Math.min(1, Math.max(0, progress)));
   return venueZoom + (targetZoom - venueZoom) * eased;
 }

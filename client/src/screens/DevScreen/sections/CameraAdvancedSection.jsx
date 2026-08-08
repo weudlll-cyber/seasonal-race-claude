@@ -360,26 +360,63 @@ function CameraAdvancedSection() {
               }}
             />
           </div>
+          {/* START-BOARD-2 — THE RUNNERS' BOARD'S OWN DURATION.
+              `max(floor, msPerName × racers)`. The countdown's total is now the SUM of the beats
+              plus whatever the board still needs after the push, so there is no "countdown
+              duration" box any more: its length follows these numbers instead of capping them. */}
           <div className={s.formGroup}>
             <label
               className={s.label}
               style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}
             >
-              Countdown Duration (ms)
+              Runners&apos; board — floor (ms)
               <InfoTooltip
-                text={`Duration of the pre-race countdown. Currently: ${config.countdownDurationMs ?? 4000}ms.`}
+                text={
+                  `The SHORTEST the starters' board is ever shown, however small the field. ` +
+                  `The board is up for max(this, per-name × racers). Currently: ` +
+                  `${config.startBoardFloorMs ?? 3000}ms.`
+                }
               />
             </label>
             <input
               type="number"
               className={s.input}
-              min={1000}
-              max={8000}
-              step={500}
-              value={config.countdownDurationMs ?? 4000}
+              min={0}
+              max={20000}
+              step={250}
+              value={config.startBoardFloorMs ?? 3000}
               onChange={(e) => {
                 const v = Number(e.target.value);
-                if (v >= 1000 && v <= 8000) set('countdownDurationMs', v);
+                if (v >= 0 && v <= 20000) set('startBoardFloorMs', v);
+              }}
+            />
+          </div>
+          <div className={s.formGroup}>
+            <label
+              className={s.label}
+              style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}
+            >
+              Runners&apos; board — per name (ms)
+              <InfoTooltip
+                text={
+                  `Reading time allowed per racer. The board is up for ` +
+                  `max(floor, this × racers), and the camera HOLDS on the formation until it is ` +
+                  `done — the push keeps its own speed. At ${config.startBoardMsPerName ?? 80}ms ` +
+                  `that is ${(((config.startBoardMsPerName ?? 80) * 40) / 1000).toFixed(1)}s at 40 ` +
+                  `racers and ${(((config.startBoardMsPerName ?? 80) * 100) / 1000).toFixed(1)}s at 100.`
+                }
+              />
+            </label>
+            <input
+              type="number"
+              className={s.input}
+              min={0}
+              max={500}
+              step={10}
+              value={config.startBoardMsPerName ?? 80}
+              onChange={(e) => {
+                const v = Number(e.target.value);
+                if (v >= 0 && v <= 500) set('startBoardMsPerName', v);
               }}
             />
           </div>

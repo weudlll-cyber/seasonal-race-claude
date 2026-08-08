@@ -179,12 +179,18 @@ test("runRace drives frames and stops; the frame count is what the loop actually
 
 test("THE COUNTDOWN COMES FROM THE CONFIG BEING RUN, not the shipped default", () => {
   // The divergence this block resolved. Two harnesses read the default while running a modified
-  // config; had they ever overridden this key, their warm-up would have desynchronised from the
-  // thing under test. A longer countdown must delay the race start, i.e. change the frame budget.
+  // config; had they ever overridden the countdown, their warm-up would have desynchronised from
+  // the thing under test. A longer countdown must delay the race start, i.e. change the frame
+  // budget.
+  //
+  // REWRITTEN BY START-BOARD-2, because the key it used to turn is gone. `countdownDurationMs` no
+  // longer exists: the countdown's length is the SUM of the ceremony beats, one of which is the
+  // runners' board's hold. So the knob this test turns is now a beat — which is a STRONGER version
+  // of the same assertion, because it also proves the derived total reaches the driver at all.
   const geo = loadTracks({ only: "searound" })[0];
   const identity = resolveIdentity({ racers: 8, seconds: 20 });
-  const runWith = (countdownDurationMs) => {
-    const cfg = { ...DEFAULT_CAMERA_CONFIG, countdownDurationMs };
+  const runWith = (ceremonyVenueMs) => {
+    const cfg = { ...DEFAULT_CAMERA_CONFIG, ceremonyVenueMs };
     const race = buildRace(geo, identity, cfg);
     let firstTs = null;
     runRace(race, identity, cfg, ({ ts }) => {
@@ -196,6 +202,6 @@ test("THE COUNTDOWN COMES FROM THE CONFIG BEING RUN, not the shipped default", (
   const long = runWith(9000);
   assert.ok(
     long > short + 7000,
-    `a 9 s countdown must start the race ~8 s later than a 1 s one (got ${short} vs ${long})`,
+    `a venue beat 8 s longer must start the race ~8 s later (got ${short} vs ${long})`,
   );
 });
