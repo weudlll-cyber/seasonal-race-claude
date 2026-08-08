@@ -72,7 +72,12 @@ describe('the label shows the NAME when it fits and the NUMBER when it does not'
   // WHAT GOES UNNOTICED: names overlapping each other — the exact thing RACE-NUMBERS-1 replaced.
   it('two racers too close for two names fall back — the second keeps its NUMBER', () => {
     // 40 px apart: two 7-character names (~64 px boxes) cannot both fit, two numbers can.
-    const out = layout(at([[600, 360], [640, 360]]));
+    const out = layout(
+      at([
+        [600, 360],
+        [640, 360],
+      ])
+    );
     expect(out.shown.size).toBe(2); // both still labelled
     expect(out.wide.size).toBe(1); // but only one got a name
     expect(out.wide.has(0)).toBe(true); // and it is the higher-priority one
@@ -83,7 +88,11 @@ describe('the label shows the NAME when it fits and the NUMBER when it does not'
   // WHAT GOES UNNOTICED: the OFF state drifting from what shipped, which would make the owner's
   // A/B comparison meaningless.
   it('with no wide form on offer, the layout is exactly what it was', () => {
-    const racers = at([[600, 360], [640, 360], [700, 360]]);
+    const racers = at([
+      [600, 360],
+      [640, 360],
+      [700, 360],
+    ]);
     const off = layout(racers, { wideLabelOf: null });
     expect(off.wide.size).toBe(0);
     // …and the same racers are labelled as when names are available but do not fit.
@@ -116,7 +125,10 @@ describe('FLICKER — the switch is governed by the same asymmetry as the label 
   // WHAT GOES UNNOTICED: a rule that reads as correct and looks like a strobe on the track.
   it('a name already shown SURVIVES an intrusion that would have prevented it', () => {
     // Two racers close enough that the second name intrudes on the first.
-    const racers = at([[600, 360], [656, 360]]);
+    const racers = at([
+      [600, 360],
+      [656, 360],
+    ]);
 
     // Cold: the newcomer must be COMPLETELY clear, so only the leader gets a name.
     const cold = layout(racers);
@@ -139,7 +151,10 @@ describe('FLICKER — the switch is governed by the same asymmetry as the label 
   // WHAT GOES UNNOTICED: a name that persists because its number was on screen, which is a
   // different claim on a different box.
   it('label tenure alone does NOT buy name tenure', () => {
-    const racers = at([[600, 360], [656, 360]]);
+    const racers = at([
+      [600, 360],
+      [656, 360],
+    ]);
     const out = layout(racers, {
       incumbents: new Set([0, 1]), // both held their LABEL
       wideIncumbents: null, // …but neither held a NAME
@@ -174,7 +189,12 @@ describe('CASCADE — one decision per label per cycle, in a fixed order', () =>
   // WHAT GOES UNNOTICED: a reordering that quietly hands names to the back of the field.
   it('the fixed order is priority order: the leader gets the contested name', () => {
     // index 0 has the highest t (see `at`), so it is first and takes the contested pixels.
-    const out = layout(at([[600, 360], [640, 360]]));
+    const out = layout(
+      at([
+        [600, 360],
+        [640, 360],
+      ])
+    );
     expect(out.wide.has(0)).toBe(true);
     expect(out.wide.has(1)).toBe(false);
   });
@@ -188,7 +208,11 @@ describe('CASCADE — one decision per label per cycle, in a fixed order', () =>
     // The point of the test is what does NOT happen next: 1 is never reconsidered. A pass that
     // revisited it would see the room 2 left and could widen it again, displacing 2, and the frame
     // would have no fixed point.
-    const racers = at([[600, 360], [640, 360], [680, 360]]);
+    const racers = at([
+      [600, 360],
+      [640, 360],
+      [680, 360],
+    ]);
     const out = layout(racers);
     expect([...out.wide].sort()).toEqual([0, 2]);
     expect(out.shown.size).toBe(3); // and all three are still labelled
@@ -203,7 +227,14 @@ describe('the start formation is untouched by any of this', () => {
   // WHAT GOES UNNOTICED: the runners' board and the on-track roll call disagreeing about what a
   // label is, during the one moment the owner asked for every name.
   it('showAll labels everyone and chooses no wide form', () => {
-    const out = layout(at([[600, 360], [610, 360], [620, 360]]), { showAll: true });
+    const out = layout(
+      at([
+        [600, 360],
+        [610, 360],
+        [620, 360],
+      ]),
+      { showAll: true }
+    );
     expect(out.shown.size).toBe(3);
     expect(out.wide.size).toBe(0);
   });
