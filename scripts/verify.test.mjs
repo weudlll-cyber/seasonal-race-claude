@@ -18,7 +18,13 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import { plan, ROUTES } from "./verify.mjs";
 
-const pick = (files, id) => plan(files).find((t) => t.id === id);
+// THE ROUTING TESTS ASSERT HULL MEMBERSHIP, so they stub the inert splitter. The paths they pass
+// are synthetic — byte-identical to the base — which the REAL splitter correctly reports as inert;
+// without this stub these tests would quietly become tests of the INERT rule while claiming to
+// test the route table. The inert rule has its own tests on real content
+// (scripts/lib/inertChange.test.mjs) plus the two both-direction cases at the end of this file.
+const NOTHING_INERT = (paths) => ({ hit: paths, inert: [] });
+const pick = (files, id) => plan(files, "master", NOTHING_INERT).find((t) => t.id === id);
 const runs = (files, id) => pick(files, id).run;
 
 test("a docs-only diff selects the doc guards and NOTHING expensive", () => {
@@ -223,4 +229,29 @@ test("FINGERPRINT CONTAINMENT runs for EVERYTHING, including paths routed nowher
       `${f} must select containment`,
     );
   }
+});
+
+// ── THE INERT RULE, BOTH DIRECTIONS (VERIFY-COST-2) ────────────────────────────────────────────
+//
+// The world fingerprint is 229 s and it ran, on the night this was added, for a paragraph of prose
+// in a hull file. A hull change whose tokens are identical cannot move it. These two are the pair:
+// a rule that only ever says "skip" would be worse than no rule at all.
+
+test("a hull file whose edit is COMMENTS ONLY does not select the world fingerprint", () => {
+  const inertOne = (paths) => ({
+    hit: [],
+    inert: paths.map((p) => ({ path: p, reason: "comments only" })),
+  });
+  const p = plan(["client/src/modules/raceStep.js"], "master", inertOne);
+  const wf = p.find((t) => t.id === "world-fingerprint");
+  assert.equal(wf.run, false);
+  // …and the skip NAMES the file and the reason, so it can never be a silent saving.
+  assert.match(wf.reason, /INERT/);
+  assert.match(wf.reason, /raceStep\.js/);
+});
+
+test("…and the SAME file with a real edit still selects it — the pair that makes the rule a rule", () => {
+  const nothingInert = (paths) => ({ hit: paths, inert: [] });
+  const p = plan(["client/src/modules/raceStep.js"], "master", nothingInert);
+  assert.equal(p.find((t) => t.id === "world-fingerprint").run, true);
 });
