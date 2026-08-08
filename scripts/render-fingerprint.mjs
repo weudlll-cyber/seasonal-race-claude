@@ -68,6 +68,7 @@ process.on("exit", () => {
 });
 
 import { createHash } from "node:crypto";
+import { isCheap, cheapTracks, cheapBanner, cheapHash, refuseCheapQuiet } from "./lib/cheapMode.mjs";
 import { readFileSync, readdirSync, existsSync } from "node:fs";
 import { join, dirname } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
@@ -131,6 +132,11 @@ const SEED = 5601;
 // is: an unpinned die means the SHOT varies between runs and the hash is noise, not a measurement.
 const CAM_SEED = 1439767152;
 const QUIET = process.argv.includes("--quiet");
+// VERIFY-COST-2: --cheap runs ONE track with EVERY sample point, so a wiring or formatting check
+// costs seconds while still exercising each code path the instrument has. Fewer sample points on
+// all ten tracks would be the wrong trade: it would stop exercising the thing being checked.
+refuseCheapQuiet();
+const CHEAP = isCheap();
 const OPS_FOR = (process.argv.find((a) => a.startsWith("--ops=")) ?? "").slice(
   6,
 );
@@ -524,6 +530,8 @@ for (const f of readdirSync(dir)) {
   if (j.id) geos.push(j);
 }
 geos.sort((a, b) => a.id.localeCompare(b.id));
+const RUN_GEOS = CHEAP ? cheapTracks(geos, (g) => g.id) : geos;
+if (CHEAP) console.log(cheapBanner("render", `One track (${RUN_GEOS[0].id}) of ${geos.length}, all sample points.`));
 
 if (OPS_FOR) {
   const geo = geos.find((g) => g.id === OPS_FOR);
@@ -547,7 +555,7 @@ if (COVERAGE) {
     `  ${"track".padEnd(16)}${late.map((f) => String(f).padStart(14)).join("")}`,
   );
   const tally = { shot: 0, move: 0, rest: 0, none: 0 };
-  for (const geo of geos) {
+  for (const geo of RUN_GEOS) {
     const { phases } = trackHash(geo, false);
     const cells = late.map((f) =>
       (phases.sampleState.get(f) ?? "—").padStart(14),
@@ -583,7 +591,7 @@ if (PHASES) {
       .map((w) => w.padStart(15))
       .join("")} ${"all home".padStart(9)}`,
   );
-  for (const geo of geos) {
+  for (const geo of RUN_GEOS) {
     const { phases } = trackHash(geo, false);
     const at = (k) =>
       phases.phaseFirstSeen.has(k)
@@ -603,18 +611,22 @@ if (PHASES) {
 
 const combined = createHash("sha256");
 const rows = [];
-for (const geo of geos) {
+// BOTH SIDES: the countdown window is this chain's (START-BOARD-1), the RUN_GEOS reduction is
+// master's cheap mode (VERIFY-COST-2). They are independent and neither replaces the other.
+for (const geo of RUN_GEOS) {
   const { hash, ops, drawn, drawnCountdown } = trackHash(geo, false);
   combined.update(geo.id + ":" + hash + "\n");
   rows.push({ id: geo.id, hash, ops, drawn, drawnCountdown });
 }
-const COMBINED = combined.digest("hex").slice(0, 16);
+// The cheap hash carries a prefix so it CANNOT match the 16-hex shape the record and the
+// containment guard expect. A cheap run must be unable to impersonate a measurement.
+const COMBINED = CHEAP ? cheapHash(combined.digest("hex")) : combined.digest("hex").slice(0, 16);
 
 if (QUIET) {
   console.log(COMBINED);
 } else {
   console.log(
-    `RENDER ${COMBINED} (seed=${SEED} camSeed=${CAM_SEED}, ${geos.length} tracks, ${N} racers, ` +
+    `RENDER ${COMBINED} (seed=${SEED} camSeed=${CAM_SEED}, ${RUN_GEOS.length} tracks, ${N} racers, ` +
       `countdown [${CD_SAMPLE_MS.join(", ")}] ms + frames [${SAMPLE_AT.join(", ")}] of ${RUN_FRAMES})`,
   );
   for (const r of rows) {
