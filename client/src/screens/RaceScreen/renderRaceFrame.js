@@ -42,6 +42,7 @@ import {
   drawFinishedOverlay,
 } from './drawing/overlayRendering.js';
 import { drawStartBoard } from './drawing/startBoardRendering.js';
+import { advanceLabelForms, LABEL_FORM_HOLD_MS } from './labelFormHold.js';
 import {
   ceremonySchedule,
   boardDurationMs,
@@ -104,7 +105,11 @@ export function renderRaceFrame(ctx, f) {
     renderAlpha,
     interpolationEnabled,
     tagIncumbents,
-    tagWideIncumbents,
+    // LABEL-OCCLUSION-1: the form each label is CURRENTLY in, and the hold state behind it. Both are
+    // owned by the component across frames — the layout is pure and the hold is the only thing in
+    // this path that remembers anything.
+    tagWideForms,
+    tagFormHold,
     leaderDiag,
     cfgBadge,
     buildBadge,
@@ -178,6 +183,10 @@ export function renderRaceFrame(ctx, f) {
   // effZoomY, not effZoomX. This is a VERTICAL distance, and on a closed track the world→screen scale
   // is anisotropic: the sprite is squashed on Y, so the gap has to be squashed with it.
   const racerScreenH = drawnRacerScreenPx(displaySize, displayScale, effZoomY);
+  // LABEL-OCCLUSION-1 needs the other axis too, and it is genuinely a different number: on a closed
+  // track the world→screen scale is anisotropic, so a name tested against a box built from effZoomY
+  // on both axes would be judged against a racer up to 18.5 % the wrong width.
+  const racerScreenW = drawnRacerScreenPx(displaySize, displayScale, effZoomX);
   const labelMarginPx = cameraConfig.nameTagMarginPx;
   const raceElapsedMs = st.raceStart != null ? ts - st.raceStart : 0;
   const showAllTags =
@@ -195,6 +204,7 @@ export function renderRaceFrame(ctx, f) {
     canvasH,
     fontPx: tagFontPx,
     racerScreenH,
+    racerScreenW,
     labelMarginPx,
     measureText: measureTagText,
     showAll: showAllTags,
@@ -212,9 +222,21 @@ export function renderRaceFrame(ctx, f) {
     // null keeps the layout byte-for-byte what it was, which is what makes the toggle a real
     // comparison rather than two code paths that merely look alike.
     wideLabelOf: cameraConfig?.labelNamesWhenRoom ? (r) => r.name ?? '' : null,
-    wideIncumbents: tagWideIncumbents,
+    wideForms: tagWideForms,
   });
   ctx.restore();
+
+  // LABEL-OCCLUSION-1: advance the hold with THIS frame's criterion, and hand the result back for
+  // the next one. It runs after the layout because the criterion is the layout's output, and the
+  // one-frame lag is the same threading `tagIncumbents` already uses.
+  const nextWideForms = tagFormHold
+    ? advanceLabelForms(tagFormHold, {
+        shown: tagLayout.shown,
+        clear: tagLayout.wideClear,
+        nowMs: ts,
+        holdMs: LABEL_FORM_HOLD_MS,
+      })
+    : null;
 
   drawRacers(
     ctx,
@@ -320,6 +342,7 @@ export function renderRaceFrame(ctx, f) {
     displayScale,
     tagShown: tagLayout.shown,
     tagWide: tagLayout.wide,
+    tagWideForms: nextWideForms,
     countdownNumber,
   };
 }

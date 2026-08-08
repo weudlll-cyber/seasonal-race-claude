@@ -23,15 +23,44 @@
 //              overlap test would answer a different question on every track, because a closed
 //              track's world->screen scale is anisotropic (X and Y differ by up to 18.5%).
 //
-//              WHAT THIS STAGE DELIBERATELY DOES NOT DO — stages 2 and 3, named so nobody has to
-//              guess whether they were forgotten:
+//              SPRITE AVOIDANCE IS BUILT (LABEL-OCCLUSION-1). It was sketched here as "stage 3";
+//              what was actually done is narrower and stronger than the sketch. It does not move a
+//              label away from a racer — it decides WHICH FORM the label takes. The owner's rule, in
+//              his words: show the NAME when it covers neither another label nor a racer; otherwise
+//              show the NUMBER. See §THE OCCLUSION CRITERION below.
+//
+//              ── THE OCCLUSION CRITERION (LABEL-OCCLUSION-1) ──────────────────────────────────
+//              A label shows its NAME when the name's box, at the position it would be drawn,
+//              overlaps NEITHER any label already placed this frame NOR the drawn box of any OTHER
+//              racer. Its own racer never counts against it: the label sits above its own racer by
+//              design and LABEL-OFFSET-1 fixed exactly that distance.
+//
+//              ANY OVERLAP COUNTS — there is no tolerance and none was introduced. The area budget
+//              that governs whether a LABEL survives at all (`yieldOverlapFrac`) is a different
+//              question and is untouched; a partially covered racer is the defect the owner
+//              reported, so a criterion with a budget would not be the criterion he asked for.
+//
+//              THIS REPLACES "DOES IT FIT?" (LABEL-DEGRADE-1) and supersedes the area-budget
+//              proposal in that report. What went with it: the wide form's own tenure
+//              (`wideIncumbents`) and its asymmetric yield. Stability is now a HOLD WINDOW in
+//              `labelFormHold.js`, because "has this been true long enough" is a clock and this
+//              module does not own one.
+//
+//              THE TEST RUNS EVERY FRAME, INCLUDING WHILE THE NUMBER IS SHOWN. `wideClear` is the
+//              criterion's raw answer for every eligible label, not only for the ones currently
+//              showing a name — judging only what is drawn would trap a label on the number forever,
+//              because the narrow number is almost always clear. The hold governs the SWITCH, never
+//              the TEST.
+//
+//              WHAT THIS STAGE DELIBERATELY DOES NOT DO — named so nobody has to guess whether they
+//              were forgotten:
 //                • PRIORITY from the director's anchor + guarantee set. Stage 1 orders by race
 //                  position, which is what the old rule did, so the change here is decluttering and
 //                  nothing else. Stage 2 makes the labels agree with the camera about who matters.
 //                • PLACEMENT in more than one slot (above / above-left / above-right / below), which
 //                  is what lets a clump stagger into two or three legible rows instead of dropping
-//                  to one. Stage 3.
-//                • SPRITE avoidance — a label must also not cover a racer. Stage 3.
+//                  to one. The criterion below makes this MORE valuable, not less: a name that is
+//                  refused today would often fit in a slot nobody has tried.
 //
 //              Pure: no canvas, no state, no clock. Text measurement comes in as a function so the
 //              caller can hand it a real ctx and a test can hand it a ruler.
@@ -164,15 +193,24 @@ export function tagFontScreenPx(frameFrac, canvasH) {
  * @param {number} [p.racerScreenH=0]  LABEL-OFFSET-1: the racer's DRAWN height in screen px, which is
  *        what the label's distance from it is derived from. The layout must be given the same number
  *        the renderer draws with, or it reasons about boxes that are not where the labels are.
+ * @param {number} [p.racerScreenW=0]  LABEL-OCCLUSION-1: the racer's DRAWN width in screen px
+ *        (drawnRacerScreenPx on the X zoom). With `racerScreenH` it gives the box a name must not
+ *        cover. Zero disables the racer half of the criterion, which is what a caller that cannot
+ *        supply it gets — a weaker rule rather than a wrong one.
  * @param {number} [p.labelMarginPx=0]  breathing space above the racer's top edge, in screen px
  * @param {(name:string)=>number} p.measureText  text width in screen px at that font size
  * @param {Set<number>|null} [p.incumbents]  racer indices labelled last frame (stability)
+ * @param {Set<number>|null} [p.wideForms]  LABEL-OCCLUSION-1: racer indices whose CURRENT form is the
+ *        name, as decided by `labelFormHold`. The layout does not decide the form — it reports
+ *        whether the name WOULD be clear (`wideClear`) and draws the form it is told.
  * @param {number} [p.edgeMarginFrac=0]  canvas-edge hysteresis band, as a fraction of frame height
  * @param {number} [p.yieldOverlapFrac=0]  how much of its own box an incumbent tolerates before yielding
  * @param {boolean} [p.showAll=false]  the START-FORMATION exception: label everyone, no decluttering
  * @param {(r:object)=>string} [p.labelOf]  the string actually drawn (row suffixes etc.)
- * @returns {{ shown: Set<number>, eligible: number, placed: number, dropped: number }}
- *   `shown` holds racer.index values.
+ * @returns {{ shown: Set<number>, wide: Set<number>, wideClear: Set<number>, eligible: number,
+ *   placed: number, dropped: number }}  `shown` is who carries a label, `wide` is who is DRAWN with
+ *   the name this frame, `wideClear` is who COULD be — the criterion's raw answer, which is what the
+ *   hold consumes. All hold racer.index values.
  */
 export function computeTagLayout({
   racers,
@@ -184,21 +222,25 @@ export function computeTagLayout({
   canvasH,
   fontPx,
   racerScreenH = 0,
+  racerScreenW = 0,
   labelMarginPx = 0,
   measureText,
   showAll = false,
   labelOf = (r) => r.name ?? '',
   wideLabelOf = null,
-  wideIncumbents = null,
+  wideForms = null,
   incumbents = null,
   edgeMarginFrac = EDGE_MARGIN_FRAC,
   yieldOverlapFrac = YIELD_OVERLAP_FRAC,
 }) {
   const shown = new Set();
-  // LABEL-DEGRADE-1: which racers got the WIDE form (the name) rather than the narrow one.
+  // Which racers are DRAWN with the wide form (the name) this frame.
   const wide = new Set();
+  // LABEL-OCCLUSION-1: which racers' name box is CLEAR this frame — the criterion's raw answer, for
+  // every eligible label rather than only for the ones already showing a name.
+  const wideClear = new Set();
   if (!Array.isArray(racers) || racers.length === 0 || !(fontPx > 0)) {
-    return { shown, wide, eligible: 0, placed: 0, dropped: 0 };
+    return { shown, wide, wideClear, eligible: 0, placed: 0, dropped: 0 };
   }
 
   const boxH = labelBoxHeight(fontPx);
@@ -212,6 +254,34 @@ export function computeTagLayout({
     top: sy - offsetAbove - boxH,
     bottom: sy - offsetAbove,
   });
+
+  // ── THE RACERS' OWN BOXES (LABEL-OCCLUSION-1) ────────────────────────────────────────────────
+  // Built from EVERY racer with a usable screen position, not only the label-eligible ones: a racer
+  // sitting just outside the eligibility margin is still a racer a name would cover, and the owner's
+  // rule is about the picture, not about who qualifies for a label.
+  const halfW = racerScreenW > 0 ? racerScreenW / 2 : 0;
+  const halfH = racerScreenH > 0 ? racerScreenH / 2 : 0;
+  const racerBoxes = [];
+  if (halfW > 0 && halfH > 0) {
+    for (const r of racers) {
+      if (!r || r.index == null) continue;
+      const sx = r.x * effX + offsetX;
+      const sy = r.y * effY + offsetY;
+      if (!Number.isFinite(sx) || !Number.isFinite(sy)) continue;
+      racerBoxes.push({
+        index: r.index,
+        left: sx - halfW,
+        right: sx + halfW,
+        top: sy - halfH,
+        bottom: sy + halfH,
+      });
+    }
+  }
+
+  /** Do two screen boxes share any area at all? No tolerance — see §THE OCCLUSION CRITERION. */
+  const hits = (a, b) =>
+    Math.min(a.right, b.right) > Math.max(a.left, b.left) &&
+    Math.min(a.bottom, b.bottom) > Math.max(a.top, b.top);
 
   // ── ELIGIBLE: on canvas. Not "top N by position" — a label answers "who is that on screen". ──
   const eligible = [];
@@ -253,7 +323,14 @@ export function computeTagLayout({
     // The start formation shows every NAME already (the roll call), so the wide form is what it
     // means by a label — but it does no decluttering, so nothing here needs to choose.
     for (const e of eligible) shown.add(e.index);
-    return { shown, wide, eligible: eligible.length, placed: eligible.length, dropped: 0 };
+    return {
+      shown,
+      wide,
+      wideClear,
+      eligible: eligible.length,
+      placed: eligible.length,
+      dropped: 0,
+    };
   }
 
   // ── PRIORITY: race position, highest t first. Stage 2 replaces this with the director's anchor
@@ -279,6 +356,9 @@ export function computeTagLayout({
   // pixels. The count is the OUTPUT — a spread field gets many labels, a clump gets few, and every
   // one that survives is readable.
   const placed = [];
+  // The boxes the CRITERION reasons against: the drawn box, widened to the name's box for any label
+  // whose name has been granted. See the note where it is read.
+  const claimed = [];
   for (const e of eligible) {
     const incumbent = incumbents ? incumbents.has(e.index) : false;
     // DECISIVENESS, Lesson 190, as a threshold on GEOMETRY rather than a timer. A label that is not
@@ -299,32 +379,69 @@ export function computeTagLayout({
       return true;
     };
 
-    // ── LABEL-DEGRADE-1: THE NAME WHEN THERE IS ROOM, THE NUMBER WHEN THERE IS NOT ─────────────
+    // ── THE OCCLUSION CRITERION (LABEL-OCCLUSION-1) ────────────────────────────────────────────
     //
-    // ONE DECISION PER LABEL PER CYCLE, in this fixed order, and never revisited. That is what
-    // stops the cascade the owner named: widening A displaces B, which frees room, which would let
-    // A widen again. Here A is decided before B is looked at, B sees A's chosen box, and neither is
-    // asked twice — so the pass cannot oscillate within a frame however the boxes fall.
+    // Asked for EVERY eligible label, in priority order, whatever form it is currently showing —
+    // the reason is in the header: a rule that only re-examines what is drawn can never let a
+    // number become a name again.
     //
-    // THE SAME ASYMMETRY GOVERNS THE SWITCH as governs the label itself, which is why this needed no
-    // new machinery: a racer NOT showing its name must find its wide box COMPLETELY free to gain
-    // one; a racer already showing its name keeps it until the intrusion is decisive. Tenure is
-    // tracked separately (`wideIncumbents`) from label tenure, because a racer can hold its label
-    // while losing the room for its name — those are two different claims on two different boxes.
-    if (e.wide && fits(e.wide, wideIncumbents ? wideIncumbents.has(e.index) : false)) {
+    // A granted name occupies its FULL WIDTH for everything decided after it, because the wide box
+    // is what goes into `placed`. So the criterion is evaluated against the picture as it is being
+    // built, not against a hypothetical frame in which everyone is narrow.
+    let nameClear = false;
+    if (e.wide) {
+      let clear = true;
+      // AGAINST `claimed`, NOT `placed`. A name the criterion has already granted reserves its FULL
+      // width even on the frames where the hold has not promoted it yet — otherwise two neighbours
+      // would each be judged clear against the other's narrow box, both promote a moment later, and
+      // land on top of each other. The reservation is what makes the criterion true of the frame the
+      // hold is heading towards, not only of the one being drawn.
+      for (const p of claimed) {
+        if (hits(e.wide, p)) {
+          clear = false;
+          break;
+        }
+      }
+      if (clear) {
+        for (const rb of racerBoxes) {
+          // ITS OWN RACER NEVER COUNTS AGAINST IT. The label sits above its own racer by design and
+          // LABEL-OFFSET-1 fixed exactly that distance; testing it against itself would refuse every
+          // name on the tracks where the gap is tightest.
+          if (rb.index === e.index) continue;
+          if (hits(e.wide, rb)) {
+            clear = false;
+            break;
+          }
+        }
+      }
+      nameClear = clear;
+      if (clear) wideClear.add(e.index);
+    }
+
+    // ── THE FORM IS THE HOLD'S DECISION, NOT THIS MODULE'S ─────────────────────────────────────
+    // `wideForms` is what `labelFormHold` settled on from earlier frames' `wideClear`. The layout
+    // draws what it is told and reports what it saw.
+    const wantsWide = e.wide != null && (wideForms ? wideForms.has(e.index) : false);
+    if (wantsWide && fits(e.wide, incumbent)) {
       placed.push(e.wide);
+      claimed.push(e.wide);
       shown.add(e.index);
       wide.add(e.index);
       continue;
     }
+    // A HELD NAME THAT CANNOT BE PLACED FALLS BACK TO THE NUMBER RATHER THAN TO NOTHING. It only
+    // arises while the hold is keeping a name whose box has since been intruded on; losing the label
+    // altogether would be a worse answer than the form the label is about to switch to anyway.
     if (!fits(e, incumbent)) continue;
     placed.push(e);
+    claimed.push(nameClear ? e.wide : e);
     shown.add(e.index);
   }
 
   return {
     shown,
     wide,
+    wideClear,
     eligible: eligible.length,
     placed: placed.length,
     dropped: eligible.length - placed.length,

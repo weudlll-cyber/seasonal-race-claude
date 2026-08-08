@@ -12,6 +12,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { validateActiveRace } from './raceSession.js';
 import { PHASE } from './racePhase.js';
 import { renderRaceFrame } from './renderRaceFrame.js';
+import { createLabelFormHold } from './labelFormHold.js';
 import { attachRenderState, attachRacerRenderState, stepFocusFade } from './renderState.js';
 import { getBgCanvasReady } from './drawing/trackRendering.js';
 import { getBackgroundImage } from '../../modules/track-effects/bgImageCache.js';
@@ -102,9 +103,11 @@ export default function RaceScreen() {
   const canvasRef = useRef(null);
   // CAMERA-TAGS-1: the set of racer indices that carried a name tag last frame.
   const tagIncumbentsRef = useRef(null);
-  // LABEL-DEGRADE-1: which labels showed the NAME last frame. Tracked separately from label tenure,
-  // because a racer can hold its label while losing the room for its name.
-  const tagWideIncumbentsRef = useRef(null);
+  // LABEL-OCCLUSION-1: which labels are CURRENTLY in the name form, and the hold state that decides
+  // when that may change. Tracked separately from label tenure, because a racer can hold its label
+  // while the name under it stops being clear — two different claims on two different boxes.
+  const tagWideFormsRef = useRef(null);
+  const tagFormHoldRef = useRef(createLabelFormHold());
   const bgCanvasRef = useRef(null);
   const screenRef = useRef(null);
   const rafRef = useRef(null);
@@ -1256,7 +1259,8 @@ export default function RaceScreen() {
         renderAlpha,
         interpolationEnabled: frameTimingConfig.renderInterpolation,
         tagIncumbents: tagIncumbentsRef.current,
-        tagWideIncumbents: tagWideIncumbentsRef.current,
+        tagWideForms: tagWideFormsRef.current,
+        tagFormHold: tagFormHoldRef.current,
         leaderDiag: leaderDiagRef.current,
         cfgBadge,
         buildBadge: RA_BUILD,
@@ -1267,7 +1271,7 @@ export default function RaceScreen() {
         canvasH: canvas.height,
       });
       tagIncumbentsRef.current = frame.tagShown;
-      tagWideIncumbentsRef.current = frame.tagWide;
+      tagWideFormsRef.current = frame.tagWideForms;
       if (frame.countdownNumber !== null) setCountdown(frame.countdownNumber);
 
       // CAMERA-REPRO-1: hand the marker the values this frame was DRAWN with. Read back from the
