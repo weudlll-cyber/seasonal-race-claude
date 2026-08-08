@@ -69,9 +69,16 @@
 import { raceNumberLabel } from '../../../modules/raceNumbers.js';
 
 // ── THE CELL ────────────────────────────────────────────────────────────────────────────────────
-// NUMBER · PORTRAIT · ROW · NAME, left to right (START-BOARD-5). The first three are fixed columns
-// and the name takes what is left, so every name in a column starts at the same x — which is what
-// makes an alphabetical list scannable.
+// NUMBER · PORTRAIT · ROW · NAME · GUTTER, left to right. The first three are fixed columns, the
+// name takes what is left of the row, and the gutter is empty — so every name in a column starts at
+// the same x, which is what makes an alphabetical list scannable.
+//
+// WHAT SITS BETWEEN THE COLUMNS (START-BOARD-7): a thin vertical RULE, centred in the gutter, one
+// per boundary and none at the outer edges. With five columns side by side the owner could not
+// always tell where one entry ended and the next began — a clipped name ran visually into its
+// neighbour's number chip. The rule is not decoration; it is the edge that a clipped name no longer
+// provides for itself, and it is dim for exactly that reason. See COL_GUTTER, and `rules` on the
+// layout, which is where the geometry lives so a test can check it without a canvas.
 //
 // THE ROW MOVED IN FRONT OF THE NAME, and it is the owner's correction. It was right-aligned at the
 // cell's far edge, and with a short name there is a gap of empty pixels between the name and its
@@ -118,6 +125,15 @@ const NAME_PAD = 5;
 // the only column that can give them — the number and the portrait are the two things he has to
 // carry away from the board.
 const ROW_BOX = 30;
+// ── THE GUTTER BETWEEN COLUMNS (START-BOARD-7) ──────────────────────────────────────────────────
+// THE COLUMNS USED TO SIT FLUSH: the name ran to the cell's right edge, so a clipped name ended one
+// pixel from the next entry's number chip and the owner could not always tell where one entry
+// stopped and the next began. There was no gap to draw a boundary in, so this takes 10 px from the
+// NAME — the only column that can give it, and the same trade START-BOARD-6 made for the row marker.
+//
+// The rule is drawn in the MIDDLE of the gutter rather than on the cell edge, so the space either
+// side of it is equal and it reads as a boundary between two entries rather than as part of one.
+const COL_GUTTER = 10;
 
 // The block's shape. Rows are chosen first and columns follow: it is the row count that decides
 // whether a block reads as a list, and a rule that picks columns first turns a small field into a
@@ -287,11 +303,32 @@ export function startBoardLayout(count, canvasW, canvasH) {
     h: Math.min(canvasH, panelBottom) - Math.max(0, panelTop),
   };
 
+  // THE COLUMN RULES, as geometry rather than as drawing (START-BOARD-7). "There are n-1 of them,
+  // each inside the panel, none crossing a cell's contents" is arithmetic, and a test that had to
+  // rasterise a canvas to check it would be measuring the rasteriser — the same reason the layout is
+  // a pure function at all.
+  //
+  // NOT AT THE OUTER EDGES: the panel already ends there, and a rule on top of that edge would read
+  // as a frame around the board rather than as a separator between entries.
+  const gutterW = COL_GUTTER * scale;
+  const rules = [];
+  for (let c = 1; c < cols; c++) {
+    rules.push({
+      x: originX + c * cellW - gutterW / 2,
+      top: originY,
+      bottom: originY + blockH,
+    });
+  }
+
   return {
     cols,
     rows,
     cellW,
     cellH,
+    // How much of each cell's right end is EMPTY — the gutter the rule is drawn in. Exported so a
+    // test can assert that no rule falls inside a cell's contents without re-deriving the layout.
+    gutterW,
+    rules,
     scale,
     originX,
     originY,
@@ -343,6 +380,14 @@ export function drawStartBoard(
   ctx.fillRect(0, 0, canvasW, canvasH);
   ctx.fillStyle = `rgba(0,0,0,${PANEL_ALPHA})`;
   ctx.fillRect(L.panel.x, L.panel.y, L.panel.w, L.panel.h);
+
+  // 3. THE COLUMN RULES, drawn UNDER the entries because they are furniture. Dim on purpose: this is
+  //    a boundary, and anything bright enough to be noticed on its own would compete with the number
+  //    chip it sits beside. Its job is to be found by the eye that is already looking for the edge.
+  ctx.fillStyle = 'rgba(255,255,255,0.14)';
+  for (const rule of L.rules) {
+    ctx.fillRect(rule.x, rule.top, Math.max(1, L.scale), rule.bottom - rule.top);
+  }
 
   ctx.textBaseline = 'middle';
   ctx.textAlign = 'center';
@@ -438,7 +483,7 @@ export function drawStartBoard(
     //    The measurement happens AFTER the font is set, because that is what `measureText` answers
     //    about.
     const nameX = rowX + rowBox + namePad;
-    const nameW = L.cellW - numberBox - spriteBox - rowBox - namePad;
+    const nameW = L.cellW - numberBox - spriteBox - rowBox - namePad - L.gutterW;
     ctx.save();
     ctx.beginPath();
     ctx.rect(nameX, y, nameW, L.cellH);

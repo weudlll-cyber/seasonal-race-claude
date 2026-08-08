@@ -204,6 +204,94 @@ describe('THE BOARD IS READ OVER A MOVING TRACK (START-BOARD-4)', () => {
   });
 });
 
+describe('A VISIBLE EDGE BETWEEN COLUMNS (START-BOARD-7)', () => {
+  // WHAT BREAKS IF DELETED: the owner's report — with five columns side by side he could not always
+  // tell where one entry ended and the next began, because a clipped name ran into its neighbour's
+  // number chip.
+  // WHAT GOES UNNOTICED: a rule count that quietly follows the wrong thing. n columns need n-1
+  // boundaries; a loop written `<= cols` draws one on the outer edge, where the panel already ends,
+  // and the board grows a frame instead of separators.
+  it('there are exactly cols - 1 rules, and none at the outer edges', () => {
+    for (const n of [8, 20, 40, 100, 140]) {
+      const L = startBoardLayout(n, CW, CH);
+      expect(L.rules.length, `rules at n=${n}`).toBe(L.cols - 1);
+      for (const r of L.rules) {
+        expect(r.x, `rule inside the left edge at n=${n}`).toBeGreaterThan(L.originX);
+        expect(r.x, `rule inside the right edge at n=${n}`).toBeLessThan(L.originX + L.blockW);
+      }
+    }
+    // A single column has no boundary to draw at all.
+    expect(startBoardLayout(4, CW, CH).rules.length).toBe(0);
+  });
+
+  // WHAT BREAKS IF DELETED: the reason the gutter exists. A rule drawn where the columns are flush
+  // would sit ON a name's last characters, which is worse than the ambiguity it was meant to fix.
+  // WHAT GOES UNNOTICED: a later change that gives the gutter's pixels back to the name and leaves
+  // the rule where it was.
+  it('no rule crosses a cell’s contents, and each runs the height of the block', () => {
+    for (const n of [20, 40, 100]) {
+      const L = startBoardLayout(n, CW, CH);
+      expect(L.gutterW).toBeGreaterThan(0);
+      for (let i = 0; i < n; i++) {
+        const c = L.cellAt(i);
+        const contentRight = c.x + L.cellW - L.gutterW;
+        for (const r of L.rules) {
+          const insideContents = r.x > c.x && r.x < contentRight;
+          expect(insideContents, `rule at ${r.x} crosses cell ${i} at n=${n}`).toBe(false);
+        }
+      }
+      for (const r of L.rules) {
+        expect(r.top).toBe(L.originY);
+        expect(r.bottom).toBe(L.originY + L.blockH);
+      }
+    }
+  });
+
+  // WHAT BREAKS IF DELETED: "inside the panel". The rules run the block's height, and the panel is
+  // the block plus padding — so a rule outside it would mean the panel stopped covering the board.
+  it('every rule is inside the panel it is drawn on', () => {
+    for (const n of [8, 40, 100, 140]) {
+      const L = startBoardLayout(n, CW, CH);
+      for (const r of L.rules) {
+        expect(r.x).toBeGreaterThan(L.panel.x);
+        expect(r.x).toBeLessThan(L.panel.x + L.panel.w);
+        expect(r.top).toBeGreaterThan(L.panel.y);
+        expect(r.bottom).toBeLessThan(L.panel.y + L.panel.h);
+      }
+    }
+  });
+
+  // WHAT BREAKS IF DELETED: the drawing, as opposed to the arithmetic. Every test above passes with
+  // a layout that computes rules nobody paints.
+  // WHAT GOES UNNOTICED: the feature existing only in the geometry.
+  it('the rules are actually drawn — dim, and under the entries', () => {
+    const ctx = draw(100);
+    const L = startBoardLayout(100, CW, CH);
+    const drawn = ctx.rects.filter((r) => L.rules.some((q) => Math.abs(q.x - r.x) < 0.5));
+    expect(drawn.length).toBe(L.rules.length);
+    for (const r of drawn) {
+      expect(r.h).toBeCloseTo(L.blockH, 6);
+      // Dim enough to be furniture: fainter than the number chip it sits beside.
+      expect(alphaOf(r.style)).toBeLessThan(0.3);
+      expect(alphaOf(r.style)).toBeGreaterThan(0);
+    }
+    // UNDER the entries, which is what makes them furniture: every rect painted after the last rule
+    // is a number chip, so nothing about an entry was drawn before the boundary it sits beside.
+    const lastRuleIdx = Math.max(...drawn.map((r) => ctx.rects.indexOf(r)));
+    expect(ctx.rects.length - lastRuleIdx - 1, 'only the 100 chips come after').toBe(100);
+  });
+
+  // The spec was explicit, and it is worth a test rather than a promise.
+  it('there are no HORIZONTAL separators', () => {
+    const ctx = draw(40);
+    const L = startBoardLayout(40, CW, CH);
+    const wideShort = ctx.rects.filter(
+      (r) => r.w > L.cellW * 0.5 && r.h < L.cellH * 0.5 && r.w > r.h
+    );
+    expect(wideShort.length).toBe(0);
+  });
+});
+
 describe('A CUT NAME LOOKS CUT (START-BOARD-4)', () => {
   // WHAT BREAKS IF DELETED: finding C. The clip rect is still there and would still stop a name
   // bleeding into the next column — silently, mid-word, which is exactly what he saw.
