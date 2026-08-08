@@ -366,7 +366,7 @@ a verbatim transcript of one run on one commit, which is a historical record, no
 
 ### The tracking lag, as measured today — and it had drifted
 
-<!-- MEASURED: tracking-lag (median/p95 pp per state) @ 2fb41f18 2026-08-09 depends=client/src/modules/camera/ -->
+<!-- MEASURED: tracking-lag (median/p95 pp per state) @ 2df4e199 2026-08-09 depends=client/src/modules/camera/ -->
 
 **These figures carry a stamp, and fails if the camera
 changes after it.** They are hand-copied on purpose: the measurement takes about seven minutes, so
@@ -379,11 +379,11 @@ and it says so itself. It also covers nothing else on this page; see its header 
 
 | state         | frames | median pp | p95 pp |
 | ------------- | ------ | --------- | ------ |
-| BATTLE_ZOOM   | 9651   | 5.72      | 9.98   |
-| COMEBACK_ZOOM | 2103   | 8.33      | 15.58  |
-| LEADER_ZOOM   | 17514  | 3.92      | 8.66   |
-| LEAD_CHANGE   | 7066   | 4.45      | 7.17   |
-| OVERVIEW      | 4305   | 2.60      | 16.00  |
+| BATTLE_ZOOM   | 9652   | 5.72      | 9.98   |
+| COMEBACK_ZOOM | 2104   | 8.33      | 15.58  |
+| LEADER_ZOOM   | 17512  | 3.91      | 8.66   |
+| LEAD_CHANGE   | 7069   | 4.45      | 7.17   |
+| OVERVIEW      | 4308   | 2.60      | 16.00  |
 | PHOTO_FINISH  | 1865   | 6.37      | 20.73  |
 
 OVERVIEW median 2.60 pp against every other state pooled 4.78 pp (ratio 0.54×).
@@ -393,6 +393,16 @@ frame count fell from 5199 to 3603 and LEADER's median lag from 4.46 to 3.92 pp.
 tracking change: the start ceremony and the field guarantee that now carries past the gun changed
 what the camera is DOING in those early seconds, so the same 60 s of race divides differently between
 the states. The lag itself is, if anything, slightly better.
+
+**Re-measured for CEREMONY-TIME-1, and the re-measurement is the point.** The opening grew from
+5.2 s to 14.4 s at a small field, which touches `client/src/modules/camera/` and made this stamp
+stale. It was tempting to re-stamp deliberately on the argument that ceremony TIME cannot move
+mid-race tracking — and that argument was wrong. Every median but one is identical, but the frame
+counts moved by a handful (BATTLE 9651 → 9652, LEADER 17514 → 17512, LEAD_CHANGE 7066 → 7069,
+OVERVIEW 4305 → 4308) and LEADER's median moved 3.92 → 3.91 pp. Small, and real: a longer opening
+divides the same race differently between the states, exactly as CEREMONY-HANDOVER-1 found. **The
+lesson is the one the guard exists for — "this cannot have moved the numbers" is a hypothesis, and
+this one cost 84 seconds to refute.**
 
 **Re-measured for START-BOARD-2, and nothing moved that matters.** The ceremony's beats changed
 length (the board got its own duration and the countdown became their sum), so the camera

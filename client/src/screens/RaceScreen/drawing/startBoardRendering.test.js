@@ -193,8 +193,10 @@ describe('THE BOARD IS READ OVER A MOVING TRACK (START-BOARD-4)', () => {
       canvasW: CW,
       canvasH: CH,
     });
-    // The portrait is still drawn at the size START-BOARD-2 gave it (~30 px, well over the old 21).
-    expect(drawRacer.mock.calls[0][7] * 40).toBeGreaterThan(28);
+    // The portrait was NOT the donor. START-BOARD-5 later shrank it deliberately at the owner's
+    // word (~30.1 → ~26.3), so the floor here is what this test is about: the number's column may
+    // never take its room from the racer, and ~21 px is what "too small to recognise" looked like.
+    expect(drawRacer.mock.calls[0][7] * 40).toBeGreaterThan(24);
     // …and the name now begins further right, i.e. it is the name's room that was spent.
     const L = startBoardLayout(40, CW, CH);
     const nameCall = ctx.textCalls.find((c) => c.t === 'Racer 000');
@@ -343,8 +345,22 @@ describe('ONE ALPHABETICAL LIST, and the row rides along (START-BOARD-3)', () =>
 
   // WHAT BREAKS IF DELETED: requirement 2(b) — the marker must not be confused with the number.
   // WHAT GOES UNNOTICED: two numbers on one line, and a viewer carrying the wrong one to the race.
-  it('the row marker is at the OPPOSITE end of the line from the number, and is prefixed', () => {
-    const ctx = draw(40);
+  // START-BOARD-5 moved the marker from the cell's right edge to immediately before the name — the
+  // owner could not tell which name a far-right marker belonged to. What must NOT change is that it
+  // is never mistaken for the race number, so the assertion is about the PORTRAIT standing between
+  // them rather than about the cell's edges.
+  it('the row marker sits behind the portrait and before the name, and is prefixed', () => {
+    const drawRacer = vi.fn();
+    const ctx = makeRecordingCtx();
+    drawStartBoard(ctx, {
+      racers: field(40),
+      racerType: { drawRacer },
+      displaySize: 40,
+      assignmentByRacer: rows(40),
+      alpha: 1,
+      canvasW: CW,
+      canvasH: CH,
+    });
     const L = startBoardLayout(40, CW, CH);
     const entries = startBoardEntries(field(40));
     const { x, y } = L.cellAt(0);
@@ -353,9 +369,17 @@ describe('ONE ALPHABETICAL LIST, and the row rides along (START-BOARD-3)', () =>
       (c) => c.t === raceNumberLabel(entries[0].raceNumber) && Math.abs(c.y - midY) < 0.5
     );
     const rowCall = ctx.textCalls.find((c) => /^R\d+$/.test(c.t) && Math.abs(c.y - midY) < 0.5);
-    expect(numCall.x).toBeLessThan(x + L.cellW * 0.3); // the number is at the left
-    expect(rowCall.x).toBeGreaterThan(x + L.cellW * 0.8); // the marker is at the right
+    const nameCall = ctx.textCalls.find((c) => c.t === entries[0].name);
+    const spriteX = drawRacer.mock.calls[0][1];
+    expect(numCall.x).toBeLessThan(spriteX); // the number is still first…
+    expect(rowCall.x).toBeGreaterThan(spriteX); // …the PORTRAIT stands between it and the marker…
+    expect(rowCall.x).toBeLessThan(nameCall.x); // …and the marker leads its own name
     expect(rowCall.t.startsWith('R')).toBe(true); // …and it is not a bare digit
+    // The marker is left-aligned in its own column, so the NAME starts at the same x on every line.
+    const xs = new Set(
+      entries.map((e) => ctx.textCalls.find((c) => c.t === e.name)?.x).map((v) => Math.round(v))
+    );
+    expect(xs.size, 'every name in the block starts at one of the column origins').toBe(L.cols);
   });
 
   it('no start-row assignment means no marker, rather than a wrong one', () => {
@@ -501,7 +525,10 @@ describe('the portrait is the shipped drawing function, in its neutral pose', ()
     }
   });
 
-  it('the portrait is drawn LARGER than the ~21 px the first version used', () => {
+  // START-BOARD-5 brought it DOWN from ~30.1 px to ~26.3 px at the owner's word. The floor here is
+  // what the assertion is really about: it must stay clearly above the ~21 px of the first board,
+  // because the colours and pattern are the whole reason a portrait is shown at all.
+  it('the portrait is smaller than it was, and still clearly larger than the first version', () => {
     const drawRacer = vi.fn();
     drawStartBoard(makeRecordingCtx(), {
       racers: field(4),
@@ -512,10 +539,12 @@ describe('the portrait is the shipped drawing function, in its neutral pose', ()
       canvasW: CW,
       canvasH: CH,
     });
-    expect(drawRacer.mock.calls[0][7] * 40).toBeGreaterThan(25);
+    const px = drawRacer.mock.calls[0][7] * 40;
+    expect(px).toBeGreaterThan(24); // still well above the first board's ~21
+    expect(px).toBeLessThan(29); // …and smaller than START-BOARD-4's ~30.1
   });
 
-  it('nothing is drawn between the sprite and the name', () => {
+  it('the ROW marker is the only thing between the sprite and the name', () => {
     const drawRacer = vi.fn();
     const ctx = makeRecordingCtx();
     const racers = field(1);
@@ -531,8 +560,14 @@ describe('the portrait is the shipped drawing function, in its neutral pose', ()
     const spriteX = drawRacer.mock.calls[0][1];
     const nameCall = ctx.textCalls.find((c) => c.t === racers[0].name);
     const numCall = ctx.textCalls.find((c) => c.t === '1');
+    const rowCall = ctx.textCalls.find((c) => /^R\d+$/.test(c.t));
     expect(numCall.x).toBeLessThan(spriteX);
-    expect(spriteX).toBeLessThan(nameCall.x);
+    expect(spriteX).toBeLessThan(rowCall.x);
+    expect(rowCall.x).toBeLessThan(nameCall.x);
+    // …and there is nothing ELSE between them: the four texts on the line are number, row, name,
+    // and nothing further.
+    const online = ctx.textCalls.filter((c) => Math.abs(c.y - nameCall.y) < 0.5).map((c) => c.t);
+    expect(online.sort()).toEqual(['1', 'R1', racers[0].name].sort());
   });
 
   it('survives a racer type that cannot draw yet, rather than taking the frame down', () => {

@@ -16,9 +16,9 @@
 //   thing you came to the board to learn.
 //
 //   THE ROW SURVIVES AS A MARKER PER ENTRY. What the grouping was FOR — telling a viewer where
-//   their racer starts — is now a small `R7` at the right end of the line, so name, number and row
-//   are read in one line. It is deliberately UNLIKE the number: smaller, dimmer, prefixed, and at
-//   the opposite end of the cell. See §THE ROW MARKER below.
+//   their racer starts — is a small `R7` on the line itself, so name, number and row are read
+//   together. START-BOARD-5 moved it from the cell's right edge to immediately BEFORE the name; see
+//   §THE CELL for why, and for what keeps it from being read as a second race number.
 //
 //   THE NUMBER READS AS A NUMBER. His report was that the board had no numbers at all. It did — the
 //   diagnosis is in reports/night/START-BOARD-3.md and the draw was never missing — but at 12 px in
@@ -69,8 +69,19 @@
 import { raceNumberLabel } from '../../../modules/raceNumbers.js';
 
 // ── THE CELL ────────────────────────────────────────────────────────────────────────────────────
-// NUMBER · SPRITE · NAME · ROW, left to right. The number and the sprite are fixed columns; the name
-// takes what is left; the row marker is right-aligned inside the cell's own right edge.
+// NUMBER · PORTRAIT · ROW · NAME, left to right (START-BOARD-5). The first three are fixed columns
+// and the name takes what is left, so every name in a column starts at the same x — which is what
+// makes an alphabetical list scannable.
+//
+// THE ROW MOVED IN FRONT OF THE NAME, and it is the owner's correction. It was right-aligned at the
+// cell's far edge, and with a short name there is a gap of empty pixels between the name and its
+// marker — he could not tell which name the marker belonged to. Immediately before the name, there
+// is nothing to mistake.
+//
+// IT MUST NOT COME TO SIT BESIDE THE RACE NUMBER: two numbers side by side is the confusion
+// START-BOARD-4's badge was built to remove. It stays BEHIND the portrait, which is what keeps them
+// apart, and it keeps every other separation it had — smaller than the name, dimmer than white, and
+// an `R` prefix.
 //
 // CELL_W IS BACK TO 236 (START-BOARD-3). START-BOARD-2 narrowed it to 200 for one reason: grouping
 // cost a heading slot per start row, so a hundred racers needed 110 slots and 236 px could only fit
@@ -89,9 +100,18 @@ const CELL_H = 30;
 // the two things a viewer must carry away, and shrinking one to enlarge the other trades a defect
 // for a defect.
 const NUMBER_BOX = 46;
-const SPRITE_BOX = 32; // the portrait, immediately left of the name
+// THE PORTRAIT'S COLUMN, 32 → 28 in START-BOARD-5 at the owner's word that it "may be a little
+// smaller". The drawn portrait is 94 % of it, so it goes from ~30.1 px to ~26.3 px — down an eighth,
+// still well above the ~21 px the first board used, and the colours and pattern are what has to stay
+// readable because they are the whole reason a portrait is on the board at all.
+//
+// THE COLUMN SHRANK, NOT ONLY THE DRAWING. Lowering the 94 % alone would have made the racer smaller
+// and left the freed pixels as padding; the name is what needs them.
+const SPRITE_BOX = 28;
+const PORTRAIT_FRAC = 0.94; // how much of its column the portrait actually fills
 const NAME_PAD = 5;
-// The row marker's column at the cell's right end. Small — `R12` at 10 px is about 20 px.
+// The row marker's column, now between the portrait and the name. Small — `R12` at 10 px is about
+// 20 px, and the marker is left-aligned in it so the NAME always starts at the same x.
 const ROW_BOX = 26;
 
 // The block's shape. Rows are chosen first and columns follow: it is the row count that decides
@@ -337,7 +357,7 @@ export function drawStartBoard(
   // make its case with. 16 px bold, white, on a chip with real opacity.
   const numFont = Math.round(16 * L.scale);
   const rowFont = Math.round(10 * L.scale);
-  const portraitPx = spriteBox * 0.94;
+  const portraitPx = spriteBox * PORTRAIT_FRAC;
   const spriteScale = displaySize > 0 ? portraitPx / displaySize : 1;
 
   for (let i = 0; i < entries.length; i++) {
@@ -381,12 +401,31 @@ export function drawStartBoard(
       ctx.restore();
     }
 
-    // 3. THE NAME, immediately after the portrait with NOTHING between them, ELLIPSISED when it does
-    //    not fit and still CLIPPED as a backstop. The clip alone was silent — a name ended mid-word
-    //    at the rect and the frame said nothing had been removed. The measurement happens AFTER the
-    //    font is set, because that is what `measureText` answers about.
-    const nameX = x + numberBox + spriteBox + namePad;
-    const nameW = L.cellW - numberBox - spriteBox - namePad - rowBox;
+    // 3. THE ROW MARKER, immediately before the name it belongs to (START-BOARD-5).
+    //
+    //    LEFT-ALIGNED IN ITS OWN COLUMN rather than butted against the name, so the NAME always
+    //    starts at the same x whether the marker reads `R1` or `R12`. A name column that jiggled by
+    //    a character's width would undo what the alphabetical list is for.
+    //
+    //    IT IS STILL UNLIKE THE NUMBER, and three of the four separations survive the move: SMALLER
+    //    (10 px against 16), DIM GREY with no chip against the number's white on deep blue, and an
+    //    `R` PREFIX. The fourth was position, and the portrait now does that job — the marker never
+    //    comes to sit beside the race number, which is the confusion the badge removed.
+    const row = startRowOf(r, assignmentByRacer);
+    const rowX = x + numberBox + spriteBox;
+    if (row != null) {
+      ctx.textAlign = 'left';
+      ctx.font = `${rowFont}px sans-serif`;
+      ctx.fillStyle = 'rgba(255,255,255,0.42)';
+      ctx.fillText(`R${row}`, rowX, midY);
+    }
+
+    // 4. THE NAME, ELLIPSISED when it does not fit and still CLIPPED as a backstop. The clip alone
+    //    was silent — a name ended mid-word at the rect and the frame said nothing had been removed.
+    //    The measurement happens AFTER the font is set, because that is what `measureText` answers
+    //    about.
+    const nameX = rowX + rowBox + namePad;
+    const nameW = L.cellW - numberBox - spriteBox - rowBox - namePad;
     ctx.save();
     ctx.beginPath();
     ctx.rect(nameX, y, nameW, L.cellH);
@@ -397,21 +436,6 @@ export function drawStartBoard(
     ctx.fillStyle = named ? '#ffffff' : 'rgba(255,255,255,0.45)';
     ctx.fillText(fitTextToWidth(ctx, named ? String(r.name) : NO_NAME_LABEL, nameW), nameX, midY);
     ctx.restore();
-
-    // 4. THE ROW MARKER — what the grouping was for, per entry.
-    //
-    //    IT MUST NOT BE MISTAKEN FOR THE NUMBER, and four things separate them rather than one: it
-    //    is at the OPPOSITE END of the cell, it is SMALLER (10 px against 16, a gap START-BOARD-4
-    //    widened), it is DIM GREY with no chip against the number's white on deep blue, and it
-    //    carries an `R` PREFIX. Any one alone would be a weak distinction at a glance across a
-    //    hundred entries; together they are not.
-    const row = startRowOf(r, assignmentByRacer);
-    if (row != null) {
-      ctx.textAlign = 'right';
-      ctx.font = `${rowFont}px sans-serif`;
-      ctx.fillStyle = 'rgba(255,255,255,0.42)';
-      ctx.fillText(`R${row}`, x + L.cellW - 4 * L.scale, midY);
-    }
   }
 
   ctx.restore();
