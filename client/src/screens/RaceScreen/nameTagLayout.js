@@ -49,8 +49,14 @@
 //              THE TEST RUNS EVERY FRAME, INCLUDING WHILE THE NUMBER IS SHOWN. `wideClear` is the
 //              criterion's raw answer for every eligible label, not only for the ones currently
 //              showing a name — judging only what is drawn would trap a label on the number forever,
-//              because the narrow number is almost always clear. The hold governs the SWITCH, never
-//              the TEST.
+//              because the narrow number is almost always clear.
+//
+//              THE HOLD GOVERNS PROMOTION ONLY (LABEL-OCCLUSION-2). A name is EARNED by two seconds
+//              of clear geometry and GIVEN UP the instant it stops being clear: this module refuses
+//              to draw a name that is not clear in the frame being drawn, whatever the hold says. A
+//              symmetric hold kept a name over a racer for up to a full window after that racer
+//              arrived underneath — 592 and 1006 drawn overlaps per race — which is the defect the
+//              feature exists to remove. See the placement pass.
 //
 //              WHAT THIS STAGE DELIBERATELY DOES NOT DO — named so nobody has to guess whether they
 //              were forgotten:
@@ -200,17 +206,17 @@ export function tagFontScreenPx(frameFrac, canvasH) {
  * @param {number} [p.labelMarginPx=0]  breathing space above the racer's top edge, in screen px
  * @param {(name:string)=>number} p.measureText  text width in screen px at that font size
  * @param {Set<number>|null} [p.incumbents]  racer indices labelled last frame (stability)
- * @param {Set<number>|null} [p.wideForms]  LABEL-OCCLUSION-1: racer indices whose CURRENT form is the
- *        name, as decided by `labelFormHold`. The layout does not decide the form — it reports
- *        whether the name WOULD be clear (`wideClear`) and draws the form it is told.
+ * @param {Set<number>|null} [p.wideForms]  racer indices ENTITLED to their name, as decided by
+ *        `labelFormHold` from earlier frames. It is a necessary condition, not a sufficient one:
+ *        LABEL-OCCLUSION-2 draws the name only if it is ALSO clear in this frame.
  * @param {number} [p.edgeMarginFrac=0]  canvas-edge hysteresis band, as a fraction of frame height
  * @param {number} [p.yieldOverlapFrac=0]  how much of its own box an incumbent tolerates before yielding
  * @param {boolean} [p.showAll=false]  the START-FORMATION exception: label everyone, no decluttering
  * @param {(r:object)=>string} [p.labelOf]  the string actually drawn (row suffixes etc.)
  * @returns {{ shown: Set<number>, wide: Set<number>, wideClear: Set<number>, eligible: number,
  *   placed: number, dropped: number }}  `shown` is who carries a label, `wide` is who is DRAWN with
- *   the name this frame, `wideClear` is who COULD be — the criterion's raw answer, which is what the
- *   hold consumes. All hold racer.index values.
+ *   the name this frame — entitled AND clear — and `wideClear` is who COULD be, the criterion's raw
+ *   answer, which is what the hold consumes. All hold racer.index values.
  */
 export function computeTagLayout({
   racers,
@@ -418,20 +424,34 @@ export function computeTagLayout({
       if (clear) wideClear.add(e.index);
     }
 
-    // ── THE FORM IS THE HOLD'S DECISION, NOT THIS MODULE'S ─────────────────────────────────────
-    // `wideForms` is what `labelFormHold` settled on from earlier frames' `wideClear`. The layout
-    // draws what it is told and reports what it saw.
-    const wantsWide = e.wide != null && (wideForms ? wideForms.has(e.index) : false);
-    if (wantsWide && fits(e.wide, incumbent)) {
+    // ── A NAME IS NEVER DRAWN UNLESS IT IS CLEAR IN THIS FRAME (LABEL-OCCLUSION-2) ─────────────
+    //
+    // TWO CONDITIONS, AND THEY GOVERN OPPOSITE DIRECTIONS. `wideForms` is what `labelFormHold`
+    // settled from earlier frames — it says the name has been EARNED, and earning takes two seconds
+    // of clear geometry. `nameClear` is this frame's geometry — it says the name is STILL clear, and
+    // it is checked with no window at all.
+    //
+    // WHY THE HOLD MAY NOT GOVERN THE WITHDRAWAL. A symmetric hold keeps a name over a racer for up
+    // to a full window after that racer arrives underneath, which is the defect the whole feature
+    // exists to remove — measured at 592 and 1006 drawn overlaps per race in LABEL-OCCLUSION-1. A
+    // name is earned slowly and given up instantly.
+    //
+    // `fits` IS NOT CONSULTED FOR THE WIDE BOX, and that is not an omission. `nameClear` is strictly
+    // stronger: it tests the same box against `claimed`, which contains every placed box at least as
+    // large as the one `placed` holds, with ZERO tolerance where `fits` has an incumbent's budget.
+    // A name that passes the criterion cannot fail the placement.
+    const wantsWide = nameClear && (wideForms ? wideForms.has(e.index) : false);
+    if (wantsWide) {
       placed.push(e.wide);
       claimed.push(e.wide);
       shown.add(e.index);
       wide.add(e.index);
       continue;
     }
-    // A HELD NAME THAT CANNOT BE PLACED FALLS BACK TO THE NUMBER RATHER THAN TO NOTHING. It only
-    // arises while the hold is keeping a name whose box has since been intruded on; losing the label
-    // altogether would be a worse answer than the form the label is about to switch to anyway.
+    // AN EARNED NAME THAT IS NOT CLEAR THIS FRAME FALLS BACK TO THE NUMBER RATHER THAN TO NOTHING.
+    // Losing the label altogether would be a worse answer than showing the form that still fits, and
+    // the racer would go anonymous for exactly as long as it is crowded — which is when a viewer
+    // most wants to know who it is.
     if (!fits(e, incumbent)) continue;
     placed.push(e);
     claimed.push(nameClear ? e.wide : e);

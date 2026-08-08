@@ -276,10 +276,10 @@ describe('THE TWO TOGETHER — the layout draws the form the hold settled on', (
     expect(layout(racers, { wideForms: forms }).wide.has(0)).toBe(true);
   });
 
-  it('a held name that can no longer be placed shows the number rather than nothing', () => {
+  it('an entitled name that can no longer be placed shows the number rather than nothing', () => {
     // 40 px apart: the two NUMBERS (16 px boxes) clear each other easily, the two NAMES (64 px) do
-    // not. The hold still says WIDE for both, but the pixels are gone for the second one — and it
-    // must keep a label rather than lose one.
+    // not. Both are entitled, but the pixels are gone for the second one — and it must keep a label
+    // rather than lose one, because a crowded racer is when a viewer most wants to know who it is.
     const racers = at([
       [600, 360],
       [640, 360],
@@ -288,6 +288,46 @@ describe('THE TWO TOGETHER — the layout draws the form the hold settled on', (
     expect(out.wide.has(0)).toBe(true);
     expect(out.wide.has(1)).toBe(false);
     expect(out.shown.has(1)).toBe(true); // …and it did not lose its label
+  });
+
+  // WHAT BREAKS IF DELETED: LABEL-OCCLUSION-2 entirely. Nothing else in this file distinguishes
+  // "entitled" from "drawn", so the symmetric behaviour would come back silently and the only thing
+  // that would notice is the harness — after the fact, on a branch nobody re-measures.
+  // WHAT GOES UNNOTICED: a name sitting on a racer for up to two seconds after that racer arrives
+  // underneath it. That is the defect the whole feature exists to remove, and it looks like the
+  // feature working.
+  it('a name that was clear when granted and is covered a frame later is NOT drawn', () => {
+    // Frame 1: racer 0 alone, its name clear. It earns the entitlement.
+    const alone = at([[400, 400]]);
+    const state = createLabelFormHold();
+    let forms = null;
+    for (const ts of [0, LABEL_FORM_HOLD_MS]) {
+      const out = layout(alone, { wideForms: forms });
+      forms = advanceLabelForms(state, {
+        shown: out.shown,
+        clear: out.wideClear,
+        nowMs: ts,
+        holdMs: LABEL_FORM_HOLD_MS,
+      });
+    }
+    expect(forms.has(0), 'entitled after the window').toBe(true);
+    expect(layout(alone, { wideForms: forms }).wide.has(0)).toBe(true);
+
+    // Frame 2, ONE frame later: a racer arrives inside racer 0's name box. The entitlement has not
+    // expired and cannot have — a window is 2000 ms and this is 16 ms.
+    const covered = at([
+      [400, 400],
+      [400, 375],
+    ]);
+    const out = layout(covered, { wideForms: forms });
+    expect(out.wideClear.has(0), 'the criterion says it is covered').toBe(false);
+    expect(out.wide.has(0), 'and it is NOT drawn as a name').toBe(false);
+    expect(out.shown.has(0), 'but it keeps its label, as a number').toBe(true);
+
+    // …and the entitlement itself is still standing, so the name returns the moment it is clear
+    // again — without paying the two seconds over.
+    expect(forms.has(0)).toBe(true);
+    expect(layout(alone, { wideForms: forms }).wide.has(0)).toBe(true);
   });
 });
 

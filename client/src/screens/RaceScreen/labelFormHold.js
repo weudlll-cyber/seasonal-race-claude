@@ -1,25 +1,40 @@
 // ============================================================
 // File:        labelFormHold.js
 // Path:        client/src/screens/RaceScreen/labelFormHold.js
-// Project:     RaceArena — LABEL-OCCLUSION-1
+// Project:     RaceArena — LABEL-OCCLUSION-1, narrowed by -2
 //
-// WHICH FORM each label is CURRENTLY in — the name or the number — and when it is allowed to change.
+// WHETHER EACH LABEL HAS EARNED ITS NAME — and nothing else. This module used to decide the form
+// outright; LABEL-OCCLUSION-2 took half of that away from it, and the half that is left is the half
+// that needs a clock.
+//
+// ── WHAT THIS MODULE GOVERNS, AND WHAT IT NO LONGER DOES ───────────────────────────────────────
+//   IT GOVERNS PROMOTION.   A name is EARNED by `holdMs` of continuously clear geometry. That is a
+//                           question about time, so it needs memory and a clock, and it lives here.
+//   IT DOES NOT GOVERN THE  A name is GIVEN UP the instant it stops being clear. `nameTagLayout`
+//   WITHDRAWAL.             refuses to DRAW a name that is not clear in the frame being drawn,
+//                           whatever this module says. That is a question about the current frame
+//                           only, so it needs neither memory nor a clock and belongs there.
+//
+// WHY THE SPLIT, and it is the reason LABEL-OCCLUSION-2 exists. A hold that governed BOTH directions
+// kept a name over a racer for up to a full window after that racer arrived underneath — measured at
+// 592 and 1006 drawn overlaps per race on searound and river-run. That is the exact defect the
+// feature was built to remove, so the symmetric form could not be the shipped one. Earn slowly, yield
+// instantly.
+//
+// A CONSEQUENCE WORTH STATING: this module's `wide` set is now an entitlement, not a picture. A label
+// can be entitled to its name and be drawn with its number in the same frame. Anything reading it as
+// "what is on screen" is reading the wrong set — `computeTagLayout` returns that as `wide`.
 //
 // ── WHY THIS IS NOT IN nameTagLayout.js ─────────────────────────────────────────────────────────
 // That module's contract is "pure: no canvas, no state, no clock", and it is worth more than the
-// convenience of putting everything in one file. A hold window is a clock and a memory, both. So the
-// layout answers one question per frame — WOULD the name be clear here — and this module owns the
-// only thing that has to remember: which form each label is showing, and how long the opposite
-// condition has been true.
+// convenience of putting everything in one file. A hold window is a clock and a memory, both.
 //
-// ── THE SUBTLE PART, and the block turns on it ──────────────────────────────────────────────────
+// ── THE SUBTLE PART, and the feature turns on it ───────────────────────────────────────────────
 // The name's box is tested EVERY frame, including while the number is being shown. Judging only what
 // is currently DRAWN would trap a label on the number for the rest of the race: the number is narrow,
 // so it is almost always clear, and a label that only asks "is what I am showing still fine?" never
-// discovers that its name would fit again.
-//
-// THE HOLD GOVERNS THE SWITCH, NEVER THE TEST. `clear` arrives fresh from the layout each frame; all
-// this module does is refuse to act on it until it has been true (or false) continuously.
+// discovers that its name would fit again. `clear` arrives fresh from the layout each frame; all this
+// module does is refuse to act on it until it has been true continuously.
 //
 // ── EVERY LABEL STARTS ON THE NUMBER ────────────────────────────────────────────────────────────
 // It is the form the owner's design assumes, and starting on the safe one means the ceremony's
@@ -28,13 +43,11 @@
 // (The measurement counts that as churn rather than as a form switch, which is the same convention
 // LABEL-DEGRADE-1 used: a label that vanishes and returns in the other form has not flickered.)
 //
-// ── ASYMMETRY IS AVAILABLE AND IS NOT THE DEFAULT ───────────────────────────────────────────────
-// `demoteHoldMs` defaults to `holdMs`, which is the owner's rule as written: a form is kept until the
-// opposite condition has held. It is a separate parameter because a *symmetric* hold necessarily
-// draws a name over a racer for up to one window after the racer arrives underneath — see
-// reports/night/LABEL-OCCLUSION-1.md, where both arms are measured. Setting it to 0 makes the demote
-// immediate and that overlap exactly zero, at a cost in switches. The choice is the owner's; the
-// parameter exists so the number for both is on the table rather than argued about.
+// ── `demoteHoldMs` IS STILL HERE, AND IS NOT THE SHIPPED BEHAVIOUR ─────────────────────────────
+// It defaults to `holdMs` and it decides how long an entitlement survives a spell of covered
+// geometry — NOT how long a name stays on screen, which the layout now settles alone. It is kept
+// because the two arms it makes measurable are how LABEL-OCCLUSION-1 priced this decision, and the
+// same arms are what LABEL-OCCLUSION-2 measured to prove the withdrawal costs what it costs.
 //
 // Pure: the clock comes in as `nowMs`, so a test can step time without waiting for it.
 // ============================================================
@@ -77,8 +90,9 @@ export function createLabelFormHold() {
  * @param {Set<number>} p.clear   racer indices whose NAME box is clear this frame (the criterion)
  * @param {number} p.nowMs        the frame's timestamp
  * @param {number} p.holdMs       how long the opposite condition must hold before a switch
- * @param {number} [p.demoteHoldMs=holdMs]  the same, for name -> number specifically
- * @returns {Set<number>} racer indices whose CURRENT form is the name
+ * @param {number} [p.demoteHoldMs=holdMs]  the same, for losing the entitlement specifically
+ * @returns {Set<number>} racer indices ENTITLED to their name — not the ones drawn with it, which is
+ *   `computeTagLayout`'s `wide`. A label can be entitled and still be drawn as a number this frame.
  */
 export function advanceLabelForms(state, { shown, clear, nowMs, holdMs, demoteHoldMs }) {
   const wide = new Set();
