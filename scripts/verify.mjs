@@ -34,7 +34,7 @@ import { readFileSync } from "node:fs";
 import { join, dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { cpus } from "node:os";
-import { engineReach } from "./engine-reach.mjs";
+import { engineReach, splitInert } from "./engine-reach.mjs";
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), "..");
 
@@ -157,15 +157,45 @@ export function selectedBy(guard, files, reach) {
   return files.filter((f) => rule.match(f, reach ?? new Set()));
 }
 
-/** The plan: every guard, whether it runs, and WHY — including the ones that do not. */
-export function plan(files) {
+/**
+ * The plan: every guard, whether it runs, and WHY — including the ones that do not.
+ *
+ * @param {string[]} files  the changed paths
+ * @param {string} [base]   the ref the diff is against; used to ask whether a hull change is INERT
+ * @param {(paths: string[], base: string) => {hit: string[], inert: {path,reason}[]}} [splitter]
+ *   the seam the ROUTING tests use. They pass synthetic paths that are byte-identical to the base,
+ *   which the real splitter correctly calls inert — so without a stub they would be asserting the
+ *   inert rule while claiming to assert hull membership. The inert rule has its own tests, on real
+ *   content, in `inertChange.test.mjs` and in the two both-direction cases in verify.test.mjs.
+ */
+export function plan(files, base = BASE, splitter = splitInert) {
   const reach = new Set(engineReach().files);
+  // VERIFY-COST-2: a hull file whose edit is comments and whitespace only cannot change what the
+  // engine computes, so it does not select the 229 s world fingerprint. The decision is mechanical
+  // (identical token stream + identical line breaks between tokens, from a real tokenizer) and
+  // every uncertainty resolves to "it counts" — see scripts/lib/inertChange.mjs. It is REPORTED
+  // below, never silent: a skip nobody can see is the failure this whole file is written against.
+  const hullHits = files.filter((f) => reach.has(f));
+  const { inert } = hullHits.length ? splitter(hullHits, base) : { hit: [], inert: [] };
+  const inertSet = new Set(inert.map((i) => i.path));
   const hits = Object.fromEntries(
-    ROUTES.map((r) => [r.guard, files.filter((f) => r.match(f, reach))]),
+    ROUTES.map((r) => [
+      r.guard,
+      files.filter((f) =>
+        r.guard === "world-fingerprint"
+          ? reach.has(f) && !inertSet.has(f)
+          : r.match(f, reach),
+      ),
+    ]),
   );
   const why = (guard) => {
     const h = hits[guard];
     const rule = ROUTES.find((r) => r.guard === guard);
+    if (guard === "world-fingerprint" && !h.length && inert.length)
+      return (
+        `nothing matched — ${inert.length} hull file(s) changed but are INERT ` +
+        `(${inert.map((i) => i.path).join(", ")}): comments and whitespace only, identical tokens`
+      );
     if (h.length)
       return `${h.length} file(s) matched (${h.slice(0, 2).join(", ")}${h.length > 2 ? ", …" : ""})`;
     // The skip reason NAMES THE RULE, so what the map believes is visible without reading the code.

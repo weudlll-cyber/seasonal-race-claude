@@ -62,6 +62,7 @@ process.on("exit", () => {
 `);
 });
 import { execFile } from "child_process";
+import { isCheap, cheapTracks, cheapBanner, cheapHash, refuseCheapQuiet } from "./lib/cheapMode.mjs";
 import { readFileSync } from "fs";
 import { createHash } from "crypto";
 import { join, dirname } from "path";
@@ -72,7 +73,7 @@ const ROOT = join(dirname(fileURLToPath(import.meta.url)), "..");
 // Scratch off the (OneDrive-synced) repo tree by default; env-overridable. Matches sim-fairness.mjs.
 const SCRATCH =
   process.env.RA_SCRATCH_DIR || join(tmpdir(), "racearena-scratch");
-const LABEL = process.argv[2] || "run";
+const LABEL = (process.argv[2] && process.argv[2] !== "--cheap" ? process.argv[2] : "run");
 
 // A FLAG IN THE LABEL POSITION IS ALWAYS A MISTAKE, and it used to be a SILENT one (ONE-TRUTH-2).
 // `argv[2]` is the label and EXTRA starts at `argv[3]`, so
@@ -82,7 +83,13 @@ const LABEL = process.argv[2] || "run";
 // cost this block a wrong `reproduce` command in the fingerprint record, written on the strength of
 // that output. Nobody wants a temp directory named `--gapRerollEnabled=false`, so refusing loses no
 // legitimate use.
-if (process.argv[2]?.startsWith("--")) {
+// VERIFY-COST-2: --cheap is the ONE flag allowed in the label position, because it is not a sim
+// flag and never reaches the sim — it reduces the TRACK SET. It is stripped before the guard
+// below and before EXTRA, so it cannot be swallowed as a label the way --gapRerollEnabled once was.
+refuseCheapQuiet();
+const CHEAP = isCheap();
+const ARGV = process.argv.filter((a) => a !== "--cheap" && !a.startsWith("--cheap-track="));
+if (ARGV[2]?.startsWith("--")) {
   console.error(
     `FAIL: "${process.argv[2]}" looks like a flag, but it is in the LABEL position.\n` +
       "       argv[2] is a label (it only names the temp output dir); sim flags start at argv[3].\n" +
@@ -94,7 +101,7 @@ if (process.argv[2]?.startsWith("--")) {
 // Any further argv entries are passed straight through to the sim. Needed since a mechanism can now
 // ship ON by default: `node scripts/fingerprint-default.mjs off --gapRerollEnabled=false` measures the
 // pre-feature world. With no extra args this is exactly the shipped-default fingerprint, as before.
-const EXTRA = process.argv.slice(3).filter((a) => a.startsWith("--"));
+const EXTRA = ARGV.slice(3).filter((a) => a.startsWith("--"));
 const SEED = 1,
   RACES = 3;
 // 10 standard tracks × default racer (fixed order — never reorder; it feeds the combined hash).
@@ -135,7 +142,10 @@ if (EXTRA.length) console.log("extra sim args:", EXTRA.join(" "));
 //
 // The cap is the machine's cores, because these are CPU-bound simulations: oversubscribing turns
 // ten fast runs into ten slow ones and would have made the change look worthless.
-const JOBS = Math.max(1, Math.min(TRACKS.length, cpus().length));
+const RUN_TRACKS = CHEAP ? cheapTracks(TRACKS, (t) => t[0]) : TRACKS;
+if (CHEAP)
+  console.log(cheapBanner("world", `One track (${RUN_TRACKS[0][0]}) of ${TRACKS.length}.`));
+const JOBS = Math.max(1, Math.min(RUN_TRACKS.length, cpus().length));
 const runOne = ([track, racer]) => {
   const out = join(SCRATCH, "fp", `${LABEL}__${track}`);
   return new Promise((resolve, reject) => {
@@ -159,7 +169,7 @@ const runOne = ([track, racer]) => {
 };
 
 // A simple worker pool: `JOBS` in flight, next track picked up as a slot frees.
-const queue = [...TRACKS];
+const queue = [...RUN_TRACKS];
 const outputs = new Map();
 await Promise.all(
   Array.from({ length: JOBS }, async () => {
@@ -173,7 +183,7 @@ await Promise.all(
 
 const combined = createHash("sha256");
 const perTrack = [];
-for (const [track] of TRACKS) {
+for (const [track] of RUN_TRACKS) {
   const out = outputs.get(track);
   const d = JSON.parse(readFileSync(join(out, "fairness-data.json"), "utf8"));
   const rows = [...d.rawData].sort(
@@ -192,11 +202,14 @@ for (const [track] of TRACKS) {
     bias,
   });
 }
-const combinedHash = combined.digest("hex").slice(0, 16);
+// Prefixed under --cheap so a one-track hash cannot impersonate the fingerprint.
+const combinedHash = CHEAP ? cheapHash(combined.digest("hex")) : combined.digest("hex").slice(0, 16);
 console.log(
   "COMBINED",
   combinedHash,
-  `(seed=${SEED} races=${RACES} track-defaults, ${TRACKS.length} tracks, default config)`,
+  `(seed=${SEED} races=${RACES} track-defaults, ${RUN_TRACKS.length} tracks, default config)`,
 );
 for (const t of perTrack)
   console.log(" ", t.track.padEnd(15), t.hash, "bias", JSON.stringify(t.bias));
+if (CHEAP)
+  console.log(cheapBanner("world", `One track (${RUN_TRACKS[0][0]}) of ${TRACKS.length}.`));

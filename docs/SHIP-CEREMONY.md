@@ -123,12 +123,46 @@ sprite blit itself, because node has no `Image` and the racer body falls back to
 branch. Placement, order, text, styles and every other layer are covered. The owner's eye remains
 the instrument for artwork.
 
+## BEFORE ANY MERGE: a branch's content is what it changes against MASTER
+
+**Run this, read it, and only then merge:**
+
+```
+git diff --name-only master...<branch>
+```
+
+**A branch's content is what it changes relative to MASTER — never relative to the branch it was cut
+from.** A branch cut from another branch carries everything that branch carried. Its own commits are
+one question; what merging it does to master is a different one, and only the command above answers
+the second.
+
+**This is not hypothetical, and the incident is why the rule is here.** On 2026-08-08
+`feat/verify-cost-2` was described — correctly, of its own three commits — as "tooling only, no
+fingerprint moved, nothing cut from coverage". It had been cut from `feat/start-board-1`. Merging it
+put **50 files** on master: the camera hold, the runners' board, the race numbers, the label offsets
+— every one of them visible behaviour awaiting the owner's eye, shipped with no eye test and no ship
+ceremony. The whole of this document was bypassed by one merge everybody involved believed was
+tooling. Master had to be reset and force-pushed; that state is preserved as
+`archive/master-9d025aa9-accidental-chain-merge` in [TAGS.md](TAGS.md).
+
+**Two corollaries, because each was also true that day:**
+
+- **Green CI does not answer this question.** CI ran and passed on the branch. It tests what the
+  branch contains — which is exactly the thing that was more than expected.
+- **When a branch must carry only part of its ancestry, cut a new branch from master and
+  cherry-pick.** That is what re-landed the tooling, and the same one-line check is what proved it:
+  16 files, none from the chain.
+
+---
+
 ## The checklist
 
 Work top to bottom. Steps that are marked **ONE step** are a single unit of work with two artefacts —
 never do one artefact and defer the other (that is exactly how the INDEX entry and the tag register
 went missing).
 
+- [ ] **−1. What does this merge put on master?** `git diff --name-only master...<branch>` — the
+      section above. If anything in that list is not what the block is about, stop.
 - [ ] **0. Pre-flight.** Confirm the change is UI-configurable (a config key, not a hard-coded edit).
       `eslint` clean, `build` green, the full test suite green on the working tree before you measure.
 - [ ] **1. Paired measurement — the gate.** Run the **N=100 quartet, paired seeds, against the CURRENT

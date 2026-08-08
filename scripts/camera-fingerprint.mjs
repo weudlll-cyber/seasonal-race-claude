@@ -35,6 +35,7 @@ process.on("exit", () => {
 });
 
 import { createHash } from "node:crypto";
+import { isCheap, cheapTracks, cheapBanner, cheapHash, refuseCheapQuiet } from "./lib/cheapMode.mjs";
 import { readFileSync, readdirSync, existsSync } from "node:fs";
 import { join, dirname } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
@@ -76,6 +77,10 @@ const N = 40;
 const SEED = 5601;
 const CAM_SEED = 1439767152;
 const QUIET = process.argv.includes("--quiet");
+// VERIFY-COST-2: --cheap runs ONE track so a wiring or formatting check costs seconds. The hash
+// it prints is NOT the fingerprint and is shaped so it cannot be mistaken for one.
+refuseCheapQuiet();
+const CHEAP = isCheap();
 // CAMERA-COMPANY-ONLY-1 probe. Off by default, so the DEFAULT invocation — the one the ceremony and
 // every gate use — is untouched. With it, the hash is a PROBE VALUE, not a baseline.
 const COMPANY_ONLY = process.argv.includes("--company-only");
@@ -213,21 +218,27 @@ for (const f of readdirSync(dir)) {
   if (j.id) geos.push(j);
 }
 geos.sort((a, b) => a.id.localeCompare(b.id));
+const RUN_GEOS = CHEAP ? cheapTracks(geos, (g) => g.id) : geos;
+if (CHEAP) console.log(cheapBanner("camera", `One track (${RUN_GEOS[0].id}) of ${geos.length}.`));
 
 const combined = createHash("sha256");
 const rows = [];
-for (const geo of geos) {
+for (const geo of RUN_GEOS) {
   const { hash, frames } = trackHash(geo);
   combined.update(geo.id + ":" + hash + "\n");
   rows.push({ id: geo.id, hash, frames });
 }
-const COMBINED = combined.digest("hex").slice(0, 16);
+// The cheap hash carries a prefix so it CANNOT match the 16-hex shape the record and the
+// containment guard expect. A cheap run must be unable to impersonate a measurement.
+const COMBINED = CHEAP
+  ? cheapHash(combined.digest("hex"))
+  : combined.digest("hex").slice(0, 16);
 
 if (QUIET) {
   console.log(COMBINED);
 } else {
   console.log(
-    `CAMERA ${COMBINED} (seed=${SEED} camSeed=${CAM_SEED}, ${geos.length} tracks, ${N} racers, ` +
+    `CAMERA ${COMBINED} (seed=${SEED} camSeed=${CAM_SEED}, ${RUN_GEOS.length} tracks, ${N} racers, ` +
       `${COMPANY_ONLY ? "PROBE: companyOnlyFraming=true — NOT a baseline" : "default config"})`,
   );
   for (const r of rows)
@@ -236,4 +247,5 @@ if (QUIET) {
     "\n  Covers the DIRECTOR only — state, phase, anchor, zoom, offsets, camT, targets.\n" +
       "  Not the render path (sprite scale, name-tag layout, drawing).",
   );
+  if (CHEAP) console.log(cheapBanner("camera", `One track (${RUN_GEOS[0].id}) of ${geos.length}.`));
 }

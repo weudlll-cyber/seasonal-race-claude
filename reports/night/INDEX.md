@@ -8,6 +8,19 @@ report here could be orphaned, or an index link could dangle, with nothing notic
 `node scripts/check-index.mjs --dir=reports/night --index=reports/night/INDEX.md` now checks both
 directions.
 
+- [VERIFY-COST-2.md](VERIFY-COST-2.md) — cut the overhead, not the coverage. Measured first:
+  `npm run verify` 504.9 s -> 417.8 s, the client suite 260.9 s -> 196.3 s, no fingerprint moved.
+  THE FINDING: goldenEquality.test.js takes 67.6 s ALONE and 244.9 s in the suite — not slow,
+  STARVED, because vitest parallelises across FILES and one file is one worker. Split into four
+  (same cases, same assertions, one test added, case list in one home): 39.5 s. `it.concurrent`
+  would have bought nothing — the races are synchronous and CPU-bound. CHEAP MODE on the three
+  fingerprint scripts (one track): world 229 -> 17.8 s, camera 169 -> 2.5 s, render 160 -> 2.9 s,
+  with a CHEAP- prefixed hash that cannot impersonate a real one and a refusal to combine with
+  --quiet. The world fingerprint no longer runs for a COMMENT: a mechanical token-stream test with
+  a real tokenizer, fail-safe in every direction — and its own trap test caught a false positive
+  (acorn represents a regex token value as an object, so two different regexes compared equal).
+  client-suite runs alone deliberately (retry:0 + timeouts under contention) and stays that way.
+  The routine-subset split is argued AGAINST and not built.
 - [HARNESS-NAMES-1.md](HARNESS-NAMES-1.md) — the render harness never set `r.name`, so every label
   box in it was 8px of padding: it measured a geometry the game cannot produce. Fixed with the MIXED
   roster, by index, imported from the one home; render **re-minted deliberately** to
