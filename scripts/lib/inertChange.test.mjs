@@ -18,34 +18,76 @@ import { isInertChange, tokenSignature, acorn, DIRECTIVE_PATTERNS } from "./iner
 const inert = (a, b, path = "x.js") => isInertChange(a, b, path).inert;
 const why = (a, b, path = "x.js") => isInertChange(a, b, path).reason;
 
-// The tokenizer comes from the CLIENT tree. If it is absent the predicate must degrade to "run the
-// guard", so the suite states which world it is asserting in rather than skipping silently.
+// ── TWO ENVIRONMENTS, AND THE SUITE ASSERTS IN BOTH ─────────────────────────────────────────────
+//
+// The tokenizer comes from the CLIENT tree, and CI's guard job deliberately does not install it —
+// it runs `node --test` against the repo without `npm ci` in client/. So there are two worlds, and
+// a suite that only knew one of them would either fail in CI (it did, on the first run) or skip
+// silently, which this project treats as a defect in its own right.
+//
+//   WITH acorn    the predicate can say "inert" — the interesting half, asserted below.
+//   WITHOUT it    it must say "not inert, cannot decide" for EVERYTHING. That is the safe default
+//                 and it is the half that runs in CI, so it is asserted too, not skipped.
+//
+// The consequence, stated so nobody has to discover it: **in CI the rule never fires and the world
+// fingerprint is never skipped.** The saving is local-only, by design.
 const HAVE_ACORN = !!acorn();
 
-test("the tokenizer is present here — otherwise every assertion below is about the fallback", () => {
-  assert.equal(HAVE_ACORN, true, "acorn not resolvable from client/node_modules; run npm ci there");
+test("the environment is STATED, and the right contract is asserted for it", () => {
+  // Not a skip: whichever world this is, one of the two branches below runs real assertions.
+  console.log(
+    HAVE_ACORN
+      ? "  tokenizer present — asserting the full predicate"
+      : "  NO TOKENIZER (client/node_modules absent, as in CI) — asserting the fail-safe contract",
+  );
+  assert.equal(typeof HAVE_ACORN, "boolean");
 });
 
-// ── WHAT MAY BE SKIPPED ─────────────────────────────────────────────────────────────────────────
+// ── WITHOUT THE TOKENIZER: everything is "run the guard" ────────────────────────────────────────
+
+test("with no tokenizer, nothing is ever inert — the fail-safe contract CI runs under", () => {
+  if (HAVE_ACORN) return; // the other half of this pair is the block below
+  for (const [a, b] of [
+    ["const a = 1; // old\n", "const a = 1; // new\n"],
+    ["const a=1;\n", "const a = 1;\n"],
+    ["const a = 1;\n", "const a = 2;\n"],
+  ]) {
+    assert.equal(inert(a, b), false);
+    assert.match(why(a, b), /cannot decide/);
+  }
+  // …and byte-identical is still inert, because that needs no tokenizer at all.
+  assert.equal(inert("same\n", "same\n"), true);
+});
+
+// ── WITH THE TOKENIZER: WHAT MAY BE SKIPPED ─────────────────────────────────────────────────────
 
 test("a comment-only edit is INERT", () => {
+  if (!HAVE_ACORN) return;
   assert.equal(inert("const a = 1; // old\n", "const a = 1; // new words entirely\n"), true);
-  assert.equal(inert("/** doc */\nexport const x = 2;\n", "/** BETTER doc */\nexport const x = 2;\n"), true);
+  assert.equal(
+    inert("/** doc */\nexport const x = 2;\n", "/** BETTER doc */\nexport const x = 2;\n"),
+    true,
+  );
 });
 
 test("a whitespace-only edit is INERT", () => {
+  if (!HAVE_ACORN) return;
   assert.equal(inert("const a=1;\nconst b=2;\n", "const a = 1;\n\n\nconst b = 2;\n"), true);
 });
 
 test("a comment REMOVED entirely is INERT", () => {
+  if (!HAVE_ACORN) return;
   assert.equal(inert("// gone\nconst a = 1;\n", "const a = 1;\n"), true);
 });
 
 // ── WHAT MAY NOT — the traps a regex stripper fails ─────────────────────────────────────────────
 
+// These all assert `false`, which is the answer in BOTH worlds — with the tokenizer because the
+// tokens differ, without it because it cannot decide. They are the tests that matter most and they
+// run everywhere. Only the REASON differs, so only the reason is gated.
 test("a real code change is NOT inert", () => {
   assert.equal(inert("const a = 1;\n", "const a = 2;\n"), false);
-  assert.match(why("const a = 1;\n", "const a = 2;\n"), /tokens/);
+  if (HAVE_ACORN) assert.match(why("const a = 1;\n", "const a = 2;\n"), /tokens/);
 });
 
 // WHAT GOES UNNOTICED WITHOUT THIS: the one way whitespace changes MEANING. A stripper that
@@ -70,6 +112,7 @@ test("a change inside a REGEX LITERAL containing // is NOT inert", () => {
 });
 
 test("a division that follows a paren is not mistaken for a regex", () => {
+  if (!HAVE_ACORN) return;
   // If `/` after `)` were read as a regex start, the tokenizer would fail and the predicate would
   // say "cannot decide" — safe, but it would also mean it never skips anything real. This pins that
   // ordinary arithmetic still tokenizes, so the INERT cases above are reachable in real code.
@@ -83,7 +126,10 @@ test("a changed DIRECTIVE comment is never inert", () => {
   assert.equal(inert("const a = f();\n", "const a = /*#__PURE__*/ f();\n"), false);
   assert.equal(inert("const a = 1;\n", "// eslint-disable-next-line\nconst a = 1;\n"), false);
   assert.equal(inert("const a = 1;\n", "// @vitest-environment node\nconst a = 1;\n"), false);
-  assert.match(why("const a = f();\n", "const a = /*#__PURE__*/ f();\n"), /directive/);
+  // The REASON is tokenizer-dependent (without one it never gets as far as the comments), the
+  // ANSWER is not — which is why only this line is gated.
+  if (HAVE_ACORN)
+    assert.match(why("const a = f();\n", "const a = /*#__PURE__*/ f();\n"), /directive/);
 });
 
 test("the directive list is non-empty and covers the four tool families", () => {

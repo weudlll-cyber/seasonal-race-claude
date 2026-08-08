@@ -140,9 +140,17 @@ It uses **acorn** — already in `client/node_modules` via eslint — rather tha
 comment-looking text, because a hand-written stripper has to decide whether `/` starts a regex or is
 a division, and getting that wrong in the unsafe direction silently skips a guard.
 
-**Every uncertainty resolves to "run the guard":** no tokenizer (CI's guard job does not install the
-client tree), a parse error, a non-JavaScript file, an added or deleted file, or a changed DIRECTIVE
-comment. The worst case is exactly today's behaviour.
+**Every uncertainty resolves to "run the guard":** no tokenizer, a parse error, a non-JavaScript
+file, an added or deleted file, or a changed DIRECTIVE comment. The worst case is exactly today's
+behaviour.
+
+**CI PROVED THAT PATH RATHER THAN MY ARGUING IT.** The first CI run went red on seven of these
+tests: CI's guard job runs `node --test` against the repo WITHOUT `npm ci` in client/, so acorn is
+not there. The predicate behaved exactly as designed — everything "cannot decide", nothing skipped —
+and it was my TESTS that were wrong about their environment. They now assert both contracts: with a
+tokenizer, the interesting half; without one, that nothing is ever inert. **The consequence, stated
+so nobody discovers it later: in CI the rule never fires and the world fingerprint is never skipped.
+The saving is local-only, by design.**
 
 **The exceptions, named as asked.** Comments that a tool READS: `/*#__PURE__*/` and
 `@__NO_SIDE_EFFECTS__` (bundler tree-shaking), `@vite-ignore` and `webpackChunkName` (bundler
