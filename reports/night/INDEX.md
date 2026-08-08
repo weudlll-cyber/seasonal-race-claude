@@ -21,6 +21,21 @@ directions.
   (acorn represents a regex token value as an object, so two different regexes compared equal).
   client-suite runs alone deliberately (retry:0 + timeouts under contention) and stays that way.
   The routine-subset split is argued AGAINST and not built.
+- [START-BOARD-3.md](START-BOARD-3.md) — the numbers read as numbers, and the alphabet is one list
+  again. THE MISSING NUMBERS WERE NEVER MISSING and both named hypotheses were wrong: all 100
+  `fillText` calls are emitted, `raceNumber` is present on every entry, and the 34 px gutter never
+  collapsed — the portrait's visible body spans x in [35,65] and cannot reach it. What regressed is
+  LEGIBILITY, and START-BOARD-2 caused it three ways at once: the number moved to the far margin,
+  stayed 12 px while the name grew, and gold `ROW n` headings began recurring in the same strip. Now
+  a badge — 13 px, brighter, on its own chip — and the column is pinned by an exported function that
+  does not depend on the cell width, which is the failure mode that would reproduce it silently. The
+  GROUPING IS WITHDRAWN, his own correction: ten alphabetical lists make you scan all ten, because
+  not knowing your row is why you came. One global list, with the row as a dim right-hand `R7` kept
+  apart from the number by FOUR separations, not one. The cell is 236 px again — the 200 was the
+  grouping's price, 110 slots for 100 racers — so the name nets +10 px. 8/20/40/100 all at scale
+  1.0, no overlap, no clipping. Render moved, camera and world did not. Named and costed, NOT built:
+  sprite avoidance, where the only new input is a per-type long/narrow ratio and the real risk is
+  fewer labels, not slower ones.
 - [START-BOARD-2.md](START-BOARD-2.md) — the board becomes usable, after his eye test. Its own
   duration max(3000, 80 x n): 3.2 s at 40 and 8.0 s at 100 against 1.46 s for both — and THE
   COUNTDOWN NOW FOLLOWS THE BEATS instead of capping them. `countdownDurationMs` is gone, key and
