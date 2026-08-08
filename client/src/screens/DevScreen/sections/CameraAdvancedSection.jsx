@@ -401,7 +401,7 @@ function CameraAdvancedSection() {
                 text={
                   `The SHORTEST the starters' board is ever shown, however small the field. ` +
                   `The board is up for max(this, per-name × racers). Currently: ` +
-                  `${config.startBoardFloorMs ?? 6000}ms.`
+                  `${config.startBoardFloorMs ?? DEFAULT_CAMERA_CONFIG.startBoardFloorMs}ms.`
                 }
               />
             </label>
@@ -411,7 +411,7 @@ function CameraAdvancedSection() {
               min={0}
               max={20000}
               step={250}
-              value={config.startBoardFloorMs ?? 6000}
+              value={config.startBoardFloorMs ?? DEFAULT_CAMERA_CONFIG.startBoardFloorMs}
               onChange={(e) => {
                 const v = Number(e.target.value);
                 if (v >= 0 && v <= 20000) set('startBoardFloorMs', v);
@@ -428,9 +428,9 @@ function CameraAdvancedSection() {
                 text={
                   `Reading time allowed per racer. The board is up for ` +
                   `max(floor, this × racers), and the camera HOLDS on the formation until it is ` +
-                  `done — the push keeps its own speed. At ${config.startBoardMsPerName ?? 120}ms ` +
-                  `that is ${(((config.startBoardMsPerName ?? 120) * 40) / 1000).toFixed(1)}s at 40 ` +
-                  `racers and ${(((config.startBoardMsPerName ?? 120) * 100) / 1000).toFixed(1)}s at 100.`
+                  `done — the push keeps its own speed. At ${config.startBoardMsPerName ?? DEFAULT_CAMERA_CONFIG.startBoardMsPerName}ms ` +
+                  `that is ${(((config.startBoardMsPerName ?? DEFAULT_CAMERA_CONFIG.startBoardMsPerName) * 40) / 1000).toFixed(1)}s at 40 ` +
+                  `racers and ${(((config.startBoardMsPerName ?? DEFAULT_CAMERA_CONFIG.startBoardMsPerName) * 100) / 1000).toFixed(1)}s at 100.`
                 }
               />
             </label>
@@ -440,7 +440,7 @@ function CameraAdvancedSection() {
               min={0}
               max={500}
               step={10}
-              value={config.startBoardMsPerName ?? 120}
+              value={config.startBoardMsPerName ?? DEFAULT_CAMERA_CONFIG.startBoardMsPerName}
               onChange={(e) => {
                 const v = Number(e.target.value);
                 if (v >= 0 && v <= 500) set('startBoardMsPerName', v);
@@ -456,7 +456,7 @@ function CameraAdvancedSection() {
             >
               Venue Shot (ms)
               <InfoTooltip
-                text={`How long the opening shot of the whole track is held STILL before the camera begins to move. It means exactly what it says: since START-BOARD-2 the opening's total length is the SUM of these beats, so raising this makes the opening longer and changes no other beat. Currently: ${config.ceremonyVenueMs ?? 1400}ms.`}
+                text={`How long the opening shot of the whole track is held STILL before the camera begins to move. It means exactly what it says: since START-BOARD-2 the opening's total length is the SUM of these beats, so raising this makes the opening longer and changes no other beat. Currently: ${config.ceremonyVenueMs ?? DEFAULT_CAMERA_CONFIG.ceremonyVenueMs}ms.`}
               />
             </label>
             <input
@@ -466,7 +466,7 @@ function CameraAdvancedSection() {
               min={0}
               max={6000}
               step={100}
-              value={config.ceremonyVenueMs ?? 1400}
+              value={config.ceremonyVenueMs ?? DEFAULT_CAMERA_CONFIG.ceremonyVenueMs}
               onChange={(e) => {
                 const v = Number(e.target.value);
                 if (v >= 0 && v <= 6000) set('ceremonyVenueMs', v);
@@ -480,7 +480,7 @@ function CameraAdvancedSection() {
             >
               Push In (ms)
               <InfoTooltip
-                text={`How long the camera takes to ease from the venue shot in to the starting formation. Where it ARRIVES is not a setting: it is the largest zoom at which every racer is still in frame, measured from the formation itself, so it is right on every track and at every field size. Currently: ${config.ceremonyPushMs ?? 2000}ms.`}
+                text={`How long the camera takes to ease from the venue shot in to the starting formation. Where it ARRIVES is not a setting: it is the largest zoom at which every racer is still in frame, measured from the formation itself, so it is right on every track and at every field size. Currently: ${config.ceremonyPushMs ?? DEFAULT_CAMERA_CONFIG.ceremonyPushMs}ms.`}
               />
             </label>
             <input
@@ -490,7 +490,7 @@ function CameraAdvancedSection() {
               min={0}
               max={6000}
               step={100}
-              value={config.ceremonyPushMs ?? 2000}
+              value={config.ceremonyPushMs ?? DEFAULT_CAMERA_CONFIG.ceremonyPushMs}
               onChange={(e) => {
                 const v = Number(e.target.value);
                 if (v >= 0 && v <= 6000) set('ceremonyPushMs', v);
@@ -504,7 +504,7 @@ function CameraAdvancedSection() {
             >
               Settled Hold — the searching time (ms)
               <InfoTooltip
-                text={`THE BEAT THAT MAKES THE BOARD WORTH SHOWING: the formation held still, board gone and no digits yet, so a viewer can take the number the board just taught them and FIND it on the track. Raised from 600 to 4000 after the searound eye test, where the race began almost the moment the board vanished. It is ADDED to the opening, never taken out of it. Currently: ${config.ceremonySettledMs ?? 4000}ms.`}
+                text={`THE BEAT THAT MAKES THE BOARD WORTH SHOWING: the formation held still, board gone and no digits yet, so a viewer can take the number the board just taught them and FIND it on the track. Raised from 600 to 4000 after the searound eye test, where the race began almost the moment the board vanished. It is ADDED to the opening, never taken out of it. Currently: ${config.ceremonySettledMs ?? DEFAULT_CAMERA_CONFIG.ceremonySettledMs}ms.`}
               />
             </label>
             <input
@@ -514,7 +514,7 @@ function CameraAdvancedSection() {
               min={0}
               max={15000}
               step={100}
-              value={config.ceremonySettledMs ?? 4000}
+              value={config.ceremonySettledMs ?? DEFAULT_CAMERA_CONFIG.ceremonySettledMs}
               onChange={(e) => {
                 const v = Number(e.target.value);
                 if (v >= 0 && v <= 15000) set('ceremonySettledMs', v);
@@ -528,7 +528,7 @@ function CameraAdvancedSection() {
             >
               Countdown digits (ms)
               <InfoTooltip
-                text={`How long the 3-2-1 digits are on screen, at the very END of the opening. Before this window there are no digits at all — that is what gives the searching time above a stretch with no clock on it. NOT a cap: it is added to the opening like every other beat, and the count still reaches zero exactly at the gun. Currently: ${config.countdownDigitsMs ?? 3000}ms.`}
+                text={`How long the 3-2-1 digits are on screen, at the very END of the opening. Before this window there are no digits at all — that is what gives the searching time above a stretch with no clock on it. NOT a cap: it is added to the opening like every other beat, and the count still reaches zero exactly at the gun. Currently: ${config.countdownDigitsMs ?? DEFAULT_CAMERA_CONFIG.countdownDigitsMs}ms.`}
               />
             </label>
             <input
@@ -538,7 +538,7 @@ function CameraAdvancedSection() {
               min={0}
               max={10000}
               step={250}
-              value={config.countdownDigitsMs ?? 3000}
+              value={config.countdownDigitsMs ?? DEFAULT_CAMERA_CONFIG.countdownDigitsMs}
               onChange={(e) => {
                 const v = Number(e.target.value);
                 if (v >= 0 && v <= 10000) set('countdownDigitsMs', v);

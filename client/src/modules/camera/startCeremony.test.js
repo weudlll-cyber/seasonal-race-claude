@@ -27,6 +27,7 @@ import { fieldGuarantee } from './framingRule.js';
 import { projectionForTrack, REFERENCE_CANVAS_W, REFERENCE_CANVAS_H } from './projection.js';
 import { DEFAULT_CAMERA_CONFIG } from '../storage/defaults.js';
 import { computeTimingFromConfig } from './cameraTimingComputation.js';
+import { CameraDirector } from './CameraDirector.js';
 
 const FRAME_W = REFERENCE_CANVAS_W;
 const FRAME_H = REFERENCE_CANVAS_H;
@@ -428,6 +429,11 @@ describe('the board gets its own duration, and the countdown follows it', () => 
       ceremonySettledMs: 600,
       startBoardFloorMs: 3000,
       startBoardMsPerName: 80,
+      // EXPLICIT ZERO, and it is the point of CEREMONY-TRUTH-1. This test states the totals from
+      // START-BOARD-2, which predates the digits beat; before that block's fallbacks became the
+      // DEFAULTS, omitting the key here silently meant 0 and the test read as if it still described
+      // the shipped ceremony. It describes a four-beat ceremony, and now it says so.
+      countdownDigitsMs: 0,
     };
     expect(ceremonyTotalMs(cfg, 8)).toBe(5000);
     expect(ceremonyTotalMs(cfg, 20)).toBe(5000);
@@ -453,6 +459,39 @@ describe('the board gets its own duration, and the countdown follows it', () => 
     const without = ceremonySchedule(1400, 2000, 4000, 6000, 0);
     for (const k of ['venueMs', 'pushMs', 'boardHoldMs', 'settledMs', 'boardEndMs']) {
       expect(withDigits[k], k).toBe(without[k]);
+    }
+  });
+
+  // WHAT BREAKS IF DELETED: the defect the owner reported twice — no 3-2-1 at all.
+  //
+  // AND WHY IT IS SHAPED LIKE THIS. A test that only called `ceremonySchedule` with five arguments
+  // passed while the bug was live, because the bug was not in the function: it was that the DIRECTOR
+  // called it with four and the RENDERER with five. The consequence is the only thing worth
+  // asserting — the total the director plans and the total the renderer derives are ONE number, and
+  // the digit window inside it is not empty.
+  it('the director and the renderer plan the SAME ceremony, with a real digit window in it', () => {
+    const cfg = { ...DEFAULT_CAMERA_CONFIG };
+    const cd = new CameraDirector({ worldWidth: 4000, worldHeight: 2000, config: cfg });
+    for (const n of [8, 40, 100]) {
+      const racers = Array.from({ length: n }, (_, i) => ({ index: i, x: i, y: 0, t: 0 }));
+      const fromDirector = cd.ceremonySchedule(racers);
+      // …exactly how renderRaceFrame assembles it, from the same config.
+      const fromRenderer = ceremonySchedule(
+        cfg.ceremonyVenueMs,
+        cfg.ceremonyPushMs,
+        cfg.ceremonySettledMs,
+        boardDurationMs(n, cfg.startBoardFloorMs, cfg.startBoardMsPerName),
+        cfg.countdownDigitsMs
+      );
+      expect(fromDirector.totalMs, `total at n=${n}`).toBe(fromRenderer.totalMs);
+      expect(fromDirector.countdownStartMs, `digit window opens at n=${n}`).toBe(
+        fromRenderer.countdownStartMs
+      );
+      // THE CONSEQUENCE: the gun fires at totalMs, so the digits must have room BEFORE it.
+      expect(fromDirector.totalMs - fromDirector.countdownStartMs, `window at n=${n}`).toBe(
+        cfg.countdownDigitsMs
+      );
+      expect(fromDirector.totalMs - fromDirector.countdownStartMs).toBeGreaterThan(0);
     }
   });
 

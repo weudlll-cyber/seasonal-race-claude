@@ -3,7 +3,21 @@
 // Path:        client/src/modules/storage/defaults.js
 // Project:     RaceArena
 // Created:     2026-04-19
-// Description: Default data for all storage keys — seeded on first launch
+// Description: Default data for all storage keys — the value that applies wherever a stored config
+//              has no entry for a key. NOT merely "seeded on first launch", which is what this line
+//              used to say and what CEREMONY-TRUTH-1 had to check rather than trust.
+//
+//              WHAT `loadCameraConfig` ACTUALLY DOES, because the difference is the whole of
+//              Lesson 199: it walks `Object.keys(DEFAULT_CAMERA_CONFIG)` and takes the stored value
+//              only where the stored object HAS that key. So a key added here reaches an existing
+//              installation on the next load, and a value the owner changed by hand SURVIVES it —
+//              his entry wins for his key, the default fills the ones he never touched. Nothing here
+//              requires resetting a stored config, and nothing should.
+//
+//              THE TRAP IS ELSEWHERE, and it is real: a reader that writes `cfg?.someKey ?? 0`
+//              installs a SECOND authority on the value, which wins exactly when the key is missing
+//              — the one moment the default was written for. See reports/night/CEREMONY-TRUTH-1.md
+//              for the count.
 // ============================================================
 
 import { DEFAULT_AUTO_SCALE_CONFIG } from '../autoSpriteScale.js';

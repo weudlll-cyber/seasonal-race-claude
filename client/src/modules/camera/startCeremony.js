@@ -12,7 +12,14 @@
 // (projection.js and framingRule.js's `fieldGuarantee`). This file only says how to get from one to
 // the other and when.
 //
-// Pure: no state, no config reads, no clock. It is handed an elapsed time and returns a number.
+// Pure: no state, no clock. `ceremonyTotalMs` is the one function here that reads a config, and
+// CEREMONY-TRUTH-1 made its fallbacks the SHIPPED DEFAULTS rather than zero — see the note there.
+//
+// ── FALLBACK IS NOT DEFAULT (LESSON 199), AND THIS FILE HAD SIX OF THEM ─────────────────────────
+// Every `cfg?.x ?? 0` here was a second authority on a value `defaults.js` already owns, and zero is
+// not a neutral choice: `?? 0` on the digits window silently produces a ceremony with no countdown
+// in it, which is exactly the shape of the defect this block was written for. A fallback that
+// differs from the default is a value that applies only when nobody is looking.
 //
 // ── WHY THE PUSH IS EASE-IN-OUT BY DEFAULT AND THE OLD ONE WAS NOT ───────────────────────────────
 // The countdown camera used ease-out cubic, which starts at full speed and decelerates. That reads
@@ -29,6 +36,8 @@
  * can never arrive somewhere other than the target — a push-in that stopped at 0.98 would leave the
  * formation permanently a little too small and nothing would report it.
  */
+import { DEFAULT_CAMERA_CONFIG } from '../storage/defaults.js';
+
 export const CEREMONY_EASINGS = {
   /** Constant speed. The plainest reference, and the honest way to judge the others. */
   linear: (p) => p,
@@ -190,12 +199,17 @@ export function ceremonySchedule(venueMs, pushMs, settledMs, boardMs = 0, countd
  * @returns {number} ms
  */
 export function ceremonyTotalMs(cfg, n) {
+  const D = DEFAULT_CAMERA_CONFIG;
   return ceremonySchedule(
-    cfg?.ceremonyVenueMs ?? 0,
-    cfg?.ceremonyPushMs ?? 0,
-    cfg?.ceremonySettledMs ?? 0,
-    boardDurationMs(n, cfg?.startBoardFloorMs ?? 0, cfg?.startBoardMsPerName ?? 0),
-    cfg?.countdownDigitsMs ?? 0
+    cfg?.ceremonyVenueMs ?? D.ceremonyVenueMs,
+    cfg?.ceremonyPushMs ?? D.ceremonyPushMs,
+    cfg?.ceremonySettledMs ?? D.ceremonySettledMs,
+    boardDurationMs(
+      n,
+      cfg?.startBoardFloorMs ?? D.startBoardFloorMs,
+      cfg?.startBoardMsPerName ?? D.startBoardMsPerName
+    ),
+    cfg?.countdownDigitsMs ?? D.countdownDigitsMs
   ).totalMs;
 }
 

@@ -505,6 +505,7 @@ export class CameraDirector {
     this._ceremonySettledMs = t.ceremonySettledMs;
     this._startBoardFloorMs = t.startBoardFloorMs;
     this._startBoardMsPerName = t.startBoardMsPerName;
+    this._countdownDigitsMs = t.countdownDigitsMs;
     this._ceremonyEasing = t.ceremonyEasing;
     this._battleCooldownMs = t.battleCooldownMs;
     this._showDiagnostics = t.showDiagnostics;
@@ -2741,7 +2742,13 @@ export class CameraDirector {
       this._ceremonyVenueMs,
       this._ceremonyPushMs,
       this._ceremonySettledMs,
-      boardDurationMs(racers?.length ?? 0, this._startBoardFloorMs, this._startBoardMsPerName)
+      boardDurationMs(racers?.length ?? 0, this._startBoardFloorMs, this._startBoardMsPerName),
+      // CEREMONY-TRUTH-1: THE FIFTH ARGUMENT, AND ITS ABSENCE WAS THE BUG. This call passed four,
+      // so `countdownMs` took its default of 0 — and this schedule is what fires the gun, while the
+      // renderer built its own WITH the digits. The renderer therefore opened the digit window at
+      // `countdownStartMs`, which without the digits in the total is the same instant the gun fires.
+      // Zero frames of countdown, from two schedules that were never compared.
+      this._countdownDigitsMs
     );
   }
 
@@ -2779,8 +2786,19 @@ export class CameraDirector {
     // START-BOARD-2: THE SCHEDULE IS DERIVED HERE, from the config and the size of the field, and
     // the countdown's length is its total. It used to be handed in as `countdownDurationMs` and used
     // as a CAP that rescaled the beats — so the caller and the beats were two authorities on one
-    // length. There is one now: `ceremonySchedule`, asked here and by everything else through
-    // `ceremonyTotalMs`.
+    // length.
+    //
+    // ── THAT COMMENT CLAIMED ONE HOME AND THERE WERE TWO (CEREMONY-TRUTH-1) ──────────────────
+    // It said "There is one now: `ceremonySchedule`, asked here and by everything else through
+    // `ceremonyTotalMs`." Both halves were true and the conclusion was not: `renderRaceFrame` calls
+    // the same PURE function with its own arguments, so the function had one home and the ARGUMENTS
+    // had two. When CEREMONY-TIME-1 added a fifth beat it reached one call site and not the other,
+    // and the difference between the two totals was exactly the length of the missing countdown.
+    // The gun fired from this schedule at the instant the renderer was about to show "3".
+    //
+    // A shared function is not a single source of truth when its callers each assemble the inputs.
+    // What makes it one is the test below the fix: the total the DIRECTOR reports and the total the
+    // RENDERER derives are asserted to be the same number.
     const schedule = this.ceremonySchedule(racers);
     const duration = Math.max(1, schedule.totalMs);
     const elapsed = Math.min(duration, Math.max(0, countdownElapsed));

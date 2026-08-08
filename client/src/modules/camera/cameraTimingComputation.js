@@ -41,6 +41,7 @@ const CEREMONY_EASING = 'easeInOutCubic';
 // way: cameraTimingComputation.test.js asserts the two agree.
 const START_BOARD_FLOOR_MS = 6000;
 const START_BOARD_MS_PER_NAME = 120;
+const COUNTDOWN_DIGITS_MS = 3000;
 const BATTLE_COOLDOWN_MS = 8000;
 const BATTLE_MAX_DURATION = 6000;
 const MIN_STATE_HOLD_MS = 5000;
@@ -102,6 +103,10 @@ export function computeTimingFromConfig(config) {
     0,
     Math.min(1000, config?.startBoardMsPerName ?? START_BOARD_MS_PER_NAME)
   );
+  // CEREMONY-TRUTH-1: the digits' window, and the camera needs it for exactly the reason above —
+  // the countdown's LENGTH is the sum of the beats, and this is one of them. It was missing here,
+  // so the director planned a ceremony that ended where the digits were due to START.
+  const countdownDigitsMs = ceremonyMs(config?.countdownDigitsMs, COUNTDOWN_DIGITS_MS);
   const ceremonyEasing = config?.ceremonyEasing ?? CEREMONY_EASING;
   const battleCooldownMs = config?.battleCooldownMs ?? BATTLE_COOLDOWN_MS;
   const showDiagnostics = config?.showCameraDiagnostics ?? false;
@@ -339,6 +344,7 @@ export function computeTimingFromConfig(config) {
     ceremonySettledMs,
     startBoardFloorMs,
     startBoardMsPerName,
+    countdownDigitsMs,
     ceremonyEasing,
     battleCooldownMs,
     showDiagnostics,

@@ -43,6 +43,7 @@ import {
 } from './drawing/overlayRendering.js';
 import { drawStartBoard } from './drawing/startBoardRendering.js';
 import { advanceLabelForms, LABEL_FORM_HOLD_MS } from './labelFormHold.js';
+import { DEFAULT_CAMERA_CONFIG } from '../../modules/storage/defaults.js';
 import {
   ceremonySchedule,
   boardDurationMs,
@@ -190,7 +191,8 @@ export function renderRaceFrame(ctx, f) {
   const labelMarginPx = cameraConfig.nameTagMarginPx;
   const raceElapsedMs = st.raceStart != null ? ts - st.raceStart : 0;
   const showAllTags =
-    st.phase !== PHASE.RACING || raceElapsedMs < (cameraConfig.nameTagAllUntilMs ?? 0);
+    st.phase !== PHASE.RACING ||
+    raceElapsedMs < (cameraConfig.nameTagAllUntilMs ?? DEFAULT_CAMERA_CONFIG.nameTagAllUntilMs);
   // LABEL-FOCUS-1: who the camera is on. The director's own answer first; the leader only where it
   // genuinely has none, which is BATTLE_ZOOM and OVERVIEW.
   let focusRacerIndex = camera?.anchorRacerIndex ?? null;
@@ -309,16 +311,19 @@ export function renderRaceFrame(ctx, f) {
     // things at once and they cannot disagree: how long the board is up, how long the countdown
     // lasts, and therefore what the digits read. Two homes for "how long is the push" is the defect
     // the ceremony work spent a night removing; this is the same rule applied to the board.
+    // CEREMONY-TRUTH-1: THE FALLBACKS ARE THE DEFAULTS. They were all `?? 0`, which is a second
+    // authority on six values `defaults.js` owns — and zero is the worst possible choice for every
+    // one of them, because it produces a ceremony that silently skips a beat instead of failing.
     const schedule = ceremonySchedule(
-      cameraConfig?.ceremonyVenueMs ?? 0,
-      cameraConfig?.ceremonyPushMs ?? 0,
-      cameraConfig?.ceremonySettledMs ?? 0,
+      cameraConfig?.ceremonyVenueMs ?? DEFAULT_CAMERA_CONFIG.ceremonyVenueMs,
+      cameraConfig?.ceremonyPushMs ?? DEFAULT_CAMERA_CONFIG.ceremonyPushMs,
+      cameraConfig?.ceremonySettledMs ?? DEFAULT_CAMERA_CONFIG.ceremonySettledMs,
       boardDurationMs(
         st.racers?.length ?? 0,
-        cameraConfig?.startBoardFloorMs ?? 0,
-        cameraConfig?.startBoardMsPerName ?? 0
+        cameraConfig?.startBoardFloorMs ?? DEFAULT_CAMERA_CONFIG.startBoardFloorMs,
+        cameraConfig?.startBoardMsPerName ?? DEFAULT_CAMERA_CONFIG.startBoardMsPerName
       ),
-      cameraConfig?.countdownDigitsMs ?? 0
+      cameraConfig?.countdownDigitsMs ?? DEFAULT_CAMERA_CONFIG.countdownDigitsMs
     );
     drawStartBoard(ctx, {
       racers: st.racers,
