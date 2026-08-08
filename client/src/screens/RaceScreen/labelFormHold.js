@@ -53,16 +53,10 @@
 // ============================================================
 
 /**
- * How long the opposite condition must hold before a label changes form, in ms.
+ * ── THE WINDOW IS A CONFIG KEY NOW, AND ITS ARGUMENT HAS CHANGED (LABEL-HOLD-1) ────────────────
  *
- * ONE HOME, AND NOT A CONFIG KEY. A Dev Screen slider would be the natural way to settle it, but a
- * key in `storage/defaults.js` sits inside the engine-reach hull and would drag the world fingerprint
- * into a block that cannot move the race.
- *
- * 400 MS WAS THE STARTING NUMBER AND THE MEASUREMENT SETTLED IT AT 2000. The owner named 400 as
- * provisional; at 400 the labels switch form 9.9–11.7 times per label per race, against the
- * 1.24–3.89 that LABEL-DEGRADE-1's rule produced — three times too busy to read. The window buys
- * calm at a price in names, and the curve is not linear (searound / river-run, n=100, one race each):
+ * It used to be the constant `LABEL_FORM_HOLD_MS = 2000`, chosen by measurement as the longest
+ * window still inside LABEL-DEGRADE-1's 1.24–3.89 switch band on both tracks:
  *
  *     window    switches per label per race    share of labels showing a name
  *      400 ms          11.71 / 9.89                    28.1 % / 20.7 %
@@ -70,11 +64,19 @@
  *     2000 ms           2.84 / 2.20                    20.7 % / 12.5 %
  *     4000 ms           1.03 / 0.63                     9.9 % /  6.9 %
  *
- * 2000 ms is the longest window that is still inside the old band on BOTH tracks while keeping most
- * of the names 400 ms bought — 4000 ms is calmer still and throws away two thirds of them. The full
- * table, including the demote-immediately arm, is in reports/night/LABEL-OCCLUSION-1.md.
+ * THE OWNER HAS NOW SEEN IT, AND HIS EYE OUTRANKS THE BAND: with plenty of room, the number takes
+ * very long to become a name. That is the honest cost of picking the calmest number on a table
+ * rather than the one that feels right, and the band was never his requirement — it was the previous
+ * rule's behaviour, used as a yardstick because nothing better existed.
+ *
+ * So the value lives in `defaults.js` as `labelFormHoldMs` (1200) with a Dev Screen slider behind
+ * it, and this module holds no copy of it: every caller passes `holdMs`. One home, and the one that
+ * he can turn.
+ *
+ * The old objection to a config key — that it would drag the world fingerprint into a cosmetic block
+ * — is answered by measurement rather than by argument: `engine-reach --check` reports `defaults.js`
+ * as reachable, the block runs no fingerprint, and the merge owes all three anyway.
  */
-export const LABEL_FORM_HOLD_MS = 2000;
 
 /** A fresh hold state. A Map of racer.index -> { wide, since }, owned by the caller across frames. */
 export function createLabelFormHold() {

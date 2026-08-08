@@ -55,7 +55,6 @@ import {
 import {
   createLabelFormHold,
   advanceLabelForms,
-  LABEL_FORM_HOLD_MS,
 } from "../client/src/screens/RaceScreen/labelFormHold.js";
 import {
   computeRenderDisplayScale,
@@ -79,7 +78,7 @@ const CH = 720;
 // out. A rule that is calm on one and busy on the other has not been measured.
 const TRACKS = (arg("tracks", "searound,river-run") || "").split(",").filter(Boolean);
 const N = Number(arg("racers", "100"));
-const HOLD_MS = Number(arg("hold", String(LABEL_FORM_HOLD_MS)));
+const HOLD_MS = Number(arg("hold", String(DEFAULT_CAMERA_CONFIG.labelFormHoldMs)));
 // How often the name-on-racer check is run. Every frame would be exact and slow; every 6th frame is
 // ten samples a second, which cannot miss an overlap that a viewer could see.
 const SAMPLE_EVERY = 6;

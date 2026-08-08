@@ -42,7 +42,7 @@ import {
   drawFinishedOverlay,
 } from './drawing/overlayRendering.js';
 import { drawStartBoard } from './drawing/startBoardRendering.js';
-import { advanceLabelForms, LABEL_FORM_HOLD_MS } from './labelFormHold.js';
+import { advanceLabelForms } from './labelFormHold.js';
 import { DEFAULT_CAMERA_CONFIG } from '../../modules/storage/defaults.js';
 import {
   ceremonySchedule,
@@ -253,7 +253,10 @@ export function renderRaceFrame(ctx, f) {
         shown: tagLayout.shown,
         clear: tagLayout.wideClear,
         nowMs: ts,
-        holdMs: LABEL_FORM_HOLD_MS,
+        // LABEL-HOLD-1: his slider. The fallback is the DEFAULT and never 0 — a 0 here would pin
+        // every label to its number for the whole race, which is the failure mode CEREMONY-TRUTH-1
+        // spent a piece on.
+        holdMs: cameraConfig?.labelFormHoldMs ?? DEFAULT_CAMERA_CONFIG.labelFormHoldMs,
       })
     : null;
 

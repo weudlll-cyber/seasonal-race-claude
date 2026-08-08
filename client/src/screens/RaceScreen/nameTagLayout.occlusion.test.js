@@ -19,7 +19,13 @@
 
 import { describe, it, expect } from 'vitest';
 import { computeTagLayout, labelOffsetAbove } from './nameTagLayout.js';
-import { createLabelFormHold, advanceLabelForms, LABEL_FORM_HOLD_MS } from './labelFormHold.js';
+import { createLabelFormHold, advanceLabelForms } from './labelFormHold.js';
+import { DEFAULT_CAMERA_CONFIG } from '../../modules/storage/defaults.js';
+
+// LABEL-HOLD-1: the window moved out of `labelFormHold.js` and into the config, so the tests read it
+// from its ONE home. They were already written as multiples of it rather than in literals, which is
+// why a 2000 -> 1200 change touches this line and nothing else.
+const LABEL_FORM_HOLD_MS = DEFAULT_CAMERA_CONFIG.labelFormHoldMs;
 
 const CW = 1280;
 const CH = 720;
@@ -161,9 +167,10 @@ describe('THE CRITERION — the name only when it covers nothing', () => {
 });
 
 describe('THE HOLD — switch only once the new state is stable', () => {
-  // EVERY TIME HERE IS A MULTIPLE OF THE WINDOW, never a literal. The window is a measured number
-  // and it has already moved once (400 -> 2000, see labelFormHold.js); a test written in literals
-  // would go red on the next measurement and say nothing about the behaviour.
+  // EVERY TIME HERE IS A MULTIPLE OF THE WINDOW, never a literal. The window has now moved twice —
+  // 400 -> 2000 on a measurement, 2000 -> 1200 on the owner's eye — and neither move touched a single
+  // assertion here. A test written in literals would have gone red both times and said nothing about
+  // the behaviour either time.
   const H = LABEL_FORM_HOLD_MS;
   const step = (state, clear, nowMs, opts = {}) =>
     advanceLabelForms(state, {

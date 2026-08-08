@@ -415,6 +415,18 @@ export const DEFAULT_CAMERA_CONFIG = {
   // Shipping it on against them would have been the wrong call; the toggle is here so his eye can
   // overrule my arithmetic, which is the one thing it can legitimately do.
   labelNamesWhenRoom: false,
+  // ── HOW LONG A NAME MUST BE EARNED FOR (LABEL-HOLD-1) ─────────────────────────────────────────
+  // A label shows the NAME once its box has been clear of every other label and racer for this long
+  // continuously; it gives the name up the instant it stops being clear. Promotion only — the
+  // withdrawal is immediate and is not configurable, because a name over a racer is the defect the
+  // whole feature exists to remove.
+  //
+  // 2000 -> 1200 ON HIS EYE. 2000 was the longest window still inside the previous rule's switch
+  // band, which was a yardstick rather than a requirement; he watched it and said the number takes
+  // very long to become a name. The cost of the shorter window is measured in
+  // reports/night/LABEL-HOLD-1.md, and the slider is there so he can settle it without another
+  // block.
+  labelFormHoldMs: 1200,
   // Ease-in-out: begins at rest, gathers, arrives at rest. The countdown used ease-OUT cubic, which
   // starts at full speed — that reads as the camera catching up to something rather than as
   // ceremony. 'easeOutCubic' is on the list so the old feel can be put back beside the new one.

@@ -350,7 +350,8 @@ function CameraAdvancedSection() {
             text={
               'During the race, a label shows the racer’s NAME when the name would cover ' +
               'neither another label nor another racer, and the NUMBER otherwise. A name is ' +
-              'EARNED by 2 s of clear geometry and given up the instant it stops being clear, so ' +
+              'EARNED by a stretch of clear geometry (the slider below) and given up the instant ' +
+              'it stops being clear, so ' +
               'a name is never drawn on a racer. Two exceptions: the racer the camera is ON keeps ' +
               'its name throughout, and at the photo finish every racer in frame carries one. ' +
               'Measured at 100 racers: 17.2% of labels show a name on searound and 9.5% on ' +
@@ -359,6 +360,39 @@ function CameraAdvancedSection() {
             }
           />
         </label>
+        {/* LABEL-HOLD-1 — how long a name must be EARNED for. Only the promotion; the withdrawal is
+            immediate by design and is deliberately not settable. */}
+        <div className={s.formGroup} style={{ marginTop: '0.5rem' }}>
+          <label
+            className={s.label}
+            style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}
+          >
+            Track labels — wait before a name (ms)
+            <InfoTooltip
+              text={
+                'How long a label’s name must be completely clear — of every other label and every ' +
+                'other racer — before it is shown. It is given up the INSTANT it stops being clear, ' +
+                'and that half is not settable: a name over a racer is the defect the feature ' +
+                'removes. Lower means names appear sooner and change form more often. 2000 was the ' +
+                'calmest value on the measurement; 1200 is what your eye asked for. Currently: ' +
+                `${config.labelFormHoldMs ?? DEFAULT_CAMERA_CONFIG.labelFormHoldMs}ms.`
+              }
+            />
+          </label>
+          <input
+            type="number"
+            className={s.input}
+            data-testid="label-form-hold-ms"
+            min={0}
+            max={10000}
+            step={100}
+            value={config.labelFormHoldMs ?? DEFAULT_CAMERA_CONFIG.labelFormHoldMs}
+            onChange={(e) => {
+              const v = Number(e.target.value);
+              if (v >= 0 && v <= 10000) set('labelFormHoldMs', v);
+            }}
+          />
+        </div>
       </div>
       {/* ── 1. Start & Post-Start ── */}
       <div className={s.card}>
