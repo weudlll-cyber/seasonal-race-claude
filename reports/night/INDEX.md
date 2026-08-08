@@ -21,6 +21,28 @@ directions.
   (acorn represents a regex token value as an object, so two different regexes compared equal).
   client-suite runs alone deliberately (retry:0 + timeouts under contention) and stays that way.
   The routine-subset split is argued AGAINST and not built.
+- [LABEL-OCCLUSION-1.md](LABEL-OCCLUSION-1.md) — the NAME only when it covers nothing. The owner's
+  rule replaces LABEL-DEGRADE-1's "does it fit" and supersedes that report's area-budget proposal:
+  a name is granted when its box overlaps neither a placed label NOR the drawn box of any OTHER
+  racer, with NO tolerance. `racerScreenW` is new and is a real second number — 18.5 % anisotropy on
+  a closed track. ONE THING THE SPEC DID NOT NAME AND THE RULE IS WRONG WITHOUT: a granted name must
+  reserve its FULL width even on the frames the hold has not promoted it, or two neighbours are each
+  judged clear against the other's NARROW box and land on top of each other two seconds later. The
+  hold lives in its own module because the layout's contract is no state and no clock, and the name
+  is tested EVERY frame including while the number shows — judging only the drawn form traps a label
+  on the number forever. THE 400 ms WINDOW WAS WRONG AND THE MEASUREMENT MOVED IT TO 2000: at 400 the
+  labels switch 9.9–11.7 times per label per race against the old rule's 1.24–3.89 baseline; the
+  curve is 1000 → 5.8/5.4, 2000 → 2.84/2.20, 4000 → 1.03/0.63. THE PASS/FAIL IS CLEAN — names the
+  criterion granted that overlap a racer = 0 on every arm — and the drawn count is reported beside it
+  because a SYMMETRIC hold necessarily keeps a name over a racer for one window: 592/1006 held
+  against 6/12 demoting immediately, which costs 40 % of the names. Name share is only 12.5–20.7 %,
+  reported and NOT loosened. Four sabotages red, S1 and S2 each green under the other's mutation. The
+  `[ra-build]` terminal line does not follow a branch switch — captured as a defect.
+**START-BOARD-4 has no entry, and deliberately:** its spec asked for the report in the reply rather
+than as a file, so there is no document here to index. Its subject — the board's own backdrop, the
+number outranking the name, and the ellipsis on a cut name — is on `feat/start-board-4` at `5e1660b2`
+and in that commit's message.
+
 - [START-BOARD-3.md](START-BOARD-3.md) — the numbers read as numbers, and the alphabet is one list
   again. THE MISSING NUMBERS WERE NEVER MISSING and both named hypotheses were wrong: all 100
   `fillText` calls are emitted, `raceNumber` is present on every entry, and the 34 px gutter never
