@@ -188,18 +188,30 @@ export function computeTagLayout({
   measureText,
   showAll = false,
   labelOf = (r) => r.name ?? '',
+  wideLabelOf = null,
+  wideIncumbents = null,
   incumbents = null,
   edgeMarginFrac = EDGE_MARGIN_FRAC,
   yieldOverlapFrac = YIELD_OVERLAP_FRAC,
 }) {
   const shown = new Set();
+  // LABEL-DEGRADE-1: which racers got the WIDE form (the name) rather than the narrow one.
+  const wide = new Set();
   if (!Array.isArray(racers) || racers.length === 0 || !(fontPx > 0)) {
-    return { shown, eligible: 0, placed: 0, dropped: 0 };
+    return { shown, wide, eligible: 0, placed: 0, dropped: 0 };
   }
 
   const boxH = labelBoxHeight(fontPx);
   const offsetAbove = labelOffsetAbove(racerScreenH, labelMarginPx);
   const edgeMargin = Math.max(0, edgeMarginFrac) * canvasH;
+
+  /** A label box in screen px, exactly where it will be drawn, for a given text width. */
+  const boxAt = (sx, sy, w) => ({
+    left: sx - w / 2,
+    right: sx + w / 2,
+    top: sy - offsetAbove - boxH,
+    bottom: sy - offsetAbove,
+  });
 
   // ── ELIGIBLE: on canvas. Not "top N by position" — a label answers "who is that on screen". ──
   const eligible = [];
@@ -215,14 +227,20 @@ export function computeTagLayout({
     const m = isIncumbent ? -edgeMargin : edgeMargin;
     if (sx < m || sx > canvasW - m || sy < m || sy > canvasH - m) continue;
     const w = Math.max(1, labelBoxWidth(measureText(labelOf(r))));
-    // The box, in screen px, exactly where it will be drawn.
+    // LABEL-DEGRADE-1: the WIDE form's box too, when a wider text is on offer for this racer. It is
+    // measured here beside the narrow one so both are in the same units, from the same `measureText`,
+    // and the placement pass below can choose between them without re-deriving anything.
+    const wideText = wideLabelOf ? wideLabelOf(r) : null;
+    const wideW =
+      wideText != null && wideText.length > 0
+        ? Math.max(1, labelBoxWidth(measureText(wideText)))
+        : null;
     eligible.push({
       index: r.index,
       t: r.t ?? 0,
-      left: sx - w / 2,
-      right: sx + w / 2,
-      top: sy - offsetAbove - boxH,
-      bottom: sy - offsetAbove,
+      ...boxAt(sx, sy, w),
+      // The wide candidate, or null when this racer has no wider form to offer.
+      wide: wideW != null && wideW > w ? boxAt(sx, sy, wideW) : null,
     });
   }
 
@@ -232,8 +250,10 @@ export function computeTagLayout({
   // to survive the new rule — it is a feature, and the decluttering below would otherwise take the
   // roll call away the moment it shipped. No decluttering runs while it holds.
   if (showAll) {
+    // The start formation shows every NAME already (the roll call), so the wide form is what it
+    // means by a label — but it does no decluttering, so nothing here needs to choose.
     for (const e of eligible) shown.add(e.index);
-    return { shown, eligible: eligible.length, placed: eligible.length, dropped: 0 };
+    return { shown, wide, eligible: eligible.length, placed: eligible.length, dropped: 0 };
   }
 
   // ── PRIORITY: race position, highest t first. Stage 2 replaces this with the director's anchor
@@ -266,22 +286,45 @@ export function computeTagLayout({
     // yields only when the intrusion is DECISIVE — more than `yieldOverlapFrac` of its own box.
     // Without the asymmetry two racers drifting past each other trade the same label many times a
     // second; measured, that was two thirds of all remaining churn on the bunched tracks.
-    const area = Math.max(1, (e.right - e.left) * (e.bottom - e.top));
-    const budget = incumbent ? yieldOverlapFrac * area : 0;
-    let intrusion = 0;
-    for (const p of placed) {
-      const ox = Math.min(e.right, p.right) - Math.max(e.left, p.left);
-      const oy = Math.min(e.bottom, p.bottom) - Math.max(e.top, p.top);
-      if (ox > 0 && oy > 0) intrusion += ox * oy;
-      if (intrusion > budget) break;
+    const fits = (box, hasTenure) => {
+      const area = Math.max(1, (box.right - box.left) * (box.bottom - box.top));
+      const budget = hasTenure ? yieldOverlapFrac * area : 0;
+      let intrusion = 0;
+      for (const p of placed) {
+        const ox = Math.min(box.right, p.right) - Math.max(box.left, p.left);
+        const oy = Math.min(box.bottom, p.bottom) - Math.max(box.top, p.top);
+        if (ox > 0 && oy > 0) intrusion += ox * oy;
+        if (intrusion > budget) return false;
+      }
+      return true;
+    };
+
+    // ── LABEL-DEGRADE-1: THE NAME WHEN THERE IS ROOM, THE NUMBER WHEN THERE IS NOT ─────────────
+    //
+    // ONE DECISION PER LABEL PER CYCLE, in this fixed order, and never revisited. That is what
+    // stops the cascade the owner named: widening A displaces B, which frees room, which would let
+    // A widen again. Here A is decided before B is looked at, B sees A's chosen box, and neither is
+    // asked twice — so the pass cannot oscillate within a frame however the boxes fall.
+    //
+    // THE SAME ASYMMETRY GOVERNS THE SWITCH as governs the label itself, which is why this needed no
+    // new machinery: a racer NOT showing its name must find its wide box COMPLETELY free to gain
+    // one; a racer already showing its name keeps it until the intrusion is decisive. Tenure is
+    // tracked separately (`wideIncumbents`) from label tenure, because a racer can hold its label
+    // while losing the room for its name — those are two different claims on two different boxes.
+    if (e.wide && fits(e.wide, wideIncumbents ? wideIncumbents.has(e.index) : false)) {
+      placed.push(e.wide);
+      shown.add(e.index);
+      wide.add(e.index);
+      continue;
     }
-    if (intrusion > budget) continue;
+    if (!fits(e, incumbent)) continue;
     placed.push(e);
     shown.add(e.index);
   }
 
   return {
     shown,
+    wide,
     eligible: eligible.length,
     placed: placed.length,
     dropped: eligible.length - placed.length,

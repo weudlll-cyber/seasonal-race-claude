@@ -369,6 +369,16 @@ export const DEFAULT_CAMERA_CONFIG = {
   // 40 it gives 3.2 s against the 1.46 s that failed; at 100 it gives 8.0 s.
   startBoardFloorMs: 3000,
   startBoardMsPerName: 80,
+  // ── LABEL-DEGRADE-1: the NAME on the track when there is room for it ───────────────────────────
+  // The owner's idea: during the race, check per racer whether the NAME fits without overlapping
+  // anything; show it if it does, fall back to the number when it does not. The decluttering's
+  // existing asymmetry governs the switch — a racer must find its wide box completely free to gain
+  // a name, and keeps it until the intrusion is decisive.
+  //
+  // DEFAULT OFF, ON MY OWN MEASUREMENT, and the numbers are in reports/night/LABEL-DEGRADE-1.md.
+  // Shipping it on against them would have been the wrong call; the toggle is here so his eye can
+  // overrule my arithmetic, which is the one thing it can legitimately do.
+  labelNamesWhenRoom: false,
   // Ease-in-out: begins at rest, gathers, arrives at rest. The countdown used ease-OUT cubic, which
   // starts at full speed — that reads as the camera catching up to something rather than as
   // ceremony. 'easeOutCubic' is on the list so the old feel can be put back beside the new one.

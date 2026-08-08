@@ -36,6 +36,20 @@ directions.
   1.0, no overlap, no clipping. Render moved, camera and world did not. Named and costed, NOT built:
   sprite avoidance, where the only new input is a per-type long/narrow ratio and the real risk is
   fewer labels, not slower ones.
+- [LABEL-DEGRADE-1.md](LABEL-DEGRADE-1.md) — a track label shows the NAME when it fits and the
+  NUMBER when it does not. The archived overlap trigger was REUSED without re-typing, because the
+  live decluttering already contains it in a stronger form (an area with a budget, not a boolean).
+  Flicker is governed by that same asymmetry, extended to a SECOND tenure — a racer can hold its
+  label while losing the room for its name. MEASURED on searound and river-run at 40 and 100:
+  **1.24–3.89 switches per label per race**, which is calm. **DEFAULT OFF anyway, and the switching
+  is not why**: the wider labels cost 3–7% of the labels and up to **32% more churn** (river-run 100:
+  10.99 → 14.56/s), and the name fits **92–99%** of the time — so it is closer to "names instead of
+  numbers" than to "the name when there is room", which would silently revert RACE-NUMBERS-1 in most
+  frames. Cascade is impossible by construction: one decision per label per cycle in the existing
+  priority order, never revisited. No fingerprint moved — with the toggle off the render path is
+  byte-identical, which is the proof that "off" is the absence of the feature; flipping it moves the
+  cheap render hash, which is the proof it reaches the picture. New harness
+  `scripts/label-degrade-truth.mjs`. Not minted.
 - [START-BOARD-2.md](START-BOARD-2.md) — the board becomes usable, after his eye test. Its own
   duration max(3000, 80 x n): 3.2 s at 40 and 8.0 s at 100 against 1.46 s for both — and THE
   COUNTDOWN NOW FOLLOWS THE BEATS instead of capping them. `countdownDurationMs` is gone, key and

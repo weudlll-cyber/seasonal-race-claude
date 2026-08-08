@@ -332,6 +332,30 @@ function CameraAdvancedSection() {
           Highlight heroes — <span style={{ color: '#34c759' }}>green ring = normal hero</span>,{' '}
           <span style={{ color: '#ff3b30' }}>red ring = B2-attacker</span>
         </label>
+        {/* LABEL-DEGRADE-1 — the name on the track when it fits. DEFAULT OFF on measurement; see
+            reports/night/LABEL-DEGRADE-1.md for the numbers and why. */}
+        <label
+          className={s.label}
+          style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginTop: '0.5rem' }}
+        >
+          <input
+            type="checkbox"
+            checked={config.labelNamesWhenRoom ?? false}
+            onChange={(e) => set('labelNamesWhenRoom', e.target.checked)}
+            data-testid="label-names-when-room-toggle"
+          />
+          Track labels show the NAME when it fits
+          <InfoTooltip
+            text={
+              'During the race, a label shows the racer’s NAME when its wider box lands on ' +
+              'free pixels, and falls back to the NUMBER when it does not. OFF by default on ' +
+              'measurement: the switching itself is calm (1.2–3.9 changes per label per race) ' +
+              'but the wider labels cost 7% of the labels and up to 32% more label churn, and the ' +
+              'name fits 92–99% of the time — so this is closer to "names instead of ' +
+              'numbers" than to "the name when there is room". Your eye decides.'
+            }
+          />
+        </label>
       </div>
       {/* ── 1. Start & Post-Start ── */}
       <div className={s.card}>

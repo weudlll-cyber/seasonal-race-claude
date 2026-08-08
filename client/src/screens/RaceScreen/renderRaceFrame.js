@@ -104,6 +104,7 @@ export function renderRaceFrame(ctx, f) {
     renderAlpha,
     interpolationEnabled,
     tagIncumbents,
+    tagWideIncumbents,
     leaderDiag,
     cfgBadge,
     buildBadge,
@@ -207,6 +208,11 @@ export function renderRaceFrame(ctx, f) {
           (assignmentByRacer.get(r.index)?.rowIndex ?? 0) +
           ')'
         : raceNumberLabel(r.raceNumber),
+    // LABEL-DEGRADE-1: the wider form on offer — the racer's NAME — when the toggle is on. Passing
+    // null keeps the layout byte-for-byte what it was, which is what makes the toggle a real
+    // comparison rather than two code paths that merely look alike.
+    wideLabelOf: cameraConfig?.labelNamesWhenRoom ? (r) => r.name ?? '' : null,
+    wideIncumbents: tagWideIncumbents,
   });
   ctx.restore();
 
@@ -308,7 +314,14 @@ export function renderRaceFrame(ctx, f) {
     renderMinimap(ctx, shape, st.racers, leaderIdx, canvasW, canvasH, minimapHighlights);
   }
 
-  return { effZoomX, effZoomY, displayScale, tagShown: tagLayout.shown, countdownNumber };
+  return {
+    effZoomX,
+    effZoomY,
+    displayScale,
+    tagShown: tagLayout.shown,
+    tagWide: tagLayout.wide,
+    countdownNumber,
+  };
 }
 
 /**
