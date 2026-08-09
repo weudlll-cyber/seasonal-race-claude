@@ -8,6 +8,25 @@ report here could be orphaned, or an index link could dangle, with nothing notic
 `node scripts/check-index.mjs --dir=reports/night --index=reports/night/INDEX.md` now checks both
 directions.
 
+- [CONFIG-DIFF-1.md](CONFIG-DIFF-1.md) — store what he chose, not what happened to be true.
+  `loadCameraConfig` was already right (it walks the DEFAULT keys, so a NEW key arrives at its
+  default); `saveCameraConfig` wrote the WHOLE resolved object, so one slider move FROZE every key
+  and a changed default could never reach him again — which is why his board sat at 3000/80 after
+  6000/120 shipped. Now only keys that DIFFER are written, state profiles are diffed per FIELD, and
+  a ONE-TIME PRUNE drops every stored key equal to its current default so the fix reaches the config
+  he already has. **A prune, deliberately not a reset** — he offered one, and it would have thrown
+  away weeks of tuning this keeps. It runs from `loadCameraConfig`, is idempotent and writes only
+  when it drops something, so it needs no marker and cannot half-run. **THE EDGE IS IN THE CODE AND
+  PINNED BY A TEST**: a value he deliberately set to today's default is indistinguishable from an
+  untouched one and will follow a future change of that default — telling them apart needs stored
+  intent, i.e. a schema, which is what this file exists without. SIX other stores have the same
+  save-everything shape and are WORSE (their loaders are spread merges, so retired keys linger too);
+  named, none fixed — two of them feed the RACE and belong in their own block with their own mint.
+  11 consequence tests (storage → load → default changes → load), five sabotages all red; one
+  existing test's fixture had to change because `minRacersVisible: 5` BECAME the default at
+  SHIP-THREE, which is the edge case demonstrating itself. WORLD `dc4647be0f55ebdb` unchanged —
+  and `engine-reach` says none of the changed paths reach the engine at all, against the block's
+  expectation, because the change is in the storage CRUD module and not in `defaults.js`.
 - [VERIFY-ROUTING-2.md](VERIFY-ROUTING-2.md) — the routing comes from the guards. The route table
   in `verify.mjs` is GONE (`ROUTES`, `selectedBy` and `FINGERPRINT_RECORD` went with it as orphans;
   net −96 lines there); each guard DECLARES what it covers and `scripts/lib/routing.mjs` collects

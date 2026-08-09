@@ -360,8 +360,12 @@ describe('no schema, no version — just sane loading', () => {
   });
 
   it('saving does not stamp anything onto what he stored', () => {
-    saveCameraConfig({ minRacersVisible: 5 });
-    expect(storageSet).toHaveBeenCalledWith('racearena:cameraConfig', { minRacersVisible: 5 });
+    // FIXTURE CHANGED BY CONFIG-DIFF-1, intent untouched. This asserted that saving adds no
+    // schemaVersion — it still does. But its payload was `minRacersVisible: 5`, and 5 BECAME the
+    // default at SHIP-THREE, so under the diff rule that value is correctly not written at all and
+    // the test was asserting the old save-everything shape by accident. 4 is a real deviation.
+    saveCameraConfig({ minRacersVisible: 4 });
+    expect(storageSet).toHaveBeenCalledWith('racearena:cameraConfig', { minRacersVisible: 4 });
   });
 
   // FAILURE PROOF — what the version check did, computed from the same inputs. A stored config whose
