@@ -146,7 +146,14 @@ const RULE_ALPHA = 0.32;
 // strip across the screen.
 const MAX_COLS = 5;
 const MAX_ROWS = 20;
-const MIN_ROWS = 6;
+// SMALL-DEBTS: renamed from `MIN_ROWS`, because "min" reads as a floor for small fields and this is
+// the ORDINARY case. `max(PREFERRED_ROWS, ceil(n / MAX_COLS))` holds the row count at 6 for every
+// field from 6 to 30 racers, so it is the board's shape almost always — a 10-racer board is 6 rows
+// by 2 columns, not 2 by 5. Rows only start growing once 6 × MAX_COLS is exceeded, and columns never
+// grow past MAX_COLS. Below 6 racers the clamp on the next line takes over and rows = n.
+// Renamed rather than only commented: a reader who trusts the old name gets the layout backwards,
+// and this constant is one of two that decide the whole block's proportions.
+const PREFERRED_ROWS = 6;
 
 const TITLE_H = 26;
 const MARGIN_X = 34;
@@ -277,7 +284,7 @@ export function startRowOf(racer, assignmentByRacer) {
 export function startBoardLayout(count, canvasW, canvasH) {
   const n = Math.max(0, count | 0);
 
-  let rows = Math.min(MAX_ROWS, Math.max(MIN_ROWS, Math.ceil(n / MAX_COLS)));
+  let rows = Math.min(MAX_ROWS, Math.max(PREFERRED_ROWS, Math.ceil(n / MAX_COLS)));
   rows = Math.max(1, Math.min(rows, n || 1));
   const cols = Math.max(1, Math.ceil(n / rows));
 
