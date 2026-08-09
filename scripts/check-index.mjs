@@ -35,6 +35,23 @@
 // VERIFY-FAST-1: every guard prints its own elapsed time. The ceremony's cost column was wrong
 // in BOTH directions (camera claimed ~85 s and costs 47; render claimed ~30 s and costs 15) and
 // nothing checked it. A number the script measures itself cannot go stale.
+// ── VERIFY-ROUTING-2: this guard declares what it covers, so verify does not have to remember.
+// `blind` is required and non-empty: the hole is written down by whoever knows it.
+export const GUARD = {
+  id: "check-index",
+  covers:
+    "a report with no INDEX line, or an INDEX line pointing at a report that does not exist — in both directions, across three report directories",
+  blind: [
+    "whether the INDEX line DESCRIBES the report; it checks that both ends exist",
+  ],
+  dirs: ["reports/"],
+  files: [],
+};
+if (process.argv.includes("--declare")) {
+  console.log(JSON.stringify(GUARD));
+  process.exit(0);
+}
+
 const __t0 = Date.now();
 process.on("exit", () => {
   // NIGHT-TOOLS-1: MACHINE-READABLE, because a human string has to be re-parsed by

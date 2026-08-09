@@ -50,6 +50,25 @@
 //   node scripts/check-measured-stamps.mjs --doc=<path>   # check a copy instead (used by its test)
 // ============================================================
 
+// ── VERIFY-ROUTING-2: this guard declares what it covers, so verify does not have to remember.
+// `blind` is required and non-empty: the hole is written down by whoever knows it.
+export const GUARD = {
+  id: "check-measured-stamps",
+  covers:
+    "a stamped measured number in a document whose source changed after the stamp was taken",
+  blind: [
+    "the NUMBERS themselves — it never re-runs a measurement, only checks freshness",
+    "any measured number that carries no stamp: it checks the stamps that exist",
+    "a change that cannot have moved the figures: a comment-only edit trips it exactly like a behaviour change",
+  ],
+  dirs: ["docs/", "client/src/modules/camera/"],
+  files: [],
+};
+if (process.argv.includes("--declare")) {
+  console.log(JSON.stringify(GUARD));
+  process.exit(0);
+}
+
 const started = Date.now();
 
 import { readFileSync } from "node:fs";
@@ -121,6 +140,11 @@ if (shallow) {
 }
 
 let found = 0;
+// VERIFY-ROUTING-2 (design from VERIFY-ROUTING-1): every stamp seen, so the PENDING pass below can
+// ask about UNCOMMITTED work after the committed check has finished.
+const STAMPS = [];
+const NL = String.fromCharCode(10);
+
 for (const doc of DOCS) {
   let text;
   try {
@@ -138,6 +162,7 @@ for (const doc of DOCS) {
     const [, what, stampCommit, date, depends] = m;
     found++;
     const paths = depends.split(",").filter(Boolean);
+    STAMPS.push({ doc, what, paths });
 
     // The stamped commit must exist. A typo here would otherwise disable the check silently.
     let resolved;
@@ -167,7 +192,14 @@ for (const doc of DOCS) {
       // golden list — is now invisible to this guard, and its stamp will read fresh after that file
       // changes. No script does that today. If one ever does, its `depends=` must name the file
       // directly rather than the directory, and this exclusion must be revisited.
-      newest = git("log", "-1", "--format=%H", "--", ...paths, TEST_FILE_EXCLUDE);
+      newest = git(
+        "log",
+        "-1",
+        "--format=%H",
+        "--",
+        ...paths,
+        TEST_FILE_EXCLUDE,
+      );
     } catch {
       newest = "";
     }
@@ -217,6 +249,48 @@ if (found === 0) {
   );
   process.exit(1);
 }
+
+// ── A GUARD'S PENDING LINE SURVIVES A GREEN RUN (VERIFY-ROUTING-2) ──────────────────────────────
+//
+// THE LIMIT THIS EXISTS FOR, and I walked into it myself in MIN-RACERS-5: this guard reads git
+// HISTORY. Run before the commit, it has nothing to compare — there is no commit touching the
+// dependency yet — so it passes, and it passes for a reason that has nothing to do with the work
+// being sound. I ran it that way, saw green, and the very next CI run went red on the same stamp.
+//
+// It cannot check a commit that does not exist. What it CAN do is say so: it reads the working tree
+// and reports uncommitted changes that will make a stamp stale the moment they are committed. This
+// is a REPORT, never a failure — failing on it would make the guard un-runnable mid-edit.
+//
+// THE COUNT PRINTS EVEN WHEN IT IS ZERO, so "no PENDING" is a statement rather than an absence.
+let pending = 0;
+for (const { doc, what, paths } of STAMPS) {
+  let dirty = [];
+  try {
+    dirty = execFileSync("git", ["status", "--porcelain", "--", ...paths], {
+      cwd: ROOT,
+      encoding: "utf8",
+    })
+      .split(String.fromCharCode(10))
+      .map((l) => l.slice(3).trim())
+      .filter(Boolean);
+  } catch {
+    dirty = [];
+  }
+  if (!dirty.length) continue;
+  pending++;
+  console.log(
+    `PENDING: ${doc}: "${what}" is fresh against COMMITTED history — but ${dirty.length} ` +
+      `uncommitted change(s) under ${paths.join(", ")} will make it stale the moment they are ` +
+      `committed:` +
+      dirty.map((d) => `${NL}         ${d}`).join("") +
+      `${NL}         This guard CANNOT check a commit that does not exist yet, so this is a ` +
+      `REPORT and not a failure.` +
+      `${NL}         Re-measure and re-stamp in the commit you are about to make.`,
+  );
+}
+console.log(
+  `check-measured-stamps: ${pending} stamp(s) PENDING against uncommitted work.`,
+);
 
 console.log(
   `check-measured-stamps: ${found} stamp(s) across ${DOCS.length} document(s), ${failures} stale.` +

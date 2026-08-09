@@ -19,6 +19,24 @@
 // VERIFY-FAST-1: every guard prints its own elapsed time. The ceremony's cost column was wrong
 // in BOTH directions (camera claimed ~85 s and costs 47; render claimed ~30 s and costs 15) and
 // nothing checked it. A number the script measures itself cannot go stale.
+// ── VERIFY-ROUTING-2: this guard declares what it covers, so verify does not have to remember.
+// `blind` is required and non-empty: the hole is written down by whoever knows it.
+export const GUARD = {
+  id: "check-doc-links",
+  covers:
+    "a relative link in a living doc or report that points at a file which does not exist",
+  blind: [
+    "external URLs",
+    "anchors within a file — only the file half of a link is resolved",
+  ],
+  dirs: ["docs/", "reports/"],
+  files: [],
+};
+if (process.argv.includes("--declare")) {
+  console.log(JSON.stringify(GUARD));
+  process.exit(0);
+}
+
 const __t0 = Date.now();
 process.on("exit", () => {
   // NIGHT-TOOLS-1: MACHINE-READABLE, because a human string has to be re-parsed by

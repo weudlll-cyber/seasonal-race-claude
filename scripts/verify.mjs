@@ -35,13 +35,9 @@ import { join, dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { cpus } from "node:os";
 import { engineReach, splitInert } from "./engine-reach.mjs";
+import { collect, reasonFor } from "./lib/routing.mjs";
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), "..");
-
-// ONE-TRUTH-2 deleted the `sites` array from docs/fingerprints.json — no document carries a copy of
-// a fingerprint any more, so there is nothing to route to. The reader that resolved those sites is
-// gone with them rather than left returning an empty set "in case".
-const FINGERPRINT_RECORD = "docs/fingerprints.json";
 
 const arg = (k, d) => {
   const p = process.argv.slice(2).find((a) => a.startsWith(`--${k}=`));
@@ -219,85 +215,62 @@ function changedFiles() {
   return [...set].sort();
 }
 
-// ── THE ROUTE TABLE — ONE map, read from one place ──────────────────────────────────────────────
+// ── THE ROUTING COMES FROM THE GUARDS (VERIFY-ROUTING-2) ────────────────────────────────────────
 //
-// This replaced five scattered predicates. Three separate times the routing was too narrow and each
-// time the entry was fixed while the MAP stayed invisible: camera files did not select the render
-// fingerprint (FINISH-COMPANY-1), and `client/vitest.config.js` did not select the client suite even
-// though it decides how the whole suite runs (NIGHT-TOOLS-1). Three occurrences is a defect in the
-// map, not in the entries — so the map is now a single table, it is printed with every skip, and it
-// is tested in both directions.
+// There is no route table here any more. Each guard declares what it covers, in its own file, and
+// `scripts/lib/routing.mjs` collects those declarations — see that file for why, and for the five
+// misses the table produced. The last of them is the one this block was opened for: the config
+// guards were bundled into `doc-guards`, which only markdown selects, so a pure JS change never ran
+// `check-config-keys` or `check-fallback-agreement` under verify.
 //
-// WHICH PATHS THIS DELIBERATELY ROUTES NOWHERE, stated here rather than left to be discovered:
-//   - `reports/**` — the lab journal. It is allowed to rot; no guard reads it.
-//   - `server/**`, `e2e/**`, `.github/**`, `*.json` lockfiles — nothing in the local guard set
-//     inspects them. CI covers what it covers; `verify` does not pretend to.
-//   - `client/src/**/*.test.{js,jsx}` — a test file DOES select the client suite (it is client
-//     source), but it deliberately selects NO fingerprint: a test cannot change the picture.
-//   - Anything not matched below runs nothing, and the plan says so by omission.
-//
-// Each rule: which guard it selects, and a MATCHER. A path may select several.
-export const ROUTES = [
-  {
-    guard: "doc-guards",
-    what: "markdown anywhere, plus the fingerprint record itself",
-    match: (f) => f.endsWith(".md") || f === FINGERPRINT_RECORD,
-  },
-  {
-    guard: "fingerprint-containment",
-    // RUNS WHENEVER ANYTHING CHANGED — precisely that, not "always". Since ONE-TRUTH-2 a current
-    // fingerprint may exist only in the record, and a stray copy can be pasted into ANY file — a
-    // comment, a shell hook, a JSON fixture — so no subset of paths would be safe to skip. It
-    // matches every path; an EMPTY diff still selects nothing, which is coherent (nothing changed,
-    // so nothing can have introduced a copy). It scans all tracked files in ~2 s, cheap enough that
-    // routing it more finely could only ever be wrong. It does NOT re-mint — see the guard's header.
-    what: "every changed file, of any kind — a stray copy can appear anywhere; the scan is ~2 s",
-    match: () => true,
-  },
-  {
-    guard: "script-suite",
-    what: "anything under scripts/",
-    match: (f) => f.startsWith("scripts/"),
-  },
-  {
-    guard: "client-suite",
-    // `client/`, NOT `client/src/`: vitest.config.js, package.json and the setup files decide how
-    // the suite RUNS, and a change to them is exactly a reason to run it. That was the third miss.
-    what: "anything under client/ EXCEPT e2e — including the configs that decide how the suite runs",
-    // `client/e2e/` is Playwright and is excluded from vitest by vitest.config.js, so a change
-    // there must NOT select the vitest suite. Caught by the routed-nowhere test when this rule was
-    // first widened from `client/src/` — widening a matcher can overshoot as easily as it can miss.
-    match: (f) => f.startsWith("client/") && !f.startsWith("client/e2e/"),
-  },
-  {
-    guard: "world-fingerprint",
-    what: "any file the race engine can reach (engine-reach closure)",
-    match: (f, reach) => reach.has(f),
-  },
-  {
-    guard: "camera-fingerprint",
-    what: "the camera director and its modules",
-    match: (f) => f.startsWith("client/src/modules/camera/"),
-  },
-  {
-    guard: "render-fingerprint",
-    // Camera counts: the director decides the transform on every drawn frame.
-    what: "anything that can reach a ctx. call — including the camera",
-    match: (f) =>
-      f.startsWith("client/src/modules/camera/") ||
-      /client\/src\/screens\/RaceScreen\/(renderRaceFrame|drawing\/|renderState)/.test(
-        f,
-      ) ||
-      /nameTagLayout|Minimap|racer-types\//.test(f) ||
-      f.startsWith("client/src/modules/parity/recordingContext"),
-  },
-];
+// WHAT REPLACES `doc-guards`: nothing. It was a BUNDLE — nine guards behind one route — and a
+// bundle can only ever have one dependency set, which is exactly how eight of its members inherited
+// "markdown changed" as their trigger. They are nine tasks now, each with its own declaration, each
+// selected on its own terms.
+const _collect = (() => {
+  let cached = null;
+  return () => (cached ??= collect());
+})();
 
-/** The files that select a given guard, using the one table above. */
-export function selectedBy(guard, files, reach) {
-  const rule = ROUTES.find((r) => r.guard === guard);
-  if (!rule) return [];
-  return files.filter((f) => rule.match(f, reach ?? new Set()));
+/** How a guard is INVOKED. Routing is declared by the guard; argv stays here, where the flags live. */
+function commandFor(g) {
+  if (g.id === "client-suite")
+    return {
+      cmd: ["npm", "test", "--silent"],
+      cwd: join(ROOT, "client"),
+      exclusive: true,
+    };
+  if (g.id === "script-suite")
+    return { cmd: ["node", "--test", ...scriptTestFiles()] };
+  // VERIFY-COST-3: `--cheap` is forwarded HERE, the only place the three are spawned. `cheapArgs()`
+  // is one home so a fourth fingerprint job cannot be added and quietly miss it.
+  const cheap = [
+    "world-fingerprint",
+    "camera-fingerprint",
+    "render-fingerprint",
+  ].includes(g.id);
+  const base = ["node", g.source, ...(cheap ? cheapArgs() : [])];
+  // check-index is ONE guard with THREE report directories — one index discipline, not three
+  // implementations. The extra invocations are argv, not routing.
+  if (g.id === "check-index")
+    return {
+      cmd: base,
+      also: [
+        [
+          "node",
+          g.source,
+          "--dir=reports/night",
+          "--index=reports/night/INDEX.md",
+        ],
+        [
+          "node",
+          g.source,
+          "--dir=reports/parity",
+          "--index=reports/parity/INDEX.md",
+        ],
+      ],
+    };
+  return { cmd: base };
 }
 
 /**
@@ -306,104 +279,38 @@ export function selectedBy(guard, files, reach) {
  * @param {string[]} files  the changed paths
  * @param {string} [base]   the ref the diff is against; used to ask whether a hull change is INERT
  * @param {(paths: string[], base: string) => {hit: string[], inert: {path,reason}[]}} [splitter]
- *   the seam the ROUTING tests use. They pass synthetic paths that are byte-identical to the base,
- *   which the real splitter correctly calls inert — so without a stub they would be asserting the
- *   inert rule while claiming to assert hull membership. The inert rule has its own tests, on real
- *   content, in `inertChange.test.mjs` and in the two both-direction cases in verify.test.mjs.
+ *   the seam the ROUTING tests use — they pass synthetic paths that are byte-identical to the base,
+ *   which the real splitter correctly calls inert.
+ * @param {object[]} [guards] injected guard set, so the tests do not spawn thirteen processes
  */
-export function plan(files, base = BASE, splitter = splitInert) {
-  const reach = new Set(engineReach().files);
+export function plan(files, base = BASE, splitter = splitInert, guards = null) {
+  const gs = guards ?? _collect().guards;
   // VERIFY-COST-2: a hull file whose edit is comments and whitespace only cannot change what the
-  // engine computes, so it does not select the 229 s world fingerprint. The decision is mechanical
-  // (identical token stream + identical line breaks between tokens, from a real tokenizer) and
-  // every uncertainty resolves to "it counts" — see scripts/lib/inertChange.mjs. It is REPORTED
-  // below, never silent: a skip nobody can see is the failure this whole file is written against.
-  const hullHits = files.filter((f) => reach.has(f));
+  // engine computes, so it does not select the world fingerprint. REPORTED below, never silent.
+  const hull = new Set(engineReach().files);
+  const hullHits = files.filter((f) => hull.has(f));
   const { inert } = hullHits.length
     ? splitter(hullHits, base)
     : { hit: [], inert: [] };
   const inertSet = new Set(inert.map((i) => i.path));
-  const hits = Object.fromEntries(
-    ROUTES.map((r) => [
-      r.guard,
-      files.filter((f) =>
-        r.guard === "world-fingerprint"
-          ? reach.has(f) && !inertSet.has(f)
-          : r.match(f, reach),
-      ),
-    ]),
-  );
-  const why = (guard) => {
-    const h = hits[guard];
-    const rule = ROUTES.find((r) => r.guard === guard);
-    if (guard === "world-fingerprint" && !h.length && inert.length)
-      return (
-        `nothing matched — ${inert.length} hull file(s) changed but are INERT ` +
-        `(${inert.map((i) => i.path).join(", ")}): comments and whitespace only, identical tokens`
-      );
-    if (h.length)
-      return `${h.length} file(s) matched (${h.slice(0, 2).join(", ")}${h.length > 2 ? ", …" : ""})`;
-    // The skip reason NAMES THE RULE, so what the map believes is visible without reading the code.
-    return `nothing matched — this guard covers: ${rule.what}`;
-  };
 
-  const cmd = {
-    "doc-guards": {
-      cmd: ["node", "scripts/check-doc-links.mjs"],
-      also: [
-        ["node", "scripts/check-index.mjs"],
-        // reports/night/ and reports/parity/ were outside every guard until ONE-TRUTH-2 stage 5.
-        // Same guard, three directories — one index discipline, not three implementations.
-        [
-          "node",
-          "scripts/check-index.mjs",
-          "--dir=reports/night",
-          "--index=reports/night/INDEX.md",
-        ],
-        [
-          "node",
-          "scripts/check-index.mjs",
-          "--dir=reports/parity",
-          "--index=reports/parity/INDEX.md",
-        ],
-        ["node", "scripts/check-tags.mjs"],
-        ["node", "scripts/check-measured-stamps.mjs"],
-        ["node", "scripts/check-config-claims.mjs"],
-        ["node", "scripts/check-doc-facts.mjs"],
-        ["node", "scripts/check-config-keys.mjs"],
-        ["node", "scripts/check-fallback-agreement.mjs"],
-      ],
-    },
-    "fingerprint-containment": {
-      cmd: ["node", "scripts/check-fingerprints.mjs"],
-    },
-    "script-suite": { cmd: ["node", "--test", ...scriptTestFiles()] },
-    "client-suite": {
-      cmd: ["npm", "test", "--silent"],
-      cwd: join(ROOT, "client"),
-      // EXCLUSIVE, measured rather than assumed: run beside the fingerprints the suite FAILS —
-      // sim-fairness.test.js carries a 5 s timeout and four CPU-saturating siblings push it past it.
-      exclusive: true,
-    },
-    // VERIFY-COST-3: `--cheap` is forwarded HERE, which is the only place the three of them are
-    // spawned. `cheapArgs()` is one home so a fourth job cannot be added and quietly miss it.
-    "world-fingerprint": {
-      cmd: ["node", "scripts/fingerprint-default.mjs", ...cheapArgs()],
-    },
-    "camera-fingerprint": {
-      cmd: ["node", "scripts/camera-fingerprint.mjs", ...cheapArgs()],
-    },
-    "render-fingerprint": {
-      cmd: ["node", "scripts/render-fingerprint.mjs", ...cheapArgs()],
-    },
-  };
-
-  return ROUTES.map((r) => ({
-    id: r.guard,
-    ...cmd[r.guard],
-    run: hits[r.guard].length > 0,
-    reason: why(r.guard),
-  }));
+  return gs.map((g) => {
+    let hits = files.filter((f) => g.matches(f));
+    if (g.id === "world-fingerprint")
+      hits = hits.filter((f) => !inertSet.has(f));
+    const inertNote =
+      g.id === "world-fingerprint" && !hits.length && inert.length
+        ? `  ·  ${inert.length} hull file(s) changed but are INERT (${inert.map((i) => i.path).join(", ")}): comments and whitespace only, identical tokens`
+        : "";
+    return {
+      id: g.id,
+      ...commandFor(g),
+      run: hits.length > 0,
+      reason: reasonFor(g, hits) + inertNote,
+      covers: g.covers,
+      blind: g.blind ?? [],
+    };
+  });
 }
 
 function scriptTestFiles() {
@@ -488,10 +395,22 @@ if (IS_ENTRY) {
 
   console.log(`\nVERIFY — ${files.length} changed file(s) vs ${BASE}\n`);
   console.log("  WILL RUN:");
-  for (const t of chosen) console.log(`    ${t.id.padEnd(19)} ${t.reason}`);
+  for (const t of chosen) console.log(`    ${t.id.padEnd(26)} ${t.reason}`);
   if (!chosen.length) console.log("    (nothing — the diff reaches no guard)");
   console.log("\n  SKIPPED, and why:");
-  for (const t of skipped) console.log(`    ${t.id.padEnd(19)} ${t.reason}`);
+  for (const t of skipped) console.log(`    ${t.id.padEnd(26)} ${t.reason}`);
+
+  // VERIFY-ROUTING-2: what the guards that WILL RUN say they do NOT cover — in their own words,
+  // from their own `blind` lists. A green verify is a statement about what WAS checked; this is the
+  // statement about what was not, and it prints on green runs precisely because that is when nobody
+  // goes looking for it.
+  const holes = chosen.flatMap((t) => (t.blind ?? []).map((b) => [t.id, b]));
+  if (holes.length) {
+    console.log(
+      "\n  NOT COVERED by the guards that will run — their own words:",
+    );
+    for (const [id, b] of holes) console.log(`    ${id.padEnd(26)} ${b}`);
+  }
   console.log("");
 
   // VERIFY-BASE-1. Nothing will run, so nothing can be verified, so this cannot be a success.

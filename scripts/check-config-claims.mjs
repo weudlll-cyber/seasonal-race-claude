@@ -62,6 +62,24 @@
 //   node scripts/check-config-claims.mjs --root=<dir> # scan a copy (used by its test)
 // ============================================================
 
+// ── VERIFY-ROUTING-2: this guard declares what it covers, so verify does not have to remember.
+// `blind` is required and non-empty: the hole is written down by whoever knows it.
+export const GUARD = {
+  id: "check-config-claims",
+  covers:
+    "documents stating a config VALUE that defaults.js owns — the value must live in one home and be pointed at, never copied",
+  blind: [
+    'a value written as prose rather than a number ("about seven seconds")',
+    "config objects other than the camera one, and any doc outside docs/ or reports/",
+  ],
+  dirs: ["docs/", "reports/"],
+  files: ["client/src/modules/storage/defaults.js"],
+};
+if (process.argv.includes("--declare")) {
+  console.log(JSON.stringify(GUARD));
+  process.exit(0);
+}
+
 const started = Date.now();
 
 import { readFileSync } from "node:fs";

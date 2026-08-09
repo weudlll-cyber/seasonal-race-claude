@@ -16,13 +16,8 @@
 
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import {
-  plan,
-  ROUTES,
-  cheapArgs,
-  describeEmptyRun,
-  EXIT_REFUSED,
-} from "./verify.mjs";
+import { plan, cheapArgs, describeEmptyRun, EXIT_REFUSED } from "./verify.mjs";
+import { collect } from "./lib/routing.mjs";
 import { execFileSync } from "node:child_process";
 import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
@@ -43,7 +38,10 @@ const runs = (files, id) => pick(files, id).run;
 
 test("a docs-only diff selects the doc guards and NOTHING expensive", () => {
   const files = ["docs/VERIFY-RULES.md", "reports/evolution/X.md"];
-  assert.equal(runs(files, "doc-guards"), true);
+  // `doc-guards` was a BUNDLE and is gone (VERIFY-ROUTING-2). Its members are separate tasks now,
+  // each selected on its own declaration.
+  assert.equal(runs(files, "check-doc-links"), true);
+  assert.equal(runs(files, "check-doc-facts"), true);
   for (const id of [
     "client-suite",
     "world-fingerprint",
@@ -93,8 +91,15 @@ test("a drawing-path diff selects the render fingerprint; a non-drawing client d
     ),
     true,
   );
+  // CHANGED BY VERIFY-ROUTING-2, and NOT loosened to get green: `storage/storage.js` is IN the
+  // engine hull, so it can change the race, so it can change what the camera sees and therefore
+  // what is drawn. The old table said render only cares about camera/ and the drawing path — that
+  // was the sixth miss. A file genuinely outside both is the honest negative case.
   assert.equal(
-    runs(["client/src/modules/storage/storage.js"], "render-fingerprint"),
+    runs(
+      ["client/src/screens/SetupScreen/SetupScreen.jsx"],
+      "render-fingerprint",
+    ),
     false,
   );
 });
@@ -119,10 +124,9 @@ test("an EMPTY diff runs nothing at all — including containment, which matches
     p.filter((t) => t.run).map((t) => t.id),
     [],
   );
-  assert.equal(
-    p.length,
-    ROUTES.length,
-    "the plan must list every route, run or not",
+  assert.ok(
+    p.length >= 13,
+    "the plan must list every guard, run or not — thirteen scripts plus the two suites",
   );
 });
 
@@ -149,9 +153,12 @@ test("CAMERA: a camera file selects camera AND render — and a storage file sel
   const cam = ["client/src/modules/camera/CameraDirector.js"];
   assert.equal(runs(cam, "camera-fingerprint"), true);
   assert.equal(runs(cam, "render-fingerprint"), true);
-  const storage = ["client/src/modules/storage/storage.js"];
-  assert.equal(runs(storage, "camera-fingerprint"), false);
-  assert.equal(runs(storage, "render-fingerprint"), false);
+  // The negative half moved for a reason (VERIFY-ROUTING-2): `storage/storage.js` is in the engine
+  // hull and now correctly selects both, because a change to the race changes the camera's inputs.
+  // SetupScreen is outside the hull and outside the drawing path, so it selects neither.
+  const outside = ["client/src/screens/SetupScreen/SetupScreen.jsx"];
+  assert.equal(runs(outside, "camera-fingerprint"), false);
+  assert.equal(runs(outside, "render-fingerprint"), false);
 });
 
 test("ENGINE: a file in the reach hull selects the world fingerprint — a camera file does not", () => {
@@ -172,11 +179,18 @@ test("ROUTED NOWHERE: the paths the table deliberately ignores select nothing at
     "client/e2e/smoke.spec.js",
     "package-lock.json",
   ]) {
-    // `fingerprint-containment` is excluded: it is deliberately always-on, so "routes nowhere"
+    // The two ALWAYS-ON guards are excluded: `fingerprint-containment` (a stray fingerprint copy
+    // can be pasted into any file) and `check-writable` (any tracked file can become an unwritable
+    // OneDrive placeholder). Both DECLARE `everything`, so "routes nowhere"
     // means "selects no guard that CAN be skipped". Excluding it here rather than weakening the
     // assertion keeps the test able to catch a matcher that has quietly widened.
     const selected = plan([f])
-      .filter((t) => t.run && t.id !== "fingerprint-containment")
+      .filter(
+        (t) =>
+          t.run &&
+          t.id !== "fingerprint-containment" &&
+          t.id !== "check-writable",
+      )
       .map((t) => t.id);
     assert.deepEqual(
       selected,
@@ -186,32 +200,41 @@ test("ROUTED NOWHERE: the paths the table deliberately ignores select nothing at
   }
 });
 
-test("THE MAP IS ONE TABLE, and every rule states what it covers", () => {
-  // If a guard is ever added to the runner without a route, this fails — which is the whole point
-  // of having one table rather than five predicates.
-  assert.ok(ROUTES.length >= 6);
-  for (const r of ROUTES) {
-    assert.equal(typeof r.guard, "string");
+test("EVERY GUARD DECLARES ITSELF — there is no table left to fall behind", () => {
+  // The property that replaces "one table": every guard script on disk answers `--declare`, and
+  // none is routed by something written elsewhere. An undeclared guard is REPORTED, never given an
+  // invented route — that is what makes a new guard's absence loud instead of silent.
+  const { guards, undeclared } = collect();
+  assert.deepEqual(undeclared, [], "every guard script must declare itself");
+  assert.ok(guards.length >= 13);
+  for (const g of guards) {
+    assert.equal(typeof g.id, "string");
     assert.ok(
-      r.what && r.what.length > 10,
-      `${r.guard} must say what it covers`,
+      g.covers && g.covers.length > 10,
+      `${g.id} must say what it covers`,
     );
-    assert.equal(typeof r.match, "function");
+    // REQUIRED and non-empty: the hole is written down by whoever knows it.
+    assert.ok(
+      Array.isArray(g.blind) && g.blind.length > 0,
+      `${g.id} must state what it is BLIND to`,
+    );
+    assert.equal(typeof g.matches, "function");
   }
-  const ids = plan([]).map((t) => t.id);
   assert.deepEqual(
-    ids,
-    ROUTES.map((r) => r.guard),
-    "plan() must come from the table, in order",
+    plan([]).map((t) => t.id),
+    guards.map((g) => g.id),
+    "plan() must come from the collected declarations, in order",
   );
 });
 
 test("A SKIP NAMES THE RULE, so the map is visible without reading the code", () => {
   for (const t of plan([])) {
-    assert.match(t.reason, /nothing matched — this guard covers:/);
+    // The reason is now MACHINE-CHECKABLE rather than a sentence someone wrote: it prints the
+    // declaration — how many files the set resolved to and where they came from.
+    assert.match(t.reason, /nothing changed  ·  declares /);
     assert.ok(
-      t.reason.length > 40,
-      `${t.id}'s skip reason must name what it covers`,
+      t.reason.length > 30,
+      `${t.id}'s skip reason must name its declaration`,
     );
   }
 });
@@ -222,8 +245,11 @@ test("THE RECORD selects the doc guards; a husky hook no longer does (ONE-TRUTH-
   // ONE-TRUTH-1 routed `.husky/pre-commit` here because it CARRIED a fingerprint. ONE-TRUTH-2
   // deleted that copy, so the reason is gone and so is the route. The record itself still selects
   // the doc guards, because editing it is a documentation act.
-  assert.equal(runs(["docs/fingerprints.json"], "doc-guards"), true);
-  assert.equal(runs([".husky/pre-commit"], "doc-guards"), false);
+  assert.equal(
+    runs(["docs/fingerprints.json"], "fingerprint-containment"),
+    true,
+  );
+  assert.equal(runs([".husky/pre-commit"], "check-doc-facts"), false);
 });
 
 test("FINGERPRINT CONTAINMENT runs for EVERYTHING, including paths routed nowhere else", () => {
@@ -451,4 +477,86 @@ test("END TO END: verify itself exits non-zero when its plan is empty", () => {
   } finally {
     rmSync(tmp, { recursive: true, force: true });
   }
+});
+
+// ── VERIFY-ROUTING-2: THE GAP FOUND AT THE SHIP, AND THE ONES THE OLD TABLE LEFT ────────────────
+
+test("THE SHIP GAP: a pure JS change runs the config guards", () => {
+  // The defect this block was opened for. `check-config-keys` and `check-fallback-agreement` were
+  // bundled into `doc-guards`, which only markdown selected — so a change to a JS file that those
+  // two guards read never ran either of them under verify. They fired in the hook and in CI, which
+  // is where they caught things, but verify was quietly blind.
+  const js = ["client/src/modules/camera/framingConfig.js"];
+  assert.equal(runs(js, "check-config-keys"), true);
+  assert.equal(runs(js, "check-fallback-agreement"), true);
+  // …and the pair, so this is not "those guards now run on everything": a report cannot select them.
+  const report = ["reports/night/X.md"];
+  assert.equal(runs(report, "check-config-keys"), false);
+  assert.equal(runs(report, "check-fallback-agreement"), false);
+});
+
+test("SELF-COVERAGE: changing a guard's own source runs THAT guard, not just its tests", () => {
+  // Miss 3 in routing.mjs's list, and it is closed for every guard at once by construction: a
+  // guard's dependency set always contains the import closure of the file its declaration lives in.
+  // Nothing is declared for this and nothing can forget it.
+  assert.equal(
+    runs(["scripts/check-fallback-agreement.mjs"], "check-fallback-agreement"),
+    true,
+  );
+  assert.equal(
+    runs(["scripts/render-fingerprint.mjs"], "render-fingerprint"),
+    true,
+  );
+  assert.equal(runs(["scripts/check-index.mjs"], "check-index"), true);
+});
+
+test("MISS 4: a camera-only change runs check-measured-stamps", () => {
+  // Its stamps say `depends=client/src/modules/camera/`, but it used to be routed by "markdown
+  // changed", so a camera-only commit never ran it. It declares the camera directory now.
+  assert.equal(
+    runs(
+      ["client/src/modules/camera/CameraDirector.js"],
+      "check-measured-stamps",
+    ),
+    true,
+  );
+});
+
+test("MISS 6: an ENGINE change runs the camera and render fingerprints", () => {
+  // Found by this block. The old table said camera/render only care about camera/ and the drawing
+  // path — but both harnesses run a real seeded race, so a change to the RACE changes what the
+  // director decides and therefore what is drawn. It costs two fingerprints on engine blocks; the
+  // alternative is a fingerprint that cannot notice the thing that moved it.
+  const engine = ["client/src/modules/raceBehavior.js"];
+  assert.equal(runs(engine, "world-fingerprint"), true);
+  assert.equal(runs(engine, "camera-fingerprint"), true);
+  assert.equal(runs(engine, "render-fingerprint"), true);
+});
+
+test("THE SUITES keep their containment, including the two misses that produced it", () => {
+  assert.equal(
+    runs(["client/vitest.config.js"], "client-suite"),
+    true,
+    "miss 2",
+  );
+  assert.equal(
+    runs(["client/e2e/smoke.spec.js"], "client-suite"),
+    false,
+    "notDirs",
+  );
+  assert.equal(runs(["scripts/lib/routing.mjs"], "script-suite"), true);
+});
+
+test("AN UNDECLARED GUARD IS REPORTED, never given an invented route", () => {
+  // The failure mode of a declaration-based router: a guard that answers nothing must not silently
+  // become a guard that covers nothing. `collect` returns it in `undeclared` instead.
+  const { guards, undeclared } = collect(
+    (rel) =>
+      rel.includes("silent")
+        ? null
+        : { id: rel, covers: "x".repeat(20), blind: ["y"] },
+    ["scripts/check-silent.mjs", "scripts/check-loud.mjs"],
+  );
+  assert.deepEqual(undeclared, ["scripts/check-silent.mjs"]);
+  assert.ok(guards.some((g) => g.id === "scripts/check-loud.mjs"));
 });

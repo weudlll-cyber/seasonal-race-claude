@@ -29,6 +29,25 @@
 // VERIFY-FAST-1: every guard prints its own elapsed time. The ceremony's cost column was wrong
 // in BOTH directions (camera claimed ~85 s and costs 47; render claimed ~30 s and costs 15) and
 // nothing checked it. A number the script measures itself cannot go stale.
+// ── VERIFY-ROUTING-2: this guard declares what it covers, so verify does not have to remember.
+// `blind` is required and non-empty: the hole is written down by whoever knows it.
+export const GUARD = {
+  id: "check-tags",
+  covers:
+    "a tag at origin that no register entry declares, and a register entry naming a tag that does not exist",
+  blind: [
+    "whether a tag points where the register SAYS it points — names are checked, not shas",
+    "local tags that were never pushed",
+    "A TAG PUSHED WITHOUT TOUCHING TAGS.md IS INVISIBLE TO ROUTING — no file changed, so verify does not select this guard. The pre-commit hook and CI run it unconditionally, which is where that case is caught.",
+  ],
+  dirs: [],
+  files: ["docs/TAGS.md"],
+};
+if (process.argv.includes("--declare")) {
+  console.log(JSON.stringify(GUARD));
+  process.exit(0);
+}
+
 const __t0 = Date.now();
 process.on("exit", () => {
   // NIGHT-TOOLS-1: MACHINE-READABLE, because a human string has to be re-parsed by
