@@ -13,6 +13,7 @@
 // ============================================================
 
 import { KEYS, storageGet, storageSet } from './storage/storage.js';
+import { resolveFromDefaults, diffFromDefaults, pruneStored } from './storage/configDiff.js';
 
 export const DEFAULT_AUTO_SCALE_CONFIG = {
   enabled: true,
@@ -160,12 +161,27 @@ export function getEffectiveMaxTargetScreenPx(typeOverridePx, globalMaxPx) {
 
 /** Load config from localStorage, merging with defaults. */
 export function loadAutoScaleConfig() {
-  const stored = storageGet(KEYS.AUTO_SCALE_CONFIG, null);
-  if (!stored || typeof stored !== 'object') return { ...DEFAULT_AUTO_SCALE_CONFIG };
-  return { ...DEFAULT_AUTO_SCALE_CONFIG, ...stored };
+  pruneStoredAutoScaleConfig();
+  return resolveFromDefaults(storageGet(KEYS.AUTO_SCALE_CONFIG, null), DEFAULT_AUTO_SCALE_CONFIG);
 }
 
 /** Persist config to localStorage. */
+/**
+ * CONFIG-DIFF-2: the one-time prune of the stored config — drop every key equal to its current
+ * default, so an untouched key goes back to following the default. The rule lives in
+ * `storage/configDiff.js`; the only thing that lives here is which storage key it belongs to.
+ *
+ * Idempotent and write-free when there is nothing to drop, so it is safe to call on every load.
+ */
+export function pruneStoredAutoScaleConfig() {
+  const { pruned, changed } = pruneStored(
+    storageGet(KEYS.AUTO_SCALE_CONFIG),
+    DEFAULT_AUTO_SCALE_CONFIG
+  );
+  if (changed) storageSet(KEYS.AUTO_SCALE_CONFIG, pruned);
+  return changed;
+}
+
 export function saveAutoScaleConfig(config) {
-  storageSet(KEYS.AUTO_SCALE_CONFIG, config);
+  storageSet(KEYS.AUTO_SCALE_CONFIG, diffFromDefaults(config, DEFAULT_AUTO_SCALE_CONFIG));
 }

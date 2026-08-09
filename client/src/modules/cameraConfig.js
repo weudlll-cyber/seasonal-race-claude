@@ -63,26 +63,14 @@
 
 import { storageGet, storageSet, KEYS } from './storage/storage.js';
 import { DEFAULT_CAMERA_CONFIG } from './storage/defaults.js';
+import {
+  resolveFromDefaults,
+  diffFromDefaults as diffAgainst,
+  pruneStored,
+  valuesEqual as valuesEqualShared,
+} from './storage/configDiff.js';
 
 export { DEFAULT_CAMERA_CONFIG };
-
-/** Per-state profiles: default profile underneath, stored fields on top, unknown fields ignored. */
-function mergeStateProfiles(storedProfiles) {
-  const defProfiles = DEFAULT_CAMERA_CONFIG.cameraStateProfiles;
-  const out = {};
-  for (const state of Object.keys(defProfiles)) {
-    const def = defProfiles[state];
-    const stored = storedProfiles?.[state];
-    const profile = { ...def };
-    if (stored && typeof stored === 'object') {
-      for (const key of Object.keys(def)) {
-        if (Object.prototype.hasOwnProperty.call(stored, key)) profile[key] = stored[key];
-      }
-    }
-    out[state] = profile;
-  }
-  return out;
-}
 
 /**
  * The live camera config: defaults underneath, stored values on top, unknown or retired keys ignored.
@@ -98,16 +86,7 @@ export function loadCameraConfig() {
   // config below is identical either way; pruning only changes what STORAGE holds, so that keys
   // equal to their default go back to following the default.
   pruneStoredCameraConfig();
-  const stored = storageGet(KEYS.CAMERA_CONFIG);
-  const storedObj = stored && typeof stored === 'object' ? stored : {};
-  const out = {};
-  for (const key of Object.keys(DEFAULT_CAMERA_CONFIG)) {
-    out[key] = Object.prototype.hasOwnProperty.call(storedObj, key)
-      ? storedObj[key]
-      : DEFAULT_CAMERA_CONFIG[key];
-  }
-  out.cameraStateProfiles = mergeStateProfiles(storedObj.cameraStateProfiles);
-  return out;
+  return resolveFromDefaults(storageGet(KEYS.CAMERA_CONFIG), DEFAULT_CAMERA_CONFIG);
 }
 
 /**
@@ -132,100 +111,26 @@ export function cameraConfigProvenance() {
   return { resolved, sources, hadStored: !!stored && typeof stored === 'object' };
 }
 
-/**
- * Value equality for config values. Scalars by `Object.is`, arrays and plain objects structurally.
- *
- * Structural rather than `===` because several camera values are arrays (and the state profiles are
- * objects): a reference comparison would report every array as "differs from the default" and store
- * it, which is the freeze this block removes, just narrower.
- */
-export function valuesEqual(a, b) {
-  if (Object.is(a, b)) return true;
-  if (Array.isArray(a) && Array.isArray(b))
-    return a.length === b.length && a.every((v, i) => valuesEqual(v, b[i]));
-  if (a && b && typeof a === 'object' && typeof b === 'object') {
-    const ka = Object.keys(a);
-    const kb = Object.keys(b);
-    if (ka.length !== kb.length) return false;
-    return ka.every((k) => Object.prototype.hasOwnProperty.call(b, k) && valuesEqual(a[k], b[k]));
-  }
-  return false;
-}
-
-/** The per-state profile fields that differ from their default. Undefined when none do. */
-function profilesDiff(profiles) {
-  if (!profiles || typeof profiles !== 'object') return undefined;
-  const defProfiles = DEFAULT_CAMERA_CONFIG.cameraStateProfiles;
-  const out = {};
-  for (const state of Object.keys(defProfiles)) {
-    const def = defProfiles[state];
-    const cur = profiles[state];
-    if (!cur || typeof cur !== 'object') continue;
-    const fields = {};
-    for (const key of Object.keys(def)) {
-      if (!Object.prototype.hasOwnProperty.call(cur, key)) continue;
-      if (!valuesEqual(cur[key], def[key])) fields[key] = cur[key];
-    }
-    if (Object.keys(fields).length) out[state] = fields;
-  }
-  return Object.keys(out).length ? out : undefined;
-}
+// CONFIG-DIFF-2: the rule moved to storage/configDiff.js, the ONE home shared by all seven stores.
+// These re-exports keep this module's public surface unchanged for its existing callers and tests —
+// the camera is now a CONSUMER of the rule rather than the place it lives.
+export const valuesEqual = valuesEqualShared;
+export const diffFromDefaults = (config) => diffAgainst(config, DEFAULT_CAMERA_CONFIG);
 
 /**
- * WHAT HE CHOSE: the subset of a resolved config that differs from the defaults.
- *
- * Keys equal to their default are OMITTED, which is the whole point — an omitted key follows the
- * default forever, so a default that changes later reaches him. Unknown keys are dropped too: the
- * loader already ignores them, so writing them back would only preserve litter.
- *
- * Exported for the tests, which must be able to ask "what would be written" without a storage layer.
- */
-export function diffFromDefaults(config) {
-  const out = {};
-  if (!config || typeof config !== 'object') return out;
-  for (const key of Object.keys(DEFAULT_CAMERA_CONFIG)) {
-    if (key === 'cameraStateProfiles') continue;
-    if (!Object.prototype.hasOwnProperty.call(config, key)) continue;
-    if (!valuesEqual(config[key], DEFAULT_CAMERA_CONFIG[key])) out[key] = config[key];
-  }
-  const profiles = profilesDiff(config.cameraStateProfiles);
-  if (profiles) out.cameraStateProfiles = profiles;
-  return out;
-}
-
-/**
- * THE ONE-TIME PRUNE of what is already in his browser.
- *
- * Drops every stored key whose value equals the current default. What survives is exactly his real
- * deviations — which is why this is a prune and NOT a reset. He offered to reset; a reset throws
- * away weeks of tuning that this keeps.
- *
- * IT RUNS FROM `loadCameraConfig`, not from an app-start hook someone has to remember to call, and
- * it WRITES ONLY WHEN IT ACTUALLY DROPS SOMETHING. It is idempotent — the second run finds nothing
- * to drop and writes nothing — so it needs no marker key and cannot half-run. A migration that
- * depends on a call site is a migration that will one day not have been called.
+ * The one-time prune of the stored camera config. See storage/configDiff.js for the rule; the only
+ * thing that lives here is which storage key it belongs to.
  *
  * @returns {{changed: boolean, dropped: string[]}}
  */
 export function pruneStoredCameraConfig() {
   const stored = storageGet(KEYS.CAMERA_CONFIG);
-  if (!stored || typeof stored !== 'object') return { changed: false, dropped: [] };
-  const pruned = diffFromDefaults({
-    ...stored,
-    // The profiles are diffed against the FULL default profile, so hand the merge in rather than the
-    // raw stored fragment — otherwise a stored profile missing a field would look like a deviation.
-    cameraStateProfiles: mergeStateProfiles(stored.cameraStateProfiles),
-  });
-  const dropped = Object.keys(stored).filter(
-    (k) => !Object.prototype.hasOwnProperty.call(pruned, k)
-  );
-  const profilesChanged = !valuesEqual(stored.cameraStateProfiles, pruned.cameraStateProfiles);
-  if (!dropped.length && !profilesChanged) return { changed: false, dropped: [] };
-  storageSet(KEYS.CAMERA_CONFIG, pruned);
-  return { changed: true, dropped };
+  const { pruned, dropped, changed } = pruneStored(stored, DEFAULT_CAMERA_CONFIG);
+  if (changed) storageSet(KEYS.CAMERA_CONFIG, pruned);
+  return { changed, dropped };
 }
 
 /** Store ONLY what differs from the defaults. See the header for why, and for the one edge case. */
 export function saveCameraConfig(config) {
-  return storageSet(KEYS.CAMERA_CONFIG, diffFromDefaults(config));
+  return storageSet(KEYS.CAMERA_CONFIG, diffAgainst(config, DEFAULT_CAMERA_CONFIG));
 }

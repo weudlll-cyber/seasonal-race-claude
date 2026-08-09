@@ -10,6 +10,7 @@
 import { storageGet, storageSet, KEYS } from './storage/storage.js';
 import { DEFAULT_RACE_BEHAVIOR_CONFIG } from './storage/defaults.js';
 import { easeInOutCubic } from '../utils/mathUtils.js';
+import { resolveFromDefaults, diffFromDefaults, pruneStored } from './storage/configDiff.js';
 
 export { DEFAULT_RACE_BEHAVIOR_CONFIG };
 
@@ -41,21 +42,22 @@ export function computeEffectiveBrakeFactor(config, isOpen, raceElapsedMs) {
 const LEGACY_START_SPREAD_DEFAULT = 0.7;
 
 export function loadRaceBehaviorConfig() {
-  const stored = storageGet(KEYS.RACE_BEHAVIOR_CONFIG);
-  if (!stored || typeof stored !== 'object') return { ...DEFAULT_RACE_BEHAVIOR_CONFIG };
-  const merged = { ...DEFAULT_RACE_BEHAVIOR_CONFIG, ...stored };
-  // Migrate: if the stored spread is the old default, silently upgrade it
+  pruneStoredRaceBehaviorConfig();
+  const merged = resolveFromDefaults(
+    storageGet(KEYS.RACE_BEHAVIOR_CONFIG),
+    DEFAULT_RACE_BEHAVIOR_CONFIG
+  );
+  // Migrate: if the stored spread is the old default, silently upgrade it. STILL NEEDED — this is a
+  // VALUE migration, and 0.7 is a legitimate stored value the resolver has no opinion about.
   if (merged.startSpreadRange === LEGACY_START_SPREAD_DEFAULT) {
     merged.startSpreadRange = DEFAULT_RACE_BEHAVIOR_CONFIG.startSpreadRange;
   }
-  // Migrate: speedBrakeTThreshold (absolute value) renamed to speedBrakeTMultiplier (dimensionless).
-  // Old stored absolute values are not meaningful as multipliers — drop them so the new default applies.
-  if ('speedBrakeTThreshold' in merged) {
-    delete merged.speedBrakeTThreshold;
-    if (!('speedBrakeTMultiplier' in stored)) {
-      merged.speedBrakeTMultiplier = DEFAULT_RACE_BEHAVIOR_CONFIG.speedBrakeTMultiplier;
-    }
-  }
+  // CONFIG-DIFF-2 REMOVED the speedBrakeTThreshold -> speedBrakeTMultiplier migration that sat here.
+  // It is not lost, it is SUBSUMED: it deleted a retired key from the spread-merged object and then
+  // supplied the new key's default when the old one had been stored. The resolver now walks the
+  // DEFAULT keys, so a retired stored key never enters the object at all and an absent new key is
+  // already its default. Both halves are structural now, and a hand-maintained list of renamed keys
+  // is exactly what this block exists to stop accumulating.
   if (
     merged.startSpreadRange <= 0 ||
     merged.startSpreadRange > 1 ||
@@ -115,6 +117,23 @@ export function loadRaceBehaviorConfig() {
   return merged;
 }
 
+/**
+ * CONFIG-DIFF-2: the one-time prune of the stored config — drop every key equal to its current
+ * default, so an untouched key goes back to following the default. Idempotent and write-free when
+ * there is nothing to drop.
+ */
+export function pruneStoredRaceBehaviorConfig() {
+  const { pruned, changed } = pruneStored(
+    storageGet(KEYS.RACE_BEHAVIOR_CONFIG),
+    DEFAULT_RACE_BEHAVIOR_CONFIG
+  );
+  if (changed) storageSet(KEYS.RACE_BEHAVIOR_CONFIG, pruned);
+  return changed;
+}
+
 export function saveRaceBehaviorConfig(config) {
-  return storageSet(KEYS.RACE_BEHAVIOR_CONFIG, config);
+  return storageSet(
+    KEYS.RACE_BEHAVIOR_CONFIG,
+    diffFromDefaults(config, DEFAULT_RACE_BEHAVIOR_CONFIG)
+  );
 }

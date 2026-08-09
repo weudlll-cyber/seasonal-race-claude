@@ -318,9 +318,11 @@ describe('loadRaceDynamicsConfig', () => {
 
 describe('saveRaceDynamicsConfig', () => {
   it('writes config to storage', () => {
-    const cfg = { ...DEFAULT_RACE_DYNAMICS_CONFIG, reRollVariationPercent: 50 };
-    saveRaceDynamicsConfig(cfg);
-    expect(storageSet).toHaveBeenCalledWith('racearena:raceDynamicsConfig', cfg);
+    // CONFIG-DIFF-2: only the deviation is written. Same intent, new payload shape.
+    saveRaceDynamicsConfig({ ...DEFAULT_RACE_DYNAMICS_CONFIG, reRollVariationPercent: 50 });
+    expect(storageSet).toHaveBeenCalledWith('racearena:raceDynamicsConfig', {
+      reRollVariationPercent: 50,
+    });
   });
 });
 

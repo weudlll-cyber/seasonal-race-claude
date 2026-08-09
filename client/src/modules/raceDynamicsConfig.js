@@ -9,6 +9,7 @@
 
 import { storageGet, storageSet, KEYS } from './storage/storage.js';
 import { DEFAULT_RACE_DYNAMICS_CONFIG } from './storage/defaults.js';
+import { resolveFromDefaults, diffFromDefaults, pruneStored } from './storage/configDiff.js';
 
 export { DEFAULT_RACE_DYNAMICS_CONFIG };
 
@@ -19,10 +20,11 @@ export { DEFAULT_RACE_DYNAMICS_CONFIG };
 // defaults (graceful + intended).
 
 export function loadRaceDynamicsConfig() {
-  const rawStored = storageGet(KEYS.RACE_DYNAMICS_CONFIG);
-  if (!rawStored || typeof rawStored !== 'object') return { ...DEFAULT_RACE_DYNAMICS_CONFIG };
-  const stored = rawStored;
-  const merged = { ...DEFAULT_RACE_DYNAMICS_CONFIG, ...stored };
+  pruneStoredRaceDynamicsConfig();
+  const merged = resolveFromDefaults(
+    storageGet(KEYS.RACE_DYNAMICS_CONFIG),
+    DEFAULT_RACE_DYNAMICS_CONFIG
+  );
   if (
     merged.reRollVariationPercent <= 0 ||
     merged.reRollTransitionDuration <= 0 ||
@@ -84,6 +86,25 @@ export function loadRaceDynamicsConfig() {
   return merged;
 }
 
+/**
+ * CONFIG-DIFF-2: the one-time prune of the stored config — drop every key equal to its current
+ * default, so an untouched key goes back to following the default. The rule lives in
+ * `storage/configDiff.js`; the only thing that lives here is which storage key it belongs to.
+ *
+ * Idempotent and write-free when there is nothing to drop, so it is safe to call on every load.
+ */
+export function pruneStoredRaceDynamicsConfig() {
+  const { pruned, changed } = pruneStored(
+    storageGet(KEYS.RACE_DYNAMICS_CONFIG),
+    DEFAULT_RACE_DYNAMICS_CONFIG
+  );
+  if (changed) storageSet(KEYS.RACE_DYNAMICS_CONFIG, pruned);
+  return changed;
+}
+
 export function saveRaceDynamicsConfig(config) {
-  return storageSet(KEYS.RACE_DYNAMICS_CONFIG, config);
+  return storageSet(
+    KEYS.RACE_DYNAMICS_CONFIG,
+    diffFromDefaults(config, DEFAULT_RACE_DYNAMICS_CONFIG)
+  );
 }
