@@ -49,6 +49,24 @@
 //   node scripts/check-fingerprints.mjs --mint    # ALSO re-mint every role and compare
 // ============================================================
 
+// ── VERIFY-ROUTING-2: this guard declares what it covers, so verify does not have to remember.
+// `blind` is required and non-empty: the hole is written down by whoever knows it.
+export const GUARD = {
+  id: "fingerprint-containment",
+  covers: "a current fingerprint value copied anywhere outside its one home",
+  blind: [
+    "whether the RECORD is right — it never runs the engine; pass --mint for that",
+    "superseded values, which living docs legitimately quote as history",
+  ],
+  dirs: [],
+  files: [],
+  everything: true,
+};
+if (process.argv.includes("--declare")) {
+  console.log(JSON.stringify(GUARD));
+  process.exit(0);
+}
+
 const started = Date.now();
 
 import { readFileSync } from "node:fs";

@@ -45,6 +45,25 @@
 //   node scripts/check-writable.mjs --fix       # clear the attributes it found, then re-check
 // ============================================================
 
+// ── VERIFY-ROUTING-2: this guard declares what it covers, so verify does not have to remember.
+// `blind` is required and non-empty: the hole is written down by whoever knows it.
+export const GUARD = {
+  id: "check-writable",
+  covers:
+    "a tracked file that can be READ but not WRITTEN — a OneDrive hidden placeholder, invisible to every other guard because they all only read",
+  blind: [
+    "files that are writable now and become hidden later; it is a snapshot",
+    "untracked files",
+  ],
+  dirs: [],
+  files: [],
+  everything: true,
+};
+if (process.argv.includes("--declare")) {
+  console.log(JSON.stringify(GUARD));
+  process.exit(0);
+}
+
 const started = Date.now();
 
 import { execFileSync } from "node:child_process";

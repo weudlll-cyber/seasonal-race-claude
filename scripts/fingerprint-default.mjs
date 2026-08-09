@@ -52,6 +52,26 @@
 // VERIFY-FAST-1: every guard prints its own elapsed time. The ceremony's cost column was wrong
 // in BOTH directions (camera claimed ~85 s and costs 47; render claimed ~30 s and costs 15) and
 // nothing checked it. A number the script measures itself cannot go stale.
+// ── VERIFY-ROUTING-2: this guard declares what it covers, so verify does not have to remember.
+// `blind` is required and non-empty: the hole is written down by whoever knows it.
+export const GUARD = {
+  id: "world-fingerprint",
+  covers:
+    "the shipped RACE: physics, plan and outcome, hashed across ten tracks",
+  blind: [
+    "anything the CAMERA decides and anything DRAWN — those are the camera and render fingerprints",
+    "configs other than the shipped default, and seeds outside its fixed sample",
+    "timing and frame pacing: it hashes outcomes, not how long they took",
+  ],
+  dirs: [],
+  files: [],
+  reach: ["client/src/modules/raceCore.js", "scripts/sim-fairness.mjs"],
+};
+if (process.argv.includes("--declare")) {
+  console.log(JSON.stringify(GUARD));
+  process.exit(0);
+}
+
 const __t0 = Date.now();
 process.on("exit", () => {
   // NIGHT-TOOLS-1: MACHINE-READABLE, because a human string has to be re-parsed by
@@ -62,7 +82,13 @@ process.on("exit", () => {
 `);
 });
 import { execFile } from "child_process";
-import { isCheap, cheapTracks, cheapBanner, cheapHash, refuseCheapQuiet } from "./lib/cheapMode.mjs";
+import {
+  isCheap,
+  cheapTracks,
+  cheapBanner,
+  cheapHash,
+  refuseCheapQuiet,
+} from "./lib/cheapMode.mjs";
 import { readFileSync } from "fs";
 import { createHash } from "crypto";
 import { join, dirname } from "path";
@@ -73,7 +99,8 @@ const ROOT = join(dirname(fileURLToPath(import.meta.url)), "..");
 // Scratch off the (OneDrive-synced) repo tree by default; env-overridable. Matches sim-fairness.mjs.
 const SCRATCH =
   process.env.RA_SCRATCH_DIR || join(tmpdir(), "racearena-scratch");
-const LABEL = (process.argv[2] && process.argv[2] !== "--cheap" ? process.argv[2] : "run");
+const LABEL =
+  process.argv[2] && process.argv[2] !== "--cheap" ? process.argv[2] : "run";
 
 // A FLAG IN THE LABEL POSITION IS ALWAYS A MISTAKE, and it used to be a SILENT one (ONE-TRUTH-2).
 // `argv[2]` is the label and EXTRA starts at `argv[3]`, so
@@ -88,7 +115,9 @@ const LABEL = (process.argv[2] && process.argv[2] !== "--cheap" ? process.argv[2
 // below and before EXTRA, so it cannot be swallowed as a label the way --gapRerollEnabled once was.
 refuseCheapQuiet();
 const CHEAP = isCheap();
-const ARGV = process.argv.filter((a) => a !== "--cheap" && !a.startsWith("--cheap-track="));
+const ARGV = process.argv.filter(
+  (a) => a !== "--cheap" && !a.startsWith("--cheap-track="),
+);
 if (ARGV[2]?.startsWith("--")) {
   console.error(
     `FAIL: "${process.argv[2]}" looks like a flag, but it is in the LABEL position.\n` +
@@ -144,7 +173,12 @@ if (EXTRA.length) console.log("extra sim args:", EXTRA.join(" "));
 // ten fast runs into ten slow ones and would have made the change look worthless.
 const RUN_TRACKS = CHEAP ? cheapTracks(TRACKS, (t) => t[0]) : TRACKS;
 if (CHEAP)
-  console.log(cheapBanner("world", `One track (${RUN_TRACKS[0][0]}) of ${TRACKS.length}.`));
+  console.log(
+    cheapBanner(
+      "world",
+      `One track (${RUN_TRACKS[0][0]}) of ${TRACKS.length}.`,
+    ),
+  );
 const JOBS = Math.max(1, Math.min(RUN_TRACKS.length, cpus().length));
 const runOne = ([track, racer]) => {
   const out = join(SCRATCH, "fp", `${LABEL}__${track}`);
@@ -203,7 +237,9 @@ for (const [track] of RUN_TRACKS) {
   });
 }
 // Prefixed under --cheap so a one-track hash cannot impersonate the fingerprint.
-const combinedHash = CHEAP ? cheapHash(combined.digest("hex")) : combined.digest("hex").slice(0, 16);
+const combinedHash = CHEAP
+  ? cheapHash(combined.digest("hex"))
+  : combined.digest("hex").slice(0, 16);
 console.log(
   "COMBINED",
   combinedHash,
@@ -212,4 +248,9 @@ console.log(
 for (const t of perTrack)
   console.log(" ", t.track.padEnd(15), t.hash, "bias", JSON.stringify(t.bias));
 if (CHEAP)
-  console.log(cheapBanner("world", `One track (${RUN_TRACKS[0][0]}) of ${TRACKS.length}.`));
+  console.log(
+    cheapBanner(
+      "world",
+      `One track (${RUN_TRACKS[0][0]}) of ${TRACKS.length}.`,
+    ),
+  );

@@ -85,6 +85,19 @@ and what was retired.
   window-control sweep that produced the "suppression, not selection" verdict — the measurement that
   justified deleting the lead-rotation mechanism from master.
 
+### The corridor overlay — archived when the owner dropped it (2026-08-09)
+
+Built to settle a dispute the numbers could not: on river-run, is the camera leaving the track? It
+never produced the deciding picture, so the owner dropped it. **Its findings are on master as
+reports; this tag preserves the CODE, which is not** — `corridorOverlay.js`, its `defaults.js` key,
+the Dev Screen toggle and the `renderRaceFrame` hook. The branch was deleted at origin.
+
+- `archive/corridor-overlay-1` (`4dbfba8c`, 2026-08-09) — the overlay, and the reason to keep it:
+  the question it was built for is STILL OPEN. `width: 300` is a FULL width to the physics and the
+  camera and a HALF width to the track-edge drawing code, so a guarantee expressed in track widths
+  may be promising a corridor the viewer cannot see. Start here rather than from scratch — see
+  [DEAD-ENDS.md](DEAD-ENDS.md) §K.
+
 ### SHIP-THREE — the owner's 5, and two guards (2026-08-09)
 
 Three blocks, two strands, one merge. The owner's `minRacersVisible` verdict shipped alongside the

@@ -45,6 +45,25 @@
 //   node scripts/check-config-keys.mjs --root=<d>  # scan a fixture (used by its test)
 // ============================================================
 
+// ── VERIFY-ROUTING-2: this guard declares what it covers, so verify does not have to remember.
+// `blind` is required and non-empty: the hole is written down by whoever knows it.
+export const GUARD = {
+  id: "check-config-keys",
+  covers:
+    "a key the renderer or the Dev Screen READS that has no entry in the defaults — the loader rebuilds the live config key by key, so such a key is silently dropped",
+  blind: [
+    "whether the key's VALUE is right — see check-fallback-agreement, which is the sibling that asks that",
+    "config objects other than the camera one: dynamics and behaviour are spread-merged and cannot fail this way",
+    "a key read by a computed expression rather than by name",
+  ],
+  dirs: ["client/src/"],
+  files: [],
+};
+if (process.argv.includes("--declare")) {
+  console.log(JSON.stringify(GUARD));
+  process.exit(0);
+}
+
 const started = Date.now();
 
 import { readFileSync, readdirSync, statSync } from "node:fs";

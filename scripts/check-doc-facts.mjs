@@ -67,6 +67,20 @@
 //   node scripts/check-doc-facts.mjs --root=<dir>  # scan a fixture (used by its test)
 // ============================================================
 
+// ── VERIFY-ROUTING-2: this guard declares what it covers, so verify does not have to remember.
+// `blind` is required and non-empty: the hole is written down by whoever knows it.
+export const GUARD = {
+  id: "check-doc-facts",
+  covers: "a stated fact in a living doc that the repository contradicts",
+  blind: ["facts nobody wrote down", "anything outside docs/"],
+  dirs: ["docs/"],
+  files: [],
+};
+if (process.argv.includes("--declare")) {
+  console.log(JSON.stringify(GUARD));
+  process.exit(0);
+}
+
 const started = Date.now();
 
 import { readFileSync, readdirSync } from "node:fs";

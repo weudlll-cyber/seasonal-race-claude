@@ -8,6 +8,26 @@ report here could be orphaned, or an index link could dangle, with nothing notic
 `node scripts/check-index.mjs --dir=reports/night --index=reports/night/INDEX.md` now checks both
 directions.
 
+- [VERIFY-ROUTING-2.md](VERIFY-ROUTING-2.md) — the routing comes from the guards. The route table
+  in `verify.mjs` is GONE (`ROUTES`, `selectedBy` and `FINGERPRINT_RECORD` went with it as orphans;
+  net −96 lines there); each guard DECLARES what it covers and `scripts/lib/routing.mjs` collects
+  those by asking each script `--declare`. SELF is the import closure of the declaring file —
+  computed, never declared, so it cannot be forgotten. **THE SHIP GAP IS CLOSED**: `doc-guards` was
+  a BUNDLE of nine guards behind one route, which is how eight of them inherited "markdown changed"
+  as their trigger, so a pure JS change never ran `check-config-keys` or `check-fallback-agreement`
+  under verify. **AND A SIXTH MISS FOUND BY BUILDING IT**: an ENGINE change now runs the camera and
+  render fingerprints, because both harnesses drive a real seeded race — it costs ~5 min on engine
+  blocks, and the alternative is a fingerprint that cannot notice the thing that moved it.
+  VERIFY-ROUTING-1's design survives whole; its DIFF does not, and the report says which parts
+  VERIFY-COST-3 and VERIFY-BASE-1 made obsolete (argv now lives with the flags, not in the
+  declaration). `blind` is required on every guard and verify prints a NOT COVERED section from
+  those lists on GREEN runs. `check-measured-stamps` gains its PENDING line — and I am the reason
+  it earns its place: in MIN-RACERS-5 I ran that guard pre-commit, saw green, and CI went red on the
+  same stamp minutes later, because it reads git HISTORY. Neither VERIFY-BASE-1's refusal nor
+  VERIFY-COST-3's flag handling was lost, and both are TESTED; the six reader-facing cases return
+  identical exit codes (0,2,0,0,2,2,2). verify PASS 14/FAIL 0/SKIP 1, all three fingerprints
+  UNCHANGED, hook PASS 7, CI green. `feat/verify-routing-1` is superseded — all four of its
+  documented misses covered.
 - [FALLBACK-GUARD-1.md](FALLBACK-GUARD-1.md) — a fallback must agree with the default it mirrors.
   The gap MIN-RACERS-5 named: `check-config-keys` asks whether a key EXISTS in the defaults, never
   whether a MIRROR of it still AGREES. New `check-fallback-agreement.mjs`, wired beside it in all
@@ -233,6 +253,46 @@ and in that commit's message.
   camera. The window trace is a committed tool now (`scripts/gun-window-truth.mjs`); the two blocks
   before it measured from patched copies in a scratch worktree that no longer exists. Camera and
   render moved, world unchanged. Not minted, not merged.
+- [CEREMONY-REGRESSION-BISECT-1.md](CEREMONY-REGRESSION-BISECT-1.md) — **LANDED 2026-08-09 AS
+  HISTORY, with a dated head-note: §2's verdict describes trees that are now 30+ commits behind and
+  is NOT a live claim.** Originally: **the commit is `ffa68d94`
+  (START-CEREMONY-CAMERA-1); CEREMONY-HANDOVER-1 changed nothing here**, its column is identical to
+  the digit. Two corrections: the **x = 0.27 figure is NOT the regression** (master is 0.26 — the
+  field was always in the left third), and what actually changed is the OTHER axis and the motion —
+  the field is walked UP the frame (y 0.50 held on master vs 0.42 after), the centre now travels
+  **4.8 -> 37.1 world px** along the track (7.7x), and its approach to the centreline changes from
+  monotonic to an overshoot-and-return. **The frame-fraction hypothesis is CONTRADICTED**: the
+  ceremony's held frame is 8.4% NARROWER (732 vs 800 world px), so a frame-fraction bias would shift
+  less, not more. Inference named but not isolated: the first OVERVIEW is now handed the field-derived
+  hold instead of its own setting, so a settled state became a zoom transition.
+- [CORRIDOR-OVERLAY-1.md](CORRIDOR-OVERLAY-1.md) — **DROPPED by the owner; code archived at
+  `archive/corridor-overlay-1`, findings kept (see [DEAD-ENDS.md](../../docs/DEAD-ENDS.md) §K).** A Dev Screen overlay (default OFF) drawing the
+  logical corridor and a cross on the frame centre. **The deciding picture is NOT delivered** — the
+  background does not blit in the capture and the red edges still do not draw, so no verdict is
+  claimed. What it DID find: `EditorShape.getPosition(t, offset)` treats the offset as NORMALISED
+  against `track.width`, and the same `width: 300` is a FULL width in the physics and the camera
+  (racers at 0.5 -> 150 px; `_trackWidthPx / 2`) but a HALF width in the code that draws the track
+  edges (`getPosition(0, 1.0)` -> 300 px). **A factor of two between what is drawn and what the
+  camera guarantees** — a strong candidate for the root of the river-run dispute, deliberately not
+- [CEREMONY-HOLD-CENTRE-1.md](CEREMONY-HOLD-CENTRE-1.md) — **STAGE 1 ONLY, nothing built.** First
+  second after the gun, camera centre split along/across the track: river-run **along 37.1 / across
+  52.7** (ratio 1.42), searound **along 73.9 / across 0.5** (ratio 0.01) — a 142x difference, which is
+  the owner's distinction in numbers. **But the camera does NOT leave the track:** the centre stays
+  within 18 px of the centreline against a 150 px half-width, so the ACROSS figure is the road bending,
+  not the camera departing. The measurement that matches what he sees is the field's position in
+  frame: **river-run puts the field centre at x=0.27 in the FIRST frame after the gun, searound at
+  0.50** — a discontinuity, not a drift. Cause is a THIRD thing: the forward bias is right but arrives
+  before the field is strung out, so a still-blocky pack lands with the forward-framed leader in the
+  left third. The across-track guarantee applies and correctly returns zero. Stage 2's premise is
+  confirmed but it was NOT built — the stop rule asks for stage 1 first and the diagnosis differs from
+  the hypothesis stage 2 was written against.
+  **ADDENDUM: the owner disputed the "does not leave the track" claim at the picture and was right.**
+  Open tracks draw NO track surface (`renderRaceFrame.js:150`), so on river-run the visible river is
+  the background ARTWORK while `width: 300` is a physics/camera number — my figure measured the
+  logical corridor, his eye judges the painted one, and nothing makes them agree. §2's conclusion is
+  withdrawn; §4's diagnosis is measured in image coordinates and stands. Possible second defect named
+  for him: every guarantee expressed in track widths may be keeping a promise about a corridor the
+  viewer cannot see.
 - [CEREMONY-HANDOVER-1.md](CEREMONY-HANDOVER-1.md) — the field guarantee no longer stops at the gun,
   and the settled beat became a control instead of a remainder. The racing-time promise is the COMPANY
   guarantee with the WHOLE FIELD as its company — reuse that is correctness, not economy, because the

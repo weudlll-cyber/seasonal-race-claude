@@ -57,6 +57,31 @@
 // VERIFY-FAST-1: every guard prints its own elapsed time. The ceremony's cost column was wrong
 // in BOTH directions (camera claimed ~85 s and costs 47; render claimed ~30 s and costs 15) and
 // nothing checked it. A number the script measures itself cannot go stale.
+// ── VERIFY-ROUTING-2: this guard declares what it covers, so verify does not have to remember.
+// `blind` is required and non-empty: the hole is written down by whoever knows it.
+export const GUARD = {
+  id: "render-fingerprint",
+  covers:
+    "the DRAW CALL SEQUENCE: sprite placement, text, styles, transforms and layer order",
+  blind: [
+    "the rasteriser and the artwork — it records calls, not pixels",
+    "the sprite blit itself: node has no Image, so the racer body falls back to its procedural branch",
+  ],
+  dirs: [],
+  files: [],
+  reach: [
+    "client/src/screens/RaceScreen/renderRaceFrame.js",
+    "client/src/modules/camera/CameraDirector.js",
+    "client/src/modules/raceCore.js",
+    "client/src/modules/storage/defaults.js",
+    "client/src/modules/parity/recordingContext.js",
+  ],
+};
+if (process.argv.includes("--declare")) {
+  console.log(JSON.stringify(GUARD));
+  process.exit(0);
+}
+
 const __t0 = Date.now();
 process.on("exit", () => {
   // NIGHT-TOOLS-1: MACHINE-READABLE, because a human string has to be re-parsed by
@@ -68,7 +93,13 @@ process.on("exit", () => {
 });
 
 import { createHash } from "node:crypto";
-import { isCheap, cheapTracks, cheapBanner, cheapHash, refuseCheapQuiet } from "./lib/cheapMode.mjs";
+import {
+  isCheap,
+  cheapTracks,
+  cheapBanner,
+  cheapHash,
+  refuseCheapQuiet,
+} from "./lib/cheapMode.mjs";
 import { readFileSync, readdirSync, existsSync } from "node:fs";
 import { join, dirname } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
@@ -354,48 +385,48 @@ function trackHash(geo, wantOps) {
   // `cam`, `ts` and `tagIncumbents` are the only parts that differ per frame, so they are the
   // only parts a caller supplies.
   const frameArgs = (cam) => ({
-        st,
-        cam,
-        shape,
-        raceData,
-        isOpenTrack: shape.isOpen,
-        bsX,
-        bsY,
-        worldWidth: geo.worldWidth,
-        worldHeight: geo.worldHeight,
-        openTrackHW: shape.isOpen ? TW / 2 : 0,
-        bgImagePath: null,
-        bgCanvasReady: false,
-        effects: [],
-        cachedLightPts,
-        trackLightsConfig,
-        racerType: rt,
-        cameraConfig: DEFAULT_CAMERA_CONFIG,
-        camera: {
-          hudState: cd.hudState,
-          comebackLockedRacerIndex: cd.comebackLockedRacerIndex,
-          detectBattleGroup: (racers) => cd.detectBattleGroup(racers),
-        },
-        displaySize: ds,
-        displaySizeScale: br.bodyNarrow / ds,
-        assignmentByRacer: meta.assignmentByRacer ?? new Map(),
-        showRpStartRow: false,
-        showRpMinimapBadges: false,
-        rpPlanInfo: meta.rpPlanInfo ?? null,
-        renderAlpha: 1,
-        interpolationEnabled: false,
-        // The BATTLE-DIAG marker buffer. Same shape the component's ref starts at; it is a
-        // developer overlay that accumulates and then freezes, so it must be per-track (a shared
-        // one would freeze after the first track and change what later tracks draw).
-        leaderDiag,
-        cfgBadge: CFG_BADGE,
-        buildBadge: BUILD_BADGE,
-        racePlanActive: true,
-        racePlanSeed: SEED,
-        gapRerollDevMarker: false,
-        canvasW: CW,
-        canvasH: CH,
-        });
+    st,
+    cam,
+    shape,
+    raceData,
+    isOpenTrack: shape.isOpen,
+    bsX,
+    bsY,
+    worldWidth: geo.worldWidth,
+    worldHeight: geo.worldHeight,
+    openTrackHW: shape.isOpen ? TW / 2 : 0,
+    bgImagePath: null,
+    bgCanvasReady: false,
+    effects: [],
+    cachedLightPts,
+    trackLightsConfig,
+    racerType: rt,
+    cameraConfig: DEFAULT_CAMERA_CONFIG,
+    camera: {
+      hudState: cd.hudState,
+      comebackLockedRacerIndex: cd.comebackLockedRacerIndex,
+      detectBattleGroup: (racers) => cd.detectBattleGroup(racers),
+    },
+    displaySize: ds,
+    displaySizeScale: br.bodyNarrow / ds,
+    assignmentByRacer: meta.assignmentByRacer ?? new Map(),
+    showRpStartRow: false,
+    showRpMinimapBadges: false,
+    rpPlanInfo: meta.rpPlanInfo ?? null,
+    renderAlpha: 1,
+    interpolationEnabled: false,
+    // The BATTLE-DIAG marker buffer. Same shape the component's ref starts at; it is a
+    // developer overlay that accumulates and then freezes, so it must be per-track (a shared
+    // one would freeze after the first track and change what later tracks draw).
+    leaderDiag,
+    cfgBadge: CFG_BADGE,
+    buildBadge: BUILD_BADGE,
+    racePlanActive: true,
+    racePlanSeed: SEED,
+    gapRerollDevMarker: false,
+    canvasW: CW,
+    canvasH: CH,
+  });
 
   const RAW = 1000 / 60;
   let ts = 0;
@@ -425,7 +456,12 @@ function trackHash(geo, wantOps) {
   let cdIdx = 0;
   while (ts < cdMs) {
     const cdCam = cd.updateCountdown(st.racers, ts, ts, CW, CH);
-    if (!PHASES && !COVERAGE && cdIdx < CD_SAMPLE_MS.length && ts >= CD_SAMPLE_MS[cdIdx]) {
+    if (
+      !PHASES &&
+      !COVERAGE &&
+      cdIdx < CD_SAMPLE_MS.length &&
+      ts >= CD_SAMPLE_MS[cdIdx]
+    ) {
       // A marker in the SAME shape the racing frames use, with its own prefix so a countdown frame
       // and a racing frame can never hash alike by accident.
       rec.fillText("##cd", Math.round(CD_SAMPLE_MS[cdIdx]), 0);
@@ -544,7 +580,13 @@ for (const f of readdirSync(dir)) {
 }
 geos.sort((a, b) => a.id.localeCompare(b.id));
 const RUN_GEOS = CHEAP ? cheapTracks(geos, (g) => g.id) : geos;
-if (CHEAP) console.log(cheapBanner("render", `One track (${RUN_GEOS[0].id}) of ${geos.length}, all sample points.`));
+if (CHEAP)
+  console.log(
+    cheapBanner(
+      "render",
+      `One track (${RUN_GEOS[0].id}) of ${geos.length}, all sample points.`,
+    ),
+  );
 
 if (OPS_FOR) {
   const geo = geos.find((g) => g.id === OPS_FOR);
@@ -633,7 +675,9 @@ for (const geo of RUN_GEOS) {
 }
 // The cheap hash carries a prefix so it CANNOT match the 16-hex shape the record and the
 // containment guard expect. A cheap run must be unable to impersonate a measurement.
-const COMBINED = CHEAP ? cheapHash(combined.digest("hex")) : combined.digest("hex").slice(0, 16);
+const COMBINED = CHEAP
+  ? cheapHash(combined.digest("hex"))
+  : combined.digest("hex").slice(0, 16);
 
 if (QUIET) {
   console.log(COMBINED);

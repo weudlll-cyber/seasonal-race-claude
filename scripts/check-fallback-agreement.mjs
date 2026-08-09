@@ -45,6 +45,25 @@
 //   node scripts/check-fallback-agreement.mjs --list   # print every pair it checked, agreeing or not
 // ============================================================
 
+// ── VERIFY-ROUTING-2: this guard declares what it covers, so verify does not have to remember.
+// `blind` is required and non-empty: the hole is written down by whoever knows it.
+export const GUARD = {
+  id: "check-fallback-agreement",
+  covers:
+    "a fallback that disagrees with the default it mirrors — `config.k ?? 3` while the default says 5",
+  blind: [
+    "destructured defaults, computed keys, aliased keys, `||` instead of `??`",
+    "a named fallback imported from another module (reported UNRESOLVED, never silently passed)",
+    "test files, which legitimately pass odd values to prove a band rejects them",
+  ],
+  dirs: ["client/src/"],
+  files: [],
+};
+if (process.argv.includes("--declare")) {
+  console.log(JSON.stringify(GUARD));
+  process.exit(0);
+}
+
 import { readFileSync, readdirSync, statSync } from "node:fs";
 import { join, dirname, relative } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";

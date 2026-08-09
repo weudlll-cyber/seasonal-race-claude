@@ -24,6 +24,29 @@
 // VERIFY-FAST-1: every guard prints its own elapsed time. The ceremony's cost column was wrong
 // in BOTH directions (camera claimed ~85 s and costs 47; render claimed ~30 s and costs 15) and
 // nothing checked it. A number the script measures itself cannot go stale.
+// ── VERIFY-ROUTING-2: this guard declares what it covers, so verify does not have to remember.
+// `blind` is required and non-empty: the hole is written down by whoever knows it.
+export const GUARD = {
+  id: "camera-fingerprint",
+  covers:
+    "every decision the DIRECTOR makes — state, phase, anchor, zoom, both offsets, camT and both targets, on every frame",
+  blind: [
+    "anything DRAWN: it stops at the director's decision",
+    "the race outcome, which is the world fingerprint's question",
+  ],
+  dirs: [],
+  files: [],
+  reach: [
+    "client/src/modules/camera/CameraDirector.js",
+    "client/src/modules/raceCore.js",
+    "client/src/modules/storage/defaults.js",
+  ],
+};
+if (process.argv.includes("--declare")) {
+  console.log(JSON.stringify(GUARD));
+  process.exit(0);
+}
+
 const __t0 = Date.now();
 process.on("exit", () => {
   // NIGHT-TOOLS-1: MACHINE-READABLE, because a human string has to be re-parsed by
@@ -35,7 +58,13 @@ process.on("exit", () => {
 });
 
 import { createHash } from "node:crypto";
-import { isCheap, cheapTracks, cheapBanner, cheapHash, refuseCheapQuiet } from "./lib/cheapMode.mjs";
+import {
+  isCheap,
+  cheapTracks,
+  cheapBanner,
+  cheapHash,
+  refuseCheapQuiet,
+} from "./lib/cheapMode.mjs";
 import { readFileSync, readdirSync, existsSync } from "node:fs";
 import { join, dirname } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
@@ -222,7 +251,10 @@ for (const f of readdirSync(dir)) {
 }
 geos.sort((a, b) => a.id.localeCompare(b.id));
 const RUN_GEOS = CHEAP ? cheapTracks(geos, (g) => g.id) : geos;
-if (CHEAP) console.log(cheapBanner("camera", `One track (${RUN_GEOS[0].id}) of ${geos.length}.`));
+if (CHEAP)
+  console.log(
+    cheapBanner("camera", `One track (${RUN_GEOS[0].id}) of ${geos.length}.`),
+  );
 
 const combined = createHash("sha256");
 const rows = [];
@@ -250,5 +282,8 @@ if (QUIET) {
     "\n  Covers the DIRECTOR only — state, phase, anchor, zoom, offsets, camT, targets.\n" +
       "  Not the render path (sprite scale, name-tag layout, drawing).",
   );
-  if (CHEAP) console.log(cheapBanner("camera", `One track (${RUN_GEOS[0].id}) of ${geos.length}.`));
+  if (CHEAP)
+    console.log(
+      cheapBanner("camera", `One track (${RUN_GEOS[0].id}) of ${geos.length}.`),
+    );
 }
