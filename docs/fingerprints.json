@@ -35,25 +35,25 @@
       "mintedOn": "3518ee0b",
       "mintedBy": "RACER-MOTION-2 — ship lateral acceleration cap (maxLateralAccelPerStep 0.0005)",
       "date": "2026-07-31",
-      "lastVerified": "2026-08-09 — re-run at the SHIP-THE-LINE merge (c5099b3a) and UNCHANGED. Twenty-five blocks and a ship have not moved the race; the line's one engine change (SIDE-FREE-CULL-1) was byte-identical by construction."
+      "lastVerified": "2026-08-09 — re-run at SHIP-THREE (f1c3d18d) and UNCHANGED: twenty-eight blocks and two ships. Previously re-run at the SHIP-THE-LINE merge (c5099b3a), also unchanged; that line's one engine change (SIDE-FREE-CULL-1) was byte-identical by construction."
     },
     "camera": {
-      "value": "7ba59a6378d37a2c",
+      "value": "ad07c08ce5d8ae49",
       "covers": "the DIRECTOR's decisions: state, phase, anchor, zoom, offsets, camT, targets",
       "reproduce": "node scripts/camera-fingerprint.mjs --quiet",
-      "mintedOn": "c5099b3a",
-      "mintedBy": "SHIP-THE-LINE — the theme line merged to master as one commit. The director gained the start ceremony (venue/push/settled beats, the countdown repair and the handover), the ceremony schedule that replaces a fixed countdownDurationMs, and the anchor the label layout reads through frameCameraInputs. Every visible change on the line was seen and accepted by the owner before the merge. Replaces 00cafa2432add0f7 (FINISH-COMPANY-1)",
+      "mintedOn": "f1c3d18d",
+      "mintedBy": "SHIP-THREE — `minRacersVisible` 3 -> 5, the owner's verdict after an eye test on city-circuit. The company guarantee now keeps five racers in frame instead of three, so the director widens the shot on the frames where it binds — measured as changing 5 of the 10 fingerprint tracks (city-circuit most, 12.9 % of frames). Replaces 7ba59a6378d37a2c (SHIP-THE-LINE), which is retained in the lineage below. The previous mint read: the director gained the start ceremony (venue/push/settled beats, the countdown repair and the handover), the ceremony schedule that replaces a fixed countdownDurationMs, and the anchor the label layout reads through frameCameraInputs. Every visible change on the line was seen and accepted by the owner before the merge. Replaces 00cafa2432add0f7 (FINISH-COMPANY-1)",
       "date": "2026-08-09",
-      "lastVerified": "2026-08-09 — minted at the ship, from the verify run against the merge commit's own tree."
+      "lastVerified": "2026-08-09 — minted at SHIP-THREE, re-run on the combined branch AND on master after the merge; both agreed with the value measured on feat/min-racers-5 alone, which is how the maintenance strand was shown not to touch the picture."
     },
     "render": {
-      "value": "9b7acc7419c5ba59",
+      "value": "752df7bc61ef0721",
       "covers": "the DRAW CALL SEQUENCE: sprite placement, text, styles, transforms, layer order",
       "reproduce": "node scripts/render-fingerprint.mjs --quiet",
-      "mintedOn": "c5099b3a",
-      "mintedBy": "SHIP-THE-LINE — the theme line merged to master as one commit. The picture is what this line was about: race numbers replace names as the default label, the occlusion rule grants a name only when its box covers neither another label nor another racer (with two exemptions — the camera's subject and the photo finish), the label offset follows the racer's drawn size, and the start board draws the field before the gun. The camera moved too, and the camera decides the transform on every drawn frame. Replaces f2e170d17ccf84e9 (HARNESS-NAMES-1)",
+      "mintedOn": "f1c3d18d",
+      "mintedBy": "SHIP-THREE — the same `minRacersVisible` 3 -> 5 change, seen from the drawing side: the camera decides the transform on every drawn frame, so a wider shot is a different draw-call sequence. Nothing in the drawing path itself changed this time. Replaces 9b7acc7419c5ba59 (SHIP-THE-LINE), whose own note read: the picture is what this line was about: race numbers replace names as the default label, the occlusion rule grants a name only when its box covers neither another label nor another racer (with two exemptions — the camera's subject and the photo finish), the label offset follows the racer's drawn size, and the start board draws the field before the gun. The camera moved too, and the camera decides the transform on every drawn frame. Replaces f2e170d17ccf84e9 (HARNESS-NAMES-1)",
       "date": "2026-08-09",
-      "lastVerified": "2026-08-09 — minted at the ship, from the verify run against the merge commit's own tree."
+      "lastVerified": "2026-08-09 — minted at SHIP-THREE, re-run on the combined branch AND on master after the merge; both agreed with the value measured on feat/min-racers-5 alone, which is how the maintenance strand was shown not to touch the picture."
     },
     "world-off": {
       "value": "854018ee5d3d83e1",
@@ -62,7 +62,7 @@
       "mintedOn": "3518ee0b",
       "mintedBy": "RACER-MOTION-2",
       "date": "2026-07-31",
-      "lastVerified": "2026-08-09 — re-run at the SHIP-THE-LINE merge and UNCHANGED, so the pre-feature invariant still holds either side of the ship. Previously 2026-08-06 — RESOLVED and VERIFIED by running it. This was UNKNOWN in ONE-TRUTH-1. docs/SIM.md's lineage table names the flag; the first command written here OMITTED THE LABEL argument, argv[2] swallowed the flag as a label, and the run returned the ON value while printing 'default config'. The label is mandatory. With it, this value reproduces exactly."
+      "lastVerified": "2026-08-09 — SHIP-THREE did not re-run it: nothing in that ship touches the engine (engine-reach clears every changed path except defaults.js, whose only moved key is read by the camera), and the ON world is unchanged, so the OFF arm has no question to answer. Previously re-run at the SHIP-THE-LINE merge and UNCHANGED, so the pre-feature invariant still holds either side of that ship. Previously 2026-08-06 — RESOLVED and VERIFIED by running it. This was UNKNOWN in ONE-TRUTH-1. docs/SIM.md's lineage table names the flag; the first command written here OMITTED THE LABEL argument, argv[2] swallowed the flag as a label, and the run returned the ON value while printing 'default config'. The label is mandatory. With it, this value reproduces exactly."
     }
   },
 

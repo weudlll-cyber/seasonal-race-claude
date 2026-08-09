@@ -85,6 +85,22 @@ and what was retired.
   window-control sweep that produced the "suppression, not selection" verdict — the measurement that
   justified deleting the lead-rotation mechanism from master.
 
+### SHIP-THREE — the owner's 5, and two guards (2026-08-09)
+
+Three blocks, two strands, one merge. The owner's `minRacersVisible` verdict shipped alongside the
+maintenance work that makes the verifier refuse an empty plan and a new guard that a fallback agrees
+with the default it mirrors. **The race did not change again**: WORLD has now held its value for
+twenty-eight blocks and two ships, while CAMERA and RENDER moved for the framing change alone —
+the maintenance strand was shown not to touch the picture by re-running both on the combined branch
+rather than carrying the values over. Values live in [fingerprints.json](fingerprints.json).
+
+- `pre/ship-three` (`1ea3a6bb`, 2026-08-09) — master immediately BEFORE the ship. Reset here to
+  restore the pre-ship picture and the pre-refusal verifier. Its world is the same world the ship
+  has, so returning changes what is drawn and how verify behaves, never who wins.
+- `v-ship-three` (`f1c3d18d`, 2026-08-09) — **the ship: MIN-RACERS-5 + VERIFY-BASE-1 +
+  FALLBACK-GUARD-1 merged to master.** 16 files. See
+  [../reports/evolution/SHIP-THREE.md](../reports/evolution/SHIP-THREE.md).
+
 ### SHIP-THE-LINE — the picture line ships (2026-08-09)
 
 The theme line that ran from the start ceremony through the labels, the start board and the perf

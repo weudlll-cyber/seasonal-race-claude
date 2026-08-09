@@ -6,6 +6,21 @@ and [FAIRNESS.md](../../docs/FAIRNESS.md). Shipped world: **`dc4647be0f55ebdb`**
 
 ## Ships
 
+- [SHIP-THREE.md](SHIP-THREE.md) — **the 5, the refusal and the guard** (2026-08-09, merge
+  `f1c3d18d`, tag `v-ship-three`, return point `pre/ship-three`). Two strands, one merge, 16 files:
+  the owner's `minRacersVisible` 3 → 5 with its two mirrors; `npm run verify` refusing an empty plan;
+  and `check-fallback-agreement.mjs`. **WORLD `dc4647be0f55ebdb` UNCHANGED — twenty-eight blocks and
+  two ships**; camera and render re-minted for the framing change alone. Camera and render were
+  RE-RUN on the combined branch rather than carried over, which is how the maintenance strand was
+  shown not to touch the picture: both came back identical to the values measured on
+  `feat/min-racers-5` alone. `npm run verify` on master **PASS 7 / FAIL 0 / SKIP 0**, and it needed
+  `--base=1ea3a6bb` — **the refusal shipping in this very merge is what printed that command**,
+  catching the SHIP-THE-LINE defect on the first occasion it could have recurred. CI green on the
+  branch before the merge (R8 exception 1). `check-measured-stamps` fired and was right: the
+  tracking lag was RE-MEASURED, not re-stamped (LEADER median 3.91 → 3.77 pp, every frame count
+  unchanged) — and it fired for a NEIGHBOURING reason, since the value that moves the measurement is
+  not in its `depends=` set. `world-off` deliberately not re-run, with the reason in the record.
+
 - [SHIP-THE-LINE.md](SHIP-THE-LINE.md) — **the picture line goes to master** (2026-08-09, merge
   `c5099b3a`, tag `v-ship-the-line`, return point `pre/ship-the-line`). One merge commit, 254 files:
   race numbers, the label occlusion rule with its two exemptions, the start board through eight
