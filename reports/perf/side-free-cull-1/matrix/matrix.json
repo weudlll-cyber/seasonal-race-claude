@@ -1,0 +1,202 @@
+{
+ "tool": "phys-bench-matrix.mjs",
+ "version": "PHYS-BENCH-1",
+ "track": "searound",
+ "seed": 5601,
+ "steps": 3000,
+ "warmup": 300,
+ "order": "size",
+ "only": [
+  "field"
+ ],
+ "trees": {
+  "chain": "C:\\Users\\weudl\\OneDrive\\Dokumente\\Seasonal race claude",
+  "master": "C:/ra-wt-sfc-parent"
+ },
+ "node": "v24.14.0",
+ "platform": "win32-x64",
+ "wallSec": 56.6,
+ "rows": [
+  {
+   "tree": "chain",
+   "label": "field-A-chain-n30",
+   "racers": 30,
+   "roster": "current",
+   "stepped": 3000,
+   "p50": 0.1911,
+   "p90": 0.395,
+   "firstFifthP50": 0.2458,
+   "lastFifthP50": 0.1042,
+   "wallSec": 1
+  },
+  {
+   "tree": "master",
+   "label": "field-B-master-n30",
+   "racers": 30,
+   "roster": "current",
+   "stepped": 3000,
+   "p50": 0.1958,
+   "p90": 0.4726,
+   "firstFifthP50": 0.2926,
+   "lastFifthP50": 0.1279,
+   "wallSec": 1.1
+  },
+  {
+   "tree": "chain",
+   "label": "field-A2-chain-n30",
+   "racers": 30,
+   "roster": "current",
+   "stepped": 3000,
+   "p50": 0.1488,
+   "p90": 0.4253,
+   "firstFifthP50": 0.237,
+   "lastFifthP50": 0.0946,
+   "wallSec": 1.1
+  },
+  {
+   "tree": "chain",
+   "label": "field-A-chain-n50",
+   "racers": 50,
+   "roster": "current",
+   "stepped": 3000,
+   "p50": 0.3114,
+   "p90": 0.7194,
+   "firstFifthP50": 0.3894,
+   "lastFifthP50": 0.262,
+   "wallSec": 1.7
+  },
+  {
+   "tree": "master",
+   "label": "field-B-master-n50",
+   "racers": 50,
+   "roster": "current",
+   "stepped": 3000,
+   "p50": 0.4617,
+   "p90": 0.9782,
+   "firstFifthP50": 0.4263,
+   "lastFifthP50": 0.6096,
+   "wallSec": 2.3
+  },
+  {
+   "tree": "chain",
+   "label": "field-A2-chain-n50",
+   "racers": 50,
+   "roster": "current",
+   "stepped": 3000,
+   "p50": 0.4046,
+   "p90": 0.7971,
+   "firstFifthP50": 0.5175,
+   "lastFifthP50": 0.3413,
+   "wallSec": 2
+  },
+  {
+   "tree": "chain",
+   "label": "field-A-chain-n70",
+   "racers": 70,
+   "roster": "current",
+   "stepped": 3000,
+   "p50": 0.5905,
+   "p90": 1.3746,
+   "firstFifthP50": 0.9469,
+   "lastFifthP50": 0.607,
+   "wallSec": 3.1
+  },
+  {
+   "tree": "master",
+   "label": "field-B-master-n70",
+   "racers": 70,
+   "roster": "current",
+   "stepped": 3000,
+   "p50": 1.1379,
+   "p90": 1.8309,
+   "firstFifthP50": 1.2489,
+   "lastFifthP50": 0.9055,
+   "wallSec": 4.8
+  },
+  {
+   "tree": "chain",
+   "label": "field-A2-chain-n70",
+   "racers": 70,
+   "roster": "current",
+   "stepped": 3000,
+   "p50": 0.8653,
+   "p90": 1.749,
+   "firstFifthP50": 0.8757,
+   "lastFifthP50": 0.6947,
+   "wallSec": 4
+  },
+  {
+   "tree": "chain",
+   "label": "field-A-chain-n85",
+   "racers": 85,
+   "roster": "current",
+   "stepped": 3000,
+   "p50": 1.163,
+   "p90": 2.0055,
+   "firstFifthP50": 1.1038,
+   "lastFifthP50": 1.0242,
+   "wallSec": 5
+  },
+  {
+   "tree": "master",
+   "label": "field-B-master-n85",
+   "racers": 85,
+   "roster": "current",
+   "stepped": 3000,
+   "p50": 1.5065,
+   "p90": 2.3266,
+   "firstFifthP50": 1.5292,
+   "lastFifthP50": 1.3755,
+   "wallSec": 6.3
+  },
+  {
+   "tree": "chain",
+   "label": "field-A2-chain-n85",
+   "racers": 85,
+   "roster": "current",
+   "stepped": 3000,
+   "p50": 1.1358,
+   "p90": 1.8429,
+   "firstFifthP50": 1.0536,
+   "lastFifthP50": 1.0074,
+   "wallSec": 4.7
+  },
+  {
+   "tree": "chain",
+   "label": "field-A-chain-n100",
+   "racers": 100,
+   "roster": "current",
+   "stepped": 3000,
+   "p50": 1.3961,
+   "p90": 2.2443,
+   "firstFifthP50": 1.3938,
+   "lastFifthP50": 1.2409,
+   "wallSec": 6.2
+  },
+  {
+   "tree": "master",
+   "label": "field-B-master-n100",
+   "racers": 100,
+   "roster": "current",
+   "stepped": 3000,
+   "p50": 1.8266,
+   "p90": 2.7231,
+   "firstFifthP50": 1.9063,
+   "lastFifthP50": 1.8013,
+   "wallSec": 7.3
+  },
+  {
+   "tree": "chain",
+   "label": "field-A2-chain-n100",
+   "racers": 100,
+   "roster": "current",
+   "stepped": 3000,
+   "p50": 1.4588,
+   "p90": 2.3874,
+   "firstFifthP50": 1.3843,
+   "lastFifthP50": 1.2966,
+   "wallSec": 6.1
+  }
+ ],
+ "profiles": []
+}

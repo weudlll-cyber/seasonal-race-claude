@@ -100,15 +100,57 @@ export function drawFinalLapOverlay(ctx, ts, finalLapStartTs) {
 }
 
 /**
- * Draws the countdown number (3, 2, 1, GO!) in the top-right corner.
+ * The digit shown at a moment of the countdown — SECONDS REMAINING, rounded up.
+ *
+ * START-BOARD-1: THE OVERLAY OWNS NO COUNT. It used to start from a hard-coded 3 while the phase
+ * itself lasted `countdownDurationMs`, so at the shipped 4000 ms the sequence was 3-2-1-GO! with
+ * "GO!" then standing for a whole extra second before anything moved — the digits and the phase
+ * were two statements of one length, and the one nobody could see was right.
+ *
+ * Derived instead: 4000 ms shows 4-3-2-1 and GO! lands exactly at zero, and any other setting
+ * follows without this file being touched. `ceil` rather than `floor` is what makes the last second
+ * read "1" and the instant of the gun read "GO!" — with `floor` the final second would already
+ * say GO!.
+ *
+ * @param {number} elapsed  ms since the countdown started
+ * @param {number} durationMs  the phase's own length
+ * @returns {number} seconds remaining, 0 at and after the gun
+ */
+export function countdownDigit(elapsed, durationMs) {
+  const d = Number.isFinite(durationMs) && durationMs > 0 ? durationMs : 0;
+  const e = Number.isFinite(elapsed) && elapsed > 0 ? elapsed : 0;
+  return Math.max(0, Math.ceil((d - e) / 1000));
+}
+
+/**
+ * Draws the countdown number in the top-right corner.
  * Returns the current countdown integer so the caller can update React state.
+ *
+ * ── THE DIGITS HAVE A WINDOW NOW (CEREMONY-TIME-1) ─────────────────────────────────────────────
+ * They used to run for the whole ceremony, so a longer opening just meant counting from a bigger
+ * number — at 100 racers the sequence would have started at 20. The owner asked for a stretch of
+ * formation with NO count on it, so the viewer can find the number the board just taught them
+ * before the clock starts pressing. `startMs` is where the digits appear; before it nothing is
+ * drawn and `null` is returned, so the caller leaves its state alone rather than showing a number
+ * nobody can see.
+ *
+ * The DIGIT is still derived from the phase's own length, not from the window — the count has to
+ * reach zero at the gun, and only the gun knows when that is.
+ *
  * @param {CanvasRenderingContext2D} ctx
  * @param {number} elapsed  ms since countdown started.
- * @returns {number} n — 3, 2, 1, or 0 ("GO!").
+ * @param {number} durationMs  the countdown phase's length — the digits are derived from it.
+ * @param {number} [startMs=0]  ms into the phase at which the digits become visible.
+ * @returns {number|null} n — seconds remaining; 0 renders as "GO!"; null before the window opens.
  */
-export function drawCountdownOverlay(ctx, elapsed) {
-  const n = Math.max(0, 3 - Math.floor(elapsed / 1000));
-  const color = CD_COLORS[n] ?? '#fff';
+export function drawCountdownOverlay(ctx, elapsed, durationMs, startMs = 0) {
+  const from = Number.isFinite(startMs) && startMs > 0 ? startMs : 0;
+  if (Number.isFinite(elapsed) && elapsed < from) return null;
+  const n = countdownDigit(elapsed, durationMs);
+  // The palette is indexed by urgency, not by the digit: it has four entries and a countdown may
+  // now be longer than four seconds. Clamping keeps the shipped colours for the last three seconds
+  // exactly and holds the calmest one for everything above.
+  const color = CD_COLORS[Math.min(n, CD_COLORS.length - 1)] ?? '#fff';
   const text = n > 0 ? String(n) : 'GO!';
   const fSize = n > 0 ? 56 : 44;
   const shrink = 1 - ((elapsed % 1000) / 1000) * 0.1;

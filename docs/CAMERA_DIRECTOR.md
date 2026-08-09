@@ -153,7 +153,22 @@ The order matters and parts of it are load-bearing:
 
 ## 3. The framing rule
 
-A state is described by three things and only three:
+**A state in `FRAMING_BY_STATE` is described by three things and only three** — and the qualifier is
+not decoration. The table has SIX rows (LEADER_ZOOM, LEAD_CHANGE, BATTLE_ZOOM, COMEBACK_ZOOM,
+OVERVIEW, PHOTO_FINISH), which are exactly the six members of `CAM_STATE`. **Two things this document
+calls "states" elsewhere are not in it, and neither is described by the three below:**
+
+- **COUNTDOWN is not a camera state at all.** It is a race PHASE. The opening runs through
+  `updateCountdown` and `startCeremony.js`, whose geometry is the track's extent easing to the
+  field's extent — a different mechanism with a different vocabulary, not a row that was forgotten.
+- **FINISH_OVERVIEW is not in `CAM_STATE` either.** It is a MODE — `_inFinishMode`, read by four
+  framing sites — and `hudState` reports it as if it were a state, which is where the name in §2 and
+  §8 comes from. It has no row here, so `framingFor` falls through to **LEADER_ZOOM's framing**. That
+  fallback is a default, not a decision: nobody chose LEADER's anchor and guarantee for the finish
+  hold, and this document should not be read as saying they did. **It is genuinely undescribed, and
+  writing that down is more useful than inventing a description for it.**
+
+The three things:
 
 - **ANCHOR** — who the camera is on. The only genuinely per-state part (`_framingSubjects`).
 - **GUARANTEE** — who must stay in frame. Applied as a zoom CEILING: it WIDENS the shot and never
@@ -366,7 +381,7 @@ a verbatim transcript of one run on one commit, which is a historical record, no
 
 ### The tracking lag, as measured today — and it had drifted
 
-<!-- MEASURED: tracking-lag (median/p95 pp per state) @ 3e756a31 2026-08-06 depends=client/src/modules/camera/ -->
+<!-- MEASURED: tracking-lag (median/p95 pp per state) @ 8e3fcce7 2026-08-09 depends=client/src/modules/camera/ -->
 
 **These figures carry a stamp, and fails if the camera
 changes after it.** They are hand-copied on purpose: the measurement takes about seven minutes, so
@@ -379,14 +394,54 @@ and it says so itself. It also covers nothing else on this page; see its header 
 
 | state         | frames | median pp | p95 pp |
 | ------------- | ------ | --------- | ------ |
-| BATTLE_ZOOM   | 9657   | 5.71      | 9.98   |
-| COMEBACK_ZOOM | 2103   | 8.33      | 15.57  |
-| LEADER_ZOOM   | 17522  | 4.46      | 8.66   |
-| LEAD_CHANGE   | 7064   | 4.45      | 7.17   |
-| OVERVIEW      | 5199   | 3.08      | 16.00  |
-| PHOTO_FINISH  | 1864   | 6.37      | 20.73  |
+| BATTLE_ZOOM   | 9655   | 5.72      | 9.99   |
+| COMEBACK_ZOOM | 2103   | 8.34      | 15.57  |
+| LEADER_ZOOM   | 17522  | 3.91      | 8.66   |
+| LEAD_CHANGE   | 7069   | 4.45      | 7.17   |
+| OVERVIEW      | 4303   | 2.60      | 16.00  |
+| PHOTO_FINISH  | 1865   | 6.37      | 20.73  |
 
-OVERVIEW median 3.08 pp against every other state pooled 4.86 pp (ratio 0.63×).
+OVERVIEW median 2.60 pp against every other state pooled 4.78 pp (ratio 0.54×).
+
+**Re-measured for CEREMONY-HANDOVER-1, and two of these moved for a reason worth naming.** OVERVIEW's
+frame count fell from 5199 to 3603 and LEADER's median lag from 4.46 to 3.92 pp. Neither is a
+tracking change: the start ceremony and the field guarantee that now carries past the gun changed
+what the camera is DOING in those early seconds, so the same 60 s of race divides differently between
+the states. The lag itself is, if anything, slightly better.
+
+**Re-measured for CEREMONY-TRUTH-1, and it moved again the same way.** Giving the director the
+digits beat lengthened the planned ceremony by 3 s, so the same 60 s of race divides differently once
+more: BATTLE 9652 → 9655, LEADER 17512 → 17522, OVERVIEW 4308 → 4303, and BATTLE's p95 9.98 → 9.99,
+COMEBACK's median 8.33 → 8.34 and p95 15.58 → 15.57. Nothing about tracking changed. **This is now
+twice in two blocks that a ceremony change moved these numbers**, which is worth stating plainly:
+any change to the opening's LENGTH owes this measurement, and it costs about 90 seconds, not the
+seven minutes below.
+
+**Re-measured for CEREMONY-TIME-1, and the re-measurement is the point.** The opening grew from
+5.2 s to 14.4 s at a small field, which touches `client/src/modules/camera/` and made this stamp
+stale. It was tempting to re-stamp deliberately on the argument that ceremony TIME cannot move
+mid-race tracking — and that argument was wrong. Every median but one is identical, but the frame
+counts moved by a handful (BATTLE 9651 → 9652, LEADER 17514 → 17512, LEAD_CHANGE 7066 → 7069,
+OVERVIEW 4305 → 4308) and LEADER's median moved 3.92 → 3.91 pp. Small, and real: a longer opening
+divides the same race differently between the states, exactly as CEREMONY-HANDOVER-1 found. **The
+lesson is the one the guard exists for — "this cannot have moved the numbers" is a hypothesis, and
+this one cost 84 seconds to refute.**
+
+**Re-measured for START-BOARD-2, and nothing moved that matters.** The ceremony's beats changed
+length (the board got its own duration and the countdown became their sum), so the camera
+fingerprint moved and this stamp had to be renewed. Every median and every p95 is IDENTICAL to the
+digit; the frame counts move by a handful (BATTLE 9657 -> 9651, LEADER 17522 -> 17514, OVERVIEW
+4302 -> 4305) because a longer countdown shifts where in the race the 60 s window lands. The
+tracking path itself was not touched.
+
+**Re-measured again for CEREMONY-HOLD-TARGET-1, and ONE row moved.** OVERVIEW: 3603 → 4302 frames,
+median 3.27 → 2.60 pp. Every other row is identical to the digit. The reason is the mechanism that
+block repaired: OVERVIEW's target used to ease away from the ceremony's framing for the first
+1.7 s of the race, so the pan was resolved every frame against a zoom that was still moving and the
+camera spent the start catching up. With the framing held, the target stands still and the lag with
+it — which is why the state's median falls without anything in the tracking path changing. The
+frame count rises for the same reason the previous re-measure named: the start divides differently
+between the states.
 
 **These numbers replace stale ones, and the staleness is the point.** The convention list below previously stated
 "LEADER 2.05 pp, OVERVIEW 6.78 pp, every other state pooled 3.78 pp" as CURRENT figures. Running the
@@ -477,7 +532,7 @@ with its date and — where one exists — the measurement that framed it.
 | what he judged                                                                                                                 | when       | the evidence, and the measurement behind it                                                                                                                                                                                                                                                                                              |
 | ------------------------------------------------------------------------------------------------------------------------------ | ---------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | **The road no longer bounds the leader shot** — LEADER/OVERVIEW/COMEBACK limited by his setting and the COMPANY guarantee only | 2026-08-05 | mountainstreet, seed 5601, toggle ON, _"nein das passt"_ — and decisive because he saw **both regimes**: a torn-apart field where the guarantee opens the shot, and a tight pack where the camera holds his 1.0. His approval also covers the CAMERA-ANCHOR-TRUTH-1 work (§4a, §4c, stages 1a/1b), which had had no eye test until then. |
-| **`minRacersVisible` stays at 5**                                                                                              | 2026-08-05 | His observation corrected the measurement: I reported the company guarantee binding ~0% at n=65 and recommended raising it. That held for the PACK case only — on a spread field it binds and widens a lot at 5. The spread-field sweep is owed before anyone changes it.                                                                |
+| **`minRacersVisible`: he judged 5. THE CODE SHIPS 3.**                                                                          | 2026-08-05 | **These are two different numbers and this row used to read as if they agreed.** What he judged: 5, on his observation that corrected the measurement — I reported the company guarantee binding ~0% at n=65 and recommended raising it, which held for the PACK case only; on a spread field it binds and widens a lot at 5. What `defaults.js` contains today: **`minRacersVisible: 3`**. The change to 5 was built and measured on its own branch (`feat/min-racers-visible-5`) and has never been merged, so the company guarantee — which reads this key — is running on 3 everywhere. **Which number is right is HIS decision and no code was changed here to resolve it.** The spread-field sweep is still owed either way. |
 | **The finish is ONE motion** — pan and zoom on one ease, no jump at the crossing                                               | 2026-08-05 | The measured defect was a **2708 px pan-target step in one frame** (dirt-oval, 144× the median of the frames before it); after, peak per-frame motion 2708 → 72 px with total travel unchanged.                                                                                                                                          |
 | **The finish pause, the travel and the resting point**                                                                         | 2026-08-05 | His photo-finish settings, watching the moment the pair shot ends. The pause now runs after a photo finish too, starting when the two contenders the shot was FOLLOWING are home — measured 6–57 frames later than `finishedCount >= 2`, and on 5 of 9 tracks the second racer across is neither of the pair.                            |
 | **The company guarantee retires once the company is home**                                                                     | 2026-08-05 | City Circuit, last thirty seconds, _"schaut besser aus jetzt"_. Baseline widened for 54 frames (4.5489 → 2.9752) after the shot had already come to rest; after, 0. Cost he accepted: the last back-marker sits 11% inside the frame instead of 23%.                                                                                     |
@@ -503,13 +558,21 @@ somebody happened to be looking. So the numbers live in DEAD-ENDS alone.
 **This is the honest limit on every "owner-approved" claim above, and it should be read before
 quoting one.**
 
-- **Tracks: three of ten.** mountainstreet, searound and City Circuit carry every judgement in §8.1
-  and §8.2; dirt-oval appears only in measurements. The other six have never been eye-checked at all.
+- **Tracks: seven of ten** (his own count, 2026-08-09 — it was three when this section was written).
+  **The record names only some of them**, and that is itself part of the honest limit: §8.1 and §8.2
+  carry evidence for mountainstreet, searound and City Circuit, and the night reports add
+  mountainstreet and searound for the board and ceremony work and river-run for the label offset.
+  The remaining names were judged in sittings that produced no written evidence. **So the COUNT is
+  his and the NAMES are not fully recoverable from this repository** — which means a claim about a
+  specific unnamed track still has nothing behind it here, even though the total is now seven.
 - **States:** he has seen LEADER, OVERVIEW, BATTLE and — since the finish work — PHOTO_FINISH and
   FINISH_OVERVIEW. **COMEBACK_ZOOM and LEAD_CHANGE have had no targeted pass**, and he declined one
   over the finish states before FINISH-WINDOW-1 gave him endings on nearly every race.
-- **Nothing at the START has been judged since the framing rewrite.** The start formation is the
-  frame he looks at first and it is sampled by the render fingerprint, but "sampled" is not "judged".
+- **The START has now been judged.** It was not, when this section was written, and the line here
+  said so. The ceremony and runners'-board work of 2026-08-08/09 was driven by his eye on the start
+  frame directly — the board's duration, its legibility at 100 starters, the searching pause before
+  the gun — on mountainstreet and searound. What that does NOT cover: the start on the other eight
+  tracks, and the formation's framing as such rather than what is drawn over it.
 
 **The consequence, stated so nobody over-reads the table:** an approval is evidence about the track
 and the state it was given on. It is not a general certificate, and a change that alters a state he

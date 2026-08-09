@@ -118,6 +118,21 @@
   text-align: center;
 }
 
+/* RACE-NUMBERS-1: the start number, shown before the name so a viewer can read the pairing here —
+   the track carries the number alone. Tabular figures so the column does not jitter between rows. */
+.sb-number {
+  display: inline-block;
+  min-width: 2.1em;
+  margin-right: 0.45em;
+  padding: 0 0.25em;
+  border-radius: 3px;
+  background: rgba(255, 255, 255, 0.14);
+  color: inherit;
+  font-variant-numeric: tabular-nums;
+  font-weight: 700;
+  text-align: center;
+}
+
 .sb-name {
   font-size: 11px;
   font-weight: 600;

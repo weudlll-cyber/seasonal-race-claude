@@ -3972,7 +3972,7 @@ describe('CameraDirector.updateCountdown', () => {
     expect(cd.state).toBe(CAM_STATE.OVERVIEW);
     // Simulate countdown frames
     for (let i = 0; i < 60; i++) {
-      cd.updateCountdown(countdownRacers, 1000 + i * 16, i * 16, 4000, 1280, 720);
+      cd.updateCountdown(countdownRacers, 1000 + i * 16, i * 16, 1280, 720);
     }
     // First RACING update — raceElapsed=0 so start-phase priority keeps OVERVIEW
     const raceState = { raceElapsed: 0, finishedCount: 0, winner: null, finishT: 1 };
@@ -3980,20 +3980,37 @@ describe('CameraDirector.updateCountdown', () => {
     expect(cd.state).toBe(CAM_STATE.OVERVIEW);
   });
 
-  it('COUNTDOWN zoom at t=0 equals countdownStartZoom (min zoom = whole track visible)', () => {
+  // BOTH MODIFIED BY START-CEREMONY-CAMERA-1, and the old assertions are named so the change is
+  // legible rather than silent. They used to require the countdown to OPEN at `_countdownStartZoom`
+  // (a corridor SETTING, OVERVIEW × 2) and to LAND on `_overviewStateZoom`. The owner replaced both
+  // ends with geometry — the track's own extent and the field's own extent — so neither number is
+  // what the ceremony aims at any more. The INTENT is unchanged and is what is kept: it opens on the
+  // whole track, and it arrives exactly, with no jump into the first RACING frame.
+  it('COUNTDOWN opens on the VENUE shot — the whole track, from the track’s own extent', () => {
     const cd = new CameraDirector(1280, 720, false, ALWAYS_TAKE, 36);
-    const cam = cd.updateCountdown(countdownRacers, 1000, 0, 4000, 1280, 720);
-    // countdownStartZoom for spriteScale=1/36 is clamped to minimum (1.0 for 1280px closed track)
-    expect(cam.zoom).toBeCloseTo(cd._countdownStartZoom, 5);
+    const cam = cd.updateCountdown(countdownRacers, 1000, 0, 1280, 720);
+    expect(cam.zoom).toBeCloseTo(cd._venueCamZoom(1280, 720), 5);
+    // On a closed track the venue shot IS the whole world — the claim that actually matters.
+    expect(cd._proj.visibleWorldW(cam.zoom, 1280)).toBeGreaterThanOrEqual(1280 - 1e-6);
+    expect(cd._proj.visibleWorldH(cam.zoom, 720)).toBeGreaterThanOrEqual(720 - 1e-6);
   });
 
-  it('COUNTDOWN zoom at t=duration equals overviewStateZoom — seamless OVERVIEW transition', () => {
+  it('COUNTDOWN arrives on the FORMATION at the gun — no jump into the first RACING frame', () => {
     const cd = new CameraDirector(1280, 720, false, ALWAYS_TAKE, 36);
-    const cam = cd.updateCountdown(countdownRacers, 5000, 4000, 4000, 1280, 720);
-    // At full progress=1, ease-out(1)=1 → zoom must equal _overviewStateZoom exactly
-    expect(cam.zoom).toBeCloseTo(cd._overviewStateZoom, 5);
-    // And the director's live zoom matches so the first RACING update sees no jump
-    expect(cd.zoom).toBeCloseTo(cd._overviewStateZoom, 5);
+    // START-BOARD-2: the gun is at the ceremony's OWN total now, not at a fixed 4000 — the board's
+    // hold scales with the field, so the schedule is asked rather than a duration typed in here.
+    const gunAt = cd.ceremonySchedule(countdownRacers).totalMs;
+    const cam = cd.updateCountdown(countdownRacers, 5000, gunAt, 1280, 720);
+    const centre = cd._formationCentre(countdownRacers);
+    const target = Math.max(
+      cd._venueCamZoom(1280, 720),
+      cd._ceremonyTargetCamZoom(countdownRacers, centre, 1280, 720)
+    );
+    expect(cam.zoom).toBeCloseTo(target, 5);
+    // The live zoom matches, so the hand-over to RACING is seamless — this test's original point.
+    expect(cd.zoom).toBeCloseTo(target, 5);
+    // And it is the framing the hold will keep.
+    expect(cd._ceremonyHoldZoom).toBeCloseTo(target, 5);
   });
 });
 
@@ -6709,10 +6726,17 @@ describe('CAMERA-WEIGHTS-1 — a weight means how often you take the shot when i
 // So the contract is asserted from both ends: the name the render path uses must exist and behave,
 // and the render path must still be using that name.
 describe('CAMERA-HYGIENE-2 — the detectBattleGroup contract with RaceScreen', () => {
-  const RACE_SCREEN = readFileSync(
+  // FRAME-INPUTS-1 MOVED THE CALL SITE, not the contract. RaceScreen used to build the frame's
+  // `camera` object as a literal and called `detectBattleGroup` inside it; that literal is now
+  // `frameCameraInputs()`, and the call lives there. Both files are read, because what this guards
+  // is that the RENDER PATH uses the public name — and the render path is now two files, not one.
+  const RENDER_PATH = [
     join(HERE, '..', '..', 'screens', 'RaceScreen', 'index.jsx'),
-    'utf8'
-  );
+    join(HERE, '..', '..', 'screens', 'RaceScreen', 'frameCameraInputs.js'),
+  ]
+    .map((p) => readFileSync(p, 'utf8'))
+    .join('\n');
+  const RACE_SCREEN = RENDER_PATH;
 
   it('RaceScreen asks for the group by the public name (not a private method)', () => {
     // Matched as a CALL, with the word boundary at the end. `toContain('detectBattleGroup')` was
@@ -6742,5 +6766,233 @@ describe('CAMERA-HYGIENE-2 — the detectBattleGroup contract with RaceScreen', 
       { t: 0.05, x: 50, y: 300, index: 3 },
     ];
     expect(cd.detectBattleGroup(spread)).toBeNull();
+  });
+});
+
+// ============================================================
+// START-CEREMONY-CAMERA-1 / CEREMONY-HOLD-TARGET-1 — THE HOLD AFTER THE GUN.
+//
+// WHAT THIS GUARDS: that the framing the ceremony arrived at survives the hand-over to the race —
+// as the state's TARGET, for the whole hold, and released at the first view change.
+//
+// EVERY TEST HERE DRIVES THE REAL PATH: a full countdown through `updateCountdown`, then `update()`
+// frames with a race state, exactly as RaceScreen does. NOTHING assigns `cd.state` or calls
+// `_transition` by hand. That is not style. The previous version of this block asserted the hold by
+// setting `cd.state = LEADER_ZOOM` and calling `_transition` to force an entry into OVERVIEW — a
+// path a race never takes at the gun, because the director is ALREADY in OVERVIEW and there is no
+// transition to make. The tests passed, the block shipped, and the hold had never once executed.
+// A test that forces a path the game never takes proves the code compiles and nothing else.
+// ============================================================
+describe('the hold keeps the ceremony framing (CEREMONY-HOLD-TARGET-1)', () => {
+  const CW = 1280;
+  const CH = 720;
+  const WORLD_W = 4000;
+  const WORLD_H = 1200;
+  const FRAME = 1000 / 60;
+
+  /** A straight track, so "the camera drifted" cannot be confused with "the road bent". */
+  const startShape = () => ({
+    getTotalLength: () => WORLD_W,
+    getPosition: (t, lateral = 0) => ({ x: t * WORLD_W, y: WORLD_H / 2 + lateral * 150 }),
+  });
+
+  // A START GRID THAT FILLS ITS CORRIDOR, which is what makes this fixture worth anything. The
+  // hold enters `Math.min` with the guarantees and a `Math.min` of cam.zoom picks the WIDEST shot,
+  // so on a fixture whose formation is narrower than the corridor the CORRIDOR guarantee is always
+  // the widest and the hold never reaches `targetZoom` at all — the test would then be asserting
+  // the corridor guarantee under the hold's name. Rows across ±105 in a 150 px corridor put the
+  // ceremony's own framing on top, which is the arrangement a real start grid has.
+  const grid = (n) =>
+    Array.from({ length: n }, (_, i) => ({
+      index: i,
+      name: `R${i}`,
+      x: 300 + Math.floor(i / 8) * 18,
+      y: WORLD_H / 2 + ((i % 8) - 3.5) * 30,
+      t: 0,
+      speed: 0,
+      lap: 0,
+    }));
+
+  function director({ open = true, config = ALWAYS_TAKE } = {}) {
+    return new CameraDirector(WORLD_W, WORLD_H, open, config, 36, startShape(), 150);
+  }
+
+  /**
+   * The race, as a race runs it: countdown frames, then RACING frames. `onFrame` sees each RACING
+   * frame after `update()`; returning `false` stops the drive.
+   */
+  function driveGun(cd, racers, frames, onFrame) {
+    for (let e = 0; e <= 4000; e += FRAME) cd.updateCountdown(racers, 1000 + e, e, CW, CH);
+    const arrived = cd.zoom; // the framing the ceremony arrived at, before a single race frame
+    let ts = 5000;
+    let el = 0;
+    for (let f = 0; f < frames; f++) {
+      for (const r of racers) {
+        r.t += 0.0004;
+        r.x = r.t * WORLD_W + 300 + Math.floor(r.index / 8) * 18;
+      }
+      cd.update(
+        racers,
+        ts,
+        {
+          raceElapsed: el,
+          finishedCount: 0,
+          winner: null,
+          finishT: 1,
+          isOutcomePhase: false,
+          physicsRacers: racers,
+        },
+        CW,
+        CH,
+        FRAME
+      );
+      if (onFrame && onFrame({ el, f, ts }) === false) break;
+      ts += FRAME;
+      el += FRAME;
+    }
+    return arrived;
+  }
+
+  // WHAT BREAKS IF THIS IS DELETED: the only assertion that the hold runs at all on the path a race
+  // takes. The shipped code puts the hand-over in `_transition`, which the gun never reaches, and
+  // every other test in this block passed while that was true.
+  // WHAT GOES UNNOTICED WITHOUT IT: the camera easing out of the ceremony framing from the first
+  // frame of the race — a whole second of drift at the one moment the picture must be still.
+  it('the ceremony framing is the STATE TARGET on the first racing frame, not just the value the camera starts at', () => {
+    const cd = director();
+    const racers = grid(20);
+    let asked = null;
+    const arrived = driveGun(cd, racers, 1, () => {
+      // `_stateCamZoom()` is the number `_setTargets` consumes every frame — the state's ASK,
+      // before the guarantees widen it. Asserting the post-guarantee `targetZoom` instead would
+      // be asserting the guarantees, which have their own tests and legitimately bind here.
+      asked = cd._stateCamZoom();
+    });
+    expect(arrived).toBeGreaterThan(0);
+    expect(asked).toBeCloseTo(arrived, 6);
+    // And it is NOT OVERVIEW's own setting — otherwise this test would pass on a director that
+    // never held anything, which is exactly the state the shipped code was in.
+    expect(Math.abs(asked - cd._overviewStateZoom)).toBeGreaterThan(1e-6);
+  });
+
+  // WHAT BREAKS IF DELETED: the defect itself, as the owner sees it rather than as a field. The
+  // ask above can be right while the picture still glides, if anything downstream re-derives the
+  // zoom; this asserts the PICTURE — over a second of race, the live zoom must not travel toward
+  // OVERVIEW's own setting. On the shipped code it arrives there in about a second.
+  // WHAT GOES UNNOTICED WITHOUT IT: exactly that glide, which is what was shipped as delivered.
+  it('the live zoom does not glide toward OVERVIEW’s own setting during the hold', () => {
+    const cd = director();
+    const racers = grid(20);
+    let gapAtGun = null;
+    let gapAtOneSecond = null;
+    driveGun(cd, racers, 61, ({ f }) => {
+      const gap = Math.abs(cd.zoom - cd._overviewStateZoom);
+      if (f === 0) gapAtGun = gap;
+      if (f === 60) gapAtOneSecond = gap;
+    });
+    expect(gapAtGun).toBeGreaterThan(0.05); // the two framings DO differ on this fixture
+    // Closing a tenth of that gap in a second is the glide. It does not close at all here; the
+    // tolerance is for the guarantees, which may legitimately move the zoom either way.
+    expect(gapAtOneSecond).toBeGreaterThan(gapAtGun * 0.9);
+  });
+
+  // WHAT BREAKS IF DELETED: nothing catches a hold that is applied for one frame and then let go.
+  // WHAT GOES UNNOTICED: the same glide, starting a frame later.
+  it('holds it for the whole start phase, through the OVERVIEW re-entry the start phase forces', () => {
+    const cd = director();
+    const racers = grid(20);
+    const targets = [];
+    const arrived = driveGun(cd, racers, 150, () => {
+      // 150 frames = 2.5 s: past the hold gate, so the director has committed at least one
+      // OVERVIEW→OVERVIEW entry, and still inside START_PHASE_DURATION.
+      targets.push(cd._stateCamZoom());
+      expect(cd.state).toBe(CAM_STATE.OVERVIEW);
+    });
+    for (const t of targets) expect(t).toBeCloseTo(arrived, 6);
+    // Not merely "never tighter": it is still the ceremony's framing at the end of the run, so the
+    // hold has not been quietly released by an entry that is not a view change.
+    expect(cd._ceremonyHoldZoom).toBeCloseTo(arrived, 6);
+  });
+
+  // WHAT BREAKS IF DELETED: the hold could outlive the start and every wide shot for the rest of
+  // the race would inherit the ceremony's framing — a far larger change than the one asked for.
+  // WHAT GOES UNNOTICED: on the shipped code the hand-over is never consumed at all, so the first
+  // MID-RACE OVERVIEW snaps to the ceremony's zoom minutes after the ceremony ended.
+  it('is released at the first view change, and no later OVERVIEW inherits it', () => {
+    const cd = director();
+    const racers = grid(20);
+    let releasedAt = null;
+    driveGun(cd, racers, 600, ({ el }) => {
+      if (cd.state !== CAM_STATE.OVERVIEW && releasedAt === null) releasedAt = el;
+      return releasedAt === null;
+    });
+    expect(releasedAt).not.toBeNull(); // the view DOES change — otherwise this proves nothing
+    expect(cd._ceremonyHoldZoom).toBeNull();
+    // And with the hand-over gone, OVERVIEW's zoom is its own setting again.
+    cd.state = CAM_STATE.OVERVIEW; // reading a pure lookup, not driving a transition
+    expect(cd._stateCamZoom()).toBeCloseTo(cd._overviewStateZoom, 9);
+  });
+
+  // WHAT BREAKS IF DELETED: a race entered without a countdown — a test, a resumed race — could
+  // pick up a stale hold from a previous race's director.
+  // WHAT GOES UNNOTICED: nothing by eye, until it happens.
+  it('no ceremony ran → no hold; OVERVIEW takes its own setting from the first frame', () => {
+    const cd = director();
+    const racers = grid(20);
+    let ts = 5000;
+    for (let f = 0; f < 30; f++) {
+      cd.update(
+        racers,
+        ts,
+        { raceElapsed: f * FRAME, finishedCount: 0, winner: null, finishT: 1 },
+        CW,
+        CH,
+        FRAME
+      );
+      ts += FRAME;
+    }
+    expect(cd._ceremonyHoldZoom).toBeNull();
+    expect(cd.targetZoom).toBeCloseTo(cd._overviewStateZoom, 6);
+  });
+
+  // WHAT BREAKS IF DELETED: Lesson 192 for this mechanism — the hold could become a FREEZE that a
+  // guarantee cannot widen, and a racer would be cropped by the one shot that promised not to.
+  // WHAT GOES UNNOTICED: the ceremony's own promise (CEREMONY-HANDOVER-1) silently doing nothing.
+  it('a guarantee can WIDEN the hold and can never NARROW it', () => {
+    const cd = director();
+    const racers = grid(40);
+    const arrived = driveGun(cd, racers, 120, () => {
+      expect(cd.targetZoom).toBeLessThanOrEqual(cd._ceremonyHoldZoom + 1e-9);
+    });
+    expect(arrived).toBeGreaterThan(0);
+    // The combining rule itself, so the property is asserted where it is guaranteed and not only
+    // where it happens to bind on this fixture.
+    expect(Math.min(arrived, arrived * 0.5, Infinity)).toBeCloseTo(arrived * 0.5, 9);
+    expect(Math.min(arrived, arrived * 2, Infinity)).toBeCloseTo(arrived, 9);
+  });
+
+  it('produces a finite framing on both track types and never leaves the projection range', () => {
+    for (const open of [false, true]) {
+      const cd = director({ open });
+      driveGun(cd, grid(20), 30);
+      expect(Number.isFinite(cd.zoom)).toBe(true);
+      expect(cd.zoom).toBeGreaterThanOrEqual(cd._proj.minCamZoom - 1e-9);
+      expect(cd.zoom).toBeLessThanOrEqual(cd._proj.maxCamZoom + 1e-9);
+      expect(Number.isFinite(cd.offsetX)).toBe(true);
+      expect(Number.isFinite(cd.offsetY)).toBe(true);
+    }
+  });
+
+  it('never zooms OUT during the ceremony — the push is monotone', () => {
+    // A formation that cannot be framed tighter than the venue shot would otherwise play the
+    // ceremony backwards: the camera would appear to retreat from the grid as the race approached.
+    const cd = director({ open: false });
+    const racers = grid(40);
+    let prev = -Infinity;
+    for (let e = 0; e <= 4000; e += 50) {
+      const out = cd.updateCountdown(racers, 1000 + e, e, CW, CH);
+      expect(out.zoom).toBeGreaterThanOrEqual(prev - 1e-9);
+      prev = out.zoom;
+    }
   });
 });

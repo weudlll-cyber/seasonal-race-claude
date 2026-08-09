@@ -1,7 +1,15 @@
 #!/usr/bin/env sh
 # Run lint-staged on the client package before every commit.
 # lint-staged auto-fixes ESLint errors and Prettier formatting on staged files.
-cd client && npx lint-staged || exit 1
+# VERIFY-COST-3: the binary is invoked DIRECTLY. `npx lint-staged` re-resolves the package on every
+# commit and that cost 1.35 s measured, for nothing — the binary is already installed and pinned by
+# the lockfile. Falls back to npx if it is somehow absent, so a fresh clone still works.
+cd client || exit 1
+if [ -x node_modules/.bin/lint-staged ]; then
+  node_modules/.bin/lint-staged || exit 1
+else
+  npx lint-staged || exit 1
+fi
 cd ..
 
 # ONE-TRUTH-2 stage 6b: THE FAST GUARDS RUN HERE, AND THEIR COUNTS ARE PRINTED EXPLICITLY.
@@ -13,19 +21,41 @@ cd ..
 #
 # It BLOCKS on failure (unlike the mint tripwire below, which only informs): these guards answer
 # yes/no questions with no legitimate failing state. `git commit --no-verify` remains the escape.
+#
+# VERIFY-COST-3: THEY RUN IN PARALLEL NOW, AND NOTHING WAS CUT TO ACHIEVE IT.
+#
+# Measured sequentially: fingerprints 1649 ms, writable 783 ms, config-claims 355 ms, stamps 198 ms,
+# doc-facts 138 ms, config-keys 119 ms — 3.4 s, of which one guard is half. All six are READ-ONLY and
+# independent: each answers a yes/no question about the tree and none writes anything, so the order
+# they run in was never load-bearing. Wall clock is now the slowest one rather than their sum.
+#
+# The OUTPUT is still deterministic: each guard writes to its own file and they are replayed in the
+# fixed order below, so a failing run reads identically to the sequential version. That mattered —
+# the reason these are here at all is that a summary line was once read instead of a count.
 fast_fail=0
 fast_pass=0
-for guard in   "scripts/check-fingerprints.mjs"   "scripts/check-measured-stamps.mjs"   "scripts/check-config-claims.mjs"   "scripts/check-doc-facts.mjs"   "scripts/check-writable.mjs"   "scripts/check-config-keys.mjs"
+guards="scripts/check-fingerprints.mjs scripts/check-measured-stamps.mjs scripts/check-config-claims.mjs scripts/check-doc-facts.mjs scripts/check-writable.mjs scripts/check-config-keys.mjs"
+i=0
+for guard in $guards
 do
-  if node "$guard" >/tmp/ra-guard.out 2>&1; then
+  i=$((i + 1))
+  node "$guard" >"/tmp/ra-guard-$i.out" 2>&1 &
+  eval "pid_$i=\$!"
+done
+i=0
+for guard in $guards
+do
+  i=$((i + 1))
+  eval "wait \$pid_$i"
+  if [ $? -eq 0 ]; then
     fast_pass=$((fast_pass + 1))
   else
     fast_fail=$((fast_fail + 1))
     echo ""
-    sed 's/^/     /' /tmp/ra-guard.out
+    sed 's/^/     /' "/tmp/ra-guard-$i.out"
   fi
+  rm -f "/tmp/ra-guard-$i.out"
 done
-rm -f /tmp/ra-guard.out
 echo ""
 echo "  GUARDS: PASS $fast_pass   FAIL $fast_fail"
 if [ "$fast_fail" -gt 0 ]; then

@@ -3,7 +3,21 @@
 // Path:        client/src/modules/storage/defaults.js
 // Project:     RaceArena
 // Created:     2026-04-19
-// Description: Default data for all storage keys — seeded on first launch
+// Description: Default data for all storage keys — the value that applies wherever a stored config
+//              has no entry for a key. NOT merely "seeded on first launch", which is what this line
+//              used to say and what CEREMONY-TRUTH-1 had to check rather than trust.
+//
+//              WHAT `loadCameraConfig` ACTUALLY DOES, because the difference is the whole of
+//              Lesson 199: it walks `Object.keys(DEFAULT_CAMERA_CONFIG)` and takes the stored value
+//              only where the stored object HAS that key. So a key added here reaches an existing
+//              installation on the next load, and a value the owner changed by hand SURVIVES it —
+//              his entry wins for his key, the default fills the ones he never touched. Nothing here
+//              requires resetting a stored config, and nothing should.
+//
+//              THE TRAP IS ELSEWHERE, and it is real: a reader that writes `cfg?.someKey ?? 0`
+//              installs a SECOND authority on the value, which wins exactly when the key is missing
+//              — the one moment the default was written for. See reports/night/CEREMONY-TRUTH-1.md
+//              for the count.
 // ============================================================
 
 import { DEFAULT_AUTO_SCALE_CONFIG } from '../autoSpriteScale.js';
@@ -212,6 +226,23 @@ export const DEFAULT_CAMERA_CONFIG = {
   // that moment, the switch is INVISIBLE and needs no transition. Note this is well past the
   // camera's own 3 s start hold: handing over when the camera does would take ~20% of the names
   // away at the densest moment.
+  // LABEL-OFFSET-1 — THE GAP FOLLOWS THE RACER, AND THIS IS THE PART THAT DOES NOT.
+  //
+  // A label sits half the racer's DRAWN height above its centre — which lands its bottom edge exactly
+  // on the racer's top edge — plus this margin. The first term needs no setting: it falls out of the
+  // drawn size, so it is right on every track and at every zoom by construction. This is the second
+  // term, the breathing space, and it is the owner's knob.
+  //
+  // It is deliberately NOT a share of the racer. That would collapse the two terms into one factor
+  // and turn the knob into a second size multiplier rather than a gap. It is the term that absorbs
+  // what the first cannot know: the drawn height is the visible NARROW BODY, and sprite extremities
+  // — a giraffe's neck, a rocket's fin — reach past it.
+  //
+  // 6 px is my judgement, not a measurement, and it is the number the owner is expected to tune by
+  // eye. It replaces a gap that was `fontPx × 2.0` = 31.7 px at the default font, fixed no matter how
+  // big the racer was; at the smallest a racer is ever drawn (the readability floor, 0.045 × 720 =
+  // 32.4 px) the gap becomes 22.2 px, and at the largest it grows instead of staying put.
+  nameTagMarginPx: 6,
   nameTagAllUntilMs: 8000,
   showCameraStateHud: true,
   showCameraDiagnostics: false,
@@ -318,23 +349,88 @@ export const DEFAULT_CAMERA_CONFIG = {
   photoFinishCloseThresholdT: 0.03, // max lap-normalized |t| gap between the top-2 finishers to count as "close" (same unit family as battlePulkThresholdT)
   photoFinishSlowmoFactor: 0.5, // physics slow-motion factor during the photo-finish shot (1.0 = normal, 0.5 = half speed)
   photoFinishLeadProgress: 0.97, // predictive gate: leader progress (fraction of finishT, 0..1) at which the one-shot close-check fires BEFORE the line
-  // Countdown camera phase: zooms from start-zoom to OVERVIEW zoom during the pre-race countdown.
-  // CAMERA-REFERENCE-WIDTH-1: the countdown opens on the same unit — a wide establishing shot that
-  // eases into OVERVIEW. Clamped by the projection, so on a small world it means "the whole world".
-  countdownStartCorridors: 3,
-  // THE COUNTDOWN'S ONE HOME (CLEANUP-BEFORE-NUMBERS-1, salvaged from START-SEQUENCE-1 stage 0).
+  // ── THE START CEREMONY (START-CEREMONY-CAMERA-1) ───────────────────────────────────────────────
+  // The race opens on the whole track, held still, then eases in to the starting formation until it
+  // is as large as it can be with every racer still in frame. Both ends are GEOMETRY and neither is
+  // a setting: the venue shot is the track's own extent, and the target is the field's own extent
+  // through `fieldGuarantee`. These numbers are the RHYTHM, which is the part that is taste.
   //
-  // The comment that stood here claimed this "matches the default race countdown duration". It was
-  // FALSE for as long as both keys existed — this is 4000 ms and `countdownDuration` said 3 seconds.
-  // And they were never two homes for one fact: `countdownDuration` was read by NOTHING. It was
-  // written by a live Dev Panel control and consumed nowhere, so moving it there never did anything.
-  // Both the key and that control are gone; this is the only countdown number there is, and it is
-  // the one RaceScreen's phase advance actually compares against.
+  // ── THE COUNTDOWN NO LONGER HAS A LENGTH OF ITS OWN (START-BOARD-2) ────────────────────────────
+  // `countdownDurationMs` is GONE. It used to be a fixed 4000 ms that CAPPED the beats: when they
+  // asked for more, all of them were scaled proportionally, so raising the push silently shortened
+  // the venue shot and the settled beat and nothing said so. The countdown is now the SUM of the
+  // beats — `ceremonyTotalMs` in startCeremony.js is the one place that adds them up, and the phase
+  // advance, the camera, the digits and both fingerprint harnesses all ask it. Each slider below now
+  // means exactly the beat it names.
+  ceremonyVenueMs: 1400,
+  ceremonyPushMs: 2000,
+  // ── THE SEARCHING TIME (CEREMONY-TIME-1) ──────────────────────────────────────────────────────
+  // The formation held motionless, board GONE and no digits yet. It is a control, not a remainder:
+  // CEREMONY-HANDOVER-1 made it one, and now that the countdown follows the beats there is no slack
+  // left anywhere to quietly land in it.
   //
-  // STILL OPEN, deliberately: `drawCountdownOverlay` counts from a hard-coded 3 while this phase
-  // lasts 4000 ms, so "GO!" stands for an extra second. That is a VISIBLE change and was left for
-  // work the owner's eye is on. See reports/night/START-SEQUENCE-1.md.
-  countdownDurationMs: 4000,
+  // 600 → 4000 after the owner's searound eye test. The board teaches the number-to-name assignment
+  // and this is when the viewer USES it — takes the number they just learned and finds it on the
+  // track. At 600 ms the race started almost immediately after the board vanished, which made the
+  // board itself close to pointless: it taught something nobody had time to apply. This time is ADDED
+  // to the opening rather than taken out of it, which is what "the countdown follows the beats"
+  // means.
+  ceremonySettledMs: 4000,
+  // ── THE DIGITS' OWN WINDOW (CEREMONY-TIME-1) ──────────────────────────────────────────────────
+  // How long the 3-2-1 digits are on screen, at the very end. NOT a cap on anything: it is added to
+  // the total like every other beat, and the camera does not know it exists. It exists because the
+  // digits are derived from the phase's whole length, so before this they ran for the ENTIRE opening
+  // — a longer ceremony just meant counting from a bigger number, and there was no such moment as
+  // "before the countdown begins" for the searching time above to sit in.
+  //
+  // This is the one new key in CEREMONY-TIME-1, and it is why that block puts defaults.js in its
+  // diff. Nothing about it can reach the race engine's arithmetic — but the guard is a reachability
+  // hull, not a judgement, and it is right to report the key rather than argue with it.
+  countdownDigitsMs: 3000,
+  // ── THE RUNNERS' BOARD'S OWN DURATION (START-BOARD-2) ──────────────────────────────────────────
+  // `max(startBoardFloorMs, startBoardMsPerName × n)`. The owner's shape, after his eye test at 40
+  // racers: "in that time it is absolutely impossible to find your own racer."
+  //
+  // THE BOARD'S LENGTH AND THE CAMERA'S ARE DIFFERENT QUESTIONS, which is why this is not just a
+  // longer push. The push is how long a good camera move takes — taste, fixed, and a crawling one is
+  // worse than a short board. This is how long a field takes to READ, which scales with the field.
+  // The camera therefore arrives on `ceremonyPushMs` and then HOLDS while the board finishes.
+  //
+  // BOTH TERMS ROUGHLY DOUBLED IN CEREMONY-TIME-1, after his second eye test on searound: the board
+  // was STILL shown too briefly. The first pair (3000 / 80) came from a task model — one alphabetical
+  // list, so finding a known name is a jump plus a short scan — and the model was optimistic. These
+  // are STARTING VALUES for his eye, not measured truth; the two sliders below are what settle them.
+  //
+  // At 6000 / 120: 6.0 s at 8 racers and at 20 (the floor binds), 6.0 s at 40, 12.0 s at 100 — against
+  // 3.2 s and 8.0 s before, and against the 1.46 s that failed his first eye test.
+  startBoardFloorMs: 6000,
+  startBoardMsPerName: 120,
+  // ── LABEL-DEGRADE-1: the NAME on the track when there is room for it ───────────────────────────
+  // The owner's idea: during the race, check per racer whether the NAME fits without overlapping
+  // anything; show it if it does, fall back to the number when it does not. The decluttering's
+  // existing asymmetry governs the switch — a racer must find its wide box completely free to gain
+  // a name, and keeps it until the intrusion is decisive.
+  //
+  // DEFAULT OFF, ON MY OWN MEASUREMENT, and the numbers are in reports/night/LABEL-DEGRADE-1.md.
+  // Shipping it on against them would have been the wrong call; the toggle is here so his eye can
+  // overrule my arithmetic, which is the one thing it can legitimately do.
+  labelNamesWhenRoom: false,
+  // ── HOW LONG A NAME MUST BE EARNED FOR (LABEL-HOLD-1) ─────────────────────────────────────────
+  // A label shows the NAME once its box has been clear of every other label and racer for this long
+  // continuously; it gives the name up the instant it stops being clear. Promotion only — the
+  // withdrawal is immediate and is not configurable, because a name over a racer is the defect the
+  // whole feature exists to remove.
+  //
+  // 2000 -> 1200 ON HIS EYE. 2000 was the longest window still inside the previous rule's switch
+  // band, which was a yardstick rather than a requirement; he watched it and said the number takes
+  // very long to become a name. The cost of the shorter window is measured in
+  // reports/night/LABEL-HOLD-1.md, and the slider is there so he can settle it without another
+  // block.
+  labelFormHoldMs: 1200,
+  // Ease-in-out: begins at rest, gathers, arrives at rest. The countdown used ease-OUT cubic, which
+  // starts at full speed — that reads as the camera catching up to something rather than as
+  // ceremony. 'easeOutCubic' is on the list so the old feel can be put back beside the new one.
+  ceremonyEasing: 'easeInOutCubic',
   // State overlay: narrative text shown during first seconds of OVERVIEW / BATTLE / COMEBACK.
   stateOverlayEnabled: true,
   stateOverlayDurationMs: 3500,

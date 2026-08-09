@@ -362,3 +362,32 @@ export const DEFAULT_NAME_SET = 'current';
 export function resolveNameSet(key) {
   return QUICK_TEST_NAME_SETS[key] ?? QUICK_TEST_NAMES;
 }
+
+/**
+ * WHICH ROSTER A LIVE FIELD IS ACTUALLY RUNNING — read off the names themselves (PERF-WHERE-1).
+ *
+ * WHY IT IS DERIVED AND NOT PLUMBED. The roster key lives in `SetupScreen`'s local state and dies
+ * there: what reaches a race is the NAMES, not the key. A diagnostic could be given the key by
+ * threading a new field through the race payload, but then it would report what a screen INTENDED
+ * rather than what the field HAS — and the two come apart the moment a real player joins a quick
+ * test, which is the ordinary case. Reading the names is both cheaper and more truthful.
+ *
+ * `custom` is a first-class answer, not a failure. A race with the owner's real player names belongs
+ * to no roster, and saying so is the correct reading of a perf log taken during one.
+ *
+ * COST: one pass over the field, run ONCE when a log is exported. Never per frame.
+ *
+ * @param {Array<{name?: string}>|Array<string>} racersOrNames
+ * @returns {'current'|'long'|'mixed'|'custom'|'none'} the roster key, or `custom`/`none`
+ */
+export function identifyNameSet(racersOrNames) {
+  if (!Array.isArray(racersOrNames) || racersOrNames.length === 0) return 'none';
+  const names = racersOrNames.map((r) => (typeof r === 'string' ? r : r?.name));
+  if (names.every((n) => !n)) return 'none';
+  for (const [key, list] of Object.entries(QUICK_TEST_NAME_SETS)) {
+    // The browser fills a field from the head of a roster, in order, so entry i is list[i]. A field
+    // larger than the list wraps, which is what every harness in this repo does too.
+    if (names.every((n, i) => n === list[i % list.length])) return key;
+  }
+  return 'custom';
+}

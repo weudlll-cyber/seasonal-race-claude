@@ -41,6 +41,14 @@ import {
   drawCountdownOverlay,
   drawFinishedOverlay,
 } from './drawing/overlayRendering.js';
+import { drawStartBoard } from './drawing/startBoardRendering.js';
+import { advanceLabelForms } from './labelFormHold.js';
+import { DEFAULT_CAMERA_CONFIG } from '../../modules/storage/defaults.js';
+import {
+  ceremonySchedule,
+  boardDurationMs,
+  boardAlphaAt,
+} from '../../modules/camera/startCeremony.js';
 import { drawTrackLights } from '../../modules/trackLights.js';
 import { computeTagLayout, tagFontScreenPx } from './nameTagLayout.js';
 import { renderMinimap } from '../../modules/camera/Minimap.js';
@@ -49,7 +57,9 @@ import { OPEN_TRACK_BASE_ZOOM } from '../../modules/camera/CameraDirector.js';
 import {
   computeRenderDisplayScale,
   getEffectiveMaxTargetScreenPx,
+  drawnRacerScreenPx,
 } from '../../modules/autoSpriteScale.js';
+import { raceNumberLabel } from '../../modules/raceNumbers.js';
 import { PHASE } from './racePhase.js';
 import { formatBuildLabel, isBuildUncertain } from '../../modules/buildInfo.js';
 import { hudRightColumn } from './hudLayout.js';
@@ -96,6 +106,11 @@ export function renderRaceFrame(ctx, f) {
     renderAlpha,
     interpolationEnabled,
     tagIncumbents,
+    // LABEL-OCCLUSION-1: the form each label is CURRENTLY in, and the hold state behind it. Both are
+    // owned by the component across frames — the layout is pure and the hold is the only thing in
+    // this path that remembers anything.
+    tagWideForms,
+    tagFormHold,
     leaderDiag,
     cfgBadge,
     buildBadge,
@@ -161,9 +176,38 @@ export function renderRaceFrame(ctx, f) {
   // racer once. `tagIncumbents` carries last frame's set: a label already on screen is offered its
   // pixels first, which is what keeps the layout from churning (Lesson 190).
   const tagFontPx = tagFontScreenPx(cameraConfig.nameTagFrameFrac, canvasH);
+  // LABEL-OFFSET-1: how far a label sits above its racer follows the RACER'S DRAWN SIZE, so that size
+  // is computed ONCE, here, and handed to both the layout and the renderer. Evaluating the formula
+  // twice would be two homes for one distance, and the failure is silent — the decluttering would
+  // reason about boxes that are not where the labels get drawn.
+  //
+  // effZoomY, not effZoomX. This is a VERTICAL distance, and on a closed track the world→screen scale
+  // is anisotropic: the sprite is squashed on Y, so the gap has to be squashed with it.
+  const racerScreenH = drawnRacerScreenPx(displaySize, displayScale, effZoomY);
+  // LABEL-OCCLUSION-1 needs the other axis too, and it is genuinely a different number: on a closed
+  // track the world→screen scale is anisotropic, so a name tested against a box built from effZoomY
+  // on both axes would be judged against a racer up to 18.5 % the wrong width.
+  const racerScreenW = drawnRacerScreenPx(displaySize, displayScale, effZoomX);
+  const labelMarginPx = cameraConfig.nameTagMarginPx;
   const raceElapsedMs = st.raceStart != null ? ts - st.raceStart : 0;
   const showAllTags =
-    st.phase !== PHASE.RACING || raceElapsedMs < (cameraConfig.nameTagAllUntilMs ?? 0);
+    st.phase !== PHASE.RACING ||
+    raceElapsedMs < (cameraConfig.nameTagAllUntilMs ?? DEFAULT_CAMERA_CONFIG.nameTagAllUntilMs);
+  // LABEL-FOCUS-1: who the camera is on. The director's own answer first; the leader only where it
+  // genuinely has none, which is BATTLE_ZOOM and OVERVIEW.
+  //
+  // WHERE THAT ANSWER COMES FROM MATTERS AS MUCH AS THE RULE (FRAME-INPUTS-1). `camera` is built by
+  // `frameCameraInputs`, and it is built there BECAUSE this line read a field the caller did not
+  // supply: RaceScreen assembled the object as a hand-written literal of three fields, so
+  // `anchorRacerIndex` was undefined on every frame of every live race and the fallback below fired
+  // always. The rule was right and the input never arrived. If a field is needed here, it goes on
+  // FRAME_CAMERA_FIELDS — nowhere else, and a test fails if it does not.
+  let focusRacerIndex = camera?.anchorRacerIndex ?? null;
+  if (focusRacerIndex == null && st.racers?.length) {
+    let leader = st.racers[0];
+    for (const r of st.racers) if ((r?.t ?? 0) > (leader?.t ?? 0)) leader = r;
+    focusRacerIndex = leader?.index ?? null;
+  }
   ctx.save();
   ctx.font = `bold ${tagFontPx}px sans-serif`;
   const measureTagText = (txt) => ctx.measureText(txt).width;
@@ -176,15 +220,52 @@ export function renderRaceFrame(ctx, f) {
     canvasW,
     canvasH,
     fontPx: tagFontPx,
+    racerScreenH,
+    racerScreenW,
+    labelMarginPx,
     measureText: measureTagText,
     showAll: showAllTags,
     incumbents: tagIncumbents,
+    // RACE-NUMBERS-1: the layout must measure the SAME string the renderer draws, or every box it
+    // reasons about is the wrong width — the defect HARNESS-NAMES-1 was created to end.
     labelOf: (r) =>
       showRpStartRow
-        ? r.name + ' (R' + (assignmentByRacer.get(r.index)?.rowIndex ?? 0) + ')'
-        : r.name,
+        ? raceNumberLabel(r.raceNumber) +
+          ' (R' +
+          (assignmentByRacer.get(r.index)?.rowIndex ?? 0) +
+          ')'
+        : raceNumberLabel(r.raceNumber),
+    // LABEL-DEGRADE-1: the wider form on offer — the racer's NAME — when the toggle is on. Passing
+    // null keeps the layout byte-for-byte what it was, which is what makes the toggle a real
+    // comparison rather than two code paths that merely look alike.
+    wideLabelOf: cameraConfig?.labelNamesWhenRoom ? (r) => r.name ?? '' : null,
+    wideForms: tagWideForms,
+    // LABEL-FOCUS-1: the racer the camera is ON keeps its name for the whole race. The director
+    // already names its subject — `anchorRacerIndex`, from CAMERA-FOCUS-1 — and it is deliberately
+    // NULL in BATTLE_ZOOM and OVERVIEW, where the shot is a group and there is no single subject.
+    // The leader is the fallback there, and that is a choice made here rather than a notion of
+    // focus invented inside the director.
+    exempt: focusRacerIndex != null ? new Set([focusRacerIndex]) : null,
+    // …and at the photo finish, everyone. At that zoom every racer stays recognisable even when the
+    // labels overlap, so overlap is acceptable there — the owner's reasoning, and it is the design.
+    exemptAll: camera?.state === 'PHOTO_FINISH',
   });
   ctx.restore();
+
+  // LABEL-OCCLUSION-1: advance the hold with THIS frame's criterion, and hand the result back for
+  // the next one. It runs after the layout because the criterion is the layout's output, and the
+  // one-frame lag is the same threading `tagIncumbents` already uses.
+  const nextWideForms = tagFormHold
+    ? advanceLabelForms(tagFormHold, {
+        shown: tagLayout.shown,
+        clear: tagLayout.wideClear,
+        nowMs: ts,
+        // LABEL-HOLD-1: his slider. The fallback is the DEFAULT and never 0 — a 0 here would pin
+        // every label to its number for the whole race, which is the failure mode CEREMONY-TRUTH-1
+        // spent a piece on.
+        holdMs: cameraConfig?.labelFormHoldMs ?? DEFAULT_CAMERA_CONFIG.labelFormHoldMs,
+      })
+    : null;
 
   drawRacers(
     ctx,
@@ -205,7 +286,9 @@ export function renderRaceFrame(ctx, f) {
     renderAlpha,
     interpolationEnabled,
     cameraConfig.highlightHeroes ?? false,
-    gapRerollDevMarker ?? false
+    gapRerollDevMarker ?? false,
+    racerScreenH,
+    labelMarginPx
   );
   drawBattleDiagMarkers(
     ctx,
@@ -231,7 +314,42 @@ export function renderRaceFrame(ctx, f) {
 
   let countdownNumber = null;
   if (st.phase === PHASE.COUNTDOWN) {
-    countdownNumber = drawCountdownOverlay(ctx, ts - st.countdownStart);
+    const cdElapsed = ts - st.countdownStart;
+    // START-BOARD-1/2 — THE RUNNERS' BOARD, under the digits and over everything else.
+    //
+    // ONE SCHEDULE, asked from the rhythm module rather than re-derived here. It now decides three
+    // things at once and they cannot disagree: how long the board is up, how long the countdown
+    // lasts, and therefore what the digits read. Two homes for "how long is the push" is the defect
+    // the ceremony work spent a night removing; this is the same rule applied to the board.
+    // CEREMONY-TRUTH-1: THE FALLBACKS ARE THE DEFAULTS. They were all `?? 0`, which is a second
+    // authority on six values `defaults.js` owns — and zero is the worst possible choice for every
+    // one of them, because it produces a ceremony that silently skips a beat instead of failing.
+    const schedule = ceremonySchedule(
+      cameraConfig?.ceremonyVenueMs ?? DEFAULT_CAMERA_CONFIG.ceremonyVenueMs,
+      cameraConfig?.ceremonyPushMs ?? DEFAULT_CAMERA_CONFIG.ceremonyPushMs,
+      cameraConfig?.ceremonySettledMs ?? DEFAULT_CAMERA_CONFIG.ceremonySettledMs,
+      boardDurationMs(
+        st.racers?.length ?? 0,
+        cameraConfig?.startBoardFloorMs ?? DEFAULT_CAMERA_CONFIG.startBoardFloorMs,
+        cameraConfig?.startBoardMsPerName ?? DEFAULT_CAMERA_CONFIG.startBoardMsPerName
+      ),
+      cameraConfig?.countdownDigitsMs ?? DEFAULT_CAMERA_CONFIG.countdownDigitsMs
+    );
+    drawStartBoard(ctx, {
+      racers: st.racers,
+      racerType,
+      displaySize,
+      assignmentByRacer,
+      alpha: boardAlphaAt(cdElapsed, schedule),
+      canvasW,
+      canvasH,
+    });
+    countdownNumber = drawCountdownOverlay(
+      ctx,
+      cdElapsed,
+      schedule.totalMs,
+      schedule.countdownStartMs
+    );
   } else if (st.phase === PHASE.FINISHED) {
     drawFinishedOverlay(ctx);
   }
@@ -256,7 +374,15 @@ export function renderRaceFrame(ctx, f) {
     renderMinimap(ctx, shape, st.racers, leaderIdx, canvasW, canvasH, minimapHighlights);
   }
 
-  return { effZoomX, effZoomY, displayScale, tagShown: tagLayout.shown, countdownNumber };
+  return {
+    effZoomX,
+    effZoomY,
+    displayScale,
+    tagShown: tagLayout.shown,
+    tagWide: tagLayout.wide,
+    tagWideForms: nextWideForms,
+    countdownNumber,
+  };
 }
 
 /**

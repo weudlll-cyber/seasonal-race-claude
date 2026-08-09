@@ -298,7 +298,10 @@ function replayTo(marker, built, cameraConfig, frameTimingConfig) {
     cd.updateRacePlan(meta.rpPlanInfo.b1Indices);
 
   const RAW_DT = 1000 / 60;
-  const countdownMs = cameraConfig.countdownDurationMs ?? 4000;
+  // START-BOARD-2: the countdown has no length of its own any more — it is the SUM of the
+  // ceremony beats, one of which scales with the field. The director is asked, so this harness
+  // cannot drift from the game the way a second copy of a duration would.
+  const countdownMs = cd.ceremonySchedule(st.racers).totalMs;
   const interpolate = !!frameTimingConfig.renderInterpolation;
   const targetPts = marker.moment.pts;
 
@@ -308,7 +311,7 @@ function replayTo(marker, built, cameraConfig, frameTimingConfig) {
   // COUNTDOWN: the camera is already live here and its state at GO depends on it, so the replay
   // runs it too rather than starting the clock at the green light.
   while (ts < countdownMs) {
-    cd.updateCountdown(st.racers, ts, ts, countdownMs, CANVAS_W, CANVAS_H);
+    cd.updateCountdown(st.racers, ts, ts, CANVAS_W, CANVAS_H);
     ts += RAW_DT;
   }
   const raceStart = ts;

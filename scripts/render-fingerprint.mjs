@@ -111,6 +111,9 @@ const { DEFAULT_TRACK_LIGHTS, sampleBoundaryAtInterval, LIGHT_SPACING_PX } =
 const { QUICK_TEST_NAMES_MIXED: HARNESS_NAMES } = await import(
   u("client/src/modules/racerNames.js")
 );
+const { assignRaceNumbers } = await import(
+  u("client/src/modules/raceNumbers.js")
+);
 const RT = await (async () => {
   const re = console.error;
   console.error = () => {};
@@ -150,6 +153,19 @@ const PHASES = process.argv.includes("--phases");
 // indices and the finish moves around, so "the window now covers the ending" is a claim that has to
 // be measured per track rather than reasoned about — this prints the matrix the report quotes.
 const COVERAGE = process.argv.includes("--coverage");
+// The countdown sample points, at module scope so the summary can print the window it covered.
+//
+// RE-PICKED BY START-BOARD-2 against the new beats. At this harness's n=40 the ceremony is
+// venue 0–1400, push 1400–3400, BOARD HOLD 3400–4600, settled 4600–5200 — the countdown is the sum
+// of the beats now, not a flat 4000, so the old points would have landed in the wrong beats. One
+// point per beat, two inside the board's window:
+//   0     the venue shot, board not yet up
+//   1500  just after the push begins — the board fading in, camera travelling
+//   2400  mid-push, board at full alpha, camera still travelling
+//   3800  the BOARD HOLD: camera ARRIVED and still, board still up. The beat that is new.
+//   4900  the settled beat: formation held, board GONE — "it ends before the gun" as a frame
+const CD_SAMPLE_MS = [0, 1500, 2400, 3800, 4900];
+
 const FRAMES_OVERRIDE = Number(
   (process.argv.find((a) => a.startsWith("--frames=")) ?? "").slice(9),
 );
@@ -276,6 +292,17 @@ function trackHash(geo, wantOps) {
   st.racers.forEach((r, i) => {
     r.name = HARNESS_NAMES[i % HARNESS_NAMES.length];
   });
+  // RACE-NUMBERS-1: and the NUMBER, because that is what the track label now draws. Without this the
+  // harness would go straight back to measuring EMPTY label boxes — the exact defect HARNESS-NAMES-1
+  // was created to end, re-created one block later by a change that had nothing to do with it. The
+  // rule the harness keeps failing is simple: every input the component sets, it must set too.
+  //
+  // Through the same shipped function and the same seed, so the instrument draws the numbers the
+  // game would draw rather than a plausible-looking substitute.
+  const harnessNumbers = assignRaceNumbers(st.racers.length, SEED);
+  st.racers.forEach((r) => {
+    r.raceNumber = harnessNumbers[r.index] ?? null;
+  });
   const raceCfg = built.config;
   const meta = built.meta;
 
@@ -316,12 +343,100 @@ function trackHash(geo, wantOps) {
     keepOps: !!wantOps,
   });
 
+  let tagIncumbents = null;
+  const leaderDiag = { snapshots: [], frozen: false };
+  let drawn = 0;
+  let drawnCountdown = 0;
+
+  // ONE description of a frame, for BOTH windows. The countdown pass and the racing pass must
+  // hand `renderRaceFrame` the same thirty-odd arguments, and two copies of that list is how an
+  // instrument comes to measure two slightly different things and report one hash.
+  // `cam`, `ts` and `tagIncumbents` are the only parts that differ per frame, so they are the
+  // only parts a caller supplies.
+  const frameArgs = (cam) => ({
+        st,
+        cam,
+        shape,
+        raceData,
+        isOpenTrack: shape.isOpen,
+        bsX,
+        bsY,
+        worldWidth: geo.worldWidth,
+        worldHeight: geo.worldHeight,
+        openTrackHW: shape.isOpen ? TW / 2 : 0,
+        bgImagePath: null,
+        bgCanvasReady: false,
+        effects: [],
+        cachedLightPts,
+        trackLightsConfig,
+        racerType: rt,
+        cameraConfig: DEFAULT_CAMERA_CONFIG,
+        camera: {
+          hudState: cd.hudState,
+          comebackLockedRacerIndex: cd.comebackLockedRacerIndex,
+          detectBattleGroup: (racers) => cd.detectBattleGroup(racers),
+        },
+        displaySize: ds,
+        displaySizeScale: br.bodyNarrow / ds,
+        assignmentByRacer: meta.assignmentByRacer ?? new Map(),
+        showRpStartRow: false,
+        showRpMinimapBadges: false,
+        rpPlanInfo: meta.rpPlanInfo ?? null,
+        renderAlpha: 1,
+        interpolationEnabled: false,
+        // The BATTLE-DIAG marker buffer. Same shape the component's ref starts at; it is a
+        // developer overlay that accumulates and then freezes, so it must be per-track (a shared
+        // one would freeze after the first track and change what later tracks draw).
+        leaderDiag,
+        cfgBadge: CFG_BADGE,
+        buildBadge: BUILD_BADGE,
+        racePlanActive: true,
+        racePlanSeed: SEED,
+        gapRerollDevMarker: false,
+        canvasW: CW,
+        canvasH: CH,
+        });
+
   const RAW = 1000 / 60;
   let ts = 0;
   let accum = 0;
-  const cdMs = DEFAULT_CAMERA_CONFIG.countdownDurationMs ?? 4000;
+  // START-BOARD-2: the countdown has no length of its own any more — it is the SUM of the
+  // ceremony beats, one of which scales with the field. The director is asked, so this harness
+  // cannot drift from the game the way a second copy of a duration would.
+  const cdMs = cd.ceremonySchedule(st.racers).totalMs;
+  // START-BOARD-1 EXTENDED THE WINDOW BACKWARDS, TO BEFORE THE GUN, and it is the same defect
+  // FINISH-WINDOW-1 repaired at the other end: this harness set `st.phase = RACING` and rendered
+  // its first frame AT the gun, so it had never drawn a single COUNTDOWN frame. Everything the
+  // ceremony puts on screen — the venue shot, the push, the countdown digits, and now the runners'
+  // board — was outside the instrument entirely. A new overlay that draws for three seconds of
+  // every race could have shipped without moving this hash by one bit.
+  //
+  // FIXED ELAPSED TIMES, never events, the same rule the racing points follow. They are chosen
+  // against the SHIPPED ceremony rhythm (venue 1400, push 2000, settled 600) so that one point
+  // lands in each beat and two land inside the push, where the board is:
+  //   0     the venue shot, board not yet up
+  //   1500  just after the push begins — the board fading in
+  //   2400  mid-push, the board at full alpha and the camera still travelling
+  //   3300  the end of the push, the board fading out
+  //   3700  the settled beat: formation held, board GONE, which is the claim "it ends before the
+  //         gun" expressed as a frame rather than as a sentence
+  st.phase = PHASE.COUNTDOWN;
+  st.countdownStart = 0;
+  let cdIdx = 0;
   while (ts < cdMs) {
-    cd.updateCountdown(st.racers, ts, ts, cdMs, CW, CH);
+    const cdCam = cd.updateCountdown(st.racers, ts, ts, CW, CH);
+    if (!PHASES && !COVERAGE && cdIdx < CD_SAMPLE_MS.length && ts >= CD_SAMPLE_MS[cdIdx]) {
+      // A marker in the SAME shape the racing frames use, with its own prefix so a countdown frame
+      // and a racing frame can never hash alike by accident.
+      rec.fillText("##cd", Math.round(CD_SAMPLE_MS[cdIdx]), 0);
+      renderRaceFrame(rec, {
+        ...frameArgs(cdCam),
+        ts,
+        tagIncumbents: null,
+      });
+      cdIdx++;
+      drawnCountdown++;
+    }
     ts += RAW;
   }
   const raceStart = ts;
@@ -331,9 +446,6 @@ function trackHash(geo, wantOps) {
   st.countdownStart = 0;
   const focusFadeMs = DEFAULT_CAMERA_CONFIG.battleSlowmoFadeDuration * 1000;
 
-  let tagIncumbents = null;
-  const leaderDiag = { snapshots: [], frozen: false };
-  let drawn = 0;
   const runFrames =
     PHASES && FRAMES_OVERRIDE > 0 ? FRAMES_OVERRIDE : RUN_FRAMES;
   const phaseFirstSeen = new Map();
@@ -395,49 +507,9 @@ function trackHash(geo, wantOps) {
       // fingerprint that "did not move" cannot be a sampler that silently stopped sampling.
       rec.fillText("##frame", frame, 0);
       const out = renderRaceFrame(rec, {
+        ...frameArgs(cam),
         ts,
-        st,
-        cam,
-        shape,
-        raceData,
-        isOpenTrack: shape.isOpen,
-        bsX,
-        bsY,
-        worldWidth: geo.worldWidth,
-        worldHeight: geo.worldHeight,
-        openTrackHW: shape.isOpen ? TW / 2 : 0,
-        bgImagePath: null,
-        bgCanvasReady: false,
-        effects: [],
-        cachedLightPts,
-        trackLightsConfig,
-        racerType: rt,
-        cameraConfig: DEFAULT_CAMERA_CONFIG,
-        camera: {
-          hudState: cd.hudState,
-          comebackLockedRacerIndex: cd.comebackLockedRacerIndex,
-          detectBattleGroup: (racers) => cd.detectBattleGroup(racers),
-        },
-        displaySize: ds,
-        displaySizeScale: br.bodyNarrow / ds,
-        assignmentByRacer: meta.assignmentByRacer ?? new Map(),
-        showRpStartRow: false,
-        showRpMinimapBadges: false,
-        rpPlanInfo: meta.rpPlanInfo ?? null,
-        renderAlpha: 1,
-        interpolationEnabled: false,
         tagIncumbents,
-        // The BATTLE-DIAG marker buffer. Same shape the component's ref starts at; it is a
-        // developer overlay that accumulates and then freezes, so it must be per-track (a shared
-        // one would freeze after the first track and change what later tracks draw).
-        leaderDiag,
-        cfgBadge: CFG_BADGE,
-        buildBadge: BUILD_BADGE,
-        racePlanActive: true,
-        racePlanSeed: SEED,
-        gapRerollDevMarker: false,
-        canvasW: CW,
-        canvasH: CH,
       });
       tagIncumbents = out.tagShown;
       drawn++;
@@ -449,6 +521,7 @@ function trackHash(geo, wantOps) {
     hash: rec.digest(),
     ops: rec.opCount,
     drawn,
+    drawnCountdown,
     opsList: wantOps ? rec.ops : null,
     phases:
       PHASES || COVERAGE
@@ -551,10 +624,12 @@ if (PHASES) {
 
 const combined = createHash("sha256");
 const rows = [];
+// BOTH SIDES: the countdown window is this chain's (START-BOARD-1), the RUN_GEOS reduction is
+// master's cheap mode (VERIFY-COST-2). They are independent and neither replaces the other.
 for (const geo of RUN_GEOS) {
-  const { hash, ops, drawn } = trackHash(geo, false);
+  const { hash, ops, drawn, drawnCountdown } = trackHash(geo, false);
   combined.update(geo.id + ":" + hash + "\n");
-  rows.push({ id: geo.id, hash, ops, drawn });
+  rows.push({ id: geo.id, hash, ops, drawn, drawnCountdown });
 }
 // The cheap hash carries a prefix so it CANNOT match the 16-hex shape the record and the
 // containment guard expect. A cheap run must be unable to impersonate a measurement.
@@ -565,15 +640,19 @@ if (QUIET) {
 } else {
   console.log(
     `RENDER ${COMBINED} (seed=${SEED} camSeed=${CAM_SEED}, ${RUN_GEOS.length} tracks, ${N} racers, ` +
-      `frames [${SAMPLE_AT.join(", ")}] of ${RUN_FRAMES})`,
+      `countdown [${CD_SAMPLE_MS.join(", ")}] ms + frames [${SAMPLE_AT.join(", ")}] of ${RUN_FRAMES})`,
   );
   for (const r of rows) {
     console.log(
-      `  ${r.id.padEnd(16)} ${r.hash}  ${r.ops} ops / ${r.drawn} frames`,
+      `  ${r.id.padEnd(16)} ${r.hash}  ${r.ops} ops / ${r.drawnCountdown}+${r.drawn} frames`,
     );
   }
   console.log(
     "\n  Covers the DRAW CALL SEQUENCE — sprites, text, styles, transforms, order.\n" +
-      "  Blind to the rasteriser and to the artwork itself (sprites are hashed by identity).",
+      "  The window now starts BEFORE the gun: the countdown samples cover the venue shot, the\n" +
+      "  push (where the runners' board is), and the settled beat.\n" +
+      "  Blind to the rasteriser and to the artwork itself (sprites are hashed by identity) — so\n" +
+      "  on the board it sees every portrait's geometry and order, and no coat: `Image` does not\n" +
+      "  exist in Node, so every sprite here takes drawRacer's procedural fallback.",
   );
 }

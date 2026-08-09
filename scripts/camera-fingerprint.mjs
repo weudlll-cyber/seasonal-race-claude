@@ -160,9 +160,12 @@ function trackHash(geo) {
   const RAW = 1000 / 60;
   let ts = 0;
   let accum = 0;
-  const cdMs = DEFAULT_CAMERA_CONFIG.countdownDurationMs ?? 4000;
+  // START-BOARD-2: the countdown has no length of its own any more — it is the SUM of the
+  // ceremony beats, one of which scales with the field. The director is asked, so this harness
+  // cannot drift from the game the way a second copy of a duration would.
+  const cdMs = cd.ceremonySchedule(st.racers).totalMs;
   while (ts < cdMs) {
-    cd.updateCountdown(st.racers, ts, ts, cdMs, CW, CH);
+    cd.updateCountdown(st.racers, ts, ts, CW, CH);
     h.update(`c|${r6(cd.zoom)}|${r6(cd.offsetX)}|${r6(cd.offsetY)}\n`);
     ts += RAW;
   }

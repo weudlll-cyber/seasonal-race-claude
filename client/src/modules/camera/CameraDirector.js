@@ -43,7 +43,6 @@ import { ComebackDetector } from './comebackDetector.js';
 import {
   resolveFramingConfig,
   DEFAULT_CORRIDORS,
-  DEFAULT_COUNTDOWN_CORRIDORS,
   DEFAULT_INNER_FRAME_PCT,
 } from './framingConfig.js';
 import {
@@ -83,10 +82,19 @@ import {
   corridorGuarantee,
   pairGuarantee,
   companyGuarantee,
+  fieldGuarantee,
   COMPANY_FRAME_PCT,
   anchorScreenPoint,
   lateralShiftToFit,
 } from './framingRule.js';
+import {
+  ceremonySchedule,
+  ceremonyZoom,
+  ceremonyEasing,
+  ceremonyAt,
+  boardDurationMs,
+  CEREMONY_BEAT,
+} from './startCeremony.js';
 
 export const CAM_STATE = {
   OVERVIEW: 'OVERVIEW',
@@ -307,10 +315,18 @@ export class CameraDirector {
     // Reset to null on every non-repeat state transition so cuts stay crisp.
     this._smoothedFocalX = null;
     this._smoothedFocalY = null;
-    // Normalized OVERVIEW snap zoom — computed from _drawnBodyWidthRefPx at each OVERVIEW entry.
-    // Null until first non-repeat OVERVIEW transition on open tracks with drawnBodyWidthRefPx>0.
-    // _setTargets reads this; falls back to _overviewStateZoom when null.
-    this._overviewSnapZoom = null;
+    // START-CEREMONY-CAMERA-1 / CEREMONY-HOLD-TARGET-1: THE HAND-OVER — the framing the ceremony
+    // arrived at, carried past the gun and released at the first view change (`_transition`).
+    // `null` means "no ceremony ran": a race entered without a countdown (a test, a resumed race)
+    // gets OVERVIEW's ordinary setting rather than a stale hold, and so does every OVERVIEW after
+    // the release.
+    this._ceremonyHoldZoom = null;
+    this._ceremonyBeat = null;
+    // CEREMONY-HANDOVER-1: the ceremony's promise, carried past the gun. ARMED by the countdown, so
+    // a race entered without one (a test, a resumed race) never acquires a guarantee it was never
+    // given — and RETIRED, one way, by `_fieldCeiling` when it can no longer be kept.
+    this._fieldGuaranteeActive = false;
+    this._fieldGuaranteeRetiredAt = null;
     // LEAD_CHANGE: leader-tracking state
     this._currentLeaderIndex = null;
     this._currentLeaderName = null;
@@ -388,8 +404,6 @@ export class CameraDirector {
   updateConfig(config) {
     this._computeZoomLevels(config);
     this._computeTimingConfig(config);
-    // Invalidate the stored snap so a changed OVERVIEW setting takes effect on the next cut.
-    this._overviewSnapZoom = null;
   }
 
   /**
@@ -460,13 +474,6 @@ export class CameraDirector {
     this._photoFinishZoom = this._computeZoomForCorridors(c.PHOTO_FINISH);
     // OVERVIEW is the same rule at the widest setting — no sprite size, no racer count.
     this._overviewStateZoom = this._computeZoomForCorridors(c.OVERVIEW, DEFAULT_CORRIDORS.OVERVIEW);
-    // The countdown opens wide on the SAME unit and eases into OVERVIEW. It is clamped by the
-    // projection like every other setting, so on a small world it simply means "the whole world".
-    this._countdownStartZoom = this._computeZoomForCorridors(
-      f.countdownCorridors,
-      DEFAULT_COUNTDOWN_CORRIDORS
-    );
-
     this._innerFramePct = f.innerFramePct;
     this._minRacersVisible = f.minRacersVisible;
     this._transitionGrammar = f.transitionGrammar;
@@ -493,6 +500,13 @@ export class CameraDirector {
     this._battleMinDurationMs = t.battleMinDurationMs;
     this._endgameThreshold = t.endgameThreshold;
     this._postStartHoldMs = t.postStartHoldMs;
+    this._ceremonyVenueMs = t.ceremonyVenueMs;
+    this._ceremonyPushMs = t.ceremonyPushMs;
+    this._ceremonySettledMs = t.ceremonySettledMs;
+    this._startBoardFloorMs = t.startBoardFloorMs;
+    this._startBoardMsPerName = t.startBoardMsPerName;
+    this._countdownDigitsMs = t.countdownDigitsMs;
+    this._ceremonyEasing = t.ceremonyEasing;
     this._battleCooldownMs = t.battleCooldownMs;
     this._showDiagnostics = t.showDiagnostics;
     this._diagEnabled = t.diagEnabled;
@@ -1347,6 +1361,16 @@ export class CameraDirector {
       this._comebackLockedRacerIndex = data.comebackRacer.index ?? null;
     }
 
+    // CEREMONY-HOLD-TARGET-1 — THE RELEASE, and the only place the hand-over ends. The hold lasts
+    // until the FIRST VIEW CHANGE, so the test is "the state actually changed", NOT "a transition
+    // was committed" and NOT "a state was entered". The start phase forces OVERVIEW, and the
+    // director commits an OVERVIEW→OVERVIEW entry inside it: that is not a view change, and
+    // releasing on it would end the hold seconds before the picture changes — the same shape of
+    // defect as putting the hand-over itself where a race never reaches it.
+    if (nextState !== prevState) {
+      this._ceremonyHoldZoom = null;
+    }
+
     // Commit state transition
     // isRepeat: true only when the same state is chosen as last time AND a full entry has
     // already occurred (null on first call so constructor-state never counts as a repeat).
@@ -1411,8 +1435,12 @@ export class CameraDirector {
         // divided by `2 x W_ref / racersPerRow`, which made the widest shot in the camera depend
         // on how many racers were in the race — non-monotonically. There is no sprite size and no
         // racer count in this path any more.
-        const snapZoom = this._overviewStateZoom;
-        this._overviewSnapZoom = snapZoom; // stored so _setTargets uses the same zoom
+        //
+        // CEREMONY-HOLD-TARGET-1: the hold is read from ONE place — `_stateCamZoom` — and this snap
+        // asks it rather than resolving the hand-over itself. An OVERVIEW re-entry inside the start
+        // phase therefore snaps to the framing the ceremony arrived at, not out of it; after the
+        // release the hand-over is null and this is OVERVIEW's ordinary setting, exactly as before.
+        const snapZoom = this._stateCamZoom();
         this.zoom = snapZoom;
         this.targetZoom = snapZoom;
       }
@@ -1968,6 +1996,76 @@ export class CameraDirector {
   }
 
   /**
+   * THE FIELD GUARANTEE, CARRIED PAST THE GUN — CEREMONY-HANDOVER-1 (b).
+   *
+   * THE DEFECT IT ENDS, in the owner's words: the camera "zooms out again and moves the focus so far
+   * while zooming out that for a short time we can no longer see all the racers". At the gun the
+   * ceremony's promise simply stopped and the COMPANY guarantee took over — five racers instead of
+   * forty — so the very next move was free to drop the other thirty-five out of frame, immediately
+   * after a shot that had just shown everyone.
+   *
+   * IT IS THE COMPANY GUARANTEE WITH THE WHOLE FIELD AS ITS COMPANY. Not a new geometry: the same
+   * `companyGuarantee`, at the same anchor, through the same `roomFromPointAlong`, with `minVisible`
+   * set past the end of the field so the tightest ceiling — the FARTHEST racer — is the one returned.
+   * That matters for more than economy. The ceremony's own `fieldGuarantee` measures from the
+   * formation's CENTRE, which is exactly right while the camera is centred on the formation and
+   * exactly wrong afterwards: during the race the camera sits on the leader, forward-framed, and a
+   * promise measured from the centre would under-widen by the whole of that offset and drop the back
+   * of the field — the defect, rebuilt inside its own fix.
+   *
+   * A CEILING, SO IT WIDENS AND NEVER STEERS (Lesson 192). It joins the existing `Math.min` beside
+   * the other two. It cannot move a centre, choose an anchor or read a clock.
+   *
+   * @returns {number} cam.zoom ceiling, or Infinity once the guarantee has retired
+   */
+  _fieldCeiling(subjects, racers, frameSize) {
+    if (!this._fieldGuaranteeActive) return Infinity;
+    if (!subjects?.point || !Array.isArray(racers) || racers.length === 0) return Infinity;
+    const at = anchorScreenPoint(
+      frameSize.width,
+      frameSize.height,
+      framingFor(this.state).position === POSITION.FORWARD ? this._leaderForwardFrac : null,
+      this._headingScreen(subjects.t)
+    );
+    // `racers.length + 1` asks for more company than exists, and `companyGuarantee` answers that by
+    // taking what exists — the tightest ceiling in the list, which is every racer in frame.
+    const ceiling = companyGuarantee(
+      subjects.point,
+      racers,
+      racers.length + 1,
+      this._proj.axisX,
+      this._proj.axisY,
+      frameSize.width,
+      frameSize.height,
+      COMPANY_FRAME_PCT,
+      at
+    );
+
+    // ── RETIREMENT ───────────────────────────────────────────────────────────────────────────────
+    // IT RETIRES WHEN IT CAN NO LONGER BE KEPT, and the measure of "kept" is the camera's own widest
+    // named shot. OVERVIEW is defined in this project as the same shot at the widest setting — the
+    // widest framing the design admits and the owner sets. A guarantee demanding more than that is
+    // asking for a picture this camera does not have a name for; carrying on would quietly make
+    // every state a de-facto OVERVIEW and replace the whole vocabulary with one shot.
+    //
+    // FROM GEOMETRY, NEVER FROM A CLOCK. Both sides are zooms: one falls out of where the racers
+    // actually are, the other is the owner's OVERVIEW setting. No timer, no lap count, no field size
+    // appears in it — a tight field keeps its guarantee for longer than a scattered one on the same
+    // track, which is the behaviour asked for.
+    //
+    // LATCHED, one way. A field that re-converges — after a crash-back, or a lap boundary on a
+    // closed track — would otherwise re-impose the wide shot mid-race and the picture would breathe
+    // in and out. Retirement is a statement about the START being over, and the start does not
+    // resume.
+    if (!(ceiling >= this._overviewStateZoom)) {
+      this._fieldGuaranteeActive = false;
+      this._fieldGuaranteeRetiredAt = subjects.t ?? null;
+      return Infinity;
+    }
+    return ceiling;
+  }
+
+  /**
    * CAMERA-FOCUS-3 leader forward-framing. Shifts a pan target BACKWARD along the leader's motion tangent
    * so the leader lands at screen fraction `_leaderForwardFrac` (> 0.5) along the motion axis — i.e. FORWARD,
    * with the trailing pack filling the rest of the frame (the action is behind the leader). Returns the
@@ -2351,7 +2449,10 @@ export class CameraDirector {
     const guaranteed = Math.min(
       stateZoom,
       this._guaranteeCeiling(subjects, frameSize),
-      _companyIsHome ? Infinity : this._companyCeiling(subjects, racers, frameSize)
+      _companyIsHome ? Infinity : this._companyCeiling(subjects, racers, frameSize),
+      // CEREMONY-HANDOVER-1: the ceremony's promise, still standing. Infinity once it has retired,
+      // so this line costs nothing for the rest of the race.
+      this._fieldCeiling(subjects, racers, frameSize)
     );
 
     // READ-ONLY PROBE (CAMERA-ANCHOR-TRUTH-1 §4a). The framing inputs this frame actually used, so
@@ -2369,6 +2470,12 @@ export class CameraDirector {
     };
 
     // ── WHERE IN FRAME: from the principle, not from a slider ──────────────────────────────────
+    // The three world points either side of the two authorities that MOVE the anchor are recorded
+    // on the probe (see above). A trace can then say which authority spent which world pixel
+    // instead of inferring it from the total — the question CEREMONY-REGRESSION-BISECT-1 could only
+    // answer by patching a throwaway copy of this file, which is the failure mode the probe exists
+    // to remove. Read by nothing in the camera.
+    const anchorPoint = panTarget;
     if (framing.position === POSITION.FORWARD && this._observerPhase === 'follow') {
       panTarget = this._applyLeaderForwardBias(
         panTarget,
@@ -2379,9 +2486,13 @@ export class CameraDirector {
         canvasH
       );
     }
+    const afterBias = panTarget;
 
     // ── AND ACROSS IT: shift off the centreline only when a guaranteed subject needs it ────────
     panTarget = this._applyLateralGuarantee(panTarget, headingT, subjects, guaranteed, frameSize);
+    this._framingProbe.anchorPoint = anchorPoint;
+    this._framingProbe.afterBias = afterBias;
+    this._framingProbe.afterLateral = panTarget;
 
     this._setTrackTargets(panTarget, guaranteed, frameSize);
   }
@@ -2390,7 +2501,24 @@ export class CameraDirector {
   _stateCamZoom() {
     switch (this.state) {
       case CAM_STATE.OVERVIEW:
-        return this._overviewSnapZoom ?? this._overviewStateZoom;
+        // START-CEREMONY-CAMERA-1 (d) / CEREMONY-HOLD-TARGET-1 — THE HOLD, on the path a race
+        // actually takes. `_setTargets` calls this EVERY frame, so for the duration of the hold the
+        // framing the ceremony arrived at is the state's TARGET — not merely the value the camera
+        // was left sitting at when the gun went. It used to be applied in `_transition` only, which
+        // a race never reaches at the gun (the director is already in OVERVIEW, so there is no
+        // transition to make): the ceremony set `this.zoom`, the state kept asking for its own
+        // setting, and the camera glided away from the ceremony framing from the first frame — in
+        // zoom, and ACROSS the track with it, because the pan is resolved against the world edge AT
+        // THE ZOOM and a wider frame is clamped harder. One number, two axes of drift.
+        //
+        // IT IS A DESIRED ZOOM, NOT A FREEZE. This value goes into `_setTargets`, which combines it
+        // with the guarantees through `Math.min` — so CORRIDOR, COMPANY and the ceremony's own FIELD
+        // guarantee can still WIDEN it as the field spreads, and nothing can narrow it. A guarantee
+        // widens, it never steers (Lesson 192), and the hold is on the widening side of that
+        // Math.min by construction. That is also what makes the hold the ceremony's RULE rather than
+        // its frozen picture: as the grid strings out, the field guarantee is what opens the shot,
+        // which is the same computation the ceremony framed the grid with.
+        return this._ceremonyHoldZoom ?? this._overviewStateZoom;
       case CAM_STATE.BATTLE_ZOOM:
         return this._battleZoom;
       case CAM_STATE.COMEBACK_ZOOM:
@@ -2542,11 +2670,109 @@ export class CameraDirector {
   }
 
   /**
-   * Camera update for the pre-race countdown phase.
-   * Zooms from countdownStartZoom toward OVERVIEW zoom (ease-out cubic) and centres
-   * on the geometric centroid of all racers (the start pulk).
-   * Sets this.zoom/offsetX/offsetY directly so CameraDirector is ready for the first
-   * RACING update() call without a visible jump.
+   * THE VENUE SHOT — the whole track in frame (START-CEREMONY-CAMERA-1 (a)).
+   *
+   * Derived from the track's own extent, not from a corridor setting. The old countdown opened at
+   * `countdownStartCorridors` (OVERVIEW × 2), a number in track WIDTHS, which says nothing about
+   * whether the track is in shot: on a large world it fell short and on a small one it asked for
+   * more world than exists.
+   *
+   * The cam.zoom that fits the world box is the smaller of the two axis fits, and the projection's
+   * clamp has the last word. On a CLOSED track that clamp is not reached — `axisX` is
+   * `canvasW / worldW` by construction, so the fit lands exactly on `minCamZoom` 1.0 and the whole
+   * track is genuinely in frame.
+   *
+   * ON AN OPEN TRACK IT IS REACHED, AND THAT LIMIT IS WORTH NAMING RATHER THAN HIDING. The open
+   * projection maps at a uniform OPEN_TRACK_BASE_ZOOM with `minCamZoom = worldFitX`, so the widest
+   * shot it allows shows 1/1.5 of the world width — about 67%. The venue shot on an open track is
+   * therefore "as wide as this camera can go", not "the whole world". Going wider would mean
+   * changing the open-track projection, which would move every other shot with it.
+   *
+   * @returns {number} cam.zoom for the venue shot
+   */
+  _venueCamZoom(canvasW = CANVAS_W, canvasH = CANVAS_H_REF) {
+    const proj = this._proj;
+    const worldW = Math.max(1, this._worldBounds.maxX - this._worldBounds.minX);
+    const worldH = Math.max(1, this._worldBounds.maxY - this._worldBounds.minY);
+    const fit = Math.min(canvasW / (worldW * proj.axisX), canvasH / (worldH * proj.axisY));
+    return proj.clampCamZoom(fit);
+  }
+
+  /**
+   * THE TARGET — the largest cam.zoom at which EVERY racer is still in frame
+   * (START-CEREMONY-CAMERA-1 (c)).
+   *
+   * It is `fieldGuarantee`: the one guarantee computation applied to the formation's own extent.
+   * There is no track name, no field size and no constant in it — a small grid comes out tight and a
+   * large one comes out wide because the two formations are different sizes.
+   *
+   * `innerFramePct` is applied, so "in frame" means the same safe region every other guarantee in
+   * this camera means by it, rather than the literal canvas edge — a racer whose CENTRE is one pixel
+   * inside the frame is cropped in the picture, and this is the project's existing answer to that.
+   *
+   * @returns {number} cam.zoom; the projection's clamp has the last word
+   */
+  _ceremonyTargetCamZoom(racers, centre, canvasW = CANVAS_W, canvasH = CANVAS_H_REF) {
+    const ceiling = fieldGuarantee(
+      racers,
+      centre,
+      this._proj.axisX,
+      this._proj.axisY,
+      canvasW,
+      canvasH,
+      this._innerFramePct
+    );
+    return this._proj.clampCamZoom(ceiling);
+  }
+
+  /**
+   * THE CEREMONY'S SCHEDULE for this field — the one place its four beats and its total length are
+   * decided (START-BOARD-2).
+   *
+   * PUBLIC, because three things outside the camera need the same answer and must not compute their
+   * own: RaceScreen's phase advance (when the gun fires), the renderer (when the board is up and
+   * what the digits read), and both fingerprint harnesses (how long to drive the countdown). The
+   * previous arrangement had each of them reading a flat `countdownDurationMs`, which is how the
+   * beats came to be capped by a number that knew nothing about them.
+   *
+   * @param {Array} racers  the field — its SIZE sets the board's duration
+   */
+  ceremonySchedule(racers) {
+    return ceremonySchedule(
+      this._ceremonyVenueMs,
+      this._ceremonyPushMs,
+      this._ceremonySettledMs,
+      boardDurationMs(racers?.length ?? 0, this._startBoardFloorMs, this._startBoardMsPerName),
+      // CEREMONY-TRUTH-1: THE FIFTH ARGUMENT, AND ITS ABSENCE WAS THE BUG. This call passed four,
+      // so `countdownMs` took its default of 0 — and this schedule is what fires the gun, while the
+      // renderer built its own WITH the digits. The renderer therefore opened the digit window at
+      // `countdownStartMs`, which without the digits in the total is the same instant the gun fires.
+      // Zero frames of countdown, from two schedules that were never compared.
+      this._countdownDigitsMs
+    );
+  }
+
+  /** The geometric centre of the formation — the point the ceremony frames on. */
+  _formationCentre(racers) {
+    let cx = (this._worldBounds.minX + this._worldBounds.maxX) / 2;
+    let cy = (this._worldBounds.minY + this._worldBounds.maxY) / 2;
+    if (racers && racers.length > 0) {
+      cx = racers.reduce((s, r) => s + (r.x ?? cx), 0) / racers.length;
+      cy = racers.reduce((s, r) => s + (r.y ?? cy), 0) / racers.length;
+    }
+    return { x: cx, y: cy };
+  }
+
+  /**
+   * Camera update for the pre-race countdown phase — THE START CEREMONY.
+   *
+   * Three beats: the venue shot held still, an eased push in, and the formation held until the gun.
+   * Both ends are geometry (`_venueCamZoom`, `_ceremonyTargetCamZoom`); this method owns only the
+   * sequencing, and the rhythm lives in `startCeremony.js`.
+   *
+   * It sets this.zoom/offsetX/offsetY directly so the director is ready for the first RACING
+   * update() without a visible jump — and it records the framing it arrives at, so the hold after
+   * the gun keeps it (`_ceremonyHoldZoom`).
    *
    * @param {Array<{x:number,y:number}>} racers  All racers with world positions.
    * @param {number} ts  Current timestamp (used to keep stateEnteredAt in sync).
@@ -2556,30 +2782,67 @@ export class CameraDirector {
    * @param {number} canvasH  Canvas height in pixels.
    * @returns {{ zoom: number, offsetX: number, offsetY: number }}
    */
-  updateCountdown(racers, ts, countdownElapsed, countdownDurationMs, canvasW, canvasH) {
-    const duration = Math.max(1, countdownDurationMs);
-    const progress = Math.min(1, Math.max(0, countdownElapsed / duration));
-    // Ease-out cubic: starts fast, arrives smoothly — no hard stop at transition to OVERVIEW.
-    const eased = 1 - Math.pow(1 - progress, 3);
+  updateCountdown(racers, ts, countdownElapsed, canvasW, canvasH) {
+    // START-BOARD-2: THE SCHEDULE IS DERIVED HERE, from the config and the size of the field, and
+    // the countdown's length is its total. It used to be handed in as `countdownDurationMs` and used
+    // as a CAP that rescaled the beats — so the caller and the beats were two authorities on one
+    // length.
+    //
+    // ── THAT COMMENT CLAIMED ONE HOME AND THERE WERE TWO (CEREMONY-TRUTH-1) ──────────────────
+    // It said "There is one now: `ceremonySchedule`, asked here and by everything else through
+    // `ceremonyTotalMs`." Both halves were true and the conclusion was not: `renderRaceFrame` calls
+    // the same PURE function with its own arguments, so the function had one home and the ARGUMENTS
+    // had two. When CEREMONY-TIME-1 added a fifth beat it reached one call site and not the other,
+    // and the difference between the two totals was exactly the length of the missing countdown.
+    // The gun fired from this schedule at the instant the renderer was about to show "3".
+    //
+    // A shared function is not a single source of truth when its callers each assemble the inputs.
+    // What makes it one is the test below the fix: the total the DIRECTOR reports and the total the
+    // RENDERER derives are asserted to be the same number.
+    const schedule = this.ceremonySchedule(racers);
+    const duration = Math.max(1, schedule.totalMs);
+    const elapsed = Math.min(duration, Math.max(0, countdownElapsed));
 
-    const targetZoom =
-      this._countdownStartZoom + (this._overviewStateZoom - this._countdownStartZoom) * eased;
-    this.zoom = targetZoom;
-    this.targetZoom = targetZoom;
+    // The centre comes FIRST, because the target zoom is measured from it: the field's extent is
+    // only meaningful relative to the point the camera is centred on.
+    const centre = this._formationCentre(racers);
+    const cx = centre.x;
+    const cy = centre.y;
+    const venueZoom = this._venueCamZoom(canvasW, canvasH);
+    const formationZoom = this._ceremonyTargetCamZoom(racers, centre, canvasW, canvasH);
+    // THE PUSH IS MONOTONE OR IT IS NOTHING. Where the formation fills the world, or where the
+    // open-track clamp already binds, the "push in" would otherwise be a push OUT and the ceremony
+    // would play backwards.
+    const targetZoom = Math.max(venueZoom, formationZoom);
 
-    // Pan to pulk centroid (mean world position of all racers).
-    let cx = (this._worldBounds.minX + this._worldBounds.maxX) / 2;
-    let cy = (this._worldBounds.minY + this._worldBounds.maxY) / 2;
-    if (racers && racers.length > 0) {
-      cx = racers.reduce((s, r) => s + (r.x ?? cx), 0) / racers.length;
-      cy = racers.reduce((s, r) => s + (r.y ?? cy), 0) / racers.length;
-    }
+    const zoom = ceremonyZoom(
+      venueZoom,
+      targetZoom,
+      elapsed,
+      schedule,
+      ceremonyEasing(this._ceremonyEasing)
+    );
+    this.zoom = zoom;
+    this.targetZoom = zoom;
+
+    // THE FRAMING THE HOLD KEEPS (START-CEREMONY-CAMERA-1 (d)). Recorded every frame rather than
+    // once at the end, so it is right however the countdown is entered or cut short — and it is the
+    // ARRIVED framing rather than the live one, so a race that starts mid-push still holds the shot
+    // the ceremony was travelling towards instead of freezing halfway.
+    this._ceremonyHoldZoom = targetZoom;
+    this._ceremonyBeat = ceremonyAt(elapsed, schedule).beat;
+    // ARM THE GUARANTEE. The ceremony has just shown every racer; the promise it made is that they
+    // stay shown. It is armed here rather than at the gun so there is no frame between the two in
+    // which it is not held — the gap the owner watched racers fall through.
+    this._fieldGuaranteeActive = true;
 
     // CAMERA-PROJECTION-1: one centring computation per axis, from the projection. The former
     // open/closed branches were the same eight lines twice — open used one scale on both axes,
     // closed used bsX on X and bsY on Y. `effY == effX` on open, so this reduces to it exactly.
-    const effZoomX = this._proj.effX(targetZoom);
-    const effZoomY = this._proj.effY(targetZoom);
+    // THE LIVE zoom, not the arrival zoom: the pan must be centred for the frame being drawn now,
+    // or the formation would sit off-centre for the whole push and slide into place at the end.
+    const effZoomX = this._proj.effX(zoom);
+    const effZoomY = this._proj.effY(zoom);
     const camXMax = Math.max(this._worldBounds.minX, this._worldBounds.maxX - canvasW / effZoomX);
     const camX = Math.max(this._worldBounds.minX, Math.min(camXMax, cx - canvasW / (2 * effZoomX)));
     this.offsetX = -camX * effZoomX;

@@ -21,6 +21,7 @@ import {
   QUICK_TEST_NAME_SETS,
   DEFAULT_NAME_SET,
   resolveNameSet,
+  identifyNameSet,
 } from './racerNames.js';
 
 describe('the default path cannot be reached by a new roster (QUICKTEST-NAMES-1)', () => {
@@ -102,5 +103,52 @@ describe('each roster keeps its own order (QUICKTEST-NAMES-1)', () => {
 
   it('offers exactly the three sets the selector offers', () => {
     expect(Object.keys(QUICK_TEST_NAME_SETS).sort()).toEqual(['current', 'long', 'mixed']);
+  });
+});
+
+// ── PERF-WHERE-1 ─────────────────────────────────────────────────────────────────────────────────
+describe('a live field can say which roster it is running (PERF-WHERE-1)', () => {
+  const fieldOf = (list, n) =>
+    Array.from({ length: n }, (_, i) => ({ name: list[i % list.length] }));
+
+  // What breaks if deleted: a perf log would name the wrong roster, and the whole point of the
+  // context block is that two logs become comparable. A WRONG label is worse than none.
+  it('names each roster from the names alone, at a field it fills exactly', () => {
+    for (const [key, list] of Object.entries(QUICK_TEST_NAME_SETS)) {
+      expect(identifyNameSet(fieldOf(list, list.length))).toBe(key);
+    }
+  });
+
+  it('still names it when the field is larger than the list and the names wrap', () => {
+    // 100 racers against the 70-entry shipped roster is the ordinary quick-test case.
+    expect(identifyNameSet(fieldOf(QUICK_TEST_NAMES, 100))).toBe('current');
+    expect(identifyNameSet(fieldOf(QUICK_TEST_NAMES_LONG, 140))).toBe('long');
+  });
+
+  it('accepts a plain array of strings as well as racer objects', () => {
+    expect(identifyNameSet(QUICK_TEST_NAMES_MIXED.slice(0, 10))).toBe('mixed');
+  });
+
+  it('answers `custom` for real player names rather than guessing the nearest roster', () => {
+    // The ordinary case the moment a person joins a quick test. Guessing here would put a roster
+    // name on a log that has none, which is exactly the kind of confident wrong answer the context
+    // block exists to prevent.
+    expect(identifyNameSet([{ name: 'Turbo' }, { name: 'Weudl' }])).toBe('custom');
+    expect(identifyNameSet([{ name: 'Weudl' }])).toBe('custom');
+  });
+
+  it('answers `none` for an empty field or one with no names at all', () => {
+    // Racers built by `createRaceFromIdentity` carry NO name — every measurement harness in this
+    // repo starts from that state — so `none` is a real answer, not an error path.
+    expect(identifyNameSet([])).toBe('none');
+    expect(identifyNameSet(null)).toBe('none');
+    expect(identifyNameSet([{ index: 0 }, { index: 1 }])).toBe('none');
+  });
+
+  it('is not fooled by the right names in the wrong ORDER', () => {
+    // Order is load-bearing for this file, so a reversed roster is a DIFFERENT race and must not be
+    // reported as the shipped one.
+    const reversed = [...QUICK_TEST_NAMES].reverse().map((name) => ({ name }));
+    expect(identifyNameSet(reversed)).toBe('custom');
   });
 });

@@ -53,6 +53,45 @@ const BASE = arg("base", "master");
 const DRY = has("dry");
 const NO_FORMAT = has("no-format");
 const JOBS = Number(arg("jobs", 0)) || 0;
+// VERIFY-COST-3: `--cheap` reaches the fingerprint jobs now. It did not: this file read its flags
+// with `has()` and never forwarded anything, so `npm run verify -- --cheap` ran the FULL thing while
+// looking like it had not. It cost one seven-minute run and sat uselessly in specs for weeks.
+const CHEAP = has("cheap");
+const CHEAP_TRACK = arg("cheap-track", null);
+
+// ── AN ARGUMENT THIS SCRIPT DOES NOT UNDERSTAND IS AN ERROR (VERIFY-COST-3) ────────────────────
+// This is the generalising half, and it is why `--cheap` could be wrong for weeks: the script
+// accepted every flag and acted on the ones it recognised, so a typo, a renamed flag and a flag that
+// was never implemented all behaved identically — silently, as a full run. THREE instruments in this
+// project have now been caught accepting an argument they ignore.
+//
+// Anything not on this list stops the run before any work happens. Adding a flag means adding it
+// here, which is one line and is the point.
+const KNOWN_VALUE_FLAGS = ["base", "jobs", "cheap-track"];
+const KNOWN_BARE_FLAGS = ["dry", "no-format", "cheap"];
+function rejectUnknownFlags(argv = process.argv.slice(2)) {
+  const bad = argv.filter((a) => {
+    if (!a.startsWith("--")) return true;
+    const eq = a.indexOf("=");
+    const name = eq === -1 ? a.slice(2) : a.slice(2, eq);
+    return eq === -1 ? !KNOWN_BARE_FLAGS.includes(name) : !KNOWN_VALUE_FLAGS.includes(name);
+  });
+  if (bad.length === 0) return;
+  console.error(
+    `\n  FAIL: verify does not understand ${bad.map((b) => `\`${b}\``).join(", ")}.\n` +
+      `        Known: ${KNOWN_BARE_FLAGS.map((f) => `--${f}`).join(", ")}, ` +
+      `${KNOWN_VALUE_FLAGS.map((f) => `--${f}=…`).join(", ")}.\n` +
+      `        Refused rather than ignored: a flag that does nothing silently is how --cheap\n` +
+      `        went unnoticed for weeks. See VERIFY-COST-3.\n`,
+  );
+  process.exit(2);
+}
+
+/** The flags a spawned fingerprint job inherits. One home, so a new one cannot reach only some. */
+export function cheapArgs(cheap = CHEAP, track = CHEAP_TRACK) {
+  if (!cheap) return [];
+  return ["--cheap", ...(track ? [`--cheap-track=${track}`] : [])];
+}
 
 // ── WHAT CHANGED ────────────────────────────────────────────────────────────────────────────────
 // Committed-on-this-branch UNION uncommitted. Both matter: a block measures before it commits, and
@@ -239,9 +278,11 @@ export function plan(files, base = BASE, splitter = splitInert) {
       // sim-fairness.test.js carries a 5 s timeout and four CPU-saturating siblings push it past it.
       exclusive: true,
     },
-    "world-fingerprint": { cmd: ["node", "scripts/fingerprint-default.mjs"] },
-    "camera-fingerprint": { cmd: ["node", "scripts/camera-fingerprint.mjs"] },
-    "render-fingerprint": { cmd: ["node", "scripts/render-fingerprint.mjs"] },
+    // VERIFY-COST-3: `--cheap` is forwarded HERE, which is the only place the three of them are
+    // spawned. `cheapArgs()` is one home so a fourth job cannot be added and quietly miss it.
+    "world-fingerprint": { cmd: ["node", "scripts/fingerprint-default.mjs", ...cheapArgs()] },
+    "camera-fingerprint": { cmd: ["node", "scripts/camera-fingerprint.mjs", ...cheapArgs()] },
+    "render-fingerprint": { cmd: ["node", "scripts/render-fingerprint.mjs", ...cheapArgs()] },
   };
 
   return ROUTES.map((r) => ({
@@ -325,6 +366,8 @@ const IS_ENTRY =
   process.argv[1] &&
   resolve(process.argv[1]) === resolve(fileURLToPath(import.meta.url));
 if (IS_ENTRY) {
+  // BEFORE ANY WORK. A refused flag must cost nothing, or the refusal is worse than the silence.
+  rejectUnknownFlags();
   const files = changedFiles();
   const tasks = plan(files);
   const chosen = tasks.filter((t) => t.run);

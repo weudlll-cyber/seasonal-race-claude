@@ -224,9 +224,19 @@ export function buildRace(geo, identity, cameraConfig) {
  * The loop is the one all four harnesses already ran: a 60 Hz frame clock, at most two fixed physics
  * steps per frame, and a 200 s wall-clock ceiling so a stuck race cannot hang a sweep.
  *
- * @param {(ctx: {cd, st, ts, raceStart, frame}) => void} onFrame  called AFTER cd.update()
+ * TWO ADDITIVE HOOKS, for harnesses that measure a WINDOW rather than a race. `onCountdownFrame`
+ * sees the ceremony (the frame before the gun is the reference every start-window measurement is
+ * expressed against, and it is unreachable from outside because the countdown runs in here), and an
+ * `onFrame` that returns exactly `false` stops the loop. Both are opt-in: an existing caller returns
+ * `undefined` and passes no countdown hook, so it runs the identical loop it always ran. The
+ * alternative was a second frame loop in the window harness, and two loops disagreeing about dt or
+ * the physics-step cap is precisely the drift this one driver exists to prevent.
+ *
+ * @param {(ctx: {cd, st, ts, raceStart, frame}) => void|false} onFrame  called AFTER cd.update();
+ *   return `false` to stop the run
+ * @param {{onCountdownFrame?: (ctx: {cd, st, ts, elapsed, countdownMs}) => void}} [hooks]
  */
-export function runRace(race, identity, cameraConfig, onFrame) {
+export function runRace(race, identity, cameraConfig, onFrame, hooks = {}) {
   const { st, raceCfg, cd } = race;
   const { canvasW: CW, canvasH: CH } = identity;
   const RAW = 1000 / 60;
@@ -235,9 +245,13 @@ export function runRace(race, identity, cameraConfig, onFrame) {
 
   // THE COUNTDOWN SOURCE, decided in this file's header: the config being RUN, not the shipped
   // default. A harness that overrides camera settings must warm up under the settings it measures.
-  const cdMs = cameraConfig.countdownDurationMs ?? 4000;
+  // START-BOARD-2: the countdown has no length of its own any more — it is the SUM of the
+  // ceremony beats, one of which scales with the field. The director is asked, so this harness
+  // cannot drift from the game the way a second copy of a duration would.
+  const cdMs = cd.ceremonySchedule(st.racers).totalMs;
   while (ts < cdMs) {
-    cd.updateCountdown(st.racers, ts, ts, cdMs, CW, CH);
+    cd.updateCountdown(st.racers, ts, ts, CW, CH);
+    hooks.onCountdownFrame?.({ cd, st, ts, elapsed: ts, countdownMs: cdMs });
     ts += RAW;
   }
 
@@ -266,9 +280,10 @@ export function runRace(race, identity, cameraConfig, onFrame) {
       CH,
       RAW,
     );
-    onFrame({ cd, st, ts, raceStart, frame });
+    const verdict = onFrame({ cd, st, ts, raceStart, frame });
     frame++;
     ts += RAW;
+    if (verdict === false) break;
   }
   return { frames: frame, endTs: ts };
 }

@@ -55,7 +55,6 @@ export const DEFAULT_MIN_RACERS_VISIBLE = 3;
 /** The fraction of the frame a subject is kept inside — the safe region, not the whole canvas. */
 export const DEFAULT_INNER_FRAME_PCT = 0.7;
 /** The countdown opens twice as wide as OVERVIEW when nothing says otherwise. */
-export const DEFAULT_COUNTDOWN_CORRIDORS = DEFAULT_CORRIDORS.OVERVIEW * 2;
 const DEFAULT_GLIDE_DURATION_MS = 500;
 
 /**
@@ -65,7 +64,6 @@ const DEFAULT_GLIDE_DURATION_MS = 500;
  * @returns {{
  *   referenceCorridorPx: number,
  *   corridorsByState: Record<string, number>,
- *   countdownCorridors: number|undefined,
  *   innerFramePct: number,
  *   minRacersVisible: number,
  *   transitionGrammar: 'cut'|'glide'|'legacy',
@@ -100,9 +98,6 @@ export function resolveFramingConfig(config) {
     referenceCorridorPx:
       Number.isFinite(refCfg) && refCfg > 0 ? refCfg : DEFAULT_REFERENCE_CORRIDOR_PX,
     corridorsByState,
-    // Undefined is meaningful here: it lets the director apply its own fallback through the same
-    // clamp path every other setting takes.
-    countdownCorridors: config?.countdownStartCorridors,
     innerFramePct: config?.targetInnerFramePct ?? DEFAULT_INNER_FRAME_PCT,
     minRacersVisible: config?.minRacersVisible ?? DEFAULT_MIN_RACERS_VISIBLE,
     transitionGrammar: g === 'cut' ? 'cut' : g === 'glide' ? 'glide' : 'legacy',

@@ -25,6 +25,23 @@ const MAX_STATE_DURATION = 8000;
 const BATTLE_PULK_THRESHOLD_T = 0.05; // lap fraction (15b: arc closeness, was 0.12 px-era)
 const BATTLE_MIN_DURATION_MS = 3000;
 const POST_START_HOLD_MS = 7000;
+// START-CEREMONY-CAMERA-1 — the ceremony's RHYTHM, and only the rhythm. Both ends of the move are
+// GEOMETRY (the track's extent, the field's extent) and are not settings at all.
+//
+// These three are duplicated in `storage/defaults.js`, which is this module's established
+// arrangement rather than an oversight — see the header: it holds the fallback for a director built
+// with NO config, and defaults.js holds the shipped value. The duplication is GUARDED by a test that
+// asserts the two agree, the same answer `autoSpriteScale.js` gives for CANVAS_H_REF. That is one
+// better than `POST_START_HOLD_MS` beside it, which is duplicated and unguarded.
+const CEREMONY_VENUE_MS = 1400;
+const CEREMONY_PUSH_MS = 2000;
+const CEREMONY_SETTLED_MS = 4000;
+const CEREMONY_EASING = 'easeInOutCubic';
+// START-BOARD-2. Duplicated from defaults.js like the three beats above it, and guarded the same
+// way: cameraTimingComputation.test.js asserts the two agree.
+const START_BOARD_FLOOR_MS = 6000;
+const START_BOARD_MS_PER_NAME = 120;
+const COUNTDOWN_DIGITS_MS = 3000;
 const BATTLE_COOLDOWN_MS = 8000;
 const BATTLE_MAX_DURATION = 6000;
 const MIN_STATE_HOLD_MS = 5000;
@@ -72,6 +89,25 @@ export function computeTimingFromConfig(config) {
   const battleMinTopN = config?.battleMinTopN ?? 10;
   const endgameThreshold = config?.endgameThreshold ?? ENDGAME_PROGRESS_THRESHOLD;
   const postStartHoldMs = config?.postStartHoldMs ?? POST_START_HOLD_MS;
+  // Clamped to a sane band so a corrupt stored config cannot produce a ceremony that never ends or
+  // one with a negative beat. The easing NAME is not validated here: `ceremonyEasing` resolves an
+  // unknown name to the shipped curve, so validating it twice would be a second authority on it.
+  const ceremonyVenueMs = ceremonyMs(config?.ceremonyVenueMs, CEREMONY_VENUE_MS);
+  const ceremonyPushMs = ceremonyMs(config?.ceremonyPushMs, CEREMONY_PUSH_MS);
+  const ceremonySettledMs = ceremonyMs(config?.ceremonySettledMs, CEREMONY_SETTLED_MS);
+  // START-BOARD-2: the board's own duration, clamped through the same guard as the beats. The board
+  // is drawn by the renderer, not the camera — but the camera needs these two numbers because the
+  // countdown's LENGTH is now the sum of the beats and one of the beats is the board's hold.
+  const startBoardFloorMs = ceremonyMs(config?.startBoardFloorMs, START_BOARD_FLOOR_MS);
+  const startBoardMsPerName = Math.max(
+    0,
+    Math.min(1000, config?.startBoardMsPerName ?? START_BOARD_MS_PER_NAME)
+  );
+  // CEREMONY-TRUTH-1: the digits' window, and the camera needs it for exactly the reason above —
+  // the countdown's LENGTH is the sum of the beats, and this is one of them. It was missing here,
+  // so the director planned a ceremony that ended where the digits were due to START.
+  const countdownDigitsMs = ceremonyMs(config?.countdownDigitsMs, COUNTDOWN_DIGITS_MS);
+  const ceremonyEasing = config?.ceremonyEasing ?? CEREMONY_EASING;
   const battleCooldownMs = config?.battleCooldownMs ?? BATTLE_COOLDOWN_MS;
   const showDiagnostics = config?.showCameraDiagnostics ?? false;
   const diagEnabled = config?.enableFrameLog ?? false;
@@ -303,6 +339,13 @@ export function computeTimingFromConfig(config) {
     battleMinTopN,
     endgameThreshold,
     postStartHoldMs,
+    ceremonyVenueMs,
+    ceremonyPushMs,
+    ceremonySettledMs,
+    startBoardFloorMs,
+    startBoardMsPerName,
+    countdownDigitsMs,
+    ceremonyEasing,
     battleCooldownMs,
     showDiagnostics,
     diagEnabled,
@@ -348,4 +391,10 @@ export function computeTimingFromConfig(config) {
     overviewTargetCount,
     overviewStartDelay,
   };
+}
+
+/** A ceremony beat length: finite, non-negative, and never longer than any countdown would be. */
+function ceremonyMs(v, fallback) {
+  if (!Number.isFinite(v) || v < 0) return fallback;
+  return Math.min(v, 30000);
 }

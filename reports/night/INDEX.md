@@ -8,6 +8,69 @@ report here could be orphaned, or an index link could dangle, with nothing notic
 `node scripts/check-index.mjs --dir=reports/night --index=reports/night/INDEX.md` now checks both
 directions.
 
+- [SIDE-FREE-CULL-1.md](SIDE-FREE-CULL-1.md) — the same race, without the all-pairs scan. **WORLD
+  fingerprint `dc4647be0f55ebdb`, UNCHANGED** — and camera/render were measured on the parent too and
+  are identical, so this block moved nothing at all (they differ from `fingerprints.json` because of
+  the CHAIN's camera work, and `verify` cannot settle that: its fingerprint jobs run the scripts and
+  compare nothing). `isSideFree` walked every racer and discarded the ones outside `tHalfSpan` AFTER
+  visiting them; it now reaches them through an index sorted by `tFrac(t)`. THE SAFETY ARGUMENT: the
+  index picks WHICH racers are considered and never decides whether one blocks — every one it reaches
+  still goes through the ORIGINAL predicate — so the window only has to be a SUPERSET, and it
+  provably is (`min(fwd,bwd) <= s` implies `fwd <= s` or `bwd <= s`). The old inner discard therefore
+  STAYED rather than being orphaned. Traps: sorted on `tFrac` not `t` (raw `t` carries the lap and
+  back rows start negative, so it orders by RANK); `t` is frozen across the pair loop (verified — the
+  three position writes are all in later passes) but `physicalY` is NOT, which is why the index
+  stores only `tFrac`; the bound is inclusive. Neither existing neighbour structure was reusable and
+  the report says why. **1.16×–1.47× faster** (pooled, 4 A/B/A sweeps against the parent commit
+  live — the stored old data was NOT reused, deliberately, because the machine has 2× speed states);
+  `isSideFree` 32.8 % → 6.1 % of the step; ceiling +25 %. **THE PREDICTION THAT FAILED: the exponent
+  barely moved (1.86 → 1.74).** This removed a constant factor, not the quadratic — the pair loop is
+  still O(n²) and is now 60 % of the step. 5 new tests, 3 sabotages all caught. Not merged, not minted.
+- [PERF-WHERE-1.md](PERF-WHERE-1.md) — a perf log now says WHERE in the race it was taken. The
+  defect: the owner's two recordings could not be compared because neither names its own conditions,
+  and PHYS-BENCH-1 had to establish from the outside what the export could have said for free. The
+  export now carries a `context` block — elapsed PHYSICS time (not wall time), the lap, leader-to-last
+  spread in the engine's own `t` units over the RUNNING racers, field size, roster and the names
+  toggle. **Gathered at export time, never per frame**: a diagnostic that adds a per-frame statistic
+  changes the thing it measures, so it is one pass over the racers when the owner clicks, and
+  `getContext` is a FUNCTION prop because the HUD re-renders every 200 ms and the race moves between
+  renders. **The roster is DERIVED from the names the field actually has** (`identifyNameSet`, in
+  `racerNames.js`) rather than plumbed from SetupScreen, whose key dies in local state — so `custom`
+  is a first-class answer the moment a real player joins. THE 50 ms CAP: BOTH — the uncapped delta is
+  recorded beside `total` AND the cap is stated in the legend, because documenting alone says the
+  number is wrong without saying by how much, and the cap itself is load-bearing (`rawDt` feeds the
+  physics accumulator) so it stays. `context` is ABSENT, not null, when nothing was supplied. 25
+  tests green, two sabotages caught, no engine file edited, nothing minted.
+- [LABEL-BENCH-1.md](LABEL-BENCH-1.md) — the drawing side of "number or name?". **The label layout is
+  not a performance concern**: 0.021 ms a frame at 100 racers with numbers, 0.036–0.040 with names
+  on, against a 3.47 ms physics step — about 1 % of one step and 0.24 % of a frame. **Short, long and
+  mixed cost the same** (0.0398 / 0.0362 / 0.0390, a 10 % band inside a 9–18 % run spread), **and the
+  reason is that long names are RATIONED, not cheap**: 3.4 of 16.5 labels carry a name against 5.5
+  for short, while the characters actually drawn go UP, 91.6 against 51.4. Master's layout at 100 on
+  the SAME captured frames is 0.0120 ms — so the chain costs 1.7× with names off and 3.0–3.3× with
+  them on, and buys the occlusion criterion for 0.17 % of a frame; master grants every label a name
+  and never asks whether it lands on a racer. THE LIMITATION IS THE MOST IMPORTANT PARAGRAPH: there
+  is no canvas in node, so `ctx.measureText` and `fillText` are NOT measured and the numbers isolate
+  the placement geometry — `measureCalls` and `charsDrawn` per frame are reported as the multiplicand
+  a browser measurement would need. Frames are captured ONCE per field size and replayed into every
+  arm, master included, so only the label text varies. Measured, nothing fixed. Raw data:
+  `reports/perf/label-bench-1/`.
+- [PHYS-BENCH-1.md](PHYS-BENCH-1.md) — what a physics step costs, and what moves it. **Q1: the two
+  commits do not differ** — at n=100, chain / master / chain read 3.4683 / 3.4621 / 3.4649 ms, a
+  0.1 % delta against a 0.1 % self-spread, so no cause is hunted. **The growth is QUADRATIC**:
+  four independent fits give 1.899–1.975 at R² 0.993–0.9997. **Density is not the lever** — bunched
+  vs spread is 0.93×–1.09× above n=50, and above n=50 the *spread* field costs *more*, so the
+  owner's 3-vs-7.7 ms is a field 1.6× larger, not the same field at two densities. **`isSideFree`
+  (`raceBehavior.js:287`) is the thing to attack**: with `applyRacerBehavior` it is 56 % of the step
+  at n=30 and 79 % at n=100, and it alone moves +16.4 pp — the arithmetic signature of an all-pairs
+  scan that does not cull by distance, which is exactly why density does not move it. Roster: no
+  effect at n=100 (−1.2 %), +3.4/+5.3 % at n=70, and it measures the RACE a roster produces because
+  a racer's name is physics. THE INSTRUMENT FAILED FIRST AND THAT IS IN THE REPORT: a naive
+  three-pass A/B/A drifted 37 % at n=100 and the first roster table read long +27 % / mixed +35 %
+  that were purely the clock warming up; adjacent-in-time triples and a palindrome fix both, and
+  this laptop has two speed states a uniform 2× apart, so every ratio is trusted and every absolute
+  is quoted with its state. Ceiling 80–150 racers depending on the drawing budget, which is NOT
+  measured here. No engine file edited; nothing minted. Raw data: `reports/perf/phys-bench-1/`.
 - [VERIFY-COST-2.md](VERIFY-COST-2.md) — cut the overhead, not the coverage. Measured first:
   `npm run verify` 504.9 s -> 417.8 s, the client suite 260.9 s -> 196.3 s, no fingerprint moved.
   THE FINDING: goldenEquality.test.js takes 67.6 s ALONE and 244.9 s in the suite — not slow,
@@ -21,6 +84,154 @@ directions.
   (acorn represents a regex token value as an object, so two different regexes compared equal).
   client-suite runs alone deliberately (retry:0 + timeouts under contention) and stays that way.
   The routine-subset split is argued AGAINST and not built.
+- [LABEL-OCCLUSION-2.md](LABEL-OCCLUSION-2.md) — a name is earned slowly and given up instantly. The
+  layout refuses to DRAW a name that is not clear in the frame being drawn, whatever the hold says,
+  so `labelFormHold` governs PROMOTION only and its set is now an ENTITLEMENT, not a picture — a
+  label can be entitled and drawn as a number in the same frame. THE PASS/FAIL IS MET: drawn
+  name-on-racer 592/1006 → **0 on all four arms**. AND THE PREDICTION "at no cost in switches" WAS
+  WRONG BY 2.6x: 2.84/2.20 → 7.48/4.30 against a 1.24–3.89 band, with the name share 20.7/12.5 →
+  15.7/8.2 %. The cause is structural — the entitlement SURVIVES the cover, so the name returns the
+  frame after the pack breathes and every breath is two switches; the symmetric rule absorbed them by
+  leaving the name up, which was the defect. STOPPED at the measurement rather than tuning:
+  `demoteHoldMs=0` is measured at 4.74/3.10 (calmer, because a lost entitlement must re-earn its two
+  seconds) and a re-promotion cost and stage 3 are named unmeasured. `fits` is no longer consulted
+  for the wide box — `nameClear` is strictly stronger. The sabotage is LABEL-OCCLUSION-1's own
+  placement rule restored verbatim, and exactly ONE test goes red. The Dev Screen tooltip is
+  knowingly stale until the owner settles the arm.
+- [LABEL-OCCLUSION-1.md](LABEL-OCCLUSION-1.md) — the NAME only when it covers nothing. The owner's
+  rule replaces LABEL-DEGRADE-1's "does it fit" and supersedes that report's area-budget proposal:
+  a name is granted when its box overlaps neither a placed label NOR the drawn box of any OTHER
+  racer, with NO tolerance. `racerScreenW` is new and is a real second number — 18.5 % anisotropy on
+  a closed track. ONE THING THE SPEC DID NOT NAME AND THE RULE IS WRONG WITHOUT: a granted name must
+  reserve its FULL width even on the frames the hold has not promoted it, or two neighbours are each
+  judged clear against the other's NARROW box and land on top of each other two seconds later. The
+  hold lives in its own module because the layout's contract is no state and no clock, and the name
+  is tested EVERY frame including while the number shows — judging only the drawn form traps a label
+  on the number forever. THE 400 ms WINDOW WAS WRONG AND THE MEASUREMENT MOVED IT TO 2000: at 400 the
+  labels switch 9.9–11.7 times per label per race against the old rule's 1.24–3.89 baseline; the
+  curve is 1000 → 5.8/5.4, 2000 → 2.84/2.20, 4000 → 1.03/0.63. THE PASS/FAIL IS CLEAN — names the
+  criterion granted that overlap a racer = 0 on every arm — and the drawn count is reported beside it
+  because a SYMMETRIC hold necessarily keeps a name over a racer for one window: 592/1006 held
+  against 6/12 demoting immediately, which costs 40 % of the names. Name share is only 12.5–20.7 %,
+  reported and NOT loosened. Four sabotages red, S1 and S2 each green under the other's mutation. The
+  `[ra-build]` terminal line does not follow a branch switch — captured as a defect.
+**START-BOARD-4 has no entry, and deliberately:** its spec asked for the report in the reply rather
+than as a file, so there is no document here to index. Its subject — the board's own backdrop, the
+number outranking the name, and the ellipsis on a cut name — is on `feat/start-board-4` at `5e1660b2`
+and in that commit's message.
+
+- [START-BOARD-3.md](START-BOARD-3.md) — the numbers read as numbers, and the alphabet is one list
+  again. THE MISSING NUMBERS WERE NEVER MISSING and both named hypotheses were wrong: all 100
+  `fillText` calls are emitted, `raceNumber` is present on every entry, and the 34 px gutter never
+  collapsed — the portrait's visible body spans x in [35,65] and cannot reach it. What regressed is
+  LEGIBILITY, and START-BOARD-2 caused it three ways at once: the number moved to the far margin,
+  stayed 12 px while the name grew, and gold `ROW n` headings began recurring in the same strip. Now
+  a badge — 13 px, brighter, on its own chip — and the column is pinned by an exported function that
+  does not depend on the cell width, which is the failure mode that would reproduce it silently. The
+  GROUPING IS WITHDRAWN, his own correction: ten alphabetical lists make you scan all ten, because
+  not knowing your row is why you came. One global list, with the row as a dim right-hand `R7` kept
+  apart from the number by FOUR separations, not one. The cell is 236 px again — the 200 was the
+  grouping's price, 110 slots for 100 racers — so the name nets +10 px. 8/20/40/100 all at scale
+  1.0, no overlap, no clipping. Render moved, camera and world did not. Named and costed, NOT built:
+  sprite avoidance, where the only new input is a per-type long/narrow ratio and the real risk is
+  fewer labels, not slower ones.
+- [LABEL-DEGRADE-1.md](LABEL-DEGRADE-1.md) — a track label shows the NAME when it fits and the
+  NUMBER when it does not. The archived overlap trigger was REUSED without re-typing, because the
+  live decluttering already contains it in a stronger form (an area with a budget, not a boolean).
+  Flicker is governed by that same asymmetry, extended to a SECOND tenure — a racer can hold its
+  label while losing the room for its name. MEASURED on searound and river-run at 40 and 100:
+  **1.24–3.89 switches per label per race**, which is calm. **DEFAULT OFF anyway, and the switching
+  is not why**: the wider labels cost 3–7% of the labels and up to **32% more churn** (river-run 100:
+  10.99 → 14.56/s), and the name fits **92–99%** of the time — so it is closer to "names instead of
+  numbers" than to "the name when there is room", which would silently revert RACE-NUMBERS-1 in most
+  frames. Cascade is impossible by construction: one decision per label per cycle in the existing
+  priority order, never revisited. No fingerprint moved — with the toggle off the render path is
+  byte-identical, which is the proof that "off" is the absence of the feature; flipping it moves the
+  cheap render hash, which is the proof it reaches the picture. New harness
+  `scripts/label-degrade-truth.mjs`. Not minted.
+- [START-BOARD-2.md](START-BOARD-2.md) — the board becomes usable, after his eye test. Its own
+  duration max(3000, 80 x n): 3.2 s at 40 and 8.0 s at 100 against 1.46 s for both — and THE
+  COUNTDOWN NOW FOLLOWS THE BEATS instead of capping them. `countdownDurationMs` is gone, key and
+  slider: `ceremonySchedule` returns `totalMs` and the proportional rescale that made every beat a
+  function of every other beat is deleted. The push is NEVER stretched — a new BOARD beat holds the
+  arrived camera still. Entry order NUMBER . SPRITE . NAME with nothing between the sprite and the
+  name; grouped by START ROW, alphabetical within; portraits ~21 -> ~30 px, free once the number
+  moved out of the middle. THE 70-OF-100 DEFECT DIAGNOSED AND THE HYPOTHESIS WAS WRONG: the board
+  drops nobody and no racer is unnamed — SetupScreen fills from a 70-entry roster with
+  slice(0, needed), so a Quick Test at 100 STARTS 70 racers. Not fixed: a roster change is an engine
+  input and his decision. Layout 8/20/40/100 all at scale 1.0, no overlap, no clipping. Camera and
+  render moved (one subsystem — the rhythm drives both), world unchanged. Not minted.
+- [START-BOARD-1.md](START-BOARD-1.md) — the runners' board: every racer once, during the push, as
+  name + number + its own sprite, alphabetical in columns and scannable at a glance. THE STILL POSE
+  WAS FREE: `_getFrameIndex` is floor(((frame % period)/period) x frameCount), so frame 0 selects
+  sheet frame 0 for any speed and any racer type — the shipped drawRacer needed no change. Layout is
+  a pure function: 8 -> 2x6, 40 -> 5x8, 100 -> 5x20 all at full size, and past 100 it shrinks rather
+  than clips. The countdown digits stop owning a count — derived from countdownDurationMs, so 4000
+  shows 4-3-2-1 with GO! at zero instead of GO! standing for an extra second. AND THE RENDER
+  FINGERPRINT HAD NEVER DRAWN A COUNTDOWN FRAME: the harness rendered its first frame AT the gun, so
+  a three-second full-screen overlay could have shipped without moving the hash — window extended
+  backwards, and the move is split into instrument (bc56f111) and content (ffe568e2). Camera and
+  world unchanged. Measured and open: 100 names cannot be scanned in the push's 1.46 s. Not minted.
+- [CEREMONY-HOLD-TARGET-1.md](CEREMONY-HOLD-TARGET-1.md) — the hold becomes a TARGET. The
+  hand-over sat in `_transition`, which a race never reaches at the gun (the director is already in
+  OVERVIEW), so the ceremony only set where the camera STARTED and OVERVIEW's own setting pulled it
+  away from frame one. It is now read from `_stateCamZoom()` every frame and released at the first
+  **view change**, not the first entry. river-run: travel ALONG over the first second **37.4 → 6.4
+  world px** (master 4.8), the field's y in frame **0.427 → 0.486** (master 0.50), zoom held at
+  1.1650 instead of easing to 1.0667; mountainstreet **0.389 → 0.505**. A second, unnoticed defect
+  closed: the hand-over was never consumed at all, so the first MID-RACE OVERVIEW would have snapped
+  to the ceremony's zoom. **The pan half of the prescription was built, measured and REJECTED** —
+  it satisfies all three predicted columns and leaves 37 of 40 racers off-screen at the release,
+  because the hold lasts 4983 ms and `_fieldCeiling` measures around the ANCHOR, not around the
+  camera. The window trace is a committed tool now (`scripts/gun-window-truth.mjs`); the two blocks
+  before it measured from patched copies in a scratch worktree that no longer exists. Camera and
+  render moved, world unchanged. Not minted, not merged.
+- [CEREMONY-HANDOVER-1.md](CEREMONY-HANDOVER-1.md) — the field guarantee no longer stops at the gun,
+  and the settled beat became a control instead of a remainder. The racing-time promise is the COMPANY
+  guarantee with the WHOLE FIELD as its company — reuse that is correctness, not economy, because the
+  ceremony's own version measures from the formation's CENTRE while the racing camera sits on the
+  leader, forward-framed. Retires when its ceiling falls below OVERVIEW's zoom: the widest shot the
+  design has a name for. **river-run 23/40 → 4/40 racers lost, frames losing anybody 884 → 488**;
+  mountainstreet 19/40 → 4/40. **Two tracks get nothing** — ice-track and space-sprint retire on frame
+  one, hashes byte-identical to the parent. (c) HOLDS and searound was not a coincidence: measuring
+  from a moving anchor is what makes the centre travel with the field. Camera moved on 8 of 10, render
+  moved, world unchanged. My first attempt at the settled slider re-created the very defect it was
+  fixing and a test caught it. A stale measured stamp from the PREVIOUS block is re-measured here —
+  verify could not have seen it, because the guard compares against committed history.
+- [START-CEREMONY-CAMERA-1.md](START-CEREMONY-CAMERA-1.md) — the race opens on the whole track, held
+  still, then eases in to the formation until it is as large as it can be with every racer still in
+  frame, and that framing is held into the race. **Both ends of the move are GEOMETRY and neither is
+  a setting** — the track's own extent and the field's own extent, the latter through a new
+  `fieldGuarantee`; only the rhythm is sliders. The hold is a DESIRED zoom, not a freeze: it enters
+  `Math.min` with the guarantees, so they can widen it and cannot narrow it (L192 by construction).
+  COUNTDOWN did NOT become a row in FRAMING_BY_STATE — the table is read only for states the machine
+  reaches during RACING, so a row would be a setting nothing reads; the value came from the GUARANTEE
+  instead and both halves arrived. Measured on 10 tracks x 5 field sizes from real formations: all 50
+  keep every racer in frame, target ranges 0.632 to 13.784. Camera moved on all ten, render moved,
+  world unchanged. **Open question for the owner: at 100 racers the first view change is a 2.6-4.1x
+  jump** — named with numbers, no mechanism added, his taste to decide.
+- [LABEL-OFFSET-1.md](LABEL-OFFSET-1.md) — the label's distance from its racer was `fontPx * 2.0`, a
+  property of the TEXT, so it stayed put while the racer changed size. It is now half the racer's
+  DRAWN height plus a margin slider (`nameTagMarginPx`, 6 px), which needs no per-track constant
+  because it falls out of the drawn size. **The measurement found a second, worse defect nobody had
+  named:** the old 31.7 px offset meant any racer drawn taller than 63.4 px had the bottom of its
+  label INSIDE its own sprite, and all ten tracks reach 82-160 px at close zoom — so at the tight end
+  of every track the labels were sitting on the racers. Drawn racers run 27.4 px to 160.0 px; the
+  VISIBLE space between sprite and label is now one constant everywhere. Declutter drops measured as
+  an A/B in one run: identical on all ten tracks and op counts identical to the digit, because every
+  racer in a frame is drawn at one size so the change is a pure translation. Render moved on all ten,
+  world unchanged (engine-reach said it was owed, so it was run).
+- [RACE-NUMBERS-1.md](RACE-NUMBERS-1.md) — the racer wears a NUMBER on the track (at most three
+  characters) and the standings list carries the number before the name. The draw cannot shift the
+  race and the guarantee is structural: `assignRaceNumbers` takes no rng argument, builds its own
+  generator and discards it. **The trap that would have caught a careful implementation:** an unseeded
+  race runs off `Math.random` directly, so a "fall back to Math.random" numbering would consume from
+  the race's own stream in exactly the case it thought was safe — the fallback is a constant, and a
+  test asserts `Math.random` is never called. Proved three ways (world unchanged, engine-reach clear,
+  and an independent generator lands where it would have). Render moved on all ten tracks as expected;
+  the op counts went UP, because shorter labels collide less so MORE labels survive decluttering.
+  Caught on the way: the harness knew nothing of `raceNumber` and would have gone straight back to
+  measuring empty label boxes.
 - [HARNESS-NAMES-1.md](HARNESS-NAMES-1.md) — the render harness never set `r.name`, so every label
   box in it was 8px of padding: it measured a geometry the game cannot produce. Fixed with the MIXED
   roster, by index, imported from the one home; render **re-minted deliberately** to

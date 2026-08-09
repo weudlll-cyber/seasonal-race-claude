@@ -1,0 +1,133 @@
+{
+ "label": "prof-chain-n30",
+ "tree": "chain",
+ "racers": 30,
+ "totalUs": 1051512,
+ "top": [
+  {
+   "fn": "applyRacerBehavior  client/src/modules/raceBehavior.js:531",
+   "us": 429323,
+   "share": 40.83
+  },
+  {
+   "fn": "stepRacePhysics  client/src/modules/raceCore.js:421",
+   "us": 113880,
+   "share": 10.83
+  },
+  {
+   "fn": "(garbage collector)  :0",
+   "us": 77120,
+   "share": 7.33
+  },
+  {
+   "fn": "pairContact  client/src/modules/raceBehavior.js:270",
+   "us": 35225,
+   "share": 3.35
+  },
+  {
+   "fn": "update  client/src/modules/racePlanner.js:518",
+   "us": 34419,
+   "share": 3.27
+  },
+  {
+   "fn": "isSideFree  client/src/modules/raceBehavior.js:397",
+   "us": 24743,
+   "share": 2.35
+  },
+  {
+   "fn": "buildTIndex  client/src/modules/raceBehavior.js:322",
+   "us": 23918,
+   "share": 2.27
+  },
+  {
+   "fn": "applyPulkLeadRotation  client/src/modules/raceGovernor.js:170",
+   "us": 23399,
+   "share": 2.23
+  },
+  {
+   "fn": "normalizeAngle  client/src/modules/raceBehavior.js:206",
+   "us": 22265,
+   "share": 2.12
+  },
+  {
+   "fn": "getPosition  client/src/modules/track-editor/EditorShape.js:95",
+   "us": 17554,
+   "share": 1.67
+  },
+  {
+   "fn": "compileSourceTextModule  node:internal/modules/esm/utils:316",
+   "us": 15980,
+   "share": 1.52
+  },
+  {
+   "fn": "shortestArcDeltaT  client/src/utils/mathUtils.js:37",
+   "us": 14650,
+   "share": 1.39
+  },
+  {
+   "fn": "assignSoftTarget  client/src/modules/raceBehavior.js:820",
+   "us": 14502,
+   "share": 1.38
+  },
+  {
+   "fn": "(program)  :0",
+   "us": 13835,
+   "share": 1.32
+  },
+  {
+   "fn": "(anonymous)  scripts/phys-bench.mjs:1",
+   "us": 10060,
+   "share": 0.96
+  },
+  {
+   "fn": "stablePairBit  client/src/modules/raceBehavior.js:210",
+   "us": 9854,
+   "share": 0.94
+  },
+  {
+   "fn": "pairForwardSpeeds  client/src/modules/raceBehavior.js:482",
+   "us": 9733,
+   "share": 0.93
+  },
+  {
+   "fn": "overrideSoftTarget  client/src/modules/raceBehavior.js:908",
+   "us": 9510,
+   "share": 0.9
+  },
+  {
+   "fn": "readFileUtf8  :0",
+   "us": 7946,
+   "share": 0.76
+  },
+  {
+   "fn": "(anonymous)  client/src/modules/raceBehavior.js:339",
+   "us": 7835,
+   "share": 0.75
+  },
+  {
+   "fn": "pxToPhysicalY  client/src/modules/raceBehavior.js:240",
+   "us": 5965,
+   "share": 0.57
+  },
+  {
+   "fn": "computeTangents  client/src/modules/heroChoreography.js:56",
+   "us": 4677,
+   "share": 0.44
+  },
+  {
+   "fn": "getFrameSizePx  client/src/modules/raceBehavior.js:244",
+   "us": 4081,
+   "share": 0.39
+  },
+  {
+   "fn": "compileForInternalLoader  node:internal/bootstrap/realm:383",
+   "us": 4054,
+   "share": 0.39
+  },
+  {
+   "fn": "smoothLaneTarget  client/src/modules/raceBehavior.js:158",
+   "us": 3898,
+   "share": 0.37
+  }
+ ]
+}

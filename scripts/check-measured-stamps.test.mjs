@@ -19,6 +19,7 @@ import assert from "node:assert/strict";
 import { spawnSync, execFileSync } from "node:child_process";
 import { readFileSync, writeFileSync, mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
+import { TEST_FILE_EXCLUDE } from "./check-measured-stamps.mjs";
 import { join, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -66,12 +67,17 @@ test("BASELINE via --doc: an untransformed copy behaves identically to the origi
 });
 
 test("SABOTAGE: a stamp that PREDATES a camera change fails, and names the offending commit", () => {
+  // THE SAME QUESTION THE GUARD ASKS, including the test-file exclusion — imported, not re-typed.
+  // CI caught the alternative: with the fixture chosen by a DIFFERENT rule, a run whose newest
+  // camera commit was a test-file commit stamped a commit the guard no longer considers, so the
+  // guard correctly said fresh and this test demanded stale. It was testing a rule nobody has.
   const commits = git(
     "log",
     "-2",
     "--format=%h",
     "--",
     "client/src/modules/camera/",
+    TEST_FILE_EXCLUDE,
   ).split("\n");
   const [newest, older] = commits;
   assert.ok(

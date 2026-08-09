@@ -332,6 +332,67 @@ function CameraAdvancedSection() {
           Highlight heroes — <span style={{ color: '#34c759' }}>green ring = normal hero</span>,{' '}
           <span style={{ color: '#ff3b30' }}>red ring = B2-attacker</span>
         </label>
+        {/* LABEL-OCCLUSION-1 — the name on the track when it covers nothing. The KEY and the OFF
+            default are LABEL-DEGRADE-1's and are deliberately unchanged; what the switch DOES is
+            not, so its text is. See reports/night/LABEL-OCCLUSION-1.md. */}
+        <label
+          className={s.label}
+          style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginTop: '0.5rem' }}
+        >
+          <input
+            type="checkbox"
+            checked={config.labelNamesWhenRoom ?? false}
+            onChange={(e) => set('labelNamesWhenRoom', e.target.checked)}
+            data-testid="label-names-when-room-toggle"
+          />
+          Track labels show the NAME when it covers nothing
+          <InfoTooltip
+            text={
+              'During the race, a label shows the racer’s NAME when the name would cover ' +
+              'neither another label nor another racer, and the NUMBER otherwise. A name is ' +
+              'EARNED by a stretch of clear geometry (the slider below) and given up the instant ' +
+              'it stops being clear, so ' +
+              'a name is never drawn on a racer. Two exceptions: the racer the camera is ON keeps ' +
+              'its name throughout, and at the photo finish every racer in frame carries one. ' +
+              'Measured at 100 racers: 17.2% of labels show a name on searound and 9.5% on ' +
+              'river-run, changing form 7.8 and 4.8 times per label per race. OFF by default — ' +
+              'your eye decides whether that share is worth that much switching.'
+            }
+          />
+        </label>
+        {/* LABEL-HOLD-1 — how long a name must be EARNED for. Only the promotion; the withdrawal is
+            immediate by design and is deliberately not settable. */}
+        <div className={s.formGroup} style={{ marginTop: '0.5rem' }}>
+          <label
+            className={s.label}
+            style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}
+          >
+            Track labels — wait before a name (ms)
+            <InfoTooltip
+              text={
+                'How long a label’s name must be completely clear — of every other label and every ' +
+                'other racer — before it is shown. It is given up the INSTANT it stops being clear, ' +
+                'and that half is not settable: a name over a racer is the defect the feature ' +
+                'removes. Lower means names appear sooner and change form more often. 2000 was the ' +
+                'calmest value on the measurement; 1200 is what your eye asked for. Currently: ' +
+                `${config.labelFormHoldMs ?? DEFAULT_CAMERA_CONFIG.labelFormHoldMs}ms.`
+              }
+            />
+          </label>
+          <input
+            type="number"
+            className={s.input}
+            data-testid="label-form-hold-ms"
+            min={0}
+            max={10000}
+            step={100}
+            value={config.labelFormHoldMs ?? DEFAULT_CAMERA_CONFIG.labelFormHoldMs}
+            onChange={(e) => {
+              const v = Number(e.target.value);
+              if (v >= 0 && v <= 10000) set('labelFormHoldMs', v);
+            }}
+          />
+        </div>
       </div>
       {/* ── 1. Start & Post-Start ── */}
       <div className={s.card}>
@@ -360,26 +421,34 @@ function CameraAdvancedSection() {
               }}
             />
           </div>
+          {/* START-BOARD-2 — THE RUNNERS' BOARD'S OWN DURATION.
+              `max(floor, msPerName × racers)`. The countdown's total is now the SUM of the beats
+              plus whatever the board still needs after the push, so there is no "countdown
+              duration" box any more: its length follows these numbers instead of capping them. */}
           <div className={s.formGroup}>
             <label
               className={s.label}
               style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}
             >
-              Countdown opening shot (corridors)
+              Runners&apos; board — floor (ms)
               <InfoTooltip
-                text={`How wide the countdown opens, in standard corridors, before easing into Overview. Clamped to the widest the world allows, so on a small world it simply means "the whole world". Currently: ${config.countdownStartCorridors ?? 3} = ${Math.round((config.countdownStartCorridors ?? 3) * (config.referenceCorridorPx ?? 300))} world pixels.`}
+                text={
+                  `The SHORTEST the starters' board is ever shown, however small the field. ` +
+                  `The board is up for max(this, per-name × racers). Currently: ` +
+                  `${config.startBoardFloorMs ?? DEFAULT_CAMERA_CONFIG.startBoardFloorMs}ms.`
+                }
               />
             </label>
             <input
               type="number"
               className={s.input}
-              min={0.25}
-              max={30}
-              step={0.25}
-              value={config.countdownStartCorridors ?? 3}
+              min={0}
+              max={20000}
+              step={250}
+              value={config.startBoardFloorMs ?? DEFAULT_CAMERA_CONFIG.startBoardFloorMs}
               onChange={(e) => {
                 const v = Number(e.target.value);
-                if (v >= 0.25 && v <= 30) set('countdownStartCorridors', v);
+                if (v >= 0 && v <= 20000) set('startBoardFloorMs', v);
               }}
             />
           </div>
@@ -388,23 +457,149 @@ function CameraAdvancedSection() {
               className={s.label}
               style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}
             >
-              Countdown Duration (ms)
+              Runners&apos; board — per name (ms)
               <InfoTooltip
-                text={`Duration of the pre-race countdown. Currently: ${config.countdownDurationMs ?? 4000}ms.`}
+                text={
+                  `Reading time allowed per racer. The board is up for ` +
+                  `max(floor, this × racers), and the camera HOLDS on the formation until it is ` +
+                  `done — the push keeps its own speed. At ${config.startBoardMsPerName ?? DEFAULT_CAMERA_CONFIG.startBoardMsPerName}ms ` +
+                  `that is ${(((config.startBoardMsPerName ?? DEFAULT_CAMERA_CONFIG.startBoardMsPerName) * 40) / 1000).toFixed(1)}s at 40 ` +
+                  `racers and ${(((config.startBoardMsPerName ?? DEFAULT_CAMERA_CONFIG.startBoardMsPerName) * 100) / 1000).toFixed(1)}s at 100.`
+                }
               />
             </label>
             <input
               type="number"
               className={s.input}
-              min={1000}
-              max={8000}
-              step={500}
-              value={config.countdownDurationMs ?? 4000}
+              min={0}
+              max={500}
+              step={10}
+              value={config.startBoardMsPerName ?? DEFAULT_CAMERA_CONFIG.startBoardMsPerName}
               onChange={(e) => {
                 const v = Number(e.target.value);
-                if (v >= 1000 && v <= 8000) set('countdownDurationMs', v);
+                if (v >= 0 && v <= 500) set('startBoardMsPerName', v);
               }}
             />
+          </div>
+          {/* START-CEREMONY-CAMERA-1 — the RHYTHM of the opening. Both ENDS of the move are
+              geometry (the track's extent, the field's extent) and are deliberately not settings. */}
+          <div className={s.formGroup}>
+            <label
+              className={s.label}
+              style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}
+            >
+              Venue Shot (ms)
+              <InfoTooltip
+                text={`How long the opening shot of the whole track is held STILL before the camera begins to move. It means exactly what it says: since START-BOARD-2 the opening's total length is the SUM of these beats, so raising this makes the opening longer and changes no other beat. Currently: ${config.ceremonyVenueMs ?? DEFAULT_CAMERA_CONFIG.ceremonyVenueMs}ms.`}
+              />
+            </label>
+            <input
+              type="number"
+              className={s.input}
+              data-testid="ceremony-venue-ms"
+              min={0}
+              max={6000}
+              step={100}
+              value={config.ceremonyVenueMs ?? DEFAULT_CAMERA_CONFIG.ceremonyVenueMs}
+              onChange={(e) => {
+                const v = Number(e.target.value);
+                if (v >= 0 && v <= 6000) set('ceremonyVenueMs', v);
+              }}
+            />
+          </div>
+          <div className={s.formGroup}>
+            <label
+              className={s.label}
+              style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}
+            >
+              Push In (ms)
+              <InfoTooltip
+                text={`How long the camera takes to ease from the venue shot in to the starting formation. Where it ARRIVES is not a setting: it is the largest zoom at which every racer is still in frame, measured from the formation itself, so it is right on every track and at every field size. Currently: ${config.ceremonyPushMs ?? DEFAULT_CAMERA_CONFIG.ceremonyPushMs}ms.`}
+              />
+            </label>
+            <input
+              type="number"
+              className={s.input}
+              data-testid="ceremony-push-ms"
+              min={0}
+              max={6000}
+              step={100}
+              value={config.ceremonyPushMs ?? DEFAULT_CAMERA_CONFIG.ceremonyPushMs}
+              onChange={(e) => {
+                const v = Number(e.target.value);
+                if (v >= 0 && v <= 6000) set('ceremonyPushMs', v);
+              }}
+            />
+          </div>
+          <div className={s.formGroup}>
+            <label
+              className={s.label}
+              style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}
+            >
+              Settled Hold — the searching time (ms)
+              <InfoTooltip
+                text={`THE BEAT THAT MAKES THE BOARD WORTH SHOWING: the formation held still, board gone and no digits yet, so a viewer can take the number the board just taught them and FIND it on the track. Raised from 600 to 4000 after the searound eye test, where the race began almost the moment the board vanished. It is ADDED to the opening, never taken out of it. Currently: ${config.ceremonySettledMs ?? DEFAULT_CAMERA_CONFIG.ceremonySettledMs}ms.`}
+              />
+            </label>
+            <input
+              type="number"
+              className={s.input}
+              data-testid="ceremony-settled-ms"
+              min={0}
+              max={15000}
+              step={100}
+              value={config.ceremonySettledMs ?? DEFAULT_CAMERA_CONFIG.ceremonySettledMs}
+              onChange={(e) => {
+                const v = Number(e.target.value);
+                if (v >= 0 && v <= 15000) set('ceremonySettledMs', v);
+              }}
+            />
+          </div>
+          <div className={s.formGroup}>
+            <label
+              className={s.label}
+              style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}
+            >
+              Countdown digits (ms)
+              <InfoTooltip
+                text={`How long the 3-2-1 digits are on screen, at the very END of the opening. Before this window there are no digits at all — that is what gives the searching time above a stretch with no clock on it. NOT a cap: it is added to the opening like every other beat, and the count still reaches zero exactly at the gun. Currently: ${config.countdownDigitsMs ?? DEFAULT_CAMERA_CONFIG.countdownDigitsMs}ms.`}
+              />
+            </label>
+            <input
+              type="number"
+              className={s.input}
+              data-testid="countdown-digits-ms"
+              min={0}
+              max={10000}
+              step={250}
+              value={config.countdownDigitsMs ?? DEFAULT_CAMERA_CONFIG.countdownDigitsMs}
+              onChange={(e) => {
+                const v = Number(e.target.value);
+                if (v >= 0 && v <= 10000) set('countdownDigitsMs', v);
+              }}
+            />
+          </div>
+          <div className={s.formGroup}>
+            <label
+              className={s.label}
+              style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}
+            >
+              Push Easing
+              <InfoTooltip
+                text={`The SHAPE of the push in. Ease in-out begins at rest, gathers, and arrives at rest — the ceremonial shape. Ease out cubic is what the countdown did before this block: it starts at full speed, which reads as the camera catching up to something rather than as ceremony. Quint is the same shape held longer at both ends, the most deliberate of the four.`}
+              />
+            </label>
+            <select
+              className={s.input}
+              data-testid="ceremony-easing"
+              value={config.ceremonyEasing ?? 'easeInOutCubic'}
+              onChange={(e) => set('ceremonyEasing', e.target.value)}
+            >
+              <option value="easeInOutCubic">Ease in-out (cubic) — ceremonial</option>
+              <option value="easeInOutQuint">Ease in-out (quint) — most deliberate</option>
+              <option value="easeOutCubic">Ease out (cubic) — the old feel</option>
+              <option value="linear">Linear — constant speed</option>
+            </select>
           </div>
         </div>
       </div>

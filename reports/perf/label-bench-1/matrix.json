@@ -1,0 +1,1122 @@
+{
+ "tool": "label-bench-matrix.mjs",
+ "version": "LABEL-BENCH-1",
+ "trees": {
+  "chain": "C:\\Users\\weudl\\OneDrive\\Dokumente\\Seasonal race claude",
+  "master": "C:/ra-wt-nanoid"
+ },
+ "framesDir": "C:\\Users\\weudl\\AppData\\Local\\Temp\\racearena-scratch\\label-bench-1",
+ "node": "v24.14.0",
+ "platform": "win32-x64",
+ "rows": [
+  {
+   "tree": "chain",
+   "racers": 30,
+   "arm": "numbers",
+   "repeats": 7,
+   "p50": 0.0108,
+   "p90": 0.0161,
+   "holdP50": 0.0009,
+   "spreadPct": 15.7,
+   "placed": 10.97,
+   "named": 0,
+   "chars": 18.6
+  },
+  {
+   "tree": "chain",
+   "racers": 30,
+   "arm": "names-short",
+   "repeats": 7,
+   "p50": 0.0179,
+   "p90": 0.0256,
+   "holdP50": 0.0016,
+   "spreadPct": 9.5,
+   "placed": 10.97,
+   "named": 6.19,
+   "chars": 40.8
+  },
+  {
+   "tree": "chain",
+   "racers": 30,
+   "arm": "names-long",
+   "repeats": 7,
+   "p50": 0.0173,
+   "p90": 0.0248,
+   "holdP50": 0.0014,
+   "spreadPct": 9.8,
+   "placed": 10.97,
+   "named": 3.73,
+   "chars": 87.5
+  },
+  {
+   "tree": "chain",
+   "racers": 30,
+   "arm": "names-mixed",
+   "repeats": 7,
+   "p50": 0.0172,
+   "p90": 0.0258,
+   "holdP50": 0.0015,
+   "spreadPct": 14,
+   "placed": 10.97,
+   "named": 5.62,
+   "chars": 53.4
+  },
+  {
+   "tree": "chain",
+   "racers": 70,
+   "arm": "numbers",
+   "repeats": 7,
+   "p50": 0.0128,
+   "p90": 0.0399,
+   "holdP50": 0.0007,
+   "spreadPct": 21.1,
+   "placed": 13.01,
+   "named": 0,
+   "chars": 24.9
+  },
+  {
+   "tree": "chain",
+   "racers": 70,
+   "arm": "names-short",
+   "repeats": 7,
+   "p50": 0.0201,
+   "p90": 0.0768,
+   "holdP50": 0.0012,
+   "spreadPct": 6.5,
+   "placed": 13.01,
+   "named": 4.08,
+   "chars": 37.8
+  },
+  {
+   "tree": "chain",
+   "racers": 70,
+   "arm": "names-long",
+   "repeats": 7,
+   "p50": 0.0192,
+   "p90": 0.0712,
+   "holdP50": 0.0011,
+   "spreadPct": 12.5,
+   "placed": 12.99,
+   "named": 2.49,
+   "chars": 68
+  },
+  {
+   "tree": "chain",
+   "racers": 70,
+   "arm": "names-mixed",
+   "repeats": 7,
+   "p50": 0.0189,
+   "p90": 0.0726,
+   "holdP50": 0.0011,
+   "spreadPct": 12.7,
+   "placed": 12.99,
+   "named": 3.21,
+   "chars": 43.6
+  },
+  {
+   "tree": "chain",
+   "racers": 100,
+   "arm": "numbers",
+   "repeats": 7,
+   "p50": 0.0209,
+   "p90": 0.0413,
+   "holdP50": 0.0012,
+   "spreadPct": 10.5,
+   "placed": 16.52,
+   "named": 0,
+   "chars": 32.9
+  },
+  {
+   "tree": "chain",
+   "racers": 100,
+   "arm": "names-short",
+   "repeats": 7,
+   "p50": 0.0398,
+   "p90": 0.0767,
+   "holdP50": 0.002,
+   "spreadPct": 17.6,
+   "placed": 16.51,
+   "named": 5.46,
+   "chars": 51.4
+  },
+  {
+   "tree": "chain",
+   "racers": 100,
+   "arm": "names-long",
+   "repeats": 7,
+   "p50": 0.0362,
+   "p90": 0.0704,
+   "holdP50": 0.0018,
+   "spreadPct": 9.1,
+   "placed": 16.49,
+   "named": 3.41,
+   "chars": 91.6
+  },
+  {
+   "tree": "chain",
+   "racers": 100,
+   "arm": "names-mixed",
+   "repeats": 7,
+   "p50": 0.039,
+   "p90": 0.08,
+   "holdP50": 0.002,
+   "spreadPct": 8.7,
+   "placed": 16.5,
+   "named": 4.59,
+   "chars": 65.6
+  },
+  {
+   "tree": "master",
+   "racers": 100,
+   "arm": "master-names",
+   "repeats": 7,
+   "p50": 0.012,
+   "p90": 0.0246,
+   "holdP50": 0.0002,
+   "spreadPct": 10,
+   "placed": 16.19,
+   "named": 16.19,
+   "chars": 88.5
+  }
+ ],
+ "blocks": [
+  {
+   "tree": "chain",
+   "racers": 30,
+   "label": "chain-n30",
+   "arms": [
+    {
+     "arm": "numbers",
+     "repeat": 0,
+     "p50": 0.012,
+     "p90": 0.0161,
+     "holdP50": 0.001,
+     "placed": 10.97,
+     "named": 0,
+     "chars": 18.6
+    },
+    {
+     "arm": "names-short",
+     "repeat": 0,
+     "p50": 0.0185,
+     "p90": 0.0281,
+     "holdP50": 0.0016,
+     "placed": 10.97,
+     "named": 6.19,
+     "chars": 40.8
+    },
+    {
+     "arm": "names-long",
+     "repeat": 0,
+     "p50": 0.017,
+     "p90": 0.0274,
+     "holdP50": 0.0014,
+     "placed": 10.97,
+     "named": 3.73,
+     "chars": 87.5
+    },
+    {
+     "arm": "names-mixed",
+     "repeat": 0,
+     "p50": 0.0183,
+     "p90": 0.0252,
+     "holdP50": 0.0016,
+     "placed": 10.97,
+     "named": 5.62,
+     "chars": 53.4
+    },
+    {
+     "arm": "numbers",
+     "repeat": 1,
+     "p50": 0.0115,
+     "p90": 0.0174,
+     "holdP50": 0.001,
+     "placed": 10.97,
+     "named": 0,
+     "chars": 18.6
+    },
+    {
+     "arm": "names-short",
+     "repeat": 1,
+     "p50": 0.0188,
+     "p90": 0.0275,
+     "holdP50": 0.0017,
+     "placed": 10.97,
+     "named": 6.19,
+     "chars": 40.8
+    },
+    {
+     "arm": "names-long",
+     "repeat": 1,
+     "p50": 0.0176,
+     "p90": 0.0253,
+     "holdP50": 0.0014,
+     "placed": 10.97,
+     "named": 3.73,
+     "chars": 87.5
+    },
+    {
+     "arm": "names-mixed",
+     "repeat": 1,
+     "p50": 0.0172,
+     "p90": 0.0263,
+     "holdP50": 0.0015,
+     "placed": 10.97,
+     "named": 5.62,
+     "chars": 53.4
+    },
+    {
+     "arm": "numbers",
+     "repeat": 2,
+     "p50": 0.0108,
+     "p90": 0.0162,
+     "holdP50": 0.0009,
+     "placed": 10.97,
+     "named": 0,
+     "chars": 18.6
+    },
+    {
+     "arm": "names-short",
+     "repeat": 2,
+     "p50": 0.0179,
+     "p90": 0.0256,
+     "holdP50": 0.0016,
+     "placed": 10.97,
+     "named": 6.19,
+     "chars": 40.8
+    },
+    {
+     "arm": "names-long",
+     "repeat": 2,
+     "p50": 0.0173,
+     "p90": 0.0227,
+     "holdP50": 0.0014,
+     "placed": 10.97,
+     "named": 3.73,
+     "chars": 87.5
+    },
+    {
+     "arm": "names-mixed",
+     "repeat": 2,
+     "p50": 0.0183,
+     "p90": 0.0258,
+     "holdP50": 0.0016,
+     "placed": 10.97,
+     "named": 5.62,
+     "chars": 53.4
+    },
+    {
+     "arm": "numbers",
+     "repeat": 3,
+     "p50": 0.0106,
+     "p90": 0.0143,
+     "holdP50": 0.0008,
+     "placed": 10.97,
+     "named": 0,
+     "chars": 18.6
+    },
+    {
+     "arm": "names-short",
+     "repeat": 3,
+     "p50": 0.0185,
+     "p90": 0.0256,
+     "holdP50": 0.0017,
+     "placed": 10.97,
+     "named": 6.19,
+     "chars": 40.8
+    },
+    {
+     "arm": "names-long",
+     "repeat": 3,
+     "p50": 0.0174,
+     "p90": 0.0248,
+     "holdP50": 0.0014,
+     "placed": 10.97,
+     "named": 3.73,
+     "chars": 87.5
+    },
+    {
+     "arm": "names-mixed",
+     "repeat": 3,
+     "p50": 0.0172,
+     "p90": 0.025,
+     "holdP50": 0.0015,
+     "placed": 10.97,
+     "named": 5.62,
+     "chars": 53.4
+    },
+    {
+     "arm": "numbers",
+     "repeat": 4,
+     "p50": 0.0103,
+     "p90": 0.0145,
+     "holdP50": 0.0008,
+     "placed": 10.97,
+     "named": 0,
+     "chars": 18.6
+    },
+    {
+     "arm": "names-short",
+     "repeat": 4,
+     "p50": 0.0171,
+     "p90": 0.0256,
+     "holdP50": 0.0015,
+     "placed": 10.97,
+     "named": 6.19,
+     "chars": 40.8
+    },
+    {
+     "arm": "names-long",
+     "repeat": 4,
+     "p50": 0.0176,
+     "p90": 0.0248,
+     "holdP50": 0.0014,
+     "placed": 10.97,
+     "named": 3.73,
+     "chars": 87.5
+    },
+    {
+     "arm": "names-mixed",
+     "repeat": 4,
+     "p50": 0.0159,
+     "p90": 0.024,
+     "holdP50": 0.0014,
+     "placed": 10.97,
+     "named": 5.62,
+     "chars": 53.4
+    },
+    {
+     "arm": "numbers",
+     "repeat": 5,
+     "p50": 0.0103,
+     "p90": 0.016,
+     "holdP50": 0.0009,
+     "placed": 10.97,
+     "named": 0,
+     "chars": 18.6
+    },
+    {
+     "arm": "names-short",
+     "repeat": 5,
+     "p50": 0.0176,
+     "p90": 0.0252,
+     "holdP50": 0.0016,
+     "placed": 10.97,
+     "named": 6.19,
+     "chars": 40.8
+    },
+    {
+     "arm": "names-long",
+     "repeat": 5,
+     "p50": 0.016,
+     "p90": 0.024,
+     "holdP50": 0.0014,
+     "placed": 10.97,
+     "named": 3.73,
+     "chars": 87.5
+    },
+    {
+     "arm": "names-mixed",
+     "repeat": 5,
+     "p50": 0.0167,
+     "p90": 0.0262,
+     "holdP50": 0.0015,
+     "placed": 10.97,
+     "named": 5.62,
+     "chars": 53.4
+    },
+    {
+     "arm": "numbers",
+     "repeat": 6,
+     "p50": 0.0109,
+     "p90": 0.0162,
+     "holdP50": 0.0009,
+     "placed": 10.97,
+     "named": 0,
+     "chars": 18.6
+    },
+    {
+     "arm": "names-short",
+     "repeat": 6,
+     "p50": 0.0173,
+     "p90": 0.0226,
+     "holdP50": 0.0015,
+     "placed": 10.97,
+     "named": 6.19,
+     "chars": 40.8
+    },
+    {
+     "arm": "names-long",
+     "repeat": 6,
+     "p50": 0.0159,
+     "p90": 0.0228,
+     "holdP50": 0.0013,
+     "placed": 10.97,
+     "named": 3.73,
+     "chars": 87.5
+    },
+    {
+     "arm": "names-mixed",
+     "repeat": 6,
+     "p50": 0.0164,
+     "p90": 0.026,
+     "holdP50": 0.0015,
+     "placed": 10.97,
+     "named": 5.62,
+     "chars": 53.4
+    }
+   ]
+  },
+  {
+   "tree": "chain",
+   "racers": 70,
+   "label": "chain-n70",
+   "arms": [
+    {
+     "arm": "numbers",
+     "repeat": 0,
+     "p50": 0.0128,
+     "p90": 0.039,
+     "holdP50": 0.0008,
+     "placed": 13.01,
+     "named": 0,
+     "chars": 24.9
+    },
+    {
+     "arm": "names-short",
+     "repeat": 0,
+     "p50": 0.02,
+     "p90": 0.0773,
+     "holdP50": 0.0013,
+     "placed": 13.01,
+     "named": 4.08,
+     "chars": 37.8
+    },
+    {
+     "arm": "names-long",
+     "repeat": 0,
+     "p50": 0.0191,
+     "p90": 0.073,
+     "holdP50": 0.0011,
+     "placed": 12.99,
+     "named": 2.49,
+     "chars": 68
+    },
+    {
+     "arm": "names-mixed",
+     "repeat": 0,
+     "p50": 0.0187,
+     "p90": 0.0708,
+     "holdP50": 0.0011,
+     "placed": 12.99,
+     "named": 3.21,
+     "chars": 43.6
+    },
+    {
+     "arm": "numbers",
+     "repeat": 1,
+     "p50": 0.0135,
+     "p90": 0.0399,
+     "holdP50": 0.0008,
+     "placed": 13.01,
+     "named": 0,
+     "chars": 24.9
+    },
+    {
+     "arm": "names-short",
+     "repeat": 1,
+     "p50": 0.0197,
+     "p90": 0.079,
+     "holdP50": 0.0012,
+     "placed": 13.01,
+     "named": 4.08,
+     "chars": 37.8
+    },
+    {
+     "arm": "names-long",
+     "repeat": 1,
+     "p50": 0.0179,
+     "p90": 0.0712,
+     "holdP50": 0.0011,
+     "placed": 12.99,
+     "named": 2.49,
+     "chars": 68
+    },
+    {
+     "arm": "names-mixed",
+     "repeat": 1,
+     "p50": 0.0189,
+     "p90": 0.0735,
+     "holdP50": 0.0011,
+     "placed": 12.99,
+     "named": 3.21,
+     "chars": 43.6
+    },
+    {
+     "arm": "numbers",
+     "repeat": 2,
+     "p50": 0.0114,
+     "p90": 0.0405,
+     "holdP50": 0.0007,
+     "placed": 13.01,
+     "named": 0,
+     "chars": 24.9
+    },
+    {
+     "arm": "names-short",
+     "repeat": 2,
+     "p50": 0.0205,
+     "p90": 0.0768,
+     "holdP50": 0.0012,
+     "placed": 13.01,
+     "named": 4.08,
+     "chars": 37.8
+    },
+    {
+     "arm": "names-long",
+     "repeat": 2,
+     "p50": 0.0192,
+     "p90": 0.0707,
+     "holdP50": 0.0012,
+     "placed": 12.99,
+     "named": 2.49,
+     "chars": 68
+    },
+    {
+     "arm": "names-mixed",
+     "repeat": 2,
+     "p50": 0.0201,
+     "p90": 0.0789,
+     "holdP50": 0.0012,
+     "placed": 12.99,
+     "named": 3.21,
+     "chars": 43.6
+    },
+    {
+     "arm": "numbers",
+     "repeat": 3,
+     "p50": 0.0111,
+     "p90": 0.0391,
+     "holdP50": 0.0007,
+     "placed": 13.01,
+     "named": 0,
+     "chars": 24.9
+    },
+    {
+     "arm": "names-short",
+     "repeat": 3,
+     "p50": 0.0205,
+     "p90": 0.0794,
+     "holdP50": 0.0012,
+     "placed": 13.01,
+     "named": 4.08,
+     "chars": 37.8
+    },
+    {
+     "arm": "names-long",
+     "repeat": 3,
+     "p50": 0.0202,
+     "p90": 0.0707,
+     "holdP50": 0.0011,
+     "placed": 12.99,
+     "named": 2.49,
+     "chars": 68
+    },
+    {
+     "arm": "names-mixed",
+     "repeat": 3,
+     "p50": 0.019,
+     "p90": 0.0746,
+     "holdP50": 0.0011,
+     "placed": 12.99,
+     "named": 3.21,
+     "chars": 43.6
+    },
+    {
+     "arm": "numbers",
+     "repeat": 4,
+     "p50": 0.0131,
+     "p90": 0.0408,
+     "holdP50": 0.0007,
+     "placed": 13.01,
+     "named": 0,
+     "chars": 24.9
+    },
+    {
+     "arm": "names-short",
+     "repeat": 4,
+     "p50": 0.0201,
+     "p90": 0.0754,
+     "holdP50": 0.0012,
+     "placed": 13.01,
+     "named": 4.08,
+     "chars": 37.8
+    },
+    {
+     "arm": "names-long",
+     "repeat": 4,
+     "p50": 0.0203,
+     "p90": 0.0733,
+     "holdP50": 0.0012,
+     "placed": 12.99,
+     "named": 2.49,
+     "chars": 68
+    },
+    {
+     "arm": "names-mixed",
+     "repeat": 4,
+     "p50": 0.0191,
+     "p90": 0.0726,
+     "holdP50": 0.0011,
+     "placed": 12.99,
+     "named": 3.21,
+     "chars": 43.6
+    },
+    {
+     "arm": "numbers",
+     "repeat": 5,
+     "p50": 0.0138,
+     "p90": 0.0414,
+     "holdP50": 0.0008,
+     "placed": 13.01,
+     "named": 0,
+     "chars": 24.9
+    },
+    {
+     "arm": "names-short",
+     "repeat": 5,
+     "p50": 0.0207,
+     "p90": 0.0755,
+     "holdP50": 0.0013,
+     "placed": 13.01,
+     "named": 4.08,
+     "chars": 37.8
+    },
+    {
+     "arm": "names-long",
+     "repeat": 5,
+     "p50": 0.0186,
+     "p90": 0.0664,
+     "holdP50": 0.0011,
+     "placed": 12.99,
+     "named": 2.49,
+     "chars": 68
+    },
+    {
+     "arm": "names-mixed",
+     "repeat": 5,
+     "p50": 0.0177,
+     "p90": 0.0701,
+     "holdP50": 0.001,
+     "placed": 12.99,
+     "named": 3.21,
+     "chars": 43.6
+    },
+    {
+     "arm": "numbers",
+     "repeat": 6,
+     "p50": 0.0119,
+     "p90": 0.0364,
+     "holdP50": 0.0007,
+     "placed": 13.01,
+     "named": 0,
+     "chars": 24.9
+    },
+    {
+     "arm": "names-short",
+     "repeat": 6,
+     "p50": 0.0194,
+     "p90": 0.0738,
+     "holdP50": 0.0012,
+     "placed": 13.01,
+     "named": 4.08,
+     "chars": 37.8
+    },
+    {
+     "arm": "names-long",
+     "repeat": 6,
+     "p50": 0.0196,
+     "p90": 0.0736,
+     "holdP50": 0.0011,
+     "placed": 12.99,
+     "named": 2.49,
+     "chars": 68
+    },
+    {
+     "arm": "names-mixed",
+     "repeat": 6,
+     "p50": 0.0189,
+     "p90": 0.0725,
+     "holdP50": 0.0011,
+     "placed": 12.99,
+     "named": 3.21,
+     "chars": 43.6
+    }
+   ]
+  },
+  {
+   "tree": "chain",
+   "racers": 100,
+   "label": "chain-n100",
+   "arms": [
+    {
+     "arm": "numbers",
+     "repeat": 0,
+     "p50": 0.0228,
+     "p90": 0.0442,
+     "holdP50": 0.0012,
+     "placed": 16.52,
+     "named": 0,
+     "chars": 32.9
+    },
+    {
+     "arm": "names-short",
+     "repeat": 0,
+     "p50": 0.0356,
+     "p90": 0.0689,
+     "holdP50": 0.0018,
+     "placed": 16.51,
+     "named": 5.46,
+     "chars": 51.4
+    },
+    {
+     "arm": "names-long",
+     "repeat": 0,
+     "p50": 0.0362,
+     "p90": 0.0696,
+     "holdP50": 0.0017,
+     "placed": 16.49,
+     "named": 3.41,
+     "chars": 91.6
+    },
+    {
+     "arm": "names-mixed",
+     "repeat": 0,
+     "p50": 0.039,
+     "p90": 0.08,
+     "holdP50": 0.002,
+     "placed": 16.5,
+     "named": 4.59,
+     "chars": 65.6
+    },
+    {
+     "arm": "numbers",
+     "repeat": 1,
+     "p50": 0.0209,
+     "p90": 0.0412,
+     "holdP50": 0.0012,
+     "placed": 16.52,
+     "named": 0,
+     "chars": 32.9
+    },
+    {
+     "arm": "names-short",
+     "repeat": 1,
+     "p50": 0.0395,
+     "p90": 0.0774,
+     "holdP50": 0.002,
+     "placed": 16.51,
+     "named": 5.46,
+     "chars": 51.4
+    },
+    {
+     "arm": "names-long",
+     "repeat": 1,
+     "p50": 0.0354,
+     "p90": 0.0934,
+     "holdP50": 0.0018,
+     "placed": 16.49,
+     "named": 3.41,
+     "chars": 91.6
+    },
+    {
+     "arm": "names-mixed",
+     "repeat": 1,
+     "p50": 0.0359,
+     "p90": 0.0726,
+     "holdP50": 0.0019,
+     "placed": 16.5,
+     "named": 4.59,
+     "chars": 65.6
+    },
+    {
+     "arm": "numbers",
+     "repeat": 2,
+     "p50": 0.0216,
+     "p90": 0.0426,
+     "holdP50": 0.0012,
+     "placed": 16.52,
+     "named": 0,
+     "chars": 32.9
+    },
+    {
+     "arm": "names-short",
+     "repeat": 2,
+     "p50": 0.0426,
+     "p90": 0.0822,
+     "holdP50": 0.002,
+     "placed": 16.51,
+     "named": 5.46,
+     "chars": 51.4
+    },
+    {
+     "arm": "names-long",
+     "repeat": 2,
+     "p50": 0.0376,
+     "p90": 0.0704,
+     "holdP50": 0.0019,
+     "placed": 16.49,
+     "named": 3.41,
+     "chars": 91.6
+    },
+    {
+     "arm": "names-mixed",
+     "repeat": 2,
+     "p50": 0.0393,
+     "p90": 0.0848,
+     "holdP50": 0.0019,
+     "placed": 16.5,
+     "named": 4.59,
+     "chars": 65.6
+    },
+    {
+     "arm": "numbers",
+     "repeat": 3,
+     "p50": 0.0208,
+     "p90": 0.0396,
+     "holdP50": 0.0011,
+     "placed": 16.52,
+     "named": 0,
+     "chars": 32.9
+    },
+    {
+     "arm": "names-short",
+     "repeat": 3,
+     "p50": 0.0398,
+     "p90": 0.0767,
+     "holdP50": 0.002,
+     "placed": 16.51,
+     "named": 5.46,
+     "chars": 51.4
+    },
+    {
+     "arm": "names-long",
+     "repeat": 3,
+     "p50": 0.0351,
+     "p90": 0.0679,
+     "holdP50": 0.0018,
+     "placed": 16.49,
+     "named": 3.41,
+     "chars": 91.6
+    },
+    {
+     "arm": "names-mixed",
+     "repeat": 3,
+     "p50": 0.0392,
+     "p90": 0.0794,
+     "holdP50": 0.0021,
+     "placed": 16.5,
+     "named": 4.59,
+     "chars": 65.6
+    },
+    {
+     "arm": "numbers",
+     "repeat": 4,
+     "p50": 0.0216,
+     "p90": 0.0413,
+     "holdP50": 0.0012,
+     "placed": 16.52,
+     "named": 0,
+     "chars": 32.9
+    },
+    {
+     "arm": "names-short",
+     "repeat": 4,
+     "p50": 0.0374,
+     "p90": 0.0748,
+     "holdP50": 0.0019,
+     "placed": 16.51,
+     "named": 5.46,
+     "chars": 51.4
+    },
+    {
+     "arm": "names-long",
+     "repeat": 4,
+     "p50": 0.0374,
+     "p90": 0.0749,
+     "holdP50": 0.0018,
+     "placed": 16.49,
+     "named": 3.41,
+     "chars": 91.6
+    },
+    {
+     "arm": "names-mixed",
+     "repeat": 4,
+     "p50": 0.0392,
+     "p90": 0.0881,
+     "holdP50": 0.002,
+     "placed": 16.5,
+     "named": 4.59,
+     "chars": 65.6
+    },
+    {
+     "arm": "numbers",
+     "repeat": 5,
+     "p50": 0.0206,
+     "p90": 0.0403,
+     "holdP50": 0.0011,
+     "placed": 16.52,
+     "named": 0,
+     "chars": 32.9
+    },
+    {
+     "arm": "names-short",
+     "repeat": 5,
+     "p50": 0.0412,
+     "p90": 0.0856,
+     "holdP50": 0.002,
+     "placed": 16.51,
+     "named": 5.46,
+     "chars": 51.4
+    },
+    {
+     "arm": "names-long",
+     "repeat": 5,
+     "p50": 0.0343,
+     "p90": 0.0781,
+     "holdP50": 0.0018,
+     "placed": 16.49,
+     "named": 3.41,
+     "chars": 91.6
+    },
+    {
+     "arm": "names-mixed",
+     "repeat": 5,
+     "p50": 0.0383,
+     "p90": 0.0821,
+     "holdP50": 0.002,
+     "placed": 16.5,
+     "named": 4.59,
+     "chars": 65.6
+    },
+    {
+     "arm": "numbers",
+     "repeat": 6,
+     "p50": 0.0206,
+     "p90": 0.0417,
+     "holdP50": 0.0011,
+     "placed": 16.52,
+     "named": 0,
+     "chars": 32.9
+    },
+    {
+     "arm": "names-short",
+     "repeat": 6,
+     "p50": 0.04,
+     "p90": 0.0754,
+     "holdP50": 0.0019,
+     "placed": 16.51,
+     "named": 5.46,
+     "chars": 51.4
+    },
+    {
+     "arm": "names-long",
+     "repeat": 6,
+     "p50": 0.037,
+     "p90": 0.0684,
+     "holdP50": 0.0018,
+     "placed": 16.49,
+     "named": 3.41,
+     "chars": 91.6
+    },
+    {
+     "arm": "names-mixed",
+     "repeat": 6,
+     "p50": 0.0375,
+     "p90": 0.0759,
+     "holdP50": 0.0019,
+     "placed": 16.5,
+     "named": 4.59,
+     "chars": 65.6
+    }
+   ]
+  },
+  {
+   "tree": "master",
+   "racers": 100,
+   "label": "master-n100",
+   "arms": [
+    {
+     "arm": "master-names",
+     "repeat": 0,
+     "p50": 0.012,
+     "p90": 0.0246,
+     "holdP50": 0.0002,
+     "placed": 16.19,
+     "named": 16.19,
+     "chars": 88.5
+    },
+    {
+     "arm": "master-names",
+     "repeat": 1,
+     "p50": 0.012,
+     "p90": 0.0239,
+     "holdP50": 0.0002,
+     "placed": 16.19,
+     "named": 16.19,
+     "chars": 88.5
+    },
+    {
+     "arm": "master-names",
+     "repeat": 2,
+     "p50": 0.0118,
+     "p90": 0.0258,
+     "holdP50": 0.0002,
+     "placed": 16.19,
+     "named": 16.19,
+     "chars": 88.5
+    },
+    {
+     "arm": "master-names",
+     "repeat": 3,
+     "p50": 0.013,
+     "p90": 0.0251,
+     "holdP50": 0.0002,
+     "placed": 16.19,
+     "named": 16.19,
+     "chars": 88.5
+    },
+    {
+     "arm": "master-names",
+     "repeat": 4,
+     "p50": 0.012,
+     "p90": 0.0245,
+     "holdP50": 0.0002,
+     "placed": 16.19,
+     "named": 16.19,
+     "chars": 88.5
+    },
+    {
+     "arm": "master-names",
+     "repeat": 5,
+     "p50": 0.0122,
+     "p90": 0.0254,
+     "holdP50": 0.0002,
+     "placed": 16.19,
+     "named": 16.19,
+     "chars": 88.5
+    },
+    {
+     "arm": "master-names",
+     "repeat": 6,
+     "p50": 0.0118,
+     "p90": 0.024,
+     "holdP50": 0.0002,
+     "placed": 16.19,
+     "named": 16.19,
+     "chars": 88.5
+    }
+   ]
+  }
+ ]
+}
