@@ -16,7 +16,7 @@
 
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { plan, ROUTES } from "./verify.mjs";
+import { plan, ROUTES, cheapArgs } from "./verify.mjs";
 
 // THE ROUTING TESTS ASSERT HULL MEMBERSHIP, so they stub the inert splitter. The paths they pass
 // are synthetic — byte-identical to the base — which the REAL splitter correctly reports as inert;
@@ -254,4 +254,28 @@ test("…and the SAME file with a real edit still selects it — the pair that m
   const nothingInert = (paths) => ({ hit: paths, inert: [] });
   const p = plan(["client/src/modules/raceStep.js"], "master", nothingInert);
   assert.equal(p.find((t) => t.id === "world-fingerprint").run, true);
+});
+
+// ── VERIFY-COST-3: THE FLAGS ────────────────────────────────────────────────────────────────────
+// Two defects, one shape. `--cheap` was read by this script and never forwarded to the jobs it
+// spawns, so it silently ran the full thing; and an argument the script did not understand was
+// accepted and ignored, which is why nobody noticed for weeks. The second is the general one — three
+// instruments in this project have now been caught accepting an argument they do nothing with.
+
+test("--cheap reaches the fingerprint jobs, which is what it never did", () => {
+  assert.deepEqual(cheapArgs(false, null), [], "off means nothing is forwarded");
+  assert.deepEqual(cheapArgs(true, null), ["--cheap"]);
+  assert.deepEqual(cheapArgs(true, "city-circuit"), ["--cheap", "--cheap-track=city-circuit"]);
+});
+
+test("an unknown flag is REFUSED, not ignored", () => {
+  const argv = ["--cheap", "--chpea"];
+  const known = { value: ["base", "jobs", "cheap-track"], bare: ["dry", "no-format", "cheap"] };
+  // The same predicate the script applies, asserted on the case that actually happened: a typo.
+  const bad = argv.filter((a) => {
+    const eq = a.indexOf("=");
+    const name = eq === -1 ? a.slice(2) : a.slice(2, eq);
+    return eq === -1 ? !known.bare.includes(name) : !known.value.includes(name);
+  });
+  assert.deepEqual(bad, ["--chpea"], "the typo is caught and the real flag is not");
 });

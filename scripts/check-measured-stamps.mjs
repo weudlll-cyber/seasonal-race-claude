@@ -138,7 +138,22 @@ for (const doc of DOCS) {
 
     let newest;
     try {
-      newest = git("log", "-1", "--format=%H", "--", ...paths);
+      // VERIFY-COST-3: TEST FILES ARE EXCLUDED FROM "what changed".
+      //
+      // WHY, and it is narrow on purpose. A measurement script imports the code it measures; it does
+      // not import that code's TESTS. So a `*.test.*` file cannot move a number this guard is
+      // protecting — but it lives inside the same `depends=` directory, and the pre-commit
+      // formatter reformats it. That is not a hypothetical: it turned this guard red twice, in two
+      // consecutive blocks, both times because prettier touched `startCeremony.test.js` in a commit
+      // that changed no measured behaviour at all, and both times the answer was a re-stamp that
+      // proved nothing.
+      //
+      // WHAT THIS NO LONGER COVERS, stated because a guard that does not say so is trusted for more
+      // than it does: a measurement script that reads a test file — as a fixture, a roster or a
+      // golden list — is now invisible to this guard, and its stamp will read fresh after that file
+      // changes. No script does that today. If one ever does, its `depends=` must name the file
+      // directly rather than the directory, and this exclusion must be revisited.
+      newest = git("log", "-1", "--format=%H", "--", ...paths, ":(exclude)**/*.test.*");
     } catch {
       newest = "";
     }
