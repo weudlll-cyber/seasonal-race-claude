@@ -10,6 +10,7 @@ directions.
 
 - [CONFIG-DIFF-1.md](CONFIG-DIFF-1.md) — store what he chose, not what happened to be true.
 - [CONFIG-DIFF-2.md](CONFIG-DIFF-2.md) — the remaining six stores, and one home for the rule.
+- [SMALL-DEBTS.md](SMALL-DEBTS.md) — a dead field that was keeping two imports alive, a constant whose name said the opposite of what it did, and a routing section pointing at a deleted table.
   `loadCameraConfig` was already right (it walks the DEFAULT keys, so a NEW key arrives at its
   default); `saveCameraConfig` wrote the WHOLE resolved object, so one slider move FROZE every key
   and a changed default could never reach him again — which is why his board sat at 3000/80 after
