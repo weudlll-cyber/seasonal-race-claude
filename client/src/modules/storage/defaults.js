@@ -467,7 +467,18 @@ export const DEFAULT_CAMERA_CONFIG = {
   // cost the shot: p95 1.76 and 2.32 track widths, the second being the over-wide picture this block
   // was opened to fix. On searound 5 does buy a little (thin 4% → 2%) for +0.22 rev/s, which is the
   // one honest reason to raise it. See reports/evolution/CAMERA-COMPANY-2.md.
-  minRacersVisible: 3,
+  //
+  // 2026-08-06: raised 3 → 5 on the OWNER'S VERDICT. His eye overrules the measurement above, and
+  // the measurement itself says why he can be right: the 3-beats-5 numbers were taken on a PACK
+  // field, and he observed that on a SPREAD field the guarantee binds and widens a lot at 5 — the
+  // case the sweep never covered. The spread-field sweep is still owed (docs/CAMERA_DIRECTOR.md §8).
+  // This value is read by the camera AND render fingerprint harnesses, so it is a re-mint.
+  //
+  // MIN-RACERS-5, 2026-08-09: shipped. Two mirrors of this number were brought with it, because a
+  // default of 5 answered by a fallback of 3 is the L199 trap rather than a second opinion —
+  // `DEFAULT_MIN_RACERS_VISIBLE` in camera/framingConfig.js (the partial-config fallback) and the
+  // Dev Screen slider, which now reads this object instead of carrying a literal at all.
+  minRacersVisible: 5,
   // Focal-position smoothing: EMA time-constant (seconds) applied to the camera's world-space
   // pan target during follow phase. Reduces velocity-oscillation artefacts (COMEBACK speedBrake
   // cycling) and per-physics-step quantisation jitter (LEADER_ZOOM). 0 = disabled.

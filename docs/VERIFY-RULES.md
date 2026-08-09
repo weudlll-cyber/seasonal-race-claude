@@ -24,6 +24,48 @@ is which guards run LOCALLY on a diff that cannot reach them. And a skip is prin
 run: a verifier that silently does less is indistinguishable from one that is broken, which is the
 failure mode this project has already paid for twice.
 
+**What the diff IS.** Committed-on-this-branch (`<base>...HEAD`) UNION uncommitted UNION untracked.
+Both halves matter: a block measures before it commits, and the branch's earlier commits are part of
+what it is shipping. The base defaults to `master`; `--base=HEAD` narrows it to uncommitted work
+only.
+
+**There are seven guards, and the route table in `scripts/verify.mjs` is the one home for which
+paths select which.** It is printed with every skip, so what the map believes is visible without
+reading it. Two consequences that are easy to be surprised by: a change under `client/` selects the
+client suite even outside `src/` (the configs decide how the suite runs), and a hull file whose edit
+is comments and whitespace only does **not** select the world fingerprint — that is reported as an
+INERT skip, never silently.
+
+**An argument verify does not understand stops the run** before any work happens (VERIFY-COST-3).
+
+## R0a — A run that verified NOTHING must not exit 0
+
+**Rule.** If routing selects no guards, `npm run verify` **refuses**: it names the cause, prints the
+command to use instead, and exits **2**. Exit 2 means refused; exit 1 means a guard failed.
+
+**Why it exists.** Found during the SHIP-THE-LINE merge: on master, `npm run verify` printed
+`PASS 0  FAIL 0  SKIP 7` and exited 0 having checked nothing. The routing diffs `master...HEAD`,
+which on master is empty by definition, so all seven guards were correctly told they had nothing to
+look at. **Seven honest skips summed to one dishonest exit code**, and the full-weight run the ship
+needed had to be asked for by hand as `--base=<the pre-merge commit>`.
+
+**Why a refusal and not a cleverer default base.** On master, "what changed" has at least three
+defensible answers — the last commit, the last merge, everything since the last tag — and they
+verify different things. Guessing would restore the exit code while keeping the real defect: a green
+run that checked something other than what the person meant. The human picks; the machine does not.
+
+**What you get in each case:**
+
+| you are…                          | what happens                                                                                       |
+| --------------------------------- | -------------------------------------------------------------------------------------------------- |
+| on a feature branch               | unchanged — the diff against `master` routes normally                                              |
+| on master, no argument            | **REFUSED**, told HEAD and the base are the same commit, and given `--base=<first parent>`         |
+| on master with `--base=<commit>`  | routes normally against that commit — this is the full-weight post-merge run                       |
+| on a detached HEAD                | routes against `master` as usual; refused only if that diff is genuinely empty                     |
+| with a base that does not resolve | **REFUSED**, and told the ref is the problem rather than the work                                  |
+| with a base sharing no history    | **REFUSED**, and told there is no merge base                                                       |
+| `--dry` with an empty plan        | also refused — `--dry`'s job is to show the plan, and a plan that runs nothing is worth failing on |
+
 ## R0b — Format, then measure, then commit
 
 **Rule.** Formatting happens BEFORE the fingerprints are measured. `npm run verify` enforces the

@@ -123,6 +123,13 @@ jobs:
       - name: Check every camera key read has a default
         run: node scripts/check-config-keys.mjs
 
+      # Its sibling, and the gap it leaves: check-config-keys asks whether a key EXISTS in the
+      # defaults, never whether a MIRROR of it still agrees. minRacersVisible went 3 -> 5 and two
+      # mirrors stayed at 3 — the partial-config fallback and the Dev Screen slider. See
+      # FALLBACK-GUARD-1. Ships green over an explicit exception list of the 42 known disagreements.
+      - name: Check every fallback agrees with the default it mirrors
+        run: node scripts/check-fallback-agreement.mjs
+
       # Fails if a stamped measured number in a document predates a change to the source it measures.
       # FRESHNESS only — it never re-runs the measurement (tracking-lag alone takes ~7 minutes).
       - name: Check measured numbers have not gone stale

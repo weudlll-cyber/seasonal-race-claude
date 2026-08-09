@@ -881,12 +881,17 @@ function CameraAdvancedSection() {
             min={0}
             max={12}
             step={1}
-            value={config.minRacersVisible ?? 3}
+            // MIN-RACERS-5: reads the DEFAULTS rather than carrying a literal. The control the owner
+            // uses to judge this number must not disagree with the number being judged — it said 3
+            // while the default said 5, so an untouched slider showed a value the game was not using.
+            value={config.minRacersVisible ?? DEFAULT_CAMERA_CONFIG.minRacersVisible}
             onChange={(e) => set('minRacersVisible', parseInt(e.target.value, 10))}
             display={
-              (config.minRacersVisible ?? 3) <= 1 ? 'Off' : `${config.minRacersVisible ?? 3}`
+              (config.minRacersVisible ?? DEFAULT_CAMERA_CONFIG.minRacersVisible) <= 1
+                ? 'Off'
+                : `${config.minRacersVisible ?? DEFAULT_CAMERA_CONFIG.minRacersVisible}`
             }
-            tip="The DRAMATURGICAL guarantee — 'do not show emptiness'. At least this many racers stay in frame, counting the subject, so a tight LEADER shot never goes empty: leader alone, no reference, no tension. It is a LIMIT, not a correction — the camera does not zoom in and then back out, it simply does not go that far. 0 or 1 turns it off. Applies to the single-subject shots (LEADER, COMEBACK, OVERVIEW); BATTLE, LEAD_CHANGE and PHOTO_FINISH already guarantee their pair. Default 3: measured to halve the frames where the leader is alone at a LEADER setting of 1, at almost no cost in restlessness."
+            tip="The DRAMATURGICAL guarantee — 'do not show emptiness'. At least this many racers stay in frame, counting the subject, so a tight LEADER shot never goes empty: leader alone, no reference, no tension. It is a LIMIT, not a correction — the camera does not zoom in and then back out, it simply does not go that far. 0 or 1 turns it off. Applies to the single-subject shots (LEADER, COMEBACK, OVERVIEW); BATTLE, LEAD_CHANGE and PHOTO_FINISH already guarantee their pair. Default 5: the owner's verdict, taken on a SPREAD field where the guarantee actually binds. The earlier measurement preferred 3, but it was taken on a PACK field where company is close by and the guarantee rarely does anything — see docs/CAMERA_DIRECTOR.md §8.1. It also decides when the finish overview stops widening for stragglers: that happens once the leader plus this many are home."
           />
         </div>
 

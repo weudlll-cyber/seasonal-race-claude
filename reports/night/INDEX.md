@@ -8,6 +8,53 @@ report here could be orphaned, or an index link could dangle, with nothing notic
 `node scripts/check-index.mjs --dir=reports/night --index=reports/night/INDEX.md` now checks both
 directions.
 
+- [FALLBACK-GUARD-1.md](FALLBACK-GUARD-1.md) — a fallback must agree with the default it mirrors.
+  The gap MIN-RACERS-5 named: `check-config-keys` asks whether a key EXISTS in the defaults, never
+  whether a MIRROR of it still AGREES. New `check-fallback-agreement.mjs`, wired beside it in all
+  three homes (hook, verify, CI). **361 mirrored fallbacks; 52 read the default BY REFERENCE and
+  cannot drift; 42 disagree** — all 42 on an explicit exception list with both values and a reason,
+  so it is green today and red on any new one. **NOTHING WAS ALIGNED**, as instructed:
+  `postStartHoldMs` (7000 vs 0) may be two clocks wearing one key name and wants a RENAME not an
+  alignment, and nine `raceCore.js` entries are the deliberate OFF arm the world-off fingerprint
+  depends on. The worklist is ordered by damage; the sharpest items are `outcomePhaseThreshold`
+  0.65 vs **0.75 in three files** (resolver, the slider the owner would judge with, and the HUD he
+  would read while judging) and `rowBonusPulk`, which runs the WRONG way — the fallback is the
+  ACTIVE value, so a partial config gets MORE behaviour than the shipped world. THE PROOF IS NOT
+  SYNTHETIC: re-applying the real MIN-RACERS-5 change makes the guard name all four sites that were
+  fixed by hand. Two false positives were caught before shipping (an unbound band pattern that
+  invented a finding, and a display fallback in a log template) and both are recorded in the guard.
+  AND THE TEST LESSON: my first suite PASSED with `isExcepted` gutted to always-true — a guard that
+  ships green over 42 exemptions needs an end-to-end fixture run, which `--src=` now provides.
+- [VERIFY-BASE-1.md](VERIFY-BASE-1.md) — a run that verified NOTHING must not exit 0. Found during
+  SHIP-THE-LINE: `npm run verify` on master printed `PASS 0 / FAIL 0 / SKIP 7` and exited 0 having
+  checked nothing, because the routing diffs `master...HEAD` and on master that is empty by
+  definition. **Seven honest skips summed to one dishonest exit code.** Verify now REFUSES when
+  routing selects no guards — names the cause, prints the paste-able command, exits 2 (2 = refused,
+  1 = a guard failed). **Not a cleverer default `--base`**, deliberately: on master "what changed"
+  has three defensible answers that verify different things, so guessing would restore the exit code
+  while keeping the real defect. Four causes get four diagnoses, `--dry` refuses too, and all six
+  reader-facing cases were run rather than reasoned about. THE TEST LESSON: the first end-to-end
+  test asserted "exit 2 if the tree is clean, 0 if dirty" — honest and useless, since the tree is
+  always dirty in development, and two of four sabotages passed green locally. It now builds a
+  throwaway repo and points verify at it via GIT_DIR, so the empty plan is empty BY CONSTRUCTION.
+  `docs/VERIFY-RULES.md` R0 brought in step and R0a added with the case table.
+- [MIN-RACERS-5.md](MIN-RACERS-5.md) — the owner's verdict becomes the shipped value.
+  `minRacersVisible` 3 → 5, plus the two mirrors that still said 3: `DEFAULT_MIN_RACERS_VISIBLE` in
+  `framingConfig.js` (the partial-config fallback — a default of 5 answered by a fallback of 3 is the
+  L199 trap, and NOTHING guards that agreement) and the Dev Screen slider, which now reads the
+  defaults instead of a literal so the control cannot disagree with the number being judged.
+  **THE THING TO READ BEFORE THE EYE TEST: on searound and river-run — the two bench tracks — this
+  changes NOTHING, zero frames.** It bites on 5 of the 10 fingerprint tracks; **city-circuit** is the
+  one to look at (12.9 % of frames differ, widest single frame 1.369×). The five that do not change
+  are already capped by the field ceiling or the geometric guarantee on 22–33 % of frames, so company
+  never gets to speak. Zoom p5/median/p95 do NOT move on any track — the cost is in the tail, because
+  zoom sits on the state profiles' discrete levels. The finish condition
+  (`finishedCount >= 1 + minRacersVisible`) moves from 4 home to 6, measured at **6–10 frames** —
+  the field arrives in a cluster, so it is not where the change is felt. WORLD
+  `dc4647be0f55ebdb` UNCHANGED; camera and render moved and are **NOT minted** — that waits for his
+  eye. The spread-field sweep is still owed and was named, not run. My first measurement was WRONG
+  (post-hoc `_companyCeiling` reads a state `update()` has already advanced) and the correction is in
+  the script's header.
 - [SIDE-FREE-CULL-1.md](SIDE-FREE-CULL-1.md) — the same race, without the all-pairs scan. **WORLD
   fingerprint `dc4647be0f55ebdb`, UNCHANGED** — and camera/render were measured on the parent too and
   are identical, so this block moved nothing at all (they differ from `fingerprints.json` because of

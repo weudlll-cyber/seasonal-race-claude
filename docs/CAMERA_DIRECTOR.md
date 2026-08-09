@@ -381,7 +381,7 @@ a verbatim transcript of one run on one commit, which is a historical record, no
 
 ### The tracking lag, as measured today — and it had drifted
 
-<!-- MEASURED: tracking-lag (median/p95 pp per state) @ 8e3fcce7 2026-08-09 depends=client/src/modules/camera/ -->
+<!-- MEASURED: tracking-lag (median/p95 pp per state) @ 46736d81 2026-08-09 depends=client/src/modules/camera/ -->
 
 **These figures carry a stamp, and fails if the camera
 changes after it.** They are hand-copied on purpose: the measurement takes about seven minutes, so
@@ -396,18 +396,27 @@ and it says so itself. It also covers nothing else on this page; see its header 
 | ------------- | ------ | --------- | ------ |
 | BATTLE_ZOOM   | 9655   | 5.72      | 9.99   |
 | COMEBACK_ZOOM | 2103   | 8.34      | 15.57  |
-| LEADER_ZOOM   | 17522  | 3.91      | 8.66   |
+| LEADER_ZOOM   | 17522  | 3.77      | 8.62   |
 | LEAD_CHANGE   | 7069   | 4.45      | 7.17   |
 | OVERVIEW      | 4303   | 2.60      | 16.00  |
 | PHOTO_FINISH  | 1865   | 6.37      | 20.73  |
 
-OVERVIEW median 2.60 pp against every other state pooled 4.78 pp (ratio 0.54×).
+OVERVIEW median 2.60 pp against every other state pooled 4.74 pp (ratio 0.55×).
 
 **Re-measured for CEREMONY-HANDOVER-1, and two of these moved for a reason worth naming.** OVERVIEW's
 frame count fell from 5199 to 3603 and LEADER's median lag from 4.46 to 3.92 pp. Neither is a
 tracking change: the start ceremony and the field guarantee that now carries past the gun changed
 what the camera is DOING in those early seconds, so the same 60 s of race divides differently between
 the states. The lag itself is, if anything, slightly better.
+
+**Re-measured for MIN-RACERS-5, and this time it is NOT a ceremony-length change.** Raising
+`minRacersVisible` 3 → 5 widens the shot on the frames where the company guarantee binds, and the
+camera tracks a wider shot slightly more closely in percentage-of-frame terms: LEADER's median
+3.91 → 3.77 pp and p95 8.66 → 8.62, pooled 4.78 → 4.74 (ratio 0.54× → 0.55×). Every frame count is
+unchanged, which is the tell — the states divide the race exactly as before, so nothing about WHEN
+the camera is doing what moved; only how far behind it sits while doing it. **The stamp guard caught
+this**, and it was right to: the change is small, real, and would otherwise have sat here as a stale
+number nobody re-checked.
 
 **Re-measured for CEREMONY-TRUTH-1, and it moved again the same way.** Giving the director the
 digits beat lengthened the planned ceremony by 3 s, so the same 60 s of race divides differently once
@@ -532,7 +541,7 @@ with its date and — where one exists — the measurement that framed it.
 | what he judged                                                                                                                 | when       | the evidence, and the measurement behind it                                                                                                                                                                                                                                                                                              |
 | ------------------------------------------------------------------------------------------------------------------------------ | ---------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | **The road no longer bounds the leader shot** — LEADER/OVERVIEW/COMEBACK limited by his setting and the COMPANY guarantee only | 2026-08-05 | mountainstreet, seed 5601, toggle ON, _"nein das passt"_ — and decisive because he saw **both regimes**: a torn-apart field where the guarantee opens the shot, and a tight pack where the camera holds his 1.0. His approval also covers the CAMERA-ANCHOR-TRUTH-1 work (§4a, §4c, stages 1a/1b), which had had no eye test until then. |
-| **`minRacersVisible`: he judged 5. THE CODE SHIPS 3.**                                                                          | 2026-08-05 | **These are two different numbers and this row used to read as if they agreed.** What he judged: 5, on his observation that corrected the measurement — I reported the company guarantee binding ~0% at n=65 and recommended raising it, which held for the PACK case only; on a spread field it binds and widens a lot at 5. What `defaults.js` contains today: **`minRacersVisible: 3`**. The change to 5 was built and measured on its own branch (`feat/min-racers-visible-5`) and has never been merged, so the company guarantee — which reads this key — is running on 3 everywhere. **Which number is right is HIS decision and no code was changed here to resolve it.** The spread-field sweep is still owed either way. |
+| **`minRacersVisible`: he judged 5, and the code now ships 5. RESOLVED.**                                                        | judged 2026-08-05, resolved 2026-08-09 | **The disagreement was real and is recorded here rather than tidied away**: he judged 5 on 2026-08-05 while `defaults.js` kept shipping 3, so the company guarantee ran on 3 everywhere for four days and this row used to read as if the two numbers agreed. **Resolved by MIN-RACERS-5 in HIS favour**: his eye overrules the measurement, and the measurement says why he can be right — I reported the guarantee binding ~0% at n=65 and recommended raising it, which held for the PACK case only; on a SPREAD field it binds and widens a lot at 5, and the sweep never covered that case. Two mirrors of the number moved with it (`DEFAULT_MIN_RACERS_VISIBLE` in `framingConfig.js`, and the Dev Screen slider, which now reads the defaults instead of a literal). **The spread-field sweep is still owed** — it would quantify what he saw, and it is the one measurement that could still argue with him. Note the second consequence he should watch for: this key also decides when the finish overview stops widening for stragglers (`finishedCount >= 1 + minRacersVisible`), which now happens at 6 home instead of 4. |
 | **The finish is ONE motion** — pan and zoom on one ease, no jump at the crossing                                               | 2026-08-05 | The measured defect was a **2708 px pan-target step in one frame** (dirt-oval, 144× the median of the frames before it); after, peak per-frame motion 2708 → 72 px with total travel unchanged.                                                                                                                                          |
 | **The finish pause, the travel and the resting point**                                                                         | 2026-08-05 | His photo-finish settings, watching the moment the pair shot ends. The pause now runs after a photo finish too, starting when the two contenders the shot was FOLLOWING are home — measured 6–57 frames later than `finishedCount >= 2`, and on 5 of 9 tracks the second racer across is neither of the pair.                            |
 | **The company guarantee retires once the company is home**                                                                     | 2026-08-05 | City Circuit, last thirty seconds, _"schaut besser aus jetzt"_. Baseline widened for 54 frames (4.5489 → 2.9752) after the shot had already come to rest; after, 0. Cost he accepted: the last back-marker sits 11% inside the frame instead of 23%.                                                                                     |
