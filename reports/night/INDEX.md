@@ -8,6 +8,14 @@ report here could be orphaned, or an index link could dangle, with nothing notic
 `node scripts/check-index.mjs --dir=reports/night --index=reports/night/INDEX.md` now checks both
 directions.
 
+- [PAIR-DEDUP-1.md](PAIR-DEDUP-1.md) — the pair loop's six geometry values, computed once instead of
+  twice. The two sites were expression-for-expression identical (same fallback, same addition order,
+  same `Math.max` order — all three checked, not assumed), so WORLD `dc4647be0f55ebdb` and all ten
+  per-track hashes are unchanged. **The ≈ 7 % PAIR-REACH-ANALYSIS priced was NOT delivered, and the
+  block says why:** the pair block's combined profile share moves 73.02 % → 72.36 %, inside master's
+  own 1.3 pp spread — V8 was already eliminating the duplicate, because both copies are pure
+  arithmetic on fields nothing writes between them. Also the first measurement of the A/B/A bench's
+  own noise floor on this machine: 5–30 %, i.e. it cannot resolve a single-digit percentage at all.
 - [CONFIG-DIFF-1.md](CONFIG-DIFF-1.md) — store what he chose, not what happened to be true.
 - [CONFIG-DIFF-2.md](CONFIG-DIFF-2.md) — the remaining six stores, and one home for the rule.
   `loadCameraConfig` was already right (it walks the DEFAULT keys, so a NEW key arrives at its

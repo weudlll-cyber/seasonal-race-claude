@@ -1,0 +1,133 @@
+{
+ "label": "prof-master-n30",
+ "tree": "master",
+ "racers": 30,
+ "totalUs": 1155873,
+ "top": [
+  {
+   "fn": "applyRacerBehavior  client/src/modules/raceBehavior.js:531",
+   "us": 500304,
+   "share": 43.28
+  },
+  {
+   "fn": "stepRacePhysics  client/src/modules/raceCore.js:421",
+   "us": 111887,
+   "share": 9.68
+  },
+  {
+   "fn": "(garbage collector)  :0",
+   "us": 90553,
+   "share": 7.83
+  },
+  {
+   "fn": "isSideFree  client/src/modules/raceBehavior.js:397",
+   "us": 47533,
+   "share": 4.11
+  },
+  {
+   "fn": "pairContact  client/src/modules/raceBehavior.js:270",
+   "us": 37906,
+   "share": 3.28
+  },
+  {
+   "fn": "update  client/src/modules/racePlanner.js:518",
+   "us": 36994,
+   "share": 3.2
+  },
+  {
+   "fn": "shortestArcDeltaT  client/src/utils/mathUtils.js:37",
+   "us": 34325,
+   "share": 2.97
+  },
+  {
+   "fn": "getPosition  client/src/modules/track-editor/EditorShape.js:95",
+   "us": 23585,
+   "share": 2.04
+  },
+  {
+   "fn": "stablePairBit  client/src/modules/raceBehavior.js:210",
+   "us": 15848,
+   "share": 1.37
+  },
+  {
+   "fn": "applyPulkLeadRotation  client/src/modules/raceGovernor.js:170",
+   "us": 14781,
+   "share": 1.28
+  },
+  {
+   "fn": "(program)  :0",
+   "us": 13440,
+   "share": 1.16
+  },
+  {
+   "fn": "overrideSoftTarget  client/src/modules/raceBehavior.js:908",
+   "us": 13198,
+   "share": 1.14
+  },
+  {
+   "fn": "buildTIndex  client/src/modules/raceBehavior.js:322",
+   "us": 13146,
+   "share": 1.14
+  },
+  {
+   "fn": "assignSoftTarget  client/src/modules/raceBehavior.js:820",
+   "us": 9656,
+   "share": 0.84
+  },
+  {
+   "fn": "writeFileUtf8  :0",
+   "us": 9573,
+   "share": 0.83
+  },
+  {
+   "fn": "compileSourceTextModule  node:internal/modules/esm/utils:316",
+   "us": 9563,
+   "share": 0.83
+  },
+  {
+   "fn": "(anonymous)  scripts/phys-bench.mjs:1",
+   "us": 9405,
+   "share": 0.81
+  },
+  {
+   "fn": "getFrameSizePx  client/src/modules/raceBehavior.js:244",
+   "us": 6568,
+   "share": 0.57
+  },
+  {
+   "fn": "readFileUtf8  :0",
+   "us": 6533,
+   "share": 0.57
+  },
+  {
+   "fn": "realpathSync  node:fs:2699",
+   "us": 6145,
+   "share": 0.53
+  },
+  {
+   "fn": "open  :0",
+   "us": 6035,
+   "share": 0.52
+  },
+  {
+   "fn": "buildArcTable  client/src/modules/track-editor/catmullRom.js:84",
+   "us": 5161,
+   "share": 0.45
+  },
+  {
+   "fn": "ModuleWrap  :0",
+   "us": 4782,
+   "share": 0.41
+  },
+  {
+   "fn": "internalModuleStat  :0",
+   "us": 4621,
+   "share": 0.4
+  },
+  {
+   "fn": "createRaceFromIdentity  client/src/modules/raceCore.js:66",
+   "us": 4577,
+   "share": 0.4
+  }
+ ]
+}

@@ -1,0 +1,133 @@
+{
+ "label": "prof-chain-n100",
+ "tree": "chain",
+ "racers": 100,
+ "totalUs": 7890653,
+ "top": [
+  {
+   "fn": "applyRacerBehavior  client/src/modules/raceBehavior.js:531",
+   "us": 5317788,
+   "share": 67.39
+  },
+  {
+   "fn": "isSideFree  client/src/modules/raceBehavior.js:397",
+   "us": 545119,
+   "share": 6.91
+  },
+  {
+   "fn": "pairContact  client/src/modules/raceBehavior.js:270",
+   "us": 350253,
+   "share": 4.44
+  },
+  {
+   "fn": "(garbage collector)  :0",
+   "us": 271352,
+   "share": 3.44
+  },
+  {
+   "fn": "stepRacePhysics  client/src/modules/raceCore.js:421",
+   "us": 214964,
+   "share": 2.72
+  },
+  {
+   "fn": "update  client/src/modules/racePlanner.js:518",
+   "us": 130243,
+   "share": 1.65
+  },
+  {
+   "fn": "stablePairBit  client/src/modules/raceBehavior.js:210",
+   "us": 112026,
+   "share": 1.42
+  },
+  {
+   "fn": "normalizeAngle  client/src/modules/raceBehavior.js:206",
+   "us": 104504,
+   "share": 1.32
+  },
+  {
+   "fn": "applyPulkLeadRotation  client/src/modules/raceGovernor.js:170",
+   "us": 95372,
+   "share": 1.21
+  },
+  {
+   "fn": "assignSoftTarget  client/src/modules/raceBehavior.js:825",
+   "us": 78035,
+   "share": 0.99
+  },
+  {
+   "fn": "buildTIndex  client/src/modules/raceBehavior.js:322",
+   "us": 73996,
+   "share": 0.94
+  },
+  {
+   "fn": "getPosition  client/src/modules/track-editor/EditorShape.js:95",
+   "us": 72275,
+   "share": 0.92
+  },
+  {
+   "fn": "smoothLaneTarget  client/src/modules/raceBehavior.js:158",
+   "us": 47790,
+   "share": 0.61
+  },
+  {
+   "fn": "overrideSoftTarget  client/src/modules/raceBehavior.js:913",
+   "us": 36769,
+   "share": 0.47
+  },
+  {
+   "fn": "pairForwardSpeeds  client/src/modules/raceBehavior.js:482",
+   "us": 33832,
+   "share": 0.43
+  },
+  {
+   "fn": "shortestArcDeltaT  client/src/utils/mathUtils.js:37",
+   "us": 32867,
+   "share": 0.42
+  },
+  {
+   "fn": "(anonymous)  scripts/phys-bench.mjs:1",
+   "us": 29466,
+   "share": 0.37
+  },
+  {
+   "fn": "(anonymous)  client/src/modules/racePlanner.js:622",
+   "us": 25424,
+   "share": 0.32
+  },
+  {
+   "fn": "(anonymous)  client/src/modules/raceBehavior.js:339",
+   "us": 22681,
+   "share": 0.29
+  },
+  {
+   "fn": "computePositions  client/src/modules/raceCore.js:330",
+   "us": 21165,
+   "share": 0.27
+  },
+  {
+   "fn": "(program)  :0",
+   "us": 20560,
+   "share": 0.26
+  },
+  {
+   "fn": "compileSourceTextModule  node:internal/modules/esm/utils:316",
+   "us": 14685,
+   "share": 0.19
+  },
+  {
+   "fn": "easeInOutCubic  client/src/utils/mathUtils.js:12",
+   "us": 13315,
+   "share": 0.17
+  },
+  {
+   "fn": "(anonymous)  client/src/modules/raceGovernor.js:214",
+   "us": 12885,
+   "share": 0.16
+  },
+  {
+   "fn": "readFileUtf8  :0",
+   "us": 10904,
+   "share": 0.14
+  }
+ ]
+}

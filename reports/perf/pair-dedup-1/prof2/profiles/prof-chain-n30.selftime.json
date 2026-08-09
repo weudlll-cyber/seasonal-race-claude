@@ -1,0 +1,133 @@
+{
+ "label": "prof-chain-n30",
+ "tree": "chain",
+ "racers": 30,
+ "totalUs": 933668,
+ "top": [
+  {
+   "fn": "applyRacerBehavior  client/src/modules/raceBehavior.js:531",
+   "us": 373858,
+   "share": 40.04
+  },
+  {
+   "fn": "(garbage collector)  :0",
+   "us": 86675,
+   "share": 9.28
+  },
+  {
+   "fn": "stepRacePhysics  client/src/modules/raceCore.js:421",
+   "us": 62669,
+   "share": 6.71
+  },
+  {
+   "fn": "isSideFree  client/src/modules/raceBehavior.js:397",
+   "us": 38979,
+   "share": 4.17
+  },
+  {
+   "fn": "update  client/src/modules/racePlanner.js:518",
+   "us": 37604,
+   "share": 4.03
+  },
+  {
+   "fn": "applyPulkLeadRotation  client/src/modules/raceGovernor.js:170",
+   "us": 33130,
+   "share": 3.55
+  },
+  {
+   "fn": "pairContact  client/src/modules/raceBehavior.js:270",
+   "us": 28523,
+   "share": 3.05
+  },
+  {
+   "fn": "compileSourceTextModule  node:internal/modules/esm/utils:316",
+   "us": 23328,
+   "share": 2.5
+  },
+  {
+   "fn": "(program)  :0",
+   "us": 14466,
+   "share": 1.55
+  },
+  {
+   "fn": "shortestArcDeltaT  client/src/utils/mathUtils.js:37",
+   "us": 14459,
+   "share": 1.55
+  },
+  {
+   "fn": "buildTIndex  client/src/modules/raceBehavior.js:322",
+   "us": 13495,
+   "share": 1.45
+  },
+  {
+   "fn": "stablePairBit  client/src/modules/raceBehavior.js:210",
+   "us": 11210,
+   "share": 1.2
+  },
+  {
+   "fn": "(anonymous)  scripts/phys-bench.mjs:1",
+   "us": 10685,
+   "share": 1.14
+  },
+  {
+   "fn": "readFileUtf8  :0",
+   "us": 9670,
+   "share": 1.04
+  },
+  {
+   "fn": "getPosition  client/src/modules/track-editor/EditorShape.js:95",
+   "us": 9456,
+   "share": 1.01
+  },
+  {
+   "fn": "normalizeAngle  client/src/modules/raceBehavior.js:206",
+   "us": 9424,
+   "share": 1.01
+  },
+  {
+   "fn": "assignSoftTarget  client/src/modules/raceBehavior.js:825",
+   "us": 8144,
+   "share": 0.87
+  },
+  {
+   "fn": "buildArcTable  client/src/modules/track-editor/catmullRom.js:84",
+   "us": 6553,
+   "share": 0.7
+  },
+  {
+   "fn": "pairForwardSpeeds  client/src/modules/raceBehavior.js:482",
+   "us": 6391,
+   "share": 0.68
+  },
+  {
+   "fn": "computePositions  client/src/modules/raceCore.js:330",
+   "us": 6365,
+   "share": 0.68
+  },
+  {
+   "fn": "(anonymous)  client/src/modules/raceBehavior.js:339",
+   "us": 6134,
+   "share": 0.66
+  },
+  {
+   "fn": "overrideSoftTarget  client/src/modules/raceBehavior.js:913",
+   "us": 5810,
+   "share": 0.62
+  },
+  {
+   "fn": "resolveSync  node:internal/modules/esm/loader:749",
+   "us": 4923,
+   "share": 0.53
+  },
+  {
+   "fn": "compileForInternalLoader  node:internal/bootstrap/realm:383",
+   "us": 4827,
+   "share": 0.52
+  },
+  {
+   "fn": "internalModuleStat  :0",
+   "us": 4765,
+   "share": 0.51
+  }
+ ]
+}
