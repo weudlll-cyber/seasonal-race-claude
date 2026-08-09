@@ -15,6 +15,7 @@ import { easeInOutCubic } from '../utils/mathUtils.js';
 import { sampleHeroCurve } from './heroChoreography.js';
 import { generateHeroCurves, GENERATOR_CONFIG } from './heroCurveGenerator.js';
 import { arcT } from './raceLengths.js'; // shared lap-aware arc distance (gap-cap re-roll bias)
+// MIRRORS-BY-REFERENCE (LESSONS L207): fallbacks in this file READ the default instead of copying it.
 import { DEFAULT_RACE_DYNAMICS_CONFIG } from './storage/defaults.js'; // single source for phase-boundary defaults (no raw drift)
 
 // ── Mulberry32 PRNG (same algorithm as scripts/sim-fairness.mjs) ──────────────
@@ -101,7 +102,6 @@ const DEFAULT_CONTROLLER_PARAMS = {
 
 const DEFAULT_PULK_TARGET_SPREAD = 0.005;
 const DEFAULT_STOCHASTIC_NOISE = 0.0008;
-const DEFAULT_PULK_BIAS_GAIN = 2.0;
 
 // Base deltas for the area bonus. multiplier=1.0 reproduces the original values.
 // bonus = 1.0 + (BASE_DELTA × multiplier). Range 0.5–3.0 is sane for the multiplier.
@@ -259,14 +259,16 @@ export function createRacePlan(racers, finishT, targetDurationMs, config = {}, s
     _targetDurationMs: targetDurationMs,
     _pulkTargetSpread: config.pulkTargetSpread ?? DEFAULT_PULK_TARGET_SPREAD,
     _stochasticNoise: config.stochasticNoise ?? DEFAULT_STOCHASTIC_NOISE,
-    _pulkBiasGain: config.pulkBiasGain ?? DEFAULT_PULK_BIAS_GAIN,
+    _pulkBiasGain: config.pulkBiasGain ?? DEFAULT_RACE_DYNAMICS_CONFIG.pulkBiasGain,
     // ── COMBO15 shipped fair-arrival mechanism (default ON). Two cooperating parts, both flag-gated so OFF
     // reproduces the pre-combo15 world byte-identically. CHAOS STEER: a CONTINUOUS gentle pull during the
     // CHAOS phase ONLY toward the DRAWN BAND (not a draw bias, not a hard wall). Reachable — the pre-outcome
     // pin early-return is skipped while active. Out of band → eased toward it (two-sided clamp
     // [minMult,maxMult], _setTarget slews it → Sanftheits); in band → 1.0, untouched. Pull TARGET ends with
     // chaos; the slew-eased mult then decays into early PULK (no snap). Flag OFF → null → never runs. ──
-    _chaosSteer: config.chaosSteer ? { gain: config.chaosSteerGain ?? 0.06 } : null,
+    _chaosSteer: config.chaosSteer
+      ? { gain: config.chaosSteerGain ?? DEFAULT_RACE_DYNAMICS_CONFIG.chaosSteerGain }
+      : null,
     // BAND-BIAS DRAW: from R, re-aim the re-roll DRAW (not the position) toward the drawn band — the dice are
     // aimed within the honest [spreadMin,spreadMax] range, so nothing is fought and in-band racers keep free
     // dice. This is the fairness win (arrival 85–90%); the Cliff Law's correct sign (LESSONS L184). OFF → null.
@@ -298,8 +300,9 @@ export function createRacePlan(racers, finishT, targetDurationMs, config = {}, s
     // mutable result (filled in-place by update()). _choreoPackBandStrictness loosens the PACK so heroes
     // can weave through (heroes themselves always track their curve exactly).
     _choreoEnabled: true,
-    _choreoIntensity: config.choreoIntensity ?? 0.6,
-    _choreoPackBandStrictness: config.choreoPackBandStrictness ?? 0.5,
+    _choreoIntensity: config.choreoIntensity ?? DEFAULT_RACE_DYNAMICS_CONFIG.choreoIntensity,
+    _choreoPackBandStrictness:
+      config.choreoPackBandStrictness ?? DEFAULT_RACE_DYNAMICS_CONFIG.choreoPackBandStrictness,
     // Stage 1 spoiler switch (default OFF): suppress the B1-target pool's CHAOS areaBonus so the future
     // top-5 are not pulled forward before the race opens. A bonus switch, NOT a depth tool (depth is
     // authored via the establish-act fall-back). Read in update()'s choreo areaBonus block.
@@ -307,13 +310,14 @@ export function createRacePlan(racers, finishT, targetDurationMs, config = {}, s
     // Step 4: front-contest release + staggered per-band resolve (DevScreen-adjustable). B1 heroes
     // are held to _choreoReleaseProgress then RELEASED to natural speed; _choreoBandResolve[band] is the
     // resolve checkpoint per band (index 0=B1 uses the release). Fed to the generator + the release.
-    _choreoReleaseProgress: config.choreoReleaseProgress ?? 0.97,
+    _choreoReleaseProgress:
+      config.choreoReleaseProgress ?? DEFAULT_RACE_DYNAMICS_CONFIG.choreoReleaseProgress,
     _choreoBandResolve: [
-      config.choreoReleaseProgress ?? 0.97,
-      config.choreoResolveB2 ?? 0.8,
-      config.choreoResolveB3 ?? 0.7,
-      config.choreoResolveB4 ?? 0.65,
-      config.choreoResolveB5 ?? 0.6,
+      config.choreoReleaseProgress ?? DEFAULT_RACE_DYNAMICS_CONFIG.choreoReleaseProgress,
+      config.choreoResolveB2 ?? DEFAULT_RACE_DYNAMICS_CONFIG.choreoResolveB2,
+      config.choreoResolveB3 ?? DEFAULT_RACE_DYNAMICS_CONFIG.choreoResolveB3,
+      config.choreoResolveB4 ?? DEFAULT_RACE_DYNAMICS_CONFIG.choreoResolveB4,
+      config.choreoResolveB5 ?? DEFAULT_RACE_DYNAMICS_CONFIG.choreoResolveB5,
     ],
     _heroCurves: null, // Map index → anchored curve, once generated
     _choreoGenerated: false,
@@ -323,15 +327,17 @@ export function createRacePlan(racers, finishT, targetDurationMs, config = {}, s
     // edge before the servo re-engages at strictness 1 and steers it back; it releases again only
     // once it is fully inside (bandError == 0). The release↔re-steer gap IS the anti-flicker guard —
     // there is NO time cooldown. Read by the B2-attacker free phase below (the only release path).
-    _packReSteerThreshold: config.packReSteerThreshold ?? 1.0,
+    _packReSteerThreshold:
+      config.packReSteerThreshold ?? DEFAULT_RACE_DYNAMICS_CONFIG.packReSteerThreshold,
     // ── B2-attacker "Attack & Fall" (SHIPPED ON at b2AttackHeroes 3; 0 casts none → pre-feature game) ──
     // Threaded into the hero-curve generator (which casts the attackers) AND read by the servo below, which
     // runs the Track-to-FinalRank-then-Free logic for role 'attacker-b2'. See heroCurveGenerator.js.
     _b2AttackHeroes: config.b2AttackHeroes ?? 0,
-    _b2AttackPeakRank: config.b2AttackPeakRank ?? 5,
+    _b2AttackPeakRank: config.b2AttackPeakRank ?? DEFAULT_RACE_DYNAMICS_CONFIG.b2AttackPeakRank,
     _b2AttackFinalRank: config.b2AttackFinalRank ?? 10,
     _b2AttackProgress: config.b2AttackProgress ?? { start: 0.4, end: 0.7 },
-    _b2AttackResolveProgress: config.b2AttackResolveProgress ?? 0.85,
+    _b2AttackResolveProgress:
+      config.b2AttackResolveProgress ?? DEFAULT_RACE_DYNAMICS_CONFIG.b2AttackResolveProgress,
     // Release model: false = fixed-final (steer to finalRank, with margin); true = band-arrival (free on
     // band re-entry = the edge, no margin). Default false → current shipped behaviour.
     _b2AttackBandArrival: !!config.b2AttackBandArrival,
@@ -349,7 +355,7 @@ export function createRacePlan(racers, finishT, targetDurationMs, config = {}, s
     // (gap > G to the racer ahead) is shifted FASTER. All ≤ G → bit-exact no-op. The BROWSER never sets
     // these → threshold null → computeGapBiasedTarget() early-returns rawSample → byte-identical.
     _gapRerollThresholdLengths: config.gapRerollThresholdLengths ?? null, // G (lengths); null = feature OFF
-    _gapRerollMode: config.gapRerollMode ?? 'symmetric', // 'symmetric' | 'down'
+    _gapRerollMode: config.gapRerollMode ?? DEFAULT_RACE_DYNAMICS_CONFIG.gapRerollMode, // 'symmetric' | 'down'
     _gapRerollStrength: config.gapRerollStrength ?? 0.5, // fraction-to-edge = min(1, strength·(gap−G))
     // Window-derivation input (config-relative, zero hardcoded). Lower bound = corrStartFrac (the LIVE
     // choreoOutcomeStart). Upper bound = (harness lastRollDeadlineMs, realized-duration basis) −

@@ -42,6 +42,7 @@ import { computeRowEnvMult, computeRowEnvSmoothed, advanceRacerT } from './raceS
 import { applyPulkLeadRotation, computeDirectorCeiling } from './raceGovernor.js';
 import { meanDrawnBodyLen, lenScaleFrom } from './raceLengths.js';
 import { createRacePlan, createTrajectoryController, makeRaceRng } from './racePlanner.js';
+// MIRRORS-BY-REFERENCE (LESSONS L207): fallbacks in this file READ the default instead of copying it.
 import { DEFAULT_RACE_DYNAMICS_CONFIG } from './raceDynamicsConfig.js';
 import { currentLap } from './camera/lapUtils.js';
 import { easeInOutCubic } from '../utils/mathUtils.js';
@@ -208,7 +209,10 @@ export function createRaceFromIdentity(p) {
 
   // ── Race Plan controller ── gated on the ONE canonical clock — the same scalar the sim gates on.
   const racePlanEnabled =
-    !!racePlanEnabledFlag && realizedDurationSec >= (dynamicsConfig.racePlanMinDurationSec ?? 30);
+    !!racePlanEnabledFlag &&
+    realizedDurationSec >=
+      (dynamicsConfig.racePlanMinDurationSec ??
+        DEFAULT_RACE_DYNAMICS_CONFIG.racePlanMinDurationSec);
   let racePlanController = null;
   let rpPlanInfo = null;
   if (racePlanEnabled) {
@@ -221,49 +225,75 @@ export function createRaceFromIdentity(p) {
       finishT,
       realizedDurationSec * 1000,
       {
-        bonusStrengthMultiplier: dynamicsConfig.racePlanBonusStrengthMultiplier ?? 2.0,
+        bonusStrengthMultiplier:
+          dynamicsConfig.racePlanBonusStrengthMultiplier ??
+          DEFAULT_RACE_DYNAMICS_CONFIG.racePlanBonusStrengthMultiplier,
         phaseSplitBonusEnabled: dynamicsConfig.phaseSplitBonusEnabled ?? false,
-        areaBonusEarly: dynamicsConfig.areaBonusEarly ?? 1.0,
-        areaBonusPulk: dynamicsConfig.areaBonusPulk ?? 0,
-        areaBonusPost: dynamicsConfig.areaBonusPost ?? 1.0,
+        areaBonusEarly:
+          dynamicsConfig.areaBonusEarly ?? DEFAULT_RACE_DYNAMICS_CONFIG.areaBonusEarly,
+        areaBonusPulk: dynamicsConfig.areaBonusPulk ?? DEFAULT_RACE_DYNAMICS_CONFIG.areaBonusPulk,
+        areaBonusPost: dynamicsConfig.areaBonusPost ?? DEFAULT_RACE_DYNAMICS_CONFIG.areaBonusPost,
         pulkStart:
           dynamicsConfig.racePlanPulkStart ?? DEFAULT_RACE_DYNAMICS_CONFIG.racePlanPulkStart,
-        bonusTransitionEnd: dynamicsConfig.racePlanBonusTransitionEnd ?? 0.75,
-        bonusFadeDuration: dynamicsConfig.racePlanBonusFadeDuration ?? 1500,
-        corridorStart: dynamicsConfig.racePlanCorridorStart ?? 0.55,
-        corridorEnd: dynamicsConfig.racePlanCorridorEnd ?? 1.0,
-        pulkBiasGain: dynamicsConfig.pulkBiasGain ?? 2.0,
-        choreoIntensity: dynamicsConfig.choreoIntensity ?? 0.6,
-        choreoPackBandStrictness: dynamicsConfig.choreoPackBandStrictness ?? 0.5,
-        choreoReleaseProgress: dynamicsConfig.choreoReleaseProgress ?? 0.97,
-        choreoResolveB2: dynamicsConfig.choreoResolveB2 ?? 0.8,
-        choreoResolveB3: dynamicsConfig.choreoResolveB3 ?? 0.7,
-        choreoResolveB4: dynamicsConfig.choreoResolveB4 ?? 0.65,
-        choreoResolveB5: dynamicsConfig.choreoResolveB5 ?? 0.6,
+        bonusTransitionEnd:
+          dynamicsConfig.racePlanBonusTransitionEnd ??
+          DEFAULT_RACE_DYNAMICS_CONFIG.racePlanBonusTransitionEnd,
+        bonusFadeDuration:
+          dynamicsConfig.racePlanBonusFadeDuration ??
+          DEFAULT_RACE_DYNAMICS_CONFIG.racePlanBonusFadeDuration,
+        corridorStart:
+          dynamicsConfig.racePlanCorridorStart ??
+          DEFAULT_RACE_DYNAMICS_CONFIG.racePlanCorridorStart,
+        corridorEnd:
+          dynamicsConfig.racePlanCorridorEnd ?? DEFAULT_RACE_DYNAMICS_CONFIG.racePlanCorridorEnd,
+        pulkBiasGain: dynamicsConfig.pulkBiasGain ?? DEFAULT_RACE_DYNAMICS_CONFIG.pulkBiasGain,
+        choreoIntensity:
+          dynamicsConfig.choreoIntensity ?? DEFAULT_RACE_DYNAMICS_CONFIG.choreoIntensity,
+        choreoPackBandStrictness:
+          dynamicsConfig.choreoPackBandStrictness ??
+          DEFAULT_RACE_DYNAMICS_CONFIG.choreoPackBandStrictness,
+        choreoReleaseProgress:
+          dynamicsConfig.choreoReleaseProgress ??
+          DEFAULT_RACE_DYNAMICS_CONFIG.choreoReleaseProgress,
+        choreoResolveB2:
+          dynamicsConfig.choreoResolveB2 ?? DEFAULT_RACE_DYNAMICS_CONFIG.choreoResolveB2,
+        choreoResolveB3:
+          dynamicsConfig.choreoResolveB3 ?? DEFAULT_RACE_DYNAMICS_CONFIG.choreoResolveB3,
+        choreoResolveB4:
+          dynamicsConfig.choreoResolveB4 ?? DEFAULT_RACE_DYNAMICS_CONFIG.choreoResolveB4,
+        choreoResolveB5:
+          dynamicsConfig.choreoResolveB5 ?? DEFAULT_RACE_DYNAMICS_CONFIG.choreoResolveB5,
         choreoOutcomeStart:
           dynamicsConfig.choreoOutcomeStart ?? DEFAULT_RACE_DYNAMICS_CONFIG.choreoOutcomeStart,
-        packReSteerThreshold: dynamicsConfig.packReSteerThreshold ?? 1.0,
+        packReSteerThreshold:
+          dynamicsConfig.packReSteerThreshold ?? DEFAULT_RACE_DYNAMICS_CONFIG.packReSteerThreshold,
         b2AttackHeroes:
           dynamicsConfig.b2AttackHeroes ?? DEFAULT_RACE_DYNAMICS_CONFIG.b2AttackHeroes,
-        b2AttackPeakRank: dynamicsConfig.b2AttackPeakRank ?? 5,
+        b2AttackPeakRank:
+          dynamicsConfig.b2AttackPeakRank ?? DEFAULT_RACE_DYNAMICS_CONFIG.b2AttackPeakRank,
         b2AttackFinalRank:
           dynamicsConfig.b2AttackFinalRank ?? DEFAULT_RACE_DYNAMICS_CONFIG.b2AttackFinalRank,
         b2AttackProgress: dynamicsConfig.b2AttackProgress ?? { start: 0.4, end: 0.7 },
-        b2AttackResolveProgress: dynamicsConfig.b2AttackResolveProgress ?? 0.85,
-        b2AttackBandArrival: dynamicsConfig.b2AttackBandArrival ?? true,
+        b2AttackResolveProgress:
+          dynamicsConfig.b2AttackResolveProgress ??
+          DEFAULT_RACE_DYNAMICS_CONFIG.b2AttackResolveProgress,
+        b2AttackBandArrival:
+          dynamicsConfig.b2AttackBandArrival ?? DEFAULT_RACE_DYNAMICS_CONFIG.b2AttackBandArrival,
         gapRerollThresholdLengths: dynamicsConfig.gapRerollEnabled
           ? (dynamicsConfig.gapRerollThresholdLengths ??
             DEFAULT_RACE_DYNAMICS_CONFIG.gapRerollThresholdLengths)
           : null,
-        gapRerollMode: dynamicsConfig.gapRerollMode ?? 'symmetric',
-        gapRerollStrength: dynamicsConfig.gapRerollStrength ?? 1.0,
+        gapRerollMode: dynamicsConfig.gapRerollMode ?? DEFAULT_RACE_DYNAMICS_CONFIG.gapRerollMode,
+        gapRerollStrength:
+          dynamicsConfig.gapRerollStrength ?? DEFAULT_RACE_DYNAMICS_CONFIG.gapRerollStrength,
         reRollTransitionDuration: dynamicsConfig.reRollTransitionDuration,
         // COMBO15 fair-arrival mechanism (chaos steer · band-aware draw bias). These MUST be threaded into the
         // plan the BROWSER (and the golden headless harness) builds here — the sim has its OWN createRacePlan
         // call, so without this the shipped defaults would carry chaosSteer/bandBias in dynamicsConfig yet the
         // running plan never receive them. OFF ⇒ createRacePlan makes _chaosSteer / _bandBias null ⇒ pre-combo15.
         chaosSteer: dynamicsConfig.chaosSteer ?? false,
-        chaosSteerGain: dynamicsConfig.chaosSteerGain ?? 0.06,
+        chaosSteerGain:
+          dynamicsConfig.chaosSteerGain ?? DEFAULT_RACE_DYNAMICS_CONFIG.chaosSteerGain,
         bandBias: dynamicsConfig.bandBias ?? false,
         bandBiasR: dynamicsConfig.bandBiasR ?? 0.8,
         bandBiasGain: dynamicsConfig.bandBiasGain ?? 0.06,
@@ -283,16 +313,27 @@ export function createRaceFromIdentity(p) {
   const pulkLeadRotationOn = racePlanEnabled;
   const pulkLeadRotCfg = {
     enabled: pulkLeadRotationOn,
-    attackerSlots: dynamicsConfig.pulkLeadRotationAttackerSlots ?? 2,
+    attackerSlots:
+      dynamicsConfig.pulkLeadRotationAttackerSlots ??
+      DEFAULT_RACE_DYNAMICS_CONFIG.pulkLeadRotationAttackerSlots,
     dropDepthLengths: dynamicsConfig.pulkLeadRotationDropDepthLengths ?? 2,
-    outsiderMaxReachLengths: dynamicsConfig.pulkLeadRotationOutsiderMaxReachLengths ?? 15,
-    deadlockTimeoutMs: dynamicsConfig.pulkLeadRotationDeadlockTimeoutMs ?? 12000,
-    minHoldMs: dynamicsConfig.pulkLeadRotationMinHoldMs ?? 750,
-    frontPool: dynamicsConfig.pulkFrontPool ?? 8,
+    outsiderMaxReachLengths:
+      dynamicsConfig.pulkLeadRotationOutsiderMaxReachLengths ??
+      DEFAULT_RACE_DYNAMICS_CONFIG.pulkLeadRotationOutsiderMaxReachLengths,
+    deadlockTimeoutMs:
+      dynamicsConfig.pulkLeadRotationDeadlockTimeoutMs ??
+      DEFAULT_RACE_DYNAMICS_CONFIG.pulkLeadRotationDeadlockTimeoutMs,
+    minHoldMs:
+      dynamicsConfig.pulkLeadRotationMinHoldMs ??
+      DEFAULT_RACE_DYNAMICS_CONFIG.pulkLeadRotationMinHoldMs,
+    frontPool: dynamicsConfig.pulkFrontPool ?? DEFAULT_RACE_DYNAMICS_CONFIG.pulkFrontPool,
     leaderBrake: dynamicsConfig.pulkLeaderBrake ?? 0,
     challengerBoost: dynamicsConfig.pulkChallengerBoost ?? 0,
-    maxEffect: dynamicsConfig.pulkEnvelopeMaxEffect ?? 0.12,
-    maxStepPerFrame: dynamicsConfig.pulkEnvelopeMaxStepPerFrame ?? 0.01,
+    maxEffect:
+      dynamicsConfig.pulkEnvelopeMaxEffect ?? DEFAULT_RACE_DYNAMICS_CONFIG.pulkEnvelopeMaxEffect,
+    maxStepPerFrame:
+      dynamicsConfig.pulkEnvelopeMaxStepPerFrame ??
+      DEFAULT_RACE_DYNAMICS_CONFIG.pulkEnvelopeMaxStepPerFrame,
     ceilingCap:
       (dynamicsConfig.pulkCeilingCap ?? false)
         ? computeDirectorCeiling(
@@ -307,9 +348,9 @@ export function createRaceFromIdentity(p) {
 
   // ── PULK-action phase-split bonuses (parity with the sim) ──
   const phaseSplitBonusEnabled = dynamicsConfig.phaseSplitBonusEnabled ?? false;
-  const rowBonusEarly = dynamicsConfig.rowBonusEarly ?? 1;
+  const rowBonusEarly = dynamicsConfig.rowBonusEarly ?? DEFAULT_RACE_DYNAMICS_CONFIG.rowBonusEarly;
   const rowBonusPulk = dynamicsConfig.rowBonusPulk ?? 1;
-  const rowBonusPost = dynamicsConfig.rowBonusPost ?? 1;
+  const rowBonusPost = dynamicsConfig.rowBonusPost ?? DEFAULT_RACE_DYNAMICS_CONFIG.rowBonusPost;
   const enableRowEnvSmooth = dynamicsConfig.enableRowEnvSmooth ?? false;
   const PHASE_CHAOS_END =
     govFractions?.pulkStartFrac ?? DEFAULT_RACE_DYNAMICS_CONFIG.racePlanPulkStart;
@@ -381,7 +422,8 @@ export function createRaceFromIdentity(p) {
     halfWidth,
     trajectoryTransitionDurationMs: dynamicsConfig.trajectoryTransitionDuration * 1000,
     gapRerollEnabled: dynamicsConfig.gapRerollEnabled ?? false,
-    gapRerollDevMarker: dynamicsConfig.gapRerollDevMarker ?? false,
+    gapRerollDevMarker:
+      dynamicsConfig.gapRerollDevMarker ?? DEFAULT_RACE_DYNAMICS_CONFIG.gapRerollDevMarker,
     constSpeedActive,
     computePositions,
   };

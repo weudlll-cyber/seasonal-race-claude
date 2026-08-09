@@ -10,6 +10,8 @@
 // ============================================================
 
 import { easeInOutCubic, shortestArcDeltaT, signedArcDeltaT, tFrac } from '../utils/mathUtils.js';
+// MIRRORS-BY-REFERENCE (LESSONS L207): fallbacks in this file READ the default instead of copying it.
+import { DEFAULT_RACE_BEHAVIOR_CONFIG } from './raceBehaviorConfig.js';
 
 // Pre-allocated per-step structures reused across every applyRacerBehavior call.
 // Eliminates per-step Map/Set allocations. Each call clears + repopulates; no stale
@@ -40,15 +42,12 @@ let _tIndexLen = 0;
 
 // Layer 1 spring-constant fallback when config.softSteeringStrength is absent
 // (partial-config callers in sim/unit paths). Mirrors the defaults.js value.
-const SOFT_STEERING_STRENGTH_FALLBACK = 0.03;
 
 // Lateral feel smoothing (Stage A2). Fallbacks mirror defaults.js for partial-config
 // callers (sim/unit). LATERAL_STEP_MS is the fixed physics step (index.jsx FIXED_DT /
 // sim DT = 16ms); the target ease advances one step per applyRacerBehavior call, so it
 // is deterministic and browser/sim parity-safe without reading any wall-clock.
 const LATERAL_STEP_MS = 16;
-const LANE_TARGET_EASE_MS_FALLBACK = 200;
-const VELOCITY_RESET_SOFTNESS_FALLBACK = 0.5;
 
 // Look-ahead lane-change (Stage A3): uniform per-step cap on lateral motion (physicalY
 // units/step), applied to dodge-outs AND returns alike so lateral speed is a single known
@@ -60,7 +59,6 @@ const VELOCITY_RESET_SOFTNESS_FALLBACK = 0.5;
 // 0.16), so it visibly caps the "jump" into a glide while the derived dodge trigger widens
 // only slightly (closing rates are small vs the longitudinal contact span → little fanning),
 // and keeps honestOverlap at/below baseline with overlapRate 0 (sim-checked).
-const MAX_LATERAL_SPEED_PER_STEP_FALLBACK = 0.028;
 
 /**
  * Compute the per-pair brake cap for brake-to-match behavior.
@@ -494,7 +492,10 @@ function pairForwardSpeeds(trailer, leader, config) {
     (trailer.areaBonusMult ?? 1.0);
   const leaderBrake =
     config.isOpen !== false && leader.avoidanceActive
-      ? Math.min(config.speedBrakeFactor ?? 0.945, leader.brakeMatchFactor ?? 1.0)
+      ? Math.min(
+          config.speedBrakeFactor ?? DEFAULT_RACE_BEHAVIOR_CONFIG.speedBrakeFactor,
+          leader.brakeMatchFactor ?? 1.0
+        )
       : 1.0;
   return { trailerDenom, leaderRawSpeed, leaderBrake };
 }
@@ -562,7 +563,10 @@ export function applyRacerBehavior(racers, config, priorityExtras) {
   const speedBrakeSet = _speedBrakeSet;
   // Look-ahead lane-change (Stage A3): uniform per-step lateral-speed cap. Read once so the
   // SAME constant feeds both the dodge trigger (dT_start below) and the integrator step clamp.
-  const vLatMax = Math.max(0, config.maxLateralSpeedPerStep ?? MAX_LATERAL_SPEED_PER_STEP_FALLBACK);
+  const vLatMax = Math.max(
+    0,
+    config.maxLateralSpeedPerStep ?? DEFAULT_RACE_BEHAVIOR_CONFIG.maxLateralSpeedPerStep
+  );
   // RACER-MOTION-1: per-tick lateral ACCELERATION cap (bounds the CHANGE in the step, not just the step).
   // 0 = disabled (pre-fix bang-bang, where a saturating dodge snaps velocity 0↔clamp = the visible jerk).
   const aLatMax = Math.max(0, config.maxLateralAccelPerStep ?? 0);
@@ -650,7 +654,10 @@ export function applyRacerBehavior(racers, config, priorityExtras) {
           const lbHalfSpan = pxToPhysicalY(brakeContactWidth, trackWidth);
           const lbTHalf = brakeContactLength / pathLength;
           const lbCap = Math.min(config.maxLateral, 1.0);
-          const reengageFloorT = lbTHalf * (config.lookBeforeBrakeReengageTMultiplier ?? 1.2);
+          const reengageFloorT =
+            lbTHalf *
+            (config.lookBeforeBrakeReengageTMultiplier ??
+              DEFAULT_RACE_BEHAVIOR_CONFIG.lookBeforeBrakeReengageTMultiplier);
 
           // Worst-case per-step longitudinal closing rate (parity-safe). Assume the leader
           // will be at least at the brake floor next frame even if it is not braking now, so
@@ -660,9 +667,14 @@ export function applyRacerBehavior(racers, config, priorityExtras) {
             leader,
             config
           );
-          const leaderBrakeWorst = Math.min(leaderBrake, config.speedBrakeFactor ?? 0.945);
+          const leaderBrakeWorst = Math.min(
+            leaderBrake,
+            config.speedBrakeFactor ?? DEFAULT_RACE_BEHAVIOR_CONFIG.speedBrakeFactor
+          );
           const vClose = Math.max(0, trailerDenom - leaderRawSpeed * leaderBrakeWorst);
-          const lagFrames = config.lookBeforeBrakeLagFrames ?? 2;
+          const lagFrames =
+            config.lookBeforeBrakeLagFrames ??
+            DEFAULT_RACE_BEHAVIOR_CONFIG.lookBeforeBrakeLagFrames;
           // Effective re-engage threshold: the larger of the fixed floor and the lag-safe
           // dynamic margin. Suppress only while dT is above it.
           const safeReengageT = Math.max(reengageFloorT, lbTHalf + lagFrames * vClose);
@@ -709,7 +721,11 @@ export function applyRacerBehavior(racers, config, priorityExtras) {
               // trailer sandwiched between two leaders steers around the closer one.
               const prev = _passCandidate.get(trailer.index);
               if (!prev || dT < prev.dT) {
-                const offsetY = lbHalfSpan * (1 + (config.softSteeringClearancePct ?? 0));
+                const offsetY =
+                  lbHalfSpan *
+                  (1 +
+                    (config.softSteeringClearancePct ??
+                      DEFAULT_RACE_BEHAVIOR_CONFIG.softSteeringClearancePct));
                 let targetY = leader.physicalY + dir * offsetY;
                 if (targetY < -lbCap) targetY = -lbCap;
                 else if (targetY > lbCap) targetY = lbCap;
@@ -763,8 +779,9 @@ export function applyRacerBehavior(racers, config, priorityExtras) {
             const cap = computeBrakeMatchFactor(
               leaderRawSpeed * leaderBrake,
               trailerDenom,
-              config.speedMatchMinDifferential ?? 0.005,
-              config.speedMatchSafetyMargin ?? 0.001
+              config.speedMatchMinDifferential ??
+                DEFAULT_RACE_BEHAVIOR_CONFIG.speedMatchMinDifferential,
+              config.speedMatchSafetyMargin ?? DEFAULT_RACE_BEHAVIOR_CONFIG.speedMatchSafetyMargin
             );
             // Track the most constraining leader (lowest cap). Tie-break: first-found
             // (lower pair indices) wins because strict < never updates on equal caps.
@@ -787,7 +804,8 @@ export function applyRacerBehavior(racers, config, priorityExtras) {
       if (contactWidth === 0 || contactLength === 0) continue;
       const latPx = Math.abs(dY) * (pairTW / 2);
       const longPx = dT * pairPL;
-      const bufferPct = config.avoidanceBufferPct ?? 0.2;
+      const bufferPct =
+        config.avoidanceBufferPct ?? DEFAULT_RACE_BEHAVIOR_CONFIG.avoidanceBufferPct;
       // Gate = contact × (1+buffer) > contact (free-lane) — invariant by construction.
       const latTrigger = contactWidth * (1 + bufferPct);
       const longTrigger = contactLength * (1 + bufferPct);
@@ -808,9 +826,13 @@ export function applyRacerBehavior(racers, config, priorityExtras) {
       // overlap wins on equal forceMag).
       if (trackWidth > 0) {
         const contactOffsetY =
-          pxToPhysicalY(contactWidth, trackWidth) * (1 + (config.softSteeringClearancePct ?? 0));
+          pxToPhysicalY(contactWidth, trackWidth) *
+          (1 +
+            (config.softSteeringClearancePct ??
+              DEFAULT_RACE_BEHAVIOR_CONFIG.softSteeringClearancePct));
         const ssCap = Math.min(config.maxLateral, 1.0);
-        const ssHystY = config.softSteeringHysteresisY ?? 0.04;
+        const ssHystY =
+          config.softSteeringHysteresisY ?? DEFAULT_RACE_BEHAVIOR_CONFIG.softSteeringHysteresisY;
         // RACER-FLAPPING-2 margin hysteresis: the INCUMBENT obstacle (the one steered relative to last
         // frame) keeps the target unless a challenger's force exceeds it by this RELATIVE margin. This
         // stops the most-constraining winner alternating tick-to-tick between two comparable obstacles —
@@ -903,7 +925,9 @@ export function applyRacerBehavior(racers, config, priorityExtras) {
           if (trackWidth > 0) {
             const ssOffsetY =
               pxToPhysicalY(contactWidth, trackWidth) *
-              (1 + (config.softSteeringClearancePct ?? 0));
+              (1 +
+                (config.softSteeringClearancePct ??
+                  DEFAULT_RACE_BEHAVIOR_CONFIG.softSteeringClearancePct));
             const ssCap2 = Math.min(config.maxLateral, 1.0);
             const overrideSoftTarget = (self, obstacle, dir, geomDir, blocked) => {
               if (forceMag < (_ssForceMag.get(self.index) ?? 0)) return; // >= : overlap wins on tie
@@ -936,10 +960,14 @@ export function applyRacerBehavior(racers, config, priorityExtras) {
   // Apply deltas via velocity + damping + hard clamp
   const damping = Number.isFinite(config.lateralDamping) ? config.lateralDamping : 0.35;
   // Stage A2 feel knobs (read once; used in this loop and the hard-separation pass below).
-  const laneTargetEaseMs = config.laneTargetEaseMs ?? LANE_TARGET_EASE_MS_FALLBACK;
+  const laneTargetEaseMs = config.laneTargetEaseMs ?? DEFAULT_RACE_BEHAVIOR_CONFIG.laneTargetEaseMs;
   const velResetKeep = Math.max(
     0,
-    Math.min(1, config.lateralVelocityResetSoftness ?? VELOCITY_RESET_SOFTNESS_FALLBACK)
+    Math.min(
+      1,
+      config.lateralVelocityResetSoftness ??
+        DEFAULT_RACE_BEHAVIOR_CONFIG.lateralVelocityResetSoftness
+    )
   );
   for (const r of active) {
     const _yStart = r.physicalY; // RACER-MOTION-1: pre-tick position → this tick's actual step for jerk cap
@@ -964,7 +992,9 @@ export function applyRacerBehavior(racers, config, priorityExtras) {
     if (passCand) {
       r.passLeaderIndex = passCand.leaderIndex;
       r.passDir = passCand.dir;
-      const passStrength = config.lookBeforeBrakePassStrength ?? 0.5;
+      const passStrength =
+        config.lookBeforeBrakePassStrength ??
+        DEFAULT_RACE_BEHAVIOR_CONFIG.lookBeforeBrakePassStrength;
       // Stage A2: the pass commit is SAFETY-CRITICAL — it must clear the racer sideways
       // BEFORE longitudinal contact (the non-penetration "commit" half). So it is NOT
       // eased; steer decisively to the free side exactly as before. Passing easeMs=0 also
@@ -982,7 +1012,8 @@ export function applyRacerBehavior(racers, config, priorityExtras) {
       // otherwise, or the current position (hold) when both sides are blocked. Runs
       // before the velocity/damping integration.
       const rawTarget = _ssTarget.get(r.index) ?? r.physicalY;
-      const strength = config.softSteeringStrength ?? SOFT_STEERING_STRENGTH_FALLBACK;
+      const strength =
+        config.softSteeringStrength ?? DEFAULT_RACE_BEHAVIOR_CONFIG.softSteeringStrength;
       // Stage A2: ease the effective soft-steering target toward the (possibly flipped) raw
       // target so the spring integrates a smooth weave, not a snap. This is FEEL only — the
       // §4a lane choice (rawTarget) is unchanged; only its motion is smoothed.
@@ -1045,10 +1076,16 @@ export function applyRacerBehavior(racers, config, priorityExtras) {
 
     // ── Brake-to-match hold state update ──────────────────────────────────
     // Constants read once per racer for clarity; values from config with safe defaults.
-    const bmTimeout = config.brakeHoldTimeoutFrames ?? 90;
-    const bmEscape = config.brakeHoldEscapeReleaseDurationFrames ?? 15;
-    const bmCooldown = config.brakeHoldEscapeCooldownFrames ?? 60;
-    const bmDebounce = config.brakeReleaseDebounceFrames ?? 3;
+    const bmTimeout =
+      config.brakeHoldTimeoutFrames ?? DEFAULT_RACE_BEHAVIOR_CONFIG.brakeHoldTimeoutFrames;
+    const bmEscape =
+      config.brakeHoldEscapeReleaseDurationFrames ??
+      DEFAULT_RACE_BEHAVIOR_CONFIG.brakeHoldEscapeReleaseDurationFrames;
+    const bmCooldown =
+      config.brakeHoldEscapeCooldownFrames ??
+      DEFAULT_RACE_BEHAVIOR_CONFIG.brakeHoldEscapeCooldownFrames;
+    const bmDebounce =
+      config.brakeReleaseDebounceFrames ?? DEFAULT_RACE_BEHAVIOR_CONFIG.brakeReleaseDebounceFrames;
 
     if (r.brakeMatchFrames < 0) {
       // Counting up from -(bmEscape+bmCooldown) toward 0: escape release then cooldown.
@@ -1169,7 +1206,13 @@ export function applyRacerBehavior(racers, config, priorityExtras) {
     // Overlap tolerance (dead-zone): bodies may overlap by up to this fraction of the
     // contact distance before separation engages, and separation only restores the gap to
     // that boundary (soft stop). 0 = separate on the slightest touch back to full contact.
-    const tol = Math.max(0, Math.min(1, config.hardSeparationTolerancePct ?? 0.1));
+    const tol = Math.max(
+      0,
+      Math.min(
+        1,
+        config.hardSeparationTolerancePct ?? DEFAULT_RACE_BEHAVIOR_CONFIG.hardSeparationTolerancePct
+      )
+    );
     const capY = Math.min(config.maxLateral, 1.0);
     const EPS = 1e-9;
     // warmupScale 0 (race start) or relax 0 → no separation at all (also no velocity touch).
