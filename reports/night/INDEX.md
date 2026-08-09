@@ -8,6 +8,26 @@ report here could be orphaned, or an index link could dangle, with nothing notic
 `node scripts/check-index.mjs --dir=reports/night --index=reports/night/INDEX.md` now checks both
 directions.
 
+- [VERIFY-ROUTING-2.md](VERIFY-ROUTING-2.md) — the routing comes from the guards. The route table
+  in `verify.mjs` is GONE (`ROUTES`, `selectedBy` and `FINGERPRINT_RECORD` went with it as orphans;
+  net −96 lines there); each guard DECLARES what it covers and `scripts/lib/routing.mjs` collects
+  those by asking each script `--declare`. SELF is the import closure of the declaring file —
+  computed, never declared, so it cannot be forgotten. **THE SHIP GAP IS CLOSED**: `doc-guards` was
+  a BUNDLE of nine guards behind one route, which is how eight of them inherited "markdown changed"
+  as their trigger, so a pure JS change never ran `check-config-keys` or `check-fallback-agreement`
+  under verify. **AND A SIXTH MISS FOUND BY BUILDING IT**: an ENGINE change now runs the camera and
+  render fingerprints, because both harnesses drive a real seeded race — it costs ~5 min on engine
+  blocks, and the alternative is a fingerprint that cannot notice the thing that moved it.
+  VERIFY-ROUTING-1's design survives whole; its DIFF does not, and the report says which parts
+  VERIFY-COST-3 and VERIFY-BASE-1 made obsolete (argv now lives with the flags, not in the
+  declaration). `blind` is required on every guard and verify prints a NOT COVERED section from
+  those lists on GREEN runs. `check-measured-stamps` gains its PENDING line — and I am the reason
+  it earns its place: in MIN-RACERS-5 I ran that guard pre-commit, saw green, and CI went red on the
+  same stamp minutes later, because it reads git HISTORY. Neither VERIFY-BASE-1's refusal nor
+  VERIFY-COST-3's flag handling was lost, and both are TESTED; the six reader-facing cases return
+  identical exit codes (0,2,0,0,2,2,2). verify PASS 14/FAIL 0/SKIP 1, all three fingerprints
+  UNCHANGED, hook PASS 7, CI green. `feat/verify-routing-1` is superseded — all four of its
+  documented misses covered.
 - [FALLBACK-GUARD-1.md](FALLBACK-GUARD-1.md) — a fallback must agree with the default it mirrors.
   The gap MIN-RACERS-5 named: `check-config-keys` asks whether a key EXISTS in the defaults, never
   whether a MIRROR of it still AGREES. New `check-fallback-agreement.mjs`, wired beside it in all
