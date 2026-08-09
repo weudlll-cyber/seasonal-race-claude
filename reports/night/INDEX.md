@@ -21,8 +21,8 @@ directions.
 - [FALLBACK-42-TRIAGE.md](FALLBACK-42-TRIAGE.md) — 41 of the 42 cannot fire; the one that can fires every render.
 - [BUILD-PILL-TRUTH.md](BUILD-PILL-TRUTH.md) — the .git watch never fired once; Vite ignores .git, so it is polled now.
 - [SPREAD-FIELD-SWEEP.md](SPREAD-FIELD-SWEEP.md) — the company guarantee binds in the PACK, not on a spread field; the premise was wrong, the value is not.
-- [CONFIG-DIFF-2.md](CONFIG-DIFF-2.md) — the remaining six stores, and one home for the rule.
 - [SMALL-DEBTS.md](SMALL-DEBTS.md) — a dead field that was keeping two imports alive, a constant whose name said the opposite of what it did, and a routing section pointing at a deleted table.
+- [CONFIG-DIFF-2.md](CONFIG-DIFF-2.md) — the remaining six stores, and one home for the rule.
   `loadCameraConfig` was already right (it walks the DEFAULT keys, so a NEW key arrives at its
   default); `saveCameraConfig` wrote the WHOLE resolved object, so one slider move FROZE every key
   and a changed default could never reach him again — which is why his board sat at 3000/80 after
