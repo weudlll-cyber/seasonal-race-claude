@@ -3669,3 +3669,35 @@ report, however well it can describe what it saw.
   the earliest a new instrument can pay for itself.
 - Stage 6 mechanised the write-proof for `scripts/`, and the very next commit lost an edit in a
   throwaway helper — mechanisation reached the named place while the error lived in the unnamed one.
+
+## Lesson 207 — The Copied-Default Law: A Fallback That COPIES A Default Is A Second Opinion Waiting To Happen; One That READS It Cannot Disagree
+
+**What happened.** The project wrote fallbacks as literals for years —
+`config?.minRacersVisible ?? 5` — and the convention was explicit: a partial-config caller should get
+the shipped value without importing anything. `check-fallback-agreement.mjs` then counted them:
+**361 mirrored fallbacks, and 42 already disagreed with the default they mirror.** Not one had been
+noticed by a person. MIN-RACERS-5 found one the hard way: the default moved 3 → 5 and the fallback in
+`framingConfig.js` stayed at 3, so the shipped path and the fallback path would have framed
+differently — and only the shipped path is covered by the fingerprints.
+
+**Why the convention was wrong.** A copied default has to be maintained in two places by whoever
+happens to remember. That is not a convention, it is a standing invitation to drift, and the 42
+measure how often the invitation was accepted. Worse, the FALLBACK-42-TRIAGE block established that
+almost all of the 42 are UNFIREABLE — every shipped caller resolves its config against the defaults
+first — so the drift was invisible in behaviour AND wrong as documentation: a reader learns the wrong
+default from a line that never runs.
+
+**The law.** **A fallback reads the default; it does not copy it.**
+`config?.k ?? DEFAULT_X_CONFIG.k` cannot disagree, because there is only one value. Where a constant
+holds the fallback, define the CONSTANT from the default — the reference then covers every use of it.
+
+**The one exception, and it must be stated at the site:** a fallback that is deliberately a DIFFERENT
+value from the default — an OFF-arm switch, where an absent key means "the world before this feature"
+— is not a mirror at all. It keeps its literal AND its reason. Nine of the 42 are this shape.
+
+**The corollary for guards.** When MIRRORS-BY-REFERENCE converted the constants, the guard turned two
+green entries into UNRESOLVED, because its resolver only understood literals — it would have
+penalised exactly the fix it exists to encourage. **A guard that rewards the old shape and cannot
+read the new one is an argument against improving the code.** It now resolves
+`const X = DEFAULT_Y.k` as by-reference, and reports a constant that names a DIFFERENT key as the
+defect it is.

@@ -11,6 +11,7 @@ import { useState, useEffect, forwardRef, useImperativeHandle } from 'react';
 import {
   loadRaceBehaviorConfig,
   saveRaceBehaviorConfig,
+  // MIRRORS-BY-REFERENCE (LESSONS L207): fallbacks in this file READ the default instead of copying it.
   DEFAULT_RACE_BEHAVIOR_CONFIG,
 } from '../../../modules/raceBehaviorConfig.js';
 import { InfoTooltip } from '../../../components/InfoTooltip/index.js';
@@ -342,7 +343,9 @@ const BehaviorTuningSection = forwardRef(function BehaviorTuningSection(_, ref) 
               min={0}
               max={2.0}
               step={0.05}
-              value={behaviorConfig.avoidanceBufferPct ?? 0.2}
+              value={
+                behaviorConfig.avoidanceBufferPct ?? DEFAULT_RACE_BEHAVIOR_CONFIG.avoidanceBufferPct
+              }
               disabled={!behaviorConfig.enabled}
               onChange={(e) => {
                 const v = Number(e.target.value);

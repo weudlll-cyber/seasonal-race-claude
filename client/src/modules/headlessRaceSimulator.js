@@ -31,6 +31,8 @@ import {
 } from './rowLayout.js';
 import { initRacerBehavior, applyRacerBehavior } from './raceBehavior.js';
 import { deriveRaceDuration, normalSpeedFrom } from './durationModel.js';
+// MIRRORS-BY-REFERENCE (LESSONS L207): fallbacks in this file READ the default instead of copying it.
+import { DEFAULT_RACE_BEHAVIOR_CONFIG } from './storage/defaults.js';
 
 // ── Constants ──────────────────────────────────────────────────────────────────
 
@@ -199,7 +201,8 @@ export function simulateRace({
 
   if (seed === 1 && drawnBodyLengthPx !== undefined) {
     const brakeT =
-      (drawnBodyLengthPx / pathLengthPx) * (behaviorConfig.speedBrakeTMultiplier ?? 1.5);
+      (drawnBodyLengthPx / pathLengthPx) *
+      (behaviorConfig.speedBrakeTMultiplier ?? DEFAULT_RACE_BEHAVIOR_CONFIG.speedBrakeTMultiplier);
     console.warn(
       `[SimGeom] drawnBodyWidthPx=${drawnBodyWidthPx.toFixed(2)} drawnBodyLengthPx=${drawnBodyLengthPx.toFixed(2)} dynamicBrakeT≈${brakeT.toFixed(5)}`
     );

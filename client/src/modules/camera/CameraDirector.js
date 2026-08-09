@@ -93,6 +93,8 @@ import {
   ceremonyEasing,
   boardDurationMs,
 } from './startCeremony.js';
+// MIRRORS-BY-REFERENCE (LESSONS L207): fallbacks in this file READ the default instead of copying it.
+import { DEFAULT_CAMERA_CONFIG } from '../storage/defaults.js';
 
 export const CAM_STATE = {
   OVERVIEW: 'OVERVIEW',
@@ -559,7 +561,7 @@ export class CameraDirector {
     this._overviewWeight = t.overviewWeight;
     this._overviewTargetCount = t.overviewTargetCount;
     this._overviewStartDelay = t.overviewStartDelay;
-    this._focalSmoothTc = config?.focalSmoothTc ?? 0.05;
+    this._focalSmoothTc = config?.focalSmoothTc ?? DEFAULT_CAMERA_CONFIG.focalSmoothTc;
     // Pre-compute per-60fps EMA base factor from TC. 0 when TC=0 (disabled).
     // alpha per frame = 1 − (1−base)^(dt×60/1000) — same dt-normalisation as the zoom lerp.
     this._focalSmoothBase =

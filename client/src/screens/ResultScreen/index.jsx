@@ -12,6 +12,8 @@ import { storageGet, storageSet, KEYS, newId } from '../../modules/storage/stora
 import { formatRaceTime } from '../../utils/formatRaceTime.js';
 import { useActiveBrandProfile } from '../../modules/branding/useActiveBrandProfile.js';
 import './ResultScreen.css';
+// MIRRORS-BY-REFERENCE (LESSONS L207): fallbacks in this file READ the default instead of copying it.
+import { DEFAULT_RACE_DEFAULTS } from '../../modules/storage/defaults.js';
 
 function ResultScreen() {
   const navigate = useFadeNavigate();
@@ -54,7 +56,9 @@ function ResultScreen() {
       trackId: parsed.race?.trackId,
       duration: parsed.elapsedTime,
       playerCount: order.length,
-      winners: order.slice(0, parsed.race?.winners ?? 3).map((r) => r.name),
+      winners: order
+        .slice(0, parsed.race?.winners ?? DEFAULT_RACE_DEFAULTS.winners)
+        .map((r) => r.name),
       finishOrder: order,
     });
     storageSet(KEYS.RACE_HISTORY, history.slice(0, 100));

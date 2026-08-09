@@ -366,6 +366,17 @@ function walk(dir, out = []) {
 /** `const NAME = <scalar>;` declared in this file. The only place a named fallback is resolved. */
 function localConstants(src) {
   const m = new Map();
+  // MIRRORS-BY-REFERENCE: a constant DEFINED from the default — `const X = DEFAULT_CAMERA_CONFIG.k`
+  // — is the safe spelling one level up, and a `band` fallback that uses it cannot disagree. Before
+  // this the guard could only resolve a literal, so converting such a constant turned a green entry
+  // into an UNRESOLVED one: the guard would have penalised exactly the fix it exists to encourage.
+  // Recorded as byRef via the sentinel below, which findPairs turns into the same verdict as an
+  // inline `?? DEFAULT_X.k`.
+  for (const mm of src.matchAll(
+    /(?:^|\n)\s*(?:export\s+)?const\s+([A-Z][A-Z0-9_]*)\s*=\s*([A-Z][A-Z0-9_]{2,}\.[a-zA-Z_][a-zA-Z0-9_]*)\s*;/g,
+  )) {
+    m.set(mm[1], { byRefTo: mm[2] });
+  }
   for (const mm of src.matchAll(
     /(?:^|\n)\s*(?:export\s+)?const\s+([A-Z][A-Z0-9_]*)\s*=\s*(-?\d+(?:\.\d+)?|true|false|'[^'\n]*'|"[^"\n]*")\s*;/g,
   )) {
@@ -437,6 +448,17 @@ export function findPairs(src, file, defaults) {
     if (/^[A-Z][A-Z0-9_]{2,}$/.test(rhs)) {
       if (!consts.has(rhs)) unresolved = rhs;
       else value = consts.get(rhs);
+      // A constant DEFINED from the default (MIRRORS-BY-REFERENCE) is byRef at one remove. Same
+      // verdict as an inline `?? DEFAULT_X.k`, and the same defect if it names a DIFFERENT key.
+      if (value && typeof value === "object" && value.byRefTo) {
+        const r2 = /^([A-Z][A-Z0-9_]{2,})\.([a-zA-Z_][a-zA-Z0-9_]*)$/.exec(value.byRefTo);
+        found.push(
+          r2 && r2[2] === key
+            ? { file, key, kind, via: `${rhs} = ${value.byRefTo}`, byRef: true, expected: defaults.get(key).value }
+            : { file, key, kind: "cross-key", via: rhs, value: value.byRefTo, unresolved: null, expected: defaults.get(key).value, crossKey: true },
+        );
+        return;
+      }
     } else {
       value = literal(rhs);
     }
