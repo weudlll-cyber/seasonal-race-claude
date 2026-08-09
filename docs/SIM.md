@@ -124,27 +124,27 @@ is exactly what the pre-commit tripwire and `npm run verify` route on.
 A file whose header states no purpose is listed as **UNKNOWN**. That is a true statement about the
 repository rather than a guess — give the FILE a header line and this table improves by itself.
 
-| File                            | What it is, in its own words                                                                                                                                                  |
-| ------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `modules/autoSpriteScale.js`    | Auto-sprite-scaling formula and config storage (D10).                                                                                                                         |
-| `modules/camera/lapUtils.js`    | **UNKNOWN** — the file's header states no purpose                                                                                                                             |
-| `modules/durationModel.js`      | THE canonical speed/duration derivation — ONE model, used verbatim by the browser (RaceScreen/SetupScreen) and by the headless sims.                                          |
-| `modules/heroChoreography.js`   | Pure hero position-curve helper for the choreo choreographed director (Step 1).                                                                                               |
-| `modules/heroCurveGenerator.js` | choreo Step 2 — PURE hero-curve GENERATOR.                                                                                                                                    |
-| `modules/raceBaseSpeed.js`      | Duration-driven base speed for the race engine (PR-A2).                                                                                                                       |
-| `modules/raceBehavior.js`       | Pure racer-behavior logic for D7b: lane-free avoidance and drafting on continuous physicalY in normalized track-width space.                                                  |
-| `modules/raceBehaviorConfig.js` | Storage CRUD for race-behavior tuning config (D7b).                                                                                                                           |
-| `modules/raceCore.js`           | the REAL race init + per-step advance, extracted from screens/RaceScreen/index.jsx so it is importable WITHOUT the DOM.                                                       |
-| `modules/raceDynamicsConfig.js` | Storage CRUD for race-dynamics (re-roll) tuning config.                                                                                                                       |
-| `modules/raceGovernor.js`       | The PULK-phase contest director.                                                                                                                                              |
-| `modules/raceLengths.js`        | the ONE source for the racer-LENGTH unit.                                                                                                                                     |
-| `modules/racePlanner.js`        | Race Plan / Trajectory Generator — Phase 3A M2v2 Pure JS, no DOM/React dependencies.                                                                                          |
-| `modules/raceStep.js`           | the ONE per-frame t-update, imported by BOTH the browser race loop (screens/RaceScreen/index.jsx) AND the fairness sim (scripts/sim-fairness.mjs).                            |
-| `modules/rowLayout.js`          | D7c row-start layout logic: racer-to-row assignment (shuffled), physicalY distribution within a row, speed-bonus compensation for rear rows, and track-capacity auto-default. |
-| `modules/storage/defaults.js`   | Default data for all storage keys — seeded on first launch                                                                                                                    |
-| `modules/storage/storage.js`    | localStorage key registry and low-level read/write helpers                                                                                                                    |
-| `modules/utils/RandomHelper.js` | Shuffle and random assignment utilities used in the setup flow                                                                                                                |
-| `utils/mathUtils.js`            | Shared interpolation helpers — single source of truth (see Lessons on "one source").                                                                                          |
+| File | What it is, in its own words |
+|---|---|
+| `modules/autoSpriteScale.js` | Auto-sprite-scaling formula and config storage (D10). |
+| `modules/camera/lapUtils.js` | **UNKNOWN** — the file's header states no purpose |
+| `modules/durationModel.js` | THE canonical speed/duration derivation — ONE model, used verbatim by the browser (RaceScreen/SetupScreen) and by the headless sims. |
+| `modules/heroChoreography.js` | Pure hero position-curve helper for the choreo choreographed director (Step 1). |
+| `modules/heroCurveGenerator.js` | choreo Step 2 — PURE hero-curve GENERATOR. |
+| `modules/raceBaseSpeed.js` | Duration-driven base speed for the race engine (PR-A2). |
+| `modules/raceBehavior.js` | Pure racer-behavior logic for D7b: lane-free avoidance and drafting on continuous physicalY in normalized track-width space. |
+| `modules/raceBehaviorConfig.js` | Storage CRUD for race-behavior tuning config (D7b). |
+| `modules/raceCore.js` | the REAL race init + per-step advance, extracted from screens/RaceScreen/index.jsx so it is importable WITHOUT the DOM. |
+| `modules/raceDynamicsConfig.js` | Storage CRUD for race-dynamics (re-roll) tuning config. |
+| `modules/raceGovernor.js` | The PULK-phase contest director. |
+| `modules/raceLengths.js` | the ONE source for the racer-LENGTH unit. |
+| `modules/racePlanner.js` | Race Plan / Trajectory Generator — Phase 3A M2v2 Pure JS, no DOM/React dependencies. |
+| `modules/raceStep.js` | the ONE per-frame t-update, imported by BOTH the browser race loop (screens/RaceScreen/index.jsx) AND the fairness sim (scripts/sim-fairness.mjs). |
+| `modules/rowLayout.js` | D7c row-start layout logic: racer-to-row assignment (shuffled), physicalY distribution within a row, speed-bonus compensation for rear rows, and track-capacity auto-default. |
+| `modules/storage/defaults.js` | Default data for all storage keys — the value that applies wherever a stored config has no entry for a key. |
+| `modules/storage/storage.js` | localStorage key registry and low-level read/write helpers |
+| `modules/utils/RandomHelper.js` | Shuffle and random assignment utilities used in the setup flow |
+| `utils/mathUtils.js` | Shared interpolation helpers — single source of truth (see Lessons on "one source"). |
 
 19 files, 1 of them UNKNOWN.
 

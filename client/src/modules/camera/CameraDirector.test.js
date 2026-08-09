@@ -6726,10 +6726,17 @@ describe('CAMERA-WEIGHTS-1 — a weight means how often you take the shot when i
 // So the contract is asserted from both ends: the name the render path uses must exist and behave,
 // and the render path must still be using that name.
 describe('CAMERA-HYGIENE-2 — the detectBattleGroup contract with RaceScreen', () => {
-  const RACE_SCREEN = readFileSync(
+  // FRAME-INPUTS-1 MOVED THE CALL SITE, not the contract. RaceScreen used to build the frame's
+  // `camera` object as a literal and called `detectBattleGroup` inside it; that literal is now
+  // `frameCameraInputs()`, and the call lives there. Both files are read, because what this guards
+  // is that the RENDER PATH uses the public name — and the render path is now two files, not one.
+  const RENDER_PATH = [
     join(HERE, '..', '..', 'screens', 'RaceScreen', 'index.jsx'),
-    'utf8'
-  );
+    join(HERE, '..', '..', 'screens', 'RaceScreen', 'frameCameraInputs.js'),
+  ]
+    .map((p) => readFileSync(p, 'utf8'))
+    .join('\n');
+  const RACE_SCREEN = RENDER_PATH;
 
   it('RaceScreen asks for the group by the public name (not a private method)', () => {
     // Matched as a CALL, with the word boundary at the end. `toContain('detectBattleGroup')` was
