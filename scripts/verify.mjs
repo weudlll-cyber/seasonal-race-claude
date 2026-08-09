@@ -150,6 +150,19 @@ export function describeEmptyRun({
       headline: `--base=${base} shares no history with HEAD, so there is no diff to route.`,
       remedy: [`use a ref on this history`, `npm run verify -- --base=${pick}`],
     };
+  // `--base=HEAD` is not "compare me to HEAD", it is the documented way to say "only my uncommitted
+  // work". Diagnosing it as "you are on the base" would be true and unhelpful: the caller knows
+  // where they are, and what they need to hear is that there is nothing uncommitted.
+  if (base === "HEAD")
+    return {
+      headline: `--base=HEAD means "only uncommitted work", and the tree is clean — there is nothing uncommitted to verify.`,
+      remedy: [
+        `to verify what the last commit put here:`,
+        `  npm run verify -- --base=${pick}`,
+        `to verify the whole branch against master:`,
+        `  npm run verify`,
+      ],
+    };
   if (baseSha === headSha)
     return {
       headline:

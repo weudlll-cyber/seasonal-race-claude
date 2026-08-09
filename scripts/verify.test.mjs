@@ -367,6 +367,10 @@ test("each empty-run cause gets its OWN diagnosis — they are not one message",
   const heads = [unresolved.headline, unrelated.headline, nothing.headline];
   assert.equal(new Set(heads).size, 3, "three causes, three headlines");
   assert.match(unresolved.headline, /does not resolve/i);
+  // `--base=HEAD` gets its OWN reading: it means "only uncommitted work", so the useful thing to
+  // say is that there is none — not that the caller is standing where they know they are standing.
+  const onlyUncommitted = describeEmptyRun({ ...base, base: "HEAD" });
+  assert.match(onlyUncommitted.headline, /uncommitted/i);
   assert.match(unrelated.headline, /no history/i);
   assert.match(nothing.headline, /nothing has changed/i);
 });
