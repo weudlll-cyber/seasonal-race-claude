@@ -16,7 +16,20 @@
 
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { plan, ROUTES, cheapArgs } from "./verify.mjs";
+import {
+  plan,
+  ROUTES,
+  cheapArgs,
+  describeEmptyRun,
+  EXIT_REFUSED,
+} from "./verify.mjs";
+import { execFileSync } from "node:child_process";
+import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join, dirname } from "node:path";
+import { fileURLToPath } from "node:url";
+
+const REPO = join(dirname(fileURLToPath(import.meta.url)), "..");
 
 // THE ROUTING TESTS ASSERT HULL MEMBERSHIP, so they stub the inert splitter. The paths they pass
 // are synthetic — byte-identical to the base — which the REAL splitter correctly reports as inert;
@@ -24,7 +37,8 @@ import { plan, ROUTES, cheapArgs } from "./verify.mjs";
 // test the route table. The inert rule has its own tests on real content
 // (scripts/lib/inertChange.test.mjs) plus the two both-direction cases at the end of this file.
 const NOTHING_INERT = (paths) => ({ hit: paths, inert: [] });
-const pick = (files, id) => plan(files, "master", NOTHING_INERT).find((t) => t.id === id);
+const pick = (files, id) =>
+  plan(files, "master", NOTHING_INERT).find((t) => t.id === id);
 const runs = (files, id) => pick(files, id).run;
 
 test("a docs-only diff selects the doc guards and NOTHING expensive", () => {
@@ -263,19 +277,174 @@ test("…and the SAME file with a real edit still selects it — the pair that m
 // instruments in this project have now been caught accepting an argument they do nothing with.
 
 test("--cheap reaches the fingerprint jobs, which is what it never did", () => {
-  assert.deepEqual(cheapArgs(false, null), [], "off means nothing is forwarded");
+  assert.deepEqual(
+    cheapArgs(false, null),
+    [],
+    "off means nothing is forwarded",
+  );
   assert.deepEqual(cheapArgs(true, null), ["--cheap"]);
-  assert.deepEqual(cheapArgs(true, "city-circuit"), ["--cheap", "--cheap-track=city-circuit"]);
+  assert.deepEqual(cheapArgs(true, "city-circuit"), [
+    "--cheap",
+    "--cheap-track=city-circuit",
+  ]);
 });
 
 test("an unknown flag is REFUSED, not ignored", () => {
   const argv = ["--cheap", "--chpea"];
-  const known = { value: ["base", "jobs", "cheap-track"], bare: ["dry", "no-format", "cheap"] };
+  const known = {
+    value: ["base", "jobs", "cheap-track"],
+    bare: ["dry", "no-format", "cheap"],
+  };
   // The same predicate the script applies, asserted on the case that actually happened: a typo.
   const bad = argv.filter((a) => {
     const eq = a.indexOf("=");
     const name = eq === -1 ? a.slice(2) : a.slice(2, eq);
     return eq === -1 ? !known.bare.includes(name) : !known.value.includes(name);
   });
-  assert.deepEqual(bad, ["--chpea"], "the typo is caught and the real flag is not");
+  assert.deepEqual(
+    bad,
+    ["--chpea"],
+    "the typo is caught and the real flag is not",
+  );
+});
+
+// ── VERIFY-BASE-1: A RUN THAT VERIFIED NOTHING MUST NOT EXIT 0 ──────────────────────────────────
+//
+// WHAT BREAKS IF THESE ARE DELETED: `npm run verify` on master goes back to printing
+// PASS 0 / FAIL 0 / SKIP 7 and exiting 0 — a green tick over seven guards that were each correctly
+// told they had nothing to look at. It is stated in CONSEQUENCE form deliberately: the property is
+// not "describeEmptyRun returns a string", it is "a routing that selects zero guards is a failure".
+
+test("CONSEQUENCE: a routing that selects zero guards means nothing will run", () => {
+  // The empty diff is the case that shipped green. `plan([])` is what the main block acts on, so
+  // this asserts the fact the refusal is derived from rather than the refusal's own wording.
+  const tasks = plan([], "master", NOTHING_INERT);
+  const chosen = tasks.filter((t) => t.run);
+  assert.equal(chosen.length, 0, "an empty diff selects no guard");
+  assert.ok(
+    tasks.length > 0,
+    "…yet every guard is present and accounted for as a SKIP",
+  );
+  // And the inverse, so the test cannot pass by plan() being broken into always-empty.
+  const one = plan(["docs/X.md"], "master", NOTHING_INERT).filter((t) => t.run);
+  assert.ok(
+    one.length > 0,
+    "a single changed file must still select something",
+  );
+});
+
+test("CONSEQUENCE: being ON the base is diagnosed as such, not as 'nothing changed'", () => {
+  // The SHIP-THE-LINE case exactly: on master, base and HEAD are one commit.
+  const r = describeEmptyRun({
+    base: "master",
+    baseExists: true,
+    hasMergeBase: true,
+    baseSha: "1ea3a6bbdeadbeef",
+    headSha: "1ea3a6bbdeadbeef",
+    fileCount: 0,
+    suggest: "c5099b3a",
+  });
+  assert.match(r.headline, /same commit/i, "it names the real cause");
+  // The remedy must be runnable, not advice: a concrete ref the caller can paste.
+  assert.ok(
+    r.remedy.some((x) => x.includes("--base=c5099b3a")),
+    "it offers the actual command with a real ref",
+  );
+});
+
+test("each empty-run cause gets its OWN diagnosis — they are not one message", () => {
+  const base = {
+    base: "nope",
+    baseExists: true,
+    hasMergeBase: true,
+    baseSha: "a",
+    headSha: "b",
+    fileCount: 0,
+  };
+  const unresolved = describeEmptyRun({ ...base, baseExists: false });
+  const unrelated = describeEmptyRun({ ...base, hasMergeBase: false });
+  const nothing = describeEmptyRun(base);
+  const heads = [unresolved.headline, unrelated.headline, nothing.headline];
+  assert.equal(new Set(heads).size, 3, "three causes, three headlines");
+  assert.match(unresolved.headline, /does not resolve/i);
+  assert.match(unrelated.headline, /no history/i);
+  assert.match(nothing.headline, /nothing has changed/i);
+});
+
+test("a NON-empty run is never described as empty — the refusal cannot fire on honest work", () => {
+  // The safety direction. If this ever fails, the refusal has started rejecting real runs, which
+  // would be a worse defect than the one it was built to fix.
+  for (const files of [
+    ["docs/X.md"],
+    ["client/src/a.js"],
+    ["scripts/x.mjs"],
+    ["server/y.js"],
+  ]) {
+    const chosen = plan(files, "master", NOTHING_INERT).filter((t) => t.run);
+    assert.ok(chosen.length > 0, `${files[0]} must select at least one guard`);
+  }
+});
+
+test("END TO END: verify itself exits non-zero when its plan is empty", () => {
+  // The unit tests above assert the DECISION. This asserts the CONSEQUENCE — the exit code, which is
+  // the thing that was wrong: seven correct skips and a green tick.
+  //
+  // IT BUILDS A THROWAWAY REPO, and that is not ceremony. The first version of this test asked the
+  // REAL repo about `--base=HEAD` and asserted "exit 2 if the tree is clean, exit 0 if it is dirty".
+  // That is honest but useless: during development the tree is always dirty, so the branch that
+  // matters was never taken, and TWO sabotages — deleting the refusal, and making it exit 0 —
+  // both passed green locally. A test whose important direction only runs in CI is a test that
+  // teaches you to trust a local green.
+  //
+  // git reads GIT_DIR/GIT_WORK_TREE ahead of the cwd, so verify can be pointed at a clean one-commit
+  // repository while still running from this one. Its plan is then empty BY CONSTRUCTION, whatever
+  // the developer's tree looks like. `engineReach()` reads source through the filesystem, not git,
+  // so the route table is still the real one.
+  const tmp = mkdtempSync(join(tmpdir(), "ra-verify-base-"));
+  try {
+    const git = (...a) =>
+      execFileSync("git", a, { cwd: tmp, encoding: "utf8" }).trim();
+    git("init", "--quiet");
+    git("config", "user.email", "t@example.invalid");
+    git("config", "user.name", "t");
+    writeFileSync(join(tmp, "seed.txt"), "one commit so HEAD resolves");
+    git("add", "-A");
+    git("commit", "--quiet", "-m", "seed");
+    const head = git("rev-parse", "HEAD");
+    const env = {
+      ...process.env,
+      GIT_DIR: join(tmp, ".git"),
+      GIT_WORK_TREE: tmp,
+    };
+
+    // Both readings of "nothing to do": only-uncommitted on a clean tree, and being ON the base —
+    // the second being the SHIP-THE-LINE case exactly.
+    for (const base of ["HEAD", head]) {
+      let code = 0;
+      let out = "";
+      try {
+        out = execFileSync(
+          process.execPath,
+          ["scripts/verify.mjs", "--dry", `--base=${base}`],
+          {
+            cwd: REPO,
+            env,
+            encoding: "utf8",
+            stdio: ["ignore", "pipe", "pipe"],
+          },
+        );
+      } catch (e) {
+        code = e.status;
+        out = `${e.stdout ?? ""}${e.stderr ?? ""}`;
+      }
+      assert.equal(
+        code,
+        EXIT_REFUSED,
+        `--base=${base} verifies NOTHING and must not exit 0`,
+      );
+      assert.match(out, /REFUSED/, "and it must say so, not merely fail");
+    }
+  } finally {
+    rmSync(tmp, { recursive: true, force: true });
+  }
 });

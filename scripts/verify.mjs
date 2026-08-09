@@ -74,7 +74,9 @@ function rejectUnknownFlags(argv = process.argv.slice(2)) {
     if (!a.startsWith("--")) return true;
     const eq = a.indexOf("=");
     const name = eq === -1 ? a.slice(2) : a.slice(2, eq);
-    return eq === -1 ? !KNOWN_BARE_FLAGS.includes(name) : !KNOWN_VALUE_FLAGS.includes(name);
+    return eq === -1
+      ? !KNOWN_BARE_FLAGS.includes(name)
+      : !KNOWN_VALUE_FLAGS.includes(name);
   });
   if (bad.length === 0) return;
   console.error(
@@ -85,6 +87,95 @@ function rejectUnknownFlags(argv = process.argv.slice(2)) {
       `        went unnoticed for weeks. See VERIFY-COST-3.\n`,
   );
   process.exit(2);
+}
+
+// ── A RUN THAT VERIFIED NOTHING MUST NOT EXIT 0 (VERIFY-BASE-1) ─────────────────────────────────
+//
+// THE DEFECT, found during the SHIP-THE-LINE merge. `npm run verify` on master printed
+// `PASS 0  FAIL 0  SKIP 7`, exited 0, and had checked nothing at all. The cause is arithmetic: the
+// routing diffs `master...HEAD`, and on master that is empty by definition, so every guard was
+// correctly told it had nothing to look at. Seven honest skips add up to one dishonest exit code.
+//
+// The same shape has now bitten this project three times — the build badge that could detect its own
+// failure and not say so, the `--cheap` flag that was accepted and ignored, and this. An instrument
+// that stays quiet when it has nothing to say is worse than one that is missing, because its silence
+// is read as an answer.
+//
+// WHY THE REFUSAL AND NOT A CLEVERER DEFAULT `--base`. Picking a base automatically on master was
+// the obvious fix and it is the wrong one: "what changed" there has at least three defensible
+// answers — the last commit, the last merge, or everything since the last tag — and they verify
+// different things. Guessing would restore the exit code while keeping the real defect, which is a
+// green run that checked something other than what the person meant. So verify REFUSES, names the
+// cause, and prints the exact command for each reading. The human picks; the machine does not guess.
+//
+// The refusal fires for `--dry` too. `--dry`'s job is to show the plan, and a plan that runs nothing
+// is exactly the plan worth failing on.
+export const EXIT_REFUSED = 2;
+
+/**
+ * Why did this run select no guards, and what should the caller type instead?
+ *
+ * PURE, so it is tested without a repository. The main block gathers the git facts and hands them in.
+ *
+ * @param {object} f
+ * @param {string} f.base        the --base value as given
+ * @param {boolean} f.baseExists it resolves to a commit
+ * @param {boolean} f.hasMergeBase it shares history with HEAD
+ * @param {string} f.baseSha
+ * @param {string} f.headSha
+ * @param {number} f.fileCount   how many changed paths routing saw
+ * @param {string} [f.suggest]   a concrete ref to offer instead (the first parent, usually)
+ * @returns {{headline: string, remedy: string[]}}
+ */
+export function describeEmptyRun({
+  base,
+  baseExists,
+  hasMergeBase,
+  baseSha,
+  headSha,
+  fileCount,
+  suggest,
+}) {
+  const pick = suggest || "HEAD~1";
+  if (!baseExists)
+    return {
+      headline: `--base=${base} does not resolve to a commit, so the diff was empty for a reason that has nothing to do with your work.`,
+      remedy: [
+        `check the ref name`,
+        `npm run verify -- --base=<a real commit or branch>`,
+      ],
+    };
+  if (!hasMergeBase)
+    return {
+      headline: `--base=${base} shares no history with HEAD, so there is no diff to route.`,
+      remedy: [`use a ref on this history`, `npm run verify -- --base=${pick}`],
+    };
+  if (baseSha === headSha)
+    return {
+      headline:
+        `you are ON ${base} — HEAD and the base are the same commit (${headSha.slice(0, 8)}), ` +
+        `so \`${base}...HEAD\` is empty by definition and every guard is correctly told it has nothing to look at.`,
+      remedy: [
+        `to verify what the last commit or merge put here:`,
+        `  npm run verify -- --base=${pick}`,
+        `to verify only uncommitted work (and there must be some):`,
+        `  npm run verify -- --base=HEAD`,
+      ],
+    };
+  if (fileCount === 0)
+    return {
+      headline: `nothing has changed against ${base}, so there is nothing to verify.`,
+      remedy: [`this is not a failure of your work — there simply is no diff`],
+    };
+  // Currently unreachable: `fingerprint-containment` matches every path, so any changed file selects
+  // at least one guard. Kept because that is a property of one route rule, not a law — if the
+  // catch-all is ever narrowed, this is the case that must not become a silent green again.
+  return {
+    headline: `${fileCount} file(s) changed but none of them reaches any guard.`,
+    remedy: [
+      `check the route table in scripts/verify.mjs against what you changed`,
+    ],
+  };
 }
 
 /** The flags a spawned fingerprint job inherits. One home, so a new one cannot reach only some. */
@@ -215,7 +306,9 @@ export function plan(files, base = BASE, splitter = splitInert) {
   // every uncertainty resolves to "it counts" — see scripts/lib/inertChange.mjs. It is REPORTED
   // below, never silent: a skip nobody can see is the failure this whole file is written against.
   const hullHits = files.filter((f) => reach.has(f));
-  const { inert } = hullHits.length ? splitter(hullHits, base) : { hit: [], inert: [] };
+  const { inert } = hullHits.length
+    ? splitter(hullHits, base)
+    : { hit: [], inert: [] };
   const inertSet = new Set(inert.map((i) => i.path));
   const hits = Object.fromEntries(
     ROUTES.map((r) => [
@@ -280,9 +373,15 @@ export function plan(files, base = BASE, splitter = splitInert) {
     },
     // VERIFY-COST-3: `--cheap` is forwarded HERE, which is the only place the three of them are
     // spawned. `cheapArgs()` is one home so a fourth job cannot be added and quietly miss it.
-    "world-fingerprint": { cmd: ["node", "scripts/fingerprint-default.mjs", ...cheapArgs()] },
-    "camera-fingerprint": { cmd: ["node", "scripts/camera-fingerprint.mjs", ...cheapArgs()] },
-    "render-fingerprint": { cmd: ["node", "scripts/render-fingerprint.mjs", ...cheapArgs()] },
+    "world-fingerprint": {
+      cmd: ["node", "scripts/fingerprint-default.mjs", ...cheapArgs()],
+    },
+    "camera-fingerprint": {
+      cmd: ["node", "scripts/camera-fingerprint.mjs", ...cheapArgs()],
+    },
+    "render-fingerprint": {
+      cmd: ["node", "scripts/render-fingerprint.mjs", ...cheapArgs()],
+    },
   };
 
   return ROUTES.map((r) => ({
@@ -380,6 +479,44 @@ if (IS_ENTRY) {
   console.log("\n  SKIPPED, and why:");
   for (const t of skipped) console.log(`    ${t.id.padEnd(19)} ${t.reason}`);
   console.log("");
+
+  // VERIFY-BASE-1. Nothing will run, so nothing can be verified, so this cannot be a success.
+  if (chosen.length === 0) {
+    const git1 = (args) => {
+      try {
+        return execFileSync("git", args, {
+          cwd: ROOT,
+          encoding: "utf8",
+        }).trim();
+      } catch {
+        return null;
+      }
+    };
+    const baseSha =
+      BASE === "HEAD"
+        ? git1(["rev-parse", "HEAD"])
+        : git1(["rev-parse", `${BASE}^{commit}`]);
+    const headSha = git1(["rev-parse", "HEAD"]);
+    const { headline, remedy } = describeEmptyRun({
+      base: BASE,
+      baseExists: !!baseSha,
+      hasMergeBase: !!(baseSha && git1(["merge-base", BASE, "HEAD"])),
+      baseSha: baseSha ?? "",
+      headSha: headSha ?? "",
+      fileCount: files.length,
+      // The first parent is the honest "what did the last commit or merge put here", and on a merge
+      // commit it is the branch that received it rather than the branch that arrived.
+      suggest: git1(["rev-parse", "--short=8", "HEAD^1"]) ?? undefined,
+    });
+    console.error(
+      `  REFUSED: this run would verify NOTHING, and a run that verified nothing must not exit 0.\n\n` +
+        `           ${headline}\n\n` +
+        remedy.map((r) => `           ${r}`).join("\n") +
+        `\n\n           (VERIFY-BASE-1. The seven skips above are each correct; it is their SUM\n` +
+        `           that is the problem. Exit ${EXIT_REFUSED} = refused, not a guard failure.)\n`,
+    );
+    process.exit(EXIT_REFUSED);
+  }
 
   if (DRY) process.exit(0);
 
