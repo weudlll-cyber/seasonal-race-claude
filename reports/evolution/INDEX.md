@@ -6,6 +6,15 @@ and [FAIRNESS.md](../../docs/FAIRNESS.md). Shipped world: **`dc4647be0f55ebdb`**
 
 ## Ships
 
+- [SHIP-CONFIG.md](SHIP-CONFIG.md) — **a stored config holds what he CHOSE** (2026-08-09, merge
+  `fff64bc9`, tag `v-ship-config`, return point `pre/ship-config`). One strand, 17 files: only what
+  differs from the default is stored, plus a one-time prune of what his browser already holds — a
+  prune, never a reset. `storage/configDiff.js` is the one home for the rule and imports nothing, so
+  the three hull callers cost the engine-reach closure a leaf and no edges. **All four fingerprints
+  re-run on master, none moved** — and none of them could see this change, which the report says
+  rather than leaving the green to imply otherwise. Acceptance was the world blob and the config
+  badge reading `0 race`. No default value changed.
+
 - [SHIP-THREE.md](SHIP-THREE.md) — **the 5, the refusal and the guard** (2026-08-09, merge
   `f1c3d18d`, tag `v-ship-three`, return point `pre/ship-three`). Two strands, one merge, 16 files:
   the owner's `minRacersVisible` 3 → 5 with its two mirrors; `npm run verify` refusing an empty plan;

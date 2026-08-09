@@ -117,6 +117,21 @@ picture proves it did not. Values live in [fingerprints.json](fingerprints.json)
   implementation — its `routing.mjs`, its `routing.test.mjs` and its own `verify.mjs`. **Its report
   IS on master** (landed at this ship); only the code is here. Branch deleted at origin.
 
+### SHIP-CONFIG — a stored config holds what he CHOSE (2026-08-09)
+
+Two blocks, one strand, one merge. Every config store used to write the WHOLE resolved object, so one
+slider move froze several hundred keys and a default that changed afterwards could never reach him.
+Now only what differs from the default is stored, and a one-time prune reaches the config already in
+his browser. **All four fingerprints were re-run on the merged master and none moved** — and the
+record says plainly that they could not have seen this change anyway, because the harnesses never
+call a loader. Values live in [fingerprints.json](fingerprints.json).
+
+- `pre/ship-config` (`01c0932d`, 2026-08-09) — master immediately BEFORE the ship. Reset here to
+  restore the save-everything storage behaviour. Its world is the same world the ship has, so
+  returning changes what is STORED, never who wins.
+- `v-ship-config` (`fff64bc9`, 2026-08-09) — **the ship: CONFIG-DIFF-1 + CONFIG-DIFF-2 merged to
+  master.** 17 files. See [../reports/evolution/SHIP-CONFIG.md](../reports/evolution/SHIP-CONFIG.md).
+
 ### SHIP-THREE — the owner's 5, and two guards (2026-08-09)
 
 Three blocks, two strands, one merge. The owner's `minRacersVisible` verdict shipped alongside the
