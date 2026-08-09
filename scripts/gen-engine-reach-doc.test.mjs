@@ -109,19 +109,33 @@ test("A NEW HEADER FIELD ends the paragraph — the next field is not swallowed 
   );
 });
 
+// THE COUNT IS DERIVED, NEVER TYPED. This test said `19 files` in three places, and the day the hull
+// grew to 20 (CONFIG-DIFF-2 added storage/configDiff.js) it turned CI red on master — not because the
+// document was wrong, but because the TEST carried a copy of a number the generator computes. That is
+// the copied-default defect (LESSONS L207) wearing a test's clothes, and it is worse here: it fails
+// only on the commit that makes the document CORRECT, so the cheapest way out is to un-fix the doc.
+const hullSize = () => {
+  const m = /block is current \((\d+) files/.exec(run("--check").stdout);
+  assert.ok(m, "could not read the closure size from --check");
+  return Number(m[1]);
+};
+
 test("--check PASSES on the tree as committed", () => {
   const r = run("--check");
   assert.equal(r.status, 0, r.stderr);
-  assert.match(r.stdout, /block is current \(19 files/);
+  // The count itself is asserted against the CLOSURE, not against a literal: engine-reach.mjs is the
+  // one home for how many files can change the race.
+  assert.match(r.stdout, /block is current \(\d+ files/);
 });
 
 test("CONSEQUENCE: --check FAILS once the generated block is edited by hand", () => {
+  const n = hullSize();
   withCopy((copy, before) => {
     writeFileSync(
       copy,
       before.replace(
-        "19 files, 1 of them UNKNOWN.",
-        "19 files, 0 of them UNKNOWN.",
+        `${n} files, 1 of them UNKNOWN.`,
+        `${n} files, 0 of them UNKNOWN.`,
       ),
     );
     const r = run("--check", `--doc=${copy}`);
