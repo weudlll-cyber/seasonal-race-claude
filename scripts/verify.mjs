@@ -371,6 +371,7 @@ export function plan(files, base = BASE, splitter = splitInert) {
         ["node", "scripts/check-config-claims.mjs"],
         ["node", "scripts/check-doc-facts.mjs"],
         ["node", "scripts/check-config-keys.mjs"],
+        ["node", "scripts/check-fallback-agreement.mjs"],
       ],
     },
     "fingerprint-containment": {
