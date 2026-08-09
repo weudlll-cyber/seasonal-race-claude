@@ -381,7 +381,7 @@ a verbatim transcript of one run on one commit, which is a historical record, no
 
 ### The tracking lag, as measured today — and it had drifted
 
-<!-- MEASURED: tracking-lag (median/p95 pp per state) @ 8e3fcce7 2026-08-09 depends=client/src/modules/camera/ -->
+<!-- MEASURED: tracking-lag (median/p95 pp per state) @ 46736d81 2026-08-09 depends=client/src/modules/camera/ -->
 
 **These figures carry a stamp, and fails if the camera
 changes after it.** They are hand-copied on purpose: the measurement takes about seven minutes, so
@@ -396,18 +396,27 @@ and it says so itself. It also covers nothing else on this page; see its header 
 | ------------- | ------ | --------- | ------ |
 | BATTLE_ZOOM   | 9655   | 5.72      | 9.99   |
 | COMEBACK_ZOOM | 2103   | 8.34      | 15.57  |
-| LEADER_ZOOM   | 17522  | 3.91      | 8.66   |
+| LEADER_ZOOM   | 17522  | 3.77      | 8.62   |
 | LEAD_CHANGE   | 7069   | 4.45      | 7.17   |
 | OVERVIEW      | 4303   | 2.60      | 16.00  |
 | PHOTO_FINISH  | 1865   | 6.37      | 20.73  |
 
-OVERVIEW median 2.60 pp against every other state pooled 4.78 pp (ratio 0.54×).
+OVERVIEW median 2.60 pp against every other state pooled 4.74 pp (ratio 0.55×).
 
 **Re-measured for CEREMONY-HANDOVER-1, and two of these moved for a reason worth naming.** OVERVIEW's
 frame count fell from 5199 to 3603 and LEADER's median lag from 4.46 to 3.92 pp. Neither is a
 tracking change: the start ceremony and the field guarantee that now carries past the gun changed
 what the camera is DOING in those early seconds, so the same 60 s of race divides differently between
 the states. The lag itself is, if anything, slightly better.
+
+**Re-measured for MIN-RACERS-5, and this time it is NOT a ceremony-length change.** Raising
+`minRacersVisible` 3 → 5 widens the shot on the frames where the company guarantee binds, and the
+camera tracks a wider shot slightly more closely in percentage-of-frame terms: LEADER's median
+3.91 → 3.77 pp and p95 8.66 → 8.62, pooled 4.78 → 4.74 (ratio 0.54× → 0.55×). Every frame count is
+unchanged, which is the tell — the states divide the race exactly as before, so nothing about WHEN
+the camera is doing what moved; only how far behind it sits while doing it. **The stamp guard caught
+this**, and it was right to: the change is small, real, and would otherwise have sat here as a stale
+number nobody re-checked.
 
 **Re-measured for CEREMONY-TRUTH-1, and it moved again the same way.** Giving the director the
 digits beat lengthened the planned ceremony by 3 s, so the same 60 s of race divides differently once
