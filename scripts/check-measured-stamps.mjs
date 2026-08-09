@@ -74,6 +74,20 @@ const DOC_OVERRIDE = process.argv
   .map((a) => a.slice("--doc=".length));
 const DOCS = DOC_OVERRIDE.length ? DOC_OVERRIDE : ["docs/CAMERA_DIRECTOR.md"];
 
+/**
+ * The pathspec that keeps TEST FILES out of "what changed" — VERIFY-COST-3.
+ *
+ * EXPORTED so this guard's own tests can ask the same question the guard asks. They cannot pick
+ * their fixture commits by a different rule and still be testing this guard, and CI caught exactly
+ * that: on a run where the newest camera commit was a test-file commit, the sabotage stamped a
+ * commit the guard no longer considers, so the guard correctly reported fresh while the test
+ * demanded stale. The rule has ONE home and both ends read it.
+ *
+ * `:(exclude,glob)` rather than `:(exclude)`: with the `glob` magic `**` means what it reads as on
+ * every git version instead of depending on the default pathspec dialect.
+ */
+export const TEST_FILE_EXCLUDE = ":(exclude,glob)**/*.test.*";
+
 const STAMP =
   /<!--\s*MEASURED:\s*(.+?)\s+@\s+([0-9a-f]{7,40})\s+(\d{4}-\d{2}-\d{2})\s+depends=([^\s]+)\s*-->/g;
 
@@ -153,7 +167,7 @@ for (const doc of DOCS) {
       // golden list — is now invisible to this guard, and its stamp will read fresh after that file
       // changes. No script does that today. If one ever does, its `depends=` must name the file
       // directly rather than the directory, and this exclusion must be revisited.
-      newest = git("log", "-1", "--format=%H", "--", ...paths, ":(exclude)**/*.test.*");
+      newest = git("log", "-1", "--format=%H", "--", ...paths, TEST_FILE_EXCLUDE);
     } catch {
       newest = "";
     }
