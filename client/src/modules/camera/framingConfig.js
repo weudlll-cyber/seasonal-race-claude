@@ -50,8 +50,21 @@ export const DEFAULT_CORRIDORS = {
 
 /** CAMERA-REFERENCE-WIDTH-1: world px per standard corridor when no config reaches the director. */
 export const DEFAULT_REFERENCE_CORRIDOR_PX = 300;
-/** CAMERA-COMPANY-1: the anchor plus this many−1 others must stay in frame. <= 1 disables it. */
-export const DEFAULT_MIN_RACERS_VISIBLE = 3;
+/**
+ * CAMERA-COMPANY-1: the anchor plus this many−1 others must stay in frame. <= 1 disables it.
+ *
+ * MIRRORS `DEFAULT_CAMERA_CONFIG.minRacersVisible`, which is the canonical home. This is the value a
+ * PARTIAL-CONFIG caller gets — unit tests and any harness that builds a director without handing it
+ * the shipped config — and it is deliberately a literal rather than an import, matching the
+ * fallback convention used throughout this project (see the same wording in raceBehavior.js).
+ *
+ * MIN-RACERS-5: moved 3 → 5 IN STEP with the default. It was left at 3 when the default went to 5,
+ * which is not a second opinion, it is the L199 trap: the shipped path and the fallback path would
+ * have framed differently and only the fallback path is untested by the fingerprints. Nothing
+ * guards this agreement — `check-config-keys` checks that a key EXISTS in the defaults, never that
+ * a mirrored fallback still AGREES with it — so if you change one, change this one too.
+ */
+export const DEFAULT_MIN_RACERS_VISIBLE = 5;
 /** The fraction of the frame a subject is kept inside — the safe region, not the whole canvas. */
 export const DEFAULT_INNER_FRAME_PCT = 0.7;
 /** The countdown opens twice as wide as OVERVIEW when nothing says otherwise. */

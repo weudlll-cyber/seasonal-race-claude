@@ -38,6 +38,23 @@ directions.
   always dirty in development, and two of four sabotages passed green locally. It now builds a
   throwaway repo and points verify at it via GIT_DIR, so the empty plan is empty BY CONSTRUCTION.
   `docs/VERIFY-RULES.md` R0 brought in step and R0a added with the case table.
+- [MIN-RACERS-5.md](MIN-RACERS-5.md) — the owner's verdict becomes the shipped value.
+  `minRacersVisible` 3 → 5, plus the two mirrors that still said 3: `DEFAULT_MIN_RACERS_VISIBLE` in
+  `framingConfig.js` (the partial-config fallback — a default of 5 answered by a fallback of 3 is the
+  L199 trap, and NOTHING guards that agreement) and the Dev Screen slider, which now reads the
+  defaults instead of a literal so the control cannot disagree with the number being judged.
+  **THE THING TO READ BEFORE THE EYE TEST: on searound and river-run — the two bench tracks — this
+  changes NOTHING, zero frames.** It bites on 5 of the 10 fingerprint tracks; **city-circuit** is the
+  one to look at (12.9 % of frames differ, widest single frame 1.369×). The five that do not change
+  are already capped by the field ceiling or the geometric guarantee on 22–33 % of frames, so company
+  never gets to speak. Zoom p5/median/p95 do NOT move on any track — the cost is in the tail, because
+  zoom sits on the state profiles' discrete levels. The finish condition
+  (`finishedCount >= 1 + minRacersVisible`) moves from 4 home to 6, measured at **6–10 frames** —
+  the field arrives in a cluster, so it is not where the change is felt. WORLD
+  `dc4647be0f55ebdb` UNCHANGED; camera and render moved and are **NOT minted** — that waits for his
+  eye. The spread-field sweep is still owed and was named, not run. My first measurement was WRONG
+  (post-hoc `_companyCeiling` reads a state `update()` has already advanced) and the correction is in
+  the script's header.
 - [SIDE-FREE-CULL-1.md](SIDE-FREE-CULL-1.md) — the same race, without the all-pairs scan. **WORLD
   fingerprint `dc4647be0f55ebdb`, UNCHANGED** — and camera/render were measured on the parent too and
   are identical, so this block moved nothing at all (they differ from `fingerprints.json` because of
