@@ -8,7 +8,7 @@
 //              fullscreen toggle, and fade-to-black navigation.
 // ============================================================
 
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { validateActiveRace } from './raceSession.js';
 import { PHASE } from './racePhase.js';
 import { renderRaceFrame } from './renderRaceFrame.js';
@@ -59,7 +59,8 @@ import RacePlanHUD from './RacePlanHUD.jsx';
 import CameraFrameLogHUD from './CameraFrameLogHUD.jsx';
 import CameraMarkerHUD from './CameraMarkerHUD.jsx';
 import PerfLogHUD from './PerfLogHUD.jsx';
-import { createPerfLog, recordPerfFrame } from './perfLog.js';
+import { createPerfLog, recordPerfFrame, buildPerfContext } from './perfLog.js';
+import { identifyNameSet } from '../../modules/racerNames.js';
 import StateOverlay from './StateOverlay.jsx';
 import BattleDiagHUD from './BattleDiagHUD.jsx';
 import ComebackDiagHUD from './ComebackDiagHUD.jsx';
@@ -187,6 +188,20 @@ export default function RaceScreen() {
   const showComebackDiag = cameraConfig.showComebackDiag ?? false;
   const showGovernorDiag = cameraConfig.showGovernorDiag ?? false;
   const showLeadChangeDiag = cameraConfig.showLeadChangeDiag ?? false;
+
+  // PERF-WHERE-1: WHERE in the race a perf-log export was taken. Called at the moment the owner
+  // clicks, never per frame — `g.current` is the live race state, so this reads what is true then
+  // rather than what was true when this component last rendered. The roster is DERIVED from the
+  // names the field actually has (`identifyNameSet`) rather than plumbed from SetupScreen, because
+  // the key dies in that screen's local state and what reaches a race is the names.
+  const getPerfContext = useCallback(
+    () =>
+      buildPerfContext(g.current, {
+        namesOn: !!cameraConfigRef.current?.labelNamesWhenRoom,
+        roster: identifyNameSet(g.current?.racers ?? []),
+      }),
+    []
+  );
 
   // ── State-overlay narrative text ─────────────────────────────────────────
   const [overlayText, setOverlayText] = useState(null);
@@ -685,6 +700,12 @@ export default function RaceScreen() {
       const st = g.current;
       const shape = shapeRef.current;
       const rawDt = st.lastTs ? Math.min(ts - st.lastTs, 50) : 16;
+      // PERF-WHERE-1: the SAME delta with no cap, for the perf log only. The cap above is
+      // load-bearing — `rawDt` feeds the physics accumulator, so an uncapped stall would
+      // fast-forward the race — but it makes `total`'s p90/p99/max saturate at exactly 50, which
+      // hides how bad the worst frame was. This value never reaches physics. One subtraction, and
+      // only when the log is on.
+      const rawDtUncapped = enablePerfLog ? (st.lastTs ? ts - st.lastTs : 16) : 0;
       // Perf-log bracket 1: start of frame (also serves as default for tPhys when no physics ran).
       const t0 = enablePerfLog ? performance.now() : 0;
       // tPhys starts at t0 so physMs = 0 on non-RACING frames (no physics while-loop ran).
@@ -1305,7 +1326,8 @@ export default function RaceScreen() {
           hudPhysSteps,
           hudPhysAdvancedMs,
           hudPhysAccumMs,
-          hudCapHit
+          hudCapHit,
+          rawDtUncapped
         );
       }
       rafRef.current = requestAnimationFrame(loop);
@@ -1424,7 +1446,7 @@ export default function RaceScreen() {
           />
           <CameraFrameLogHUD cameraRef={camDirRef} visible={enableFrameLog} />
           <CameraMarkerHUD buildRef={markerBuildRef} />
-          <PerfLogHUD perfLogRef={perfLogRef} visible={enablePerfLog} />
+          <PerfLogHUD perfLogRef={perfLogRef} visible={enablePerfLog} getContext={getPerfContext} />
           <BattleDiagHUD cameraRef={camDirRef} racersRef={g} visible={showBattleDiag} />
           <ComebackDiagHUD cameraRef={camDirRef} racersRef={g} visible={showComebackDiag} />
           <GovernorDiagHUD

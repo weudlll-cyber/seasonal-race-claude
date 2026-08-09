@@ -8,6 +8,21 @@ report here could be orphaned, or an index link could dangle, with nothing notic
 `node scripts/check-index.mjs --dir=reports/night --index=reports/night/INDEX.md` now checks both
 directions.
 
+- [PERF-WHERE-1.md](PERF-WHERE-1.md) — a perf log now says WHERE in the race it was taken. The
+  defect: the owner's two recordings could not be compared because neither names its own conditions,
+  and PHYS-BENCH-1 had to establish from the outside what the export could have said for free. The
+  export now carries a `context` block — elapsed PHYSICS time (not wall time), the lap, leader-to-last
+  spread in the engine's own `t` units over the RUNNING racers, field size, roster and the names
+  toggle. **Gathered at export time, never per frame**: a diagnostic that adds a per-frame statistic
+  changes the thing it measures, so it is one pass over the racers when the owner clicks, and
+  `getContext` is a FUNCTION prop because the HUD re-renders every 200 ms and the race moves between
+  renders. **The roster is DERIVED from the names the field actually has** (`identifyNameSet`, in
+  `racerNames.js`) rather than plumbed from SetupScreen, whose key dies in local state — so `custom`
+  is a first-class answer the moment a real player joins. THE 50 ms CAP: BOTH — the uncapped delta is
+  recorded beside `total` AND the cap is stated in the legend, because documenting alone says the
+  number is wrong without saying by how much, and the cap itself is load-bearing (`rawDt` feeds the
+  physics accumulator) so it stays. `context` is ABSENT, not null, when nothing was supplied. 25
+  tests green, two sabotages caught, no engine file edited, nothing minted.
 - [LABEL-BENCH-1.md](LABEL-BENCH-1.md) — the drawing side of "number or name?". **The label layout is
   not a performance concern**: 0.021 ms a frame at 100 racers with numbers, 0.036–0.040 with names
   on, against a 3.47 ms physics step — about 1 % of one step and 0.24 % of a frame. **Short, long and

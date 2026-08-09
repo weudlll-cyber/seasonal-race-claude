@@ -51,10 +51,15 @@ function trendArrow(dMs) {
 }
 
 /**
- * @param {{ perfLogRef: React.MutableRefObject, visible: boolean }} props
+ * @param {{ perfLogRef: React.MutableRefObject, visible: boolean,
+ *           getContext?: () => object|null }} props
  *   perfLogRef — ref pointing at the live perfLog object from createPerfLog().
+ *   getContext — PERF-WHERE-1: called at the moment of export to say WHERE in the race this log was
+ *     taken. A FUNCTION rather than a value, because the answer must be the one true when the owner
+ *     clicks, not the one true when this component last rendered — the HUD re-renders every 200 ms
+ *     and the race moves between them. Optional: without it the export is exactly what it was.
  */
-export default function PerfLogHUD({ perfLogRef, visible }) {
+export default function PerfLogHUD({ perfLogRef, visible, getContext }) {
   const canvasRef = useRef(null);
   const [stats, setStats] = useState(null);
   const [pace, setPace] = useState(null);
@@ -129,7 +134,7 @@ export default function PerfLogHUD({ perfLogRef, visible }) {
   const triggerDownload = useCallback(() => {
     const log = perfLogRef.current;
     if (!log) return;
-    const json = exportPerfLog(log);
+    const json = exportPerfLog(log, getContext?.() ?? null);
     const ts = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
     const filename = `perf-log-${ts}-f${log.frameIdx}.json`;
     const blob = new Blob([json], { type: 'application/json' });
@@ -139,20 +144,20 @@ export default function PerfLogHUD({ perfLogRef, visible }) {
     a.download = filename;
     a.click();
     URL.revokeObjectURL(url);
-  }, [perfLogRef]);
+  }, [perfLogRef, getContext]);
 
   const triggerClipboard = useCallback(async () => {
     const log = perfLogRef.current;
     if (!log) return;
     try {
-      await navigator.clipboard.writeText(exportPerfLog(log));
+      await navigator.clipboard.writeText(exportPerfLog(log, getContext?.() ?? null));
       setCopyStatus('copied');
       setTimeout(() => setCopyStatus(''), 2000);
     } catch {
       setCopyStatus('error');
       setTimeout(() => setCopyStatus(''), 2000);
     }
-  }, [perfLogRef]);
+  }, [perfLogRef, getContext]);
 
   if (!visible) return null;
 
