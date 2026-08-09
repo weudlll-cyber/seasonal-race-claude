@@ -1,0 +1,58 @@
+{
+ "tool": "phys-bench-matrix.mjs",
+ "version": "PHYS-BENCH-1",
+ "track": "searound",
+ "seed": 5601,
+ "steps": 3000,
+ "warmup": 300,
+ "order": "size",
+ "only": [
+  "field"
+ ],
+ "trees": {
+  "chain": "C:\\Users\\weudl\\OneDrive\\Dokumente\\Seasonal race claude",
+  "master": "C:/ra-wt-nanoid"
+ },
+ "node": "v24.14.0",
+ "platform": "win32-x64",
+ "wallSec": 29.8,
+ "rows": [
+  {
+   "tree": "chain",
+   "label": "field-A-chain-n85",
+   "racers": 85,
+   "roster": "current",
+   "stepped": 3000,
+   "p50": 2.43,
+   "p90": 3.7668,
+   "firstFifthP50": 2.1916,
+   "lastFifthP50": 2.4337,
+   "wallSec": 9.7
+  },
+  {
+   "tree": "master",
+   "label": "field-B-master-n85",
+   "racers": 85,
+   "roster": "current",
+   "stepped": 3000,
+   "p50": 2.4597,
+   "p90": 4.0073,
+   "firstFifthP50": 2.4364,
+   "lastFifthP50": 2.4063,
+   "wallSec": 10
+  },
+  {
+   "tree": "chain",
+   "label": "field-A2-chain-n85",
+   "racers": 85,
+   "roster": "current",
+   "stepped": 3000,
+   "p50": 2.5211,
+   "p90": 4.1141,
+   "firstFifthP50": 2.358,
+   "lastFifthP50": 2.5442,
+   "wallSec": 10.1
+  }
+ ],
+ "profiles": []
+}

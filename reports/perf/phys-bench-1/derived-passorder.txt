@@ -1,0 +1,76 @@
+PHYS-BENCH-1 — derived from reports/perf/phys-bench-1/matrix.json
+track=searound seed=5601 steps=3000 node=v24.14.0 win32-x64
+
+Q1 — CHAIN vs MASTER, per field size (median step, ms). All runs, none averaged away.
+   n     A chain    B master   A2 chain   |  master vs chain-mean
+   30     0.6288     0.6624     0.6281   |  +5.4%   (chain A/A2 self-spread 0.1%)
+   50     1.8128     1.7363     1.4824   |  +5.4%   (chain A/A2 self-spread 20.1%)
+   70     3.4508     3.5078     2.7982   |  +12.3%   (chain A/A2 self-spread 20.9%)
+   85     4.5221     4.8135     4.0436   |  +12.4%   (chain A/A2 self-spread 11.2%)
+  100     6.3076     4.8851     4.3372   |  -8.2%   (chain A/A2 self-spread 37.0%)
+
+Q2 — GROWTH. Fit on the chain passes' mean: t(N) = 1.416e-3 · N^1.800   (log-log R² = 0.9975)
+   n    measured    fitted   residual
+   30     0.6284    0.6458   -2.7%
+   50     1.6476    1.6198   +1.7%
+   70     3.1245    2.9683   +5.3%
+   85     4.2828    4.2101   +1.7%
+  100     5.3224    5.6409   -5.6%
+   master's own exponent, for comparison: 1.758 (R² 0.9800)
+
+Q3 — DENSITY. First fifth (bunched) vs last fifth (spread), chain passes.
+   n    first5th   last5th    last/first
+   30     0.7507    0.4420   0.59x
+   50     1.5101    1.3992   0.93x
+   70     3.2990    2.6340   0.80x
+   85     4.0686    4.2595   1.05x
+  100     5.0362    5.3114   1.05x
+
+Q5 — ROSTER (chain head). A racer's name is physics: each arm is a DIFFERENT RACE.
+   n    roster     p50        p90     vs current
+   70   current     3.1557    4.1844   +0.0%
+   70   long        3.1787    4.2197   +0.7%
+   70   mixed       3.4441    4.3415   +9.1%
+  100   current     5.4716    8.3255   +0.0%
+  100   long        6.9467    8.5928   +27.0%
+  100   mixed       7.4117    8.5792   +35.5%
+
+Q4 — chain: SELF-TIME SHARE, n=30 -> n=100. The movers are the growth.
+    n=30     n=100    delta   function
+   35.12%   41.47%    +6.35pp   applyRacerBehavior  client/src/modules/raceBehavior.js:386
+   20.92%   37.30%   +16.38pp   isSideFree  client/src/modules/raceBehavior.js:287
+    2.90%    4.07%    +1.17pp   pairContact  client/src/modules/raceBehavior.js:261
+    5.52%    2.71%    -2.81pp   (garbage collector)  :0
+    7.07%    2.39%    -4.68pp   stepRacePhysics  client/src/modules/raceCore.js:421
+    0.00%    1.92%    +1.92pp   chooseFreeLaneDir  client/src/modules/raceBehavior.js:311
+    1.41%    1.12%    -0.29pp   stablePairBit  client/src/modules/raceBehavior.js:201
+    2.58%    1.07%    -1.51pp   update  client/src/modules/racePlanner.js:518
+    0.87%    0.88%    +0.01pp   assignSoftTarget  client/src/modules/raceBehavior.js:667
+    1.61%    0.78%    -0.83pp   applyPulkLeadRotation  client/src/modules/raceGovernor.js:170
+
+Q4 — master: SELF-TIME SHARE, n=30 -> n=100. The movers are the growth.
+    n=30     n=100    delta   function
+   36.34%   41.78%    +5.44pp   applyRacerBehavior  client/src/modules/raceBehavior.js:386
+   18.31%   36.83%   +18.52pp   isSideFree  client/src/modules/raceBehavior.js:287
+    2.91%    4.39%    +1.48pp   pairContact  client/src/modules/raceBehavior.js:261
+    5.97%    2.72%    -3.25pp   (garbage collector)  :0
+    6.80%    1.95%    -4.85pp   stepRacePhysics  client/src/modules/raceCore.js:421
+    0.00%    1.88%    +1.88pp   chooseFreeLaneDir  client/src/modules/raceBehavior.js:311
+    0.96%    1.14%    +0.18pp   stablePairBit  client/src/modules/raceBehavior.js:201
+    2.60%    1.06%    -1.54pp   update  client/src/modules/racePlanner.js:518
+    0.77%    0.91%    +0.14pp   assignSoftTarget  client/src/modules/raceBehavior.js:667
+    1.38%    0.79%    -0.59pp   applyPulkLeadRotation  client/src/modules/raceGovernor.js:170
+
+CEILING — largest N with 2 physics steps + drawing inside 16.7 ms.
+   drawing budget    max racers
+       0 ms          124
+       2 ms          115
+       4 ms          106
+       6 ms          97
+       8 ms          86
+   (drawing is NOT measured by this harness — it is headless. The row is the answer; a single
+    number would be a guess wearing a decimal point.)
+
+THE TWO RECORDINGS, inverted through the fit (this machine, searound, not his):
+      3 ms/step  <->  a field of about 70 racers
+    7.7 ms/step  <->  a field of about 119 racers

@@ -1,0 +1,202 @@
+{
+ "tool": "phys-bench-matrix.mjs",
+ "version": "PHYS-BENCH-1",
+ "track": "searound",
+ "seed": 5601,
+ "steps": 3000,
+ "warmup": 300,
+ "order": "size",
+ "only": [
+  "field"
+ ],
+ "trees": {
+  "chain": "C:\\Users\\weudl\\OneDrive\\Dokumente\\Seasonal race claude",
+  "master": "C:/ra-wt-nanoid"
+ },
+ "node": "v24.14.0",
+ "platform": "win32-x64",
+ "wallSec": 189.3,
+ "rows": [
+  {
+   "tree": "chain",
+   "label": "field-A-chain-n30",
+   "racers": 30,
+   "roster": "current",
+   "stepped": 3000,
+   "p50": 0.6103,
+   "p90": 1.1281,
+   "firstFifthP50": 0.7057,
+   "lastFifthP50": 0.4659,
+   "wallSec": 2.9
+  },
+  {
+   "tree": "master",
+   "label": "field-B-master-n30",
+   "racers": 30,
+   "roster": "current",
+   "stepped": 3000,
+   "p50": 0.6711,
+   "p90": 1.0767,
+   "firstFifthP50": 0.7393,
+   "lastFifthP50": 0.606,
+   "wallSec": 3.2
+  },
+  {
+   "tree": "chain",
+   "label": "field-A2-chain-n30",
+   "racers": 30,
+   "roster": "current",
+   "stepped": 3000,
+   "p50": 0.6593,
+   "p90": 1.0903,
+   "firstFifthP50": 0.7244,
+   "lastFifthP50": 0.5879,
+   "wallSec": 3.2
+  },
+  {
+   "tree": "chain",
+   "label": "field-A-chain-n50",
+   "racers": 50,
+   "roster": "current",
+   "stepped": 3000,
+   "p50": 1.8836,
+   "p90": 2.5039,
+   "firstFifthP50": 1.8432,
+   "lastFifthP50": 1.8259,
+   "wallSec": 7.1
+  },
+  {
+   "tree": "master",
+   "label": "field-B-master-n50",
+   "racers": 50,
+   "roster": "current",
+   "stepped": 3000,
+   "p50": 1.8787,
+   "p90": 2.4786,
+   "firstFifthP50": 1.8168,
+   "lastFifthP50": 1.8021,
+   "wallSec": 7.2
+  },
+  {
+   "tree": "chain",
+   "label": "field-A2-chain-n50",
+   "racers": 50,
+   "roster": "current",
+   "stepped": 3000,
+   "p50": 1.9249,
+   "p90": 2.5255,
+   "firstFifthP50": 1.8405,
+   "lastFifthP50": 1.8327,
+   "wallSec": 7.2
+  },
+  {
+   "tree": "chain",
+   "label": "field-A-chain-n70",
+   "racers": 70,
+   "roster": "current",
+   "stepped": 3000,
+   "p50": 3.8302,
+   "p90": 4.6327,
+   "firstFifthP50": 3.7065,
+   "lastFifthP50": 3.6593,
+   "wallSec": 13.2
+  },
+  {
+   "tree": "master",
+   "label": "field-B-master-n70",
+   "racers": 70,
+   "roster": "current",
+   "stepped": 3000,
+   "p50": 3.8084,
+   "p90": 4.63,
+   "firstFifthP50": 3.626,
+   "lastFifthP50": 3.7849,
+   "wallSec": 13.2
+  },
+  {
+   "tree": "chain",
+   "label": "field-A2-chain-n70",
+   "racers": 70,
+   "roster": "current",
+   "stepped": 3000,
+   "p50": 3.5986,
+   "p90": 4.6219,
+   "firstFifthP50": 3.6314,
+   "lastFifthP50": 3.5204,
+   "wallSec": 12.1
+  },
+  {
+   "tree": "chain",
+   "label": "field-A-chain-n85",
+   "racers": 85,
+   "roster": "current",
+   "stepped": 3000,
+   "p50": 5.5076,
+   "p90": 6.5242,
+   "firstFifthP50": 5.3066,
+   "lastFifthP50": 5.43,
+   "wallSec": 18.3
+  },
+  {
+   "tree": "master",
+   "label": "field-B-master-n85",
+   "racers": 85,
+   "roster": "current",
+   "stepped": 3000,
+   "p50": 5.2355,
+   "p90": 6.1582,
+   "firstFifthP50": 5.0656,
+   "lastFifthP50": 5.2885,
+   "wallSec": 17.5
+  },
+  {
+   "tree": "chain",
+   "label": "field-A2-chain-n85",
+   "racers": 85,
+   "roster": "current",
+   "stepped": 3000,
+   "p50": 5.5646,
+   "p90": 6.5403,
+   "firstFifthP50": 5.2989,
+   "lastFifthP50": 5.4568,
+   "wallSec": 18.4
+  },
+  {
+   "tree": "chain",
+   "label": "field-A-chain-n100",
+   "racers": 100,
+   "roster": "current",
+   "stepped": 3000,
+   "p50": 6.8726,
+   "p90": 8.563,
+   "firstFifthP50": 6.7781,
+   "lastFifthP50": 5.5393,
+   "wallSec": 22.7
+  },
+  {
+   "tree": "master",
+   "label": "field-B-master-n100",
+   "racers": 100,
+   "roster": "current",
+   "stepped": 3000,
+   "p50": 6.8695,
+   "p90": 8.3514,
+   "firstFifthP50": 6.824,
+   "lastFifthP50": 6.7947,
+   "wallSec": 22.7
+  },
+  {
+   "tree": "chain",
+   "label": "field-A2-chain-n100",
+   "racers": 100,
+   "roster": "current",
+   "stepped": 3000,
+   "p50": 5.7825,
+   "p90": 8.1741,
+   "firstFifthP50": 5.2093,
+   "lastFifthP50": 5.9328,
+   "wallSec": 20.5
+  }
+ ],
+ "profiles": []
+}

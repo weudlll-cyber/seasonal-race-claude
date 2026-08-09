@@ -8,6 +8,22 @@ report here could be orphaned, or an index link could dangle, with nothing notic
 `node scripts/check-index.mjs --dir=reports/night --index=reports/night/INDEX.md` now checks both
 directions.
 
+- [PHYS-BENCH-1.md](PHYS-BENCH-1.md) — what a physics step costs, and what moves it. **Q1: the two
+  commits do not differ** — at n=100, chain / master / chain read 3.4683 / 3.4621 / 3.4649 ms, a
+  0.1 % delta against a 0.1 % self-spread, so no cause is hunted. **The growth is QUADRATIC**:
+  four independent fits give 1.899–1.975 at R² 0.993–0.9997. **Density is not the lever** — bunched
+  vs spread is 0.93×–1.09× above n=50, and above n=50 the *spread* field costs *more*, so the
+  owner's 3-vs-7.7 ms is a field 1.6× larger, not the same field at two densities. **`isSideFree`
+  (`raceBehavior.js:287`) is the thing to attack**: with `applyRacerBehavior` it is 56 % of the step
+  at n=30 and 79 % at n=100, and it alone moves +16.4 pp — the arithmetic signature of an all-pairs
+  scan that does not cull by distance, which is exactly why density does not move it. Roster: no
+  effect at n=100 (−1.2 %), +3.4/+5.3 % at n=70, and it measures the RACE a roster produces because
+  a racer's name is physics. THE INSTRUMENT FAILED FIRST AND THAT IS IN THE REPORT: a naive
+  three-pass A/B/A drifted 37 % at n=100 and the first roster table read long +27 % / mixed +35 %
+  that were purely the clock warming up; adjacent-in-time triples and a palindrome fix both, and
+  this laptop has two speed states a uniform 2× apart, so every ratio is trusted and every absolute
+  is quoted with its state. Ceiling 80–150 racers depending on the drawing budget, which is NOT
+  measured here. No engine file edited; nothing minted. Raw data: `reports/perf/phys-bench-1/`.
 - [VERIFY-COST-2.md](VERIFY-COST-2.md) — cut the overhead, not the coverage. Measured first:
   `npm run verify` 504.9 s -> 417.8 s, the client suite 260.9 s -> 196.3 s, no fingerprint moved.
   THE FINDING: goldenEquality.test.js takes 67.6 s ALONE and 244.9 s in the suite — not slow,

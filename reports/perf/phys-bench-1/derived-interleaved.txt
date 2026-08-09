@@ -1,0 +1,67 @@
+PHYS-BENCH-1 — derived from reports/perf/phys-bench-1/interleaved/matrix.json
+track=searound seed=5601 steps=3000 node=v24.14.0 win32-x64
+
+Q1 — CHAIN vs MASTER, per field size (median step, ms). All runs, none averaged away.
+   n     A chain    B master   A2 chain   |  master vs chain-mean
+   30     0.6103     0.6711     0.6593   |  +5.7%   (chain A/A2 self-spread 7.7%)
+   50     1.8836     1.8787     1.9249   |  -1.3%   (chain A/A2 self-spread 2.2%)
+   70     3.8302     3.8084     3.5986   |  +2.5%   (chain A/A2 self-spread 6.2%)
+   85     5.5076     5.2355     5.5646   |  -5.4%   (chain A/A2 self-spread 1.0%)
+  100     6.8726     6.8695     5.7825   |  +8.6%   (chain A/A2 self-spread 17.2%)
+
+Q2 — GROWTH. Fit on the chain passes' mean: t(N) = 8.384e-4 · N^1.964   (log-log R² = 0.9928)
+   n    measured    fitted   residual
+   30     0.6348    0.6677   -4.9%
+   50     1.9042    1.8210   +4.6%
+   70     3.7144    3.5263   +5.3%
+   85     5.5361    5.1633   +7.2%
+  100     6.3276    7.1048   -10.9%
+   master's own exponent, for comparison: 1.951 (R² 0.9982)
+
+Q3 — DENSITY. First fifth (bunched) vs last fifth (spread), chain passes.
+   n    first5th   last5th    last/first
+   30     0.7150    0.5269   0.74x
+   50     1.8418    1.8293   0.99x
+   70     3.6690    3.5899   0.98x
+   85     5.3027    5.4434   1.03x
+  100     5.9937    5.7361   0.96x
+
+Q4 — chain: SELF-TIME SHARE, n=30 -> n=100. The movers are the growth.
+    n=30     n=100    delta   function
+   35.12%   41.47%    +6.35pp   applyRacerBehavior  client/src/modules/raceBehavior.js:386
+   20.92%   37.30%   +16.38pp   isSideFree  client/src/modules/raceBehavior.js:287
+    2.90%    4.07%    +1.17pp   pairContact  client/src/modules/raceBehavior.js:261
+    5.52%    2.71%    -2.81pp   (garbage collector)  :0
+    7.07%    2.39%    -4.68pp   stepRacePhysics  client/src/modules/raceCore.js:421
+    0.00%    1.92%    +1.92pp   chooseFreeLaneDir  client/src/modules/raceBehavior.js:311
+    1.41%    1.12%    -0.29pp   stablePairBit  client/src/modules/raceBehavior.js:201
+    2.58%    1.07%    -1.51pp   update  client/src/modules/racePlanner.js:518
+    0.87%    0.88%    +0.01pp   assignSoftTarget  client/src/modules/raceBehavior.js:667
+    1.61%    0.78%    -0.83pp   applyPulkLeadRotation  client/src/modules/raceGovernor.js:170
+
+Q4 — master: SELF-TIME SHARE, n=30 -> n=100. The movers are the growth.
+    n=30     n=100    delta   function
+   36.34%   41.78%    +5.44pp   applyRacerBehavior  client/src/modules/raceBehavior.js:386
+   18.31%   36.83%   +18.52pp   isSideFree  client/src/modules/raceBehavior.js:287
+    2.91%    4.39%    +1.48pp   pairContact  client/src/modules/raceBehavior.js:261
+    5.97%    2.72%    -3.25pp   (garbage collector)  :0
+    6.80%    1.95%    -4.85pp   stepRacePhysics  client/src/modules/raceCore.js:421
+    0.00%    1.88%    +1.88pp   chooseFreeLaneDir  client/src/modules/raceBehavior.js:311
+    0.96%    1.14%    +0.18pp   stablePairBit  client/src/modules/raceBehavior.js:201
+    2.60%    1.06%    -1.54pp   update  client/src/modules/racePlanner.js:518
+    0.77%    0.91%    +0.14pp   assignSoftTarget  client/src/modules/raceBehavior.js:667
+    1.38%    0.79%    -0.59pp   applyPulkLeadRotation  client/src/modules/raceGovernor.js:170
+
+CEILING — largest N with 2 physics steps + drawing inside 16.7 ms.
+   drawing budget    max racers
+       0 ms          108
+       2 ms          101
+       4 ms          94
+       6 ms          86
+       8 ms          77
+   (drawing is NOT measured by this harness — it is headless. The row is the answer; a single
+    number would be a guess wearing a decimal point.)
+
+THE TWO RECORDINGS, inverted through the fit (this machine, searound, not his):
+      3 ms/step  <->  a field of about 64 racers
+    7.7 ms/step  <->  a field of about 104 racers
