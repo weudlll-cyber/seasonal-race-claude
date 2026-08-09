@@ -169,7 +169,6 @@ and in that commit's message.
   the op counts went UP, because shorter labels collide less so MORE labels survive decluttering.
   Caught on the way: the harness knew nothing of `raceNumber` and would have gone straight back to
   measuring empty label boxes.
-||||||| 434501af
 - [HARNESS-NAMES-1.md](HARNESS-NAMES-1.md) — the render harness never set `r.name`, so every label
   box in it was 8px of padding: it measured a geometry the game cannot produce. Fixed with the MIXED
   roster, by index, imported from the one home; render **re-minted deliberately** to
