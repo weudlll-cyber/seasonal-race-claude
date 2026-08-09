@@ -28,6 +28,20 @@ directions.
   identical exit codes (0,2,0,0,2,2,2). verify PASS 14/FAIL 0/SKIP 1, all three fingerprints
   UNCHANGED, hook PASS 7, CI green. `feat/verify-routing-1` is superseded — all four of its
   documented misses covered.
+- [VERIFY-ROUTING-1.md](VERIFY-ROUTING-1.md) — verify stops guessing. The hand-maintained route
+  table is GONE: each guard declares its own dependencies in its own file, and routing.mjs collects
+  them. Self-dependency is COMPUTED (the import closure of the declaring file), so no guard can fail
+  to route on a change to its own instrument — miss 3 closed for every guard at once. The runtime
+  entry points a static walk cannot follow are declared but CROSS-CHECKED against the script, and
+  the check caught a wrong path in the render declaration the first time it ran. The four misses are
+  tests, one each, both directions, each shown false-before / true-after. Two guards that ran NOWHERE
+  now run: check-writable, and check-measured-stamps for the very change that invalidates it. What
+  verify cannot know about the commit being made is a PENDING line printed on green runs instead of
+  a silent PASS. Skip reasons are counts, not prose; every guard states its own blind spots and
+  verify prints them. All three fingerprints unchanged. **SUPERSEDED by VERIFY-ROUTING-2, which
+  shipped its DESIGN against the rewritten verify.mjs; the code of THIS implementation is preserved
+  at `archive/verify-routing-1` and its branch is deleted. Landed as history at SHIP-ROUTING.**
+- [HARNESS-NAMES-1.md](HARNESS-NAMES-1.md) — the render harness never set `r.name`, so every label
 - [FALLBACK-GUARD-1.md](FALLBACK-GUARD-1.md) — a fallback must agree with the default it mirrors.
   The gap MIN-RACERS-5 named: `check-config-keys` asks whether a key EXISTS in the defaults, never
   whether a MIRROR of it still AGREES. New `check-fallback-agreement.mjs`, wired beside it in all

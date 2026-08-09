@@ -98,6 +98,25 @@ the Dev Screen toggle and the `renderRaceFrame` hook. The branch was deleted at 
   may be promising a corridor the viewer cannot see. Start here rather than from scratch — see
   [DEAD-ENDS.md](DEAD-ENDS.md) §K.
 
+### SHIP-ROUTING — the maintenance strand, and the router it replaced (2026-08-09)
+
+Documentation and tooling only: nothing under `client/` moved, and **all four fingerprints were
+re-run and are unchanged** — which is how a strand that has no business touching the race or the
+picture proves it did not. Values live in [fingerprints.json](fingerprints.json).
+
+- `pre/ship-routing` (`01e18bbf`, 2026-08-09) — master immediately BEFORE the ship. Reset here to
+  restore the pre-declaration verifier.
+- `v-ship-routing` (`d14e063d`, 2026-08-09) — **the ship: CEREMONY-HOLD-CENTRE-1's reports landed,
+  CORRIDOR-OVERLAY-1 archived, and verify's routing moved from a hand-maintained table to the
+  guards' own declarations.** 25 files, six routing misses closed. See
+  [../reports/night/VERIFY-ROUTING-2.md](../reports/night/VERIFY-ROUTING-2.md).
+- `archive/verify-routing-1` (`d47daa8f`, 2026-08-09) — **the FIRST declaration-based router,
+  superseded.** Its design shipped in VERIFY-ROUTING-2; its diff did not, because it was written
+  against a `verify.mjs` that VERIFY-COST-3 and VERIFY-BASE-1 rewrote afterwards, so merging it
+  would have meant resolving three versions of one file against each other. This tag preserves that
+  implementation — its `routing.mjs`, its `routing.test.mjs` and its own `verify.mjs`. **Its report
+  IS on master** (landed at this ship); only the code is here. Branch deleted at origin.
+
 ### SHIP-THREE — the owner's 5, and two guards (2026-08-09)
 
 Three blocks, two strands, one merge. The owner's `minRacersVisible` verdict shipped alongside the
