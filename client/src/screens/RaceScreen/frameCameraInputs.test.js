@@ -11,6 +11,13 @@
 // `camera.<field>` it reads, and fails if any of them is missing from the assembly. A function can
 // go stale exactly as the literal it replaced did; what cannot go stale is a test that derives the
 // requirement from the consumer.
+//
+// WHAT IT DOES NOT CHECK, because a guard that does not say so is trusted for more than it does: it
+// matches the LITERAL `camera.<field>` spelling only. A destructured read (`const { state } =
+// camera`), an aliased one (`const cam = camera; cam.state`), a computed one (`camera[key]`), and
+// any read in a file other than `renderRaceFrame.js` all pass it unseen. It catches the mistake this
+// project actually made — a field added to the renderer and forgotten in the assembly, written the
+// ordinary way — and it catches nothing clever.
 // ============================================================
 
 import { describe, it, expect, vi } from 'vitest';
