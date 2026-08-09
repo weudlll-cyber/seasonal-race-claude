@@ -85,6 +85,23 @@ and what was retired.
   window-control sweep that produced the "suppression, not selection" verdict — the measurement that
   justified deleting the lead-rotation mechanism from master.
 
+### SHIP-THE-LINE — the picture line ships (2026-08-09)
+
+The theme line that ran from the start ceremony through the labels, the start board and the perf
+benches, merged to master as ONE commit. **The race did not change and the picture did**: the WORLD
+fingerprint is the same value it has held for twenty-five blocks, while CAMERA and RENDER were both
+re-minted — which is the correct signature for a line whose whole subject was what the viewer sees.
+Values live in [fingerprints.json](fingerprints.json), not here.
+
+- `pre/ship-the-line` (`8547640d`, 2026-08-09) — master immediately BEFORE the ship. The return
+  point: reset here to restore the pre-ship picture. Its world is the same world the ship has, so
+  returning here changes what is drawn, never who wins.
+- `v-ship-the-line` (`c5099b3a`, 2026-08-09) — **the ship: the theme line merged to master.** Race
+  numbers, the label occlusion rule with its two exemptions, the start board through eight blocks,
+  the ceremony timings and the countdown repair, the frame-input seam, the verify/hook cost work, the
+  camera-doc corrections, the three perf benches and the `isSideFree` neighbour cull. 254 files. See
+  [../reports/evolution/SHIP-THE-LINE.md](../reports/evolution/SHIP-THE-LINE.md).
+
 ### COMBO15 ship + the action/fair-arrival line (2026-07-29)
 
 COMBO15 (chaos steer + band-aware re-roll bias + 0.15 chaos window) was the shipped world **at this ship**; it

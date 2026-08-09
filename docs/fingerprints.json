@@ -35,25 +35,25 @@
       "mintedOn": "3518ee0b",
       "mintedBy": "RACER-MOTION-2 — ship lateral acceleration cap (maxLateralAccelPerStep 0.0005)",
       "date": "2026-07-31",
-      "lastVerified": "2026-08-06 — re-run and unchanged"
+      "lastVerified": "2026-08-09 — re-run at the SHIP-THE-LINE merge (c5099b3a) and UNCHANGED. Twenty-five blocks and a ship have not moved the race; the line's one engine change (SIDE-FREE-CULL-1) was byte-identical by construction."
     },
     "camera": {
-      "value": "00cafa2432add0f7",
+      "value": "7ba59a6378d37a2c",
       "covers": "the DIRECTOR's decisions: state, phase, anchor, zoom, offsets, camT, targets",
       "reproduce": "node scripts/camera-fingerprint.mjs --quiet",
-      "mintedOn": "e39c9483",
-      "mintedBy": "FINISH-COMPANY-1 — the company guarantee retires once the company is home",
-      "date": "2026-08-05",
-      "lastVerified": "2026-08-06 — re-run and unchanged"
+      "mintedOn": "c5099b3a",
+      "mintedBy": "SHIP-THE-LINE — the theme line merged to master as one commit. The director gained the start ceremony (venue/push/settled beats, the countdown repair and the handover), the ceremony schedule that replaces a fixed countdownDurationMs, and the anchor the label layout reads through frameCameraInputs. Every visible change on the line was seen and accepted by the owner before the merge. Replaces 00cafa2432add0f7 (FINISH-COMPANY-1)",
+      "date": "2026-08-09",
+      "lastVerified": "2026-08-09 — minted at the ship, from the verify run against the merge commit's own tree."
     },
     "render": {
-      "value": "f2e170d17ccf84e9",
+      "value": "9b7acc7419c5ba59",
       "covers": "the DRAW CALL SEQUENCE: sprite placement, text, styles, transforms, layer order",
       "reproduce": "node scripts/render-fingerprint.mjs --quiet",
-      "mintedOn": "harness-names-1",
-      "mintedBy": "HARNESS-NAMES-1 — an INSTRUMENT change, not a behaviour change. The harness never set r.name, so every label box in it was 8 px of padding and it measured a geometry the game cannot produce. It now names its racers from QUICK_TEST_NAMES_MIXED by index. NOTHING THE GAME DRAWS CHANGED: the world and camera fingerprints are unchanged and engine-reach reports the diff cannot reach the engine. No ship ceremony and no eye test — there is nothing for the owner to look at. Replaces cf716cbdf37b2077",
-      "date": "2026-08-07",
-      "lastVerified": "2026-08-07 — re-minted deliberately by HARNESS-NAMES-1. The old value described a harness drawing nameless racers."
+      "mintedOn": "c5099b3a",
+      "mintedBy": "SHIP-THE-LINE — the theme line merged to master as one commit. The picture is what this line was about: race numbers replace names as the default label, the occlusion rule grants a name only when its box covers neither another label nor another racer (with two exemptions — the camera's subject and the photo finish), the label offset follows the racer's drawn size, and the start board draws the field before the gun. The camera moved too, and the camera decides the transform on every drawn frame. Replaces f2e170d17ccf84e9 (HARNESS-NAMES-1)",
+      "date": "2026-08-09",
+      "lastVerified": "2026-08-09 — minted at the ship, from the verify run against the merge commit's own tree."
     },
     "world-off": {
       "value": "854018ee5d3d83e1",
@@ -62,7 +62,7 @@
       "mintedOn": "3518ee0b",
       "mintedBy": "RACER-MOTION-2",
       "date": "2026-07-31",
-      "lastVerified": "2026-08-06 — RESOLVED and VERIFIED by running it. This was UNKNOWN in ONE-TRUTH-1. docs/SIM.md's lineage table names the flag; the first command written here OMITTED THE LABEL argument, argv[2] swallowed the flag as a label, and the run returned the ON value while printing 'default config'. The label is mandatory. With it, this value reproduces exactly."
+      "lastVerified": "2026-08-09 — re-run at the SHIP-THE-LINE merge and UNCHANGED, so the pre-feature invariant still holds either side of the ship. Previously 2026-08-06 — RESOLVED and VERIFIED by running it. This was UNKNOWN in ONE-TRUTH-1. docs/SIM.md's lineage table names the flag; the first command written here OMITTED THE LABEL argument, argv[2] swallowed the flag as a label, and the run returned the ON value while printing 'default config'. The label is mandatory. With it, this value reproduces exactly."
     }
   },
 
