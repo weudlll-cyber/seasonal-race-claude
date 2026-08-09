@@ -101,6 +101,27 @@ is the expected answer and not the acceptance.
 **Pre-commit hook run, not bypassed: GUARDS PASS 7 FAIL 0.** It also printed the mint reminder for
 the four engine-reaching paths, correctly.
 
+## The served pill — read on the running branch
+
+Dev server restarted on `feat/config-diff-2`; the build badge reads `64bb8d46 · feat/config-diff-2`,
+so the bundle being measured is this branch.
+
+**I could not read the pill through the UI: the app is behind the login gate and I do not have the
+password.** Instead I read it from the SERVED code — Vite serves the modules, so the page imported
+`exportRaceConfig.js` and `configFingerprintBadge()` was called against a real browser localStorage
+seeded the OLD way, every store as a whole object. That measures the shipped bundle rather than the
+test environment, which is the point of the check; it is not a substitute for his eye on the picture.
+
+| storage state | badge | config hash |
+|---|---|---|
+| empty | `0 race`, 0 cosmetic | `e9fd70` |
+| **whole-object, all defaults (his shape today)** | **`0 race`, 0 cosmetic** | `e9fd70` — identical |
+| + one real deviation (`reRollIntervalDivisor: 9`) | `1 race`, key named | changes |
+
+**The prune is visible in bytes: those seven stores went from 6745 bytes to 14** — seven `{}` — and
+the resolved config, the badge and the hash did not move. After the deviation, storage holds exactly
+`{"reRollIntervalDivisor":9}` and nothing else.
+
 ## Tests — 52, and six sabotages
 
 | required consequence | |
