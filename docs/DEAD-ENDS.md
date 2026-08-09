@@ -237,6 +237,32 @@ does not, and that is the whole reason the finish shot works.
 **What was shipped instead** (FINISH-COMPANY-1, the owner's own proposal): the guarantee stops
 applying once the leader plus `minRacersVisible` are home — 0 widening frames on both tracks.
 
+## K. The corridor overlay — a Dev Screen picture to settle where the track is (2026-08-09)
+
+**What was built.** `corridorOverlay.js`, a Dev Screen overlay (default OFF) that drew the LOGICAL
+corridor and a cross on the frame centre, with its own `defaults.js` key, a Dev Screen toggle and a
+hook in `renderRaceFrame`. The point was to answer a dispute the numbers could not settle: on
+river-run, is the camera actually leaving the track, or does it only look that way?
+
+**Why it was dropped.** It never delivered the deciding picture — the background did not blit in the
+capture and the red edges still did not draw — so it claimed no verdict, and the owner dropped it
+rather than spend another block making a diagnostic work. **The code is preserved at
+`archive/corridor-overlay-1` (`4dbfba8c`) and nowhere else**; its findings are on master as
+[CORRIDOR-OVERLAY-1](../reports/night/CORRIDOR-OVERLAY-1.md) and
+[CEREMONY-REGRESSION-BISECT-1](../reports/night/CEREMONY-REGRESSION-BISECT-1.md).
+
+**THE QUESTION IT WAS BUILT FOR IS STILL OPEN, and this is the part that matters.** It found a real
+factor of two before it was dropped: `EditorShape.getPosition(t, offset)` treats the offset as
+NORMALISED against `track.width`, so the same `width: 300` is a **FULL** width to the physics and the
+camera (a racer at 0.5 sits 150 px out; the camera divides by two) and a **HALF** width to the code
+that draws the track edges (`getPosition(0, 1.0)` reaches 300 px). **A guarantee expressed in track
+widths may therefore be keeping a promise about a corridor the viewer cannot see** — which would make
+every "world in shot" number mean one thing to the camera and another to the eye.
+
+That is not a dead end; it is an unanswered question with a strong lead. **Whoever picks it up should
+start from `archive/corridor-overlay-1`, not from scratch** — the overlay is 90 % of a working
+instrument, and the two reports inventory what was already ruled out.
+
 ## What this leaves open (not tried, not excluded)
 
 Formats that make a breakaway irrelevant rather than catching it: **elimination** (last-at-call out of
