@@ -1,0 +1,133 @@
+{
+ "label": "prof-master-n30",
+ "tree": "master",
+ "racers": 30,
+ "totalUs": 1365165,
+ "top": [
+  {
+   "fn": "applyRacerBehavior  client/src/modules/raceBehavior.js:386",
+   "us": 464858,
+   "share": 34.05
+  },
+  {
+   "fn": "isSideFree  client/src/modules/raceBehavior.js:287",
+   "us": 178540,
+   "share": 13.08
+  },
+  {
+   "fn": "stepRacePhysics  client/src/modules/raceCore.js:421",
+   "us": 120762,
+   "share": 8.85
+  },
+  {
+   "fn": "(garbage collector)  :0",
+   "us": 85335,
+   "share": 6.25
+  },
+  {
+   "fn": "open  :0",
+   "us": 73703,
+   "share": 5.4
+  },
+  {
+   "fn": "update  client/src/modules/racePlanner.js:518",
+   "us": 47801,
+   "share": 3.5
+  },
+  {
+   "fn": "compileSourceTextModule  node:internal/modules/esm/utils:316",
+   "us": 33701,
+   "share": 2.47
+  },
+  {
+   "fn": "pairContact  client/src/modules/raceBehavior.js:261",
+   "us": 33563,
+   "share": 2.46
+  },
+  {
+   "fn": "applyPulkLeadRotation  client/src/modules/raceGovernor.js:170",
+   "us": 22005,
+   "share": 1.61
+  },
+  {
+   "fn": "shortestArcDeltaT  client/src/utils/mathUtils.js:32",
+   "us": 21598,
+   "share": 1.58
+  },
+  {
+   "fn": "(program)  :0",
+   "us": 20108,
+   "share": 1.47
+  },
+  {
+   "fn": "stablePairBit  client/src/modules/raceBehavior.js:201",
+   "us": 18722,
+   "share": 1.37
+  },
+  {
+   "fn": "assignSoftTarget  client/src/modules/raceBehavior.js:667",
+   "us": 16745,
+   "share": 1.23
+  },
+  {
+   "fn": "writeFileUtf8  :0",
+   "us": 10320,
+   "share": 0.76
+  },
+  {
+   "fn": "readFileUtf8  :0",
+   "us": 9749,
+   "share": 0.71
+  },
+  {
+   "fn": "overrideSoftTarget  client/src/modules/raceBehavior.js:755",
+   "us": 9588,
+   "share": 0.7
+  },
+  {
+   "fn": "normalizeAngle  client/src/modules/raceBehavior.js:197",
+   "us": 9559,
+   "share": 0.7
+  },
+  {
+   "fn": "smoothLaneTarget  client/src/modules/raceBehavior.js:149",
+   "us": 9386,
+   "share": 0.69
+  },
+  {
+   "fn": "getPosition  client/src/modules/track-editor/EditorShape.js:95",
+   "us": 8686,
+   "share": 0.64
+  },
+  {
+   "fn": "computePositions  client/src/modules/raceCore.js:330",
+   "us": 7566,
+   "share": 0.55
+  },
+  {
+   "fn": "compileForInternalLoader  node:internal/bootstrap/realm:383",
+   "us": 4911,
+   "share": 0.36
+  },
+  {
+   "fn": "getPackageScopeConfig  :0",
+   "us": 4881,
+   "share": 0.36
+  },
+  {
+   "fn": "pairForwardSpeeds  client/src/modules/raceBehavior.js:337",
+   "us": 4750,
+   "share": 0.35
+  },
+  {
+   "fn": "read  :0",
+   "us": 4724,
+   "share": 0.35
+  },
+  {
+   "fn": "catmullRomSpline  client/src/modules/track-editor/catmullRom.js:151",
+   "us": 4593,
+   "share": 0.34
+  }
+ ]
+}

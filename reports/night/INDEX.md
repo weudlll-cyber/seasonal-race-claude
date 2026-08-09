@@ -8,6 +8,24 @@ report here could be orphaned, or an index link could dangle, with nothing notic
 `node scripts/check-index.mjs --dir=reports/night --index=reports/night/INDEX.md` now checks both
 directions.
 
+- [SIDE-FREE-CULL-1.md](SIDE-FREE-CULL-1.md) — the same race, without the all-pairs scan. **WORLD
+  fingerprint `dc4647be0f55ebdb`, UNCHANGED** — and camera/render were measured on the parent too and
+  are identical, so this block moved nothing at all (they differ from `fingerprints.json` because of
+  the CHAIN's camera work, and `verify` cannot settle that: its fingerprint jobs run the scripts and
+  compare nothing). `isSideFree` walked every racer and discarded the ones outside `tHalfSpan` AFTER
+  visiting them; it now reaches them through an index sorted by `tFrac(t)`. THE SAFETY ARGUMENT: the
+  index picks WHICH racers are considered and never decides whether one blocks — every one it reaches
+  still goes through the ORIGINAL predicate — so the window only has to be a SUPERSET, and it
+  provably is (`min(fwd,bwd) <= s` implies `fwd <= s` or `bwd <= s`). The old inner discard therefore
+  STAYED rather than being orphaned. Traps: sorted on `tFrac` not `t` (raw `t` carries the lap and
+  back rows start negative, so it orders by RANK); `t` is frozen across the pair loop (verified — the
+  three position writes are all in later passes) but `physicalY` is NOT, which is why the index
+  stores only `tFrac`; the bound is inclusive. Neither existing neighbour structure was reusable and
+  the report says why. **1.16×–1.47× faster** (pooled, 4 A/B/A sweeps against the parent commit
+  live — the stored old data was NOT reused, deliberately, because the machine has 2× speed states);
+  `isSideFree` 32.8 % → 6.1 % of the step; ceiling +25 %. **THE PREDICTION THAT FAILED: the exponent
+  barely moved (1.86 → 1.74).** This removed a constant factor, not the quadratic — the pair loop is
+  still O(n²) and is now 60 % of the step. 5 new tests, 3 sabotages all caught. Not merged, not minted.
 - [PERF-WHERE-1.md](PERF-WHERE-1.md) — a perf log now says WHERE in the race it was taken. The
   defect: the owner's two recordings could not be compared because neither names its own conditions,
   and PHYS-BENCH-1 had to establish from the outside what the export could have said for free. The
