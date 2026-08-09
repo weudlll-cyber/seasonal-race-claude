@@ -8,6 +8,20 @@ report here could be orphaned, or an index link could dangle, with nothing notic
 `node scripts/check-index.mjs --dir=reports/night --index=reports/night/INDEX.md` now checks both
 directions.
 
+- [LABEL-BENCH-1.md](LABEL-BENCH-1.md) — the drawing side of "number or name?". **The label layout is
+  not a performance concern**: 0.021 ms a frame at 100 racers with numbers, 0.036–0.040 with names
+  on, against a 3.47 ms physics step — about 1 % of one step and 0.24 % of a frame. **Short, long and
+  mixed cost the same** (0.0398 / 0.0362 / 0.0390, a 10 % band inside a 9–18 % run spread), **and the
+  reason is that long names are RATIONED, not cheap**: 3.4 of 16.5 labels carry a name against 5.5
+  for short, while the characters actually drawn go UP, 91.6 against 51.4. Master's layout at 100 on
+  the SAME captured frames is 0.0120 ms — so the chain costs 1.7× with names off and 3.0–3.3× with
+  them on, and buys the occlusion criterion for 0.17 % of a frame; master grants every label a name
+  and never asks whether it lands on a racer. THE LIMITATION IS THE MOST IMPORTANT PARAGRAPH: there
+  is no canvas in node, so `ctx.measureText` and `fillText` are NOT measured and the numbers isolate
+  the placement geometry — `measureCalls` and `charsDrawn` per frame are reported as the multiplicand
+  a browser measurement would need. Frames are captured ONCE per field size and replayed into every
+  arm, master included, so only the label text varies. Measured, nothing fixed. Raw data:
+  `reports/perf/label-bench-1/`.
 - [PHYS-BENCH-1.md](PHYS-BENCH-1.md) — what a physics step costs, and what moves it. **Q1: the two
   commits do not differ** — at n=100, chain / master / chain read 3.4683 / 3.4621 / 3.4649 ms, a
   0.1 % delta against a 0.1 % self-spread, so no cause is hunted. **The growth is QUADRATIC**:
