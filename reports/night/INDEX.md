@@ -233,6 +233,25 @@ and in that commit's message.
   camera. The window trace is a committed tool now (`scripts/gun-window-truth.mjs`); the two blocks
   before it measured from patched copies in a scratch worktree that no longer exists. Camera and
   render moved, world unchanged. Not minted, not merged.
+- [CEREMONY-HOLD-CENTRE-1.md](CEREMONY-HOLD-CENTRE-1.md) — **STAGE 1 ONLY, nothing built.** First
+  second after the gun, camera centre split along/across the track: river-run **along 37.1 / across
+  52.7** (ratio 1.42), searound **along 73.9 / across 0.5** (ratio 0.01) — a 142x difference, which is
+  the owner's distinction in numbers. **But the camera does NOT leave the track:** the centre stays
+  within 18 px of the centreline against a 150 px half-width, so the ACROSS figure is the road bending,
+  not the camera departing. The measurement that matches what he sees is the field's position in
+  frame: **river-run puts the field centre at x=0.27 in the FIRST frame after the gun, searound at
+  0.50** — a discontinuity, not a drift. Cause is a THIRD thing: the forward bias is right but arrives
+  before the field is strung out, so a still-blocky pack lands with the forward-framed leader in the
+  left third. The across-track guarantee applies and correctly returns zero. Stage 2's premise is
+  confirmed but it was NOT built — the stop rule asks for stage 1 first and the diagnosis differs from
+  the hypothesis stage 2 was written against.
+  **ADDENDUM: the owner disputed the "does not leave the track" claim at the picture and was right.**
+  Open tracks draw NO track surface (`renderRaceFrame.js:150`), so on river-run the visible river is
+  the background ARTWORK while `width: 300` is a physics/camera number — my figure measured the
+  logical corridor, his eye judges the painted one, and nothing makes them agree. §2's conclusion is
+  withdrawn; §4's diagnosis is measured in image coordinates and stands. Possible second defect named
+  for him: every guarantee expressed in track widths may be keeping a promise about a corridor the
+  viewer cannot see.
 - [CEREMONY-HANDOVER-1.md](CEREMONY-HANDOVER-1.md) — the field guarantee no longer stops at the gun,
   and the settled beat became a control instead of a remainder. The racing-time promise is the COMPANY
   guarantee with the WHOLE FIELD as its company — reuse that is correctness, not economy, because the
