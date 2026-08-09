@@ -118,7 +118,7 @@ Mechanism (parity step 1, 2026-07-23): the race-init effect in `RaceScreen/index
 
 **This list is GENERATED, never typed** — `node scripts/gen-engine-reach-doc.mjs` reads the
 closure from `scripts/engine-reach.mjs` and each purpose from the FILE'S OWN header. These are the
-**19 files that can change the race**: touch one and the world fingerprint is owed, which
+**20 files that can change the race**: touch one and the world fingerprint is owed, which
 is exactly what the pre-commit tripwire and `npm run verify` route on.
 
 A file whose header states no purpose is listed as **UNKNOWN**. That is a true statement about the
@@ -141,12 +141,13 @@ repository rather than a guess — give the FILE a header line and this table im
 | `modules/racePlanner.js` | Race Plan / Trajectory Generator — Phase 3A M2v2 Pure JS, no DOM/React dependencies. |
 | `modules/raceStep.js` | the ONE per-frame t-update, imported by BOTH the browser race loop (screens/RaceScreen/index.jsx) AND the fairness sim (scripts/sim-fairness.mjs). |
 | `modules/rowLayout.js` | D7c row-start layout logic: racer-to-row assignment (shuffled), physicalY distribution within a row, speed-bonus compensation for rear rows, and track-capacity auto-default. |
+| `modules/storage/configDiff.js` | CONFIG-DIFF-2 |
 | `modules/storage/defaults.js` | Default data for all storage keys — the value that applies wherever a stored config has no entry for a key. |
 | `modules/storage/storage.js` | localStorage key registry and low-level read/write helpers |
 | `modules/utils/RandomHelper.js` | Shuffle and random assignment utilities used in the setup flow |
 | `utils/mathUtils.js` | Shared interpolation helpers — single source of truth (see Lessons on "one source"). |
 
-19 files, 1 of them UNKNOWN.
+20 files, 1 of them UNKNOWN.
 
 <!-- END GENERATED: engine reach -->
 
