@@ -9,7 +9,7 @@
 //              Functions mutate racer objects in-place, no React or DOM deps.
 // ============================================================
 
-import { easeInOutCubic, shortestArcDeltaT, signedArcDeltaT } from '../utils/mathUtils.js';
+import { easeInOutCubic, shortestArcDeltaT, signedArcDeltaT, tFrac } from '../utils/mathUtils.js';
 
 // Pre-allocated per-step structures reused across every applyRacerBehavior call.
 // Eliminates per-step Map/Set allocations. Each call clears + repopulates; no stale
@@ -28,6 +28,15 @@ const _ssForceMag = new Map();
 // to drive decisive lateral steering and update the pass latch. Nearest leader (lowest dT)
 // wins, mirroring the brake-match most-constraining-leader rule.
 const _passCandidate = new Map();
+// SIDE-FREE-CULL-1: the free-lane scan's neighbour index — racers sorted by their position ON THE
+// LOOP. Two parallel arrays rather than an array of objects, reused across steps, because this is
+// rebuilt inside the physics step and a per-step allocation of 100 objects is the cost this block
+// exists to remove. `_tIndexOrder` holds slots into `_tIndexRacer`/`_tIndexTf`. See buildTIndex.
+let _tIndexRacer = [];
+let _tIndexTf = new Float64Array(0);
+let _tIndexSrcTf = new Float64Array(0);
+let _tIndexSlots = [];
+let _tIndexLen = 0;
 
 // Layer 1 spring-constant fallback when config.softSteeringStrength is absent
 // (partial-config callers in sim/unit paths). Mirrors the defaults.js value.
@@ -284,14 +293,150 @@ function chooseSingleSideDirection(canLeft, canRight) {
   return 0;
 }
 
+// ── SIDE-FREE-CULL-1: THE NEIGHBOUR INDEX ────────────────────────────────────────────────────────
+//
+// Racers sorted by WHERE THEY ARE ON THE LOOP, so the free-lane scan can visit the ones within
+// `tHalfSpan` instead of visiting all of them and discarding the rest.
+//
+// SORTED BY `tFrac(t)`, NOT BY `t`, and the difference is the whole correctness argument. Raw `t`
+// carries the lap (lap 2 is t=1.x) and closed-track back rows START NEGATIVE, so sorting by `t`
+// orders racers by RACE RANK, not by position on the track. `shortestArcDeltaT` compares `tFrac`,
+// so the index must be keyed on exactly `tFrac` or the window would bound a different quantity than
+// the test it is bounding. `tFrac` is imported rather than re-typed for the same reason.
+//
+// WHY IT MAY BE BUILT ONCE PER `applyRacerBehavior` CALL: nothing writes `r.t` between the top of
+// the avoidance pair loop and its end. The three position writes in this file — the physicalY clamp
+// in the apply-deltas loop, and the physicalY/t pushes in hard separation — are all in LATER passes
+// that run after the pair loop has finished. So `t` is frozen for exactly the window in which the
+// index is consulted. (`physicalY` is NOT frozen across the whole function, but the index does not
+// store it: the scan reads `other.physicalY` live off the racer object, exactly as before.)
+//
+// BUILT ONCE per call, immediately before the pair loop. It is O(n log n) against a pair loop that
+// is O(n^2), so building it unconditionally costs less than the bookkeeping needed to decide whether
+// to build it — and a lazily-built shared structure is exactly the shape that goes stale silently.
+//
+// NOT AN INSERTION SORT, though the field looks almost-sorted at a glance. `active` arrives in RACER
+// INDEX order, which is unrelated to track position, so an insertion sort would be O(n^2) on an
+// effectively random permutation and would eat the win this block exists to get. The near-sortedness
+// is a property of the field BETWEEN STEPS, not of `active` WITHIN one.
+function buildTIndex(active) {
+  const n = active.length;
+  if (_tIndexRacer.length < n) {
+    _tIndexRacer = new Array(n);
+    _tIndexTf = new Float64Array(n);
+    _tIndexSrcTf = new Float64Array(n);
+    _tIndexSlots = new Array(n);
+  }
+  const srcTf = _tIndexSrcTf;
+  for (let i = 0; i < n; i++) srcTf[i] = tFrac(active[i].t);
+  const slots = _tIndexSlots;
+  slots.length = n;
+  for (let i = 0; i < n; i++) slots[i] = i;
+  // Ties broken by racer index. The scan's result cannot depend on visit order — it is a boolean AND
+  // that returns on the first blocker — so this is not required for correctness. It is here so the
+  // structure is deterministic on its own terms and a reader never has to reconstruct that argument
+  // from the sort's stability guarantees.
+  slots.sort((a, b) => srcTf[a] - srcTf[b] || active[a].index - active[b].index);
+  for (let k = 0; k < n; k++) {
+    const s = slots[k];
+    _tIndexRacer[k] = active[s];
+    _tIndexTf[k] = srcTf[s];
+  }
+  _tIndexLen = n;
+}
+
+/** First slot whose `tf` is >= `tf0`, or `_tIndexLen` if there is none. Plain binary search. */
+function lowerBoundTf(tf0) {
+  let lo = 0;
+  let hi = _tIndexLen;
+  while (lo < hi) {
+    const mid = (lo + hi) >> 1;
+    if (_tIndexTf[mid] < tf0) lo = mid + 1;
+    else hi = mid;
+  }
+  return lo;
+}
+
+// Is the lane at `racer.physicalY + dir * lateralHalfSpan` clear of every other racer within
+// `tHalfSpan` along the track?
+//
+// THE GEOMETRY (unchanged): a racer blocks the target lane when it lies within `tHalfSpan` of the
+// tested racer along the track AND its `physicalY` is closer than `lateralHalfSpan` to the target
+// lane centre. The counterpart of the pair being resolved never blocks — it is the racer being
+// passed. A target outside +/-`cap` is off the corridor and is never free.
+//
+// ── WHERE THE NEIGHBOUR BOUND COMES FROM, AND WHY THE ANSWER IS UNCHANGED (SIDE-FREE-CULL-1) ─────
+//
+// This used to walk EVERY active racer and `continue` past the ones outside `tHalfSpan`. The
+// discard was already here; it just ran after visiting everybody, which made a scan that is O(field)
+// inside a pair loop that is O(field^2). The racers outside the span could never have changed the
+// answer, so not visiting them cannot change it either.
+//
+// THE BOUND IS A SUPERSET, DELIBERATELY, AND THAT IS WHAT MAKES THIS SAFE RATHER THAN HOPEFUL.
+// The index selects WHICH racers are considered; it never decides whether one blocks. Every racer
+// the walk reaches is still put through the ORIGINAL predicate — the same `shortestArcDeltaT` call,
+// the same `> tHalfSpan` comparison, the same `<` on the lateral distance. So the window only has to
+// contain every racer the old loop would have accepted; if it is a hair too wide the extra racers
+// are rejected by the same line that always rejected them, and the result is bit-identical. Only a
+// window that is too NARROW could move the race, and it cannot be:
+//   `shortestArcDeltaT` returns `min(fwd, bwd)` over the forward and backward circular offsets, so
+//   `min(fwd, bwd) <= s` implies `fwd <= s` OR `bwd <= s`. Walking forward while `fwd <= s` and
+//   backward while `bwd <= s` therefore reaches every racer that satisfies the original test.
+//
+// THE WALK WRAPS, because the track is a loop. Both walks step circularly through the sorted ring,
+// so a racer just past the start line is found by the backward walk of a racer just before it, and
+// vice versa. Their offsets are computed as circular offsets (`+1` when the raw difference is
+// negative), which makes each walk's offset MONOTONICALLY INCREASING along the ring — that is what
+// lets `break` be exact rather than an approximation.
+//
+// THE BOUND IS INCLUSIVE (`<= s`), matching the original discard's `> tHalfSpan`: a racer at exactly
+// `tHalfSpan` still counts, and the walk must not stop before it.
+//
+// A span of >= 0.5 covers the whole loop — `shortestArcDeltaT` cannot exceed 0.5 — so that case
+// short-circuits to the full scan rather than relying on two half-windows meeting exactly.
 function isSideFree(racer, counterpart, active, dir, lateralHalfSpan, tHalfSpan, cap) {
   const targetY = racer.physicalY + dir * lateralHalfSpan;
   if (targetY < -cap || targetY > cap) return false;
 
-  for (const other of active) {
+  const n = _tIndexLen;
+  // Whole-loop span, or an index that is not standing (a direct unit-test caller): the original
+  // full scan, which is always correct and is what the window is measured against.
+  if (!(tHalfSpan < 0.5) || n !== active.length) {
+    for (const other of active) {
+      if (other.index === racer.index || other.index === counterpart.index) continue;
+      if (shortestArcDeltaT(racer.t, other.t) > tHalfSpan) continue;
+      if (Math.abs(other.physicalY - targetY) < lateralHalfSpan) return false;
+    }
+    return true;
+  }
+
+  const tf0 = tFrac(racer.t);
+  const lo = lowerBoundTf(tf0);
+  let visited = 0;
+
+  // Forward: slots at or after `tf0`, wrapping past the end of the ring. Starting at `lo` includes
+  // every racer that shares `tf0` exactly (offset 0), which a strict walk would have dropped.
+  for (let k = 0; k < n; k++) {
+    const slot = lo + k >= n ? lo + k - n : lo + k;
+    const d = _tIndexTf[slot] - tf0;
+    if ((d < 0 ? d + 1 : d) > tHalfSpan) break;
+    visited++;
+    const other = _tIndexRacer[slot];
     if (other.index === racer.index || other.index === counterpart.index) continue;
-    const dT = shortestArcDeltaT(racer.t, other.t);
-    if (dT > tHalfSpan) continue;
+    if (shortestArcDeltaT(racer.t, other.t) > tHalfSpan) continue;
+    if (Math.abs(other.physicalY - targetY) < lateralHalfSpan) return false;
+  }
+
+  // Backward: slots strictly before `tf0`, wrapping past the start. Bounded by what the forward walk
+  // did not already cover, so no racer is tested twice however small the field or wide the span.
+  for (let k = 1; k <= n - visited; k++) {
+    const raw = lo - k;
+    const slot = raw < 0 ? raw + n : raw;
+    const d = tf0 - _tIndexTf[slot];
+    if ((d < 0 ? d + 1 : d) > tHalfSpan) break;
+    const other = _tIndexRacer[slot];
+    if (other.index === racer.index || other.index === counterpart.index) continue;
+    if (shortestArcDeltaT(racer.t, other.t) > tHalfSpan) continue;
     if (Math.abs(other.physicalY - targetY) < lateralHalfSpan) return false;
   }
 
@@ -384,6 +529,10 @@ function pairForwardSpeeds(trailer, leader, config) {
  *   warmup ramp. When omitted (legacy/test callers), the ramp runs at full strength.
  */
 export function applyRacerBehavior(racers, config, priorityExtras) {
+  // SIDE-FREE-CULL-1: the neighbour index describes THIS call's field and nothing else. Retiring it
+  // on entry means the early return below cannot leave a previous call's index standing for the
+  // next one, whatever path that call takes.
+  _tIndexLen = 0;
   if (!config.enabled) {
     for (const r of racers) {
       r.avoidanceActive = false;
@@ -421,6 +570,10 @@ export function applyRacerBehavior(racers, config, priorityExtras) {
   // Populated in the pair loop; consumed in the apply-deltas loop to update racer state.
   const brakeMatchCaps = _brakeMatchCaps; // trailer.index → lowest requiredBrakeFactor this frame
   const brakeMatchLeaderIdxs = _brakeMatchLeaderIdxs; // trailer.index → leader.index for that cap
+
+  // SIDE-FREE-CULL-1: stand the neighbour index up for the pair loop below. `r.t` is not written
+  // again until the pair loop has finished, so one build serves every free-lane scan in it.
+  buildTIndex(active);
 
   // ── Avoidance (anisotropic, asymmetric: trailer yields, leader holds) ──────
   for (let i = 0; i < active.length; i++) {

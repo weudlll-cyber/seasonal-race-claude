@@ -630,6 +630,110 @@ describe('applyRacerBehavior — look before you brake', () => {
     expect(trailer.avoidanceActive).toBe(true); // no free lane → brake, just like before
   });
 
+  // ── SIDE-FREE-CULL-1: THE WRAP TRAP ────────────────────────────────────────────────────────────
+  // The free-lane scan no longer visits every racer; it visits the ones within `tHalfSpan` along the
+  // track, found through an index sorted by position on the LOOP. The track is a loop, so that
+  // window has to wrap — and a window that does not wrap is the single most likely way to make this
+  // change silently alter the race.
+  //
+  // WHY IT WOULD BE SILENT. Nothing throws. The scan just fails to see the blockers sitting a few
+  // thousandths of a lap away on the other side of the start line, reports both lanes free, and the
+  // trailer sails through a gap that is not there. It would happen a handful of times per race, at
+  // one point on the track, and the only symptom is a different finishing order.
+  //
+  // This is the same 'both sides blocked' geometry as the test above, moved across the start line:
+  // the trailer sits just BEFORE it and both blockers just AFTER it, 0.004 of a lap away — well
+  // inside the 0.0258 free-lane span. `shortestArcDeltaT` has always wrapped; this asserts the
+  // neighbour window wraps with it.
+  it('WRAP: blockers just past the start line still block a trailer just before it', () => {
+    const trailer = makeLaneRacer({ index: 0, t: 0.998, physicalY: 0.0, baseSpeed: 1.2e-4 });
+    const leader = makeLaneRacer({ index: 1, t: 1.033, physicalY: 0.0, baseSpeed: 1.0e-4 });
+    // dT(trailer, leader) = 0.035 — the pass window, exactly as in the non-wrapping test.
+    // dT(trailer, blockers) = 0.004 — across the line, inside the span, so both lanes are pinned.
+    const leftBlock = makeLaneRacer({ index: 2, t: 0.002, physicalY: -0.4 });
+    const rightBlock = makeLaneRacer({ index: 3, t: 0.002, physicalY: 0.4 });
+    applyRacerBehavior([trailer, leader, leftBlock, rightBlock], lbCfg);
+    expect(trailer.avoidanceActive).toBe(true);
+  });
+
+  it('WRAP: the same field one lap earlier behaves identically (t is lap-normalized)', () => {
+    // The wrap must come from `tFrac`, not from the numbers happening to sit near 1.0. Shifting the
+    // whole field down a lap must not change a thing.
+    const trailer = makeLaneRacer({ index: 0, t: -0.002, physicalY: 0.0, baseSpeed: 1.2e-4 });
+    const leader = makeLaneRacer({ index: 1, t: 0.033, physicalY: 0.0, baseSpeed: 1.0e-4 });
+    const leftBlock = makeLaneRacer({ index: 2, t: 0.002, physicalY: -0.4 });
+    const rightBlock = makeLaneRacer({ index: 3, t: 0.002, physicalY: 0.4 });
+    applyRacerBehavior([trailer, leader, leftBlock, rightBlock], lbCfg);
+    expect(trailer.avoidanceActive).toBe(true);
+  });
+
+  // The other half of the same claim: a blocker genuinely OUTSIDE the span must still not block, or
+  // a window that simply scanned everything would pass the two tests above for the wrong reason.
+  it('WRAP: a racer far away across the line does NOT block', () => {
+    const trailer = makeLaneRacer({ index: 0, t: 0.998, physicalY: 0.0, baseSpeed: 1.2e-4 });
+    const leader = makeLaneRacer({ index: 1, t: 1.033, physicalY: 0.0, baseSpeed: 1.0e-4 });
+    // 0.1 of a lap past the line — far outside the 0.0258 span, on both lanes.
+    const farLeft = makeLaneRacer({ index: 2, t: 0.098, physicalY: -0.4 });
+    const farRight = makeLaneRacer({ index: 3, t: 0.098, physicalY: 0.4 });
+    applyRacerBehavior([trailer, leader, farLeft, farRight], lbCfg);
+    expect(trailer.avoidanceActive).toBe(false); // lanes free → passes, as with no blockers at all
+  });
+
+  // ── SIDE-FREE-CULL-1: THE INCLUSIVE EDGE ───────────────────────────────────────────────────────
+  // The discard the window replaces was `if (dT > tHalfSpan) continue`, so a racer at EXACTLY
+  // `tHalfSpan` still counts. If the walk's stop were `>=` instead of `>`, that racer would never be
+  // visited and the lane would read free — a one-racer, one-frame difference that is nevertheless a
+  // different race.
+  //
+  // IT NEEDS EXACT FLOAT EQUALITY, which is why the geometry here is not `makeLaneRacer`'s. The
+  // shipped 31/1200 span is not reachable as a difference of two `tFrac` values — `tFrac`'s
+  // `(x+1)%1` round-trip shifts it by one ulp — so nothing placed at "exactly the span" is exactly
+  // at the span. 32 px of body over a 1024 px path gives a span of 0.03125, and
+  // `shortestArcDeltaT(0.5, 0.53125)` returns that value bit-for-bit. Verified, not assumed: with
+  // `>=` in place of `>` this test goes red and the three WRAP tests above stay green.
+  const edgeRacer = (overrides) => {
+    const { physicalY, ...rest } = overrides;
+    const r = makeRacer({
+      frameSizePx: 40,
+      trackWidthPx: 128, // contactWidth 32 -> lbHalfSpan = 32 / (128/2) = 0.5 exactly
+      pathLengthPx: 1024, // contactLength 32 -> lbTHalf = 32 / 1024 = 0.03125 exactly
+      drawnBodyWidthPx: 32,
+      drawnBodyLengthPx: 32,
+      ...rest,
+    });
+    if (Number.isFinite(physicalY)) r.physicalY = physicalY;
+    return r;
+  };
+
+  it('EDGE: a blocker at EXACTLY tHalfSpan still blocks (the bound is inclusive)', () => {
+    const trailer = edgeRacer({ index: 0, t: 0.5, physicalY: 0.0, baseSpeed: 1.2e-4 });
+    const leader = edgeRacer({ index: 1, t: 0.54233875, physicalY: 0.0, baseSpeed: 1.0e-4 });
+    // dT == 0.03125 == lbTHalf, bit-for-bit. physicalY == the target lane centre, so the lateral
+    // test cannot be what decides it — only whether the walk reaches these racers at all.
+    const leftBlock = edgeRacer({ index: 2, t: 0.53125, physicalY: -0.5 });
+    const rightBlock = edgeRacer({ index: 3, t: 0.53125, physicalY: 0.5 });
+    applyRacerBehavior([trailer, leader, leftBlock, rightBlock], lbCfg);
+    expect(trailer.avoidanceActive).toBe(true);
+  });
+
+  it('EDGE: blockers just beyond the span do NOT block', () => {
+    // The other side of the same boundary, so the test above cannot pass merely because the window
+    // is generous.
+    //
+    // TWO ulps, not one, and the reason is worth recording: `tFrac`'s `(x+1)%1` round-trip rounds
+    // away the first ulp, so `0.5312500000000001` still returns EXACTLY 0.03125 from
+    // `shortestArcDeltaT`. `0.5312500000000002` is the first `t` whose arc distance genuinely
+    // exceeds the span. That is a property of the existing `tFrac`, not of this change — but it is
+    // exactly why the test above had to hunt for a reachable value instead of assuming one.
+    const beyond = 0.5312500000000002;
+    const trailer = edgeRacer({ index: 0, t: 0.5, physicalY: 0.0, baseSpeed: 1.2e-4 });
+    const leader = edgeRacer({ index: 1, t: 0.54233875, physicalY: 0.0, baseSpeed: 1.0e-4 });
+    const leftBlock = edgeRacer({ index: 2, t: beyond, physicalY: -0.5 });
+    const rightBlock = edgeRacer({ index: 3, t: beyond, physicalY: 0.5 });
+    applyRacerBehavior([trailer, leader, leftBlock, rightBlock], lbCfg);
+    expect(trailer.avoidanceActive).toBe(false);
+  });
+
   it('re-engage: past the margin without lateral clearance, the brake comes back', () => {
     // Free lane exists, but the leader is inside the re-engage margin (dT=0.020 < 0.031):
     // too close to clear, so the pass is not taken and the brake re-engages with lead time.

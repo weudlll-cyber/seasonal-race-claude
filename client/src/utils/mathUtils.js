@@ -25,7 +25,12 @@ export const lerpAngle = (a, b, t) => {
 // across laps (lap 2: t=1.x) and closed-track back rows start at NEGATIVE t, so callers
 // must normalize before any same-lap distance check. Plain `t % 1` keeps JS's sign and
 // breaks for t<0; this matches the canonical tPos = ((t%1)+1)%1 used for rendering.
-const tFrac = (t) => ((t % 1) + 1) % 1;
+// EXPORTED for SIDE-FREE-CULL-1. `raceBehavior.js` sorts racers by this exact value to bound the
+// free-lane scan, and the bound is only sound if the sort key is the SAME quantity
+// `shortestArcDeltaT` compares. A second copy of `((t%1)+1)%1` over there would be a second
+// definition of "where on the loop is this racer", and the two would be free to drift apart by one
+// ulp — which is the whole ballgame when the acceptance test is a byte-identical race.
+export const tFrac = (t) => ((t % 1) + 1) % 1;
 
 // Shortest-arc t-distance on a closed loop (≥0), lap-normalized. Use instead of a raw
 // `|a−b|; if(>0.5) 1−` wrap, which is only correct for inputs already in [0,1].
