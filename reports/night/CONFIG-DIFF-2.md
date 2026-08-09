@@ -83,6 +83,24 @@ asked, and saying plainly that **it is the weaker instrument here**: the fingerp
 config from `DEFAULT_CONFIG_WORLD` directly and never call a loader, so they cannot see a storage change
 at all. A green fingerprint proves nothing about this block. The two acceptance tests above can.
 
+## Verification
+
+```
+$ npm run verify                                    PASS 11   FAIL 0   SKIP 4
+  world-fingerprint   COMBINED dc4647be0f55ebdb     unchanged
+  camera-fingerprint  CAMERA   ad07c08ce5d8ae49     unchanged
+  render-fingerprint  RENDER   752df7bc61ef0721     unchanged
+  client-suite, check-config-keys, check-config-claims, check-fallback-agreement,
+  check-index, check-doc-links, check-writable, fingerprint-containment   all PASS
+```
+
+All three fingerprints were routed in — the routing was right to select them, because
+`engine-reach` says four of the touched paths CAN change the race. They came back unchanged, which
+is the expected answer and not the acceptance.
+
+**Pre-commit hook run, not bypassed: GUARDS PASS 7 FAIL 0.** It also printed the mint reminder for
+the four engine-reaching paths, correctly.
+
 ## Tests — 52, and six sabotages
 
 | required consequence | |
