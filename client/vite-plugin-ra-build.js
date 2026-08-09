@@ -13,10 +13,15 @@
 // THE RULE THIS ENFORCES: the build identity may never be older than the code it names.
 //
 //   DEV    the value is read from git when the virtual module is loaded, and the module is
-//          INVALIDATED with a full page reload whenever the identity changes. Two watchers make that
+//          INVALIDATED with a full page reload whenever the identity changes. Two signals make that
 //          complete: Vite's own file watcher catches every source edit (which is what makes the tree
-//          dirty), and `.git/HEAD` + `.git/index` are added to it explicitly, because a commit or a
-//          branch switch can change the identity without touching a single file Vite tracks.
+//          dirty), and a mtime POLL over `.git/HEAD` + `.git/index` catches a commit or a branch
+//          switch, which can change the identity without touching a single file Vite tracks.
+//   BUILD-PILL-TRUTH corrected the second half. It used to say those two files were "added to"
+//          Vite's watcher — and that line had never fired, because Vite's watcher ignores `.git`.
+//          The reload after a branch switch was arriving from the SOURCE FILES the switch rewrote, so
+//          the mechanism worked for a different reason than the one written here, and failed exactly
+//          when no file changed. See makeMtimePoll.
 //   BUILD  the value is read once, at build time, which is honest by construction: the constant and
 //          the bundle are made in the same act and ship together.
 //
@@ -35,6 +40,7 @@
 // ============================================================
 
 import { execSync } from 'node:child_process';
+import { statSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -43,6 +49,11 @@ const RESOLVED_ID = '\0' + VIRTUAL_ID;
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const REPO_ROOT = join(HERE, '..');
+
+// How often the two git files are stat-ed. Well under the time it takes to switch branch and look at
+// the screen, and two stat calls a second are not a cost. It is NOT how often the identity is read —
+// see makeMtimePoll: `readBuildInfo()` still runs only when a mtime actually moved.
+const GIT_POLL_MS = 500;
 
 /**
  * WHY THE FAILURE CARRIES A REASON (BUILD-UNKNOWN-1).
@@ -132,6 +143,54 @@ const unknownBuild = (reason) => ({
 /** The identity as one comparable string — what "has the build changed?" means. */
 const identityOf = (i) => `${i.commit}|${i.branch}|${i.dirty ? 'dirty' : 'clean'}`;
 
+/**
+ * BUILD-PILL-TRUTH — a mtime poll over the two git files, because WATCHING THEM DOES NOT WORK.
+ *
+ * The line this replaces was `server.watcher.add(['.git/HEAD', '.git/index'])`, and it was DEAD:
+ * Vite's dev watcher is configured with `ignored: ['**‍/.git/**', …]`, and chokidar applies `ignored`
+ * to paths added later just as it does to the initial globs. Adding a file inside an ignored
+ * directory adds nothing. The plugin's header claimed those two watches were what made a branch
+ * switch visible; they never fired once.
+ *
+ * It LOOKED like it worked because a branch switch normally rewrites source files, and Vite's own
+ * watcher reports those — so the reload arrived for a different reason than the one written down.
+ * The two cases with no file churn are exactly the ones that broke:
+ *   - switching between branches whose trees are identical (the badge kept the old BRANCH name),
+ *   - committing, which moves HEAD and index and touches no working file.
+ *
+ * Polling mtimes rather than re-reading the identity: `git status --porcelain` on this repo is not
+ * free, and running it every second would be a real cost for a value that changes a few times a day.
+ * Two `statSync` calls are not measurable. `readBuildInfo()` still runs only when something moved.
+ *
+ * Kept as a pure function of an injected `stat` so it can be tested without a git repository, a dev
+ * server, or a clock.
+ *
+ * @param {string[]} paths files whose mtime signals a possible identity change
+ * @param {(p: string) => number|null} stat mtime in ms, or null when the file cannot be read
+ * @returns {() => boolean} tick: true when at least one path changed since the previous tick
+ */
+export function makeMtimePoll(paths, stat) {
+  // Seeded on construction so the first tick reports a CHANGE, not the initial state. A missing file
+  // is a legitimate reading (`.git/index` does not exist in a fresh clone until the first stage) and
+  // is remembered as null, so its appearance later is itself a change.
+  let last = paths.map(stat);
+  return () => {
+    const now = paths.map(stat);
+    const changed = now.some((v, i) => v !== last[i]);
+    last = now;
+    return changed;
+  };
+}
+
+/** mtime in ms, or null when the path cannot be read. Never throws — a missing file is an answer. */
+const mtimeOf = (p) => {
+  try {
+    return statSync(p).mtimeMs;
+  } catch {
+    return null;
+  }
+};
+
 export function raBuildInfo() {
   let lastIdentity = null;
   let lastCheck = 0;
@@ -178,16 +237,27 @@ export function raBuildInfo() {
       report(atStartUp, 'start-up');
 
       // A commit or a branch switch can change the identity without touching a file Vite watches.
-      // Watching these two closes that hole: HEAD moves on checkout, index moves on commit/stage.
-      server.watcher.add([join(REPO_ROOT, '.git', 'HEAD'), join(REPO_ROOT, '.git', 'index')]);
+      // `server.watcher.add()` on these two CANNOT close that hole — Vite ignores `.git` — so they
+      // are polled instead. See makeMtimePoll for the whole argument.
+      const gitMoved = makeMtimePoll(
+        [join(REPO_ROOT, '.git', 'HEAD'), join(REPO_ROOT, '.git', 'index')],
+        mtimeOf
+      );
 
       // Seeded from the start-up read so a server that starts broken does not say so twice.
       let lastReason = atStartUp.reason;
-      const recheck = () => {
+      const recheck = (force = false) => {
         // Throttled: a branch switch fires hundreds of watcher events and each `git status` costs
         // real time on a synced disk. 400 ms is well under human reaction time.
+        //
+        // THE POLL BYPASSES THE THROTTLE, and it has to. This is a LEADING-edge throttle with no
+        // trailing call: within a burst, only the first event is served and every later one is
+        // dropped for good. A branch switch is exactly a burst — so the poll's call, arriving in the
+        // middle of one, would be dropped, and nothing would ever call again because a mtime only
+        // changes once. The poll fires at most a few times a day and only when a git file genuinely
+        // moved, so there is no burst for it to be throttled against.
         const now = Date.now();
-        if (now - lastCheck < 400) return;
+        if (!force && now - lastCheck < 400) return;
         lastCheck = now;
 
         const info = readBuildInfo();
@@ -202,6 +272,12 @@ export function raBuildInfo() {
         const identity = identityOf(info);
         if (lastIdentity === null || identity === lastIdentity) return;
         lastIdentity = identity;
+        // THE TERMINAL LINE MUST NOT OUTLIVE THE COMMIT IT NAMES (BUILD-PILL-TRUTH). Before this,
+        // `start-up: serving build X` was printed once and never corrected, so a terminal that had
+        // been open across two branch switches asserted a commit the server had stopped serving
+        // hours earlier — and every block that read the pill from that line read a stale one.
+        // Announcing the CHANGE is what makes the terminal a record instead of a snapshot.
+        if (!info.reason) report(info, 'changed');
         const mod = server.moduleGraph.getModuleById(RESOLVED_ID);
         if (mod) server.moduleGraph.invalidateModule(mod);
         // A full reload, not HMR: the badge must be re-read from a re-loaded module, and the code it
@@ -209,9 +285,19 @@ export function raBuildInfo() {
         server.ws.send({ type: 'full-reload' });
       };
 
-      server.watcher.on('change', recheck);
-      server.watcher.on('add', recheck);
-      server.watcher.on('unlink', recheck);
+      server.watcher.on('change', () => recheck());
+      server.watcher.on('add', () => recheck());
+      server.watcher.on('unlink', () => recheck());
+
+      // The poll is the ONLY thing that sees a branch switch with no file churn, or a commit. It runs
+      // beside the watcher rather than replacing it: the watcher is still the fastest signal when
+      // source files do change, and `recheck` is idempotent, so both firing costs one extra compare.
+      // `unref()` so this timer can never be the reason the dev server refuses to exit.
+      const timer = setInterval(() => {
+        if (gitMoved()) recheck(true);
+      }, GIT_POLL_MS);
+      timer.unref?.();
+      server.httpServer?.once('close', () => clearInterval(timer));
     },
   };
 }
