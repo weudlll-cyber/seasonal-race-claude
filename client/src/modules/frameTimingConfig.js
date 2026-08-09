@@ -8,13 +8,16 @@
 
 import { storageGet, storageSet, KEYS } from './storage/storage.js';
 import { DEFAULT_FRAME_TIMING_CONFIG } from './storage/defaults.js';
+import { resolveFromDefaults, diffFromDefaults, pruneStored } from './storage/configDiff.js';
 
 export { DEFAULT_FRAME_TIMING_CONFIG };
 
 export function loadFrameTimingConfig() {
-  const stored = storageGet(KEYS.FRAME_TIMING_CONFIG);
-  if (!stored || typeof stored !== 'object') return { ...DEFAULT_FRAME_TIMING_CONFIG };
-  const merged = { ...DEFAULT_FRAME_TIMING_CONFIG, ...stored };
+  pruneStoredFrameTimingConfig();
+  const merged = resolveFromDefaults(
+    storageGet(KEYS.FRAME_TIMING_CONFIG),
+    DEFAULT_FRAME_TIMING_CONFIG
+  );
   if (
     typeof merged.dtSmoothingAlpha !== 'number' ||
     merged.dtSmoothingAlpha < 0 ||
@@ -28,6 +31,25 @@ export function loadFrameTimingConfig() {
   return merged;
 }
 
+/**
+ * CONFIG-DIFF-2: the one-time prune of the stored config — drop every key equal to its current
+ * default, so an untouched key goes back to following the default. The rule lives in
+ * `storage/configDiff.js`; the only thing that lives here is which storage key it belongs to.
+ *
+ * Idempotent and write-free when there is nothing to drop, so it is safe to call on every load.
+ */
+export function pruneStoredFrameTimingConfig() {
+  const { pruned, changed } = pruneStored(
+    storageGet(KEYS.FRAME_TIMING_CONFIG),
+    DEFAULT_FRAME_TIMING_CONFIG
+  );
+  if (changed) storageSet(KEYS.FRAME_TIMING_CONFIG, pruned);
+  return changed;
+}
+
 export function saveFrameTimingConfig(config) {
-  return storageSet(KEYS.FRAME_TIMING_CONFIG, config);
+  return storageSet(
+    KEYS.FRAME_TIMING_CONFIG,
+    diffFromDefaults(config, DEFAULT_FRAME_TIMING_CONFIG)
+  );
 }

@@ -160,8 +160,17 @@ describe('loadRaceBehaviorConfig — startSpreadRange migration', () => {
 
 describe('saveRaceBehaviorConfig', () => {
   it('calls storageSet with the config', () => {
-    const cfg = { ...DEFAULT_RACE_BEHAVIOR_CONFIG };
-    saveRaceBehaviorConfig(cfg);
-    expect(storageSet).toHaveBeenCalledWith('racearena:raceBehaviorConfig', cfg);
+    // CONFIG-DIFF-2: the payload is now the DIFF from the defaults. This fixture was the defaults
+    // themselves, so the diff is empty — and that is the point of the block, not a regression.
+    // The routing this test exists to check (right key, one call) is asserted unchanged.
+    saveRaceBehaviorConfig({ ...DEFAULT_RACE_BEHAVIOR_CONFIG });
+    expect(storageSet).toHaveBeenCalledWith('racearena:raceBehaviorConfig', {});
+  });
+
+  it('carries a genuine deviation through to storage', () => {
+    saveRaceBehaviorConfig({ ...DEFAULT_RACE_BEHAVIOR_CONFIG, softSteeringStrength: 0.04 });
+    expect(storageSet).toHaveBeenCalledWith('racearena:raceBehaviorConfig', {
+      softSteeringStrength: 0.04,
+    });
   });
 });

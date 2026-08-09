@@ -35,30 +35,42 @@
 //              That is a different thing — a browser<->sim handshake on the exported world, where a
 //              mismatch must abort loudly rather than be half-honoured. It versions a wire format
 //              between two programs, never the owner's settings, and it cannot wipe anything.
+//
+//              ── CONFIG-DIFF-1: WHAT IS STORED IS WHAT HE CHOSE ───────────────────────────────
+//
+//              THE DEFECT, and it is the SAVE side rather than the load side. `loadCameraConfig`
+//              was already right: it walks the DEFAULT keys and takes a stored value only where the
+//              stored object HAS that key, so a NEW key always arrives at its default. But
+//              `saveCameraConfig` wrote `{...config}` — the WHOLE resolved object. One slider move
+//              therefore FROZE every key, including the hundreds he never touched, and a default
+//              that changed afterwards could never reach him again. That is why his start board sat
+//              at 3000/80 for days after 6000/120 shipped: he had moved some unrelated slider once.
+//
+//              NOW: only keys whose value DIFFERS from the default are written. A key equal to its
+//              default is absent from storage, so it keeps following the default forever. Plus a
+//              one-time prune of what is already in his browser, so the fix reaches the config he
+//              has rather than only the ones he saves from now on.
+//
+//              ⚠ THE EDGE, stated here because it is the one thing this design cannot distinguish:
+//              A VALUE HE DELIBERATELY SET TO TODAY'S DEFAULT LOOKS EXACTLY LIKE ONE HE NEVER
+//              TOUCHED. Both are absent from storage, so both will follow a future change of that
+//              default. If he sets `minRacersVisible` to 5 while the default is 5, and the default
+//              later becomes 7, he gets 7. There is no way to tell the two apart without storing
+//              intent, which would mean a schema — and the schema is what this file exists without.
+//              The alternative (store everything) is the bug above, and it is worse: it silently
+//              freezes hundreds of keys to buy certainty about a handful.
 // ============================================================
 
 import { storageGet, storageSet, KEYS } from './storage/storage.js';
 import { DEFAULT_CAMERA_CONFIG } from './storage/defaults.js';
+import {
+  resolveFromDefaults,
+  diffFromDefaults as diffAgainst,
+  pruneStored,
+  valuesEqual as valuesEqualShared,
+} from './storage/configDiff.js';
 
 export { DEFAULT_CAMERA_CONFIG };
-
-/** Per-state profiles: default profile underneath, stored fields on top, unknown fields ignored. */
-function mergeStateProfiles(storedProfiles) {
-  const defProfiles = DEFAULT_CAMERA_CONFIG.cameraStateProfiles;
-  const out = {};
-  for (const state of Object.keys(defProfiles)) {
-    const def = defProfiles[state];
-    const stored = storedProfiles?.[state];
-    const profile = { ...def };
-    if (stored && typeof stored === 'object') {
-      for (const key of Object.keys(def)) {
-        if (Object.prototype.hasOwnProperty.call(stored, key)) profile[key] = stored[key];
-      }
-    }
-    out[state] = profile;
-  }
-  return out;
-}
 
 /**
  * The live camera config: defaults underneath, stored values on top, unknown or retired keys ignored.
@@ -69,16 +81,12 @@ function mergeStateProfiles(storedProfiles) {
  * migration, no reset.
  */
 export function loadCameraConfig() {
-  const stored = storageGet(KEYS.CAMERA_CONFIG);
-  const storedObj = stored && typeof stored === 'object' ? stored : {};
-  const out = {};
-  for (const key of Object.keys(DEFAULT_CAMERA_CONFIG)) {
-    out[key] = Object.prototype.hasOwnProperty.call(storedObj, key)
-      ? storedObj[key]
-      : DEFAULT_CAMERA_CONFIG[key];
-  }
-  out.cameraStateProfiles = mergeStateProfiles(storedObj.cameraStateProfiles);
-  return out;
+  // CONFIG-DIFF-1: normalise what is already stored, once, before reading it. Idempotent and
+  // write-free unless there is something to drop — see `pruneStoredCameraConfig`. The resolved
+  // config below is identical either way; pruning only changes what STORAGE holds, so that keys
+  // equal to their default go back to following the default.
+  pruneStoredCameraConfig();
+  return resolveFromDefaults(storageGet(KEYS.CAMERA_CONFIG), DEFAULT_CAMERA_CONFIG);
 }
 
 /**
@@ -90,9 +98,12 @@ export function loadCameraConfig() {
  * @returns {{ resolved: object, sources: Record<string,'stored'|'default'>, hadStored: boolean }}
  */
 export function cameraConfigProvenance() {
+  // RESOLVE FIRST, THEN READ STORAGE (CONFIG-DIFF-1). `loadCameraConfig` prunes, and this function
+  // is a TRUTH instrument: reading storage before the prune would report `stored` for keys that no
+  // longer are, on exactly the one run where the answer matters most — the first after the upgrade.
+  const resolved = loadCameraConfig();
   const stored = storageGet(KEYS.CAMERA_CONFIG);
   const storedObj = stored && typeof stored === 'object' ? stored : {};
-  const resolved = loadCameraConfig();
   const sources = {};
   for (const key of Object.keys(DEFAULT_CAMERA_CONFIG)) {
     sources[key] = Object.prototype.hasOwnProperty.call(storedObj, key) ? 'stored' : 'default';
@@ -100,6 +111,26 @@ export function cameraConfigProvenance() {
   return { resolved, sources, hadStored: !!stored && typeof stored === 'object' };
 }
 
+// CONFIG-DIFF-2: the rule moved to storage/configDiff.js, the ONE home shared by all seven stores.
+// These re-exports keep this module's public surface unchanged for its existing callers and tests —
+// the camera is now a CONSUMER of the rule rather than the place it lives.
+export const valuesEqual = valuesEqualShared;
+export const diffFromDefaults = (config) => diffAgainst(config, DEFAULT_CAMERA_CONFIG);
+
+/**
+ * The one-time prune of the stored camera config. See storage/configDiff.js for the rule; the only
+ * thing that lives here is which storage key it belongs to.
+ *
+ * @returns {{changed: boolean, dropped: string[]}}
+ */
+export function pruneStoredCameraConfig() {
+  const stored = storageGet(KEYS.CAMERA_CONFIG);
+  const { pruned, dropped, changed } = pruneStored(stored, DEFAULT_CAMERA_CONFIG);
+  if (changed) storageSet(KEYS.CAMERA_CONFIG, pruned);
+  return { changed, dropped };
+}
+
+/** Store ONLY what differs from the defaults. See the header for why, and for the one edge case. */
 export function saveCameraConfig(config) {
-  return storageSet(KEYS.CAMERA_CONFIG, { ...config });
+  return storageSet(KEYS.CAMERA_CONFIG, diffAgainst(config, DEFAULT_CAMERA_CONFIG));
 }

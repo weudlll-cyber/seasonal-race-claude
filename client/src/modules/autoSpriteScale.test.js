@@ -140,9 +140,21 @@ describe('loadAutoScaleConfig', () => {
 
 describe('saveAutoScaleConfig', () => {
   it('writes config to storage', () => {
+    // CONFIG-DIFF-2: what reaches storage is the DIFF from the defaults, not the whole object. The
+    // intent of this test — save routes to the right key with what the caller chose — is unchanged;
+    // only the payload shape is, and `enabled: true` is now absent because it IS the default.
     const cfg = { enabled: true, referenceValue: 30, minScale: 0.3, maxScale: 3.0 };
     saveAutoScaleConfig(cfg);
-    expect(storageSet).toHaveBeenCalledWith('racearena:autoScaleConfig', cfg);
+    expect(storageSet).toHaveBeenCalledWith('racearena:autoScaleConfig', {
+      referenceValue: 30,
+      minScale: 0.3,
+      maxScale: 3.0,
+    });
+  });
+
+  it('writes an EMPTY object when nothing differs from the defaults', () => {
+    saveAutoScaleConfig({ ...DEFAULT_AUTO_SCALE_CONFIG });
+    expect(storageSet).toHaveBeenCalledWith('racearena:autoScaleConfig', {});
   });
 });
 
