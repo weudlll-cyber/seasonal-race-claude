@@ -585,21 +585,25 @@ export function applyRacerBehavior(racers, config, priorityExtras) {
       const dT = shortestArcDeltaT(rA.t, rB.t);
       const dY = rA.physicalY - rB.physicalY;
 
-      // Body geometry for the speed-brake — both axes body-based (reports 43/45).
-      // Frame size kept as fallback when body dims are absent.
-      const frameA = getFrameSizePx(rA);
-      const frameB = getFrameSizePx(rB);
-      const hlA_b = (rA.drawnBodyLengthPx ?? frameA) / 2;
-      const hlB_b = (rB.drawnBodyLengthPx ?? frameB) / 2;
-      const hwA_b = (rA.drawnBodyWidthPx ?? frameA) / 2;
-      const hwB_b = (rB.drawnBodyWidthPx ?? frameB) / 2;
-      const brakeContactLength = hlA_b + hlB_b;
-      const brakeContactWidth = hwA_b + hwB_b;
-      const trackWidth = Math.max(getTrackWidthAtTpx(rA), getTrackWidthAtTpx(rB));
-      const pathLength = Math.max(getPathLengthPx(rA), getPathLengthPx(rB));
+      // Body geometry for the speed-brake AND for the geometric gate below — both axes
+      // body-based (reports 43/45). Frame size kept as fallback when body dims are absent.
+      //
+      // PAIR-DEDUP-1 (2026-08-10): ONE call, read by both. Until now this preamble computed the
+      // six quantities itself and `pairContact` computed them AGAIN at the gate from the same two
+      // racers — twice per pair, every step. The two sites were expression-for-expression
+      // identical (same `?? frameSizePx` fallback, same A+B addition order, same `Math.max`
+      // argument order), so collapsing them is arithmetic deduplication and NOTHING else: the
+      // world fingerprint is unchanged by construction. Only the computation moved up; the gate's
+      // own zero-size `continue` stays exactly where it was, below the speed-brake block.
+      const {
+        contactWidth,
+        contactLength,
+        pairTW: trackWidth,
+        pairPL: pathLength,
+      } = pairContact(rA, rB);
       // Same-lane filter: brake only if bodies would collide laterally (no expansion multiplier).
       const brakeSameLaneY =
-        trackWidth > 0 ? pxToPhysicalY(brakeContactWidth, trackWidth) : config.speedBrakeYThreshold;
+        trackWidth > 0 ? pxToPhysicalY(contactWidth, trackWidth) : config.speedBrakeYThreshold;
 
       // Trailer = lower t, tie-break by index. Trailer yields; leader holds.
       const aIsTrailer = rA.t < rB.t || (rA.t === rB.t && rA.index < rB.index);
@@ -613,8 +617,8 @@ export function applyRacerBehavior(racers, config, priorityExtras) {
       // Lateral proximity must NOT drive braking; it only answers "same lane y/n".
       // Report 13: disabling avoidanceActive on closed tracks caused regressions.
       const dynamicBrakeT =
-        brakeContactLength > 0 && pathLength > 0
-          ? (brakeContactLength / pathLength) * config.speedBrakeTMultiplier
+        contactLength > 0 && pathLength > 0
+          ? (contactLength / pathLength) * config.speedBrakeTMultiplier
           : 0.014;
       if (Math.abs(dY) < brakeSameLaneY && dT < dynamicBrakeT) {
         // ── Look before you brake ─────────────────────────────────────────────
@@ -647,8 +651,8 @@ export function applyRacerBehavior(racers, config, priorityExtras) {
         // The hard-separation pass remains ONLY as a last-resort catch, never the guarantee.
         let takeFreeLane = false;
         if (config.lookBeforeBrakeEnabled !== false && trackWidth > 0 && pathLength > 0) {
-          const lbHalfSpan = pxToPhysicalY(brakeContactWidth, trackWidth);
-          const lbTHalf = brakeContactLength / pathLength;
+          const lbHalfSpan = pxToPhysicalY(contactWidth, trackWidth);
+          const lbTHalf = contactLength / pathLength;
           const lbCap = Math.min(config.maxLateral, 1.0);
           const reengageFloorT = lbTHalf * (config.lookBeforeBrakeReengageTMultiplier ?? 1.2);
 
@@ -738,8 +742,8 @@ export function applyRacerBehavior(racers, config, priorityExtras) {
             const bmMultiplier =
               config.brakeMatchActivationTMultiplier ?? config.speedBrakeTMultiplier;
             const dynamicBrakeMatchT =
-              brakeContactLength > 0 && pathLength > 0
-                ? (brakeContactLength / pathLength) * bmMultiplier
+              contactLength > 0 && pathLength > 0
+                ? (contactLength / pathLength) * bmMultiplier
                 : 0.014;
             const bmYThreshold = config.brakeMatchActivationYThreshold ?? brakeSameLaneY;
             inBrakeMatchZone = Math.abs(dY) < bmYThreshold && dT < dynamicBrakeMatchT;
@@ -782,11 +786,12 @@ export function applyRacerBehavior(racers, config, priorityExtras) {
       // Two independent px-space axes, no sqrt. Speed brake runs BEFORE this gate (above)
       // because its body-based longitudinal zone (×1.5) is wider than the gate (×1.2).
       // Invariant: gate contact threshold × (1+buffer) > contact = free-lane threshold.
-      const { contactWidth, contactLength, pairTW, pairPL } = pairContact(rA, rB);
+      // PAIR-DEDUP-1: contactWidth/contactLength/trackWidth/pathLength come from the single
+      // `pairContact` call in the loop preamble — this gate used to recompute them.
       // Skip pairs with no body size info (real racers always have frameSizePx as fallback).
       if (contactWidth === 0 || contactLength === 0) continue;
-      const latPx = Math.abs(dY) * (pairTW / 2);
-      const longPx = dT * pairPL;
+      const latPx = Math.abs(dY) * (trackWidth / 2);
+      const longPx = dT * pathLength;
       const bufferPct = config.avoidanceBufferPct ?? 0.2;
       // Gate = contact × (1+buffer) > contact (free-lane) — invariant by construction.
       const latTrigger = contactWidth * (1 + bufferPct);
