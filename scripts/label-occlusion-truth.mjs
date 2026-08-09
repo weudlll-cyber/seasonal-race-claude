@@ -56,6 +56,7 @@ import {
   createLabelFormHold,
   advanceLabelForms,
 } from "../client/src/screens/RaceScreen/labelFormHold.js";
+import { frameCameraInputs } from "../client/src/screens/RaceScreen/frameCameraInputs.js";
 import {
   computeRenderDisplayScale,
   getEffectiveMaxTargetScreenPx,
@@ -157,16 +158,18 @@ function runOne(geo, n, demoteHoldMs) {
     const racerScreenH = drawnRacerScreenPx(race.displaySize, displayScale, effY);
     const racerScreenW = drawnRacerScreenPx(race.displaySize, displayScale, effX);
 
-    // LABEL-FOCUS-1: the same exemptions the renderer applies, derived the same way — the
-    // director's own subject where it has one, the leader where it does not (BATTLE_ZOOM and
-    // OVERVIEW frame a group and name nobody).
-    let focusIndex = cd.anchorRacerIndex ?? null;
+    // LABEL-FOCUS-1: the same exemptions the renderer applies. FRAME-INPUTS-1: through the SAME
+    // assembly the game uses, rather than reaching into the director here. That is the whole point
+    // of that block — this harness passed while the live game was broken precisely because it set
+    // fields RaceScreen did not, so it must not be allowed to assemble its own inputs again.
+    const camera = frameCameraInputs(cd);
+    let focusIndex = camera.anchorRacerIndex ?? null;
     if (focusIndex == null && s.racers.length) {
       let leader = s.racers[0];
       for (const r of s.racers) if ((r?.t ?? 0) > (leader?.t ?? 0)) leader = r;
       focusIndex = leader?.index ?? null;
     }
-    const atFinish = cd.state === "PHOTO_FINISH";
+    const atFinish = camera.state === "PHOTO_FINISH";
     const exempt = focusIndex != null ? new Set([focusIndex]) : null;
 
     const out = computeTagLayout({

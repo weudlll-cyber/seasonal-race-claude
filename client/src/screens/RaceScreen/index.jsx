@@ -13,6 +13,7 @@ import { validateActiveRace } from './raceSession.js';
 import { PHASE } from './racePhase.js';
 import { renderRaceFrame } from './renderRaceFrame.js';
 import { createLabelFormHold } from './labelFormHold.js';
+import { frameCameraInputs } from './frameCameraInputs.js';
 import { attachRenderState, attachRacerRenderState, stepFocusFade } from './renderState.js';
 import { getBgCanvasReady } from './drawing/trackRendering.js';
 import { getBackgroundImage } from '../../modules/track-effects/bgImageCache.js';
@@ -1245,11 +1246,10 @@ export default function RaceScreen() {
         trackLightsConfig,
         racerType: racerTypeRef.current,
         cameraConfig: cameraConfigRef.current,
-        camera: {
-          hudState: camDirRef.current?.hudState ?? null,
-          comebackLockedRacerIndex: camDirRef.current?.comebackLockedRacerIndex ?? null,
-          detectBattleGroup: (racers) => camDirRef.current?.detectBattleGroup?.(racers) ?? null,
-        },
+        // FRAME-INPUTS-1: assembled in ONE place, not listed by hand here. The literal that used to
+        // sit at this call site named three fields; the renderer read five, so the two it missed —
+        // the director's SUBJECT and its STATE — were undefined on every frame of every live race.
+        camera: frameCameraInputs(camDirRef.current),
         displaySize,
         displaySizeScale,
         assignmentByRacer,

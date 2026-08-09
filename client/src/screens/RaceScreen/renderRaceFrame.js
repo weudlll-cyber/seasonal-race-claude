@@ -195,6 +195,13 @@ export function renderRaceFrame(ctx, f) {
     raceElapsedMs < (cameraConfig.nameTagAllUntilMs ?? DEFAULT_CAMERA_CONFIG.nameTagAllUntilMs);
   // LABEL-FOCUS-1: who the camera is on. The director's own answer first; the leader only where it
   // genuinely has none, which is BATTLE_ZOOM and OVERVIEW.
+  //
+  // WHERE THAT ANSWER COMES FROM MATTERS AS MUCH AS THE RULE (FRAME-INPUTS-1). `camera` is built by
+  // `frameCameraInputs`, and it is built there BECAUSE this line read a field the caller did not
+  // supply: RaceScreen assembled the object as a hand-written literal of three fields, so
+  // `anchorRacerIndex` was undefined on every frame of every live race and the fallback below fired
+  // always. The rule was right and the input never arrived. If a field is needed here, it goes on
+  // FRAME_CAMERA_FIELDS — nowhere else, and a test fails if it does not.
   let focusRacerIndex = camera?.anchorRacerIndex ?? null;
   if (focusRacerIndex == null && st.racers?.length) {
     let leader = st.racers[0];
