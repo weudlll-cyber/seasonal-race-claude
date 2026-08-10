@@ -62,8 +62,20 @@ export function ceremonyEasing(name) {
   return CEREMONY_EASINGS[name] ?? CEREMONY_EASINGS[DEFAULT_CEREMONY_EASING];
 }
 
-/** The four beats. None of them is a remainder — see `ceremonySchedule`. */
+/** The beats. None of them is a remainder — see `ceremonySchedule`. */
 export const CEREMONY_BEAT = {
+  /**
+   * THE BRAND CARD (CEREMONY-OPENING-1). The brand's logo, large, with the chosen race name, before
+   * anything else happens. The owner's words: *"At the very beginning of the race, show the brand
+   * logo — if a brand was chosen — and the race name that was chosen."*
+   *
+   * IT DOES NOT EXIST WHEN THERE IS NO BRAND, and that is a real absence rather than a zero-length
+   * hold: `ceremonySchedule` is given 0 and every later beat starts that much earlier, so the
+   * ceremony begins directly on the track with no gap and no blank frame. Whoever calls the schedule
+   * decides — see `ceremonyTotalMs`, which takes the brand as an argument rather than reading
+   * storage, because a pure rhythm module has no business knowing what a brand profile is.
+   */
+  BRAND: 'brand',
   /** The whole track, held still. */
   VENUE: 'venue',
   /** Easing from the venue shot to the formation. */
@@ -162,24 +174,48 @@ export function boardDurationMs(n, floorMs, msPerName) {
  * @returns {{venueMs, pushMs, boardHoldMs, settledMs, countdownMs, boardStartMs, boardEndMs,
  *   countdownStartMs, totalMs}}
  */
-export function ceremonySchedule(venueMs, pushMs, settledMs, boardMs = 0, countdownMs = 0) {
+export function ceremonySchedule(
+  venueMs,
+  pushMs,
+  settledMs,
+  boardMs = 0,
+  countdownMs = 0,
+  brandMs = 0
+) {
+  const br = Math.max(0, Number.isFinite(brandMs) ? brandMs : 0);
   const v = Math.max(0, Number.isFinite(venueMs) ? venueMs : 0);
   const p = Math.max(0, Number.isFinite(pushMs) ? pushMs : 0);
   const st = Math.max(0, Number.isFinite(settledMs) ? settledMs : 0);
   const b = Math.max(0, Number.isFinite(boardMs) ? boardMs : 0);
   const cd = Math.max(0, Number.isFinite(countdownMs) ? countdownMs : 0);
-  // The board is up for the whole push and then for as long again as it still needs. When it is
-  // SHORTER than the push it needs no extra hold at all and this beat is zero — a small field does
-  // not make the ceremony longer.
-  const boardHoldMs = Math.max(0, b - p);
-  const boardEndMs = v + p + boardHoldMs;
+  // CEREMONY-OPENING-1: THE BOARD IS ITS OWN BEAT AND STARTS WHEN THE TRAVEL IS OVER.
+  //
+  // It used to start the instant the venue shot ended and stand for the WHOLE push, holding
+  // afterwards only for whatever it still needed (`boardHoldMs = max(0, boardMs - pushMs)`). That
+  // was deliberate once — it kept a small field from lengthening the opening — but it is exactly
+  // what the owner was missing: the track's own moment was 1400 ms long and the travel behind it was
+  // spent under a board. Measured on the shipped build, the board was up from 1400 ms to 7400 at 40
+  // racers, and the camera arrived at 3400.
+  //
+  // So `boardHoldMs` is GONE, and with it the last coupling between two beats in this file. Every
+  // beat below is now exactly the number its slider names, and the total is their sum. The cost is
+  // stated rather than hidden: a small field's opening is now `boardMs` longer than it was, because
+  // the board no longer hides inside the push.
+  const brandEndMs = br;
+  const venueEndMs = brandEndMs + v;
+  const boardStartMs = venueEndMs + p;
+  const boardEndMs = boardStartMs + b;
   return {
+    brandMs: br,
     venueMs: v,
     pushMs: p,
-    boardHoldMs,
+    boardMs: b,
     settledMs: st,
     countdownMs: cd,
-    boardStartMs: v,
+    brandEndMs,
+    venueEndMs,
+    pushEndMs: boardStartMs,
+    boardStartMs,
     boardEndMs,
     countdownStartMs: boardEndMs + st,
     totalMs: boardEndMs + st + cd,
@@ -198,7 +234,26 @@ export function ceremonySchedule(venueMs, pushMs, settledMs, boardMs = 0, countd
  * @param {number} n    racers in the race
  * @returns {number} ms
  */
-export function ceremonyTotalMs(cfg, n) {
+export function ceremonyTotalMs(cfg, n, hasBrand = false) {
+  return ceremonyScheduleFor(cfg, n, hasBrand).totalMs;
+}
+
+/**
+ * THE SCHEDULE, from a config and a field size — the ONE place that turns settings into beats.
+ *
+ * Every caller asks here rather than assembling the six arguments itself. That is not tidiness: the
+ * five callers that used to do it by hand each carried their own copy of the fallbacks, and
+ * CEREMONY-TRUTH-1 was written because one of them had `?? 0` where the default was 3000, producing
+ * a ceremony with no countdown in it that nothing reported. One assembly point, six fallbacks, all
+ * of them the shipped defaults.
+ *
+ * @param {object} cfg  a camera config
+ * @param {number} n    racers in the race
+ * @param {boolean} hasBrand  whether a brand profile with a logo is active. The BRAND beat is zero
+ *   when it is false, which removes it from the schedule entirely rather than holding a blank card.
+ * @returns {object} the schedule
+ */
+export function ceremonyScheduleFor(cfg, n, hasBrand = false) {
   const D = DEFAULT_CAMERA_CONFIG;
   return ceremonySchedule(
     cfg?.ceremonyVenueMs ?? D.ceremonyVenueMs,
@@ -209,8 +264,9 @@ export function ceremonyTotalMs(cfg, n) {
       cfg?.startBoardFloorMs ?? D.startBoardFloorMs,
       cfg?.startBoardMsPerName ?? D.startBoardMsPerName
     ),
-    cfg?.countdownDigitsMs ?? D.countdownDigitsMs
-  ).totalMs;
+    cfg?.countdownDigitsMs ?? D.countdownDigitsMs,
+    hasBrand ? (cfg?.ceremonyBrandMs ?? D.ceremonyBrandMs) : 0
+  );
 }
 
 /**
@@ -222,17 +278,23 @@ export function ceremonyTotalMs(cfg, n) {
  */
 export function ceremonyAt(elapsedMs, schedule) {
   const e = Number.isFinite(elapsedMs) && elapsedMs > 0 ? elapsedMs : 0;
-  const { venueMs, pushMs, boardHoldMs = 0 } = schedule;
-  if (e < venueMs) {
-    return { beat: CEREMONY_BEAT.VENUE, progress: venueMs > 0 ? e / venueMs : 1 };
+  const { brandMs = 0, venueMs, pushMs, boardMs = 0 } = schedule;
+  // A brand of zero length is skipped rather than entered with progress 1 — the card must not exist
+  // for a single frame when there is no brand.
+  if (brandMs > 0 && e < brandMs) {
+    return { beat: CEREMONY_BEAT.BRAND, progress: e / brandMs };
   }
-  const intoPush = e - venueMs;
+  const intoVenue = e - brandMs;
+  if (intoVenue < venueMs) {
+    return { beat: CEREMONY_BEAT.VENUE, progress: venueMs > 0 ? intoVenue / venueMs : 1 };
+  }
+  const intoPush = intoVenue - venueMs;
   if (pushMs > 0 && intoPush < pushMs) {
     return { beat: CEREMONY_BEAT.PUSH, progress: intoPush / pushMs };
   }
   const intoBoard = intoPush - pushMs;
-  if (boardHoldMs > 0 && intoBoard < boardHoldMs) {
-    return { beat: CEREMONY_BEAT.BOARD, progress: intoBoard / boardHoldMs };
+  if (boardMs > 0 && intoBoard < boardMs) {
+    return { beat: CEREMONY_BEAT.BOARD, progress: intoBoard / boardMs };
   }
   return { beat: CEREMONY_BEAT.SETTLED, progress: 1 };
 }
@@ -288,7 +350,10 @@ export const BOARD_FADE_MS = 220;
  */
 export function ceremonyZoom(venueZoom, targetZoom, elapsedMs, schedule, easing) {
   const { beat, progress } = ceremonyAt(elapsedMs, schedule);
-  if (beat === CEREMONY_BEAT.VENUE) return venueZoom;
+  // BRAND holds the venue shot: the card is drawn OVER the track, so the camera must already be
+  // where the track's own beat will find it. Anything else would make the card lift on a moving
+  // picture and land the overview mid-travel.
+  if (beat === CEREMONY_BEAT.BRAND || beat === CEREMONY_BEAT.VENUE) return venueZoom;
   // BOARD and SETTLED are both "arrived": the camera has finished its travel and holds. That is the
   // whole point of the BOARD beat — the board gets its time without the push getting slower.
   if (beat === CEREMONY_BEAT.BOARD || beat === CEREMONY_BEAT.SETTLED) return targetZoom;

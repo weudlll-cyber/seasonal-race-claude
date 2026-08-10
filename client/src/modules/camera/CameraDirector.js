@@ -368,6 +368,8 @@ export class CameraDirector {
     // one, a perfect physics replay still diverges the moment the director rolls a die.
     this._rng = null;
     this._randomSeed = 0;
+    // CEREMONY-OPENING-1: no brand card unless somebody says so. See setCeremonyBrandActive.
+    this._ceremonyBrandActive = false;
   }
 
   /** The director's next random draw: its own seeded stream, or the global generator. */
@@ -499,6 +501,7 @@ export class CameraDirector {
     this._battleMinDurationMs = t.battleMinDurationMs;
     this._endgameThreshold = t.endgameThreshold;
     this._postStartHoldMs = t.postStartHoldMs;
+    this._ceremonyBrandMs = t.ceremonyBrandMs;
     this._ceremonyVenueMs = t.ceremonyVenueMs;
     this._ceremonyPushMs = t.ceremonyPushMs;
     this._ceremonySettledMs = t.ceremonySettledMs;
@@ -2751,8 +2754,24 @@ export class CameraDirector {
       // renderer built its own WITH the digits. The renderer therefore opened the digit window at
       // `countdownStartMs`, which without the digits in the total is the same instant the gun fires.
       // Zero frames of countdown, from two schedules that were never compared.
-      this._countdownDigitsMs
+      this._countdownDigitsMs,
+      // CEREMONY-OPENING-1: the SIXTH argument, and it is zero unless somebody has said there is a
+      // brand to show. The director cannot know that — a brand profile is storage, not camera — so
+      // RaceScreen tells it once at race init through `setCeremonyBrandActive`. Left alone it is
+      // false, which is what every headless harness wants: no brand, no card, no beat.
+      this._ceremonyBrandActive ? this._ceremonyBrandMs : 0
     );
+  }
+
+  /**
+   * Whether this race opens on a brand card. Set ONCE, at race init, by whoever knows.
+   *
+   * It is a setter rather than an argument to `ceremonySchedule` because five callers ask for that
+   * schedule and only one of them has any idea what branding is; making them all carry the flag
+   * would put the answer in five places and guarantee they disagree.
+   */
+  setCeremonyBrandActive(active) {
+    this._ceremonyBrandActive = !!active;
   }
 
   /** The geometric centre of the formation — the point the ceremony frames on. */
