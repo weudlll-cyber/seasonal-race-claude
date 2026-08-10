@@ -8,6 +8,30 @@ report here could be orphaned, or an index link could dangle, with nothing notic
 `node scripts/check-index.mjs --dir=reports/night --index=reports/night/INDEX.md` now checks both
 directions.
 
+- [DOC-AUDIT-2.md](DOC-AUDIT-2.md) — the living documents in one pass. **The machine-checkable half
+  is already green and stays green** (config claims 0, fingerprint copies 0, dangling links 0, index
+  both directions 0), so what is left is what a guard cannot see — and all six findings are the same
+  defect: a number a scan could derive, typed into a sentence. `SHIP-CEREMONY.md` carried THREE of
+  them in one sentence (19/103/84 → 20/106/86, stale since CONFIG-DIFF-2); `ARCHITECTURE.md`
+  described a three-tier track fallback whose third tier is not in the repository. Five fixed, one
+  named as needing a generator. **The routing gap that turned master red is closed** in the routing
+  declarations — `gen-engine-reach-doc` now declares `reach: raceCore.js`, so its dependency set IS
+  the hull and cannot drift from it; three tests, both directions, including the exact file
+  CONFIG-DIFF-2 added. **`postStartHoldMs` is TWO CLOCKS wearing one name** — the camera's is a
+  duration from the end of the 3 s overview, the planner's an absolute floor from t=0, differing by
+  exactly START_PHASE_DURATION — and the planner's is INERT above a ~28 s race, so it can bite only
+  short races. Rename not proposed: it is his call.
+- [OUTCOME-PHASE-75.md](OUTCOME-PHASE-75.md) — **the owner's decision, shipped**: the decisive phase
+  begins at 75 % of the leader's run, not 65 %. The COMEBACK gate opens 6–8 s later and stays open a
+  quarter of the race instead of a third (measured on two tracks); COMEBACK_ZOOM is entered a third
+  as often (2103 → 753 frames) and LEAD_CHANGE takes most of the freed frames. CAMERA
+  `ad07c08ce5d8ae49` → `d54d6332fb8d36c6` and RENDER `752df7bc61ef0721` → `9580ff2e3626b3b9` as
+  expected; WORLD `dc4647be0f55ebdb` unchanged. The three stale literals are CONVERTED, not aligned
+  (42 → 38 disagreeing sites), plus a fourth copy nobody had counted — a Dev Screen tooltip reading
+  "Default 65%", which no guard could ever have caught. **The HUD bug is not what the brief said and
+  the record is corrected**: `getComebackDiagData` does emit the value, so the HUD was right all
+  along; the diagnostic fallbacks are removed anyway, because a fallback in a panel is a second
+  authority on a number the director owns.
 - [PAIR-PREFILTER-1.md](PAIR-PREFILTER-1.md) — a two-axis field bound in front of the pair loop, and
   **the race now costs 20 % less to compute**: the world fingerprint, a fixed ten-track workload, runs
   128 s against master's 160 s, and every one of the six timed runs produced `dc4647be0f55ebdb`.

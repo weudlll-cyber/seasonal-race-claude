@@ -263,6 +263,38 @@ That is not a dead end; it is an unanswered question with a strong lead. **Whoev
 start from `archive/corridor-overlay-1`, not from scratch** — the overlay is 90 % of a working
 instrument, and the two reports inventory what was already ruled out.
 
+## L. Neighbour-limited pair loop by a sorted t-window (2026-06-06, reverted `fb988587`)
+
+**What was built.** Report [08-neighbor-pairloop](../reports/perf/08-neighbor-pairloop.md): the pair
+loop sorted the field by `t` each step and evaluated only pairs inside a window `T_WINDOW = 0.09`,
+with the pair body wrapped in an `evalPair` closure so the walk could be done in two passes.
+
+**Why it was dropped.** Measured against the baseline frame log at 70 racers on Space Sprint and it
+**REGRESSED**: mean +0.73 ms, P90 +2.35 ms, max +3.39 ms, worst spike run 16 → 43 frames. The cause
+was named at the time: the per-step sort and the closure cost more than the window saved, because in
+a dense pack `T_WINDOW = 0.09` selected essentially the whole field, so the T-break fired on zero
+pairs while every pair still paid for the machinery.
+
+**DO NOT READ THIS AS "WINDOWING THE PAIR LOOP IS DEAD", and this is the whole reason the entry is
+here.** It is evidence about THAT window and THAT implementation, and all three of its premises have
+since changed:
+
+- **The window was 9–45× too wide.** `T_WINDOW = 0.09` was derived from the mixed-unit avoidance
+  metric, which **no longer exists** — `8292d9db` replaced it with the two-axis geometric gate. The
+  bound re-derived against today's gate is 0.002–0.010 depending on track length.
+- **It had no Y axis, and the Y axis is the strong one.** Measured in
+  [PAIR-REACH-ANALYSIS](../reports/night/PAIR-REACH-ANALYSIS.md): at 100 racers the t-axis alone
+  leaves 18 % of pairs, t AND y together leave 3.4 %. This project had in fact already shipped a
+  Y-rejection once (`8bd7180`, reports 11 and 12) and lost it in the same refactor.
+- **The sort is already paid for.** SIDE-FREE-CULL-1 builds a `tFrac`-sorted index every step for
+  `isSideFree`, at 0.83 % of the step — and a prefilter that keeps the original loop order does not
+  need the index at all, only two scalars and two `continue`s. No closure either.
+
+**The successor SHIPPED the same night this entry was written** — see
+[PAIR-PREFILTER-1](../reports/night/PAIR-PREFILTER-1.md), a two-axis field bound proven a strict
+superset of both gates, world fingerprint byte-identical. A reader who finds the 2026-06 failure
+must find this paragraph with it, which is why both are named here.
+
 ## What this leaves open (not tried, not excluded)
 
 Formats that make a breakaway irrelevant rather than catching it: **elimination** (last-at-call out of

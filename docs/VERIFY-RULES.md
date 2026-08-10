@@ -37,10 +37,17 @@ The reason is the one the table kept demonstrating: a new guard had to be added 
 the place that got forgotten was always the table.
 
 **The SET of guards is discovered, not listed** — `guardScripts()` scans `scripts/` for
-`check-*.mjs`, `*-fingerprint.mjs` and `fingerprint-default.mjs`, plus the two suite guards declared
-in `routing.mjs`. So this document deliberately states **no count**: an earlier version said "seven",
-which was true when it was written and was fifteen by the time anyone read it again. `--dry` prints
-the current set.
+`check-*.mjs`, `*-fingerprint.mjs` and `fingerprint-default.mjs`, plus `gen-engine-reach-doc.mjs`
+by name, plus the two suite guards declared in `routing.mjs`. So this document deliberately states
+**no count**: an earlier version said "seven", which was true when it was written and was fifteen by
+the time anyone read it again. `--dry` prints the current set.
+
+**Why one generator is named individually rather than a `gen-*` wildcard.** Discovery works by RUNNING
+each candidate with `--declare`, and most scripts here do their work at module load — asking a sweep
+what it covers would run the sweep, and a generator run with no argument REWRITES its document.
+`gen-engine-reach-doc.mjs` is safe to ask because it declares and exits first, and `verify.mjs` gives
+it `--check` so it can only read. Any future generator earns its place the same way, one name at a
+time; a wildcard would enrol the next one automatically and in write mode.
 
 The declaration is printed with every skip, so what a guard believes is visible without reading it.
 Two consequences that are easy to be surprised by: a change under `client/` selects the client suite

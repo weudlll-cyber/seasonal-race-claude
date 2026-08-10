@@ -967,18 +967,26 @@ See `docs/TRACK_LIFECYCLE.md` for the full lifecycle spec. This section summaris
 | **Track-Geometry** | Spatial data: background image, inner/outer boundary points, effects, closed flag. Stored in the same JSON file, referenced by `geometryId`.                                                                                      |
 | **Server-Track**   | A Track-Preset that exists as a real server record (has a `server/data/tracks/<id>.json` file).                                                                                                                                   |
 | **Default-Track**  | One of the 10 built-in tracks (Dirt Oval, River Run, Space Sprint, Garden Path, City Circuit, Mountainstreet, Ice Track, Seatrack, Searound, Luger Hill). After TLH-1 these are Server-Tracks with empty geometry fields at boot. |
-| **Code-Bundle**    | `client/src/modules/storage/defaultTracks.js` — the in-code fallback snapshot. Used as last resort when server is unreachable and cache is empty.                                                                                 |
+| **Code-Bundle**    | **NOT BUILT.** `client/src/modules/storage/defaultTracks.js` does not exist. The planned in-code fallback snapshot, for when the server is unreachable and the cache is empty — deferred as TLH-3 in [TRACK_LIFECYCLE.md](TRACK_LIFECYCLE.md), which owns it and marks it deferred. Kept as a term because the two blocks below use it. |
 
 ### Persistence Layer (after TLH)
 
 ```
 Frontend loading order for track list:
-  1. Server  (GET /api/tracks — live, authoritative)
-  2. Cache   (localStorage racearena:trackGeometries:* — populated after last server fetch)
-  3. Code-Bundle (defaultTracks.js — hardcoded snapshot, bootstrap + last-resort fallback)
+  1. Server  (GET /api/tracks — live, authoritative)          BUILT
+  2. Cache   (localStorage racearena:trackGeometries:* — populated after last server fetch)  BUILT
+  3. Code-Bundle (defaultTracks.js — hardcoded snapshot)      NOT BUILT — TLH-3, deferred
 ```
 
-The Code-Bundle initially ships with empty geometry fields (bootstrap). After the user draws the 10 default-track geometries, an **Export button** in the Dev-Screen writes the current server-track state as a JSON snapshot. The user commits this snapshot manually. The snapshot is a deliberate act, not automatic.
+**Step 3 does not exist**, and this block read as if it did until DOC-AUDIT-2 (2026-08-10). The file
+it names is not in the repository, there is no `fallbackMode` flag, and nothing falls back past the
+cache — if the server is unreachable and the cache is empty, the list is empty. The design for it,
+including the Export button and the offline banner, is [TRACK_LIFECYCLE.md](TRACK_LIFECYCLE.md)'s
+**TLH-3**, which is marked *planned but deferred* and is the canonical home for the plan. Nothing is
+duplicated here: the two lines below describe the DESIGN and are kept only because the diagram
+above refers to it.
+
+The Code-Bundle would initially ship with empty geometry fields (bootstrap). After the user draws the 10 default-track geometries, an **Export button** in the Dev-Screen would write the current server-track state as a JSON snapshot. The user commits this snapshot manually. The snapshot is a deliberate act, not automatic.
 
 ### Default-Tracks as Server-Records (TLH-1)
 

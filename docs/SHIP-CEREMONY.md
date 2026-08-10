@@ -24,9 +24,18 @@ Camera and other presentation work still skips this whole ceremony. But it does 
 > table below — this sentence deliberately quotes no duration.
 
 **The trigger is a computed set, not a folder (VERIFY-COST-1).** It is the transitive closure of
-`raceCore.js`'s imports — **19 files** — against the **103** files under `client/src/modules/`
-outside `camera/` that the old folder rule fired on. The other 84 cannot reach the engine, so minting
+`raceCore.js`'s imports — **20 files** — against the **106** files under `client/src/modules/`
+outside `camera/` that the old folder rule fired on. The other 86 cannot reach the engine, so minting
 for them proved what the diff already proved; that is where the wasted three minutes went.
+
+> **The three numbers in that sentence are TYPED, and they have already gone stale once.** They read
+> 19 / 103 / 84 until 2026-08-10; `CONFIG-DIFF-2` added a file to the closure and nothing here
+> noticed, which is the same defect that turned master red on the generated block in
+> [SIM.md](SIM.md). Both counts are derivable — `node scripts/engine-reach.mjs` prints the closure,
+> and the folder count is a directory scan — so **this paragraph should be generated**, exactly as
+> the guard-cost table below it already is. Recorded rather than built: the argument here is prose
+> and a generator would have to own the sentence, not just the number.
+> **The list itself, in [SIM.md](SIM.md), IS generated and is not affected.**
 
 **WHAT THE NEW TRIGGER DOES NOT CATCH, stated so nobody over-trusts it:**
 
