@@ -75,6 +75,32 @@ and [FAIRNESS.md](../../docs/FAIRNESS.md). Shipped world: **`dc4647be0f55ebdb`**
 
 ## Camera / presentation fixes
 
+- [SCOREBOARD-STABLE-ROWS.md](SCOREBOARD-STABLE-ROWS.md) — **HIS SHAPE, BUILT: 101 ROWS REBUILT PER
+  TICK BECOMES 36** (branch `feat/scoreboard-stable-rows` off `024b58c3`, with `feat/frame-gap-1`
+  merged so one log measures everything; **NOT merged — a visible surface awaiting his eye**; all four
+  fingerprints unchanged). The owner's own diagnosis, implemented: the four fields that never change
+  during a race (index, icon, name, race number) live in ONE identity object per racer, created once
+  and **never mutated**; the three that change (rank, finished, finishTimeMs) are passed as
+  **primitives**; the row is memoised. **THE TRAP, handled explicitly**: rank is a primitive prop and
+  never written onto the shared identity, so a racer moving 5th→4th changes a value memo compares —
+  had the rank been stored on the identity, memo would have seen the same reference, skipped, and
+  frozen the standings silently. **MEASURED, real React (every earlier bench used hand-rolled DOM and
+  could not answer a reconciler question): 101.4 row bodies per update → 36.1, and 7000 row renders
+  per 15 s → 2519, down 64 %** — a count, so ambient noise cannot move it. **THE HONEST OTHER HALF:
+  the frame-time arms do NOT separate** — quiet run all three arms 0 missed / 7200 with `rafLate` p90
+  0.5 flat, loaded run all three bad together. One early unrotated arm showed the old shape at 5.89 %
+  missed with `rafLate` p90 13.5; **it did not reproduce, and the obvious "first arm after a fresh
+  mount" explanation was tested and refuted too**. `commitMs` was captured and deliberately NOT quoted
+  as React's cost — under the concurrent scheduler most of it is waiting for a slot. **TESTS**: the
+  memo trap in both directions with a BEHAVIOURAL skip probe (a counting getter on the identity), and
+  a parity test that drives a real seeded race and compares what the row displays, field by field,
+  every tick, against the old expression written out verbatim — plus a sabotage arm. **The old row
+  read its rank from the MAP INDEX, not the `rank` field it was handed**, which the parity test had to
+  match. **The sort is untouched and has no tiebreak**: equal `t` falls back on `Array.prototype.sort`
+  being stable over racer index, true before and after. **WHAT IS LEFT**: reordering keyed DOM nodes
+  still costs, and that floor is what remains. The cadence default is untouched at 500.
+
+
 - [SCOREBOARD-CADENCE-1.md](SCOREBOARD-CADENCE-1.md) — **ONE NUMBER, AND THE RATE FALLS AT LEAST
   PROPORTIONALLY** (branch `feat/scoreboard-cadence-1` off `570a8505`; **NOT merged — a visible change
   awaiting his eye**; all four fingerprints unchanged). FRAME-GAP-3 named the standings list; this

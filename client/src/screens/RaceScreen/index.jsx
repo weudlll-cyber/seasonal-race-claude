@@ -18,11 +18,11 @@ import { attachRenderState, attachRacerRenderState, stepFocusFade } from './rend
 import { getBgCanvasReady } from './drawing/trackRendering.js';
 import { getBackgroundImage } from '../../modules/track-effects/bgImageCache.js';
 import { emitBurst } from './drawing/particleRendering.js';
-import { formatRaceTime } from '../../utils/formatRaceTime.js';
+import { ScoreboardRow } from './ScoreboardRow.jsx';
 import { lerp, lerpAngle } from '../../utils/mathUtils.js';
 import { resolveActiveBrandProfile } from '../../modules/branding/useActiveBrandProfile.js';
 import { getRacerType, getCoatsByType } from '../../modules/racer-types/index.js';
-import { assignRaceNumbers, raceNumberLabel } from '../../modules/raceNumbers.js';
+import { assignRaceNumbers } from '../../modules/raceNumbers.js';
 import {
   assignCoat,
   assignPattern,
@@ -98,7 +98,7 @@ import {
 const CANVAS_W = 1280;
 const CANVAS_H = 720;
 
-const RANK_PALETTE = ['#ffd700', '#c0c0c0', '#cd7f32'];
+// SCOREBOARD-STABLE-ROWS: RANK_PALETTE moved to ScoreboardRow.jsx, its only reader.
 
 // PHASE has one home now (racePhase.js) — it used to be declared here AND twice more as
 // `PHASE_RACING = 1` in the drawing modules.
@@ -692,7 +692,28 @@ export default function RaceScreen() {
       dynamicsConfig.racePlanBonusStrengthMultiplier ??
       DEFAULT_RACE_DYNAMICS_CONFIG.racePlanBonusStrengthMultiplier;
 
-    setScoreboard(g.current.racers.map((r) => ({ ...r, rank: 0 })));
+    // SCOREBOARD-STABLE-ROWS: build each racer's row identity once, here, and hand the list only
+    // the values that move. The seed keeps the pre-race order the old code showed (racer order, one
+    // rank each), so the first painted list is identical to what it was.
+    // The per-racer constants — icon, name, race number — created ONCE here and never re-created and
+    // NEVER MUTATED. Each row entry below carries the SAME OBJECT every tick, which is what lets the
+    // memoised row compare it by reference and skip. It lives in this effect's closure rather than a
+    // ref because the render must not read a ref, and the render is what needs it.
+    const rowIdentities = new Map(
+      g.current.racers.map((r) => [
+        r.index,
+        { index: r.index, icon: r.icon, name: r.name, raceNumber: r.raceNumber ?? null },
+      ])
+    );
+    setScoreboard(
+      g.current.racers.map((r, i) => ({
+        index: r.index,
+        identity: rowIdentities.get(r.index),
+        rank: i + 1,
+        finished: !!r.finished,
+        finishTimeMs: r.finishTimeMs ?? null,
+      }))
+    );
 
     // ── Canvas positions ────────────────────────────────────────────────────
     // openTrackHW = half the track width used by physics (same source as avoidance/overlap).
@@ -908,6 +929,10 @@ export default function RaceScreen() {
           // through BATTLE slow-motion, rather than running ahead of the picture it describes.
           const sbBucket = frameTimingConfig.scoreboardIntervalMs;
           if (Math.round(physicsTs / sbBucket) !== Math.round((physicsTs - FIXED_DT) / sbBucket)) {
+            // SCOREBOARD-STABLE-ROWS: the SORT IS UNTOUCHED — same two groups, same tie handling,
+            // same resulting order. What changed is what comes out of the map: four small values per
+            // racer instead of a spread of the whole racer, so the row's props are primitives and a
+            // row whose rank did not move is skipped by `memo` rather than rebuilt.
             setScoreboard(
               [...st.racers]
                 .sort((a, b) => {
@@ -915,7 +940,13 @@ export default function RaceScreen() {
                   if (a.finished) return a.finishRank - b.finishRank;
                   return b.t - a.t;
                 })
-                .map((r, i) => ({ ...r, rank: i + 1 }))
+                .map((r, i) => ({
+                  index: r.index,
+                  identity: rowIdentities.get(r.index),
+                  rank: i + 1,
+                  finished: !!r.finished,
+                  finishTimeMs: r.finishTimeMs ?? null,
+                }))
             );
           }
 
@@ -1535,33 +1566,14 @@ export default function RaceScreen() {
 
           <div className="scoreboard">
             <div className="scoreboard-header">Live Standings</div>
-            {scoreboard.map((r, i) => (
-              <div
-                key={r.index}
-                className={`scoreboard-row${r.finished ? ' scoreboard-row--finished' : ''}`}
-              >
-                <span
-                  className="sb-rank"
-                  style={{
-                    color: RANK_PALETTE[i] ?? '#888',
-                    borderColor: RANK_PALETTE[i] ?? '#444',
-                  }}
-                >
-                  {i === 0 ? '👑' : `#${i + 1}`}
-                </span>
-                <span className="sb-icon">{r.icon}</span>
-                <span className="sb-name" style={{ color: RANK_PALETTE[i] ?? '#ddd' }}>
-                  {/* RACE-NUMBERS-1: the number comes BEFORE the name. The track shows only the
-                      number, so the list is where a viewer reads the two together. */}
-                  {r.raceNumber != null && (
-                    <span className="sb-number">{raceNumberLabel(r.raceNumber)}</span>
-                  )}
-                  {r.name}
-                </span>
-                {r.finished && r.finishTimeMs != null && (
-                  <span className="sb-finish-time">{formatRaceTime(r.finishTimeMs)}</span>
-                )}
-              </div>
+            {scoreboard.map((row) => (
+              <ScoreboardRow
+                key={row.index}
+                identity={row.identity}
+                rank={row.rank}
+                finished={row.finished}
+                finishTimeMs={row.finishTimeMs}
+              />
             ))}
           </div>
 
