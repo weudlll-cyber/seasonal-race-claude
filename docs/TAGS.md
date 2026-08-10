@@ -98,6 +98,27 @@ the Dev Screen toggle and the `renderRaceFrame` hook. The branch was deleted at 
   may be promising a corridor the viewer cannot see. Start here rather than from scratch — see
   [DEAD-ENDS.md](DEAD-ENDS.md) §K.
 
+### SHIP-THE-STANDINGS — the live standings stop costing the browser a layout (2026-08-10)
+
+Four branches, one merge commit, 29 files, and **nothing that moves the race or the picture**: all
+four fingerprints were re-measured and are unchanged. That is the acceptance rather than a footnote —
+the standings are DOM, not canvas, so a moved RENDER hash would have meant something had reached the
+drawing. Values live in [fingerprints.json](fingerprints.json).
+
+- `pre/ship-the-standings` (`570a8505`, 2026-08-10) — master immediately BEFORE the strand. Reset here
+  to restore the 250 ms hard-coded standings tick, the rows in normal flow with the place badge on
+  each racer's row, the racer icon repeated on every row, and the panel running off the bottom of the
+  window at a hundred racers.
+- `v-ship-the-standings` (`942af34d`, 2026-08-10) — **the ship.** Fourteen layouts per hundred frames
+  become one — fourteen being exactly one per cadence tick — and a MutationObserver over 25 s of a
+  100-racer race recorded 728–833 mutations of which every one was `scoreboard-card:style`: an
+  overtake is a transform and nothing else. Also the owner's three pixel changes (the `#` dropped, the
+  scrollbar overlaid, the icon moved into the header), which take the name box from 113.67 px to
+  137.67 and a representative name from 13 characters to 18. See
+  [../reports/evolution/SCOREBOARD-SLOT-LAYER.md](../reports/evolution/SCOREBOARD-SLOT-LAYER.md).
+  **His eye is owed on all of it**, and on a production build — which is the other thing this ship
+  changed: [VERIFY-RULES.md](VERIFY-RULES.md) R10 now says an eye test or a perf log is taken on one.
+
 ### STRIP-AND-SHIP — the layout separation, the dead clock, and the generated counts (2026-08-10)
 
 Three blocks, one merge commit, and **nothing that moves the picture or the race**: all four
