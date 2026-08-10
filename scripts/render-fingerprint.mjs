@@ -40,6 +40,17 @@
 //      Also not exercised: PARTICLES and SURFACE TRAILS. Both draw from buffers the component's
 //      loop fills, so in this harness both are empty and their two layers are no-ops. Discovered
 //      by a sabotage that swapped them and did NOT move the hash. Named fix in the report.
+//   4. THE CEREMONY'S DOM. The brand card and the corner logo are React components, not canvas, so
+//      no fingerprint of draw calls can ever see them. RENDER-SAMPLER-CEREMONY turns the brand ON
+//      so the BRAND BEAT exists and its canvas — the venue shot, held — is sampled; the CARD on top
+//      of it is still nobody's measurement but the owner's eye.
+//
+// WHERE IT SAMPLES THE CEREMONY, and this was a blind spot for one whole ship: the countdown points
+// are DERIVED from the schedule (`scripts/lib/ceremonySamples.mjs`), one per beat. They used to be
+// five typed milliseconds, and CEREMONY-OPENING moved the starters board past the last of them —
+// so the board, the settled beat and the digits were outside the instrument and the hash said
+// nothing about it. Proven both ways: the heading text changed under the OLD points is
+// byte-identical, and under the new ones it moves.
 //
 // Usage:
 //   node scripts/render-fingerprint.mjs             # the hash, plus a per-track breakdown
@@ -100,6 +111,7 @@ import {
   cheapHash,
   refuseCheapQuiet,
 } from "./lib/cheapMode.mjs";
+import { ceremonySamplePoints } from "./lib/ceremonySamples.mjs";
 import { readFileSync, readdirSync, existsSync } from "node:fs";
 import { join, dirname } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
@@ -131,6 +143,11 @@ const { renderRaceFrame } = await import(
 const { attachRenderState, attachRacerRenderState, stepFocusFade } =
   await import(u("client/src/screens/RaceScreen/renderState.js"));
 const { PHASE } = await import(u("client/src/screens/RaceScreen/racePhase.js"));
+// The board's fade length, from the module that owns it, so the sampler's board-fade point cannot
+// drift from the ramp it is aiming at.
+const { BOARD_FADE_MS } = await import(
+  u("client/src/modules/camera/startCeremony.js")
+);
 const { createRecordingContext } = await import(
   u("client/src/modules/parity/recordingContext.js")
 );
@@ -184,18 +201,21 @@ const PHASES = process.argv.includes("--phases");
 // indices and the finish moves around, so "the window now covers the ending" is a claim that has to
 // be measured per track rather than reasoned about — this prints the matrix the report quotes.
 const COVERAGE = process.argv.includes("--coverage");
-// The countdown sample points, at module scope so the summary can print the window it covered.
+// THE COUNTDOWN SAMPLE POINTS ARE NO LONGER TYPED. They are derived per track from the schedule the
+// game computes, by `scripts/lib/ceremonySamples.mjs` — read that file for why, and for what the
+// midpoint rule buys. Held here after the first track so the summary can print the window covered.
 //
-// RE-PICKED BY START-BOARD-2 against the new beats. At this harness's n=40 the ceremony is
-// venue 0–1400, push 1400–3400, BOARD HOLD 3400–4600, settled 4600–5200 — the countdown is the sum
-// of the beats now, not a flat 4000, so the old points would have landed in the wrong beats. One
-// point per beat, two inside the board's window:
-//   0     the venue shot, board not yet up
-//   1500  just after the push begins — the board fading in, camera travelling
-//   2400  mid-push, board at full alpha, camera still travelling
-//   3800  the BOARD HOLD: camera ARRIVED and still, board still up. The beat that is new.
-//   4900  the settled beat: formation held, board GONE — "it ends before the gun" as a frame
-const CD_SAMPLE_MS = [0, 1500, 2400, 3800, 4900];
+// WHAT IT REPLACED, and it is the whole case: `[0, 1500, 2400, 3800, 4900]`, re-picked by
+// START-BOARD-2 against a ceremony whose board ran 3400–4600. CEREMONY-OPENING moved the board to
+// 5000–11000 and every one of the five points fell before it, so the starters board, the settled
+// beat and the digits were outside the instrument entirely. Nothing said so — the numbers were
+// still numbers and the hash was still a hash.
+let cdSamplesSeen = null;
+
+// The brand the harness opens with. Only its TRUTHINESS reaches the canvas path, and the card is
+// DOM — so this is a marker that a brand beat exists, not a picture. Named rather than inlined so
+// the two places that must agree about it (the director and the frame arguments) read one value.
+const HARNESS_BRAND = { id: "render-fingerprint", name: "RaceArena", logo: true };
 
 const FRAMES_OVERRIDE = Number(
   (process.argv.find((a) => a.startsWith("--frames=")) ?? "").slice(9),
@@ -347,6 +367,18 @@ function trackHash(geo, wantOps) {
     TW,
   );
   cd.setRandomSeed(CAM_SEED);
+  // RENDER-SAMPLER-CEREMONY: THE BRAND IS TURNED ON, DELIBERATELY, AND IT IS THE ONLY WAY TO SAMPLE
+  // ITS BEAT. `ceremonyScheduleFor` gives the BRAND beat zero length unless somebody says a brand
+  // card is opening this race, so with the director left alone the beat does not exist and there is
+  // nothing to sample — the harness would not be blind to it, it would be absent.
+  //
+  // The honest limits, so nobody reads more into this than it says. The brand CARD is DOM
+  // (CeremonyBrandCard.jsx) and no canvas fingerprint can ever see it. What the brand beat puts on
+  // the CANVAS is the venue shot, held — `ceremonyZoom` returns the venue zoom for BRAND and VENUE
+  // alike — so this point pins that the camera does not move under the card, and pins the 2500 ms
+  // shift every later beat inherits. The unbranded opening differs only by that shift, and the
+  // derived sample points follow it, so nothing about it goes unmeasured.
+  cd.setCeremonyBrandActive(true);
   if (meta.racePlanEnabled && meta.rpPlanInfo?.b1Indices) {
     cd.updateRacePlan(meta.rpPlanInfo.b1Indices);
   }
@@ -397,6 +429,10 @@ function trackHash(geo, wantOps) {
     openTrackHW: shape.isOpen ? TW / 2 : 0,
     bgImagePath: null,
     bgCanvasReady: false,
+    // Its PRESENCE is what adds the BRAND beat, and it must agree with the director above or the
+    // renderer would compute its board alpha and its digits against a schedule the camera is not
+    // using. Only `!!ceremonyBrand` is read here; the card itself is DOM and is drawn elsewhere.
+    ceremonyBrand: HARNESS_BRAND,
     effects: [],
     cachedLightPts,
     trackLightsConfig,
@@ -434,7 +470,11 @@ function trackHash(geo, wantOps) {
   // START-BOARD-2: the countdown has no length of its own any more — it is the SUM of the
   // ceremony beats, one of which scales with the field. The director is asked, so this harness
   // cannot drift from the game the way a second copy of a duration would.
-  const cdMs = cd.ceremonySchedule(st.racers).totalMs;
+  const cdSchedule = cd.ceremonySchedule(st.racers);
+  const cdMs = cdSchedule.totalMs;
+  // RENDER-SAMPLER-CEREMONY: ONE POINT PER BEAT, DERIVED. See scripts/lib/ceremonySamples.mjs.
+  const cdPoints = ceremonySamplePoints(cdSchedule, BOARD_FADE_MS);
+  cdSamplesSeen ??= cdPoints;
   // START-BOARD-1 EXTENDED THE WINDOW BACKWARDS, TO BEFORE THE GUN, and it is the same defect
   // FINISH-WINDOW-1 repaired at the other end: this harness set `st.phase = RACING` and rendered
   // its first frame AT the gun, so it had never drawn a single COUNTDOWN frame. Everything the
@@ -442,15 +482,10 @@ function trackHash(geo, wantOps) {
   // board — was outside the instrument entirely. A new overlay that draws for three seconds of
   // every race could have shipped without moving this hash by one bit.
   //
-  // FIXED ELAPSED TIMES, never events, the same rule the racing points follow. They are chosen
-  // against the SHIPPED ceremony rhythm (venue 1400, push 2000, settled 600) so that one point
-  // lands in each beat and two land inside the push, where the board is:
-  //   0     the venue shot, board not yet up
-  //   1500  just after the push begins — the board fading in
-  //   2400  mid-push, the board at full alpha and the camera still travelling
-  //   3300  the end of the push, the board fading out
-  //   3700  the settled beat: formation held, board GONE, which is the claim "it ends before the
-  //         gun" expressed as a frame rather than as a sentence
+  // ELAPSED TIMES, never events — the same rule the racing points follow. What changed is where
+  // they come from: they are the midpoint of each beat of THIS race's schedule, so a beat that moves
+  // takes its sample point with it and a beat that appears gets one. The five typed milliseconds
+  // this replaced had drifted entirely out of the board by the time anybody looked.
   st.phase = PHASE.COUNTDOWN;
   st.countdownStart = 0;
   let cdIdx = 0;
@@ -459,12 +494,14 @@ function trackHash(geo, wantOps) {
     if (
       !PHASES &&
       !COVERAGE &&
-      cdIdx < CD_SAMPLE_MS.length &&
-      ts >= CD_SAMPLE_MS[cdIdx]
+      cdIdx < cdPoints.length &&
+      ts >= cdPoints[cdIdx].ms
     ) {
       // A marker in the SAME shape the racing frames use, with its own prefix so a countdown frame
-      // and a racing frame can never hash alike by accident.
-      rec.fillText("##cd", Math.round(CD_SAMPLE_MS[cdIdx]), 0);
+      // and a racing frame can never hash alike by accident. It carries the BEAT rather than the
+      // millisecond: the beat is what the point means, and a beat that stops being sampled at all
+      // takes its marker out of the stream — which is a moved hash rather than a silent hole.
+      rec.fillText("##cd:" + cdPoints[cdIdx].beat, 0, 0);
       renderRaceFrame(rec, {
         ...frameArgs(cdCam),
         ts,
@@ -684,7 +721,8 @@ if (QUIET) {
 } else {
   console.log(
     `RENDER ${COMBINED} (seed=${SEED} camSeed=${CAM_SEED}, ${RUN_GEOS.length} tracks, ${N} racers, ` +
-      `countdown [${CD_SAMPLE_MS.join(", ")}] ms + frames [${SAMPLE_AT.join(", ")}] of ${RUN_FRAMES})`,
+      `countdown [${(cdSamplesSeen ?? []).map((p) => `${p.beat}@${Math.round(p.ms)}`).join(", ")}] ` +
+        `+ frames [${SAMPLE_AT.join(", ")}] of ${RUN_FRAMES})`,
   );
   for (const r of rows) {
     console.log(
@@ -693,8 +731,9 @@ if (QUIET) {
   }
   console.log(
     "\n  Covers the DRAW CALL SEQUENCE — sprites, text, styles, transforms, order.\n" +
-      "  The window now starts BEFORE the gun: the countdown samples cover the venue shot, the\n" +
-      "  push (where the runners' board is), and the settled beat.\n" +
+      "  The window starts BEFORE the gun, and the countdown points are DERIVED from the ceremony\n" +
+      "  schedule — one per beat, at its midpoint, plus one inside the board's fade. A beat that\n" +
+      "  moves takes its sample with it; a beat that appears gets one.\n" +
       "  Blind to the rasteriser and to the artwork itself (sprites are hashed by identity) — so\n" +
       "  on the board it sees every portrait's geometry and order, and no coat: `Image` does not\n" +
       "  exist in Node, so every sprite here takes drawRacer's procedural fallback.",
