@@ -61,6 +61,15 @@
 }
 
 /* ── HUD sidebar ─────────────────────────────────────────────────────────── */
+/* SCOREBOARD-SLOT-LAYER — THE PANEL IS BOUNDED BY THE WINDOW.
+   The defect this fixes is the owner's, and it is OLDER than the transform work: at a hundred
+   racers the standings are 3533 px tall, so the sidebar ran ~2400 px past the bottom of his window
+   and `#100` was not in it. Measured on master and on the transform branch, the two differ by 4 px
+   (the last row's collapsed margin) — the clipping is the same on both, so this is not a regression
+   and the fix belongs wherever it is made.
+   `max-height` is the viewport minus the screen's own 10 px padding, top and bottom. `min-height: 0`
+   is what lets the scoreboard below actually shrink inside a flex column — without it a flex item
+   refuses to go below its content height and the cap would do nothing. */
 .race-hud {
   display: flex;
   flex-direction: column;
@@ -70,11 +79,35 @@
   border-radius: 8px;
   padding: 12px;
   box-shadow: 0 0 20px rgba(0, 150, 255, 0.1);
+  max-height: calc(100vh - 20px);
+  min-height: 0;
+}
+
+/* Fullscreen drops the screen padding from 10 px to 6 px, so the cap follows it. */
+.screen--race:fullscreen .race-hud {
+  max-height: calc(100vh - 12px);
 }
 
 /* ── Scoreboard ─────────────────────────────────────────────────────────── */
 .scoreboard {
-  flex: 1;
+  flex: 1 1 auto;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+/* The scrolling VIEWPORT. It takes whatever height the panel has left after the header, and the
+   rows canvas inside it keeps its true height — so the last row is fully drawn and reachable at any
+   field size instead of being cut off by the window. A hundred rows will not fit in any window at
+   this pitch (3533 px against ~1200 available) and the spacing may not change, so a scroll is what
+   "use the height available" can mean here. `scrollbar-width: thin` keeps the 210 px sidebar's name
+   column as wide as possible. */
+.scoreboard-scroll {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
+  scrollbar-width: thin;
 }
 
 /* SCOREBOARD-TRANSFORM-ROWS: the rows are OUT OF FLOW and positioned by transform, so THIS is their
@@ -82,7 +115,9 @@
    be explicit: absolutely positioned children contribute nothing to their parent's height, so
    without it the sidebar would collapse.
    It is a separate element from `.scoreboard` on purpose — the header is a flow child of the
-   scoreboard, and absolute rows anchored to the scoreboard itself would draw straight over it. */
+   scoreboard, and absolute rows anchored to the scoreboard itself would draw straight over it.
+   SCOREBOARD-SLOT-LAYER: it also carries `--sb-badge-w`, the ONE badge-column width, set inline from
+   the field size. Both layers read it from here, which is what keeps them aligned. */
 .scoreboard-rows {
   position: relative;
 }
@@ -98,46 +133,111 @@
   border-bottom: 1px solid rgba(0, 200, 255, 0.15);
 }
 
-.scoreboard-row {
+/* SCOREBOARD-SLOT-LAYER — TWO LAYERS, ONE GRID.
+   The row used to be one element carrying both the place and the racer. It is now a static SLOT
+   behind (the badge, drawn once per race) and a CARD in front (the racer, never re-drawn), and the
+   only thing a rank change touches is the card's `transform`.
+   BOTH LAYERS DECLARE THE SAME GRID. That is not duplication for its own sake: it is what makes the
+   badge in the slot land in exactly the column the card leaves empty, at any field size, without
+   either layer knowing the other's measurements. */
+.scoreboard-card,
+.scoreboard-slot {
   display: grid;
-  grid-template-columns: 28px 22px 1fr auto;
+  grid-template-columns: var(--sb-badge-w, 28px) 22px 1fr auto;
   gap: 5px;
   align-items: center;
   padding: 5px 3px;
-  border-radius: 4px;
-  /* SCOREBOARD-TRANSFORM-ROWS: out of flow, stacked at the top, moved into place by translateY.
-     `margin-bottom` is kept rather than folded into the transform because it is what MAKES the
-     31.333px row a 35.333px pitch — the two numbers stay derivable from each other, and the test
-     measures this element to prove ROW_PITCH_PX still agrees with what the browser lays out.
-     `will-change: transform` asks for a compositor layer so a position change need not repaint the
-     row; the row's TEXT still changes on a rank change, so this bounds the win rather than removing
-     the paint entirely (see ScoreboardRow.jsx). */
-  margin-bottom: 4px;
   position: absolute;
   top: 0;
   left: 0;
   right: 0;
+}
+
+.scoreboard-card {
+  border-radius: 4px;
+  /* SCOREBOARD-TRANSFORM-ROWS: out of flow, stacked at the top, moved into place by translateY.
+     `margin-bottom` is kept rather than folded into the transform because it is what MAKES the
+     31.333px card a 35.333px pitch — the two numbers stay derivable from each other, and the test
+     measures this element to prove ROW_PITCH_PX still agrees with what the browser lays out.
+     `will-change: transform` asks for a compositor layer so a position change need not repaint.
+     SCOREBOARD-SLOT-LAYER: that request is now worth making, because with the place text gone from
+     this element there is nothing left in it for a rank change to repaint.
+     The `color` here is the fallback place colour; the positioner overwrites it per place, and it is
+     stated so a card that has not been positioned yet is never the wrong colour. */
+  margin-bottom: 4px;
+  color: #ddd;
   will-change: transform;
   transition: background 0.3s;
 }
 
-.scoreboard-row--finished {
+.scoreboard-card--finished {
   background: rgba(0, 220, 80, 0.07);
 }
 
-.sb-rank {
-  font-size: 12px;
-  font-weight: bold;
-  text-align: center;
-  border: 1px solid;
-  border-radius: 3px;
-  padding: 1px 3px;
-  min-width: 24px;
+/* The static place column. `inset: 0` makes it the slots' containing block and puts it ABOVE the
+   cards in paint order, so a badge draws over the finished tint exactly as it did when it was a
+   child of the row. `pointer-events: none` because it is decoration that must not swallow a click. */
+.scoreboard-slot-layer {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  /* NOT a performance hint — this layer never changes. It is here so the badges are RASTERISED the
+     way they always were. A badge used to live inside a row carrying `will-change: transform`, and
+     inside a composited layer the browser antialiases text in greyscale rather than with subpixel
+     LCD filtering. Moved out, the same badge came back subtly different: a pixel diff of a shipped
+     8-racer panel against this one showed every icon, number and name identical and every BADGE
+     changed. Compositing this layer too puts them back. It costs one layer for the whole column,
+     drawn once and never repainted. */
+  will-change: transform;
 }
 
+/* THE BADGE AND THE HOLE IT LEFT SHARE ONE BOX.
+   The badge was the tallest thing in the row, so it was the badge that made the row 31.333 px tall.
+   Moving it into its own layer would have made the card a third of a pixel shorter and slid every
+   icon and name up with it. The card therefore reserves the badge's column with a spacer that has
+   the SAME metrics — font size, line height, padding, border width — so both layers derive the same
+   height from the same rule.
+   IT IS A SHARED RULE RATHER THAN A CONSTANT ON PURPOSE, and this is measured, not defensive: the
+   very same badge is 22.000 px on a 1:1 display and 21.333 on the owner's 1.5x one, because the
+   browser snaps the border box to whole device pixels. A number written here would have been right
+   on one screen and wrong on the other. Derived, it is right on both. */
+.sb-rank,
+.sb-badge-spacer {
+  font-size: 12px;
+  line-height: 1.5;
+  padding: 1px 3px;
+  border: 1px solid transparent;
+}
+
+.sb-rank {
+  font-weight: bold;
+  text-align: center;
+  border-style: solid;
+  border-radius: 3px;
+}
+
+/* The reserved, empty first column of a card — the badge for that place is drawn behind it.
+   IT HOLDS ONE BLANK LINE OF THE BADGE'S TEXT rather than an explicit height, and that is the whole
+   trick: its height is then computed exactly the way the badge's is, from the same line box through
+   the same rounding. Measured, an explicit `height: calc(1.5em + 4px)` — arithmetically the same
+   22 px — lands on 32.000 where the badge lands on 31.333, because the browser snaps an author
+   height and an auto height to device pixels differently. A no-break space is preserved white space,
+   so unlike an empty `content: ''` it produces a line box that is not zero-height. */
+.sb-badge-spacer {
+  display: block;
+}
+
+.sb-badge-spacer::before {
+  content: '\00a0';
+}
+
+/* The icon keeps the colour it has always inherited from the page, rather than the card's
+   place colour. The glyph is an emoji and paints its own colours either way; this is here so the
+   answer does not depend on that staying true. */
 .sb-icon {
   font-size: 14px;
   text-align: center;
+  color: var(--color-text);
 }
 
 /* RACE-NUMBERS-1: the start number, shown before the name so a viewer can read the pairing here —

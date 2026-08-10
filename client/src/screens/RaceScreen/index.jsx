@@ -18,8 +18,10 @@ import { attachRenderState, attachRacerRenderState, stepFocusFade } from './rend
 import { getBgCanvasReady } from './drawing/trackRendering.js';
 import { getBackgroundImage } from '../../modules/track-effects/bgImageCache.js';
 import { emitBurst } from './drawing/particleRendering.js';
-import { ScoreboardRow } from './ScoreboardRow.jsx';
-import { ROW_PITCH_PX } from './scoreboardLayout.js';
+import { ScoreboardCard } from './ScoreboardCard.jsx';
+import { ScoreboardSlots } from './ScoreboardSlots.jsx';
+import { ROW_PITCH_PX, badgeWidthPx } from './scoreboardLayout.js';
+import { createScoreboardPositions } from './scoreboardPositions.js';
 import { lerp, lerpAngle } from '../../utils/mathUtils.js';
 import { resolveActiveBrandProfile } from '../../modules/branding/useActiveBrandProfile.js';
 import { getRacerType, getCoatsByType } from '../../modules/racer-types/index.js';
@@ -99,7 +101,8 @@ import {
 const CANVAS_W = 1280;
 const CANVAS_H = 720;
 
-// SCOREBOARD-STABLE-ROWS: RANK_PALETTE moved to ScoreboardRow.jsx, its only reader.
+// SCOREBOARD-SLOT-LAYER: RANK_PALETTE lives in scoreboardLayout.js, beside the pitch and the badge
+// width — the two layers and the positioner all read it from there.
 
 // PHASE has one home now (racePhase.js) — it used to be declared here AND twice more as
 // `PHASE_RACING = 1` in the drawing modules.
@@ -178,7 +181,17 @@ export default function RaceScreen() {
   );
   const [phase, setPhase] = useState(PHASE.COUNTDOWN);
   const [countdown, setCountdown] = useState(3);
-  const [scoreboard, setScoreboard] = useState([]);
+  // SCOREBOARD-SLOT-LAYER: React state now holds only what a card SAYS — its identity and its finish.
+  // It no longer holds the RANKING, which changes constantly and would re-render the list four times
+  // a second to produce one changed `transform` per card. The ranking is applied through the
+  // positioner below, straight onto the DOM. See scoreboardPositions.js for why.
+  const [scoreboardCards, setScoreboardCards] = useState([]);
+  const scoreboardPositionsRef = useRef(null);
+  // Stable for the life of the component, so a card's ref callback never re-runs for a new identity.
+  const attachScoreboardCard = useCallback(
+    (index, el) => scoreboardPositionsRef.current?.attach(index, el),
+    []
+  );
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [camState, setCamState] = useState(null);
   const prevHudStateRef = useRef(null);
@@ -693,28 +706,43 @@ export default function RaceScreen() {
       dynamicsConfig.racePlanBonusStrengthMultiplier ??
       DEFAULT_RACE_DYNAMICS_CONFIG.racePlanBonusStrengthMultiplier;
 
-    // SCOREBOARD-STABLE-ROWS: build each racer's row identity once, here, and hand the list only
-    // the values that move. The seed keeps the pre-race order the old code showed (racer order, one
-    // rank each), so the first painted list is identical to what it was.
+    // SCOREBOARD-STABLE-ROWS: build each racer's card identity once, here, and hand the list only
+    // the values that move.
     // The per-racer constants — icon, name, race number — created ONCE here and never re-created and
-    // NEVER MUTATED. Each row entry below carries the SAME OBJECT every tick, which is what lets the
-    // memoised row compare it by reference and skip. It lives in this effect's closure rather than a
-    // ref because the render must not read a ref, and the render is what needs it.
+    // NEVER MUTATED. Each card entry below carries the SAME OBJECT for the whole race, which is what
+    // lets the memoised card compare it by reference and skip. It lives in this effect's closure
+    // rather than a ref because the render must not read a ref, and the render is what needs it.
     const rowIdentities = new Map(
       g.current.racers.map((r) => [
         r.index,
         { index: r.index, icon: r.icon, name: r.name, raceNumber: r.raceNumber ?? null },
       ])
     );
-    setScoreboard(
-      g.current.racers.map((r, i) => ({
+    // SCOREBOARD-SLOT-LAYER: one positioner per race. It is created BEFORE the cards are handed to
+    // React and seeded with the starting ranking below, so every card is positioned by its own
+    // `attach` the moment it mounts rather than sitting at the top of the list until the first tick.
+    const positions = createScoreboardPositions();
+    scoreboardPositionsRef.current = positions;
+    // The reusable ranking map — one allocation per race, refilled each tick.
+    const scoreboardRanks = new Map();
+    // The seed keeps the pre-race order the old code showed (racer order, one rank each), so the
+    // first painted list is identical to what it was.
+    for (let i = 0; i < g.current.racers.length; i++) {
+      scoreboardRanks.set(g.current.racers[i].index, i + 1);
+    }
+    positions.applyRanks(scoreboardRanks);
+    setScoreboardCards(
+      g.current.racers.map((r) => ({
         index: r.index,
         identity: rowIdentities.get(r.index),
-        rank: i + 1,
         finished: !!r.finished,
         finishTimeMs: r.finishTimeMs ?? null,
       }))
     );
+    // The ONLY thing that still makes a card re-render: a racer crossing the line. Tracked so the
+    // cadence tick can tell "somebody finished" from "the order changed", and set React state for
+    // the first case only.
+    let scoreboardFinishedCount = 0;
 
     // ── Canvas positions ────────────────────────────────────────────────────
     // openTrackHW = half the track width used by physics (same source as avoidance/overlap).
@@ -924,37 +952,41 @@ export default function RaceScreen() {
           // finishers temporarily overtake earlier ones in raw r.t.
           //
           // SCOREBOARD-CADENCE-1: the bucket was a hard-coded 250 and is now a setting. This is the
-          // ONLY place it is read — the other `setScoreboard` is a one-shot seed at race init — so
+          // ONLY place it is read — the other update is a one-shot seed at race init — so
           // there is one cadence and no second copy to drift from it. It is measured in PHYSICS time,
           // not wall time, which is deliberate and unchanged: the list then ticks with the race even
           // through BATTLE slow-motion, rather than running ahead of the picture it describes.
           const sbBucket = frameTimingConfig.scoreboardIntervalMs;
           if (Math.round(physicsTs / sbBucket) !== Math.round((physicsTs - FIXED_DT) / sbBucket)) {
             // SCOREBOARD-STABLE-ROWS: the SORT IS UNTOUCHED — same two groups, same tie handling,
-            // same resulting order. What changed is what comes out of the map: four small values per
-            // racer instead of a spread of the whole racer, so the row's props are primitives and a
-            // row whose rank did not move is skipped by `memo` rather than rebuilt.
-            // SCOREBOARD-TRANSFORM-ROWS: the sort is still the sort — same two groups, same tie
-            // handling — but it now only assigns RANKS. The array handed to React stays in
-            // `st.racers` order, which never changes during a race, so the rows keep a stable place
-            // in the document and the ranking travels as a transform instead of as a DOM move.
-            const ranks = new Map();
+            // same resulting order.
+            // SCOREBOARD-TRANSFORM-ROWS: it now only assigns RANKS; the ranking travels to the
+            // screen as a `translateY` instead of as a move in the document.
+            // SCOREBOARD-SLOT-LAYER: and the ranking no longer travels through React at all. The
+            // places are a static layer, the cards say nothing that a rank change could alter, so
+            // the tick writes one transform per card that moved and touches no React state.
+            scoreboardRanks.clear();
             [...st.racers]
               .sort((a, b) => {
                 if (a.finished !== b.finished) return a.finished ? -1 : 1;
                 if (a.finished) return a.finishRank - b.finishRank;
                 return b.t - a.t;
               })
-              .forEach((r, i) => ranks.set(r.index, i + 1));
-            setScoreboard(
-              st.racers.map((r) => ({
-                index: r.index,
-                identity: rowIdentities.get(r.index),
-                rank: ranks.get(r.index),
-                finished: !!r.finished,
-                finishTimeMs: r.finishTimeMs ?? null,
-              }))
-            );
+              .forEach((r, i) => scoreboardRanks.set(r.index, i + 1));
+            positions.applyRanks(scoreboardRanks);
+            // A card's CONTENT changes exactly once per racer — when it finishes and gains a time.
+            // That is the one occasion this list re-renders, and it is one card per crossing.
+            if (st.finishedCount !== scoreboardFinishedCount) {
+              scoreboardFinishedCount = st.finishedCount;
+              setScoreboardCards(
+                st.racers.map((r) => ({
+                  index: r.index,
+                  identity: rowIdentities.get(r.index),
+                  finished: !!r.finished,
+                  finishTimeMs: r.finishTimeMs ?? null,
+                }))
+              );
+            }
           }
 
           if (st.finishedCount >= nRacers) {
@@ -1573,22 +1605,35 @@ export default function RaceScreen() {
 
           <div className="scoreboard">
             <div className="scoreboard-header">Live Standings</div>
-            {/* SCOREBOARD-TRANSFORM-ROWS: the rows are absolutely positioned, so they contribute no
-                height and this container must state it. `scoreboard` is in racer order and never
-                re-sorted — the ranking is the transform on each row. */}
-            <div
-              className="scoreboard-rows"
-              style={{ height: `${scoreboard.length * ROW_PITCH_PX}px` }}
-            >
-              {scoreboard.map((row) => (
-                <ScoreboardRow
-                  key={row.index}
-                  identity={row.identity}
-                  rank={row.rank}
-                  finished={row.finished}
-                  finishTimeMs={row.finishTimeMs}
-                />
-              ))}
+            {/* SCOREBOARD-SLOT-LAYER: the scrolling viewport. The rows canvas below keeps its true
+                height, so the last row is fully drawn and reachable however large the field is,
+                instead of running off the bottom of the window. */}
+            <div className="scoreboard-scroll">
+              {/* SCOREBOARD-TRANSFORM-ROWS: the cards are absolutely positioned, so they contribute
+                  no height and this container must state it. The list is in racer order and never
+                  re-sorted — the ranking is the transform on each card.
+                  SCOREBOARD-SLOT-LAYER: `--sb-badge-w` is the ONE badge-column width, chosen from the
+                  field size so `#100` fits its box, and read from here by BOTH layers — which is
+                  what keeps the static places aligned with the moving cards. */}
+              <div
+                className="scoreboard-rows"
+                style={{
+                  height: `${scoreboardCards.length * ROW_PITCH_PX}px`,
+                  '--sb-badge-w': `${badgeWidthPx(scoreboardCards.length)}px`,
+                }}
+              >
+                {scoreboardCards.map((card) => (
+                  <ScoreboardCard
+                    key={card.index}
+                    identity={card.identity}
+                    finished={card.finished}
+                    finishTimeMs={card.finishTimeMs}
+                    attach={attachScoreboardCard}
+                  />
+                ))}
+                {/* Drawn once per race, and after the cards so the badges paint over them. */}
+                <ScoreboardSlots count={scoreboardCards.length} />
+              </div>
             </div>
           </div>
 
