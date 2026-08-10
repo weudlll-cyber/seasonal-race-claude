@@ -384,7 +384,15 @@ a verbatim transcript of one run on one commit, which is a historical record, no
 
 ### The tracking lag, as measured today — and it had drifted
 
-<!-- MEASURED: tracking-lag (median/p95 pp per state) @ 572324c7 2026-08-10 depends=client/src/modules/camera/ -->
+<!-- MEASURED: tracking-lag (median/p95 pp per state) @ 497a3dc8 2026-08-10 depends=client/src/modules/camera/ -->
+
+**RE-STAMPED, NOT RE-MEASURED, at `497a3dc8` (POST-START-HOLD-UNIFY), and here is the reason.** That
+commit's only edit under `client/src/modules/camera/` is a COMMENT — four lines at the post-start
+hold saying what `postStartHoldMs` measures. The guard trips on a comment-only edit exactly as on a
+behaviour change, and says so in its own `blind` list; that is a deliberate design, not a bug, and
+the answer it asks for is a deliberate re-stamp with a stated reason rather than an edited date. The
+camera fingerprint was re-measured on that branch and did not move, which is the independent evidence
+that no figure below can have changed.
 
 **These figures carry a stamp, and fails if the camera
 changes after it.** They are hand-copied on purpose: the measurement takes about seven minutes, so

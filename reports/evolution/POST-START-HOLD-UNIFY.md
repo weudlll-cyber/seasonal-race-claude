@@ -110,7 +110,17 @@ the arithmetic.
 **That is a REBASELINE and it is his.** It would need the full ship ceremony — the paired N=100 gate,
 the new baseline block, the lineage, the golden re-pins. Nothing here does any of it.
 
-## 5. The name
+## 5. A stamp re-stamped, deliberately
+
+`check-measured-stamps` failed on `docs/CAMERA_DIRECTOR.md`: the tracking-lag figures are stamped
+against `client/src/modules/camera/`, and this branch touched that directory. **The edit is four
+lines of COMMENT** at the post-start hold. The guard trips on a comment-only edit exactly as on a
+behaviour change and states that in its own `blind` list — that is deliberate, and the answer it asks
+for is a re-stamp with a stated reason rather than an edited date. Re-stamped at this branch's
+commit, with the reason written into the document beside it; the camera fingerprint was re-measured
+here and did not move, which is the independent evidence that no figure can have changed.
+
+## 6. The name
 
 **The key is deliberately NOT renamed.** After §3 there is one quantity with one reader, so the two
 meanings the brief was worried about no longer coexist — and a rename would cost the owner his stored
