@@ -110,6 +110,13 @@ re-measured on the shipping tree rather than argued about. Values live in
   here to restore the 1400 ms track beat, the starters board that comes up during the push-in travel
   and stands across it, the single-line `STARTERS · 40` heading, and a ceremony with no brand card in
   it. It also restores the opening's old length: 14.4 s at 40 racers against 18.0 after.
+- `v-ship-ceremony-opening` (`c7038569`, 2026-08-11) — **the ship.** The opening is re-ordered to the
+  owner's shape and the starters board stops standing across the push-in travel: `boardStartMs` was
+  `venueMs`, so the track's own moment was 1400 ms and the camera's move happened under a board. It
+  is 3000 ms and a clear picture now, with a brand card before it when a brand is set. Six beats, six
+  sliders in one block, and a derived total. **The event-title clearance is NOT in this ship** — it
+  was specified, then dropped on the owner's instruction because he accepts the board as it looks
+  today, and it was never committed.
 
 ### SHIP-THE-STANDINGS — the live standings stop costing the browser a layout (2026-08-10)
 
