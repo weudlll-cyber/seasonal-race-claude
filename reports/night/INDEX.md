@@ -8,6 +8,17 @@ report here could be orphaned, or an index link could dangle, with nothing notic
 `node scripts/check-index.mjs --dir=reports/night --index=reports/night/INDEX.md` now checks both
 directions.
 
+- [PAIR-PREFILTER-1.md](PAIR-PREFILTER-1.md) — a two-axis field bound in front of the pair loop, and
+  **the race now costs 20 % less to compute**: the world fingerprint, a fixed ten-track workload, runs
+  128 s against master's 160 s, and every one of the six timed runs produced `dc4647be0f55ebdb`.
+  `pairContact`'s share of the step falls 4.19 % → 1.37 % at n=100, which is the census's 96.6 %
+  cull landing. **The brief named three safety conditions and there was a FOURTH, live:** the flat
+  brake fallback is per-PAIR, not per-field, and on a long track is six times wider than the
+  geometric bound — so the cull as designed would have skipped pairs gate A still brakes. Found by
+  writing the test, closed before the fingerprint was run, and the literal now has one home. Seven
+  tests, each sabotaged and each caught by exactly one; removing the prefilter entirely still passes
+  all seven, because they assert the superset property rather than the cull's presence. The ceiling
+  table is NOT re-derived and the report says why — its only instrument has a ±9–26 % noise floor.
 - [PAIR-DEDUP-1.md](PAIR-DEDUP-1.md) — the pair loop's six geometry values, computed once instead of
   twice. The two sites were expression-for-expression identical (same fallback, same addition order,
   same `Math.max` order — all three checked, not assumed), so WORLD `dc4647be0f55ebdb` and all ten
