@@ -464,7 +464,6 @@ and in that commit's message.
   The renderer still has no guard and would draw a 100-character name ~750px wide — proposed, not
   built. A 32-character name measures ~283px realistically, 486px worst case, against the current
   roster's 55px mean.
-||||||| parent of 9a0673ad (report(QUICKTEST-NAMES-1): realistic names break the shrink rule, with the numbers)
 - [DOC-ORDER-1.md](DOC-ORDER-1.md) — documentation a stranger could actually be handed. The evidence
   for his own suspicion that most documents were never asked for: twenty of fifty-three were the
   by-product of one work session and had had no substantive change since a bulk German-to-English
