@@ -19,10 +19,16 @@ powershell -Command "Get-NetTCPConnection -LocalPort 4000,5173 -State Listen -Er
 
 ## 2) Backend starten (Hintergrund) — Port 4000, mit Dev-Secret + Origin
 cd "c:/Users/weudl/OneDrive/Dokumente/Seasonal race claude/server"
-RA_SESSION_SECRET=dev-secret-not-for-production RA_CLIENT_ORIGIN=http://localhost:5173 npm start
+RA_SESSION_SECRET=dev-secret-not-for-production RA_CLIENT_ORIGIN=http://localhost:5173,http://localhost:4173 npm start
 # RA_SESSION_SECRET (fest, NUR Dev): Sessions überleben Backend-Neustarts → kein ständiges Neu-Einloggen.
 #   Das ist KEIN echtes Secret und gehört NICHT in Produktion. Prod setzt einen echten, zufälligen Wert via Umgebung.
-# RA_CLIENT_ORIGIN: erlaubt dem Vite-Client (5173) Schreibvorgänge (sonst CSRF-403 cross-origin).
+# RA_CLIENT_ORIGIN: allows the clients to write cross-origin (otherwise CSRF-403). BOTH ports are
+#   listed and both are needed: 5173 is the dev server, 4173 is the PRODUCTION build the owner judges
+#   on (VERIFY-RULES.md R10). The list is comma-separated and `corsOptions` is built ONCE at module
+#   load, so adding a port means RESTARTING the API — there is no way to add one to a running server.
+#   Leaving 4173 out looks exactly like a dead backend: the browser gets no Access-Control-Allow-Origin,
+#   the fetch fails as a network error, and the app says "Server not reachable. Check that the backend
+#   is running" while the backend is running perfectly. That happened on 2026-08-10.
 # Watch-Variante (Auto-Reload bei Codeänderung): ... npm run dev  (statt npm start)
 # Erwartete Log-Zeile:  RaceArena server running on port 4000
 #   (Die Warnung "ephemeral dev session secret" darf jetzt NICHT mehr erscheinen — wenn doch, wurde das Secret nicht gesetzt.)

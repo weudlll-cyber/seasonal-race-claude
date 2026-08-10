@@ -237,6 +237,24 @@ replaced on every run) and serves it with no file watcher. Before handing anythi
 exact pill (`<sha> · <branch>`, no `+dirty`) and **confirm it by reading it from the served bundle**
 rather than by assuming.
 
+**THE API MUST BE TOLD ABOUT 4173, and forgetting it looks exactly like a dead backend.** The server's
+allowed origins come from `RA_CLIENT_ORIGIN`, and `corsOptions` is built ONCE at module load — so a
+port that is not in that list when the API STARTS cannot be added to it while it runs:
+
+```
+cd server && RA_SESSION_SECRET=dev-secret-not-for-production \
+  RA_CLIENT_ORIGIN=http://localhost:5173,http://localhost:4173 npm start
+```
+
+Without 4173 the browser gets no `Access-Control-Allow-Origin`, every call fails as a network error,
+and the client reports **"Server not reachable. Check that the backend is running"** — while the
+backend is running perfectly and answering 5173. **This is a real incident, not a caution:** on
+2026-08-10 this rule shipped pointing the owner at 4173 while the API had only been told about 5173,
+and the first thing he hit was a login screen that would not log in. The message names the wrong
+cause, so the evidence to trust is the API's own answer, not the client's:
+`curl -H "Origin: http://localhost:4173" http://localhost:4000/api/auth/me -i` — an `access-control-allow-origin`
+header means the API is fine and the origin list is the problem.
+
 The dev server on **5173** keeps its old job: developing, and any check where the bundle is not the
 question. Your own work runs on a different port — `npm run dev -- --port 5273 --strictPort`.
 
