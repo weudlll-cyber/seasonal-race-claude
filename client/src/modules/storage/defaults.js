@@ -305,7 +305,16 @@ export const DEFAULT_CAMERA_CONFIG = {
   comebackMinDuration: 3, // seconds camera stays on the comeback racer (1–5)
   // Outcome-phase threshold: leader progress at which COMEBACK becomes eligible internally,
   // independently of the external isOutcomePhase flag from RaceScreen.
-  outcomePhaseThreshold: 0.65,
+  //
+  // OUTCOME-PHASE-75 (2026-08-10) — the OWNER'S CHOICE. Asked from what leader progress the camera
+  // should treat the race as its decisive phase, he chose the later, sharper end. The decisive
+  // phase is now the last quarter of the leader's run instead of the last third: COMEBACK becomes
+  // eligible later, so the shot it wins is a climb that is still resolving rather than one that
+  // resolved a while ago. It also moved this key OFF the fallback-disagreement list — three files
+  // carried a stale 0.75 while this said 0.65, and all three now READ this value rather than
+  // copying it (LESSONS L207), so the slider, the diagnostic HUD and the game cannot disagree
+  // again whatever it is set to next.
+  outcomePhaseThreshold: 0.75,
   // COMEBACK start-rank filter: racer must have been at least this far back (as fraction of
   // field) at the start of the observation window. Prevents triggering for racers already
   // near the front. E.g. 0.40 = must have been in the bottom 60% of the field.
@@ -471,8 +480,17 @@ export const DEFAULT_CAMERA_CONFIG = {
   // 2026-08-06: raised 3 → 5 on the OWNER'S VERDICT. His eye overrules the measurement above, and
   // the measurement itself says why he can be right: the 3-beats-5 numbers were taken on a PACK
   // field, and he observed that on a SPREAD field the guarantee binds and widens a lot at 5 — the
-  // case the sweep never covered. The spread-field sweep is still owed (docs/CAMERA_DIRECTOR.md §8).
+  // case the sweep never covered.
   // This value is read by the camera AND render fingerprint harnesses, so it is a re-mint.
+  //
+  // SPREAD-FIELD-SWEEP, 2026-08-10: THE SWEEP IS NO LONGER OWED — see
+  // reports/night/SPREAD-FIELD-SWEEP.md. It does NOT contradict 5, and it CORRECTS the sentence
+  // above: on four of the five tracks where this setting acts at all, the guarantee binds in the
+  // PACK, not on a spread field (mean 7.95 % of packed frames against 1.75 % of spread ones at 5).
+  // Ice-track is the exception and binds more when strung out. So the old PACK measurement was
+  // looking at the right case after all, and the reason given for re-measuring was itself wrong.
+  // What the sweep does support: 5 acts about three times as often as 3, on the tracks where
+  // anything acts, and more as the field grows. Nothing here is an argument for moving the value.
   //
   // MIN-RACERS-5, 2026-08-09: shipped. Two mirrors of this number were brought with it, because a
   // default of 5 answered by a fallback of 3 is the L199 trap rather than a second opinion —

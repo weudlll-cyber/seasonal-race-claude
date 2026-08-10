@@ -929,3 +929,181 @@ describe('applyRacerBehavior — look-ahead lane-change (Stage A3)', () => {
     expect(Math.abs(trailer.physicalY - yAfter1)).toBeLessThanOrEqual(0.025 + 1e-9); // capped, no snap-back
   });
 });
+
+// ── PAIR-PREFILTER-1: the two-axis field bound ────────────────────────────
+//
+// The prefilter is a SUPERSET of the two gates: a pair it skips is a pair both gates would have
+// rejected. These tests pin the three conditions that make that true, each of which is a way the
+// superset property could quietly stop holding.
+//
+// The real acceptance is the world fingerprint (byte-identical, all ten tracks). These tests exist
+// because the fingerprint runs ONE default field per track: it cannot reach a bodiless racer or a
+// racer with no track width, and those are exactly where a geometry-derived bound is wrong.
+
+describe('PAIR-PREFILTER-1 — the field bound only ever skips pairs the gates reject', () => {
+  // Deliberately NOT `cfg`: these tests need the brake path the shipped config runs, so
+  // look-before-brake stays enabled only where it cannot fire (no free lane / no faster trailer).
+  const brakeCfg = {
+    ...DEFAULT_RACE_BEHAVIOR_CONFIG,
+    hardSeparationEnabled: false,
+    softSteeringStrength: 0,
+    lookBeforeBrakeEnabled: false,
+  };
+
+  it('CONDITION 1a — a pair with NO track width falls through unculled (the 0.18 fallback still brakes)', () => {
+    // Both racers lack trackWidthPx, so the pair's trackWidth is 0 and the brake's lateral test
+    // falls back to config.speedBrakeYThreshold — a number no body geometry can produce. The field
+    // minimum is therefore 0 and boundY must be Infinity, or this pair is never even looked at.
+    const trailer = makeRacer({
+      index: 0,
+      t: 0.5,
+      pathLengthPx: 1200,
+      drawnBodyWidthPx: 28,
+      drawnBodyLengthPx: 31,
+      baseSpeed: 1.2e-4,
+    });
+    const leader = makeRacer({
+      index: 1,
+      t: 0.51,
+      pathLengthPx: 1200,
+      drawnBodyWidthPx: 28,
+      drawnBodyLengthPx: 31,
+      baseSpeed: 1.0e-4,
+    });
+    trailer.physicalY = 0;
+    leader.physicalY = 0.17; // inside speedBrakeYThreshold (0.18), outside nothing geometric
+    applyRacerBehavior([trailer, leader], brakeCfg);
+    expect(trailer.avoidanceActive).toBe(true);
+  });
+
+  it('CONDITION 1b — a ZERO-LENGTH pair falls through unculled even when the field bound is tighter than the flat fallback', () => {
+    // THE HOLE THIS TEST EXISTS FOR, and note the exact shape it needs. A pair with NO body at all
+    // cannot fire on either gate: contactWidth 0 makes the same-lane filter `|dY| < 0`. The pair
+    // that CAN fire while taking the flat fallback is one with width but zero LENGTH — then
+    // contactLength is 0, dynamicBrakeT = DEGENERATE_BRAKE_T (0.014), and the lateral filter is a
+    // real 28/(300/2) = 0.187.
+    //
+    // A third racer with a real body sets maxBodyLen, and a long path makes the geometric bound
+    // 31/19772 x 1.5 = 0.0024 — far TIGHTER than 0.014. A bound that used only the geometry would
+    // skip this pair, and the brake it would have applied would silently stop happening.
+    const flat = (i, t) =>
+      makeRacer({
+        index: i,
+        t,
+        pathLengthPx: 19772,
+        trackWidthPx: 300,
+        drawnBodyWidthPx: 28,
+        drawnBodyLengthPx: 0, // explicit: width but no length
+        baseSpeed: i === 0 ? 1.2e-4 : 1.0e-4,
+      });
+    const trailer = flat(0, 0.5);
+    const leader = flat(1, 0.51); // dT = 0.01: inside 0.014, OUTSIDE the 0.0024 geometric bound
+    trailer.physicalY = 0;
+    leader.physicalY = 0.05; // inside the pair's own 0.187 same-lane filter
+    const bodied = makeLaneRacer({
+      index: 2,
+      t: 0.1,
+      pathLengthPx: 19772,
+      trackWidthPx: 300,
+      baseSpeed: 1.0e-4,
+    });
+    applyRacerBehavior([trailer, leader, bodied], brakeCfg);
+    expect(trailer.avoidanceActive).toBe(true);
+  });
+
+  it('CONDITION 1b — and the geometric bound is genuinely the tighter of the two here', () => {
+    // Guards the test above against becoming vacuous: if maxBodyLen/pathLength x 1.5 ever grew
+    // past DEGENERATE_BRAKE_T, the previous test would pass without exercising the Math.max at all.
+    const geometric = (31 / 19772) * 1.5;
+    expect(geometric).toBeLessThan(0.014);
+  });
+
+  it('CONDITION 2 — the bound is the field MINIMUM track width, so one narrow racer cannot shrink it below another pair', () => {
+    // A mixed field: the pair under test sits on a NARROW track width while a third racer reports a
+    // wide one. Using the maximum (or any single racer's) width would produce a bound smaller than
+    // this pair's own gate and cull a pair that does brake.
+    const trailer = makeLaneRacer({ index: 0, t: 0.5, trackWidthPx: 140, baseSpeed: 1.2e-4 });
+    const leader = makeLaneRacer({ index: 1, t: 0.508, trackWidthPx: 140, baseSpeed: 1.0e-4 });
+    const wide = makeLaneRacer({ index: 2, t: 0.1, trackWidthPx: 4000, baseSpeed: 1.0e-4 });
+    trailer.physicalY = 0;
+    leader.physicalY = 0.3; // |dY| = 0.3: inside 28/(140/2) = 0.4, the pair's own same-lane filter
+    applyRacerBehavior([trailer, leader, wide], brakeCfg);
+    expect(trailer.avoidanceActive).toBe(true);
+  });
+
+  it('CONDITION 3 — the OUTERMOST pair a gate can still act on is never culled (the bound is not one ULP short)', () => {
+    // The bound must be >= the gate's reach on EVERY pair. In a uniform field the two coincide
+    // exactly — maxBodyLen === contactLength === hl+hl — so this places a pair one representable
+    // step INSIDE the bound, where gate A does fire, and asserts it fires. A bound even slightly
+    // too tight (a dropped multiplier, a half-extent instead of a full body, `Math.min` instead of
+    // `Math.max` on the bodies) culls this pair and the brake silently stops happening.
+    //
+    // WHAT THIS TEST CANNOT SHOW, said plainly rather than implied: `>` versus `>=` at the bound
+    // itself is not observable today. BOTH gates are strict on both axes, so a pair sitting exactly
+    // ON the bound is rejected by the gate anyway and the prefilter's choice does not matter. `>`
+    // is used because the cull is a superset by construction and `>=` would make it depend on two
+    // differently-written float expressions being bit-identical — which they are, until one of them
+    // is edited.
+    const boundT = (31 / 1200) * 1.5; // maxBodyLen / pathLength x speedBrakeTMultiplier
+    const justInside = boundT * (1 - Number.EPSILON);
+    expect(justInside).toBeLessThan(boundT);
+    const trailer = makeLaneRacer({ index: 0, t: 0.5, baseSpeed: 1.2e-4 });
+    const leader = makeLaneRacer({ index: 1, t: 0.5 + justInside, baseSpeed: 1.0e-4 });
+    trailer.physicalY = 0;
+    leader.physicalY = 0;
+    applyRacerBehavior([trailer, leader], brakeCfg);
+    expect(trailer.avoidanceActive).toBe(true);
+  });
+
+  it('the bound uses the field MAXIMUM body, so a small racer cannot shrink it below a big pair', () => {
+    // The mirror of CONDITION 2 on the body axis, and it needs a MIXED field to bite: with one body
+    // size, min and max coincide and a `Math.min` slip is invisible. Here a big pair (31 px long,
+    // 28 wide) shares the field with a 5 px racer. Under a minimum the bound would be
+    // 5/1200 x 1.5 = 0.00625 and this pair — whose own gate reaches 0.03875 — would be culled.
+    const trailer = makeLaneRacer({ index: 0, t: 0.5, baseSpeed: 1.2e-4 });
+    const leader = makeLaneRacer({ index: 1, t: 0.53, baseSpeed: 1.0e-4 }); // dT = 0.03
+    const tiny = makeLaneRacer({
+      index: 2,
+      t: 0.1,
+      drawnBodyWidthPx: 5,
+      drawnBodyLengthPx: 5,
+      baseSpeed: 1.0e-4,
+    });
+    for (const r of [trailer, leader, tiny]) r.physicalY = 0;
+    // Offset laterally too, so BOTH axes of the bound are exercised: |dY| = 0.3 sits inside this
+    // pair's own same-lane filter (28/(140/2) = 0.4) but outside a bound built from the 5 px racer
+    // (5/(140/2) x 1.2 = 0.086). Without this the Y half of the sabotage is invisible.
+    leader.physicalY = 0.3;
+    applyRacerBehavior([trailer, leader, tiny], brakeCfg);
+    expect(trailer.avoidanceActive).toBe(true);
+  });
+
+  it('the bound uses the field MINIMUM path length, so a long-path racer cannot shrink it below a short-path pair', () => {
+    // The T-axis twin of CONDITION 2. The pair runs a 1200 px path, so its own brake zone reaches
+    // dT = 31/1200 x 1.5 = 0.0388. A third racer reports a 19 772 px path. Under a MAXIMUM the
+    // bound would collapse to 0.0024 and this pair, at dT = 0.03, would never be looked at.
+    const trailer = makeLaneRacer({ index: 0, t: 0.5, baseSpeed: 1.2e-4 });
+    const leader = makeLaneRacer({ index: 1, t: 0.53, baseSpeed: 1.0e-4 }); // dT = 0.03
+    const longPath = makeLaneRacer({
+      index: 2,
+      t: 0.1,
+      pathLengthPx: 19772,
+      baseSpeed: 1.0e-4,
+    });
+    for (const r of [trailer, leader, longPath]) r.physicalY = 0;
+    applyRacerBehavior([trailer, leader, longPath], brakeCfg);
+    expect(trailer.avoidanceActive).toBe(true);
+  });
+
+  it('the cull leaves the SURVIVORS in their original order (the three order-sensitive tie-breaks)', () => {
+    // brakeMatchCaps updates on strict `<` (first found wins), so the most-constraining leader for a
+    // trailer must still be the same one after culling. Two leaders, one far outside the bound: the
+    // near one must win exactly as it did before, and the far one must not be reachable at all.
+    const trailer = makeLaneRacer({ index: 0, t: 0.5, baseSpeed: 1.4e-4 });
+    const near = makeLaneRacer({ index: 1, t: 0.512, baseSpeed: 1.0e-4 });
+    const far = makeLaneRacer({ index: 2, t: 0.9, baseSpeed: 0.5e-4 }); // far outside boundT
+    for (const r of [trailer, near, far]) r.physicalY = 0;
+    applyRacerBehavior([trailer, near, far], brakeCfg);
+    expect(trailer.brakeMatchLeaderIndex).toBe(near.index);
+  });
+});

@@ -118,7 +118,7 @@ needs none of it. A contributor about to change RaceArena needs most of it.
 
 ## Tier 3 — history
 
-[archive/](archive/README.md) — twenty dated records: diagnoses, inventories and tuning logs that
+[archive/](archive/README.md) — twenty-one dated records: diagnoses, inventories and tuning logs that
 describe the project as it was on a particular date. Kept because the reasoning is worth reading.
 **Read nothing there as current.**
 

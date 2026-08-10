@@ -10,6 +10,8 @@
 // ============================================================
 
 import { easeInOutCubic, shortestArcDeltaT, signedArcDeltaT, tFrac } from '../utils/mathUtils.js';
+// MIRRORS-BY-REFERENCE (LESSONS L207): fallbacks in this file READ the default instead of copying it.
+import { DEFAULT_RACE_BEHAVIOR_CONFIG } from './raceBehaviorConfig.js';
 
 // Pre-allocated per-step structures reused across every applyRacerBehavior call.
 // Eliminates per-step Map/Set allocations. Each call clears + repopulates; no stale
@@ -40,15 +42,23 @@ let _tIndexLen = 0;
 
 // Layer 1 spring-constant fallback when config.softSteeringStrength is absent
 // (partial-config callers in sim/unit paths). Mirrors the defaults.js value.
-const SOFT_STEERING_STRENGTH_FALLBACK = 0.03;
 
 // Lateral feel smoothing (Stage A2). Fallbacks mirror defaults.js for partial-config
 // callers (sim/unit). LATERAL_STEP_MS is the fixed physics step (index.jsx FIXED_DT /
 // sim DT = 16ms); the target ease advances one step per applyRacerBehavior call, so it
 // is deterministic and browser/sim parity-safe without reading any wall-clock.
 const LATERAL_STEP_MS = 16;
-const LANE_TARGET_EASE_MS_FALLBACK = 200;
-const VELOCITY_RESET_SOFTNESS_FALLBACK = 0.5;
+
+// The longitudinal brake zone when a pair has no geometry to derive one from — `contactLength` or
+// `pathLength` is 0, so `contactLength / pathLength x speedBrakeTMultiplier` is not available. It is
+// NOT a config mirror and has no key in defaults.js: it is the pre-body-geometry constant the brake
+// used before reports 43/45, kept as the fallback for partial-config sim and unit callers.
+//
+// PAIR-PREFILTER-1 gave it a name. It was written twice as a bare `0.014` in the pair loop, and the
+// prefilter's bound has to fold the SAME number in (see condition 1(b) at the bound) or it culls
+// pairs this fallback would still have braked. Three copies of a literal that must agree is how a
+// bound and a gate drift apart, so there is one home and all three read it.
+const DEGENERATE_BRAKE_T = 0.014;
 
 // Look-ahead lane-change (Stage A3): uniform per-step cap on lateral motion (physicalY
 // units/step), applied to dodge-outs AND returns alike so lateral speed is a single known
@@ -60,7 +70,6 @@ const VELOCITY_RESET_SOFTNESS_FALLBACK = 0.5;
 // 0.16), so it visibly caps the "jump" into a glide while the derived dodge trigger widens
 // only slightly (closing rates are small vs the longitudinal contact span → little fanning),
 // and keeps honestOverlap at/below baseline with overlapRate 0 (sim-checked).
-const MAX_LATERAL_SPEED_PER_STEP_FALLBACK = 0.028;
 
 /**
  * Compute the per-pair brake cap for brake-to-match behavior.
@@ -494,7 +503,10 @@ function pairForwardSpeeds(trailer, leader, config) {
     (trailer.areaBonusMult ?? 1.0);
   const leaderBrake =
     config.isOpen !== false && leader.avoidanceActive
-      ? Math.min(config.speedBrakeFactor ?? 0.945, leader.brakeMatchFactor ?? 1.0)
+      ? Math.min(
+          config.speedBrakeFactor ?? DEFAULT_RACE_BEHAVIOR_CONFIG.speedBrakeFactor,
+          leader.brakeMatchFactor ?? 1.0
+        )
       : 1.0;
   return { trailerDenom, leaderRawSpeed, leaderBrake };
 }
@@ -562,7 +574,10 @@ export function applyRacerBehavior(racers, config, priorityExtras) {
   const speedBrakeSet = _speedBrakeSet;
   // Look-ahead lane-change (Stage A3): uniform per-step lateral-speed cap. Read once so the
   // SAME constant feeds both the dodge trigger (dT_start below) and the integrator step clamp.
-  const vLatMax = Math.max(0, config.maxLateralSpeedPerStep ?? MAX_LATERAL_SPEED_PER_STEP_FALLBACK);
+  const vLatMax = Math.max(
+    0,
+    config.maxLateralSpeedPerStep ?? DEFAULT_RACE_BEHAVIOR_CONFIG.maxLateralSpeedPerStep
+  );
   // RACER-MOTION-1: per-tick lateral ACCELERATION cap (bounds the CHANGE in the step, not just the step).
   // 0 = disabled (pre-fix bang-bang, where a saturating dodge snaps velocity 0↔clamp = the visible jerk).
   const aLatMax = Math.max(0, config.maxLateralAccelPerStep ?? 0);
@@ -575,6 +590,99 @@ export function applyRacerBehavior(racers, config, priorityExtras) {
   // again until the pair loop has finished, so one build serves every free-lane scan in it.
   buildTIndex(active);
 
+  // ── PAIR-PREFILTER-1: THE TWO-AXIS FIELD BOUND ─────────────────────────────────────────────────
+  //
+  // The pair loop below has exactly TWO gates, and every write it can make is nested inside one of
+  // them (PAIR-REACH-ANALYSIS §1 enumerates them and §7 checks for an unbounded effect and finds
+  // none). Both gates require BOTH axes to be inside, so a pair outside either axis executes zero
+  // writes and its whole body is wasted work:
+  //
+  //   gate A, the speed brake:      |dY| < contact_width/(trackWidth/2)      AND dT < (contact_length/pathLength) x speedBrakeTMultiplier
+  //   gate B, the geometric gate:   |dY| < contact_width/(trackWidth/2) x (1+buffer)  AND dT < (contact_length/pathLength) x (1+buffer)
+  //
+  // A prefilter must decide BEFORE it knows the pair's bodies, so the per-pair contact distances are
+  // replaced by the largest body in the FIELD and the per-pair track metrics by the field's
+  // smallest. `contactLength = hlA + hlB <= max body length`, and the pair's `pathLength` is a
+  // `Math.max` of the two, hence `>= the field minimum` — so both substitutions can only make the
+  // bound WIDER. The cull is therefore a strict SUPERSET of the gates: a pair it skips is a pair
+  // both gates would have rejected. That is the entire safety argument, and it is the same shape
+  // SIDE-FREE-CULL-1 used.
+  //
+  // THE ORIGINAL GATES STAY. The bound is a superset, never a replacement — `dynamicBrakeT` and the
+  // gate-B triggers still decide, exactly as `shortestArcDeltaT(...) > tHalfSpan` still decides
+  // inside the culled `isSideFree`.
+  //
+  // THE `for i, for j > i` ORDER OVER `active` STAYS, and this is load-bearing. Three tie-breaks in
+  // the loop are order-sensitive: `brakeMatchCaps` updates on strict `<` (first found wins),
+  // `_ssForceMag` uses `<=` in §4a and `>=` in §4b, and `_ssObstacleNext` records the last writer.
+  // A prefilter only SKIPS, so the relative order of the survivors is untouched and no ordering
+  // question arises. Iterating the t-index instead would raise all three at once.
+  //
+  // CONDITION 1 — THE DEGENERATE FALLBACKS ARE NOT GEOMETRIC, and they come in TWO shapes.
+  //
+  //   (a) PER-FIELD. When a pair's `trackWidth <= 0` the brake's lateral test falls back to
+  //       `config.speedBrakeYThreshold`, and when its `pathLength <= 0` `dynamicBrakeT` falls back
+  //       to a flat DEGENERATE_BRAKE_T. Both of those are a `Math.max` of the two racers, so they
+  //       are only degenerate when BOTH members are — which the field MINIMUM catches: if any racer
+  //       lacks a metric the minimum is 0, that axis's bound becomes Infinity, and every pair falls
+  //       through unculled. Conservative, and it cannot half-apply.
+  //
+  //   (b) PER-PAIR, and this one the minimum does NOT catch. `dynamicBrakeT` also falls back to the
+  //       flat DEGENERATE_BRAKE_T when the pair's `contactLength` is 0 — which needs both HALF
+  //       lengths to be 0, i.e. two bodiless racers in an otherwise normal field. `pathLength` is
+  //       fine there, so the geometric bound is computed and is finite, and on a long track it is
+  //       SMALLER than the flat fallback: on space-sprint a 31 px body over 19 772 px gives
+  //       0.0024, against the fallback's 0.014. The cull would then skip a pair gate A would have
+  //       evaluated — a superset violation, not a tuning question. So whenever the field's SMALLEST
+  //       body length is 0, the flat fallback is folded into the bound with a `Math.max`. Gate A's
+  //       lateral axis needs no twin of this: `contactWidth === 0` makes `brakeSameLaneY` 0 and
+  //       `|dY| < 0` can never hold, so a bodiless pair cannot fire on that axis at all.
+  //
+  // CONDITION 2 — `boundY` ASSUMES A UNIFORM TRACK WIDTH, AND HERE IS ITS EXPIRY. It holds today
+  // only because `getTrackWidthAtTpx` returns the constant `racer.trackWidthPx`. That function
+  // carries an explicit extension comment — "For non-uniform tracks (no _centerWidth): extend here
+  // with racer.t per-frame lookup". THE DAY THAT LANDS, `minTrackWidth` below stops being the
+  // minimum over the TRACK and becomes a minimum over the racers' CURRENT positions, which is not
+  // a bound on what a pair will see, and `boundY` must be re-derived against the track's narrowest
+  // point instead. Written at the bound rather than in a report because that is where it will be
+  // read.
+  //
+  // CONDITION 3 — THE BOUND IS INCLUSIVE. The tests below are strict `>`, so a pair sitting exactly
+  // ON either bound is still evaluated by the real gates. `>=` would cull the boundary case, which
+  // is the trap SIDE-FREE-CULL-1 named.
+  let maxBodyLen = 0;
+  let maxBodyWid = 0;
+  let minBodyLen = Infinity;
+  let minTrackWidth = Infinity;
+  let minPathLength = Infinity;
+  for (const r of active) {
+    const frame = getFrameSizePx(r);
+    const len = r.drawnBodyLengthPx ?? frame;
+    const wid = r.drawnBodyWidthPx ?? frame;
+    if (len > maxBodyLen) maxBodyLen = len;
+    if (len < minBodyLen) minBodyLen = len;
+    if (wid > maxBodyWid) maxBodyWid = wid;
+    const tw = getTrackWidthAtTpx(r);
+    if (tw < minTrackWidth) minTrackWidth = tw;
+    const pl = getPathLengthPx(r);
+    if (pl < minPathLength) minPathLength = pl;
+  }
+  // The widest multiplier either gate applies on each axis. Gate A's brake-to-match zone
+  // (`brakeMatchActivationTMultiplier` / `brakeMatchActivationYThreshold`) adds no reach: it is
+  // nested INSIDE gate A, so it can only narrow. Resolving an absent `speedBrakeTMultiplier` to the
+  // default is safe in the superset direction — absent, the live gate computes NaN and never fires.
+  const prefilterBufferPct =
+    config.avoidanceBufferPct ?? DEFAULT_RACE_BEHAVIOR_CONFIG.avoidanceBufferPct;
+  const boundTMult = Math.max(
+    config.speedBrakeTMultiplier ?? DEFAULT_RACE_BEHAVIOR_CONFIG.speedBrakeTMultiplier,
+    1 + prefilterBufferPct
+  );
+  const boundYMult = Math.max(1, 1 + prefilterBufferPct);
+  const geometricBoundT = minPathLength > 0 ? (maxBodyLen / minPathLength) * boundTMult : Infinity;
+  // Condition 1(b): a bodiless PAIR takes the flat fallback, which the field metrics cannot bound.
+  const boundT = minBodyLen > 0 ? geometricBoundT : Math.max(geometricBoundT, DEGENERATE_BRAKE_T);
+  const boundY = minTrackWidth > 0 ? (maxBodyWid / (minTrackWidth / 2)) * boundYMult : Infinity;
+
   // ── Avoidance (anisotropic, asymmetric: trailer yields, leader holds) ──────
   for (let i = 0; i < active.length; i++) {
     for (let j = i + 1; j < active.length; j++) {
@@ -583,23 +691,30 @@ export function applyRacerBehavior(racers, config, priorityExtras) {
 
       // Anisotropic distance in (t, physicalY) space — lap-normalized shortest arc.
       const dT = shortestArcDeltaT(rA.t, rB.t);
+      // PAIR-PREFILTER-1: before ANY geometry. See the bound above for why this is a superset.
+      if (dT > boundT) continue;
       const dY = rA.physicalY - rB.physicalY;
+      if (dY > boundY || dY < -boundY) continue;
 
-      // Body geometry for the speed-brake — both axes body-based (reports 43/45).
-      // Frame size kept as fallback when body dims are absent.
-      const frameA = getFrameSizePx(rA);
-      const frameB = getFrameSizePx(rB);
-      const hlA_b = (rA.drawnBodyLengthPx ?? frameA) / 2;
-      const hlB_b = (rB.drawnBodyLengthPx ?? frameB) / 2;
-      const hwA_b = (rA.drawnBodyWidthPx ?? frameA) / 2;
-      const hwB_b = (rB.drawnBodyWidthPx ?? frameB) / 2;
-      const brakeContactLength = hlA_b + hlB_b;
-      const brakeContactWidth = hwA_b + hwB_b;
-      const trackWidth = Math.max(getTrackWidthAtTpx(rA), getTrackWidthAtTpx(rB));
-      const pathLength = Math.max(getPathLengthPx(rA), getPathLengthPx(rB));
+      // Body geometry for the speed-brake AND for the geometric gate below — both axes
+      // body-based (reports 43/45). Frame size kept as fallback when body dims are absent.
+      //
+      // PAIR-DEDUP-1 (2026-08-10): ONE call, read by both. Until now this preamble computed the
+      // six quantities itself and `pairContact` computed them AGAIN at the gate from the same two
+      // racers — twice per pair, every step. The two sites were expression-for-expression
+      // identical (same `?? frameSizePx` fallback, same A+B addition order, same `Math.max`
+      // argument order), so collapsing them is arithmetic deduplication and NOTHING else: the
+      // world fingerprint is unchanged by construction. Only the computation moved up; the gate's
+      // own zero-size `continue` stays exactly where it was, below the speed-brake block.
+      const {
+        contactWidth,
+        contactLength,
+        pairTW: trackWidth,
+        pairPL: pathLength,
+      } = pairContact(rA, rB);
       // Same-lane filter: brake only if bodies would collide laterally (no expansion multiplier).
       const brakeSameLaneY =
-        trackWidth > 0 ? pxToPhysicalY(brakeContactWidth, trackWidth) : config.speedBrakeYThreshold;
+        trackWidth > 0 ? pxToPhysicalY(contactWidth, trackWidth) : config.speedBrakeYThreshold;
 
       // Trailer = lower t, tie-break by index. Trailer yields; leader holds.
       const aIsTrailer = rA.t < rB.t || (rA.t === rB.t && rA.index < rB.index);
@@ -613,9 +728,9 @@ export function applyRacerBehavior(racers, config, priorityExtras) {
       // Lateral proximity must NOT drive braking; it only answers "same lane y/n".
       // Report 13: disabling avoidanceActive on closed tracks caused regressions.
       const dynamicBrakeT =
-        brakeContactLength > 0 && pathLength > 0
-          ? (brakeContactLength / pathLength) * config.speedBrakeTMultiplier
-          : 0.014;
+        contactLength > 0 && pathLength > 0
+          ? (contactLength / pathLength) * config.speedBrakeTMultiplier
+          : DEGENERATE_BRAKE_T;
       if (Math.abs(dY) < brakeSameLaneY && dT < dynamicBrakeT) {
         // ── Look before you brake ─────────────────────────────────────────────
         // The trailer is same-lane and closing on a slower leader inside the brake zone.
@@ -647,10 +762,13 @@ export function applyRacerBehavior(racers, config, priorityExtras) {
         // The hard-separation pass remains ONLY as a last-resort catch, never the guarantee.
         let takeFreeLane = false;
         if (config.lookBeforeBrakeEnabled !== false && trackWidth > 0 && pathLength > 0) {
-          const lbHalfSpan = pxToPhysicalY(brakeContactWidth, trackWidth);
-          const lbTHalf = brakeContactLength / pathLength;
+          const lbHalfSpan = pxToPhysicalY(contactWidth, trackWidth);
+          const lbTHalf = contactLength / pathLength;
           const lbCap = Math.min(config.maxLateral, 1.0);
-          const reengageFloorT = lbTHalf * (config.lookBeforeBrakeReengageTMultiplier ?? 1.2);
+          const reengageFloorT =
+            lbTHalf *
+            (config.lookBeforeBrakeReengageTMultiplier ??
+              DEFAULT_RACE_BEHAVIOR_CONFIG.lookBeforeBrakeReengageTMultiplier);
 
           // Worst-case per-step longitudinal closing rate (parity-safe). Assume the leader
           // will be at least at the brake floor next frame even if it is not braking now, so
@@ -660,9 +778,14 @@ export function applyRacerBehavior(racers, config, priorityExtras) {
             leader,
             config
           );
-          const leaderBrakeWorst = Math.min(leaderBrake, config.speedBrakeFactor ?? 0.945);
+          const leaderBrakeWorst = Math.min(
+            leaderBrake,
+            config.speedBrakeFactor ?? DEFAULT_RACE_BEHAVIOR_CONFIG.speedBrakeFactor
+          );
           const vClose = Math.max(0, trailerDenom - leaderRawSpeed * leaderBrakeWorst);
-          const lagFrames = config.lookBeforeBrakeLagFrames ?? 2;
+          const lagFrames =
+            config.lookBeforeBrakeLagFrames ??
+            DEFAULT_RACE_BEHAVIOR_CONFIG.lookBeforeBrakeLagFrames;
           // Effective re-engage threshold: the larger of the fixed floor and the lag-safe
           // dynamic margin. Suppress only while dT is above it.
           const safeReengageT = Math.max(reengageFloorT, lbTHalf + lagFrames * vClose);
@@ -709,7 +832,11 @@ export function applyRacerBehavior(racers, config, priorityExtras) {
               // trailer sandwiched between two leaders steers around the closer one.
               const prev = _passCandidate.get(trailer.index);
               if (!prev || dT < prev.dT) {
-                const offsetY = lbHalfSpan * (1 + (config.softSteeringClearancePct ?? 0));
+                const offsetY =
+                  lbHalfSpan *
+                  (1 +
+                    (config.softSteeringClearancePct ??
+                      DEFAULT_RACE_BEHAVIOR_CONFIG.softSteeringClearancePct));
                 let targetY = leader.physicalY + dir * offsetY;
                 if (targetY < -lbCap) targetY = -lbCap;
                 else if (targetY > lbCap) targetY = lbCap;
@@ -738,9 +865,9 @@ export function applyRacerBehavior(racers, config, priorityExtras) {
             const bmMultiplier =
               config.brakeMatchActivationTMultiplier ?? config.speedBrakeTMultiplier;
             const dynamicBrakeMatchT =
-              brakeContactLength > 0 && pathLength > 0
-                ? (brakeContactLength / pathLength) * bmMultiplier
-                : 0.014;
+              contactLength > 0 && pathLength > 0
+                ? (contactLength / pathLength) * bmMultiplier
+                : DEGENERATE_BRAKE_T;
             const bmYThreshold = config.brakeMatchActivationYThreshold ?? brakeSameLaneY;
             inBrakeMatchZone = Math.abs(dY) < bmYThreshold && dT < dynamicBrakeMatchT;
           } else {
@@ -763,8 +890,9 @@ export function applyRacerBehavior(racers, config, priorityExtras) {
             const cap = computeBrakeMatchFactor(
               leaderRawSpeed * leaderBrake,
               trailerDenom,
-              config.speedMatchMinDifferential ?? 0.005,
-              config.speedMatchSafetyMargin ?? 0.001
+              config.speedMatchMinDifferential ??
+                DEFAULT_RACE_BEHAVIOR_CONFIG.speedMatchMinDifferential,
+              config.speedMatchSafetyMargin ?? DEFAULT_RACE_BEHAVIOR_CONFIG.speedMatchSafetyMargin
             );
             // Track the most constraining leader (lowest cap). Tie-break: first-found
             // (lower pair indices) wins because strict < never updates on equal caps.
@@ -782,12 +910,14 @@ export function applyRacerBehavior(racers, config, priorityExtras) {
       // Two independent px-space axes, no sqrt. Speed brake runs BEFORE this gate (above)
       // because its body-based longitudinal zone (×1.5) is wider than the gate (×1.2).
       // Invariant: gate contact threshold × (1+buffer) > contact = free-lane threshold.
-      const { contactWidth, contactLength, pairTW, pairPL } = pairContact(rA, rB);
+      // PAIR-DEDUP-1: contactWidth/contactLength/trackWidth/pathLength come from the single
+      // `pairContact` call in the loop preamble — this gate used to recompute them.
       // Skip pairs with no body size info (real racers always have frameSizePx as fallback).
       if (contactWidth === 0 || contactLength === 0) continue;
-      const latPx = Math.abs(dY) * (pairTW / 2);
-      const longPx = dT * pairPL;
-      const bufferPct = config.avoidanceBufferPct ?? 0.2;
+      const latPx = Math.abs(dY) * (trackWidth / 2);
+      const longPx = dT * pathLength;
+      const bufferPct =
+        config.avoidanceBufferPct ?? DEFAULT_RACE_BEHAVIOR_CONFIG.avoidanceBufferPct;
       // Gate = contact × (1+buffer) > contact (free-lane) — invariant by construction.
       const latTrigger = contactWidth * (1 + bufferPct);
       const longTrigger = contactLength * (1 + bufferPct);
@@ -808,9 +938,13 @@ export function applyRacerBehavior(racers, config, priorityExtras) {
       // overlap wins on equal forceMag).
       if (trackWidth > 0) {
         const contactOffsetY =
-          pxToPhysicalY(contactWidth, trackWidth) * (1 + (config.softSteeringClearancePct ?? 0));
+          pxToPhysicalY(contactWidth, trackWidth) *
+          (1 +
+            (config.softSteeringClearancePct ??
+              DEFAULT_RACE_BEHAVIOR_CONFIG.softSteeringClearancePct));
         const ssCap = Math.min(config.maxLateral, 1.0);
-        const ssHystY = config.softSteeringHysteresisY ?? 0.04;
+        const ssHystY =
+          config.softSteeringHysteresisY ?? DEFAULT_RACE_BEHAVIOR_CONFIG.softSteeringHysteresisY;
         // RACER-FLAPPING-2 margin hysteresis: the INCUMBENT obstacle (the one steered relative to last
         // frame) keeps the target unless a challenger's force exceeds it by this RELATIVE margin. This
         // stops the most-constraining winner alternating tick-to-tick between two comparable obstacles —
@@ -903,7 +1037,9 @@ export function applyRacerBehavior(racers, config, priorityExtras) {
           if (trackWidth > 0) {
             const ssOffsetY =
               pxToPhysicalY(contactWidth, trackWidth) *
-              (1 + (config.softSteeringClearancePct ?? 0));
+              (1 +
+                (config.softSteeringClearancePct ??
+                  DEFAULT_RACE_BEHAVIOR_CONFIG.softSteeringClearancePct));
             const ssCap2 = Math.min(config.maxLateral, 1.0);
             const overrideSoftTarget = (self, obstacle, dir, geomDir, blocked) => {
               if (forceMag < (_ssForceMag.get(self.index) ?? 0)) return; // >= : overlap wins on tie
@@ -936,10 +1072,14 @@ export function applyRacerBehavior(racers, config, priorityExtras) {
   // Apply deltas via velocity + damping + hard clamp
   const damping = Number.isFinite(config.lateralDamping) ? config.lateralDamping : 0.35;
   // Stage A2 feel knobs (read once; used in this loop and the hard-separation pass below).
-  const laneTargetEaseMs = config.laneTargetEaseMs ?? LANE_TARGET_EASE_MS_FALLBACK;
+  const laneTargetEaseMs = config.laneTargetEaseMs ?? DEFAULT_RACE_BEHAVIOR_CONFIG.laneTargetEaseMs;
   const velResetKeep = Math.max(
     0,
-    Math.min(1, config.lateralVelocityResetSoftness ?? VELOCITY_RESET_SOFTNESS_FALLBACK)
+    Math.min(
+      1,
+      config.lateralVelocityResetSoftness ??
+        DEFAULT_RACE_BEHAVIOR_CONFIG.lateralVelocityResetSoftness
+    )
   );
   for (const r of active) {
     const _yStart = r.physicalY; // RACER-MOTION-1: pre-tick position → this tick's actual step for jerk cap
@@ -964,7 +1104,9 @@ export function applyRacerBehavior(racers, config, priorityExtras) {
     if (passCand) {
       r.passLeaderIndex = passCand.leaderIndex;
       r.passDir = passCand.dir;
-      const passStrength = config.lookBeforeBrakePassStrength ?? 0.5;
+      const passStrength =
+        config.lookBeforeBrakePassStrength ??
+        DEFAULT_RACE_BEHAVIOR_CONFIG.lookBeforeBrakePassStrength;
       // Stage A2: the pass commit is SAFETY-CRITICAL — it must clear the racer sideways
       // BEFORE longitudinal contact (the non-penetration "commit" half). So it is NOT
       // eased; steer decisively to the free side exactly as before. Passing easeMs=0 also
@@ -982,7 +1124,8 @@ export function applyRacerBehavior(racers, config, priorityExtras) {
       // otherwise, or the current position (hold) when both sides are blocked. Runs
       // before the velocity/damping integration.
       const rawTarget = _ssTarget.get(r.index) ?? r.physicalY;
-      const strength = config.softSteeringStrength ?? SOFT_STEERING_STRENGTH_FALLBACK;
+      const strength =
+        config.softSteeringStrength ?? DEFAULT_RACE_BEHAVIOR_CONFIG.softSteeringStrength;
       // Stage A2: ease the effective soft-steering target toward the (possibly flipped) raw
       // target so the spring integrates a smooth weave, not a snap. This is FEEL only — the
       // §4a lane choice (rawTarget) is unchanged; only its motion is smoothed.
@@ -1045,10 +1188,16 @@ export function applyRacerBehavior(racers, config, priorityExtras) {
 
     // ── Brake-to-match hold state update ──────────────────────────────────
     // Constants read once per racer for clarity; values from config with safe defaults.
-    const bmTimeout = config.brakeHoldTimeoutFrames ?? 90;
-    const bmEscape = config.brakeHoldEscapeReleaseDurationFrames ?? 15;
-    const bmCooldown = config.brakeHoldEscapeCooldownFrames ?? 60;
-    const bmDebounce = config.brakeReleaseDebounceFrames ?? 3;
+    const bmTimeout =
+      config.brakeHoldTimeoutFrames ?? DEFAULT_RACE_BEHAVIOR_CONFIG.brakeHoldTimeoutFrames;
+    const bmEscape =
+      config.brakeHoldEscapeReleaseDurationFrames ??
+      DEFAULT_RACE_BEHAVIOR_CONFIG.brakeHoldEscapeReleaseDurationFrames;
+    const bmCooldown =
+      config.brakeHoldEscapeCooldownFrames ??
+      DEFAULT_RACE_BEHAVIOR_CONFIG.brakeHoldEscapeCooldownFrames;
+    const bmDebounce =
+      config.brakeReleaseDebounceFrames ?? DEFAULT_RACE_BEHAVIOR_CONFIG.brakeReleaseDebounceFrames;
 
     if (r.brakeMatchFrames < 0) {
       // Counting up from -(bmEscape+bmCooldown) toward 0: escape release then cooldown.
@@ -1169,7 +1318,13 @@ export function applyRacerBehavior(racers, config, priorityExtras) {
     // Overlap tolerance (dead-zone): bodies may overlap by up to this fraction of the
     // contact distance before separation engages, and separation only restores the gap to
     // that boundary (soft stop). 0 = separate on the slightest touch back to full contact.
-    const tol = Math.max(0, Math.min(1, config.hardSeparationTolerancePct ?? 0.1));
+    const tol = Math.max(
+      0,
+      Math.min(
+        1,
+        config.hardSeparationTolerancePct ?? DEFAULT_RACE_BEHAVIOR_CONFIG.hardSeparationTolerancePct
+      )
+    );
     const capY = Math.min(config.maxLateral, 1.0);
     const EPS = 1e-9;
     // warmupScale 0 (race start) or relax 0 → no separation at all (also no velocity touch).

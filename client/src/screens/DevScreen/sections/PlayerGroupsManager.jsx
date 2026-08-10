@@ -12,6 +12,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useStorage } from '../../../modules/storage/useStorage.js';
 import { KEYS, storageSet } from '../../../modules/storage/storage.js';
+// MIRRORS-BY-REFERENCE (LESSONS L207): fallbacks in this file READ the default instead of copying it.
 import { DEFAULT_RACE_DEFAULTS } from '../../../modules/storage/defaults.js';
 import { assignRacers } from '../../../modules/utils/RandomHelper.js';
 import { InfoTooltip } from '../../../components/InfoTooltip/index.js';
@@ -39,7 +40,7 @@ function PlayerGroupsManager() {
   const [actionError, setActionError] = useState(null);
 
   const [raceDefaults] = useStorage(KEYS.RACE_DEFAULTS, DEFAULT_RACE_DEFAULTS);
-  const maxPlayers = raceDefaults.maxPlayersOpen ?? 100;
+  const maxPlayers = raceDefaults.maxPlayersOpen ?? DEFAULT_RACE_DEFAULTS.maxPlayersOpen;
   const [form, setForm] = useState(BLANK_FORM);
   const [editId, setEditId] = useState(null);
   const [showForm, setShowForm] = useState(false);

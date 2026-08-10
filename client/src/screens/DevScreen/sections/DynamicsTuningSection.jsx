@@ -11,6 +11,7 @@ import { useState, useEffect, forwardRef, useImperativeHandle } from 'react';
 import {
   loadBaseSpeedConfig,
   saveBaseSpeedConfig,
+  // MIRRORS-BY-REFERENCE (LESSONS L207): fallbacks in this file READ the default instead of copying it.
   DEFAULT_BASE_SPEED_CONFIG,
   spreadPercent,
 } from '../../../modules/baseSpeedConfig.js';
@@ -296,7 +297,10 @@ const DynamicsTuningSection = forwardRef(function DynamicsTuningSection(_, ref) 
             <input
               type="checkbox"
               aria-label="Render Interpolation"
-              checked={frameTimingConfig.renderInterpolation ?? true}
+              checked={
+                frameTimingConfig.renderInterpolation ??
+                DEFAULT_FRAME_TIMING_CONFIG.renderInterpolation
+              }
               onChange={(e) => setFrameTiming('renderInterpolation', e.target.checked)}
               style={{ cursor: 'pointer' }}
             />
@@ -675,7 +679,7 @@ const DynamicsTuningSection = forwardRef(function DynamicsTuningSection(_, ref) 
               className={s.input}
               aria-label="Gap-Reroll mode"
               data-testid="gap-reroll-mode"
-              value={dynamicsConfig.gapRerollMode ?? 'symmetric'}
+              value={dynamicsConfig.gapRerollMode ?? DEFAULT_RACE_DYNAMICS_CONFIG.gapRerollMode}
               onChange={(e) => setDynamics('gapRerollMode', e.target.value)}
             >
               <option value="symmetric">symmetric</option>
@@ -689,7 +693,10 @@ const DynamicsTuningSection = forwardRef(function DynamicsTuningSection(_, ref) 
             >
               <input
                 type="checkbox"
-                checked={dynamicsConfig.gapRerollDevMarker ?? false}
+                checked={
+                  dynamicsConfig.gapRerollDevMarker ??
+                  DEFAULT_RACE_DYNAMICS_CONFIG.gapRerollDevMarker
+                }
                 onChange={(e) => setDynamics('gapRerollDevMarker', e.target.checked)}
                 data-testid="gap-reroll-devmarker-toggle"
               />
@@ -749,7 +756,10 @@ const DynamicsTuningSection = forwardRef(function DynamicsTuningSection(_, ref) 
               min={30}
               max={95}
               step={5}
-              value={Math.round((dynamicsConfig.racePlanBonusTransitionEnd ?? 0.75) * 100)}
+              value={Math.round(
+                (dynamicsConfig.racePlanBonusTransitionEnd ??
+                  DEFAULT_RACE_DYNAMICS_CONFIG.racePlanBonusTransitionEnd) * 100
+              )}
               onChange={(e) => {
                 const v = Number(e.target.value);
                 if (v >= 30 && v <= 95) setDynamics('racePlanBonusTransitionEnd', v / 100);
@@ -771,7 +781,10 @@ const DynamicsTuningSection = forwardRef(function DynamicsTuningSection(_, ref) 
               min={500}
               max={5000}
               step={500}
-              value={dynamicsConfig.racePlanBonusFadeDuration ?? 1500}
+              value={
+                dynamicsConfig.racePlanBonusFadeDuration ??
+                DEFAULT_RACE_DYNAMICS_CONFIG.racePlanBonusFadeDuration
+              }
               onChange={(e) => {
                 const v = Number(e.target.value);
                 if (v >= 500 && v <= 5000) setDynamics('racePlanBonusFadeDuration', v);
@@ -793,7 +806,10 @@ const DynamicsTuningSection = forwardRef(function DynamicsTuningSection(_, ref) 
               min={50}
               max={100}
               step={5}
-              value={Math.round((dynamicsConfig.racePlanCorridorStart ?? 0.55) * 100)}
+              value={Math.round(
+                (dynamicsConfig.racePlanCorridorStart ??
+                  DEFAULT_RACE_DYNAMICS_CONFIG.racePlanCorridorStart) * 100
+              )}
               onChange={(e) => {
                 const v = Number(e.target.value);
                 const end =
@@ -826,7 +842,9 @@ const DynamicsTuningSection = forwardRef(function DynamicsTuningSection(_, ref) 
                 const v = Number(e.target.value);
                 if (v >= 50 && v <= 100) {
                   const newEnd = v / 100;
-                  const curStart = dynamicsConfig.racePlanCorridorStart ?? 0.55;
+                  const curStart =
+                    dynamicsConfig.racePlanCorridorStart ??
+                    DEFAULT_RACE_DYNAMICS_CONFIG.racePlanCorridorStart;
                   setDynamicsConfig((prev) => ({
                     ...prev,
                     racePlanCorridorEnd: newEnd,
@@ -851,7 +869,10 @@ const DynamicsTuningSection = forwardRef(function DynamicsTuningSection(_, ref) 
               min={0}
               max={120}
               step={5}
-              value={dynamicsConfig.racePlanMinDurationSec ?? 30}
+              value={
+                dynamicsConfig.racePlanMinDurationSec ??
+                DEFAULT_RACE_DYNAMICS_CONFIG.racePlanMinDurationSec
+              }
               onChange={(e) => {
                 const v = Number(e.target.value);
                 if (v >= 0 && v <= 120) setDynamics('racePlanMinDurationSec', v);
@@ -890,9 +911,21 @@ const DynamicsTuningSection = forwardRef(function DynamicsTuningSection(_, ref) 
           data-testid="race-plan-timeline-hint"
         >
           {'Bonus: 0%→'}
-          <strong>{Math.round((dynamicsConfig.racePlanBonusTransitionEnd ?? 0.75) * 100)}%</strong>
+          <strong>
+            {Math.round(
+              (dynamicsConfig.racePlanBonusTransitionEnd ??
+                DEFAULT_RACE_DYNAMICS_CONFIG.racePlanBonusTransitionEnd) * 100
+            )}
+            %
+          </strong>
           {'  |  Controller: '}
-          <strong>{Math.round((dynamicsConfig.racePlanCorridorStart ?? 0.55) * 100)}%</strong>
+          <strong>
+            {Math.round(
+              (dynamicsConfig.racePlanCorridorStart ??
+                DEFAULT_RACE_DYNAMICS_CONFIG.racePlanCorridorStart) * 100
+            )}
+            %
+          </strong>
           {'→'}
           <strong>
             {Math.round(

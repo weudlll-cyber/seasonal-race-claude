@@ -115,13 +115,27 @@ export const SUITE_GUARDS = [
   },
 ];
 
-/** Every guard script on disk — DISCOVERED, so a new guard is routed the moment it exists. */
+/**
+ * Every guard script on disk — DISCOVERED, so a new guard is routed the moment it exists.
+ *
+ * WHY THE SET IS A NAME PATTERN AND NOT "EVERY .mjs": `declarationOf` RUNS the file to ask it, and
+ * most scripts here are harnesses and generators that do their work at module load. Asking a sweep
+ * what it covers would run the sweep.
+ *
+ * `gen-engine-reach-doc.mjs` is named EXPLICITLY rather than by widening the pattern to `gen-*`,
+ * and the distinction is the point: a generator run with no arguments REWRITES its document. This
+ * one is safe to ask because it declares and exits before doing anything, and `verify.mjs` gives it
+ * `--check`. Any other generator must earn its place the same way, one name at a time — a `gen-*`
+ * wildcard would enrol the next one automatically and in write mode.
+ */
 export function guardScripts(dir = SCRIPTS) {
   const out = [];
   for (const f of readdirSync(dir)) {
     if (!f.endsWith(".mjs") || f.endsWith(".test.mjs")) continue;
     if (
-      !/^check-.*\.mjs$|-fingerprint\.mjs$|^fingerprint-default\.mjs$/.test(f)
+      !/^check-.*\.mjs$|-fingerprint\.mjs$|^fingerprint-default\.mjs$|^gen-engine-reach-doc\.mjs$/.test(
+        f,
+      )
     )
       continue;
     out.push(`scripts/${f}`);

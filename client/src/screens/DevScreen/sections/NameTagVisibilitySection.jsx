@@ -11,6 +11,7 @@ import { useState, useEffect } from 'react';
 import {
   loadCameraConfig,
   saveCameraConfig,
+  // MIRRORS-BY-REFERENCE (LESSONS L207): fallbacks in this file READ the default instead of copying it.
   DEFAULT_CAMERA_CONFIG,
 } from '../../../modules/cameraConfig.js';
 import { InfoTooltip } from '../../../components/InfoTooltip/index.js';
@@ -73,7 +74,7 @@ function NameTagVisibilitySection() {
             >
               Name size (% of frame)
               <InfoTooltip
-                text={`How big a name tag is drawn, as a share of the frame height — the same size on screen at every zoom and on every track. ${((config.nameTagFrameFrac ?? 0.022) * 100).toFixed(1)}% = ${Math.round((config.nameTagFrameFrac ?? 0.022) * 720)} px on a 720-tall frame. Bigger names are easier to read but collide sooner, so fewer of them fit.`}
+                text={`How big a name tag is drawn, as a share of the frame height — the same size on screen at every zoom and on every track. ${((config.nameTagFrameFrac ?? DEFAULT_CAMERA_CONFIG.nameTagFrameFrac) * 100).toFixed(1)}% = ${Math.round((config.nameTagFrameFrac ?? DEFAULT_CAMERA_CONFIG.nameTagFrameFrac) * 720)} px on a 720-tall frame. Bigger names are easier to read but collide sooner, so fewer of them fit.`}
               />
             </label>
             <input
@@ -82,7 +83,11 @@ function NameTagVisibilitySection() {
               min={1.0}
               max={5.0}
               step={0.1}
-              value={Math.round((config.nameTagFrameFrac ?? 0.022) * 1000) / 10}
+              value={
+                Math.round(
+                  (config.nameTagFrameFrac ?? DEFAULT_CAMERA_CONFIG.nameTagFrameFrac) * 1000
+                ) / 10
+              }
               onChange={(e) => {
                 const v = Number(e.target.value);
                 if (v >= 1.0 && v <= 5.0) set('nameTagFrameFrac', v / 100);
@@ -96,7 +101,7 @@ function NameTagVisibilitySection() {
             >
               Gap above racer (px)
               <InfoTooltip
-                text={`The breathing space between the top of a racer and the bottom of its tag. The rest of the distance is not a setting: a tag sits half the racer's DRAWN height above its centre, so the gap follows the RACER — a bigger racer gets a bigger gap, on every track and at every zoom, with no per-track number. This margin is only the space above that edge, and it exists because the drawn height measures the racer's narrow body while a neck or a fin reaches past it. Value: ${config.nameTagMarginPx ?? 6} px.`}
+                text={`The breathing space between the top of a racer and the bottom of its tag. The rest of the distance is not a setting: a tag sits half the racer's DRAWN height above its centre, so the gap follows the RACER — a bigger racer gets a bigger gap, on every track and at every zoom, with no per-track number. This margin is only the space above that edge, and it exists because the drawn height measures the racer's narrow body while a neck or a fin reaches past it. Value: ${config.nameTagMarginPx ?? DEFAULT_CAMERA_CONFIG.nameTagMarginPx} px.`}
               />
             </label>
             <input
@@ -106,7 +111,7 @@ function NameTagVisibilitySection() {
               min={0}
               max={40}
               step={1}
-              value={config.nameTagMarginPx ?? 6}
+              value={config.nameTagMarginPx ?? DEFAULT_CAMERA_CONFIG.nameTagMarginPx}
               onChange={(e) => {
                 const v = Number(e.target.value);
                 if (v >= 0 && v <= 40) set('nameTagMarginPx', v);
@@ -120,7 +125,7 @@ function NameTagVisibilitySection() {
             >
               Show all names for (s)
               <InfoTooltip
-                text={`How long after the gun EVERY name stays visible, so a spectator can find their racer once. Default 8 s: measured, not chosen — while the field is still a block, decluttering would drop 10-22% of the names, worst about 4 s in; by 8 s it drops essentially none, so the handover is invisible. Note the camera's own start hold ends at 3 s, which is too early. Value: ${((config.nameTagAllUntilMs ?? 8000) / 1000).toFixed(1)} s.`}
+                text={`How long after the gun EVERY name stays visible, so a spectator can find their racer once. Default 8 s: measured, not chosen — while the field is still a block, decluttering would drop 10-22% of the names, worst about 4 s in; by 8 s it drops essentially none, so the handover is invisible. Note the camera's own start hold ends at 3 s, which is too early. Value: ${((config.nameTagAllUntilMs ?? DEFAULT_CAMERA_CONFIG.nameTagAllUntilMs) / 1000).toFixed(1)} s.`}
               />
             </label>
             <input
@@ -129,7 +134,7 @@ function NameTagVisibilitySection() {
               min={0}
               max={30}
               step={0.5}
-              value={(config.nameTagAllUntilMs ?? 8000) / 1000}
+              value={(config.nameTagAllUntilMs ?? DEFAULT_CAMERA_CONFIG.nameTagAllUntilMs) / 1000}
               onChange={(e) => {
                 const v = Number(e.target.value);
                 if (v >= 0 && v <= 30) set('nameTagAllUntilMs', Math.round(v * 1000));

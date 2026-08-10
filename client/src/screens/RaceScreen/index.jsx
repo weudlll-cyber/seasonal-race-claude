@@ -52,6 +52,7 @@ import { buildCameraMarker, configDiffWithValues } from '../../modules/camera/ca
 // out of `modules/` on purpose: scripts/render-fingerprint.mjs drives the renderer directly in node,
 // where a bare `virtual:` specifier cannot resolve.
 import RA_BUILD from 'virtual:ra-build';
+// MIRRORS-BY-REFERENCE (LESSONS L207): fallbacks in this file READ the default instead of copying it.
 import { DEFAULT_CONFIG_WORLD } from '../../modules/storage/defaults.js';
 import CameraStateHUD from './CameraStateHUD.jsx';
 import CameraDiagnosticsHUD from './CameraDiagnosticsHUD.jsx';
@@ -83,6 +84,10 @@ import { loadServerClasses } from '../../modules/surface-effects/registry.js';
 import { initProbe, recordFrame, recordFrameCamera } from '../../modules/rAFProbe.js';
 import BrandLogoOverlay from './BrandLogoOverlay.jsx';
 import './RaceScreen.css';
+import {
+  DEFAULT_CAMERA_CONFIG,
+  DEFAULT_RACE_DYNAMICS_CONFIG,
+} from '../../modules/storage/defaults.js';
 
 const CANVAS_W = 1280;
 const CANVAS_H = 720;
@@ -177,17 +182,21 @@ export default function RaceScreen() {
   // Camera config as React state so updateConfig() is called whenever it changes.
   const [cameraConfig] = useState(() => loadCameraConfig());
   const cameraConfigRef = useRef(cameraConfig);
-  const showCameraStateHud = cameraConfig.showCameraStateHud ?? true;
-  const showCameraDiagnostics = cameraConfig.showCameraDiagnostics ?? false;
-  const showRpDiag = cameraConfig.showRpDiag ?? false;
-  const showRpWinnerList = cameraConfig.showRpWinnerList ?? false;
-  const showTop10SpeedMonitor = cameraConfig.showTop10SpeedMonitor ?? false;
-  const enableFrameLog = cameraConfig.enableFrameLog ?? false;
-  const enablePerfLog = cameraConfig.enablePerfLog ?? false;
-  const showBattleDiag = cameraConfig.showBattleDiag ?? false;
-  const showComebackDiag = cameraConfig.showComebackDiag ?? false;
-  const showGovernorDiag = cameraConfig.showGovernorDiag ?? false;
-  const showLeadChangeDiag = cameraConfig.showLeadChangeDiag ?? false;
+  const showCameraStateHud =
+    cameraConfig.showCameraStateHud ?? DEFAULT_CAMERA_CONFIG.showCameraStateHud;
+  const showCameraDiagnostics =
+    cameraConfig.showCameraDiagnostics ?? DEFAULT_CAMERA_CONFIG.showCameraDiagnostics;
+  const showRpDiag = cameraConfig.showRpDiag ?? DEFAULT_CAMERA_CONFIG.showRpDiag;
+  const showRpWinnerList = cameraConfig.showRpWinnerList ?? DEFAULT_CAMERA_CONFIG.showRpWinnerList;
+  const showTop10SpeedMonitor =
+    cameraConfig.showTop10SpeedMonitor ?? DEFAULT_CAMERA_CONFIG.showTop10SpeedMonitor;
+  const enableFrameLog = cameraConfig.enableFrameLog ?? DEFAULT_CAMERA_CONFIG.enableFrameLog;
+  const enablePerfLog = cameraConfig.enablePerfLog ?? DEFAULT_CAMERA_CONFIG.enablePerfLog;
+  const showBattleDiag = cameraConfig.showBattleDiag ?? DEFAULT_CAMERA_CONFIG.showBattleDiag;
+  const showComebackDiag = cameraConfig.showComebackDiag ?? DEFAULT_CAMERA_CONFIG.showComebackDiag;
+  const showGovernorDiag = cameraConfig.showGovernorDiag ?? DEFAULT_CAMERA_CONFIG.showGovernorDiag;
+  const showLeadChangeDiag =
+    cameraConfig.showLeadChangeDiag ?? DEFAULT_CAMERA_CONFIG.showLeadChangeDiag;
 
   // PERF-WHERE-1: WHERE in the race a perf-log export was taken. Called at the moment the owner
   // clicks, never per frame — `g.current` is the live race state, so this reads what is true then
@@ -239,7 +248,7 @@ export default function RaceScreen() {
     if (phase !== PHASE.RACING) return;
 
     const cfg = cameraConfigRef.current;
-    if (!(cfg.stateOverlayEnabled ?? true)) return;
+    if (!(cfg.stateOverlayEnabled ?? DEFAULT_CAMERA_CONFIG.stateOverlayEnabled)) return;
     if (!['OVERVIEW', 'BATTLE_ZOOM', 'COMEBACK_ZOOM', 'LEAD_CHANGE'].includes(camState)) return;
 
     const vars = {};
@@ -300,7 +309,7 @@ export default function RaceScreen() {
 
     setOverlayText(result.text);
 
-    const duration = cfg.stateOverlayDurationMs ?? 3500;
+    const duration = cfg.stateOverlayDurationMs ?? DEFAULT_CAMERA_CONFIG.stateOverlayDurationMs;
     overlayTimerRef.current = setTimeout(() => setOverlayText(null), duration);
 
     return () => clearTimeout(overlayTimerRef.current);
@@ -654,8 +663,10 @@ export default function RaceScreen() {
     g.current = attachRenderState(raceState);
 
     // ── Config flags for canvas-loop use ────────────────────────────────────
-    const showRpMinimapBadgesCfg = cameraConfigRef.current.showRpMinimapBadges ?? false;
-    const showRpStartRowCfg = cameraConfigRef.current.showRpStartRow ?? false;
+    const showRpMinimapBadgesCfg =
+      cameraConfigRef.current.showRpMinimapBadges ?? DEFAULT_CAMERA_CONFIG.showRpMinimapBadges;
+    const showRpStartRowCfg =
+      cameraConfigRef.current.showRpStartRow ?? DEFAULT_CAMERA_CONFIG.showRpStartRow;
 
     // Camera/diag-only Race-Plan bindings (the controller + plan info come from the extracted core).
     let cameraPlanDelivered = false; // B4a: deliver the authored cameraPlan once, mid-race (heroes cast then)
@@ -671,7 +682,9 @@ export default function RaceScreen() {
     diagDataRef.current.rpRows = rowLayout.totalRows;
     diagDataRef.current.rpRacersPerRow = rowLayout.racersPerRow;
     diagDataRef.current.rpNRacers = nRacers;
-    diagDataRef.current.rpBonusMult = dynamicsConfig.racePlanBonusStrengthMultiplier ?? 2.0;
+    diagDataRef.current.rpBonusMult =
+      dynamicsConfig.racePlanBonusStrengthMultiplier ??
+      DEFAULT_RACE_DYNAMICS_CONFIG.racePlanBonusStrengthMultiplier;
 
     setScoreboard(g.current.racers.map((r) => ({ ...r, rank: 0 })));
 
@@ -767,10 +780,16 @@ export default function RaceScreen() {
           const isPhotoFinish = hud === 'PHOTO_FINISH';
           const isSlowmoState = isBattleZoom || isPhotoFinish;
           const smFactor = isPhotoFinish
-            ? (cameraConfigRef.current.photoFinishSlowmoFactor ?? 0.5)
-            : (cameraConfigRef.current.battleSlowmoFactor ?? 0.5);
-          const smMinDurMs = (cameraConfigRef.current.battleSlowmoMinDuration ?? 2.0) * 1000;
-          const smFadeDurMs = (cameraConfigRef.current.battleSlowmoFadeDuration ?? 0.3) * 1000;
+            ? (cameraConfigRef.current.photoFinishSlowmoFactor ??
+              DEFAULT_CAMERA_CONFIG.photoFinishSlowmoFactor)
+            : (cameraConfigRef.current.battleSlowmoFactor ??
+              DEFAULT_CAMERA_CONFIG.battleSlowmoFactor);
+          const smMinDurMs =
+            (cameraConfigRef.current.battleSlowmoMinDuration ??
+              DEFAULT_CAMERA_CONFIG.battleSlowmoMinDuration) * 1000;
+          const smFadeDurMs =
+            (cameraConfigRef.current.battleSlowmoFadeDuration ??
+              DEFAULT_CAMERA_CONFIG.battleSlowmoFadeDuration) * 1000;
           if (isSlowmoState && !st.slowmoActive) {
             st.slowmoActive = true;
             st.slowmoStartWallTs = ts;
@@ -901,7 +920,7 @@ export default function RaceScreen() {
             );
             finishNavTimerRef.current = setTimeout(
               () => fadeNavRef.current('/results'),
-              camDirRef.current?.finishPauseMs ?? 2500
+              camDirRef.current?.finishPauseMs ?? DEFAULT_CAMERA_CONFIG.finishPauseMs
             );
           }
 
@@ -1287,7 +1306,8 @@ export default function RaceScreen() {
         buildBadge: RA_BUILD,
         racePlanActive: !!racePlanController,
         racePlanSeed,
-        gapRerollDevMarker: dynamicsConfig.gapRerollDevMarker ?? false,
+        gapRerollDevMarker:
+          dynamicsConfig.gapRerollDevMarker ?? DEFAULT_RACE_DYNAMICS_CONFIG.gapRerollDevMarker,
         canvasW: canvas.width,
         canvasH: canvas.height,
       });

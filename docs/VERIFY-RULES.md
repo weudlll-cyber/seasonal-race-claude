@@ -29,12 +29,31 @@ Both halves matter: a block measures before it commits, and the branch's earlier
 what it is shipping. The base defaults to `master`; `--base=HEAD` narrows it to uncommitted work
 only.
 
-**There are seven guards, and the route table in `scripts/verify.mjs` is the one home for which
-paths select which.** It is printed with every skip, so what the map believes is visible without
-reading it. Two consequences that are easy to be surprised by: a change under `client/` selects the
-client suite even outside `src/` (the configs decide how the suite runs), and a hull file whose edit
-is comments and whitespace only does **not** select the world fingerprint — that is reported as an
-INERT skip, never silently.
+**EACH GUARD DECLARES ITS OWN ROUTING, and there is no route table.** VERIFY-ROUTING-2 deleted the
+`ROUTES` map in `scripts/verify.mjs`: a guard now answers `--declare` with what it covers, what it is
+blind to, and which paths select it, and `scripts/lib/routing.mjs` asks every guard rather than
+consulting a list. **The one home for "which paths select this guard" is therefore the guard itself.**
+The reason is the one the table kept demonstrating: a new guard had to be added in two places, and
+the place that got forgotten was always the table.
+
+**The SET of guards is discovered, not listed** — `guardScripts()` scans `scripts/` for
+`check-*.mjs`, `*-fingerprint.mjs` and `fingerprint-default.mjs`, plus `gen-engine-reach-doc.mjs`
+by name, plus the two suite guards declared in `routing.mjs`. So this document deliberately states
+**no count**: an earlier version said "seven", which was true when it was written and was fifteen by
+the time anyone read it again. `--dry` prints the current set.
+
+**Why one generator is named individually rather than a `gen-*` wildcard.** Discovery works by RUNNING
+each candidate with `--declare`, and most scripts here do their work at module load — asking a sweep
+what it covers would run the sweep, and a generator run with no argument REWRITES its document.
+`gen-engine-reach-doc.mjs` is safe to ask because it declares and exits first, and `verify.mjs` gives
+it `--check` so it can only read. Any future generator earns its place the same way, one name at a
+time; a wildcard would enrol the next one automatically and in write mode.
+
+The declaration is printed with every skip, so what a guard believes is visible without reading it.
+Two consequences that are easy to be surprised by: a change under `client/` selects the client suite
+even outside `src/` (the configs decide how the suite runs), and a hull file whose edit is comments
+and whitespace only does **not** select the world fingerprint — that is reported as an INERT skip,
+never silently.
 
 **An argument verify does not understand stops the run** before any work happens (VERIFY-COST-3).
 
@@ -45,7 +64,7 @@ command to use instead, and exits **2**. Exit 2 means refused; exit 1 means a gu
 
 **Why it exists.** Found during the SHIP-THE-LINE merge: on master, `npm run verify` printed
 `PASS 0  FAIL 0  SKIP 7` and exited 0 having checked nothing. The routing diffs `master...HEAD`,
-which on master is empty by definition, so all seven guards were correctly told they had nothing to
+which on master is empty by definition, so all seven guards THERE WERE THAT DAY were correctly told they had nothing to
 look at. **Seven honest skips summed to one dishonest exit code**, and the full-weight run the ship
 needed had to be asked for by hand as `--base=<the pre-merge commit>`.
 

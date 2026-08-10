@@ -23,7 +23,9 @@
 // ============================================================
 
 import { makeHeroCurve, anchorHeroCurve, sampleHeroCurve } from './heroChoreography.js';
+// MIRRORS-BY-REFERENCE (LESSONS L207): fallbacks in this file READ the default instead of copying it.
 import { mulberry32, BAND_EDGES, DEFAULT_PHASE_FRACTIONS } from './racePlanner.js';
+import { DEFAULT_RACE_DYNAMICS_CONFIG } from './storage/defaults.js';
 
 // ── Config (single source of truth; documented, calibratable) ─────────────────────────────────
 export const GENERATOR_CONFIG = {
@@ -215,7 +217,7 @@ export function feasibleTiming(
 // lockstep. null = infeasible (climb+fall can't fit the runway). ─────────────────────────────────────
 export function attackerTiming(anchorRank, peakRank, finalRank, maxRankRate, config, seed, idx) {
   const ap = config.anchorProgress;
-  const bc = config.b2AttackResolveProgress ?? 0.85;
+  const bc = config.b2AttackResolveProgress ?? DEFAULT_RACE_DYNAMICS_CONFIG.b2AttackResolveProgress;
   if (maxRankRate <= 0) return null;
   const span1 = (config.minJerkPeakFactor * Math.abs(anchorRank - peakRank)) / maxRankRate;
   const span2 = (config.minJerkPeakFactor * Math.abs(peakRank - finalRank)) / maxRankRate;
@@ -467,7 +469,11 @@ export function castHeroes(
   // cast unfair. These are cast AFTER (and independently of) the nHeroes cap — a separate attacker budget.
   const nAttack = config.b2AttackHeroes ?? 0;
   if (nAttack > 0) {
-    const peakRank = clamp(Math.round(config.b2AttackPeakRank ?? 5), 1, n);
+    const peakRank = clamp(
+      Math.round(config.b2AttackPeakRank ?? DEFAULT_RACE_DYNAMICS_CONFIG.b2AttackPeakRank),
+      1,
+      n
+    );
     const [b2Lo, b2Hi] = bandBounds(1); // B2 rank bounds
     const finalRank = clamp(Math.round(config.b2AttackFinalRank ?? 10), b2Lo, Math.min(b2Hi, n));
     const b2Front = postChaos

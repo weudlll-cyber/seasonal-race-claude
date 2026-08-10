@@ -233,7 +233,7 @@ const _collect = (() => {
 })();
 
 /** How a guard is INVOKED. Routing is declared by the guard; argv stays here, where the flags live. */
-function commandFor(g) {
+export function commandFor(g) {
   if (g.id === "client-suite")
     return {
       cmd: ["npm", "test", "--silent"],
@@ -249,6 +249,10 @@ function commandFor(g) {
     "camera-fingerprint",
     "render-fingerprint",
   ].includes(g.id);
+  // DOC-AUDIT-2 B: this one is a GENERATOR, and with no argv it REWRITES docs/SIM.md. Verify must
+  // never write a tracked file, so the flag that makes it read-only lives here with the other argv.
+  if (g.id === "engine-reach-doc")
+    return { cmd: ["node", g.source, "--check"] };
   const base = ["node", g.source, ...(cheap ? cheapArgs() : [])];
   // check-index is ONE guard with THREE report directories — one index discipline, not three
   // implementations. The extra invocations are argv, not routing.

@@ -46,6 +46,41 @@
 // now copies the document and points here instead; nothing tracked is ever written by a test.
 // ============================================================
 
+// ── DOC-AUDIT-2 B: THE ROUTING MISS THIS DECLARATION CLOSES ──────────────────────────────────────
+//
+// This block is invalidated by a change to `client/src/`, and until now nothing routed on that. The
+// guard for it was this file's own test, which lives in the SCRIPT SUITE, and the script suite is
+// selected by changes under `scripts/`. So `CONFIG-DIFF-2` — which changed only `client/src/` and
+// added a file to the closure — was correctly not selected locally, verify passed, and CI found the
+// stale block minutes later. Master was red for a routing gap, not for a mistake.
+//
+// The fix belongs where routing now lives: the guard says what it depends on. `reach` names
+// `raceCore.js`, and `resolveGuard` expands a reach entry to its whole import closure — which IS the
+// hull, i.e. exactly the set of files whose change can move this block. It cannot fall out of step
+// with the hull because it IS the hull, computed by the same function the block is generated from.
+//
+// `scripts/lib/routing.mjs` had to learn to DISCOVER this file (its scan matched `check-*`,
+// `*-fingerprint` and `fingerprint-default` only), and `verify.mjs` supplies the `--check` argv —
+// running this script with no arguments REWRITES the document, which is not a thing a verify run
+// may do.
+export const GUARD = {
+  id: "engine-reach-doc",
+  covers:
+    "the generated engine-reach block in docs/SIM.md going stale — a file entering or leaving raceCore.js's import closure, or a listed file's header purpose changing",
+  blind: [
+    "whether the closure is RIGHT — scripts/engine-reach.mjs owns that and has its own test",
+    "a listed file whose header states no purpose: it is reported as UNKNOWN, which is a true statement about the repository and not a failure",
+    "every other generated block in every other document",
+  ],
+  dirs: [],
+  files: ["docs/SIM.md"],
+  reach: ["client/src/modules/raceCore.js"],
+};
+if (process.argv.includes("--declare")) {
+  console.log(JSON.stringify(GUARD));
+  process.exit(0);
+}
+
 const started = Date.now();
 
 import { readFileSync } from "node:fs";

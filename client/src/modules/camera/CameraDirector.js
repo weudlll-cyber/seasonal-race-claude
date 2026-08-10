@@ -91,10 +91,10 @@ import {
   ceremonySchedule,
   ceremonyZoom,
   ceremonyEasing,
-  ceremonyAt,
   boardDurationMs,
-  CEREMONY_BEAT,
 } from './startCeremony.js';
+// MIRRORS-BY-REFERENCE (LESSONS L207): fallbacks in this file READ the default instead of copying it.
+import { DEFAULT_CAMERA_CONFIG } from '../storage/defaults.js';
 
 export const CAM_STATE = {
   OVERVIEW: 'OVERVIEW',
@@ -321,7 +321,6 @@ export class CameraDirector {
     // gets OVERVIEW's ordinary setting rather than a stale hold, and so does every OVERVIEW after
     // the release.
     this._ceremonyHoldZoom = null;
-    this._ceremonyBeat = null;
     // CEREMONY-HANDOVER-1: the ceremony's promise, carried past the gun. ARMED by the countdown, so
     // a race entered without one (a test, a resumed race) never acquires a guarantee it was never
     // given — and RETIRED, one way, by `_fieldCeiling` when it can no longer be kept.
@@ -562,7 +561,7 @@ export class CameraDirector {
     this._overviewWeight = t.overviewWeight;
     this._overviewTargetCount = t.overviewTargetCount;
     this._overviewStartDelay = t.overviewStartDelay;
-    this._focalSmoothTc = config?.focalSmoothTc ?? 0.05;
+    this._focalSmoothTc = config?.focalSmoothTc ?? DEFAULT_CAMERA_CONFIG.focalSmoothTc;
     // Pre-compute per-60fps EMA base factor from TC. 0 when TC=0 (disabled).
     // alpha per frame = 1 − (1−base)^(dt×60/1000) — same dt-normalisation as the zoom lerp.
     this._focalSmoothBase =
@@ -2830,7 +2829,6 @@ export class CameraDirector {
     // ARRIVED framing rather than the live one, so a race that starts mid-push still holds the shot
     // the ceremony was travelling towards instead of freezing halfway.
     this._ceremonyHoldZoom = targetZoom;
-    this._ceremonyBeat = ceremonyAt(elapsed, schedule).beat;
     // ARM THE GUARANTEE. The ceremony has just shown every racer; the promise it made is that they
     // stay shown. It is armed here rather than at the gun so there is no frame between the two in
     // which it is not held — the gap the owner watched racers fall through.

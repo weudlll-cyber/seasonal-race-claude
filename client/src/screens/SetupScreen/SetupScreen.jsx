@@ -52,6 +52,7 @@ import {
   QUICK_TEST_SEED_MAX,
 } from './quickTestSeed.js';
 import styles from './SetupScreen.module.css';
+// MIRRORS-BY-REFERENCE (LESSONS L207): fallbacks in this file READ the default instead of copying it.
 import { resolveNameSet, DEFAULT_NAME_SET } from '../../modules/racerNames.js';
 
 const TABS = ['Players', 'Track', 'Settings'];
@@ -628,8 +629,8 @@ function SetupScreen() {
                 onChange={setPlayers}
                 maxPlayers={
                   trackIsOpen
-                    ? (raceDefaults.maxPlayersOpen ?? 100)
-                    : (raceDefaults.maxPlayersClosed ?? 40)
+                    ? (raceDefaults.maxPlayersOpen ?? DEFAULT_RACE_DEFAULTS.maxPlayersOpen)
+                    : (raceDefaults.maxPlayersClosed ?? DEFAULT_RACE_DEFAULTS.maxPlayersClosed)
                 }
               />
             </>

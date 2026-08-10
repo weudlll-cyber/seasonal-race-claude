@@ -23,6 +23,9 @@
 // test must perturb INSIDE the band or it measures nothing.
 // ============================================================
 
+// MIRRORS-BY-REFERENCE: the fallbacks below read the canonical home instead of copying it. See LESSONS L207.
+import { DEFAULT_CAMERA_CONFIG } from '../storage/defaults.js';
+
 export const ALL_FRAMED_STATES = [
   'OVERVIEW',
   'LEADER_ZOOM',
@@ -49,7 +52,7 @@ export const DEFAULT_CORRIDORS = {
 };
 
 /** CAMERA-REFERENCE-WIDTH-1: world px per standard corridor when no config reaches the director. */
-export const DEFAULT_REFERENCE_CORRIDOR_PX = 300;
+export const DEFAULT_REFERENCE_CORRIDOR_PX = DEFAULT_CAMERA_CONFIG.referenceCorridorPx;
 /**
  * CAMERA-COMPANY-1: the anchor plus this many−1 others must stay in frame. <= 1 disables it.
  *
@@ -64,11 +67,11 @@ export const DEFAULT_REFERENCE_CORRIDOR_PX = 300;
  * guards this agreement — `check-config-keys` checks that a key EXISTS in the defaults, never that
  * a mirrored fallback still AGREES with it — so if you change one, change this one too.
  */
-export const DEFAULT_MIN_RACERS_VISIBLE = 5;
+export const DEFAULT_MIN_RACERS_VISIBLE = DEFAULT_CAMERA_CONFIG.minRacersVisible;
 /** The fraction of the frame a subject is kept inside — the safe region, not the whole canvas. */
-export const DEFAULT_INNER_FRAME_PCT = 0.7;
+export const DEFAULT_INNER_FRAME_PCT = DEFAULT_CAMERA_CONFIG.targetInnerFramePct;
 /** The countdown opens twice as wide as OVERVIEW when nothing says otherwise. */
-const DEFAULT_GLIDE_DURATION_MS = 500;
+const DEFAULT_GLIDE_DURATION_MS = DEFAULT_CAMERA_CONFIG.glideDurationMs;
 
 /**
  * Resolve the framing half of a camera config.
@@ -111,8 +114,8 @@ export function resolveFramingConfig(config) {
     referenceCorridorPx:
       Number.isFinite(refCfg) && refCfg > 0 ? refCfg : DEFAULT_REFERENCE_CORRIDOR_PX,
     corridorsByState,
-    innerFramePct: config?.targetInnerFramePct ?? DEFAULT_INNER_FRAME_PCT,
-    minRacersVisible: config?.minRacersVisible ?? DEFAULT_MIN_RACERS_VISIBLE,
+    innerFramePct: config?.targetInnerFramePct ?? DEFAULT_CAMERA_CONFIG.targetInnerFramePct,
+    minRacersVisible: config?.minRacersVisible ?? DEFAULT_CAMERA_CONFIG.minRacersVisible,
     transitionGrammar: g === 'cut' ? 'cut' : g === 'glide' ? 'glide' : 'legacy',
     glideDurationMs: Number.isFinite(gd) && gd >= 300 && gd <= 900 ? gd : DEFAULT_GLIDE_DURATION_MS,
     leaderForwardFrac: Number.isFinite(lff) && lff > 0.5 && lff <= 0.8 ? lff : null,

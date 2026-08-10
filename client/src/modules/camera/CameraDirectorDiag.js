@@ -90,7 +90,16 @@ export const diagMixin = {
     const lockedRacer = racers
       ? this._findByIndex(racers, this._comebackLockedRacerIndex, this._comebackLockedRacer)
       : this._comebackLockedRacer;
-    const threshold = this._outcomePhaseThreshold ?? 0.75;
+    // OUTCOME-PHASE-75: NO `??` HERE, deliberately, and it is the point of the fix. This line used
+    // to read `this._outcomePhaseThreshold ?? 0.75` — a second authority on a number the director
+    // already owns. While the two agreed the HUD was right by coincidence; the moment the default
+    // moved, the panel would have gone on stating the old figure with no way for a reader to tell.
+    // The rule this file lives by is that a panel never re-implements a rule it is displaying, and
+    // a fallback IS a re-implementation. So the diag reports exactly what the director will use in
+    // `_internalOutcomePhase`, including `undefined` if it was never computed — which is honest,
+    // because `progress > undefined` is false and that is precisely what the director would do.
+    // The HUD renders a dash for that rather than inventing a figure.
+    const threshold = this._outcomePhaseThreshold;
     const progress = this._diagLeaderProgress ?? 0;
     return {
       active: this.state === 'COMEBACK_ZOOM',

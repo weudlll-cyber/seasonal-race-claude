@@ -32,6 +32,8 @@ import { useSurfaceClasses } from '../../../modules/surface-effects/useSurfaceCl
 import { InfoTooltip } from '../../../components/InfoTooltip/index.js';
 import { trackDefaultLaps } from '../../../modules/durationModel.js';
 import s from '../DevScreen.module.css';
+// MIRRORS-BY-REFERENCE (LESSONS L207): fallbacks in this file READ the default instead of copying it.
+import { DEFAULT_ROW_LAYOUT_CONFIG } from '../../../modules/storage/defaults.js';
 
 // Canonical per-track defaults: CLOSED tracks default to a lap count, OPEN tracks to seconds.
 const LAP_CHOICES = [1, 2, 3, 4, 5, 6, 8, 10];
@@ -60,7 +62,8 @@ function autoMaxRacers(geom, track, rowCfg) {
   if (!geom?.pathLengthPx) return null;
   const racerType = getRacerType(track.defaultRacerTypeId ?? 'horse');
   const displaySize = racerType?.config?.displaySize ?? 40;
-  const rowGapPx = displaySize * (rowCfg.rowGapMultiplier ?? 1.5);
+  const rowGapPx =
+    displaySize * (rowCfg.rowGapMultiplier ?? DEFAULT_ROW_LAYOUT_CONFIG.rowGapMultiplier);
   const shape = new EditorShape(geom);
   const behaviorCfg = loadRaceBehaviorConfig();
   const effectiveWidth = (geom.width ?? shape.getActualTrackWidth()) * behaviorCfg.startSpreadRange;

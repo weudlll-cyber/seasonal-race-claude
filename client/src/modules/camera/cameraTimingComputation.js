@@ -21,10 +21,10 @@
 // THE fallback constants for every timing tunable. A director built with no config at all gets
 // these by calling computeTimingFromConfig(null) — there is deliberately no second copy anywhere
 // (CAMERA-HYGIENE-2 deleted the sixteen that had accumulated in CameraDirector.js).
+// MIRRORS-BY-REFERENCE: the fallbacks below read the canonical home instead of copying it. See LESSONS L207.
+import { DEFAULT_CAMERA_CONFIG } from '../storage/defaults.js';
+
 const MAX_STATE_DURATION = 8000;
-const BATTLE_PULK_THRESHOLD_T = 0.05; // lap fraction (15b: arc closeness, was 0.12 px-era)
-const BATTLE_MIN_DURATION_MS = 3000;
-const POST_START_HOLD_MS = 7000;
 // START-CEREMONY-CAMERA-1 — the ceremony's RHYTHM, and only the rhythm. Both ends of the move are
 // GEOMETRY (the track's extent, the field's extent) and are not settings at all.
 //
@@ -36,13 +36,10 @@ const POST_START_HOLD_MS = 7000;
 const CEREMONY_VENUE_MS = 1400;
 const CEREMONY_PUSH_MS = 2000;
 const CEREMONY_SETTLED_MS = 4000;
-const CEREMONY_EASING = 'easeInOutCubic';
 // START-BOARD-2. Duplicated from defaults.js like the three beats above it, and guarded the same
 // way: cameraTimingComputation.test.js asserts the two agree.
 const START_BOARD_FLOOR_MS = 6000;
-const START_BOARD_MS_PER_NAME = 120;
 const COUNTDOWN_DIGITS_MS = 3000;
-const BATTLE_COOLDOWN_MS = 8000;
 const BATTLE_MAX_DURATION = 6000;
 const MIN_STATE_HOLD_MS = 5000;
 const FRAME_RATE = 60;
@@ -50,8 +47,6 @@ const TC_OVERVIEW = 1.5;
 const TC_LEADER = 0.3;
 const TC_BATTLE = 0.3;
 const TC_COMEBACK = 0.3;
-const OVERVIEW_COOLDOWN_MS = 15000;
-const TRANSITION_T_CONVERGENCE = 0.03;
 const ENDGAME_PROGRESS_THRESHOLD = 0.85;
 const DEFAULT_MAX_ENTRY_DURATION_MS = {
   OVERVIEW: 10000,
@@ -81,14 +76,21 @@ function tcToLerpFactor(tc) {
  */
 export function computeTimingFromConfig(config) {
   // ── Global tunables ───────────────────────────────────────────────────────
-  const battlePulkThresholdT = config?.battlePulkThresholdT ?? BATTLE_PULK_THRESHOLD_T;
-  const battleMinDurationMs = config?.battleMinDurationMs ?? BATTLE_MIN_DURATION_MS;
-  const battleIsolationThresholdT = config?.battleIsolationThresholdT ?? 0;
-  const battleMaxGroupSize = Math.max(3, Math.min(6, config?.battleMaxGroupSize ?? 6));
-  const battleMaxGroupRankSpan = config?.battleMaxGroupRankSpan ?? 5;
-  const battleMinTopN = config?.battleMinTopN ?? 10;
+  const battlePulkThresholdT =
+    config?.battlePulkThresholdT ?? DEFAULT_CAMERA_CONFIG.battlePulkThresholdT;
+  const battleMinDurationMs =
+    config?.battleMinDurationMs ?? DEFAULT_CAMERA_CONFIG.battleMinDurationMs;
+  const battleIsolationThresholdT =
+    config?.battleIsolationThresholdT ?? DEFAULT_CAMERA_CONFIG.battleIsolationThresholdT;
+  const battleMaxGroupSize = Math.max(
+    3,
+    Math.min(6, config?.battleMaxGroupSize ?? DEFAULT_CAMERA_CONFIG.battleMaxGroupSize)
+  );
+  const battleMaxGroupRankSpan =
+    config?.battleMaxGroupRankSpan ?? DEFAULT_CAMERA_CONFIG.battleMaxGroupRankSpan;
+  const battleMinTopN = config?.battleMinTopN ?? DEFAULT_CAMERA_CONFIG.battleMinTopN;
   const endgameThreshold = config?.endgameThreshold ?? ENDGAME_PROGRESS_THRESHOLD;
-  const postStartHoldMs = config?.postStartHoldMs ?? POST_START_HOLD_MS;
+  const postStartHoldMs = config?.postStartHoldMs ?? DEFAULT_CAMERA_CONFIG.postStartHoldMs;
   // Clamped to a sane band so a corrupt stored config cannot produce a ceremony that never ends or
   // one with a negative beat. The easing NAME is not validated here: `ceremonyEasing` resolves an
   // unknown name to the shipped curve, so validating it twice would be a second authority on it.
@@ -101,19 +103,21 @@ export function computeTimingFromConfig(config) {
   const startBoardFloorMs = ceremonyMs(config?.startBoardFloorMs, START_BOARD_FLOOR_MS);
   const startBoardMsPerName = Math.max(
     0,
-    Math.min(1000, config?.startBoardMsPerName ?? START_BOARD_MS_PER_NAME)
+    Math.min(1000, config?.startBoardMsPerName ?? DEFAULT_CAMERA_CONFIG.startBoardMsPerName)
   );
   // CEREMONY-TRUTH-1: the digits' window, and the camera needs it for exactly the reason above —
   // the countdown's LENGTH is the sum of the beats, and this is one of them. It was missing here,
   // so the director planned a ceremony that ended where the digits were due to START.
   const countdownDigitsMs = ceremonyMs(config?.countdownDigitsMs, COUNTDOWN_DIGITS_MS);
-  const ceremonyEasing = config?.ceremonyEasing ?? CEREMONY_EASING;
-  const battleCooldownMs = config?.battleCooldownMs ?? BATTLE_COOLDOWN_MS;
-  const showDiagnostics = config?.showCameraDiagnostics ?? false;
-  const diagEnabled = config?.enableFrameLog ?? false;
-  const detourEnabled = config?.cameraDetourLog ?? false; // CAMERA-DETOUR-1 per-transition frame log
-  const transitionTConvergence = config?.transitionTConvergence ?? TRANSITION_T_CONVERGENCE;
-  const overviewCooldownMs = config?.overviewCooldownMs ?? OVERVIEW_COOLDOWN_MS;
+  const ceremonyEasing = config?.ceremonyEasing ?? DEFAULT_CAMERA_CONFIG.ceremonyEasing;
+  const battleCooldownMs = config?.battleCooldownMs ?? DEFAULT_CAMERA_CONFIG.battleCooldownMs;
+  const showDiagnostics =
+    config?.showCameraDiagnostics ?? DEFAULT_CAMERA_CONFIG.showCameraDiagnostics;
+  const diagEnabled = config?.enableFrameLog ?? DEFAULT_CAMERA_CONFIG.enableFrameLog;
+  const detourEnabled = config?.cameraDetourLog ?? DEFAULT_CAMERA_CONFIG.cameraDetourLog; // CAMERA-DETOUR-1 per-transition frame log
+  const transitionTConvergence =
+    config?.transitionTConvergence ?? DEFAULT_CAMERA_CONFIG.transitionTConvergence;
+  const overviewCooldownMs = config?.overviewCooldownMs ?? DEFAULT_CAMERA_CONFIG.overviewCooldownMs;
   // CAMERA-ZOOM-UNIT-1 removed three OVERVIEW zoom inputs that the track-widths unit replaces:
   //   overviewClosedTrackZoom  — dead since 2026-06-04, its Dev Screen tooltip still described
   //                              behaviour it did not have; key, slider and tooltip all gone now
@@ -194,8 +198,8 @@ export function computeTimingFromConfig(config) {
   } else {
     // Legacy flat-field path.
     maxStateDuration = config?.maxStateDuration ?? MAX_STATE_DURATION;
-    battleMaxDurationMs = config?.battleMaxDurationMs ?? BATTLE_MAX_DURATION;
-    minStateHoldMs = config?.minStateHoldMs ?? MIN_STATE_HOLD_MS;
+    battleMaxDurationMs = config?.battleMaxDurationMs ?? DEFAULT_CAMERA_CONFIG.battleMaxDurationMs;
+    minStateHoldMs = config?.minStateHoldMs ?? DEFAULT_CAMERA_CONFIG.minStateHoldMs;
 
     const rawTc = config?.cameraTransitionSeconds;
     if (rawTc && typeof rawTc === 'object') {
@@ -281,14 +285,18 @@ export function computeTimingFromConfig(config) {
     PHOTO_FINISH: lfEntryBattle,
   };
 
-  const entryConvergenceZoom = config?.entryConvergenceZoom ?? 0.05;
-  const entryConvergencePx = config?.entryConvergencePx ?? 10;
+  const entryConvergenceZoom =
+    config?.entryConvergenceZoom ?? DEFAULT_CAMERA_CONFIG.entryConvergenceZoom;
+  const entryConvergencePx = config?.entryConvergencePx ?? DEFAULT_CAMERA_CONFIG.entryConvergencePx;
 
   // ── COMEBACK config ───────────────────────────────────────────────────────
-  const comebackMinPositionsGained = config?.comebackMinPositionsGained ?? 2;
-  const comebackWindowSec = config?.comebackWindowSec ?? 4;
-  const comebackMinDuration = config?.comebackMinDuration ?? 3;
-  const outcomePhaseThreshold = config?.outcomePhaseThreshold ?? 0.75;
+  const comebackMinPositionsGained =
+    config?.comebackMinPositionsGained ?? DEFAULT_CAMERA_CONFIG.comebackMinPositionsGained;
+  const comebackWindowSec = config?.comebackWindowSec ?? DEFAULT_CAMERA_CONFIG.comebackWindowSec;
+  const comebackMinDuration =
+    config?.comebackMinDuration ?? DEFAULT_CAMERA_CONFIG.comebackMinDuration;
+  const outcomePhaseThreshold =
+    config?.outcomePhaseThreshold ?? DEFAULT_CAMERA_CONFIG.outcomePhaseThreshold;
   const comebackMinStartGap = config?.comebackMinStartGap ?? 0.4;
   const comebackMaxCurrentRankPct = config?.comebackMaxCurrentRankPct ?? 0.1;
   // Override COMEBACK_ZOOM minStateHold when explicitly configured.
@@ -297,38 +305,48 @@ export function computeTimingFromConfig(config) {
   }
 
   // ── LEAD_CHANGE config ────────────────────────────────────────────────────
-  const leadChangeMinGap = config?.leadChangeMinGap ?? 0.002;
-  const leadChangeDebounceMs = config?.leadChangeDebounceMs ?? 800;
-  const leadChangeMinDuration = config?.leadChangeMinDuration ?? 1.5;
+  const leadChangeMinGap = config?.leadChangeMinGap ?? DEFAULT_CAMERA_CONFIG.leadChangeMinGap;
+  const leadChangeDebounceMs =
+    config?.leadChangeDebounceMs ?? DEFAULT_CAMERA_CONFIG.leadChangeDebounceMs;
+  const leadChangeMinDuration =
+    config?.leadChangeMinDuration ?? DEFAULT_CAMERA_CONFIG.leadChangeMinDuration;
   // Override LEAD_CHANGE minStateHold when explicitly configured.
   if (config?.leadChangeMinDuration != null) {
     minStateHoldByState['LEAD_CHANGE'] = leadChangeMinDuration * 1000;
   }
 
   // ── Finish sequence config ────────────────────────────────────────────────
-  const finishDramaDurationMs = config?.finishDramaDurationMs ?? 1500;
-  const finishOverviewZoomOutDurationMs = config?.finishOverviewZoomOutDurationMs ?? 3000;
-  const finishPauseMs = config?.finishPauseMs ?? 2500;
-  const finishOverviewLookbackPx = config?.finishOverviewLookbackPx ?? 300;
+  const finishDramaDurationMs =
+    config?.finishDramaDurationMs ?? DEFAULT_CAMERA_CONFIG.finishDramaDurationMs;
+  const finishOverviewZoomOutDurationMs =
+    config?.finishOverviewZoomOutDurationMs ??
+    DEFAULT_CAMERA_CONFIG.finishOverviewZoomOutDurationMs;
+  const finishPauseMs = config?.finishPauseMs ?? DEFAULT_CAMERA_CONFIG.finishPauseMs;
+  const finishOverviewLookbackPx =
+    config?.finishOverviewLookbackPx ?? DEFAULT_CAMERA_CONFIG.finishOverviewLookbackPx;
   // Photo-Finish (15a): top-2 close-finish group shot. Camera-only; slow-motion factor is read
   // in the RaceScreen render loop (not a director tunable).
-  const photoFinishEnabled = config?.photoFinishEnabled ?? true;
-  const photoFinishCloseThresholdT = config?.photoFinishCloseThresholdT ?? 0.03;
-  const photoFinishLeadProgress = config?.photoFinishLeadProgress ?? 0.97;
+  const photoFinishEnabled = config?.photoFinishEnabled ?? DEFAULT_CAMERA_CONFIG.photoFinishEnabled;
+  const photoFinishCloseThresholdT =
+    config?.photoFinishCloseThresholdT ?? DEFAULT_CAMERA_CONFIG.photoFinishCloseThresholdT;
+  const photoFinishLeadProgress =
+    config?.photoFinishLeadProgress ?? DEFAULT_CAMERA_CONFIG.photoFinishLeadProgress;
 
   // ── Per-state cooldowns ───────────────────────────────────────────────────
-  const comebackCooldownMs = config?.comebackCooldownMs ?? 10000;
-  const leadChangeCooldownMs = config?.leadChangeCooldownMs ?? 5000;
+  const comebackCooldownMs = config?.comebackCooldownMs ?? DEFAULT_CAMERA_CONFIG.comebackCooldownMs;
+  const leadChangeCooldownMs =
+    config?.leadChangeCooldownMs ?? DEFAULT_CAMERA_CONFIG.leadChangeCooldownMs;
 
   // ── Weighted-random candidate weights ────────────────────────────────────
-  const battleWeight = config?.battleWeight ?? 0.8;
-  const leadChangeWeight = config?.leadChangeWeight ?? 0.7;
-  const comebackWeight = config?.comebackWeight ?? 0.6;
-  const overviewWeight = config?.overviewWeight ?? 0.3;
+  const battleWeight = config?.battleWeight ?? DEFAULT_CAMERA_CONFIG.battleWeight;
+  const leadChangeWeight = config?.leadChangeWeight ?? DEFAULT_CAMERA_CONFIG.leadChangeWeight;
+  const comebackWeight = config?.comebackWeight ?? DEFAULT_CAMERA_CONFIG.comebackWeight;
+  const overviewWeight = config?.overviewWeight ?? DEFAULT_CAMERA_CONFIG.overviewWeight;
 
   // ── OVERVIEW scheduler ────────────────────────────────────────────────────
-  const overviewTargetCount = config?.overviewTargetCount ?? 2;
-  const overviewStartDelay = config?.overviewStartDelay ?? 15;
+  const overviewTargetCount =
+    config?.overviewTargetCount ?? DEFAULT_CAMERA_CONFIG.overviewTargetCount;
+  const overviewStartDelay = config?.overviewStartDelay ?? DEFAULT_CAMERA_CONFIG.overviewStartDelay;
 
   return {
     battlePulkThresholdT,

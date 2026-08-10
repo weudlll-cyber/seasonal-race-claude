@@ -43,6 +43,7 @@ import {
 } from './drawing/overlayRendering.js';
 import { drawStartBoard } from './drawing/startBoardRendering.js';
 import { advanceLabelForms } from './labelFormHold.js';
+// MIRRORS-BY-REFERENCE (LESSONS L207): fallbacks in this file READ the default instead of copying it.
 import { DEFAULT_CAMERA_CONFIG } from '../../modules/storage/defaults.js';
 import {
   ceremonySchedule,
@@ -285,7 +286,7 @@ export function renderRaceFrame(ctx, f) {
     tagFontPx,
     renderAlpha,
     interpolationEnabled,
-    cameraConfig.highlightHeroes ?? false,
+    cameraConfig.highlightHeroes ?? DEFAULT_CAMERA_CONFIG.highlightHeroes,
     gapRerollDevMarker ?? false,
     racerScreenH,
     labelMarginPx

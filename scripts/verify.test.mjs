@@ -16,7 +16,13 @@
 
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { plan, cheapArgs, describeEmptyRun, EXIT_REFUSED } from "./verify.mjs";
+import {
+  plan,
+  cheapArgs,
+  commandFor,
+  describeEmptyRun,
+  EXIT_REFUSED,
+} from "./verify.mjs";
 import { collect } from "./lib/routing.mjs";
 import { execFileSync } from "node:child_process";
 import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
@@ -559,4 +565,48 @@ test("AN UNDECLARED GUARD IS REPORTED, never given an invented route", () => {
   );
   assert.deepEqual(undeclared, ["scripts/check-silent.mjs"]);
   assert.ok(guards.some((g) => g.id === "scripts/check-loud.mjs"));
+});
+
+// DOC-AUDIT-2 B: THE ROUTING MISS THAT TURNED MASTER RED.
+//
+// `docs/SIM.md` carries a GENERATED block listing the engine-reach hull. A `client/src` change that
+// adds or removes a file from that hull invalidates it — and nothing routed on that. The guard was
+// this generator's own test, which lives in the script suite, and the script suite is selected by
+// changes under `scripts/`. CONFIG-DIFF-2 changed only `client/src`, so the suite was correctly not
+// selected, verify passed, and CI went red on the stale block minutes later.
+//
+// Both directions, because a one-direction test passes against a guard that selects everything.
+test("HULL -> SIM.md: a change to a hull file selects the engine-reach-doc guard", () => {
+  // The exact shape of the incident: a file INSIDE raceCore.js's import closure, under client/src,
+  // with no script touched at all.
+  assert.equal(
+    runs(["client/src/modules/raceBehavior.js"], "engine-reach-doc"),
+    true,
+    "a hull file must select the guard on the generated block it can invalidate",
+  );
+  assert.equal(
+    runs(["client/src/modules/storage/configDiff.js"], "engine-reach-doc"),
+    true,
+    "the file CONFIG-DIFF-2 actually added to the hull — the incident itself",
+  );
+  // ...and it must not become a guard that runs on everything: a client file OUTSIDE the hull
+  // cannot change the closure, so it must not select this.
+  assert.equal(
+    runs(["client/src/modules/camera/finishPhase.js"], "engine-reach-doc"),
+    false,
+    "a non-hull client file cannot change the closure and must not select the guard",
+  );
+});
+
+test("engine-reach-doc is invoked READ-ONLY — verify may not rewrite a tracked document", () => {
+  // With no argv this generator REWRITES docs/SIM.md. `commandFor` supplies `--check`; without it
+  // verify would "pass" by making the document agree with itself, which is the opposite of a guard.
+  const cmd = commandFor({ id: "engine-reach-doc", source: "scripts/gen-engine-reach-doc.mjs" }).cmd;
+  assert.ok(cmd.includes("--check"), `expected --check in ${JSON.stringify(cmd)}`);
+});
+
+test("engine-reach-doc still routes on its OWN source, via the closure nobody declares", () => {
+  // SELF is computed, never declared. Editing the generator must select it too.
+  assert.equal(runs(["scripts/gen-engine-reach-doc.mjs"], "engine-reach-doc"), true);
+  assert.equal(runs(["docs/SIM.md"], "engine-reach-doc"), true);
 });

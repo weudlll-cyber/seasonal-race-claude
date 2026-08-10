@@ -9,6 +9,7 @@
 
 import { useEffect, useState } from 'react';
 import {
+  // MIRRORS-BY-REFERENCE (LESSONS L207): fallbacks in this file READ the default instead of copying it.
   DEFAULT_CAMERA_CONFIG,
   loadCameraConfig,
   saveCameraConfig,
@@ -325,7 +326,7 @@ function CameraAdvancedSection() {
         <label className={s.label} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
           <input
             type="checkbox"
-            checked={config.highlightHeroes ?? false}
+            checked={config.highlightHeroes ?? DEFAULT_CAMERA_CONFIG.highlightHeroes}
             onChange={(e) => set('highlightHeroes', e.target.checked)}
             data-testid="highlight-heroes-toggle"
           />
@@ -341,7 +342,7 @@ function CameraAdvancedSection() {
         >
           <input
             type="checkbox"
-            checked={config.labelNamesWhenRoom ?? false}
+            checked={config.labelNamesWhenRoom ?? DEFAULT_CAMERA_CONFIG.labelNamesWhenRoom}
             onChange={(e) => set('labelNamesWhenRoom', e.target.checked)}
             data-testid="label-names-when-room-toggle"
           />
@@ -414,7 +415,7 @@ function CameraAdvancedSection() {
               min={0}
               max={15000}
               step={500}
-              value={config.postStartHoldMs ?? 7000}
+              value={config.postStartHoldMs ?? DEFAULT_CAMERA_CONFIG.postStartHoldMs}
               onChange={(e) => {
                 const v = Number(e.target.value);
                 if (v >= 0 && v <= 15000) set('postStartHoldMs', v);
@@ -592,7 +593,7 @@ function CameraAdvancedSection() {
             <select
               className={s.input}
               data-testid="ceremony-easing"
-              value={config.ceremonyEasing ?? 'easeInOutCubic'}
+              value={config.ceremonyEasing ?? DEFAULT_CAMERA_CONFIG.ceremonyEasing}
               onChange={(e) => set('ceremonyEasing', e.target.value)}
             >
               <option value="easeInOutCubic">Ease in-out (cubic) — ceremonial</option>
@@ -615,7 +616,7 @@ function CameraAdvancedSection() {
             >
               BATTLE Min Hold (ms)
               <InfoTooltip
-                text={`Minimum BATTLE duration after entry, even if the cluster dissolves. Currently: ${config.battleMinDurationMs ?? 3000}ms.`}
+                text={`Minimum BATTLE duration after entry, even if the cluster dissolves. Currently: ${config.battleMinDurationMs ?? DEFAULT_CAMERA_CONFIG.battleMinDurationMs}ms.`}
               />
             </label>
             <input
@@ -624,7 +625,7 @@ function CameraAdvancedSection() {
               min={500}
               max={10000}
               step={500}
-              value={config.battleMinDurationMs ?? 3000}
+              value={config.battleMinDurationMs ?? DEFAULT_CAMERA_CONFIG.battleMinDurationMs}
               onChange={(e) => {
                 const v = Number(e.target.value);
                 if (v >= 500 && v <= 10000) set('battleMinDurationMs', v);
@@ -647,7 +648,7 @@ function CameraAdvancedSection() {
               min={0}
               max={20000}
               step={500}
-              value={config.battleCooldownMs ?? 8000}
+              value={config.battleCooldownMs ?? DEFAULT_CAMERA_CONFIG.battleCooldownMs}
               onChange={(e) => {
                 const v = Number(e.target.value);
                 if (v >= 0 && v <= 20000) set('battleCooldownMs', v);
@@ -664,12 +665,12 @@ function CameraAdvancedSection() {
             min={0.001}
             max={0.02}
             step={0.001}
-            value={config.battlePulkThresholdT ?? 0.05}
+            value={config.battlePulkThresholdT ?? DEFAULT_CAMERA_CONFIG.battlePulkThresholdT}
             onChange={(e) => {
               const v = parseFloat(e.target.value);
               if (v >= 0.001 && v <= 0.02) set('battlePulkThresholdT', v);
             }}
-            display={`${((config.battlePulkThresholdT ?? 0.05) * 100).toFixed(1)}%`}
+            display={`${((config.battlePulkThresholdT ?? DEFAULT_CAMERA_CONFIG.battlePulkThresholdT) * 100).toFixed(1)}%`}
             tip="How close (as a fraction of a lap) ≥3 top-10 racers must be to trigger BATTLE. Scale-independent — same on every track. Lower = tighter duel, higher = fires more often. Fine-grained for the dense COMBO15 field: range 0.1%–2.0%, step 0.1%. Default 0.05 (5% of a lap) — above the slider max, so the thumb pins at 2.0% until you move it (the stored value is preserved)."
           />
           <SliderRow
@@ -678,12 +679,14 @@ function CameraAdvancedSection() {
             min={0}
             max={0.02}
             step={0.001}
-            value={config.battleIsolationThresholdT ?? 0}
+            value={
+              config.battleIsolationThresholdT ?? DEFAULT_CAMERA_CONFIG.battleIsolationThresholdT
+            }
             onChange={(e) => {
               const v = parseFloat(e.target.value);
               if (v >= 0 && v <= 0.02) set('battleIsolationThresholdT', v);
             }}
-            display={`${((config.battleIsolationThresholdT ?? 0) * 100).toFixed(1)}%`}
+            display={`${((config.battleIsolationThresholdT ?? DEFAULT_CAMERA_CONFIG.battleIsolationThresholdT) * 100).toFixed(1)}%`}
             tip="Reject a battle if any non-group racer is within this lap fraction of a group member. 0 = disabled. Recommendation ≈ 1.5 × Pulk Closeness. Fine-grained: range 0.0%–2.0%, step 0.1%. Ships disabled (default 0)."
           />
           <SliderRow
@@ -692,12 +695,12 @@ function CameraAdvancedSection() {
             min={3}
             max={6}
             step={1}
-            value={config.battleMaxGroupSize ?? 6}
+            value={config.battleMaxGroupSize ?? DEFAULT_CAMERA_CONFIG.battleMaxGroupSize}
             onChange={(e) => {
               const v = parseInt(e.target.value, 10);
               if (v >= 3 && v <= 6) set('battleMaxGroupSize', v);
             }}
-            display={`${config.battleMaxGroupSize ?? 6}`}
+            display={`${config.battleMaxGroupSize ?? DEFAULT_CAMERA_CONFIG.battleMaxGroupSize}`}
             tip="Maximum number of racers in the BATTLE group (3–6). Default 6."
           />
           <SliderRow
@@ -706,12 +709,12 @@ function CameraAdvancedSection() {
             min={2}
             max={10}
             step={1}
-            value={config.battleMaxGroupRankSpan ?? 5}
+            value={config.battleMaxGroupRankSpan ?? DEFAULT_CAMERA_CONFIG.battleMaxGroupRankSpan}
             onChange={(e) => {
               const v = parseInt(e.target.value, 10);
               if (v >= 2 && v <= 10) set('battleMaxGroupRankSpan', v);
             }}
-            display={`${config.battleMaxGroupRankSpan ?? 5}`}
+            display={`${config.battleMaxGroupRankSpan ?? DEFAULT_CAMERA_CONFIG.battleMaxGroupRankSpan}`}
             tip="Maximum rank span (highest minus lowest rank) of the BATTLE group after greedy expansion. Default 5 → P3–P8 when seed is at P3. Prevents P3-to-P11 clusters."
           />
           <SliderRow
@@ -720,12 +723,12 @@ function CameraAdvancedSection() {
             min={3}
             max={20}
             step={1}
-            value={config.battleMinTopN ?? 10}
+            value={config.battleMinTopN ?? DEFAULT_CAMERA_CONFIG.battleMinTopN}
             onChange={(e) => {
               const v = parseInt(e.target.value, 10);
               if (v >= 3 && v <= 20) set('battleMinTopN', v);
             }}
-            display={`Top-${config.battleMinTopN ?? 10}`}
+            display={`Top-${config.battleMinTopN ?? DEFAULT_CAMERA_CONFIG.battleMinTopN}`}
             tip="At least one racer in the pulk must be at position ≤ N. Default 10 → battles only when at least one top-10 racer is involved."
           />
         </div>
@@ -745,12 +748,12 @@ function CameraAdvancedSection() {
             min={0}
             max={1}
             step={0.05}
-            value={config.battleWeight ?? 0.8}
+            value={config.battleWeight ?? DEFAULT_CAMERA_CONFIG.battleWeight}
             onChange={(e) => {
               const v = parseFloat(e.target.value);
               if (v >= 0 && v <= 1) set('battleWeight', v);
             }}
-            display={(config.battleWeight ?? 0.8).toFixed(2)}
+            display={(config.battleWeight ?? DEFAULT_CAMERA_CONFIG.battleWeight).toFixed(2)}
             tip="Selection weight for BATTLE_ZOOM in the candidate pool. Default 0.80."
           />
           <SliderRow
@@ -759,12 +762,12 @@ function CameraAdvancedSection() {
             min={0}
             max={1}
             step={0.05}
-            value={config.leadChangeWeight ?? 0.7}
+            value={config.leadChangeWeight ?? DEFAULT_CAMERA_CONFIG.leadChangeWeight}
             onChange={(e) => {
               const v = parseFloat(e.target.value);
               if (v >= 0 && v <= 1) set('leadChangeWeight', v);
             }}
-            display={(config.leadChangeWeight ?? 0.7).toFixed(2)}
+            display={(config.leadChangeWeight ?? DEFAULT_CAMERA_CONFIG.leadChangeWeight).toFixed(2)}
             tip="Selection weight for LEAD_CHANGE in the candidate pool. Default 0.70."
           />
           <SliderRow
@@ -773,12 +776,12 @@ function CameraAdvancedSection() {
             min={0}
             max={1}
             step={0.05}
-            value={config.comebackWeight ?? 0.6}
+            value={config.comebackWeight ?? DEFAULT_CAMERA_CONFIG.comebackWeight}
             onChange={(e) => {
               const v = parseFloat(e.target.value);
               if (v >= 0 && v <= 1) set('comebackWeight', v);
             }}
-            display={(config.comebackWeight ?? 0.6).toFixed(2)}
+            display={(config.comebackWeight ?? DEFAULT_CAMERA_CONFIG.comebackWeight).toFixed(2)}
             tip="Selection weight for COMEBACK_ZOOM in the candidate pool. Default 0.60."
           />
           <SliderRow
@@ -787,12 +790,12 @@ function CameraAdvancedSection() {
             min={0}
             max={1}
             step={0.05}
-            value={config.overviewWeight ?? 0.3}
+            value={config.overviewWeight ?? DEFAULT_CAMERA_CONFIG.overviewWeight}
             onChange={(e) => {
               const v = parseFloat(e.target.value);
               if (v >= 0 && v <= 1) set('overviewWeight', v);
             }}
-            display={(config.overviewWeight ?? 0.3).toFixed(2)}
+            display={(config.overviewWeight ?? DEFAULT_CAMERA_CONFIG.overviewWeight).toFixed(2)}
             tip="Selection weight for OVERVIEW in the candidate pool. Default 0.30."
           />
           <SliderRow
@@ -801,12 +804,12 @@ function CameraAdvancedSection() {
             min={5000}
             max={60000}
             step={1000}
-            value={config.overviewCooldownMs ?? 15000}
+            value={config.overviewCooldownMs ?? DEFAULT_CAMERA_CONFIG.overviewCooldownMs}
             onChange={(e) => {
               const v = parseInt(e.target.value, 10);
               if (v >= 5000 && v <= 60000) set('overviewCooldownMs', v);
             }}
-            display={`${((config.overviewCooldownMs ?? 15000) / 1000).toFixed(0)}s`}
+            display={`${((config.overviewCooldownMs ?? DEFAULT_CAMERA_CONFIG.overviewCooldownMs) / 1000).toFixed(0)}s`}
             tip="Minimum pause after OVERVIEW before OVERVIEW may appear again. Default 15 s."
           />
           <SliderRow
@@ -815,12 +818,12 @@ function CameraAdvancedSection() {
             min={1}
             max={5}
             step={1}
-            value={config.overviewTargetCount ?? 2}
+            value={config.overviewTargetCount ?? DEFAULT_CAMERA_CONFIG.overviewTargetCount}
             onChange={(e) => {
               const v = parseInt(e.target.value, 10);
               if (v >= 1 && v <= 5) set('overviewTargetCount', v);
             }}
-            display={`${config.overviewTargetCount ?? 2}`}
+            display={`${config.overviewTargetCount ?? DEFAULT_CAMERA_CONFIG.overviewTargetCount}`}
             tip="Target number of OVERVIEW cuts per race. Default 2."
           />
           <SliderRow
@@ -829,12 +832,12 @@ function CameraAdvancedSection() {
             min={5}
             max={30}
             step={1}
-            value={config.overviewStartDelay ?? 15}
+            value={config.overviewStartDelay ?? DEFAULT_CAMERA_CONFIG.overviewStartDelay}
             onChange={(e) => {
               const v = parseInt(e.target.value, 10);
               if (v >= 5 && v <= 30) set('overviewStartDelay', v);
             }}
-            display={`${config.overviewStartDelay ?? 15}s`}
+            display={`${config.overviewStartDelay ?? DEFAULT_CAMERA_CONFIG.overviewStartDelay}s`}
             tip="Seconds after race start before OVERVIEW may appear in the pool for the first time. Default 15 s."
           />
           <SliderRow
@@ -846,15 +849,19 @@ function CameraAdvancedSection() {
             min={0}
             max={10}
             step={0.5}
-            value={Math.round((config.minDrawnFrameFrac ?? 0.045) * 1000) / 10}
+            value={
+              Math.round(
+                (config.minDrawnFrameFrac ?? DEFAULT_CAMERA_CONFIG.minDrawnFrameFrac) * 1000
+              ) / 10
+            }
             onChange={(e) => {
               const v = Number(e.target.value);
               if (v >= 0 && v <= 10) set('minDrawnFrameFrac', v / 100);
             }}
             display={
-              (config.minDrawnFrameFrac ?? 0.045) <= 0
+              (config.minDrawnFrameFrac ?? DEFAULT_CAMERA_CONFIG.minDrawnFrameFrac) <= 0
                 ? 'Off'
-                : `${((config.minDrawnFrameFrac ?? 0.045) * 100).toFixed(1)}%`
+                : `${((config.minDrawnFrameFrac ?? DEFAULT_CAMERA_CONFIG.minDrawnFrameFrac) * 100).toFixed(1)}%`
             }
             tip="A readability floor: a racer is never DRAWN smaller than this share of the frame height, so it stays recognisable when the camera is far out. It affects the drawing only — it does not change the zoom, it cannot override your 'World in shot' setting, and it never moves the camera. Default 4.5%: before this floor existed the Space Sprint start formation drew its rockets at 4.44% and the owner was happy with it; without any floor they are 3.17% and the formation stops overlapping. At the default it only bites in Overview, on the tracks whose racers are drawn smallest. 0 turns it off."
           />
@@ -867,12 +874,12 @@ function CameraAdvancedSection() {
             min={100}
             max={600}
             step={10}
-            value={config.referenceCorridorPx ?? 300}
+            value={config.referenceCorridorPx ?? DEFAULT_CAMERA_CONFIG.referenceCorridorPx}
             onChange={(e) => {
               const v = parseInt(e.target.value, 10);
               if (v >= 100 && v <= 600) set('referenceCorridorPx', v);
             }}
-            display={`${config.referenceCorridorPx ?? 300} px`}
+            display={`${config.referenceCorridorPx ?? DEFAULT_CAMERA_CONFIG.referenceCorridorPx} px`}
             tip="The width, in world pixels, that ONE corridor means for every camera setting. Every state's 'World in shot' number is measured in these, so changing this rescales EVERY shot on EVERY track at once — raise it and the whole game pulls back, lower it and everything moves in. It is what makes one number mean the same picture on a narrow track and a wide one. Default 300: the widest corridor drawn so far, so today every track is judged against the same yardstick. A track wider than this keeps its own width instead, so its corridor is never cropped."
           />
           <SliderRow
@@ -913,7 +920,9 @@ function CameraAdvancedSection() {
             <span style={{ minWidth: '11rem' }}>Transition style</span>
             <select
               data-testid="regie-transition-grammar"
-              value={config.cameraTransitionGrammar ?? 'glide'}
+              value={
+                config.cameraTransitionGrammar ?? DEFAULT_CAMERA_CONFIG.cameraTransitionGrammar
+              }
               onChange={(e) => set('cameraTransitionGrammar', e.target.value)}
               style={{ padding: '0.2rem 0.4rem' }}
             >
@@ -927,9 +936,9 @@ function CameraAdvancedSection() {
             min={300}
             max={900}
             step={50}
-            value={config.glideDurationMs ?? 500}
+            value={config.glideDurationMs ?? DEFAULT_CAMERA_CONFIG.glideDurationMs}
             onChange={(e) => set('glideDurationMs', parseInt(e.target.value, 10))}
-            display={`${config.glideDurationMs ?? 500} ms`}
+            display={`${config.glideDurationMs ?? DEFAULT_CAMERA_CONFIG.glideDurationMs} ms`}
             tip="How long a Glide transition takes to ease pan+zoom from the old shot to the new subject's framing. Only used when Transition style = Glide. Range 300–900 ms. Default 500."
           />
           <SliderRow
@@ -938,12 +947,12 @@ function CameraAdvancedSection() {
             min={0.5}
             max={0.8}
             step={0.02}
-            value={config.leaderForwardFrac ?? 0.66}
+            value={config.leaderForwardFrac ?? DEFAULT_CAMERA_CONFIG.leaderForwardFrac}
             onChange={(e) => set('leaderForwardFrac', parseFloat(e.target.value))}
             display={
-              (config.leaderForwardFrac ?? 0.66) <= 0.5
+              (config.leaderForwardFrac ?? DEFAULT_CAMERA_CONFIG.leaderForwardFrac) <= 0.5
                 ? 'Centre'
-                : (config.leaderForwardFrac ?? 0.66).toFixed(2)
+                : (config.leaderForwardFrac ?? DEFAULT_CAMERA_CONFIG.leaderForwardFrac).toFixed(2)
             }
             tip="Where the leader sits along the motion axis. 0.50 = dead centre; 0.66 = about two-thirds forward toward the leading edge so most of the frame shows the pack behind (the action). Range 0.50–0.80. Default 0.66."
           />
@@ -963,12 +972,12 @@ function CameraAdvancedSection() {
             min={0.001}
             max={0.01}
             step={0.001}
-            value={config.leadChangeMinGap ?? 0.002}
+            value={config.leadChangeMinGap ?? DEFAULT_CAMERA_CONFIG.leadChangeMinGap}
             onChange={(e) => {
               const v = parseFloat(e.target.value);
               if (v >= 0.001 && v <= 0.01) set('leadChangeMinGap', v);
             }}
-            display={(config.leadChangeMinGap ?? 0.002).toFixed(3)}
+            display={(config.leadChangeMinGap ?? DEFAULT_CAMERA_CONFIG.leadChangeMinGap).toFixed(3)}
             tip="Minimum T-space gap between P1 and P2 for a stable lead reading. Default 0.002."
           />
           <SliderRow
@@ -977,12 +986,12 @@ function CameraAdvancedSection() {
             min={200}
             max={2000}
             step={50}
-            value={config.leadChangeDebounceMs ?? 800}
+            value={config.leadChangeDebounceMs ?? DEFAULT_CAMERA_CONFIG.leadChangeDebounceMs}
             onChange={(e) => {
               const v = parseInt(e.target.value, 10);
               if (v >= 200 && v <= 2000) set('leadChangeDebounceMs', v);
             }}
-            display={`${config.leadChangeDebounceMs ?? 800}ms`}
+            display={`${config.leadChangeDebounceMs ?? DEFAULT_CAMERA_CONFIG.leadChangeDebounceMs}ms`}
             tip="Duration in ms the new leader must hold before the change is confirmed. Default 800 ms."
           />
           <SliderRow
@@ -991,12 +1000,12 @@ function CameraAdvancedSection() {
             min={1}
             max={5}
             step={0.5}
-            value={config.leadChangeMinDuration ?? 1.5}
+            value={config.leadChangeMinDuration ?? DEFAULT_CAMERA_CONFIG.leadChangeMinDuration}
             onChange={(e) => {
               const v = parseFloat(e.target.value);
               if (v >= 1 && v <= 5) set('leadChangeMinDuration', v);
             }}
-            display={`${(config.leadChangeMinDuration ?? 1.5).toFixed(1)}s`}
+            display={`${(config.leadChangeMinDuration ?? DEFAULT_CAMERA_CONFIG.leadChangeMinDuration).toFixed(1)}s`}
             tip="Minimum time the camera stays on the new leader after LEAD_CHANGE entry. Default 1.5 s."
           />
           <SliderRow
@@ -1005,12 +1014,12 @@ function CameraAdvancedSection() {
             min={1000}
             max={30000}
             step={1000}
-            value={config.leadChangeCooldownMs ?? 5000}
+            value={config.leadChangeCooldownMs ?? DEFAULT_CAMERA_CONFIG.leadChangeCooldownMs}
             onChange={(e) => {
               const v = parseInt(e.target.value, 10);
               if (v >= 1000 && v <= 30000) set('leadChangeCooldownMs', v);
             }}
-            display={`${((config.leadChangeCooldownMs ?? 5000) / 1000).toFixed(0)}s`}
+            display={`${((config.leadChangeCooldownMs ?? DEFAULT_CAMERA_CONFIG.leadChangeCooldownMs) / 1000).toFixed(0)}s`}
             tip="Minimum pause after LEAD_CHANGE before re-triggering is possible. Default 5 s."
           />
         </div>
@@ -1031,14 +1040,14 @@ function CameraAdvancedSection() {
             min={0}
             max={0.2}
             step={0.005}
-            value={config.focalSmoothTc ?? 0.05}
+            value={config.focalSmoothTc ?? DEFAULT_CAMERA_CONFIG.focalSmoothTc}
             onChange={(e) => {
               const v = parseFloat(e.target.value);
               if (v >= 0 && v <= 0.2) set('focalSmoothTc', v);
             }}
             display={
-              (config.focalSmoothTc ?? 0.05) > 0
-                ? `${Math.round((config.focalSmoothTc ?? 0.05) * 1000)}ms`
+              (config.focalSmoothTc ?? DEFAULT_CAMERA_CONFIG.focalSmoothTc) > 0
+                ? `${Math.round((config.focalSmoothTc ?? DEFAULT_CAMERA_CONFIG.focalSmoothTc) * 1000)}ms`
                 : 'Off'
             }
             tip="EMA time-constant applied to the pan target in COMEBACK and LEADER_ZOOM follow phase. Removes comeback-braking oscillation and per-physics-step jitter. 0 = disabled. Higher = smoother but the camera trails the racer more. Default 50 ms."
@@ -1049,12 +1058,14 @@ function CameraAdvancedSection() {
             min={2}
             max={10}
             step={1}
-            value={config.comebackMinPositionsGained ?? 2}
+            value={
+              config.comebackMinPositionsGained ?? DEFAULT_CAMERA_CONFIG.comebackMinPositionsGained
+            }
             onChange={(e) => {
               const v = parseInt(e.target.value, 10);
               if (v >= 2 && v <= 10) set('comebackMinPositionsGained', v);
             }}
-            display={`${config.comebackMinPositionsGained ?? 2}`}
+            display={`${config.comebackMinPositionsGained ?? DEFAULT_CAMERA_CONFIG.comebackMinPositionsGained}`}
             tip="Minimum positions gained within the time window to trigger COMEBACK. Default 2."
           />
           <SliderRow
@@ -1063,12 +1074,12 @@ function CameraAdvancedSection() {
             min={1}
             max={10}
             step={0.5}
-            value={config.comebackWindowSec ?? 4}
+            value={config.comebackWindowSec ?? DEFAULT_CAMERA_CONFIG.comebackWindowSec}
             onChange={(e) => {
               const v = parseFloat(e.target.value);
               if (v >= 1 && v <= 10) set('comebackWindowSec', v);
             }}
-            display={`${(config.comebackWindowSec ?? 4).toFixed(1)}s`}
+            display={`${(config.comebackWindowSec ?? DEFAULT_CAMERA_CONFIG.comebackWindowSec).toFixed(1)}s`}
             tip="Look-back window for rank history. Positions gained = rank N seconds ago minus current rank. Default 4 s."
           />
           <SliderRow
@@ -1077,12 +1088,12 @@ function CameraAdvancedSection() {
             min={1}
             max={5}
             step={0.5}
-            value={config.comebackMinDuration ?? 3}
+            value={config.comebackMinDuration ?? DEFAULT_CAMERA_CONFIG.comebackMinDuration}
             onChange={(e) => {
               const v = parseFloat(e.target.value);
               if (v >= 1 && v <= 5) set('comebackMinDuration', v);
             }}
-            display={`${(config.comebackMinDuration ?? 3).toFixed(1)}s`}
+            display={`${(config.comebackMinDuration ?? DEFAULT_CAMERA_CONFIG.comebackMinDuration).toFixed(1)}s`}
             tip="Minimum duration after COMEBACK entry on the comeback racer. Default 3 s."
           />
           <SliderRow
@@ -1091,12 +1102,12 @@ function CameraAdvancedSection() {
             min={1000}
             max={30000}
             step={1000}
-            value={config.comebackCooldownMs ?? 10000}
+            value={config.comebackCooldownMs ?? DEFAULT_CAMERA_CONFIG.comebackCooldownMs}
             onChange={(e) => {
               const v = parseInt(e.target.value, 10);
               if (v >= 1000 && v <= 30000) set('comebackCooldownMs', v);
             }}
-            display={`${((config.comebackCooldownMs ?? 10000) / 1000).toFixed(0)}s`}
+            display={`${((config.comebackCooldownMs ?? DEFAULT_CAMERA_CONFIG.comebackCooldownMs) / 1000).toFixed(0)}s`}
             tip="Minimum pause after COMEBACK before re-triggering is possible. Default 10 s."
           />
           <SliderRow
@@ -1105,13 +1116,13 @@ function CameraAdvancedSection() {
             min={0.5}
             max={0.95}
             step={0.05}
-            value={config.outcomePhaseThreshold ?? 0.75}
+            value={config.outcomePhaseThreshold ?? DEFAULT_CAMERA_CONFIG.outcomePhaseThreshold}
             onChange={(e) => {
               const v = parseFloat(e.target.value);
               if (v >= 0.5 && v <= 0.95) set('outcomePhaseThreshold', v);
             }}
-            display={`${((config.outcomePhaseThreshold ?? 0.75) * 100).toFixed(0)}%`}
-            tip="Leader progress from which COMEBACK is considered active internally (independent of the external isOutcomePhase flag). Default 65%."
+            display={`${((config.outcomePhaseThreshold ?? DEFAULT_CAMERA_CONFIG.outcomePhaseThreshold) * 100).toFixed(0)}%`}
+            tip={`Leader progress from which COMEBACK is considered active internally (independent of the external isOutcomePhase flag). Default ${(DEFAULT_CAMERA_CONFIG.outcomePhaseThreshold * 100).toFixed(0)}%.`}
           />
           <SliderRow
             label="Min. starting gap"
@@ -1157,12 +1168,14 @@ function CameraAdvancedSection() {
             min={0.2}
             max={1.0}
             step={0.05}
-            value={config.battleSlowmoFactor ?? 0.5}
+            value={config.battleSlowmoFactor ?? DEFAULT_CAMERA_CONFIG.battleSlowmoFactor}
             onChange={(e) => {
               const v = parseFloat(e.target.value);
               if (v >= 0.2 && v <= 1.0) set('battleSlowmoFactor', v);
             }}
-            display={(config.battleSlowmoFactor ?? 0.5).toFixed(2)}
+            display={(
+              config.battleSlowmoFactor ?? DEFAULT_CAMERA_CONFIG.battleSlowmoFactor
+            ).toFixed(2)}
             tip="Physics speed during BATTLE_ZOOM. 1.0 = normal, 0.5 = half speed. Default 0.5."
           />
           <SliderRow
@@ -1171,12 +1184,12 @@ function CameraAdvancedSection() {
             min={1.0}
             max={5.0}
             step={0.5}
-            value={config.battleSlowmoMinDuration ?? 2.0}
+            value={config.battleSlowmoMinDuration ?? DEFAULT_CAMERA_CONFIG.battleSlowmoMinDuration}
             onChange={(e) => {
               const v = parseFloat(e.target.value);
               if (v >= 1.0 && v <= 5.0) set('battleSlowmoMinDuration', v);
             }}
-            display={`${(config.battleSlowmoMinDuration ?? 2.0).toFixed(1)}s`}
+            display={`${(config.battleSlowmoMinDuration ?? DEFAULT_CAMERA_CONFIG.battleSlowmoMinDuration).toFixed(1)}s`}
             tip="Minimum duration of the slowmo effect after BATTLE_ZOOM ends. Default 2.0s."
           />
           <SliderRow
@@ -1185,12 +1198,14 @@ function CameraAdvancedSection() {
             min={0.0}
             max={1.0}
             step={0.05}
-            value={config.battleSlowmoFadeDuration ?? 0.3}
+            value={
+              config.battleSlowmoFadeDuration ?? DEFAULT_CAMERA_CONFIG.battleSlowmoFadeDuration
+            }
             onChange={(e) => {
               const v = parseFloat(e.target.value);
               if (v >= 0.0 && v <= 1.0) set('battleSlowmoFadeDuration', v);
             }}
-            display={`${(config.battleSlowmoFadeDuration ?? 0.3).toFixed(2)}s`}
+            display={`${(config.battleSlowmoFadeDuration ?? DEFAULT_CAMERA_CONFIG.battleSlowmoFadeDuration).toFixed(2)}s`}
             tip="Duration of slowmo effect fade-in and fade-out. 0 = instant switch. Default 0.3s."
           />
           <SliderRow
@@ -1199,12 +1214,14 @@ function CameraAdvancedSection() {
             min={0.0}
             max={1.0}
             step={0.05}
-            value={config.battleFocusDarkening ?? 0.4}
+            value={config.battleFocusDarkening ?? DEFAULT_CAMERA_CONFIG.battleFocusDarkening}
             onChange={(e) => {
               const v = parseFloat(e.target.value);
               if (v >= 0.0 && v <= 1.0) set('battleFocusDarkening', v);
             }}
-            display={(config.battleFocusDarkening ?? 0.4).toFixed(2)}
+            display={(
+              config.battleFocusDarkening ?? DEFAULT_CAMERA_CONFIG.battleFocusDarkening
+            ).toFixed(2)}
             tip="Dimming of non-BATTLE racers. 0 = no effect, 1 = completely black. Default 0.4."
           />
         </div>
@@ -1221,7 +1238,7 @@ function CameraAdvancedSection() {
             >
               Endgame Focus Threshold
               <InfoTooltip
-                text={`From this leader-progress value the camera locks to LEADER_ZOOM (except during LEAD_CHANGE). Currently: ${((config.endgameThreshold ?? 0.9) * 100).toFixed(0)}%.`}
+                text={`From this leader-progress value the camera locks to LEADER_ZOOM (except during LEAD_CHANGE). Currently: ${((config.endgameThreshold ?? DEFAULT_CAMERA_CONFIG.endgameThreshold) * 100).toFixed(0)}%.`}
               />
             </label>
             <input
@@ -1230,7 +1247,7 @@ function CameraAdvancedSection() {
               min={0.5}
               max={1.0}
               step={0.05}
-              value={config.endgameThreshold ?? 0.9}
+              value={config.endgameThreshold ?? DEFAULT_CAMERA_CONFIG.endgameThreshold}
               onChange={(e) => {
                 const v = Number(e.target.value);
                 if (v >= 0.5 && v <= 1.0) set('endgameThreshold', v);
@@ -1255,7 +1272,7 @@ function CameraAdvancedSection() {
             >
               Finish pause (ms)
               <InfoTooltip
-                text={`How long the camera HOLDS before the zoom-out to the finish overview begins. It applies to both endings and it is the same dial for both: after an ordinary finish it holds on the winner from the moment he crosses; after a PHOTO FINISH it holds the pair shot from the moment BOTH contenders are home — not merely when two racers have crossed, since the second across is often neither of them. 0 means no pause at all: the zoom-out starts on the same frame, with no held shot. Currently: ${config.finishDramaDurationMs ?? 1500}ms.`}
+                text={`How long the camera HOLDS before the zoom-out to the finish overview begins. It applies to both endings and it is the same dial for both: after an ordinary finish it holds on the winner from the moment he crosses; after a PHOTO FINISH it holds the pair shot from the moment BOTH contenders are home — not merely when two racers have crossed, since the second across is often neither of them. 0 means no pause at all: the zoom-out starts on the same frame, with no held shot. Currently: ${config.finishDramaDurationMs ?? DEFAULT_CAMERA_CONFIG.finishDramaDurationMs}ms.`}
               />
             </label>
             <input
@@ -1266,7 +1283,7 @@ function CameraAdvancedSection() {
               min={0}
               max={5000}
               step={100}
-              value={config.finishDramaDurationMs ?? 1500}
+              value={config.finishDramaDurationMs ?? DEFAULT_CAMERA_CONFIG.finishDramaDurationMs}
               onChange={(e) => {
                 const v = Number(e.target.value);
                 if (v >= 0 && v <= 5000) set('finishDramaDurationMs', v);
@@ -1280,7 +1297,7 @@ function CameraAdvancedSection() {
             >
               Zoom-out duration (ms)
               <InfoTooltip
-                text={`Target duration for the smooth zoom-out to OVERVIEW level after the drama pulse. Currently: ${config.finishOverviewZoomOutDurationMs ?? 3000}ms.`}
+                text={`Target duration for the smooth zoom-out to OVERVIEW level after the drama pulse. Currently: ${config.finishOverviewZoomOutDurationMs ?? DEFAULT_CAMERA_CONFIG.finishOverviewZoomOutDurationMs}ms.`}
               />
             </label>
             <input
@@ -1289,7 +1306,10 @@ function CameraAdvancedSection() {
               min={500}
               max={8000}
               step={250}
-              value={config.finishOverviewZoomOutDurationMs ?? 3000}
+              value={
+                config.finishOverviewZoomOutDurationMs ??
+                DEFAULT_CAMERA_CONFIG.finishOverviewZoomOutDurationMs
+              }
               onChange={(e) => {
                 const v = Number(e.target.value);
                 if (v >= 500 && v <= 8000) set('finishOverviewZoomOutDurationMs', v);
@@ -1303,7 +1323,7 @@ function CameraAdvancedSection() {
             >
               Pause before leaderboard (ms)
               <InfoTooltip
-                text={`Pause after last finisher before the leaderboard appears. Currently: ${config.finishPauseMs ?? 2500}ms.`}
+                text={`Pause after last finisher before the leaderboard appears. Currently: ${config.finishPauseMs ?? DEFAULT_CAMERA_CONFIG.finishPauseMs}ms.`}
               />
             </label>
             <input
@@ -1312,7 +1332,7 @@ function CameraAdvancedSection() {
               min={0}
               max={10000}
               step={250}
-              value={config.finishPauseMs ?? 2500}
+              value={config.finishPauseMs ?? DEFAULT_CAMERA_CONFIG.finishPauseMs}
               onChange={(e) => {
                 const v = Number(e.target.value);
                 if (v >= 0 && v <= 10000) set('finishPauseMs', v);
@@ -1329,12 +1349,16 @@ function CameraAdvancedSection() {
             min={0}
             max={1000}
             step={25}
-            value={config.finishOverviewLookbackPx ?? 300}
+            value={
+              config.finishOverviewLookbackPx ?? DEFAULT_CAMERA_CONFIG.finishOverviewLookbackPx
+            }
             onChange={(e) => {
               const v = parseFloat(e.target.value);
               if (v >= 0 && v <= 1000) set('finishOverviewLookbackPx', v);
             }}
-            display={String(config.finishOverviewLookbackPx ?? 300)}
+            display={String(
+              config.finishOverviewLookbackPx ?? DEFAULT_CAMERA_CONFIG.finishOverviewLookbackPx
+            )}
             tip="FINISH_OVERVIEW: How far before the finish line (in world pixels) the camera target sits. 0 = centred on finish line, 300 = 300 px before the finish (track-independent). Default 300."
           />
         </div>
@@ -1361,7 +1385,7 @@ function CameraAdvancedSection() {
           <input
             type="checkbox"
             data-testid="photo-finish-enabled"
-            checked={config.photoFinishEnabled ?? true}
+            checked={config.photoFinishEnabled ?? DEFAULT_CAMERA_CONFIG.photoFinishEnabled}
             onChange={(e) => set('photoFinishEnabled', e.target.checked)}
           />
           <span style={{ fontWeight: 600 }}>Enable photo-finish shot</span>
@@ -1374,12 +1398,14 @@ function CameraAdvancedSection() {
             min={0.85}
             max={0.999}
             step={0.001}
-            value={config.photoFinishLeadProgress ?? 0.97}
+            value={config.photoFinishLeadProgress ?? DEFAULT_CAMERA_CONFIG.photoFinishLeadProgress}
             onChange={(e) => {
               const v = parseFloat(e.target.value);
               if (v >= 0.85 && v <= 0.999) set('photoFinishLeadProgress', v);
             }}
-            display={(config.photoFinishLeadProgress ?? 0.97).toFixed(3)}
+            display={(
+              config.photoFinishLeadProgress ?? DEFAULT_CAMERA_CONFIG.photoFinishLeadProgress
+            ).toFixed(3)}
             tip="Predictive gate: leader progress (fraction of the finish, 0–1) at which the one-shot close-check fires BEFORE the line. Higher = later/closer to the line. Default 0.97."
           />
           <SliderRow
@@ -1388,12 +1414,16 @@ function CameraAdvancedSection() {
             min={0.005}
             max={0.15}
             step={0.005}
-            value={config.photoFinishCloseThresholdT ?? 0.03}
+            value={
+              config.photoFinishCloseThresholdT ?? DEFAULT_CAMERA_CONFIG.photoFinishCloseThresholdT
+            }
             onChange={(e) => {
               const v = parseFloat(e.target.value);
               if (v >= 0.005 && v <= 0.15) set('photoFinishCloseThresholdT', v);
             }}
-            display={(config.photoFinishCloseThresholdT ?? 0.03).toFixed(3)}
+            display={(
+              config.photoFinishCloseThresholdT ?? DEFAULT_CAMERA_CONFIG.photoFinishCloseThresholdT
+            ).toFixed(3)}
             tip="Max lap-normalised t-gap between the top-2 finishers to trigger the photo-finish shot (same unit family as the BATTLE temporal threshold). Larger = triggers more often. Default 0.03."
           />
           <SliderRow
@@ -1402,12 +1432,14 @@ function CameraAdvancedSection() {
             min={0.1}
             max={1.0}
             step={0.05}
-            value={config.photoFinishSlowmoFactor ?? 0.5}
+            value={config.photoFinishSlowmoFactor ?? DEFAULT_CAMERA_CONFIG.photoFinishSlowmoFactor}
             onChange={(e) => {
               const v = parseFloat(e.target.value);
               if (v >= 0.1 && v <= 1.0) set('photoFinishSlowmoFactor', v);
             }}
-            display={(config.photoFinishSlowmoFactor ?? 0.5).toFixed(2)}
+            display={(
+              config.photoFinishSlowmoFactor ?? DEFAULT_CAMERA_CONFIG.photoFinishSlowmoFactor
+            ).toFixed(2)}
             tip="Physics slow-motion during the photo-finish shot. 1.0 = normal, 0.5 = half speed. Default 0.5."
           />
         </div>
@@ -1445,7 +1477,7 @@ function CameraAdvancedSection() {
             >
               Convergence Zoom Threshold
               <InfoTooltip
-                text={`Entry→Tracking when zoom delta falls below this value. Currently: ${config.entryConvergenceZoom ?? 0.05}.`}
+                text={`Entry→Tracking when zoom delta falls below this value. Currently: ${config.entryConvergenceZoom ?? DEFAULT_CAMERA_CONFIG.entryConvergenceZoom}.`}
               />
             </label>
             <input
@@ -1454,7 +1486,7 @@ function CameraAdvancedSection() {
               min={0.001}
               max={0.5}
               step={0.005}
-              value={config.entryConvergenceZoom ?? 0.05}
+              value={config.entryConvergenceZoom ?? DEFAULT_CAMERA_CONFIG.entryConvergenceZoom}
               onChange={(e) => {
                 const v = Number(e.target.value);
                 if (v >= 0.001 && v <= 0.5) set('entryConvergenceZoom', v);
@@ -1468,7 +1500,7 @@ function CameraAdvancedSection() {
             >
               Convergence Px Threshold
               <InfoTooltip
-                text={`Entry→Tracking when offset delta falls below this pixel value. Currently: ${config.entryConvergencePx ?? 10}px.`}
+                text={`Entry→Tracking when offset delta falls below this pixel value. Currently: ${config.entryConvergencePx ?? DEFAULT_CAMERA_CONFIG.entryConvergencePx}px.`}
               />
             </label>
             <input
@@ -1477,7 +1509,7 @@ function CameraAdvancedSection() {
               min={1}
               max={100}
               step={1}
-              value={config.entryConvergencePx ?? 10}
+              value={config.entryConvergencePx ?? DEFAULT_CAMERA_CONFIG.entryConvergencePx}
               onChange={(e) => {
                 const v = Number(e.target.value);
                 if (v >= 1 && v <= 100) set('entryConvergencePx', v);
@@ -1491,7 +1523,7 @@ function CameraAdvancedSection() {
             >
               T-Space Convergence Threshold
               <InfoTooltip
-                text={`Entry→Tracking when |camT − targetT| falls below this value (track-parameter units). Steady-state gap ≈ 0.026; threshold must be above that. Currently: ${(config.transitionTConvergence ?? 0.03).toFixed(3)}.`}
+                text={`Entry→Tracking when |camT − targetT| falls below this value (track-parameter units). Steady-state gap ≈ 0.026; threshold must be above that. Currently: ${(config.transitionTConvergence ?? DEFAULT_CAMERA_CONFIG.transitionTConvergence).toFixed(3)}.`}
               />
             </label>
             <input
@@ -1500,7 +1532,7 @@ function CameraAdvancedSection() {
               min={0.005}
               max={0.2}
               step={0.005}
-              value={config.transitionTConvergence ?? 0.03}
+              value={config.transitionTConvergence ?? DEFAULT_CAMERA_CONFIG.transitionTConvergence}
               onChange={(e) => {
                 const v = Number(e.target.value);
                 if (v >= 0.005 && v <= 0.2) set('transitionTConvergence', v);
@@ -1529,7 +1561,7 @@ function CameraAdvancedSection() {
             <input
               type="checkbox"
               data-testid="state-overlay-toggle"
-              checked={config.stateOverlayEnabled ?? true}
+              checked={config.stateOverlayEnabled ?? DEFAULT_CAMERA_CONFIG.stateOverlayEnabled}
               onChange={(e) => set('stateOverlayEnabled', e.target.checked)}
             />
             <span style={{ fontWeight: 600 }}>Enable overlay texts</span>
@@ -1545,7 +1577,7 @@ function CameraAdvancedSection() {
               min={500}
               max={10000}
               step={100}
-              value={config.stateOverlayDurationMs ?? 3500}
+              value={config.stateOverlayDurationMs ?? DEFAULT_CAMERA_CONFIG.stateOverlayDurationMs}
               onChange={(e) => {
                 const v = parseInt(e.target.value, 10);
                 if (v >= 500 && v <= 10000) set('stateOverlayDurationMs', v);

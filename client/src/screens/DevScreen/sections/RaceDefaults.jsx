@@ -9,6 +9,7 @@
 
 import { useStorage } from '../../../modules/storage/useStorage.js';
 import { KEYS } from '../../../modules/storage/storage.js';
+// MIRRORS-BY-REFERENCE (LESSONS L207): fallbacks in this file READ the default instead of copying it.
 import { DEFAULT_RACE_DEFAULTS } from '../../../modules/storage/defaults.js';
 import { InfoTooltip } from '../../../components/InfoTooltip/index.js';
 import s from '../DevScreen.module.css';
@@ -112,7 +113,7 @@ function RaceDefaults() {
             min={1}
             max={100}
             step={1}
-            value={defaults.maxPlayersClosed ?? 40}
+            value={defaults.maxPlayersClosed ?? DEFAULT_RACE_DEFAULTS.maxPlayersClosed}
             onChange={(e) => {
               const v = Number(e.target.value);
               if (Number.isInteger(v) && v >= 1 && v <= 100) set({ maxPlayersClosed: v });
@@ -135,7 +136,7 @@ function RaceDefaults() {
             min={1}
             max={100}
             step={1}
-            value={defaults.maxPlayersOpen ?? 100}
+            value={defaults.maxPlayersOpen ?? DEFAULT_RACE_DEFAULTS.maxPlayersOpen}
             onChange={(e) => {
               const v = Number(e.target.value);
               if (Number.isInteger(v) && v >= 1 && v <= 100) set({ maxPlayersOpen: v });

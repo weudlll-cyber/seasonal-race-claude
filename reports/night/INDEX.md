@@ -8,8 +8,57 @@ report here could be orphaned, or an index link could dangle, with nothing notic
 `node scripts/check-index.mjs --dir=reports/night --index=reports/night/INDEX.md` now checks both
 directions.
 
+- [DOC-AUDIT-2.md](DOC-AUDIT-2.md) — the living documents in one pass. **The machine-checkable half
+  is already green and stays green** (config claims 0, fingerprint copies 0, dangling links 0, index
+  both directions 0), so what is left is what a guard cannot see — and all six findings are the same
+  defect: a number a scan could derive, typed into a sentence. `SHIP-CEREMONY.md` carried THREE of
+  them in one sentence (19/103/84 → 20/106/86, stale since CONFIG-DIFF-2); `ARCHITECTURE.md`
+  described a three-tier track fallback whose third tier is not in the repository. Five fixed, one
+  named as needing a generator. **The routing gap that turned master red is closed** in the routing
+  declarations — `gen-engine-reach-doc` now declares `reach: raceCore.js`, so its dependency set IS
+  the hull and cannot drift from it; three tests, both directions, including the exact file
+  CONFIG-DIFF-2 added. **`postStartHoldMs` is TWO CLOCKS wearing one name** — the camera's is a
+  duration from the end of the 3 s overview, the planner's an absolute floor from t=0, differing by
+  exactly START_PHASE_DURATION — and the planner's is INERT above a ~28 s race, so it can bite only
+  short races. Rename not proposed: it is his call.
+- [OUTCOME-PHASE-75.md](OUTCOME-PHASE-75.md) — **the owner's decision, shipped**: the decisive phase
+  begins at 75 % of the leader's run, not 65 %. The COMEBACK gate opens 6–8 s later and stays open a
+  quarter of the race instead of a third (measured on two tracks); COMEBACK_ZOOM is entered a third
+  as often (2103 → 753 frames) and LEAD_CHANGE takes most of the freed frames. CAMERA
+  `ad07c08ce5d8ae49` → `d54d6332fb8d36c6` and RENDER `752df7bc61ef0721` → `9580ff2e3626b3b9` as
+  expected; WORLD `dc4647be0f55ebdb` unchanged. The three stale literals are CONVERTED, not aligned
+  (42 → 38 disagreeing sites), plus a fourth copy nobody had counted — a Dev Screen tooltip reading
+  "Default 65%", which no guard could ever have caught. **The HUD bug is not what the brief said and
+  the record is corrected**: `getComebackDiagData` does emit the value, so the HUD was right all
+  along; the diagnostic fallbacks are removed anyway, because a fallback in a panel is a second
+  authority on a number the director owns.
+- [PAIR-PREFILTER-1.md](PAIR-PREFILTER-1.md) — a two-axis field bound in front of the pair loop, and
+  **the race now costs 20 % less to compute**: the world fingerprint, a fixed ten-track workload, runs
+  128 s against master's 160 s, and every one of the six timed runs produced `dc4647be0f55ebdb`.
+  `pairContact`'s share of the step falls 4.19 % → 1.37 % at n=100, which is the census's 96.6 %
+  cull landing. **The brief named three safety conditions and there was a FOURTH, live:** the flat
+  brake fallback is per-PAIR, not per-field, and on a long track is six times wider than the
+  geometric bound — so the cull as designed would have skipped pairs gate A still brakes. Found by
+  writing the test, closed before the fingerprint was run, and the literal now has one home. Seven
+  tests, each sabotaged and each caught by exactly one; removing the prefilter entirely still passes
+  all seven, because they assert the superset property rather than the cull's presence. The ceiling
+  table is NOT re-derived and the report says why — its only instrument has a ±9–26 % noise floor.
+- [PAIR-DEDUP-1.md](PAIR-DEDUP-1.md) — the pair loop's six geometry values, computed once instead of
+  twice. The two sites were expression-for-expression identical (same fallback, same addition order,
+  same `Math.max` order — all three checked, not assumed), so WORLD `dc4647be0f55ebdb` and all ten
+  per-track hashes are unchanged. **The ≈ 7 % PAIR-REACH-ANALYSIS priced was NOT delivered, and the
+  block says why:** the pair block's combined profile share moves 73.02 % → 72.36 %, inside master's
+  own 1.3 pp spread — V8 was already eliminating the duplicate, because both copies are pure
+  arithmetic on fields nothing writes between them. Also the first measurement of the A/B/A bench's
+  own noise floor on this machine: 5–30 %, i.e. it cannot resolve a single-digit percentage at all.
 - [CONFIG-DIFF-1.md](CONFIG-DIFF-1.md) — store what he chose, not what happened to be true.
+- [PAIR-REACH-ANALYSIS.md](PAIR-REACH-ANALYSIS.md) — the bound exists and the Y axis is the strong one; the cheaper win is a duplicate.
+- [FALLBACK-42-TRIAGE.md](FALLBACK-42-TRIAGE.md) — 41 of the 42 cannot fire; the one that can fires every render.
+- [BUILD-PILL-TRUTH.md](BUILD-PILL-TRUTH.md) — the .git watch never fired once; Vite ignores .git, so it is polled now.
+- [SPREAD-FIELD-SWEEP.md](SPREAD-FIELD-SWEEP.md) — the company guarantee binds in the PACK, not on a spread field; the premise was wrong, the value is not.
+- [SMALL-DEBTS.md](SMALL-DEBTS.md) — a dead field that was keeping two imports alive, a constant whose name said the opposite of what it did, and a routing section pointing at a deleted table.
 - [CONFIG-DIFF-2.md](CONFIG-DIFF-2.md) — the remaining six stores, and one home for the rule.
+- [MIRRORS-BY-REFERENCE.md](MIRRORS-BY-REFERENCE.md) — 259 fallbacks now read the default instead of copying it; byRef 55 to 314.
   `loadCameraConfig` was already right (it walks the DEFAULT keys, so a NEW key arrives at its
   default); `saveCameraConfig` wrote the WHOLE resolved object, so one slider move FROZE every key
   and a changed default could never reach him again — which is why his board sat at 3000/80 after
@@ -450,7 +499,6 @@ and in that commit's message.
   The renderer still has no guard and would draw a 100-character name ~750px wide — proposed, not
   built. A 32-character name measures ~283px realistically, 486px worst case, against the current
   roster's 55px mean.
-||||||| parent of 9a0673ad (report(QUICKTEST-NAMES-1): realistic names break the shrink rule, with the numbers)
 - [DOC-ORDER-1.md](DOC-ORDER-1.md) — documentation a stranger could actually be handed. The evidence
   for his own suspicion that most documents were never asked for: twenty of fifty-three were the
   by-product of one work session and had had no substantive change since a bulk German-to-English
