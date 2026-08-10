@@ -60,7 +60,13 @@ import RacePlanHUD from './RacePlanHUD.jsx';
 import CameraFrameLogHUD from './CameraFrameLogHUD.jsx';
 import CameraMarkerHUD from './CameraMarkerHUD.jsx';
 import PerfLogHUD from './PerfLogHUD.jsx';
-import { createPerfLog, recordPerfFrame, buildPerfContext } from './perfLog.js';
+import {
+  createPerfLog,
+  recordPerfFrame,
+  buildPerfContext,
+  startLongTaskObserver,
+  stopLongTaskObserver,
+} from './perfLog.js';
 import { identifyNameSet } from '../../modules/racerNames.js';
 import StateOverlay from './StateOverlay.jsx';
 import BattleDiagHUD from './BattleDiagHUD.jsx';
@@ -701,7 +707,12 @@ export default function RaceScreen() {
     const renderBuf = [];
 
     // Perf-log: reset ring buffer on each race start (enablePerfLog captured from cameraConfig).
-    if (enablePerfLog) perfLogRef.current = createPerfLog();
+    if (enablePerfLog) {
+      perfLogRef.current = createPerfLog();
+      // FRAME-GAP-1: the long-task observer lives exactly as long as the log does. Started here and
+      // disconnected in the cleanup below, so a race that ends leaves no observer behind.
+      startLongTaskObserver(perfLogRef.current);
+    }
 
     // Perf probe: activated by ?perfprobe=1 URL flag (persisted via sessionStorage).
     initProbe();
@@ -721,6 +732,12 @@ export default function RaceScreen() {
       const rawDtUncapped = enablePerfLog ? (st.lastTs ? ts - st.lastTs : 16) : 0;
       // Perf-log bracket 1: start of frame (also serves as default for tPhys when no physics ran).
       const t0 = enablePerfLog ? performance.now() : 0;
+      // FRAME-GAP-1: how late the browser was to us. `ts` is the frame's nominal start as rAF
+      // reports it; `t0` is when OUR code actually began. The gap is everything the browser did
+      // first, and it is the half of `other` that no change to our draw code can shorten. One
+      // subtraction, only when the log is on. Clamped at 0 because the two clocks are the same
+      // clock but a browser may hand in a timestamp fractionally ahead of the callback.
+      const rafLate = enablePerfLog ? Math.max(0, t0 - ts) : 0;
       // tPhys starts at t0 so physMs = 0 on non-RACING frames (no physics while-loop ran).
       let tPhys = t0;
       // Perf-log pace counters for this frame (read-only mirrors of the physics
@@ -1360,7 +1377,8 @@ export default function RaceScreen() {
           hudPhysAdvancedMs,
           hudPhysAccumMs,
           hudCapHit,
-          rawDtUncapped
+          rawDtUncapped,
+          rafLate
         );
       }
       rafRef.current = requestAnimationFrame(loop);
@@ -1371,6 +1389,7 @@ export default function RaceScreen() {
       // No global RNG to restore — the race stream is the local `raceRng` above (parity step 1),
       // so `Math.random` was never swapped and the rest of the app stays non-deterministic.
       cancelled = true;
+      stopLongTaskObserver(perfLogRef.current); // FRAME-GAP-1: never outlive the race
       markerBuildRef.current = null; // CAMERA-REPRO-1: no markers from a torn-down race
       if (rafRef.current) cancelAnimationFrame(rafRef.current);
       clearTimeout(finishNavTimerRef.current);

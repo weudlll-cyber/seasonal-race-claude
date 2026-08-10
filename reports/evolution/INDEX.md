@@ -75,6 +75,29 @@ and [FAIRNESS.md](../../docs/FAIRNESS.md). Shipped world: **`dc4647be0f55ebdb`**
 
 ## Camera / presentation fixes
 
+- [FRAME-GAP-1.md](FRAME-GAP-1.md) — **`other` IS SPLITTABLE NOW, AND THE SPLIT SAYS THE 29 ms ARE NOT
+  WHERE WE LOOKED** (branch `feat/frame-gap-1` off `570a8505`; **diagnosis only, nothing fixed**; all
+  four fingerprints unchanged and engine-reach clears all four changed paths). **A NEGATIVE RESULT,
+  reported as such.** Two of three arms moved nothing beyond the run-to-run spread; the third — the
+  DOM around the canvas — moved `rafLate` p90 from 0.8–0.9 ms to 3.7–4.3 ms, **real and repeatable
+  (±0.5 ms spread) but one fifth of the 16.6 ms gap, and it does NOT scale with window area**, which
+  is the one property his own experiment proved. **`total` p90 never left 16.7–17.0 ms in any of ten
+  arms**: the harness never reproduced a 33 ms frame, at either window size or either DPR, so it can
+  say where the time is NOT and not where it is. **B (canvas CSS stretch) refuted** — pinning the box
+  to 1280×720 changes `rafLate` by less than that arm's own ±1.2 ms spread. **C (window area) not
+  reproduced** — three times the area moves `total` p90 by 0.1 ms. **THE INSTRUMENT IS THE DELIVERABLE**:
+  `rafLate` (callback entry minus the rAF timestamp — the half of `other` no draw-code change can
+  shorten) and a `longtask` PerformanceObserver whose `supported` is THREE-VALUED, because "no long
+  tasks" and "this browser cannot see long tasks" are opposite conclusions; his Chrome 151 supports
+  it. **Next suspects, in order: React** (100 keyed rows reconciled 4×/s plus four state setters
+  called from inside the rAF loop — work that runs in a different task, which is exactly where
+  `rafLate` hides, and the one thing this harness deliberately lacks), the dev bundle, the real
+  6144×4096 JPEG, his browser profile. **PIECE 0**: origin 48 branches → 1, local 48 → 1, worktrees
+  4 → 1, four empty `docs/` dirs gone, every deleted tip SHA recorded first; both uncontained branches
+  verified dead before deletion (one carried only two leftover conflict markers). **37 stale
+  `.git/worktrees/` admin dirs cannot be pruned** — OneDrive ReparsePoint placeholders, EPERM.
+
+
 - [CEREMONY-COUNTS-GENERATED.md](CEREMONY-COUNTS-GENERATED.md) — **THE SENTENCE WAS SPLIT, AND ONE OF
   THE THREE NUMBERS WAS WRONG** (branch `feat/ceremony-counts` off `feat/post-start-hold-unify`; docs
   and tooling only, no engine file touched). Declined last night because a generator would have had

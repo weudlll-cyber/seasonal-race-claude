@@ -35,6 +35,32 @@
 // AND the cap is stated in the legend. Merely documenting the cap tells a reader the number is wrong
 // without telling them by how much, which does not let them size the worst frame. Recording it costs
 // one subtraction per frame, only when the log is on. Both, because they answer different halves.
+//
+// ── FRAME-GAP-1: SPLITTING `other`, WHICH IS WHERE THE TIME ACTUALLY WENT ───────────────────────
+//
+// THE DEFECT THIS EXISTS FOR. At 100 racers the owner's own log reads physics 2.6 ms, render 3.3,
+// camera 0.4 — six to eight milliseconds of a 16.7 ms frame — and 40 % of frames still take 33.3 ms.
+// Ten to twenty-eight milliseconds sit in `other`, and `other` is a SUBTRACTION (`rawDt - measured`),
+// not a measurement: it is the name of our ignorance, and it can be shortened by nothing we write.
+// Shrinking the browser WINDOW moved 90 % of frames back to 16.7 ms while the canvas backing store
+// stayed a constant 1280x720 — so the cost scales with window area and lives outside our JavaScript.
+//
+// TWO FIELDS SPLIT IT, and between them they separate "the browser was late to us" from "we were
+// slow once we had the frame":
+//
+//   `rafLate` — `performance.now()` at callback entry MINUS the timestamp rAF hands in. The rAF
+//     timestamp is the frame's nominal start; the gap to when our code actually begins is how long
+//     the browser spent on ITSELF first — style, layout, paint, compositing, other tasks. It is the
+//     part of the frame no faster draw code of ours can shorten. If `rafLate` accounts for most of
+//     `other`, the answer is not in our draw code and looking harder at it is wasted effort.
+//
+//   `longTasks` — a `PerformanceObserver` on `longtask`, counting the ≥50 ms blocks the browser
+//     knows about, with `attribution` where it provides it. See `startLongTaskObserver`.
+//
+// WHAT `rafLate` IS NOT. It is not "browser overhead per frame" in general: work the browser does
+// AFTER our callback returns — the composite of what we just drew — lands in the NEXT frame's
+// `rafLate`, not this one's. That is a real property of the measurement rather than a flaw, and it
+// is why the two must be read as a window rather than frame by frame.
 // ============================================================
 
 const RING_SIZE = 600; // 10 s at 60 fps
@@ -64,12 +90,78 @@ export function createPerfLog() {
       physAdvancedMs: 0, // physics-time advanced this frame = physSteps × FIXED_DT (ms)
       physAccum: 0, // st.physicsAccum after the catch-up loop (backlog, ms)
       capHit: 0, // 1 if the step cap was reached AND accum ≥ FIXED_DT remained (fell further behind)
+      // FRAME-GAP-1: how long the BROWSER was busy before it handed us this frame — see the header.
+      rafLate: 0,
     })),
     ringHead: 0,
     ringCount: 0,
     frameIdx: 0,
     spikes: [], // up to SPIKE_COUNT worst frames (sorted desc by total on demand)
+    // FRAME-GAP-1: long-task tally for the CURRENT ring window. `supported` is three-valued on
+    // purpose — an environment without the API must not look like an environment with no long tasks.
+    longTasks: { supported: null, count: 0, totalMs: 0, maxMs: 0, attribution: {} },
+    _longTaskObserver: null,
   };
+}
+
+/**
+ * FRAME-GAP-1 — start the long-task observer for this log, if the browser has one.
+ *
+ * WHY AN OBSERVER AND NOT A BRACKET. A long task is by definition work that ran when our rAF
+ * callback was NOT running, so no `performance.now()` pair of ours can measure it. The browser is
+ * the only thing that can see it, and `PerformanceObserver` is how it says so.
+ *
+ * `supported` is null / true / false, never a bare 0 count. "No long tasks" and "this browser cannot
+ * tell you about long tasks" are opposite conclusions, and reporting the second as the first is how
+ * a diagnosis talks itself out of the right answer (the brief asks for exactly this distinction).
+ *
+ * ZERO COST WHEN THE LOG IS OFF: nothing here runs unless `createPerfLog` was called, which the
+ * caller already guards on `enablePerfLog`.
+ *
+ * @param {object} log  from createPerfLog()
+ * @returns {object} the same log, for chaining
+ */
+export function startLongTaskObserver(log) {
+  if (!log) return log;
+  const PO = typeof PerformanceObserver !== 'undefined' ? PerformanceObserver : null;
+  const types = PO?.supportedEntryTypes;
+  if (!PO || !Array.isArray(types) || !types.includes('longtask')) {
+    log.longTasks.supported = false;
+    return log;
+  }
+  try {
+    const obs = new PO((list) => {
+      for (const e of list.getEntries()) {
+        log.longTasks.count++;
+        log.longTasks.totalMs += e.duration;
+        if (e.duration > log.longTasks.maxMs) log.longTasks.maxMs = e.duration;
+        // `attribution` is where the browser names WHAT was slow. Chrome fills it with a
+        // TaskAttributionTiming whose containerType/containerName say "this iframe" or "this script";
+        // most browsers leave it empty, which is why the key is a tally and not a promise.
+        for (const a of e.attribution ?? []) {
+          const key = `${a.containerType ?? 'unknown'}:${a.containerName || a.containerId || a.name || '—'}`;
+          log.longTasks.attribution[key] = (log.longTasks.attribution[key] ?? 0) + 1;
+        }
+      }
+    });
+    obs.observe({ entryTypes: ['longtask'] });
+    log._longTaskObserver = obs;
+    log.longTasks.supported = true;
+  } catch {
+    // Present in `supportedEntryTypes` and still refused: record the refusal, not a zero.
+    log.longTasks.supported = false;
+  }
+  return log;
+}
+
+/** Stop the observer. Safe to call when none was started. */
+export function stopLongTaskObserver(log) {
+  try {
+    log?._longTaskObserver?.disconnect();
+  } catch {
+    /* a disconnect that throws must not take the race down */
+  }
+  if (log) log._longTaskObserver = null;
 }
 
 /**
@@ -107,7 +199,8 @@ export function recordPerfFrame(
   physAdvancedMs = 0,
   physAccum = 0,
   capHit = 0,
-  rawDtUncapped = rawDt
+  rawDtUncapped = rawDt,
+  rafLate = 0
 ) {
   const physMs = tPhys - t0;
   const prepMs = tPreCam - tPhys;
@@ -133,6 +226,7 @@ export function recordPerfFrame(
   slot.physAdvancedMs = physAdvancedMs;
   slot.physAccum = physAccum;
   slot.capHit = capHit;
+  slot.rafLate = rafLate;
 
   log.ringHead = (log.ringHead + 1) % RING_SIZE;
   if (log.ringCount < RING_SIZE) log.ringCount++;
@@ -172,6 +266,8 @@ export function getPerfStats(log) {
   const prep = new Array(n);
   const camera = new Array(n);
   const render = new Array(n);
+  // FRAME-GAP-1: the browser's own head start on each frame, summarised like every other bracket.
+  const rafLate = new Array(n);
   const start = log.ringCount < RING_SIZE ? 0 : log.ringHead;
 
   for (let k = 0; k < n; k++) {
@@ -182,7 +278,9 @@ export function getPerfStats(log) {
     prep[k] = f.prep;
     camera[k] = f.camera;
     render[k] = f.render;
+    rafLate[k] = f.rafLate;
   }
+  rafLate.sort((a, b) => a - b);
   totals.sort((a, b) => a - b);
   uncapped.sort((a, b) => a - b);
   physics.sort((a, b) => a - b);
@@ -231,6 +329,23 @@ export function getPerfStats(log) {
       p90: pct(render, 90),
       p99: pct(render, 99),
       max: render[render.length - 1],
+    },
+    // FRAME-GAP-1. Read this against `other`: if they track each other, the frame is long because
+    // the browser was busy before it reached us, and our brackets are not where the time is.
+    rafLate: {
+      p50: pct(rafLate, 50),
+      p90: pct(rafLate, 90),
+      p99: pct(rafLate, 99),
+      max: rafLate[rafLate.length - 1],
+    },
+    // Not percentiles: a tally over the window, and `supported` is three-valued (null = the observer
+    // was never started, false = this browser has no long-task API, true = the counts below are real).
+    longTasks: {
+      supported: log.longTasks?.supported ?? null,
+      count: log.longTasks?.count ?? 0,
+      totalMs: log.longTasks?.totalMs ?? 0,
+      maxMs: log.longTasks?.maxMs ?? 0,
+      attribution: { ...(log.longTasks?.attribution ?? {}) },
     },
   };
 }
@@ -370,6 +485,8 @@ export function exportPerfLog(log, context = null) {
       physSteps: f.physSteps,
       physAccum: +f.physAccum.toFixed(2),
       capHit: f.capHit,
+      // FRAME-GAP-1: exported per frame, because the whole point is to read it BESIDE `other`.
+      rafLate: +(f.rafLate ?? 0).toFixed(2),
     });
   }
 
@@ -407,6 +524,20 @@ export function exportPerfLog(log, context = null) {
           'renderBuf lerp setup + raceState build + CameraDirector.update + hudState sync (ms)',
         render: 'all canvas drawing — world transform, track, racers, overlays, minimap (ms)',
         other: 'total - measured — GC pauses, scheduler jitter, GPU flush (ms)',
+        rafLate:
+          'FRAME-GAP-1. performance.now() at callback entry MINUS the timestamp rAF handed in ' +
+          '(ms) — how long the browser spent on ITSELF (style, layout, paint, composite, other ' +
+          'tasks) before it reached our code. THIS IS THE HALF OF `other` THAT NO CHANGE TO OUR ' +
+          'DRAW CODE CAN SHORTEN: read it against `other`, and if the two track each other the ' +
+          'frame is long because the browser was late, not because we were slow. Note the work the ' +
+          'browser does AFTER our callback returns — compositing what we just drew — lands in the ' +
+          'NEXT frame’s rafLate, so read these as a window, not frame by frame.',
+        longTasks:
+          'FRAME-GAP-1. Blocks of ≥50 ms the browser reports via PerformanceObserver, which is the ' +
+          'only thing that can see work running while our callback was NOT. `supported` is ' +
+          'three-valued ON PURPOSE — null = never started, false = this browser has no long-task ' +
+          'API, true = the counts are real. A browser that cannot report long tasks must never look ' +
+          'like a browser with none. `attribution` is filled only where the browser provides it.',
         sumCheck:
           'physics + prep + camera + render ≈ measured ≈ total (other should be small on smooth frames)',
         physMsPerRealSec:
