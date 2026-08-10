@@ -288,7 +288,21 @@ describe('A VISIBLE EDGE BETWEEN COLUMNS (START-BOARD-7)', () => {
     // UNDER the entries, which is what makes them furniture: every rect painted after the last rule
     // is a number chip, so nothing about an entry was drawn before the boundary it sits beside.
     const lastRuleIdx = Math.max(...drawn.map((r) => ctx.rects.indexOf(r)));
-    expect(ctx.rects.length - lastRuleIdx - 1, 'only the 100 chips come after').toBe(100);
+    // CEREMONY-OPENING-2 added ONE rect above the entries — the heading's hairline — so "everything
+    // after the last rule" is no longer "every chip" by construction. The claim is unchanged and is
+    // now stated against the entries' own band instead of against a raw count, which is what it
+    // always meant: nothing belonging to an ENTRY is painted before the rule it sits beside.
+    const after = ctx.rects.slice(lastRuleIdx + 1);
+    // The heading's hairline is a ONE-PIXEL rule; a number chip is a box. Separating them by height
+    // rather than by position says what actually distinguishes them.
+    const chips = after.filter((r) => r.h > 2);
+    const hairlines = after.filter((r) => r.h <= 2);
+    expect(chips.length, 'only the 100 chips come after').toBe(100);
+    expect(hairlines.length, 'and one heading rule, which is not part of an entry').toBe(1);
+    expect(
+      hairlines[0].y,
+      'the heading rule sits with the heading, above the entries'
+    ).toBeLessThan(Math.min(...chips.map((c) => c.y)));
   });
 
   // The spec was explicit, and it is worth a test rather than a promise.
@@ -667,7 +681,11 @@ describe('the portrait is the shipped drawing function, in its neutral pose', ()
     });
     const spriteX = drawRacer.mock.calls[0][1];
     const nameCall = ctx.textCalls.find((c) => c.t === racers[0].name);
-    const numCall = ctx.textCalls.find((c) => c.t === '1');
+    // CEREMONY-OPENING-2: the heading draws the FIELD COUNT as a bare number, which at a
+    // one-racer field is also '1'. The entry's number is the one on the entry's line — which is
+    // what this test always meant, and now has to say.
+    const nameY = ctx.textCalls.find((c) => c.t === racers[0].name).y;
+    const numCall = ctx.textCalls.find((c) => c.t === '1' && Math.abs(c.y - nameY) < 0.5);
     const rowCall = ctx.textCalls.find((c) => /^R\d+$/.test(c.t));
     expect(numCall.x).toBeLessThan(spriteX);
     expect(spriteX).toBeLessThan(rowCall.x);

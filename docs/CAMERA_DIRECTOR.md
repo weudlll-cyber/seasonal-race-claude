@@ -384,15 +384,21 @@ a verbatim transcript of one run on one commit, which is a historical record, no
 
 ### The tracking lag, as measured today — and it had drifted
 
-<!-- MEASURED: tracking-lag (median/p95 pp per state) @ 497a3dc8 2026-08-10 depends=client/src/modules/camera/ -->
+<!-- MEASURED: tracking-lag (median/p95 pp per state) @ ee28afe4 2026-08-10 depends=client/src/modules/camera/ -->
 
-**RE-STAMPED, NOT RE-MEASURED, at `497a3dc8` (POST-START-HOLD-UNIFY), and here is the reason.** That
-commit's only edit under `client/src/modules/camera/` is a COMMENT — four lines at the post-start
-hold saying what `postStartHoldMs` measures. The guard trips on a comment-only edit exactly as on a
-behaviour change, and says so in its own `blind` list; that is a deliberate design, not a bug, and
-the answer it asks for is a deliberate re-stamp with a stated reason rather than an edited date. The
-camera fingerprint was re-measured on that branch and did not move, which is the independent evidence
-that no figure below can have changed.
+**RE-MEASURED, NOT RE-STAMPED, for CEREMONY-OPENING-2 — and re-measuring was the only honest
+option.** That block lengthens the opening: the track's own beat goes from 1400 ms to 3000 and the
+starters' board no longer overlaps the push-in travel, so the ceremony runs 18.0 s against 14.4 at 40
+racers. A change to how long the camera spends before the gun is exactly the kind that could move
+these numbers, and no argument from a fingerprint could have settled it — the camera fingerprint
+moves in this block by design.
+
+**The verdict: every median and every p95 is unchanged to two decimals, and the frame counts moved by
+a handful** (BATTLE_ZOOM 9661 → 9668, COMEBACK_ZOOM 753 → 755, LEADER_ZOOM 17796 → 17788,
+LEAD_CHANGE 8090 → 8089, OVERVIEW 4304 → 4303). That is the expected shape: the ceremony is longer,
+so the 60-second race reaches its states a little differently, but the TRACKING behaviour inside each
+state is untouched. Worth having measured rather than assumed — it is the difference between knowing
+and expecting.
 
 **These figures carry a stamp, and fails if the camera
 changes after it.** They are hand-copied on purpose: the measurement takes about seven minutes, so
@@ -405,11 +411,11 @@ and it says so itself. It also covers nothing else on this page; see its header 
 
 | state         | frames | median pp | p95 pp |
 | ------------- | ------ | --------- | ------ |
-| BATTLE_ZOOM   | 9661   | 5.72      | 9.97   |
-| COMEBACK_ZOOM | 753    | 13.73     | 16.22  |
-| LEADER_ZOOM   | 17796  | 3.85      | 8.61   |
-| LEAD_CHANGE   | 8090   | 4.45      | 7.10   |
-| OVERVIEW      | 4304   | 2.65      | 16.00  |
+| BATTLE_ZOOM   | 9668   | 5.72      | 9.98   |
+| COMEBACK_ZOOM | 755    | 13.73     | 16.22  |
+| LEADER_ZOOM   | 17788  | 3.85      | 8.61   |
+| LEAD_CHANGE   | 8089   | 4.45      | 7.10   |
+| OVERVIEW      | 4303   | 2.65      | 16.00  |
 | PHOTO_FINISH  | 1865   | 6.37      | 20.73  |
 
 OVERVIEW median 2.65 pp against every other state pooled 4.64 pp (ratio 0.57×).

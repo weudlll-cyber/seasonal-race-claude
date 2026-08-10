@@ -37,11 +37,17 @@ import './CeremonyBrandCard.css';
 export default function CeremonyBrandCard({ brand, raceName, visible }) {
   if (!brand?.logo) return null;
   const title = raceName || brand.eventName || '';
+  // A profile whose subtitle repeats the race name prints the same words twice, one above the other.
+  // Seen immediately in the first browser run, on a perfectly ordinary profile.
+  const subtitle =
+    brand.subtitle && brand.subtitle.trim().toLowerCase() !== title.trim().toLowerCase()
+      ? brand.subtitle
+      : null;
   return (
     <div className={`ceremony-brand${visible ? ' ceremony-brand--in' : ''}`} aria-hidden="true">
       <img className="ceremony-brand__logo" src={brand.logo} alt="" />
       {title && <div className="ceremony-brand__title">{title}</div>}
-      {brand.subtitle && <div className="ceremony-brand__subtitle">{brand.subtitle}</div>}
+      {subtitle && <div className="ceremony-brand__subtitle">{subtitle}</div>}
     </div>
   );
 }

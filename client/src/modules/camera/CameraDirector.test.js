@@ -6867,7 +6867,15 @@ describe('the hold keeps the ceremony framing (CEREMONY-HOLD-TARGET-1)', () => {
    * frame after `update()`; returning `false` stops the drive.
    */
   function driveGun(cd, racers, frames, onFrame) {
-    for (let e = 0; e <= 4000; e += FRAME) cd.updateCountdown(racers, 1000 + e, e, CW, CH);
+    // CEREMONY-OPENING-2: drive to the schedule's OWN arrival point rather than to a magic 4000.
+    // That number was "past the push" only while the push ended at 1400 + 2000; the track's beat is
+    // 3000 ms now, so 4000 landed the camera mid-travel and `arrived` was not an arrived framing at
+    // all. Asking the schedule makes this helper immune to the next change of the beats — the same
+    // one-home rule the ceremony itself follows.
+    // One frame PAST it, not at it: the loop steps in whole frames, so landing exactly on the
+    // boundary leaves the easing a hair short of 1 and `arrived` a hair short of the target.
+    const untilMs = cd.ceremonySchedule(racers).pushEndMs + FRAME;
+    for (let e = 0; e <= untilMs; e += FRAME) cd.updateCountdown(racers, 1000 + e, e, CW, CH);
     const arrived = cd.zoom; // the framing the ceremony arrived at, before a single race frame
     let ts = 5000;
     let el = 0;

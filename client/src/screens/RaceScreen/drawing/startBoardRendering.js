@@ -410,11 +410,55 @@ export function drawStartBoard(
     ctx.fillRect(rule.x - ruleW / 2, rule.top, ruleW, rule.bottom - rule.top);
   }
 
+  // ── THE HEADING (CEREMONY-OPENING-2) ─────────────────────────────────────────────────────────
+  // The owner: *"the heading could be a little prettier, and the number of starters does not need to
+  // be the same size as the word."* It was one string — `STARTERS · 40` — drawn at one size, so the
+  // count carried the same weight as the word and the whole line read like a debug label.
+  //
+  // THE COUNT IS SUBORDINATE NOW, in three ways at once rather than by shrinking alone: smaller
+  // (12 px against 19), lighter (not bold), and dimmer (a muted white against the gold). It is a
+  // caption to the title, which is what it actually is — the title is what the screen IS, the count
+  // is a fact about this particular race.
+  //
+  // AND THE WORD IS GIVEN THE TREATMENT OF A TITLE: letter-spacing, which is the one typographic
+  // move that reads as ceremony rather than as chrome, and a hairline rule under the pair to seat it
+  // against the columns. Drawn CENTRED as one composed unit — the two strings are measured so the
+  // group is centred, not the title with the count hanging off it.
   ctx.textBaseline = 'middle';
-  ctx.textAlign = 'center';
-  ctx.font = `bold ${Math.round(17 * L.scale)}px sans-serif`;
+  ctx.textAlign = 'left';
+  const titleFont = Math.round(19 * L.scale);
+  const countFont = Math.round(12 * L.scale);
+  const title = 'STARTERS';
+  const count = String(entries.length);
+  // Canvas has no letter-spacing, so it is drawn character by character. At eight characters that is
+  // eight fillText calls once per frame the board is up — cheaper than the rule it draws under it.
+  const track = 3.2 * L.scale;
+  ctx.font = `bold ${titleFont}px sans-serif`;
+  const titleW = ctx.measureText(title).width + track * (title.length - 1);
+  ctx.font = `${countFont}px sans-serif`;
+  const countW = ctx.measureText(count).width;
+  const gap = 10 * L.scale;
+  let tx = canvasW / 2 - (titleW + gap + countW) / 2;
+  ctx.font = `bold ${titleFont}px sans-serif`;
   ctx.fillStyle = '#ffd700';
-  ctx.fillText(`STARTERS · ${entries.length}`, canvasW / 2, L.titleY);
+  for (const ch of title) {
+    ctx.fillText(ch, tx, L.titleY);
+    tx += ctx.measureText(ch).width + track;
+  }
+  tx += gap - track;
+  ctx.font = `${countFont}px sans-serif`;
+  ctx.fillStyle = 'rgba(255, 255, 255, 0.55)';
+  ctx.fillText(count, tx, L.titleY);
+  // The hairline: as wide as the composed heading and no wider, so it belongs to the words rather
+  // than to the panel.
+  ctx.fillStyle = 'rgba(255, 215, 0, 0.28)';
+  ctx.fillRect(
+    canvasW / 2 - (titleW + gap + countW) / 2,
+    Math.round(L.titleY + titleFont * 0.72),
+    titleW + gap + countW,
+    Math.max(1, Math.round(L.scale))
+  );
+  ctx.textAlign = 'center';
 
   const numberBox = NUMBER_BOX * L.scale;
   const spriteBox = SPRITE_BOX * L.scale;

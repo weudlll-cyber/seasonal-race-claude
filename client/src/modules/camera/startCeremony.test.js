@@ -22,6 +22,7 @@ import {
   boardDurationMs,
   boardAlphaAt,
   ceremonyTotalMs,
+  ceremonyScheduleFor,
 } from './startCeremony.js';
 import { fieldGuarantee } from './framingRule.js';
 import { projectionForTrack, REFERENCE_CANVAS_W, REFERENCE_CANVAS_H } from './projection.js';
@@ -210,18 +211,37 @@ describe('the ceremony always completes before the gun (START-CEREMONY-CAMERA-1)
 
   // WHAT BREAKS IF DELETED: the countdown's length. It is the SUM now, and nothing else defines it.
   // WHAT GOES UNNOTICED: a gun that fires before the ceremony finishes, or long after it.
-  it('the countdown FOLLOWS the beats: totalMs is their sum, and the board adds its own hold', () => {
-    // A board shorter than the push needs no hold at all — a small field is not made longer.
+  //
+  // ── RE-DERIVED BY CEREMONY-OPENING-2 ────────────────────────────────────────────────────────────
+  // IT ASSERTED: `boardHoldMs` was 0 when the board was shorter than the push and `board - push`
+  // when it was longer — i.e. the board started during the travel and only held for what it still
+  // needed afterwards. The equivalent statement under the new order is that the board contributes
+  // ALL of itself, whatever the push is, because it no longer starts until the travel is over.
+  //
+  // ONE HALF OF THE OLD TEST HAS NO EQUIVALENT AND IS NOT SILENTLY DROPPED: "a small field is not
+  // made longer" was a property OF the coupling, and removing the coupling removes it. A small field
+  // IS now made longer, by exactly the board's length, and that is the deliberate price of giving
+  // the track a beat of its own. It is asserted below rather than left unstated — the cost of a
+  // change belongs in the suite just as much as its benefit.
+  it('the countdown FOLLOWS the beats: totalMs is their sum, and the board contributes all of itself', () => {
+    // A board SHORTER than the push no longer hides inside it: it costs its own 1500 ms.
     const small = ceremonySchedule(1400, 2000, 600, 1500);
-    expect(small.boardHoldMs).toBe(0);
-    expect(small.totalMs).toBe(4000);
-    // A board longer than the push holds the camera still for the difference.
+    expect(small.boardMs).toBe(1500);
+    expect(small.totalMs).toBe(1400 + 2000 + 1500 + 600);
+    // A board LONGER than the push costs all of itself too — there is no difference-taking left.
     const big = ceremonySchedule(1400, 2000, 600, 8000);
-    expect(big.boardHoldMs).toBe(6000);
-    expect(big.totalMs).toBe(10000);
+    expect(big.boardMs).toBe(8000);
+    expect(big.totalMs).toBe(1400 + 2000 + 8000 + 600);
+    // THE PRICE, stated: the same small field under the old coupling totalled 4000 ms, because 1500
+    // of board fitted inside 2000 of push and cost nothing. It is 5500 now.
+    expect(small.totalMs).toBe(5500);
     // and the push itself is untouched in both — the camera's rhythm is never stretched
     expect(small.pushMs).toBe(2000);
     expect(big.pushMs).toBe(2000);
+    // THE COUPLING IS GONE, asserted directly so it cannot come back by accident: the board's start
+    // depends on the push's LENGTH (it follows it) but its DURATION does not.
+    expect(ceremonySchedule(1400, 5000, 600, 1500).boardMs).toBe(1500);
+    expect(ceremonySchedule(1400, 0, 600, 1500).boardMs).toBe(1500);
   });
 
   it('has arrived at the target by the gun, for every schedule', () => {
@@ -360,6 +380,10 @@ describe('the easing curves and their settings (START-CEREMONY-CAMERA-1)', () =>
     // START-BOARD-2 added two more to the same duplication, so they join the same guard.
     expect(t.startBoardFloorMs).toBe(DEFAULT_CAMERA_CONFIG.startBoardFloorMs);
     expect(t.startBoardMsPerName).toBe(DEFAULT_CAMERA_CONFIG.startBoardMsPerName);
+    // CEREMONY-OPENING-2 adds the brand card, and this test EARNED its place the moment the venue
+    // default moved: it failed on the mirror in cameraTimingComputation.js that still said 1400
+    // while defaults.js said 3000. That is the whole reason the duplication is allowed to exist.
+    expect(t.ceremonyBrandMs).toBe(DEFAULT_CAMERA_CONFIG.ceremonyBrandMs);
   });
 });
 
@@ -422,7 +446,15 @@ describe('the board gets its own duration, and the countdown follows it', () => 
     );
   });
 
-  it('the totals are what the report states: 5.0 s at 8 and 20, 5.2 s at 40, 10.0 s at 100', () => {
+  // ── RE-DERIVED BY CEREMONY-OPENING-2 ──────────────────────────────────────────────────────────
+  // IT ASSERTED: START-BOARD-2's published totals — 5.0 s at 8 and 20, 5.2 s at 40, 10.0 s at 100 —
+  // under the coupling, where the board's first 2000 ms were free because they ran under the push.
+  // The equivalent statement is the same four field sizes with the board paid for in full, and the
+  // CONTENT it was really pinning is untouched: which term of `max(floor, perName x n)` binds where.
+  // The floor binds at 8 and 20 (identical totals), the per-name term binds from 40 up.
+  // WHAT IT NOW CATCHES: the board's arithmetic silently changing — a floor that stopped scaling
+  // would still look right at 8 and fail at 100, which is the field the owner reported on.
+  it('the totals, with the board paid for in full: 7.0 s at 8 and 20, 7.2 s at 40, 12.0 s at 100', () => {
     const cfg = {
       ceremonyVenueMs: 1400,
       ceremonyPushMs: 2000,
@@ -435,10 +467,14 @@ describe('the board gets its own duration, and the countdown follows it', () => 
       // the shipped ceremony. It describes a four-beat ceremony, and now it says so.
       countdownDigitsMs: 0,
     };
-    expect(ceremonyTotalMs(cfg, 8)).toBe(5000);
-    expect(ceremonyTotalMs(cfg, 20)).toBe(5000);
-    expect(ceremonyTotalMs(cfg, 40)).toBe(5200);
-    expect(ceremonyTotalMs(cfg, 100)).toBe(10000);
+    expect(ceremonyTotalMs(cfg, 8)).toBe(7000);
+    expect(ceremonyTotalMs(cfg, 20)).toBe(7000);
+    expect(ceremonyTotalMs(cfg, 40)).toBe(7200);
+    expect(ceremonyTotalMs(cfg, 100)).toBe(12000);
+    // The shape, asserted rather than left to the numbers: the floor binds while the field is small
+    // and the per-name term takes over, which is the only thing this arithmetic is for.
+    expect(ceremonyTotalMs(cfg, 8)).toBe(ceremonyTotalMs(cfg, 20));
+    expect(ceremonyTotalMs(cfg, 100) - ceremonyTotalMs(cfg, 40)).toBe(80 * 100 - 80 * 40);
   });
 
   // WHAT BREAKS IF DELETED: the sum. `countdownDigitsMs` is a WINDOW and the one thing it must never
@@ -448,16 +484,22 @@ describe('the board gets its own duration, and the countdown follows it', () => 
   it('the digits window ADDS to the total, and never caps a beat', () => {
     const base = { ceremonyVenueMs: 1400, ceremonyPushMs: 2000, ceremonySettledMs: 4000 };
     const cfg = { ...base, startBoardFloorMs: 6000, startBoardMsPerName: 120 };
-    // 1400 + 2000 + (6000 - 2000) + 4000 = 11400 without digits…
-    expect(ceremonyTotalMs({ ...cfg, countdownDigitsMs: 0 }, 8)).toBe(11400);
-    // …and exactly the window more with them.
-    expect(ceremonyTotalMs({ ...cfg, countdownDigitsMs: 3000 }, 8)).toBe(14400);
+    // CEREMONY-OPENING-2: 1400 + 2000 + 6000 + 4000 = 13400 without digits — the board's full 6000
+    // now, where it used to contribute 6000 - 2000.
+    expect(ceremonyTotalMs({ ...cfg, countdownDigitsMs: 0 }, 8)).toBe(13400);
+    // …and exactly the window more with them. THE CLAIM IS THE DIFFERENCE, not the absolute.
+    expect(ceremonyTotalMs({ ...cfg, countdownDigitsMs: 3000 }, 8)).toBe(16400);
+    expect(
+      ceremonyTotalMs({ ...cfg, countdownDigitsMs: 3000 }, 8) -
+        ceremonyTotalMs({ ...cfg, countdownDigitsMs: 0 }, 8)
+    ).toBe(3000);
     // At 100 the board's per-name term binds instead of the floor: 120 x 100 = 12000.
-    expect(ceremonyTotalMs({ ...cfg, countdownDigitsMs: 3000 }, 100)).toBe(20400);
+    expect(ceremonyTotalMs({ ...cfg, countdownDigitsMs: 3000 }, 100)).toBe(22400);
     // Every other beat is untouched by the window — no scaling factor is left in this file.
+    // `boardHoldMs` is gone with the coupling; `boardMs` and `boardStartMs` are what must not move.
     const withDigits = ceremonySchedule(1400, 2000, 4000, 6000, 3000);
     const without = ceremonySchedule(1400, 2000, 4000, 6000, 0);
-    for (const k of ['venueMs', 'pushMs', 'boardHoldMs', 'settledMs', 'boardEndMs']) {
+    for (const k of ['venueMs', 'pushMs', 'boardMs', 'settledMs', 'boardStartMs', 'boardEndMs']) {
       expect(withDigits[k], k).toBe(without[k]);
     }
   });
@@ -475,14 +517,11 @@ describe('the board gets its own duration, and the countdown follows it', () => 
     for (const n of [8, 40, 100]) {
       const racers = Array.from({ length: n }, (_, i) => ({ index: i, x: i, y: 0, t: 0 }));
       const fromDirector = cd.ceremonySchedule(racers);
-      // …exactly how renderRaceFrame assembles it, from the same config.
-      const fromRenderer = ceremonySchedule(
-        cfg.ceremonyVenueMs,
-        cfg.ceremonyPushMs,
-        cfg.ceremonySettledMs,
-        boardDurationMs(n, cfg.startBoardFloorMs, cfg.startBoardMsPerName),
-        cfg.countdownDigitsMs
-      );
+      // CEREMONY-OPENING-2: exactly how renderRaceFrame assembles it — which is now ONE CALL, and
+      // that is the point. This used to write the five arguments out by hand, which is the same
+      // shape as the defect the test exists for: two assemblies of one schedule, free to disagree.
+      // Calling the shared assembler is the stronger check, because it is literally what ships.
+      const fromRenderer = ceremonyScheduleFor(cfg, n, false);
       expect(fromDirector.totalMs, `total at n=${n}`).toBe(fromRenderer.totalMs);
       expect(fromDirector.countdownStartMs, `digit window opens at n=${n}`).toBe(
         fromRenderer.countdownStartMs
@@ -492,6 +531,18 @@ describe('the board gets its own duration, and the countdown follows it', () => 
         cfg.countdownDigitsMs
       );
       expect(fromDirector.totalMs - fromDirector.countdownStartMs).toBeGreaterThan(0);
+      // THE NEW WAY THEY COULD DISAGREE (CEREMONY-OPENING-1): the brand beat. The director is TOLD
+      // whether there is a brand; the renderer INFERS it from the card it was handed. If those two
+      // answers ever came apart, the gun would fire at one time and the board would be scheduled for
+      // another — the same class of defect as the missing digit window, in a new place.
+      cd.setCeremonyBrandActive(true);
+      const brandedDirector = cd.ceremonySchedule(racers);
+      const brandedRenderer = ceremonyScheduleFor(cfg, n, true);
+      expect(brandedDirector.totalMs, `branded total at n=${n}`).toBe(brandedRenderer.totalMs);
+      expect(brandedDirector.boardStartMs).toBe(brandedRenderer.boardStartMs);
+      // and the brand beat is worth exactly its setting, on top of the unbranded ceremony
+      expect(brandedDirector.totalMs - fromDirector.totalMs).toBe(cfg.ceremonyBrandMs);
+      cd.setCeremonyBrandActive(false);
     }
   });
 
@@ -499,9 +550,12 @@ describe('the board gets its own duration, and the countdown follows it', () => 
   // WHAT GOES UNNOTICED: the digits creeping back over the searching time, which is the exact state
   // this block was built to leave behind.
   it('the digits start only after the searching time, and the count still ends at the gun', () => {
+    // CEREMONY-OPENING-2: the board now STARTS at 3400 (when the push ends) and runs its full 6000,
+    // so it is gone at 9400 rather than 7400. The RELATIONS below are the content and are unchanged.
     const sch = ceremonySchedule(1400, 2000, 4000, 6000, 3000);
-    expect(sch.boardEndMs).toBe(7400); // the board is gone…
-    expect(sch.countdownStartMs).toBe(11400); // …4000 ms before the first digit
+    expect(sch.boardStartMs).toBe(3400); // …only once the camera has arrived…
+    expect(sch.boardEndMs).toBe(9400); // …the board is gone…
+    expect(sch.countdownStartMs).toBe(13400); // …4000 ms before the first digit
     expect(sch.countdownStartMs - sch.boardEndMs).toBe(sch.settledMs);
     expect(sch.totalMs - sch.countdownStartMs).toBe(sch.countdownMs);
   });

@@ -1639,13 +1639,16 @@ export default function RaceScreen() {
           {/* CEREMONY-OPENING-1: the opening card, and the logo that must step aside for the board.
               The logo is unmounted rather than hidden while the board stands — it is an `<img>` with
               its own opacity, and leaving it up at zero would still put it in the compositor over
-              the names it was covering. It returns the moment the board goes. */}
+              the names it was covering. It returns the moment the board goes.
+              It is also away during the CARD, which the first browser run made obvious: the card
+              shows the same logo at ten times the size, and the corner copy beside it read as a
+              duplicate rather than as branding. */}
           <CeremonyBrandCard
             brand={activeBrand?.logo ? activeBrand : null}
             raceName={raceData?.eventName ?? null}
             visible={ceremonyBrandUp}
           />
-          {!ceremonyBoardUp && <BrandLogoOverlay />}
+          {!ceremonyBoardUp && !ceremonyBrandUp && <BrandLogoOverlay />}
         </div>
 
         <aside className="race-hud">
