@@ -98,6 +98,21 @@ the Dev Screen toggle and the `renderRaceFrame` hook. The branch was deleted at 
   may be promising a corridor the viewer cannot see. Start here rather than from scratch — see
   [DEAD-ENDS.md](DEAD-ENDS.md) §K.
 
+### RENDER-SAMPLER-CEREMONY — the instrument follows the ceremony again (2026-08-11)
+
+**RENDER moves and the product does not.** The render fingerprint sampled the start ceremony at five
+typed milliseconds, and CEREMONY-OPENING moved the starters board past the last of them: the board,
+the settled beat and the countdown digits were outside the hash. The points are DERIVED from the
+schedule now, one per beat. **CAMERA, WORLD and WORLD-OFF were re-measured on the same tree and none
+of them moved** — that is the acceptance, not a footnote, because an instrument that starts seeing
+more must not move anything it was already seeing. Values live in
+[fingerprints.json](fingerprints.json).
+
+- `pre/ship-render-sampler-ceremony` (`be0105f6`, 2026-08-11) — master immediately BEFORE the ship.
+  Reset here to restore the five fixed countdown sample points and a render hash that cannot see the
+  starters board, its heading, the settled beat or the digits. Proven rather than asserted: the
+  board heading changed under those points is byte-identical.
+
 ### CEREMONY-OPENING — the race opens on the brand, then on the track (2026-08-11)
 
 One strand, one merge commit. **The opening was re-ordered and it is the owner's own shape**: the
