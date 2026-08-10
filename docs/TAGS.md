@@ -98,6 +98,23 @@ the Dev Screen toggle and the `renderRaceFrame` hook. The branch was deleted at 
   may be promising a corridor the viewer cannot see. Start here rather than from scratch — see
   [DEAD-ENDS.md](DEAD-ENDS.md) §K.
 
+### SHIP-THE-NIGHT — the pair loop culls, and the decisive phase starts later (2026-08-10)
+
+Eight branches, one merge commit. **WORLD unchanged through two engine changes** — the pair-loop
+deduplication and the two-axis cull — on all ten per-track values, separately and merged, which is
+the correctness proof for a cull rather than a side note. **CAMERA and RENDER moved** with
+`outcomePhaseThreshold` 0.65 → 0.75. Values live in [fingerprints.json](fingerprints.json).
+
+- `pre/ship-the-night` (`24d1ed2c`, 2026-08-10) — master immediately BEFORE the ship. Reset here to
+  restore the 0.65 decisive phase and the unculled pair loop.
+- `v-ship-the-night` (`a4cb669a`, 2026-08-10) — **the ship.** The race costs about 20 % less to
+  compute (fixed-work measurement: the world fingerprint's own ten-track run, 128.3 s against
+  160.4 s), and the camera treats the last quarter of the leader's run as decisive instead of the
+  last third. See [../reports/night/PAIR-PREFILTER-1.md](../reports/night/PAIR-PREFILTER-1.md) and
+  [../reports/night/OUTCOME-PHASE-75.md](../reports/night/OUTCOME-PHASE-75.md).
+  **The owner's eye is still owed on the 0.75 change** — he chose the value, but has not yet seen it
+  run; `pre/ship-the-night` is the one-command way back if he does not like it.
+
 ### SHIP-ROUTING — the maintenance strand, and the router it replaced (2026-08-09)
 
 Documentation and tooling only: nothing under `client/` moved, and **all four fingerprints were

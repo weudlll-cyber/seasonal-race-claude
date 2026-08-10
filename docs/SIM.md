@@ -878,6 +878,14 @@ returns the `7c70b1eae7d31e22` print. Baseline metrics: [reports/evolution/FAIR-
 subsections below are accreting history — their fingerprints were current on their date; this block is the
 current print.**
 
+**The ON hash did NOT move at SHIP-THE-NIGHT (2026-08-10, `a4cb669a`), and that is the entry worth
+making**: two engine changes landed in the pair loop at once — a deduplication and a two-axis cull
+that skips 96.6 % of pairs at 100 racers — and the hash held on all ten per-track values, separately
+and merged. **For a cull, the unchanged world IS the correctness proof**, not a side note: it is what
+establishes that every skipped pair was one both gates would have rejected. The same ship moved the
+CAMERA and RENDER prints (`outcomePhaseThreshold` 0.65 → 0.75); both are in
+[fingerprints.json](fingerprints.json) with their lineage.
+
 ### CLI race-length inputs
 
 The sim takes the **same two operator inputs the browser takes**, so any browser race is
