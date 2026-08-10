@@ -1116,13 +1116,15 @@ function CameraAdvancedSection() {
             min={0.5}
             max={0.95}
             step={0.05}
-            value={config.outcomePhaseThreshold ?? 0.75}
+            value={
+              config.outcomePhaseThreshold ?? DEFAULT_CAMERA_CONFIG.outcomePhaseThreshold
+            }
             onChange={(e) => {
               const v = parseFloat(e.target.value);
               if (v >= 0.5 && v <= 0.95) set('outcomePhaseThreshold', v);
             }}
-            display={`${((config.outcomePhaseThreshold ?? 0.75) * 100).toFixed(0)}%`}
-            tip="Leader progress from which COMEBACK is considered active internally (independent of the external isOutcomePhase flag). Default 65%."
+            display={`${((config.outcomePhaseThreshold ?? DEFAULT_CAMERA_CONFIG.outcomePhaseThreshold) * 100).toFixed(0)}%`}
+            tip={`Leader progress from which COMEBACK is considered active internally (independent of the external isOutcomePhase flag). Default ${(DEFAULT_CAMERA_CONFIG.outcomePhaseThreshold * 100).toFixed(0)}%.`}
           />
           <SliderRow
             label="Min. starting gap"

@@ -394,20 +394,33 @@ and it says so itself. It also covers nothing else on this page; see its header 
 
 | state         | frames | median pp | p95 pp |
 | ------------- | ------ | --------- | ------ |
-| BATTLE_ZOOM   | 9655   | 5.72      | 9.99   |
-| COMEBACK_ZOOM | 2103   | 8.34      | 15.57  |
-| LEADER_ZOOM   | 17522  | 3.77      | 8.62   |
-| LEAD_CHANGE   | 7069   | 4.45      | 7.17   |
-| OVERVIEW      | 4303   | 2.60      | 16.00  |
+| BATTLE_ZOOM   | 9661   | 5.72      | 9.97   |
+| COMEBACK_ZOOM | 753    | 13.73     | 16.22  |
+| LEADER_ZOOM   | 17796  | 3.85      | 8.61   |
+| LEAD_CHANGE   | 8090   | 4.45      | 7.10   |
+| OVERVIEW      | 4304   | 2.65      | 16.00  |
 | PHOTO_FINISH  | 1865   | 6.37      | 20.73  |
 
-OVERVIEW median 2.60 pp against every other state pooled 4.74 pp (ratio 0.55×).
+OVERVIEW median 2.65 pp against every other state pooled 4.64 pp (ratio 0.57×).
 
-**Re-measured for CEREMONY-HANDOVER-1, and two of these moved for a reason worth naming.** OVERVIEW's
-frame count fell from 5199 to 3603 and LEADER's median lag from 4.46 to 3.92 pp. Neither is a
-tracking change: the start ceremony and the field guarantee that now carries past the gun changed
-what the camera is DOING in those early seconds, so the same 60 s of race divides differently between
-the states. The lag itself is, if anything, slightly better.
+**Re-measured for OUTCOME-PHASE-75, and COMEBACK_ZOOM moved so far that re-stamping would have been
+wrong.** Its frame count fell from **2103 to 753** and its median lag rose from **8.34 to 13.73 pp**.
+That is the threshold change doing exactly what it says: the decisive phase now opens at 0.75 of the
+leader's run instead of 0.65, so COMEBACK is eligible for a shorter window and the shots it does win
+are later, faster ones — a climb resolving at speed is a harder subject to track than one caught
+early, which is why the lag inside the state is worse while every other state is unchanged. **The
+camera is not tracking worse; it is spending that state on a harder subject and much less often.**
+LEAD_CHANGE picks up most of the freed frames (7069 → 8090).
+
+Two earlier movements are kept here because they explain the rest of the table. Re-measured for
+CEREMONY-HANDOVER-1: OVERVIEW's frame count fell from 5199 to 3603 and LEADER's median lag from 4.46
+to 3.92 pp — the start ceremony and the field guarantee that carries past the gun changed what the
+camera is DOING in those early seconds, so the same 60 s divides differently between the states.
+
+**The lesson this table keeps teaching: a frame COUNT here is an occupancy measurement, not a
+tracking one.** Three of the four times these numbers have moved, what changed was how long the
+camera spends in a state, not how well it follows. Read the counts and the medians as two different
+findings.
 
 **Re-measured for MIN-RACERS-5, and this time it is NOT a ceremony-length change.** Raising
 `minRacersVisible` 3 → 5 widens the shot on the frames where the company guarantee binds, and the
@@ -515,9 +528,14 @@ time-constant defaults**, with the reason for each attached to the assertion.
   forward bias moves it.
 - **`targetInnerFramePct`** is live but has no Dev Screen control, against the project's
   everything-is-UI-configurable principle.
-- **Three code fallbacks disagree with the shipped defaults** (`outcomePhaseThreshold` 0.75 vs 0.65,
-  `comebackMinStartGap` 0.4 vs 0.25, `comebackMaxCurrentRankPct` 0.1 vs 0.2). Only a bare-config
-  caller sees the fallbacks, so this is latent rather than active.
+- **Two code fallbacks disagree with the shipped defaults** (`comebackMinStartGap`,
+  `comebackMaxCurrentRankPct`). Only a bare-config caller sees a fallback, so this is latent rather
+  than active. The values are not stated here — `scripts/check-fallback-agreement.mjs` holds both
+  sides of every one of them, and it is the guard that fails when a new one appears.
+  **`outcomePhaseThreshold` left this list on 2026-08-10** (OUTCOME-PHASE-75): the owner decided the
+  value, and its three sites then stopped copying it — two read the default, and the diagnostic HUD
+  carries no fallback at all. That is the shape the other two should follow, and it is why the fix
+  is not "align the literal".
 - **`START_PHASE_DURATION = 3000`** is a constant, not a control, and CAMERA-TAGS-1 measured it about
   five seconds short of when the field actually spreads.
 

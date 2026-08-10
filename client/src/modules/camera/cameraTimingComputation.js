@@ -295,7 +295,8 @@ export function computeTimingFromConfig(config) {
   const comebackWindowSec = config?.comebackWindowSec ?? DEFAULT_CAMERA_CONFIG.comebackWindowSec;
   const comebackMinDuration =
     config?.comebackMinDuration ?? DEFAULT_CAMERA_CONFIG.comebackMinDuration;
-  const outcomePhaseThreshold = config?.outcomePhaseThreshold ?? 0.75;
+  const outcomePhaseThreshold =
+    config?.outcomePhaseThreshold ?? DEFAULT_CAMERA_CONFIG.outcomePhaseThreshold;
   const comebackMinStartGap = config?.comebackMinStartGap ?? 0.4;
   const comebackMaxCurrentRankPct = config?.comebackMaxCurrentRankPct ?? 0.1;
   // Override COMEBACK_ZOOM minStateHold when explicitly configured.

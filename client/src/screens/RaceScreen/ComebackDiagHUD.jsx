@@ -75,7 +75,14 @@ export default function ComebackDiagHUD({ cameraRef, racersRef, visible }) {
         </span>{' '}
         <span style={{ color: '#666' }}>
           ({(diag.leaderProgress ?? 0).toFixed(2)} /{' '}
-          {(diag.outcomePhaseThreshold ?? 0.75).toFixed(2)})
+          {/* OUTCOME-PHASE-75: the threshold is shown ONLY when the director actually has one.
+              This used to be `?? 0.75`, a literal copy of a default that has since moved — so the
+              panel would have stated a number the camera was not running and looked authoritative
+              doing it. A dash is the honest reading of "the director has not computed one". */}
+          {Number.isFinite(diag.outcomePhaseThreshold)
+            ? diag.outcomePhaseThreshold.toFixed(2)
+            : '—'}
+          )
         </span>
       </div>
       <div

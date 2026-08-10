@@ -227,34 +227,23 @@ export const EXCEPTIONS = [
     ),
   ),
   // ── TIER 4: camera. Visible, but they cannot move the race. ───────────────────────────────────
-  ...[
-    [
-      "client/src/modules/camera/cameraTimingComputation.js",
-      "outcomePhaseThreshold",
-      0.65,
-      0.75,
-    ],
-    [
-      "client/src/screens/DevScreen/sections/CameraAdvancedSection.jsx",
-      "outcomePhaseThreshold",
-      0.65,
-      0.75,
-    ],
-    [
-      "client/src/screens/RaceScreen/ComebackDiagHUD.jsx",
-      "outcomePhaseThreshold",
-      0.65,
-      0.75,
-    ],
-  ].map(([file, k, d, f]) =>
-    D(
-      file,
-      k,
-      d,
-      f,
-      "LIVE in ComebackDiagHUD.jsx, UNFIREABLE in the other two (FALLBACK-42-TRIAGE). `getComebackDiagData` never puts `outcomePhaseThreshold` into the diag object, so the HUD's `?? 0.75` fires on EVERY render: the HUD states 0.75 while the director runs the config's 0.65. It is the one entry on this list that is a live defect rather than a decision. The other two read a loader-resolved config, so their `?? 0.75` cannot fire — stale text, not behaviour. The owner decision on the NUMBER stands (0.65 vs 0.75 shapes the final phase); the HUD is a bug fix that does not need it.",
-    ),
-  ),
+  //
+  // THE THREE `outcomePhaseThreshold` ENTRIES ARE GONE, 2026-08-10 (OUTCOME-PHASE-75), and not by
+  // aligning a number so the guard would go quiet. The owner decided the value — 0.65 -> 0.75, the
+  // later and sharper end of the question he was asked — and the three sites then stopped COPYING
+  // it: the resolver and the Dev Screen control read the default (L207), and the diagnostic HUD
+  // carries no fallback at all, rendering what the director computed or a dash. A key with no copy
+  // of its default cannot disagree with it, so there is nothing left here to except.
+  //
+  // ONE CORRECTION TO THE RECORD, because the reason that stood here was wrong and it was load
+  // bearing: it said "`getComebackDiagData` never puts `outcomePhaseThreshold` into the diag
+  // object, so the HUD's `?? 0.75` fires on EVERY render". It does put it in — the key is written
+  // unconditionally into the returned object literal in `CameraDirectorDiag.js`, and
+  // `_outcomePhaseThreshold` is assigned by `_computeTimingConfig`, which runs from the
+  // constructor. The HUD's fallback was therefore UNFIREABLE like the other two, and the HUD was
+  // showing the director's real value all along. The defect was real but smaller and differently
+  // shaped: three copies of a default, one of which sat in the panel you would read while judging
+  // the very number it copied.
   ...[
     [
       "client/src/modules/camera/cameraTimingComputation.js",

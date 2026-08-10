@@ -4742,10 +4742,58 @@ describe('getComebackDiagData — outcomePhaseThreshold / leaderProgress / isOut
     expect(diag.outcomePhaseThreshold).toBeCloseTo(0.6, 3);
   });
 
-  it('default outcomePhaseThreshold is 0.75', () => {
+  it('with no config, the diag reports the SHIPPED DEFAULT — read, not copied', () => {
+    // OUTCOME-PHASE-75: this assertion used to be a literal `0.75`, which is LESSONS L207 wearing a
+    // test's clothes. It passed for the wrong reason — the resolver's own stale `?? 0.75` fallback,
+    // not the shipped default, which was 0.65 — and it would have gone red on the commit that made
+    // the DEFAULT correct, the cheapest way out of which is to un-fix the default. Reading the
+    // default means this test can never again object to the default changing.
     const cd = new CameraDirector(1280, 720, false);
     const diag = cd.getComebackDiagData([], 0);
-    expect(diag.outcomePhaseThreshold).toBeCloseTo(0.75, 3);
+    expect(diag.outcomePhaseThreshold).toBeCloseTo(
+      DEFAULT_CAMERA_CONFIG.outcomePhaseThreshold,
+      6
+    );
+  });
+
+  it('THE HUD SHOWS WHAT THE DIRECTOR IS RUNNING — the diag threshold IS the gate threshold', () => {
+    // The one test the diagnostic chain was missing. ComebackDiagHUD renders
+    // `diag.outcomePhaseThreshold` beside `diag.leaderProgress` and calls the pair a "phase gate".
+    // For that panel to be worth reading, the number it prints must be the number
+    // `_internalOutcomePhase` compares against — not a copy that happens to agree.
+    //
+    // Checked at a NON-DEFAULT value on purpose: at the default, a stale copy and the real value
+    // agree and the test would pass while proving nothing.
+    const threshold = 0.42;
+    const cd = new CameraDirector(1280, 720, false, { outcomePhaseThreshold: threshold });
+    const racers = [makeRacer(0.45, 0), makeRacer(0.3, 1), makeRacer(0.1, 2)];
+    cd.update(
+      racers,
+      1000,
+      { raceElapsed: 5000, finishedCount: 0, winner: null, finishT: 1.0 },
+      1280,
+      720
+    );
+    const diag = cd.getComebackDiagData(racers, 1000);
+    // (a) the panel states the director's own value, to the bit
+    expect(diag.outcomePhaseThreshold).toBe(cd._outcomePhaseThreshold);
+    expect(diag.outcomePhaseThreshold).toBe(threshold);
+    // (b) and the verdict it draws from it agrees with the gate the director applies:
+    //     leaderProgress 0.45 > 0.42, so the phase gate reads open.
+    expect(diag.leaderProgress).toBeCloseTo(0.45, 6);
+    expect(diag.isOutcomePhaseActive).toBe(true);
+  });
+
+  it('the diag invents NO threshold when the director has none (the HUD renders a dash)', () => {
+    // The fallback that used to sit in getComebackDiagData was a second authority on a number the
+    // director owns. With it gone, an object that never computed a threshold reports `undefined`
+    // rather than a plausible-looking figure — and `progress > undefined` is false, which is
+    // exactly what the director's own gate would do with the same state.
+    const cd = new CameraDirector(1280, 720, false);
+    cd._outcomePhaseThreshold = undefined;
+    const diag = cd.getComebackDiagData([], 0);
+    expect(diag.outcomePhaseThreshold).toBeUndefined();
+    expect(diag.isOutcomePhaseActive).toBe(false);
   });
 
   it('leaderProgress is 0 before first update()', () => {

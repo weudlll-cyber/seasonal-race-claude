@@ -305,7 +305,16 @@ export const DEFAULT_CAMERA_CONFIG = {
   comebackMinDuration: 3, // seconds camera stays on the comeback racer (1–5)
   // Outcome-phase threshold: leader progress at which COMEBACK becomes eligible internally,
   // independently of the external isOutcomePhase flag from RaceScreen.
-  outcomePhaseThreshold: 0.65,
+  //
+  // OUTCOME-PHASE-75 (2026-08-10) — the OWNER'S CHOICE. Asked from what leader progress the camera
+  // should treat the race as its decisive phase, he chose the later, sharper end. The decisive
+  // phase is now the last quarter of the leader's run instead of the last third: COMEBACK becomes
+  // eligible later, so the shot it wins is a climb that is still resolving rather than one that
+  // resolved a while ago. It also moved this key OFF the fallback-disagreement list — three files
+  // carried a stale 0.75 while this said 0.65, and all three now READ this value rather than
+  // copying it (LESSONS L207), so the slider, the diagnostic HUD and the game cannot disagree
+  // again whatever it is set to next.
+  outcomePhaseThreshold: 0.75,
   // COMEBACK start-rank filter: racer must have been at least this far back (as fraction of
   // field) at the start of the observation window. Prevents triggering for racers already
   // near the front. E.g. 0.40 = must have been in the bottom 60% of the field.
