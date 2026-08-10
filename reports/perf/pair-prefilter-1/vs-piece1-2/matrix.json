@@ -1,0 +1,130 @@
+{
+ "tool": "phys-bench-matrix.mjs",
+ "version": "PHYS-BENCH-1",
+ "track": "searound",
+ "seed": 5601,
+ "steps": 3000,
+ "warmup": 300,
+ "order": "size",
+ "only": [
+  "field"
+ ],
+ "trees": {
+  "chain": "C:\\Users\\weudl\\OneDrive\\Dokumente\\Seasonal race claude",
+  "master": "C:/ra-wt-bench"
+ },
+ "node": "v24.14.0",
+ "platform": "win32-x64",
+ "wallSec": 43.9,
+ "rows": [
+  {
+   "tree": "chain",
+   "label": "field-A-chain-n30",
+   "racers": 30,
+   "roster": "current",
+   "stepped": 3000,
+   "p50": 0.1631,
+   "p90": 0.5182,
+   "firstFifthP50": 0.2052,
+   "lastFifthP50": 0.1436,
+   "wallSec": 1.1
+  },
+  {
+   "tree": "master",
+   "label": "field-B-master-n30",
+   "racers": 30,
+   "roster": "current",
+   "stepped": 3000,
+   "p50": 0.2231,
+   "p90": 0.6371,
+   "firstFifthP50": 0.2623,
+   "lastFifthP50": 0.1814,
+   "wallSec": 1.4
+  },
+  {
+   "tree": "chain",
+   "label": "field-A2-chain-n30",
+   "racers": 30,
+   "roster": "current",
+   "stepped": 3000,
+   "p50": 0.2074,
+   "p90": 0.6415,
+   "firstFifthP50": 0.3001,
+   "lastFifthP50": 0.1691,
+   "wallSec": 1.4
+  },
+  {
+   "tree": "chain",
+   "label": "field-A-chain-n70",
+   "racers": 70,
+   "roster": "current",
+   "stepped": 3000,
+   "p50": 1.4478,
+   "p90": 2.423,
+   "firstFifthP50": 0.9678,
+   "lastFifthP50": 1.9855,
+   "wallSec": 6
+  },
+  {
+   "tree": "master",
+   "label": "field-B-master-n70",
+   "racers": 70,
+   "roster": "current",
+   "stepped": 3000,
+   "p50": 0.8624,
+   "p90": 2.2251,
+   "firstFifthP50": 0.7719,
+   "lastFifthP50": 1.9706,
+   "wallSec": 4.2
+  },
+  {
+   "tree": "chain",
+   "label": "field-A2-chain-n70",
+   "racers": 70,
+   "roster": "current",
+   "stepped": 3000,
+   "p50": 0.8252,
+   "p90": 2.0858,
+   "firstFifthP50": 0.7052,
+   "lastFifthP50": 1.5823,
+   "wallSec": 4
+  },
+  {
+   "tree": "chain",
+   "label": "field-A-chain-n100",
+   "racers": 100,
+   "roster": "current",
+   "stepped": 3000,
+   "p50": 1.9071,
+   "p90": 4.3028,
+   "firstFifthP50": 1.2312,
+   "lastFifthP50": 2.7604,
+   "wallSec": 8
+  },
+  {
+   "tree": "master",
+   "label": "field-B-master-n100",
+   "racers": 100,
+   "roster": "current",
+   "stepped": 3000,
+   "p50": 2.2984,
+   "p90": 4.7698,
+   "firstFifthP50": 1.2411,
+   "lastFifthP50": 3.4842,
+   "wallSec": 9.1
+  },
+  {
+   "tree": "chain",
+   "label": "field-A2-chain-n100",
+   "racers": 100,
+   "roster": "current",
+   "stepped": 3000,
+   "p50": 2.1803,
+   "p90": 4.3991,
+   "firstFifthP50": 1.2606,
+   "lastFifthP50": 3.0568,
+   "wallSec": 8.8
+  }
+ ],
+ "profiles": []
+}
