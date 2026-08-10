@@ -328,6 +328,14 @@ export const DEFAULT_CAMERA_CONFIG = {
   leadChangeDebounceMs: 800, // ms the new leader must hold before change is confirmed
   leadChangeMinDuration: 1.5, // seconds camera stays in LEAD_CHANGE state (1–5)
   // Timing tunables (global — not per-state)
+  // A DURATION, measured from the END of the 3 s start overview — so the hold ends at
+  // 3000 + this value, and at 7000 that is 10 s after the gun. Stated this precisely because the
+  // key used to be read a second time, in `racePlanner.js`, as an ABSOLUTE time from zero; the two
+  // readings differed by exactly the 3 s nobody wrote down. The planner's reading is gone
+  // (POST-START-HOLD-UNIFY) and this is now the only one, but the ambiguity the name still carries
+  // — from the gun, or from the end of the overview? — is answered here rather than left to be
+  // re-derived. The key is deliberately NOT renamed: the camera loader rebuilds the live config key
+  // by key from these defaults, so a rename would silently discard the owner's stored value.
   postStartHoldMs: 7000, // ms of forced LEADER after the 3s start phase (no BATTLE before 10s total)
   battleCooldownMs: 8000, // ms after leaving BATTLE before it can re-trigger
   comebackCooldownMs: 10000, // ms after leaving COMEBACK before it can re-trigger

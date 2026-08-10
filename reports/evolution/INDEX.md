@@ -75,6 +75,29 @@ and [FAIRNESS.md](../../docs/FAIRNESS.md). Shipped world: **`dc4647be0f55ebdb`**
 
 ## Camera / presentation fixes
 
+- [POST-START-HOLD-UNIFY.md](POST-START-HOLD-UNIFY.md) — **THERE WERE NEVER TWO CLOCKS. THERE WAS ONE
+  CLOCK AND ONE DEAD PARAMETER** (branch `feat/post-start-hold-unify` off `feat/canvas-scale-1`; not
+  merged; **WORLD `dc4647be0f55ebdb` unchanged**). His decision was to unify, and the constraint was
+  that the planner sits inside the engine so unifying could pick a different winner. **It could not,
+  because the planner's clock was never wired**: `config.postStartHoldMs ?? 0` resolved to 0 on every
+  race ever run — **none of the five callers of `createRacePlan` passes that key** (raceCore,
+  sim-fairness, goldenRunner, both diag harnesses), so the floor `Math.max(0, x)` has never bound.
+  **THE CORRECT MEANING IS THE CAMERA'S** — a DURATION added to the 3 s overview, so the hold ends at
+  3000 + the value — and every independent statement of the key says so (the `+` in CameraDirector,
+  the defaults comment, the tooltip, CAMERA_DIRECTOR.md); the planner's absolute-from-zero reading
+  had no support and was **3000 ms wrong on its own terms**. **BUILT: the dead reading is removed** —
+  byte-identical for every duration, track and seed by construction, and re-measured to say so.
+  **MEASURED ANYWAY, because he may still want it wired properly**: a floor at 3000+7000 = 10000 ms
+  would make the world **`792299983c98d25d`**, binding on **6 of 10 tracks** (it binds whenever a race
+  finishes under **66.7 s**) and changing the outcome on **5** — space-sprint's boundary moves a full
+  second and its outcome hash does not, which is why this was measured rather than argued. That is a
+  REBASELINE and it is his. **A FALSE CLAIM CORRECTED**: `check-fallback-agreement.mjs` justified its
+  exception with "raceCore sets postStartHoldMs in the plan config" — it does not; entry removed, and
+  the worklist got shorter by being worked. **NOT RENAMED, with a reason**: the camera loader rebuilds
+  the config key by key, so a rename silently discards his stored value; instead all three sites now
+  state what the key measures. Two tests changed rather than deleted — the floor test is **inverted**
+  into "the planner does not read a camera key".
+
 - [CANVAS-SCALE-1.md](CANVAS-SCALE-1.md) — **THE DRAWING SURFACE GETS A SIZE CONTROL, AND THE
   MEASUREMENT DISAGREES WITH THE HOPE** (branch `feat/canvas-scale-1` off `f69f66fb`; **not merged,
   nothing minted, his eye pending**). **THE CANVAS HAS NEVER BEEN DPR-AWARE**: `devicePixelRatio`

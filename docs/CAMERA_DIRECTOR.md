@@ -101,7 +101,10 @@ Evaluated in strict order on every `_transition()`:
 2. **Pre-line photo-finish entry**, a once-only latch evaluated in `update()` and consumed here.
 3. **Start phase** (`raceElapsed < 3000 ms`) → OVERVIEW.
 4. **Post-start hold** (`+ postStartHoldMs`) → LEADER_ZOOM, so BATTLE cannot fire on the natural
-   clustering at the gun.
+   clustering at the gun. The `+` is the whole point: it is a DURATION added to the 3 s overview
+   above, not a time from the gun, so the hold ends at 3000 ms plus the value. This is the only
+   place that key is read — the race planner read it too, as an absolute time, until
+   POST-START-HOLD-UNIFY removed that reading.
 5. **Endgame** (`leaderProgress > endgameThreshold`) → LEADER_ZOOM, with LEAD_CHANGE allowed
    through — a lead swap near the line is the most dramatic moment there is.
 6. **The weighted pool** — every eligible candidate, one weighted draw.

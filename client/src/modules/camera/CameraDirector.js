@@ -1218,6 +1218,10 @@ export class CameraDirector {
     }
     // Priority 2.1: Post-start hold — force LEADER for postStartHoldMs after start phase.
     // Prevents BATTLE from firing on natural cluster gaps at race start.
+    // THE ONLY READER of that key, and the one whose meaning is authoritative: it is a DURATION
+    // added to the 3 s overview, so the hold ends at START_PHASE_DURATION + the value. It was not
+    // the only reader until POST-START-HOLD-UNIFY — `racePlanner.js` read the same key as an
+    // absolute time from zero, 3000 ms adrift of this, on a floor no caller ever fed.
     else if (raceState.raceElapsed < START_PHASE_DURATION + this._postStartHoldMs) {
       return {
         nextState: CAM_STATE.LEADER_ZOOM,

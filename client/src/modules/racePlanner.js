@@ -227,10 +227,26 @@ export function createRacePlan(racers, finishT, targetDurationMs, config = {}, s
   }
   const pulkRacerIds = shuffled.slice(0, 3).map((r) => r.index);
 
-  // Absolute phase boundaries in ms
-  const postStartHoldMs = config.postStartHoldMs ?? 0;
+  // Absolute phase boundaries in ms.
+  //
+  // POST-START-HOLD-UNIFY: this used to read `config.postStartHoldMs` and take
+  // `Math.max(postStartHoldMs, …)` as a floor on pulkStart. It is gone, and the reason it can go
+  // without moving the race is that IT NEVER RAN: no caller of `createRacePlan` anywhere in the
+  // repository passes that key — not `raceCore.js`, not `sim-fairness.mjs`, not `goldenRunner.mjs`,
+  // not either diag harness — so `?? 0` always resolved to 0 and `Math.max(0, x)` is `x` for every
+  // x this expression can produce. The removal is byte-identical by construction, and the world
+  // fingerprint was re-measured to say so rather than to be reasoned about.
+  //
+  // WHY IT IS A REMOVAL AND NOT A REPAIR. `postStartHoldMs` is a CAMERA key with a camera meaning:
+  // how long the director holds LEADER_ZOOM after the 3 s start overview, so the hold ends at
+  // 3000 + the value. Read here as an absolute floor from zero it meant something else — the
+  // earliest the PULK phase may begin — and was 3000 ms out even on its own terms. Wiring it
+  // correctly (a floor of 3000 + 7000 = 10000 ms) MOVES THE RACE: it binds on six of the ten
+  // fingerprint tracks and changes the outcome on five of them. That is a rebaseline decision and
+  // it belongs to the owner, so this file states the question instead of deciding it. The measured
+  // numbers are in reports/evolution/POST-START-HOLD-UNIFY.md.
   const phases = {
-    pulkStart: Math.max(postStartHoldMs, phaseFractions.pulkStart * targetDurationMs),
+    pulkStart: phaseFractions.pulkStart * targetDurationMs,
     pulkEnd: phaseFractions.pulkEnd * targetDurationMs,
     transEnd: phaseFractions.transitionEnd * targetDurationMs, // areaBonusMult fade boundary
     corrStart: phaseFractions.corridorStart * targetDurationMs, // P-controller start (OUTCOME begin)
@@ -396,8 +412,9 @@ export function createTrajectoryController(racePlan) {
 
   // Phase-boundary FRACTIONS [0,1] for the leader-progress phase clock.
   // Single-source: derived from the same absolute ms boundaries used by the elapsedMs path
-  // (no second copy of pulkStart/corridorStart) — keeps both clocks in lock-step, including
-  // any postStartHold offset baked into pulkStart.
+  // (no second copy of pulkStart/corridorStart) — keeps both clocks in lock-step.
+  // This line used to end "including any postStartHold offset baked into pulkStart". There is no
+  // such offset any more (POST-START-HOLD-UNIFY), so the derivation is the only thing it defends.
   const _dur = plan._targetDurationMs > 0 ? plan._targetDurationMs : 1;
   const pulkStartFrac = pulkStart / _dur;
   const pulkEndFrac = pulkEnd / _dur;
