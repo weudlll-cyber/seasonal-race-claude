@@ -8,6 +8,29 @@ report here could be orphaned, or an index link could dangle, with nothing notic
 `node scripts/check-index.mjs --dir=reports/night --index=reports/night/INDEX.md` now checks both
 directions.
 
+- [STANDINGS-SAMPLER-LOADMODE.md](STANDINGS-SAMPLER-LOADMODE.md) — **three pieces; two shipped, one
+  is an honest map** (2026-08-11). **(1) The two-layer standings become a RULE with a guard behind
+  it** — `docs/STANDINGS-ARCHITECTURE.md` states it, `check-standings-invariant.mjs` makes it bind,
+  in two halves because neither alone is enough: a card that displays its place needs a rank PROP,
+  and a mounted harness only sees what it is handed, so the measurement would stay green while the
+  architecture was gone. Both sabotages went red — the place put back on the card in 5 ms, the
+  positioner made to write text with **959 `childList` records**. The panel's composition was
+  EXTRACTED (`index.jsx` 1726 → 1691) because a guard that re-declares the arrangement cannot notice
+  the arrangement changing. **(2) The render sampler follows the ceremony again** — five typed
+  milliseconds topped out at 4900 while the starters board had moved to 5000–11000, so the board,
+  the settled beat and the digits were outside the instrument. The points are derived from
+  `ceremonyScheduleFor` now, one per beat at its midpoint plus one in the board's fade, and the
+  marker carries the BEAT so a beat that stops being sampled moves the hash. Proven both ways: the
+  heading changed is **byte-identical** under the old points and **moves** under the new ones. RENDER
+  minted fresh, no `--cheap`; **CAMERA, WORLD and WORLD-OFF re-measured on the same tree and all
+  three unchanged**. **(3) The `TrackEditor.loadmode` timeout is NOT where it was looked for** —
+  verify's spawn, cwd and env are all exonerated by a faithful 4/4 repro and by a **bare whole-suite
+  run that reproduces the slowdown identically**; the discriminator is one-file (1112 ms) versus
+  whole-suite (4213–9839 ms) against vitest's 5000 ms default, worst sample 3136 ms. Same family as
+  CI-AUDIT-GREEN-1. **Stopped rather than fixed**, per the brief, because the only remedy inside the
+  file is the one it forbids. Found on the way, reproducible and unrecorded: **a lowercase drive
+  letter in `cwd` makes vitest fail 198 of 201 suites with "failed to find the runner"** — the case
+  is everything, the slashes are irrelevant, and the message names nothing about paths.
 - [DOC-AUDIT-2.md](DOC-AUDIT-2.md) — the living documents in one pass. **The machine-checkable half
   is already green and stays green** (config claims 0, fingerprint copies 0, dangling links 0, index
   both directions 0), so what is left is what a guard cannot see — and all six findings are the same
