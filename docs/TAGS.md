@@ -112,6 +112,12 @@ more must not move anything it was already seeing. Values live in
   Reset here to restore the five fixed countdown sample points and a render hash that cannot see the
   starters board, its heading, the settled beat or the digits. Proven rather than asserted: the
   board heading changed under those points is byte-identical.
+- `v-ship-render-sampler-ceremony` (`9cee5875`, 2026-08-11) — **the ship.** The countdown points
+  come from `ceremonyScheduleFor`, one per beat at its midpoint, plus a second inside the board's
+  fade; the brand is turned on in the harness so the BRAND beat exists to be sampled at all. Five
+  countdown frames per track become seven, and the marker carries the BEAT rather than a
+  millisecond, so a beat that stops being sampled moves the hash instead of going quiet. What it
+  still cannot see is named in the harness: the brand CARD and the corner logo are DOM.
 
 ### CEREMONY-OPENING — the race opens on the brand, then on the track (2026-08-11)
 
