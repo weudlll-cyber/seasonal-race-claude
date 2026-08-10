@@ -75,6 +75,26 @@ and [FAIRNESS.md](../../docs/FAIRNESS.md). Shipped world: **`dc4647be0f55ebdb`**
 
 ## Camera / presentation fixes
 
+- [FRAME-GAP-2.md](FRAME-GAP-2.md) — **PRODUCTION REPRODUCED THE 33 ms FRAME, AND IT IS THE PAGE
+  AROUND THE CANVAS** (branch `feat/frame-gap-2` off `860f3a05`; **diagnosis only, no source file
+  changed, React untouched**; all four fingerprints re-run and unchanged). FRAME-GAP-1 could not make
+  a 33 ms frame and therefore could not locate one; **the dev-bundle doubt was worth testing and it
+  paid.** In a minified production build, page shown, large window: **`total` p90 33.4 ms with
+  `rafLate` p90 13.2 ms** — exactly one missed vsync, with the time spent before our code ran — and
+  the same batch with the page hidden: **16.8 ms, `rafLate` 0.8**. **THE SECOND FINDING CORRECTS
+  FRAME-GAP-1**: in production the DOM's cost **scales with window area** — at the small window it is
+  **zero** (0.7–0.8 vs 0.6) — while the dev bundle charged a flat ~2.3 ms at BOTH sizes and so masked
+  the area-dependent part. FRAME-GAP-1 demoted arm A on both counts; **both were dev artefacts**.
+  **The distribution is the finding**: A-off is stable at 0.6–0.8 everywhere, A-on at the large window
+  runs 1.0 … 3.5 with a tail to 7.1, 7.2 and 13.2 — the page does not add a fixed cost, it adds a RISK
+  of a large one. Honest limit: **1 event in ~19 arms, not his sustained 40 %**, so the mode is
+  reproduced and its rate is not; a "first arm after a fresh page build" hypothesis was tested and
+  **refuted** (2.0 / 2.2 / 1.5). Also measured: **the dev bundle costs a third of physics** (p50
+  3.4 → 2.2–2.6), and his own reported 2.6 ms is the PRODUCTION number. **Not separated**: the arm
+  hides the standings list and the 6144×4096 background layer together — that split is the next
+  measurement, and it is his call. 5173 left on `feat/frame-gap-1` with the instrument.
+
+
 - [FRAME-GAP-1.md](FRAME-GAP-1.md) — **`other` IS SPLITTABLE NOW, AND THE SPLIT SAYS THE 29 ms ARE NOT
   WHERE WE LOOKED** (branch `feat/frame-gap-1` off `570a8505`; **diagnosis only, nothing fixed**; all
   four fingerprints unchanged and engine-reach clears all four changed paths). **A NEGATIVE RESULT,
