@@ -6,6 +6,17 @@ and [FAIRNESS.md](../../docs/FAIRNESS.md). Shipped world: **`dc4647be0f55ebdb`**
 
 ## Ships
 
+- [SHIP-THE-NIGHT.md](SHIP-THE-NIGHT.md) — **the pair loop culls, and the decisive phase starts
+  later** (2026-08-10, merge `a4cb669a`, mint `1d575759`, tag `v-ship-the-night`, return point
+  `pre/ship-the-night`). Eight branches, one merge commit. **The race costs about 20 % less to
+  compute** — a two-axis field bound skips pairs neither avoidance gate could act on, and the WORLD
+  fingerprint is byte-identical on all ten per-track values through TWO engine changes, which for a
+  cull is the correctness proof rather than a footnote. **The decisive phase now begins at 75 % of
+  the leader's run instead of 65 %**, his own choice, so CAMERA and RENDER moved and are minted.
+  Also: 259 fallbacks read their default instead of copying it, 41 of 42 fallback disagreements
+  proven unfireable, the living-doc audit, and the routing gap that turned master red. **His eye is
+  still owed on the 0.75 change**, and the record says so. `phys-bench` could not resolve either
+  engine change and the report says so rather than quoting it — its own control reads +9–14 %.
 - [SHIP-CONFIG.md](SHIP-CONFIG.md) — **a stored config holds what he CHOSE** (2026-08-09, merge
   `fff64bc9`, tag `v-ship-config`, return point `pre/ship-config`). One strand, 17 files: only what
   differs from the default is stored, plus a one-time prune of what his browser already holds — a
