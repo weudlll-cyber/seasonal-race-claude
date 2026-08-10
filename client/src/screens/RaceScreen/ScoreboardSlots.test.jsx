@@ -26,7 +26,7 @@ const badges = (container) => [...container.querySelectorAll('.sb-rank')];
 describe('ScoreboardSlots — the places, and their colours', () => {
   it('crowns first place and numbers the rest, once per racer in the field', () => {
     const { container } = render(<ScoreboardSlots count={5} />);
-    expect(badges(container).map((b) => b.textContent)).toEqual(['👑', '#2', '#3', '#4', '#5']);
+    expect(badges(container).map((b) => b.textContent)).toEqual(['👑', '2', '3', '4', '5']);
   });
 
   it('colours the first THREE places and nothing below — gold, SILVER, bronze', () => {
@@ -58,7 +58,7 @@ describe('ScoreboardSlots — the places, and their colours', () => {
     const { container } = render(<ScoreboardSlots count={140} />);
     const b = badges(container);
     expect(b).toHaveLength(140);
-    expect(b.at(-1).textContent).toBe('#140');
+    expect(b.at(-1).textContent).toBe('140');
   });
 });
 
@@ -85,6 +85,6 @@ describe('ScoreboardSlots — drawn ONCE, which is the point of the layer', () =
     expect(container.querySelectorAll('.sb-rank')).toHaveLength(4);
     rerender(<ScoreboardSlots count={6} />);
     expect(container.querySelectorAll('.sb-rank')).toHaveLength(6);
-    expect(badges(container).at(-1).textContent).toBe('#6');
+    expect(badges(container).at(-1).textContent).toBe('6');
   });
 });

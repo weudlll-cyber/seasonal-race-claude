@@ -41,14 +41,16 @@ describe('ScoreboardCard — inert while the race runs', () => {
     // component that is not memoised at all. The probe is a getter on the identity — if `memo`
     // skips, the component body never runs, so the getter is never read. Shallow prop comparison
     // touches the REFERENCE only, so the getter cannot fire during the comparison itself.
+    // The probe is on `name` rather than on `icon`: SHIP-THE-STANDINGS took the icon off the card,
+    // so a getter there would never fire and this test would pass against anything at all.
     let reads = 0;
     const id = {
       index: 3,
-      name: 'Thunderbolt',
+      icon: '🏇',
       raceNumber: 7,
-      get icon() {
+      get name() {
         reads++;
-        return '🏇';
+        return 'Thunderbolt';
       },
     };
     const { rerender } = render(
@@ -84,9 +86,14 @@ describe('ScoreboardCard — inert while the race runs', () => {
       <ScoreboardCard identity={identity()} finished={false} finishTimeMs={null} attach={noop} />
     );
     expect(container.querySelector('.sb-rank')).toBeNull();
-    expect(container.textContent).not.toMatch(/#\d/);
     expect(container.textContent).not.toContain('👑');
-    // ...and the column the badge is drawn in is still RESERVED, or the icon would sit under it.
+    // The ONLY digits a card may carry are its race number, which is racer-bound and never moves.
+    // Anything else numeric here would be a place, and a place would repaint on every overtake.
+    const digitsOutsideTheNumber = container.textContent
+      .replace(container.querySelector('.sb-number').textContent, '')
+      .match(/\d/g);
+    expect(digitsOutsideTheNumber).toBeNull();
+    // ...and the column the badge is drawn in is still RESERVED, or the name would sit under it.
     expect(container.querySelector('.sb-badge-spacer')).toBeTruthy();
   });
 
@@ -136,8 +143,11 @@ describe('ScoreboardCard — the markup is the one it replaced', () => {
     expect(container.querySelector('.sb-finish-time')).toBeTruthy();
   });
 
-  it('shows the icon and the name it was given', () => {
-    render(
+  it('shows the name it was given, and NO racer icon', () => {
+    // SHIP-THE-STANDINGS: the icon left the row. Every racer in a race is the same type, so a
+    // hundred rows repeated one picture; it is said once in the panel header now. Asserted here
+    // because putting it back is a 27 px regression that no other test would notice.
+    const { container } = render(
       <ScoreboardCard
         identity={identity({ icon: '🐬', name: 'Seabiscuit' })}
         finished={false}
@@ -145,7 +155,8 @@ describe('ScoreboardCard — the markup is the one it replaced', () => {
         attach={noop}
       />
     );
-    expect(screen.getByText('🐬')).toBeTruthy();
     expect(screen.getByText(/Seabiscuit/)).toBeTruthy();
+    expect(container.querySelector('.sb-icon')).toBeNull();
+    expect(container.textContent).not.toContain('🐬');
   });
 });

@@ -1,5 +1,5 @@
 // ============================================================
-// scoreboard-parity.test.mjs — SCOREBOARD-SLOT-LAYER
+// scoreboard-parity.test.mjs — SCOREBOARD-SLOT-LAYER, extended by SHIP-THE-STANDINGS
 //
 // Run: node --test scripts/scoreboard-parity.test.mjs
 //
@@ -27,13 +27,13 @@
 //
 // IT CAN SEE: which racer is drawn at which y; that the ys are one pitch apart and a permutation, so
 // no two cards can overlap and no slot can be empty; every badge's text and colour; the card's own
-// text colour; the icon, the start number and the name on every card; and the finish time appearing
-// on exactly the racers that have finished. It sees them at EVERY cadence tick of a race that runs
-// to its end, not at a chosen moment.
+// text colour; the start number and the name on every card; and the finish time appearing on exactly
+// the racers that have finished. It sees them at EVERY cadence tick of a race that runs to its end,
+// not at a chosen moment.
 //
 // IT CANNOT SEE ANYTHING THAT REQUIRES LAYOUT. Neither node nor jsdom measures text, so nothing here
 // can prove the two layers line up on screen, that 35.333 is still the pitch, that the badge column
-// is wide enough for `#100`, or that a long name still ellipsises. Those are font metrics from a
+// is wide enough for `100`, or that a long name still ellipsises. Those are font metrics from a
 // real browser. What this file does instead is pin the CSS INPUTS each measured constant depends on,
 // so a change to the padding, the margin, the positioning or the badge width fails here and asks for
 // a re-measurement. That is the most a source-level check can honestly offer, and the browser
@@ -71,7 +71,7 @@ const {
   ROW_PITCH_PX,
   RANK_PALETTE,
   badgeWidthPx,
-  BADGE_MIN_WIDTH_PX,
+  CROWN_WIDTH_PX,
   cardTextColor,
   rankBorderColor,
   rankLabel,
@@ -116,7 +116,6 @@ function slotAt(rank) {
  */
 const drawnOld = (row, i) => ({
   index: row.index,
-  icon: row.icon,
   name: row.name,
   raceNumber: row.raceNumber ?? null,
   badge: rankLabel(i + 1),
@@ -186,7 +185,6 @@ runRace(race, identity, DEFAULT_CAMERA_CONFIG, ({ st }) => {
             index,
             y: yOf(el),
             textColor: el.style.color,
-            icon: id.icon,
             name: id.name,
             raceNumber: id.raceNumber,
             finished: !!r.finished,
@@ -225,7 +223,6 @@ test("WHAT IS DRAWN matches the old list, position for position, every tick of a
       assert.deepEqual(
         {
           index: card.index,
-          icon: card.icon,
           name: card.name,
           raceNumber: card.raceNumber,
           badge: slot.label,
@@ -303,14 +300,18 @@ test("the badge column is ONE width, taken from the widest place the field can p
   // The owner's second defect: the column was a hard 28 px, sized for two digits, and `#100` spills
   // out of its rounded box. The width must therefore grow with the field — and must NOT grow per
   // row, or the two layers would stop lining up.
-  assert.equal(badgeWidthPx(8), BADGE_MIN_WIDTH_PX, "a small field must be untouched");
-  assert.equal(badgeWidthPx(9), BADGE_MIN_WIDTH_PX);
-  assert.equal(badgeWidthPx(40), 32, "two digits need more than the 28 px column");
-  assert.equal(badgeWidthPx(99), 32);
-  assert.equal(badgeWidthPx(100), 40, "`#100` is why this exists");
-  assert.equal(badgeWidthPx(140), 40, "140 racers is still three digits — same column");
-  assert.equal(badgeWidthPx(999), 40);
-  assert.equal(badgeWidthPx(1000), 47);
+  // SHIP-THE-STANDINGS: the `#` is gone and the figures are tabular, so a label's width is a pure
+  // function of its LENGTH and these numbers are the widest label each field can actually produce —
+  // not the widest of a digit class. The crown sets the floor below three digits.
+  assert.equal(badgeWidthPx(8), 24, "a one-digit field is sized by its CROWN, not by `9`");
+  assert.equal(badgeWidthPx(9), 24);
+  assert.equal(badgeWidthPx(40), 24, "two digits still fit inside the crown's width");
+  assert.equal(badgeWidthPx(99), 24);
+  assert.equal(badgeWidthPx(100), 31, "`100` is what the list really shows");
+  assert.equal(badgeWidthPx(140), 31, "140 racers is still three digits — same column");
+  assert.equal(badgeWidthPx(999), 31);
+  assert.equal(badgeWidthPx(1000), 39);
+  assert.ok(badgeWidthPx(100) >= Math.ceil(CROWN_WIDTH_PX), "the crown must fit at every field size");
   // Monotone, so a bigger field can never get a narrower column.
   for (let n = 1; n < 400; n++) {
     assert.ok(badgeWidthPx(n + 1) >= badgeWidthPx(n), `width went backwards at ${n}`);
@@ -341,7 +342,7 @@ test("the CSS the measured constants depend on has not moved", () => {
   assert.match(shared, /position:\s*absolute/, "the rows are back in flow — the transform now overlaps them");
   assert.match(
     shared,
-    /grid-template-columns:\s*var\(--sb-badge-w[^)]*\) 22px 1fr auto/,
+    /grid-template-columns:\s*var\(--sb-badge-w[^)]*\) 1fr auto/,
     "the two layers no longer declare the SAME grid — the badge would drift out of the card's gap",
   );
   assert.match(
@@ -363,6 +364,12 @@ test("the CSS the measured constants depend on has not moved", () => {
   assert.match(shared2, /line-height:\s*1\.5/);
   assert.match(shared2, /padding:\s*1px 3px/);
   assert.match(shared2, /border:\s*1px solid/);
+  assert.match(
+    shared2,
+    /font-variant-numeric:\s*tabular-nums/,
+    "the badge lost its tabular figures — a label's width stops being a function of its LENGTH and " +
+      "`badgeWidthPx` can no longer be the widest label the field produces",
+  );
   assert.match(
     block(".sb-badge-spacer::before {"),
     /content:\s*'\\00a0'/,
@@ -388,8 +395,19 @@ test("the panel is bounded by the window and scrolls, so the last row is reachab
     "the rows viewport stopped scrolling — the last row becomes unreachable",
   );
   assert.match(
-    block(".scoreboard-scroll {"),
+    block(".scoreboard-viewport {"),
     /min-height:\s*0/,
     "without `min-height: 0` a flex item refuses to shrink and the cap does nothing",
+  );
+  // SHIP-THE-STANDINGS: the scrollbar must not take a column from the names.
+  assert.match(
+    block(".scoreboard-scroll {"),
+    /scrollbar-width:\s*none/,
+    "the native scrollbar is back — it takes ~10 px of layout width from a 210 px panel",
+  );
+  assert.match(
+    block(".scoreboard-scrollbar {"),
+    /position:\s*absolute/,
+    "the overlay scrollbar went back into the flow and is taking width again",
   );
 });

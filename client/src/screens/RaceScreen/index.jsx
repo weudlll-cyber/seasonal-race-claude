@@ -20,6 +20,7 @@ import { getBackgroundImage } from '../../modules/track-effects/bgImageCache.js'
 import { emitBurst } from './drawing/particleRendering.js';
 import { ScoreboardCard } from './ScoreboardCard.jsx';
 import { ScoreboardSlots } from './ScoreboardSlots.jsx';
+import ScoreboardViewport from './ScoreboardViewport.jsx';
 import { ROW_PITCH_PX, badgeWidthPx } from './scoreboardLayout.js';
 import { createScoreboardPositions } from './scoreboardPositions.js';
 import { lerp, lerpAngle } from '../../utils/mathUtils.js';
@@ -186,6 +187,10 @@ export default function RaceScreen() {
   // a second to produce one changed `transform` per card. The ranking is applied through the
   // positioner below, straight onto the DOM. See scoreboardPositions.js for why.
   const [scoreboardCards, setScoreboardCards] = useState([]);
+  // SHIP-THE-STANDINGS: the racer type's glyph, for the panel header. Race-constant, so it is set
+  // once at race init and never touched again — it is the icon the rows used to repeat a hundred
+  // times. Null until a race is built, and the header simply omits it then.
+  const [rosterIcon, setRosterIcon] = useState(null);
   const scoreboardPositionsRef = useRef(null);
   // Stable for the life of the component, so a card's ref callback never re-runs for a new identity.
   const attachScoreboardCard = useCallback(
@@ -718,6 +723,10 @@ export default function RaceScreen() {
         { index: r.index, icon: r.icon, name: r.name, raceNumber: r.raceNumber ?? null },
       ])
     );
+    // SHIP-THE-STANDINGS: one glyph for the whole panel. `trackEmoji` is the racer type's own emoji
+    // and is what every row carried; the first racer's icon is the fallback for a type without one,
+    // which is exactly what the rows displayed.
+    setRosterIcon(trackEmoji ?? g.current.racers[0]?.icon ?? null);
     // SCOREBOARD-SLOT-LAYER: one positioner per race. It is created BEFORE the cards are handed to
     // React and seeded with the starting ranking below, so every card is positioned by its own
     // `attach` the moment it mounts rather than sitting at the top of the list until the first tick.
@@ -1604,17 +1613,24 @@ export default function RaceScreen() {
           </button>
 
           <div className="scoreboard">
-            <div className="scoreboard-header">Live Standings</div>
+            {/* SHIP-THE-STANDINGS: the racer type is said ONCE here rather than on all hundred rows.
+                It is race-constant, so it is set beside the identities at race init. */}
+            <div className="scoreboard-header">
+              {rosterIcon && <span className="sb-header-icon">{rosterIcon}</span>}
+              <span>Live Standings</span>
+            </div>
             {/* SCOREBOARD-SLOT-LAYER: the scrolling viewport. The rows canvas below keeps its true
                 height, so the last row is fully drawn and reachable however large the field is,
-                instead of running off the bottom of the window. */}
-            <div className="scoreboard-scroll">
+                instead of running off the bottom of the window.
+                SHIP-THE-STANDINGS: its scrollbar OVERLAYS the list instead of taking a column from
+                it — see ScoreboardViewport.jsx for why that had to be hand-built. */}
+            <ScoreboardViewport contentHeightPx={scoreboardCards.length * ROW_PITCH_PX}>
               {/* SCOREBOARD-TRANSFORM-ROWS: the cards are absolutely positioned, so they contribute
                   no height and this container must state it. The list is in racer order and never
                   re-sorted — the ranking is the transform on each card.
                   SCOREBOARD-SLOT-LAYER: `--sb-badge-w` is the ONE badge-column width, chosen from the
-                  field size so `#100` fits its box, and read from here by BOTH layers — which is
-                  what keeps the static places aligned with the moving cards. */}
+                  field size so the widest place fits its box, and read from here by BOTH layers —
+                  which is what keeps the static places aligned with the moving cards. */}
               <div
                 className="scoreboard-rows"
                 style={{
@@ -1634,7 +1650,7 @@ export default function RaceScreen() {
                 {/* Drawn once per race, and after the cards so the badges paint over them. */}
                 <ScoreboardSlots count={scoreboardCards.length} />
               </div>
-            </div>
+            </ScoreboardViewport>
           </div>
 
           {phase === PHASE.COUNTDOWN && (

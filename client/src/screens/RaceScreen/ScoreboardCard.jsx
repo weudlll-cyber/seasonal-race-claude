@@ -44,10 +44,16 @@
 // re-render a racer's finish causes rewrites the class and adds the time cell, and leaves the
 // position and the colour exactly where the positioner put them.
 //
-// WHAT IS UNCHANGED: the markup below, the class names, the number-before-name order
-// (RACE-NUMBERS-1), the ellipsis on a long name, the finished tint and the finish-time cell. The
-// grid still reserves the badge column as its first track — the badge is simply drawn in the layer
-// behind rather than inside this element, which is what lets the two layers line up.
+// WHAT IS UNCHANGED: the class names, the number-before-name order (RACE-NUMBERS-1), the ellipsis on
+// a long name, the finished tint and the finish-time cell. The grid still reserves the badge column
+// as its first track — the badge is simply drawn in the layer behind rather than inside this
+// element, which is what lets the two layers line up.
+//
+// SHIP-THE-STANDINGS: THE RACER ICON LEFT THIS CARD, and it is the owner's call. Every racer in a
+// race is the same type — that is pillar 1 of PROJECT-PRINCIPLES, not an accident of the data — so a
+// hundred rows were repeating one picture and charging 27 px of a 210 px panel for it. The thing it
+// said is true once per race, so it is said once, in the panel header (`.sb-header-icon`). The name
+// column is what got those pixels.
 // ============================================================
 
 import { memo } from 'react';
@@ -75,9 +81,8 @@ function ScoreboardCardInner({ identity, finished, finishTimeMs, attach }) {
       className={`scoreboard-card${finished ? ' scoreboard-card--finished' : ''}`}
     >
       {/* The badge column, reserved and empty: the badge itself lives in the static layer behind
-          this one. Without the spacer the icon and the name would sit where the badge is drawn. */}
+          this one. Without the spacer the name would sit where the badge is drawn. */}
       <span className="sb-badge-spacer" />
-      <span className="sb-icon">{identity.icon}</span>
       <span className="sb-name">
         {/* RACE-NUMBERS-1: the number comes BEFORE the name. The track shows only the
             number, so the list is where a viewer reads the two together. */}

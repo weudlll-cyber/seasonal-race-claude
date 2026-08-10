@@ -99,15 +99,67 @@
 /* The scrolling VIEWPORT. It takes whatever height the panel has left after the header, and the
    rows canvas inside it keeps its true height — so the last row is fully drawn and reachable at any
    field size instead of being cut off by the window. A hundred rows will not fit in any window at
-   this pitch (3533 px against ~1200 available) and the spacing may not change, so a scroll is what
-   "use the height available" can mean here. `scrollbar-width: thin` keeps the 210 px sidebar's name
-   column as wide as possible. */
+   this pitch (3533 px against ~450 available in his) and the spacing may not change, so a scroll is
+   what "use the height available" can mean here. */
+/* It is a flex COLUMN, not just a positioned box, and that is load-bearing. The panel's height chain
+   runs on content: the rows are 3533 px tall, which drives `.race-hud` into its `max-height`, and the
+   `min-height: 0` at every level is what then lets the scroller shrink back to the cap. Absolutely
+   positioning the scroller inside here instead was tried and collapsed the panel to nothing — with no
+   in-flow content, there is no height to distribute and `flex-grow` has no free space to grow into. */
+.scoreboard-viewport {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 auto;
+  min-height: 0;
+}
+
+/* SHIP-THE-STANDINGS: the native scrollbar is HIDDEN and drawn over the list instead. On Windows
+   Chrome a native bar is a CLASSIC scrollbar — it takes ~10 px of layout width from a 210 px panel
+   whose every pixel is names — and `scrollbar-gutter` fixes the shift by reserving that width
+   permanently, which is the opposite of what is wanted. `overflow: overlay` was the feature for
+   exactly this and Chrome removed it. The element is still a genuine scroller, so the wheel, the
+   trackpad and the keyboard are untouched; the thumb is drawn by ScoreboardViewport.jsx and can be
+   dragged. */
 .scoreboard-scroll {
   flex: 1 1 auto;
   min-height: 0;
   overflow-y: auto;
   overflow-x: hidden;
-  scrollbar-width: thin;
+  scrollbar-width: none;
+}
+
+.scoreboard-scroll::-webkit-scrollbar {
+  width: 0;
+  height: 0;
+}
+
+.scoreboard-scrollbar {
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  width: 5px;
+  /* The track itself never intercepts a pointer — only the thumb does — so a click meant for a row
+     is not swallowed by an invisible strip down the side of the list. */
+  pointer-events: none;
+}
+
+.scoreboard-thumb {
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 5px;
+  border-radius: 3px;
+  background: rgba(0, 200, 255, 0.28);
+  pointer-events: auto;
+  cursor: grab;
+  transition: background 0.2s;
+}
+
+.scoreboard-thumb:hover,
+.scoreboard-thumb:active {
+  background: rgba(0, 220, 255, 0.55);
 }
 
 /* SCOREBOARD-TRANSFORM-ROWS: the rows are OUT OF FLOW and positioned by transform, so THIS is their
@@ -123,6 +175,9 @@
 }
 
 .scoreboard-header {
+  display: flex;
+  align-items: center;
+  gap: 5px;
   font-size: 10px;
   font-weight: bold;
   color: rgba(0, 200, 255, 0.7);
@@ -133,6 +188,14 @@
   border-bottom: 1px solid rgba(0, 200, 255, 0.15);
 }
 
+/* The racer type, said ONCE for the whole list. It is bigger than the header text because it is a
+   glyph rather than a word — at the header's 10 px an emoji is unreadable. */
+.sb-header-icon {
+  font-size: 14px;
+  line-height: 1;
+  letter-spacing: 0;
+}
+
 /* SCOREBOARD-SLOT-LAYER — TWO LAYERS, ONE GRID.
    The row used to be one element carrying both the place and the racer. It is now a static SLOT
    behind (the badge, drawn once per race) and a CARD in front (the racer, never re-drawn), and the
@@ -140,10 +203,14 @@
    BOTH LAYERS DECLARE THE SAME GRID. That is not duplication for its own sake: it is what makes the
    badge in the slot land in exactly the column the card leaves empty, at any field size, without
    either layer knowing the other's measurements. */
+/* SHIP-THE-STANDINGS: the RACER ICON is gone from the row, so the grid is three tracks instead of
+   four. Every racer in a race is the same type (PROJECT-PRINCIPLES pillar 1), so a hundred rows were
+   repeating one picture and charging 27 px of a 210 px panel for it. What it said — WHAT is racing
+   on this track — is true once, so it is said once, in the panel header. */
 .scoreboard-card,
 .scoreboard-slot {
   display: grid;
-  grid-template-columns: var(--sb-badge-w, 28px) 22px 1fr auto;
+  grid-template-columns: var(--sb-badge-w, 28px) 1fr auto;
   gap: 5px;
   align-items: center;
   padding: 5px 3px;
@@ -207,6 +274,11 @@
   line-height: 1.5;
   padding: 1px 3px;
   border: 1px solid transparent;
+  /* SHIP-THE-STANDINGS: tabular figures. Two reasons and both are load-bearing — the column stops
+     jittering from row to row, and every label of a given length becomes exactly one width, which is
+     what lets `badgeWidthPx` be sized by the widest label the FIELD produces rather than by the
+     widest label of a digit class (`999` is 2 px wider than `140` with proportional figures). */
+  font-variant-numeric: tabular-nums;
 }
 
 .sb-rank {
@@ -231,14 +303,7 @@
   content: '\00a0';
 }
 
-/* The icon keeps the colour it has always inherited from the page, rather than the card's
-   place colour. The glyph is an emoji and paints its own colours either way; this is here so the
-   answer does not depend on that staying true. */
-.sb-icon {
-  font-size: 14px;
-  text-align: center;
-  color: var(--color-text);
-}
+/* SHIP-THE-STANDINGS: `.sb-icon` is gone — the racer type is in the header now (`.sb-header-icon`). */
 
 /* RACE-NUMBERS-1: the start number, shown before the name so a viewer can read the pairing here —
    the track carries the number alone. Tabular figures so the column does not jitter between rows. */

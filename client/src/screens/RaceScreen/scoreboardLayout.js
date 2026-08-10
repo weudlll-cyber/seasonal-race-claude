@@ -50,8 +50,15 @@ export const rankTextColor = (rank) => RANK_PALETTE[rank - 1] ?? RANK_TEXT_FALLB
 export const rankBorderColor = (rank) => RANK_PALETTE[rank - 1] ?? RANK_BORDER_FALLBACK;
 /** The CARD's text colour for a 1-based place — the name and, by inheritance, the race number. */
 export const cardTextColor = (rank) => RANK_PALETTE[rank - 1] ?? CARD_TEXT_FALLBACK;
-/** What the badge for a 1-based place reads. First place is crowned rather than numbered. */
-export const rankLabel = (rank) => (rank === 1 ? '👑' : `#${rank}`);
+/**
+ * What the badge for a 1-based place reads. First place is crowned rather than numbered.
+ *
+ * SHIP-THE-STANDINGS: the `#` is GONE, and it is the owner's call. Measured, every character in this
+ * badge costs about 7.8 px of a 210 px sidebar, so the `#` cost as much as a digit while saying
+ * nothing the column does not already say — it is the place column, and its first slot carries a
+ * crown. `100`, not `#100`.
+ */
+export const rankLabel = (rank) => (rank === 1 ? '👑' : String(rank));
 /** Where a 1-based place sits, in CSS pixels from the top of the rows container. */
 export const slotOffsetPx = (rank) => (rank - 1) * ROW_PITCH_PX;
 
@@ -59,29 +66,36 @@ export const slotOffsetPx = (rank) => (rank - 1) * ROW_PITCH_PX;
  * THE BADGE COLUMN'S WIDTH, chosen ONCE from the field size — never per row.
  *
  * THE DEFECT IT FIXES, which is the owner's: the column was a hard 28 px, sized for two digits, and
- * `#100` needs 37.2. His screenshot shows the text spilling out of its rounded box. It is not only a
- * hundred-racer problem — measured, a two-digit `#99` needs 31.4 and already overflows by about
- * 1.7 px a side today, which is small enough to read as kerning and is why it was never reported.
+ * `#100` did not fit it. His screenshot shows the text spilling out of its rounded box. It was not
+ * only a hundred-racer problem — measured, a two-digit `#99` needed 31.4 and already overflowed by
+ * about 1.7 px a side, small enough to read as kerning, which is why it was never reported.
  *
- * MEASURED max-content widths of a real `.sb-rank` (700 12px Inter, 1 px border, 3 px side padding),
- * using the WIDEST digit so the entry is an upper bound for every place of that length:
- *   `#9` 23.594 · `#99` 31.375 · `#999` 39.172 · `#9999` 46.969  (crown 24.484, never the widest)
+ * IT IS NOW THE WIDEST LABEL THE FIELD ACTUALLY PRODUCES, not the widest label of a digit CLASS, and
+ * `font-variant-numeric: tabular-nums` on the badge is what makes that difference disappear: with
+ * proportional figures `999` is 2 px wider than `140`, so a three-digit field had to be sized for a
+ * label it would never show. With tabular figures every label of a given length is exactly one
+ * width, so the number below IS the width of the widest label a field of that size can produce.
+ * Tabular figures are also what stops the column jittering row to row — the same reason
+ * `.sb-number` has had them since RACE-NUMBERS-1.
+ *
+ * MEASURED max-content widths of a real `.sb-rank` (700 12px Inter tabular, 1 px border, 3 px side
+ * padding), on this machine, after the `#` was dropped:
+ *   `9` 15.094 · `99` 22.854 · `999` 30.615 · `9999` 38.365 · crown `👑` 23.813
+ *
+ * THE CROWN IS THE FLOOR, and it is why the first two entries are not their own measurement: slot
+ * one always shows `👑`, which is wider than any one- or two-digit place. A field of 99 is sized by
+ * its crown, not by `99`.
  *
  * ONE WIDTH FOR THE WHOLE COLUMN, and it must be: the badge column is a separate LAYER from the
- * cards, and the two only line up if every slot and every card reserve the same first column. A
- * badge that grew per row would put the icons of the top nine rows in a different place from the
- * rest.
- *
- * THE 28 px FLOOR is today's column, kept as a floor on purpose: a field of nine or fewer is then
- * pixel-for-pixel what it always was, and only fields that actually need more get more.
+ * cards, and the two only line up if every slot and every card reserve the same first column.
  *
  * @param {number} fieldSize  how many racers are in this race — the widest place it can produce
  * @returns {number} the column width in CSS pixels
  */
-export const BADGE_MIN_WIDTH_PX = 28;
-const BADGE_MAX_CONTENT_PX = [23.594, 31.375, 39.172, 46.969];
+export const CROWN_WIDTH_PX = 23.813;
+const BADGE_MAX_CONTENT_PX = [15.094, 22.854, 30.615, 38.365];
 export function badgeWidthPx(fieldSize) {
   const n = Math.max(1, Math.floor(Number(fieldSize) || 1));
   const digits = Math.min(String(n).length, BADGE_MAX_CONTENT_PX.length);
-  return Math.max(BADGE_MIN_WIDTH_PX, Math.ceil(BADGE_MAX_CONTENT_PX[digits - 1]));
+  return Math.ceil(Math.max(CROWN_WIDTH_PX, BADGE_MAX_CONTENT_PX[digits - 1]));
 }
