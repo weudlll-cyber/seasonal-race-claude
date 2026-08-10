@@ -98,6 +98,19 @@ the Dev Screen toggle and the `renderRaceFrame` hook. The branch was deleted at 
   may be promising a corridor the viewer cannot see. Start here rather than from scratch — see
   [DEAD-ENDS.md](DEAD-ENDS.md) §K.
 
+### CEREMONY-OPENING — the race opens on the brand, then on the track (2026-08-11)
+
+One strand, one merge commit. **The opening was re-ordered and it is the owner's own shape**: the
+brand's logo and the chosen race name first, then the whole track with nothing over it, then the
+starters board. **CAMERA and RENDER both move**; WORLD and WORLD-OFF do not, and the world hash was
+re-measured on the shipping tree rather than argued about. Values live in
+[fingerprints.json](fingerprints.json).
+
+- `pre/ship-ceremony-opening` (`09e69786`, 2026-08-11) — master immediately BEFORE the ship. Reset
+  here to restore the 1400 ms track beat, the starters board that comes up during the push-in travel
+  and stands across it, the single-line `STARTERS · 40` heading, and a ceremony with no brand card in
+  it. It also restores the opening's old length: 14.4 s at 40 racers against 18.0 after.
+
 ### SHIP-THE-STANDINGS — the live standings stop costing the browser a layout (2026-08-10)
 
 Four branches, one merge commit, 29 files, and **nothing that moves the race or the picture**: all
