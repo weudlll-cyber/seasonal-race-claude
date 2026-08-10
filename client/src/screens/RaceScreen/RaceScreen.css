@@ -77,6 +77,16 @@
   flex: 1;
 }
 
+/* SCOREBOARD-TRANSFORM-ROWS: the rows are OUT OF FLOW and positioned by transform, so THIS is their
+   containing block and its height is set inline from the field size (rows x ROW_PITCH_PX). It has to
+   be explicit: absolutely positioned children contribute nothing to their parent's height, so
+   without it the sidebar would collapse.
+   It is a separate element from `.scoreboard` on purpose — the header is a flow child of the
+   scoreboard, and absolute rows anchored to the scoreboard itself would draw straight over it. */
+.scoreboard-rows {
+  position: relative;
+}
+
 .scoreboard-header {
   font-size: 10px;
   font-weight: bold;
@@ -95,7 +105,19 @@
   align-items: center;
   padding: 5px 3px;
   border-radius: 4px;
+  /* SCOREBOARD-TRANSFORM-ROWS: out of flow, stacked at the top, moved into place by translateY.
+     `margin-bottom` is kept rather than folded into the transform because it is what MAKES the
+     31.333px row a 35.333px pitch — the two numbers stay derivable from each other, and the test
+     measures this element to prove ROW_PITCH_PX still agrees with what the browser lays out.
+     `will-change: transform` asks for a compositor layer so a position change need not repaint the
+     row; the row's TEXT still changes on a rank change, so this bounds the win rather than removing
+     the paint entirely (see ScoreboardRow.jsx). */
   margin-bottom: 4px;
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  will-change: transform;
   transition: background 0.3s;
 }
 

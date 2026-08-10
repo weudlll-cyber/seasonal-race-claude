@@ -28,6 +28,7 @@
 
 import { test } from "node:test";
 import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
 import { join, dirname } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 
@@ -48,6 +49,9 @@ const { assignRaceNumbers } = await import(u("client/src/modules/raceNumbers.js"
 const { loadTracks, resolveIdentity, buildRace, runRace } = await import(
   u("scripts/lib/raceDriver.mjs")
 );
+const { ROW_PITCH_PX } = await import(
+  u("client/src/screens/RaceScreen/scoreboardLayout.js")
+);
 
 const FIXED_DT = 16;
 
@@ -63,16 +67,25 @@ function oldShape(racers) {
   return [...racers].sort(cmp).map((r, i) => ({ ...r, rank: i + 1 }));
 }
 
-/** WHAT THE ROW RECEIVES NOW: four values and a stable identity reference. */
+/**
+ * WHAT THE ROW RECEIVES NOW: four values and a stable identity reference — and, since
+ * SCOREBOARD-TRANSFORM-ROWS, emitted in RACER ORDER, not rank order. The sort only assigns ranks;
+ * the ranking travels to the screen as a transform. This mirrors RaceScreen exactly.
+ */
 function newShape(racers, identities) {
-  return [...racers].sort(cmp).map((r, i) => ({
+  const ranks = new Map();
+  [...racers].sort(cmp).forEach((r, i) => ranks.set(r.index, i + 1));
+  return racers.map((r) => ({
     index: r.index,
     identity: identities.get(r.index),
-    rank: i + 1,
+    rank: ranks.get(r.index),
     finished: !!r.finished,
     finishTimeMs: r.finishTimeMs ?? null,
   }));
 }
+
+/** The rows in the order a viewer SEES them: sorted by the y each one is translated to. */
+const asDrawn = (rows) => [...rows].sort((a, b) => a.rank - b.rank);
 
 /** Everything the rendered row actually displays, from either shape — the only fair comparison. */
 const displayedOld = (row, i) => ({
@@ -151,13 +164,16 @@ test("the race under test actually ran, and finished — otherwise nothing below
 });
 
 test("same racers, same ORDER, same RANKS, every tick of a real race", () => {
+  // Compared AS DRAWN, because the array position stopped being the visual position when the
+  // ranking moved into the transform. Same claim as before; the y is now what carries it.
   for (const t of ticks) {
     assert.equal(t.next.length, t.old.length, `tick ${t.physicsTs}: row count`);
+    const drawn = asDrawn(t.next);
     for (let i = 0; i < t.old.length; i++) {
       assert.deepEqual(
-        displayedNew(t.next[i]),
+        displayedNew(drawn[i]),
         displayedOld(t.old[i], i),
-        `tick ${t.physicsTs}, position ${i}: the row data drifted`,
+        `tick ${t.physicsTs}, visual position ${i}: the row data drifted`,
       );
     }
   }
@@ -196,10 +212,94 @@ test("the identity is never MUTATED — the trap that would freeze the standings
 
 test("SABOTAGE — a rank moved by one is caught, so the comparison is not vacuous", () => {
   const t = ticks[Math.floor(ticks.length / 2)];
-  const broken = t.next.map((r, i) => (i === 3 ? { ...r, rank: r.rank + 1 } : r));
+  const broken = asDrawn(t.next).map((r, i) => (i === 3 ? { ...r, rank: r.rank + 1 } : r));
   assert.throws(() => {
     for (let i = 0; i < t.old.length; i++) {
       assert.deepEqual(displayedNew(broken[i]), displayedOld(t.old[i], i));
     }
   });
+});
+
+
+// ── SCOREBOARD-TRANSFORM-ROWS: position now carries the ranking, so position is compared too ──────
+
+test("VISUAL ORDER matches the old DOM order — the transform reproduces the sort", () => {
+  // The old list carried the ranking in the DOM: first child = first place. The new one keeps the
+  // DOM in racer order and moves rows with translateY. So the fair comparison is: sort the new rows
+  // by the y they are translated to, and that must be the old array, position for position.
+  for (const t of ticks) {
+    const byY = [...t.next].sort(
+      (a, b) => (a.rank - 1) * ROW_PITCH_PX - (b.rank - 1) * ROW_PITCH_PX,
+    );
+    for (let i = 0; i < t.old.length; i++) {
+      assert.equal(
+        byY[i].index,
+        t.old[i].index,
+        `tick ${t.physicsTs}, visual position ${i}: a different racer is drawn there`,
+      );
+      assert.deepEqual(
+        displayedNew(byY[i]),
+        displayedOld(t.old[i], i),
+        `tick ${t.physicsTs}, visual position ${i}: the row drawn there shows something else`,
+      );
+    }
+  }
+});
+
+test("the DOM order is STABLE — it is racer order and never the ranking", () => {
+  // If a future change went back to emitting the sorted array, the transform would fight the DOM
+  // order and the list would look right by accident until it did not.
+  const first = ticks[0].next.map((r) => r.index);
+  for (const t of ticks) {
+    assert.deepEqual(
+      t.next.map((r) => r.index),
+      first,
+      `tick ${t.physicsTs}: the rows changed places in the document`,
+    );
+  }
+  // ...and that order is NOT the ranking, on at least one tick, or the claim is untestable.
+  const mid = ticks[Math.floor(ticks.length / 2)];
+  assert.notDeepEqual(
+    mid.next.map((r) => r.index),
+    mid.old.map((r) => r.index),
+    "document order equals rank order on the sampled tick — pick a tick where the field has moved",
+  );
+});
+
+test("every rank is used exactly once — no two rows can land on the same y", () => {
+  for (const t of ticks) {
+    const ranks = t.next.map((r) => r.rank).sort((a, b) => a - b);
+    assert.deepEqual(
+      ranks,
+      Array.from({ length: t.next.length }, (_, i) => i + 1),
+      `tick ${t.physicsTs}: ranks are not a permutation — rows would overlap or leave a gap`,
+    );
+  }
+});
+
+// ── The pitch, and the one thing this test suite CANNOT do ───────────────────────────────────────
+//
+// ROW_PITCH_PX is 35.333 because a rendered `.scoreboard-row` measures 31.333 px plus a 4 px
+// `margin-bottom`. That 31.333 came from a REAL BROWSER (Chrome 151, this machine): it is font
+// metrics, and neither node nor jsdom does layout, so nothing here can re-derive it. Stated plainly
+// rather than papered over — this guard cannot prove the number, only that the CSS inputs it depends
+// on have not moved. If one of them does, the test fails and asks for a re-measurement, which is the
+// most a source-level check can honestly offer.
+const CSS = readFileSync(
+  join(ROOT, "client/src/screens/RaceScreen/RaceScreen.css"),
+  "utf8",
+);
+const rowBlock = CSS.slice(
+  CSS.indexOf(".scoreboard-row {"),
+  CSS.indexOf("}", CSS.indexOf(".scoreboard-row {")),
+);
+
+test("the CSS the pitch depends on has not moved", () => {
+  assert.match(rowBlock, /padding:\s*5px 3px/, "row padding changed — re-measure ROW_PITCH_PX");
+  assert.match(rowBlock, /margin-bottom:\s*4px/, "row margin changed — re-measure ROW_PITCH_PX");
+  assert.match(rowBlock, /position:\s*absolute/, "the rows are back in flow — the transform now overlaps them");
+  assert.match(CSS, /\.scoreboard-rows\s*\{[^}]*position:\s*relative/,
+    "the rows' containing block lost `position: relative` — they would anchor to the page");
+  // The measured value, pinned so a silent edit of the constant is caught too.
+  assert.equal(ROW_PITCH_PX, 35.333);
 });

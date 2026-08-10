@@ -22,6 +22,7 @@
 import { describe, it, expect } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import { ScoreboardRow } from './ScoreboardRow.jsx';
+import { ROW_PITCH_PX } from './scoreboardLayout.js';
 
 /** The per-racer constants, as RaceScreen builds them once per race. */
 const identity = (over = {}) => ({
@@ -129,5 +130,39 @@ describe('ScoreboardRow — the markup is the one it replaced', () => {
     expect(container.querySelector('.sb-finish-time')).toBeNull();
     rerender(<ScoreboardRow identity={identity()} rank={1} finished={true} finishTimeMs={1000} />);
     expect(container.querySelector('.sb-finish-time')).toBeTruthy();
+  });
+});
+
+describe('ScoreboardRow — the ranking is POSITION now (SCOREBOARD-TRANSFORM-ROWS)', () => {
+  it('translates by rank, so rank 1 sits at the top and rank n at (n-1) pitches', () => {
+    const { container, rerender } = render(
+      <ScoreboardRow identity={identity()} rank={1} finished={false} finishTimeMs={null} />
+    );
+    const row = container.querySelector('.scoreboard-row');
+    expect(row.style.transform).toBe('translateY(0px)');
+
+    rerender(<ScoreboardRow identity={identity()} rank={4} finished={false} finishTimeMs={null} />);
+    expect(row.style.transform).toBe(`translateY(${3 * ROW_PITCH_PX}px)`);
+
+    // The L203 pair: a different rank must land somewhere different, or this tests a constant.
+    rerender(<ScoreboardRow identity={identity()} rank={7} finished={false} finishTimeMs={null} />);
+    expect(row.style.transform).toBe(`translateY(${6 * ROW_PITCH_PX}px)`);
+  });
+
+  it('never moves in the DOM — two rows keep their document order whatever their ranks', () => {
+    // The whole point: the row that is 1st may be the LAST child. If a future change went back to
+    // sorting the array, this would fail and say so.
+    const a = identity({ index: 1, name: 'Alpha' });
+    const b = identity({ index: 2, name: 'Beta' });
+    const { container } = render(
+      <div>
+        <ScoreboardRow identity={a} rank={9} finished={false} finishTimeMs={null} />
+        <ScoreboardRow identity={b} rank={1} finished={false} finishTimeMs={null} />
+      </div>
+    );
+    const rows = [...container.querySelectorAll('.scoreboard-row')];
+    expect(rows[0].textContent).toContain('Alpha'); // document order, not rank order
+    expect(rows[1].textContent).toContain('Beta');
+    expect(rows[1].style.transform).toBe('translateY(0px)'); // but Beta is drawn first
   });
 });

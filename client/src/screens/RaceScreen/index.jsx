@@ -19,6 +19,7 @@ import { getBgCanvasReady } from './drawing/trackRendering.js';
 import { getBackgroundImage } from '../../modules/track-effects/bgImageCache.js';
 import { emitBurst } from './drawing/particleRendering.js';
 import { ScoreboardRow } from './ScoreboardRow.jsx';
+import { ROW_PITCH_PX } from './scoreboardLayout.js';
 import { lerp, lerpAngle } from '../../utils/mathUtils.js';
 import { resolveActiveBrandProfile } from '../../modules/branding/useActiveBrandProfile.js';
 import { getRacerType, getCoatsByType } from '../../modules/racer-types/index.js';
@@ -933,20 +934,26 @@ export default function RaceScreen() {
             // same resulting order. What changed is what comes out of the map: four small values per
             // racer instead of a spread of the whole racer, so the row's props are primitives and a
             // row whose rank did not move is skipped by `memo` rather than rebuilt.
+            // SCOREBOARD-TRANSFORM-ROWS: the sort is still the sort — same two groups, same tie
+            // handling — but it now only assigns RANKS. The array handed to React stays in
+            // `st.racers` order, which never changes during a race, so the rows keep a stable place
+            // in the document and the ranking travels as a transform instead of as a DOM move.
+            const ranks = new Map();
+            [...st.racers]
+              .sort((a, b) => {
+                if (a.finished !== b.finished) return a.finished ? -1 : 1;
+                if (a.finished) return a.finishRank - b.finishRank;
+                return b.t - a.t;
+              })
+              .forEach((r, i) => ranks.set(r.index, i + 1));
             setScoreboard(
-              [...st.racers]
-                .sort((a, b) => {
-                  if (a.finished !== b.finished) return a.finished ? -1 : 1;
-                  if (a.finished) return a.finishRank - b.finishRank;
-                  return b.t - a.t;
-                })
-                .map((r, i) => ({
-                  index: r.index,
-                  identity: rowIdentities.get(r.index),
-                  rank: i + 1,
-                  finished: !!r.finished,
-                  finishTimeMs: r.finishTimeMs ?? null,
-                }))
+              st.racers.map((r) => ({
+                index: r.index,
+                identity: rowIdentities.get(r.index),
+                rank: ranks.get(r.index),
+                finished: !!r.finished,
+                finishTimeMs: r.finishTimeMs ?? null,
+              }))
             );
           }
 
@@ -1566,15 +1573,23 @@ export default function RaceScreen() {
 
           <div className="scoreboard">
             <div className="scoreboard-header">Live Standings</div>
-            {scoreboard.map((row) => (
-              <ScoreboardRow
-                key={row.index}
-                identity={row.identity}
-                rank={row.rank}
-                finished={row.finished}
-                finishTimeMs={row.finishTimeMs}
-              />
-            ))}
+            {/* SCOREBOARD-TRANSFORM-ROWS: the rows are absolutely positioned, so they contribute no
+                height and this container must state it. `scoreboard` is in racer order and never
+                re-sorted — the ranking is the transform on each row. */}
+            <div
+              className="scoreboard-rows"
+              style={{ height: `${scoreboard.length * ROW_PITCH_PX}px` }}
+            >
+              {scoreboard.map((row) => (
+                <ScoreboardRow
+                  key={row.index}
+                  identity={row.identity}
+                  rank={row.rank}
+                  finished={row.finished}
+                  finishTimeMs={row.finishTimeMs}
+                />
+              ))}
+            </div>
           </div>
 
           {phase === PHASE.COUNTDOWN && (

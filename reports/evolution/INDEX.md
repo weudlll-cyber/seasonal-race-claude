@@ -75,6 +75,31 @@ and [FAIRNESS.md](../../docs/FAIRNESS.md). Shipped world: **`dc4647be0f55ebdb`**
 
 ## Camera / presentation fixes
 
+- [SCOREBOARD-TRANSFORM-ROWS.md](SCOREBOARD-TRANSFORM-ROWS.md) — **THE STAIRCASE IS FLATTENED TO
+  ZERO** (branch `feat/scoreboard-transform-rows` off `afdf130a`; **NOT merged — a visible surface
+  awaiting his eye**; all four fingerprints unchanged). The rows now keep a STABLE place in the
+  document — racer order, never re-sorted — and the ranking travels as `translateY((rank−1) ×
+  35.333px)`, so a rank change moves nothing in the document and nothing below it is laid out again.
+  **ESTABLISHED FIRST, in a real browser**: the rows were in normal flow, so they had to come out of
+  it; and **row height is uniform at 31.333 px across all seven shapes that could differ** (crown,
+  `#100`, no race number, finished with/without a time, ellipsised name) because `.sb-name` is
+  `nowrap` — had that come back non-uniform the approach was dead. A separate `.scoreboard-rows`
+  container holds the absolute rows, **because the header is a flow child of `.scoreboard`** and
+  rows anchored there would draw over it. Verified at 100 rows with shuffled ranks: every gap exactly
+  35.333, **zero overlaps**, document order ≠ drawn order. **MEASURED, idle, 6 rotated batches, 5400
+  frames/arm: staircase 0.73–0.76 ms/frame (flow) → −0.01 / 0.08 (transform), and missed frames
+  1.204 % → 0.056 % at 500 ms — 21×.** The per-batch pattern is the result: flow is usually zero and
+  then has an EPISODE (one batch 4.41 ms/frame with 65 drops, another 3.20 with 13); transform reads
+  zero in nine batches of ten. **And the cadence question dissolves: with the transform, 250 ms and
+  500 ms are identical (3 drops in 5400 each) — the lively list becomes free.** **HONEST LIMITS**: a
+  separate LOADED run (uncontrolled, something else on the machine) shows only ~a fifth fewer drops
+  and **no staircase separation** — this helps when the deficit is the list's own layout, not when
+  something else owns the CPU; the per-changed-row REPAINT remains, as predicted, because `#5`→`#4`
+  is a text change; and the pitch is font metrics that **neither node nor jsdom can re-derive**, so
+  the guard pins the CSS inputs and the constant instead. Parity extended to compare the row **as
+  drawn** (sorted by y), since array position stopped being visual position.
+
+
 - [SCOREBOARD-STABLE-ROWS.md](SCOREBOARD-STABLE-ROWS.md) — **HIS SHAPE, BUILT: 101 ROWS REBUILT PER
   TICK BECOMES 36** (branch `feat/scoreboard-stable-rows` off `024b58c3`, with `feat/frame-gap-1`
   merged so one log measures everything; **NOT merged — a visible surface awaiting his eye**; all four
