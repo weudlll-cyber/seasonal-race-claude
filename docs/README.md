@@ -88,6 +88,12 @@ What a stranger needs in order to understand and change RaceArena.
 | ---------------------------------------- | --------------------------------------------------------------------- |
 | [CAMERA_DIRECTOR.md](CAMERA_DIRECTOR.md) | The camera's shape: which file owns what, and the one framing rule. |
 
+### The race screen
+
+| document                                                 | what it owns                                                                          |
+| -------------------------------------------------------- | --------------------------------------------------------------------------------------- |
+| [STANDINGS-ARCHITECTURE.md](STANDINGS-ARCHITECTURE.md)   | **Canonical.** The live standings' two layers, and the rule a change to them must obey. |
+
 ### Limits, and what is next
 
 | document                     | what it owns                                                                                                                 |

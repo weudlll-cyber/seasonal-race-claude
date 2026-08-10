@@ -18,10 +18,7 @@ import { attachRenderState, attachRacerRenderState, stepFocusFade } from './rend
 import { getBgCanvasReady } from './drawing/trackRendering.js';
 import { getBackgroundImage } from '../../modules/track-effects/bgImageCache.js';
 import { emitBurst } from './drawing/particleRendering.js';
-import { ScoreboardCard } from './ScoreboardCard.jsx';
-import { ScoreboardSlots } from './ScoreboardSlots.jsx';
-import ScoreboardViewport from './ScoreboardViewport.jsx';
-import { ROW_PITCH_PX, badgeWidthPx } from './scoreboardLayout.js';
+import Scoreboard from './Scoreboard.jsx';
 import { createScoreboardPositions } from './scoreboardPositions.js';
 import { lerp, lerpAngle } from '../../utils/mathUtils.js';
 import { resolveActiveBrandProfile } from '../../modules/branding/useActiveBrandProfile.js';
@@ -1662,46 +1659,14 @@ export default function RaceScreen() {
             ← Setup
           </button>
 
-          <div className="scoreboard">
-            {/* SHIP-THE-STANDINGS: the racer type is said ONCE here rather than on all hundred rows.
-                It is race-constant, so it is set beside the identities at race init. */}
-            <div className="scoreboard-header">
-              {rosterIcon && <span className="sb-header-icon">{rosterIcon}</span>}
-              <span>Live Standings</span>
-            </div>
-            {/* SCOREBOARD-SLOT-LAYER: the scrolling viewport. The rows canvas below keeps its true
-                height, so the last row is fully drawn and reachable however large the field is,
-                instead of running off the bottom of the window.
-                SHIP-THE-STANDINGS: its scrollbar OVERLAYS the list instead of taking a column from
-                it — see ScoreboardViewport.jsx for why that had to be hand-built. */}
-            <ScoreboardViewport contentHeightPx={scoreboardCards.length * ROW_PITCH_PX}>
-              {/* SCOREBOARD-TRANSFORM-ROWS: the cards are absolutely positioned, so they contribute
-                  no height and this container must state it. The list is in racer order and never
-                  re-sorted — the ranking is the transform on each card.
-                  SCOREBOARD-SLOT-LAYER: `--sb-badge-w` is the ONE badge-column width, chosen from the
-                  field size so the widest place fits its box, and read from here by BOTH layers —
-                  which is what keeps the static places aligned with the moving cards. */}
-              <div
-                className="scoreboard-rows"
-                style={{
-                  height: `${scoreboardCards.length * ROW_PITCH_PX}px`,
-                  '--sb-badge-w': `${badgeWidthPx(scoreboardCards.length)}px`,
-                }}
-              >
-                {scoreboardCards.map((card) => (
-                  <ScoreboardCard
-                    key={card.index}
-                    identity={card.identity}
-                    finished={card.finished}
-                    finishTimeMs={card.finishTimeMs}
-                    attach={attachScoreboardCard}
-                  />
-                ))}
-                {/* Drawn once per race, and after the cards so the badges paint over them. */}
-                <ScoreboardSlots count={scoreboardCards.length} />
-              </div>
-            </ScoreboardViewport>
-          </div>
+          {/* STANDINGS-RULE: the panel's composition lives in Scoreboard.jsx, so the guard that
+              holds the two-layer rule can mount THE REAL arrangement rather than a copy of it.
+              docs/STANDINGS-ARCHITECTURE.md is the rule's one home. */}
+          <Scoreboard
+            cards={scoreboardCards}
+            rosterIcon={rosterIcon}
+            attach={attachScoreboardCard}
+          />
 
           {phase === PHASE.COUNTDOWN && (
             <div className="race-phase-badge race-phase-badge--countdown">
