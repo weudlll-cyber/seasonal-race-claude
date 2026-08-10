@@ -127,13 +127,19 @@ export const SUITE_GUARDS = [
  * one is safe to ask because it declares and exits before doing anything, and `verify.mjs` gives it
  * `--check`. Any other generator must earn its place the same way, one name at a time — a `gen-*`
  * wildcard would enrol the next one automatically and in write mode.
+ *
+ * `gen-ceremony-costs.mjs` is the second name to earn it (CEREMONY-COUNTS-GENERATED), and it is the
+ * sharpest case yet for why this list is names and not a wildcard: run with no arguments it does not
+ * merely rewrite a document, it spends FIVE MINUTES running six guards first. It qualifies on the
+ * same two conditions — it declares and exits before any of that, and `verify.mjs` gives it
+ * `--check-counts`.
  */
 export function guardScripts(dir = SCRIPTS) {
   const out = [];
   for (const f of readdirSync(dir)) {
     if (!f.endsWith(".mjs") || f.endsWith(".test.mjs")) continue;
     if (
-      !/^check-.*\.mjs$|-fingerprint\.mjs$|^fingerprint-default\.mjs$|^gen-engine-reach-doc\.mjs$/.test(
+      !/^check-.*\.mjs$|-fingerprint\.mjs$|^fingerprint-default\.mjs$|^gen-engine-reach-doc\.mjs$|^gen-ceremony-costs\.mjs$/.test(
         f,
       )
     )

@@ -75,6 +75,30 @@ and [FAIRNESS.md](../../docs/FAIRNESS.md). Shipped world: **`dc4647be0f55ebdb`**
 
 ## Camera / presentation fixes
 
+- [CEREMONY-COUNTS-GENERATED.md](CEREMONY-COUNTS-GENERATED.md) — **THE SENTENCE WAS SPLIT, AND ONE OF
+  THE THREE NUMBERS WAS WRONG** (branch `feat/ceremony-counts` off `feat/post-start-hold-unify`; docs
+  and tooling only, no engine file touched). Declined last night because a generator would have had
+  to own the ARGUMENT and not just the number; the fix is to split them — the assertion stays as
+  prose above and below the markers, and what is inside is arithmetic and nothing else. Every
+  sentence split cleanly, so nothing was left typed. **THE PAYOFF WAS IMMEDIATE: the document said
+  86 and the answer is 88.** The closure (20) and the folder count (106) were both right; the third
+  was computed as `106 − 20`, and that subtraction is invalid because **the closure is not a subset
+  of the folder** — `camera/lapUtils.js` is inside `camera/` and `client/src/utils/mathUtils.js` is
+  outside `modules/`. The generator takes the intersection and the block NAMES those two, so the
+  argument below it is checkable rather than assertable. (`103 − 19 = 84` was wrong the same way.)
+  **SAME MECHANISM, ONE FLAG APART**: same script, same markers, same `writeVerified` — but the two
+  blocks are asked DIFFERENT questions, because a cost cannot be recomputed without paying it (so
+  `--check` can only ask how old it is) while a count can (so its check asks whether it is right).
+  `npm run verify` runs `--check-counts`, asserted in `verify.test.mjs`; `routing.mjs` gains its
+  second explicit generator name, and this is the sharpest case for why that list is names and not a
+  `gen-*` wildcard — run bare, this one spends five minutes running six guards before it writes.
+  **A DEFECT FOUND BY THE NEW TEST IN THE FILE IT WAS TESTING**: importing the module ran all six
+  guards and REWROTE the tracked `docs/SHIP-CEREMONY.md`; same defect and same `IS_ENTRY` fix as
+  `verify.mjs`, and the test went 114 s → 0.8 s. That accident is why the cost numbers moved here —
+  re-measured deliberately afterwards, world 120 → 72 s, camera 39 → 22 s, render 32 → 22 s, which is
+  a quieter machine and not a faster guard. Plus the one `docs/README.md` line: the four empty
+  directories are not in the repository at all.
+
 - [POST-START-HOLD-UNIFY.md](POST-START-HOLD-UNIFY.md) — **THERE WERE NEVER TWO CLOCKS. THERE WAS ONE
   CLOCK AND ONE DEAD PARAMETER** (branch `feat/post-start-hold-unify` off `feat/canvas-scale-1`; not
   merged; **WORLD `dc4647be0f55ebdb` unchanged**). His decision was to unify, and the constraint was

@@ -610,3 +610,39 @@ test("engine-reach-doc still routes on its OWN source, via the closure nobody de
   assert.equal(runs(["scripts/gen-engine-reach-doc.mjs"], "engine-reach-doc"), true);
   assert.equal(runs(["docs/SIM.md"], "engine-reach-doc"), true);
 });
+
+// CEREMONY-COUNTS-GENERATED: the same three questions for the ceremony's own generated counts. They
+// are asked here rather than trusted because the incident above was a ROUTING miss, not a guard
+// that did not work — the guard was fine and nothing selected it.
+test("MODULES -> SHIP-CEREMONY.md: a file appearing under modules/ selects ceremony-counts", () => {
+  // The counts include "tracked non-test files under client/src/modules/ outside camera/", so ANY
+  // change under modules/ can move them — including one nowhere near the engine's closure. That is
+  // the difference from engine-reach-doc, which routes on the hull alone.
+  assert.equal(runs(["client/src/modules/raceBehavior.js"], "ceremony-counts"), true);
+  assert.equal(runs(["client/src/modules/rAFProbe.js"], "ceremony-counts"), true);
+  assert.equal(
+    runs(["client/src/screens/RaceScreen/index.jsx"], "ceremony-counts"),
+    false,
+    "a file outside modules/ and outside the hull cannot move either count",
+  );
+});
+
+test("ceremony-counts is invoked READ-ONLY — verify may not rewrite a tracked document", () => {
+  // With no argv this generator runs six guards for FIVE MINUTES and rewrites SHIP-CEREMONY.md.
+  // `--check-counts` and not `--check`: plain `--check` also fails on a cost table older than 40
+  // commits, which is a re-measure-soon warning and not a reason to fail somebody's build.
+  const cmd = commandFor({
+    id: "ceremony-counts",
+    source: "scripts/gen-ceremony-costs.mjs",
+  }).cmd;
+  assert.ok(
+    cmd.includes("--check-counts"),
+    `expected --check-counts in ${JSON.stringify(cmd)}`,
+  );
+  assert.ok(!cmd.includes("--check"), "plain --check would fail the build on a stale COST table");
+});
+
+test("ceremony-counts routes on its own source and on the document it writes", () => {
+  assert.equal(runs(["scripts/gen-ceremony-costs.mjs"], "ceremony-counts"), true);
+  assert.equal(runs(["docs/SHIP-CEREMONY.md"], "ceremony-counts"), true);
+});
