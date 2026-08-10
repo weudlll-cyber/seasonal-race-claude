@@ -878,12 +878,19 @@ export default function RaceScreen() {
             };
           }
 
-          // Scoreboard: update when physicsTs crosses a 250ms bucket boundary.
+          // Scoreboard: update when physicsTs crosses a bucket boundary.
           // Two-group sort mirrors the Results screen: finishers by finishRank
           // (ascending), then still-racing by r.t (descending). Pure b.t-a.t
           // fails once racers finish because the runout-decay surge lets later
           // finishers temporarily overtake earlier ones in raw r.t.
-          if (Math.round(physicsTs / 250) !== Math.round((physicsTs - FIXED_DT) / 250)) {
+          //
+          // SCOREBOARD-CADENCE-1: the bucket was a hard-coded 250 and is now a setting. This is the
+          // ONLY place it is read — the other `setScoreboard` is a one-shot seed at race init — so
+          // there is one cadence and no second copy to drift from it. It is measured in PHYSICS time,
+          // not wall time, which is deliberate and unchanged: the list then ticks with the race even
+          // through BATTLE slow-motion, rather than running ahead of the picture it describes.
+          const sbBucket = frameTimingConfig.scoreboardIntervalMs;
+          if (Math.round(physicsTs / sbBucket) !== Math.round((physicsTs - FIXED_DT) / sbBucket)) {
             setScoreboard(
               [...st.racers]
                 .sort((a, b) => {

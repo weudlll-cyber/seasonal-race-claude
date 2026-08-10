@@ -75,6 +75,29 @@ and [FAIRNESS.md](../../docs/FAIRNESS.md). Shipped world: **`dc4647be0f55ebdb`**
 
 ## Camera / presentation fixes
 
+- [SCOREBOARD-CADENCE-1.md](SCOREBOARD-CADENCE-1.md) — **ONE NUMBER, AND THE RATE FALLS AT LEAST
+  PROPORTIONALLY** (branch `feat/scoreboard-cadence-1` off `570a8505`; **NOT merged — a visible change
+  awaiting his eye**; all four fingerprints unchanged). FRAME-GAP-3 named the standings list; this
+  makes its cadence a setting — `scoreboardIntervalMs` in `DEFAULT_FRAME_TIMING_CONFIG`, shipped at
+  **500** (was a hard-coded 250), band 100–2000 with one home, a Dev Screen number box plus one-click
+  250 / 500 / 1000 buttons. **The cadence was read in exactly ONE place**, so there was no second copy
+  to reconcile; the bucket stays in PHYSICS time so the list ticks with the race through slow-motion.
+  React untouched, no memoisation, contents unchanged. **MEASURED, production bundle, 9
+  order-randomised batches, 8100 frames per arm: 250 ms → 0.185 %, 500 ms → 0.086 %, 1000 ms →
+  0.012 %**, with `rafLate` p90 **4.3 → 1.6 → 0.7 ms** — at 1000 within noise of the 0.6 floor
+  FRAME-GAP-3 measured with the list hidden entirely. **250→500 is proportional (2.1× for 2×);
+  500→1000 is 7× for 2× — BETTER than proportional.** So the frequency dominates and the per-tick cost
+  does not: **the memoisation priced in FRAME-GAP-3 is NOT indicated by this data**, which is the
+  cheaper of the two answers. **The arm order is rotated per batch** because the first attempt had one
+  batch where all three arms were bad at once (including 1000 ms at 0.78 %) — ambient noise that a
+  fixed order would have read as "250 is worst". **Honest caveat**: FRAME-GAP-3 pooled 0.78 % for the
+  same 250 ms arm against 0.185 % here — absolute rates are not comparable across sessions, only the
+  within-session ratio is. **Priced, not built**: the row reads six fields, four of which never change
+  during a race, so emitting a narrow record plus `React.memo` needs no change to the row's markup —
+  under an hour, orthogonal to the cadence, and justified only if he picks 250 for feel and still
+  drops frames.
+
+
 - [CEREMONY-COUNTS-GENERATED.md](CEREMONY-COUNTS-GENERATED.md) — **THE SENTENCE WAS SPLIT, AND ONE OF
   THE THREE NUMBERS WAS WRONG** (branch `feat/ceremony-counts` off `feat/post-start-hold-unify`; docs
   and tooling only, no engine file touched). Declined last night because a generator would have had

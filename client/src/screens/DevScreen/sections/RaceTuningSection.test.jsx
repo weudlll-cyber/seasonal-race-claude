@@ -107,10 +107,15 @@ vi.mock('../../../modules/raceDynamicsConfig.js', () => ({
   },
 }));
 
+// SCOREBOARD-CADENCE-1: the cadence band is part of this module's surface now, and a mock that omits
+// it renders the control with `min={undefined}`, which React reports as an error and every test in
+// this file then fails on. The values are the module's, not invented here.
 vi.mock('../../../modules/frameTimingConfig.js', () => ({
-  loadFrameTimingConfig: vi.fn(() => ({ dtSmoothingAlpha: 0.7 })),
+  loadFrameTimingConfig: vi.fn(() => ({ dtSmoothingAlpha: 0.7, scoreboardIntervalMs: 500 })),
   saveFrameTimingConfig: vi.fn(),
-  DEFAULT_FRAME_TIMING_CONFIG: { dtSmoothingAlpha: 0.7 },
+  DEFAULT_FRAME_TIMING_CONFIG: { dtSmoothingAlpha: 0.7, scoreboardIntervalMs: 500 },
+  SCOREBOARD_INTERVAL_MIN_MS: 100,
+  SCOREBOARD_INTERVAL_MAX_MS: 2000,
 }));
 
 import { loadRaceDynamicsConfig } from '../../../modules/raceDynamicsConfig.js';
