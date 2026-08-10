@@ -265,13 +265,70 @@ from that inherited commit. Nothing this block wrote is reachable.
 for this report not yet being in the index — fixed, and both `check-index` and `check-doc-links` are
 green after it. The full client suite (232 s) is inside that PASS.
 
+## SHIP-THE-STANDINGS — the three pixel changes, and the width ledger
+
+All three are the owner's calls, made after he saw what the block above cost the names.
+
+**A. The `#` is gone.** Every character in the badge costs ~7.8 px of a 210 px sidebar, and the `#`
+cost as much as a digit while saying nothing the column does not already say. `100`, not `#100`.
+The width is now **the widest label the FIELD produces** rather than the widest of a digit CLASS —
+which needed `font-variant-numeric: tabular-nums` to be true at all, because with proportional
+figures `999` is 2 px wider than `140` and a three-digit field had to be sized for a label it would
+never show. Measured, tabular: `9` 15.094 · `99` 22.854 · `999` 30.615 · `9999` 38.365 · crown
+23.813. **The crown is the floor below three digits** — slot one always shows it — so 24 px up to 99
+racers and 31 to 999. Tabular figures also stop the column jittering row to row, the same reason
+`.sb-number` has had them since RACE-NUMBERS-1.
+
+**B. The scrollbar overlays the list.** On Windows Chrome a native bar is a CLASSIC scrollbar: it
+takes ~10 px of layout width for as long as it is there, and `scrollbar-gutter` fixes the *shift* by
+reserving that width permanently, which is the opposite of what was wanted. `overflow: overlay` was
+the browser feature for exactly this and Chrome removed it. So the native bar is hidden and a 5 px
+thumb is drawn over the right edge. **It is a real scrollbar, not an indicator**: the element under
+it is a genuine scroller, so wheel, trackpad and keyboard are untouched, and the thumb drags —
+measured, a 120 px drag moves the list 942 px against 942.1 predicted from the ratio. **What it
+costs:** the thumb sits on the last ~5 px of the row, which is the finish-time cell's right edge;
+the card already carries 3 px of padding there, so the overlap is about two pixels of glyph, and only
+once a race has finishers.
+
+**C. The racer icon left the rows.** Every racer in a race is the same type — pillar 1 of
+PROJECT-PRINCIPLES, not an accident of the data — so a hundred rows repeated one picture and charged
+27 px for it. It does say WHAT is racing, and that is true once per race, so it is said once in the
+panel header (`🛹 LIVE STANDINGS` on mountainstreet). **Nothing was lost**; the header had room.
+
+### THE WIDTH LEDGER — measured at his window (1280 × 665), 100 racers
+
+| state | name box | characters that fit |
+| --- | --- | --- |
+| **before tonight** (`feat/scoreboard-transform-rows`) | 113.67 px | **13** |
+| after SCOREBOARD-SLOT-LAYER | 91.67 px (**−22.0**) | 10 (−3) |
+| **after the three changes** | **137.67 px (+46.0)** | **18** |
+
+**The three do more than get back what was lost.** Against before tonight the name box is **+24 px
+and +5 characters**. The arithmetic is exact and each part is separable: badge 40 → 31 (**+9**),
+scrollbar overlaid (**+10**), icon removed (**+27**) — 46 px, which is precisely the measured gain.
+
+At an 8-racer field the badge is 24 px and the name box 144.67 (19 characters); at 140 it is
+identical to 100, because both are three-digit fields. No badge overflows at any of them.
+
+**The ellipsis is untouched, deliberately.** The owner raised hard-clipping versus `…`; the ellipsis
+costs one character rather than three, and a hard clip can end mid-letter. He decides that after
+seeing what these three give back, so his eye judges one change at a time.
+
+**Two layout dead ends on the way, recorded because both look right and neither is.** `height: 100%`
+on the scroller does not resolve against a flex item here — the scroller grew to the full 3533 px and
+nothing was scrollable. Absolutely positioning it instead collapsed the panel to zero, because with
+no in-flow content there is no height to distribute and `flex-grow` has no free space to grow into.
+The viewport is a flex COLUMN and the scroller its flex item — the chain that already worked — with
+only the scrollbar positioned over it.
+
 ## Open for the owner
 
 1. **The panel scrolls; it does not shrink.** A hundred rows need 3533 px and his window offers ~450
    for the list, so about thirteen are on screen at a time. Showing the whole field at once needs
    either a smaller pitch or a multi-column layout, and both change how the list looks. His call.
-2. **The name column is ~22 px narrower** at a hundred racers — 12 to the badge fitting its box, ~10
-   to the scrollbar — so a long name ellipsises earlier. That is the visible price of the two fixes.
+2. **Hard clip versus the ellipsis.** He raised it; it is left alone here on purpose so his eye
+   judges the three pixel changes on their own. The `…` costs one character, not three, and a hard
+   clip can end mid-letter.
 3. **The place is no longer in the accessibility tree with the racer.** The slot layer is
    `aria-hidden`, so a screen reader reading a card hears the racer and not the place. Nothing that
    worked stops working — the standings were never keyboard-reachable or labelled — but this is the

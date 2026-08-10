@@ -222,13 +222,49 @@ is a claim about a human being present to read it. A push followed by walking aw
 three-minute wait into an overnight red master, which is the one case where the cost stops being
 small — and it is exactly the situation R8's second exception exists for.
 
-## R10 — An eye test OWNS the dev server until the owner releases it
+## R10 — The owner judges a PRODUCTION build; the dev server is for developing
 
-**Rule.** While an eye test is pending, port **5173** serves the branch and commit being judged, and
-nothing else touches it. Your own work runs on a **different port** — `npm run dev -- --port 5273
---strictPort`. Before handing an eye test over, state the exact pill (`<sha> · <branch>`, no
-`+dirty`), and confirm it by reading `http://localhost:5173/@id/__x00__virtual:ra-build` rather than
-by assuming. When the owner releases it, 5173 is free again.
+**Rule.** An eye test or a perf log the owner takes is served from a **production build**, on port
+**4173**, and nothing else touches that port while the judgement is pending. One command, from the
+repo root:
+
+```
+cd client && npm run build && node ../scripts/serve-production.mjs
+```
+
+That script copies `client/dist` **out of the OneDrive-synced tree** (to `%LOCALAPPDATA%\racearena-preview`,
+replaced on every run) and serves it with no file watcher. Before handing anything over, state the
+exact pill (`<sha> · <branch>`, no `+dirty`) and **confirm it by reading it from the served bundle**
+rather than by assuming.
+
+The dev server on **5173** keeps its old job: developing, and any check where the bundle is not the
+question. Your own work runs on a different port — `npm run dev -- --port 5273 --strictPort`.
+
+**Why — and it is the owner's finding, not a preference.** On 2026-08-10 every perf log he took came
+from the dev server while every number the assistant reported came from production bundles, and that
+is why the two never agreed. It was never "his machine versus a harness". **FRAME-GAP-2 had already
+measured the difference: the dev bundle costs about a third of physics and HIDES how the DOM scales
+with window area** — React's development build re-runs every component with checks the production
+build strips, so the one regime the standings work had to be judged in was the one the judgement was
+never taken in.
+
+**And why not from the repo folder.** `client/dist` sits in a synced directory. Measured the same
+night, served from there: one frame took **1016 ms** with nothing on screen to explain it, and
+arm-to-arm variation swamped a real effect. Copied out and served watcher-free, the same builds
+separated cleanly. **A measurement taken inside the synced tree is not measuring the code.**
+`vite preview` is deliberately not the command here: it serves the synced directory and holds a
+watcher over it.
+
+**What this does NOT change.** The build pill rule stands exactly as it was, and it is the half that
+has already cost two test runs in one evening: whatever is being judged, read the pill from the thing
+being served. The failure is silent by construction — a branch switch or a stray edit re-points a
+server with no warning, and the picture still looks plausible.
+
+**The practical consequence for the agent:** if a block needs the tree on a different branch while a
+judgement is pending, use a `git worktree` at a SHORT path outside the OneDrive tree
+(`git worktree add C:/ra-wt <branch>`), not a checkout in the main tree. Long paths under the
+scratchpad fail on this machine, and `git worktree prune` cannot delete the stale stubs here — both
+are the reparse-point condition recorded in the backlog.
 
 **Why it is safe — and why it is not optional.** This has now cost him two test runs in one evening.
 The failure mode is silent by construction: the dev server serves the WORKING TREE, so a branch
