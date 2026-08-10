@@ -98,6 +98,18 @@ the Dev Screen toggle and the `renderRaceFrame` hook. The branch was deleted at 
   may be promising a corridor the viewer cannot see. Start here rather than from scratch — see
   [DEAD-ENDS.md](DEAD-ENDS.md) §K.
 
+### STRIP-AND-SHIP — the layout separation, the dead clock, and the generated counts (2026-08-10)
+
+Three blocks, one merge commit, and **nothing that moves the picture or the race**: all four
+fingerprints were re-measured on the branch and are unchanged, which is how a strand with no business
+touching either proves it did not. Values live in [fingerprints.json](fingerprints.json). The strand's
+one behaviour question — waking the dead `postStartHoldMs` floor — was deliberately NOT taken; it is
+a rebaseline and it is the owner's, and the report measures what it would cost.
+
+- `pre/strip-and-ship` (`f69f66fb`, 2026-08-10) — master immediately BEFORE the strand. Reset here to
+  restore `renderRaceFrame` reading the backing store for layout, the planner's dead
+  `postStartHoldMs` floor, and the typed counts in the ship ceremony.
+
 ### SHIP-THE-NIGHT — the pair loop culls, and the decisive phase starts later (2026-08-10)
 
 Eight branches, one merge commit. **WORLD unchanged through two engine changes** — the pair-loop
