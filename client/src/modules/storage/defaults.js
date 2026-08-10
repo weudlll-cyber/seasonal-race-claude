@@ -675,6 +675,15 @@ export const DEFAULT_RACE_DYNAMICS_CONFIG = {
 export const DEFAULT_FRAME_TIMING_CONFIG = {
   dtSmoothingAlpha: 0.7,
   renderInterpolation: true,
+  // CANVAS-SCALE-1: the race canvas's BACKING STORE as a fraction of the 1280x720 reference the
+  // whole render path draws in. The element is stretched to the wrapper by CSS either way, so this
+  // buys drawing cost against sharpness and nothing else: a base transform of exactly this factor is
+  // applied before every frame, so every drawn coordinate stays a reference pixel and the picture's
+  // CONTENT — camera framing, label layout, minimap, HUD column — is identical at every value.
+  // 1.0 is today's behaviour and is byte-identical to the state before this key existed. It is the
+  // SHIPPED default deliberately: which value still looks right is the owner's eye to decide, and a
+  // lower default would be shipping a picture change he has not seen.
+  renderScale: 1.0,
 };
 
 export const DEFAULT_RACE_BEHAVIOR_CONFIG = {

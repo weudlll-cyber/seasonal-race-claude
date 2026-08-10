@@ -107,10 +107,15 @@ vi.mock('../../../modules/raceDynamicsConfig.js', () => ({
   },
 }));
 
+// CANVAS-SCALE-1: the render-scale bounds are part of this module's surface now, and a mock that
+// omits them renders the slider with `min={undefined}` — which React reports as an error and every
+// test in this file then fails on. The values are the module's, not invented here.
 vi.mock('../../../modules/frameTimingConfig.js', () => ({
-  loadFrameTimingConfig: vi.fn(() => ({ dtSmoothingAlpha: 0.7 })),
+  loadFrameTimingConfig: vi.fn(() => ({ dtSmoothingAlpha: 0.7, renderScale: 1.0 })),
   saveFrameTimingConfig: vi.fn(),
-  DEFAULT_FRAME_TIMING_CONFIG: { dtSmoothingAlpha: 0.7 },
+  DEFAULT_FRAME_TIMING_CONFIG: { dtSmoothingAlpha: 0.7, renderScale: 1.0 },
+  RENDER_SCALE_MIN: 0.4,
+  RENDER_SCALE_MAX: 1.0,
 }));
 
 import { loadRaceDynamicsConfig } from '../../../modules/raceDynamicsConfig.js';

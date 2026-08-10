@@ -424,6 +424,22 @@ export default function RaceScreen() {
     const dynamicsConfig = loadRaceDynamicsConfig();
     const frameTimingConfig = loadFrameTimingConfig();
 
+    // ── CANVAS-SCALE-1: the backing store, and only the backing store ────────────────────────────
+    // The canvas element has never been sized from `devicePixelRatio` — the backing store is the
+    // 1280x720 reference and CSS stretches it to the wrapper (`width:100%; height:auto`). So on a
+    // wide window the picture is already being UPSCALED, and the honest control is a FRACTION of
+    // that reference rather than a DPR cap: there is no DPR here to cap.
+    //
+    // `renderScale` sizes the store; the base transform below makes every drawn coordinate a
+    // reference pixel again, so nothing downstream — camera, labels, minimap, HUD — can tell the
+    // difference. It is re-applied at the top of every frame rather than set once here, so no
+    // save/restore imbalance anywhere in the draw path can quietly lose it.
+    const renderScale = frameTimingConfig.renderScale;
+    canvas.width = Math.round(CANVAS_W * renderScale);
+    canvas.height = Math.round(CANVAS_H * renderScale);
+    // Setting width/height resets every context attribute, so the smoothing choice above is re-made.
+    ctx.imageSmoothingQuality = 'low';
+
     // Config-fingerprint badge (fix-plan step 4): short world hash + how many config keys are off the
     // shipped defaults. Race-constant, computed once here; drawn under the seed badge in the loop below.
     // CAMERA-REPRO-1 reuses the SAME world snapshot for the marker's config diff — one gather, so the
@@ -742,6 +758,10 @@ export default function RaceScreen() {
       const smoothDt = st.smoothDt;
       for (const inst of effectsRef.current) inst.update(smoothDt);
 
+      // CANVAS-SCALE-1: re-establish the base transform, then clear in REFERENCE pixels — which is
+      // exactly the whole backing store, at any scale. At renderScale 1 this is the identity matrix
+      // the context already had, so the shipped default draws precisely what it drew before.
+      ctx.setTransform(renderScale, 0, 0, renderScale, 0, 0);
       ctx.clearRect(0, 0, CANVAS_W, CANVAS_H);
 
       // ── Phase advancement ──
@@ -1308,8 +1328,15 @@ export default function RaceScreen() {
         racePlanSeed,
         gapRerollDevMarker:
           dynamicsConfig.gapRerollDevMarker ?? DEFAULT_RACE_DYNAMICS_CONFIG.gapRerollDevMarker,
-        canvasW: canvas.width,
-        canvasH: canvas.height,
+        // CANVAS-SCALE-1 — a FINDING, not a tidy-up. These read `canvas.width/height` until now,
+        // and the renderer spends them on LAYOUT: the name-tag font size, where the minimap sits,
+        // the HUD's right column, and the camera projection. They were only ever right because the
+        // backing store happened to equal the reference. Leave them reading the store and the
+        // render-scale slider stops being a sharpness control and starts moving the picture's
+        // CONTENT — smaller labels, a minimap in a different place. The reference is what the whole
+        // draw path works in, so the reference is what it is handed.
+        canvasW: CANVAS_W,
+        canvasH: CANVAS_H,
       });
       tagIncumbentsRef.current = frame.tagShown;
       tagWideFormsRef.current = frame.tagWideForms;
