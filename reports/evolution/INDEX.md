@@ -75,6 +75,32 @@ and [FAIRNESS.md](../../docs/FAIRNESS.md). Shipped world: **`dc4647be0f55ebdb`**
 
 ## Camera / presentation fixes
 
+- [SCOREBOARD-SLOT-LAYER.md](SCOREBOARD-SLOT-LAYER.md) — **THE PLACES ARE DRAWN ONCE; ONLY THE NAME
+  TAG MOVES** (branch `feat/scoreboard-slot-layer` off `669a1a5b`; **NOT merged — a visible surface
+  awaiting his eye**; all four fingerprints unchanged). The owner's own design: the badge column —
+  crown, `#2`, `#3` … with gold/**silver**/bronze — becomes a STATIC layer built once per race, and
+  the racers become CARDS whose content never changes, so the rank stops being a React prop entirely
+  and is written straight onto the element as a `translateY`. **Proven rather than argued: a
+  `MutationObserver` over 25 s of a 100-racer race recorded 728–833 mutations and EVERY ONE was
+  `scoreboard-card:style` — zero text, zero structure.** The browser's own CDP counters say what that
+  buys: **14 layouts per 100 frames — exactly one per cadence tick — become 1**, and mid-race layout
+  time falls from ~17 ms per 100 frames to **half a millisecond**. At 250 ms the branch reaches the
+  1000 ms reference (42.7 % missed vs 39.0 % in the packed phase, 4.7 % vs 0 % mid-race) where
+  today's build sits at 82 % and 72 %, running the pack at 30 fps against this one's 60. **Both of
+  the owner's visible defects were established as OLDER than this line of work before anything was
+  touched**: master clips `#100` identically (3529.3 px of rows against his 665 px window, versus
+  3533.3 on the transform branch — 4 px APART, and the transform branch is the less clipped), and the
+  28 px badge box is overflowed by every two-digit place, not only by `#100`. Both fixed here: the
+  HUD is capped at the window with a scrolling rows viewport (`#100` and `#140` fully visible at the
+  scroll end; the page stops overflowing at all), and the badge column takes ONE width from the field
+  size — 28 up to `#9`, 32 to `#99`, 40 to `#999`. **Pixel parity at an 8-racer field caught a real
+  difference**: every icon, number and name identical and every BADGE changed, because text inside a
+  composited layer is antialiased in greyscale; compositing the static layer too puts it back at 0
+  pixels differing by more than 8. **Two inherited claims corrected by re-measurement**: the row is
+  31.333 px at 1.5× and 32.000 at 1×, so `ROW_PITCH_PX` was never "height plus the 4 px margin" and
+  that margin has been inert since the rows left the flow. **Two method findings worth keeping**: a
+  perf bench inside the OneDrive-synced tree is not measuring the code (one run stalled 1016 ms), and
+  headless Chromium does not advance the race at all.
 - [SCOREBOARD-TRANSFORM-ROWS.md](SCOREBOARD-TRANSFORM-ROWS.md) — **THE STAIRCASE IS FLATTENED TO
   ZERO** (branch `feat/scoreboard-transform-rows` off `afdf130a`; **NOT merged — a visible surface
   awaiting his eye**; all four fingerprints unchanged). The rows now keep a STABLE place in the
