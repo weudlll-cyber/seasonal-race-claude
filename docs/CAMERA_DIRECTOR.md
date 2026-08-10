@@ -101,7 +101,10 @@ Evaluated in strict order on every `_transition()`:
 2. **Pre-line photo-finish entry**, a once-only latch evaluated in `update()` and consumed here.
 3. **Start phase** (`raceElapsed < 3000 ms`) → OVERVIEW.
 4. **Post-start hold** (`+ postStartHoldMs`) → LEADER_ZOOM, so BATTLE cannot fire on the natural
-   clustering at the gun.
+   clustering at the gun. The `+` is the whole point: it is a DURATION added to the 3 s overview
+   above, not a time from the gun, so the hold ends at 3000 ms plus the value. This is the only
+   place that key is read — the race planner read it too, as an absolute time, until
+   POST-START-HOLD-UNIFY removed that reading.
 5. **Endgame** (`leaderProgress > endgameThreshold`) → LEADER_ZOOM, with LEAD_CHANGE allowed
    through — a lead swap near the line is the most dramatic moment there is.
 6. **The weighted pool** — every eligible candidate, one weighted draw.
@@ -381,7 +384,15 @@ a verbatim transcript of one run on one commit, which is a historical record, no
 
 ### The tracking lag, as measured today — and it had drifted
 
-<!-- MEASURED: tracking-lag (median/p95 pp per state) @ 572324c7 2026-08-10 depends=client/src/modules/camera/ -->
+<!-- MEASURED: tracking-lag (median/p95 pp per state) @ 497a3dc8 2026-08-10 depends=client/src/modules/camera/ -->
+
+**RE-STAMPED, NOT RE-MEASURED, at `497a3dc8` (POST-START-HOLD-UNIFY), and here is the reason.** That
+commit's only edit under `client/src/modules/camera/` is a COMMENT — four lines at the post-start
+hold saying what `postStartHoldMs` measures. The guard trips on a comment-only edit exactly as on a
+behaviour change, and says so in its own `blind` list; that is a deliberate design, not a bug, and
+the answer it asks for is a deliberate re-stamp with a stated reason rather than an edited date. The
+camera fingerprint was re-measured on that branch and did not move, which is the independent evidence
+that no figure below can have changed.
 
 **These figures carry a stamp, and fails if the camera
 changes after it.** They are hand-copied on purpose: the measurement takes about seven minutes, so

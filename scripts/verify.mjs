@@ -253,6 +253,13 @@ export function commandFor(g) {
   // never write a tracked file, so the flag that makes it read-only lives here with the other argv.
   if (g.id === "engine-reach-doc")
     return { cmd: ["node", g.source, "--check"] };
+  // CEREMONY-COUNTS-GENERATED: the same rule for the ceremony's generator, and the flag is
+  // `--check-counts` rather than `--check` on purpose. Plain `--check` also fails when the guard
+  // COST table is more than 40 commits old, and a stale duration is a thing to re-measure, not a
+  // reason to fail somebody's build. The counts are recomputed in milliseconds and are either right
+  // or wrong, so that is the half verify asks about.
+  if (g.id === "ceremony-counts")
+    return { cmd: ["node", g.source, "--check-counts"] };
   const base = ["node", g.source, ...(cheap ? cheapArgs() : [])];
   // check-index is ONE guard with THREE report directories — one index discipline, not three
   // implementations. The extra invocations are argv, not routing.

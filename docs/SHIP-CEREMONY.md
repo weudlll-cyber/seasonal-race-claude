@@ -23,19 +23,38 @@ Camera and other presentation work still skips this whole ceremony. But it does 
 > against the shipped fingerprint, and say the result in the report. Its cost is in the generated
 > table below — this sentence deliberately quotes no duration.
 
-**The trigger is a computed set, not a folder (VERIFY-COST-1).** It is the transitive closure of
-`raceCore.js`'s imports — **20 files** — against the **106** files under `client/src/modules/`
-outside `camera/` that the old folder rule fired on. The other 86 cannot reach the engine, so minting
-for them proved what the diff already proved; that is where the wasted three minutes went.
+**The trigger is a computed set, not a folder (VERIFY-COST-1).** What can change the race is the
+transitive closure of `raceCore.js`'s imports. The old rule fired on a FOLDER instead, and minting
+for a file the engine cannot reach proved only what the diff had already proved — that is where the
+wasted three minutes went.
 
-> **The three numbers in that sentence are TYPED, and they have already gone stale once.** They read
-> 19 / 103 / 84 until 2026-08-10; `CONFIG-DIFF-2` added a file to the closure and nothing here
-> noticed, which is the same defect that turned master red on the generated block in
-> [SIM.md](SIM.md). Both counts are derivable — `node scripts/engine-reach.mjs` prints the closure,
-> and the folder count is a directory scan — so **this paragraph should be generated**, exactly as
-> the guard-cost table below it already is. Recorded rather than built: the argument here is prose
-> and a generator would have to own the sentence, not just the number.
-> **The list itself, in [SIM.md](SIM.md), IS generated and is not affected.**
+**The counts below are GENERATED, because typing them did not work.** They read 19 / 103 / 84 until
+2026-08-10: `CONFIG-DIFF-2` added a file to the closure and nothing here noticed, the same defect
+that turned master red on the generated block in [SIM.md](SIM.md). What kept them typed for one
+block longer was that a generator would have had to own the SENTENCE and not just the number — so
+the sentence was split. Everything a person is asserting is prose, above and below the markers; what
+is inside them is arithmetic and nothing else. Regenerate with
+`node scripts/gen-ceremony-costs.mjs --counts` — milliseconds, no guard is run — and
+`npm run verify` fails if the document disagrees with the repository.
+
+<!-- BEGIN GENERATED: engine-reach counts — gen-ceremony-costs.mjs -->
+
+| count | value |
+| ---------------------------------------------------------------------------------------------- | ----- |
+| files in `raceCore.js`'s import closure — `node scripts/engine-reach.mjs` | 20 |
+| tracked non-test files under `client/src/modules/` outside `camera/` — what the old folder rule fired on | 106 |
+| of those, files that CANNOT reach the engine | 88 |
+| closure files the folder rule never covered | `client/src/modules/camera/lapUtils.js`, `client/src/utils/mathUtils.js` |
+
+<!-- END GENERATED: engine-reach counts -->
+
+**The third count is NOT the difference of the first two, and typing it as one is how this document
+came to claim 86.** The closure and the folder are two sets, neither containing the other: the last
+row names the closure members the folder rule never covered — one inside `camera/`, which the rule
+excluded, and one outside `modules/` entirely — so the subtraction that looks obvious is short by
+exactly those. The generator takes the intersection, which is why the number moved the first time it
+was computed rather than typed. **The list itself, in [SIM.md](SIM.md), IS generated and is not
+affected.**
 
 **WHAT THE NEW TRIGGER DOES NOT CATCH, stated so nobody over-trusts it:**
 
@@ -104,19 +123,19 @@ baseline statistics behind the current world.
 
 <!-- BEGIN GENERATED: guard costs — gen-ceremony-costs.mjs -->
 
-**Costs below are GENERATED, never typed** — measured on commit `703b5b6e`, 2026-08-05 22:30 UTC, on `Testrechner`,
+**Costs below are GENERATED, never typed** — measured on commit `497a3dc8`, 2026-08-10 08:11 UTC, on `Testrechner`,
 by `node scripts/gen-ceremony-costs.mjs`. Each guard times ITSELF and prints `[ra-elapsed-ms N]`;
 this table quotes those numbers. A duration here that nobody measured is a bug in the generator,
 not a typo. `--check` warns once the block is more than 40 commits old.
 
-| guard                                         | cost  |
-| --------------------------------------------- | ----- |
-| `scripts/fingerprint-default.mjs` — **world** | 120 s |
-| `scripts/camera-fingerprint.mjs` — **camera** | 39 s  |
-| `scripts/render-fingerprint.mjs` — **render** | 32 s  |
-| `scripts/check-doc-links.mjs`                 | 0 s   |
-| `scripts/check-index.mjs`                     | 0 s   |
-| `scripts/check-tags.mjs`                      | 1 s   |
+| guard | cost |
+|---|---|
+| `scripts/fingerprint-default.mjs` — **world** | 72 s |
+| `scripts/camera-fingerprint.mjs` — **camera** | 22 s |
+| `scripts/render-fingerprint.mjs` — **render** | 22 s |
+| `scripts/check-doc-links.mjs` | 0 s |
+| `scripts/check-index.mjs` | 0 s |
+| `scripts/check-tags.mjs` | 1 s |
 
 <!-- END GENERATED: guard costs -->
 

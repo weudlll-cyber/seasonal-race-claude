@@ -2,7 +2,9 @@
 
 **What this document owns:** the map. Every maintained document, what it owns, and the order to read
 them in. If a document is not listed here it is either in [archive/](archive/README.md) or it should
-not exist.
+not exist. **The rule is about DOCUMENTS, and the four empty directories a reader may find beside
+them are not a counter-example: they are not in the repository at all** — git tracks files, so a
+directory holding none of them is local litter on one machine and nothing this map is missing.
 
 The project overview and the quick start are in the root [`README.md`](../README.md).
 

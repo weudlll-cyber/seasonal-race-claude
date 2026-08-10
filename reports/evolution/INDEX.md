@@ -75,6 +75,78 @@ and [FAIRNESS.md](../../docs/FAIRNESS.md). Shipped world: **`dc4647be0f55ebdb`**
 
 ## Camera / presentation fixes
 
+- [CEREMONY-COUNTS-GENERATED.md](CEREMONY-COUNTS-GENERATED.md) — **THE SENTENCE WAS SPLIT, AND ONE OF
+  THE THREE NUMBERS WAS WRONG** (branch `feat/ceremony-counts` off `feat/post-start-hold-unify`; docs
+  and tooling only, no engine file touched). Declined last night because a generator would have had
+  to own the ARGUMENT and not just the number; the fix is to split them — the assertion stays as
+  prose above and below the markers, and what is inside is arithmetic and nothing else. Every
+  sentence split cleanly, so nothing was left typed. **THE PAYOFF WAS IMMEDIATE: the document said
+  86 and the answer is 88.** The closure (20) and the folder count (106) were both right; the third
+  was computed as `106 − 20`, and that subtraction is invalid because **the closure is not a subset
+  of the folder** — `camera/lapUtils.js` is inside `camera/` and `client/src/utils/mathUtils.js` is
+  outside `modules/`. The generator takes the intersection and the block NAMES those two, so the
+  argument below it is checkable rather than assertable. (`103 − 19 = 84` was wrong the same way.)
+  **SAME MECHANISM, ONE FLAG APART**: same script, same markers, same `writeVerified` — but the two
+  blocks are asked DIFFERENT questions, because a cost cannot be recomputed without paying it (so
+  `--check` can only ask how old it is) while a count can (so its check asks whether it is right).
+  `npm run verify` runs `--check-counts`, asserted in `verify.test.mjs`; `routing.mjs` gains its
+  second explicit generator name, and this is the sharpest case for why that list is names and not a
+  `gen-*` wildcard — run bare, this one spends five minutes running six guards before it writes.
+  **A DEFECT FOUND BY THE NEW TEST IN THE FILE IT WAS TESTING**: importing the module ran all six
+  guards and REWROTE the tracked `docs/SHIP-CEREMONY.md`; same defect and same `IS_ENTRY` fix as
+  `verify.mjs`, and the test went 114 s → 0.8 s. That accident is why the cost numbers moved here —
+  re-measured deliberately afterwards, world 120 → 72 s, camera 39 → 22 s, render 32 → 22 s, which is
+  a quieter machine and not a faster guard. Plus the one `docs/README.md` line: the four empty
+  directories are not in the repository at all.
+
+- [POST-START-HOLD-UNIFY.md](POST-START-HOLD-UNIFY.md) — **THERE WERE NEVER TWO CLOCKS. THERE WAS ONE
+  CLOCK AND ONE DEAD PARAMETER** (branch `feat/post-start-hold-unify` off `feat/canvas-scale-1`; not
+  merged; **WORLD `dc4647be0f55ebdb` unchanged**). His decision was to unify, and the constraint was
+  that the planner sits inside the engine so unifying could pick a different winner. **It could not,
+  because the planner's clock was never wired**: `config.postStartHoldMs ?? 0` resolved to 0 on every
+  race ever run — **none of the five callers of `createRacePlan` passes that key** (raceCore,
+  sim-fairness, goldenRunner, both diag harnesses), so the floor `Math.max(0, x)` has never bound.
+  **THE CORRECT MEANING IS THE CAMERA'S** — a DURATION added to the 3 s overview, so the hold ends at
+  3000 + the value — and every independent statement of the key says so (the `+` in CameraDirector,
+  the defaults comment, the tooltip, CAMERA_DIRECTOR.md); the planner's absolute-from-zero reading
+  had no support and was **3000 ms wrong on its own terms**. **BUILT: the dead reading is removed** —
+  byte-identical for every duration, track and seed by construction, and re-measured to say so.
+  **MEASURED ANYWAY, because he may still want it wired properly**: a floor at 3000+7000 = 10000 ms
+  would make the world **`792299983c98d25d`**, binding on **6 of 10 tracks** (it binds whenever a race
+  finishes under **66.7 s**) and changing the outcome on **5** — space-sprint's boundary moves a full
+  second and its outcome hash does not, which is why this was measured rather than argued. That is a
+  REBASELINE and it is his. **A FALSE CLAIM CORRECTED**: `check-fallback-agreement.mjs` justified its
+  exception with "raceCore sets postStartHoldMs in the plan config" — it does not; entry removed, and
+  the worklist got shorter by being worked. **NOT RENAMED, with a reason**: the camera loader rebuilds
+  the config key by key, so a rename silently discards his stored value; instead all three sites now
+  state what the key measures. Two tests changed rather than deleted — the floor test is **inverted**
+  into "the planner does not read a camera key".
+
+- [CANVAS-SCALE-1.md](CANVAS-SCALE-1.md) — **A RENDER-SCALE SLIDER WAS BUILT, MEASURED AND DROPPED;
+  THE LAYOUT COUPLING IT EXPOSED IS WHAT SHIPS** (branch `feat/canvas-scale-1` off `f69f66fb`; **all
+  four fingerprints unchanged — it draws exactly what master draws**). **THE CANVAS HAS NEVER BEEN
+  DPR-AWARE**: `devicePixelRatio` appears nowhere in `client/src`; the backing store is a hard-coded
+  1280×720 that CSS stretches to the wrapper. On his machine (DPR **1.5**, canvas CSS box 1058×595 =
+  **1587×893 device px**) that means the shipped picture is **already upscaled ~1.5× in area** — no
+  DPR headroom to cap, only sharpness to spend. **MEASURED, AND THE MEASUREMENT KILLED THE SLIDER**:
+  100 racers on mountainstreet, total 16.7/16.8 ms at every scale; 1.00 → 0.50 saves ~0.4 ms of
+  physics-p90 and ~0.5 ms of render-p90 — **under 1 ms of a 16.7 ms frame**, so the owner dropped it
+  rather than keep code that earns nothing. **AND IT REFUTES THE MECHANISM**: `clearRect` clears a
+  CONSTANT 1280×720, so shrinking the window cannot have shrunk it; his own experiment reproduced
+  with the store held fixed moves the brackets by the same ~1 ms; and the 6144×4096 (25.2 Mpx, **27×
+  the race canvas**) background layer, re-transformed every frame, was added as a suspect and changed
+  nothing. The harness never reproduced a 33 ms frame at all — **his ~29 ms lives in `other`, which no
+  `perfLog` bracket contains**. **WHAT SHIPS IS THE FINDING UNDERNEATH**: `index.jsx` handed the
+  renderer `canvas.width/height`, and the renderer spends that on **LAYOUT** — name-tag font, minimum
+  drawn racer size, label-layout box, minimap, HUD column. Correct only because the store happens to
+  equal the reference; a coincidence, not a rule, and one that fails silently. It now passes the
+  reference constants (a no-op today, and the render fingerprint says so), guarded by
+  `render-layout-separation.test.mjs` in both directions — that the two arguments really drive
+  layout, and, sabotage-proven by text, that the call site passes the reference. The 430-line
+  multi-scale invariance test went with the slider. **Two harness findings kept**: drawing a frame is
+  NOT read-only (`racerRendering.js` appends to `r.trail` while painting), and `/race` is behind a
+  login only he has, so no in-app measurement is possible without him.
+
 - [FINISH-COMPANY-1.md](FINISH-COMPANY-1.md) — **THE COMPANY GUARANTEE RETIRES ONCE THE COMPANY IS HOME** (branch `feat/finish-company-1`, his proposal built; **his eye pending**). **§1 — WHY FINISHED RACERS WERE EXCLUDED, answered before overturning anything**: blamed to `cfd47cd5` (CAMERA-COMPANY-1), where the guarantee was introduced — **deliberate, not an accident** (that block lists "finished racers are not company" among its fifteen tested properties), but **the reason is recorded nowhere**. **It is NOT a stale-position problem, and that was measured rather than read**: over 60 frames after crossing, the first six finishers advanced `t` by ~0.010-0.012 and moved **62-75 world px** — they run out past the line with live, trustworthy coordinates. So option B was viable and worth asking about. **§2 — BOTH MEASURED, AND B IS REFUTED**: on his marked race and on dirt-oval, baseline widens for **54 / 58 frames** down to 2.9752 / 2.9592; **A (stop once leader+N are home) gives 0 / 0 widening frames**, holding the setting 4.5489 exactly; **B (count finished racers as company) is slightly WORSE — 55 / 59 frames, widening FURTHER to 2.8760 / 2.8443**. **The reason B fails is the fixed anchor**: FINISH_OVERVIEW centres `finishOverviewLookbackPx` BEHIND the line, so finished racers run out AWAY from it exactly as stragglers fall back from it — counting them adds more distant company instead of satisfying the promise. The intuition that it "resolves itself" assumes the anchor is where the racers are; it is deliberately not. **A and B differ on every measured race**, so the simpler-if-identical branch does not apply. **THE TRADE, as a picture rather than a number**: with A the last back-marker sits **11% inside the frame instead of 23% (city) / 50% (dirt) — still ON SCREEN on both, nearer the edge, not cropped**. **CHANGE**: one condition in `_setTargets` — the company ceiling is skipped when `_inFinishMode && finishedCount >= 1 + minRacersVisible`. Scoped to the finish deliberately, since nothing is finished during the race, so the branch cannot fire and the guarantee elsewhere is untouched; `minRacersVisible` and `companyGuarantee` are both unchanged. **Tests in both positions** — enough finishers stops the ceiling, too few still binds, the threshold follows HIS number (4 is enough at 3, not at 5), and mid-race with the same field it still binds, which is what proves the scoping. **A DEFECT FOUND IN MY OWN TOOL AND FIXED HERE**: `npm run verify` **told this block the diff could not reach a `ctx.` call** and skipped the render fingerprint — which had moved. The `isRender` matcher, copied from the ceremony's list, omitted `modules/camera/`; of course a camera change moves the drawn frame, since the director decides the transform every frame. Matcher and routing test fixed — the tool made its own failure visible, which is what it was built for. camera `6480c2e0b2f612b5` -> **`00cafa2432add0f7`**, render `b6591e74102152bd` -> **`1f83ecc1fcb6fa9a`**, both on purpose; **world `dc4647be0f55ebdb` unmoved** (nothing in engine-reach's closure was touched, which verify stated as its reason for skipping it). Suite **3645**. **Noticed**: the ceremony's own render-fingerprint list has the same omission, since that is where the matcher came from.
 
 - [FINISH-SWING-1.md](FINISH-SWING-1.md) — **THE LATE SWING IS THE COMPANY GUARANTEE, AND IT IS OLDER THAN THE BRANCH** (diagnosed from his marker on `a505ecf6`; NOT repaired; all three branches then merged to master `9f988c70`). **REPRODUCED FRAME-FOR-FRAME** from his identity (City Circuit, n=39, motorbike, seed 5601, cam seed 882842572, his stored config): his marker read `z 3.218059 / ox -1912.477`, the repro hits `z 3.2160 / ox -1959.9` at frame 5040. **He was right that the camera was still moving.** **CAUSE, with its location**: `_setTargets()`'s `guaranteed = Math.min(stateZoom, _guaranteeCeiling, _companyCeiling)`. The finish move LANDS at frame 4904 (zoom 4.5489, offset -2835.9, dPan 0.0) and stays at rest for **96 frames / 1.6 s**; then `guaranteed` falls away from `stateZoom` — 4.5489 -> 2.9752 — while `stateZoom` never moves, and the camera follows it at ~30 px/frame. **The COMPANY guarantee (`minRacersVisible`, default 3) is doing it**: FINISH_OVERVIEW holds a FIXED point behind the line, and as the tail straggles in (finishedCount 32 -> 38 across exactly those frames) the three nearest racers to that point get further away, so the shot widens to keep three in frame. **PROVED BY THE SWITCH, NOT THE STORY**: at `minRacersVisible: 0` the widening disappears completely (4.5489 / -2835.9 held to the last frame, dPan 0.0). **OLDER THAN THE BRANCH**: the same probe on `b363bd94` — before FINISH-SEAM-1, FINISH-MOTION-1 and FINISH-WINDOW-1 — shows the identical widening from the same finishedCount. He is noticing it now because **the jump that used to dominate the moment is gone and what was always underneath is the loudest thing left**. So nothing was repaired: fixing it inside a branch he had already passed by eye would have moved fingerprints under his verdict. **HIS CONFIG, two answers**: (1) despite the much stricter 0.025 / 0.966, the marked race still took the **PHOTO-FINISH path**, not the ordinary one the brief expected; (2) **both keys are live and govern DIFFERENT moments — neither is an ignored orphan**: `finishDramaDurationMs` (900) is the camera HOLD before the zoom-out ("Finish pause (ms)"), `finishPauseMs` (4000) is the delay after the LAST finisher before the leaderboard. What he should set for the beat he means is the 900. **A naming collision I introduced and own**: FINISH-WINDOW-1 relabelled `finishDramaDurationMs` to "Finish pause (ms)", which now reads confusingly close to the neighbouring "Pause after last finisher" — the tooltips distinguish them, the labels no longer do. **MERGES**: finish-window-1 (CI `31038147958`) -> verify-cost-1 -> verify-fast-1, `--no-ff`, in that order; master `9f988c70`, all three deleted at origin, script suite 150/150, world `dc4647be0f55ebdb` unmoved. **RECOMMENDATION, not taken here because it is a taste question**: freeze the guarantee once the finish move lands (FINISH_OVERVIEW is an authored final shot and the guarantee exists to stop a LIVE shot going empty) — versus leaving it, since the widening does keep the arriving stragglers in frame, which is what he likes about the lookback point. Build the first behind a gate and let his eye decide; it moves the camera fingerprint, so it needs its own block.

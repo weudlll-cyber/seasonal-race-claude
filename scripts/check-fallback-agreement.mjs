@@ -88,11 +88,13 @@ const LIST = process.argv.includes("--list");
 //
 // EVERY KNOWN DISAGREEMENT, WITH BOTH VALUES AND A REASON. It is not an allowlist and it is not
 // permission: it is a WORKLIST. A bare allowlist rots into a list nobody reads; a list of unanswered
-// questions is something a person can pick up. Two of these cannot be "brought in step" without
+// questions is something a person can pick up. One of these cannot be "brought in step" without
 // deciding a behaviour question, which is exactly why this guard ships green rather than shipping a
 // silent alignment:
 //   - `outcomePhaseThreshold` shapes the race.
-//   - `postStartHoldMs` is engine-adjacent; aligning it silently could move the world fingerprint.
+// `postStartHoldMs` was the second, and POST-START-HOLD-UNIFY answered it: the planner's reading was
+// removed, so there is no longer a second site to be out of step with. The worklist got shorter by
+// being worked, which is what it is for.
 //
 // A NEW disagreement — in any file, including these — is RED. The exception is keyed on
 // (file, key, both values), so changing either side of a listed pair makes it stop matching and the
@@ -110,13 +112,13 @@ const D = (file, key, defaultValue, fallbackValue, reason) => ({
 });
 export const EXCEPTIONS = [
   // ── TIER 1: engine-adjacent. Aligning one of these could move the WORLD fingerprint. ──────────
-  D(
-    "client/src/modules/racePlanner.js",
-    "postStartHoldMs",
-    7000,
-    0,
-    "UNFIREABLE, but the RENAME question SURVIVES the triage (FALLBACK-42-TRIAGE). raceCore sets postStartHoldMs in the plan config, so `?? 0` never runs. The two-clocks question is not about the fallback at all — it is about one key name meaning two different things — and that remains a real owner decision independent of this list.",
-  ),
+  //
+  // RESOLVED AND REMOVED (POST-START-HOLD-UNIFY): `racePlanner.js` / `postStartHoldMs` / 7000 vs 0.
+  // The fallback is gone because the READING is gone. Its reason line here also stated something
+  // untrue — "raceCore sets postStartHoldMs in the plan config, so `?? 0` never runs". raceCore
+  // does not set it, and neither does any other caller of `createRacePlan`; the fallback ran on
+  // EVERY race and resolved to 0, which is why removing the floor is byte-identical. Recorded
+  // rather than quietly deleted: the entry was right that it could not fire, and wrong about why.
   D(
     "client/src/modules/raceBehavior.js",
     "maxLateralAccelPerStep",

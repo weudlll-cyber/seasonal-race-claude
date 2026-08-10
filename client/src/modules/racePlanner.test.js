@@ -125,17 +125,22 @@ describe('createRacePlan', () => {
     expect(plan._phases.pulkEnd).toBeCloseTo(0.5 * TARGET_DUR_MS, 0);
   });
 
-  it('respects postStartHoldMs as minimum pulkStart', () => {
-    const holdMs = 20_000;
-    const plan = createRacePlan(
+  // POST-START-HOLD-UNIFY: this used to be 'respects postStartHoldMs as minimum pulkStart', and it
+  // was the only place in the repository where that floor was ever exercised — no caller of
+  // createRacePlan passes the key, so the behaviour it pinned could not happen in a race. The test
+  // is INVERTED rather than deleted: it now pins that the planner does NOT read a camera key, which
+  // is the property the removal establishes and the one a well-meaning re-introduction would break.
+  it('does not read postStartHoldMs — it is a CAMERA key and the planner ignores it', () => {
+    const without = createRacePlan(BASE_RACERS, FINISH_T, TARGET_DUR_MS, {}, BASE_SEED);
+    const withKey = createRacePlan(
       BASE_RACERS,
       FINISH_T,
       TARGET_DUR_MS,
-      { postStartHoldMs: holdMs },
+      { postStartHoldMs: 20_000 },
       BASE_SEED
     );
-    // pulkStart fraction = 0.15 × 60000 = 9000ms < 20000ms, so holdMs wins
-    expect(plan._phases.pulkStart).toBe(holdMs);
+    expect(withKey._phases.pulkStart).toBe(without._phases.pulkStart);
+    expect(without._phases.pulkStart).toBeCloseTo(0.15 * TARGET_DUR_MS, 0);
   });
 
   it('accepts config overrides for controllerParams', () => {
@@ -840,22 +845,26 @@ describe('createTrajectoryController — leader-progress phase clock', () => {
     expect(ctrl.getPhase(0, 0.6)).toBe('OUTCOME');
   });
 
-  it('derives the fraction boundaries single-source (postStartHold reflected, ties to L126)', () => {
-    // postStartHold raises pulkStart to 20000ms → fraction 20000/60000 ≈ 0.333 (not the raw 0.25).
-    const holdMs = 20_000;
+  it('derives the fraction boundaries single-source from the ms boundaries', () => {
+    // POST-START-HOLD-UNIFY: this test used to shift pulkStart with `postStartHoldMs` so the derived
+    // fraction (0.333) would differ from the raw one (0.15), and then check the controller used the
+    // derived value. That vehicle is gone with the floor, so the same property is stated directly:
+    // the progress clock's boundary IS `_phases.pulkStart / duration`, with no second copy of the
+    // fraction anywhere. A caller-supplied `pulkStart` fraction is what can move it now.
     const plan = createRacePlan(
       BASE_RACERS,
       FINISH_T,
       TARGET_DUR_MS,
-      { postStartHoldMs: holdMs, choreoOutcomeStart: 0.5 },
+      { pulkStart: 0.3, choreoOutcomeStart: 0.5 },
       BASE_SEED
     );
     const ctrl = createTrajectoryController(plan);
-    const pulkStartFrac = plan._phases.pulkStart / TARGET_DUR_MS; // 0.333…
+    const pulkStartFrac = plan._phases.pulkStart / TARGET_DUR_MS;
+    expect(pulkStartFrac).toBeCloseTo(0.3, 6);
     expect(ctrl.getPhase(0, pulkStartFrac - 0.01)).toBe('PRE_PULK');
     expect(ctrl.getPhase(0, pulkStartFrac + 0.01)).toBe('PULK');
-    // Raw 0.25 would be PULK if the boundary were not single-sourced from the ms value.
-    expect(ctrl.getPhase(0, 0.3)).toBe('PRE_PULK');
+    // The shipped 0.15 would be PULK here if the boundary were the default rather than the plan's.
+    expect(ctrl.getPhase(0, 0.2)).toBe('PRE_PULK');
   });
 
   it('computePulkBiasedTarget gates on phaseProgress when supplied', () => {

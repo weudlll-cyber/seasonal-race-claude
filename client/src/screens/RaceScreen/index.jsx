@@ -1308,8 +1308,21 @@ export default function RaceScreen() {
         racePlanSeed,
         gapRerollDevMarker:
           dynamicsConfig.gapRerollDevMarker ?? DEFAULT_RACE_DYNAMICS_CONFIG.gapRerollDevMarker,
-        canvasW: canvas.width,
-        canvasH: canvas.height,
+        // CANVAS-SCALE-1 — a FINDING, not a tidy-up, and the one thing that block left behind.
+        // These read `canvas.width/height` until now, and the renderer spends them on LAYOUT: the
+        // name-tag font size, the minimum drawn racer size, the label layout's screen box, where the
+        // minimap sits and where the HUD's right column sits. They were only ever right because the
+        // backing store happens to equal the reference the whole draw path works in — a coincidence,
+        // not a rule, and one that holds only while nothing ever resizes the store.
+        //
+        // NOTHING RESIZES IT TODAY, so this is a no-op and the render fingerprint says so. It stays
+        // because the coupling is the kind that fails silently: the day the store changes size, for
+        // any reason, layout in backing-store pixels moves the picture's CONTENT — smaller labels, a
+        // minimap somewhere else — while looking like a resolution change.
+        // `scripts/render-layout-separation.test.mjs` holds both halves: that these two arguments
+        // really do drive layout, and that this call site passes the reference.
+        canvasW: CANVAS_W,
+        canvasH: CANVAS_H,
       });
       tagIncumbentsRef.current = frame.tagShown;
       tagWideFormsRef.current = frame.tagWideForms;
