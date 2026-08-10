@@ -1,0 +1,67 @@
+/* ============================================================
+   File:        CeremonyBrandCard.css
+   Path:        client/src/screens/RaceScreen/CeremonyBrandCard.css
+   Project:     RaceArena — CEREMONY-OPENING-1
+
+   The opening card. It sits over the canvas, inside the canvas wrapper, so it is bounded by the
+   picture rather than by the page — the standings beside it are never covered.
+
+   The fade is `opacity` and `visibility` only. `visibility` is what keeps the card out of the way
+   once it has gone: an element at opacity 0 still occupies the compositor and still answers a hit
+   test, and this one covers the whole race.
+   ============================================================ */
+
+.ceremony-brand {
+  position: absolute;
+  inset: 0;
+  z-index: 6;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 18px;
+  background: radial-gradient(ellipse at center, rgba(4, 8, 24, 0.86), rgba(2, 3, 12, 0.97));
+  opacity: 0;
+  visibility: hidden;
+  transition:
+    opacity 0.45s ease,
+    visibility 0s linear 0.45s;
+  pointer-events: none;
+}
+
+.ceremony-brand--in {
+  opacity: 1;
+  visibility: visible;
+  transition:
+    opacity 0.45s ease,
+    visibility 0s;
+}
+
+.ceremony-brand__logo {
+  max-width: 46%;
+  max-height: 42%;
+  object-fit: contain;
+  filter: drop-shadow(0 6px 28px rgba(0, 0, 0, 0.65));
+}
+
+.ceremony-brand__title {
+  font-size: clamp(22px, 3.6vw, 52px);
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--brand-primary, #ffd700);
+  text-shadow: 0 2px 18px rgba(0, 0, 0, 0.7);
+  text-align: center;
+  padding: 0 6%;
+}
+
+.ceremony-brand__subtitle {
+  margin-top: -6px;
+  font-size: clamp(11px, 1.4vw, 18px);
+  font-weight: 600;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.62);
+  text-align: center;
+  padding: 0 8%;
+}

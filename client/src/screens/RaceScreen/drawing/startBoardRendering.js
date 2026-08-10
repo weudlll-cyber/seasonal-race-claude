@@ -263,6 +263,52 @@ export function startBoardEntries(racers) {
   });
 }
 
+/**
+ * THE HEADING'S TWO LINES, as strings — pure, so what the header SAYS can be tested without a canvas.
+ *
+ * The note carries two facts and each appears exactly once: how many are starting, and the order the
+ * list is in. Both are drawn from the same place the board is: the count is `entries.length` and the
+ * ordering is `startBoardEntries`'s own guarantee, so the note cannot describe an order the board is
+ * not in. THAT IS THE POINT OF PUTTING IT HERE rather than inlining two template strings — a claim
+ * about the list belongs next to the function that makes the claim true, and
+ * `startBoardRendering.test.js` asserts the layout really is in that order.
+ *
+ * `ORDER_LABEL` is a constant rather than a literal because it is the one word a future re-sort would
+ * have to change, and a re-sort that forgot it would leave the board lying about itself.
+ *
+ * @param {number} count  how many entries the board is showing
+ * @returns {{title: string, note: string}}
+ */
+export const ORDER_LABEL = 'ALPHABETICAL ORDER';
+
+export function startBoardHeading(count) {
+  const n = Number.isFinite(count) && count > 0 ? Math.floor(count) : 0;
+  return { title: 'STARTERS', note: `${n} · ${ORDER_LABEL}` };
+}
+
+/**
+ * Draw `text` centred on `cx` with `track` extra pixels between characters.
+ *
+ * Canvas has no letter-spacing, and letter-spacing is the one typographic move that reads as
+ * ceremony rather than as chrome. Extracted from the heading because it was eight lines of index
+ * arithmetic inline in the middle of the drawing sequence, and because the measurement and the
+ * drawing have to agree about the tracking — inline, they were two expressions that could drift.
+ *
+ * The caller sets font, fill and `textAlign = 'left'`; this only positions.
+ */
+export function fillTracked(ctx, text, cx, y, track) {
+  const chars = [...text];
+  let w = 0;
+  for (const ch of chars) w += ctx.measureText(ch).width + track;
+  w -= track;
+  let x = cx - w / 2;
+  for (const ch of chars) {
+    ctx.fillText(ch, x, y);
+    x += ctx.measureText(ch).width + track;
+  }
+  return w;
+}
+
 /** A racer's start row, 1-based for display, or null when no assignment is available. */
 export function startRowOf(racer, assignmentByRacer) {
   const row = assignmentByRacer?.get?.(racer?.index)?.rowIndex;
@@ -410,11 +456,51 @@ export function drawStartBoard(
     ctx.fillRect(rule.x - ruleW / 2, rule.top, ruleW, rule.bottom - rule.top);
   }
 
+  // ── THE HEADING (STARTERS-HEADING-1) ─────────────────────────────────────────────────────────
+  // TWO LINES AND A RULE, and the point of the shape is that they are one BLOCK rather than a word
+  // with a number stuck to its side. CEREMONY-OPENING-2 made the count subordinate but left it
+  // beside the title, so the pair floated: a long word, a small orphan, and a hairline as wide as
+  // the two of them together, sitting over a much wider panel.
+  //
+  // WHAT MOVED: the count came out from beside the word and joined the ORDERING on a line of its
+  // own directly beneath it, and the rule is now tied to the PANEL's width instead of the words'.
+  // A rule as wide as the thing it sits above is what anchors a header to a list; a rule as wide as
+  // the words is a decoration floating in the middle of one.
+  //
+  // THE SUBORDINATION IS UNCHANGED — smaller, lighter, dimmer — because that part his eye accepted.
+  // It has only been relocated.
+  const heading = startBoardHeading(entries.length);
+  const titleFont = Math.round(19 * L.scale);
+  const noteFont = Math.round(11 * L.scale);
   ctx.textBaseline = 'middle';
-  ctx.textAlign = 'center';
-  ctx.font = `bold ${Math.round(17 * L.scale)}px sans-serif`;
+
+  // The title is LIFTED off `titleY` to make room for the note under it. The two lines are placed
+  // around that anchor rather than growing downward from it, so the block stays inside the padding
+  // the panel already allows and the entries below do not move — this change draws differently, it
+  // does not re-lay-out the board.
+  const titleMid = L.titleY - 5 * L.scale;
+  const noteMid = L.titleY + 8 * L.scale;
+
+  ctx.textAlign = 'left';
+  ctx.font = `bold ${titleFont}px sans-serif`;
   ctx.fillStyle = '#ffd700';
-  ctx.fillText(`STARTERS · ${entries.length}`, canvasW / 2, L.titleY);
+  fillTracked(ctx, heading.title, canvasW / 2, titleMid, 3.2 * L.scale);
+
+  ctx.textAlign = 'center';
+  ctx.font = `${noteFont}px sans-serif`;
+  ctx.fillStyle = 'rgba(255, 255, 255, 0.5)';
+  ctx.fillText(heading.note, canvasW / 2, noteMid);
+
+  // THE RULE, tied to the PANEL. Inset a little at each end so it reads as belonging to the board
+  // rather than as a second edge drawn on top of the panel's own.
+  const ruleInset = PANEL_PAD_X * L.scale;
+  ctx.fillStyle = 'rgba(255, 215, 0, 0.22)';
+  ctx.fillRect(
+    L.panel.x + ruleInset,
+    Math.round(L.titleY + 16 * L.scale),
+    Math.max(0, L.panel.w - ruleInset * 2),
+    Math.max(1, Math.round(L.scale))
+  );
 
   const numberBox = NUMBER_BOX * L.scale;
   const spriteBox = SPRITE_BOX * L.scale;

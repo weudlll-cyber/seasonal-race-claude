@@ -26,6 +26,8 @@ import {
   fitTextToWidth,
   startRowOf,
   drawStartBoard,
+  startBoardHeading,
+  ORDER_LABEL,
   NO_NAME_LABEL,
 } from './startBoardRendering.js';
 import { raceNumberLabel } from '../../../modules/raceNumbers.js';
@@ -288,17 +290,39 @@ describe('A VISIBLE EDGE BETWEEN COLUMNS (START-BOARD-7)', () => {
     // UNDER the entries, which is what makes them furniture: every rect painted after the last rule
     // is a number chip, so nothing about an entry was drawn before the boundary it sits beside.
     const lastRuleIdx = Math.max(...drawn.map((r) => ctx.rects.indexOf(r)));
-    expect(ctx.rects.length - lastRuleIdx - 1, 'only the 100 chips come after').toBe(100);
+    // CEREMONY-OPENING-2 added ONE rect above the entries — the heading's hairline — so "everything
+    // after the last rule" is no longer "every chip" by construction. The claim is unchanged and is
+    // now stated against the entries' own band instead of against a raw count, which is what it
+    // always meant: nothing belonging to an ENTRY is painted before the rule it sits beside.
+    const after = ctx.rects.slice(lastRuleIdx + 1);
+    // The heading's hairline is a ONE-PIXEL rule; a number chip is a box. Separating them by height
+    // rather than by position says what actually distinguishes them.
+    const chips = after.filter((r) => r.h > 2);
+    const hairlines = after.filter((r) => r.h <= 2);
+    expect(chips.length, 'only the 100 chips come after').toBe(100);
+    expect(hairlines.length, 'and one heading rule, which is not part of an entry').toBe(1);
+    expect(
+      hairlines[0].y,
+      'the heading rule sits with the heading, above the entries'
+    ).toBeLessThan(Math.min(...chips.map((c) => c.y)));
   });
 
   // The spec was explicit, and it is worth a test rather than a promise.
-  it('there are no HORIZONTAL separators', () => {
+  it('there are no HORIZONTAL separators BETWEEN ENTRIES', () => {
+    // STARTERS-HEADING-1: scoped to the entries' own band. The claim was always about the LIST —
+    // rows are separated by nothing, columns by a rule — and the heading now draws a panel-wide rule
+    // ABOVE the grid to anchor itself to it. That rule is not a separator between entries and never
+    // was the thing this test was protecting against; saying "below the first row's top" is what the
+    // test always meant.
     const ctx = draw(40);
     const L = startBoardLayout(40, CW, CH);
     const wideShort = ctx.rects.filter(
-      (r) => r.w > L.cellW * 0.5 && r.h < L.cellH * 0.5 && r.w > r.h
+      (r) => r.y >= L.originY && r.w > L.cellW * 0.5 && r.h < L.cellH * 0.5 && r.w > r.h
     );
     expect(wideShort.length).toBe(0);
+    // …and the heading's rule IS there, above them, or the scoping above would hide a regression.
+    const above = ctx.rects.filter((r) => r.y < L.originY && r.h <= 2 && r.w > L.cellW);
+    expect(above.length, 'the heading rule is missing').toBe(1);
   });
 });
 
@@ -667,7 +691,11 @@ describe('the portrait is the shipped drawing function, in its neutral pose', ()
     });
     const spriteX = drawRacer.mock.calls[0][1];
     const nameCall = ctx.textCalls.find((c) => c.t === racers[0].name);
-    const numCall = ctx.textCalls.find((c) => c.t === '1');
+    // CEREMONY-OPENING-2: the heading draws the FIELD COUNT as a bare number, which at a
+    // one-racer field is also '1'. The entry's number is the one on the entry's line — which is
+    // what this test always meant, and now has to say.
+    const nameY = ctx.textCalls.find((c) => c.t === racers[0].name).y;
+    const numCall = ctx.textCalls.find((c) => c.t === '1' && Math.abs(c.y - nameY) < 0.5);
     const rowCall = ctx.textCalls.find((c) => /^R\d+$/.test(c.t));
     expect(numCall.x).toBeLessThan(spriteX);
     expect(spriteX).toBeLessThan(rowCall.x);
@@ -687,5 +715,118 @@ describe('the portrait is the shipped drawing function, in its neutral pose', ()
     const ctx = draw(40, { alpha: 0 });
     expect(ctx.fillRect).not.toHaveBeenCalled();
     expect(ctx.texts.length).toBe(0);
+  });
+});
+
+// ── THE HEADING SAYS SOMETHING TRUE, AND SAYS IT ONCE (STARTERS-HEADING-1) ──────────────────────
+describe('the heading’s ordering note is a fact about the board, not decoration', () => {
+  // WHAT BREAKS IF DELETED: the board tells the viewer the list is alphabetical. If a future change
+  // re-sorts the entries — by start row, by number, by anything — the note keeps claiming
+  // alphabetical and the viewer scans for a name that is not where they were told to look. That is
+  // worse than no note at all, because they will trust it.
+  // WHAT GOES UNNOTICED: exactly that. A wrong ordering note looks identical to a right one.
+  it('the entries are LAID OUT in alphabetical order, in the order they are read', () => {
+    // Not `startBoardEntries` in isolation — the LAYOUT. The cells are filled column-major, so the
+    // order a viewer reads is down column one, then down column two. This asserts the order that is
+    // actually on screen, which is the thing the note describes.
+    const names = [
+      'Zebedee',
+      'alpha',
+      'Mabel',
+      'bravo',
+      'Yolanda',
+      'Charlie',
+      'delta',
+      'Nadia',
+      'echo',
+      'Xavier',
+    ];
+    const entries = startBoardEntries(field(names.length, names));
+    const read = entries.map((r) => r.name.toLowerCase());
+    expect(read).toEqual([...read].sort());
+    // …and the layout consumes them in that same order, cell by cell — so "read order" is not an
+    // assumption about the grid but a statement about it.
+    const L = startBoardLayout(names.length, CW, CH);
+    const cells = entries.map((_, i) => L.cellAt(i));
+    for (let i = 1; i < cells.length; i++) {
+      const prev = cells[i - 1];
+      const cur = cells[i];
+      const sameColumn = Math.abs(cur.x - prev.x) < 0.5;
+      expect(sameColumn ? cur.y > prev.y : cur.x > prev.x).toBe(true);
+    }
+  });
+
+  it('SABOTAGE — a board sorted by anything else fails the claim', () => {
+    const names = ['Zebedee', 'alpha', 'Mabel', 'bravo'];
+    const byIndex = field(names.length, names).map((r) => r.name.toLowerCase());
+    expect(byIndex).not.toEqual([...byIndex].sort());
+  });
+
+  // WHAT BREAKS IF DELETED: nothing catches the heading saying the same thing twice. This branch has
+  // already shipped one duplicated line — the brand card printed its subtitle under an identical
+  // title — and only a browser run found it. A string test is cheaper than a browser run.
+  it('carries the count exactly once and the ordering note exactly once', () => {
+    const ctx = draw(40);
+    const L = startBoardLayout(40, CW, CH);
+    // SCOPED TO THE HEADING BAND, and it has to be: '40' is also the race NUMBER of the fortieth
+    // racer, drawn on a chip down in the list. The claim is about the header, so the header is what
+    // is looked at.
+    const head = ctx.textCalls.filter((c) => c.y < L.originY);
+    const note = startBoardHeading(40).note;
+    expect(
+      head.filter((c) => c.t === note),
+      'the note is drawn once'
+    ).toHaveLength(1);
+    // Nothing ELSE in the header states the count — the old layout drew it as its own string beside
+    // the title, and this is what would catch it coming back.
+    expect(
+      head.filter((c) => c.t === '40'),
+      'no second, bare count'
+    ).toHaveLength(0);
+    expect((note.match(/40/g) ?? []).length, 'the count appears once IN the note').toBe(1);
+    expect((note.match(new RegExp(ORDER_LABEL, 'g')) ?? []).length, 'the ordering once').toBe(1);
+    // The title is letter-spaced, so it is drawn character by character and never exists as a whole
+    // string; the note is the only place the word appears intact. One occurrence, in the note or not
+    // at all — and with the note carrying no 'STARTERS', that is zero.
+    const whole = head.filter((c) => typeof c.t === 'string' && c.t.includes('STARTERS'));
+    expect(whole.length, 'the word is never drawn twice as a whole string').toBeLessThanOrEqual(1);
+    // The title's characters ARE drawn, once each in order — the header is not silently empty.
+    const letters = head.filter((c) => c.t.length === 1).map((c) => c.t);
+    expect(letters.join('')).toContain('STARTERS');
+  });
+
+  it('the note is subordinate: smaller and dimmer than the title', () => {
+    const ctx = draw(40);
+    const note = startBoardHeading(40).note;
+    const noteCall = ctx.textCalls.find((c) => c.t === note);
+    const titleCall = ctx.textCalls.find((c) => c.t === 'S');
+    expect(noteCall, 'the note was not drawn').toBeTruthy();
+    const sizeOf = (f) => Number(/([\d.]+)px/.exec(f)?.[1]);
+    expect(sizeOf(noteCall.font)).toBeLessThan(sizeOf(titleCall.font));
+    expect(noteCall.font).not.toMatch(/bold/);
+    expect(titleCall.font).toMatch(/bold/);
+    expect(titleCall.style).toBe('#ffd700');
+    expect(noteCall.style).not.toBe('#ffd700');
+    // …and it sits BELOW the title, which is what makes it a caption rather than a second heading.
+    expect(noteCall.y).toBeGreaterThan(titleCall.y);
+  });
+
+  it('the rule is tied to the PANEL, not to the words', () => {
+    // The anchoring claim. A rule as wide as the words floats; a rule as wide as the list anchors.
+    const ctx = draw(40);
+    const L = startBoardLayout(40, CW, CH);
+    const rule = ctx.rects.filter((r) => r.y < L.originY && r.h <= 2 && r.w > L.cellW)[0];
+    expect(rule, 'no heading rule').toBeTruthy();
+    expect(rule.w).toBeGreaterThan(L.panel.w * 0.8);
+    expect(rule.w).toBeLessThanOrEqual(L.panel.w);
+    // It is inside the panel at both ends — not a second edge drawn over the panel's own.
+    expect(rule.x).toBeGreaterThan(L.panel.x);
+    expect(rule.x + rule.w).toBeLessThan(L.panel.x + L.panel.w);
+  });
+
+  it('the count follows the field', () => {
+    for (const n of [8, 40, 100]) {
+      expect(startBoardHeading(n).note.startsWith(String(n))).toBe(true);
+    }
   });
 });

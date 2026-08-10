@@ -33,7 +33,14 @@ const MAX_STATE_DURATION = 8000;
 // with NO config, and defaults.js holds the shipped value. The duplication is GUARDED by a test that
 // asserts the two agree, the same answer `autoSpriteScale.js` gives for CANVAS_H_REF. That is one
 // better than `POST_START_HOLD_MS` beside it, which is duplicated and unguarded.
-const CEREMONY_VENUE_MS = 1400;
+// CEREMONY-OPENING-2: 1400 -> 3000, in step with defaults.js. The guard that made this edit
+// necessary is the reason the arrangement is safe at all — `startCeremony.test.js` failed the moment
+// the shipped default moved and this mirror did not, which is exactly what it is for.
+const CEREMONY_VENUE_MS = 3000;
+// CEREMONY-OPENING-1's brand card. Joins the same guarded duplication as the beats below it: zero
+// would have been the wrong fallback here for the same reason it was wrong for the digits — it does
+// not mean "no brand", it means "a brand card of no length", and only the CALLER knows which.
+const CEREMONY_BRAND_MS = 2500;
 const CEREMONY_PUSH_MS = 2000;
 const CEREMONY_SETTLED_MS = 4000;
 // START-BOARD-2. Duplicated from defaults.js like the three beats above it, and guarded the same
@@ -94,6 +101,7 @@ export function computeTimingFromConfig(config) {
   // Clamped to a sane band so a corrupt stored config cannot produce a ceremony that never ends or
   // one with a negative beat. The easing NAME is not validated here: `ceremonyEasing` resolves an
   // unknown name to the shipped curve, so validating it twice would be a second authority on it.
+  const ceremonyBrandMs = ceremonyMs(config?.ceremonyBrandMs, CEREMONY_BRAND_MS);
   const ceremonyVenueMs = ceremonyMs(config?.ceremonyVenueMs, CEREMONY_VENUE_MS);
   const ceremonyPushMs = ceremonyMs(config?.ceremonyPushMs, CEREMONY_PUSH_MS);
   const ceremonySettledMs = ceremonyMs(config?.ceremonySettledMs, CEREMONY_SETTLED_MS);
@@ -357,6 +365,7 @@ export function computeTimingFromConfig(config) {
     battleMinTopN,
     endgameThreshold,
     postStartHoldMs,
+    ceremonyBrandMs,
     ceremonyVenueMs,
     ceremonyPushMs,
     ceremonySettledMs,

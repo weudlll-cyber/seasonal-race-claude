@@ -93,6 +93,7 @@ import { getCachedServerSurfaceClasses } from '../../modules/storage/surfaceClas
 import { loadServerClasses } from '../../modules/surface-effects/registry.js';
 import { initProbe, recordFrame, recordFrameCamera } from '../../modules/rAFProbe.js';
 import BrandLogoOverlay from './BrandLogoOverlay.jsx';
+import CeremonyBrandCard from './CeremonyBrandCard.jsx';
 import './RaceScreen.css';
 import {
   DEFAULT_CAMERA_CONFIG,
@@ -191,6 +192,15 @@ export default function RaceScreen() {
   // once at race init and never touched again — it is the icon the rows used to repeat a hundred
   // times. Null until a race is built, and the header simply omits it then.
   const [rosterIcon, setRosterIcon] = useState(null);
+  // CEREMONY-OPENING-1: the two things the ceremony's beats switch in the DOM. Both change at most
+  // twice per race, so they are React state and not a per-frame value — the loop below only calls a
+  // setter when the boolean actually flips, exactly as `camState` does.
+  //   brandUp — the opening card is on screen
+  //   boardUp — the starters board is on screen, and while it is the brand LOGO must not be, because
+  //             it sits across the last column of names (the owner's screenshot).
+  const [ceremonyBrandUp, setCeremonyBrandUp] = useState(false);
+  const [ceremonyBoardUp, setCeremonyBoardUp] = useState(false);
+  const prevCeremonyRef = useRef({ brand: false, board: false });
   const scoreboardPositionsRef = useRef(null);
   // Stable for the life of the component, so a card's ref callback never re-runs for a new identity.
   const attachScoreboardCard = useCallback(
@@ -573,6 +583,14 @@ export default function RaceScreen() {
     // can be stood in again. This mirrors the Quick-Test seed rule (drawn, not fixed, then shown).
     const cameraRandomSeed = (Math.random() * 0x7fffffff) >>> 0 || 1;
     camDirRef.current.setRandomSeed(cameraRandomSeed);
+    // CEREMONY-OPENING-1: the ONE place that says whether this race opens on a brand card. The
+    // director owns the schedule and cannot know what a branding profile is; this is the only thing
+    // it is told, once, and every consumer of the schedule inherits the answer.
+    const ceremonyBrandProfile = activeBrand?.logo ? activeBrand : null;
+    camDirRef.current.setCeremonyBrandActive(!!ceremonyBrandProfile);
+    setCeremonyBrandUp(false);
+    setCeremonyBoardUp(false);
+    prevCeremonyRef.current = { brand: false, board: false };
     // CAMERA-FOCUS-4 LIVE TRUTH — print, at every race start, exactly which build + camera path this
     // browser is running: short commit · RESOLVED transition grammar · leader forward-frac · stored schema
     // per-key source (stored vs default) for the two FOCUS-3 keys. Reload once and paste this to
@@ -824,6 +842,24 @@ export default function RaceScreen() {
       if (st.phase === PHASE.COUNTDOWN) {
         if (!st.countdownStart) st.countdownStart = ts;
         computePositions();
+        // CEREMONY-OPENING-1: the DOM half of the ceremony, from the SAME schedule the camera and
+        // the renderer use. No second clock — the one-home rule this project has already paid for
+        // once, when a timer beside the schedule made the countdown invisible.
+        {
+          const sched = camDirRef.current.ceremonySchedule(st.racers);
+          const el = ts - st.countdownStart;
+          const brandUp = el < sched.brandMs;
+          const boardUp = el >= sched.boardStartMs && el < sched.boardEndMs;
+          const prev = prevCeremonyRef.current;
+          if (brandUp !== prev.brand) {
+            prev.brand = brandUp;
+            setCeremonyBrandUp(brandUp);
+          }
+          if (boardUp !== prev.board) {
+            prev.board = boardUp;
+            setCeremonyBoardUp(boardUp);
+          }
+        }
         // START-BOARD-2: the gun fires when the CEREMONY is over, not at a fixed 4000 ms. The
         // ceremony's total is the sum of its beats and one of them scales with the field, so the
         // director is asked rather than a config key read — one home for the length.
@@ -1389,6 +1425,8 @@ export default function RaceScreen() {
         trackLightsConfig,
         racerType: racerTypeRef.current,
         cameraConfig: cameraConfigRef.current,
+        // CEREMONY-OPENING-1: presence adds the BRAND beat to the schedule the renderer builds.
+        ceremonyBrand: activeBrand?.logo ? activeBrand : null,
         // FRAME-INPUTS-1: assembled in ONE place, not listed by hand here. The literal that used to
         // sit at this call site named three fields; the renderer read five, so the two it missed —
         // the director's SUBJECT and its STATE — were undefined on every frame of every live race.
@@ -1598,7 +1636,19 @@ export default function RaceScreen() {
             showWinnerList={showRpWinnerList}
             showSpeedMonitor={showTop10SpeedMonitor}
           />
-          <BrandLogoOverlay />
+          {/* CEREMONY-OPENING-1: the opening card, and the logo that must step aside for the board.
+              The logo is unmounted rather than hidden while the board stands — it is an `<img>` with
+              its own opacity, and leaving it up at zero would still put it in the compositor over
+              the names it was covering. It returns the moment the board goes.
+              It is also away during the CARD, which the first browser run made obvious: the card
+              shows the same logo at ten times the size, and the corner copy beside it read as a
+              duplicate rather than as branding. */}
+          <CeremonyBrandCard
+            brand={activeBrand?.logo ? activeBrand : null}
+            raceName={raceData?.eventName ?? null}
+            visible={ceremonyBrandUp}
+          />
+          {!ceremonyBoardUp && !ceremonyBrandUp && <BrandLogoOverlay />}
         </div>
 
         <aside className="race-hud">

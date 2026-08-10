@@ -45,11 +45,7 @@ import { drawStartBoard } from './drawing/startBoardRendering.js';
 import { advanceLabelForms } from './labelFormHold.js';
 // MIRRORS-BY-REFERENCE (LESSONS L207): fallbacks in this file READ the default instead of copying it.
 import { DEFAULT_CAMERA_CONFIG } from '../../modules/storage/defaults.js';
-import {
-  ceremonySchedule,
-  boardDurationMs,
-  boardAlphaAt,
-} from '../../modules/camera/startCeremony.js';
+import { ceremonyScheduleFor, boardAlphaAt } from '../../modules/camera/startCeremony.js';
 import { drawTrackLights } from '../../modules/trackLights.js';
 import { computeTagLayout, tagFontScreenPx } from './nameTagLayout.js';
 import { renderMinimap } from '../../modules/camera/Minimap.js';
@@ -97,6 +93,9 @@ export function renderRaceFrame(ctx, f) {
     trackLightsConfig,
     racerType,
     cameraConfig,
+    // CEREMONY-OPENING-1: the brand card's content, or null when no brand is active. Its PRESENCE is
+    // what adds the BRAND beat to the schedule; the card itself is DOM, drawn by CeremonyBrandCard.
+    ceremonyBrand = null,
     camera,
     displaySize,
     displaySizeScale,
@@ -325,17 +324,12 @@ export function renderRaceFrame(ctx, f) {
     // CEREMONY-TRUTH-1: THE FALLBACKS ARE THE DEFAULTS. They were all `?? 0`, which is a second
     // authority on six values `defaults.js` owns — and zero is the worst possible choice for every
     // one of them, because it produces a ceremony that silently skips a beat instead of failing.
-    const schedule = ceremonySchedule(
-      cameraConfig?.ceremonyVenueMs ?? DEFAULT_CAMERA_CONFIG.ceremonyVenueMs,
-      cameraConfig?.ceremonyPushMs ?? DEFAULT_CAMERA_CONFIG.ceremonyPushMs,
-      cameraConfig?.ceremonySettledMs ?? DEFAULT_CAMERA_CONFIG.ceremonySettledMs,
-      boardDurationMs(
-        st.racers?.length ?? 0,
-        cameraConfig?.startBoardFloorMs ?? DEFAULT_CAMERA_CONFIG.startBoardFloorMs,
-        cameraConfig?.startBoardMsPerName ?? DEFAULT_CAMERA_CONFIG.startBoardMsPerName
-      ),
-      cameraConfig?.countdownDigitsMs ?? DEFAULT_CAMERA_CONFIG.countdownDigitsMs
-    );
+    // CEREMONY-OPENING-1: assembled by `ceremonyScheduleFor` rather than here. This call site is
+    // exactly where CEREMONY-TRUTH-1's defect lived — six fallbacks written out by hand, one of them
+    // wrong, in a second copy of an assembly the director also does. There is one assembly now, and
+    // this passes the only thing it knows that the module cannot: whether a brand card is opening
+    // this race.
+    const schedule = ceremonyScheduleFor(cameraConfig, st.racers?.length ?? 0, !!ceremonyBrand);
     drawStartBoard(ctx, {
       racers: st.racers,
       racerType,

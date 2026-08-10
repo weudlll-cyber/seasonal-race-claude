@@ -379,7 +379,22 @@ export const DEFAULT_CAMERA_CONFIG = {
   // beats — `ceremonyTotalMs` in startCeremony.js is the one place that adds them up, and the phase
   // advance, the camera, the digits and both fingerprint harnesses all ask it. Each slider below now
   // means exactly the beat it names.
-  ceremonyVenueMs: 1400,
+  // ── THE BRAND CARD (CEREMONY-OPENING-1) ───────────────────────────────────────────────────────
+  // The brand's logo and the chosen race name, before anything else. ZERO WHEN NO BRAND IS ACTIVE —
+  // that is decided by the caller, not by this number, so the ceremony begins directly on the track
+  // with no gap. 2500 ms is a starting value for his eye: long enough to read a name and register a
+  // logo, short enough that it is a title rather than a wait. He will set it by slider.
+  ceremonyBrandMs: 2500,
+  // ── THE TRACK'S OWN MOMENT (CEREMONY-OPENING-1) ───────────────────────────────────────────────
+  // 1400 → 3000. This is the beat the owner said he was missing, and 1400 ms was not a considered
+  // choice for it: the board used to come up the instant it ended and stand through the whole push,
+  // so the track never really had a moment of its own. It does now — the board waits until the
+  // travel is finished. 3000 ms is a bit over one second longer than a glance, which is what
+  // "look at the track" needs; his slider decides the rest.
+  //
+  // SETTING THIS TO ZERO REPRODUCES TODAY'S SHAPE as closely as the new order allows, and that is
+  // deliberate — there is always a way back.
+  ceremonyVenueMs: 3000,
   ceremonyPushMs: 2000,
   // ── THE SEARCHING TIME (CEREMONY-TIME-1) ──────────────────────────────────────────────────────
   // The formation held motionless, board GONE and no digits yet. It is a control, not a remainder:
