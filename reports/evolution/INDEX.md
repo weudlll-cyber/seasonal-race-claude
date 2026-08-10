@@ -75,6 +75,32 @@ and [FAIRNESS.md](../../docs/FAIRNESS.md). Shipped world: **`dc4647be0f55ebdb`**
 
 ## Camera / presentation fixes
 
+- [FRAME-GAP-3.md](FRAME-GAP-3.md) — **IT IS THE STANDINGS LIST. THE BACKGROUND LAYER COSTS NOTHING,
+  AND THE PREDICTION WAS WRONG** (branch `feat/frame-gap-3` off `80f772fe`; **diagnosis only, no
+  source file changed, React untouched**; all four fingerprints re-run and unchanged). FRAME-GAP-2
+  hid two things at once; this separates them and changes nothing else — the `aside` is never hidden,
+  only the `.scoreboard` inside it, so `cssBox` is **identical in all four arms** (FRAME-GAP-2's A-off
+  moved it 1021×575 → 1037×583, a confound now removed). **Eight batches of 900 frames at the large
+  window, three at the small.** **ARM 2 (background layer present, list hidden) IS EXACTLY THE FLOOR**:
+  `rafLate` p90 **0.6 ms in eleven batches out of eleven**, **zero missed frames in 9900** —
+  indistinguishable from arm 4, so the owner's predicted culprit is refuted in the strongest form the
+  design allows. **ARM 3 (list present, bg hidden) is elevated in every batch** (`rafLate` p90 1.4–4.0
+  against the 0.6 floor) and produces missed frames where arms 2 and 4 produce none. **NOT
+  OVERCLAIMED**: arm 1's 56 misses are dominated by one batch of 48; excluding it, arm 1 (8/6300) and
+  arm 3 (6/6300) are the same — the list reproduces essentially the whole effect alone, and the
+  background layer only occasionally amplifies it. **THE RATE IS STILL NOT REPRODUCED**: worst arm
+  5.33 %, pooled 0.78 %, against his 40 % — **fifty times short** across ~40 000 measured frames.
+  **No long tasks inside any measured window** (the single ~4 s entry per arm is the harness's own
+  scene build), so the missed vsyncs are NOT ≥50 ms JS blocks. **THE CULPRIT NAMED**: `setScoreboard`
+  fires every 250 ms and hands React a fresh 100-element array via
+  `[...st.racers].sort(...).map((r,i) => ({...r, rank: i+1}))` — every row gets a new object identity,
+  so all 100 keyed rows re-render and re-order; the other three in-loop setState calls are guarded by
+  change checks or fire once. **Fix named, not built**: cut the 250 ms cadence (one number), or stop
+  minting new row objects and memoise the row. The background canvas — a second `<canvas>` at
+  6144×4096 whose `style.transform` is rewritten every frame — **measured free, so there is nothing to
+  fix there**, which is the useful half of a refuted prediction.
+
+
 - [FRAME-GAP-2.md](FRAME-GAP-2.md) — **PRODUCTION REPRODUCED THE 33 ms FRAME, AND IT IS THE PAGE
   AROUND THE CANVAS** (branch `feat/frame-gap-2` off `860f3a05`; **diagnosis only, no source file
   changed, React untouched**; all four fingerprints re-run and unchanged). FRAME-GAP-1 could not make
