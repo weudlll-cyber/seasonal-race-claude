@@ -4750,10 +4750,7 @@ describe('getComebackDiagData — outcomePhaseThreshold / leaderProgress / isOut
     // default means this test can never again object to the default changing.
     const cd = new CameraDirector(1280, 720, false);
     const diag = cd.getComebackDiagData([], 0);
-    expect(diag.outcomePhaseThreshold).toBeCloseTo(
-      DEFAULT_CAMERA_CONFIG.outcomePhaseThreshold,
-      6
-    );
+    expect(diag.outcomePhaseThreshold).toBeCloseTo(DEFAULT_CAMERA_CONFIG.outcomePhaseThreshold, 6);
   });
 
   it('THE HUD SHOWS WHAT THE DIRECTOR IS RUNNING — the diag threshold IS the gate threshold', () => {

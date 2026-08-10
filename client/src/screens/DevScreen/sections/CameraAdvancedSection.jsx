@@ -1116,9 +1116,7 @@ function CameraAdvancedSection() {
             min={0.5}
             max={0.95}
             step={0.05}
-            value={
-              config.outcomePhaseThreshold ?? DEFAULT_CAMERA_CONFIG.outcomePhaseThreshold
-            }
+            value={config.outcomePhaseThreshold ?? DEFAULT_CAMERA_CONFIG.outcomePhaseThreshold}
             onChange={(e) => {
               const v = parseFloat(e.target.value);
               if (v >= 0.5 && v <= 0.95) set('outcomePhaseThreshold', v);
