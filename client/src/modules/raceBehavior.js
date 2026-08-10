@@ -49,6 +49,17 @@ let _tIndexLen = 0;
 // is deterministic and browser/sim parity-safe without reading any wall-clock.
 const LATERAL_STEP_MS = 16;
 
+// The longitudinal brake zone when a pair has no geometry to derive one from — `contactLength` or
+// `pathLength` is 0, so `contactLength / pathLength x speedBrakeTMultiplier` is not available. It is
+// NOT a config mirror and has no key in defaults.js: it is the pre-body-geometry constant the brake
+// used before reports 43/45, kept as the fallback for partial-config sim and unit callers.
+//
+// PAIR-PREFILTER-1 gave it a name. It was written twice as a bare `0.014` in the pair loop, and the
+// prefilter's bound has to fold the SAME number in (see condition 1(b) at the bound) or it culls
+// pairs this fallback would still have braked. Three copies of a literal that must agree is how a
+// bound and a gate drift apart, so there is one home and all three read it.
+const DEGENERATE_BRAKE_T = 0.014;
+
 // Look-ahead lane-change (Stage A3): uniform per-step cap on lateral motion (physicalY
 // units/step), applied to dodge-outs AND returns alike so lateral speed is a single known
 // constant. Mirrors the defaults.js value for partial-config callers (sim/unit). The dodge
@@ -579,6 +590,99 @@ export function applyRacerBehavior(racers, config, priorityExtras) {
   // again until the pair loop has finished, so one build serves every free-lane scan in it.
   buildTIndex(active);
 
+  // ── PAIR-PREFILTER-1: THE TWO-AXIS FIELD BOUND ─────────────────────────────────────────────────
+  //
+  // The pair loop below has exactly TWO gates, and every write it can make is nested inside one of
+  // them (PAIR-REACH-ANALYSIS §1 enumerates them and §7 checks for an unbounded effect and finds
+  // none). Both gates require BOTH axes to be inside, so a pair outside either axis executes zero
+  // writes and its whole body is wasted work:
+  //
+  //   gate A, the speed brake:      |dY| < contact_width/(trackWidth/2)      AND dT < (contact_length/pathLength) x speedBrakeTMultiplier
+  //   gate B, the geometric gate:   |dY| < contact_width/(trackWidth/2) x (1+buffer)  AND dT < (contact_length/pathLength) x (1+buffer)
+  //
+  // A prefilter must decide BEFORE it knows the pair's bodies, so the per-pair contact distances are
+  // replaced by the largest body in the FIELD and the per-pair track metrics by the field's
+  // smallest. `contactLength = hlA + hlB <= max body length`, and the pair's `pathLength` is a
+  // `Math.max` of the two, hence `>= the field minimum` — so both substitutions can only make the
+  // bound WIDER. The cull is therefore a strict SUPERSET of the gates: a pair it skips is a pair
+  // both gates would have rejected. That is the entire safety argument, and it is the same shape
+  // SIDE-FREE-CULL-1 used.
+  //
+  // THE ORIGINAL GATES STAY. The bound is a superset, never a replacement — `dynamicBrakeT` and the
+  // gate-B triggers still decide, exactly as `shortestArcDeltaT(...) > tHalfSpan` still decides
+  // inside the culled `isSideFree`.
+  //
+  // THE `for i, for j > i` ORDER OVER `active` STAYS, and this is load-bearing. Three tie-breaks in
+  // the loop are order-sensitive: `brakeMatchCaps` updates on strict `<` (first found wins),
+  // `_ssForceMag` uses `<=` in §4a and `>=` in §4b, and `_ssObstacleNext` records the last writer.
+  // A prefilter only SKIPS, so the relative order of the survivors is untouched and no ordering
+  // question arises. Iterating the t-index instead would raise all three at once.
+  //
+  // CONDITION 1 — THE DEGENERATE FALLBACKS ARE NOT GEOMETRIC, and they come in TWO shapes.
+  //
+  //   (a) PER-FIELD. When a pair's `trackWidth <= 0` the brake's lateral test falls back to
+  //       `config.speedBrakeYThreshold`, and when its `pathLength <= 0` `dynamicBrakeT` falls back
+  //       to a flat DEGENERATE_BRAKE_T. Both of those are a `Math.max` of the two racers, so they
+  //       are only degenerate when BOTH members are — which the field MINIMUM catches: if any racer
+  //       lacks a metric the minimum is 0, that axis's bound becomes Infinity, and every pair falls
+  //       through unculled. Conservative, and it cannot half-apply.
+  //
+  //   (b) PER-PAIR, and this one the minimum does NOT catch. `dynamicBrakeT` also falls back to the
+  //       flat DEGENERATE_BRAKE_T when the pair's `contactLength` is 0 — which needs both HALF
+  //       lengths to be 0, i.e. two bodiless racers in an otherwise normal field. `pathLength` is
+  //       fine there, so the geometric bound is computed and is finite, and on a long track it is
+  //       SMALLER than the flat fallback: on space-sprint a 31 px body over 19 772 px gives
+  //       0.0024, against the fallback's 0.014. The cull would then skip a pair gate A would have
+  //       evaluated — a superset violation, not a tuning question. So whenever the field's SMALLEST
+  //       body length is 0, the flat fallback is folded into the bound with a `Math.max`. Gate A's
+  //       lateral axis needs no twin of this: `contactWidth === 0` makes `brakeSameLaneY` 0 and
+  //       `|dY| < 0` can never hold, so a bodiless pair cannot fire on that axis at all.
+  //
+  // CONDITION 2 — `boundY` ASSUMES A UNIFORM TRACK WIDTH, AND HERE IS ITS EXPIRY. It holds today
+  // only because `getTrackWidthAtTpx` returns the constant `racer.trackWidthPx`. That function
+  // carries an explicit extension comment — "For non-uniform tracks (no _centerWidth): extend here
+  // with racer.t per-frame lookup". THE DAY THAT LANDS, `minTrackWidth` below stops being the
+  // minimum over the TRACK and becomes a minimum over the racers' CURRENT positions, which is not
+  // a bound on what a pair will see, and `boundY` must be re-derived against the track's narrowest
+  // point instead. Written at the bound rather than in a report because that is where it will be
+  // read.
+  //
+  // CONDITION 3 — THE BOUND IS INCLUSIVE. The tests below are strict `>`, so a pair sitting exactly
+  // ON either bound is still evaluated by the real gates. `>=` would cull the boundary case, which
+  // is the trap SIDE-FREE-CULL-1 named.
+  let maxBodyLen = 0;
+  let maxBodyWid = 0;
+  let minBodyLen = Infinity;
+  let minTrackWidth = Infinity;
+  let minPathLength = Infinity;
+  for (const r of active) {
+    const frame = getFrameSizePx(r);
+    const len = r.drawnBodyLengthPx ?? frame;
+    const wid = r.drawnBodyWidthPx ?? frame;
+    if (len > maxBodyLen) maxBodyLen = len;
+    if (len < minBodyLen) minBodyLen = len;
+    if (wid > maxBodyWid) maxBodyWid = wid;
+    const tw = getTrackWidthAtTpx(r);
+    if (tw < minTrackWidth) minTrackWidth = tw;
+    const pl = getPathLengthPx(r);
+    if (pl < minPathLength) minPathLength = pl;
+  }
+  // The widest multiplier either gate applies on each axis. Gate A's brake-to-match zone
+  // (`brakeMatchActivationTMultiplier` / `brakeMatchActivationYThreshold`) adds no reach: it is
+  // nested INSIDE gate A, so it can only narrow. Resolving an absent `speedBrakeTMultiplier` to the
+  // default is safe in the superset direction — absent, the live gate computes NaN and never fires.
+  const prefilterBufferPct =
+    config.avoidanceBufferPct ?? DEFAULT_RACE_BEHAVIOR_CONFIG.avoidanceBufferPct;
+  const boundTMult = Math.max(
+    config.speedBrakeTMultiplier ?? DEFAULT_RACE_BEHAVIOR_CONFIG.speedBrakeTMultiplier,
+    1 + prefilterBufferPct
+  );
+  const boundYMult = Math.max(1, 1 + prefilterBufferPct);
+  const geometricBoundT = minPathLength > 0 ? (maxBodyLen / minPathLength) * boundTMult : Infinity;
+  // Condition 1(b): a bodiless PAIR takes the flat fallback, which the field metrics cannot bound.
+  const boundT = minBodyLen > 0 ? geometricBoundT : Math.max(geometricBoundT, DEGENERATE_BRAKE_T);
+  const boundY = minTrackWidth > 0 ? (maxBodyWid / (minTrackWidth / 2)) * boundYMult : Infinity;
+
   // ── Avoidance (anisotropic, asymmetric: trailer yields, leader holds) ──────
   for (let i = 0; i < active.length; i++) {
     for (let j = i + 1; j < active.length; j++) {
@@ -587,7 +691,10 @@ export function applyRacerBehavior(racers, config, priorityExtras) {
 
       // Anisotropic distance in (t, physicalY) space — lap-normalized shortest arc.
       const dT = shortestArcDeltaT(rA.t, rB.t);
+      // PAIR-PREFILTER-1: before ANY geometry. See the bound above for why this is a superset.
+      if (dT > boundT) continue;
       const dY = rA.physicalY - rB.physicalY;
+      if (dY > boundY || dY < -boundY) continue;
 
       // Body geometry for the speed-brake AND for the geometric gate below — both axes
       // body-based (reports 43/45). Frame size kept as fallback when body dims are absent.
@@ -623,7 +730,7 @@ export function applyRacerBehavior(racers, config, priorityExtras) {
       const dynamicBrakeT =
         contactLength > 0 && pathLength > 0
           ? (contactLength / pathLength) * config.speedBrakeTMultiplier
-          : 0.014;
+          : DEGENERATE_BRAKE_T;
       if (Math.abs(dY) < brakeSameLaneY && dT < dynamicBrakeT) {
         // ── Look before you brake ─────────────────────────────────────────────
         // The trailer is same-lane and closing on a slower leader inside the brake zone.
@@ -760,7 +867,7 @@ export function applyRacerBehavior(racers, config, priorityExtras) {
             const dynamicBrakeMatchT =
               contactLength > 0 && pathLength > 0
                 ? (contactLength / pathLength) * bmMultiplier
-                : 0.014;
+                : DEGENERATE_BRAKE_T;
             const bmYThreshold = config.brakeMatchActivationYThreshold ?? brakeSameLaneY;
             inBrakeMatchZone = Math.abs(dY) < bmYThreshold && dT < dynamicBrakeMatchT;
           } else {
