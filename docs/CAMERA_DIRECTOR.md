@@ -384,7 +384,7 @@ a verbatim transcript of one run on one commit, which is a historical record, no
 
 ### The tracking lag, as measured today — and it had drifted
 
-<!-- MEASURED: tracking-lag (median/p95 pp per state) @ ee28afe4 2026-08-10 depends=client/src/modules/camera/ -->
+<!-- MEASURED: tracking-lag (median/p95 pp per state) @ 46751941 2026-08-10 depends=client/src/modules/camera/ -->
 
 **RE-MEASURED, NOT RE-STAMPED, for CEREMONY-OPENING-2 — and re-measuring was the only honest
 option.** That block lengthens the opening: the track's own beat goes from 1400 ms to 3000 and the
