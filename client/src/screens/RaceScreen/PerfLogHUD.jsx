@@ -255,6 +255,10 @@ export default function PerfLogHUD({ perfLogRef, visible, getContext }) {
             ['prep', s.prep, COL.prep],
             ['cam', s.camera, COL.camera],
             ['draw', s.render, COL.render],
+            // FRAME-GAP-1: the browser's own head start, read against `other` below. It is listed
+            // with the brackets because it is the same unit, but it is NOT one of ours — it is the
+            // part of the frame that was gone before our code ran.
+            ['rafLate', s.rafLate, COL.other],
           ].map(([label, row, color]) => (
             <div key={label} style={{ color }}>
               {label.padEnd(6)} {fmt(row.p50).padStart(5)} {fmt(row.p90).padStart(5)}{' '}
@@ -263,6 +267,16 @@ export default function PerfLogHUD({ perfLogRef, visible, getContext }) {
           ))}
           <div style={{ color: COL.muted, marginTop: '2px', fontSize: '8px' }}>
             spike threshold: ≥{SPIKE_MIN_MS}ms
+          </div>
+          {/* FRAME-GAP-1: three-valued on purpose — "no long tasks" and "this browser cannot see
+              long tasks" are opposite conclusions and must not print the same. */}
+          <div style={{ color: COL.muted, fontSize: '8px' }}>
+            long tasks:{' '}
+            {s.longTasks.supported === false
+              ? 'API unavailable in this browser'
+              : s.longTasks.supported === null
+                ? 'observer not started'
+                : `${s.longTasks.count} · ${fmt(s.longTasks.totalMs)}ms total · max ${fmt(s.longTasks.maxMs)}ms`}
           </div>
         </div>
       ) : (
@@ -291,7 +305,7 @@ export default function PerfLogHUD({ perfLogRef, visible, getContext }) {
       {s && (
         <div style={{ fontSize: '8px', color: COL.muted }}>
           P90 sum: {fmt(s.physics.p90 + s.prep.p90 + s.camera.p90 + s.render.p90)}ms measured /{' '}
-          {fmt(s.total.p90)}ms total
+          {fmt(s.total.p90)}ms total · of the gap, {fmt(s.rafLate.p90)}ms was the browser being late
         </div>
       )}
 

@@ -75,6 +75,128 @@ and [FAIRNESS.md](../../docs/FAIRNESS.md). Shipped world: **`dc4647be0f55ebdb`**
 
 ## Camera / presentation fixes
 
+- [SCOREBOARD-SLOT-LAYER.md](SCOREBOARD-SLOT-LAYER.md) — **THE PLACES ARE DRAWN ONCE; ONLY THE NAME
+  TAG MOVES** (branch `feat/scoreboard-slot-layer` off `669a1a5b`; **NOT merged — a visible surface
+  awaiting his eye**; all four fingerprints unchanged). The owner's own design: the badge column —
+  crown, `#2`, `#3` … with gold/**silver**/bronze — becomes a STATIC layer built once per race, and
+  the racers become CARDS whose content never changes, so the rank stops being a React prop entirely
+  and is written straight onto the element as a `translateY`. **Proven rather than argued: a
+  `MutationObserver` over 25 s of a 100-racer race recorded 728–833 mutations and EVERY ONE was
+  `scoreboard-card:style` — zero text, zero structure.** The browser's own CDP counters say what that
+  buys: **14 layouts per 100 frames — exactly one per cadence tick — become 1**, and mid-race layout
+  time falls from ~17 ms per 100 frames to **half a millisecond**. At 250 ms the branch reaches the
+  1000 ms reference (42.7 % missed vs 39.0 % in the packed phase, 4.7 % vs 0 % mid-race) where
+  today's build sits at 82 % and 72 %, running the pack at 30 fps against this one's 60. **Both of
+  the owner's visible defects were established as OLDER than this line of work before anything was
+  touched**: master clips `#100` identically (3529.3 px of rows against his 665 px window, versus
+  3533.3 on the transform branch — 4 px APART, and the transform branch is the less clipped), and the
+  28 px badge box is overflowed by every two-digit place, not only by `#100`. Both fixed here: the
+  HUD is capped at the window with a scrolling rows viewport (`#100` and `#140` fully visible at the
+  scroll end; the page stops overflowing at all), and the badge column takes ONE width from the field
+  size — 28 up to `#9`, 32 to `#99`, 40 to `#999`. **Pixel parity at an 8-racer field caught a real
+  difference**: every icon, number and name identical and every BADGE changed, because text inside a
+  composited layer is antialiased in greyscale; compositing the static layer too puts it back at 0
+  pixels differing by more than 8. **Two inherited claims corrected by re-measurement**: the row is
+  31.333 px at 1.5× and 32.000 at 1×, so `ROW_PITCH_PX` was never "height plus the 4 px margin" and
+  that margin has been inert since the rows left the flow. **Two method findings worth keeping**: a
+  perf bench inside the OneDrive-synced tree is not measuring the code (one run stalled 1016 ms), and
+  headless Chromium does not advance the race at all.
+- [SCOREBOARD-TRANSFORM-ROWS.md](SCOREBOARD-TRANSFORM-ROWS.md) — **THE STAIRCASE IS FLATTENED TO
+  ZERO** (branch `feat/scoreboard-transform-rows` off `afdf130a`; **NOT merged — a visible surface
+  awaiting his eye**; all four fingerprints unchanged). The rows now keep a STABLE place in the
+  document — racer order, never re-sorted — and the ranking travels as `translateY((rank−1) ×
+  35.333px)`, so a rank change moves nothing in the document and nothing below it is laid out again.
+  **ESTABLISHED FIRST, in a real browser**: the rows were in normal flow, so they had to come out of
+  it; and **row height is uniform at 31.333 px across all seven shapes that could differ** (crown,
+  `#100`, no race number, finished with/without a time, ellipsised name) because `.sb-name` is
+  `nowrap` — had that come back non-uniform the approach was dead. A separate `.scoreboard-rows`
+  container holds the absolute rows, **because the header is a flow child of `.scoreboard`** and
+  rows anchored there would draw over it. Verified at 100 rows with shuffled ranks: every gap exactly
+  35.333, **zero overlaps**, document order ≠ drawn order. **MEASURED, idle, 6 rotated batches, 5400
+  frames/arm: staircase 0.73–0.76 ms/frame (flow) → −0.01 / 0.08 (transform), and missed frames
+  1.204 % → 0.056 % at 500 ms — 21×.** The per-batch pattern is the result: flow is usually zero and
+  then has an EPISODE (one batch 4.41 ms/frame with 65 drops, another 3.20 with 13); transform reads
+  zero in nine batches of ten. **And the cadence question dissolves: with the transform, 250 ms and
+  500 ms are identical (3 drops in 5400 each) — the lively list becomes free.** **HONEST LIMITS**: a
+  separate LOADED run (uncontrolled, something else on the machine) shows only ~a fifth fewer drops
+  and **no staircase separation** — this helps when the deficit is the list's own layout, not when
+  something else owns the CPU; the per-changed-row REPAINT remains, as predicted, because `#5`→`#4`
+  is a text change; and the pitch is font metrics that **neither node nor jsdom can re-derive**, so
+  the guard pins the CSS inputs and the constant instead. Parity extended to compare the row **as
+  drawn** (sorted by y), since array position stopped being visual position.
+
+
+- [SCOREBOARD-STABLE-ROWS.md](SCOREBOARD-STABLE-ROWS.md) — **HIS SHAPE, BUILT: 101 ROWS REBUILT PER
+  TICK BECOMES 36** (branch `feat/scoreboard-stable-rows` off `024b58c3`, with `feat/frame-gap-1`
+  merged so one log measures everything; **NOT merged — a visible surface awaiting his eye**; all four
+  fingerprints unchanged). The owner's own diagnosis, implemented: the four fields that never change
+  during a race (index, icon, name, race number) live in ONE identity object per racer, created once
+  and **never mutated**; the three that change (rank, finished, finishTimeMs) are passed as
+  **primitives**; the row is memoised. **THE TRAP, handled explicitly**: rank is a primitive prop and
+  never written onto the shared identity, so a racer moving 5th→4th changes a value memo compares —
+  had the rank been stored on the identity, memo would have seen the same reference, skipped, and
+  frozen the standings silently. **MEASURED, real React (every earlier bench used hand-rolled DOM and
+  could not answer a reconciler question): 101.4 row bodies per update → 36.1, and 7000 row renders
+  per 15 s → 2519, down 64 %** — a count, so ambient noise cannot move it. **THE HONEST OTHER HALF:
+  the frame-time arms do NOT separate** — quiet run all three arms 0 missed / 7200 with `rafLate` p90
+  0.5 flat, loaded run all three bad together. One early unrotated arm showed the old shape at 5.89 %
+  missed with `rafLate` p90 13.5; **it did not reproduce, and the obvious "first arm after a fresh
+  mount" explanation was tested and refuted too**. `commitMs` was captured and deliberately NOT quoted
+  as React's cost — under the concurrent scheduler most of it is waiting for a slot. **TESTS**: the
+  memo trap in both directions with a BEHAVIOURAL skip probe (a counting getter on the identity), and
+  a parity test that drives a real seeded race and compares what the row displays, field by field,
+  every tick, against the old expression written out verbatim — plus a sabotage arm. **The old row
+  read its rank from the MAP INDEX, not the `rank` field it was handed**, which the parity test had to
+  match. **The sort is untouched and has no tiebreak**: equal `t` falls back on `Array.prototype.sort`
+  being stable over racer index, true before and after. **WHAT IS LEFT**: reordering keyed DOM nodes
+  still costs, and that floor is what remains. The cadence default is untouched at 500.
+
+
+- [SCOREBOARD-CADENCE-1.md](SCOREBOARD-CADENCE-1.md) — **ONE NUMBER, AND THE RATE FALLS AT LEAST
+  PROPORTIONALLY** (branch `feat/scoreboard-cadence-1` off `570a8505`; **NOT merged — a visible change
+  awaiting his eye**; all four fingerprints unchanged). FRAME-GAP-3 named the standings list; this
+  makes its cadence a setting — `scoreboardIntervalMs` in `DEFAULT_FRAME_TIMING_CONFIG`, shipped at
+  **500** (was a hard-coded 250), band 100–2000 with one home, a Dev Screen number box plus one-click
+  250 / 500 / 1000 buttons. **The cadence was read in exactly ONE place**, so there was no second copy
+  to reconcile; the bucket stays in PHYSICS time so the list ticks with the race through slow-motion.
+  React untouched, no memoisation, contents unchanged. **MEASURED, production bundle, 9
+  order-randomised batches, 8100 frames per arm: 250 ms → 0.185 %, 500 ms → 0.086 %, 1000 ms →
+  0.012 %**, with `rafLate` p90 **4.3 → 1.6 → 0.7 ms** — at 1000 within noise of the 0.6 floor
+  FRAME-GAP-3 measured with the list hidden entirely. **250→500 is proportional (2.1× for 2×);
+  500→1000 is 7× for 2× — BETTER than proportional.** So the frequency dominates and the per-tick cost
+  does not: **the memoisation priced in FRAME-GAP-3 is NOT indicated by this data**, which is the
+  cheaper of the two answers. **The arm order is rotated per batch** because the first attempt had one
+  batch where all three arms were bad at once (including 1000 ms at 0.78 %) — ambient noise that a
+  fixed order would have read as "250 is worst". **Honest caveat**: FRAME-GAP-3 pooled 0.78 % for the
+  same 250 ms arm against 0.185 % here — absolute rates are not comparable across sessions, only the
+  within-session ratio is. **Priced, not built**: the row reads six fields, four of which never change
+  during a race, so emitting a narrow record plus `React.memo` needs no change to the row's markup —
+  under an hour, orthogonal to the cadence, and justified only if he picks 250 for feel and still
+  drops frames.
+||||||| 570a8505
+- [FRAME-GAP-1.md](FRAME-GAP-1.md) — **`other` IS SPLITTABLE NOW, AND THE SPLIT SAYS THE 29 ms ARE NOT
+  WHERE WE LOOKED** (branch `feat/frame-gap-1` off `570a8505`; **diagnosis only, nothing fixed**; all
+  four fingerprints unchanged and engine-reach clears all four changed paths). **A NEGATIVE RESULT,
+  reported as such.** Two of three arms moved nothing beyond the run-to-run spread; the third — the
+  DOM around the canvas — moved `rafLate` p90 from 0.8–0.9 ms to 3.7–4.3 ms, **real and repeatable
+  (±0.5 ms spread) but one fifth of the 16.6 ms gap, and it does NOT scale with window area**, which
+  is the one property his own experiment proved. **`total` p90 never left 16.7–17.0 ms in any of ten
+  arms**: the harness never reproduced a 33 ms frame, at either window size or either DPR, so it can
+  say where the time is NOT and not where it is. **B (canvas CSS stretch) refuted** — pinning the box
+  to 1280×720 changes `rafLate` by less than that arm's own ±1.2 ms spread. **C (window area) not
+  reproduced** — three times the area moves `total` p90 by 0.1 ms. **THE INSTRUMENT IS THE DELIVERABLE**:
+  `rafLate` (callback entry minus the rAF timestamp — the half of `other` no draw-code change can
+  shorten) and a `longtask` PerformanceObserver whose `supported` is THREE-VALUED, because "no long
+  tasks" and "this browser cannot see long tasks" are opposite conclusions; his Chrome 151 supports
+  it. **Next suspects, in order: React** (100 keyed rows reconciled 4×/s plus four state setters
+  called from inside the rAF loop — work that runs in a different task, which is exactly where
+  `rafLate` hides, and the one thing this harness deliberately lacks), the dev bundle, the real
+  6144×4096 JPEG, his browser profile. **PIECE 0**: origin 48 branches → 1, local 48 → 1, worktrees
+  4 → 1, four empty `docs/` dirs gone, every deleted tip SHA recorded first; both uncontained branches
+  verified dead before deletion (one carried only two leftover conflict markers). **37 stale
+  `.git/worktrees/` admin dirs cannot be pruned** — OneDrive ReparsePoint placeholders, EPERM.
+
+
 - [CEREMONY-COUNTS-GENERATED.md](CEREMONY-COUNTS-GENERATED.md) — **THE SENTENCE WAS SPLIT, AND ONE OF
   THE THREE NUMBERS WAS WRONG** (branch `feat/ceremony-counts` off `feat/post-start-hold-unify`; docs
   and tooling only, no engine file touched). Declined last night because a generator would have had

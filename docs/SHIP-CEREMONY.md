@@ -235,8 +235,9 @@ went missing).
 - [ ] **10. Owner's eye on a live trace.** The owner eye-tests the change on a real running session.
       For any **UI or camera** change this includes the **LIVE-TRUTH console proof line from the owner's
       OWN browser** — tests measure the code, the truth line measures the session, and the harness is
-      trusted only while live == replay ([LESSONS.md L191](LESSONS.md)). Restart the dev server for the
-      eye-test rather than letting a stale bundle be judged.
+      trusted only while live == replay ([LESSONS.md L191](LESSONS.md)). **Serve a PRODUCTION build
+      for the eye test, not the dev server** — [VERIFY-RULES.md](VERIFY-RULES.md) R10 owns that rule
+      and the one command that does it — and never let a stale bundle be judged.
 - [ ] **11. Run the three guards before the commit.** `node scripts/check-doc-links.mjs`,
       `node scripts/check-index.mjs`, `node scripts/check-tags.mjs` — all three green. Plus the full test
       suite + `eslint` + `build`. These are the cheap catches for the drift a human reviewer cannot see.

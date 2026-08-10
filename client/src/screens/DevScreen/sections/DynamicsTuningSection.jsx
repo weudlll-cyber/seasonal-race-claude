@@ -29,6 +29,8 @@ import {
   loadFrameTimingConfig,
   saveFrameTimingConfig,
   DEFAULT_FRAME_TIMING_CONFIG,
+  SCOREBOARD_INTERVAL_MIN_MS,
+  SCOREBOARD_INTERVAL_MAX_MS,
 } from '../../../modules/frameTimingConfig.js';
 import { InfoTooltip } from '../../../components/InfoTooltip/index.js';
 import { RACE_RELEVANT_DEFAULTS } from './raceRelevantReset.js';
@@ -52,6 +54,10 @@ const DynamicsTuningSection = forwardRef(function DynamicsTuningSection(_, ref) 
   const [dynamicsConfig, setDynamicsConfig] = useState(() => loadRaceDynamicsConfig());
   const [frameTimingConfig, setFrameTimingConfig] = useState(() => loadFrameTimingConfig());
   const [storageError, setStorageError] = useState(null);
+  // SCOREBOARD-CADENCE-1: the fallback covers a config saved before this key existed, so the control
+  // shows the value the race will actually use rather than an empty box.
+  const scoreboardIntervalMs =
+    frameTimingConfig.scoreboardIntervalMs ?? DEFAULT_FRAME_TIMING_CONFIG.scoreboardIntervalMs;
 
   useEffect(() => {
     saveBaseSpeedConfig(speedConfig);
@@ -307,6 +313,59 @@ const DynamicsTuningSection = forwardRef(function DynamicsTuningSection(_, ref) 
             Render Interpolation
             <InfoTooltip text="Smooths sprite and camera movement between physics steps. Eliminates rhythmic jitter at variable browser frame rates. Off = pre-interpolation behavior (comparison mode). Takes effect immediately." />
           </label>
+        </div>
+        <div style={{ marginTop: '0.75rem' }}>
+          <label
+            className={s.label}
+            style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}
+          >
+            Live Standings update every
+            <InfoTooltip text="How often the standings list on the right is rebuilt, in race milliseconds. This is the ONE measured cause of dropped frames at large fields: every update hands React a fresh object for all hundred rows, so all hundred re-render and re-order. 250 was the old behaviour; 500 is shipped; 1000 halves the work again. Lower = the list reacts sooner to an overtake. Higher = fewer dropped frames. Pick the slowest value that still feels live — it is a matter of taste, not a number to be derived. Takes effect on the next race start." />
+          </label>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+            <input
+              type="number"
+              aria-label="Live Standings update interval"
+              className={s.input}
+              min={SCOREBOARD_INTERVAL_MIN_MS}
+              max={SCOREBOARD_INTERVAL_MAX_MS}
+              step={50}
+              value={scoreboardIntervalMs}
+              onChange={(e) => {
+                const v = Number(e.target.value);
+                if (v >= SCOREBOARD_INTERVAL_MIN_MS && v <= SCOREBOARD_INTERVAL_MAX_MS)
+                  setFrameTiming('scoreboardIntervalMs', v);
+              }}
+              style={{ width: '6rem' }}
+            />
+            <span style={{ fontSize: '0.82rem', color: 'var(--color-muted)' }}>ms</span>
+            {/* The three the owner is choosing between, one click each — the point of the control. */}
+            {[250, 500, 1000].map((v) => (
+              <button
+                key={v}
+                type="button"
+                onClick={() => setFrameTiming('scoreboardIntervalMs', v)}
+                style={{
+                  padding: '0.15rem 0.5rem',
+                  fontSize: '0.78rem',
+                  cursor: 'pointer',
+                  borderRadius: 'var(--radius)',
+                  border:
+                    scoreboardIntervalMs === v ? '1px solid var(--color-accent)' : '1px solid #444',
+                  background: scoreboardIntervalMs === v ? 'rgba(0,200,255,0.12)' : 'transparent',
+                  color: scoreboardIntervalMs === v ? 'var(--color-accent)' : '#bbb',
+                }}
+              >
+                {v}
+              </button>
+            ))}
+          </div>
+          <p style={{ fontSize: '0.82rem', color: 'var(--color-muted)', marginTop: '0.4rem' }}>
+            {(1000 / scoreboardIntervalMs).toFixed(1)} updates per race second
+            {scoreboardIntervalMs === DEFAULT_FRAME_TIMING_CONFIG.scoreboardIntervalMs
+              ? ' · shipped default'
+              : ''}
+          </p>
         </div>
       </SubCard>
 

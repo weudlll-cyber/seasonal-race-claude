@@ -18,11 +18,15 @@ import { attachRenderState, attachRacerRenderState, stepFocusFade } from './rend
 import { getBgCanvasReady } from './drawing/trackRendering.js';
 import { getBackgroundImage } from '../../modules/track-effects/bgImageCache.js';
 import { emitBurst } from './drawing/particleRendering.js';
-import { formatRaceTime } from '../../utils/formatRaceTime.js';
+import { ScoreboardCard } from './ScoreboardCard.jsx';
+import { ScoreboardSlots } from './ScoreboardSlots.jsx';
+import ScoreboardViewport from './ScoreboardViewport.jsx';
+import { ROW_PITCH_PX, badgeWidthPx } from './scoreboardLayout.js';
+import { createScoreboardPositions } from './scoreboardPositions.js';
 import { lerp, lerpAngle } from '../../utils/mathUtils.js';
 import { resolveActiveBrandProfile } from '../../modules/branding/useActiveBrandProfile.js';
 import { getRacerType, getCoatsByType } from '../../modules/racer-types/index.js';
-import { assignRaceNumbers, raceNumberLabel } from '../../modules/raceNumbers.js';
+import { assignRaceNumbers } from '../../modules/raceNumbers.js';
 import {
   assignCoat,
   assignPattern,
@@ -60,7 +64,13 @@ import RacePlanHUD from './RacePlanHUD.jsx';
 import CameraFrameLogHUD from './CameraFrameLogHUD.jsx';
 import CameraMarkerHUD from './CameraMarkerHUD.jsx';
 import PerfLogHUD from './PerfLogHUD.jsx';
-import { createPerfLog, recordPerfFrame, buildPerfContext } from './perfLog.js';
+import {
+  createPerfLog,
+  recordPerfFrame,
+  buildPerfContext,
+  startLongTaskObserver,
+  stopLongTaskObserver,
+} from './perfLog.js';
 import { identifyNameSet } from '../../modules/racerNames.js';
 import StateOverlay from './StateOverlay.jsx';
 import BattleDiagHUD from './BattleDiagHUD.jsx';
@@ -92,7 +102,8 @@ import {
 const CANVAS_W = 1280;
 const CANVAS_H = 720;
 
-const RANK_PALETTE = ['#ffd700', '#c0c0c0', '#cd7f32'];
+// SCOREBOARD-SLOT-LAYER: RANK_PALETTE lives in scoreboardLayout.js, beside the pitch and the badge
+// width — the two layers and the positioner all read it from there.
 
 // PHASE has one home now (racePhase.js) — it used to be declared here AND twice more as
 // `PHASE_RACING = 1` in the drawing modules.
@@ -171,7 +182,21 @@ export default function RaceScreen() {
   );
   const [phase, setPhase] = useState(PHASE.COUNTDOWN);
   const [countdown, setCountdown] = useState(3);
-  const [scoreboard, setScoreboard] = useState([]);
+  // SCOREBOARD-SLOT-LAYER: React state now holds only what a card SAYS — its identity and its finish.
+  // It no longer holds the RANKING, which changes constantly and would re-render the list four times
+  // a second to produce one changed `transform` per card. The ranking is applied through the
+  // positioner below, straight onto the DOM. See scoreboardPositions.js for why.
+  const [scoreboardCards, setScoreboardCards] = useState([]);
+  // SHIP-THE-STANDINGS: the racer type's glyph, for the panel header. Race-constant, so it is set
+  // once at race init and never touched again — it is the icon the rows used to repeat a hundred
+  // times. Null until a race is built, and the header simply omits it then.
+  const [rosterIcon, setRosterIcon] = useState(null);
+  const scoreboardPositionsRef = useRef(null);
+  // Stable for the life of the component, so a card's ref callback never re-runs for a new identity.
+  const attachScoreboardCard = useCallback(
+    (index, el) => scoreboardPositionsRef.current?.attach(index, el),
+    []
+  );
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [camState, setCamState] = useState(null);
   const prevHudStateRef = useRef(null);
@@ -686,7 +711,47 @@ export default function RaceScreen() {
       dynamicsConfig.racePlanBonusStrengthMultiplier ??
       DEFAULT_RACE_DYNAMICS_CONFIG.racePlanBonusStrengthMultiplier;
 
-    setScoreboard(g.current.racers.map((r) => ({ ...r, rank: 0 })));
+    // SCOREBOARD-STABLE-ROWS: build each racer's card identity once, here, and hand the list only
+    // the values that move.
+    // The per-racer constants — icon, name, race number — created ONCE here and never re-created and
+    // NEVER MUTATED. Each card entry below carries the SAME OBJECT for the whole race, which is what
+    // lets the memoised card compare it by reference and skip. It lives in this effect's closure
+    // rather than a ref because the render must not read a ref, and the render is what needs it.
+    const rowIdentities = new Map(
+      g.current.racers.map((r) => [
+        r.index,
+        { index: r.index, icon: r.icon, name: r.name, raceNumber: r.raceNumber ?? null },
+      ])
+    );
+    // SHIP-THE-STANDINGS: one glyph for the whole panel. `trackEmoji` is the racer type's own emoji
+    // and is what every row carried; the first racer's icon is the fallback for a type without one,
+    // which is exactly what the rows displayed.
+    setRosterIcon(trackEmoji ?? g.current.racers[0]?.icon ?? null);
+    // SCOREBOARD-SLOT-LAYER: one positioner per race. It is created BEFORE the cards are handed to
+    // React and seeded with the starting ranking below, so every card is positioned by its own
+    // `attach` the moment it mounts rather than sitting at the top of the list until the first tick.
+    const positions = createScoreboardPositions();
+    scoreboardPositionsRef.current = positions;
+    // The reusable ranking map — one allocation per race, refilled each tick.
+    const scoreboardRanks = new Map();
+    // The seed keeps the pre-race order the old code showed (racer order, one rank each), so the
+    // first painted list is identical to what it was.
+    for (let i = 0; i < g.current.racers.length; i++) {
+      scoreboardRanks.set(g.current.racers[i].index, i + 1);
+    }
+    positions.applyRanks(scoreboardRanks);
+    setScoreboardCards(
+      g.current.racers.map((r) => ({
+        index: r.index,
+        identity: rowIdentities.get(r.index),
+        finished: !!r.finished,
+        finishTimeMs: r.finishTimeMs ?? null,
+      }))
+    );
+    // The ONLY thing that still makes a card re-render: a racer crossing the line. Tracked so the
+    // cadence tick can tell "somebody finished" from "the order changed", and set React state for
+    // the first case only.
+    let scoreboardFinishedCount = 0;
 
     // ── Canvas positions ────────────────────────────────────────────────────
     // openTrackHW = half the track width used by physics (same source as avoidance/overlap).
@@ -701,7 +766,12 @@ export default function RaceScreen() {
     const renderBuf = [];
 
     // Perf-log: reset ring buffer on each race start (enablePerfLog captured from cameraConfig).
-    if (enablePerfLog) perfLogRef.current = createPerfLog();
+    if (enablePerfLog) {
+      perfLogRef.current = createPerfLog();
+      // FRAME-GAP-1: the long-task observer lives exactly as long as the log does. Started here and
+      // disconnected in the cleanup below, so a race that ends leaves no observer behind.
+      startLongTaskObserver(perfLogRef.current);
+    }
 
     // Perf probe: activated by ?perfprobe=1 URL flag (persisted via sessionStorage).
     initProbe();
@@ -721,6 +791,12 @@ export default function RaceScreen() {
       const rawDtUncapped = enablePerfLog ? (st.lastTs ? ts - st.lastTs : 16) : 0;
       // Perf-log bracket 1: start of frame (also serves as default for tPhys when no physics ran).
       const t0 = enablePerfLog ? performance.now() : 0;
+      // FRAME-GAP-1: how late the browser was to us. `ts` is the frame's nominal start as rAF
+      // reports it; `t0` is when OUR code actually began. The gap is everything the browser did
+      // first, and it is the half of `other` that no change to our draw code can shorten. One
+      // subtraction, only when the log is on. Clamped at 0 because the two clocks are the same
+      // clock but a browser may hand in a timestamp fractionally ahead of the callback.
+      const rafLate = enablePerfLog ? Math.max(0, t0 - ts) : 0;
       // tPhys starts at t0 so physMs = 0 on non-RACING frames (no physics while-loop ran).
       let tPhys = t0;
       // Perf-log pace counters for this frame (read-only mirrors of the physics
@@ -878,21 +954,48 @@ export default function RaceScreen() {
             };
           }
 
-          // Scoreboard: update when physicsTs crosses a 250ms bucket boundary.
+          // Scoreboard: update when physicsTs crosses a bucket boundary.
           // Two-group sort mirrors the Results screen: finishers by finishRank
           // (ascending), then still-racing by r.t (descending). Pure b.t-a.t
           // fails once racers finish because the runout-decay surge lets later
           // finishers temporarily overtake earlier ones in raw r.t.
-          if (Math.round(physicsTs / 250) !== Math.round((physicsTs - FIXED_DT) / 250)) {
-            setScoreboard(
-              [...st.racers]
-                .sort((a, b) => {
-                  if (a.finished !== b.finished) return a.finished ? -1 : 1;
-                  if (a.finished) return a.finishRank - b.finishRank;
-                  return b.t - a.t;
-                })
-                .map((r, i) => ({ ...r, rank: i + 1 }))
-            );
+          //
+          // SCOREBOARD-CADENCE-1: the bucket was a hard-coded 250 and is now a setting. This is the
+          // ONLY place it is read — the other update is a one-shot seed at race init — so
+          // there is one cadence and no second copy to drift from it. It is measured in PHYSICS time,
+          // not wall time, which is deliberate and unchanged: the list then ticks with the race even
+          // through BATTLE slow-motion, rather than running ahead of the picture it describes.
+          const sbBucket = frameTimingConfig.scoreboardIntervalMs;
+          if (Math.round(physicsTs / sbBucket) !== Math.round((physicsTs - FIXED_DT) / sbBucket)) {
+            // SCOREBOARD-STABLE-ROWS: the SORT IS UNTOUCHED — same two groups, same tie handling,
+            // same resulting order.
+            // SCOREBOARD-TRANSFORM-ROWS: it now only assigns RANKS; the ranking travels to the
+            // screen as a `translateY` instead of as a move in the document.
+            // SCOREBOARD-SLOT-LAYER: and the ranking no longer travels through React at all. The
+            // places are a static layer, the cards say nothing that a rank change could alter, so
+            // the tick writes one transform per card that moved and touches no React state.
+            scoreboardRanks.clear();
+            [...st.racers]
+              .sort((a, b) => {
+                if (a.finished !== b.finished) return a.finished ? -1 : 1;
+                if (a.finished) return a.finishRank - b.finishRank;
+                return b.t - a.t;
+              })
+              .forEach((r, i) => scoreboardRanks.set(r.index, i + 1));
+            positions.applyRanks(scoreboardRanks);
+            // A card's CONTENT changes exactly once per racer — when it finishes and gains a time.
+            // That is the one occasion this list re-renders, and it is one card per crossing.
+            if (st.finishedCount !== scoreboardFinishedCount) {
+              scoreboardFinishedCount = st.finishedCount;
+              setScoreboardCards(
+                st.racers.map((r) => ({
+                  index: r.index,
+                  identity: rowIdentities.get(r.index),
+                  finished: !!r.finished,
+                  finishTimeMs: r.finishTimeMs ?? null,
+                }))
+              );
+            }
           }
 
           if (st.finishedCount >= nRacers) {
@@ -1360,7 +1463,8 @@ export default function RaceScreen() {
           hudPhysAdvancedMs,
           hudPhysAccumMs,
           hudCapHit,
-          rawDtUncapped
+          rawDtUncapped,
+          rafLate
         );
       }
       rafRef.current = requestAnimationFrame(loop);
@@ -1371,6 +1475,7 @@ export default function RaceScreen() {
       // No global RNG to restore — the race stream is the local `raceRng` above (parity step 1),
       // so `Math.random` was never swapped and the rest of the app stays non-deterministic.
       cancelled = true;
+      stopLongTaskObserver(perfLogRef.current); // FRAME-GAP-1: never outlive the race
       markerBuildRef.current = null; // CAMERA-REPRO-1: no markers from a torn-down race
       if (rafRef.current) cancelAnimationFrame(rafRef.current);
       clearTimeout(finishNavTimerRef.current);
@@ -1508,35 +1613,44 @@ export default function RaceScreen() {
           </button>
 
           <div className="scoreboard">
-            <div className="scoreboard-header">Live Standings</div>
-            {scoreboard.map((r, i) => (
+            {/* SHIP-THE-STANDINGS: the racer type is said ONCE here rather than on all hundred rows.
+                It is race-constant, so it is set beside the identities at race init. */}
+            <div className="scoreboard-header">
+              {rosterIcon && <span className="sb-header-icon">{rosterIcon}</span>}
+              <span>Live Standings</span>
+            </div>
+            {/* SCOREBOARD-SLOT-LAYER: the scrolling viewport. The rows canvas below keeps its true
+                height, so the last row is fully drawn and reachable however large the field is,
+                instead of running off the bottom of the window.
+                SHIP-THE-STANDINGS: its scrollbar OVERLAYS the list instead of taking a column from
+                it — see ScoreboardViewport.jsx for why that had to be hand-built. */}
+            <ScoreboardViewport contentHeightPx={scoreboardCards.length * ROW_PITCH_PX}>
+              {/* SCOREBOARD-TRANSFORM-ROWS: the cards are absolutely positioned, so they contribute
+                  no height and this container must state it. The list is in racer order and never
+                  re-sorted — the ranking is the transform on each card.
+                  SCOREBOARD-SLOT-LAYER: `--sb-badge-w` is the ONE badge-column width, chosen from the
+                  field size so the widest place fits its box, and read from here by BOTH layers —
+                  which is what keeps the static places aligned with the moving cards. */}
               <div
-                key={r.index}
-                className={`scoreboard-row${r.finished ? ' scoreboard-row--finished' : ''}`}
+                className="scoreboard-rows"
+                style={{
+                  height: `${scoreboardCards.length * ROW_PITCH_PX}px`,
+                  '--sb-badge-w': `${badgeWidthPx(scoreboardCards.length)}px`,
+                }}
               >
-                <span
-                  className="sb-rank"
-                  style={{
-                    color: RANK_PALETTE[i] ?? '#888',
-                    borderColor: RANK_PALETTE[i] ?? '#444',
-                  }}
-                >
-                  {i === 0 ? '👑' : `#${i + 1}`}
-                </span>
-                <span className="sb-icon">{r.icon}</span>
-                <span className="sb-name" style={{ color: RANK_PALETTE[i] ?? '#ddd' }}>
-                  {/* RACE-NUMBERS-1: the number comes BEFORE the name. The track shows only the
-                      number, so the list is where a viewer reads the two together. */}
-                  {r.raceNumber != null && (
-                    <span className="sb-number">{raceNumberLabel(r.raceNumber)}</span>
-                  )}
-                  {r.name}
-                </span>
-                {r.finished && r.finishTimeMs != null && (
-                  <span className="sb-finish-time">{formatRaceTime(r.finishTimeMs)}</span>
-                )}
+                {scoreboardCards.map((card) => (
+                  <ScoreboardCard
+                    key={card.index}
+                    identity={card.identity}
+                    finished={card.finished}
+                    finishTimeMs={card.finishTimeMs}
+                    attach={attachScoreboardCard}
+                  />
+                ))}
+                {/* Drawn once per race, and after the cards so the badges paint over them. */}
+                <ScoreboardSlots count={scoreboardCards.length} />
               </div>
-            ))}
+            </ScoreboardViewport>
           </div>
 
           {phase === PHASE.COUNTDOWN && (

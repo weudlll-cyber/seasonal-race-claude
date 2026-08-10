@@ -683,6 +683,18 @@ export const DEFAULT_RACE_DYNAMICS_CONFIG = {
 export const DEFAULT_FRAME_TIMING_CONFIG = {
   dtSmoothingAlpha: 0.7,
   renderInterpolation: true,
+  // SCOREBOARD-CADENCE-1: how often the Live Standings list is rebuilt, in PHYSICS milliseconds.
+  //
+  // It is here rather than hard-coded because it is not a rendering detail — it is the one measured
+  // cause of the missed frames (FRAME-GAP-3). Every tick hands React a fresh object for all hundred
+  // rows, so all hundred re-render and re-order; hiding the list put the page on the frame-time
+  // floor, while hiding the 25 Mpx background layer instead changed nothing at all.
+  //
+  // 500 rather than the 250 it was: half the ticks for a list that still reads as live. WHICH VALUE
+  // IS RIGHT IS THE OWNER'S CALL, not a number to be derived — a standings list is a product surface
+  // and how live it feels is a matter of taste, so this ships at 500 with a Dev Screen control and he
+  // picks between 250, 500 and 1000 by eye.
+  scoreboardIntervalMs: 500,
 };
 
 export const DEFAULT_RACE_BEHAVIOR_CONFIG = {

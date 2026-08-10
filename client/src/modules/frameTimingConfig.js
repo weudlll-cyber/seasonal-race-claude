@@ -12,6 +12,19 @@ import { resolveFromDefaults, diffFromDefaults, pruneStored } from './storage/co
 
 export { DEFAULT_FRAME_TIMING_CONFIG };
 
+/**
+ * SCOREBOARD-CADENCE-1: the band the standings cadence may take, and its one home. The Dev Screen
+ * control and the loader's validation both read these, so a control that offered a value the loader
+ * rejects would silently snap back to the default and look like the setting did nothing.
+ *
+ * The floor is 100 ms rather than 0 because below roughly that the list is being rebuilt more often
+ * than a person can read it, which spends the exact cost this key exists to control for no gain the
+ * eye can see. The ceiling is 2000 ms: past two seconds the standings stop being live and become a
+ * periodic report, which is a different product and not a cadence choice.
+ */
+export const SCOREBOARD_INTERVAL_MIN_MS = 100;
+export const SCOREBOARD_INTERVAL_MAX_MS = 2000;
+
 export function loadFrameTimingConfig() {
   pruneStoredFrameTimingConfig();
   const merged = resolveFromDefaults(
@@ -27,6 +40,14 @@ export function loadFrameTimingConfig() {
   }
   if (typeof merged.renderInterpolation !== 'boolean') {
     merged.renderInterpolation = DEFAULT_FRAME_TIMING_CONFIG.renderInterpolation;
+  }
+  if (
+    typeof merged.scoreboardIntervalMs !== 'number' ||
+    !Number.isFinite(merged.scoreboardIntervalMs) ||
+    merged.scoreboardIntervalMs < SCOREBOARD_INTERVAL_MIN_MS ||
+    merged.scoreboardIntervalMs > SCOREBOARD_INTERVAL_MAX_MS
+  ) {
+    merged.scoreboardIntervalMs = DEFAULT_FRAME_TIMING_CONFIG.scoreboardIntervalMs;
   }
   return merged;
 }
