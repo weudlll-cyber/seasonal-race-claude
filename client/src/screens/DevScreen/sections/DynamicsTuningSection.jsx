@@ -29,10 +29,7 @@ import {
   loadFrameTimingConfig,
   saveFrameTimingConfig,
   DEFAULT_FRAME_TIMING_CONFIG,
-  RENDER_SCALE_MIN,
-  RENDER_SCALE_MAX,
 } from '../../../modules/frameTimingConfig.js';
-import { REFERENCE_CANVAS_W, REFERENCE_CANVAS_H } from '../../../modules/camera/projection.js';
 import { InfoTooltip } from '../../../components/InfoTooltip/index.js';
 import { RACE_RELEVANT_DEFAULTS } from './raceRelevantReset.js';
 import { SubCard, SubHeading } from './SubCard.jsx';
@@ -55,9 +52,6 @@ const DynamicsTuningSection = forwardRef(function DynamicsTuningSection(_, ref) 
   const [dynamicsConfig, setDynamicsConfig] = useState(() => loadRaceDynamicsConfig());
   const [frameTimingConfig, setFrameTimingConfig] = useState(() => loadFrameTimingConfig());
   const [storageError, setStorageError] = useState(null);
-  // CANVAS-SCALE-1: the fallback covers a config saved before this key existed, so the slider shows
-  // the value the renderer will actually use rather than an empty thumb at the far left.
-  const renderScale = frameTimingConfig.renderScale ?? DEFAULT_FRAME_TIMING_CONFIG.renderScale;
 
   useEffect(() => {
     saveBaseSpeedConfig(speedConfig);
@@ -313,33 +307,6 @@ const DynamicsTuningSection = forwardRef(function DynamicsTuningSection(_, ref) 
             Render Interpolation
             <InfoTooltip text="Smooths sprite and camera movement between physics steps. Eliminates rhythmic jitter at variable browser frame rates. Off = pre-interpolation behavior (comparison mode). Takes effect immediately." />
           </label>
-        </div>
-        <div style={{ marginTop: '0.75rem' }}>
-          <label
-            className={s.label}
-            style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}
-          >
-            Render Scale
-            <InfoTooltip text="How many pixels the race canvas is actually drawn at, as a fraction of its 1280x720 reference. The canvas is stretched to the window by CSS either way, so this trades sharpness for drawing cost and changes nothing else — the camera framing, the labels, the minimap and the HUD are laid out in reference pixels and are identical at every value. 1.0 is the shipped picture. Lower it one step at a time on a large window and stop where it still looks right. Takes effect on the next race start." />
-          </label>
-          <input
-            type="range"
-            aria-label="Render Scale"
-            min={RENDER_SCALE_MIN}
-            max={RENDER_SCALE_MAX}
-            step={0.05}
-            value={renderScale}
-            onChange={(e) => setFrameTiming('renderScale', Number(e.target.value))}
-            style={{ width: '12rem' }}
-          />
-          <p style={{ fontSize: '0.82rem', color: 'var(--color-muted)', marginTop: '0.4rem' }}>
-            Drawing at{' '}
-            <strong style={{ color: 'var(--color-accent)' }}>{renderScale.toFixed(2)}×</strong> ={' '}
-            {Math.round(REFERENCE_CANVAS_W * renderScale)}×
-            {Math.round(REFERENCE_CANVAS_H * renderScale)} pixels —{' '}
-            {/* the AREA is what the drawing costs, so the area is what is quoted */}
-            {Math.round(renderScale ** 2 * 100)}% of the pixels drawn at 1.00.
-          </p>
         </div>
       </SubCard>
 

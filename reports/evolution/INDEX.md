@@ -98,34 +98,30 @@ and [FAIRNESS.md](../../docs/FAIRNESS.md). Shipped world: **`dc4647be0f55ebdb`**
   state what the key measures. Two tests changed rather than deleted — the floor test is **inverted**
   into "the planner does not read a camera key".
 
-- [CANVAS-SCALE-1.md](CANVAS-SCALE-1.md) — **THE DRAWING SURFACE GETS A SIZE CONTROL, AND THE
-  MEASUREMENT DISAGREES WITH THE HOPE** (branch `feat/canvas-scale-1` off `f69f66fb`; **not merged,
-  nothing minted, his eye pending**). **THE CANVAS HAS NEVER BEEN DPR-AWARE**: `devicePixelRatio`
-  appears nowhere in `client/src`; the backing store is a hard-coded 1280×720 that CSS stretches to
-  the wrapper. On his machine (DPR **1.5**, canvas CSS box 1058×595 = **1587×893 device px**) that
-  means **1.0 is already an UPSCALE of about 1.5× in area** — so the honest control is a FRACTION of
-  the reference, never a DPR cap, and every step below 1.0 spends real sharpness. `renderScale` lands
-  in `DEFAULT_FRAME_TIMING_CONFIG` with a Dev Screen slider; the store becomes `round(1280·s) ×
-  round(720·s)` and a base transform of exactly `s` is **re-applied at the top of every frame** so no
-  save/restore imbalance can lose it. **THE FINDING THE BRIEF ASKED FOR WAS THERE**: `index.jsx`
-  handed the renderer `canvas.width/height`, and the renderer spends that on **LAYOUT** — name-tag
-  font, minimum drawn racer size, label-layout box, minimap and HUD column — so the slider would have
-  changed the picture's CONTENT, not its sharpness. It now reads the reference constants, which is a
-  no-op at 1.0. `cullBounds` also reads the store and is **correct at any scale** (point and bound
-  both carry `s`); checked, left. **TEST + TWO SABOTAGES**: ~2900 marks captured in DEVICE space
-  through a CTM-tracking recorder and divided back by `s` are identical at 1.0/0.85/0.7/0.5/0.4, and
-  the test FAILS on the pre-block wiring and on a smaller store with no base transform. Writing it
-  found that **drawing a frame is not read-only** — `racerRendering.js` appends to `r.trail` while
-  painting — so a determinism test now guards the comparison. **THE MEASUREMENT (his machine, 100
-  racers, mountainstreet, mid-race, one run each): total 16.7/16.8 ms at every scale; 1.00 → 0.50
-  saves ~0.4 ms of physics-p90 and ~0.5 ms of render-p90 — under 1 ms of a 16.7 ms budget.** **AND IT
-  REFUTES THE CLEAR-AREA STORY**: `clearRect` clears a CONSTANT 1280×720, so shrinking the window
-  cannot have reduced it; his own experiment reproduced with the store held fixed moves the brackets
-  by the same ~1 ms; and the 6144×4096 (25.2 Mpx, **27× the race canvas**) background layer,
-  re-transformed every frame, was added as a suspect and **changed nothing**. The harness never
-  reproduced a 33 ms frame at all, so it says where the cost is NOT rather than inventing a number —
-  **his ~29 ms lives in `other`, which no `perfLog` bracket contains**. **The in-app numbers could not
-  be taken: `/race` is behind a login only he has.** All four fingerprints re-measured and UNMOVED.
+- [CANVAS-SCALE-1.md](CANVAS-SCALE-1.md) — **A RENDER-SCALE SLIDER WAS BUILT, MEASURED AND DROPPED;
+  THE LAYOUT COUPLING IT EXPOSED IS WHAT SHIPS** (branch `feat/canvas-scale-1` off `f69f66fb`; **all
+  four fingerprints unchanged — it draws exactly what master draws**). **THE CANVAS HAS NEVER BEEN
+  DPR-AWARE**: `devicePixelRatio` appears nowhere in `client/src`; the backing store is a hard-coded
+  1280×720 that CSS stretches to the wrapper. On his machine (DPR **1.5**, canvas CSS box 1058×595 =
+  **1587×893 device px**) that means the shipped picture is **already upscaled ~1.5× in area** — no
+  DPR headroom to cap, only sharpness to spend. **MEASURED, AND THE MEASUREMENT KILLED THE SLIDER**:
+  100 racers on mountainstreet, total 16.7/16.8 ms at every scale; 1.00 → 0.50 saves ~0.4 ms of
+  physics-p90 and ~0.5 ms of render-p90 — **under 1 ms of a 16.7 ms frame**, so the owner dropped it
+  rather than keep code that earns nothing. **AND IT REFUTES THE MECHANISM**: `clearRect` clears a
+  CONSTANT 1280×720, so shrinking the window cannot have shrunk it; his own experiment reproduced
+  with the store held fixed moves the brackets by the same ~1 ms; and the 6144×4096 (25.2 Mpx, **27×
+  the race canvas**) background layer, re-transformed every frame, was added as a suspect and changed
+  nothing. The harness never reproduced a 33 ms frame at all — **his ~29 ms lives in `other`, which no
+  `perfLog` bracket contains**. **WHAT SHIPS IS THE FINDING UNDERNEATH**: `index.jsx` handed the
+  renderer `canvas.width/height`, and the renderer spends that on **LAYOUT** — name-tag font, minimum
+  drawn racer size, label-layout box, minimap, HUD column. Correct only because the store happens to
+  equal the reference; a coincidence, not a rule, and one that fails silently. It now passes the
+  reference constants (a no-op today, and the render fingerprint says so), guarded by
+  `render-layout-separation.test.mjs` in both directions — that the two arguments really drive
+  layout, and, sabotage-proven by text, that the call site passes the reference. The 430-line
+  multi-scale invariance test went with the slider. **Two harness findings kept**: drawing a frame is
+  NOT read-only (`racerRendering.js` appends to `r.trail` while painting), and `/race` is behind a
+  login only he has, so no in-app measurement is possible without him.
 
 - [FINISH-COMPANY-1.md](FINISH-COMPANY-1.md) — **THE COMPANY GUARANTEE RETIRES ONCE THE COMPANY IS HOME** (branch `feat/finish-company-1`, his proposal built; **his eye pending**). **§1 — WHY FINISHED RACERS WERE EXCLUDED, answered before overturning anything**: blamed to `cfd47cd5` (CAMERA-COMPANY-1), where the guarantee was introduced — **deliberate, not an accident** (that block lists "finished racers are not company" among its fifteen tested properties), but **the reason is recorded nowhere**. **It is NOT a stale-position problem, and that was measured rather than read**: over 60 frames after crossing, the first six finishers advanced `t` by ~0.010-0.012 and moved **62-75 world px** — they run out past the line with live, trustworthy coordinates. So option B was viable and worth asking about. **§2 — BOTH MEASURED, AND B IS REFUTED**: on his marked race and on dirt-oval, baseline widens for **54 / 58 frames** down to 2.9752 / 2.9592; **A (stop once leader+N are home) gives 0 / 0 widening frames**, holding the setting 4.5489 exactly; **B (count finished racers as company) is slightly WORSE — 55 / 59 frames, widening FURTHER to 2.8760 / 2.8443**. **The reason B fails is the fixed anchor**: FINISH_OVERVIEW centres `finishOverviewLookbackPx` BEHIND the line, so finished racers run out AWAY from it exactly as stragglers fall back from it — counting them adds more distant company instead of satisfying the promise. The intuition that it "resolves itself" assumes the anchor is where the racers are; it is deliberately not. **A and B differ on every measured race**, so the simpler-if-identical branch does not apply. **THE TRADE, as a picture rather than a number**: with A the last back-marker sits **11% inside the frame instead of 23% (city) / 50% (dirt) — still ON SCREEN on both, nearer the edge, not cropped**. **CHANGE**: one condition in `_setTargets` — the company ceiling is skipped when `_inFinishMode && finishedCount >= 1 + minRacersVisible`. Scoped to the finish deliberately, since nothing is finished during the race, so the branch cannot fire and the guarantee elsewhere is untouched; `minRacersVisible` and `companyGuarantee` are both unchanged. **Tests in both positions** — enough finishers stops the ceiling, too few still binds, the threshold follows HIS number (4 is enough at 3, not at 5), and mid-race with the same field it still binds, which is what proves the scoping. **A DEFECT FOUND IN MY OWN TOOL AND FIXED HERE**: `npm run verify` **told this block the diff could not reach a `ctx.` call** and skipped the render fingerprint — which had moved. The `isRender` matcher, copied from the ceremony's list, omitted `modules/camera/`; of course a camera change moves the drawn frame, since the director decides the transform every frame. Matcher and routing test fixed — the tool made its own failure visible, which is what it was built for. camera `6480c2e0b2f612b5` -> **`00cafa2432add0f7`**, render `b6591e74102152bd` -> **`1f83ecc1fcb6fa9a`**, both on purpose; **world `dc4647be0f55ebdb` unmoved** (nothing in engine-reach's closure was touched, which verify stated as its reason for skipping it). Suite **3645**. **Noticed**: the ceremony's own render-fingerprint list has the same omission, since that is where the matcher came from.
 
