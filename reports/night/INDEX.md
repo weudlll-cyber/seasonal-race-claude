@@ -8,6 +8,27 @@ report here could be orphaned, or an index link could dangle, with nothing notic
 `node scripts/check-index.mjs --dir=reports/night --index=reports/night/INDEX.md` now checks both
 directions.
 
+- [GATE-TRUTH-1.md](GATE-TRUTH-1.md) — **the repair of [GATE-LINES-1](GATE-LINES-1.md): the gate now
+  tells the truth** (2026-08-12). **The reader is fixed and cannot go silent again.** The three
+  harnesses read through `runawayRateOf()`, which now sits beside `classifyRace` in the observer that
+  owns the definition, and it returns a SHAPE rather than a number so the two causes of a zero can
+  never look alike: **unusable records are a FAILURE, an honest zero is a RESULT** stated in words. A
+  once-per-run control prints on every run of all three and never fails a build. **The proof, one gate
+  command before and after** (`--nlist=100`, same world, same seed, machine quiet): pooled **0.0% →
+  2.8%** over 400 races — searound 7.0%, luger-hill 3.0%, space-sprint 1.0%, seatrack 0.0% in **both**
+  columns, which is exactly how the defect survived. **The budget is written where it belongs**:
+  SHIP-CEREMONY step 1a, pooled ≤ 5% and per track, with the owner's verdict quoted verbatim
+  (_"3 % ist total ok…"_) and one sentence saying why it is not in FAIRNESS.md — PROJECT-PRINCIPLES §8
+  already rules action quality out of the fairness gates. searound is recorded as the known outlier
+  rather than averaged away. `exp-fair-arrival` **stops restating the gate** — its "preregistered,
+  binding" five-criterion list becomes a SCREEN pointing at the two homes, with no criterion or
+  arithmetic changed. **`rowMin` gets one home**: `rowMinOf()` in `fairness-stats.mjs`, reading the
+  ENGINE's `BAND_EDGES`, replacing four copies of the expression and four of the edges; identical on
+  every track **at full float precision**, not at the rounded percentage. FAIRNESS.md now owns the
+  line and states that the code implements **no-regression** while the word "floor" implies an
+  absolute — **the disagreement is reported and nothing is changed**, because that would be a change
+  to the gate. A dated CORRECTIONS entry in `reports/evolution/INDEX.md` records that four ship
+  reports carry a `0%` that was an artefact; those reports are append-only and were not edited.
 - [GATE-LINES-1.md](GATE-LINES-1.md) — **`runaway 0%` has never been measured; `rowMin` is sound but
   homeless** (2026-08-12). The owner asked which document is right about the two gate lines
   SHIP-CEREMONY step 1 requires and FAIRNESS.md does not carry. **The question changes on the

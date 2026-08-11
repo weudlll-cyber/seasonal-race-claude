@@ -223,13 +223,32 @@ went missing).
       shipped world** — `scripts/exp-flapping-gate.mjs --nlist=100`, where the command carries the race
       count so no second copy of it can drift. Paired means the same seed sequence for both arms; the
       baseline is the fingerprint that is shipped RIGHT NOW, **never gold numbers copied from another
-      run** (a stale gold number silently compares against the wrong world). **The thresholds are NOT
-      restated here — [FAIRNESS.md §Permanent gate lines](FAIRNESS.md) is their one home**, and the gate
-      is green when those hold and band arrival has not regressed on any track. Two conditions this
-      checklist has always ALSO required — **runaway 0%** and the **per-row floor (`rowMin`)** — are not
-      among FAIRNESS.md's permanent gate lines; that discrepancy is named here rather than silently
-      reconciled, because deciding which document is right is a change to the gate and not a docs edit.
+      run** (a stale gold number silently compares against the wrong world). **The FAIRNESS thresholds
+      are NOT restated here — [FAIRNESS.md §Permanent gate lines](FAIRNESS.md) is their one home**, and
+      that now includes the per-row floor `rowMin`, which moved there because it IS a fairness
+      quantity. The gate is green when those hold and band arrival has not regressed on any track.
       Do not proceed on a red gate.
+- [ ] **1a. The RUNAWAY BUDGET — and it lives HERE, not in FAIRNESS.md.** **Pooled runaway-winner rate
+      ≤ 5%, reported per track as well as pooled.** A runaway winner is **action quality, not
+      fairness**, and [PROJECT-PRINCIPLES §8](PROJECT-PRINCIPLES.md) already rules action quality out
+      of the fairness gates in as many words — `corrP1` is excluded for exactly this reason. Stating
+      the line here rather than there is that ruling applied, not an oversight; **do not re-open it.**
+
+      **The budget is the owner's, 2026-08-12, and his words are the evidence:** _"3 % ist total ok,
+      das ist ja auch ein möglicher Rennausgang — wenn es nicht zu oft vorkommt, passt das."_ — "3% is
+      totally fine, that is a possible race outcome after all — as long as it doesn't happen too
+      often, that's OK."
+
+      **THE BASELINE IS THE MEASUREMENT THAT SET IT** ([GATE-LINES-1](../reports/night/GATE-LINES-1.md),
+      2026-08-12, N=100 per track): **2.8% pooled** over 400 races — searound 7.0%, luger-hill 3.0%,
+      space-sprint 1.0%, seatrack 0.0%. **searound is the known outlier and is recorded as one rather
+      than averaged away**: a pooled number that hides a single track at more than double the budget
+      would be the same kind of silence this line was written to end.
+
+      **Read the once-per-run RUNAWAY CONTROL line the harness prints**, every time. Until 2026-08-12
+      three harnesses read a property that did not exist and reported `0%` on every track of every
+      ship; the control exists so that a rate which is identically zero has to be stated as a result
+      instead of passing as a number.
 - [ ] **2. Set the default + re-confirm the mechanical gates.** Flip the default in `defaults.js` to
       the chosen value; re-run `eslint` + the parity/golden tests (they will move — see #6).
 - [ ] **3. Mint the fingerprints — ONE measurement per world, on the FINAL committed state.** Mint
