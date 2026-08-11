@@ -11,9 +11,23 @@
 import { useActiveBrandProfile } from '../../modules/branding/useActiveBrandProfile.js';
 import './BrandLogoOverlay.css';
 
+// COORD-SYSTEM-1: the corner offsets are percentages, so the box lands on the CANVAS ruler that
+// what is drawn inside the canvas already uses (Minimap, HUD text). `calc(16 / 1280 * 100%)` and
+// `calc(16 / 720 * 100%)` are EXACTLY 16 canvas px — no rounded-percentage drift — matching the
+// shipped 16-CSS-px offset at scale 1.0 and staying 16 canvas px at every other scale.
 const CORNER_STYLES = {
-  'bottom-right': { bottom: '16px', top: 'auto', right: '16px', left: 'auto' },
-  'top-right': { top: '16px', bottom: 'auto', right: '16px', left: 'auto' },
+  'bottom-right': {
+    bottom: 'calc(16 / 720 * 100%)',
+    top: 'auto',
+    right: 'calc(16 / 1280 * 100%)',
+    left: 'auto',
+  },
+  'top-right': {
+    top: 'calc(16 / 720 * 100%)',
+    bottom: 'auto',
+    right: 'calc(16 / 1280 * 100%)',
+    left: 'auto',
+  },
 };
 
 export default function BrandLogoOverlay() {
