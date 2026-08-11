@@ -91,6 +91,7 @@ import { loadServerClasses } from '../../modules/surface-effects/registry.js';
 import { initProbe, recordFrame, recordFrameCamera } from '../../modules/rAFProbe.js';
 import BrandLogoOverlay from './BrandLogoOverlay.jsx';
 import CeremonyBrandCard from './CeremonyBrandCard.jsx';
+import WinnerCard, { WINNER_CARD_FADE_MS, winnerCardWindowMs } from './WinnerCard.jsx';
 import './RaceScreen.css';
 import {
   DEFAULT_CAMERA_CONFIG,
@@ -251,6 +252,12 @@ export default function RaceScreen() {
   // [camState, phase] state-overlay effect and NOT auto-cleared by stateOverlayDurationMs, so it
   // survives the PHOTO_FINISH→FINISH_OVERVIEW change and holds until race end / new race.
   const [winnerOverlayText, setWinnerOverlayText] = useState(null);
+  // WINNER-CARD-1: the closing card. `winnerCard` is WHO (null = no card at all, which is what the
+  // key at 0 produces); `winnerCardUp` is WHETHER IT IS IN ITS WINDOW. Two states rather than one so
+  // the fade OUT has something to fade out of — clearing the identity would unmount mid-transition.
+  const [winnerCard, setWinnerCard] = useState(null);
+  const [winnerCardUp, setWinnerCardUp] = useState(false);
+  const winnerCardTimersRef = useRef([]);
   const winnerTextFiredRef = useRef(false); // once-latch: winner text fires exactly once per race
   // Per-race no-repeat tracking: Set<number> of used template indices per state key.
   // Reset at race start via phase transition. OVERVIEW/COMEBACK use last-index anti-repeat;
@@ -468,6 +475,12 @@ export default function RaceScreen() {
     const autoScaleConfig = loadAutoScaleConfig();
     // Use the component-level cameraConfig (via ref for closure access).
     const cameraConfig = cameraConfigRef.current;
+    // WINNER-CARD-1: the timer list, captured here rather than read from the ref in the cleanup.
+    // The array identity never changes (it is pushed into and truncated, never replaced), so the
+    // local and the ref are the same list — this is the shape the exhaustive-deps rule asks for, and
+    // it is honest here rather than a silencing, because a cleanup that read the ref LATER could in
+    // principle be looking at a different race's list.
+    const winnerCardTimers = winnerCardTimersRef.current;
     const displaySize = racerType.config.displaySize;
     const _bfNarrowRaw = Math.min(racerType.config.bodyFillX, racerType.config.bodyFillY);
     const _bfLongRaw = Math.max(racerType.config.bodyFillX, racerType.config.bodyFillY);
@@ -672,6 +685,12 @@ export default function RaceScreen() {
     // 15a-predictive: reset the persistent winner-text channel for the new race.
     winnerTextFiredRef.current = false;
     setWinnerOverlayText(null);
+    // WINNER-CARD-1: and the closing card, which must not survive into the next race. Its timers go
+    // first — a pending hide from the previous race would otherwise put the new card away early.
+    winnerCardTimersRef.current.forEach(clearTimeout);
+    winnerCardTimersRef.current.length = 0;
+    setWinnerCardUp(false);
+    setWinnerCard(null);
 
     // ── Augment the extracted physics racers with render-only fields (icon/colour/coat/pattern/
     // trail/emitter). Done IN PLACE so the render array and the physics array stepRacePhysics mutates
@@ -1054,10 +1073,37 @@ export default function RaceScreen() {
                 race: raceData,
               })
             );
-            finishNavTimerRef.current = setTimeout(
-              () => fadeNavRef.current('/results'),
-              camDirRef.current?.finishPauseMs ?? DEFAULT_CAMERA_CONFIG.finishPauseMs
+            const pauseMs = camDirRef.current?.finishPauseMs ?? DEFAULT_CAMERA_CONFIG.finishPauseMs;
+            finishNavTimerRef.current = setTimeout(() => fadeNavRef.current('/results'), pauseMs);
+
+            // WINNER-CARD-1: the card is fired HERE, from the same block that starts the pause, so
+            // the two can never disagree about when the ending begins.
+            //
+            // THE CLAMP IS THE WHOLE CONTRACT: the card gets `min(key, pause)` and therefore cannot
+            // extend the ending by any setting. `pause = 0` gives it 0, which is the same as the key
+            // at 0 — no card. The fade-out is started early enough to have finished before the
+            // navigation, which is why the hide timer is not simply `cardMs`.
+            const cardMs = winnerCardWindowMs(
+              cameraConfigRef.current?.winnerCardMs ?? DEFAULT_CAMERA_CONFIG.winnerCardMs,
+              pauseMs
             );
+            if (cardMs > 0) {
+              const w = byRank[0];
+              if (w?.name) {
+                setWinnerCard({
+                  name: w.name,
+                  raceNumber: w.raceNumber ?? null,
+                  color: w.color ?? null,
+                });
+                setWinnerCardUp(true);
+                winnerCardTimers.push(
+                  setTimeout(
+                    () => setWinnerCardUp(false),
+                    Math.max(0, cardMs - WINNER_CARD_FADE_MS)
+                  )
+                );
+              }
+            }
           }
 
           // Final lap detection — ts (browser time) used so visual overlay timing is correct
@@ -1514,6 +1560,9 @@ export default function RaceScreen() {
       markerBuildRef.current = null; // CAMERA-REPRO-1: no markers from a torn-down race
       if (rafRef.current) cancelAnimationFrame(rafRef.current);
       clearTimeout(finishNavTimerRef.current);
+      // WINNER-CARD-1: the card's hide timer belongs to the race, exactly like the nav timer above.
+      winnerCardTimers.forEach(clearTimeout);
+      winnerCardTimers.length = 0;
       for (const inst of effectsRef.current) inst.destroy?.();
       effectsRef.current = [];
     };
@@ -1646,6 +1695,15 @@ export default function RaceScreen() {
             visible={ceremonyBrandUp}
           />
           {!ceremonyBoardUp && !ceremonyBrandUp && <BrandLogoOverlay />}
+          {/* WINNER-CARD-1: the closing card, and it is INSIDE this wrapper for the same reason the
+              opening card is — the standings `<aside>` is a SIBLING of the wrapper, so a card
+              positioned in here cannot cover them at any size. The accent is the brand's primary,
+              which is the same choice the result screen's podium accent makes. */}
+          <WinnerCard
+            winner={winnerCard}
+            accentColor={activeBrand?.primaryColor ?? null}
+            visible={winnerCardUp}
+          />
         </div>
 
         <aside className="race-hud">

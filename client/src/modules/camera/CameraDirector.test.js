@@ -5077,9 +5077,13 @@ describe('CameraDirector — FINISH_OVERVIEW lookback', () => {
     expect(cd.finishPauseMs).toBe(4000);
   });
 
-  it('finishPauseMs getter: defaults to 2500', () => {
+  it('finishPauseMs getter: falls back to the SHIPPED default', () => {
+    // MIRRORS-BY-REFERENCE (LESSON 207): reads the default instead of copying it. This test used to
+    // pin the literal 2500 and went red when the owner's eye moved the pause to 3500 — it was
+    // testing the NUMBER, which defaults.js owns, instead of the PROPERTY it exists for, which is
+    // that an unconfigured director falls back rather than to zero or undefined.
     const cd = new CameraDirector();
-    expect(cd.finishPauseMs).toBe(2500);
+    expect(cd.finishPauseMs).toBe(DEFAULT_CAMERA_CONFIG.finishPauseMs);
   });
 
   it('finishPauseMs is live-applied via updateConfig', () => {

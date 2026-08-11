@@ -356,7 +356,11 @@ export const DEFAULT_CAMERA_CONFIG = {
   // Finish sequence: drama pulse duration (was hardcoded), smooth zoom-out, and pause before leaderboard.
   finishDramaDurationMs: 1500, // ms of LEADER_ZOOM on the winner before FINISH_OVERVIEW begins
   finishOverviewZoomOutDurationMs: 3000, // ms for smooth zoom-out during FINISH_OVERVIEW
-  finishPauseMs: 2500, // ms pause after last racer finishes before leaderboard
+  // 2500 -> 3500 ON HIS EYE, 2026-08-13: _"die Anzeige ist zu kurz"_ — "the display is too short",
+  // about the winner card. RAISING THE CARD ALONE WOULD HAVE DONE NOTHING, because the card's window
+  // is `min(winnerCardMs, finishPauseMs)` and this was the binding half — so both moved together.
+  // This is the ROOM; `winnerCardMs` below is the tenant.
+  finishPauseMs: 3500, // ms pause after last racer finishes before leaderboard
   finishOverviewLookbackPx: 300, // world-pixel distance before finish line where camera centers during FINISH_OVERVIEW
   // ── THE PODIUM IS BUILT UP (PODIUM-BUILD-1) ───────────────────────────────────────────────────
   // ONE beat. Everything the result screen's build-up does is a whole multiple of it, so the owner
@@ -388,6 +392,33 @@ export const DEFAULT_CAMERA_CONFIG = {
   // escape hatches are what make it affordable — any click or key press completes it at once, and 0
   // switches it off entirely.
   podiumRevealBeatMs: 1500,
+  // ── THE WINNER CARD (WINNER-CARD-1) ───────────────────────────────────────────────────────────
+  // The counterpart to the opening's brand card: the opening introduces the FIELD, the ending names
+  // the WINNER — his race number, his name, his colour, over the race picture, in the brand's accent
+  // where a brand is chosen. How long the card is on screen, fades included.
+  //
+  // IT LIVES INSIDE `finishPauseMs` AND CANNOT OUTLAST IT. The effective duration is
+  // `min(winnerCardMs, finishPauseMs)`, clamped where it is read, so this key can never make the
+  // ending longer — the pause above is the container and this is a tenant. Two consequences follow
+  // and both are deliberate: `finishPauseMs: 0` means no card no matter what is set here, and
+  // raising THIS beyond the pause buys nothing. If the card needs more room, the honest lever is the
+  // pause, which the owner already owns one slider above.
+  //
+  // ⚠ RAISING THIS ALONE DOES NOTHING once it reaches `finishPauseMs` above. The window is
+  // `min(winnerCardMs, finishPauseMs)`, so whichever is smaller decides — move the pause with it.
+  //
+  // 1800 -> 3000 ON HIS EYE, 2026-08-13: _"die Anzeige ist zu kurz"_ — "the display is too short".
+  // The pause went 2500 -> 3500 in the same breath, because at 1800 the CARD's key was the binding
+  // half and at 3000 the PAUSE would have become one.
+  //
+  // 3000 INSIDE A 3500 ms PAUSE: 450 ms in, ~2100 ms at full, 450 ms out (the fades are the opening
+  // brand card's own 0.45 s, so the two cards share one language rather than each having a tempo),
+  // and 500 ms of clean race picture before the screen fades to the podium. 900 ms at full was
+  // enough to READ a number and a name and not enough to LOOK at them, which is what he saw.
+  //
+  // ZERO MEANS NO CARD AT ALL — not a zero-length fade. Nothing is scheduled and the component
+  // renders null, so the race screen at 0 is the race screen before this key existed.
+  winnerCardMs: 3000,
   // Photo-Finish (15a): when the first two finishers cross essentially together, show a tight
   // top-2 group shot with slow-motion instead of the single-winner drama pulse. Camera-only,
   // reuses the BATTLE arc-midpoint pan + group spriteScale and the render-loop slow-motion path.
