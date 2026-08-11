@@ -358,6 +358,26 @@ export const DEFAULT_CAMERA_CONFIG = {
   finishOverviewZoomOutDurationMs: 3000, // ms for smooth zoom-out during FINISH_OVERVIEW
   finishPauseMs: 2500, // ms pause after last racer finishes before leaderboard
   finishOverviewLookbackPx: 300, // world-pixel distance before finish line where camera centers during FINISH_OVERVIEW
+  // ── THE PODIUM IS BUILT UP (PODIUM-BUILD-1) ───────────────────────────────────────────────────
+  // ONE beat. Everything the result screen's build-up does is a whole multiple of it, so the owner
+  // can predict the whole sequence from this single slider: 3rd at 0, 2nd at one beat, the WINNER at
+  // two — and then the winner is held for TWO beats, which is what makes him the moment rather than
+  // the third item in a stagger. Everything below the podium settles in at four beats. Total = 4×.
+  //
+  // ZERO MEANS OFF, and that is the same escape hatch `finishPauseMs` above already offers: at 0 the
+  // result screen appears complete and instantly, exactly as it did before this key existed. No
+  // timer is scheduled and no class is ever put on an element, so "off" is an absence rather than a
+  // fast animation.
+  //
+  // WHY 700 AND NOT LESS: the podium slot's own entrance animation (`podiumAppear` in
+  // ResultScreen.css) is 600 ms, and the build-up REUSES it rather than adding a second motion. A
+  // beat shorter than that overlaps two arrivals and reads as one stagger; 700 leaves about a tenth
+  // of a second of stillness between the end of one arrival and the start of the next.
+  // WHY NOT MORE: at 700 the sequence is finished 2.8 s after the screen appears — about what
+  // `finishPauseMs` already costs once per race. At 1200 it would be 4.8 s on top of that pause,
+  // which is seven seconds between the last crossing and a button he can press.
+  // These are starting values for his eye; the slider is beside the finish pause in Camera Advanced.
+  podiumRevealBeatMs: 700,
   // Photo-Finish (15a): when the first two finishers cross essentially together, show a tight
   // top-2 group shot with slow-motion instead of the single-winner drama pulse. Camera-only,
   // reuses the BATTLE arc-midpoint pan + group spriteScale and the render-loop slow-motion path.

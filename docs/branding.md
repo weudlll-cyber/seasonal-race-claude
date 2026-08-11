@@ -37,7 +37,7 @@ form is full CRUD. Every saved profile has the following fields
 | `subtitle`       | string       | Optional secondary line (e.g. season or sponsor name). Shown below `eventName` in the SetupScreen header, on the race canvas, and in the ResultScreen brand block.                                                                                                                                                                                                                   |
 | `primaryColor`   | string       | Hex color. Drives `--brand-primary` CSS var. `eventName` is rendered in this color everywhere it appears. Default `#e63946`.                                                                                                                                                                                                                                                         |
 | `secondaryColor` | string       | Hex color. Drives `--brand-secondary` CSS var. `subtitle` is rendered in this color everywhere it appears. Default `#f4a261`.                                                                                                                                                                                                                                                        |
-| `sponsorText`    | string       | Sponsor credit text. Displayed as a grey footer strip on the ResultScreen ([`ResultScreen/index.jsx:199`](../client/src/screens/ResultScreen/index.jsx#L199)).                                                                                                                                                                                                                       |
+| `sponsorText`    | string       | Sponsor credit text. Displayed as a grey footer strip on the ResultScreen ([`ResultScreen/index.jsx:351`](../client/src/screens/ResultScreen/index.jsx#L351)).                                                                                                                                                                                                                       |
 | `logo`           | string       | Base64 data URL of an image. Shown as corner logo overlay during races (bottom-right) and as a top-left absolute overlay on the ResultScreen.                                                                                                                                                                                                                                        |
 | `isDefault`      | boolean      | UI star indicator only — **does NOT drive activation** (see below).                                                                                                                                                                                                                                                                                                                  |
 | `logoMaxHeight`  | number (px)  | Max height of the in-race corner logo. Range 40–160. Default `90`. Not used on ResultScreen (which uses a fixed 210px max).                                                                                                                                                                                                                                                          |
@@ -148,7 +148,7 @@ each surface reads them differs — there is no single shared chain:
 - **ResultScreen brand block** (eventName, subtitle, logo, colors): resolved directly from
   `localStorage` via `useStorage`, independent of the race object — the same pattern as
   `BrandLogoOverlay`
-  ([`ResultScreen/index.jsx:26–30`](../client/src/screens/ResultScreen/index.jsx#L26-L30)).
+  ([`ResultScreen/index.jsx:98`](../client/src/screens/ResultScreen/index.jsx#L98)).
 
 `sponsorText` is the one exception: the ResultScreen reads it from `race.sponsorText` (carrier path
 [`SetupScreen.jsx:386`](../client/src/screens/SetupScreen/SetupScreen.jsx#L386), see "Sponsor strip
@@ -188,8 +188,8 @@ The canvas carrier chain in full:
 
 5. **ResultScreen brand block** (direct storage read, not via carrier): `ResultScreen` calls
    `useStorage(KEYS.BRANDING)` and `useStorage(KEYS.ACTIVE_SESSION)` directly
-   ([`ResultScreen/index.jsx:26–30`](../client/src/screens/ResultScreen/index.jsx#L26-L30))
-   and renders ([`ResultScreen/index.jsx:87–111`](../client/src/screens/ResultScreen/index.jsx#L87-L111)):
+   ([`ResultScreen/index.jsx:98`](../client/src/screens/ResultScreen/index.jsx#L98))
+   and renders ([`ResultScreen/index.jsx:237–262`](../client/src/screens/ResultScreen/index.jsx#L237-L262)):
    - `eventName` in the profile's own `primaryColor`
    - `subtitle` (if present) in `secondaryColor`
    - track name and elapsed time below
@@ -200,19 +200,29 @@ The ResultScreen is no longer a bare `<h1>`. As of `b9a2f03`:
 
 - **Brand identity block** (conditional on active profile): event name in `primaryColor`, subtitle in
   `secondaryColor`, track name · elapsed time
-  ([`ResultScreen/index.jsx:87–111`](../client/src/screens/ResultScreen/index.jsx#L87-L111)).
+  ([`ResultScreen/index.jsx:237–262`](../client/src/screens/ResultScreen/index.jsx#L237-L262)).
 - **Logo top-left**: when the active profile has a logo, it is rendered as a `position: absolute`
   overlay in the top-left corner of the results card, outside the vertical flow
-  ([`ResultScreen/index.jsx:113–123`](../client/src/screens/ResultScreen/index.jsx#L113-L123),
+  ([`ResultScreen/index.jsx:264–274`](../client/src/screens/ResultScreen/index.jsx#L264-L274),
   [`ResultScreen.css:76–89`](../client/src/screens/ResultScreen/ResultScreen.css#L76-L89)).
   Uses `logoOpacity` from the profile; fixed max of 210 px (not `logoMaxHeight`).
 - **Podium** (ranks 1–3): animated slots with racer icon, name, and finish time
-  ([`ResultScreen/index.jsx:125–170`](../client/src/screens/ResultScreen/index.jsx#L125-L170)).
+  ([`ResultScreen/index.jsx:276–321`](../client/src/screens/ResultScreen/index.jsx#L276-L321)).
 - **Scrollable rank panel** (ranks 4+): fixed-height panel showing 5 rows before scrolling
-  ([`ResultScreen/index.jsx:172–189`](../client/src/screens/ResultScreen/index.jsx#L172-L189)).
+  ([`ResultScreen/index.jsx:323–340`](../client/src/screens/ResultScreen/index.jsx#L323-L340)).
   `max-height` is set to the measured actual row height × 5 (233 px).
+- **The build-up's accent** (PODIUM-BUILD-1): while the podium is arriving, each slot flashes its
+  frame once as it lands — the winner in the profile's `primaryColor`, 2nd and 3rd in
+  `secondaryColor`. It is the ending answering the brand card the start ceremony now opens on. The
+  colours reach the CSS as `--result-brand-1` / `--result-brand-2` custom properties on the results
+  card, set only while the sequence runs; **with no active profile they are never set and the
+  stylesheet's own fallbacks — gold, silver, bronze — carry it instead**, so an unbranded ending is
+  the same ceremony in the podium's native palette rather than a stripped one. The flash has faded
+  and every trace of it is off the DOM before the screen settles, which is what keeps the finished
+  screen identical to the one before this feature
+  ([`ResultScreen.css`](../client/src/screens/ResultScreen/ResultScreen.css)).
 - **Sponsor strip**: a grey footer line rendered when `race.sponsorText` is non-empty
-  ([`ResultScreen/index.jsx:199`](../client/src/screens/ResultScreen/index.jsx#L199)).
+  ([`ResultScreen/index.jsx:351`](../client/src/screens/ResultScreen/index.jsx#L351)).
 
 #### Per-racer finish times
 
@@ -245,7 +255,7 @@ sponsorText: activeBrandProfile?.sponsorText ?? '',  // SetupScreen.jsx:386
 
 It travels in `sessionStorage.activeRace` → `sessionStorage.raceResults` → ResultScreen, where it
 is rendered as a centered grey footer below the Back button
-([`ResultScreen/index.jsx:199`](../client/src/screens/ResultScreen/index.jsx#L199)):
+([`ResultScreen/index.jsx:351`](../client/src/screens/ResultScreen/index.jsx#L351)):
 
 ```jsx
 {
