@@ -8,6 +8,29 @@ report here could be orphaned, or an index link could dangle, with nothing notic
 `node scripts/check-index.mjs --dir=reports/night --index=reports/night/INDEX.md` now checks both
 directions.
 
+- [GATE-LINES-1.md](GATE-LINES-1.md) — **`runaway 0%` has never been measured; `rowMin` is sound but
+  homeless** (2026-08-12). The owner asked which document is right about the two gate lines
+  SHIP-CEREMONY step 1 requires and FAIRNESS.md does not carry. **The question changes on the
+  measurement.** The three harnesses that feed the ship gate read `r.runawayParade?.runaway` — a
+  property the raw record **does not have** (the classifier's boolean is `runawayWinner`, and the
+  file's own `meta.note` names the function to use). `?.` makes it silent, so the answer is always
+  exactly `0%`. Proven on the gate's own command, `--nlist=100`, four tracks, 400 races, machine
+  quiet: **the gate reads 0.0%; `classifyRace()` on the SAME records says 2.8%** (searound 7%,
+  luger-hill 3%, space-sprint 1%, seatrack genuinely 0 — which is why it survived). The same broken
+  line is in `exp-flapping-gate`, `exp-fairness-recheck` and `exp-roster-matrix`, while **five other
+  harnesses do it correctly** — so a 23.5% and a 0% have coexisted for months in different reports.
+  **Historically it could never have gone red**: the filed gate data (`motion.json` N=100,
+  `combined.json` N=300) is 0% on every row, and that zero propagated into four ship reports as a
+  green result — while the TRUE rate means a literal `0%` gate would have blocked every one of those
+  ships. **`rowMin`** is computed correctly (87–91% today, matching the filed ships) but its
+  expression and zone edges are **four identical copies in four files**, its only comparison is
+  RELATIVE (`c.rowMin >= s.rowMin`) while the checklist says "floor", and it has **never** been the
+  reason anything stopped. **A THIRD gate definition was found on the way**: `exp-fair-arrival.mjs`
+  carries a "preregistered, binding" gate that omits runaway entirely — no two of the three
+  statements list the same criteria. **Recommends**: drop `runaway` from the checklist and do NOT put
+  it in FAIRNESS.md (the `corrP1`-is-not-a-fairness-gate ruling already covers this shape), fix the
+  reader in its own commit regardless; give `rowMin` one home in code, then let FAIRNESS.md own the
+  line and say which KIND of gate it is. Neither document edited — the decision is his.
 - [STANDINGS-SAMPLER-LOADMODE.md](STANDINGS-SAMPLER-LOADMODE.md) — **three pieces; two shipped, one
   is an honest map** (2026-08-11). **(1) The two-layer standings become a RULE with a guard behind
   it** — `docs/STANDINGS-ARCHITECTURE.md` states it, `check-standings-invariant.mjs` makes it bind,
