@@ -13,12 +13,43 @@
    once it has gone — an element at opacity 0 still occupies the compositor.
    ============================================================ */
 
+/* ── WHERE IT SITS, AND WHY — MEASURED ON THE FINISH FRAME, NOT DERIVED FROM THE SOURCE ──────────
+   The first version sat at `left: 26px; bottom: 26px` and landed ON THE MINIMAP, which the owner saw
+   at once. The minimap is drawn INTO THE CANVAS (`modules/camera/Minimap.js`), so it appears in none
+   of the files that name the other overlays — reading the sources could not have found it, and did
+   not. The occupancy below was measured in a browser at the moment the card fires, with the canvas
+   displayed 1:1 with its fixed 1280x720 store, and every box is in canvas pixels:
+
+     FINISH pill (DOM)          10,10    78x20
+     HUD right column (canvas)  1084,14  186x82     race plan / cfg / lap / build
+     event title (canvas)       top-centre, dimmed at the finish
+     "RACE FINISHED!" (canvas)  322,304  634x58     the banner, dead centre
+     "Loading results…"         ~555,410 170x30
+     the FIELD at the line      ~580,480 110x100    what the moment is actually about
+     MINIMAP (canvas)           14,546   280x160    <- measured border, exactly its constants
+     brand logo (DOM)           1174,614 90x90
+     state pill (DOM)           ~530,664 220x28     bottom-centre, and STILL UP when the card fires
+
+   THE LOWER CENTRE IS RULED OUT, and it was the preferred spot. The state-overlay pill is cleared
+   when the phase leaves RACING, but the clearing is a 400 ms FADE, so for the first moments of the
+   card the pill is still on screen — photographed, both visible in one frame. A card there would
+   arrive on top of it every time the finish was close enough to produce winner text.
+
+   WHAT IS LEFT: the left column ABOVE the minimap. It stacks with the minimap rather than floating,
+   it is the side a name-super belongs on, and it leaves the right to the HUD column and the logo.
+
+   THE ANCHOR IS A PERCENTAGE, AND THAT IS THE REAL FIX. The card is positioned against the WRAPPER
+   while the minimap is drawn in CANVAS pixels; a px offset only agrees with the minimap at one
+   canvas scale and drifts at every other. Percentages put both on the same ruler. The card grows
+   UPWARD from a bottom anchor, so a longer name moves it further from the minimap, never into it. */
 .winner-card {
   position: absolute;
-  left: 26px;
-  bottom: 26px;
+  left: 2%; /* the minimap's own left margin is 1.09% — the card lines up with it */
+  bottom: 26%; /* bottom edge at 74% of the height; the minimap's top edge is at 75.83% */
   z-index: 7; /* above the ceremony card's 6, below the state-overlay pill's 15 */
-  max-width: 40%;
+  /* 30%, not 40%: the right edge can then never pass 32% of the width, which keeps the longest name
+     clear of the centre where the camera is holding the winner. */
+  max-width: 30%;
 
   display: flex;
   flex-direction: column;

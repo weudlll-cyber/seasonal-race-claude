@@ -22,8 +22,29 @@
 import { render, screen, act } from '@testing-library/react';
 import { describe, it, expect, vi, afterEach } from 'vitest';
 
+import { readFileSync, existsSync } from 'node:fs';
+
 import WinnerCard, { WINNER_CARD_FADE_MS, winnerCardWindowMs } from './WinnerCard.jsx';
 import { DEFAULT_CAMERA_CONFIG } from '../../modules/storage/defaults.js';
+import { MINIMAP_W, MINIMAP_H, MINIMAP_MARGIN } from '../../modules/camera/Minimap.js';
+
+/** The canvas is a FIXED store; the minimap's constants are in its pixels and so is this. */
+const CANVAS_W = 1280;
+const CANVAS_H = 720;
+
+/**
+ * The card's own stylesheet, read as text.
+ *
+ * Resolved from the working directory rather than from `import.meta.url`: under Vite the module URL
+ * is not a file: URL and `readFileSync` refuses it. The two candidates cover running the suite from
+ * `client/` and from the repo root.
+ */
+function readCss() {
+  const rel = 'src/screens/RaceScreen/WinnerCard.css';
+  const path = [rel, `client/${rel}`].find((p) => existsSync(p));
+  if (!path) throw new Error('WinnerCard.css not found from the working directory');
+  return readFileSync(path, 'utf8');
+}
 
 const WINNER = { name: 'Bramble', raceNumber: 7, color: '#33cc66' };
 
@@ -107,14 +128,7 @@ describe('WINNER-CARD-1 — the fade constant is one value, not two', () => {
     // L207 in miniature. The race screen starts the fade-out `WINNER_CARD_FADE_MS` before the end of
     // the window so it has finished before the navigation; if the CSS and this number disagree the
     // card is either cut off or still up when the screen goes black, and nothing would say so.
-    // Resolved from the working directory rather than from `import.meta.url`: under Vite the module
-    // URL is not a file: URL and `readFileSync` refuses it. The two candidates cover running the
-    // suite from `client/` and from the repo root.
-    const fs = await import('node:fs');
-    const rel = 'src/screens/RaceScreen/WinnerCard.css';
-    const path = [rel, `client/${rel}`].find((p) => fs.existsSync(p));
-    expect(path, 'WinnerCard.css must be findable from the working directory').toBeTruthy();
-    const css = fs.readFileSync(path, 'utf8');
+    const css = readCss();
     const seconds = WINNER_CARD_FADE_MS / 1000;
     expect(css).toContain(`opacity ${seconds}s ease`);
   });
@@ -154,6 +168,44 @@ describe('WINNER-CARD-1 — the card cannot make the ending longer', () => {
       expect(winnerCardWindowMs(bad, PAUSE)).toBe(0);
       expect(winnerCardWindowMs(2000, bad)).toBe(0);
     }
+  });
+});
+
+describe('WINNER-CARD-1 — the card keeps off the minimap at every canvas scale', () => {
+  // THE REGRESSION THIS EXISTS FOR, and it shipped: the card was anchored in PIXELS while the minimap
+  // is drawn in CANVAS pixels. The two rulers only agree at one canvas scale, and at that scale the
+  // card was on top of the minimap anyway. jsdom does no layout, so this is arithmetic on the
+  // declared anchors against the minimap's own constants — which is exactly the comparison nobody
+  // made the first time.
+  const css = readCss();
+  const decl = (prop) => {
+    const m = css.match(new RegExp(`^\\s*${prop}:\\s*([0-9.]+)(%|px)`, 'm'));
+    return m ? { value: parseFloat(m[1]), unit: m[2] } : null;
+  };
+
+  it('anchors in PERCENTAGES, so it rides the same ruler as the canvas it sits on', () => {
+    for (const prop of ['left', 'bottom', 'max-width']) {
+      expect(decl(prop), `${prop} must be declared`).toBeTruthy();
+      expect(decl(prop).unit, `${prop} must scale with the canvas`).toBe('%');
+    }
+  });
+
+  it('its bottom edge stays above the minimap’s top edge', () => {
+    // The minimap's top, as a fraction of the frame height, from its own constants.
+    const minimapTopFrac = (CANVAS_H - MINIMAP_H - MINIMAP_MARGIN) / CANVAS_H;
+    // The card's bottom edge, as a fraction from the top.
+    const cardBottomFrac = 1 - decl('bottom').value / 100;
+    expect(cardBottomFrac).toBeLessThan(minimapTopFrac);
+  });
+
+  it('never crosses the centre line, where the camera is holding the winner', () => {
+    const rightEdgeFrac = (decl('left').value + decl('max-width').value) / 100;
+    expect(rightEdgeFrac).toBeLessThan(0.5);
+  });
+
+  it('starts left of the minimap’s right edge, so the two read as one stack', () => {
+    const minimapRightFrac = (MINIMAP_MARGIN + MINIMAP_W) / CANVAS_W;
+    expect(decl('left').value / 100).toBeLessThan(minimapRightFrac);
   });
 });
 
