@@ -98,6 +98,29 @@ the Dev Screen toggle and the `renderRaceFrame` hook. The branch was deleted at 
   may be promising a corridor the viewer cannot see. Start here rather than from scratch — see
   [DEAD-ENDS.md](DEAD-ENDS.md) §K.
 
+### FINISH-PAIR — the photo finish frames the pair it is following (2026-08-11)
+
+**The camera stops lurching at the finish, and NOTHING about the race moved.** The shot captured its
+two contenders once at entry while the FRAMING guaranteed the live top two by `t`, re-sorted over the
+whole field every frame with no finished filter — and a finished racer does not stop, `raceCore`
+coasts it on a run-out decay, so a later finisher overtakes an earlier one and the guaranteed slot
+walked backwards through the finishing order. Every swap moved the pair distance discontinuously and
+the picture lurched. CAMERA and RENDER moved and are minted; the WORLD is unchanged and is the
+control that says the engine was not touched. Values live in [fingerprints.json](fingerprints.json).
+**Reversals of the picture on his race 5 → 2**, and the cost that was feared inverted: the winner is
+in frame for 100 % of the shot against 87–91 % before.
+
+- `pre/ship-finish-pair` (`330842c6`, 2026-08-11) — master immediately BEFORE the ship. Reset here to
+  restore a photo finish whose guarantee follows the live top two by `t`, with no
+  `photoFinishContenderFraming` key, and the CAMERA/RENDER pair `afd7461071cf2eec` /
+  `c11a7e87d9a9126c`.
+- `v-ship-finish-pair` (`b5c4ab40`, 2026-08-11) — **the ship.** One key, defaulting to the FIX rather
+  than to today's behaviour, because he asked for a defect to be fixed and not for a taste to be
+  offered. Hysteresis was measured first across eleven holding windows and lost: at short windows it
+  is WORSE than the defect, and it only matches pinning at a window longer than the shot itself. Two
+  instrument blind spots are recorded rather than repaired — the shared driver runs a nameless field
+  and no slow motion, and without either the defect does not reproduce at all.
+
 ### WINNER-CARD — the ending names the winner (2026-08-13)
 
 **The counterpart to the opening's brand card, and NOTHING about the race moved.** At the end of a

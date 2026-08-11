@@ -1021,6 +1021,113 @@ describe('CameraDirector — the finish lifecycle (FINISH-SEAM-1)', () => {
     expect(cd._lastFinishReason).toBe(FINISH_REASON.PHOTO_FINISH_FIRST_CROSSING);
   });
 
+  // ── FINISH-PAIR-1: WHO the shot frames ───────────────────────────────────────────────────────
+  //
+  // The defect these guard: the shot FOLLOWED a fixed pair while the framing GUARANTEED a live one.
+  // Finished racers coast (raceCore's run-out) and a later finisher carries a fresher decay than an
+  // earlier one, so it overtakes — and the second slot walked backwards through the finishing order
+  // while the shot was still running. Each swap moved the pair distance discontinuously, which moved
+  // the guarantee, which flipped the binding zoom authority, and the picture lurched: five reversals
+  // on the owner's Searound race where there should be two.
+  //
+  // Asserted in BOTH positions (L203), because a switch whose test would pass with the switch
+  // disconnected is not tested.
+
+  /** Drive a director into a live photo-finish shot on racers 0 and 1. */
+  const shotOn = (cfg) => {
+    const cd = new CameraDirector(1280, 720, false, cfg);
+    cd.stateEnteredAt = 0;
+    cd.update(
+      [
+        { t: 0.98, x: 640, y: 360, index: 0 },
+        { t: 0.979, x: 600, y: 350, index: 1 },
+        { t: 0.6, x: 300, y: 300, index: 2 },
+      ],
+      10_000,
+      rs(),
+      CW,
+      CH
+    );
+    expect(cd.state).toBe(CAM_STATE.PHOTO_FINISH);
+    expect(cd._photoFinishContenders.map((c) => c.index)).toEqual([0, 1]);
+    return cd;
+  };
+
+  /** The field AFTER the line: 0 and 1 are home and coasting, and 2 has coasted PAST 1. */
+  const afterTheLine = [
+    { t: 1.012, x: 700, y: 400, index: 0, finished: true, finishRank: 1 },
+    { t: 1.004, x: 660, y: 380, index: 1, finished: true, finishRank: 2 },
+    { t: 1.008, x: 200, y: 120, index: 2, finished: true, finishRank: 3 },
+  ];
+
+  it('ON (the default): the shot keeps framing ITS OWN pair when a finished racer coasts past one', () => {
+    const cd = shotOn();
+    expect(cd._photoFinishContenderFraming).toBe(true);
+    // Racer 2 is now second by t — the live top-2 is [0, 2]. The framing must not follow it.
+    const subjects = cd._framingSubjects(afterTheLine, cd._focusRacers(afterTheLine));
+    expect(subjects.pair.map((r) => r.index)).toEqual([0, 1]);
+    // …and the live sort really would have said otherwise, or this proves nothing.
+    expect(
+      cd
+        ._focusRacers(afterTheLine)
+        .slice(0, 2)
+        .map((r) => r.index)
+    ).toEqual([0, 2]);
+  });
+
+  it('OFF: the old behaviour is restored — the framing follows the live top two', () => {
+    const cd = shotOn({ photoFinishContenderFraming: false });
+    expect(cd._photoFinishContenderFraming).toBe(false);
+    const subjects = cd._framingSubjects(afterTheLine, cd._focusRacers(afterTheLine));
+    expect(subjects.pair.map((r) => r.index)).toEqual([0, 2]);
+  });
+
+  it('a REAL overtake still moves the pair — WHO is pinned, WHERE they are is not', () => {
+    const cd = shotOn();
+    const before = cd._framingSubjects(
+      [
+        { t: 0.985, x: 640, y: 360, index: 0 },
+        { t: 0.984, x: 600, y: 350, index: 1 },
+        { t: 0.6, x: 300, y: 300, index: 2 },
+      ],
+      []
+    );
+    // Racer 1 passes racer 0 — a genuine P1/P2 change BETWEEN the contenders — and pulls away
+    // laterally. The anchor must follow, and the pair separation must widen with them.
+    const after = cd._framingSubjects(
+      [
+        { t: 0.99, x: 700, y: 300, index: 0 },
+        { t: 0.995, x: 900, y: 500, index: 1 },
+        { t: 0.6, x: 300, y: 300, index: 2 },
+      ],
+      []
+    );
+    expect(after.pair.map((r) => r.index)).toEqual([0, 1]);
+    expect(after.point).not.toEqual(before.point);
+    expect(after.t).toBeGreaterThan(before.t);
+    const sep = (s) => Math.hypot(s.pair[0].x - s.pair[1].x, s.pair[0].y - s.pair[1].y);
+    expect(sep(after)).toBeGreaterThan(sep(before));
+  });
+
+  it('falls back to the live top two when the shot has no contenders to frame', () => {
+    // A state assigned directly — never a real race, because entry always captures two.
+    const cd = new CameraDirector();
+    cd.state = CAM_STATE.PHOTO_FINISH;
+    expect(cd._photoFinishContenders).toBe(null);
+    const subjects = cd._framingSubjects(afterTheLine, cd._focusRacers(afterTheLine));
+    expect(subjects.pair.map((r) => r.index)).toEqual([0, 2]);
+  });
+
+  it('touches only PHOTO_FINISH — BATTLE_ZOOM and LEAD_CHANGE still read the live field', () => {
+    const cd = shotOn();
+    for (const state of [CAM_STATE.BATTLE_ZOOM, CAM_STATE.LEAD_CHANGE]) {
+      cd.state = state;
+      const subjects = cd._framingSubjects(afterTheLine, cd._focusRacers(afterTheLine));
+      expect(subjects.pair[0].index).toBe(0);
+      expect(subjects.pair.map((r) => r?.index ?? null)).not.toEqual([0, 1]);
+    }
+  });
+
   // ── THE DRAMA WINDOW: it opens, it holds, and it ENDS ─────────────────────────────────────────
 
   it('the drama window ends — and the duration setting is what ends it', () => {

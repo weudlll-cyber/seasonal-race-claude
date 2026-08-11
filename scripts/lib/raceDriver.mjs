@@ -87,6 +87,10 @@ export function resolveIdentity(partial = {}) {
     seconds: partial.seconds ?? 60,
     canvasW: partial.canvasW ?? 1280,
     canvasH: partial.canvasH ?? 720,
+    // The names to give the field, or null for the nameless default every harness here has always
+    // run. NOT cosmetic — see the roster block in buildRace. Part of the identity because two runs
+    // with different rosters are incomparable, which is exactly what this object exists to say.
+    roster: partial.roster ?? null,
     // A free-text note naming WHY this identity is what it is; printed with the rest.
     note: partial.note ?? "",
   };
@@ -101,6 +105,7 @@ export function formatIdentity(id) {
     `racer=${id.racerType}`,
     `${id.seconds}s`,
     `${id.canvasW}x${id.canvasH}`,
+    `roster=${id.roster ? `${id.roster.length} names` : "none (index strings)"}`,
   ];
   return `RACE IDENTITY: ${parts.join(" · ")}${id.note ? `  (${id.note})` : ""}`;
 }
@@ -198,6 +203,19 @@ export function buildRace(geo, identity, cameraConfig) {
     shape,
     trackWidthPx,
   );
+  // THE ROSTER (opt-in, FINISH-PAIR-1). A racer's NAME is an engine input — `stablePairBit` in
+  // raceBehavior.js hashes `r.name` and falls back to `r.index` when there is none, so a NAMELESS
+  // field runs a DIFFERENT race from the browser at the same seed. `createRaceFromIdentity` assigns
+  // no names (RaceScreen attaches the roster afterwards), so every harness on this driver has been
+  // running the index-string race. That is fine for a self-consistent fingerprint and FATAL for a
+  // reproduction: the owner's Searound seed-2814 ending does not reproduce at all without the real
+  // Quick-Test roster, and reproduces exactly with it.
+  // Default OFF, so no existing caller's race changes.
+  if (identity.roster) {
+    for (let i = 0; i < built.state.racers.length; i++) {
+      built.state.racers[i].name = identity.roster[i % identity.roster.length];
+    }
+  }
   cd.setRandomSeed(identity.cameraSeed);
   if (built.meta.racePlanEnabled && built.meta.rpPlanInfo?.b1Indices) {
     cd.updateRacePlan(built.meta.rpPlanInfo.b1Indices);
@@ -258,8 +276,42 @@ export function runRace(race, identity, cameraConfig, onFrame, hooks = {}) {
   const raceStart = ts;
   st.physicsTs = 0;
   let frame = 0;
+  // SLOW MOTION (opt-in, FINISH-PAIR-1). RaceScreen dilates the PHYSICS accumulator during
+  // BATTLE_ZOOM and PHOTO_FINISH while the CAMERA keeps running on wall-clock (index.jsx, the
+  // "BATTLE slowmo" block). Every harness on this driver ran without it, which makes them blind to
+  // anything that only misbehaves when a shot is stretched over twice as many camera frames — and
+  // the FINISH-PAIR-1 defect is exactly that: at full speed it does not reproduce at all.
+  // Default OFF, so every existing caller runs the identical loop and no fingerprint moves.
+  const slowmo = hooks.slowmo === true;
+  const smFadeMs = (cameraConfig?.battleSlowmoFadeDuration ?? 0.3) * 1000;
+  const smMinDurMs = (cameraConfig?.battleSlowmoMinDuration ?? 1) * 1000;
+  let slowActive = false;
+  let slowIsPF = false;
+  let slowStart = 0;
+  let fadeProg = 0;
   while (st.finishedCount < identity.racers && ts - raceStart < 200000) {
-    accum += RAW;
+    let dilation = 1;
+    if (slowmo) {
+      // Reads LAST frame's hudState, the same order RaceScreen's block runs in.
+      const isPF = cd.hudState === "PHOTO_FINISH";
+      const isSlow = isPF || cd.hudState === "BATTLE_ZOOM";
+      const factor = isPF
+        ? (cameraConfig?.photoFinishSlowmoFactor ?? 0.5)
+        : (cameraConfig?.battleSlowmoFactor ?? 0.5);
+      if (isSlow && !slowActive) {
+        slowActive = true;
+        slowStart = ts;
+        slowIsPF = isPF;
+      }
+      if (!isSlow && slowActive && (slowIsPF || ts - slowStart >= smMinDurMs)) {
+        slowActive = false;
+        slowIsPF = false;
+      }
+      const step = smFadeMs > 0 ? RAW / smFadeMs : Infinity;
+      fadeProg = slowActive ? Math.min(1, fadeProg + step) : Math.max(0, fadeProg - step);
+      dilation = 1 - (1 - factor) * fadeProg;
+    }
+    accum += RAW * dilation;
     let steps = 0;
     while (accum >= FIXED_DT && steps++ < 2) {
       stepRacePhysics(st, raceCfg);

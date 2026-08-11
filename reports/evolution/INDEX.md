@@ -26,6 +26,20 @@ is dated and recorded HERE, where a reader on their way to the report will pass 
 
 ## Ships
 
+- [FINISH-PAIR-1.md](FINISH-PAIR-1.md) — **the photo finish frames the pair it is actually
+  following** (2026-08-11, tag `v-ship-finish-pair`, return point `pre/ship-finish-pair`). The shot
+  captured its two contenders once at entry while the framing guaranteed the live top two by `t`,
+  re-sorted over the whole field every frame with no finished filter — and finished racers do not
+  stop, they coast on a run-out decay, so a later finisher overtakes an earlier one and the
+  guaranteed slot walked backwards through the finishing order. Reversals of the picture on the
+  owner's race **5 → 2**, Mountainstreet and River Run **4 → 2**, six other measurable tracks
+  unchanged. **The expected cost inverted:** the winner is in frame for 100 % of the shot against
+  87–91 % before, and on River Run the live pair had lost its OWN contenders off-frame for 93–98 %.
+  Hysteresis was measured first over eleven windows and lost — at short windows it is WORSE than the
+  defect, and it only matches pinning at a window longer than the shot. CAMERA and RENDER minted,
+  WORLD unchanged and both moves attributed by re-measuring master. Two blind spots recorded rather
+  than fixed: the shared driver runs a nameless field and no slow motion, and without either the
+  defect does not reproduce at all.
 - [SHIP-THE-NIGHT.md](SHIP-THE-NIGHT.md) — **the pair loop culls, and the decisive phase starts
   later** (2026-08-10, merge `a4cb669a`, mint `1d575759`, tag `v-ship-the-night`, return point
   `pre/ship-the-night`). Eight branches, one merge commit. **The race costs about 20 % less to
