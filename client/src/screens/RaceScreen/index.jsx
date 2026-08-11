@@ -1077,8 +1077,13 @@ export default function RaceScreen() {
             const pauseMs = camDirRef.current?.finishPauseMs ?? DEFAULT_CAMERA_CONFIG.finishPauseMs;
             // ENDING-HOLD-1: extra time on the settled finish picture BEFORE the pause starts. The
             // two ADD, so the ending grows by exactly the hold — the card's window stays `min(card,
-            // pause)` and does not inherit it. At the default 0 this is `0 + pauseMs`, which is the
-            // arithmetic that was here before, so nothing moves until the owner sets it.
+            // pause)` and does not inherit it, which is why what grows is the CARD-FREE tail.
+            //
+            // MEASURED FROM THE LAST CROSSING, and that is structural rather than asserted: this
+            // whole block is inside `if (st.finishedCount >= nRacers)`, which is reachable only on
+            // the frame the last racer finishes (the same frame sets PHASE.FINISHED, and the arm
+            // above is `st.phase === PHASE.RACING`, so it cannot run twice). At `0` the arithmetic
+            // is `0 + pauseMs` — the ending that existed before this key.
             const holdMs = endingHoldMs(cameraConfigRef.current?.finishHoldAfterLastMs);
             finishNavTimerRef.current = setTimeout(
               () => fadeNavRef.current('/results'),

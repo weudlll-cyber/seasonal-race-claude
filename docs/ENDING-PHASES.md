@@ -31,7 +31,7 @@ the correct response is to say so in this table instead of building one.
 | 4 | **Hold before the zoom-out** | the winner held before the camera releases | **none — it is the tail of phase 2.** There is no separate hold; FINISH_OVERVIEW begins when the drama duration expires | — | no, and none is needed |
 | 5 | **Zoom-out** | smooth pull back to the overview | `finishOverviewZoomOutDurationMs` | defaults.js | yes |
 | 6 | **The wait for the stragglers** | the rest of the field crosses and freezes on the line | **EVENT-DRIVEN** — ends when `finishedCount >= nRacers` (`RaceScreen/index.jsx`), i.e. when the last racer's `t` reaches `finishT`. **NO SLIDER, EVER.** Measured at 20 racers it is ~2.9 s and the zoom-out starts ~1.4 s BEFORE it ends | the race | **no — by design** |
-| 7 | **Hold on the finish picture** | extra time on the settled shot after the field is home | `finishHoldAfterLastMs` (ENDING-HOLD-1) | defaults.js | yes — **default 0 = today** |
+| 7 | **Hold on the finish picture** | extra time on the settled shot after the field is home | `finishHoldAfterLastMs` (ENDING-HOLD-1) | defaults.js | yes — **on by default; 0 is the escape hatch** |
 | 8 | **Winner card** | the card naming the winner, over the race picture | `min(winnerCardMs, finishPauseMs)` — a TENANT of phase 9, it cannot extend the ending | defaults.js + `WinnerCard.jsx` (`winnerCardWindowMs`) | yes |
 | 9 | **Pause before the result screen** | the settled picture until the screen changes | `finishPauseMs` | defaults.js | yes |
 | 10 | **Screen transition** | fade to black, navigate, fade in | **A HARD-CODED CONSTANT: 320 ms + a 50 ms settle** | `contexts/TransitionContext.jsx` | **NO — hidden constant** |
@@ -69,6 +69,13 @@ reason is in the source beside it.
   A "wait longer" control here would either do nothing (everyone is already home) or hold a still
   picture while pretending to wait for arrivals that have happened. `finishHoldAfterLastMs` (#7) is
   the honest version of that wish and is named for what it actually does.
+
+  **The owner settled this on 2026-08-12 and the shape is his:** _"das Rauszoomen sollte schon
+  beginnen wenn der erste / die ersten im Ziel sind … Aber wenn der letzte ins Ziel kommt sollte das
+  Bild noch ein wenig stehen bleiben"_ — the zoom-out keeps its present trigger (phase 5, off the
+  FIRST crossing), and the extra time goes on the settled picture after the LAST. Gating the
+  zoom-out on `finishedCount >= nRacers` was proposed and **rejected**: it would move phase 5 behind
+  phase 6 and make the pull-back's start a property of the slowest racer.
 
 **If the owner wants arrivals to watch, the lever is the race, not the ending** —
 [PROJECT-PRINCIPLES §9](PROJECT-PRINCIPLES.md): the camera cannot manufacture a contest the race did
