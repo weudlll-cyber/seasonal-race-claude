@@ -430,7 +430,12 @@
   box-shadow:
     0 0 0 2px var(--result-accent),
     0 0 22px 3px var(--result-accent);
-  animation: resultAccentFade var(--result-beat, 700ms) ease-out forwards;
+  /* MIRRORS-BY-REFERENCE (LESSON 207) the hard way: CSS cannot import `podiumRevealBeatMs`, so this
+     fallback is the one copy of it in the repository and it MOVES WITH THE DEFAULT — 700 -> 1500 on
+     the owner's eye, 2026-08-13. It is unreachable in practice (the screen sets `--result-beat` on
+     the card whenever a slot can carry `.result-arrive`), which is exactly why a stale value here
+     would never be caught by looking. */
+  animation: resultAccentFade var(--result-beat, 1500ms) ease-out forwards;
 }
 
 @keyframes resultAccentFade {
