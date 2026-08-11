@@ -1433,6 +1433,29 @@ function CameraAdvancedSection() {
               }}
             />
           </div>
+          <div className={s.formGroup}>
+            <label
+              className={s.label}
+              style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}
+            >
+              Winner card (ms)
+              <InfoTooltip
+                text={`The counterpart to the opening's brand card: at the end of the race a card in the lower-left names the winner — his race number, his name, his colour — in the brand's accent where a brand is chosen. IT LIVES INSIDE THE PAUSE ABOVE AND CANNOT MAKE THE ENDING LONGER: the card gets min(this, pause), so setting the pause to 0 removes the card whatever this says, and raising this past the pause buys nothing — the pause is the lever for a longer read. ZERO MEANS NO CARD AT ALL. Currently: ${config.winnerCardMs ?? DEFAULT_CAMERA_CONFIG.winnerCardMs}ms, of which ${Math.min(config.winnerCardMs ?? DEFAULT_CAMERA_CONFIG.winnerCardMs, config.finishPauseMs ?? DEFAULT_CAMERA_CONFIG.finishPauseMs)}ms fits in the pause.`}
+              />
+            </label>
+            <input
+              type="number"
+              className={s.input}
+              min={0}
+              max={10000}
+              step={100}
+              value={config.winnerCardMs ?? DEFAULT_CAMERA_CONFIG.winnerCardMs}
+              onChange={(e) => {
+                const v = Number(e.target.value);
+                if (v >= 0 && v <= 10000) set('winnerCardMs', v);
+              }}
+            />
+          </div>
         </div>
         <div
           style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem', marginTop: '0.5rem' }}
