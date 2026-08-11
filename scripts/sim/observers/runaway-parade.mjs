@@ -276,3 +276,122 @@ export function relativeSpeedSpread(memberIndices, speedByIndex) {
   const mean = sum / speeds.length;
   return mean > 0 ? +((mx - mn) / mean).toFixed(6) : 0;
 }
+
+// ── READING A WHOLE RUN, AND THE CONTROL THAT MAKES THE ANSWER TRUSTWORTHY ───────────────────────
+//
+// WHY THIS FUNCTION EXISTS AND WHY IT IS HERE. Three gate harnesses derived the runaway RATE
+// themselves, with `rp.filter((r) => r.runawayParade?.runaway)` — and `runawayParade.runaway` is not
+// a property this module has ever produced. The classifier's boolean is `runawayWinner`. The
+// optional chain turned "the field is not there" into `undefined`, `undefined` is falsy, and the
+// rate came out as exactly `0%` on every track of every ship for months (GATE-LINES-1: the gate read
+// 0.0% where classifyRace() on the SAME 400 records said 2.8%).
+//
+// So the reading moves next to the definition. There is now ONE way to turn a set of raw records
+// into a rate, and a harness that wants the number asks here instead of re-deriving it.
+//
+// ── THE CONTROL, and the distinction it draws ───────────────────────────────────────────────────
+//
+// A rate of zero has two completely different causes and they must never look alike again:
+//
+//   USABLE = 0  — the records do not carry the fields the classifier needs. That is the defect
+//                 class above, and it is a FAILURE: `ok` is false and the caller must say so.
+//   rate  = 0   — the records are fine and no race qualified. That is a RESULT about the world,
+//                 and it must be PRINTED rather than passed over in silence.
+//
+// `usable` is what tells them apart, and it is why this returns a shape rather than a number.
+// Deliberately NOT generalised into a mechanism for every metric — it lives with the one metric
+// whose silence was actually paid for.
+
+/** The raw fields `classifyRace` cannot work without. A record missing them is unusable, not zero. */
+const REQUIRED_RAW_FIELDS = ["leaderGapP2At090Len", "minLeadFrom090Len", "finalRankByIndex"];
+
+/**
+ * The runaway-winner rate over a whole run, with the control that says whether it can be believed.
+ *
+ * @param {Array<{runawayParade?: object}>} races  the `races` array of a runaway-parade.json
+ * @param {object} [D]  thresholds; defaults to the shipped ones
+ * @returns {{ok:boolean, rate:number|null, parade:number|null, n:number, usable:number, note:string}}
+ *   `ok` false means the RECORDS are the problem, never the world.
+ */
+export function runawayRateOf(races, D = RUNAWAY_PARADE_DEFAULTS) {
+  const list = Array.isArray(races) ? races : [];
+  const raws = list.map((r) => r?.runawayParade).filter(Boolean);
+  const usable = raws.filter((raw) =>
+    REQUIRED_RAW_FIELDS.every((k) => raw[k] !== undefined),
+  );
+  if (usable.length === 0) {
+    return {
+      ok: false,
+      rate: null,
+      parade: null,
+      n: list.length,
+      usable: 0,
+      note:
+        `RUNAWAY CONTROL — FAIL: ${list.length} record(s) and NONE carries ` +
+        `${REQUIRED_RAW_FIELDS.join("/")}. This is the GATE-LINES-1 defect: a rate of 0% here would ` +
+        `describe the reader, not the world. Do not report a number from this run.`,
+    };
+  }
+  const c = usable.map((raw) => classifyRace(raw, D));
+  const rate = c.filter((x) => x.runawayWinner).length / c.length;
+  const parade = c.filter((x) => x.paradeFinish).length / c.length;
+  const partial =
+    usable.length < raws.length
+      ? ` (${raws.length - usable.length} of ${raws.length} record(s) UNUSABLE and excluded)`
+      : "";
+  return {
+    ok: true,
+    rate,
+    parade,
+    n: c.length,
+    usable: usable.length,
+    note:
+      rate === 0
+        ? `RUNAWAY CONTROL — the rate is 0% over ${c.length} usable race(s)${partial}. That is a ` +
+          `RESULT, not a silence: no race met all three clauses. The records are intact, so this ` +
+          `is the world and not the reader.`
+        : `RUNAWAY CONTROL — live: ${(100 * rate).toFixed(1)}% over ${c.length} usable race(s)${partial}.`,
+  };
+}
+
+/**
+ * THE ONCE-PER-RUN CONTROL. A harness that reports a runaway rate calls this at the end and prints
+ * what it returns — always, on every run.
+ *
+ * The rule it enforces is the one GATE-LINES-1 paid for: **a rate that is identically zero across a
+ * whole run must be SAID.** For months every gate run reported `0%` on every track and nobody
+ * looked, because zero and silence are the same shape on a page. Now the run has to make a
+ * statement about itself, and the statement distinguishes the two causes.
+ *
+ * It never throws and never fails a build: an honest zero is a legitimate result about the world,
+ * and a harness that refused to finish on one would be worse than the silence it replaces.
+ *
+ * @param {{label:string, rate:number|null, n:number}[]} rows  one per measured combo
+ * @returns {string} the line to print
+ */
+export function runawayRunSummary(rows) {
+  const seen = (rows ?? []).filter((r) => typeof r.rate === "number");
+  if (seen.length === 0) {
+    return (
+      "RUNAWAY CONTROL (run) — NO rate was measured at all. Nothing here says anything about " +
+      "runaway; do not quote a 0% from this run."
+    );
+  }
+  const races = seen.reduce((a, r) => a + (r.n || 0), 0);
+  const hits = seen.reduce((a, r) => a + r.rate * (r.n || 0), 0);
+  const pooled = races ? hits / races : 0;
+  const worst = seen.reduce((a, r) => (r.rate > a.rate ? r : a), seen[0]);
+  if (pooled === 0) {
+    return (
+      `RUNAWAY CONTROL (run) — ZERO ON EVERY COMBO: 0.0% across ${seen.length} combo(s) / ` +
+      `${races} race(s). THIS IS A RESULT AND MUST BE REPORTED AS ONE. It is also the exact shape ` +
+      `a broken reader produced for months (GATE-LINES-1), so state in the report that the records ` +
+      `were usable and the world simply produced none.`
+    );
+  }
+  return (
+    `RUNAWAY CONTROL (run) — LIVE: pooled ${(100 * pooled).toFixed(1)}% over ${races} race(s); ` +
+    `worst combo ${worst.label} at ${(100 * worst.rate).toFixed(1)}%. The metric is measuring ` +
+    `something, which is the half a 0% can never demonstrate.`
+  );
+}

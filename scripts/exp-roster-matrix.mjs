@@ -12,8 +12,13 @@
 import { readFileSync, writeFileSync, mkdirSync, existsSync } from "node:fs";
 import { join, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
+import { rowMinOf } from "./sim/observers/fairness-stats.mjs";
 import { tmpdir, cpus } from "node:os";
 import { execFile, execFileSync } from "node:child_process";
+import {
+  runawayRateOf,
+  runawayRunSummary,
+} from "./sim/observers/runaway-parade.mjs";
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), "..");
 const argv = process.argv.slice(2);
@@ -88,13 +93,6 @@ const TRACKS = argVal("tracks", TEN.join(","))
   });
 const intersects = (a, b) => a.some((x) => b.includes(x));
 
-// band zones for rowMin (B1 1-5, B2 6-15, B3 16-25, B4 26-40, B5 41+)
-const BE = [5, 15, 25, 40];
-const zi = (r) => {
-  for (let i = 0; i < BE.length; i++) if (r <= BE[i]) return i;
-  return BE.length;
-};
-
 function pExec(file, args) {
   return new Promise((res, rej) => {
     execFile(file, args, { cwd: ROOT, maxBuffer: 512 * 1024 * 1024 }, (err) =>
@@ -119,25 +117,27 @@ async function runCell(track, type) {
   ]);
   const hm = JSON.parse(readFileSync(join(out, "hero-map.json"), "utf8"));
   const fd = JSON.parse(readFileSync(join(out, "fairness-data.json"), "utf8"));
-  const rr = [],
-    rt = [];
-  for (const r of fd.rawData) {
-    const row = r.startRowIndex;
-    rr[row] = (rr[row] ?? 0) + (zi(r.finalRank) === zi(r.sollRank) ? 1 : 0);
-    rt[row] = (rt[row] ?? 0) + 1;
-  }
-  const rowMin = Math.min(...rr.map((v, i) => (rt[i] ? v / rt[i] : 1)));
+  // GATE-TRUTH-1: ONE home for the per-start-row floor and for the band edges it uses.
+  const rowMin = rowMinOf(fd.rawData);
+  // GATE-TRUTH-1: read through the observer that OWNS the definition. This used to be
+  // `rp.filter((r) => r.runawayParade?.runaway)`, and that property has never existed — the optional
+  // chain turned a missing field into a silent, permanent 0%. `runawayRateOf` also returns the
+  // CONTROL that tells a broken reader from an honest zero.
   let runaway = null;
+  let runawayNote = "no runaway-parade.json (observer not requested?)";
+  let runawayOK = true;
   try {
     const rp = JSON.parse(
       readFileSync(join(out, "runaway-parade.json"), "utf8"),
     ).races;
-    runaway = rp.length
-      ? rp.filter((r) => r.runawayParade?.runaway).length / rp.length
-      : null;
+    const rr = runawayRateOf(rp);
+    runaway = rr.rate;
+    runawayNote = rr.note;
+    runawayOK = rr.ok;
   } catch {
     /* observer optional */
   }
+  if (!runawayOK) console.log(`  ${runawayNote}`);
   return {
     type,
     bandReach: hm.fairness?.bandReach ?? null,
@@ -159,6 +159,8 @@ console.log(
 
 // simple promise pool over ALL cells; collect per-track; commit a track when all its cells are in.
 const results = {}; // track.id → { ...meta, cells: [] }
+// GATE-TRUTH-1: every measured cell's runaway rate, for the once-per-run control at the end.
+const runawayRows = [];
 for (const g of plan)
   results[g.track.id] = {
     track: g.track.id,
@@ -179,6 +181,7 @@ async function worker() {
     try {
       const r = await runCell(track, type);
       results[track.id].cells.push(r);
+      runawayRows.push({ label: `${track.id}/${type}`, rate: r.runaway, n: RACES });
       console.log(
         `[${++done}/${totalCells}] ${track.id}/${type}: arrival=${r.bandReach == null ? "?" : (r.bandReach * 100).toFixed(1) + "%"} rowMin=${(r.rowMin * 100).toFixed(0)}% ${r.holm} runaway=${r.runaway == null ? "?" : (r.runaway * 100).toFixed(0) + "%"} (${((Date.now() - t0) / 1000).toFixed(0)}s)`,
       );
@@ -216,4 +219,6 @@ async function worker() {
   }
 }
 await Promise.all(Array.from({ length: Math.min(JOBS, queue.length) }, worker));
+// GATE-TRUTH-1: the once-per-run runaway control, printed on every run.
+console.log("\n" + runawayRunSummary(runawayRows));
 console.log("DONE — all eligible cells measured.");
