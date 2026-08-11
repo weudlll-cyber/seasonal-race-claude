@@ -575,10 +575,10 @@ with its date and — where one exists — the measurement that framed it.
 
 | what he judged                                                                                                                 | when       | the evidence, and the measurement behind it                                                                                                                                                                                                                                                                                              |
 | ------------------------------------------------------------------------------------------------------------------------------ | ---------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **The road no longer bounds the leader shot** — LEADER/OVERVIEW/COMEBACK limited by his setting and the COMPANY guarantee only | 2026-08-05 | mountainstreet, seed 5601, toggle ON, _"nein das passt"_ — and decisive because he saw **both regimes**: a torn-apart field where the guarantee opens the shot, and a tight pack where the camera holds his 1.0. His approval also covers the CAMERA-ANCHOR-TRUTH-1 work (§4a, §4c, stages 1a/1b), which had had no eye test until then. |
+| **The road no longer bounds the leader shot** — LEADER/OVERVIEW/COMEBACK limited by his setting and the COMPANY guarantee only | 2026-08-05 | mountainstreet, seed 5601, toggle ON, _"nein das passt"_ ("no, that's fine") — and decisive because he saw **both regimes**: a torn-apart field where the guarantee opens the shot, and a tight pack where the camera holds his 1.0. **His verdict is about the leader shot's bounding and nothing else.** [CAMERA-COMPANY-ONLY-3](../reports/evolution/CAMERA-COMPANY-ONLY-3.md) §"his approval also covers" reads that verdict as closing the CAMERA-ANCHOR-TRUTH-1 debt (§4a, §4c, stages 1a/1b) on the grounds that the work "was present in every build he ran". **Present in the build is not judged**: he was never shown it and said nothing about it, so it is not UNSEEN and it is not APPROVED, and the eye-test debt on it stands. Narrowed here on 2026-08-12; the report is the lab journal and is left as written. |
 | **`minRacersVisible`: he judged 5, and the code now ships 5. RESOLVED.**                                                        | judged 2026-08-05, resolved 2026-08-09 | **The disagreement was real and is recorded here rather than tidied away**: he judged 5 on 2026-08-05 while `defaults.js` kept shipping 3, so the company guarantee ran on 3 everywhere for four days and this row used to read as if the two numbers agreed. **Resolved by MIN-RACERS-5 in HIS favour**: his eye overrules the measurement, and the measurement says why he can be right — I reported the guarantee binding ~0% at n=65 and recommended raising it, which held for the PACK case only; on a SPREAD field it binds and widens a lot at 5, and the sweep never covered that case. Two mirrors of the number moved with it (`DEFAULT_MIN_RACERS_VISIBLE` in `framingConfig.js`, and the Dev Screen slider, which now reads the defaults instead of a literal). **The spread-field sweep is still owed** — it would quantify what he saw, and it is the one measurement that could still argue with him. Note the second consequence he should watch for: this key also decides when the finish overview stops widening for stragglers (`finishedCount >= 1 + minRacersVisible`), which now happens at 6 home instead of 4. |
 | **The finish is ONE motion** — pan and zoom on one ease, no jump at the crossing                                               | 2026-08-05 | The measured defect was a **2708 px pan-target step in one frame** (dirt-oval, 144× the median of the frames before it); after, peak per-frame motion 2708 → 72 px with total travel unchanged.                                                                                                                                          |
-| **The finish pause, the travel and the resting point**                                                                         | 2026-08-05 | His photo-finish settings, watching the moment the pair shot ends. The pause now runs after a photo finish too, starting when the two contenders the shot was FOLLOWING are home — measured 6–57 frames later than `finishedCount >= 2`, and on 5 of 9 tracks the second racer across is neither of the pair.                            |
+| **The finish pause, the travel and the resting point** — three judgements, one date, separated below | 2026-08-05 | **WHAT HE WATCHED:** the single moment the pair shot ends, with his own photo-finish settings, on the two tracks the handover named — Dirt Oval (longest gap between the pair crossing) then City Circuit (longest old hold). **WHAT HE SAID:** recorded in merge `421e8f9a` — _"the pause, the travel and the resting point are what he asked for."_ All three are his, not inferred; the handover asked him for exactly those three ([FINISH-WINDOW-1](../reports/evolution/FINISH-WINDOW-1.md) §9). **THE MEASUREMENT THAT FRAMED IT:** the pause starts when the two contenders the shot was FOLLOWING are home — 6–57 frames later than `finishedCount >= 2`, and on 5 of 9 tracks the second racer across is neither of the pair. **WHAT HIS APPROVAL DOES NOT CARRY:** he moved the lookback slider across the range the handover named; **beyond it the resting point stops following on some tracks** — that is the world edge, its numbers are in FINISH-WINDOW-1 §5, and it is a limit he was told about rather than one he approved. |
 | **The company guarantee retires once the company is home**                                                                     | 2026-08-05 | City Circuit, last thirty seconds, _"schaut besser aus jetzt"_. Baseline widened for 54 frames (4.5489 → 2.9752) after the shot had already come to rest; after, 0. Cost he accepted: the last back-marker sits 11% inside the frame instead of 23%.                                                                                     |
 
 ### 8.2 Rejected by him — and both are natural ideas that will return
@@ -602,13 +602,17 @@ somebody happened to be looking. So the numbers live in DEAD-ENDS alone.
 **This is the honest limit on every "owner-approved" claim above, and it should be read before
 quoting one.**
 
-- **Tracks: seven of ten** (his own count, 2026-08-09 — it was three when this section was written).
-  **The record names only some of them**, and that is itself part of the honest limit: §8.1 and §8.2
-  carry evidence for mountainstreet, searound and City Circuit, and the night reports add
-  mountainstreet and searound for the board and ceremony work and river-run for the label offset.
-  The remaining names were judged in sittings that produced no written evidence. **So the COUNT is
-  his and the NAMES are not fully recoverable from this repository** — which means a claim about a
-  specific unnamed track still has nothing behind it here, even though the total is now seven.
+- **Tracks: TEN of ten** (his own count, 2026-08-12 — it was three when this section was written and
+  seven on 2026-08-09). His words, kept in the original because they are the evidence:
+  _"ich habe alle Rennen gesehen"_ — "I have seen all the races." Asked afterwards what came out of
+  it, he reported **no findings**.
+  **THE COUNT REACHING TEN CHANGES NOTHING ABOUT THE NAMES, and that is the part to read.** §8.1 and
+  §8.2 carry evidence for mountainstreet, searound and City Circuit; the night reports add
+  mountainstreet and searound for the board and ceremony work and river-run for the label offset. The
+  rest were judged in sittings that produced no written evidence. **So the COUNT is his and the NAMES
+  are still not recoverable from this repository** — a claim about a specific unnamed track has
+  exactly as little behind it here at ten as it had at seven. A total is not per-track evidence, and
+  "no findings" is a statement about a sitting, not a certificate on each track in it.
 - **States:** he has seen LEADER, OVERVIEW, BATTLE and — since the finish work — PHOTO_FINISH and
   FINISH_OVERVIEW. **COMEBACK_ZOOM and LEAD_CHANGE have had no targeted pass**, and he declined one
   over the finish states before FINISH-WINDOW-1 gave him endings on nearly every race.
@@ -617,6 +621,18 @@ quoting one.**
   frame directly — the board's duration, its legibility at 100 starters, the searching pause before
   the gun — on mountainstreet and searound. What that does NOT cover: the start on the other eight
   tracks, and the formation's framing as such rather than what is drawn over it.
+- **The re-ordered OPENING has been judged, once.** On 2026-08-12, on a **production build** (R10 in
+  [VERIFY-RULES.md](VERIFY-RULES.md)), at **40 and 100 racers**: the brand card, the track's own beat
+  with nothing over it, the board arriving after the camera's travel instead of standing across it,
+  and the two-line header. **What that covers** is the opening as a SEQUENCE — the order of the beats
+  and their proportions — at both ends of the field-size range, in the regime he is meant to judge in
+  (the beats are not all fixed lengths; the board's scales with the roster, and
+  `client/src/modules/camera/startCeremony.js` is where that is decided). **What it does NOT cover,
+  and this is the whole reason the bullet exists: it was ONE SITTING on ONE build, not a pass across
+  tracks.** It says nothing about how the opening frames any particular track's geometry, nothing
+  about the field sizes between the two he saw, and — since the brand card and the corner logo are
+  DOM rather than canvas — nothing there is reachable by any fingerprint either. His eye is the only
+  instrument those two have.
 
 **The consequence, stated so nobody over-reads the table:** an approval is evidence about the track
 and the state it was given on. It is not a general certificate, and a change that alters a state he

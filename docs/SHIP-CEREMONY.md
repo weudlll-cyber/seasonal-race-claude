@@ -25,8 +25,10 @@ Camera and other presentation work still skips this whole ceremony. But it does 
 
 **The trigger is a computed set, not a folder (VERIFY-COST-1).** What can change the race is the
 transitive closure of `raceCore.js`'s imports. The old rule fired on a FOLDER instead, and minting
-for a file the engine cannot reach proved only what the diff had already proved — that is where the
-wasted three minutes went.
+for a file the engine cannot reach proved only what the diff had already proved — at the world
+fingerprint's full cost, which is where the waste went. **That cost is in the generated table below;
+this sentence deliberately quotes no duration**, because a duration typed into prose is exactly the
+drift the table exists to end.
 
 **The counts below are GENERATED, because typing them did not work.** They read 19 / 103 / 84 until
 2026-08-10: `CONFIG-DIFF-2` added a file to the closure and nothing here noticed, the same defect
@@ -69,9 +71,21 @@ affected.**
 
 `ENGINE_INPUT_MODULES` in `raceConfigWorld.js` remains, and remains guarded — it is the DIRECT-import
 list, and it stays useful as the "did a new engine input appear" alarm. It is deliberately **not** the
-trigger: it names eleven files, and the eight in the gap between it and the closure include
-`autoSpriteScale.js`, which is the precise file this tripwire was created for. Triggering on it would
-have stopped catching the incident that produced the rule.
+trigger: it names eleven files against the closure count generated above, and **the gap between the
+two contains `autoSpriteScale.js`, which is the precise file this tripwire was created for.**
+Triggering on it would have stopped catching the incident that produced the rule.
+
+**`eleven` is a HAND-COUNTED figure: `ENGINE_INPUT_MODULES` in
+`client/src/modules/raceConfigWorld.js`, counted by hand on 2026-08-12 and correct on that date.**
+Nothing re-checks it. It is marked rather than generated or stamped because neither was available
+without changing code: `scripts/check-measured-stamps.mjs` — this repository's mechanism for exactly
+this — scans **`docs/CAMERA_DIRECTOR.md` and nothing else**, so a `MEASURED:` stamp placed in this
+file would look guarded and be decoration, which is worse than an honest date.
+
+**The gap between the list and the closure is deliberately described WITHOUT a count.** The NAME is
+what carries the argument; the number is not load-bearing, so it is not stated at all rather than
+stated and left to rot. It read "eight" until 2026-08-12 and was still true only under one reading of
+"gap" — which is the whole hazard.
 
 **Why it exists.** The old test was "no simulation file in the diff" — but that is a test of FOLDERS,
 and the engine's inputs are not confined to one. `drawnBodyWidthRefPx` is computed in a screen file
@@ -83,8 +97,9 @@ diff and nobody noticed until the owner asked why overtaking looked easier
 moved, but nothing in the regime had established that).
 
 No list, no judgement call: a block that stays inside `camera/` pays nothing, and anything that
-strays out of it pays two minutes. If the fingerprint moved, the block is not presentation-only and
-the full ceremony above applies.
+strays out of it pays the world fingerprint's cost — the generated table below, not a number typed
+here. If the fingerprint moved, the block is not presentation-only and the full ceremony above
+applies.
 
 **This rule works when someone remembers it.** Its durable twin — an enumerated list of the modules
 whose values reach `createRaceFromIdentity` / `stepRacePhysics`, kept beside `WORLD_CONFIG_KEYS` in
@@ -193,13 +208,17 @@ went missing).
       section above. If anything in that list is not what the block is about, stop.
 - [ ] **0. Pre-flight.** Confirm the change is UI-configurable (a config key, not a hard-coded edit).
       `eslint` clean, `build` green, the full test suite green on the working tree before you measure.
-- [ ] **1. Paired measurement — the gate.** Run the **N=100 quartet, paired seeds, against the CURRENT
-      shipped world** (`scripts/exp-flapping-gate.mjs --nlist=100`). Paired means the same seed sequence
-      for both arms; the baseline is the fingerprint that is shipped RIGHT NOW, **never gold numbers
-      copied from another run** (a stale gold number silently compares against the wrong world). Gate is
-      green when: band arrival holds within noise on every track, runaway 0%, per-row floor (rowMin)
-      holds, and Holm does not gain a newly-unfair track versus the current ship. Do not proceed on a red
-      gate.
+- [ ] **1. Paired measurement — the gate.** Run the quartet, paired seeds, against the **CURRENT
+      shipped world** — `scripts/exp-flapping-gate.mjs --nlist=100`, where the command carries the race
+      count so no second copy of it can drift. Paired means the same seed sequence for both arms; the
+      baseline is the fingerprint that is shipped RIGHT NOW, **never gold numbers copied from another
+      run** (a stale gold number silently compares against the wrong world). **The thresholds are NOT
+      restated here — [FAIRNESS.md §Permanent gate lines](FAIRNESS.md) is their one home**, and the gate
+      is green when those hold and band arrival has not regressed on any track. Two conditions this
+      checklist has always ALSO required — **runaway 0%** and the **per-row floor (`rowMin`)** — are not
+      among FAIRNESS.md's permanent gate lines; that discrepancy is named here rather than silently
+      reconciled, because deciding which document is right is a change to the gate and not a docs edit.
+      Do not proceed on a red gate.
 - [ ] **2. Set the default + re-confirm the mechanical gates.** Flip the default in `defaults.js` to
       the chosen value; re-run `eslint` + the parity/golden tests (they will move — see #6).
 - [ ] **3. Mint the fingerprints — ONE measurement per world, on the FINAL committed state.** Mint
