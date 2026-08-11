@@ -24,18 +24,45 @@ All user-facing text, source code comments, variable names, log messages, UI lab
 labels, document strings, and repository documents must be in **English**. No German text anywhere in
 the codebase or documents — including file names.
 
-**ONE exception, and it is narrow: a VERBATIM QUOTATION of the owner.** His own words are evidence
-for a decision, and translating them destroys the evidence — so the original stays and an English
-translation goes beside it, never instead of it. His ruling, 2026-08-07. It covers quotations only;
-it is not licence for German anywhere else.
+**THE QUOTATION EXCEPTION IS CLOSED, 2026-08-13.** From this date the owner's verdicts are recorded
+in **English only, attributed and dated**. A rendition of what he said, not a transcription of it —
+"the owner, 2026-08-12: not worse is fine" rather than the German original beside a gloss. The list
+below is the last state of the exception and is what STAYS; nothing on it moves.
 
-**Where his words are quoted today** — `docs/CONCEPT-COHESION.md` on the bounded brake,
-`docs/TAGS.md` on the company guarantee, `docs/SHIP-CEREMONY.md` on the runaway budget, and
-`client/src/modules/storage/defaults.js` on the podium build-up's tempo. **Do not "fix" any of
-them.** This is a LIST and no longer a count: it read _"exactly two such quotations"_ until
-2026-08-13 and had been wrong since 2026-08-12, when the runaway budget added a third and nothing
-here noticed — the same drift this project refuses to type anywhere else. Nothing enforces the list
-either; a new quotation belongs on it because the rule needs a home, not because a guard will ask.
+**Why close it rather than convert.** The exception was written narrow — "his own words are
+evidence, translating them destroys the evidence" — and read wider every time. The list drifted
+from a COUNT ("exactly two such quotations") to a LIST with an incomplete inventory to what it
+plainly was: an in-repository German paragraph after a rule that said no German in the repository.
+Recording verdicts in English, attributed and dated, is evidence enough for every decision this
+project has needed to justify since the exception was written; the German original is not a load-
+bearing part of that evidence, it was a habit that grew unread.
+
+**Why the existing quotations stay.** They are ALREADY WRITTEN into the record — into ships, into
+fingerprints, into tags. Editing them would rewrite the evidence for verdicts that have already
+been acted on; a later reader auditing a ship needs to find those words where the ship was cut.
+Translating them out now would be its own form of falsifying the record, in the opposite direction
+from the one the exception feared. So they stay, and this list is the closing inventory so a later
+reader does not read them as an oversight.
+
+**The closing inventory** (every verbatim owner quotation the codebase carries as of 2026-08-13,
+found by searching, not trusted from a count):
+
+- `docs/CONCEPT-COHESION.md` — the bounded brake
+- `docs/TAGS.md` — the company guarantee, and the framing failure ("that is not exciting")
+- `docs/SHIP-CEREMONY.md` — the runaway budget
+- `client/src/modules/storage/defaults.js` — the podium build-up's tempo
+- `docs/CAMERA_DIRECTOR.md` — the leader shot's bounding, the company guarantee retiring once home,
+  and "I have seen all the races"
+- `docs/FAIRNESS.md` — the 2026-08-12 verdict on the disproportionate-chaos watchdog
+- `docs/fingerprints.json` — the FINISH-PAIR-1 mint carries two quotations, one the failure and one
+  the verdict on the fresh tree
+- `client/src/modules/autoSpriteScale.test.js` — the sprite-scaling rule
+- `client/src/modules/camera/framingRule.js` and its test — the framing failure again
+
+The list is CLOSED. **Do not add to it, and do not "fix" any entry on it.** If a later reading of
+the code turns up a quotation this inventory missed, that entry too is grandfathered — it was
+already written under the exception — and the inventory gets the missed line added; the rule
+against NEW quotations is unaffected.
 
 ## Ship ceremony (permanent)
 
