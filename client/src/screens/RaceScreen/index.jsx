@@ -92,6 +92,7 @@ import { initProbe, recordFrame, recordFrameCamera } from '../../modules/rAFProb
 import BrandLogoOverlay from './BrandLogoOverlay.jsx';
 import CeremonyBrandCard from './CeremonyBrandCard.jsx';
 import WinnerCard, { WINNER_CARD_FADE_MS, winnerCardWindowMs } from './WinnerCard.jsx';
+import { endingHoldMs } from './endingSchedule.js';
 import './RaceScreen.css';
 import {
   DEFAULT_CAMERA_CONFIG,
@@ -1074,7 +1075,15 @@ export default function RaceScreen() {
               })
             );
             const pauseMs = camDirRef.current?.finishPauseMs ?? DEFAULT_CAMERA_CONFIG.finishPauseMs;
-            finishNavTimerRef.current = setTimeout(() => fadeNavRef.current('/results'), pauseMs);
+            // ENDING-HOLD-1: extra time on the settled finish picture BEFORE the pause starts. The
+            // two ADD, so the ending grows by exactly the hold — the card's window stays `min(card,
+            // pause)` and does not inherit it. At the default 0 this is `0 + pauseMs`, which is the
+            // arithmetic that was here before, so nothing moves until the owner sets it.
+            const holdMs = endingHoldMs(cameraConfigRef.current?.finishHoldAfterLastMs);
+            finishNavTimerRef.current = setTimeout(
+              () => fadeNavRef.current('/results'),
+              holdMs + pauseMs
+            );
 
             // WINNER-CARD-1: the card is fired HERE, from the same block that starts the pause, so
             // the two can never disagree about when the ending begins.

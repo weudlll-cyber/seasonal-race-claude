@@ -361,6 +361,28 @@ export const DEFAULT_CAMERA_CONFIG = {
   // is `min(winnerCardMs, finishPauseMs)` and this was the binding half — so both moved together.
   // This is the ROOM; `winnerCardMs` below is the tenant.
   finishPauseMs: 3500, // ms pause after last racer finishes before leaderboard
+  // ── THE HELD OVERVIEW (ENDING-HOLD-1) ─────────────────────────────────────────────────────────
+  // Extra time on the settled finish picture AFTER the last racer is home, BEFORE `finishPauseMs`
+  // starts running. The two are added, so the ending lengthens by exactly this and nothing else
+  // moves — the winner card's window is still `min(winnerCardMs, finishPauseMs)` and does not grow.
+  //
+  // DEFAULT 0 = TODAY, EXACTLY. Nothing is scheduled and no behaviour changes until the owner sets
+  // it, which is the point: this key exists because the question it answers is TASTE, and the
+  // measurement said there is no defect to fix.
+  //
+  // WHAT IT IS FOR, in his words: _"das Rauszoomen gibt es noch, aber nicht das Abwarten, bis alle
+  // Racer im Ziel sind"_ — "the zoom-out is still there, but not the waiting until all racers are at
+  // the finish". MEASURED, three builds, 20 racers, Dirt Oval, seed 4242, shipped defaults: the whole
+  // field crosses within 2894-2900 ms, and the zoom-out BEGINS about 1.4 s BEFORE the last racer is
+  // home. So there is no wait to restore — the camera pulls back while the stragglers are still
+  // arriving, and the field is complete almost as it finishes. The wait he remembers is a spread the
+  // fair-arrival world does not produce any more.
+  //
+  // THIS KEY DOES NOT PUT THE SPREAD BACK, and nothing on the screen can: a longer look at a settled
+  // picture is not the same as watching racers come in. That is why it is a HOLD and not a "wait for
+  // the stragglers" — the wait is EVENT-DRIVEN and already over. If he wants arrivals to watch, the
+  // lever is the race, not the ending (PROJECT-PRINCIPLES §9).
+  finishHoldAfterLastMs: 0,
   finishOverviewLookbackPx: 300, // world-pixel distance before finish line where camera centers during FINISH_OVERVIEW
   // ── THE PODIUM IS BUILT UP (PODIUM-BUILD-1) ───────────────────────────────────────────────────
   // ONE beat. Everything the result screen's build-up does is a whole multiple of it, so the owner

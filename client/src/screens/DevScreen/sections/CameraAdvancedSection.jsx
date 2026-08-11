@@ -1392,9 +1392,32 @@ function CameraAdvancedSection() {
               className={s.label}
               style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}
             >
-              Pause before leaderboard (ms)
+              1 · Hold on the finish picture (ms)
               <InfoTooltip
-                text={`Pause after last finisher before the leaderboard appears. Currently: ${config.finishPauseMs ?? DEFAULT_CAMERA_CONFIG.finishPauseMs}ms.`}
+                text={`THE FIRST PHASE OF THE ENDING: extra time on the settled finish shot AFTER the last racer is home, BEFORE the pause below starts. The two ADD. ZERO IS THE SHIPPED DEFAULT and reproduces today exactly — no timer is scheduled. MEASURED, so the expectation is right: the whole field crosses within ~2.9 s and the zoom-out begins about 1.4 s BEFORE the last racer arrives, so there is no "wait for the stragglers" left to lengthen. This buys a longer look at a SETTLED picture; it cannot put arrivals back. Currently: ${config.finishHoldAfterLastMs ?? DEFAULT_CAMERA_CONFIG.finishHoldAfterLastMs}ms.`}
+              />
+            </label>
+            <input
+              type="number"
+              className={s.input}
+              min={0}
+              max={10000}
+              step={250}
+              value={config.finishHoldAfterLastMs ?? DEFAULT_CAMERA_CONFIG.finishHoldAfterLastMs}
+              onChange={(e) => {
+                const v = Number(e.target.value);
+                if (v >= 0 && v <= 10000) set('finishHoldAfterLastMs', v);
+              }}
+            />
+          </div>
+          <div className={s.formGroup}>
+            <label
+              className={s.label}
+              style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}
+            >
+              2 · Pause before the result screen (ms)
+              <InfoTooltip
+                text={`THE SECOND PHASE OF THE ENDING, and the room the winner card is a tenant of. It starts when the hold above ends and runs until the screen changes. Relabelled from "Pause before leaderboard": it sat beside a "hold after the last finisher" and the two read as the same thing — this one is the pause BEFORE THE SCREEN CHANGES, that one is time on the RACE PICTURE. Currently: ${config.finishPauseMs ?? DEFAULT_CAMERA_CONFIG.finishPauseMs}ms.`}
               />
             </label>
             <input
