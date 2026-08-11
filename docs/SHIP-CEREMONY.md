@@ -154,6 +154,17 @@ not a typo. `--check` warns once the block is more than 40 commits old.
 
 <!-- END GENERATED: guard costs -->
 
+**NOTHING RUNS THE STALENESS CHECK, and the block above drifted inside its own tolerance.** Stated
+here because a generated table reads as maintained whether or not anything maintains it. The
+generator is invoked **by hand only** — not by `npm run verify`, not by CI, not by the commit hook.
+`--check` exists and asks how old the block is, but `verify.mjs` deliberately passes `--check-counts`
+instead, and says why in its own source: a cost cannot be recomputed without paying for it, so a
+stale duration is a thing to re-measure rather than a reason to fail somebody's build. **And the
+check would not have caught this one anyway**: the column was measured 37 commits before it was found
+wrong, against a threshold of 40. It counts COMMITS, while what actually moves a duration is the
+MACHINE — which no commit count can see. Two of the three fingerprint rows were out by more than a
+factor of two while the clock still read fresh.
+
 **Why the render one earns its cost only on drawing blocks.** The camera fingerprint already covers
 every decision the director makes, and it is the cheaper answer for camera-only work. The render
 fingerprint answers the question the camera one structurally cannot — _did the picture change?_ —
