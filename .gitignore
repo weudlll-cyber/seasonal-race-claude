@@ -5,12 +5,16 @@ dist
 build
 .claude/*
 .claude/projects/
-.claude/settings.json
 .claude/settings.local.json
 # Exception: share project skills (SKILL.md only); rest of .claude/ stays ignored
 !.claude/skills/
 !.claude/skills/*/
 !.claude/skills/**/SKILL.md
+# Exception: the PERMISSION RULES travel with the repository. They are the machine-neutral half —
+# what an agent may run here without asking, and what must stop even at 3 a.m. Everything
+# machine-specific (absolute paths, one-off allows) stays in settings.local.json, which is still
+# ignored above. Before this, an unattended block's rules lived only on one disk.
+!.claude/settings.json
 client/coverage/
 server/coverage/
 client/playwright-report/
