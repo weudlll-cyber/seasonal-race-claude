@@ -1508,6 +1508,28 @@ function CameraAdvancedSection() {
           <span style={{ fontWeight: 600 }}>Enable photo-finish shot</span>
           <InfoTooltip text="When off, a close finish uses the classic single-winner drama pulse (today's behaviour)." />
         </label>
+        <label
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: '0.6rem',
+            cursor: 'pointer',
+            fontSize: '0.88rem',
+            marginBottom: '0.6rem',
+          }}
+        >
+          <input
+            type="checkbox"
+            data-testid="photo-finish-contender-framing"
+            checked={
+              config.photoFinishContenderFraming ??
+              DEFAULT_CAMERA_CONFIG.photoFinishContenderFraming
+            }
+            onChange={(e) => set('photoFinishContenderFraming', e.target.checked)}
+          />
+          <span style={{ fontWeight: 600 }}>Frame the shot&apos;s own contenders</span>
+          <InfoTooltip text="On (default): the shot keeps the two racers it started on in frame. Off: it keeps whoever is top-2 right now — which after the line means already-finished racers coasting past each other, and the picture lurches every time they swap. Off is the pre-2026-08-11 behaviour." />
+        </label>
         <div style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem' }}>
           <SliderRow
             label="Lead-progress gate"

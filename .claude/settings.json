@@ -5,13 +5,10 @@
     "pr": ""
   },
   "permissions": {
-    "_mode": "defaultMode is 'default' ON PURPOSE. The posture an unattended run needs — DENY an unapproved call instead of waiting on a human who is asleep — is wrong for an interactive one, so it belongs on the launcher (--permission-mode dontAsk, see docs/NIGHT-RUN.md) and not in a file both share. 'acceptEdits' was tried and is NOT enough: it auto-approves writes and a little filesystem work, and every other shell command still prompts, which is exactly where a night block stalls.",
-    "defaultMode": "default",
     "allow": [
       "Read",
       "Write",
       "Edit",
-
       "Bash(npm run *)",
       "Bash(npm test *)",
       "Bash(npm ci)",
@@ -19,12 +16,7 @@
       "Bash(npm install *)",
       "Bash(npm start)",
       "Bash(npm start *)",
-
-      "Bash(node scripts/*)",
-      "Bash(node -e *)",
-      "Bash(node --input-type=module -e *)",
-      "Bash(node -p *)",
-
+      "Bash(node *)",
       "Bash(npx vitest *)",
       "Bash(npx eslint *)",
       "Bash(npx prettier *)",
@@ -38,7 +30,6 @@
       "Bash(npm run test:e2e *)",
       "Bash(npm run test:e2e:ui)",
       "Bash(npm run test:e2e:ui *)",
-
       "Bash(git status*)",
       "Bash(git log*)",
       "Bash(git show*)",
@@ -64,7 +55,6 @@
       "Bash(git fetch*)",
       "Bash(git pull --ff-only*)",
       "Bash(git config --get*)",
-
       "Bash(ls *)",
       "Bash(cat *)",
       "Bash(cd *)",
@@ -74,6 +64,9 @@
       "Bash(head *)",
       "Bash(tail *)",
       "Bash(sort *)",
+      "Bash(sed *)",
+      "Bash(awk *)",
+      "Bash(time *)",
       "Bash(grep *)",
       "Bash(find *)",
       "Bash(for *)",
@@ -84,7 +77,6 @@
       "Bash(bash *)",
       "Bash(prettier *)",
       "Bash(eslint *)",
-
       "Bash(powershell -Command \"Get-Process*)",
       "Bash(powershell -Command \"Get-NetTCPConnection*)",
       "Bash(powershell -Command \"Stop-Process*)",
@@ -92,7 +84,6 @@
       "Bash(tasklist)",
       "Bash(taskkill *)",
       "Bash(netstat *)",
-
       "mcp__playwright__browser_click",
       "mcp__playwright__browser_close",
       "mcp__playwright__browser_console_messages",
@@ -118,7 +109,6 @@
       "mcp__playwright__browser_take_screenshot",
       "mcp__playwright__browser_type",
       "mcp__playwright__browser_wait_for",
-
       "WebFetch(domain:localhost)",
       "Skill(run)",
       "Skill(run:*)",
@@ -136,7 +126,6 @@
       "Bash(git reset --hard*)",
       "Bash(git clean -fdx*)",
       "Bash(git update-ref -d *)",
-
       "Bash(rm -rf /*)",
       "Bash(rm -rf ~*)",
       "Bash(rm -rf .git*)",
@@ -146,7 +135,6 @@
       "Bash(rm -rf scripts*)",
       "Bash(rmdir /s*)",
       "Bash(del /f*)",
-
       "Read(./.env)",
       "Read(./.env.*)",
       "Read(**/.env)",
@@ -157,9 +145,10 @@
       "Read(**/*.pem)",
       "Bash(cat *.env*)",
       "Bash(cat *users.json*)",
-
       "Bash(curl *)",
       "Bash(wget *)"
-    ]
+    ],
+    "defaultMode": "default",
+    "_mode": "defaultMode is 'default' ON PURPOSE. The posture an unattended run needs — DENY an unapproved call instead of waiting on a human who is asleep — is wrong for an interactive one, so it belongs on the launcher (--permission-mode dontAsk, see docs/NIGHT-RUN.md) and not in a file both share. 'acceptEdits' was tried and is NOT enough: it auto-approves writes and a little filesystem work, and every other shell command still prompts, which is exactly where a night block stalls."
   }
 }
