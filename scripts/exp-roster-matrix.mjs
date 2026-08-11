@@ -3,7 +3,8 @@
 // Does every SURFACE-COMPATIBLE racer type reach its band on each track it belongs on?
 // Builds the eligibility map (racer surfaceClasses ∩ track surfaceClasses), then measures ONLY the
 // eligible (type, track) cells as a uniform single-type field on the shipped COMBO15 world (flagless sim
-// = COMBO15 defaults). Metric per cell: absolute band arrival (hero-map bandReach) + per-row floor (rowMin)
+// = COMBO15 defaults). Metric per cell: absolute band arrival (hero-map bandReach) + the per-start-row
+// check (rowMin — no start row worse than the shipped world; not an absolute minimum)
 // + a collapse note (runaway rate). Parallelized across cores; writes + commits per-track JSON so a partial
 // run is an honest partial. Engine untouched — the shipped fingerprint is asserted separately.
 // Usage: node scripts/exp-roster-matrix.mjs [--races=50] [--dur=60] [--jobs=N] [--tracks=a,b] [--no-commit]
@@ -117,7 +118,7 @@ async function runCell(track, type) {
   ]);
   const hm = JSON.parse(readFileSync(join(out, "hero-map.json"), "utf8"));
   const fd = JSON.parse(readFileSync(join(out, "fairness-data.json"), "utf8"));
-  // GATE-TRUTH-1: ONE home for the per-start-row floor and for the band edges it uses.
+  // GATE-TRUTH-1: ONE home for the per-start-row check and for the band edges it uses.
   const rowMin = rowMinOf(fd.rawData);
   // GATE-TRUTH-1: read through the observer that OWNS the definition. This used to be
   // `rp.filter((r) => r.runawayParade?.runaway)`, and that property has never existed — the optional
