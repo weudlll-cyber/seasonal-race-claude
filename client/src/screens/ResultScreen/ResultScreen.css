@@ -387,6 +387,96 @@
   opacity: 0.75;
 }
 
+/* ── THE PODIUM IS BUILT UP, NOT SHOWN FINISHED (PODIUM-BUILD-1) ─────────────────────────────────
+   Two classes and one rule between them. `result-pending` is an element that has not arrived yet;
+   `result-arrive` is the beat it arrives on. A revealed element carries NEITHER — that is the whole
+   guarantee that the finished screen is the screen this file described before the feature existed.
+
+   `animation: none` IS THE LOAD-BEARING HALF. Without it, `podiumAppear` and `slideIn` would play
+   their 0.6 s and 0.3 s out against an invisible element and be spent before it is ever seen. With
+   it, the element's animation-name is parked at `none`; dropping the class hands the name back, and
+   the browser starts the animation fresh. THE BUILD-UP THEREFORE ADDS NO MOTION OF ITS OWN — each
+   element arrives with exactly the entrance the screen already had, and nothing here has to be kept
+   in step with those keyframes if they ever change.
+
+   NOT `display: none`: the space stays reserved from the first frame, so nothing moves when an
+   element arrives and nothing can move once the sequence ends. `visibility` rather than opacity
+   alone takes the not-yet-arrived Back button out of the tab order while it is invisible. */
+.result-pending,
+.result-pending * {
+  animation: none;
+}
+
+.result-pending {
+  opacity: 0;
+  visibility: hidden;
+}
+
+/* THE ACCENT — the brand's colours answering the brand card the opening starts on. It is a flash on
+   the frame of the slot as it lands, lasting exactly one beat and fading to nothing, so it is gone
+   before the sequence ends and cannot leave the finished screen any different.
+   ::after rather than a second animation on the element itself, because the element's own entrance
+   animation is doing its job and must not be overwritten. */
+.result-arrive {
+  position: relative;
+}
+
+.result-arrive::after {
+  content: '';
+  position: absolute;
+  inset: -2px;
+  border-radius: inherit;
+  pointer-events: none;
+  box-shadow:
+    0 0 0 2px var(--result-accent),
+    0 0 22px 3px var(--result-accent);
+  /* MIRRORS-BY-REFERENCE (LESSON 207) the hard way: CSS cannot import `podiumRevealBeatMs`, so this
+     fallback is the one copy of it in the repository and it MOVES WITH THE DEFAULT — 700 -> 1500 on
+     the owner's eye, 2026-08-13. It is unreachable in practice (the screen sets `--result-beat` on
+     the card whenever a slot can carry `.result-arrive`), which is exactly why a stale value here
+     would never be caught by looking. */
+  animation: resultAccentFade var(--result-beat, 1500ms) ease-out forwards;
+}
+
+@keyframes resultAccentFade {
+  from {
+    opacity: 0.9;
+  }
+  to {
+    opacity: 0;
+  }
+}
+
+/* WHERE NO BRAND IS CHOSEN THIS IS NOT A STRIPPED SEQUENCE. The fallbacks are the podium's own
+   metals — the palette the medals, the rank labels and the winner's border already use — so an
+   unbranded build-up is the same build-up in the screen's native colours. With a brand active,
+   `--result-brand-1` / `--result-brand-2` arrive from the profile and take over. */
+.podium-slot--1st.result-arrive {
+  --result-accent: var(--result-brand-1, #ffd700);
+}
+
+.podium-slot--2nd.result-arrive {
+  --result-accent: var(--result-brand-2, #c0c0c0);
+}
+
+.podium-slot--3rd.result-arrive {
+  --result-accent: var(--result-brand-2, #cd7f32);
+}
+
+/* The system's request wins over the setting: no build-up, the finished screen at once. The screen
+   also checks this in JS (it never starts the timers), so this rule is the second line rather than
+   the only one — it covers a stylesheet applied to markup the script has not reached. */
+@media (prefers-reduced-motion: reduce) {
+  .result-pending {
+    opacity: 1;
+    visibility: visible;
+  }
+
+  .result-arrive::after {
+    display: none;
+  }
+}
+
 /* Mobile responsiveness */
 @media (max-width: 768px) {
   .results-container {

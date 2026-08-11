@@ -358,6 +358,36 @@ export const DEFAULT_CAMERA_CONFIG = {
   finishOverviewZoomOutDurationMs: 3000, // ms for smooth zoom-out during FINISH_OVERVIEW
   finishPauseMs: 2500, // ms pause after last racer finishes before leaderboard
   finishOverviewLookbackPx: 300, // world-pixel distance before finish line where camera centers during FINISH_OVERVIEW
+  // ── THE PODIUM IS BUILT UP (PODIUM-BUILD-1) ───────────────────────────────────────────────────
+  // ONE beat. Everything the result screen's build-up does is a whole multiple of it, so the owner
+  // can predict the whole sequence from this single slider: 3rd at 0, 2nd at one beat, the WINNER at
+  // two — and then the winner is held for TWO beats, which is what makes him the moment rather than
+  // the third item in a stagger. Everything below the podium settles in at four beats. Total = 4×.
+  //
+  // ZERO MEANS OFF, and that is the same escape hatch `finishPauseMs` above already offers: at 0 the
+  // result screen appears complete and instantly, exactly as it did before this key existed. No
+  // timer is scheduled and no class is ever put on an element, so "off" is an absence rather than a
+  // fast animation.
+  //
+  // 700 -> 1500 ON HIS EYE, 2026-08-13, and the number is HIS rather than mine: he watched the
+  // build-up on a production build, moved the slider himself, and reported where he landed. His
+  // words are the evidence, so the original stays and the English goes beside it (CLAUDE.md's
+  // quotation exception): _"das sieht nett aus, mir ging es zu schnell — ich habe auf 1500 ms
+  // geändert, das wäre super als Default."_ — "that looks nice, it went too fast for me — I changed
+  // it to 1500 ms, that would be great as the default."
+  //
+  // WHAT 700 GOT WRONG, stated so it is not re-proposed: it was derived from a FLOOR and then
+  // shipped as if the floor were the answer. The floor is real and still holds — the podium slot's
+  // own entrance animation (`podiumAppear` in ResultScreen.css) is 600 ms and the build-up REUSES it
+  // rather than adding a second motion, so a beat under that overlaps two arrivals and reads as one
+  // stagger. But "not a stagger" is the minimum for the sequence to be legible, not the tempo that
+  // makes it ceremonious, and only his eye could tell the two apart.
+  //
+  // THE COST, so nobody discovers it later: total = 4 x beat = 6.0 s from the screen appearing to
+  // the ranking settling, on top of `finishPauseMs`. That is deliberate and it is his call. The two
+  // escape hatches are what make it affordable — any click or key press completes it at once, and 0
+  // switches it off entirely.
+  podiumRevealBeatMs: 1500,
   // Photo-Finish (15a): when the first two finishers cross essentially together, show a tight
   // top-2 group shot with slow-motion instead of the single-winner drama pulse. Camera-only,
   // reuses the BATTLE arc-midpoint pan + group spriteScale and the render-loop slow-motion path.

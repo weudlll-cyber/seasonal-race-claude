@@ -27,9 +27,15 @@ the codebase or documents — including file names.
 **ONE exception, and it is narrow: a VERBATIM QUOTATION of the owner.** His own words are evidence
 for a decision, and translating them destroys the evidence — so the original stays and an English
 translation goes beside it, never instead of it. His ruling, 2026-08-07. It covers quotations only;
-it is not licence for German anywhere else, and there are exactly two such quotations today
-(`docs/CONCEPT-COHESION.md` on the bounded brake, `docs/TAGS.md` on the company guarantee).
-**Do not "fix" either of them.**
+it is not licence for German anywhere else.
+
+**Where his words are quoted today** — `docs/CONCEPT-COHESION.md` on the bounded brake,
+`docs/TAGS.md` on the company guarantee, `docs/SHIP-CEREMONY.md` on the runaway budget, and
+`client/src/modules/storage/defaults.js` on the podium build-up's tempo. **Do not "fix" any of
+them.** This is a LIST and no longer a count: it read _"exactly two such quotations"_ until
+2026-08-13 and had been wrong since 2026-08-12, when the runaway budget added a third and nothing
+here noticed — the same drift this project refuses to type anywhere else. Nothing enforces the list
+either; a new quotation belongs on it because the rule needs a home, not because a guard will ask.
 
 ## Ship ceremony (permanent)
 

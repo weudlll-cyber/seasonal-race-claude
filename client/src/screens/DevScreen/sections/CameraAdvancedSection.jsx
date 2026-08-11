@@ -1410,6 +1410,29 @@ function CameraAdvancedSection() {
               }}
             />
           </div>
+          <div className={s.formGroup}>
+            <label
+              className={s.label}
+              style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}
+            >
+              Podium build-up beat (ms)
+              <InfoTooltip
+                text={`ONE beat, and the whole result screen is built from multiples of it: 3rd place, then 2nd a beat later, then the WINNER a beat after that — held for TWO beats, because that is the moment — and then the ranking and everything below it settle in. Total = four beats. ZERO SWITCHES IT OFF: the screen appears complete and instantly, exactly as it did before. A click or any key completes it early, and a system asking for reduced motion never starts it. Currently: ${config.podiumRevealBeatMs ?? DEFAULT_CAMERA_CONFIG.podiumRevealBeatMs}ms (total ${4 * (config.podiumRevealBeatMs ?? DEFAULT_CAMERA_CONFIG.podiumRevealBeatMs)}ms).`}
+              />
+            </label>
+            <input
+              type="number"
+              className={s.input}
+              min={0}
+              max={3000}
+              step={50}
+              value={config.podiumRevealBeatMs ?? DEFAULT_CAMERA_CONFIG.podiumRevealBeatMs}
+              onChange={(e) => {
+                const v = Number(e.target.value);
+                if (v >= 0 && v <= 3000) set('podiumRevealBeatMs', v);
+              }}
+            />
+          </div>
         </div>
         <div
           style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem', marginTop: '0.5rem' }}
