@@ -8,6 +8,23 @@ report here could be orphaned, or an index link could dangle, with nothing notic
 `node scripts/check-index.mjs --dir=reports/night --index=reports/night/INDEX.md` now checks both
 directions.
 
+- [ANCHOR-TRUTH-EYE-1.md](ANCHOR-TRUTH-EYE-1.md) — **is there anything for his eye to judge? Half of
+  it, and the other half closes on the measurement** (2026-08-12). CAMERA-ANCHOR-TRUTH-1's eye-test
+  debt, measured before spending his time. **§4a, the anchored corridor guarantee: 0.00 points of
+  frame on every one of 50,407 frames, ten tracks, both field regimes** — not "too small to see",
+  IDENTICAL, because CAMERA-COMPANY-ONLY-3 (the verdict he DID give) retired the corridor from the
+  single-anchor states and the surviving PAIR fallback never fires. `corridor-truth.mjs` agrees from
+  the other side: its whole table is byte-identical with the change in and out. **§4c, OVERVIEW's
+  `trackingTC` 1.5→0.25: VISIBLE and the debt stands** — p95 **19.56 pp**, max **44.05 pp**, and
+  **28.8% of OVERVIEW frames more than 10 pp apart**, while `cam.zoom` is identical to 0.00% and the
+  director takes the same shots at the same times on 100.0% of frames. The regime does not decide it
+  (tight 8.0% vs torn 8.3% of frames over 1 pp); the STATE does, and OVERVIEW is 16.5% of a race.
+  **§1a shipped no behaviour and was never eye-testable** — the reason existed only as control flow,
+  so it has no "before" to A/B. A ten-minute sitting is prepared and NOT run: ice-track (median
+  13.11 pp, 58% of its OVERVIEW frames over 10 pp), seed 5601, both arms on an existing Dev Screen
+  slider — checked in `CameraAdvancedSection.jsx`, not assumed. New harness
+  `scripts/exp-anchor-truth-ab.mjs` drives the same race and director as `camera-fingerprint.mjs`
+  and invents no unit. One temporary one-line edit, reverted and proven gone.
 - [STANDINGS-SAMPLER-LOADMODE.md](STANDINGS-SAMPLER-LOADMODE.md) — **three pieces; two shipped, one
   is an honest map** (2026-08-11). **(1) The two-layer standings become a RULE with a guard behind
   it** — `docs/STANDINGS-ARCHITECTURE.md` states it, `check-standings-invariant.mjs` makes it bind,
