@@ -138,16 +138,16 @@ baseline statistics behind the current world.
 
 <!-- BEGIN GENERATED: guard costs — gen-ceremony-costs.mjs -->
 
-**Costs below are GENERATED, never typed** — measured on commit `497a3dc8`, 2026-08-10 08:11 UTC, on `Testrechner`,
+**Costs below are GENERATED, never typed** — measured on commit `b1a3bb1b`, 2026-08-11 08:37 UTC, on `Testrechner`,
 by `node scripts/gen-ceremony-costs.mjs`. Each guard times ITSELF and prints `[ra-elapsed-ms N]`;
 this table quotes those numbers. A duration here that nobody measured is a bug in the generator,
 not a typo. `--check` warns once the block is more than 40 commits old.
 
 | guard | cost |
 |---|---|
-| `scripts/fingerprint-default.mjs` — **world** | 72 s |
-| `scripts/camera-fingerprint.mjs` — **camera** | 22 s |
-| `scripts/render-fingerprint.mjs` — **render** | 22 s |
+| `scripts/fingerprint-default.mjs` — **world** | 117 s |
+| `scripts/camera-fingerprint.mjs` — **camera** | 57 s |
+| `scripts/render-fingerprint.mjs` — **render** | 54 s |
 | `scripts/check-doc-links.mjs` | 0 s |
 | `scripts/check-index.mjs` | 0 s |
 | `scripts/check-tags.mjs` | 1 s |
