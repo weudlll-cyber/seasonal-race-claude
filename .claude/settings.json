@@ -5,7 +5,8 @@
     "pr": ""
   },
   "permissions": {
-    "defaultMode": "acceptEdits",
+    "_mode": "defaultMode is 'default' ON PURPOSE. The posture an unattended run needs — DENY an unapproved call instead of waiting on a human who is asleep — is wrong for an interactive one, so it belongs on the launcher (--permission-mode dontAsk, see docs/NIGHT-RUN.md) and not in a file both share. 'acceptEdits' was tried and is NOT enough: it auto-approves writes and a little filesystem work, and every other shell command still prompts, which is exactly where a night block stalls.",
+    "defaultMode": "default",
     "allow": [
       "Read",
       "Write",
@@ -55,8 +56,14 @@
       "Bash(git push)",
       "Bash(git push origin *)",
       "Bash(git push -u origin *)",
+      "Bash(git push origin --delete *)",
+      "Bash(git branch -d *)",
+      "Bash(git branch -D *)",
       "Bash(git worktree *)",
       "Bash(git stash*)",
+      "Bash(git fetch*)",
+      "Bash(git pull --ff-only*)",
+      "Bash(git config --get*)",
 
       "Bash(ls *)",
       "Bash(cat *)",
@@ -122,8 +129,6 @@
     "deny": [
       "Bash(git push --force*)",
       "Bash(git push -f *)",
-      "Bash(git push --delete *)",
-      "Bash(git push origin --delete *)",
       "Bash(git rebase*)",
       "Bash(git filter-branch*)",
       "Bash(git filter-repo*)",
