@@ -58,6 +58,24 @@ A race-dynamics change ships only if it holds ALL of these on the standard track
 - **Layer 1 — start-row fairness:** band-reach ≥ 70% AND zero Holm-unfair start rows, every track
   (PROJECT-PRINCIPLES §8). A change must not WORSEN Holm on any track.
 - **Layer 2 — arrival:** absolute band arrival must not regress; the headline target is **85–90% / track**.
+- **The per-start-row floor, `rowMin` — and READ THE NEXT PARAGRAPH BEFORE QUOTING IT.** For each start
+  row, the share of racers whose FINAL rank lands in the same band as their `soll` rank; `rowMin` is the
+  WORST row. It is band-reach taken per start row and minimised, so it belongs to layer 1: Holm asks
+  whether the start-row gradient is statistically significant, `rowMin` asks whether any single row is
+  being left behind. One home for the computation and for the band edges it uses:
+  `rowMinOf()` in `scripts/sim/observers/fairness-stats.mjs`, which reads the engine's own
+  `BAND_EDGES` — it was four copies in four harnesses until 2026-08-12.
+
+  **WHICH KIND OF GATE IT IS — the code and this document's neighbours disagree, and NOTHING was
+  changed to hide it.** The only comparison in the repository is `exp-fair-arrival.mjs`'s
+  `c.rowMin >= s.rowMin`: **a NO-REGRESSION line against the shipped arm.** There is no absolute floor
+  anywhere in code. The word "floor" — used in the ship checklist and in three harness headers — reads
+  as an absolute, and an absolute would be a DIFFERENT gate that has never been evaluated. **So this
+  document states the line the code actually implements: rowMin must not regress against the shipped
+  arm.** Turning it into an absolute floor is a change to the gate and is the owner's decision, not a
+  documentation edit. Measured context, not a threshold: 87–91% across the quartet at the last three
+  ships, and it has never been the reason anything stopped
+  ([GATE-LINES-1](../reports/night/GATE-LINES-1.md)).
 - **The v2 duration-relative PULK watchdog (permanent gate line).** The chaos-window P1–P2 maximum gap must
   stay proportionate to the shipped world: **chaos maxGap ≤ ship × 1.5**. This catches a _disproportionate_
   early breakaway (one racer running away from the field in the chaos window) without punishing an honest

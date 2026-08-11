@@ -9,6 +9,7 @@ import { promisify } from "node:util";
 import { readFileSync, mkdirSync } from "node:fs";
 import { join, dirname, relative } from "node:path";
 import { fileURLToPath } from "node:url";
+import { rowMinOf } from "./sim/observers/fairness-stats.mjs";
 
 const pExec = promisify(execFile);
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), "..");
@@ -27,11 +28,6 @@ const TMP = join(ROOT, "client/tmp/fair-arrival" + (TAG ? `-${TAG}` : ""));
 const toOut = (a) => relative(ROOT, a).replace(/\\/g, "/");
 const mean = (a) => (a.length ? a.reduce((s, x) => s + x, 0) / a.length : 0);
 const pct = (x) => (x == null ? "n/a" : (x * 100).toFixed(0) + "%");
-const BE = [5, 15, 25, 40];
-const zi = (r) => {
-  for (let i = 0; i < BE.length; i++) if (r <= BE[i]) return i;
-  return BE.length;
-};
 
 // FAIR-ARRIVAL-CONFIRM-1: 10-track confirm of the COMBO. --tracks=ten runs all 10 standard tracks (racer +
 // closed read from the seed); default is the searound+ice screen pair. Field size 40 closed / 60 open.
@@ -110,14 +106,8 @@ async function run(armKey, flags, track) {
     readFileSync(join(out, "runaway-parade.json"), "utf8"),
   ).races.map((r) => r.runawayParade);
   const fd = JSON.parse(readFileSync(join(out, "fairness-data.json"), "utf8"));
-  const rr = [],
-    rt = [];
-  for (const r of fd.rawData) {
-    const row = r.startRowIndex;
-    rr[row] = (rr[row] ?? 0) + (zi(r.finalRank) === zi(r.sollRank) ? 1 : 0);
-    rt[row] = (rt[row] ?? 0) + 1;
-  }
-  const rowMin = Math.min(...rr.map((v, i) => (rt[i] ? v / rt[i] : 1)));
+  // GATE-TRUTH-1: ONE home for the per-start-row floor and for the band edges it uses.
+  const rowMin = rowMinOf(fd.rawData);
   // ROW-SKEW DIAGNOSIS: per-start-row band-reach + per-row steer exposure (share steered + mean mult).
   const rowBandReach = rr.map((v, i) => (rt[i] ? v / rt[i] : null));
   const rowSteer = {}; // row → {n, steered, ticks, multSum, inBandEnd} summed across races
@@ -313,17 +303,34 @@ for (const armKey of Object.keys(ARMS)) {
     }
   }
 }
-// ── FAIR-ARRIVAL-GATE (preregistered, binding at N=100). Candidate arm = --gate-arm (default combo15).
-// Per track vs SHIP: A arrival [(≥ship+10pp OR ≥88% abs) AND ≥ship] · R rowMin≥ship · F fC≥ship−2pp ·
-// B DEAD-BORING≤ship+2pp · P PULK WATCHDOG [maxLeadHoldShare_mid≤ship+5pp AND distinctLeaders_mid≥ship−1
-// AND chaos maxGap≤ship+1.0L]. PASS = arrival OR-form on ≥8/10 & no track failing both forms & never below
-// ship; R/F/B/P everywhere; Holm not worsened on any watchlist track.
+// ── FAIR-ARRIVAL SCREEN — what this harness applies. It is NOT the ship gate. ───────────────────
+//
+// GATE-TRUTH-1: this block used to call itself "preregistered, binding at N=100" and then write out
+// its own list of criteria — a THIRD statement of the gate, beside FAIRNESS.md and the ship
+// checklist, and no two of the three listed the same set (this one omits the runaway budget
+// entirely). A harness that restates a gate cannot help drifting from it, and a reader who finds
+// three lists has no way to know which one binds.
+//
+// SO IT STOPS RESTATING AND POINTS INSTEAD:
+//   the FAIRNESS lines — band-reach, zero-Holm, arrival, rowMin no-regression, the PULK watchdog
+//     -> docs/FAIRNESS.md §Permanent gate lines, their one home
+//   the RUNAWAY BUDGET — pooled ≤ 5%, per track as well
+//     -> docs/SHIP-CEREMONY.md step 1a, its one home, which also says why it is not a fairness line
+//        (PROJECT-PRINCIPLES §8: action quality is not a fairness gate)
+//
+// WHAT THE COLUMNS BELOW ARE, said plainly so nobody mistakes them for the gate: a per-track SCREEN
+// for deciding whether a candidate arm is worth taking further. A/R/P correspond to lines that do
+// bind; F (fC) and B (DEAD-BORING) are action-quality screens and bind nothing.
 const GATE_ARM = argVal("gate-arm", "combo15");
 if (ARM_KEYS.includes(GATE_ARM)) {
   const mk = (b) => (b ? "✓" : "✗");
   const f1 = (x) => (x == null ? "n/a" : x.toFixed(1));
   console.log(
-    `\n=== FAIR-ARRIVAL-GATE (${GATE_ARM} vs SHIP, N=${RACES}, per track) ===`,
+    `\n=== FAIR-ARRIVAL SCREEN (${GATE_ARM} vs SHIP, N=${RACES}, per track) ===`,
+  );
+  console.log(
+    "  NOT the ship gate. The binding lines live in docs/FAIRNESS.md §Permanent gate lines and\n" +
+      "  docs/SHIP-CEREMONY.md step 1/1a. F (fC) and B (DEAD-BORING) bind nothing.",
   );
   console.log(
     `  track            | arrival S→C | A | rowMin S→C · Holm | R | fC S→C | F | BORING S→C | B | PULK maxHold/distLead/chaosGap C(S) | P/P2 | PASS`,
@@ -390,5 +397,6 @@ if (ARM_KEYS.includes(GATE_ARM)) {
   );
 }
 console.log(
-  `\nruntime ${((Date.now() - t0) / 60000).toFixed(1)} min | FAIR-ARRIVAL-GATE (binding at N=${RACES}); gate-arm=${GATE_ARM}`,
+  `\nruntime ${((Date.now() - t0) / 60000).toFixed(1)} min | FAIR-ARRIVAL SCREEN at N=${RACES}; gate-arm=${GATE_ARM}` +
+    ` | the binding gate: docs/FAIRNESS.md §Permanent gate lines + docs/SHIP-CEREMONY.md step 1/1a`,
 );
