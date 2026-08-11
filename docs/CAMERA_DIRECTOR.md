@@ -384,7 +384,15 @@ a verbatim transcript of one run on one commit, which is a historical record, no
 
 ### The tracking lag, as measured today — and it had drifted
 
-<!-- MEASURED: tracking-lag (median/p95 pp per state) @ 46751941 2026-08-10 depends=client/src/modules/camera/ -->
+<!-- MEASURED: tracking-lag (median/p95 pp per state) @ c9bc34d1 2026-08-11 depends=client/src/modules/camera/ -->
+
+**RE-MEASURED FOR FINISH-PAIR-1, and one row moved — the one that should have.** That change makes
+the photo-finish shot frame the pair it is actually following instead of the live top two, so the
+only state whose ANCHOR it can touch is PHOTO_FINISH. It is also the only row that moved: median
+6.37 → 5.68 pp and p95 20.73 → 16.51 pp, on the identical 1865 frames. The camera now sits closer to
+its subject during the shot, and the p95 — the tail, which is where a lurch shows up — improved by
+more than four points. Every other state is unchanged in frames, median and p95 alike. The pooled
+"every other state" figure moves 4.64 → 4.62 pp only because PHOTO_FINISH is inside that pool.
 
 **RE-MEASURED, NOT RE-STAMPED, for CEREMONY-OPENING-2 — and re-measuring was the only honest
 option.** That block lengthens the opening: the track's own beat goes from 1400 ms to 3000 and the
@@ -416,9 +424,9 @@ and it says so itself. It also covers nothing else on this page; see its header 
 | LEADER_ZOOM   | 17788  | 3.85      | 8.61   |
 | LEAD_CHANGE   | 8089   | 4.45      | 7.10   |
 | OVERVIEW      | 4303   | 2.65      | 16.00  |
-| PHOTO_FINISH  | 1865   | 6.37      | 20.73  |
+| PHOTO_FINISH  | 1865   | 5.68      | 16.51  |
 
-OVERVIEW median 2.65 pp against every other state pooled 4.64 pp (ratio 0.57×).
+OVERVIEW median 2.65 pp against every other state pooled 4.62 pp (ratio 0.57×).
 
 **Re-measured for OUTCOME-PHASE-75, and COMEBACK_ZOOM moved so far that re-stamping would have been
 wrong.** Its frame count fell from **2103 to 753** and its median lag rose from **8.34 to 13.73 pp**.
