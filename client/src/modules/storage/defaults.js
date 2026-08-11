@@ -427,6 +427,38 @@ export const DEFAULT_CAMERA_CONFIG = {
   photoFinishCloseThresholdT: 0.03, // max lap-normalized |t| gap between the top-2 finishers to count as "close" (same unit family as battlePulkThresholdT)
   photoFinishSlowmoFactor: 0.5, // physics slow-motion factor during the photo-finish shot (1.0 = normal, 0.5 = half speed)
   photoFinishLeadProgress: 0.97, // predictive gate: leader progress (fraction of finishT, 0..1) at which the one-shot close-check fires BEFORE the line
+  // ── THE SHOT FRAMES ITS OWN PAIR (FINISH-PAIR-1, 2026-08-11) ──────────────────────────────────
+  // TRUE = the PHOTO_FINISH guarantee keeps the two contenders the shot CAPTURED AT ENTRY in frame.
+  // FALSE = the old behaviour: it keeps whoever is top-2 by `t` THIS FRAME.
+  //
+  // THE DEFAULT IS THE FIX, which is unusual here and deliberate: this is a defect the owner asked
+  // to have fixed, not a taste he asked to be offered. The key exists so the old behaviour can be
+  // put back, not so the fix has to be switched on.
+  //
+  // WHAT WAS WRONG. The shot follows a FIXED pair (`_photoFinishContenders`, captured once) while
+  // the framing guaranteed a LIVE one (`_focusRacers`, the whole field re-sorted by `t` every
+  // frame, finished racers included). Finished racers do not stop — `raceCore` coasts them on a
+  // run-out decay — and because a later finisher has a fresher decay it OVERTAKES an earlier one,
+  // so the second slot walks backwards through the finishing order. Every swap moved the pair
+  // distance discontinuously, which moved the guarantee ceiling, which flipped the binding
+  // authority between the guarantee and the state zoom, and the picture lurched.
+  //
+  // MEASURED on the owner's race (Searound, 20 racers, seed 2814), counting reversals of the
+  // picture worth >= 60 screen px: 5 -> 2 here, 4 -> 2 on Mountainstreet and River Run, and no
+  // change on the seven tracks that never had it. The pair distance on Searound was swinging
+  // 90.4 -> 21.8 -> 93.9 px in single frames; one of those cost 1063 screen px in SIX frames.
+  //
+  // AND IT DOES NOT COST A CROPPED WINNER, which was the thing to fear — measured the other way
+  // round. The eventual winner is in frame for 100% of the shot with this on, against 87-91% with
+  // the live pair; on River Run the live pair had lost its OWN contenders off-frame for 93-98% of
+  // the shot. A guarantee that keeps changing its mind protects nobody.
+  //
+  // HYSTERESIS WAS TRIED FIRST and is not here because it lost: holding a swap for 6/12/20/30/45
+  // frames left Searound at 6 reversals — WORSE than the 5 it started with, because delaying a
+  // discontinuity concentrates several small ones into fewer larger ones. It only matched pinning
+  // at 240 frames (4 s), which is longer than the shot itself and therefore this same fix with a
+  // knob whose only safe value is "longer than the shot".
+  photoFinishContenderFraming: true,
   // ── THE START CEREMONY (START-CEREMONY-CAMERA-1) ───────────────────────────────────────────────
   // The race opens on the whole track, held still, then eases in to the starting formation until it
   // is as large as it can be with every racer still in frame. Both ends are GEOMETRY and neither is

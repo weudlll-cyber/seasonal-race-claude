@@ -556,6 +556,7 @@ export class CameraDirector {
     this._photoFinishEnabled = t.photoFinishEnabled;
     this._photoFinishCloseThresholdT = t.photoFinishCloseThresholdT;
     this._photoFinishLeadProgress = t.photoFinishLeadProgress;
+    this._photoFinishContenderFraming = t.photoFinishContenderFraming;
     this._comebackCooldownMs = t.comebackCooldownMs;
     this._leadChangeCooldownMs = t.leadChangeCooldownMs;
     this._battleWeight = t.battleWeight;
@@ -1823,6 +1824,32 @@ export class CameraDirector {
    *   `point` the world point to centre on, `t` its track parameter (for the heading), and `pair`
    *   the two racers a PAIR guarantee must keep in frame.
    */
+  /**
+   * FINISH-PAIR-1: WHO the photo-finish shot frames.
+   *
+   * The two racers the shot captured at entry, resolved against THIS frame's racer array — the same
+   * index-and-reference dual lookup `_photoFinishContenders` is stored with, because the render path
+   * hands out spread-copies every frame and a bare reference does not survive one.
+   *
+   * Falls back to the live top two whenever the pinned pair cannot be produced: the key is off, the
+   * shot has no contenders (a state assigned directly in a test, never a real race — the entry always
+   * captures two), or one of them cannot be found in this frame's array. The fallback is the old
+   * behaviour, so nothing is ever left without a pair.
+   *
+   * @param {object[]} racers        every racer this frame
+   * @param {object[]} focusRacers   `_focusRacers(racers)` — the live top-N by t
+   * @returns {[object|null, object|null]}
+   */
+  _photoFinishFramingPair(racers, focusRacers) {
+    const live = [focusRacers[0] ?? null, focusRacers[1] ?? null];
+    if (!this._photoFinishContenderFraming) return live;
+    const captured = this._photoFinishContenders;
+    if (!captured || captured.length !== 2) return live;
+    const a = this._findByIndex(racers, captured[0].index, captured[0].ref);
+    const b = this._findByIndex(racers, captured[1].index, captured[1].ref);
+    return a && b ? [a, b] : live;
+  }
+
   _framingSubjects(racers, focusRacers) {
     const leader = focusRacers[0] ?? null;
     switch (this.state) {
@@ -1852,9 +1879,22 @@ export class CameraDirector {
         return { point, t: a && b ? (a.t + b.t) / 2 : (a?.t ?? null), pair: [a, b] };
       }
       case CAM_STATE.PHOTO_FINISH: {
-        // The deterministic top two contesting the line — never the live battle-group detection.
-        const a = focusRacers[0] ?? null;
-        const b = focusRacers[1] ?? null;
+        // FINISH-PAIR-1: THE SHOT'S OWN CONTENDERS, not the live top two.
+        //
+        // The comment here used to say "the deterministic top two contesting the line", and that is
+        // what `focusRacers` gives you only until somebody crosses. `_focusRacers` re-sorts the
+        // WHOLE field by `t` every frame and does not exclude finished racers; `raceCore` coasts a
+        // finished racer on a run-out decay rather than freezing it, and a later finisher carries a
+        // fresher decay than an earlier one, so it overtakes. The second slot therefore walks
+        // BACKWARDS through the finishing order while the shot is still running — and every step
+        // moved the pair distance discontinuously, which moved the guarantee, which flipped the
+        // binding zoom authority, which lurched the picture. See `photoFinishContenderFraming`
+        // in defaults.js for the measurement.
+        //
+        // The pair is looked up LIVE by index every frame: WHO is fixed, WHERE they are is not.
+        const contenders = this._photoFinishFramingPair(racers, focusRacers);
+        const a = contenders[0];
+        const b = contenders[1];
         const point =
           a && b
             ? getPanTarget(CAM_STATE.BATTLE_ZOOM, [a, b], this._shape)
