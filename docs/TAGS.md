@@ -98,6 +98,27 @@ the Dev Screen toggle and the `renderRaceFrame` hook. The branch was deleted at 
   may be promising a corridor the viewer cannot see. Start here rather than from scratch — see
   [DEAD-ENDS.md](DEAD-ENDS.md) §K.
 
+### PODIUM-BUILD — the result screen arrives instead of appearing (2026-08-13)
+
+**The ending answers the opening, and NOTHING about the race moved.** The podium is built up — 3rd,
+then 2nd, then the winner held for twice as long, and only then the ranking and everything below it.
+All three fingerprints were re-measured on the shipping tree and none of them changed; values live in
+[fingerprints.json](fingerprints.json). What keeps it cosmetic is structural rather than asserted: a
+revealed element carries NO class, so the end of the sequence is byte-for-byte the DOM the screen
+rendered before the feature existed.
+
+- `pre/ship-podium-build` (`0da0b574`, 2026-08-13) — master immediately BEFORE the ship. Reset here
+  to restore a result screen that appears complete in one frame, with no `podiumRevealBeatMs` key,
+  no build-up, and no brand accent on the winner's arrival. It also restores `CLAUDE.md`'s claim of
+  _"exactly two"_ owner quotations — which was already wrong when this tag was cut, and is the
+  reason that sentence is now a list.
+- `v-ship-podium-build` (`eb051889`, 2026-08-13) — **the ship.** One key, `podiumRevealBeatMs`, and
+  every other time in the sequence is a whole multiple of it, so the total is `4 x beat`. **1500 ms
+  is the OWNER'S number, not the one that was proposed:** he watched it on a production build at 700
+  and moved the slider himself. Two escape hatches make a 6.0 s ending affordable — any click or key
+  press completes it at once, and 0 restores the previous screen exactly, scheduling no timer and
+  applying no class. A system asking for reduced motion never starts it.
+
 ### RENDER-SAMPLER-CEREMONY — the instrument follows the ceremony again (2026-08-11)
 
 **RENDER moves and the product does not.** The render fingerprint sampled the start ceremony at five
