@@ -98,6 +98,29 @@ the Dev Screen toggle and the `renderRaceFrame` hook. The branch was deleted at 
   may be promising a corridor the viewer cannot see. Start here rather than from scratch — see
   [DEAD-ENDS.md](DEAD-ENDS.md) §K.
 
+### WINNER-CARD — the ending names the winner (2026-08-13)
+
+**The counterpart to the opening's brand card, and NOTHING about the race moved.** At the end of a
+race a card names the winner — race number, name, colour — over the race picture, in the brand's
+accent where a brand is chosen and in the podium's gold where none is. All three fingerprints were
+re-measured on the shipping tree and none of them changed; values live in
+[fingerprints.json](fingerprints.json). **The render fingerprint is BLIND to it** — it records canvas
+draw calls and the card is DOM, so its unmoved hash is evidence about the picture underneath and not
+about the card. The owner's eye is the only instrument that saw it.
+
+- `pre/ship-winner-card` (`235333d5`, 2026-08-13) — master immediately BEFORE the ship. Reset here to
+  restore an ending with no winner card at all: no `winnerCardMs` key, and `finishPauseMs` back at
+  its pre-card length before the card's read time was allowed to set it.
+- `v-ship-winner-card` (`6de86e6a`, 2026-08-13) — **the ship, at his SECOND look.** The first
+  placement sat on the MINIMAP, which is drawn INTO the canvas and therefore appears in none of the
+  files that name the other overlays — reading the sources could not find it and did not. What
+  shipped is placed against a MEASURED occupancy map of the finish frame, and anchored in
+  PERCENTAGES rather than pixels: on the owner's machine the canvas displays at 0.81 scale, never
+  1:1, so a pixel offset agreed with the minimap at no scale anyone uses. Measured overlap with every
+  other occupant is 0 at canvas scales 0.81 and 0.51. The card is a TENANT of `finishPauseMs` —
+  `min(winnerCardMs, finishPauseMs)` — so it cannot make the ending longer at any setting, and 0 on
+  either key removes it.
+
 ### PODIUM-BUILD — the result screen arrives instead of appearing (2026-08-13)
 
 **The ending answers the opening, and NOTHING about the race moved.** The podium is built up — 3rd,
