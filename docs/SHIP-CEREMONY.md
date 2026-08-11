@@ -225,8 +225,9 @@ went missing).
       baseline is the fingerprint that is shipped RIGHT NOW, **never gold numbers copied from another
       run** (a stale gold number silently compares against the wrong world). **The FAIRNESS thresholds
       are NOT restated here — [FAIRNESS.md §Permanent gate lines](FAIRNESS.md) is their one home**, and
-      that now includes the per-row floor `rowMin`, which moved there because it IS a fairness
-      quantity. The gate is green when those hold and band arrival has not regressed on any track.
+      that now includes the per-start-row check `rowMin`, which moved there because it IS a fairness
+      quantity — and which is a NO-REGRESSION line: a change must not make any start row worse than the
+      shipped world. The gate is green when those hold and band arrival has not regressed on any track.
       Do not proceed on a red gate.
 - [ ] **1a. The RUNAWAY BUDGET — and it lives HERE, not in FAIRNESS.md.** **Pooled runaway-winner rate
       ≤ 5%, reported per track as well as pooled.** A runaway winner is **action quality, not

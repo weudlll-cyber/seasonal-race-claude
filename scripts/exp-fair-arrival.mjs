@@ -2,7 +2,7 @@
 // scripts/exp-fair-arrival.mjs — FAIR-ARRIVAL-1 screen (searound + ice, N=25, paired vs Ship).
 // Read-only driver: each arm is a CLI flag-set on sim-fairness.mjs. Headline = ABSOLUTE band arrival
 // (hero-map bandReach); dual scoreboard = dead + DEAD-BORING/THRILLER + frontContest + distinctLead;
-// watchdog = per-row band floor + Holm. Usage: node scripts/exp-fair-arrival.mjs [--races=25] [--jobs=4]
+// watchdog = per-start-row band check (rowMin: not worse than ship) + Holm. Usage: node scripts/exp-fair-arrival.mjs [--races=25] [--jobs=4]
 // ============================================================
 import { execFile } from "node:child_process";
 import { promisify } from "node:util";
@@ -106,7 +106,7 @@ async function run(armKey, flags, track) {
     readFileSync(join(out, "runaway-parade.json"), "utf8"),
   ).races.map((r) => r.runawayParade);
   const fd = JSON.parse(readFileSync(join(out, "fairness-data.json"), "utf8"));
-  // GATE-TRUTH-1: ONE home for the per-start-row floor and for the band edges it uses.
+  // GATE-TRUTH-1: ONE home for the per-start-row check and for the band edges it uses.
   const rowMin = rowMinOf(fd.rawData);
   // ROW-SKEW DIAGNOSIS: per-start-row band-reach + per-row steer exposure (share steered + mean mult).
   const rowBandReach = rr.map((v, i) => (rt[i] ? v / rt[i] : null));

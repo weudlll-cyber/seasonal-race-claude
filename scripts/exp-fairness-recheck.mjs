@@ -3,7 +3,8 @@
 // Independent re-proof that the shipped COMBO15 world still holds its gate numbers after the
 // camera/presentation week. NO engine changes — the OFF-path fingerprint ded0a126048e4cdb is asserted
 // separately (first + last). Runs the representative quartet at N=100, 60s, shipped defaults, and records
-// the BINDING fairness metrics per track: absolute band arrival (headline), per-start-row floor (rowMin),
+// the BINDING fairness metrics per track: absolute band arrival (headline), the per-start-row check
+// (rowMin — a NO-REGRESSION line: no start row worse than the shipped world, never an absolute minimum),
 // Holm start-row fairness, runaway rate; plus front-action (P1 lead changes) as action context. Commits
 // per track so a partial run is an honest partial. This is VERIFICATION, not tuning — deviations are alarms.
 // Usage: node scripts/exp-fairness-recheck.mjs [--races=100] [--no-commit]
@@ -66,7 +67,7 @@ for (const t of TRACKS) {
   );
   const hm = JSON.parse(readFileSync(join(out, "hero-map.json"), "utf8"));
   const fd = JSON.parse(readFileSync(join(out, "fairness-data.json"), "utf8"));
-  // GATE-TRUTH-1: ONE home for the per-start-row floor and for the band edges it uses.
+  // GATE-TRUTH-1: ONE home for the per-start-row check and for the band edges it uses.
   const rowMin = rowMinOf(fd.rawData);
   // GATE-TRUTH-1: read through the observer that OWNS the definition. This used to be
   // `rp.filter((r) => r.runawayParade?.runaway)`, and that property has never existed — the optional

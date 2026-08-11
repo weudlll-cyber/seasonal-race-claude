@@ -56,7 +56,7 @@ for (const N of NLIST) {
     const fd = JSON.parse(
       readFileSync(join(out, "fairness-data.json"), "utf8"),
     );
-    // GATE-TRUTH-1: ONE home for the per-start-row floor and for the band edges it uses.
+    // GATE-TRUTH-1: ONE home for the per-start-row check and for the band edges it uses.
     const rowMin = rowMinOf(fd.rawData);
     // GATE-TRUTH-1: read through the observer that OWNS the definition. This used to be
     // `rp.filter((r) => r.runawayParade?.runaway)`, and that property has never existed — the

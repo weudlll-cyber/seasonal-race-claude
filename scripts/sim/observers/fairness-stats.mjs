@@ -506,7 +506,9 @@ export { spearman, chiSqPValue };
 //
 // WHAT IT MEANS: for each start row, the share of racers whose FINAL rank lands in the same band as
 // their `soll` rank; `rowMin` is the WORST row. It is band-reach taken per start row and minimised —
-// a floor under the headline number, which is why it is a fairness quantity and not an action one.
+// the headline number taken per start row, which is why it is a fairness quantity and not an action
+// one. IT IS COMPARED AGAINST THE SHIPPED ARM, never against an absolute minimum: the gate line is
+// "no start row worse than the shipped world" (docs/FAIRNESS.md; owner's decision 2026-08-12).
 //
 // THE ARITHMETIC IS CARRIED OVER CHARACTER-FOR-CHARACTER, deliberately, including the sparse-array
 // behaviour of `rr.map` — this is a MOVE, and a move that quietly improves the expression would make
