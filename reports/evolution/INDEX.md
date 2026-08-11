@@ -4,6 +4,26 @@ One line per report: what it tried → verdict → the lesson/outcome. This is t
 themselves are the record; the living docs are [LESSONS.md](../../docs/LESSONS.md), [DEAD-ENDS.md](../../docs/DEAD-ENDS.md),
 and [FAIRNESS.md](../../docs/FAIRNESS.md). Shipped world: **`dc4647be0f55ebdb`** = COMBO15 + margin hysteresis + lateral acceleration cap (lineage in [SIM.md](../../docs/SIM.md)).
 
+## CORRECTIONS — findings that invalidate a number in a report below
+
+**The reports themselves are append-only and are NOT edited.** A report records what was true on the
+day it was written; when a later measurement shows one of its numbers was an artefact, the correction
+is dated and recorded HERE, where a reader on their way to the report will pass it.
+
+- **2026-08-12 — every `runaway 0%` in the four reports below is an ARTEFACT, not a measurement.**
+  Three harnesses (`exp-flapping-gate.mjs`, `exp-fairness-recheck.mjs`, `exp-roster-matrix.mjs`)
+  derived the rate with `rp.filter((r) => r.runawayParade?.runaway)`, and `runawayParade.runaway` has
+  never existed — the classifier's boolean is `runawayWinner`. The optional chain turned the missing
+  field into a silent, permanent `0%`. Affected: **[RACER-MOTION-2.md](RACER-MOTION-2.md)**,
+  **[HOLM-300-COMBINED.md](HOLM-300-COMBINED.md)**, **[FAIRNESS-RECHECK-1.md](FAIRNESS-RECHECK-1.md)**
+  and **[ROSTER-MATRIX-1.md](ROSTER-MATRIX-1.md)**, plus the filed gate data
+  `flapping-gate-data/motion.json` and `flapping-gate-data/combined.json`. **Every other number in
+  those reports stands** — band arrival, `rowMin` and Holm were computed correctly and are unaffected.
+  The true rate on the same four tracks and the same shipped world is **2.8% pooled** (searound 7.0%,
+  luger-hill 3.0%, space-sprint 1.0%, seatrack 0.0%). Diagnosis and proof:
+  [GATE-LINES-1](../night/GATE-LINES-1.md); the fix and the once-per-run control that makes the
+  silence impossible to repeat: [GATE-TRUTH-1](../night/GATE-TRUTH-1.md).
+
 ## Ships
 
 - [SHIP-THE-NIGHT.md](SHIP-THE-NIGHT.md) — **the pair loop culls, and the decisive phase starts

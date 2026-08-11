@@ -489,3 +489,51 @@ function normalCDF(z) {
 
 // Re-export the internal helpers the race core references directly.
 export { spearman, chiSqPValue };
+
+// ── rowMin — THE PER-START-ROW FLOOR, and its ONE home ──────────────────────────────────────────
+//
+// GATE-TRUTH-1. Until this function existed, `rowMin` was written out in FOUR harnesses —
+// `exp-flapping-gate.mjs`, `exp-fair-arrival.mjs`, `exp-fairness-recheck.mjs` and
+// `exp-roster-matrix.mjs` — each with its own `const BE = [5, 15, 25, 40]` and its own copy of the
+// rank→band function. That is FIVE statements of the band edges once the engine's own `BAND_EDGES`
+// is counted, and four of them were copies that happened to agree. A gate line whose definition
+// lives in four files cannot honestly be promoted to a canonical document, which is what
+// GATE-LINES-1 found and what this closes.
+//
+// THE EDGES NOW COME FROM THE ENGINE. `BAND_EDGES` is imported at the top of this file from
+// `racePlanner.js`, the same source the race core uses, so the harnesses can no longer drift from
+// the bands the race is actually planned in.
+//
+// WHAT IT MEANS: for each start row, the share of racers whose FINAL rank lands in the same band as
+// their `soll` rank; `rowMin` is the WORST row. It is band-reach taken per start row and minimised —
+// a floor under the headline number, which is why it is a fairness quantity and not an action one.
+//
+// THE ARITHMETIC IS CARRIED OVER CHARACTER-FOR-CHARACTER, deliberately, including the sparse-array
+// behaviour of `rr.map` — this is a MOVE, and a move that quietly improves the expression would make
+// "the numbers are unchanged" an argument instead of a measurement.
+
+/** A rank's 0-based band index, from the engine's own edges. The harnesses' `zi`, with one home. */
+export function bandIndexOfRank(rank) {
+  for (let i = 0; i < BAND_EDGES.length; i++) if (rank <= BAND_EDGES[i]) return i;
+  return BAND_EDGES.length;
+}
+
+/**
+ * The worst per-start-row band-reach over a run.
+ *
+ * @param {Array<{startRowIndex:number, finalRank:number, sollRank:number}>} rawData
+ *   `fairness-data.json`'s `rawData`, one entry per racer per race
+ * @returns {number} 0..1
+ */
+export function rowMinOf(rawData) {
+  const rr = [],
+    rt = [];
+  for (const r of rawData) {
+    const row = r.startRowIndex;
+    rr[row] =
+      (rr[row] ?? 0) +
+      (bandIndexOfRank(r.finalRank) === bandIndexOfRank(r.sollRank) ? 1 : 0);
+    rt[row] = (rt[row] ?? 0) + 1;
+  }
+  return Math.min(...rr.map((v, i) => (rt[i] ? v / rt[i] : 1)));
+}

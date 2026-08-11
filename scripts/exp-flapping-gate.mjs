@@ -5,8 +5,13 @@
 import { readFileSync, writeFileSync, mkdirSync } from "node:fs";
 import { join, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
+import { rowMinOf } from "./sim/observers/fairness-stats.mjs";
 import { tmpdir } from "node:os";
 import { execFileSync } from "node:child_process";
+import {
+  runawayRateOf,
+  runawayRunSummary,
+} from "./sim/observers/runaway-parade.mjs";
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), "..");
 const argv = process.argv.slice(2);
 const argVal = (k, d) => {
@@ -27,11 +32,6 @@ const TRACKS = [
   { id: "seatrack", racer: "dolphin" },
   { id: "space-sprint", racer: "rocket" },
 ];
-const BE = [5, 15, 25, 40];
-const zi = (r) => {
-  for (let i = 0; i < BE.length; i++) if (r <= BE[i]) return i;
-  return BE.length;
-};
 const results = [];
 for (const N of NLIST) {
   for (const t of TRACKS) {
@@ -56,25 +56,27 @@ for (const N of NLIST) {
     const fd = JSON.parse(
       readFileSync(join(out, "fairness-data.json"), "utf8"),
     );
-    const rr = [],
-      rt = [];
-    for (const r of fd.rawData) {
-      const row = r.startRowIndex;
-      rr[row] = (rr[row] ?? 0) + (zi(r.finalRank) === zi(r.sollRank) ? 1 : 0);
-      rt[row] = (rt[row] ?? 0) + 1;
-    }
-    const rowMin = Math.min(...rr.map((v, i) => (rt[i] ? v / rt[i] : 1)));
+    // GATE-TRUTH-1: ONE home for the per-start-row floor and for the band edges it uses.
+    const rowMin = rowMinOf(fd.rawData);
+    // GATE-TRUTH-1: read through the observer that OWNS the definition. This used to be
+    // `rp.filter((r) => r.runawayParade?.runaway)`, and that property has never existed — the
+    // optional chain turned a missing field into a silent, permanent 0%. `runawayRateOf` also
+    // returns the CONTROL that tells a broken reader from an honest zero.
     let runaway = null;
+    let runawayNote = "no runaway-parade.json (observer not requested?)";
+    let runawayOK = true;
     try {
       const rp = JSON.parse(
         readFileSync(join(out, "runaway-parade.json"), "utf8"),
       ).races;
-      runaway = rp.length
-        ? rp.filter((r) => r.runawayParade?.runaway).length / rp.length
-        : null;
+      const rr = runawayRateOf(rp);
+      runaway = rr.rate;
+      runawayNote = rr.note;
+      runawayOK = rr.ok;
     } catch {
       /* */
     }
+    if (!runawayOK) console.log(`  ${runawayNote}`);
     const rec = {
       label: LABEL,
       track: t.id,
@@ -93,5 +95,17 @@ for (const N of NLIST) {
     );
   }
 }
+// GATE-TRUTH-1: the once-per-run control. It prints on EVERY run, and it exists because a rate
+// that is identically zero across a whole run is indistinguishable from a rate nobody measured.
+console.log(
+  "\n" +
+    runawayRunSummary(
+      results.map((r) => ({
+        label: `${r.track}/N${r.N}`,
+        rate: r.runaway,
+        n: r.N,
+      })),
+    ),
+);
 writeFileSync(join(DATA, `${LABEL}.json`), JSON.stringify(results, null, 2));
 console.log("DONE");
