@@ -26,6 +26,34 @@ is dated and recorded HERE, where a reader on their way to the report will pass 
 
 ## Ships
 
+- [FINISH-READABLE-1.md](FINISH-READABLE-1.md) — **the finish line was drawn and painted nothing**
+  (2026-08-12, `feat/finish-readable` off master `e1f53781`, **NOT merged — he judges it**;
+  fingerprints measured fresh and **NOT minted**). His screenshot showed the gold FINISH label on
+  ice-track with no checkerboard. **THIS CORRECTS AN EARLIER STAGE-A FINDING OF MINE** that the
+  closed-track band is "drawn unconditionally" — true, and useless: it is drawn and it **encloses
+  ZERO AREA**. Measured off the real frame's draw stream: mean quad area **0.000-0.001 world px²**
+  on all five CLOSED tracks where the shape implies 229-369, against 218-262 on all five OPEN ones.
+  **THE CAUSE, in one line**: the stripe depth was taken along `angle + PI/2`, which is the direction
+  the finish line ALREADY RUNS (the line is `getPosition(0,+w)` minus `getPosition(0,-w)`, the
+  across-track perpendicular) — extruding a segment along ITSELF gives a parallelogram with two
+  parallel edges and no area. `drawOpenTrackFinishLine` extrudes along the FORWARD direction, which
+  is why the open tracks were never affected; the label is drawn separately and was never broken,
+  which is exactly what the screenshot shows. **A SECOND ERROR RODE ALONG**: the line was built from
+  `getPosition(0, ±1.0)` and that offset scales by `_centerWidth`, which IS the track width — so the
+  band spanned TWICE the corridor. The edges are ±0.5. **WHAT IT DRAWS NOW, to his ruling**: a GATE —
+  two checkered posts at the corridor EDGES running along the forward direction, the racing surface
+  clear between them, and a gold hairline where the line is. **ONE function for both topologies**:
+  there were two implementations of one marking and they had drifted far enough for one to be
+  painting nothing, so `drawOpenTrackFinishLine` is now a five-line adapter onto the shared gate.
+  **AND IT SURVIVES ZOOMING OUT**: every dimension is a SCREEN size converted back through the
+  effective zoom, so the checker measures **9.0 px at the widest overview and 9.0 px at the tightest
+  shot on all ten tracks**, and the label holds 13 px against the **3.9 px** that made him say it is
+  not there. One bound that is not a taste number: a post never exceeds a quarter of the corridor, or
+  on searound's 131 px it would reach across. **Tracks showing a band: 5 of 10 -> 10 of 10.**
+  **FINGERPRINTS**: world `dc4647be0f55ebdb` and camera `64432e18a7e62188` **both unmoved** — this is
+  the drawing layer only, and `engine-reach` confirms none of the diff can reach the engine — render
+  `096f2726c45ed853` -> `d24d78450f197495`. Client suite 4018.
+
 - [ENDING-PICTURE-1.md](ENDING-PICTURE-1.md) — **the ending gets a picture worth holding**
   (2026-08-12, tag `v-ship-ending-picture`, return point `pre/ship-ending-picture`). Two blocks in
   one ship: the HOLD after the last crossing (`finishHoldAfterLastMs` 0 → 1500, his own podium beat,
@@ -153,7 +181,7 @@ is dated and recorded HERE, where a reader on their way to the report will pass 
   ZERO** (branch `feat/scoreboard-transform-rows` off `afdf130a`; **NOT merged — a visible surface
   awaiting his eye**; all four fingerprints unchanged). The rows now keep a STABLE place in the
   document — racer order, never re-sorted — and the ranking travels as `translateY((rank−1) ×
-  35.333px)`, so a rank change moves nothing in the document and nothing below it is laid out again.
+35.333px)`, so a rank change moves nothing in the document and nothing below it is laid out again.
   **ESTABLISHED FIRST, in a real browser**: the rows were in normal flow, so they had to come out of
   it; and **row height is uniform at 31.333 px across all seven shapes that could differ** (crown,
   `#100`, no race number, finished with/without a time, ellipsised name) because `.sb-name` is
@@ -172,7 +200,6 @@ is dated and recorded HERE, where a reader on their way to the report will pass 
   is a text change; and the pitch is font metrics that **neither node nor jsdom can re-derive**, so
   the guard pins the CSS inputs and the constant instead. Parity extended to compare the row **as
   drawn** (sorted by y), since array position stopped being visual position.
-
 
 - [SCOREBOARD-STABLE-ROWS.md](SCOREBOARD-STABLE-ROWS.md) — **HIS SHAPE, BUILT: 101 ROWS REBUILT PER
   TICK BECOMES 36** (branch `feat/scoreboard-stable-rows` off `024b58c3`, with `feat/frame-gap-1`
@@ -199,7 +226,6 @@ is dated and recorded HERE, where a reader on their way to the report will pass 
   being stable over racer index, true before and after. **WHAT IS LEFT**: reordering keyed DOM nodes
   still costs, and that floor is what remains. The cadence default is untouched at 500.
 
-
 - [SCOREBOARD-CADENCE-1.md](SCOREBOARD-CADENCE-1.md) — **ONE NUMBER, AND THE RATE FALLS AT LEAST
   PROPORTIONALLY** (branch `feat/scoreboard-cadence-1` off `570a8505`; **NOT merged — a visible change
   awaiting his eye**; all four fingerprints unchanged). FRAME-GAP-3 named the standings list; this
@@ -221,7 +247,7 @@ is dated and recorded HERE, where a reader on their way to the report will pass 
   during a race, so emitting a narrow record plus `React.memo` needs no change to the row's markup —
   under an hour, orthogonal to the cadence, and justified only if he picks 250 for feel and still
   drops frames.
-||||||| 570a8505
+  ||||||| 570a8505
 - [FRAME-GAP-1.md](FRAME-GAP-1.md) — **`other` IS SPLITTABLE NOW, AND THE SPLIT SAYS THE 29 ms ARE NOT
   WHERE WE LOOKED** (branch `feat/frame-gap-1` off `570a8505`; **diagnosis only, nothing fixed**; all
   four fingerprints unchanged and engine-reach clears all four changed paths). **A NEGATIVE RESULT,
@@ -243,7 +269,6 @@ is dated and recorded HERE, where a reader on their way to the report will pass 
   4 → 1, four empty `docs/` dirs gone, every deleted tip SHA recorded first; both uncontained branches
   verified dead before deletion (one carried only two leftover conflict markers). **37 stale
   `.git/worktrees/` admin dirs cannot be pruned** — OneDrive ReparsePoint placeholders, EPERM.
-
 
 - [CEREMONY-COUNTS-GENERATED.md](CEREMONY-COUNTS-GENERATED.md) — **THE SENTENCE WAS SPLIT, AND ONE OF
   THE THREE NUMBERS WAS WRONG** (branch `feat/ceremony-counts` off `feat/post-start-hold-unify`; docs

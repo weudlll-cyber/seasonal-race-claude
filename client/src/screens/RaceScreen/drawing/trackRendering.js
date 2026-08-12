@@ -132,42 +132,130 @@ export function drawEditorBackground(
 }
 
 /**
- * Draws the closed-track finish-line checkerboard at T=0.
+ * THE FINISH GATE on a closed track — FINISH-READABLE-1.
+ *
+ * ── WHAT WAS HERE BEFORE PAINTED NOTHING, AND THAT IS NOT A FIGURE OF SPEECH ───────────────────
+ *
+ * The old checkerboard issued eight `fill()` calls whose paths enclosed **zero area**. Measured off
+ * the recorded draw stream on all five closed tracks: mean quad area **0.000–0.001 world px²**
+ * where the shape implies 229–369. The five OPEN tracks paint 218–262 px² and were always fine.
+ *
+ * THE CAUSE, in one line: the stripe depth was taken along `angle + PI/2` — which is the direction
+ * the finish line ALREADY RUNS, because the line is `getPosition(0, +w)` minus `getPosition(0, -w)`,
+ * i.e. the across-track perpendicular. Extruding a segment along itself gives a parallelogram with
+ * two parallel edges and no area. `drawOpenTrackFinishLine` extrudes along `localAngle` — the
+ * FORWARD direction — which is why the open tracks were never affected. The owner's screenshot shows
+ * the gold FINISH label and no band because the label is drawn separately and was never broken.
+ *
+ * A SECOND ERROR RODE ALONG WITH IT: the line was built from `getPosition(0, ±1.0)`, and that offset
+ * scales by `_centerWidth`, which IS the track width — so the band spanned TWICE the corridor,
+ * overhanging it by half a width on each side. The edges are `±0.5`.
+ *
+ * ── WHAT IT DRAWS NOW: HIS RULING, WHICH IS "STRUCTURE AT THE EDGES ONLY" ──────────────────────
+ *
+ * Two checkered posts, one at each edge of the corridor, running along the FORWARD direction — so
+ * the finish reads as a gate the racers pass between, and **nothing crosses the racing surface**.
+ * The gold rule that used to be a shadow blur is drawn as a thin line joining the two posts at the
+ * line itself; it marks WHERE the finish is without covering what happens on it.
+ *
+ * ── AND IT SURVIVES ZOOMING OUT, WHICH IS WHY IT TAKES THE ZOOM ────────────────────────────────
+ *
+ * A world-sized mark shrinks with the shot: at the widest overview the FINISH label measures 3.9 px,
+ * which is the owner's "it is not there". Every dimension below is therefore a SCREEN size converted
+ * back into world units through the effective zoom, so the gate is the same size on screen at every
+ * shot. `drawTrackLights` already takes the zoom for the same reason, so this is the established
+ * shape rather than a new idea.
+ *
  * @param {CanvasRenderingContext2D} ctx
  * @param {object} shape  EditorShape instance.
+ * @param {number} effZoomX  world→screen scale on X, so screen sizes can be held constant.
+ * @param {number} effZoomY  the same on Y; a closed track's mapping is anisotropic.
  */
-export function drawEditorTrackSurface(ctx, shape) {
-  // Boundary lines and lane fill removed — replaced by track-light dots.
-  // Only the finish line is drawn here.
-  const pOuter = shape.getPosition(0, 1.0);
-  const pInner = shape.getPosition(0, -1.0);
-  const dx = pOuter.x - pInner.x,
-    dy = pOuter.y - pInner.y;
-  const segments = 8;
-  ctx.shadowBlur = 10;
-  ctx.shadowColor = '#ffd700';
-  for (let i = 0; i < segments; i++) {
-    const f0 = i / segments,
-      f1 = (i + 1) / segments;
-    ctx.fillStyle = i % 2 === 0 ? '#fff' : '#222';
+export function drawEditorTrackSurface(ctx, shape, effZoomX = 1, effZoomY = 1) {
+  // The TRUE corridor edges. `offset` scales by `_centerWidth` (the track width), so ±0.5 is ±half
+  // a width — the edge. The old ±1.0 was a full width each way.
+  const pOuter = shape.getPosition(0, 0.5);
+  const pInner = shape.getPosition(0, -0.5);
+  drawFinishGate(ctx, pInner, pOuter, pInner.angle, effZoomX, effZoomY);
+}
+
+/**
+ * The gate itself, shared by both topologies so there is ONE finish marking in the game rather than
+ * two that drift apart — which is exactly how the closed one came to be broken while the open one
+ * was not.
+ *
+ * @param {{x:number,y:number}} pInner  one edge of the corridor at the line
+ * @param {{x:number,y:number}} pOuter  the other
+ * @param {number} fwdAngle  the track's forward direction at the line, in world radians
+ */
+export function drawFinishGate(ctx, pInner, pOuter, fwdAngle, effZoomX, effZoomY) {
+  const dx = pOuter.x - pInner.x;
+  const dy = pOuter.y - pInner.y;
+  const span = Math.hypot(dx, dy);
+  if (!(span > 0)) return;
+  const ux = dx / span;
+  const uy = dy / span;
+  // FORWARD, not the perpendicular. This is the whole repair.
+  const fx = Math.cos(fwdAngle);
+  const fy = Math.sin(fwdAngle);
+
+  // ── SCREEN SIZES, held constant, converted back to world through the zoom ───────────────────
+  const sx = effZoomX > 0 ? effZoomX : 1;
+  const sy = effZoomY > 0 ? effZoomY : 1;
+  // One checker is this many screen px on its shorter side; a post is three of them deep. Small
+  // enough to sit beside a corridor at the tightest shot, large enough to survive the widest.
+  const CHECKER_SCREEN_PX = 9;
+  const cw = CHECKER_SCREEN_PX / sx; // world px per checker, across the track
+  const ch = CHECKER_SCREEN_PX / sy; // world px per checker, along the track
+  // A post is never wider than a quarter of the corridor: on a narrow track the screen-derived size
+  // would otherwise reach across, and reaching across is the one thing his ruling forbids.
+  const postW = Math.min(cw, span / 4);
+  const ROWS = 3;
+
+  const square = (ox, oy, w, h, colour) => {
+    ctx.fillStyle = colour;
     ctx.beginPath();
-    ctx.moveTo(pInner.x + dx * f0, pInner.y + dy * f0);
-    ctx.lineTo(pInner.x + dx * f1, pInner.y + dy * f1);
-    const perp = pInner.angle + Math.PI / 2;
-    const hw = 7;
-    ctx.lineTo(pInner.x + dx * f1 + Math.cos(perp) * hw, pInner.y + dy * f1 + Math.sin(perp) * hw);
-    ctx.lineTo(pInner.x + dx * f0 + Math.cos(perp) * hw, pInner.y + dy * f0 + Math.sin(perp) * hw);
+    ctx.moveTo(ox, oy);
+    ctx.lineTo(ox + ux * w, oy + uy * w);
+    ctx.lineTo(ox + ux * w + fx * h, oy + uy * w + fy * h);
+    ctx.lineTo(ox + fx * h, oy + fy * h);
     ctx.closePath();
     ctx.fill();
+  };
+
+  // Two posts: one growing INWARD from each edge, so the gap between them is the racing surface.
+  for (const side of [0, 1]) {
+    const baseX = side === 0 ? pInner.x : pOuter.x - ux * postW;
+    const baseY = side === 0 ? pInner.y : pOuter.y - uy * postW;
+    for (let r = 0; r < ROWS; r++) {
+      // Centred on the line along the forward axis, so the gate straddles the finish rather than
+      // sitting behind it.
+      const off = (r - ROWS / 2) * ch;
+      square(baseX + fx * off, baseY + fy * off, postW, ch, (r + side) % 2 === 0 ? '#fff' : '#222');
+    }
   }
-  ctx.shadowBlur = 0;
-  const midX = (pOuter.x + pInner.x) / 2,
-    midY = (pOuter.y + pInner.y) / 2;
-  ctx.font = 'bold 11px sans-serif';
+
+  // The rule ACROSS the line — a hairline, so it says where the finish is without covering it.
+  ctx.strokeStyle = '#ffd700';
+  ctx.lineWidth = Math.max(1 / sx, 1 / sy);
+  ctx.beginPath();
+  ctx.moveTo(pInner.x, pInner.y);
+  ctx.lineTo(pOuter.x, pOuter.y);
+  ctx.stroke();
+
+  // The label, at the same screen size at every zoom — the reason he could not see it at 3.9 px.
+  const midX = (pOuter.x + pInner.x) / 2;
+  const midY = (pOuter.y + pInner.y) / 2;
+  const LABEL_SCREEN_PX = 13;
+  ctx.save();
+  ctx.translate(midX, midY);
+  ctx.scale(1 / sx, 1 / sy);
+  ctx.font = `bold ${LABEL_SCREEN_PX}px sans-serif`;
   ctx.fillStyle = '#ffd700';
   ctx.textAlign = 'center';
   ctx.textBaseline = 'bottom';
-  ctx.fillText('FINISH', midX, midY - 8);
+  ctx.fillText('FINISH', 0, -(ROWS / 2) * ch * sy - 4);
+  ctx.restore();
 }
 
 /**
@@ -180,57 +268,24 @@ export function drawEditorTrackSurface(ctx, shape) {
  * @param {number} ft  T-fraction where the finish line sits (0–1).
  * @param {number} hw  Half-width of the track in world pixels.
  */
-export function drawOpenTrackFinishLine(ctx, shape, ft, hw) {
-  // Use the LOCAL track angle at ft so the finish line is always perpendicular
-  // to the track direction at the actual finish position, regardless of how
-  // much the track curves between the midpoint and the finish.
+export function drawOpenTrackFinishLine(ctx, shape, ft, hw, effZoomX = 1, effZoomY = 1) {
+  // Use the LOCAL track angle at ft so the finish line is always perpendicular to the track
+  // direction at the actual finish position, regardless of how much the track curves between the
+  // midpoint and the finish.
   const center = shape.getPosition(ft, 0);
   const localAngle = center.angle;
   const perpCos = Math.cos(localAngle + Math.PI / 2);
   const perpSin = Math.sin(localAngle + Math.PI / 2);
-  const fwdCos = Math.cos(localAngle);
-  const fwdSin = Math.sin(localAngle);
-  const pInner = {
-    x: center.x - perpCos * hw,
-    y: center.y - perpSin * hw,
-  };
-  const pOuter = {
-    x: center.x + perpCos * hw,
-    y: center.y + perpSin * hw,
-  };
-  const dx = pOuter.x - pInner.x,
-    dy = pOuter.y - pInner.y;
-  const segments = 8;
-  for (let i = 0; i < segments; i++) {
-    const f0 = i / segments,
-      f1 = (i + 1) / segments;
-    ctx.fillStyle = i % 2 === 0 ? '#fff' : '#222';
-    ctx.beginPath();
-    ctx.moveTo(pInner.x + dx * f0, pInner.y + dy * f0);
-    ctx.lineTo(pInner.x + dx * f1, pInner.y + dy * f1);
-    // Stripe depth runs along the forward direction (⊥ to the finish line).
-    const stripeHW = 7;
-    ctx.lineTo(pInner.x + dx * f1 + fwdCos * stripeHW, pInner.y + dy * f1 + fwdSin * stripeHW);
-    ctx.lineTo(pInner.x + dx * f0 + fwdCos * stripeHW, pInner.y + dy * f0 + fwdSin * stripeHW);
-    ctx.closePath();
-    ctx.fill();
-  }
-  // Gold border — replaces ctx.shadowBlur (which forced an offscreen compositor pass
-  // every frame). Thick stroke drawn once; same visual read as the former glow.
-  ctx.strokeStyle = '#ffd700';
-  ctx.lineWidth = 2;
-  ctx.beginPath();
-  ctx.moveTo(pInner.x, pInner.y);
-  ctx.lineTo(pOuter.x, pOuter.y);
-  ctx.lineTo(pOuter.x + fwdCos * 7, pOuter.y + fwdSin * 7);
-  ctx.lineTo(pInner.x + fwdCos * 7, pInner.y + fwdSin * 7);
-  ctx.closePath();
-  ctx.stroke();
-  const midX = (pOuter.x + pInner.x) / 2,
-    midY = (pOuter.y + pInner.y) / 2;
-  ctx.font = 'bold 11px sans-serif';
-  ctx.fillStyle = '#ffd700';
-  ctx.textAlign = 'center';
-  ctx.textBaseline = 'bottom';
-  ctx.fillText('FINISH', midX, midY - 8);
+  // FINISH-READABLE-1: the SAME gate the closed tracks draw. It was a second implementation of one
+  // marking, and the two had already drifted — the closed one extruded its stripes along the finish
+  // line instead of along the track and had been painting zero-area quads on all five closed tracks.
+  // One function now, so a repair to the finish cannot reach half the game.
+  drawFinishGate(
+    ctx,
+    { x: center.x - perpCos * hw, y: center.y - perpSin * hw },
+    { x: center.x + perpCos * hw, y: center.y + perpSin * hw },
+    localAngle,
+    effZoomX,
+    effZoomY
+  );
 }
