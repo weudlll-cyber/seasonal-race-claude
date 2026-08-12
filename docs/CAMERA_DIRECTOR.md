@@ -489,7 +489,7 @@ a verbatim transcript of one run on one commit, which is a historical record, no
 
 ### The tracking lag, as measured today — and it had drifted
 
-<!-- MEASURED: tracking-lag (median/p95 pp per state) @ RUNIN_PACE_SHA 2026-08-12 depends=client/src/modules/camera/ -->
+<!-- MEASURED: tracking-lag (median/p95 pp per state) @ 82ea307f 2026-08-12 depends=client/src/modules/camera/ -->
 
 **RE-MEASURED FOR RUNIN-PACE-1, and LEAD_CHANGE's tail is the price of the owner's own pace.** The
 opening moved 3000 ms -> **1250 ms** at his request, and the lag is proportional to the zoom rate, so
