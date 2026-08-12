@@ -27,7 +27,7 @@
 // WHAT THIS GUARD DOES **NOT** CHECK, stated here rather than discovered later:
 //   - **It does not verify the NUMBERS.** It never runs the measurement. A stamp taken on the right
 //     commit with wrong digits typed under it passes. This checks FRESHNESS, not accuracy.
-//   - It does not cover any other number in the stamped document. In CAMERA_DIRECTOR.md that
+//   - It does not cover any other number in a stamped document. In CAMERA_DIRECTOR.md that
 //     explicitly leaves unguarded: the test and file counts in the camera-check section, the
 //     command durations (~35 s, ~7 min), the frame counts and sample-point lists, the 2708 px
 //     finish jump, the 300 px lookback default, and every percentage in the state-machine prose.
@@ -37,7 +37,13 @@
 //     judging significance, which is what went wrong the last time a person did it by eye — but it
 //     means a trip is a prompt to re-measure or re-stamp, not proof that the numbers moved.
 //   - It does not find measured numbers that carry NO stamp. It checks the stamps that exist. A
-//     number nobody stamped is invisible to it.
+//     number nobody stamped is invisible to it — and WIDENING THE DOCUMENT SET DID NOT CHANGE THAT.
+//     Scanning fifty-seven documents instead of one means a stamp placed anywhere is now checked;
+//     it does not mean the unstamped measured numbers in those documents are. That is the same
+//     hole, at the same size, and it is still the biggest one here.
+//   - `reports/` — the lab journal, deliberately outside the scanned set. A report records what was
+//     true on the day it was written and is allowed to go stale by rule, which is the opposite of
+//     what a stamp promises.
 //
 // LOUD-FAILURE RULE (Lesson 187): zero stamps found is a FAILURE. This guard's whole value is that
 // the stamps exist; silently checking nothing is the failure mode it is built against.
@@ -45,8 +51,16 @@
 // THE STAMP FORMAT, one HTML comment on its own line:
 //   <!-- MEASURED: <what> @ <commit> <YYYY-MM-DD> depends=<path>[,<path>...] -->
 //
+// WHY IT READS GIT HISTORY AND NOT THE WORKING TREE — asked again at STAMP-COMPLETE-1, answered
+// UNCHANGED. The question a stamp raises is historical: "has the dependency changed since the commit
+// this was measured at". Only history can answer it, and a working-tree comparison would answer a
+// different question — "does the tree differ from the stamp" — which is true constantly and
+// harmlessly during any edit, and would make the guard un-runnable mid-block. The working tree is
+// not IGNORED: the PENDING pass at the bottom reads it and REPORTS what is about to go stale,
+// without failing. That split is right and stays.
+//
 // Usage:
-//   node scripts/check-measured-stamps.mjs
+//   node scripts/check-measured-stamps.mjs                # every living doc (docs/ + repo-root *.md)
 //   node scripts/check-measured-stamps.mjs --doc=<path>   # check a copy instead (used by its test)
 // ============================================================
 
@@ -55,10 +69,11 @@
 export const GUARD = {
   id: "check-measured-stamps",
   covers:
-    "a stamped measured number in a document whose source changed after the stamp was taken",
+    "a stamped measured number whose source changed after the stamp was taken, across EVERY living document (docs/ + repo-root *.md), not one named file",
   blind: [
     "the NUMBERS themselves — it never re-runs a measurement, only checks freshness",
-    "any measured number that carries no stamp: it checks the stamps that exist",
+    "any measured number that carries no stamp: it checks the stamps that exist, in any document",
+    "reports/ — the lab journal is outside the scanned set and is allowed to go stale by rule",
     "a change that cannot have moved the figures: a comment-only edit trips it exactly like a behaviour change",
   ],
   dirs: ["docs/", "client/src/modules/camera/"],
@@ -78,10 +93,28 @@ import { fileURLToPath } from "node:url";
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), "..");
 
-// The documents scanned for stamps. A short explicit list, not a glob: a stamp is a deliberate act,
-// and a guard that hunts for them everywhere would encourage sprinkling them about.
+// ── THE DOCUMENTS SCANNED (STAMP-COMPLETE-1) ──────────────────────────────────────────────────
 //
-// `--doc=<path>` overrides the list, and exists for ONE reason worth writing down. The first version
+// IT IS THE WHOLE LIVING-DOC SET, and it used to be `docs/CAMERA_DIRECTOR.md` and nothing else.
+// That was true when the only stamp existed there and false as soon as a second document carried a
+// measured number — and the failure is silent by construction, because a guard scanning one file
+// prints a confident green line about the other fifty-six it never opened. That is the identical
+// shape INDEX-COMPLETE-1 fixed this morning in `check-index`, where a bare invocation answered
+// about one of three registered report directories and an unindexed report sat behind the green
+// for three hours.
+//
+// IT DEFAULTS TO ALL OF THEM rather than REFUSING without arguments, and that choice is the same
+// one INDEX-COMPLETE-1 made for the same reason: refusing only helps the person who runs it bare,
+// while defaulting also covers the document somebody stamps tomorrow AND makes the CHEAPEST
+// invocation the COMPLETE one — which is the invocation people actually type. A guard whose
+// complete form has to be remembered will be run in its incomplete form.
+//
+// THE SET IS DISCOVERED, NOT LISTED, and it is the SAME rule `check-doc-links.mjs` uses so there is
+// one definition of "a living doc": every tracked `*.md` under `docs/`, plus the repo-root `*.md`
+// files. `reports/` is the lab journal and is deliberately out — a report records what was true on
+// the day it was written and is allowed to go stale, which is the opposite of what a stamp promises.
+//
+// `--doc=<path>` overrides the set, and exists for ONE reason worth writing down. The first version
 // of this guard's test sabotaged the REAL `docs/CAMERA_DIRECTOR.md` and restored it in a `finally`.
 // That is safe alone and unsafe in this repository: `npm run verify` runs the doc guards and the
 // script suite CONCURRENTLY, so the guard read the document during the window its own test had it
@@ -91,7 +124,24 @@ const ROOT = join(dirname(fileURLToPath(import.meta.url)), "..");
 const DOC_OVERRIDE = process.argv
   .filter((a) => a.startsWith("--doc="))
   .map((a) => a.slice("--doc=".length));
-const DOCS = DOC_OVERRIDE.length ? DOC_OVERRIDE : ["docs/CAMERA_DIRECTOR.md"];
+
+/** Every tracked living doc: all of `docs/`, plus the repo-root `*.md`. Same rule as check-doc-links. */
+function livingDocs() {
+  const tracked = execFileSync("git", ["ls-files", "*.md"], {
+    cwd: ROOT,
+    encoding: "utf8",
+  })
+    .split(String.fromCharCode(10))
+    .map((f) => f.trim())
+    .filter(Boolean);
+  return tracked.filter((f) => {
+    if (f.includes("node_modules/") || f.includes("/dist/")) return false;
+    if (f.startsWith("docs/")) return true;
+    return !f.includes("/"); // repo-root-level *.md
+  });
+}
+
+const DOCS = DOC_OVERRIDE.length ? DOC_OVERRIDE : livingDocs();
 
 /**
  * The pathspec that keeps TEST FILES out of "what changed" — VERIFY-COST-3.
@@ -145,6 +195,9 @@ let found = 0;
 const STAMPS = [];
 const NL = String.fromCharCode(10);
 
+let scanned = 0;
+const CARRIERS = new Set();
+
 for (const doc of DOCS) {
   let text;
   try {
@@ -157,12 +210,20 @@ for (const doc of DOCS) {
     );
     continue;
   }
+  scanned++;
+  // FENCED CODE IS DOCUMENTATION, NOT A STAMP (STAMP-COMPLETE-1). Now that the whole living-doc set
+  // is scanned, any document EXPLAINING the stamp format would have its example parsed as a real
+  // stamp and go red for saying what the format is — and R11 is explicit that the answer to a guard
+  // disagreeing with a true sentence is to fix the GUARD, never to make the sentence vaguer. So
+  // fenced blocks are stripped, exactly as check-doc-links strips them for the same reason.
+  text = text.replace(/```[\s\S]*?```/g, "");
 
   for (const m of text.matchAll(STAMP)) {
     const [, what, stampCommit, date, depends] = m;
     found++;
     const paths = depends.split(",").filter(Boolean);
     STAMPS.push({ doc, what, paths });
+    CARRIERS.add(doc);
 
     // The stamped commit must exist. A typo here would otherwise disable the check silently.
     let resolved;
@@ -292,9 +353,12 @@ console.log(
   `check-measured-stamps: ${pending} stamp(s) PENDING against uncommitted work.`,
 );
 
+// THE COUNTS SAY WHAT WAS OPENED, not just what was found. A guard that prints "1 stamp, 0 stale"
+// reads identically whether it scanned one document or fifty-seven — which is exactly how the
+// one-document version looked green for as long as it did.
 console.log(
-  `check-measured-stamps: ${found} stamp(s) across ${DOCS.length} document(s), ${failures} stale.` +
-    " (Freshness only — the numbers themselves are never re-measured.)",
+  `check-measured-stamps: ${found} stamp(s) in ${CARRIERS.size} of ${scanned} living document(s) ` +
+    `scanned, ${failures} stale. (Freshness only — the numbers themselves are never re-measured.)`,
 );
 if (failures > 0) process.exit(1);
 console.log(`[ra-elapsed-ms ${Date.now() - started}]`);

@@ -135,3 +135,95 @@ test("THE REAL DOCUMENT IS NEVER WRITTEN BY THIS FILE", () => {
   onCopy((t) => t.replace(/<!--\s*MEASURED:[\s\S]*?-->/, ""));
   assert.equal(readFileSync(DOC, "utf8"), before);
 });
+
+// ── STAMP-COMPLETE-1: the guard answers about EVERYTHING it is responsible for ──────────────────
+//
+// The defect: run bare, this guard scanned `docs/CAMERA_DIRECTOR.md` alone while printing a
+// confident green line, so a stale stamp in any other living document was invisible. Proven by
+// sabotage before the fix: on a tree with a stale stamp appended to `docs/ENDING-PHASES.md`, the old
+// guard exited 0 reporting "1 stamp(s) across 1 document(s), 0 stale" and the new one exits 1 and
+// names it. That proof mutates a tracked file and so CANNOT live here — see this file's header — so
+// these tests assert the two PROPERTIES that make it true, on copies.
+
+test("THE DEFAULT SET IS THE LIVING-DOC SET, not one named file", () => {
+  // The property, not the number: whatever `git ls-files` says the living docs are, that is what a
+  // bare run opens. Pinning "57" would need re-blessing on every added document, which is exactly
+  // the habit R7 warns turns a suite into paperwork.
+  const expected = git("ls-files", "*.md")
+    .split(String.fromCharCode(10))
+    .map((f) => f.trim())
+    .filter(Boolean)
+    .filter(
+      (f) =>
+        !f.includes("node_modules/") &&
+        !f.includes("/dist/") &&
+        (f.startsWith("docs/") || !f.includes("/")),
+    ).length;
+  assert.ok(expected > 1, "the repository must have more than one living doc");
+  const r = spawnSync(process.execPath, [GUARD], {
+    cwd: ROOT,
+    encoding: "utf8",
+  });
+  assert.equal(r.status, 0);
+  assert.ok(
+    r.stdout.includes(`of ${expected} living document`),
+    `a bare run must open all ${expected} living docs, not a subset — got: ${r.stdout.trim()}`,
+  );
+});
+
+test("A STALE STAMP IN THE SECOND DOCUMENT IS CAUGHT — the set is scanned, not just its head", () => {
+  // Two copies: the first fresh, the second stale. The old guard could not fail this by
+  // construction, because it only ever opened one document.
+  const dir = mkdtempSync(join(tmpdir(), "ra-stamp-multi-"));
+  try {
+    const text = readFileSync(DOC, "utf8");
+    const fresh = join(dir, "FRESH.md");
+    const stale = join(dir, "STALE.md");
+    writeFileSync(fresh, text);
+    // An ancestor of the newest camera commit: measured before the dependency last moved.
+    const old = git(
+      "log",
+      "--format=%h",
+      "--skip=40",
+      "-1",
+      "--",
+      "client/src/modules/camera/",
+    );
+    writeFileSync(stale, text.replace(/@ [0-9a-f]{7,40} /, `@ ${old} `));
+    const r = spawnSync(
+      process.execPath,
+      [GUARD, `--doc=${fresh}`, `--doc=${stale}`],
+      { cwd: ROOT, encoding: "utf8" },
+    );
+    assert.equal(
+      r.status,
+      1,
+      "the stale stamp in the SECOND document must fail the run",
+    );
+    assert.match(r.stderr, /STALE\.md/, "it must name which document is stale");
+    assert.ok(r.stdout.includes("of 2 living document"));
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test("A FENCED EXAMPLE OF THE FORMAT IS NOT A STAMP — R11, the guard yields to a true sentence", () => {
+  // Now that every living doc is scanned, a document EXPLAINING the stamp format would have its
+  // example parsed as a real stamp and go red for being correct. Fenced blocks are stripped.
+  const r = onCopy(
+    (t) =>
+      t +
+      String.fromCharCode(10) +
+      "```" +
+      String.fromCharCode(10) +
+      "<!-- MEASURED: an example @ deadbee 2020-01-01 depends=no/such/path/ -->" +
+      String.fromCharCode(10) +
+      "```" +
+      String.fromCharCode(10),
+  );
+  assert.equal(
+    r.code,
+    0,
+    "a fenced example must not be parsed as a live stamp",
+  );
+});
