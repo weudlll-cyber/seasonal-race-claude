@@ -82,22 +82,113 @@ describe('resolveCamera — no-black-border guarantee', () => {
   });
 });
 
-describe('resolveCamera — zoom reduction (inner frame)', () => {
-  it('reduces zoom when target is outside inner 70% frame after clamping', () => {
-    // Target at right edge of 1280px world at desiredEffZoom=2
-    // camXMax = 640; idealCamX = 1250 - 320 = 930 → clamped to 640
-    // screenTargetX = (1250 - 640) * 2 = 1220 → outside inner frame (max = 1280*0.85=1088)
-    const result = resolveCamera({
-      targetWorld: { x: 1250, y: 360 },
-      desiredEffZoom: 2.0,
-      worldBounds: WB_STANDARD,
-      frameSize: FRAME,
-      minEffZoom: 0.1,
-    });
-    expect(result.wasZoomAdapted).toBe(true);
-    expect(result.effectiveZoom).toBeLessThan(2.0);
+/**
+ * How far outside the inner band the target lands, in screen px, on the worse axis — the same
+ * quantity the loop compares between steps, recomputed here from the PUBLIC return so the property
+ * below is checked against what callers actually see rather than against an internal.
+ */
+function missOf(result, targetWorld, frameSize, innerFramePct) {
+  const sx = (targetWorld.x - result.camX) * result.effectiveZoom;
+  const sy = (targetWorld.y - result.camY) * result.effectiveZoom;
+  const mx = (frameSize.width * (1 - innerFramePct)) / 2;
+  const my = (frameSize.height * (1 - innerFramePct)) / 2;
+  return Math.max(0, mx - sx, sx - (frameSize.width - mx), my - sy, sy - (frameSize.height - my));
+}
+
+describe('resolveCamera — widening only when widening helps (RESOLVE-CONVERGE-1)', () => {
+  // Both regimes of the clamp, because they answer "does widening help" in opposite directions —
+  // and a rule tested in only one of them is a rule nobody has seen take both positions.
+  const CASES = [
+    {
+      // World WIDER than the frame, target pinned against the right world edge. The clamp holds the
+      // frame at that edge, so widening slides the target further out. This is the ice-track shape.
+      name: 'wide world, target at the right edge',
+      args: {
+        targetWorld: { x: 1250, y: 360 },
+        desiredEffZoom: 2.0,
+        worldBounds: WB_STANDARD,
+        frameSize: FRAME,
+        minEffZoom: 0.1,
+      },
+      expectAdapted: false,
+    },
+    {
+      name: 'wide world, target at the left edge',
+      args: {
+        targetWorld: { x: 50, y: 360 },
+        desiredEffZoom: 2.0,
+        worldBounds: WB_STANDARD,
+        frameSize: FRAME,
+        minEffZoom: 1.5,
+      },
+      expectAdapted: false,
+    },
+    {
+      // World already FITS the frame on X, target on the far side: the frame cannot move, but a
+      // wider shot pulls the target back toward the centre. Here the loop earns its width.
+      name: 'world fits the frame, target on the far side',
+      args: {
+        targetWorld: { x: 1100, y: 360 },
+        desiredEffZoom: 1.0,
+        worldBounds: WB_STANDARD,
+        frameSize: FRAME,
+        innerFramePct: 0.5,
+        minEffZoom: 0.1,
+      },
+      expectAdapted: true,
+    },
+    {
+      // The same regime on Y — a world shorter than the frame, target low in it.
+      name: 'short world, target near the bottom',
+      args: {
+        targetWorld: { x: 640, y: 390 },
+        desiredEffZoom: 1.6,
+        worldBounds: { maxX: 1280, maxY: 400 },
+        frameSize: FRAME,
+        minEffZoom: 0.5,
+      },
+      expectAdapted: true,
+    },
+    {
+      name: 'target already in the inner frame',
+      args: {
+        targetWorld: { x: 1600, y: 360 },
+        desiredEffZoom: 1.5,
+        worldBounds: WB_LARGE,
+        frameSize: FRAME,
+      },
+      expectAdapted: false,
+    },
+  ];
+
+  // THE PROPERTY. Width is only ever given away for a target that ends up closer to the inner
+  // frame than it was at the zoom the caller asked for. This is the whole of the repair, and it
+  // replaces two tests that asserted the old loop's INSTANCES — one of which asserted, as correct,
+  // a run all the way to minEffZoom that left the target outside the frame it was widening for.
+  it.each(CASES)('$name', ({ args, expectAdapted }) => {
+    const pct = args.innerFramePct ?? 0.7;
+    const result = resolveCamera(args);
+    // The single attempt at the requested zoom: the floor raised to the desired zoom cannot step.
+    const unwidened = resolveCamera({ ...args, minEffZoom: args.desiredEffZoom });
+    expect(result.wasZoomAdapted).toBe(expectAdapted);
+    if (!expectAdapted) {
+      expect(result.effectiveZoom).toBeCloseTo(args.desiredEffZoom, 6);
+    } else {
+      expect(result.effectiveZoom).toBeLessThan(args.desiredEffZoom);
+      expect(missOf(result, args.targetWorld, args.frameSize, pct)).toBeLessThan(
+        missOf(unwidened, args.targetWorld, args.frameSize, pct)
+      );
+    }
+    expect(result.effectiveZoom).toBeGreaterThanOrEqual((args.minEffZoom ?? 0) - 1e-9);
   });
 
+  it('the property is not vacuous: the table holds both positions', () => {
+    expect(CASES.some((c) => c.expectAdapted)).toBe(true);
+    expect(CASES.some((c) => !c.expectAdapted)).toBe(true);
+  });
+});
+
+describe('resolveCamera — zoom reduction (inner frame)', () => {
   it('does NOT reduce zoom when target is in inner frame', () => {
     // Target at world center, large world → easy to center
     const result = resolveCamera({
@@ -108,22 +199,6 @@ describe('resolveCamera — zoom reduction (inner frame)', () => {
     });
     expect(result.wasZoomAdapted).toBe(false);
     expect(result.effectiveZoom).toBeCloseTo(1.5);
-  });
-
-  it('stops at minEffZoom even if target never reaches inner frame', () => {
-    // x=50 on 1280px world at effZoom=2.0: camX clamped to 0, screenX=100 < 192 (inner frame floor)
-    // At minEffZoom=1.5: screenX=75 < 192 still — can never reach inner frame
-    const result = resolveCamera({
-      targetWorld: { x: 50, y: 360 },
-      desiredEffZoom: 2.0,
-      worldBounds: WB_STANDARD,
-      frameSize: FRAME,
-      minEffZoom: 1.5,
-    });
-    expect(result.effectiveZoom).toBeGreaterThanOrEqual(1.5 - 0.01);
-    expect(result.effectiveZoom).toBeLessThanOrEqual(1.5 + 0.01);
-    expect(result.wasZoomAdapted).toBe(true);
-    expect(result.targetInInnerFrame).toBe(false);
   });
 
   it('effectiveZoom never goes below minEffZoom', () => {
