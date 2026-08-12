@@ -489,7 +489,18 @@ a verbatim transcript of one run on one commit, which is a historical record, no
 
 ### The tracking lag, as measured today — and it had drifted
 
-<!-- MEASURED: tracking-lag (median/p95 pp per state) @ eea0acf2 2026-08-12 depends=client/src/modules/camera/ -->
+<!-- MEASURED: tracking-lag (median/p95 pp per state) @ 0275fcf4 2026-08-12 depends=client/src/modules/camera/ -->
+
+**RE-MEASURED FOR FRONT-GROUP-1, and PHOTO_FINISH moved in the direction the change predicts.** That
+block stops the ending tightening past the width that still holds the front group, so the photo
+finish now runs at a WIDER shot — and the same world-space tracking lag is a smaller fraction of a
+wider frame. **Median 4.71 -> 2.58 pp and p95 29.80 -> 16.33 pp**, the largest single improvement
+this table has recorded. Every other state is unchanged to the digit.
+
+**Its FRAME COUNT falls 1865 -> 1265, and that is the instrument, not the shot.** This measures the
+TRACKING phase only, and the block's release at the first crossing is a GLIDE — those frames are
+excluded by construction, exactly as the run-in's engagement glide is. The photo finish is not
+shorter; 600 of its frames are now in a phase this table does not count.
 
 **RE-MEASURED ON THE SHIP (`eea0acf2`), because neither branch's table describes the merged tree.**
 The run-in and RESOLVE-CONVERGE-1 were measured apart and shipped together, so the numbers below are
@@ -633,9 +644,9 @@ and it says so itself. It also covers nothing else on this page; see its header 
 | LEADER_ZOOM   | 17788  | 4.05      | 9.32   |
 | LEAD_CHANGE   | 7789   | 4.55      | 22.17  |
 | OVERVIEW      | 4303   | 2.65      | 16.00  |
-| PHOTO_FINISH  | 1865   | 4.71      | 29.80  |
+| PHOTO_FINISH  | 1265   | 2.58      | 16.33  |
 
-OVERVIEW median 2.65 pp against every other state pooled 4.63 pp (ratio 0.57×).
+OVERVIEW median 2.65 pp against every other state pooled 4.60 pp (ratio 0.58×).
 
 **Re-measured for OUTCOME-PHASE-75, and COMEBACK_ZOOM moved so far that re-stamping would have been
 wrong.** Its frame count fell from **2103 to 753** and its median lag rose from **8.34 to 13.73 pp**.

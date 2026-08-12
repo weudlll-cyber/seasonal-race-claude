@@ -396,6 +396,24 @@ is dated and recorded HERE, where a reader on their way to the report will pass 
 
 ## Camera / presentation fixes
 
+- [FRONT-GROUP-1.md](FRONT-GROUP-1.md) — **the front group bounds the tightening** (branch
+  `feat/front-group` off master; **NOT merged, nothing minted — his eye is owed, and so is a
+  ruling**). His complaint: with about six racers nearly level, closing to the photo-finish zoom
+  loses racers out of the shot. Measured first — the shot loses one of the front group on **31.6% of
+  photo-finish frames**, and on one race holds none of the six. **The brief's premise was wrong and
+  the code says so**: the company guarantee has not "retired before the ending", it returns Infinity
+  on every PAIR-guaranteed state and was never running on those shots at all — an exclusion
+  CAMERA-COMPANY-1 §5 gave as an argument, for the case where the field IS strung out, which is not
+  his. So the COMPUTATION is reused unchanged and only the policy is new, with **no new number**:
+  the group is the leader plus everyone inside the BATTLE closeness arc, capped at the battle
+  group's own size. Membership **captured once** — a live definition would have churned 597 times
+  across 27 races; the capture churns 0. Result **31.6% → 6.9%**, median the whole group on every
+  measurable race, `check-runin-frame` 0 empty frames. **THE COST NEEDS HIS RULING: the crossing
+  shot is 25–75% wider**, which contradicts RUNIN-PACE-1's standing "the crossing must be the
+  ordinary shot" — the two asks are the same knob in opposite directions whenever the group has not
+  converged by the line. Two wrong retirements are recorded rather than hidden (84 and 29 empty
+  frames).
+
 - [RESOLVE-CONVERGE-1.md](RESOLVE-CONVERGE-1.md) — **a widening step has to buy something** (branch
   `fix/resolve-converge` off `master`; **NOT merged, nothing minted — his eye is owed on ice-track
   seed 9**). `resolveCamera` widened 10% at a time to frame the pan target and never asked whether
