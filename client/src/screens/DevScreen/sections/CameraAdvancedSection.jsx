@@ -1336,8 +1336,31 @@ function CameraAdvancedSection() {
             onChange={(e) => set('frontGroupFraming', e.target.checked)}
           />
           <span style={{ fontWeight: 600 }}>Hold the front group while the shot closes</span>
-          <InfoTooltip text="On (default): through the ending the shot stops tightening at the width that still holds the whole front group, and continues only as they converge. The group is the leader plus everyone within the BATTLE closeness arc of him, capped at the battle group's own maximum size — the same two settings the battle shot uses, so this adds no threshold of its own. It is captured once when the endgame window opens and never re-sorted, so membership cannot churn; it retires at the first crossing, and that release is glided. It only ever widens, and never past the width the ending has already reached. Off is the pre-2026-08-12 behaviour: the shot closes to the photo-finish zoom whatever it loses." />
+          <InfoTooltip text="On (default): through the ending the shot stops tightening at the width that still holds every racer LEVEL with the leader, and continues only as they converge. A racer running behind another in his line is not in the group — he is shown when the racer ahead of him is. Membership admits a racer the moment he comes level and never evicts or re-orders, so it cannot lurch; admissions close at the first crossing, and the bound is held until the group's own members are home. It only ever widens, and never past the width the ending has already reached. Off: the shot closes to the photo-finish zoom whatever it loses." />
         </label>
+        <div className={s.formGrid}>
+          <div className={s.formGroup}>
+            <label
+              className={s.label}
+              style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}
+            >
+              Level = within N body lengths
+              <InfoTooltip
+                text={`How level is level, in the racer's OWN length, measured along the track to the leader. Currently ${config.frontGroupLevelBodies ?? DEFAULT_CAMERA_CONFIG.frontGroupLevelBodies}. Measured on ten tracks: 1 length holds a median group of 2 and is indistinguishable from OFF on the owner's race; 2 holds a median of 4 and is the first length that includes the racers he named; 3 holds a median of 6 and costs more width again. Bigger group, wider shot — there is no free value.`}
+              />
+            </label>
+            <input
+              type="number"
+              className={s.input}
+              min="0"
+              max="10"
+              step="0.5"
+              data-testid="front-group-level-bodies"
+              value={config.frontGroupLevelBodies ?? DEFAULT_CAMERA_CONFIG.frontGroupLevelBodies}
+              onChange={(e) => set('frontGroupLevelBodies', Number(e.target.value))}
+            />
+          </div>
+        </div>
         <div className={s.formGrid}>
           <div className={s.formGroup}>
             <label

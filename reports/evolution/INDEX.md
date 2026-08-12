@@ -396,6 +396,19 @@ is dated and recorded HERE, where a reader on their way to the report will pass 
 
 ## Camera / presentation fixes
 
+- [FRONT-GROUP-2.md](FRONT-GROUP-2.md) — **the front group stays whole** (branch `feat/front-group`;
+  **NOT merged, nothing minted — his eye is owed**). Continues FRONT-GROUP-1 and **corrects its
+  headline**: that report counted CENTRES and reported 6.9%, while the owner was looking at a racer
+  cut in half — measured with the renderer's own drawn size, the same race had 74 frames with a
+  member not whole against 14 fully outside, an undercount of five. Four repairs: the guarantee pads
+  by the BODY as the pair guarantee always has; the bound holds until the GROUP is home rather than
+  the first of them; the group is whoever is LEVEL with the leader in his own body lengths with **no
+  cap** — replacing a 5%-of-a-lap threshold that admitted all twenty racers on eleven of 27 races;
+  and membership is **admit-only**, 120 changes against 186 for live re-sorting and structurally
+  unable to produce the FINISH-PAIR-1 lurch. **N=1 was wrong and the fixed yardstick showed it** —
+  at one body length the mechanism is identical to OFF on his race; N=2 ships. **The price, stated:
+  the crossing shot is 70% of the ordinary one pooled, 37% at worst, 78% on his race.**
+
 - [FRONT-GROUP-1.md](FRONT-GROUP-1.md) — **the front group bounds the tightening** (branch
   `feat/front-group` off master; **NOT merged, nothing minted — his eye is owed, and so is a
   ruling**). His complaint: with about six racers nearly level, closing to the photo-finish zoom
