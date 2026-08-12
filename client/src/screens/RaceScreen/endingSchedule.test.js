@@ -2,7 +2,7 @@
 // File:        endingSchedule.test.js
 // Path:        client/src/screens/RaceScreen/endingSchedule.test.js
 // Project:     RaceArena — ENDING-HOLD-1
-// Created:     2026-08-13
+// Created:     2026-08-11
 // Description: The hold's two positions, and the total nobody should add up by hand.
 //
 //              THE DEFAULT MOVED, 2026-08-12. It shipped at 0 because the measurement said there
