@@ -7327,3 +7327,71 @@ describe('RUNIN-GLIDE-1 — wide-and-back, gliding to the ordinary shot', () => 
   });
 });
 
+// ── NEVER TIGHTER THAN THE TRACK IS WIDE (FRONT-GROUP-6) ──────────────────────────────────────
+//
+// The owner's own solution: racers can only spread ACROSS the corridor, so a frame holding its full
+// width holds everyone who is level. Two things are worth asserting and the numbers are not among
+// them — how many racers stay whole across ten tracks belongs to a harness, not to an expectation.
+describe('CameraDirector — the endgame never closes past a track width', () => {
+  const WORLD_W = 6000;
+  const CANVAS_W = 1280;
+  const CANVAS_H = 720;
+  const FINISH_T = 0.9;
+  const TRACK_W = 300;
+
+  function makeShape() {
+    return {
+      getTotalLength: () => WORLD_W,
+      getPosition: (t) => ({ x: t * WORLD_W, y: 360, angle: 0 }),
+      getCenterPoint: () => ({ x: WORLD_W / 2, y: CANVAS_H / 2 }),
+    };
+  }
+
+  /** Two contenders nose to tail — the shot a photo finish would close hard onto. */
+  const pairAtTheLine = () => [
+    { t: 0.889, x: 5334, y: 358, finished: false, index: 0 },
+    { t: 0.888, x: 5328, y: 362, finished: false, index: 1 },
+    { t: 0.5, x: 3000, y: 360, finished: false, index: 2 },
+  ];
+
+  function drive(configOver, racers, prog) {
+    const cd = new CameraDirector(WORLD_W, CANVAS_H, true, configOver, 36, makeShape(), TRACK_W);
+    let ts = 1000;
+    for (let f = 0; f < 6; f++) {
+      cd.update(
+        racers,
+        ts,
+        { raceElapsed: 40000 + f * 200, finishedCount: 0, finishT: prog },
+        CANVAS_W,
+        CANVAS_H
+      );
+      cd.stateEnteredAt = 0;
+      ts += 200;
+    }
+    return cd;
+  }
+
+  // L203 — both positions of the switch, because a floor nobody has seen bind is a comment.
+  it('both positions differ: the floor stops the close, off lets it continue', () => {
+    const on = drive({ endgameCorridorFloor: true }, pairAtTheLine(), FINISH_T);
+    const off = drive({ endgameCorridorFloor: false }, pairAtTheLine(), FINISH_T);
+    expect(on._framingProbe.guaranteed).toBeLessThan(off._framingProbe.guaranteed);
+    expect(on._framingProbe.ceilings.corridor).toBeLessThan(Infinity);
+    expect(off._framingProbe.ceilings.corridor).toBe(Infinity);
+  });
+
+  // The promise itself, in the unit it is made in: a full corridor plus a body fits across the
+  // frame at the delivered zoom. Checked from the projection rather than from the ceiling that
+  // produced it, so the assertion cannot pass by agreeing with its own arithmetic.
+  it('a full track width plus a body fits across the frame', () => {
+    const cd = drive({ endgameCorridorFloor: true }, pairAtTheLine(), FINISH_T);
+    const visibleAcross = cd._proj.visibleWorldH(cd._framingProbe.guaranteed, CANVAS_H);
+    expect(visibleAcross).toBeGreaterThanOrEqual(TRACK_W + 36 - 1e-6);
+  });
+
+  it('is inert before the endgame — mid-race tight shots are untouched', () => {
+    const early = pairAtTheLine().map((r) => ({ ...r, t: r.t * 0.3 }));
+    const cd = drive({ endgameCorridorFloor: true }, early, FINISH_T);
+    expect(cd._framingProbe.ceilings.corridor).toBe(Infinity);
+  });
+});

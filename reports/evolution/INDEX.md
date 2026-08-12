@@ -396,6 +396,20 @@ is dated and recorded HERE, where a reader on their way to the report will pass 
 
 ## Camera / presentation fixes
 
+- [FRONT-GROUP-3.md](FRONT-GROUP-3.md) — **never tighter than the track is wide** (branch
+  `feat/front-group`; **NOT merged, nothing minted — his eye is owed**). The owner's own solution,
+  and it is better than what we built: racers can only spread ACROSS the corridor, so a frame holding
+  its full width holds everyone who is level — no group to define, no membership to follow. It is
+  `corridorGuarantee` applied in the endgame and nothing else; the diagonal was already handled
+  (the perpendicular is projected per axis and compared against the frame's true chord), and body
+  overhang is paid by fitting `trackWidth + one body`. **Measured on a fixed yardstick, the floor
+  ALONE beats the FRONT-GROUP-2 machinery** — 0.0% vs 10.6% of photo-finish frames with a top-six
+  racer not whole on his race, 18.3% vs 27.1% pooled — **so 791 lines came out against 68 added** and
+  two keys became one. **The price is reported in both directions and the worst case is NOT less
+  extreme (37%, unchanged); what changed is that it is now PREDICTABLE PER TRACK** (searound 93/94/93
+  across seeds where the old bound swung 71/47/39). It never binds on a leader, overview or comeback
+  shot, so the simplification costs nothing where the camera would rightly have closed in.
+
 - [FRONT-GROUP-2.md](FRONT-GROUP-2.md) — **the front group stays whole** (branch `feat/front-group`;
   **NOT merged, nothing minted — his eye is owed**). Continues FRONT-GROUP-1 and **corrects its
   headline**: that report counted CENTRES and reported 6.9%, while the owner was looking at a racer

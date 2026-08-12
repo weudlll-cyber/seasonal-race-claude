@@ -489,7 +489,15 @@ a verbatim transcript of one run on one commit, which is a historical record, no
 
 ### The tracking lag, as measured today — and it had drifted
 
-<!-- MEASURED: tracking-lag (median/p95 pp per state) @ c5d8bd2a 2026-08-12 depends=client/src/modules/camera/ -->
+<!-- MEASURED: tracking-lag (median/p95 pp per state) @ 55d8848a 2026-08-12 depends=client/src/modules/camera/ -->
+
+**RE-MEASURED FOR FRONT-GROUP-6, and PHOTO_FINISH is the only row that moves — for the third time,
+and in the same direction as the first.** Holding the corridor's full width through the endgame keeps
+the shot wider than its own setting would, and a wider frame makes the same world-space lag a smaller
+share of it: **median 4.81 -> 2.43 pp and p95 26.23 -> 16.04**, the lowest this row has read. Its
+frame count returns to **1865** — the whole photo finish is in the tracking phase again, because the
+glide release that the deleted group machinery needed is gone with it. Every other state is
+unchanged to the digit, which is the evidence that a bound scoped to the endgame stayed there.
 
 **RE-MEASURED FOR FRONT-GROUP-2..5, and PHOTO_FINISH is the only row that moves — again.** Holding
 every racer LEVEL with the leader keeps the ending wider than the shot alone would be, and a wider
@@ -651,9 +659,9 @@ and it says so itself. It also covers nothing else on this page; see its header 
 | LEADER_ZOOM   | 17788  | 4.05      | 9.32   |
 | LEAD_CHANGE   | 7789   | 4.55      | 22.17  |
 | OVERVIEW      | 4303   | 2.65      | 16.00  |
-| PHOTO_FINISH  | 1640   | 4.81      | 26.23  |
+| PHOTO_FINISH  | 1865   | 2.43      | 16.04  |
 
-OVERVIEW median 2.65 pp against every other state pooled 4.63 pp (ratio 0.57×).
+OVERVIEW median 2.65 pp against every other state pooled 4.53 pp (ratio 0.58×).
 
 **Re-measured for OUTCOME-PHASE-75, and COMEBACK_ZOOM moved so far that re-stamping would have been
 wrong.** Its frame count fell from **2103 to 753** and its median lag rose from **8.34 to 13.73 pp**.
