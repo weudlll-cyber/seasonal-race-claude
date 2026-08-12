@@ -98,6 +98,55 @@ the Dev Screen toggle and the `renderRaceFrame` hook. The branch was deleted at 
   may be promising a corridor the viewer cannot see. Start here rather than from scratch — see
   [DEAD-ENDS.md](DEAD-ENDS.md) §K.
 
+### CAMERA-ENDING-WINDOW — the camera's own fingerprint can see the ending (2026-08-13)
+
+**The instrument changed, not the product, and that is the whole entry.** Not one line of camera
+behaviour moves here. `camera-fingerprint.mjs` ran `while (finishedCount < N)`, so it stopped on the
+exact frame the ending BEGINS and had never rendered a FINISHED frame — which meant ENDING-PICTURE-1,
+the block that makes the director compose the ending at all, was invisible to the camera's own change
+detector. The record said so in three separate places, and said it as though it were a property
+rather than a hole. **The window is now DERIVED** from `endingOnRaceScreenMs()`, the same arithmetic
+RaceScreen sets its navigate-away timer from, so a future change that lengthens the ending lengthens
+the window with it. CAMERA moved once, deliberately, and is minted; WORLD and RENDER were re-run in
+full and are unchanged. Values live in [fingerprints.json](fingerprints.json).
+
+**The proof is the off arm, and it is exact.** With `endingKeepsFinishShot` false — the arm in which
+the director does not compose the ending — the extended instrument reproduces the predecessor value
+BYTE-IDENTICALLY, so no frame before the last crossing moved and the entire fingerprint move is the
+ending. A sabotage firing only from the SECOND all-home frame onward moves the default arm and leaves
+that control untouched; removing it returns the hash. **9 of 10 tracks contribute 300 FINISHED
+frames**, and the instrument now prints that count and refuses to run if none does — so the blindness
+cannot come back quietly. Cost 44 s against ~29 s.
+
+- `pre/ship-camera-ending-window` (`758a95ac`, 2026-08-13) — master immediately BEFORE the ship.
+  Reset here to restore a camera fingerprint that stops at the last crossing, with the CAMERA value
+  `c1556053b1824758` and `docs/fingerprints.json` carrying RUNIN-1's mint.
+- `v-ship-camera-ending-window` (`96f7a0ae`, 2026-08-13) — **the ship.** An instrument change that
+  moves a baseline is the case a ceremony exists for, so it was run in full rather than argued: both
+  other fingerprints measured, the off arm measured, and the move proved by sabotage and restored.
+
+### STAMP-COMPLETE — the stamp guard answers about everything it is responsible for (2026-08-13)
+
+**A guard that scans one file and prints a confident green line.** `check-measured-stamps` ran bare
+over `docs/CAMERA_DIRECTOR.md` and nothing else, so a stale stamp in any other living document was
+invisible — the identical shape INDEX-COMPLETE-1 had fixed in `check-index` the previous day. It now
+scans the whole living-doc set, discovered by the SAME rule `check-doc-links` uses so that "a living
+doc" has one definition. **Proved by sabotage in both directions on one tree**: with a stale stamp
+appended to `docs/ENDING-PHASES.md`, the old guard exits 0 reporting "1 stamp across 1 document, 0
+stale" and the new one exits 1 naming the document and the commit that invalidated it.
+
+It defaults to ALL rather than refusing without arguments, following INDEX-COMPLETE-1's reasoning:
+refusing helps only the person who runs it bare, while defaulting makes the cheapest invocation the
+complete one. It still reads git HISTORY, which was re-examined and left alone — the question a stamp
+raises is historical, and the PENDING pass already reports the working tree without failing on it.
+
+**It unblocked something the same day.** `docs/SHIP-CEREMONY.md` recorded that its hand-counted
+`eleven` could not be stamped BECAUSE this guard scanned one file. Re-counted and stamped.
+
+- `v-guard-stamp-complete` (`758a95ac`, 2026-08-13) — **the merge.** No fingerprint moves; this is a
+  guard, and it is tagged because a guard widening its own reach is exactly the kind of change a
+  later reader needs to be able to date.
+
 ### RUNIN — the run-in glides wide-and-back, and only the line sets the width (2026-08-12)
 
 **The endgame gets a shot that shows the line.** From the moment the leader is within reach of the
