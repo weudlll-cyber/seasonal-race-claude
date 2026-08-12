@@ -41,3 +41,12 @@ docs/HANDOFF.md
 results/
 # Stray scratch stylesheet dump (leading-underscore; not imported anywhere).
 client/_ul.css
+# Night-run scaffolding. `logs/` is the unattended run's own output (docs/NIGHT-RUN.md owns the
+# launcher that writes it) and `night-task.md` is the scratch brief handed to that run — neither is
+# repository content, and the RUN'S FINDINGS live in reports/night/ which IS committed.
+# WHY THEY ARE IGNORED RATHER THAN TOLERATED: the build stamp reads `git status --porcelain`, which
+# counts untracked files, so leaving these two in the tree makes a bundle built from a clean commit
+# report `+dirty` — at exactly the moment the owner is judging that bundle. A flag that cries wolf
+# is worse than no flag.
+logs/
+night-task.md
