@@ -76,7 +76,22 @@ untouched — but that is the conclusion the measurement supports, not a reason 
 
 ## 5. CI — a ship is finished when CI is green for that exact SHA
 
-| ship               | master SHA | CI run                                     | conclusion |
-| ------------------ | ---------- | ------------------------------------------ | ---------- |
-| RESOLVE-CONVERGE-1 | `0b6d6098` | `31630061033`                              | **success** |
-| RUNIN-1            | see below  | see below                                  | see below   |
+| ship               | master SHA | CI run        | conclusion  |
+| ------------------ | ---------- | ------------- | ----------- |
+| RESOLVE-CONVERGE-1 | `0b6d6098` | `31630061033` | **success** |
+| RUNIN-1            | `c8330950` | `31631773305` | **success** |
+
+Each run's `headSha` was read back and checked against the master tip rather than trusting the
+branch view, which can show a green run for the commit before yours.
+
+`npm run verify -- --base=e1f53781` — the full-weight run across both ships — is green on the
+committed state: **PASS 19, FAIL 0, SKIP 0**, with all three fingerprints reproduced independently
+of the minting run (`c1556053b1824758` / `c962df5334277f95` / `dc4647be0f55ebdb`). The first attempt
+failed on `check-tags` alone, correctly: the tag pair was registered but not yet at origin. That is
+the guard doing its job and it is recorded rather than quietly re-run.
+
+## 6. Where master is served
+
+Both servers point at master at `c8330950`, with the pill read from the served bundle in each case —
+see the report's delivery note. The run-in is ON by default there, so ice-track seed 9 shows the
+shipped shot.
