@@ -121,6 +121,31 @@ in frame for 100 % of the shot against 87–91 % before.
   instrument blind spots are recorded rather than repaired — the shared driver runs a nameless field
   and no slow motion, and without either the defect does not reproduce at all.
 
+### ENDING-PICTURE — the ending gets a picture worth holding (2026-08-12)
+
+**The hold, and the picture it was supposed to be holding.** `finishHoldAfterLastMs` goes from 0 to
+1500 — his own podium beat — and the card-free tail grows from 500 to 2000 ms. But the ending was
+holding nothing: the camera's transform was replaced by the IDENTITY the frame the phase flipped
+(on an open track an 853×470 window at world (0,0) with **0 of 20 racers in it**; on a closed one the
+whole world as a map), and a full-canvas scrim reading "Loading results…" was drawn over all of it.
+Both predated the hold by months. The director is now consulted through FINISHED and the splash is
+retired, each behind a key defaulting to the fix. RENDER moved and is minted; values live in
+[fingerprints.json](fingerprints.json). **CAMERA is unchanged and that is NOT evidence about this
+ship** — `camera-fingerprint.mjs` stops at the last crossing and renders no FINISHED frame, which is
+recorded beside the value.
+
+- `pre/ship-ending-picture` (`7eb8f013`, 2026-08-12) — master immediately BEFORE the ship. Reset here
+  to restore an ending that flips to an identity transform at the last crossing and draws the
+  "RACE FINISHED! / Loading results…" scrim over it, with `finishHoldAfterLastMs` absent, and the
+  RENDER fingerprint at `c0fd1e8eda539867`.
+- `v-ship-ending-picture` (`a20c701f`, 2026-08-12) — **the ship.** Three keys in total across the two
+  blocks, all defaulting to the fixed behaviour because he asked for a defect repaired rather than a
+  taste offered. The zoom-out trigger is deliberately UNCHANGED: gating it on
+  `finishedCount >= nRacers` was proposed and rejected by him, since it would make the pull-back's
+  start a property of the slowest racer. New guard `check-ending-frame.mjs` renders a real FINISHED
+  frame and refuses a full-canvas fill at the identity transform — tracking the matrix is what stops
+  it flagging the track's own background — proven by sabotage, 1.1 s.
+
 > **DATE CORRECTION, 2026-08-12.** The two sections below and their four tags were dated 2026-08-13.
 > That date was never observed — it came from a task specification and propagated. Every date here is
 > now read from `git log --date=iso` on the commit it names: `6de86e6a` 2026-08-11 18:15 (WINNER-CARD
