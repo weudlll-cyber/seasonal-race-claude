@@ -341,6 +341,7 @@ export function computeTimingFromConfig(config) {
     config?.photoFinishLeadProgress ?? DEFAULT_CAMERA_CONFIG.photoFinishLeadProgress;
   const photoFinishContenderFraming =
     config?.photoFinishContenderFraming ?? DEFAULT_CAMERA_CONFIG.photoFinishContenderFraming;
+  const finishLineFraming = config?.finishLineFraming ?? DEFAULT_CAMERA_CONFIG.finishLineFraming;
 
   // ── Per-state cooldowns ───────────────────────────────────────────────────
   const comebackCooldownMs = config?.comebackCooldownMs ?? DEFAULT_CAMERA_CONFIG.comebackCooldownMs;
@@ -412,6 +413,7 @@ export function computeTimingFromConfig(config) {
     photoFinishCloseThresholdT,
     photoFinishLeadProgress,
     photoFinishContenderFraming,
+    finishLineFraming,
     comebackCooldownMs,
     leadChangeCooldownMs,
     battleWeight,

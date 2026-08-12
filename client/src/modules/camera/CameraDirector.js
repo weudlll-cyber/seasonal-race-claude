@@ -85,6 +85,7 @@ import {
   fieldGuarantee,
   COMPANY_FRAME_PCT,
   anchorScreenPoint,
+  pointGuarantee,
   lateralShiftToFit,
 } from './framingRule.js';
 import {
@@ -557,6 +558,7 @@ export class CameraDirector {
     this._photoFinishCloseThresholdT = t.photoFinishCloseThresholdT;
     this._photoFinishLeadProgress = t.photoFinishLeadProgress;
     this._photoFinishContenderFraming = t.photoFinishContenderFraming;
+    this._finishLineFraming = t.finishLineFraming;
     this._comebackCooldownMs = t.comebackCooldownMs;
     this._leadChangeCooldownMs = t.leadChangeCooldownMs;
     this._battleWeight = t.battleWeight;
@@ -2364,6 +2366,89 @@ export class CameraDirector {
   }
 
   /**
+   * FINISH-FRAMED-1: the world point where the race ENDS.
+   *
+   * Same open/closed topology question `_finishLookbackT` answers, and answered the same way: a lap
+   * count wraps on a loop and clamps on a line. Two laps on a closed track finish where one lap
+   * started, so `finishT = 2` is the point at `t = 0`.
+   *
+   * @param {number} finishT
+   * @returns {{x:number,y:number}|null}
+   */
+  _finishLineWorldPoint(finishT) {
+    if (!this._shape || !(finishT > 0)) return null;
+    const t = this._isOpenTrack ? Math.min(1, finishT) : ((finishT % 1) + 1) % 1;
+    return this._shape.getPosition(t, 0);
+  }
+
+  /**
+   * FINISH-FRAMED-1: THE FINISH LINE IS A GUARANTEED SUBJECT FOR THE RUN-IN.
+   *
+   * The owner's design: when the run-in begins, pull out far enough that the finish is visible, then
+   * come back in continuously to the close shot — but keep the line in frame the whole way, so he can
+   * see how much race is left and whether anyone still has a chance.
+   *
+   * THE ZOOM IS NOT RAMPED, IT IS DERIVED. This is `pairGuarantee` with the line as the partner: the
+   * frame must contain the subject AND the line, so far out is wide because both must fit, and it
+   * tightens by itself as they close. There is no curve to tune and nothing to keep in step with the
+   * race's length — the geometry does it. As the subject reaches the line the separation goes to
+   * zero, the ceiling goes to Infinity, and the state's own zoom takes over: the tight shot at the
+   * line is reachable BY CONSTRUCTION rather than by a special case.
+   *
+   * WHEN. From `endgameThreshold`, which is not a new number: it is the same threshold at which
+   * `_pickNextState` already declares the endgame and locks the camera to the leader. The run-in
+   * begins where the director already says it begins.
+   *
+   * WHY IT CANNOT FIGHT THE PAIR GUARANTEE. Every guarantee is a CEILING and they compose through
+   * `Math.min`, which takes the LOWEST — the widest requirement. So this one widens when the line is
+   * far and stands aside when something else needs more room. The pair guarantee is untouched and
+   * still binds whenever the contenders need more frame than the line does.
+   *
+   * MEASURED FROM THE ANCHOR, not from the leader: `subjects.point` is the point the camera is
+   * actually on, so the guarantee is about the frame the viewer gets rather than about a racer who
+   * may not be the subject. It uses `pointGuarantee` and NOT `pairGuarantee` — the room toward the
+   * line is measured from the anchor's own place in the frame, because that is where the camera
+   * sits. The pair form was built first and measured: it moved the line's in-frame share by nothing
+   * at all (41.4% -> 40.8%), for the reason written at `pointGuarantee`.
+   *
+   * @returns {number} cam.zoom ceiling; Infinity outside the run-in or when the key is off
+   */
+  _finishLineCeiling(subjects, racers, frameSize, raceState) {
+    if (!this._finishLineFraming) return Infinity;
+    if (!subjects?.point || !(raceState?.finishT > 0)) return Infinity;
+    // THE RUN-IN ENDS WHERE THE AFTERMATH BEGINS. FINISH_OVERVIEW already anchors on a fixed point
+    // `finishOverviewLookbackPx` BEHIND the line, so the line is framed there by construction — and
+    // that shot's distance is a measured decision this guarantee has no business overriding. Caught
+    // by `CameraDirector.test.js`'s lookback tests, which are exactly the pin for that framing: with
+    // this line missing they moved the settled target by 44 px.
+    if (this._inFinishMode) return Infinity;
+    // The run-in has not started until the leader is past the endgame threshold.
+    let maxT = 0;
+    for (const r of racers) if (r.t > maxT) maxT = r.t;
+    if (maxT / raceState.finishT <= this._endgameThreshold) return Infinity;
+    const line = this._finishLineWorldPoint(raceState.finishT);
+    if (!line) return Infinity;
+    // The SAME anchor placement the company guarantee uses, and for the same reason: where the
+    // subject sits in frame decides how much room there is toward anything else.
+    const at = anchorScreenPoint(
+      frameSize.width,
+      frameSize.height,
+      framingFor(this.state).position === POSITION.FORWARD ? this._leaderForwardFrac : null,
+      this._headingScreen(subjects.t)
+    );
+    return pointGuarantee(
+      subjects.point,
+      line,
+      this._proj.axisX,
+      this._proj.axisY,
+      frameSize.width,
+      frameSize.height,
+      COMPANY_FRAME_PCT,
+      at
+    );
+  }
+
+  /**
    * The world point on the racing line at the camera's current track parameter, or null.
    * The open/closed test here is a genuine TOPOLOGY question — does the track parameter WRAP
    * (a loop) or CLAMP (a line)? It was written out at six separate call sites; it lives here now.
@@ -2498,7 +2583,12 @@ export class CameraDirector {
       _companyIsHome ? Infinity : this._companyCeiling(subjects, racers, frameSize),
       // CEREMONY-HANDOVER-1: the ceremony's promise, still standing. Infinity once it has retired,
       // so this line costs nothing for the rest of the race.
-      this._fieldCeiling(subjects, racers, frameSize)
+      this._fieldCeiling(subjects, racers, frameSize),
+      // FINISH-FRAMED-1: the finish line is a guaranteed subject for the run-in. It composes with
+      // the others for free — every one of these is a CEILING and `Math.min` takes the widest
+      // requirement, so this can only ever open the shot, never tighten it, and it cannot fight the
+      // pair guarantee. See `_finishLineCeiling`.
+      this._finishLineCeiling(subjects, racers, frameSize, raceState)
     );
 
     // READ-ONLY PROBE (CAMERA-ANCHOR-TRUTH-1 §4a). The framing inputs this frame actually used, so

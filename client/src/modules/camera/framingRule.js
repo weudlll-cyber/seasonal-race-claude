@@ -445,6 +445,47 @@ export function companyGuarantee(
 }
 
 /**
+ * GUARANTEE 5 — A FIXED WORLD POINT (FINISH-FRAMED-1). The tightest cam.zoom at which `target`
+ * is still inside the frame, given where the ANCHOR sits in it.
+ *
+ * WHY THIS IS NOT `pairGuarantee`. That one fits the SEPARATION between two things into the frame's
+ * full chord, which is right only when the camera sits between them — as it does for BATTLE and the
+ * photo finish, whose pan target is the pair's midpoint. The run-in's camera sits on the LEADER, so
+ * the room toward the finish line is the distance from the leader's own place in the frame to the
+ * edge, not the whole chord. Built with the pair form first and MEASURED: the finish line's
+ * in-frame share went 41.4% -> 40.8% on Searound, i.e. nothing, because a fitted separation says
+ * nothing about where either end lands. This is the company guarantee's shape — one target instead
+ * of a headcount — and it is the honest one for "keep this point in shot".
+ *
+ * @param {{x:number,y:number}|null} anchor  the world point the shot is built around
+ * @param {{x:number,y:number}|null} target  the world point that must stay in frame
+ * @param {{x:number,y:number}|null} [anchorAt=null]  the anchor's SCREEN position; centre when null
+ * @param {number} [framePct=COMPANY_FRAME_PCT]  the region the target must be inside
+ * @returns {number} cam.zoom ceiling; Infinity when nothing constrains
+ */
+export function pointGuarantee(
+  anchor,
+  target,
+  axisX,
+  axisY,
+  frameW,
+  frameH,
+  framePct = COMPANY_FRAME_PCT,
+  anchorAt = null
+) {
+  if (!anchor || !target) return Infinity;
+  const sx = (target.x - anchor.x) * axisX;
+  const sy = (target.y - anchor.y) * axisY;
+  const needed = Math.hypot(sx, sy);
+  if (!(needed > 0)) return Infinity; // already on the anchor: nothing to keep in frame
+  const at = anchorAt ?? { x: frameW / 2, y: frameH / 2 };
+  const room = roomFromPointAlong(at.x, at.y, sx, sy, frameW, frameH, framePct);
+  // Room 0 means the anchor is already outside the region in that direction; no zoom fixes that.
+  if (!(room > 0)) return Infinity;
+  return room / needed;
+}
+
+/**
  * THE LATERAL GUARANTEE — CAMERA-LATERAL-1.
  *
  * The camera sits on the corridor centreline ACROSS the track. That is a default position, and like

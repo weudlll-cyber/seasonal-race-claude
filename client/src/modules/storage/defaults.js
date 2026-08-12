@@ -528,6 +528,32 @@ export const DEFAULT_CAMERA_CONFIG = {
   // at 240 frames (4 s), which is longer than the shot itself and therefore this same fix with a
   // knob whose only safe value is "longer than the shot".
   photoFinishContenderFraming: true,
+  // ── THE FINISH LINE IS FRAMED THROUGHOUT THE RUN-IN (FINISH-FRAMED-1, 2026-08-12) ─────────────
+  // TRUE = from the endgame threshold onward the finish line is a GUARANTEED SUBJECT, exactly like
+  // the photo-finish pair: the frame must contain the camera's subject AND the line. FALSE = the
+  // pre-2026-08-12 behaviour, where the run-in framed the leader alone and the line was wherever it
+  // happened to fall.
+  //
+  // HIS DESIGN, in English: when the run-in begins, pull out far enough that the finish is visible,
+  // then come back in continuously to the close shot — but keep the line in frame the whole way, so
+  // he can see how much race is left and whether a racer still has a chance to overtake.
+  //
+  // THE ZOOM IS DERIVED, NOT RAMPED, and that is the point of doing it this way. It is the same
+  // `pairGuarantee` the photo finish uses, with the line as the partner, so the shot is wide when
+  // the subject is far from the line and tightens BY ITSELF as they close. There is no curve to tune
+  // and nothing that has to be kept in step with a track's length. As the subject reaches the line
+  // the separation goes to zero, the ceiling goes to Infinity, and the state's own zoom takes over —
+  // so the tightest shot is still reachable AT the line by construction, not by a special case.
+  //
+  // IT CANNOT FIGHT THE PAIR GUARANTEE. Every guarantee is a cam.zoom CEILING and they compose
+  // through `Math.min`, which takes the widest requirement. This one widens the shot when the line
+  // is far away and stands aside when the contenders need more room. Nothing was removed to make
+  // space for it.
+  //
+  // WHEN IT STARTS is not a new number: `endgameThreshold` is the same value at which the director
+  // already declares the endgame and locks the camera to the leader. The run-in begins where the
+  // project already says it begins.
+  finishLineFraming: true,
   // ── THE START CEREMONY (START-CEREMONY-CAMERA-1) ───────────────────────────────────────────────
   // The race opens on the whole track, held still, then eases in to the starting formation until it
   // is as large as it can be with every racer still in frame. Both ends are GEOMETRY and neither is
