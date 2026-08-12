@@ -228,21 +228,6 @@ export class CameraDirector {
     this._runInEngaged = false;
     this._runInComposingNow = false;
     this._runInProgress = null;
-    // FRONT-GROUP-1: the front group's STABLE INDICES, captured once when the endgame window opens
-    // and never re-sorted. `null` means "not captured yet"; an empty array means "captured, and
-    // there was nobody to hold" — the two are different and the difference is load-bearing, because
-    // a capture that found nothing must not be retried every frame.
-    this._frontGroupIdx = null;
-    // The widest width the ending has already asked for, as a cam.zoom ceiling — the running minimum
-    // of the other ceilings while the front group exists. It is the floor the front-group bound may
-    // not open past; `null` until the window opens. `_frontGroupClamped` is this frame's answer to
-    // "was the group too spread to hold even at that width", recorded rather than inferred.
-    this._frontGroupFloor = null;
-    this._frontGroupClamped = false;
-    // Was the bound the binding term last frame, and has its release already been glided? The
-    // release is once-only: a second glide mid-finish would fight the finish sequence's own moves.
-    this._frontGroupWasBinding = false;
-    this._frontGroupReleased = false;
     this._inFinishDrama = false; // the drama window after the crossing (hudState reports 'FINISH')
     this._inPhotoFinish = false; // 15a: true while the PHOTO_FINISH shot holds (kept distinct from _inFinishDrama so hudState reports 'PHOTO_FINISH')
     this._photoFinishGateDone = false; // 15a-predictive: once-only latch — the pre-line close-check fires exactly once
@@ -582,8 +567,7 @@ export class CameraDirector {
     this._photoFinishContenderFraming = t.photoFinishContenderFraming;
     this._runInShot = t.runInShot;
     this._runInOpenMs = t.runInOpenMs;
-    this._frontGroupFraming = t.frontGroupFraming;
-    this._frontGroupLevelBodies = t.frontGroupLevelBodies;
+    this._endgameCorridorFloor = t.endgameCorridorFloor;
     this._comebackCooldownMs = t.comebackCooldownMs;
     this._leadChangeCooldownMs = t.leadChangeCooldownMs;
     this._battleWeight = t.battleWeight;
@@ -2253,164 +2237,38 @@ export class CameraDirector {
   }
 
   /**
-   * THE FRONT GROUP — captured once, and only ever smaller afterwards (FRONT-GROUP-1).
+   * THE ENDGAME FLOOR — never tighter than the track is wide (FRONT-GROUP-6).
    *
-   * The owner's ask: the tightening should stop while the whole front group is still in frame, and
-   * continue only as they converge. That needs a set of racers that does NOT churn, because
-   * FINISH-PAIR-1 is the record of what a set that churns does to the picture — the guaranteed pair
-   * was re-sorted every frame and every swap moved the shot discontinuously.
+   * SCOPE IS THE ENDGAME, from the window opening through the photo finish, and that is the owner's
+   * own scoping: tight battle shots mid-race are wanted, so this must not reach them. It is not
+   * retired at the crossing — a width floor cannot chase anybody, so the failure that forced the
+   * group bound to retire (holding still-coming racers against an anchor they are not near) has no
+   * analogue here. It simply stops binding once the authored zoom-out goes wider than a track width.
    *
-   * SO IT IS CAPTURED, once, on the first frame of the endgame window, and stored as INDICES rather
-   * than as racer objects (the object-identity trap: `renderInterpolation` hands the director
-   * spread-copies, so a stored reference stops matching). After that the membership can only lose
-   * members, as they finish — a monotone retirement, never a reordering.
-   *
-   * WHO IS IN IT, WITH NO NEW NUMBER. The leader plus everyone within `battlePulkThresholdT` of him
-   * in lap-normalised arc, capped at `battleMaxGroupSize`. Both keys ship, and both are already this
-   * camera's answer to "are these racers together" — the arc unit exists because world px meant 1.5%
-   * of a lap on one track and 4.9% on another (see battleGroup.js). `detectPulkGroup` itself cannot
-   * be reused: its third condition demands the frontmost member be at rank 3 or worse, because P1/P2
-   * are LEADER territory, so it excludes the front by construction.
-   *
-   * @returns {Array<{x:number,y:number}>} the surviving members, live objects from THIS frame
+   * @returns {number} cam.zoom ceiling; Infinity outside the endgame or when switched off
    */
-  _frontGroupNow(racers, raceState) {
-    if (!this._frontGroupFraming) return [];
-    if (!racers || racers.length === 0) return [];
-    if (this._frontGroupIdx === null) {
-      // Not captured yet — capture only once the endgame window is open.
-      if (!(raceState?.finishT > 0)) return [];
-      let maxT = 0;
-      for (const r of racers) if (r.t > maxT) maxT = r.t;
-      if (!(maxT / raceState.finishT > this._endgameThreshold)) return [];
-      const live = racers.filter((r) => r && !r.finished);
-      if (live.length === 0) return [];
-      this._frontGroupIdx = this._levelWithLeader(live).map((r) => r.index);
-    } else {
-      // ── ADMIT-ONLY (FRONT-GROUP-5) ───────────────────────────────────────────────────────────
-      //
-      // Never evict, never re-sort, only ADD a racer who has come level. That asymmetry is the whole
-      // safety argument: FINISH-PAIR-1's defect was a guaranteed set being re-sorted, where every
-      // SWAP moved the picture discontinuously. An admission cannot swap — the set only grows, so a
-      // member's place in it never changes and the ceiling can only fall (a wider shot), which is
-      // the direction a guarantee is allowed to move in anyway.
-      //
-      // IT IS ALSO WHAT MAKES "LEVEL" MEAN ANYTHING. Measured at the capture frame alone the group
-      // is usually just the leader — median 1 of 20 at one body length — because the field is not
-      // level at the endgame threshold, it becomes level at the LINE. A set captured once and never
-      // added to would therefore promise nothing on exactly the races this exists for.
-      // ADMISSIONS CLOSE AT THE FIRST CROSSING, and that bound is not tidiness — without it this
-      // admits the WHOLE FIELD, measured, on every one of 27 races at both tested lengths. The
-      // reason is that "the leader" among UNFINISHED racers walks backwards through the field as the
-      // front goes home: once the real leader is across, the next racer becomes the reference, then
-      // the next, and an admit-only set accumulates everybody behind them. Closing at the line also
-      // says the right thing — who is fighting for the win is decided by the line, and after it the
-      // participants are known rather than still being nominated.
-      if ((raceState?.finishedCount ?? 0) === 0) {
-        const live = racers.filter((r) => r && !r.finished);
-        for (const r of this._levelWithLeader(live)) {
-          if (!this._frontGroupIdx.includes(r.index)) this._frontGroupIdx.push(r.index);
-        }
-      }
-    }
-    const out = [];
-    for (const i of this._frontGroupIdx) {
-      const r = this._findByIndex(racers, i, null);
-      if (r && !r.finished) out.push(r);
-    }
-    return out;
-  }
-
-  /**
-   * WHO IS LEVEL WITH THE LEADER — the owner's own definition, in the racer's own length.
-   *
-   * HIS WORDS: a racer running BEHIND another in his line is not part of the group; he is shown
-   * anyway, because he is behind the other one. If only two are leading, seeing those two is enough.
-   * If six share the whole width of the track, all six must be seen — and yes, the shot cannot close
-   * in then, but a real camera at a horse race could not either and still showed them all.
-   *
-   * SO THE CRITERION IS BEING LEVEL, AND THE SIZE FOLLOWS FROM THE RACE. There is no cap: twelve
-   * racers level is a group of twelve and the shot is whatever that costs. What was here before was
-   * the opposite — `battlePulkThresholdT` is 5% of a LAP, which late in a race admits everybody (on
-   * eleven of 27 measured races all twenty racers fell inside it), so `battleMaxGroupSize` was doing
-   * all of the selecting and "the front group" meant "the leading six at one instant".
-   *
-   * THE UNIT IS THE RACER'S OWN LENGTH, and the director already holds it: `_drawnBodyWidthRefPx`,
-   * the same world-px body reference the pair guarantee pads with. `t` is lap-normalised, so a gap
-   * in `t` becomes a gap in world px through the shape's own total length — no constant enters.
-   *
-   * A RACER TUCKED DIRECTLY BEHIND ANOTHER IS EXCLUDED BY CONSTRUCTION, which is his point restated:
-   * membership is a gap ALONG the track to the leader, so a racer a length or more back is out
-   * however close he is across the track. He is not abandoned — he is behind somebody who IS held,
-   * so the frame that holds the one in front contains the road he is on.
-   *
-   * @param {Array} live  the unfinished field
-   * @returns {Array} the leader and everyone level with him, frontmost first
-   */
-  _levelWithLeader(live) {
-    if (!live || live.length === 0) return [];
-    const sorted = [...live].sort((a, b) => b.t - a.t);
-    const leader = sorted[0];
-    const lengthPx = this._drawnBodyWidthRefPx;
-    const total = this._shape?.getTotalLength?.() ?? 0;
-    // Without a shape or a body reference there is no length to measure in; the leader alone is the
-    // honest answer, and it costs nothing because a one-racer group constrains nothing.
-    if (!(lengthPx > 0) || !(total > 0)) return [leader];
-    const reachT = (this._frontGroupLevelBodies * lengthPx) / total;
-    const out = [leader];
-    for (let i = 1; i < sorted.length; i++) {
-      if (leader.t - sorted[i].t <= reachT) out.push(sorted[i]);
-    }
-    return out;
-  }
-
-  /**
-   * THE FRONT-GROUP CEILING — the tightest cam.zoom that still holds the whole captured group.
-   *
-   * IT IS `companyGuarantee`, NOT A NEW COMPUTATION. That function already answers exactly this
-   * question — the tightest zoom at which N racers around an anchor are still inside the frame,
-   * measured from where the anchor actually sits, per-axis and orientation-aware. What it could not
-   * do is answer it HERE: `_companyCeiling` returns Infinity on every PAIR-guaranteed state, which
-   * is BATTLE_ZOOM, LEAD_CHANGE and PHOTO_FINISH — precisely the shots the owner is describing. So
-   * this is not a revival of a retired guarantee; the guarantee was never running here at all.
-   *
-   * CAMERA-COMPANY-1 §5 gave the reason for that exclusion as an argument rather than a measurement:
-   * "the pair states already guarantee two named contenders, which IS company", and adding a
-   * headcount "would fight a guarantee that is already doing the job ... whenever the field is
-   * strung out behind a close duel". The case it did not consider is the one the owner watched: the
-   * field NOT strung out, six racers nearly level, of whom the pair guarantee protects two and says
-   * nothing about the other four.
-   *
-   * `minVisible` is `group.length + 1` so that ALL of them are held: `companyGuarantee` subtracts
-   * one for the anchor itself, and the anchor here (a pair midpoint, or the leader) is not
-   * necessarily a member, so every member must be counted as company.
-   *
-   * @returns {number} cam.zoom ceiling; Infinity when nothing constrains
-   */
-  _frontGroupCeiling(subjects, group, frameSize) {
-    if (!this._frontGroupFraming || !subjects?.point) return Infinity;
-    if (!group || group.length === 0) return Infinity;
+  _endgameCorridorCeiling(subjects, frameSize, racers, raceState) {
+    if (!this._endgameCorridorFloor) return Infinity;
+    if (!subjects?.point || !(this._trackWidthPx > 0)) return Infinity;
+    if (!(raceState?.finishT > 0)) return Infinity;
+    let maxT = 0;
+    for (const r of racers) if (r && r.t > maxT) maxT = r.t;
+    if (!(maxT / raceState.finishT > this._endgameThreshold)) return Infinity;
     const at = anchorScreenPoint(
       frameSize.width,
       frameSize.height,
       this._forwardFracNow(),
       this._headingScreen(subjects.t)
     );
-    // COMPANY_FRAME_PCT for the same reason `_companyCeiling` uses it: a guaranteed companion needs
-    // to be visible with a margin, not inside the subject's own safe region.
-    return companyGuarantee(
-      subjects.point,
-      group,
-      group.length + 1,
+    return corridorGuarantee(
+      this._headingAt(subjects.t),
+      this._trackWidthPx + this._drawnBodyWidthRefPx,
       this._proj.axisX,
       this._proj.axisY,
       frameSize.width,
       frameSize.height,
-      COMPANY_FRAME_PCT,
-      at,
-      // FRONT-GROUP-2: the body, from the same field the PAIR guarantee reads two lines away. A
-      // guaranteed racer cut in half reads as lost to the eye, and it passed every centre test.
-      this._drawnBodyWidthRefPx
+      1,
+      at
     );
   }
 
@@ -3020,89 +2878,41 @@ export class CameraDirector {
       // others, which is why the shot it hands back at the line is bit-for-bit the state's own.
       // `stateZoom` above IS the run-in's second bound; it needed no code.
       line: _runInCeiling,
+      // ── NEVER TIGHTER THAN THE TRACK IS WIDE (FRONT-GROUP-6) ─────────────────────────────────
+      //
+      // The owner's own solution, and it replaces a great deal: racers can only spread across the
+      // CORRIDOR, so a frame that holds the corridor's full width shows everyone who is level —
+      // however many there are, and whoever they are. No group to define, no membership to follow,
+      // and the shot is bounded ABOVE as well, because a track width is a fixed quantity rather
+      // than whatever the widest pair happened to need.
+      //
+      // IT IS `corridorGuarantee`, UNCHANGED, AND THAT IS THE WHOLE IMPLEMENTATION. That function
+      // already measures the full width PERPENDICULAR to the heading and asks the frame for its
+      // real reach in that direction, per side of the anchor — so THE DIAGONAL IS ALREADY HANDLED:
+      // the perpendicular is projected through each axis scale separately (`perp.x*axisX`,
+      // `perp.y*axisY`) and compared against the frame's true chord along that screen direction, so
+      // a corridor lying at 40 degrees asks for more zoom-out than one lying flat, exactly as it
+      // must, and never asks for both axes at once the way an axis-blind bound would.
+      //
+      // BODY OVERHANG is paid for by widening the corridor rather than by a new parameter: the
+      // guarantee is asked to fit `trackWidth + one body`, which is half a body beyond each edge.
+      // `_drawnBodyWidthRefPx` is the NARROW body reference and covers 38.5% of the drawn sprite
+      // (20.04 world px against 52 on ice-track), so a racer riding the very edge of the corridor
+      // can still be clipped by the remainder; what it cannot be any more is half out of frame.
+      //
+      // `innerFramePct` is 1 here DELIBERATELY. The promise is "the track's width fits", and the
+      // safe-region inset belongs to the SUBJECT, not to the road; adding it would widen every
+      // endgame shot by a further 15% for a margin nobody asked for.
+      corridor: this._endgameCorridorCeiling(subjects, frameSize, racers, raceState),
     };
-    // FRONT-GROUP-1: THE FRONT GROUP BOUNDS THE TIGHTENING, AND ONLY THE TIGHTENING.
-    //
-    // Computed after the others because it is FLOORED by what they have already asked for. A ceiling
-    // is a maximum cam.zoom, so a SMALLER ceiling is a WIDER shot, and the front group's ceiling is
-    // smaller than the photo finish's by construction — that is the whole mechanism: it stops the
-    // close at the width that still holds the group.
-    //
-    // "IT MUST NEVER WIDEN THE SHOT BEYOND WHAT IS ALREADY ASKED FOR" is therefore not a clamp
-    // against THIS frame's other ceilings — against those it would be a no-op, since it only ever
-    // does anything when it is the smallest of them. It is a clamp against the WIDEST WIDTH THE
-    // ENDING HAS ALREADY REACHED: `_frontGroupFloor`, the running minimum of the other ceilings
-    // since the window opened. The front group may hold the shot anywhere between the ordinary shot
-    // and the width the camera has already shown, and may not open it one pixel further. No new
-    // number: the bound is a width this ending already delivered.
-    //
-    // Where the group is genuinely too spread to hold even at that width, the floor binds instead,
-    // the picture is exactly what it would have been, and the harness COUNTS the frame — rather than
-    // the camera opening to the world to keep a promise it cannot keep.
-    //
-    // It cannot fight the line guarantee, for the reason nothing here fights anything: this is a
-    // Math.min over ceilings, so the widest ask wins and the rest are simply not binding. Early in
-    // the run-in the line is far wider and this is inert; as the leader closes, the line's ceiling
-    // rises past this one and THIS becomes the binding term — which is exactly the moment the owner
-    // is describing, the tightening that used to continue all the way to the photo-finish zoom.
-    const _othersMin = Math.min(
+    const guaranteed = Math.min(
       _ceilings.state,
       _ceilings.guarantee,
       _ceilings.company,
       _ceilings.field,
-      _ceilings.line
+      _ceilings.line,
+      _ceilings.corridor
     );
-    // IT RETIRES WHEN THE GROUP IS HOME, NOT WHEN THE FIRST OF THEM IS (FRONT-GROUP-3).
-    //
-    // Retiring at the first crossing was the owner's own counter-example. Every fully-outside frame
-    // measured came AFTER that crossing, and the frame he photographed was one of them: a promise
-    // that ends the instant the winner arrives is not a promise about the racers fighting for the
-    // win, because it ends exactly where the fight is decided.
-    //
-    // THE CONDITION IS THE GROUP'S OWN MEMBERSHIP, which is the whole reason it is safe.
-    // `_frontGroupNow` drops a member the frame he finishes, so the set DRAINS TO EMPTY as the fight
-    // resolves and the bound retires when the LAST of them is across — not on a clock, not on a
-    // count of the field, and never on somebody who was never in the group.
-    //
-    // WHY THAT IS NOT THE 84-EMPTY-FRAME FAILURE AGAIN. Retiring at `_companyIsHome` left the bound
-    // holding whoever of the group was STILL COMING while the finish shot aimed at its fixed
-    // lookback point, and it tightened onto them: 84 frames with no racer on screen on luger-hill
-    // seed 9. That set drained to a STRAGGLER and stopped there, because `_companyIsHome` counts the
-    // FIELD's finishers rather than the group's. This one drains to nothing, so the bound cannot
-    // outlive the fight it exists for.
-    // ...OR WHEN THE FINISH SEQUENCE TAKES THE ANCHOR AWAY FROM THE RACERS, and that second half was
-    // measured rather than reasoned. A guarantee WIDENS; it may never steer (Lesson 192), so it can
-    // only keep somebody in frame relative to the point the shot is already built on. Once the drama
-    // pulse or FINISH_OVERVIEW puts that point at a FIXED place behind the line, the group has no
-    // relation to it: holding two still-coming members against an anchor they are not near widened
-    // nothing and tightened as they converged on it — 60 frames with no racer on screen at all on
-    // luger-hill seed 9, at four finishers, long after the fight was over.
-    //
-    // The crossing itself is NOT that moment and this is why the distinction is worth the line: the
-    // photo finish holds its own shot across the line and only hands over to the drama pulse
-    // afterwards, so the frame the owner photographed — a racer cut at the first crossing — is still
-    // inside the bound.
-    const _frontGroupLive = this._frontGroupNow(racers, raceState);
-    const _frontRetires =
-      (this._frontGroupIdx !== null && _frontGroupLive.length === 0) ||
-      this._inFinishDrama ||
-      this._inFinishMode;
-    if (_frontRetires && this._frontGroupWasBinding && !this._frontGroupReleased) {
-      this._frontGroupReleased = true;
-      this._beginRunInGlide(ts);
-    }
-    const _frontRaw = _frontRetires
-      ? Infinity
-      : this._frontGroupCeiling(subjects, _frontGroupLive, frameSize);
-    if (_frontRaw < Infinity) {
-      this._frontGroupFloor =
-        this._frontGroupFloor === null ? _othersMin : Math.min(this._frontGroupFloor, _othersMin);
-    }
-    _ceilings.frontGroup =
-      this._frontGroupFloor === null ? _frontRaw : Math.max(_frontRaw, this._frontGroupFloor);
-    // Recorded so the harness can say "the group was too spread here" instead of inferring it.
-    this._frontGroupClamped = _frontRaw < _ceilings.frontGroup;
-    const guaranteed = Math.min(_othersMin, _ceilings.frontGroup);
     // ── RUNIN-PACE-1 §3: A TIGHTEN-RATE LIMIT WAS BUILT HERE AND MEASURED OUT ───────────────────
     //
     // The candidate was sound in principle: every ceiling is a LOWER BOUND ON WIDTH, so approaching
@@ -3134,7 +2944,6 @@ export class CameraDirector {
     this._runInBinding = this._runInActive && guaranteed >= _runInCeiling - 1e-12;
     let _binding = 'state';
     for (const k of Object.keys(_ceilings)) if (_ceilings[k] < _ceilings[_binding]) _binding = k;
-    this._frontGroupWasBinding = _binding === 'frontGroup';
     this._framingProbe = {
       ceilings: _ceilings,
       binding: _binding,
@@ -3142,10 +2951,6 @@ export class CameraDirector {
       runInActive: this._runInActive,
       runInBinding: this._runInBinding,
       runInCeiling: _runInCeiling,
-      frontGroupRaw: _frontRaw,
-      frontGroupFloor: this._frontGroupFloor,
-      frontGroupClamped: this._frontGroupClamped,
-      frontGroupSize: this._frontGroupIdx === null ? 0 : this._frontGroupIdx.length,
       stateBinding: guaranteed >= stateZoom - 1e-12,
       frameW: frameSize.width,
       frameH: frameSize.height,

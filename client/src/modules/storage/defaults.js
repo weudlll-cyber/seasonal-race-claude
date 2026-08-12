@@ -606,43 +606,12 @@ export const DEFAULT_CAMERA_CONFIG = {
   // WHAT THIS REPLACED: an OVERVIEW-width cap and a delayed engagement. Both are gone — the run-in
   // composes from the endgame threshold again and the pull-out is whatever the line requires.
   runInShot: true,
-  // ── THE FRONT GROUP BOUNDS THE TIGHTENING (FRONT-GROUP-1) ──────────────────────────────────────
-  //
-  // The owner, watching a race with about six racers nearly level: zooming all the way to the
-  // photo-finish zoom loses racers out of the shot. Measured before anything was built — ten tracks,
-  // three seeds — the shot loses at least one of the front group on 31.6% of photo-finish frames,
-  // and on one race it holds NONE of the six.
-  //
-  // So the tightening now STOPS at the width that holds the whole front group, and continues only
-  // as they converge. It is a ceiling like every other guarantee: it can only widen, never steer.
-  //
-  // IT INTRODUCES NO NEW NUMBER, which is why there is one key here and not three. "The front group"
-  // is the leader plus everyone within `battlePulkThresholdT` of him in lap-normalised arc, capped
-  // at `battleMaxGroupSize` — both shipped keys, and both already the camera's own answer to "are
-  // these racers together". `detectPulkGroup` could not be reused: its third condition requires the
-  // frontmost member to be at rank 3 or worse, because P1/P2 are LEADER territory, so it excludes
-  // the front by construction. The unit and the thresholds transfer; the function does not.
-  //
-  // MEMBERSHIP IS CAPTURED ONCE, at the frame the endgame window opens, and thereafter only SHRINKS
-  // as members finish. FINISH-PAIR-1 is why: a guaranteed set that is re-sorted every frame moves
-  // the picture on every swap. Measured on this definition, a live per-frame membership would have
-  // changed 597 times across 27 races; the captured one changes 0 times.
-  //
-  // IT RETIRES AT THE FIRST CROSSING, and the release is GLIDED. Both were measured rather than
-  // chosen — see the block in `CameraDirector._setTargets`, which records the 84 empty frames the
-  // un-retired form produced and the 29 the un-glided release produced.
-  frontGroupFraming: true,
-  // HOW LEVEL IS LEVEL — in the racer's OWN LENGTH, which is the only unit that means the same thing
-  // on a 3072 px world and a 6144 px one. A racer is in the group while he is within this many body
-  // lengths of the leader ALONG the track.
-  //
-  // WHAT IT REPLACED, and why the replacement is not a like-for-like swap: the group used to be
-  // "everyone within `battlePulkThresholdT` of the leader, capped at `battleMaxGroupSize`". That
-  // threshold is 5% of a LAP, which late in a race admits the whole field — on eleven of 27 measured
-  // races all twenty racers fell inside it — so the CAP was doing all of the selecting and the
-  // group meant "the leading six at one instant". There is no cap now: if twelve racers are level
-  // the group is twelve and the shot is whatever that costs, which is the owner's own ruling.
-  frontGroupLevelBodies: 2,
+  // ── NEVER TIGHTER THAN THE TRACK IS WIDE (FRONT-GROUP-6) ───────────────────────────────────────
+  // Through the endgame the shot never closes past the corridor's own full width plus a body. His
+  // solution, and it needs nothing defined: racers can only spread ACROSS the corridor, so a frame
+  // holding its width holds everyone who is level, however many. Bounded above as well as below —
+  // a track width is a fixed quantity, unlike whatever the widest pair happened to need.
+  endgameCorridorFloor: true,
   // ── THE START CEREMONY (START-CEREMONY-CAMERA-1) ───────────────────────────────────────────────
   // The race opens on the whole track, held still, then eases in to the starting formation until it
   // is as large as it can be with every racer still in frame. Both ends are GEOMETRY and neither is
