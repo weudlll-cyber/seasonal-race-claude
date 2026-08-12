@@ -8,6 +8,15 @@ order, and this is the survey the ending's equivalent is built on.
 **What it is NOT:** the values. Those live in `client/src/modules/storage/defaults.js`, and this
 document deliberately states none of them.
 
+**Where the ending's FRAMING comes from, which is not in this table (RUNIN-1, 2026-08-12).** Every
+phase below inherits a shot the RUN-IN composed: from the moment the leader is within reach of the
+line, the run-in bounds whatever shot is running, opening wide-and-back over `runInOpenMs` and
+closing to the ordinary shot exactly at the crossing — where this table begins. So phase 2's width
+is set before phase 2 starts, and nothing here decides it.
+[CAMERA_DIRECTOR §3a](CAMERA_DIRECTOR.md) is its one home; this line exists so a reader looking for
+"what decides how the ending LOOKS" is not left with only durations. **This document owns the
+LENGTHS; the camera document owns the FRAMING.**
+
 ---
 
 ## The two kinds of phase, because they need opposite treatment
