@@ -15,7 +15,12 @@
 
 import { describe, it, expect } from 'vitest';
 
-import { endingHoldMs, endingTotalMs, SCREEN_TRANSITION_MS } from './endingSchedule.js';
+import {
+  endingHoldMs,
+  endingTotalMs,
+  endingOnRaceScreenMs,
+  SCREEN_TRANSITION_MS,
+} from './endingSchedule.js';
 import { DEFAULT_CAMERA_CONFIG } from '../../modules/storage/defaults.js';
 
 const PAUSE = DEFAULT_CAMERA_CONFIG.finishPauseMs;
@@ -110,5 +115,49 @@ describe('ENDING-HOLD-1 — the total the Dev Screen shows', () => {
 
   it('every phase at 0 leaves only the screen transition, which is not a key', () => {
     expect(total({ holdMs: 0, pauseMs: 0, podiumBeatMs: 0 })).toBe(SCREEN_TRANSITION_MS);
+  });
+});
+
+// ── CAMERA-ENDING-WINDOW-1 ──────────────────────────────────────────────────────────────────────
+//
+// WHAT BREAKS IF THESE GO, which is the question R7 asks first. `endingOnRaceScreenMs` has two
+// consumers that must never disagree: the race screen's navigate-away timer, and the window of
+// `scripts/camera-fingerprint.mjs`. The moment they diverge, the instrument is measuring a
+// different ending from the one that ships — which is the exact defect this function exists to make
+// impossible. So what is asserted is the RELATION to `endingTotalMs` rather than a number: the
+// race-screen span is the whole ending minus precisely the terms the race screen is gone for.
+describe('CAMERA-ENDING-WINDOW-1 — the span the race screen is still up for', () => {
+  const onScreen = (over = {}) =>
+    endingOnRaceScreenMs({
+      holdMs: DEFAULT_CAMERA_CONFIG.finishHoldAfterLastMs,
+      pauseMs: PAUSE,
+      ...over,
+    });
+
+  it('is the whole ending MINUS the transition and the podium, which happen after it', () => {
+    const whole = endingTotalMs({
+      holdMs: DEFAULT_CAMERA_CONFIG.finishHoldAfterLastMs,
+      pauseMs: PAUSE,
+      podiumBeatMs: BEAT,
+      transitionMs: SCREEN_TRANSITION_MS,
+    });
+    expect(onScreen()).toBe(whole - SCREEN_TRANSITION_MS - 4 * BEAT);
+  });
+
+  it('the podium beat cannot reach it — that build-up belongs to the RESULT screen', () => {
+    // The two functions take the same shape, so a caller CAN pass a podium beat here. It must buy
+    // nothing, or the fingerprint's window would grow on a change the camera never sees.
+    expect(endingOnRaceScreenMs({ holdMs: 0, pauseMs: PAUSE, podiumBeatMs: 9999 })).toBe(PAUSE);
+  });
+
+  it('grows by exactly the hold, the same way the total does', () => {
+    expect(onScreen({ holdMs: 2500 })).toBe(onScreen({ holdMs: 0 }) + 2500);
+  });
+
+  it('a broken or absent pause reads as 0 rather than NaN — the window must stay finite', () => {
+    // A NaN window would make the fingerprint's loop run to its 200 s ceiling on every track.
+    expect(endingOnRaceScreenMs({ holdMs: 0, pauseMs: undefined })).toBe(0);
+    expect(endingOnRaceScreenMs({ holdMs: 0, pauseMs: Number.NaN })).toBe(0);
+    expect(Number.isFinite(endingOnRaceScreenMs({ holdMs: NaN, pauseMs: NaN }))).toBe(true);
   });
 });

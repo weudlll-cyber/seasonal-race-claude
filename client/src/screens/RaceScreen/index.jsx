@@ -92,7 +92,7 @@ import { initProbe, recordFrame, recordFrameCamera } from '../../modules/rAFProb
 import BrandLogoOverlay from './BrandLogoOverlay.jsx';
 import CeremonyBrandCard from './CeremonyBrandCard.jsx';
 import WinnerCard, { WINNER_CARD_FADE_MS, winnerCardWindowMs } from './WinnerCard.jsx';
-import { endingHoldMs } from './endingSchedule.js';
+import { endingOnRaceScreenMs } from './endingSchedule.js';
 import './RaceScreen.css';
 import {
   DEFAULT_CAMERA_CONFIG,
@@ -1090,10 +1090,16 @@ export default function RaceScreen() {
             // the frame the last racer finishes (the same frame sets PHASE.FINISHED, and the arm
             // above is `st.phase === PHASE.RACING`, so it cannot run twice). At `0` the arithmetic
             // is `0 + pauseMs` — the ending that existed before this key.
-            const holdMs = endingHoldMs(cameraConfigRef.current?.finishHoldAfterLastMs);
+            // CAMERA-ENDING-WINDOW-1: `hold + pause` is now computed by `endingOnRaceScreenMs` so
+            // that this timer and `scripts/camera-fingerprint.mjs`'s window read ONE function. The
+            // instrument used to stop on the frame this timer starts, which is why it had never
+            // rendered a FINISHED frame. Same arithmetic, same result; one home.
             finishNavTimerRef.current = setTimeout(
               () => fadeNavRef.current('/results'),
-              holdMs + pauseMs
+              endingOnRaceScreenMs({
+                holdMs: cameraConfigRef.current?.finishHoldAfterLastMs,
+                pauseMs,
+              })
             );
 
             // WINNER-CARD-1: the card is fired HERE, from the same block that starts the pause, so
