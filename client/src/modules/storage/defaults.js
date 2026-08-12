@@ -356,7 +356,7 @@ export const DEFAULT_CAMERA_CONFIG = {
   // Finish sequence: drama pulse duration (was hardcoded), smooth zoom-out, and pause before leaderboard.
   finishDramaDurationMs: 1500, // ms of LEADER_ZOOM on the winner before FINISH_OVERVIEW begins
   finishOverviewZoomOutDurationMs: 3000, // ms for smooth zoom-out during FINISH_OVERVIEW
-  // 2500 -> 3500 ON HIS EYE, 2026-08-13: _"die Anzeige ist zu kurz"_ — "the display is too short",
+  // 2500 -> 3500 ON HIS EYE, 2026-08-11: _"die Anzeige ist zu kurz"_ — "the display is too short",
   // about the winner card. RAISING THE CARD ALONE WOULD HAVE DONE NOTHING, because the card's window
   // is `min(winnerCardMs, finishPauseMs)` and this was the binding half — so both moved together.
   // This is the ROOM; `winnerCardMs` below is the tenant.
@@ -406,7 +406,7 @@ export const DEFAULT_CAMERA_CONFIG = {
   // timer is scheduled and no class is ever put on an element, so "off" is an absence rather than a
   // fast animation.
   //
-  // 700 -> 1500 ON HIS EYE, 2026-08-13, and the number is HIS rather than mine: he watched the
+  // 700 -> 1500 ON HIS EYE, 2026-08-11, and the number is HIS rather than mine: he watched the
   // build-up on a production build, moved the slider himself, and reported where he landed. His
   // words are the evidence, so the original stays and the English goes beside it (CLAUDE.md's
   // quotation exception): _"das sieht nett aus, mir ging es zu schnell — ich habe auf 1500 ms
@@ -440,7 +440,7 @@ export const DEFAULT_CAMERA_CONFIG = {
   // ⚠ RAISING THIS ALONE DOES NOTHING once it reaches `finishPauseMs` above. The window is
   // `min(winnerCardMs, finishPauseMs)`, so whichever is smaller decides — move the pause with it.
   //
-  // 1800 -> 3000 ON HIS EYE, 2026-08-13: _"die Anzeige ist zu kurz"_ — "the display is too short".
+  // 1800 -> 3000 ON HIS EYE, 2026-08-11: _"die Anzeige ist zu kurz"_ — "the display is too short".
   // The pause went 2500 -> 3500 in the same breath, because at 1800 the CARD's key was the binding
   // half and at 3000 the PAUSE would have become one.
   //

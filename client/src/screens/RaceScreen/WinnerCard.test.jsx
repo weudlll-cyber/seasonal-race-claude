@@ -2,7 +2,7 @@
 // File:        WinnerCard.test.jsx
 // Path:        client/src/screens/RaceScreen/WinnerCard.test.jsx
 // Project:     RaceArena — WINNER-CARD-1
-// Created:     2026-08-13
+// Created:     2026-08-11
 // Description: What the closing card CLAIMS: it names the actual winner, it says it once, it goes
 //              away, and at 0 it does not exist.
 //
