@@ -85,7 +85,9 @@ const SRC = (() => {
   const a = process.argv.find((x) => x.startsWith("--src="));
   // `resolve`, not `join`: the test writes its fixture into the system temp directory, which is an
   // ABSOLUTE path on a different drive letter on this machine.
-  return a ? resolve(ROOT, a.slice(6)) : join(ROOT, "client/src/screens/RaceScreen");
+  return a
+    ? resolve(ROOT, a.slice(6))
+    : join(ROOT, "client/src/screens/RaceScreen");
 })();
 const SOURCE_ONLY = process.argv.includes("--source");
 
@@ -161,7 +163,11 @@ if (card) {
   } else {
     notes.push(`ScoreboardCard props: ${props.join(", ") || "(none)"}`);
     for (const p of props) {
-      if (RANK_PROPS.some((r) => new RegExp(`(^|[^a-z])${r}s?([^a-z]|$)`, "i").test(p))) {
+      if (
+        RANK_PROPS.some((r) =>
+          new RegExp(`(^|[^a-z])${r}s?([^a-z]|$)`, "i").test(p),
+        )
+      ) {
         problems.push(
           `ScoreboardCard.jsx takes a prop \`${p}\`. The card is racer-bound; nothing about a place ` +
             `may reach it. docs/STANDINGS-ARCHITECTURE.md.`,
@@ -183,7 +189,11 @@ if (board) {
     const given = [...el[1].matchAll(/(\w+)\s*=/g)].map((m) => m[1]);
     notes.push(`Scoreboard hands the card: ${given.join(", ")}`);
     for (const p of given) {
-      if (RANK_PROPS.some((r) => new RegExp(`(^|[^a-z])${r}s?([^a-z]|$)`, "i").test(p))) {
+      if (
+        RANK_PROPS.some((r) =>
+          new RegExp(`(^|[^a-z])${r}s?([^a-z]|$)`, "i").test(p),
+        )
+      ) {
         problems.push(
           `Scoreboard.jsx passes \`${p}\` to ScoreboardCard. A rank travelling as a prop re-renders ` +
             `every card that moved — the exact cost the two layers removed.`,
@@ -232,7 +242,11 @@ if (!SOURCE_ONLY && problems.length === 0) {
     execFileSync(
       process.execPath,
       [join(ROOT, "client/node_modules/vitest/vitest.mjs"), "run", TEST_FILE],
-      { cwd: join(ROOT, "client"), encoding: "utf8", stdio: ["ignore", "pipe", "pipe"] },
+      {
+        cwd: join(ROOT, "client"),
+        encoding: "utf8",
+        stdio: ["ignore", "pipe", "pipe"],
+      },
     );
     measured = `PASS in ${((Date.now() - t) / 1000).toFixed(1)}s`;
   } catch (e) {
@@ -259,4 +273,6 @@ if (problems.length) {
   );
   process.exit(1);
 }
-console.log("\n  OK — the place is slot-bound, and a rank change is one transform.\n");
+console.log(
+  "\n  OK — the place is slot-bound, and a rank change is one transform.\n",
+);

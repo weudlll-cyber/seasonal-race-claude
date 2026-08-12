@@ -130,18 +130,21 @@ for (const pair of PAIRS) {
     fail(`cannot read index ${INDEX}: ${e.message}`);
   }
 
-// A report is indexed iff its filename appears as a markdown LINK TARGET — i.e. immediately after
-// `(` (a sibling link `(NAME.md)`) or `/` (a pathed link `(dir/NAME.md)`). Matching the bare
-// filename anywhere would false-pass on substrings (e.g. "A.md" inside "DATA.md").
-  const isIndexed = (f) => indexText.includes(`(${f}`) || indexText.includes(`/${f}`);
+  // A report is indexed iff its filename appears as a markdown LINK TARGET — i.e. immediately after
+  // `(` (a sibling link `(NAME.md)`) or `/` (a pathed link `(dir/NAME.md)`). Matching the bare
+  // filename anywhere would false-pass on substrings (e.g. "A.md" inside "DATA.md").
+  const isIndexed = (f) =>
+    indexText.includes(`(${f}`) || indexText.includes(`/${f}`);
   const unindexed = reports.filter((f) => !isIndexed(f));
 
-// DIRECTION 2 (NIGHT-TOOLS-1): every sibling report INDEX.md links to must EXIST. Only `(NAME.md)`
-// sibling targets are considered — a pathed link points outside this guard's relationship and is
-// `check-doc-links`' business, not ours. Anchors are stripped before the check.
+  // DIRECTION 2 (NIGHT-TOOLS-1): every sibling report INDEX.md links to must EXIST. Only `(NAME.md)`
+  // sibling targets are considered — a pathed link points outside this guard's relationship and is
+  // `check-doc-links`' business, not ours. Anchors are stripped before the check.
   const linked = [
     ...new Set(
-      [...indexText.matchAll(/\(([A-Za-z0-9._-]+\.md)(?:#[^)]*)?\)/g)].map((m) => m[1]),
+      [...indexText.matchAll(/\(([A-Za-z0-9._-]+\.md)(?:#[^)]*)?\)/g)].map(
+        (m) => m[1],
+      ),
     ),
   ].filter((f) => f !== INDEX_NAME);
   const present = new Set(reports);

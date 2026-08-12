@@ -215,7 +215,11 @@ let cdSamplesSeen = null;
 // The brand the harness opens with. Only its TRUTHINESS reaches the canvas path, and the card is
 // DOM — so this is a marker that a brand beat exists, not a picture. Named rather than inlined so
 // the two places that must agree about it (the director and the frame arguments) read one value.
-const HARNESS_BRAND = { id: "render-fingerprint", name: "RaceArena", logo: true };
+const HARNESS_BRAND = {
+  id: "render-fingerprint",
+  name: "RaceArena",
+  logo: true,
+};
 
 const FRAMES_OVERRIDE = Number(
   (process.argv.find((a) => a.startsWith("--frames=")) ?? "").slice(9),
@@ -722,7 +726,7 @@ if (QUIET) {
   console.log(
     `RENDER ${COMBINED} (seed=${SEED} camSeed=${CAM_SEED}, ${RUN_GEOS.length} tracks, ${N} racers, ` +
       `countdown [${(cdSamplesSeen ?? []).map((p) => `${p.beat}@${Math.round(p.ms)}`).join(", ")}] ` +
-        `+ frames [${SAMPLE_AT.join(", ")}] of ${RUN_FRAMES})`,
+      `+ frames [${SAMPLE_AT.join(", ")}] of ${RUN_FRAMES})`,
   );
   for (const r of rows) {
     console.log(

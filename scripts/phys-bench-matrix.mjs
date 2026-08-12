@@ -80,7 +80,9 @@ if (ORDER !== "pass" && ORDER !== "size") {
 
 // `--sizes=85` re-measures ONE triple. A triple that a machine transition landed inside is not a
 // finding and must not be averaged into one — it is re-run, and both attempts are kept on disk.
-const FIELD_SIZES = (arg("sizes", "30,50,70,85,100") || "").split(",").map(Number);
+const FIELD_SIZES = (arg("sizes", "30,50,70,85,100") || "")
+  .split(",")
+  .map(Number);
 const ROSTER_SIZES = [70, 100];
 const ROSTERS = ["current", "long", "mixed"];
 const PROFILE_SIZES = [30, 100];
@@ -138,7 +140,11 @@ function run(tree, { racers, roster, label, nodeArgs = [] }) {
     throw new Error(`no [phys-bench ...] token from ${label}`);
   }
   const parsed = JSON.parse(m[1]);
-  const row = { tree: tree.label, ...parsed, wallSec: +((Date.now() - t0) / 1000).toFixed(1) };
+  const row = {
+    tree: tree.label,
+    ...parsed,
+    wallSec: +((Date.now() - t0) / 1000).toFixed(1),
+  };
   rows.push(row);
   console.log(
     `  ${row.tree.padEnd(6)} n=${String(racers).padStart(3)} roster=${roster.padEnd(7)} ` +
@@ -198,7 +204,9 @@ function profile(tree, racers) {
     join(OUTDIR, "profiles", `${label}.selftime.json`),
     JSON.stringify({ label, tree: tree.label, racers, ...summary }, null, 1),
   );
-  console.log(`    profile -> profiles/${label}.selftime.json  (${(summary.totalUs / 1000).toFixed(0)} ms sampled)`);
+  console.log(
+    `    profile -> profiles/${label}.selftime.json  (${(summary.totalUs / 1000).toFixed(0)} ms sampled)`,
+  );
   return { label, tree: tree.label, racers, ...summary };
 }
 
@@ -251,7 +259,11 @@ try {
       // clock warming up, not a roster.
       const seq = [...ROSTERS, ...[...ROSTERS].reverse()];
       seq.forEach((r, i) =>
-        run(TREES.chain, { racers: n, roster: r, label: `roster-chain-n${n}-${r}-r${i}` }),
+        run(TREES.chain, {
+          racers: n,
+          roster: r,
+          label: `roster-chain-n${n}-${r}-r${i}`,
+        }),
       );
     }
   }
@@ -284,4 +296,6 @@ const out = {
   profiles,
 };
 writeFileSync(join(OUTDIR, "matrix.json"), JSON.stringify(out, null, 1));
-console.log(`\nmatrix -> ${join(OUTDIR, "matrix.json")}   (${out.wallSec}s total)`);
+console.log(
+  `\nmatrix -> ${join(OUTDIR, "matrix.json")}   (${out.wallSec}s total)`,
+);

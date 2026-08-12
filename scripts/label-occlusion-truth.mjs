@@ -62,7 +62,10 @@ import {
   getEffectiveMaxTargetScreenPx,
   drawnRacerScreenPx,
 } from "../client/src/modules/autoSpriteScale.js";
-import { raceNumberLabel, assignRaceNumbers } from "../client/src/modules/raceNumbers.js";
+import {
+  raceNumberLabel,
+  assignRaceNumbers,
+} from "../client/src/modules/raceNumbers.js";
 import { QUICK_TEST_NAMES_MIXED } from "../client/src/modules/racerNames.js";
 import { effectiveZoom } from "../client/src/modules/camera/openTrackCamera.js";
 import { OPEN_TRACK_BASE_ZOOM } from "../client/src/modules/camera/CameraDirector.js";
@@ -77,15 +80,20 @@ const CH = 720;
 // TWO CONTRASTING TRACKS, the same pair LABEL-DEGRADE-1 used so the switch numbers are comparable:
 // searound is CLOSED and bunches the field into a repeating pack, river-run is OPEN and strings it
 // out. A rule that is calm on one and busy on the other has not been measured.
-const TRACKS = (arg("tracks", "searound,river-run") || "").split(",").filter(Boolean);
+const TRACKS = (arg("tracks", "searound,river-run") || "")
+  .split(",")
+  .filter(Boolean);
 const N = Number(arg("racers", "100"));
-const HOLD_MS = Number(arg("hold", String(DEFAULT_CAMERA_CONFIG.labelFormHoldMs)));
+const HOLD_MS = Number(
+  arg("hold", String(DEFAULT_CAMERA_CONFIG.labelFormHoldMs)),
+);
 // How often the name-on-racer check is run. Every frame would be exact and slow; every 6th frame is
 // ten samples a second, which cannot miss an overlap that a viewer could see.
 const SAMPLE_EVERY = 6;
 
 /** The same width rule for both forms — see the header on why an approximation is sound here. */
-const measureText = (fontPx) => (txt) => String(txt ?? "").length * fontPx * 0.5;
+const measureText = (fontPx) => (txt) =>
+  String(txt ?? "").length * fontPx * 0.5;
 
 const hits = (a, b) =>
   Math.min(a.right, b.right) > Math.max(a.left, b.left) &&
@@ -142,7 +150,9 @@ function runOne(geo, n, demoteHoldMs) {
     // Only the RACING phase: the start formation shows every name by design (the roll call).
     if (ts - raceStart < (cameraConfig.nameTagAllUntilMs ?? 0)) return;
     const cam = { zoom: cd.zoom, offsetX: cd.offsetX, offsetY: cd.offsetY };
-    const effX = isOpen ? effectiveZoom(cam.zoom, OPEN_TRACK_BASE_ZOOM) : cam.zoom * bsX;
+    const effX = isOpen
+      ? effectiveZoom(cam.zoom, OPEN_TRACK_BASE_ZOOM)
+      : cam.zoom * bsX;
     const effY = isOpen ? effX : cam.zoom * bsY;
     const displayScale = computeRenderDisplayScale(
       race.displaySize,
@@ -155,8 +165,16 @@ function runOne(geo, n, demoteHoldMs) {
       cameraConfig.minDrawnFrameFrac,
       CH,
     );
-    const racerScreenH = drawnRacerScreenPx(race.displaySize, displayScale, effY);
-    const racerScreenW = drawnRacerScreenPx(race.displaySize, displayScale, effX);
+    const racerScreenH = drawnRacerScreenPx(
+      race.displaySize,
+      displayScale,
+      effY,
+    );
+    const racerScreenW = drawnRacerScreenPx(
+      race.displaySize,
+      displayScale,
+      effX,
+    );
 
     // LABEL-FOCUS-1: the same exemptions the renderer applies. FRAME-INPUTS-1: through the SAME
     // assembly the game uses, rather than reaching into the director here. That is the whole point
@@ -201,7 +219,10 @@ function runOne(geo, n, demoteHoldMs) {
     // ── THE PASS/FAIL. Rebuilt from the SAME exported helpers the layout uses. ──
     if (frames % SAMPLE_EVERY === 0) {
       sampled++;
-      const offsetAbove = labelOffsetAbove(racerScreenH, cameraConfig.nameTagMarginPx);
+      const offsetAbove = labelOffsetAbove(
+        racerScreenH,
+        cameraConfig.nameTagMarginPx,
+      );
       const boxes = [];
       for (const r of s.racers) {
         if (!r || r.index == null) continue;

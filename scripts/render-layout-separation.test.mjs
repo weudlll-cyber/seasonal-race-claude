@@ -81,7 +81,10 @@ const FRAME = 240;
 // ── One mid-race frame, drawn at a given LAYOUT size ─────────────────────────────────────────────
 
 const geo = loadTracks({ only: TRACK })[0];
-assert.ok(geo, `track ${TRACK} not found — this test measures nothing without it`);
+assert.ok(
+  geo,
+  `track ${TRACK} not found — this test measures nothing without it`,
+);
 
 const identity = resolveIdentity({
   racers: 40,
@@ -98,7 +101,10 @@ attachRacerRenderState(race.st.racers);
 race.st.racers.forEach((r, i) => {
   r.name = HARNESS_NAMES[i % HARNESS_NAMES.length];
 });
-const harnessNumbers = assignRaceNumbers(race.st.racers.length, identity.raceSeed);
+const harnessNumbers = assignRaceNumbers(
+  race.st.racers.length,
+  identity.raceSeed,
+);
 race.st.racers.forEach((r) => {
   r.raceNumber = harnessNumbers[r.index] ?? null;
 });
@@ -108,17 +114,25 @@ race.st.racers.forEach((r) => {
 let camAt = null;
 let tsAt = 0;
 let raceStartAt = 0;
-runRace(race, identity, DEFAULT_CAMERA_CONFIG, ({ cd, ts, raceStart, frame }) => {
-  if (frame === FRAME) {
-    // `runRace` does not hand the caller `cd.update`'s return value, and it does not need to: that
-    // return is these three fields off the director itself (CameraDirector.js:1126).
-    camAt = { zoom: cd.zoom, offsetX: cd.offsetX, offsetY: cd.offsetY };
-    tsAt = ts;
-    raceStartAt = raceStart;
-    return false;
-  }
-});
-assert.ok(camAt && Number.isFinite(camAt.zoom), "no camera at the sampled frame");
+runRace(
+  race,
+  identity,
+  DEFAULT_CAMERA_CONFIG,
+  ({ cd, ts, raceStart, frame }) => {
+    if (frame === FRAME) {
+      // `runRace` does not hand the caller `cd.update`'s return value, and it does not need to: that
+      // return is these three fields off the director itself (CameraDirector.js:1126).
+      camAt = { zoom: cd.zoom, offsetX: cd.offsetX, offsetY: cd.offsetY };
+      tsAt = ts;
+      raceStartAt = raceStart;
+      return false;
+    }
+  },
+);
+assert.ok(
+  camAt && Number.isFinite(camAt.zoom),
+  "no camera at the sampled frame",
+);
 
 const { shape, st, meta, racerType, displaySize, trackWidthPx } = race;
 st.phase = PHASE.RACING;
@@ -152,7 +166,10 @@ const TRAILS = race.st.racers.map((r) => r.trail.map((p) => ({ ...p })));
  * @param {number} canvasW  what `renderRaceFrame` is told the frame is, in reference pixels
  * @param {number} canvasH
  */
-function drawDigest(canvasW = REFERENCE_CANVAS_W, canvasH = REFERENCE_CANVAS_H) {
+function drawDigest(
+  canvasW = REFERENCE_CANVAS_W,
+  canvasH = REFERENCE_CANVAS_H,
+) {
   race.st.racers.forEach((r, i) => {
     r.trail = TRAILS[i].map((p) => ({ ...p }));
   });
@@ -163,7 +180,11 @@ function drawDigest(canvasW = REFERENCE_CANVAS_W, canvasH = REFERENCE_CANVAS_H) 
     cam: camAt,
     ts: tsAt,
     shape,
-    raceData: { eventName: geo.name ?? geo.id, trackName: geo.id, subtitle: "" },
+    raceData: {
+      eventName: geo.name ?? geo.id,
+      trackName: geo.id,
+      subtitle: "",
+    },
     isOpenTrack: shape.isOpen,
     bsX,
     bsY,
@@ -205,7 +226,10 @@ test("the frame drawn here is a real frame, not an empty canvas", () => {
   const { ops } = drawDigest();
   // A floor, not a pin: it exists so a harness that silently stopped drawing cannot pass the checks
   // below by comparing nothing to nothing (Lesson 187).
-  assert.ok(ops > 500, `only ${ops} operations — the harness is not drawing the race`);
+  assert.ok(
+    ops > 500,
+    `only ${ops} operations — the harness is not drawing the race`,
+  );
 });
 
 test("the harness is deterministic — the same layout size twice draws the same stream", () => {
@@ -219,7 +243,10 @@ test("canvasW/canvasH really DO drive layout — a different size draws a differ
   // about a value the renderer ignores, and the guard below would be theatre.
   const reference = drawDigest().digest;
   for (const [w, h] of [
-    [Math.round(REFERENCE_CANVAS_W * 0.5), Math.round(REFERENCE_CANVAS_H * 0.5)],
+    [
+      Math.round(REFERENCE_CANVAS_W * 0.5),
+      Math.round(REFERENCE_CANVAS_H * 0.5),
+    ],
     [REFERENCE_CANVAS_W * 2, REFERENCE_CANVAS_H * 2],
   ]) {
     assert.notEqual(
@@ -235,7 +262,10 @@ test("THE GUARD: RaceScreen hands renderRaceFrame the REFERENCE, not the backing
   // Read as text, and it has to be: no behavioural test on `renderRaceFrame` can see what its caller
   // decides to pass. This is where the wrong value lived.
   const call = SCREEN_SRC.slice(SCREEN_SRC.indexOf("renderRaceFrame(ctx, {"));
-  assert.ok(call.length > 0, "the renderRaceFrame call site was not found — this file moved");
+  assert.ok(
+    call.length > 0,
+    "the renderRaceFrame call site was not found — this file moved",
+  );
   assert.match(
     call,
     /canvasW:\s*CANVAS_W\b/,
@@ -258,7 +288,10 @@ test("...and those constants ARE the reference — a drifted copy would defeat t
   // The guard above would pass just as happily against a drifted pair, so the pair is checked.
   const w = /^const CANVAS_W = (\d+);$/m.exec(SCREEN_SRC);
   const h = /^const CANVAS_H = (\d+);$/m.exec(SCREEN_SRC);
-  assert.ok(w && h, "RaceScreen no longer declares CANVAS_W / CANVAS_H as plain constants");
+  assert.ok(
+    w && h,
+    "RaceScreen no longer declares CANVAS_W / CANVAS_H as plain constants",
+  );
   assert.equal(Number(w[1]), REFERENCE_CANVAS_W);
   assert.equal(Number(h[1]), REFERENCE_CANVAS_H);
 });

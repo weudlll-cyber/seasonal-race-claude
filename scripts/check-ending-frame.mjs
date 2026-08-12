@@ -64,14 +64,24 @@ const SABOTAGE = process.argv.includes("--sabotage");
 const { DEFAULT_CAMERA_CONFIG, DEFAULT_CONFIG_WORLD } = await import(
   u("client/src/modules/storage/defaults.js")
 );
-const { EditorShape } = await import(u("client/src/modules/track-editor/EditorShape.js"));
-const { CameraDirector } = await import(u("client/src/modules/camera/CameraDirector.js"));
+const { EditorShape } = await import(
+  u("client/src/modules/track-editor/EditorShape.js")
+);
+const { CameraDirector } = await import(
+  u("client/src/modules/camera/CameraDirector.js")
+);
 const { createRaceFromIdentity, stepRacePhysics, FIXED_DT } = await import(
   u("client/src/modules/raceCore.js")
 );
-const { normalSpeedFrom } = await import(u("client/src/modules/durationModel.js"));
-const { computeRacerLayout, computeBodyNarrowRef } = await import(u("client/src/modules/rowLayout.js"));
-const { renderRaceFrame } = await import(u("client/src/screens/RaceScreen/renderRaceFrame.js"));
+const { normalSpeedFrom } = await import(
+  u("client/src/modules/durationModel.js")
+);
+const { computeRacerLayout, computeBodyNarrowRef } = await import(
+  u("client/src/modules/rowLayout.js")
+);
+const { renderRaceFrame } = await import(
+  u("client/src/screens/RaceScreen/renderRaceFrame.js")
+);
 const { PHASE } = await import(u("client/src/screens/RaceScreen/racePhase.js"));
 const { attachRenderState, attachRacerRenderState } = await import(
   u("client/src/screens/RaceScreen/renderState.js")
@@ -115,33 +125,71 @@ function recorder() {
     f: p.b * q.e + p.d * q.f + p.f,
   });
   const isIdentity = () =>
-    Math.abs(m.a - 1) < 1e-9 && Math.abs(m.d - 1) < 1e-9 &&
-    Math.abs(m.b) < 1e-9 && Math.abs(m.c) < 1e-9 &&
-    Math.abs(m.e) < 1e-9 && Math.abs(m.f) < 1e-9;
+    Math.abs(m.a - 1) < 1e-9 &&
+    Math.abs(m.d - 1) < 1e-9 &&
+    Math.abs(m.b) < 1e-9 &&
+    Math.abs(m.c) < 1e-9 &&
+    Math.abs(m.e) < 1e-9 &&
+    Math.abs(m.f) < 1e-9;
   const ctx = {
     fills,
     // Everything the renderer may call. Only fillRect is inspected; the rest must merely not throw.
-    beginPath: noop, closePath: noop, moveTo: noop, lineTo: noop,
-    arc: noop, arcTo: noop, ellipse: noop, rect: noop, quadraticCurveTo: noop, bezierCurveTo: noop,
-    fill: noop, stroke: noop, clip: noop, clearRect: noop, strokeRect: noop,
-    fillText: noop, strokeText: noop, drawImage: noop, putImageData: noop, setLineDash: noop,
+    beginPath: noop,
+    closePath: noop,
+    moveTo: noop,
+    lineTo: noop,
+    arc: noop,
+    arcTo: noop,
+    ellipse: noop,
+    rect: noop,
+    quadraticCurveTo: noop,
+    bezierCurveTo: noop,
+    fill: noop,
+    stroke: noop,
+    clip: noop,
+    clearRect: noop,
+    strokeRect: noop,
+    fillText: noop,
+    strokeText: noop,
+    drawImage: noop,
+    putImageData: noop,
+    setLineDash: noop,
     createLinearGradient: () => ({ addColorStop: noop }),
     createRadialGradient: () => ({ addColorStop: noop }),
     createPattern: () => null,
-    measureText: () => ({ width: 10, actualBoundingBoxAscent: 8, actualBoundingBoxDescent: 2 }),
+    measureText: () => ({
+      width: 10,
+      actualBoundingBoxAscent: 8,
+      actualBoundingBoxDescent: 2,
+    }),
     getImageData: () => ({ data: new Uint8ClampedArray(4) }),
     canvas: { width: CW, height: CH },
-    save() { stack.push({ ...m }); },
-    restore() { if (stack.length) m = stack.pop(); },
-    translate(x, y) { m = mul(m, { a: 1, b: 0, c: 0, d: 1, e: x, f: y }); },
-    scale(x, y) { m = mul(m, { a: x, b: 0, c: 0, d: y, e: 0, f: 0 }); },
+    save() {
+      stack.push({ ...m });
+    },
+    restore() {
+      if (stack.length) m = stack.pop();
+    },
+    translate(x, y) {
+      m = mul(m, { a: 1, b: 0, c: 0, d: 1, e: x, f: y });
+    },
+    scale(x, y) {
+      m = mul(m, { a: x, b: 0, c: 0, d: y, e: 0, f: 0 });
+    },
     rotate(r) {
-      const cs = Math.cos(r), sn = Math.sin(r);
+      const cs = Math.cos(r),
+        sn = Math.sin(r);
       m = mul(m, { a: cs, b: sn, c: -sn, d: cs, e: 0, f: 0 });
     },
-    transform(a, b, c, d, e, f) { m = mul(m, { a, b, c, d, e, f }); },
-    setTransform(a, b, c, d, e, f) { m = { a, b, c, d, e, f }; },
-    resetTransform() { m = { ...ID }; },
+    transform(a, b, c, d, e, f) {
+      m = mul(m, { a, b, c, d, e, f });
+    },
+    setTransform(a, b, c, d, e, f) {
+      m = { a, b, c, d, e, f };
+    },
+    resetTransform() {
+      m = { ...ID };
+    },
     fillRect(x, y, w, h) {
       fills.push({ x, y, w, h, style: ctx.fillStyle, identity: isIdentity() });
     },
@@ -154,9 +202,14 @@ const dir = existsSync(join(ROOT, "server/data/tracks"))
   : join(ROOT, "server/seeds/tracks");
 const geo = JSON.parse(
   readFileSync(
-    join(dir, readdirSync(dir).filter((f) => f.endsWith(".json")).sort()[0]),
-    "utf8"
-  )
+    join(
+      dir,
+      readdirSync(dir)
+        .filter((f) => f.endsWith(".json"))
+        .sort()[0],
+    ),
+    "utf8",
+  ),
 );
 
 const shape = new EditorShape(geo);
@@ -169,15 +222,34 @@ const bfN = Math.min(rt.config.bodyFillX, rt.config.bodyFillY);
 const bfL = Math.max(rt.config.bodyFillX, rt.config.bodyFillY);
 const effW = TW * bc.startSpreadRange;
 const pss = computeRacerLayout(effW, N, ds, W.autoScaleConfig).spriteSize;
-const br = computeBodyNarrowRef(Math.min(285, effW), N, ds, bfN, W.autoScaleConfig);
+const br = computeBodyNarrowRef(
+  Math.min(285, effW),
+  N,
+  ds,
+  bfN,
+  W.autoScaleConfig,
+);
 const bodyRef = ds * (br.bodyNarrow / ds);
 const built = createRaceFromIdentity({
-  shape, isOpenTrack: shape.isOpen, pathLengthPx: geo.pathLengthPx ?? 0, trackWidthPx: TW,
-  speedMultiplier: rt.getSpeedMultiplier(), baseSpeedConfig: W.baseSpeedConfig, behaviorConfig: bc,
-  rowConfig: W.rowLayoutConfig, dynamicsConfig: W.raceDynamicsConfig,
-  normalSpeedPxPerSec: normalSpeedFrom(W.baseSpeedConfig), laps: shape.isOpen ? 1 : 2,
-  requestedSeconds: 60, nRacers: N, racePlanSeed: 5601, racePlanEnabledFlag: true,
-  physicalSpriteSize: pss, drawnBodyWidthRefPx: bodyRef, bodyFillNarrow: bfN, bodyFillLong: bfL,
+  shape,
+  isOpenTrack: shape.isOpen,
+  pathLengthPx: geo.pathLengthPx ?? 0,
+  trackWidthPx: TW,
+  speedMultiplier: rt.getSpeedMultiplier(),
+  baseSpeedConfig: W.baseSpeedConfig,
+  behaviorConfig: bc,
+  rowConfig: W.rowLayoutConfig,
+  dynamicsConfig: W.raceDynamicsConfig,
+  normalSpeedPxPerSec: normalSpeedFrom(W.baseSpeedConfig),
+  laps: shape.isOpen ? 1 : 2,
+  requestedSeconds: 60,
+  nRacers: N,
+  racePlanSeed: 5601,
+  racePlanEnabledFlag: true,
+  physicalSpriteSize: pss,
+  drawnBodyWidthRefPx: bodyRef,
+  bodyFillNarrow: bfN,
+  bodyFillLong: bfL,
   constSpeedActive: false,
 });
 // The renderer expects the RENDER half of the state (particle buffers, per-racer render fields),
@@ -186,7 +258,15 @@ const built = createRaceFromIdentity({
 const st = attachRenderState(built.state);
 attachRacerRenderState(st.racers);
 const raceCfg = built.config;
-const cd = new CameraDirector(geo.worldWidth, geo.worldHeight, shape.isOpen, DEFAULT_CAMERA_CONFIG, bodyRef, shape, TW);
+const cd = new CameraDirector(
+  geo.worldWidth,
+  geo.worldHeight,
+  shape.isOpen,
+  DEFAULT_CAMERA_CONFIG,
+  bodyRef,
+  shape,
+  TW,
+);
 cd.setRandomSeed(1439767152);
 raceCfg.computePositions();
 
@@ -198,24 +278,46 @@ let cam = { zoom: 1, offsetX: 0, offsetY: 0 };
 while (st.finishedCount < N && ts < 600000) {
   accum += RAW;
   let steps = 0;
-  while (accum >= FIXED_DT && steps++ < 2) { stepRacePhysics(st, raceCfg); accum -= FIXED_DT; }
-  cam = cd.update(st.racers, ts, {
-    raceElapsed: ts, finishedCount: st.finishedCount,
-    winner: st.racers.find((r) => r.finishRank === 1) ?? null, finishT: st.finishT,
-    isOutcomePhase: false, physicsRacers: st.racers,
-  }, CW, CH, RAW);
+  while (accum >= FIXED_DT && steps++ < 2) {
+    stepRacePhysics(st, raceCfg);
+    accum -= FIXED_DT;
+  }
+  cam = cd.update(
+    st.racers,
+    ts,
+    {
+      raceElapsed: ts,
+      finishedCount: st.finishedCount,
+      winner: st.racers.find((r) => r.finishRank === 1) ?? null,
+      finishT: st.finishT,
+      isOutcomePhase: false,
+      physicsRacers: st.racers,
+    },
+    CW,
+    CH,
+    RAW,
+  );
   ts += RAW;
 }
 st.phase = PHASE.FINISHED;
 
 const rec = recorder();
 renderRaceFrame(rec, {
-  ts, st, cam, shape, raceData: { racers: st.racers }, isOpenTrack: shape.isOpen,
+  ts,
+  st,
+  cam,
+  shape,
+  raceData: { racers: st.racers },
+  isOpenTrack: shape.isOpen,
   bsX: shape.isOpen ? 1.5 : CW / geo.worldWidth,
   bsY: shape.isOpen ? 1.5 : CH / geo.worldHeight,
-  worldWidth: geo.worldWidth, worldHeight: geo.worldHeight,
+  worldWidth: geo.worldWidth,
+  worldHeight: geo.worldHeight,
   openTrackHW: shape.isOpen ? TW / 2 : 0,
-  bgImagePath: null, bgCanvasReady: false, ceremonyBrand: null, effects: [],
+  bgImagePath: null,
+  bgCanvasReady: false,
+  ceremonyBrand: null,
+  effects: [],
   // The lights are derived the same way the component derives them; `null` is not an accepted
   // shape here (drawTrackLights reads `.outer` unguarded) and a guard that passes a shape the
   // renderer cannot take would be testing its own stub.
@@ -223,51 +325,66 @@ renderRaceFrame(rec, {
     const { outer, inner } = shape.getEdgePoints(800);
     return { outer, inner };
   })(),
-  trackLightsConfig: geo.trackLights ?? {}, racerType: rt,
+  trackLightsConfig: geo.trackLights ?? {},
+  racerType: rt,
   cameraConfig: DEFAULT_CAMERA_CONFIG,
-  camera: { hudState: cd.hudState, comebackLockedRacerIndex: null, detectBattleGroup: () => [] },
-  displaySize: ds, displaySizeScale: br.bodyNarrow / ds,
+  camera: {
+    hudState: cd.hudState,
+    comebackLockedRacerIndex: null,
+    detectBattleGroup: () => [],
+  },
+  displaySize: ds,
+  displaySizeScale: br.bodyNarrow / ds,
   assignmentByRacer: built.meta.assignmentByRacer ?? new Map(),
-  showRpStartRow: false, showRpMinimapBadges: false,
+  showRpStartRow: false,
+  showRpMinimapBadges: false,
   // THE KEY UNDER TEST. `--sabotage` turns the retired splash back on, which is exactly the
   // behaviour this guard exists to refuse, so a green run proves the check can go red.
   showFinishedSplash: SABOTAGE,
-  rpPlanInfo: null, renderAlpha: 1, interpolationEnabled: false, tagIncumbents: null,
+  rpPlanInfo: null,
+  renderAlpha: 1,
+  interpolationEnabled: false,
+  tagIncumbents: null,
   leaderDiag: null,
   // The HUD pills read these unguarded; same fixed shapes `render-fingerprint.mjs` passes.
   cfgBadge: { hashShort: "endingfp0", raceCount: 0, cosmeticCount: 0 },
   buildBadge: { commit: "endingfp", branch: "endingfp", dirty: false },
-  racePlanActive: false, racePlanSeed: 5601,
-  gapRerollDevMarker: false, canvasW: CW, canvasH: CH,
+  racePlanActive: false,
+  racePlanSeed: 5601,
+  gapRerollDevMarker: false,
+  canvasW: CW,
+  canvasH: CH,
 });
 
 // A cover-up is a fill spanning the whole canvas AT THE IDENTITY TRANSFORM — screen space, after the
 // world has been drawn. Tolerance of 1 px so a rounded edge is not a miss.
 const covering = rec.fills.filter(
-  (f) => f.identity && f.x <= 1 && f.y <= 1 && f.w >= CW - 1 && f.h >= CH - 1
+  (f) => f.identity && f.x <= 1 && f.y <= 1 && f.w >= CW - 1 && f.h >= CH - 1,
 );
 
 console.log(
-  `check-ending-frame: ${geo.id}, one FINISHED frame, ${rec.fills.length} fillRect call(s) recorded.`
+  `check-ending-frame: ${geo.id}, one FINISHED frame, ${rec.fills.length} fillRect call(s) recorded.`,
 );
 if (covering.length > 0) {
   for (const f of covering) {
     console.log(
       `FAIL: a fill covers the whole picture while the ending is running — ` +
-        `fillRect(${f.x}, ${f.y}, ${f.w}, ${f.h}) style=${JSON.stringify(f.style)}`
+        `fillRect(${f.x}, ${f.y}, ${f.w}, ${f.h}) style=${JSON.stringify(f.style)}`,
     );
   }
   console.log(
     "The ending is a designed sequence (settled shot, winner card, hold, podium). Nothing may be\n" +
       "drawn over all of it. If a cover-up is genuinely wanted, it belongs in the screen transition,\n" +
-      "which already fades to black."
+      "which already fades to black.",
   );
   process.exit(1);
 }
-console.log("check-ending-frame: nothing covers the race picture during the ending. PASS");
+console.log(
+  "check-ending-frame: nothing covers the race picture during the ending. PASS",
+);
 if (SABOTAGE) {
   console.log(
-    "SABOTAGE RAN AND THE GUARD STILL PASSED — that is itself a failure: the check cannot go red."
+    "SABOTAGE RAN AND THE GUARD STILL PASSED — that is itself a failure: the check cannot go red.",
   );
   process.exit(1);
 }

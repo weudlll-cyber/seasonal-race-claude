@@ -108,12 +108,17 @@ function reversalRuns(points, min) {
 }
 
 function measure(geo, contenderFraming) {
-  const cameraConfig = { ...DEFAULT_CAMERA_CONFIG, photoFinishContenderFraming: contenderFraming };
+  const cameraConfig = {
+    ...DEFAULT_CAMERA_CONFIG,
+    photoFinishContenderFraming: contenderFraming,
+  };
   const race = buildRace(geo, IDENTITY, cameraConfig);
   const { shape, st } = race;
   const axisX = shape.isOpen ? 1.5 : IDENTITY.canvasW / geo.worldWidth;
   const axisY = shape.isOpen ? 1.5 : IDENTITY.canvasH / geo.worldHeight;
-  const finishNormT = shape.isOpen ? Math.min(1, st.finishT) : ((st.finishT % 1) + 1) % 1;
+  const finishNormT = shape.isOpen
+    ? Math.min(1, st.finishT)
+    : ((st.finishT % 1) + 1) % 1;
   const landmark = shape.getPosition(finishNormT, 0);
 
   const frames = [];
@@ -135,7 +140,7 @@ function measure(geo, contenderFraming) {
         y: landmark.y * cd.zoom * axisY + cd.offsetY,
       });
     },
-    { slowmo: true }
+    { slowmo: true },
   );
 
   // Measure from 90 frames before the first crossing: the approach is part of the ending.
@@ -146,14 +151,20 @@ function measure(geo, contenderFraming) {
   if (firstCross === null) return { unmeasured: true, isOpen: shape.isOpen };
   const start = Math.max(0, firstCross - 90);
   const window = frames.slice(start);
-  return { runs: reversalRuns(window, MIN), window, firstCross, frames, isOpen: shape.isOpen };
+  return {
+    runs: reversalRuns(window, MIN),
+    window,
+    firstCross,
+    frames,
+    isOpen: shape.isOpen,
+  };
 }
 
 const tracks = loadTracks({ only: ONLY });
 console.log(formatIdentity(IDENTITY));
 console.log(
   `Reversals of the picture across the finish (runs >= ${MIN} screen px). ` +
-    `TWO is healthy: carry forward across the line, then pull back.\n`
+    `TWO is healthy: carry forward across the line, then pull back.\n`,
 );
 console.log("track            open    ON (shipped)   OFF (pre-fix)   verdict");
 let worstOn = 0;
@@ -165,25 +176,33 @@ for (const geo of tracks) {
     unmeasured.push(geo.id);
     console.log(
       `${geo.id.padEnd(16)} ${(on.isOpen ? "open" : "closed").padEnd(7)} ` +
-        `${"—".padEnd(14)} ${"—".padEnd(15)} NOT MEASURED (race exceeds the driver's 200 s ceiling)`
+        `${"—".padEnd(14)} ${"—".padEnd(15)} NOT MEASURED (race exceeds the driver's 200 s ceiling)`,
     );
     continue;
   }
   worstOn = Math.max(worstOn, on.runs.length);
-  const verdict = on.runs.length <= 2 ? (off.runs.length > 2 ? "FIXED" : "was already clean") : "STILL LURCHING";
+  const verdict =
+    on.runs.length <= 2
+      ? off.runs.length > 2
+        ? "FIXED"
+        : "was already clean"
+      : "STILL LURCHING";
   console.log(
     `${geo.id.padEnd(16)} ${(on.isOpen ? "open" : "closed").padEnd(7)} ` +
-      `${String(on.runs.length).padEnd(14)} ${String(off.runs.length).padEnd(15)} ${verdict}`
+      `${String(on.runs.length).padEnd(14)} ${String(off.runs.length).padEnd(15)} ${verdict}`,
   );
   if (DETAIL) {
-    for (const [label, r] of [["ON ", on], ["OFF", off]]) {
+    for (const [label, r] of [
+      ["ON ", on],
+      ["OFF", off],
+    ]) {
       console.log(`    ${label} turning points:`);
       for (const s of r.runs) {
         const a = r.window[s.from];
         const b = r.window[s.to];
         console.log(
           `      f${a.frame}→${b.frame}  ${a.ms}→${b.ms} ms  ${s.mag.toFixed(0)} screen px  ` +
-            `zoom ${a.zoom.toFixed(2)}→${b.zoom.toFixed(2)}  ${a.state}/${a.hud}→${b.state}/${b.hud}`
+            `zoom ${a.zoom.toFixed(2)}→${b.zoom.toFixed(2)}  ${a.state}/${a.hud}→${b.state}/${b.hud}`,
         );
       }
     }
@@ -191,12 +210,14 @@ for (const geo of tracks) {
 }
 console.log(
   `\nWorst ON: ${worstOn} reversals. ` +
-    (worstOn <= 2 ? "Every measured track is a two-motion ending." : "At least one track still lurches.")
+    (worstOn <= 2
+      ? "Every measured track is a two-motion ending."
+      : "At least one track still lurches."),
 );
 if (unmeasured.length) {
   console.log(
     `NOT COVERED: ${unmeasured.join(", ")} — the race is longer than the shared driver's 200 s\n` +
-      `ceiling, so it has no finish to measure here. Stated rather than silently counted as clean.`
+      `ceiling, so it has no finish to measure here. Stated rather than silently counted as clean.`,
   );
 }
 process.exitCode = worstOn <= 2 ? 0 : 1;
