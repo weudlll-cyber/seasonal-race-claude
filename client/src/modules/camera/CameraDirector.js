@@ -2347,7 +2347,10 @@ export class CameraDirector {
       frameSize.width,
       frameSize.height,
       COMPANY_FRAME_PCT,
-      at
+      at,
+      // FRONT-GROUP-2: the body, from the same field the PAIR guarantee reads two lines away. A
+      // guaranteed racer cut in half reads as lost to the eye, and it passed every centre test.
+      this._drawnBodyWidthRefPx
     );
   }
 

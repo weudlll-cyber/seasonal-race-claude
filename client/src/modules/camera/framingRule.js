@@ -404,6 +404,8 @@ export function anchorScreenPoint(frameW, frameH, forwardFrac, headingScreen) {
  * @param {number} minVisible  how many racers must be in frame INCLUDING the anchor; <= 1 disables
  * @param {number} [framePct=COMPANY_FRAME_PCT]  the region a companion must be inside
  * @param {{x:number,y:number}|null} [anchorAt=null]  the anchor's SCREEN position; frame centre when null
+ * @param {number} [padding=0]  world px of BODY to keep beyond the companion's centre — pass the
+ *   drawn body width, exactly as `pairGuarantee` takes it. See the block below.
  * @returns {number} cam.zoom ceiling; Infinity when nothing constrains
  */
 export function companyGuarantee(
@@ -415,20 +417,37 @@ export function companyGuarantee(
   frameW,
   frameH,
   framePct = COMPANY_FRAME_PCT,
-  anchorAt = null
+  anchorAt = null,
+  padding = 0
 ) {
   if (!anchor || !Array.isArray(racers)) return Infinity;
   const need = Math.floor(minVisible) - 1; // the anchor itself is one of them
   if (!(need > 0)) return Infinity;
   const at = anchorAt ?? { x: frameW / 2, y: frameH / 2 };
+  // HALF a body, because the companion's CENTRE is what this measures to and its sprite extends half
+  // a width past it. `pairGuarantee` takes the whole width for the same reason and spends half at
+  // each end of the pair; here there is one end. Same parameter, same units, same source value.
+  const half = Math.max(0, padding) / 2;
   const ceilings = [];
   for (const r of racers) {
     if (!r || r.finished) continue;
     const dx = r.x - anchor.x;
     const dy = r.y - anchor.y;
     if (dx === 0 && dy === 0) continue; // the anchor itself
-    const sx = dx * axisX;
-    const sy = dy * axisY;
+    // THE BODY, NOT THE CENTRE (FRONT-GROUP-2). Extending the world vector by half a body before it
+    // is projected is the same arithmetic `pairGuarantee` performs, and it is done in WORLD units so
+    // it scales with the zoom exactly as the sprite does.
+    //
+    // WHY IT WAS MISSING AND WHY THAT WAS NOT VISIBLE: this guarantee promises a companion's centre
+    // inside `framePct`, and 5% of the frame was sized as "half a drawn body at the largest a body
+    // gets in these shots" — measured where this guarantee actually ran, at 6.65% of frame height at
+    // the median and 9.50% at p95. At the PHOTO-FINISH zoom the drawn body is 16.4-22.2% of the
+    // frame, so half a body is 1.6-2.2x the margin it is allowed, and the promise was kept while the
+    // racer was visibly cut in half. The constant was never wrong; it was measured somewhere else.
+    const wlen = Math.hypot(dx, dy);
+    const ext = wlen > 0 ? (wlen + half) / wlen : 1;
+    const sx = dx * ext * axisX;
+    const sy = dy * ext * axisY;
     const needed = Math.hypot(sx, sy);
     if (!(needed > 0)) continue;
     const room = roomFromPointAlong(at.x, at.y, sx, sy, frameW, frameH, framePct);
