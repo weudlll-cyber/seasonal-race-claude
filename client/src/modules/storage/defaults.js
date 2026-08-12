@@ -632,6 +632,17 @@ export const DEFAULT_CAMERA_CONFIG = {
   // chosen — see the block in `CameraDirector._setTargets`, which records the 84 empty frames the
   // un-retired form produced and the 29 the un-glided release produced.
   frontGroupFraming: true,
+  // HOW LEVEL IS LEVEL — in the racer's OWN LENGTH, which is the only unit that means the same thing
+  // on a 3072 px world and a 6144 px one. A racer is in the group while he is within this many body
+  // lengths of the leader ALONG the track.
+  //
+  // WHAT IT REPLACED, and why the replacement is not a like-for-like swap: the group used to be
+  // "everyone within `battlePulkThresholdT` of the leader, capped at `battleMaxGroupSize`". That
+  // threshold is 5% of a LAP, which late in a race admits the whole field — on eleven of 27 measured
+  // races all twenty racers fell inside it — so the CAP was doing all of the selecting and the
+  // group meant "the leading six at one instant". There is no cap now: if twelve racers are level
+  // the group is twelve and the shot is whatever that costs, which is the owner's own ruling.
+  frontGroupLevelBodies: 2,
   // ── THE START CEREMONY (START-CEREMONY-CAMERA-1) ───────────────────────────────────────────────
   // The race opens on the whole track, held still, then eases in to the starting formation until it
   // is as large as it can be with every racer still in frame. Both ends are GEOMETRY and neither is

@@ -74,9 +74,12 @@ const SEEDS = argOf("seeds", argOf("seed", "9"))
 const CW = 1280;
 const CH = 720;
 const ROSTER = resolveNameSet(DEFAULT_NAME_SET);
+const BODIES = argOf("bodies", null);
 const CAMERA_CONFIG = FRONT_OFF
   ? { ...DEFAULT_CAMERA_CONFIG, frontGroupFraming: false }
-  : DEFAULT_CAMERA_CONFIG;
+  : BODIES !== null
+    ? { ...DEFAULT_CAMERA_CONFIG, frontGroupLevelBodies: Number(BODIES) }
+    : DEFAULT_CAMERA_CONFIG;
 
 /** The front group by the shipped closeness rule: leader + everyone within the arc, capped. */
 function frontGroupOf(racers, thresholdT, maxSize) {
@@ -126,6 +129,8 @@ for (const geo of loadTracks({ only: ONLY })) {
     const endgame = CAMERA_CONFIG.endgameThreshold;
 
     let captured = null;
+    let capturedSize0 = null;
+    let finalSize = 0;
     let capturedKey = null;
     let churn = 0;
     let lastLiveKey = null;
@@ -154,11 +159,12 @@ for (const geo of loadTracks({ only: ONLY })) {
         if (prog <= endgame) return;
 
         // ── CAPTURE, once, at the frame the window opens ──
-        if (!captured) {
-          captured = frontGroupOf(s.racers, thresholdT, maxSize);
-          capturedKey = key(captured);
-          lastLiveKey = capturedKey;
-        }
+        // THE LIVE GROUP, not the capture-frame one: admissions are part of what must be held, so a
+        // harness frozen at the first frame would grade the mechanism on a set it no longer uses.
+        if (!d._frontGroupIdx) return;
+        captured = d._frontGroupIdx.map((i) => s.racers[i]).filter(Boolean);
+        if (capturedSize0 === null) capturedSize0 = captured.length;
+        finalSize = d._frontGroupIdx.length;
         // ── THE CHURN A LIVE DEFINITION WOULD HAVE HAD ──
         const liveKey = key(frontGroupOf(s.racers, thresholdT, maxSize));
         if (liveKey !== lastLiveKey) {
@@ -243,7 +249,8 @@ for (const geo of loadTracks({ only: ONLY })) {
     rows.push({
       track: geo.id,
       seed: raceSeed,
-      size: captured ? captured.length : 0,
+      size: capturedSize0 ?? 0,
+      finalSize,
       churn,
       pfFrames,
       pfMin: inFramePF.length ? Math.min(...inFramePF) : NaN,
@@ -289,7 +296,7 @@ for (const r of rows) {
   const ord = r.stateZoomAtCrossing, cz = r.crossingZoom;
   const rel = ord && cz ? `${((100 * cz) / ord).toFixed(0)}%` : "—";
   console.log(
-    `${r.track.padEnd(15)} ${String(r.seed).padStart(4)} ${String(r.size).padStart(4)} ` +
+    `${r.track.padEnd(15)} ${String(r.seed).padStart(4)} ${(r.size + '->' + r.finalSize).padStart(6)} ` +
       `${String(r.pfFrames).padStart(6)}   ${S(r.pfCut)} /${S(r.pfOut)} /${S(r.pfNotWhole)}` +
       `               ${S(r.preCut)} /${S(r.preOut)}        ` +
       `${cz === null ? "     —" : cz.toFixed(3).padStart(8)} vs ${ord === null ? "   —" : ord.toFixed(3).padStart(7)}  ${rel}`,
@@ -313,7 +320,7 @@ const fmt = (e) => { const tot=e.reduce((a,[,v])=>a+v,0)||1; return e.map(([k,v]
 console.log(`which ceiling binds, whole ending:   ${fmt(merge((r) => r.binding))}`);
 console.log(`which ceiling binds, PHOTO_FINISH:   ${fmt(merge((r) => r.bindingPF))}`);
 console.log(`floor bound instead (group too spread): ${rows.reduce((a, r) => a + r.clamped, 0)}`);
-const sizes = rows.filter((r) => r.size > 0).map((r) => r.size);
+const sizes = rows.filter((r) => r.finalSize > 0).map((r) => r.finalSize);
 if (sizes.length)
-  console.log(`group size: min ${Math.min(...sizes)}, median ${med2(sizes)}, max ${Math.max(...sizes)} over ${sizes.length} race(s)`);
+  console.log(`group size AFTER admissions: min ${Math.min(...sizes)}, median ${med2(sizes)}, max ${Math.max(...sizes)} over ${sizes.length} race(s)`);
 if (rows.length) console.log(formatIdentity(rows[0].identity));

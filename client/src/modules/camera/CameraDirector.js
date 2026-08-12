@@ -583,6 +583,7 @@ export class CameraDirector {
     this._runInShot = t.runInShot;
     this._runInOpenMs = t.runInOpenMs;
     this._frontGroupFraming = t.frontGroupFraming;
+    this._frontGroupLevelBodies = t.frontGroupLevelBodies;
     this._comebackCooldownMs = t.comebackCooldownMs;
     this._leadChangeCooldownMs = t.leadChangeCooldownMs;
     this._battleWeight = t.battleWeight;
@@ -2284,21 +2285,81 @@ export class CameraDirector {
       if (!(maxT / raceState.finishT > this._endgameThreshold)) return [];
       const live = racers.filter((r) => r && !r.finished);
       if (live.length === 0) return [];
-      const sorted = [...live].sort((a, b) => b.t - a.t);
-      const leader = sorted[0];
-      // The SAME two gates the battle group runs on, read from the same object so they cannot drift.
-      const idx = [leader.index];
-      for (let i = 1; i < sorted.length && idx.length < this._battleGates.maxSize; i++) {
-        if (shortestArcDeltaT(leader.t, sorted[i].t) <= this._battleGates.closenessT) {
-          idx.push(sorted[i].index);
+      this._frontGroupIdx = this._levelWithLeader(live).map((r) => r.index);
+    } else {
+      // ── ADMIT-ONLY (FRONT-GROUP-5) ───────────────────────────────────────────────────────────
+      //
+      // Never evict, never re-sort, only ADD a racer who has come level. That asymmetry is the whole
+      // safety argument: FINISH-PAIR-1's defect was a guaranteed set being re-sorted, where every
+      // SWAP moved the picture discontinuously. An admission cannot swap — the set only grows, so a
+      // member's place in it never changes and the ceiling can only fall (a wider shot), which is
+      // the direction a guarantee is allowed to move in anyway.
+      //
+      // IT IS ALSO WHAT MAKES "LEVEL" MEAN ANYTHING. Measured at the capture frame alone the group
+      // is usually just the leader — median 1 of 20 at one body length — because the field is not
+      // level at the endgame threshold, it becomes level at the LINE. A set captured once and never
+      // added to would therefore promise nothing on exactly the races this exists for.
+      // ADMISSIONS CLOSE AT THE FIRST CROSSING, and that bound is not tidiness — without it this
+      // admits the WHOLE FIELD, measured, on every one of 27 races at both tested lengths. The
+      // reason is that "the leader" among UNFINISHED racers walks backwards through the field as the
+      // front goes home: once the real leader is across, the next racer becomes the reference, then
+      // the next, and an admit-only set accumulates everybody behind them. Closing at the line also
+      // says the right thing — who is fighting for the win is decided by the line, and after it the
+      // participants are known rather than still being nominated.
+      if ((raceState?.finishedCount ?? 0) === 0) {
+        const live = racers.filter((r) => r && !r.finished);
+        for (const r of this._levelWithLeader(live)) {
+          if (!this._frontGroupIdx.includes(r.index)) this._frontGroupIdx.push(r.index);
         }
       }
-      this._frontGroupIdx = idx;
     }
     const out = [];
     for (const i of this._frontGroupIdx) {
       const r = this._findByIndex(racers, i, null);
       if (r && !r.finished) out.push(r);
+    }
+    return out;
+  }
+
+  /**
+   * WHO IS LEVEL WITH THE LEADER — the owner's own definition, in the racer's own length.
+   *
+   * HIS WORDS: a racer running BEHIND another in his line is not part of the group; he is shown
+   * anyway, because he is behind the other one. If only two are leading, seeing those two is enough.
+   * If six share the whole width of the track, all six must be seen — and yes, the shot cannot close
+   * in then, but a real camera at a horse race could not either and still showed them all.
+   *
+   * SO THE CRITERION IS BEING LEVEL, AND THE SIZE FOLLOWS FROM THE RACE. There is no cap: twelve
+   * racers level is a group of twelve and the shot is whatever that costs. What was here before was
+   * the opposite — `battlePulkThresholdT` is 5% of a LAP, which late in a race admits everybody (on
+   * eleven of 27 measured races all twenty racers fell inside it), so `battleMaxGroupSize` was doing
+   * all of the selecting and "the front group" meant "the leading six at one instant".
+   *
+   * THE UNIT IS THE RACER'S OWN LENGTH, and the director already holds it: `_drawnBodyWidthRefPx`,
+   * the same world-px body reference the pair guarantee pads with. `t` is lap-normalised, so a gap
+   * in `t` becomes a gap in world px through the shape's own total length — no constant enters.
+   *
+   * A RACER TUCKED DIRECTLY BEHIND ANOTHER IS EXCLUDED BY CONSTRUCTION, which is his point restated:
+   * membership is a gap ALONG the track to the leader, so a racer a length or more back is out
+   * however close he is across the track. He is not abandoned — he is behind somebody who IS held,
+   * so the frame that holds the one in front contains the road he is on.
+   *
+   * @param {Array} live  the unfinished field
+   * @returns {Array} the leader and everyone level with him, frontmost first
+   */
+  _levelWithLeader(live) {
+    if (!live || live.length === 0) return [];
+    const sorted = [...live].sort((a, b) => b.t - a.t);
+    const leader = sorted[0];
+    const lengthPx = this._drawnBodyWidthRefPx;
+    const total = this._shape?.getTotalLength?.() ?? 0;
+    // Without a shape or a body reference there is no length to measure in; the leader alone is the
+    // honest answer, and it costs nothing because a one-racer group constrains nothing.
+    if (!(lengthPx > 0) || !(total > 0)) return [leader];
+    const reachT = (this._frontGroupLevelBodies * lengthPx) / total;
+    const out = [leader];
+    for (let i = 1; i < sorted.length; i++) {
+      if (leader.t - sorted[i].t <= reachT) out.push(sorted[i]);
     }
     return out;
   }

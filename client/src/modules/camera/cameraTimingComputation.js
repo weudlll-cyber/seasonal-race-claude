@@ -343,6 +343,12 @@ export function computeTimingFromConfig(config) {
     config?.photoFinishContenderFraming ?? DEFAULT_CAMERA_CONFIG.photoFinishContenderFraming;
   const runInShot = config?.runInShot ?? DEFAULT_CAMERA_CONFIG.runInShot;
   const frontGroupFraming = config?.frontGroupFraming ?? DEFAULT_CAMERA_CONFIG.frontGroupFraming;
+  // Clamped to a band for the reason every other number here is: a corrupt stored config must not be
+  // able to make the group the whole field or empty it of everyone but the leader.
+  const frontGroupLevelBodies = Math.max(
+    0,
+    Math.min(10, config?.frontGroupLevelBodies ?? DEFAULT_CAMERA_CONFIG.frontGroupLevelBodies)
+  );
   // RUNIN-PACE-1: clamped to a band for the same reason every other duration here is — a corrupt
   // stored config must not be able to produce an opening that never ends or one with no length.
   const runInOpenMs = Math.max(
@@ -423,6 +429,7 @@ export function computeTimingFromConfig(config) {
     runInShot,
     runInOpenMs,
     frontGroupFraming,
+    frontGroupLevelBodies,
     comebackCooldownMs,
     leadChangeCooldownMs,
     battleWeight,

@@ -7348,25 +7348,24 @@ describe('CameraDirector — the front group bounds the tightening', () => {
     };
   }
 
-  /** A field whose front six are inside the closeness arc but strung out across ~600 world px. */
+  /**
+   * SIX RACERS LEVEL AND SPREAD ACROSS THE TRACK — the owner's own picture, and the case the group
+   * exists for. They share almost the same `t` (so each is within a body length or two of the
+   * leader along the track) and differ ACROSS it, which is the geometry a single tight shot cannot
+   * hold. Racer 6 is a full length back and is the "tucked in behind" case the definition excludes.
+   */
   function spreadField() {
     return [
-      { t: 0.885, x: 5310, y: 360, finished: false, index: 0 },
-      { t: 0.878, x: 5268, y: 380, finished: false, index: 1 },
-      { t: 0.872, x: 5232, y: 340, finished: false, index: 2 },
-      { t: 0.866, x: 5196, y: 390, finished: false, index: 3 },
-      { t: 0.86, x: 5160, y: 330, finished: false, index: 4 },
-      { t: 0.854, x: 5124, y: 370, finished: false, index: 5 },
+      { t: 0.885, x: 5310, y: 300, finished: false, index: 0 },
+      { t: 0.8845, x: 5307, y: 340, finished: false, index: 1 },
+      { t: 0.884, x: 5304, y: 380, finished: false, index: 2 },
+      { t: 0.8835, x: 5301, y: 420, finished: false, index: 3 },
+      { t: 0.883, x: 5298, y: 460, finished: false, index: 4 },
+      { t: 0.8825, x: 5295, y: 500, finished: false, index: 5 },
       { t: 0.5, x: 3000, y: 360, finished: false, index: 6 },
     ];
   }
 
-  /**
-   * Drive the ending the way a race actually drives it: the window opens with the leader still
-   * short of the line, and the field advances toward it frame by frame. That ORDER is load-bearing
-   * — the bound may only hold the shot at a width the ending has already reached, so a two-frame
-   * fixture where nothing has opened yet cannot exercise it at all.
-   */
   function drive(configOver, racers, frames = 8) {
     const cd = new CameraDirector(WORLD_W, CANVAS_H, true, configOver, 36, makeShape());
     let ts = 1000;
