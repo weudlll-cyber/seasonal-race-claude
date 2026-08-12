@@ -24,7 +24,7 @@ All user-facing text, source code comments, variable names, log messages, UI lab
 labels, document strings, and repository documents must be in **English**. No German text anywhere in
 the codebase or documents — including file names.
 
-**THE QUOTATION EXCEPTION IS CLOSED, 2026-08-13.** From this date the owner's verdicts are recorded
+**THE QUOTATION EXCEPTION IS CLOSED, 2026-08-12.** From this date the owner's verdicts are recorded
 in **English only, attributed and dated**. A rendition of what he said, not a transcription of it —
 "the owner, 2026-08-12: not worse is fine" rather than the German original beside a gloss. The list
 below is the last state of the exception and is what STAYS; nothing on it moves.
@@ -44,7 +44,7 @@ Translating them out now would be its own form of falsifying the record, in the 
 from the one the exception feared. So they stay, and this list is the closing inventory so a later
 reader does not read them as an oversight.
 
-**The closing inventory** (every verbatim owner quotation the codebase carries as of 2026-08-13,
+**The closing inventory** (every verbatim owner quotation the codebase carries as of 2026-08-12,
 found by searching, not trusted from a count):
 
 - `docs/CONCEPT-COHESION.md` — the bounded brake
