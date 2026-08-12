@@ -40,6 +40,19 @@ is dated and recorded HERE, where a reader on their way to the report will pass 
 
 ## Ships
 
+- [SHIP-RUNIN-CONVERGE.md](SHIP-RUNIN-CONVERGE.md) — **the run-in and the convergence fix go to
+  master** (2026-08-12, merges `d7eca25d` + `eea0acf2`, tags `v-ship-resolve-converge` +
+  `v-ship-runin`, return points `pre/ship-resolve-converge` + `pre/ship-runin`). Two merges in one
+  session on the owner's authorisation after he judged a production build of the COMBINED tree.
+  Carries what only the ship can: the order and why the convergence fix went first (it moves nothing
+  on its own, so the run-in's mint is taken on a tree that already contains it while the two moves
+  stay separable); the mint, **attributed in two measured parts** — the run-in alone puts CAMERA at
+  `988a9b31aaf9768a` and the repair carries it the rest of the way, moving **ice-track alone**;
+  **the off-arm promise re-measured ON THE MERGED TREE** rather than carried over, both instruments
+  reproducing the predecessor values exactly; the WORLD re-run in full because `engine-reach --check`
+  compares the WORKING tree and therefore cannot speak about a committed merge; and the CI run ids.
+  Step −1 surfaced a **prettier sweep of 28 script files** riding in an unrelated commit, proven
+  inert by formatting master's version of each and comparing byte-for-byte.
 - [RUNIN-PACE-1.md](RUNIN-PACE-1.md) — **own key, explained width, and a rate limit that measured
   out** (2026-08-12, `feat/runin-state`, **NOT merged**; fingerprints measured fresh and **NOT
   minted**). **(1) THE KEY IS SPLIT.** The opening ran on `finishOverviewZoomOutDurationMs`, which

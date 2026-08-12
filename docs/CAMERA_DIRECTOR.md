@@ -489,7 +489,16 @@ a verbatim transcript of one run on one commit, which is a historical record, no
 
 ### The tracking lag, as measured today — and it had drifted
 
-<!-- MEASURED: tracking-lag (median/p95 pp per state) @ 82ea307f 2026-08-12 depends=client/src/modules/camera/ -->
+<!-- MEASURED: tracking-lag (median/p95 pp per state) @ eea0acf2 2026-08-12 depends=client/src/modules/camera/ -->
+
+**RE-MEASURED ON THE SHIP (`eea0acf2`), because neither branch's table describes the merged tree.**
+The run-in and RESOLVE-CONVERGE-1 were measured apart and shipped together, so the numbers below are
+taken on the merge itself rather than carried over from either side. **One cell moved and it is the
+smallest one on the page: LEAD_CHANGE median 4.56 → 4.55 pp.** Every other frame count, median and
+p95 is identical to the digit. That single hundredth is the convergence repair, and it is where it
+should be — the repair acts on ice-track alone (per-track camera hash `a083c940ba3400c7` →
+`54dc4193568e9c91`, the other nine byte-identical), so a pooled figure over ten tracks is the only
+place it could show at all, and it shows this small.
 
 **RE-MEASURED FOR RESOLVE-CONVERGE-1, and nothing moved at all.** That block stops `resolveCamera`
 widening when widening brings the pan target no closer to the inner frame. It is the last step of
@@ -622,7 +631,7 @@ and it says so itself. It also covers nothing else on this page; see its header 
 | BATTLE_ZOOM   | 9406   | 5.70      | 10.55  |
 | COMEBACK_ZOOM | 605    | 2.44      | 15.57  |
 | LEADER_ZOOM   | 17788  | 4.05      | 9.32   |
-| LEAD_CHANGE   | 7789   | 4.56      | 22.17  |
+| LEAD_CHANGE   | 7789   | 4.55      | 22.17  |
 | OVERVIEW      | 4303   | 2.65      | 16.00  |
 | PHOTO_FINISH  | 1865   | 4.71      | 29.80  |
 

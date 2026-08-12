@@ -98,6 +98,33 @@ the Dev Screen toggle and the `renderRaceFrame` hook. The branch was deleted at 
   may be promising a corridor the viewer cannot see. Start here rather than from scratch — see
   [DEAD-ENDS.md](DEAD-ENDS.md) §K.
 
+### RUNIN — the run-in glides wide-and-back, and only the line sets the width (2026-08-12)
+
+**The endgame gets a shot that shows the line.** From the moment the leader is within reach of the
+finish, one progress measure — the leader's remaining distance ALONG THE TRACK, so it is monotone —
+drives both the anchor placement and the zoom: the shot opens wide-and-back over `runInOpenMs` and
+closes to the ordinary shot exactly at the crossing, with no seam and no handover. **It adds no
+camera state**, which is deliberate and was checked in the source rather than after the fact:
+RaceScreen starts the photo-finish slow motion off `hudState`, so a RUN_IN state holding the slot at
+the line would have suppressed it outright. Line in frame over the run-in window **9.8% → 86.6%**
+pooled across ten tracks, first in shot 1.1 s after the window opens, **0 empty frames on every
+track at every pace tested**. The trade is the tracking-lag tail — LEAD_CHANGE p95 10.72 → 22.17 pp —
+and it is proportional to the zoom rate by construction. CAMERA and RENDER moved and are minted;
+WORLD is unchanged and was re-run in full rather than inferred. Values and the two-part attribution
+live in [fingerprints.json](fingerprints.json).
+
+**Five shapes were built and four were replaced**, each by the measurement of its own limit — the
+history is in the six RUNIN reports, and [DEAD-ENDS.md](DEAD-ENDS.md) carries what must not be
+retried, including the tighten-rate limit that cost the crossing shot an order of magnitude.
+
+- `pre/ship-runin` (`0b6d6098`, 2026-08-12) — master immediately BEFORE the ship, and AFTER
+  `v-ship-resolve-converge`. Reset here to restore an endgame with no run-in at all — no `runInShot`
+  or `runInOpenMs` keys — and the CAMERA/RENDER pair `64432e18a7e62188` / `096f2726c45ed853`.
+- `v-ship-runin` (`eea0acf2`, 2026-08-12) — **the ship.** Two keys, both defaulting to the new
+  behaviour. **The off-arm promise was measured on this tree, not assumed**: with `runInShot` false
+  both instruments reproduce the predecessor values exactly, so the run-in and the convergence repair
+  shipped beside it change nothing until the run-in composes.
+
 ### RESOLVE-CONVERGE — a widening step has to buy something (2026-08-12)
 
 **The last step of every shot stops paying width for nothing.** `resolveCamera` pursued its
