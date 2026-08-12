@@ -98,6 +98,32 @@ the Dev Screen toggle and the `renderRaceFrame` hook. The branch was deleted at 
   may be promising a corridor the viewer cannot see. Start here rather than from scratch — see
   [DEAD-ENDS.md](DEAD-ENDS.md) §K.
 
+### RESOLVE-CONVERGE — a widening step has to buy something (2026-08-12)
+
+**The last step of every shot stops paying width for nothing.** `resolveCamera` pursued its
+inner-frame guarantee by stepping the zoom down 10% at a time and never asked whether the steps were
+getting anywhere; where the world-bounds clamp holds the target at the world edge they cannot, so it
+ran to the projection floor, handed over the whole world, and left the target further outside than it
+started. It now takes a step only when the step strictly reduces how far outside the inner frame the
+target lands — a comparison, no new number. **The up-front "is it reachable" test was rejected on
+evidence**: the clamp has two regimes and where the world already FITS the frame, widening genuinely
+helps, so a test written from the other regime alone would have shipped wrong.
+
+**NOTHING WAS MINTED, and that is the measurement rather than an omission.** Over 172226 frames the
+loop fires zero times on the shipped configuration, so CAMERA and RENDER are byte-identical to the
+values already in [fingerprints.json](fingerprints.json), and the WORLD cannot be reached at all
+(`engine-reach --check`: none of 4). The defect is reachable only under a forward-anchored wide shot
+near the world edge, which is the run-in shipped beside this.
+
+- `pre/ship-resolve-converge` (`e1f53781`, 2026-08-12) — master immediately BEFORE the ship. Reset
+  here to restore a `resolveCamera` that widens to the projection floor whenever the pan target falls
+  outside `innerFramePct`, whether or not widening can bring it back.
+- `v-ship-resolve-converge` (`d7eca25d`, 2026-08-12) — **the ship.** No key: it is a defect repair
+  with no second position worth offering, and both fingerprints prove it changes nothing until the
+  condition that triggers it exists. `scripts/resolve-converge-truth.mjs` ships with it and measures
+  the SHIPPED function rather than a copy — it reconstructs `_setTrackTargets`'s arguments from the
+  director's own `_framingProbe` and self-checks every frame against the `targetZoom` actually set.
+
 ### FINISH-PAIR — the photo finish frames the pair it is following (2026-08-11)
 
 **The camera stops lurching at the finish, and NOTHING about the race moved.** The shot captured its
