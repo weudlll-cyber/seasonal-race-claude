@@ -40,6 +40,43 @@ is dated and recorded HERE, where a reader on their way to the report will pass 
 
 ## Ships
 
+- [RUNIN-WIDTH-1.md](RUNIN-WIDTH-1.md) — **only the line decides the width, and the pull-out is
+  calmer** (2026-08-12, `feat/runin-state`, **NOT merged**; fingerprints measured fresh and **NOT
+  minted**). **A REQUIREMENT I INVENTED, STRUCK**: RUNIN-GLIDE-1 §5 reported field coverage as "the
+  limit"; the owner never asked that the field stay in frame during the endgame, so it bounds nothing
+  and is now information only. **WHAT DRIVES THE WIDTH, measured before anything changed: the LINE
+  binds at the widest frame of every finishing track**, and over the whole run-in it binds 86.5-97.9%
+  of frames. **The field guarantee is `Infinity` on every one of those frames** — it retires after the
+  ceremony — and the company guarantee never binds there either, so there was no field-guarantee
+  decision to make and nothing to remove. Two tracks are informative: **city-circuit's line would need
+  109% of the world** (more than the camera can show, so it is at the floor and the line still cannot
+  be framed), and **ice-track's needed 72% while 100% was delivered** — the owner's own observation,
+  and §2 says why. **THE TWO ODD MOVEMENTS ARE ONE MECHANISM**: the delivered zoom is a `Math.min`
+  over ceilings, so where the ARGMIN changes the zoom is continuous but **its RATE is not**, and the
+  pan lag is proportional to that rate — so the subject REVERSES DIRECTION at the corner. Traced
+  frame by frame: on **luger-hill seed 9** the framing subject drifts to (899, 490) and sails back to
+  (695, 346), turning at progress **0.9949**, the exact frame the line ceiling passes the state zoom
+  (4.114 > 4.000) and the zoom's rate collapses from +0.05 to +0.001 per frame; on **ice-track** the
+  camera sits at `minCamZoom` for ~2 s with the pan held completely still by the world-bounds clamp —
+  **the line's screen position does not move by one pixel for 120 frames** — and then un-pins at
+  run-in progress **0.216**, frozen to moving in a single frame. **A CALMER PULL-OUT**: the engagement
+  glide now runs on **`finishOverviewZoomOutDurationMs`**, which already means "an authored zoom-out
+  at the end of the race" — the same kind of move at the other end of the ending — rather than
+  `glideDurationMs`, whose 300-900 ms band paces a CUT and cannot express "unhurried". No new number.
+  **Opening 0.5 s -> 2.9 s**; it costs the line's in-frame share **93.3% -> 73.4%** and delays the
+  line 0.4 s -> 2.5 s, and it **does not reintroduce empty frames**. It is also SHALLOWER, which was
+  not the goal but answers part of (c): the widest frame falls on six of nine finishing tracks
+  (searound 85% -> 57%, luger-hill 67% -> 40%, river-run 34% -> 21%), while city-circuit and ice-track
+  still reach 100% because the line there genuinely needs it. **LEAD_CHANGE's tracking-lag p95 falls
+  25.19 -> 10.72 pp** — the hecticness, measured — while PHOTO_FINISH's is unchanged at 29.80, which
+  says the remaining tail is at the CLOSE and not the opening. **LEFT OPEN WITH THE EVIDENCE**: that
+  closing corner is not fixed, because every way to remove it replaces the `Math.min` over ceilings
+  with a blend, which is no longer a guarantee and needs his ruling. **ALL TEN TRACKS**: composes 100%,
+  line in frame **9.8% -> 73.4%**, **0 empty frames**, `check-runin-frame` green both halves (0.15 /
+  0.37 TW, limit untouched), crossing zoom within 0.03% of OFF on six tracks and 3.58% at worst.
+  **FINGERPRINTS**: world `dc4647be0f55ebdb` **unmoved**; camera `64432e18a7e62188` ->
+  `8f6ed90ec8a89e25`, render `096f2726c45ed853` -> `3f53bea250d5a4c3`; with `runInShot: false` all
+  three return exactly to the stored values.
 - [RUNIN-GLIDE-1.md](RUNIN-GLIDE-1.md) — **the run-in glides from wide-and-back to the ordinary
   shot** (2026-08-12, `feat/runin-state`, **NOT merged — his eye on luger-hill seed 9**;
   fingerprints measured fresh and **NOT minted**). The owner's final design and the fourth shape.

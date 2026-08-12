@@ -2260,6 +2260,21 @@ export class CameraDirector {
    *
    * It is deliberately ONE-SHOT, guarded by the same latch that makes the run-in a phase: a glide
    * restarted every frame is not an ease, it is a rail.
+   *
+   * ── IT RUNS ON THE FINISH ZOOM-OUT'S OWN DURATION, NOT THE TRANSITION GLIDE'S ──────────────────
+   *
+   * The owner watched it in production and said the pull-out looks HECTIC. At `glideDurationMs` it
+   * is: measured on ice-track, cam.zoom fell 4.549 -> 1.000 in about half a second, which is the
+   * pace of an ordinary state change and not of an authored move.
+   *
+   * `finishOverviewZoomOutDurationMs` is the right existing number and needs no derivation: it
+   * already means "how long an authored zoom-out at the END OF THE RACE takes", which is exactly
+   * what this is — the same kind of move as the finish zoom-out, in the same part of the race, at
+   * the other end of it. Using it makes the two ends of the ending run at one tempo instead of two,
+   * and it is a value the owner has already set with his eye on the result.
+   *
+   * `glideDurationMs` is deliberately NOT reused here: its band is 300-900 ms because it paces a
+   * CUT between shots, and a 900 ms ceiling cannot express "unhurried" for a move this large.
    */
   _beginRunInGlide(ts) {
     if (!this._shape) return;
@@ -2268,7 +2283,7 @@ export class CameraDirector {
     this._glideStartZoom = this.zoom;
     this._glideStartOffsetX = this.offsetX;
     this._glideStartOffsetY = this.offsetY;
-    this._glideDurationActiveMs = this._glideDurationMs;
+    this._glideDurationActiveMs = this._finishOverviewZoomOutDurationMs;
   }
 
   /**
@@ -2800,18 +2815,28 @@ export class CameraDirector {
     // RUNIN-MINIMAL-1: FIRST, because `_forwardFracNow` reads the answer and every guarantee below
     // measures its room from the anchor that answer places.
     const _runInCeiling = this._updateRunIn(subjects, frameSize, racers, raceState, ts);
-    const guaranteed = Math.min(
-      stateZoom,
-      this._guaranteeCeiling(subjects, frameSize),
-      _companyIsHome ? Infinity : this._companyCeiling(subjects, racers, frameSize),
+    // EVERY TERM NAMED, so the probe below can say WHICH ONE decided the width instead of leaving a
+    // reader to infer it from the total. `Math.min` over an object's values is the same computation
+    // it always was — this only stops the answer being unrecoverable one line after it is produced.
+    const _ceilings = {
+      state: stateZoom,
+      guarantee: this._guaranteeCeiling(subjects, frameSize),
+      company: _companyIsHome ? Infinity : this._companyCeiling(subjects, racers, frameSize),
       // CEREMONY-HANDOVER-1: the ceremony's promise, still standing. Infinity once it has retired,
       // so this line costs nothing for the rest of the race.
-      this._fieldCeiling(subjects, racers, frameSize),
+      field: this._fieldCeiling(subjects, racers, frameSize),
       // RUNIN-OWNS-1: the run-in. Infinity outside the endgame window, so this line costs nothing
       // for the rest of the race either — and INSIDE the window it is one more ceiling among the
       // others, which is why the shot it hands back at the line is bit-for-bit the state's own.
       // `stateZoom` above IS the run-in's second bound; it needed no code.
-      _runInCeiling
+      line: _runInCeiling,
+    };
+    const guaranteed = Math.min(
+      _ceilings.state,
+      _ceilings.guarantee,
+      _ceilings.company,
+      _ceilings.field,
+      _ceilings.line
     );
 
     // READ-ONLY PROBE (CAMERA-ANCHOR-TRUTH-1 §4a). The framing inputs this frame actually used, so
@@ -2823,7 +2848,11 @@ export class CameraDirector {
     // bound nobody has seen bind is a comment, and this is how that stays checkable.
     this._runInActive = this._runInComposingNow;
     this._runInBinding = this._runInActive && guaranteed >= _runInCeiling - 1e-12;
+    let _binding = 'state';
+    for (const k of Object.keys(_ceilings)) if (_ceilings[k] < _ceilings[_binding]) _binding = k;
     this._framingProbe = {
+      ceilings: _ceilings,
+      binding: _binding,
       t: subjects.t,
       runInActive: this._runInActive,
       runInBinding: this._runInBinding,

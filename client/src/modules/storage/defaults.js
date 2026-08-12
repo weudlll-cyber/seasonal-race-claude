@@ -573,10 +573,20 @@ export const DEFAULT_CAMERA_CONFIG = {
   // how far off centre a subject is placed, and this uses it twice. A CENTRED state does not move
   // at all — mirroring 0.5 gives 0.5 — which is why the photo finish keeps its own framing.
   //
-  // THE ENGAGEMENT IS A GLIDE, on the same `glideDurationMs` every transition uses. Measured
-  // without it: the frame goes EMPTY for a handful of frames on six of ten tracks, every one at
-  // run-in progress 0.006-0.016, while pan and zoom ease independently out of the step. The glide
-  // moves them on ONE ease, which is what makes a large zoom change safe here as everywhere else.
+  // THE ENGAGEMENT IS A GLIDE. Measured without it: the frame goes EMPTY for a handful of frames on
+  // six of ten tracks, every one at run-in progress 0.006-0.016, while pan and zoom ease
+  // independently out of the step. The glide moves them on ONE ease, which is what makes a large
+  // zoom change safe here as everywhere else.
+  //
+  // IT RUNS ON `finishOverviewZoomOutDurationMs`, NOT the transition glide's duration. The owner
+  // watched the pull-out in production and called it HECTIC at 500 ms, which is the pace of an
+  // ordinary state change and not of an authored move. That key already means "how long an authored
+  // zoom-out at the END OF THE RACE takes" — the same kind of move, in the same part of the race, at
+  // the other end of it — so the two ends of the ending now run at one tempo. Measured: the opening
+  // goes 0.5 s -> 2.9 s, and it is SHALLOWER as well as calmer (the widest frame falls on six of
+  // the nine finishing tracks) because a slow ease never reaches a target that is already receding.
+  // The price is the line's in-frame share, 93.3% -> 73.4%, and the line arriving 0.4 s -> 2.5 s
+  // after the window opens.
   //
   // WHAT THIS REPLACED: an OVERVIEW-width cap and a delayed engagement. Both are gone — the run-in
   // composes from the endgame threshold again and the pull-out is whatever the line requires.

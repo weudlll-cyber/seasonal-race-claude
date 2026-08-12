@@ -7276,7 +7276,11 @@ describe('RUNIN-GLIDE-1 — wide-and-back, gliding to the ordinary shot', () => 
     expect(cd._runInEngaged).toBe(true);
     expect(cd._lerpPhase).toBe('glide');
     expect(cd._glideStartTs).toBe(5000);
-    expect(cd._glideDurationActiveMs).toBe(cd._glideDurationMs);
+    // RUNIN-WIDTH-1: the FINISH zoom-out's duration, not the transition glide's — the owner called
+    // the pull-out hectic at 500 ms, and `glideDurationMs`'s 300-900 band paces a CUT between shots
+    // and cannot express "unhurried" for a move this large.
+    expect(cd._glideDurationActiveMs).toBe(cd._finishOverviewZoomOutDurationMs);
+    expect(cd._glideDurationActiveMs).toBeGreaterThan(cd._glideDurationMs);
     // A glide restarted every frame is a rail, not an ease.
     cd._lerpPhase = 'tracking';
     cd._updateRunIn(subjectsAt(3800), FRAME, racersAt(3800), rs, 6000);
