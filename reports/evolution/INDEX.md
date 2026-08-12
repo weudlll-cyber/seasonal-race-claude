@@ -26,6 +26,20 @@ is dated and recorded HERE, where a reader on their way to the report will pass 
 
 ## Ships
 
+- [ENDING-PICTURE-1.md](ENDING-PICTURE-1.md) — **the ending gets a picture worth holding**
+  (2026-08-12, tag `v-ship-ending-picture`, return point `pre/ship-ending-picture`). Two blocks in
+  one ship: the HOLD after the last crossing (`finishHoldAfterLastMs` 0 → 1500, his own podium beat,
+  growing the card-free tail 500 → 2000 ms), and the PICTURE it was supposed to hold. The camera's
+  transform was replaced by the identity the frame the phase flipped — on an open track that is an
+  853×480 window at world (0,0) with **0 of 20 racers in it** — and a full-canvas scrim reading
+  "Loading results…" was drawn over the whole ending, both predating the hold by months. The
+  director is now consulted through FINISHED (chosen over freezing, because the zoom-out can still
+  be in flight at the last crossing) and the splash is retired. New guard renders a real FINISHED
+  frame and refuses a full-canvas fill **at the identity transform** — tracking the matrix is what
+  stops it flagging the track's own background; proven by sabotage, 1.1 s. RENDER minted
+  `c0fd1e8eda539867` → `096f2726c45ed853`, isolated to one file by worktree; WORLD and CAMERA
+  unchanged — and **CAMERA's unchanged hash is explicitly not evidence here**, because
+  `camera-fingerprint` stops at the last crossing and renders no FINISHED frame at all.
 - [FINISH-PAIR-1.md](FINISH-PAIR-1.md) — **the photo finish frames the pair it is actually
   following** (2026-08-11, tag `v-ship-finish-pair`, return point `pre/ship-finish-pair`). The shot
   captured its two contenders once at entry while the framing guaranteed the live top two by `t`,
