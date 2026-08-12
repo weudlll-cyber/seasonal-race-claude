@@ -556,23 +556,30 @@ export const DEFAULT_CAMERA_CONFIG = {
   // in step with a track's length. As the leader arrives it relaxes past the state's own setting,
   // stops being the smallest term, and what is left is the shot that was always there.
   //
-  // ── IT OPENS ONLY AS FAR AS THE LINE NEEDS, AND IT STARTS WHEN THAT FITS (2026-08-12) ─────────
+  // ── IT GLIDES FROM WIDE-AND-BACK TO THE ORDINARY SHOT (RUNIN-GLIDE-1, 2026-08-12) ────────────
   //
-  // Two rulings, and neither cost a number.
+  // The owner's design, and both halves happen at once. ONE progress measure — the leader's
+  // remaining distance to the line — drives the anchor placement AND the zoom, from the endgame
+  // threshold to the crossing:
   //
-  // MINIMALITY. The first cut opened to the whole world on a closed track. Almost all of that was
-  // the ANCHOR'S PLACE IN FRAME: a forward-framed leader sits two thirds of the way along the
-  // frame, so only a third of it lay ahead of him toward the line, and the shot had to be 3.01x
-  // wider than the leader-to-line distance demands. The run-in now answers the framing rule's own
-  // position question with its own facts — there IS something worth seeing ahead — so the subject
-  // is centred while it composes. Nothing else was excess: the margin is a flat 1.43x and is
-  // WANTED, and the easing another 1.03x.
+  //   at engagement   the leader sits BEHIND centre, so most of the frame lies toward the finish
+  //                   and the line fits at a modest zoom;
+  //   as he closes    he travels back to his ordinary position while the shot tightens;
+  //   at the crossing he is at `leaderForwardFrac` under the state's own zoom — the ordinary shot
+  //                   exactly, so there is no seam to hand over.
   //
-  // IT STARTS LATER. It engages only once the line can be framed WITHOUT opening wider than the
-  // widest shot this camera already composes — OVERVIEW's own width. Until then the normal states
-  // run untouched. Measured, that is about 4.4 s (Luger Hill) and 4.9 s (Searound) after the
-  // endgame threshold, and it takes the widest frame the run-in ever reaches from 99% of the world
-  // to 19-21%.
+  // IT INVENTS NO NUMBER. The end of the travel is the state's own placement from the framing
+  // table; the start is that placement MIRRORED about the centre. `leaderForwardFrac` already says
+  // how far off centre a subject is placed, and this uses it twice. A CENTRED state does not move
+  // at all — mirroring 0.5 gives 0.5 — which is why the photo finish keeps its own framing.
+  //
+  // THE ENGAGEMENT IS A GLIDE, on the same `glideDurationMs` every transition uses. Measured
+  // without it: the frame goes EMPTY for a handful of frames on six of ten tracks, every one at
+  // run-in progress 0.006-0.016, while pan and zoom ease independently out of the step. The glide
+  // moves them on ONE ease, which is what makes a large zoom change safe here as everywhere else.
+  //
+  // WHAT THIS REPLACED: an OVERVIEW-width cap and a delayed engagement. Both are gone — the run-in
+  // composes from the endgame threshold again and the pull-out is whatever the line requires.
   runInShot: true,
   // ── THE START CEREMONY (START-CEREMONY-CAMERA-1) ───────────────────────────────────────────────
   // The race opens on the whole track, held still, then eases in to the starting formation until it

@@ -1839,7 +1839,13 @@ describe('CameraDirector — trivial pan centering (closed tracks)', () => {
       { t: 0.8, x: 500, y: worldCy, finished: false },
       { t: 0.5, x: 200, y: worldCy, finished: false },
     ];
-    for (let i = 0; i < 400; i++) cd.update(racers, 1000, mockRaceState, 1280, 720);
+    // RUNIN-GLIDE-1: the clock ADVANCES. This drove 400 frames at a frozen `ts`, which converges a
+    // pixel lerp but cannot converge anything TIMED — the transition glide included. It passed only
+    // because nothing timed was running in this state; the run-in's engagement glide is, and a
+    // frozen clock holds it at its first frame forever. Advancing the clock is what a real caller
+    // does and is what "after the pan converges" means.
+    for (let i = 0; i < 400; i++)
+      cd.update(racers, 1000 + i * (1000 / 60), mockRaceState, 1280, 720);
     expect(screenX(cd, worldCx, worldW)).toBeCloseTo(640, 0);
     expect(screenY(cd, worldCy, worldH)).toBeCloseTo(360, 0);
   });
@@ -7172,24 +7178,21 @@ describe('the hold keeps the ceremony framing (CEREMONY-HOLD-TARGET-1)', () => {
 });
 
 // ============================================================
-// RUNIN-MINIMAL-1 — THE RUN-IN OPENS ONLY AS FAR AS THE LINE NEEDS, AND STARTS WHEN THAT FITS.
+// RUNIN-GLIDE-1 — THE RUN-IN GLIDES FROM WIDE-AND-BACK TO THE ORDINARY SHOT.
 //
-// The run-in bounds the zoom of whatever state is running between the endgame threshold and the
-// first crossing (RUNIN-OWNS-1). This block pins the two rulings on top of that shape:
+// One progress measure — the leader's remaining distance to the line — drives BOTH the anchor
+// placement and the zoom, from the endgame threshold to the crossing. What is pinned here:
 //
-//   MINIMALITY. The excess was the anchor's place in frame: a forward-framed leader sits 0.66 along
-//   the chord, so only a THIRD of the frame lay ahead of him toward the line and the shot had to be
-//   3.01x wider than the distance demands. The run-in answers the framing rule's own position
-//   question differently — there IS something worth seeing ahead — and `_forwardFracNow` is the one
-//   place that answer lives, read by the guarantees AND by the bias itself. The two reading the
-//   same helper is load-bearing: while they disagreed, every guarantee sized the shot for an anchor
-//   the pan did not deliver, and the line fell out of frame on a third of the run-in's own frames.
-//
-//   IT STARTS LATER. It engages only once the line fits WITHOUT opening wider than the widest shot
-//   this camera composes (OVERVIEW's own width), and the engagement LATCHES so the shot cannot
-//   flicker between wide and tight.
+//   THE TRAVEL. It starts at the MIRROR of the state's own placement (most of the frame toward the
+//   finish) and ends at the state's own placement exactly, so the crossing shot is the ordinary shot
+//   with no seam. A CENTRED state does not move at all — mirroring 0.5 gives 0.5 — which is why the
+//   photo finish keeps its framing.
+//   THE BACKWARD BIAS IS LEGAL. `_applyLeaderForwardBias` used to reject a negative displacement
+//   with a guard that read as a degenerate check and was in fact a one-way valve.
+//   THE ENGAGEMENT IS A GLIDE, once. Without it the frame goes empty for a handful of frames on six
+//   of ten tracks while pan and zoom ease independently out of the step.
 // ============================================================
-describe('RUNIN-MINIMAL-1 — the run-in is minimal, and starts when the line fits', () => {
+describe('RUNIN-GLIDE-1 — wide-and-back, gliding to the ordinary shot', () => {
   // A straight 4000 px track; the line at t=1 is therefore at x=4000, y=360.
   const runInDirector = (cfg = {}) =>
     new CameraDirector(4000, 720, true, { ...DEFAULT_CAMERA_CONFIG, ...cfg }, 36, makeShape(4000));
@@ -7212,51 +7215,72 @@ describe('RUNIN-MINIMAL-1 — the run-in is minimal, and starts when the line fi
     expect(cd._runInWindowOpen([], rs)).toBe(false);
   });
 
-  it('THE POSITION ANSWER: the forward bias is suspended while the run-in composes', () => {
+  it('THE TRAVEL: the anchor starts at the mirror and ends at the state’s own placement', () => {
     const cd = runInDirector();
     cd.state = CAM_STATE.LEADER_ZOOM; // FORWARD in the table
-    cd._runInComposingNow = false;
-    expect(cd._forwardFracNow()).toBe(cd._leaderForwardFrac);
-    expect(cd._forwardFracNow()).not.toBeNull();
+    const end = cd._leaderForwardFrac;
     cd._runInComposingNow = true;
-    expect(cd._forwardFracNow()).toBeNull(); // centred: something worth seeing IS ahead
-    // A state the table already centres is unaffected either way.
-    cd.state = CAM_STATE.PHOTO_FINISH;
-    cd._runInComposingNow = false;
-    expect(cd._forwardFracNow()).toBeNull();
+
+    cd._runInProgress = 0;
+    expect(cd._forwardFracNow()).toBeCloseTo(1 - end, 10); // behind centre, same displacement
+    expect(cd._forwardFracNow()).toBeLessThan(0.5);
+
+    cd._runInProgress = 0.5;
+    expect(cd._forwardFracNow()).toBeCloseTo(0.5, 10); // halfway is dead centre
+
+    cd._runInProgress = 1;
+    expect(cd._forwardFracNow()).toBeCloseTo(end, 10); // the ordinary shot, exactly — no seam
   });
 
-  it('IT STARTS LATER: it does not engage while the line would need a wider shot than OVERVIEW', () => {
+  it('a CENTRED state does not travel at all, so the photo finish keeps its framing', () => {
     const cd = runInDirector();
-    cd.state = CAM_STATE.LEADER_ZOOM;
-    // Just past the threshold but a long way from the line: engaging would mean opening wider than
-    // the widest shot this camera composes, so it holds off and leaves the state untouched.
-    expect(cd._updateRunIn(subjectsAt(3620), FRAME, racersAt(3620), rs)).toBe(Infinity);
-    expect(cd._runInComposingNow).toBe(false);
-    expect(cd._runInEngaged).toBe(false);
-    // Close enough that the line fits inside OVERVIEW's width: it engages.
-    const ceiling = cd._updateRunIn(subjectsAt(3950), FRAME, racersAt(3950), rs);
-    expect(Number.isFinite(ceiling)).toBe(true);
-    expect(ceiling).toBeGreaterThanOrEqual(cd._overviewStateZoom);
-    expect(cd._runInComposingNow).toBe(true);
-    expect(cd._runInEngaged).toBe(true);
+    cd.state = CAM_STATE.PHOTO_FINISH; // CENTRED in the table
+    cd._runInComposingNow = true;
+    for (const p of [0, 0.25, 0.5, 0.75, 1]) {
+      cd._runInProgress = p;
+      expect(cd._forwardFracNow(), `s=${p}`).toBeCloseTo(0.5, 10);
+    }
   });
 
-  it('the engagement LATCHES, so the shot cannot flicker between wide and tight', () => {
+  it('the progress measure is 0 at the threshold, 1 at the line, and never runs backwards', () => {
+    const cd = runInDirector();
+    cd._runInProgress = null;
+    expect(cd._runInProgressOf(racersAt(3600), rs)).toBeCloseTo(0, 6); // 0.9 of finishT = threshold
+    cd._runInProgress = null;
+    expect(cd._runInProgressOf(racersAt(4000), rs)).toBeCloseTo(1, 6);
+    // Monotone: a dip in the reading cannot walk the anchor back across the frame.
+    cd._runInProgress = 0.8;
+    expect(cd._runInProgressOf(racersAt(3700), rs)).toBe(0.8);
+  });
+
+  it('a BACKWARD bias actually moves the pan — the old guard rejected exactly that case', () => {
     const cd = runInDirector();
     cd.state = CAM_STATE.LEADER_ZOOM;
-    cd._updateRunIn(subjectsAt(3950), FRAME, racersAt(3950), rs);
+    const pos = { x: 3000, y: 360 };
+    const args = [0.5, cd._proj.axisX, cd._proj.axisY, 1280, 720];
+    cd._runInComposingNow = true;
+    cd._runInProgress = 0; // fully back
+    const back = cd._applyLeaderForwardBias(pos, ...args);
+    cd._runInProgress = 1; // fully forward
+    const fwd = cd._applyLeaderForwardBias(pos, ...args);
+    expect(back.x).not.toBeCloseTo(pos.x, 3);
+    // The two displacements are opposite in sign and equal in size — one mirror, used twice.
+    expect(back.x - pos.x).toBeCloseTo(-(fwd.x - pos.x), 6);
+  });
+
+  it('THE ENGAGEMENT IS A GLIDE, and only once', () => {
+    const cd = runInDirector();
+    cd.state = CAM_STATE.LEADER_ZOOM;
+    cd._lerpPhase = 'tracking';
+    cd._updateRunIn(subjectsAt(3700), FRAME, racersAt(3700), rs, 5000);
     expect(cd._runInEngaged).toBe(true);
-    // The same far position that would NOT have engaged still composes once engaged.
-    expect(Number.isFinite(cd._updateRunIn(subjectsAt(3620), FRAME, racersAt(3620), rs))).toBe(
-      true
-    );
-    expect(cd._runInComposingNow).toBe(true);
-    // …but the window still closes it at the crossing.
-    expect(
-      cd._updateRunIn(subjectsAt(3950), FRAME, racersAt(3950), { finishT: 1, finishedCount: 1 })
-    ).toBe(Infinity);
-    expect(cd._runInComposingNow).toBe(false);
+    expect(cd._lerpPhase).toBe('glide');
+    expect(cd._glideStartTs).toBe(5000);
+    expect(cd._glideDurationActiveMs).toBe(cd._glideDurationMs);
+    // A glide restarted every frame is a rail, not an ease.
+    cd._lerpPhase = 'tracking';
+    cd._updateRunIn(subjectsAt(3800), FRAME, racersAt(3800), rs, 6000);
+    expect(cd._lerpPhase).toBe('tracking');
   });
 
   it('the line bound widens with distance and RELEASES as the leader reaches the line', () => {
@@ -7273,26 +7297,27 @@ describe('RUNIN-MINIMAL-1 — the run-in is minimal, and starts when the line fi
     expect(cd._lineCeiling(subjectsAt(1000), FRAME, { finishT: 0 })).toBe(Infinity);
   });
 
-  it('centring the anchor is what makes it minimal — the same distance needs less width', () => {
-    // The measured excess, as a unit test: a forward-framed anchor leaves a third of the frame
-    // toward the line, a centred one leaves half, so the centred shot may be TIGHTER (higher
-    // ceiling) for the identical geometry.
+  it('the back placement is what makes the shot modest — less width for the same geometry', () => {
     const cd = runInDirector();
     cd.state = CAM_STATE.LEADER_ZOOM;
-    cd._runInComposingNow = false;
-    const forward = cd._lineCeiling(subjectsAt(3000), FRAME, rs);
     cd._runInComposingNow = true;
-    const centred = cd._lineCeiling(subjectsAt(3000), FRAME, rs);
-    expect(centred).toBeGreaterThan(forward);
+    cd._runInProgress = 1; // the ordinary forward placement
+    const forward = cd._lineCeiling(subjectsAt(3000), FRAME, rs);
+    cd._runInProgress = 0; // the mirror
+    const back = cd._lineCeiling(subjectsAt(3000), FRAME, rs);
+    // Higher ceiling = tighter shot for the same geometry.
+    expect(back).toBeGreaterThan(forward);
   });
 
-  it('runInShot: false makes it inert — no window, no engagement, no bound', () => {
+  it('runInShot: false makes it inert — no window, no travel, no glide, no bound', () => {
     const cd = runInDirector({ runInShot: false });
-    expect(cd._runInWindowOpen(racersAt(3800), rs)).toBe(false);
     cd.state = CAM_STATE.LEADER_ZOOM;
-    expect(cd._updateRunIn(subjectsAt(3950), FRAME, racersAt(3950), rs)).toBe(Infinity);
+    cd._lerpPhase = 'tracking';
+    expect(cd._runInWindowOpen(racersAt(3800), rs)).toBe(false);
+    expect(cd._updateRunIn(subjectsAt(3950), FRAME, racersAt(3950), rs, 5000)).toBe(Infinity);
     expect(cd._runInComposingNow).toBe(false);
     expect(cd._runInEngaged).toBe(false);
+    expect(cd._lerpPhase).toBe('tracking');
     expect(cd._forwardFracNow()).toBe(cd._leaderForwardFrac);
   });
 });

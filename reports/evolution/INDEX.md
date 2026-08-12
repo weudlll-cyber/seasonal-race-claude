@@ -40,6 +40,52 @@ is dated and recorded HERE, where a reader on their way to the report will pass 
 
 ## Ships
 
+- [RUNIN-GLIDE-1.md](RUNIN-GLIDE-1.md) — **the run-in glides from wide-and-back to the ordinary
+  shot** (2026-08-12, `feat/runin-state`, **NOT merged — his eye on luger-hill seed 9**;
+  fingerprints measured fresh and **NOT minted**). The owner's final design and the fourth shape.
+  **ONE progress measure — the leader's remaining distance to the line — drives BOTH the anchor
+  placement and the zoom**: at engagement he sits BEHIND centre so most of the frame lies toward the
+  finish and the line fits at a modest zoom; as he closes he travels back to his ordinary place while
+  the shot tightens; at the crossing he is at `leaderForwardFrac` under the state's own zoom, i.e.
+  the ordinary shot with **no seam to hand over**. **IT INVENTS NO NUMBER** — the end of the travel is
+  the framing table's own answer, the start is that answer MIRRORED about the centre, so
+  `leaderForwardFrac` is used twice; a CENTRED state therefore does not move at all (mirroring 0.5
+  gives 0.5), which falls out rather than being special-cased and is why the photo finish keeps its
+  framing. The measure is taken ALONG THE TRACK, not across the ground, because a progress measure
+  must be monotone and the straight-line distance is not — on a closed track the leader can be
+  euclidean-near the finish and still most of a lap from it; along the track it is `leaderProgress`,
+  the same quantity `endgameThreshold` is written in, so it is 0 exactly at the window and 1 exactly
+  at the line. **REMOVED**: the OVERVIEW-width cap and the delayed engagement, so the run-in composes
+  from the threshold again and the pull-out is whatever the line requires. **AND ONE GUARD THAT WAS
+  HIDING**: `_applyLeaderForwardBias` ended with `if (!(worldBias > 0)) return pos;`, which reads as
+  a degenerate-input check and is in fact a ONE-WAY VALVE silently discarding every BACKWARD
+  displacement — i.e. the whole of the new placement, which would have made this block a no-op with
+  no error anywhere. **THE ENGAGEMENT HAD TO BECOME A GLIDE, and which step forced it was MEASURED
+  rather than guessed**: without one, **93 empty frames across ten tracks, every single one at run-in
+  progress 0.006-0.016** — the engagement frame and nothing else, where the framing steps in both
+  quantities at once (the zoom opens up to 6.5x on space-sprint). With the anchor travel disabled and
+  only the zoom step left the count was **95, no better** — so the zoom step is the whole of it and
+  **the anchor travel is free**, costing nothing in emptiness while lifting line-in-frame 90.1% ->
+  95.3% and bringing the line into shot 0.4 s -> 0.2 s. The fix is the mechanism DEAD-ENDS §M already
+  names (_the glide is what makes a big zoom change safe_), started by hand on the same
+  `glideDurationMs`, once, guarded by the latch. **MEASURED ON ALL TEN TRACKS**: composes **100%** of
+  the endgame window, line in frame **9.8% -> 93.3%**, first in shot **0.4 s** after the window opens
+  (about **4 s earlier** than the previous build, which did not engage for 4.4-4.9 s), **0 empty
+  frames on every track**. **THE FIELD, measured because the brief asked rather than assumed**: the
+  chasing pack is in shot on **94.6%** of run-in frames and first drops below at progress **0.93** —
+  and **that loss is the photo finish tightening on the pair, not the anchor placement**, which has
+  already arrived by then; racers-on-screen rises 5 -> 19 as the run-in opens and holds in the teens
+  through the whole travel. The existing field guarantee neither prevents nor fights it: it retires
+  early and does not apply to PAIR states. **COSTS**: the pull-out reaches the whole world on the
+  closed tracks whose finish is most of a lap away at the threshold (city-circuit and ice-track 100%,
+  dirt-oval 92%; luger-hill 67%, mountainstreet 27%); the crossing zoom is within **0.03%** of OFF on
+  six tracks and **3.58%** at worst (space-sprint); and the tracking-lag tails are back
+  (LEAD_CHANGE p95 7.15 -> **25.19**) — though **PHOTO_FINISH IMPROVED, 33.59 -> 29.80**, because the
+  anchor travel means that shot no longer has to be opened as far to hold the line. **check-runin-frame
+  GREEN on both halves both tracks** (0.15 / 1.23 TW, limit untouched). **FINGERPRINTS**: world
+  `dc4647be0f55ebdb` **unmoved**; camera `64432e18a7e62188` -> `e9d19cda3e585c70`, render
+  `096f2726c45ed853` -> `3ab2918a88337a83` — and with `runInShot: false` **all three return exactly to
+  the stored values on all ten tracks**.
 - [RUNIN-MINIMAL-1.md](RUNIN-MINIMAL-1.md) — **the pull-out is minimal, and the run-in starts when
   the line fits** (2026-08-12, `feat/runin-state`, **NOT merged — his eye on luger-hill seed 9**;
   fingerprints measured fresh and **NOT minted**). Third and final shape. **STAGE 1 MEASURED BEFORE

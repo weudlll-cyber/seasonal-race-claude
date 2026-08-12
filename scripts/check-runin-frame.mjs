@@ -43,12 +43,18 @@
 //   are geometrically exclusive at that width — this is not a camera pointed away from the race, it
 //   is a camera showing all of it.
 //
-// THAT FAILURE IS GONE, AND NOTHING HERE WAS TOUCHED TO ACHIEVE IT (RUNIN-MINIMAL-1, same day).
-// The run-in now opens only as far as the line needs and does not engage until the line fits inside
-// OVERVIEW's width, so the world-sized frame no longer happens: the widest it reaches is 19-21% of
-// the world and the two cases read 0.40 and 0.09 track widths. The limit of 2 stands untouched and
-// unwidened, which is the outcome to want — the guard was reading a real property of the shot, the
-// shot changed, and the reading changed with it.
+// THAT FAILURE IS GONE, AND NOTHING HERE WAS TOUCHED TO ACHIEVE IT (RUNIN-GLIDE-1, same day). The
+// run-in now starts the leader BEHIND frame centre, so most of the frame lies toward the finish and
+// the line fits without the shot having to swell to hold both. The two cases read 0.15 and 1.23
+// track widths against the untouched limit of 2.
+//
+// IT IS STILL POSSIBLE TO REACH A WORLD-SIZED FRAME — the pull-out is deliberately whatever the line
+// requires, and on a closed track whose finish is most of a lap away at the threshold that is the
+// whole world (city-circuit and ice-track measure 100%). Those tracks are not in the two cases below.
+// If a later change brings one of them here and this half fails at ~2 track widths, the reading is
+// almost certainly that frame and not a defect: see RUNIN-OWNS-1's report for the geometry, which is
+// that a world-sized frame CANNOT be centred on the spine because the world-bounds clamp centres it
+// on the world, whose centre on an oval is the infield.
 //
 // Why 2 and not something larger: a healthy run-in holds 0.1, and the original excursion reached
 // 10.9. A limit in that gap catches a camera pointed at nothing without policing framing taste.
