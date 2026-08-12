@@ -18,6 +18,9 @@ import { InfoTooltip } from '../../../components/InfoTooltip/index.js';
 // CEREMONY-OPENING-2: the total is READ from the same function the race uses, never re-added here.
 // A second sum beside the schedule is precisely how the countdown once became invisible.
 import { ceremonyTotalMs } from '../../../modules/camera/startCeremony.js';
+// ENDING-HOLD-1: the ending's arithmetic has ONE home, and this read-out shares it with the race
+// screen's timers rather than adding the terms up a second time here.
+import { endingTotalMs, SCREEN_TRANSITION_MS } from '../../RaceScreen/endingSchedule.js';
 import s from '../DevScreen.module.css';
 
 // ── Per-state profile accordion ───────────────────────────────────────────────
@@ -1332,8 +1335,70 @@ function CameraAdvancedSection() {
       <div className={s.card}>
         <SectionHeading>8 · Finish</SectionHeading>
         <p style={{ fontSize: '0.78rem', color: 'var(--color-muted)', marginBottom: '0.75rem' }}>
-          After first finish crossing: drama pulse on leader → smooth FINISH_OVERVIEW zoom-out until
-          the last racer finishes → pause → leaderboard.
+          The controls below are in the order the phases happen. <strong>1</strong> and{' '}
+          <strong>2</strong> are measured from the FIRST crossing; <strong>3</strong>,{' '}
+          <strong>4</strong> and <strong>5</strong> from the LAST. The winner card is a tenant of{' '}
+          <strong>4</strong> and can never lengthen the ending.
+        </p>
+        <label
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: '0.6rem',
+            cursor: 'pointer',
+            fontSize: '0.88rem',
+            marginBottom: '0.4rem',
+          }}
+        >
+          <input
+            type="checkbox"
+            data-testid="ending-keeps-finish-shot"
+            checked={config.endingKeepsFinishShot ?? DEFAULT_CAMERA_CONFIG.endingKeepsFinishShot}
+            onChange={(e) => set('endingKeepsFinishShot', e.target.checked)}
+          />
+          <span style={{ fontWeight: 600 }}>The ending keeps the finish shot</span>
+          <InfoTooltip text="On (default): the camera director keeps composing while the ending runs, so phases 3-4 hold the settled finish picture. Off: the pre-2026-08-12 behaviour — the transform is replaced by zoom 1 / offset 0 the moment the last racer crosses, which on a closed track shrinks the whole world into the canvas and on an open track shows an 853x480 window at world (0,0) with no racers in it at all." />
+        </label>
+        <label
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: '0.6rem',
+            cursor: 'pointer',
+            fontSize: '0.88rem',
+            marginBottom: '0.75rem',
+          }}
+        >
+          <input
+            type="checkbox"
+            data-testid="finished-splash-enabled"
+            checked={config.finishedSplashEnabled ?? DEFAULT_CAMERA_CONFIG.finishedSplashEnabled}
+            onChange={(e) => set('finishedSplashEnabled', e.target.checked)}
+          />
+          <span style={{ fontWeight: 600 }}>Show the old &quot;RACE FINISHED!&quot; splash</span>
+          <InfoTooltip text="Off (default). On: restores the pre-2026-08-12 full-canvas black scrim with RACE FINISHED! and 'Loading results…', drawn over every frame of the ending. It is off because nothing is loading — the results are written on the same frame it appeared — and because it covered the winner card, the held picture and the podium build-up alike." />
+        </label>
+        {/* ENDING-HOLD-1: the total, computed by the SAME function the race screen's timers are
+            built from (endingSchedule.js), so this read-out and the behaviour cannot disagree.
+            It was previously a number a reader had to add up by hand from four sliders in two
+            cards. Read-only on purpose — every term has its own control below. */}
+        <p
+          data-testid="ending-total"
+          style={{ fontSize: '0.78rem', color: 'var(--color-muted)', marginBottom: '0.75rem' }}
+        >
+          <strong>From the last crossing to a settled result screen:</strong>{' '}
+          {endingTotalMs({
+            holdMs: config.finishHoldAfterLastMs ?? DEFAULT_CAMERA_CONFIG.finishHoldAfterLastMs,
+            pauseMs: config.finishPauseMs ?? DEFAULT_CAMERA_CONFIG.finishPauseMs,
+            podiumBeatMs: config.podiumRevealBeatMs ?? DEFAULT_CAMERA_CONFIG.podiumRevealBeatMs,
+            transitionMs: SCREEN_TRANSITION_MS,
+          })}
+          {' ms'} — hold{' '}
+          {config.finishHoldAfterLastMs ?? DEFAULT_CAMERA_CONFIG.finishHoldAfterLastMs} + pause{' '}
+          {config.finishPauseMs ?? DEFAULT_CAMERA_CONFIG.finishPauseMs} + screen transition{' '}
+          {SCREEN_TRANSITION_MS} + podium 4×
+          {config.podiumRevealBeatMs ?? DEFAULT_CAMERA_CONFIG.podiumRevealBeatMs}. Phases 1 and 2
+          are not in this total: they happen before the last racer is home.
         </p>
         <div className={s.formGrid}>
           <div className={s.formGroup}>
@@ -1341,9 +1406,9 @@ function CameraAdvancedSection() {
               className={s.label}
               style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}
             >
-              Finish pause (ms)
+              1 · Hold on the winner, before the zoom-out (ms)
               <InfoTooltip
-                text={`How long the camera HOLDS before the zoom-out to the finish overview begins. It applies to both endings and it is the same dial for both: after an ordinary finish it holds on the winner from the moment he crosses; after a PHOTO FINISH it holds the pair shot from the moment BOTH contenders are home — not merely when two racers have crossed, since the second across is often neither of them. 0 means no pause at all: the zoom-out starts on the same frame, with no held shot. Currently: ${config.finishDramaDurationMs ?? DEFAULT_CAMERA_CONFIG.finishDramaDurationMs}ms.`}
+                text={`THE FIRST PHASE OF THE ENDING, and it is measured from the FIRST crossing, not the last. RELABELLED 2026-08-12: this control read "Finish pause (ms)" while writing finishDramaDurationMs, so it collided with phase 4 below, which really is the pause — two different keys reading as the same control, one of them by the other's name. How long the camera HOLDS before the zoom-out to the finish overview begins. It applies to both endings and it is the same dial for both: after an ordinary finish it holds on the winner from the moment he crosses; after a PHOTO FINISH it holds the pair shot from the moment BOTH contenders are home — not merely when two racers have crossed, since the second across is often neither of them. 0 means no pause at all: the zoom-out starts on the same frame, with no held shot. Currently: ${config.finishDramaDurationMs ?? DEFAULT_CAMERA_CONFIG.finishDramaDurationMs}ms.`}
               />
             </label>
             <input
@@ -1366,7 +1431,7 @@ function CameraAdvancedSection() {
               className={s.label}
               style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}
             >
-              Zoom-out duration (ms)
+              2 · Zoom-out duration (ms)
               <InfoTooltip
                 text={`Target duration for the smooth zoom-out to OVERVIEW level after the drama pulse. Currently: ${config.finishOverviewZoomOutDurationMs ?? DEFAULT_CAMERA_CONFIG.finishOverviewZoomOutDurationMs}ms.`}
               />
@@ -1392,9 +1457,32 @@ function CameraAdvancedSection() {
               className={s.label}
               style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}
             >
-              Pause before leaderboard (ms)
+              3 · Hold on the finish picture, after the LAST crossing (ms)
               <InfoTooltip
-                text={`Pause after last finisher before the leaderboard appears. Currently: ${config.finishPauseMs ?? DEFAULT_CAMERA_CONFIG.finishPauseMs}ms.`}
+                text={`Extra time on the settled finish shot AFTER the LAST racer is home, before the pause below starts. The two ADD. What actually grows is the CARD-FREE tail: the winner card is capped at min(card, pause) and does not inherit this, so at the shipped numbers the picture stands card-free for 500ms + this. It buys a longer look at a SETTLED picture and cannot put arrivals back — the zoom-out starts when the FIRST finishers are home (phase 1 above), so by the last crossing the pull-back is long over. ZERO means no hold at all and schedules no timer. Currently: ${config.finishHoldAfterLastMs ?? DEFAULT_CAMERA_CONFIG.finishHoldAfterLastMs}ms.`}
+              />
+            </label>
+            <input
+              type="number"
+              className={s.input}
+              min={0}
+              max={10000}
+              step={250}
+              value={config.finishHoldAfterLastMs ?? DEFAULT_CAMERA_CONFIG.finishHoldAfterLastMs}
+              onChange={(e) => {
+                const v = Number(e.target.value);
+                if (v >= 0 && v <= 10000) set('finishHoldAfterLastMs', v);
+              }}
+            />
+          </div>
+          <div className={s.formGroup}>
+            <label
+              className={s.label}
+              style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}
+            >
+              4 · Pause before the result screen (ms)
+              <InfoTooltip
+                text={`THE SECOND PHASE OF THE ENDING, and the room the winner card is a tenant of. It starts when the hold above ends and runs until the screen changes. Relabelled from "Pause before leaderboard": it sat beside a "hold after the last finisher" and the two read as the same thing — this one is the pause BEFORE THE SCREEN CHANGES, that one is time on the RACE PICTURE. Currently: ${config.finishPauseMs ?? DEFAULT_CAMERA_CONFIG.finishPauseMs}ms.`}
               />
             </label>
             <input
@@ -1415,7 +1503,7 @@ function CameraAdvancedSection() {
               className={s.label}
               style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}
             >
-              Podium build-up beat (ms)
+              5 · Podium build-up beat (ms)
               <InfoTooltip
                 text={`ONE beat, and the whole result screen is built from multiples of it: 3rd place, then 2nd a beat later, then the WINNER a beat after that — held for TWO beats, because that is the moment — and then the ranking and everything below it settle in. Total = four beats. ZERO SWITCHES IT OFF: the screen appears complete and instantly, exactly as it did before. A click or any key completes it early, and a system asking for reduced motion never starts it. Currently: ${config.podiumRevealBeatMs ?? DEFAULT_CAMERA_CONFIG.podiumRevealBeatMs}ms (total ${4 * (config.podiumRevealBeatMs ?? DEFAULT_CAMERA_CONFIG.podiumRevealBeatMs)}ms).`}
               />
@@ -1438,7 +1526,7 @@ function CameraAdvancedSection() {
               className={s.label}
               style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}
             >
-              Winner card (ms)
+              Winner card (ms) — a tenant of 4, never its own phase
               <InfoTooltip
                 text={`The counterpart to the opening's brand card: at the end of the race a card in the lower-left names the winner — his race number, his name, his colour — in the brand's accent where a brand is chosen. IT LIVES INSIDE THE PAUSE ABOVE AND CANNOT MAKE THE ENDING LONGER: the card gets min(this, pause), so setting the pause to 0 removes the card whatever this says, and raising this past the pause buys nothing — the pause is the lever for a longer read. ZERO MEANS NO CARD AT ALL. Currently: ${config.winnerCardMs ?? DEFAULT_CAMERA_CONFIG.winnerCardMs}ms, of which ${Math.min(config.winnerCardMs ?? DEFAULT_CAMERA_CONFIG.winnerCardMs, config.finishPauseMs ?? DEFAULT_CAMERA_CONFIG.finishPauseMs)}ms fits in the pause.`}
               />

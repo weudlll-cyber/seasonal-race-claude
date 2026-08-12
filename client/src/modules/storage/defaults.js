@@ -361,6 +361,75 @@ export const DEFAULT_CAMERA_CONFIG = {
   // is `min(winnerCardMs, finishPauseMs)` and this was the binding half — so both moved together.
   // This is the ROOM; `winnerCardMs` below is the tenant.
   finishPauseMs: 3500, // ms pause after last racer finishes before leaderboard
+  // ── THE HELD OVERVIEW (ENDING-HOLD-1) ─────────────────────────────────────────────────────────
+  // Extra time on the settled finish picture AFTER the last racer is home, BEFORE `finishPauseMs`
+  // starts running. The two are added, so the ending lengthens by exactly this and nothing else
+  // moves — the winner card's window is still `min(winnerCardMs, finishPauseMs)` and does not grow.
+  //
+  // THE DEFAULT IS THE BEHAVIOUR HE ASKED FOR, 2026-08-12, in his words: _"Aber wenn der letzte ins
+  // Ziel kommt sollte das Bild noch ein wenig stehen bleiben"_ — "but when the last one crosses the
+  // line the picture should stand still a little longer". It shipped at 0 because the measurement
+  // then said there was no WAIT to restore; that reading was right and beside the point. He is not
+  // asking to watch arrivals, he is asking for a beat on the finished picture, and a key defaulting
+  // to 0 does not give him one.
+  //
+  // WHY 1500 AND NOT ANOTHER NUMBER. It is HIS OWN BEAT — `podiumRevealBeatMs` below is 1500 because
+  // he watched the podium at 700 and moved the slider there himself, so the ending keeps one rhythm
+  // instead of gaining a second, unrelated one. And it is the number that makes the change legible:
+  // the settled, CARD-FREE picture at the end is what actually grows here, because the winner card
+  // is capped at `min(winnerCardMs, finishPauseMs)` = 3000 of the 3500 ms pause and does not inherit
+  // this. That window goes from 500 ms to 2000 ms — a fourfold change, unmistakable in an eye test,
+  // where 250 or 500 would be argued about.
+  //
+  // MEASURED end to end at this default (20 racers, shipped config): the ending from the last
+  // crossing to a settled result screen is 11 370 ms against 9 870 at 0. On a race with a genuinely
+  // far-behind straggler (Searound seed 9) the last crossing is unchanged — this key cannot move it,
+  // it only follows it.
+  //
+  // ZERO STILL MEANS NO HOLD AT ALL and is still tested: no timer is scheduled and the arithmetic is
+  // `0 + finishPauseMs`, which is exactly the ending that shipped before this key existed.
+  //
+  // WHAT IT IS STILL NOT: a way to watch racers come in. The zoom-out begins when the FIRST finishers
+  // are home — his instruction, and unchanged here — so by the last crossing the pull-back is long
+  // over. This buys a longer look at a SETTLED picture and nothing else. If he wants arrivals to
+  // watch, the lever is the race, not the ending (PROJECT-PRINCIPLES §9).
+  finishHoldAfterLastMs: 1500,
+  // ── THE ENDING KEEPS ITS PICTURE (ENDING-PICTURE-1, 2026-08-12) ───────────────────────────────
+  // TRUE = while the phase is FINISHED, the camera director keeps composing the shot. FALSE = the
+  // pre-2026-08-12 behaviour, which replaced the director's transform with `{ zoom: 1, offsetX: 0,
+  // offsetY: 0 }` on the frame the last racer crossed.
+  //
+  // WHAT THAT IDENTITY TRANSFORM ACTUALLY WAS: not a shot. On Searound it squeezed the whole
+  // 3072x2048 world into the 1280x720 canvas; on a 6144-wide open track it left an 853x480 window
+  // pinned at world (0,0) — 14% of the track's width, with the racers nowhere inside it. The owner
+  // reported it as "the race view disappears as soon as the last racer crosses", and the hold he
+  // had just asked for was holding exactly that.
+  //
+  // WHY THE DIRECTOR IS CONSULTED RATHER THAN THE LAST TRANSFORM FROZEN. Freezing was the other
+  // candidate and it fails on timing: the zoom-out can still be IN FLIGHT at the last crossing (on
+  // Searound seed 2814 it ends 50 ms after it), so freezing would stop the pull-back dead mid-move
+  // and hold a half-finished one. Consulting lets the move finish and come to rest. It is safe by
+  // construction — physics no longer steps in this phase, so the director sees a static field, and
+  // `_inFinishMode` is absolute, so no new shot can be chosen.
+  //
+  // NOT AN ENGINE KEY: the director is asked for a transform on frames where it used to be ignored.
+  // The race is over, no physics runs, and `camera-fingerprint.mjs` stops at the last crossing, so
+  // this key cannot move any of the three fingerprints.
+  endingKeepsFinishShot: true,
+  // ── THE END-OF-RACE SPLASH IS RETIRED (ENDING-PICTURE-1, 2026-08-12) ──────────────────────────
+  // FALSE = no splash. TRUE = the pre-2026-08-12 behaviour: a full-canvas `rgba(0,0,0,0.48)` scrim
+  // with "RACE FINISHED!" in 80px gold and "Loading results…" beneath it, drawn over the race
+  // picture for every frame of the ending.
+  //
+  // WHY IT GOES ENTIRELY RATHER THAN MOVING TO THE LAST MOMENTS. Both halves of it are now false.
+  // Nothing is loading: `raceResults` is written to sessionStorage on the SAME FRAME the splash
+  // first appears, so "Loading results…" describes a wait that does not exist. And the ending is no
+  // longer an instant jump — it is a designed sequence that names the winner on a card, holds the
+  // settled picture, and builds the podium up. A scrim over all of that contradicts every part of
+  // it. Moving it to the last moments before navigation was considered and rejected as redundant:
+  // the screen transition already fades to black there (`SCREEN_TRANSITION_MS`, a constant in
+  // TransitionContext.jsx), so those moments are covered by something that fades rather than snaps.
+  finishedSplashEnabled: false,
   finishOverviewLookbackPx: 300, // world-pixel distance before finish line where camera centers during FINISH_OVERVIEW
   // ── THE PODIUM IS BUILT UP (PODIUM-BUILD-1) ───────────────────────────────────────────────────
   // ONE beat. Everything the result screen's build-up does is a whole multiple of it, so the owner

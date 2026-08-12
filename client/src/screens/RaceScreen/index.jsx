@@ -92,6 +92,7 @@ import { initProbe, recordFrame, recordFrameCamera } from '../../modules/rAFProb
 import BrandLogoOverlay from './BrandLogoOverlay.jsx';
 import CeremonyBrandCard from './CeremonyBrandCard.jsx';
 import WinnerCard, { WINNER_CARD_FADE_MS, winnerCardWindowMs } from './WinnerCard.jsx';
+import { endingHoldMs } from './endingSchedule.js';
 import './RaceScreen.css';
 import {
   DEFAULT_CAMERA_CONFIG,
@@ -726,6 +727,12 @@ export default function RaceScreen() {
       cameraConfigRef.current.showRpMinimapBadges ?? DEFAULT_CAMERA_CONFIG.showRpMinimapBadges;
     const showRpStartRowCfg =
       cameraConfigRef.current.showRpStartRow ?? DEFAULT_CAMERA_CONFIG.showRpStartRow;
+    // ENDING-PICTURE-1: the two ending keys, read ONCE per race like the flags above. Both default
+    // to the fixed behaviour; both restore the old one when turned the other way.
+    const endingKeepsFinishShotCfg =
+      cameraConfigRef.current.endingKeepsFinishShot ?? DEFAULT_CAMERA_CONFIG.endingKeepsFinishShot;
+    const finishedSplashEnabledCfg =
+      cameraConfigRef.current.finishedSplashEnabled ?? DEFAULT_CAMERA_CONFIG.finishedSplashEnabled;
 
     // Camera/diag-only Race-Plan bindings (the controller + plan info come from the extracted core).
     let cameraPlanDelivered = false; // B4a: deliver the authored cameraPlan once, mid-race (heroes cast then)
@@ -1074,7 +1081,20 @@ export default function RaceScreen() {
               })
             );
             const pauseMs = camDirRef.current?.finishPauseMs ?? DEFAULT_CAMERA_CONFIG.finishPauseMs;
-            finishNavTimerRef.current = setTimeout(() => fadeNavRef.current('/results'), pauseMs);
+            // ENDING-HOLD-1: extra time on the settled finish picture BEFORE the pause starts. The
+            // two ADD, so the ending grows by exactly the hold — the card's window stays `min(card,
+            // pause)` and does not inherit it, which is why what grows is the CARD-FREE tail.
+            //
+            // MEASURED FROM THE LAST CROSSING, and that is structural rather than asserted: this
+            // whole block is inside `if (st.finishedCount >= nRacers)`, which is reachable only on
+            // the frame the last racer finishes (the same frame sets PHASE.FINISHED, and the arm
+            // above is `st.phase === PHASE.RACING`, so it cannot run twice). At `0` the arithmetic
+            // is `0 + pauseMs` — the ending that existed before this key.
+            const holdMs = endingHoldMs(cameraConfigRef.current?.finishHoldAfterLastMs);
+            finishNavTimerRef.current = setTimeout(
+              () => fadeNavRef.current('/results'),
+              holdMs + pauseMs
+            );
 
             // WINNER-CARD-1: the card is fired HERE, from the same block that starts the pause, so
             // the two can never disagree about when the ending begins.
@@ -1363,8 +1383,24 @@ export default function RaceScreen() {
         isOutcomePhase: diagDataRef.current.rpPhase === 'OUTCOME',
         physicsRacers: st.racers,
       };
+      // ENDING-PICTURE-1: THE ENDING KEEPS THE SHOT THE DIRECTOR COMPOSED.
+      //
+      // This used to hand back `{ zoom: 1, offsetX: 0, offsetY: 0 }` the frame the phase flipped to
+      // FINISHED — an identity transform, which is not a shot at all. On a closed track it shrank
+      // the whole world into the canvas; on an open track it left an 853x480 window pinned at world
+      // (0,0), with the racers nowhere in it. The hold the owner asked for was holding that.
+      //
+      // WHY THE DIRECTOR KEEPS BEING CONSULTED rather than freezing the last transform, which was
+      // the other candidate: the zoom-out can still be IN FLIGHT when the last racer crosses. On
+      // Searound seed 2814 it ends 50 ms after the last crossing, and his own zoom-out setting is
+      // longer than the shipped one — freezing would stop the pull-back dead mid-move and hold THAT.
+      // Consulting the director lets it finish the move and come to rest, which is what "settled"
+      // means. It is also safe by construction: physics no longer steps in this phase, so the
+      // director sees a static field, and `_inFinishMode` is absolute — `_pickNextState` returns
+      // FINISH_MODE_LOCKED, so no new shot can be chosen. It converges and stops.
+      const directorDrivesEnding = st.phase === PHASE.FINISHED && endingKeepsFinishShotCfg;
       const cam =
-        st.phase === PHASE.RACING
+        st.phase === PHASE.RACING || directorDrivesEnding
           ? camDirRef.current.update(renderRacers, ts, raceState, CANVAS_W, CANVAS_H, rawDt)
           : st.phase === PHASE.COUNTDOWN && st.countdownStart != null
             ? camDirRef.current.updateCountdown(
@@ -1479,6 +1515,7 @@ export default function RaceScreen() {
         assignmentByRacer,
         showRpStartRow: showRpStartRowCfg,
         showRpMinimapBadges: showRpMinimapBadgesCfg,
+        showFinishedSplash: finishedSplashEnabledCfg,
         rpPlanInfo,
         renderAlpha,
         interpolationEnabled: frameTimingConfig.renderInterpolation,
