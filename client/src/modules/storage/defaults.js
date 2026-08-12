@@ -554,8 +554,25 @@ export const DEFAULT_CAMERA_CONFIG = {
   // THE ZOOM IS DERIVED, NOT RAMPED. The line's requirement is `room / distance` — wide when the
   // finish is far, tightening by itself as the leader closes, no curve to tune and nothing to keep
   // in step with a track's length. As the leader arrives it relaxes past the state's own setting,
-  // stops being the smallest term, and what is left is the shot that was always there — so the
-  // picture at the crossing is bit-for-bit what it is with this switched off.
+  // stops being the smallest term, and what is left is the shot that was always there.
+  //
+  // ── IT OPENS ONLY AS FAR AS THE LINE NEEDS, AND IT STARTS WHEN THAT FITS (2026-08-12) ─────────
+  //
+  // Two rulings, and neither cost a number.
+  //
+  // MINIMALITY. The first cut opened to the whole world on a closed track. Almost all of that was
+  // the ANCHOR'S PLACE IN FRAME: a forward-framed leader sits two thirds of the way along the
+  // frame, so only a third of it lay ahead of him toward the line, and the shot had to be 3.01x
+  // wider than the leader-to-line distance demands. The run-in now answers the framing rule's own
+  // position question with its own facts — there IS something worth seeing ahead — so the subject
+  // is centred while it composes. Nothing else was excess: the margin is a flat 1.43x and is
+  // WANTED, and the easing another 1.03x.
+  //
+  // IT STARTS LATER. It engages only once the line can be framed WITHOUT opening wider than the
+  // widest shot this camera already composes — OVERVIEW's own width. Until then the normal states
+  // run untouched. Measured, that is about 4.4 s (Luger Hill) and 4.9 s (Searound) after the
+  // endgame threshold, and it takes the widest frame the run-in ever reaches from 99% of the world
+  // to 19-21%.
   runInShot: true,
   // ── THE START CEREMONY (START-CEREMONY-CAMERA-1) ───────────────────────────────────────────────
   // The race opens on the whole track, held still, then eases in to the starting formation until it

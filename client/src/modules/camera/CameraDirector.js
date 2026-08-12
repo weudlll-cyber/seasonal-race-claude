@@ -221,6 +221,11 @@ export class CameraDirector {
     // THE FINISH LATCHES. What they mean, and the sequence they form, is stated in finishPhase.js;
     // these are the six memories that sequence runs on. Five of them decide only WHICH SHOT (plus
     // the HUD label); `_inFinishMode` is the one that also FRAMES — see its reads below.
+    // RUNIN-MINIMAL-1. `_runInEngaged` is the one-way latch: the run-in is a phase, not a per-frame
+    // test, so once the line fits inside OVERVIEW's width it stays engaged for the rest of the race.
+    // `_runInComposingNow` is this frame's answer, read by `_forwardFracNow` and by the diagnostics.
+    this._runInEngaged = false;
+    this._runInComposingNow = false;
     this._inFinishDrama = false; // the drama window after the crossing (hudState reports 'FINISH')
     this._inPhotoFinish = false; // 15a: true while the PHOTO_FINISH shot holds (kept distinct from _inFinishDrama so hudState reports 'PHOTO_FINISH')
     this._photoFinishGateDone = false; // 15a-predictive: once-only latch — the pre-line close-check fires exactly once
@@ -1801,7 +1806,7 @@ export class CameraDirector {
     const at = anchorScreenPoint(
       frameSize.width,
       frameSize.height,
-      framingFor(this.state).position === POSITION.FORWARD ? this._leaderForwardFrac : null,
+      this._forwardFracNow(),
       this._headingScreen(headingT)
     );
     // The perpendicular in SCREEN space, and how many screen px one world px along it is worth.
@@ -2014,7 +2019,7 @@ export class CameraDirector {
     const at = anchorScreenPoint(
       frameSize.width,
       frameSize.height,
-      framingFor(this.state).position === POSITION.FORWARD ? this._leaderForwardFrac : null,
+      this._forwardFracNow(),
       this._headingScreen(subjects.t)
     );
     return corridorGuarantee(
@@ -2046,8 +2051,8 @@ export class CameraDirector {
   }
 
   /**
-   * IS THE RUN-IN COMPOSING THIS FRAME? From the endgame threshold to the crossing, and that is the
-   * whole window — the two ends are read from things that already exist and neither is new.
+   * IS THE RUN-IN'S WINDOW OPEN? From the endgame threshold to the crossing — the two ends are read
+   * from things that already exist and neither is new.
    *
    * `endgameThreshold` is the value at which the director has always declared the endgame.
    * `finishedCount === 0` is the crossing: once somebody is home the finish sequence owns the
@@ -2055,15 +2060,56 @@ export class CameraDirector {
    * zoom-out on a fixed point behind the line), and a bound that kept opening the shot to hold a
    * line the winner has already crossed would be arguing with an authored move.
    *
+   * THE WINDOW IS NECESSARY BUT NO LONGER SUFFICIENT — see `_updateRunIn` for the second condition,
+   * which is what makes the run-in start a little later than the window opens.
+   *
    * @returns {boolean}
    */
-  _runInComposing(racers, raceState) {
+  _runInWindowOpen(racers, raceState) {
     if (!this._runInShot) return false;
     if (!(raceState?.finishT > 0) || (raceState.finishedCount ?? 0) > 0) return false;
     if (!racers || racers.length === 0) return false;
     let maxT = 0;
     for (const r of racers) if (r.t > maxT) maxT = r.t;
     return maxT / raceState.finishT > this._endgameThreshold;
+  }
+
+  /**
+   * WHERE THE SUBJECT SITS ALONG THE FRAME THIS FRAME — the framing rule's POSITION column, with the
+   * run-in's answer folded in. Six call sites read this; they used to read the table directly, and
+   * six copies of one question is how the run-in's answer could have reached five of them.
+   *
+   * ── THE RUN-IN ANSWERS THE POSITION QUESTION DIFFERENTLY, AND THE TABLE IS WHY (RUNIN-MINIMAL-1) ─
+   *
+   * `framingRule.js` states the question once: *is there anything worth seeing AHEAD of the subject?
+   * If yes the subject is centred; if no it sits forward of centre so the frame carries the action
+   * behind.* LEADER_ZOOM, LEAD_CHANGE and OVERVIEW answer NO — "nobody is ahead of the leader, the
+   * race is behind him" — and that is right for the whole race except the run-in, where the finish
+   * line is ahead and is the entire point of the shot.
+   *
+   * IT WAS THE EXCESS. Measured before this block: on the frames the line bound was binding, the
+   * anchor sat a median 0.67 of the way along the frame toward the line on Luger Hill, leaving only
+   * a third of the frame ahead of it — so the shot had to be **3.01x wider** than the leader-to-line
+   * distance actually demands. Searound read 2.15x. Everything else was small: the margin is a flat
+   * 1.11x (and it is WANTED — "well in frame", not at the edge) and the easing another 1.03x
+   * median. Against the frame it actually delivers, the shot is already minimal to within 1.12-1.18x.
+   *
+   * So this suspends the forward bias while the run-in composes, which is not a new rule and not a
+   * number: it is the table's own question, answered with the run-in's own facts. Centring takes the
+   * anchor from 0.67 to 0.50 of the chord, i.e. 3.01x to 2.00x.
+   *
+   * WHY NOT PUSH IT FURTHER, to the trailing edge, where the frame would span anchor and line
+   * exactly (1.0x)? Because the corridor, company and lateral guarantees all measure their room FROM
+   * this point, and an anchor at the frame edge leaves them none — `roomFromPointAlong` returns 0
+   * and they stop constraining anything. Centred is the furthest this can go without disabling the
+   * promises that keep the shot honest.
+   *
+   * @returns {number|null} the fraction along the heading, or null for centred
+   */
+  _forwardFracNow() {
+    if (framingFor(this.state).position !== POSITION.FORWARD) return null;
+    if (this._runInComposingNow) return null;
+    return this._leaderForwardFrac;
   }
 
   /**
@@ -2106,19 +2152,16 @@ export class CameraDirector {
    *
    * @returns {number} cam.zoom ceiling; Infinity when the run-in is not composing this frame
    */
-  _lineCeiling(subjects, frameSize, racers, raceState) {
+  _lineCeiling(subjects, frameSize, raceState) {
     if (!subjects?.point) return Infinity;
-    if (!this._runInComposing(racers, raceState)) return Infinity;
-    const line = this._finishLineWorldPoint(raceState.finishT);
+    const line = this._finishLineWorldPoint(raceState?.finishT ?? 0);
     if (!line) return Infinity;
     // The SAME anchor placement the corridor and company guarantees use, and for the same reason:
-    // where the subject sits in frame decides how much room there is toward anything else. It reads
-    // the ACTIVE state's framing row, so a forward-framed leader shot and a centred photo finish
-    // each measure their own room rather than a run-in's idea of it.
+    // where the subject sits in frame decides how much room there is toward anything else.
     const at = anchorScreenPoint(
       frameSize.width,
       frameSize.height,
-      framingFor(this.state).position === POSITION.FORWARD ? this._leaderForwardFrac : null,
+      this._forwardFracNow(),
       this._headingScreen(subjects.t)
     );
     return pointGuarantee(
@@ -2128,9 +2171,70 @@ export class CameraDirector {
       this._proj.axisY,
       frameSize.width,
       frameSize.height,
-      COMPANY_FRAME_PCT,
+      // THE SUBJECT'S SAFE REGION, not the company's margin — RUNIN-MINIMAL-1, and framingRule.js
+      // states the rule this follows: `innerFramePct` "exists so the SUBJECT does not cling to the
+      // edge ... it keeps doing it for the subject and for both geometric guarantees. Only the
+      // company guarantee reads [COMPANY_FRAME_PCT] instead." The finish line is a guaranteed
+      // SUBJECT of the run-in, so it takes the subject's region; reading the company margin here
+      // was borrowed from the quarry and was the wrong one of the two.
+      //
+      // IT IS ALSO WHAT "WELL IN FRAME" MEANS, measured. At the company margin the shot is minimal
+      // to 1.05x and the line therefore sits ON the edge, where the tracking lag alone — the camera
+      // trails its subject, so the anchor lands a few percent of the chord further toward the line
+      // than the guarantee assumed — pushes it out on a third of the frames.
+      this._innerFramePct ?? DEFAULT_INNER_FRAME_PCT,
       at
     );
+  }
+
+  /**
+   * THE RUN-IN'S DECISION FOR THIS FRAME: is it composing, and at what ceiling?
+   *
+   * Sets `_runInComposingNow` — which `_forwardFracNow` reads, so it must run BEFORE any guarantee
+   * measures room — and returns the ceiling to join `_setTargets`'s `Math.min`.
+   *
+   * ── WHY IT STARTS LATER THAN THE WINDOW OPENS (RUNIN-MINIMAL-1) ────────────────────────────────
+   *
+   * The owner's ruling, in two parts: open only far enough that the finish is WELL in frame and no
+   * further; and if that would still mean opening far too wide, the end scenario should simply
+   * start a little later.
+   *
+   * "Too wide" is not a taste question here and needs no number: **the run-in engages when the line
+   * can be framed WITHOUT opening wider than the widest shot this camera already composes**, which
+   * is OVERVIEW's own width. Until then nothing happens at all — the normal states run exactly as
+   * they do with the key off. Measured before this rule, the run-in reached 100% of the world on
+   * Searound, because at the endgame threshold a closed track's finish is most of a lap away and
+   * "the line in frame" meant "the whole lap in frame".
+   *
+   * THE ENGAGEMENT LATCHES, ONE WAY. `room / distance` is not perfectly monotone — the room depends
+   * on the heading, which turns — so a bare comparison would let the run-in flicker on and off, and
+   * each flicker is a jump between a wide shot and a tight one. It only ever needs to fire once: the
+   * leader is running at the line and does not go back. The latch is not a tuning number, it is the
+   * statement that the run-in is a phase rather than a per-frame test.
+   *
+   * THE TEST USES THE RUN-IN'S OWN FRAMING, not the outgoing shot's. It asks "can the run-in frame
+   * this?", so it must ask under the framing the run-in would use — centred, per `_forwardFracNow`.
+   * Asking with the forward bias still on would delay the start by the very factor this block
+   * removed.
+   *
+   * @returns {number} the cam.zoom ceiling for this frame, or Infinity when the run-in is not on
+   */
+  _updateRunIn(subjects, frameSize, racers, raceState) {
+    this._runInComposingNow = false;
+    if (!this._runInWindowOpen(racers, raceState)) return Infinity;
+    if (!subjects?.point) return Infinity;
+    // Ask under the run-in's own framing: set the flag, measure, and put it back if it does not fire.
+    this._runInComposingNow = true;
+    const ceiling = this._lineCeiling(subjects, frameSize, raceState);
+    if (!this._runInEngaged) {
+      // A ceiling BELOW OVERVIEW's width is a request to open wider than the widest shot there is.
+      if (!(ceiling >= this._overviewStateZoom)) {
+        this._runInComposingNow = false;
+        return Infinity;
+      }
+      this._runInEngaged = true;
+    }
+    return ceiling;
   }
 
   /**
@@ -2160,7 +2264,7 @@ export class CameraDirector {
     const at = anchorScreenPoint(
       frameSize.width,
       frameSize.height,
-      framingFor(this.state).position === POSITION.FORWARD ? this._leaderForwardFrac : null,
+      this._forwardFracNow(),
       this._headingScreen(subjects.t)
     );
     // COMPANY_FRAME_PCT, not `_innerFramePct`: a guaranteed companion needs to be visible with a
@@ -2207,7 +2311,7 @@ export class CameraDirector {
     const at = anchorScreenPoint(
       frameSize.width,
       frameSize.height,
-      framingFor(this.state).position === POSITION.FORWARD ? this._leaderForwardFrac : null,
+      this._forwardFracNow(),
       this._headingScreen(subjects.t)
     );
     // `racers.length + 1` asks for more company than exists, and `companyGuarantee` answers that by
@@ -2629,7 +2733,9 @@ export class CameraDirector {
     // cannot fire, and the guarantee everywhere else is untouched.
     const _companyIsHome =
       this._inFinishMode && (raceState?.finishedCount ?? 0) >= 1 + this._minRacersVisible;
-    const _runInCeiling = this._lineCeiling(subjects, frameSize, racers, raceState);
+    // RUNIN-MINIMAL-1: FIRST, because `_forwardFracNow` reads the answer and every guarantee below
+    // measures its room from the anchor that answer places.
+    const _runInCeiling = this._updateRunIn(subjects, frameSize, racers, raceState);
     const guaranteed = Math.min(
       stateZoom,
       this._guaranteeCeiling(subjects, frameSize),
@@ -2651,7 +2757,7 @@ export class CameraDirector {
     // RUNIN-OWNS-1: WHICH BOUND WON, recorded rather than inferred. The anchor decision in update()
     // reads `runInBinding`, and the harness reads all three to report where each bound binds — a
     // bound nobody has seen bind is a comment, and this is how that stays checkable.
-    this._runInActive = Number.isFinite(_runInCeiling);
+    this._runInActive = this._runInComposingNow;
     this._runInBinding = this._runInActive && guaranteed >= _runInCeiling - 1e-12;
     this._framingProbe = {
       t: subjects.t,
@@ -2674,7 +2780,11 @@ export class CameraDirector {
     // answer by patching a throwaway copy of this file, which is the failure mode the probe exists
     // to remove. Read by nothing in the camera.
     const anchorPoint = panTarget;
-    if (framing.position === POSITION.FORWARD && this._observerPhase === 'follow') {
+    // RUNIN-MINIMAL-1: THE SAME helper the guarantees above measured their room with. It has to be
+    // the same one: if the bias still fired here while the guarantees assumed it did not, every
+    // guarantee would size the shot for an anchor that is not where the pan puts it — which is
+    // precisely the promise-vs-delivery gap CAMERA-ANCHOR-TRUTH-1 exists to close.
+    if (this._forwardFracNow() !== null && this._observerPhase === 'follow') {
       panTarget = this._applyLeaderForwardBias(
         panTarget,
         headingT,

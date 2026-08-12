@@ -40,6 +40,47 @@ is dated and recorded HERE, where a reader on their way to the report will pass 
 
 ## Ships
 
+- [RUNIN-MINIMAL-1.md](RUNIN-MINIMAL-1.md) — **the pull-out is minimal, and the run-in starts when
+  the line fits** (2026-08-12, `feat/runin-state`, **NOT merged — his eye on luger-hill seed 9**;
+  fingerprints measured fresh and **NOT minted**). Third and final shape. **STAGE 1 MEASURED BEFORE
+  ANYTHING CHANGED, and the answer was where the owner said to look**: against the frame it actually
+  delivers the shot was ALREADY nearly minimal (excess 1.12x / 1.18x) — the width was going into
+  **WHERE THE CAMERA IS POINTED**. A FORWARD-framed leader sits `leaderForwardFrac` along the frame,
+  so only a THIRD of it lay ahead of him toward the line and the shot had to be **3.01x** (Luger
+  Hill) / 2.15x (Searound) wider than the leader-to-line distance demands; the margin was a flat
+  1.11x and the easing 1.03x, i.e. nothing. **THE FIX IS THE FRAMING RULE'S OWN QUESTION** — _is
+  there anything worth seeing ahead of the subject?_ — answered with the run-in's facts: the finish
+  is ahead, so the subject is centred while it composes. No new number; 3.01x → 2.00x. **SIX CALL
+  SITES read that question and now read one helper, and that was load-bearing rather than tidy**: the
+  first cut changed the five `anchorScreenPoint` calls and MISSED THE PAN BIAS ITSELF, so every
+  guarantee sized the shot for a centred anchor while the pan still pushed the leader forward — the
+  line fell out of frame on a third of the run-in's own frames (67.0%). Both reading the same helper:
+  **89.1%**. **A SECOND CORRECTION, from framingRule.js's own rule**: the line was reading
+  `COMPANY_FRAME_PCT`, borrowed from the quarry, when the file states that `innerFramePct` is for the
+  SUBJECT "and for both geometric guarantees" — at the company margin the shot was minimal to 1.05x,
+  so the line sat ON the edge where the tracking lag alone pushed it out. **STAGE 3, HIS RULING,
+  BUILT**: the run-in engages only once the line fits WITHOUT opening wider than OVERVIEW's own
+  width, and the engagement LATCHES one way because `room / distance` is not perfectly monotone (the
+  room depends on the heading, which turns) and a bare comparison would flicker the shot between wide
+  and tight. **THE TRADE, 2 tracks x 8 seeds**: the widest frame the run-in reaches falls from
+  **99% of the world to 18% / 21%**; the line is in frame on **89.1% / 98.7%** of the run-in's own
+  window and 11.9% → **37.3%** / 9.9% → **35.0%** of the whole endgame window (it was 78.2% / 93.1%
+  when the run-in composed all of it); it now composes **41.9% / 35.4%** of the endgame and starts
+  **4.4 s / 4.9 s** later, at leader progress ~0.973 against the window's 0.900. Excess is
+  **1.32x / 1.40x**, which IS the margin (1/0.7) — nothing left to remove. **empty frames 0**.
+  **`check-runin-frame` is GREEN on both tracks and both halves** (centre 0.40 / 0.09 TW) and **the
+  limit of 2 was never touched** — the Searound failure came from the world-sized frame and resolved
+  by itself when the frame stopped being world-sized. **WHAT IT COSTS, one row and it is what to
+  watch**: the run-in bounds the photo finish too and holds it a median **2.05x / 2.10x wider** (max
+  ~4x) so the line stays in it, mid-shot on the seeds where it engages after the photo finish has
+  begun. **The tracking lag re-measurement says the same thing in one number**: the later start gave
+  five states BACK to their pre-run-in values to two decimals — LEAD_CHANGE's p95 that the previous
+  cut had tripled is 7.10 → 21.81 → **7.15**, COMEBACK_ZOOM's median 13.73 → 3.06 → **13.73** — and
+  the entire remaining cost is **PHOTO_FINISH's p95, 16.51 → 33.59 pp**, with its median almost still
+  (5.68 → 5.71): a tail, not a steady lag. The crossing zoom is consequently **not** bit-identical
+  (1.60e-2 / 1.53e-1, i.e. 0.4% and 0.9%). **FINGERPRINTS**: world `dc4647be0f55ebdb` **unmoved**;
+  camera `64432e18a7e62188` → `0f56ded2d786e3b0`, render `096f2726c45ed853` → `7d7af693a766c6c9` —
+  and with `runInShot: false` **all three return exactly to the stored values on all ten tracks**.
 - [RUNIN-OWNS-1.md](RUNIN-OWNS-1.md) — **the run-in owns the endgame's FRAMING, not its state slot**
   (2026-08-12, `feat/runin-state`, **NOT merged — his eye on luger-hill seed 9**; fingerprints
   measured fresh and **NOT minted**). Continues RUNIN-STATE-1 and **replaces its mechanism** — see

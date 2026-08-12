@@ -268,6 +268,14 @@ zoom. Switched by `runInShot`.
 where the director has always declared the endgame, the second is where the finish sequence takes
 over the picture with its own authored moves.
 
+**It does not START at the threshold, it starts when the line FITS.** The run-in engages once the
+line can be framed without opening wider than the widest shot this camera already composes —
+OVERVIEW's own width — and until then the normal states run exactly as they do with the key off.
+The engagement latches one way, because `room / distance` is not perfectly monotone (the room
+depends on the heading, which turns) and a bare comparison would let the shot flicker between wide
+and tight. Measured: it starts about **4.4 s** (Luger Hill) and **4.9 s** (Searound) after the
+threshold, at leader progress ~0.973, and composes 42% / 35% of the endgame window.
+
 **The two bounds, and neither is a new number:**
 
 1. **The line** — `pointGuarantee` from the anchor's own place in the frame to the finish, i.e.
@@ -278,21 +286,35 @@ over the picture with its own authored moves.
    photo-finish zoom, and the run-in can never tighten past the shot underneath it.
 
 **Nothing is handed over.** As the leader arrives the line's requirement passes above the state's
-setting, stops being the smallest term, and what is left is the shot that was always there. Anchor,
-guarantee, position, `hudState` and the photo-finish slow motion are all untouched.
+setting, stops being the smallest term, and what is left is the shot that was always there.
+`hudState` and the photo-finish slow motion are untouched.
 
-**Measured (2 tracks x 8 seeds), and both bounds are real bounds rather than comments:** the line
-binds 88.6% (Luger Hill) / 90.5% (Searound) of the window and the state's own zoom binds 10.8% /
-8.7%; the remainder is another guarantee. The line's in-frame share over the window goes 11.9% ->
-78.2% and 9.9% -> 93.1%, with 0 empty frames.
+**ONE THING IS NOT UNTOUCHED, and it is the minimality ruling.** While the run-in composes, a
+FORWARD-framed state is centred instead. That is the framing rule's own question — _is there
+anything worth seeing ahead of the subject?_ — answered with the run-in's own facts: the finish
+line is ahead, and it is the point of the shot. It was also where the excess lived. A leader at
+`leaderForwardFrac` leaves only a third of the frame ahead of him, so the shot had to be **3.01x**
+wider than the leader-to-line distance demands (Searound 2.15x); centring takes that to 2.00x.
+`_forwardFracNow()` is the single place that answer lives, and **the guarantees and the pan bias
+must both read it** — while they disagreed, every guarantee sized the shot for an anchor the pan did
+not deliver and the line fell out of frame on a third of the run-in's own frames.
 
-**THE COST, and it is a real one.** On a closed track the finish can be most of a lap away at the
-threshold, so "the line in frame" means "most of the world in frame". At Searound's widest run-in
-moment the frame covers **99% x 99% of the world**. The camera CANNOT be centred on the track spine
-there — the world-bounds clamp centres a world-sized frame on the world, and an oval's world centre
-is its infield — so `check-runin-frame`'s centre half reads 2.08 track widths against its limit of
-2 and fails, on a frame that holds all 20 racers and the finish line. The two requirements are
-geometrically exclusive at that width. See the report for the priced alternative.
+**The line is a guaranteed SUBJECT, so it uses `targetInnerFramePct`**, not the company margin — the
+rule §3 already states. That is what "well in frame" means here, and it is the difference between
+the line being in shot on 67% of the run-in's own frames and on 89% / 99%.
+
+**Measured (2 tracks x 8 seeds):** the line is in frame on **89.1%** (Luger Hill) / **98.7%**
+(Searound) of the frames the run-in composes, and on 37.3% / 35.0% of the whole endgame window
+against no-feature baselines of 11.9% / 9.9%. **0 empty frames.** The widest frame the run-in
+reaches is **19% / 21% of the world** — it was 99% before the two rulings above. Against the frame
+it actually delivers the shot is minimal to **1.32x / 1.40x**, which is the margin itself (1/0.7),
+so there is no excess left to remove.
+
+**THE COST, and it is what to watch.** The run-in bounds the photo finish too, and while it is
+composing it holds that shot a median **2.05x / 2.10x wider** than its own setting (max ~4x) so the
+line stays in it. On the seeds where the run-in engages after the photo finish has begun (3.1% /
+7.6% of the window) that widening happens mid-shot. The zoom at the crossing is consequently not
+bit-identical: 1.60e-2 and 1.53e-1, i.e. 0.4% and 0.9% of the zoom.
 
 ---
 
@@ -436,9 +458,25 @@ a verbatim transcript of one run on one commit, which is a historical record, no
 
 ### The tracking lag, as measured today — and it had drifted
 
-<!-- MEASURED: tracking-lag (median/p95 pp per state) @ 33de4bea 2026-08-12 depends=client/src/modules/camera/ -->
+<!-- MEASURED: tracking-lag (median/p95 pp per state) @ RUNIN_MINIMAL_SHA 2026-08-12 depends=client/src/modules/camera/ -->
 
-**RE-MEASURED FOR RUNIN-OWNS-1, AND THIS IS WHERE THE RUN-IN'S COST SHOWS UP.** The run-in bounds
+**RE-MEASURED AGAIN FOR RUNIN-MINIMAL-1, AND THE LATER START GAVE FIVE STATES BACK.** Making the
+run-in wait until the line fits inside OVERVIEW's width means it no longer touches the shots that
+run earlier in the endgame, and the figures say so exactly: **BATTLE_ZOOM, COMEBACK_ZOOM,
+LEADER_ZOOM and LEAD_CHANGE are all back to their pre-run-in values to two decimals**, including
+LEAD_CHANGE's p95, which the first cut had tripled (7.10 → 21.81 → **7.15**), and COMEBACK_ZOOM's
+median, which it had moved by a factor of four (13.73 → 3.06 → **13.73**). OVERVIEW never moved.
+
+**THE WHOLE COST IS NOW IN ONE ROW: PHOTO_FINISH's p95, 16.51 → 33.59 pp.** That is not a surprise
+and it is not hidden — it is where the run-in now lives. It engages late, often after the photo
+finish has begun, and holds that shot about twice as wide as its own setting so the line stays in
+frame; a shot whose zoom is moving is a shot the pan trails. **The median barely moves (5.68 →
+5.71), so this is a tail, not a steady lag.** It is the number to judge the trade by, and it is the
+thing to watch on screen.
+
+The block below is the previous re-measurement and is kept because its verdict still stands.
+
+**RE-MEASURED FOR RUNIN-OWNS-1, AND THIS IS WHERE THE RUN-IN'S COST SHOWED UP.** The run-in bounds
 the zoom of whatever shot is running through the endgame, so it moves the zoom inside states that
 were previously steady — and a moving zoom is exactly what this instrument measures the camera
 trailing.
@@ -468,9 +506,10 @@ figures because it is not eligible inside the endgame.
 comeback shot that runs into the endgame is now held WIDER, and a wider shot has a smaller lag
 measured as a fraction of the frame.
 
-**The number to judge is LEAD_CHANGE's p95 at 21.81 pp** — at the tail the camera sits about a fifth
-of a frame behind its subject. That is the price of the 6x–8x opening move, stated in the project's
-own units so it can be argued with. It is reported, not tuned: see the report.
+**That verdict was superseded the same day** — RUNIN-MINIMAL-1's later start returned every one of
+those rows to its pre-run-in value. The paragraph is kept because the SHAPE of the finding was
+right: a moving zoom shows up as a tail in whichever state the run-in is touching. It simply
+touches only one of them now.
 
 **RE-MEASURED FOR FINISH-PAIR-1, and one row moved — the one that should have.** That change makes
 the photo-finish shot frame the pair it is actually following instead of the live top two, so the
@@ -505,14 +544,14 @@ and it says so itself. It also covers nothing else on this page; see its header 
 
 | state         | frames | median pp | p95 pp |
 | ------------- | ------ | --------- | ------ |
-| BATTLE_ZOOM   | 9668   | 5.71      | 11.03  |
-| COMEBACK_ZOOM | 755    | 3.06      | 16.50  |
-| LEADER_ZOOM   | 17788  | 3.79      | 8.88   |
-| LEAD_CHANGE   | 8089   | 4.46      | 21.81  |
+| BATTLE_ZOOM   | 9668   | 5.72      | 9.98   |
+| COMEBACK_ZOOM | 755    | 13.73     | 16.22  |
+| LEADER_ZOOM   | 17788  | 3.85      | 8.62   |
+| LEAD_CHANGE   | 8089   | 4.46      | 7.15   |
 | OVERVIEW      | 4303   | 2.65      | 16.00  |
-| PHOTO_FINISH  | 1865   | 4.87      | 27.73  |
+| PHOTO_FINISH  | 1865   | 5.71      | 33.59  |
 
-OVERVIEW median 2.65 pp against every other state pooled 4.54 pp (ratio 0.58×).
+OVERVIEW median 2.65 pp against every other state pooled 4.63 pp (ratio 0.57×).
 
 **Re-measured for OUTCOME-PHASE-75, and COMEBACK_ZOOM moved so far that re-stamping would have been
 wrong.** Its frame count fell from **2103 to 753** and its median lag rose from **8.34 to 13.73 pp**.

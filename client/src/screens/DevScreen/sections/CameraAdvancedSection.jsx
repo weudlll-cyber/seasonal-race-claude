@@ -1319,7 +1319,7 @@ function CameraAdvancedSection() {
             onChange={(e) => set('runInShot', e.target.checked)}
           />
           <span style={{ fontWeight: 600 }}>Frame the finish through the run-in</span>
-          <InfoTooltip text="On (default): from the endgame threshold to the first crossing the finish line must stay in frame, so the shot opens while the finish is far and tightens by itself as the leader closes. It does not change WHICH shot is running — it bounds whatever shot is, and never tightens past that shot's own zoom, so the picture at the line is unchanged. Off is the pre-2026-08-12 behaviour." />
+          <InfoTooltip text="On (default): once the finish line can be framed without opening wider than the OVERVIEW shot, the camera keeps it in frame until the first racer crosses — opening only as far as the line needs and tightening by itself as the leader closes. It does not change WHICH shot is running; it bounds whatever shot is, and never tightens past that shot's own zoom. While it composes, the leader is centred rather than framed forward, because the thing worth seeing is now ahead of him. Off is the pre-2026-08-12 behaviour." />
         </label>
         <div className={s.formGrid}>
           <div className={s.formGroup}>

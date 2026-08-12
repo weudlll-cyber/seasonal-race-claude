@@ -43,13 +43,12 @@
 //   are geometrically exclusive at that width — this is not a camera pointed away from the race, it
 //   is a camera showing all of it.
 //
-// SO THIS HALF NOW FAILS ON A FRAME THAT IS NOT A DEFECT, and that is left standing rather than
-// tuned away, for the reason the block below already gives: the number would be doing taste work.
-// The honest readings of the situation are (a) the limit encodes "the camera never shows the whole
-// world", which was true of every shot this camera made before 2026-08-12, or (b) the metric should
-// ask whether the TRACK is in frame rather than whether the CENTRE is on it — which needs no
-// threshold at all, like the never-empty half. Neither is decided here: changing the acceptance
-// test inside the block it is judging is how a guard stops meaning anything. THE OWNER DECIDES.
+// THAT FAILURE IS GONE, AND NOTHING HERE WAS TOUCHED TO ACHIEVE IT (RUNIN-MINIMAL-1, same day).
+// The run-in now opens only as far as the line needs and does not engage until the line fits inside
+// OVERVIEW's width, so the world-sized frame no longer happens: the widest it reaches is 19-21% of
+// the world and the two cases read 0.40 and 0.09 track widths. The limit of 2 stands untouched and
+// unwidened, which is the outcome to want — the guard was reading a real property of the shot, the
+// shot changed, and the reading changed with it.
 //
 // Why 2 and not something larger: a healthy run-in holds 0.1, and the original excursion reached
 // 10.9. A limit in that gap catches a camera pointed at nothing without policing framing taste.
