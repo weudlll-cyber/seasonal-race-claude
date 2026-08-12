@@ -40,6 +40,42 @@ is dated and recorded HERE, where a reader on their way to the report will pass 
 
 ## Ships
 
+- [RUNIN-PACE-1.md](RUNIN-PACE-1.md) — **own key, explained width, and a rate limit that measured
+  out** (2026-08-12, `feat/runin-state`, **NOT merged**; fingerprints measured fresh and **NOT
+  minted**). **(1) THE KEY IS SPLIT.** The opening ran on `finishOverviewZoomOutDurationMs`, which
+  also paces the zoom-out AFTER the crossing — a shot he has already accepted — so one value paced
+  two motions at different moments for different reasons and tuning either moved the other.
+  **`runInOpenMs`, default 1250 ms** ("between 1 and 1.5 seconds would have been enough"). The
+  post-crossing zoom-out was never altered in VALUE — the coupling was a shared SOURCE — so the proof
+  is independence: **3000 ms on every track at every pace tested**. Sweep, ten tracks: 1000 ms gives
+  line-in 88.8% / first-in-shot 0.9 s / LEAD_CHANGE lag p95 23.14; **1250 ms 86.6% / 1.1 s / 22.17**;
+  1500 ms 84.4% / 1.3 s / 21.12; **empty frames 0 at every pace**. Against the previous 3000 ms
+  (73.4% / 2.5 s / 10.72) his number buys the line back and pays in the lag tail — the lag is
+  proportional to the zoom rate, so that is by construction. **(2) THE 28 POINTS ON ICE-TRACK, and it
+  is NOT the line.** `resolveCamera` is the last authority on width, only ever LOOSENS, and was the
+  one width request nothing could see; it is now on a read-only probe. Frame by frame it reads
+  **line asks 68-87% of the world, resolveCamera delivers 100%**, with `wasZoomAdapted` true and
+  **`targetInInnerFrame` FALSE on every one of those frames** — it steps the zoom down 10% at a time
+  trying to bring the pan target inside `innerFramePct`, the world-bounds clamp makes that
+  impossible, and the loop runs to the projection floor having achieved nothing. **Very probably what
+  he has been seeing on that track all along**: pre-existing, and it fires wherever a pan target sits
+  near the world edge at a wide shot. **NOT FIXED HERE** — the repair is inside `resolveCamera`, the
+  last step for every state on every frame, so it moves both fingerprints with `runInShot: false` and
+  breaks the standing off-arm promise; it needs its own block. **(3) THE TIGHTEN-RATE LIMIT WAS BUILT
+  AND TAKEN BACK OUT.** The principle held — a ceiling is a LOWER BOUND ON WIDTH, so approaching it
+  more slowly from the wide side cannot violate it and `Math.min` survives — but it fails a
+  requirement standing beside it: **a rate limit IS a delay in arriving, and the crossing is where
+  arrival is due.** Measured (corner reversal / crossing zoom vs OFF, worst of ten tracks): no limit
+  **221 px / 3.58%**; the rate derivable from `runInOpenMs` **192 px / 23.83%** (barely moves the
+  corner, peak still at s≈0.95); half that rate **96 px / 55.30%**; paced to arrive at the line
+  **96 px / 7.91%** — the near-miss, which needs no constant and genuinely flattens the corner (rate
+  through it 1.04/0.85/0.66/0.73/0.61 %/frame instead of 1.24/1.37/1.48/0.12/0.01, subject almost
+  still) but lands at cam.zoom 3.77 where the ordinary shot is 4.00. **Reported, not forced**; one
+  paragraph in `_setTargets` records the study so it is not rebuilt. **ALL TEN TRACKS at 1250 ms**:
+  line in frame **9.8% -> 86.6%**, **0 empty**, `check-runin-frame` green both halves (0.15 / 0.94 TW,
+  limit untouched), crossing zoom <=0.74% on nine tracks and 3.58% at worst. **FINGERPRINTS**: world
+  `dc4647be0f55ebdb` **unmoved**; camera `64432e18a7e62188` -> `988a9b31aaf9768a`, render
+  `096f2726c45ed853` -> `c962df5334277f95`; with `runInShot: false` all three return exactly.
 - [RUNIN-WIDTH-1.md](RUNIN-WIDTH-1.md) — **only the line decides the width, and the pull-out is
   calmer** (2026-08-12, `feat/runin-state`, **NOT merged**; fingerprints measured fresh and **NOT
   minted**). **A REQUIREMENT I INVENTED, STRUCK**: RUNIN-GLIDE-1 §5 reported field coverage as "the

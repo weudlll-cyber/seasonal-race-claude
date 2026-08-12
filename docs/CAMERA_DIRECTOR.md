@@ -274,10 +274,12 @@ for a handful of frames on six of ten tracks, every one at run-in progress 0.006
 moves pan and zoom on one ease, which is what makes a large zoom change safe here as at every state
 change.
 
-**The glide runs on `finishOverviewZoomOutDurationMs`, not the transition glide's duration** — the
-owner called the pull-out hectic at 500 ms. That key already means "an authored zoom-out at the end
-of the race", which is what this is. The opening goes **0.5 s → 2.9 s**, and is shallower as well as
-calmer; the price is the line's in-frame share, 93.3% → 73.4%.
+**The glide runs on `runInOpenMs`, its own key**, in the ending controls beside the post-crossing
+zoom-out it borrowed for one day. Two motions at different moments for different reasons: coupling
+them meant tuning either moved the other. At the shipped 1250 ms the opening is calm without costing
+the line — in frame 86.6% of the run-in, first in shot 1.1 s after the window opens — against 500 ms
+(hectic) and 3000 ms (73.4%, line arriving at 2.5 s). The post-crossing zoom-out measures 3000 ms at
+every pace, which is the proof they are independent.
 
 **The two bounds, and neither is a new number:**
 
@@ -330,11 +332,20 @@ crossing is within **0.03%** of the feature being off on most tracks and **3.58%
 
 **TWO ODD MOVEMENTS, ONE MECHANISM.** The delivered zoom is a `Math.min` over ceilings, so where the
 ARGMIN changes the zoom is continuous but its RATE is not — and the pan lag is proportional to that
-rate, so the subject's screen position reverses direction at the corner. Traced: on luger-hill seed 9
-the framing subject drifts to (899, 490) and returns to (695, 346), turning at the exact frame the
-binding term goes line → state; on ice-track the camera sits pinned at the projection floor with a
-frozen frame for ~2 s and then un-pins, turning at the frame the delivered zoom leaves that floor.
-Slowing the opening cut the worst of it — LEAD_CHANGE's tracking-lag p95 went 25.19 → 10.72 pp.
+rate, so the subject's screen position reverses direction at the corner. Traced on luger-hill seed 9:
+the framing subject drifts to (910, 490) and returns, turning at the exact frame the binding term
+goes line → state. **A tighten-rate limit was built against it and measured out**: the rate derivable
+from `runInOpenMs` barely moves the corner (221 → 192 px) and every rate that does move it costs the
+crossing shot an order of magnitude (3.58% → 23.83% or worse). A rate limit IS a delay in arriving,
+and the crossing is where arrival is due. See RUNIN-PACE-1 §3.
+
+**AND ONE WIDTH THAT IS NOT THE LINE'S.** On ice-track the line asks for 68-87% of the world and
+**`resolveCamera` delivers 100%** — it steps the zoom down 10% at a time trying to bring the pan
+target inside `innerFramePct`, the world-bounds clamp makes that impossible, and the loop stops only
+at the projection floor with `targetInInnerFrame` still false. The widening achieves nothing. It is
+pre-existing and fires wherever a pan target sits near the world edge at a wide shot; repairing it
+means changing `resolveCamera`, which is the last step for every state on every frame. Not done
+here — see RUNIN-PACE-1 §2.
 
 ---
 
@@ -478,7 +489,15 @@ a verbatim transcript of one run on one commit, which is a historical record, no
 
 ### The tracking lag, as measured today — and it had drifted
 
-<!-- MEASURED: tracking-lag (median/p95 pp per state) @ 8b93688e 2026-08-12 depends=client/src/modules/camera/ -->
+<!-- MEASURED: tracking-lag (median/p95 pp per state) @ RUNIN_PACE_SHA 2026-08-12 depends=client/src/modules/camera/ -->
+
+**RE-MEASURED FOR RUNIN-PACE-1, and LEAD_CHANGE's tail is the price of the owner's own pace.** The
+opening moved 3000 ms -> **1250 ms** at his request, and the lag is proportional to the zoom rate, so
+**LEAD_CHANGE p95 goes 10.72 -> 22.17 pp** by construction. What it buys is the line: in frame 73.4%
+-> **86.6%** of the run-in, first in shot 2.5 s -> **1.1 s**. Measured at 1000 / 1250 / 1500 ms the
+p95 reads 23.14 / 22.17 / 21.12, so the trade is smooth and his 1250 sits in the middle of it.
+PHOTO_FINISH is unchanged at 29.80 — that tail is the closing corner, which §3 of the report shows
+cannot be removed by a rate limit without breaking the crossing shot.
 
 **RE-MEASURED FOR RUNIN-WIDTH-1, and the slower pull-out is visible here as one number.**
 **LEAD_CHANGE's p95 falls 25.19 → 10.72 pp** — the tail the previous cut introduced is gone, because
@@ -593,14 +612,14 @@ and it says so itself. It also covers nothing else on this page; see its header 
 
 | state         | frames | median pp | p95 pp |
 | ------------- | ------ | --------- | ------ |
-| BATTLE_ZOOM   | 9119   | 5.67      | 10.10  |
-| COMEBACK_ZOOM | 395    | 10.56     | 15.87  |
+| BATTLE_ZOOM   | 9406   | 5.70      | 10.55  |
+| COMEBACK_ZOOM | 605    | 2.44      | 15.57  |
 | LEADER_ZOOM   | 17788  | 4.05      | 9.32   |
-| LEAD_CHANGE   | 7410   | 4.48      | 10.72  |
+| LEAD_CHANGE   | 7789   | 4.56      | 22.17  |
 | OVERVIEW      | 4303   | 2.65      | 16.00  |
 | PHOTO_FINISH  | 1865   | 4.71      | 29.80  |
 
-OVERVIEW median 2.65 pp against every other state pooled 4.61 pp (ratio 0.57×).
+OVERVIEW median 2.65 pp against every other state pooled 4.63 pp (ratio 0.57×).
 
 **Re-measured for OUTCOME-PHASE-75, and COMEBACK_ZOOM moved so far that re-stamping would have been
 wrong.** Its frame count fell from **2103 to 753** and its median lag rose from **8.34 to 13.73 pp**.

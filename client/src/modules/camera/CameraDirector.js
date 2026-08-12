@@ -565,6 +565,7 @@ export class CameraDirector {
     this._photoFinishLeadProgress = t.photoFinishLeadProgress;
     this._photoFinishContenderFraming = t.photoFinishContenderFraming;
     this._runInShot = t.runInShot;
+    this._runInOpenMs = t.runInOpenMs;
     this._comebackCooldownMs = t.comebackCooldownMs;
     this._leadChangeCooldownMs = t.leadChangeCooldownMs;
     this._battleWeight = t.battleWeight;
@@ -2261,20 +2262,17 @@ export class CameraDirector {
    * It is deliberately ONE-SHOT, guarded by the same latch that makes the run-in a phase: a glide
    * restarted every frame is not an ease, it is a rail.
    *
-   * ── IT RUNS ON THE FINISH ZOOM-OUT'S OWN DURATION, NOT THE TRANSITION GLIDE'S ──────────────────
+   * ── IT HAS ITS OWN DURATION, AND THE BORROWING BEFORE IT WAS A MISTAKE ────────────────────────
    *
-   * The owner watched it in production and said the pull-out looks HECTIC. At `glideDurationMs` it
-   * is: measured on ice-track, cam.zoom fell 4.549 -> 1.000 in about half a second, which is the
-   * pace of an ordinary state change and not of an authored move.
+   * The owner watched it at `glideDurationMs` and called it HECTIC — measured on ice-track, cam.zoom
+   * fell 4.549 -> 1.000 in about half a second, the pace of an ordinary state change and not of an
+   * authored move. It then borrowed `finishOverviewZoomOutDurationMs` for one day, which was wrong
+   * for a reason worth keeping: that key paces the zoom-out AFTER the crossing, a shot the owner has
+   * already accepted at its present length. One value for two motions that happen at different
+   * moments for different reasons means tuning either moves the other, and it put a settled value at
+   * risk to change an unsettled one.
    *
-   * `finishOverviewZoomOutDurationMs` is the right existing number and needs no derivation: it
-   * already means "how long an authored zoom-out at the END OF THE RACE takes", which is exactly
-   * what this is — the same kind of move as the finish zoom-out, in the same part of the race, at
-   * the other end of it. Using it makes the two ends of the ending run at one tempo instead of two,
-   * and it is a value the owner has already set with his eye on the result.
-   *
-   * `glideDurationMs` is deliberately NOT reused here: its band is 300-900 ms because it paces a
-   * CUT between shots, and a 900 ms ceiling cannot express "unhurried" for a move this large.
+   * `runInOpenMs` is its own key now, beside that zoom-out in the ending controls.
    */
   _beginRunInGlide(ts) {
     if (!this._shape) return;
@@ -2283,7 +2281,7 @@ export class CameraDirector {
     this._glideStartZoom = this.zoom;
     this._glideStartOffsetX = this.offsetX;
     this._glideStartOffsetY = this.offsetY;
-    this._glideDurationActiveMs = this._finishOverviewZoomOutDurationMs;
+    this._glideDurationActiveMs = this._runInOpenMs;
   }
 
   /**
@@ -2602,6 +2600,18 @@ export class CameraDirector {
       minEffZoom,
     });
     this.targetZoom = proj.camZoomForEffX(zoomResolved.effectiveZoom);
+    // RUNIN-PACE-1 §2, read-only. `resolveCamera` is the LAST authority on width and it only ever
+    // LOOSENS — it steps the zoom down 10% at a time until the pan target lands inside
+    // `innerFramePct`, or until the projection floor. It is therefore a width REQUEST like any
+    // ceiling, and until now the only one that could not be seen. Recorded so a trace can say
+    // whether the shot is wide because a guarantee asked or because the fit could not be made.
+    this._resolveProbe = {
+      requested: stateCamZoom,
+      resolved: this.targetZoom,
+      wasZoomAdapted: zoomResolved.wasZoomAdapted,
+      wasClamped: zoomResolved.wasClamped,
+      targetInInnerFrame: zoomResolved.targetInInnerFrame,
+    };
 
     // CAMERA-GLIDE-TARGET-1 (fixes CAMERA-DETOUR cause D): the GRAMMAR-1 glide interpolates the offset from the
     // captured start to THIS endpoint across the whole glide, so the endpoint must be the DESTINATION framing —
@@ -2838,6 +2848,25 @@ export class CameraDirector {
       _ceilings.field,
       _ceilings.line
     );
+    // ── RUNIN-PACE-1 §3: A TIGHTEN-RATE LIMIT WAS BUILT HERE AND MEASURED OUT ───────────────────
+    //
+    // The candidate was sound in principle: every ceiling is a LOWER BOUND ON WIDTH, so approaching
+    // one more slowly from the wide side can never violate it and `Math.min` keeps its meaning —
+    // unlike the blend that was rejected before it. It was built, and it fails on a requirement that
+    // sits beside it: **the shot at the crossing must be the ordinary shot.**
+    //
+    // A rate limit IS a delay in arriving, and the crossing is exactly where the arrival is due. The
+    // two are in direct conflict, and the measurement is not close (worst crossing zoom against the
+    // feature being off, ten tracks):
+    //
+    //     no limit                    3.58%      corner reversal 221 px
+    //     limit at the derived rate  23.83%      corner reversal 192 px
+    //     limit at half that rate    55.30%      corner reversal  96 px
+    //     paced to arrive at the line 7.91%      corner reversal  96 px
+    //
+    // So the rate that is derivable from `runInOpenMs` barely moves the corner, and every rate that
+    // does move it costs the crossing shot by an order of magnitude. Reported rather than forced —
+    // see reports/evolution/RUNIN-PACE-1.md §3 for the full study and the rate curves.
 
     // READ-ONLY PROBE (CAMERA-ANCHOR-TRUTH-1 §4a). The framing inputs this frame actually used, so
     // the corridor measurement reads the REAL path instead of reconstructing it — a harness that

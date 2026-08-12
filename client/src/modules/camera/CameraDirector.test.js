@@ -7276,11 +7276,12 @@ describe('RUNIN-GLIDE-1 — wide-and-back, gliding to the ordinary shot', () => 
     expect(cd._runInEngaged).toBe(true);
     expect(cd._lerpPhase).toBe('glide');
     expect(cd._glideStartTs).toBe(5000);
-    // RUNIN-WIDTH-1: the FINISH zoom-out's duration, not the transition glide's — the owner called
-    // the pull-out hectic at 500 ms, and `glideDurationMs`'s 300-900 band paces a CUT between shots
-    // and cannot express "unhurried" for a move this large.
-    expect(cd._glideDurationActiveMs).toBe(cd._finishOverviewZoomOutDurationMs);
-    expect(cd._glideDurationActiveMs).toBeGreaterThan(cd._glideDurationMs);
+    // RUNIN-PACE-1: ITS OWN key. It borrowed `finishOverviewZoomOutDurationMs` for a day, which
+    // coupled the opening to the post-crossing zoom-out — one value for two motions that happen at
+    // different moments for different reasons, so tuning either moved the other. This assertion is
+    // what keeps them apart.
+    expect(cd._glideDurationActiveMs).toBe(cd._runInOpenMs);
+    expect(cd._runInOpenMs).not.toBe(cd._finishOverviewZoomOutDurationMs);
     // A glide restarted every frame is a rail, not an ease.
     cd._lerpPhase = 'tracking';
     cd._updateRunIn(subjectsAt(3800), FRAME, racersAt(3800), rs, 6000);

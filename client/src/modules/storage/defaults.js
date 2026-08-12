@@ -356,6 +356,21 @@ export const DEFAULT_CAMERA_CONFIG = {
   // Finish sequence: drama pulse duration (was hardcoded), smooth zoom-out, and pause before leaderboard.
   finishDramaDurationMs: 1500, // ms of LEADER_ZOOM on the winner before FINISH_OVERVIEW begins
   finishOverviewZoomOutDurationMs: 3000, // ms for smooth zoom-out during FINISH_OVERVIEW
+  // ── THE RUN-IN'S OPENING, ITS OWN KEY (RUNIN-PACE-1, 2026-08-12) ──────────────────────────────
+  // How long the camera takes to open the shot when the run-in engages. It sits here because it is
+  // an ENDING control, beside the zoom-out it used to borrow.
+  //
+  // IT BORROWED `finishOverviewZoomOutDurationMs` FOR ONE DAY AND THAT WAS WRONG. The two are
+  // different motions at different moments for different reasons: this one opens the shot BEFORE the
+  // crossing so the finish comes into view, that one closes the race AFTER it. Coupling them meant
+  // tuning either would move the other — and the owner has already accepted the post-crossing
+  // zoom-out at its present length, so the borrowing put a settled value at risk to change an
+  // unsettled one.
+  //
+  // 1250 ms is his number: "between 1 and 1.5 seconds would have been enough". The band below it is
+  // 500 ms — the pace of an ordinary cut, which he called hectic — and above it the line arrives so
+  // late that the shot has little of the run-in left to be wide for.
+  runInOpenMs: 1250,
   // 2500 -> 3500 ON HIS EYE, 2026-08-11: _"die Anzeige ist zu kurz"_ — "the display is too short",
   // about the winner card. RAISING THE CARD ALONE WOULD HAVE DONE NOTHING, because the card's window
   // is `min(winnerCardMs, finishPauseMs)` and this was the binding half — so both moved together.

@@ -1474,6 +1474,29 @@ function CameraAdvancedSection() {
               className={s.label}
               style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}
             >
+              Run-in opening (ms)
+              <InfoTooltip
+                text={`How long the camera takes to open the shot when the run-in begins, BEFORE the crossing. Its own control: it used to share the zoom-out duration above, which meant tuning either moved the other. Faster shows the finish line sooner; slower is calmer but the camera trails its subject more while it moves. Currently: ${config.runInOpenMs ?? DEFAULT_CAMERA_CONFIG.runInOpenMs}ms.`}
+              />
+            </label>
+            <input
+              type="number"
+              className={s.input}
+              min={0}
+              max={6000}
+              step={250}
+              value={config.runInOpenMs ?? DEFAULT_CAMERA_CONFIG.runInOpenMs}
+              onChange={(e) => {
+                const v = Number(e.target.value);
+                if (v >= 0 && v <= 6000) set('runInOpenMs', v);
+              }}
+            />
+          </div>
+          <div className={s.formGroup}>
+            <label
+              className={s.label}
+              style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}
+            >
               3 · Hold on the finish picture, after the LAST crossing (ms)
               <InfoTooltip
                 text={`Extra time on the settled finish shot AFTER the LAST racer is home, before the pause below starts. The two ADD. What actually grows is the CARD-FREE tail: the winner card is capped at min(card, pause) and does not inherit this, so at the shipped numbers the picture stands card-free for 500ms + this. It buys a longer look at a SETTLED picture and cannot put arrivals back — the zoom-out starts when the FIRST finishers are home (phase 1 above), so by the last crossing the pull-back is long over. ZERO means no hold at all and schedules no timer. Currently: ${config.finishHoldAfterLastMs ?? DEFAULT_CAMERA_CONFIG.finishHoldAfterLastMs}ms.`}
