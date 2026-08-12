@@ -460,7 +460,7 @@ a verbatim transcript of one run on one commit, which is a historical record, no
 
 ### The tracking lag, as measured today — and it had drifted
 
-<!-- MEASURED: tracking-lag (median/p95 pp per state) @ RUNIN_GLIDE_SHA 2026-08-12 depends=client/src/modules/camera/ -->
+<!-- MEASURED: tracking-lag (median/p95 pp per state) @ 4637621b 2026-08-12 depends=client/src/modules/camera/ -->
 
 **RE-MEASURED FOR RUNIN-GLIDE-1, and the tails are the price of the run-in composing the whole
 endgame again.** The previous cut bought its flat table by starting the run-in late; this one starts
