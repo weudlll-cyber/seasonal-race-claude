@@ -612,6 +612,23 @@ export const DEFAULT_CAMERA_CONFIG = {
   // holding its width holds everyone who is level, however many. Bounded above as well as below —
   // a track width is a fixed quantity, unlike whatever the widest pair happened to need.
   endgameCorridorFloor: true,
+  // ── AND ONLY AS WIDE AS THE RACERS ACTUALLY ARE (FRONT-GROUP-7) ────────────────────────────────
+  // The floor above holds the corridor's FULL width; measured, the field occupies a median 35.3% of
+  // it through the endgame, so most of what it holds open is empty road. His rule was "see everyone
+  // sharing the width", not "show the full width where nobody races". With this on, the floor binds
+  // on the real lateral extent plus the same one body, CAPPED at the corridor — it can never ask for
+  // more than the plain floor did, only less. Every racer counts, so there is still no group to
+  // define. Off restores the full-width floor exactly.
+  //
+  // DEFAULT OFF, AND IT IS A MEASURED VERDICT RATHER THAN CAUTION (FRONT-GROUP-7 §3). It narrows the
+  // crossing shot exactly as asked — river-run seed 2814 goes 38% -> 53% of the ordinary, ten tracks
+  // 52% -> 84% median — and it CUTS RACERS DOING IT: on ice-track seed 9 the photo finish goes from
+  // 0.0% cut to 12.0%, and on his own river-run 2814 from 0.0% to 16.0%. The cause is measured, not
+  // guessed: the plain floor was paying for the body-padding gap with empty road. `bodyRef` is the
+  // NARROW reference and covers a median 44.6% of the DRAWN sprite, so binding on the occupied band
+  // removes the slack that was hiding the other 55%. The door is named in the report — the pad has
+  // to be the drawn body, which the director is not given today.
+  endgameFloorBindsExtent: false,
   // ── THE START CEREMONY (START-CEREMONY-CAMERA-1) ───────────────────────────────────────────────
   // The race opens on the whole track, held still, then eases in to the starting formation until it
   // is as large as it can be with every racer still in frame. Both ends are GEOMETRY and neither is

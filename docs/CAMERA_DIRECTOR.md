@@ -491,6 +491,16 @@ a verbatim transcript of one run on one commit, which is a historical record, no
 
 <!-- MEASURED: tracking-lag (median/p95 pp per state) @ 55d8848a 2026-08-12 depends=client/src/modules/camera/ -->
 
+**RE-STAMPED WITHOUT RE-MEASURING FOR FRONT-GROUP-7, DELIBERATELY, AND THE ARGUMENT IS A
+MEASUREMENT.** That block adds `endgameFloorBindsExtent`, which ships **OFF**, and on the shipped
+tree the camera fingerprint reproduces `15bcceae3c802cc9` and the render fingerprint
+`a9de15ebaafcf108` — both byte-identical to the values FRONT-GROUP-6 was stamped against. Every
+director decision on every frame of ten tracks is therefore unchanged, and this table is derived
+from exactly those decisions. Running `tracking-lag.mjs` again would cost seven minutes to
+reproduce numbers a stronger instrument has already proven cannot have moved. The stamp is left
+naming `55d8848a`, the commit the figures WERE measured on, rather than advanced to a commit that
+measured nothing — which is what the guard's own failure text asks for.
+
 **RE-MEASURED FOR FRONT-GROUP-6, and PHOTO_FINISH is the only row that moves — for the third time,
 and in the same direction as the first.** Holding the corridor's full width through the endgame keeps
 the shot wider than its own setting would, and a wider frame makes the same world-space lag a smaller

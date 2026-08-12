@@ -396,6 +396,17 @@ is dated and recorded HERE, where a reader on their way to the report will pass 
 
 ## Camera / presentation fixes
 
+- [FRONT-GROUP-7.md](FRONT-GROUP-7.md) — **the floor was never buying width, and that is why it
+  cannot be narrowed** (branch `feat/front-group`; **NOT merged, nothing minted — his eye is owed**).
+  He asked for less empty road on river-run seed 2814, and he was right about the slack: the field
+  occupies a median **35.3%** of the corridor through the endgame. The refinement is built behind one
+  key and narrows the crossing exactly as asked (river-run 38% -> 53% of the ordinary), **and it
+  ships OFF because it cuts racers doing it** — ice-track seed 9 goes 0.0% -> 12.0% cut. **WHY is the
+  finding: on ice-track 100% of the racers lost leave ALONG the track, and `corridorGuarantee` only
+  constrains ACROSS.** The full-width floor was buying LONGITUDINAL room by accident and paying in
+  empty road; any refinement of the width takes that away. The body-padding hypothesis was tested and
+  refuted. Predictability is also lost (space-sprint 65/65/65 -> 98/99/77). The lever for a narrower
+  ending is a longitudinal bound, which is not built.
 - [FRONT-GROUP-3.md](FRONT-GROUP-3.md) — **never tighter than the track is wide** (branch
   `feat/front-group`; **NOT merged, nothing minted — his eye is owed**). The owner's own solution,
   and it is better than what we built: racers can only spread ACROSS the corridor, so a frame holding

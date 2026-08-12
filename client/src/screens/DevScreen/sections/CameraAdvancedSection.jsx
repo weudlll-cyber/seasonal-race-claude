@@ -1338,6 +1338,27 @@ function CameraAdvancedSection() {
           <span style={{ fontWeight: 600 }}>Never closer than the track is wide</span>
           <InfoTooltip text="On (default): through the endgame the shot never closes past the corridor's own full width, plus one body so a racer riding the edge is not clipped. Racers can only spread ACROSS the corridor, so a frame holding its width holds everyone who is level — however many there are, with no group to define. Mid-race is untouched, because tight battle shots are wanted there. Measured: it never binds on a leader, overview or comeback shot, so it does not hold the picture open where the camera would rightly have closed in. Off is the pre-2026-08-12 behaviour: the shot closes to the photo-finish zoom whatever it loses." />
         </label>
+        <label
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: '0.5rem',
+            marginBottom: '0.6rem',
+            marginLeft: '1.4rem',
+          }}
+        >
+          <input
+            type="checkbox"
+            data-testid="endgame-floor-binds-extent"
+            disabled={!(config.endgameCorridorFloor ?? DEFAULT_CAMERA_CONFIG.endgameCorridorFloor)}
+            checked={
+              config.endgameFloorBindsExtent ?? DEFAULT_CAMERA_CONFIG.endgameFloorBindsExtent
+            }
+            onChange={(e) => set('endgameFloorBindsExtent', e.target.checked)}
+          />
+          <span style={{ fontWeight: 600 }}>…and only as wide as the racers actually are</span>
+          <InfoTooltip text="On (default): the floor above holds the width the racers are ACTUALLY using rather than the corridor's full width — their real lateral extent plus the same one body, and never more than the full corridor. Measured across ten tracks, the field occupies a median 35.3% of the road through the endgame, so most of what the plain floor holds open is empty. Every racer counts, so there is still no group to define and nothing to track. Off is the plain full-width floor. It does nothing at all while the floor above is off." />
+        </label>
         <div className={s.formGrid}>
           <div className={s.formGroup}>
             <label

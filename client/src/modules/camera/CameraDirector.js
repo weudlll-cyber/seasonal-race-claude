@@ -52,7 +52,6 @@ import {
   findByIndex,
   resolveGroup,
 } from './battleGroup.js';
-import { shortestArcDeltaT } from '../../utils/mathUtils.js';
 import { mulberry32 } from '../racePlanner.js';
 import { computeTimingFromConfig } from './cameraTimingComputation.js';
 import { decideTransition, TRANSITION_ACTION, TRANSITION_REASON } from './transitionDecision.js';
@@ -568,6 +567,7 @@ export class CameraDirector {
     this._runInShot = t.runInShot;
     this._runInOpenMs = t.runInOpenMs;
     this._endgameCorridorFloor = t.endgameCorridorFloor;
+    this._endgameFloorBindsExtent = t.endgameFloorBindsExtent;
     this._comebackCooldownMs = t.comebackCooldownMs;
     this._leadChangeCooldownMs = t.leadChangeCooldownMs;
     this._battleWeight = t.battleWeight;
@@ -2245,6 +2245,29 @@ export class CameraDirector {
    * group bound to retire (holding still-coming racers against an anchor they are not near) has no
    * analogue here. It simply stops binding once the authored zoom-out goes wider than a track width.
    *
+   * THE WIDTH IT ASKS FOR — the corridor's, or the one the racers are actually using (FRONT-GROUP-7).
+   *
+   * The owner, on river-run seed 2814: the shot "shows almost too much of the track, and that much
+   * room is not needed". His rule was SEE EVERYONE SHARING THE WIDTH, not SHOW THE FULL WIDTH WHERE
+   * NOBODY RACES — and measured, the field occupies a median 35.3% of the corridor through the
+   * endgame across ten tracks, so most of what the full-width floor holds open is empty road.
+   *
+   * `endgameFloorBindsExtent` binds on the REAL LATERAL EXTENT instead, plus the same one body, and
+   * CAPPED AT THE CORRIDOR — so it can never ask for more than the old floor did, only less.
+   *
+   * IT IS EVERY RACER, AND THAT IS THE POINT. No group, no membership, no threshold, no capture —
+   * the same virtue the full-width floor had, applied to the width actually in use. Anything
+   * narrower needs a definition of who counts, and the one obvious candidate (the front six) is the
+   * GRADING yardstick: a mechanism that binds on its own yardstick cannot be graded by it, which is
+   * exactly how the first front-group harness flattered itself.
+   *
+   * WHAT IT DOES NOT CLOSE, measured rather than assumed: `_drawnBodyWidthRefPx` is the NARROW body
+   * reference and covers a median 44.6% of the drawn sprite, so a racer at the very edge of the
+   * occupied band can still be clipped by the remainder. Closing that needs the DRAWN size, which
+   * depends on the zoom being solved for — the sprite sits at its screen cap on only 23.4% of
+   * endgame frames, so there is no closed form for the other 77% and it would take a fixed-point
+   * iteration or a one-frame lag. Not built; the gap is stated instead.
+   *
    * @returns {number} cam.zoom ceiling; Infinity outside the endgame or when switched off
    */
   _endgameCorridorCeiling(subjects, frameSize, racers, raceState) {
@@ -2254,6 +2277,25 @@ export class CameraDirector {
     let maxT = 0;
     for (const r of racers) if (r && r.t > maxT) maxT = r.t;
     if (!(maxT / raceState.finishT > this._endgameThreshold)) return Infinity;
+    const full = this._trackWidthPx + this._drawnBodyWidthRefPx;
+    let ask = full;
+    if (this._endgameFloorBindsExtent) {
+      // physicalY is in [-1,+1] across the corridor and ONE unit is trackWidth/2 world px — the
+      // conversion raceBehavior.js owns. A field that has not spread yet asks for less; one spread
+      // edge to edge asks for the whole corridor and this is the old floor exactly.
+      let lo = Infinity;
+      let hi = -Infinity;
+      for (const r of racers) {
+        const y = r?.physicalY;
+        if (!Number.isFinite(y)) continue;
+        if (y < lo) lo = y;
+        if (y > hi) hi = y;
+      }
+      if (hi >= lo) {
+        const occupied = ((hi - lo) * this._trackWidthPx) / 2;
+        ask = Math.min(occupied + this._drawnBodyWidthRefPx, full);
+      }
+    }
     const at = anchorScreenPoint(
       frameSize.width,
       frameSize.height,
@@ -2262,7 +2304,7 @@ export class CameraDirector {
     );
     return corridorGuarantee(
       this._headingAt(subjects.t),
-      this._trackWidthPx + this._drawnBodyWidthRefPx,
+      ask,
       this._proj.axisX,
       this._proj.axisY,
       frameSize.width,

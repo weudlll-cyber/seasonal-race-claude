@@ -7394,4 +7394,69 @@ describe('CameraDirector — the endgame never closes past a track width', () =>
     const cd = drive({ endgameCorridorFloor: true }, early, FINISH_T);
     expect(cd._framingProbe.ceilings.corridor).toBe(Infinity);
   });
+
+  // ── AND ONLY AS WIDE AS THE RACERS ACTUALLY ARE (FRONT-GROUP-7) ────────────────────────────────
+  //
+  // The key ships OFF — measured, see the report — so what these pin is the MECHANISM, not a
+  // recommendation. Three properties, no numbers: the numbers belong to the harness.
+  const spreadOver = (frac) =>
+    pairAtTheLine().map((r, i) => ({
+      ...r,
+      physicalY: i === 0 ? -frac : i === 1 ? frac : 0,
+    }));
+
+  // L203 — both positions of the switch, and the direction is the whole claim.
+  it('both positions differ: binding on the extent asks for LESS than the full corridor', () => {
+    const full = drive(
+      { endgameCorridorFloor: true, endgameFloorBindsExtent: false },
+      spreadOver(0.25),
+      FINISH_T
+    );
+    const extent = drive(
+      { endgameCorridorFloor: true, endgameFloorBindsExtent: true },
+      spreadOver(0.25),
+      FINISH_T
+    );
+    // A smaller ask is a HIGHER zoom ceiling — less binding, a tighter shot allowed.
+    expect(extent._framingProbe.ceilings.corridor).toBeGreaterThan(
+      full._framingProbe.ceilings.corridor
+    );
+  });
+
+  // The cap, which is the promise that this can never be WORSE than the plain floor.
+  it('is capped at the corridor: a field spread edge to edge asks exactly what the full floor does', () => {
+    const full = drive(
+      { endgameCorridorFloor: true, endgameFloorBindsExtent: false },
+      spreadOver(1),
+      FINISH_T
+    );
+    const extent = drive(
+      { endgameCorridorFloor: true, endgameFloorBindsExtent: true },
+      spreadOver(1),
+      FINISH_T
+    );
+    expect(extent._framingProbe.ceilings.corridor).toBeCloseTo(
+      full._framingProbe.ceilings.corridor,
+      10
+    );
+  });
+
+  // A caller that supplies no lateral coordinate must get the OLD behaviour rather than a collapse.
+  // `camera-replay` and the ceremony paths hand the director racer shapes that have no physicalY.
+  it('falls back to the full corridor when no racer carries a lateral position', () => {
+    const full = drive(
+      { endgameCorridorFloor: true, endgameFloorBindsExtent: false },
+      pairAtTheLine(),
+      FINISH_T
+    );
+    const extent = drive(
+      { endgameCorridorFloor: true, endgameFloorBindsExtent: true },
+      pairAtTheLine(),
+      FINISH_T
+    );
+    expect(extent._framingProbe.ceilings.corridor).toBeCloseTo(
+      full._framingProbe.ceilings.corridor,
+      10
+    );
+  });
 });
