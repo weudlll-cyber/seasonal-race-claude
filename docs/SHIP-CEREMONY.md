@@ -291,7 +291,23 @@ went missing).
 - [ ] **11. Run the three guards before the commit.** `node scripts/check-doc-links.mjs`,
       `node scripts/check-index.mjs`, `node scripts/check-tags.mjs` — all three green. Plus the full test
       suite + `eslint` + `build`. These are the cheap catches for the drift a human reviewer cannot see.
-- [ ] **12. Commit, push, verify.** One clear commit; push; confirm with `git log origin/master
+- [ ] **12. Commit, push, verify — AND THE SHIP IS NOT FINISHED AT THE PUSH.** It is finished when CI
+      reports **success for that exact SHA**. Read it, and put the run id in the report.
+
+      **Why this is a step and not a habit.** Three pushes in one day ended at "pushed" while the red
+      arrived afterwards, and master stayed broken for three hours because nobody was still looking.
+      A push is a request; the run is the answer. Check the HEAD SHA rather than the branch — a
+      branch view can show you a green run for the commit before yours:
+
+      ```bash
+      gh run list --branch master --limit 1 --json headSha,databaseId,status,conclusion
+      gh run watch <id> --exit-status
+      ```
+
+      **A red run is not finished work with a footnote.** Either fix it and push again, or revert.
+      The ceremony has no state in which master is knowingly left red.
+
+      One clear commit; push; confirm with `git log origin/master
 --oneline -3` that the push landed. **Any verification transcript pasted into the report must come
       from the state ACTUALLY being committed** — re-run the guards after the commit if that is the only
       way to make it honest, and say that you did. A transcript from an intermediate state (guards still
