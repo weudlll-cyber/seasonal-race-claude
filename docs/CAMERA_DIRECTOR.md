@@ -436,7 +436,7 @@ a verbatim transcript of one run on one commit, which is a historical record, no
 
 ### The tracking lag, as measured today — and it had drifted
 
-<!-- MEASURED: tracking-lag (median/p95 pp per state) @ RUNIN_OWNS_SHA 2026-08-12 depends=client/src/modules/camera/ -->
+<!-- MEASURED: tracking-lag (median/p95 pp per state) @ 33de4bea 2026-08-12 depends=client/src/modules/camera/ -->
 
 **RE-MEASURED FOR RUNIN-OWNS-1, AND THIS IS WHERE THE RUN-IN'S COST SHOWS UP.** The run-in bounds
 the zoom of whatever shot is running through the endgame, so it moves the zoom inside states that
