@@ -458,7 +458,7 @@ a verbatim transcript of one run on one commit, which is a historical record, no
 
 ### The tracking lag, as measured today — and it had drifted
 
-<!-- MEASURED: tracking-lag (median/p95 pp per state) @ RUNIN_MINIMAL_SHA 2026-08-12 depends=client/src/modules/camera/ -->
+<!-- MEASURED: tracking-lag (median/p95 pp per state) @ c58c3249 2026-08-12 depends=client/src/modules/camera/ -->
 
 **RE-MEASURED AGAIN FOR RUNIN-MINIMAL-1, AND THE LATER START GAVE FIVE STATES BACK.** Making the
 run-in wait until the line fits inside OVERVIEW's width means it no longer touches the shots that
