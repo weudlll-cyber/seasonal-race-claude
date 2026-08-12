@@ -1340,6 +1340,44 @@ function CameraAdvancedSection() {
           <strong>4</strong> and <strong>5</strong> from the LAST. The winner card is a tenant of{' '}
           <strong>4</strong> and can never lengthen the ending.
         </p>
+        <label
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: '0.6rem',
+            cursor: 'pointer',
+            fontSize: '0.88rem',
+            marginBottom: '0.4rem',
+          }}
+        >
+          <input
+            type="checkbox"
+            data-testid="ending-keeps-finish-shot"
+            checked={config.endingKeepsFinishShot ?? DEFAULT_CAMERA_CONFIG.endingKeepsFinishShot}
+            onChange={(e) => set('endingKeepsFinishShot', e.target.checked)}
+          />
+          <span style={{ fontWeight: 600 }}>The ending keeps the finish shot</span>
+          <InfoTooltip text="On (default): the camera director keeps composing while the ending runs, so phases 3-4 hold the settled finish picture. Off: the pre-2026-08-12 behaviour — the transform is replaced by zoom 1 / offset 0 the moment the last racer crosses, which on a closed track shrinks the whole world into the canvas and on an open track shows an 853x480 window at world (0,0) with no racers in it at all." />
+        </label>
+        <label
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: '0.6rem',
+            cursor: 'pointer',
+            fontSize: '0.88rem',
+            marginBottom: '0.75rem',
+          }}
+        >
+          <input
+            type="checkbox"
+            data-testid="finished-splash-enabled"
+            checked={config.finishedSplashEnabled ?? DEFAULT_CAMERA_CONFIG.finishedSplashEnabled}
+            onChange={(e) => set('finishedSplashEnabled', e.target.checked)}
+          />
+          <span style={{ fontWeight: 600 }}>Show the old &quot;RACE FINISHED!&quot; splash</span>
+          <InfoTooltip text="Off (default). On: restores the pre-2026-08-12 full-canvas black scrim with RACE FINISHED! and 'Loading results…', drawn over every frame of the ending. It is off because nothing is loading — the results are written on the same frame it appeared — and because it covered the winner card, the held picture and the podium build-up alike." />
+        </label>
         {/* ENDING-HOLD-1: the total, computed by the SAME function the race screen's timers are
             built from (endingSchedule.js), so this read-out and the behaviour cannot disagree.
             It was previously a number a reader had to add up by hand from four sliders in two

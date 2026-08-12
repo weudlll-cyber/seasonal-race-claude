@@ -727,6 +727,12 @@ export default function RaceScreen() {
       cameraConfigRef.current.showRpMinimapBadges ?? DEFAULT_CAMERA_CONFIG.showRpMinimapBadges;
     const showRpStartRowCfg =
       cameraConfigRef.current.showRpStartRow ?? DEFAULT_CAMERA_CONFIG.showRpStartRow;
+    // ENDING-PICTURE-1: the two ending keys, read ONCE per race like the flags above. Both default
+    // to the fixed behaviour; both restore the old one when turned the other way.
+    const endingKeepsFinishShotCfg =
+      cameraConfigRef.current.endingKeepsFinishShot ?? DEFAULT_CAMERA_CONFIG.endingKeepsFinishShot;
+    const finishedSplashEnabledCfg =
+      cameraConfigRef.current.finishedSplashEnabled ?? DEFAULT_CAMERA_CONFIG.finishedSplashEnabled;
 
     // Camera/diag-only Race-Plan bindings (the controller + plan info come from the extracted core).
     let cameraPlanDelivered = false; // B4a: deliver the authored cameraPlan once, mid-race (heroes cast then)
@@ -1377,8 +1383,24 @@ export default function RaceScreen() {
         isOutcomePhase: diagDataRef.current.rpPhase === 'OUTCOME',
         physicsRacers: st.racers,
       };
+      // ENDING-PICTURE-1: THE ENDING KEEPS THE SHOT THE DIRECTOR COMPOSED.
+      //
+      // This used to hand back `{ zoom: 1, offsetX: 0, offsetY: 0 }` the frame the phase flipped to
+      // FINISHED — an identity transform, which is not a shot at all. On a closed track it shrank
+      // the whole world into the canvas; on an open track it left an 853x480 window pinned at world
+      // (0,0), with the racers nowhere in it. The hold the owner asked for was holding that.
+      //
+      // WHY THE DIRECTOR KEEPS BEING CONSULTED rather than freezing the last transform, which was
+      // the other candidate: the zoom-out can still be IN FLIGHT when the last racer crosses. On
+      // Searound seed 2814 it ends 50 ms after the last crossing, and his own zoom-out setting is
+      // longer than the shipped one — freezing would stop the pull-back dead mid-move and hold THAT.
+      // Consulting the director lets it finish the move and come to rest, which is what "settled"
+      // means. It is also safe by construction: physics no longer steps in this phase, so the
+      // director sees a static field, and `_inFinishMode` is absolute — `_pickNextState` returns
+      // FINISH_MODE_LOCKED, so no new shot can be chosen. It converges and stops.
+      const directorDrivesEnding = st.phase === PHASE.FINISHED && endingKeepsFinishShotCfg;
       const cam =
-        st.phase === PHASE.RACING
+        st.phase === PHASE.RACING || directorDrivesEnding
           ? camDirRef.current.update(renderRacers, ts, raceState, CANVAS_W, CANVAS_H, rawDt)
           : st.phase === PHASE.COUNTDOWN && st.countdownStart != null
             ? camDirRef.current.updateCountdown(
@@ -1493,6 +1515,7 @@ export default function RaceScreen() {
         assignmentByRacer,
         showRpStartRow: showRpStartRowCfg,
         showRpMinimapBadges: showRpMinimapBadgesCfg,
+        showFinishedSplash: finishedSplashEnabledCfg,
         rpPlanInfo,
         renderAlpha,
         interpolationEnabled: frameTimingConfig.renderInterpolation,

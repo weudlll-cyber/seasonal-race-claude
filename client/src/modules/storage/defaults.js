@@ -394,6 +394,42 @@ export const DEFAULT_CAMERA_CONFIG = {
   // over. This buys a longer look at a SETTLED picture and nothing else. If he wants arrivals to
   // watch, the lever is the race, not the ending (PROJECT-PRINCIPLES §9).
   finishHoldAfterLastMs: 1500,
+  // ── THE ENDING KEEPS ITS PICTURE (ENDING-PICTURE-1, 2026-08-12) ───────────────────────────────
+  // TRUE = while the phase is FINISHED, the camera director keeps composing the shot. FALSE = the
+  // pre-2026-08-12 behaviour, which replaced the director's transform with `{ zoom: 1, offsetX: 0,
+  // offsetY: 0 }` on the frame the last racer crossed.
+  //
+  // WHAT THAT IDENTITY TRANSFORM ACTUALLY WAS: not a shot. On Searound it squeezed the whole
+  // 3072x2048 world into the 1280x720 canvas; on a 6144-wide open track it left an 853x480 window
+  // pinned at world (0,0) — 14% of the track's width, with the racers nowhere inside it. The owner
+  // reported it as "the race view disappears as soon as the last racer crosses", and the hold he
+  // had just asked for was holding exactly that.
+  //
+  // WHY THE DIRECTOR IS CONSULTED RATHER THAN THE LAST TRANSFORM FROZEN. Freezing was the other
+  // candidate and it fails on timing: the zoom-out can still be IN FLIGHT at the last crossing (on
+  // Searound seed 2814 it ends 50 ms after it), so freezing would stop the pull-back dead mid-move
+  // and hold a half-finished one. Consulting lets the move finish and come to rest. It is safe by
+  // construction — physics no longer steps in this phase, so the director sees a static field, and
+  // `_inFinishMode` is absolute, so no new shot can be chosen.
+  //
+  // NOT AN ENGINE KEY: the director is asked for a transform on frames where it used to be ignored.
+  // The race is over, no physics runs, and `camera-fingerprint.mjs` stops at the last crossing, so
+  // this key cannot move any of the three fingerprints.
+  endingKeepsFinishShot: true,
+  // ── THE END-OF-RACE SPLASH IS RETIRED (ENDING-PICTURE-1, 2026-08-12) ──────────────────────────
+  // FALSE = no splash. TRUE = the pre-2026-08-12 behaviour: a full-canvas `rgba(0,0,0,0.48)` scrim
+  // with "RACE FINISHED!" in 80px gold and "Loading results…" beneath it, drawn over the race
+  // picture for every frame of the ending.
+  //
+  // WHY IT GOES ENTIRELY RATHER THAN MOVING TO THE LAST MOMENTS. Both halves of it are now false.
+  // Nothing is loading: `raceResults` is written to sessionStorage on the SAME FRAME the splash
+  // first appears, so "Loading results…" describes a wait that does not exist. And the ending is no
+  // longer an instant jump — it is a designed sequence that names the winner on a card, holds the
+  // settled picture, and builds the podium up. A scrim over all of that contradicts every part of
+  // it. Moving it to the last moments before navigation was considered and rejected as redundant:
+  // the screen transition already fades to black there (`SCREEN_TRANSITION_MS`, a constant in
+  // TransitionContext.jsx), so those moments are covered by something that fades rather than snaps.
+  finishedSplashEnabled: false,
   finishOverviewLookbackPx: 300, // world-pixel distance before finish line where camera centers during FINISH_OVERVIEW
   // ── THE PODIUM IS BUILT UP (PODIUM-BUILD-1) ───────────────────────────────────────────────────
   // ONE beat. Everything the result screen's build-up does is a whole multiple of it, so the owner
