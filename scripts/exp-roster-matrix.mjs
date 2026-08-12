@@ -182,7 +182,11 @@ async function worker() {
     try {
       const r = await runCell(track, type);
       results[track.id].cells.push(r);
-      runawayRows.push({ label: `${track.id}/${type}`, rate: r.runaway, n: RACES });
+      runawayRows.push({
+        label: `${track.id}/${type}`,
+        rate: r.runaway,
+        n: RACES,
+      });
       console.log(
         `[${++done}/${totalCells}] ${track.id}/${type}: arrival=${r.bandReach == null ? "?" : (r.bandReach * 100).toFixed(1) + "%"} rowMin=${(r.rowMin * 100).toFixed(0)}% ${r.holm} runaway=${r.runaway == null ? "?" : (r.runaway * 100).toFixed(0) + "%"} (${((Date.now() - t0) / 1000).toFixed(0)}s)`,
       );

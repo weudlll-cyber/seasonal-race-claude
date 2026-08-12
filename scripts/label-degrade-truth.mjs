@@ -52,7 +52,10 @@ import {
   getEffectiveMaxTargetScreenPx,
   drawnRacerScreenPx,
 } from "../client/src/modules/autoSpriteScale.js";
-import { raceNumberLabel, assignRaceNumbers } from "../client/src/modules/raceNumbers.js";
+import {
+  raceNumberLabel,
+  assignRaceNumbers,
+} from "../client/src/modules/raceNumbers.js";
 import { QUICK_TEST_NAMES_MIXED } from "../client/src/modules/racerNames.js";
 import { effectiveZoom } from "../client/src/modules/camera/openTrackCamera.js";
 import { OPEN_TRACK_BASE_ZOOM } from "../client/src/modules/camera/CameraDirector.js";
@@ -67,14 +70,17 @@ const CH = 720;
 // TWO CONTRASTING TRACKS, and the contrast is the point: searound is CLOSED and bunches the field
 // into a repeating pack, river-run is OPEN and strings it out. Flicker is a function of how often
 // neighbours cross, so a rule that is calm on one and busy on the other has not been measured.
-const TRACKS = (arg("tracks", "searound,river-run") || "").split(",").filter(Boolean);
+const TRACKS = (arg("tracks", "searound,river-run") || "")
+  .split(",")
+  .filter(Boolean);
 const SIZES = (arg("racers", "40,100") || "")
   .split(",")
   .map(Number)
   .filter((n) => n > 0);
 
 /** The same width rule for both forms — see the header on why an approximation is sound here. */
-const measureText = (fontPx) => (txt) => String(txt ?? "").length * fontPx * 0.5;
+const measureText = (fontPx) => (txt) =>
+  String(txt ?? "").length * fontPx * 0.5;
 
 function runOne(geo, n, namesOn) {
   const identity = resolveIdentity({
@@ -116,7 +122,9 @@ function runOne(geo, n, namesOn) {
     // counting it would report the roll call as flicker.
     if (ts - raceStart < (cameraConfig.nameTagAllUntilMs ?? 0)) return;
     const cam = { zoom: cd.zoom, offsetX: cd.offsetX, offsetY: cd.offsetY };
-    const effX = isOpen ? effectiveZoom(cam.zoom, OPEN_TRACK_BASE_ZOOM) : cam.zoom * bsX;
+    const effX = isOpen
+      ? effectiveZoom(cam.zoom, OPEN_TRACK_BASE_ZOOM)
+      : cam.zoom * bsX;
     const effY = isOpen ? effX : cam.zoom * bsY;
     const displayScale = computeRenderDisplayScale(
       race.displaySize,
@@ -191,7 +199,9 @@ function runOne(geo, n, namesOn) {
 }
 
 console.log(
-  formatIdentity(resolveIdentity({ racers: 0, note: "per-run n below" })).replace("n=0 · ", ""),
+  formatIdentity(
+    resolveIdentity({ racers: 0, note: "per-run n below" }),
+  ).replace("n=0 · ", ""),
 );
 console.log(
   "\ntrack        n    names  labels  name%   switches  /label/race  /label/s   churn/s  worst label",

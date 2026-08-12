@@ -32,10 +32,24 @@
 // number is doing tuning work rather than only defect-detection work, and it is recorded here
 // rather than quietly widened.
 //
-// RE-CHECK THIS ONCE THE RUN-IN DEFECT IS FIXED. With the field bound applied the same two cases
-// read 1.21 and 0.90, so the margin roughly doubles and the limit stops being marginal. If the
-// finished repair leaves searound near 2 again, the right response is to understand why the centre
-// wanders that far on a closed track — not to raise the limit.
+// RE-CHECKED AT THE FINISHED REPAIR (RUNIN-OWNS-1, 2026-08-12). It left Searound near 2 again —
+// 2.07 — and the limit has NOT been raised. Here is the wander, understood:
+//
+//   AT THAT FRAME THE CAMERA IS SHOWING 99% x 99% OF THE WORLD, with all 20 racers on screen and
+//   the finish line in frame. The run-in opens the shot until the finish is visible, and on a
+//   closed track the finish can be most of a lap away, so "the line in frame" becomes "the world in
+//   frame". A world-sized frame CANNOT be centred on the spine: `resolveCamera`'s world-bounds
+//   clamp centres it on the WORLD, and an oval's world centre is its infield. The two requirements
+//   are geometrically exclusive at that width — this is not a camera pointed away from the race, it
+//   is a camera showing all of it.
+//
+// SO THIS HALF NOW FAILS ON A FRAME THAT IS NOT A DEFECT, and that is left standing rather than
+// tuned away, for the reason the block below already gives: the number would be doing taste work.
+// The honest readings of the situation are (a) the limit encodes "the camera never shows the whole
+// world", which was true of every shot this camera made before 2026-08-12, or (b) the metric should
+// ask whether the TRACK is in frame rather than whether the CENTRE is on it — which needs no
+// threshold at all, like the never-empty half. Neither is decided here: changing the acceptance
+// test inside the block it is judging is how a guard stops meaning anything. THE OWNER DECIDES.
 //
 // Why 2 and not something larger: a healthy run-in holds 0.1, and the original excursion reached
 // 10.9. A limit in that gap catches a camera pointed at nothing without policing framing taste.
@@ -109,8 +123,16 @@ const SPINE_SAMPLES = 2000;
 
 /** One open track and one closed one, at the races the defect was found on. */
 const CASES = [
-  { track: "luger-hill", raceSeed: 9, note: "OPEN — where FINISH-FRAMED-1's excursion was found" },
-  { track: "searound", raceSeed: 2814, note: "CLOSED — the owner's reported race" },
+  {
+    track: "luger-hill",
+    raceSeed: 9,
+    note: "OPEN — where FINISH-FRAMED-1's excursion was found",
+  },
+  {
+    track: "searound",
+    raceSeed: 2814,
+    note: "CLOSED — the owner's reported race",
+  },
 ];
 
 let failures = 0;
@@ -139,7 +161,8 @@ for (const c of CASES) {
 
   // The spine, sampled once. Distance to it is what "off the track" means.
   const spine = [];
-  for (let i = 0; i <= SPINE_SAMPLES; i++) spine.push(shape.getPosition(i / SPINE_SAMPLES, 0));
+  for (let i = 0; i <= SPINE_SAMPLES; i++)
+    spine.push(shape.getPosition(i / SPINE_SAMPLES, 0));
   const offSpine = (x, y) => {
     let best = Infinity;
     for (let i = 0; i <= SPINE_SAMPLES; i++) {
@@ -174,7 +197,8 @@ for (const c of CASES) {
       }
       if (onScreen === 0) {
         emptyFrames++;
-        if (firstEmpty === null) firstEmpty = { ms: Math.round(ts - raceStart), hud: cd.hudState };
+        if (firstEmpty === null)
+          firstEmpty = { ms: Math.round(ts - raceStart), hud: cd.hudState };
       }
       // ── QUESTION 1: the centre stays near the track, through the run-in. ──
       let maxT = 0;
@@ -185,11 +209,16 @@ for (const c of CASES) {
         const cy = (CH / 2 - cd.offsetY) / (cd.zoom * bsY);
         const tw = offSpine(cx, cy) / trackWidthPx;
         if (tw > worstOff.tw) {
-          worstOff = { tw, ms: Math.round(ts - raceStart), hud: cd.hudState, zoom: cd.zoom };
+          worstOff = {
+            tw,
+            ms: Math.round(ts - raceStart),
+            hud: cd.hudState,
+            zoom: cd.zoom,
+          };
         }
       }
     },
-    { slowmo: true }
+    { slowmo: true },
   );
 
   const centreOk = worstOff.tw <= MAX_CENTRE_OFF_TW;
@@ -200,17 +229,17 @@ for (const c of CASES) {
     `${c.track.padEnd(12)} ${(shape.isOpen ? "open" : "closed").padEnd(7)} ` +
       `centre worst ${worstOff.tw.toFixed(2)} TW ${centreOk ? "OK " : "FAIL"}   ` +
       `empty frames ${String(emptyFrames).padStart(4)} ${emptyOk ? "OK " : "FAIL"}   ` +
-      `(${runInFrames} run-in of ${totalFrames})`
+      `(${runInFrames} run-in of ${totalFrames})`,
   );
   if (!centreOk) {
     console.log(
       `  FAIL: the camera centre reached ${worstOff.tw.toFixed(2)} track widths off the spine ` +
-        `at ${worstOff.ms} ms (${worstOff.hud}, zoom ${worstOff.zoom?.toFixed(3)}), limit ${MAX_CENTRE_OFF_TW}.`
+        `at ${worstOff.ms} ms (${worstOff.hud}, zoom ${worstOff.zoom?.toFixed(3)}), limit ${MAX_CENTRE_OFF_TW}.`,
     );
   }
   if (!emptyOk) {
     console.log(
-      `  FAIL: ${emptyFrames} frame(s) with NO racer on screen, first at ${firstEmpty.ms} ms (${firstEmpty.hud}).`
+      `  FAIL: ${emptyFrames} frame(s) with NO racer on screen, first at ${firstEmpty.ms} ms (${firstEmpty.hud}).`,
     );
   }
   if (VERBOSE) console.log(`  ${formatIdentity(identity)}`);
@@ -219,8 +248,10 @@ for (const c of CASES) {
 if (failures > 0) {
   console.log(
     `\ncheck-runin-frame: ${failures} case(s) failed. A camera pointed away from the race is a\n` +
-      `defect however good the framing numbers look — see the header for why this guard exists.`
+      `defect however good the framing numbers look — see the header for why this guard exists.`,
   );
   process.exit(1);
 }
-console.log("check-runin-frame: the camera is pointed at the race on both tracks. PASS");
+console.log(
+  "check-runin-frame: the camera is pointed at the race on both tracks. PASS",
+);

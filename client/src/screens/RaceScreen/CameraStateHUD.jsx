@@ -48,13 +48,6 @@ const STATE_CONFIG = {
     glow: 'rgba(192,132,252,0.45)',
     tooltip: 'The leader has changed!',
   },
-  RUN_IN: {
-    label: 'RUN-IN',
-    icon: '🏁',
-    color: '#ffd700',
-    glow: 'rgba(255,215,0,0.45)',
-    tooltip: 'The leader is closing on the finish line',
-  },
   FINISH: {
     label: 'FINISH',
     icon: '🏆',

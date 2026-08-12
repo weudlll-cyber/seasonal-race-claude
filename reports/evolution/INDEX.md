@@ -6,6 +6,20 @@ and [FAIRNESS.md](../../docs/FAIRNESS.md). Shipped world: **`dc4647be0f55ebdb`**
 
 ## CORRECTIONS — findings that invalidate a number in a report below
 
+- **2026-08-12 (evening) — [RUNIN-STATE-1.md](RUNIN-STATE-1.md)'s MECHANISM is superseded; its
+  MEASUREMENTS and its trace stand.** That report shipped the run-in as a camera STATE and recorded
+  the limit itself: the state owned 14.9% / 18.5% of the endgame window. [RUNIN-OWNS-1.md](RUNIN-OWNS-1.md)
+  replaced the state with a bound on whatever state is running, and ownership went to **100%**. Two
+  of its conclusions are now wrong and are corrected there rather than in the report, which is
+  append-only: (1) "the run-in must be a LEADER-family STATE so the anchor correction is live" —
+  the anchor correction is what matters, not the state, and it is now supplied directly; (2) a RUN_IN
+  state at the line would have **suppressed the photo-finish slow motion**, which RaceScreen
+  triggers off `hudState` — not known when that report was written. Its **line-in-frame figures
+  (24.8% / 25.6%) and its bit-identical crossing zoom (0.00e+0) are correct for the shape it
+  measured** and are superseded by 78.2% / 93.1% and 1.31e-3 / 1.02e-2 for the shape that shipped.
+  **docs/DEAD-ENDS.md §M was rewritten the same day**: as first written it banned the mechanism that
+  shipped nine hours later.
+
 **The reports themselves are append-only and are NOT edited.** A report records what was true on the
 day it was written; when a later measurement shows one of its numbers was an artefact, the correction
 is dated and recorded HERE, where a reader on their way to the report will pass it.
@@ -26,6 +40,49 @@ is dated and recorded HERE, where a reader on their way to the report will pass 
 
 ## Ships
 
+- [RUNIN-OWNS-1.md](RUNIN-OWNS-1.md) — **the run-in owns the endgame's FRAMING, not its state slot**
+  (2026-08-12, `feat/runin-state`, **NOT merged — his eye on luger-hill seed 9**; fingerprints
+  measured fresh and **NOT minted**). Continues RUNIN-STATE-1 and **replaces its mechanism** — see
+  the CORRECTIONS block above. **THE CHANGE OF SHAPE**: the run-in stops competing for which shot is
+  running and READS whichever one is, bounding that shot's zoom. It therefore composes **100.0% of
+  the endgame window on both tracks**, against the state shape's 14.9% / 18.5%. It also avoids a
+  defect the state shape had not yet been caught on: RaceScreen starts the photo-finish slow motion
+  off `hudState`, so a RUN_IN state holding the slot at the line would have **suppressed the slow
+  motion outright** — checked in the source before the rework, not after. `CAM_STATE` is six again,
+  `GUARANTEE.LINE` is gone, and this block is mostly REMOVAL. **TWO BOUNDS, ONE OF WHICH IS NOT
+  CODE**: the LINE (`room / distance` from the anchor's place in the frame — no curve, no ramp, no
+  knob) and THE ACTIVE STATE'S OWN ZOOM, which was already the first term of the `Math.min` every
+  shot is composed with. So a leader shot closes to the leader zoom and a photo finish to the
+  photo-finish zoom, and **nothing is handed over** — as the leader arrives the line's requirement
+  passes above the state's setting, stops being the smallest term, and what is left is the shot that
+  was always there. **BOTH BOUNDS PROVED TO BE REAL BOUNDS RATHER THAN COMMENTS**: the line binds
+  88.6% / 90.5% of the window, the state's own zoom 10.8% / 8.7%. **MEASURED, 2 tracks x 8 seeds**:
+  line in frame **11.9% → 78.2%** and **9.9% → 93.1%** over the run-in window (48.0% → 87.1% and
+  40.6% → 95.5% on the wider one), against the state shape's 24.8% / 25.6%; **empty frames 0**
+  everywhere. **THE ONE REPAIR IT NEEDED** is the one RUNIN-STATE-1's trace bought: `_focusAnchorRacer`
+  returns null for group shots, which SKIPS the zoom-about-the-anchor correction — harmless while a
+  group shot's zoom is steady, fatal while it is moving, and the run-in moves it inside PHOTO_FINISH.
+  Scoped to the run-in deliberately so the OFF arm stays inert. **WHAT IT COST, both reported rather
+  than tuned away**: (1) the zoom at the crossing is **no longer bit-identical** — 1.31e-3 and
+  1.02e-2, i.e. 0.03% and 0.006% of the zoom — because "close to the photo-finish zoom" and
+  "bit-identical at the crossing" are in tension and geometry decides: arriving from further away
+  takes longer; the previous 0.00e+0 held only because the run-in was not composing during
+  PHOTO_FINISH at all. (2) `check-runin-frame`'s centre half **FAILS on Searound at 2.08 TW against
+  its limit of 2, and the limit was NOT raised** — at that frame the camera shows **99% x 99% of the
+  world with all 20 racers on screen and the line in frame**, and a world-sized frame CANNOT be
+  centred on the spine because the world-bounds clamp centres it on the WORLD, whose centre on an
+  oval is the infield. The two requirements are geometrically exclusive at that width; the guard's
+  header now carries the finding and the owner decides between "the limit encodes a shot this camera
+  never used to make" and "the metric should ask whether the TRACK is in frame, not whether the
+  CENTRE is on it". **THE PRICED ALTERNATIVE, since a bound is the obvious next suggestion**: adding
+  OVERVIEW's own width as a wide-end bound fixes the reading and costs two thirds of the feature
+  (78.2% / 93.1% → 26.2% / 34.0%, worst centre → 0.56 / 0.41 TW). Real trade, priced, his call.
+  **ALSO FOR HIS EYE**: the opening move is a **6x–8x zoom-out in about half a second** at the
+  threshold, on the tracking lerp rather than a glide, because no state transition happens there.
+  **FINGERPRINTS**: world `dc4647be0f55ebdb` **unmoved**; camera `64432e18a7e62188` →
+  `e2dbf91851744136`, render `096f2726c45ed853` → `5405d885f0432b0e` — and with `runInShot: false`
+  **all three return EXACTLY to the stored values on all ten tracks**, so nothing outside the endgame
+  window moves.
 - [RUNIN-STATE-1.md](RUNIN-STATE-1.md) — **the run-in becomes a state** (2026-08-12,
   `feat/runin-state` off master `e1f53781`, **NOT merged — his eye on luger-hill seed 9**;
   fingerprints measured fresh and **NOT minted**). The fourth attempt at "keep the finish line in
@@ -196,7 +253,7 @@ is dated and recorded HERE, where a reader on their way to the report will pass 
   ZERO** (branch `feat/scoreboard-transform-rows` off `afdf130a`; **NOT merged — a visible surface
   awaiting his eye**; all four fingerprints unchanged). The rows now keep a STABLE place in the
   document — racer order, never re-sorted — and the ranking travels as `translateY((rank−1) ×
-  35.333px)`, so a rank change moves nothing in the document and nothing below it is laid out again.
+35.333px)`, so a rank change moves nothing in the document and nothing below it is laid out again.
   **ESTABLISHED FIRST, in a real browser**: the rows were in normal flow, so they had to come out of
   it; and **row height is uniform at 31.333 px across all seven shapes that could differ** (crown,
   `#100`, no race number, finished with/without a time, ellipsised name) because `.sb-name` is
@@ -215,7 +272,6 @@ is dated and recorded HERE, where a reader on their way to the report will pass 
   is a text change; and the pitch is font metrics that **neither node nor jsdom can re-derive**, so
   the guard pins the CSS inputs and the constant instead. Parity extended to compare the row **as
   drawn** (sorted by y), since array position stopped being visual position.
-
 
 - [SCOREBOARD-STABLE-ROWS.md](SCOREBOARD-STABLE-ROWS.md) — **HIS SHAPE, BUILT: 101 ROWS REBUILT PER
   TICK BECOMES 36** (branch `feat/scoreboard-stable-rows` off `024b58c3`, with `feat/frame-gap-1`
@@ -242,7 +298,6 @@ is dated and recorded HERE, where a reader on their way to the report will pass 
   being stable over racer index, true before and after. **WHAT IS LEFT**: reordering keyed DOM nodes
   still costs, and that floor is what remains. The cadence default is untouched at 500.
 
-
 - [SCOREBOARD-CADENCE-1.md](SCOREBOARD-CADENCE-1.md) — **ONE NUMBER, AND THE RATE FALLS AT LEAST
   PROPORTIONALLY** (branch `feat/scoreboard-cadence-1` off `570a8505`; **NOT merged — a visible change
   awaiting his eye**; all four fingerprints unchanged). FRAME-GAP-3 named the standings list; this
@@ -264,7 +319,7 @@ is dated and recorded HERE, where a reader on their way to the report will pass 
   during a race, so emitting a narrow record plus `React.memo` needs no change to the row's markup —
   under an hour, orthogonal to the cadence, and justified only if he picks 250 for feel and still
   drops frames.
-||||||| 570a8505
+  ||||||| 570a8505
 - [FRAME-GAP-1.md](FRAME-GAP-1.md) — **`other` IS SPLITTABLE NOW, AND THE SPLIT SAYS THE 29 ms ARE NOT
   WHERE WE LOOKED** (branch `feat/frame-gap-1` off `570a8505`; **diagnosis only, nothing fixed**; all
   four fingerprints unchanged and engine-reach clears all four changed paths). **A NEGATIVE RESULT,
@@ -286,7 +341,6 @@ is dated and recorded HERE, where a reader on their way to the report will pass 
   4 → 1, four empty `docs/` dirs gone, every deleted tip SHA recorded first; both uncontained branches
   verified dead before deletion (one carried only two leftover conflict markers). **37 stale
   `.git/worktrees/` admin dirs cannot be pruned** — OneDrive ReparsePoint placeholders, EPERM.
-
 
 - [CEREMONY-COUNTS-GENERATED.md](CEREMONY-COUNTS-GENERATED.md) — **THE SENTENCE WAS SPLIT, AND ONE OF
   THE THREE NUMBERS WAS WRONG** (branch `feat/ceremony-counts` off `feat/post-start-hold-unify`; docs

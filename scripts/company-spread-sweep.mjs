@@ -28,7 +28,12 @@ import { mkdirSync, writeFileSync } from "node:fs";
 import { dirname, isAbsolute, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
-import { resolveIdentity, loadTracks, buildRace, runRace } from "./lib/raceDriver.mjs";
+import {
+  resolveIdentity,
+  loadTracks,
+  buildRace,
+  runRace,
+} from "./lib/raceDriver.mjs";
 import { DEFAULT_CAMERA_CONFIG } from "../client/src/modules/storage/defaults.js";
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), "..");
@@ -39,7 +44,10 @@ const arg = (k, d) => {
 
 // THE FIVE WHERE IT BINDS, from MIN-RACERS-5's one-seed table. The other five are confirmed once by
 // --tracks, not swept: they were 0.0 % because something else already holds the shot wider.
-const TRACKS = (arg("tracks", "city-circuit,ice-track,dirt-oval,space-sprint,garden-path") || "")
+const TRACKS = (
+  arg("tracks", "city-circuit,ice-track,dirt-oval,space-sprint,garden-path") ||
+  ""
+)
   .split(",")
   .filter(Boolean);
 const RACER_COUNTS = (arg("racers", "20,40,70") || "").split(",").map(Number);
@@ -50,7 +58,8 @@ const JSON_OUT = arg("json", "");
 const CW = 1280;
 const CH = 720;
 
-const pct = (s, p) => s[Math.min(s.length - 1, Math.floor(((s.length - 1) * p) / 100))];
+const pct = (s, p) =>
+  s[Math.min(s.length - 1, Math.floor(((s.length - 1) * p) / 100))];
 
 /** How strung out the field is, in laps: max t − min t over racers still running. */
 function tSpread(racers) {
@@ -153,7 +162,9 @@ if (geos.length !== TRACKS.length) {
   const missing = TRACKS.filter((t) => !geos.some((g) => g.id === t));
   console.error(
     `REFUSED: ${missing.length} of ${TRACKS.length} requested track(s) not found: ${missing.join(", ")}\n` +
-      `  available: ${loadTracks().map((g) => g.id).join(", ")}`,
+      `  available: ${loadTracks()
+        .map((g) => g.id)
+        .join(", ")}`,
   );
   process.exit(2);
 }
@@ -162,7 +173,9 @@ const rows = [];
 console.log(
   "CHANGED% = frames whose zoom differs from the guarantee-OFF arm. PACK/MID/SPREAD are terciles of",
 );
-console.log("the field's t-spread (laps), so SPREAD is the strung-out third — where it can bind.\n");
+console.log(
+  "the field's t-spread (laps), so SPREAD is the strung-out third — where it can bind.\n",
+);
 console.log(
   "track          n   seed  arm   CHANGED%  (pack / mid / spread)      widest   zoom p5/med/p95",
 );

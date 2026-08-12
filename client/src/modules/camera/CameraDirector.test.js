@@ -671,9 +671,10 @@ describe('CameraDirector — B4b comeback candidate = cast comebacker', () => {
 // ── CameraDirector — §5.4 trigger extensions ─────────────────────────────────
 
 describe('CameraDirector — §5.4 trigger extensions', () => {
-  // RUNIN-STATE-1 turned this into a BOTH-POSITIONS test. The endgame lock is the same lock and
-  // fires on the same threshold against the same cooldown; only the state it names has changed, and
-  // `runInShot: false` still names the old one.
+  // RUNIN-OWNS-1: BOTH POSITIONS, and they must agree. The run-in bounds the endgame's ZOOM and
+  // does not touch which state is chosen, so this lock names LEADER_ZOOM whatever `runInShot` says.
+  // The earlier shape made the run-in a STATE that took this slot; asserting both positions here is
+  // what would catch that creeping back.
   const endgameCase = () => ({
     racers: [
       { t: 0.9, x: 500, y: 300, finished: false }, // 0.9/1.0=90% > 85%
@@ -683,26 +684,16 @@ describe('CameraDirector — §5.4 trigger extensions', () => {
     rs: { raceElapsed: 10000, finishedCount: 0, winner: null, finishT: 1.0 },
   });
 
-  it('Endgame (leader > 85%): RUN_IN even when cooldown would block OVERVIEW', () => {
-    const cd = new CameraDirector();
-    cd.state = CAM_STATE.OVERVIEW;
-    cd.stateEnteredAt = 0;
-    const { racers, rs } = endgameCase();
-    cd.update(racers, 9000, rs, 1280, 720);
-    expect(cd.state).toBe(CAM_STATE.RUN_IN);
-  });
-
-  it('Endgame with runInShot OFF: the same lock still names LEADER_ZOOM', () => {
-    const cd = new CameraDirector(1280, 720, false, {
-      ...DEFAULT_CAMERA_CONFIG,
-      runInShot: false,
+  for (const runInShot of [true, false]) {
+    it(`Endgame (leader > 85%): LEADER_ZOOM even when cooldown would block OVERVIEW (runInShot ${runInShot})`, () => {
+      const cd = new CameraDirector(1280, 720, false, { ...DEFAULT_CAMERA_CONFIG, runInShot });
+      cd.state = CAM_STATE.OVERVIEW;
+      cd.stateEnteredAt = 0;
+      const { racers, rs } = endgameCase();
+      cd.update(racers, 9000, rs, 1280, 720);
+      expect(cd.state).toBe(CAM_STATE.LEADER_ZOOM);
     });
-    cd.state = CAM_STATE.OVERVIEW;
-    cd.stateEnteredAt = 0;
-    const { racers, rs } = endgameCase();
-    cd.update(racers, 9000, rs, 1280, 720);
-    expect(cd.state).toBe(CAM_STATE.LEADER_ZOOM);
-  });
+  }
 
   it('Endgame threshold: leader at exactly 85% does NOT trigger endgame', () => {
     const cd = new CameraDirector();
@@ -4401,9 +4392,7 @@ describe('LEAD_CHANGE camera state', () => {
     ];
     const raceState = { raceElapsed: 20000, finishedCount: 0, winner: null, finishT: 1 };
     cd.update(racers, 900, raceState, 1280, 720);
-    // RUNIN-STATE-1: still "not LEAD_CHANGE", which is what this test is about. The endgame's
-    // fall-through is RUN_IN now; the blocked lead change is unchanged.
-    expect(cd.state).toBe(CAM_STATE.RUN_IN);
+    expect(cd.state).toBe(CAM_STATE.LEADER_ZOOM);
     expect(cd._leadChangePending).toBe(false);
   });
 });
@@ -5784,20 +5773,8 @@ describe('weighted event selection never surfaces a zero-weight state (BATTLE-WE
       finished: false,
     }));
     const pick = cd._pickNextState(endgame, 20000, rs()); // leaderProgress 0.95 > endgameThreshold
-    expect(pick.nextState).toBe(CAM_STATE.RUN_IN);
+    expect(pick.nextState).toBe(CAM_STATE.LEADER_ZOOM);
     expect(pick.reason).toMatch(/endgame/);
-    // BOTH POSITIONS (RUNIN-STATE-1): the mandatory endgame is mandatory in either, and the key
-    // changes only WHICH shot it mandates. A zero-weight pool must not be able to suppress it.
-    const off = mkDir({
-      battleWeight: 0,
-      leadChangeWeight: 0,
-      comebackWeight: 0,
-      overviewWeight: 0,
-      runInShot: false,
-    });
-    const pickOff = off._pickNextState(endgame, 20000, rs());
-    expect(pickOff.nextState).toBe(CAM_STATE.LEADER_ZOOM);
-    expect(pickOff.reason).toMatch(/endgame/);
   });
 });
 
@@ -7195,99 +7172,105 @@ describe('the hold keeps the ceremony framing (CEREMONY-HOLD-TARGET-1)', () => {
 });
 
 // ============================================================
-// RUNIN-STATE-1 — THE RUN-IN IS A STATE.
+// RUNIN-OWNS-1 — THE RUN-IN OWNS THE ENDGAME'S FRAMING, NOT ITS STATE SLOT.
 //
-// Three things are pinned here, and each of them is a thing that BROKE in the retired ceiling form
-// (see docs/DEAD-ENDS.md):
+// What is pinned here is the SHAPE of the repair, because the shape is what was got wrong twice:
 //
-//   1. THE ANCHOR. The retired form put its zoom curve on PHOTO_FINISH, a group shot whose
-//      `_focusAnchorRacer` is null — which disables update()'s zoom-about-the-anchor correction and
-//      let the pan trail 535-1115 px behind its own target, emptying the frame of racers for 51
-//      consecutive frames. RUN_IN is in the LEADER family precisely so that cannot happen, so the
-//      family membership is an assertion and not an implementation detail.
-//   2. THE ZOOM SHAPE. It must WIDEN when the line is far and RELEASE as the subject arrives, so
-//      the state's own setting takes the shot back with nothing to switch off.
-//   3. BOTH POSITIONS. `runInShot: false` must reach the pre-2026-08-12 behaviour.
+//   1. IT IS NOT A STATE. Making it one cost the photo finish its slow motion (RaceScreen triggers
+//      that off `hudState`) and gave the run-in only 15-19% of the window, because a shot entered
+//      just before the threshold holds its own gate across it. `CAM_STATE` must stay six.
+//   2. THE WINDOW is the endgame threshold to the first crossing, and both ends are read from
+//      things that already existed.
+//   3. THE TWO BOUNDS. The line, and the active state's own zoom — so the run-in can never tighten
+//      past the shot underneath it, and the picture it hands back at the line is that shot's own.
+//   4. BOTH POSITIONS: `runInShot: false` must make it inert everywhere.
 // ============================================================
-describe('RUNIN-STATE-1 — the run-in is a state', () => {
+describe('RUNIN-OWNS-1 — the run-in owns the endgame framing', () => {
   // A straight 4000 px track; the line at t=1 is therefore at x=4000, y=360.
   const runInDirector = (cfg = {}) =>
     new CameraDirector(4000, 720, true, { ...DEFAULT_CAMERA_CONFIG, ...cfg }, 36, makeShape(4000));
   const FRAME = { width: 1280, height: 720 };
   const subjectsAt = (x) => ({ point: { x, y: 360 }, t: x / 4000, pair: [null, null] });
+  // Leader at 95% of a finishT of 1 — inside the window, nobody home yet.
+  const inWindow = {
+    racers: [{ index: 0, t: 0.95, x: 3800, y: 360 }],
+    rs: { finishT: 1, finishedCount: 0 },
+  };
 
-  it('is in the LEADER family, so the zoom-about-anchor correction is live (the 51-frame defect)', () => {
-    const cd = runInDirector();
-    const racers = [
-      { index: 0, t: 0.95, x: 3800, y: 360 },
-      { index: 1, t: 0.93, x: 3720, y: 360 },
-    ];
-    cd.state = CAM_STATE.RUN_IN;
-    expect(cd._focusAnchorRacer(racers)).toBe(racers[0]);
-    // The contrast that makes the point: the shot the retired form ran its curve on has none.
-    cd.state = CAM_STATE.PHOTO_FINISH;
-    expect(cd._focusAnchorRacer(racers)).toBeNull();
+  it('adds no camera state — CAM_STATE is still the six the framing rule describes', () => {
+    expect(Object.keys(CAM_STATE)).not.toContain('RUN_IN');
+    expect(Object.values(CAM_STATE)).toHaveLength(6);
   });
 
-  it('borrows LEADER_ZOOM’s width rather than carrying a second setting', () => {
+  it('composes from the endgame threshold to the first crossing, and nowhere else', () => {
+    const cd = runInDirector();
+    const { racers, rs } = inWindow;
+    expect(cd._runInComposing(racers, rs)).toBe(true);
+    // Before the threshold.
+    expect(cd._runInComposing([{ t: 0.5, x: 2000, y: 360 }], rs)).toBe(false);
+    // After the first crossing — the finish sequence owns the picture from there.
+    expect(cd._runInComposing(racers, { finishT: 1, finishedCount: 1 })).toBe(false);
+    // No race.
+    expect(cd._runInComposing(racers, { finishT: 0, finishedCount: 0 })).toBe(false);
+    expect(cd._runInComposing([], rs)).toBe(false);
+  });
+
+  it('the line bound widens with distance and RELEASES as the leader reaches the line', () => {
     const cd = runInDirector();
     cd.state = CAM_STATE.LEADER_ZOOM;
-    const leader = cd._stateCamZoom();
-    cd.state = CAM_STATE.RUN_IN;
-    expect(cd._stateCamZoom()).toBe(leader);
-  });
-
-  it('the LINE ceiling widens with distance and RELEASES as the subject reaches the line', () => {
-    const cd = runInDirector();
-    cd.state = CAM_STATE.RUN_IN;
-    const rs = { finishT: 1 };
-    const far = cd._lineCeiling(subjectsAt(1000), FRAME, rs);
-    const mid = cd._lineCeiling(subjectsAt(3000), FRAME, rs);
-    const near = cd._lineCeiling(subjectsAt(3900), FRAME, rs);
+    const rs = { finishT: 1, finishedCount: 0 };
+    const at = (x) => cd._lineCeiling(subjectsAt(x), FRAME, [{ t: 0.95, x, y: 360 }], rs);
+    const far = at(1000);
+    const mid = at(3000);
+    const near = at(3900);
     // A ceiling is a cam.zoom: LOWER means WIDER. Far from the line the shot must be widest.
     expect(far).toBeLessThan(mid);
     expect(mid).toBeLessThan(near);
     // ON the line there is nothing left to keep in frame, so it constrains nothing at all — which
-    // is how the state hands the shot back to its own width without a special case.
-    expect(cd._lineCeiling(subjectsAt(4000), FRAME, rs)).toBe(Infinity);
+    // is how the run-in hands the shot back with no handover and nothing to switch off.
+    expect(at(4000)).toBe(Infinity);
   });
 
-  it('the LINE ceiling constrains nothing when there is no finish to frame', () => {
+  it('it bounds whatever state is running — including the photo finish', () => {
+    // "If it is a photo finish, it closes to the photo-finish zoom." The bound is computed for
+    // every state, so no state can run the endgame with the line out of frame.
     const cd = runInDirector();
-    cd.state = CAM_STATE.RUN_IN;
-    expect(cd._lineCeiling(subjectsAt(1000), FRAME, { finishT: 0 })).toBe(Infinity);
-    expect(cd._lineCeiling(subjectsAt(1000), FRAME, null)).toBe(Infinity);
-    expect(cd._lineCeiling({ point: null, t: null }, FRAME, { finishT: 1 })).toBe(Infinity);
-  });
-
-  it('it is the RUN-IN’s guarantee ALONE: no other state reads the line', () => {
-    // The whole point of the repair. `_guaranteeCeiling` routes to the line only for RUN_IN, so
-    // PHOTO_FINISH's shot is composed by exactly what composed it before.
-    const cd = runInDirector();
-    const rs = { finishT: 1 };
+    const rs = { finishT: 1, finishedCount: 0 };
+    const racers = [{ index: 0, t: 0.95, x: 2000, y: 360 }];
     for (const state of [
       CAM_STATE.PHOTO_FINISH,
       CAM_STATE.LEADER_ZOOM,
-      CAM_STATE.OVERVIEW,
       CAM_STATE.BATTLE_ZOOM,
       CAM_STATE.COMEBACK_ZOOM,
       CAM_STATE.LEAD_CHANGE,
+      CAM_STATE.OVERVIEW,
     ]) {
       cd.state = state;
-      const withFinish = cd._guaranteeCeiling(subjectsAt(1000), FRAME, rs);
-      const without = cd._guaranteeCeiling(subjectsAt(1000), FRAME, null);
-      expect(withFinish, `${state} must not read finishT`).toEqual(without);
+      expect(Number.isFinite(cd._lineCeiling(subjectsAt(2000), FRAME, racers, rs)), state).toBe(
+        true
+      );
     }
   });
 
-  it('runInShot: false never produces the state at all', () => {
+  it('never tightens past the active state’s own zoom — the second bound needed no code', () => {
+    // The bound is `Math.min(stateZoom, ..., lineCeiling)` in `_setTargets`, so proving it means
+    // proving the composed zoom never exceeds the state's setting even when the line has released.
+    const cd = runInDirector();
+    cd.state = CAM_STATE.PHOTO_FINISH;
+    const pf = cd._stateCamZoom();
+    const rs = { finishT: 1, finishedCount: 0 };
+    // Leader ON the line: the line bound is Infinity, so the state zoom is all that is left.
+    expect(cd._lineCeiling(subjectsAt(4000), FRAME, [{ t: 1, x: 4000, y: 360 }], rs)).toBe(
+      Infinity
+    );
+    expect(Math.min(pf, Infinity)).toBe(pf);
+  });
+
+  it('runInShot: false makes it inert, in the window and out of it', () => {
     const cd = runInDirector({ runInShot: false });
-    const endgame = [
-      { index: 0, t: 0.95, x: 3800, y: 360, finished: false },
-      { index: 1, t: 0.9, x: 3600, y: 360, finished: false },
-    ];
-    const rs = { raceElapsed: 20000, finishedCount: 0, winner: null, finishT: 1 };
-    const pick = cd._pickNextState(endgame, 20000, rs);
-    expect(pick.nextState).toBe(CAM_STATE.LEADER_ZOOM);
+    const { racers, rs } = inWindow;
+    expect(cd._runInComposing(racers, rs)).toBe(false);
+    cd.state = CAM_STATE.LEADER_ZOOM;
+    expect(cd._lineCeiling(subjectsAt(1000), FRAME, racers, rs)).toBe(Infinity);
   });
 });

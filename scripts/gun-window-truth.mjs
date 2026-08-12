@@ -129,7 +129,10 @@ runRace(
     const el = ts - raceStart;
     const centre = centreOf(c.zoom, c.offsetX, c.offsetY);
     const near = nearestOnCentreline(centre);
-    const d = { x: centre.x - ceremony.centre.x, y: centre.y - ceremony.centre.y };
+    const d = {
+      x: centre.x - ceremony.centre.x,
+      y: centre.y - ceremony.centre.y,
+    };
     const T = ceremony.tangent;
     const p = race.cd._framingProbe ?? {};
     // The pan target the camera is actually lerping toward, read from `targetOffsetX/Y` and the
@@ -145,7 +148,10 @@ runRace(
         )
       : null;
     const field = st.racers.reduce(
-      (s, r) => ({ x: s.x + r.x / st.racers.length, y: s.y + r.y / st.racers.length }),
+      (s, r) => ({
+        x: s.x + r.x / st.racers.length,
+        y: s.y + r.y / st.racers.length,
+      }),
       { x: 0, y: 0 },
     );
     // The ceremony's promise, counted rather than assumed: it has just shown every racer, and
@@ -181,7 +187,11 @@ runRace(
     rows.push(row);
     // Run to the window, and always at least three frames past the first view change so the STEP
     // at the release is on the table rather than inferred from its last row before it.
-    return !(el > WINDOW_MS && released !== null && el > released + 3 * (1000 / 60));
+    return !(
+      el > WINDOW_MS &&
+      released !== null &&
+      el > released + 3 * (1000 / 60)
+    );
   },
   {
     onCountdownFrame: ({ cd: c, ts, elapsed, countdownMs }) => {

@@ -295,52 +295,58 @@ since changed:
 superset of both gates, world fingerprint byte-identical. A reader who finds the 2026-06 failure
 must find this paragraph with it, which is why both are named here.
 
-## M. A zoom CEILING that keeps the finish line in frame during the run-in (2026-08-12, `feat/finish-framed`, NEVER MERGED)
+## M. Framing the finish line during the run-in — what actually died, corrected 2026-08-12
 
-**The idea, and it is the obvious one — expect it to be proposed again.** The owner wants the finish
-line in shot through the run-in, opening while it is far and tightening as the leader closes. Every
-framing promise in this camera is already a zoom CEILING combined with `Math.min`, so the natural
-move is one more ceiling: `pointGuarantee` with the line as the target, applied from
-`endgameThreshold` to whatever state the camera happens to be in. No new state, no new zoom
-authority, and it composes for free.
+**THIS ENTRY WAS WRONG FOR ONE DAY AND THE CORRECTION IS THE USEFUL PART.** Written the morning of
+2026-08-12, it concluded "do not re-propose bounding somebody else's shot" and recommended a
+dedicated RUN_IN camera state instead. By that evening the state shape had been measured, found to
+reach only 14.9% / 18.5% of the endgame, and REPLACED by a bound on somebody else's shot — which
+now works. The entry is rewritten rather than appended to because leaving the wrong exclusion
+standing would have banned the thing that shipped.
 
-**It was built three times and failed three times.** The third failure is the informative one: it
-emptied the frame of racers entirely for **51 consecutive frames** on Luger Hill seed 9, with the
-camera centre still sitting a healthy 0.62 track widths from the spine. Two bounds were tried on it —
-the field's own extent, then nothing — and neither addressed the cause.
+**WHAT WAS ACTUALLY TRIED, in order:**
 
-**WHY, and this is the part to remember, because it is not about the finish line at all.** The pan
-target was CORRECT on every one of those frames. The trace showed the delivered `offsetX` trailing
-its own target by 535 → 1115 px while the ceiling RELEASED the zoom from 2.46 to 4.00 over forty
-frames. A ceiling that releases delivers its zoom change inside the `tracking` phase, where pan and
-zoom are two independent lerps; the correction that re-couples them — update()'s zoom-about-the-
-anchor step (CAMERA-SIDEJUMP-1) — is skipped when `_focusAnchorRacer` returns null, and it returns
-null for PHOTO_FINISH because a group shot has no single anchor. **So the rule is: a large zoom
-change during `tracking` in an unanchored state loses the subject, and the amount it loses scales
-with `|world position| x axis scale`** — which is why the same ceiling was harmless on Searound
-(closed, axis 0.42, world centre ~1600) and fatal on Luger Hill (open, axis 1.5).
+1. **An UNANCHORED zoom ceiling** (`feat/finish-framed` `6e94a086`, never merged). A
+   `pointGuarantee` on the finish line applied from `endgameThreshold` to whatever state was
+   running. **FAILED, three times, finally emptying the frame of racers for 51 consecutive frames
+   on Luger Hill seed 9** with the camera centre still a healthy 0.62 track widths from the spine.
+2. **A dedicated RUN_IN camera STATE** (RUNIN-STATE-1). Fixed the emptiness structurally — a
+   LEADER-family state has an anchor — but **REACHED ALMOST NONE OF THE ENDGAME**: 14.9% of the
+   window on Luger Hill, 18.5% on Searound, and no frames at all in 3 of 8 races on each track,
+   because the endgame lock is consulted only when `decideTransition` permits a transition and a
+   shot entered just before the threshold holds its own gate across it. It would also have
+   **suppressed the photo-finish slow motion**, which RaceScreen triggers off `hudState`.
+3. **The bound again, ANCHORED** (RUNIN-OWNS-1) — SHIPPED. Same ceiling, applied to whatever state
+   is running, plus the one repair the trace in step 1 identified.
 
-The diagnosis was confirmed before anything was rebuilt: pointing that one correction at the framing
-anchor instead of the racer anchor took 51 empty frames to **0** with the ceiling itself untouched.
+**SO THE DEAD END IS NARROWER THAN IT LOOKED, AND THIS IS THE LESSON.** The ceiling was never the
+defect. **A large zoom change delivered during the `tracking` phase inside a state whose
+`_focusAnchorRacer` returns null is the defect** — the zoom-about-the-anchor correction
+(CAMERA-SIDEJUMP-1) is skipped there, so the pan target runs away from the pan lerp at
+`worldPos x axisScale x dZoom` per frame. Measured: the pan target was CORRECT on every empty
+frame while the delivered offset trailed it by 535 -> 1115 px. The magnitude scales with
+`|world position| x axis scale`, which is why it was fatal on an open track (axis 1.5) and
+invisible on a closed one (axis 0.42). Pointing that one correction at the framing anchor took 51
+empty frames to **0** with the ceiling untouched.
 
-**Two lessons that outlive this entry.** First, **the glide is what makes a big zoom change safe** —
-it moves pan and zoom on ONE ease, so the anchor is framed consistently by construction. On master
-the identical 2.13 → 4.00 change happens at the PHOTO_FINISH transition and costs nothing, because
-it happens in a glide. Deferring a zoom change PAST the glide is what broke. Second, **"the camera
-centre is near the track" does not mean the camera is pointed at the race**: the excursion here was
-ALONG the track, so the centre metric read 0.62 track widths while every racer was off screen.
-`check-runin-frame`'s two halves exist for exactly that reason, and its never-empty half is the one
-that caught this.
+**TWO THINGS THAT OUTLIVE THIS ENTRY.** The **glide** is what makes a big zoom change safe — it
+moves pan and zoom on one ease, so the anchor is framed consistently by construction; master does a
+LARGER 2.13 -> 4.00 change at the PHOTO_FINISH seam inside a glide and it costs nothing. And **"the
+camera centre is near the track" does not mean the camera is pointed at the race**: that excursion
+was ALONG the track, so the centre metric read 0.62 track widths while the frame held zero racers.
 
-**What was shipped instead** (RUNIN-STATE-1): the run-in as its own STATE, `RUN_IN`, anchored on the
-leader — so the correction is live for the whole shot — with the line as its GUARANTEE and LEADER's
-own width, so at the line the run-in IS the leader shot and the handover into PHOTO_FINISH is the
-glide the camera has always made there. Empty frames 0 across sixteen races, and the cam.zoom at the
-crossing is bit-identical to the feature being off.
+**STILL DEAD, and do not re-propose:**
 
-**Do not re-propose bounding somebody else's shot.** The branch survives as a quarry at
-`feat/finish-framed` (`6e94a086`), honestly red; `pointGuarantee` was taken from it unchanged and is
-the only part worth keeping.
+- **A wide-end bound on the line requirement taken from the FIELD's own extent.** At the endgame the
+  field is strung out over most of the track, so it is far wider than any shot and on an open track
+  binds nothing at all. Principled to read, weak to measure.
+- **A wide-end bound at OVERVIEW's width.** It binds HARD and costs the design its point: measured,
+  it pins the ceiling for the first 60% of the shot and cuts the line's in-frame share from 78.2% /
+  93.1% to 26.2% / 34.0%. Kept in the record because it is the obvious next suggestion and because
+  it is the one lever that would fix the Searound centre reading — it is a real trade, priced, not a
+  dead end, and it is the owner's call.
+- **Bounding at the projection's own minimum**, which measures IDENTICAL to no bound at all —
+  `resolveCamera` already clamps there, so it would be a second authority on one question.
 
 ## What this leaves open (not tried, not excluded)
 

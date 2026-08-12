@@ -50,8 +50,8 @@ const fits = (vec, z, t, inner = 1) => {
   return Math.hypot(sx, sy) <= frameExtentAlong(sx, sy, W, H) * inner + 1e-9;
 };
 
-describe('the table: seven states, three columns, one answer to the position question', () => {
-  it('describes exactly the seven states, and nothing else', () => {
+describe('the table: six states, three columns, one answer to the position question', () => {
+  it('describes exactly the six states, and nothing else', () => {
     expect(Object.keys(FRAMING_BY_STATE).sort()).toEqual(
       [
         'BATTLE_ZOOM',
@@ -60,8 +60,6 @@ describe('the table: seven states, three columns, one answer to the position que
         'LEADER_ZOOM',
         'OVERVIEW',
         'PHOTO_FINISH',
-        // RUNIN-STATE-1. The seventh row, and the first one whose guarantee is not a racer.
-        'RUN_IN',
       ].sort()
     );
   });
@@ -971,23 +969,14 @@ describe('the switch’s reach is exactly the corridor states (CAMERA-COMPANY-ON
     }
   });
 
-  it('the LINE state is neither, so the switch cannot reach it either (RUNIN-STATE-1)', () => {
-    // RUN_IN's guaranteed subject is the finish line — a fixed world point, not a racer and not
-    // the road. It is listed HERE rather than added to either group above because putting it in
-    // one of them is exactly the mistake this describe() block exists to catch: the corridor
-    // switch would then be asked to bound a state whose subject the corridor knows nothing about.
-    expect(framingFor('RUN_IN').guarantee).toBe(GUARANTEE.LINE);
-    expect(framingFor('RUN_IN').guarantee).not.toBe(GUARANTEE.CORRIDOR);
-    expect(framingFor('RUN_IN').guarantee).not.toBe(GUARANTEE.PAIR);
-  });
-
-  it('there are exactly seven states and no eighth has appeared unclassified', () => {
+  // RUNIN-OWNS-1 left this at SIX deliberately. The run-in bounds the zoom of whatever state is
+  // running and is not a state itself, so it has no row here and adds no guarantee kind — which is
+  // exactly why the picture it hands back at the line is the state's own.
+  it('there are exactly six states and no seventh has appeared unclassified', () => {
     const states = Object.keys(FRAMING_BY_STATE);
-    expect(states).toHaveLength(7);
+    expect(states).toHaveLength(6);
     for (const s of states) {
-      expect([GUARANTEE.CORRIDOR, GUARANTEE.PAIR, GUARANTEE.LINE]).toContain(
-        FRAMING_BY_STATE[s].guarantee
-      );
+      expect([GUARANTEE.CORRIDOR, GUARANTEE.PAIR]).toContain(FRAMING_BY_STATE[s].guarantee);
     }
   });
 });

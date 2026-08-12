@@ -61,7 +61,6 @@ construction and must be argued another way.
 | `COMEBACK_ZOOM` | A racer climbing through the field.                                                                                                                                                            |
 | `LEAD_CHANGE`   | The racer who has just taken the lead, with the racer he passed.                                                                                                                               |
 | `PHOTO_FINISH`  | The top two contesting the line. The tightest shot in the race, and it has its own setting — it used to borrow BATTLE's, so the most dramatic moment was never closer than an ordinary battle. |
-| `RUN_IN`        | The leader closing on the line, with the FINISH LINE guaranteed in frame beside him. It is the LEADER shot with one column changed and no width of its own — see §3. Switched by `runInShot`. |
 
 Two finish sub-phases are flags rather than states, because they are OVERVIEW and LEADER_ZOOM with a
 different anchor and a lock: `_inFinishDrama` (the pulse on the winner) and `_inFinishMode`
@@ -106,21 +105,18 @@ Evaluated in strict order on every `_transition()`:
    above, not a time from the gun, so the hold ends at 3000 ms plus the value. This is the only
    place that key is read — the race planner read it too, as an absolute time, until
    POST-START-HOLD-UNIFY removed that reading.
-5. **Endgame** (`leaderProgress > endgameThreshold`) → RUN_IN, with LEAD_CHANGE allowed
-   through — a lead swap near the line is the most dramatic moment there is. With `runInShot` off
-   this branch names LEADER_ZOOM, which is what it named before 2026-08-12; nothing else about the
-   endgame changed, and the run-in enters HERE and nowhere else.
+5. **Endgame** (`leaderProgress > endgameThreshold`) → LEADER_ZOOM, with LEAD_CHANGE allowed
+   through — a lead swap near the line is the most dramatic moment there is.
 
-   **THIS LOCK DOES NOT ACTUALLY OWN THE ENDGAME, and that is worth knowing before reading any
-   measurement of it.** The branch is only consulted when `decideTransition` permits a transition at
-   all, and a state entered just before the threshold holds its own gate across it. Measured over
-   sixteen races (two tracks x eight seeds, `runInShot` on): the window from the threshold to the
-   first crossing is 40–48% PHOTO_FINISH — its pre-line gate fires at `photoFinishLeadProgress` —
-   and most of the rest belongs to whichever shot was already running. RUN_IN owned 14.9% of that
-   window on Luger Hill and 18.5% on Searound; in three of eight Luger Hill races and three of eight
-   Searound races it got no frames at all. This is pre-existing behaviour, not something the run-in
-   introduced, and changing it would end BATTLE and COMEBACK shots early at the threshold — a much
-   larger change than a new state. It is recorded here as an open question, not fixed.
+   **THIS LOCK DOES NOT ACTUALLY OWN THE ENDGAME**, and it is worth knowing because it looks as
+   though it does. The branch is only consulted when `decideTransition` permits a transition at all,
+   and a shot entered just before the threshold holds its own gate across it. Measured over sixteen
+   races (two tracks x eight seeds): the window from the threshold to the first crossing is 40–48%
+   PHOTO_FINISH — its pre-line gate fires at `photoFinishLeadProgress` — and most of the rest
+   belongs to whichever shot was already running. **This is exactly why the run-in (§3a) bounds the
+   zoom of whatever state is running instead of trying to be a state**: a state chosen here reaches
+   only about a sixth of the endgame, measured.
+
 6. **The weighted pool** — every eligible candidate, one weighted draw.
 
 ### 2.3 What a weight MEANS, because it is not obvious
@@ -171,9 +167,9 @@ The order matters and parts of it are load-bearing:
 ## 3. The framing rule
 
 **A state in `FRAMING_BY_STATE` is described by three things and only three** — and the qualifier is
-not decoration. The table has SEVEN rows (LEADER_ZOOM, LEAD_CHANGE, BATTLE_ZOOM, COMEBACK_ZOOM,
-OVERVIEW, PHOTO_FINISH, RUN_IN), which are exactly the seven members of `CAM_STATE`. **Two things
-this document calls "states" elsewhere are not in it, and neither is described by the three below:**
+not decoration. The table has SIX rows (LEADER_ZOOM, LEAD_CHANGE, BATTLE_ZOOM, COMEBACK_ZOOM,
+OVERVIEW, PHOTO_FINISH), which are exactly the six members of `CAM_STATE`. **Two things this document
+calls "states" elsewhere are not in it, and neither is described by the three below:**
 
 - **COUNTDOWN is not a camera state at all.** It is a race PHASE. The opening runs through
   `updateCountdown` and `startCeremony.js`, whose geometry is the track's extent easing to the
@@ -206,19 +202,7 @@ The three things:
   present — but **measured: that fallback fired on 0 of 11,813 pair frames**, so it is defensive
   rather than load-bearing, and it is kept knowingly on that basis.
 
-  **THE ONE GUARANTEE WHOSE SUBJECT IS NOT A RACER — `LINE`, added 2026-08-12 (RUNIN-STATE-1).** It
-  keeps a FIXED WORLD POINT, the finish, in frame, and RUN_IN is the only state that carries it. It
-  is `room / distance` measured from the anchor's own place in the frame, so it widens the shot while
-  the line is far and releases entirely as the leader arrives — at which point the state's own width
-  takes the shot back with nothing to switch off. That release is what the run-in's zoom design IS:
-  the owner asked for a shot that opens to show the finish and tightens by itself as they close, and
-  a division is the whole of it. It carries no bound of its own; `resolveCamera` already floors every
-  zoom at the projection's minimum, and a second bound here was built twice and removed twice.
-
-- **ZOOM** — how much world is in shot, in standard corridors. **RUN_IN has none of its own**: it
-  reads LEADER's, so tuning the leader shot tunes the run-in and the two cannot drift apart. That is
-  also why the handover into PHOTO_FINISH is the zoom step this camera has always made there — by
-  the line, RUN_IN and LEADER_ZOOM are the identical picture.
+- **ZOOM** — how much world is in shot, in standard corridors.
 
 Frame POSITION is not a fourth setting. It follows from "is there anything worth seeing ahead of the
 subject?", answered once per state in `framingRule.js`.
@@ -267,6 +251,48 @@ them individually.
 
 The residual trail that the clamp used to hide is the tracking lag. It is measured and reported
 rather than papered over. See §6.
+
+---
+
+## 3a. The run-in — the endgame's zoom, on top of the framing rule (RUNIN-OWNS-1, 2026-08-12)
+
+**What the owner asked for:** when the run-in begins, open far enough that the finish is visible,
+then come back in continuously to the close shot, keeping the line in frame the whole way — so he
+can see how much race is left and whether anyone still has a chance.
+
+**It owns the FRAMING of the endgame, not its state slot,** and that distinction is the design. The
+run-in does not compete for which shot is running; it READS whichever one is and bounds that shot's
+zoom. Switched by `runInShot`.
+
+**The window** is `endgameThreshold` to the first crossing. Both ends already existed: the first is
+where the director has always declared the endgame, the second is where the finish sequence takes
+over the picture with its own authored moves.
+
+**The two bounds, and neither is a new number:**
+
+1. **The line** — `pointGuarantee` from the anchor's own place in the frame to the finish, i.e.
+   `room / distance`. Wide when the finish is far, tightening by itself as the leader closes. There
+   is no curve and no knob; the division is the whole of it.
+2. **The active state's own zoom** — already the first term of the `Math.min` every shot is composed
+   with, so it needed no code at all. A leader shot closes to the leader zoom, a photo finish to the
+   photo-finish zoom, and the run-in can never tighten past the shot underneath it.
+
+**Nothing is handed over.** As the leader arrives the line's requirement passes above the state's
+setting, stops being the smallest term, and what is left is the shot that was always there. Anchor,
+guarantee, position, `hudState` and the photo-finish slow motion are all untouched.
+
+**Measured (2 tracks x 8 seeds), and both bounds are real bounds rather than comments:** the line
+binds 88.6% (Luger Hill) / 90.5% (Searound) of the window and the state's own zoom binds 10.8% /
+8.7%; the remainder is another guarantee. The line's in-frame share over the window goes 11.9% ->
+78.2% and 9.9% -> 93.1%, with 0 empty frames.
+
+**THE COST, and it is a real one.** On a closed track the finish can be most of a lap away at the
+threshold, so "the line in frame" means "most of the world in frame". At Searound's widest run-in
+moment the frame covers **99% x 99% of the world**. The camera CANNOT be centred on the track spine
+there — the world-bounds clamp centres a world-sized frame on the world, and an oval's world centre
+is its infield — so `check-runin-frame`'s centre half reads 2.08 track widths against its limit of
+2 and fails, on a frame that holds all 20 racers and the finish line. The two requirements are
+geometrically exclusive at that width. See the report for the priced alternative.
 
 ---
 
@@ -410,7 +436,41 @@ a verbatim transcript of one run on one commit, which is a historical record, no
 
 ### The tracking lag, as measured today — and it had drifted
 
-<!-- MEASURED: tracking-lag (median/p95 pp per state) @ c9bc34d1 2026-08-11 depends=client/src/modules/camera/ -->
+<!-- MEASURED: tracking-lag (median/p95 pp per state) @ RUNIN_OWNS_SHA 2026-08-12 depends=client/src/modules/camera/ -->
+
+**RE-MEASURED FOR RUNIN-OWNS-1, AND THIS IS WHERE THE RUN-IN'S COST SHOWS UP.** The run-in bounds
+the zoom of whatever shot is running through the endgame, so it moves the zoom inside states that
+were previously steady — and a moving zoom is exactly what this instrument measures the camera
+trailing.
+
+**THE FRAME COUNTS ARE IDENTICAL IN EVERY STATE** (9668 / 755 / 17788 / 8089 / 4303 / 1865, all
+unchanged), which is the first thing to check and the proof that the run-in changed no state
+decision anywhere. Only the LAG inside states moved.
+
+**The medians barely move; the p95 — the tail, which is where a lurch shows up — moves a lot:**
+
+| state         | median           | p95                     |
+| ------------- | ---------------- | ----------------------- |
+| LEAD_CHANGE   | 4.45 → 4.46      | **7.10 → 21.81** (3.1×) |
+| PHOTO_FINISH  | 5.68 → 4.87      | **16.51 → 27.73**       |
+| BATTLE_ZOOM   | 5.72 → 5.71      | 9.98 → 11.03            |
+| LEADER_ZOOM   | 3.85 → 3.79      | 8.61 → 8.88             |
+| COMEBACK_ZOOM | **13.73 → 3.06** | 16.22 → 16.50           |
+| OVERVIEW      | 2.65 → 2.65      | 16.00 → 16.00           |
+
+**READ IT AS A TAIL, NOT AS A REGRESSION IN TRACKING.** The endgame window is a small fraction of a
+60-second race, so the frames the run-in touches land almost entirely in each state's tail. The
+camera trails further during the seconds it is opening or closing the shot, and it trails no
+differently at any other time — which is why the medians are flat. OVERVIEW is untouched in both
+figures because it is not eligible inside the endgame.
+
+**COMEBACK_ZOOM's median improving from 13.73 to 3.06 is the same effect with its sign reversed**: a
+comeback shot that runs into the endgame is now held WIDER, and a wider shot has a smaller lag
+measured as a fraction of the frame.
+
+**The number to judge is LEAD_CHANGE's p95 at 21.81 pp** — at the tail the camera sits about a fifth
+of a frame behind its subject. That is the price of the 6x–8x opening move, stated in the project's
+own units so it can be argued with. It is reported, not tuned: see the report.
 
 **RE-MEASURED FOR FINISH-PAIR-1, and one row moved — the one that should have.** That change makes
 the photo-finish shot frame the pair it is actually following instead of the live top two, so the
@@ -445,14 +505,14 @@ and it says so itself. It also covers nothing else on this page; see its header 
 
 | state         | frames | median pp | p95 pp |
 | ------------- | ------ | --------- | ------ |
-| BATTLE_ZOOM   | 9668   | 5.72      | 9.98   |
-| COMEBACK_ZOOM | 755    | 13.73     | 16.22  |
-| LEADER_ZOOM   | 17788  | 3.85      | 8.61   |
-| LEAD_CHANGE   | 8089   | 4.45      | 7.10   |
+| BATTLE_ZOOM   | 9668   | 5.71      | 11.03  |
+| COMEBACK_ZOOM | 755    | 3.06      | 16.50  |
+| LEADER_ZOOM   | 17788  | 3.79      | 8.88   |
+| LEAD_CHANGE   | 8089   | 4.46      | 21.81  |
 | OVERVIEW      | 4303   | 2.65      | 16.00  |
-| PHOTO_FINISH  | 1865   | 5.68      | 16.51  |
+| PHOTO_FINISH  | 1865   | 4.87      | 27.73  |
 
-OVERVIEW median 2.65 pp against every other state pooled 4.62 pp (ratio 0.57×).
+OVERVIEW median 2.65 pp against every other state pooled 4.54 pp (ratio 0.58×).
 
 **Re-measured for OUTCOME-PHASE-75, and COMEBACK_ZOOM moved so far that re-stamping would have been
 wrong.** Its frame count fell from **2103 to 753** and its median lag rose from **8.34 to 13.73 pp**.
@@ -607,13 +667,13 @@ with its date and — where one exists — the measurement that framed it.
 
 ### 8.1 Approved by his eye
 
-| what he judged                                                                                                                 | when       | the evidence, and the measurement behind it                                                                                                                                                                                                                                                                                              |
-| ------------------------------------------------------------------------------------------------------------------------------ | ---------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **The road no longer bounds the leader shot** — LEADER/OVERVIEW/COMEBACK limited by his setting and the COMPANY guarantee only | 2026-08-05 | mountainstreet, seed 5601, toggle ON, _"nein das passt"_ ("no, that's fine") — and decisive because he saw **both regimes**: a torn-apart field where the guarantee opens the shot, and a tight pack where the camera holds his 1.0. **His verdict is about the leader shot's bounding and nothing else.** [CAMERA-COMPANY-ONLY-3](../reports/evolution/CAMERA-COMPANY-ONLY-3.md) §"his approval also covers" reads that verdict as closing the CAMERA-ANCHOR-TRUTH-1 debt (§4a, §4c, stages 1a/1b) on the grounds that the work "was present in every build he ran". **Present in the build is not judged**: he was never shown it and said nothing about it, so it is not UNSEEN and it is not APPROVED. Narrowed here on 2026-08-12; the report is the lab journal and is left as written. **THE DEBT IS NOW HALF CLOSED, BY MEASUREMENT RATHER THAN BY A SITTING** ([ANCHOR-TRUTH-EYE-1](../reports/night/ANCHOR-TRUTH-EYE-1.md)). **§4a is CLOSED: the anchored corridor changes the shipped picture by 0.00 points of frame on all 50,407 frames of ten tracks, in both field regimes** — because THIS VERY VERDICT retired the corridor from the single-anchor states, leaving only a PAIR fallback that never fires. There is nothing for an eye to see, and there would be again only if the corridor ever returned to those states. **§4c is OPEN and is visible**: OVERVIEW's `trackingTC` is a fifth of a frame apart at p95 and 28.8% of OVERVIEW frames differ by more than 10 pp. A ten-minute sitting is prepared in that report. §1a shipped no behaviour and was never eye-testable. |
-| **`minRacersVisible`: he judged 5, and the code now ships 5. RESOLVED.**                                                        | judged 2026-08-05, resolved 2026-08-09 | **The disagreement was real and is recorded here rather than tidied away**: he judged 5 on 2026-08-05 while `defaults.js` kept shipping 3, so the company guarantee ran on 3 everywhere for four days and this row used to read as if the two numbers agreed. **Resolved by MIN-RACERS-5 in HIS favour**: his eye overrules the measurement, and the measurement says why he can be right — I reported the guarantee binding ~0% at n=65 and recommended raising it, which held for the PACK case only; on a SPREAD field it binds and widens a lot at 5, and the sweep never covered that case. Two mirrors of the number moved with it (`DEFAULT_MIN_RACERS_VISIBLE` in `framingConfig.js`, and the Dev Screen slider, which now reads the defaults instead of a literal). **The spread-field sweep is still owed** — it would quantify what he saw, and it is the one measurement that could still argue with him. Note the second consequence he should watch for: this key also decides when the finish overview stops widening for stragglers (`finishedCount >= 1 + minRacersVisible`), which now happens at 6 home instead of 4. |
-| **The finish is ONE motion** — pan and zoom on one ease, no jump at the crossing                                               | 2026-08-05 | The measured defect was a **2708 px pan-target step in one frame** (dirt-oval, 144× the median of the frames before it); after, peak per-frame motion 2708 → 72 px with total travel unchanged.                                                                                                                                          |
-| **The finish pause, the travel and the resting point** — three judgements, one date, separated below | 2026-08-05 | **WHAT HE WATCHED:** the single moment the pair shot ends, with his own photo-finish settings, on the two tracks the handover named — Dirt Oval (longest gap between the pair crossing) then City Circuit (longest old hold). **WHAT HE SAID:** recorded in merge `421e8f9a` — _"the pause, the travel and the resting point are what he asked for."_ All three are his, not inferred; the handover asked him for exactly those three ([FINISH-WINDOW-1](../reports/evolution/FINISH-WINDOW-1.md) §9). **THE MEASUREMENT THAT FRAMED IT:** the pause starts when the two contenders the shot was FOLLOWING are home — 6–57 frames later than `finishedCount >= 2`, and on 5 of 9 tracks the second racer across is neither of the pair. **WHAT HIS APPROVAL DOES NOT CARRY:** he moved the lookback slider across the range the handover named; **beyond it the resting point stops following on some tracks** — that is the world edge, its numbers are in FINISH-WINDOW-1 §5, and it is a limit he was told about rather than one he approved. |
-| **The company guarantee retires once the company is home**                                                                     | 2026-08-05 | City Circuit, last thirty seconds, _"schaut besser aus jetzt"_. Baseline widened for 54 frames (4.5489 → 2.9752) after the shot had already come to rest; after, 0. Cost he accepted: the last back-marker sits 11% inside the frame instead of 23%.                                                                                     |
+| what he judged                                                                                                                 | when                                   | the evidence, and the measurement behind it                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            |
+| ------------------------------------------------------------------------------------------------------------------------------ | -------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| **The road no longer bounds the leader shot** — LEADER/OVERVIEW/COMEBACK limited by his setting and the COMPANY guarantee only | 2026-08-05                             | mountainstreet, seed 5601, toggle ON, _"nein das passt"_ ("no, that's fine") — and decisive because he saw **both regimes**: a torn-apart field where the guarantee opens the shot, and a tight pack where the camera holds his 1.0. **His verdict is about the leader shot's bounding and nothing else.** [CAMERA-COMPANY-ONLY-3](../reports/evolution/CAMERA-COMPANY-ONLY-3.md) §"his approval also covers" reads that verdict as closing the CAMERA-ANCHOR-TRUTH-1 debt (§4a, §4c, stages 1a/1b) on the grounds that the work "was present in every build he ran". **Present in the build is not judged**: he was never shown it and said nothing about it, so it is not UNSEEN and it is not APPROVED. Narrowed here on 2026-08-12; the report is the lab journal and is left as written. **THE DEBT IS NOW HALF CLOSED, BY MEASUREMENT RATHER THAN BY A SITTING** ([ANCHOR-TRUTH-EYE-1](../reports/night/ANCHOR-TRUTH-EYE-1.md)). **§4a is CLOSED: the anchored corridor changes the shipped picture by 0.00 points of frame on all 50,407 frames of ten tracks, in both field regimes** — because THIS VERY VERDICT retired the corridor from the single-anchor states, leaving only a PAIR fallback that never fires. There is nothing for an eye to see, and there would be again only if the corridor ever returned to those states. **§4c is OPEN and is visible**: OVERVIEW's `trackingTC` is a fifth of a frame apart at p95 and 28.8% of OVERVIEW frames differ by more than 10 pp. A ten-minute sitting is prepared in that report. §1a shipped no behaviour and was never eye-testable. |
+| **`minRacersVisible`: he judged 5, and the code now ships 5. RESOLVED.**                                                       | judged 2026-08-05, resolved 2026-08-09 | **The disagreement was real and is recorded here rather than tidied away**: he judged 5 on 2026-08-05 while `defaults.js` kept shipping 3, so the company guarantee ran on 3 everywhere for four days and this row used to read as if the two numbers agreed. **Resolved by MIN-RACERS-5 in HIS favour**: his eye overrules the measurement, and the measurement says why he can be right — I reported the guarantee binding ~0% at n=65 and recommended raising it, which held for the PACK case only; on a SPREAD field it binds and widens a lot at 5, and the sweep never covered that case. Two mirrors of the number moved with it (`DEFAULT_MIN_RACERS_VISIBLE` in `framingConfig.js`, and the Dev Screen slider, which now reads the defaults instead of a literal). **The spread-field sweep is still owed** — it would quantify what he saw, and it is the one measurement that could still argue with him. Note the second consequence he should watch for: this key also decides when the finish overview stops widening for stragglers (`finishedCount >= 1 + minRacersVisible`), which now happens at 6 home instead of 4.                                                                                                                                                                                                                                                                                                                                                                                                                                                               |
+| **The finish is ONE motion** — pan and zoom on one ease, no jump at the crossing                                               | 2026-08-05                             | The measured defect was a **2708 px pan-target step in one frame** (dirt-oval, 144× the median of the frames before it); after, peak per-frame motion 2708 → 72 px with total travel unchanged.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        |
+| **The finish pause, the travel and the resting point** — three judgements, one date, separated below                           | 2026-08-05                             | **WHAT HE WATCHED:** the single moment the pair shot ends, with his own photo-finish settings, on the two tracks the handover named — Dirt Oval (longest gap between the pair crossing) then City Circuit (longest old hold). **WHAT HE SAID:** recorded in merge `421e8f9a` — _"the pause, the travel and the resting point are what he asked for."_ All three are his, not inferred; the handover asked him for exactly those three ([FINISH-WINDOW-1](../reports/evolution/FINISH-WINDOW-1.md) §9). **THE MEASUREMENT THAT FRAMED IT:** the pause starts when the two contenders the shot was FOLLOWING are home — 6–57 frames later than `finishedCount >= 2`, and on 5 of 9 tracks the second racer across is neither of the pair. **WHAT HIS APPROVAL DOES NOT CARRY:** he moved the lookback slider across the range the handover named; **beyond it the resting point stops following on some tracks** — that is the world edge, its numbers are in FINISH-WINDOW-1 §5, and it is a limit he was told about rather than one he approved.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       |
+| **The company guarantee retires once the company is home**                                                                     | 2026-08-05                             | City Circuit, last thirty seconds, _"schaut besser aus jetzt"_. Baseline widened for 54 frames (4.5489 → 2.9752) after the shot had already come to rest; after, 0. Cost he accepted: the last back-marker sits 11% inside the frame instead of 23%.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   |
 
 ### 8.2 Rejected by him — and both are natural ideas that will return
 

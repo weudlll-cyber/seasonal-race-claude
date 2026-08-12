@@ -72,15 +72,6 @@ export const GUARANTEE = {
   /** DRAMATURGICAL: enough of the field in frame that the shot has tension. See companyGuarantee. */
   COMPANY: 'company',
   /**
-   * GEOMETRIC: a FIXED WORLD POINT — the finish line. See `pointGuarantee`.
-   *
-   * The only guaranteed subject in this file that is not a racer, and the reason it is a guarantee
-   * rather than a zoom curve of its own: the run-in shot has ONE zoom authority, the same
-   * `Math.min` over ceilings every other state runs, and this is a row in it. It widens as the line
-   * approaches from far away and stands aside once the subject is on top of it.
-   */
-  LINE: 'line',
-  /**
    * GEOMETRIC: EVERY racer, not a corridor and not a chosen pair. See `fieldGuarantee`.
    *
    * It exists for the start ceremony (START-CEREMONY-CAMERA-1), where the subject is the formation
@@ -134,26 +125,6 @@ export const FRAMING_BY_STATE = {
     guarantee: GUARANTEE.PAIR,
     position: POSITION.CENTRED,
     aheadMatters: true, // both contenders matter equally; neither is "the one ahead"
-  },
-  /**
-   * THE RUN-IN (RUNIN-STATE-1) — the shot from the endgame threshold to the line.
-   *
-   * It is the LEADER shot with one column changed, and that is the whole design: the endgame
-   * already locks the camera to the leader, so the ANCHOR is unchanged and the ZOOM setting is
-   * LEADER's own (see `_stateCamZoom`). Only the GUARANTEE differs — the finish line joins the
-   * subject as something that must stay in frame — and because a guarantee is a ceiling, that one
-   * change is what makes the shot open when the line is far and tighten by itself as they close.
-   *
-   * THE POSITION ANSWER FLIPS, and it is the table's own question that flips it. For LEADER the
-   * answer is "nothing worth seeing ahead — the race is behind him". In the run-in there IS
-   * something ahead and it is the point of the shot, so the subject is CENTRED and the frame
-   * carries the line. One rule, a different answer, for a stated reason.
-   */
-  RUN_IN: {
-    anchor: 'leader',
-    guarantee: GUARANTEE.LINE,
-    position: POSITION.CENTRED,
-    aheadMatters: true, // the finish line is ahead, and showing it is why this state exists
   },
 };
 

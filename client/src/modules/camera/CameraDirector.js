@@ -106,9 +106,6 @@ export const CAM_STATE = {
   // Photo-Finish (15a): tight top-2 group shot at a close finish. Dedicated state (Option B),
   // not a reuse of BATTLE_ZOOM; reuses BATTLE's arc-midpoint pan + group spriteScale for framing.
   PHOTO_FINISH: 'PHOTO_FINISH',
-  // RUNIN-STATE-1: the run-in, from `endgameThreshold` to the line. The LEADER shot with the finish
-  // line added to what must stay in frame — see FRAMING_BY_STATE.RUN_IN and `runInShot`.
-  RUN_IN: 'RUN_IN',
 };
 
 // Base zoom multiplier for open tracks. CAMERA-PROJECTION-1: the single definition now lives in
@@ -832,12 +829,7 @@ export class CameraDirector {
     const battleExitEligible = inBattleZoom && stateAge >= this._battleMinDurationMs;
     const decision = decideTransition({
       inBattleZoom,
-      // RUNIN-STATE-1: RUN_IN counts as the leader shot here, and it MUST. This flag gates the early
-      // LEAD_CHANGE interrupt, which is what lets a lead swap near the line cut in before the hold
-      // gate elapses — the endgame branch of `_pickNextState` calls that "the most dramatic moment
-      // and must not be suppressed". Without this line the run-in would swallow a lead change for
-      // up to eight seconds on the frame it was entered.
-      inLeaderZoom: this.state === CAM_STATE.LEADER_ZOOM || this.state === CAM_STATE.RUN_IN,
+      inLeaderZoom: this.state === CAM_STATE.LEADER_ZOOM,
       stateAge,
       battleMinDurationMs: this._battleMinDurationMs,
       holdGate,
@@ -888,7 +880,6 @@ export class CameraDirector {
       const fr = this._focusRacers(racers);
       let fT = null;
       switch (this.state) {
-        case CAM_STATE.RUN_IN: // the leader, exactly as LEADER_ZOOM
         case CAM_STATE.LEADER_ZOOM:
           fT = fr[0]?.t ?? null;
           break;
@@ -1037,7 +1028,29 @@ export class CameraDirector {
         // — re-apply this frame's zoom delta around the anchor's world position so its screen position is
         // preserved, THEN let the pan lerp ease it toward the forward-framed target — makes every zoom
         // source (min-vis, future mechanisms) lurch-free without touching any of them.
-        const _anchor = this._focusAnchorRacer(racers);
+        // RUNIN-OWNS-1 — THE ANCHOR THE RUN-IN NEEDS, and it is the repair the Stage-1 trace bought.
+        //
+        // `_focusAnchorRacer` returns null for the group shots (BATTLE, OVERVIEW, PHOTO_FINISH), so
+        // the zoom-about-the-anchor correction below is SKIPPED there. That is harmless while their
+        // zoom is steady, and fatal while it is moving: the pan target then travels at
+        // `worldPos x axisScale x dZoom` per frame while the pan lerp closes only a fraction of it,
+        // so the shot trails its own target — measured at 535 -> 1115 px on Luger Hill seed 9,
+        // which put EVERY racer off screen for 51 consecutive frames. The pan target was correct on
+        // every one of them; only the delivery was late.
+        //
+        // The run-in moves the zoom continuously and by design, and it does so inside whatever
+        // state is running — including PHOTO_FINISH. So while it is composing, the correction needs
+        // a world point, and `_framingProbe.anchorPoint` is the one the framing was actually built
+        // on. Restoring it took those 51 frames to 0 with nothing else changed.
+        //
+        // SCOPED TO THE RUN-IN DELIBERATELY. The null is a latent defect everywhere — any future
+        // mechanism that moves zoom during a group shot will hit it — but repairing it in general
+        // moves both fingerprints with `runInShot` OFF, and "nothing outside the endgame window
+        // moves" is a promise this block has to keep. The general case is written down instead.
+        const _anchor =
+          this._focusAnchorRacer(racers) ??
+          (this._runInActive ? this._framingProbe?.anchorPoint : null) ??
+          null;
         const _dz = this.zoom - _zoomAtStart;
         if (_anchor && _dz !== 0) {
           this.offsetX -= _anchor.x * this._proj.axisX * _dz;
@@ -1259,14 +1272,12 @@ export class CameraDirector {
           data: {},
         };
       } else {
-        // RUNIN-STATE-1: THE RUN-IN ENTERS HERE AND NOWHERE ELSE. The endgame threshold is not a new
-        // number — it is the one the director has always used to lock to the leader — and RUN_IN
-        // replaces only the state this branch names. The LEAD_CHANGE exception above is untouched,
-        // and the finish sequence (priorities 0/1/1.5, decided in finishPhase.js) sits ABOVE this
-        // block, so the handover to PHOTO_FINISH at the line needs no code here at all: the run-in
-        // simply stops being chosen.
+        // RUNIN-OWNS-1: this branch is untouched by the run-in and must stay that way. The run-in
+        // owns the endgame's FRAMING, not its state slot — see `_lineCeiling`. Taking the slot here
+        // was the previous shape and it cost the photo finish its slow motion, which RaceScreen
+        // triggers off `hudState === 'PHOTO_FINISH'`.
         return {
-          nextState: this._runInShot ? CAM_STATE.RUN_IN : CAM_STATE.LEADER_ZOOM,
+          nextState: CAM_STATE.LEADER_ZOOM,
           reason: `endgame: leaderProgress=${leaderProgress.toFixed(2)} > ${this._endgameThreshold}`,
           data: {},
         };
@@ -1521,7 +1532,6 @@ export class CameraDirector {
         // camera targets the leader's position, centering the action with followers visible).
         let focusT = null;
         switch (nextState) {
-          case CAM_STATE.RUN_IN: // the leader, exactly as LEADER_ZOOM
           case CAM_STATE.LEADER_ZOOM:
             focusT = ordered[0]?.t ?? 0;
             break;
@@ -1689,18 +1699,13 @@ export class CameraDirector {
   /**
    * CAMERA-FOCUS-1: the single racer the LEADER-family pan is ANCHORED on this frame. Re-evaluated every
    * frame, so a P1 swap moves the anchor to the new leader automatically (the pan then lerps to it smoothly).
-   * LEADER_ZOOM / LEAD_CHANGE / RUN_IN → the current leader (max t). COMEBACK_ZOOM → the locked comeback racer.
+   * LEADER_ZOOM / LEAD_CHANGE → the current leader (max t). COMEBACK_ZOOM → the locked comeback racer.
    * BATTLE_ZOOM / OVERVIEW → null (group / whole-field shots have no single anchor — no containment there).
    *
-   * RUN_IN IS IN THE LEADER FAMILY, AND THAT IS LOAD-BEARING (RUNIN-STATE-1). update()'s
-   * zoom-about-the-anchor correction (CAMERA-SIDEJUMP-1) is skipped when this returns null, and
-   * without it a fast zoom change during `tracking` moves the pan TARGET faster than the pan lerp
-   * can follow — the shot trails the subject and eventually loses it. Traced on Luger Hill seed 9
-   * under the retired ceiling form: the pan target was correct on every frame while the delivered
-   * offset trailed it by 535-1115 px, which put every racer off screen for 51 consecutive frames.
-   * A run-in that changes zoom continuously therefore MUST be anchored. Restoring the anchor alone
-   * took those 51 frames to 0 with nothing else changed — that experiment is why this state is in
-   * the leader family rather than a group shot.
+   * WHERE THE NULL BITES, because it is not obvious and it has cost this project a repair
+   * (RUNIN-OWNS-1): update()'s zoom-about-the-anchor correction is SKIPPED when this returns null.
+   * A group shot whose zoom is steady does not care. A group shot whose zoom is MOVING does — the
+   * pan target then runs away from the pan lerp and the frame empties. See `_runInAnchorPoint`.
    */
   _focusAnchorRacer(racers) {
     if (!racers || racers.length === 0) return null;
@@ -1711,11 +1716,7 @@ export class CameraDirector {
         null
       );
     }
-    if (
-      this.state === CAM_STATE.LEADER_ZOOM ||
-      this.state === CAM_STATE.LEAD_CHANGE ||
-      this.state === CAM_STATE.RUN_IN
-    ) {
+    if (this.state === CAM_STATE.LEADER_ZOOM || this.state === CAM_STATE.LEAD_CHANGE) {
       let leader = racers[0];
       for (const r of racers) if (r.t > leader.t) leader = r;
       return leader;
@@ -1946,17 +1947,6 @@ export class CameraDirector {
           pair: [null, null],
         };
       }
-      case CAM_STATE.RUN_IN:
-        // RUNIN-STATE-1. The leader, exactly as LEADER_ZOOM — the run-in's second subject is not a
-        // racer, so it is not in `pair`. It is the finish LINE, and `_guaranteeCeiling` fetches it
-        // from the track rather than from the field: a world point has no `x`/`y` on a racer to
-        // carry here, and putting it in `pair` would make every pair-shaped reader (the diagnostic
-        // probe, the lateral guarantee) treat the line as a contender.
-        return {
-          point: leader ? { x: leader.x, y: leader.y } : null,
-          t: leader?.t ?? null,
-          pair: [null, null],
-        };
       case CAM_STATE.OVERVIEW:
       case CAM_STATE.LEADER_ZOOM:
       default:
@@ -1979,11 +1969,10 @@ export class CameraDirector {
    *
    * @returns {number} cam.zoom ceiling, Infinity when nothing constrains
    */
-  _guaranteeCeiling(subjects, frameSize, raceState = null) {
+  _guaranteeCeiling(subjects, frameSize) {
     const kind = framingFor(this.state).guarantee;
     const { axisX, axisY } = this._proj;
     const inner = this._innerFramePct ?? DEFAULT_INNER_FRAME_PCT;
-    if (kind === GUARANTEE.LINE) return this._lineCeiling(subjects, frameSize, raceState);
     if (kind === GUARANTEE.PAIR) {
       const [a, b] = subjects.pair;
       const ceiling = pairGuarantee(
@@ -2041,7 +2030,7 @@ export class CameraDirector {
   }
 
   /**
-   * RUNIN-STATE-1: THE WORLD POINT WHERE THE RACE ENDS.
+   * THE WORLD POINT WHERE THE RACE ENDS.
    *
    * Same open/closed topology question `_finishLookbackT` answers, and answered the same way: a lap
    * count wraps on a loop and clamps on a line. Two laps on a closed track finish where one lap
@@ -2057,49 +2046,82 @@ export class CameraDirector {
   }
 
   /**
-   * RUNIN-STATE-1: THE RUN-IN'S GUARANTEE — the finish line stays in frame.
+   * IS THE RUN-IN COMPOSING THIS FRAME? From the endgame threshold to the crossing, and that is the
+   * whole window — the two ends are read from things that already exist and neither is new.
    *
-   * `pointGuarantee` with the line as the target, measured from where the ANCHOR sits in the frame.
-   * It is the whole of the run-in's zoom behaviour and there is no curve in it: the ceiling is
-   * `room / distance`, so it is low (a wide shot) when the line is far, rises as the leader closes,
-   * and passes above the state's own setting near the line — at which point `Math.min` in
-   * `_setTargets` hands the shot back to LEADER's width with nothing to switch off. The owner's
-   * "tightening by itself, with no ramp to tune" is that division and nothing else.
+   * `endgameThreshold` is the value at which the director has always declared the endgame.
+   * `finishedCount === 0` is the crossing: once somebody is home the finish sequence owns the
+   * picture (the drama pulse, the photo finish's own hold, then FINISH_OVERVIEW's authored
+   * zoom-out on a fixed point behind the line), and a bound that kept opening the shot to hold a
+   * line the winner has already crossed would be arguing with an authored move.
    *
-   * ── IT CARRIES NO BOUND OF ITS OWN, AND THAT WAS MEASURED, NOT ASSUMED ─────────────────────────
-   *
-   * `room / distance` goes to zero as the line recedes, so the obvious worry is that the run-in
-   * opens without limit. It cannot: `_setTrackTargets` resolves every zoom through `resolveCamera`
-   * with `minEffZoom = proj.minEffX()`, the widest the world-to-canvas mapping physically allows.
-   * A ceiling below that is clamped there whatever this function returns.
-   *
-   * TWO BOUNDS WERE BUILT HERE FIRST AND BOTH WERE REMOVED. The retired ceiling form used the
-   * FIELD's own extent; at the endgame the field is strung out over most of the track, so that
-   * bound is far wider than any shot and on an open track binds nothing at all — principled to
-   * read, weak to measure. This function then bounded at OVERVIEW's width, which bound HARD and
-   * cost the design its point: on Luger Hill it pinned the ceiling at cam.zoom 1.067 for the first
-   * 60% of the shot, so the picture did not tighten and the line stayed out of frame until
-   * progress 0.959. Measured across three seeds on both tracks, dropping it moved the line's
-   * in-frame share over the run-in window from 21.1% to 44.9% (Luger Hill) and 18.1% to 44.2%
-   * (Searound), with empty frames still 0. Setting the bound to the projection's own minimum gave
-   * numbers IDENTICAL to no bound at all — which is the proof that the clamp downstream is the real
-   * one and a second bound here would be a second authority on the same question.
-   *
-   * @returns {number} cam.zoom ceiling; Infinity when there is no line to keep in frame
+   * @returns {boolean}
    */
-  _lineCeiling(subjects, frameSize, raceState) {
+  _runInComposing(racers, raceState) {
+    if (!this._runInShot) return false;
+    if (!(raceState?.finishT > 0) || (raceState.finishedCount ?? 0) > 0) return false;
+    if (!racers || racers.length === 0) return false;
+    let maxT = 0;
+    for (const r of racers) if (r.t > maxT) maxT = r.t;
+    return maxT / raceState.finishT > this._endgameThreshold;
+  }
+
+  /**
+   * THE RUN-IN (RUNIN-OWNS-1) — the finish line stays in frame from the endgame threshold to the
+   * crossing, whatever shot the director is running.
+   *
+   * ── IT OWNS THE FRAMING, NOT THE STATE SLOT, AND THAT DISTINCTION IS THE WHOLE DESIGN ──────────
+   *
+   * The run-in does not compete for the state. It READS whichever state is active and bounds that
+   * state's zoom. Two consequences follow, and both are requirements rather than side effects:
+   *
+   *   THE FINAL PICTURE IS THE STATE'S PICTURE, EXACTLY. Anchor, guarantee, position, slow motion,
+   *   `hudState` — none of them are touched. As the leader closes, `room / distance` rises past the
+   *   state's own setting, this term stops being the smallest in `_setTargets`'s `Math.min`, and
+   *   what is left is the shot that was always there, bit for bit. There is nothing to hand over
+   *   and nothing to switch off.
+   *
+   *   THE PHOTO FINISH IS STILL THE PHOTO FINISH. RaceScreen starts the slow motion on
+   *   `hudState === 'PHOTO_FINISH'`. The previous shape of this repair made RUN_IN a camera STATE
+   *   that took the endgame slot — which would have suppressed the slow motion outright, and owned
+   *   only 14.9%/18.5% of the window in any case, because a shot entered just before the threshold
+   *   holds its own gate across it. Reading the states instead of replacing them fixes both at once.
+   *
+   * ── THE TWO BOUNDS, AND NEITHER IS A NEW NUMBER ───────────────────────────────────────────────
+   *
+   *   1. THE LINE, which is this function: `pointGuarantee` from the anchor's own place in the
+   *      frame to the finish. It drives the shot while the leader is far away.
+   *   2. THE ACTIVE STATE'S OWN ZOOM, which is `stateZoom` — already the first term of the
+   *      `Math.min` this joins, and therefore not a line of code at all. If a leader shot is
+   *      running the run-in closes to the leader zoom and no further; if a photo finish is running
+   *      it closes to the photo-finish zoom. That is the same sentence as "never tighter than the
+   *      underlying state", said by the machinery rather than by a new rule.
+   *
+   * It carries no bound of its own at the wide end: `_setTrackTargets` resolves every zoom through
+   * `resolveCamera` with `minEffZoom = proj.minEffX()`, the widest the world-to-canvas mapping
+   * allows, and a ceiling below that is clamped there whatever this returns. Two wide-end bounds
+   * were built and both removed — the field's own extent (never binds on an open track) and
+   * OVERVIEW's width (bound so hard it cost the design its point). Bounding at the projection's own
+   * minimum measured IDENTICAL to no bound, which is the proof the downstream clamp is the real one.
+   *
+   * @returns {number} cam.zoom ceiling; Infinity when the run-in is not composing this frame
+   */
+  _lineCeiling(subjects, frameSize, racers, raceState) {
     if (!subjects?.point) return Infinity;
-    const line = this._finishLineWorldPoint(raceState?.finishT ?? 0);
+    if (!this._runInComposing(racers, raceState)) return Infinity;
+    const line = this._finishLineWorldPoint(raceState.finishT);
     if (!line) return Infinity;
     // The SAME anchor placement the corridor and company guarantees use, and for the same reason:
-    // where the subject sits in frame decides how much room there is toward anything else.
+    // where the subject sits in frame decides how much room there is toward anything else. It reads
+    // the ACTIVE state's framing row, so a forward-framed leader shot and a centred photo finish
+    // each measure their own room rather than a run-in's idea of it.
     const at = anchorScreenPoint(
       frameSize.width,
       frameSize.height,
       framingFor(this.state).position === POSITION.FORWARD ? this._leaderForwardFrac : null,
       this._headingScreen(subjects.t)
     );
-    const ceiling = pointGuarantee(
+    return pointGuarantee(
       subjects.point,
       line,
       this._proj.axisX,
@@ -2109,7 +2131,6 @@ export class CameraDirector {
       COMPANY_FRAME_PCT,
       at
     );
-    return ceiling;
   }
 
   /**
@@ -2575,11 +2596,7 @@ export class CameraDirector {
     if (
       panTarget &&
       !followsCamT &&
-      (this.state === CAM_STATE.LEADER_ZOOM ||
-        this.state === CAM_STATE.COMEBACK_ZOOM ||
-        // RUNIN-STATE-1: the run-in is a single-racer anchor, so the reason below applies to it
-        // unchanged. Omitting it would make the run-in JITTERIER than the leader shot it replaces.
-        this.state === CAM_STATE.RUN_IN)
+      (this.state === CAM_STATE.LEADER_ZOOM || this.state === CAM_STATE.COMEBACK_ZOOM)
     ) {
       // Focal smoothing removes the brake-induced velocity oscillation on single-racer anchors.
       panTarget = this._smoothFocal(panTarget.x, panTarget.y);
@@ -2612,23 +2629,36 @@ export class CameraDirector {
     // cannot fire, and the guarantee everywhere else is untouched.
     const _companyIsHome =
       this._inFinishMode && (raceState?.finishedCount ?? 0) >= 1 + this._minRacersVisible;
+    const _runInCeiling = this._lineCeiling(subjects, frameSize, racers, raceState);
     const guaranteed = Math.min(
       stateZoom,
-      // RUNIN-STATE-1 passes `raceState` for RUN_IN's LINE guarantee, which needs `finishT` to know
-      // where the race ends. Every other guarantee ignores it.
-      this._guaranteeCeiling(subjects, frameSize, raceState),
+      this._guaranteeCeiling(subjects, frameSize),
       _companyIsHome ? Infinity : this._companyCeiling(subjects, racers, frameSize),
       // CEREMONY-HANDOVER-1: the ceremony's promise, still standing. Infinity once it has retired,
       // so this line costs nothing for the rest of the race.
-      this._fieldCeiling(subjects, racers, frameSize)
+      this._fieldCeiling(subjects, racers, frameSize),
+      // RUNIN-OWNS-1: the run-in. Infinity outside the endgame window, so this line costs nothing
+      // for the rest of the race either — and INSIDE the window it is one more ceiling among the
+      // others, which is why the shot it hands back at the line is bit-for-bit the state's own.
+      // `stateZoom` above IS the run-in's second bound; it needed no code.
+      _runInCeiling
     );
 
     // READ-ONLY PROBE (CAMERA-ANCHOR-TRUTH-1 §4a). The framing inputs this frame actually used, so
     // the corridor measurement reads the REAL path instead of reconstructing it — a harness that
     // measures a COPY is the failure mode this repo has hit six times. Written every frame and read
     // by NOTHING in the camera, so it cannot move a fingerprint.
+    // RUNIN-OWNS-1: WHICH BOUND WON, recorded rather than inferred. The anchor decision in update()
+    // reads `runInBinding`, and the harness reads all three to report where each bound binds — a
+    // bound nobody has seen bind is a comment, and this is how that stays checkable.
+    this._runInActive = Number.isFinite(_runInCeiling);
+    this._runInBinding = this._runInActive && guaranteed >= _runInCeiling - 1e-12;
     this._framingProbe = {
       t: subjects.t,
+      runInActive: this._runInActive,
+      runInBinding: this._runInBinding,
+      runInCeiling: _runInCeiling,
+      stateBinding: guaranteed >= stateZoom - 1e-12,
       frameW: frameSize.width,
       frameH: frameSize.height,
       stateZoom,
@@ -2695,15 +2725,6 @@ export class CameraDirector {
         return this._leadChangeZoom;
       case CAM_STATE.PHOTO_FINISH:
         return this._photoFinishZoom;
-      // RUNIN-STATE-1: the run-in has NO zoom setting of its own, and that is the design rather
-      // than an omission. It is the leader shot; what makes it the run-in is its GUARANTEE, and a
-      // guarantee widens the shot it is given. Sharing the SOURCE rather than copying the number is
-      // the one-canonical-home rule: LEAD_CHANGE ships `visibleCorridors: 0.75` with the comment
-      // "same framing as LEADER", which is the same intent written as a second number that nothing
-      // keeps in step. Consequence, stated so it is not discovered: the LEADER width slider tunes
-      // the run-in, and at the line — where the ceiling has released — RUN_IN and LEADER_ZOOM are
-      // the identical picture. That is what makes the handover into PHOTO_FINISH unchanged.
-      case CAM_STATE.RUN_IN:
       case CAM_STATE.LEADER_ZOOM:
       default:
         return this._leaderZoom;
@@ -2738,7 +2759,6 @@ export class CameraDirector {
 
     let focusT;
     switch (this.state) {
-      case CAM_STATE.RUN_IN: // the leader, exactly as LEADER_ZOOM
       case CAM_STATE.LEADER_ZOOM: {
         const r = focusRacers[0];
         focusT = r?.t ?? 0;

@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { computeTimingFromConfig } from './cameraTimingComputation.js';
+import { DEFAULT_CAMERA_CONFIG } from '../storage/defaults.js';
 
 // Minimal profiles object used across tests.
 function minimalProfiles() {
@@ -72,7 +73,6 @@ describe('computeTimingFromConfig — null config (all defaults)', () => {
       'LEADER_ZOOM',
       'LEAD_CHANGE',
       'OVERVIEW',
-      'RUN_IN',
     ]);
   });
   it('all states present in lfByState', () => {
@@ -83,13 +83,11 @@ describe('computeTimingFromConfig — null config (all defaults)', () => {
       'LEAD_CHANGE',
       'OVERVIEW',
       'PHOTO_FINISH',
-      'RUN_IN',
     ]);
   });
-  // RUNIN-STATE-1: the run-in borrows LEADER's timing in every per-state map rather than carrying
-  // a second set of numbers. This is the assertion that keeps that true — the mirror loop is one
-  // line, so the way it breaks is a map being ADDED and not mirrored, which this catches.
-  it('RUN_IN mirrors LEADER_ZOOM in every per-state timing map', () => {
+  // RUNIN-OWNS-1: the run-in adds no camera state, so it must add no per-state timing either. A
+  // RUN_IN key appearing in any of these maps means the state shape has crept back in.
+  it('the run-in adds no state to any per-state timing map', () => {
     for (const m of [
       'tcByState',
       'lfByState',
@@ -101,8 +99,12 @@ describe('computeTimingFromConfig — null config (all defaults)', () => {
       'maxEntryDurationByState',
       'phasedByState',
     ]) {
-      expect(t[m].RUN_IN, m).toEqual(t[m].LEADER_ZOOM);
+      expect(Object.keys(t[m]), m).not.toContain('RUN_IN');
     }
+  });
+  it('runInShot resolves, and defaults to the shipped value', () => {
+    expect(t.runInShot).toBe(DEFAULT_CAMERA_CONFIG.runInShot);
+    expect(computeTimingFromConfig({ runInShot: false }).runInShot).toBe(false);
   });
   it('lfOverview matches tcToLerpFactor(1.5)', () => {
     const expected = 1 - Math.pow(0.1, 1 / (1.5 * 60));
