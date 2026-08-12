@@ -384,7 +384,14 @@ a verbatim transcript of one run on one commit, which is a historical record, no
 
 ### The tracking lag, as measured today — and it had drifted
 
-<!-- MEASURED: tracking-lag (median/p95 pp per state) @ c9bc34d1 2026-08-11 depends=client/src/modules/camera/ -->
+<!-- MEASURED: tracking-lag (median/p95 pp per state) @ a2efd2fa 2026-08-12 depends=client/src/modules/camera/ -->
+
+**RE-MEASURED FOR RESOLVE-CONVERGE-1, and nothing moved at all.** That block stops `resolveCamera`
+widening when widening brings the pan target no closer to the inner frame. It is the last step of
+every state on every frame, so it had to be re-measured rather than argued about — but on the shipped
+configuration the loop never takes a step in the first place (172226 frames across ten tracks and
+three seeds, zero firings), so the expectation was a null result and the measurement is what makes it
+one. **Every frame count, median and p95 in the table below is identical to the digit.**
 
 **RE-MEASURED FOR FINISH-PAIR-1, and one row moved — the one that should have.** That change makes
 the photo-finish shot frame the pair it is actually following instead of the live top two, so the

@@ -123,6 +123,21 @@ is dated and recorded HERE, where a reader on their way to the report will pass 
 
 ## Camera / presentation fixes
 
+- [RESOLVE-CONVERGE-1.md](RESOLVE-CONVERGE-1.md) — **a widening step has to buy something** (branch
+  `fix/resolve-converge` off `master`; **NOT merged, nothing minted — his eye is owed on ice-track
+  seed 9**). `resolveCamera` widened 10% at a time to frame the pan target and never asked whether
+  the steps helped; where the world-bounds clamp holds the target at the world edge they cannot, so
+  the loop ran to the projection floor, handed over the whole world, and left the target further
+  outside than it started. It now takes a step only when the step strictly reduces how far outside
+  the inner frame the target lands — a comparison, not a threshold. **The up-front "is it
+  reachable" test was rejected on evidence**: there are two clamped regimes and where the world
+  already FITS the frame widening genuinely helps, which a test written from the other regime would
+  have got wrong. Measured over 172226 frames per arm: with `runInShot` OFF the loop fires **0**
+  times before and after, so **CAMERA and RENDER are byte-identical on master** — the off-arm promise
+  holds, which is the opposite of what the block expected and is measured rather than assumed. With
+  it ON, **276 futile frames, all on ice-track, all delivering 100% of the world against a 75% ask**,
+  and the loop converged on **zero** frames in any arm. Ice-track's delivered width now follows the
+  line down through 68.7% instead of pinning at 100%.
 - [SCOREBOARD-SLOT-LAYER.md](SCOREBOARD-SLOT-LAYER.md) — **THE PLACES ARE DRAWN ONCE; ONLY THE NAME
   TAG MOVES** (branch `feat/scoreboard-slot-layer` off `669a1a5b`; **NOT merged — a visible surface
   awaiting his eye**; all four fingerprints unchanged). The owner's own design: the badge column —
