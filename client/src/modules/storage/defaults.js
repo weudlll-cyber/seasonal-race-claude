@@ -427,9 +427,16 @@ export const DEFAULT_CAMERA_CONFIG = {
   // construction — physics no longer steps in this phase, so the director sees a static field, and
   // `_inFinishMode` is absolute, so no new shot can be chosen.
   //
-  // NOT AN ENGINE KEY: the director is asked for a transform on frames where it used to be ignored.
-  // The race is over, no physics runs, and `camera-fingerprint.mjs` stops at the last crossing, so
-  // this key cannot move any of the three fingerprints.
+  // NOT AN ENGINE KEY: the director is asked for a transform on frames where it used to be ignored,
+  // the race is over and no physics runs — so this key cannot move the WORLD fingerprint.
+  //
+  // IT NOW MOVES THE CAMERA FINGERPRINT, AND UNTIL 2026-08-13 IT COULD NOT (CAMERA-ENDING-WINDOW-1).
+  // This comment used to say the key "cannot move any of the three fingerprints", and the reason it
+  // gave was `camera-fingerprint.mjs` stopping at the last crossing — which was TRUE, and was a
+  // BLIND SPOT rather than a property: the instrument whose whole job is to notice camera changes
+  // could not see this one at all. Its window is now derived from `endingOnRaceScreenMs()` and
+  // reaches the ending, so flipping this key moves CAMERA. Measured rather than argued — with it
+  // false the instrument reproduces the pre-block value exactly, and `--ending-off` is that arm.
   endingKeepsFinishShot: true,
   // ── THE END-OF-RACE SPLASH IS RETIRED (ENDING-PICTURE-1, 2026-08-12) ──────────────────────────
   // FALSE = no splash. TRUE = the pre-2026-08-12 behaviour: a full-canvas `rgba(0,0,0,0.48)` scrim

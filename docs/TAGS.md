@@ -187,6 +187,14 @@ retired, each behind a key defaulting to the fix. RENDER moved and is minted; va
 ship** — `camera-fingerprint.mjs` stops at the last crossing and renders no FINISHED frame, which is
 recorded beside the value.
 
+**That last sentence was true when this tag was cut and is no longer true of the instrument**, and
+it is left standing rather than edited because it is what the ship was judged against.
+CAMERA-ENDING-WINDOW-1 (2026-08-13) derived the instrument's window from `endingOnRaceScreenMs()`,
+the same arithmetic the race screen navigates away on, so it now renders the ending. The blindness
+this paragraph records is measured, not remembered: with `endingKeepsFinishShot` false the extended
+instrument reproduces this ship's CAMERA value exactly, which is precisely why that value could say
+nothing about a ship that only acts once the key is on.
+
 - `pre/ship-ending-picture` (`7eb8f013`, 2026-08-12) — master immediately BEFORE the ship. Reset here
   to restore an ending that flips to an identity transform at the last crossing and draws the
   "RACE FINISHED! / Loading results…" scrim over it, with `finishHoldAfterLastMs` absent, and the
