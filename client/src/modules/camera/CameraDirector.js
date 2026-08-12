@@ -2326,10 +2326,9 @@ export class CameraDirector {
    *
    * @returns {number} cam.zoom ceiling; Infinity when nothing constrains
    */
-  _frontGroupCeiling(subjects, racers, frameSize, raceState) {
+  _frontGroupCeiling(subjects, group, frameSize) {
     if (!this._frontGroupFraming || !subjects?.point) return Infinity;
-    const group = this._frontGroupNow(racers, raceState);
-    if (group.length === 0) return Infinity;
+    if (!group || group.length === 0) return Infinity;
     const at = anchorScreenPoint(
       frameSize.width,
       frameSize.height,
@@ -2992,33 +2991,48 @@ export class CameraDirector {
       _ceilings.field,
       _ceilings.line
     );
-    // IT RETIRES AT THE FIRST CROSSING, which is `_runInWindowOpen`'s own rule and its own reason:
-    // once somebody is home the finish sequence owns the picture — the drama pulse, the photo
-    // finish's hold, then FINISH_OVERVIEW's authored zoom-out on a fixed point behind the line — and
-    // a bound still arguing about who is in frame is arguing with an authored move.
+    // IT RETIRES WHEN THE GROUP IS HOME, NOT WHEN THE FIRST OF THEM IS (FRONT-GROUP-3).
     //
-    // IT WAS MEASURED FIRST, and the first two retirements tried were both wrong. Retiring where the
-    // COMPANY guarantee retires (FINISH-COMPANY-1's `_companyIsHome`) fixed that block's two tests
-    // and left the real defect: with four of twenty home the bound is computed against whoever of
-    // the captured group is STILL COMING, and it tightens onto them while the finish shot is aimed
-    // elsewhere — 84 frames with no racer on screen at all on luger-hill seed 9, climbing zoom 1.4 →
-    // 2.5 as it chased. Not retiring at all was worse. The crossing is the honest line, and it is
-    // also where the owner's complaint stops: the tightening he watched happens on the APPROACH.
+    // Retiring at the first crossing was the owner's own counter-example. Every fully-outside frame
+    // measured came AFTER that crossing, and the frame he photographed was one of them: a promise
+    // that ends the instant the winner arrives is not a promise about the racers fighting for the
+    // win, because it ends exactly where the fight is decided.
     //
-    // AND THE RELEASE IS A GLIDE, for the reason RUNIN-GLIDE-1 already paid for. Retiring it as a
-    // STEP is a discontinuous framing change in the middle of a state — the ceiling went 1.33 to
-    // Infinity on one frame, the target jumped 1.33 to 4.00, and the pan could not follow the zoom:
-    // 29 frames with nothing on screen on luger-hill seed 9. That is the same failure, with the same
-    // cause and the same cure, as the run-in's ENGAGEMENT: pan and zoom must travel together on one
-    // ease or the frame empties while they argue. The engagement glide is reused rather than copied.
-    const _frontRetires = (raceState?.finishedCount ?? 0) > 0;
+    // THE CONDITION IS THE GROUP'S OWN MEMBERSHIP, which is the whole reason it is safe.
+    // `_frontGroupNow` drops a member the frame he finishes, so the set DRAINS TO EMPTY as the fight
+    // resolves and the bound retires when the LAST of them is across — not on a clock, not on a
+    // count of the field, and never on somebody who was never in the group.
+    //
+    // WHY THAT IS NOT THE 84-EMPTY-FRAME FAILURE AGAIN. Retiring at `_companyIsHome` left the bound
+    // holding whoever of the group was STILL COMING while the finish shot aimed at its fixed
+    // lookback point, and it tightened onto them: 84 frames with no racer on screen on luger-hill
+    // seed 9. That set drained to a STRAGGLER and stopped there, because `_companyIsHome` counts the
+    // FIELD's finishers rather than the group's. This one drains to nothing, so the bound cannot
+    // outlive the fight it exists for.
+    // ...OR WHEN THE FINISH SEQUENCE TAKES THE ANCHOR AWAY FROM THE RACERS, and that second half was
+    // measured rather than reasoned. A guarantee WIDENS; it may never steer (Lesson 192), so it can
+    // only keep somebody in frame relative to the point the shot is already built on. Once the drama
+    // pulse or FINISH_OVERVIEW puts that point at a FIXED place behind the line, the group has no
+    // relation to it: holding two still-coming members against an anchor they are not near widened
+    // nothing and tightened as they converged on it — 60 frames with no racer on screen at all on
+    // luger-hill seed 9, at four finishers, long after the fight was over.
+    //
+    // The crossing itself is NOT that moment and this is why the distinction is worth the line: the
+    // photo finish holds its own shot across the line and only hands over to the drama pulse
+    // afterwards, so the frame the owner photographed — a racer cut at the first crossing — is still
+    // inside the bound.
+    const _frontGroupLive = this._frontGroupNow(racers, raceState);
+    const _frontRetires =
+      (this._frontGroupIdx !== null && _frontGroupLive.length === 0) ||
+      this._inFinishDrama ||
+      this._inFinishMode;
     if (_frontRetires && this._frontGroupWasBinding && !this._frontGroupReleased) {
       this._frontGroupReleased = true;
       this._beginRunInGlide(ts);
     }
     const _frontRaw = _frontRetires
       ? Infinity
-      : this._frontGroupCeiling(subjects, racers, frameSize, raceState);
+      : this._frontGroupCeiling(subjects, _frontGroupLive, frameSize);
     if (_frontRaw < Infinity) {
       this._frontGroupFloor =
         this._frontGroupFloor === null ? _othersMin : Math.min(this._frontGroupFloor, _othersMin);
