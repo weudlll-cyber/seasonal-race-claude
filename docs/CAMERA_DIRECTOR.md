@@ -478,7 +478,7 @@ a verbatim transcript of one run on one commit, which is a historical record, no
 
 ### The tracking lag, as measured today — and it had drifted
 
-<!-- MEASURED: tracking-lag (median/p95 pp per state) @ RUNIN_WIDTH_SHA 2026-08-12 depends=client/src/modules/camera/ -->
+<!-- MEASURED: tracking-lag (median/p95 pp per state) @ 8b93688e 2026-08-12 depends=client/src/modules/camera/ -->
 
 **RE-MEASURED FOR RUNIN-WIDTH-1, and the slower pull-out is visible here as one number.**
 **LEAD_CHANGE's p95 falls 25.19 → 10.72 pp** — the tail the previous cut introduced is gone, because
