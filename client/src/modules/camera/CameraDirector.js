@@ -2436,7 +2436,7 @@ export class CameraDirector {
       framingFor(this.state).position === POSITION.FORWARD ? this._leaderForwardFrac : null,
       this._headingScreen(subjects.t)
     );
-    return pointGuarantee(
+    const lineCeiling = pointGuarantee(
       subjects.point,
       line,
       this._proj.axisX,
@@ -2446,6 +2446,32 @@ export class CameraDirector {
       COMPANY_FRAME_PCT,
       at
     );
+    // ── THE BOUND: never open wider than the shot that already holds the whole field. ───────────
+    //
+    // RUNIN-FRAME-1. Unbounded, this ceiling asked for a six-fold widening in ONE frame the moment
+    // it engaged (cam.zoom 2.24 -> a target of 0.37 on Luger Hill), and the camera cannot get there
+    // coherently: the zoom eases while the offset is re-resolved every frame, and the frames in
+    // between were pointed at nothing — 51 of them with no racer on screen at all.
+    //
+    // WHY THE FIELD IS THE RIGHT BOUND AND NOT A NEW NUMBER. "Wide enough to show every racer" is
+    // already the widest shot this camera has any business composing, and it is already computed
+    // here for the ceremony. A finish line that will not fit inside THAT is simply too far away to
+    // be worth showing yet, and it will come into range on its own as the leader closes — which is
+    // the whole premise of deriving the zoom from the distance. So the bound needs no tuning and
+    // cannot drift: it is the field's own requirement, whatever the track and the field size.
+    //
+    // `Math.max` because these are CEILINGS: the larger ceiling is the tighter shot, so this refuses
+    // to open past the field's requirement while still opening as far as the line needs below it.
+    const fieldCeiling = fieldGuarantee(
+      racers,
+      subjects.point,
+      this._proj.axisX,
+      this._proj.axisY,
+      frameSize.width,
+      frameSize.height,
+      this._innerFramePct ?? DEFAULT_INNER_FRAME_PCT
+    );
+    return Number.isFinite(fieldCeiling) ? Math.max(lineCeiling, fieldCeiling) : lineCeiling;
   }
 
   /**
