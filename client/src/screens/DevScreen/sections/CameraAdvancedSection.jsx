@@ -1321,6 +1321,23 @@ function CameraAdvancedSection() {
           <span style={{ fontWeight: 600 }}>Frame the finish through the run-in</span>
           <InfoTooltip text="On (default): once the finish line can be framed without opening wider than the OVERVIEW shot, the camera keeps it in frame until the first racer crosses — opening only as far as the line needs and tightening by itself as the leader closes. It does not change WHICH shot is running; it bounds whatever shot is, and never tightens past that shot's own zoom. While it composes, the leader is centred rather than framed forward, because the thing worth seeing is now ahead of him. Off is the pre-2026-08-12 behaviour." />
         </label>
+        <label
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: '0.5rem',
+            marginBottom: '0.6rem',
+          }}
+        >
+          <input
+            type="checkbox"
+            data-testid="front-group-framing"
+            checked={config.frontGroupFraming ?? DEFAULT_CAMERA_CONFIG.frontGroupFraming}
+            onChange={(e) => set('frontGroupFraming', e.target.checked)}
+          />
+          <span style={{ fontWeight: 600 }}>Hold the front group while the shot closes</span>
+          <InfoTooltip text="On (default): through the ending the shot stops tightening at the width that still holds the whole front group, and continues only as they converge. The group is the leader plus everyone within the BATTLE closeness arc of him, capped at the battle group's own maximum size — the same two settings the battle shot uses, so this adds no threshold of its own. It is captured once when the endgame window opens and never re-sorted, so membership cannot churn; it retires at the first crossing, and that release is glided. It only ever widens, and never past the width the ending has already reached. Off is the pre-2026-08-12 behaviour: the shot closes to the photo-finish zoom whatever it loses." />
+        </label>
         <div className={s.formGrid}>
           <div className={s.formGroup}>
             <label

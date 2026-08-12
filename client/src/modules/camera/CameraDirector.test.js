@@ -7326,3 +7326,128 @@ describe('RUNIN-GLIDE-1 — wide-and-back, gliding to the ordinary shot', () => 
     expect(cd._forwardFracNow()).toBe(cd._leaderForwardFrac);
   });
 });
+
+// ── THE FRONT GROUP BOUNDS THE TIGHTENING (FRONT-GROUP-1) ─────────────────────────────────────
+//
+// The owner, watching a race with about six racers nearly level: zooming all the way to the
+// photo-finish zoom loses racers out of the shot. Two properties are worth a test and the third
+// thing this block does is deliberately NOT tested here — the numbers (how many racers stay in
+// frame, across ten tracks) belong to `scripts/front-group-truth.mjs`, because an assertion cannot
+// hold a distribution and a harness cannot be read as a promise.
+describe('CameraDirector — the front group bounds the tightening', () => {
+  const WORLD_W = 6000;
+  const CANVAS_W = 1280;
+  const CANVAS_H = 720;
+  const FINISH_T = 0.9;
+
+  function makeShape() {
+    return {
+      getTotalLength: () => WORLD_W,
+      getPosition: (t) => ({ x: t * WORLD_W, y: 360, angle: 0 }),
+      getCenterPoint: () => ({ x: WORLD_W / 2, y: CANVAS_H / 2 }),
+    };
+  }
+
+  /** A field whose front six are inside the closeness arc but strung out across ~600 world px. */
+  function spreadField() {
+    return [
+      { t: 0.885, x: 5310, y: 360, finished: false, index: 0 },
+      { t: 0.878, x: 5268, y: 380, finished: false, index: 1 },
+      { t: 0.872, x: 5232, y: 340, finished: false, index: 2 },
+      { t: 0.866, x: 5196, y: 390, finished: false, index: 3 },
+      { t: 0.86, x: 5160, y: 330, finished: false, index: 4 },
+      { t: 0.854, x: 5124, y: 370, finished: false, index: 5 },
+      { t: 0.5, x: 3000, y: 360, finished: false, index: 6 },
+    ];
+  }
+
+  /**
+   * Drive the ending the way a race actually drives it: the window opens with the leader still
+   * short of the line, and the field advances toward it frame by frame. That ORDER is load-bearing
+   * — the bound may only hold the shot at a width the ending has already reached, so a two-frame
+   * fixture where nothing has opened yet cannot exercise it at all.
+   */
+  function drive(configOver, racers, frames = 8) {
+    const cd = new CameraDirector(WORLD_W, CANVAS_H, true, configOver, 36, makeShape());
+    let ts = 1000;
+    for (let f = 0; f < frames; f++) {
+      const rs = { raceElapsed: 40000 + f * 200, finishedCount: 0, finishT: FINISH_T };
+      cd.update(racers, ts, rs, CANVAS_W, CANVAS_H);
+      cd.stateEnteredAt = 0;
+      ts += 200;
+      // Advance the whole field toward the line, keeping the front six's spread intact.
+      for (const r of racers) {
+        r.t += 0.002;
+        r.x += 12;
+      }
+    }
+    return cd;
+  }
+
+  // L203 — a switch is tested by proving its two positions DIFFER. Without this, a bound that had
+  // been deleted outright would pass every other assertion here.
+  it('both positions differ: the bound widens the shot it is asked to widen', () => {
+    const on = drive({ frontGroupFraming: true }, spreadField());
+    const off = drive({ frontGroupFraming: false }, spreadField());
+    expect(on._framingProbe.guaranteed).toBeLessThan(off._framingProbe.guaranteed);
+    expect(on._framingProbe.ceilings.frontGroup).toBeLessThan(Infinity);
+    expect(off._framingProbe.ceilings.frontGroup).toBe(Infinity);
+  });
+
+  // §2 — THE TRAP. FINISH-PAIR-1 exists because a guaranteed set was re-sorted every frame and every
+  // swap moved the picture. The capture is what prevents it, so the capture is what is asserted:
+  // reorder the front six completely and membership must not move.
+  it('membership is captured once and does not churn when the order reverses', () => {
+    const racers = spreadField();
+    const cd = drive({ frontGroupFraming: true }, racers);
+    const captured = [...cd._frontGroupIdx];
+    expect(captured.length).toBe(6);
+    // Reverse the front six along the track — a total reordering, every rank changed.
+    const ts = racers.slice(0, 6).map((r) => r.t);
+    const xs = racers.slice(0, 6).map((r) => r.x);
+    for (let i = 0; i < 6; i++) {
+      racers[i].t = ts[5 - i];
+      racers[i].x = xs[5 - i];
+    }
+    cd.stateEnteredAt = 0;
+    cd.update(
+      racers,
+      5000,
+      { raceElapsed: 44000, finishedCount: 0, finishT: FINISH_T },
+      CANVAS_W,
+      CANVAS_H
+    );
+    expect(cd._frontGroupIdx).toEqual(captured);
+  });
+
+  // It bounds TIGHTENING only: it may hold the shot at a width the ending already reached and may
+  // never open it further. The floor is what enforces that, so the floor is what is asserted.
+  it('never opens the shot wider than the width the ending already reached', () => {
+    const cd = drive({ frontGroupFraming: true }, spreadField());
+    const p = cd._framingProbe;
+    expect(p.ceilings.frontGroup).toBeGreaterThanOrEqual(p.frontGroupFloor);
+    // And when the raw ask is wider than the floor, the clamp is RECORDED rather than silent.
+    expect(typeof p.frontGroupClamped).toBe('boolean');
+  });
+
+  it('is inert outside the endgame window — no capture, no ceiling', () => {
+    const cd = new CameraDirector(
+      WORLD_W,
+      CANVAS_H,
+      true,
+      { frontGroupFraming: true },
+      36,
+      makeShape()
+    );
+    const early = spreadField().map((r) => ({ ...r, t: r.t * 0.3 }));
+    cd.update(
+      early,
+      1000,
+      { raceElapsed: 5000, finishedCount: 0, finishT: FINISH_T },
+      CANVAS_W,
+      CANVAS_H
+    );
+    expect(cd._frontGroupIdx).toBe(null);
+    expect(cd._framingProbe.ceilings.frontGroup).toBe(Infinity);
+  });
+});

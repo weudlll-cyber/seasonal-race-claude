@@ -342,6 +342,7 @@ export function computeTimingFromConfig(config) {
   const photoFinishContenderFraming =
     config?.photoFinishContenderFraming ?? DEFAULT_CAMERA_CONFIG.photoFinishContenderFraming;
   const runInShot = config?.runInShot ?? DEFAULT_CAMERA_CONFIG.runInShot;
+  const frontGroupFraming = config?.frontGroupFraming ?? DEFAULT_CAMERA_CONFIG.frontGroupFraming;
   // RUNIN-PACE-1: clamped to a band for the same reason every other duration here is — a corrupt
   // stored config must not be able to produce an opening that never ends or one with no length.
   const runInOpenMs = Math.max(
@@ -421,6 +422,7 @@ export function computeTimingFromConfig(config) {
     photoFinishContenderFraming,
     runInShot,
     runInOpenMs,
+    frontGroupFraming,
     comebackCooldownMs,
     leadChangeCooldownMs,
     battleWeight,

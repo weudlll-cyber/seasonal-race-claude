@@ -52,6 +52,7 @@ import {
   findByIndex,
   resolveGroup,
 } from './battleGroup.js';
+import { shortestArcDeltaT } from '../../utils/mathUtils.js';
 import { mulberry32 } from '../racePlanner.js';
 import { computeTimingFromConfig } from './cameraTimingComputation.js';
 import { decideTransition, TRANSITION_ACTION, TRANSITION_REASON } from './transitionDecision.js';
@@ -227,6 +228,21 @@ export class CameraDirector {
     this._runInEngaged = false;
     this._runInComposingNow = false;
     this._runInProgress = null;
+    // FRONT-GROUP-1: the front group's STABLE INDICES, captured once when the endgame window opens
+    // and never re-sorted. `null` means "not captured yet"; an empty array means "captured, and
+    // there was nobody to hold" — the two are different and the difference is load-bearing, because
+    // a capture that found nothing must not be retried every frame.
+    this._frontGroupIdx = null;
+    // The widest width the ending has already asked for, as a cam.zoom ceiling — the running minimum
+    // of the other ceilings while the front group exists. It is the floor the front-group bound may
+    // not open past; `null` until the window opens. `_frontGroupClamped` is this frame's answer to
+    // "was the group too spread to hold even at that width", recorded rather than inferred.
+    this._frontGroupFloor = null;
+    this._frontGroupClamped = false;
+    // Was the bound the binding term last frame, and has its release already been glided? The
+    // release is once-only: a second glide mid-finish would fight the finish sequence's own moves.
+    this._frontGroupWasBinding = false;
+    this._frontGroupReleased = false;
     this._inFinishDrama = false; // the drama window after the crossing (hudState reports 'FINISH')
     this._inPhotoFinish = false; // 15a: true while the PHOTO_FINISH shot holds (kept distinct from _inFinishDrama so hudState reports 'PHOTO_FINISH')
     this._photoFinishGateDone = false; // 15a-predictive: once-only latch — the pre-line close-check fires exactly once
@@ -566,6 +582,7 @@ export class CameraDirector {
     this._photoFinishContenderFraming = t.photoFinishContenderFraming;
     this._runInShot = t.runInShot;
     this._runInOpenMs = t.runInOpenMs;
+    this._frontGroupFraming = t.frontGroupFraming;
     this._comebackCooldownMs = t.comebackCooldownMs;
     this._leadChangeCooldownMs = t.leadChangeCooldownMs;
     this._battleWeight = t.battleWeight;
@@ -2235,6 +2252,106 @@ export class CameraDirector {
   }
 
   /**
+   * THE FRONT GROUP — captured once, and only ever smaller afterwards (FRONT-GROUP-1).
+   *
+   * The owner's ask: the tightening should stop while the whole front group is still in frame, and
+   * continue only as they converge. That needs a set of racers that does NOT churn, because
+   * FINISH-PAIR-1 is the record of what a set that churns does to the picture — the guaranteed pair
+   * was re-sorted every frame and every swap moved the shot discontinuously.
+   *
+   * SO IT IS CAPTURED, once, on the first frame of the endgame window, and stored as INDICES rather
+   * than as racer objects (the object-identity trap: `renderInterpolation` hands the director
+   * spread-copies, so a stored reference stops matching). After that the membership can only lose
+   * members, as they finish — a monotone retirement, never a reordering.
+   *
+   * WHO IS IN IT, WITH NO NEW NUMBER. The leader plus everyone within `battlePulkThresholdT` of him
+   * in lap-normalised arc, capped at `battleMaxGroupSize`. Both keys ship, and both are already this
+   * camera's answer to "are these racers together" — the arc unit exists because world px meant 1.5%
+   * of a lap on one track and 4.9% on another (see battleGroup.js). `detectPulkGroup` itself cannot
+   * be reused: its third condition demands the frontmost member be at rank 3 or worse, because P1/P2
+   * are LEADER territory, so it excludes the front by construction.
+   *
+   * @returns {Array<{x:number,y:number}>} the surviving members, live objects from THIS frame
+   */
+  _frontGroupNow(racers, raceState) {
+    if (!this._frontGroupFraming) return [];
+    if (!racers || racers.length === 0) return [];
+    if (this._frontGroupIdx === null) {
+      // Not captured yet — capture only once the endgame window is open.
+      if (!(raceState?.finishT > 0)) return [];
+      let maxT = 0;
+      for (const r of racers) if (r.t > maxT) maxT = r.t;
+      if (!(maxT / raceState.finishT > this._endgameThreshold)) return [];
+      const live = racers.filter((r) => r && !r.finished);
+      if (live.length === 0) return [];
+      const sorted = [...live].sort((a, b) => b.t - a.t);
+      const leader = sorted[0];
+      // The SAME two gates the battle group runs on, read from the same object so they cannot drift.
+      const idx = [leader.index];
+      for (let i = 1; i < sorted.length && idx.length < this._battleGates.maxSize; i++) {
+        if (shortestArcDeltaT(leader.t, sorted[i].t) <= this._battleGates.closenessT) {
+          idx.push(sorted[i].index);
+        }
+      }
+      this._frontGroupIdx = idx;
+    }
+    const out = [];
+    for (const i of this._frontGroupIdx) {
+      const r = this._findByIndex(racers, i, null);
+      if (r && !r.finished) out.push(r);
+    }
+    return out;
+  }
+
+  /**
+   * THE FRONT-GROUP CEILING — the tightest cam.zoom that still holds the whole captured group.
+   *
+   * IT IS `companyGuarantee`, NOT A NEW COMPUTATION. That function already answers exactly this
+   * question — the tightest zoom at which N racers around an anchor are still inside the frame,
+   * measured from where the anchor actually sits, per-axis and orientation-aware. What it could not
+   * do is answer it HERE: `_companyCeiling` returns Infinity on every PAIR-guaranteed state, which
+   * is BATTLE_ZOOM, LEAD_CHANGE and PHOTO_FINISH — precisely the shots the owner is describing. So
+   * this is not a revival of a retired guarantee; the guarantee was never running here at all.
+   *
+   * CAMERA-COMPANY-1 §5 gave the reason for that exclusion as an argument rather than a measurement:
+   * "the pair states already guarantee two named contenders, which IS company", and adding a
+   * headcount "would fight a guarantee that is already doing the job ... whenever the field is
+   * strung out behind a close duel". The case it did not consider is the one the owner watched: the
+   * field NOT strung out, six racers nearly level, of whom the pair guarantee protects two and says
+   * nothing about the other four.
+   *
+   * `minVisible` is `group.length + 1` so that ALL of them are held: `companyGuarantee` subtracts
+   * one for the anchor itself, and the anchor here (a pair midpoint, or the leader) is not
+   * necessarily a member, so every member must be counted as company.
+   *
+   * @returns {number} cam.zoom ceiling; Infinity when nothing constrains
+   */
+  _frontGroupCeiling(subjects, racers, frameSize, raceState) {
+    if (!this._frontGroupFraming || !subjects?.point) return Infinity;
+    const group = this._frontGroupNow(racers, raceState);
+    if (group.length === 0) return Infinity;
+    const at = anchorScreenPoint(
+      frameSize.width,
+      frameSize.height,
+      this._forwardFracNow(),
+      this._headingScreen(subjects.t)
+    );
+    // COMPANY_FRAME_PCT for the same reason `_companyCeiling` uses it: a guaranteed companion needs
+    // to be visible with a margin, not inside the subject's own safe region.
+    return companyGuarantee(
+      subjects.point,
+      group,
+      group.length + 1,
+      this._proj.axisX,
+      this._proj.axisY,
+      frameSize.width,
+      frameSize.height,
+      COMPANY_FRAME_PCT,
+      at
+    );
+  }
+
+  /**
    * THE ENGAGEMENT IS A GLIDE, and it has to be (RUNIN-GLIDE-1).
    *
    * On the frame the run-in engages, the framing it asks for changes discontinuously in BOTH
@@ -2841,13 +2958,73 @@ export class CameraDirector {
       // `stateZoom` above IS the run-in's second bound; it needed no code.
       line: _runInCeiling,
     };
-    const guaranteed = Math.min(
+    // FRONT-GROUP-1: THE FRONT GROUP BOUNDS THE TIGHTENING, AND ONLY THE TIGHTENING.
+    //
+    // Computed after the others because it is FLOORED by what they have already asked for. A ceiling
+    // is a maximum cam.zoom, so a SMALLER ceiling is a WIDER shot, and the front group's ceiling is
+    // smaller than the photo finish's by construction — that is the whole mechanism: it stops the
+    // close at the width that still holds the group.
+    //
+    // "IT MUST NEVER WIDEN THE SHOT BEYOND WHAT IS ALREADY ASKED FOR" is therefore not a clamp
+    // against THIS frame's other ceilings — against those it would be a no-op, since it only ever
+    // does anything when it is the smallest of them. It is a clamp against the WIDEST WIDTH THE
+    // ENDING HAS ALREADY REACHED: `_frontGroupFloor`, the running minimum of the other ceilings
+    // since the window opened. The front group may hold the shot anywhere between the ordinary shot
+    // and the width the camera has already shown, and may not open it one pixel further. No new
+    // number: the bound is a width this ending already delivered.
+    //
+    // Where the group is genuinely too spread to hold even at that width, the floor binds instead,
+    // the picture is exactly what it would have been, and the harness COUNTS the frame — rather than
+    // the camera opening to the world to keep a promise it cannot keep.
+    //
+    // It cannot fight the line guarantee, for the reason nothing here fights anything: this is a
+    // Math.min over ceilings, so the widest ask wins and the rest are simply not binding. Early in
+    // the run-in the line is far wider and this is inert; as the leader closes, the line's ceiling
+    // rises past this one and THIS becomes the binding term — which is exactly the moment the owner
+    // is describing, the tightening that used to continue all the way to the photo-finish zoom.
+    const _othersMin = Math.min(
       _ceilings.state,
       _ceilings.guarantee,
       _ceilings.company,
       _ceilings.field,
       _ceilings.line
     );
+    // IT RETIRES AT THE FIRST CROSSING, which is `_runInWindowOpen`'s own rule and its own reason:
+    // once somebody is home the finish sequence owns the picture — the drama pulse, the photo
+    // finish's hold, then FINISH_OVERVIEW's authored zoom-out on a fixed point behind the line — and
+    // a bound still arguing about who is in frame is arguing with an authored move.
+    //
+    // IT WAS MEASURED FIRST, and the first two retirements tried were both wrong. Retiring where the
+    // COMPANY guarantee retires (FINISH-COMPANY-1's `_companyIsHome`) fixed that block's two tests
+    // and left the real defect: with four of twenty home the bound is computed against whoever of
+    // the captured group is STILL COMING, and it tightens onto them while the finish shot is aimed
+    // elsewhere — 84 frames with no racer on screen at all on luger-hill seed 9, climbing zoom 1.4 →
+    // 2.5 as it chased. Not retiring at all was worse. The crossing is the honest line, and it is
+    // also where the owner's complaint stops: the tightening he watched happens on the APPROACH.
+    //
+    // AND THE RELEASE IS A GLIDE, for the reason RUNIN-GLIDE-1 already paid for. Retiring it as a
+    // STEP is a discontinuous framing change in the middle of a state — the ceiling went 1.33 to
+    // Infinity on one frame, the target jumped 1.33 to 4.00, and the pan could not follow the zoom:
+    // 29 frames with nothing on screen on luger-hill seed 9. That is the same failure, with the same
+    // cause and the same cure, as the run-in's ENGAGEMENT: pan and zoom must travel together on one
+    // ease or the frame empties while they argue. The engagement glide is reused rather than copied.
+    const _frontRetires = (raceState?.finishedCount ?? 0) > 0;
+    if (_frontRetires && this._frontGroupWasBinding && !this._frontGroupReleased) {
+      this._frontGroupReleased = true;
+      this._beginRunInGlide(ts);
+    }
+    const _frontRaw = _frontRetires
+      ? Infinity
+      : this._frontGroupCeiling(subjects, racers, frameSize, raceState);
+    if (_frontRaw < Infinity) {
+      this._frontGroupFloor =
+        this._frontGroupFloor === null ? _othersMin : Math.min(this._frontGroupFloor, _othersMin);
+    }
+    _ceilings.frontGroup =
+      this._frontGroupFloor === null ? _frontRaw : Math.max(_frontRaw, this._frontGroupFloor);
+    // Recorded so the harness can say "the group was too spread here" instead of inferring it.
+    this._frontGroupClamped = _frontRaw < _ceilings.frontGroup;
+    const guaranteed = Math.min(_othersMin, _ceilings.frontGroup);
     // ── RUNIN-PACE-1 §3: A TIGHTEN-RATE LIMIT WAS BUILT HERE AND MEASURED OUT ───────────────────
     //
     // The candidate was sound in principle: every ceiling is a LOWER BOUND ON WIDTH, so approaching
@@ -2879,6 +3056,7 @@ export class CameraDirector {
     this._runInBinding = this._runInActive && guaranteed >= _runInCeiling - 1e-12;
     let _binding = 'state';
     for (const k of Object.keys(_ceilings)) if (_ceilings[k] < _ceilings[_binding]) _binding = k;
+    this._frontGroupWasBinding = _binding === 'frontGroup';
     this._framingProbe = {
       ceilings: _ceilings,
       binding: _binding,
@@ -2886,6 +3064,10 @@ export class CameraDirector {
       runInActive: this._runInActive,
       runInBinding: this._runInBinding,
       runInCeiling: _runInCeiling,
+      frontGroupRaw: _frontRaw,
+      frontGroupFloor: this._frontGroupFloor,
+      frontGroupClamped: this._frontGroupClamped,
+      frontGroupSize: this._frontGroupIdx === null ? 0 : this._frontGroupIdx.length,
       stateBinding: guaranteed >= stateZoom - 1e-12,
       frameW: frameSize.width,
       frameH: frameSize.height,
