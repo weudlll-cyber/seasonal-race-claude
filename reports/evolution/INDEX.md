@@ -26,6 +26,49 @@ is dated and recorded HERE, where a reader on their way to the report will pass 
 
 ## Ships
 
+- [RUNIN-STATE-1.md](RUNIN-STATE-1.md) — **the run-in becomes a state** (2026-08-12,
+  `feat/runin-state` off master `e1f53781`, **NOT merged — his eye on luger-hill seed 9**;
+  fingerprints measured fresh and **NOT minted**). The fourth attempt at "keep the finish line in
+  frame during the run-in", and the first that is not a zoom CEILING. **STAGE 1, THE TRACE, AND IT
+  REVERSED THE PREMISE**: the picture was not pointed at track the racers had not reached, it was
+  pointed at track they had **already left**, ~173 world px behind them. **The pan TARGET was correct
+  on every empty frame** — the delivered offset trailed it by **535 → 1115 px** while the ceiling
+  released the zoom 2.46 → 4.00 over forty frames. Cause: a ceiling that RELEASES delivers its zoom
+  change inside the `tracking` phase, where pan and zoom are independent lerps, and
+  zoom-about-the-anchor (CAMERA-SIDEJUMP-1) is **skipped when `_focusAnchorRacer` returns null** —
+  which it does for PHOTO_FINISH, a group shot. **Proven, not argued: pointing that one correction at
+  the framing anchor took 51 empty frames to 0 with the ceiling untouched.** Two corollaries worth
+  more than the feature: **the GLIDE is what makes a big zoom change safe** (master does a LARGER
+  2.13 → 4.00 at the same seam, in a glide, for free — deferring a zoom change PAST the glide is the
+  defect), and **"the centre is near the track" does not mean the camera is pointed at the race** —
+  the excursion was ALONG the track, so the centre read 0.62 TW while the frame held zero racers.
+  **SHIPPED SHAPE**: `RUN_IN`, anchored on the leader (so the correction is live), guarantee = the
+  LINE (a fixed world point, the first guaranteed subject that is not a racer), and **no width of its
+  own** — it reads LEADER's, so at the line RUN_IN and LEADER_ZOOM are the identical picture and the
+  handover into PHOTO_FINISH is the glide the camera has always made there. The zoom is
+  `room / distance` and nothing else: no ramp, no curve, no knob. **TWO BOUNDS BUILT AND BOTH
+  REMOVED** — the quarry's field extent (weak at the endgame), then OVERVIEW's width, which pinned
+  the ceiling for the first 60% of the shot and cost the design its point (21.1% → 44.9% line-in-frame
+  on dropping it); bounding at the projection's minimum measured **identical to no bound**, proving
+  `resolveCamera`'s clamp is the real one. **MEASURED, 2 tracks x 8 seeds**: empty frames **0**
+  everywhere, centre worst **0.09 / 0.11 TW** against a limit of 2 (the quarry's 2.07 near-miss is
+  gone, nothing widened), line-in-frame **11.9% → 24.8%** and **9.9% → 25.6%** over the run-in window
+  (**48.0% → 55.6%** and **40.6% → 51.0%** on the brief's wider window, whose OFF arm reproduces its
+  47.3% / 41.4% baselines), the middle-third dip **gone** — the profile rises monotonically where OFF
+  reads 0.0% for the first two thirds — and **cam.zoom at the crossing bit-identical** (`0.00e+0`, vs
+  the ceiling's third of a thousandth). **THE HONEST LIMIT, and it is an owner decision**: the endgame
+  lock does **not own the endgame** — it is consulted only when `decideTransition` permits a
+  transition, so a shot entered just before the threshold holds its gate across it. **40–48% of the
+  window is PHOTO_FINISH** (its pre-line gate) and RUN_IN owned only **14.9% / 18.5%** of the window,
+  with **no frames at all in 3 of 8 races on each track**. Where it owns 0% the in-frame share is
+  unchanged to the decimal and where it owns 55% the share is 61.4% — an exact correlation, which is
+  also the proof the change is confined to the state. Pre-existing, not introduced here; fixing it
+  would cut BATTLE and COMEBACK short at the threshold. **FINGERPRINTS**: world `dc4647be0f55ebdb`
+  **unmoved**; camera `64432e18a7e62188` → `3a1603d37210dc66`, render `096f2726c45ed853` →
+  `bd29a55fd93e2f68` — and **with `runInShot: false` both return EXACTLY to the stored values across
+  all ten tracks**, so the off position is the old behaviour rather than an approximation of it.
+  `npm run verify` PASS 16 / FAIL 0. The ceiling form is recorded as **DEAD-ENDS §M**; the quarry
+  `feat/finish-framed` stays unmerged, and `pointGuarantee` is the only part taken from it.
 - [ENDING-PICTURE-1.md](ENDING-PICTURE-1.md) — **the ending gets a picture worth holding**
   (2026-08-12, tag `v-ship-ending-picture`, return point `pre/ship-ending-picture`). Two blocks in
   one ship: the HOLD after the last crossing (`finishHoldAfterLastMs` 0 → 1500, his own podium beat,

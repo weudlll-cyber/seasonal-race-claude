@@ -528,6 +528,33 @@ export const DEFAULT_CAMERA_CONFIG = {
   // at 240 frames (4 s), which is longer than the shot itself and therefore this same fix with a
   // knob whose only safe value is "longer than the shot".
   photoFinishContenderFraming: true,
+  // ── THE RUN-IN IS A STATE (RUNIN-STATE-1, 2026-08-12) ──────────────────────────────────────────
+  // TRUE = from `endgameThreshold` to the line the camera runs its OWN shot, RUN_IN, whose
+  // guaranteed subjects are the leader AND the finish line. FALSE = the pre-2026-08-12 behaviour,
+  // where the endgame locked to LEADER_ZOOM and the line was wherever it happened to fall.
+  //
+  // HIS DESIGN, in English: when the run-in begins, open far enough that the finish is visible,
+  // then come back in continuously to the close shot — keeping the line in frame the whole way, so
+  // he can see how much race is left and whether anyone still has a chance.
+  //
+  // A STATE, NOT A CEILING ON SOMEBODY ELSE'S SHOT, and that distinction is the entire repair. The
+  // first attempt bounded the zoom of whatever state the endgame happened to be in. It was
+  // measured three times and failed three times, finally emptying the frame of racers for 51
+  // consecutive frames on Luger Hill: a ceiling that RELEASES delivers its zoom change inside the
+  // `tracking` phase, where pan and zoom are decoupled, and the correction that re-couples them
+  // (zoom-about-the-anchor) is inert in PHOTO_FINISH because a group shot has no single anchor. As
+  // a STATE the same zoom curve runs inside a LEADER-family shot that HAS an anchor, and the
+  // handover to PHOTO_FINISH is an ordinary transition — a glide, which moves pan and zoom
+  // together on one ease by construction. See DEAD-ENDS.md for the retired form.
+  //
+  // THE ZOOM IS DERIVED, NOT RAMPED. RUN_IN has no zoom setting of its own: it borrows LEADER's
+  // (see `_stateCamZoom`) and lets the LINE guarantee widen it, exactly as every other guarantee
+  // widens the shot it is given. So the picture is wide when the line is far and tightens BY ITSELF
+  // as the leader closes; there is no curve to tune and nothing to keep in step with a track's
+  // length. At the line the ceiling has released entirely and RUN_IN is showing precisely the
+  // LEADER shot the endgame used to show — which is why the handover into PHOTO_FINISH is the same
+  // zoom step this camera has always made there.
+  runInShot: true,
   // ── THE START CEREMONY (START-CEREMONY-CAMERA-1) ───────────────────────────────────────────────
   // The race opens on the whole track, held still, then eases in to the starting formation until it
   // is as large as it can be with every racer still in frame. Both ends are GEOMETRY and neither is

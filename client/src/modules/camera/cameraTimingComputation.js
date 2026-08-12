@@ -293,6 +293,33 @@ export function computeTimingFromConfig(config) {
     PHOTO_FINISH: lfEntryBattle,
   };
 
+  // ── RUN_IN MIRRORS LEADER_ZOOM, in one place (RUNIN-STATE-1) ────────────────────────────────────
+  //
+  // The run-in IS the leader shot — the endgame has always locked to the leader, and RUN_IN changes
+  // only WHAT MUST STAY IN FRAME (the line joins the leader), never the timing. So every per-state
+  // timing map takes LEADER's RESOLVED value rather than a second set of numbers that could drift
+  // from it. This is the same arrangement PHOTO_FINISH has with BATTLE above, written as one loop
+  // because there are nine maps rather than three: a per-map literal is nine chances to forget one,
+  // and the one that gets forgotten is never the one you check.
+  //
+  // WHY THE RESOLVED VALUE AND NOT `profiles.RUN_IN`. RUN_IN deliberately has no profile of its own
+  // (see `runInShot` in defaults.js): giving it one would put a second width and a second timing
+  // next to LEADER's with nothing keeping them in step, for a shot the owner has never described as
+  // a different shot. Tuning the leader shot tunes the run-in, which is the truth of the design.
+  for (const m of [
+    tcByState,
+    lfByState,
+    lfEntryByState,
+    minStateHoldByState,
+    maxStateDurationByState,
+    leadAheadEnabledByState,
+    leadOutEnabledByState,
+    maxEntryDurationByState,
+    phasedByState,
+  ]) {
+    m.RUN_IN = m.LEADER_ZOOM;
+  }
+
   const entryConvergenceZoom =
     config?.entryConvergenceZoom ?? DEFAULT_CAMERA_CONFIG.entryConvergenceZoom;
   const entryConvergencePx = config?.entryConvergencePx ?? DEFAULT_CAMERA_CONFIG.entryConvergencePx;
@@ -341,6 +368,7 @@ export function computeTimingFromConfig(config) {
     config?.photoFinishLeadProgress ?? DEFAULT_CAMERA_CONFIG.photoFinishLeadProgress;
   const photoFinishContenderFraming =
     config?.photoFinishContenderFraming ?? DEFAULT_CAMERA_CONFIG.photoFinishContenderFraming;
+  const runInShot = config?.runInShot ?? DEFAULT_CAMERA_CONFIG.runInShot;
 
   // ── Per-state cooldowns ───────────────────────────────────────────────────
   const comebackCooldownMs = config?.comebackCooldownMs ?? DEFAULT_CAMERA_CONFIG.comebackCooldownMs;
@@ -412,6 +440,7 @@ export function computeTimingFromConfig(config) {
     photoFinishCloseThresholdT,
     photoFinishLeadProgress,
     photoFinishContenderFraming,
+    runInShot,
     comebackCooldownMs,
     leadChangeCooldownMs,
     battleWeight,

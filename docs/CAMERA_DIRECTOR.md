@@ -61,6 +61,7 @@ construction and must be argued another way.
 | `COMEBACK_ZOOM` | A racer climbing through the field.                                                                                                                                                            |
 | `LEAD_CHANGE`   | The racer who has just taken the lead, with the racer he passed.                                                                                                                               |
 | `PHOTO_FINISH`  | The top two contesting the line. The tightest shot in the race, and it has its own setting — it used to borrow BATTLE's, so the most dramatic moment was never closer than an ordinary battle. |
+| `RUN_IN`        | The leader closing on the line, with the FINISH LINE guaranteed in frame beside him. It is the LEADER shot with one column changed and no width of its own — see §3. Switched by `runInShot`. |
 
 Two finish sub-phases are flags rather than states, because they are OVERVIEW and LEADER_ZOOM with a
 different anchor and a lock: `_inFinishDrama` (the pulse on the winner) and `_inFinishMode`
@@ -105,8 +106,21 @@ Evaluated in strict order on every `_transition()`:
    above, not a time from the gun, so the hold ends at 3000 ms plus the value. This is the only
    place that key is read — the race planner read it too, as an absolute time, until
    POST-START-HOLD-UNIFY removed that reading.
-5. **Endgame** (`leaderProgress > endgameThreshold`) → LEADER_ZOOM, with LEAD_CHANGE allowed
-   through — a lead swap near the line is the most dramatic moment there is.
+5. **Endgame** (`leaderProgress > endgameThreshold`) → RUN_IN, with LEAD_CHANGE allowed
+   through — a lead swap near the line is the most dramatic moment there is. With `runInShot` off
+   this branch names LEADER_ZOOM, which is what it named before 2026-08-12; nothing else about the
+   endgame changed, and the run-in enters HERE and nowhere else.
+
+   **THIS LOCK DOES NOT ACTUALLY OWN THE ENDGAME, and that is worth knowing before reading any
+   measurement of it.** The branch is only consulted when `decideTransition` permits a transition at
+   all, and a state entered just before the threshold holds its own gate across it. Measured over
+   sixteen races (two tracks x eight seeds, `runInShot` on): the window from the threshold to the
+   first crossing is 40–48% PHOTO_FINISH — its pre-line gate fires at `photoFinishLeadProgress` —
+   and most of the rest belongs to whichever shot was already running. RUN_IN owned 14.9% of that
+   window on Luger Hill and 18.5% on Searound; in three of eight Luger Hill races and three of eight
+   Searound races it got no frames at all. This is pre-existing behaviour, not something the run-in
+   introduced, and changing it would end BATTLE and COMEBACK shots early at the threshold — a much
+   larger change than a new state. It is recorded here as an open question, not fixed.
 6. **The weighted pool** — every eligible candidate, one weighted draw.
 
 ### 2.3 What a weight MEANS, because it is not obvious
@@ -157,9 +171,9 @@ The order matters and parts of it are load-bearing:
 ## 3. The framing rule
 
 **A state in `FRAMING_BY_STATE` is described by three things and only three** — and the qualifier is
-not decoration. The table has SIX rows (LEADER_ZOOM, LEAD_CHANGE, BATTLE_ZOOM, COMEBACK_ZOOM,
-OVERVIEW, PHOTO_FINISH), which are exactly the six members of `CAM_STATE`. **Two things this document
-calls "states" elsewhere are not in it, and neither is described by the three below:**
+not decoration. The table has SEVEN rows (LEADER_ZOOM, LEAD_CHANGE, BATTLE_ZOOM, COMEBACK_ZOOM,
+OVERVIEW, PHOTO_FINISH, RUN_IN), which are exactly the seven members of `CAM_STATE`. **Two things
+this document calls "states" elsewhere are not in it, and neither is described by the three below:**
 
 - **COUNTDOWN is not a camera state at all.** It is a race PHASE. The opening runs through
   `updateCountdown` and `startCeremony.js`, whose geometry is the track's extent easing to the
@@ -192,7 +206,19 @@ The three things:
   present — but **measured: that fallback fired on 0 of 11,813 pair frames**, so it is defensive
   rather than load-bearing, and it is kept knowingly on that basis.
 
-- **ZOOM** — how much world is in shot, in standard corridors.
+  **THE ONE GUARANTEE WHOSE SUBJECT IS NOT A RACER — `LINE`, added 2026-08-12 (RUNIN-STATE-1).** It
+  keeps a FIXED WORLD POINT, the finish, in frame, and RUN_IN is the only state that carries it. It
+  is `room / distance` measured from the anchor's own place in the frame, so it widens the shot while
+  the line is far and releases entirely as the leader arrives — at which point the state's own width
+  takes the shot back with nothing to switch off. That release is what the run-in's zoom design IS:
+  the owner asked for a shot that opens to show the finish and tightens by itself as they close, and
+  a division is the whole of it. It carries no bound of its own; `resolveCamera` already floors every
+  zoom at the projection's minimum, and a second bound here was built twice and removed twice.
+
+- **ZOOM** — how much world is in shot, in standard corridors. **RUN_IN has none of its own**: it
+  reads LEADER's, so tuning the leader shot tunes the run-in and the two cannot drift apart. That is
+  also why the handover into PHOTO_FINISH is the zoom step this camera has always made there — by
+  the line, RUN_IN and LEADER_ZOOM are the identical picture.
 
 Frame POSITION is not a fourth setting. It follows from "is there anything worth seeing ahead of the
 subject?", answered once per state in `framingRule.js`.

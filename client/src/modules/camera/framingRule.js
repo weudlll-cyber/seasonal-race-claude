@@ -72,6 +72,15 @@ export const GUARANTEE = {
   /** DRAMATURGICAL: enough of the field in frame that the shot has tension. See companyGuarantee. */
   COMPANY: 'company',
   /**
+   * GEOMETRIC: a FIXED WORLD POINT — the finish line. See `pointGuarantee`.
+   *
+   * The only guaranteed subject in this file that is not a racer, and the reason it is a guarantee
+   * rather than a zoom curve of its own: the run-in shot has ONE zoom authority, the same
+   * `Math.min` over ceilings every other state runs, and this is a row in it. It widens as the line
+   * approaches from far away and stands aside once the subject is on top of it.
+   */
+  LINE: 'line',
+  /**
    * GEOMETRIC: EVERY racer, not a corridor and not a chosen pair. See `fieldGuarantee`.
    *
    * It exists for the start ceremony (START-CEREMONY-CAMERA-1), where the subject is the formation
@@ -125,6 +134,26 @@ export const FRAMING_BY_STATE = {
     guarantee: GUARANTEE.PAIR,
     position: POSITION.CENTRED,
     aheadMatters: true, // both contenders matter equally; neither is "the one ahead"
+  },
+  /**
+   * THE RUN-IN (RUNIN-STATE-1) — the shot from the endgame threshold to the line.
+   *
+   * It is the LEADER shot with one column changed, and that is the whole design: the endgame
+   * already locks the camera to the leader, so the ANCHOR is unchanged and the ZOOM setting is
+   * LEADER's own (see `_stateCamZoom`). Only the GUARANTEE differs — the finish line joins the
+   * subject as something that must stay in frame — and because a guarantee is a ceiling, that one
+   * change is what makes the shot open when the line is far and tighten by itself as they close.
+   *
+   * THE POSITION ANSWER FLIPS, and it is the table's own question that flips it. For LEADER the
+   * answer is "nothing worth seeing ahead — the race is behind him". In the run-in there IS
+   * something ahead and it is the point of the shot, so the subject is CENTRED and the frame
+   * carries the line. One rule, a different answer, for a stated reason.
+   */
+  RUN_IN: {
+    anchor: 'leader',
+    guarantee: GUARANTEE.LINE,
+    position: POSITION.CENTRED,
+    aheadMatters: true, // the finish line is ahead, and showing it is why this state exists
   },
 };
 
@@ -442,6 +471,60 @@ export function companyGuarantee(
   ceilings.sort((a, b) => b - a);
   // Asking for more company than the field can supply must not zoom to a point: take what exists.
   return ceilings[Math.min(need, ceilings.length) - 1];
+}
+
+/**
+ * GUARANTEE 5 — A FIXED WORLD POINT (RUNIN-STATE-1). The tightest cam.zoom at which `target` is
+ * still inside the frame, given where the ANCHOR sits in it.
+ *
+ * TAKEN FROM `feat/finish-framed`, unchanged except for its name in the record. That branch is a
+ * quarry, not a base: its zoom MECHANISM was retired (see DEAD-ENDS.md), but this function is pure
+ * geometry and the reasoning below is its own, measured, and still true.
+ *
+ * WHY THIS IS NOT `pairGuarantee`. That one fits the SEPARATION between two things into the frame's
+ * full chord, which is right only when the camera sits between them — as it does for BATTLE and the
+ * photo finish, whose pan target is the pair's midpoint. The run-in's camera sits on the LEADER, so
+ * the room toward the finish line is the distance from the leader's own place in the frame to the
+ * edge, not the whole chord. Built with the pair form first and MEASURED: the finish line's
+ * in-frame share went 41.4% -> 40.8% on Searound, i.e. nothing, because a fitted separation says
+ * nothing about where either end lands. This is the company guarantee's shape — one target instead
+ * of a headcount — and it is the honest one for "keep this point in shot".
+ *
+ * IT HAS NO FLOOR OF ITS OWN, deliberately. As the target recedes the ceiling falls without bound,
+ * and "how wide is this camera ever allowed to open" is a question about the ZOOM SETTINGS, which
+ * this file knows nothing about (see the header: it never changes a zoom factor). The bound is
+ * applied by the caller, against a setting — `_guaranteeCeiling`'s LINE branch.
+ *
+ * @param {{x:number,y:number}|null} anchor  the world point the shot is built around
+ * @param {{x:number,y:number}|null} target  the world point that must stay in frame
+ * @param {number} axisX  projection world→screen scale on X at cam.zoom = 1
+ * @param {number} axisY
+ * @param {number} frameW
+ * @param {number} frameH
+ * @param {number} [framePct=COMPANY_FRAME_PCT]  the region the target must be inside
+ * @param {{x:number,y:number}|null} [anchorAt=null]  the anchor's SCREEN position; centre when null
+ * @returns {number} cam.zoom ceiling; Infinity when nothing constrains
+ */
+export function pointGuarantee(
+  anchor,
+  target,
+  axisX,
+  axisY,
+  frameW,
+  frameH,
+  framePct = COMPANY_FRAME_PCT,
+  anchorAt = null
+) {
+  if (!anchor || !target) return Infinity;
+  const sx = (target.x - anchor.x) * axisX;
+  const sy = (target.y - anchor.y) * axisY;
+  const needed = Math.hypot(sx, sy);
+  if (!(needed > 0)) return Infinity; // already on the anchor: nothing to keep in frame
+  const at = anchorAt ?? { x: frameW / 2, y: frameH / 2 };
+  const room = roomFromPointAlong(at.x, at.y, sx, sy, frameW, frameH, framePct);
+  // Room 0 means the anchor is already outside the region in that direction; no zoom fixes that.
+  if (!(room > 0)) return Infinity;
+  return room / needed;
 }
 
 /**

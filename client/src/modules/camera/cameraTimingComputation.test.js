@@ -72,6 +72,7 @@ describe('computeTimingFromConfig — null config (all defaults)', () => {
       'LEADER_ZOOM',
       'LEAD_CHANGE',
       'OVERVIEW',
+      'RUN_IN',
     ]);
   });
   it('all states present in lfByState', () => {
@@ -82,7 +83,26 @@ describe('computeTimingFromConfig — null config (all defaults)', () => {
       'LEAD_CHANGE',
       'OVERVIEW',
       'PHOTO_FINISH',
+      'RUN_IN',
     ]);
+  });
+  // RUNIN-STATE-1: the run-in borrows LEADER's timing in every per-state map rather than carrying
+  // a second set of numbers. This is the assertion that keeps that true — the mirror loop is one
+  // line, so the way it breaks is a map being ADDED and not mirrored, which this catches.
+  it('RUN_IN mirrors LEADER_ZOOM in every per-state timing map', () => {
+    for (const m of [
+      'tcByState',
+      'lfByState',
+      'lfEntryByState',
+      'minStateHoldByState',
+      'maxStateDurationByState',
+      'leadAheadEnabledByState',
+      'leadOutEnabledByState',
+      'maxEntryDurationByState',
+      'phasedByState',
+    ]) {
+      expect(t[m].RUN_IN, m).toEqual(t[m].LEADER_ZOOM);
+    }
   });
   it('lfOverview matches tcToLerpFactor(1.5)', () => {
     const expected = 1 - Math.pow(0.1, 1 / (1.5 * 60));

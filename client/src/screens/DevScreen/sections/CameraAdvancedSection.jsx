@@ -1304,6 +1304,23 @@ function CameraAdvancedSection() {
       {/* ── 7. Endgame ── */}
       <div className={s.card}>
         <SectionHeading>7 · Endgame</SectionHeading>
+        <label
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: '0.5rem',
+            marginBottom: '0.6rem',
+          }}
+        >
+          <input
+            type="checkbox"
+            data-testid="run-in-shot"
+            checked={config.runInShot ?? DEFAULT_CAMERA_CONFIG.runInShot}
+            onChange={(e) => set('runInShot', e.target.checked)}
+          />
+          <span style={{ fontWeight: 600 }}>The run-in is its own shot</span>
+          <InfoTooltip text="On (default): from the endgame threshold to the line the camera runs the RUN_IN shot, which keeps the leader AND the finish line in frame — so it opens while the finish is far and tightens by itself as they close. Off: the endgame locks to LEADER_ZOOM and the line is wherever it falls. Off is the pre-2026-08-12 behaviour. The run-in has no width of its own: it uses the LEADER width above." />
+        </label>
         <div className={s.formGrid}>
           <div className={s.formGroup}>
             <label
@@ -1312,7 +1329,7 @@ function CameraAdvancedSection() {
             >
               Endgame Focus Threshold
               <InfoTooltip
-                text={`From this leader-progress value the camera locks to LEADER_ZOOM (except during LEAD_CHANGE). Currently: ${((config.endgameThreshold ?? DEFAULT_CAMERA_CONFIG.endgameThreshold) * 100).toFixed(0)}%.`}
+                text={`From this leader-progress value the camera locks to the run-in shot — RUN_IN, or LEADER_ZOOM when the run-in shot is switched off above (except during LEAD_CHANGE). Currently: ${((config.endgameThreshold ?? DEFAULT_CAMERA_CONFIG.endgameThreshold) * 100).toFixed(0)}%.`}
               />
             </label>
             <input
