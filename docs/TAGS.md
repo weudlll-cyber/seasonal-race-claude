@@ -121,7 +121,16 @@ in frame for 100 % of the shot against 87–91 % before.
   instrument blind spots are recorded rather than repaired — the shared driver runs a nameless field
   and no slow motion, and without either the defect does not reproduce at all.
 
-### WINNER-CARD — the ending names the winner (2026-08-13)
+> **DATE CORRECTION, 2026-08-12.** The two sections below and their four tags were dated 2026-08-13.
+> That date was never observed — it came from a task specification and propagated. Every date here is
+> now read from `git log --date=iso` on the commit it names: `6de86e6a` 2026-08-11 18:15 (WINNER-CARD
+> ship), `235333d5` 2026-08-11 15:56 (its return point), `eb051889` 2026-08-11 15:56 (PODIUM-BUILD
+> ship), `0da0b574` 2026-08-11 13:29 (its return point). The same wrong date reached three
+> `defaults.js` notes, one in `ResultScreen.css` and one test header, all corrected the same way and
+> from the same source. The reports that discuss it are append-only and were NOT edited — see the
+> CORRECTION section of [reports/night/NIGHT-2026-08-12.md](../reports/night/NIGHT-2026-08-12.md).
+
+### WINNER-CARD — the ending names the winner (2026-08-11)
 
 **The counterpart to the opening's brand card, and NOTHING about the race moved.** At the end of a
 race a card names the winner — race number, name, colour — over the race picture, in the brand's
@@ -131,10 +140,10 @@ re-measured on the shipping tree and none of them changed; values live in
 draw calls and the card is DOM, so its unmoved hash is evidence about the picture underneath and not
 about the card. The owner's eye is the only instrument that saw it.
 
-- `pre/ship-winner-card` (`235333d5`, 2026-08-13) — master immediately BEFORE the ship. Reset here to
+- `pre/ship-winner-card` (`235333d5`, 2026-08-11) — master immediately BEFORE the ship. Reset here to
   restore an ending with no winner card at all: no `winnerCardMs` key, and `finishPauseMs` back at
   its pre-card length before the card's read time was allowed to set it.
-- `v-ship-winner-card` (`6de86e6a`, 2026-08-13) — **the ship, at his SECOND look.** The first
+- `v-ship-winner-card` (`6de86e6a`, 2026-08-11) — **the ship, at his SECOND look.** The first
   placement sat on the MINIMAP, which is drawn INTO the canvas and therefore appears in none of the
   files that name the other overlays — reading the sources could not find it and did not. What
   shipped is placed against a MEASURED occupancy map of the finish frame, and anchored in
@@ -144,7 +153,7 @@ about the card. The owner's eye is the only instrument that saw it.
   `min(winnerCardMs, finishPauseMs)` — so it cannot make the ending longer at any setting, and 0 on
   either key removes it.
 
-### PODIUM-BUILD — the result screen arrives instead of appearing (2026-08-13)
+### PODIUM-BUILD — the result screen arrives instead of appearing (2026-08-11)
 
 **The ending answers the opening, and NOTHING about the race moved.** The podium is built up — 3rd,
 then 2nd, then the winner held for twice as long, and only then the ranking and everything below it.
@@ -153,12 +162,12 @@ All three fingerprints were re-measured on the shipping tree and none of them ch
 revealed element carries NO class, so the end of the sequence is byte-for-byte the DOM the screen
 rendered before the feature existed.
 
-- `pre/ship-podium-build` (`0da0b574`, 2026-08-13) — master immediately BEFORE the ship. Reset here
+- `pre/ship-podium-build` (`0da0b574`, 2026-08-11) — master immediately BEFORE the ship. Reset here
   to restore a result screen that appears complete in one frame, with no `podiumRevealBeatMs` key,
   no build-up, and no brand accent on the winner's arrival. It also restores `CLAUDE.md`'s claim of
   _"exactly two"_ owner quotations — which was already wrong when this tag was cut, and is the
   reason that sentence is now a list.
-- `v-ship-podium-build` (`eb051889`, 2026-08-13) — **the ship.** One key, `podiumRevealBeatMs`, and
+- `v-ship-podium-build` (`eb051889`, 2026-08-11) — **the ship.** One key, `podiumRevealBeatMs`, and
   every other time in the sequence is a whole multiple of it, so the total is `4 x beat`. **1500 ms
   is the OWNER'S number, not the one that was proposed:** he watched it on a production build at 700
   and moved the slider himself. Two escape hatches make a 6.0 s ending affordable — any click or key
