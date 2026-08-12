@@ -76,11 +76,15 @@ two contains `autoSpriteScale.js`, which is the precise file this tripwire was c
 Triggering on it would have stopped catching the incident that produced the rule.
 
 **`eleven` is a HAND-COUNTED figure: `ENGINE_INPUT_MODULES` in
-`client/src/modules/raceConfigWorld.js`, counted by hand on 2026-08-12 and correct on that date.**
-Nothing re-checks it. It is marked rather than generated or stamped because neither was available
-without changing code: `scripts/check-measured-stamps.mjs` — this repository's mechanism for exactly
-this — scans **`docs/CAMERA_DIRECTOR.md` and nothing else**, so a `MEASURED:` stamp placed in this
-file would look guarded and be decoration, which is worse than an honest date.
+`client/src/modules/raceConfigWorld.js`.** Nothing re-counts it — a stamp checks FRESHNESS, never
+accuracy. **It is now STAMPED, and STAMP-COMPLETE-1 is what made that possible.** This paragraph
+recorded the opposite until 2026-08-13, and correctly for its day: `check-measured-stamps.mjs`
+scanned `docs/CAMERA_DIRECTOR.md` and nothing else, so a stamp placed here would have looked guarded
+and been decoration, which is worse than an honest date. It now scans every living document, so the
+stamp below is real — the day `raceConfigWorld.js` changes, this figure goes red and asks to be
+re-counted. Re-counted by hand on 2026-08-13 and still eleven; the array is eleven lines long.
+
+<!-- MEASURED: ENGINE_INPUT_MODULES is eleven entries @ 86d542f0 2026-08-13 depends=client/src/modules/raceConfigWorld.js -->
 
 **The gap between the list and the closure is deliberately described WITHOUT a count.** The NAME is
 what carries the argument; the number is not load-bearing, so it is not stated at all rather than
