@@ -489,7 +489,7 @@ a verbatim transcript of one run on one commit, which is a historical record, no
 
 ### The tracking lag, as measured today — and it had drifted
 
-<!-- MEASURED: tracking-lag (median/p95 pp per state) @ eea0acf2 2026-08-12 depends=client/src/modules/camera/ -->
+<!-- MEASURED: tracking-lag (median/p95 pp per state) @ b15b5107 2026-08-14 depends=client/src/modules/camera/ -->
 
 **RE-MEASURED ON THE SHIP (`eea0acf2`), because neither branch's table describes the merged tree.**
 The run-in and RESOLVE-CONVERGE-1 were measured apart and shipped together, so the numbers below are
