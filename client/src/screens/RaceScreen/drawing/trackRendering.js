@@ -153,12 +153,12 @@ export function drawEditorBackground(
  *
  * ── WHAT "EDGES ONLY" GOT WRONG, AND IT WAS A MISREADING (FINISH-READABLE-2) ────────────────────
  *
- * FINISH-READABLE-1 read his ruling as "structure at the edges only" and DELETED the ground band
- * instead of repairing it, leaving two checkered posts and a hairline. His verdict on that, on
- * dirt-oval and garden-path: "a very thin, barely visible line, otherwise nothing has changed. I see
- * nothing."
+ * FINISH-READABLE-1 read his ruling as structure at the edges only and DELETED the ground band
+ * instead of repairing it, leaving two checkered posts and a hairline. The owner judged that on a
+ * production build on 2026-08-12, on dirt-oval and garden-path, and REJECTED it: the marking read as
+ * a barely visible thin line and he could not find the finish at all.
  *
- * What he had rejected was a GANTRY — a structure standing OVER the track, which would hide the
+ * What he had rejected earlier was a GANTRY — a structure standing OVER the track, which would hide the
  * racers passing under it. "Structure at the edges" was about things standing UP. **A flat marking
  * painted ON the racing surface covers nobody**: the racers drive over it, as in a real race. So the
  * band is back, across the full corridor, and the posts stay because he said they are good.
@@ -223,9 +223,9 @@ export function drawFinishGate(ctx, pInner, pOuter, fwdAngle, effZoomX, effZoomY
 
   // ── HOW DEEP THE BAND IS, AND WHY THESE NUMBERS ─────────────────────────────────────────────
   //
-  // 30 screen px, two rows of 15. The owner's verdict on the 9 px version was "a very thin, barely
-  // visible line … I see nothing", and 9 px is what a marking measures when its size was chosen to
-  // sit BESIDE the corridor rather than to be read. Measured against the corridor's own screen
+  // 30 screen px, two rows of 15. The owner rejected the 9 px version on 2026-08-12 as too faint to
+  // find, and 9 px is what a marking measures when its size was chosen to sit BESIDE the corridor
+  // rather than to be read. Measured against the corridor's own screen
   // width, 30 px is about 1:22 at the mid-race shot — the proportion a real finish line has against
   // a real road, which is the thing it has to look like.
   const BAND_SCREEN_PX = 30;

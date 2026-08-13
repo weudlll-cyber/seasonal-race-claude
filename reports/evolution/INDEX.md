@@ -40,9 +40,22 @@ is dated and recorded HERE, where a reader on their way to the report will pass 
 
 ## Ships
 
+- [SHIP-FINISH-BAND.md](SHIP-FINISH-BAND.md) — **the finish line is a line, not a hair, and it goes
+  to master** (2026-08-13, merge `354859bc`, tags `v-ship-finish-band` + `pre/ship-finish-band`). The
+  owner judged a production build of `de957c2b` on 2026-08-13, on dirt-oval and garden-path, and
+  accepted it. Carries what only the ship can: **the branch was 26 commits behind** — cut off
+  `e1f53781`, before the run-in, the ending picture and the corridor work — so it was forward-merged
+  FIRST and the band **re-measured on the merged tree** rather than argued from the diff, because its
+  sizes are screen sizes converted through a zoom that the camera work had moved underneath it. **The
+  band's depth is identical on all ten tracks at all three shots before and after**; what moved is
+  the SHOT (garden-path's tightest endgame zoom 5.17 → 4.98), and the band measured the same 30.0 px
+  in it either way — the screen-size design proving itself. **RENDER minted `c962df5334277f95` →
+  `d1c9d5d0da6a964f`; WORLD and CAMERA RUN IN FULL on the ship tree and byte-identical.**
+  FINISH-READABLE-2's own `db98466db3b2bba4` was measured against a base that no longer exists and
+  was never minted. verify PASS 12 / FAIL 0.
 - [FINISH-READABLE-2.md](FINISH-READABLE-2.md) — **the finish line is a line, not a hair**
-  (2026-08-13, `feat/finish-readable`, **NOT merged, nothing minted — he judges it**). His verdict on
-  FINISH-READABLE-1 was "a very thin, barely visible line … I see nothing", and the cause was the
+  (2026-08-13, `feat/finish-readable`, **NOT merged, nothing minted — he judges it**). He judged
+  FINISH-READABLE-1 on production on 2026-08-12 and rejected it as too faint to find, and the cause was the
   BRIEF: he rejected a GANTRY standing over the track, that became "edges only", and the ground band
   was deleted rather than repaired. **A flat marking painted ON the surface covers nobody** — the
   racers drive over it. The band is back across the full corridor, two rows deep, with the posts and

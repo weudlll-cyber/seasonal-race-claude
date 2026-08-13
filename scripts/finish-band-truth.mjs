@@ -2,9 +2,9 @@
 // File:        scripts/finish-band-truth.mjs
 // Project:     RaceArena — FINISH-READABLE-2
 //
-// THE QUESTION, and it is the owner's: on dirt-oval and garden-path the finish reads as "a very thin,
-// barely visible line, otherwise nothing has changed. I see nothing." So: how big is the finish
-// marking ON SCREEN at the shots he actually watches, how much area does it paint on each of the ten
+// THE QUESTION, and it is the owner's. He judged the finish marking on a production build on
+// 2026-08-12, on dirt-oval and garden-path, and rejected it: too faint to find at all. So: how big
+// is the finish marking ON SCREEN at the shots he actually watches, how much area does it paint on each of the ten
 // tracks, and — because the band is being put back ACROSS the racing surface — is it drawn UNDER the
 // racers or over them?
 //
@@ -439,8 +439,8 @@ console.log(
 
 // ── HOW MUCH IT ACTUALLY PAINTS ────────────────────────────────────────────────────────────────
 // The depth says how thick the mark is; this says how much of the picture it occupies, which is the
-// number that answers "I see nothing". Reported at the WIDEST overview because that is the shot the
-// complaint is about.
+// number that answers whether the marking can be found at all. Reported at the WIDEST overview,
+// because that is the shot his rejection was about.
 const CANVAS = CW * CH;
 console.log("\nPAINTED AREA at the WIDEST overview — screen px2, and the share of the canvas\n");
 console.log("track            band  +  posts  =  total    of canvas | MID total | TIGHT total | quads w/m/t");

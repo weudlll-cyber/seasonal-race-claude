@@ -3,8 +3,9 @@
 **Branch:** `feat/finish-readable`, continuing from `84b7c8f0`. **Not merged. Nothing minted.**
 Corrects [FINISH-READABLE-1](FINISH-READABLE-1.md), whose band this restores.
 
-**The owner, on dirt-oval and garden-path:** _"that does not look much better — we now have a very
-thin, barely visible line, otherwise nothing has changed. I see nothing."_
+**The owner judged FINISH-READABLE-1 on a production build on 2026-08-12, on dirt-oval and
+garden-path, and rejected it:** the marking read as a barely visible thin line, nothing else had
+changed, and he could not find the finish at all.
 
 ---
 
@@ -82,7 +83,7 @@ median, the tightest endgame shot the maximum inside the endgame window.
 rounds so one quad falls outside the modal-area group the depth is derived from. A 1.3% measurement
 artefact, not a different band.
 
-## 4. Painted area — the answer to "I see nothing"
+## 4. Painted area — the answer to "it cannot be found"
 
 | track | WIDEST: band + posts = total | of canvas | vs before | MID | TIGHTEST |
 | --- | --- | --- | --- | --- | --- |

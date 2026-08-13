@@ -98,6 +98,40 @@ the Dev Screen toggle and the `renderRaceFrame` hook. The branch was deleted at 
   may be promising a corridor the viewer cannot see. Start here rather than from scratch — see
   [DEAD-ENDS.md](DEAD-ENDS.md) §K.
 
+### FINISH-BAND — the finish line is a line, not a hair (2026-08-13)
+
+**The owner judged it on a production build on 2026-08-13, on dirt-oval and garden-path — the two
+tracks his rejection came from — and ACCEPTED it.** What ships is a checkered band across the
+whole corridor, flat on the racing surface and drawn UNDER the racers, with the edge posts and the
+gold accent kept. It replaces a marking that measured **7.7 screen px deep and painted 486 px² at
+every zoom on every track**, which he judged on production on 2026-08-12 and REJECTED as too faint
+to find.
+
+**The fault was the brief rather than the build**, and that is why this entry exists at all: he
+rejected a GANTRY standing OVER the track, which would hide the racers passing under it; that was
+read as "edges only", and FINISH-READABLE-1 deleted the ground band instead of repairing it. A flat
+marking painted ON the surface covers nobody. **30 screen px deep against 9**, clamped so it is never
+deeper than half the road is wide; painted area at the mid-race shot goes **31–65×**. Real area on
+10 of 10 tracks, and the under-racers ordering is measured at the tightest endgame zoom rather than
+argued.
+
+**THE BRANCH WAS BROUGHT FORWARD BEFORE ANYTHING WAS MINTED.** It was cut off `e1f53781`, 26 commits
+behind, so every fingerprint its report carries was measured against a base that no longer exists;
+none of it was minted. RENDER moved and is minted; WORLD and CAMERA were **run in full on the merged
+tree** rather than argued from `engine-reach`, and both are byte-identical. Values live in
+[fingerprints.json](fingerprints.json).
+
+**And the band did not change size across the forward merge**, measured on all ten tracks at three
+shots — which is the screen-size design proving itself against a camera that moved a great deal
+underneath it. What moved was the SHOT: garden-path's tightest endgame zoom went 5.17 → 4.98, and the
+band measured the same 30.0 px in it either way.
+
+- `pre/ship-finish-band` (`b4be55ea`, 2026-08-13) — master immediately BEFORE the ship. Reset here to
+  restore a finish marking that is two checkered posts and a gold hairline, 7.7 px deep, with the
+  RENDER value `c962df5334277f95`.
+- `v-ship-finish-band` (`354859bc`, 2026-08-13) — **the ship.** The forward merge is inside it: the
+  branch was merged with master first, re-measured, and only then merged out.
+
 ### CAMERA-ENDING-WINDOW — the camera's own fingerprint can see the ending (2026-08-13)
 
 **The instrument changed, not the product, and that is the whole entry.** Not one line of camera
