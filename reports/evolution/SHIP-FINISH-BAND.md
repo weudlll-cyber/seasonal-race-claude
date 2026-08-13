@@ -91,8 +91,55 @@ was away. The band's contribution is the same in both; the base under it is not.
 
 ## 5. CI
 
-**PENDING at the time this file was written**, and deliberately left that way rather than
-pre-filled — the run id and the head SHA it ran on are appended in a follow-up commit once the run
-has actually reported, read back from the remote rather than from the local branch. A ship is
-finished when CI reports success for that exact SHA, and a report that names a run id before the run
-exists is not evidence of anything.
+**Run `31727190878`, conclusion `success`, head SHA `04f40a103dc735d4a12a8b186a653ab4fc873c68`.**
+
+Read from the remote, not from the local branch. This section was written PENDING and filled in
+afterwards rather than pre-filled: a report that names a run id before the run exists is not evidence
+of anything.
+
+**The precise relationship, because it is easy to blur.** CI ran on `04f40a10`, the mint commit,
+which is the head of the push. The tagged ship `v-ship-finish-band` is `354859bc`, the merge commit —
+its parent. `04f40a10` **contains** `354859bc` and differs from it only by the mint, the tag register
+and this report. GitHub Actions runs on the head of a push, so the merge commit has no run of its
+own; that is stated rather than glossed.
+
+**`origin/master` moved `b4be55ea` → `04f40a10`, confirmed by reading the ref back from the remote:**
+
+```
+$ git ls-remote origin master
+04f40a103dc735d4a12a8b186a653ab4fc873c68	refs/heads/master
+
+$ git ls-remote --tags origin | grep finish-band
+b4be55eaaf54c53975ffa85e401a825363a85a58	refs/tags/pre/ship-finish-band
+354859bccbb7fc0f6403782123b1373f2183e7a6	refs/tags/v-ship-finish-band
+```
+
+`check-tags`: 109 origin tags, 0 unregistered, 0 missing at origin.
+
+## 6. The quotations, and what was not rewritten
+
+The owner corrected the spec mid-ship: **his words are not to be quoted at all** — not in German, not
+translated, not in commit messages, not in documents. The quotation exception is closed, so his
+verdicts are recorded as attributed, dated facts.
+
+**Every occurrence this branch introduced was removed** — six files, nine occurrences, listed in
+`04f40a10`'s commit message. Two were in `trackRendering.js` and two in `finish-band-truth.mjs`; both
+edits are comment-only and **the render fingerprint was re-run afterwards to prove it, still
+`d1c9d5d0da6a964f`**. The merge commit's own message was amended for the same reason, which is why
+the ship is `354859bc` and not the `131f5d46` an earlier draft of this file named.
+
+**Two things are reported rather than rewritten:**
+
+1. **`84b7c8f0` and `de957c2b`** are already published on the branch and carry quotations in their
+   messages and in the file content they introduced. Rewriting them needs a force-push of published
+   history — the owner's call, not a step to take unasked. **The tree at master's head carries
+   none**; only those two commit objects do.
+2. **Three pre-existing German quotations in `reports/evolution/INDEX.md`** (the entries for
+   CAMERA-COMPANY-ONLY-3, CAMERA-COMPANY-1 and CAMERA-PICTURE-FIXES-1). They arrived via the forward
+   merge from master, predate the closure, and **the branch introduced none of them** — verified by
+   diffing the added lines, which contain zero. They are grandfathered under CLAUDE.md's own clause.
+   Worth noting: the closing inventory in CLAUDE.md does not list `reports/` at all, so these sit
+   outside it by scope rather than by oversight.
+
+**The scan was an inventory, not an impression:** every commit message in `b4be55ea..HEAD`, and every
+added line of the full diff.
