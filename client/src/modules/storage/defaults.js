@@ -639,7 +639,7 @@ export const DEFAULT_CAMERA_CONFIG = {
   // shot's binding dimension is longitudinal, and the corridor width cannot see it.
   //
   // Off restores the pre-2026-08-13 composition exactly — measured, both fingerprints byte-identical.
-  contenderZoom: false,
+  contenderZoom: true,
   // ── THE START CEREMONY (START-CEREMONY-CAMERA-1) ───────────────────────────────────────────────
   // The race opens on the whole track, held still, then eases in to the starting formation until it
   // is as large as it can be with every racer still in frame. Both ends are GEOMETRY and neither is

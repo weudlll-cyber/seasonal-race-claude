@@ -701,7 +701,13 @@ export class CameraDirector {
     // index as "nobody to wait for" and so reported the pair home on the first frame of every shot —
     // caught by a director test, and the safe direction is the other one: the everybody-home net
     // still ends the shot if a contender genuinely never arrives.
-    return pair.every((c) => !!findByIndex(racers, c.index, c.ref)?.finished);
+    // THE LEADING TWO ONLY, EVEN WHEN THE FRAMED SET IS LARGER (CONTENDER-ZOOM-1).
+    //
+    // DETECTION AND DURATION KEEP STARTING WITH TWO; only the FRAMING set widened. Letting the
+    // framed set decide when the shot ENDS made the photo finish wait for three to five racers
+    // instead of two and stretched it by 85% (7441 -> 13756 frames across ten tracks, measured),
+    // which is a different feature nobody asked for. The two are separated here deliberately.
+    return pair.slice(0, 2).every((c) => !!findByIndex(racers, c.index, c.ref)?.finished);
   }
 
   /** The best current comeback, or null. See comebackDetector.js for what "best" means. */
@@ -1229,9 +1235,27 @@ export class CameraDirector {
         // WHO the shot is following, captured once at entry. Index AND reference, the same dual
         // lookup the battle lock uses: the render path hands out spread-copies every frame so a
         // bare reference does not survive, and a harness racer may carry no index at all.
-        this._photoFinishContenders = ordered
-          .slice(0, 2)
-          .map((r) => ({ index: r.index ?? null, ref: r }));
+        // ── WHO THE SHOT IS ABOUT (CONTENDER-ZOOM-1) ────────────────────────────────────────
+        //
+        // EVERY RACER STILL IN THE FIGHT FOR THE WIN, which is a GEOMETRIC question and needs no
+        // number: a racer on the SAME LANE as somebody ahead of him cannot win any more — he would
+        // have to move aside AND then still overtake, and the photo finish is far too short for
+        // both. Everyone else is still contesting it.
+        //
+        // "SAME LANE" IS THE ENGINE'S OWN DEFINITION, not a new one. The race is LANE-FREE
+        // (raceBehavior.js's header says so) and `physicalY` is a continuous lateral offset, so
+        // there are no discrete lanes to read. `pairContact` there already fixes when two bodies
+        // overlap ACROSS the track — `halfWidthA + halfWidthB` — and rowLayout.js fixes the unit,
+        // one physicalY being trackWidth/2 world px. Both quantities are already here.
+        //
+        // DETECTION IS UNCHANGED: the gate above still enters on the top two, which is all it takes
+        // to establish that a photo finish is happening. This is the FRAMING set.
+        //
+        // CAPTURED ONCE, NEVER RE-SORTED — that is what FINISH-PAIR-1 bought, and it is why the
+        // set is stored by index and looked up live rather than recomputed each frame.
+        this._photoFinishContenders = (
+          this._contenderZoom ? this._abreastContenders(ordered) : ordered.slice(0, 2)
+        ).map((r) => ({ index: r.index ?? null, ref: r }));
         return { nextState: CAM_STATE.PHOTO_FINISH, reason: finish.text, data: {} };
       case FINISH_ACTION.ENTER_DRAMA:
         this._finishMomentExpiry = ts + this._finishDramaDurationMs;
@@ -1886,10 +1910,11 @@ export class CameraDirector {
     const live = [focusRacers[0] ?? null, focusRacers[1] ?? null];
     if (!this._photoFinishContenderFraming) return live;
     const captured = this._photoFinishContenders;
-    if (!captured || captured.length !== 2) return live;
-    const a = this._findByIndex(racers, captured[0].index, captured[0].ref);
-    const b = this._findByIndex(racers, captured[1].index, captured[1].ref);
-    return a && b ? [a, b] : live;
+    if (!captured || captured.length < 2) return live;
+    // CONTENDER-ZOOM-1: the whole captured set, not the first two of it. Looked up live by index —
+    // WHO is fixed, WHERE they are is not.
+    const found = captured.map((c) => this._findByIndex(racers, c.index, c.ref)).filter(Boolean);
+    return found.length >= 2 ? found : live;
   }
 
   _framingSubjects(racers, focusRacers) {
@@ -1943,7 +1968,12 @@ export class CameraDirector {
             : a
               ? { x: a.x, y: a.y }
               : null;
-        return { point, t: a && b ? (a.t + b.t) / 2 : (a?.t ?? null), pair: [a, b] };
+        // THE PAN STAYS ON THE LEADING PAIR, THE GUARANTEE TAKES THEM ALL (CONTENDER-ZOOM-1).
+        // `point` and `t` are unchanged — FINISH-PAIR-1 pinned them to a stable pair precisely so
+        // the picture does not lurch, and widening the pan to a centroid of a set that can change
+        // size would hand that back. What widens is the ZOOM: `pair` carries the whole captured set
+        // and `contenderGuarantee` fits every one of them. At a set of two the two are identical.
+        return { point, t: a && b ? (a.t + b.t) / 2 : (a?.t ?? null), pair: contenders };
       }
       case CAM_STATE.COMEBACK_ZOOM: {
         const locked =
@@ -2048,6 +2078,38 @@ export class CameraDirector {
       inner,
       at
     );
+  }
+
+  /**
+   * THE CONTENDERS, BY LANE — everyone not blocked by a racer ahead of them on their own lane.
+   *
+   * Two bodies are on the same lane when they OVERLAP across the track: their lateral separation is
+   * less than the sum of their half widths. That is `pairContact`'s `contactWidth` in
+   * `raceBehavior.js`, reused rather than restated, and the physicalY unit is rowLayout.js's — one
+   * unit is half a track width.
+   *
+   * @param {object[]} ordered  racers sorted by t, leader first
+   * @returns {object[]} the contenders, leader first
+   */
+  _abreastContenders(ordered) {
+    const tw = this._trackWidthPx;
+    if (!(tw > 0)) return ordered.slice(0, 2);
+    const out = [];
+    for (const r of ordered) {
+      let blocked = false;
+      for (const ahead of out) {
+        const lateralPx = (Math.abs((r.physicalY ?? 0) - (ahead.physicalY ?? 0)) * tw) / 2;
+        const contactWidth = ((r.drawnBodyWidthPx ?? 0) + (ahead.drawnBodyWidthPx ?? 0)) / 2;
+        if (contactWidth > 0 && lateralPx < contactWidth) {
+          blocked = true;
+          break;
+        }
+      }
+      if (!blocked) out.push(r);
+    }
+    // A field with no lateral data at all (a harness racer carries no physicalY) would return
+    // everyone; fall back to the pair rather than framing the whole grid.
+    return out.length >= 2 ? out : ordered.slice(0, 2);
   }
 
   /**

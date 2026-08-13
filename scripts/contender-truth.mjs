@@ -92,6 +92,37 @@ const ROSTER = resolveNameSet(DEFAULT_NAME_SET);
 const CFG = { ...DEFAULT_CAMERA_CONFIG, ...ARMS[ARM] };
 const THRESH = DEFAULT_CAMERA_CONFIG.photoFinishCloseThresholdT;
 
+// ── WHAT A LANE IS, TAKEN FROM THE ENGINE RATHER THAN INVENTED ─────────────────────────────────
+//
+// THE RACE IS LANE-FREE. `raceBehavior.js` says so in its own header ("lane-free avoidance"), and
+// `physicalY` is a CONTINUOUS lateral offset in [-1,+1]; `computeRowPhysicalY` only lays out the
+// START GRID. So there are no discrete lanes to read and "same lane" has to be geometric.
+//
+// THE ENGINE ALREADY DEFINES IT, for its own free-lane overlap check: `pairContact` in
+// raceBehavior.js gives `contactWidth = halfWidthA + halfWidthB`, the centre-to-centre distance at
+// which two bodies touch across the track. And rowLayout.js's own helper fixes the unit: one
+// physicalY unit is trackWidth/2 world px. Both quantities are already on the racer
+// (`drawnBodyWidthPx`) and on the director (`_trackWidthPx`), so nothing here is a new number.
+const sameLane = (a, b, trackWidthPx) => {
+  const lateralPx = (Math.abs((a.physicalY ?? 0) - (b.physicalY ?? 0)) * trackWidthPx) / 2;
+  const contactWidth = ((a.drawnBodyWidthPx ?? 0) + (b.drawnBodyWidthPx ?? 0)) / 2;
+  return contactWidth > 0 && lateralPx < contactWidth;
+};
+
+/**
+ * THE CONTENDERS: everyone not blocked by a racer ahead of them on their own lane.
+ *
+ * A racer sitting behind one of the leaders cannot win — he would have to move aside AND then still
+ * overtake, and the photo-finish phase is far too short for both. He is not a contender. Everyone
+ * else is still in the fight, and the shot is about them.
+ *
+ * @param {object[]} ordered  racers sorted by t, leader first
+ */
+const contendersOf = (ordered, trackWidthPx) =>
+  ordered.filter(
+    (r, i) => !ordered.slice(0, i).some((ahead) => sameLane(r, ahead, trackWidthPx)),
+  );
+
 const med = (a) => {
   if (!a.length) return NaN;
   const s = [...a].sort((x, y) => x - y);
@@ -119,6 +150,9 @@ for (const geo of loadTracks({ only: ONLY })) {
     );
 
     let entrySeen = false;
+    let contenderIdx = [];
+    let contendersAtEntry = 0;
+    let othersInFrame = 0;
     let levelAtEntry = 0; // how many racers are within closeThresholdT of the leader at entry
     let capturedAtEntry = 0; // how many the director actually pinned
     let gapsAtEntry = []; // the top six arc gaps to the leader, at entry
@@ -145,30 +179,42 @@ for (const geo of loadTracks({ only: ONLY })) {
           prevFinished = s.finishedCount;
           return;
         }
-        // ── STAGE A: the level set, measured ONCE at entry ──────────────────────────────────────
-        const live = s.racers.filter((r) => r && !r.finished);
+        // ── STAGE A: THE CONTENDER SET, captured ONCE at entry ──────────────────────────────────
+        //
+        // CAPTURED, NOT RECOMPUTED. FINISH-PAIR-1 exists because a guaranteed set that is re-sorted
+        // every frame moves the picture on every swap. The set below is taken on the entry frame and
+        // then followed by index for the rest of the shot, which is what that block bought.
         const ordered = [...s.racers].sort((a, b) => b.t - a.t);
         const leader = ordered[0];
         if (!entrySeen) {
           entrySeen = true;
           capturedAtEntry = d._photoFinishContenders?.length ?? 0;
+          const set = contendersOf(ordered, trackWidthPx);
+          contenderIdx = set.map((r) => r.index);
+          contendersAtEntry = set.length;
+          // For the record: how many the OLD arc-threshold yardstick would have called level. It is
+          // reported to show the two disagree, and for no other purpose.
           levelAtEntry = ordered.filter(
             (r) => shortestArcDeltaT(leader.t, r.t) <= THRESH,
           ).length;
-          gapsAtEntry = ordered
-            .slice(0, 6)
-            .map((r) => shortestArcDeltaT(leader.t, r.t));
+          gapsAtEntry = ordered.slice(0, 6).map((r) => shortestArcDeltaT(leader.t, r.t));
         }
         if (!fp?.point) return;
         pfFrames++;
 
-        // ── STAGE B: are the PARTICIPANTS whole? ────────────────────────────────────────────────
-        // The participants are the level set — everyone the gate's own predicate calls close to the
-        // leader — not the pinned pair, because grading an arm on the set it chose is how a harness
-        // flatters itself (FRONT-GROUP-1).
-        const participants = ordered.filter(
-          (r) => shortestArcDeltaT(leader.t, r.t) <= THRESH,
-        );
+        // ── STAGE B: are the CONTENDERS whole? THAT IS THE CRITERION ────────────────────────────
+        //
+        // The contenders are the racers captured at entry — everyone not blocked by a racer ahead of
+        // them on their own lane. Graded by INDEX against this frame's array, so a spread-copy does
+        // not break the lookup.
+        //
+        // EVERYONE ELSE IS INFORMATION ONLY. A racer further back appearing in frame is NOT a defect
+        // and their absence is NOT a success; the owner has said so explicitly. The `others` counters
+        // below exist so a reader can see what is happening, and must never become a target.
+        const participants = contenderIdx
+          .map((ix) => s.racers.find((r) => r.index === ix))
+          .filter(Boolean);
+        const others = s.racers.filter((r) => !contenderIdx.includes(r.index));
         const eX = proj.effX(d.zoom);
         const eY = proj.effY(d.zoom);
         const dScale = computeRenderDisplayScale(
@@ -210,6 +256,10 @@ for (const geo of loadTracks({ only: ONLY })) {
           if (centreIn) c++;
           else o++;
         }
+        for (const r of others) {
+          const p = proj.toScreen(r, d.zoom, d.offsetX, d.offsetY);
+          if (p.x >= 0 && p.x <= CW && p.y >= 0 && p.y <= CH) { othersInFrame++; break; }
+        }
         if (c > 0) cut++;
         if (o > 0) outside++;
         if (c + o > 0) notWhole++;
@@ -235,6 +285,8 @@ for (const geo of loadTracks({ only: ONLY })) {
       track: geo.id,
       seed: raceSeed,
       levelAtEntry,
+      contendersAtEntry,
+      othersInFrame,
       capturedAtEntry,
       gapsAtEntry,
       pfFrames,
@@ -259,7 +311,7 @@ console.log(
     `the SAME predicate the entry gate uses, asked of every racer instead of second place alone.\n`,
 );
 console.log(
-  "track            seed   level  captured   gaps to the leader, top 6 (lap-normalised arc)",
+  "track            seed  CONTENDERS  pinned  (old arc yardstick said)   gaps to the leader, top 6",
 );
 for (const r of rows) {
   if (!r.pfFrames && !r.levelAtEntry) {
@@ -267,8 +319,8 @@ for (const r of rows) {
     continue;
   }
   console.log(
-    `${r.track.padEnd(15)} ${String(r.seed).padStart(5)} ${String(r.levelAtEntry).padStart(6)} ` +
-      `${String(r.capturedAtEntry).padStart(9)}   ` +
+    `${r.track.padEnd(15)} ${String(r.seed).padStart(5)} ${String(r.contendersAtEntry).padStart(11)} ` +
+      `${String(r.capturedAtEntry).padStart(7)} ${String(r.levelAtEntry).padStart(20)}       ` +
       r.gapsAtEntry.map((g) => g.toFixed(4)).join("  "),
   );
 }
