@@ -163,9 +163,13 @@ export function renderRaceFrame(ctx, f) {
     inst.render(ctx);
     ctx.restore();
   }
-  if (!isOpenTrack) drawEditorTrackSurface(ctx, shape);
+  // FINISH-READABLE-1: the finish gate takes the effective zoom so its marks hold a constant SCREEN
+  // size — a world-sized mark shrinks with the shot, which is why the label measured 3.9 px at the
+  // widest overview and the owner reported the finish as simply not there.
+  if (!isOpenTrack) drawEditorTrackSurface(ctx, shape, effZoomX, effZoomY);
   drawTrackLights(ctx, cachedLightPts, trackLightsConfig, ts, !isOpenTrack, effZoomX);
-  if (isOpenTrack && st.finishT < 1) drawOpenTrackFinishLine(ctx, shape, st.finishT, openTrackHW);
+  if (isOpenTrack && st.finishT < 1)
+    drawOpenTrackFinishLine(ctx, shape, st.finishT, openTrackHW, effZoomX, effZoomY);
   drawParticles(ctx, st.dustParticles, st.burstParticles);
   drawSurfaceTrails(ctx, st.racers);
 
