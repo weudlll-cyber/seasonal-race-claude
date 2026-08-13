@@ -78,6 +78,11 @@ const { DEFAULT_CAMERA_CONFIG, DEFAULT_CONFIG_WORLD } = await import(
 const { EditorShape } = await import(
   u("client/src/modules/track-editor/EditorShape.js")
 );
+// CAMERA-ENDING-WINDOW-1: the instrument's stop condition comes from the GAME's ending arithmetic,
+// not from a condition typed in this file. See the loop below for why that is the requirement.
+const { endingOnRaceScreenMs } = await import(
+  u("client/src/screens/RaceScreen/endingSchedule.js")
+);
 const { CameraDirector } = await import(
   u("client/src/modules/camera/CameraDirector.js")
 );
@@ -113,9 +118,17 @@ const CHEAP = isCheap();
 // CAMERA-COMPANY-ONLY-1 probe. Off by default, so the DEFAULT invocation — the one the ceremony and
 // every gate use — is untouched. With it, the hash is a PROBE VALUE, not a baseline.
 const COMPANY_ONLY = process.argv.includes("--company-only");
-const CAM_CFG = COMPANY_ONLY
-  ? { ...DEFAULT_CAMERA_CONFIG, companyOnlyFraming: true }
-  : DEFAULT_CAMERA_CONFIG;
+// CAMERA-ENDING-WINDOW-1 probe, same shape and same rules as --company-only above. It turns
+// `endingKeepsFinishShot` OFF, which is the arm in which the director does NOT compose the ending —
+// so this instrument stops at the last crossing exactly as it did before this block, and the value
+// it prints must be the PREDECESSOR fingerprint. That is the block's own off-arm promise, and it is
+// something to RUN rather than assert. Like --company-only, the result is a PROBE, not a baseline.
+const ENDING_OFF = process.argv.includes("--ending-off");
+const CAM_CFG = {
+  ...DEFAULT_CAMERA_CONFIG,
+  ...(COMPANY_ONLY ? { companyOnlyFraming: true } : {}),
+  ...(ENDING_OFF ? { endingKeepsFinishShot: false } : {}),
+};
 
 const dir = existsSync(join(ROOT, "server/data/tracks"))
   ? join(ROOT, "server/data/tracks")
@@ -201,12 +214,49 @@ function trackHash(geo) {
   const raceStart = ts;
   st.physicsTs = 0;
   let frames = 0;
-  while (st.finishedCount < N && ts - raceStart < 200000) {
+  // ── THE WINDOW REACHES THE ENDING, AND IT IS DERIVED (CAMERA-ENDING-WINDOW-1) ──────────────────
+  //
+  // This loop ran `while (st.finishedCount < N)`, so it stopped on the exact frame the ending
+  // BEGINS and never rendered a single FINISHED frame. ENDING-PICTURE-1 — which made RaceScreen keep
+  // consulting the director through PHASE.FINISHED so an in-flight zoom-out can come to rest —
+  // was therefore INVISIBLE to the camera's own change detector. A shipped camera feature, outside
+  // the reach of the instrument whose whole job is to notice camera changes.
+  //
+  // THE STOP IS NOW THE ENDING'S OWN SCHEDULE, not a condition typed here. `endingOnRaceScreenMs`
+  // is the same function `RaceScreen` uses to set the navigate-away timer, so the window is exactly
+  // as long as the race screen is up — and a future change that lengthens the ending lengthens this
+  // window with it, which is the property the old fixed condition could not have. That is the
+  // requirement: a change must not be able to blind this instrument silently.
+  //
+  // IT HONOURS `endingKeepsFinishShot`, because the GAME does. RaceScreen consults the director
+  // through PHASE.FINISHED only when that key is on; with it off the ending is not the director's
+  // and there is nothing there to hash. Ignoring it would make this instrument measure behaviour
+  // the product does not run — and it is also the sharpest available proof that this change adds
+  // EXACTLY the ending and nothing else: with the key off, the hash returns to its pre-block value.
+  const endingMs = CAM_CFG.endingKeepsFinishShot
+    ? endingOnRaceScreenMs({
+        holdMs: CAM_CFG.finishHoldAfterLastMs,
+        pauseMs: CAM_CFG.finishPauseMs,
+      })
+    : 0;
+  let allHomeTs = null;
+  let endingFrames = 0;
+  while (ts - raceStart < 200000) {
+    if (allHomeTs !== null && ts - allHomeTs >= endingMs) break;
     accum += RAW;
     let steps = 0;
-    while (accum >= FIXED_DT && steps++ < 2) {
-      stepRacePhysics(st, raceCfg);
-      accum -= FIXED_DT;
+    // PHYSICS DOES NOT STEP ONCE EVERYONE IS HOME, and that is the game's rule rather than this
+    // harness's convenience — RaceScreen stops stepping at PHASE.FINISHED, which is what lets
+    // ENDING-PICTURE-1 claim the director "sees a static field" and converges. Stepping here would
+    // hash an ending no player ever sees.
+    if (allHomeTs === null) {
+      while (accum >= FIXED_DT && steps++ < 2) {
+        stepRacePhysics(st, raceCfg);
+        accum -= FIXED_DT;
+      }
+    } else {
+      accum = 0;
+      endingFrames++;
     }
     cd.update(
       st.racers,
@@ -239,8 +289,11 @@ function trackHash(geo) {
     );
     frames++;
     ts += RAW;
+    // Latched on the FIRST frame everyone is home, after that frame has been hashed — so the ending
+    // window starts where the race stops, with no frame counted twice and none dropped.
+    if (allHomeTs === null && st.finishedCount >= N) allHomeTs = ts;
   }
-  return { hash: h.digest("hex").slice(0, 16), frames };
+  return { hash: h.digest("hex").slice(0, 16), frames, endingFrames };
 }
 
 const geos = [];
@@ -259,9 +312,32 @@ if (CHEAP)
 const combined = createHash("sha256");
 const rows = [];
 for (const geo of RUN_GEOS) {
-  const { hash, frames } = trackHash(geo);
+  const { hash, frames, endingFrames } = trackHash(geo);
   combined.update(geo.id + ":" + hash + "\n");
-  rows.push({ id: geo.id, hash, frames });
+  rows.push({ id: geo.id, hash, frames, endingFrames });
+}
+
+// ── PROOF OF LIVE FOR THE ENDING WINDOW (Lesson 187, CAMERA-ENDING-WINDOW-1) ────────────────────
+//
+// The whole point of this block is that the ending is now IN the hash. If a future change stopped
+// the loop before the ending again, every number printed here would still look perfectly reasonable
+// and the hash would still be a hash — which is exactly how the old blindness lasted as long as it
+// did. So the instrument REFUSES rather than noting it: zero ending frames anywhere is a failure.
+//
+// It is "at least one track", not "every track". garden-path does not finish inside the harness's
+// 200 s wall-clock ceiling, so it has no ending to sample and never did; demanding all ten would
+// fail on a race that is simply too long, which is a different problem and not this one.
+const withEnding = rows.filter((r) => r.endingFrames > 0);
+// --ending-off is the one arm where zero is the EXPECTED answer rather than the failure: the key it
+// turns off is what puts the ending in the director's hands at all.
+if (!CHEAP && !ENDING_OFF && withEnding.length === 0) {
+  console.error(
+    "\nFAIL: NOT ONE TRACK produced a FINISHED frame, so this hash does not cover the ending at\n" +
+      "      all — the exact blindness CAMERA-ENDING-WINDOW-1 removed. The window comes from\n" +
+      "      endingOnRaceScreenMs(); either the ending has been shortened to nothing or this loop\n" +
+      "      no longer reaches it. Refusing to print a value that would look like a baseline.",
+  );
+  process.exit(1);
 }
 // The cheap hash carries a prefix so it CANNOT match the 16-hex shape the record and the
 // containment guard expect. A cheap run must be unable to impersonate a measurement.
@@ -274,10 +350,19 @@ if (QUIET) {
 } else {
   console.log(
     `CAMERA ${COMBINED} (seed=${SEED} camSeed=${CAM_SEED}, ${RUN_GEOS.length} tracks, ${N} racers, ` +
-      `${COMPANY_ONLY ? "PROBE: companyOnlyFraming=true — NOT a baseline" : "default config"})`,
+      `${COMPANY_ONLY ? "PROBE: companyOnlyFraming=true — NOT a baseline" : ENDING_OFF ? "PROBE: endingKeepsFinishShot=false — NOT a baseline" : "default config"})`,
   );
   for (const r of rows)
-    console.log(`  ${r.id.padEnd(16)} ${r.hash}  ${r.frames} frames`);
+    console.log(
+      `  ${r.id.padEnd(16)} ${r.hash}  ${String(r.frames).padStart(5)} frames` +
+        `  (${r.endingFrames} after the last crossing)`,
+    );
+  console.log(
+    `\n  THE ENDING IS IN THIS HASH — ${withEnding.length} of ${rows.length} tracks contributed ` +
+      `FINISHED frames.\n  The window is endingOnRaceScreenMs(), the same arithmetic RaceScreen ` +
+      `navigates away on.\n  garden-path does not finish inside the 200 s ceiling, so it has no ` +
+      `ending to sample.`,
+  );
   console.log(
     "\n  Covers the DIRECTOR only — state, phase, anchor, zoom, offsets, camT, targets.\n" +
       "  Not the render path (sprite scale, name-tag layout, drawing).",

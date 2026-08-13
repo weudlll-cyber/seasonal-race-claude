@@ -55,8 +55,14 @@ const withCopy = (fn) => {
 
 test("the counts are DERIVED, and the third is not the difference of the first two", () => {
   const c = ceremonyCounts();
-  assert.ok(c.closure > 0, "an empty closure means engine-reach returned nothing");
-  assert.ok(c.folder > c.closure, "the folder rule fired on more files than the closure holds");
+  assert.ok(
+    c.closure > 0,
+    "an empty closure means engine-reach returned nothing",
+  );
+  assert.ok(
+    c.folder > c.closure,
+    "the folder rule fired on more files than the closure holds",
+  );
   // THE WHOLE POINT of computing rather than subtracting: the closure is not a subset of the folder,
   // so `folder - closure` is wrong by however many closure members sit outside it. If this ever
   // becomes an empty list the subtraction would be correct — and this assertion would say so.
@@ -85,7 +91,11 @@ test("--check-counts FAILS when a count is edited by hand", () => {
       `| of those, files that CANNOT reach the engine | ${c.unreachable} |`,
       `| of those, files that CANNOT reach the engine | ${c.unreachable + 1} |`,
     );
-    assert.notEqual(sabotaged, text, "the sabotage did not match — the row wording moved");
+    assert.notEqual(
+      sabotaged,
+      text,
+      "the sabotage did not match — the row wording moved",
+    );
     writeFileSync(copy, sabotaged);
     const r = run("--check-counts", `--doc=${copy}`);
     assert.equal(r.status, 1, "a wrong count must fail the check");
@@ -99,7 +109,11 @@ test("--check-counts FAILS when the block is missing entirely", () => {
       /<!-- BEGIN GENERATED: engine-reach counts[\s\S]*?<!-- END GENERATED: engine-reach counts -->/,
       "",
     );
-    assert.notEqual(stripped, text, "the markers were not found — they have been renamed");
+    assert.notEqual(
+      stripped,
+      text,
+      "the markers were not found — they have been renamed",
+    );
     writeFileSync(copy, stripped);
     const r = run("--check-counts", `--doc=${copy}`);
     assert.equal(r.status, 1, "a missing block must fail the check");
@@ -115,7 +129,11 @@ test("--counts REPAIRS a sabotaged block, and repairing it is idempotent", () =>
     assert.equal(run("--check-counts", `--doc=${copy}`).status, 0);
     const once = readFileSync(copy, "utf8");
     run("--counts", `--doc=${copy}`);
-    assert.equal(readFileSync(copy, "utf8"), once, "a second write changed the document");
+    assert.equal(
+      readFileSync(copy, "utf8"),
+      once,
+      "a second write changed the document",
+    );
   });
 });
 
@@ -125,7 +143,10 @@ test("the block is PURE ARITHMETIC — the argument stays outside the markers", 
   const block = countsBlock();
   const body = block
     .split("\n")
-    .filter((l) => l.startsWith("|") && !l.startsWith("| count") && !/^\|\s*-/.test(l));
+    .filter(
+      (l) =>
+        l.startsWith("|") && !l.startsWith("| count") && !/^\|\s*-/.test(l),
+    );
   assert.ok(body.length >= 3, "fewer than three count rows");
   for (const line of body) {
     const value = line.split("|").at(-2).trim();

@@ -1304,6 +1304,23 @@ function CameraAdvancedSection() {
       {/* ── 7. Endgame ── */}
       <div className={s.card}>
         <SectionHeading>7 · Endgame</SectionHeading>
+        <label
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: '0.5rem',
+            marginBottom: '0.6rem',
+          }}
+        >
+          <input
+            type="checkbox"
+            data-testid="run-in-shot"
+            checked={config.runInShot ?? DEFAULT_CAMERA_CONFIG.runInShot}
+            onChange={(e) => set('runInShot', e.target.checked)}
+          />
+          <span style={{ fontWeight: 600 }}>Frame the finish through the run-in</span>
+          <InfoTooltip text="On (default): once the finish line can be framed without opening wider than the OVERVIEW shot, the camera keeps it in frame until the first racer crosses — opening only as far as the line needs and tightening by itself as the leader closes. It does not change WHICH shot is running; it bounds whatever shot is, and never tightens past that shot's own zoom. While it composes, the leader is centred rather than framed forward, because the thing worth seeing is now ahead of him. Off is the pre-2026-08-12 behaviour." />
+        </label>
         <div className={s.formGrid}>
           <div className={s.formGroup}>
             <label
@@ -1312,7 +1329,7 @@ function CameraAdvancedSection() {
             >
               Endgame Focus Threshold
               <InfoTooltip
-                text={`From this leader-progress value the camera locks to LEADER_ZOOM (except during LEAD_CHANGE). Currently: ${((config.endgameThreshold ?? DEFAULT_CAMERA_CONFIG.endgameThreshold) * 100).toFixed(0)}%.`}
+                text={`From this leader-progress value the camera locks to LEADER_ZOOM (except during LEAD_CHANGE), and it is also where the run-in framing above begins. Currently: ${((config.endgameThreshold ?? DEFAULT_CAMERA_CONFIG.endgameThreshold) * 100).toFixed(0)}%.`}
               />
             </label>
             <input
@@ -1449,6 +1466,29 @@ function CameraAdvancedSection() {
               onChange={(e) => {
                 const v = Number(e.target.value);
                 if (v >= 500 && v <= 8000) set('finishOverviewZoomOutDurationMs', v);
+              }}
+            />
+          </div>
+          <div className={s.formGroup}>
+            <label
+              className={s.label}
+              style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}
+            >
+              Run-in opening (ms)
+              <InfoTooltip
+                text={`How long the camera takes to open the shot when the run-in begins, BEFORE the crossing. Its own control: it used to share the zoom-out duration above, which meant tuning either moved the other. Faster shows the finish line sooner; slower is calmer but the camera trails its subject more while it moves. Currently: ${config.runInOpenMs ?? DEFAULT_CAMERA_CONFIG.runInOpenMs}ms.`}
+              />
+            </label>
+            <input
+              type="number"
+              className={s.input}
+              min={0}
+              max={6000}
+              step={250}
+              value={config.runInOpenMs ?? DEFAULT_CAMERA_CONFIG.runInOpenMs}
+              onChange={(e) => {
+                const v = Number(e.target.value);
+                if (v >= 0 && v <= 6000) set('runInOpenMs', v);
               }}
             />
           </div>

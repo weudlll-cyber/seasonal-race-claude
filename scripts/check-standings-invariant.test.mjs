@@ -55,13 +55,18 @@ const HEALTHY = {
 function run(files) {
   const dir = mkdtempSync(join(tmpdir(), "ra-standings-"));
   try {
-    for (const [name, body] of Object.entries(files)) writeFileSync(join(dir, name), body);
+    for (const [name, body] of Object.entries(files))
+      writeFileSync(join(dir, name), body);
     try {
-      const out = execFileSync(process.execPath, [SCRIPT, "--source", `--src=${dir}`], {
-        cwd: ROOT,
-        encoding: "utf8",
-        stdio: ["ignore", "pipe", "ignore"],
-      });
+      const out = execFileSync(
+        process.execPath,
+        [SCRIPT, "--source", `--src=${dir}`],
+        {
+          cwd: ROOT,
+          encoding: "utf8",
+          stdio: ["ignore", "pipe", "ignore"],
+        },
+      );
       return { code: 0, out };
     } catch (e) {
       return { code: e.status ?? 1, out: `${e.stdout ?? ""}` };
@@ -120,7 +125,10 @@ test("…and by what the COMPOSITION hands it, which is where a re-render would 
 test("a layer that disappears is caught, not silently skipped", () => {
   const r = run({
     ...HEALTHY,
-    "Scoreboard.jsx": HEALTHY["Scoreboard.jsx"].replace("<ScoreboardSlots count={cards.length} />", ""),
+    "Scoreboard.jsx": HEALTHY["Scoreboard.jsx"].replace(
+      "<ScoreboardSlots count={cards.length} />",
+      "",
+    ),
   });
   assert.equal(r.code, 1);
   assert.match(r.out, /no longer renders <ScoreboardSlots>/);
@@ -154,9 +162,14 @@ test("the DECLARATION names its blind spots, which is what verify prints on a gr
     cwd: ROOT,
     encoding: "utf8",
   });
-  const GUARD = JSON.parse(raw.split("\n").find((l) => l.trim().startsWith("{")));
+  const GUARD = JSON.parse(
+    raw.split("\n").find((l) => l.trim().startsWith("{")),
+  );
   assert.equal(GUARD.id, "check-standings-invariant");
-  assert.ok(GUARD.blind.length > 0, "a guard with no declared holes is claiming to have none");
+  assert.ok(
+    GUARD.blind.length > 0,
+    "a guard with no declared holes is claiming to have none",
+  );
   assert.ok(
     GUARD.files.includes("docs/STANDINGS-ARCHITECTURE.md"),
     "the rule's document must select the guard that enforces it",

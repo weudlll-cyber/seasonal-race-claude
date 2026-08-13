@@ -63,7 +63,9 @@ const { attachRenderState, attachRacerRenderState } = await import(
 const { QUICK_TEST_NAMES_MIXED: NAMES } = await import(
   u("client/src/modules/racerNames.js")
 );
-const { assignRaceNumbers } = await import(u("client/src/modules/raceNumbers.js"));
+const { assignRaceNumbers } = await import(
+  u("client/src/modules/raceNumbers.js")
+);
 const { loadTracks, resolveIdentity, buildRace, runRace } = await import(
   u("scripts/lib/raceDriver.mjs")
 );
@@ -123,13 +125,20 @@ const drawnOld = (row, i) => ({
   badgeBorder: rankBorderColor(i + 1),
   textColor: cardTextColor(i + 1),
   finished: !!row.finished,
-  finishTimeMs: row.finished && row.finishTimeMs != null ? row.finishTimeMs : null,
+  finishTimeMs:
+    row.finished && row.finishTimeMs != null ? row.finishTimeMs : null,
 });
 
 const geo = loadTracks({ only: "mountainstreet" })[0];
-assert.ok(geo, "mountainstreet not found — this test measures nothing without it");
+assert.ok(
+  geo,
+  "mountainstreet not found — this test measures nothing without it",
+);
 
-const identity = resolveIdentity({ racers: 40, note: "SCOREBOARD-SLOT-LAYER parity" });
+const identity = resolveIdentity({
+  racers: 40,
+  note: "SCOREBOARD-SLOT-LAYER parity",
+});
 const race = buildRace(geo, identity, DEFAULT_CAMERA_CONFIG);
 attachRenderState(race.st);
 attachRacerRenderState(race.st.racers);
@@ -146,7 +155,12 @@ race.st.racers.forEach((r) => {
 const identities = new Map(
   race.st.racers.map((r) => [
     r.index,
-    { index: r.index, icon: r.icon, name: r.name, raceNumber: r.raceNumber ?? null },
+    {
+      index: r.index,
+      icon: r.icon,
+      name: r.name,
+      raceNumber: r.raceNumber ?? null,
+    },
   ]),
 );
 
@@ -154,13 +168,12 @@ const identities = new Map(
 // with a `style` bag is a faithful stand-in — and using the shipped module rather than a copy of its
 // arithmetic is the entire point: a change to how a place becomes a y fails HERE.
 const positions = createScoreboardPositions();
-const cards = new Map(
-  race.st.racers.map((r) => [r.index, { style: {} }]),
-);
+const cards = new Map(race.st.racers.map((r) => [r.index, { style: {} }]));
 for (const [index, el] of cards) positions.attach(index, el);
 
 /** The y a card is currently translated to, parsed back out of what the positioner wrote. */
-const yOf = (el) => Number(/translateY\(([-\d.]+)px\)/.exec(el.style.transform)?.[1]);
+const yOf = (el) =>
+  Number(/translateY\(([-\d.]+)px\)/.exec(el.style.transform)?.[1]);
 
 // Drive the race and capture, at every cadence tick, BOTH the reference list and what the two layers
 // would put on screen — exactly where and how the component does it.
@@ -188,7 +201,8 @@ runRace(race, identity, DEFAULT_CAMERA_CONFIG, ({ st }) => {
             name: id.name,
             raceNumber: id.raceNumber,
             finished: !!r.finished,
-            finishTimeMs: r.finished && r.finishTimeMs != null ? r.finishTimeMs : null,
+            finishTimeMs:
+              r.finished && r.finishTimeMs != null ? r.finishTimeMs : null,
           };
         })
         .sort((a, b) => a.y - b.y);
@@ -200,7 +214,9 @@ runRace(race, identity, DEFAULT_CAMERA_CONFIG, ({ st }) => {
 });
 
 // The static layer, built once for this field — exactly as ScoreboardSlots does.
-const slotLayer = Array.from({ length: race.st.racers.length }, (_, i) => slotAt(i + 1));
+const slotLayer = Array.from({ length: race.st.racers.length }, (_, i) =>
+  slotAt(i + 1),
+);
 
 test("the race under test actually ran, and finished — otherwise nothing below is exercised", () => {
   // A floor, not a pin (Lesson 187): a race that stopped after two ticks would pass every check
@@ -216,7 +232,11 @@ test("WHAT IS DRAWN matches the old list, position for position, every tick of a
   // The whole claim, and it is now about the PICTURE rather than about a prop bag: at each visual
   // position, the same racer, under the same badge, in the same colours, with the same finish time.
   for (const t of ticks) {
-    assert.equal(t.drawn.length, t.old.length, `tick ${t.physicsTs}: row count`);
+    assert.equal(
+      t.drawn.length,
+      t.old.length,
+      `tick ${t.physicsTs}: row count`,
+    );
     for (let i = 0; i < t.old.length; i++) {
       const card = t.drawn[i];
       const slot = slotLayer[i];
@@ -236,7 +256,11 @@ test("WHAT IS DRAWN matches the old list, position for position, every tick of a
         `tick ${t.physicsTs}, visual position ${i}: the list drew something else`,
       );
       // ...and the card is actually AT that slot, not merely in that order.
-      assert.equal(card.y, slot.y, `tick ${t.physicsTs}, position ${i}: card and slot disagree on y`);
+      assert.equal(
+        card.y,
+        slot.y,
+        `tick ${t.physicsTs}, position ${i}: card and slot disagree on y`,
+      );
     }
   }
 });
@@ -254,7 +278,9 @@ test("the ys are one pitch apart and used exactly once — no overlap, no empty 
 
 test("SABOTAGE — one rank moved by one is caught, so the comparison is not vacuous", () => {
   const t = ticks[Math.floor(ticks.length / 2)];
-  const broken = t.drawn.map((c, i) => (i === 3 ? { ...c, index: t.drawn[4].index } : c));
+  const broken = t.drawn.map((c, i) =>
+    i === 3 ? { ...c, index: t.drawn[4].index } : c,
+  );
   assert.throws(() => {
     for (let i = 0; i < t.old.length; i++) {
       assert.equal(broken[i].index, t.old[i].index);
@@ -266,9 +292,15 @@ test("the identity handed to each card is the SAME OBJECT, and is never MUTATED"
   // What makes `memo` able to skip a card at all. If the identities were rebuilt, or written to, the
   // component would still be correct and the block would have bought nothing — and the second
   // failure is worse than the first: a mutated identity compares equal and the card freezes.
-  const first = new Map([...identities].map(([k, v]) => [k, JSON.stringify(v)]));
+  const first = new Map(
+    [...identities].map(([k, v]) => [k, JSON.stringify(v)]),
+  );
   for (const [index, id] of identities) {
-    assert.equal(JSON.stringify(id), first.get(index), `racer ${index}: its identity changed`);
+    assert.equal(
+      JSON.stringify(id),
+      first.get(index),
+      `racer ${index}: its identity changed`,
+    );
   }
 });
 
@@ -283,8 +315,14 @@ test("the tick writes ONLY what moved — the cost this block exists to remove",
   );
   // At least one tick in a real race must have moved NOTHING or nearly nothing, or the skip is dead
   // code; and at least one must have moved something, or the list is frozen. Both, over one race.
-  assert.ok(Math.min(...moves.slice(1)) < n, "every tick rewrote the whole field — nothing is skipped");
-  assert.ok(Math.max(...moves.slice(1)) > 0, "no tick ever moved a card — the standings are frozen");
+  assert.ok(
+    Math.min(...moves.slice(1)) < n,
+    "every tick rewrote the whole field — nothing is skipped",
+  );
+  assert.ok(
+    Math.max(...moves.slice(1)) > 0,
+    "no tick ever moved a card — the standings are frozen",
+  );
   // And the COLOURS: only a change across the top-three boundary may write one.
   const recoloured = ticks.reduce((a, t) => a + t.write.recoloured, 0);
   const moved = ticks.reduce((a, t) => a + t.write.moved, 0);
@@ -303,18 +341,36 @@ test("the badge column is ONE width, taken from the widest place the field can p
   // SHIP-THE-STANDINGS: the `#` is gone and the figures are tabular, so a label's width is a pure
   // function of its LENGTH and these numbers are the widest label each field can actually produce —
   // not the widest of a digit class. The crown sets the floor below three digits.
-  assert.equal(badgeWidthPx(8), 24, "a one-digit field is sized by its CROWN, not by `9`");
+  assert.equal(
+    badgeWidthPx(8),
+    24,
+    "a one-digit field is sized by its CROWN, not by `9`",
+  );
   assert.equal(badgeWidthPx(9), 24);
-  assert.equal(badgeWidthPx(40), 24, "two digits still fit inside the crown's width");
+  assert.equal(
+    badgeWidthPx(40),
+    24,
+    "two digits still fit inside the crown's width",
+  );
   assert.equal(badgeWidthPx(99), 24);
   assert.equal(badgeWidthPx(100), 31, "`100` is what the list really shows");
-  assert.equal(badgeWidthPx(140), 31, "140 racers is still three digits — same column");
+  assert.equal(
+    badgeWidthPx(140),
+    31,
+    "140 racers is still three digits — same column",
+  );
   assert.equal(badgeWidthPx(999), 31);
   assert.equal(badgeWidthPx(1000), 39);
-  assert.ok(badgeWidthPx(100) >= Math.ceil(CROWN_WIDTH_PX), "the crown must fit at every field size");
+  assert.ok(
+    badgeWidthPx(100) >= Math.ceil(CROWN_WIDTH_PX),
+    "the crown must fit at every field size",
+  );
   // Monotone, so a bigger field can never get a narrower column.
   for (let n = 1; n < 400; n++) {
-    assert.ok(badgeWidthPx(n + 1) >= badgeWidthPx(n), `width went backwards at ${n}`);
+    assert.ok(
+      badgeWidthPx(n + 1) >= badgeWidthPx(n),
+      `width went backwards at ${n}`,
+    );
   }
   // It is a function of the FIELD, not of a place: every row in a 100-racer field gets 40.
   assert.equal(badgeWidthPx(100), badgeWidthPx(100));
@@ -329,7 +385,10 @@ test("the badge column is ONE width, taken from the widest place the field can p
 // (Chrome 141, headed and headless, this machine); neither node nor jsdom does layout, so nothing
 // here can re-derive any of it. Stated plainly rather than papered over.
 
-const CSS = readFileSync(join(ROOT, "client/src/screens/RaceScreen/RaceScreen.css"), "utf8");
+const CSS = readFileSync(
+  join(ROOT, "client/src/screens/RaceScreen/RaceScreen.css"),
+  "utf8",
+);
 const block = (selector) => {
   const at = CSS.indexOf(selector);
   assert.notEqual(at, -1, `${selector} is gone from RaceScreen.css`);
@@ -338,8 +397,16 @@ const block = (selector) => {
 
 test("the CSS the measured constants depend on has not moved", () => {
   const shared = block(".scoreboard-card,\n.scoreboard-slot {");
-  assert.match(shared, /padding:\s*5px 3px/, "row padding changed — re-measure ROW_PITCH_PX");
-  assert.match(shared, /position:\s*absolute/, "the rows are back in flow — the transform now overlaps them");
+  assert.match(
+    shared,
+    /padding:\s*5px 3px/,
+    "row padding changed — re-measure ROW_PITCH_PX",
+  );
+  assert.match(
+    shared,
+    /position:\s*absolute/,
+    "the rows are back in flow — the transform now overlaps them",
+  );
   assert.match(
     shared,
     /grid-template-columns:\s*var\(--sb-badge-w[^)]*\) 1fr auto/,

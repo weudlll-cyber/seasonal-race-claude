@@ -84,7 +84,9 @@ const MID_AT_SEC = Number(flag("midAt", 30));
 const VW = Number(flag("width", 1280));
 const VH = Number(flag("height", 665));
 
-const geo = JSON.parse(readFileSync(join(ROOT, `server/data/tracks/${TRACK}.json`), "utf8"));
+const geo = JSON.parse(
+  readFileSync(join(ROOT, `server/data/tracks/${TRACK}.json`), "utf8"),
+);
 
 const racers = Array.from({ length: RACERS }, (_, i) => ({
   id: `p${i}`,
@@ -137,7 +139,9 @@ function stats(frames) {
   }
   const pct = (arr, p) => {
     const s = [...arr].sort((a, b) => a - b);
-    return +s[Math.min(s.length - 1, Math.floor(((s.length - 1) * p) / 100))].toFixed(2);
+    return +s[
+      Math.min(s.length - 1, Math.floor(((s.length - 1) * p) / 100))
+    ].toFixed(2);
   };
   return {
     frames: n,
@@ -165,18 +169,26 @@ async function runArm(arm) {
     ],
   });
   try {
-    const ctx = await browser.newContext({ viewport: { width: VW, height: VH } });
+    const ctx = await browser.newContext({
+      viewport: { width: VW, height: VH },
+    });
     await ctx.addInitScript(
       ({ geo, activeRace, cadence }) => {
         localStorage.setItem(
           "racearena:lastUser",
-          JSON.stringify({ name: "bench", role: "admin" })
+          JSON.stringify({ name: "bench", role: "admin" }),
         );
-        localStorage.setItem("racearena:trackGeometries:index", JSON.stringify([geo.id]));
-        localStorage.setItem(`racearena:trackGeometries:${geo.id}`, JSON.stringify(geo));
+        localStorage.setItem(
+          "racearena:trackGeometries:index",
+          JSON.stringify([geo.id]),
+        );
+        localStorage.setItem(
+          `racearena:trackGeometries:${geo.id}`,
+          JSON.stringify(geo),
+        );
         localStorage.setItem(
           "racearena:frameTimingConfig",
-          JSON.stringify({ scoreboardIntervalMs: cadence })
+          JSON.stringify({ scoreboardIntervalMs: cadence }),
         );
         sessionStorage.setItem("activeRace", JSON.stringify(activeRace));
         // THE INSTRUMENT. It wraps rAF rather than reading the app's own perf log, so both arms are
@@ -193,19 +205,25 @@ async function runArm(arm) {
             return cb(ts);
           });
       },
-      { geo, activeRace, cadence: arm.cadence }
+      { geo, activeRace, cadence: arm.cadence },
     );
     const page = await ctx.newPage();
     const errors = [];
     page.on("pageerror", (e) => errors.push(String(e)));
     await page.goto(`${arm.url}/race`, { waitUntil: "domcontentloaded" });
-    await page.waitForSelector(".scoreboard-card, .scoreboard-row", { timeout: 30_000 });
+    await page.waitForSelector(".scoreboard-card, .scoreboard-row", {
+      timeout: 30_000,
+    });
     // THE GUN: the countdown badge is present through the start ceremony and gone once the race is
     // running. Waiting on it rather than on a fixed delay matters — the ceremony's length scales
     // with the field size.
-    await page.waitForFunction(() => !document.querySelector(".race-phase-badge--countdown"), null, {
-      timeout: 60_000,
-    });
+    await page.waitForFunction(
+      () => !document.querySelector(".race-phase-badge--countdown"),
+      null,
+      {
+        timeout: 60_000,
+      },
+    );
     // The browser's own CPU counters. Cumulative since the page loaded, so every reading below is a
     // DELTA across exactly the frame window it accompanies.
     const cdp = await page.context().newCDPSession(page);
@@ -223,7 +241,9 @@ async function runArm(arm) {
       };
     };
     const deltaOf = (a, b) =>
-      Object.fromEntries(Object.keys(a).map((k) => [k, +(b[k] - a[k]).toFixed(2)]));
+      Object.fromEntries(
+        Object.keys(a).map((k) => [k, +(b[k] - a[k]).toFixed(2)]),
+      );
 
     const gun = await page.evaluate(() => window.__f.length);
     const gunWall = Date.now();
@@ -234,13 +254,20 @@ async function runArm(arm) {
       // Fail SOFT. A window that cannot be filled means the race ended under it, and a bench that
       // throws there loses every arm already measured in this batch.
       try {
-        await page.waitForFunction((need) => window.__f.length >= need, from + FRAMES, {
-          timeout: 40_000,
-        });
+        await page.waitForFunction(
+          (need) => window.__f.length >= need,
+          from + FRAMES,
+          {
+            timeout: 40_000,
+          },
+        );
       } catch {
         /* take whatever the window got; `stats` returns null if it is too short */
       }
-      return page.evaluate(([a, b]) => window.__f.slice(a, b), [from, from + FRAMES]);
+      return page.evaluate(
+        ([a, b]) => window.__f.slice(a, b),
+        [from, from + FRAMES],
+      );
     };
     const c0 = await counters();
     const early = await collect(gun);
@@ -249,7 +276,9 @@ async function runArm(arm) {
     // MID-RACE — the same field, spread out, so far fewer places change per tick. Anchored on WALL
     // time since the gun rather than on a frame count, because the race is 60 s of wall clock and a
     // frame-count anchor would land in a different part of it on a slower machine.
-    await page.waitForTimeout(Math.max(0, MID_AT_SEC * 1000 - (Date.now() - gunWall)));
+    await page.waitForTimeout(
+      Math.max(0, MID_AT_SEC * 1000 - (Date.now() - gunWall)),
+    );
     const midStart = await page.evaluate(() => window.__f.length);
     const c2 = await counters();
     const mid = await collect(midStart);
@@ -282,7 +311,7 @@ for (let batch = 0; batch < BATCHES; batch++) {
         ? `style ${r[k].recalcStyleCount}x/${r[k].recalcStyleMs}ms  layout ${r[k].layoutCount}x/${r[k].layoutMs}ms  script ${r[k].scriptMs}ms  task ${r[k].taskMs}ms`
         : "—";
     console.log(
-      `batch ${batch}  ${arm.label.padEnd(12)} @${String(arm.cadence).padStart(4)}ms  EARLY ${f(r.early)}`
+      `batch ${batch}  ${arm.label.padEnd(12)} @${String(arm.cadence).padStart(4)}ms  EARLY ${f(r.early)}`,
     );
     console.log(`${" ".repeat(38)}${w("earlyWork")}`);
     console.log(`${" ".repeat(28)}  MID   ${f(r.mid)}`);
@@ -301,7 +330,9 @@ const median = (xs) => {
 };
 
 console.log("\n── POOLED: the frame train ──");
-console.log("(MEDIAN across batches, not the mean — one stalled run reads 1016 ms and would own a mean)");
+console.log(
+  "(MEDIAN across batches, not the mean — one stalled run reads 1016 ms and would own a mean)",
+);
 for (const arm of ARMS) {
   for (const phase of ["early", "mid"]) {
     const rows = results.filter((r) => r.arm === arm.label && r[phase]);
@@ -314,31 +345,39 @@ for (const arm of ARMS) {
         ` n=${frames}  missed ${String(missed).padStart(4)} (${((100 * missed) / frames).toFixed(1)}%)` +
         `  total ${med("totalP50")}/${med("totalP90")}` +
         `  rafLate ${med("lateP50")}/${med("lateP90")}` +
-        `  stair ${med("stair")}  [missed% per batch: ${rows.map((r) => r[phase].missedPct.toFixed(0)).join(" ")}]`
+        `  stair ${med("stair")}  [missed% per batch: ${rows.map((r) => r[phase].missedPct.toFixed(0)).join(" ")}]`,
     );
   }
 }
 
 console.log("\n── POOLED: the browser's own CPU counters, per 100 frames ──");
-console.log("(the load-robust half: this measures the WORK, not whether the machine kept up with it)");
+console.log(
+  "(the load-robust half: this measures the WORK, not whether the machine kept up with it)",
+);
 for (const arm of ARMS) {
   for (const [phase, wk] of [
     ["early", "earlyWork"],
     ["mid", "midWork"],
   ]) {
-    const rows = results.filter((r) => r.arm === arm.label && r[wk] && r[phase]);
+    const rows = results.filter(
+      (r) => r.arm === arm.label && r[wk] && r[phase],
+    );
     if (!rows.length) continue;
-    const per = (k) => median(rows.map((r) => (100 * r[wk][k]) / r[phase].frames));
+    const per = (k) =>
+      median(rows.map((r) => (100 * r[wk][k]) / r[phase].frames));
     console.log(
       `${arm.label.padEnd(12)} @${String(arm.cadence).padStart(4)}ms ${phase.padEnd(6)}` +
         ` style ${per("recalcStyleCount")}x / ${per("recalcStyleMs")}ms` +
         `  layout ${per("layoutCount")}x / ${per("layoutMs")}ms` +
-        `  script ${per("scriptMs")}ms  task ${per("taskMs")}ms`
+        `  script ${per("scriptMs")}ms  task ${per("taskMs")}ms`,
     );
   }
 }
 
 if (OUT) {
-  writeFileSync(OUT, JSON.stringify({ ARMS, BATCHES, RACERS, FRAMES, TRACK, results }, null, 2));
+  writeFileSync(
+    OUT,
+    JSON.stringify({ ARMS, BATCHES, RACERS, FRAMES, TRACK, results }, null, 2),
+  );
   console.log(`\nwritten: ${OUT}`);
 }

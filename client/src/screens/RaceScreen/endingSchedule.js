@@ -46,5 +46,28 @@ export function endingTotalMs({ holdMs, pauseMs, podiumBeatMs, transitionMs }) {
   return hold + pause + transition + podium;
 }
 
+/**
+ * The part of the ending the RACE SCREEN is still up for — hold + pause, from the last crossing to
+ * the navigation away. It is `endingTotalMs` minus the two terms that happen after the race screen
+ * is gone (the transition and the podium build-up, which is the result screen's).
+ *
+ * WHY IT EXISTS SEPARATELY, and it is not a convenience (CAMERA-ENDING-WINDOW-1). This is exactly
+ * the span in which the DIRECTOR IS STILL DIRECTING: ENDING-PICTURE-1 made `RaceScreen` keep
+ * consulting `CameraDirector.update()` through `PHASE.FINISHED` so an in-flight zoom-out can finish
+ * its move and come to rest. `scripts/camera-fingerprint.mjs` ran `while (finishedCount < N)`, so it
+ * stopped on the very frame this span BEGINS and could not see ENDING-PICTURE-1 at all — a shipped
+ * camera feature outside the reach of the camera's own change detector, silently.
+ *
+ * SO THE INSTRUMENT AND THE GAME NOW READ THE SAME FUNCTION. A fixed stop condition in the harness
+ * could go stale against the screen without anything noticing, which is precisely what happened;
+ * a shared derivation cannot. If a future change adds a term to the race screen's ending, it is
+ * added HERE and the fingerprint's window grows with it.
+ */
+export function endingOnRaceScreenMs({ holdMs, pauseMs }) {
+  const hold = endingHoldMs(holdMs);
+  const pause = Number.isFinite(pauseMs) && pauseMs > 0 ? pauseMs : 0;
+  return hold + pause;
+}
+
 /** The screen transition, which is a constant and not a key. See `endingTotalMs`. */
 export const SCREEN_TRANSITION_MS = 370;

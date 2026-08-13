@@ -6,6 +6,20 @@ and [FAIRNESS.md](../../docs/FAIRNESS.md). Shipped world: **`dc4647be0f55ebdb`**
 
 ## CORRECTIONS — findings that invalidate a number in a report below
 
+- **2026-08-12 (evening) — [RUNIN-STATE-1.md](RUNIN-STATE-1.md)'s MECHANISM is superseded; its
+  MEASUREMENTS and its trace stand.** That report shipped the run-in as a camera STATE and recorded
+  the limit itself: the state owned 14.9% / 18.5% of the endgame window. [RUNIN-OWNS-1.md](RUNIN-OWNS-1.md)
+  replaced the state with a bound on whatever state is running, and ownership went to **100%**. Two
+  of its conclusions are now wrong and are corrected there rather than in the report, which is
+  append-only: (1) "the run-in must be a LEADER-family STATE so the anchor correction is live" —
+  the anchor correction is what matters, not the state, and it is now supplied directly; (2) a RUN_IN
+  state at the line would have **suppressed the photo-finish slow motion**, which RaceScreen
+  triggers off `hudState` — not known when that report was written. Its **line-in-frame figures
+  (24.8% / 25.6%) and its bit-identical crossing zoom (0.00e+0) are correct for the shape it
+  measured** and are superseded by 78.2% / 93.1% and 1.31e-3 / 1.02e-2 for the shape that shipped.
+  **docs/DEAD-ENDS.md §M was rewritten the same day**: as first written it banned the mechanism that
+  shipped nine hours later.
+
 **The reports themselves are append-only and are NOT edited.** A report records what was true on the
 day it was written; when a later measurement shows one of its numbers was an artefact, the correction
 is dated and recorded HERE, where a reader on their way to the report will pass it.
@@ -68,6 +82,265 @@ is dated and recorded HERE, where a reader on their way to the report will pass 
   the drawing layer only, and `engine-reach` confirms none of the diff can reach the engine — render
   `096f2726c45ed853` -> `d24d78450f197495`. Client suite 4018.
 
+- [SHIP-RUNIN-CONVERGE.md](SHIP-RUNIN-CONVERGE.md) — **the run-in and the convergence fix go to
+  master** (2026-08-12, merges `d7eca25d` + `eea0acf2`, tags `v-ship-resolve-converge` +
+  `v-ship-runin`, return points `pre/ship-resolve-converge` + `pre/ship-runin`). Two merges in one
+  session on the owner's authorisation after he judged a production build of the COMBINED tree.
+  Carries what only the ship can: the order and why the convergence fix went first (it moves nothing
+  on its own, so the run-in's mint is taken on a tree that already contains it while the two moves
+  stay separable); the mint, **attributed in two measured parts** — the run-in alone puts CAMERA at
+  `988a9b31aaf9768a` and the repair carries it the rest of the way, moving **ice-track alone**;
+  **the off-arm promise re-measured ON THE MERGED TREE** rather than carried over, both instruments
+  reproducing the predecessor values exactly; the WORLD re-run in full because `engine-reach --check`
+  compares the WORKING tree and therefore cannot speak about a committed merge; and the CI run ids.
+  Step −1 surfaced a **prettier sweep of 28 script files** riding in an unrelated commit, proven
+  inert by formatting master's version of each and comparing byte-for-byte.
+- [RUNIN-PACE-1.md](RUNIN-PACE-1.md) — **own key, explained width, and a rate limit that measured
+  out** (2026-08-12, `feat/runin-state`, **NOT merged**; fingerprints measured fresh and **NOT
+  minted**). **(1) THE KEY IS SPLIT.** The opening ran on `finishOverviewZoomOutDurationMs`, which
+  also paces the zoom-out AFTER the crossing — a shot he has already accepted — so one value paced
+  two motions at different moments for different reasons and tuning either moved the other.
+  **`runInOpenMs`, default 1250 ms** ("between 1 and 1.5 seconds would have been enough"). The
+  post-crossing zoom-out was never altered in VALUE — the coupling was a shared SOURCE — so the proof
+  is independence: **3000 ms on every track at every pace tested**. Sweep, ten tracks: 1000 ms gives
+  line-in 88.8% / first-in-shot 0.9 s / LEAD_CHANGE lag p95 23.14; **1250 ms 86.6% / 1.1 s / 22.17**;
+  1500 ms 84.4% / 1.3 s / 21.12; **empty frames 0 at every pace**. Against the previous 3000 ms
+  (73.4% / 2.5 s / 10.72) his number buys the line back and pays in the lag tail — the lag is
+  proportional to the zoom rate, so that is by construction. **(2) THE 28 POINTS ON ICE-TRACK, and it
+  is NOT the line.** `resolveCamera` is the last authority on width, only ever LOOSENS, and was the
+  one width request nothing could see; it is now on a read-only probe. Frame by frame it reads
+  **line asks 68-87% of the world, resolveCamera delivers 100%**, with `wasZoomAdapted` true and
+  **`targetInInnerFrame` FALSE on every one of those frames** — it steps the zoom down 10% at a time
+  trying to bring the pan target inside `innerFramePct`, the world-bounds clamp makes that
+  impossible, and the loop runs to the projection floor having achieved nothing. **Very probably what
+  he has been seeing on that track all along**: pre-existing, and it fires wherever a pan target sits
+  near the world edge at a wide shot. **NOT FIXED HERE** — the repair is inside `resolveCamera`, the
+  last step for every state on every frame, so it moves both fingerprints with `runInShot: false` and
+  breaks the standing off-arm promise; it needs its own block. **(3) THE TIGHTEN-RATE LIMIT WAS BUILT
+  AND TAKEN BACK OUT.** The principle held — a ceiling is a LOWER BOUND ON WIDTH, so approaching it
+  more slowly from the wide side cannot violate it and `Math.min` survives — but it fails a
+  requirement standing beside it: **a rate limit IS a delay in arriving, and the crossing is where
+  arrival is due.** Measured (corner reversal / crossing zoom vs OFF, worst of ten tracks): no limit
+  **221 px / 3.58%**; the rate derivable from `runInOpenMs` **192 px / 23.83%** (barely moves the
+  corner, peak still at s≈0.95); half that rate **96 px / 55.30%**; paced to arrive at the line
+  **96 px / 7.91%** — the near-miss, which needs no constant and genuinely flattens the corner (rate
+  through it 1.04/0.85/0.66/0.73/0.61 %/frame instead of 1.24/1.37/1.48/0.12/0.01, subject almost
+  still) but lands at cam.zoom 3.77 where the ordinary shot is 4.00. **Reported, not forced**; one
+  paragraph in `_setTargets` records the study so it is not rebuilt. **ALL TEN TRACKS at 1250 ms**:
+  line in frame **9.8% -> 86.6%**, **0 empty**, `check-runin-frame` green both halves (0.15 / 0.94 TW,
+  limit untouched), crossing zoom <=0.74% on nine tracks and 3.58% at worst. **FINGERPRINTS**: world
+  `dc4647be0f55ebdb` **unmoved**; camera `64432e18a7e62188` -> `988a9b31aaf9768a`, render
+  `096f2726c45ed853` -> `c962df5334277f95`; with `runInShot: false` all three return exactly.
+- [RUNIN-WIDTH-1.md](RUNIN-WIDTH-1.md) — **only the line decides the width, and the pull-out is
+  calmer** (2026-08-12, `feat/runin-state`, **NOT merged**; fingerprints measured fresh and **NOT
+  minted**). **A REQUIREMENT I INVENTED, STRUCK**: RUNIN-GLIDE-1 §5 reported field coverage as "the
+  limit"; the owner never asked that the field stay in frame during the endgame, so it bounds nothing
+  and is now information only. **WHAT DRIVES THE WIDTH, measured before anything changed: the LINE
+  binds at the widest frame of every finishing track**, and over the whole run-in it binds 86.5-97.9%
+  of frames. **The field guarantee is `Infinity` on every one of those frames** — it retires after the
+  ceremony — and the company guarantee never binds there either, so there was no field-guarantee
+  decision to make and nothing to remove. Two tracks are informative: **city-circuit's line would need
+  109% of the world** (more than the camera can show, so it is at the floor and the line still cannot
+  be framed), and **ice-track's needed 72% while 100% was delivered** — the owner's own observation,
+  and §2 says why. **THE TWO ODD MOVEMENTS ARE ONE MECHANISM**: the delivered zoom is a `Math.min`
+  over ceilings, so where the ARGMIN changes the zoom is continuous but **its RATE is not**, and the
+  pan lag is proportional to that rate — so the subject REVERSES DIRECTION at the corner. Traced
+  frame by frame: on **luger-hill seed 9** the framing subject drifts to (899, 490) and sails back to
+  (695, 346), turning at progress **0.9949**, the exact frame the line ceiling passes the state zoom
+  (4.114 > 4.000) and the zoom's rate collapses from +0.05 to +0.001 per frame; on **ice-track** the
+  camera sits at `minCamZoom` for ~2 s with the pan held completely still by the world-bounds clamp —
+  **the line's screen position does not move by one pixel for 120 frames** — and then un-pins at
+  run-in progress **0.216**, frozen to moving in a single frame. **A CALMER PULL-OUT**: the engagement
+  glide now runs on **`finishOverviewZoomOutDurationMs`**, which already means "an authored zoom-out
+  at the end of the race" — the same kind of move at the other end of the ending — rather than
+  `glideDurationMs`, whose 300-900 ms band paces a CUT and cannot express "unhurried". No new number.
+  **Opening 0.5 s -> 2.9 s**; it costs the line's in-frame share **93.3% -> 73.4%** and delays the
+  line 0.4 s -> 2.5 s, and it **does not reintroduce empty frames**. It is also SHALLOWER, which was
+  not the goal but answers part of (c): the widest frame falls on six of nine finishing tracks
+  (searound 85% -> 57%, luger-hill 67% -> 40%, river-run 34% -> 21%), while city-circuit and ice-track
+  still reach 100% because the line there genuinely needs it. **LEAD_CHANGE's tracking-lag p95 falls
+  25.19 -> 10.72 pp** — the hecticness, measured — while PHOTO_FINISH's is unchanged at 29.80, which
+  says the remaining tail is at the CLOSE and not the opening. **LEFT OPEN WITH THE EVIDENCE**: that
+  closing corner is not fixed, because every way to remove it replaces the `Math.min` over ceilings
+  with a blend, which is no longer a guarantee and needs his ruling. **ALL TEN TRACKS**: composes 100%,
+  line in frame **9.8% -> 73.4%**, **0 empty frames**, `check-runin-frame` green both halves (0.15 /
+  0.37 TW, limit untouched), crossing zoom within 0.03% of OFF on six tracks and 3.58% at worst.
+  **FINGERPRINTS**: world `dc4647be0f55ebdb` **unmoved**; camera `64432e18a7e62188` ->
+  `8f6ed90ec8a89e25`, render `096f2726c45ed853` -> `3f53bea250d5a4c3`; with `runInShot: false` all
+  three return exactly to the stored values.
+- [RUNIN-GLIDE-1.md](RUNIN-GLIDE-1.md) — **the run-in glides from wide-and-back to the ordinary
+  shot** (2026-08-12, `feat/runin-state`, **NOT merged — his eye on luger-hill seed 9**;
+  fingerprints measured fresh and **NOT minted**). The owner's final design and the fourth shape.
+  **ONE progress measure — the leader's remaining distance to the line — drives BOTH the anchor
+  placement and the zoom**: at engagement he sits BEHIND centre so most of the frame lies toward the
+  finish and the line fits at a modest zoom; as he closes he travels back to his ordinary place while
+  the shot tightens; at the crossing he is at `leaderForwardFrac` under the state's own zoom, i.e.
+  the ordinary shot with **no seam to hand over**. **IT INVENTS NO NUMBER** — the end of the travel is
+  the framing table's own answer, the start is that answer MIRRORED about the centre, so
+  `leaderForwardFrac` is used twice; a CENTRED state therefore does not move at all (mirroring 0.5
+  gives 0.5), which falls out rather than being special-cased and is why the photo finish keeps its
+  framing. The measure is taken ALONG THE TRACK, not across the ground, because a progress measure
+  must be monotone and the straight-line distance is not — on a closed track the leader can be
+  euclidean-near the finish and still most of a lap from it; along the track it is `leaderProgress`,
+  the same quantity `endgameThreshold` is written in, so it is 0 exactly at the window and 1 exactly
+  at the line. **REMOVED**: the OVERVIEW-width cap and the delayed engagement, so the run-in composes
+  from the threshold again and the pull-out is whatever the line requires. **AND ONE GUARD THAT WAS
+  HIDING**: `_applyLeaderForwardBias` ended with `if (!(worldBias > 0)) return pos;`, which reads as
+  a degenerate-input check and is in fact a ONE-WAY VALVE silently discarding every BACKWARD
+  displacement — i.e. the whole of the new placement, which would have made this block a no-op with
+  no error anywhere. **THE ENGAGEMENT HAD TO BECOME A GLIDE, and which step forced it was MEASURED
+  rather than guessed**: without one, **93 empty frames across ten tracks, every single one at run-in
+  progress 0.006-0.016** — the engagement frame and nothing else, where the framing steps in both
+  quantities at once (the zoom opens up to 6.5x on space-sprint). With the anchor travel disabled and
+  only the zoom step left the count was **95, no better** — so the zoom step is the whole of it and
+  **the anchor travel is free**, costing nothing in emptiness while lifting line-in-frame 90.1% ->
+  95.3% and bringing the line into shot 0.4 s -> 0.2 s. The fix is the mechanism DEAD-ENDS §M already
+  names (_the glide is what makes a big zoom change safe_), started by hand on the same
+  `glideDurationMs`, once, guarded by the latch. **MEASURED ON ALL TEN TRACKS**: composes **100%** of
+  the endgame window, line in frame **9.8% -> 93.3%**, first in shot **0.4 s** after the window opens
+  (about **4 s earlier** than the previous build, which did not engage for 4.4-4.9 s), **0 empty
+  frames on every track**. **THE FIELD, measured because the brief asked rather than assumed**: the
+  chasing pack is in shot on **94.6%** of run-in frames and first drops below at progress **0.93** —
+  and **that loss is the photo finish tightening on the pair, not the anchor placement**, which has
+  already arrived by then; racers-on-screen rises 5 -> 19 as the run-in opens and holds in the teens
+  through the whole travel. The existing field guarantee neither prevents nor fights it: it retires
+  early and does not apply to PAIR states. **COSTS**: the pull-out reaches the whole world on the
+  closed tracks whose finish is most of a lap away at the threshold (city-circuit and ice-track 100%,
+  dirt-oval 92%; luger-hill 67%, mountainstreet 27%); the crossing zoom is within **0.03%** of OFF on
+  six tracks and **3.58%** at worst (space-sprint); and the tracking-lag tails are back
+  (LEAD_CHANGE p95 7.15 -> **25.19**) — though **PHOTO_FINISH IMPROVED, 33.59 -> 29.80**, because the
+  anchor travel means that shot no longer has to be opened as far to hold the line. **check-runin-frame
+  GREEN on both halves both tracks** (0.15 / 1.23 TW, limit untouched). **FINGERPRINTS**: world
+  `dc4647be0f55ebdb` **unmoved**; camera `64432e18a7e62188` -> `e9d19cda3e585c70`, render
+  `096f2726c45ed853` -> `3ab2918a88337a83` — and with `runInShot: false` **all three return exactly to
+  the stored values on all ten tracks**.
+- [RUNIN-MINIMAL-1.md](RUNIN-MINIMAL-1.md) — **the pull-out is minimal, and the run-in starts when
+  the line fits** (2026-08-12, `feat/runin-state`, **NOT merged — his eye on luger-hill seed 9**;
+  fingerprints measured fresh and **NOT minted**). Third and final shape. **STAGE 1 MEASURED BEFORE
+  ANYTHING CHANGED, and the answer was where the owner said to look**: against the frame it actually
+  delivers the shot was ALREADY nearly minimal (excess 1.12x / 1.18x) — the width was going into
+  **WHERE THE CAMERA IS POINTED**. A FORWARD-framed leader sits `leaderForwardFrac` along the frame,
+  so only a THIRD of it lay ahead of him toward the line and the shot had to be **3.01x** (Luger
+  Hill) / 2.15x (Searound) wider than the leader-to-line distance demands; the margin was a flat
+  1.11x and the easing 1.03x, i.e. nothing. **THE FIX IS THE FRAMING RULE'S OWN QUESTION** — _is
+  there anything worth seeing ahead of the subject?_ — answered with the run-in's facts: the finish
+  is ahead, so the subject is centred while it composes. No new number; 3.01x → 2.00x. **SIX CALL
+  SITES read that question and now read one helper, and that was load-bearing rather than tidy**: the
+  first cut changed the five `anchorScreenPoint` calls and MISSED THE PAN BIAS ITSELF, so every
+  guarantee sized the shot for a centred anchor while the pan still pushed the leader forward — the
+  line fell out of frame on a third of the run-in's own frames (67.0%). Both reading the same helper:
+  **89.1%**. **A SECOND CORRECTION, from framingRule.js's own rule**: the line was reading
+  `COMPANY_FRAME_PCT`, borrowed from the quarry, when the file states that `innerFramePct` is for the
+  SUBJECT "and for both geometric guarantees" — at the company margin the shot was minimal to 1.05x,
+  so the line sat ON the edge where the tracking lag alone pushed it out. **STAGE 3, HIS RULING,
+  BUILT**: the run-in engages only once the line fits WITHOUT opening wider than OVERVIEW's own
+  width, and the engagement LATCHES one way because `room / distance` is not perfectly monotone (the
+  room depends on the heading, which turns) and a bare comparison would flicker the shot between wide
+  and tight. **THE TRADE, 2 tracks x 8 seeds**: the widest frame the run-in reaches falls from
+  **99% of the world to 18% / 21%**; the line is in frame on **89.1% / 98.7%** of the run-in's own
+  window and 11.9% → **37.3%** / 9.9% → **35.0%** of the whole endgame window (it was 78.2% / 93.1%
+  when the run-in composed all of it); it now composes **41.9% / 35.4%** of the endgame and starts
+  **4.4 s / 4.9 s** later, at leader progress ~0.973 against the window's 0.900. Excess is
+  **1.32x / 1.40x**, which IS the margin (1/0.7) — nothing left to remove. **empty frames 0**.
+  **`check-runin-frame` is GREEN on both tracks and both halves** (centre 0.40 / 0.09 TW) and **the
+  limit of 2 was never touched** — the Searound failure came from the world-sized frame and resolved
+  by itself when the frame stopped being world-sized. **WHAT IT COSTS, one row and it is what to
+  watch**: the run-in bounds the photo finish too and holds it a median **2.05x / 2.10x wider** (max
+  ~4x) so the line stays in it, mid-shot on the seeds where it engages after the photo finish has
+  begun. **The tracking lag re-measurement says the same thing in one number**: the later start gave
+  five states BACK to their pre-run-in values to two decimals — LEAD_CHANGE's p95 that the previous
+  cut had tripled is 7.10 → 21.81 → **7.15**, COMEBACK_ZOOM's median 13.73 → 3.06 → **13.73** — and
+  the entire remaining cost is **PHOTO_FINISH's p95, 16.51 → 33.59 pp**, with its median almost still
+  (5.68 → 5.71): a tail, not a steady lag. The crossing zoom is consequently **not** bit-identical
+  (1.60e-2 / 1.53e-1, i.e. 0.4% and 0.9%). **FINGERPRINTS**: world `dc4647be0f55ebdb` **unmoved**;
+  camera `64432e18a7e62188` → `0f56ded2d786e3b0`, render `096f2726c45ed853` → `7d7af693a766c6c9` —
+  and with `runInShot: false` **all three return exactly to the stored values on all ten tracks**.
+- [RUNIN-OWNS-1.md](RUNIN-OWNS-1.md) — **the run-in owns the endgame's FRAMING, not its state slot**
+  (2026-08-12, `feat/runin-state`, **NOT merged — his eye on luger-hill seed 9**; fingerprints
+  measured fresh and **NOT minted**). Continues RUNIN-STATE-1 and **replaces its mechanism** — see
+  the CORRECTIONS block above. **THE CHANGE OF SHAPE**: the run-in stops competing for which shot is
+  running and READS whichever one is, bounding that shot's zoom. It therefore composes **100.0% of
+  the endgame window on both tracks**, against the state shape's 14.9% / 18.5%. It also avoids a
+  defect the state shape had not yet been caught on: RaceScreen starts the photo-finish slow motion
+  off `hudState`, so a RUN_IN state holding the slot at the line would have **suppressed the slow
+  motion outright** — checked in the source before the rework, not after. `CAM_STATE` is six again,
+  `GUARANTEE.LINE` is gone, and this block is mostly REMOVAL. **TWO BOUNDS, ONE OF WHICH IS NOT
+  CODE**: the LINE (`room / distance` from the anchor's place in the frame — no curve, no ramp, no
+  knob) and THE ACTIVE STATE'S OWN ZOOM, which was already the first term of the `Math.min` every
+  shot is composed with. So a leader shot closes to the leader zoom and a photo finish to the
+  photo-finish zoom, and **nothing is handed over** — as the leader arrives the line's requirement
+  passes above the state's setting, stops being the smallest term, and what is left is the shot that
+  was always there. **BOTH BOUNDS PROVED TO BE REAL BOUNDS RATHER THAN COMMENTS**: the line binds
+  88.6% / 90.5% of the window, the state's own zoom 10.8% / 8.7%. **MEASURED, 2 tracks x 8 seeds**:
+  line in frame **11.9% → 78.2%** and **9.9% → 93.1%** over the run-in window (48.0% → 87.1% and
+  40.6% → 95.5% on the wider one), against the state shape's 24.8% / 25.6%; **empty frames 0**
+  everywhere. **THE ONE REPAIR IT NEEDED** is the one RUNIN-STATE-1's trace bought: `_focusAnchorRacer`
+  returns null for group shots, which SKIPS the zoom-about-the-anchor correction — harmless while a
+  group shot's zoom is steady, fatal while it is moving, and the run-in moves it inside PHOTO_FINISH.
+  Scoped to the run-in deliberately so the OFF arm stays inert. **WHAT IT COST, both reported rather
+  than tuned away**: (1) the zoom at the crossing is **no longer bit-identical** — 1.31e-3 and
+  1.02e-2, i.e. 0.03% and 0.006% of the zoom — because "close to the photo-finish zoom" and
+  "bit-identical at the crossing" are in tension and geometry decides: arriving from further away
+  takes longer; the previous 0.00e+0 held only because the run-in was not composing during
+  PHOTO_FINISH at all. (2) `check-runin-frame`'s centre half **FAILS on Searound at 2.08 TW against
+  its limit of 2, and the limit was NOT raised** — at that frame the camera shows **99% x 99% of the
+  world with all 20 racers on screen and the line in frame**, and a world-sized frame CANNOT be
+  centred on the spine because the world-bounds clamp centres it on the WORLD, whose centre on an
+  oval is the infield. The two requirements are geometrically exclusive at that width; the guard's
+  header now carries the finding and the owner decides between "the limit encodes a shot this camera
+  never used to make" and "the metric should ask whether the TRACK is in frame, not whether the
+  CENTRE is on it". **THE PRICED ALTERNATIVE, since a bound is the obvious next suggestion**: adding
+  OVERVIEW's own width as a wide-end bound fixes the reading and costs two thirds of the feature
+  (78.2% / 93.1% → 26.2% / 34.0%, worst centre → 0.56 / 0.41 TW). Real trade, priced, his call.
+  **ALSO FOR HIS EYE**: the opening move is a **6x–8x zoom-out in about half a second** at the
+  threshold, on the tracking lerp rather than a glide, because no state transition happens there.
+  **FINGERPRINTS**: world `dc4647be0f55ebdb` **unmoved**; camera `64432e18a7e62188` →
+  `e2dbf91851744136`, render `096f2726c45ed853` → `5405d885f0432b0e` — and with `runInShot: false`
+  **all three return EXACTLY to the stored values on all ten tracks**, so nothing outside the endgame
+  window moves.
+- [RUNIN-STATE-1.md](RUNIN-STATE-1.md) — **the run-in becomes a state** (2026-08-12,
+  `feat/runin-state` off master `e1f53781`, **NOT merged — his eye on luger-hill seed 9**;
+  fingerprints measured fresh and **NOT minted**). The fourth attempt at "keep the finish line in
+  frame during the run-in", and the first that is not a zoom CEILING. **STAGE 1, THE TRACE, AND IT
+  REVERSED THE PREMISE**: the picture was not pointed at track the racers had not reached, it was
+  pointed at track they had **already left**, ~173 world px behind them. **The pan TARGET was correct
+  on every empty frame** — the delivered offset trailed it by **535 → 1115 px** while the ceiling
+  released the zoom 2.46 → 4.00 over forty frames. Cause: a ceiling that RELEASES delivers its zoom
+  change inside the `tracking` phase, where pan and zoom are independent lerps, and
+  zoom-about-the-anchor (CAMERA-SIDEJUMP-1) is **skipped when `_focusAnchorRacer` returns null** —
+  which it does for PHOTO_FINISH, a group shot. **Proven, not argued: pointing that one correction at
+  the framing anchor took 51 empty frames to 0 with the ceiling untouched.** Two corollaries worth
+  more than the feature: **the GLIDE is what makes a big zoom change safe** (master does a LARGER
+  2.13 → 4.00 at the same seam, in a glide, for free — deferring a zoom change PAST the glide is the
+  defect), and **"the centre is near the track" does not mean the camera is pointed at the race** —
+  the excursion was ALONG the track, so the centre read 0.62 TW while the frame held zero racers.
+  **SHIPPED SHAPE**: `RUN_IN`, anchored on the leader (so the correction is live), guarantee = the
+  LINE (a fixed world point, the first guaranteed subject that is not a racer), and **no width of its
+  own** — it reads LEADER's, so at the line RUN_IN and LEADER_ZOOM are the identical picture and the
+  handover into PHOTO_FINISH is the glide the camera has always made there. The zoom is
+  `room / distance` and nothing else: no ramp, no curve, no knob. **TWO BOUNDS BUILT AND BOTH
+  REMOVED** — the quarry's field extent (weak at the endgame), then OVERVIEW's width, which pinned
+  the ceiling for the first 60% of the shot and cost the design its point (21.1% → 44.9% line-in-frame
+  on dropping it); bounding at the projection's minimum measured **identical to no bound**, proving
+  `resolveCamera`'s clamp is the real one. **MEASURED, 2 tracks x 8 seeds**: empty frames **0**
+  everywhere, centre worst **0.09 / 0.11 TW** against a limit of 2 (the quarry's 2.07 near-miss is
+  gone, nothing widened), line-in-frame **11.9% → 24.8%** and **9.9% → 25.6%** over the run-in window
+  (**48.0% → 55.6%** and **40.6% → 51.0%** on the brief's wider window, whose OFF arm reproduces its
+  47.3% / 41.4% baselines), the middle-third dip **gone** — the profile rises monotonically where OFF
+  reads 0.0% for the first two thirds — and **cam.zoom at the crossing bit-identical** (`0.00e+0`, vs
+  the ceiling's third of a thousandth). **THE HONEST LIMIT, and it is an owner decision**: the endgame
+  lock does **not own the endgame** — it is consulted only when `decideTransition` permits a
+  transition, so a shot entered just before the threshold holds its gate across it. **40–48% of the
+  window is PHOTO_FINISH** (its pre-line gate) and RUN_IN owned only **14.9% / 18.5%** of the window,
+  with **no frames at all in 3 of 8 races on each track**. Where it owns 0% the in-frame share is
+  unchanged to the decimal and where it owns 55% the share is 61.4% — an exact correlation, which is
+  also the proof the change is confined to the state. Pre-existing, not introduced here; fixing it
+  would cut BATTLE and COMEBACK short at the threshold. **FINGERPRINTS**: world `dc4647be0f55ebdb`
+  **unmoved**; camera `64432e18a7e62188` → `3a1603d37210dc66`, render `096f2726c45ed853` →
+  `bd29a55fd93e2f68` — and **with `runInShot: false` both return EXACTLY to the stored values across
+  all ten tracks**, so the off position is the old behaviour rather than an approximation of it.
+  `npm run verify` PASS 16 / FAIL 0. The ceiling form is recorded as **DEAD-ENDS §M**; the quarry
+  `feat/finish-framed` stays unmerged, and `pointGuarantee` is the only part taken from it.
 - [ENDING-PICTURE-1.md](ENDING-PICTURE-1.md) — **the ending gets a picture worth holding**
   (2026-08-12, tag `v-ship-ending-picture`, return point `pre/ship-ending-picture`). Two blocks in
   one ship: the HOLD after the last crossing (`finishHoldAfterLastMs` 0 → 1500, his own podium beat,
@@ -165,6 +438,21 @@ is dated and recorded HERE, where a reader on their way to the report will pass 
 
 ## Camera / presentation fixes
 
+- [RESOLVE-CONVERGE-1.md](RESOLVE-CONVERGE-1.md) — **a widening step has to buy something** (branch
+  `fix/resolve-converge` off `master`; **NOT merged, nothing minted — his eye is owed on ice-track
+  seed 9**). `resolveCamera` widened 10% at a time to frame the pan target and never asked whether
+  the steps helped; where the world-bounds clamp holds the target at the world edge they cannot, so
+  the loop ran to the projection floor, handed over the whole world, and left the target further
+  outside than it started. It now takes a step only when the step strictly reduces how far outside
+  the inner frame the target lands — a comparison, not a threshold. **The up-front "is it
+  reachable" test was rejected on evidence**: there are two clamped regimes and where the world
+  already FITS the frame widening genuinely helps, which a test written from the other regime would
+  have got wrong. Measured over 172226 frames per arm: with `runInShot` OFF the loop fires **0**
+  times before and after, so **CAMERA and RENDER are byte-identical on master** — the off-arm promise
+  holds, which is the opposite of what the block expected and is measured rather than assumed. With
+  it ON, **276 futile frames, all on ice-track, all delivering 100% of the world against a 75% ask**,
+  and the loop converged on **zero** frames in any arm. Ice-track's delivered width now follows the
+  line down through 68.7% instead of pinning at 100%.
 - [SCOREBOARD-SLOT-LAYER.md](SCOREBOARD-SLOT-LAYER.md) — **THE PLACES ARE DRAWN ONCE; ONLY THE NAME
   TAG MOVES** (branch `feat/scoreboard-slot-layer` off `669a1a5b`; **NOT merged — a visible surface
   awaiting his eye**; all four fingerprints unchanged). The owner's own design: the badge column —

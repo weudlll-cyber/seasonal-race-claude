@@ -78,7 +78,13 @@ function powerFit(points) {
     ssRes += (ly[i] - (a + b * lx[i])) ** 2;
     ssTot += (ly[i] - my) ** 2;
   }
-  return { a, b, k: Math.exp(a), r2: 1 - ssRes / ssTot, predict: (N) => Math.exp(a) * N ** b };
+  return {
+    a,
+    b,
+    k: Math.exp(a),
+    r2: 1 - ssRes / ssTot,
+    predict: (N) => Math.exp(a) * N ** b,
+  };
 }
 
 const sizes = [...new Set(field.map((r) => r.racers))].sort((a, b) => a - b);
@@ -89,10 +95,15 @@ console.log(
 );
 
 // ── Q1: do the two commits differ? Every run kept; the two chain passes bracket the master pass. ──
-console.log("Q1 — CHAIN vs MASTER, per field size (median step, ms). All runs, none averaged away.");
-console.log("   n     A chain    B master   A2 chain   |  master vs chain-mean");
+console.log(
+  "Q1 — CHAIN vs MASTER, per field size (median step, ms). All runs, none averaged away.",
+);
+console.log(
+  "   n     A chain    B master   A2 chain   |  master vs chain-mean",
+);
 for (const n of sizes) {
-  const g = (label) => field.find((r) => r.racers === n && r.label.includes(label));
+  const g = (label) =>
+    field.find((r) => r.racers === n && r.label.includes(label));
   const A = g("field-A-")?.p50,
     B = g("field-B-")?.p50,
     A2 = g("field-A2-")?.p50;
@@ -108,8 +119,12 @@ for (const n of sizes) {
 
 // ── Q2: the curve, fitted on the two chain passes' mean. ──
 const pts = sizes.map((n) => {
-  const A = field.find((r) => r.racers === n && r.label.includes("field-A-")).p50;
-  const A2 = field.find((r) => r.racers === n && r.label.includes("field-A2-")).p50;
+  const A = field.find(
+    (r) => r.racers === n && r.label.includes("field-A-"),
+  ).p50;
+  const A2 = field.find(
+    (r) => r.racers === n && r.label.includes("field-A2-"),
+  ).p50;
   return { n, t: (A + A2) / 2 };
 });
 const fit = powerFit(pts);
@@ -130,10 +145,14 @@ const masterPts = sizes.map((n) => ({
   t: field.find((r) => r.racers === n && r.label.includes("field-B-")).p50,
 }));
 const mFit = powerFit(masterPts);
-console.log(`   master's own exponent, for comparison: ${mFit.b.toFixed(3)} (R² ${mFit.r2.toFixed(4)})`);
+console.log(
+  `   master's own exponent, for comparison: ${mFit.b.toFixed(3)} (R² ${mFit.r2.toFixed(4)})`,
+);
 
 // ── Q3: bunched vs spread, from the same runs. ──
-console.log("\nQ3 — DENSITY. First fifth (bunched) vs last fifth (spread), chain passes.");
+console.log(
+  "\nQ3 — DENSITY. First fifth (bunched) vs last fifth (spread), chain passes.",
+);
 console.log("   n    first5th   last5th    last/first");
 for (const n of sizes) {
   const rs = field.filter((r) => r.racers === n && r.tree === "chain");
@@ -147,10 +166,14 @@ for (const n of sizes) {
 // ── Q5: the roster arms. Three different RACES, not three label styles. ──
 const roster = m.rows.filter((r) => r.label.startsWith("roster-"));
 if (roster.length) {
-  console.log("\nQ5 — ROSTER (chain head). A racer's name is physics: each arm is a DIFFERENT RACE.");
+  console.log(
+    "\nQ5 — ROSTER (chain head). A racer's name is physics: each arm is a DIFFERENT RACE.",
+  );
   console.log("   n    roster    runs    mean p50   spread   vs current");
   const arms = [...new Set(roster.map((r) => r.roster))];
-  for (const n of [...new Set(roster.map((r) => r.racers))].sort((a, b) => a - b)) {
+  for (const n of [...new Set(roster.map((r) => r.racers))].sort(
+    (a, b) => a - b,
+  )) {
     // The palindrome gives each arm two runs; the PAIR MEAN is what a linear drift cancels out of.
     const meanOf = (name) => {
       const rs = roster.filter((x) => x.racers === n && x.roster === name);
@@ -159,7 +182,13 @@ if (roster.length) {
     const base = meanOf("current").mean;
     for (const name of arms) {
       const { rs, mean } = meanOf(name);
-      const spread = rs.length > 1 ? (100 * (Math.max(...rs.map((x) => x.p50)) - Math.min(...rs.map((x) => x.p50)))) / mean : 0;
+      const spread =
+        rs.length > 1
+          ? (100 *
+              (Math.max(...rs.map((x) => x.p50)) -
+                Math.min(...rs.map((x) => x.p50)))) /
+            mean
+          : 0;
       const d = (100 * (mean - base)) / base;
       console.log(
         `  ${String(n).padStart(3)}   ${name.padEnd(8)}   ${rs.length}     ${mean.toFixed(4).padStart(8)}   ` +
@@ -170,10 +199,15 @@ if (roster.length) {
 }
 
 // ── Q4: WHICH functions change their share between the two field sizes. The shape of the growth. ──
-const PROF_DIR = join(dirname(isAbsolute(IN) ? IN : join(ROOT, IN)), "profiles");
+const PROF_DIR = join(
+  dirname(isAbsolute(IN) ? IN : join(ROOT, IN)),
+  "profiles",
+);
 const readProf = (name) => {
   try {
-    return JSON.parse(readFileSync(join(PROF_DIR, `${name}.selftime.json`), "utf8"));
+    return JSON.parse(
+      readFileSync(join(PROF_DIR, `${name}.selftime.json`), "utf8"),
+    );
   } catch {
     return null;
   }
@@ -182,7 +216,9 @@ for (const tree of ["chain", "master"]) {
   const lo = readProf(`prof-${tree}-n30`);
   const hi = readProf(`prof-${tree}-n100`);
   if (!lo || !hi) continue;
-  console.log(`\nQ4 — ${tree}: SELF-TIME SHARE, n=30 -> n=100. The movers are the growth.`);
+  console.log(
+    `\nQ4 — ${tree}: SELF-TIME SHARE, n=30 -> n=100. The movers are the growth.`,
+  );
   const shareOf = (p, fn) => p.top.find((t) => t.fn === fn)?.share ?? 0;
   const names = [...new Set([...hi.top, ...lo.top].map((t) => t.fn))]
     .map((fn) => ({ fn, lo: shareOf(lo, fn), hi: shareOf(hi, fn) }))
@@ -220,7 +256,11 @@ console.log(
 // inversion of a fit measured on THIS machine, on ONE track — it is an order of magnitude, not a
 // diagnosis of his recordings.
 const invert = (ms) => Math.round((ms / fit.k) ** (1 / fit.b));
-console.log(`\nTHE TWO RECORDINGS, inverted through the fit (this machine, ${m.track}, not his):`);
+console.log(
+  `\nTHE TWO RECORDINGS, inverted through the fit (this machine, ${m.track}, not his):`,
+);
 for (const ms of (arg("recordings", "3,7.7") || "").split(",").map(Number)) {
-  console.log(`   ${String(ms).padStart(4)} ms/step  <->  a field of about ${invert(ms)} racers`);
+  console.log(
+    `   ${String(ms).padStart(4)} ms/step  <->  a field of about ${invert(ms)} racers`,
+  );
 }

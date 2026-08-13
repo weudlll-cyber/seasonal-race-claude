@@ -601,13 +601,22 @@ test("HULL -> SIM.md: a change to a hull file selects the engine-reach-doc guard
 test("engine-reach-doc is invoked READ-ONLY — verify may not rewrite a tracked document", () => {
   // With no argv this generator REWRITES docs/SIM.md. `commandFor` supplies `--check`; without it
   // verify would "pass" by making the document agree with itself, which is the opposite of a guard.
-  const cmd = commandFor({ id: "engine-reach-doc", source: "scripts/gen-engine-reach-doc.mjs" }).cmd;
-  assert.ok(cmd.includes("--check"), `expected --check in ${JSON.stringify(cmd)}`);
+  const cmd = commandFor({
+    id: "engine-reach-doc",
+    source: "scripts/gen-engine-reach-doc.mjs",
+  }).cmd;
+  assert.ok(
+    cmd.includes("--check"),
+    `expected --check in ${JSON.stringify(cmd)}`,
+  );
 });
 
 test("engine-reach-doc still routes on its OWN source, via the closure nobody declares", () => {
   // SELF is computed, never declared. Editing the generator must select it too.
-  assert.equal(runs(["scripts/gen-engine-reach-doc.mjs"], "engine-reach-doc"), true);
+  assert.equal(
+    runs(["scripts/gen-engine-reach-doc.mjs"], "engine-reach-doc"),
+    true,
+  );
   assert.equal(runs(["docs/SIM.md"], "engine-reach-doc"), true);
 });
 
@@ -618,8 +627,14 @@ test("MODULES -> SHIP-CEREMONY.md: a file appearing under modules/ selects cerem
   // The counts include "tracked non-test files under client/src/modules/ outside camera/", so ANY
   // change under modules/ can move them — including one nowhere near the engine's closure. That is
   // the difference from engine-reach-doc, which routes on the hull alone.
-  assert.equal(runs(["client/src/modules/raceBehavior.js"], "ceremony-counts"), true);
-  assert.equal(runs(["client/src/modules/rAFProbe.js"], "ceremony-counts"), true);
+  assert.equal(
+    runs(["client/src/modules/raceBehavior.js"], "ceremony-counts"),
+    true,
+  );
+  assert.equal(
+    runs(["client/src/modules/rAFProbe.js"], "ceremony-counts"),
+    true,
+  );
   assert.equal(
     runs(["client/src/screens/RaceScreen/index.jsx"], "ceremony-counts"),
     false,
@@ -639,10 +654,16 @@ test("ceremony-counts is invoked READ-ONLY — verify may not rewrite a tracked 
     cmd.includes("--check-counts"),
     `expected --check-counts in ${JSON.stringify(cmd)}`,
   );
-  assert.ok(!cmd.includes("--check"), "plain --check would fail the build on a stale COST table");
+  assert.ok(
+    !cmd.includes("--check"),
+    "plain --check would fail the build on a stale COST table",
+  );
 });
 
 test("ceremony-counts routes on its own source and on the document it writes", () => {
-  assert.equal(runs(["scripts/gen-ceremony-costs.mjs"], "ceremony-counts"), true);
+  assert.equal(
+    runs(["scripts/gen-ceremony-costs.mjs"], "ceremony-counts"),
+    true,
+  );
   assert.equal(runs(["docs/SHIP-CEREMONY.md"], "ceremony-counts"), true);
 });

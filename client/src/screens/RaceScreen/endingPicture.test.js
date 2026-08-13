@@ -8,9 +8,16 @@
 //
 //              WHAT THESE GUARD. For four months the ending replaced the director's transform with
 //              an identity matrix and drew a full-canvas scrim over the result, and nothing noticed:
-//              the camera fingerprint stops at the last crossing and the render fingerprint samples
-//              no FINISHED frame. `scripts/check-ending-frame.mjs` is the guard that renders a real
-//              frame; these are the unit-level statements of the same two rules.
+//              the camera fingerprint stopped at the last crossing and the render fingerprint
+//              sampled no FINISHED frame. `scripts/check-ending-frame.mjs` is the guard that renders
+//              a real frame; these are the unit-level statements of the same two rules.
+//
+//              BOTH OF THOSE HOLES ARE NOW CLOSED, and this note stays because it says WHY these
+//              tests exist rather than describing today's coverage: FINISH-WINDOW-1 extended the
+//              render fingerprint to the finish, and CAMERA-ENDING-WINDOW-1 (2026-08-13) took the
+//              camera fingerprint's window from `endingOnRaceScreenMs()`, so it now renders the
+//              ending the director actually composes. Neither replaces these — a fingerprint says
+//              that SOMETHING moved, and these say WHICH RULE it was.
 // ============================================================
 
 import { describe, it, expect } from 'vitest';

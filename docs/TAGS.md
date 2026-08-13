@@ -98,6 +98,108 @@ the Dev Screen toggle and the `renderRaceFrame` hook. The branch was deleted at 
   may be promising a corridor the viewer cannot see. Start here rather than from scratch — see
   [DEAD-ENDS.md](DEAD-ENDS.md) §K.
 
+### CAMERA-ENDING-WINDOW — the camera's own fingerprint can see the ending (2026-08-13)
+
+**The instrument changed, not the product, and that is the whole entry.** Not one line of camera
+behaviour moves here. `camera-fingerprint.mjs` ran `while (finishedCount < N)`, so it stopped on the
+exact frame the ending BEGINS and had never rendered a FINISHED frame — which meant ENDING-PICTURE-1,
+the block that makes the director compose the ending at all, was invisible to the camera's own change
+detector. The record said so in three separate places, and said it as though it were a property
+rather than a hole. **The window is now DERIVED** from `endingOnRaceScreenMs()`, the same arithmetic
+RaceScreen sets its navigate-away timer from, so a future change that lengthens the ending lengthens
+the window with it. CAMERA moved once, deliberately, and is minted; WORLD and RENDER were re-run in
+full and are unchanged. Values live in [fingerprints.json](fingerprints.json).
+
+**The proof is the off arm, and it is exact.** With `endingKeepsFinishShot` false — the arm in which
+the director does not compose the ending — the extended instrument reproduces the predecessor value
+BYTE-IDENTICALLY, so no frame before the last crossing moved and the entire fingerprint move is the
+ending. A sabotage firing only from the SECOND all-home frame onward moves the default arm and leaves
+that control untouched; removing it returns the hash. **9 of 10 tracks contribute 300 FINISHED
+frames**, and the instrument now prints that count and refuses to run if none does — so the blindness
+cannot come back quietly. Cost 44 s against ~29 s.
+
+- `pre/ship-camera-ending-window` (`758a95ac`, 2026-08-13) — master immediately BEFORE the ship.
+  Reset here to restore a camera fingerprint that stops at the last crossing, with the CAMERA value
+  `c1556053b1824758` and `docs/fingerprints.json` carrying RUNIN-1's mint.
+- `v-ship-camera-ending-window` (`96f7a0ae`, 2026-08-13) — **the ship.** An instrument change that
+  moves a baseline is the case a ceremony exists for, so it was run in full rather than argued: both
+  other fingerprints measured, the off arm measured, and the move proved by sabotage and restored.
+
+### STAMP-COMPLETE — the stamp guard answers about everything it is responsible for (2026-08-13)
+
+**A guard that scans one file and prints a confident green line.** `check-measured-stamps` ran bare
+over `docs/CAMERA_DIRECTOR.md` and nothing else, so a stale stamp in any other living document was
+invisible — the identical shape INDEX-COMPLETE-1 had fixed in `check-index` the previous day. It now
+scans the whole living-doc set, discovered by the SAME rule `check-doc-links` uses so that "a living
+doc" has one definition. **Proved by sabotage in both directions on one tree**: with a stale stamp
+appended to `docs/ENDING-PHASES.md`, the old guard exits 0 reporting "1 stamp across 1 document, 0
+stale" and the new one exits 1 naming the document and the commit that invalidated it.
+
+It defaults to ALL rather than refusing without arguments, following INDEX-COMPLETE-1's reasoning:
+refusing helps only the person who runs it bare, while defaulting makes the cheapest invocation the
+complete one. It still reads git HISTORY, which was re-examined and left alone — the question a stamp
+raises is historical, and the PENDING pass already reports the working tree without failing on it.
+
+**It unblocked something the same day.** `docs/SHIP-CEREMONY.md` recorded that its hand-counted
+`eleven` could not be stamped BECAUSE this guard scanned one file. Re-counted and stamped.
+
+- `v-guard-stamp-complete` (`758a95ac`, 2026-08-13) — **the merge.** No fingerprint moves; this is a
+  guard, and it is tagged because a guard widening its own reach is exactly the kind of change a
+  later reader needs to be able to date.
+
+### RUNIN — the run-in glides wide-and-back, and only the line sets the width (2026-08-12)
+
+**The endgame gets a shot that shows the line.** From the moment the leader is within reach of the
+finish, one progress measure — the leader's remaining distance ALONG THE TRACK, so it is monotone —
+drives both the anchor placement and the zoom: the shot opens wide-and-back over `runInOpenMs` and
+closes to the ordinary shot exactly at the crossing, with no seam and no handover. **It adds no
+camera state**, which is deliberate and was checked in the source rather than after the fact:
+RaceScreen starts the photo-finish slow motion off `hudState`, so a RUN_IN state holding the slot at
+the line would have suppressed it outright. Line in frame over the run-in window **9.8% → 86.6%**
+pooled across ten tracks, first in shot 1.1 s after the window opens, **0 empty frames on every
+track at every pace tested**. The trade is the tracking-lag tail — LEAD_CHANGE p95 10.72 → 22.17 pp —
+and it is proportional to the zoom rate by construction. CAMERA and RENDER moved and are minted;
+WORLD is unchanged and was re-run in full rather than inferred. Values and the two-part attribution
+live in [fingerprints.json](fingerprints.json).
+
+**Five shapes were built and four were replaced**, each by the measurement of its own limit — the
+history is in the six RUNIN reports, and [DEAD-ENDS.md](DEAD-ENDS.md) carries what must not be
+retried, including the tighten-rate limit that cost the crossing shot an order of magnitude.
+
+- `pre/ship-runin` (`0b6d6098`, 2026-08-12) — master immediately BEFORE the ship, and AFTER
+  `v-ship-resolve-converge`. Reset here to restore an endgame with no run-in at all — no `runInShot`
+  or `runInOpenMs` keys — and the CAMERA/RENDER pair `64432e18a7e62188` / `096f2726c45ed853`.
+- `v-ship-runin` (`eea0acf2`, 2026-08-12) — **the ship.** Two keys, both defaulting to the new
+  behaviour. **The off-arm promise was measured on this tree, not assumed**: with `runInShot` false
+  both instruments reproduce the predecessor values exactly, so the run-in and the convergence repair
+  shipped beside it change nothing until the run-in composes.
+
+### RESOLVE-CONVERGE — a widening step has to buy something (2026-08-12)
+
+**The last step of every shot stops paying width for nothing.** `resolveCamera` pursued its
+inner-frame guarantee by stepping the zoom down 10% at a time and never asked whether the steps were
+getting anywhere; where the world-bounds clamp holds the target at the world edge they cannot, so it
+ran to the projection floor, handed over the whole world, and left the target further outside than it
+started. It now takes a step only when the step strictly reduces how far outside the inner frame the
+target lands — a comparison, no new number. **The up-front "is it reachable" test was rejected on
+evidence**: the clamp has two regimes and where the world already FITS the frame, widening genuinely
+helps, so a test written from the other regime alone would have shipped wrong.
+
+**NOTHING WAS MINTED, and that is the measurement rather than an omission.** Over 172226 frames the
+loop fires zero times on the shipped configuration, so CAMERA and RENDER are byte-identical to the
+values already in [fingerprints.json](fingerprints.json), and the WORLD cannot be reached at all
+(`engine-reach --check`: none of 4). The defect is reachable only under a forward-anchored wide shot
+near the world edge, which is the run-in shipped beside this.
+
+- `pre/ship-resolve-converge` (`e1f53781`, 2026-08-12) — master immediately BEFORE the ship. Reset
+  here to restore a `resolveCamera` that widens to the projection floor whenever the pan target falls
+  outside `innerFramePct`, whether or not widening can bring it back.
+- `v-ship-resolve-converge` (`d7eca25d`, 2026-08-12) — **the ship.** No key: it is a defect repair
+  with no second position worth offering, and both fingerprints prove it changes nothing until the
+  condition that triggers it exists. `scripts/resolve-converge-truth.mjs` ships with it and measures
+  the SHIPPED function rather than a copy — it reconstructs `_setTrackTargets`'s arguments from the
+  director's own `_framingProbe` and self-checks every frame against the `targetZoom` actually set.
+
 ### FINISH-PAIR — the photo finish frames the pair it is following (2026-08-11)
 
 **The camera stops lurching at the finish, and NOTHING about the race moved.** The shot captured its
@@ -133,6 +235,14 @@ retired, each behind a key defaulting to the fix. RENDER moved and is minted; va
 [fingerprints.json](fingerprints.json). **CAMERA is unchanged and that is NOT evidence about this
 ship** — `camera-fingerprint.mjs` stops at the last crossing and renders no FINISHED frame, which is
 recorded beside the value.
+
+**That last sentence was true when this tag was cut and is no longer true of the instrument**, and
+it is left standing rather than edited because it is what the ship was judged against.
+CAMERA-ENDING-WINDOW-1 (2026-08-13) derived the instrument's window from `endingOnRaceScreenMs()`,
+the same arithmetic the race screen navigates away on, so it now renders the ending. The blindness
+this paragraph records is measured, not remembered: with `endingKeepsFinishShot` false the extended
+instrument reproduces this ship's CAMERA value exactly, which is precisely why that value could say
+nothing about a ship that only acts once the key is on.
 
 - `pre/ship-ending-picture` (`7eb8f013`, 2026-08-12) — master immediately BEFORE the ship. Reset here
   to restore an ending that flips to an identity transform at the last crossing and draws the

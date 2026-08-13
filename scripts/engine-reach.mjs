@@ -126,9 +126,14 @@ if (
     // VERIFY-COST-1: a hull file whose edit is comments and whitespace ONLY cannot change what the
     // engine computes, so it does not count as reach. Printed, never silent.
     const baseArg = process.argv.find((a) => a.startsWith("--base="));
-    const { hit, inert } = splitInert(inHull, baseArg ? baseArg.slice(7) : "master");
+    const { hit, inert } = splitInert(
+      inHull,
+      baseArg ? baseArg.slice(7) : "master",
+    );
     for (const i of inert)
-      console.log(`ENGINE REACH: ${i.path} is in the hull but INERT — ${i.reason}`);
+      console.log(
+        `ENGINE REACH: ${i.path} is in the hull but INERT — ${i.reason}`,
+      );
     if (hit.length) {
       console.log(
         `ENGINE REACH: ${hit.length} of ${wanted.length} path(s) can change the race:`,

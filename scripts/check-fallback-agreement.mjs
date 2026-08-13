@@ -442,11 +442,29 @@ export function findPairs(src, file, defaults) {
       // A constant DEFINED from the default (MIRRORS-BY-REFERENCE) is byRef at one remove. Same
       // verdict as an inline `?? DEFAULT_X.k`, and the same defect if it names a DIFFERENT key.
       if (value && typeof value === "object" && value.byRefTo) {
-        const r2 = /^([A-Z][A-Z0-9_]{2,})\.([a-zA-Z_][a-zA-Z0-9_]*)$/.exec(value.byRefTo);
+        const r2 = /^([A-Z][A-Z0-9_]{2,})\.([a-zA-Z_][a-zA-Z0-9_]*)$/.exec(
+          value.byRefTo,
+        );
         found.push(
           r2 && r2[2] === key
-            ? { file, key, kind, via: `${rhs} = ${value.byRefTo}`, byRef: true, expected: defaults.get(key).value }
-            : { file, key, kind: "cross-key", via: rhs, value: value.byRefTo, unresolved: null, expected: defaults.get(key).value, crossKey: true },
+            ? {
+                file,
+                key,
+                kind,
+                via: `${rhs} = ${value.byRefTo}`,
+                byRef: true,
+                expected: defaults.get(key).value,
+              }
+            : {
+                file,
+                key,
+                kind: "cross-key",
+                via: rhs,
+                value: value.byRefTo,
+                unresolved: null,
+                expected: defaults.get(key).value,
+                crossKey: true,
+              },
         );
         return;
       }

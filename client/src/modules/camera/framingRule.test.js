@@ -969,6 +969,9 @@ describe('the switch’s reach is exactly the corridor states (CAMERA-COMPANY-ON
     }
   });
 
+  // RUNIN-OWNS-1 left this at SIX deliberately. The run-in bounds the zoom of whatever state is
+  // running and is not a state itself, so it has no row here and adds no guarantee kind — which is
+  // exactly why the picture it hands back at the line is the state's own.
   it('there are exactly six states and no seventh has appeared unclassified', () => {
     const states = Object.keys(FRAMING_BY_STATE);
     expect(states).toHaveLength(6);

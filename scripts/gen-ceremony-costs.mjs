@@ -279,7 +279,11 @@ if (IS_ENTRY && COUNTS_ONLY) {
     console.log(countsBlock());
     process.exit(0);
   }
-  writeVerified(CEREMONY, next, "the engine-reach counts in docs/SHIP-CEREMONY.md");
+  writeVerified(
+    CEREMONY,
+    next,
+    "the engine-reach counts in docs/SHIP-CEREMONY.md",
+  );
   console.log("  wrote the generated engine-reach counts block");
   process.exit(0);
 }
