@@ -2096,7 +2096,22 @@ export class CameraDirector {
     const tw = this._trackWidthPx;
     const leader = ordered[0];
     if (!(tw > 0) || !leader) return ordered.slice(0, 2);
+    // ── THE RULE IS GEOMETRIC, SO WITHOUT GEOMETRY IT CANNOT BE APPLIED ───────────────────────
+    //
+    // BOTH conditions below are built from quantities the RACE puts on a racer — `pathLengthPx`,
+    // `drawnBodyLengthPx`, `drawnBodyWidthPx`. A caller that supplies none of them (a director test
+    // driving bare `{t, x, y, index}` shapes, `camera-replay`'s marker fields) would silently pass
+    // EVERY racer through both tests and frame the whole field.
+    //
+    // THAT IS NOT HYPOTHETICAL AND IT WAS NOT CAUGHT BY MEASUREMENT. Five FINISH-PAIR-1 tests went
+    // red because their fixture's third racer — sitting at t = 0.6 against a leader at 0.98, THIRTY-
+    // EIGHT PER CENT OF A LAP BACK — was being admitted as a contender. He is not one by any
+    // reading; the level condition had simply evaporated with `pathLengthPx` absent. The tests were
+    // right and this guard is the repair. Real races carry all three fields on every racer.
     const pathLen = leader.pathLengthPx ?? 0;
+    const hasGeometry =
+      pathLen > 0 && (leader.drawnBodyLengthPx ?? 0) > 0 && (leader.drawnBodyWidthPx ?? 0) > 0;
+    if (!hasGeometry) return ordered.slice(0, 2);
     const out = [];
     for (const r of ordered) {
       // ── CONDITION 1: NEARLY LEVEL WITH THE LEADER ─────────────────────────────────────────
@@ -2105,7 +2120,7 @@ export class CameraDirector {
       // which is what was forcing the shot open. `contactLength` is pairContact's own along-track
       // touch distance, `halfLengthA + halfLengthB`, i.e. exactly one body length between two equal
       // racers. Not a new number and not a lap fraction.
-      if (r !== leader && pathLen > 0) {
+      if (r !== leader) {
         const gapPx = shortestArcDeltaT(leader.t, r.t) * pathLen;
         const contactLength = ((leader.drawnBodyLengthPx ?? 0) + (r.drawnBodyLengthPx ?? 0)) / 2;
         if (!(contactLength > 0) || gapPx > contactLength) continue;
