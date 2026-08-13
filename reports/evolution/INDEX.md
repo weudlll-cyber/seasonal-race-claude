@@ -451,6 +451,24 @@ is dated and recorded HERE, where a reader on their way to the report will pass 
 
 ## Camera / presentation fixes
 
+- [CONTENDER-ZOOM-1.md](CONTENDER-ZOOM-1.md) — **the corridor is the wrong quantity in BOTH
+  directions** (2026-08-13, `feat/contender-zoom` off master `5d4079c3`; **NOT merged, nothing
+  minted**). The owner's corrected rule: the contenders decide how tight the photo finish closes and
+  the corridor width is a MAXIMUM. Three findings, and each changes what can be built. **(1)
+  `endgameCorridorFloor` is not on master** — it lives only on the unmerged `feat/front-group`, so
+  there was no floor to turn round, and the crossing shot is ALREADY at the ordinary zoom (median
+  100%). **(2) The contender set holds exactly two and cannot hold more**: gate, capture and
+  consumer are all pair-shaped, while **26 of 27 photo finishes have more than two racers level at
+  entry — median 12, up to 20 of 20.** Widening it needs a definition of ABREAST the project does
+  not have; both existing thresholds (0.03, 0.05) admit most of the field, so **no number was
+  invented and the decision is his**. **(3) The corridor cap ships OFF because it measurably costs
+  participants** — it moves the zoom on 3955 of 7441 frames and takes level-racers-not-whole from
+  57.3% to 81.7%, because a width bound only constrains ACROSS while a zoom change moves both ways
+  and the participants are strung out ALONG the road. With FRONT-GROUP-7, which found the same
+  geometry from the opposite side, **the corridor width is wrong in both directions.** Built and
+  kept: `contenderGuarantee`, which is `pairGuarantee` exactly at two — proved by all three
+  fingerprints being byte-identical at the shipped default.
+
 - [RESOLVE-CONVERGE-1.md](RESOLVE-CONVERGE-1.md) — **a widening step has to buy something** (branch
   `fix/resolve-converge` off `master`; **NOT merged, nothing minted — his eye is owed on ice-track
   seed 9**). `resolveCamera` widened 10% at a time to frame the pan target and never asked whether

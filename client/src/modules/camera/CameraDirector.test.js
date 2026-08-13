@@ -7326,3 +7326,70 @@ describe('RUNIN-GLIDE-1 — wide-and-back, gliding to the ordinary shot', () => 
     expect(cd._forwardFracNow()).toBe(cd._leaderForwardFrac);
   });
 });
+
+// ── CONTENDER-ZOOM-1: the corridor as a MAXIMUM WIDTH ───────────────────────────────────────────
+//
+// The key ships OFF — measured, see the report — so what these pin is the MECHANISM and the fact
+// that the off position is genuinely the old composition. The numbers belong to the harness.
+describe('CameraDirector — the corridor caps the width, it does not force it', () => {
+  const WORLD_W = 6000;
+  const CANVAS_W = 1280;
+  const CANVAS_H = 720;
+  const FINISH_T = 0.9;
+  const TRACK_W = 300;
+
+  function makeShape() {
+    return {
+      getTotalLength: () => WORLD_W,
+      getPosition: (t) => ({ x: t * WORLD_W, y: 360, angle: 0 }),
+      getCenterPoint: () => ({ x: WORLD_W / 2, y: CANVAS_H / 2 }),
+    };
+  }
+
+  /** A pair far enough apart that the state would otherwise open wider than the road. */
+  const spreadPair = () => [
+    { t: 0.889, x: 5334, y: 300, finished: false, index: 0 },
+    { t: 0.888, x: 4200, y: 420, finished: false, index: 1 },
+    { t: 0.5, x: 3000, y: 360, finished: false, index: 2 },
+  ];
+
+  function drive(configOver, racers) {
+    const cd = new CameraDirector(WORLD_W, CANVAS_H, true, configOver, 36, makeShape(), TRACK_W);
+    cd.state = CAM_STATE.PHOTO_FINISH;
+    cd._photoFinishContenders = racers.slice(0, 2).map((r) => ({ index: r.index, ref: r }));
+    let ts = 1000;
+    for (let f = 0; f < 6; f++) {
+      cd.update(
+        racers,
+        ts,
+        { raceElapsed: 40000 + f * 200, finishedCount: 0, finishT: FINISH_T },
+        CANVAS_W,
+        CANVAS_H
+      );
+      cd.stateEnteredAt = 0;
+      ts += 200;
+    }
+    return cd;
+  }
+
+  // L203 — both positions, and the direction is the claim: a CAP raises the zoom (tightens).
+  it('both positions differ: the cap tightens a shot that was wider than the road', () => {
+    const off = drive({ contenderZoom: false }, spreadPair());
+    const on = drive({ contenderZoom: true }, spreadPair());
+    expect(on._framingProbe.corridorCap).toBeGreaterThan(0);
+    expect(on.targetZoom).toBeGreaterThanOrEqual(off.targetZoom);
+  });
+
+  it('off means the probe carries no cap at all — the old composition, not a neutral value', () => {
+    const off = drive({ contenderZoom: false }, spreadPair());
+    expect(off._framingProbe.corridorCap).toBeNull();
+    expect(off._framingProbe.capBound).toBe(false);
+  });
+
+  // The half that protects the contenders: the cap may never cut one.
+  it('the contenders still win — the cap never tightens past their own guarantee', () => {
+    const on = drive({ contenderZoom: true }, spreadPair());
+    const g = on._framingProbe.ceilings.guarantee;
+    if (Number.isFinite(g)) expect(on._framingProbe.guaranteed).toBeLessThanOrEqual(g + 1e-9);
+  });
+});

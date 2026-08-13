@@ -81,6 +81,7 @@ import {
   POSITION,
   corridorGuarantee,
   pairGuarantee,
+  contenderGuarantee,
   companyGuarantee,
   fieldGuarantee,
   COMPANY_FRAME_PCT,
@@ -566,6 +567,7 @@ export class CameraDirector {
     this._photoFinishContenderFraming = t.photoFinishContenderFraming;
     this._runInShot = t.runInShot;
     this._runInOpenMs = t.runInOpenMs;
+    this._contenderZoom = t.contenderZoom;
     this._comebackCooldownMs = t.comebackCooldownMs;
     this._leadChangeCooldownMs = t.leadChangeCooldownMs;
     this._battleWeight = t.battleWeight;
@@ -1981,10 +1983,22 @@ export class CameraDirector {
     const { axisX, axisY } = this._proj;
     const inner = this._innerFramePct ?? DEFAULT_INNER_FRAME_PCT;
     if (kind === GUARANTEE.PAIR) {
-      const [a, b] = subjects.pair;
-      const ceiling = pairGuarantee(
-        a,
-        b,
+      // CONTENDER-ZOOM-1: THE CONTENDERS ARE THE BINDING REQUIREMENT, however many there are.
+      //
+      // `subjects.pair` is the pinned set. `contenderGuarantee` is `pairGuarantee` over every pair in
+      // it and reduces to exactly `pairGuarantee` at two — which is what the set holds today, so this
+      // line changes no picture until the capture widens. It is here rather than waiting for that
+      // widening because the guarantee is the half that can be built without a membership rule; the
+      // membership rule is the half that cannot. See the block above `_photoFinishContenders`.
+      //
+      // THE PADDING IS THE NARROW BODY REFERENCE, and that is stated rather than assumed adequate:
+      // `_drawnBodyWidthRefPx` covers a MEDIAN 44.6% of the drawn sprite (measured across ten tracks,
+      // FRONT-GROUP-7 §1), so a contender at the very edge of the shot can still be clipped by the
+      // remainder. What it cannot be is half out of frame. Closing that needs the DRAWN size, which
+      // depends on the zoom being solved for, and the sprite sits at its screen cap on only 23.4% of
+      // endgame frames — so there is no closed form for the other 77%.
+      const ceiling = contenderGuarantee(
+        subjects.pair,
         axisX,
         axisY,
         frameSize.width,
@@ -2034,6 +2048,47 @@ export class CameraDirector {
       inner,
       at
     );
+  }
+
+  /**
+   * THE CORRIDOR AS A MAXIMUM WIDTH — the zoom BELOW which the shot would be wider than the road.
+   *
+   * Returns a LOWER bound on `cam.zoom`, which is the opposite direction from every ceiling in this
+   * file; the composition site says why that cannot be one more `_ceilings` entry. It reuses
+   * `corridorGuarantee` unchanged, so the three things that were right about it survive intact and
+   * are not restated here: the SCREEN-relative anchor point, the per-axis projection of the
+   * perpendicular that makes an angled corridor ask for more than a flat one, and the body padding.
+   *
+   * `innerFramePct` is 1 deliberately — the promise is "the road's width fits", and the safe-region
+   * inset belongs to the subject rather than to the road.
+   *
+   * @returns {number|null} a cam.zoom FLOOR, or null when nothing should be capped
+   */
+  _corridorWidthCap(subjects, frameSize) {
+    // PHOTO_FINISH ONLY, and the first draft of this got it wrong in a way worth recording.
+    // Scoping by `GUARANTEE.PAIR` looks equivalent and is not: BATTLE_ZOOM and LEAD_CHANGE are pair
+    // states too, and they are mid-race shots the owner's rule says nothing about. With the cap
+    // reaching them, `check-runin-frame` went red — 14 frames with NO racer on screen at all on
+    // searound, the narrowest corridor, in BATTLE_ZOOM. The rule is about the finish; so is this.
+    if (this.state !== CAM_STATE.PHOTO_FINISH) return null;
+    if (!subjects?.point || !(this._trackWidthPx > 0)) return null;
+    const at = anchorScreenPoint(
+      frameSize.width,
+      frameSize.height,
+      this._forwardFracNow(),
+      this._headingScreen(subjects.t)
+    );
+    const cap = corridorGuarantee(
+      this._headingAt(subjects.t),
+      this._trackWidthPx + this._drawnBodyWidthRefPx,
+      this._proj.axisX,
+      this._proj.axisY,
+      frameSize.width,
+      frameSize.height,
+      1,
+      at
+    );
+    return Number.isFinite(cap) ? cap : null;
   }
 
   /**
@@ -2828,6 +2883,9 @@ export class CameraDirector {
     // EVERY TERM NAMED, so the probe below can say WHICH ONE decided the width instead of leaving a
     // reader to infer it from the total. `Math.min` over an object's values is the same computation
     // it always was — this only stops the answer being unrecoverable one line after it is produced.
+    // THE CORRIDOR CAP, computed once beside the ceilings it does NOT belong to. `null` outside the
+    // pair states and whenever the key is off, so the composition below is a no-op there.
+    const _corridorCap = this._contenderZoom ? this._corridorWidthCap(subjects, frameSize) : null;
     const _ceilings = {
       state: stateZoom,
       guarantee: this._guaranteeCeiling(subjects, frameSize),
@@ -2841,13 +2899,42 @@ export class CameraDirector {
       // `stateZoom` above IS the run-in's second bound; it needed no code.
       line: _runInCeiling,
     };
-    const guaranteed = Math.min(
+    let guaranteed = Math.min(
       _ceilings.state,
       _ceilings.guarantee,
       _ceilings.company,
       _ceilings.field,
       _ceilings.line
     );
+    // ── THE CORRIDOR IS A CEILING ON WIDTH, NOT A FLOOR (CONTENDER-ZOOM-1) ──────────────────────
+    //
+    // THE OWNER'S CORRECTED RULE, and it is the opposite way round from how this was first built:
+    // the corridor width is a MAXIMUM. Never wider than the track is wide, because showing the whole
+    // width certainly shows everyone; and if the full width is NOT needed, the shot closes in
+    // further. The contenders decide how tight it gets — the road only says how loose.
+    //
+    // EVERY OTHER TERM IN THIS FUNCTION IS A CEILING ON ZOOM, i.e. a LOWER bound on width, composed
+    // with `min`. A maximum WIDTH is the other direction: a LOWER bound on zoom, composed with
+    // `max`. That asymmetry is the whole reason this cannot be another entry in `_ceilings` — it
+    // would silently mean the opposite of every line beside it.
+    //
+    // WHY IT IS SCOPED TO THE PAIR STATES. On the single-anchor shots the road already lost, and for
+    // the owner's own reason: THE ROAD IS NOT WHO MATTERS, THE RACERS ARE (CAMERA-COMPANY-ONLY-3,
+    // approved 2026-08-05). Re-imposing it there would overturn a decision he has already made. The
+    // finish is the one place he has now said the road IS the sufficient bound.
+    //
+    // THE CONTENDERS WIN IF THEY CONFLICT, and that is deliberate rather than a fallback: his first
+    // rule is that ALL participants must be visible, and the corridor is only his shortcut for
+    // "certainly enough". If a contender needs more room than a track width, honouring the cap would
+    // cut him — so the cap is applied to the OTHER terms and the contender ceiling is re-applied
+    // after it. How often that happens is measured rather than assumed; see the report.
+    const _preCapGuaranteed = guaranteed;
+    if (this._contenderZoom && _corridorCap !== null && Number.isFinite(_corridorCap)) {
+      guaranteed = Math.max(guaranteed, _corridorCap);
+      if (Number.isFinite(_ceilings.guarantee)) {
+        guaranteed = Math.min(guaranteed, _ceilings.guarantee);
+      }
+    }
     // ── RUNIN-PACE-1 §3: A TIGHTEN-RATE LIMIT WAS BUILT HERE AND MEASURED OUT ───────────────────
     //
     // The candidate was sound in principle: every ceiling is a LOWER BOUND ON WIDTH, so approaching
@@ -2892,7 +2979,13 @@ export class CameraDirector {
       stateZoom,
       guaranteed,
       point: subjects.point, // the anchor world point (§4b: is its BODY inside, or just its centre?)
-      pair: subjects.pair, // the two guaranteed contenders, when the state guarantees a pair
+      pair: subjects.pair, // the guaranteed contenders, when the state guarantees them
+      // CONTENDER-ZOOM-1, diagnostic only — read by nothing in the camera. `corridorCap` is the
+      // zoom FLOOR the road imposes (null when it does not apply) and `capBound` says whether it
+      // actually moved the delivered zoom, so "the corridor is the ceiling" can be measured as a
+      // frequency rather than asserted.
+      corridorCap: _corridorCap,
+      capBound: _corridorCap !== null && guaranteed > _preCapGuaranteed + 1e-12,
     };
 
     // ── WHERE IN FRAME: from the principle, not from a slider ──────────────────────────────────

@@ -292,6 +292,60 @@ function halfCorridorCeiling(
  * @param {number} [padding=0]  world px added to the separation (e.g. one drawn body width)
  * @returns {number} cam.zoom ceiling; Infinity when fewer than two contenders exist
  */
+/**
+ * GUARANTEE 2b — THE CONTENDERS, however many there are (CONTENDER-ZOOM-1).
+ *
+ * The owner's corrected rule: in a photo finish ALL of its participants must be visible, WHOLE. Two
+ * contenders means the shot may close in far; three abreast means less far. **The contenders decide
+ * how tight it gets**, and the corridor is only the ceiling above them.
+ *
+ * IT IS `pairGuarantee` OVER EVERY PAIR, minimum wins. Every contender must fit with every other, so
+ * the binding constraint is the widest separation in the set — and asking the existing pair rule
+ * about each pair reuses its orientation handling, its padding and its co-located case instead of
+ * restating any of them.
+ *
+ * **AT n = 2 IT IS `pairGuarantee`, EXACTLY** — one pair, one call, the same arguments. That is what
+ * makes this block's off arm byte-identical rather than approximately so, and it is why the shipped
+ * picture cannot move until the contender SET grows beyond two. Today it never does: see
+ * `_photoFinishContenders`, which is captured as `slice(0, 2)`.
+ *
+ * WHY NOT A BOUNDING BOX: an axis-aligned box assumes the worst orientation, which is precisely what
+ * `pairGuarantee` was written to stop doing — two racers side by side across a diagonal corridor need
+ * far less zoom-out than their bounding box implies. The cost is O(n^2) over a handful of points.
+ *
+ * @param {Array<{x:number,y:number}|null>} pts  the contenders
+ * @returns {number} cam.zoom ceiling; Infinity when fewer than two are present
+ */
+export function contenderGuarantee(
+  pts,
+  axisX,
+  axisY,
+  frameW,
+  frameH,
+  innerFramePct = 1,
+  padding = 0
+) {
+  const live = (pts ?? []).filter((p) => p && Number.isFinite(p.x) && Number.isFinite(p.y));
+  if (live.length < 2) return Infinity;
+  let ceiling = Infinity;
+  for (let i = 0; i < live.length; i++) {
+    for (let j = i + 1; j < live.length; j++) {
+      const c = pairGuarantee(
+        live[i],
+        live[j],
+        axisX,
+        axisY,
+        frameW,
+        frameH,
+        innerFramePct,
+        padding
+      );
+      if (c < ceiling) ceiling = c;
+    }
+  }
+  return ceiling;
+}
+
 export function pairGuarantee(a, b, axisX, axisY, frameW, frameH, innerFramePct = 1, padding = 0) {
   if (!a || !b) return Infinity;
   const dx = b.x - a.x;
