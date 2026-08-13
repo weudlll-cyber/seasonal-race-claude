@@ -52,6 +52,7 @@ import {
   findByIndex,
   resolveGroup,
 } from './battleGroup.js';
+import { shortestArcDeltaT } from '../../utils/mathUtils.js';
 import { mulberry32 } from '../racePlanner.js';
 import { computeTimingFromConfig } from './cameraTimingComputation.js';
 import { decideTransition, TRANSITION_ACTION, TRANSITION_REASON } from './transitionDecision.js';
@@ -2093,9 +2094,26 @@ export class CameraDirector {
    */
   _abreastContenders(ordered) {
     const tw = this._trackWidthPx;
-    if (!(tw > 0)) return ordered.slice(0, 2);
+    const leader = ordered[0];
+    if (!(tw > 0) || !leader) return ordered.slice(0, 2);
+    const pathLen = leader.pathLengthPx ?? 0;
     const out = [];
     for (const r of ordered) {
+      // ── CONDITION 1: NEARLY LEVEL WITH THE LEADER ─────────────────────────────────────────
+      // A racer well behind the leader is not fighting for the win however clear his lane is, and
+      // MEASURED, the lane test alone reaches up to 18.2 body lengths back (dirt-oval seed 9) —
+      // which is what was forcing the shot open. `contactLength` is pairContact's own along-track
+      // touch distance, `halfLengthA + halfLengthB`, i.e. exactly one body length between two equal
+      // racers. Not a new number and not a lap fraction.
+      if (r !== leader && pathLen > 0) {
+        const gapPx = shortestArcDeltaT(leader.t, r.t) * pathLen;
+        const contactLength = ((leader.drawnBodyLengthPx ?? 0) + (r.drawnBodyLengthPx ?? 0)) / 2;
+        if (!(contactLength > 0) || gapPx > contactLength) continue;
+      }
+      // ── CONDITION 2: ON A FREE LANE ───────────────────────────────────────────────────────
+      // Blocked by somebody ahead across the track means he would have to move aside AND then still
+      // overtake, and the photo finish is far too short for both. `contactWidth` is pairContact's
+      // across-track touch distance; the physicalY unit is rowLayout's, one unit = trackWidth/2.
       let blocked = false;
       for (const ahead of out) {
         const lateralPx = (Math.abs((r.physicalY ?? 0) - (ahead.physicalY ?? 0)) * tw) / 2;
@@ -2107,8 +2125,9 @@ export class CameraDirector {
       }
       if (!blocked) out.push(r);
     }
-    // A field with no lateral data at all (a harness racer carries no physicalY) would return
-    // everyone; fall back to the pair rather than framing the whole grid.
+    // Fewer than two survivors means nobody is contesting the line with the leader — and a field
+    // with no geometry at all (a harness racer carries no physicalY) lands here too. Fall back to
+    // the pair, which is master's behaviour, rather than framing one racer or the whole grid.
     return out.length >= 2 ? out : ordered.slice(0, 2);
   }
 

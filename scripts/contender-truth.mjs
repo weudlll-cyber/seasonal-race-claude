@@ -81,6 +81,8 @@ const ARMS = {
   contenders: { contenderZoom: true },
 };
 const ARM = argOf("arm", "off");
+// --lane-only reproduces the previous, half-stated rule for comparison.
+const LEVEL_TOO = !process.argv.includes("--lane-only");
 if (!ARMS[ARM]) {
   console.error(`FAIL: unknown --arm=${ARM}. One of: ${Object.keys(ARMS).join(", ")}`);
   process.exit(2);
@@ -118,10 +120,24 @@ const sameLane = (a, b, trackWidthPx) => {
  *
  * @param {object[]} ordered  racers sorted by t, leader first
  */
-const contendersOf = (ordered, trackWidthPx) =>
-  ordered.filter(
-    (r, i) => !ordered.slice(0, i).some((ahead) => sameLane(r, ahead, trackWidthPx)),
+const nearlyLevel = (r, leader) => {
+  const pathLen = leader.pathLengthPx ?? 0;
+  if (!(pathLen > 0)) return true;
+  const gapPx = shortestArcDeltaT(leader.t, r.t) * pathLen;
+  // contactLength = halfLengthA + halfLengthB — pairContact's own along-track touch distance, which
+  // for two equal racers is exactly one body length. Not a new number.
+  const contactLength = ((leader.drawnBodyLengthPx ?? 0) + (r.drawnBodyLengthPx ?? 0)) / 2;
+  return contactLength > 0 && gapPx <= contactLength;
+};
+
+const contendersOf = (ordered, trackWidthPx, levelToo = true) => {
+  const leader = ordered[0];
+  return ordered.filter(
+    (r, i) =>
+      (!levelToo || i === 0 || nearlyLevel(r, leader)) &&
+      !ordered.slice(0, i).some((ahead) => sameLane(r, ahead, trackWidthPx)),
   );
+};
 
 const med = (a) => {
   if (!a.length) return NaN;
@@ -152,6 +168,8 @@ for (const geo of loadTracks({ only: ONLY })) {
     let entrySeen = false;
     let contenderIdx = [];
     let contendersAtEntry = 0;
+    let backLengths = [];
+    let furthestBack = NaN;
     let othersInFrame = 0;
     let levelAtEntry = 0; // how many racers are within closeThresholdT of the leader at entry
     let capturedAtEntry = 0; // how many the director actually pinned
@@ -189,9 +207,21 @@ for (const geo of loadTracks({ only: ONLY })) {
         if (!entrySeen) {
           entrySeen = true;
           capturedAtEntry = d._photoFinishContenders?.length ?? 0;
-          const set = contendersOf(ordered, trackWidthPx);
+          const set = contendersOf(ordered, trackWidthPx, LEVEL_TOO);
           contenderIdx = set.map((r) => r.index);
           contendersAtEntry = set.length;
+          // ── HOW FAR BACK THE LANE-ONLY RULE REACHES ─────────────────────────────────────────
+          // In the racer's OWN LENGTH, which the engine already gives: drawnBodyLengthPx per racer
+          // and pathLengthPx for the loop. A member many lengths back is on a free lane but is not
+          // "nearly level with the leader", and he is what forces the shot open.
+          const bodyLen = leader.drawnBodyLengthPx ?? 0;
+          const pathLen = leader.pathLengthPx ?? 0;
+          const inLengths = (r) =>
+            bodyLen > 0 && pathLen > 0
+              ? (shortestArcDeltaT(leader.t, r.t) * pathLen) / bodyLen
+              : NaN;
+          backLengths = set.map(inLengths);
+          furthestBack = backLengths.length ? Math.max(...backLengths) : NaN;
           // For the record: how many the OLD arc-threshold yardstick would have called level. It is
           // reported to show the two disagree, and for no other purpose.
           levelAtEntry = ordered.filter(
@@ -286,6 +316,8 @@ for (const geo of loadTracks({ only: ONLY })) {
       seed: raceSeed,
       levelAtEntry,
       contendersAtEntry,
+      backLengths,
+      furthestBack,
       othersInFrame,
       capturedAtEntry,
       gapsAtEntry,
@@ -311,7 +343,7 @@ console.log(
     `the SAME predicate the entry gate uses, asked of every racer instead of second place alone.\n`,
 );
 console.log(
-  "track            seed  CONTENDERS  pinned  (old arc yardstick said)   gaps to the leader, top 6",
+  "track            seed  CONTENDERS  pinned  arc-said   how far back each member is, in BODY LENGTHS",
 );
 for (const r of rows) {
   if (!r.pfFrames && !r.levelAtEntry) {
@@ -320,8 +352,9 @@ for (const r of rows) {
   }
   console.log(
     `${r.track.padEnd(15)} ${String(r.seed).padStart(5)} ${String(r.contendersAtEntry).padStart(11)} ` +
-      `${String(r.capturedAtEntry).padStart(7)} ${String(r.levelAtEntry).padStart(20)}       ` +
-      r.gapsAtEntry.map((g) => g.toFixed(4)).join("  "),
+      `${String(r.capturedAtEntry).padStart(7)} ${String(r.levelAtEntry).padStart(9)}   ` +
+      `furthest back ${(Number.isFinite(r.furthestBack) ? r.furthestBack.toFixed(1) : "—").padStart(6)} lengths   ` +
+      `set: ${r.backLengths.map((b) => (Number.isFinite(b) ? b.toFixed(1) : "?")).join(", ")}`,
   );
 }
 const withPF = rows.filter((r) => r.pfFrames > 0);
