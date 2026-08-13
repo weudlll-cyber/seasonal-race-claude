@@ -151,20 +151,30 @@ export function drawEditorBackground(
  * scales by `_centerWidth`, which IS the track width — so the band spanned TWICE the corridor,
  * overhanging it by half a width on each side. The edges are `±0.5`.
  *
- * ── WHAT IT DRAWS NOW: HIS RULING, WHICH IS "STRUCTURE AT THE EDGES ONLY" ──────────────────────
+ * ── WHAT "EDGES ONLY" GOT WRONG, AND IT WAS A MISREADING (FINISH-READABLE-2) ────────────────────
  *
- * Two checkered posts, one at each edge of the corridor, running along the FORWARD direction — so
- * the finish reads as a gate the racers pass between, and **nothing crosses the racing surface**.
- * The gold rule that used to be a shadow blur is drawn as a thin line joining the two posts at the
- * line itself; it marks WHERE the finish is without covering what happens on it.
+ * FINISH-READABLE-1 read his ruling as "structure at the edges only" and DELETED the ground band
+ * instead of repairing it, leaving two checkered posts and a hairline. His verdict on that, on
+ * dirt-oval and garden-path: "a very thin, barely visible line, otherwise nothing has changed. I see
+ * nothing."
+ *
+ * What he had rejected was a GANTRY — a structure standing OVER the track, which would hide the
+ * racers passing under it. "Structure at the edges" was about things standing UP. **A flat marking
+ * painted ON the racing surface covers nobody**: the racers drive over it, as in a real race. So the
+ * band is back, across the full corridor, and the posts stay because he said they are good.
+ *
+ * THE RACING SURFACE STAYS CLEAR OF ANYTHING STANDING UP. Everything here is paint on the ground,
+ * issued before `drawRacers`, and that ordering is MEASURED rather than asserted — see the band
+ * block below.
  *
  * ── AND IT SURVIVES ZOOMING OUT, WHICH IS WHY IT TAKES THE ZOOM ────────────────────────────────
  *
- * A world-sized mark shrinks with the shot: at the widest overview the FINISH label measures 3.9 px,
+ * A world-sized mark shrinks with the shot: at the widest overview the FINISH label measured 3.9 px,
  * which is the owner's "it is not there". Every dimension below is therefore a SCREEN size converted
- * back into world units through the effective zoom, so the gate is the same size on screen at every
- * shot. `drawTrackLights` already takes the zoom for the same reason, so this is the established
- * shape rather than a new idea.
+ * back into world units through the effective zoom, so the marking is the same size on screen at
+ * every shot. `drawTrackLights` already takes the zoom for the same reason, so this is the
+ * established shape rather than a new idea. That half of FINISH-READABLE-1 was right and stays; what
+ * changed is the SIZES, which had been chosen to sit BESIDE the corridor rather than to be read.
  *
  * @param {CanvasRenderingContext2D} ctx
  * @param {object} shape  EditorShape instance.
@@ -195,24 +205,50 @@ export function drawFinishGate(ctx, pInner, pOuter, fwdAngle, effZoomX, effZoomY
   if (!(span > 0)) return;
   const ux = dx / span;
   const uy = dy / span;
-  // FORWARD, not the perpendicular. This is the whole repair.
+  // FORWARD, not the perpendicular. This was FINISH-READABLE-1's repair and it stays.
   const fx = Math.cos(fwdAngle);
   const fy = Math.sin(fwdAngle);
 
-  // ── SCREEN SIZES, held constant, converted back to world through the zoom ───────────────────
+  // ── SCREEN SIZES, CONVERTED ALONG THE DIRECTION THEY ARE MEASURED IN ─────────────────────────
+  //
+  // The world→screen scale is ANISOTROPIC on a closed track, so "screen px per world px" is not one
+  // number — it depends on which way you are pointing. FINISH-READABLE-1 divided by `effZoomX` for
+  // the across size and `effZoomY` for the along size, which is only correct when the track happens
+  // to run along a screen axis. The right conversion projects the direction through both scales.
   const sx = effZoomX > 0 ? effZoomX : 1;
   const sy = effZoomY > 0 ? effZoomY : 1;
-  // One checker is this many screen px on its shorter side; a post is three of them deep. Small
-  // enough to sit beside a corridor at the tightest shot, large enough to survive the widest.
-  const CHECKER_SCREEN_PX = 9;
-  const cw = CHECKER_SCREEN_PX / sx; // world px per checker, across the track
-  const ch = CHECKER_SCREEN_PX / sy; // world px per checker, along the track
-  // A post is never wider than a quarter of the corridor: on a narrow track the screen-derived size
-  // would otherwise reach across, and reaching across is the one thing his ruling forbids.
-  const postW = Math.min(cw, span / 4);
-  const ROWS = 3;
+  const sAlong = Math.hypot(fx * sx, fy * sy); // screen px per world px, along the track
+  const sAcross = Math.hypot(ux * sx, uy * sy); // screen px per world px, across it
+  if (!(sAlong > 0) || !(sAcross > 0)) return;
 
-  const square = (ox, oy, w, h, colour) => {
+  // ── HOW DEEP THE BAND IS, AND WHY THESE NUMBERS ─────────────────────────────────────────────
+  //
+  // 30 screen px, two rows of 15. The owner's verdict on the 9 px version was "a very thin, barely
+  // visible line … I see nothing", and 9 px is what a marking measures when its size was chosen to
+  // sit BESIDE the corridor rather than to be read. Measured against the corridor's own screen
+  // width, 30 px is about 1:22 at the mid-race shot — the proportion a real finish line has against
+  // a real road, which is the thing it has to look like.
+  const BAND_SCREEN_PX = 30;
+  const ROWS = 2;
+  // NEVER DEEPER THAN HALF THE ROAD IS WIDE. At the widest overview the corridor is only tens of
+  // screen px across, so an unclamped 30 px band would be deeper than the road is wide and would
+  // stop reading as a LINE and start reading as a blob straddling the track. This is the one bound
+  // that is geometry rather than taste, and it is the reason the reported depth differs between the
+  // three shots even though the nominal size does not.
+  const depth = Math.min(BAND_SCREEN_PX / sAlong, span * 0.5);
+  const rowDepth = depth / ROWS;
+
+  // Columns across the corridor, sized so a checker is SQUARE ON SCREEN — a checkerboard whose
+  // squares are not square stops reading as one. Capped so the tightest shot cannot ask for
+  // hundreds of quads; past the cap the squares simply get wider, which still reads.
+  const COLS_MAX = 48;
+  const COLS_MIN = 4;
+  const colTarget = (rowDepth * sAlong) / sAcross; // world px per column for a square checker
+  const cols = Math.max(COLS_MIN, Math.min(COLS_MAX, Math.round(span / colTarget)));
+  const colW = span / cols; // exact, so the band ends flush with both corridor edges
+
+  /** One quad, laid out on the ground: `w` across the track, `h` along it, from a corner. */
+  const quad = (ox, oy, w, h, colour) => {
     ctx.fillStyle = colour;
     ctx.beginPath();
     ctx.moveTo(ox, oy);
@@ -223,30 +259,74 @@ export function drawFinishGate(ctx, pInner, pOuter, fwdAngle, effZoomX, effZoomY
     ctx.fill();
   };
 
-  // Two posts: one growing INWARD from each edge, so the gap between them is the racing surface.
-  for (const side of [0, 1]) {
-    const baseX = side === 0 ? pInner.x : pOuter.x - ux * postW;
-    const baseY = side === 0 ? pInner.y : pOuter.y - uy * postW;
-    for (let r = 0; r < ROWS; r++) {
-      // Centred on the line along the forward axis, so the gate straddles the finish rather than
-      // sitting behind it.
-      const off = (r - ROWS / 2) * ch;
-      square(baseX + fx * off, baseY + fy * off, postW, ch, (r + side) % 2 === 0 ? '#fff' : '#222');
+  // ── THE BAND, ACROSS THE WHOLE CORRIDOR, FLAT ON THE RACING SURFACE ─────────────────────────
+  //
+  // It is PAINT. A racer drives over it exactly as in a real race, and it covers nobody — this is
+  // called before `drawRacers`, so every racer is drawn on top. That ordering is not an assumption:
+  // `scripts/finish-band-truth.mjs` renders a real frame at the tightest endgame zoom and compares
+  // the band's last draw index against the first draw issued at any racer's own world position.
+  //
+  // WHAT WENT WRONG BEFORE, so it is not repeated: his rejection of a GANTRY — a structure standing
+  // OVER the track, which would hide the racers passing under it — was read as "edges only", and the
+  // ground band was deleted rather than repaired. A flat marking on the surface was never what he
+  // objected to. "Structure at the edges" was about things standing UP.
+  const startX = pInner.x - fx * (depth / 2);
+  const startY = pInner.y - fy * (depth / 2);
+  for (let r = 0; r < ROWS; r++) {
+    for (let c = 0; c < cols; c++) {
+      const ox = startX + ux * (c * colW) + fx * (r * rowDepth);
+      const oy = startY + uy * (c * colW) + fy * (r * rowDepth);
+      quad(ox, oy, colW, rowDepth, (r + c) % 2 === 0 ? '#fff' : '#151515');
     }
   }
 
-  // The rule ACROSS the line — a hairline, so it says where the finish is without covering it.
+  // ── THE EDGE POSTS, KEPT — he said they are good ─────────────────────────────────────────────
+  //
+  // They now flank the band rather than replacing it: the same checker pattern, but reaching
+  // further ALONG the track at each corridor edge, so the finish reads as a gate the field passes
+  // between. Still flat paint, still under the racers, and still at the edges where nothing races.
+  const POST_DEPTH_MULT = 1.9;
+  const postDepth = depth * POST_DEPTH_MULT;
+  const postW = Math.min(colW * 1.25, span / 6);
+  const postRows = 4;
+  const postRow = postDepth / postRows;
+  for (const side of [0, 1]) {
+    const baseX = side === 0 ? pInner.x : pOuter.x - ux * postW;
+    const baseY = side === 0 ? pInner.y : pOuter.y - uy * postW;
+    for (let r = 0; r < postRows; r++) {
+      const off = (r - postRows / 2) * postRow;
+      quad(
+        baseX + fx * off,
+        baseY + fy * off,
+        postW,
+        postRow,
+        (r + side) % 2 === 0 ? '#fff' : '#151515'
+      );
+    }
+  }
+
+  // ── THE GOLD ACCENT, KEPT AND WIDENED ────────────────────────────────────────────────────────
+  //
+  // It bisects the band at the exact finish line, so the band says "this is the finish" and the gold
+  // says "and this is the line". At 1 px it was the hairline he complained about; at 2.5 screen px it
+  // reads at the widest overview and still cannot hide a racer, being under them like everything
+  // else here.
+  const GOLD_SCREEN_PX = 2.5;
   ctx.strokeStyle = '#ffd700';
-  ctx.lineWidth = Math.max(1 / sx, 1 / sy);
+  ctx.lineWidth = GOLD_SCREEN_PX / Math.max(sAlong, 1e-6);
   ctx.beginPath();
   ctx.moveTo(pInner.x, pInner.y);
   ctx.lineTo(pOuter.x, pOuter.y);
   ctx.stroke();
 
-  // The label, at the same screen size at every zoom — the reason he could not see it at 3.9 px.
+  // ── THE LABEL ────────────────────────────────────────────────────────────────────────────────
+  //
+  // 20 screen px, held constant through the inverse scale. It measured 3.9 px before
+  // FINISH-READABLE-1 and 13 px after, and 13 was still inside the picture he called empty. It sits
+  // clear of the band along the track, so it labels the line without sitting on it.
   const midX = (pOuter.x + pInner.x) / 2;
   const midY = (pOuter.y + pInner.y) / 2;
-  const LABEL_SCREEN_PX = 13;
+  const LABEL_SCREEN_PX = 20;
   ctx.save();
   ctx.translate(midX, midY);
   ctx.scale(1 / sx, 1 / sy);
@@ -254,7 +334,7 @@ export function drawFinishGate(ctx, pInner, pOuter, fwdAngle, effZoomX, effZoomY
   ctx.fillStyle = '#ffd700';
   ctx.textAlign = 'center';
   ctx.textBaseline = 'bottom';
-  ctx.fillText('FINISH', 0, -(ROWS / 2) * ch * sy - 4);
+  ctx.fillText('FINISH', 0, -(postDepth / 2) * sAlong - 6);
   ctx.restore();
 }
 

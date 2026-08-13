@@ -26,6 +26,20 @@ is dated and recorded HERE, where a reader on their way to the report will pass 
 
 ## Ships
 
+- [FINISH-READABLE-2.md](FINISH-READABLE-2.md) — **the finish line is a line, not a hair**
+  (2026-08-13, `feat/finish-readable`, **NOT merged, nothing minted — he judges it**). His verdict on
+  FINISH-READABLE-1 was "a very thin, barely visible line … I see nothing", and the cause was the
+  BRIEF: he rejected a GANTRY standing over the track, that became "edges only", and the ground band
+  was deleted rather than repaired. **A flat marking painted ON the surface covers nobody** — the
+  racers drive over it. The band is back across the full corridor, two rows deep, with the posts and
+  the gold accent kept. **30 screen px deep against 9**, clamped so it is never deeper than half the
+  road is wide (which binds only on the four narrow closed tracks, 13.4–22.9 px at the widest
+  overview); label 20 px against 13. Painted area at the mid-race shot goes from a flat 486 px² at
+  every zoom to **15,000–32,000 px², a 31–65× increase**. Real area on **10 of 10** tracks. **Proved
+  UNDER the racers** at the tightest endgame zoom by wrapping `racerType.drawRacer` for an exact
+  boundary — two earlier position-based versions of that check were wrong and both accused the band
+  falsely. RENDER moves to `db98466db3b2bba4`, CAMERA measured and unmoved, WORLD unreachable.
+  New instrument `scripts/finish-band-truth.mjs`.
 - [FINISH-READABLE-1.md](FINISH-READABLE-1.md) — **the finish line was drawn and painted nothing**
   (2026-08-12, `feat/finish-readable` off master `e1f53781`, **NOT merged — he judges it**;
   fingerprints measured fresh and **NOT minted**). His screenshot showed the gold FINISH label on
