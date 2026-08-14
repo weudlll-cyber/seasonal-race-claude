@@ -23,7 +23,7 @@ function sigLabel(p) {
  * Build Markdown tables A-E from rawData rows for one combo.
  * Only called when sollBereich is present (RACE_PLAN_ACTIVE).
  *
- * @param {object[]} rawRows  rawData filtered for one trackId×racerType×durationSec
+ * @param {object[]} rawRows  rawData filtered for one trackId x racerType x durationSec
  * @param {object[]} rowStats computeFairnessStats rowStats (for row count/expected)
  * @returns {string[]} markdown lines
  */
@@ -77,7 +77,7 @@ function buildDiagnosticTables(rawRows, rowStats) {
   lines.push("");
   lines.push("#### A — Bereichstreue");
   lines.push("");
-  lines.push("| Soll-Bereich | Zugewiesen | Treffer | Quote |");
+  lines.push("| target band | assigned | hits | rate |");
   lines.push("|---|---|---|---|");
   for (let b = 1; b <= 5; b++) {
     const [lo, hi] = bereichBounds[b - 1];
@@ -95,9 +95,9 @@ function buildDiagnosticTables(rawRows, rowStats) {
     (rs) => `Row ${rs.rowIndex} (${rowSizes[rs.rowIndex] ?? "?"}R)`,
   );
   lines.push("");
-  lines.push("#### B.1 — End-Platz-Gruppen × Start-Reihe");
+  lines.push("#### B.1 — final-place groups x start row");
   lines.push("");
-  lines.push(`| End-Platz | ${rowHdrs.join(" | ")} | Gesamt |`);
+  lines.push(`| final place |  | total |`);
   lines.push(`|---|${rowHdrs.map(() => "---|").join("")}---|`);
   for (const g of rankGroups) {
     const total = rawRows.filter(
@@ -116,10 +116,10 @@ function buildDiagnosticTables(rawRows, rowStats) {
 
   // ── Table B.2 ───────────────────────────────────────────────────────────────
   lines.push("");
-  lines.push("#### B.2 — End-Platz-Gruppen × Soll-Bereich");
+  lines.push("#### B.2 — final-place groups x target band");
   lines.push("");
   lines.push(
-    "| End-Platz | Soll B1 | Soll B2 | Soll B3 | Soll B4 | Soll B5 | Gesamt |",
+    "| final place | target B1 | target B2 | target B3 | target B4 | target B5 | total |",
   );
   lines.push("|---|---|---|---|---|---|---|");
   for (const g of rankGroups) {
@@ -138,13 +138,13 @@ function buildDiagnosticTables(rawRows, rowStats) {
   const b1Total = b1Rows.length;
   lines.push("");
   lines.push(
-    "#### C — Mismatch Soll-Bereich 1 (Wo landen B1-Racer die ihr Soll verfehlen?)",
+    "#### C — target-band-1 mismatch (where do B1 racers land when they miss their target?)",
   );
   lines.push("");
-  lines.push("| Tatsächlich gelandet | Anzahl | Anteil |");
+  lines.push("| actually landed | count | share |");
   lines.push("|---|---|---|");
   const cBuckets = [
-    { label: "Pl. 1–5 ✅ Soll erreicht", lo: 1, hi: 5 },
+    { label: "places 1-5 — target met", lo: 1, hi: 5 },
     { label: "Pl. 6–10", lo: 6, hi: 10 },
     { label: "Pl. 11–15", lo: 11, hi: 15 },
     { label: "Pl. 16–25", lo: 16, hi: 25 },
@@ -159,7 +159,7 @@ function buildDiagnosticTables(rawRows, rowStats) {
   }
   // Per-row hit rates for B1
   lines.push("");
-  lines.push("Trefferquote B1 nach Start-Reihe:");
+  lines.push("B1 hit rate by start row:");
   lines.push("");
   const b1RowCols = rowStats.map((rs) => `Row ${rs.rowIndex}`).join(" | ");
   lines.push(`| Metrik | ${b1RowCols} |`);
@@ -188,17 +188,17 @@ function buildDiagnosticTables(rawRows, rowStats) {
   const b5Total = b5Rows.length;
   lines.push("");
   lines.push(
-    "#### D — Brems-Leck Soll-Bereich 5 (Row-0-Diagnose: entkommen trotz Bremsen?)",
+    "#### D — brake leak, target band 5 (row-0 diagnosis: escaping despite the brake?)",
   );
   lines.push("");
-  lines.push("| Tatsächlich gelandet | Anzahl | Anteil |");
+  lines.push("| actually landed | count | share |");
   lines.push("|---|---|---|");
   const dBuckets = [
-    { label: `Pl. 41–${nRacers} ✅ Soll erreicht`, lo: 41, hi: nRacers },
+    { label: `places 41-${nRacers} — target met`, lo: 41, hi: nRacers },
     { label: "Pl. 26–40", lo: 26, hi: 40 },
     { label: "Pl. 16–25", lo: 16, hi: 25 },
     { label: "Pl. 6–15", lo: 6, hi: 15 },
-    { label: "Pl. 1–5 ❌ Brems-Leck", lo: 1, hi: 5 },
+    { label: "places 1-5 — brake leak", lo: 1, hi: 5 },
   ];
   for (const b of dBuckets) {
     const n = b5Rows.filter(
@@ -208,7 +208,7 @@ function buildDiagnosticTables(rawRows, rowStats) {
   }
   // Per-row escape-to-top-5 rate (the critical Row0 leak metric)
   lines.push("");
-  lines.push("Brems-Leck Top-5 nach Start-Reihe:");
+  lines.push("Brake leak, top 5, by start row:");
   lines.push("");
   lines.push(`| Metrik | ${b1RowCols} |`);
   lines.push(`|---|${rowStats.map(() => "---|").join("")}`);
@@ -225,7 +225,7 @@ function buildDiagnosticTables(rawRows, rowStats) {
 }
 
 function fairLabel(p, rowStats) {
-  if (p >= 0.05) return "✅ Fair";
+  if (p >= 0.05) return "FAIR";
   const row0Rate = rowStats[0]?.winRate ?? 0;
   const expected = rowStats[0]?.expectedWinRate ?? 1 / rowStats.length;
   if (row0Rate > expected + 0.05) return "⚠️ Front-Bias";
@@ -250,8 +250,8 @@ function buildReport(
     `**world:** ${worldStamp.worldHash} (schema v${worldStamp.schemaVersion})${worldStamp.provisional ? " — ⚠️ PROVISIONAL (ASSUMED-DEFAULTS, no --config; may not describe the owner's race)" : ""}  `,
   );
   lines.push(`**Datum:** ${runDate}  `);
-  lines.push(`**Rennen pro Kombination:** ${nRaces}  `);
-  lines.push(`**Teilnehmer pro Rennen:** ${nRacers}  `);
+  lines.push(`**Races per combination:** ${nRaces}  `);
+  lines.push(`**Racers per race:** ${nRacers}  `);
   lines.push(`**Distanz-Varianten:** 30s / 120s  `);
   lines.push(
     `**Catch-Up (speedBonusFactor):** ${rowLayoutConfig.speedBonusFactor}  `,
@@ -262,13 +262,13 @@ function buildReport(
   lines.push("");
 
   // ── Overview table ──
-  lines.push("## Übersicht — Win-Rate pro Startreihe");
+  lines.push("## Overview — win rate per start row");
   lines.push("");
   lines.push(
-    "Erwartete Win-Rate bei perfekter Fairness: **1 / Anzahl Reihen**.  ",
+    "Expected win rate under perfect fairness: **1 / number of rows**.  ",
   );
   lines.push(
-    "Signifikanz: Chi²-Test, H₀ = alle Reihen gleichwahrscheinlich.  ",
+    "Significance: chi-squared test, H0 = all rows equally likely.  ",
   );
   lines.push(
     "`⚠️ Front-Bias` = Row 0 gewinnt zu oft; `⚠️ Rear-Bias` = Row 0 gewinnt zu selten.  ",
@@ -276,8 +276,8 @@ function buildReport(
   lines.push("");
 
   lines.push(
-    "| Track | Racer | Dist | Reihen | Erwart. | " +
-      "R0 WinRate | R1 WinRate | R2+ WinRate | χ² | p-Wert | Urteil |",
+    "| track | racer | dist | rows | expected | " +
+      "R0 win rate | R1 win rate | R2+ win rate | chi2 | p-value | verdict |",
   );
   lines.push(
     "|-------|-------|------|--------|---------|" +
@@ -329,13 +329,13 @@ function buildReport(
     lines.push("");
     lines.push(`- **finishT:** ${finishT.toFixed(4)} (Ziellinie in t-Raum)`);
     lines.push(
-      `- **Reihen:** ${totalRows} (gewichtete Erwartung nach Reihengröße)`,
+      `- **Rows:** ${totalRows} (expectation weighted by row size)`,
     );
     lines.push(`- **Chi²(${df}):** ${fmtN(chiSq, 2)} — ${sigLabel(pValue)}`);
     lines.push("");
 
     lines.push(
-      "| Reihe | Siege | Win-Rate | Erwartet (gew.) | Δ Erwartet | Ø Rang | σ Rang |",
+      "| row | wins | win rate | expected (wtd) | delta expected | mean rank | sd rank |",
     );
     lines.push(
       "|-------|-------|----------|-----------------|------------|--------|--------|",
@@ -362,7 +362,7 @@ function buildReport(
       : [];
     if (comboRaw.length > 0) {
       lines.push("");
-      lines.push("#### E — 1.5×-Gate Aggregat (gewichtet)");
+      lines.push("#### E — 1.5x gate aggregate (weighted)");
       lines.push("");
       const gateRows = rowStats.filter(
         (rs) => rs.expectedWinRate * nRaces >= 3,
@@ -391,8 +391,8 @@ function buildReport(
     lines.push("## Mixing-Quote — Open Tracks (t-Space-Mixing-Validierung)");
     lines.push("");
     lines.push(
-      "Anteil der Row-1-Racer die bei Ablauf von `avoidanceWarmupMs` mindestens einen Row-0-Racer " +
-        "im t-Raum überholt haben. Zielbereich: **60–95 %**.",
+      "Share of row-1 racers that have overtaken at least one row-0 racer " +
+        "in t-space by the time `avoidanceWarmupMs` expires. Target range: **60-95%**.",
     );
     lines.push("");
     lines.push("| Track | Racer | Dist | Mixing-Quote | Bewertung |");
@@ -413,10 +413,10 @@ function buildReport(
     lines.push("");
   }
 
-  // ── Gesamtauswertung ──
+  // ── overall evaluation ──
   lines.push("---");
   lines.push("");
-  lines.push("## Gesamtauswertung");
+  lines.push("## Overall evaluation");
   lines.push("");
   lines.push(`**Getestete Kombinationen:** ${allResults.length}  `);
   lines.push(`**Davon statistisch fair (p≥0.05):** ${fairCombos.length}  `);
@@ -425,7 +425,7 @@ function buildReport(
 
   if (unfairCombos.length === 0) {
     lines.push(
-      "**Befund:** Keine Kombination zeigt statistisch signifikante Unfairness. ✅",
+      "**Finding:** no combination shows statistically significant unfairness.",
     );
   } else {
     lines.push(
@@ -442,7 +442,7 @@ function buildReport(
           ? `Row 0 zu oft (${fmtPct(r0Rate)} statt erw. ${fmtPct(expRate)})`
           : r0Rate < expRate
             ? `Row 0 zu selten (${fmtPct(r0Rate)} statt erw. ${fmtPct(expRate)})`
-            : "mittlere Reihen bevorzugt";
+            : "middle rows favoured";
       lines.push(
         `- **${trackName} × ${racerType} × ${durationSec}s:** ${bias} — ${sigLabel(pValue)}`,
       );
@@ -473,7 +473,7 @@ function buildReport(
   lines.push("### Front-Row-Vorteil (Row 0 gewinnt zu oft)");
   if (frontBias.length === 0) {
     lines.push(
-      "Keine Kombination zeigt statistisch signifikanten Front-Row-Vorteil.",
+      "No combination shows a statistically significant front-row advantage.",
     );
   } else {
     for (const r of frontBias) {
@@ -485,11 +485,11 @@ function buildReport(
   lines.push("");
 
   lines.push(
-    "### Hinter-Row-Nachteil (Row 0 gewinnt zu selten / Catch-Up überkompensiert)",
+    "### Back-row disadvantage (row 0 wins too rarely / catch-up overcompensates)",
   );
   if (rearBias.length === 0) {
     lines.push(
-      "Keine Kombination zeigt Hinter-Row-Nachteil oder Überkompensation.",
+      "No combination shows a back-row disadvantage or overcompensation.",
     );
   } else {
     for (const r of rearBias) {
@@ -503,30 +503,30 @@ function buildReport(
   lines.push("### Catch-Up-Mechanismus (speedBonusFactor = 1.0)");
   if (unfairCombos.length === 0) {
     lines.push(
-      "Der Catch-Up-Mechanismus wirkt auf allen getesteten Tracks und Racer-Typen ausreichend. " +
-        "Kein statistisch signifikanter Reihen-Bias nachweisbar.",
+      "The catch-up mechanism works adequately on every track and racer type tested. " +
+        "No statistically significant row bias is detectable.",
     );
   } else {
     if (shortUnfair.length > longUnfair.length) {
       lines.push(
-        `Unfairness tritt häufiger bei **kurzen Rennen (30s)** auf (${shortUnfair.length}/${unfairCombos.length} unfaire Kombos). ` +
-          "Der Catch-Up-Mechanismus benötigt Renndauer zum Wirken — bei sehr kurzen Rennen ist die Ausgleichswirkung begrenzt.",
+        `Unfairness occurs more often in **short races (30s)** (${shortUnfair.length}/${unfairCombos.length} unfair combos). ` +
+          "The catch-up mechanism needs race duration to act — in very short races its compensating effect is limited.",
       );
     } else if (longUnfair.length > shortUnfair.length) {
       lines.push(
-        `Unfairness tritt häufiger bei **langen Rennen (120s)** auf (${longUnfair.length}/${unfairCombos.length} unfaire Kombos). ` +
-          "Das deutet auf akkumulierende Effekte hin, die den Bonus langfristig aus dem Gleichgewicht bringen.",
+        `Unfairness occurs more often in **long races (120s)** (${longUnfair.length}/${unfairCombos.length} unfair combos). ` +
+          "That points to accumulating effects that unbalance the bonus over the long run.",
       );
     } else {
       lines.push(
-        `Unfairness verteilt sich gleichmäßig auf kurze und lange Rennen ` +
+        `Unfairness is spread evenly across short and long races ` +
           `(${shortUnfair.length} × 30s, ${longUnfair.length} × 120s).`,
       );
     }
   }
   lines.push("");
   lines.push(
-    "*Hinweis: Dieser Abschnitt enthält ausschließlich statistische Beurteilungen, keine Code-Empfehlungen.*",
+    "*Note: this section contains statistical judgements only, not code recommendations.*",
   );
   lines.push("");
 
@@ -540,7 +540,7 @@ function buildReport(
     lines.push(
       "Stabile Phase: 25%–95% der targetDuration. " +
         "Jerk: |Δ(effSpeed)/DT| / max(baseSpeed, ε). " +
-        "naturalOvt: Anteil Überholungen mit tDiff ≤ 30% des Referenzabstands.",
+        "naturalOvt: share of overtakes with tDiff <= 30% of the reference gap.",
     );
     lines.push("");
     lines.push(
@@ -836,7 +836,7 @@ function printComebackReport(
 
   // Aggregate
   if (diags.length > 1) {
-    console.log(`\n── Aggregat (${diags.length} Rennen) ──`);
+    console.log(`\n── aggregate (${diags.length} races) ──`);
     const avgOutDur =
       diags.reduce((s, d) => s + d.outcomeDurS, 0) / diags.length;
     const avgEffDur =
@@ -848,7 +848,7 @@ function printComebackReport(
     console.log(`  OUTCOME Dauer:       Ø ${avgOutDur.toFixed(1)}s`);
     console.log(`  Effektives Fenster:  Ø ${avgEffDur.toFixed(1)}s`);
     console.log(
-      `  COMEBACK-Trigger:    Ø ${avgTriggers.toFixed(1)}/Rennen  (${zeroTrig}/${diags.length} ohne Trigger)`,
+      `  COMEBACK triggers:   mean ${avgTriggers.toFixed(1)}/race  (${zeroTrig}/${diags.length} with none)`,
     );
     if (allMaxGains.length > 0) {
       const mn = Math.min(...allMaxGains);
@@ -859,7 +859,7 @@ function printComebackReport(
       const n3 = allMaxGains.filter((g) => g >= 3).length;
       const tot = allMaxGains.length;
       console.log(
-        `  Max-Platzgewinn B1:  min=${mn}  max=${mx}  avg=${av.toFixed(1)}  (${tot} Racer×Rennen)`,
+        `  Max places gained B1: min=${mn}  max=${mx}  avg=${av.toFixed(1)}  (${tot} racer-races)`,
       );
       console.log(
         `  Davon ≥1 Platz: ${n1}/${tot} (${((n1 / tot) * 100).toFixed(0)}%)`,
@@ -891,7 +891,7 @@ function printComebackReport(
         );
       } else {
         console.log(
-          `  ✅ Ø ${avgTriggers.toFixed(1)} Trigger/Rennen — COMEBACK-Event wird feuern`,
+          `  OK: mean ${avgTriggers.toFixed(1)} triggers/race — the COMEBACK event will fire`,
         );
       }
     }

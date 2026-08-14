@@ -135,7 +135,21 @@ setting.
 **guarantee** — what must stay in frame. A guarantee WIDENS the shot; it never steers it.
 
 - **corridor guarantee** — the full track width stays visible, measured across the heading.
-- **pair guarantee** — two named contenders both stay in frame.
+- **pair guarantee** — two named racers both stay in frame. **It is the n = 2 case of the contender
+  guarantee below, not a separate rule** — at two points the two are identical to the bit.
+- **contender guarantee** — every racer in the CONTENDER SET stays in frame. Shipped 2026-08-14
+  (CONTENDER-ZOOM-1, default ON via `contenderZoom`).
+- **contender set** — who the photo-finish shot is about, and **it is not the top two**. A racer is a
+  contender when BOTH conditions hold: nearly level with the leader (within one body length, the
+  engine's own `pairContact` distance) AND on a free lane (no racer ahead overlapping across the
+  track). Captured ONCE at entry and never re-sorted; 2, 3 or 4 racers in practice. Before this it
+  was `ordered.slice(0, 2)` — a pair, always.
+- **corridor CAP** — the opposite of the corridor guarantee and easy to confuse with it. **A
+  guarantee is a floor on how much world is in shot; the cap is a CEILING** — the photo-finish shot
+  is never WIDER than the road. It is composed with `Math.max` on the zoom where every guarantee is
+  composed with `Math.min`, arrives over `corridorCapArriveMs` rather than in one frame, and is
+  gated by `contenderZoom` along with the set. **The corridor FLOOR — never TIGHTER than the road —
+  is a different mechanism, was never shipped, and is retired**; see DEAD-ENDS §N.
 - **company guarantee** — enough of the field stays in frame that the shot has tension. This one is
   dramaturgical, not geometric: it protects against showing a leader alone in an empty frame.
 

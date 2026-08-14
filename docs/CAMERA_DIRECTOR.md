@@ -202,6 +202,42 @@ The three things:
   present — but **measured: that fallback fired on 0 of 11,813 pair frames**, so it is defensive
   rather than load-bearing, and it is kept knowingly on that basis.
 
+  **THE PHOTO FINISH IS NO LONGER A PAIR SHOT — CONTENDER-ZOOM-1, shipped 2026-08-14 and default ON
+  via `contenderZoom`.** The framed set was `ordered.slice(0, 2)` in three places — the gate, the
+  capture and the consumer — and was therefore exactly two racers, always, while 26 of 27 measured
+  photo finishes had more than two racers level at entry. It is now the **contender set**: everyone
+  who is BOTH nearly level with the leader AND on a free lane. **Neither condition is a new number.**
+  "Nearly level" is one body length, which is `pairContact`'s own along-track touch distance for two
+  equal racers; "free lane" is `halfWidthA + halfWidthB` across the track, the engine's own overlap
+  test, with `rowLayout`'s unit that one `physicalY` is `trackWidth / 2` world px. The race is
+  LANE-FREE, so "same lane" had to be geometric — there are no discrete lanes to read.
+
+  **Captured once at entry, never re-sorted**, which is what FINISH-PAIR-1 bought: a set re-derived
+  every frame moves the picture on every swap. In practice the set is **2, 3 or 4** racers.
+  `contenderGuarantee` takes the minimum `pairGuarantee` over every pair in the set, so **at n = 2 it
+  IS `pairGuarantee`, to the bit** — which is why the OFF arm is byte-identical to what shipped
+  before.
+
+  **AND THE CORRIDOR RUNS THE OTHER WAY HERE.** Everywhere else in this file the corridor is a
+  GUARANTEE — a floor on how much world is in shot, composed with `Math.min` on the zoom. In the
+  photo finish it is also a **CAP**: the shot is never *wider* than the road, composed with
+  `Math.max`. Two opposite senses of one word, which is why the GLOSSARY now carries both.
+
+  **The cap ARRIVES rather than appears.** Its scope is `state === PHOTO_FINISH`, and a state change
+  is instantaneous, so it used to engage in a single frame and take the target from 2.47 to 10.02 —
+  the jump the owner saw as the camera leaping. It is now blended in over `corridorCapArriveMs`
+  (1500 ms), in log space, so the same limit arrives as a move. Setting it to 0 restores the jump.
+
+  **The contenders WIN if the two conflict**, because the first rule is that every participant stays
+  visible. The cap is a ceiling on the zoom, the contender guarantee a floor, and the floor is
+  applied last.
+
+  **One diagnostic defect is recorded here because it cost three reports and two builds:** `_binding`
+  was computed as the argmin over `_ceilings` while the cap was applied to `guaranteed` afterwards,
+  so on every frame the cap decided the shot the probe still named whichever ceiling was smallest.
+  A diagnostic that misattributes authority is worse than none. It now names `corridor-cap` and
+  `guarantee-after-cap` explicitly.
+
 - **ZOOM** — how much world is in shot, in standard corridors.
 
 Frame POSITION is not a fourth setting. It follows from "is there anything worth seeing ahead of the
