@@ -525,7 +525,25 @@ a verbatim transcript of one run on one commit, which is a historical record, no
 
 ### The tracking lag, as measured today — and it had drifted
 
-<!-- MEASURED: tracking-lag (median/p95 pp per state) @ a2cb638b 2026-08-14 depends=client/src/modules/camera/ -->
+<!-- MEASURED: tracking-lag (median/p95 pp per state) @ f7b960dd 2026-08-15 depends=client/src/modules/camera/ -->
+
+**RE-STAMPED AGAIN FOR MINIMAP-TAIL-1, on exactly the argument below.** That block washes the
+stretch of band behind the finish on open tracks — the same file, the same reason, the same
+unchanged table. The paragraph that follows is the whole justification and it did not weaken:
+`Minimap.js` is still not in `tracking-lag.mjs`'s load closure.
+
+**RE-STAMPED, NOT RE-MEASURED, FOR MINIMAP-MARKS-1 — and the reason is a fact, not a judgement.**
+That block added start and finish marks to `client/src/modules/camera/Minimap.js`, which is inside
+this stamp's `depends=` directory, so the guard tripped as designed: it deliberately cannot tell a
+change that matters from one that does not, and says so in its own header. **What settles it here is
+that `scripts/tracking-lag.mjs` cannot reach the file.** Its load closure is seven files —
+`lib/raceDriver.mjs` and, through it, `defaults.js`, `EditorShape.js`, `CameraDirector.js`,
+`raceCore.js`, `durationModel.js`, `rowLayout.js`, `racer-types/index.js`, plus `frameGeometry.js`
+and `framingRule.js` imported directly — and `Minimap.js` is in none of them. The only importers of
+`Minimap.js` are the DRAW path (`renderRaceFrame.js`) and two consumers of its panel CONSTANTS
+(`overlayGeometry.js`, `WinnerCard.test.jsx`), and those constants did not change. A file the
+measurement never loads cannot move its numbers. **The table below is unchanged from `a2cb638b`;
+only the stamp moved.**
 
 **RE-MEASURED ON THE SHIP (`eea0acf2`), because neither branch's table describes the merged tree.**
 The run-in and RESOLVE-CONVERGE-1 were measured apart and shipped together, so the numbers below are

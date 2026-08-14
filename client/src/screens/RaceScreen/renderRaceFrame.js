@@ -375,7 +375,19 @@ export function renderRaceFrame(ctx, f) {
   if (st.phase !== PHASE.COUNTDOWN) {
     const leaderIdx = st.racers.reduce((best, r, i) => (r.t > st.racers[best].t ? i : best), 0);
     const minimapHighlights = showRpMinimapBadges && rpPlanInfo ? rpPlanInfo.b1Indices : null;
-    renderMinimap(ctx, shape, st.racers, leaderIdx, canvasW, canvasH, minimapHighlights);
+    // The two t values the track drawing already works from, handed over rather than looked up.
+    // `startT` is the START LINE at t 0, which is not the same as where the field stands: on a
+    // CLOSED track the front row sits on it and the rest behind (`tStart = -(rowIndex × ΔT)`),
+    // but on an OPEN track EVERY row is ahead of it — `tStart = (totalRows − rowIndex) × ΔT`,
+    // raceCore.js — so the bar sits just behind the rearmost row. The line is the mark; the field
+    // is the dots.
+    // `finishT` is a 0..1 position on an open track and a LAP COUNT on a closed one, which the
+    // minimap wraps back to the gate at t 0. That wrap is why the closed case needs no branch
+    // here — and on an open track it is also where the unraced tail begins.
+    renderMinimap(ctx, shape, st.racers, leaderIdx, canvasW, canvasH, minimapHighlights, {
+      startT: 0,
+      finishT: st.finishT,
+    });
   }
 
   return {
