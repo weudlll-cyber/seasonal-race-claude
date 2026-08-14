@@ -525,7 +525,7 @@ a verbatim transcript of one run on one commit, which is a historical record, no
 
 ### The tracking lag, as measured today — and it had drifted
 
-<!-- MEASURED: tracking-lag (median/p95 pp per state) @ MINIMAP_TAIL_SHA 2026-08-15 depends=client/src/modules/camera/ -->
+<!-- MEASURED: tracking-lag (median/p95 pp per state) @ f7b960dd 2026-08-15 depends=client/src/modules/camera/ -->
 
 **RE-STAMPED AGAIN FOR MINIMAP-TAIL-1, on exactly the argument below.** That block washes the
 stretch of band behind the finish on open tracks — the same file, the same reason, the same
