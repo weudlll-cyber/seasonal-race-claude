@@ -109,7 +109,7 @@ spot this ship exposed: a visible change that no fingerprint can see.
 
 - `pre/ship-coord-system` (`767f3f35`, 2026-08-14) — master immediately before the merge, the tip
   after the source clean-up.
-- `v-ship-coord-system` (`SHIPSHA`, 2026-08-14) — the merge itself.
+- `v-ship-coord-system` (`f78869bc`, 2026-08-14) — the merge itself.
 
 ### BRANCH-CLEANUP — two branches archived so the record survives the branch (2026-08-14)
 
