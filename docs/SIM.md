@@ -118,7 +118,7 @@ Mechanism (parity step 1, 2026-07-23): the race-init effect in `RaceScreen/index
 
 **This list is GENERATED, never typed** — `node scripts/gen-engine-reach-doc.mjs` reads the
 closure from `scripts/engine-reach.mjs` and each purpose from the FILE'S OWN header. These are the
-**20 files that can change the race**: touch one and the world fingerprint is owed, which
+**36 files that can change the race**: touch one and the world fingerprint is owed, which
 is exactly what the pre-commit tripwire and `npm run verify` route on.
 
 A file whose header states no purpose is listed as **UNKNOWN**. That is a true statement about the
@@ -134,6 +134,7 @@ repository rather than a guess — give the FILE a header line and this table im
 | `modules/raceBaseSpeed.js` | Duration-driven base speed for the race engine (PR-A2). |
 | `modules/raceBehavior.js` | Pure racer-behavior logic for D7b: lane-free avoidance and drafting on continuous physicalY in normalized track-width space. |
 | `modules/raceBehaviorConfig.js` | Storage CRUD for race-behavior tuning config (D7b). |
+| `modules/raceConfigWorld.js` | Stage 0: the SINGLE source of truth for the exported "world" config. |
 | `modules/raceCore.js` | the REAL race init + per-step advance, extracted from screens/RaceScreen/index.jsx so it is importable WITHOUT the DOM. |
 | `modules/raceDynamicsConfig.js` | Storage CRUD for race-dynamics (re-roll) tuning config. |
 | `modules/raceGovernor.js` | The PULK-phase contest director. |
@@ -144,10 +145,25 @@ repository rather than a guess — give the FILE a header line and this table im
 | `modules/storage/configDiff.js` | CONFIG-DIFF-2 |
 | `modules/storage/defaults.js` | Default data for all storage keys — the value that applies wherever a stored config has no entry for a key. |
 | `modules/storage/storage.js` | localStorage key registry and low-level read/write helpers |
+| `modules/track-editor/EditorShape.js` | Race-engine shape adapter for track-editor geometry; wraps inner/outer Catmull-Rom splines. |
+| `modules/track-editor/catmullRom.js` | Pure Catmull-Rom spline math — no DOM, no React. |
 | `modules/utils/RandomHelper.js` | Shuffle and random assignment utilities used in the setup flow |
 | `utils/mathUtils.js` | Shared interpolation helpers — single source of truth (see Lessons on "one source"). |
+| `scripts/sim-fairness.mjs` | Headless fairness simulation — tests whether start-row position affects win probability across all tracks and racer types, with speedBonusMult (catch-up) fully active. |
+| `scripts/sim/observers/comeback-reality.mjs` | **UNKNOWN** — the file's header states no purpose |
+| `scripts/sim/observers/escape-episodes.mjs` | **UNKNOWN** — the file's header states no purpose |
+| `scripts/sim/observers/fairness-stats.mjs` | **UNKNOWN** — the file's header states no purpose |
+| `scripts/sim/observers/front-liveliness.mjs` | **UNKNOWN** — the file's header states no purpose |
+| `scripts/sim/observers/gap-metrics.mjs` | **UNKNOWN** — the file's header states no purpose |
+| `scripts/sim/observers/hero-adherence.mjs` | **UNKNOWN** — the file's header states no purpose |
+| `scripts/sim/observers/outcome-front-battle.mjs` | **UNKNOWN** — the file's header states no purpose |
+| `scripts/sim/observers/physics-tax.mjs` | **UNKNOWN** — the file's header states no purpose |
+| `scripts/sim/observers/pulk-contest.mjs` | **UNKNOWN** — the file's header states no purpose |
+| `scripts/sim/observers/release-contest.mjs` | **UNKNOWN** — the file's header states no purpose |
+| `scripts/sim/observers/report.mjs` | **UNKNOWN** — the file's header states no purpose |
+| `scripts/sim/observers/runaway-parade.mjs` | **UNKNOWN** — the file's header states no purpose |
 
-20 files, 1 of them UNKNOWN.
+36 files, 13 of them UNKNOWN.
 
 <!-- END GENERATED: engine reach -->
 
