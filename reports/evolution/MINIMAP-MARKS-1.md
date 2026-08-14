@@ -190,13 +190,14 @@ and did not have to argue for.
 **No CI run exists for this branch, and that is by design** — `.github/workflows/ci.yml` runs on
 pushes to master and PRs targeting it. There is nothing to wait for until this is proposed.
 
-**Production build served per R10.** Build pill read **from the served bundle**, not assumed:
+**Production build served per R10**, from the branch tip, and the pill was read **from the served
+bundle** rather than assumed — `branch: feat/minimap-start-finish`, `dirty: false`, `reason: null`.
+**The SHA is deliberately not quoted here.** It is the branch tip at build time, and every commit on
+this branch after `faf379fd` is documentation, so a SHA typed into a report would be a second home
+for a number that moves. Read it in the HUD before judging; that is the half of R10 that has already
+cost two test runs.
 
-```
-commit: faf379fd   branch: feat/minimap-start-finish   dirty: false   reason: null
-```
-
-served from `C:\Users\weudl\AppData\Local\racearena-preview` (outside the synced tree), on
+Served from `C:\Users\weudl\AppData\Local\racearena-preview` (outside the synced tree), on
 **http://localhost:4173/**. The API on 4000 was checked and already answers
 `access-control-allow-origin: http://localhost:4173`, so the R10 CORS trap is not armed here.
 
