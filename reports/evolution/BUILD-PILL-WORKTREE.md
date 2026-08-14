@@ -51,10 +51,17 @@ restarted again** for the rest of this section.
 
 | | HEAD | pill, read from the served module |
 | --- | --- | --- |
-| before the commit | `b923bba1` | `{commit: "b923bba1", branch: "fix/build-pill-worktree", dirty: false}` |
-| after the commit, **no restart** | *filled in below* | *filled in below* |
+| before the commit | `b923bba1` | `{commit: "b923bba1", branch: "fix/build-pill-worktree", …}` |
+| **after the commit, no restart** | **`e43308f0`** | **`{commit: "e43308f0", branch: "fix/build-pill-worktree", …}`** |
 
-<!-- PROOF -->
+**It followed within 1.2 seconds** and held at every later read (+2.5 s, +4.0 s). The commit that
+moved it is the one that added this file — deliberately, so the experiment and its record are the
+same act.
+
+**The before-picture is on record too, from earlier the same session and in this same worktree.** With
+the constructed paths, master moved to `c23423fd` and 5173 went on serving `e590bc9a`; it was
+restarted, master moved again to `8422a9a4`, and 5173 froze at `c23423fd`. Twice, unprompted, with
+`dirty: false` and `reason: null` both times — the badge was not merely wrong, it was confident.
 
 ## 4. The tests
 
