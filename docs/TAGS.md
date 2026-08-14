@@ -98,6 +98,201 @@ the Dev Screen toggle and the `renderRaceFrame` hook. The branch was deleted at 
   may be promising a corridor the viewer cannot see. Start here rather than from scratch — see
   [DEAD-ENDS.md](DEAD-ENDS.md) §K.
 
+### BRANCH-CLEANUP — two branches archived so the record survives the branch (2026-08-14)
+
+**A branch is a poor archive: it is mutable, it can be deleted by anyone, and it says "work in
+progress" to every reader who lists it.** These two were kept as record for weeks because deleting
+them would have destroyed evidence. The evidence is now either on master or under a permanent tag, so
+the branches went. The EVIDENCE was moved FIRST and the branches deleted after — in that order, never
+the other way.
+
+- `archive/front-group` (`87a08af4`, 2026-08-14) — the endgame corridor floor, nine commits, built
+  and retired without ever shipping. `endgameCorridorFloor` and `endgameFloorBindsExtent`, their Dev
+  Screen control, and the group machinery FRONT-GROUP-6 removed. **Superseded by CONTENDER-ZOOM-1:
+  the corridor is the wrong quantity in BOTH directions, constraining only ACROSS the track while the
+  racers who leave a finish shot leave ALONG it** — see [DEAD-ENDS.md](DEAD-ENDS.md) §N. This tag
+  holds the CODE only; reports FRONT-GROUP-1/2/3/7 and `scripts/endgame-width-truth.mjs` are on
+  master, brought across before the branch was deleted.
+- `archive/finish-framed` (`6e94a086`, 2026-08-14) — the finish line as a guaranteed subject, two
+  commits, and **its head commit declares itself RED and says do not merge**: its own guard reported
+  51 frames with no racer on screen on luger-hill seed 9. That honesty is why it was kept and why it
+  is archived rather than discarded. Superseded by `feat/runin-state` (merged `eea0acf2`), which
+  reached the same goal by another route. Two things reached master separately — the guard
+  (`2a7e1bdf`, a later version than this one) and its `pointGuarantee` tests, which covered a
+  function that had shipped with none. See [DEAD-ENDS.md](DEAD-ENDS.md) §M.
+
+### FINISH-BAND — the finish line is a line, not a hair (2026-08-13)
+
+**The owner judged it on a production build on 2026-08-13, on dirt-oval and garden-path — the two
+tracks his rejection came from — and ACCEPTED it.** What ships is a checkered band across the
+whole corridor, flat on the racing surface and drawn UNDER the racers, with the edge posts and the
+gold accent kept. It replaces a marking that measured **7.7 screen px deep and painted 486 px² at
+every zoom on every track**, which he judged on production on 2026-08-12 and REJECTED as too faint
+to find.
+
+**The fault was the brief rather than the build**, and that is why this entry exists at all: he
+rejected a GANTRY standing OVER the track, which would hide the racers passing under it; that was
+read as "edges only", and FINISH-READABLE-1 deleted the ground band instead of repairing it. A flat
+marking painted ON the surface covers nobody. **30 screen px deep against 9**, clamped so it is never
+deeper than half the road is wide; painted area at the mid-race shot goes **31–65×**. Real area on
+10 of 10 tracks, and the under-racers ordering is measured at the tightest endgame zoom rather than
+argued.
+
+**THE BRANCH WAS BROUGHT FORWARD BEFORE ANYTHING WAS MINTED.** It was cut off `e1f53781`, 26 commits
+behind, so every fingerprint its report carries was measured against a base that no longer exists;
+none of it was minted. RENDER moved and is minted; WORLD and CAMERA were **run in full on the merged
+tree** rather than argued from `engine-reach`, and both are byte-identical. Values live in
+[fingerprints.json](fingerprints.json).
+
+**And the band did not change size across the forward merge**, measured on all ten tracks at three
+shots — which is the screen-size design proving itself against a camera that moved a great deal
+underneath it. What moved was the SHOT: garden-path's tightest endgame zoom went 5.17 → 4.98, and the
+band measured the same 30.0 px in it either way.
+
+- `pre/ship-finish-band` (`b4be55ea`, 2026-08-13) — master immediately BEFORE the ship. Reset here to
+  restore a finish marking that is two checkered posts and a gold hairline, 7.7 px deep, with the
+  RENDER value `c962df5334277f95`.
+- `v-ship-finish-band` (`354859bc`, 2026-08-13) — **the ship.** The forward merge is inside it: the
+  branch was merged with master first, re-measured, and only then merged out.
+
+### CONTENDER-ZOOM — the photo finish frames everyone still abreast (2026-08-14)
+
+**The owner judged it on a production build on 2026-08-14 and ACCEPTED it.** The photo-finish shot is
+now framed on everyone still fighting for the win rather than on a fixed pair, and it is never wider
+than the road.
+
+**A racer is a contender when he is BOTH nearly level with the leader AND on a free lane** — one on
+the same lane as somebody ahead cannot win, because he would have to move aside and then still
+overtake, and the shot is far too short for both. **Neither condition is a new number:** both are the
+engine's own geometry from `pairContact` — `contactLength` (one body length between equal racers) for
+level, `contactWidth` with `rowLayout`'s `physicalY` unit for the lane. The race is lane-free and
+`physicalY` is continuous, so "same lane" had to be geometric.
+
+**Detection and duration are unchanged.** The gate still enters on the top two, and
+`_photoFinishContendersHome` still reads the leading two — letting the framed set decide when the
+shot ENDS stretched the photo finish by 85% and produced 59 empty frames.
+
+**The corridor cap ships as part of the same feature and is not separable.** Priced apart it costs
+nothing: 3.4% contenders-not-whole with it nulled against 3.4% with it arriving, and empty frames
+46 → 35. **It arrives over `corridorCapArriveMs` rather than appearing** — its scope is a state
+predicate, which is a cut, and it used to switch on in one frame and take the target 2.47 → 10.02.
+Hanging it on the run-in's continuous progress was built first and FAILED: the cap escaped the finish
+shot and tightened OVERVIEW from 1.5 corridors to 0.469.
+
+**Measured, ten tracks × three seeds:** contenders not whole **10.3% → 3.4%**; crossing zoom median
+**99%**, opening only where racers are genuinely abreast; photo-finish frames 7468 against master's
+7441; `check-runin-frame` green on both halves. CAMERA and RENDER moved and are minted; WORLD was RUN
+rather than argued and is unmoved. Values live in [fingerprints.json](fingerprints.json).
+
+- `pre/ship-contender-zoom` (`5d4079c3`, 2026-08-14) — master immediately BEFORE the ship. Reset here
+  to restore a photo finish framed on `ordered.slice(0, 2)` with no corridor cap, CAMERA
+  `d7a8fe54072df6d7` and RENDER `d1c9d5d0da6a964f`.
+- `v-ship-contender-zoom` (`0bd07dba`, 2026-08-14) — **the ship.** It carries five diagnosis reports
+  as well as the change: three of them record wrong attributions of mine that measurement overturned,
+  and they are kept deliberately so the next person down this path does not repeat them.
+
+### CAMERA-ENDING-WINDOW — the camera's own fingerprint can see the ending (2026-08-13)
+
+**The instrument changed, not the product, and that is the whole entry.** Not one line of camera
+behaviour moves here. `camera-fingerprint.mjs` ran `while (finishedCount < N)`, so it stopped on the
+exact frame the ending BEGINS and had never rendered a FINISHED frame — which meant ENDING-PICTURE-1,
+the block that makes the director compose the ending at all, was invisible to the camera's own change
+detector. The record said so in three separate places, and said it as though it were a property
+rather than a hole. **The window is now DERIVED** from `endingOnRaceScreenMs()`, the same arithmetic
+RaceScreen sets its navigate-away timer from, so a future change that lengthens the ending lengthens
+the window with it. CAMERA moved once, deliberately, and is minted; WORLD and RENDER were re-run in
+full and are unchanged. Values live in [fingerprints.json](fingerprints.json).
+
+**The proof is the off arm, and it is exact.** With `endingKeepsFinishShot` false — the arm in which
+the director does not compose the ending — the extended instrument reproduces the predecessor value
+BYTE-IDENTICALLY, so no frame before the last crossing moved and the entire fingerprint move is the
+ending. A sabotage firing only from the SECOND all-home frame onward moves the default arm and leaves
+that control untouched; removing it returns the hash. **9 of 10 tracks contribute 300 FINISHED
+frames**, and the instrument now prints that count and refuses to run if none does — so the blindness
+cannot come back quietly. Cost 44 s against ~29 s.
+
+- `pre/ship-camera-ending-window` (`758a95ac`, 2026-08-13) — master immediately BEFORE the ship.
+  Reset here to restore a camera fingerprint that stops at the last crossing, with the CAMERA value
+  `c1556053b1824758` and `docs/fingerprints.json` carrying RUNIN-1's mint.
+- `v-ship-camera-ending-window` (`96f7a0ae`, 2026-08-13) — **the ship.** An instrument change that
+  moves a baseline is the case a ceremony exists for, so it was run in full rather than argued: both
+  other fingerprints measured, the off arm measured, and the move proved by sabotage and restored.
+
+### STAMP-COMPLETE — the stamp guard answers about everything it is responsible for (2026-08-13)
+
+**A guard that scans one file and prints a confident green line.** `check-measured-stamps` ran bare
+over `docs/CAMERA_DIRECTOR.md` and nothing else, so a stale stamp in any other living document was
+invisible — the identical shape INDEX-COMPLETE-1 had fixed in `check-index` the previous day. It now
+scans the whole living-doc set, discovered by the SAME rule `check-doc-links` uses so that "a living
+doc" has one definition. **Proved by sabotage in both directions on one tree**: with a stale stamp
+appended to `docs/ENDING-PHASES.md`, the old guard exits 0 reporting "1 stamp across 1 document, 0
+stale" and the new one exits 1 naming the document and the commit that invalidated it.
+
+It defaults to ALL rather than refusing without arguments, following INDEX-COMPLETE-1's reasoning:
+refusing helps only the person who runs it bare, while defaulting makes the cheapest invocation the
+complete one. It still reads git HISTORY, which was re-examined and left alone — the question a stamp
+raises is historical, and the PENDING pass already reports the working tree without failing on it.
+
+**It unblocked something the same day.** `docs/SHIP-CEREMONY.md` recorded that its hand-counted
+`eleven` could not be stamped BECAUSE this guard scanned one file. Re-counted and stamped.
+
+- `v-guard-stamp-complete` (`758a95ac`, 2026-08-13) — **the merge.** No fingerprint moves; this is a
+  guard, and it is tagged because a guard widening its own reach is exactly the kind of change a
+  later reader needs to be able to date.
+
+### RUNIN — the run-in glides wide-and-back, and only the line sets the width (2026-08-12)
+
+**The endgame gets a shot that shows the line.** From the moment the leader is within reach of the
+finish, one progress measure — the leader's remaining distance ALONG THE TRACK, so it is monotone —
+drives both the anchor placement and the zoom: the shot opens wide-and-back over `runInOpenMs` and
+closes to the ordinary shot exactly at the crossing, with no seam and no handover. **It adds no
+camera state**, which is deliberate and was checked in the source rather than after the fact:
+RaceScreen starts the photo-finish slow motion off `hudState`, so a RUN_IN state holding the slot at
+the line would have suppressed it outright. Line in frame over the run-in window **9.8% → 86.6%**
+pooled across ten tracks, first in shot 1.1 s after the window opens, **0 empty frames on every
+track at every pace tested**. The trade is the tracking-lag tail — LEAD_CHANGE p95 10.72 → 22.17 pp —
+and it is proportional to the zoom rate by construction. CAMERA and RENDER moved and are minted;
+WORLD is unchanged and was re-run in full rather than inferred. Values and the two-part attribution
+live in [fingerprints.json](fingerprints.json).
+
+**Five shapes were built and four were replaced**, each by the measurement of its own limit — the
+history is in the six RUNIN reports, and [DEAD-ENDS.md](DEAD-ENDS.md) carries what must not be
+retried, including the tighten-rate limit that cost the crossing shot an order of magnitude.
+
+- `pre/ship-runin` (`0b6d6098`, 2026-08-12) — master immediately BEFORE the ship, and AFTER
+  `v-ship-resolve-converge`. Reset here to restore an endgame with no run-in at all — no `runInShot`
+  or `runInOpenMs` keys — and the CAMERA/RENDER pair `64432e18a7e62188` / `096f2726c45ed853`.
+- `v-ship-runin` (`eea0acf2`, 2026-08-12) — **the ship.** Two keys, both defaulting to the new
+  behaviour. **The off-arm promise was measured on this tree, not assumed**: with `runInShot` false
+  both instruments reproduce the predecessor values exactly, so the run-in and the convergence repair
+  shipped beside it change nothing until the run-in composes.
+
+### RESOLVE-CONVERGE — a widening step has to buy something (2026-08-12)
+
+**The last step of every shot stops paying width for nothing.** `resolveCamera` pursued its
+inner-frame guarantee by stepping the zoom down 10% at a time and never asked whether the steps were
+getting anywhere; where the world-bounds clamp holds the target at the world edge they cannot, so it
+ran to the projection floor, handed over the whole world, and left the target further outside than it
+started. It now takes a step only when the step strictly reduces how far outside the inner frame the
+target lands — a comparison, no new number. **The up-front "is it reachable" test was rejected on
+evidence**: the clamp has two regimes and where the world already FITS the frame, widening genuinely
+helps, so a test written from the other regime alone would have shipped wrong.
+
+**NOTHING WAS MINTED, and that is the measurement rather than an omission.** Over 172226 frames the
+loop fires zero times on the shipped configuration, so CAMERA and RENDER are byte-identical to the
+values already in [fingerprints.json](fingerprints.json), and the WORLD cannot be reached at all
+(`engine-reach --check`: none of 4). The defect is reachable only under a forward-anchored wide shot
+near the world edge, which is the run-in shipped beside this.
+
+- `pre/ship-resolve-converge` (`e1f53781`, 2026-08-12) — master immediately BEFORE the ship. Reset
+  here to restore a `resolveCamera` that widens to the projection floor whenever the pan target falls
+  outside `innerFramePct`, whether or not widening can bring it back.
+- `v-ship-resolve-converge` (`d7eca25d`, 2026-08-12) — **the ship.** No key: it is a defect repair
+  with no second position worth offering, and both fingerprints prove it changes nothing until the
+  condition that triggers it exists. `scripts/resolve-converge-truth.mjs` ships with it and measures
+  the SHIPPED function rather than a copy — it reconstructs `_setTrackTargets`'s arguments from the
+  director's own `_framingProbe` and self-checks every frame against the `targetZoom` actually set.
+
 ### FINISH-PAIR — the photo finish frames the pair it is following (2026-08-11)
 
 **The camera stops lurching at the finish, and NOTHING about the race moved.** The shot captured its
@@ -121,7 +316,49 @@ in frame for 100 % of the shot against 87–91 % before.
   instrument blind spots are recorded rather than repaired — the shared driver runs a nameless field
   and no slow motion, and without either the defect does not reproduce at all.
 
-### WINNER-CARD — the ending names the winner (2026-08-13)
+### ENDING-PICTURE — the ending gets a picture worth holding (2026-08-12)
+
+**The hold, and the picture it was supposed to be holding.** `finishHoldAfterLastMs` goes from 0 to
+1500 — his own podium beat — and the card-free tail grows from 500 to 2000 ms. But the ending was
+holding nothing: the camera's transform was replaced by the IDENTITY the frame the phase flipped
+(on an open track an 853×470 window at world (0,0) with **0 of 20 racers in it**; on a closed one the
+whole world as a map), and a full-canvas scrim reading "Loading results…" was drawn over all of it.
+Both predated the hold by months. The director is now consulted through FINISHED and the splash is
+retired, each behind a key defaulting to the fix. RENDER moved and is minted; values live in
+[fingerprints.json](fingerprints.json). **CAMERA is unchanged and that is NOT evidence about this
+ship** — `camera-fingerprint.mjs` stops at the last crossing and renders no FINISHED frame, which is
+recorded beside the value.
+
+**That last sentence was true when this tag was cut and is no longer true of the instrument**, and
+it is left standing rather than edited because it is what the ship was judged against.
+CAMERA-ENDING-WINDOW-1 (2026-08-13) derived the instrument's window from `endingOnRaceScreenMs()`,
+the same arithmetic the race screen navigates away on, so it now renders the ending. The blindness
+this paragraph records is measured, not remembered: with `endingKeepsFinishShot` false the extended
+instrument reproduces this ship's CAMERA value exactly, which is precisely why that value could say
+nothing about a ship that only acts once the key is on.
+
+- `pre/ship-ending-picture` (`7eb8f013`, 2026-08-12) — master immediately BEFORE the ship. Reset here
+  to restore an ending that flips to an identity transform at the last crossing and draws the
+  "RACE FINISHED! / Loading results…" scrim over it, with `finishHoldAfterLastMs` absent, and the
+  RENDER fingerprint at `c0fd1e8eda539867`.
+- `v-ship-ending-picture` (`a20c701f`, 2026-08-12) — **the ship.** Three keys in total across the two
+  blocks, all defaulting to the fixed behaviour because he asked for a defect repaired rather than a
+  taste offered. The zoom-out trigger is deliberately UNCHANGED: gating it on
+  `finishedCount >= nRacers` was proposed and rejected by him, since it would make the pull-back's
+  start a property of the slowest racer. New guard `check-ending-frame.mjs` renders a real FINISHED
+  frame and refuses a full-canvas fill at the identity transform — tracking the matrix is what stops
+  it flagging the track's own background — proven by sabotage, 1.1 s.
+
+> **DATE CORRECTION, 2026-08-12.** The two sections below and their four tags were dated 2026-08-13.
+> That date was never observed — it came from a task specification and propagated. Every date here is
+> now read from `git log --date=iso` on the commit it names: `6de86e6a` 2026-08-11 18:15 (WINNER-CARD
+> ship), `235333d5` 2026-08-11 15:56 (its return point), `eb051889` 2026-08-11 15:56 (PODIUM-BUILD
+> ship), `0da0b574` 2026-08-11 13:29 (its return point). The same wrong date reached three
+> `defaults.js` notes, one in `ResultScreen.css` and one test header, all corrected the same way and
+> from the same source. The reports that discuss it are append-only and were NOT edited — see the
+> CORRECTION section of [reports/night/NIGHT-2026-08-12.md](../reports/night/NIGHT-2026-08-12.md).
+
+### WINNER-CARD — the ending names the winner (2026-08-11)
 
 **The counterpart to the opening's brand card, and NOTHING about the race moved.** At the end of a
 race a card names the winner — race number, name, colour — over the race picture, in the brand's
@@ -131,10 +368,10 @@ re-measured on the shipping tree and none of them changed; values live in
 draw calls and the card is DOM, so its unmoved hash is evidence about the picture underneath and not
 about the card. The owner's eye is the only instrument that saw it.
 
-- `pre/ship-winner-card` (`235333d5`, 2026-08-13) — master immediately BEFORE the ship. Reset here to
+- `pre/ship-winner-card` (`235333d5`, 2026-08-11) — master immediately BEFORE the ship. Reset here to
   restore an ending with no winner card at all: no `winnerCardMs` key, and `finishPauseMs` back at
   its pre-card length before the card's read time was allowed to set it.
-- `v-ship-winner-card` (`6de86e6a`, 2026-08-13) — **the ship, at his SECOND look.** The first
+- `v-ship-winner-card` (`6de86e6a`, 2026-08-11) — **the ship, at his SECOND look.** The first
   placement sat on the MINIMAP, which is drawn INTO the canvas and therefore appears in none of the
   files that name the other overlays — reading the sources could not find it and did not. What
   shipped is placed against a MEASURED occupancy map of the finish frame, and anchored in
@@ -144,7 +381,7 @@ about the card. The owner's eye is the only instrument that saw it.
   `min(winnerCardMs, finishPauseMs)` — so it cannot make the ending longer at any setting, and 0 on
   either key removes it.
 
-### PODIUM-BUILD — the result screen arrives instead of appearing (2026-08-13)
+### PODIUM-BUILD — the result screen arrives instead of appearing (2026-08-11)
 
 **The ending answers the opening, and NOTHING about the race moved.** The podium is built up — 3rd,
 then 2nd, then the winner held for twice as long, and only then the ranking and everything below it.
@@ -153,12 +390,12 @@ All three fingerprints were re-measured on the shipping tree and none of them ch
 revealed element carries NO class, so the end of the sequence is byte-for-byte the DOM the screen
 rendered before the feature existed.
 
-- `pre/ship-podium-build` (`0da0b574`, 2026-08-13) — master immediately BEFORE the ship. Reset here
+- `pre/ship-podium-build` (`0da0b574`, 2026-08-11) — master immediately BEFORE the ship. Reset here
   to restore a result screen that appears complete in one frame, with no `podiumRevealBeatMs` key,
   no build-up, and no brand accent on the winner's arrival. It also restores `CLAUDE.md`'s claim of
   _"exactly two"_ owner quotations — which was already wrong when this tag was cut, and is the
   reason that sentence is now a list.
-- `v-ship-podium-build` (`eb051889`, 2026-08-13) — **the ship.** One key, `podiumRevealBeatMs`, and
+- `v-ship-podium-build` (`eb051889`, 2026-08-11) — **the ship.** One key, `podiumRevealBeatMs`, and
   every other time in the sequence is a whole multiple of it, so the total is `4 x beat`. **1500 ms
   is the OWNER'S number, not the one that was proposed:** he watched it on a production build at 700
   and moved the slider himself. Two escape hatches make a 6.0 s ending affordable — any click or key

@@ -129,7 +129,8 @@ export function makeProjection({ worldW, worldH, uniformScale = null, minCamZoom
 
     /**
      * The loosest EFFECTIVE zoom this projection allows (minCamZoom expressed on the X axis).
-     * `resolveCamera` reduces zoom until the target is framed and stops here.
+     * The floor `resolveCamera` widens toward — though since RESOLVE-CONVERGE-1 it stops at the
+     * first step that brings the target no closer to the inner frame, which is usually sooner.
      */
     minEffX() {
       return minCamZoom * axisX;

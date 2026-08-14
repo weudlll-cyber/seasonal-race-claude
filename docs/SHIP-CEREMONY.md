@@ -76,11 +76,15 @@ two contains `autoSpriteScale.js`, which is the precise file this tripwire was c
 Triggering on it would have stopped catching the incident that produced the rule.
 
 **`eleven` is a HAND-COUNTED figure: `ENGINE_INPUT_MODULES` in
-`client/src/modules/raceConfigWorld.js`, counted by hand on 2026-08-12 and correct on that date.**
-Nothing re-checks it. It is marked rather than generated or stamped because neither was available
-without changing code: `scripts/check-measured-stamps.mjs` — this repository's mechanism for exactly
-this — scans **`docs/CAMERA_DIRECTOR.md` and nothing else**, so a `MEASURED:` stamp placed in this
-file would look guarded and be decoration, which is worse than an honest date.
+`client/src/modules/raceConfigWorld.js`.** Nothing re-counts it — a stamp checks FRESHNESS, never
+accuracy. **It is now STAMPED, and STAMP-COMPLETE-1 is what made that possible.** This paragraph
+recorded the opposite until 2026-08-13, and correctly for its day: `check-measured-stamps.mjs`
+scanned `docs/CAMERA_DIRECTOR.md` and nothing else, so a stamp placed here would have looked guarded
+and been decoration, which is worse than an honest date. It now scans every living document, so the
+stamp below is real — the day `raceConfigWorld.js` changes, this figure goes red and asks to be
+re-counted. Re-counted by hand on 2026-08-13 and still eleven; the array is eleven lines long.
+
+<!-- MEASURED: ENGINE_INPUT_MODULES is eleven entries @ 86d542f0 2026-08-13 depends=client/src/modules/raceConfigWorld.js -->
 
 **The gap between the list and the closure is deliberately described WITHOUT a count.** The NAME is
 what carries the argument; the number is not load-bearing, so it is not stated at all rather than
@@ -291,7 +295,23 @@ went missing).
 - [ ] **11. Run the three guards before the commit.** `node scripts/check-doc-links.mjs`,
       `node scripts/check-index.mjs`, `node scripts/check-tags.mjs` — all three green. Plus the full test
       suite + `eslint` + `build`. These are the cheap catches for the drift a human reviewer cannot see.
-- [ ] **12. Commit, push, verify.** One clear commit; push; confirm with `git log origin/master
+- [ ] **12. Commit, push, verify — AND THE SHIP IS NOT FINISHED AT THE PUSH.** It is finished when CI
+      reports **success for that exact SHA**. Read it, and put the run id in the report.
+
+      **Why this is a step and not a habit.** Three pushes in one day ended at "pushed" while the red
+      arrived afterwards, and master stayed broken for three hours because nobody was still looking.
+      A push is a request; the run is the answer. Check the HEAD SHA rather than the branch — a
+      branch view can show you a green run for the commit before yours:
+
+      ```bash
+      gh run list --branch master --limit 1 --json headSha,databaseId,status,conclusion
+      gh run watch <id> --exit-status
+      ```
+
+      **A red run is not finished work with a footnote.** Either fix it and push again, or revert.
+      The ceremony has no state in which master is knowingly left red.
+
+      One clear commit; push; confirm with `git log origin/master
 --oneline -3` that the push landed. **Any verification transcript pasted into the report must come
       from the state ACTUALLY being committed** — re-run the guards after the commit if that is the only
       way to make it honest, and say that you did. A transcript from an intermediate state (guards still

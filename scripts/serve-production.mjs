@@ -44,10 +44,15 @@ const arg = (n, d) => {
 const PORT = Number(arg("port", 4173));
 const TARGET =
   arg("dir", null) ??
-  join(process.env.LOCALAPPDATA ?? process.env.TMPDIR ?? "/tmp", "racearena-preview");
+  join(
+    process.env.LOCALAPPDATA ?? process.env.TMPDIR ?? "/tmp",
+    "racearena-preview",
+  );
 
 if (!existsSync(DIST)) {
-  console.error(`no build at ${DIST} — run \`cd client && npm run build\` first`);
+  console.error(
+    `no build at ${DIST} — run \`cd client && npm run build\` first`,
+  );
   process.exit(2);
 }
 
@@ -76,7 +81,9 @@ const send = async (res, file, fallback) => {
       body = await readFile(file);
       cache.set(file, body);
     }
-    res.writeHead(200, { "content-type": TYPES[extname(file)] ?? "application/octet-stream" });
+    res.writeHead(200, {
+      "content-type": TYPES[extname(file)] ?? "application/octet-stream",
+    });
     res.end(body);
   } catch (e) {
     if (fallback) return send(res, fallback, null);
@@ -94,5 +101,7 @@ createServer((req, res) => {
   console.log(`  served from : ${TARGET}   (outside the synced tree)`);
   console.log(`  copied from : ${DIST}`);
   console.log(`  open        : http://localhost:${PORT}/`);
-  console.log(`  build pill  : http://localhost:${PORT}/  — read it in the HUD before judging`);
+  console.log(
+    `  build pill  : http://localhost:${PORT}/  — read it in the HUD before judging`,
+  );
 });

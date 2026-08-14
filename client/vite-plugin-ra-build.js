@@ -15,8 +15,13 @@
 //   DEV    the value is read from git when the virtual module is loaded, and the module is
 //          INVALIDATED with a full page reload whenever the identity changes. Two signals make that
 //          complete: Vite's own file watcher catches every source edit (which is what makes the tree
-//          dirty), and a mtime POLL over `.git/HEAD` + `.git/index` catches a commit or a branch
+//          dirty), and a mtime POLL over git's OWN `HEAD` + `index` catches a commit or a branch
 //          switch, which can change the identity without touching a single file Vite tracks.
+//   BUILD-PILL-WORKTREE corrected WHERE those two files are. They were CONSTRUCTED as
+//          `<repo>/.git/HEAD` and `.../index`, which is true in a main tree and false in a linked
+//          WORKTREE — there `.git` is a file, neither path exists, and the poll compared null with
+//          null forever and could never fire. The paths are now ASKED FOR with
+//          `git rev-parse --git-path`. See gitIdentityPaths.
 //   BUILD-PILL-TRUTH corrected the second half. It used to say those two files were "added to"
 //          Vite's watcher — and that line had never fired, because Vite's watcher ignores `.git`.
 //          The reload after a branch switch was arriving from the SOURCE FILES the switch rewrote, so
@@ -41,7 +46,7 @@
 
 import { execSync } from 'node:child_process';
 import { statSync } from 'node:fs';
-import { dirname, join } from 'node:path';
+import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const VIRTUAL_ID = 'virtual:ra-build';
@@ -182,6 +187,46 @@ export function makeMtimePoll(paths, stat) {
   };
 }
 
+/**
+ * WHERE THE TWO GIT FILES ACTUALLY ARE — ASKED FOR, NOT CONSTRUCTED.
+ *
+ * BUILD-PILL-WORKTREE. These paths used to be built as `join(REPO_ROOT, '.git', 'HEAD')` and
+ * `…'index'`, which is true in a MAIN tree and false in a LINKED WORKTREE, where `.git` is a FILE
+ * holding a `gitdir:` pointer:
+ *
+ *     C:/ra-n1/.git  →  gitdir: …/Seasonal race claude/.git/worktrees/ra-n1
+ *
+ * So in a worktree neither constructed path exists. `mtimeOf` returns null for both — correctly, by
+ * its own contract, a missing file being a legitimate reading — and the poll then compares
+ * `null, null` against `null, null` on every tick FOREVER. **It can never fire.** The badge froze at
+ * whatever the server read at start-up, and reported itself clean and current while doing it.
+ *
+ * That is precisely the failure this file's header says it exists to abolish: a build identity that
+ * is "not stale by accident" but "structurally incapable of being anything else". BUILD-TRUTH-1 shut
+ * it for the main tree; this shape reopened it for worktrees — and R10 tells us to work in a worktree
+ * whenever a judgement is pending, so the more correctly the process was followed, the more certainly
+ * the badge lied.
+ *
+ * `git rev-parse --git-path` answers correctly in both shapes. It returns a path RELATIVE to the git
+ * invocation's cwd in a main tree (`.git/HEAD`) and an ABSOLUTE one in a worktree, so the answer is
+ * resolved against REPO_ROOT — `resolve` takes an absolute right-hand side as-is and joins a relative
+ * one, which is exactly the required behaviour for both.
+ *
+ * THE FALLBACK IS THE OLD CONSTRUCTION, deliberately. If git cannot be asked at all, the identity is
+ * already `unknown` for a reason the badge reports, and the poll has nothing useful to watch; falling
+ * back keeps a git-less checkout behaving as it did rather than watching nothing at all.
+ *
+ * @returns {string[]} the two paths whose mtime signals a possible identity change
+ */
+export function gitIdentityPaths() {
+  const head = git('rev-parse --git-path HEAD');
+  const index = git('rev-parse --git-path index');
+  if (!head.out || !index.out) {
+    return [join(REPO_ROOT, '.git', 'HEAD'), join(REPO_ROOT, '.git', 'index')];
+  }
+  return [resolve(REPO_ROOT, head.out), resolve(REPO_ROOT, index.out)];
+}
+
 /** mtime in ms, or null when the path cannot be read. Never throws — a missing file is an answer. */
 const mtimeOf = (p) => {
   try {
@@ -238,11 +283,9 @@ export function raBuildInfo() {
 
       // A commit or a branch switch can change the identity without touching a file Vite watches.
       // `server.watcher.add()` on these two CANNOT close that hole — Vite ignores `.git` — so they
-      // are polled instead. See makeMtimePoll for the whole argument.
-      const gitMoved = makeMtimePoll(
-        [join(REPO_ROOT, '.git', 'HEAD'), join(REPO_ROOT, '.git', 'index')],
-        mtimeOf
-      );
+      // are polled instead. See makeMtimePoll for the whole argument, and gitIdentityPaths for why
+      // the two paths are ASKED FOR rather than constructed.
+      const gitMoved = makeMtimePoll(gitIdentityPaths(), mtimeOf);
 
       // Seeded from the start-up read so a server that starts broken does not say so twice.
       let lastReason = atStartUp.reason;

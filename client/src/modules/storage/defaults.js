@@ -356,11 +356,102 @@ export const DEFAULT_CAMERA_CONFIG = {
   // Finish sequence: drama pulse duration (was hardcoded), smooth zoom-out, and pause before leaderboard.
   finishDramaDurationMs: 1500, // ms of LEADER_ZOOM on the winner before FINISH_OVERVIEW begins
   finishOverviewZoomOutDurationMs: 3000, // ms for smooth zoom-out during FINISH_OVERVIEW
-  // 2500 -> 3500 ON HIS EYE, 2026-08-13: _"die Anzeige ist zu kurz"_ — "the display is too short",
+  // ── THE RUN-IN'S OPENING, ITS OWN KEY (RUNIN-PACE-1, 2026-08-12) ──────────────────────────────
+  // How long the camera takes to open the shot when the run-in engages. It sits here because it is
+  // an ENDING control, beside the zoom-out it used to borrow.
+  //
+  // IT BORROWED `finishOverviewZoomOutDurationMs` FOR ONE DAY AND THAT WAS WRONG. The two are
+  // different motions at different moments for different reasons: this one opens the shot BEFORE the
+  // crossing so the finish comes into view, that one closes the race AFTER it. Coupling them meant
+  // tuning either would move the other — and the owner has already accepted the post-crossing
+  // zoom-out at its present length, so the borrowing put a settled value at risk to change an
+  // unsettled one.
+  //
+  // 1250 ms is his number: "between 1 and 1.5 seconds would have been enough". The band below it is
+  // 500 ms — the pace of an ordinary cut, which he called hectic — and above it the line arrives so
+  // late that the shot has little of the run-in left to be wide for.
+  runInOpenMs: 1250,
+  // 2500 -> 3500 ON HIS EYE, 2026-08-11: _"die Anzeige ist zu kurz"_ — "the display is too short",
   // about the winner card. RAISING THE CARD ALONE WOULD HAVE DONE NOTHING, because the card's window
   // is `min(winnerCardMs, finishPauseMs)` and this was the binding half — so both moved together.
   // This is the ROOM; `winnerCardMs` below is the tenant.
   finishPauseMs: 3500, // ms pause after last racer finishes before leaderboard
+  // ── THE HELD OVERVIEW (ENDING-HOLD-1) ─────────────────────────────────────────────────────────
+  // Extra time on the settled finish picture AFTER the last racer is home, BEFORE `finishPauseMs`
+  // starts running. The two are added, so the ending lengthens by exactly this and nothing else
+  // moves — the winner card's window is still `min(winnerCardMs, finishPauseMs)` and does not grow.
+  //
+  // THE DEFAULT IS THE BEHAVIOUR HE ASKED FOR, 2026-08-12, in his words: _"Aber wenn der letzte ins
+  // Ziel kommt sollte das Bild noch ein wenig stehen bleiben"_ — "but when the last one crosses the
+  // line the picture should stand still a little longer". It shipped at 0 because the measurement
+  // then said there was no WAIT to restore; that reading was right and beside the point. He is not
+  // asking to watch arrivals, he is asking for a beat on the finished picture, and a key defaulting
+  // to 0 does not give him one.
+  //
+  // WHY 1500 AND NOT ANOTHER NUMBER. It is HIS OWN BEAT — `podiumRevealBeatMs` below is 1500 because
+  // he watched the podium at 700 and moved the slider there himself, so the ending keeps one rhythm
+  // instead of gaining a second, unrelated one. And it is the number that makes the change legible:
+  // the settled, CARD-FREE picture at the end is what actually grows here, because the winner card
+  // is capped at `min(winnerCardMs, finishPauseMs)` = 3000 of the 3500 ms pause and does not inherit
+  // this. That window goes from 500 ms to 2000 ms — a fourfold change, unmistakable in an eye test,
+  // where 250 or 500 would be argued about.
+  //
+  // MEASURED end to end at this default (20 racers, shipped config): the ending from the last
+  // crossing to a settled result screen is 11 370 ms against 9 870 at 0. On a race with a genuinely
+  // far-behind straggler (Searound seed 9) the last crossing is unchanged — this key cannot move it,
+  // it only follows it.
+  //
+  // ZERO STILL MEANS NO HOLD AT ALL and is still tested: no timer is scheduled and the arithmetic is
+  // `0 + finishPauseMs`, which is exactly the ending that shipped before this key existed.
+  //
+  // WHAT IT IS STILL NOT: a way to watch racers come in. The zoom-out begins when the FIRST finishers
+  // are home — his instruction, and unchanged here — so by the last crossing the pull-back is long
+  // over. This buys a longer look at a SETTLED picture and nothing else. If he wants arrivals to
+  // watch, the lever is the race, not the ending (PROJECT-PRINCIPLES §9).
+  finishHoldAfterLastMs: 1500,
+  // ── THE ENDING KEEPS ITS PICTURE (ENDING-PICTURE-1, 2026-08-12) ───────────────────────────────
+  // TRUE = while the phase is FINISHED, the camera director keeps composing the shot. FALSE = the
+  // pre-2026-08-12 behaviour, which replaced the director's transform with `{ zoom: 1, offsetX: 0,
+  // offsetY: 0 }` on the frame the last racer crossed.
+  //
+  // WHAT THAT IDENTITY TRANSFORM ACTUALLY WAS: not a shot. On Searound it squeezed the whole
+  // 3072x2048 world into the 1280x720 canvas; on a 6144-wide open track it left an 853x480 window
+  // pinned at world (0,0) — 14% of the track's width, with the racers nowhere inside it. The owner
+  // reported it as "the race view disappears as soon as the last racer crosses", and the hold he
+  // had just asked for was holding exactly that.
+  //
+  // WHY THE DIRECTOR IS CONSULTED RATHER THAN THE LAST TRANSFORM FROZEN. Freezing was the other
+  // candidate and it fails on timing: the zoom-out can still be IN FLIGHT at the last crossing (on
+  // Searound seed 2814 it ends 50 ms after it), so freezing would stop the pull-back dead mid-move
+  // and hold a half-finished one. Consulting lets the move finish and come to rest. It is safe by
+  // construction — physics no longer steps in this phase, so the director sees a static field, and
+  // `_inFinishMode` is absolute, so no new shot can be chosen.
+  //
+  // NOT AN ENGINE KEY: the director is asked for a transform on frames where it used to be ignored,
+  // the race is over and no physics runs — so this key cannot move the WORLD fingerprint.
+  //
+  // IT NOW MOVES THE CAMERA FINGERPRINT, AND UNTIL 2026-08-13 IT COULD NOT (CAMERA-ENDING-WINDOW-1).
+  // This comment used to say the key "cannot move any of the three fingerprints", and the reason it
+  // gave was `camera-fingerprint.mjs` stopping at the last crossing — which was TRUE, and was a
+  // BLIND SPOT rather than a property: the instrument whose whole job is to notice camera changes
+  // could not see this one at all. Its window is now derived from `endingOnRaceScreenMs()` and
+  // reaches the ending, so flipping this key moves CAMERA. Measured rather than argued — with it
+  // false the instrument reproduces the pre-block value exactly, and `--ending-off` is that arm.
+  endingKeepsFinishShot: true,
+  // ── THE END-OF-RACE SPLASH IS RETIRED (ENDING-PICTURE-1, 2026-08-12) ──────────────────────────
+  // FALSE = no splash. TRUE = the pre-2026-08-12 behaviour: a full-canvas `rgba(0,0,0,0.48)` scrim
+  // with "RACE FINISHED!" in 80px gold and "Loading results…" beneath it, drawn over the race
+  // picture for every frame of the ending.
+  //
+  // WHY IT GOES ENTIRELY RATHER THAN MOVING TO THE LAST MOMENTS. Both halves of it are now false.
+  // Nothing is loading: `raceResults` is written to sessionStorage on the SAME FRAME the splash
+  // first appears, so "Loading results…" describes a wait that does not exist. And the ending is no
+  // longer an instant jump — it is a designed sequence that names the winner on a card, holds the
+  // settled picture, and builds the podium up. A scrim over all of that contradicts every part of
+  // it. Moving it to the last moments before navigation was considered and rejected as redundant:
+  // the screen transition already fades to black there (`SCREEN_TRANSITION_MS`, a constant in
+  // TransitionContext.jsx), so those moments are covered by something that fades rather than snaps.
+  finishedSplashEnabled: false,
   finishOverviewLookbackPx: 300, // world-pixel distance before finish line where camera centers during FINISH_OVERVIEW
   // ── THE PODIUM IS BUILT UP (PODIUM-BUILD-1) ───────────────────────────────────────────────────
   // ONE beat. Everything the result screen's build-up does is a whole multiple of it, so the owner
@@ -373,7 +464,7 @@ export const DEFAULT_CAMERA_CONFIG = {
   // timer is scheduled and no class is ever put on an element, so "off" is an absence rather than a
   // fast animation.
   //
-  // 700 -> 1500 ON HIS EYE, 2026-08-13, and the number is HIS rather than mine: he watched the
+  // 700 -> 1500 ON HIS EYE, 2026-08-11, and the number is HIS rather than mine: he watched the
   // build-up on a production build, moved the slider himself, and reported where he landed. His
   // words are the evidence, so the original stays and the English goes beside it (CLAUDE.md's
   // quotation exception): _"das sieht nett aus, mir ging es zu schnell — ich habe auf 1500 ms
@@ -407,7 +498,7 @@ export const DEFAULT_CAMERA_CONFIG = {
   // ⚠ RAISING THIS ALONE DOES NOTHING once it reaches `finishPauseMs` above. The window is
   // `min(winnerCardMs, finishPauseMs)`, so whichever is smaller decides — move the pause with it.
   //
-  // 1800 -> 3000 ON HIS EYE, 2026-08-13: _"die Anzeige ist zu kurz"_ — "the display is too short".
+  // 1800 -> 3000 ON HIS EYE, 2026-08-11: _"die Anzeige ist zu kurz"_ — "the display is too short".
   // The pause went 2500 -> 3500 in the same breath, because at 1800 the CARD's key was the binding
   // half and at 3000 the PAUSE would have become one.
   //
@@ -459,6 +550,111 @@ export const DEFAULT_CAMERA_CONFIG = {
   // at 240 frames (4 s), which is longer than the shot itself and therefore this same fix with a
   // knob whose only safe value is "longer than the shot".
   photoFinishContenderFraming: true,
+  // ── THE RUN-IN IS COMPOSED AROUND THE FINISH LINE (RUNIN-OWNS-1, 2026-08-12) ──────────────────
+  // TRUE = from `endgameThreshold` to the first crossing the finish line is a bound on the camera's
+  // zoom, whatever shot the director is running. FALSE = the pre-2026-08-12 behaviour, where the
+  // line was wherever it happened to fall.
+  //
+  // HIS DESIGN, in English: when the run-in begins, open far enough that the finish is visible, then
+  // come back in continuously to the close shot — keeping the line in frame the whole way, so he can
+  // see how much race is left and whether anyone still has a chance.
+  //
+  // IT OWNS THE FRAMING, NOT THE STATE SLOT, and that is the design rather than a detail. The run-in
+  // does not compete with LEAD_CHANGE, BATTLE, COMEBACK or the photo finish for which shot is
+  // running; it READS whichever one is running and bounds its zoom. An earlier shape made the run-in
+  // a camera STATE that took the endgame slot, and it was wrong twice over: it owned only 14.9%
+  // (Luger Hill) and 18.5% (Searound) of the window, because a shot entered just before the
+  // threshold holds its own gate across it — and taking the slot at the line would have suppressed
+  // the photo-finish slow motion outright, which RaceScreen triggers off `hudState`.
+  //
+  // TWO BOUNDS, NEITHER OF THEM A NEW NUMBER. The LINE, which drives the shot while the leader is
+  // far away; and THE ACTIVE STATE'S OWN ZOOM, which is already the first term of the `Math.min`
+  // every shot is composed with and therefore needed no code at all. So the run-in never tightens
+  // past the shot underneath it: a leader shot closes to the leader zoom, a photo finish to the
+  // photo-finish zoom.
+  //
+  // THE ZOOM IS DERIVED, NOT RAMPED. The line's requirement is `room / distance` — wide when the
+  // finish is far, tightening by itself as the leader closes, no curve to tune and nothing to keep
+  // in step with a track's length. As the leader arrives it relaxes past the state's own setting,
+  // stops being the smallest term, and what is left is the shot that was always there.
+  //
+  // ── IT GLIDES FROM WIDE-AND-BACK TO THE ORDINARY SHOT (RUNIN-GLIDE-1, 2026-08-12) ────────────
+  //
+  // The owner's design, and both halves happen at once. ONE progress measure — the leader's
+  // remaining distance to the line — drives the anchor placement AND the zoom, from the endgame
+  // threshold to the crossing:
+  //
+  //   at engagement   the leader sits BEHIND centre, so most of the frame lies toward the finish
+  //                   and the line fits at a modest zoom;
+  //   as he closes    he travels back to his ordinary position while the shot tightens;
+  //   at the crossing he is at `leaderForwardFrac` under the state's own zoom — the ordinary shot
+  //                   exactly, so there is no seam to hand over.
+  //
+  // IT INVENTS NO NUMBER. The end of the travel is the state's own placement from the framing
+  // table; the start is that placement MIRRORED about the centre. `leaderForwardFrac` already says
+  // how far off centre a subject is placed, and this uses it twice. A CENTRED state does not move
+  // at all — mirroring 0.5 gives 0.5 — which is why the photo finish keeps its own framing.
+  //
+  // THE ENGAGEMENT IS A GLIDE. Measured without it: the frame goes EMPTY for a handful of frames on
+  // six of ten tracks, every one at run-in progress 0.006-0.016, while pan and zoom ease
+  // independently out of the step. The glide moves them on ONE ease, which is what makes a large
+  // zoom change safe here as everywhere else.
+  //
+  // IT RUNS ON `finishOverviewZoomOutDurationMs`, NOT the transition glide's duration. The owner
+  // watched the pull-out in production and called it HECTIC at 500 ms, which is the pace of an
+  // ordinary state change and not of an authored move. That key already means "how long an authored
+  // zoom-out at the END OF THE RACE takes" — the same kind of move, in the same part of the race, at
+  // the other end of it — so the two ends of the ending now run at one tempo. Measured: the opening
+  // goes 0.5 s -> 2.9 s, and it is SHALLOWER as well as calmer (the widest frame falls on six of
+  // the nine finishing tracks) because a slow ease never reaches a target that is already receding.
+  // The price is the line's in-frame share, 93.3% -> 73.4%, and the line arriving 0.4 s -> 2.5 s
+  // after the window opens.
+  //
+  // WHAT THIS REPLACED: an OVERVIEW-width cap and a delayed engagement. Both are gone — the run-in
+  // composes from the endgame threshold again and the pull-out is whatever the line requires.
+  runInShot: true,
+  // ── THE CONTENDERS DECIDE THE ZOOM, THE CORRIDOR IS ONLY THE CEILING (CONTENDER-ZOOM-1) ────────
+  // The owner's corrected rule for the photo finish, and it is the opposite way round from how a
+  // corridor bound was first drafted: in a photo finish ALL of its participants must be visible and
+  // WHOLE, the contenders decide how tight the shot may close, and the corridor width is a MAXIMUM
+  // rather than a minimum — never wider than the track is wide, because the full width certainly
+  // shows everyone, and if the full width is not needed the shot closes in further.
+  //
+  // TWO HALVES, AND ONLY ONE OF THEM COULD BE BUILT. The GUARANTEE half is here: the pair rule is
+  // generalised to however many contenders the set holds, and the corridor becomes a cap on width.
+  // The MEMBERSHIP half is NOT: `_photoFinishContenders` is captured as `slice(0, 2)`, and widening
+  // it needs a definition of "abreast" that this project does not have. Measured, 26 of 27 photo
+  // finishes have more than two racers within the entry gate's own threshold of the leader — a
+  // median of 12 and up to 20 of 20 — so that threshold cannot serve as the membership rule. The
+  // report states what a new number would be compensating for; it was not invented here.
+  //
+  // DEFAULT OFF, AND IT IS A MEASURED VERDICT RATHER THAN CAUTION. The cap does exactly what the
+  // rule asks — it binds on 3955 of 7441 photo-finish frames across ten tracks and three seeds — and
+  // it COSTS PARTICIPANTS: the share of frames with a level racer not whole goes 57.3% -> 82.7%.
+  //
+  // WHY, and it is the same geometry FRONT-GROUP-7 found from the other side: a corridor bound only
+  // ever constrains ACROSS the track, but a zoom change moves BOTH directions. The participants are
+  // strung out ALONG the road, so tightening to the road's width takes away the very room that was
+  // holding them. "Showing the whole width certainly shows everyone" is false here: the finish
+  // shot's binding dimension is longitudinal, and the corridor width cannot see it.
+  //
+  // Off restores the pre-2026-08-13 composition exactly — measured, both fingerprints byte-identical.
+  contenderZoom: true,
+  // ── AND THE CAP ARRIVES INSTEAD OF APPEARING (ZOOM-PACE-5) ────────────────────────────────────
+  // How long the corridor cap takes to reach full strength once the photo-finish shot begins.
+  //
+  // WHAT IT COMPENSATES FOR, stated because a duration is the weaker of the two shapes tried. The
+  // cap's scope is `state === PHOTO_FINISH`, which is a CUT by construction: it went from absent to
+  // fully applied in one frame and took the target 2.47 -> 10.02, which is the whole of the "leap"
+  // the owner objected to. The honest repair was to hang it on a continuous quantity instead — the
+  // run-in's own progress — and that was BUILT AND MEASURED AND FAILED: the run-in composes during
+  // OVERVIEW and LEADER_ZOOM too, so the cap escaped the finish shot and tightened mid-race states
+  // (OVERVIEW's visibleCorridors 1.5 -> 0.469, caught by four tests). The scope has to stay a state,
+  // so the onset needs a duration. This number is what that costs.
+  //
+  // 1500 ms: the 4x arrival spread over it gives about 0.9 halvings/s of visible width, against the
+  // 2.9 the step delivered. Longer is calmer and spends more of the shot arriving.
+  corridorCapArriveMs: 1500,
   // ── THE START CEREMONY (START-CEREMONY-CAMERA-1) ───────────────────────────────────────────────
   // The race opens on the whole track, held still, then eases in to the starting formation until it
   // is as large as it can be with every racer still in frame. Both ends are GEOMETRY and neither is

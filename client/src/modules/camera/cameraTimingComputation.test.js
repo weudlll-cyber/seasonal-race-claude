@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { computeTimingFromConfig } from './cameraTimingComputation.js';
+import { DEFAULT_CAMERA_CONFIG } from '../storage/defaults.js';
 
 // Minimal profiles object used across tests.
 function minimalProfiles() {
@@ -83,6 +84,27 @@ describe('computeTimingFromConfig — null config (all defaults)', () => {
       'OVERVIEW',
       'PHOTO_FINISH',
     ]);
+  });
+  // RUNIN-OWNS-1: the run-in adds no camera state, so it must add no per-state timing either. A
+  // RUN_IN key appearing in any of these maps means the state shape has crept back in.
+  it('the run-in adds no state to any per-state timing map', () => {
+    for (const m of [
+      'tcByState',
+      'lfByState',
+      'lfEntryByState',
+      'minStateHoldByState',
+      'maxStateDurationByState',
+      'leadAheadEnabledByState',
+      'leadOutEnabledByState',
+      'maxEntryDurationByState',
+      'phasedByState',
+    ]) {
+      expect(Object.keys(t[m]), m).not.toContain('RUN_IN');
+    }
+  });
+  it('runInShot resolves, and defaults to the shipped value', () => {
+    expect(t.runInShot).toBe(DEFAULT_CAMERA_CONFIG.runInShot);
+    expect(computeTimingFromConfig({ runInShot: false }).runInShot).toBe(false);
   });
   it('lfOverview matches tcToLerpFactor(1.5)', () => {
     const expected = 1 - Math.pow(0.1, 1 / (1.5 * 60));

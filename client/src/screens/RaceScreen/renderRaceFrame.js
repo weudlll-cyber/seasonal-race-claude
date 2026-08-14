@@ -102,6 +102,9 @@ export function renderRaceFrame(ctx, f) {
     assignmentByRacer,
     showRpStartRow,
     showRpMinimapBadges,
+    // ENDING-PICTURE-1: whether the end-of-race splash is drawn at all. Defaults FALSE at the
+    // caller; see `finishedSplashEnabled` in defaults.js for why it is off.
+    showFinishedSplash = false,
     rpPlanInfo,
     renderAlpha,
     interpolationEnabled,
@@ -160,9 +163,13 @@ export function renderRaceFrame(ctx, f) {
     inst.render(ctx);
     ctx.restore();
   }
-  if (!isOpenTrack) drawEditorTrackSurface(ctx, shape);
+  // FINISH-READABLE-1: the finish gate takes the effective zoom so its marks hold a constant SCREEN
+  // size — a world-sized mark shrinks with the shot, which is why the label measured 3.9 px at the
+  // widest overview and the owner reported the finish as simply not there.
+  if (!isOpenTrack) drawEditorTrackSurface(ctx, shape, effZoomX, effZoomY);
   drawTrackLights(ctx, cachedLightPts, trackLightsConfig, ts, !isOpenTrack, effZoomX);
-  if (isOpenTrack && st.finishT < 1) drawOpenTrackFinishLine(ctx, shape, st.finishT, openTrackHW);
+  if (isOpenTrack && st.finishT < 1)
+    drawOpenTrackFinishLine(ctx, shape, st.finishT, openTrackHW, effZoomX, effZoomY);
   drawParticles(ctx, st.dustParticles, st.burstParticles);
   drawSurfaceTrails(ctx, st.racers);
 
@@ -345,7 +352,9 @@ export function renderRaceFrame(ctx, f) {
       schedule.totalMs,
       schedule.countdownStartMs
     );
-  } else if (st.phase === PHASE.FINISHED) {
+  } else if (st.phase === PHASE.FINISHED && showFinishedSplash) {
+    // ENDING-PICTURE-1: OFF by default. This scrim covered the whole canvas for the entire ending,
+    // including the hold that exists to show the settled finish picture. See defaults.js.
     drawFinishedOverlay(ctx);
   }
 

@@ -8,6 +8,29 @@ report here could be orphaned, or an index link could dangle, with nothing notic
 `node scripts/check-index.mjs --dir=reports/night --index=reports/night/INDEX.md` now checks both
 directions.
 
+- [NIGHT-2026-08-13.md](NIGHT-2026-08-13.md) — **five pieces, all five finished, and the floor turned
+  out to work for a different reason than anyone thought** (2026-08-13). Piece 1: nothing is lying
+  around — both trees clean, no stashes, no unpushed tags — and all four fingerprints reproduce on
+  master; six stale documents corrected, five more reported. Piece 2 (`feat/front-group`, NOT merged,
+  **his eye owed on 4173**): the endgame floor does not work by holding the width — **100% of the
+  racers it saves leave ALONG the track and `corridorGuarantee` only constrains ACROSS** — so the
+  narrower version he asked for cuts racers (0.0% -> 12.0%) and ships OFF. Piece 3 (**merged**,
+  `v-ship-camera-ending-window`): the camera fingerprint's window is derived from the ending's own
+  schedule, CAMERA minted, proved by an off arm that reproduces the predecessor byte-identically.
+  Piece 4 (**merged**, `v-guard-stamp-complete`): the stamp guard scans all 57 living docs, proved by
+  sabotage in both directions. Piece 5: the 5 s budget is fine — **`goldenRealArm.test.js` is 99% of
+  the suite's wall clock**, so capping the fork pool costs 0.2 s and makes the worst TrackEditor test
+  2.2x faster.
+- [NIGHT-2026-08-12.md](NIGHT-2026-08-12.md) — **four pieces, four branches, and the run died on exit
+  without writing its log** (2026-08-12). The work survived and the JSON result did not: exit code 4,
+  a 0-byte log, and a complete report on disk. Piece 1 closed the German-quotation exception (merged);
+  Piece 2 brought the ending hold forward; Piece 3 put the canvas overlays on one coordinate system —
+  **left unmerged, because its own merge condition is "no overlay moved" and independent
+  re-measurement showed both move at the owner's 0.81 scale** (logo −3.04 px, state pill −5.33 px);
+  Piece 4 mapped the `TrackEditor.loadmode` timeout without touching it. Carries a CORRECTION section
+  on the date it was first written under, and the rule it produced: **a date in a lab journal is worth
+  exactly what its source is** — this one is read from `git log --date=iso` on the commit that made
+  each change.
 - [GATE-TRUTH-1.md](GATE-TRUTH-1.md) — **the repair of [GATE-LINES-1](GATE-LINES-1.md): the gate now
   tells the truth** (2026-08-12). **The reader is fixed and cannot go silent again.** The three
   harnesses read through `runawayRateOf()`, which now sits beside `classifyRace` in the observer that

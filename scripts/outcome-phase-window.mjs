@@ -45,7 +45,10 @@ const arg = (k, d) => {
 const TRACKS = (arg("tracks", "mountainstreet,city-circuit") || "")
   .split(",")
   .filter(Boolean);
-const AT = (arg("at", "0.65,0.75") || "").split(",").map(Number).filter(Number.isFinite);
+const AT = (arg("at", "0.65,0.75") || "")
+  .split(",")
+  .map(Number)
+  .filter(Number.isFinite);
 const SEED = Number(arg("seed", "5601"));
 const RACERS = Number(arg("racers", "40"));
 const SECONDS = Number(arg("seconds", "60"));
@@ -98,9 +101,7 @@ console.log(
 console.log(
   "track            racerType     winner at   | threshold  begins at   % of race   WINDOW to the finish",
 );
-console.log(
-  "-".repeat(108),
-);
+console.log("-".repeat(108));
 
 for (const name of TRACKS) {
   const geo = loadTracks({ only: name })[0];

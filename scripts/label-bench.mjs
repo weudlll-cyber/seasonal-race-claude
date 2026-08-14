@@ -55,7 +55,10 @@ import {
   computeTagLayout,
   tagFontScreenPx,
 } from "../client/src/screens/RaceScreen/nameTagLayout.js";
-import { QUICK_TEST_NAME_SETS, resolveNameSet } from "../client/src/modules/racerNames.js";
+import {
+  QUICK_TEST_NAME_SETS,
+  resolveNameSet,
+} from "../client/src/modules/racerNames.js";
 import { effectiveZoom } from "../client/src/modules/camera/openTrackCamera.js";
 import { OPEN_TRACK_BASE_ZOOM } from "../client/src/modules/camera/CameraDirector.js";
 
@@ -84,7 +87,8 @@ const LABEL = arg("label", "");
 const QUIET = process.argv.includes("--quiet");
 
 /** The same width rule every label harness in this repo uses. See the header on why it is sound. */
-const measureTextFor = (fontPx) => (txt) => String(txt ?? "").length * fontPx * 0.5;
+const measureTextFor = (fontPx) => (txt) =>
+  String(txt ?? "").length * fontPx * 0.5;
 
 // ── THE ARMS ─────────────────────────────────────────────────────────────────────────────────────
 // `number` is the shipped default: the label is the race number and the names toggle is OFF, which
@@ -92,10 +96,30 @@ const measureTextFor = (fontPx) => (txt) => String(txt ?? "").length * fontPx * 
 // arms turn it on. `name` is MASTER's shape — there are no race numbers there and the label IS the
 // name — and it is the one arm that answers "does what we built cost more than what was there".
 const ARMS = [
-  { key: "numbers", roster: null, wide: false, note: "shipped default, names toggle OFF" },
-  { key: "names-short", roster: "current", wide: true, note: "roster `current`, 4-8 chars" },
-  { key: "names-long", roster: "long", wide: true, note: "roster `long`, 16-23 chars" },
-  { key: "names-mixed", roster: "mixed", wide: true, note: "roster `mixed`, 2-23 chars" },
+  {
+    key: "numbers",
+    roster: null,
+    wide: false,
+    note: "shipped default, names toggle OFF",
+  },
+  {
+    key: "names-short",
+    roster: "current",
+    wide: true,
+    note: "roster `current`, 4-8 chars",
+  },
+  {
+    key: "names-long",
+    roster: "long",
+    wide: true,
+    note: "roster `long`, 16-23 chars",
+  },
+  {
+    key: "names-mixed",
+    roster: "mixed",
+    wide: true,
+    note: "roster `mixed`, 2-23 chars",
+  },
 ];
 
 // ── CAPTURE: one real race, the real camera, the real frame inputs ───────────────────────────────
@@ -137,7 +161,9 @@ function capture() {
     // Only the RACING window: the start formation labels everyone by design (the roll call), and a
     // frame under that exception exercises a different branch of the layout.
     if (ts - raceStart < (cameraConfig.nameTagAllUntilMs ?? 0)) return;
-    const effX = isOpen ? effectiveZoom(cd.zoom, OPEN_TRACK_BASE_ZOOM) : cd.zoom * bsX;
+    const effX = isOpen
+      ? effectiveZoom(cd.zoom, OPEN_TRACK_BASE_ZOOM)
+      : cd.zoom * bsX;
     const effY = isOpen ? effX : cd.zoom * bsY;
     frames.push({
       effX,
@@ -214,7 +240,8 @@ async function replayArm(cap, arm, hold) {
   const numberOf = arm.numberLabels
     ? (index) => arm.numberLabels[index] ?? ""
     : () => "";
-  const primaryOf = arm.primary === "name" ? (r) => nameOf(r.index) : (r) => numberOf(r.index);
+  const primaryOf =
+    arm.primary === "name" ? (r) => nameOf(r.index) : (r) => numberOf(r.index);
   const wideLabelOf = arm.wide ? (r) => nameOf(r.index) : null;
 
   const n = cap.frames.length;
@@ -267,7 +294,9 @@ async function replayArm(cap, arm, hold) {
     namedPer[i] = arm.primary === "name" ? out.shown.size : wide.size;
     // What a real fillText would have to draw this frame — the multiplicand named in the header.
     for (const idx of out.shown) {
-      charsDrawn += (arm.primary === "name" || wide.has(idx) ? nameOf(idx) : numberOf(idx)).length;
+      charsDrawn += (
+        arm.primary === "name" || wide.has(idx) ? nameOf(idx) : numberOf(idx)
+      ).length;
     }
 
     const t1 = process.hrtime.bigint();
@@ -282,7 +311,8 @@ async function replayArm(cap, arm, hold) {
   }
 
   const ms = (v) => v / 1e6;
-  const pct = (s, p) => s[Math.min(s.length - 1, Math.floor(((s.length - 1) * p) / 100))];
+  const pct = (s, p) =>
+    s[Math.min(s.length - 1, Math.floor(((s.length - 1) * p) / 100))];
   const stat = (arr) => {
     const s = Array.from(arr).sort((a, b) => a - b);
     return {
@@ -331,14 +361,18 @@ let numberLabels = null;
 try {
   const rn = await import("../client/src/modules/raceNumbers.js");
   const assigned = rn.assignRaceNumbers(RACERS, SEED);
-  numberLabels = Array.from({ length: RACERS }, (_, i) => rn.raceNumberLabel(assigned[i] ?? null));
+  numberLabels = Array.from({ length: RACERS }, (_, i) =>
+    rn.raceNumberLabel(assigned[i] ?? null),
+  );
 } catch {
   // Master has no raceNumbers module. Only the `name` arm runs there, so nothing needs them.
   numberLabels = Array.from({ length: RACERS }, () => "");
 }
 
 const cap = REPLAY
-  ? JSON.parse(readFileSync(isAbsolute(REPLAY) ? REPLAY : join(ROOT, REPLAY), "utf8"))
+  ? JSON.parse(
+      readFileSync(isAbsolute(REPLAY) ? REPLAY : join(ROOT, REPLAY), "utf8"),
+    )
   : capture();
 
 if (DUMP) {
@@ -350,12 +384,20 @@ if (DUMP) {
 const armList = ONE_ARM
   ? [
       ONE_ARM === "name"
-        ? { key: "master-names", roster: "current", wide: false, primary: "name", note: "MASTER's layout — the label IS the name" }
+        ? {
+            key: "master-names",
+            roster: "current",
+            wide: false,
+            primary: "name",
+            note: "MASTER's layout — the label IS the name",
+          }
         : ARMS.find((a) => a.key === ONE_ARM),
     ].filter(Boolean)
   : ARMS;
 if (armList.length === 0) {
-  console.error(`FAIL: unknown --arm=${ONE_ARM}. Known: ${ARMS.map((a) => a.key).join(", ")}, name.`);
+  console.error(
+    `FAIL: unknown --arm=${ONE_ARM}. Known: ${ARMS.map((a) => a.key).join(", ")}, name.`,
+  );
   process.exit(2);
 }
 for (const a of armList) a.numberLabels = numberLabels;
@@ -383,7 +425,12 @@ const out = {
   tool: "label-bench.mjs",
   version: "LABEL-BENCH-1",
   label: LABEL,
-  meta: { ...cap.meta, repeats: REPEATS, node: process.version, platform: `${process.platform}-${process.arch}` },
+  meta: {
+    ...cap.meta,
+    repeats: REPEATS,
+    node: process.version,
+    platform: `${process.platform}-${process.arch}`,
+  },
   results,
 };
 if (OUT) {
@@ -395,7 +442,12 @@ if (OUT) {
 if (!QUIET) {
   console.log(
     formatIdentity(
-      resolveIdentity({ racers: cap.meta.racers, raceSeed: cap.meta.raceSeed, seconds: cap.meta.seconds, note: "LABEL-BENCH-1" }),
+      resolveIdentity({
+        racers: cap.meta.racers,
+        raceSeed: cap.meta.raceSeed,
+        seconds: cap.meta.seconds,
+        note: "LABEL-BENCH-1",
+      }),
     ),
   );
   console.log(

@@ -140,7 +140,9 @@ for (let i = 0; i < STEPS; i++) {
 
 const msOf = (v) => v / 1e6;
 const pct = (sorted, p) =>
-  sorted[Math.min(sorted.length - 1, Math.floor(((sorted.length - 1) * p) / 100))];
+  sorted[
+    Math.min(sorted.length - 1, Math.floor(((sorted.length - 1) * p) / 100))
+  ];
 
 /** Median / p90 over a slice of the raw per-step nanosecond samples, in ms. */
 function summarize(from, to) {

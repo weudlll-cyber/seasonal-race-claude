@@ -19,7 +19,14 @@
 // ============================================================
 
 import { execFileSync } from "node:child_process";
-import { copyFileSync, mkdirSync, rmSync, writeFileSync, readFileSync, existsSync } from "node:fs";
+import {
+  copyFileSync,
+  mkdirSync,
+  rmSync,
+  writeFileSync,
+  readFileSync,
+  existsSync,
+} from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { tmpdir } from "node:os";
@@ -42,7 +49,9 @@ const SIZES = (arg("sizes", "30,70,100") || "").split(",").map(Number);
 const MASTER_AT = Number(arg("master-at", "100"));
 // The captured frames are an INTERMEDIATE, not a result: ~6 MB at n=100 and regenerable exactly from
 // the seed. They go to scratch, not into the repo. Only the timings are committed.
-const SCRATCH = process.env.RA_SCRATCH_DIR || join(tmpdir(), "racearena-scratch", "label-bench-1");
+const SCRATCH =
+  process.env.RA_SCRATCH_DIR ||
+  join(tmpdir(), "racearena-scratch", "label-bench-1");
 
 if (!existsSync(join(MASTER, "scripts", "lib", "raceDriver.mjs"))) {
   console.error(`FAIL: --master=${MASTER} is not a RaceArena tree.`);
@@ -69,7 +78,12 @@ function run(cwd, args, label) {
     throw new Error(`no [label-bench ...] token from ${label}`);
   }
   const parsed = JSON.parse(m[1]);
-  console.log(stdout.split("\n").filter((l) => l && !l.startsWith("[label-bench")).join("\n"));
+  console.log(
+    stdout
+      .split("\n")
+      .filter((l) => l && !l.startsWith("[label-bench"))
+      .join("\n"),
+  );
   console.log(`   (${((Date.now() - t0) / 1000).toFixed(1)}s)\n`);
   return parsed;
 }
@@ -99,7 +113,9 @@ try {
     });
 
     if (n === MASTER_AT) {
-      console.log(`=== MASTER n=${n} — its own layout, THE SAME captured frames ===`);
+      console.log(
+        `=== MASTER n=${n} — its own layout, THE SAME captured frames ===`,
+      );
       summary.push({
         tree: "master",
         racers: n,
@@ -145,7 +161,9 @@ for (const block of summary) {
       p90: med(runs.map((r) => r.p90)),
       holdP50: med(runs.map((r) => r.holdP50)),
       spreadPct: +(
-        (100 * (Math.max(...runs.map((r) => r.p50)) - Math.min(...runs.map((r) => r.p50)))) /
+        (100 *
+          (Math.max(...runs.map((r) => r.p50)) -
+            Math.min(...runs.map((r) => r.p50)))) /
         med(runs.map((r) => r.p50))
       ).toFixed(1),
       placed: runs[0].placed,

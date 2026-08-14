@@ -70,72 +70,116 @@ const argVal = (k, d) => {
   return p ? p.slice(k.length + 3) : d;
 };
 
-const DIR = resolve(argVal("dir", "reports/evolution"));
-const INDEX = resolve(argVal("index", join(DIR, "INDEX.md")));
-const INDEX_NAME = basename(INDEX);
+// ── THE REGISTERED DIRECTORIES (INDEX-COMPLETE-1) ─────────────────────────────────────────────
+//
+// Run bare, this guard used to answer about reports/evolution ALONE, while CI invoked it three times
+// with three --dir/--index pairs. So `node scripts/check-index.mjs` printed a confident green line
+// about a directory it had never been shown, and an unindexed night report sat on master behind that
+// green for three hours. The LOUD-FAILURE RULE above already says a guard that finds nothing to
+// check is a no-op and must refuse to pass; answering about one third of its subject is the same
+// failure with better manners.
+//
+// IT DEFAULTS TO ALL OF THEM rather than refusing without arguments, which was the other option.
+// Refusing helps only the person who runs it bare. Defaulting also covers the fourth directory the
+// day somebody adds one, and it makes the CHEAPEST invocation the COMPLETE one — which is the
+// invocation people actually type. The explicit --dir/--index form still checks exactly one pair,
+// because the guard's own tests point it at fixtures.
+const REGISTERED = [
+  { dir: "reports/evolution", index: "reports/evolution/INDEX.md" },
+  { dir: "reports/night", index: "reports/night/INDEX.md" },
+  { dir: "reports/parity", index: "reports/parity/INDEX.md" },
+];
+
+const dirArg = argVal("dir", null);
+const PAIRS = dirArg
+  ? [{ dir: dirArg, index: argVal("index", join(dirArg, "INDEX.md")) }]
+  : REGISTERED;
 
 function fail(msg) {
   console.error(`check-index: FAIL — ${msg}`);
   process.exit(1);
 }
 
-let entries;
-try {
-  entries = readdirSync(DIR);
-} catch (e) {
-  fail(`cannot read reports dir ${DIR}: ${e.message}`);
-}
+let anyFailed = false;
+const totals = { reports: 0, unindexed: 0, links: 0, missing: 0 };
 
-// The reports are the flat *.md files in the dir; the index itself is exempt.
-const reports = entries.filter((f) => f.endsWith(".md") && f !== INDEX_NAME);
-if (reports.length === 0) {
-  fail(
-    `zero reports found in ${DIR}. A guard that finds nothing to check is a no-op (Lesson 187); refusing to pass.`,
-  );
-}
+for (const pair of PAIRS) {
+  const DIR = resolve(pair.dir);
+  const INDEX = resolve(pair.index);
+  const INDEX_NAME = basename(INDEX);
 
-let indexText;
-try {
-  indexText = readFileSync(INDEX, "utf8");
-} catch (e) {
-  fail(`cannot read index ${INDEX}: ${e.message}`);
-}
+  let entries;
+  try {
+    entries = readdirSync(DIR);
+  } catch (e) {
+    fail(`cannot read reports dir ${DIR}: ${e.message}`);
+  }
 
-// A report is indexed iff its filename appears as a markdown LINK TARGET — i.e. immediately after
-// `(` (a sibling link `(NAME.md)`) or `/` (a pathed link `(dir/NAME.md)`). Matching the bare
-// filename anywhere would false-pass on substrings (e.g. "A.md" inside "DATA.md").
-const isIndexed = (f) =>
-  indexText.includes(`(${f}`) || indexText.includes(`/${f}`);
-const unindexed = reports.filter((f) => !isIndexed(f));
+  // The reports are the flat *.md files in the dir; the index itself is exempt.
+  const reports = entries.filter((f) => f.endsWith(".md") && f !== INDEX_NAME);
+  if (reports.length === 0) {
+    fail(
+      `zero reports found in ${DIR}. A guard that finds nothing to check is a no-op (Lesson 187); refusing to pass.`,
+    );
+  }
 
-// DIRECTION 2 (NIGHT-TOOLS-1): every sibling report INDEX.md links to must EXIST. Only `(NAME.md)`
-// sibling targets are considered — a pathed link points outside this guard's relationship and is
-// `check-doc-links`' business, not ours. Anchors are stripped before the check.
-const linked = [
-  ...new Set(
-    [...indexText.matchAll(/\(([A-Za-z0-9._-]+\.md)(?:#[^)]*)?\)/g)].map(
-      (m) => m[1],
+  let indexText;
+  try {
+    indexText = readFileSync(INDEX, "utf8");
+  } catch (e) {
+    fail(`cannot read index ${INDEX}: ${e.message}`);
+  }
+
+  // A report is indexed iff its filename appears as a markdown LINK TARGET — i.e. immediately after
+  // `(` (a sibling link `(NAME.md)`) or `/` (a pathed link `(dir/NAME.md)`). Matching the bare
+  // filename anywhere would false-pass on substrings (e.g. "A.md" inside "DATA.md").
+  const isIndexed = (f) =>
+    indexText.includes(`(${f}`) || indexText.includes(`/${f}`);
+  const unindexed = reports.filter((f) => !isIndexed(f));
+
+  // DIRECTION 2 (NIGHT-TOOLS-1): every sibling report INDEX.md links to must EXIST. Only `(NAME.md)`
+  // sibling targets are considered — a pathed link points outside this guard's relationship and is
+  // `check-doc-links`' business, not ours. Anchors are stripped before the check.
+  const linked = [
+    ...new Set(
+      [...indexText.matchAll(/\(([A-Za-z0-9._-]+\.md)(?:#[^)]*)?\)/g)].map(
+        (m) => m[1],
+      ),
     ),
-  ),
-].filter((f) => f !== INDEX_NAME);
-const present = new Set(reports);
-const missing = linked.filter((f) => !present.has(f));
+  ].filter((f) => f !== INDEX_NAME);
+  const present = new Set(reports);
+  const missing = linked.filter((f) => !present.has(f));
 
-console.log(
-  `check-index: ${reports.length} reports checked, ${unindexed.length} unindexed; ` +
-    `${linked.length} index links checked, ${missing.length} pointing at a missing file.`,
-);
+  totals.reports += reports.length;
+  totals.unindexed += unindexed.length;
+  totals.links += linked.length;
+  totals.missing += missing.length;
 
-if (unindexed.length > 0) {
-  console.error(
-    `\nFAIL: ${unindexed.length} report(s) in ${DIR} not referenced from ${INDEX_NAME}:`,
+  console.log(
+    `check-index: ${pair.dir} — ${reports.length} reports checked, ${unindexed.length} unindexed; ` +
+      `${linked.length} index links checked, ${missing.length} pointing at a missing file.`,
   );
-  for (const f of unindexed) console.error(f);
+
+  if (unindexed.length > 0) {
+    console.error(
+      `\nFAIL: ${unindexed.length} report(s) in ${DIR} not referenced from ${INDEX_NAME}:`,
+    );
+    for (const f of unindexed) console.error(f);
+  }
+  if (missing.length > 0) {
+    console.error(
+      `\nFAIL: ${missing.length} link(s) in ${INDEX_NAME} point at a report that does not exist:`,
+    );
+    for (const f of missing) console.error(f);
+  }
+  if (unindexed.length > 0 || missing.length > 0) anyFailed = true;
 }
-if (missing.length > 0) {
-  console.error(
-    `\nFAIL: ${missing.length} link(s) in ${INDEX_NAME} point at a report that does not exist:`,
+
+// The roll-up exists so a multi-directory run cannot be read as a single-directory one.
+if (PAIRS.length > 1) {
+  console.log(
+    `check-index: ${PAIRS.length} directories — ${totals.reports} reports, ${totals.unindexed} unindexed, ` +
+      `${totals.links} links, ${totals.missing} dangling.`,
   );
-  for (const f of missing) console.error(f);
 }
-if (unindexed.length > 0 || missing.length > 0) process.exit(1);
+if (anyFailed) process.exit(1);

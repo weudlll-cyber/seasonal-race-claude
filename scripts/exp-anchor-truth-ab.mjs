@@ -183,7 +183,11 @@ function runTrack(geo) {
     cd.updateRacePlan(meta.rpPlanInfo.b1Indices);
   }
   raceCfg.computePositions();
-  const proj = projectionForTrack(geo.worldWidth, geo.worldHeight, shape.isOpen);
+  const proj = projectionForTrack(
+    geo.worldWidth,
+    geo.worldHeight,
+    shape.isOpen,
+  );
 
   const RAW = 1000 / 60;
   let ts = 0;
@@ -365,7 +369,9 @@ function compare(A, B) {
         `${(k === "all" ? ta.id : "").padEnd(16)} ${k.padEnd(6)} ${String(cnt[k]).padStart(6)} ` +
           `${((100 * sdiff[k]) / (cnt[k] || 1)).toFixed(1).padStart(8)} ` +
           `${median(rows[k]).toFixed(2).padStart(14)} ${p95(rows[k]).toFixed(2).padStart(7)} ` +
-          `${Math.max(...rows[k], 0).toFixed(2).padStart(7)} ` +
+          `${Math.max(...rows[k], 0)
+            .toFixed(2)
+            .padStart(7)} ` +
           `${median(zrows[k]).toFixed(2).padStart(10)} ${p95(zrows[k]).toFixed(2).padStart(10)}`,
       );
     }
@@ -384,7 +390,9 @@ function compare(A, B) {
     );
   }
   console.log(`\nBY CAMERA STATE — where the difference actually lives:`);
-  for (const [s, xs] of [...byState].sort((a, b) => b[1].length - a[1].length)) {
+  for (const [s, xs] of [...byState].sort(
+    (a, b) => b[1].length - a[1].length,
+  )) {
     console.log(
       `  ${String(s).padEnd(16)} n=${String(xs.length).padStart(6)}  ` +
         `median ${median(xs).toFixed(2)} pp   p95 ${p95(xs).toFixed(2)} pp   max ${Math.max(...xs, 0).toFixed(2)} pp   ` +

@@ -295,6 +295,97 @@ since changed:
 superset of both gates, world fingerprint byte-identical. A reader who finds the 2026-06 failure
 must find this paragraph with it, which is why both are named here.
 
+## M. Framing the finish line during the run-in — what actually died, corrected 2026-08-12
+
+**THIS ENTRY WAS WRONG FOR ONE DAY AND THE CORRECTION IS THE USEFUL PART.** Written the morning of
+2026-08-12, it concluded "do not re-propose bounding somebody else's shot" and recommended a
+dedicated RUN_IN camera state instead. By that evening the state shape had been measured, found to
+reach only 14.9% / 18.5% of the endgame, and REPLACED by a bound on somebody else's shot — which
+now works. The entry is rewritten rather than appended to because leaving the wrong exclusion
+standing would have banned the thing that shipped.
+
+**WHAT WAS ACTUALLY TRIED, in order:**
+
+1. **An UNANCHORED zoom ceiling** (`feat/finish-framed` `6e94a086`, never merged). A
+   `pointGuarantee` on the finish line applied from `endgameThreshold` to whatever state was
+   running. **FAILED, three times, finally emptying the frame of racers for 51 consecutive frames
+   on Luger Hill seed 9** with the camera centre still a healthy 0.62 track widths from the spine.
+2. **A dedicated RUN_IN camera STATE** (RUNIN-STATE-1). Fixed the emptiness structurally — a
+   LEADER-family state has an anchor — but **REACHED ALMOST NONE OF THE ENDGAME**: 14.9% of the
+   window on Luger Hill, 18.5% on Searound, and no frames at all in 3 of 8 races on each track,
+   because the endgame lock is consulted only when `decideTransition` permits a transition and a
+   shot entered just before the threshold holds its own gate across it. It would also have
+   **suppressed the photo-finish slow motion**, which RaceScreen triggers off `hudState`.
+3. **The bound again, ANCHORED** (RUNIN-OWNS-1) — SHIPPED. Same ceiling, applied to whatever state
+   is running, plus the one repair the trace in step 1 identified.
+
+**SO THE DEAD END IS NARROWER THAN IT LOOKED, AND THIS IS THE LESSON.** The ceiling was never the
+defect. **A large zoom change delivered during the `tracking` phase inside a state whose
+`_focusAnchorRacer` returns null is the defect** — the zoom-about-the-anchor correction
+(CAMERA-SIDEJUMP-1) is skipped there, so the pan target runs away from the pan lerp at
+`worldPos x axisScale x dZoom` per frame. Measured: the pan target was CORRECT on every empty
+frame while the delivered offset trailed it by 535 -> 1115 px. The magnitude scales with
+`|world position| x axis scale`, which is why it was fatal on an open track (axis 1.5) and
+invisible on a closed one (axis 0.42). Pointing that one correction at the framing anchor took 51
+empty frames to **0** with the ceiling untouched.
+
+**TWO THINGS THAT OUTLIVE THIS ENTRY.** The **glide** is what makes a big zoom change safe — it
+moves pan and zoom on one ease, so the anchor is framed consistently by construction; master does a
+LARGER 2.13 -> 4.00 change at the PHOTO_FINISH seam inside a glide and it costs nothing. And **"the
+camera centre is near the track" does not mean the camera is pointed at the race**: that excursion
+was ALONG the track, so the centre metric read 0.62 track widths while the frame held zero racers.
+
+**STILL DEAD, and do not re-propose:**
+
+- **A wide-end bound on the line requirement taken from the FIELD's own extent.** At the endgame the
+  field is strung out over most of the track, so it is far wider than any shot and on an open track
+  binds nothing at all. Principled to read, weak to measure.
+- **A wide-end bound at OVERVIEW's width.** It binds HARD and costs the design its point: measured,
+  it pins the ceiling for the first 60% of the shot and cuts the line's in-frame share from 78.2% /
+  93.1% to 26.2% / 34.0%. Kept in the record because it is the obvious next suggestion and because
+  it is the one lever that would fix the Searound centre reading — it is a real trade, priced, not a
+  dead end, and it is the owner's call.
+- **Bounding at the projection's own minimum**, which measures IDENTICAL to no bound at all —
+  `resolveCamera` already clamps there, so it would be a second authority on one question.
+
+## N. The endgame corridor FLOOR — bounding the finish shot by the track's width (2026-08-13/14)
+
+**`endgameCorridorFloor`, built over nine commits on `feat/front-group`, NEVER SHIPPED, and superseded
+by CONTENDER-ZOOM-1.** The branch is deleted; the code is archived at the tag
+`archive/front-group`, and the four FRONT-GROUP reports and `scripts/endgame-width-truth.mjs` are on
+master.
+
+**THE IDEA.** In the endgame, never let the shot close tighter than the corridor is wide — the full
+width certainly shows everyone racing side by side, so a floor on the visible width should keep the
+finishers in frame.
+
+**WHY IT FAILED, and the finding is worth more than the mechanism: THE CORRIDOR IS THE WRONG QUANTITY
+IN BOTH DIRECTIONS.** A corridor bound only ever constrains ACROSS the track. A zoom change moves
+BOTH directions at once. The racers who leave the frame at a finish leave ALONG the road, not beside
+it — **100% of the racers the floor saved left along the track** — so:
+
+- Forcing the shot OPEN to the corridor's width did help, **but by accident**: it bought LONGITUDINAL
+  room as a side effect of asking for lateral room. FRONT-GROUP-7.
+- Tightening to the corridor's width — the same quantity, aimed the other way — **cost 24.4 points of
+  participants-whole** (57.3% → 81.7% not whole), because it took away the very room that was holding
+  them. CONTENDER-ZOOM-1 §4.
+
+**"Showing the whole width certainly shows everyone" is FALSE in this geometry.** The finish shot's
+binding dimension is longitudinal and no width-based quantity can see it.
+
+**WHAT REPLACED IT IS NOT A CORRECTED FLOOR.** The corridor survives only as a CAP — never tighter
+than the track is wide is gone; never WIDER than the track is wide remains — and the thing that
+decides how far the shot closes is now the CONTENDER SET, which is a set of racers rather than a
+width. Different quantity, opposite direction, different mechanism.
+
+**Two hypotheses tested and REFUTED along the way**, recorded so they are not re-proposed: binding on
+the field's actual lateral EXTENT rather than the full width cut racers rather than saving them
+(0.0% → 12.0%); and padding with the DRAWN sprite instead of `_drawnBodyWidthRefPx` did not recover
+them, so the body-padding gap was not what the plain floor had been paying for.
+
+**Do not re-propose a width-based bound on the finish shot.** A longitudinal bound is a different
+proposal and is not excluded by this entry.
+
 ## What this leaves open (not tried, not excluded)
 
 Formats that make a breakaway irrelevant rather than catching it: **elimination** (last-at-call out of

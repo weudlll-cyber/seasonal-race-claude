@@ -73,18 +73,27 @@ for (const geo of tracks) {
       seconds: SECONDS,
       note: `PAIR-REACH-ANALYSIS census n=${racers}`,
     });
-    const race = buildRace(geo, identity, structuredClone(DEFAULT_CAMERA_CONFIG));
+    const race = buildRace(
+      geo,
+      identity,
+      structuredClone(DEFAULT_CAMERA_CONFIG),
+    );
     const st = race.st;
 
     // Field geometry is fixed at construction: read it once.
     const pathLengthPx = st.racers[0]?.pathLengthPx ?? 0;
     const trackWidthPx = st.racers[0]?.trackWidthPx ?? 0;
-    const bodyLens = st.racers.map((r) => r.drawnBodyLengthPx ?? r.frameSizePx ?? 0);
-    const bodyWids = st.racers.map((r) => r.drawnBodyWidthPx ?? r.frameSizePx ?? 0);
+    const bodyLens = st.racers.map(
+      (r) => r.drawnBodyLengthPx ?? r.frameSizePx ?? 0,
+    );
+    const bodyWids = st.racers.map(
+      (r) => r.drawnBodyWidthPx ?? r.frameSizePx ?? 0,
+    );
     const maxBodyLen = Math.max(...bodyLens);
     const maxBodyWid = Math.max(...bodyWids);
     // FIELD bound: the widest pair this field can produce, so it is a superset of every pair bound.
-    const fieldBoundT = pathLengthPx > 0 ? (maxBodyLen / pathLengthPx) * T_MULT : 0;
+    const fieldBoundT =
+      pathLengthPx > 0 ? (maxBodyLen / pathLengthPx) * T_MULT : 0;
     const fieldBoundY =
       trackWidthPx > 0 ? (maxBodyWid / (trackWidthPx / 2)) * Y_MULT : 0;
 
@@ -129,12 +138,19 @@ for (const geo of tracks) {
           // The EXACT per-pair bound both gates reduce to.
           const frameA = rA.frameSizePx ?? 0;
           const frameB = rB.frameSizePx ?? 0;
-          const contactLength = ((rA.drawnBodyLengthPx ?? frameA) + (rB.drawnBodyLengthPx ?? frameB)) / 2;
-          const contactWidth = ((rA.drawnBodyWidthPx ?? frameA) + (rB.drawnBodyWidthPx ?? frameB)) / 2;
+          const contactLength =
+            ((rA.drawnBodyLengthPx ?? frameA) +
+              (rB.drawnBodyLengthPx ?? frameB)) /
+            2;
+          const contactWidth =
+            ((rA.drawnBodyWidthPx ?? frameA) +
+              (rB.drawnBodyWidthPx ?? frameB)) /
+            2;
           const pairPL = Math.max(rA.pathLengthPx ?? 0, rB.pathLengthPx ?? 0);
           const pairTW = Math.max(rA.trackWidthPx ?? 0, rB.trackWidthPx ?? 0);
           const exactT = pairPL > 0 ? (contactLength / pairPL) * T_MULT : 0;
-          const exactY = pairTW > 0 ? (contactWidth / (pairTW / 2)) * Y_MULT : 0;
+          const exactY =
+            pairTW > 0 ? (contactWidth / (pairTW / 2)) * Y_MULT : 0;
           if (dT <= exactT && dY <= exactY) inExact++;
         }
       }
@@ -176,6 +192,9 @@ for (const geo of tracks) {
 if (JSON_OUT) {
   const out = isAbsolute(JSON_OUT) ? JSON_OUT : join(ROOT, JSON_OUT);
   mkdirSync(dirname(out), { recursive: true });
-  writeFileSync(out, JSON.stringify({ tMult: T_MULT, yMult: Y_MULT, rows }, null, 2));
+  writeFileSync(
+    out,
+    JSON.stringify({ tMult: T_MULT, yMult: Y_MULT, rows }, null, 2),
+  );
   console.log(`\nwrote ${out}`);
 }
