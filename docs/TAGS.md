@@ -98,6 +98,29 @@ the Dev Screen toggle and the `renderRaceFrame` hook. The branch was deleted at 
   may be promising a corridor the viewer cannot see. Start here rather than from scratch — see
   [DEAD-ENDS.md](DEAD-ENDS.md) §K.
 
+### BRANCH-CLEANUP — two branches archived so the record survives the branch (2026-08-14)
+
+**A branch is a poor archive: it is mutable, it can be deleted by anyone, and it says "work in
+progress" to every reader who lists it.** These two were kept as record for weeks because deleting
+them would have destroyed evidence. The evidence is now either on master or under a permanent tag, so
+the branches went. The EVIDENCE was moved FIRST and the branches deleted after — in that order, never
+the other way.
+
+- `archive/front-group` (`87a08af4`, 2026-08-14) — the endgame corridor floor, nine commits, built
+  and retired without ever shipping. `endgameCorridorFloor` and `endgameFloorBindsExtent`, their Dev
+  Screen control, and the group machinery FRONT-GROUP-6 removed. **Superseded by CONTENDER-ZOOM-1:
+  the corridor is the wrong quantity in BOTH directions, constraining only ACROSS the track while the
+  racers who leave a finish shot leave ALONG it** — see [DEAD-ENDS.md](DEAD-ENDS.md) §N. This tag
+  holds the CODE only; reports FRONT-GROUP-1/2/3/7 and `scripts/endgame-width-truth.mjs` are on
+  master, brought across before the branch was deleted.
+- `archive/finish-framed` (`6e94a086`, 2026-08-14) — the finish line as a guaranteed subject, two
+  commits, and **its head commit declares itself RED and says do not merge**: its own guard reported
+  51 frames with no racer on screen on luger-hill seed 9. That honesty is why it was kept and why it
+  is archived rather than discarded. Superseded by `feat/runin-state` (merged `eea0acf2`), which
+  reached the same goal by another route. Two things reached master separately — the guard
+  (`2a7e1bdf`, a later version than this one) and its `pointGuarantee` tests, which covered a
+  function that had shipped with none. See [DEAD-ENDS.md](DEAD-ENDS.md) §M.
+
 ### FINISH-BAND — the finish line is a line, not a hair (2026-08-13)
 
 **The owner judged it on a production build on 2026-08-13, on dirt-oval and garden-path — the two

@@ -348,6 +348,44 @@ was ALONG the track, so the centre metric read 0.62 track widths while the frame
 - **Bounding at the projection's own minimum**, which measures IDENTICAL to no bound at all —
   `resolveCamera` already clamps there, so it would be a second authority on one question.
 
+## N. The endgame corridor FLOOR — bounding the finish shot by the track's width (2026-08-13/14)
+
+**`endgameCorridorFloor`, built over nine commits on `feat/front-group`, NEVER SHIPPED, and superseded
+by CONTENDER-ZOOM-1.** The branch is deleted; the code is archived at the tag
+`archive/front-group`, and the four FRONT-GROUP reports and `scripts/endgame-width-truth.mjs` are on
+master.
+
+**THE IDEA.** In the endgame, never let the shot close tighter than the corridor is wide — the full
+width certainly shows everyone racing side by side, so a floor on the visible width should keep the
+finishers in frame.
+
+**WHY IT FAILED, and the finding is worth more than the mechanism: THE CORRIDOR IS THE WRONG QUANTITY
+IN BOTH DIRECTIONS.** A corridor bound only ever constrains ACROSS the track. A zoom change moves
+BOTH directions at once. The racers who leave the frame at a finish leave ALONG the road, not beside
+it — **100% of the racers the floor saved left along the track** — so:
+
+- Forcing the shot OPEN to the corridor's width did help, **but by accident**: it bought LONGITUDINAL
+  room as a side effect of asking for lateral room. FRONT-GROUP-7.
+- Tightening to the corridor's width — the same quantity, aimed the other way — **cost 24.4 points of
+  participants-whole** (57.3% → 81.7% not whole), because it took away the very room that was holding
+  them. CONTENDER-ZOOM-1 §4.
+
+**"Showing the whole width certainly shows everyone" is FALSE in this geometry.** The finish shot's
+binding dimension is longitudinal and no width-based quantity can see it.
+
+**WHAT REPLACED IT IS NOT A CORRECTED FLOOR.** The corridor survives only as a CAP — never tighter
+than the track is wide is gone; never WIDER than the track is wide remains — and the thing that
+decides how far the shot closes is now the CONTENDER SET, which is a set of racers rather than a
+width. Different quantity, opposite direction, different mechanism.
+
+**Two hypotheses tested and REFUTED along the way**, recorded so they are not re-proposed: binding on
+the field's actual lateral EXTENT rather than the full width cut racers rather than saving them
+(0.0% → 12.0%); and padding with the DRAWN sprite instead of `_drawnBodyWidthRefPx` did not recover
+them, so the body-padding gap was not what the plain floor had been paying for.
+
+**Do not re-propose a width-based bound on the finish shot.** A longitudinal bound is a different
+proposal and is not excluded by this entry.
+
 ## What this leaves open (not tried, not excluded)
 
 Formats that make a breakaway irrelevant rather than catching it: **elimination** (last-at-call out of
