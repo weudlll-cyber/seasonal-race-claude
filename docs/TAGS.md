@@ -98,6 +98,19 @@ the Dev Screen toggle and the `renderRaceFrame` hook. The branch was deleted at 
   may be promising a corridor the viewer cannot see. Start here rather than from scratch — see
   [DEAD-ENDS.md](DEAD-ENDS.md) §K.
 
+### COORD-SYSTEM — one ruler for the wrapper (2026-08-14)
+
+**The owner judged it on a production build on 2026-08-14 and accepted it.** The overlays inside
+`.race-canvas-wrapper` are anchored in percentages rather than pixels; at his 1037x583 the corner
+clearance becomes 12.96 CSS px instead of 16. **No fingerprint moved** — all three were re-run fresh
+on the final tree and are unmoved, so nothing was minted. See
+[SHIP-COORD-SYSTEM.md](../reports/evolution/SHIP-COORD-SYSTEM.md), whose section 4 records the blind
+spot this ship exposed: a visible change that no fingerprint can see.
+
+- `pre/ship-coord-system` (`767f3f35`, 2026-08-14) — master immediately before the merge, the tip
+  after the source clean-up.
+- `v-ship-coord-system` (`SHIPSHA`, 2026-08-14) — the merge itself.
+
 ### BRANCH-CLEANUP — two branches archived so the record survives the branch (2026-08-14)
 
 **A branch is a poor archive: it is mutable, it can be deleted by anyone, and it says "work in

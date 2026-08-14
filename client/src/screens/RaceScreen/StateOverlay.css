@@ -11,7 +11,12 @@
 
 .state-overlay {
   position: absolute;
-  bottom: 28px;
+  /* COORD-SYSTEM-1: the bottom offset is a percentage, so this pill lands on the same ruler as the
+     minimap that also sits on the bottom of the picture. `calc(28 / 720 * 100%)` is EXACTLY 28
+     canvas px — no rounded-percentage drift — matching the shipped 28-CSS-px offset at scale 1.0
+     and staying 28 canvas px at every other scale, which is what the minimap's own bottom
+     clearance already does, so the two cannot drift apart. */
+  bottom: calc(28 / 720 * 100%);
   left: 50%;
   transform: translateX(-50%);
 

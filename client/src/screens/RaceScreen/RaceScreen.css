@@ -41,6 +41,18 @@
 }
 
 /* ── Canvas ──────────────────────────────────────────────────────────────── */
+/* THE ONE-COORDINATE RULE (COORD-SYSTEM-1, 2026-08-13).
+   The wrapper HOLDS THE CANVAS at 1280x720 and stretches to whatever CSS width the grid cell gives
+   it, so its CSS pixels and the canvas store's pixels do not line up 1:1 at any scale but 1.0. The
+   WinnerCard bug had shown what that costs: a card anchored in CSS pixels overlapped a minimap
+   drawn in canvas pixels, and the collision was invisible to every source-level check — the two
+   files never named the same ruler.
+   ANYTHING ABSOLUTELY POSITIONED INSIDE THIS WRAPPER IS ANCHORED IN PERCENTAGES, so its box shares
+   one ruler with what is drawn into the canvas. WinnerCard.css and CeremonyBrandCard.css are
+   already on this rule; BrandLogoOverlay and StateOverlay came under it here — see their files. A
+   pixel offset is only permitted for a HUD whose box is measured against the browser window rather
+   than against the picture (the diagnostics HUDs are the surviving example, and they never sit on
+   top of the picture the owner is watching). */
 .race-canvas-wrapper {
   position: relative;
   width: 100%;
