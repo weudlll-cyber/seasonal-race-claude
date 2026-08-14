@@ -545,6 +545,15 @@ finish shot leave ALONG it.
 
 ## Camera / presentation fixes
 
+- [MINIMAP-MARKS-1.md](MINIMAP-MARKS-1.md) — the minimap now marks the START and the FINISH
+  (2026-08-15, `feat/minimap-start-finish` @ `faf379fd`, **pushed, unmerged, HIS EYE OWED**). A bar
+  across the band at the same segment the world's finish gate spans; solid green starts, a checker
+  finishes, and where they coincide — every closed track — **one** mark carries both. Sizes chosen
+  against a measurement (the bar is **12–22 panel px**, not the ~50 first assumed). RENDER moves and
+  is **NOT minted**; WORLD/WORLD-OFF/CAMERA unmoved. Two refutations worth keeping: comparing edge
+  curves **by index** invents a 502 px error that is really a parameterisation offset (1.5 panel px
+  by nearest point), and the dark wedges at an open band's ends are **pre-existing** and are not the
+  end cap.
 - [EDGE-SLICE-2.md](EDGE-SLICE-2.md) — **the racer is Nova, he fails BOTH conditions, and my earlier
   reason was wrong** (2026-08-14, `feat/contender-zoom` @ `73781bda`, **DIAGNOSIS ONLY**). Corrects
   [EDGE-SLICE-1](EDGE-SLICE-1.md). **Colour IS reachable** — `renderState.js` assigns
