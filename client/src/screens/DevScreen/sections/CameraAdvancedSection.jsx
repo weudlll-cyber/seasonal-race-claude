@@ -1497,6 +1497,29 @@ function CameraAdvancedSection() {
               className={s.label}
               style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}
             >
+              Lane-cap arrival (ms)
+              <InfoTooltip
+                text={`How long the shot takes to accept the lane-width limit once the photo finish begins. The limit itself is not new — the shot is never wider than the road — but its SCOPE is the photo-finish state, and a state change is instant, so it used to appear in a single frame and take the target from 2.47 to 10.02. That jump is what read as the camera leaping. Spreading it over this duration turns the same limit into a move. 0 restores the jump. Currently: ${config.corridorCapArriveMs ?? DEFAULT_CAMERA_CONFIG.corridorCapArriveMs}ms.`}
+              />
+            </label>
+            <input
+              type="number"
+              className={s.input}
+              min={0}
+              max={5000}
+              step={250}
+              value={config.corridorCapArriveMs ?? DEFAULT_CAMERA_CONFIG.corridorCapArriveMs}
+              onChange={(e) => {
+                const v = Number(e.target.value);
+                if (v >= 0 && v <= 5000) set('corridorCapArriveMs', v);
+              }}
+            />
+          </div>
+          <div className={s.formGroup}>
+            <label
+              className={s.label}
+              style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}
+            >
               3 · Hold on the finish picture, after the LAST crossing (ms)
               <InfoTooltip
                 text={`Extra time on the settled finish shot AFTER the LAST racer is home, before the pause below starts. The two ADD. What actually grows is the CARD-FREE tail: the winner card is capped at min(card, pause) and does not inherit this, so at the shipped numbers the picture stands card-free for 500ms + this. It buys a longer look at a SETTLED picture and cannot put arrivals back — the zoom-out starts when the FIRST finishers are home (phase 1 above), so by the last crossing the pull-back is long over. ZERO means no hold at all and schedules no timer. Currently: ${config.finishHoldAfterLastMs ?? DEFAULT_CAMERA_CONFIG.finishHoldAfterLastMs}ms.`}

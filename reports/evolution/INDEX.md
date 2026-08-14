@@ -451,6 +451,126 @@ is dated and recorded HERE, where a reader on their way to the report will pass 
 
 ## Camera / presentation fixes
 
+- [EDGE-SLICE-2.md](EDGE-SLICE-2.md) — **the racer is Nova, he fails BOTH conditions, and my earlier
+  reason was wrong** (2026-08-14, `feat/contender-zoom` @ `73781bda`, **DIAGNOSIS ONLY**). Corrects
+  [EDGE-SLICE-1](EDGE-SLICE-1.md). **Colour IS reachable** — `renderState.js` assigns
+  `RACER_COLORS[array position % 10]` — but that makes it an UNSTABLE identifier: change the field
+  size and every racer's colour moves, and in this run neither violet racer is near the top edge
+  (both inner, 7.8 and 14.0 lengths back). **Two of twenty racers are at or beyond the top edge**;
+  Nova (rank 5, salmon, physicalY 0.60, 0.74 outward of a winner at −0.14, 43% of his body showing)
+  matches the description exactly. **Judged at the CAPTURE frame — the one that decides membership,
+  since the set is never re-sorted — Nova is 1.21 body lengths back against a one-length rule AND
+  blocked across the track by Blaze**, who is himself a contender. Not a rule violation, and all
+  three contenders are WHOLE at the crossing. **The correction owed:** EDGE-SLICE-1 said he was
+  behind the LEADER — that read an array index as a rank.
+
+- [EDGE-SLICE-1.md](EDGE-SLICE-1.md) — **Nova is not a contender, and the harness has been grading
+  the wrong set** (2026-08-14, `feat/contender-zoom` @ `60fa2cb1`, **DIAGNOSIS ONLY**). The racer cut
+  at the top edge on ice-track seed 9 is **1.60 body lengths back and directly behind the leader on
+  the same lane** — he fails BOTH conditions, so this is not a rule violation, and **no contender is
+  sliced in that race at all** (0 of 274 frames). A non-contender is sliced on **70.9%** of
+  photo-finish frames pooled; including the sliced one whole costs a median **12.1%** more width
+  (21.3% for that frame, worst 44.4%). **Two instrument corrections:** the slice test required the
+  centre to be inside the frame, so it classified the very racer he pointed at as "outside"; and
+  `contender-truth.mjs` grades its own reconstruction of the contender set rather than the
+  director's, so its **3.4% understates — against the director's actual set contenders are sliced on
+  7.6%** of frames. "Push fully out" is available on 97.5% of cases; the other 2.5% sit nearer the
+  centre than a contender, so it cannot be a blanket rule.
+
+- [ZOOM-PACE-5.md](ZOOM-PACE-5.md) — **the cap arrives instead of appearing, and the probe stops
+  lying** (2026-08-14, `feat/contender-zoom`, **NOT merged, nothing minted**). **The probe first:**
+  `_binding` was the argmin over `_ceilings` while the corridor cap is applied afterwards, so it
+  named `line` on every frame the cap decided the shot — the defect behind three wrong causes and two
+  no-op builds. It now names the term the delivered zoom is equal to, whatever stage produced it, and
+  at prog 0.9701 it reads `line -> corridor-cap`. **Shape (b) was built first and FAILED:** hanging
+  the cap on the run-in's continuous progress flattened the leap and let the cap ESCAPE the finish
+  shot — OVERVIEW's `visibleCorridors` 1.5 → 0.469, caught by four convergence tests — because the
+  run-in composes during OVERVIEW and LEADER_ZOOM too. **So (a):** scope stays PHOTO_FINISH, the
+  onset gets a duration (`corridorCapArriveMs`, 1500 ms, one Dev Screen control). The ×4.057
+  single-frame step is **gone**; the inward move spreads from 467 ms at −2.912 shrink/s to 1400 ms at
+  about −0.93, and the run-in's wide opening is preserved (2006 px). **And the cap now costs
+  nothing:** contenders not whole 3.4% with the cap nulled vs 3.4% with it arriving, against master's
+  10.3% — CONTENDER-ZOOM-1's 57.3% → 81.7% was the shock plus the wrong yardstick, as the owner
+  suspected. verify PASS 18 FAIL 0.
+
+- [ZOOM-PACE-4.md](ZOOM-PACE-4.md) — **the leap is MY corridor cap switching on, and the `binding`
+  probe was lying** (2026-08-14, `feat/contender-zoom` @ `b29e8a68`, **built, graded, REVERTED**).
+  The corrected part 1 — easing the anchor's destination across a state change — works mechanically
+  (the forward fraction now interpolates 0.564 → 0.500 instead of snapping) and **does not flatten
+  the leap**: 467 ms, shrink/s −2.912 → −2.915, flow 565 → 632 px/s. Reverted. **The real cause, at
+  true frame resolution:** `guaranteed` is 10.02 while `ceilings.line` is 3.03 — a `Math.min` above
+  one of its own terms — because CONTENDER-ZOOM-1's `guaranteed = Math.max(guaranteed, _corridorCap)`
+  switches on the frame PHOTO_FINISH is entered. The run-in ceiling moves only ×1.225 across that
+  frame and `resolveCamera` never widens at all. **`_binding` is the argmin over `_ceilings`,
+  computed BEFORE the cap is applied**, so it reports `line` on every frame the cap actually decides
+  — which is why ZOOM-PACE-1, -2 and -3 each named a different wrong cause and two builds measured as
+  no-ops. Fix the probe first. The repair is to give the cap a duration, but two prior questions are
+  the owner's: whether the cap survives at all (it ships OFF for costing participants), and whether
+  it should engage on a state predicate rather than the run-in's own progress.
+
+- [ZOOM-PACE-3.md](ZOOM-PACE-3.md) — **part 1's premise is refuted: it is the ANCHOR that steps, not
+  the zoom** (2026-08-14, `feat/contender-zoom` @ `4349e5d1`, **NOTHING BUILT — product source
+  untouched**). Part 1 was built as specified — easing `stateZoom` across LEADER_ZOOM → PHOTO_FINISH
+  — measured, and found to be a **complete no-op**: every phase byte-identical, because the binding
+  term through the crawl and the leap is `line`, so `stateZoom` is never the minimum and easing it
+  eases a number nothing reads. Reverted rather than left as dead code. **The step is in the ANCHOR:**
+  `_forwardFracNow()` climbs smoothly 0.343 → 0.563 and then **snaps to 0.500**, because LEADER_ZOOM
+  is a FORWARD state and PHOTO_FINISH a CENTRED one — the run-in interpolates toward a destination
+  that belongs to the state, and at the state change the destination moves. The anchor jumps, the
+  room to the line jumps, and `pointGuarantee` returns a ceiling 4.1× tighter with no change of
+  binding term. Part 2 remains the right shape and is better aimed (the crawl is `pointGuarantee`'s
+  1/distance hyperbola — flat then vertical — so hold-then-close addresses crawl and leap together);
+  part 3 is unaffected; the corrected part 1 is to give the FORWARD FRACTION a duration.
+
+- [ZOOM-PACE-2.md](ZOOM-PACE-2.md) — **he is right about which phase, and I was measuring the wrong
+  thing** (2026-08-14, `feat/contender-zoom` @ `24cd7c8f`, **DIAGNOSIS ONLY**). Corrects
+  [ZOOM-PACE-1](ZOOM-PACE-1.md), which stands as written. **Zoom per second is not what an eye
+  judges**; measured in screen flow and log-rate of the visible width, **phase 1 is the only stall** —
+  95 px/s and −0.129 shrink/s held for 3.6 s, immediately after the shot opens to its widest of the
+  endgame (2048 px of world). What ZOOM-PACE-1 called the stall, phase 3, runs at **306 px/s** and
+  phase 5 at **462** — among the busiest stretches on screen, motionless only in a table of zoom
+  rates. **The run-in ceiling is one monotone curve** — 1.2 → 1.5 → 2.0 → 2.3 → 3.8 → 6.7 → 29.0 → ∞
+  — so the flat foot and the leap are the same rule, answering the objection that the thing opening
+  the shot to 1.5 cannot also be holding at 9. **The trigger is a 4.1× step in the run-in ceiling
+  itself** (target 2.40 → 9.95 with `line` binding on both sides), caused by `stateZoom` stepping
+  9.10 → 17.06 at LEADER_ZOOM → PHOTO_FINISH and propagating through it — neither an argmin corner
+  nor the state term taking over. The acceleration rule must fix the 1→2 boundary; phases 3, 5 and 6
+  should be left alone.
+
+- [ZOOM-PACE-1.md](ZOOM-PACE-1.md) — **the pace is a STATE STEP, not an argmin corner**
+  (2026-08-14, `feat/contender-zoom` @ `2adba27f`, **DIAGNOSIS ONLY — nothing changed or minted**).
+  The owner sees the endgame zoom go in slowly, stall, then rush. **Both offered hypotheses are
+  refuted:** the contender set's extent does not collapse (83 → 78 world px, its ceiling Infinity on
+  0 of 274 frames), and the argmin corner fires **once** in 909 frames. **The dominant cause is a
+  state-zoom STEP** — `stateZoom` jumps 9.10 → 17.06 in one frame at LEADER_ZOOM → PHOTO_FINISH,
+  producing +16.34 zoom/s against the slow stretch's +0.23, a 34× spread. The corner is real but
+  secondary (+7.75/s), and the 2.3 s "stall" is the run-in ceiling holding ~9 while the state has
+  already asked for 17. **The stall and the final rush are PRE-EXISTING** — master has both, slightly
+  larger — so they are not a regression of the contender work; what this arm owns is the entry, **11×
+  sharper than master** (16.34 vs 1.42 zoom/s) plus the plateau that follows. On river-run 2814 it is
+  invisible because the guarantee holds the shot at 1.74 and there is almost no zoom travel to have a
+  pace in. Four options named with costs; the closed "arrive at the line" variant is worth
+  re-measuring because the ordinary zoom it undershot has itself moved. Instrument:
+  `scripts/zoom-pace-truth.mjs`.
+
+- [CONTENDER-ZOOM-1.md](CONTENDER-ZOOM-1.md) — **the corridor is the wrong quantity in BOTH
+  directions** (2026-08-13, `feat/contender-zoom` off master `5d4079c3`; **NOT merged, nothing
+  minted**). The owner's corrected rule: the contenders decide how tight the photo finish closes and
+  the corridor width is a MAXIMUM. Three findings, and each changes what can be built. **(1)
+  `endgameCorridorFloor` is not on master** — it lives only on the unmerged `feat/front-group`, so
+  there was no floor to turn round, and the crossing shot is ALREADY at the ordinary zoom (median
+  100%). **(2) The contender set holds exactly two and cannot hold more**: gate, capture and
+  consumer are all pair-shaped, while **26 of 27 photo finishes have more than two racers level at
+  entry — median 12, up to 20 of 20.** Widening it needs a definition of ABREAST the project does
+  not have; both existing thresholds (0.03, 0.05) admit most of the field, so **no number was
+  invented and the decision is his**. **(3) The corridor cap ships OFF because it measurably costs
+  participants** — it moves the zoom on 3955 of 7441 frames and takes level-racers-not-whole from
+  57.3% to 81.7%, because a width bound only constrains ACROSS while a zoom change moves both ways
+  and the participants are strung out ALONG the road. With FRONT-GROUP-7, which found the same
+  geometry from the opposite side, **the corridor width is wrong in both directions.** Built and
+  kept: `contenderGuarantee`, which is `pairGuarantee` exactly at two — proved by all three
+  fingerprints being byte-identical at the shipped default.
+
 - [RESOLVE-CONVERGE-1.md](RESOLVE-CONVERGE-1.md) — **a widening step has to buy something** (branch
   `fix/resolve-converge` off `master`; **NOT merged, nothing minted — his eye is owed on ice-track
   seed 9**). `resolveCamera` widened 10% at a time to frame the pan target and never asked whether

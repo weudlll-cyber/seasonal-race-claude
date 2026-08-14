@@ -52,6 +52,7 @@ import {
   findByIndex,
   resolveGroup,
 } from './battleGroup.js';
+import { shortestArcDeltaT } from '../../utils/mathUtils.js';
 import { mulberry32 } from '../racePlanner.js';
 import { computeTimingFromConfig } from './cameraTimingComputation.js';
 import { decideTransition, TRANSITION_ACTION, TRANSITION_REASON } from './transitionDecision.js';
@@ -81,6 +82,7 @@ import {
   POSITION,
   corridorGuarantee,
   pairGuarantee,
+  contenderGuarantee,
   companyGuarantee,
   fieldGuarantee,
   COMPANY_FRAME_PCT,
@@ -290,6 +292,9 @@ export class CameraDirector {
     // Diagnostic: entry-phase convergence tracking
     this._entryStartTs = null;
     this._lastTs = 0;
+    // ZOOM-PACE-5: the corridor cap's arrival — this frame's clock, and when the shot began.
+    this._frameTs = 0;
+    this._photoFinishEnteredTs = null;
     this._lastDt = 1000 / FRAME_RATE;
     this._lastEntryDeltaZoom = 0;
     this._lastEntryDeltaX = 0;
@@ -566,6 +571,8 @@ export class CameraDirector {
     this._photoFinishContenderFraming = t.photoFinishContenderFraming;
     this._runInShot = t.runInShot;
     this._runInOpenMs = t.runInOpenMs;
+    this._contenderZoom = t.contenderZoom;
+    this._corridorCapArriveMs = t.corridorCapArriveMs;
     this._comebackCooldownMs = t.comebackCooldownMs;
     this._leadChangeCooldownMs = t.leadChangeCooldownMs;
     this._battleWeight = t.battleWeight;
@@ -699,7 +706,13 @@ export class CameraDirector {
     // index as "nobody to wait for" and so reported the pair home on the first frame of every shot —
     // caught by a director test, and the safe direction is the other one: the everybody-home net
     // still ends the shot if a contender genuinely never arrives.
-    return pair.every((c) => !!findByIndex(racers, c.index, c.ref)?.finished);
+    // THE LEADING TWO ONLY, EVEN WHEN THE FRAMED SET IS LARGER (CONTENDER-ZOOM-1).
+    //
+    // DETECTION AND DURATION KEEP STARTING WITH TWO; only the FRAMING set widened. Letting the
+    // framed set decide when the shot ENDS made the photo finish wait for three to five racers
+    // instead of two and stretched it by 85% (7441 -> 13756 frames across ten tracks, measured),
+    // which is a different feature nobody asked for. The two are separated here deliberately.
+    return pair.slice(0, 2).every((c) => !!findByIndex(racers, c.index, c.ref)?.finished);
   }
 
   /** The best current comeback, or null. See comebackDetector.js for what "best" means. */
@@ -1227,9 +1240,27 @@ export class CameraDirector {
         // WHO the shot is following, captured once at entry. Index AND reference, the same dual
         // lookup the battle lock uses: the render path hands out spread-copies every frame so a
         // bare reference does not survive, and a harness racer may carry no index at all.
-        this._photoFinishContenders = ordered
-          .slice(0, 2)
-          .map((r) => ({ index: r.index ?? null, ref: r }));
+        // ── WHO THE SHOT IS ABOUT (CONTENDER-ZOOM-1) ────────────────────────────────────────
+        //
+        // EVERY RACER STILL IN THE FIGHT FOR THE WIN, which is a GEOMETRIC question and needs no
+        // number: a racer on the SAME LANE as somebody ahead of him cannot win any more — he would
+        // have to move aside AND then still overtake, and the photo finish is far too short for
+        // both. Everyone else is still contesting it.
+        //
+        // "SAME LANE" IS THE ENGINE'S OWN DEFINITION, not a new one. The race is LANE-FREE
+        // (raceBehavior.js's header says so) and `physicalY` is a continuous lateral offset, so
+        // there are no discrete lanes to read. `pairContact` there already fixes when two bodies
+        // overlap ACROSS the track — `halfWidthA + halfWidthB` — and rowLayout.js fixes the unit,
+        // one physicalY being trackWidth/2 world px. Both quantities are already here.
+        //
+        // DETECTION IS UNCHANGED: the gate above still enters on the top two, which is all it takes
+        // to establish that a photo finish is happening. This is the FRAMING set.
+        //
+        // CAPTURED ONCE, NEVER RE-SORTED — that is what FINISH-PAIR-1 bought, and it is why the
+        // set is stored by index and looked up live rather than recomputed each frame.
+        this._photoFinishContenders = (
+          this._contenderZoom ? this._abreastContenders(ordered) : ordered.slice(0, 2)
+        ).map((r) => ({ index: r.index ?? null, ref: r }));
         return { nextState: CAM_STATE.PHOTO_FINISH, reason: finish.text, data: {} };
       case FINISH_ACTION.ENTER_DRAMA:
         this._finishMomentExpiry = ts + this._finishDramaDurationMs;
@@ -1471,6 +1502,11 @@ export class CameraDirector {
       // representations of one intent is the defect family this repair exists to end. It was also a
       // permanent mutation of a shared map: nothing ever restored it, so every later OVERVIEW entry
       // in that race inherited the finish's slow entry TC.
+      // ZOOM-PACE-5: when the photo-finish shot began, which is what the cap's arrival is measured
+      // from. Set on entry only, so a repeat transition inside the shot does not restart it.
+      if (nextState === CAM_STATE.PHOTO_FINISH && prevState !== CAM_STATE.PHOTO_FINISH) {
+        this._photoFinishEnteredTs = ts;
+      }
       if (nextState === CAM_STATE.OVERVIEW && !this._inFinishMode) {
         // CAMERA-ZOOM-UNIT-1: OVERVIEW snaps to its TRACK-WIDTHS setting, the same rule the other
         // four states run. What stood here before derived the zoom from a target sprite size
@@ -1884,10 +1920,11 @@ export class CameraDirector {
     const live = [focusRacers[0] ?? null, focusRacers[1] ?? null];
     if (!this._photoFinishContenderFraming) return live;
     const captured = this._photoFinishContenders;
-    if (!captured || captured.length !== 2) return live;
-    const a = this._findByIndex(racers, captured[0].index, captured[0].ref);
-    const b = this._findByIndex(racers, captured[1].index, captured[1].ref);
-    return a && b ? [a, b] : live;
+    if (!captured || captured.length < 2) return live;
+    // CONTENDER-ZOOM-1: the whole captured set, not the first two of it. Looked up live by index —
+    // WHO is fixed, WHERE they are is not.
+    const found = captured.map((c) => this._findByIndex(racers, c.index, c.ref)).filter(Boolean);
+    return found.length >= 2 ? found : live;
   }
 
   _framingSubjects(racers, focusRacers) {
@@ -1941,7 +1978,12 @@ export class CameraDirector {
             : a
               ? { x: a.x, y: a.y }
               : null;
-        return { point, t: a && b ? (a.t + b.t) / 2 : (a?.t ?? null), pair: [a, b] };
+        // THE PAN STAYS ON THE LEADING PAIR, THE GUARANTEE TAKES THEM ALL (CONTENDER-ZOOM-1).
+        // `point` and `t` are unchanged — FINISH-PAIR-1 pinned them to a stable pair precisely so
+        // the picture does not lurch, and widening the pan to a centroid of a set that can change
+        // size would hand that back. What widens is the ZOOM: `pair` carries the whole captured set
+        // and `contenderGuarantee` fits every one of them. At a set of two the two are identical.
+        return { point, t: a && b ? (a.t + b.t) / 2 : (a?.t ?? null), pair: contenders };
       }
       case CAM_STATE.COMEBACK_ZOOM: {
         const locked =
@@ -1981,10 +2023,22 @@ export class CameraDirector {
     const { axisX, axisY } = this._proj;
     const inner = this._innerFramePct ?? DEFAULT_INNER_FRAME_PCT;
     if (kind === GUARANTEE.PAIR) {
-      const [a, b] = subjects.pair;
-      const ceiling = pairGuarantee(
-        a,
-        b,
+      // CONTENDER-ZOOM-1: THE CONTENDERS ARE THE BINDING REQUIREMENT, however many there are.
+      //
+      // `subjects.pair` is the pinned set. `contenderGuarantee` is `pairGuarantee` over every pair in
+      // it and reduces to exactly `pairGuarantee` at two — which is what the set holds today, so this
+      // line changes no picture until the capture widens. It is here rather than waiting for that
+      // widening because the guarantee is the half that can be built without a membership rule; the
+      // membership rule is the half that cannot. See the block above `_photoFinishContenders`.
+      //
+      // THE PADDING IS THE NARROW BODY REFERENCE, and that is stated rather than assumed adequate:
+      // `_drawnBodyWidthRefPx` covers a MEDIAN 44.6% of the drawn sprite (measured across ten tracks,
+      // FRONT-GROUP-7 §1), so a contender at the very edge of the shot can still be clipped by the
+      // remainder. What it cannot be is half out of frame. Closing that needs the DRAWN size, which
+      // depends on the zoom being solved for, and the sprite sits at its screen cap on only 23.4% of
+      // endgame frames — so there is no closed form for the other 77%.
+      const ceiling = contenderGuarantee(
+        subjects.pair,
         axisX,
         axisY,
         frameSize.width,
@@ -2034,6 +2088,149 @@ export class CameraDirector {
       inner,
       at
     );
+  }
+
+  /**
+   * THE CONTENDERS, BY LANE — everyone not blocked by a racer ahead of them on their own lane.
+   *
+   * Two bodies are on the same lane when they OVERLAP across the track: their lateral separation is
+   * less than the sum of their half widths. That is `pairContact`'s `contactWidth` in
+   * `raceBehavior.js`, reused rather than restated, and the physicalY unit is rowLayout.js's — one
+   * unit is half a track width.
+   *
+   * @param {object[]} ordered  racers sorted by t, leader first
+   * @returns {object[]} the contenders, leader first
+   */
+  _abreastContenders(ordered) {
+    const tw = this._trackWidthPx;
+    const leader = ordered[0];
+    if (!(tw > 0) || !leader) return ordered.slice(0, 2);
+    // ── THE RULE IS GEOMETRIC, SO WITHOUT GEOMETRY IT CANNOT BE APPLIED ───────────────────────
+    //
+    // BOTH conditions below are built from quantities the RACE puts on a racer — `pathLengthPx`,
+    // `drawnBodyLengthPx`, `drawnBodyWidthPx`. A caller that supplies none of them (a director test
+    // driving bare `{t, x, y, index}` shapes, `camera-replay`'s marker fields) would silently pass
+    // EVERY racer through both tests and frame the whole field.
+    //
+    // THAT IS NOT HYPOTHETICAL AND IT WAS NOT CAUGHT BY MEASUREMENT. Five FINISH-PAIR-1 tests went
+    // red because their fixture's third racer — sitting at t = 0.6 against a leader at 0.98, THIRTY-
+    // EIGHT PER CENT OF A LAP BACK — was being admitted as a contender. He is not one by any
+    // reading; the level condition had simply evaporated with `pathLengthPx` absent. The tests were
+    // right and this guard is the repair. Real races carry all three fields on every racer.
+    const pathLen = leader.pathLengthPx ?? 0;
+    const hasGeometry =
+      pathLen > 0 && (leader.drawnBodyLengthPx ?? 0) > 0 && (leader.drawnBodyWidthPx ?? 0) > 0;
+    if (!hasGeometry) return ordered.slice(0, 2);
+    const out = [];
+    for (const r of ordered) {
+      // ── CONDITION 1: NEARLY LEVEL WITH THE LEADER ─────────────────────────────────────────
+      // A racer well behind the leader is not fighting for the win however clear his lane is, and
+      // MEASURED, the lane test alone reaches up to 18.2 body lengths back (dirt-oval seed 9) —
+      // which is what was forcing the shot open. `contactLength` is pairContact's own along-track
+      // touch distance, `halfLengthA + halfLengthB`, i.e. exactly one body length between two equal
+      // racers. Not a new number and not a lap fraction.
+      if (r !== leader) {
+        const gapPx = shortestArcDeltaT(leader.t, r.t) * pathLen;
+        const contactLength = ((leader.drawnBodyLengthPx ?? 0) + (r.drawnBodyLengthPx ?? 0)) / 2;
+        if (!(contactLength > 0) || gapPx > contactLength) continue;
+      }
+      // ── CONDITION 2: ON A FREE LANE ───────────────────────────────────────────────────────
+      // Blocked by somebody ahead across the track means he would have to move aside AND then still
+      // overtake, and the photo finish is far too short for both. `contactWidth` is pairContact's
+      // across-track touch distance; the physicalY unit is rowLayout's, one unit = trackWidth/2.
+      let blocked = false;
+      for (const ahead of out) {
+        const lateralPx = (Math.abs((r.physicalY ?? 0) - (ahead.physicalY ?? 0)) * tw) / 2;
+        const contactWidth = ((r.drawnBodyWidthPx ?? 0) + (ahead.drawnBodyWidthPx ?? 0)) / 2;
+        if (contactWidth > 0 && lateralPx < contactWidth) {
+          blocked = true;
+          break;
+        }
+      }
+      if (!blocked) out.push(r);
+    }
+    // Fewer than two survivors means nobody is contesting the line with the leader — and a field
+    // with no geometry at all (a harness racer carries no physicalY) lands here too. Fall back to
+    // the pair, which is master's behaviour, rather than framing one racer or the whole grid.
+    return out.length >= 2 ? out : ordered.slice(0, 2);
+  }
+
+  /**
+   * THE CORRIDOR AS A MAXIMUM WIDTH — the zoom BELOW which the shot would be wider than the road.
+   *
+   * Returns a LOWER bound on `cam.zoom`, which is the opposite direction from every ceiling in this
+   * file; the composition site says why that cannot be one more `_ceilings` entry. It reuses
+   * `corridorGuarantee` unchanged, so the three things that were right about it survive intact and
+   * are not restated here: the SCREEN-relative anchor point, the per-axis projection of the
+   * perpendicular that makes an angled corridor ask for more than a flat one, and the body padding.
+   *
+   * `innerFramePct` is 1 deliberately — the promise is "the road's width fits", and the safe-region
+   * inset belongs to the subject rather than to the road.
+   *
+   * @returns {number|null} a cam.zoom FLOOR, or null when nothing should be capped
+   */
+  /**
+   * HOW MUCH OF THE CAP APPLIES THIS FRAME — a continuous weight, not a switch (ZOOM-PACE-5).
+   *
+   * THE CAP USED TO APPEAR IN ONE FRAME. Its scope was `state === PHOTO_FINISH`, which is a CUT by
+   * construction: on the frame the state changed it went from absent to fully applied and took the
+   * target from 2.47 to 10.02 — measured, the whole of the "leap" the owner objects to.
+   *
+   * SO IT HANGS ON A CONTINUOUS QUANTITY INSTEAD, and the run-in already owns exactly one:
+   * `_runInProgress`, 0 where the endgame window opens and 1 at the line, clamped monotone. **No
+   * duration, no easing and no new number** — the cap's demand simply grows with the leader's own
+   * approach, which is the quantity the whole endgame is already written in.
+   *
+   * PAST THE RUN-IN it is 1. The run-in releases at the crossing, by which point progress has
+   * already reached 1, so the hand-over is continuous rather than another step.
+   */
+  _corridorCapWeight() {
+    // ── (b) WAS TRIED FIRST AND IT FAILED — recorded so it is not tried again ──────────────────
+    //
+    // The honest shape is to hang the cap on a continuous quantity instead of a state predicate,
+    // and the run-in already owns one: `_runInProgress`. Built that way, the leap did flatten — and
+    // the cap ESCAPED THE FINISH SHOT. The run-in composes during OVERVIEW and LEADER_ZOOM too, so
+    // the cap began tightening mid-race states in the endgame: `visibleCorridors` in OVERVIEW went
+    // from its 1.5 setting to 0.469, caught by four convergence tests. The run-in's progress is
+    // continuous but it is not CONFINED to the shot the owner's rule is about, and confining it
+    // again would reintroduce the same cut.
+    //
+    // SO THE SCOPE STAYS `PHOTO_FINISH` AND THE ONSET GETS A DURATION.
+    if (this.state !== CAM_STATE.PHOTO_FINISH) return 0;
+    if (this._photoFinishEnteredTs === null || !(this._corridorCapArriveMs > 0)) return 1;
+    const k = ((this._frameTs ?? 0) - this._photoFinishEnteredTs) / this._corridorCapArriveMs;
+    if (!(k > 0)) return 0;
+    if (k >= 1) return 1;
+    // The SAME smoothstep the glide uses, so the two cannot disagree about the shape of a move.
+    return k * k * (3 - 2 * k);
+  }
+
+  _corridorWidthCap(subjects, frameSize) {
+    // THE ENDGAME, not one state. An earlier draft scoped this by `GUARANTEE.PAIR`, which looks
+    // equivalent and is not: BATTLE_ZOOM and LEAD_CHANGE are pair states too, and with the cap
+    // reaching them `check-runin-frame` went red — 14 frames with NO racer on screen at all on
+    // searound. Scoping it to PHOTO_FINISH fixed that and introduced the step. The weight above is
+    // what keeps it off the mid-race shots now: outside the run-in and outside the photo finish it
+    // is 0, so this value is computed and then applied not at all.
+    if (this._corridorCapWeight() <= 0) return null;
+    if (!subjects?.point || !(this._trackWidthPx > 0)) return null;
+    const at = anchorScreenPoint(
+      frameSize.width,
+      frameSize.height,
+      this._forwardFracNow(),
+      this._headingScreen(subjects.t)
+    );
+    const cap = corridorGuarantee(
+      this._headingAt(subjects.t),
+      this._trackWidthPx + this._drawnBodyWidthRefPx,
+      this._proj.axisX,
+      this._proj.axisY,
+      frameSize.width,
+      frameSize.height,
+      1,
+      at
+    );
+    return Number.isFinite(cap) ? cap : null;
   }
 
   /**
@@ -2727,6 +2924,9 @@ export class CameraDirector {
    * same guarantee and the same position step as everything else.
    */
   _setTargets(racers, canvasW, canvasH, raceState, ts = this._lastTs ?? 0) {
+    // ZOOM-PACE-5: the arrival needs THIS frame's clock. `_lastTs` is not it — `update()` writes
+    // that AFTER `_setTargets` returns, so reading it here gives the previous frame's time.
+    this._frameTs = ts;
     const focusRacers = this._focusRacers(racers);
     const frameSize = { width: canvasW, height: canvasH };
     const framing = framingFor(this.state);
@@ -2828,6 +3028,9 @@ export class CameraDirector {
     // EVERY TERM NAMED, so the probe below can say WHICH ONE decided the width instead of leaving a
     // reader to infer it from the total. `Math.min` over an object's values is the same computation
     // it always was — this only stops the answer being unrecoverable one line after it is produced.
+    // THE CORRIDOR CAP, computed once beside the ceilings it does NOT belong to. `null` outside the
+    // pair states and whenever the key is off, so the composition below is a no-op there.
+    const _corridorCap = this._contenderZoom ? this._corridorWidthCap(subjects, frameSize) : null;
     const _ceilings = {
       state: stateZoom,
       guarantee: this._guaranteeCeiling(subjects, frameSize),
@@ -2841,13 +3044,49 @@ export class CameraDirector {
       // `stateZoom` above IS the run-in's second bound; it needed no code.
       line: _runInCeiling,
     };
-    const guaranteed = Math.min(
+    let guaranteed = Math.min(
       _ceilings.state,
       _ceilings.guarantee,
       _ceilings.company,
       _ceilings.field,
       _ceilings.line
     );
+    // ── THE CORRIDOR IS A CEILING ON WIDTH, NOT A FLOOR (CONTENDER-ZOOM-1) ──────────────────────
+    //
+    // THE OWNER'S CORRECTED RULE, and it is the opposite way round from how this was first built:
+    // the corridor width is a MAXIMUM. Never wider than the track is wide, because showing the whole
+    // width certainly shows everyone; and if the full width is NOT needed, the shot closes in
+    // further. The contenders decide how tight it gets — the road only says how loose.
+    //
+    // EVERY OTHER TERM IN THIS FUNCTION IS A CEILING ON ZOOM, i.e. a LOWER bound on width, composed
+    // with `min`. A maximum WIDTH is the other direction: a LOWER bound on zoom, composed with
+    // `max`. That asymmetry is the whole reason this cannot be another entry in `_ceilings` — it
+    // would silently mean the opposite of every line beside it.
+    //
+    // WHY IT IS SCOPED TO THE PAIR STATES. On the single-anchor shots the road already lost, and for
+    // the owner's own reason: THE ROAD IS NOT WHO MATTERS, THE RACERS ARE (CAMERA-COMPANY-ONLY-3,
+    // approved 2026-08-05). Re-imposing it there would overturn a decision he has already made. The
+    // finish is the one place he has now said the road IS the sufficient bound.
+    //
+    // THE CONTENDERS WIN IF THEY CONFLICT, and that is deliberate rather than a fallback: his first
+    // rule is that ALL participants must be visible, and the corridor is only his shortcut for
+    // "certainly enough". If a contender needs more room than a track width, honouring the cap would
+    // cut him — so the cap is applied to the OTHER terms and the contender ceiling is re-applied
+    // after it. How often that happens is measured rather than assumed; see the report.
+    const _preCapGuaranteed = guaranteed;
+    if (this._contenderZoom && _corridorCap !== null && Number.isFinite(_corridorCap)) {
+      // THE BLEND IS IN LOG SPACE, and that is the same reasoning the diagnosis rested on: a scale
+      // change is perceived logarithmically, so a linear blend of zooms would still arrive as an
+      // uneven move. `w = 0` leaves the shot untouched; `w = 1` is the full cap; in between the
+      // demand grows smoothly with the leader's approach.
+      const w = this._corridorCapWeight();
+      if (w > 0 && _corridorCap > guaranteed) {
+        guaranteed = guaranteed * Math.pow(_corridorCap / guaranteed, w);
+      }
+      if (Number.isFinite(_ceilings.guarantee)) {
+        guaranteed = Math.min(guaranteed, _ceilings.guarantee);
+      }
+    }
     // ── RUNIN-PACE-1 §3: A TIGHTEN-RATE LIMIT WAS BUILT HERE AND MEASURED OUT ───────────────────
     //
     // The candidate was sound in principle: every ceiling is a LOWER BOUND ON WIDTH, so approaching
@@ -2877,8 +3116,25 @@ export class CameraDirector {
     // bound nobody has seen bind is a comment, and this is how that stays checkable.
     this._runInActive = this._runInComposingNow;
     this._runInBinding = this._runInActive && guaranteed >= _runInCeiling - 1e-12;
+    // ── WHAT ACTUALLY DECIDED THE DELIVERED ZOOM (ZOOM-PACE-5) ─────────────────────────────────
+    //
+    // THIS FIELD LIED, AND IT COST THREE REPORTS AND TWO NO-OP BUILDS. It was the argmin over
+    // `_ceilings` alone, while the corridor cap is applied to `guaranteed` AFTERWARDS — so on every
+    // frame the cap decided the shot, this still named whichever ceiling happened to be smallest.
+    // A trace reading it concluded the run-in was in charge when it was not, three times running.
+    //
+    // IT NOW NAMES THE TERM THAT PRODUCED `guaranteed`, whatever stage it came from. The argmin is
+    // still the answer when nothing after it moved the number; when the cap raised it, the cap is
+    // named; when the contender guarantee then clamped it back down, that is named instead. The
+    // rule is "which term is the delivered zoom equal to", not "which ceiling was smallest".
     let _binding = 'state';
     for (const k of Object.keys(_ceilings)) if (_ceilings[k] < _ceilings[_binding]) _binding = k;
+    if (guaranteed > _preCapGuaranteed + 1e-12) {
+      _binding =
+        _corridorCap !== null && Math.abs(guaranteed - _corridorCap) <= 1e-9
+          ? 'corridor-cap'
+          : 'guarantee-after-cap';
+    }
     this._framingProbe = {
       ceilings: _ceilings,
       binding: _binding,
@@ -2892,7 +3148,13 @@ export class CameraDirector {
       stateZoom,
       guaranteed,
       point: subjects.point, // the anchor world point (§4b: is its BODY inside, or just its centre?)
-      pair: subjects.pair, // the two guaranteed contenders, when the state guarantees a pair
+      pair: subjects.pair, // the guaranteed contenders, when the state guarantees them
+      // CONTENDER-ZOOM-1, diagnostic only — read by nothing in the camera. `corridorCap` is the
+      // zoom FLOOR the road imposes (null when it does not apply) and `capBound` says whether it
+      // actually moved the delivered zoom, so "the corridor is the ceiling" can be measured as a
+      // frequency rather than asserted.
+      corridorCap: _corridorCap,
+      capBound: _corridorCap !== null && guaranteed > _preCapGuaranteed + 1e-12,
     };
 
     // ── WHERE IN FRAME: from the principle, not from a slider ──────────────────────────────────

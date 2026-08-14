@@ -9,6 +9,7 @@
 
 import { describe, it, expect } from 'vitest';
 import {
+  contenderGuarantee,
   FRAMING_BY_STATE,
   GUARANTEE,
   POSITION,
@@ -1006,5 +1007,45 @@ describe('the road no longer bounds the single-anchor states (CAMERA-COMPANY-ONL
     const z = corridorGuarantee({ x: 1, y: 0 }, CLOSED.tw, CLOSED.axisX, CLOSED.axisY, W, H);
     expect(Number.isFinite(z)).toBe(true);
     expect(z).toBeGreaterThan(0);
+  });
+});
+
+// ── CONTENDER-ZOOM-1 ────────────────────────────────────────────────────────────────────────────
+//
+// WHAT BREAKS IF THESE GO. `contenderGuarantee` is what lets the photo finish bind on however many
+// contenders it holds. Today the set holds two, so the FIRST property below is the one that keeps
+// the shipped picture still: at n = 2 it must be `pairGuarantee` to the bit, or the day this is
+// wired in every finish shot moves for a reason nobody chose. The others pin the direction (more
+// contenders never permit a tighter shot) and the degenerate cases.
+describe('contenderGuarantee — the contenders decide the zoom', () => {
+  const A = { x: 1000, y: 500 };
+  const B = { x: 1060, y: 520 };
+  const C = { x: 980, y: 610 };
+  const call = (pts, pad = 0) => contenderGuarantee(pts, CLOSED.axisX, CLOSED.axisY, W, H, 1, pad);
+
+  it('AT TWO IT IS pairGuarantee, EXACTLY — the property that keeps the shipped shot still', () => {
+    for (const pad of [0, 20.04, 36]) {
+      expect(call([A, B], pad)).toBe(pairGuarantee(A, B, CLOSED.axisX, CLOSED.axisY, W, H, 1, pad));
+    }
+  });
+
+  it('a third contender can only make the shot WIDER, never tighter', () => {
+    // A ceiling is an upper bound on zoom, so "wider" is a SMALLER number.
+    expect(call([A, B, C])).toBeLessThanOrEqual(call([A, B]));
+  });
+
+  it('binds on the WIDEST pair, not on the first two', () => {
+    // C is further from A than B is, so the ceiling must be the A-C pair's.
+    expect(call([A, B, C])).toBe(pairGuarantee(A, C, CLOSED.axisX, CLOSED.axisY, W, H, 1, 0));
+  });
+
+  it('fewer than two contenders constrain nothing', () => {
+    expect(call([])).toBe(Infinity);
+    expect(call([A])).toBe(Infinity);
+    expect(call([A, null])).toBe(Infinity);
+  });
+
+  it('ignores holes rather than throwing on them', () => {
+    expect(call([A, null, B])).toBe(call([A, B]));
   });
 });

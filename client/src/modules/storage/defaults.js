@@ -613,6 +613,48 @@ export const DEFAULT_CAMERA_CONFIG = {
   // WHAT THIS REPLACED: an OVERVIEW-width cap and a delayed engagement. Both are gone — the run-in
   // composes from the endgame threshold again and the pull-out is whatever the line requires.
   runInShot: true,
+  // ── THE CONTENDERS DECIDE THE ZOOM, THE CORRIDOR IS ONLY THE CEILING (CONTENDER-ZOOM-1) ────────
+  // The owner's corrected rule for the photo finish, and it is the opposite way round from how a
+  // corridor bound was first drafted: in a photo finish ALL of its participants must be visible and
+  // WHOLE, the contenders decide how tight the shot may close, and the corridor width is a MAXIMUM
+  // rather than a minimum — never wider than the track is wide, because the full width certainly
+  // shows everyone, and if the full width is not needed the shot closes in further.
+  //
+  // TWO HALVES, AND ONLY ONE OF THEM COULD BE BUILT. The GUARANTEE half is here: the pair rule is
+  // generalised to however many contenders the set holds, and the corridor becomes a cap on width.
+  // The MEMBERSHIP half is NOT: `_photoFinishContenders` is captured as `slice(0, 2)`, and widening
+  // it needs a definition of "abreast" that this project does not have. Measured, 26 of 27 photo
+  // finishes have more than two racers within the entry gate's own threshold of the leader — a
+  // median of 12 and up to 20 of 20 — so that threshold cannot serve as the membership rule. The
+  // report states what a new number would be compensating for; it was not invented here.
+  //
+  // DEFAULT OFF, AND IT IS A MEASURED VERDICT RATHER THAN CAUTION. The cap does exactly what the
+  // rule asks — it binds on 3955 of 7441 photo-finish frames across ten tracks and three seeds — and
+  // it COSTS PARTICIPANTS: the share of frames with a level racer not whole goes 57.3% -> 82.7%.
+  //
+  // WHY, and it is the same geometry FRONT-GROUP-7 found from the other side: a corridor bound only
+  // ever constrains ACROSS the track, but a zoom change moves BOTH directions. The participants are
+  // strung out ALONG the road, so tightening to the road's width takes away the very room that was
+  // holding them. "Showing the whole width certainly shows everyone" is false here: the finish
+  // shot's binding dimension is longitudinal, and the corridor width cannot see it.
+  //
+  // Off restores the pre-2026-08-13 composition exactly — measured, both fingerprints byte-identical.
+  contenderZoom: true,
+  // ── AND THE CAP ARRIVES INSTEAD OF APPEARING (ZOOM-PACE-5) ────────────────────────────────────
+  // How long the corridor cap takes to reach full strength once the photo-finish shot begins.
+  //
+  // WHAT IT COMPENSATES FOR, stated because a duration is the weaker of the two shapes tried. The
+  // cap's scope is `state === PHOTO_FINISH`, which is a CUT by construction: it went from absent to
+  // fully applied in one frame and took the target 2.47 -> 10.02, which is the whole of the "leap"
+  // the owner objected to. The honest repair was to hang it on a continuous quantity instead — the
+  // run-in's own progress — and that was BUILT AND MEASURED AND FAILED: the run-in composes during
+  // OVERVIEW and LEADER_ZOOM too, so the cap escaped the finish shot and tightened mid-race states
+  // (OVERVIEW's visibleCorridors 1.5 -> 0.469, caught by four tests). The scope has to stay a state,
+  // so the onset needs a duration. This number is what that costs.
+  //
+  // 1500 ms: the 4x arrival spread over it gives about 0.9 halvings/s of visible width, against the
+  // 2.9 the step delivered. Longer is calmer and spends more of the shot arriving.
+  corridorCapArriveMs: 1500,
   // ── THE START CEREMONY (START-CEREMONY-CAMERA-1) ───────────────────────────────────────────────
   // The race opens on the whole track, held still, then eases in to the starting formation until it
   // is as large as it can be with every racer still in frame. Both ends are GEOMETRY and neither is

@@ -489,7 +489,7 @@ a verbatim transcript of one run on one commit, which is a historical record, no
 
 ### The tracking lag, as measured today — and it had drifted
 
-<!-- MEASURED: tracking-lag (median/p95 pp per state) @ eea0acf2 2026-08-12 depends=client/src/modules/camera/ -->
+<!-- MEASURED: tracking-lag (median/p95 pp per state) @ b15b5107 2026-08-14 depends=client/src/modules/camera/ -->
 
 **RE-MEASURED ON THE SHIP (`eea0acf2`), because neither branch's table describes the merged tree.**
 The run-in and RESOLVE-CONVERGE-1 were measured apart and shipped together, so the numbers below are
@@ -633,9 +633,22 @@ and it says so itself. It also covers nothing else on this page; see its header 
 | LEADER_ZOOM   | 17788  | 4.05      | 9.32   |
 | LEAD_CHANGE   | 7789   | 4.55      | 22.17  |
 | OVERVIEW      | 4303   | 2.65      | 16.00  |
-| PHOTO_FINISH  | 1865   | 4.71      | 29.80  |
+| PHOTO_FINISH  | 1865   | 5.06      | 26.61  |
 
-OVERVIEW median 2.65 pp against every other state pooled 4.63 pp (ratio 0.57×).
+OVERVIEW median 2.65 pp against every other state pooled 4.64 pp (ratio 0.57×).
+
+**RE-MEASURED FOR CONTENDER-ZOOM-1, AND EXACTLY ONE ROW MOVES — which is the point of measuring it.**
+PHOTO_FINISH's median lag rises **4.71 → 5.06 pp** and its p95 FALLS **29.80 → 26.61**, on an
+**unchanged frame count of 1865**. Every other state is identical to the digit, and pooled moves only
+4.63 → 4.64.
+
+The shape is what the change predicts rather than a surprise. The photo-finish shot now sizes itself
+on however many racers are still contesting the line instead of always on two, so on the frames where
+a third or fourth is abreast the target zoom is wider and the live camera has further to travel —
+which is a slightly worse median. The p95 improving at the same time is the other half: the WORST
+lag came from the shot chasing a pair whose separation jumped, and a set sized on everyone abreast
+moves less abruptly. **The frame count being unchanged is the tell that this is a framing change and
+not an occupancy one** — the table's own standing lesson, stated three paragraphs below.
 
 **Re-measured for OUTCOME-PHASE-75, and COMEBACK_ZOOM moved so far that re-stamping would have been
 wrong.** Its frame count fell from **2103 to 753** and its median lag rose from **8.34 to 13.73 pp**.

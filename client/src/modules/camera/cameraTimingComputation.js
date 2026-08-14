@@ -342,6 +342,13 @@ export function computeTimingFromConfig(config) {
   const photoFinishContenderFraming =
     config?.photoFinishContenderFraming ?? DEFAULT_CAMERA_CONFIG.photoFinishContenderFraming;
   const runInShot = config?.runInShot ?? DEFAULT_CAMERA_CONFIG.runInShot;
+  const contenderZoom = config?.contenderZoom ?? DEFAULT_CAMERA_CONFIG.contenderZoom;
+  // ZOOM-PACE-5: clamped to a band for the same reason every other duration here is — a corrupt
+  // stored config must not be able to make the cap arrive instantly or never.
+  const corridorCapArriveMs = Math.max(
+    0,
+    Math.min(5000, config?.corridorCapArriveMs ?? DEFAULT_CAMERA_CONFIG.corridorCapArriveMs)
+  );
   // RUNIN-PACE-1: clamped to a band for the same reason every other duration here is — a corrupt
   // stored config must not be able to produce an opening that never ends or one with no length.
   const runInOpenMs = Math.max(
@@ -421,6 +428,8 @@ export function computeTimingFromConfig(config) {
     photoFinishContenderFraming,
     runInShot,
     runInOpenMs,
+    contenderZoom,
+    corridorCapArriveMs,
     comebackCooldownMs,
     leadChangeCooldownMs,
     battleWeight,
