@@ -1,8 +1,16 @@
 # MINIMAP-MARKS-1 — the minimap says where the race starts and where it ends
 
-**Branch `feat/minimap-start-finish`, off master `4b336419`. Final SOURCE commit `faf379fd` — this
-report is the commit after it, and adds no code. Pushed, NOT merged, NOT minted — this is visible
-and the owner judges it first.**
+**Branch `feat/minimap-start-finish`, off master `4b336419`. TWO blocks, one branch, because master
+gets this visible change once. Pushed, NOT merged, NOT minted.**
+
+| block            | what                                              | source commit | RENDER              |
+| ---------------- | ------------------------------------------------- | ------------- | ------------------- |
+| MINIMAP-MARKS-1  | the start and finish marks                        | `faf379fd`    | `2edf583c861a9254`  |
+| MINIMAP-TAIL-1   | the unraced stretch behind the finish, washed down | `f7b960dd`    | `0e04fa4a5e9c3b85`  |
+
+**THE OWNER JUDGED MINIMAP-MARKS-1 ON A PRODUCTION BUILD ON 2026-08-15 AND ACCEPTED IT.** The green
+start bar and the checkered finish stay as they are. MINIMAP-TAIL-1 below is the one addition he
+asked for, and the sections above it are the record of what he accepted, unchanged.
 
 One piece. The minimap drew the band, its two edges and the racer dots. On an open track the band
 runs on past the finish and looks there exactly as it does before it, so there was no way to see how
@@ -179,6 +187,20 @@ also checked and **refuted**: the end cap `|outer[0] − inner[0]|` is **exactly
 all five open tracks (250/250, 300/300 ×4), so a mis-shapen cap is not it. Cause still open; see
 PROPOSALS.
 
+> **CORRECTION, 2026-08-15 (MINIMAP-TAIL-1) — THERE ARE NO DARK WEDGES. I misread a screenshot.**
+> The paragraph above is left as written because this record is append-only, but its premise is
+> wrong and so is the proposal built on it. Histogramming the actual canvas — the very
+> `marks: null` luger-hill render the claim came from — gives **one** band colour,
+> `109,101,68,255`, across **110601 px**; the next most common value is the panel border. There is
+> no second, darker fill anywhere in the drawing. Confirmed a second way: the band drawn from
+> `getEdgePoints` by index and from `getPosition(t, ±0.5)` are **visually identical**, wedges and
+> all, so the index-pairing hypothesis in PROPOSAL 2 was answering a question that does not exist.
+> **What is really there** is that the two END CAPS of an open band are never stroked — the
+> outlines run along `outer` and along `inner` and never across the ends — so the band's last few
+> pixels have no cyan boundary and read as flat against the outlined body. Downscaling the
+> screenshot did the rest. **The lesson is the cheap one: a colour claim is settled by sampling
+> pixels, not by looking at a resized picture.**
+
 ## Verify and handover
 
 `npm run verify` on the final branch state — **PASS 14, FAIL 0, SKIP 6**, 222.9 s. (The pre-commit
@@ -212,7 +234,7 @@ Served from `C:\Users\weudl\AppData\Local\racearena-preview` (outside the synced
    checker is at `finishT`, and **the band visibly continues past it**. That gap is the thing that
    did not exist before, and it reads best once the field has left the start.
 
-## PROPOSALS
+## PROPOSALS (MINIMAP-MARKS-1)
 
 1. **Give the finish mark the weight the question deserves.** On open tracks the green start bar
    currently out-shouts the checker, and "how much race is left" is about the finish. One constant
@@ -234,3 +256,169 @@ Served from `C:\Users\weudl\AppData\Local\racearena-preview` (outside the synced
    where the shot is, and today only the dots imply it. The camera's frame footprint as a thin
    rectangle would say it directly — but it reads what the director owns, which this module has
    deliberately never done, so it is a design decision and not a small one.
+
+---
+
+# MINIMAP-TAIL-1 — the unraced tail behind the finish
+
+**Same branch, source commit `f7b960dd`. Still not merged, still not minted.**
+
+The owner accepted the marks and asked for one addition: on an open track the band runs on past the
+finish and that stretch is never raced, so it should read differently and make the extent of the
+race obvious.
+
+## What was built
+
+The stretch from `finishT` to the end of the geometry is **washed down** — it keeps the band's hue
+and loses its light. **Open tracks only.** A closed loop is raced in full and gets nothing, decided
+by the same `shape.isOpen` the band already asks about for its `closePath`, not by a second rule
+invented for this.
+
+Draw order, and each position is load-bearing:
+
+| # | layer                    | why there                                                                                    |
+| - | ------------------------ | -------------------------------------------------------------------------------------------- |
+| 1 | band fill                | unchanged                                                                                     |
+| 2 | **the tail wash**        | **before the edges**, so the cyan outline still runs through it                                |
+| 3 | outer + inner outlines   | unchanged                                                                                     |
+| 4 | start / finish marks     | the checker lands **on** the seam, not under it                                                |
+| 5 | racer dots               | dots keep full contrast over both fills                                                        |
+
+**Position 2 is the one that matters.** Washing after the outlines would dim the cyan too, and the
+tail would then read as *"the track ends here"* — the opposite of true, and the one misreading this
+addition could cause.
+
+## The seam is the checker, and it is measured
+
+**Built from `getPosition(t, ±0.5)` — the same source the finish mark uses — so the tail's leading
+cross-section IS the mark's bar.** The alternative was to take it from the band's own
+`getEdgePoints(80)` by index, and the brief was right to warn: those two parameterisations disagree
+by up to **502 world px** on luger-hill, which is an along-track offset and would have put the seam
+visibly off the checker on the longest tail in the game.
+
+Measured by driving the **shipped `renderMinimap`** through a recording context — not by
+re-deriving the maths — on all ten tracks at four finish positions:
+
+| measurement                                       | worst, all open tracks × `finishT` ∈ {0.6, 0.75, 0.9, 0.95} |
+| ------------------------------------------------- | ------------------------------------------------------------ |
+| **SEAM** — tail's leading edge vs the checker bar | **0.000000 panel px** — exact, on every case                 |
+| **SLIVER** — tail's side vs the band it washes    | **1.74 panel px** (space-sprint; ≤ 0.75 on most cases)       |
+
+Closed tracks: **no tail drawn**, one area fill, on all five.
+
+The sliver is not zero and cannot be: the tail is washing a band drawn from the *other* source, so
+the 1.5-ish px disagreement already recorded above shows up as a hairline along the tail's flank. It
+is below the width of the cyan edge that covers it.
+
+**The first version of this measurement read SEAM 60–240 px and was WRONG — the instrument was.**
+Two faults, both worth naming because both are easy to repeat: the checker's cells are **separate**
+two-point strokes with **different midpoints** on a curved track, so grouping them by midpoint
+scattered the bar and compared against a random cell; and nearest-**vertex** distance to the band
+polygon measures its 80-sample spacing, not misfit. Chaining segments by shared endpoints and
+measuring point-to-**segment** gives the numbers above. A measurement that disagrees with a
+construction proof should make you doubt the measurement first.
+
+## The form, and the dropped alternatives
+
+**A wash, not a colour.** The raced part must be what the eye finds first; darkening recedes and a
+hue advances. Verified at 1× and 2× on the real module over real geometry — luger-hill (short
+tail), seatrack (long), space-sprint (longest, and the worst sliver), dirt-oval (no tail).
+
+- **Diagonal hatching** — dropped. The classic "not in play" texture, and noise on a band measured
+  at 12–22 panel px.
+- **A distinct hue (grey-blue, red)** — dropped. It pulls the eye, which is exactly what
+  *subordinate* forbids.
+- **Washing after the edge outlines** — dropped, and it is the trap: it dims the cyan and the tail
+  stops reading as track.
+- **A fixed sample count for the tail** — dropped. The count is derived from the tail's own span at
+  the band's density, so the outline follows the curve exactly as closely as the band beneath it;
+  fixed counts are coarse on a long tail and wasteful on a short one.
+
+## The call-site comment was wrong, and is fixed
+
+It said the field forms at t 0 on both topologies. **It does not.** On an OPEN track every row is
+**ahead** of the line — `tStart = (totalRows − rowIndex) × ΔT`, `raceCore.js:149` — so the start bar
+sits just **behind** the rearmost row. On a CLOSED track the front row is on it and the rest behind
+(`tStart = −(rowIndex × ΔT)`). The line is the mark; the field is the dots. **The mark itself stays
+at t 0**, which was and is correct — only the sentence was wrong.
+
+## Fingerprints
+
+```
+$ node scripts/engine-reach.mjs --check client/src/modules/camera/Minimap.js \
+      client/src/modules/camera/Minimap.test.js client/src/screens/RaceScreen/renderRaceFrame.js
+ENGINE REACH: none of 3 path(s) can reach the race engine.        (exit 1)
+```
+
+CAMERA again by the guard's own declaration: verify routed `camera-fingerprint` as **"nothing
+changed"**.
+
+**RENDER, measured FRESH on the final source commit `9d5d3597` with a clean tree:**
+
+```
+RENDER 0e04fa4a5e9c3b85     (was 2edf583c861a9254 after MINIMAP-MARKS-1; recorded 0d5854a652c69d87)
+```
+
+**NOT minted; `docs/fingerprints.json` untouched.**
+
+## Tests — four added, twelve total
+
+| test                                        | what breaks if it is deleted                                                                                                 |
+| ------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------- |
+| OPEN washes a tail, fill distinct from band | the addition itself is unguarded; also pins the tail to the track END, and `getPosition` **clamps** rather than throwing, so nothing else would notice a tail running past t 1 |
+| the seam IS the finish mark, to 1e-6 px     | the one thing that makes the tail honest. Building it from the mark's source is what puts the seam under the checker, and only this test says so |
+| CLOSED draws no tail                        | a tail on a closed track would be a lie — and `finishT` there is a lap count that wraps to 0, so an ungated tail would wash the **entire** band |
+| the tail precedes the marks and the dots    | the wash lands on the checker or the racer dots, dimming the two things it exists to make legible                              |
+
+The ctx mock now records **fill paths** as well as strokes, so an AREA is distinguishable from a dot
+without naming a colour: racer dots call `fill()` after an `arc()`, which adds no path point.
+
+## Hygiene
+
+| file                                        | after MARKS-1 | after TAIL-1 | delta |
+| ------------------------------------------- | ------------: | -----------: | ----: |
+| `client/src/modules/camera/Minimap.js`      |           270 |          332 |   +62 |
+| `client/src/modules/camera/Minimap.test.js` |           215 |          288 |   +73 |
+| `renderRaceFrame.js`                        |           488 |          493 |    +5 |
+
+Against master: `Minimap.js` 133 → 332, `Minimap.test.js` 83 → 288.
+
+**Removed: nothing.** Again this adds a layer rather than replacing one, and again saying so is
+better than inventing a deletion.
+
+**Extracted:** `drawUnracedTail`, one function, beside the mark helpers.
+
+**Noticed and deliberately left alone:**
+
+1. **There are now FOUR ribbon walks in the file** — band fill, outer outline, inner outline, and
+   the tail. They cannot share a helper as things stand, because the first three read
+   `getEdgePoints` and the tail reads `getPosition`. **That is the unification proposal below, and
+   it is now much better evidenced than it was**: the tail proves the technique works on all ten
+   tracks, and the sliver number *is* the distance between the two sources.
+2. **The two end caps of an open band are never stroked.** Real, cosmetic, pre-existing, and the
+   thing actually behind the retracted "wedge" claim. Proposal below.
+3. **`getPosition` clamps t on open tracks rather than rejecting.** The tail relies on it and the
+   test pins the consequence, but a caller passing 1.4 would silently get the track end. Left as
+   is: that is `EditorShape`'s contract, not this module's to change.
+
+## PROPOSALS (MINIMAP-TAIL-1)
+
+1. **Build the band fill and the edge outlines from `getPosition(t, ±0.5)` too.** Then the band, the
+   edges, the marks and the tail all come from **one** source; the sliver goes to exactly 0, the
+   four ribbon walks collapse into one helper, and the "compare curves, not indices" trap stops
+   existing in this file. The evidence is already in: drawn both ways side by side on luger-hill,
+   seatrack and space-sprint, the bands are **visually identical**, so this is a simplification with
+   no look change to argue about. **It moves RENDER**, so it is its own block.
+
+2. **Stroke the two end caps on open tracks.** One `lineTo` at each end of the outline pass. It is
+   the real defect behind the retracted wedge claim: the band's ends are the only part of it with no
+   cyan boundary, which is why they read as unfinished. Cheap, and it also tidies the tail's far end.
+
+3. **Let the tail say how much is left, not only where it ends.** The wash is binary today. If he
+   wants more, the tail is the natural place to carry a progress reading — but it is a new idea
+   rather than a fix, and the panel is already carrying four things.
+
+4. **A guard for draw ORDER in this module.** Three of the twelve tests now assert layering, one per
+   pair, and they will keep multiplying as layers are added. One property test — "the layers appear
+   in this declared order" — would replace them and would catch a new layer inserted in the wrong
+   place, which is the mistake this module is now most exposed to.
