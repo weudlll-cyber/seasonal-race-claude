@@ -451,6 +451,20 @@ is dated and recorded HERE, where a reader on their way to the report will pass 
 
 ## Camera / presentation fixes
 
+- [ZOOM-PACE-3.md](ZOOM-PACE-3.md) — **part 1's premise is refuted: it is the ANCHOR that steps, not
+  the zoom** (2026-08-14, `feat/contender-zoom` @ `4349e5d1`, **NOTHING BUILT — product source
+  untouched**). Part 1 was built as specified — easing `stateZoom` across LEADER_ZOOM → PHOTO_FINISH
+  — measured, and found to be a **complete no-op**: every phase byte-identical, because the binding
+  term through the crawl and the leap is `line`, so `stateZoom` is never the minimum and easing it
+  eases a number nothing reads. Reverted rather than left as dead code. **The step is in the ANCHOR:**
+  `_forwardFracNow()` climbs smoothly 0.343 → 0.563 and then **snaps to 0.500**, because LEADER_ZOOM
+  is a FORWARD state and PHOTO_FINISH a CENTRED one — the run-in interpolates toward a destination
+  that belongs to the state, and at the state change the destination moves. The anchor jumps, the
+  room to the line jumps, and `pointGuarantee` returns a ceiling 4.1× tighter with no change of
+  binding term. Part 2 remains the right shape and is better aimed (the crawl is `pointGuarantee`'s
+  1/distance hyperbola — flat then vertical — so hold-then-close addresses crawl and leap together);
+  part 3 is unaffected; the corrected part 1 is to give the FORWARD FRACTION a duration.
+
 - [ZOOM-PACE-2.md](ZOOM-PACE-2.md) — **he is right about which phase, and I was measuring the wrong
   thing** (2026-08-14, `feat/contender-zoom` @ `24cd7c8f`, **DIAGNOSIS ONLY**). Corrects
   [ZOOM-PACE-1](ZOOM-PACE-1.md), which stands as written. **Zoom per second is not what an eye

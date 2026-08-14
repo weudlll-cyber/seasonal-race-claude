@@ -132,6 +132,7 @@ for (const geo of loadTracks({ only: ONLY })) {
           y: d._proj.effY(d.zoom) > 0 ? (360 - d.offsetY) / d._proj.effY(d.zoom) : 0,
         };
         trace.push({
+          fwdFrac: d._forwardFracNow(),
           worldW,
           flowPx,
           lineCeil: fp.ceilings?.line ?? Infinity,
@@ -223,6 +224,7 @@ for (const geo of loadTracks({ only: ONLY })) {
           `zoom ${r0.zoom.toFixed(2).padStart(5)} → ${r1.zoom.toFixed(2).padStart(5)}  ` +
           `world ${r0.worldW.toFixed(0).padStart(5)} → ${r1.worldW.toFixed(0).padStart(5)} px  ` +
           `flow ${med(x.rows.map((r) => r.flowPx)).toFixed(0).padStart(5)} px/s  ` +
+          `fwd ${String(x.rows[0].fwdFrac ?? "null").slice(0, 5).padStart(5)}→${String(x.rows[x.rows.length - 1].fwdFrac ?? "null").slice(0, 5).padStart(5)}  ` +
           `shrink/s ${(
             Math.log(r1.worldW / r0.worldW) / Math.max(1e-6, (r1.ts - r0.ts) / 1000)
           ).toFixed(3).padStart(7)}  ${terms}`,
