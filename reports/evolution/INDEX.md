@@ -444,7 +444,77 @@ is dated and recorded HERE, where a reader on their way to the report will pass 
   three of them a second open strand off `1fd0b471` whose `feat/verify-routing-1` will conflict in
   `verify.mjs` when it lands.
 
+## The endgame corridor FLOOR (2026-08-13/14) — RESCUED EVIDENCE, mechanism retired
+
+**These four reports are on master and the mechanism they describe is not.** `endgameCorridorFloor`
+was built over nine commits on `feat/front-group`, never shipped, and was superseded by
+CONTENDER-ZOOM-1; the branch is deleted and the code is archived at the tag `archive/front-group`.
+The reports and `scripts/endgame-width-truth.mjs` were brought across on their own because they are
+the only record of the question and the only fixed-yardstick instrument for it — see
+[docs/DEAD-ENDS.md](../../docs/DEAD-ENDS.md) §N for what died and why. **The harness's floor arms
+REFUSE on master rather than running**: a config key the director does not read is inert, so `off` /
+`floor` / `extent` / `extent-drawn` would have reported four identical arms under four names.
+
+**Read them knowing the verdict they were building toward is settled**: the corridor is the wrong
+quantity in BOTH directions, because it constrains only ACROSS the track while the racers who leave a
+finish shot leave ALONG it.
+
+- [FRONT-GROUP-7.md](FRONT-GROUP-7.md) — **the floor was never buying width, and that is why it
+  cannot be narrowed** (branch `feat/front-group`; **RETIRED — never merged, nothing minted; code archived at `archive/front-group`**).
+  He asked for less empty road on river-run seed 2814, and he was right about the slack: the field
+  occupies a median **35.3%** of the corridor through the endgame. The refinement is built behind one
+  key and narrows the crossing exactly as asked (river-run 38% -> 53% of the ordinary), **and it
+  ships OFF because it cuts racers doing it** — ice-track seed 9 goes 0.0% -> 12.0% cut. **WHY is the
+  finding: on ice-track 100% of the racers lost leave ALONG the track, and `corridorGuarantee` only
+  constrains ACROSS.** The full-width floor was buying LONGITUDINAL room by accident and paying in
+  empty road; any refinement of the width takes that away. The body-padding hypothesis was tested and
+  refuted. Predictability is also lost (space-sprint 65/65/65 -> 98/99/77). The lever for a narrower
+  ending is a longitudinal bound, which is not built.
+- [FRONT-GROUP-3.md](FRONT-GROUP-3.md) — **never tighter than the track is wide** (branch
+  `feat/front-group`; **RETIRED — never merged, nothing minted; code archived at `archive/front-group`**). The owner's own solution,
+  and it is better than what we built: racers can only spread ACROSS the corridor, so a frame holding
+  its full width holds everyone who is level — no group to define, no membership to follow. It is
+  `corridorGuarantee` applied in the endgame and nothing else; the diagonal was already handled
+  (the perpendicular is projected per axis and compared against the frame's true chord), and body
+  overhang is paid by fitting `trackWidth + one body`. **Measured on a fixed yardstick, the floor
+  ALONE beats the FRONT-GROUP-2 machinery** — 0.0% vs 10.6% of photo-finish frames with a top-six
+  racer not whole on his race, 18.3% vs 27.1% pooled — **so 791 lines came out against 68 added** and
+  two keys became one. **The price is reported in both directions and the worst case is NOT less
+  extreme (37%, unchanged); what changed is that it is now PREDICTABLE PER TRACK** (searound 93/94/93
+  across seeds where the old bound swung 71/47/39). It never binds on a leader, overview or comeback
+  shot, so the simplification costs nothing where the camera would rightly have closed in.
+
+- [FRONT-GROUP-2.md](FRONT-GROUP-2.md) — **the front group stays whole** (branch `feat/front-group`;
+  **RETIRED — never merged, nothing minted; code archived at `archive/front-group`**). Continues FRONT-GROUP-1 and **corrects its
+  headline**: that report counted CENTRES and reported 6.9%, while the owner was looking at a racer
+  cut in half — measured with the renderer's own drawn size, the same race had 74 frames with a
+  member not whole against 14 fully outside, an undercount of five. Four repairs: the guarantee pads
+  by the BODY as the pair guarantee always has; the bound holds until the GROUP is home rather than
+  the first of them; the group is whoever is LEVEL with the leader in his own body lengths with **no
+  cap** — replacing a 5%-of-a-lap threshold that admitted all twenty racers on eleven of 27 races;
+  and membership is **admit-only**, 120 changes against 186 for live re-sorting and structurally
+  unable to produce the FINISH-PAIR-1 lurch. **N=1 was wrong and the fixed yardstick showed it** —
+  at one body length the mechanism is identical to OFF on his race; N=2 ships. **The price, stated:
+  the crossing shot is 70% of the ordinary one pooled, 37% at worst, 78% on his race.**
+
+- [FRONT-GROUP-1.md](FRONT-GROUP-1.md) — **the front group bounds the tightening** (branch
+  `feat/front-group` off master; **RETIRED — never merged, nothing minted; code archived at
+  `archive/front-group`**). His complaint: with about six racers nearly level, closing to the photo-finish zoom
+  loses racers out of the shot. Measured first — the shot loses one of the front group on **31.6% of
+  photo-finish frames**, and on one race holds none of the six. **The brief's premise was wrong and
+  the code says so**: the company guarantee has not "retired before the ending", it returns Infinity
+  on every PAIR-guaranteed state and was never running on those shots at all — an exclusion
+  CAMERA-COMPANY-1 §5 gave as an argument, for the case where the field IS strung out, which is not
+  his. So the COMPUTATION is reused unchanged and only the policy is new, with **no new number**:
+  the group is the leader plus everyone inside the BATTLE closeness arc, capped at the battle
+  group's own size. Membership **captured once** — a live definition would have churned 597 times
+  across 27 races; the capture churns 0. Result **31.6% → 6.9%**, median the whole group on every
+  measurable race, `check-runin-frame` 0 empty frames. **THE COST NEEDS HIS RULING: the crossing
+  shot is 25–75% wider**, which contradicts RUNIN-PACE-1's standing "the crossing must be the
+
 ## Repository hygiene (2026-08-14)
+
+- [BRANCH-CLEANUP-1.md](BRANCH-CLEANUP-1.md) — **THE EVIDENCE MOVED FIRST, AND THE BRANCHES WENT AFTER** (branch `docs/rescue-front-group` off `b2176dc7`). Out of `feat/front-group`: the four FRONT-GROUP reports, `scripts/endgame-width-truth.mjs` (502 lines, the only fixed-yardstick endgame-width instrument), and [DEAD-ENDS.md](../../docs/DEAD-ENDS.md) §N. The corridor-floor CODE did NOT come — it is at the tag `archive/front-group`. **THE HARNESS NEEDED A CHANGE TO BE HONEST HERE, and it is the important part**: its four arms were driven by `endgameCorridorFloor` / `endgameFloorBindsExtent`, and neither key nor the method they drove exists on master (checked, not assumed). **A config key the director does not read is INERT**, so all four arms would have run and returned the SAME numbers, silently, under four names — an instrument that reports agreement because it changed nothing is worse than one that is missing. The floor arms now REFUSE with exit 2 and name where the mechanism went; the three measurements that never depended on it survive and were re-run on master (river-run 2814: extent **50.0%** of the corridor, the diagonal costs **58.8%**, body coverage **79.2%**, a tighter shot would be **1.84×**). The diagnostic monkey-patch is DELETED — on master there is no method for it to re-implement. **`feat/finish-framed` held exactly ONE thing master did not**, found file by file rather than from the branch name: `pointGuarantee`, `check-runin-frame.mjs` (master's copy is the LATER one, added separately at `2a7e1bdf`) and the line-as-run-in-subject are all already here — but **`pointGuarantee` shipped with ZERO test coverage**, and it is the term ZOOM-PACE-2/3 showed BINDS THE ENTIRE ENDGAME. **6 of its 12 tests are now on master**; the 2 asserting the dead key did NOT come and were not re-pointed at something else, which would be inventing a test rather than rescuing one. **SABOTAGE: `pointGuarantee` returning Infinity turns 3 of the 6 red.** On tags-vs-branches the objection was invited and NOT raised: a branch is mutable and anyone can delete it, a registered annotated tag is permanent and keeps the objects reachable. **Caveat stated rather than left implicit: a tag preserves the code, not the ability to RUN it** — `archive/front-group` is nine commits off a master two ships ahead, a record to read rather than a branch to resume. verify PASS 13 FAIL 0, nothing minted.
 
 - [BUILD-PILL-WORKTREE.md](BUILD-PILL-WORKTREE.md) — **THE BADGE CAN SEE A COMMIT MADE IN A WORKTREE** (branch `fix/build-pill-worktree` off `8422a9a4`). The mtime poll watched two paths it CONSTRUCTED — `join(REPO_ROOT, '.git', 'HEAD')` and `.git/index`. In a linked worktree `.git` is a FILE holding a `gitdir:` pointer, so neither exists; `mtimeOf` returned null for both, correctly by its own contract, and the poll compared `null,null` with `null,null` on every tick **forever — it could never fire**. The badge froze at start-up and reported itself CLEAN AND CURRENT while doing it. **Found live, not reasoned:** 5173 served a stale bundle twice in one session, with `dirty:false` and `reason:null` both times — not merely wrong but confident. **This is the failure the file's own header exists to abolish** ("not stale by accident — structurally incapable of being anything else"): BUILD-TRUTH-1 shut it for the main tree and this shape reopened it for worktrees, and since **R10 tells us to work in a worktree whenever a judgement is pending**, the more correctly the process was followed the more certainly the badge lied. **FIX: ask, do not construct** — `git rev-parse --git-path` answers RELATIVELY in a main tree and ABSOLUTELY in a worktree, so the answer is resolved against REPO_ROOT; the fallback when git cannot be asked at all is the old construction, deliberately, since the identity is `unknown` with a reported reason by then. **PROVED LIVE IN A WORKTREE**: dev server started once on the fixed plugin and never restarted, HEAD `b923bba1` → `e43308f0`, **pill followed in 1.2 s** and held. **TESTS +7, −0**, building a REAL repository and a REAL `git worktree add` rather than hand-making a `.git` file, because the defect is about the shape git puts on disk. **L203 is load-bearing rather than decorative here** — a poll over two valid paths is indistinguishable from one over two invalid paths until something moves — so every assertion is paired against the old construction; **SABOTAGE: returning the old construction turns 2 of 7 red**, including the poll case. Harness fix: the child process now carries its stderr instead of discarding it, the same half-an-instrument failure BUILD-UNKNOWN-1 ended, which cost a debugging round here first. No default, no fingerprint, dev-only, **nothing minted**.
 
