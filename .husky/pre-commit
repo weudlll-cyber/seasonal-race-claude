@@ -35,19 +35,40 @@ cd ..
 fast_fail=0
 fast_pass=0
 guards="scripts/check-fingerprints.mjs scripts/check-measured-stamps.mjs scripts/check-config-claims.mjs scripts/check-doc-facts.mjs scripts/check-writable.mjs scripts/check-config-keys.mjs scripts/check-fallback-agreement.mjs"
+
+# STAMP-TRAP-1: the stamp guard runs against the STAGED tree HERE, and only here.
+#
+# Its ordinary mode reports a dirty dependency as PENDING - a REPORT, not a failure - which is right
+# for an ad-hoc run and exactly wrong at commit time, because the stamp goes stale the instant the
+# commit lands. That is what put master red twice on the day CONTENDER-ZOOM shipped: verify was run
+# on an uncommitted camera change, printed PENDING, and read GREEN. The guard's own header warns
+# about that path in prose; this is the line that makes it a rule.
+guard_args() {
+  case "$1" in
+    scripts/check-measured-stamps.mjs) echo "--staged" ;;
+    *) echo "" ;;
+  esac
+}
 i=0
 for guard in $guards
 do
   i=$((i + 1))
-  node "$guard" >"/tmp/ra-guard-$i.out" 2>&1 &
+  # shellcheck disable=SC2046 - guard_args returns a flag or nothing, and must word-split.
+  node "$guard" $(guard_args "$guard") >"/tmp/ra-guard-$i.out" 2>&1 &
   eval "pid_$i=\$!"
 done
 i=0
 for guard in $guards
 do
   i=$((i + 1))
-  eval "wait \$pid_$i"
-  if [ $? -eq 0 ]; then
+  # STAMP-TRAP-1: `wait` IS THE CONDITION, not a bare command followed by a $? test.
+  #
+  # Husky runs this script as `sh -e` (see .husky/_/h). Under -e a bare failing command aborts the
+  # script immediately - so the moment any guard failed, the shell exited HERE, before the replay
+  # below and before the "COMMIT BLOCKED" line. The hook refused the commit and could not say why:
+  # the operator got `husky - pre-commit script failed (code 1)` and nothing else. A command used as
+  # an `if` condition is exempt from -e, which is the whole fix.
+  if eval "wait \$pid_$i"; then
     fast_pass=$((fast_pass + 1))
   else
     fast_fail=$((fast_fail + 1))

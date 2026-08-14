@@ -322,6 +322,94 @@ if (found === 0) {
 // and reports uncommitted changes that will make a stamp stale the moment they are committed. This
 // is a REPORT, never a failure — failing on it would make the guard un-runnable mid-edit.
 //
+// ── --staged: THE ONE MOMENT WHERE PENDING IS THE WRONG ANSWER (STAMP-TRAP-1) ───────────────────
+//
+// The report below is right for an ad-hoc run and EXACTLY WRONG at commit time, and that cost master
+// two red CI runs on the day CONTENDER-ZOOM shipped. The sequence is not exotic — it is what
+// following the ceremony looks like:
+//
+//   1. change client/src/modules/camera/, do not commit yet
+//   2. `npm run verify` — the guard prints PENDING, a REPORT, and the run reads GREEN
+//   3. commit
+//   4. the stamp is stale from that instant, and the next CI run is red
+//
+// The header above warns about this exact path in prose. Prose is not a guard. `--staged` makes the
+// tool enforce what the prose asks, at the only moment the answer is knowable: the change is STAGED,
+// so it is about to exist, and "will this commit make a stamp stale" has a real answer.
+//
+// WHAT COUNTS AS HAVING DONE THE WORK. The guard cannot validate the new stamp's SHA — it names the
+// commit being made, which does not exist yet, and no cleverness changes that. What it CAN see is
+// whether the author RE-STAMPED IN THIS SAME COMMIT: the stamp's own MEASURED line staged as
+// modified. That is a real signal and it is not satisfied by accident.
+//
+// It stays out of the way otherwise: no staged change under a stamp's dependencies, nothing to say.
+const STAGED_MODE = process.argv.includes("--staged");
+
+/** Files staged for commit under `paths` — the changes that are ABOUT to exist. */
+const stagedUnder = (paths) => {
+  try {
+    return execFileSync(
+      "git",
+      ["diff", "--cached", "--name-only", "--", ...paths],
+      { cwd: ROOT, encoding: "utf8" },
+    )
+      .split(String.fromCharCode(10))
+      .map((l) => l.trim())
+      .filter(Boolean);
+  } catch {
+    return [];
+  }
+};
+
+/** True when this commit also stages a change to the stamp's own MEASURED line. */
+const stampRestampedInThisCommit = (doc, what) => {
+  try {
+    return execFileSync("git", ["diff", "--cached", "-U0", "--", doc], {
+      cwd: ROOT,
+      encoding: "utf8",
+    })
+      .split(String.fromCharCode(10))
+      .some(
+        (l) => l.startsWith("+") && l.includes("MEASURED:") && l.includes(what),
+      );
+  } catch {
+    return false;
+  }
+};
+
+if (STAGED_MODE) {
+  let trapped = 0;
+  for (const { doc, what, paths } of STAMPS) {
+    const staged = stagedUnder(paths);
+    if (!staged.length) continue;
+    if (stampRestampedInThisCommit(doc, what)) {
+      console.log(
+        `check-measured-stamps: ${doc}: "${what}" — dependency staged AND the stamp re-stamped in ` +
+          `the same commit. That is the shape this mode asks for.`,
+      );
+      continue;
+    }
+    trapped++;
+    console.error(
+      `FAIL: ${doc}: "${what}" will be STALE the moment this commit lands. ` +
+        `${staged.length} staged change(s) under ${paths.join(", ")}:` +
+        staged.map((d) => `${NL}         ${d}`).join("") +
+        `${NL}      The stamp's own MEASURED line is NOT staged, so nothing in this commit ` +
+        `re-measures it.` +
+        `${NL}      Re-run the measurement and re-stamp HERE — or, if the change cannot have moved` +
+        `${NL}      those numbers, re-stamp deliberately and say why in the commit message. Do not` +
+        `${NL}      just edit the date.` +
+        `${NL}      (--staged is the PRE-COMMIT position. An ad-hoc run reports PENDING instead and` +
+        `${NL}      does not fail, which is correct there and was exactly wrong here.)`,
+    );
+  }
+  console.log(
+    `check-measured-stamps --staged: ${STAMPS.length} stamp(s) checked against the STAGED tree, ` +
+      `${trapped} would go stale.`,
+  );
+  if (trapped > 0) process.exit(1);
+}
+
 // THE COUNT PRINTS EVEN WHEN IT IS ZERO, so "no PENDING" is a statement rather than an absence.
 let pending = 0;
 for (const { doc, what, paths } of STAMPS) {
@@ -346,7 +434,9 @@ for (const { doc, what, paths } of STAMPS) {
       dirty.map((d) => `${NL}         ${d}`).join("") +
       `${NL}         This guard CANNOT check a commit that does not exist yet, so this is a ` +
       `REPORT and not a failure.` +
-      `${NL}         Re-measure and re-stamp in the commit you are about to make.`,
+      `${NL}         Re-measure and re-stamp in the commit you are about to make.` +
+      `${NL}         (At COMMIT time this is a FAILURE, not a report — see --staged, which the ` +
+      `pre-commit hook uses.)`,
   );
 }
 console.log(
