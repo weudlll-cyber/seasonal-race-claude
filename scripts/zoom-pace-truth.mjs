@@ -136,6 +136,14 @@ for (const geo of loadTracks({ only: ONLY })) {
           worldW,
           flowPx,
           lineCeil: fp.ceilings?.line ?? Infinity,
+          // ZOOM-PACE-4: resolveCamera is the LAST authority on width and only ever LOOSENS, in
+          // discrete 10% steps. `requested` is what the ceilings asked for; `resolved` is what came
+          // back. Their ratio is how much widening the fit is buying this frame.
+          guaranteed: fp.guaranteed,
+          runInCeil: fp.runInCeiling,
+          reqZoom: d._resolveProbe?.requested ?? null,
+          resZoom: d._resolveProbe?.resolved ?? null,
+          adapted: !!d._resolveProbe?.wasZoomAdapted,
           ts,
           prog,
           hud: d.hudState,
@@ -245,6 +253,60 @@ for (const geo of loadTracks({ only: ONLY })) {
       `SET COLLAPSE: the pinned set's extent goes ${extent0.toFixed(0)} → ${extentEnd.toFixed(0)} world px ` +
         `across the photo finish (${pfRows.length} frames); its ceiling is Infinity on ${relFrames} of them.`,
     );
+    // ── IS THERE A DISCONTINUITY AT ALL? (ZOOM-PACE-4) ──────────────────────────────────────────
+    // The largest SINGLE-FRAME ratio in the target and in the run-in ceiling. A step shows up here
+    // as a large number; a smooth curve, however steep, does not. Consecutive frames — no sampling.
+    let worstT = { r: 1 }, worstL = { r: 1 };
+    for (let i = 1; i < trace.length; i++) {
+      const a = trace[i - 1], b = trace[i];
+      if (a.target > 0 && b.target > 0) {
+        const r = Math.max(b.target / a.target, a.target / b.target);
+        if (r > worstT.r) worstT = { r, i, a, b };
+      }
+      if (Number.isFinite(a.lineCeil) && Number.isFinite(b.lineCeil) && a.lineCeil > 0 && b.lineCeil > 0) {
+        const r = Math.max(b.lineCeil / a.lineCeil, a.lineCeil / b.lineCeil);
+        if (r > worstL.r) worstL = { r, i, a, b };
+      }
+    }
+    {
+      const withReq = trace.filter((r) => r.reqZoom > 0 && r.resZoom > 0);
+      let worstW = { r: 1 };
+      for (let i = 1; i < withReq.length; i++) {
+        const a = withReq[i - 1], b = withReq[i];
+        const wa = a.reqZoom / a.resZoom, wb = b.reqZoom / b.resZoom;
+        const r = Math.max(wb / wa, wa / wb);
+        if (r > worstW.r) worstW = { r, a, b, wa, wb };
+      }
+      console.log(
+        `
+RESOLVECAMERA WIDENING (requested / resolved): largest single-frame change x${worstW.r.toFixed(3)}` +
+          (worstW.a
+            ? ` — ${worstW.wa.toFixed(2)}x -> ${worstW.wb.toFixed(2)}x widening at prog ${worstW.b.prog.toFixed(4)}` +
+              `, adapted ${worstW.a.adapted} -> ${worstW.b.adapted}`
+            : ""),
+      );
+    }
+    {
+      const i = trace.findIndex((r) => r.prog >= 0.9701);
+      for (const k of [i - 2, i - 1, i, i + 1, i + 2]) {
+        const f = trace[k];
+        if (!f) continue;
+        console.log(
+          `  prog ${f.prog.toFixed(4)}  hud ${f.hud.padEnd(13)} guaranteed ${f.guaranteed.toFixed(2).padStart(7)}` +
+            `  runInCeil ${(Number.isFinite(f.runInCeil) ? f.runInCeil.toFixed(2) : "inf").padStart(7)}` +
+            `  ceilings.line ${(Number.isFinite(f.lineCeil) ? f.lineCeil.toFixed(2) : "inf").padStart(7)}` +
+            `  target ${f.target.toFixed(2).padStart(7)}  state ${f.state.toFixed(2)}`,
+        );
+      }
+    }
+    console.log(
+      `
+LARGEST SINGLE-FRAME JUMP — target x${worstT.r.toFixed(3)}` +
+        (worstT.a ? ` (${worstT.a.target.toFixed(2)} -> ${worstT.b.target.toFixed(2)} at prog ${worstT.b.prog.toFixed(4)}, ${worstT.a.binding}->${worstT.b.binding})` : "") +
+        `;  run-in ceiling x${worstL.r.toFixed(3)}` +
+        (worstL.a ? ` (${worstL.a.lineCeil.toFixed(2)} -> ${worstL.b.lineCeil.toFixed(2)} at prog ${worstL.b.prog.toFixed(4)})` : ""),
+    );
+
     // ── THE RUN-IN CEILING AS A CURVE (ZOOM-PACE-1 §3) ──────────────────────────────────────────
     // He finds it implausible that the rule which opens the shot to 1.5 is later the thing holding
     // at 9. Sampled here so the answer is a curve rather than an assertion.

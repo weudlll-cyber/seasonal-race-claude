@@ -451,6 +451,21 @@ is dated and recorded HERE, where a reader on their way to the report will pass 
 
 ## Camera / presentation fixes
 
+- [ZOOM-PACE-4.md](ZOOM-PACE-4.md) — **the leap is MY corridor cap switching on, and the `binding`
+  probe was lying** (2026-08-14, `feat/contender-zoom` @ `b29e8a68`, **built, graded, REVERTED**).
+  The corrected part 1 — easing the anchor's destination across a state change — works mechanically
+  (the forward fraction now interpolates 0.564 → 0.500 instead of snapping) and **does not flatten
+  the leap**: 467 ms, shrink/s −2.912 → −2.915, flow 565 → 632 px/s. Reverted. **The real cause, at
+  true frame resolution:** `guaranteed` is 10.02 while `ceilings.line` is 3.03 — a `Math.min` above
+  one of its own terms — because CONTENDER-ZOOM-1's `guaranteed = Math.max(guaranteed, _corridorCap)`
+  switches on the frame PHOTO_FINISH is entered. The run-in ceiling moves only ×1.225 across that
+  frame and `resolveCamera` never widens at all. **`_binding` is the argmin over `_ceilings`,
+  computed BEFORE the cap is applied**, so it reports `line` on every frame the cap actually decides
+  — which is why ZOOM-PACE-1, -2 and -3 each named a different wrong cause and two builds measured as
+  no-ops. Fix the probe first. The repair is to give the cap a duration, but two prior questions are
+  the owner's: whether the cap survives at all (it ships OFF for costing participants), and whether
+  it should engage on a state predicate rather than the run-in's own progress.
+
 - [ZOOM-PACE-3.md](ZOOM-PACE-3.md) — **part 1's premise is refuted: it is the ANCHOR that steps, not
   the zoom** (2026-08-14, `feat/contender-zoom` @ `4349e5d1`, **NOTHING BUILT — product source
   untouched**). Part 1 was built as specified — easing `stateZoom` across LEADER_ZOOM → PHOTO_FINISH
