@@ -4769,7 +4769,14 @@ if (isMain) {
               finishT,
               seed,
               raceIdx,
-              targetRank,
+              // THE KEY IS `sollRank` AND MUST STAY `sollRank` — DOC-AUDIT-1 renamed the variable to
+              // `targetRank` while this was SHORTHAND property syntax, so the EMITTED COLUMN was
+              // renamed with it. `fairness-stats.mjs` reads `r.sollRank`, got undefined, and
+              // `bandIndexOfRank(undefined)` returns a constant 4 — every start row's band hit rate
+              // fell to 0.000. The world fingerprint hashes these rows INCLUDING their key names, so
+              // it moved too, while the race itself was byte-identical. Written explicitly rather
+              // than as shorthand so the variable can never rename the column again.
+              sollRank: targetRank,
               sollBereich,
               // B2-leak trace field: only added under --b2-trace, so no-flag rawData stays byte-identical.
               ...(B2_TRACE
