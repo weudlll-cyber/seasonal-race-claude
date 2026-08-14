@@ -451,6 +451,22 @@ is dated and recorded HERE, where a reader on their way to the report will pass 
 
 ## Camera / presentation fixes
 
+- [ZOOM-PACE-5.md](ZOOM-PACE-5.md) — **the cap arrives instead of appearing, and the probe stops
+  lying** (2026-08-14, `feat/contender-zoom`, **NOT merged, nothing minted**). **The probe first:**
+  `_binding` was the argmin over `_ceilings` while the corridor cap is applied afterwards, so it
+  named `line` on every frame the cap decided the shot — the defect behind three wrong causes and two
+  no-op builds. It now names the term the delivered zoom is equal to, whatever stage produced it, and
+  at prog 0.9701 it reads `line -> corridor-cap`. **Shape (b) was built first and FAILED:** hanging
+  the cap on the run-in's continuous progress flattened the leap and let the cap ESCAPE the finish
+  shot — OVERVIEW's `visibleCorridors` 1.5 → 0.469, caught by four convergence tests — because the
+  run-in composes during OVERVIEW and LEADER_ZOOM too. **So (a):** scope stays PHOTO_FINISH, the
+  onset gets a duration (`corridorCapArriveMs`, 1500 ms, one Dev Screen control). The ×4.057
+  single-frame step is **gone**; the inward move spreads from 467 ms at −2.912 shrink/s to 1400 ms at
+  about −0.93, and the run-in's wide opening is preserved (2006 px). **And the cap now costs
+  nothing:** contenders not whole 3.4% with the cap nulled vs 3.4% with it arriving, against master's
+  10.3% — CONTENDER-ZOOM-1's 57.3% → 81.7% was the shock plus the wrong yardstick, as the owner
+  suspected. verify PASS 18 FAIL 0.
+
 - [ZOOM-PACE-4.md](ZOOM-PACE-4.md) — **the leap is MY corridor cap switching on, and the `binding`
   probe was lying** (2026-08-14, `feat/contender-zoom` @ `b29e8a68`, **built, graded, REVERTED**).
   The corrected part 1 — easing the anchor's destination across a state change — works mechanically

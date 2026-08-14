@@ -292,6 +292,9 @@ export class CameraDirector {
     // Diagnostic: entry-phase convergence tracking
     this._entryStartTs = null;
     this._lastTs = 0;
+    // ZOOM-PACE-5: the corridor cap's arrival — this frame's clock, and when the shot began.
+    this._frameTs = 0;
+    this._photoFinishEnteredTs = null;
     this._lastDt = 1000 / FRAME_RATE;
     this._lastEntryDeltaZoom = 0;
     this._lastEntryDeltaX = 0;
@@ -569,6 +572,7 @@ export class CameraDirector {
     this._runInShot = t.runInShot;
     this._runInOpenMs = t.runInOpenMs;
     this._contenderZoom = t.contenderZoom;
+    this._corridorCapArriveMs = t.corridorCapArriveMs;
     this._comebackCooldownMs = t.comebackCooldownMs;
     this._leadChangeCooldownMs = t.leadChangeCooldownMs;
     this._battleWeight = t.battleWeight;
@@ -1498,6 +1502,11 @@ export class CameraDirector {
       // representations of one intent is the defect family this repair exists to end. It was also a
       // permanent mutation of a shared map: nothing ever restored it, so every later OVERVIEW entry
       // in that race inherited the finish's slow entry TC.
+      // ZOOM-PACE-5: when the photo-finish shot began, which is what the cap's arrival is measured
+      // from. Set on entry only, so a repeat transition inside the shot does not restart it.
+      if (nextState === CAM_STATE.PHOTO_FINISH && prevState !== CAM_STATE.PHOTO_FINISH) {
+        this._photoFinishEnteredTs = ts;
+      }
       if (nextState === CAM_STATE.OVERVIEW && !this._inFinishMode) {
         // CAMERA-ZOOM-UNIT-1: OVERVIEW snaps to its TRACK-WIDTHS setting, the same rule the other
         // four states run. What stood here before derived the zoom from a target sprite size
@@ -2160,13 +2169,50 @@ export class CameraDirector {
    *
    * @returns {number|null} a cam.zoom FLOOR, or null when nothing should be capped
    */
+  /**
+   * HOW MUCH OF THE CAP APPLIES THIS FRAME — a continuous weight, not a switch (ZOOM-PACE-5).
+   *
+   * THE CAP USED TO APPEAR IN ONE FRAME. Its scope was `state === PHOTO_FINISH`, which is a CUT by
+   * construction: on the frame the state changed it went from absent to fully applied and took the
+   * target from 2.47 to 10.02 — measured, the whole of the "leap" the owner objects to.
+   *
+   * SO IT HANGS ON A CONTINUOUS QUANTITY INSTEAD, and the run-in already owns exactly one:
+   * `_runInProgress`, 0 where the endgame window opens and 1 at the line, clamped monotone. **No
+   * duration, no easing and no new number** — the cap's demand simply grows with the leader's own
+   * approach, which is the quantity the whole endgame is already written in.
+   *
+   * PAST THE RUN-IN it is 1. The run-in releases at the crossing, by which point progress has
+   * already reached 1, so the hand-over is continuous rather than another step.
+   */
+  _corridorCapWeight() {
+    // ── (b) WAS TRIED FIRST AND IT FAILED — recorded so it is not tried again ──────────────────
+    //
+    // The honest shape is to hang the cap on a continuous quantity instead of a state predicate,
+    // and the run-in already owns one: `_runInProgress`. Built that way, the leap did flatten — and
+    // the cap ESCAPED THE FINISH SHOT. The run-in composes during OVERVIEW and LEADER_ZOOM too, so
+    // the cap began tightening mid-race states in the endgame: `visibleCorridors` in OVERVIEW went
+    // from its 1.5 setting to 0.469, caught by four convergence tests. The run-in's progress is
+    // continuous but it is not CONFINED to the shot the owner's rule is about, and confining it
+    // again would reintroduce the same cut.
+    //
+    // SO THE SCOPE STAYS `PHOTO_FINISH` AND THE ONSET GETS A DURATION.
+    if (this.state !== CAM_STATE.PHOTO_FINISH) return 0;
+    if (this._photoFinishEnteredTs === null || !(this._corridorCapArriveMs > 0)) return 1;
+    const k = ((this._frameTs ?? 0) - this._photoFinishEnteredTs) / this._corridorCapArriveMs;
+    if (!(k > 0)) return 0;
+    if (k >= 1) return 1;
+    // The SAME smoothstep the glide uses, so the two cannot disagree about the shape of a move.
+    return k * k * (3 - 2 * k);
+  }
+
   _corridorWidthCap(subjects, frameSize) {
-    // PHOTO_FINISH ONLY, and the first draft of this got it wrong in a way worth recording.
-    // Scoping by `GUARANTEE.PAIR` looks equivalent and is not: BATTLE_ZOOM and LEAD_CHANGE are pair
-    // states too, and they are mid-race shots the owner's rule says nothing about. With the cap
-    // reaching them, `check-runin-frame` went red — 14 frames with NO racer on screen at all on
-    // searound, the narrowest corridor, in BATTLE_ZOOM. The rule is about the finish; so is this.
-    if (this.state !== CAM_STATE.PHOTO_FINISH) return null;
+    // THE ENDGAME, not one state. An earlier draft scoped this by `GUARANTEE.PAIR`, which looks
+    // equivalent and is not: BATTLE_ZOOM and LEAD_CHANGE are pair states too, and with the cap
+    // reaching them `check-runin-frame` went red — 14 frames with NO racer on screen at all on
+    // searound. Scoping it to PHOTO_FINISH fixed that and introduced the step. The weight above is
+    // what keeps it off the mid-race shots now: outside the run-in and outside the photo finish it
+    // is 0, so this value is computed and then applied not at all.
+    if (this._corridorCapWeight() <= 0) return null;
     if (!subjects?.point || !(this._trackWidthPx > 0)) return null;
     const at = anchorScreenPoint(
       frameSize.width,
@@ -2878,6 +2924,9 @@ export class CameraDirector {
    * same guarantee and the same position step as everything else.
    */
   _setTargets(racers, canvasW, canvasH, raceState, ts = this._lastTs ?? 0) {
+    // ZOOM-PACE-5: the arrival needs THIS frame's clock. `_lastTs` is not it — `update()` writes
+    // that AFTER `_setTargets` returns, so reading it here gives the previous frame's time.
+    this._frameTs = ts;
     const focusRacers = this._focusRacers(racers);
     const frameSize = { width: canvasW, height: canvasH };
     const framing = framingFor(this.state);
@@ -3026,7 +3075,14 @@ export class CameraDirector {
     // after it. How often that happens is measured rather than assumed; see the report.
     const _preCapGuaranteed = guaranteed;
     if (this._contenderZoom && _corridorCap !== null && Number.isFinite(_corridorCap)) {
-      guaranteed = Math.max(guaranteed, _corridorCap);
+      // THE BLEND IS IN LOG SPACE, and that is the same reasoning the diagnosis rested on: a scale
+      // change is perceived logarithmically, so a linear blend of zooms would still arrive as an
+      // uneven move. `w = 0` leaves the shot untouched; `w = 1` is the full cap; in between the
+      // demand grows smoothly with the leader's approach.
+      const w = this._corridorCapWeight();
+      if (w > 0 && _corridorCap > guaranteed) {
+        guaranteed = guaranteed * Math.pow(_corridorCap / guaranteed, w);
+      }
       if (Number.isFinite(_ceilings.guarantee)) {
         guaranteed = Math.min(guaranteed, _ceilings.guarantee);
       }
@@ -3060,8 +3116,25 @@ export class CameraDirector {
     // bound nobody has seen bind is a comment, and this is how that stays checkable.
     this._runInActive = this._runInComposingNow;
     this._runInBinding = this._runInActive && guaranteed >= _runInCeiling - 1e-12;
+    // ── WHAT ACTUALLY DECIDED THE DELIVERED ZOOM (ZOOM-PACE-5) ─────────────────────────────────
+    //
+    // THIS FIELD LIED, AND IT COST THREE REPORTS AND TWO NO-OP BUILDS. It was the argmin over
+    // `_ceilings` alone, while the corridor cap is applied to `guaranteed` AFTERWARDS — so on every
+    // frame the cap decided the shot, this still named whichever ceiling happened to be smallest.
+    // A trace reading it concluded the run-in was in charge when it was not, three times running.
+    //
+    // IT NOW NAMES THE TERM THAT PRODUCED `guaranteed`, whatever stage it came from. The argmin is
+    // still the answer when nothing after it moved the number; when the cap raised it, the cap is
+    // named; when the contender guarantee then clamped it back down, that is named instead. The
+    // rule is "which term is the delivered zoom equal to", not "which ceiling was smallest".
     let _binding = 'state';
     for (const k of Object.keys(_ceilings)) if (_ceilings[k] < _ceilings[_binding]) _binding = k;
+    if (guaranteed > _preCapGuaranteed + 1e-12) {
+      _binding =
+        _corridorCap !== null && Math.abs(guaranteed - _corridorCap) <= 1e-9
+          ? 'corridor-cap'
+          : 'guarantee-after-cap';
+    }
     this._framingProbe = {
       ceilings: _ceilings,
       binding: _binding,

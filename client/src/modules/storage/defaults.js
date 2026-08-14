@@ -640,6 +640,21 @@ export const DEFAULT_CAMERA_CONFIG = {
   //
   // Off restores the pre-2026-08-13 composition exactly — measured, both fingerprints byte-identical.
   contenderZoom: true,
+  // ── AND THE CAP ARRIVES INSTEAD OF APPEARING (ZOOM-PACE-5) ────────────────────────────────────
+  // How long the corridor cap takes to reach full strength once the photo-finish shot begins.
+  //
+  // WHAT IT COMPENSATES FOR, stated because a duration is the weaker of the two shapes tried. The
+  // cap's scope is `state === PHOTO_FINISH`, which is a CUT by construction: it went from absent to
+  // fully applied in one frame and took the target 2.47 -> 10.02, which is the whole of the "leap"
+  // the owner objected to. The honest repair was to hang it on a continuous quantity instead — the
+  // run-in's own progress — and that was BUILT AND MEASURED AND FAILED: the run-in composes during
+  // OVERVIEW and LEADER_ZOOM too, so the cap escaped the finish shot and tightened mid-race states
+  // (OVERVIEW's visibleCorridors 1.5 -> 0.469, caught by four tests). The scope has to stay a state,
+  // so the onset needs a duration. This number is what that costs.
+  //
+  // 1500 ms: the 4x arrival spread over it gives about 0.9 halvings/s of visible width, against the
+  // 2.9 the step delivered. Longer is calmer and spends more of the shot arriving.
+  corridorCapArriveMs: 1500,
   // ── THE START CEREMONY (START-CEREMONY-CAMERA-1) ───────────────────────────────────────────────
   // The race opens on the whole track, held still, then eases in to the starting formation until it
   // is as large as it can be with every racer still in frame. Both ends are GEOMETRY and neither is

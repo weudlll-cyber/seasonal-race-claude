@@ -79,6 +79,10 @@ const N_RACERS = Number(argOf("racers", "20"));
 const ARMS = {
   off: { contenderZoom: false },
   contenders: { contenderZoom: true },
+  // ZOOM-PACE-5 §3: the contender SET without the corridor CAP. One key controls both today, so the
+  // cap is nulled on the instance instead of being switched — a measurement, not a candidate build,
+  // and the only way to price the two halves separately.
+  "contenders-nocap": { contenderZoom: true },
 };
 const ARM = argOf("arm", "off");
 // --lane-only reproduces the previous, half-stated rule for comparison.
@@ -158,6 +162,7 @@ for (const geo of loadTracks({ only: ONLY })) {
     });
     const race = buildRace(geo, identity, CFG);
     const { cd, displaySize, racerType, trackWidthPx } = race;
+    if (ARM === "contenders-nocap") cd._corridorWidthCap = () => null;
     const proj = cd._proj;
     const dsScale = DEFAULT_CONFIG_WORLD.autoScaleConfig?.displaySizeScale ?? 1;
     const maxTargetPx = getEffectiveMaxTargetScreenPx(
