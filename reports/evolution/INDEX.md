@@ -451,6 +451,22 @@ is dated and recorded HERE, where a reader on their way to the report will pass 
 
 ## Camera / presentation fixes
 
+- [ZOOM-PACE-1.md](ZOOM-PACE-1.md) — **the pace is a STATE STEP, not an argmin corner**
+  (2026-08-14, `feat/contender-zoom` @ `2adba27f`, **DIAGNOSIS ONLY — nothing changed or minted**).
+  The owner sees the endgame zoom go in slowly, stall, then rush. **Both offered hypotheses are
+  refuted:** the contender set's extent does not collapse (83 → 78 world px, its ceiling Infinity on
+  0 of 274 frames), and the argmin corner fires **once** in 909 frames. **The dominant cause is a
+  state-zoom STEP** — `stateZoom` jumps 9.10 → 17.06 in one frame at LEADER_ZOOM → PHOTO_FINISH,
+  producing +16.34 zoom/s against the slow stretch's +0.23, a 34× spread. The corner is real but
+  secondary (+7.75/s), and the 2.3 s "stall" is the run-in ceiling holding ~9 while the state has
+  already asked for 17. **The stall and the final rush are PRE-EXISTING** — master has both, slightly
+  larger — so they are not a regression of the contender work; what this arm owns is the entry, **11×
+  sharper than master** (16.34 vs 1.42 zoom/s) plus the plateau that follows. On river-run 2814 it is
+  invisible because the guarantee holds the shot at 1.74 and there is almost no zoom travel to have a
+  pace in. Four options named with costs; the closed "arrive at the line" variant is worth
+  re-measuring because the ordinary zoom it undershot has itself moved. Instrument:
+  `scripts/zoom-pace-truth.mjs`.
+
 - [CONTENDER-ZOOM-1.md](CONTENDER-ZOOM-1.md) — **the corridor is the wrong quantity in BOTH
   directions** (2026-08-13, `feat/contender-zoom` off master `5d4079c3`; **NOT merged, nothing
   minted**). The owner's corrected rule: the contenders decide how tight the photo finish closes and
