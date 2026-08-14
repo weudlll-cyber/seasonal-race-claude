@@ -99,8 +99,15 @@ const ROOT = join(dirname(fileURLToPath(import.meta.url)), "..");
 // Scratch off the (OneDrive-synced) repo tree by default; env-overridable. Matches sim-fairness.mjs.
 const SCRATCH =
   process.env.RA_SCRATCH_DIR || join(tmpdir(), "racearena-scratch");
+// FP-COMPARE-1 adds `--check` to the same exception `--cheap` already has: it is not a sim flag, it
+// never reaches the sim, and it only decides whether the measured hash is COMPARED to the record
+// afterwards. Without this it lands in the label position and the refusal below fires — correctly,
+// but on a flag that is legitimate here.
+const NON_SIM_FLAGS = new Set(["--cheap", "--check"]);
 const LABEL =
-  process.argv[2] && process.argv[2] !== "--cheap" ? process.argv[2] : "run";
+  process.argv[2] && !NON_SIM_FLAGS.has(process.argv[2])
+    ? process.argv[2]
+    : "run";
 
 // A FLAG IN THE LABEL POSITION IS ALWAYS A MISTAKE, and it used to be a SILENT one (ONE-TRUTH-2).
 // `argv[2]` is the label and EXTRA starts at `argv[3]`, so
@@ -116,7 +123,7 @@ const LABEL =
 refuseCheapQuiet();
 const CHEAP = isCheap();
 const ARGV = process.argv.filter(
-  (a) => a !== "--cheap" && !a.startsWith("--cheap-track="),
+  (a) => !NON_SIM_FLAGS.has(a) && !a.startsWith("--cheap-track="),
 );
 if (ARGV[2]?.startsWith("--")) {
   console.error(
@@ -247,6 +254,77 @@ console.log(
 );
 for (const t of perTrack)
   console.log(" ", t.track.padEnd(15), t.hash, "bias", JSON.stringify(t.bias));
+
+// ── --check: COMPARE AGAINST THE RECORD, DO NOT MERELY PRINT (FP-COMPARE-1) ─────────────────────
+//
+// THIS GUARD MEASURED AND DID NOT CHECK, and it cost a day. On 2026-08-14 a renamed column moved
+// this hash off its recorded value; `npm run verify` ran the world fingerprint, PRINTED the new
+// number, and reported PASS 13 FAIL 0. CI was green. The defect reached master and was found only
+// because a later audit happened to read the value. (The two hashes are deliberately NOT written
+// here — ONE-TRUTH-1: `docs/fingerprints.json` is the only home, and check-fingerprints enforces it.
+// See reports/evolution/SOLLRANK-KEY-1.md for the incident.)
+//
+// An instrument that emits a value nobody compares is not a guard. It is a log line.
+//
+// WHY IT COMPARES AGAINST THE RECORD RATHER THAN A CONSTANT: `docs/fingerprints.json` is the one
+// home (ONE-TRUTH-1), so this reads the same file `check-fingerprints.mjs` does and cannot drift
+// from it.
+//
+// A FAILURE HERE IS NOT ALWAYS A BUG. A ship that deliberately moves the world SHOULD fail this
+// until the value is minted — that is the ceremony working, and the message says so rather than
+// implying something is broken.
+if (process.argv.includes("--check")) {
+  if (CHEAP) {
+    console.log(
+      "check: SKIPPED under --cheap — a one-track hash is prefixed and cannot be compared " +
+        "against a ten-track record.",
+    );
+  } else {
+    const RECORD = join(ROOT, "docs", "fingerprints.json");
+    const role = LABEL === "off" ? "world-off" : "world";
+    let expected = null;
+    try {
+      expected =
+        JSON.parse(readFileSync(RECORD, "utf8"))?.roles?.[role]?.value ?? null;
+    } catch (e) {
+      console.error(
+        `FAIL: cannot read the fingerprint record at ${RECORD}: ${e.message}`,
+      );
+      process.exit(1);
+    }
+    if (!expected) {
+      // LOUD FAILURE (Lesson 187): a check with nothing to check against is a no-op wearing a
+      // guard's name, and that is the shape this whole block exists to end.
+      console.error(
+        `FAIL: the record declares no value for role "${role}". Nothing to check.`,
+      );
+      process.exit(1);
+    }
+    if (combinedHash !== expected) {
+      console.error(
+        `FAIL: WORLD fingerprint does not match the record.
+` +
+          `      role     : ${role}
+` +
+          `      recorded : ${expected}
+` +
+          `      measured : ${combinedHash}
+` +
+          `      If this change was NOT meant to move the world, something reached the engine that
+` +
+          `      you did not intend — start from the per-track hashes above, which localise it.
+` +
+          `      If it WAS meant to, this is the ship ceremony asking for a deliberate mint; see
+` +
+          `      docs/SHIP-CEREMONY.md. Do not edit the record to make this pass.`,
+      );
+      process.exit(1);
+    }
+    console.log(
+      `check: WORLD matches the record for role "${role}" (${expected}).`,
+    );
+  }
+}
 if (CHEAP)
   console.log(
     cheapBanner(

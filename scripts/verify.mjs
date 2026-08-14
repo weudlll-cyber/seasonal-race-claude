@@ -260,6 +260,15 @@ export function commandFor(g) {
   // or wrong, so that is the half verify asks about.
   if (g.id === "ceremony-counts")
     return { cmd: ["node", g.source, "--check-counts"] };
+  // FP-COMPARE-1: the world fingerprint must COMPARE against the record, not print and pass. It
+  // measured-and-did-not-check until 2026-08-14, when a renamed column moved the hash, verify
+  // printed the new value and reported PASS, and the defect reached master green. `--check` is
+  // inert under --cheap (a one-track hash cannot be compared to a ten-track record) and the script
+  // says so rather than passing silently.
+  if (g.id === "world-fingerprint")
+    return {
+      cmd: ["node", g.source, ...(cheap ? cheapArgs() : []), "--check"],
+    };
   const base = ["node", g.source, ...(cheap ? cheapArgs() : [])];
   // check-index is ONE guard with THREE report directories — one index discipline, not three
   // implementations. The extra invocations are argv, not routing.

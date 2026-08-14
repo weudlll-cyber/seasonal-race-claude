@@ -129,15 +129,22 @@ test("--check PASSES on the tree as committed", () => {
 });
 
 test("CONSEQUENCE: --check FAILS once the generated block is edited by hand", () => {
-  const n = hullSize();
   withCopy((copy, before) => {
-    writeFileSync(
-      copy,
-      before.replace(
-        `${n} files, 1 of them UNKNOWN.`,
-        `${n} files, 0 of them UNKNOWN.`,
-      ),
+    // THE SABOTAGE IS DERIVED, NOT TYPED. This used to hard-code "1 of them UNKNOWN", which stopped
+    // matching the moment the hull grew (FP-HULL-1 took it from 19 files to 36, and the UNKNOWN
+    // count from 1 to 13). A `replace` whose needle is absent is a NO-OP, so the copy stayed valid,
+    // `--check` passed, and the test failed claiming the guard was broken when the guard was fine.
+    // The line two tests above already said the count must come from the closure rather than a
+    // literal; this now obeys it.
+    const m = /(\d+) files, (\d+) of them UNKNOWN\./.exec(before);
+    assert.ok(m, "could not find the generated summary line to sabotage");
+    const sabotaged = `${m[1]} files, ${Number(m[2]) + 1} of them UNKNOWN.`;
+    assert.notEqual(
+      sabotaged,
+      m[0],
+      "the sabotage must actually change the text",
     );
+    writeFileSync(copy, before.replace(m[0], sabotaged));
     const r = run("--check", `--doc=${copy}`);
     assert.equal(r.status, 1);
     assert.match(r.stderr, /OUT OF DATE/);

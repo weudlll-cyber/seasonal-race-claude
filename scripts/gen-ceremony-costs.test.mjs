@@ -123,7 +123,17 @@ test("--check-counts FAILS when the block is missing entirely", () => {
 
 test("--counts REPAIRS a sabotaged block, and repairing it is idempotent", () => {
   withCopy((copy, text) => {
-    writeFileSync(copy, text.replace(/\| 20 \|/, "| 999 |"));
+    // THE SABOTAGE IS DERIVED, NOT TYPED. This used to look for the literal `| 20 |`, and the moment
+    // the engine-reach hull grew (FP-HULL-1: 19 files to 36) that cell held a different number. A
+    // `replace` whose needle is absent is a NO-OP, so the copy stayed VALID, --check-counts passed,
+    // and the test failed while reporting that the generator was broken. It now finds whatever
+    // numeric cell is actually there and corrupts that.
+    const cell = /\| (\d+) \|/.exec(text);
+    assert.ok(
+      cell,
+      "no numeric cell found in the generated counts block to sabotage",
+    );
+    writeFileSync(copy, text.replace(cell[0], "| 999999 |"));
     assert.equal(run("--check-counts", `--doc=${copy}`).status, 1);
     assert.equal(run("--counts", `--doc=${copy}`).status, 0);
     assert.equal(run("--check-counts", `--doc=${copy}`).status, 0);

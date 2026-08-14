@@ -35,6 +35,53 @@ const ROOT = join(dirname(fileURLToPath(import.meta.url)), "..");
 export const MODULES_DIR = join(ROOT, "client", "src", "modules");
 const ENTRY = join(MODULES_DIR, "raceCore.js");
 
+// ── THE HULL IS NOT ONLY WHAT raceCore IMPORTS (FP-HULL-1) ─────────────────────────────────────
+//
+// `raceCore.js`'s import closure answers "what does the engine read". It does NOT answer "what can
+// change the world fingerprint", and the two came apart on 2026-08-14: the fingerprint is produced
+// by `scripts/sim-fairness.mjs`, which DRIVES the engine and emits the rows that get hashed. It is
+// not imported by raceCore, so it was outside the closure by construction — and this script
+// answered "none of 11 path(s) can reach the race engine" for a change that moved the fingerprint.
+//
+// `fingerprint-default.mjs` had already declared the truth in its own GUARD block
+// (`reach: [raceCore.js, sim-fairness.mjs]`). Nothing read it. So the entry points are now taken
+// FROM THAT DECLARATION rather than restated here — one home, and a guard that changes what it
+// drives updates this automatically.
+//
+// Read by spawning `--declare`, which prints the block and exits before any measuring, because the
+// guard is a script with top-level side effects and importing it would run a fingerprint.
+const GUARDS_DECLARING_REACH = ["scripts/fingerprint-default.mjs"];
+
+let _declaredCache = null;
+function declaredReachEntries() {
+  if (_declaredCache) return _declaredCache;
+  const out = [];
+  for (const g of GUARDS_DECLARING_REACH) {
+    try {
+      const json = execFileSync(
+        process.execPath,
+        [join(ROOT, g), "--declare"],
+        {
+          encoding: "utf8",
+          stdio: ["ignore", "pipe", "pipe"],
+        },
+      );
+      for (const r of JSON.parse(json).reach ?? []) out.push(join(ROOT, r));
+    } catch {
+      // A guard that cannot declare must not silently shrink the hull to nothing, so the engine
+      // entry below still stands on its own. The failure is visible as a smaller closure, which
+      // engine-reach.test.mjs's floor assertion catches.
+    }
+  }
+  _declaredCache = out;
+  return out;
+}
+
+/** Every entry point the world fingerprint can be reached from — the engine plus its declared driver. */
+export function entryPoints() {
+  return [...new Set([ENTRY, ...declaredReachEntries()])];
+}
+
 /** Every relative specifier a file imports from. Static `from '...'` edges only — see the header. */
 export function importSpecifiers(src) {
   return [...src.matchAll(/from\s+["']([^"']+)["']/g)]
@@ -94,7 +141,8 @@ export function hasDynamicImport(src) {
  * @returns {{files: string[], dynamic: string[]}} `dynamic` names any reached file the walk cannot
  *   fully follow — it must be empty for this script to be the authority it claims to be.
  */
-export function engineReach(entry = ENTRY) {
+export function engineReach(entry = entryPoints()) {
+  const entries = Array.isArray(entry) ? entry : [entry];
   const seen = new Set();
   const dynamic = [];
   const walk = (file) => {
@@ -106,7 +154,7 @@ export function engineReach(entry = ENTRY) {
     for (const spec of importSpecifiers(src))
       walk(resolve(dirname(real), spec));
   };
-  walk(entry);
+  for (const e of entries) walk(e);
   const rel = (f) => relative(ROOT, f).split(sep).join("/");
   return { files: [...seen].map(rel).sort(), dynamic: dynamic.map(rel).sort() };
 }
