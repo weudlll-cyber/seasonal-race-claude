@@ -633,9 +633,21 @@ and it says so itself. It also covers nothing else on this page; see its header 
 | LEADER_ZOOM   | 17788  | 4.05      | 9.32   |
 | LEAD_CHANGE   | 7789   | 4.55      | 22.17  |
 | OVERVIEW      | 4303   | 2.65      | 16.00  |
-| PHOTO_FINISH  | 1865   | 5.06      | 26.61  |
+| PHOTO_FINISH  | 1865   | 5.33      | 26.85  |
 
 OVERVIEW median 2.65 pp against every other state pooled 4.64 pp (ratio 0.57×).
+
+**RE-MEASURED FOR ZOOM-PACE-5, AND AGAIN EXACTLY ONE ROW MOVES.** PHOTO_FINISH's median goes
+**5.06 → 5.33 pp** and its p95 **26.61 → 26.85**, on an unchanged frame count of 1865; every other
+state is identical to the digit and pooled is unmoved at 4.64. The corridor cap now arrives over
+1500 ms instead of in one frame, so the shot spends longer moving and the live camera trails it for
+more of the shot — a slightly larger lag, in exchange for the step the owner objected to.
+
+**THIS STAMP WENT STALE ON MASTER AND CI CAUGHT IT.** The guard's own header warns about exactly the
+path taken: `npm run verify` was run while the camera change was still UNCOMMITTED, so the guard
+printed its PENDING line — a report, not a failure — and the run read green. The moment the change
+was committed the stamp was stale, and the next CI run went red. **The PENDING line is the warning,
+and it has to be acted on before the commit, not after.**
 
 **RE-MEASURED FOR CONTENDER-ZOOM-1, AND EXACTLY ONE ROW MOVES — which is the point of measuring it.**
 PHOTO_FINISH's median lag rises **4.71 → 5.06 pp** and its p95 FALLS **29.80 → 26.61**, on an
