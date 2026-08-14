@@ -700,7 +700,52 @@ is dated and recorded HERE, where a reader on their way to the report will pass 
   during a race, so emitting a narrow record plus `React.memo` needs no change to the row's markup —
   under an hour, orthogonal to the cadence, and justified only if he picks 250 for feel and still
   drops frames.
-  ||||||| 570a8505
+- [FRAME-GAP-3.md](FRAME-GAP-3.md) — **IT IS THE STANDINGS LIST. THE BACKGROUND LAYER COSTS NOTHING,
+  AND THE PREDICTION WAS WRONG** (branch `feat/frame-gap-3` off `80f772fe`; **diagnosis only, no
+  source file changed, React untouched**; all four fingerprints re-run and unchanged). FRAME-GAP-2
+  hid two things at once; this separates them and changes nothing else — the `aside` is never hidden,
+  only the `.scoreboard` inside it, so `cssBox` is **identical in all four arms** (FRAME-GAP-2's A-off
+  moved it 1021×575 → 1037×583, a confound now removed). **Eight batches of 900 frames at the large
+  window, three at the small.** **ARM 2 (background layer present, list hidden) IS EXACTLY THE FLOOR**:
+  `rafLate` p90 **0.6 ms in eleven batches out of eleven**, **zero missed frames in 9900** —
+  indistinguishable from arm 4, so the owner's predicted culprit is refuted in the strongest form the
+  design allows. **ARM 3 (list present, bg hidden) is elevated in every batch** (`rafLate` p90 1.4–4.0
+  against the 0.6 floor) and produces missed frames where arms 2 and 4 produce none. **NOT
+  OVERCLAIMED**: arm 1's 56 misses are dominated by one batch of 48; excluding it, arm 1 (8/6300) and
+  arm 3 (6/6300) are the same — the list reproduces essentially the whole effect alone, and the
+  background layer only occasionally amplifies it. **THE RATE IS STILL NOT REPRODUCED**: worst arm
+  5.33 %, pooled 0.78 %, against his 40 % — **fifty times short** across ~40 000 measured frames.
+  **No long tasks inside any measured window** (the single ~4 s entry per arm is the harness's own
+  scene build), so the missed vsyncs are NOT ≥50 ms JS blocks. **THE CULPRIT NAMED**: `setScoreboard`
+  fires every 250 ms and hands React a fresh 100-element array via
+  `[...st.racers].sort(...).map((r,i) => ({...r, rank: i+1}))` — every row gets a new object identity,
+  so all 100 keyed rows re-render and re-order; the other three in-loop setState calls are guarded by
+  change checks or fire once. **Fix named, not built**: cut the 250 ms cadence (one number), or stop
+  minting new row objects and memoise the row. The background canvas — a second `<canvas>` at
+  6144×4096 whose `style.transform` is rewritten every frame — **measured free, so there is nothing to
+  fix there**, which is the useful half of a refuted prediction.
+
+
+- [FRAME-GAP-2.md](FRAME-GAP-2.md) — **PRODUCTION REPRODUCED THE 33 ms FRAME, AND IT IS THE PAGE
+  AROUND THE CANVAS** (branch `feat/frame-gap-2` off `860f3a05`; **diagnosis only, no source file
+  changed, React untouched**; all four fingerprints re-run and unchanged). FRAME-GAP-1 could not make
+  a 33 ms frame and therefore could not locate one; **the dev-bundle doubt was worth testing and it
+  paid.** In a minified production build, page shown, large window: **`total` p90 33.4 ms with
+  `rafLate` p90 13.2 ms** — exactly one missed vsync, with the time spent before our code ran — and
+  the same batch with the page hidden: **16.8 ms, `rafLate` 0.8**. **THE SECOND FINDING CORRECTS
+  FRAME-GAP-1**: in production the DOM's cost **scales with window area** — at the small window it is
+  **zero** (0.7–0.8 vs 0.6) — while the dev bundle charged a flat ~2.3 ms at BOTH sizes and so masked
+  the area-dependent part. FRAME-GAP-1 demoted arm A on both counts; **both were dev artefacts**.
+  **The distribution is the finding**: A-off is stable at 0.6–0.8 everywhere, A-on at the large window
+  runs 1.0 … 3.5 with a tail to 7.1, 7.2 and 13.2 — the page does not add a fixed cost, it adds a RISK
+  of a large one. Honest limit: **1 event in ~19 arms, not his sustained 40 %**, so the mode is
+  reproduced and its rate is not; a "first arm after a fresh page build" hypothesis was tested and
+  **refuted** (2.0 / 2.2 / 1.5). Also measured: **the dev bundle costs a third of physics** (p50
+  3.4 → 2.2–2.6), and his own reported 2.6 ms is the PRODUCTION number. **Not separated**: the arm
+  hides the standings list and the 6144×4096 background layer together — that split is the next
+  measurement, and it is his call. 5173 left on `feat/frame-gap-1` with the instrument.
+
+
 - [FRAME-GAP-1.md](FRAME-GAP-1.md) — **`other` IS SPLITTABLE NOW, AND THE SPLIT SAYS THE 29 ms ARE NOT
   WHERE WE LOOKED** (branch `feat/frame-gap-1` off `570a8505`; **diagnosis only, nothing fixed**; all
   four fingerprints unchanged and engine-reach clears all four changed paths). **A NEGATIVE RESULT,
