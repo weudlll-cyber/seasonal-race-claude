@@ -39,13 +39,33 @@ the correct response is to say so in this table instead of building one.
 | 3 | **Slow-motion factor** | physics slowed during the photo-finish shot | `photoFinishSlowmoFactor` — a RATE, not a length; it stretches phase 2 rather than adding a phase | defaults.js | yes |
 | 4 | **Hold before the zoom-out** | the winner held before the camera releases | **none — it is the tail of phase 2.** There is no separate hold; FINISH_OVERVIEW begins when the drama duration expires | — | no, and none is needed |
 | 5 | **Zoom-out** | smooth pull back to the overview | `finishOverviewZoomOutDurationMs` | defaults.js | yes |
-| 6 | **The wait for the stragglers** | the rest of the field crosses and freezes on the line | **EVENT-DRIVEN** — ends when `finishedCount >= nRacers` (`RaceScreen/index.jsx`), i.e. when the last racer's `t` reaches `finishT`. **NO SLIDER, EVER.** Measured at 20 racers it is ~2.9 s and the zoom-out starts ~1.4 s BEFORE it ends | the race | **no — by design** |
+| 6 | **The wait for the stragglers** | the rest of the field crosses and freezes on the line | **EVENT-DRIVEN** — ends when `finishedCount >= nRacers` (`RaceScreen/index.jsx`), i.e. when the last racer's `t` reaches `finishT`. **NO SLIDER, EVER.** Two numbers here are UNVERIFIED — see the note below the table | the race | **no — by design** |
 | 7 | **Hold on the finish picture** | extra time on the settled shot after the field is home | `finishHoldAfterLastMs` (ENDING-HOLD-1) | defaults.js | yes — **on by default; 0 is the escape hatch** |
 | 8 | **Winner card** | the card naming the winner, over the race picture | `min(winnerCardMs, finishPauseMs)` — a TENANT of phase 9, it cannot extend the ending | defaults.js + `WinnerCard.jsx` (`winnerCardWindowMs`) | yes |
 | 9 | **Pause before the result screen** | the settled picture until the screen changes | `finishPauseMs` | defaults.js | yes |
 | 10 | **Screen transition** | fade to black, navigate, fade in | **A HARD-CODED CONSTANT: 320 ms + a 50 ms settle** | `contexts/TransitionContext.jsx` | **NO — hidden constant** |
 | 11 | **Podium build-up** | 3rd, 2nd, winner (held two beats), then the ranking | `4 x podiumRevealBeatMs`; the classes come off one beat later | defaults.js + `ResultScreen/index.jsx` | yes |
 | 12 | **Result screen settled** | the final screen, identical to the pre-feature DOM | — | — | — |
+
+### Phase 6's two numbers are UNVERIFIED, and they are flagged rather than corrected
+
+**They carry no `MEASURED:` stamp and no provenance**, so a reader has been taking them as
+established when nothing in the repository backs them. Both are removed from the table above rather
+than restated, and the audit that found them (2026-08-14) could not resolve them:
+
+- **"~2.9 s at 20 racers"** — plausible but unsourced. No harness in `scripts/` measures the interval
+  between the winner's crossing and the last racer's.
+- **"the zoom-out starts ~1.4 s before it ends"** — **doubtful**, and it is the one that matters,
+  because it is the claim that the ending does not begin before the race is over.
+  the zoom-out's own duration (`finishOverviewZoomOutDurationMs`, in defaults.js) is longer than the
+  1.4 s lead it is claimed to have, so a zoom-out beginning that late would still be running well
+  after the field is home. A separate measurement recorded the zoom-out beginning **4.4–5.9 s**
+  before the last crossing, which contradicts 1.4 s outright.
+
+**Neither was corrected, because correcting a number requires measuring it and the instrument does
+not exist.** Building it is a small job — the race already knows every racer's `finishT` and the
+director already knows when FINISH_OVERVIEW begins — and it is proposed rather than done here, since
+this audit's remit was to check the record against the source, not to add measurements to it.
 
 ### The card's own fades
 
@@ -74,7 +94,8 @@ reason is in the source beside it.
 
 - **#1 the photo-finish check** — a predicate on the race, not a duration.
 - **#6 the wait for the stragglers** — it ends when the last racer arrives. Its length is a property
-  of the RACE, and the fair-arrival world makes it short on purpose (measured ~2.9 s at 20 racers).
+  of the RACE, and the fair-arrival world makes it short on purpose (the ~2.9 s figure is
+  UNVERIFIED — see the note under the phase table).
   A "wait longer" control here would either do nothing (everyone is already home) or hold a still
   picture while pretending to wait for arrivals that have happened. `finishHoldAfterLastMs` (#7) is
   the honest version of that wish and is named for what it actually does.

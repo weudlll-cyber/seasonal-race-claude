@@ -355,5 +355,18 @@ invokes `npm run test:coverage`. That is the only place it runs, and it is where
 is a reviewer's question, not an inner-loop one.
 
 **So a slow local suite is not coverage.** Measured, the cost is concentrated elsewhere: the slowest
-ten of 179 files are **85%** of all file time, and `goldenEquality.test.js` alone is 46%. If the
-inner loop needs to get faster, that is the file to look at — not the coverage flag.
+ten of 208 files are **79%** of all file time, and **`goldenRealArm.test.js` alone is 26%** — 152 s
+of 579 s. If the inner loop needs to get faster, that is the file to look at — not the coverage flag.
+
+**THIS LINE NAMED THE WRONG FILE UNTIL 2026-08-14.** It said `goldenEquality.test.js` at 46%. Both
+halves were wrong: the file count had grown from 179 to 208, and `goldenEquality` is not the
+dominant file and may never have been. Re-measured twice, isolated and under full-suite contention,
+`goldenRealArm.test.js` wins both times — **52.8 s against 25.3 s** running the parity directory
+alone, **152 s against 36–76 s** in a whole-suite run. Anyone who acted on the old line would have
+optimised the wrong file.
+
+**These figures are NOT carried by a `MEASURED:` stamp, deliberately.** A timing claim depends on the
+whole suite, so a stamp would have to declare `client/src/` as its dependency and would then go stale
+on essentially every commit — a guard that cries wolf is worse than none. The contention spread is
+real (`goldenEquality` measured 36 s and 76 s in two runs of the same tree), so treat the shares as
+approximate and the RANKING as the finding. Measured on `a0970310`, 2026-08-14.

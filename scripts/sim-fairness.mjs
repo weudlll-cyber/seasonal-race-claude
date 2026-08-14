@@ -4210,12 +4210,12 @@ if (isMain) {
   ];
 
   console.log("\n=== sim-fairness — RaceArena Fairness Simulation ===");
-  console.log(`Rennen pro Kombination : ${N_RACES}`);
-  console.log(`Teilnehmer pro Rennen  : ${N_RACERS}`);
+  console.log(`Races per combination : ${N_RACES}`);
+  console.log(`Racers per race       : ${N_RACERS}`);
   console.log(`Racer-Typen            : ${Object.keys(RACER_CONFIGS).length}`);
   console.log(`Tracks                 : ${trackFiles.length}`);
   console.log(
-    `Gesamt-Rennen          : ${N_RACES} × ${Object.keys(RACER_CONFIGS).length} × ${trackFiles.length} × ${DURATION_VARIANTS.length} = ` +
+    `Total races            : ${N_RACES} × ${Object.keys(RACER_CONFIGS).length} × ${trackFiles.length} × ${DURATION_VARIANTS.length} = ` +
       `${N_RACES * Object.keys(RACER_CONFIGS).length * trackFiles.length * DURATION_VARIANTS.length}`,
   );
   console.log(`Output                 : ${OUT_DIR}`);
@@ -4254,7 +4254,7 @@ if (isMain) {
   if (COMEBACK_ANALYSIS) {
     if (!RACE_PLAN_ACTIVE)
       console.warn(
-        "⚠️  --comeback-analysis benötigt --race-plan=true — B1-Daten fehlen",
+        "WARNING: --comeback-analysis requires --race-plan=true — B1 data is missing",
       );
     console.log(
       `Phase-3B COMEBACK Analyse aktiv: minPositions=${CB_MIN_POSITIONS}  windowSec=${CB_WINDOW_SEC}  endgameThresh=${(CB_ENDGAME_THRESH * 100).toFixed(0)}%`,
@@ -4296,7 +4296,7 @@ if (isMain) {
     if (TRACK_FILTER && trackId !== TRACK_FILTER) continue;
     const trackPath = join(trackDataDir, `${trackId}.json`);
     if (!existsSync(trackPath)) {
-      console.warn(`  [SKIP] Track nicht gefunden: ${trackPath}`);
+      console.warn(`  [SKIP] track not found: ${trackPath}`);
       continue;
     }
     const track = JSON.parse(readFileSync(trackPath, "utf8"));
@@ -4440,7 +4440,7 @@ if (isMain) {
           );
           // Phase-3A: create Race Plan + TrajectoryController for this race when active
           let racePlanController = null;
-          let raceSollRankMap = null;
+          let raceTargetRankMap = null;
           let b1Indices = new Set();
           if (RACE_PLAN_ACTIVE) {
             // Ordered by racer index (NOT grid position) to match the browser exactly: createRacePlan
@@ -4511,9 +4511,9 @@ if (isMain) {
               seed,
             );
             racePlanController = createTrajectoryController(plan);
-            raceSollRankMap = plan._racerTargetRank;
+            raceTargetRankMap = plan._racerTargetRank;
             if (COMEBACK_ANALYSIS) {
-              for (const [idx, sr] of raceSollRankMap) {
+              for (const [idx, sr] of raceTargetRankMap) {
                 if (sr <= 5) b1Indices.add(idx);
               }
             }
@@ -4558,7 +4558,7 @@ if (isMain) {
             // RACER-FLAPPING-1: reproduce the browser's roster names (D-NAME) so the avoidance symmetry
             // tiebreak matches the owner's race. --racer-names=a,b,c (comma-separated, index order).
             racerNames: RACER_NAMES,
-            racerTargetRankMap: raceSollRankMap,
+            racerTargetRankMap: raceTargetRankMap,
             heroMap: HERO_MAP,
             gapMetrics: GAP_METRICS,
             runawayParade: RUNAWAY_PARADE,
@@ -4683,15 +4683,15 @@ if (isMain) {
             });
           }
           // Step 1: fair-chance placement metrics (requires race-plan target ranks)
-          if (raceSollRankMap) {
-            const b1Entries = [...raceSollRankMap.entries()].filter(
+          if (raceTargetRankMap) {
+            const b1Entries = [...raceTargetRankMap.entries()].filter(
               ([, sr]) => sr <= 5,
             );
             let fcExact = 0,
               fcTop5 = 0;
             // Gap B: per-starting-row breakdown (rowIndex → {b1Count, exactHits, top5Hits})
             const fcByRow = new Map();
-            for (const [racerIdx, sollRank] of b1Entries) {
+            for (const [racerIdx, targetRank] of b1Entries) {
               const rr = result.find((x) => x.racerIndex === racerIdx);
               if (!rr) continue;
               const row = rr.startRowIndex;
@@ -4699,7 +4699,7 @@ if (isMain) {
                 fcByRow.set(row, { b1Count: 0, exactHits: 0, top5Hits: 0 });
               const rd = fcByRow.get(row);
               rd.b1Count++;
-              if (rr.finalRank === sollRank) {
+              if (rr.finalRank === targetRank) {
                 fcExact++;
                 rd.exactHits++;
               }
@@ -4754,10 +4754,10 @@ if (isMain) {
 
           // Collect raw data
           for (const r of result) {
-            const sollRank = raceSollRankMap?.get(r.racerIndex) ?? null;
+            const targetRank = raceTargetRankMap?.get(r.racerIndex) ?? null;
             const sollBereich =
-              sollRank != null
-                ? BAND_EDGES.findIndex((e) => sollRank <= e) + 1 ||
+              targetRank != null
+                ? BAND_EDGES.findIndex((e) => targetRank <= e) + 1 ||
                   BAND_EDGES.length + 1
                 : null;
             rawData.push({
@@ -4769,7 +4769,7 @@ if (isMain) {
               finishT,
               seed,
               raceIdx,
-              sollRank,
+              targetRank,
               sollBereich,
               // B2-leak trace field: only added under --b2-trace, so no-flag rawData stays byte-identical.
               ...(B2_TRACE
@@ -6181,12 +6181,12 @@ if (isMain) {
 
   // Print quick summary
   const unfair = allResults.filter((r) => r.stats.pValue < 0.05);
-  console.log(`\n=== Zusammenfassung ===`);
-  console.log(`Kombinationen gesamt : ${allResults.length}`);
+  console.log(`\n=== Summary ===`);
+  console.log(`Combinations total   : ${allResults.length}`);
   console.log(`Fair (p≥0.05)        : ${allResults.length - unfair.length}`);
   console.log(`Unfair (p<0.05)      : ${unfair.length}`);
   if (unfair.length > 0) {
-    console.log("\nUnfaire Kombinationen:");
+    console.log("\nUnfair combinations:");
     for (const r of unfair) {
       const r0 = r.stats.rowStats[0];
       const exp = r0?.expectedWinRate ?? 1 / r.stats.totalRows;

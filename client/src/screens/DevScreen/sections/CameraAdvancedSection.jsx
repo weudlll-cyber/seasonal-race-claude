@@ -1492,6 +1492,30 @@ function CameraAdvancedSection() {
               }}
             />
           </div>
+          {/* CONTENDER-ZOOM-1 shipped default ON and had NO control until DOC-AUDIT-1. It gates the
+              framed SET and the lane cap together — one key, two mechanisms — which is exactly why
+              the owner needs a switch: the arrival slider below can only pace the cap, it cannot
+              answer whether the pair or the set is the right shot. */}
+          <label
+            className={s.label}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '0.5rem',
+              marginBottom: '0.75rem',
+            }}
+          >
+            <input
+              type="checkbox"
+              checked={config.contenderZoom ?? DEFAULT_CAMERA_CONFIG.contenderZoom}
+              onChange={(e) => set('contenderZoom', e.target.checked)}
+              data-testid="contender-zoom-toggle"
+            />
+            Photo finish frames everyone still abreast
+            <InfoTooltip
+              text={`ON: the photo-finish shot is sized to every racer who is still ABREAST — nearly level with the leader AND on a free lane, both conditions, no new threshold. The set is captured once at entry and is 2, 3 or 4 racers in practice. OFF: the shot frames the top two only, which is what shipped before 2026-08-14. This key also gates the lane cap (never wider than the road); the slider below paces that cap but cannot switch it. Currently: ${(config.contenderZoom ?? DEFAULT_CAMERA_CONFIG.contenderZoom) ? 'ON' : 'OFF'}.`}
+            />
+          </label>
           <div className={s.formGroup}>
             <label
               className={s.label}

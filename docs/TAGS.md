@@ -20,6 +20,14 @@ return points captured before/after a risky step. Once a phase closes, that hist
 messages and the phase docs, so the step-tags are collapsed. This file records which tags are permanent
 and what was retired.
 
+## How a return point is obtained (TAG-SWEEP-1, 2026-08-14)
+
+**A ship's return point is `v-ship-<name>^1` — the first parent of its merge commit — so `pre/ship-*`
+tags are derivable and 16 of the 19 were deleted rather than kept.** Three were verified NOT
+derivable and are kept below with the reason: a tag cut on the feature branch instead of master
+(`combo15`), a register commit landing between the tag and the merge (`ceremony-opening`), and a
+ship with no merge commit at all to take a first parent from (`the-night`).
+
 ## Permanent anchors (do NOT delete)
 
 ### stable/*
@@ -107,7 +115,6 @@ on the final tree and are unmoved, so nothing was minted. See
 [SHIP-COORD-SYSTEM.md](../reports/evolution/SHIP-COORD-SYSTEM.md), whose section 4 records the blind
 spot this ship exposed: a visible change that no fingerprint can see.
 
-- `pre/ship-coord-system` (`767f3f35`, 2026-08-14) — master immediately before the merge, the tip
   after the source clean-up.
 - `v-ship-coord-system` (`f78869bc`, 2026-08-14) — the merge itself.
 
@@ -162,7 +169,6 @@ shots — which is the screen-size design proving itself against a camera that m
 underneath it. What moved was the SHOT: garden-path's tightest endgame zoom went 5.17 → 4.98, and the
 band measured the same 30.0 px in it either way.
 
-- `pre/ship-finish-band` (`b4be55ea`, 2026-08-13) — master immediately BEFORE the ship. Reset here to
   restore a finish marking that is two checkered posts and a gold hairline, 7.7 px deep, with the
   RENDER value `c962df5334277f95`.
 - `v-ship-finish-band` (`354859bc`, 2026-08-13) — **the ship.** The forward merge is inside it: the
@@ -197,7 +203,6 @@ shot and tightened OVERVIEW from 1.5 corridors to 0.469.
 7441; `check-runin-frame` green on both halves. CAMERA and RENDER moved and are minted; WORLD was RUN
 rather than argued and is unmoved. Values live in [fingerprints.json](fingerprints.json).
 
-- `pre/ship-contender-zoom` (`5d4079c3`, 2026-08-14) — master immediately BEFORE the ship. Reset here
   to restore a photo finish framed on `ordered.slice(0, 2)` with no corridor cap, CAMERA
   `d7a8fe54072df6d7` and RENDER `d1c9d5d0da6a964f`.
 - `v-ship-contender-zoom` (`0bd07dba`, 2026-08-14) — **the ship.** It carries five diagnosis reports
@@ -224,7 +229,6 @@ that control untouched; removing it returns the hash. **9 of 10 tracks contribut
 frames**, and the instrument now prints that count and refuses to run if none does — so the blindness
 cannot come back quietly. Cost 44 s against ~29 s.
 
-- `pre/ship-camera-ending-window` (`758a95ac`, 2026-08-13) — master immediately BEFORE the ship.
   Reset here to restore a camera fingerprint that stops at the last crossing, with the CAMERA value
   `c1556053b1824758` and `docs/fingerprints.json` carrying RUNIN-1's mint.
 - `v-ship-camera-ending-window` (`96f7a0ae`, 2026-08-13) — **the ship.** An instrument change that
@@ -272,7 +276,6 @@ live in [fingerprints.json](fingerprints.json).
 history is in the six RUNIN reports, and [DEAD-ENDS.md](DEAD-ENDS.md) carries what must not be
 retried, including the tighten-rate limit that cost the crossing shot an order of magnitude.
 
-- `pre/ship-runin` (`0b6d6098`, 2026-08-12) — master immediately BEFORE the ship, and AFTER
   `v-ship-resolve-converge`. Reset here to restore an endgame with no run-in at all — no `runInShot`
   or `runInOpenMs` keys — and the CAMERA/RENDER pair `64432e18a7e62188` / `096f2726c45ed853`.
 - `v-ship-runin` (`eea0acf2`, 2026-08-12) — **the ship.** Two keys, both defaulting to the new
@@ -297,7 +300,6 @@ values already in [fingerprints.json](fingerprints.json), and the WORLD cannot b
 (`engine-reach --check`: none of 4). The defect is reachable only under a forward-anchored wide shot
 near the world edge, which is the run-in shipped beside this.
 
-- `pre/ship-resolve-converge` (`e1f53781`, 2026-08-12) — master immediately BEFORE the ship. Reset
   here to restore a `resolveCamera` that widens to the projection floor whenever the pan target falls
   outside `innerFramePct`, whether or not widening can bring it back.
 - `v-ship-resolve-converge` (`d7eca25d`, 2026-08-12) — **the ship.** No key: it is a defect repair
@@ -318,7 +320,6 @@ control that says the engine was not touched. Values live in [fingerprints.json]
 **Reversals of the picture on his race 5 → 2**, and the cost that was feared inverted: the winner is
 in frame for 100 % of the shot against 87–91 % before.
 
-- `pre/ship-finish-pair` (`330842c6`, 2026-08-11) — master immediately BEFORE the ship. Reset here to
   restore a photo finish whose guarantee follows the live top two by `t`, with no
   `photoFinishContenderFraming` key, and the CAMERA/RENDER pair `afd7461071cf2eec` /
   `c11a7e87d9a9126c`.
@@ -350,7 +351,6 @@ this paragraph records is measured, not remembered: with `endingKeepsFinishShot`
 instrument reproduces this ship's CAMERA value exactly, which is precisely why that value could say
 nothing about a ship that only acts once the key is on.
 
-- `pre/ship-ending-picture` (`7eb8f013`, 2026-08-12) — master immediately BEFORE the ship. Reset here
   to restore an ending that flips to an identity transform at the last crossing and draws the
   "RACE FINISHED! / Loading results…" scrim over it, with `finishHoldAfterLastMs` absent, and the
   RENDER fingerprint at `c0fd1e8eda539867`.
@@ -381,7 +381,6 @@ re-measured on the shipping tree and none of them changed; values live in
 draw calls and the card is DOM, so its unmoved hash is evidence about the picture underneath and not
 about the card. The owner's eye is the only instrument that saw it.
 
-- `pre/ship-winner-card` (`235333d5`, 2026-08-11) — master immediately BEFORE the ship. Reset here to
   restore an ending with no winner card at all: no `winnerCardMs` key, and `finishPauseMs` back at
   its pre-card length before the card's read time was allowed to set it.
 - `v-ship-winner-card` (`6de86e6a`, 2026-08-11) — **the ship, at his SECOND look.** The first
@@ -403,7 +402,6 @@ All three fingerprints were re-measured on the shipping tree and none of them ch
 revealed element carries NO class, so the end of the sequence is byte-for-byte the DOM the screen
 rendered before the feature existed.
 
-- `pre/ship-podium-build` (`0da0b574`, 2026-08-11) — master immediately BEFORE the ship. Reset here
   to restore a result screen that appears complete in one frame, with no `podiumRevealBeatMs` key,
   no build-up, and no brand accent on the winner's arrival. It also restores `CLAUDE.md`'s claim of
   _"exactly two"_ owner quotations — which was already wrong when this tag was cut, and is the
@@ -425,7 +423,6 @@ of them moved** — that is the acceptance, not a footnote, because an instrumen
 more must not move anything it was already seeing. Values live in
 [fingerprints.json](fingerprints.json).
 
-- `pre/ship-render-sampler-ceremony` (`be0105f6`, 2026-08-11) — master immediately BEFORE the ship.
   Reset here to restore the five fixed countdown sample points and a render hash that cannot see the
   starters board, its heading, the settled beat or the digits. Proven rather than asserted: the
   board heading changed under those points is byte-identical.
@@ -444,6 +441,9 @@ starters board. **CAMERA and RENDER both move**; WORLD and WORLD-OFF do not, and
 re-measured on the shipping tree rather than argued about. Values live in
 [fingerprints.json](fingerprints.json).
 
+- **KEPT, NOT DERIVABLE (TAG-SWEEP-1):** `v-ship-ceremony-opening^1` is `3130af70`, a `ship(register)`
+  commit that landed between this tag and the merge, so the derivation returns a different (later)
+  commit than the tag does.
 - `pre/ship-ceremony-opening` (`09e69786`, 2026-08-11) — master immediately BEFORE the ship. Reset
   here to restore the 1400 ms track beat, the starters board that comes up during the push-in travel
   and stands across it, the single-line `STARTERS · 40` heading, and a ceremony with no brand card in
@@ -463,7 +463,6 @@ four fingerprints were re-measured and are unchanged. That is the acceptance rat
 the standings are DOM, not canvas, so a moved RENDER hash would have meant something had reached the
 drawing. Values live in [fingerprints.json](fingerprints.json).
 
-- `pre/ship-the-standings` (`570a8505`, 2026-08-10) — master immediately BEFORE the strand. Reset here
   to restore the 250 ms hard-coded standings tick, the rows in normal flow with the place badge on
   each racer's row, the racer icon repeated on every row, and the panel running off the bottom of the
   window at a hundred racers.
@@ -496,6 +495,8 @@ deduplication and the two-axis cull — on all ten per-track values, separately 
 the correctness proof for a cull rather than a side note. **CAMERA and RENDER moved** with
 `outcomePhaseThreshold` 0.65 → 0.75. Values live in [fingerprints.json](fingerprints.json).
 
+- **KEPT, NOT DERIVABLE (TAG-SWEEP-1):** `v-ship-the-night` points at a commit with ONE parent — the
+  ship has no merge commit, so there is no first parent to derive a return point from.
 - `pre/ship-the-night` (`24d1ed2c`, 2026-08-10) — master immediately BEFORE the ship. Reset here to
   restore the 0.65 decisive phase and the unculled pair loop.
 - `v-ship-the-night` (`a4cb669a`, 2026-08-10) — **the ship.** The race costs about 20 % less to
@@ -512,7 +513,6 @@ Documentation and tooling only: nothing under `client/` moved, and **all four fi
 re-run and are unchanged** — which is how a strand that has no business touching the race or the
 picture proves it did not. Values live in [fingerprints.json](fingerprints.json).
 
-- `pre/ship-routing` (`01e18bbf`, 2026-08-09) — master immediately BEFORE the ship. Reset here to
   restore the pre-declaration verifier.
 - `v-ship-routing` (`d14e063d`, 2026-08-09) — **the ship: CEREMONY-HOLD-CENTRE-1's reports landed,
   CORRIDOR-OVERLAY-1 archived, and verify's routing moved from a hand-maintained table to the
@@ -534,7 +534,6 @@ his browser. **All four fingerprints were re-run on the merged master and none m
 record says plainly that they could not have seen this change anyway, because the harnesses never
 call a loader. Values live in [fingerprints.json](fingerprints.json).
 
-- `pre/ship-config` (`01c0932d`, 2026-08-09) — master immediately BEFORE the ship. Reset here to
   restore the save-everything storage behaviour. Its world is the same world the ship has, so
   returning changes what is STORED, never who wins.
 - `v-ship-config` (`fff64bc9`, 2026-08-09) — **the ship: CONFIG-DIFF-1 + CONFIG-DIFF-2 merged to
@@ -549,7 +548,6 @@ twenty-eight blocks and two ships, while CAMERA and RENDER moved for the framing
 the maintenance strand was shown not to touch the picture by re-running both on the combined branch
 rather than carrying the values over. Values live in [fingerprints.json](fingerprints.json).
 
-- `pre/ship-three` (`1ea3a6bb`, 2026-08-09) — master immediately BEFORE the ship. Reset here to
   restore the pre-ship picture and the pre-refusal verifier. Its world is the same world the ship
   has, so returning changes what is drawn and how verify behaves, never who wins.
 - `v-ship-three` (`f1c3d18d`, 2026-08-09) — **the ship: MIN-RACERS-5 + VERIFY-BASE-1 +
@@ -564,7 +562,6 @@ fingerprint is the same value it has held for twenty-five blocks, while CAMERA a
 re-minted — which is the correct signature for a line whose whole subject was what the viewer sees.
 Values live in [fingerprints.json](fingerprints.json), not here.
 
-- `pre/ship-the-line` (`8547640d`, 2026-08-09) — master immediately BEFORE the ship. The return
   point: reset here to restore the pre-ship picture. Its world is the same world the ship has, so
   returning here changes what is drawn, never who wins.
 - `v-ship-the-line` (`c5099b3a`, 2026-08-09) — **the ship: the theme line merged to master.** Race
@@ -620,6 +617,9 @@ that problem, so all four were archived as tags and their branches deleted (CLEA
   Restores render fingerprint `1f83ecc1fcb6fa9a`; the world and camera fingerprints are the same on
   both sides of the ship, because the change is presentation-only.
   See [../reports/night/START-FORMATION-1.md](../reports/night/START-FORMATION-1.md).
+- **KEPT, NOT DERIVABLE (TAG-SWEEP-1):** this tag is on the FEATURE branch, not master — it is an
+  ancestor of `v-ship-combo15^2` rather than `^1`, and it is the same commit as
+  `archive/fair-arrival-merged`. The derivation would return `a12b6ab7`, three days older.
 - `pre/ship-combo15` (`215afde`) — the return point: master state right BEFORE COMBO15 shipped.
 - `pre/clean-sweep` (`dad4077`) — the return point before CLEAN-SWEEP-1 (dead-arm removal + local audit) and
   the DOC-SYNC-1 doc pass that followed. Master state at the end of DOCS-1.
