@@ -375,7 +375,14 @@ export function renderRaceFrame(ctx, f) {
   if (st.phase !== PHASE.COUNTDOWN) {
     const leaderIdx = st.racers.reduce((best, r, i) => (r.t > st.racers[best].t ? i : best), 0);
     const minimapHighlights = showRpMinimapBadges && rpPlanInfo ? rpPlanInfo.b1Indices : null;
-    renderMinimap(ctx, shape, st.racers, leaderIdx, canvasW, canvasH, minimapHighlights);
+    // The two t values the track drawing already works from, handed over rather than looked up:
+    // the field forms at t 0 on both topologies, and the finish is `st.finishT` — a 0..1 position
+    // on an open track, a LAP COUNT on a closed one, which the minimap wraps back to the gate at
+    // t 0. That wrap is why the closed case needs no branch here.
+    renderMinimap(ctx, shape, st.racers, leaderIdx, canvasW, canvasH, minimapHighlights, {
+      startT: 0,
+      finishT: st.finishT,
+    });
   }
 
   return {
