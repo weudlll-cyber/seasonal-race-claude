@@ -525,7 +525,12 @@ a verbatim transcript of one run on one commit, which is a historical record, no
 
 ### The tracking lag, as measured today — and it had drifted
 
-<!-- MEASURED: tracking-lag (median/p95 pp per state) @ 60a30fab 2026-08-15 depends=client/src/modules/camera/ -->
+<!-- MEASURED: tracking-lag (median/p95 pp per state) @ MINIMAP_TAIL_SHA 2026-08-15 depends=client/src/modules/camera/ -->
+
+**RE-STAMPED AGAIN FOR MINIMAP-TAIL-1, on exactly the argument below.** That block washes the
+stretch of band behind the finish on open tracks — the same file, the same reason, the same
+unchanged table. The paragraph that follows is the whole justification and it did not weaken:
+`Minimap.js` is still not in `tracking-lag.mjs`'s load closure.
 
 **RE-STAMPED, NOT RE-MEASURED, FOR MINIMAP-MARKS-1 — and the reason is a fact, not a judgement.**
 That block added start and finish marks to `client/src/modules/camera/Minimap.js`, which is inside

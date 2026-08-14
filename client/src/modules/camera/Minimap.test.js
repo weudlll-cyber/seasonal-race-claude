@@ -52,7 +52,9 @@ function makeCtx() {
     lineTo: vi.fn((x, y) => ctx._path.push({ x, y })),
     closePath: vi.fn(),
     arc: vi.fn((x, y, r) => ctx.ops.push({ op: 'arc', x, y, r })),
-    fill: vi.fn(() => ctx.ops.push({ op: 'fill', fillStyle: ctx.fillStyle })),
+    fill: vi.fn(() =>
+      ctx.ops.push({ op: 'fill', fillStyle: ctx.fillStyle, path: ctx._path.slice() })
+    ),
     stroke: vi.fn(() =>
       ctx.ops.push({
         op: 'stroke',
@@ -81,6 +83,13 @@ function markSegments(ctx) {
 
 const segMidX = (s) => Math.round((s.path[0].x + s.path[1].x) / 2);
 const segLen = (s) => Math.hypot(s.path[1].x - s.path[0].x, s.path[1].y - s.path[0].y);
+
+/**
+ * The two AREA fills: the track band and, on an open track, the unraced tail behind the finish.
+ * Racer dots also call fill(), but after an arc, which adds no path point to this mock — so a
+ * multi-point path is what separates a region from a dot without naming any colour.
+ */
+const areaFills = (ctx) => ctx.ops.filter((o) => o.op === 'fill' && o.path.length > 2);
 
 /** Splits mark segments into one bucket per position on the panel. */
 function marksByPosition(ctx) {
@@ -145,12 +154,14 @@ describe('renderMinimap', () => {
     expect(ctx.restore).toHaveBeenCalledTimes(1);
   });
 
-  it('draws no marks at all when none are passed', () => {
+  it('draws no marks and no tail at all when no marks are passed', () => {
     // DELETE THIS and the marks become unconditional, so any future caller that has no start/finish
-    // to give (a shape preview, an editor panel) would crash or draw a mark at a made-up t.
+    // to give (a shape preview, an editor panel) would crash or draw a mark at a made-up t. The
+    // tail rides on the same condition: it BEGINS at finishT, so with no finish there is no tail.
     const ctx = makeCtx();
-    renderMinimap(ctx, makeMockShape(true), makeMockRacers(2), 0, 1280, 720);
+    renderMinimap(ctx, makeMockShape(false), makeMockRacers(2), 0, 1280, 720);
     expect(markSegments(ctx)).toHaveLength(0);
+    expect(areaFills(ctx)).toHaveLength(1);
   });
 
   it('OPEN shape: draws two marks, one per t, and they are tellable apart', () => {
@@ -198,6 +209,68 @@ describe('renderMinimap', () => {
     // …and it must be the same green that means "start" on an open track, or the combined mark
     // does not actually say "start" to anyone who learned the marks on an open track.
     expect(plate[0].strokeStyle).toBe(startColorFromOpenRender());
+  });
+
+  it('OPEN shape: washes the unraced tail, in a fill distinct from the raced band', () => {
+    // DELETE THIS and the addition itself goes unguarded: the stretch behind the finish is never
+    // raced, and without a distinct fill an open track gives no way to see how much race is left.
+    // It also pins the tail to the track END — a tail that ran past t 1 would smear off the
+    // geometry, and `getPosition` CLAMPS rather than throwing, so nothing else would notice.
+    const ctx = makeCtx();
+    renderMinimap(ctx, makeMockShape(false), makeMockRacers(3), 0, 1280, 720, null, MARKS_OPEN);
+
+    const fills = areaFills(ctx);
+    expect(fills).toHaveLength(2);
+    const [band, tail] = fills;
+    expect(tail.fillStyle).not.toBe(band.fillStyle);
+
+    // The band spans the whole track, so its far end IS the track end. The tail must reach it and
+    // stop there.
+    const farEnd = (f) => Math.max(...f.path.map((p) => p.x));
+    expect(farEnd(tail)).toBeCloseTo(farEnd(band), 6);
+  });
+
+  it('OPEN shape: the tail SEAM is the finish mark itself, to the pixel', () => {
+    // DELETE THIS and the one thing that makes the tail honest is unguarded. The band is built
+    // from getEdgePoints BY INDEX and the marks from getPosition; those two parameterisations
+    // disagree by up to 502 world px on luger-hill. Building the tail from the mark's own source
+    // is what puts the seam under the checker, and only this test says so.
+    const ctx = makeCtx();
+    renderMinimap(ctx, makeMockShape(false), makeMockRacers(3), 0, 1280, 720, null, MARKS_OPEN);
+
+    const tail = areaFills(ctx)[1];
+    const checker = marksByPosition(ctx)[1].segs;
+    const barEnds = [checker[0].path[0], checker[checker.length - 1].path[1]];
+
+    for (const end of barEnds) {
+      const onSeam = tail.path.some(
+        (p) => Math.abs(p.x - end.x) < 1e-6 && Math.abs(p.y - end.y) < 1e-6
+      );
+      expect(onSeam).toBe(true);
+    }
+  });
+
+  it('CLOSED shape: no tail — a loop is raced in full', () => {
+    // DELETE THIS and a tail could appear on closed tracks, where it would be a lie: the loop is
+    // raced end to end, and `finishT` there is a LAP COUNT that wraps to 0, so an ungated tail
+    // would wash the ENTIRE band.
+    const ctx = makeCtx();
+    renderMinimap(ctx, makeMockShape(true), makeMockRacers(3), 0, 1280, 720, null, MARKS_CLOSED);
+    expect(areaFills(ctx)).toHaveLength(1);
+  });
+
+  it('draws the tail BEFORE the marks and before the dots', () => {
+    // DELETE THIS and the wash could land on top of the checker or the racer dots, dimming the two
+    // things it exists to make legible.
+    const ctx = makeCtx();
+    renderMinimap(ctx, makeMockShape(false), makeMockRacers(3), 0, 1280, 720, null, MARKS_OPEN);
+
+    const tailIdx = ctx.ops.indexOf(areaFills(ctx)[1]);
+    const firstMark = ctx.ops.findIndex((o) => o.op === 'stroke' && o.path.length === 2);
+    const firstDot = ctx.ops.findIndex((o) => o.op === 'arc');
+    expect(tailIdx).toBeGreaterThanOrEqual(0);
+    expect(tailIdx).toBeLessThan(firstMark);
+    expect(tailIdx).toBeLessThan(firstDot);
   });
 
   it('draws the marks BEFORE the racer dots', () => {

@@ -52,6 +52,24 @@ const MARK_PLATE_THICKNESS = MARK_THICKNESS + 2;
 // and at any track size.
 const MARK_COINCIDE_PX = 6;
 
+// ── The unraced tail ─────────────────────────────────────────────────────────────────────────
+// On an OPEN track the band runs on past the finish, and that stretch is never raced. It is washed
+// down so the extent of the race is obvious. A CLOSED loop is raced in full and has no tail — the
+// same `shape.isOpen` the band already asks about decides it, not a second rule.
+//
+// IT IS BUILT FROM `getPosition(t, ±0.5)`, THE SAME SOURCE THE FINISH MARK USES, which is the
+// whole reason the seam lands on the checker: the tail's first cross-section IS the mark's bar,
+// to the pixel, rather than two parameterisations that have to be trusted to agree. They do not —
+// pairing `getEdgePoints` by index disagrees with `getPosition` by up to 502 world px on
+// luger-hill (that is an along-track offset, not a width error), which would have put the seam
+// visibly off the mark on the longest tail in the game.
+//
+// A WASH, NOT A COLOUR. The tail keeps the band's own hue and loses its light, so the raced part
+// is what the eye finds first. It is drawn BEFORE the edge outlines, so the cyan edge still runs
+// through it — without that the tail would read as "the track ends here", which is the opposite of
+// true and the one misreading this addition could cause.
+const TAIL_WASH = 'rgba(6,10,14,0.5)';
+
 /**
  * Renders a picture-in-picture minimap in the bottom-left corner of the canvas.
  * @param {CanvasRenderingContext2D} ctx
@@ -64,7 +82,8 @@ const MARK_COINCIDE_PX = 6;
  * @param {{startT:number, finishT:number}|null} [marks]  Where the race starts and ends, in the
  *   caller's t units — `finishT` may be a LAP COUNT on a closed track, which normalises to the
  *   gate at t 0. Passed IN rather than read out of race state, so the minimap keeps reading
- *   nothing but the shape it is handed. `null` draws no marks.
+ *   nothing but the shape it is handed. `null` draws no marks AND no unraced tail: the tail is
+ *   the stretch behind `finishT`, so without a finish there is nothing to say where it starts.
  */
 export function renderMinimap(
   ctx,
@@ -119,6 +138,10 @@ export function renderMinimap(
   if (!shape.isOpen) ctx.closePath();
   ctx.fillStyle = 'rgba(200,180,120,0.5)';
   ctx.fill();
+
+  // The unraced tail — with the band, and before the edge outlines so the cyan edge still runs
+  // through it. Open tracks only; a closed loop has no tail.
+  if (marks) drawUnracedTail(ctx, shape, marks.finishT, toMx, toMy);
 
   // Outer edge outline
   ctx.strokeStyle = 'rgba(0,220,220,0.9)';
@@ -180,6 +203,45 @@ export function renderMinimap(
  */
 function markT(shape, t) {
   return shape.isOpen ? Math.max(0, Math.min(1, t)) : ((t % 1) + 1) % 1;
+}
+
+/**
+ * Washes down the stretch of band behind the finish, which no racer ever runs.
+ *
+ * OPEN TRACKS ONLY, and silent when the finish is at or past the end of the geometry — there is
+ * no tail to draw then, and a zero-length polygon would be a smear at the last sample.
+ *
+ * The sample count is derived from how much of the track the tail covers, at the band's own
+ * density (`TRACK_SAMPLES` over the whole track), so the tail's outline follows the curve exactly
+ * as closely as the band it sits on — a fixed count would be coarse on a long tail and wasteful on
+ * a short one.
+ */
+function drawUnracedTail(ctx, shape, finishT, toMx, toMy) {
+  if (!shape.isOpen) return;
+  const t0 = markT(shape, finishT);
+  if (t0 >= 1) return;
+
+  const span = 1 - t0;
+  const n = Math.max(2, Math.ceil(span * TRACK_SAMPLES));
+  const at = (i, offset) => {
+    const p = shape.getPosition(t0 + (span * i) / n, offset);
+    return { x: toMx(p.x), y: toMy(p.y) };
+  };
+
+  ctx.beginPath();
+  let p = at(0, -0.5);
+  ctx.moveTo(p.x, p.y);
+  for (let i = 1; i <= n; i++) {
+    p = at(i, -0.5);
+    ctx.lineTo(p.x, p.y);
+  }
+  for (let i = n; i >= 0; i--) {
+    p = at(i, 0.5);
+    ctx.lineTo(p.x, p.y);
+  }
+  ctx.closePath();
+  ctx.fillStyle = TAIL_WASH;
+  ctx.fill();
 }
 
 /** The bar across the band at `t`, inner edge to outer edge, already in panel pixels. */
