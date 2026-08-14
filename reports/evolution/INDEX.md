@@ -451,6 +451,19 @@ is dated and recorded HERE, where a reader on their way to the report will pass 
 
 ## Camera / presentation fixes
 
+- [EDGE-SLICE-1.md](EDGE-SLICE-1.md) — **Nova is not a contender, and the harness has been grading
+  the wrong set** (2026-08-14, `feat/contender-zoom` @ `60fa2cb1`, **DIAGNOSIS ONLY**). The racer cut
+  at the top edge on ice-track seed 9 is **1.60 body lengths back and directly behind the leader on
+  the same lane** — he fails BOTH conditions, so this is not a rule violation, and **no contender is
+  sliced in that race at all** (0 of 274 frames). A non-contender is sliced on **70.9%** of
+  photo-finish frames pooled; including the sliced one whole costs a median **12.1%** more width
+  (21.3% for that frame, worst 44.4%). **Two instrument corrections:** the slice test required the
+  centre to be inside the frame, so it classified the very racer he pointed at as "outside"; and
+  `contender-truth.mjs` grades its own reconstruction of the contender set rather than the
+  director's, so its **3.4% understates — against the director's actual set contenders are sliced on
+  7.6%** of frames. "Push fully out" is available on 97.5% of cases; the other 2.5% sit nearer the
+  centre than a contender, so it cannot be a blanket rule.
+
 - [ZOOM-PACE-5.md](ZOOM-PACE-5.md) — **the cap arrives instead of appearing, and the probe stops
   lying** (2026-08-14, `feat/contender-zoom`, **NOT merged, nothing minted**). **The probe first:**
   `_binding` was the argmin over `_ceilings` while the corridor cap is applied afterwards, so it
