@@ -40,6 +40,18 @@ is dated and recorded HERE, where a reader on their way to the report will pass 
 
 ## Ships
 
+- [SHIP-CONTENDER-ZOOM.md](SHIP-CONTENDER-ZOOM.md) — **the photo finish frames everyone still
+  abreast** (2026-08-14, merge `0bd07dba`, tags `v-ship-contender-zoom` + `pre/ship-contender-zoom`).
+  The owner judged a production build on 2026-08-14, on ice-track seed 9 and river-run seed 2814, and
+  accepted it. **CAMERA `d7a8fe54072df6d7` → `ff2bc42af377b5cf` and RENDER `d1c9d5d0da6a964f` →
+  `0d5854a652c69d87` minted; WORLD run and unmoved.** Every value matched the expectation before
+  minting. The framed set stops being `ordered.slice(0, 2)`; **detection and duration did NOT change**,
+  and that separation is load-bearing — letting the framed set end the shot stretched the photo finish
+  by 85% and produced 59 empty frames. **The corridor cap ships as one feature with the set**, priced
+  apart at zero cost. Carries five diagnosis reports, three recording attributions of mine that
+  measurement overturned; the reusable one is that **`_binding` named the argmin over `_ceilings`
+  while the cap was applied afterwards**, which produced three wrong causes and two no-op builds.
+
 - [SHIP-FINISH-BAND.md](SHIP-FINISH-BAND.md) — **the finish line is a line, not a hair, and it goes
   to master** (2026-08-13, merge `354859bc`, tags `v-ship-finish-band` + `pre/ship-finish-band`). The
   owner judged a production build of `de957c2b` on 2026-08-13, on dirt-oval and garden-path, and

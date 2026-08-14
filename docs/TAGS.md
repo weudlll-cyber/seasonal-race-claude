@@ -132,6 +132,42 @@ band measured the same 30.0 px in it either way.
 - `v-ship-finish-band` (`354859bc`, 2026-08-13) — **the ship.** The forward merge is inside it: the
   branch was merged with master first, re-measured, and only then merged out.
 
+### CONTENDER-ZOOM — the photo finish frames everyone still abreast (2026-08-14)
+
+**The owner judged it on a production build on 2026-08-14 and ACCEPTED it.** The photo-finish shot is
+now framed on everyone still fighting for the win rather than on a fixed pair, and it is never wider
+than the road.
+
+**A racer is a contender when he is BOTH nearly level with the leader AND on a free lane** — one on
+the same lane as somebody ahead cannot win, because he would have to move aside and then still
+overtake, and the shot is far too short for both. **Neither condition is a new number:** both are the
+engine's own geometry from `pairContact` — `contactLength` (one body length between equal racers) for
+level, `contactWidth` with `rowLayout`'s `physicalY` unit for the lane. The race is lane-free and
+`physicalY` is continuous, so "same lane" had to be geometric.
+
+**Detection and duration are unchanged.** The gate still enters on the top two, and
+`_photoFinishContendersHome` still reads the leading two — letting the framed set decide when the
+shot ENDS stretched the photo finish by 85% and produced 59 empty frames.
+
+**The corridor cap ships as part of the same feature and is not separable.** Priced apart it costs
+nothing: 3.4% contenders-not-whole with it nulled against 3.4% with it arriving, and empty frames
+46 → 35. **It arrives over `corridorCapArriveMs` rather than appearing** — its scope is a state
+predicate, which is a cut, and it used to switch on in one frame and take the target 2.47 → 10.02.
+Hanging it on the run-in's continuous progress was built first and FAILED: the cap escaped the finish
+shot and tightened OVERVIEW from 1.5 corridors to 0.469.
+
+**Measured, ten tracks × three seeds:** contenders not whole **10.3% → 3.4%**; crossing zoom median
+**99%**, opening only where racers are genuinely abreast; photo-finish frames 7468 against master's
+7441; `check-runin-frame` green on both halves. CAMERA and RENDER moved and are minted; WORLD was RUN
+rather than argued and is unmoved. Values live in [fingerprints.json](fingerprints.json).
+
+- `pre/ship-contender-zoom` (`5d4079c3`, 2026-08-14) — master immediately BEFORE the ship. Reset here
+  to restore a photo finish framed on `ordered.slice(0, 2)` with no corridor cap, CAMERA
+  `d7a8fe54072df6d7` and RENDER `d1c9d5d0da6a964f`.
+- `v-ship-contender-zoom` (`0bd07dba`, 2026-08-14) — **the ship.** It carries five diagnosis reports
+  as well as the change: three of them record wrong attributions of mine that measurement overturned,
+  and they are kept deliberately so the next person down this path does not repeat them.
+
 ### CAMERA-ENDING-WINDOW — the camera's own fingerprint can see the ending (2026-08-13)
 
 **The instrument changed, not the product, and that is the whole entry.** Not one line of camera
