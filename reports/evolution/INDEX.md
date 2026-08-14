@@ -451,6 +451,21 @@ is dated and recorded HERE, where a reader on their way to the report will pass 
 
 ## Camera / presentation fixes
 
+- [ZOOM-PACE-2.md](ZOOM-PACE-2.md) — **he is right about which phase, and I was measuring the wrong
+  thing** (2026-08-14, `feat/contender-zoom` @ `24cd7c8f`, **DIAGNOSIS ONLY**). Corrects
+  [ZOOM-PACE-1](ZOOM-PACE-1.md), which stands as written. **Zoom per second is not what an eye
+  judges**; measured in screen flow and log-rate of the visible width, **phase 1 is the only stall** —
+  95 px/s and −0.129 shrink/s held for 3.6 s, immediately after the shot opens to its widest of the
+  endgame (2048 px of world). What ZOOM-PACE-1 called the stall, phase 3, runs at **306 px/s** and
+  phase 5 at **462** — among the busiest stretches on screen, motionless only in a table of zoom
+  rates. **The run-in ceiling is one monotone curve** — 1.2 → 1.5 → 2.0 → 2.3 → 3.8 → 6.7 → 29.0 → ∞
+  — so the flat foot and the leap are the same rule, answering the objection that the thing opening
+  the shot to 1.5 cannot also be holding at 9. **The trigger is a 4.1× step in the run-in ceiling
+  itself** (target 2.40 → 9.95 with `line` binding on both sides), caused by `stateZoom` stepping
+  9.10 → 17.06 at LEADER_ZOOM → PHOTO_FINISH and propagating through it — neither an argmin corner
+  nor the state term taking over. The acceleration rule must fix the 1→2 boundary; phases 3, 5 and 6
+  should be left alone.
+
 - [ZOOM-PACE-1.md](ZOOM-PACE-1.md) — **the pace is a STATE STEP, not an argmin corner**
   (2026-08-14, `feat/contender-zoom` @ `2adba27f`, **DIAGNOSIS ONLY — nothing changed or minted**).
   The owner sees the endgame zoom go in slowly, stall, then rush. **Both offered hypotheses are

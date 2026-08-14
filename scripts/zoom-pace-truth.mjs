@@ -85,6 +85,7 @@ for (const geo of loadTracks({ only: ONLY })) {
     const trace = [];
     let prevZoom = null;
     let prevTs = null;
+    let prevCentreWorld = null;
 
     runRace(
       race,
@@ -111,7 +112,29 @@ for (const geo of loadTracks({ only: ONLY })) {
         for (let i = 0; i < pair.length; i++)
           for (let j = i + 1; j < pair.length; j++)
             extent = Math.max(extent, Math.hypot(pair[i].x - pair[j].x, pair[i].y - pair[j].y));
+        // ── WHAT A VIEWER ACTUALLY SEES ────────────────────────────────────────────────────────
+        // Zoom per second is not what an eye judges. Two things are:
+        //   worldW    how much world is in shot (canvas width / effective scale) — the "how wide"
+        //   flowPx    the SCREEN speed of the world point currently at the frame centre, i.e. how
+        //             fast the picture slides and swells under the viewer. Computed by taking the
+        //             world point at the centre this frame and asking where it lands next frame, so
+        //             it captures pan and zoom together rather than either alone.
+        const eX = d._proj.effX(d.zoom);
+        const worldW = eX > 0 ? 1280 / eX : Infinity;
+        let flowPx = 0;
+        if (prevCentreWorld && dt > 0) {
+          const sx = prevCentreWorld.x * eX + d.offsetX;
+          const sy = prevCentreWorld.y * d._proj.effY(d.zoom) + d.offsetY;
+          flowPx = Math.hypot(sx - 640, sy - 360) / dt;
+        }
+        prevCentreWorld = {
+          x: eX > 0 ? (640 - d.offsetX) / eX : 0,
+          y: d._proj.effY(d.zoom) > 0 ? (360 - d.offsetY) / d._proj.effY(d.zoom) : 0,
+        };
         trace.push({
+          worldW,
+          flowPx,
+          lineCeil: fp.ceilings?.line ?? Infinity,
           ts,
           prog,
           hud: d.hudState,
@@ -152,20 +175,23 @@ for (const geo of loadTracks({ only: ONLY })) {
         `— ${trace.length} endgame frames, zoom ${trace[0].zoom.toFixed(2)} → ${trace[trace.length - 1].zoom.toFixed(2)}`,
     );
     console.log(
-      "phase  binding      frames    ms      zoom span        median rate   |rate| max   set  extent",
+      "phase  binding    frames    ms   zoom span     world width (px)   screen flow px/s   run-in ceiling",
     );
     for (const [i, p] of phases.entries()) {
       const rows = p.rows;
       const rates = rows.map((r) => r.rate);
       const ms = rows[rows.length - 1].ts - rows[0].ts;
+      const lc = rows.map((r) => r.lineCeil).filter(Number.isFinite);
       console.log(
-        `${String(i).padStart(4)}   ${p.binding.padEnd(11)} ${String(rows.length).padStart(6)} ` +
-          `${String(Math.round(ms)).padStart(6)}   ` +
-          `${rows[0].zoom.toFixed(2)} → ${rows[rows.length - 1].zoom.toFixed(2)}   ` +
-          `${med(rates).toFixed(3).padStart(11)}   ` +
-          `${Math.max(...rates.map(Math.abs)).toFixed(3).padStart(9)}   ` +
-          `${String(med(rows.map((r) => r.nPair))).padStart(3)}  ` +
-          `${med(rows.map((r) => r.extent)).toFixed(0).padStart(6)}`,
+        `${String(i).padStart(4)}   ${p.binding.padEnd(9)} ${String(rows.length).padStart(6)} ` +
+          `${String(Math.round(ms)).padStart(6)}  ` +
+          `${rows[0].zoom.toFixed(2).padStart(5)} → ${rows[rows.length - 1].zoom.toFixed(2).padStart(5)}  ` +
+          `${rows[0].worldW.toFixed(0).padStart(6)} → ${rows[rows.length - 1].worldW.toFixed(0).padStart(6)}   ` +
+          `${med(rows.map((r) => r.flowPx)).toFixed(0).padStart(8)} med ` +
+          `${Math.max(...rows.map((r) => r.flowPx)).toFixed(0).padStart(6)} max   ` +
+          (lc.length
+            ? `${lc[0].toFixed(2).padStart(6)} → ${lc[lc.length - 1].toFixed(2).padStart(6)}`
+            : "   inf"),
       );
     }
 
@@ -192,10 +218,14 @@ for (const geo of loadTracks({ only: ONLY })) {
       const r1 = x.rows[x.rows.length - 1];
       const terms = [...new Set(x.rows.map((r) => r.binding))].join("+");
       console.log(
-        `  ${x.b.padEnd(7)} ${String(x.rows.length).padStart(4)} frames  ` +
+        `  ${x.b.padEnd(7)} ${String(x.rows.length).padStart(4)} fr ` +
           `${String(Math.round(r1.ts - r0.ts)).padStart(5)} ms  ` +
-          `zoom ${r0.zoom.toFixed(2)} → ${r1.zoom.toFixed(2)}  ` +
-          `median rate ${med(x.rows.map((r) => r.rate)).toFixed(3).padStart(8)}  binding: ${terms}`,
+          `zoom ${r0.zoom.toFixed(2).padStart(5)} → ${r1.zoom.toFixed(2).padStart(5)}  ` +
+          `world ${r0.worldW.toFixed(0).padStart(5)} → ${r1.worldW.toFixed(0).padStart(5)} px  ` +
+          `flow ${med(x.rows.map((r) => r.flowPx)).toFixed(0).padStart(5)} px/s  ` +
+          `shrink/s ${(
+            Math.log(r1.worldW / r0.worldW) / Math.max(1e-6, (r1.ts - r0.ts) / 1000)
+          ).toFixed(3).padStart(7)}  ${terms}`,
       );
     }
 
@@ -212,6 +242,25 @@ for (const geo of loadTracks({ only: ONLY })) {
     console.log(
       `SET COLLAPSE: the pinned set's extent goes ${extent0.toFixed(0)} → ${extentEnd.toFixed(0)} world px ` +
         `across the photo finish (${pfRows.length} frames); its ceiling is Infinity on ${relFrames} of them.`,
+    );
+    // ── THE RUN-IN CEILING AS A CURVE (ZOOM-PACE-1 §3) ──────────────────────────────────────────
+    // He finds it implausible that the rule which opens the shot to 1.5 is later the thing holding
+    // at 9. Sampled here so the answer is a curve rather than an assertion.
+    console.log(
+      "\nRUN-IN CEILING across the endgame (one sample per ~10% of the window):",
+    );
+    const step = Math.max(1, Math.floor(trace.length / 10));
+    let line = "  ";
+    for (let i = 0; i < trace.length; i += step) {
+      const f = trace[i];
+      line += `${Number.isFinite(f.lineCeil) ? f.lineCeil.toFixed(1) : "inf"}`.padStart(7);
+    }
+    console.log(line);
+    console.log(
+      "  " +
+        Array.from({ length: Math.ceil(trace.length / step) }, (_, k) =>
+          `${(trace[k * step].prog * 100).toFixed(1)}%`.padStart(7),
+        ).join(""),
     );
     if (FRAMES) {
       console.log(
