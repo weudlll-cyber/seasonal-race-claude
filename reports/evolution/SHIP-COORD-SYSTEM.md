@@ -95,4 +95,12 @@ after. CI green for the exact head SHA — run id in §6.
 
 Filled in from the remote after the fact rather than pre-filled.
 
-<!-- CI -->
+| head SHA | run id | result |
+| --- | --- | --- |
+| **`1b8927b4`** | **31834808074** | **success** |
+
+**Green on the first run**, which is worth noting only because the last ship was not: CONTENDER-ZOOM
+went red twice on a stale measured-stamp. `STAMP-TRAP-1` made the pre-commit hook answer that
+question against the STAGED tree, and this is the first ship since. The stamp guard had nothing to
+complain about here — this branch does not touch `client/src/modules/camera/` — so the hook is not
+yet proved on a real ship by this run. It is proved not to be in the way.
