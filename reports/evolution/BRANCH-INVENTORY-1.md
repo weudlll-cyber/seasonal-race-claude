@@ -134,3 +134,40 @@ warns about this path in prose; the proposal is to make the tool enforce what th
 the owner opens by default is nine commits of superseded camera work rather than what ships — and it
 is also the reason `feat/front-group` cannot be deleted without detaching first. Moving it is
 reversible and makes the default view the shipped one.
+
+## 5. Found while reading the stamps: the build pill CANNOT see a commit in a worktree
+
+**This was live, and I hit it rather than reasoned it.** After master moved to `c23423fd`, the dev
+server on 5173 was still serving `{commit: "e590bc9a"}` — a bundle four commits stale, reporting
+itself as clean and current.
+
+**The cause.** `vite-plugin-ra-build.js` polls `join(REPO_ROOT, '.git', 'HEAD')` and
+`join(REPO_ROOT, '.git', 'index')`. In a **linked worktree** `.git` is a FILE, not a directory:
+
+```
+C:/ra-n1/.git  →  gitdir: .../Seasonal race claude/.git/worktrees/ra-n1
+```
+
+So both polled paths do not exist. `mtimeOf` catches the error and returns `null` — correctly, by its
+own contract — and the poll then compares `null, null` against `null, null` on every tick, forever.
+**It can never fire.** The files that do move are
+`.git/worktrees/ra-n1/HEAD` and `.../index`, and they moved twice today.
+
+**Why this is worse than an ordinary bug.** It is the exact failure BUILD-TRUTH-1 was written to
+abolish — its header says a `define` constant "was not stale by accident, it was structurally
+incapable of being anything else". The mtime poll fixed that for the main tree and reintroduced it
+for worktrees. And **R10 tells us to use a worktree** whenever a different branch is needed while a
+judgement is pending, so the two rules collide: the more correctly the process is followed, the more
+certainly the badge lies.
+
+**What it means for what has already been judged.** Any eye-test served from 5173 in `C:/ra-n1` or
+`C:/ra-n2` after a commit — without a dev-server restart — was judged against a bundle whose badge
+could not have known it was stale. The badge would have read clean and current in every one of those
+cases. **I cannot say from here which past eye-tests that touched**; I can say the mechanism was
+capable of it the whole time.
+
+**The fix is one line and is not built here**, because it is outside what was authorised tonight:
+ask git for the answer instead of constructing the path —
+`execSync('git rev-parse --git-path HEAD')` and `--git-path index` return the correct location in
+both a main tree and a worktree, and the plugin already shells out to git a few lines above.
+**Proposal 5, and the one I would do first.**
