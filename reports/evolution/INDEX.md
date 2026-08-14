@@ -451,6 +451,19 @@ is dated and recorded HERE, where a reader on their way to the report will pass 
 
 ## Camera / presentation fixes
 
+- [EDGE-SLICE-2.md](EDGE-SLICE-2.md) — **the racer is Nova, he fails BOTH conditions, and my earlier
+  reason was wrong** (2026-08-14, `feat/contender-zoom` @ `73781bda`, **DIAGNOSIS ONLY**). Corrects
+  [EDGE-SLICE-1](EDGE-SLICE-1.md). **Colour IS reachable** — `renderState.js` assigns
+  `RACER_COLORS[array position % 10]` — but that makes it an UNSTABLE identifier: change the field
+  size and every racer's colour moves, and in this run neither violet racer is near the top edge
+  (both inner, 7.8 and 14.0 lengths back). **Two of twenty racers are at or beyond the top edge**;
+  Nova (rank 5, salmon, physicalY 0.60, 0.74 outward of a winner at −0.14, 43% of his body showing)
+  matches the description exactly. **Judged at the CAPTURE frame — the one that decides membership,
+  since the set is never re-sorted — Nova is 1.21 body lengths back against a one-length rule AND
+  blocked across the track by Blaze**, who is himself a contender. Not a rule violation, and all
+  three contenders are WHOLE at the crossing. **The correction owed:** EDGE-SLICE-1 said he was
+  behind the LEADER — that read an array index as a rank.
+
 - [EDGE-SLICE-1.md](EDGE-SLICE-1.md) — **Nova is not a contender, and the harness has been grading
   the wrong set** (2026-08-14, `feat/contender-zoom` @ `60fa2cb1`, **DIAGNOSIS ONLY**). The racer cut
   at the top edge on ice-track seed 9 is **1.60 body lengths back and directly behind the leader on

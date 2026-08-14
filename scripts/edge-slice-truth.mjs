@@ -49,6 +49,22 @@ const { resolveNameSet, DEFAULT_NAME_SET } = await import(
   u("client/src/modules/racerNames.js")
 );
 const { shortestArcDeltaT } = await import(u("client/src/utils/mathUtils.js"));
+// COLOUR IS REACHABLE AFTER ALL. EDGE-SLICE-1 said a headless run has no colours because they are
+// assigned "in the screen layer" — true, and the wrong conclusion: `renderState.js` is an ordinary
+// module and the harness can call it. `attachRacerRenderState` sets `r.color` from RACER_COLORS by
+// ARRAY POSITION, so the mapping is fixed and reproducible.
+const { RACER_COLORS, attachRacerRenderState } = await import(
+  u("client/src/screens/RaceScreen/renderState.js")
+);
+const COLOUR_NAME = {
+  "#ff6b35": "orange", "#4fc3f7": "light blue", "#a5d6a7": "green", "#ffcc02": "yellow",
+  "#ce93d8": "VIOLET", "#f48fb1": "pink", "#80cbc4": "teal", "#ffab40": "amber",
+  "#90caf9": "pale blue", "#ef9a9a": "salmon",
+};
+// renderState.js assigns by ARRAY POSITION in `st.racers`, so this must resolve the same way. An
+// earlier draft used `r.index`, which is only the same thing while the array is in creation order.
+let COLOUR_BY_POS = new Map();
+const colourOf = (r) => COLOUR_BY_POS.get(r) ?? "?";
 const {
   computeRenderDisplayScale,
   drawnRacerScreenPx,
@@ -104,6 +120,8 @@ for (const geo of loadTracks({ only: ONLY })) {
     });
     const race = buildRace(geo, identity, CFG);
     const { cd, displaySize, racerType, trackWidthPx } = race;
+    attachRacerRenderState(race.st.racers);
+    COLOUR_BY_POS = new Map(race.st.racers.map((r, i) => [r, RACER_COLORS[i % RACER_COLORS.length]]));
     const proj = cd._proj;
     const dsScale = DEFAULT_CONFIG_WORLD.autoScaleConfig?.displaySizeScale ?? 1;
     const maxTargetPx = getEffectiveMaxTargetScreenPx(
@@ -113,6 +131,7 @@ for (const geo of loadTracks({ only: ONLY })) {
 
     let prevFinished = 0;
     let dumped = false;
+    let entryDumped = false;
 
     runRace(
       race,
@@ -198,6 +217,32 @@ for (const geo of loadTracks({ only: ONLY })) {
           poolPushable.push(reach > contReach ? 1 : 0);
         }
 
+        // ── THE CAPTURE FRAME, which is the one membership was decided on ──────────────────────
+        // The set is taken ONCE at entry and never re-sorted (FINISH-PAIR-1), so a gap measured at
+        // the CROSSING says nothing about whether a racer qualified. This is the frame that does.
+        if (AT_CROSSING && !entryDumped) {
+          entryDumped = true;
+          console.log(
+            `
+${geo.id} seed ${raceSeed} — THE CAPTURE FRAME (entry), where membership was decided
+`,
+          );
+          console.log(
+            "  rank  name      idx  colour        physY   gap(len)  level?  ahead-on-his-lane       contender?",
+          );
+          for (const [k, i] of info.entries()) {
+            if (k > 7) break;
+            console.log(
+              `  ${String(k + 1).padStart(4)}  ${String(i.r.name).slice(0,8).padEnd(9)} ${String(i.r.index).padStart(3)}  ` +
+                `${(COLOUR_NAME[colourOf(i.r)] ?? colourOf(i.r)).padEnd(11)} ${(i.r.physicalY ?? 0).toFixed(2).padStart(6)}  ` +
+                `${(Number.isFinite(i.gapLengths) ? i.gapLengths.toFixed(2) : "—").padStart(7)}  ` +
+                `${(i.level ? "yes" : "NO").padEnd(6)}  ` +
+                `${(i.aheadOnLane.length ? i.aheadOnLane.map((o) => `${o.name}(r${info.findIndex((x) => x.r === o) + 1})`).join(",") : "none").padEnd(22)}  ` +
+                `${i.contender ? "YES" : "no"}`,
+            );
+          }
+        }
+
         // ── THE FRAME HE IS LOOKING AT: the first crossing ──────────────────────────────────────
         if (AT_CROSSING && !dumped && s.finishedCount > prevFinished) {
           dumped = true;
@@ -205,20 +250,67 @@ for (const geo of loadTracks({ only: ONLY })) {
             `\n${geo.id} seed ${raceSeed} — THE CROSSING FRAME (zoom ${d.zoom.toFixed(2)}, ` +
               `binding ${d._framingProbe.binding}, contenders ${contenderIdx.size})\n`,
           );
+          const violets = info.filter((i) => colourOf(i.r) === "#ce93d8");
           console.log(
-            "  rank  colour     name          screen x,y      state    edge    gap(lengths)  level?  ahead-on-lane  contender?",
+            `
+  WHERE THE VIOLET RACERS ACTUALLY ARE (#ce93d8, array positions 4 and 14 of 20):`,
           );
-          for (const [k, i] of info.entries()) {
-            if (k > 9 && i.whole) continue;
+          for (const v of violets) {
             console.log(
-              `  ${String(k + 1).padStart(4)}  ${String(i.r.color ?? "?").padEnd(9)} ` +
-                `${String(i.r.name ?? i.r.index).slice(0, 12).padEnd(13)} ` +
-                `${i.p.x.toFixed(0).padStart(6)},${i.p.y.toFixed(0).padStart(5)}  ` +
-                `${(i.whole ? "whole" : i.sliced ? "SLICED" : "outside").padEnd(8)} ` +
-                `${i.edge.padEnd(7)} ${(Number.isFinite(i.gapLengths) ? i.gapLengths.toFixed(2) : "—").padStart(9)}     ` +
+              `    ${String(v.r.name).slice(0,8).padEnd(9)} idx ${String(v.r.index).padStart(3)}  ` +
+                `rank ${String(info.indexOf(v) + 1).padStart(2)}  physY ${(v.r.physicalY ?? 0).toFixed(2).padStart(6)}  ` +
+                `screen ${v.p.x.toFixed(0).padStart(6)},${v.p.y.toFixed(0).padStart(5)}  ` +
+                `${v.whole ? "whole" : v.sliced ? "SLICED" : "outside"}  gap ${Number.isFinite(v.gapLengths) ? v.gapLengths.toFixed(2) : "?"} lengths`,
+            );
+          }
+          const lead = info[0];
+          console.log(
+            `  the WINNER sits at physicalY ${(lead.r.physicalY ?? 0).toFixed(2)} ` +
+              `(-1 = inner edge, 0 = centreline, +1 = outer edge), colour ` +
+              `${COLOUR_NAME[colourOf(lead.r)] ?? colourOf(lead.r)}
+`,
+          );
+          // EVERY racer at or beyond the TOP edge — his body top above the canvas top — whether he
+          // still overlaps the frame or is entirely gone. Enumerated, not picked.
+          const atTop = info.filter((i) => i.p.y - halfH < 0);
+          console.log(
+            `  EVERY RACER AT OR BEYOND THE TOP EDGE (${atTop.length} of ${info.length}):
+`,
+          );
+          console.log(
+            "  rank  name      idx  colour       physY  lane vs leader   gap(len)  level?  ahead-on-his-lane       body in   contender?",
+          );
+          for (const i of atTop) {
+            const hex = colourOf(i.r);
+            const dy = (i.r.physicalY ?? 0) - (lead.r.physicalY ?? 0);
+            const lane =
+              Math.abs(dy) < 1e-9 ? "same"
+              : sameLane(i.r, lead.r, trackWidthPx) ? "SAME (overlaps)"
+              : dy > 0 ? `${dy.toFixed(2)} outward` : `${(-dy).toFixed(2)} inward`;
+            // How much of his body is inside: the visible fraction of his drawn box.
+            const visW = Math.max(0, Math.min(CW, i.p.x + halfW) - Math.max(0, i.p.x - halfW));
+            const visH = Math.max(0, Math.min(CH, i.p.y + halfH) - Math.max(0, i.p.y - halfH));
+            const frac = halfW > 0 && halfH > 0 ? (visW * visH) / (4 * halfW * halfH) : 0;
+            console.log(
+              `  ${String(info.indexOf(i) + 1).padStart(4)}  ${String(i.r.name).slice(0,8).padEnd(9)} ${String(i.r.index).padStart(3)}  ${(COLOUR_NAME[hex] ?? hex).padEnd(11)} ` +
+                `${(i.r.physicalY ?? 0).toFixed(2).padStart(6)}  ${lane.padEnd(15)} ` +
+                `${(Number.isFinite(i.gapLengths) ? i.gapLengths.toFixed(2) : "—").padStart(7)}  ` +
                 `${(i.level ? "yes" : "NO").padEnd(6)}  ` +
-                `${(i.aheadOnLane.length ? i.aheadOnLane.map((o) => `#${o.index}`).join(",") : "none").padEnd(14)} ` +
-                `${i.contender ? "YES" : "no"}`,
+                `${(i.aheadOnLane.length ? i.aheadOnLane.map((o) => `${o.name}(r${info.findIndex((x) => x.r === o) + 1})`).join(",") : "none").padEnd(22)}  ` +
+                `${(100 * frac).toFixed(0).padStart(5)}%          ${i.contender ? "YES" : "no"}`,
+            );
+          }
+          console.log(
+            `
+  THE DIRECTOR'S OWN CONTENDER SET (_photoFinishContenders, ${contenderIdx.size}):
+`,
+          );
+          for (const i of info.filter((x) => x.contender)) {
+            console.log(
+              `  ${String(info.indexOf(i) + 1).padStart(4)}  ${String(i.r.name).slice(0,8).padEnd(9)} ` +
+                `${String(i.r.index).padStart(3)}  ${(COLOUR_NAME[colourOf(i.r)] ?? colourOf(i.r)).padEnd(11)} ` +
+                `${(i.r.physicalY ?? 0).toFixed(2).padStart(6)}  gap ${i.gapLengths.toFixed(2)} lengths  ` +
+                `${i.whole ? "WHOLE" : i.sliced ? "*** SLICED ***" : "*** OUTSIDE ***"}`,
             );
           }
           const worst = info.filter((i) => i.sliced).sort((a, b) => a.m - b.m)[0];
