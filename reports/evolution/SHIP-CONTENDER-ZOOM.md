@@ -49,5 +49,32 @@ builds before it was found, and it is fixed in this ship.
 
 ## 4. CI
 
-**PENDING at the time this file was written**, and filled in afterwards from the remote rather than
-pre-filled — a report that names a run id before the run exists is not evidence of anything.
+Filled in from the remote after the fact rather than pre-filled — a report that names a run id before
+the run exists is not evidence of anything. **And the first two runs were RED**, which is the part
+worth recording.
+
+| head SHA | run id | result |
+| --- | --- | --- |
+| `dcb8d62d` — the merge + mint | 31821186931 | **failure** |
+| `a2cb638b` — re-measured, still mis-stamped | 31821920004 | **failure** |
+| **`7b28c540`** — re-stamped | **31822025984** | **success** |
+
+**What was red, and it was mine.** `check-measured-stamps` failed: the tracking-lag stamp in
+`docs/CAMERA_DIRECTOR.md` named `b15b5107` while `client/src/modules/camera/` had changed at
+`60fa2cb1` (ZOOM-PACE-5). Re-measured on master, exactly one row moves — PHOTO_FINISH median
+**5.06 → 5.33 pp**, p95 **26.61 → 26.85**, on an unchanged 1865 frames; every other state identical
+to the digit and pooled unmoved at 4.64. The corridor cap now arrives over 1500 ms rather than in one
+frame, so the shot spends longer moving and the camera trails it for more of it.
+
+**Why local verification did not catch it, stated so it is not repeated.** `npm run verify` ran while
+the camera change was still UNCOMMITTED. In that state the guard prints its PENDING line — a
+**report, not a failure** — and the run reads green. The stamp went stale the moment the change was
+committed. The guard's own header warns about exactly this path; the PENDING line IS the warning and
+it has to be acted on before the commit. I read it and did not.
+
+**The second run was red for a smaller reason:** `a2cb638b` re-measured the numbers but left the
+stamp naming the old commit, so freshness was still violated by a tree that was in fact fresh. Fixed
+at `7b28c540`.
+
+**Master was red for the length of those two fixes** — a cost of merging on a green *local* run, and
+recorded rather than smoothed over. The shipped BEHAVIOUR never moved: both fixes are documentation.

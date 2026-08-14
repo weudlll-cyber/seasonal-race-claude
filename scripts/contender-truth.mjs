@@ -66,29 +66,35 @@ const argOf = (n, d) => {
   return hit ? hit.slice(n.length + 3) : d;
 };
 const ONLY = argOf("only", null);
-const SEEDS = argOf("seeds", argOf("seed", "9"))
+// THE POOLED FOOTPRINT IS THE DEFAULT, not a flag. Every pooled figure this harness has produced was
+// ten tracks x these three seeds, but that was recorded only in the usage block above, so a reader
+// re-running the tool with no flags got ONE seed and a different number under the same name. The
+// baseline is now what the tool does by default; `--seeds=9` still gets the single race.
+const SEEDS = argOf("seeds", argOf("seed", "9,2814,5601"))
   .split(",")
   .map((s) => Number(s.trim()))
   .filter(Number.isFinite);
 const N_RACERS = Number(argOf("racers", "20"));
 
-// THE ARMS. `floor` is master's behaviour (the corridor forces the shot open); `contenders` is the
-// corrected rule (the contenders bind, the corridor caps).
+// THE ARMS, AND `contenders` IS NOW WHAT MASTER SHIPS. CONTENDER-ZOOM-1 merged at 0bd07dba with
+// `contenderZoom: true`, so the arm that needs no flag is the shipped one; `off` is retained as the
+// pre-ship CONTROL rather than as a default. Reading a baseline off `--arm=off` would now describe
+// behaviour nobody sees.
 // NOTE: `endgameCorridorFloor` does NOT exist on master — it lives only on the unmerged
-// feat/front-group. The two arms here are master's own behaviour and this block's.
+// feat/front-group, and CONTENDER-ZOOM-1 superseded it.
 const ARMS = {
-  off: { contenderZoom: false },
   contenders: { contenderZoom: true },
+  off: { contenderZoom: false },
   // ZOOM-PACE-5 §3: the contender SET without the corridor CAP. One key controls both today, so the
   // cap is nulled on the instance instead of being switched — a measurement, not a candidate build,
   // and the only way to price the two halves separately.
   "contenders-nocap": { contenderZoom: true },
 };
-const ARM = argOf("arm", "off");
-// --lane-only reproduces the previous, half-stated rule for comparison.
-const LEVEL_TOO = !process.argv.includes("--lane-only");
+const ARM = argOf("arm", "contenders");
 if (!ARMS[ARM]) {
-  console.error(`FAIL: unknown --arm=${ARM}. One of: ${Object.keys(ARMS).join(", ")}`);
+  console.error(
+    `FAIL: unknown --arm=${ARM}. One of: ${Object.keys(ARMS).join(", ")}`,
+  );
   process.exit(2);
 }
 
@@ -98,50 +104,16 @@ const ROSTER = resolveNameSet(DEFAULT_NAME_SET);
 const CFG = { ...DEFAULT_CAMERA_CONFIG, ...ARMS[ARM] };
 const THRESH = DEFAULT_CAMERA_CONFIG.photoFinishCloseThresholdT;
 
-// ── WHAT A LANE IS, TAKEN FROM THE ENGINE RATHER THAN INVENTED ─────────────────────────────────
+// ── THE MEMBERSHIP RULE IS NOT RESTATED HERE, AND THAT IS THE POINT ────────────────────────────
 //
-// THE RACE IS LANE-FREE. `raceBehavior.js` says so in its own header ("lane-free avoidance"), and
-// `physicalY` is a CONTINUOUS lateral offset in [-1,+1]; `computeRowPhysicalY` only lays out the
-// START GRID. So there are no discrete lanes to read and "same lane" has to be geometric.
+// This harness used to carry its own copy of the rule — `sameLane`, `nearlyLevel` and a
+// `contendersOf` built from them, plus a `--lane-only` switch that reproduced an older half-stated
+// version. All of it is DELETED. It was a second implementation of a rule whose one home is
+// `_abreastContenders` in CameraDirector.js, evaluated one world-step later than the director's
+// capture, and it produced a second pooled figure that competed with the shipped one.
 //
-// THE ENGINE ALREADY DEFINES IT, for its own free-lane overlap check: `pairContact` in
-// raceBehavior.js gives `contactWidth = halfWidthA + halfWidthB`, the centre-to-centre distance at
-// which two bodies touch across the track. And rowLayout.js's own helper fixes the unit: one
-// physicalY unit is trackWidth/2 world px. Both quantities are already on the racer
-// (`drawnBodyWidthPx`) and on the director (`_trackWidthPx`), so nothing here is a new number.
-const sameLane = (a, b, trackWidthPx) => {
-  const lateralPx = (Math.abs((a.physicalY ?? 0) - (b.physicalY ?? 0)) * trackWidthPx) / 2;
-  const contactWidth = ((a.drawnBodyWidthPx ?? 0) + (b.drawnBodyWidthPx ?? 0)) / 2;
-  return contactWidth > 0 && lateralPx < contactWidth;
-};
-
-/**
- * THE CONTENDERS: everyone not blocked by a racer ahead of them on their own lane.
- *
- * A racer sitting behind one of the leaders cannot win — he would have to move aside AND then still
- * overtake, and the photo-finish phase is far too short for both. He is not a contender. Everyone
- * else is still in the fight, and the shot is about them.
- *
- * @param {object[]} ordered  racers sorted by t, leader first
- */
-const nearlyLevel = (r, leader) => {
-  const pathLen = leader.pathLengthPx ?? 0;
-  if (!(pathLen > 0)) return true;
-  const gapPx = shortestArcDeltaT(leader.t, r.t) * pathLen;
-  // contactLength = halfLengthA + halfLengthB — pairContact's own along-track touch distance, which
-  // for two equal racers is exactly one body length. Not a new number.
-  const contactLength = ((leader.drawnBodyLengthPx ?? 0) + (r.drawnBodyLengthPx ?? 0)) / 2;
-  return contactLength > 0 && gapPx <= contactLength;
-};
-
-const contendersOf = (ordered, trackWidthPx, levelToo = true) => {
-  const leader = ordered[0];
-  return ordered.filter(
-    (r, i) =>
-      (!levelToo || i === 0 || nearlyLevel(r, leader)) &&
-      !ordered.slice(0, i).some((ahead) => sameLane(r, ahead, trackWidthPx)),
-  );
-};
+// A grade of the shot has to read the set the shot was sized from. It now does, at the capture site,
+// by index.
 
 const med = (a) => {
   if (!a.length) return NaN;
@@ -188,7 +160,9 @@ for (const geo of loadTracks({ only: ONLY })) {
     let crossStateZoom = null;
     let prevFinished = 0;
     let capBound = 0;
-    let pairCut = 0, pairOut = 0, pairNotWhole = 0;
+    let pairCut = 0,
+      pairOut = 0,
+      pairNotWhole = 0;
     let capApplicable = 0;
     const laneUse = []; // lateral extent the contenders occupy, as a fraction of the corridor
 
@@ -202,18 +176,30 @@ for (const geo of loadTracks({ only: ONLY })) {
           prevFinished = s.finishedCount;
           return;
         }
-        // ── STAGE A: THE CONTENDER SET, captured ONCE at entry ──────────────────────────────────
+        // ── STAGE A: THE CONTENDER SET — READ FROM THE DIRECTOR, NOT REBUILT ───────────────────
         //
-        // CAPTURED, NOT RECOMPUTED. FINISH-PAIR-1 exists because a guaranteed set that is re-sorted
-        // every frame moves the picture on every swap. The set below is taken on the entry frame and
-        // then followed by index for the rest of the shot, which is what that block bought.
+        // THE SET IS THE DIRECTOR'S OWN `_photoFinishContenders`, taken as it stands. It used to be
+        // reconstructed here by calling `contendersOf` on the first frame this callback OBSERVES the
+        // photo finish — one step of the world later than the director's capture, on racer positions
+        // that had already moved. The two sets disagreed at the edges, so the pooled figure this
+        // harness reported graded the RECONSTRUCTION rather than the shipped shot. One harness, one
+        // set, one baseline.
+        //
+        // CAPTURED, NOT RECOMPUTED — the director's rule, inherited rather than restated. It stores
+        // the set by index at entry and never re-sorts it, which is what FINISH-PAIR-1 bought; this
+        // follows the same indices for the rest of the shot.
         const ordered = [...s.racers].sort((a, b) => b.t - a.t);
         const leader = ordered[0];
         if (!entrySeen) {
           entrySeen = true;
-          capturedAtEntry = d._photoFinishContenders?.length ?? 0;
-          const set = contendersOf(ordered, trackWidthPx, LEVEL_TOO);
-          contenderIdx = set.map((r) => r.index);
+          const captured = d._photoFinishContenders ?? [];
+          capturedAtEntry = captured.length;
+          contenderIdx = captured
+            .map((cn) => cn.index)
+            .filter((ix) => ix != null);
+          const set = contenderIdx
+            .map((ix) => ordered.find((r) => r.index === ix))
+            .filter(Boolean);
           contendersAtEntry = set.length;
           // ── HOW FAR BACK THE LANE-ONLY RULE REACHES ─────────────────────────────────────────
           // In the racer's OWN LENGTH, which the engine already gives: drawnBodyLengthPx per racer
@@ -232,7 +218,9 @@ for (const geo of loadTracks({ only: ONLY })) {
           levelAtEntry = ordered.filter(
             (r) => shortestArcDeltaT(leader.t, r.t) <= THRESH,
           ).length;
-          gapsAtEntry = ordered.slice(0, 6).map((r) => shortestArcDeltaT(leader.t, r.t));
+          gapsAtEntry = ordered
+            .slice(0, 6)
+            .map((r) => shortestArcDeltaT(leader.t, r.t));
         }
         if (!fp?.point) return;
         pfFrames++;
@@ -262,15 +250,24 @@ for (const geo of loadTracks({ only: ONLY })) {
         );
         const halfW = drawnRacerScreenPx(displaySize, dScale, eX) / 2;
         const halfH = drawnRacerScreenPx(displaySize, dScale, eY) / 2;
+        // THE SAME SET, RE-READ. Since the grade above follows the director's own indices, this
+        // block now grades the same racers by a different route — a live re-read with the stored
+        // reference as fallback. The two columns agreeing is therefore a CHECK on the index lookup
+        // surviving a spread-copy, not an independent measurement, and they must not be read as two
+        // findings.
         const pinned = (d._photoFinishContenders ?? [])
           .map((cn) => s.racers.find((r) => r.index === cn.index) ?? cn.ref)
           .filter(Boolean);
-        let pc2 = 0, po2 = 0;
+        let pc2 = 0,
+          po2 = 0;
         for (const r of pinned) {
           const p = proj.toScreen(r, d.zoom, d.offsetX, d.offsetY);
           const centreIn = p.x >= 0 && p.x <= CW && p.y >= 0 && p.y <= CH;
           const whole =
-            p.x - halfW >= 0 && p.x + halfW <= CW && p.y - halfH >= 0 && p.y + halfH <= CH;
+            p.x - halfW >= 0 &&
+            p.x + halfW <= CW &&
+            p.y - halfH >= 0 &&
+            p.y + halfH <= CH;
           if (whole) continue;
           if (centreIn) pc2++;
           else po2++;
@@ -285,7 +282,10 @@ for (const geo of loadTracks({ only: ONLY })) {
           const p = proj.toScreen(r, d.zoom, d.offsetX, d.offsetY);
           const centreIn = p.x >= 0 && p.x <= CW && p.y >= 0 && p.y <= CH;
           const whole =
-            p.x - halfW >= 0 && p.x + halfW <= CW && p.y - halfH >= 0 && p.y + halfH <= CH;
+            p.x - halfW >= 0 &&
+            p.x + halfW <= CW &&
+            p.y - halfH >= 0 &&
+            p.y + halfH <= CH;
           if (centreIn) onScreen++;
           if (whole) continue;
           if (centreIn) c++;
@@ -293,7 +293,10 @@ for (const geo of loadTracks({ only: ONLY })) {
         }
         for (const r of others) {
           const p = proj.toScreen(r, d.zoom, d.offsetX, d.offsetY);
-          if (p.x >= 0 && p.x <= CW && p.y >= 0 && p.y <= CH) { othersInFrame++; break; }
+          if (p.x >= 0 && p.x <= CW && p.y >= 0 && p.y <= CH) {
+            othersInFrame++;
+            break;
+          }
         }
         if (c > 0) cut++;
         if (o > 0) outside++;
@@ -303,9 +306,14 @@ for (const geo of loadTracks({ only: ONLY })) {
         // How much of the corridor the participants actually use — the "empty road" question.
         const ys = participants.map((r) => r.physicalY ?? 0);
         if (ys.length)
-          laneUse.push(((Math.max(...ys) - Math.min(...ys)) * trackWidthPx) / 2 / trackWidthPx);
+          laneUse.push(
+            ((Math.max(...ys) - Math.min(...ys)) * trackWidthPx) /
+              2 /
+              trackWidthPx,
+          );
 
-        if (fp.corridorCap !== null && fp.corridorCap !== undefined) capApplicable++;
+        if (fp.corridorCap !== null && fp.corridorCap !== undefined)
+          capApplicable++;
         if (fp.capBound) capBound++;
         if (crossZoom === null && s.finishedCount > prevFinished) {
           crossZoom = d.zoom;
@@ -334,7 +342,11 @@ for (const geo of loadTracks({ only: ONLY })) {
       crossZoom,
       crossStateZoom,
       laneMed: med(laneUse),
-      capBound, capApplicable, pairCut, pairOut, pairNotWhole,
+      capBound,
+      capApplicable,
+      pairCut,
+      pairOut,
+      pairNotWhole,
       identity,
     });
   }
@@ -352,7 +364,9 @@ console.log(
 );
 for (const r of rows) {
   if (!r.pfFrames && !r.levelAtEntry) {
-    console.log(`${r.track.padEnd(15)} ${String(r.seed).padStart(5)}   (no photo finish)`);
+    console.log(
+      `${r.track.padEnd(15)} ${String(r.seed).padStart(5)}   (no photo finish)`,
+    );
     continue;
   }
   console.log(
@@ -371,7 +385,7 @@ console.log(
       : ""),
 );
 console.log(
-  `The director captured exactly ${[...new Set(withPF.map((r) => r.capturedAtEntry))].join("/")} in every one of them.`,
+  `The director captured ${[...new Set(withPF.map((r) => r.capturedAtEntry))].sort((a, b) => a - b).join(" or ")} of them.`,
 );
 
 console.log(`\nSTAGE B — ARE THE PARTICIPANTS WHOLE (arm=${ARM})\n`);
@@ -386,7 +400,10 @@ for (const r of withPF) {
   T.o += r.outside;
   T.n += r.notWhole;
   T.e += r.emptyFrames;
-  const rel = r.crossZoom && r.crossStateZoom ? (100 * r.crossZoom) / r.crossStateZoom : NaN;
+  const rel =
+    r.crossZoom && r.crossStateZoom
+      ? (100 * r.crossZoom) / r.crossStateZoom
+      : NaN;
   if (Number.isFinite(rel)) rels.push(rel);
   console.log(
     `${r.track.padEnd(15)} ${String(r.seed).padStart(5)} ${String(r.pfFrames).padStart(6)} ` +
@@ -402,12 +419,12 @@ console.log(
     `delivered zoom on ${sum("capBound")}.`,
 );
 console.log(
-  `\nTHE PINNED PAIR — the promise the shot actually makes today (2 racers): ` +
+  `\nTHE SAME SET, RE-READ LIVE — an index-lookup cross-check, NOT a second finding: ` +
     `cut ${pc(sum("pairCut"), T.f)}, fully outside ${pc(sum("pairOut"), T.f)}, ` +
     `NOT WHOLE ${pc(sum("pairNotWhole"), T.f)}`,
 );
 console.log(
-  `THE LEVEL SET — everyone within the entry gate's own threshold (${T.f} frames): ` +
+  `THE CONTENDERS — the director's own captured set (${T.f} frames): ` +
     `cut ${pc(T.c, T.f)}, fully outside ${pc(T.o, T.f)}, ` +
     `NOT WHOLE ${pc(T.n, T.f)}, EMPTY FRAMES ${T.e}`,
 );
