@@ -8,6 +8,22 @@ report here could be orphaned, or an index link could dangle, with nothing notic
 `node scripts/check-index.mjs --dir=reports/night --index=reports/night/INDEX.md` now checks both
 directions.
 
+- [NIGHT-2026-08-15.md](NIGHT-2026-08-15.md) — **one ship and four night pieces, sequential**
+  (2026-08-15). JOB A shipped the minimap the owner accepted that day — marks and unraced tail, one
+  merge, one tag, one mint, with the fingerprint selection made by each instrument's OWN declared
+  closure rather than by `engine-reach`, which has nothing to compare on a committed merge. PIECE 1:
+  the hashed fingerprint row may no longer use shorthand property syntax — it PARSES, anchors on the
+  call site rather than a name, and its nine shorthand keys are explicit now with both world arms
+  re-checked; the `...r` spread that contributes SIX of the sixteen hashed keys is named and not
+  fixed. PIECE 2: the language rule and the 2026-08-12 closed quotation exception get a guard with a
+  frozen file-plus-count allowlist — **the tree is not clean and it says so: 14 real pre-existing
+  violations including three German USER-FACING alerts** — plus two premise corrections (a byte
+  grep's "45 German lines" in `sim-fairness.mjs` is really 0, an umlaut-continuation-byte artefact)
+  and one lesson, that the guard could not see its own untracked files and CI caught the false local
+  green. PIECE 3, read-only: the worktree hook bypass **demonstrated** (relative `core.hooksPath`
+  into an untracked directory ⇒ a worktree commit runs no hook at all, silently), **549 commits
+  audited and only 3 left prettier-dirty blobs, none of which survives on master** — a clean result
+  is a real one.
 - [NIGHT-2026-08-13.md](NIGHT-2026-08-13.md) — **five pieces, all five finished, and the floor turned
   out to work for a different reason than anyone thought** (2026-08-13). Piece 1: nothing is lying
   around — both trees clean, no stashes, no unpushed tags — and all four fingerprints reproduce on
