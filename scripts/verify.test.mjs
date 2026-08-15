@@ -178,13 +178,14 @@ test("ENGINE: a file in the reach hull selects the world fingerprint — a camer
   );
 });
 
-test("ROUTED NOWHERE: the paths the table deliberately ignores select nothing at all", () => {
-  for (const f of [
-    "server/index.js",
-    ".github/workflows/ci.yml",
-    "client/e2e/smoke.spec.js",
-    "package-lock.json",
-  ]) {
+// LANG-CLOSED-1 SPLIT THIS TEST, and the split is the finding rather than an accommodation.
+// `check-language-closed` covers the LANGUAGE RULE, which applies to every line of source and every
+// document in the repository — so `server/index.js` and `client/e2e/*` genuinely stopped routing
+// nowhere the moment it shipped. Two paths still route nowhere and are asserted below; the two that
+// now route to exactly ONE guard are asserted to route to exactly THAT one, so a matcher that
+// quietly widens is still caught for every guard that is supposed to be narrow.
+test("ROUTED NOWHERE: the paths no narrow guard covers select nothing at all", () => {
+  for (const f of [".github/workflows/ci.yml", "package-lock.json"]) {
     // The two ALWAYS-ON guards are excluded: `fingerprint-containment` (a stray fingerprint copy
     // can be pasted into any file) and `check-writable` (any tracked file can become an unwritable
     // OneDrive placeholder). Both DECLARE `everything`, so "routes nowhere"
@@ -202,6 +203,26 @@ test("ROUTED NOWHERE: the paths the table deliberately ignores select nothing at
       selected,
       [],
       `${f} should route nowhere, got ${selected.join(",")}`,
+    );
+  }
+});
+
+test("ROUTED TO THE LANGUAGE GUARD ONLY: source no other guard reads still has a language rule", () => {
+  // Delete this and the split above becomes a hole: these two paths would be asserted by nothing,
+  // and a narrow guard that widened onto them would go unnoticed.
+  for (const f of ["server/index.js", "client/e2e/smoke.spec.js"]) {
+    const selected = plan([f])
+      .filter(
+        (t) =>
+          t.run &&
+          t.id !== "fingerprint-containment" &&
+          t.id !== "check-writable",
+      )
+      .map((t) => t.id);
+    assert.deepEqual(
+      selected,
+      ["check-language-closed"],
+      `${f} should route to the language guard and nothing else, got ${selected.join(",")}`,
     );
   }
 });

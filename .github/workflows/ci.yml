@@ -154,6 +154,13 @@ jobs:
       - name: Check the hashed fingerprint row uses no shorthand keys
         run: node scripts/check-fingerprint-payload.mjs
 
+      # Fails on German text anywhere in tracked source, scripts and documents, over the FROZEN
+      # allowlist of the quotations CLAUDE.md's closing inventory grandfathered on 2026-08-12 plus
+      # the pre-existing violations found when it shipped. Entries may be removed from that list;
+      # adding one fails its test, which is the asymmetry the closed exception asks for.
+      - name: Check the language rule and the closed quotation exception
+        run: node scripts/check-language-closed.mjs
+
       # Fails if a stamped measured number in a document predates a change to the source it measures.
       # FRESHNESS only — it never re-runs the measurement (tracking-lag alone takes ~7 minutes).
       - name: Check measured numbers have not gone stale
