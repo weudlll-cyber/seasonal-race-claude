@@ -516,6 +516,20 @@ finish shot leave ALONG it.
 
 ## Repository hygiene (2026-08-14)
 
+- [IP-ADDRESS-ADVISORY-1.md](IP-ADDRESS-ADVISORY-1.md) — **the one finding with a production path,
+  closed, and the server gate armed** (2026-08-16). SERVER-AUDIT-1's four highs are gone and **every
+  one was a lockfile-only move**: each fixed version already lay inside the range its dependent
+  declares, so no dependent was bumped and `server/package.json` is byte-identical. ip-address
+  10.2.0 → 10.5.0 (the production path, through express-rate-limit), nanoid 3.3.12 → 3.3.18 and
+  postcss 8.5.15 → 8.5.26 on the dev side — **dev flags intact**, which was the precise failure
+  `npm install <pkg>` had caused before. nanoid needed checking rather than assuming: its `latest`
+  is 6.0.1, outside postcss's `^3.3.12`, so the question was whether the 3.x line carried a fix at
+  all (it does). Audit **4 vulnerabilities (1 low, 3 high) → 1 low**; `--report-only` removed, so the
+  server gate now BLOCKS like the client one, with the remaining body-parser low printed and never
+  blocking by standing policy. Proven by the suite wired in for exactly this: **615/615**, locally
+  and on the merge SHA. Also records that **`npm ci` cannot run in `server/` while the dev server is
+  up** — better-sqlite3's native binary is held open and it dies on unlink after wiping node_modules.
+
 - [E2E-LOGIN-1.md](E2E-LOGIN-1.md) — **the gate the whole suite died at** (2026-08-16). A Playwright
   `setup` project logs in once and every spec inherits the state through `storageState`, so a new
   spec is authenticated because of where it lives rather than what its author remembered. **17 → 63
