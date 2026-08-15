@@ -10,6 +10,10 @@
 // ============================================================
 
 import { test, expect } from '@playwright/test';
+// E2E-RESET-BADGE-1: the API this run is actually talking to. These fixtures used to fetch
+// `http://localhost:4000` — the OWNER'S API, hardcoded — while the suite runs against its own
+// isolated instance on another port. See the note on the afterEach below.
+import { E2E } from './e2e-env.js';
 
 async function goToSurfaceClasses(page) {
   await page.goto('/dev');
@@ -150,15 +154,13 @@ test.describe('V4 — Generator switch', () => {
 test.describe('V5 — Default-Override lifecycle', () => {
   const OVERRIDE_ID = 'mud';
 
+  // E2E-RESET-BADGE-1: `page.request` rather than `fetch` inside `page.evaluate`, and the run's own
+  // API rather than a hardcoded port. `page.request` carries the browser context's cookies, so the
+  // call is authenticated the way the UI's would be; a bare `fetch` would have needed
+  // `credentials: 'include'` and would still have been pointed at the wrong server.
   test.afterEach(async ({ page }) => {
-    // Clean up: delete any override created during the test
-    await page.evaluate(async (id) => {
-      try {
-        await fetch(`http://localhost:4000/api/surface-classes/${id}`, { method: 'DELETE' });
-      } catch {
-        // cleanup — ignore if resource was never created during the test
-      }
-    }, OVERRIDE_ID);
+    // Clean up: delete any override created during the test.
+    await page.request.delete(`${E2E.apiUrl}/api/surface-classes/${OVERRIDE_ID}`).catch(() => {});
   });
 
   test('saving a code-default class creates a Modified override and shows Modified badge', async ({ page }) => {
@@ -179,23 +181,31 @@ test.describe('V5 — Default-Override lifecycle', () => {
   });
 
   test('Reset-to-Default removes the Modified badge', async ({ page }) => {
-    // Pre-create an override via API
-    await page.evaluate(async () => {
-      try {
-        await fetch('http://localhost:4000/api/surface-classes/mud', {
-          method: 'PUT',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            id: 'mud', label: 'Override Mud', generatorId: 'splash',
-            config: { color: '#ff0000', count: 4, sizeMin: 2, sizeMax: 5,
-                      lifetimeFrames: 30, spawnProbability: 0.5, gravity: 0.15, spreadAngle: 1.4 },
-            isOverride: true,
-          }),
-        });
-      } catch {
-        // test setup — ignore if PUT fails (test verifies the resulting state, not the setup call)
-      }
+    // Pre-create an override through the run's OWN API, authenticated by the page's cookies.
+    // THIS IS THE DEFECT THE TEST HAD: it posted to a hardcoded localhost:4000 inside
+    // page.evaluate, so on the isolated instance no override was ever created and the
+    // Reset-to-default button correctly did not exist. The failure was never in the product.
+    const created = await page.request.put(`${E2E.apiUrl}/api/surface-classes/mud`, {
+      data: {
+        id: 'mud',
+        label: 'Override Mud',
+        generatorId: 'splash',
+        config: {
+          color: '#ff0000',
+          count: 4,
+          sizeMin: 2,
+          sizeMax: 5,
+          lifetimeFrames: 30,
+          spawnProbability: 0.5,
+          gravity: 0.15,
+          spreadAngle: 1.4,
+        },
+        isOverride: true,
+      },
     });
+    // The setup is now ASSERTED rather than swallowed. A silently-failing setup is what let this
+    // test pass and fail on leaked state from the test above it for two months.
+    expect(created.ok(), `could not create the override the test needs (${created.status()})`).toBeTruthy();
 
     await goToSurfaceClasses(page);
     // Select the overridden mud
@@ -206,8 +216,19 @@ test.describe('V5 — Default-Override lifecycle', () => {
     page.on('dialog', (d) => d.accept());
     await page.getByRole('button', { name: /Reset to default/i }).click();
 
-    // After reset, Modified badge should be gone (class reverts to code-default)
-    await expect(page.getByText('Modified')).not.toBeVisible({ timeout: 5000 });
+    // After reset, THIS class is no longer modified.
+    //
+    // E2E-RESET-BADGE-1: was `expect(page.getByText('Modified')).not.toBeVisible()`, a PAGE-WIDE
+    // query. Any other overridden class made it resolve to two elements, and a strict-mode
+    // violation ABORTS the assertion immediately instead of retrying — so it never waited the 5 s
+    // it asked for, and its verdict depended on what earlier tests had left behind.
+    //
+    // The Reset-to-default control is rendered only for a class whose kind is 'modified', so its
+    // disappearance IS the statement "this class reverted", scoped to the class under test by
+    // construction. Stronger than the assertion it replaces, not weaker.
+    await expect(page.getByRole('button', { name: /Reset to default/i })).not.toBeVisible({
+      timeout: 5000,
+    });
   });
 });
 
