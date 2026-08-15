@@ -516,6 +516,20 @@ finish shot leave ALONG it.
 
 ## Repository hygiene (2026-08-14)
 
+- [WIRE-SUITES-1.md](WIRE-SUITES-1.md) — **the two suites that ran nowhere: one wired, one found
+  dead** (2026-08-16). CHECK-AUDIT-1 found 19 server test files and 7 e2e spec files that no invoker
+  ran. **Both were run BEFORE anything was wired.** The server suite is **615/615 green in 41.8 s**
+  and is now a CI job plus a `SUITE_GUARDS` declaration, so a change under `server/` selects it —
+  **not** the hook, because 42 s against a ~5 s hook that has no routing would be paid by every
+  commit. The e2e suite is **85 of 102 FAILED in 10.7 min** and is deliberately NOT wired: every
+  failure is a 30 s timeout because `ProtectedRoute` landed 2026-06-14 and **no spec logs in** — the
+  suite has been dead for two months and nothing said so, because nothing ran it. No test was edited.
+  Also adds **R13** (a new truth gets a rule inside an existing guard, not a new guard script — with
+  the three deliberately-unmerged document guards as the counter-example, and no guard for the rule
+  itself), and two true-again fixes: `check-doc-links` claimed to cover reports it never scans (its
+  `dirs` correctly stay, because 88 living-doc links point INTO reports), and `package.json` still
+  credited Husky.
+
 - [HOOK-TRACKED-1.md](HOOK-TRACKED-1.md) — **the hooks live in the repository, and it shows when they
   do not run** (2026-08-15). HOOK-SILENT-1 found that `core.hooksPath` was a RELATIVE path into an
   UNTRACKED directory, so a fresh worktree or clone enforced nothing, silently, exit 0. The hooks now

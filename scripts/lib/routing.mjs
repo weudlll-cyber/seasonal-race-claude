@@ -159,6 +159,27 @@ export const SUITE_GUARDS = [
     exclusive: true,
   },
   {
+    // WIRE-SUITES-1: 19 files and 615 tests that no invoker ran. Not the hook, not verify, not CI —
+    // they looked like coverage and were none (CHECK-AUDIT-1). Run green on master as they stood
+    // (615/615, 41.8 s), so they were wired unchanged; nothing in them was edited to make that true.
+    id: "server-suite",
+    covers:
+      "every vitest test under server/, and everything they import — including the configuration that decides how the suite runs",
+    blind: [
+      "the client: nothing under client/ is loaded by it",
+      "the race engine — the server neither imports nor drives it, so this suite can never speak to a fingerprint",
+      "whether the tests are the RIGHT tests. It runs what exists.",
+    ],
+    // `server/`, not `server/src/`, for the reason client-suite records in the comment below: the
+    // package manifest and vitest configuration decide how the suite RUNS, and naming the source
+    // subdirectory was that guard's misses 1 and 2. Learning it here rather than repeating it.
+    dirs: ["server/"],
+    notDirs: [],
+    files: [],
+    reach: [],
+    exclusive: false,
+  },
+  {
     id: "script-suite",
     covers: "every scripts/**/*.test.mjs, and the scripts they exercise",
     blind: [

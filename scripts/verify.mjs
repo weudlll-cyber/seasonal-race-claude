@@ -240,6 +240,18 @@ export function commandFor(g) {
       cwd: join(ROOT, "client"),
       exclusive: true,
     };
+  // WIRE-SUITES-1. `--no-file-parallelism` is the server package's OWN `npm test`, not a flag added
+  // here: the suite writes a real sqlite session store, so files sharing it cannot run concurrently.
+  // Invoked through the package script rather than by spelling out vitest, so the suite keeps ONE
+  // definition of how it runs — the same reason client-suite calls `npm test`.
+  if (g.id === "server-suite")
+    return {
+      cmd: ["npm", "test", "--silent"],
+      cwd: join(ROOT, "server"),
+      // NOT exclusive, unlike client-suite. That flag exists because the client suite saturates the
+      // machine for ~200 s; this one is 42 s and its `--no-file-parallelism` already keeps it to a
+      // single worker, so it is the cheapest thing in the run to overlap with a fingerprint.
+    };
   if (g.id === "script-suite")
     return { cmd: ["node", "--test", ...scriptTestFiles()] };
   // VERIFY-COST-3: `--cheap` is forwarded HERE, the only place the three are spawned. `cheapArgs()`
