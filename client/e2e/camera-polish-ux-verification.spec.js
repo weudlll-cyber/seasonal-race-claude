@@ -179,7 +179,7 @@ test.describe('V1 — Adaptive Zoom 1280-Track backward compat', () => {
     await page.goto('/race');
     await page.waitForTimeout(1200);
     expect(errors).toHaveLength(0);
-    await expect(page.locator('canvas')).toBeVisible();
+    await expect(page.locator('canvas.race-canvas')).toBeVisible();
   });
 
   test('zoom formula at worldW=1280: CANVAS_W²/(LEADER_VIEW_W×worldW) ≈ 1.40', async ({ page }) => {
@@ -203,7 +203,7 @@ test.describe('V2 — Adaptive Zoom 6000-Track', () => {
     await page.goto('/race');
     await page.waitForTimeout(1200);
     expect(errors).toHaveLength(0);
-    await expect(page.locator('canvas')).toBeVisible();
+    await expect(page.locator('canvas.race-canvas')).toBeVisible();
   });
 
   test('zoom formula at worldW=6000: leaderZoom ≈ 0.30 (zoom-out)', async ({ page }) => {
@@ -473,7 +473,7 @@ test.describe('V7 — Sprite-Scale: override hierarchy, race starts cleanly', ()
     await page.goto('/race');
     await page.waitForTimeout(1200);
     expect(errors).toHaveLength(0);
-    await expect(page.locator('canvas')).toBeVisible();
+    await expect(page.locator('canvas.race-canvas')).toBeVisible();
   });
 
   test('race without override: auto-scale active, still starts cleanly', async ({ page }) => {
@@ -510,7 +510,7 @@ test.describe('V7 — Sprite-Scale: override hierarchy, race starts cleanly', ()
     await page.goto('/race');
     await page.waitForTimeout(1200);
     expect(errors).toHaveLength(0);
-    await expect(page.locator('canvas')).toBeVisible();
+    await expect(page.locator('canvas.race-canvas')).toBeVisible();
   });
 });
 
@@ -623,7 +623,7 @@ test.describe('V11 — Open track: sprite scale unaffected by camera zoom', () =
     await page.goto('/race');
     await page.waitForTimeout(1200);
     expect(errors).toHaveLength(0);
-    await expect(page.locator('canvas')).toBeVisible();
+    await expect(page.locator('canvas.race-canvas')).toBeVisible();
   });
 
   test('open-track race uses raceMode=open or duration-based finish, still loads', async ({
@@ -660,7 +660,7 @@ test.describe('V11 — Open track: sprite scale unaffected by camera zoom', () =
     await page.goto('/race');
     await page.waitForTimeout(1200);
     expect(errors).toHaveLength(0);
-    await expect(page.locator('canvas')).toBeVisible();
+    await expect(page.locator('canvas.race-canvas')).toBeVisible();
   });
 });
 
