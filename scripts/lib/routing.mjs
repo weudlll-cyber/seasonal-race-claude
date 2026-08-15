@@ -63,7 +63,7 @@
 // ============================================================
 
 import { execFileSync } from "node:child_process";
-import { readdirSync, existsSync } from "node:fs";
+import { readdirSync, existsSync, statSync } from "node:fs";
 import { join, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
 import { engineReach } from "../engine-reach.mjs";
@@ -76,6 +76,64 @@ export function closureOf(relPath) {
   const abs = join(ROOT, relPath);
   if (!existsSync(abs)) return [];
   return engineReach(abs).files;
+}
+
+// ── THE DECLARATION IS A CONTRACT (REACH-CONTRACT-1) ────────────────────────────────────────────
+//
+// `closureOf` returns [] for a path that does not exist, and THAT is the silent failure this
+// checks. A guard declaring `reach: ["client/src/modules/raceCore.js"]` for a file that has since
+// been renamed contributes NOTHING to its own dependency set: the guard keeps declaring itself,
+// keeps printing a `reach=1 entry point(s)` line, and quietly stops selecting on anything that file
+// imports. `npm run verify` then SKIPS it for a diff it should have run on, and prints an honest
+// skip reason for a set that has silently shrunk — which is the worst shape a guard can take,
+// because it looks exactly like coverage.
+//
+// `files:` and `dirs:` have the same hole from the other direction: a declared path that does not
+// exist never matches anything, so the guard narrows without saying so.
+//
+// THE DECLARED `reach` WAS CORRECT FOR YEARS AND READ BY NOBODY. It stayed correct by luck. This
+// makes it correct by construction.
+//
+// WHERE THIS LIVES, AND WHY NOT IN A `check-*.mjs` GUARD. A guard checking the router would itself
+// be ROUTED BY THE ROUTER — the one path that most needs the check is the one that could skip it.
+// So it lives in the resolver: every consumer of a declaration (verify, engine-reach, the tests)
+// gets it for free and none of them can opt out.
+const KINDS = [
+  ["reach", "file"],
+  ["files", "file"],
+  ["dirs", "dir"],
+  ["notDirs", "dir"],
+];
+
+/**
+ * Every declared path in `d` that does not exist, or exists as the wrong kind of thing.
+ * @returns {{id:string, kind:string, path:string, why:string}[]}
+ */
+export function declaredPathProblems(d) {
+  const out = [];
+  for (const [key, kind] of KINDS) {
+    for (const p of d[key] ?? []) {
+      const abs = join(ROOT, p);
+      if (!existsSync(abs)) {
+        out.push({
+          id: d.id,
+          kind: key,
+          path: p,
+          why:
+            key === "reach"
+              ? "does not exist — its closure resolves to NOTHING, so this guard silently stops selecting on everything that file reaches"
+              : "does not exist — it can never match, so this guard is narrower than it declares",
+        });
+        continue;
+      }
+      const isDir = statSync(abs).isDirectory();
+      if (kind === "dir" && !isDir)
+        out.push({ id: d.id, kind: key, path: p, why: "is a FILE, but this key names directories" });
+      if (kind === "file" && isDir)
+        out.push({ id: d.id, kind: key, path: p, why: "is a DIRECTORY, but this key names files" });
+    }
+  }
+  return out;
 }
 
 // ── THE TWO SUITES ───────────────────────────────────────────────────────────────────────────────
@@ -212,19 +270,25 @@ export function resolveGuard(d) {
 export function collect(read = declarationOf, scripts = guardScripts()) {
   const guards = [];
   const undeclared = [];
+  // REACH-CONTRACT-1: collected here rather than thrown, so a caller decides what a broken
+  // declaration means. `verify` REFUSES on it; the tests assert on it. Either way it is never
+  // silently absorbed the way `closureOf`'s empty array absorbs it today.
+  const invalid = [];
   for (const rel of scripts) {
     const d = read(rel);
     if (!d || !d.id) {
       undeclared.push(rel);
       continue;
     }
+    invalid.push(...declaredPathProblems(d));
     guards.push(resolveGuard({ ...d, source: rel }));
   }
   for (const s of SUITE_GUARDS) {
+    invalid.push(...declaredPathProblems(s));
     guards.push(resolveGuard({ ...s, source: null }));
   }
   guards.sort((a, b) => a.id.localeCompare(b.id));
-  return { guards, undeclared };
+  return { guards, undeclared, invalid };
 }
 
 /**
