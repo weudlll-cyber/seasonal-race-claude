@@ -96,26 +96,22 @@ jobs:
       - name: Run server tests
         run: npm test
 
-      # SERVER-AUDIT-1: the server tree was audited by NOBODY — the gate only ever ran in client/.
-      # It runs here now, and it is REPORT-ONLY, which is a decision with a reason and an end date
-      # rather than a permanent softening:
+      # SERVER-AUDIT-1 wired this as REPORT-ONLY because four un-allowlisted HIGH advisories existed
+      # on a tree that had never been audited, and failing master over untriaged dependency bumps is
+      # how a red build becomes something people learn to ignore.
       #
-      #   Four un-allowlisted HIGH advisories exist on this tree today. Exactly ONE reaches
-      #   production — GHSA-mwp4-54f8-5fhr in `ip-address`, pulled in by express-rate-limit, where
-      #   it can affect how client IPs are bucketed for rate limiting. The other three (nanoid ×2,
-      #   postcss ×1) are dev-only, via vitest -> vite, and are never loaded by the running server.
+      # IP-ADDRESS-ADVISORY-1 CLOSED ALL FOUR, so the flag is gone and this BLOCKS like the client
+      # gate. They were lockfile-only moves — every fixed version already lay inside the range its
+      # dependent declared, so no dependent was bumped and no package.json changed:
       #
-      #   THEY ARE NOT ALLOWLISTED, deliberately: the allowlist takes an entry only where there is
-      #   NO fix, and `npm audit fix` offers one for all four. Allowlisting them would be a lie
-      #   about why they are tolerated. Failing on them tonight would turn master red over
-      #   dependency bumps nobody has triaged, on a tree that has never been audited before — which
-      #   is how a red build becomes something people learn to ignore.
+      #   ip-address 10.2.0 -> 10.5.0   (express-rate-limit declares ^10.2.0)   PRODUCTION
+      #   nanoid     3.3.12 -> 3.3.18   (postcss declares ^3.3.12)              dev-only
+      #   postcss    8.5.15 -> 8.5.26   (vite declares ^8.5.15)                 dev-only
       #
-      #   FLIP THIS TO A GATE by dropping `--report-only`, once the four are fixed or an entry is
-      #   justified. The advisories, their reachability and the fix cost are in
-      #   reports/night/NIGHT-2026-08-16.md.
-      - name: Security audit report (server tree — report-only, see the note above)
-        run: node ../scripts/audit-gate.mjs --tree=server --report-only
+      # One LOW advisory remains (body-parser, GHSA-v422-hmwv-36x6). It is printed, never blocking —
+      # that is the gate's standing policy for moderate/low and not an exception made for it.
+      - name: Security audit gate (server tree — high/critical fail unless allowlisted)
+        run: node ../scripts/audit-gate.mjs --tree=server
 
   # ── Docs ────────────────────────────────────────────────────
   docs:
