@@ -7,7 +7,8 @@
     "prepare": "node scripts/setup-hooks.mjs",
     "verify": "node scripts/verify.mjs",
     "data:export": "node scripts/data-export.mjs",
-    "hooks:install": "node scripts/setup-hooks.mjs"
+    "hooks:install": "node scripts/setup-hooks.mjs",
+    "test:e2e": "npm --prefix client run test:e2e"
   },
   "devDependencies": {
     "acorn": "^8.16.0",

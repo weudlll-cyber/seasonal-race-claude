@@ -1,0 +1,4 @@
+
+# E2E-LOGIN-1: the authenticated browser state the setup project writes. Generated per run,
+# contains a session cookie for a throwaway account, and must never be committed.
+e2e/.auth/

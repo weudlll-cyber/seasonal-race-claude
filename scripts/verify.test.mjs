@@ -227,12 +227,22 @@ test("ROUTED TO THE SERVER SUITE: a change under server/ selects the suite that 
   assert.deepEqual(routesTo("server/package.json"), ["check-language-closed", "server-suite"]);
 });
 
-test("NOT ROUTED: the e2e suite is deliberately wired to nothing", () => {
-  // Delete this and the DECISION disappears. The e2e suite was run on master and 85 of 102 tests
-  // failed — every spec that touches the UI, because `ProtectedRoute` landed 2026-06-14 and no spec
-  // logs in. It is deliberately not wired, and this test is where that decision is recorded in
-  // executable form: if someone wires it, this fails and they have to justify it.
+test("NOT ROUTED: the e2e suite is NIGHT WORK, and that is deliberate", () => {
+  // THIS IS A DECISION, NOT AN OVERSIGHT, and the distinction is the reason the comment exists.
+  //
+  // E2E-LOGIN-1 fixed the login gate that had killed the suite for two months, so "it is broken" is
+  // no longer why it is absent from the per-push path. The owner decided on 2026-08-16 that it runs
+  // during NIGHT WORK: it is about ten minutes, roughly five times the whole per-push CI run, and a
+  // ten-minute browser suite gating every merge trains people to re-run red builds.
+  //
+  //   the invoker:  npm run test:e2e      (one home: docs/NIGHT-RUN.md)
+  //   the rule:     docs/VERIFY-RULES.md R12a, which points there rather than repeating it
+  //
+  // Delete this and the decision becomes invisible; wire the suite into the ordinary path and this
+  // fails, which is the point — whoever does it has to justify it rather than slip it in.
   assert.deepEqual(routesTo("client/e2e/smoke.spec.js"), ["check-language-closed"]);
+  // The fixture files live beside the specs and must not change that answer either.
+  assert.deepEqual(routesTo("client/e2e/auth.setup.js"), ["check-language-closed"]);
 });
 
 test("EVERY GUARD DECLARES ITSELF — there is no table left to fall behind", () => {
