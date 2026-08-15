@@ -60,6 +60,9 @@ const FROZEN_ALLOWLIST = new Set([
   "server/src/auth/session.test.js",
   "docs/BACKLOG.md",
   "docs/archive/cleanup-audit-pr98.md",
+  // the detector and its fixtures — a German detector contains German
+  "scripts/check-language-closed.mjs",
+  "scripts/check-language-closed.test.mjs",
 ]);
 
 const withRepo = (files, fn) => {

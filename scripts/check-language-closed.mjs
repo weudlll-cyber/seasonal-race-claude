@@ -171,6 +171,22 @@ export const ALLOWLIST = [
   { file: "server/src/auth/session.test.js", hits: 1, why: "PRE-EXISTING — a German review marker in a comment", since: "2026-08-15" },
   { file: "docs/BACKLOG.md", hits: 1, why: "PRE-EXISTING — a German tool name in a backlog line", since: "2026-08-15" },
   { file: "docs/archive/cleanup-audit-pr98.md", hits: 1, why: "PRE-EXISTING — a German tooltip quoted in an archived audit", since: "2026-08-15" },
+
+  // ── THE DETECTOR ITSELF. A guard that detects German has to contain German: the umlaut class it
+  // matches on, the word list it matches on, and the fixtures its test proves it with. This is not
+  // an exception to the rule, it is what the tool IS — the same way check-config-claims must name
+  // the config keys it forbids elsewhere.
+  //
+  // IT IS ALLOWED BY COUNT RATHER THAN EXCLUDED WHOLESALE, deliberately: a blanket self-exemption
+  // would let German be added to this file forever, while a count still fails on anything beyond
+  // the machinery.
+  //
+  // CI FOUND THIS AND A LOCAL RUN DID NOT, which is the lesson worth keeping: this guard reads
+  // `git ls-files`, so its own brand-new files were INVISIBLE to it until they were committed. A
+  // guard that scans the tracked set cannot see itself before it is tracked, and a green run in
+  // that window means nothing.
+  { file: "scripts/check-language-closed.mjs", hits: 4, why: "THE DETECTOR — the umlaut class, the word list, and the header explaining both", since: "2026-08-15" },
+  { file: "scripts/check-language-closed.test.mjs", hits: 5, why: "THE DETECTOR'S FIXTURES — the German this guard is proven to catch", since: "2026-08-15" },
 ];
 
 const SKIP_EXT = new Set([
