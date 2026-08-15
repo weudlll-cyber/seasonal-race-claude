@@ -96,6 +96,27 @@ jobs:
       - name: Run server tests
         run: npm test
 
+      # SERVER-AUDIT-1: the server tree was audited by NOBODY — the gate only ever ran in client/.
+      # It runs here now, and it is REPORT-ONLY, which is a decision with a reason and an end date
+      # rather than a permanent softening:
+      #
+      #   Four un-allowlisted HIGH advisories exist on this tree today. Exactly ONE reaches
+      #   production — GHSA-mwp4-54f8-5fhr in `ip-address`, pulled in by express-rate-limit, where
+      #   it can affect how client IPs are bucketed for rate limiting. The other three (nanoid ×2,
+      #   postcss ×1) are dev-only, via vitest -> vite, and are never loaded by the running server.
+      #
+      #   THEY ARE NOT ALLOWLISTED, deliberately: the allowlist takes an entry only where there is
+      #   NO fix, and `npm audit fix` offers one for all four. Allowlisting them would be a lie
+      #   about why they are tolerated. Failing on them tonight would turn master red over
+      #   dependency bumps nobody has triaged, on a tree that has never been audited before — which
+      #   is how a red build becomes something people learn to ignore.
+      #
+      #   FLIP THIS TO A GATE by dropping `--report-only`, once the four are fixed or an entry is
+      #   justified. The advisories, their reachability and the fix cost are in
+      #   reports/night/NIGHT-2026-08-16.md.
+      - name: Security audit report (server tree — report-only, see the note above)
+        run: node ../scripts/audit-gate.mjs --tree=server --report-only
+
   # ── Docs ────────────────────────────────────────────────────
   docs:
     name: Living-doc guards + script tests
