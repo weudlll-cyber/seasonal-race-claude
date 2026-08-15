@@ -224,7 +224,12 @@ test.describe('D9 — session data (raceMode / targetLaps / targetDuration)', ()
     );
     expect(session.raceMode).toBe('laps');
     expect(session.targetLaps).toBeGreaterThanOrEqual(1);
-    expect(session.targetDuration).toBeGreaterThan(0);
+    // E2E-STALE-1: was `expect(session.targetDuration).toBeGreaterThan(0)`, wrong on two counts.
+    // The key is `targetDurationSec`, and on a CLOSED track it is deliberately absent —
+    // SetupScreen.jsx states the contract in the payload itself: "the two canonical operator
+    // inputs. Exactly one is meaningful per race mode." Asserting its ABSENCE is what the product
+    // correctly does, and is stronger than the assertion it replaces.
+    expect(session.targetDurationSec).toBeUndefined();
   });
 
   test('Quick Test on open track writes raceMode=time and targetDuration', async ({ page }) => {
@@ -241,7 +246,9 @@ test.describe('D9 — session data (raceMode / targetLaps / targetDuration)', ()
       JSON.parse(sessionStorage.getItem('activeRace') || '{}')
     );
     expect(session.raceMode).toBe('time');
-    expect(session.targetDuration).toBeGreaterThan(0);
+    // E2E-STALE-1: the key is `targetDurationSec` (SetupScreen.jsx), not `targetDuration`. The
+    // assertion's intent — an open race carries a duration target and no lap target — is unchanged.
+    expect(session.targetDurationSec).toBeGreaterThan(0);
     expect(session.targetLaps).toBeUndefined();
   });
 
@@ -323,7 +330,7 @@ test.describe('D9 — race screen startup', () => {
     await page.goto('/race');
     // Wait for countdown to finish (4 s) then check lap indicator
     await page.waitForTimeout(5000);
-    await expect(page.locator('canvas')).toBeVisible();
+    await expect(page.locator('canvas.race-canvas')).toBeVisible();
     // The lap info is drawn on canvas, so we verify via the HUD text we can reach
     // — the scoreboard should show racer names once the race is live
     await expect(page.getByText('Alpha')).toBeVisible();
@@ -336,7 +343,7 @@ test.describe('D9 — race screen startup', () => {
     await page.goto('/race');
     await page.waitForTimeout(1000);
     expect(errors).toHaveLength(0);
-    await expect(page.locator('canvas')).toBeVisible();
+    await expect(page.locator('canvas.race-canvas')).toBeVisible();
   });
 
   test('race screen loads cleanly for a snail race (speedMultiplier=0.30)', async ({ page }) => {
@@ -346,7 +353,7 @@ test.describe('D9 — race screen startup', () => {
     await page.goto('/race');
     await page.waitForTimeout(1000);
     expect(errors).toHaveLength(0);
-    await expect(page.locator('canvas')).toBeVisible();
+    await expect(page.locator('canvas.race-canvas')).toBeVisible();
   });
 
   test('race screen loads cleanly for a rocket race (speedMultiplier=1.25)', async ({ page }) => {
@@ -356,7 +363,7 @@ test.describe('D9 — race screen startup', () => {
     await page.goto('/race');
     await page.waitForTimeout(1000);
     expect(errors).toHaveLength(0);
-    await expect(page.locator('canvas')).toBeVisible();
+    await expect(page.locator('canvas.race-canvas')).toBeVisible();
   });
 
   test('← Setup button returns to setup screen', async ({ page }) => {
