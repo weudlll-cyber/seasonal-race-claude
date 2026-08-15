@@ -516,6 +516,28 @@ finish shot leave ALONG it.
 
 ## Repository hygiene (2026-08-14)
 
+- [E2E-LOGIN-1.md](E2E-LOGIN-1.md) — **the gate the whole suite died at** (2026-08-16). A Playwright
+  `setup` project logs in once and every spec inherits the state through `storageState`, so a new
+  spec is authenticated because of where it lives rather than what its author remembered. **17 → 63
+  passing, 85 → 40 failing, 10.7 → 7.7 min; not one assertion edited.** The account is CREATED per
+  run against an isolated API with its own temp `RA_DATA_DIR` and generated secrets — no credential
+  in the repository, none asked for, and the owner's server never touched (the old config reused
+  whatever was on 5173, which is why the suite could never authenticate). The 40 remaining failures
+  are triaged in clusters and left: **9 of 10 clusters read as stale tests** (a bare `canvas`
+  selector that now matches two, Base Speed defaults rebaselined to 0.00096/0.00113, a lap-selector
+  locator matching by bare digit, a spec waiting on a track nobody seeds), and **one is a possible
+  real defect — Reset-to-Default does not clear the Modified badge**. Runs as NIGHT WORK only:
+  `npm run test:e2e`, documented in NIGHT-RUN.md with VERIFY-RULES R12a pointing there.
+- [CHECK-AUDIT-1.md](CHECK-AUDIT-1.md) — **an independent audit of every check this repository runs,
+  by Copilot** (2026-08-15). Read-only: no check, test or config was changed. Counts **29 distinct
+  checks** and gives each one a defect class, a can-it-fail answer, git-history catch evidence, a
+  measured cost and a what-if-removed. **Committed as written and not edited** — it is another
+  author's record and the journal is append-only, so its numbers stand as taken on the day. Its
+  three headline findings drove two blocks: the uninvoked server and e2e suites (acted on in
+  [WIRE-SUITES-1](WIRE-SUITES-1.md)), `check-doc-links`' declaration not matching its runtime scope
+  (fixed there too), and `.github/workflows/deploy.yml` reading as live while documented as dormant
+  (still open).
+
 - [WIRE-SUITES-1.md](WIRE-SUITES-1.md) — **the two suites that ran nowhere: one wired, one found
   dead** (2026-08-16). CHECK-AUDIT-1 found 19 server test files and 7 e2e spec files that no invoker
   ran. **Both were run BEFORE anything was wired.** The server suite is **615/615 green in 41.8 s**

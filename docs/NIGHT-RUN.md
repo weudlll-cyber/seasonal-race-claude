@@ -92,3 +92,30 @@ Stated here so the next gap is closed by widening the rules and not by reaching 
 
 **Branch deletion IS allowed** (`git push origin --delete`, `git branch -D`) — the ship lifecycle ends
 with it, and an earlier draft of the deny list broke exactly that.
+
+---
+
+## The browser suite runs HERE, and nowhere else
+
+```bash
+npm run test:e2e
+```
+
+**That is the whole command.** It starts its own API and its own Vite on their own ports with their
+own empty data directory, creates a throwaway account, logs in once, and runs every spec
+authenticated. It touches nothing on 4000, 5173 or 4173, so it can run while the owner's dev server
+and production build are up.
+
+**Why it is a night command and not a CI step — the owner's decision, 2026-08-16.** It costs about
+**ten minutes**, which is roughly five times the entire per-push CI run, and its flake budget is
+unknown because until 2026-08-16 the suite had not run successfully at all. A ten-minute browser
+suite gating every merge trains people to re-run red builds, and a check nobody believes protects
+nothing.
+
+**This is the one home for that command and that reason.** `docs/VERIFY-RULES.md` says why the suite
+is deliberately outside the ordinary path and points here rather than repeating it.
+
+**What to read afterwards.** The list reporter prints per-test lines; `client/playwright-report/`
+holds the HTML report, and failures keep a screenshot and a video. **A failure here is a FINDING to
+triage, not a build to fix in the night** — the suite spent two months dead behind an auth gate, so
+some of its assertions are older than the product they describe.

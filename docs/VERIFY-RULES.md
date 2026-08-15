@@ -376,6 +376,23 @@ can have; it skips there and says so in one line. What CI verifies instead is th
 through `scripts/check-hooks-installed.test.mjs` in the script suite, against fixture repositories in
 all three broken states.
 
+## R12a — The browser suite is NIGHT WORK, deliberately outside the ordinary path
+
+**Rule.** The Playwright e2e suite is not in the per-push CI path and not in `npm run verify`'s
+ordinary routing. It is run deliberately, during night work.
+
+**The command and the full reason live in [NIGHT-RUN.md](NIGHT-RUN.md), which is their one home.**
+Not repeated here.
+
+**Why it is a rule and not an oversight.** It is about **ten minutes** — roughly five times the whole
+per-push CI run — and its flake budget is unknown, because until 2026-08-16 the suite had never run
+successfully: `ProtectedRoute` landed 2026-06-14, no spec authenticated, and 85 of 102 died at the
+login gate. A ten-minute browser suite gating every merge trains people to re-run red builds.
+
+**The decision is asserted, not just written down.** `scripts/verify.test.mjs` requires that
+`client/e2e/*` selects no suite, so wiring it into the ordinary path fails a test and whoever does it
+has to justify it.
+
 ## R13 — A new truth gets a RULE INSIDE AN EXISTING GUARD, not a new guard script
 
 **Rule.** When something new needs protecting, the first question is **which existing guard already
