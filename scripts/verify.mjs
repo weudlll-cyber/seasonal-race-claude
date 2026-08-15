@@ -408,6 +408,34 @@ const IS_ENTRY =
 if (IS_ENTRY) {
   // BEFORE ANY WORK. A refused flag must cost nothing, or the refusal is worse than the silence.
   rejectUnknownFlags();
+
+  // ── REACH-CONTRACT-1: A BROKEN DECLARATION REFUSES THE RUN ────────────────────────────────────
+  //
+  // `closureOf` returns [] for a path that does not exist, so a `reach` entry naming a renamed file
+  // silently contributes NOTHING: the guard still declares itself, still prints its `reach=N entry
+  // point(s)` line, and quietly stops selecting on everything that file imports. Verify then SKIPS
+  // it for a diff it should have run on, with a skip reason that reads perfectly honest.
+  //
+  // Refusing rather than warning, and BEFORE the plan is computed, because the plan itself is the
+  // thing that cannot be trusted: a route computed from a broken declaration is not a route, and
+  // printing it would give the run the appearance of having decided something.
+  //
+  // Exit ${EXIT_REFUSED} = refused, the same code an empty run uses (R0a). It is not a guard failure.
+  const { invalid } = _collect();
+  if (invalid.length) {
+    console.error(
+      `\n  REFUSED: ${invalid.length} declared path(s) do not resolve, so the routing cannot be trusted.\n`,
+    );
+    for (const p of invalid)
+      console.error(`           ${p.id}  ${p.kind}: ${p.path}\n             ${p.why}`);
+    console.error(
+      `\n           Fix the declaration in the guard, or restore the path. A declaration that\n` +
+        `           names something gone is a guard whose coverage has silently shrunk — which\n` +
+        `           looks exactly like coverage. Exit ${EXIT_REFUSED} = refused, not a guard failure.\n`,
+    );
+    process.exit(EXIT_REFUSED);
+  }
+
   const files = changedFiles();
   const tasks = plan(files);
   const chosen = tasks.filter((t) => t.run);

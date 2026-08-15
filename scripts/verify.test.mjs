@@ -688,3 +688,55 @@ test("ceremony-counts routes on its own source and on the document it writes", (
   );
   assert.equal(runs(["docs/SHIP-CEREMONY.md"], "ceremony-counts"), true);
 });
+
+// ── REACH-CONTRACT-1: the declaration is a contract ──────────────────────────────────────────────
+//
+// `closureOf` returns [] for a path that does not exist, so a `reach` entry naming a renamed file
+// contributes NOTHING and the guard silently stops selecting on everything that file imports. These
+// three tests are the both-directions proof: the tree as it stands, a sabotage, and the shape of the
+// refusal.
+
+test("CONTRACT: every path every guard declares resolves on the tree as it stands", () => {
+  // Delete this and the contract has no baseline: a declaration could rot to a missing path and
+  // only the sabotage test below — which uses synthetic declarations — would still pass.
+  const { invalid } = collect();
+  assert.deepEqual(
+    invalid,
+    [],
+    `declared paths that do not resolve:\n${invalid
+      .map((p) => `  ${p.id} ${p.kind}: ${p.path} — ${p.why}`)
+      .join("\n")}`,
+  );
+});
+
+test("SABOTAGE: a reach entry naming a file that does not exist is reported, not absorbed", () => {
+  // Delete this and the whole piece is unguarded — this is the exact silent failure it exists for.
+  // The declaration is injected rather than written to disk, so the test never edits a real guard.
+  const fake = () => ({
+    id: "fake-guard",
+    covers: "x",
+    blind: ["y"],
+    reach: ["client/src/modules/raceCoreRENAMED.js"],
+    files: [],
+    dirs: [],
+  });
+  const { invalid } = collect(fake, ["scripts/check-doc-facts.mjs"]);
+  assert.equal(invalid.length, 1, "a missing reach entry must be reported");
+  assert.equal(invalid[0].kind, "reach");
+  assert.match(invalid[0].why, /resolves to NOTHING/);
+});
+
+test("SABOTAGE: a declared path of the WRONG KIND is reported too", () => {
+  // Delete this and `files: ["docs/"]` would pass while matching nothing — the same silent narrowing
+  // through a different door, because a directory can never equal a file path in the match set.
+  const fake = () => ({
+    id: "fake-guard",
+    covers: "x",
+    blind: ["y"],
+    files: ["docs/"],
+    dirs: ["scripts/verify.mjs"],
+  });
+  const { invalid } = collect(fake, ["scripts/check-doc-facts.mjs"]);
+  const kinds = invalid.map((p) => `${p.kind}:${p.path}`).sort();
+  assert.deepEqual(kinds, ["dirs:scripts/verify.mjs", "files:docs/"]);
+});
