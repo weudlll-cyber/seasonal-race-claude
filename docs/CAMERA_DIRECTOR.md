@@ -525,7 +525,14 @@ a verbatim transcript of one run on one commit, which is a historical record, no
 
 ### The tracking lag, as measured today — and it had drifted
 
-<!-- MEASURED: tracking-lag (median/p95 pp per state) @ f7b960dd 2026-08-15 depends=client/src/modules/camera/ -->
+<!-- MEASURED: tracking-lag (median/p95 pp per state) @ RUNIN_HOLD_SHA 2026-08-16 depends=client/src/modules/camera/ -->
+
+**RE-MEASURED IN FULL FOR RUNIN-HOLD-1 — the first time since this stamp was written that the
+change actually reached the measurement.** The two preceding entries below re-stamped without
+re-measuring, correctly, because `Minimap.js` is not in `tracking-lag.mjs`'s load closure.
+`CameraDirector.js` is, and RUNIN-HOLD-1 changes when the shot closes, so the numbers were re-run
+rather than argued about. The table further down carries them; every frame count is identical and
+the movement is entirely in the tails.
 
 **RE-STAMPED AGAIN FOR MINIMAP-TAIL-1, on exactly the argument below.** That block washes the
 stretch of band behind the finish on open tracks — the same file, the same reason, the same
@@ -682,14 +689,40 @@ and it says so itself. It also covers nothing else on this page; see its header 
 
 | state         | frames | median pp | p95 pp |
 | ------------- | ------ | --------- | ------ |
-| BATTLE_ZOOM   | 9406   | 5.70      | 10.55  |
-| COMEBACK_ZOOM | 605    | 2.44      | 15.57  |
-| LEADER_ZOOM   | 17788  | 4.05      | 9.32   |
-| LEAD_CHANGE   | 7789   | 4.55      | 22.17  |
+| BATTLE_ZOOM   | 9406   | 5.72      | 10.99  |
+| COMEBACK_ZOOM | 605    | 1.15      | 15.57  |
+| LEADER_ZOOM   | 17788  | 4.05      | 9.49   |
+| LEAD_CHANGE   | 7789   | 4.57      | 31.33  |
 | OVERVIEW      | 4303   | 2.65      | 16.00  |
-| PHOTO_FINISH  | 1865   | 5.33      | 26.85  |
+| PHOTO_FINISH  | 1865   | 5.44      | 33.94  |
 
-OVERVIEW median 2.65 pp against every other state pooled 4.64 pp (ratio 0.57×).
+OVERVIEW median 2.65 pp against every other state pooled 4.65 pp (ratio 0.57×).
+
+**RE-MEASURED FOR RUNIN-HOLD-1, AND EVERY FRAME COUNT IS IDENTICAL TO THE DIGIT.** That is the
+first thing to read here and it is the proof the block owes: 9406 / 605 / 17788 / 7789 / 4303 /
+1865, unchanged, so **no state decision moved anywhere** — the run-in still reads the states rather
+than competing with them. Only the LAG inside states moved.
+
+**IT MOVED IN THE TAILS, WHICH IS WHERE THE CHANGE LIVES.** The run-in now HOLDS its opening shot
+for 77–85% of the endgame window and then closes in one 1.13–1.30 s sweep, instead of tightening
+continuously across the whole window. The closing is therefore concentrated: the same total travel
+happens in about a fifth of the time, so during those seconds the camera trails its subject further
+than it used to, and at no other time does it trail differently.
+
+The p95s that rose are exactly the endgame states: PHOTO_FINISH **26.85 → 33.94**, LEAD_CHANGE
+**22.17 → 31.33**, with BATTLE_ZOOM 10.55 → 10.99 and LEADER_ZOOM 9.32 → 9.49 barely moving.
+**Medians are flat everywhere** (LEADER_ZOOM and OVERVIEW identical to the digit), which says the
+ordinary tracking is untouched — the endgame window is a small fraction of a 60-second race, so its
+frames land in each state's tail and nowhere else.
+
+**COMEBACK_ZOOM's median FELL, 2.44 → 1.15 pp**, on an unchanged 605 frames. It is the smallest
+sample on the page and the one that has swung before (13.73 → 3.06 at RUNIN-1); a 605-frame median
+is not a stable statistic and this is not read as an improvement.
+
+**THIS IS THE COST THE OWNER IS BEING ASKED TO JUDGE**, not a regression to fix: a held shot that
+then sweeps is a bigger move in less time, and a camera that trails during an authored move is what
+an authored move looks like. If the tails read as sloppy on screen, the lever is the sweep's length
+(`runInOpenMs`), not the hold.
 
 **RE-MEASURED FOR ZOOM-PACE-5, AND AGAIN EXACTLY ONE ROW MOVES.** PHOTO_FINISH's median goes
 **5.06 → 5.33 pp** and its p95 **26.61 → 26.85**, on an unchanged frame count of 1865; every other

@@ -7220,6 +7220,10 @@ describe('RUNIN-GLIDE-1 — wide-and-back, gliding to the ordinary shot', () => 
     cd.state = CAM_STATE.LEADER_ZOOM; // FORWARD in the table
     const end = cd._leaderForwardFrac;
     cd._runInComposingNow = true;
+    // RUNIN-HOLD-1: the anchor now travels on the SWEEP, not on raw progress. Releasing at 0
+    // makes the sweep span the whole window, which is exactly the parameterisation these tests
+    // were written against — so every assertion below still states what it always stated.
+    cd._runInReleaseProgress = 0;
 
     cd._runInProgress = 0;
     expect(cd._forwardFracNow()).toBeCloseTo(1 - end, 10); // behind centre, same displacement
@@ -7236,6 +7240,10 @@ describe('RUNIN-GLIDE-1 — wide-and-back, gliding to the ordinary shot', () => 
     const cd = runInDirector();
     cd.state = CAM_STATE.PHOTO_FINISH; // CENTRED in the table
     cd._runInComposingNow = true;
+    // RUNIN-HOLD-1: the anchor now travels on the SWEEP, not on raw progress. Releasing at 0
+    // makes the sweep span the whole window, which is exactly the parameterisation these tests
+    // were written against — so every assertion below still states what it always stated.
+    cd._runInReleaseProgress = 0;
     for (const p of [0, 0.25, 0.5, 0.75, 1]) {
       cd._runInProgress = p;
       expect(cd._forwardFracNow(), `s=${p}`).toBeCloseTo(0.5, 10);
@@ -7259,6 +7267,10 @@ describe('RUNIN-GLIDE-1 — wide-and-back, gliding to the ordinary shot', () => 
     const pos = { x: 3000, y: 360 };
     const args = [0.5, cd._proj.axisX, cd._proj.axisY, 1280, 720];
     cd._runInComposingNow = true;
+    // RUNIN-HOLD-1: the anchor now travels on the SWEEP, not on raw progress. Releasing at 0
+    // makes the sweep span the whole window, which is exactly the parameterisation these tests
+    // were written against — so every assertion below still states what it always stated.
+    cd._runInReleaseProgress = 0;
     cd._runInProgress = 0; // fully back
     const back = cd._applyLeaderForwardBias(pos, ...args);
     cd._runInProgress = 1; // fully forward
@@ -7306,6 +7318,10 @@ describe('RUNIN-GLIDE-1 — wide-and-back, gliding to the ordinary shot', () => 
     const cd = runInDirector();
     cd.state = CAM_STATE.LEADER_ZOOM;
     cd._runInComposingNow = true;
+    // RUNIN-HOLD-1: the anchor now travels on the SWEEP, not on raw progress. Releasing at 0
+    // makes the sweep span the whole window, which is exactly the parameterisation these tests
+    // were written against — so every assertion below still states what it always stated.
+    cd._runInReleaseProgress = 0;
     cd._runInProgress = 1; // the ordinary forward placement
     const forward = cd._lineCeiling(subjectsAt(3000), FRAME, rs);
     cd._runInProgress = 0; // the mirror
@@ -7391,5 +7407,119 @@ describe('CameraDirector — the corridor caps the width, it does not force it',
     const on = drive({ contenderZoom: true }, spreadPair());
     const g = on._framingProbe.ceilings.guarantee;
     if (Number.isFinite(g)) expect(on._framingProbe.guaranteed).toBeLessThanOrEqual(g + 1e-9);
+  });
+});
+
+// ============================================================
+// RUNIN-HOLD-1 — HOLD THE OPENING SHOT, THEN CLOSE IN ONE SWEEP.
+//
+// The run-in used to begin closing on the frame the window opened, so the first seconds were a
+// crawl — measured, about 3.6 s of lead-in at roughly 95 px/s of picture flow, below the rate at
+// which anything reads as movement. The owner's rule is the opposite shape: open far enough that
+// the line sits well in frame, HOLD that, then close ONCE.
+//
+// THE FIXTURES CARRY GEOMETRY. `runInDirector` builds a real 4000 px shape and the subjects are
+// real points on it, because every rule under test reads race fields — a bare {t,x,y,index} shape
+// would let a rule that stopped reading them pass silently, which this repository has paid for.
+// ============================================================
+describe('RUNIN-HOLD-1 — hold, then one sweep', () => {
+  const runInDirector = (cfg = {}) =>
+    new CameraDirector(4000, 720, true, { ...DEFAULT_CAMERA_CONFIG, ...cfg }, 36, makeShape(4000));
+  const FRAME = { width: 1280, height: 720 };
+  const subjectsAt = (x) => ({ point: { x, y: 360 }, t: x / 4000, pair: [null, null] });
+  const racersAt = (x) => [{ index: 0, t: x / 4000, x, y: 360 }];
+  const rs = { finishT: 1, finishedCount: 0 };
+
+  /** Drive the run-in from `fromX` to `toX` at a steady pace, returning a frame-by-frame trace. */
+  const sweepTrace = (cd, fromX, toX, stepX = 20, dtMs = 16.7) => {
+    const trace = [];
+    let ts = 1000;
+    for (let x = fromX; x <= toX; x += stepX) {
+      cd._frameTs = ts;
+      const ceiling = cd._updateRunIn(subjectsAt(x), FRAME, racersAt(x), rs, ts);
+      trace.push({
+        x,
+        ts,
+        ceiling,
+        u: cd._runInSweepU(),
+        released: cd._runInReleaseProgress !== null,
+      });
+      ts += dtMs;
+    }
+    return trace;
+  };
+
+  // DELETE THIS and the whole point of the block is unguarded: the flat foot comes back, and the
+  // first seconds of the endgame go back to closing so slowly that nothing reads as movement.
+  it('HOLDS: while it holds, the bound does not tighten at all', () => {
+    const cd = runInDirector();
+    const trace = sweepTrace(cd, 3400, 3600); // early in the window — far from the line
+    const holding = trace.filter((f) => !f.released);
+    expect(holding.length).toBeGreaterThan(3);
+    const first = holding[0].ceiling;
+    for (const f of holding) expect(f.ceiling).toBeCloseTo(first, 9);
+    // And the anchor does not creep either — the travel is part of the same held move.
+    expect(holding[holding.length - 1].u).toBe(0);
+  });
+
+  // DELETE THIS and the sweep could pause, restart or reverse mid-close — the one thing the owner's
+  // rule forbids outright. A close that stands still is worse than one that starts late.
+  it('SWEEPS ONCE: after release the rate is never zero and never reverses before the line', () => {
+    const cd = runInDirector();
+    const trace = sweepTrace(cd, 3400, 3999, 5);
+    const swept = trace.filter((f) => f.released);
+    expect(swept.length).toBeGreaterThan(5);
+    for (let i = 1; i < swept.length; i++) {
+      // u is the sweep's own parameter: monotone, and strictly advancing while progress advances.
+      expect(swept[i].u).toBeGreaterThanOrEqual(swept[i - 1].u - 1e-12);
+    }
+    expect(swept[swept.length - 1].u).toBeGreaterThan(swept[0].u);
+    // Released once and never un-released — the latch.
+    const firstReleaseIdx = trace.findIndex((f) => f.released);
+    for (let i = firstReleaseIdx; i < trace.length; i++) expect(trace[i].released).toBe(true);
+  });
+
+  // DELETE THIS and a late-forming endgame would sit in a hold it can never leave in time, then cut.
+  // The rule is explicit: a COMPRESSED sweep is correct, a pause in the middle is not.
+  it('SHORT WINDOW: when there is less than a sweep left, it releases immediately', () => {
+    const cd = runInDirector();
+    // Engage with the leader already almost at the line: one sweep does not fit in what remains.
+    let ts = 1000;
+    cd._frameTs = ts;
+    cd._updateRunIn(subjectsAt(3990), FRAME, racersAt(3990), rs, ts);
+    ts += 16.7;
+    cd._frameTs = ts;
+    cd._updateRunIn(subjectsAt(3995), FRAME, racersAt(3995), rs, ts);
+    expect(cd._runInReleaseProgress).not.toBeNull();
+    // u is 0 ON the release frame by definition — that is where the sweep STARTS. What "immediately"
+    // means is that the hold was over within a frame of engagement, and that the sweep then moves.
+    expect(cd._runInSweepU()).toBe(0);
+    ts += 16.7;
+    cd._frameTs = ts;
+    cd._updateRunIn(subjectsAt(3998), FRAME, racersAt(3998), rs, ts);
+    expect(cd._runInSweepU()).toBeGreaterThan(0);
+  });
+
+  // DELETE THIS and the property the whole run-in was designed around goes unchecked: at the
+  // crossing the picture must be the active state's own shot, with nothing of the run-in left in it.
+  it("THE CROSSING IS THE STATE'S OWN SHOT: the bound reaches the live value exactly at the line", () => {
+    const cd = runInDirector();
+    sweepTrace(cd, 3400, 3999, 5);
+    // At progress 1 the sweep is complete by construction, so the returned bound IS `_lineCeiling`.
+    cd._runInProgress = 1;
+    const live = cd._lineCeiling(subjectsAt(4000), FRAME, rs);
+    const atLine = cd._runInHoldCeiling + (live - cd._runInHoldCeiling) * cd._runInSweepU();
+    expect(cd._runInSweepU()).toBe(1);
+    expect(atLine).toBe(live);
+  });
+
+  // DELETE THIS and a CENTRED state could start being moved by the sweep, which would take the
+  // photo finish's framing away from it — the case the mirror arithmetic makes fall out for free.
+  it('A CENTRED STATE STILL DOES NOT MOVE, hold or sweep', () => {
+    const cd = runInDirector();
+    cd.state = CAM_STATE.PHOTO_FINISH;
+    sweepTrace(cd, 3400, 3900, 20);
+    // Mirroring dead centre gives dead centre, whatever the sweep is doing.
+    expect(cd._forwardFracNow()).toBeCloseTo(0.5, 9);
   });
 });

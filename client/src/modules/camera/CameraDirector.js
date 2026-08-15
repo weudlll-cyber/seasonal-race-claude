@@ -229,6 +229,15 @@ export class CameraDirector {
     this._runInEngaged = false;
     this._runInComposingNow = false;
     this._runInProgress = null;
+    // RUNIN-HOLD-1: the run-in HOLDS its opening shot and then closes in ONE sweep. Both fields are
+    // one-way latches, for the same reason `_runInProgress` is clamped monotone — a close that could
+    // restart is not a sweep.
+    //   `_runInHoldCeiling`      the ceiling captured on the engagement frame, held while the hold lasts
+    //   `_runInReleaseProgress`  the run-in progress at which the sweep began; null while holding
+    this._runInHoldCeiling = null;
+    this._runInReleaseProgress = null;
+    this._runInStartTs = null;
+    this._runInStartProgress = null;
     this._inFinishDrama = false; // the drama window after the crossing (hudState reports 'FINISH')
     this._inPhotoFinish = false; // 15a: true while the PHOTO_FINISH shot holds (kept distinct from _inFinishDrama so hudState reports 'PHOTO_FINISH')
     this._photoFinishGateDone = false; // 15a-predictive: once-only latch — the pre-line close-check fires exactly once
@@ -2308,7 +2317,12 @@ export class CameraDirector {
       return framingFor(this.state).position === POSITION.FORWARD ? this._leaderForwardFrac : null;
     }
     const back = 1 - tableFrac; // the mirror: the same displacement, the other way
-    return back + (tableFrac - back) * this._runInProgress;
+    // RUNIN-HOLD-1: the SWEEP, not the raw progress. The anchor's travel and the zoom's close are
+    // one move — holding the shot while the leader walked back across the frame would be two moves
+    // at once, which is the shape `_beginRunInGlide` records emptying the frame. `_runInSweepU` is 0
+    // throughout the hold, so the leader simply stays at the mirror until the sweep begins, and it
+    // is 1 at the line, so he arrives at the state's own place exactly at the crossing.
+    return back + (tableFrac - back) * this._runInSweepU();
   }
 
   /**
@@ -2425,10 +2439,121 @@ export class CameraDirector {
     if (!this._runInEngaged) {
       this._runInEngaged = true;
       this._beginRunInGlide(ts);
+      // RUNIN-HOLD-1: the reference the release pace is measured against — the run-in's OWN span,
+      // captured once by the same latch that makes the run-in a phase.
+      this._runInStartTs = ts;
+      this._runInStartProgress = this._runInProgressOf(racers, raceState);
     }
     this._runInProgress = this._runInProgressOf(racers, raceState);
     this._runInComposingNow = true;
-    return this._lineCeiling(subjects, frameSize, raceState);
+
+    // ── RUNIN-HOLD-1: HOLD THE OPENING SHOT, THEN CLOSE ONCE ──────────────────────────────────
+    //
+    // `_lineCeiling` shrinks with the distance to the line, so left alone it begins closing on the
+    // frame the window opens. Measured, that made the first seconds a crawl: about 3.6 s of lead-in
+    // at roughly 95 px/s of picture flow, below the rate at which anything reads as movement. The
+    // owner's rule is the opposite shape — open far enough that the line sits well in frame, HOLD
+    // that, then close in ONE sweep.
+    //
+    // Holding is free with respect to the promise the run-in exists for: the held shot is the
+    // WIDEST the run-in ever asks for, and a wider shot keeps the line in frame trivially.
+    const live = this._lineCeiling(subjects, frameSize, raceState);
+    // NOTHING TO HOLD OR SWEEP when the line cannot be framed at all — `_lineCeiling` says so with
+    // Infinity, meaning "no constraint from me". Interpolating on it produced Infinity + (Infinity −
+    // Infinity) × u = **NaN**, which reached `cam.zoom` and took 21 existing tests down with it,
+    // including the plain "update() returns finite values". Returning it unchanged is what the code
+    // did before this block and is the only honest answer: there is no ceiling to ease toward.
+    if (!Number.isFinite(live)) return live;
+    if (this._runInHoldCeiling === null) this._runInHoldCeiling = live;
+
+    if (this._runInReleaseProgress === null) {
+      if (!this._runInShouldRelease(ts)) return this._runInHoldCeiling;
+      this._runInReleaseProgress = this._runInProgress;
+    }
+
+    // THE SWEEP IS PARAMETERISED BY PROGRESS, NOT BY WALL CLOCK, and that is what makes the landing
+    // exact rather than approximate. `u` is 1 when progress is 1 — the line — BY CONSTRUCTION, so
+    // the bound reaches the live geometric value precisely at the crossing and the state's own shot
+    // is what remains. A wall-clock sweep would land early or late by whatever the pace estimate
+    // was wrong by, and landing LATE would leave this term still binding at the crossing, which is
+    // the one thing the design may not do.
+    //
+    // It also cannot stand still or reverse: `_runInProgress` is already clamped monotone.
+    const u = this._runInSweepU();
+    return this._runInHoldCeiling + (live - this._runInHoldCeiling) * u;
+  }
+
+  /**
+   * HOW FAR THROUGH THE ONE SWEEP THIS FRAME IS — 0 while holding, 1 at the line.
+   *
+   * Read by `_forwardFracNow` as well as by the ceiling above, so the anchor's travel and the
+   * zoom's close are the SAME move rather than two moves that happen to overlap. That is the same
+   * lesson `_beginRunInGlide` records: pan and zoom on one ease, or the frame empties between them.
+   *
+   * @returns {number} 0..1
+   */
+  _runInSweepU() {
+    if (this._runInReleaseProgress === null) return 0;
+    const p = this._runInProgress ?? 0;
+    const span = 1 - this._runInReleaseProgress;
+    if (!(span > 0)) return 1; // released at (or past) the line: nothing left to sweep
+    const u = (p - this._runInReleaseProgress) / span;
+    return u < 0 ? 0 : u > 1 ? 1 : u;
+  }
+
+  /**
+   * IS IT TIME TO START THE ONE SWEEP? — derived, not chosen.
+   *
+   * ── THE ARITHMETIC, ONCE ──────────────────────────────────────────────────────────────────────
+   *
+   * The sweep lasts `runInOpenMs`, which is the owner's own 1–1.5 s and already exists as the key
+   * that paces the run-in's opening. So the release moment is simply *the moment from which one
+   * sweep of that length arrives at the line*: release when the leader's REMAINING TIME to the line
+   * has fallen to the sweep's length.
+   *
+   *   rate       =  (progress now - progress at engagement) / (now - engaged at)   ← observed
+   *   remaining  =  (1 - progress now) / rate
+   *   RELEASE WHEN  remaining <= runInOpenMs
+   *
+   * Both halves are things the run-in already knows: the distance still to run — `1 - progress`, in
+   * the very measure `_runInProgressOf` is written in — and the span the shot must close,
+   * `runInOpenMs`. NO FRACTION WAS PICKED and no key was added. The hold is simply whatever is left
+   * of the window before this moment, which is why it is derived rather than configured.
+   *
+   * ── WHY THE PACE IS THE RUN-IN'S OWN AND NOT THE WHOLE RACE'S, MEASURED ───────────────────────
+   *
+   * The first version used the projection idiom `_scheduleNextOverview` already has —
+   * `(finishT / leaderT) x elapsed`, the leader's average pace over the whole race — because reusing
+   * it meant the director had one way of estimating a finish time rather than two. **It was wrong by
+   * about six times and the shape of the error is instructive.** On ice-track it released with a
+   * true 7.4 s still to run while predicting 1.25 s: the field DECELERATES into the finish, so an
+   * average taken over the fast early laps is optimistic about exactly the stretch this needs to be
+   * right about. The sweep came out at 5.7–8.5 s across the ten tracks — most of the crawl this
+   * block exists to remove, still there under a new name.
+   *
+   * Measuring the rate over the RUN-IN's own span fixes that at the source: the endgame window is
+   * the period whose pace is being asked about, so it is the period to measure. It is also stable
+   * without smoothing — a per-frame derivative would be noise, an average since engagement is not.
+   *
+   * ── THE SHORT WINDOW: START IMMEDIATELY AND BE SHORTER ────────────────────────────────────────
+   *
+   * A late-forming endgame or a very fast closer can leave less than `runInOpenMs` in the window at
+   * the moment the run-in engages. Then this is already true on the engagement frame, the sweep
+   * begins at once and is simply compressed. THAT IS CORRECT AND A PAUSE IN THE MIDDLE IS NOT: a
+   * compressed close is still one continuous move, which is the property the owner asked for.
+   *
+   * @returns {boolean}
+   */
+  _runInShouldRelease(ts) {
+    const p = this._runInProgress ?? 0;
+    if (p >= 1) return true; // at or past the line: nothing left to wait for
+    // The pace over the RUN-IN's OWN SPAN — engagement to now. No span to measure yet on the
+    // engagement frame, and no rate before progress advances — hold rather than guess.
+    const dt = ts - (this._runInStartTs ?? ts);
+    const dp = p - (this._runInStartProgress ?? p);
+    if (!(dt > 0) || !(dp > 0)) return false;
+    const remainingMs = ((1 - p) * dt) / dp;
+    return remainingMs <= this._runInOpenMs;
   }
 
   /**
