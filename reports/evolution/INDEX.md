@@ -607,6 +607,23 @@ finish shot leave ALONG it.
 
 ## Camera / presentation fixes
 
+- [RUNIN-HOLD-1.md](RUNIN-HOLD-1.md) — **hold the opening shot, then close in ONE sweep**
+  (2026-08-16, `feat/runin-hold`, **unmerged, NOT minted, HIS EYE OWED**). The run-in began closing
+  the moment the endgame window opened, so the first seconds were a crawl — ~3.6 s at ~95 px/s of
+  picture flow. It now holds its opening shot and releases only when one steady close arrives at the
+  crossing. **The release is DERIVED**: release when `(1 − progress) / observed rate ≤ runInOpenMs` —
+  the distance still to run and the span the shot must close, no new key and no picked fraction. The
+  sweep is parameterised by PROGRESS, not wall clock, so `u = 1` at the line **by construction** and
+  the crossing is the state's own shot with no seam. Measured on ten tracks: **hold 77–85% of the
+  window, sweep 1.13–1.30 s** against the 1250 ms key; short-window compression fired 0 of 10.
+  **CAMERA `ff2bc42af377b5cf` → `bca27102de40518b` and RENDER `0e04fa4a5e9c3b85` →
+  `3a5268aac86f665d`, neither minted.** Tracking lag RE-measured (not re-stamped): every frame count
+  identical, movement entirely in the endgame tails (PHOTO_FINISH p95 26.85 → 33.94). Two lessons
+  worth more than the change: **both release estimators I rejected were fine and my MEASUREMENT was
+  wrong** — progress asymptotes to 0.999 and never reaches 1, so a script waiting for `>= 1` counts
+  the whole post-crossing ending as sweep; and interpolating on `_lineCeiling`'s `Infinity` produced
+  **NaN in cam.zoom**, caught only because 21 existing tests failed.
+
 - [MINIMAP-MARKS-1.md](MINIMAP-MARKS-1.md) — the minimap now marks the START and the FINISH, and
   washes down the UNRACED TAIL behind the finish (2026-08-15, `feat/minimap-start-finish`,
   **pushed, unmerged**; marks @ `faf379fd` **ACCEPTED by the owner on a production build**, tail @
