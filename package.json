@@ -2,13 +2,14 @@
   "name": "racearena",
   "version": "0.1.0",
   "private": true,
-  "description": "Monorepo root \u2014 manages git hooks via Husky",
+  "description": "Monorepo root — manages git hooks via Husky",
   "scripts": {
     "prepare": "husky",
     "verify": "node scripts/verify.mjs",
     "data:export": "node scripts/data-export.mjs"
   },
   "devDependencies": {
+    "acorn": "^8.16.0",
     "husky": "^9.0.0",
     "pngjs": "^7.0.0",
     "sharp": "^0.34.5"

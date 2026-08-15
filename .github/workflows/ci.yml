@@ -81,6 +81,22 @@ jobs:
         with:
           node-version: 20
 
+      # THE ONE DEPENDENCY THIS JOB HAS, and it is here rather than assumed (FP-PAYLOAD-1).
+      # Every guard below was deliberately built with relative imports only, so this job needed no
+      # install at all. `check-fingerprint-payload.mjs` breaks that: it must PARSE the payload
+      # literal, and a regex over the source would be a partial guard that looks exactly like a
+      # complete one. So acorn is a declared devDependency at the ROOT and comes from the lockfile.
+      #
+      # --omit=optional skips sharp's platform binaries (10+ MB of image codecs no guard touches);
+      # --ignore-scripts skips husky's `prepare`, which has no job in a runner. What remains is
+      # acorn, which is pure JS with no dependencies of its own.
+      #
+      # IF THIS STEP IS EVER REMOVED, the payload guard FAILS rather than skipping — it says so
+      # itself. That is deliberate: a guard that cannot parse cannot have an opinion, and a guard
+      # that silently checks nothing is worse than no guard.
+      - name: Install the parser the payload guard needs
+        run: npm ci --omit=optional --ignore-scripts
+
       # Fails on any dangling relative link in the LIVING docs (docs/ + repo-root *.md).
       # reports/ is excluded by design — it is the lab journal (historical, allowed to rot).
       - name: Check living-doc links
@@ -129,6 +145,14 @@ jobs:
       # FALLBACK-GUARD-1. Ships green over an explicit exception list of the 42 known disagreements.
       - name: Check every fallback agrees with the default it mirrors
         run: node scripts/check-fallback-agreement.mjs
+
+      # Fails if the object literal whose keys become the world fingerprint's hashed columns uses
+      # SHORTHAND property syntax — where renaming a local variable silently renames an emitted
+      # column. That is not hypothetical: it moved the world fingerprint for a byte-identical race
+      # and every start row's band hit rate fell to 0.000 (SOLLRANK-KEY-1). It PARSES rather than
+      # matching text, which is why the install step above exists.
+      - name: Check the hashed fingerprint row uses no shorthand keys
+        run: node scripts/check-fingerprint-payload.mjs
 
       # Fails if a stamped measured number in a document predates a change to the source it measures.
       # FRESHNESS only — it never re-runs the measurement (tracking-lag alone takes ~7 minutes).

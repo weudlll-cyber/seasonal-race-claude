@@ -4761,14 +4761,19 @@ if (isMain) {
                   BAND_EDGES.length + 1
                 : null;
             rawData.push({
-              trackId,
-              trackName,
-              isOpen,
-              racerType,
-              durationSec,
-              finishT,
-              seed,
-              raceIdx,
+              // EVERY KEY HERE IS WRITTEN EXPLICITLY, AND A GUARD ENFORCES IT
+              // (scripts/check-fingerprint-payload.mjs). Under shorthand the emitted COLUMN is a
+              // side effect of local variable naming, which is exactly how `sollRank` was renamed
+              // by a documentation pass — see the note on that key below. Explicit `key: value`
+              // makes a rename a local edit.
+              trackId: trackId,
+              trackName: trackName,
+              isOpen: isOpen,
+              racerType: racerType,
+              durationSec: durationSec,
+              finishT: finishT,
+              seed: seed,
+              raceIdx: raceIdx,
               // THE KEY IS `sollRank` AND MUST STAY `sollRank` — DOC-AUDIT-1 renamed the variable to
               // `targetRank` while this was SHORTHAND property syntax, so the EMITTED COLUMN was
               // renamed with it. `fairness-stats.mjs` reads `r.sollRank`, got undefined, and
@@ -4777,7 +4782,7 @@ if (isMain) {
               // it moved too, while the race itself was byte-identical. Written explicitly rather
               // than as shorthand so the variable can never rename the column again.
               sollRank: targetRank,
-              sollBereich,
+              sollBereich: sollBereich,
               // B2-leak trace field: only added under --b2-trace, so no-flag rawData stays byte-identical.
               ...(B2_TRACE
                 ? { b2LastInside: result.b2LastInside?.get(r.racerIndex) ?? -1 }
