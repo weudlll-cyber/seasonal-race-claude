@@ -116,12 +116,19 @@ seasonal-race-claude/
 └── .github/
     └── workflows/
         ├── ci.yml                  # Lint + test on PR
-        └── deploy.yml              # INERT — has never run; see its header comment
+        └── deploy.yml.disabled     # INERT — never run, and DE-REGISTERED by the suffix
 ```
 
-`deploy.yml` describes an intent that was never wired up. Measured 2026-08-04: it triggers on
-`branches: [main]` and the only branch at origin is `master`; it runs `scripts/deploy.sh`, which is
-not in this repository; and all three secrets it consumes are absent. Deployment today is MANUAL —
+`deploy.yml.disabled` describes an intent that was never wired up. Measured 2026-08-04: it triggers
+on `branches: [main]` and the only branch at origin is `master`; it runs `scripts/deploy.sh`, which
+is not in this repository; and all three secrets it consumes are absent.
+
+**It was renamed on 2026-08-16 and the rename is the point.** GitHub registers only `*.yml` /
+`*.yaml` under `.github/workflows/`, and until then it listed this workflow as **active** — a
+disclaimer written inside a registered workflow is invisible to the platform and to anyone reading
+the Actions tab. The `.disabled` suffix de-registers it while leaving the file where a reader looking
+for the deployment thinking would go. Reviving it takes the rename back **and** all four blockers
+cleared. Deployment today is MANUAL —
 [DEPLOYMENT.md](DEPLOYMENT.md) documents the by-hand production start, and the server currently runs
 only on the owner's machine. See BACKLOG.md, "Before the VPS migration".
 

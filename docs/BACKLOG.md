@@ -229,11 +229,15 @@ measurements are from [CI-AUDIT-GREEN-1](../reports/evolution/CI-AUDIT-GREEN-1.m
       comes from a header) and `postcss` (dev-only, via `vite`). Both clear with a plain
       `npm audit fix` — no `--force`, no breaking change. Not urgent while nothing is reachable; a
       **blocker** before anything is.
-- [ ] **`deploy.yml` cannot run — four independent blockers.** (1) triggers on `branches: [main]`,
+- [ ] **`deploy.yml.disabled` cannot run — four independent blockers, and it is now DE-REGISTERED
+      too** (renamed 2026-08-16; GitHub had listed it as *active* while the header said it could
+      never run). (1) triggers on `branches: [main]`,
       the only branch at origin is `master`; (2) runs `scripts/deploy.sh`, which is not in the repo;
       (3) all three secrets are absent (`DEPLOY_HOST`, `DEPLOY_USER`, `DEPLOY_KEY`); (4) no
       alternative path exists — 0 deployments, 0 environments, 0 webhooks, 0 deploy keys, no Pages.
-      The file is kept on purpose as the record of an intent; its header says all of this.
+      The file is kept on purpose as the record of an intent; its header says all of this, and the
+      `.disabled` suffix now says it to GitHub as well. Reviving it needs the rename back AND all
+      four cleared — the rename alone would register a workflow that still cannot work.
 - [ ] **`RA_PUBLIC_ORIGIN` exists only as the placeholder `racearena.example.com`.** It is the
       canonical self-origin the CSRF guard compares incoming `Origin` headers against, so it must be
       a real value before the app is reachable.
