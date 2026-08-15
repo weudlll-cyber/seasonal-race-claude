@@ -8,6 +8,22 @@ report here could be orphaned, or an index link could dangle, with nothing notic
 `node scripts/check-index.mjs --dir=reports/night --index=reports/night/INDEX.md` now checks both
 directions.
 
+- [NIGHT-2026-08-16.md](NIGHT-2026-08-16.md) — **six pieces, six reached** (2026-08-16). The e2e
+  suite told the truth about itself for the first time: **63 → 75 passing**, repairing only the two
+  clusters whose correct assertion the SOURCE could settle (a bare `canvas` selector that now matches
+  two elements; `targetDurationSec`, where the closed-track case now asserts its ABSENCE because
+  SetupScreen's own payload says exactly one target is meaningful per mode) — and leaving 28 failing
+  with a named reason each, because a wrong green is worse than a known red. **The one candidate
+  product defect was not one:** Reset-to-Default works, and its test failed because its setup PUT
+  went to a HARDCODED `localhost:4000` — the owner's API, which it had been writing overrides into
+  and deleting from — and because a page-wide `getByText` aborted on strict mode instead of waiting.
+  **Five runs replace the flakiness guess with a number: 27 tests fail in all five, only 4 are flake
+  (each 1/5).** The server tree is audited for the first time — **4 highs, exactly one reaching
+  production** (ip-address via express-rate-limit), report-only with a stated end date rather than a
+  false allowlist entry. The six columns arriving through `...r` are explicit, with the world
+  fingerprint **byte-identical on both sides**. And `deploy.yml` — which GitHub listed as *active*
+  while its own header said it could never run — is de-registered by rename, proven at the origin.
+
 - [NIGHT-2026-08-15.md](NIGHT-2026-08-15.md) — **one ship and four night pieces, sequential**
   (2026-08-15). JOB A shipped the minimap the owner accepted that day — marks and unraced tail, one
   merge, one tag, one mint, with the fingerprint selection made by each instrument's OWN declared
