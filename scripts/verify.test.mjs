@@ -206,22 +206,33 @@ test("ROUTED NOWHERE: the paths no narrow guard covers select nothing at all", (
   }
 });
 
-test("ROUTED TO THE LANGUAGE GUARD ONLY: source no other guard reads still has a language rule", () => {
-  // Delete this and the split above becomes a hole: these two paths would be asserted by nothing,
-  // and a narrow guard that widened onto them would go unnoticed.
-  for (const f of ["server/index.js", "client/e2e/smoke.spec.js"]) {
-    const selected = plan([f])
-      .filter(
-        (t) =>
-          t.run && !t.everything,
-      )
-      .map((t) => t.id);
-    assert.deepEqual(
-      selected,
-      ["check-language-closed"],
-      `${f} should route to the language guard and nothing else, got ${selected.join(",")}`,
-    );
-  }
+/** Every guard a path selects, excluding the always-on ones, sorted. */
+const routesTo = (f) =>
+  plan([f])
+    .filter((t) => t.run && !t.everything)
+    .map((t) => t.id)
+    .sort();
+
+// WIRE-SUITES-1 SPLIT THIS TEST AGAIN, and again the split is the finding. It used to assert that
+// `server/index.js` selects the language guard and NOTHING else — true only while 19 server test
+// files and 615 tests were wired to no invoker at all. They are wired now, so the sentence had to
+// change; the test catching it is the routing declaration doing its job.
+test("ROUTED TO THE SERVER SUITE: a change under server/ selects the suite that tests it", () => {
+  // Delete this and the whole point of WIRE-SUITES-1 is unguarded: the server suite could quietly
+  // stop being selected and go back to being 615 tests nobody runs, which is the state it was found
+  // in and which looks exactly like coverage.
+  assert.deepEqual(routesTo("server/index.js"), ["check-language-closed", "server-suite"]);
+  // `server/`, not `server/src/` — the package manifest decides how the suite RUNS, and naming the
+  // source subdirectory is the miss client-suite already paid for twice.
+  assert.deepEqual(routesTo("server/package.json"), ["check-language-closed", "server-suite"]);
+});
+
+test("NOT ROUTED: the e2e suite is deliberately wired to nothing", () => {
+  // Delete this and the DECISION disappears. The e2e suite was run on master and 85 of 102 tests
+  // failed — every spec that touches the UI, because `ProtectedRoute` landed 2026-06-14 and no spec
+  // logs in. It is deliberately not wired, and this test is where that decision is recorded in
+  // executable form: if someone wires it, this fails and they have to justify it.
+  assert.deepEqual(routesTo("client/e2e/smoke.spec.js"), ["check-language-closed"]);
 });
 
 test("EVERY GUARD DECLARES ITSELF — there is no table left to fall behind", () => {

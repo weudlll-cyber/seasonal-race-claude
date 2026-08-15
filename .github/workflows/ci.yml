@@ -61,6 +61,41 @@ jobs:
       - name: Security audit gate (high/critical fail unless allowlisted)
         run: node ../scripts/audit-gate.mjs
 
+  # ── Server ──────────────────────────────────────────────────
+  # WIRE-SUITES-1: 19 files and 615 tests that NO invoker ran — not the hook, not `npm run verify`,
+  # not CI. They looked like coverage and were none (CHECK-AUDIT-1, 2026-08-15).
+  #
+  # WIRED ONLY BECAUSE IT IS GREEN. Run on master as it stood, before anything was changed: 615/615
+  # in 41.8 s. Not one test was edited to make that true. The e2e suite was run the same way and is
+  # NOT here — 85 of 102 failed, and a red suite in the pipeline turns master red and teaches
+  # everyone to ignore it. See reports/evolution/WIRE-SUITES-1.md.
+  #
+  # ITS OWN JOB, not a step inside `client`. The two suites share nothing: different package,
+  # different vitest config, different install. A failure here should name the server, and a job
+  # that installs the client to test the server would be lying about what broke.
+  server:
+    name: Server tests
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: server
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: server/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      # `--no-file-parallelism` comes from the server package's own `npm test`, not from here: the
+      # suite writes a real sqlite session store, so files sharing it cannot run concurrently.
+      - name: Run server tests
+        run: npm test
+
   # ── Docs ────────────────────────────────────────────────────
   docs:
     name: Living-doc guards + script tests

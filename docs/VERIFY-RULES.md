@@ -376,6 +376,43 @@ can have; it skips there and says so in one line. What CI verifies instead is th
 through `scripts/check-hooks-installed.test.mjs` in the script suite, against fixture repositories in
 all three broken states.
 
+## R13 — A new truth gets a RULE INSIDE AN EXISTING GUARD, not a new guard script
+
+**Rule.** When something new needs protecting, the first question is **which existing guard already
+looks at that ground**, and the answer is a rule added inside it. A new `check-*.mjs` is the last
+resort, not the first move, and taking it means saying in the commit message which existing guard was
+considered and why it could not host the rule.
+
+**Why.** The guard set is now large enough that its own weight is a cost: every guard is a file to
+route, a declaration to keep true, a test file to maintain, a line in CI, and one more thing a reader
+has to hold. A rule added to a guard that already reads those files costs a function and a test.
+CHECK-AUDIT-1 counted **29 distinct checks**; the marginal one is cheap to write and is never free.
+
+**THE COUNTER-EXAMPLE IS DELIBERATE, AND IT IS THE INTERESTING HALF.** `check-config-claims`,
+`check-doc-facts` and `check-fingerprints` all scan the same living documents for a forbidden kind of
+string — a config value, a stated fact, a current fingerprint. They were **not** merged into one
+document guard, on purpose:
+
+- **Three narrow guards each fail loudly about one thing.** One guard with three modes fails about
+  "documents", and the reader then has to work out which mode fired. A failure message that names its
+  own subject is most of a guard's value.
+- **A merged guard can be half-disabled without anyone noticing.** If one mode's anchor breaks — a
+  pattern that no longer matches, a directory that moved — the guard still runs, still passes, and
+  reports success over ground it never looked at. **This repository has shipped that shape twice**
+  (`check-fingerprints` over a directory it was never pointed at, `check-language-closed` unable to
+  see its own untracked files), and both times the cost was a green run that meant nothing.
+- **Their blind lists differ.** Three declarations state three different holes; one declaration would
+  have to state the union, which is where a hole goes to hide.
+
+**So the rule is a DEFAULT, not a law:** add to an existing guard unless the new rule would need a
+different anchor, a different failure message, or a different blind list — in which case it is a
+different guard and the three siblings above are the precedent for saying so.
+
+**THERE IS NO GUARD FOR THIS RULE, AND THERE MUST NOT BE ONE.** A checker that enforced "no new
+checkers" would be the joke this rule exists to prevent — the 30th check, whose entire subject is
+that there are 29. It is a rule for a person to apply with judgement at review time, and the place it
+is enforced is the commit message.
+
 ---
 
 ## The instruments, and what each costs

@@ -23,12 +23,21 @@
 // `blind` is required and non-empty: the hole is written down by whoever knows it.
 export const GUARD = {
   id: "check-doc-links",
+  // WAS "a relative link in a living doc OR REPORT". It never scanned reports — `isLivingDoc`
+  // excludes them by design, as the header has always said — so the declaration claimed ground the
+  // code never looked at, which is the one thing a declaration must not do (CHECK-AUDIT-1 found it).
   covers:
-    "a relative link in a living doc or report that points at a file which does not exist",
+    "a relative link in a LIVING doc (docs/ + repo-root *.md) that points at a file which does not exist",
   blind: [
     "external URLs",
     "anchors within a file — only the file half of a link is resolved",
+    "links written INSIDE reports/ — the lab journal is allowed to rot and is never scanned, even though a change there selects this guard (see dirs below)",
   ],
+  // `reports/` STAYS in dirs, and it is not an inconsistency with the line above. `dirs` is a
+  // ROUTING statement — which changed paths select this guard — and it is a different question from
+  // which files get SCANNED. Reports are never scanned, but they are link TARGETS: 88 links in the
+  // living docs point into reports/, and deleting or renaming a report makes those dangle. A guard
+  // that did not run when reports changed would miss its most likely real failure.
   dirs: ["docs/", "reports/"],
   files: [],
 };
