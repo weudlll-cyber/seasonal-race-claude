@@ -525,7 +525,7 @@ a verbatim transcript of one run on one commit, which is a historical record, no
 
 ### The tracking lag, as measured today — and it had drifted
 
-<!-- MEASURED: tracking-lag (median/p95 pp per state) @ RUNIN_HOLD_SHA 2026-08-16 depends=client/src/modules/camera/ -->
+<!-- MEASURED: tracking-lag (median/p95 pp per state) @ a85640b8 2026-08-16 depends=client/src/modules/camera/ -->
 
 **RE-MEASURED IN FULL FOR RUNIN-HOLD-1 — the first time since this stamp was written that the
 change actually reached the measurement.** The two preceding entries below re-stamped without
