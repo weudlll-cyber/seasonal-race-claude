@@ -346,7 +346,7 @@ Full-screen UI for creating and managing custom racer types with user-supplied P
 - [x] Prettier (single quotes, 2-space, printWidth 100)
 - [x] Vitest + React Testing Library (2134 unit tests as of 2026-05-25 hygiene sprint; 183 Playwright e2e tests: 22 D9 + 14 D3.5.5 + 21 UX-verification + 18 D10-smoke + 17 D10-UX-verification + 13 B-Wave-smoke + 12 B-16/17 + 3 fix-list-tracks + 8 camera-polish-smoke + 31 camera-polish-UX-verification + 14 D11-smoke + 12 D11-UX-verification)
 - [x] GitHub Actions CI — push + PR to main: lint → format-check → test → audit
-- [x] Husky pre-commit hook → lint-staged (ESLint fix + Prettier on staged files)
+- [x] Tracked pre-commit hook (`.githooks/`) → lint-staged (ESLint fix + Prettier on staged files) plus the fast guards. One home: [VERIFY-RULES.md](VERIFY-RULES.md) R12. Was husky until HOOK-TRACKED-1, 2026-08-15.
 - [x] docs/AUDIT.md with OWASP Top 10 checklist
 
 ## D7c — Row Start with Speed Bonus + Track Capacity ✅ Done (PR #39)

@@ -186,17 +186,16 @@ test("ENGINE: a file in the reach hull selects the world fingerprint — a camer
 // quietly widens is still caught for every guard that is supposed to be narrow.
 test("ROUTED NOWHERE: the paths no narrow guard covers select nothing at all", () => {
   for (const f of [".github/workflows/ci.yml", "package-lock.json"]) {
-    // The two ALWAYS-ON guards are excluded: `fingerprint-containment` (a stray fingerprint copy
-    // can be pasted into any file) and `check-writable` (any tracked file can become an unwritable
-    // OneDrive placeholder). Both DECLARE `everything`, so "routes nowhere"
-    // means "selects no guard that CAN be skipped". Excluding it here rather than weakening the
-    // assertion keeps the test able to catch a matcher that has quietly widened.
+    // ALWAYS-ON guards are excluded BY THEIR DECLARATION rather than by name, so "routes
+    // nowhere" means "selects no guard that CAN be skipped". It was a hand-written list of two and
+    // needed editing BOTH times an always-on guard was added (check-language-closed, then
+    // check-hooks-installed) -- a second statement of something the declaration already says, and
+    // it fell behind exactly as VERIFY-ROUTING-2 predicts. Reading `everything` keeps the test
+    // able to catch a matcher that has quietly widened, without breaking on a legitimate new one.
     const selected = plan([f])
       .filter(
         (t) =>
-          t.run &&
-          t.id !== "fingerprint-containment" &&
-          t.id !== "check-writable",
+          t.run && !t.everything,
       )
       .map((t) => t.id);
     assert.deepEqual(
@@ -214,9 +213,7 @@ test("ROUTED TO THE LANGUAGE GUARD ONLY: source no other guard reads still has a
     const selected = plan([f])
       .filter(
         (t) =>
-          t.run &&
-          t.id !== "fingerprint-containment" &&
-          t.id !== "check-writable",
+          t.run && !t.everything,
       )
       .map((t) => t.id);
     assert.deepEqual(
