@@ -68,7 +68,7 @@ export const GUARD = {
   covers:
     "a shorthand property in the object literal whose keys become the world fingerprint's hashed columns, where renaming a local variable silently renames an emitted column",
   blind: [
-    "SPREAD elements in that literal (`...r`, `...(FLAG ? {} : {})`) — their keys come from elsewhere and this guard never sees them; --spread-report inventories them",
+    "a spread of an object LITERAL, which is ALLOWED — its keys are written at the call site, so a rename of them is a visible edit to this file (the `...(FLAG ? {…} : {})` trace field). A spread of anything else is now REFUSED rather than merely reported (FP-SPREAD-1)",
     "whether the key names are RIGHT — `sollRank: somethingElse` passes; this is a schema guard, not a value guard",
     "the ORDER of the keys, which the hash also depends on — reordering is a visible edit, renaming was the invisible one",
     "every other object literal in the repository; it checks one call site",
@@ -156,6 +156,21 @@ function* nodes(node) {
   }
 }
 
+/**
+ * Are the key names this spread contributes WRITTEN AT THIS CALL SITE?
+ *
+ * Object literal          → yes, the keys are right here.
+ * `cond ? {…} : {…}`      → yes, both branches are literals (the --b2-trace field's shape).
+ * anything else (`...r`)  → no; the names come from wherever that value was built.
+ */
+function spreadKeysAreVisible(node) {
+  if (!node) return false;
+  if (node.type === "ObjectExpression") return true;
+  if (node.type === "ConditionalExpression")
+    return spreadKeysAreVisible(node.consequent) && spreadKeysAreVisible(node.alternate);
+  return false;
+}
+
 const isAnchorCall = (n) =>
   n.type === "CallExpression" &&
   n.callee?.type === "MemberExpression" &&
@@ -202,7 +217,32 @@ for (const call of calls) {
 
   for (const p of arg.properties) {
     if (p.type === "SpreadElement") {
-      spreads.push({ line: p.loc.start.line, text: src.slice(p.start, p.end).split(NL)[0].trim() });
+      const text = src.slice(p.start, p.end).split(NL)[0].trim();
+      spreads.push({ line: p.loc.start.line, text });
+      // ── FP-SPREAD-1: A SPREAD WHOSE KEYS ARE NOT VISIBLE HERE IS REFUSED ────────────────────
+      //
+      // This started as a declared BLIND SPOT and is now a rule, because it was the same defect
+      // as the shorthand keys through the other door: `...r` spliced six of the sixteen hashed
+      // columns out of a racer object, so their names were that object's field names and a rename
+      // THERE renamed a hashed column silently.
+      //
+      // The distinction is whether the KEY NAMES ARE WRITTEN AT THIS CALL SITE. Spreading an
+      // object LITERAL is fine — `...(FLAG ? { b2LastInside: x } : {})` names its key right here,
+      // and a rename of it is a visible edit to this file. Spreading an IDENTIFIER is not: the
+      // names come from wherever that value was built.
+      if (!spreadKeysAreVisible(p.argument)) {
+        failures++;
+        console.error(
+          `FAIL: ${PAYLOAD_FILE}:${p.loc.start.line}: \`${text}\` spreads a value whose KEYS ARE ` +
+            `NOT NAMED HERE.${NL}` +
+            `      The world fingerprint hashes these rows INCLUDING their key names, so a rename ` +
+            `in whatever builds${NL}      that value renames an emitted COLUMN — silently, for a ` +
+            `race that did not change.${NL}` +
+            `      Write the keys out explicitly at this call site. Spreading an object LITERAL is ` +
+            `still allowed:${NL}      its keys are written here and a rename of them is a visible ` +
+            `edit to this file.`,
+        );
+      }
       continue;
     }
     const name =
