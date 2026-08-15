@@ -1,12 +1,32 @@
 # ============================================================
-# File:        deploy.yml
-# Path:        .github/workflows/deploy.yml
+# File:        deploy.yml.disabled
+# Path:        .github/workflows/deploy.yml.disabled
 # Project:     RaceArena
 # Created:     2026-04-19
 # Description: INTENT ONLY — this workflow has NEVER RUN, not once, and cannot run as written.
 #
 # THIS FILE IS A RECORD, NOT A PIPELINE. It is kept deliberately: deleting it would delete the
 # record of a decision, and this project's rule is that doing so is how a project forgets why.
+#
+# ── THE `.disabled` SUFFIX IS THE MECHANISM, AND IT IS WHY THIS FILE WAS RENAMED ────────────────
+#
+# The header below has said "never run, cannot run" since 2026-08-04 — and GitHub still listed this
+# workflow as **active** (`gh workflow list` reported: `Deploy  active  272257209`). A prose
+# disclaimer inside a registered workflow is invisible to the platform and to anyone reading the
+# Actions tab, and CHECK-AUDIT-1 flagged exactly that: a configuration that looks live while being
+# documented as dormant.
+#
+# GitHub registers only `*.yml` / `*.yaml` under `.github/workflows/`. Ending the name `.disabled`
+# de-registers it entirely — it leaves the Actions list — while the file stays exactly where a
+# reader looking for the deployment thinking would go, with its content untouched.
+#
+# WHY NOT the alternatives: disabling it through the API is repo state, invisible in the tree, and
+# reverts on a whim; moving it under docs/ separates it from the other workflows a reader compares
+# it against; changing the trigger to `workflow_dispatch` would leave it registered AND make it
+# easier to fire, which is the opposite of the intent.
+#
+# TO REVIVE IT: rename back to `deploy.yml` AND clear all four blockers below. The rename alone
+# would register a workflow that still cannot work.
 #
 # Measured at origin on 2026-08-04 (CI-AUDIT-GREEN-1 §10): the Deploy workflow is registered and
 # ACTIVE but has 0 runs in its entire history; the last 100 Actions runs are 100% CI; and the repo
