@@ -174,6 +174,51 @@ band measured the same 30.0 px in it either way.
 - `v-ship-finish-band` (`354859bc`, 2026-08-13) — **the ship.** The forward merge is inside it: the
   branch was merged with master first, re-measured, and only then merged out.
 
+### MINIMAP — the minimap says where the race starts, ends, and is never raced (2026-08-15)
+
+**The owner judged the marks and the unraced tail on a production build on 2026-08-15 and ACCEPTED
+both.** They ship as ONE ship — one merge, one tag, one mint — because master gets a visible change
+once.
+
+The minimap drew the band, its two edges and the racer dots. On an open track the band runs on past
+the finish and looked there exactly as it does before it, so **there was no way to see how much race
+was left.** It now carries a start mark, a finish mark, and a wash over the stretch that is never
+raced.
+
+**Both marks are bars across the band at `getPosition(t, ±0.5)` — the SAME segment the world's finish
+gate spans**, since `drawOpenTrackFinishLine` extrudes `getPosition(ft, 0)` by `openTrackHW`, which is
+`trackWidthPx / 2`, which is the width `getPosition` offsets by. The mark and the line the racers
+cross cannot drift apart by construction rather than by agreement. Solid green starts, a black/white
+checker finishes, and **where the two coincide — every closed track — one mark carries both** rather
+than two bars stacking into a smear.
+
+**Sizes were chosen against a measurement.** The bar is 12–22 panel px on the ten shipped tracks and
+its ends land within 1.5 panel px of the drawn band edge, both measured across all ten. An earlier
+reading assumed ~50 px and would have drawn a blob on half the game.
+
+**The unraced tail is built from the mark's own source, and that is the whole design.** Driving the
+shipped `renderMinimap` through a recording context on all ten tracks at four finish positions gives
+a **seam of 0.000000 panel px** against the checker, every case. The alternative — the band's own
+index-paired `getEdgePoints` — was rejected with numbers: the two parameterisations disagree by up to
+502 world px on luger-hill, an along-track offset that would have put the seam visibly off the mark.
+
+**No config key was added**, and the minimap still reads nothing but the shape it is handed.
+
+**RENDER moved and is minted; WORLD, WORLD-OFF and CAMERA did not move.** That was decided by the
+guards' own declarations rather than asserted: walking `scripts/lib/routing.mjs`'s `closureOf` from
+each instrument's declared `reach`, none of the six merged files lies inside WORLD/WORLD-OFF or
+CAMERA, while RENDER's closure contains both changed source files. **`engine-reach` was deliberately
+not leaned on** — on a committed merge it has no working-tree diff to read, so its verdict there is
+not evidence. Values live in [fingerprints.json](fingerprints.json).
+
+**One claim in the branch's own report is retracted inside it**: "dark wedges at the ends of an open
+band". The canvas has one band colour across 110601 px and there is no darker region anywhere. What
+is really there is that an open band's two end caps are never stroked.
+
+- `v-ship-minimap` (`8a2dacab`, 2026-08-15) — **the ship.** Two blocks in one merge; the return point
+  is `v-ship-minimap^1`, which restores a minimap with no start mark, no finish mark and no tail,
+  with the RENDER value `0d5854a652c69d87`.
+
 ### CONTENDER-ZOOM — the photo finish frames everyone still abreast (2026-08-14)
 
 **The owner judged it on a production build on 2026-08-14 and ACCEPTED it.** The photo-finish shot is

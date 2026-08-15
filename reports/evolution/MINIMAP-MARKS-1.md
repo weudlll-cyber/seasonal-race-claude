@@ -422,3 +422,73 @@ better than inventing a deletion.
    pair, and they will keep multiplying as layers are added. One property test — "the layers appear
    in this declared order" — would replace them and would catch a new layer inserted in the wrong
    place, which is the mistake this module is now most exposed to.
+
+---
+
+# THE SHIP — 2026-08-15
+
+**The owner judged the marks and the unraced tail on a production build on 2026-08-15 and accepted
+both.** One merge, one tag, one mint, because master gets a visible change once.
+
+| | |
+| --- | --- |
+| merge commit | `8a2dacab` — `merge(MINIMAP-MARKS-1 + MINIMAP-TAIL-1)` |
+| tag | `v-ship-minimap`, annotated, registered in `docs/TAGS.md` in the same push |
+| return point | `v-ship-minimap^1` — derivable, so no `pre/*` tag was cut (TAG-SWEEP-1) |
+| branch | `feat/minimap-start-finish`, deleted at the origin after the merge |
+
+**The diff was read before merging and it is exactly the six files this work touched** — the two
+minimap sources, the call site, the stamp document, and the two report files. Nothing rode along
+from elsewhere.
+
+## What was measured on the merge, and what deliberately was not
+
+**Per instrument, the question asked was "does any merged file lie inside the closure this
+instrument actually reads", computed with the repo's own `scripts/lib/routing.mjs` `closureOf`
+walked from each guard's declared `reach`.** That is a stronger statement than a matching hash: a
+hash says "it did not move this time", a closure says "it cannot".
+
+| role       | closure  | merged files inside                        | action                    |
+| ---------- | -------: | ------------------------------------------ | ------------------------- |
+| WORLD      | 36 files | **none**                                    | not run — cannot move     |
+| WORLD-OFF  | 36 files | **none** (same instrument)                  | not run — cannot move     |
+| CAMERA     | 36 files | **none**                                    | not run — cannot move     |
+| RENDER     | 55 files | `Minimap.js`, `renderRaceFrame.js`          | **measured fresh**        |
+
+**`engine-reach` was deliberately not used here.** It answers "does the DIFF reach the engine", and
+on a committed merge there is no working-tree diff for it to read — its verdict would have been a
+sentence, not evidence. The closure walk is the same machinery `npm run verify` routes with, so it
+cannot drift from what the guards themselves believe.
+
+**A first attempt at this check was wrong and is worth recording**: it read each guard's declared
+`files`/`dirs`, which are empty for all three, and concluded that *nothing* was inside *any*
+closure — including RENDER, which plainly reads the file that changed. The declaration names ENTRY
+POINTS in `reach`; the closure is computed transitively from them. A membership test that answers
+"none" for every instrument is reporting its own bug.
+
+## Fingerprints — before, after, and which were minted
+
+| role       | recorded before   | measured on `8a2dacab` | minted?                                     |
+| ---------- | ----------------- | ---------------------- | ------------------------------------------- |
+| RENDER     | `0d5854a652c69d87` | `0e04fa4a5e9c3b85`     | **YES** — the movement the owner accepted   |
+| WORLD      | `dc4647be0f55ebdb` | not run (see above)    | no — unmoved, and no movement to record     |
+| WORLD-OFF  | `854018ee5d3d83e1` | not run (see above)    | no                                          |
+| CAMERA     | `ff2bc42af377b5cf` | not run (see above)    | no                                          |
+
+**RENDER was measured on the merge and not carried across from the branch.** It happens to equal the
+branch tip's value, which is what a merge of a fast-forwardable branch should give — but "happens to
+equal" is the point: it was re-derived rather than copied, because the branch and the merge are
+different commits and only one of them is what ships. `docs/fingerprints.json` is the one home and
+carries the new value, the superseded one, and why it moved.
+
+**A mint records a MOVEMENT, so three roles were not minted.** Re-stamping an unmoved value would
+put a 2026-08-15 date on a measurement nobody took.
+
+## Sweep
+
+`feat/minimap-start-finish` deleted at the origin and confirmed absent with `git ls-remote`. No other
+remote branch is already contained in master.
+
+## CI
+
+Green on the merge SHA — the result, not a prediction; the run is named in the night report.
