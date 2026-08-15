@@ -329,6 +329,11 @@ export function plan(files, base = BASE, splitter = splitInert, guards = null) {
       reason: reasonFor(g, hits) + inertNote,
       covers: g.covers,
       blind: g.blind ?? [],
+      // CARRIED THROUGH so a consumer can ask the DECLARATION whether a guard is always-on rather
+      // than keeping a list of names. The routing tests kept such a list and it needed editing both
+      // times an always-on guard was added — a second statement of something the declaration
+      // already makes, which is the exact failure VERIFY-ROUTING-2 exists to end.
+      everything: g.everything === true,
     };
   });
 }

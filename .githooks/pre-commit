@@ -1,4 +1,28 @@
 #!/usr/bin/env sh
+# ============================================================
+# File:        .githooks/pre-commit
+# Project:     RaceArena — HOOK-TRACKED-1
+#
+# THIS FILE IS TRACKED, AND THAT IS THE POINT. It used to live at `.husky/pre-commit` and was
+# reached through `.husky/_/pre-commit` — a generated shim in an UNTRACKED directory that
+# `core.hooksPath` pointed at. A fresh worktree or clone had the script and not the shim, so git
+# resolved the hooks path to a directory that did not exist and ran NOTHING, silently, exit 0.
+# HOOK-SILENT-1 demonstrated that. The work below is UNCHANGED; only where it lives has moved.
+#
+# The `set` line below REPRODUCES HUSKY and is not a new rule. Husky invoked this script through
+# `sh -e`, and two comments further down depend on it: `wait` is used as an `if` CONDITION
+# precisely because a bare failing command under that flag would abort before the failure could be
+# printed. Dropping it would have made those comments quietly false.
+#
+# WHAT IS DELIBERATELY NOT REPRODUCED: husky honoured `HUSKY=0` as a bypass. `git commit
+# --no-verify` remains the escape, and it is the one this repository already documents.
+#
+# HOW IT IS REACHED: `core.hooksPath` = `.githooks` — a relative path into a TRACKED directory, so
+# it resolves in every worktree and in every clone that has run the setup command. See
+# docs/VERIFY-RULES.md R12, which is the one home for that.
+# ============================================================
+set -e
+
 # Run lint-staged on the client package before every commit.
 # lint-staged auto-fixes ESLint errors and Prettier formatting on staged files.
 # VERIFY-COST-3: the binary is invoked DIRECTLY. `npx lint-staged` re-resolves the package on every

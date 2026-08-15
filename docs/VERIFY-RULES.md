@@ -325,6 +325,57 @@ clone, and the cheapest response to its message would have been to destroy a cor
 that can only be satisfied by damaging the documents is not a check, and shipping it anyway to have
 built something is how a suite stops being trusted.
 
+## R12 — The hooks are TRACKED, and one command puts them in effect
+
+**Rule.** The git hooks live in **`.githooks/`**, which is tracked. In a fresh clone or a fresh
+worktree, one command — and only one — makes them take effect:
+
+```
+npm run hooks:install
+```
+
+`npm install` and `npm ci` run it too, through `prepare`, so the usual first step already does it.
+`node scripts/setup-hooks.mjs --check` reports without changing anything.
+
+**This is the ONE HOME for how the hooks work.** Everywhere else points here.
+
+**What the command does, and why one `git config` line is not enough.** Three separate things have
+to be true, and only the first is a setting:
+
+1. **`core.hooksPath` is not cloned.** Git config lives outside the object store, so every fresh
+   clone starts with it unset and runs `.git/hooks/`, which this repository does not use.
+2. **The executable bit is not honoured here.** `core.filemode` is **false** on this machine (Git
+   for Windows), so a `chmod` on the working file records nothing — the old hook was tracked as
+   `100644`. Git for Windows runs a hook through `sh` regardless of the bit, but **git on Linux does
+   not execute a non-executable hook**, so a hook authored here would have been dead everywhere else
+   and green here. The command sets the bit **in the index** (`git update-index --chmod=+x`), which
+   is what actually travels in a clone and works from Windows.
+3. **A relative `hooksPath` resolves against the WORKTREE.** That is what broke before: it pointed at
+   `.husky/_`, which is generated and untracked, so it existed in the main worktree and nowhere else.
+   `.githooks/` is tracked, so the checkout supplies it everywhere.
+
+**MEASURED, not assumed — `core.hooksPath` is SHARED across worktrees on this machine.** It is set in
+`.git/config`, which linked worktrees inherit; `extensions.worktreeConfig` is on, but no
+`config.worktree` overrides it. A worktree created during HOOK-SILENT-1 read back `.githooks`'s
+predecessor unchanged. So tracking the directory IS enough for worktrees — the setting travels, and
+only a fresh clone needs the command.
+
+**Why it is safe.** Nothing about what the hook DOES changed when it moved. The failure it removes is
+the one HOOK-SILENT-1 demonstrated: git resolving `hooksPath` to a missing directory runs **no hook,
+prints nothing, and exits 0**. Commits succeed. Every check this repository owns is walked past, and
+the only evidence is its absence.
+
+**The absence is now loud.** `scripts/check-hooks-installed.mjs` runs in `npm run verify` as an
+always-on guard and fails when the hooks are not in effect — unset, pointing elsewhere, or pointing
+at a directory whose files are gone.
+
+**It is NOT in the hook**, deliberately: if the hooks are not in effect the hook does not run, so a
+hook that checks whether hooks run can only ever report success. **It is NOT asserted in CI**
+either — a runner makes no commits and never runs the setup command, so this is not a property CI
+can have; it skips there and says so in one line. What CI verifies instead is that the guard WORKS,
+through `scripts/check-hooks-installed.test.mjs` in the script suite, against fixture repositories in
+all three broken states.
+
 ---
 
 ## The instruments, and what each costs

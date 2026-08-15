@@ -88,8 +88,9 @@ jobs:
       # complete one. So acorn is a declared devDependency at the ROOT and comes from the lockfile.
       #
       # --omit=optional skips sharp's platform binaries (10+ MB of image codecs no guard touches);
-      # --ignore-scripts skips husky's `prepare`, which has no job in a runner. What remains is
-      # acorn, which is pure JS with no dependencies of its own.
+      # --ignore-scripts skips `prepare`, which installs the git hooks and has no job in a runner
+      # that makes no commits (docs/VERIFY-RULES.md R12). What remains is acorn, which is pure JS
+      # with no dependencies of its own.
       #
       # IF THIS STEP IS EVER REMOVED, the payload guard FAILS rather than skipping — it says so
       # itself. That is deliberate: a guard that cannot parse cannot have an opinion, and a guard
