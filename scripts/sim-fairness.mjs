@@ -4787,7 +4787,23 @@ if (isMain) {
               ...(B2_TRACE
                 ? { b2LastInside: result.b2LastInside?.get(r.racerIndex) ?? -1 }
                 : {}),
-              ...r,
+              // FP-SPREAD-1: WAS `...r`, and it was the same defect as the shorthand keys through
+              // the other door. Six of the sixteen hashed columns arrived by spreading the racer
+              // result object, so their names were `runSingleRace`'s field names — rename a field
+              // there and a HASHED COLUMN is renamed, silently, for a race that did not change.
+              // That is exactly what moved the world fingerprint on 2026-08-14 (SOLLRANK-KEY-1).
+              //
+              // The six are written out here with the SAME names and the SAME order the spread
+              // emitted, so the object is identical. Proven, not argued: the world fingerprint was
+              // measured on both sides of this change and is byte-identical — the value lives in
+              // docs/fingerprints.json, which is its one home. check-fingerprint-payload now
+              // REFUSES a spread whose keys are not named at this call site.
+              racerIndex: r.racerIndex,
+              startRowIndex: r.startRowIndex,
+              indexInRow: r.indexInRow,
+              finalT: r.finalT,
+              finalRank: r.finalRank,
+              finishTime: r.finishTime,
             });
           }
         }

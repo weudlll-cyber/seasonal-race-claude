@@ -44,7 +44,8 @@ for (const r of result) {
   rawData.push({
     trackId: trackId,
     sollRank: targetRank,
-    ...r,
+    ...(FLAG ? { traced: 1 } : {}),
+    racerIndex: r.racerIndex,
   });
 }
 `;
@@ -55,7 +56,7 @@ for (const r of result) {
   rawData.push({
     trackId,
     sollRank: targetRank,
-    ...r,
+    racerIndex: r.racerIndex,
   });
 }
 `;
@@ -97,13 +98,30 @@ test("PAYLOAD BEHIND A VARIABLE: a non-literal argument FAILS", () => {
   assert.match(out, /not an object literal/);
 });
 
-// DELETE THIS and the guard's declared blindness stops being checked. `...r` splices keys decided
-// somewhere else into the hashed row; the guard cannot see them, and it must SAY so rather than let
-// a reader assume the row is fully covered.
-test("SPREADS are reported as blind spots rather than passed over in silence", () => {
+// DELETE THIS and FP-SPREAD-1's whole rule goes unguarded. `...r` spliced six of the sixteen
+// hashed columns out of a racer object, so their names were that object's field names — the same
+// silent-rename defect as shorthand, through the other door. It used to be a declared blind spot;
+// it is a refusal now, and this is the sabotage that proves it.
+test("SABOTAGE: spreading a value whose keys are not named here FAILS", () => {
+  const { code, out } = onFixture(`
+const rawData = [];
+for (const r of result) {
+  rawData.push({ trackId: trackId, ...r });
+}
+`);
+  assert.equal(code, 1, "a spread of an identifier must fail");
+  assert.match(out, /KEYS ARE NOT NAMED HERE/);
+});
+
+// DELETE THIS and the rule would be too blunt to live with: the payload legitimately spreads an
+// object LITERAL under a flag (`...(B2_TRACE ? { b2LastInside: x } : {})`), whose key IS written at
+// the call site. A rule that refused that too would have to be turned off, and a guard people turn
+// off is worse than none.
+test("a spread of an object LITERAL is allowed, and is still printed", () => {
   const { code, out } = onFixture(EXPLICIT);
-  assert.equal(code, 0);
-  assert.match(out, /blind at/, "every spread must be printed on a passing run");
+  assert.equal(code, 0, `a literal spread must pass — got:
+${out}`);
+  assert.match(out, /blind at/, "every spread must still be printed on a passing run");
   const { out: report } = onFixture(EXPLICIT, ["--spread-report"]);
   assert.match(report, /1 spread element/);
 });
