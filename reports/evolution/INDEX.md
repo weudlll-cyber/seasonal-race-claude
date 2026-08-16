@@ -607,6 +607,22 @@ finish shot leave ALONG it.
 
 ## Camera / presentation fixes
 
+- [FALLBACK-MIRRORS-1.md](FALLBACK-MIRRORS-1.md) — **the camera's last three copied defaults, and
+  what "unreachable" meant this time** (2026-08-18, SHIPPED, **nothing minted**). Four copies
+  REMOVED, none synced. **The two identical wrong copies were the dangerous part**: the Dev Screen
+  carried the same 0.4 and 0.1 as the engine, so cross-checking them found AGREEMENT — two copies of
+  one wrong number manufacture corroboration, and one sat in the panel you would open to judge that
+  number. **`maxStateDuration` was not the simple case it looked like**: the same constant serves a
+  mirror of the top-level key on the legacy branch AND the fallback for a per-state PROFILE, a
+  different quantity that shares a name — and measurement showed the shipped config takes the
+  profiles branch, so the top-level key is **unread**. **Reachability was established per key BEFORE
+  changing anything**, which the previous block did not do; even so **three tests** were written
+  against `maxStateDuration`'s literal and the third was found only by running everything — its name
+  mentioned neither the key nor the value. The five guard exceptions were reported **STALE** once the
+  copies went and are deleted, so the guard is green because the mirrors are GONE. Census 36 → 29
+  disagreeing, **zero left in any camera file**; the remaining 29 sit in the race engine, 22 of them
+  inside the WORLD closure, and are reported as the next block's decision.
+
 - [ENDGAME-FALLBACK-1.md](ENDGAME-FALLBACK-1.md) — **one home for `endgameThreshold`, and the
   fallback was reachable after all** (2026-08-18, SHIPPED, **nothing minted**). The literal `0.85`
   in `cameraTimingComputation.js` was **deleted rather than synced** — the file already imported the
