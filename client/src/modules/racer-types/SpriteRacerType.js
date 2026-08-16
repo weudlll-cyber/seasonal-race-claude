@@ -8,11 +8,18 @@
 /**
  * SpriteRacerType — configuration-driven base for all sprite-rendered racer types.
  *
- * Replaces the per-type class duplication of HorseRacerType / DuckRacerType /
- * SnailRacerType (D3.5 refactor). The three existing classes are NOT migrated in this
- * PR — they remain unchanged. Migration is the next PR (D3.5 part 2).
+ * Replaced the per-type class duplication of HorseRacerType / DuckRacerType /
+ * SnailRacerType (D3.5 refactor), and D3.5 part 2 then migrated those three — each of them says so
+ * in its own header ("Migrated from class to config object in D3.5 part 2").
  *
- * In this first PR, SpriteRacerType is not yet wired into the registry.
+ * THIS CLASS IS THE REGISTRY'S BACKBONE: every racer type the game ships is a
+ * `new SpriteRacerType({…})`, and `racer-types/index.js` exports twenty of them.
+ *
+ * The three sentences above replace three that were written on 2026-04-26 and had been false ever
+ * since D3.5 part 2 landed — that the three classes were "NOT migrated", that migration was "the
+ * next PR", and that "SpriteRacerType is not yet wired into the registry". Recorded rather than
+ * quietly corrected (NIGHT-2026-08-18): a reader who believed the last one would conclude the whole
+ * sprite path was dead code, and it is the most-used class in this directory.
  *
  * Reserved for future phases:
  * - rteDefinitions: Array of Racer-Track-Effect specs. Schema TBD in phase D6.

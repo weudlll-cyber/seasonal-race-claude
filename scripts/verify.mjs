@@ -182,7 +182,10 @@ export function describeEmptyRun({
   return {
     headline: `${fileCount} file(s) changed but none of them reaches any guard.`,
     remedy: [
-      `check the route table in scripts/verify.mjs against what you changed`,
+      // NOT "check the route table": VERIFY-ROUTING-2 DELETED it, and this line went on naming it
+      // for as long as nothing could reach the line to read it (NIGHT-2026-08-18). A guard now
+      // declares its own routing, so the place to look is the guard.
+      `run \`npm run verify -- --dry\` and read what each guard declares — routing lives in the guards, not in a table here`,
     ],
   };
 }

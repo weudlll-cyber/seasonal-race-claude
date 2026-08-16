@@ -36,17 +36,23 @@
 //   - Any track not in the fixed ten-track list below.
 //
 // Usage: node scripts/fingerprint-default.mjs [label]     (label only names the temp out dir)
-//   Reference hashes (shipped-default byte-identity):
-//     Stage-1 AFTER:                        fa4e3796e1e5f1a5 (historical)
-//     Parity step 1 (RNG isolation):        ON e93ffa70dad562a1  OFF 72c3360fb75225ef
-//     Parity step 2a (plan-grid unified):   ON 0ecca5e2dbe6526e  OFF 6e01e472b7655b9a
-//     Speed/duration ship (canonical model):ON e80f78a0da6a9993  OFF 1cd6c9fdd62542a4
-//     Type-multiplier amendment (pace=V*M):ON eda28d614f5e47d9  OFF 83eec6cf5c8b0419
-//     Step-order alignment (sim runs step):ON 8b13ccbe96992cc0  OFF e07150f936361a73
-//     Speed-150 ship (owner pace pick):    ON 6fdfe851dbb4ca72  OFF f8f7d9c2fd3283e9  ← current
-//   (OFF = extra arg `--gapRerollEnabled=false`. Numbers MOVED at step 2a — D-GRID — and again at
-//    the speed/duration ship: the shipped race is now each track's canonical default (laps for
-//    closed, seconds for open) at ONE normal speed, and the method switched --dur=60 → --track-defaults.)
+//        node scripts/fingerprint-default.mjs off --gapRerollEnabled=false   (the OFF invariant)
+//
+//   THIS FILE STATES NO HASH, AND THAT IS THE POINT (ONE-TRUTH-2, applied here 2026-08-18).
+//     • the CURRENT values — docs/fingerprints.json, the one home
+//     • the LINEAGE, which change moved which value to which — docs/SIM.md
+//   Until tonight a table stood here listing eight worlds and marking the LAST ONE `← current`.
+//   It had been wrong since 2026-07-31: `6fdfe851dbb4ca72` was superseded by the speed-150 flip,
+//   then twice more, while the marker stayed. Nothing could catch it — `check-config-claims` reads
+//   only `*.md`, and `fingerprint-containment` declares SUPERSEDED values as its blind spot
+//   precisely so a document may quote history. A stale hash labelled `current` in the header of the
+//   script that MINTS the hash is the one place that blindness costs something, and this comment is
+//   the fix rather than a ninth row.
+//
+//   (OFF = extra arg `--gapRerollEnabled=false`. The method moved twice and both are lineage, not
+//    hashes: at step 2a — D-GRID — and at the speed/duration ship, where the shipped race became
+//    each track's canonical default (laps for closed, seconds for open) at ONE normal speed and the
+//    invocation switched --dur=60 → --track-defaults.)
 // ============================================================
 
 // VERIFY-FAST-1: every guard prints its own elapsed time. The ceremony's cost column was wrong
