@@ -199,7 +199,7 @@ measured on the merged tree and are byte-identical, which is the proof no shippe
 **Three siblings in the same file remain stale and are recorded as a finding, not fixed** —
 `comebackMinStartGap`, `comebackMaxCurrentRankPct` and `maxStateDuration`.
 
-- `v-ship-endgame-fallback` (`03f9c480`, 2026-08-18) — **the ship.** The return point is
+- `v-ship-endgame-fallback` (`43b0d82d`, 2026-08-18) — **the ship.** The return point is
   `v-ship-endgame-fallback^1`. No fingerprint moves across it, so it restores no world; it restores
   the second copy of a config value.
 
