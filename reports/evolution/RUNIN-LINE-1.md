@@ -599,6 +599,131 @@ unreachable — the cap is an additional term in a fraction that was already com
 
 ---
 
+---
+
+# RUNIN-PIN-1 — BUILT, MEASURED, AND REVERTED. The pin cannot be done from where the run-in stands.
+
+**Appended 2026-08-17. Nothing shipped: `CameraDirector.js` is untouched at `f405b988`.** The
+instrument stays, because it is what will settle the next attempt.
+
+The owner's rule: open until the leader and the line are both visible, let the leader settle onto
+his forward placement, then STOP TRAVELLING — the line holds its screen position, the leader holds
+his, and the closing world gap is absorbed by zoom alone.
+
+## 21. The baseline, measured first
+
+`scripts/diag/runin-pin-drift.mjs` measures the two drifts the rule is about, from the leader
+settling (the director's own signal: the opening glide coming to rest) to the crossing. Drift is the
+**spread** of each screen position, not its endpoints — a position that wanders out and back is not
+holding still, and an endpoint difference would score that as zero.
+
+| track | frames | line drift | leader drift | in shot | zoom monotone |
+| --- | ---: | ---: | ---: | ---: | --- |
+| city-circuit | 777 | 253 px | 646 px | 18.8 | yes |
+| dirt-oval | 596 | 595 | 806 | 18.2 | yes |
+| ice-track | 446 | 847 | 871 | 18.2 | **NO** |
+| luger-hill | 303 | 593 | 644 | 15.5 | yes |
+| mountainstreet | 343 | 718 | 664 | 17.4 | yes |
+| river-run | 340 | 668 | 593 | 17.7 | **NO** |
+| searound | 352 | 590 | 674 | 16.7 | yes |
+| seatrack | 350 | 586 | 518 | 16.2 | yes |
+| space-sprint | 333 | 737 | 829 | 16.4 | yes |
+
+**The complaint is real: 253–847 px of line travel after the leader has settled.** Note also that
+the zoom is already non-monotone on two tracks today, before anything was changed.
+
+## 22. What was built
+
+The geometry first, because it bounds what can be promised: **the camera has three degrees of
+freedom** (one zoom, two offsets) and **pinning two screen points is four constraints**. Both can
+hold exactly only while the screen direction between them is constant — true on a straight, false
+through a curve.
+
+The implementation followed the brief's "no new numbers" exactly, and it collapsed further than
+expected:
+
+- **The run-in stopped touching the anchor at all.** If the leader is pinned at *the placement the
+  current framing already gives him*, then the mirror, the hold, the progress-swept release and
+  RUNIN-AHEAD-1's forward cap are all ways of moving something that no longer moves.
+  `_forwardFracNow` lost its run-in branch entirely; four fields and three helpers went with it.
+- **The zoom became a law rather than an interpolation.** Screen separation is *linear* in cam.zoom,
+  so holding it fixed is one division: `zoom = pinnedSeparation / hypot(dx·axisX, dy·axisY)`. The
+  numerator is read off the running director on the frame the leader settles. No fraction, no
+  margin, no duration was needed.
+- **The crossing stayed seamless by the existing mechanism**: as the gap closes the law demands ever
+  more zoom, stops being the smallest term in `Math.min`, and the state's own shot is what remains.
+
+## 23. It did not work, and the measurement says so plainly
+
+| track | line drift before → after | leader drift | in shot | zoom monotone |
+| --- | --- | --- | --- | --- |
+| city-circuit | 253 → **713** | 646 → 725 | 18.8 → **15.4** | yes → **NO** |
+| dirt-oval | 595 → 723 | 806 → 716 | 18.2 → **14.9** | yes |
+| ice-track | 847 → 788 | 871 → 842 | 18.2 → 17.2 | NO |
+| luger-hill | 593 → **453** | 644 → 519 | 15.5 → **12.6** | yes → **NO** |
+| mountainstreet | 718 → 639 | 664 → 776 | 17.4 → 16.5 | yes → **NO** |
+| river-run | 668 → 592 | 593 → **336** | 17.7 → 14.9 | NO |
+| searound | 590 → 609 | 674 → 491 | 16.7 → **12.8** | yes → **NO** |
+| seatrack | 586 → 456 | 518 → 361 | 16.2 → 14.2 | yes → **NO** |
+| space-sprint | 737 → 511 | 829 → 653 | 16.4 → **12.7** | yes |
+
+**The line still drifts 453–788 px. It is worse on three tracks and better on none that matters.
+The zoom went from non-monotone on two tracks to non-monotone on seven. And FEWER racers are in
+shot on every single track** — the opposite of what the last two blocks bought.
+
+## 24. Why — and my first explanation was wrong
+
+My hypothesis was that the pin law, being only one ceiling among five in `Math.min`, was being
+overruled. **The instrument refutes that.** The binding term over the pinned stretch:
+
+| track | binding while pinned |
+| --- | --- |
+| seatrack | `line` **100%** |
+| ice-track | `line` 97% · state 3% |
+| space-sprint | `line` 95% · state 5% |
+| city-circuit | `line` 94% · state 6% |
+| mountainstreet | `line` 93% · state 7% |
+| dirt-oval, luger-hill | `line` 92% · state 8% |
+| searound | `line` 88% · state 13% |
+| river-run | `line` 83% · guarantee 17% |
+
+**The law was in charge on 83–100% of frames and the line moved anyway.** So the reason is not
+composition. It is this:
+
+> **The pin is a statement about the DELIVERED frame, and every mechanism the run-in owns speaks to
+> the TARGET.**
+
+`_updateRunIn` returns a target zoom; `_setTrackTargets` resolves a target offset; the camera then
+*lerps* toward both. The law computes the zoom that would hold the separation **at this frame's**
+world gap — but the camera only arrives there several frames later, by which time the gap has closed
+further. It is permanently chasing a value that has already moved. That also explains the
+monotonicity collapse: as the gap goes to zero the law's target rises hyperbolically, and a
+first-order lag chasing a hyperbola overshoots and corrects.
+
+**This is a structural finding, not a tuning failure.** Delivering the contract needs the run-in to
+write the delivered camera during the pinned stretch — to become the authority over the shot rather
+than one ceiling among five. That collides directly with two things the brief holds fixed: *the
+run-in owns the framing, not the state slot*, and *at the crossing the picture is the state's own
+shot, bit for bit*. It is a redesign of how the endgame camera composes, not an increment.
+
+## 25. What was reverted, and what was kept
+
+**Reverted:** every line of `CameraDirector.js`. The branch is back at `f405b988` — the shape the
+owner accepted, with RUNIN-AHEAD-1's forward bound intact and doing its measured work.
+
+**The forward bound is NOT subsumed**, and that question is now answered with numbers rather than by
+argument: it removes 200–480 px of overshoot and puts four short tracks back to 20-of-20 in shot
+(§17), and the pin that would have replaced it does not hold. It stays.
+
+**`runInOpenMs` still has work.** It paces the opening glide (`_beginRunInGlide`) and the hold and
+sweep that the pin would have removed. Since nothing was removed, nothing about it changed.
+
+**Kept:** `scripts/diag/runin-pin-drift.mjs`, and it is the useful output of this block. It measures
+the exact property the contract is about, on the delivered camera, and it is what should be run
+first by whoever attempts the pin again — before writing any of it.
+
+---
+
 ## PROPOSALS
 
 1. **Retire `contenderZoom`, or scope it to after the crossing.** It moves the zoom on **0** frames
@@ -633,6 +758,22 @@ unreachable — the cap is an additional term in a fraction that was already com
    touching anything: whether the ceremony's held zoom should retire on the GUN or on a geometric
    condition the way the field guarantee does, and whether the effect is really absent on open
    tracks or merely smaller because luger-hill's world is short.
+
+9. **If the pin is wanted, give the run-in a DELIVERED-camera authority for the pinned stretch —
+   and price it first.** §24 says the obstacle is the lag between target and delivery, not the
+   composition. The smallest honest shape is: while pinned, the run-in writes `zoom`/`offset`
+   directly instead of `targetZoom`/`targetOffset`, and hands back to the state on the frame before
+   the crossing. That is a second authority over the camera, which this design has deliberately
+   never had — so it should be *measured* before it is built: run `runin-pin-drift.mjs` with the
+   lerp disabled for those frames and see whether the drift actually goes to zero. If it does not,
+   the over-determination in §22 is the real wall and the contract needs relaxing to one pinned
+   point, not two.
+
+10. **Ask him which of the two points he actually wants pinned.** The geometry says both cannot hold
+    through a curve — three degrees of freedom, four constraints. His wording already hints at the
+    answer ("the line stays where it is… the leader stays *roughly* where he is"), and pinning the
+    LINE alone is a well-posed problem with a unique solution. One sentence from him turns an
+    over-determined system into a solvable one.
 
 7. **Give `d` the arc distance and see whether the two closed ovals join in.** city-circuit and
    dirt-oval are the only tracks the forward bound does not help, and the reason is measured: the
