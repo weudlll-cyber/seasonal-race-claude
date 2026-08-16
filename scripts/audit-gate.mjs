@@ -29,6 +29,30 @@ import { fileURLToPath } from "node:url";
 // than as a general escape: see the CI wiring for the server tree, and reports/night for the
 // advisories that made it necessary. It is not a way to silence the client gate — that one still
 // blocks, and the default with no flags is unchanged in every respect.
+//
+// ── WHEN THE GATE RUNS, AND WHY THAT IS TWO DIFFERENT ANSWERS (AUDIT-SCHEDULE-1) ────────────────
+//
+// This script has TWO invokers and they exist for opposite reasons. Both live in
+// `.github/workflows/`; the POLICY is stated here, because the policy is this file's.
+//
+//   ci.yml               per push and per pull request, BOTH trees, no flags. It BLOCKS. A change
+//                        that introduces a high/critical advisory is refused at the door, and the
+//                        person who introduced it is the person who sees the red.
+//   audit-schedule.yml   daily, both trees, `--report-only`. It NEVER blocks. Nobody pushed
+//                        anything — the advisory arrived on the npm feed on its own timetable — so
+//                        the result reaches the owner as a GitHub ISSUE instead of as a red build.
+//
+// WHY THE SCHEDULED ONE MUST NOT BE ABLE TO TURN MASTER RED. A red build nobody caused is the
+// fastest way to teach everyone that red is background noise. It is the same reasoning that keeps
+// the ten-minute browser suite out of the per-push path (docs/NIGHT-RUN.md) and the same reasoning
+// that made SERVER-AUDIT-1 report-only on a tree that had never been audited. An advisory published
+// overnight is a thing to TRIAGE, not a thing the last committer broke. So the scheduled run
+// reports and the gate blocks — and they are separate WORKFLOWS, not two triggers on one, so that
+// "CI is failing" keeps meaning exactly one thing.
+//
+// THE SECOND INVOKER DOES NOT WEAKEN THE FIRST. Nothing about the blocking path changed when the
+// schedule was added; `--report-only` is still opt-in per invocation, still has to be typed at the
+// call site, and every caller of it carries its own reason in its own header.
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), "..");
 const argOf = (name) =>
   process.argv.find((a) => a.startsWith(`--${name}=`))?.split("=").slice(1).join("=");
