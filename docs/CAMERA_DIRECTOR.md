@@ -600,7 +600,7 @@ a verbatim transcript of one run on one commit, which is a historical record, no
 
 ### The tracking lag, as measured today — and it had drifted
 
-<!-- MEASURED: tracking-lag (median/p95 pp per state) @ 27ec861a 2026-08-18 depends=client/src/modules/camera/ -->
+<!-- MEASURED: tracking-lag (median/p95 pp per state) @ 03f9c480 2026-08-18 depends=client/src/modules/camera/ -->
 
 **RE-STAMPED, NOT RE-MEASURED, FOR ENDGAME-FALLBACK-1 — and the corroboration is arithmetic rather
 than an argument.** That block deletes a literal `0.85` from `cameraTimingComputation.js`, which IS
