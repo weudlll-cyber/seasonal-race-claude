@@ -22,6 +22,14 @@ and what was retired.
 
 ## How a return point is obtained (TAG-SWEEP-1, 2026-08-14)
 
+> **The ORDER in which a ship tag, its register line and the merge are made lives in
+> [SHIP-CEREMONY.md § THE SHIP ORDER](SHIP-CEREMONY.md), which is its one home.** Since 2026-08-18
+> the register line goes on the BRANCH, before the merge, so the merge commit registers its own tag
+> and the tag points at a commit that passes `check-tags`. **Four tags predate that rule** —
+> `v-ship-runin-hold`, `v-ship-minimap`, `v-ship-contender-zoom` and `v-ship-endgame-095` — and do
+> not register themselves in the tree they point at. **They are not violations**: they are correctly
+> registered on master, `check-tags` is green there, and history is not rewritten for them.
+
 **A ship's return point is `v-ship-<name>^1` — the first parent of its merge commit — so `pre/ship-*`
 tags are derivable and 16 of the 19 were deleted rather than kept.** Three were verified NOT
 derivable and are kept below with the reason: a tag cut on the feature branch instead of master

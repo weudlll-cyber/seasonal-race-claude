@@ -607,6 +607,19 @@ finish shot leave ALONG it.
 
 ## Camera / presentation fixes
 
+- [SHIP-ORDER-1.md](SHIP-ORDER-1.md) — **a ship tag now points at a commit that passes** (2026-08-18,
+  documents only, nothing minted, **the guard was NOT touched**). Two rules were both right and could
+  not both hold: CI green for exactly the merge SHA, and the tag's `TAGS.md` register line landing in
+  the commit AFTER the merge — so `check-tags` failed on the very commit the tag names. Found by
+  USING it: dispatching CI against `v-ship-endgame-095` to get a green for its merge SHA produced a
+  red, and the red was this. **The fix is the ORDER, not the guard**: everything the merge must
+  contain is written on the BRANCH, which works because the catch-up merge already makes the branch
+  tip's tree the tree master will have — so the mint is still measured on the merged tree.
+  **One step genuinely cannot be done in that order and is named rather than forced**: a commit
+  cannot name its own hash, so the register SHA and `mintedOn` are provisional at the merge and
+  corrected in a follow-up — which costs nothing, because `check-tags` declares that it checks names,
+  not shas. Four existing tags predate the rule and are recorded as such; history is not rewritten.
+
 - [DOCS-TWO-WEEKS.md](DOCS-TWO-WEEKS.md) — **what these weeks owed the documentation** (2026-08-18,
   a writing and deleting job — no guard, no script, no code, nothing minted). **Six new lessons
   (208–213)** — the Admissible-Set Law (an even close and "the line stays in frame" are incompatible

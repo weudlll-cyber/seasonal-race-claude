@@ -213,6 +213,80 @@ tooling. Master had to be reset and force-pushed; that state is preserved as
 
 ---
 
+## THE SHIP ORDER — and why the register line goes on the BRANCH
+
+**This section owns the ORDER of the merge, the mint and the tag.** Anything else that describes that
+order points here instead of restating it.
+
+**The contradiction it resolves (found 2026-08-18).** Two of this repository's rules were both right
+and could not both hold: *CI must be green for exactly the merge SHA*, and *a ship tag's `TAGS.md`
+register line goes in the commit after the merge*. Checked out at the tag, `check-tags` saw a tag at
+origin that the tree did not register, and failed. `v-ship-runin-hold`, `v-ship-minimap`,
+`v-ship-contender-zoom` and `v-ship-endgame-095` are all in that state. **The rules were fine; the
+order was wrong.**
+
+**The fix is one move: everything the merge commit must CONTAIN is written on the branch, before the
+merge.** Then the merge commit is self-consistent — it registers its own tag, it carries its own
+fingerprints — and the tag points at a commit that passes every guard.
+
+**What makes this possible at all**, and it is worth saying because it looks impossible: the branch
+is caught up with master FIRST, so **the branch tip's tree is already the tree master will have.**
+Fingerprints measured on the branch tip are therefore measured on the merged tree, which is what the
+mint rule requires. Without the catch-up merge this ordering does not work and the old one has to be
+used.
+
+### The steps
+
+1. **Catch up with master.** `git merge --no-ff master` on the branch, resolve, and run
+   `npm run verify` green on the result. From here the branch tip's tree is the post-merge tree.
+2. **Read what the merge puts on master** — the `git diff --name-only master...<branch>` check above.
+3. **Choose the tag name now.** It is an input to step 5, not an output of the merge.
+4. **Measure the fingerprints on the branch tip**, per the mint rules below. This is the merged tree.
+5. **On the branch, in one commit: the mint, the register line, the report and its INDEX entry.**
+   The `TAGS.md` entry is written in the declaration form the register requires — backticked name,
+   backticked short SHA, date — with the SHA **provisional** (see the note below).
+6. **`npm run verify` green on the branch**, now including `check-tags`, `check-index` and
+   `check-fingerprints` against the tree that is about to become master.
+7. **Merge into master** with `--no-ff`. The merge commit's tree is the branch tip's tree.
+8. **Tag the merge commit**, annotated. It registers its own tag, so `check-tags` passes on it.
+9. **One follow-up commit on master corrects the two provisional SHAs** — the register line's and
+   `mintedOn` — to the merge's actual hash.
+10. **Push master and the tag in the SAME push.** A tag pushed ahead of its register turns master
+    red, and this repository has paid for that once.
+
+### The one step that CANNOT be done in this order, and why
+
+**A commit cannot name its own hash.** The register line's SHA and `mintedOn` both want the merge
+commit's hash, and neither can have it until that commit exists. So step 5 writes them provisionally
+— the branch tip's short SHA is the honest provisional value, because it is the commit the tree
+actually came from — and step 9 corrects them.
+
+**This costs nothing that matters, and it is measured rather than assumed:** `check-tags` declares in
+its own header that it checks **names, not shas** ("whether a tag points where the register SAYS it
+points — names are checked, not shas"). So the merge commit passes the guard with a provisional SHA,
+which is the whole point of the reordering; the correction in step 9 is for the human reader.
+
+**It is also the pattern this repository already uses** for the `MEASURED:` stamps, where a commit
+that carries a measurement cannot name the commit the measurement was taken on until it exists —
+see the `docs(…): the tracking-lag stamp names the commit it was measured at` commits.
+
+### The guard was NOT changed, deliberately
+
+`check-tags.mjs` is untouched. It was correct throughout: it reported a real inconsistency between a
+tag at origin and a tree that did not register it. **The defect was in the order of the ceremony, and
+a guard that had been relaxed to accept the old order would have stopped being able to catch the
+thing it was built after** — a tag pushed with no register entry at all.
+
+### The four tags that predate this rule
+
+`v-ship-runin-hold` (`48f954a4`), `v-ship-minimap` (`8a2dacab`), `v-ship-contender-zoom` (`0bd07dba`)
+and `v-ship-endgame-095` (`740f605c`) were cut under the old order and **do not register themselves
+in the tree they point at. They are not violations and history is not rewritten for them** — they
+predate the rule, they are correctly registered on master, and `check-tags` is green there. Only a
+checkout of one of those four tags shows the inconsistency.
+
+---
+
 ## The checklist
 
 Work top to bottom. Steps that are marked **ONE step** are a single unit of work with two artefacts —
@@ -277,7 +351,8 @@ went missing).
 - [ ] **7. Return tag + its register entry — ONE step.** Tag the pre-ship state `pre/<name>` AND add
       its entry to [docs/TAGS.md](TAGS.md) (commit, date, the world it restores) in the SAME unit of work.
       The tag and the register are one step, never two — an unregistered tag is invisible until a guard
-      or a human trips over it.
+      or a human trips over it. **For the SHIP tag, the register line goes on the BRANCH before the
+      merge** — see THE SHIP ORDER above, which owns that sequence.
 - [ ] **8. Report + its INDEX entry — ONE step.** Write `reports/evolution/<NAME>.md` AND add its line
       to [reports/evolution/INDEX.md](../reports/evolution/INDEX.md) in the SAME unit of work. A report
       with no INDEX line is an orphan (`check-index.mjs` now catches it, but write the line yourself).
