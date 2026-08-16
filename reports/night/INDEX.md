@@ -8,6 +8,15 @@ report here could be orphaned, or an index link could dangle, with nothing notic
 `node scripts/check-index.mjs --dir=reports/night --index=reports/night/INDEX.md` now checks both
 directions.
 
+- [NIGHT-2026-08-18.md](NIGHT-2026-08-18.md) — **the census, and the answer to his question**
+  (2026-08-18). 24 findings · 6 reach a shipped path · 5 he could ever see · 8 fixed · 16 wait for
+  him. **Not one touches the race** — four fingerprints measured six times across two branches and
+  never moved. The five he could see all need a server that is slow or unreachable, which his
+  localhost never is; the sixth he cannot hit because **first-admin setup is broken and he already
+  has an account** — the client sends the bootstrap token in the body, the server reads the header
+  only, and the server suite contains a passing test asserting exactly that rejection. Verdict: the
+  game is sound and the accounting *about the race* is strong; what is thin is everything around it,
+  which fails quietly and defaults confidently. Three proposals.
 - [TEXT-TRUTH-1.md](TEXT-TRUTH-1.md) — three sentences that were false, and a test that could not
   fail. `SpriteRacerType.js` said it was "not yet wired into the registry" while **twenty shipped
   racer types are instances of it**; `fingerprint-default.mjs` marked a world superseded on
