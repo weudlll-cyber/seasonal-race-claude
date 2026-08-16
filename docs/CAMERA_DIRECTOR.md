@@ -600,7 +600,18 @@ a verbatim transcript of one run on one commit, which is a historical record, no
 
 ### The tracking lag, as measured today — and it had drifted
 
-<!-- MEASURED: tracking-lag (median/p95 pp per state) @ f5afd92e 2026-08-18 depends=client/src/modules/camera/ -->
+<!-- MEASURED: tracking-lag (median/p95 pp per state) @ 27ec861a 2026-08-18 depends=client/src/modules/camera/ -->
+
+**RE-STAMPED, NOT RE-MEASURED, FOR ENDGAME-FALLBACK-1 — and the corroboration is arithmetic rather
+than an argument.** That block deletes a literal `0.85` from `cameraTimingComputation.js`, which IS
+inside this stamp's `depends=` directory and inside `tracking-lag.mjs`'s load closure, so the guard
+tripped as designed. What settles it is not the usual "the tool cannot reach the file" reasoning —
+it can — but something stronger: **CAMERA and RENDER were measured on that block's tree and are
+BYTE-IDENTICAL** to their recorded values (which live in [fingerprints.json](fingerprints.json) and
+are deliberately not copied here). No camera decision and no framing changed anywhere, so the lag
+inside states cannot have moved either. The deleted literal was
+unreachable from every shipped path — that is the block's whole finding — and the two fingerprints
+are the measurement that proves it. The table below is unchanged; only the stamp moved.
 
 **RE-MEASURED IN FULL FOR ENDGAME-THRESHOLD-095, AND THIS IS THE FIRST ENTRY HERE WHERE THE FRAME
 COUNTS MOVED.** The endgame threshold went 0.9 -> 0.95 on the owner's decision, and that key is a

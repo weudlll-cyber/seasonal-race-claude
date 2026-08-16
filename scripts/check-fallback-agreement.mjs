@@ -282,13 +282,6 @@ export const EXCEPTIONS = [
   ),
   D(
     "client/src/modules/camera/cameraTimingComputation.js",
-    "endgameThreshold",
-    0.95,
-    0.85,
-    "UNFIREABLE (FALLBACK-42-TRIAGE) — a stale previous value. The director is always constructed with the loader-resolved camera config, and endgameThreshold is a top-level default key, so the fallback is never reached. Camera-only and unreachable: text, not behaviour. ENDGAME-THRESHOLD-095 (2026-08-18) moved the DEFAULT 0.9 -> 0.95 and this line follows it, because an exception records the exact pair it was granted for and a moved default is a different pair. THE FALLBACK IS NOW TWO SHIPS STALE and was deliberately left alone: the ship that moved the default was told to change it in defaults.js and nowhere else, and bringing 0.85 in step would also re-pin the 'no config' test that exists to hold this literal. Worth doing as hygiene, not here.",
-  ),
-  D(
-    "client/src/modules/camera/cameraTimingComputation.js",
     "maxStateDuration",
     4000,
     8000,
