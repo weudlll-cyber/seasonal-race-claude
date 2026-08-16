@@ -174,6 +174,35 @@ band measured the same 30.0 px in it either way.
 - `v-ship-finish-band` (`354859bc`, 2026-08-13) — **the ship.** The forward merge is inside it: the
   branch was merged with master first, re-measured, and only then merged out.
 
+### ENDGAME-THRESHOLD — the endgame opens at 95% (2026-08-18)
+
+**The owner's decision, 2026-08-18.** He had been running 0.95 himself, judged it on a production
+build on 2026-08-17, and **explicitly waived a before/after sweep** — so no ten-track measurement
+stands behind this number and none is claimed. One key in `defaults.js`; the Dev control, its range
+and its 1% step are untouched.
+
+**One value, two readers, and both are the run-in's**: the state machine's endgame gate and
+`_runInWindowOpen`. So the endgame declares later and the run-in's window is **half as long**.
+
+**This is the first camera ship in this sequence where STATE DECISIONS moved** rather than only
+framing, and the tracking-lag frame counts are how it shows: BATTLE_ZOOM 9406 → 9701, COMEBACK_ZOOM
+605 → 644, LEADER_ZOOM 17788 → 17630, LEAD_CHANGE 7789 → 7786, with OVERVIEW and PHOTO_FINISH
+identical because neither is eligible in the stretch the threshold moved. Every tail improves.
+
+**WORLD and WORLD-OFF were MEASURED, not argued**, and the closure walk is why: `defaults.js` is
+inside **all four** instruments' declared closures, because the race's keys and the camera's live in
+one file. "It is only a camera key" is a claim about the CONTENTS of the diff, not about the file it
+sits in — so only a measurement can settle it. Both are byte-identical. `engine-reach` was
+deliberately not leaned on: on a committed merge its verdict is not evidence. Values live in
+[fingerprints.json](fingerprints.json).
+
+**A stored 0.95 is dropped by this change** — confirmed against the real `pruneStored` rather than
+assumed — so the owner follows the default at the same number, and the key stops being shadowed.
+
+- `v-ship-endgame-095` (`740f605c`, 2026-08-18) — **the ship.** The return point is
+  `v-ship-endgame-095^1`, which restores an endgame declared at 0.9 and a run-in window twice as
+  long, with the CAMERA value `6ae77f12daf23f78` and the RENDER value `a870f5f9e79cb444`.
+
 ### RUNIN-HOLD — the run-in holds the opening shot and closes once (2026-08-17)
 
 **The owner judged this on a production build on 2026-08-17 and ACCEPTED it.** Three framing changes
