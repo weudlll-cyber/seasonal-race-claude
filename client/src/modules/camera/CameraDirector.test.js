@@ -221,11 +221,15 @@ describe('CameraDirector', () => {
     expect(cd.stateEnteredAt).toBe(9000);
   });
 
-  it('does not transition before 8s have elapsed', () => {
+  // FALLBACK-MIRRORS-1: the 8s in this test's name and its 7999 were the LEGACY-path fallback that
+  // a no-config director used to resolve `maxStateDuration` to. That literal is gone and the branch
+  // reads `defaults.js`, so the cap is the shipped value and the drive point follows it. What the
+  // test states is unchanged: a state does not transition before its own cap has elapsed.
+  it('does not transition before the state cap has elapsed', () => {
     const cd = new CameraDirector();
     cd.state = CAM_STATE.OVERVIEW;
     cd.stateEnteredAt = 0;
-    cd.update(mockRacers(4), 7999, mockRaceState, 1280, 720);
+    cd.update(mockRacers(4), DEFAULT_CAMERA_CONFIG.maxStateDuration - 1, mockRaceState, 1280, 720);
     // stateEnteredAt unchanged — transition did not fire
     expect(cd.stateEnteredAt).toBe(0);
   });
@@ -1216,9 +1220,10 @@ describe('CameraDirector — the finish lifecycle (FINISH-SEAM-1)', () => {
 // 107px black bars. These two tests must fail without the isOpenTrack hotfix.
 
 describe('CameraDirector — battle trigger tunables (Block X)', () => {
-  it('no config: fallback _maxStateDuration=8000, _battleGates.closenessT=0.05, _battleMinDurationMs=3000, _endgameThreshold READS the default', () => {
+  it('no config: _maxStateDuration and _endgameThreshold READ the defaults, _battleGates.closenessT=0.05, _battleMinDurationMs=3000', () => {
     const cd = new CameraDirector();
-    expect(cd._maxStateDuration).toBe(8000);
+    // FALLBACK-MIRRORS-1: was the literal 8000, against a shipped 4000. Asserts the rule now.
+    expect(cd._maxStateDuration).toBe(DEFAULT_CAMERA_CONFIG.maxStateDuration);
     expect(cd._battleGates.closenessT).toBe(0.05);
     expect(cd._battleMinDurationMs).toBe(3000);
     // ENDGAME-FALLBACK-1: this used to pin the literal 0.85 that `cameraTimingComputation.js`

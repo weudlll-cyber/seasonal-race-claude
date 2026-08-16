@@ -62,7 +62,14 @@ describe('computeTimingFromConfig — null config (all defaults)', () => {
   it('reads the DEFAULT endgameThreshold, it does not copy it', () =>
     expect(t.endgameThreshold).toBe(DEFAULT_CAMERA_CONFIG.endgameThreshold));
   it('uses fallback battleCooldownMs', () => expect(t.battleCooldownMs).toBe(8000));
-  it('uses fallback maxStateDuration', () => expect(t.maxStateDuration).toBe(8000));
+  // FALLBACK-MIRRORS-1: pinned the literal 8000 that lived beside the key against a shipped 4000.
+  // The copy is gone — this branch reads `defaults.js` now — so the RULE is what is pinned and it
+  // cannot go stale when the default moves. IF DELETED: nothing states that the LEGACY path (a
+  // config with no `cameraStateProfiles`) resolves this key at all, and that path is the only one
+  // where the top-level `maxStateDuration` key is read — the shipped config takes the profiles
+  // branch, where a per-state profile decides instead.
+  it('reads the DEFAULT maxStateDuration on the legacy path, it does not copy it', () =>
+    expect(t.maxStateDuration).toBe(DEFAULT_CAMERA_CONFIG.maxStateDuration));
   it('uses fallback battleMaxDurationMs', () => expect(t.battleMaxDurationMs).toBe(6000));
   it('uses fallback minStateHoldMs', () => expect(t.minStateHoldMs).toBe(5000));
   it('uses fallback overviewCooldownMs', () => expect(t.overviewCooldownMs).toBe(15000));
