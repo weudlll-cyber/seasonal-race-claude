@@ -7200,6 +7200,18 @@ describe('RUNIN-GLIDE-1 — wide-and-back, gliding to the ordinary shot', () => 
   const subjectsAt = (x) => ({ point: { x, y: 360 }, t: x / 4000, pair: [null, null] });
   const racersAt = (x) => [{ index: 0, t: x / 4000, x, y: 360 }];
   const rs = { finishT: 1, finishedCount: 0 };
+  // ENDGAME-THRESHOLD-095: the window-dependent fixtures are DERIVED from the shipped threshold,
+  // not written as x positions chosen against it. They used to say 3600 for the window's edge and
+  // 3700/3800 for points inside it, all correct while the default was 0.9. When it moved to 0.95
+  // two of them fell OUTSIDE the window — and a third kept PASSING for the wrong reason, because
+  // `_runInProgressOf` clamps, so "0 at the threshold" read 0 from a point a whole window early.
+  // A fixture that names a position the key decides cannot see the key change; this one follows it.
+  // The `_lineCeiling` tests below deliberately keep their literals: those are about DISTANCE to the
+  // line, which the threshold has nothing to do with.
+  const EDGE = 4000 * DEFAULT_CAMERA_CONFIG.endgameThreshold; // exactly at the threshold
+  const IN_EARLY = EDGE + (4000 - EDGE) * 0.2; // just inside the window
+  const IN_LATE = EDGE + (4000 - EDGE) * 0.6; // well inside it
+  const BEFORE = EDGE * 0.5; // nowhere near it
 
   it('adds no camera state — CAM_STATE is still the six the framing rule describes', () => {
     expect(Object.keys(CAM_STATE)).not.toContain('RUN_IN');
@@ -7208,10 +7220,11 @@ describe('RUNIN-GLIDE-1 — wide-and-back, gliding to the ordinary shot', () => 
 
   it('the window is the endgame threshold to the first crossing, and nothing else', () => {
     const cd = runInDirector();
-    expect(cd._runInWindowOpen(racersAt(3800), rs)).toBe(true);
-    expect(cd._runInWindowOpen(racersAt(2000), rs)).toBe(false); // before the threshold
-    expect(cd._runInWindowOpen(racersAt(3800), { finishT: 1, finishedCount: 1 })).toBe(false);
-    expect(cd._runInWindowOpen(racersAt(3800), { finishT: 0, finishedCount: 0 })).toBe(false);
+    expect(cd._runInWindowOpen(racersAt(IN_LATE), rs)).toBe(true);
+    expect(cd._runInWindowOpen(racersAt(BEFORE), rs)).toBe(false); // before the threshold
+    expect(cd._runInWindowOpen(racersAt(EDGE), rs)).toBe(false); // AT it is not INSIDE it
+    expect(cd._runInWindowOpen(racersAt(IN_LATE), { finishT: 1, finishedCount: 1 })).toBe(false);
+    expect(cd._runInWindowOpen(racersAt(IN_LATE), { finishT: 0, finishedCount: 0 })).toBe(false);
     expect(cd._runInWindowOpen([], rs)).toBe(false);
   });
 
@@ -7253,12 +7266,12 @@ describe('RUNIN-GLIDE-1 — wide-and-back, gliding to the ordinary shot', () => 
   it('the progress measure is 0 at the threshold, 1 at the line, and never runs backwards', () => {
     const cd = runInDirector();
     cd._runInProgress = null;
-    expect(cd._runInProgressOf(racersAt(3600), rs)).toBeCloseTo(0, 6); // 0.9 of finishT = threshold
+    expect(cd._runInProgressOf(racersAt(EDGE), rs)).toBeCloseTo(0, 6); // exactly at the threshold
     cd._runInProgress = null;
     expect(cd._runInProgressOf(racersAt(4000), rs)).toBeCloseTo(1, 6);
     // Monotone: a dip in the reading cannot walk the anchor back across the frame.
     cd._runInProgress = 0.8;
-    expect(cd._runInProgressOf(racersAt(3700), rs)).toBe(0.8);
+    expect(cd._runInProgressOf(racersAt(IN_EARLY), rs)).toBe(0.8);
   });
 
   it('a BACKWARD bias actually moves the pan — the old guard rejected exactly that case', () => {
@@ -7284,7 +7297,7 @@ describe('RUNIN-GLIDE-1 — wide-and-back, gliding to the ordinary shot', () => 
     const cd = runInDirector();
     cd.state = CAM_STATE.LEADER_ZOOM;
     cd._lerpPhase = 'tracking';
-    cd._updateRunIn(subjectsAt(3700), FRAME, racersAt(3700), rs, 5000);
+    cd._updateRunIn(subjectsAt(IN_EARLY), FRAME, racersAt(IN_EARLY), rs, 5000);
     expect(cd._runInEngaged).toBe(true);
     expect(cd._lerpPhase).toBe('glide');
     expect(cd._glideStartTs).toBe(5000);
@@ -7296,7 +7309,7 @@ describe('RUNIN-GLIDE-1 — wide-and-back, gliding to the ordinary shot', () => 
     expect(cd._runInOpenMs).not.toBe(cd._finishOverviewZoomOutDurationMs);
     // A glide restarted every frame is a rail, not an ease.
     cd._lerpPhase = 'tracking';
-    cd._updateRunIn(subjectsAt(3800), FRAME, racersAt(3800), rs, 6000);
+    cd._updateRunIn(subjectsAt(IN_LATE), FRAME, racersAt(IN_LATE), rs, 6000);
     expect(cd._lerpPhase).toBe('tracking');
   });
 
@@ -7334,7 +7347,7 @@ describe('RUNIN-GLIDE-1 — wide-and-back, gliding to the ordinary shot', () => 
     const cd = runInDirector({ runInShot: false });
     cd.state = CAM_STATE.LEADER_ZOOM;
     cd._lerpPhase = 'tracking';
-    expect(cd._runInWindowOpen(racersAt(3800), rs)).toBe(false);
+    expect(cd._runInWindowOpen(racersAt(IN_LATE), rs)).toBe(false);
     expect(cd._updateRunIn(subjectsAt(3950), FRAME, racersAt(3950), rs, 5000)).toBe(Infinity);
     expect(cd._runInComposingNow).toBe(false);
     expect(cd._runInEngaged).toBe(false);
@@ -7672,8 +7685,16 @@ describe('RUNIN-BACK-1 — the leader falls back across the frame', () => {
     // leader is close enough that the sweep has released. The release moment is derived from the
     // observed pace (`_runInShouldRelease`), so a fixture that never gets near the line never
     // sweeps — which is what the first version of this test discovered about itself.
-    const opening = drive(0.83, { frames: 40 }).trace.filter((f) => f.frac !== null);
-    const arrival = drive(0.894, { frames: 40 }).trace.filter((f) => f.frac !== null);
+    // ENDGAME-THRESHOLD-095: both drive points are DERIVED from the shipped threshold rather than
+    // written against it. They used to read 0.83 and 0.894, chosen when the window opened at 0.9 of
+    // the finish; at 0.95 the first of them starts OUTSIDE the window entirely and the fixture
+    // measures a leader the run-in is not composing. A fixture positioned relative to a key has to
+    // be expressed in that key, or it silently stops testing when the key moves — which is exactly
+    // what this test exists to prevent happening to the owner's placement.
+    const TH = DEFAULT_CAMERA_CONFIG.endgameThreshold;
+    const at = (frac) => FINISH_T * (TH + (1 - TH) * frac);
+    const opening = drive(at(0.05), { frames: 40 }).trace.filter((f) => f.frac !== null);
+    const arrival = drive(at(0.93), { frames: 40 }).trace.filter((f) => f.frac !== null);
     expect(opening.length, 'the run-in never composed').toBeGreaterThan(10);
     expect(arrival.length, 'the run-in never composed').toBeGreaterThan(10);
     expect(

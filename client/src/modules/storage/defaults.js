@@ -265,7 +265,17 @@ export const DEFAULT_CAMERA_CONFIG = {
   // the checkbox appeared to work and the rings never came back. A key the renderer reads must
   // exist here or it cannot survive loading; `scripts/check-config-keys.mjs` now fails if one does not.
   highlightHeroes: false,
-  endgameThreshold: 0.9,
+  // ENDGAME-THRESHOLD-095: the endgame — and with it the run-in's window — opens at 95% of the way
+  // to the finish rather than 90%. THE OWNER'S DECISION, 2026-08-18: he had been running 0.95
+  // himself, judged it on a production build on 2026-08-17, and waived a before/after sweep, so no
+  // ten-track measurement stands behind this number and none is claimed to.
+  //
+  // A STORED 0.95 IS DROPPED BY THIS CHANGE, which was confirmed against `pruneStored` rather than
+  // assumed: the store keeps only what differs from these defaults, so his own setting disappears
+  // from localStorage on the next load and he follows the default at the same number. Nothing he
+  // sees changes — and the key stops being shadowed, so the next change to it will actually reach
+  // him instead of losing to a stored copy of today's value.
+  endgameThreshold: 0.95,
   // Pulk closeness (15b): BATTLE triggers when ≥3 of the top-10 racers are within this
   // lap-normalized arc distance (fraction of a lap) of each other — scale-independent, so one
   // value means the same on-track closeness on every track (replaced the world-px test that

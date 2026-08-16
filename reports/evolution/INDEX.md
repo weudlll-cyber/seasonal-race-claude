@@ -607,6 +607,23 @@ finish shot leave ALONG it.
 
 ## Camera / presentation fixes
 
+- [ENDGAME-THRESHOLD-095.md](ENDGAME-THRESHOLD-095.md) — **the endgame opens at 95%, and the
+  interesting part is what it broke** (2026-08-18, SHIPPED). One key in `defaults.js`, 0.9 → 0.95,
+  on the owner's decision after running the value himself — **he waived the before/after sweep**, so
+  no ten-track measurement stands behind the number and none is claimed. **The one thing that could
+  surprise him was CONFIRMED, not assumed**: his stored 0.95 is DROPPED by this change (run against
+  the real `pruneStored`), so he follows the default at the same number — and the key stops being
+  shadowed, so the NEXT change to it will actually reach him. **The interesting part is the fallout
+  a one-line default does not predict**: `check-fallback-agreement` fired because its exceptions
+  record an exact (default, fallback) PAIR; two director tests went red because their fixtures name
+  x positions chosen against a 0.9 window; and **one test went GREEN for the wrong reason** —
+  "the progress measure is 0 at the threshold" still passed from a point a whole window early,
+  because `_runInProgressOf` clamps. All three fixtures are DERIVED from the shipped threshold now.
+  **The closure walk changed the plan**: `defaults.js` is inside ALL FOUR instruments' closures, so
+  WORLD and WORLD-OFF had to be MEASURED rather than argued — both byte-identical
+  (`dc4647be0f55ebdb` / `854018ee5d3d83e1`), which is the substantive result. CAMERA
+  `6ae77f12daf23f78` → `d9f45a4aea0e5778` and RENDER `a870f5f9e79cb444` → `1274c7e8444238e3`, both
+  minted.
 - [RUNIN-LINE-1.md](RUNIN-LINE-1.md) — **the line left the frame, and the term that put it out was
   not the hold** — and, appended to the same file across sixteen blocks, **the whole run-in thread
   and how it ended**. **SHIPPED 2026-08-17** as `v-ship-runin-hold`, merge `48f954a4`, the owner

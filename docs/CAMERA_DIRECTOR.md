@@ -546,7 +546,30 @@ a verbatim transcript of one run on one commit, which is a historical record, no
 
 ### The tracking lag, as measured today — and it had drifted
 
-<!-- MEASURED: tracking-lag (median/p95 pp per state) @ e1836294 2026-08-17 depends=client/src/modules/camera/ -->
+<!-- MEASURED: tracking-lag (median/p95 pp per state) @ 4ecd0ec4 2026-08-18 depends=client/src/modules/camera/ -->
+
+**RE-MEASURED IN FULL FOR ENDGAME-THRESHOLD-095, AND THIS IS THE FIRST ENTRY HERE WHERE THE FRAME
+COUNTS MOVED.** The endgame threshold went 0.9 -> 0.95 on the owner's decision, and that key is a
+STATE GATE as well as the run-in's window — so unlike every camera block above it, this one changes
+which state the director is in, not merely how tightly it frames. The counts say so: **BATTLE_ZOOM
+9406 -> 9701, COMEBACK_ZOOM 605 -> 644, LEADER_ZOOM 17788 -> 17630, LEAD_CHANGE 7789 -> 7786**, with
+OVERVIEW and PHOTO_FINISH identical (4303 / 1865) because neither is eligible in the stretch the
+threshold moved. A later endgame means ~160 frames that used to be LEADER_ZOOM are now whatever the
+ordinary priority order picks, and BATTLE takes most of them.
+
+**Every tail improves and one median jumps.** LEAD_CHANGE p95 **31.33 -> 7.12** and LEADER_ZOOM
+**9.49 -> 8.72**, PHOTO_FINISH **37.36 -> 35.66**, BATTLE **10.99 -> 9.97**: the run-in's opening is
+the steepest zoom in the race and the lag is proportional to the zoom rate, so a window that starts
+later spends less of each state inside it. **COMEBACK_ZOOM's median goes 1.15 -> 14.23 and must not
+be read as a regression** — it is 644 frames, it swung 13.73 -> 2.01 -> 1.15 across the three blocks
+above on samples of the same size, and the direction reverses with whichever races happen to carry a
+comeback into the endgame. It is the one row on this page that has never been stable enough to
+carry an argument.
+
+**It was RE-MEASURED rather than re-stamped, and the reason is the same fact the entries below turn
+on**: `defaults.js` IS in `tracking-lag.mjs`'s load closure. The guard flagged only the staged test
+file, which cannot reach the measurement — but the key that moved can, so an argument from the test
+file alone would have been true and beside the point.
 
 **RE-MEASURED IN FULL FOR RUNIN-BACK-1, AND EVERY NUMBER WENT BACK TO WHERE IT WAS BEFORE
 RUNIN-AHEAD-1.** That block's forward bound is removed, so the two FORWARD states it had moved
@@ -752,14 +775,14 @@ and it says so itself. It also covers nothing else on this page; see its header 
 
 | state         | frames | median pp | p95 pp |
 | ------------- | ------ | --------- | ------ |
-| BATTLE_ZOOM   | 9406   | 5.72      | 10.99  |
-| COMEBACK_ZOOM | 605    | 1.15      | 15.57  |
-| LEADER_ZOOM   | 17788  | 4.05      | 9.49   |
-| LEAD_CHANGE   | 7789   | 4.57      | 31.33  |
+| BATTLE_ZOOM   | 9701   | 5.71      | 9.97   |
+| COMEBACK_ZOOM | 644    | 14.23     | 16.22  |
+| LEADER_ZOOM   | 17630  | 3.82      | 8.72   |
+| LEAD_CHANGE   | 7786   | 4.42      | 7.12   |
 | OVERVIEW      | 4303   | 2.65      | 16.00  |
-| PHOTO_FINISH  | 1865   | 4.81      | 37.36  |
+| PHOTO_FINISH  | 1865   | 3.50      | 35.66  |
 
-OVERVIEW median 2.65 pp against every other state pooled 4.64 pp (ratio 0.57×).
+OVERVIEW median 2.65 pp against every other state pooled 4.56 pp (ratio 0.58×).
 
 **RE-MEASURED FOR RUNIN-HOLD-1, AND EVERY FRAME COUNT IS IDENTICAL TO THE DIGIT.** That is the
 first thing to read here and it is the proof the block owes: 9406 / 605 / 17788 / 7789 / 4303 /
