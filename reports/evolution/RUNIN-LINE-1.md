@@ -724,6 +724,106 @@ first by whoever attempts the pin again — before writing any of it.
 
 ---
 
+---
+
+# RUNIN-ANCHOR-1 — BUILT, MEASURED, REVERTED. It works, and it costs the previous block.
+
+**Appended 2026-08-17. Nothing shipped: `CameraDirector.js` is untouched at `ac1754c2`.** This
+block is a NEGATIVE result with a positive finding inside it, and the finding is worth more than the
+code was.
+
+The owner's rule: *"The camera no longer travels along the track, the zoom only keeps closing. That
+the racer moves forward towards the finish line while it does is exactly what we want."* The
+premise was right and RUNIN-PIN-1's diagnosis held: change the SUBJECT, not the law. A stationary
+target cannot be chased.
+
+## 26. What was built
+
+The anchor stops being the leader and becomes `_finishLineWorldPoint`, eased over `runInOpenMs` from
+the engagement frame on the same smoothstep `_beginRunInGlide` runs the opening on — one move, one
+ease, no new number. The line takes the state's own forward placement, so it sits ahead of centre
+with the track behind it filling the rest. `_forwardFracNow` lost its run-in branch entirely: the
+mirror, the hold, the swept release and RUNIN-AHEAD-1's forward cap all existed to travel a subject
+through the frame, and the anchor no longer travels.
+
+## 27. The first attempt emptied the frame, and the reason is the finding
+
+| track | in shot, today | in shot, first attempt |
+| --- | ---: | ---: |
+| seatrack | 16.2 | **0.1** |
+| city-circuit | 18.8 | **0.9** |
+| luger-hill | 15.5 | **1.4** |
+| river-run | 17.7 | 1.7 |
+
+**Anchoring on the line silently switched off the only bound that keeps the leader and the line in
+one frame.** `_lineCeiling` sizes the shot so the LINE fits beside the anchor — and when the line
+*is* the anchor that distance is zero, so the term goes quiet. The binding column showed it
+immediately: `state` 47–87%, i.e. the shot had closed to the state's own zoom while the field was
+still most of a lap behind the line.
+
+**The repair is not a correction term — it is the bound keeping its meaning.** *"These two are in
+one frame"* does not care which of the two the camera is anchored on, so the far point becomes the
+LEADER once the anchor has become the line. One line, and the frame refilled.
+
+## 28. With that, it works — and it is better than today on most of what matters
+
+| track | line drift | leader drift | in shot | zoom monotone |
+| --- | --- | --- | --- | --- |
+| city-circuit | 253 → **343** | 646 → **494** | 18.8 → 18.6 | yes |
+| dirt-oval | 595 → **367** | 806 → **530** | 18.2 → 18.0 | yes |
+| ice-track | 847 → **512** | 871 → **650** | 18.2 → 17.9 | **NO → yes** |
+| luger-hill | 593 → **418** | 644 → **416** | 15.5 → 15.3 | yes |
+| mountainstreet | 718 → **535** | 664 → **433** | 17.4 → 17.1 | yes |
+| river-run | 668 → **495** | 593 → 684 | 17.7 → 17.0 | NO |
+| searound | 590 → **297** | 674 → **414** | 16.7 → 16.2 | yes |
+| seatrack | 586 → **745** | 518 → 766 | 16.2 → 16.1 | yes |
+| space-sprint | 737 → **660** | 829 → **753** | 16.4 → 15.9 | yes |
+
+**Line drift improves on seven of nine** (searound 590 → 297, ice-track 847 → 512), leader drift on
+seven, racers in shot are unchanged to within half a racer, and the zoom becomes monotone on one
+more track. The camera genuinely travels less.
+
+**But it does not deliver the contract.** The line still moves 297–745 px. It is the anchor and it
+still drifts, because the anchor is placed at a fraction *along the heading* — and on a closed track
+the heading rotates through the endgame, so a fixed fraction is a moving screen point. The lateral
+guarantee and `resolveCamera`'s world-bounds clamp move it further. **The residual is heading
+rotation, not chasing** — a different obstacle from RUNIN-PIN-1's, and the next one to attack.
+
+## 29. Why it was reverted anyway: it costs RUNIN-AHEAD-1
+
+**The frame carries MORE finished track than the build he accepted**, because the line at the
+state's forward placement leaves the whole remaining fraction of the frame beyond it:
+
+| track | accepted build | with the anchor swap |
+| --- | ---: | ---: |
+| ice-track | 157 px | **916** |
+| seatrack | 96 | **288** |
+| mountainstreet | 188 | **415** |
+| searound | 641 | 733 |
+| space-sprint | 107 | **58** (better) |
+
+RUNIN-AHEAD-1's forward cap is **dead** with the swap in — it never fires — exactly as the brief
+predicted. But what replaces it is worse at the job it was doing. Trading a measured, accepted gain
+for a partial delivery of a different one is not mine to decide, and the honest state to leave the
+branch in is the one he accepted.
+
+**Also unfinished, and this is the plain reason rather than the polite one:** nine director tests
+pin the deleted mechanisms and would all have needed rewriting, and the block still owed a
+tracking-lag re-measure, both fingerprints, `npm run verify` and five new tests. I ran out of budget
+to do that to the standard the earlier blocks were held to. **A branch back at a known state beats a
+branch with a half-finished redesign and nine red tests.**
+
+## 30. What is kept
+
+Nothing in `client/`. CAMERA `c2f3e97277041fed` and RENDER `28893c9595196026` are unmoved. The two
+instruments already on the branch did all the work here and needed no changes — which is the first
+time in this sequence that a block's measurement cost nothing to run.
+
+**`runInOpenMs` still has work** (the opening glide, the hold, the release), because nothing was
+removed.
+
+---
+
 ## PROPOSALS
 
 1. **Retire `contenderZoom`, or scope it to after the crossing.** It moves the zoom on **0** frames
@@ -758,6 +858,21 @@ first by whoever attempts the pin again — before writing any of it.
    touching anything: whether the ceremony's held zoom should retire on the GUN or on a geometric
    condition the way the field guarantee does, and whether the effect is really absent on open
    tracks or merely smaller because luger-hill's world is short.
+
+11. **Re-run RUNIN-ANCHOR-1 as its own block with the forward reach as an acceptance test.** It is
+    two edits — the anchor swap and `_lineCeiling` keeping its meaning (§27) — and it measurably
+    beats today on line drift, leader drift and zoom monotonicity. The one thing that stopped it is
+    that it un-does RUNIN-AHEAD-1's gain. Those are not in conflict in principle: the line's
+    placement is what decides how much frame sits beyond it, and the state's forward fraction is
+    simply the wrong fraction for an anchor that IS the line. **Ask him where he wants the line to
+    sit in frame** — that is one number he owns, it is the only thing missing, and this block was
+    forbidden from inventing it.
+
+12. **Anchor at a fixed SCREEN point rather than a fraction along the heading.** §28 found the
+    residual drift is heading rotation: a fraction along the heading is a moving screen position on
+    a track that curves. If the line's placement were expressed in screen terms directly, the
+    residual would go with it — and that is a smaller change than it sounds, because
+    `anchorScreenPoint` already converts between the two.
 
 9. **If the pin is wanted, give the run-in a DELIVERED-camera authority for the pinned stretch —
    and price it first.** §24 says the obstacle is the lag between target and delivery, not the
