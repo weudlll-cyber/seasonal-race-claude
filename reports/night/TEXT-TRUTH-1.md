@@ -116,8 +116,30 @@ change of the shipped duration, which is the re-blessing habit R7 names.
 
 ## VERIFICATION
 
-`npm run verify` on the branch, and its routing is the interesting part: `SpriteRacerType.js` lies
-inside the RENDER closure, so a comment-only edit there selects the render fingerprint. That is the
-INERT rule doing its job, and the measurement is the proof rather than the rule being quoted.
+`npm run verify` on the branch: **PASS 16 · FAIL 0 · SKIP 8**, 230 s. Client suite green.
+**WORLD `dc4647be0f55ebdb`** ran and reproduced — selected because this branch edits
+`fingerprint-default.mjs`, the guard's own file.
 
-Result and the four hashes are in the merge commit.
+**CI was green on the branch BEFORE the merge**, which is not the usual order and is not optional
+here: R8 exception 1 — the branch touches `scripts/verify.mjs`, so a local run would be marking its
+own homework. All three jobs passed (client 2m41s, server 2m14s, living-doc guards 1m19s) on PR #141,
+opened for that purpose and closed unmerged; the merge is the local `--no-ff` commit MERGE-AND-GUARD-1
+requires.
+
+**AND THE ROUTING CORRECTED A CLAIM THIS REPORT FIRST MADE.** The draft said `SpriteRacerType.js`
+lies inside the RENDER closure, so the render fingerprint would run. It does not, and verify said so
+by skipping both presentation instruments with *"nothing changed"*. Walking the declarations settles
+it:
+
+```
+render-fingerprint | closure 55 files | racer-types members: NONE
+camera-fingerprint | closure 36 files | racer-types members: NONE
+engine-reach --check client/src/modules/racer-types/SpriteRacerType.js  ->  cannot reach the engine
+```
+
+**`racer-types/` is inside NO instrument's closure.** That is worth more than the correction, because
+`docs/SHIP-CEREMONY.md`'s three-fingerprint table lists *"the racer types' `drawRacer`"* among the
+diffs that should make you run the render fingerprint — and routing will never select it for one.
+RENDER-FINGERPRINT-1 separately declares the instrument blind to the sprite blit, since node has no
+`Image` and the body falls back to its procedural branch. **A change to how a racer is drawn is
+covered by the owner's eye and by nothing else.** It is on tomorrow's list, not repaired here.
