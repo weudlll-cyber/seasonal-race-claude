@@ -232,6 +232,27 @@ The three things:
   visible. The cap is a ceiling on the zoom, the contender guarantee a floor, and the floor is
   applied last.
 
+  **AND SO DOES THE FINISH LINE (RUNIN-LINE-1, 2026-08-17).** The run-in's `line` ceiling was in the
+  `Math.min` and then the cap raised the zoom past it, re-applying only the contender guarantee — so
+  the shot closed past its own finish line. That is the defect the owner rejected the run-in for:
+  measured, **593 frames across six of the ten tracks, up to 608 px outside the canvas**, and it
+  **predates the hold** — master loses the line on the same nine tracks at the same progress. The
+  line is now re-applied after the cap for the same reason the contenders are, and `_lineCeiling`'s
+  own header already called the finish line "a guaranteed SUBJECT of the run-in". Same standing,
+  same clamp.
+
+  **THE CONSEQUENCE IS LARGER THAN THE DIFF AND IS THE THING TO KNOW: the cap no longer moves the
+  shot at all before the crossing.** It used to move the delivered zoom on **5019 of 7441**
+  photo-finish frames; it now moves it on **0**, because in every one of those frames the line
+  ceiling was the *argmin* — the cap was not adding tightening on top of the tightest constraint, it
+  was overriding it. The two are structurally exclusive there. **And its own promise barely notices:
+  contenders NOT WHOLE 8.8% → 8.7%** on ten tracks × three seeds. Whether a cap that costs the
+  finish line and buys a tenth of a point is worth keeping is the owner's call; nothing was removed.
+
+  A third name, `line-after-cap`, exists for the case where the line clamps the cap to a value above
+  the pre-cap minimum. **It did not fire once in 57,366 measured frames** and is kept only so the
+  probe cannot go back to misnaming a line-clamped frame — the defect recorded in the next paragraph.
+
   **One diagnostic defect is recorded here because it cost three reports and two builds:** `_binding`
   was computed as the argmin over `_ceilings` while the cap was applied to `guaranteed` afterwards,
   so on every frame the cap decided the shot the probe still named whichever ceiling was smallest.
@@ -525,7 +546,18 @@ a verbatim transcript of one run on one commit, which is a historical record, no
 
 ### The tracking lag, as measured today — and it had drifted
 
-<!-- MEASURED: tracking-lag (median/p95 pp per state) @ a85640b8 2026-08-16 depends=client/src/modules/camera/ -->
+<!-- MEASURED: tracking-lag (median/p95 pp per state) @ 86f4ce97 2026-08-17 depends=client/src/modules/camera/ -->
+
+**RE-MEASURED IN FULL FOR RUNIN-LINE-1, AND ONE STATE MOVED — THE ONE THE REPAIR ACTS IN.** The
+corridor cap stopped closing past the finish line, and the cap's only scope is `PHOTO_FINISH`. So
+the expectation was that PHOTO_FINISH would move and nothing else would, and that is exactly the
+reading: **PHOTO_FINISH median 5.44 → 4.81 pp, p95 33.94 → 37.36 pp**, with every other state's
+median and p95 identical to the digit and **every frame count identical to the digit** — 9406 / 605
+/ 17788 / 7789 / 4303 / 1865, which is the proof no state decision moved. The median IMPROVES
+because the shot is no longer tightened past the line and a given world lag is a smaller fraction of
+a wider frame; the tail rises because the frames the cap used to hold tight are now the frames the
+run-in is still opening through. A guard that could not tell those apart would have been re-stamped
+on an argument — this was re-run.
 
 **RE-MEASURED IN FULL FOR RUNIN-HOLD-1 — the first time since this stamp was written that the
 change actually reached the measurement.** The two preceding entries below re-stamped without
@@ -694,9 +726,9 @@ and it says so itself. It also covers nothing else on this page; see its header 
 | LEADER_ZOOM   | 17788  | 4.05      | 9.49   |
 | LEAD_CHANGE   | 7789   | 4.57      | 31.33  |
 | OVERVIEW      | 4303   | 2.65      | 16.00  |
-| PHOTO_FINISH  | 1865   | 5.44      | 33.94  |
+| PHOTO_FINISH  | 1865   | 4.81      | 37.36  |
 
-OVERVIEW median 2.65 pp against every other state pooled 4.65 pp (ratio 0.57×).
+OVERVIEW median 2.65 pp against every other state pooled 4.64 pp (ratio 0.57×).
 
 **RE-MEASURED FOR RUNIN-HOLD-1, AND EVERY FRAME COUNT IS IDENTICAL TO THE DIGIT.** That is the
 first thing to read here and it is the proof the block owes: 9406 / 605 / 17788 / 7789 / 4303 /

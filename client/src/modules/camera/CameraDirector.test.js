@@ -7408,6 +7408,105 @@ describe('CameraDirector — the corridor caps the width, it does not force it',
     const g = on._framingProbe.ceilings.guarantee;
     if (Number.isFinite(g)) expect(on._framingProbe.guaranteed).toBeLessThanOrEqual(g + 1e-9);
   });
+
+  // ── RUNIN-LINE-1 — THE OTHER GUARANTEED SUBJECT, WHICH THE CAP USED TO CUT ────────────────────
+  //
+  // The three tests below are the case `check-runin-frame` question 3 caught: the owner rejected a
+  // production build on 2026-08-17 because the shot closed so far the finish line left the frame,
+  // and the term deciding those frames was this cap — 593 frames across six tracks, up to 608 px
+  // outside. `_ceilings.line` was in the `Math.min` and the cap raised the zoom past it afterwards,
+  // re-applying only the contender guarantee.
+  //
+  // THE FIXTURE CARRIES GEOMETRY — `makeShape()` above is a real 6000 px shape and the pair are real
+  // points on it, so `_lineCeiling` can do its own `_finishLineWorldPoint` lookup and
+  // `pointGuarantee` its own projection. A bare {t,x,y,index} racer would make every one of these
+  // rules read `undefined` and pass for the wrong reason.
+  describe('RUNIN-LINE-1 — and it never cuts the finish line either', () => {
+    // A NON-VACUOUS FIXTURE, AND FINDING ONE WAS THE WORK. `spreadPair()` above puts the leader
+    // 66 world px from the line, which makes the line ceiling LOOSER than the cap — so the cap
+    // never wants to go past it and the assertion below would have passed on a director with no
+    // repair in it at all. THIS pair sits ~180 px back on a NARROW road (140 px, the shipped width
+    // of most tracks rather than this block's 300), which is the geometry the defect actually lives
+    // in: a line still far enough to need a wide shot while the corridor asks for a tight one.
+    // Measured on this fixture: cap 2.727, line ceiling 1.632, contender guarantee 2.154 — so
+    // without the repair the delivered zoom is 2.154, a third tighter than the line allows.
+    const NARROW_TRACK_W = 140;
+    const linePair = () => [
+      { t: 0.87, x: 0.87 * WORLD_W, y: 300, finished: false, index: 0 },
+      { t: 0.869, x: 0.869 * WORLD_W, y: 420, finished: false, index: 1 },
+      { t: 0.5, x: 3000, y: 360, finished: false, index: 2 },
+    ];
+    const withRunIn = () => {
+      const racers = linePair();
+      const cd = new CameraDirector(
+        WORLD_W,
+        CANVAS_H,
+        true,
+        { ...DEFAULT_CAMERA_CONFIG, contenderZoom: true, runInShot: true },
+        36,
+        makeShape(),
+        NARROW_TRACK_W
+      );
+      cd.state = CAM_STATE.PHOTO_FINISH;
+      cd._photoFinishContenders = racers.slice(0, 2).map((r) => ({ index: r.index, ref: r }));
+      let ts = 1000;
+      for (let f = 0; f < 6; f++) {
+        cd.update(
+          racers,
+          ts,
+          { raceElapsed: 40000 + f * 200, finishedCount: 0, finishT: FINISH_T },
+          CANVAS_W,
+          CANVAS_H
+        );
+        cd.stateEnteredAt = 0;
+        ts += 200;
+      }
+      return cd;
+    };
+
+    // IF DELETED: the defect returns silently. This is the assertion — the delivered zoom may never
+    // be tighter than the run-in's own ceiling — and it is the exact property the instrument
+    // measures per frame across ten tracks. Nothing else in this suite compares those two numbers.
+    it('the delivered zoom is never tighter than the run-in line ceiling', () => {
+      const on = withRunIn();
+      const line = on._framingProbe.ceilings.line;
+      expect(Number.isFinite(line)).toBe(true);
+      expect(on._framingProbe.guaranteed).toBeLessThanOrEqual(line + 1e-9);
+    });
+
+    // IF DELETED: the test above could pass VACUOUSLY on a fixture where the cap never fires, and
+    // would then keep passing after a change that removed the cap entirely. This one pins that the
+    // cap is genuinely active and genuinely wanted to go tighter than the line allows — i.e. that
+    // the first test is standing in front of a real force rather than an absent one.
+    it('the cap is really trying to tighten past the line in this fixture', () => {
+      const on = withRunIn();
+      expect(on._framingProbe.corridorCap).toBeGreaterThan(0);
+      expect(on._framingProbe.corridorCap).toBeGreaterThan(on._framingProbe.ceilings.line);
+    });
+
+    // IF DELETED: the probe could name a term that is not the delivered number and nothing would
+    // notice — which is exactly the failure ZOOM-PACE-5 spent three reports and two no-op builds
+    // chasing. The composition now has TWO re-clamps after the cap, so there are more ways for the
+    // name and the number to part company than when that lesson was learned.
+    it('the term the probe names is the number it delivered', () => {
+      const on = withRunIn();
+      const p = on._framingProbe;
+      const named = p.binding === 'corridor-cap' ? p.corridorCap : p.ceilings[p.binding];
+      expect(Number.isFinite(named)).toBe(true);
+      expect(Math.abs(p.guaranteed - named)).toBeLessThan(1e-6);
+    });
+
+    // IF DELETED: the run-in could stop composing in the photo finish — the state where the owner
+    // saw the defect — and the two tests above would pass vacuously with `line` at Infinity, since
+    // an infinite ceiling can never be exceeded. This pins that the run-in is ACTUALLY the tightest
+    // constraint in this fixture, which is the fact that makes the cap's override consequential.
+    it('the line ceiling is the tightest term here — which is why overriding it showed', () => {
+      const p = withRunIn()._framingProbe;
+      expect(p.ceilings.line).toBeLessThan(p.ceilings.guarantee);
+      expect(p.ceilings.line).toBeLessThan(p.ceilings.state);
+      expect(p.binding).toBe('line');
+    });
+  });
 });
 
 // ============================================================

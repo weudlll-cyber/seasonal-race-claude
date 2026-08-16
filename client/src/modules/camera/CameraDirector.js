@@ -3211,6 +3211,35 @@ export class CameraDirector {
       if (Number.isFinite(_ceilings.guarantee)) {
         guaranteed = Math.min(guaranteed, _ceilings.guarantee);
       }
+      // ── RUNIN-LINE-1: THE LINE IS RE-APPLIED HERE FOR THE SAME REASON THE CONTENDERS ARE ──────
+      //
+      // THE LINE USED TO BE DROPPED AT THIS POINT, and that is the whole of the defect the owner
+      // rejected on 2026-08-17: "it closes so far that the finish line is no longer visible."
+      //
+      // `_ceilings.line` is in the `Math.min` above, so the run-in's own bound was honoured — and
+      // then the cap RAISED `guaranteed` past it and only `_ceilings.guarantee` was put back. The
+      // run-in cannot violate its own bound by interpolating (it eases from the held ceiling to the
+      // live one, both of which frame the line); it was overridden AFTER it had decided.
+      //
+      // MEASURED, not read: `check-runin-frame` question 3 loses the line on 9 of 10 tracks, and
+      // 90% of the lost frames are bound by `corridor-cap` or `guarantee-after-cap`. With the cap
+      // turned off (`--no-cap`) four of those tracks hold the line for the whole window and the
+      // rest improve by hundreds of pixels. The cap is the term that was deciding.
+      //
+      // THE ARGUMENT FOR RE-APPLYING IT IS THE ONE THREE LINES ABOVE, VERBATIM. The corridor is the
+      // owner's shortcut for "certainly enough", and a subject that needs more room than a track
+      // width would be CUT by honouring it — which is exactly why the contender guarantee is
+      // re-applied. `_lineCeiling`'s own header calls the finish line "a guaranteed SUBJECT of the
+      // run-in". Same standing, same clamp. This is not a floor, a margin or a safety net bolted
+      // on over the cap: it is the omission of one of the two guaranteed subjects from a re-clamp
+      // that already existed for the other.
+      //
+      // IT COSTS THE CAP NOTHING AFTER THE CROSSING, which is where the corridor shot matters most:
+      // the run-in's window closes on `finishedCount > 0`, so `_ceilings.line` is Infinity from the
+      // first finisher onward and this line is a no-op for the whole of the finish sequence.
+      if (Number.isFinite(_ceilings.line)) {
+        guaranteed = Math.min(guaranteed, _ceilings.line);
+      }
     }
     // ── RUNIN-PACE-1 §3: A TIGHTEN-RATE LIMIT WAS BUILT HERE AND MEASURED OUT ───────────────────
     //
@@ -3255,10 +3284,16 @@ export class CameraDirector {
     let _binding = 'state';
     for (const k of Object.keys(_ceilings)) if (_ceilings[k] < _ceilings[_binding]) _binding = k;
     if (guaranteed > _preCapGuaranteed + 1e-12) {
+      // RUNIN-LINE-1 named the third outcome. Two of these existed and the probe therefore reported
+      // `guarantee-after-cap` for a frame the LINE had clamped — the same class of lie ZOOM-PACE-5
+      // opened this block to remove, one clamp later. A term that can decide the shot and cannot be
+      // named is a term the next diagnosis will miss.
       _binding =
         _corridorCap !== null && Math.abs(guaranteed - _corridorCap) <= 1e-9
           ? 'corridor-cap'
-          : 'guarantee-after-cap';
+          : Number.isFinite(_ceilings.line) && Math.abs(guaranteed - _ceilings.line) <= 1e-9
+            ? 'line-after-cap'
+            : 'guarantee-after-cap';
     }
     this._framingProbe = {
       ceilings: _ceilings,
