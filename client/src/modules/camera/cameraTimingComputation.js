@@ -54,7 +54,6 @@ const TC_OVERVIEW = 1.5;
 const TC_LEADER = 0.3;
 const TC_BATTLE = 0.3;
 const TC_COMEBACK = 0.3;
-const ENDGAME_PROGRESS_THRESHOLD = 0.85;
 const DEFAULT_MAX_ENTRY_DURATION_MS = {
   OVERVIEW: 10000,
   LEADER_ZOOM: 5000,
@@ -96,7 +95,12 @@ export function computeTimingFromConfig(config) {
   const battleMaxGroupRankSpan =
     config?.battleMaxGroupRankSpan ?? DEFAULT_CAMERA_CONFIG.battleMaxGroupRankSpan;
   const battleMinTopN = config?.battleMinTopN ?? DEFAULT_CAMERA_CONFIG.battleMinTopN;
-  const endgameThreshold = config?.endgameThreshold ?? ENDGAME_PROGRESS_THRESHOLD;
+  // ENDGAME-FALLBACK-1: READ the default, do not COPY it (Lesson 207). This line carried a literal
+  // 0.85 that was two ships stale — 0.9 then 0.95 went past it — and survived only because every
+  // shipped caller resolves its config against the defaults first, so the fallback never fired. A
+  // number nobody reaches is still the number a reader finds when they open the file to learn it.
+  // Every other top-level key in this function already reads the default; this was the last literal.
+  const endgameThreshold = config?.endgameThreshold ?? DEFAULT_CAMERA_CONFIG.endgameThreshold;
   const postStartHoldMs = config?.postStartHoldMs ?? DEFAULT_CAMERA_CONFIG.postStartHoldMs;
   // Clamped to a sane band so a corrupt stored config cannot produce a ceremony that never ends or
   // one with a negative beat. The easing NAME is not validated here: `ceremonyEasing` resolves an

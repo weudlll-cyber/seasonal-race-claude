@@ -182,6 +182,27 @@ band measured the same 30.0 px in it either way.
 - `v-ship-finish-band` (`354859bc`, 2026-08-13) — **the ship.** The forward merge is inside it: the
   branch was merged with master first, re-measured, and only then merged out.
 
+### ENDGAME-FALLBACK — one home for `endgameThreshold` (2026-08-18)
+
+**The first ship cut under [SHIP-CEREMONY § THE SHIP ORDER](SHIP-CEREMONY.md)**, so this register
+line was written on the BRANCH and the merge commit registers its own tag.
+
+`cameraTimingComputation.js` carried a literal `0.85` beside the key — two ships stale — behind an
+"UNFIREABLE" exception. **The copy is deleted, not synced**: the fallback reads `defaults.js` now, so
+it cannot drift again, and the exception is gone with it.
+
+**The fallback turned out to be reachable — by the TEST SUITE, not by the product.** Three tests
+build a director with no config and drove leaders at `t` values chosen to clear the old literal; all
+three are derived from the resolved threshold now. **Nothing minted**: CAMERA and RENDER were
+measured on the merged tree and are byte-identical, which is the proof no shipped path took it.
+
+**Three siblings in the same file remain stale and are recorded as a finding, not fixed** —
+`comebackMinStartGap`, `comebackMaxCurrentRankPct` and `maxStateDuration`.
+
+- `v-ship-endgame-fallback` (`03f9c480`, 2026-08-18) — **the ship.** The return point is
+  `v-ship-endgame-fallback^1`. No fingerprint moves across it, so it restores no world; it restores
+  the second copy of a config value.
+
 ### ENDGAME-THRESHOLD — the endgame opens at 95% (2026-08-18)
 
 **The owner's decision, 2026-08-18.** He had been running 0.95 himself, judged it on a production

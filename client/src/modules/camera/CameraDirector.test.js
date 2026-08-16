@@ -1216,12 +1216,18 @@ describe('CameraDirector — the finish lifecycle (FINISH-SEAM-1)', () => {
 // 107px black bars. These two tests must fail without the isOpenTrack hotfix.
 
 describe('CameraDirector — battle trigger tunables (Block X)', () => {
-  it('no config: fallback _maxStateDuration=8000, _battleGates.closenessT=0.05, _battleMinDurationMs=3000, _endgameThreshold=0.85', () => {
+  it('no config: fallback _maxStateDuration=8000, _battleGates.closenessT=0.05, _battleMinDurationMs=3000, _endgameThreshold READS the default', () => {
     const cd = new CameraDirector();
     expect(cd._maxStateDuration).toBe(8000);
     expect(cd._battleGates.closenessT).toBe(0.05);
     expect(cd._battleMinDurationMs).toBe(3000);
-    expect(cd._endgameThreshold).toBe(0.85);
+    // ENDGAME-FALLBACK-1: this used to pin the literal 0.85 that `cameraTimingComputation.js`
+    // carried beside the key. The second copy is gone — the fallback READS `defaults.js` now — so
+    // what this asserts is the RULE rather than a number, and it can no longer go stale when the
+    // default moves. IF DELETED: nothing states that a director built with no config at all still
+    // resolves this key to the shipped value, which is the property that made the old literal
+    // unreachable and therefore invisible for two ships.
+    expect(cd._endgameThreshold).toBe(DEFAULT_CAMERA_CONFIG.endgameThreshold);
     expect(cd._postStartHoldMs).toBe(7000);
     expect(cd._battleCooldownMs).toBe(8000);
     expect(cd._battleMaxDurationMs).toBe(6000);
@@ -4392,9 +4398,14 @@ describe('LEAD_CHANGE camera state', () => {
     cd.stateEnteredAt = 0;
     // ts=900, lastLeadChangeExitTs=800 → 900-800=100ms < 5000ms cooldown → blocked
     cd._lastLeadChangeExitTs = 800;
+    // ENDGAME-FALLBACK-1: the leader's t is DERIVED from the resolved threshold. It read a flat 0.9,
+    // which cleared the literal 0.85 this director used to fall back to and does not clear the
+    // shipped default it reads now. The endgame path is what the test is about, so the fixture has
+    // to be inside the endgame whatever the threshold is.
+    const ENDGAME_T = (DEFAULT_CAMERA_CONFIG.endgameThreshold + 1) / 2; // safely inside the window
     const racers = [
-      { index: 1, name: 'Bob', t: 0.9, x: 700, y: 360 },
-      { index: 0, name: 'Alice', t: 0.8, x: 600, y: 360 },
+      { index: 1, name: 'Bob', t: ENDGAME_T, x: 700, y: 360 },
+      { index: 0, name: 'Alice', t: ENDGAME_T - 0.1, x: 600, y: 360 },
     ];
     const raceState = { raceElapsed: 20000, finishedCount: 0, winner: null, finishT: 1 };
     cd.update(racers, 900, raceState, 1280, 720);
@@ -5551,8 +5562,17 @@ describe('CameraDirector — LEAD_CHANGE pan snap', () => {
     // weight — CAMERA-WEIGHTS-1 deliberately removed that exception, because a leadChangeWeight
     // of 0 was still producing LEAD_CHANGE near the line. Determinism comes from ALWAYS_TAKE.
     const cd = makeCD();
+    // ENDGAME-FALLBACK-1: derived from the resolved threshold rather than chosen against it. The
+    // pair 0.9 / 0.85 gave leaderProgress ≈ 0.944, which cleared the old literal 0.85 and does not
+    // clear the shipped default. It has to land in a WINDOW, not merely above the threshold: past
+    // `photoFinishLeadProgress` the photo finish takes the shot and the endgame LEAD_CHANGE path
+    // this test is about never runs. Midway between the two gates is the only stable answer, and it
+    // follows both of them.
     const FINISH_T = 0.9;
-    const LEADER_T = 0.85; // leaderProgress = 0.85/0.9 ≈ 0.944 > 0.90 → endgame path
+    const LEADER_T =
+      (FINISH_T *
+        (DEFAULT_CAMERA_CONFIG.endgameThreshold + DEFAULT_CAMERA_CONFIG.photoFinishLeadProgress)) /
+      2;
     const racers = [
       { t: LEADER_T, x: LEADER_T * WORLD_W, y: 360, index: 0 },
       { t: LEADER_T - 0.02, x: (LEADER_T - 0.02) * WORLD_W, y: 360, index: 1 },
@@ -5771,9 +5791,13 @@ describe('weighted event selection never surfaces a zero-weight state (BATTLE-WE
       comebackWeight: 0,
       overviewWeight: 0,
     });
+    // ENDGAME-FALLBACK-1: derived, not chosen. A flat 0.95 leader sat above the old literal 0.85
+    // and sits exactly ON the shipped default, and the gate is exclusive — so the fixture stopped
+    // being an endgame at all and the test asserted the wrong branch's reason string.
+    const LEAD_T = (DEFAULT_CAMERA_CONFIG.endgameThreshold + 1) / 2;
     const endgame = Array.from({ length: 10 }, (_, i) => ({
       index: i,
-      t: 0.95 - i * 0.001,
+      t: LEAD_T - i * 0.001,
       x: 600,
       y: 360,
       finished: false,

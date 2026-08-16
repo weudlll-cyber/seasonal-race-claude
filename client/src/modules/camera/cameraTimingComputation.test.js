@@ -54,7 +54,13 @@ describe('computeTimingFromConfig — null config (all defaults)', () => {
   it('uses fallback battlePulkThresholdT', () => expect(t.battlePulkThresholdT).toBe(0.05));
   it('uses fallback battleIsolationThresholdT', () => expect(t.battleIsolationThresholdT).toBe(0));
   it('uses fallback battleMinDurationMs', () => expect(t.battleMinDurationMs).toBe(3000));
-  it('uses fallback endgameThreshold', () => expect(t.endgameThreshold).toBe(0.85));
+  // ENDGAME-FALLBACK-1: this pinned the literal 0.85 that lived beside the key. The second copy is
+  // gone — the fallback READS `defaults.js` now — so what is pinned is the RULE, and it cannot go
+  // stale when the default moves. IF DELETED: nothing states that a null config still resolves this
+  // key at all, which is the property that kept the old literal unreachable and therefore invisible
+  // while it drifted two ships out of date.
+  it('reads the DEFAULT endgameThreshold, it does not copy it', () =>
+    expect(t.endgameThreshold).toBe(DEFAULT_CAMERA_CONFIG.endgameThreshold));
   it('uses fallback battleCooldownMs', () => expect(t.battleCooldownMs).toBe(8000));
   it('uses fallback maxStateDuration', () => expect(t.maxStateDuration).toBe(8000));
   it('uses fallback battleMaxDurationMs', () => expect(t.battleMaxDurationMs).toBe(6000));

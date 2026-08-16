@@ -245,8 +245,9 @@ used.
 5. **On the branch, in one commit: the mint, the register line, the report and its INDEX entry.**
    The `TAGS.md` entry is written in the declaration form the register requires — backticked name,
    backticked short SHA, date — with the SHA **provisional** (see the note below).
-6. **`npm run verify` green on the branch**, now including `check-tags`, `check-index` and
-   `check-fingerprints` against the tree that is about to become master.
+6. **`npm run verify` green on the branch — EXCEPT `check-tags`, which cannot be green here.** See
+   the note below; `check-index` and `check-fingerprints` do run against the tree that is about to
+   become master, which is most of the value.
 7. **Merge into master** with `--no-ff`. The merge commit's tree is the branch tip's tree.
 8. **Tag the merge commit**, annotated. It registers its own tag, so `check-tags` passes on it.
 9. **One follow-up commit on master corrects the two provisional SHAs** — the register line's and
@@ -254,12 +255,34 @@ used.
 10. **Push master and the tag in the SAME push.** A tag pushed ahead of its register turns master
     red, and this repository has paid for that once.
 
+### `check-tags` IS RED ON THE BRANCH, DELIBERATELY — and that is the window moving, not a defect
+
+**Corrected 2026-08-18 by ENDGAME-FALLBACK-1, the first ship under this order, which found it by
+doing it.** The first draft of step 6 claimed `check-tags` would now be green on the branch. It
+cannot be: a register line for a tag that has not been pushed yet fails the guard's SECOND direction
+— *every registered tag exists at origin* — for as long as the branch is unmerged. **Commit that
+step with `--no-verify` and say so in the commit message**; the guard is green again the moment
+master and the tag are pushed together in step 10.
+
+**This is the inconsistency window moving, and it moves in the right direction:**
+
+| | old order | new order |
+| --- | --- | --- |
+| where the inconsistency lives | **in history, permanently** — the merge commit forever fails `check-tags` | **on an unmerged branch, transiently** |
+| when it ends | never | at the push in step 10 |
+| what a checkout of the tag shows | red | green |
+
+**A branch is work in progress; history is not.** Trading a permanent inconsistency in the record for
+a temporary one in a branch nobody has merged is the whole of what this reordering buys.
+
 ### The one step that CANNOT be done in this order, and why
 
 **A commit cannot name its own hash.** The register line's SHA and `mintedOn` both want the merge
 commit's hash, and neither can have it until that commit exists. So step 5 writes them provisionally
 — the branch tip's short SHA is the honest provisional value, because it is the commit the tree
-actually came from — and step 9 corrects them.
+actually came from — and step 9 corrects them. **Any `MEASURED:` stamp re-pointed by the ship is the
+same case and rides in the same step-9 commit**, so there is exactly one place where provisional
+hashes are settled rather than three.
 
 **This costs nothing that matters, and it is measured rather than assumed:** `check-tags` declares in
 its own header that it checks **names, not shas** ("whether a tag points where the register SAYS it
