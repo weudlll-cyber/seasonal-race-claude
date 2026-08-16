@@ -14,6 +14,41 @@ it, with RUNIN-AHEAD-1's contradicting forward bound removed (RUNIN-BACK-1). CAM
 minted on the merge. WORLD and WORLD-OFF could not move and were not re-run: no merged file lies
 inside `fingerprint-default.mjs`'s declared closure. Defaults were not touched.
 
+**The ship, in the order it happened.** Master was merged INTO the branch first (`a790e04e`, twelve
+commits of night work, **no file touched by both sides**, so nothing to resolve and in particular
+nothing in the director) and `npm run verify` ran green on the result before anything went the other
+way. The merge onto master is **`48f954a4`**, carrying 17 files and one production file,
+`CameraDirector.js`. Both fingerprints were then measured on that tree — `camera-fingerprint --quiet`
+and `render-fingerprint --quiet`, no `--cheap` — and written into `docs/fingerprints.json` by the
+mint commit **`0a9afc9a`**, which also carries this summary and the `TAGS.md` register line for the
+tag, in the same push as the tag itself.
+
+**`engine-reach` was deliberately not used to clear WORLD**, because on a committed merge it compares
+the working tree and can say nothing about the merge. The closure was walked instead:
+`scripts/lib/routing.mjs` `closureOf` from each instrument's declared reach entries gives **36 files
+for WORLD/WORLD-OFF containing none of the 17**, and **36 for CAMERA / 55 for RENDER, both containing
+`CameraDirector.js`**. That is a stronger statement than a matching hash, and it is the one the
+closure can make.
+
+| | before | after | minted |
+| --- | --- | --- | :---: |
+| CAMERA | `ff2bc42af377b5cf` | **`6ae77f12daf23f78`** | yes |
+| RENDER | `0e04fa4a5e9c3b85` | **`a870f5f9e79cb444`** | yes |
+| WORLD | `dc4647be0f55ebdb` | `dc4647be0f55ebdb` | no — outside the closure |
+| WORLD-OFF | `854018ee5d3d83e1` | `854018ee5d3d83e1` | no — outside the closure |
+
+**CI is green for exactly the merge SHA**: run `31967936548` on `48f954a4`, and run `31968095719` on
+the mint `0a9afc9a`. The merge was pushed on its own first so that the first of those runs answers
+about the merge and nothing else. `npm run verify` on master after the ship: **PASS 18, FAIL 0**,
+with `camera-fingerprint` and `render-fingerprint` reproducing the two minted values.
+
+**The sweep.** `feat/runin-hold` was proven contained in master (`git merge-base --is-ancestor`),
+then deleted at origin and locally; `git ls-remote --heads origin` returns **master alone**. No
+stashes. `check-tags`: **101 origin tags, 0 unregistered, 101 declared, 0 missing at origin.** The
+working tree carries three files that are **the owner's and deliberately untouched** — a modified
+`.vscode/settings.json` and untracked `err.txt` and `out.txt` — which is the whole of what any build
+badge means by "dirty" here.
+
 ## SIX ATTEMPTS AT ONE SENTENCE, AND WHY IT CANNOT BE HAD
 
 The owner asked for a close that is **even** — "zoom in softly, at the speed necessary for that
