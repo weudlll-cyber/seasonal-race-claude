@@ -546,7 +546,7 @@ a verbatim transcript of one run on one commit, which is a historical record, no
 
 ### The tracking lag, as measured today — and it had drifted
 
-<!-- MEASURED: tracking-lag (median/p95 pp per state) @ 86f4ce97 2026-08-17 depends=client/src/modules/camera/ -->
+<!-- MEASURED: tracking-lag (median/p95 pp per state) @ 7f792a7c 2026-08-17 depends=client/src/modules/camera/ -->
 
 **RE-MEASURED IN FULL FOR RUNIN-LINE-1, AND ONE STATE MOVED — THE ONE THE REPAIR ACTS IN.** The
 corridor cap stopped closing past the finish line, and the cap's only scope is `PHOTO_FINISH`. So
