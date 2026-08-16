@@ -546,7 +546,7 @@ a verbatim transcript of one run on one commit, which is a historical record, no
 
 ### The tracking lag, as measured today — and it had drifted
 
-<!-- MEASURED: tracking-lag (median/p95 pp per state) @ 67bab5bb 2026-08-17 depends=client/src/modules/camera/ -->
+<!-- MEASURED: tracking-lag (median/p95 pp per state) @ 9b3c3a00 2026-08-17 depends=client/src/modules/camera/ -->
 
 **RE-MEASURED IN FULL FOR RUNIN-AHEAD-1, AND EXACTLY THE TWO STATES THAT SHOULD HAVE MOVED DID.**
 The forward-extent bound applies only where the framing has a FORWARD look to reclaim, so the
