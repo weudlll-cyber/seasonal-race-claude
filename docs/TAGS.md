@@ -200,7 +200,7 @@ All assert the rule now. **Zero disagreeing mirrors remain in any camera file.**
 **Nothing minted** — CAMERA and RENDER measured on the merged tree and byte-identical, which is the
 proof no shipped path took a stale value.
 
-- `v-ship-fallback-mirrors` (`4bba083f`, 2026-08-18) — **the ship.** The return point is
+- `v-ship-fallback-mirrors` (`a2d92596`, 2026-08-18) — **the ship.** The return point is
   `v-ship-fallback-mirrors^1`. No fingerprint moves across it; it restores four copies of three
   config values.
 
