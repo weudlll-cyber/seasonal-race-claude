@@ -88,7 +88,14 @@ for (const geo of loadTracks()) {
       if (!cd._runInComposingNow) return;
       const ms = ts - raceStart;
       if (engagedMs === null) engagedMs = ms;
-      if (releaseMs === null && cd._runInReleaseProgress !== null) {
+      // WHERE THE CLOSE BEGINS. With a hold it is the release latch; with RUNIN-EVEN-1/-2's single
+      // even movement there is no latch to read, and the close begins the moment the opening glide
+      // ends. Both are the director's own state — nothing is reconstructed.
+      const releasedNow =
+        cd._runInReleaseProgress === undefined
+          ? cd._lerpPhase !== 'glide'
+          : cd._runInReleaseProgress !== null;
+      if (releaseMs === null && releasedNow) {
         releaseMs = ms;
         releaseZoom = cd.zoom;
         compressed = cd._runInCompressed === true;

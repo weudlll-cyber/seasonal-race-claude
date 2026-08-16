@@ -1583,3 +1583,124 @@ nothing was kept. Had the change shipped it would have kept only the first.
    leader was 237 px off the edge. "The picture is never empty" and "the person the shot is about is
    in it" are different promises, and the second is the one the owner checks with his eyes. The
    projection is already computed per racer on every frame, so the cost is a comparison.
+
+---
+
+---
+
+# RUNIN-EVEN-2 — the destination stopped running away. The line ceiling still owns the picture.
+
+**Appended 2026-08-17. Nothing shipped — `CameraDirector.js` is byte-identical to `b5c5a51d`, so
+CAMERA `6ae77f12daf23f78` and RENDER `a870f5f9e79cb444` cannot move.** The brief's diagnosis of
+RUNIN-EVEN-1 was correct and its fix does what it says. It still does not come out flat, for a
+reason neither attempt could have predicted from the other, and which is stated with a number
+below. **Reverted, and per the brief there is no sixth shape.**
+
+## 58. What was built — one line changed, everything else as specified
+
+The RUNIN-EVEN-1 walk, unchanged in its arithmetic, with the destination swapped:
+
+```
+dest  = this._stateCamZoom()                      // the shot the crossing becomes anyway — stationary
+speed = |ln(dest / current)| / remainingMs         // computed once: distance ÷ time still to run
+current *= exp(sign · min(|span|, speed · dt))     // walked every frame, in log space
+```
+
+`_runInHoldCeiling`, `_runInReleaseProgress`, `_runInSweepU` and `_runInShouldRelease` went with the
+hold; the anchor's travel went back to raw `_runInProgress`, whose two ends are the owner's
+placement and its mirror, untouched. **`_lineCeiling` stayed in the `Math.min`** exactly as required.
+The photo-finish case keeps the rise-only acceleration limit with `runInOpenMs` as its time constant
+— no new key.
+
+**Every distance is along the course.** The time still to run comes from `_runInProgress`, which
+`_runInProgressOf` measures along the track and not across the ground; nothing in the walk takes a
+straight-line distance to anything.
+
+## 59. It is flatter. It is not flat.
+
+Instantaneous rate through the close at 20% / 50% / 80%, log-units per second, ten tracks, seed 9:
+
+| track | **delivered** | **the run-in's own target** | close s | first perceptible |
+| --- | --- | --- | ---: | ---: |
+| city-circuit | 0.08 / 0.16 / 0.40 | 0.11 / 0.14 / 0.61 | 13.93 | 2.65 s |
+| dirt-oval | 0.08 / 0.23 / 0.40 | 0.06 / 0.13 / 0.51 | 10.42 | 0.20 s |
+| ice-track | 0.10 / 0.26 / 0.56 | 0.25 / 0.10 / 0.63 | 7.92 | 0.27 s |
+| luger-hill | 0.07 / 1.21 / 0.65 | 0.14 / 0.28 / 0.59 | 6.03 | 0.28 s |
+| mountainstreet | 0.13 / 0.98 / 0.57 | 0.12 / 0.34 / 0.56 | 6.20 | 0.35 s |
+| river-run | 0.13 / 0.31 / 0.69 | 0.21 / 0.31 / 0.68 | 7.15 | 0.32 s |
+| searound | 0.26 / 0.85 / 0.56 | 0.48 / 0.17 / 0.55 | 6.85 | 0.20 s |
+| seatrack | 0.12 / 0.51 / 0.83 | 0.10 / 0.29 / 0.95 | 6.32 | 0.42 s |
+| space-sprint | 0.14 / 0.96 / 0.69 | 0.13 / 0.49 / 0.90 | 6.03 | 0.30 s |
+| garden-path | — | — | — | — |
+
+**A flat profile reads three equal numbers. None of these rows do**, and every one of them ends
+faster than it starts — 0.08 → 0.40, 0.14 → 0.69. By the brief's own rule that is a fail and is
+reported as one.
+
+**What did improve, honestly stated.** Cross-track rate spread **13.6× → 2.27×**, so the destination
+swap fixed precisely what the brief said it would; it is now comparable to the shipped 2.08×. The
+flat foot shortened a great deal: city-circuit's first perceptible movement went **6.70 s → 2.65 s**
+and eight of the nine measured tracks are under 0.5 s. **And the delivered zoom is no longer
+monotone on any track** — the "mono" column reads NO ten times out of ten, against yes on the
+shipped build. That alone disqualifies it.
+
+## 60. WHY, with the number the brief asked for
+
+**How often `_lineCeiling` binds during the close**, counted frame by frame — the walk's value
+discarded in favour of the line's:
+
+| track | close frames | line-clamped | share |
+| --- | ---: | ---: | ---: |
+| space-sprint | 333 | 317 | **95.2%** |
+| ice-track | 446 | 415 | **93.0%** |
+| city-circuit | 777 | 718 | **92.4%** |
+| dirt-oval | 596 | 546 | **91.6%** |
+| seatrack | 350 | 319 | **91.1%** |
+| searound | 352 | 275 | 78.1% |
+| luger-hill | 303 | 211 | 69.6% |
+| mountainstreet | 343 | 174 | 50.7% |
+| river-run | 340 | 29 | 8.5% |
+
+**On seven of nine tracks the even walk decides the picture on fewer than one frame in four.** The
+`Math.min` the brief required — correctly, because the line must stay in frame — is the whole
+explanation: the walk heads for the state's own zoom, which is *tighter* than the line permits for
+most of the close, so the smaller of the two is the line ceiling and **the shot inherits the line
+ceiling's shape, which is the hyperbolic shape RUNIN-EVEN-1 was reverted for.** The walk was never
+running the close; it was waiting behind a bound that was running it.
+
+**So the wall is a third one, and it is not a bug in either attempt.** RUNIN-EVEN-1 failed because
+its destination ran away. RUNIN-EVEN-2's destination is stationary and the walk toward it is genuinely
+even — and it is invisible, because a promise-keeping bound sits between it and the picture. **The
+line ceiling is not a safety net around the close; during the close it IS the close.** Any shape that
+leaves `_lineCeiling` in the `Math.min` — and it must stay, that is the promise the whole line of work
+exists for — will read as `_lineCeiling` for as long as `_lineCeiling` is the wider of the two.
+The even walk and the framing promise are not two terms that can be composed with a `min`; they are
+one term, and only one of them can be even.
+
+That is where this line stops. **No sixth shape.**
+
+## 61. State
+
+`CameraDirector.js` reverted, byte-identical to `b5c5a51d`. Kept: the one-line tolerance in
+`scripts/diag/runin-close-rate.mjs` so the instrument reads the close's start from either shape's own
+state — the release latch when there is one, the end of the opening glide when there is not; it
+reconstructs nothing either way. CAMERA and RENDER unmoved, nothing to mint, the tracking-lag stamp
+cannot go stale. `runInOpenMs` keeps both its jobs, because nothing was kept.
+
+## PROPOSALS
+
+1. **Ask the line ceiling to be even, instead of asking something else to be even underneath it.**
+   §60 says the close IS `_lineCeiling` on 50–95% of frames, so the only place a uniform close can
+   live is inside `_lineCeiling` itself — its *placement* term, not a bound wrapped around it. The
+   line's screen position is already a value with a Dev control (`runInLinePlacement`, RUNIN-ANCHOR-2);
+   scheduling THAT evenly through the close, rather than the zoom it implies, would make the even
+   quantity the one the ceiling is computed from. **It is measurable before it is built**: one run of
+   `runin-close-rate` against a placement schedule swept in the existing diagnostic would say whether
+   the implied zoom comes out flatter, at the cost of no production change.
+
+2. **Show the owner the 2.27× and the shortened foot before the next attempt.** The destination swap
+   did fix the cross-track spread and cut city-circuit's dead opening from 6.70 s to 2.65 s; it was
+   rejected on flatness and on monotonicity, both of which are *my* acceptance rules read from his
+   brief. He has not seen either number. **If what actually bothers him is the long dead opening
+   rather than the unevenness**, then §59's middle column is a result and not a failure, and the next
+   block is a much smaller one than a sixth shape.
