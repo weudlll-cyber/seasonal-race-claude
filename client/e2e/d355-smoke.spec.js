@@ -34,10 +34,20 @@ test.describe('D3.5.5 — Edit-Modal opens', () => {
   });
 
   test('Edit button is visible for each racer type', async ({ page }) => {
+    // E2E-STALE-2: this asserted `toBe(12)` and the page renders 20 — the built-in registry
+    // (`RACER_TYPES` in modules/racer-types/index.js) has grown to twenty entries. But a literal
+    // count is the wrong assertion for a list the SERVER can add to: `listAllRacerTypes()` merges
+    // server-created types in, so any spec that creates one would break a hard-coded number for a
+    // reason that is not a defect. What the test NAME claims — one Edit button per racer type — is
+    // an invariant, so it is asserted as one, against an independent enumerator: every row also
+    // renders its speed multiplier as "×N.NN".
     const editBtns = page.getByRole('button', { name: 'Edit', exact: true });
-    // There are 12 types, each has an Edit button
+    // No `$` anchor: a row that carries tuning overrides appends a ✱ inside the same span.
+    const rows = page.getByText(/^×\d+\.\d\d/);
     await expect(editBtns.first()).toBeVisible();
-    expect(await editBtns.count()).toBe(12);
+    const rowCount = await rows.count();
+    expect(rowCount, 'the racer-type list rendered no rows at all').toBeGreaterThan(0);
+    expect(await editBtns.count()).toBe(rowCount);
   });
 
   test('clicking Edit opens a modal dialog', async ({ page }) => {
@@ -70,11 +80,31 @@ test.describe('D3.5.5 — Edit-Modal opens', () => {
   });
 
   test('info icons appear in the modal (one per field)', async ({ page }) => {
+    // E2E-STALE-2: this counted every info icon in the dialog and expected 6. The modal now
+    // carries 9 — the six tunable fields plus Min Sprite Screen Size, Surface Classes and the
+    // cloud-effect overrides — so a total was never the claim the test's own name makes. "One per
+    // field" is now asserted per field, which also says WHICH field lost its tooltip when it fails.
+    const TUNABLE_FIELD_LABELS = [
+      'Speed Multiplier',
+      'Display Size (px)',
+      'Anim Period (ms)',
+      'Leader Ring Color',
+      'Leader Ring Width (rx)',
+      'Leader Ring Height (ry)',
+    ];
+
     await page.getByRole('button', { name: 'Edit', exact: true }).first().click();
     const dialog = page.getByRole('dialog');
-    // Each field has an InfoTooltip icon with role="img" and tabIndex=0
-    const infoIcons = dialog.locator('[role="img"][tabindex="0"]');
-    expect(await infoIcons.count()).toBe(6);
+    await expect(dialog).toBeVisible();
+
+    for (const label of TUNABLE_FIELD_LABELS) {
+      // The row is `<span class=fieldLabel>{label}</span><InfoTooltip/>`, and InfoTooltip renders
+      // a wrapper span holding the `role="img"` icon — so the icon is in the label's next sibling.
+      const icon = dialog
+        .getByText(label, { exact: true })
+        .locator('xpath=following-sibling::span[1]//*[@role="img"]');
+      await expect(icon, `no info icon beside "${label}"`).toHaveCount(1);
+    }
   });
 });
 

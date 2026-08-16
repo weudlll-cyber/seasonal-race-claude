@@ -17,7 +17,12 @@ test.describe('B-16 — Camera adaptive zoom: UI not regressed', () => {
     page.on('pageerror', (e) => errors.push(e.message));
     await page.goto('/dev');
     await page.getByRole('button', { name: /Race Defaults/ }).click();
-    await expect(page.getByText('Race Duration')).toBeVisible();
+    // E2E-STALE-2: `getByText('Race Duration')` is a CASE-INSENSITIVE SUBSTRING match, and it was
+    // resolving to the field's hidden tooltip — "…the actual race duration may vary…" — which is
+    // never visible, so the test failed on a string it did match. The visible things are the
+    // section heading the Dev Screen renders for the active section, and the field's own label.
+    await expect(page.getByRole('heading', { name: /Race Defaults/ })).toBeVisible();
+    await expect(page.locator('label').filter({ hasText: 'Default Race Duration' })).toBeVisible();
     expect(errors).toHaveLength(0);
   });
 
@@ -25,7 +30,10 @@ test.describe('B-16 — Camera adaptive zoom: UI not regressed', () => {
     const errors = [];
     page.on('pageerror', (e) => errors.push(e.message));
     await page.goto('/dev');
-    await expect(page.getByRole('button', { name: /Base Speed/ })).toBeVisible();
+    // E2E-STALE-2: there is no `Base Speed` section any more — the speed controls moved under
+    // Speed Range inside Race Tuning. The landmark this test wants is "the sidebar rendered its
+    // sections", so it now waits for that nav entry, which is the successor of the one it named.
+    await expect(page.getByRole('button', { name: /Race Tuning/ })).toBeVisible();
     expect(errors).toHaveLength(0);
   });
 
