@@ -1,0 +1,196 @@
+# ============================================================
+# File:        audit-schedule.yml
+# Path:        .github/workflows/audit-schedule.yml
+# Project:     RaceArena
+# Created:     2026-08-17
+# Description: The dependency audit, on a clock. Runs the SAME gate CI runs — both trees — and
+#              turns a finding into a GitHub issue, because a finding in a log nobody opens is not
+#              a finding.
+#
+# ── WHY THIS EXISTS AT ALL ─────────────────────────────────────────────────────────────────────
+# Both trees audit clean today and neither STAYS clean: advisories arrive on the npm feed's
+# timetable, not on ours. Until this file, nothing looked unless a human ran it, and the last two
+# advisory findings were both discovered by accident during unrelated night work.
+#
+# ── WHY IT IS ITS OWN WORKFLOW AND NOT A `schedule:` INSIDE ci.yml ──────────────────────────────
+# A SCHEDULED RUN MUST NOT BE ABLE TO TURN MASTER RED FOR SOMETHING NOBODY HAS TRIAGED. A red build
+# that nobody caused is the fastest way to teach everyone to ignore red — the same reasoning that
+# made SERVER-AUDIT-1 report-only and that keeps the ten-minute e2e suite out of the per-push path.
+# Two separations do that work here, and both are needed:
+#
+#   1. ITS OWN WORKFLOW. A `schedule:` trigger added to `ci.yml` would file every nightly result
+#      under the CI workflow, so "CI failing" would mean two different things depending on the day.
+#      Here, `CI` continues to mean exactly "the checks for a commit somebody pushed".
+#   2. `--report-only` ON BOTH TREES. The gate PRINTS and never exits non-zero for an advisory, so
+#      this job is green whenever the audit RAN. The signal is the issue, not the build status.
+#
+# The per-push gate is untouched and still BLOCKS: `ci.yml` runs it without `--report-only` on both
+# trees, so a pull request that ADDS a high/critical advisory is still refused at the door. This
+# workflow is for advisories that arrive when nobody pushed anything.
+#
+# ── HOW A FAILURE REACHES THE OWNER ────────────────────────────────────────────────────────────
+# By an issue on this repository, whose title is fixed so it can be found again:
+#   • findings, no open issue  → the issue is CREATED. GitHub notifies the owner (he watches his own
+#     repository), so it arrives as mail and as a web notification.
+#   • findings, issue already open, SAME advisories → nothing. A daily "still broken" comment is how
+#     a notification channel becomes noise.
+#   • findings, issue already open, DIFFERENT advisories → one comment naming the new set.
+#   • no findings, issue open → a closing comment and the issue is CLOSED. The issue's existence
+#     mirrors the state of the trees, so "is anything outstanding?" is answered by looking at it.
+#
+# And if the JOB ITSELF fails — the checkout, the install, or a gate that cannot parse `npm audit`
+# — the run goes red, and GitHub mails the last person to edit this file about a failed scheduled
+# run. That is the intended alarm for "the audit did not happen", which is the one failure mode a
+# report-only gate cannot report on its own.
+#
+# ── WHY DAILY ──────────────────────────────────────────────────────────────────────────────────
+# The advisory feed publishes continuously and an advisory's reachability is not knowable in
+# advance: IP-ADDRESS-ADVISORY-1 was a production-reachable HIGH in the request path. Weekly would
+# leave one like it sitting for up to seven days. Hourly would say the same thing to the same person
+# twenty-four times. Daily is one look per feed-day, and the dedup above means one NOTIFICATION per
+# change of state rather than one per run.
+#
+# 06:17 UTC, not 06:00: GitHub queues cron workloads and on-the-hour schedules are the most delayed.
+# ============================================================
+
+name: Dependency audit (scheduled)
+
+on:
+  schedule:
+    - cron: '17 6 * * *'
+  # The hand crank, for the same reason ci.yml has one: when the platform loses a run there has to
+  # be a way to ASK for one.
+  workflow_dispatch:
+    inputs:
+      drill:
+        description: >-
+          Exercise the notification path with a fake finding. A NOTIFICATION CHANNEL NOBODY HAS EVER
+          FIRED IS NOT A NOTIFICATION CHANNEL — this is how the issue-opens/issue-closes path is
+          proven without waiting for a real advisory. The audit still runs and its real result is
+          still printed; only the "is there a finding" verdict is forced, and the issue says DRILL
+          in its first line. Run it again with drill off to watch the issue close.
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+  issues: write
+
+jobs:
+  audit:
+    name: Audit both trees
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      # `npm audit` reads the lockfile, but it is run here after a real install for one reason: this
+      # job must produce the SAME verdict as the CI gate, and the CI gate audits an installed tree.
+      # A nightly that could disagree with the gate would be worse than no nightly.
+      - name: Install client dependencies
+        run: npm ci
+        working-directory: client
+
+      - name: Install server dependencies
+        run: npm ci
+        working-directory: server
+
+      # Never fails on an advisory — see the header. `|| true` is deliberate and covers the OTHER
+      # exit: the gate exits 2 when it cannot run or parse `npm audit` at all, and that must become
+      # a reported finding rather than a red build with no explanation. The transcript is kept
+      # whichever happens.
+      - name: Audit both trees (report-only — a schedule must not gate)
+        id: audit
+        env:
+          # `false` on a schedule, where `inputs` does not exist at all.
+          DRILL: ${{ inputs.drill == true && 'true' || 'false' }}
+        run: |
+          set -u
+          : > audit.txt
+          for tree in client server; do
+            echo "── ${tree} ─────────────────────────────────────────────" >> audit.txt
+            node scripts/audit-gate.mjs --tree="${tree}" --report-only >> audit.txt 2>&1 || {
+              echo "audit-gate exited $? for ${tree} — the audit did not complete." >> audit.txt
+            }
+          done
+          cat audit.txt
+          # A finding is a REPORTED line (an un-allowlisted high/critical) or a gate that could not
+          # run. Both mean a human has to look; neither means the build is broken.
+          if grep -qE 'REPORTED \(|did not complete' audit.txt || [ "${DRILL}" = "true" ]; then
+            echo "findings=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "findings=false" >> "$GITHUB_OUTPUT"
+          fi
+          {
+            if [ "${DRILL}" = "true" ]; then
+              echo '**DRILL — this is not a real finding.** Someone dispatched this workflow with'
+              echo '`drill` on to prove that a finding reaches a human. The audit below is the real'
+              echo 'one; only the verdict was forced. Re-run with `drill` off to watch this close.'
+              echo
+            fi
+            echo 'The scheduled dependency audit found advisories that are neither fixed nor'
+            echo 'allowlisted. This issue tracks them; it closes itself when both trees are clean.'
+            echo
+            echo 'The per-push CI gate BLOCKS on these, so a pull request cannot introduce one —'
+            echo 'this is the path for advisories that arrived on the feed while nobody pushed.'
+            echo
+            echo '```'
+            cat audit.txt
+            echo '```'
+          } > issue-body.md
+
+      - name: Open, update or close the advisory issue
+        env:
+          GH_TOKEN: ${{ github.token }}
+          FINDINGS: ${{ steps.audit.outputs.findings }}
+        run: |
+          set -euo pipefail
+          TITLE='Dependency audit: un-allowlisted advisories'
+          # LISTED AND FILTERED, NOT SEARCHED. GitHub's issue search runs off an index that lags
+          # behind writes by up to a minute, so `--search` can miss an issue this workflow itself
+          # opened — and missing it means opening a second one. `--state open` with a local match on
+          # the exact title reads the live list.
+          NUM=$(gh issue list --state open --limit 200 --json number,title \
+                  --jq "[.[] | select(.title == \"$TITLE\")][0].number // empty")
+
+          if [ "$FINDINGS" = "true" ]; then
+            if [ -z "$NUM" ]; then
+              gh issue create --title "$TITLE" --body-file issue-body.md
+              echo "opened a new advisory issue"
+              exit 0
+            fi
+            # Comment only when the set of advisories CHANGED. The state is carried by the issue's
+            # most recent body — its last comment if it has one, otherwise the body it opened with —
+            # so nothing outside this workflow has to be kept in step.
+            gh issue view "$NUM" --json body,comments \
+              --jq '(.comments | last | .body) // .body' > previous.md
+            # GitHub stores issue bodies with CRLF line endings, so the carriage returns have to go
+            # or every single day would look like a change and the dedup would report nothing.
+            if diff -q <(tr -d '\r' < previous.md | sed 's/[[:space:]]*$//') \
+                       <(tr -d '\r' < issue-body.md | sed 's/[[:space:]]*$//') >/dev/null; then
+              echo "issue #$NUM already states this exact set — not commenting again"
+            else
+              gh issue comment "$NUM" --body-file issue-body.md
+              echo "the advisory set changed — commented on issue #$NUM"
+            fi
+          elif [ -n "$NUM" ]; then
+            gh issue comment "$NUM" --body \
+              "Both trees audit clean as of run \`${GITHUB_RUN_ID}\`. Closing — this issue reopens by itself if an advisory returns."
+            gh issue close "$NUM"
+            echo "closed issue #$NUM"
+          else
+            echo "both trees clean and nothing open — nothing to say"
+          fi
+
+      # The transcript survives the run whatever the outcome, so "what did it see on the 14th" is
+      # answerable without re-running an audit against a feed that has since moved.
+      - name: Keep the transcript
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: audit-transcript
+          path: audit.txt
+          retention-days: 90
