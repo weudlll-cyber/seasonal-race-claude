@@ -246,47 +246,6 @@ export const EXCEPTIONS = [
   // showing the director's real value all along. The defect was real but smaller and differently
   // shaped: three copies of a default, one of which sat in the panel you would read while judging
   // the very number it copied.
-  ...[
-    [
-      "client/src/modules/camera/cameraTimingComputation.js",
-      "comebackMinStartGap",
-      0.25,
-      0.4,
-    ],
-    [
-      "client/src/screens/DevScreen/sections/CameraAdvancedSection.jsx",
-      "comebackMinStartGap",
-      0.25,
-      0.4,
-    ],
-    [
-      "client/src/modules/camera/cameraTimingComputation.js",
-      "comebackMaxCurrentRankPct",
-      0.2,
-      0.1,
-    ],
-    [
-      "client/src/screens/DevScreen/sections/CameraAdvancedSection.jsx",
-      "comebackMaxCurrentRankPct",
-      0.2,
-      0.1,
-    ],
-  ].map(([file, k, d, f]) =>
-    D(
-      file,
-      k,
-      d,
-      f,
-      "UNFIREABLE (FALLBACK-42-TRIAGE) — the COMEBACK trigger band, stale on both sides at once. Why nobody noticed is now precise: BOTH sites read a loader-resolved config, so neither fallback runs and both numbers are text. The slider shows the config, not the literal beside it.",
-    ),
-  ),
-  D(
-    "client/src/modules/camera/cameraTimingComputation.js",
-    "maxStateDuration",
-    4000,
-    8000,
-    "UNFIREABLE (FALLBACK-42-TRIAGE) — the fallback is DOUBLE the shipped value, and it cannot fire: profMax is only called with the six shipped state names, and CONFIG-DIFF-2 resolves nested blocks field by field, so a stored profile can no longer be missing maxStateDuration. Camera-only and unreachable.",
-  ),
   // ── TIER 5: Dev Screen only. Wrong number under the owner's hand, nothing else. ────────────────
   ...[
     ["gapRerollEnabled", true, false],

@@ -600,7 +600,15 @@ a verbatim transcript of one run on one commit, which is a historical record, no
 
 ### The tracking lag, as measured today — and it had drifted
 
-<!-- MEASURED: tracking-lag (median/p95 pp per state) @ 43b0d82d 2026-08-18 depends=client/src/modules/camera/ -->
+<!-- MEASURED: tracking-lag (median/p95 pp per state) @ 4b600d5c 2026-08-18 depends=client/src/modules/camera/ -->
+
+**RE-STAMPED, NOT RE-MEASURED, FOR FALLBACK-MIRRORS-1 — same corroboration as the entry below.**
+That block deletes four copied defaults from `cameraTimingComputation.js`, which is inside this
+stamp's `depends=` directory and inside `tracking-lag.mjs`'s load closure, so the guard tripped as
+designed. **CAMERA and RENDER were measured on that block's tree and are BYTE-IDENTICAL** to their
+recorded values (which live in [fingerprints.json](fingerprints.json)). No camera decision and no
+framing changed, so the lag inside states cannot have moved. The table below is unchanged; only the
+stamp moved.
 
 **RE-STAMPED, NOT RE-MEASURED, FOR ENDGAME-FALLBACK-1 — and the corroboration is arithmetic rather
 than an argument.** That block deletes a literal `0.85` from `cameraTimingComputation.js`, which IS

@@ -1204,12 +1204,17 @@ function CameraAdvancedSection() {
             min={0.1}
             max={0.9}
             step={0.05}
-            value={config.comebackMinStartGap ?? 0.4}
+            // FALLBACK-MIRRORS-1: read the default rather than copy it. This slider and the one
+            // below carried 0.4 and 0.1, the same two wrong numbers as the engine's own fallbacks —
+            // so the two files corroborated each other instead of disagreeing, which is how the
+            // drift survived. `config` is loader-resolved here, so neither `??` ever fired and the
+            // sliders always showed the real value; the literals were wrong text, not a wrong UI.
+            value={config.comebackMinStartGap ?? DEFAULT_CAMERA_CONFIG.comebackMinStartGap}
             onChange={(e) => {
               const v = parseFloat(e.target.value);
               if (v >= 0.1 && v <= 0.9) set('comebackMinStartGap', v);
             }}
-            display={`${((config.comebackMinStartGap ?? 0.4) * 100).toFixed(0)}%`}
+            display={`${((config.comebackMinStartGap ?? DEFAULT_CAMERA_CONFIG.comebackMinStartGap) * 100).toFixed(0)}%`}
             tip="The racer must have had at least this normalised gap to P1 at the start of the observation window (field fraction). 0.25 = must have been in the back 75% of the field. Default 25%."
           />
           <SliderRow
@@ -1218,12 +1223,14 @@ function CameraAdvancedSection() {
             min={0.05}
             max={0.5}
             step={0.05}
-            value={config.comebackMaxCurrentRankPct ?? 0.1}
+            value={
+              config.comebackMaxCurrentRankPct ?? DEFAULT_CAMERA_CONFIG.comebackMaxCurrentRankPct
+            }
             onChange={(e) => {
               const v = parseFloat(e.target.value);
               if (v >= 0.05 && v <= 0.5) set('comebackMaxCurrentRankPct', v);
             }}
-            display={`${((config.comebackMaxCurrentRankPct ?? 0.1) * 100).toFixed(0)}%`}
+            display={`${((config.comebackMaxCurrentRankPct ?? DEFAULT_CAMERA_CONFIG.comebackMaxCurrentRankPct) * 100).toFixed(0)}%`}
             tip="Racer must not have a better normalised rank than this at trigger time. 0.20 = top 20% excluded (e.g. P1–P8 with 40 racers). Default 20%."
           />
         </div>

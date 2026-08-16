@@ -182,6 +182,28 @@ band measured the same 30.0 px in it either way.
 - `v-ship-finish-band` (`354859bc`, 2026-08-13) — **the ship.** The forward merge is inside it: the
   branch was merged with master first, re-measured, and only then merged out.
 
+### FALLBACK-MIRRORS — the camera's last copied defaults (2026-08-18)
+
+Four copies removed, none synced: `comebackMinStartGap` (0.4 against a shipped 0.25) and
+`comebackMaxCurrentRankPct` (0.1 against 0.2), **each wrong identically in two files** — the engine
+and the Dev Screen panel you would open to judge them, so cross-checking found agreement instead of
+the defect — and `maxStateDuration` (8000 against 4000) on the legacy branch.
+
+**`MAX_STATE_DURATION` stays in the file and that is deliberate**: its other use is the fallback for a
+per-state PROFILE that lacks the field, a different quantity that shares a name. Measured, the shipped
+config takes the profiles branch, so the legacy line never runs and the top-level key is unread.
+
+**Reachability was established per key before anything changed.** No shipped path reaches any of the
+three; **three tests** reached `maxStateDuration`'s, one of which named neither the key nor the value.
+All assert the rule now. **Zero disagreeing mirrors remain in any camera file.**
+
+**Nothing minted** — CAMERA and RENDER measured on the merged tree and byte-identical, which is the
+proof no shipped path took a stale value.
+
+- `v-ship-fallback-mirrors` (`4bba083f`, 2026-08-18) — **the ship.** The return point is
+  `v-ship-fallback-mirrors^1`. No fingerprint moves across it; it restores four copies of three
+  config values.
+
 ### ENDGAME-FALLBACK — one home for `endgameThreshold` (2026-08-18)
 
 **The first ship cut under [SHIP-CEREMONY § THE SHIP ORDER](SHIP-CEREMONY.md)**, so this register

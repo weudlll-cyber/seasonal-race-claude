@@ -209,7 +209,12 @@ export function computeTimingFromConfig(config) {
     }
   } else {
     // Legacy flat-field path.
-    maxStateDuration = config?.maxStateDuration ?? MAX_STATE_DURATION;
+    // FALLBACK-MIRRORS-1: this is the ONE site where `MAX_STATE_DURATION` was a mirror of the
+    // top-level key, and it read 8000 against a shipped 4000. It reads the default now. The other
+    // uses of that constant, in the profiles branch above, are NOT mirrors of this key — they are
+    // the fallback for a per-state PROFILE that lacks `maxStateDuration`, which is a different
+    // quantity that happens to share a name. Pointing them here would have been the wrong fix.
+    maxStateDuration = config?.maxStateDuration ?? DEFAULT_CAMERA_CONFIG.maxStateDuration;
     battleMaxDurationMs = config?.battleMaxDurationMs ?? DEFAULT_CAMERA_CONFIG.battleMaxDurationMs;
     minStateHoldMs = config?.minStateHoldMs ?? DEFAULT_CAMERA_CONFIG.minStateHoldMs;
 
@@ -309,8 +314,15 @@ export function computeTimingFromConfig(config) {
     config?.comebackMinDuration ?? DEFAULT_CAMERA_CONFIG.comebackMinDuration;
   const outcomePhaseThreshold =
     config?.outcomePhaseThreshold ?? DEFAULT_CAMERA_CONFIG.outcomePhaseThreshold;
-  const comebackMinStartGap = config?.comebackMinStartGap ?? 0.4;
-  const comebackMaxCurrentRankPct = config?.comebackMaxCurrentRankPct ?? 0.1;
+  // FALLBACK-MIRRORS-1: READ the default, do not COPY it (Lesson 207). These two carried literals
+  // 0.4 and 0.1 against shipped values of 0.25 and 0.2 — and the SAME two wrong numbers sat in
+  // `CameraAdvancedSection.jsx`, so a reader cross-checking the pair found agreement and concluded
+  // they were right. Two copies of one wrong number is worse than one, because it manufactures
+  // corroboration.
+  const comebackMinStartGap =
+    config?.comebackMinStartGap ?? DEFAULT_CAMERA_CONFIG.comebackMinStartGap;
+  const comebackMaxCurrentRankPct =
+    config?.comebackMaxCurrentRankPct ?? DEFAULT_CAMERA_CONFIG.comebackMaxCurrentRankPct;
   // Override COMEBACK_ZOOM minStateHold when explicitly configured.
   if (config?.comebackMinDuration != null) {
     minStateHoldByState['COMEBACK_ZOOM'] = comebackMinDuration * 1000;
