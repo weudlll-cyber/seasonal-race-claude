@@ -99,9 +99,25 @@ test.describe('V3 — Validation recovery', () => {
   const SLUG_ID = 'e2e-slug-test';
 
   // The one test here that writes to the shared server cleans up after itself, by the derived id.
-  test.afterEach(async ({ page }) => {
-    await page.request.delete(`${E2E.apiUrl}/api/surface-classes/${SLUG_ID}`).catch(() => {});
-  });
+  //
+  // E2E-FLAKE-2: THE CLEAN-UP GOES BY LABEL, NOT BY THE DERIVED ID, and it runs on BOTH sides.
+  // `uniqueSlug` appends a suffix when the slug is taken, so a class this test left behind would be
+  // created next time as `e2e-slug-test-2` — the DELETE-by-slug would 404, the leftover would stay
+  // on the SHARED server, and the leak would grow by one every run. Deleting everything carrying
+  // this test's label cannot miss a suffixed one. Found with `--repeat-each=3`, which is harsher
+  // than the suite ever is, but a test that can only pass the first time has a hidden rule.
+  async function deleteEveryLeftover(page) {
+    const res = await page.request.get(`${E2E.apiUrl}/api/surface-classes`);
+    if (!res.ok()) return;
+    for (const cls of await res.json()) {
+      if (cls.label === SLUG_LABEL) {
+        await page.request.delete(`${E2E.apiUrl}/api/surface-classes/${cls.id}`).catch(() => {});
+      }
+    }
+  }
+
+  test.beforeEach(async ({ page }) => deleteEveryLeftover(page));
+  test.afterEach(async ({ page }) => deleteEveryLeftover(page));
 
   test('no ID control is offered; the ID is derived from the label on save', async ({ page }) => {
     await goToSurfaceClasses(page);
@@ -193,8 +209,18 @@ test.describe('V5 — Default-Override lifecycle', () => {
     await page.locator('#sc-label').fill('Modified Mud');
     await page.getByRole('button', { name: /Save surface class/i }).click();
 
-    // After save, Modified badge should appear in the list
-    await expect(page.getByText('Modified')).toBeVisible({ timeout: 5000 });
+    // E2E-FLAKE-2: THE SAME PAGE-WIDE `getByText` DEFECT ITS SIBLING WAS REPAIRED FOR, and it was
+    // hiding behind the same 1-in-5 arithmetic. `getByText('Modified')` is a case-insensitive
+    // SUBSTRING match over the whole page, so once the list re-renders it matches four elements —
+    // twice for the badge and twice for the label THIS TEST JUST TYPED, "Modified Mud". A strict-
+    // mode violation aborts the assertion instead of retrying, so whether it passed depended on
+    // which render the first poll happened to catch. The subject is the class under test, so the
+    // assertion is scoped to its row: that row must carry the badge.
+    // `exact` is what separates the BADGE from the label: the badge's whole text is "Modified",
+    // the label's is "Modified Mud". Without it this would assert nothing the row did not already
+    // say by being found.
+    const mudButton = page.getByRole('button').filter({ hasText: 'Modified Mud' }).first();
+    await expect(mudButton.getByText('Modified', { exact: true })).toBeVisible({ timeout: 5000 });
     // Reset-to-Default button should now be visible
     await expect(page.getByRole('button', { name: /Reset to default/i })).toBeVisible();
   });
