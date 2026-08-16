@@ -8,6 +8,14 @@ report here could be orphaned, or an index link could dangle, with nothing notic
 `node scripts/check-index.mjs --dir=reports/night --index=reports/night/INDEX.md` now checks both
 directions.
 
+- [MIRROR-CENSUS-1.md](MIRROR-CENSUS-1.md) — the mirror census finished: 29 disagreeing copied
+  defaults → 21, eight stale copies now reading the one home, all four fingerprints measured either
+  side and byte-identical. **One "UNFIREABLE" verdict was false** — the sim's own `createRacePlan`
+  call passes `gapRerollStrength: undefined` on the world-OFF arm, so that fallback ran on every
+  race of every ship and resolved to 0.5 against a shipped 1; it was inert only because the
+  threshold is null there. The 21 that stay are the `?? false` / `?? 0` shapes, which are a
+  convention and therefore the owner's decision, not a sweep's. Also: the guard cannot see
+  object-literal fallbacks at all, and two were copying `b2AttackProgress`.
 - [NIGHT-2026-08-17.md](NIGHT-2026-08-17.md) — **the red tests, the flakes, and an audit that runs
   by itself** (2026-08-17). Three pieces asked for, four merged. **The 27 hard e2e failures are
   gone — 76/27 → 103/0**, every one repaired against the source and three assertions made STRONGER

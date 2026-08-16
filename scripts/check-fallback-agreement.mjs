@@ -164,59 +164,28 @@ export const EXCEPTIONS = [
     ),
   ),
   // ── TIER 3: engine numbers whose fallback is a STALE PREVIOUS VALUE, not an off switch. ───────
-  //    These are the ones most likely to be real bugs, and none can be fixed without a mint.
-  D(
-    "client/src/modules/raceCore.js",
-    "bandBiasR",
-    0.6,
-    0.8,
-    "UNFIREABLE (FALLBACK-42-TRIAGE) — a superseded value, confirmed dead: raceCore reads a loader-resolved dynamicsConfig, and racePlanner reads the object raceCore builds, which sets this key unconditionally. Stale text in two places, no behaviour. Same pair also in racePlanner.js.",
-  ),
-  D(
-    "client/src/modules/raceCore.js",
-    "bandBiasGain",
-    0.1,
-    0.06,
-    "UNFIREABLE (FALLBACK-42-TRIAGE) — as bandBiasR: stale text, neither a disable nor a decision.",
-  ),
-  D(
-    "client/src/modules/raceCore.js",
-    "pulkLeadRotationDropDepthLengths",
-    8,
-    2,
-    "UNFIREABLE (FALLBACK-42-TRIAGE) — 2 against a shipped 8 is a large disagreement AND unreachable: dynamicsConfig always carries the key. Worth correcting as documentation, not as behaviour.",
-  ),
-  D(
-    "client/src/modules/raceCore.js",
-    "rowBonusPulk",
-    0,
-    1,
-    "UNFIREABLE (FALLBACK-42-TRIAGE) — and it runs the OTHER way: the fallback (1) is ACTIVE while the default (0) is disabled, so a partial-config caller would get MORE behaviour than the shipped world. No shipped caller is partial, so nobody does. The inverted sense makes it the most misleading line here to leave standing.",
-  ),
-  D(
-    "client/src/modules/racePlanner.js",
-    "bandBiasR",
-    0.6,
-    0.8,
-    "UNFIREABLE (FALLBACK-42-TRIAGE) — the raceCore pair duplicated here, and doubly dead: racePlanner reads the plan config raceCore builds, and raceCore sets this key unconditionally. A second-line fallback behind a first-line fallback that also never fires.",
-  ),
-  D(
-    "client/src/modules/racePlanner.js",
-    "bandBiasGain",
-    0.1,
-    0.06,
-    "UNFIREABLE (FALLBACK-42-TRIAGE) — the raceCore pair duplicated here; a second-line fallback, never reached.",
-  ),
-  D(
-    "client/src/modules/racePlanner.js",
-    "gapRerollStrength",
-    1,
-    0.5,
-    "UNFIREABLE (FALLBACK-42-TRIAGE) — half the shipped strength, and unreachable: raceCore sets gapRerollStrength in the plan config it passes.",
-  ),
+  //
+  // TIER 3 IS EMPTY OF ENGINE NUMBERS AS OF MIRROR-CENSUS-1 (2026-08-18), and the reason it emptied
+  // is the reason the tier existed: a literal copying a value the default no longer holds cannot be
+  // intentional under any reading, so there was nothing to decide. Eight sites now read the default:
+  //   raceCore.js       bandBiasR · bandBiasGain · pulkLeadRotationDropDepthLengths · rowBonusPulk
+  //   racePlanner.js    bandBiasR · bandBiasGain · gapRerollStrength · b2AttackFinalRank
+  // WORLD and WORLD-OFF measured either side and byte-identical, which is the proof — the
+  // reachability argument alone would not have been one.
+  //
+  // ONE OF THOSE EIGHT WAS NOT UNFIREABLE, and the record says so rather than leaving the claim
+  // standing: `racePlanner.js` / `gapRerollStrength`. sim-fairness passes
+  // `gapRerollStrength: GAP_REROLL_STRENGTH ?? undefined`, and `GAP_REROLL_STRENGTH` is null on any
+  // arm where the gap-cap feature is off — so on the WORLD-OFF arm the fallback RAN, and resolved to
+  // 0.5 against a shipped 1. It changed nothing only because `computeGapBiasedTarget` returns before
+  // reading the strength when the threshold is null. FALLBACK-42-TRIAGE called it UNFIREABLE and gave
+  // a reason that was true of raceCore and not of the sim's own `createRacePlan` call.
+  //
+  // WHAT DELIBERATELY STAYS: the `?? false` / `?? 0` shapes above and below. Those say "absent means
+  // OFF", which is a convention rather than a stale value, and changing one is a decision about what
+  // a partial caller should get — not hygiene. L207's exception names exactly that shape.
   ...[
     ["client/src/modules/racePlanner.js", "b2AttackHeroes", 3, 0],
-    ["client/src/modules/racePlanner.js", "b2AttackFinalRank", 7, 10],
     ["client/src/modules/heroCurveGenerator.js", "b2AttackHeroes", 3, 0],
     ["client/src/modules/heroCurveGenerator.js", "b2AttackFinalRank", 7, 10],
   ].map(([file, k, d, f]) =>
@@ -225,7 +194,7 @@ export const EXCEPTIONS = [
       k,
       d,
       f,
-      "UNFIREABLE (FALLBACK-42-TRIAGE) — `?? 0` is a genuine off switch in SHAPE, but the key is always present (racePlanner reads raceCore's plan config; heroCurveGenerator reads racePlanner's). `b2AttackFinalRank ?? 10` against a shipped 7 is stale text riding along. Neither fires; decide the pair together if they are corrected.",
+      "UNFIREABLE (FALLBACK-42-TRIAGE), and LEFT STANDING BY MIRROR-CENSUS-1 with a reason. `?? 0` is an off switch in shape and the key is always present, so neither fires. The two heroCurveGenerator entries are NOT stale text: that module's header states its literals are the direct/test-call default set, deliberately distinct from the shipped default, and GENERATOR_CONFIG carries the same pair. Overriding a written decision that has not expired is the owner's call, not a sweep's — MIRRORS-BY-REFERENCE overrode two such decisions and had to say so; this one was left instead.",
     ),
   ),
   // ── TIER 4: camera. Visible, but they cannot move the race. ───────────────────────────────────
