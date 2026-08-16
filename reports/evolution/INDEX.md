@@ -607,6 +607,26 @@ finish shot leave ALONG it.
 
 ## Camera / presentation fixes
 
+- [RUNIN-LINE-1.md](RUNIN-LINE-1.md) — **the line left the frame, and the term that put it out was
+  not the hold** (2026-08-17, `feat/runin-hold`, **unmerged, NOT minted, HIS EYE OWED**). The owner
+  rejected the production build because the run-in closed past its own finish line. **The instrument
+  came first**: `check-runin-frame` was green throughout because its two questions ask whether
+  RACERS are on screen — question 3 now asks whether THE LINE is, every frame from the endgame
+  threshold to the crossing, on all ten tracks, reading the director's own `_finishLineWorldPoint`,
+  `_proj.toScreen` and `_framingProbe` rather than rebuilding the rule. **It leaves on 9 of 10 tracks
+  from progress 0.976, by up to 608 px, for up to 2.4 s.** The binding term was COUNTED, not
+  eyeballed: **90% of lost frames are the corridor cap**, which raises `guaranteed` after the
+  `Math.min` and re-applies only the contender guarantee, dropping the run-in's `line` ceiling —
+  proven by a `--no-cap` control arm, and **it PREDATES the hold** (master loses the line on the same
+  nine tracks). The repair is the omitted half of a clamp that already existed: the line is
+  re-applied for the same reason the contenders are. **593 overridden frames → 0.** The consequence
+  is bigger than the diff and is reported rather than buried — **the cap now moves the shot on 0 of
+  7441 photo-finish frames, down from 5019**, because the line was the argmin on every one of them,
+  while its own promise moves 8.8% → 8.7% NOT WHOLE. The residual (5 tracks, 7–31 frames, 40–228 px)
+  is the PAN trailing a bound it is honouring, so the guard fails on cause — delivered zoom tighter
+  than the run-in's ceiling — and never on a pixel threshold. Pace table at `runInOpenMs`
+  1250/1750/2250 included: a longer sweep shrinks the residual on every affected track.
+
 - [RUNIN-HOLD-1.md](RUNIN-HOLD-1.md) — **hold the opening shot, then close in ONE sweep**
   (2026-08-16, `feat/runin-hold`, **unmerged, NOT minted, HIS EYE OWED**). The run-in began closing
   the moment the endgame window opened, so the first seconds were a crawl — ~3.6 s at ~95 px/s of
