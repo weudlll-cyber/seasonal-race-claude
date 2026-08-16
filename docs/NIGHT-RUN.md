@@ -107,10 +107,16 @@ authenticated. It touches nothing on 4000, 5173 or 4173, so it can run while the
 and production build are up.
 
 **Why it is a night command and not a CI step — the owner's decision, 2026-08-16.** It costs about
-**ten minutes**, which is roughly five times the entire per-push CI run, and its flake budget is
-unknown because until 2026-08-16 the suite had not run successfully at all. A ten-minute browser
-suite gating every merge trains people to re-run red builds, and a check nobody believes protects
-nothing.
+**ten minutes**, which is roughly five times the entire per-push CI run. A ten-minute browser suite
+gating every merge trains people to re-run red builds, and a check nobody believes protects nothing.
+
+**The flake budget is no longer unknown (2026-08-17).** The suite is **103/103 green**, and five full
+runs measured the residual at about **two tests per five runs** — with a single shared mechanism
+rather than four unrelated ones: a loader that swallowed a failed fetch, so a MISSING track geometry
+read as a CLOSED track and an open track quick-tested as a laps race. `client/e2e/appReady.js` is the
+repair. **It took five runs to know that**, which is the point: one run cannot separate a broken
+assertion from an unlucky one (see [Lesson 211](LESSONS.md)). The measurement does not change the
+rule above — ten minutes is still ten minutes.
 
 **This is the one home for that command and that reason.** `docs/VERIFY-RULES.md` says why the suite
 is deliberately outside the ordinary path and points here rather than repeating it.

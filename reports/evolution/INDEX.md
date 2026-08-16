@@ -607,6 +607,22 @@ finish shot leave ALONG it.
 
 ## Camera / presentation fixes
 
+- [DOCS-TWO-WEEKS.md](DOCS-TWO-WEEKS.md) — **what these weeks owed the documentation** (2026-08-18,
+  a writing and deleting job — no guard, no script, no code, nothing minted). **Six new lessons
+  (208–213)** — the Admissible-Set Law (an even close and "the line stays in frame" are incompatible
+  while the ends are fixed), the Inert-Enforcement Law (a check that cannot fail is not a check —
+  four instances in one week), the Blast-Radius Law (a suite reached production data through TWO
+  doors), the Single-Run Law (five runs separated 27 real failures from 4 flakes), the
+  Along-The-Course Law, and the Suspect-The-Instrument Law. **Two findings were ALREADY in the canon
+  and were EXTENDED rather than duplicated**, per R13: the uniform "none" into Lesson 196, the
+  downscaled screenshot into Lesson 156. **`DEAD-ENDS.md` gains §O** with the six-shape table and the
+  instruction to run `runin-line-schedule.mjs` first. **`CAMERA_DIRECTOR.md` §3a now opens with the
+  impossibility finding**, carries the SHIPPED hold-and-single-sweep shape that was missing, and has
+  a stale measurement corrected — it stated 73.4% / 2.5 s from the 3000 ms opening eleven lines below
+  its own 86.6% / 1.1 s. Also corrects the "flake budget is unknown" claim in both its homes. **Three
+  things are reported as believed-wrong but NOT changed because they need a decision**, including
+  that a `v-ship-*` tag can never satisfy `check-tags` in its own tree.
+
 - [ENDGAME-THRESHOLD-095.md](ENDGAME-THRESHOLD-095.md) — **the endgame opens at 95%, and the
   interesting part is what it broke** (2026-08-18, SHIPPED). One key in `defaults.js`, 0.9 → 0.95,
   on the owner's decision after running the value himself — **he waived the before/after sweep**, so

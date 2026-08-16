@@ -386,6 +386,42 @@ them, so the body-padding gap was not what the plain floor had been paying for.
 **Do not re-propose a width-based bound on the finish shot.** A longitudinal bound is a different
 proposal and is not excluded by this entry.
 
+## O. An EVEN close during the run-in — six shapes, one geometry (2026-08-16/17)
+
+**Do not build a seventh shape for "zoom in at a uniform speed" while the ends of the close are
+fixed. It is not a tuning problem and it is not an architecture problem — it is excluded by the
+geometry.**
+
+**What the owner asked for**, and it is a reasonable ask: "zoom out until the leader and the finish
+line are visible, then zoom in softly, at the speed that is necessary for that particular track, but
+at a UNIFORM speed — one that ought to be calculable."
+
+**Six shapes were built and measured; five were reverted.**
+
+| shape | what stopped it |
+| --- | --- |
+| RUNIN-PIN-1 — pin the line and the leader on screen, absorb the gap with zoom | the target-versus-delivered lerp: the camera cannot be commanded to a screen position |
+| RUNIN-ANCHOR-1/-2 — make the line the anchor, then give it its own placement value | it works, and it costs the accepted build; no placement value has a solution on ice-track or seatrack |
+| RUNIN-RATE-1 — release the hold when a calm CONSTANT rate can still make it | **this camera has no constant rate to borrow** — every sibling is a duration or a time constant |
+| RUNIN-EVEN-1 — walk the zoom evenly toward `_lineCeiling` | the destination **runs away**; the walk catches it and inherits its acceleration. Cross-track spread 2.08× → **13.6×** |
+| RUNIN-EVEN-2 — same walk, toward the active state's own zoom (stationary) | fixed the spread (→ 2.27×) and the walk is **invisible**: `_lineCeiling` binds on a median **91%** of closing frames |
+| RUNIN-SCHEDULE-1 — schedule the line's PLACE in frame so the zoom comes out even | the schedule needs the line **outside the frame** on **9 of 9** tracks, up to **2.46×** the room ahead of the anchor |
+
+**THE FINDING.** Keeping the line in frame requires `zoom ≤ room / needed`. `needed` falls to zero at
+the crossing so that bound rises **hyperbolically**, while `room` shrinks as the leader travels
+forward across the frame. **`_lineCeiling` is the BOUNDARY of the admissible set, not one option
+among several — it is already the fastest close that keeps the promise.** An even close is a chord
+between two fixed ends; the boundary is convex; they cross. See Lesson 208.
+
+**BEFORE TOUCHING THE DIRECTOR FOR THIS, RUN `node scripts/diag/runin-line-schedule.mjs`.** It prices
+a proposed close in the line's own units — the share of the room ahead of the anchor that the
+schedule needs the line to sit at — and a share above 1 is a shape that cannot keep the promise. One
+run, no production change, and it is what would have made five of the six shapes unnecessary.
+
+**What is NOT excluded.** Moving an END of the close: opening less wide, or crossing at a wider shot.
+Both flatten the chord without touching the boundary, and both are the owner's taste rather than
+anything derivable — so they are a question to put to him, not a block to start.
+
 ## What this leaves open (not tried, not excluded)
 
 Formats that make a breakaway irrelevant rather than catching it: **elimination** (last-at-call out of
