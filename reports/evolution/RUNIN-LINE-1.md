@@ -824,6 +824,94 @@ removed.
 
 ---
 
+---
+
+# RUNIN-ANCHOR-2 — the placement works. The acceptance test still fails, on ice-track, at every value.
+
+**Appended 2026-08-17. Nothing shipped: the branch is at `fd3a8de5` and CAMERA / RENDER are
+unmoved.** This block was asked to finish the anchor swap by giving the line its own placement
+value. **The placement was built and it does exactly what it was supposed to do — and it is not
+enough.** The reason is measured, not argued, and it is a different obstacle again.
+
+## 31. What was built, and it is the smallest version of the ask
+
+- Both RUNIN-ANCHOR-1 edits re-applied unchanged: the anchor becomes `_finishLineWorldPoint`, and
+  `_lineCeiling` keeps its meaning by taking the LEADER as its far point once the line is the anchor.
+- **`runInLinePlacement`**, a config key of its own, plumbed through `computeTimingFromConfig` with
+  the same clamp shape every other placement there has (0.5–0.98). Two subjects placed for two
+  different reasons need two values — `leaderForwardFrac` puts a RACER where the road ahead of him
+  is visible; the line needs the opposite, because there is nothing to see beyond it.
+- The placement travels with the anchor on the anchor's own ease, so the contents change hands once.
+
+**It plumbs correctly and it is monotone in the right direction** — mountainstreet's finished track
+in frame, at the 25% and 50% points of the window:
+
+| placement | 0.70 | 0.80 | 0.86 | 0.92 |
+| --- | ---: | ---: | ---: | ---: |
+| mountainstreet | 357 px | 213 | **132** | 50 |
+
+**At 0.86 mountainstreet beats the accepted build's 188 px.** The mechanism is sound.
+
+## 32. Why it still fails — two walls, both measured
+
+**ICE-TRACK DOES NOT RESPOND TO THE PLACEMENT AT ALL.**
+
+| placement | 0.70 | 0.80 | 0.86 | 0.92 |
+| --- | ---: | ---: | ---: | ---: |
+| ice-track | 916 px | 916 | 916 | 916 |
+
+Against **157 px** in the build he accepted. The number does not move by one pixel across the whole
+range, which means the placement is not what decides it there. The reading that fits: on ice-track
+the run-in opens to a **world-sized frame** — the line is most of a lap away at the threshold — and
+`resolveCamera`'s world-bounds clamp then centres the frame on the WORLD, overriding any placement.
+`check-runin-frame`'s own header records that geometry from RUNIN-OWNS-1: *a world-sized frame
+cannot be positioned freely, because the clamp centres it on the world.*
+
+**AND PUSHING THE PLACEMENT FURTHER EMPTIES THE FRAME.** At 0.92, seatrack reads **0 racers in
+shot** at the 25% point: the line is so far forward that the field falls off the back edge. That is
+the same failure the first RUNIN-ANCHOR-1 attempt had, arriving from the other direction.
+
+**So the window between "enough forward to beat the accepted build" and "so far forward the frame
+empties" does not contain a value that works on all ten tracks.** At the best candidate (0.86) the
+finished track carried is BETTER than the accepted build on 2 tracks, roughly equal on 1, and WORSE
+on 6 — including ice-track by a factor of six.
+
+## 33. The verdict, and why the branch is back at `fd3a8de5`
+
+The block's own acceptance criterion — *pick the placement at which the finished track carried is no
+worse than the build he accepted* — **has no solution.** There is no value of `runInLinePlacement`
+that satisfies it, because on ice-track the placement is not the term that decides, and on seatrack
+the range that would help empties the frame.
+
+Shipping the anchor swap anyway would trade a measured, accepted gain (RUNIN-AHEAD-1: ice-track
+157 px, mountainstreet 188 px) for a partial delivery of a different one — the same trade this
+report already refused once, in §29. It is refused again for the same reason, and this time with the
+sweep that proves no value fixes it.
+
+**What that leaves is a sharper problem than the one this block started with**, and it is now
+named: the obstacle is no longer the placement or the anchor, it is `resolveCamera`'s world-bounds
+clamp on tracks where the run-in opens to a world-sized frame. That is the thing to attack next, and
+it is not a camera-framing question at all — it is a question about how wide the run-in is allowed
+to open in the first place.
+
+## 34. What this cost and what it did not
+
+**Reverted:** `CameraDirector.js`, `cameraTimingComputation.js`, `defaults.js`, and the sweep flag
+on `runin-forward-reach.mjs`. CAMERA `c2f3e97277041fed` and RENDER `28893c9595196026` are unmoved,
+which is the arithmetic proof the revert is complete. The client suite is green at 859 camera tests.
+
+**Not done, and named rather than glossed:** the nine director tests were not rewritten, the
+tracking lag was not re-measured and no Dev control was added — all three were work for a change
+that is not shipping. `runInOpenMs` keeps all its current work, because nothing was removed.
+
+**The honest summary of three attempts at this rule:** RUNIN-PIN-1 failed on target-versus-delivered
+lag; RUNIN-ANCHOR-1 failed on cost to the accepted build; RUNIN-ANCHOR-2 shows the cost cannot be
+bought off with the one number it was allowed to introduce. Each attempt named a different wall, and
+the walls have been getting more specific. **The next one should start from §32's finding rather
+than from the rule.**
+
+---
+
 ## PROPOSALS
 
 1. **Retire `contenderZoom`, or scope it to after the crossing.** It moves the zoom on **0** frames
@@ -858,6 +946,23 @@ removed.
    touching anything: whether the ceremony's held zoom should retire on the GUN or on a geometric
    condition the way the field guarantee does, and whether the effect is really absent on open
    tracks or merely smaller because luger-hill's world is short.
+
+13. **Attack the world-sized frame, not the placement.** §32 found the wall: on ice-track the
+    finished track in frame does not move by a pixel across the whole placement range, because the
+    run-in has opened to a world-sized frame and `resolveCamera`'s world-bounds clamp centres it on
+    the world. **Every attempt at this rule has now been defeated on the tracks where the line is
+    most of a lap away at the endgame threshold.** The question to ask is not where the line sits in
+    frame but why the shot has to contain a whole lap to begin with — and `endgameThreshold` is
+    exactly the key that decides how far away the line is when the run-in engages. He is already
+    running 0.95 and has a 1% control for it. **A sweep of finished-track-in-frame against
+    `endgameThreshold` is one run of an instrument that already exists, and it may dissolve this
+    whole problem without any camera change at all.**
+
+14. **Ask whether ice-track and city-circuit should run the run-in at all.** RUNIN-OWNS-1 already
+    established that a closed track whose finish is most of a lap away turns "the line in frame"
+    into "the world in frame". Three blocks have now broken on exactly those tracks. If the honest
+    answer is that the run-in has nothing useful to do when the line is that far away, the engagement
+    test could say so — and that is a smaller, more truthful change than anything attempted here.
 
 11. **Re-run RUNIN-ANCHOR-1 as its own block with the forward reach as an acceptance test.** It is
     two edits — the anchor swap and `_lineCeiling` keeping its meaning (§27) — and it measurably
