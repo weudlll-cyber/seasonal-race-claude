@@ -1225,6 +1225,94 @@ what rule 2 of the handover order prescribes when Step 2 ends in "do not remove"
 
 ---
 
+---
+
+# RUNIN-RATE-1 — built, measured, REVERTED: this camera has no rate to borrow
+
+**Appended 2026-08-17. Nothing shipped — `CameraDirector.js` is untouched at `0a55107e`, so CAMERA
+`6ae77f12daf23f78` and RENDER `a870f5f9e79cb444` cannot move.** The rule was implemented exactly as
+specified, measured, and it did not deliver. **The brief's own escape clause is the answer: nothing
+in this camera can honestly supply a constant zoom RATE.**
+
+## 50. What was built, and which sibling supplied the rate
+
+The release rule changed from *"remaining time ≤ `runInOpenMs`"* to *"remaining time ≤ the time the
+close needs at a calm rate"*, with
+
+```
+needed = |ln(live / held)| / rate            // log units, because scale is perceived logarithmically
+rate   = |ln(zoomAfterOpening / zoomAtEngagement)| / runInOpenMs
+```
+
+**The sibling is the run-in's OWN OPENING** — the one zoom movement in this camera whose pace the
+owner has explicitly accepted (*"open the shot until the leader and the finish line are both visible
+— unchanged, that part is accepted"*), measured on this race, on this track, moments earlier. It
+imports nothing from a different kind of move and invents no number. The compressed case needed no
+branch: `remaining ≤ needed` is already true on the first frame that can decide, so a short window
+closes immediately by construction.
+
+## 51. It did not work, and the reason is worth more than the code
+
+**The test the brief set: is the delivered closing rate now similar across tracks?**
+
+| track | rate BEFORE (tip) | rate AFTER | hold before → after | close before → after |
+| --- | ---: | ---: | --- | --- |
+| mountainstreet | 0.952 | 1.057 | 5.27 → 5.48 s | 2.18 → 1.97 s |
+| luger-hill | 0.938 | 1.146 | 4.98 → 5.40 | 2.30 → 1.88 |
+| ice-track | 1.291 | 1.161 | 7.08 → 6.85 | 2.08 → 2.32 |
+| river-run | 1.190 | 1.330 | 6.50 → 6.70 | 1.90 → 1.70 |
+| city-circuit | 1.953 | 1.360 | 13.73 → 13.10 | 1.45 → 2.08 |
+| dirt-oval | 1.358 | 1.490 | 9.60 → 9.78 | 2.07 → 1.88 |
+| seatrack | 1.233 | 1.575 | 5.50 → 5.95 | 2.07 → 1.62 |
+| searound | 1.265 | 1.593 | 5.92 → 6.37 | 2.18 → 1.73 |
+| space-sprint | 1.324 | 2.040 | 5.12 → 5.88 | 2.17 → 1.40 |
+
+**RATE SPREAD: 2.08× before, 1.93× after.** That is not consistency; it is the same spread with the
+extremes swapped. **The change failed its own acceptance test**, and by the brief's rule that is
+what this section has to say.
+
+### Why — and it is a trap worth recording
+
+**THE OPENING IS ITSELF DURATION-GOVERNED.** `_beginRunInGlide` sets
+`_glideDurationActiveMs = runInOpenMs`, so the opening covers *whatever span this track needs* in a
+fixed 1250 ms. Its rate is therefore `span / 1250` — which varies across tracks by **exactly the
+same factor the spans do**, the >2× RUNIN-CEILING-1 measured.
+
+So deriving the close's rate from the opening's rate **reproduces the very variation it was meant to
+remove**. I replaced "the same duration on every track" with "the same duration as this track's own
+opening", which is the same fixed-duration shape wearing the coat the brief warned about — and I did
+not see it until the measurement said so.
+
+### And there is no other sibling
+
+Every pace this camera owns is a DURATION or a TIME CONSTANT: `runInOpenMs`,
+`finishOverviewZoomOutDurationMs`, `corridorCapArriveMs`, `battleSlowmoFadeDuration`, and the lerp's
+`trackingTC` / `entryTC`. **All of them mean "cover whatever gap exists in this long"** — which is
+the fixed-duration shape restated, not a rate. A time constant looks like a rate but is not one: it
+covers a fixed FRACTION of a remaining gap per unit time, so a bigger gap still moves faster.
+
+**There is no constant zoom rate anywhere in this camera to borrow.** Per the brief — *"If nothing in
+the camera can honestly supply it, STOP and report that rather than inventing a number"* — that is
+the finding, and the code was reverted rather than shipped with a rate I would have had to make up.
+
+## 52. What `runInOpenMs` still does — unchanged
+
+It paces the opening glide and, through `_runInShouldRelease`, sets the release. **Both jobs are
+intact because nothing was kept.** The proposal below is about what should happen to it, not this
+block's doing.
+
+## 53. State
+
+`CameraDirector.js` untouched; camera suite 859 green; CAMERA and RENDER unmoved, so nothing to
+mint and the tracking-lag stamp cannot go stale. `engine-reach --check` over the added script and
+the report: *"none of 2 path(s) can reach the race engine."* **The served build keeps the owner's
+placement, restored — `0a55107e`'s behaviour.**
+
+Kept: `scripts/diag/runin-close-rate.mjs`. It is the instrument that failed this change honestly and
+it is what any future attempt should be judged by first.
+
+---
+
 ## PROPOSALS
 
 1. **Retire `contenderZoom`, or scope it to after the crossing.** It moves the zoom on **0** frames
@@ -1260,7 +1348,24 @@ what rule 2 of the handover order prescribes when Step 2 ends in "do not remove"
    condition the way the field guarantee does, and whether the effect is really absent on open
    tracks or merely smaller because luger-hill's world is short.
 
+21. **THE RATE IS ONE NUMBER AND IT IS HIS, exactly as the placement was.** RUNIN-RATE-1 proved by
+    measurement that no existing pace in this camera is a rate — they are all durations or time
+    constants. So a rate-governed close needs a rate, and the honest way to get one is the way the
+    leader's placement was got: he sets it once. **The measurement even suggests the range**: the
+    delivered close today runs at 0.94-1.95 log-units per second, so "about 1.2" is the middle of
+    what he has already been watching and accepting. Replacing `runInOpenMs` with a
+    `runInCloseRate` — same Dev control slot, 0.1 steps — turns the hold's length into a consequence
+    exactly as he asked, and it is ONE value rather than the ten this block would otherwise need.
+
+22. **If he does not want to set a rate, tell him plainly that the hold cannot be consequence-shaped.**
+    Everything in this camera says "cover the gap in this long". A hold whose length falls out of a
+    calm rate needs the rate to exist first; without one the length IS the setting, however it is
+    dressed. That is not a limitation of the run-in — it is what the camera's whole vocabulary is
+    made of, and it is better said once than rediscovered a fourth time.
+
 19. **The one lever left that nobody has priced: shorten the HOLD, do not weaken the ceiling.**
+    *(Partly answered by RUNIN-RATE-1: shortening the hold is exactly what a rate-governed release
+    does, and it was built. The obstacle is not the hold, it is that there is no rate to derive.)*
     RUNIN-CEILING-1 shows the surplus is the held ceiling ageing — 1.0x at engagement, 1.25-1.44x by
     the settled frame — so the size of the surplus is exactly *how long the hold lasts*. That is
     `runInOpenMs` (larger releases EARLIER, section 7's table), and the pace table already measured the
