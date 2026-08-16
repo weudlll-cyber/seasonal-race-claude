@@ -9,6 +9,10 @@
 // ============================================================
 
 import { test, expect } from '@playwright/test';
+// E2E-FLAKE-1: the app drops a track geometry silently when its fetch loses a 3 s race, and every
+// consumer then reads the missing geometry as a CLOSED track. The full mechanism, and the evidence
+// that this is NOT one spec inheriting another's state, are in `appReady.js`.
+import { ensureTrackGeometriesCached } from './appReady.js';
 
 // Minimal valid geometry for a closed oval track
 const CLOSED_GEOM = {
@@ -262,10 +266,16 @@ test.describe('D9 — open track info row', () => {
 // ── Session data written by handleStartRace / handleQuickTest ────────────────
 
 test.describe('D9 — session data (raceMode / targetLaps / targetDuration)', () => {
-  test('Quick Test on closed track writes raceMode=laps and targetLaps', async ({ page }) => {
-    await seedStorage(page, { closedGeomId: CLOSED_GEOM.id });
+  // E2E-FLAKE-1: every test in this block picks a SERVER track and asks the app what kind of race
+  // it is. `handleQuickTest` answers from the geometry cache — `getTrack(geometryId)` — and reads a
+  // missing geometry as closed, so a dropped fetch turns an open track's race into a laps race with
+  // no error anywhere. The precondition is now stated instead of hoped for.
+  test.beforeEach(async ({ page }) => {
     await page.goto('/setup');
+    await ensureTrackGeometriesCached(page);
+  });
 
+  test('Quick Test on closed track writes raceMode=laps and targetLaps', async ({ page }) => {
     // Select Dirt Oval as the quick-test track
     const quickDirtBtn = page.locator('button', { hasText: '🐴 Dirt Oval' });
     await quickDirtBtn.click();
@@ -288,9 +298,6 @@ test.describe('D9 — session data (raceMode / targetLaps / targetDuration)', ()
   });
 
   test('Quick Test on open track writes raceMode=time and targetDuration', async ({ page }) => {
-    await seedStorage(page, { openGeomId: OPEN_GEOM.id });
-    await page.goto('/setup');
-
     const quickSprintBtn = page.locator('button', { hasText: /Space Sprint/ }).last();
     await quickSprintBtn.click();
     await page.getByRole('button', { name: /Quick Test/ }).click();
@@ -308,9 +315,6 @@ test.describe('D9 — session data (raceMode / targetLaps / targetDuration)', ()
   });
 
   test('explicit 3-lap selection is stored in targetLaps', async ({ page }) => {
-    await seedStorage(page, { closedGeomId: CLOSED_GEOM.id });
-    await page.goto('/setup');
-
     // Add a player so Start Race is enabled
     await page.getByRole('tab', { name: 'Players' }).click();
     await page.getByPlaceholder(/Enter player name/i).fill('Alice');

@@ -10,6 +10,9 @@
 // ============================================================
 
 import { test, expect } from '@playwright/test';
+// E2E-FLAKE-1: the three tests below that START A RACE depend on the app having cached the
+// selected track's geometry, and that fetch is allowed to fail silently. See `appReady.js`.
+import { ensureTrackGeometriesCached } from './appReady.js';
 
 const CLOSED_GEOM = {
   id: 'ux-d11-closed',
@@ -137,6 +140,7 @@ test('V6 — race engine reads custom behavior config from localStorage', async 
   });
 
   await page.goto('/setup');
+  await ensureTrackGeometriesCached(page);
   await page.getByPlaceholder(/player name/i).first().fill('A');
   await page.getByRole('button', { name: /add/i }).click();
   await page.getByRole('tab', { name: /track/i }).click();
@@ -161,6 +165,7 @@ test('V7 — race works normally when behavior is disabled', async ({ page }) =>
   });
 
   await page.goto('/setup');
+  await ensureTrackGeometriesCached(page);
   await page.getByPlaceholder(/player name/i).first().fill('A');
   await page.getByRole('button', { name: /add/i }).click();
   await page.getByPlaceholder(/player name/i).first().fill('B');
@@ -183,6 +188,7 @@ test('V8 — race with 5 racers and behavior enabled produces no errors', async 
   });
 
   await page.goto('/setup');
+  await ensureTrackGeometriesCached(page);
   for (const name of ['A', 'B', 'C', 'D', 'E']) {
     await page.getByPlaceholder(/player name/i).first().fill(name);
     await page.getByRole('button', { name: /add/i }).click();

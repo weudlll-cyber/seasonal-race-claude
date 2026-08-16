@@ -14,6 +14,10 @@ import { test, expect } from '@playwright/test';
 // `http://localhost:4000` — the OWNER'S API, hardcoded — while the suite runs against its own
 // isolated instance on another port. See the note on the afterEach below.
 import { E2E } from './e2e-env.js';
+// E2E-FLAKE-1: this app's server-backed loaders render a default first and swallow a failed fetch.
+// The mechanism, and the evidence that it is NOT one spec inheriting another's state, are in
+// `appReady.js`.
+import { withServerDataRetry } from './appReady.js';
 
 async function goToSurfaceClasses(page) {
   await page.goto('/dev');
@@ -222,10 +226,25 @@ test.describe('V5 — Default-Override lifecycle', () => {
     // test pass and fail on leaked state from the test above it for two months.
     expect(created.ok(), `could not create the override the test needs (${created.status()})`).toBeTruthy();
 
-    await goToSurfaceClasses(page);
-    // Select the overridden mud
-    await page.getByRole('button').filter({ hasText: 'mud' }).first().click();
-    await expect(page.getByRole('button', { name: /Reset to default/i })).toBeVisible();
+    // E2E-FLAKE-1: THE SCREEN OPENS ON THE CODE DEFAULTS AND MAY NEVER LEAVE THEM.
+    // `useSurfaceClasses` seeds its state from `listAllSurfaceClasses()` — the code defaults — and
+    // replaces it only if `fetchServerSurfaceClasses()` succeeds; that call has a 3 s timeout and
+    // falls back to the localStorage cache, which is EMPTY in a fresh context, without saying so.
+    // So under seven-worker load this page can settle showing Mud as a *code default*, in which
+    // case no Reset-to-default control is rendered and the wait below can never succeed — the
+    // override exists on the server and the browser simply never learned about it.
+    //
+    // Waiting for the Modified badge FIRST states what the page must have loaded, and re-navigating
+    // is the retry the app itself does not have. The assertions are unchanged; the last attempt is
+    // not caught, so a genuine defect still fails on its own message.
+    await withServerDataRetry(async () => {
+      await goToSurfaceClasses(page);
+      // Select the overridden mud — and only once the list says it IS overridden.
+      const mudButton = page.getByRole('button').filter({ hasText: 'mud' }).first();
+      await expect(mudButton).toContainText('Modified');
+      await mudButton.click();
+      await expect(page.getByRole('button', { name: /Reset to default/i })).toBeVisible();
+    });
 
     // Confirm dialog
     page.on('dialog', (d) => d.accept());
