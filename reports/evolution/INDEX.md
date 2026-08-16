@@ -607,6 +607,22 @@ finish shot leave ALONG it.
 
 ## Camera / presentation fixes
 
+- [ENDGAME-FALLBACK-1.md](ENDGAME-FALLBACK-1.md) — **one home for `endgameThreshold`, and the
+  fallback was reachable after all** (2026-08-18, SHIPPED, **nothing minted**). The literal `0.85`
+  in `cameraTimingComputation.js` was **deleted rather than synced** — the file already imported the
+  defaults and every other top-level key already read them — so the guard is green **because the
+  mirror is gone, not because the numbers agree**. **The "UNFIREABLE" exception was true of the
+  product and false of the TEST SUITE**: three tests build a director with no config and had been
+  written against the stale literal, so the wrong number was not documentation, it was what three
+  tests silently asserted. All three fixtures are derived now, and one needed BOTH gates —
+  `endgameThreshold` and `photoFinishLeadProgress` — because past the second the photo finish takes
+  the shot. CAMERA and RENDER measured on the merged tree and **byte-identical**, which is the proof
+  no shipped path took it. **Three siblings in the same file are stale and are reported, not fixed**
+  (`comebackMinStartGap`, `comebackMaxCurrentRankPct`, `maxStateDuration` — the last at DOUBLE the
+  shipped value). First ship under the new SHIP ORDER, which it also corrects: `check-tags` cannot be
+  green on an unmerged branch that registers a not-yet-pushed tag, and the report shows why that
+  window is the right one to have.
+
 - [SHIP-ORDER-1.md](SHIP-ORDER-1.md) — **a ship tag now points at a commit that passes** (2026-08-18,
   documents only, nothing minted, **the guard was NOT touched**). Two rules were both right and could
   not both hold: CI green for exactly the merge SHA, and the tag's `TAGS.md` register line landing in
