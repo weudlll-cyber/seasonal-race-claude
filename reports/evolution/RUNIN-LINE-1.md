@@ -1122,6 +1122,109 @@ all of its work — it paces the opening glide and derives the release.
 
 ---
 
+---
+
+# RUNIN-CEILING-1 — the surplus is the HOLD, it is the owner's own instruction, and nothing was changed
+
+**Appended 2026-08-17. NOTHING SHIPPED — no line of `client/` was touched, so no fingerprint can
+move.** Step 2's third rule applies: the surplus is intentional and something depends on it, so it
+stays. This is the complete answer that rule describes.
+
+## 45. Term by term, at the owner's frame
+
+`scripts/diag/line-ceiling-terms.mjs` calls the product's own `anchorScreenPoint` and
+`roomFromPointAlong` with the live director's inputs and prints the intermediates `pointGuarantee`
+computes and never exposes. ice-track, seed 9, 77 550 ms, LEADER_ZOOM:
+
+| | |
+| --- | --- |
+| anchor (world) | (400.0, 883.0) |
+| line (world) | (873.0, 252.0) |
+| world gap | dx 473.0, dy −631.0 — **788.6 px straight**, 874 along the arc |
+| projection | axisX 0.41667, axisY 0.35173 · world 3072 × 2047 |
+| frame | 1280 × 720 · `innerFramePct` **0.7** |
+| forward frac | **0.3400** — the mirror, two thirds of the frame ahead |
+| anchor on screen | (738.4, 475.2) |
+| `sx = dx·axisX` | 197.07 |
+| `sy = dy·axisY` | −221.96 |
+| `needed = hypot` | **296.82** |
+| room to the X sides | 526.48 |
+| room to the Y sides | **491.06** ← the min, so the vertical sides decide |
+| `ceiling = room/needed` | **1.65438** cam.zoom → **1857 world px wide** |
+| **`_runInHoldCeiling`** | **1.15134** → **2668 world px wide** |
+| sweep `u` | **0.0000** — still holding |
+| delivered zoom | **1.15134** — equal to the held ceiling, to five decimals |
+
+## 46. WHERE THE FACTOR COMES FROM, in one sentence
+
+**The run-in is not asking for 2668 px — it is asking for what the line needed at ENGAGEMENT, held
+constant by RUNIN-HOLD-1 while the leader closes, and the live demand at the owner's frame is 1857.**
+
+The dump makes it visible without any arithmetic: over 700 ms the `line` column sits at **2668,
+2668, 2668…** while the delivered width climbs 675 → 1273 toward it. A constant demand from a term
+whose input is a shrinking distance is a held value, and `_runInHoldCeiling` is exactly that.
+
+### The three candidates the brief named, checked rather than assumed
+
+| candidate | verdict |
+| --- | --- |
+| a margin or padding term | **No.** `innerFramePct` 0.7 costs 1.29×, not 2×, and it is the same margin every guaranteed subject gets. |
+| the **second axis** inflating the near one | **No.** The Y sides decide on ice-track — but by **1.07×** (491 vs 526). On luger-hill, searound and mountainstreet the **X** sides decide, so the axis is not even consistent. |
+| the line treated as an extent, or the fraction applied twice | **No.** `sx`/`sy` are a single point difference and `forwardFrac` appears once, in `anchorScreenPoint`. |
+| a projection/heading mismatch | **No.** `needed` and `room` are both measured along the same screen direction — `roomFromPointAlong` takes that direction as its argument. |
+
+### And on four tracks, one open, one closed, and the narrowest frame
+
+| track | live demand | **held** | surplus | which axis decided |
+| --- | ---: | ---: | ---: | --- |
+| ice-track (closed) | 1857 px | **2668** | **1.44×** | vertical, by 1.07 |
+| luger-hill (open) | 1432 | **1851** | **1.29×** | horizontal |
+| searound (closed) | 2277 | **2854** | **1.25×** | horizontal |
+| mountainstreet (narrowest) | 1365 | **1705** | **1.25×** | horizontal |
+
+**On every one of them the delivered zoom equals `_runInHoldCeiling` to five decimals, and `u` is 0.**
+The surplus is 1.25–1.44× at that frame — not 2 — and it **grows through the hold**, because it is
+zero at engagement by construction and widens as the line approaches.
+
+## 47. Why it is not removed
+
+**RUNIN-HOLD-1 built this at the owner's explicit instruction**, recorded in its own report: *"open
+far enough that the line sits well in frame, HOLD that, then close once."* The held ceiling IS that
+instruction expressed as a number. Removing it would restore the crawl he rejected on 2026-08-16 —
+the run-in closing from the frame the window opens, measured then at 3.6 s of lead-in at ~95 px/s of
+picture flow, "below the rate at which anything reads as movement".
+
+So Step 2's third rule decides it: **intentional, depended upon, do not remove.** The whole
+mechanism it feeds is the hold-then-sweep shape he asked for, and `runInOpenMs` is the key that
+paces it.
+
+**Also worth correcting: the factor of two was an over-estimate.** RUNIN-BACK-1 compared the held
+width against a straight-line estimate of what the gap needed; the live ceiling is 1857 px, so the
+surplus at that frame is 1.44×. The premise was directionally right and numerically loose.
+
+## 48. What was changed: nothing
+
+No `client/` file was touched. `git status --short client/` returns zero lines, so **CAMERA
+`6ae77f12daf23f78` and RENDER `a870f5f9e79cb444` cannot move**, the tracking-lag stamp cannot go
+stale, and there is nothing to mint. `engine-reach --check` over the two added paths:
+*"none of 2 path(s) can reach the race engine."*
+
+**The served build stays at `9123b312`'s behaviour** — the owner's placement, restored — which is
+what rule 2 of the handover order prescribes when Step 2 ends in "do not remove".
+
+## 49. Noticed and deliberately left alone
+
+1. **The hold's surplus grows with the approach.** It is 1.0× at engagement and 1.25–1.44× by the
+   settled frame. Nobody has ever put a number on that before, and it is the honest way to describe
+   what the hold costs: not "twice as wide as needed" but "as wide as it needed to be a second ago".
+2. **`innerFramePct` is 0.7 for the line**, i.e. a 15% margin on each side. It is the subject's own
+   safe region and `_lineCeiling` takes it deliberately (RUNIN-MINIMAL-1 records choosing it over the
+   company margin). It costs 1.29× on its own and is a legitimate lever if the owner ever wants one.
+3. **The deciding axis is not stable across tracks** — vertical on ice-track, horizontal on the other
+   three. Any future rule that assumes one of them will be wrong on some track.
+
+---
+
 ## PROPOSALS
 
 1. **Retire `contenderZoom`, or scope it to after the crossing.** It moves the zoom on **0** frames
@@ -1156,6 +1259,22 @@ all of its work — it paces the opening glide and derives the release.
    touching anything: whether the ceremony's held zoom should retire on the GUN or on a geometric
    condition the way the field guarantee does, and whether the effect is really absent on open
    tracks or merely smaller because luger-hill's world is short.
+
+19. **The one lever left that nobody has priced: shorten the HOLD, do not weaken the ceiling.**
+    RUNIN-CEILING-1 shows the surplus is the held ceiling ageing — 1.0x at engagement, 1.25-1.44x by
+    the settled frame — so the size of the surplus is exactly *how long the hold lasts*. That is
+    `runInOpenMs` (larger releases EARLIER, section 7's table), and the pace table already measured the
+    hold at 3.4-13.7 s. **Nobody has ever measured finished-track-in-frame against `runInOpenMs`**,
+    and it is one run of `runin-forward-reach.mjs` per value on an existing key with an existing
+    control. If a shorter hold buys back the width without the crawl returning, that is the whole
+    problem solved with a number he already owns.
+
+20. **Re-derive the held ceiling once, part-way through the hold, instead of holding one value.**
+    The hold exists so the shot does not crawl; it does NOT require the value to be frozen at the
+    single widest moment. Re-capturing it once — say when the leader has closed half the distance —
+    would keep the shot still for two long stretches instead of one, and cost 1.12x instead of 1.44x.
+    It is a change to `_updateRunIn` alone and both instruments to price it exist. Listed second
+    because it is a new mechanism, and proposal 19 tries an existing key first.
 
 17. **The line's place in frame is set by the ZOOM, not by the leader — so that is where to look.**
     RUNIN-BACK-1 tested the hope in proposal 15 and it failed: moving the leader back to 0.34 did
