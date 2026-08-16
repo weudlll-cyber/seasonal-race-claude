@@ -174,6 +174,56 @@ band measured the same 30.0 px in it either way.
 - `v-ship-finish-band` (`354859bc`, 2026-08-13) — **the ship.** The forward merge is inside it: the
   branch was merged with master first, re-measured, and only then merged out.
 
+### RUNIN-HOLD — the run-in holds the opening shot and closes once (2026-08-17)
+
+**The owner judged this on a production build on 2026-08-17 and ACCEPTED it.** Three framing changes
+in one merge, one tag, one mint.
+
+**The corridor cap no longer overrides the finish line's own ceiling** (RUNIN-LINE-1). `_setTargets`
+honoured `_ceilings.line` in its `Math.min` and then let the corridor cap raise the composed zoom
+back above it — so the one term that knows where the finish line is was being overruled by a term
+that does not. The repair is one clause, and the instrument was built BEFORE it rather than after:
+`check-runin-frame` gained a **third question** — is the line in frame from the endgame threshold to
+the crossing, on ten tracks — which splits its losses by cause, overridden against merely trailed,
+so a future regression names itself instead of appearing as a single number.
+
+**The opening shot is HELD, then closed in ONE sweep** (RUNIN-HOLD-1). Left alone `_lineCeiling`
+begins closing on the frame the window opens, which measured about 3.6 s of lead-in at roughly
+95 px/s of picture flow — below the rate at which anything reads as movement. **The release is
+derived, not chosen**: the sweep lasts `runInOpenMs`, so it begins when the leader's remaining time
+to the line has fallen to that length. That time is measured over the RUN-IN's own span, because the
+field decelerates into the finish and a whole-race average was wrong by about six times. No key was
+added.
+
+**The leader is where the owner put him** (RUNIN-BACK-1) — a little before the centre of frame,
+easing to a little after it — and RUNIN-AHEAD-1's forward bound, which contradicted that
+specification, is removed with nothing in its place. Placing the leader behind centre is itself the
+reason the frame does not reach past the line. **It narrowed nothing**: the extra width the bound
+bought carried no racer, the whole field spanning 600–830 px inside a frame the line was forcing to
+2668.
+
+**Defaults are not touched.** `endgameThreshold` keeps its shipped value; the Dev control merely
+steps it in 1% instead of 5%.
+
+**Five further shapes were built, measured and REVERTED on the branch, and none is in this tree** —
+RUNIN-PIN-1, RUNIN-ANCHOR-1, RUNIN-RATE-1, RUNIN-EVEN-1/-2 and RUNIN-SCHEDULE-1. What they
+established is the finding the report opens with: an even close and "the finish line stays in frame"
+cannot both hold while the two ends of the close are fixed, because `_lineCeiling` is the **boundary
+of the admissible set** rather than one option among several.
+
+**CAMERA and RENDER both move; WORLD and WORLD-OFF cannot.** Decided by the instruments' own
+declarations rather than asserted: walking `scripts/lib/routing.mjs` `closureOf` from each declared
+reach entry, **none** of the 17 merged files lies inside `fingerprint-default.mjs`'s closure (36
+files), while CAMERA's closure (36) and RENDER's (55) both contain `CameraDirector.js`, the single
+production file this ship changes. **`engine-reach` was deliberately not leaned on** — on a committed
+merge it has no working-tree diff to read, so its verdict there is not evidence. Values live in
+[fingerprints.json](fingerprints.json).
+
+- `v-ship-runin-hold` (`48f954a4`, 2026-08-17) — **the ship.** The return point is
+  `v-ship-runin-hold^1`, which restores a run-in that begins closing the moment its window opens and
+  a corridor cap that can override the line, with the CAMERA value `ff2bc42af377b5cf` and the RENDER
+  value `0e04fa4a5e9c3b85`.
+
 ### MINIMAP — the minimap says where the race starts, ends, and is never raced (2026-08-15)
 
 **The owner judged the marks and the unraced tail on a production build on 2026-08-15 and ACCEPTED

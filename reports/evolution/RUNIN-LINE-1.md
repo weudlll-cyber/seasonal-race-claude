@@ -1,3 +1,50 @@
+# The run-in — the whole thread, and how it ended
+
+> **READ THIS FIRST.** This file grew across sixteen blocks between 2026-08-16 and 2026-08-17. It is
+> append-only by rule, so the sections below are in the order they were written and several of them
+> describe things that were reverted the same day. This summary is what survived.
+
+**SHIPPED on 2026-08-17 as `v-ship-runin-hold`, merge `48f954a4`.** The owner judged it on a
+production build on 2026-08-17 and accepted it. Three changes: the corridor cap stops overriding the
+finish line's own ceiling (RUNIN-LINE-1); the opening shot is held and then closed in one sweep, on a
+release derived from the leader's own observed pace rather than a chosen fraction (RUNIN-HOLD-1); and
+the leader sits where the owner put him, a little before the centre of frame easing to a little after
+it, with RUNIN-AHEAD-1's contradicting forward bound removed (RUNIN-BACK-1). CAMERA moved
+`ff2bc42af377b5cf` → `6ae77f12daf23f78` and RENDER `0e04fa4a5e9c3b85` → `a870f5f9e79cb444`, both
+minted on the merge. WORLD and WORLD-OFF could not move and were not re-run: no merged file lies
+inside `fingerprint-default.mjs`'s declared closure. Defaults were not touched.
+
+## SIX ATTEMPTS AT ONE SENTENCE, AND WHY IT CANNOT BE HAD
+
+The owner asked for a close that is **even** — "zoom in softly, at the speed necessary for that
+particular track, but at a UNIFORM speed — one that ought to be calculable". Six shapes were built
+for that sentence. Five were reverted, each on a measurement, and each hit a **different** wall:
+
+| block | the shape | what stopped it |
+| --- | --- | --- |
+| RUNIN-PIN-1 | pin the line and the leader on screen, absorb the gap with zoom | the target-versus-delivered lerp: the camera cannot be commanded to a screen position |
+| RUNIN-ANCHOR-1/-2 | make the line the camera's anchor, then give it its own placement value | it works, and it costs the accepted build; no placement value has a solution on ice-track and seatrack |
+| RUNIN-RATE-1 | release the hold when a calm, constant rate can still make it | **there is no constant rate in this camera to borrow** — every sibling is a duration or a time constant |
+| RUNIN-EVEN-1 | walk the zoom evenly toward `_lineCeiling`, speed = distance ÷ time left | the destination **runs away**: the ceiling rises hyperbolically, the walk catches it and inherits its acceleration. Spread 2.08× → 13.6× |
+| RUNIN-EVEN-2 | same walk, toward the active state's own zoom — a stationary destination | fixed the spread (13.6× → 2.27×) and the walk was still **invisible**: `_lineCeiling` bound on a median 91% of closing frames |
+| RUNIN-SCHEDULE-1 | schedule the line's PLACE in frame so the resulting zoom is even | the schedule needs the line **outside the frame** on 9 of 9 tracks, up to 2.46× the room ahead |
+
+**The finding, and it is §64 in full.** Keeping the line in frame requires `zoom ≤ room / needed`.
+The world distance `needed` falls to zero at the crossing, so that bound rises **hyperbolically**,
+while `room` shrinks as the leader travels forward across the frame. **`_lineCeiling` is therefore
+not one option among several — it is the boundary of the admissible set, and it is the fastest close
+that keeps the promise.** An even close is a chord between two fixed ends; the boundary is convex;
+they cross. So while the two ends of the close are fixed, an even close and "the finish line stays in
+frame" are incompatible, and no seventh shape changes that. **The only remaining lever is the ends
+themselves — open less wide, or cross at a wider shot — and both are the owner's taste rather than
+anything derivable.**
+
+**If anyone attempts this again, run `node scripts/diag/runin-line-schedule.mjs` first**: it prices a
+proposed close in the line's own units and says whether it is admissible at all, in one run, before a
+line of the director is touched.
+
+---
+
 # RUNIN-LINE-1 — the line left the frame, and the term that put it out was not the hold
 
 **Branch `feat/runin-hold`, continued on `86f4ce97`. NOT merged and NOT minted.** The owner judged

@@ -608,7 +608,26 @@ finish shot leave ALONG it.
 ## Camera / presentation fixes
 
 - [RUNIN-LINE-1.md](RUNIN-LINE-1.md) — **the line left the frame, and the term that put it out was
-  not the hold** (2026-08-17, `feat/runin-hold`, **unmerged, NOT minted, HIS EYE OWED**). The owner
+  not the hold** — and, appended to the same file across sixteen blocks, **the whole run-in thread
+  and how it ended**. **SHIPPED 2026-08-17** as `v-ship-runin-hold`, merge `48f954a4`, the owner
+  having judged it on a production build that day and accepted it; **CAMERA and RENDER minted on the
+  merge, WORLD and WORLD-OFF outside the closure and not re-run**. **The file opens with its own
+  summary** — read that first, since the sections below it are append-only and several describe
+  shapes reverted the same day. **THE FINDING THE THREAD ENDS ON**: an even close and "the finish
+  line stays in frame" are incompatible while the two ends of the close are fixed, because
+  `_lineCeiling` is the **boundary of the admissible set** rather than one option among several —
+  `needed` falls to zero at the crossing so the bound rises hyperbolically while `room` shrinks, and
+  an even close is a chord that crosses it. Five shapes were built, measured and REVERTED on that
+  finding — RUNIN-PIN-1 (the target-versus-delivered lerp), RUNIN-ANCHOR-1/-2 (no placement value
+  has a solution), RUNIN-RATE-1 (**this camera has no constant rate to borrow**), RUNIN-EVEN-1/-2
+  (the destination runs away; then the walk is invisible behind a ceiling binding on a median 91% of
+  closing frames) and RUNIN-SCHEDULE-1 (the schedule needs the line **outside the frame** on 9 of 9
+  tracks, up to 2.46× the room ahead). **Nine report-only instruments ship with it**, under
+  `scripts/diag/`: `runin-line-schedule` (**run this one first** if anyone attempts an even close
+  again — it prices a proposed close in the line's own units in one run), `runin-close-rate`,
+  `line-ceiling-terms`, `runin-forward-reach`, `runin-pin-drift`, `width-authority`,
+  `binding-census`, `runin-pace-table` and `start-frame-capture`. What follows is the block that
+  opened the thread. The owner
   rejected the production build because the run-in closed past its own finish line. **The instrument
   came first**: `check-runin-frame` was green throughout because its two questions ask whether
   RACERS are on screen — question 3 now asks whether THE LINE is, every frame from the endgame
