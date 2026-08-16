@@ -273,7 +273,9 @@ export function createRaceFromIdentity(p) {
           dynamicsConfig.b2AttackPeakRank ?? DEFAULT_RACE_DYNAMICS_CONFIG.b2AttackPeakRank,
         b2AttackFinalRank:
           dynamicsConfig.b2AttackFinalRank ?? DEFAULT_RACE_DYNAMICS_CONFIG.b2AttackFinalRank,
-        b2AttackProgress: dynamicsConfig.b2AttackProgress ?? { start: 0.4, end: 0.7 },
+        b2AttackProgress: dynamicsConfig.b2AttackProgress ?? {
+          ...DEFAULT_RACE_DYNAMICS_CONFIG.b2AttackProgress,
+        },
         b2AttackResolveProgress:
           dynamicsConfig.b2AttackResolveProgress ??
           DEFAULT_RACE_DYNAMICS_CONFIG.b2AttackResolveProgress,
@@ -295,8 +297,8 @@ export function createRaceFromIdentity(p) {
         chaosSteerGain:
           dynamicsConfig.chaosSteerGain ?? DEFAULT_RACE_DYNAMICS_CONFIG.chaosSteerGain,
         bandBias: dynamicsConfig.bandBias ?? false,
-        bandBiasR: dynamicsConfig.bandBiasR ?? 0.8,
-        bandBiasGain: dynamicsConfig.bandBiasGain ?? 0.06,
+        bandBiasR: dynamicsConfig.bandBiasR ?? DEFAULT_RACE_DYNAMICS_CONFIG.bandBiasR,
+        bandBiasGain: dynamicsConfig.bandBiasGain ?? DEFAULT_RACE_DYNAMICS_CONFIG.bandBiasGain,
       },
       racePlanSeed
     );
@@ -316,7 +318,9 @@ export function createRaceFromIdentity(p) {
     attackerSlots:
       dynamicsConfig.pulkLeadRotationAttackerSlots ??
       DEFAULT_RACE_DYNAMICS_CONFIG.pulkLeadRotationAttackerSlots,
-    dropDepthLengths: dynamicsConfig.pulkLeadRotationDropDepthLengths ?? 2,
+    dropDepthLengths:
+      dynamicsConfig.pulkLeadRotationDropDepthLengths ??
+      DEFAULT_RACE_DYNAMICS_CONFIG.pulkLeadRotationDropDepthLengths,
     outsiderMaxReachLengths:
       dynamicsConfig.pulkLeadRotationOutsiderMaxReachLengths ??
       DEFAULT_RACE_DYNAMICS_CONFIG.pulkLeadRotationOutsiderMaxReachLengths,
@@ -349,7 +353,7 @@ export function createRaceFromIdentity(p) {
   // ── PULK-action phase-split bonuses (parity with the sim) ──
   const phaseSplitBonusEnabled = dynamicsConfig.phaseSplitBonusEnabled ?? false;
   const rowBonusEarly = dynamicsConfig.rowBonusEarly ?? DEFAULT_RACE_DYNAMICS_CONFIG.rowBonusEarly;
-  const rowBonusPulk = dynamicsConfig.rowBonusPulk ?? 1;
+  const rowBonusPulk = dynamicsConfig.rowBonusPulk ?? DEFAULT_RACE_DYNAMICS_CONFIG.rowBonusPulk;
   const rowBonusPost = dynamicsConfig.rowBonusPost ?? DEFAULT_RACE_DYNAMICS_CONFIG.rowBonusPost;
   const enableRowEnvSmooth = dynamicsConfig.enableRowEnvSmooth ?? false;
   const PHASE_CHAOS_END =

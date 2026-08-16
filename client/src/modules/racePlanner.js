@@ -289,7 +289,10 @@ export function createRacePlan(racers, finishT, targetDurationMs, config = {}, s
     // aimed within the honest [spreadMin,spreadMax] range, so nothing is fought and in-band racers keep free
     // dice. This is the fairness win (arrival 85–90%); the Cliff Law's correct sign (LESSONS L184). OFF → null.
     _bandBias: config.bandBias
-      ? { R: config.bandBiasR ?? 0.8, gain: config.bandBiasGain ?? 0.06 }
+      ? {
+          R: config.bandBiasR ?? DEFAULT_RACE_DYNAMICS_CONFIG.bandBiasR,
+          gain: config.bandBiasGain ?? DEFAULT_RACE_DYNAMICS_CONFIG.bandBiasGain,
+        }
       : null,
     _racerTargetRank: racerTargetRank,
     _racerAreaBonus: racerAreaBonus,
@@ -350,8 +353,10 @@ export function createRacePlan(racers, finishT, targetDurationMs, config = {}, s
     // runs the Track-to-FinalRank-then-Free logic for role 'attacker-b2'. See heroCurveGenerator.js.
     _b2AttackHeroes: config.b2AttackHeroes ?? 0,
     _b2AttackPeakRank: config.b2AttackPeakRank ?? DEFAULT_RACE_DYNAMICS_CONFIG.b2AttackPeakRank,
-    _b2AttackFinalRank: config.b2AttackFinalRank ?? 10,
-    _b2AttackProgress: config.b2AttackProgress ?? { start: 0.4, end: 0.7 },
+    _b2AttackFinalRank: config.b2AttackFinalRank ?? DEFAULT_RACE_DYNAMICS_CONFIG.b2AttackFinalRank,
+    _b2AttackProgress: config.b2AttackProgress ?? {
+      ...DEFAULT_RACE_DYNAMICS_CONFIG.b2AttackProgress,
+    },
     _b2AttackResolveProgress:
       config.b2AttackResolveProgress ?? DEFAULT_RACE_DYNAMICS_CONFIG.b2AttackResolveProgress,
     // Release model: false = fixed-final (steer to finalRank, with margin); true = band-arrival (free on
@@ -372,7 +377,12 @@ export function createRacePlan(racers, finishT, targetDurationMs, config = {}, s
     // these → threshold null → computeGapBiasedTarget() early-returns rawSample → byte-identical.
     _gapRerollThresholdLengths: config.gapRerollThresholdLengths ?? null, // G (lengths); null = feature OFF
     _gapRerollMode: config.gapRerollMode ?? DEFAULT_RACE_DYNAMICS_CONFIG.gapRerollMode, // 'symmetric' | 'down'
-    _gapRerollStrength: config.gapRerollStrength ?? 0.5, // fraction-to-edge = min(1, strength·(gap−G))
+    // NOT unfireable, and it is the one entry on the 29 where the triage's UNFIREABLE verdict is
+    // wrong: the sim passes `gapRerollStrength: undefined` on the world-OFF arm, so this fallback
+    // DOES run there. It is inert all the same — `_gapRerollThresholdLengths` is null on that arm,
+    // so `computeGapBiasedTarget` returns rawSample before it ever reads the strength. Measured:
+    // world-off is byte-identical either side of this line (MIRROR-CENSUS-1).
+    _gapRerollStrength: config.gapRerollStrength ?? DEFAULT_RACE_DYNAMICS_CONFIG.gapRerollStrength, // fraction-to-edge = min(1, strength·(gap−G))
     // Window-derivation input (config-relative, zero hardcoded). Lower bound = corrStartFrac (the LIVE
     // choreoOutcomeStart). Upper bound = (harness lastRollDeadlineMs, realized-duration basis) −
     // transitionDur, so a biased roll's easeInOutCubic ramp settles before the schedule's own last roll.
