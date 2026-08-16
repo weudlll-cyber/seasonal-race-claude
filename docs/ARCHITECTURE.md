@@ -115,9 +115,15 @@ seasonal-race-claude/
 │
 └── .github/
     └── workflows/
-        ├── ci.yml                  # Lint + test on PR
+        ├── ci.yml                  # Lint + test on PR — the audit gate here BLOCKS
+        ├── audit-schedule.yml      # Daily dependency audit — reports as an issue, never blocks
         └── deploy.yml.disabled     # INERT — never run, and DE-REGISTERED by the suffix
 ```
+
+**Two workflows, and the split is deliberate.** `ci.yml` answers "is this commit sound?"; a
+scheduled advisory run cannot be part of that answer, because a red build nobody caused teaches
+people to ignore red. `audit-schedule.yml` therefore reports to a GitHub issue and never fails on a
+finding. The full reasoning is in `scripts/audit-gate.mjs`, which owns the audit policy.
 
 `deploy.yml.disabled` describes an intent that was never wired up. Measured 2026-08-04: it triggers
 on `branches: [main]` and the only branch at origin is `master`; it runs `scripts/deploy.sh`, which

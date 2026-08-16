@@ -14,6 +14,10 @@ import { test, expect } from '@playwright/test';
 // `http://localhost:4000` — the OWNER'S API, hardcoded — while the suite runs against its own
 // isolated instance on another port. See the note on the afterEach below.
 import { E2E } from './e2e-env.js';
+// E2E-FLAKE-1: this app's server-backed loaders render a default first and swallow a failed fetch.
+// The mechanism, and the evidence that it is NOT one spec inheriting another's state, are in
+// `appReady.js`.
+import { withServerDataRetry } from './appReady.js';
 
 async function goToSurfaceClasses(page) {
   await page.goto('/dev');
@@ -83,33 +87,64 @@ test.describe('V2 — Badge indicators', () => {
 // ── V3 — Validation recovery ──────────────────────────────────────────────────
 
 test.describe('V3 — Validation recovery', () => {
-  test('invalid ID shows error; fixing ID clears error', async ({ page }) => {
+  // E2E-STALE-2: THE ID FIELD IS GONE FROM THE PRODUCT, not broken in it.
+  // `SurfaceClassManager.jsx` says so in its own header — "ID is auto-generated from the label via
+  // slugify — not user-visible" — and `handleSave` proves it: `uniqueSlug(slugify(draft.label))`.
+  // So the old "type an ID with capitals and spaces, get a lowercase error, fix it, error clears"
+  // test was asserting a control that no longer exists and a validation rule that was replaced by
+  // DERIVATION. Both tests below used to fill `#sc-id` and timed out waiting for it.
+  //
+  // The label that this derivation is asserted with, and the id it must produce.
+  const SLUG_LABEL = 'E2E Slug Test';
+  const SLUG_ID = 'e2e-slug-test';
+
+  // The one test here that writes to the shared server cleans up after itself, by the derived id.
+  //
+  // E2E-FLAKE-2: THE CLEAN-UP GOES BY LABEL, NOT BY THE DERIVED ID, and it runs on BOTH sides.
+  // `uniqueSlug` appends a suffix when the slug is taken, so a class this test left behind would be
+  // created next time as `e2e-slug-test-2` — the DELETE-by-slug would 404, the leftover would stay
+  // on the SHARED server, and the leak would grow by one every run. Deleting everything carrying
+  // this test's label cannot miss a suffixed one. Found with `--repeat-each=3`, which is harsher
+  // than the suite ever is, but a test that can only pass the first time has a hidden rule.
+  async function deleteEveryLeftover(page) {
+    const res = await page.request.get(`${E2E.apiUrl}/api/surface-classes`);
+    if (!res.ok()) return;
+    for (const cls of await res.json()) {
+      if (cls.label === SLUG_LABEL) {
+        await page.request.delete(`${E2E.apiUrl}/api/surface-classes/${cls.id}`).catch(() => {});
+      }
+    }
+  }
+
+  test.beforeEach(async ({ page }) => deleteEveryLeftover(page));
+  test.afterEach(async ({ page }) => deleteEveryLeftover(page));
+
+  test('no ID control is offered; the ID is derived from the label on save', async ({ page }) => {
     await goToSurfaceClasses(page);
     await page.getByRole('button', { name: /New Surface Class/i }).click();
 
-    // Fill invalid ID
-    await page.locator('#sc-label').fill('Test Label');
-    await page.locator('#sc-id').fill('INVALID ID!');
+    // The form offers a Label and a Generator and NOTHING that sets an id.
+    await expect(page.locator('#sc-id')).toHaveCount(0);
+    await page.locator('#sc-label').fill(SLUG_LABEL);
     await page.getByRole('button', { name: /Save surface class/i }).click();
 
-    // Error message should appear
-    await expect(page.getByText(/lowercase/i)).toBeVisible();
-
-    // Fix the ID
-    await page.locator('#sc-id').fill('valid-id-now');
-    // Error should be gone after typing
-    await expect(page.getByText(/lowercase/i)).not.toBeVisible();
+    // The class is created and listed under its label...
+    await expect(page.getByRole('button', { name: new RegExp(SLUG_LABEL, 'i') })).toBeVisible();
+    // ...and DELETE by the slugified id succeeds, which is the statement that `slugify(label)` —
+    // not anything the operator typed — is what became the id. A wrong id would 404 here.
+    const del = await page.request.delete(`${E2E.apiUrl}/api/surface-classes/${SLUG_ID}`);
+    expect(del.ok(), `DELETE /api/surface-classes/${SLUG_ID} → ${del.status()}`).toBeTruthy();
   });
 
   test('empty label shows error on Save', async ({ page }) => {
     await goToSurfaceClasses(page);
     await page.getByRole('button', { name: /New Surface Class/i }).click();
 
-    // Leave label empty, fill valid ID
-    await page.locator('#sc-id').fill('test-empty-label');
+    // Leave the label empty — the only thing `handleSave` validates before it calls the server.
     await page.getByRole('button', { name: /Save surface class/i }).click();
 
     await expect(page.getByRole('alert')).toBeVisible();
+    await expect(page.getByRole('alert')).toContainText(/label is required/i);
   });
 
   test('Save button exists and is not disabled when form is open', async ({ page }) => {
@@ -174,8 +209,18 @@ test.describe('V5 — Default-Override lifecycle', () => {
     await page.locator('#sc-label').fill('Modified Mud');
     await page.getByRole('button', { name: /Save surface class/i }).click();
 
-    // After save, Modified badge should appear in the list
-    await expect(page.getByText('Modified')).toBeVisible({ timeout: 5000 });
+    // E2E-FLAKE-2: THE SAME PAGE-WIDE `getByText` DEFECT ITS SIBLING WAS REPAIRED FOR, and it was
+    // hiding behind the same 1-in-5 arithmetic. `getByText('Modified')` is a case-insensitive
+    // SUBSTRING match over the whole page, so once the list re-renders it matches four elements —
+    // twice for the badge and twice for the label THIS TEST JUST TYPED, "Modified Mud". A strict-
+    // mode violation aborts the assertion instead of retrying, so whether it passed depended on
+    // which render the first poll happened to catch. The subject is the class under test, so the
+    // assertion is scoped to its row: that row must carry the badge.
+    // `exact` is what separates the BADGE from the label: the badge's whole text is "Modified",
+    // the label's is "Modified Mud". Without it this would assert nothing the row did not already
+    // say by being found.
+    const mudButton = page.getByRole('button').filter({ hasText: 'Modified Mud' }).first();
+    await expect(mudButton.getByText('Modified', { exact: true })).toBeVisible({ timeout: 5000 });
     // Reset-to-Default button should now be visible
     await expect(page.getByRole('button', { name: /Reset to default/i })).toBeVisible();
   });
@@ -207,10 +252,25 @@ test.describe('V5 — Default-Override lifecycle', () => {
     // test pass and fail on leaked state from the test above it for two months.
     expect(created.ok(), `could not create the override the test needs (${created.status()})`).toBeTruthy();
 
-    await goToSurfaceClasses(page);
-    // Select the overridden mud
-    await page.getByRole('button').filter({ hasText: 'mud' }).first().click();
-    await expect(page.getByRole('button', { name: /Reset to default/i })).toBeVisible();
+    // E2E-FLAKE-1: THE SCREEN OPENS ON THE CODE DEFAULTS AND MAY NEVER LEAVE THEM.
+    // `useSurfaceClasses` seeds its state from `listAllSurfaceClasses()` — the code defaults — and
+    // replaces it only if `fetchServerSurfaceClasses()` succeeds; that call has a 3 s timeout and
+    // falls back to the localStorage cache, which is EMPTY in a fresh context, without saying so.
+    // So under seven-worker load this page can settle showing Mud as a *code default*, in which
+    // case no Reset-to-default control is rendered and the wait below can never succeed — the
+    // override exists on the server and the browser simply never learned about it.
+    //
+    // Waiting for the Modified badge FIRST states what the page must have loaded, and re-navigating
+    // is the retry the app itself does not have. The assertions are unchanged; the last attempt is
+    // not caught, so a genuine defect still fails on its own message.
+    await withServerDataRetry(async () => {
+      await goToSurfaceClasses(page);
+      // Select the overridden mud — and only once the list says it IS overridden.
+      const mudButton = page.getByRole('button').filter({ hasText: 'mud' }).first();
+      await expect(mudButton).toContainText('Modified');
+      await mudButton.click();
+      await expect(page.getByRole('button', { name: /Reset to default/i })).toBeVisible();
+    });
 
     // Confirm dialog
     page.on('dialog', (d) => d.accept());
@@ -242,13 +302,21 @@ test.describe('V6 — Live Preview stability', () => {
     await page.getByRole('button').filter({ hasText: 'sand' }).first().click();
     await expect(page.getByLabel(/Surface effect live preview/i)).toBeVisible();
 
-    // Move sliders — page should not crash
+    // Move sliders — page should not crash.
+    //
+    // E2E-STALE-2: this used to `fill('30')` unconditionally and failed with "Malformed value" —
+    // the first slider is Start Size, whose range is 1–20, and Playwright refuses a value a range
+    // input cannot hold. The number was never the point; MOVING the slider was. So the target is
+    // now read off the control itself — its own max — which is a value the product accepts by
+    // construction and stays correct if the range is ever changed.
     const sliders = page.locator('input[type="range"]');
     const count = await sliders.count();
-    if (count > 0) {
-      await sliders.first().fill('30');
-      await expect(page.getByLabel(/Surface effect live preview/i)).toBeVisible();
-    }
+    expect(count, 'the surface-class editor should expose config sliders').toBeGreaterThan(0);
+    const first = sliders.first();
+    const max = await first.getAttribute('max');
+    await first.fill(String(max));
+    await expect(first).toHaveValue(String(max));
+    await expect(page.getByLabel(/Surface effect live preview/i)).toBeVisible();
   });
 
   test('preview remains visible after navigating between classes', async ({ page }) => {

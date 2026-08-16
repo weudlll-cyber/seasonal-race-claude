@@ -8,6 +8,25 @@ report here could be orphaned, or an index link could dangle, with nothing notic
 `node scripts/check-index.mjs --dir=reports/night --index=reports/night/INDEX.md` now checks both
 directions.
 
+- [NIGHT-2026-08-17.md](NIGHT-2026-08-17.md) — **the red tests, the flakes, and an audit that runs
+  by itself** (2026-08-17). Three pieces asked for, four merged. **The 27 hard e2e failures are
+  gone — 76/27 → 103/0**, every one repaired against the source and three assertions made STRONGER
+  (an old `expect(color).not.toBe('')` was true of every colour; a window bounded on both sides
+  around a number the test did not own; a hard-coded lap gap now re-derived). The Base Speed cluster
+  was rewritten and now **imports** the defaults instead of restating them in eight places, and the
+  previous night's claim that the lap selector "needs a hook the markup does not offer" was WRONG —
+  every hook was already there. **The flakes were not leaked state, and the suite's own artefact
+  settles it:** `.auth/state.json` carries two entries, so no spec can reach another. The cause is
+  that every server-backed loader renders a default first and swallows a failed fetch — and a
+  MISSING geometry reads as a CLOSED track, so an open track quick-tested inside that window runs as
+  a laps race with nothing logged. Five runs before and five after, same instrument: the two flakes
+  aimed at did not recur, two different ones surfaced, **the rate did not change** — and one of the
+  new ones was the same page-wide `getByText` defect its sibling had already been repaired for.
+  The dependency audit now runs **daily on both trees**, reporting to a GitHub issue that opens,
+  dedups and closes itself, in **its own workflow with `--report-only`** so a schedule can never
+  turn master red for something nobody triaged — and both issue transitions were **proven at the
+  origin** by a `drill` input, because a notification channel nobody has fired is not one.
+
 - [NIGHT-2026-08-16.md](NIGHT-2026-08-16.md) — **six pieces, six reached** (2026-08-16). The e2e
   suite told the truth about itself for the first time: **63 → 75 passing**, repairing only the two
   clusters whose correct assertion the SOURCE could settle (a bare `canvas` selector that now matches
