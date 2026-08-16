@@ -15,6 +15,20 @@
         "/^\\$p = \"c:\\\\Users\\\\weudl\\\\OneDrive\\\\Dokumente\\\\Seasonal race claude\\\\client\\\\src\\\\screens\\\\RaceScreen\\\\index\\.jsx\"; \\$i=1; Get-Content \\$p \\| ForEach-Object \\{ \"\\{0,4\\}: \\{1\\}\" -f \\$i, \\$_; \\$i\\+\\+ \\} \\| Select-Object -Skip 640 -First 70$/": {
             "approve": true,
             "matchCommandLine": true
+        },
+        "/^node -e \"import\\('\\./scripts/lib/routing\\.mjs'\\)\\.then\\(m=>\\{const c=m\\.collect\\(\\); console\\.log\\(JSON\\.stringify\\(\\{count:c\\.guards\\.length, undeclared:c\\.undeclared, invalid:c\\.invalid, guards:c\\.guards\\.map\\(g=>\\(\\{id:g\\.id,source:g\\.source,everything:!!g\\.everything,exclusive:!!g\\.exclusive\\}\\)\\)\\},null,2\\)\\);\\}\\);\"$/": {
+            "approve": true,
+            "matchCommandLine": true
+        },
+        "git rev-list": true,
+        "role\\\":": true,
+        "/^node -e \"const \\{spawnSync\\}=require\\('child_process'\\);const run=\\(cmd,args,cwd\\)=>\\{const t=Date\\.now\\(\\);const r=spawnSync\\(cmd,args,\\{cwd,encoding:'utf8',shell:process\\.platform==='win32'\\}\\);return \\{ms:Date\\.now\\(\\)-t,code:r\\.status\\}\\};const root=process\\.cwd\\(\\);const lint=run\\('npm',\\['run','lint','--silent'\\],root\\+'\\\\\\\\client'\\);const fmt=run\\('npm',\\['run','format:check','--silent'\\],root\\+'\\\\\\\\client'\\);const audit=run\\('node',\\['scripts/audit-gate\\.mjs'\\],root\\);console\\.log\\(JSON\\.stringify\\(\\{lint,formatCheck:fmt,auditGate:audit\\}\\)\\);\"$/": {
+            "approve": true,
+            "matchCommandLine": true
+        },
+        "/^node -e \"const \\{spawnSync\\}=require\\('child_process'\\);const t=Date\\.now\\(\\);const r=spawnSync\\('node_modules/\\.bin/lint-staged',\\['--quiet'\\],\\{cwd:process\\.cwd\\(\\)\\+'\\\\\\\\client',encoding:'utf8',shell:process\\.platform==='win32'\\}\\);console\\.log\\(JSON\\.stringify\\(\\{ms:Date\\.now\\(\\)-t,code:r\\.status,stdout:\\(r\\.stdout\\|\\|''\\)\\.trim\\(\\),stderr:\\(r\\.stderr\\|\\|''\\)\\.trim\\(\\)\\}\\)\\);\"$/": {
+            "approve": true,
+            "matchCommandLine": true
         }
     }
 }
