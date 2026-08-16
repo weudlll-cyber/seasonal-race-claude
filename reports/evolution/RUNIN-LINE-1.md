@@ -1704,3 +1704,127 @@ cannot go stale. `runInOpenMs` keeps both its jobs, because nothing was kept.
    brief. He has not seen either number. **If what actually bothers him is the long dead opening
    rather than the unevenness**, then §59's middle column is a result and not a failure, and the next
    block is a much smaller one than a sixth shape.
+
+---
+
+---
+
+# RUNIN-SCHEDULE-1 — the ceiling IS the fastest even close there is, and it is not even. **THREAD CLOSED.**
+
+**Appended 2026-08-17. Nothing shipped — `CameraDirector.js` is byte-identical to `d30821fb`, so
+CAMERA `6ae77f12daf23f78` and RENDER `a870f5f9e79cb444` cannot move.** This was the last attempt by
+the owner's decision, and it ends the line with a geometric statement rather than another shape. It
+is reverted. **Nothing else was attempted.**
+
+## 62. The algebra that makes this measurable in one number
+
+`_lineCeiling` is `room / needed` — the screen room ahead of the anchor over the world distance to
+the line. It is the TIGHTEST zoom that still fits the line, and it fits it by putting the line
+exactly ON the edge of the subject's region. Put the line at a **share `s`** of that room instead and
+the zoom is `s x room / needed`. Therefore
+
+> **share = scheduled zoom / `_lineCeiling`**
+
+**The share and the zoom are the same number said two ways.** That is what this block turns on:
+`s <= 1` is a placement the run-in is entitled to make and the promise holds; `s > 1` is the schedule
+asking for the line OUTSIDE the region it exists to keep it inside. No new key and no new control
+were needed, and none was added.
+
+Both ends were already known, as the brief said: the start is the shot the opening arrived at, where
+the line sits at the edge (`s = 1`); the end is the state's own zoom at the crossing, where the leader
+IS at the line so the line's placement and the leader's are the same thing. All distances along the
+course, via `_runInProgressOf`. The photo-finish case kept the rise-only acceleration limit with
+`runInOpenMs` as its time constant.
+
+## 63. THE DECIDING MEASUREMENT — the share the even schedule demands
+
+Ten tracks, seed 9, read from the director's own `_runInLineShare`:
+
+| track | close frames | share @20 | @50 | @80 | **MAX** | frames over 1 | accel fired |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| space-sprint | 333 | 1.54 | 2.45 | 2.21 | **2.46** | 95.2% | 69 |
+| ice-track | 446 | 1.18 | 1.94 | 1.64 | **1.97** | 93.0% | 120 |
+| city-circuit | 777 | 1.39 | 2.00 | 1.25 | **2.02** | 92.4% | 406 |
+| dirt-oval | 596 | 1.38 | 1.91 | 1.78 | **1.92** | 91.6% | 342 |
+| seatrack | 350 | 1.46 | 1.87 | 1.35 | **1.90** | 91.1% | 80 |
+| searound | 352 | 1.26 | 0.94 | 1.14 | **1.41** | 78.1% | 131 |
+| luger-hill | 303 | 1.22 | 0.92 | 1.09 | **1.24** | 69.6% | 181 |
+| mountainstreet | 343 | 1.24 | 1.40 | 0.90 | **1.42** | 50.7% | 172 |
+| river-run | 340 | 0.76 | 0.54 | 0.67 | **1.05** | 8.5% | 242 |
+| garden-path | — | — | — | — | — | — | — |
+
+**Nine of nine measured tracks need the line outside the frame**, by as much as **2.46x the entire
+room ahead of the anchor** — not marginally out, but roughly two frame-widths out. The share is also
+non-monotone on every track. The brief's fail condition is ANY track; this is all of them.
+
+## 64. THE REASON, and it is geometry, not a defect in any of the six shapes
+
+Keeping the line in frame requires `zoom <= room / needed`. As the leader closes, `needed` falls to
+zero, so that bound rises **hyperbolically**; and `room` SHRINKS at the same time, because the leader
+travels forward across the frame to his own placement. **`_lineCeiling` is therefore the fastest
+schedule that keeps the line in frame — it is not one option among several, it is the boundary of
+the admissible set.** An even close is exponential in time. A convex boundary and a straight chord
+between two points on the same side of it cross, and §63 measures where and by how much.
+
+> **The promise and the evenness are not two terms that a `Math.min` composes, and they are not one
+> term that can be made even either. The admissible set has exactly one fastest member and its shape
+> is fixed by the track geometry.** Any even schedule from the opened shot to the state's own zoom is
+> faster than that member somewhere in the middle of every close but river-run's.
+
+**This is the same picture as RUNIN-EVEN-2, exactly.** When the share exceeds 1 the build places the
+line at the edge, which is `_lineCeiling`, which is what the previous `Math.min` returned. The rate
+table is byte-identical — delivered 0.08/0.16/0.40 on city-circuit, spread 2.27x, non-monotone on all
+ten. What this attempt adds is not a different picture but **the price named in the line's own
+units**, which is the thing the previous five reports could not say.
+
+## 65. The other measurements, taken and reported
+
+- **Delivered rate at 20/50/80%**: unchanged from §59 — not three near-equal numbers on any track.
+  **FAIL.**
+- **Zoom monotonicity**: NO on all ten tracks. **FAIL.**
+- **Line outside frame**: nine of nine. **FAIL.**
+- **`check-runin-frame`, all three questions: PASS**, and this is the one place the attempt was
+  *better* than the tip. Question 3 went from four tracks HELD / six TRAIL to six HELD / three
+  TRAIL: mountainstreet and river-run stopped trailing entirely, and the worst trailing margins
+  improved (space-sprint −228 → −190 px, seatrack −210 → −133 px, luger-hill −51 → −26 px). Total
+  trailed frames 89 → 87. **`_lineCeiling` still binds** — that is the whole finding — so the promise
+  was never at risk; the improvement comes from the shot being tighter earlier, not from the schedule.
+- **Racers in shot / camera pointed at the race**: questions 1 and 2 pass unchanged, worst centre
+  0.15 TW (luger-hill) / 0.94 TW (searound), zero empty frames.
+- **Better / equal / worse against the tip `d30821fb`**: better on 3 tracks (guard question 3 only),
+  equal on 6, worse on 0 for the promise — and **worse on all 10 for the thing the block was for**,
+  since the delivered close is identical and the line placement it needs is inadmissible.
+- **Against the accepted build `cc2af320`**: the delivered picture is the tip's, so the comparison is
+  the tip's, already recorded in §40.
+
+## 66. State, hygiene, and the close of this thread
+
+`CameraDirector.js` reverted, byte-identical to `d30821fb` — verified with `git diff --stat`, not
+assumed. `_runInHoldCeiling`, `_runInReleaseProgress`, `_runInSweepU` and `_runInShouldRelease` are
+all back and none of them was ever superseded in a shipped commit, so there is nothing to clean up
+in production source.
+
+Kept: `scripts/diag/runin-line-schedule.mjs`, the instrument that produced §63. **It is the only
+artefact of this block worth keeping**, because it converts "the close is not even" into a number in
+the line's own units, and any future attempt can be judged by it in one run before a line of the
+director is touched.
+
+CAMERA `6ae77f12daf23f78` and RENDER `a870f5f9e79cb444` measured fresh and unmoved; nothing to mint;
+the tracking-lag stamp cannot go stale because its closure did not change. `runInOpenMs` keeps both
+its jobs. **This report is closed.**
+
+## PROPOSALS
+
+1. **The only remaining lever is the ENDS, and it is his to pull.** §64 says the shape of the close
+   is fixed once the two ends are fixed, so the only way to flatten it without breaking the promise
+   is to move an end: **open less wide** (a higher starting zoom shortens the span and flattens the
+   chord) or **cross at a wider shot** (a lower destination does the same from the other side). Both
+   are visible, both are his taste rather than a derivation, and **both are already measurable with
+   `runin-close-rate` before anything is built**. This is the question to put to him, not a seventh
+   shape.
+2. **Ship the tip and stop measuring evenness.** The accepted build's close is uneven by 2.08x across
+   tracks and always has been; six attempts established that no schedule available to the camera
+   improves on it while keeping the line in frame. The remaining complaint that has never been shown
+   to be unfixable is the **long dead opening on the two long tracks** — city-circuit 6.70 s of
+   nothing at the start of its 13.93 s close — and §7's proposal to sweep `endgameThreshold` against
+   hold length is one existing key and one table away from answering it.
