@@ -322,6 +322,123 @@ tested.
 
 ---
 
+---
+
+# RUNIN-START-1 — the start, bisected: it predates both, and nothing was changed
+
+**Appended 2026-08-17.** The owner reported that shortly after the start of a dirt-oval Quick Test
+(seed 9, OVERVIEW, LAP 1/2) the whole field sits against the RIGHT edge of the canvas with the
+leader off screen. The start was never in scope for any run-in work, so the first question was not
+*why* but **when**.
+
+## 11. The three frames
+
+`CameraDirector.js` is the ONLY behavioural file that differs across the three commits — checked
+first, `git diff --stat … -- client/src` shows it and its test file and nothing else — so swapping
+that one file is a faithful bisect. Same track, same seed, same 20-racer Quick Test field, same
+elapsed times, `scripts/diag/start-frame-capture.mjs` unchanged between runs.
+
+**dirt-oval, seed 9 — and the three commits are byte-identical on every sampled frame:**
+
+| at ms | hud | zoom | offsetX | field x | leader x | on screen | binding | `ceilings.line` |
+| ---: | --- | ---: | ---: | --- | ---: | ---: | --- | --- |
+| 500 | OVERVIEW | 7.1480 | −4390 | 208..395 | 395 | 20/20 | field | **Infinity** |
+| 1000 | OVERVIEW | 7.2024 | −4285 | 547..781 | 781 | 20/20 | field | **Infinity** |
+| 1500 | OVERVIEW | 7.2328 | −4355 | 699..979 | 979 | 20/20 | field | **Infinity** |
+| 2000 | OVERVIEW | 7.2933 | −4514 | 815..1122 | 1122 | 20/20 | field | **Infinity** |
+| 3000 | OVERVIEW | 7.9388 | −5161 | **1089..1517** | **1517** | **19/20** | state | **Infinity** |
+| 5000 | LEADER_ZOOM | 8.4368 | −7132 | 516..1120 | 1120 | 20/20 | state | **Infinity** |
+| 8000 | LEADER_ZOOM | 6.7935 | −7090 | 237..740 | 740 | 20/20 | field | **Infinity** |
+
+**`cba73da8` (master) = `86f4ce97` (RUNIN-HOLD-1) = `d769cbd1` (RUNIN-LINE-1), to the digit, in every
+column.** A second witness, searound, is identical across all three as well.
+
+**The symptom reproduces exactly as described**: at 3000 ms the leader is at screen x 1517 on a
+1280-wide canvas — **237 px off the right edge** — and one racer is out of frame.
+
+### The verdict
+
+**IT PREDATES BOTH.** Neither RUNIN-LINE-1 nor RUNIN-HOLD-1 caused it; the owner had simply never
+looked at the start before. **Per the brief, NOTHING was changed on this branch** — no revert, no
+fix, no special case. It is an old defect and it gets its own block.
+
+## 12. The term, with numbers
+
+**`_ceilings.line` is `Infinity` on every early frame of every track measured.** The run-in is not
+composing, `_runInActive` is false, and the bound this branch's work touches is doing nothing at the
+start. That is the hypothesis the brief named as the suspect, and it is ruled out by measurement.
+
+**What DOES place the shot**, read off `_framingProbe` on the dirt-oval frames:
+
+| | 1000 ms | 2000 ms | 2500 ms | 3000 ms |
+| --- | ---: | ---: | ---: | ---: |
+| `ceilings.state` (the ceremony's held zoom) | 8.460 | 8.460 | 8.460 | 8.460 |
+| `ceilings.field` (the ceremony's field guarantee) | **7.121** | **7.567** | **7.958** | 12.894 |
+| `ceilings.company` | 27.696 | 22.558 | 21.904 | 19.296 |
+| `ceilings.guarantee` | ∞ | ∞ | ∞ | ∞ |
+| delivered `guaranteed` | 7.121 | 7.567 | 7.958 | **8.460** |
+| binding | field | field | field | **state** |
+| anchor, screen x (aimed → afterBias → afterLateral) | 644 → 644 → 644 | 907 → 907 → 907 | 1048 → 1048 → 1048 | **1515 → 1515 → 1515** |
+
+**The width is the ceremony's field guarantee widening with the grid, and then the ceremony's held
+zoom.** Neither is steered by anything the run-in owns.
+
+**The anchor is the finding.** It is the pan TARGET, projected with the camera the director actually
+delivered — and it walks from 644 (frame centre, correct) to **1515**, which is itself off the
+right-hand edge. Neither the forward bias nor the lateral guarantee moves it at any sample. **So the
+shot is not mis-aimed: the camera is roughly 875 px behind where it is already trying to be.** The
+field accelerates off the grid faster than the delivered pan follows, and the picture recovers by
+itself from ~3500 ms as the camera catches up.
+
+**It is systematic on closed tracks and absent on the open one measured:**
+
+| track | worst sampled | on screen |
+| --- | --- | ---: |
+| dirt-oval | leader 237 px off the right edge at 3000 ms | 19/20 |
+| searound | leader 80 px off the right edge at 3000 ms | 19/20 |
+| city-circuit | field pinned left, 249..670 at 3000 ms | 18/20 |
+| luger-hill (open) | leader 1018, in frame throughout | 20/20 |
+
+## 13. The test, and the one it is not
+
+**One test, `RUNIN-START-1 — the run-in bounds nothing before the endgame window`,** with a fixture
+carrying real geometry, driving `update()` rather than `_updateRunIn` — which also closes the gap
+RUNIN-HOLD-1's own report recorded, that all five of its tests call the private method and never
+exercise the real path.
+
+**If deleted:** the one hypothesis this bisect ruled out could return unnoticed. Should
+`_runInWindowOpen` ever admit an early frame, the run-in would bound the START — and the symptom
+would be precisely the reported one, because the run-in's job is to open toward a finish line most
+of a lap away. **Proven live by sabotage:** with the fixture's `endgameThreshold` dropped to 0.01
+the test fails with `expected 0.0853 to be Infinity` at frame 0 — a demand for a shot twenty times
+wider than the ceremony's, which is what that failure would look like on screen.
+
+**THE TEST AIMED AT THE ACTUAL CAUSE IS NOT HERE, AND DELIBERATELY.** The cause is unrepaired and
+predates all three commits, so such a test would be RED on master and on this branch — a red test in
+a green suite is either deleted by the next person or trains everyone to ignore the colour. It
+belongs in the block that repairs the start, as its failing-first evidence.
+
+## 14. What must be true at the end
+
+The brief's closing requirement — *the start looks exactly as it did on master* — is met in the
+strongest available sense: **the start frames ARE master's frames, digit for digit**, because
+nothing was changed. The requirement's other half, *the leader in shot*, is **not** true on this
+branch and is not true on master either; that is the old defect, and the three-way table is the
+evidence that this branch neither caused it nor can repair it without opening its own block.
+
+| role | branch before this block | measured on the final commit | |
+| --- | --- | --- | --- |
+| CAMERA | `6ae77f12daf23f78` | **`6ae77f12daf23f78`** | **unmoved** |
+| RENDER | `a870f5f9e79cb444` | **`a870f5f9e79cb444`** | **unmoved** |
+| WORLD | `dc4647be0f55ebdb` | not run | cannot move |
+| WORLD-OFF | `854018ee5d3d83e1` | not run | same |
+
+**Both hashes unchanged is the arithmetic proof that this block altered no behaviour** — a test
+file, a diagnostic script and a report cannot reach the camera. `engine-reach --check` over the
+three changed paths: *"none of 3 path(s) can reach the race engine."* **Nothing minted.**
+
+---
+
 ## PROPOSALS
 
 1. **Retire `contenderZoom`, or scope it to after the crossing.** It moves the zoom on **0** frames
@@ -347,3 +464,18 @@ tested.
    blocks in a row have now needed a one-line follow-up commit whose entire content is correcting a
    SHA that could not exist when the stamp was written. The guard is right to demand the
    measurement; it should not force a second commit to record it honestly.
+
+5. **The start needs its own block, and the measurement for it already exists.** The anchor walks to
+   screen x 1515 while the shot stays where the ceremony left it, so the question is not "which
+   ceiling is wrong" — every ceiling is behaving — but **how fast the delivered pan is allowed to
+   follow its own target off the grid**. `scripts/diag/start-frame-capture.mjs` is the instrument;
+   it needs no changes, only pointing at the pan's time constant. Two things worth measuring before
+   touching anything: whether the ceremony's held zoom should retire on the GUN or on a geometric
+   condition the way the field guarantee does, and whether the effect is really absent on open
+   tracks or merely smaller because luger-hill's world is short.
+
+6. **Make `check-runin-frame` ask its never-empty question about the LEADER, not about any racer.**
+   Question 2 passed every one of these frames — one racer on screen is enough for it — while the
+   leader was 237 px off the edge. "The picture is never empty" and "the person the shot is about is
+   in it" are different promises, and the second is the one the owner checks with his eyes. The
+   projection is already computed per racer on every frame, so the cost is a comparison.

@@ -7521,6 +7521,78 @@ describe('CameraDirector — the corridor caps the width, it does not force it',
 // real points on it, because every rule under test reads race fields — a bare {t,x,y,index} shape
 // would let a rule that stopped reading them pass silently, which this repository has paid for.
 // ============================================================
+// ============================================================
+// RUNIN-START-1 — THE RUN-IN IS ABSENT FROM THE START, AND THAT IS NOW PINNED.
+//
+// The owner reported a broken start on this branch: a few seconds into a dirt-oval Quick Test the
+// whole field sits against the right edge and the leader is off screen. A three-way frame capture
+// at `cba73da8` (master), `86f4ce97` and `d769cbd1` came back BYTE-IDENTICAL on every sampled
+// frame and on two tracks, so the run-in work is not the cause and nothing was changed for it.
+//
+// WHAT THIS TEST IS FOR is the hypothesis that capture RULED OUT, because ruling it out by
+// measurement once is not the same as it being unable to come back. If `_ceilings.line` were ever
+// finite before the endgame window, the run-in would be bounding the shot during the START — and
+// the symptom would be exactly what he described, because the run-in's whole job is to open toward
+// a finish line that is most of a lap away. The measurement said Infinity on every early frame of
+// every track; this says it must stay that way.
+//
+// IT DRIVES `update()`, NOT `_updateRunIn`. RUNIN-HOLD-1's own report records that all five of its
+// tests call the private method directly and therefore never exercise the real path — so this one
+// goes through the front door, which is also the only way the window predicate gets consulted.
+// ============================================================
+describe('RUNIN-START-1 — the run-in bounds nothing before the endgame window', () => {
+  const WORLD_W = 6000;
+  const CANVAS_W = 1280;
+  const CANVAS_H = 720;
+
+  // THE FIXTURE CARRIES GEOMETRY: a real shape, and racers at real points on it. `_lineCeiling`
+  // calls `_finishLineWorldPoint` -> `shape.getPosition`, and `_runInWindowOpen` reads `r.t` against
+  // `finishT` — a bare {t,x,y,index} with no shape behind it would make both read undefined and the
+  // assertion would pass for the wrong reason.
+  const shape = () => ({
+    getTotalLength: () => WORLD_W,
+    getPosition: (t) => ({ x: t * WORLD_W, y: 360, angle: 0 }),
+    getCenterPoint: () => ({ x: WORLD_W / 2, y: CANVAS_H / 2 }),
+  });
+
+  /** A grid a few seconds off the line: 5% of the way round, with the finish most of a lap away. */
+  const earlyField = () =>
+    Array.from({ length: 8 }, (_, i) => {
+      const t = 0.05 - i * 0.002;
+      return { index: i, t, x: t * WORLD_W, y: 340 + (i % 3) * 20, finished: false };
+    });
+
+  it('ceilings.line is Infinity through the early race, so it cannot place the start shot', () => {
+    const cd = new CameraDirector(
+      WORLD_W,
+      CANVAS_H,
+      true,
+      { ...DEFAULT_CAMERA_CONFIG, runInShot: true },
+      36,
+      shape(),
+      300
+    );
+    let ts = 1000;
+    for (let f = 0; f < 20; f++) {
+      const racers = earlyField().map((r) => ({ ...r, t: r.t + f * 0.004 }));
+      racers.forEach((r) => (r.x = r.t * WORLD_W));
+      cd.update(
+        racers,
+        ts,
+        { raceElapsed: f * 200, finishedCount: 0, finishT: 0.9 },
+        CANVAS_W,
+        CANVAS_H
+      );
+      expect(
+        cd._framingProbe.ceilings.line,
+        `frame ${f}: the run-in bounded the shot at leader t=${racers[0].t.toFixed(3)}, far outside the endgame window`
+      ).toBe(Infinity);
+      expect(cd._runInActive).toBe(false);
+      ts += 200;
+    }
+  });
+});
+
 describe('RUNIN-HOLD-1 — hold, then one sweep', () => {
   const runInDirector = (cfg = {}) =>
     new CameraDirector(4000, 720, true, { ...DEFAULT_CAMERA_CONFIG, ...cfg }, 36, makeShape(4000));

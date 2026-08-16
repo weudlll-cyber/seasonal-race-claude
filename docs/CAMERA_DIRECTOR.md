@@ -546,7 +546,20 @@ a verbatim transcript of one run on one commit, which is a historical record, no
 
 ### The tracking lag, as measured today — and it had drifted
 
-<!-- MEASURED: tracking-lag (median/p95 pp per state) @ 7f792a7c 2026-08-17 depends=client/src/modules/camera/ -->
+<!-- MEASURED: tracking-lag (median/p95 pp per state) @ d769cbd1 2026-08-17 depends=client/src/modules/camera/ -->
+
+**RE-STAMPED, NOT RE-MEASURED, FOR RUNIN-START-1 — and the reason is a fact, not a judgement.**
+That block added ONE TEST under `client/src/modules/camera/`, which is inside this stamp's
+`depends=` directory, so the guard tripped as designed: it deliberately cannot tell a change that
+matters from one that does not, and says so in its own header. **What settles it is that
+`scripts/tracking-lag.mjs` cannot reach a test file** — its load closure is `lib/raceDriver.mjs` and,
+through it, `defaults.js`, `EditorShape.js`, `CameraDirector.js`, `raceCore.js`, `durationModel.js`,
+`rowLayout.js`, `racer-types/index.js`, plus `frameGeometry.js` and `framingRule.js` imported
+directly. `CameraDirector.test.js` is in none of them and nothing under `scripts/` imports it. The
+same argument MINIMAP-MARKS-1 used, on the same guard, for the same reason. **And here it is
+corroborated arithmetically: CAMERA and RENDER were re-measured on that block's tree and are
+BYTE-IDENTICAL, so no camera behaviour changed at all.** The table below is unchanged from
+`7f792a7c`; only the stamp moved.
 
 **RE-MEASURED IN FULL FOR RUNIN-LINE-1, AND ONE STATE MOVED — THE ONE THE REPAIR ACTS IN.** The
 corridor cap stopped closing past the finish line, and the cap's only scope is `PHOTO_FINISH`. So
