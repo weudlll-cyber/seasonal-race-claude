@@ -7594,19 +7594,25 @@ describe('RUNIN-START-1 — the run-in bounds nothing before the endgame window'
 });
 
 // ============================================================
-// RUNIN-AHEAD-1 — THE FRAME STOPS AT THE FINISH LINE.
+// RUNIN-BACK-1 — THE LEADER FALLS BACK ACROSS THE FRAME, WHICH IS THE OWNER'S OWN SPECIFICATION.
 //
-// The owner accepted the run-in's shape and rejected what the frame shows: while the shot closes it
-// reaches well past the line onto empty track and then comes back. Measured before the change, the
-// frame carried 220-755 screen px of already-finished track through the close. The bound pushes the
-// leader forward in frame instead, so that room goes to the field behind him.
+// He set this deliberately: during the run-in the leader travels from a little BEFORE the centre of
+// frame to a little AFTER it, so that more of the track ahead is visible.
+//
+// RUNIN-AHEAD-1 added a bound here that held him FORWARD instead, to stop the frame reaching past
+// the finish line, and WHY-SO-WIDE-1 measured the price: with only about a third of the frame ahead
+// of him a line 874 world px away forced a frame 2668 px wide, where every other term was satisfied
+// with 338. The extra width bought no racer — the whole field spans 600-830 px.
+//
+// THE BOUND IS GONE AND NOTHING REPLACED IT. Placing the leader behind centre is ITSELF the reason
+// the frame does not reach past the line: most of the frame lies toward the finish, so the line sits
+// near the front edge by construction rather than by a clamp.
 //
 // THE FIXTURES CARRY GEOMETRY — a real 6000 px shape and racers at real points on it — because
-// every rule under test reads race fields: `_finishLineWorldPoint` walks the shape, `_headingAt`
-// asks it for a tangent, and the cap projects one against the other. A bare {t,x,y,index} would
-// make all three read undefined and every assertion below would pass for the wrong reason.
+// every rule under test reads race fields. A bare {t,x,y,index} would make them read undefined and
+// every assertion below would pass for the wrong reason.
 // ============================================================
-describe('RUNIN-AHEAD-1 — the frame does not travel past the finish line', () => {
+describe('RUNIN-BACK-1 — the leader falls back across the frame', () => {
   const WORLD_W = 6000;
   const CANVAS_W = 1280;
   const CANVAS_H = 720;
@@ -7650,37 +7656,56 @@ describe('RUNIN-AHEAD-1 — the frame does not travel past the finish line', () 
         CANVAS_H
       );
       cd.stateEnteredAt = 0;
-      trace.push({ frac: cd._forwardFracNow(), cap: cd._runInForwardCap, zoom: cd.zoom });
+      trace.push({ frac: cd._forwardFracNow(), u: cd._runInSweepU(), zoom: cd.zoom });
       ts += 200;
     }
     return { cd, trace };
   };
 
-  // IF DELETED: the whole point of the block goes unguarded. This is the rule itself — with the line
-  // ahead, the leader is pushed at least as far forward as the cap demands, which is the same as
-  // saying the frame's leading edge does not run past the line. Nothing else asserts it.
-  it('the anchor is pushed forward so the frame stops at the line', () => {
-    const { cd, trace } = drive(0.86);
-    const last = trace[trace.length - 1];
-    expect(last.cap).not.toBeNull();
-    expect(last.cap).toBeGreaterThan(0);
-    // The delivered fraction honours the cap: it is at or past it (never short of it).
-    expect(last.frac).toBeGreaterThanOrEqual(Math.min(last.cap, 1) - 1e-9);
-    // And it is genuinely FORWARD of where the run-in alone would have put him — the mirror of the
-    // state's own fraction, which is below centre. Without this the test could pass on a director
-    // that ignored the cap and happened to sit forward anyway.
-    expect(last.frac).toBeGreaterThan(0.5);
+  // THE OWNER'S REQUIREMENT, PINNED. IF DELETED: nothing in this suite states the travel he
+  // specified — and RUNIN-AHEAD-1 removed it without a single test going red, which is how it
+  // reached a production build he then rejected. This is the assertion that would have caught it,
+  // and it is why this test exists in place of the two it replaces.
+  it('the leader starts a little BEFORE centre and ends a little AFTER it', () => {
+    // TWO DRIVES, because the travel has two ends and one fixture cannot sit at both. The opening
+    // is measured where the run-in has just engaged and is still holding; the arrival where the
+    // leader is close enough that the sweep has released. The release moment is derived from the
+    // observed pace (`_runInShouldRelease`), so a fixture that never gets near the line never
+    // sweeps — which is what the first version of this test discovered about itself.
+    const opening = drive(0.83, { frames: 40 }).trace.filter((f) => f.frac !== null);
+    const arrival = drive(0.894, { frames: 40 }).trace.filter((f) => f.frac !== null);
+    expect(opening.length, 'the run-in never composed').toBeGreaterThan(10);
+    expect(arrival.length, 'the run-in never composed').toBeGreaterThan(10);
+    expect(
+      arrival[arrival.length - 1].u,
+      'the sweep never released in this fixture'
+    ).toBeGreaterThan(0.5);
+    const trace = [...opening, ...arrival];
+    const first = opening[0];
+    const last = arrival[arrival.length - 1];
+    expect(first.frac, 'at the opening the leader must sit BEFORE centre').toBeLessThan(0.5);
+    expect(last.frac, 'the travel must run toward the far side of centre').toBeGreaterThan(
+      first.frac
+    );
+    // THE TWO ENDS ARE THE STATE'S OWN PLACEMENT AND ITS MIRROR — no third number anywhere. If a
+    // future change introduces one, this is what refuses it.
+    expect(first.frac + DEFAULT_CAMERA_CONFIG.leaderForwardFrac).toBeCloseTo(1, 9);
+    expect(DEFAULT_CAMERA_CONFIG.leaderForwardFrac).toBeGreaterThan(0.5);
   });
 
-  // IF DELETED: the cap could move the anchor in STEPS or drag it backwards during the close. A
+  // ONE PROPERTY IS GONE RATHER THAN REWRITTEN, and this is the record of it. RUNIN-AHEAD-1 also
+  // pinned that its cap was genuinely trying to tighten past the line in the fixture — a
+  // non-vacuity check for a bound that no longer exists. There is nothing left for it to guard, so
+  // it is deleted rather than turned into something that only looks like a test.
+
+  // IF DELETED: the travel could move the anchor in STEPS or drag it backwards during the close. A
   // jump reads as the picture flicking sideways and a reversal reads as the close restarting —
-  // both are failures this camera has paid for. The cap engages on the SAME frame the run-in does
-  // (measured: with the line inside the window it always binds from the first composing frame), so
-  // what has to be proved is that it is smooth and one-way FROM there, which is what this walks.
-  it('the anchor moves smoothly and only ever forward while the cap is live', () => {
+  // both are failures this camera has paid for. The travel rides `_runInSweepU`, which is clamped
+  // monotone, and this is what proves that survives composition with everything else.
+  it('the anchor moves smoothly and only ever forward through the run-in', () => {
     const { trace } = drive(0.812, { frames: 40 });
-    const live = trace.filter((f) => f.cap !== null);
-    expect(live.length, 'the cap was never live — the test proves nothing').toBeGreaterThan(20);
+    const live = trace.filter((f) => f.frac !== null);
+    expect(live.length, 'the run-in never composed — the test proves nothing').toBeGreaterThan(20);
     for (let i = 1; i < live.length; i++) {
       const step = live[i].frac - live[i - 1].frac;
       // No jump…
@@ -7690,29 +7715,28 @@ describe('RUNIN-AHEAD-1 — the frame does not travel past the finish line', () 
     }
   });
 
-  // IF DELETED: the cap could survive the crossing and keep bounding the finish sequence, which owns
-  // its own framing entirely. The run-in's window closes on the first finisher, so this pins that
-  // the bound is gone with it rather than left latched from the last composing frame.
+  // IF DELETED: the run-in could keep speaking after the crossing, where the finish sequence owns
+  // the framing entirely. Its window closes on the first finisher, and this pins that the travel
+  // closes with it rather than being left latched from the last composing frame.
   it('after the crossing the framing is IDENTICAL to a director with no run-in at all', () => {
     // The strongest available form of "unchanged": run the same frames against a director with
     // `runInShot` off — the arm in which none of this code exists — and require the same anchor and
     // the same zoom. Comparing against a remembered constant would only pin today's number; this
     // pins that the run-in is SILENT there, which is the actual promise.
     const before = drive(0.88).cd;
-    expect(before._runInForwardCap).not.toBeNull();
+    expect(before._runInComposingNow, 'the run-in must be live BEFORE the crossing').toBe(true);
 
     const withRunIn = drive(0.88, { finishedCount: 1 }).cd;
     const without = drive(0.88, { finishedCount: 1, runInShot: false }).cd;
-    expect(withRunIn._runInForwardCap).toBeNull();
     expect(withRunIn._runInComposingNow).toBe(false);
     expect(withRunIn._forwardFracNow()).toBe(without._forwardFracNow());
     expect(withRunIn.targetZoom).toBeCloseTo(without.targetZoom, 9);
   });
 
-  // IF DELETED: the photo finish could be re-framed by this bound. Its position is CENTRED — there
-  // is no forward look to reclaim — and "a CENTRED state still does not move" is a contract
-  // RUNIN-HOLD-1 pinned separately. This is the same promise seen from the cap's side.
-  it('a CENTRED state is untouched by the cap', () => {
+  // IF DELETED: a CENTRED state could acquire a travel it must not have. Mirroring 0.5 gives 0.5, so
+  // the photo finish keeps its own framing for free — and "for free" is exactly the kind of property
+  // that stops being true silently, which is why it is asserted rather than reasoned about.
+  it('a CENTRED state does not travel at all', () => {
     const { cd } = drive(0.86, { state: CAM_STATE.PHOTO_FINISH });
     expect(cd._forwardFracNow()).toBeCloseTo(0.5, 9);
   });

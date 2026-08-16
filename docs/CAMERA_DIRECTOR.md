@@ -546,7 +546,15 @@ a verbatim transcript of one run on one commit, which is a historical record, no
 
 ### The tracking lag, as measured today — and it had drifted
 
-<!-- MEASURED: tracking-lag (median/p95 pp per state) @ 9b3c3a00 2026-08-17 depends=client/src/modules/camera/ -->
+<!-- MEASURED: tracking-lag (median/p95 pp per state) @ 2e5f1fd2 2026-08-17 depends=client/src/modules/camera/ -->
+
+**RE-MEASURED IN FULL FOR RUNIN-BACK-1, AND EVERY NUMBER WENT BACK TO WHERE IT WAS BEFORE
+RUNIN-AHEAD-1.** That block's forward bound is removed, so the two FORWARD states it had moved
+return exactly: **LEADER_ZOOM 4.00 → 4.05 median and 9.03 → 9.49 p95; LEAD_CHANGE 4.54 → 4.57 and
+29.00 → 31.33.** Every other state is unchanged and every frame count is identical. The table below
+is once again the RUNIN-HOLD-1 table, digit for digit — which is the strongest available statement
+that the removal is exact and left nothing behind. CAMERA and RENDER say the same thing: both
+returned to their pre-RUNIN-AHEAD-1 values.
 
 **RE-MEASURED IN FULL FOR RUNIN-AHEAD-1, AND EXACTLY THE TWO STATES THAT SHOULD HAVE MOVED DID.**
 The forward-extent bound applies only where the framing has a FORWARD look to reclaim, so the
@@ -746,12 +754,12 @@ and it says so itself. It also covers nothing else on this page; see its header 
 | ------------- | ------ | --------- | ------ |
 | BATTLE_ZOOM   | 9406   | 5.72      | 10.99  |
 | COMEBACK_ZOOM | 605    | 1.15      | 15.57  |
-| LEADER_ZOOM   | 17788  | 4.00      | 9.03   |
-| LEAD_CHANGE   | 7789   | 4.54      | 29.00  |
+| LEADER_ZOOM   | 17788  | 4.05      | 9.49   |
+| LEAD_CHANGE   | 7789   | 4.57      | 31.33  |
 | OVERVIEW      | 4303   | 2.65      | 16.00  |
 | PHOTO_FINISH  | 1865   | 4.81      | 37.36  |
 
-OVERVIEW median 2.65 pp against every other state pooled 4.62 pp (ratio 0.57×).
+OVERVIEW median 2.65 pp against every other state pooled 4.64 pp (ratio 0.57×).
 
 **RE-MEASURED FOR RUNIN-HOLD-1, AND EVERY FRAME COUNT IS IDENTICAL TO THE DIGIT.** That is the
 first thing to read here and it is the proof the block owes: 9406 / 605 / 17788 / 7789 / 4303 /

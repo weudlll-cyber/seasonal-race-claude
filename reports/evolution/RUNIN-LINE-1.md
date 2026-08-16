@@ -992,6 +992,136 @@ buying a single racer — it is reaching for the line.
 
 ---
 
+---
+
+# RUNIN-BACK-1 — the leader is back where the owner put him, and it narrowed nothing
+
+**Appended 2026-08-17. SHIPPED on the branch.** RUNIN-AHEAD-1's forward bound is removed and the
+owner's specified travel is restored. **It is worse on most measurable dimensions than the build he
+accepted, and it narrowed the shot on exactly zero tracks** — the opposite of what the previous
+block's finding implied. Both of those are stated up front because the count is what he decides on.
+
+## 39. The change, and which code now carries the placement
+
+**One deletion.** `_runInForwardCapOf` and the composition that read it are gone; nothing replaced
+them. The travel is carried by **`_forwardFracNow`'s two surviving lines** — RUNIN-GLIDE-1's mirror,
+untouched since it was written:
+
+```js
+const back = 1 - tableFrac;                     // a little BEFORE centre: 0.34
+return back + (tableFrac - back) * this._runInSweepU();   // easing to 0.66, a little AFTER
+```
+
+No new key, no fraction, no margin, no duration. `frameExtentAlong` and `roomFromPointAlong` are
+still imported because the forward bias and the lateral guarantee use them; nothing else was orphaned.
+
+## 40. Ten tracks, against the accepted build `cc2af320`
+
+**THE WIDTH DID NOT MOVE ON ANY TRACK.** At the owner's frame — first settled frame with the line in
+shot — the delivered width is identical, to the pixel, on all nine finishing tracks:
+
+| | city-circuit | dirt-oval | ice-track | luger-hill | mountainstreet | river-run | searound | seatrack | space-sprint |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| accepted | 3072 | 2984 | 2668 | 1851 | 1705 | 2196 | 2854 | 2837 | 3905 |
+| now | 3072 | 2984 | 2668 | 1851 | 1705 | 2196 | 2854 | 2837 | 3905 |
+
+**The reason, and it corrects WHY-SO-WIDE-1's implication:** at that frame the sweep has not
+released, so `u = 0` and the leader is already at the mirror — **0.34, behind centre, with two
+thirds of the frame ahead of him** — in BOTH arms. The cap was not binding there. WHY-SO-WIDE-1 read
+the 2668 px as the consequence of "only about a third of the frame ahead of him"; that was the
+state's placement (0.66), not the placement in force during the run-in. **The 2668 px is what
+`_lineCeiling` asks for with the leader ALREADY two thirds back, and removing the cap does not
+touch it.**
+
+### The four dimensions, per track
+
+| track | finished track in frame | racers in shot | line drift | zoom monotone | verdict |
+| --- | --- | --- | --- | --- | --- |
+| city-circuit | 290/656 → 290/656 | 18.8 → 18.8 | 253 → 253 | yes | **equal** |
+| dirt-oval | 640/627 → 640/630 | 18.2 → 18.2 | 595 → 628 | yes | **worse** |
+| ice-track | 43/157 → **105**/157 | 18.2 → 18.2 | 847 → **756** | yes | **mixed** |
+| luger-hill | 206/201 → **407/633** | 15.5 → **13.7** | 593 → **718** | yes | **worse** |
+| mountainstreet | 166/188 → **396/584** | 17.4 → **17.1** | 718 → **796** | yes | **worse** |
+| river-run | 213/201 → **463/680** | 17.7 → 17.7 | 668 → **799** | NO → NO | **worse** |
+| searound | 554/641 → 554/**755** | 16.7 → 16.7 | 590 → **657** | yes | **worse** |
+| seatrack | 0/96 → **273/326** | 16.2 → **15.4** | 586 → 589 | yes | **worse** |
+| space-sprint | 106/107 → **220/333** | 16.4 → **14.4** | 737 → **795** | yes | **worse** |
+
+**THE COUNT: 1 equal, 1 mixed, 7 worse, 0 better.** Zoom monotonicity improves by one track
+(ice-track recovers; river-run stays non-monotone, as it was before RUNIN-AHEAD-1 too).
+
+**The finished track in frame is worse on seven of nine, by 100–430 px**, and that is exactly what
+the removed bound was buying. The brief anticipated this and asked whether the leader sitting behind
+centre would put the line near the front edge by itself. **It does not** — that is the finding it
+asked for. The line's position in frame is set by `_lineCeiling`'s zoom demand, not by where the
+leader sits, so moving the leader back does not pull the line forward.
+
+**Racers in shot falls on four tracks**, worst on space-sprint (16.4 → 14.4) and luger-hill
+(15.5 → 13.7).
+
+## 41. What must still be true, and is
+
+| requirement | evidence |
+| --- | --- |
+| line in frame, opening → crossing | `check-runin-frame` **PASS**, all three questions, 0 overridden frames on ten tracks |
+| the zoom only closes | monotone on 8 of 9; river-run was already non-monotone before RUNIN-AHEAD-1 |
+| the crossing shot is unchanged | the sweep lands `u = 1` at the line by construction, and the test comparing against a `runInShot: false` director passes |
+| after the crossing nothing changes | same test — same anchor, same zoom |
+| a CENTRED state does not move | mirroring 0.5 gives 0.5; pinned by its own test |
+| questions 1 and 2 | luger-hill 0.24 TW / 0 empty, searound 1.10 TW / 0 empty |
+
+## 42. Tests — each of the four accounted for
+
+| RUNIN-AHEAD-1 test | what happened |
+| --- | --- |
+| *the anchor is pushed forward so the frame stops at the line* | **replaced** by the owner's requirement: the leader starts before centre and ends after it |
+| *the cap is really trying to tighten past the line* | **deleted, and the report says why** — it was a non-vacuity check for a bound that no longer exists. Rewriting it would have produced something that only looks like a test. |
+| *the anchor moves smoothly and only ever forward while the cap is live* | **moved** to the restored travel: same walk, same thresholds, now over `_runInSweepU` |
+| *a CENTRED state is untouched by the cap* | **moved** to "a CENTRED state does not travel at all" |
+
+**The new test, and what breaks if it is deleted:** nothing in the suite would state the travel the
+owner specified — and RUNIN-AHEAD-1 removed it *without a single test going red*, which is how it
+reached a production build he then rejected. It asserts the opening is before centre, the arrival is
+after it, and that **the two ends are the state's own placement and its mirror — no third number**,
+so a future change that introduces one is refused. It needs **two drives**, because one fixture
+cannot sit at both ends: the release moment is derived from the observed pace, so a fixture that
+never approaches the line never sweeps. The first version of this test discovered that about itself.
+
+## 43. Fingerprints, and the cleanest proof this block has
+
+```
+$ node scripts/engine-reach.mjs --check \
+    client/src/modules/camera/CameraDirector.js \
+    client/src/modules/camera/CameraDirector.test.js \
+    scripts/diag/width-authority.mjs
+ENGINE REACH: none of 3 path(s) can reach the race engine.        (exit 1)
+```
+
+| role | accepted build | measured on the final commit | |
+| --- | --- | --- | --- |
+| CAMERA | `c2f3e97277041fed` | **`6ae77f12daf23f78`** | moved |
+| RENDER | `28893c9595196026` | **`a870f5f9e79cb444`** | moved |
+| WORLD / WORLD-OFF | unchanged | not run | cannot move |
+
+**Both are the values from BEFORE RUNIN-AHEAD-1, bit for bit.** A removal that returns two 64-bit
+hashes to their earlier values is a removal that left nothing behind — stronger than any diff
+review. The tracking lag says the same: LEADER_ZOOM 4.00 → 4.05 / 9.03 → 9.49 and LEAD_CHANGE
+4.54 → 4.57 / 29.00 → 31.33, back to the RUNIN-HOLD-1 table digit for digit, with every frame count
+identical. **Nothing minted.**
+
+## 44. Hygiene
+
+| file | before | after |
+| --- | ---: | ---: |
+| `CameraDirector.js` | 3869 | **3774** (−95) |
+| `CameraDirector.test.js` | 7821 | 7844 |
+
+**Orphaned: nothing.** `frameExtentAlong` and `roomFromPointAlong` remain in use by the forward bias
+and the lateral guarantee; no config key, helper or branch became unreachable. `runInOpenMs` keeps
+all of its work — it paces the opening glide and derives the release.
+
+---
+
 ## PROPOSALS
 
 1. **Retire `contenderZoom`, or scope it to after the crossing.** It moves the zoom on **0** frames
@@ -1027,7 +1157,24 @@ buying a single racer — it is reaching for the line.
    condition the way the field guarantee does, and whether the effect is really absent on open
    tracks or merely smaller because luger-hill's world is short.
 
+17. **The line's place in frame is set by the ZOOM, not by the leader — so that is where to look.**
+    RUNIN-BACK-1 tested the hope in proposal 15 and it failed: moving the leader back to 0.34 did
+    not pull the line toward the front edge, because `_lineCeiling` asks for whatever zoom puts the
+    line at the inner-frame boundary *given* the anchor, and it gets it. **The finished track in
+    frame is therefore a property of the line ceiling's own margin, not of the placement.** The next
+    experiment is one line: ask `_lineCeiling` for the line at a point OTHER than the inner-frame
+    edge and measure `runin-forward-reach.mjs`. That is a real number to choose and it belongs to
+    the owner, which is why it is a proposal rather than a change.
+
+18. **Show him the two builds side by side rather than asking him to remember.** RUNIN-BACK-1 is
+    worse on 7 of 9 tracks on the numbers and satisfies a requirement he stated as non-negotiable.
+    That is a genuine conflict between what he specified and what he liked, and it is not resolvable
+    from measurements. Two production builds on two ports, same track and seed, is an hour of work
+    and it settles the question the last six blocks have been circling.
+
 15. **The cheapest lever is the anchor placement inside `_lineCeiling`, and it needs no new key.**
+    *(TESTED AND FAILED by RUNIN-BACK-1 — see proposal 17. The placement was restored and the width
+    did not move on any track. Left here rather than deleted because the report is append-only.)*
     §37's arithmetic is `width ≈ distance-to-line ÷ room-ahead-of-the-anchor`. Today the room ahead
     is about a third of the frame, because the run-in places its subject at `leaderForwardFrac`
     (0.66) — a value chosen so a RACER has road visible ahead of him. During the run-in the thing
