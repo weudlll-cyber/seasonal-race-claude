@@ -607,6 +607,43 @@ finish shot leave ALONG it.
 
 ## Camera / presentation fixes
 
+- [RUNIN-LINE-1.md](RUNIN-LINE-1.md) — **the line left the frame, and the term that put it out was
+  not the hold** (2026-08-17, `feat/runin-hold`, **unmerged, NOT minted, HIS EYE OWED**). The owner
+  rejected the production build because the run-in closed past its own finish line. **The instrument
+  came first**: `check-runin-frame` was green throughout because its two questions ask whether
+  RACERS are on screen — question 3 now asks whether THE LINE is, every frame from the endgame
+  threshold to the crossing, on all ten tracks, reading the director's own `_finishLineWorldPoint`,
+  `_proj.toScreen` and `_framingProbe` rather than rebuilding the rule. **It leaves on 9 of 10 tracks
+  from progress 0.976, by up to 608 px, for up to 2.4 s.** The binding term was COUNTED, not
+  eyeballed: **90% of lost frames are the corridor cap**, which raises `guaranteed` after the
+  `Math.min` and re-applies only the contender guarantee, dropping the run-in's `line` ceiling —
+  proven by a `--no-cap` control arm, and **it PREDATES the hold** (master loses the line on the same
+  nine tracks). The repair is the omitted half of a clamp that already existed: the line is
+  re-applied for the same reason the contenders are. **593 overridden frames → 0.** The consequence
+  is bigger than the diff and is reported rather than buried — **the cap now moves the shot on 0 of
+  7441 photo-finish frames, down from 5019**, because the line was the argmin on every one of them,
+  while its own promise moves 8.8% → 8.7% NOT WHOLE. The residual (5 tracks, 7–31 frames, 40–228 px)
+  is the PAN trailing a bound it is honouring, so the guard fails on cause — delivered zoom tighter
+  than the run-in's ceiling — and never on a pixel threshold. Pace table at `runInOpenMs`
+  1250/1750/2250 included: a longer sweep shrinks the residual on every affected track.
+
+- [RUNIN-HOLD-1.md](RUNIN-HOLD-1.md) — **hold the opening shot, then close in ONE sweep**
+  (2026-08-16, `feat/runin-hold`, **unmerged, NOT minted, HIS EYE OWED**). The run-in began closing
+  the moment the endgame window opened, so the first seconds were a crawl — ~3.6 s at ~95 px/s of
+  picture flow. It now holds its opening shot and releases only when one steady close arrives at the
+  crossing. **The release is DERIVED**: release when `(1 − progress) / observed rate ≤ runInOpenMs` —
+  the distance still to run and the span the shot must close, no new key and no picked fraction. The
+  sweep is parameterised by PROGRESS, not wall clock, so `u = 1` at the line **by construction** and
+  the crossing is the state's own shot with no seam. Measured on ten tracks: **hold 77–85% of the
+  window, sweep 1.13–1.30 s** against the 1250 ms key; short-window compression fired 0 of 10.
+  **CAMERA `ff2bc42af377b5cf` → `bca27102de40518b` and RENDER `0e04fa4a5e9c3b85` →
+  `3a5268aac86f665d`, neither minted.** Tracking lag RE-measured (not re-stamped): every frame count
+  identical, movement entirely in the endgame tails (PHOTO_FINISH p95 26.85 → 33.94). Two lessons
+  worth more than the change: **both release estimators I rejected were fine and my MEASUREMENT was
+  wrong** — progress asymptotes to 0.999 and never reaches 1, so a script waiting for `>= 1` counts
+  the whole post-crossing ending as sweep; and interpolating on `_lineCeiling`'s `Infinity` produced
+  **NaN in cam.zoom**, caught only because 21 existing tests failed.
+
 - [MINIMAP-MARKS-1.md](MINIMAP-MARKS-1.md) — the minimap now marks the START and the FINISH, and
   washes down the UNRACED TAIL behind the finish (2026-08-15, `feat/minimap-start-finish`,
   **pushed, unmerged**; marks @ `faf379fd` **ACCEPTED by the owner on a production build**, tail @
