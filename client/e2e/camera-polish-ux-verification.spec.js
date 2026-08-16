@@ -11,6 +11,12 @@
 // ============================================================
 
 import { test, expect } from '@playwright/test';
+// E2E-STALE-2: the defaults and the spread function are IMPORTED from the shipped source, never
+// restated here. `defaults.js` is the one home for a config value (CLAUDE.md, ship ceremony), and
+// eight hard-coded copies of the old pair are exactly what the 2026-08 rebaseline invalidated.
+// Both modules import cleanly in plain Node — no DOM, no storage access at module load.
+import { DEFAULT_BASE_SPEED_CONFIG } from '../src/modules/storage/defaults.js';
+import { spreadPercent } from '../src/modules/baseSpeedConfig.js';
 
 // ── Shared geometries ──────────────────────────────────────────────────────────
 
@@ -514,45 +520,72 @@ test.describe('V7 — Sprite-Scale: override hierarchy, race starts cleanly', ()
   });
 });
 
-// ── V8 — BaseSpeed: default values ───────────────────────────────────────────
+// ── V8–V12 — the Speed Range block, rewritten against the screen it now lives on ──────────────
+//
+// E2E-STALE-2 — WHY THIS IS A REWRITE AND NOT A REPAIR. Every test below clicked a Dev-Screen
+// section called `Base Speed`. There is no such section: the controls live under **Speed Range**
+// inside **Race Tuning** (`DynamicsTuningSection.jsx`), which is an *advanced-tier* sidebar entry.
+// Having got there, the tests then located the two inputs POSITIONALLY —
+// `input[type=number]`.first() / .nth(1) — which on today's card lands on Normal Speed and Min
+// Speed. Both halves had to be rebuilt, so the section helper and the named hooks below replace
+// them; the inputs now carry `min-speed-input` / `max-speed-input` the way Normal Speed already did.
+//
+// AND THE NUMBERS ARE NOT TYPED IN. The old file restated 0.00091/0.00118 in eight places; the
+// rebaseline moved them and every one of those places went stale at once. `defaults.js` is the one
+// home for a default, so the spec IMPORTS it — a future rebaseline moves these tests with it, and
+// a test that disagrees with the shipped default is then a real finding rather than a stale string.
 
-test.describe('V8 — BaseSpeed default values in Dev Screen', () => {
+async function goToSpeedRange(page) {
+  await page.goto('/dev');
+  await page.getByRole('button', { name: /Race Tuning/ }).click();
+  await expect(page.getByTestId('min-speed-input')).toBeVisible();
+}
+
+/** What the number input renders for a config value — React stringifies it. */
+const asShown = (n) => String(n);
+
+test.describe('V8 — Speed Range default values in Dev Screen', () => {
   test.beforeEach(async ({ page }) => {
     await clearBaseSpeedConfig(page);
   });
 
-  test('Min Speed default is 0.00091', async ({ page }) => {
-    await page.goto('/dev');
-    await page.getByRole('button', { name: /Base Speed/ }).click();
-    const minInput = page.locator('input[type="number"]').first();
-    await expect(minInput).toHaveValue('0.00091');
+  test('Min Speed shows the shipped default', async ({ page }) => {
+    await goToSpeedRange(page);
+    await expect(page.getByTestId('min-speed-input')).toHaveValue(
+      asShown(DEFAULT_BASE_SPEED_CONFIG.min)
+    );
   });
 
-  test('Max Speed default is 0.00118', async ({ page }) => {
-    await page.goto('/dev');
-    await page.getByRole('button', { name: /Base Speed/ }).click();
-    const maxInput = page.locator('input[type="number"]').nth(1);
-    await expect(maxInput).toHaveValue('0.00118');
+  test('Max Speed shows the shipped default', async ({ page }) => {
+    await goToSpeedRange(page);
+    await expect(page.getByTestId('max-speed-input')).toHaveValue(
+      asShown(DEFAULT_BASE_SPEED_CONFIG.max)
+    );
   });
 
-  test('spread preview shows ±12–14% from mean', async ({ page }) => {
-    await page.goto('/dev');
-    await page.getByRole('button', { name: /Base Speed/ }).click();
-    // Preview should contain "±12" or "±13"
-    await expect(page.locator('p').filter({ hasText: /±1[23]/ })).toBeVisible();
+  test('spread preview states the spread of the shipped defaults', async ({ page }) => {
+    await goToSpeedRange(page);
+    // `spreadPercent` is the shipped function, imported rather than re-implemented — the screen
+    // renders `±{spread.toFixed(1)}%`, so this asserts the preview agrees with the engine's own
+    // definition of spread for the engine's own defaults.
+    const spread = spreadPercent(DEFAULT_BASE_SPEED_CONFIG.min, DEFAULT_BASE_SPEED_CONFIG.max);
+    await expect(page.getByTestId('speed-spread-percent')).toHaveText(`±${spread.toFixed(1)}%`);
   });
 
-  test('2-lap gap estimate is ~0.46 laps for default values', async ({ page }) => {
-    await page.goto('/dev');
-    await page.getByRole('button', { name: /Base Speed/ }).click();
-    // 2 × (1 - 0.00091/0.00118) ≈ 0.46
-    await expect(page.locator('p').filter({ hasText: /0\.4[0-9]/ })).toBeVisible();
+  test('2-lap gap estimate matches gap = 2 × (1 − min/max) for the defaults', async ({ page }) => {
+    await goToSpeedRange(page);
+    // The formula is stated on the screen's own tooltip; this reproduces it from the defaults
+    // instead of hard-coding the answer, which is what went stale last time.
+    const gap = 2 * (1 - DEFAULT_BASE_SPEED_CONFIG.min / DEFAULT_BASE_SPEED_CONFIG.max);
+    await expect(page.getByTestId('speed-spread-preview')).toContainText(
+      `${gap.toFixed(2)} laps`
+    );
   });
 });
 
-// ── V9 — BaseSpeed custom config ─────────────────────────────────────────────
+// ── V9 — Speed Range custom config ───────────────────────────────────────────
 
-test.describe('V9 — BaseSpeed custom config persists in Dev Screen', () => {
+test.describe('V9 — Speed Range custom config persists in Dev Screen', () => {
   test('custom config {min: 0.0008, max: 0.0013} shown in inputs', async ({ page }) => {
     await page.addInitScript(() => {
       localStorage.setItem(
@@ -560,56 +593,53 @@ test.describe('V9 — BaseSpeed custom config persists in Dev Screen', () => {
         JSON.stringify({ min: 0.0008, max: 0.0013 })
       );
     });
-    await page.goto('/dev');
-    await page.getByRole('button', { name: /Base Speed/ }).click();
-    const minInput = page.locator('input[type="number"]').first();
-    const maxInput = page.locator('input[type="number"]').nth(1);
-    await expect(minInput).toHaveValue('0.0008');
-    await expect(maxInput).toHaveValue('0.0013');
+    await goToSpeedRange(page);
+    await expect(page.getByTestId('min-speed-input')).toHaveValue('0.0008');
+    await expect(page.getByTestId('max-speed-input')).toHaveValue('0.0013');
   });
 
-  test('wider spread triggers orange warning color (>15%)', async ({ page }) => {
+  test('a spread past the warning threshold is coloured amber, not accent', async ({ page }) => {
     await page.addInitScript(() => {
       localStorage.setItem(
         'racearena:baseSpeedConfig',
         JSON.stringify({ min: 0.0007, max: 0.0014 })
       );
     });
-    await page.goto('/dev');
-    await page.getByRole('button', { name: /Base Speed/ }).click();
-    // ±33% spread → orange warning text color
-    const spreadText = page.locator('strong').filter({ hasText: /±\d+/ }).first();
-    await expect(spreadText).toBeVisible();
-    const color = await spreadText.evaluate((el) => getComputedStyle(el).color);
-    // Should not be the default accent color (either orange or amber applied)
-    expect(color).not.toBe('');
+    await goToSpeedRange(page);
+    // The old assertion was `expect(color).not.toBe('')`, which no computed colour can ever be —
+    // it passed for every colour including the un-warned one. The rule the screen actually applies
+    // is `spread > 20 → #f59e0b`, and ±33.3% is past it, so the colour is now asserted.
+    const spread = spreadPercent(0.0007, 0.0014);
+    expect(spread, 'this fixture must exceed the >20% amber threshold').toBeGreaterThan(20);
+    await expect(page.getByTestId('speed-spread-percent')).toHaveCSS('color', 'rgb(245, 158, 11)');
   });
 });
 
-// ── V10 — BaseSpeed reset to defaults ────────────────────────────────────────
+// ── V10 — Speed Range reset to defaults ──────────────────────────────────────
 
-test.describe('V10 — BaseSpeed Reset Defaults', () => {
-  test('reset defaults restores 0.00091/0.00118 after custom values', async ({ page }) => {
+test.describe('V10 — Speed Range Reset Defaults', () => {
+  test('the Speed Range reset restores the shipped defaults after custom values', async ({
+    page,
+  }) => {
     await page.addInitScript(() => {
       localStorage.setItem(
         'racearena:baseSpeedConfig',
         JSON.stringify({ min: 0.0008, max: 0.0013 })
       );
     });
-    await page.goto('/dev');
-    await page.getByRole('button', { name: /Base Speed/ }).click();
+    await goToSpeedRange(page);
+    await expect(page.getByTestId('min-speed-input')).toHaveValue('0.0008');
 
-    // Verify custom values loaded
-    const minInput = page.locator('input[type="number"]').first();
-    await expect(minInput).toHaveValue('0.0008');
+    // The screen has several resets now (one per sub-heading, plus a card-level Reset All). The
+    // one under test is the Speed Range heading's, which already names itself.
+    await page.getByTestId('reset-speed-range').click();
 
-    // Reset
-    await page.getByRole('button', { name: /Reset Defaults/ }).click();
-
-    // Should be back to defaults
-    await expect(minInput).toHaveValue('0.00091');
-    const maxInput = page.locator('input[type="number"]').nth(1);
-    await expect(maxInput).toHaveValue('0.00118');
+    await expect(page.getByTestId('min-speed-input')).toHaveValue(
+      asShown(DEFAULT_BASE_SPEED_CONFIG.min)
+    );
+    await expect(page.getByTestId('max-speed-input')).toHaveValue(
+      asShown(DEFAULT_BASE_SPEED_CONFIG.max)
+    );
   });
 });
 
@@ -664,37 +694,35 @@ test.describe('V11 — Open track: sprite scale unaffected by camera zoom', () =
   });
 });
 
-// ── V12 — Speed-range: new defaults tighter than old ±17% ────────────────────
+// ── V12 — Speed-range: the preview agrees with the shipped defaults ──────────
 
-test.describe('V12 — Speed-range spread preview matches new tighter defaults', () => {
+test.describe('V12 — Speed-range spread preview matches the shipped defaults', () => {
   test.beforeEach(async ({ page }) => {
     await clearBaseSpeedConfig(page);
   });
 
-  test('default spread is narrower than old 34% total range', async ({ page }) => {
-    await page.goto('/dev');
-    await page.getByRole('button', { name: /Base Speed/ }).click();
-    const spreadText = await page
-      .locator('p')
-      .filter({ hasText: /total range/ })
-      .textContent();
-    // Extract the "XX% total range" number
-    const match = spreadText?.match(/(\d+)%\s+total range/);
-    const totalRange = match ? parseInt(match[1], 10) : 999;
-    expect(totalRange).toBeLessThan(30); // default 26%, old was 34%
-    expect(totalRange).toBeGreaterThan(20); // still meaningful spread
+  test('the total range the preview states is twice the shipped spread', async ({ page }) => {
+    // E2E-STALE-2: this used to bound the number in both directions — `< 30` and `> 20` — against
+    // a default of "26%". The rebaseline narrowed the range and the LOWER bound is what now fails:
+    // the shipped defaults give 16%. A window around a number the test does not own was always the
+    // wrong shape. It now asserts the identity the screen renders — total range = 2 × spread —
+    // against `defaults.js`, which cannot go stale when the default moves.
+    await goToSpeedRange(page);
+    const spread = spreadPercent(DEFAULT_BASE_SPEED_CONFIG.min, DEFAULT_BASE_SPEED_CONFIG.max);
+    const text = await page.getByTestId('speed-spread-preview').textContent();
+    const totalRange = Number(text?.match(/(\d+)%\s+total range/)?.[1]);
+    expect(totalRange, `no "N% total range" in "${text}"`).not.toBeNaN();
+    expect(totalRange).toBe(Number((spread * 2).toFixed(0)));
   });
 
   test('formula preview 2-lap gap < 0.5 laps — no lap-wrap confusion', async ({ page }) => {
-    await page.goto('/dev');
-    await page.getByRole('button', { name: /Base Speed/ }).click();
-    // Extract the lap-gap number from "leader finishes ~X.XX laps ahead of last"
-    const previewText = await page
-      .locator('p')
-      .filter({ hasText: /ahead of last/ })
-      .textContent();
-    const lapMatch = previewText?.match(/([0-9]+\.[0-9]+)\s+laps/);
-    const lapGap = lapMatch ? parseFloat(lapMatch[1]) : 999;
-    expect(lapGap).toBeLessThan(0.5); // 0.46 for defaults — no lap wrap
+    // THE ONE STANDING CLAIM IN THIS BLOCK that is about the product rather than about a number:
+    // whatever the defaults are, the two-lap gap must stay under half a lap or the minimap's
+    // lap-wrap becomes ambiguous. Kept as an absolute on purpose.
+    await goToSpeedRange(page);
+    const previewText = await page.getByTestId('speed-spread-preview').textContent();
+    const lapGap = Number(previewText?.match(/([0-9]+\.[0-9]+)\s+laps/)?.[1]);
+    expect(lapGap, `no lap gap in "${previewText}"`).not.toBeNaN();
+    expect(lapGap).toBeLessThan(0.5);
   });
 });

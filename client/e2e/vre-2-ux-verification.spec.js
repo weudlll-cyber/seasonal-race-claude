@@ -83,33 +83,48 @@ test.describe('V2 — Badge indicators', () => {
 // ── V3 — Validation recovery ──────────────────────────────────────────────────
 
 test.describe('V3 — Validation recovery', () => {
-  test('invalid ID shows error; fixing ID clears error', async ({ page }) => {
+  // E2E-STALE-2: THE ID FIELD IS GONE FROM THE PRODUCT, not broken in it.
+  // `SurfaceClassManager.jsx` says so in its own header — "ID is auto-generated from the label via
+  // slugify — not user-visible" — and `handleSave` proves it: `uniqueSlug(slugify(draft.label))`.
+  // So the old "type an ID with capitals and spaces, get a lowercase error, fix it, error clears"
+  // test was asserting a control that no longer exists and a validation rule that was replaced by
+  // DERIVATION. Both tests below used to fill `#sc-id` and timed out waiting for it.
+  //
+  // The label that this derivation is asserted with, and the id it must produce.
+  const SLUG_LABEL = 'E2E Slug Test';
+  const SLUG_ID = 'e2e-slug-test';
+
+  // The one test here that writes to the shared server cleans up after itself, by the derived id.
+  test.afterEach(async ({ page }) => {
+    await page.request.delete(`${E2E.apiUrl}/api/surface-classes/${SLUG_ID}`).catch(() => {});
+  });
+
+  test('no ID control is offered; the ID is derived from the label on save', async ({ page }) => {
     await goToSurfaceClasses(page);
     await page.getByRole('button', { name: /New Surface Class/i }).click();
 
-    // Fill invalid ID
-    await page.locator('#sc-label').fill('Test Label');
-    await page.locator('#sc-id').fill('INVALID ID!');
+    // The form offers a Label and a Generator and NOTHING that sets an id.
+    await expect(page.locator('#sc-id')).toHaveCount(0);
+    await page.locator('#sc-label').fill(SLUG_LABEL);
     await page.getByRole('button', { name: /Save surface class/i }).click();
 
-    // Error message should appear
-    await expect(page.getByText(/lowercase/i)).toBeVisible();
-
-    // Fix the ID
-    await page.locator('#sc-id').fill('valid-id-now');
-    // Error should be gone after typing
-    await expect(page.getByText(/lowercase/i)).not.toBeVisible();
+    // The class is created and listed under its label...
+    await expect(page.getByRole('button', { name: new RegExp(SLUG_LABEL, 'i') })).toBeVisible();
+    // ...and DELETE by the slugified id succeeds, which is the statement that `slugify(label)` —
+    // not anything the operator typed — is what became the id. A wrong id would 404 here.
+    const del = await page.request.delete(`${E2E.apiUrl}/api/surface-classes/${SLUG_ID}`);
+    expect(del.ok(), `DELETE /api/surface-classes/${SLUG_ID} → ${del.status()}`).toBeTruthy();
   });
 
   test('empty label shows error on Save', async ({ page }) => {
     await goToSurfaceClasses(page);
     await page.getByRole('button', { name: /New Surface Class/i }).click();
 
-    // Leave label empty, fill valid ID
-    await page.locator('#sc-id').fill('test-empty-label');
+    // Leave the label empty — the only thing `handleSave` validates before it calls the server.
     await page.getByRole('button', { name: /Save surface class/i }).click();
 
     await expect(page.getByRole('alert')).toBeVisible();
+    await expect(page.getByRole('alert')).toContainText(/label is required/i);
   });
 
   test('Save button exists and is not disabled when form is open', async ({ page }) => {
@@ -242,13 +257,21 @@ test.describe('V6 — Live Preview stability', () => {
     await page.getByRole('button').filter({ hasText: 'sand' }).first().click();
     await expect(page.getByLabel(/Surface effect live preview/i)).toBeVisible();
 
-    // Move sliders — page should not crash
+    // Move sliders — page should not crash.
+    //
+    // E2E-STALE-2: this used to `fill('30')` unconditionally and failed with "Malformed value" —
+    // the first slider is Start Size, whose range is 1–20, and Playwright refuses a value a range
+    // input cannot hold. The number was never the point; MOVING the slider was. So the target is
+    // now read off the control itself — its own max — which is a value the product accepts by
+    // construction and stays correct if the range is ever changed.
     const sliders = page.locator('input[type="range"]');
     const count = await sliders.count();
-    if (count > 0) {
-      await sliders.first().fill('30');
-      await expect(page.getByLabel(/Surface effect live preview/i)).toBeVisible();
-    }
+    expect(count, 'the surface-class editor should expose config sliders').toBeGreaterThan(0);
+    const first = sliders.first();
+    const max = await first.getAttribute('max');
+    await first.fill(String(max));
+    await expect(first).toHaveValue(String(max));
+    await expect(page.getByLabel(/Surface effect live preview/i)).toBeVisible();
   });
 
   test('preview remains visible after navigating between classes', async ({ page }) => {

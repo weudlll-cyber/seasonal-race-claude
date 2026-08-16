@@ -91,24 +91,42 @@ test.describe('D9 — lap selector (closed track)', () => {
     await dirtOvalCard.click();
   });
 
-  test('lap selector renders 4 buttons after selecting a closed track', async ({ page }) => {
-    await expect(page.getByRole('button', { name: '1' })).toBeVisible();
-    await expect(page.getByRole('button', { name: '2*' })).toBeVisible();
-    await expect(page.getByRole('button', { name: '3' })).toBeVisible();
-    await expect(page.getByRole('button', { name: '4' })).toBeVisible();
+  // E2E-STALE-2: THE SELECTOR OFFERS EIGHT CHOICES, NOT FOUR, and it is addressed BY TEST ID.
+  // `LAP_CHOICES` in SetupScreen.jsx is [1, 2, 3, 4, 5, 6, 8, 10] and each button carries
+  // `data-testid="lap-choice-<n>"`. The old tests located by bare digit — `getByRole('button',
+  // {name: '1'})` — which is a strict-mode violation the moment a "10" exists, and it did not name
+  // the stale count at all. The hook the markup already offers is used instead of adding one.
+  const LAP_CHOICES = [1, 2, 3, 4, 5, 6, 8, 10];
+
+  test('lap selector renders one button per lap choice after selecting a closed track', async ({
+    page,
+  }) => {
+    for (const n of LAP_CHOICES) {
+      await expect(page.getByTestId(`lap-choice-${n}`)).toBeVisible();
+    }
+    // …and nothing beyond them.
+    await expect(page.locator('[data-testid^="lap-choice-"]')).toHaveCount(LAP_CHOICES.length);
   });
 
-  test('lap 2 is auto-selected by default for 60 s duration', async ({ page }) => {
-    // The auto button carries the * suffix
-    const autoBtn = page.getByRole('button', { name: '2*' });
-    await expect(autoBtn).toBeVisible();
-    // Hint text confirms the auto selection
-    await expect(page.getByText(/auto from duration/)).toBeVisible();
+  test('the track default lap count is marked with * and is what the start bar shows', async ({
+    page,
+  }) => {
+    // E2E-STALE-2: the default no longer comes from a chosen duration — it comes from the TRACK
+    // (`effectiveLaps = selectedLaps ?? trackDefaultLaps(selectedTrack)`), and duration is derived
+    // from it rather than the other way round. So the old "auto from duration" hint does not exist;
+    // the hint the screen actually renders is "* track default". Dirt Oval's default is 2.
+    await expect(page.getByTestId('lap-choice-2')).toHaveText('2*');
+    await expect(page.getByTestId('closed-track-estimated-duration')).toContainText(
+      '* track default'
+    );
+    await expect(page.getByText(/^2 laps · ~\d+s$/)).toBeVisible();
   });
 
   test('estimated duration label is visible', async ({ page }) => {
-    // Matches "~31s est." or similar
-    await expect(page.getByText(/~\d+s est\./)).toBeVisible();
+    // E2E-STALE-2: the label reads "Estimated duration: 87s (field 87–87s)", not "~87s est.".
+    await expect(page.getByTestId('closed-track-estimated-duration')).toContainText(
+      /Estimated duration: \d+s/
+    );
   });
 
   test('start bar shows "2 laps" for default 60 s / horse', async ({ page }) => {
@@ -116,51 +134,51 @@ test.describe('D9 — lap selector (closed track)', () => {
   });
 
   test('clicking lap 3 updates start bar to "3 laps"', async ({ page }) => {
-    await page.getByRole('button', { name: '3' }).click();
+    await page.getByTestId('lap-choice-3').click();
     await expect(page.getByText(/3 laps/)).toBeVisible();
   });
 
   test('clicking lap 1 updates start bar to "1 lap"', async ({ page }) => {
-    await page.getByRole('button', { name: '1' }).click();
-    await expect(page.getByText(/1 lap/)).toBeVisible();
+    await page.getByTestId('lap-choice-1').click();
+    await expect(page.getByText(/^1 lap · ~\d+s$/)).toBeVisible();
   });
+
+  // E2E-STALE-2: THE ESTIMATE MOVED AND THE SELECT IS ONE OF FOUR COMBOBOXES ON THIS SCREEN.
+  // Reading it by `~\d+s est\.` matched nothing, and `getByRole('combobox')` is a strict-mode
+  // violation (branding profile, racer type, Quick-Test racer, Quick-Test names). The racer-type
+  // select already carries `data-testid="racer-type-select"`; the estimate already carries
+  // `data-testid="closed-track-estimated-duration"`.
+  const readEstimate = async (page) => {
+    const text = await page.getByTestId('closed-track-estimated-duration').textContent();
+    const m = text?.match(/Estimated duration: (\d+)s/);
+    expect(m, `no estimate in "${text}"`).not.toBeNull();
+    return parseInt(m[1], 10);
+  };
 
   test('estimated duration is ~3× higher for Snail than for Horse', async ({ page }) => {
-    // Helper: read the estimate text and extract the number
-    const readEstimate = async () => {
-      const el = page.locator('text=/~\\d+s est\\./')
-      const text = await el.textContent();
-      return parseInt(text.match(/~(\d+)s est\./)?.[1] ?? '0', 10);
-    };
+    const horseSecs = await readEstimate(page);
 
-    const horseSecs = await readEstimate();
-
-    // Switch to Snail (speedMultiplier 0.30)
-    await page.getByRole('combobox').selectOption('Snail 🐌');
-    const snailSecs = await readEstimate();
-
-    // Snail should take > 2× longer per lap (exact ratio ~ 1/0.30 = 3.33×)
-    expect(snailSecs).toBeGreaterThan(horseSecs * 2);
+    // Switch to Snail (speedMultiplier 0.30). By VALUE — the option label carries an emoji.
+    await page.getByTestId('racer-type-select').selectOption('snail');
+    await expect
+      .poll(() => readEstimate(page))
+      .toBeGreaterThan(horseSecs * 2); // exact ratio ~ 1/0.30 = 3.33×
   });
 
-  test('estimated duration is higher for Rocket than for Horse', async ({ page }) => {
-    const readEstimate = async () => {
-      const el = page.locator('text=/~\\d+s est\\./')
-      const text = await el.textContent();
-      return parseInt(text.match(/~(\d+)s est\./)?.[1] ?? '0', 10);
-    };
-
-    const horseSecs = await readEstimate();
-    await page.getByRole('combobox').selectOption('Rocket 🚀');
-    const rocketSecs = await readEstimate();
-
-    // Rocket (1.25×) is faster → fewer seconds per lap
-    expect(rocketSecs).toBeLessThan(horseSecs);
+  test('estimated duration is lower for a faster racer type than for Horse', async ({ page }) => {
+    // E2E-STALE-2: THE OLD TEST PICKED ROCKET, WHICH THIS TRACK DOES NOT OFFER. Dirt Oval declares
+    // the surface classes Sand/Earth/Mud/Grass and the select is filtered to compatible types, so
+    // Rocket is absent from it — the test could never have selected it. Motorbike (1.05) is on the
+    // list and is the faster-than-Horse case the test was after. Its NAME also said "higher" while
+    // it asserted "lower"; the assertion was right and the name is now what it does.
+    const horseSecs = await readEstimate(page);
+    await page.getByTestId('racer-type-select').selectOption('motorbike');
+    await expect.poll(() => readEstimate(page)).toBeLessThan(horseSecs);
   });
 
   test('switching tracks resets lap selection to auto', async ({ page }) => {
     // Select 4 laps explicitly on Dirt Oval
-    await page.getByRole('button', { name: '4' }).click();
+    await page.getByTestId('lap-choice-4').click();
     await expect(page.getByText(/4 laps/)).toBeVisible();
 
     // Click any other track card — this changes selectedTrackId and resets selectedLaps.
@@ -190,17 +208,54 @@ test.describe('D9 — open track info row', () => {
   });
 
   test('no lap buttons shown for open track', async ({ page }) => {
-    await expect(page.getByRole('button', { name: '1' })).not.toBeVisible();
-    await expect(page.getByRole('button', { name: '2*' })).not.toBeVisible();
+    // Was two bare-digit role queries — the same strict-mode hazard the closed-track block had,
+    // passing only because an open track happens to render no such button at all.
+    await expect(page.locator('[data-testid^="lap-choice-"]')).toHaveCount(0);
   });
 
-  test('open track info row mentions duration and open-track label', async ({ page }) => {
-    // The info span reads "60s — open track, finish line placed at …"
-    await expect(page.getByText(/open track.*finish line/i)).toBeVisible();
+  // E2E-STALE-2: THE OPEN-TRACK ROW SAYS SOMETHING ELSE NOW, and what it says is a different
+  // model. It used to read "60s — open track, finish line placed at X% of track": duration was
+  // chosen and the finish line was reported as a fraction. Today the operator moves a duration
+  // slider and the row states the track's NATURAL MAXIMUM at this race's pace next to the
+  // estimated duration (SetupScreen.jsx, `open-track-natural-max` / `open-track-estimated-duration`).
+  // Neither "finish line" nor "% of track" is text this screen produces, so both tests were
+  // waiting for a string the product retired.
+
+  test('open track info row states the natural maximum and the estimated duration', async ({
+    page,
+  }) => {
+    await expect(page.getByTestId('open-track-natural-max')).toContainText(
+      /Natural maximum at normal speed: \d+s/
+    );
+    await expect(page.getByTestId('open-track-estimated-duration')).toContainText(
+      /Estimated duration: \d+s/
+    );
   });
 
-  test('open track info row shows finish line position', async ({ page }) => {
-    await expect(page.getByText(/% of track/)).toBeVisible();
+  test('asking for more than the natural maximum warns that the whole field is slowed', async ({
+    page,
+  }) => {
+    // THIS IS WHERE THE FINISH LINE WENT. The old test asked where the finish line was placed;
+    // the answer today is "wherever a normal racer is after the chosen time — until you ask for
+    // longer than the track can hold, and then the line is fixed and the field slows instead".
+    // That boundary is the natural maximum, and crossing it is what the screen reports.
+    const slider = page.getByTestId('open-track-duration-slider');
+    const max = await slider.getAttribute('max');
+    const naturalMax = parseInt(
+      (await page.getByTestId('open-track-natural-max').textContent())?.match(/(\d+)s/)?.[1] ?? '0',
+      10
+    );
+    expect(Number(max), 'the slider must reach past the natural maximum').toBeGreaterThan(
+      naturalMax
+    );
+
+    await slider.fill(String(max));
+    await expect(page.getByTestId('open-track-slowdown-warning')).toContainText(
+      /Beyond this track.s natural maximum of \d+s/
+    );
+    await expect(page.getByTestId('open-track-slowdown-warning')).toContainText(
+      /\d+% of normal pace/
+    );
   });
 });
 

@@ -419,8 +419,14 @@ const DynamicsTuningSection = forwardRef(function DynamicsTuningSection(_, ref) 
               Min Speed
               <InfoTooltip text="The slowest possible base speed for a racer. Lower values mean some racers can fall well behind." />
             </label>
+            {/* E2E-STALE-2: named, like `normal-speed-input` above it. The browser suite used to
+                reach these two by POSITION — `input[type=number]`.first()/.nth(1) inside a section
+                called "Base Speed" — and both halves of that broke when the section was folded into
+                Race Tuning. A name is the only thing that makes those tests a repair rather than a
+                rewrite every time this screen is rearranged. */}
             <input
               type="number"
+              data-testid="min-speed-input"
               className={s.input}
               min={0.0001}
               max={0.005}
@@ -442,6 +448,7 @@ const DynamicsTuningSection = forwardRef(function DynamicsTuningSection(_, ref) 
             </label>
             <input
               type="number"
+              data-testid="max-speed-input"
               className={s.input}
               min={0.0001}
               max={0.005}
@@ -473,11 +480,15 @@ const DynamicsTuningSection = forwardRef(function DynamicsTuningSection(_, ref) 
             Spread Preview
           </p>
           {speedValid ? (
-            <p style={{ fontSize: '0.82rem', color: 'var(--color-muted)' }}>
+            <p
+              data-testid="speed-spread-preview"
+              style={{ fontSize: '0.82rem', color: 'var(--color-muted)' }}
+            >
               Mean: <strong style={{ color: 'var(--color-accent)' }}>{mean}</strong>
               {'  ·  '}
               Spread:{' '}
               <strong
+                data-testid="speed-spread-percent"
                 style={{
                   color: spread > 20 ? '#f59e0b' : spread > 15 ? '#fb923c' : 'var(--color-accent)',
                 }}
