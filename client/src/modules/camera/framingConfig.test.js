@@ -70,7 +70,50 @@ describe('resolveFramingConfig — the shipped config', () => {
   // fallback instead of the value the owner set. That has happened before, in tooltips.
   const f = resolveFramingConfig(DEFAULT_CAMERA_CONFIG);
 
-  it('every shipped value survives its own validation band', () => {
+  // ── WHY THE BANDS ARE ASSERTED DIRECTLY BELOW, AND NOT ONLY THROUGH THE RESOLVER ──────────────
+  // Four of the six round-trip assertions in the next test CANNOT FAIL any more, and two of them
+  // could before MIRRORS-BY-REFERENCE pointed the resolver's fallbacks at the defaults
+  // (NIGHT-2026-08-18). `referenceCorridorPx` and `glideDurationMs` fall back to
+  // DEFAULT_CAMERA_CONFIG's own value, so a shipped value that leaves its band is replaced by
+  // ITSELF and `f.k === DEFAULT.k` still holds — the exact drift this describe block is named
+  // after, now invisible to it. `minRacersVisible` and `innerFramePct` have no band at all, so
+  // their round trip was always a tautology.
+  //
+  // The two that survive are the two whose fallback is a DIFFERENT value: `leaderForwardFrac`
+  // (falls back to null) and `transitionGrammar` (falls back to 'legacy'). Those stay as they are.
+  //
+  // The repair is to assert the RULE — the band itself, against the shipped number — which no
+  // change to a fallback can defeat. Proven in both directions: with `glideDurationMs` set to 2000
+  // this block FAILS, and the round-trip test below still passes.
+  it('every shipped value satisfies the band the resolver enforces', () => {
+    const c = DEFAULT_CAMERA_CONFIG;
+
+    expect(Number.isFinite(c.referenceCorridorPx)).toBe(true);
+    expect(c.referenceCorridorPx).toBeGreaterThan(0);
+
+    expect(Number.isFinite(c.glideDurationMs)).toBe(true);
+    expect(c.glideDurationMs).toBeGreaterThanOrEqual(300);
+    expect(c.glideDurationMs).toBeLessThanOrEqual(900);
+
+    expect(Number.isFinite(c.leaderForwardFrac)).toBe(true);
+    expect(c.leaderForwardFrac).toBeGreaterThan(0.5);
+    expect(c.leaderForwardFrac).toBeLessThanOrEqual(0.8);
+
+    expect(['cut', 'glide']).toContain(c.cameraTransitionGrammar);
+
+    // No band in the resolver — `?? ` only — so the rule these two have is EXISTENCE, and that is
+    // all this asserts. Stated rather than dressed up as a band that is not there.
+    expect(c.minRacersVisible).not.toBeUndefined();
+    expect(c.targetInnerFramePct).not.toBeUndefined();
+
+    for (const s of ALL_FRAMED_STATES) {
+      const v = c.cameraStateProfiles[s].visibleCorridors;
+      expect(Number.isFinite(v)).toBe(true);
+      expect(v).toBeGreaterThan(0);
+    }
+  });
+
+  it('the resolver returns the shipped value rather than a fallback', () => {
     expect(f.referenceCorridorPx).toBe(DEFAULT_CAMERA_CONFIG.referenceCorridorPx);
     expect(f.glideDurationMs).toBe(DEFAULT_CAMERA_CONFIG.glideDurationMs);
     expect(f.leaderForwardFrac).toBe(DEFAULT_CAMERA_CONFIG.leaderForwardFrac);
@@ -102,9 +145,17 @@ describe('resolveFramingConfig — the bands REJECT, they do not clamp', () => {
     expect(band({ referenceCorridorPx: 450 }).referenceCorridorPx).toBe(450);
   });
 
-  it('glideDurationMs: 299 and 901 are REJECTED to 500, not pulled to 300 and 900', () => {
-    expect(band({ glideDurationMs: 299 }).glideDurationMs).toBe(500);
-    expect(band({ glideDurationMs: 901 }).glideDurationMs).toBe(500);
+  // The RULE is reject-to-default, not clamp-to-edge, and naming the default rather than 500 is
+  // what makes that the assertion (NIGHT-2026-08-18). It still discriminates: a resolver that
+  // clamped would return 300 and 900, which are not the default. What it no longer does is go red
+  // on an honest change of the shipped duration, which is the re-blessing habit R7 warns about.
+  it('glideDurationMs: 299 and 901 are REJECTED to the shipped default, not pulled to the band edges', () => {
+    expect(band({ glideDurationMs: 299 }).glideDurationMs).toBe(
+      DEFAULT_CAMERA_CONFIG.glideDurationMs
+    );
+    expect(band({ glideDurationMs: 901 }).glideDurationMs).toBe(
+      DEFAULT_CAMERA_CONFIG.glideDurationMs
+    );
     expect(band({ glideDurationMs: 300 }).glideDurationMs).toBe(300); // inclusive edge
     expect(band({ glideDurationMs: 900 }).glideDurationMs).toBe(900); // inclusive edge
   });

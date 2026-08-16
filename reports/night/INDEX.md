@@ -8,6 +8,14 @@ report here could be orphaned, or an index link could dangle, with nothing notic
 `node scripts/check-index.mjs --dir=reports/night --index=reports/night/INDEX.md` now checks both
 directions.
 
+- [TEXT-TRUTH-1.md](TEXT-TRUTH-1.md) — three sentences that were false, and a test that could not
+  fail. `SpriteRacerType.js` said it was "not yet wired into the registry" while **twenty shipped
+  racer types are instances of it**; `fingerprint-default.mjs` marked a world superseded on
+  2026-07-31 as `← current`, in the header of the script that mints the hash; `verify.mjs` pointed
+  at a route table VERIFY-ROUTING-2 deleted, inside a branch that is provably unreachable. And
+  **four of six assertions in "every shipped value survives its own validation band" cannot fail** —
+  proven by sabotage: with `glideDurationMs` at 2000, the new band test fails and the old round-trip
+  test passes.
 - [MIRROR-CENSUS-1.md](MIRROR-CENSUS-1.md) — the mirror census finished: 29 disagreeing copied
   defaults → 21, eight stale copies now reading the one home, all four fingerprints measured either
   side and byte-identical. **One "UNFIREABLE" verdict was false** — the sim's own `createRacePlan`
