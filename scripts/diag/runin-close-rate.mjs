@@ -70,6 +70,14 @@ for (const geo of loadTracks()) {
   let compressed = false;
   let mono = true;
   let prevZoom = null;
+  // RUNIN-EVEN-1: the PROFILE. Uniform means uniform, so the instantaneous rate through the close
+  // is what decides — an average is exactly what an eased curve hides behind.
+  const prof = [];
+  const profT = [];
+  let prevTgt = null;
+  let openMs = null;
+  let openZoom = null;
+  let perceptibleMs = null;
 
   runRace(
     race,
@@ -89,10 +97,27 @@ for (const geo of loadTracks()) {
         const liveNow = cd._framingProbe?.ceilings?.line;
         if (held > 0 && Number.isFinite(liveNow) && liveNow > 0) surplus = liveNow / held;
       }
-      if (releaseMs !== null) {
-        if (prevZoom !== null && cd.zoom < prevZoom - 1e-9) mono = false;
-        prevZoom = cd.zoom;
+      if (cd._lerpPhase !== 'glide' && openMs === null) {
+        openMs = ms;
+        openZoom = cd.zoom;
       }
+      // TIME UNTIL THE MOVEMENT IS PERCEPTIBLE: the first frame after the shot has opened at which
+      // the zoom has changed by 2% — a ratio, because that is how a scale change is seen.
+      if (openMs !== null && perceptibleMs === null && Math.abs(Math.log(cd.zoom / openZoom)) > 0.02)
+        perceptibleMs = ms - openMs;
+      // TWO PROFILES: what the run-in ASKED for (its own term, `ceilings.line`) and what the camera
+      // DELIVERED. The difference between them is the lerp, and telling them apart is the whole
+      // question — a uniform target that arrives non-uniform is an architecture finding, not a
+      // mistake in the rule.
+      const tgt = cd._framingProbe?.ceilings?.line;
+      if (prevZoom !== null) {
+        if (cd.zoom < prevZoom - 1e-9) mono = false;
+        if (openMs !== null) prof.push({ ms, r: Math.abs(Math.log(cd.zoom / prevZoom)) });
+      }
+      if (openMs !== null && Number.isFinite(tgt) && Number.isFinite(prevTgt) && prevTgt > 0)
+        profT.push({ ms, r: Math.abs(Math.log(tgt / prevTgt)) });
+      if (Number.isFinite(tgt)) prevTgt = tgt;
+      prevZoom = cd.zoom;
       lastMs = ms;
       lastZoom = cd.zoom;
     },
@@ -104,6 +129,18 @@ for (const geo of loadTracks()) {
     rows.push({ id: geo.id, ok: false });
     continue;
   }
+  // Flatness: the instantaneous rate at three points through the close, and the spread between the
+  // busiest and quietest tenth. A flat profile has a spread near 1.
+  const win = prof.filter((x) => x.r > 0);
+  const winT = profT.filter((x) => x.r > 0);
+  const qT = (f) => {
+    const i = Math.max(0, Math.min(winT.length - 1, Math.round(f * (winT.length - 1))));
+    return winT.length ? winT[i].r * 60 : 0;
+  };
+  const q = (f) => {
+    const i = Math.max(0, Math.min(win.length - 1, Math.round(f * (win.length - 1))));
+    return win.length ? win[i].r * 60 : 0; // per second at 60 fps
+  };
   const holdS = (releaseMs - engagedMs) / 1000;
   const closeS = (lastMs - releaseMs) / 1000;
   const spanLn = Math.abs(Math.log(lastZoom / releaseZoom));
@@ -113,7 +150,10 @@ for (const geo of loadTracks()) {
     `${geo.id.padEnd(15)} ${holdS.toFixed(2).padStart(7)} ${closeS.toFixed(2).padStart(8)} ` +
       `${spanLn.toFixed(3).padStart(8)} ${(rate === null ? "—" : rate.toFixed(3)).padStart(7)} ` +
       `${(surplus === null ? "—" : surplus.toFixed(2) + "x").padStart(8)} ` +
-      `${(compressed ? "YES" : "no").padStart(11)} ${(mono ? "yes" : "NO").padStart(5)}`,
+      `${(compressed ? "YES" : "no").padStart(11)} ${(mono ? "yes" : "NO").padStart(5)}` +
+      `  profile ${q(0.2).toFixed(2)}/${q(0.5).toFixed(2)}/${q(0.8).toFixed(2)}` +
+      `  visible@${perceptibleMs === null ? "never" : (perceptibleMs / 1000).toFixed(2) + "s"}` +
+      `  TARGET ${qT(0.2).toFixed(2)}/${qT(0.5).toFixed(2)}/${qT(0.8).toFixed(2)}`,
   );
 }
 

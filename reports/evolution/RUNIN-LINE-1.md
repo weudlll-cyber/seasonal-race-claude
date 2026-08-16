@@ -1313,6 +1313,85 @@ it is what any future attempt should be judged by first.
 
 ---
 
+---
+
+# RUNIN-EVEN-1 — the speed IS calculable. The destination is not.
+
+**Appended 2026-08-17. Nothing shipped — `CameraDirector.js` untouched at `def84d01`, so CAMERA
+`6ae77f12daf23f78` and RENDER `a870f5f9e79cb444` cannot move.** The design in the brief was right
+about the thing that defeated the last two attempts, and it fails on a different one, which this
+report names exactly.
+
+## 54. What was built — no hold, no release, no number
+
+The whole hold-and-release machinery went: `_runInHoldCeiling`, `_runInReleaseProgress`,
+`_runInSweepU`, `_runInShouldRelease`. In their place, once the opening glide is done:
+
+```
+speed = |ln(live / current)| / remainingMs        // computed once: distance ÷ time left
+current *= exp(sign · min(|span|, speed · dt))    // walked every frame, in log space
+```
+
+**Log space because uniform must mean uniform to the eye** — a scale change is perceived as a ratio.
+**No new key**: the acceleration limit for the photo-finish case is a first-order approach with
+`runInOpenMs` as its time constant, the key that already paces the opening, so "raised slowly"
+borrows the pace the shot opens at. The anchor's travel went back to raw `_runInProgress`, since the
+sweep it used to ride existed only to skip the hold; **the owner's placement and its mirror are the
+two ends, untouched.**
+
+## 55. It is not uniform, and the profile says so
+
+The instantaneous rate through the close, sampled at 20% / 50% / 80% (log-units per second):
+
+| track | **delivered** | **the run-in's own target** | first perceptible |
+| --- | --- | --- | ---: |
+| city-circuit | 0.06 / 0.22 / 0.55 | 0.00 / 0.11 / 0.34 | **6.70 s** |
+| ice-track | 0.02 / 0.74 / 0.49 | 0.02 / 0.10 / 0.53 | 1.92 s |
+| luger-hill | 0.30 / 2.32 / 0.64 | 0.15 / 0.57 / 0.70 | 1.22 s |
+| searound | 0.02 / 3.28 / 0.75 | 0.03 / 0.48 / 0.79 | 1.65 s |
+| mountainstreet | 0.01 / 2.27 / 0.66 | — | 2.07 s |
+| space-sprint | 0.01 / 2.18 / 0.63 | — | 1.93 s |
+
+**A flat profile reads 0.30 / 0.30 / 0.30. None of these do**, and the cross-track rate spread went
+from 2.08× to **13.6×** — worse than what it replaced. By the brief's own rule that is the answer,
+reported instead of the averages that would have hidden it.
+
+**And the flat foot is not gone**: city-circuit still takes 6.70 s to become perceptible, against the
+~3.6 s the old shape took.
+
+## 56. Where it breaks, and it is neither of the previous two walls
+
+**The target is not flat either** — 0.00 / 0.11 / 0.34 on city-circuit. So this is *not* the
+target-versus-delivered lag that defeated RUNIN-PIN-1. The run-in's own demand is already
+accelerating before the camera ever sees it.
+
+**The cause: the close is walking toward a MOVING destination.** `live` is `_lineCeiling`, and it
+rises hyperbolically as the leader nears the line. The walk catches it early — `step` is
+`min(|span|, speed·dt)`, so once the gap is smaller than one step the ceiling simply **becomes**
+`live` and from then on inherits *its* profile, which is anything but uniform.
+
+**So "one even speed" and "arrive exactly at what the line requires" are in conflict**, and no
+choice of speed resolves it: a speed low enough never to catch `live` would not arrive, and any
+speed that arrives then follows. The brief's design fixes the speed; the thing it moves toward is
+what is not fixed.
+
+**The speed itself was never the problem.** Computing it as distance ÷ time-remaining works exactly
+as the brief said it would — it needs no constant, no key and no borrowed sibling, which is what
+RUNIN-RATE-1 could not find. That half of the design is sound and should be kept for whoever tries
+next.
+
+## 57. State, and what `runInOpenMs` still does
+
+`CameraDirector.js` untouched; camera suite 859 green; CAMERA and RENDER unmoved, nothing to mint,
+the tracking-lag stamp cannot go stale. `engine-reach --check` over the changed diagnostic and the
+report: *"none of 2 path(s) can reach the race engine."* The served build keeps `def84d01`'s
+behaviour — the owner's placement, restored.
+
+**`runInOpenMs` keeps both its jobs** — it paces the opening glide and sets the release — because
+nothing was kept. Had the change shipped it would have kept only the first.
+
+---
+
 ## PROPOSALS
 
 1. **Retire `contenderZoom`, or scope it to after the crossing.** It moves the zoom on **0** frames
@@ -1348,7 +1427,25 @@ it is what any future attempt should be judged by first.
    condition the way the field guarantee does, and whether the effect is really absent on open
    tracks or merely smaller because luger-hill's world is short.
 
-21. **THE RATE IS ONE NUMBER AND IT IS HIS, exactly as the placement was.** RUNIN-RATE-1 proved by
+23. **WALK TO A PREDICTED DESTINATION, NOT TO THE LIVE ONE — this is the next thing to build.**
+    RUNIN-EVEN-1 found that the speed is calculable exactly as he said, and that the close still is
+    not uniform because it walks toward `_lineCeiling`, which accelerates. **Give it a fixed
+    destination instead: the ACTIVE STATE'S OWN ZOOM**, which is what the shot becomes at the
+    crossing anyway and is known every frame. Then the close is a straight log-line from the opened
+    shot to a stationary end point, at one computed speed, and it is uniform by construction. The
+    line stays protected because `_lineCeiling` remains in `_setTargets`'s `Math.min` — it just
+    stops being the thing the walk chases. **That is a small change to `_updateRunIn` alone and both
+    profile instruments already exist to judge it.**
+
+24. **Judge it on the profile, never on the average.** Every attempt in this sequence looked
+    acceptable on averages and failed on the shape: RUNIN-EVEN-1's delivered rate averages a
+    perfectly reasonable 0.077 ln/s on city-circuit while running 0.06 then 0.55. `runin-close-rate`
+    now prints the 20/50/80 profile for both the target and the delivered zoom, and **a flat profile
+    reads three equal numbers** — that is the acceptance test for anything in this area from now on.
+
+21. **THE RATE IS ONE NUMBER AND IT IS HIS, exactly as the placement was.** *(Superseded by
+    RUNIN-EVEN-1: the speed does NOT need to be a number he sets — computing it as distance over
+    time-remaining works. The obstacle moved to the destination, see proposal 23.)* RUNIN-RATE-1 proved by
     measurement that no existing pace in this camera is a rate — they are all durations or time
     constants. So a rate-governed close needs a rate, and the honest way to get one is the way the
     leader's placement was got: he sets it once. **The measurement even suggests the range**: the
