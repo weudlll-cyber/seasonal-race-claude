@@ -2738,6 +2738,17 @@ Each name carried the wrong mental model into every reader of that code. Copilot
 
 **Reference:** `server/seeds/tracks/searound.json` (200 index-aligned `innerPoints`/`outerPoints` pairs measured at exactly 131.0px, matching the declared `width: 131`), consumed via `EditorShape`; searound width-bump decision (distinct from the four geometry-expansion tracks). Session 2026-06-30.
 
+
+**AND A DOWNSCALED SCREENSHOT IS NOT A MEASUREMENT AT ALL (added 2026-08-18).** The rule above is
+about precision; this is about a picture that has stopped containing the quantity. An image scaled to
+fit a viewer, a terminal, a report or a chat window has had the thing being measured destroyed by
+resampling before anyone looked at it: a 2 px line survives as a grey smear, a 0.000 px² quad and a
+30 px one both read as "there is something there", and a colour sampled from it is a blend of its
+neighbours. **The picture still looks like evidence, which is the whole danger** — it is the only
+form of evidence that degrades silently and keeps its shape. If a number is wanted, read the geometry
+or record the draw calls. A screenshot is admissible for "does this look right to a person", which is
+a different question and the only one it can answer.
+
 ## Lesson 157 — A Fixed Seed Does Not Guarantee Determinism If Any Randomness Runs Outside the Seeded Scope
 
 The fairness sim replaced `Math.random` with a seeded PRNG _inside_ each race, but the start-row shuffle ran in the per-combo setup BEFORE that scope, using global `Math.random`. So `--seed=1` produced different start-row assignments every run, and two "identical" runs were never comparable — a subtle non-determinism that silently injected noise into every re-gate. Lesson: seeding one hot loop is not enough; a seed only guarantees reproducibility if EVERY randomness source is inside the seeded scope. Prove determinism empirically with a same-seed double-run (bit-identical SHA256) before trusting ANY run-to-run comparison — and never diagnose a "regression" from a single pair of unseeded runs.
@@ -3402,6 +3413,17 @@ counters, log columns, and the assertions that read them. Assert on the value pr
 a mirror of it. Prefer a test that can be SHOWN to fail: sabotage it once, watch it go red, restore. Evidence:
 reports/evolution/CAMERA-HYGIENE-2.md.
 
+**THE UNIFORM NEGATIVE, added 2026-08-18.** The same law has a second face, and it is the one that
+costs time rather than coverage: **an instrument that answers "none" everywhere is more likely
+reporting its own bug than a clean world.** A guard that found no losses on any of ten tracks, a
+sweep that returned zero firings on every seed, a search that matched nothing anywhere — each is
+formally a reading, and each is exactly what a broken query, an unbuilt input or a wrong path also
+produces. The question is Lesson 196's, asked of a negative: **what input would make this say
+something else, and has it ever said it?** If the instrument has never been seen to report a
+positive, its "none" is not a result. Run it against a case known to be positive — sabotage one — and
+watch it speak, before believing the zero. The cheapest version of this is to keep one deliberately
+failing fixture in the harness forever.
+
 ## Lesson 197 — The Propensity Law: Making A Dial Real Turns Every Downstream Assertion Into A Coin Flip
 
 When a setting stops being decorative and starts genuinely deciding something probabilistic, every test that
@@ -3701,3 +3723,137 @@ penalised exactly the fix it exists to encourage. **A guard that rewards the old
 read the new one is an argument against improving the code.** It now resolves
 `const X = DEFAULT_Y.k` as by-reference, and reports a constant that names a DIFFERENT key as the
 defect it is.
+
+## Lesson 208 — The Admissible-Set Law: When A Bound Is The Boundary Of What Is Possible, No Shape Inside It Can Beat It
+
+**What happened.** The owner asked for one thing: the run-in's close should be EVEN — "zoom in
+softly, at the speed necessary for that particular track, but at a UNIFORM speed". Six shapes were
+built for that sentence over two days and five were reverted, each on its own measurement: pin the
+line on screen (defeated by the target-versus-delivered lerp), anchor on the line (no placement value
+has a solution), release on a borrowed constant rate (this camera has none — every sibling is a
+duration or a time constant), walk the zoom evenly toward the line ceiling (the destination runs
+away), walk toward the state's own zoom instead (the walk is invisible: the ceiling binds on a median
+91% of closing frames), schedule the line's PLACE in frame so the resulting zoom is even (it needs
+the line OUT of frame on 9 of 9 tracks, by up to 2.46× the room ahead of the anchor).
+
+**Insight / the law.** Keeping the finish line in frame requires `zoom ≤ room / needed`. The distance
+`needed` falls to zero at the crossing, so that bound rises hyperbolically while `room` shrinks as the
+leader travels forward across the frame. **`_lineCeiling` is therefore not one option among several —
+it is the BOUNDARY of the admissible set, and it is already the fastest close that keeps the
+promise.** An even close is a chord between two fixed ends; the boundary is convex; they cross. So
+while the ENDS of the close are fixed, "even" and "the line stays in frame" are not both obtainable,
+and no seventh shape changes that.
+
+**The general form, which is the part worth carrying.** When a requirement is expressed as a bound
+and a second requirement asks for a particular SHAPE inside it, ask first whether the bound is a
+CONSTRAINT the design may trade against or the EDGE of what the geometry permits. If it is the edge,
+the only levers left are the endpoints — and those are usually somebody's taste rather than anything
+derivable. **Six shapes is what not asking that question costs.** Each of the five failures was
+correct work that measured its own wall honestly; none of them could have succeeded.
+
+**Consequence / enforcement.** Price the ask before building it. `scripts/diag/runin-line-schedule.mjs`
+answers this specific one in a single run, in the line's own units, before a line of the director is
+touched. Evidence: reports/evolution/RUNIN-LINE-1.md §64; docs/DEAD-ENDS.md §O.
+
+## Lesson 209 — The Inert-Enforcement Law: A Check That Cannot Fail Is Not A Check, And It Looks Identical To One That Can
+
+**What happened.** Four instances in one week, all found by looking rather than by anything going
+red. **(1)** The end-to-end suite had been failing for about two months and nobody knew, because
+nothing ran it on a schedule and its red was not anybody's inbox. **(2)** A pre-commit hook enforced
+nothing in a fresh clone: it was installed by a step that only ran locally, so the repository's rule
+existed on the machines of people who already knew it. **(3)** A hook file was present, tracked and
+correct — and not executable, so the shell skipped it silently and every commit passed. **(4)** A
+workflow GitHub's own UI listed as live could never run: its trigger named a branch that no longer
+existed, and the listing showed the file, not its reachability.
+
+**Insight / the law.** Every one of these looked exactly like enforcement from the outside, which is
+the point: **a guard, hook, suite or workflow that has never been observed to FAIL is
+indistinguishable from one that cannot.** This is Lesson 196 turned outward — that lesson asks what
+would have to change for a READING to read differently; this one asks what would have to change for
+an ENFORCEMENT to fire, and the answer "nothing" is just as fatal and much harder to see, because the
+green is real and the machinery is present.
+
+**Consequence / enforcement.** For every check the project relies on, record the last time it was
+seen RED and what made it red — a deliberate sabotage counts and is the cheapest version. Ask of a
+new check: who receives its failure, on what schedule, and what breaks it. **A check nobody receives
+is a check nobody has.** Evidence: reports/night/NIGHT-2026-08-17.md.
+
+## Lesson 210 — The Blast-Radius Law: Ask Every Test Suite What It RUNS AGAINST, Because Two Different Doors Lead To Production Data
+
+**What happened.** The browser suite reached the owner's real data twice, through two mechanisms
+that have nothing to do with each other. **Playwright's `reuseExistingServer`** attaches to a dev
+server that is already up instead of starting an isolated one — so a suite meant to run against a
+throwaway instance silently ran against whatever the owner had open. And separately, **a spec
+hardcoded the production API URL**, so isolating the front end changed nothing for that file.
+Isolating one door leaves the other wide open, and the suite passes either way.
+
+**Insight / the law.** A test suite's blast radius is not a property of the suite, it is a property
+of every path by which it can acquire an address — the runner's config, an environment variable, a
+default in a helper, and any literal in any spec. **"It runs against a test instance" is a claim about
+all of them at once**, and it is only as true as the least careful file.
+
+**Consequence / enforcement.** Ask the question explicitly of every new suite and write the answer
+down: what does this run against, and what would make it point somewhere else? Pin the port and the
+base URL in ONE place the specs read; forbid literals. Prefer a config that fails loudly when the
+expected isolated server is absent over one that helpfully attaches to whatever is listening.
+
+## Lesson 211 — The Single-Run Law: One Run Separates Nothing; It Is The REPEAT That Tells A Failure From A Flake
+
+**What happened.** A browser suite showed 27 failures. One run could say that and nothing more.
+**Five full runs settled it**: 27 of them failed every time and were real — the product had moved and
+the specs had not — while a further 4 came and went at about two per five runs and were flakes with a
+single shared cause. Repairing the 27 and hunting the 4 are completely different jobs, and no amount
+of staring at the first run distinguishes them.
+
+**Insight / the law.** A single run of a nondeterministic suite produces a SAMPLE, not a result. The
+failure set of one run is the union of "broken" and "unlucky", and those two sets need opposite
+treatments — one is fixed by changing assertions, the other only by finding the shared mechanism.
+**The cheapest instrument for telling them apart is the same suite, run again.**
+
+**Consequence / enforcement.** Before triaging a red suite, run it enough times to classify: a
+failure that survives every run is a defect; one that comes and goes is a flake and needs its
+mechanism found, never a retry. Report the count of runs alongside the counts of failures — "27 of 27
+across five runs" is a finding and "27 failures" is a screenshot of one moment. And never let a retry
+setting hide the distinction: a suite with retries on cannot make this measurement at all.
+
+## Lesson 212 — The Along-The-Course Law: Distance In A Race Is Measured ALONG The Track, Never As The Crow Flies
+
+**What happened.** More than one calculation in the camera reached for the straight-line distance
+between two points because it was one `Math.hypot` away. On a closed track that number is not even
+monotone as a racer approaches the finish — it falls, rises and falls again around the loop — so a
+progress measure built on it walks backwards, a "remaining distance" shrinks while the racer is still
+half a lap out, and a bound derived from it was wrong by roughly a factor of two in one recorded case
+without ever looking wrong.
+
+**Insight / the law.** The race's own coordinate is arc length along the shape. **Any quantity that
+means "how far is he from that" must be expressed in the same coordinate the race is run in** —
+`_runInProgressOf` and its kin — and a Euclidean distance between two world points is a different
+quantity that happens to have the same units. The two agree on a straight, which is exactly why the
+error survives testing: every straight-track fixture passes.
+
+**Consequence / enforcement.** When a distance appears in a race calculation, name which of the two
+it is at the site. Prefer the along-course measure; if a straight line is genuinely wanted (screen
+fitting, for instance, where the frame really is a rectangle in space) say so and say why. Test on a
+CLOSED track, because that is where the two disagree.
+
+## Lesson 213 — The Suspect-The-Instrument Law: When A Derivation And A Measurement Disagree, Doubt The MEASUREMENT First
+
+**What happened.** Repeatedly, and in both directions. A number that could be derived from the
+geometry in two lines was contradicted by a harness reading, and the reflex each time was to accept
+the reading and go looking for the mechanism that would explain it — which is expensive, because a
+plausible mechanism can almost always be constructed. In the cases where somebody instead re-derived
+first, the harness turned out to be measuring a different thing: grading a copy of the rule it was
+grading, sampling frames that never land in the window under test, or reporting a clamped value as
+though it were the raw one.
+
+**Insight / the law.** A derivation has a short, inspectable chain: the geometry, the algebra, the
+assumption. A measurement has a long one — the harness, its fixtures, the driver, the sampling, the
+build it loaded, the units it printed. **When the two disagree, the long chain is where the error
+almost certainly is**, and it is also the cheaper of the two to audit against a known case. This is
+not "trust theory over data"; it is that a measurement is itself a piece of software and deserves the
+same suspicion as the code under test.
+
+**Consequence / enforcement.** On a contradiction, spend the first ten minutes re-deriving and the
+next ten pointing the instrument at a case whose answer is known independently — never on
+constructing a story that reconciles them. A story that reconciles a derivation with a broken
+instrument is the most expensive artefact this project has produced more than once.

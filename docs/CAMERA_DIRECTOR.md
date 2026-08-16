@@ -313,6 +313,32 @@ rather than papered over. See §6.
 
 ## 3a. The run-in — the endgame's zoom, on top of the framing rule (RUNIN-OWNS-1, 2026-08-12)
 
+> ### READ THIS BEFORE DESIGNING ANYTHING FOR THE CLOSE
+>
+> **An EVEN close and "the finish line stays in frame" cannot both be had while the two ends of the
+> close are fixed.** This is not a tuning problem and not an architecture problem — it is excluded by
+> the geometry, and it cost **six shapes over two days** to establish.
+>
+> Keeping the line in frame requires `zoom ≤ room / needed`. The distance `needed` falls to zero at
+> the crossing, so that bound rises **hyperbolically**, while `room` SHRINKS as the leader travels
+> forward across the frame. **`_lineCeiling` is therefore the BOUNDARY of the admissible set, not one
+> option among several — it is already the fastest close that keeps the promise.** An even close is a
+> chord between two fixed ends; the boundary is convex; they cross.
+>
+> The last shape measured the price exactly: an even schedule needs the line placed at up to
+> **2.46× the entire room ahead of the anchor** — roughly two frame-widths outside it — on **9 of 9**
+> measured tracks. The five before it each hit a different wall (the delivered-versus-target lerp; no
+> placement value having a solution; the camera having no constant rate to borrow; a destination that
+> runs away; a walk that is invisible because the ceiling binds on a median 91% of closing frames).
+>
+> **Run `node scripts/diag/runin-line-schedule.mjs` before touching the director for this.** It
+> prices a proposed close in the line's own units in one run, with no production change: a required
+> share above 1 is a shape that cannot keep the promise. What IS still open is moving an END — open
+> less wide, or cross at a wider shot — and both are the owner's taste rather than a derivation.
+>
+> Full record: [DEAD-ENDS §O](DEAD-ENDS.md), [Lesson 208](LESSONS.md),
+> [reports/evolution/RUNIN-LINE-1.md](../reports/evolution/RUNIN-LINE-1.md).
+
 **What the owner asked for:** when the run-in begins, open far enough that the finish is visible,
 then come back in continuously to the close shot, keeping the line in frame the whole way — so he
 can see how much race is left and whether anyone still has a chance.
@@ -323,7 +349,31 @@ zoom. Switched by `runInShot`.
 
 **The window** is `endgameThreshold` to the first crossing. Both ends already existed: the first is
 where the director has always declared the endgame, the second is where the finish sequence takes
-over the picture with its own authored moves.
+over the picture with its own authored moves. That key moved on 2026-08-18 (ENDGAME-THRESHOLD-095),
+which **halved the window** — and it is a state gate as well, so it is the one camera change in this
+sequence that moved which STATE the director is in rather than only how tightly it frames. Its value
+lives in `client/src/modules/storage/defaults.js` and is not restated here.
+
+**THE SHOT IS HELD, THEN CLOSED IN ONE SWEEP (RUNIN-HOLD-1) — this is the shipped shape.** Left
+alone, `_lineCeiling` begins closing on the frame the window opens, and measured that made the first
+seconds a crawl: about 3.6 s of lead-in at roughly 95 px/s of picture flow, below the rate at which
+anything reads as movement. So the opening shot is held — which is free with respect to the promise,
+because the held shot is the WIDEST the run-in ever asks for and a wider shot keeps the line in frame
+trivially — and then closed once.
+
+**The release is DERIVED, not chosen, and no key was added.** The sweep lasts `runInOpenMs`, so it
+begins at the moment from which one sweep of that length still arrives at the line: when the leader's
+REMAINING TIME to the line has fallen to the sweep's length. The pace is measured over the RUN-IN's
+OWN span, not the whole race — the field DECELERATES into the finish, and a whole-race average was
+wrong by about six times, predicting 1.25 s where 7.4 s remained. If the window is shorter than one
+sweep the close simply begins at once and is compressed, which is correct; a pause in the middle
+would not be.
+
+**The corridor cap can no longer override the line (RUNIN-LINE-1).** `_setTargets` honoured
+`_ceilings.line` in its `Math.min` and then let the corridor cap raise the composed zoom back above
+it — so the one term that knows where the finish line is was being overruled by a term that does
+not. The line is re-applied after the cap for the same reason the contender guarantee already was.
+**593 overridden frames → 0.**
 
 **It composes the whole window.** The engagement is performed as a GLIDE, because the framing it
 asks for changes in both quantities at once on that frame. Measured without it, the frame goes empty
@@ -370,9 +420,13 @@ rule §3 already states. That is what "well in frame" means here: at the company
 minimal to 1.05x, so the line sits ON the edge where the tracking lag alone pushes it out.
 
 **Measured on ALL TEN TRACKS (3 seeds each):** the run-in composes **100%** of the endgame window and
-the line is in frame on **73.4%** of those frames, against a no-feature baseline of **9.8%**. The
-line is first in shot a median **2.5 s** after the window opens, and the opening itself takes
-**2.9 s**. **0 empty frames on every track.**
+**0 empty frames on every track**. The in-frame share and the time to first sight are a function of
+the opening pace and are quoted above for the shipped `runInOpenMs` — **86.6%** and **1.1 s**. (The
+figures **73.4%** and **2.5 s** that stood here belonged to the 3000 ms opening and were left behind
+when RUNIN-PACE-1 moved it to 1250 ms; corrected 2026-08-18.) The guard that watches this
+continuously is `check-runin-frame`'s third question, which asks every frame from the threshold to
+the crossing whether the line is on screen and splits its losses by cause — overridden by another
+term, or merely trailed by the pan.
 
 **ONLY THE LINE DECIDES THE WIDTH, and that was measured rather than assumed.** At the widest frame
 of every one of the nine finishing tracks the binding term is the LINE; over the whole run-in it

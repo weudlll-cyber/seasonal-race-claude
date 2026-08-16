@@ -385,9 +385,14 @@ ordinary routing. It is run deliberately, during night work.
 Not repeated here.
 
 **Why it is a rule and not an oversight.** It is about **ten minutes** — roughly five times the whole
-per-push CI run — and its flake budget is unknown, because until 2026-08-16 the suite had never run
-successfully: `ProtectedRoute` landed 2026-06-14, no spec authenticated, and 85 of 102 died at the
-login gate. A ten-minute browser suite gating every merge trains people to re-run red builds.
+per-push CI run. A ten-minute browser suite gating every merge trains people to re-run red builds.
+
+**The history that made it urgent, and the state it is in now.** Until 2026-08-16 the suite had never
+run successfully at all: `ProtectedRoute` landed 2026-06-14, no spec authenticated, and 85 of 102
+died at the login gate — **about two months dead while looking exactly like a check** (see
+[Lesson 209](LESSONS.md)). It was repaired over 2026-08-16/17 and is **103/103 green**, with a
+measured flake rate of roughly **two tests per five runs** from one shared mechanism, now fixed. The
+cost, not the state of repair, is why it stays outside the ordinary path.
 
 **The decision is asserted, not just written down.** `scripts/verify.test.mjs` requires that
 `client/e2e/*` selects no suite, so wiring it into the ordinary path fails a test and whoever does it
