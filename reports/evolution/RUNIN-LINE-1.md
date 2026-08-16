@@ -439,6 +439,166 @@ three changed paths: *"none of 3 path(s) can reach the race engine."* **Nothing 
 
 ---
 
+---
+
+# RUNIN-AHEAD-1 — the frame stops at the finish line
+
+**Appended 2026-08-17.** The owner accepted the run-in's shape at `endgameThreshold` 0.95 and
+rejected what the frame shows: *while the shot closes it reaches well past the line onto empty track
+beyond it, and then comes back. There is nothing to see beyond the line — that room should go to the
+racers behind the leader instead.*
+
+## 15. Measured before anything was changed
+
+`scripts/diag/runin-forward-reach.mjs` stands on the finish line's screen position, looks along the
+leader's heading, and asks the product's own `roomFromPointAlong` how far it is to the frame's edge.
+Positive = screen pixels of already-finished track the frame is still carrying. It reconstructs
+nothing: the line comes from `_finishLineWorldPoint`, the projection from `_proj.toScreen` with the
+DELIVERED zoom and offsets, the heading from `_headingScreen`.
+
+**The complaint is real and large — 220 to 755 px of a 1280-wide canvas**, at the sampled quarter,
+half and three-quarter points of the composing window.
+
+## 16. The rule, and the three things that make it safe
+
+**The bound is on the ANCHOR, not on the zoom.** Every other run-in term is a zoom ceiling; using
+one here would take the room away from everybody rather than give it to the field, which is the
+opposite of the instruction. So:
+
+```
+frac ≥ 1 − (1 − innerFramePct)/2 − d / extent
+```
+
+`d` is how far the line is ahead **along the heading**; `extent` is how far the frame reaches along
+that heading in world px. Push the leader that far forward and every pixel the look ahead would have
+spent past the line is behind him instead.
+
+**No new key and no new fraction.** `d` is `_finishLineWorldPoint`, the same point `_lineCeiling`
+and question 3 read. `innerFramePct` is the region this director already calls "in frame" for a
+guaranteed subject — and `_lineCeiling` already sizes the zoom against that same boundary. **This is
+the one judgement call in the block and it is recorded as one:** using the outer frame edge would
+put the line exactly ON the border, where the tracking lag alone takes it out and question 3 goes
+red. Stopping at the boundary the director already owns is not a margin added beyond the line.
+
+**Three properties make it safe, and each is a line of the composition:**
+
+| | why |
+| --- | --- |
+| `Math.max` | the cap only ever pushes the leader FORWARD, which is the same as giving the room behind him to the field. It cannot pull him back, so it cannot fight or reverse the sweep. |
+| `× (1 − u)` | **the mechanism the brief asked me to name: `_runInSweepU()`**, the run-in's own ease. Applied raw the bound would still bind AT the crossing — `d → 0` there, so it would demand ~0.975 and pin the leader against the front edge exactly where the state's shot is due. Faded on the sweep it is full strength through the hold, where the overshoot is, and **gone by construction at `u = 1`**. |
+| FORWARD states only | a CENTRED state places its subject in the middle by its own rule; there is no forward look to reclaim and the room past the line is the symmetric other half of the room behind. Clamping there would move a framing this design promises not to touch — and *"a CENTRED state still does not move"* is pinned by a RUNIN-HOLD-1 test, **which is how I found this: it went red on the first attempt.** |
+
+Computed in `_updateRunIn`, before `_lineCeiling` and before every guarantee, because they all
+measure their room from the anchor this answer places. A clamp applied later at the pan — where the
+final zoom is known — would leave every guarantee sizing the shot for an anchor that is not where
+the pan puts it, the exact gap CAMERA-ANCHOR-TRUTH-1 exists to close. The zoom it needs is
+`this.zoom`, the one on screen: the zoom for *this* frame is decided from ceilings that read this
+answer, so the circle is broken with the value the viewer is actually looking at, one frame old and
+moving by a lerp, which cannot introduce a step.
+
+## 17. Before and after, per track
+
+Sampled at the phase opening and three points through the close. **`beyond`** = screen px past the
+line; **`in`** = racers on the canvas; the state running is what decides whether the cap applies.
+
+| track | open | 25% before → after | 50% before → after | 75% before → after |
+| --- | --- | --- | --- | --- |
+| luger-hill | 0 px, 5 in | 407 → **206**, 16 → **20** | 633 → **201**, 16 → **20** | 443 → 443, 17 (PHOTO_FINISH) |
+| river-run | 0 px, 11 in | 463 → **213**, 20 | 680 → **201**, 20 | 577 → 577, 20 (PHOTO_FINISH) |
+| mountainstreet | 0 px, 13 in | 396 → **166**, 20 | 584 → **188**, 19 → **20** | 436 → 436, 20 (PHOTO_FINISH) |
+| space-sprint | 0 px, 4 in | 220 → **106**, 16 → **20** | 333 → **107**, 16 → **20** | 257 → 257, 19 (PHOTO_FINISH) |
+| seatrack | 0 px, 6 in | 273 → **0**, 20 | 326 → **96**, 18 → **20** | 299 → 299, 20 (PHOTO_FINISH) |
+| ice-track | 0 px, 17 in | 105 → **43**, 20 | 157 → 157, 20 | 521 → 521, 20 (PHOTO_FINISH) |
+| searound | 0 px, 6 in | 554 → 554, 20 | 755 → **641**, 20 | 634 → 634, 20 (PHOTO_FINISH) |
+| dirt-oval | 0 px, 5 in | 640 → 640, 20 | 630 → **627**, 20 | 628 → 628, 20 (PHOTO_FINISH) |
+| city-circuit | 0 px, 7 in | 290 → 290, 20 | 656 → 656, 20 | 639 → 639, 20 (PHOTO_FINISH) |
+
+**IT DID WHAT IT WAS ASKED, AND MORE RACERS ARE IN SHOT — but only where there were racers missing
+to gain.** Six of the nine tracks already showed 20 of 20 at these points, so there was no headroom.
+On the four that were short, every one of them is now full: **luger-hill 16 → 20, space-sprint
+16 → 20, seatrack 18 → 20, mountainstreet 19 → 20.** The overshoot falls by half to two thirds on
+six tracks (luger-hill 633 → 201, river-run 680 → 201, mountainstreet 584 → 188).
+
+**Three things it does NOT do, stated plainly rather than left for him to notice:**
+
+1. **The 75% column is unchanged everywhere, and that is by design.** By then every track is in
+   PHOTO_FINISH, which is CENTRED — the cap does not apply, and the photo finish keeps its own
+   framing exactly as the brief requires.
+2. **city-circuit and dirt-oval barely move.** The cap is live on those frames but does not bind:
+   the line is far enough ahead **along the heading** that the frame is not spending its forward
+   look past it, even though the line's screen position has canvas beyond it. On a curving closed
+   oval those two are not the same question, and the bound answers the first one — the one the
+   instruction is about.
+3. **The line takes longer to first enter frame on two tracks** — ice-track 1.0 s → 2.0 s, seatrack
+   1.1 s → 2.5 s. That is the direct cost of holding the leader further forward: the frame's leading
+   edge starts further back, so the line arrives later during the opening approach. It is inside the
+   window `check-runin-frame` already excludes as "the camera is still travelling", and question 3
+   stays green, but it is a real trade and it is the one to watch on his eye-test.
+
+## 18. What must still be true
+
+| requirement | evidence |
+| --- | --- |
+| line in frame, opening → crossing | `check-runin-frame` **PASS** — 0 overridden frames on all ten tracks |
+| crossing = the state's own shot, no seam | the fade reaches 0 at `u = 1` by construction; pinned by a test comparing against a director with `runInShot` OFF — same anchor, same zoom |
+| photo finish keeps its framing and slow motion | CENTRED states are excluded; PHOTO_FINISH tracking lag **identical to the digit** (4.81 / 37.36) |
+| contender framing untouched | `contenderZoom` path unmodified; the corridor-cap tests all pass |
+| the close never stands still, restarts or reverses | `Math.max` is one-way and the test walks 40 frames asserting no step > 0.12 and no backward move |
+| questions 1 and 2 green | luger-hill 0.24 TW / 0 empty; searound 1.40 TW / 0 empty (limit 2) |
+
+**Tracking lag re-measured in full, and exactly the two states that should have moved did:**
+LEADER_ZOOM median 4.05 → 4.00, p95 9.49 → **9.03**; LEAD_CHANGE median 4.57 → 4.54, p95
+31.33 → **29.00** — both FORWARD states, both **improved**, because a leader held further forward is
+closer to where the pan is already heading. PHOTO_FINISH, BATTLE_ZOOM, COMEBACK_ZOOM and OVERVIEW
+identical to the digit; **every frame count identical**, so no state decision moved.
+
+## 19. The Dev-screen step
+
+`Endgame Focus Threshold` stepped in 5%, which cannot express 0.93 or 0.96 at all — coarser than the
+decision it exists for, and he has just settled the shape at 0.95. **Now 1%.** Range and clamping
+untouched: the handler still refuses anything outside 0.5–1.0.
+
+## 20. Fingerprints and hygiene
+
+```
+$ node scripts/engine-reach.mjs --check \
+    client/src/modules/camera/CameraDirector.js \
+    client/src/modules/camera/CameraDirector.test.js \
+    client/src/screens/DevScreen/sections/CameraAdvancedSection.jsx \
+    scripts/diag/runin-forward-reach.mjs
+ENGINE REACH: none of 4 path(s) can reach the race engine.        (exit 1)
+```
+
+| role | before this block | measured on the final commit | |
+| --- | --- | --- | --- |
+| CAMERA | `6ae77f12daf23f78` | **`c2f3e97277041fed`** | moved — the anchor moved |
+| RENDER | `a870f5f9e79cb444` | **`28893c9595196026`** | moved — with it |
+| WORLD | `dc4647be0f55ebdb` | not run | cannot move |
+| WORLD-OFF | `854018ee5d3d83e1` | not run | same |
+
+**Nothing minted.**
+
+| file | before | after |
+| --- | ---: | ---: |
+| `client/src/modules/camera/CameraDirector.js` | 3760 | 3869 |
+| `client/src/modules/camera/CameraDirector.test.js` | 7696 | 7821 |
+| `scripts/diag/runin-forward-reach.mjs` | — | 127 (new) |
+
+**Orphaned by this change: nothing, and it was checked.** No value, helper or branch became
+unreachable — the cap is an additional term in a fraction that was already computed every frame. The
+5% step it replaces was a literal with no other reader.
+
+**Noticed and deliberately left alone:**
+
+1. **`d` is a straight-line projection along the heading, not an arc distance.** On a closed oval
+   whose line is most of a lap away those differ, which is exactly why city-circuit and dirt-oval
+   see no change. Making it an arc distance would need the shape's arc-length, which is a bigger
+   change than the instruction asked for.
+2. **The approach got longer on two tracks** (§17.3). Untouched because shortening it means moving
+   the anchor back, which is the thing this block was asked to stop doing.
+
+---
+
 ## PROPOSALS
 
 1. **Retire `contenderZoom`, or scope it to after the crossing.** It moves the zoom on **0** frames
@@ -473,6 +633,18 @@ three changed paths: *"none of 3 path(s) can reach the race engine."* **Nothing 
    touching anything: whether the ceremony's held zoom should retire on the GUN or on a geometric
    condition the way the field guarantee does, and whether the effect is really absent on open
    tracks or merely smaller because luger-hill's world is short.
+
+7. **Give `d` the arc distance and see whether the two closed ovals join in.** city-circuit and
+   dirt-oval are the only tracks the forward bound does not help, and the reason is measured: the
+   line is far ahead *along the heading* while being near on screen, because the track curves
+   between the two. The shape can answer "how far to the line along the track" — `_runInProgressOf`
+   already works in that measure — so the experiment is to build `d` from arc length instead of a
+   projection and re-run `runin-forward-reach.mjs`. One run says whether it is worth having.
+
+8. **Report the approach as a first-class number in question 3.** §17.3 found the line entering
+   frame a second later on two tracks, and it was visible only because the guard happens to print
+   the approach length beside its verdict. "How long after the phase opens is the finish line first
+   visible?" is a promise in its own right, and it is one line to assert rather than to notice.
 
 6. **Make `check-runin-frame` ask its never-empty question about the LEADER, not about any racer.**
    Question 2 passed every one of these frames — one racer on screen is enough for it — while the

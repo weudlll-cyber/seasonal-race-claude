@@ -1337,7 +1337,11 @@ function CameraAdvancedSection() {
               className={s.input}
               min={0.5}
               max={1.0}
-              step={0.05}
+              // RUNIN-AHEAD-1: 1% steps, not 5%. The owner settled the run-in's shape at 0.95 and is
+              // tuning around it; a 5% step cannot express 0.93 or 0.96 at all, so the control was
+              // coarser than the decision it exists for. Range and clamping are unchanged — the
+              // guard below still refuses anything outside 0.5–1.0.
+              step={0.01}
               value={config.endgameThreshold ?? DEFAULT_CAMERA_CONFIG.endgameThreshold}
               onChange={(e) => {
                 const v = Number(e.target.value);

@@ -236,6 +236,9 @@ export class CameraDirector {
     //   `_runInReleaseProgress`  the run-in progress at which the sweep began; null while holding
     this._runInHoldCeiling = null;
     this._runInReleaseProgress = null;
+    // RUNIN-AHEAD-1: this frame's forward-extent cap, recomputed every composing frame and null
+    // whenever the bound does not apply — outside the run-in, and once the line is behind.
+    this._runInForwardCap = null;
     this._runInStartTs = null;
     this._runInStartProgress = null;
     this._inFinishDrama = false; // the drama window after the crossing (hudState reports 'FINISH')
@@ -2322,7 +2325,28 @@ export class CameraDirector {
     // at once, which is the shape `_beginRunInGlide` records emptying the frame. `_runInSweepU` is 0
     // throughout the hold, so the leader simply stays at the mirror until the sweep begins, and it
     // is 1 at the line, so he arrives at the state's own place exactly at the crossing.
-    return back + (tableFrac - back) * this._runInSweepU();
+    const u = this._runInSweepU();
+    const swept = back + (tableFrac - back) * u;
+
+    // RUNIN-AHEAD-1: and no further forward than the line. `_runInForwardCapOf` states the whole
+    // rule and the reason; here is only its composition, which is three things and each matters:
+    //
+    //   `Math.max`   the cap only ever pushes the leader FORWARD in frame, which is the same as
+    //                giving the room behind him to the field. It can never pull him back, so it
+    //                cannot fight the sweep or reverse it.
+    //   `× (1 − u)`  faded on the run-in's OWN ease, so the bound is gone at the line and the
+    //                crossing is the state's own shot, bit for bit, exactly as before.
+    //   continuous   `max` of two continuous functions, scaled by a continuous one. There is no
+    //                frame on which this can step, which is what "no jump when it engages" means.
+    // AND ONLY WHERE THERE IS A FORWARD LOOK TO SPEND. A CENTRED state places its subject in the
+    // middle by its own rule — there is no forward bias to claw back, and the room past the line is
+    // the symmetric other half of the room behind it. Clamping there would MOVE a framing this
+    // design promises not to touch: the photo finish is CENTRED, and "a CENTRED state still does
+    // not move, hold or sweep" is pinned by a test RUNIN-HOLD-1 wrote for exactly this reason.
+    if (framingFor(this.state).position !== POSITION.FORWARD) return swept;
+    const cap = this._runInForwardCap;
+    if (cap === null || cap === undefined || !(cap > swept)) return swept;
+    return swept + (cap - swept) * (1 - u);
   }
 
   /**
@@ -2434,6 +2458,10 @@ export class CameraDirector {
    */
   _updateRunIn(subjects, frameSize, racers, raceState, ts) {
     this._runInComposingNow = false;
+    // RUNIN-AHEAD-1: cleared FIRST. A cap left over from the last composing frame would keep
+    // bounding the anchor after the crossing, which is precisely where the finish sequence owns
+    // the framing and nothing of the run-in's may still be speaking.
+    this._runInForwardCap = null;
     if (!this._runInWindowOpen(racers, raceState)) return Infinity;
     if (!subjects?.point) return Infinity;
     if (!this._runInEngaged) {
@@ -2446,6 +2474,12 @@ export class CameraDirector {
     }
     this._runInProgress = this._runInProgressOf(racers, raceState);
     this._runInComposingNow = true;
+    // RUNIN-AHEAD-1: computed HERE, before `_lineCeiling` below and before every guarantee in
+    // `_setTargets`, because `_forwardFracNow` reads it and all of them measure their room from the
+    // anchor that answer places. A clamp applied later — at the pan, where the final zoom is known —
+    // would leave every guarantee sizing the shot for an anchor that is not where the pan puts it,
+    // which is the promise-vs-delivery gap CAMERA-ANCHOR-TRUTH-1 exists to close.
+    this._runInForwardCap = this._runInForwardCapOf(subjects, frameSize, raceState);
 
     // ── RUNIN-HOLD-1: HOLD THE OPENING SHOT, THEN CLOSE ONCE ──────────────────────────────────
     //
@@ -2481,6 +2515,81 @@ export class CameraDirector {
     // It also cannot stand still or reverse: `_runInProgress` is already clamped monotone.
     const u = this._runInSweepU();
     return this._runInHoldCeiling + (live - this._runInHoldCeiling) * u;
+  }
+
+  /**
+   * RUNIN-AHEAD-1 — THE FRAME'S FORWARD EXTENT STOPS AT THE FINISH LINE.
+   *
+   * ── WHAT THE OWNER ASKED FOR ──────────────────────────────────────────────────────────────────
+   *
+   * "While the shot closes, the frame reaches well past the finish line onto empty track beyond it,
+   * and then comes back. There is nothing to see beyond the line. That room should go to the racers
+   * BEHIND the leader instead." Measured before anything was changed: the frame carried **220–755
+   * screen px** of already-finished track through the close, on a 1280-wide canvas.
+   *
+   * ── IT IS A BOUND ON THE ANCHOR, NOT ON THE ZOOM ──────────────────────────────────────────────
+   *
+   * Every other run-in term is a ceiling on zoom. This one cannot be: tightening the shot to stop
+   * it overshooting would take the room away from everybody rather than give it to the field, which
+   * is the opposite of the instruction. It is instead the SMALLEST forward fraction that leaves the
+   * frame's leading edge on the line — push the leader that far forward and every pixel the look
+   * ahead would have spent past the line is behind him instead.
+   *
+   *   `d`      how far the line is ahead, ALONG the heading, in world px
+   *   `extent` how far the frame reaches along that heading, in world px
+   *   frac ≥ 1 − (1 − innerFramePct)/2 − d / extent
+   *
+   * NO NEW KEY AND NO NEW FRACTION. `d` comes from `_finishLineWorldPoint`, the same point
+   * `_lineCeiling` and `check-runin-frame`'s question 3 read. `innerFramePct` is the region this
+   * director already calls "in frame" for a guaranteed subject, and `_lineCeiling` already sizes the
+   * zoom against that same boundary — using the outer edge instead would put the line exactly ON
+   * the frame border, where the tracking lag alone takes it out, and question 3 would go red.
+   *
+   * ── WHY IT IS AT THE ZOOM ON SCREEN AND NOT THE ONE BEING DECIDED ─────────────────────────────
+   *
+   * `extent` needs a zoom, and the zoom for this frame is not known yet — it is decided in
+   * `_setTargets` from ceilings that read this answer. Using the delivered `this.zoom` breaks the
+   * circle with the value the viewer is actually looking at, one frame old. It cannot introduce a
+   * jump: the delivered zoom moves by a lerp, so this moves with it.
+   *
+   * ── AND IT FADES ON THE RUN-IN'S OWN EASE ─────────────────────────────────────────────────────
+   *
+   * Applied raw, this bound would still be binding AT the crossing — `d` goes to zero there, so it
+   * would demand a fraction of ~0.975 and pin the leader against the front edge exactly where the
+   * state's own shot is due. That is the one thing the run-in's design may not do. So it is faded
+   * out on `_runInSweepU()`, the SAME parameter that already carries the anchor from the mirror to
+   * the state's place and the ceiling from the held value to the live one — full strength through
+   * the hold, where the overshoot actually is, and gone by construction at `u = 1`.
+   *
+   * @returns {number|null} the minimum forward fraction, or null when the bound does not apply
+   */
+  _runInForwardCapOf(subjects, frameSize, raceState) {
+    if (!subjects?.point || !frameSize?.width) return null;
+    const line = this._finishLineWorldPoint(raceState?.finishT ?? 0);
+    if (!line) return null;
+    const heading = this._headingAt(subjects.t);
+    if (!heading) return null;
+    const hLen = Math.hypot(heading.x, heading.y);
+    if (!(hLen > 0)) return null;
+    const hx = heading.x / hLen;
+    const hy = heading.y / hLen;
+
+    // ONLY WHILE THE LINE IS AHEAD. Once it is behind the leader the bound is gone entirely and the
+    // finish sequence keeps its own framing — `d <= 0` is that test, taken along the heading rather
+    // than as a straight distance so a curved track answers it the way the race runs.
+    const d = (line.x - subjects.point.x) * hx + (line.y - subjects.point.y) * hy;
+    if (!(d > 0)) return null;
+
+    const sx = hx * this._proj.effX(this.zoom);
+    const sy = hy * this._proj.effY(this.zoom);
+    const sLen = Math.hypot(sx, sy);
+    if (!(sLen > 0)) return null;
+    const extent = frameExtentAlong(sx, sy, frameSize.width, frameSize.height) / sLen;
+    if (!(extent > 0)) return null;
+
+    const pct = this._innerFramePct ?? DEFAULT_INNER_FRAME_PCT;
+    const cap = 1 - (1 - pct) / 2 - d / extent;
+    return Number.isFinite(cap) ? cap : null;
   }
 
   /**

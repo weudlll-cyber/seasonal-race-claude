@@ -7593,6 +7593,131 @@ describe('RUNIN-START-1 — the run-in bounds nothing before the endgame window'
   });
 });
 
+// ============================================================
+// RUNIN-AHEAD-1 — THE FRAME STOPS AT THE FINISH LINE.
+//
+// The owner accepted the run-in's shape and rejected what the frame shows: while the shot closes it
+// reaches well past the line onto empty track and then comes back. Measured before the change, the
+// frame carried 220-755 screen px of already-finished track through the close. The bound pushes the
+// leader forward in frame instead, so that room goes to the field behind him.
+//
+// THE FIXTURES CARRY GEOMETRY — a real 6000 px shape and racers at real points on it — because
+// every rule under test reads race fields: `_finishLineWorldPoint` walks the shape, `_headingAt`
+// asks it for a tangent, and the cap projects one against the other. A bare {t,x,y,index} would
+// make all three read undefined and every assertion below would pass for the wrong reason.
+// ============================================================
+describe('RUNIN-AHEAD-1 — the frame does not travel past the finish line', () => {
+  const WORLD_W = 6000;
+  const CANVAS_W = 1280;
+  const CANVAS_H = 720;
+  const FINISH_T = 0.9;
+
+  const shape = () => ({
+    getTotalLength: () => WORLD_W,
+    getPosition: (t) => ({ x: t * WORLD_W, y: 360, angle: 0 }),
+    getCenterPoint: () => ({ x: WORLD_W / 2, y: CANVAS_H / 2 }),
+  });
+
+  /** LEADER_ZOOM is a FORWARD-position state, which is where a forward look exists to reclaim. */
+  const drive = (
+    leadT,
+    { state = CAM_STATE.LEADER_ZOOM, finishedCount = 0, frames = 8, runInShot = true } = {}
+  ) => {
+    const cd = new CameraDirector(
+      WORLD_W,
+      CANVAS_H,
+      true,
+      { ...DEFAULT_CAMERA_CONFIG, runInShot },
+      36,
+      shape(),
+      300
+    );
+    cd.state = state;
+    let ts = 1000;
+    const trace = [];
+    for (let f = 0; f < frames; f++) {
+      const t = leadT + f * 0.0008;
+      const racers = [
+        { index: 0, t, x: t * WORLD_W, y: 350, finished: false },
+        { index: 1, t: t - 0.01, x: (t - 0.01) * WORLD_W, y: 370, finished: false },
+        { index: 2, t: t - 0.02, x: (t - 0.02) * WORLD_W, y: 355, finished: false },
+      ];
+      cd.update(
+        racers,
+        ts,
+        { raceElapsed: 40000 + f * 200, finishedCount, finishT: FINISH_T },
+        CANVAS_W,
+        CANVAS_H
+      );
+      cd.stateEnteredAt = 0;
+      trace.push({ frac: cd._forwardFracNow(), cap: cd._runInForwardCap, zoom: cd.zoom });
+      ts += 200;
+    }
+    return { cd, trace };
+  };
+
+  // IF DELETED: the whole point of the block goes unguarded. This is the rule itself — with the line
+  // ahead, the leader is pushed at least as far forward as the cap demands, which is the same as
+  // saying the frame's leading edge does not run past the line. Nothing else asserts it.
+  it('the anchor is pushed forward so the frame stops at the line', () => {
+    const { cd, trace } = drive(0.86);
+    const last = trace[trace.length - 1];
+    expect(last.cap).not.toBeNull();
+    expect(last.cap).toBeGreaterThan(0);
+    // The delivered fraction honours the cap: it is at or past it (never short of it).
+    expect(last.frac).toBeGreaterThanOrEqual(Math.min(last.cap, 1) - 1e-9);
+    // And it is genuinely FORWARD of where the run-in alone would have put him — the mirror of the
+    // state's own fraction, which is below centre. Without this the test could pass on a director
+    // that ignored the cap and happened to sit forward anyway.
+    expect(last.frac).toBeGreaterThan(0.5);
+  });
+
+  // IF DELETED: the cap could move the anchor in STEPS or drag it backwards during the close. A
+  // jump reads as the picture flicking sideways and a reversal reads as the close restarting —
+  // both are failures this camera has paid for. The cap engages on the SAME frame the run-in does
+  // (measured: with the line inside the window it always binds from the first composing frame), so
+  // what has to be proved is that it is smooth and one-way FROM there, which is what this walks.
+  it('the anchor moves smoothly and only ever forward while the cap is live', () => {
+    const { trace } = drive(0.812, { frames: 40 });
+    const live = trace.filter((f) => f.cap !== null);
+    expect(live.length, 'the cap was never live — the test proves nothing').toBeGreaterThan(20);
+    for (let i = 1; i < live.length; i++) {
+      const step = live[i].frac - live[i - 1].frac;
+      // No jump…
+      expect(Math.abs(step), `frame ${i}: the anchor stepped by ${step}`).toBeLessThan(0.12);
+      // …and no reversal: the anchor only ever travels forward through the run-in.
+      expect(step, `frame ${i}: the anchor moved BACKWARD by ${step}`).toBeGreaterThan(-1e-9);
+    }
+  });
+
+  // IF DELETED: the cap could survive the crossing and keep bounding the finish sequence, which owns
+  // its own framing entirely. The run-in's window closes on the first finisher, so this pins that
+  // the bound is gone with it rather than left latched from the last composing frame.
+  it('after the crossing the framing is IDENTICAL to a director with no run-in at all', () => {
+    // The strongest available form of "unchanged": run the same frames against a director with
+    // `runInShot` off — the arm in which none of this code exists — and require the same anchor and
+    // the same zoom. Comparing against a remembered constant would only pin today's number; this
+    // pins that the run-in is SILENT there, which is the actual promise.
+    const before = drive(0.88).cd;
+    expect(before._runInForwardCap).not.toBeNull();
+
+    const withRunIn = drive(0.88, { finishedCount: 1 }).cd;
+    const without = drive(0.88, { finishedCount: 1, runInShot: false }).cd;
+    expect(withRunIn._runInForwardCap).toBeNull();
+    expect(withRunIn._runInComposingNow).toBe(false);
+    expect(withRunIn._forwardFracNow()).toBe(without._forwardFracNow());
+    expect(withRunIn.targetZoom).toBeCloseTo(without.targetZoom, 9);
+  });
+
+  // IF DELETED: the photo finish could be re-framed by this bound. Its position is CENTRED — there
+  // is no forward look to reclaim — and "a CENTRED state still does not move" is a contract
+  // RUNIN-HOLD-1 pinned separately. This is the same promise seen from the cap's side.
+  it('a CENTRED state is untouched by the cap', () => {
+    const { cd } = drive(0.86, { state: CAM_STATE.PHOTO_FINISH });
+    expect(cd._forwardFracNow()).toBeCloseTo(0.5, 9);
+  });
+});
+
 describe('RUNIN-HOLD-1 — hold, then one sweep', () => {
   const runInDirector = (cfg = {}) =>
     new CameraDirector(4000, 720, true, { ...DEFAULT_CAMERA_CONFIG, ...cfg }, 36, makeShape(4000));

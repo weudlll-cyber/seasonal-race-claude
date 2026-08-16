@@ -546,7 +546,17 @@ a verbatim transcript of one run on one commit, which is a historical record, no
 
 ### The tracking lag, as measured today — and it had drifted
 
-<!-- MEASURED: tracking-lag (median/p95 pp per state) @ d769cbd1 2026-08-17 depends=client/src/modules/camera/ -->
+<!-- MEASURED: tracking-lag (median/p95 pp per state) @ 67bab5bb 2026-08-17 depends=client/src/modules/camera/ -->
+
+**RE-MEASURED IN FULL FOR RUNIN-AHEAD-1, AND EXACTLY THE TWO STATES THAT SHOULD HAVE MOVED DID.**
+The forward-extent bound applies only where the framing has a FORWARD look to reclaim, so the
+prediction before running it was: the two FORWARD states move, the CENTRED photo finish does not,
+and no frame count changes. That is the reading. **LEADER_ZOOM median 4.05 → 4.00 pp and p95
+9.49 → 9.03; LEAD_CHANGE median 4.57 → 4.54 and p95 31.33 → 29.00** — both IMPROVED, because a
+leader held further forward in frame is closer to where the pan is already heading. **PHOTO_FINISH
+is identical to the digit at 4.81 / 37.36**, which is the CENTRED contract holding, and BATTLE_ZOOM,
+COMEBACK_ZOOM and OVERVIEW are identical too. **Every frame count is identical** (9406 / 605 /
+17788 / 7789 / 4303 / 1865): no state decision moved.
 
 **RE-STAMPED, NOT RE-MEASURED, FOR RUNIN-START-1 — and the reason is a fact, not a judgement.**
 That block added ONE TEST under `client/src/modules/camera/`, which is inside this stamp's
@@ -736,12 +746,12 @@ and it says so itself. It also covers nothing else on this page; see its header 
 | ------------- | ------ | --------- | ------ |
 | BATTLE_ZOOM   | 9406   | 5.72      | 10.99  |
 | COMEBACK_ZOOM | 605    | 1.15      | 15.57  |
-| LEADER_ZOOM   | 17788  | 4.05      | 9.49   |
-| LEAD_CHANGE   | 7789   | 4.57      | 31.33  |
+| LEADER_ZOOM   | 17788  | 4.00      | 9.03   |
+| LEAD_CHANGE   | 7789   | 4.54      | 29.00  |
 | OVERVIEW      | 4303   | 2.65      | 16.00  |
 | PHOTO_FINISH  | 1865   | 4.81      | 37.36  |
 
-OVERVIEW median 2.65 pp against every other state pooled 4.64 pp (ratio 0.57×).
+OVERVIEW median 2.65 pp against every other state pooled 4.62 pp (ratio 0.57×).
 
 **RE-MEASURED FOR RUNIN-HOLD-1, AND EVERY FRAME COUNT IS IDENTICAL TO THE DIGIT.** That is the
 first thing to read here and it is the proof the block owes: 9406 / 605 / 17788 / 7789 / 4303 /
