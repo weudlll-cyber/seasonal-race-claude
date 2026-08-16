@@ -912,6 +912,86 @@ than from the rule.**
 
 ---
 
+---
+
+# WHY-SO-WIDE-1 — the width was never the world-bounds clamp. It is the run-in's own line ceiling.
+
+**Appended 2026-08-17. MEASUREMENT ONLY — nothing in `client/` was touched, so no fingerprint can
+move.** The owner's screenshot contradicted RUNIN-ANCHOR-2's recorded explanation, and he was right.
+
+`scripts/diag/width-authority.mjs` reports every term as **the width it asks for**, frame by frame,
+with the winner marked — reading `_framingProbe.ceilings`, `.corridorCap`, `.binding` and
+`_resolveProbe` rather than reconstructing anything. A ceiling on zoom is a floor on width, so the
+widest demand wins the `Math.min`.
+
+## 35. Who wins, over the whole stretch
+
+| track | frames | binding term | `resolveCamera` adapted the zoom |
+| --- | ---: | --- | --- |
+| ice-track | 551 | **`line` 96%**, state 4% | **22 of 551** |
+| city-circuit | 912 | **`line` 97%**, state 3% | **0 of 912** |
+| seatrack | 455 | **`line` 95%**, guarantee 5% | **0 of 455** |
+| mountainstreet | 448 | **`line` 92%**, state 8% | **0 of 448** |
+
+## 36. The owner's frame, in plain numbers
+
+ice-track, first settled frame with the line in shot, 78 250 ms, LEADER_ZOOM:
+
+| | |
+| --- | ---: |
+| leader → line, along the track | **874 world px** |
+| leader → LAST racer, along the track | **642 world px** |
+| the frame is | **2668 world px** wide — **87%** of a 3072 px world |
+| state asks for | 338 px |
+| company asks for | 156 px |
+| guarantee / field / corridor cap | ask for nothing |
+| **line asks for** | **2668 px** |
+| `resolveCamera` | requested 2668 → resolved 2668, **adapted false** |
+
+**87%, not 100%.** A substantial part of the course is outside the frame, exactly as his screenshot
+shows — which is what falsified the recorded explanation in the first place.
+
+## 37. The three answers
+
+**1. Is the world-bounds clamp binding at that moment? NO.** It did not adapt the zoom on that frame
+or on any frame of seatrack, mountainstreet or city-circuit, and on only 22 of 551 ice-track frames.
+(The `clamped` flag that is true on many frames is the PAN being held inside the world, not the
+width.) **RUNIN-ANCHOR-2's explanation was wrong, and every proposal derived from it — including
+"attack the world-sized frame" and the `endgameThreshold` sweep — was aimed at a term that is not
+deciding anything.** The real term is the **line ceiling**, `_lineCeiling`, the run-in's own bound.
+
+**2. Does the run-in influence the picture while that term binds? It IS the picture.** The width is
+not something happening to the run-in — it is the run-in's own demand, on 92–97% of frames. And the
+arithmetic is elementary: the line sits 874 px ahead, the anchor placement leaves only about a third
+of the frame ahead of the leader, and 874 ÷ ~0.33 ≈ 2600. **The shot is wide because the run-in is
+asked to hold a line ~900 px ahead while placing its subject two thirds of the way forward.**
+
+**3. Is it the same on the other broken tracks? Yes — checked, not assumed.** `line` binds 95% on
+seatrack and 92% on mountainstreet, with the world-bounds clamp adapting the zoom on **zero** frames
+of either. seatrack's frame is 46% of its world and mountainstreet's is 28% — neither is anywhere
+near world-sized.
+
+**And the one sentence, unsoftened: the last three blocks were aimed at the wrong term.** PIN-1,
+ANCHOR-1 and ANCHOR-2 all tried to change where the camera points and how it travels, while the
+thing setting the width — on every track they broke on — was the run-in's own line ceiling, and none
+of them changed what it asks for.
+
+## 38. The number that makes it concrete
+
+On all four tracks the leader is **further from the line than from the last racer**, or close to it:
+
+| track | leader → line | leader → last | frame width |
+| --- | ---: | ---: | ---: |
+| ice-track | 874 px | 642 px | 2668 px |
+| city-circuit | 1137 | 832 | 3072 (world-capped) |
+| seatrack | 598 | 780 | 2837 |
+| mountainstreet | 687 | 612 | 1705 |
+
+**The whole field spans 600–830 px and the shot is 1700–3100 px wide.** The extra width is not
+buying a single racer — it is reaching for the line.
+
+---
+
 ## PROPOSALS
 
 1. **Retire `contenderZoom`, or scope it to after the crossing.** It moves the zoom on **0** frames
@@ -947,7 +1027,27 @@ than from the rule.**
    condition the way the field guarantee does, and whether the effect is really absent on open
    tracks or merely smaller because luger-hill's world is short.
 
-13. **Attack the world-sized frame, not the placement.** §32 found the wall: on ice-track the
+15. **The cheapest lever is the anchor placement inside `_lineCeiling`, and it needs no new key.**
+    §37's arithmetic is `width ≈ distance-to-line ÷ room-ahead-of-the-anchor`. Today the room ahead
+    is about a third of the frame, because the run-in places its subject at `leaderForwardFrac`
+    (0.66) — a value chosen so a RACER has road visible ahead of him. During the run-in the thing
+    ahead is the LINE, and it is the only thing that matters, so the subject wants to be BEHIND
+    centre, not ahead of it. That is what RUNIN-GLIDE-1's mirror did and what RUNIN-ANCHOR-1 removed.
+    **Restoring a behind-centre placement for the run-in's own subject roughly halves the width the
+    line ceiling demands, with no new number and no anchor change** — and `runin-forward-reach.mjs`
+    and `check-runin-frame` already exist to price it. This is the first thing to try.
+
+16. **Then ask whether the line needs to be in frame that early at all.** §38 shows the shot is
+    1700–3100 px wide to hold a line 600–1100 px ahead, while the entire field spans 600–830 px. The
+    run-in's promise — the line in frame from the endgame threshold — is what buys that width, and
+    it is a promise the owner has never been shown the price of in these terms. **A run-in that
+    brought the line in later, but kept the field tight throughout, is a different and possibly
+    better shape**, and the choice is his rather than a tuning question.
+
+13. **Attack the world-sized frame, not the placement.** *(WITHDRAWN by WHY-SO-WIDE-1 — the
+    world-bounds clamp adapts the zoom on 0 frames of three of the four tracks and 22 of 551 on the
+    fourth. This proposal was written from the explanation §37 falsified; it is left here rather
+    than deleted because the report is append-only, but it should not be acted on.)* §32 found the wall: on ice-track the
     finished track in frame does not move by a pixel across the whole placement range, because the
     run-in has opened to a world-sized frame and `resolveCamera`'s world-bounds clamp centres it on
     the world. **Every attempt at this rule has now been defeated on the tracks where the line is
@@ -958,7 +1058,10 @@ than from the rule.**
     `endgameThreshold` is one run of an instrument that already exists, and it may dissolve this
     whole problem without any camera change at all.**
 
-14. **Ask whether ice-track and city-circuit should run the run-in at all.** RUNIN-OWNS-1 already
+14. **Ask whether ice-track and city-circuit should run the run-in at all.** *(Still standing after
+    WHY-SO-WIDE-1, and for a better reason than it was written with: not because those frames are
+    world-sized — they are 87% and 100% — but because the line ceiling there demands 2668 and 3394
+    px to hold a line ~900-1100 px ahead.)* RUNIN-OWNS-1 already
     established that a closed track whose finish is most of a lap away turns "the line in frame"
     into "the world in frame". Three blocks have now broken on exactly those tracks. If the honest
     answer is that the run-in has nothing useful to do when the line is that far away, the engagement
