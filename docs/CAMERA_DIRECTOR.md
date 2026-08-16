@@ -546,7 +546,7 @@ a verbatim transcript of one run on one commit, which is a historical record, no
 
 ### The tracking lag, as measured today — and it had drifted
 
-<!-- MEASURED: tracking-lag (median/p95 pp per state) @ 4ecd0ec4 2026-08-18 depends=client/src/modules/camera/ -->
+<!-- MEASURED: tracking-lag (median/p95 pp per state) @ f5afd92e 2026-08-18 depends=client/src/modules/camera/ -->
 
 **RE-MEASURED IN FULL FOR ENDGAME-THRESHOLD-095, AND THIS IS THE FIRST ENTRY HERE WHERE THE FRAME
 COUNTS MOVED.** The endgame threshold went 0.9 -> 0.95 on the owner's decision, and that key is a
