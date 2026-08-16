@@ -546,7 +546,7 @@ a verbatim transcript of one run on one commit, which is a historical record, no
 
 ### The tracking lag, as measured today — and it had drifted
 
-<!-- MEASURED: tracking-lag (median/p95 pp per state) @ 2e5f1fd2 2026-08-17 depends=client/src/modules/camera/ -->
+<!-- MEASURED: tracking-lag (median/p95 pp per state) @ e1836294 2026-08-17 depends=client/src/modules/camera/ -->
 
 **RE-MEASURED IN FULL FOR RUNIN-BACK-1, AND EVERY NUMBER WENT BACK TO WHERE IT WAS BEFORE
 RUNIN-AHEAD-1.** That block's forward bound is removed, so the two FORWARD states it had moved
