@@ -319,7 +319,8 @@ export function computeTimingFromConfig(config) {
   // `CameraAdvancedSection.jsx`, so a reader cross-checking the pair found agreement and concluded
   // they were right. Two copies of one wrong number is worse than one, because it manufactures
   // corroboration.
-  const comebackMinStartGap = config?.comebackMinStartGap ?? DEFAULT_CAMERA_CONFIG.comebackMinStartGap;
+  const comebackMinStartGap =
+    config?.comebackMinStartGap ?? DEFAULT_CAMERA_CONFIG.comebackMinStartGap;
   const comebackMaxCurrentRankPct =
     config?.comebackMaxCurrentRankPct ?? DEFAULT_CAMERA_CONFIG.comebackMaxCurrentRankPct;
   // Override COMEBACK_ZOOM minStateHold when explicitly configured.

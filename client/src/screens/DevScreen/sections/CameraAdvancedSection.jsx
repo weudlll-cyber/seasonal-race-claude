@@ -1223,7 +1223,9 @@ function CameraAdvancedSection() {
             min={0.05}
             max={0.5}
             step={0.05}
-            value={config.comebackMaxCurrentRankPct ?? DEFAULT_CAMERA_CONFIG.comebackMaxCurrentRankPct}
+            value={
+              config.comebackMaxCurrentRankPct ?? DEFAULT_CAMERA_CONFIG.comebackMaxCurrentRankPct
+            }
             onChange={(e) => {
               const v = parseFloat(e.target.value);
               if (v >= 0.05 && v <= 0.5) set('comebackMaxCurrentRankPct', v);
