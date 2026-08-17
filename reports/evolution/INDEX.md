@@ -38,6 +38,18 @@ is dated and recorded HERE, where a reader on their way to the report will pass 
   [GATE-LINES-1](../night/GATE-LINES-1.md); the fix and the once-per-run control that makes the
   silence impossible to repeat: [GATE-TRUTH-1](../night/GATE-TRUTH-1.md).
 
+- [SEPARATION-TO-TEST-1.md](SEPARATION-TO-TEST-1.md) — **the criterion moves to where it is actually
+  used** (2026-08-19, the owner's decision). `checkSeparation` was defined once in
+  `heroCurveGenerator.js` and referenced 7 times in its own test file and nowhere else — never a
+  gate; two specs in a row assumed otherwise. It is now a plain function IN the test file, export
+  removed, body byte-for-byte unchanged, with its reason carried across: it covers the STANDARD
+  cast, because the three B2 attackers share one `b2AttackFinalRank` and are one act by design.
+  **All four fingerprints measured — `heroCurveGenerator.js` is inside all three closures — and
+  unmoved**, which is the proof nothing was reading it. Stated in the module's place: nothing checks
+  at run time that two heroes are on different scripts. **19 other exports share the exact shape**
+  (a first count said 153 — wrong, because a helper used internally AND tested looks identical from
+  outside); none was moved, and two of them look like genuinely dead product code. No document named
+  the criterion, so none was corrected and none was added.
 - [SEPARATION-WINDOW-1.md](SEPARATION-WINDOW-1.md) — **the window is not the problem, and the fix
   was NOT merged** (2026-08-19). First, the question nobody had answered: **`checkSeparation` is
   called from nowhere in production** — no rejection, no retry, no fallback; it is an assertion in a

@@ -332,21 +332,11 @@ export function checkPositiveBudget(curve, maxRankRate, config = GENERATOR_CONFI
   if (bandOfRank(Math.round(atResolve)) !== finalBand) return false;
   return Math.abs(endRank - atResolve) <= Math.max(1, maxRankRate) * (1 - rp) + 1e-6;
 }
-// SEPARATION: transient crossings (overtakes) are legitimate; only SUSTAINED coincidence is forbidden.
-export function checkSeparation(curves, maxCoincidentFrac = 0.2, config = GENERATOR_CONFIG) {
-  const dp = 0.02;
-  const samples = [];
-  for (let p = config.anchorProgress; p <= 1.0 + 1e-9; p += dp) samples.push(Math.min(p, 1));
-  for (let i = 0; i < curves.length; i++) {
-    for (let j = i + 1; j < curves.length; j++) {
-      let near = 0;
-      for (const p of samples)
-        if (Math.abs(sampleHeroCurve(curves[i], p) - sampleHeroCurve(curves[j], p)) < 0.5) near++;
-      if (near / samples.length > maxCoincidentFrac) return false;
-    }
-  }
-  return true;
-}
+// SEPARATION MOVED TO THE TEST FILE (SEPARATION-TO-TEST-1, the owner's decision 2026-08-19).
+// `checkSeparation` lived here and was called by nothing but `heroCurveGenerator.test.js` — it never
+// gated, rejected or retried a plan, and two specs in a row were written on the assumption that it
+// did. It now lives where it is used. NOTHING CHECKS AT RUN TIME THAT TWO HEROES ARE ON DIFFERENT
+// SCRIPTS; the assertion covers generated curves in the suite, which is what it always did.
 
 // HOLE GUARD (A5, Step 4): as bands resolve in stages, the field must stay continuous — no large
 // empty rank-stretch. Ranks are always a contiguous permutation, so the honest check projects the

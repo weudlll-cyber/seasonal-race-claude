@@ -22,7 +22,6 @@ import {
   relationalWaypoints,
   checkFeasible,
   checkPositiveBudget,
-  checkSeparation,
   checkFieldContinuity,
   resolveForBand,
   shouldCastFaller,
@@ -30,6 +29,39 @@ import {
 } from './heroCurveGenerator.js';
 import { makeHeroCurve, anchorHeroCurve, sampleHeroCurve } from './heroChoreography.js';
 import { mulberry32 } from './racePlanner.js';
+
+// ── checkSeparation — LIVES HERE, and only here (SEPARATION-TO-TEST-1, the owner, 2026-08-19) ────
+//
+// It used to be exported from `heroCurveGenerator.js` and was called by nothing but this file: never
+// a gate, never a rejection, never a retry. Two specs in a row were written on the assumption that a
+// `false` did something. It does not, and now the code says where it belongs.
+//
+// WHY IT IS KEPT AT ALL, in the owner's terms: nothing else would notice if a change to the curve
+// generator put two heroes on the same script — two racers moving in lockstep, which he would see
+// immediately. That is worth an assertion even though it is not worth a run-time check.
+//
+// WHAT IT COVERS: THE STANDARD CAST. The three B2 attackers share one `b2AttackFinalRank` and reach
+// it well before their band's release, so they are ONE ACT by design and mutual separation is
+// unsatisfiable for them at any window. That is measured, not assumed: SEPARATION-WINDOW-1 built the
+// narrowing this seems to invite, measured it across 120 plans (98% of bunched-field plans failing
+// -> 95%), and REVERTED it. Do not re-open that without reading the report.
+//
+// BEHAVIOUR UNCHANGED BY THE MOVE: same 0.2 tolerance, same anchor-to-finish window, same 0.5-rank
+// nearness. Transient crossings (overtakes) are legitimate; only SUSTAINED coincidence is forbidden.
+function checkSeparation(curves, maxCoincidentFrac = 0.2, config = GENERATOR_CONFIG) {
+  const dp = 0.02;
+  const samples = [];
+  for (let p = config.anchorProgress; p <= 1.0 + 1e-9; p += dp) samples.push(Math.min(p, 1));
+  for (let i = 0; i < curves.length; i++) {
+    for (let j = i + 1; j < curves.length; j++) {
+      let near = 0;
+      for (const p of samples)
+        if (Math.abs(sampleHeroCurve(curves[i], p) - sampleHeroCurve(curves[j], p)) < 0.5) near++;
+      if (near / samples.length > maxCoincidentFrac) return false;
+    }
+  }
+  return true;
+}
 
 const FINISH_T = 2; // closed-track lap bucket
 // Build a deterministic n-racer field. density: 'bunched' packs all t into a tiny range (a racer can
