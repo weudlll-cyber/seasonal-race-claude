@@ -208,10 +208,17 @@ suite red**, which is what makes "deny by default" a fact rather than an intenti
 
 **Rate limits are per IP**, and both return `429 too many attempts, please try again later`.
 
-|                        | window     | limit | counts                                                                  |
-| ---------------------- | ---------- | ----- | ----------------------------------------------------------------------- |
-| `POST /api/auth/login` | 15 minutes | 10    | **failed logins only** — a successful login does not consume the budget |
-| `POST /api/auth/setup` | 1 hour     | 10    | every attempt, successful or not                                        |
+|                                  | window     | limit | keyed on               | counts                                                                      |
+| -------------------------------- | ---------- | ----- | ---------------------- | --------------------------------------------------------------------------- |
+| `POST /api/auth/login`           | 15 minutes | 10    | the IP                 | **failed logins only** — a successful login does not consume the budget     |
+| `POST /api/auth/setup`           | 1 hour     | 10    | the IP                 | every attempt, successful or not                                            |
+| `POST /api/auth/change-password` | 15 minutes | **5** | **the session's user** | **failed attempts only** — changing your password successfully never counts |
+
+**The change-password limiter keys on the USER, and that is the one way it differs.** Login and setup
+are anonymous, so the IP is the only bucket available. This route is authenticated, so the subject is
+known — and keying it on the IP would let one operator exhaust the budget of every colleague at the
+same address, which on a per-install tool is the normal case. Its window is the login window, read
+from the same variable; **only the count is its own.**
 
 Both are **disabled under test** (`NODE_ENV=test` or `VITEST`), because the suite shares one IP and
 would otherwise lock itself out.
