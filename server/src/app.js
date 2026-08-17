@@ -19,7 +19,7 @@ import authRouter from './auth/authRouter.js';
 import usersRouter from './auth/usersRouter.js';
 import { requireAuth, requireAdmin } from './auth/guards.js';
 import { corsOptions, csrfOriginGuard } from './auth/csrf.js';
-import { loginLimiter, setupLimiter } from './auth/rateLimit.js';
+import { loginLimiter, setupLimiter, changePasswordLimiter } from './auth/rateLimit.js';
 
 // Created once at module scope so all createApp instances share one store and timer.
 const sessionMiddleware = createSessionMiddleware();
@@ -41,6 +41,9 @@ export function createApp() {
 
   app.use('/api/auth/login', loginLimiter);
   app.use('/api/auth/setup', setupLimiter);
+  // Mounted BELOW requireAuth deliberately: this limiter keys on req.authUser, which the guard
+  // stack above has already resolved from the session cookie.
+  app.use('/api/auth/change-password', changePasswordLimiter);
   app.use('/api/auth', authRouter);
   app.use('/api/users', usersRouter);
   app.use('/api/tracks', tracksRouter);
