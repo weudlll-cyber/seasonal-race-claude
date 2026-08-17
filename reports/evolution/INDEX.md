@@ -38,6 +38,18 @@ is dated and recorded HERE, where a reader on their way to the report will pass 
   [GATE-LINES-1](../night/GATE-LINES-1.md); the fix and the once-per-run control that makes the
   silence impossible to repeat: [GATE-TRUTH-1](../night/GATE-TRUTH-1.md).
 
+- [ONE-HOME-1.md](ONE-HOME-1.md) — **no second definition, anywhere** (2026-08-19, the owner's
+  ruling). He rejected the OFF-or-shipped question: no key is ever missing, because every loader
+  walks the full default set — the fallbacks exist only so a function can be called with NO config,
+  and only tests and harnesses do that. So reachability stopped being the question. **27 sites in 5
+  files now read the one home; the guard's exception list went from 11 entries to EMPTY**, green for
+  the right reason. All four fingerprints measured and byte-identical. The six booleans
+  MIRROR-CENSUS-2 *deleted* are restored to reading the home — deletion made a bare caller fall to
+  `undefined`, a second definition by omission. **The searches found a class nobody had named:** the
+  guard models fallbacks, not module-level objects that ASSIGN shipped values, and `GENERATOR_CONFIG`
+  held FIVE such keys, all agreeing, so nothing could ever have spoken. **And the ruling exposed a
+  finding — the shipped hero cast is NOT mutually separated**: that test only passed because a bare
+  call ran with the attackers disabled by a local copy.
 - [OWNER-DECISIONS-2026-08-19.md](OWNER-DECISIONS-2026-08-19.md) — **everything left that needs
   him**, and nothing on it has been touched. 13 items in 4 batches, ordered by whether he could ever
   SEE it, each with exactly five lines: what is wrong in plain language, can he see it, what changes
