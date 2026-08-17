@@ -38,6 +38,18 @@ is dated and recorded HERE, where a reader on their way to the report will pass 
   [GATE-LINES-1](../night/GATE-LINES-1.md); the fix and the once-per-run control that makes the
   silence impossible to repeat: [GATE-TRUTH-1](../night/GATE-TRUTH-1.md).
 
+- [TEARDOWN-INFLIGHT-1.md](TEARDOWN-INFLIGHT-1.md) — **the suite can no longer die at teardown**
+  (2026-08-18). The cause was not noisy tests: four screen tests were making **real requests to
+  `localhost:4000`**, and the suite's own `HTTP 401` proves a live server answered them. With a
+  server up they resolved in milliseconds; with none they waited out a 3 s timeout — the same
+  assertions taking different paths depending on what else was running on the machine — and
+  `withTimeout` never clears its timer, so the work outlived the test that started it. The hooks are
+  now mocked (NOT `fetch`, because a stub that made the loader succeed would have written geometries
+  into localStorage and destroyed the state SetupScreen's refusal tests depend on). **The race is
+  proved gone rather than absent:** `forbidNetwork()` records and throws on any call and asserts in
+  `afterAll`, so a file that completes has proved no request was ever started — and the `afterAll`
+  placement was itself found by sabotage, because throwing alone left the file GREEN with the guard
+  firing 11 times. 65 warning lines → **0**; 4111 tests unchanged; no assertion re-blessed.
 - [CI-DOCS-ONLY-1.md](CI-DOCS-ONLY-1.md) — **CI stops paying for what it cannot affect**
   (2026-08-18). On a push where every changed path is under `docs/`, `reports/` or a root `*.md`,
   the client and server jobs skip lint/format/tests. **The jobs themselves always run** — a

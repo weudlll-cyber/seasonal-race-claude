@@ -52,6 +52,20 @@ vi.mock('../../modules/track-effects/index.js', () => ({
 }));
 
 import { listEffects, getEffect, getDefaultConfig } from '../../modules/track-effects/index.js';
+import { forbidNetwork } from '../../test/mockServerTracks.js';
+
+// TEARDOWN-INFLIGHT-1: the server-tracks hooks, without the network. These tests were making a REAL
+// request to localhost:4000 (the suite printed `HTTP 401` — a live dev server answered it), and
+// `withTimeout` never clears its 3 s timer, so the work outlived the test that started it. See
+// `src/test/mockServerTracks.js` for the whole mechanism and why `fetch` was NOT the thing to stub.
+vi.mock('../../modules/storage/useServerTracks.js', async () => {
+  const { serverTracksMock } = await import('../../test/mockServerTracks.js');
+  return serverTracksMock();
+});
+
+// TEARDOWN-INFLIGHT-1 — the proof: any network call from this file throws by name, so a file that
+// finishes has proved no request was ever started, and nothing can arrive after a test ends.
+forbidNetwork();
 
 // ── rAF/cAF stubs ─────────────────────────────────────────────────────────────
 let _rafId = 0;
