@@ -120,20 +120,18 @@ export const EXCEPTIONS = [
   // does not set it, and neither does any other caller of `createRacePlan`; the fallback ran on
   // EVERY race and resolved to 0, which is why removing the floor is byte-identical. Recorded
   // rather than quietly deleted: the entry was right that it could not fire, and wrong about why.
-  D(
-    "client/src/modules/raceBehavior.js",
-    "maxLateralAccelPerStep",
-    0.0005,
-    0,
-    "UNFIREABLE in every shipped path (FALLBACK-42-TRIAGE). `applyRacerBehavior` is called with `{...behaviorConfig, isOpen}` where behaviorConfig is loader-resolved, and the sim merges from DEFAULT_RACE_BEHAVIOR_CONFIG — the key is always present. 0 as the off switch is real, but it is reached by SETTING 0, never by omitting the key. Aligning the literal cannot move the fingerprint, because the branch is not taken.",
-  ),
-  D(
-    "client/src/modules/raceBehavior.js",
-    "softSteeringObstacleMargin",
-    0.5,
-    0,
-    "UNFIREABLE in every shipped path (FALLBACK-42-TRIAGE) — same argument as the line above. Not a decision.",
-  ),
+  // ── TIER 1 IS EMPTY (ONE-HOME-1, the owner's ruling of 2026-08-19) ────────────────────────────
+  //
+  // `raceBehavior.js` / `maxLateralAccelPerStep` and `softSteeringObstacleMargin` used to sit here
+  // with `?? 0`, exempt because the branch was unreachable. THE RULING MAKES REACHABILITY BESIDE
+  // THE POINT: no second definition of a value, whatever its current value and whoever can reach
+  // it. Both now read `DEFAULT_RACE_BEHAVIOR_CONFIG`, so there is nothing left to except.
+  //
+  // The ruling also settles what the OFF-arm question was really about. It was never "should a
+  // missing key mean OFF" — no key is ever missing, because every loader walks the full default
+  // set. The fallbacks exist so a function can be called WITHOUT a config at all, and the only
+  // callers that do that are tests and harnesses. A test calling `applyRacerBehavior({})` should
+  // get the SHIPPED game, not a quietly disabled one.
   // ── TIER 2: the OFF-arm booleans — GONE, and REMOVED rather than aligned (MIRROR-CENSUS-2). ───
   //
   // `chaosSteer` · `bandBias` · `gapRerollEnabled` · `phaseSplitBonusEnabled` · `pulkCeilingCap` ·
@@ -152,19 +150,10 @@ export const EXCEPTIONS = [
   // which IS `DEFAULT_RACE_DYNAMICS_CONFIG` (same object identity, checked); `DiagnoseVerteilung`
   // uses the loader. No test passes a partial config to `createRaceFromIdentity`. WORLD and
   // WORLD-OFF measured either side and byte-identical.
-  ...[
-    ["pulkLeaderBrake", 0.1, 0],
-    ["pulkChallengerBoost", 0.06, 0],
-    ["pulkBoostHeadroom", 0.1, 0],
-  ].map(([k, d, f]) =>
-    D(
-      "client/src/modules/raceCore.js",
-      k,
-      d,
-      f,
-      "UNFIREABLE in every shipped path (FALLBACK-42-TRIAGE) — `dynamicsConfig` is loader-resolved in the browser and defaults-merged in the sim, so 0 is never reached. The OFF arm is the flag that SETS the value, never an absent key. Dead text; a mint to change, but not a decision.",
-    ),
-  ),
+  // The three pulk numbers — `pulkLeaderBrake`, `pulkChallengerBoost`, `pulkBoostHeadroom` — stood
+  // here with `?? 0` and are gone for the same reason: they READ THE HOME now (ONE-HOME-1). On a
+  // value that feeds arithmetic the literal was the worst of both worlds — a stale number if it
+  // fired, and a NaN if it were simply deleted. The home is neither.
   // ── TIER 3: engine numbers whose fallback is a STALE PREVIOUS VALUE, not an off switch. ───────
   //
   // TIER 3 IS EMPTY OF ENGINE NUMBERS AS OF MIRROR-CENSUS-1 (2026-08-18), and the reason it emptied

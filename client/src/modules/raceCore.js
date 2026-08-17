@@ -228,7 +228,9 @@ export function createRaceFromIdentity(p) {
         bonusStrengthMultiplier:
           dynamicsConfig.racePlanBonusStrengthMultiplier ??
           DEFAULT_RACE_DYNAMICS_CONFIG.racePlanBonusStrengthMultiplier,
-        phaseSplitBonusEnabled: dynamicsConfig.phaseSplitBonusEnabled,
+        phaseSplitBonusEnabled:
+          dynamicsConfig.phaseSplitBonusEnabled ??
+          DEFAULT_RACE_DYNAMICS_CONFIG.phaseSplitBonusEnabled,
         areaBonusEarly:
           dynamicsConfig.areaBonusEarly ?? DEFAULT_RACE_DYNAMICS_CONFIG.areaBonusEarly,
         areaBonusPulk: dynamicsConfig.areaBonusPulk ?? DEFAULT_RACE_DYNAMICS_CONFIG.areaBonusPulk,
@@ -281,10 +283,11 @@ export function createRaceFromIdentity(p) {
           DEFAULT_RACE_DYNAMICS_CONFIG.b2AttackResolveProgress,
         b2AttackBandArrival:
           dynamicsConfig.b2AttackBandArrival ?? DEFAULT_RACE_DYNAMICS_CONFIG.b2AttackBandArrival,
-        gapRerollThresholdLengths: dynamicsConfig.gapRerollEnabled
-          ? (dynamicsConfig.gapRerollThresholdLengths ??
-            DEFAULT_RACE_DYNAMICS_CONFIG.gapRerollThresholdLengths)
-          : null,
+        gapRerollThresholdLengths:
+          (dynamicsConfig.gapRerollEnabled ?? DEFAULT_RACE_DYNAMICS_CONFIG.gapRerollEnabled)
+            ? (dynamicsConfig.gapRerollThresholdLengths ??
+              DEFAULT_RACE_DYNAMICS_CONFIG.gapRerollThresholdLengths)
+            : null,
         gapRerollMode: dynamicsConfig.gapRerollMode ?? DEFAULT_RACE_DYNAMICS_CONFIG.gapRerollMode,
         gapRerollStrength:
           dynamicsConfig.gapRerollStrength ?? DEFAULT_RACE_DYNAMICS_CONFIG.gapRerollStrength,
@@ -293,10 +296,10 @@ export function createRaceFromIdentity(p) {
         // plan the BROWSER (and the golden headless harness) builds here — the sim has its OWN createRacePlan
         // call, so without this the shipped defaults would carry chaosSteer/bandBias in dynamicsConfig yet the
         // running plan never receive them. OFF ⇒ createRacePlan makes _chaosSteer / _bandBias null ⇒ pre-combo15.
-        chaosSteer: dynamicsConfig.chaosSteer,
+        chaosSteer: dynamicsConfig.chaosSteer ?? DEFAULT_RACE_DYNAMICS_CONFIG.chaosSteer,
         chaosSteerGain:
           dynamicsConfig.chaosSteerGain ?? DEFAULT_RACE_DYNAMICS_CONFIG.chaosSteerGain,
-        bandBias: dynamicsConfig.bandBias,
+        bandBias: dynamicsConfig.bandBias ?? DEFAULT_RACE_DYNAMICS_CONFIG.bandBias,
         bandBiasR: dynamicsConfig.bandBiasR ?? DEFAULT_RACE_DYNAMICS_CONFIG.bandBiasR,
         bandBiasGain: dynamicsConfig.bandBiasGain ?? DEFAULT_RACE_DYNAMICS_CONFIG.bandBiasGain,
       },
@@ -331,30 +334,34 @@ export function createRaceFromIdentity(p) {
       dynamicsConfig.pulkLeadRotationMinHoldMs ??
       DEFAULT_RACE_DYNAMICS_CONFIG.pulkLeadRotationMinHoldMs,
     frontPool: dynamicsConfig.pulkFrontPool ?? DEFAULT_RACE_DYNAMICS_CONFIG.pulkFrontPool,
-    leaderBrake: dynamicsConfig.pulkLeaderBrake ?? 0,
-    challengerBoost: dynamicsConfig.pulkChallengerBoost ?? 0,
+    leaderBrake: dynamicsConfig.pulkLeaderBrake ?? DEFAULT_RACE_DYNAMICS_CONFIG.pulkLeaderBrake,
+    challengerBoost:
+      dynamicsConfig.pulkChallengerBoost ?? DEFAULT_RACE_DYNAMICS_CONFIG.pulkChallengerBoost,
     maxEffect:
       dynamicsConfig.pulkEnvelopeMaxEffect ?? DEFAULT_RACE_DYNAMICS_CONFIG.pulkEnvelopeMaxEffect,
     maxStepPerFrame:
       dynamicsConfig.pulkEnvelopeMaxStepPerFrame ??
       DEFAULT_RACE_DYNAMICS_CONFIG.pulkEnvelopeMaxStepPerFrame,
-    ceilingCap: dynamicsConfig.pulkCeilingCap
-      ? computeDirectorCeiling(
-          BASE_SPEED_MAX,
-          BASE_SPEED_MEAN,
-          dynamicsConfig.pulkBoostHeadroom ?? 0
-        )
-      : 0,
+    ceilingCap:
+      (dynamicsConfig.pulkCeilingCap ?? DEFAULT_RACE_DYNAMICS_CONFIG.pulkCeilingCap)
+        ? computeDirectorCeiling(
+            BASE_SPEED_MAX,
+            BASE_SPEED_MEAN,
+            dynamicsConfig.pulkBoostHeadroom ?? DEFAULT_RACE_DYNAMICS_CONFIG.pulkBoostHeadroom
+          )
+        : 0,
   };
   const govFractions = racePlanController?.getPhaseFractions?.() ?? null;
   const govSeed = racePlanController?.seed ?? 0;
 
   // ── PULK-action phase-split bonuses (parity with the sim) ──
-  const phaseSplitBonusEnabled = dynamicsConfig.phaseSplitBonusEnabled;
+  const phaseSplitBonusEnabled =
+    dynamicsConfig.phaseSplitBonusEnabled ?? DEFAULT_RACE_DYNAMICS_CONFIG.phaseSplitBonusEnabled;
   const rowBonusEarly = dynamicsConfig.rowBonusEarly ?? DEFAULT_RACE_DYNAMICS_CONFIG.rowBonusEarly;
   const rowBonusPulk = dynamicsConfig.rowBonusPulk ?? DEFAULT_RACE_DYNAMICS_CONFIG.rowBonusPulk;
   const rowBonusPost = dynamicsConfig.rowBonusPost ?? DEFAULT_RACE_DYNAMICS_CONFIG.rowBonusPost;
-  const enableRowEnvSmooth = dynamicsConfig.enableRowEnvSmooth;
+  const enableRowEnvSmooth =
+    dynamicsConfig.enableRowEnvSmooth ?? DEFAULT_RACE_DYNAMICS_CONFIG.enableRowEnvSmooth;
   const PHASE_CHAOS_END =
     govFractions?.pulkStartFrac ?? DEFAULT_RACE_DYNAMICS_CONFIG.racePlanPulkStart;
   const PHASE_PULK_END = govFractions?.pulkEndFrac ?? 0.5;
@@ -424,7 +431,8 @@ export function createRaceFromIdentity(p) {
     spreadRange,
     halfWidth,
     trajectoryTransitionDurationMs: dynamicsConfig.trajectoryTransitionDuration * 1000,
-    gapRerollEnabled: dynamicsConfig.gapRerollEnabled,
+    gapRerollEnabled:
+      dynamicsConfig.gapRerollEnabled ?? DEFAULT_RACE_DYNAMICS_CONFIG.gapRerollEnabled,
     gapRerollDevMarker:
       dynamicsConfig.gapRerollDevMarker ?? DEFAULT_RACE_DYNAMICS_CONFIG.gapRerollDevMarker,
     constSpeedActive,
