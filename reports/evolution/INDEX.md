@@ -38,6 +38,17 @@ is dated and recorded HERE, where a reader on their way to the report will pass 
   [GATE-LINES-1](../night/GATE-LINES-1.md); the fix and the once-per-run control that makes the
   silence impossible to repeat: [GATE-TRUTH-1](../night/GATE-TRUTH-1.md).
 
+- [INDEX-COVERAGE-1.md](INDEX-COVERAGE-1.md) — **every report directory is now decided about**
+  (2026-08-18). `check-index` walked **3 of 14** directories and printed `0 unindexed` — true of
+  **44%** of the tree, in a shape that read as a statement about all of it. `proposals/` is now
+  INDEXED (17 entries) because it is the one archive that still receives work — the audit that
+  nearly went missing was written there; seven closed archives are declared **by name with a
+  reason** (312 reports), and master did not go red because nothing was mass-indexed to make it
+  pass. **The part that actually closes it is a THIRD DIRECTION**: the guard enumerates tracked
+  reports itself and FAILS on any directory in neither list, so the `reports/audit/` case cannot
+  repeat silently. `audit/`, `speed-candidates/` and `clean-state-2026-06-04/` are deliberately NOT
+  pre-declared — they hold nothing today, and listing them would let the next file land silently.
+  Proved in all three directions against the real tree.
 - [CENSUS-REST-1.md](CENSUS-REST-1.md) — **the documents stop claiming cover they do not have**
   (2026-08-18). `SHIP-CEREMONY.md`'s render row named "the racer types' `drawRacer`" as a reason to
   run the render fingerprint; **`racer-types/` is inside no instrument's closure** (render 55,

@@ -40,10 +40,12 @@
 export const GUARD = {
   id: "check-index",
   covers:
-    "a report with no INDEX line, or an INDEX line pointing at a report that does not exist — in both directions, across three report directories",
+    "a report with no INDEX line, an INDEX line pointing at a report that does not exist, and — since INDEX-COVERAGE-1 — a directory under reports/ that holds tracked reports and is in neither the indexed set nor the declared archive set. Every directory is accounted for; none is merely unwatched",
   blind: [
     "whether the INDEX line DESCRIBES the report; it checks that both ends exist",
-    "ELEVEN of the fourteen directories under reports/. This guard walks evolution/, night/ and parity/ — 245 tracked *.md between them — while 329 more sit in audit/, proposals/, closed-track-overview/, exp-archive/, greenfield/, open-track-overlap/, perf/, phase1-metrics/, results-salvage/, speed-candidates/ and clean-state-2026-06-04/, where an orphan cannot be detected. Most of that is archived sweep output, but proposals/ holds 17 and audit/ held the ONLY copy of a critical finding until it was rescued on 2026-08-18. Narrow by decision, not by oversight — widening it is the owner's call (NIGHT-2026-08-18 finding 11)",
+    "ORPHANS INSIDE A DECLARED ARCHIVE. Seven directories are named in ARCHIVED with a reason and are deliberately not walked — results-salvage/, open-track-overlap/, closed-track-overview/, greenfield/, perf/, exp-archive/, phase1-metrics/. That is 312 reports of machine output and closed investigations that nobody adds to. The decision is now DECLARED rather than silent, which is the whole of INDEX-COVERAGE-1: a NEW directory, or a new file in one that holds none today, fails until somebody decides which list it belongs in",
+    "the four standing notes directly in reports/ (README.md, BASELINE-INVALIDATED.md and two one-off write-ups). They belong to no block, so an index is the wrong shape for them; check-doc-links covers their links",
+    "subdirectories of a registered directory — the walk is flat. reports/night/captures/ and reports/night/img/ hold evidence rather than reports and are deliberately not descended into",
   ],
   dirs: ["reports/"],
   files: [],
@@ -64,6 +66,7 @@ process.on("exit", () => {
 });
 
 import { readFileSync, readdirSync } from "node:fs";
+import { execFileSync } from "node:child_process";
 import { join, resolve, basename } from "node:path";
 
 const argVal = (k, d) => {
@@ -89,7 +92,43 @@ const REGISTERED = [
   { dir: "reports/evolution", index: "reports/evolution/INDEX.md" },
   { dir: "reports/night", index: "reports/night/INDEX.md" },
   { dir: "reports/parity", index: "reports/parity/INDEX.md" },
+  // INDEX-COVERAGE-1: the one archive that still RECEIVES work. `PROJECT-AUDIT-2026-08-18.md` was
+  // written here, sat untracked and outside every guard, and was the only copy of the finding that
+  // first-admin setup could not succeed. A directory new work lands in needs the orphan check.
+  { dir: "reports/proposals", index: "reports/proposals/INDEX.md" },
 ];
+
+// ── THE ARCHIVES, DECLARED BY NAME (INDEX-COVERAGE-1) ─────────────────────────────────────────
+//
+// Until 2026-08-18 this guard walked three of the fourteen directories under `reports/` and said
+// "0 unindexed" — a true sentence about 44% of the tree, printed in a shape that reads as a
+// statement about all of it. The other eleven were not a decision; they were SILENCE, and silence
+// is what let a critical finding sit in an unwatched directory.
+//
+// So every directory is now accounted for in one of two ways: REGISTERED above, or named here with
+// a reason. An archive genuinely does not need an index — nobody adds to it and nothing links into
+// it — but that has to be SAID, because "not indexed" and "nobody decided" look identical from
+// outside.
+const ARCHIVED = {
+  "results-salvage":
+    "raw per-combo result tables recovered from interrupted sweeps — machine output, never linked, never added to",
+  "open-track-overlap":
+    "the closed open-track overlap investigation; its conclusions live in reports/evolution and docs/DEAD-ENDS.md",
+  "closed-track-overview":
+    "per-track survey tables from the closed-track pass — evidence for reports that are themselves indexed",
+  greenfield:
+    "the greenfield night run's raw arms and tables; the verdict is an indexed evolution report",
+  perf: "captured performance logs and frame traces — measurements, not write-ups",
+  "exp-archive": "superseded experiment write-ups, kept so a killed branch can be re-read",
+  "phase1-metrics": "the Phase-1 metric dumps; superseded by REBASELINE.md",
+};
+
+// A directory holding tracked reports that is in NEITHER list is the `audit/` case repeating, so it
+// FAILS and forces a decision. Deliberately not pre-declared for the empty ones (`audit/`,
+// `speed-candidates/`, `clean-state-2026-06-04/` hold no tracked *.md today): listing them now would
+// let the next file land in them silently, which is the exact defect this closes.
+const ROOT_NOTES_REASON =
+  "standing notes that belong to no block — README.md is the map, BASELINE-INVALIDATED.md is the retired-numbers note, and two are one-off write-ups. They sit directly in reports/ and are covered by check-doc-links, not by an index.";
 
 const dirArg = argVal("dir", null);
 const PAIRS = dirArg
@@ -174,6 +213,74 @@ for (const pair of PAIRS) {
     for (const f of missing) console.error(f);
   }
   if (unindexed.length > 0 || missing.length > 0) anyFailed = true;
+}
+
+// ── DIRECTION 3 (INDEX-COVERAGE-1): EVERY DIRECTORY IS ACCOUNTED FOR ─────────────────────────────
+//
+// The two directions above answer "is every report in a REGISTERED directory indexed?". They cannot
+// answer "is every directory registered?", and that is the question `audit/` failed silently: a new
+// directory, a critical finding inside it, and a guard printing 0 unindexed about somewhere else.
+//
+// Enumeration is by GIT, not the filesystem: a directory with no tracked file is not part of the
+// repository, and walking the disk would fail this guard on anybody's local scratch folder.
+// Skipped when --dir is given, because that form is the fixture path its own tests use.
+if (!dirArg) {
+  let tracked;
+  try {
+    tracked = execFileSync("git", ["ls-files", "reports"], {
+      encoding: "utf8",
+      cwd: resolve("."),
+    });
+  } catch (e) {
+    fail(
+      `cannot enumerate tracked reports (git ls-files): ${e.message}. This guard refuses to report coverage it could not compute.`,
+    );
+  }
+  const segments = new Map();
+  let rootNotes = 0;
+  for (const line of tracked.split("\n")) {
+    const f = line.trim();
+    if (!f.endsWith(".md")) continue;
+    const rest = f.slice("reports/".length);
+    const slash = rest.indexOf("/");
+    if (slash < 0) {
+      rootNotes++;
+      continue;
+    }
+    const seg = rest.slice(0, slash);
+    segments.set(seg, (segments.get(seg) ?? 0) + 1);
+  }
+
+  const registeredNames = new Set(REGISTERED.map((p) => basename(p.dir)));
+  const undeclared = [...segments.keys()].filter(
+    (s) => !registeredNames.has(s) && !(s in ARCHIVED),
+  );
+
+  const archivedCount = [...segments.entries()]
+    .filter(([s]) => s in ARCHIVED)
+    .reduce((n, [, c]) => n + c, 0);
+
+  console.log(
+    `check-index: coverage — ${segments.size} directories hold tracked reports; ` +
+      `${registeredNames.size} INDEXED (${totals.reports} reports), ` +
+      `${Object.keys(ARCHIVED).length} declared ARCHIVE (${archivedCount} reports), ` +
+      `${rootNotes} standing note(s) directly in reports/, ${undeclared.length} undeclared.`,
+  );
+
+  if (undeclared.length > 0) {
+    console.error(
+      `\nFAIL: ${undeclared.length} directory/directories under reports/ hold tracked reports and are in NEITHER list:`,
+    );
+    for (const s of undeclared)
+      console.error(`  reports/${s}/  (${segments.get(s)} report(s))`);
+    console.error(
+      `\nDecide, do not leave it silent — that is how reports/audit/ came to hold the ONLY copy of a\n` +
+        `critical finding with nothing watching it. Either add an INDEX.md and register the directory\n` +
+        `in REGISTERED, or name it in ARCHIVED with a reason a stranger can read.\n` +
+        `Standing notes directly in reports/ are exempt: ${ROOT_NOTES_REASON}`,
+    );
+    anyFailed = true;
+  }
 }
 
 // The roll-up exists so a multi-directory run cannot be read as a single-directory one.
