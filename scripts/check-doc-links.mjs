@@ -32,7 +32,7 @@ export const GUARD = {
     "external URLs",
     "anchors within a file — only the file half of a link is resolved",
     "links written INSIDE reports/ — the lab journal is allowed to rot and is never scanned, even though a change there selects this guard (see dirs below)",
-    "repo-root `*.md`, which this guard SCANS but does not ROUTE on. `dirs` below is docs/ and reports/, so a change to README.md or CLAUDE.md ALONE selects neither this guard nor check-measured-stamps — proved by appending one blank line to README.md and reading `npm run verify --dry`, where the only guards it selected were the three declared always-on. CI runs everything unconditionally, so a broken root link is caught there: the cost is a late failure, not a missed one (NIGHT-2026-08-18 finding 10)",
+    "a root `*.md` that is NOT in `files` below. The two tracked ones are named there (DECLARED-HOLES-1), and `scripts/verify.test.mjs` fails if that list stops matching `git ls-files '*.md'` at the root — so a NEW root document is loud rather than silently unrouted. A path prefix could not express this: `dirs` matches by prefix and the repo root is the prefix of everything.",
   ],
   // `reports/` STAYS in dirs, and it is not an inconsistency with the line above. `dirs` is a
   // ROUTING statement — which changed paths select this guard — and it is a different question from
@@ -40,7 +40,11 @@ export const GUARD = {
   // living docs point into reports/, and deleting or renaming a report makes those dangle. A guard
   // that did not run when reports changed would miss its most likely real failure.
   dirs: ["docs/", "reports/"],
-  files: [],
+  // DECLARED-HOLES-1: the repo-root living documents this guard already SCANS. `dirs` cannot express
+  // them — it matches by PREFIX, and the repo root is the prefix of every path — so they are named.
+  // `scripts/verify.test.mjs` fails if this list stops matching the tracked root *.md set, which is
+  // what stops a NEW root document from being silently unrouted.
+  files: ["README.md", "CLAUDE.md"],
 };
 if (process.argv.includes("--declare")) {
   console.log(JSON.stringify(GUARD));

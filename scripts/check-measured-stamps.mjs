@@ -75,11 +75,14 @@ export const GUARD = {
     "any measured number that carries no stamp: it checks the stamps that exist, in any document",
     "reports/ — the lab journal is outside the scanned set and is allowed to go stale by rule",
     "a change that cannot have moved the figures: a comment-only edit trips it exactly like a behaviour change",
-    "a TEST-ONLY edit inside a `depends=` directory, which is the same false positive as the comment case and the more common one: routing selects on the DIRECTORY, so touching `client/src/modules/camera/*.test.js` reports the tracking-lag stamp stale although no test can move a median (NIGHT-2026-08-18 finding 13)",
-    "repo-root `*.md`, which this guard SCANS but does not ROUTE on — `dirs` below is docs/ and the camera directory, so editing README.md or CLAUDE.md alone selects neither this guard nor check-doc-links locally. CI runs both unconditionally, so the cost is a late failure rather than a missed one (NIGHT-2026-08-18 finding 10)",
+    "a root `*.md` that is NOT in `files` below — same closure and same keep-honest test as check-doc-links (DECLARED-HOLES-1)",
   ],
   dirs: ["docs/", "client/src/modules/camera/"],
-  files: [],
+  // DECLARED-HOLES-1: the repo-root living documents this guard already SCANS. `dirs` cannot express
+  // them — it matches by PREFIX, and the repo root is the prefix of every path — so they are named.
+  // `scripts/verify.test.mjs` fails if this list stops matching the tracked root *.md set, which is
+  // what stops a NEW root document from being silently unrouted.
+  files: ["README.md", "CLAUDE.md"],
 };
 if (process.argv.includes("--declare")) {
   console.log(JSON.stringify(GUARD));
@@ -347,12 +350,29 @@ if (found === 0) {
 // It stays out of the way otherwise: no staged change under a stamp's dependencies, nothing to say.
 const STAGED_MODE = process.argv.includes("--staged");
 
-/** Files staged for commit under `paths` — the changes that are ABOUT to exist. */
+/**
+ * Files staged for commit under `paths` — the changes that are ABOUT to exist.
+ *
+ * TEST FILES ARE EXCLUDED HERE TOO (DECLARED-HOLES-1), and the omission was the more expensive half.
+ * The committed-history query above has excluded `*.test.*` since VERIFY-COST-3, for the reason
+ * written there: a measurement script imports the code it measures, never that code's tests, so a
+ * test cannot move a number this guard protects. **This function never got the same treatment**, so
+ * the `--staged` form — the PRE-COMMIT position, the one that actually blocks a commit — still
+ * failed on a staged test file.
+ *
+ * It is not hypothetical: on 2026-08-18 staging `client/src/modules/camera/framingConfig.test.js`
+ * blocked a commit with "the tracking-lag stamp will be STALE the moment this commit lands", and the
+ * answer was a deliberate re-stamp that proved nothing. That is the habit the whole stamp mechanism
+ * exists to prevent — a stamp re-pointed to silence a guard is a stamp that means nothing.
+ *
+ * The same limit applies as above: a measurement that reads a test file as a fixture must name that
+ * file directly in `depends=` rather than the directory.
+ */
 const stagedUnder = (paths) => {
   try {
     return execFileSync(
       "git",
-      ["diff", "--cached", "--name-only", "--", ...paths],
+      ["diff", "--cached", "--name-only", "--", ...paths, TEST_FILE_EXCLUDE],
       { cwd: ROOT, encoding: "utf8" },
     )
       .split(String.fromCharCode(10))
