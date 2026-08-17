@@ -170,7 +170,56 @@ was pushed, a PR opened purely to trigger CI, and the merge is the local `--no-f
 MERGE-AND-GUARD-1 requires.
 
 **And the branch itself is the first proof the predicate works in the real trigger**, since a branch
-touching `.github/` and `scripts/` is *not* documentation-only and must run everything.
+touching `.github/` and `scripts/` is *not* documentation-only and must run everything. Run
+`32006656646`, from the branch's own CI:
+
+```
+ci-docs-only: FULL RUN — 3 of 5 changed path(s) are not documentation,
+              first: .github/workflows/ci.yml, scripts/ci-docs-only.mjs, scripts/ci-docs-only.test.mjs
+```
+
+…and the client job then ran its full 3 m 36 s. **The negative direction is proven in production,
+with the reason named in the log.**
+
+---
+
+## THE MERGE WENT RED, AND IT WAS NOT THIS PIECE
+
+**Master failed on `213136f0` — this piece's own merge commit — and the cause was QUIET-FAILURES-1,
+the piece before it.** Recorded here rather than in that report because this is where it was found.
+
+```
+Client checks: failure — step "Run tests with coverage"
+  Test Files  209 passed (209)
+       Tests  4111 passed (4111)
+      Errors  1 error
+EnvironmentTeardownError: [vitest-worker]: Closing rpc while "onUserConsoleLog" was pending
+  originated in "src/screens/TrackEditor/TrackEditor.trackLights.test.jsx"
+```
+
+**Every test passed.** Vitest forwards each worker console line to the main process over an RPC, and
+one was still in flight when the environment tore down. QUIET-FAILURES-1 added **~48 console lines**
+to the client suite — measured by tag — and `TrackEditor.trackLights.test.jsx`, the file the error
+names, emits **11** of them. The suite was right; the console traffic was the defect.
+
+**Fixed in `4cd1876b`, and only the part that provably works:** `trackLoader.test.js` gained one
+file-level `console.warn` spy (most of its tests provoke the failure paths deliberately, and an
+intentional failure is not console noise), and the one test that writes `NOT_JSON` now **asserts**
+the warning instead of printing it — it gained an assertion rather than merely being quieted.
+
+**What was tried and REVERTED:** file-level spies in `SetupScreen.test.jsx` and the three
+`TrackEditor` test files. Those warnings arrive **~3 s late** — the loader's own fetch timeout — and
+the spy demonstrably does not intercept them: 41 lines still printed with it installed in
+`beforeAll` and never restored. Decoration that claims a fix it does not deliver is the exact class
+these blocks are about, so it was taken out rather than left in looking helpful.
+
+**THE RESIDUE, STATED PLAINLY AND NOT CLOSED:** ~48 warning lines still print from four screen test
+files, all from loaders whose 3 s timeout expires after the test that triggered them has finished.
+**The teardown race is therefore still possible.** It did not reproduce in four local full-suite runs
+(209 files / 4111 tests, 0 errors each) and master is green on `4cd1876b`. The honest fix is to stop
+those screens leaving a real fetch in flight, which is a change to how the screen tests mount — not
+something to start at the end of a night block. **It is the first item on any list that follows
+this one.**
 
 ---
 
