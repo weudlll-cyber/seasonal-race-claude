@@ -55,6 +55,7 @@ export const GUARD = {
     "destructured defaults, computed keys, aliased keys, `||` instead of `??`",
     "a named fallback imported from another module (reported UNRESOLVED, never silently passed)",
     "test files, which legitimately pass odd values to prove a band rejects them",
+    "an OBJECT or ARRAY literal fallback — `?? { start: 0.4, end: 0.7 }` is a mirror this guard has never counted, because NULLISH matches only a scalar or a SCREAMING_CASE name. Two such copies of `b2AttackProgress` existed and were converted by MIRROR-CENSUS-1 while invisible here (NIGHT-2026-08-18 finding 12)",
   ],
   dirs: ["client/src/"],
   files: [],

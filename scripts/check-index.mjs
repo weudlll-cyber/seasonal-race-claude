@@ -43,6 +43,7 @@ export const GUARD = {
     "a report with no INDEX line, or an INDEX line pointing at a report that does not exist — in both directions, across three report directories",
   blind: [
     "whether the INDEX line DESCRIBES the report; it checks that both ends exist",
+    "ELEVEN of the fourteen directories under reports/. This guard walks evolution/, night/ and parity/ — 245 tracked *.md between them — while 329 more sit in audit/, proposals/, closed-track-overview/, exp-archive/, greenfield/, open-track-overlap/, perf/, phase1-metrics/, results-salvage/, speed-candidates/ and clean-state-2026-06-04/, where an orphan cannot be detected. Most of that is archived sweep output, but proposals/ holds 17 and audit/ held the ONLY copy of a critical finding until it was rescued on 2026-08-18. Narrow by decision, not by oversight — widening it is the owner's call (NIGHT-2026-08-18 finding 11)",
   ],
   dirs: ["reports/"],
   files: [],

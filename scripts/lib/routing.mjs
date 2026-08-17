@@ -212,6 +212,13 @@ export const SUITE_GUARDS = [
  * merely rewrite a document, it spends FIVE MINUTES running six guards first. It qualifies on the
  * same two conditions — it declares and exits before any of that, and `verify.mjs` gives it
  * `--check-counts`.
+ *
+ * IT DOES NOT RECURSE, and that is worth knowing rather than discovering (NIGHT-2026-08-18 finding
+ * 16). `readdirSync` reads the top level of `scripts/` only, so a guard placed in a subdirectory
+ * would never be discovered, never routed and never run locally — silently, because nothing counts
+ * what it did not find. There are none today, so this is latent rather than a defect; the sibling
+ * `scriptTestFiles()` in `verify.mjs` had exactly this bug once and was moved to `git ls-files` for
+ * it. If a guard ever needs a subdirectory, this is the line that has to change with it.
  */
 export function guardScripts(dir = SCRIPTS) {
   const out = [];

@@ -138,7 +138,26 @@ baseline statistics behind the current world.
 | --------------------------------------------- | ------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | `scripts/fingerprint-default.mjs` — **world** | the RACE: physics, plan, outcome                                                | any behaviour change, and per the mint tripwire above                                                                                                                                                                                                                                                                                                                                                                                                                                      |
 | `scripts/camera-fingerprint.mjs` — **camera** | the DIRECTOR's decisions: state, phase, anchor, zoom, offsets, camT, targets    | any block touching `client/src/modules/camera/`                                                                                                                                                                                                                                                                                                                                                                                                                                            |
-| `scripts/render-fingerprint.mjs` — **render** | the DRAW CALL SEQUENCE: sprite placement, text, styles, transforms, layer order | any block touching the drawing path — **`modules/camera/`**, `RaceScreen/renderRaceFrame.js`, `RaceScreen/drawing/`, `nameTagLayout.js`, `Minimap.js`, the racer types' `drawRacer`. **Camera counts** (FINISH-COMPANY-1): a camera-only diff moved this hash off `b6591e74102152bd` (**superseded 2026-08-05**), because the director decides the transform on every drawn frame. `scripts/verify.mjs` had copied this list's omission and told a block it could not reach a `ctx.` call. |
+| `scripts/render-fingerprint.mjs` — **render** | the DRAW CALL SEQUENCE: sprite placement, text, styles, transforms, layer order | any block touching the drawing path — **`modules/camera/`**, `RaceScreen/renderRaceFrame.js`, `RaceScreen/drawing/`, `nameTagLayout.js`, `Minimap.js`. **Camera counts** (FINISH-COMPANY-1): a camera-only diff moved this hash off `b6591e74102152bd` (**superseded 2026-08-05**), because the director decides the transform on every drawn frame. `scripts/verify.mjs` had copied this list's omission and told a block it could not reach a `ctx.` call. |
+
+**THE RACER TYPES ARE NOT ON THAT LIST ANY MORE, AND NOTHING REPLACES THEM.** This row read "…and
+the racer types' `drawRacer`" until 2026-08-18, which told a reader that changing how a racer is
+drawn is covered by an instrument. **It is not, in two independent ways, and both were measured
+rather than argued** (NIGHT-2026-08-18 finding 7):
+
+- **`racer-types/` is inside NO instrument's closure.** Walking each guard's declared `reach`
+  through `closureOf`: render 55 files, camera 36, world 36 — `racer-types/` appears in none, and
+  `engine-reach --check` on `SpriteRacerType.js` reports it cannot reach the engine. So a diff
+  confined to a racer type selects no fingerprint, and following this row by hand was the only way
+  it could ever have run.
+- **Even when it runs, the instrument is blind to the sprite.** `RENDER-FINGERPRINT-1` §"blind to"
+  says so: node has no `Image`, so the racer body falls back to its procedural branch and the blit
+  is never recorded.
+
+**So a change to how a racer is drawn is covered by the owner's eye and by nothing else.** That is a
+defensible position — it is what the render fingerprint's own blind list already declares — but the
+row above must not read as though an instrument has it. Whether to widen the instrument is a
+decision, not a documentation fix, and it is on the owner's list.
 
 <!-- BEGIN GENERATED: guard costs — gen-ceremony-costs.mjs -->
 
