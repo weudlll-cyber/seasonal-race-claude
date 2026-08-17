@@ -236,9 +236,19 @@ describe('setRacerTypeOverride', () => {
     expect(raw.snail).toEqual({ isActive: false, speedMultiplier: 0.5 });
   });
 
-  it('corrupt JSON in localStorage does not throw', () => {
+  it('corrupt JSON in localStorage does not throw — and SAYS SO (QUIET-FAILURES-1)', () => {
+    // The spy is not decoration. `storageGet` now names an unreadable key, and this test is the
+    // only place in the suite that deliberately corrupts one — so without capturing it, the warning
+    // is forwarded to the main process over vitest's console RPC, which is what CI-DOCS-ONLY-1's
+    // merge run died on at teardown with all 4111 tests passing. Capturing it also lets the test
+    // assert the second half of the behaviour instead of merely tolerating it.
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
     localStorage.setItem('racearena:racerTypeOverrides', 'NOT_JSON');
     expect(() => setRacerTypeOverride('horse', 'speedMultiplier', 1.2)).not.toThrow();
+    expect(warn).toHaveBeenCalledWith(
+      expect.stringContaining('"racearena:racerTypeOverrides" could not be read')
+    );
+    warn.mockRestore();
   });
 });
 

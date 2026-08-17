@@ -43,10 +43,20 @@ const MOCK_TRACK_FULL = {
   updatedAt: '2026-01-01T00:00:00.000Z',
 };
 
+// QUIET-FAILURES-1 made this loader SPEAK on its failure paths, and most of the tests in this file
+// provoke exactly those paths on purpose. A file-level spy captures the output instead of printing
+// it: an intentional failure is not console noise, and vitest forwards every worker console line to
+// the main process over an RPC that must not still be in flight at teardown. CI-DOCS-ONLY-1's merge
+// run went red on precisely that — `EnvironmentTeardownError: Closing rpc while "onUserConsoleLog"
+// was pending` — with all 4111 tests passing. The suite was right; the console traffic was the
+// problem. `warn` is exported to the tests below so they can still ASSERT what was said.
+let warn;
+
 beforeEach(() => {
   localStorage.clear();
   vi.restoreAllMocks();
   vi.unstubAllGlobals();
+  warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
 });
 
 afterEach(() => {
@@ -439,11 +449,8 @@ describe('cacheTrackGeometry — honesty proof: credentials:include (fix: was 40
 // at the end are the other half of the piece's promise: on success, nothing changed and nothing is
 // said.
 describe('trackLoader — the failure path SAYS SO (QUIET-FAILURES-1)', () => {
-  let warn;
-  beforeEach(() => {
-    warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
-  });
-  afterEach(() => warn.mockRestore());
+  // Uses the file-level `warn` spy installed above — one spy, so a test cannot accidentally assert
+  // against a console that something else already replaced.
 
   it('a geometry that times out is NAMED, not silently dropped', async () => {
     vi.stubGlobal('fetch', vi.fn().mockRejectedValue(new Error('timeout')));
