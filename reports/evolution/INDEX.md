@@ -38,6 +38,20 @@ is dated and recorded HERE, where a reader on their way to the report will pass 
   [GATE-LINES-1](../night/GATE-LINES-1.md); the fix and the once-per-run control that makes the
   silence impossible to repeat: [GATE-TRUTH-1](../night/GATE-TRUTH-1.md).
 
+- [START-SHAPE-1.md](START-SHAPE-1.md) — **the shape of the start, measured before anyone builds**
+  (2026-08-19). **MEASUREMENT ONLY — the code is byte-identical to master**; nothing minted. **The
+  leader is not out because the shot is tight around him — the camera is not pointed at him yet**: at
+  dirt-oval 3000 ms the aim projects at x 1515 and the leader sits at 1517, 875 px outside the frame.
+  Wrong on **3 of 5 CLOSED tracks and 0 of 5 open** (city-circuit 0.25–0.63 s, searound 2.13–3.13 s,
+  dirt-oval 2.45–3.92 s), all inside the hold — release is 4983 ms everywhere. **The old defect is
+  still repaired** (river-run ALONG 6.4 px at 1 s vs 37.4 before `c3f294d1`). **The proposed direction
+  FAILS**: the field requirement is measured around the ANCHOR, so it reads 12.855 "comfortable" while
+  a racer is 237 px outside — priced, it fixes zero closed tracks and **breaks garden-path**.
+  Recommended instead is **B′ — the same requirement read off the DELIVERED frame, leader only**:
+  leader in frame on all ten, **0 of 2400 frames changed on every open track** (so the old defect
+  cannot return where it was diagnosed), 196 of 4800 overall, ≤1.70× widening for ~1.5 s. Three
+  proposals, incl. **a camera commit must name the tracks its numbers come from**.
+
 - [START-BISECT-1.md](START-BISECT-1.md) — **when did the start start looking like this** (2026-08-19).
   **INVESTIGATION ONLY — the code is byte-identical to master.** The leader leaving the frame in the
   first seconds on closed tracks entered at **`c3f294d1`, 2026-08-08 01:20, CEREMONY-HOLD-TARGET-1**
