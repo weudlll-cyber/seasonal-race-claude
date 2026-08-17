@@ -758,3 +758,39 @@ test("SABOTAGE: a declared path of the WRONG KIND is reported too", () => {
   const kinds = invalid.map((p) => `${p.kind}:${p.path}`).sort();
   assert.deepEqual(kinds, ["dirs:scripts/verify.mjs", "files:docs/"]);
 });
+
+test("A GUARD THAT SCANS THE REPO ROOT MUST ROUTE ON IT (DECLARED-HOLES-1)", () => {
+  // WHAT BREAKS IF THIS IS DELETED: a new repo-root *.md becomes silently unrouted, which is the
+  // hole this closed. `check-doc-links` and `check-measured-stamps` both SCAN `docs/ + repo-root
+  // *.md` and both used to route on `dirs` alone — and `dirs` matches by PREFIX, so the repo root
+  // cannot be expressed there without matching every path in the tree. They name the root documents
+  // in `files` instead, and that list is a hand-maintained copy of something git already knows.
+  //
+  // This is the rule that keeps the copy honest: add `AGENTS.md` at the root tomorrow and this test
+  // fails until the two guards are told, instead of the document going unchecked in the local run.
+  // Proved by running it: appending one blank line to README.md now selects BOTH guards, where
+  // before it selected only the three declared always-on.
+  const rootMd = execFileSync("git", ["ls-files", "*.md"], {
+    cwd: join(dirname(fileURLToPath(import.meta.url)), ".."),
+    encoding: "utf8",
+  })
+    .split("\n")
+    .map((s) => s.trim())
+    .filter((f) => f && !f.includes("/"))
+    .sort();
+
+  assert.ok(rootMd.length > 0, "the repo must have at least one root *.md");
+
+  const { guards } = collect();
+  for (const id of ["check-doc-links", "check-measured-stamps"]) {
+    const g = guards.find((x) => x.id === id);
+    assert.ok(g, `${id} must be discoverable`);
+    for (const f of rootMd) {
+      assert.ok(
+        g.matches(f),
+        `${id} scans the repo-root living docs, so it must ROUTE on ${f}. ` +
+          `Add it to that guard's \`files\` list.`,
+      );
+    }
+  }
+});

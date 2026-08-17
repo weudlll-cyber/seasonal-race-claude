@@ -38,6 +38,17 @@ is dated and recorded HERE, where a reader on their way to the report will pass 
   [GATE-LINES-1](../night/GATE-LINES-1.md); the fix and the once-per-run control that makes the
   silence impossible to repeat: [GATE-TRUTH-1](../night/GATE-TRUTH-1.md).
 
+- [DECLARED-HOLES-1.md](DECLARED-HOLES-1.md) — **two holes closed, one declared permanent with
+  evidence** (2026-08-18). `check-measured-stamps` had excluded test files from its COMMITTED query
+  since VERIFY-COST-3 but never from `stagedUnder` — the pre-commit position, the one that actually
+  blocks — so a staged camera test blocked a commit and was answered with a re-stamp that proved
+  nothing. Closed, and proved both ways: a staged test no longer blocks, a staged production file
+  still does. `check-doc-links` and `check-measured-stamps` both SCANNED repo-root `*.md` and routed
+  on neither, because `dirs` matches by prefix and the root is the prefix of everything; both now
+  name the root docs, with a rule in `verify.test.mjs` that fails if the list stops matching git.
+  **The object-literal blind spot is declared permanent, and the hand search behind it found FOUR
+  copies of `b2AttackProgress` where MIRROR-CENSUS-1 reported two** — two are still live in
+  `heroCurveGenerator.js`. That is what an uncounted class costs: not a wrong fix, a wrong count.
 - [INDEX-COVERAGE-1.md](INDEX-COVERAGE-1.md) — **every report directory is now decided about**
   (2026-08-18). `check-index` walked **3 of 14** directories and printed `0 unindexed` — true of
   **44%** of the tree, in a shape that read as a statement about all of it. `proposals/` is now

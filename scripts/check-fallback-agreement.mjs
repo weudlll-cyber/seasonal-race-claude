@@ -55,7 +55,7 @@ export const GUARD = {
     "destructured defaults, computed keys, aliased keys, `||` instead of `??`",
     "a named fallback imported from another module (reported UNRESOLVED, never silently passed)",
     "test files, which legitimately pass odd values to prove a band rejects them",
-    "an OBJECT or ARRAY literal fallback — `?? { start: 0.4, end: 0.7 }` is a mirror this guard has never counted, because NULLISH matches only a scalar or a SCREAMING_CASE name. Two such copies of `b2AttackProgress` existed and were converted by MIRROR-CENSUS-1 while invisible here (NIGHT-2026-08-18 finding 12)",
+    "an OBJECT or ARRAY literal fallback. NULLISH matches a scalar or a SCREAMING_CASE name, so `?? { start: 0.4, end: 0.7 }` is a mirror this guard has never counted. DECLARED-HOLES-1 looked for them by hand and found FOUR copies of `b2AttackProgress`: two converted by MIRROR-CENSUS-1, and TWO STILL LIVE in `heroCurveGenerator.js` (the `GENERATOR_CONFIG` entry and the `?? { start: 0.4, end: 0.7 }` at the cast site). LEFT OPEN DELIBERATELY: closing it means teaching `literal()` to parse an object and compare structurally — a change to the resolution engine that has to be proved in both directions — and the only class it would surface is already known and already exempt as that module's declared direct-call default set. Every other `?? {}` in the tree is an empty-object guard on a key with no default, which is not a mirror at all."
   ],
   dirs: ["client/src/"],
   files: [],
