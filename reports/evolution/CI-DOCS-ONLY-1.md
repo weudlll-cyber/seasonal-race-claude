@@ -116,12 +116,31 @@ the saving, and it is why the honest number is smaller than "three minutes of te
 
 | merge | what it touched | wall clock BEFORE | AFTER | saving |
 | --- | --- | --- | --- | --- |
-| **`7c2a27eb`** — the census merge | `reports/` only | **3 m 25 s** | **≈ 1 m 40 s** | **≈ 1 m 45 s** |
+| **`7c2a27eb`** — the census merge | `reports/` only | **3 m 25 s** | *(predicted ≈ 1 m 40 s)* | — |
 | **`0877d523`** — QUIET-FAILURES-1 | `client/` + `reports/` | **3 m 36 s** | **3 m 36 s** | **0** |
+| **`05bc3dbc`** — this report's own update | `reports/` only | *(3 m 25 – 3 m 36 s)* | **1 m 52 s MEASURED** | **≈ 1 m 40 s** |
 
-*(BEFORE figures are measured. AFTER for `7c2a27eb` is computed from the measured step timings that
-remain: the server job becomes the long pole at ≈ 1 m 40 s — checkout + setup + the 1 m 26 s install
-it keeps for the audit gate — with docs at 1 m 25 s just behind it.)*
+**THE AFTER FIGURE IS NO LONGER A PREDICTION.** Run `32009606450` is a real docs-only push to master
+and it behaved exactly as designed — including being *slower* than the 1 m 40 s predicted above,
+which is why the measured row is the one to trust:
+
+| job | before | after | conclusion |
+| --- | --- | --- | --- |
+| Client checks | 3 m 36 s | **31 s** | `success` |
+| Server tests | 2 m 19 s | **1 m 52 s** | `success` |
+| Living-doc guards | 1 m 26 s | 1 m 26 s | `success` |
+| **wall clock** | **3 m 36 s** | **1 m 52 s** | |
+
+```
+ci-docs-only: DOCS-ONLY — all 1 changed path(s) are under docs/, reports/ or a root *.md
+DOCS-ONLY PUSH — lint, format-check and the client test suite were SKIPPED.
+DOCS-ONLY PUSH — the server test suite was SKIPPED.
+The security audit gate below still ran: its result is not decided by the diff.
+```
+
+**All three jobs reported `success` for the SHA** — which is the property the whole design exists to
+keep. The server job is the long pole at 1 m 52 s because it keeps its 1 m 26 s install for the audit
+gate; that is the cost of not weakening what green means, and Proposal B is about exactly it.
 
 **A second docs-only run agrees**: `15b6f465` measured 3 m 31 s (client 3 m 28 s, server 2 m 32 s,
 docs 1 m 26 s), and lands in the same place.
