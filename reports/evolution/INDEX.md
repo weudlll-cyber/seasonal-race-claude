@@ -38,6 +38,19 @@ is dated and recorded HERE, where a reader on their way to the report will pass 
   [GATE-LINES-1](../night/GATE-LINES-1.md); the fix and the once-per-run control that makes the
   silence impossible to repeat: [GATE-TRUTH-1](../night/GATE-TRUTH-1.md).
 
+- [DOCS-CATCH-UP-2.md](DOCS-CATCH-UP-2.md) — **the documents describe the state we actually have**
+  (2026-08-19). Documentation only; `engine-reach --check` printed for all three changed paths, and
+  nothing was minted. **R14 NO SECOND DEFINITION** enters `VERIFY-RULES.md` in its numbered form,
+  with the owner's reason and both traps we walked into (deletion-by-omission, and `?? 0` becoming
+  NaN); **R8a** states what "green for exactly this SHA" means since the docs-only skip, pointing at
+  `ci.yml` rather than restating it; R8 gains a pointer to the corrected ship order, which
+  `SHIP-CEREMONY.md` already owned. **Canon: 3 EXTENDED (L207, L209, L210), 3 ADDED (L214 Summary,
+  L215 Exclusion-Set, L216 Denominator)** — and L207's OFF-arm exception clause is REMOVED, because
+  the ruling closed the question it rested on. `CAMERA_DIRECTOR.md`'s render blind list now says the
+  racer types' drawing CODE is watched by nothing, not only their pixels. One stale claim found by
+  reading: two camera fallbacks listed as disagreeing had been resolved by MIRRORS-BY-REFERENCE.
+  Left alone and reported: `docs/archive/AUTH.md` is the contract's named home and declares itself
+  unbuilt.
 - [DEAD-EXPORTS-1.md](DEAD-EXPORTS-1.md) — **one deleted, one kept, and a premise corrected**
   (2026-08-19). The block was specced to delete TWO exports "referenced nowhere"; **one of them is
   referenced** — `deleteRacerSprite` is imported and called five times by its own test. The table in
