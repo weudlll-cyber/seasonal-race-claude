@@ -38,6 +38,21 @@ is dated and recorded HERE, where a reader on their way to the report will pass 
   [GATE-LINES-1](../night/GATE-LINES-1.md); the fix and the once-per-run control that makes the
   silence impossible to repeat: [GATE-TRUTH-1](../night/GATE-TRUTH-1.md).
 
+- [START-BISECT-1.md](START-BISECT-1.md) — **when did the start start looking like this** (2026-08-19).
+  **INVESTIGATION ONLY — the code is byte-identical to master.** The leader leaving the frame in the
+  first seconds on closed tracks entered at **`c3f294d1`, 2026-08-08 01:20, CEREMONY-HOLD-TARGET-1**
+  — _"the hold is what the state ASKS for, not where the camera happened to stand"_. Its direct
+  parent `ca178cc5` frames the leader at **863 px**; it frames him at **1517 px** off a 1280 px
+  canvas, and that number is unchanged through master. **The term is the ZOOM**, not the pan, its
+  smoothing or the field guarantee: the ceremony hand-over became a per-frame TARGET, so zoom at
+  3000 ms went 4.587 → 7.939 (+73%) and a tighter frame magnifies the leader's distance from centre.
+  **Deliberate, and judged on other tracks** — every number in it comes from river-run and
+  mountainstreet, both open serpentines; its claim _"racers outside the picture 0 throughout"_ is
+  false on dirt-oval (19/20). **His frames WOULD have looked different, on day one** — no growth or
+  drift was needed. Predicate fixed before the search; instrument adaptations proven equivalent and
+  neutral on master; bracket ADJACENT so no skip lies inside it; pre-2026-08-03 trees are not
+  headlessly runnable (named causes). Three proposals.
+
 - [SELF-PASSWORD-1.md](SELF-PASSWORD-1.md) — **an operator changes his own password** (2026-08-19).
   `engine-reach --check` printed for all 13 changed paths; nothing minted. `POST /api/auth/change-password`
   lives on the AUTH router, not `/api/users`, because that router is admin-only for every method —
