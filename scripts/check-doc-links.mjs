@@ -32,6 +32,7 @@ export const GUARD = {
     "external URLs",
     "anchors within a file — only the file half of a link is resolved",
     "links written INSIDE reports/ — the lab journal is allowed to rot and is never scanned, even though a change there selects this guard (see dirs below)",
+    "repo-root `*.md`, which this guard SCANS but does not ROUTE on. `dirs` below is docs/ and reports/, so a change to README.md or CLAUDE.md ALONE selects neither this guard nor check-measured-stamps — proved by appending one blank line to README.md and reading `npm run verify --dry`, where the only guards it selected were the three declared always-on. CI runs everything unconditionally, so a broken root link is caught there: the cost is a late failure, not a missed one (NIGHT-2026-08-18 finding 10)",
   ],
   // `reports/` STAYS in dirs, and it is not an inconsistency with the line above. `dirs` is a
   // ROUTING statement — which changed paths select this guard — and it is a different question from

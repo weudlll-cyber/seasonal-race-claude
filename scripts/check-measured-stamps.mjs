@@ -75,6 +75,8 @@ export const GUARD = {
     "any measured number that carries no stamp: it checks the stamps that exist, in any document",
     "reports/ — the lab journal is outside the scanned set and is allowed to go stale by rule",
     "a change that cannot have moved the figures: a comment-only edit trips it exactly like a behaviour change",
+    "a TEST-ONLY edit inside a `depends=` directory, which is the same false positive as the comment case and the more common one: routing selects on the DIRECTORY, so touching `client/src/modules/camera/*.test.js` reports the tracking-lag stamp stale although no test can move a median (NIGHT-2026-08-18 finding 13)",
+    "repo-root `*.md`, which this guard SCANS but does not ROUTE on — `dirs` below is docs/ and the camera directory, so editing README.md or CLAUDE.md alone selects neither this guard nor check-doc-links locally. CI runs both unconditionally, so the cost is a late failure rather than a missed one (NIGHT-2026-08-18 finding 10)",
   ],
   dirs: ["docs/", "client/src/modules/camera/"],
   files: [],

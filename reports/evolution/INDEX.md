@@ -38,6 +38,17 @@ is dated and recorded HERE, where a reader on their way to the report will pass 
   [GATE-LINES-1](../night/GATE-LINES-1.md); the fix and the once-per-run control that makes the
   silence impossible to repeat: [GATE-TRUTH-1](../night/GATE-TRUTH-1.md).
 
+- [CENSUS-REST-1.md](CENSUS-REST-1.md) — **the documents stop claiming cover they do not have**
+  (2026-08-18). `SHIP-CEREMONY.md`'s render row named "the racer types' `drawRacer`" as a reason to
+  run the render fingerprint; **`racer-types/` is inside no instrument's closure** (render 55,
+  camera 36, world unreachable) and the instrument is separately blind to the sprite blit, so a
+  change to how a racer is drawn is covered by his eye and nothing else. Four guards now DECLARE
+  holes the census found: object-literal fallbacks (invisible to `check-fallback-agreement` while
+  MIRROR-CENSUS-1 converted two), test-only edits tripping a production stamp, the repo-root
+  `*.md` scanned-but-not-routed gap in two guards, and `check-index` walking **3 of 14** report
+  directories — 245 covered, **329 not**. `guardScripts()` says it does not recurse. Text only:
+  `covers`/`blind` are printed, never consulted for selection, so no guard runs on a different set.
+  Six behaviour-changing fixes were one line away each and are listed rather than started.
 - [MIRROR-CENSUS-2.md](MIRROR-CENSUS-2.md) — **six mirrors removed, not aligned** (2026-08-18).
   21 disagreeing copied defaults -> 14: the six OFF-arm BOOLEANS in `raceCore.js` had their
   `?? false` **deleted outright** rather than pointed at the default — a mirror that cannot drift
