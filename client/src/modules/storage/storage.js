@@ -26,11 +26,35 @@ export const KEYS = {
   SURFACE_CLASSES_CACHE: 'racearena:cache:surfaceClasses',
 };
 
+// QUIET-FAILURES-1: which keys have already announced a failed read. NOT app state and not a UI
+// concept — a module-local de-duplicator, because `storageGet` runs on nearly every render and a
+// browser with storage blocked would otherwise fill the console with the same line forever. One
+// line per key is enough to name the cause; a thousand is just a different kind of silence.
+const _reported = new Set();
+
 export function storageGet(key, fallback = null) {
   try {
     const raw = localStorage.getItem(key);
     return raw !== null ? JSON.parse(raw) : fallback;
-  } catch {
+  } catch (err) {
+    // Until now a corrupt or unreadable value was indistinguishable from an absent one: every
+    // loader in this app resolves through here, so one malformed byte in `racearena:cameraConfig`
+    // silently replaced the owner's entire camera tuning with the shipped defaults, with nothing
+    // on screen and nothing in the console.
+    //
+    // NO `localStorage` AT ALL IS NOT A FAILURE — it is node. The sim and all three fingerprint
+    // harnesses import this module and have no storage API, so warning there would print on every
+    // run about a value nobody ever stored. FOUND BY MEASURING: the first version of this warning
+    // did exactly that, once per harness. A guard that cries wolf in the one place it is read most
+    // is the failure mode this project already has a name for, so the headless case stays silent
+    // and the browser case — storage present, read or parse failed — is the one that speaks.
+    if (typeof localStorage === 'undefined') return fallback;
+    if (!_reported.has(key)) {
+      _reported.add(key);
+      console.warn(
+        `[storage] "${key}" could not be read — ${err?.message ?? 'unreadable'}; falling back to the default, so anything you had stored under it is NOT in effect`
+      );
+    }
     return fallback;
   }
 }

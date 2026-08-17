@@ -36,9 +36,15 @@ export async function fetchServerSurfaceClasses() {
     storageSet(KEYS.SURFACE_CLASSES_CACHE, classes);
     loadServerClasses(classes);
     return classes;
-  } catch {
+  } catch (err) {
+    // QUIET-FAILURES-1: on a cold profile this cache is EMPTY, so the registry falls all the way
+    // back to the code defaults and every custom class and every override simply is not there —
+    // in the Setup filter and in the trails. Indistinguishable from a successful load until now.
     const cached = getCachedServerSurfaceClasses();
     loadServerClasses(cached);
+    console.warn(
+      `[surface-classes] could not be fetched — ${err?.message ?? 'request failed'}; using ${cached.length} cached class(es), so custom classes and overrides may be missing`
+    );
     return cached;
   }
 }

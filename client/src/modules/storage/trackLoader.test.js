@@ -426,3 +426,103 @@ describe('cacheTrackGeometry — honesty proof: credentials:include (fix: was 40
     expect(result).toBeNull();
   });
 });
+
+// ── QUIET-FAILURES-1 ─────────────────────────────────────────────────────────────────────────────
+//
+// WHAT BREAKS IF THIS BLOCK IS DELETED: the loader goes back to failing in complete silence, and
+// nothing in the repository exercises its failure path — which is exactly how the class survived.
+// A dropped geometry returned null, `Promise.allSettled` discarded it, and the track then rendered
+// from the list with nothing behind it; `SetupScreen` read that as a CLOSED track, so an open track
+// became a laps race with the right name and the right picture and no message anywhere.
+//
+// Each test states the failure it simulates and asserts the HONEST behaviour. The happy-path tests
+// at the end are the other half of the piece's promise: on success, nothing changed and nothing is
+// said.
+describe('trackLoader — the failure path SAYS SO (QUIET-FAILURES-1)', () => {
+  let warn;
+  beforeEach(() => {
+    warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+  });
+  afterEach(() => warn.mockRestore());
+
+  it('a geometry that times out is NAMED, not silently dropped', async () => {
+    vi.stubGlobal('fetch', vi.fn().mockRejectedValue(new Error('timeout')));
+
+    const result = await cacheTrackGeometry(MOCK_TRACK_SUMMARY);
+
+    expect(result).toBeNull();
+    expect(warn).toHaveBeenCalledWith(
+      expect.stringContaining(`geometry for "${MOCK_TRACK_SUMMARY.id}" could not be cached`)
+    );
+    expect(warn).toHaveBeenCalledWith(expect.stringContaining('REFUSED'));
+  });
+
+  it('an HTTP error is NAMED too — it was the silent exit the catch never saw', async () => {
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: false, status: 500 }));
+
+    expect(await cacheTrackGeometry(MOCK_TRACK_SUMMARY)).toBeNull();
+    expect(warn).toHaveBeenCalledWith(expect.stringContaining('HTTP 500'));
+  });
+
+  it('the LIST failing says how many tracks are being shown from the last good load', async () => {
+    storageSet(CACHE_KEY, [MOCK_TRACK_SUMMARY]);
+    vi.stubGlobal('fetch', vi.fn().mockRejectedValue(new Error('offline')));
+
+    const tracks = await fetchServerTracks();
+
+    expect(tracks).toEqual([MOCK_TRACK_SUMMARY]);
+    expect(warn).toHaveBeenCalledWith(
+      expect.stringContaining('the track list could not be fetched')
+    );
+    expect(warn).toHaveBeenCalledWith(expect.stringContaining('1 track(s) from the last'));
+  });
+
+  it('a list that loads while its geometries drop reports the TALLY', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi
+        .fn()
+        .mockImplementation((url) =>
+          String(url).endsWith('/api/tracks')
+            ? Promise.resolve({ ok: true, json: async () => [MOCK_TRACK_SUMMARY] })
+            : Promise.reject(new Error('timeout'))
+        )
+    );
+
+    await fetchServerTracks();
+
+    expect(warn).toHaveBeenCalledWith(
+      expect.stringContaining('1 of 1 track geometries could not be cached')
+    );
+  });
+
+  // ── THE HAPPY PATH IS UNCHANGED, AND THAT IS ASSERTED RATHER THAN CLAIMED ──────────────────────
+  it('HAPPY PATH: a successful geometry fetch returns the same object and says NOTHING', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValue({ ok: true, json: async () => MOCK_TRACK_FULL })
+    );
+
+    const geometry = await cacheTrackGeometry(MOCK_TRACK_SUMMARY);
+
+    expect(geometry.id).toBe(MOCK_TRACK_FULL.geometryId);
+    expect(geometry.closed).toBe(MOCK_TRACK_FULL.closed);
+    expect(warn).not.toHaveBeenCalled();
+  });
+
+  it('HAPPY PATH: a successful list fetch returns the tracks and says NOTHING', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockImplementation((url) =>
+        Promise.resolve({
+          ok: true,
+          json: async () =>
+            String(url).endsWith('/api/tracks') ? [MOCK_TRACK_SUMMARY] : MOCK_TRACK_FULL,
+        })
+      )
+    );
+
+    expect(await fetchServerTracks()).toEqual([MOCK_TRACK_SUMMARY]);
+    expect(warn).not.toHaveBeenCalled();
+  });
+});
