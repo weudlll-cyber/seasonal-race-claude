@@ -102,6 +102,20 @@ the server — there is no third tier and no per-user permission set.
 create, change role or reset a password, delete. The first admin comes from §1 and nowhere else —
 **there is no self-service registration and no password reset by email.**
 
+**A password change ends the sessions it should end, and only those.** The rule is one mechanism, not
+a cleanup step: `updateUser` bumps the record's `sessionEpoch` in the same serialised write that
+stores the new hash, and `requireAuth` rejects any session whose stored epoch differs. So:
+
+- an admin setting **another** user's password ends **every** session of that user, on that session's
+  **very next request** — not at its next expiry, and not after a sweep;
+- a user changing their **own** password ends every **other** session of theirs, while the session
+  making the request survives — it is re-stamped with the new epoch, so nobody is logged out for
+  rotating their own password;
+- **no other user is affected**, ever.
+
+**Only an admin can change a password at all**, their own or anyone's, because `/api/users` is
+admin-only and there is no self-service route. An `operator` who wants a new password must ask one.
+
 **The last admin cannot be removed.** Deleting the sole `admin`, or demoting them to `operator`, is
 refused by the store itself rather than by the route (`Cannot delete the last admin` / `Cannot demote
 the last admin`), so no future caller can bypass it.

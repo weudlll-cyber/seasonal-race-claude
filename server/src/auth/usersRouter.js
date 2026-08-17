@@ -46,10 +46,43 @@ function createUsersRouter({ store } = {}) {
   });
 
   // PUT /:id — update role and/or reset password; delegates to store.updateUser
+  //
+  // SESSIONS AND A PASSWORD CHANGE (SESSION-INVALIDATE-1, the owner's contract of 2026-08-19).
+  // A password change bumps the record's `sessionEpoch` inside the same serialised write
+  // (usersStore.js), and `requireAuth` rejects any session whose stored epoch differs
+  // (guards.js). That already ends every session of a user whose password an ADMIN set — there
+  // is no separate "remove the sessions" step here, and deliberately so: a second mechanism
+  // beside this one would be a second definition of the same rule.
+  //
+  // The one case it got wrong is a user changing their OWN password: the session making the
+  // request predates the bump too, so the requester was logged out for doing the right thing.
+  // That single session is re-stamped with the new epoch below. Every OTHER session of that
+  // user still carries the old epoch and still dies on its next request.
   router.put('/:id', async (req, res) => {
     const { role, password } = req.body ?? {};
+    const changedOwnPassword = password !== undefined && req.params.id === req.authUser?.id;
     try {
       const user = await store.updateUser(req.params.id, { role, password });
+
+      if (changedOwnPassword && req.session) {
+        const fresh = store.findAuthRecordById(req.params.id);
+        req.session.sessionEpoch = fresh?.sessionEpoch ?? 0;
+        // A FAILURE HERE INVALIDATES MORE, NEVER LESS, so the password change still stands: it is
+        // already committed to disk, and the worst outcome is that the requester must log in again
+        // exactly as they had to before this existed. What we refuse is doing it quietly.
+        await new Promise((resolve) => {
+          req.session.save((err) => {
+            if (err) {
+              console.error(
+                `[users] own-password session re-stamp failed for user ${req.params.id}; the password WAS changed and this session will be logged out:`,
+                err.message
+              );
+            }
+            resolve();
+          });
+        });
+      }
+
       res.json(user);
     } catch (err) {
       if (err.code === 'NOT_FOUND') return res.status(404).json({ error: 'user not found' });
