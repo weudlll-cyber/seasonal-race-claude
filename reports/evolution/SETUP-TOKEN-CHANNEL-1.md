@@ -171,6 +171,19 @@ INDEX entry, so the older file did not have to be touched either.
 `reports/audit/` is left in place holding only its empty `archive/` directory, which git does not
 track and which is not mine to delete.
 
+**ONE QUALIFICATION ON "NOT ONE WORD", BECAUSE THE CLAIM SHOULD SURVIVE INSPECTION.** Both files
+arrived with CRLF line endings and git normalised them to LF on commit, exactly as it does for every
+file in this repository. **The text is byte-identical otherwise** — verified rather than assumed, by
+diffing the committed blob against the working file with line endings stripped from both:
+
+```
+08-18: identical ignoring line endings   (1061 words)
+08-17: identical ignoring line endings   (1174 words)
+```
+
+No sentence, number, link or heading differs. Said plainly here so that a later reader who notices
+the line-ending change does not have to wonder what else moved with it.
+
 ---
 
 ## VERIFICATION
