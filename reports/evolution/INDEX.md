@@ -38,6 +38,16 @@ is dated and recorded HERE, where a reader on their way to the report will pass 
   [GATE-LINES-1](../night/GATE-LINES-1.md); the fix and the once-per-run control that makes the
   silence impossible to repeat: [GATE-TRUTH-1](../night/GATE-TRUTH-1.md).
 
+- [CHANGE-PASSWORD-RL-1.md](CHANGE-PASSWORD-RL-1.md) — **a rate limit on changing your own password**
+  (2026-08-19). The owner set the number: **FIVE**. Reuses the limiter login and setup already use —
+  same factory, same 429 sentence, **no new env key** (the window is the login window, read from the
+  same variable). **The one genuine difference, named rather than smuggled: it keys on the SESSION'S
+  USER, not the IP**, because this route is authenticated and per-IP keying would let one operator
+  spend every colleague's budget at the same address. Failed attempts only. 5 tests; the per-user
+  keying is **sabotage-proven** (revert to per-IP and "the limit does not leak across users" goes
+  red). `docs/AUTH.md` is the one home and gains a **keyed on** column. **No fingerprint can move** —
+  no instrument's closure (36/36/55) contains any changed file.
+
 - [AIM-TRAIL-1.md](AIM-TRAIL-1.md) — **why does the camera trail its own aim** (2026-08-18).
   **INVESTIGATION ONLY — the code is byte-identical to master**; nothing minted. **THE TRAIL IS NOT A
   DEFECT, and it is OLDER than the commit blamed for it.** `gun-window-truth`'s own `lag` column, run
