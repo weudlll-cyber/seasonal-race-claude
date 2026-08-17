@@ -37,7 +37,8 @@ export async function cacheTrackGeometry(summaryTrack) {
       fetch(`${API_BASE_URL}/api/tracks/${summaryTrack.id}`, { credentials: 'include' }),
       FETCH_TIMEOUT_MS
     );
-    if (!res.ok) return null;
+    // The OTHER silent exit, and it is not an exception so the catch below never saw it.
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
     const full = await res.json();
     // Three fields need special handling; everything else passes through automatically
     // so new data-model fields (trackLights, surfaceClasses, …) are never silently dropped.
@@ -54,7 +55,14 @@ export async function cacheTrackGeometry(summaryTrack) {
     storageSet(GEO_KEY(geometryId), geometry);
     registerInIndex(geometryId);
     return geometry;
-  } catch {
+  } catch (err) {
+    // QUIET-FAILURES-1: a dropped geometry used to be invisible — this returned null, the caller
+    // discarded it through `Promise.allSettled`, and the track then rendered from the list with no
+    // geometry behind it. `SetupScreen` reads a missing geometry as a CLOSED track, so an open
+    // track became a laps race with the right name and the right picture. Say it instead.
+    console.warn(
+      `[tracks] geometry for "${summaryTrack?.id}" could not be cached — ${err?.message ?? 'request failed'}; this track will be REFUSED rather than raced on a guess`
+    );
     return null;
   }
 }
@@ -85,10 +93,26 @@ export async function fetchServerTracks() {
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
     const tracks = await res.json();
     storageSet(CACHE_KEY, tracks);
-    await Promise.allSettled(tracks.map(cacheTrackGeometry));
+    // QUIET-FAILURES-1: `allSettled` discards its results by design — it must not let one bad
+    // geometry take the whole list down. What it must NOT do is stay silent about how many were
+    // lost, because the list then renders complete while some of its tracks have nothing behind
+    // them. Each drop already announced itself in `cacheTrackGeometry`; this is the tally.
+    const settled = await Promise.allSettled(tracks.map(cacheTrackGeometry));
+    const missing = settled.filter((s) => s.status !== 'fulfilled' || s.value === null).length;
+    if (missing > 0) {
+      console.warn(
+        `[tracks] ${missing} of ${tracks.length} track geometries could not be cached — those tracks cannot be raced until the server answers for them`
+      );
+    }
     return tracks;
-  } catch {
-    return getCachedServerTracks();
+  } catch (err) {
+    // QUIET-FAILURES-1: the list itself failed, so what is on screen is the LAST KNOWN list, not
+    // the server's. Silently identical to a successful load until now.
+    const cached = getCachedServerTracks();
+    console.warn(
+      `[tracks] the track list could not be fetched — ${err?.message ?? 'request failed'}; showing ${cached.length} track(s) from the last successful load`
+    );
+    return cached;
   }
 }
 

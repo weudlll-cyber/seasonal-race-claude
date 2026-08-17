@@ -76,3 +76,73 @@ describe('importAllStorage', () => {
     expect(storageGet('unrelated-key')).toBeNull();
   });
 });
+
+// ── QUIET-FAILURES-1 ─────────────────────────────────────────────────────────────────────────────
+//
+// WHAT BREAKS IF THIS BLOCK IS DELETED: `storageGet` goes back to being unable to tell an ABSENT
+// value from an UNREADABLE one, and nothing exercises the difference. Every loader in this app
+// resolves through this function, so one malformed byte in `racearena:cameraConfig` replaced the
+// owner's entire camera tuning with the shipped defaults — no screen message, no console line, and
+// a settings panel that looked untouched.
+describe('storageGet — an unreadable value SAYS SO (QUIET-FAILURES-1)', () => {
+  let warn;
+  beforeEach(() => {
+    warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+  });
+  afterEach(() => warn.mockRestore());
+
+  it('corrupt JSON falls back to the default AND names the key', () => {
+    localStorage.setItem('racearena:cameraConfig', '{not json');
+
+    expect(storageGet('racearena:cameraConfig', { fallback: true })).toEqual({ fallback: true });
+    expect(warn).toHaveBeenCalledWith(
+      expect.stringContaining('"racearena:cameraConfig" could not be read')
+    );
+    expect(warn).toHaveBeenCalledWith(expect.stringContaining('is NOT in effect'));
+  });
+
+  // The de-duplicator is why this is safe to run on every render. It is module-local and about
+  // logging only — it is not app state and nothing reads it.
+  it('says it ONCE per key, so a blocked storage cannot flood the console', () => {
+    localStorage.setItem('racearena:raceDefaults', '{{{');
+
+    storageGet('racearena:raceDefaults', null);
+    storageGet('racearena:raceDefaults', null);
+    storageGet('racearena:raceDefaults', null);
+
+    const forThisKey = warn.mock.calls.filter((c) =>
+      String(c[0]).includes('racearena:raceDefaults')
+    );
+    expect(forThisKey).toHaveLength(1);
+  });
+
+  it('HAPPY PATH: a readable value returns unchanged and says NOTHING', () => {
+    localStorage.setItem('racearena:branding', JSON.stringify([{ id: 'a' }]));
+
+    expect(storageGet('racearena:branding', [])).toEqual([{ id: 'a' }]);
+    expect(warn).not.toHaveBeenCalled();
+  });
+
+  it('HAPPY PATH: an ABSENT key is not a failure — fallback, and still silent', () => {
+    expect(storageGet('racearena:neverWritten', 'dflt')).toBe('dflt');
+    expect(warn).not.toHaveBeenCalled();
+  });
+});
+
+// A headless harness has no storage API at all, and that is the environment rather than a failure.
+// This test exists because the first version of the warning above DID fire there — measured, once
+// per fingerprint run — telling a sim that a value it never stored was "not in effect".
+describe('storageGet — headless (no localStorage) is SILENT (QUIET-FAILURES-1)', () => {
+  it('returns the fallback and says nothing when there is no storage API', () => {
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    const real = globalThis.localStorage;
+    delete globalThis.localStorage;
+    try {
+      expect(storageGet('racearena:anything', 'dflt')).toBe('dflt');
+      expect(warn).not.toHaveBeenCalled();
+    } finally {
+      globalThis.localStorage = real;
+      warn.mockRestore();
+    }
+  });
+});

@@ -24,6 +24,30 @@ function renderSetupScreen() {
   );
 }
 
+/**
+ * Put a real geometry behind a track's `geometryId` (QUIET-FAILURES-1).
+ *
+ * A track summary NAMING a geometry and the geometry EXISTING are two different states, and the
+ * screen now refuses to race the second one. Seeding both is what a healthy load looks like.
+ */
+function seedGeometry(id, { closed = true } = {}) {
+  const pts = Array.from({ length: 5 }, (_, i) => ({ x: i * 100, y: 0 }));
+  localStorage.setItem(
+    `racearena:trackGeometries:${id}`,
+    JSON.stringify({
+      id,
+      closed,
+      pathLengthPx: 6156,
+      innerPoints: pts.map((p) => ({ ...p, y: -20 })),
+      outerPoints: pts.map((p) => ({ ...p, y: 20 })),
+      centerPoints: pts,
+    })
+  );
+  const idx = JSON.parse(localStorage.getItem('racearena:trackGeometries:index') ?? '{}');
+  idx[id] = id;
+  localStorage.setItem('racearena:trackGeometries:index', JSON.stringify(idx));
+}
+
 describe('SetupScreen', () => {
   beforeEach(() => {
     // Start each test with clean localStorage so storage defaults apply
@@ -185,11 +209,17 @@ describe('SetupScreen — surface class filter (VRE-3)', () => {
 });
 
 describe('SetupScreen — Quick Test autofill', () => {
+  // QUIET-FAILURES-1: THIS FIXTURE USED TO SEED A `geometryId` AND NO GEOMETRY, and the tests
+  // below passed anyway — because Quick Test would start a race on a track whose geometry was
+  // absent, guessing CLOSED. The fixture was reproducing the defect, so the five autofill tests
+  // were autofilling into a race that should never have been startable. The geometry is now
+  // seeded, which is what makes these tests about AUTOFILL rather than about the guess.
   function renderWithQuickTrack() {
     const tracksWithGeometry = SAMPLE_TRACKS.map((t, i) =>
       i === 0 ? { ...t, geometryId: 'geom-test-quick' } : t
     );
     storageSet(CACHE_KEY, tracksWithGeometry);
+    seedGeometry('geom-test-quick', { closed: true });
     renderSetupScreen();
   }
 
@@ -448,6 +478,9 @@ describe('SetupScreen — Quick Test racer selector', () => {
 
   function renderWithQuickTracks(trackIds = ['garden-path']) {
     storageSet(CACHE_KEY, getTracksWithGeometry(trackIds));
+    // QUIET-FAILURES-1 — same correction as the autofill block: a named geometry is not a present
+    // one, and Quick Test now refuses the second state instead of guessing CLOSED.
+    for (const id of trackIds) seedGeometry(`geom-${id}`, { closed: true });
     renderSetupScreen();
   }
 
@@ -596,5 +629,74 @@ describe('SetupScreen — brand eventName seed (B1)', () => {
     const brandSelect = screen.getByRole('combobox', { name: /active branding profile/i });
     fireEvent.change(brandSelect, { target: { value: '' } });
     expect(titleInput.value).toBe('');
+  });
+});
+
+// ── QUIET-FAILURES-1: THE REFUSAL ────────────────────────────────────────────────────────────────
+//
+// WHAT BREAKS IF THIS BLOCK IS DELETED: the screen goes back to racing on a GUESS. `trackIsOpen`
+// resolves a missing geometry to `false` = CLOSED, and `raceMode` is derived straight from it — so
+// an OPEN track whose geometry failed to cache started as a LAPS race, with the right name, the
+// right picture and no message anywhere. `cacheTrackGeometry` drops a geometry on a 3 s timeout and
+// its caller discards the result, so this is one slow server away.
+//
+// This is the piece's one REFUSAL — the place where honest handling means saying no to something the
+// owner asked for. It is deliberate: a race that is silently not the track he chose is worse than a
+// race that does not start.
+describe('SetupScreen — a track whose geometry is MISSING is refused, not guessed', () => {
+  function renderNamedButMissing() {
+    // The state a dropped geometry leaves behind: the SUMMARY names a geometry, and the geometry
+    // itself is not in storage. Nothing is seeded under racearena:trackGeometries:*.
+    const tracks = SAMPLE_TRACKS.map((t, i) =>
+      i === 0 ? { ...t, geometryId: 'geom-dropped', surfaceClasses: [] } : t
+    );
+    storageSet(CACHE_KEY, tracks);
+    renderSetupScreen();
+  }
+
+  it('Quick Test is DISABLED, and its tooltip names the server rather than the operator', () => {
+    renderNamedButMissing();
+    const btn = screen.getAllByRole('button').find((b) => b.textContent.includes('Quick Test'));
+    expect(btn).toBeDisabled();
+    expect(btn.getAttribute('title')).toMatch(/geometry could not be loaded from the server/i);
+    // The old message blamed the operator for a server failure. It must not be this one.
+    expect(btn.getAttribute('title')).not.toMatch(/Draw a track in the Track Editor first/i);
+  });
+
+  it('Start Race is DISABLED even with players added and the track selected', () => {
+    renderNamedButMissing();
+    fireEvent.click(screen.getByText('Track'));
+    const trackBtn = screen
+      .getAllByRole('button')
+      .find((b) => b.getAttribute('title') === SAMPLE_TRACKS[0].name);
+    if (trackBtn) fireEvent.click(trackBtn);
+    const start = screen.getByText(/Start Race/i);
+    expect(start).toBeDisabled();
+  });
+
+  it('clicking Quick Test starts NO race and says why', () => {
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    renderNamedButMissing();
+    const btn = screen.getAllByRole('button').find((b) => b.textContent.includes('Quick Test'));
+
+    // The button is disabled, so a click cannot reach the handler — which is the point. The
+    // assertion that matters is the outcome: nothing was written, so nothing can be raced.
+    fireEvent.click(btn);
+
+    expect(sessionStorage.getItem('activeRace')).toBeNull();
+    warn.mockRestore();
+  });
+
+  it('HAPPY PATH: the SAME track with its geometry present is fully enabled', () => {
+    const tracks = SAMPLE_TRACKS.map((t, i) =>
+      i === 0 ? { ...t, geometryId: 'geom-present', surfaceClasses: [] } : t
+    );
+    storageSet(CACHE_KEY, tracks);
+    seedGeometry('geom-present', { closed: true });
+    renderSetupScreen();
+
+    const btn = screen.getAllByRole('button').find((b) => b.textContent.includes('Quick Test'));
+    expect(btn).toBeEnabled();
+    expect(btn.getAttribute('title')).toMatch(/Auto-fill to \d+ test players/i);
   });
 });

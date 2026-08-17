@@ -143,7 +143,21 @@ function SetupScreen() {
   }, [racerTypeOverrides, racerTypeOverride]);
 
   const selectedTrack = tracks.find((t) => t.id === selectedTrackId);
-  const canStart = players.length > 0 && selectedTrackId !== null && !!selectedTrack?.geometryId;
+
+  // ── QUIET-FAILURES-1: IS THE GEOMETRY ACTUALLY THERE, or only NAMED? ─────────────────────────
+  // `geometryId` says the track SUMMARY names a geometry. `getTrack` says whether the geometry is
+  // really in the cache. Nothing asked the second question until now, and the difference is a
+  // whole race: `trackIsOpen` below resolves a missing geometry to `false` = CLOSED, so an OPEN
+  // track whose geometry failed to cache started as a LAPS race — right name, right picture, wrong
+  // race, no message anywhere. `cacheTrackGeometry` drops a geometry on a 3 s timeout and its
+  // caller discards the result, so this is one slow server away and not hypothetical.
+  //
+  // THERE IS NOTHING HONEST TO GUESS: the flag we would have to invent IS the race mode. So the
+  // answer is to REFUSE, and the refusal reuses the pattern these buttons already have — `disabled`
+  // plus a `title` that says why. No new component, no new message style, no new state.
+  const selectedGeometryReady = !!selectedTrack?.geometryId && !!getTrack(selectedTrack.geometryId);
+
+  const canStart = players.length > 0 && selectedTrackId !== null && selectedGeometryReady;
 
   // Filter racer types to those compatible with the selected track's surface classes.
   // Types with empty surfaceClasses are always included (native trail fallback).
@@ -314,6 +328,8 @@ function SetupScreen() {
   // Track selected for Quick Test (defaults to first track)
   const [quickTrackId, setQuickTrackId] = useState(null);
   const quickTrack = tracks.find((t) => t.id === (quickTrackId ?? tracks[0]?.id)) ?? tracks[0];
+  // QUIET-FAILURES-1 — the same question for the Quick Test track. See `selectedGeometryReady`.
+  const quickGeometryReady = !!quickTrack?.geometryId && !!getTrack(quickTrack.geometryId);
   const [quickTestCount, setQuickTestCount] = useState(20);
   // Quick-Test seed field. EMPTY (the default) = draw a fresh random seed for each race: every race
   // differs — the normal Quick-Test case, zero input needed — yet each one stays replayable, because
@@ -361,6 +377,14 @@ function SetupScreen() {
   }, [quickCompatibleRacerTypeIds, quickTestRacerTypeId]);
 
   function handleStartRace() {
+    // QUIET-FAILURES-1 — the same refusal as Quick Test, for the same reason: `trackIsOpen`
+    // resolves a missing geometry to CLOSED, and `raceMode` below is derived straight from it.
+    if (!selectedGeometryReady) {
+      console.warn(
+        `[setup] Start refused: the geometry for "${selectedTrack?.name ?? selectedTrackId}" is not available, so whether this track is open or closed is UNKNOWN — racing would have guessed CLOSED and run a laps race`
+      );
+      return;
+    }
     const preferredId = racerTypeOverride ?? selectedTrack?.defaultRacerTypeId ?? 'horse';
     const effectiveTypeId = filteredRacerTypeIds.includes(preferredId)
       ? preferredId
@@ -411,10 +435,19 @@ function SetupScreen() {
     const track = quickTrack;
     if (!track || !track.geometryId) return;
 
-    const quickIsOpen = (() => {
-      const geom = getTrack(track.geometryId);
-      return geom ? !geom.closed : false;
-    })();
+    // QUIET-FAILURES-1 — the refusal, repeated here rather than trusted to the disabled button.
+    // The button is the guard a person sees; this is the guard that holds if the geometry is
+    // evicted between render and click. Racing on a guessed open/closed flag is the one outcome
+    // that must be impossible, because the guess IS the race mode.
+    const geom = getTrack(track.geometryId);
+    if (!geom) {
+      console.warn(
+        `[setup] Quick Test refused: the geometry for "${track.name ?? track.id}" is not available, so whether this track is open or closed is UNKNOWN — racing would have guessed CLOSED and run a laps race`
+      );
+      return;
+    }
+
+    const quickIsOpen = !geom.closed;
     const defaultTypeId = track.defaultRacerTypeId || 'horse';
     // Use the Quick Test racer selector; fall back to track default (backward-compatible).
     const effectiveTypeId =
@@ -1135,11 +1168,14 @@ function SetupScreen() {
               <button
                 className={styles.quickTestBtn}
                 onClick={handleQuickTest}
-                disabled={!quickTrack?.geometryId}
+                disabled={!quickGeometryReady}
                 title={
-                  quickTrack?.geometryId
+                  quickGeometryReady
                     ? `Auto-fill to ${quickTestCount} test players and start race`
-                    : 'Draw a track in the Track Editor first'
+                    : quickTrack?.geometryId
+                      ? // QUIET-FAILURES-1: named, not guessed. The track exists; its geometry does not.
+                        'This track’s geometry could not be loaded from the server, so whether it is open or closed is unknown. Check the server and reload — racing now would guess.'
+                      : 'Draw a track in the Track Editor first'
                 }
               >
                 ⚡ Quick Test ({quickTestCount})
@@ -1150,9 +1186,13 @@ function SetupScreen() {
               disabled={!canStart}
               onClick={handleStartRace}
               title={
-                !canStart
-                  ? 'Add at least one player and select a track to start'
-                  : 'Start the race!'
+                canStart
+                  ? 'Start the race!'
+                  : // QUIET-FAILURES-1: the old single message blamed the operator for a server
+                    // failure. Separate the two so the cause is the one that is actually true.
+                    selectedTrack?.geometryId && !selectedGeometryReady
+                    ? 'This track’s geometry could not be loaded from the server, so whether it is open or closed is unknown. Check the server and reload — racing now would guess.'
+                    : 'Add at least one player and select a track to start'
               }
             >
               Start Race →

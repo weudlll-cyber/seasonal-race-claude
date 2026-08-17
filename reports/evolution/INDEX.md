@@ -38,6 +38,19 @@ is dated and recorded HERE, where a reader on their way to the report will pass 
   [GATE-LINES-1](../night/GATE-LINES-1.md); the fix and the once-per-run control that makes the
   silence impossible to repeat: [GATE-TRUTH-1](../night/GATE-TRUTH-1.md).
 
+- [QUIET-FAILURES-1.md](QUIET-FAILURES-1.md) — **it stops defaulting confidently** (2026-08-18).
+  Five places replaced data that failed to arrive with a plausible default and told nobody; four now
+  say so and the fifth (the server's route loaders) already did and was left alone. **The refusal is
+  the piece:** a track whose geometry did not load can no longer be raced, because
+  `geom ? !geom.closed : false` made a MISSING geometry a CLOSED track and that flag IS the race
+  mode — an open track whose geometry timed out ran as a laps race with the right name and no
+  message. A sixth silent exit was found while fixing the first (`if (!res.ok) return null`, which
+  the `catch` never saw). **Seven existing tests went red and every one deserved it** — the Quick
+  Test fixtures seeded a `geometryId` with no geometry and raced anyway, so they were passing
+  *because* of the defect. 20 tests added, all on failure paths, each with a happy-path silence
+  check beside it. All four fingerprints measured (`storage.js` is in all three closures) and
+  unchanged — and **the first run caught a defect in the fix**: the new warning fired in every
+  headless harness, where no `localStorage` is the environment rather than a failure.
 - [SETUP-TOKEN-CHANNEL-1.md](SETUP-TOKEN-CHANNEL-1.md) — **first-admin setup can succeed again**
   (2026-08-18). The client sent the bootstrap token in the body; the server reads
   `x-bootstrap-token` and nowhere else, so **no fresh installation could ever create its first
