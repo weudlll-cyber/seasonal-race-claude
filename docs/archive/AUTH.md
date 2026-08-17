@@ -1,5 +1,18 @@
 # RaceArena — Authentication & Authorization Architecture (DESIGN v3.2)
 
+> **SUPERSEDED 2026-08-19. The living document is [docs/AUTH.md](../AUTH.md).**
+>
+> **This is the DESIGN this system grew from, kept for its reasoning and not maintained.** It
+> describes intent, some of which was built differently and some of which was never built at all —
+> so **do not answer a question about how authentication behaves from this file.** Its own header
+> said "Status: DESIGN / not built" and named an intended source of truth at `docs/AUTH.md` that did
+> not exist until now; that dangling pointer cost the setup work a detour, and the defect it was
+> meant to prevent lived for months.
+>
+> **Nothing below this line has been edited** — a design record that is corrected afterwards stops
+> being evidence of what was intended at the time. AUTH-DOC-LIVE-1 records which of its claims the
+> source supports.
+
 **Owns:** the authentication and authorization DESIGN. Nothing here is built.
 
 > Status: **DESIGN / not built.** v3.2 (completeness): §7 route inventory now lists

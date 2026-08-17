@@ -286,7 +286,7 @@ backend is running perfectly and answering 5173. **This is a real incident, not 
 and the first thing he hit was a login screen that would not log in. The message names the wrong
 cause, so the evidence to trust is the API's own answer, not the client's:
 `curl -H "Origin: http://localhost:4173" http://localhost:4000/api/auth/me -i` — an `access-control-allow-origin`
-header means the API is fine and the origin list is the problem.
+header means the API is fine and the origin list is the problem. **Why the list exists and what else the auth path reads is [AUTH.md](AUTH.md)'s.**
 
 The dev server on **5173** keeps its old job: developing, and any check where the bundle is not the
 question. Your own work runs on a different port — `npm run dev -- --port 5273 --strictPort`.

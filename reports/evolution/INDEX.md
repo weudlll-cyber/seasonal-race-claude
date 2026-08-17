@@ -38,6 +38,20 @@ is dated and recorded HERE, where a reader on their way to the report will pass 
   [GATE-LINES-1](../night/GATE-LINES-1.md); the fix and the once-per-run control that makes the
   silence impossible to repeat: [GATE-TRUTH-1](../night/GATE-TRUTH-1.md).
 
+- [AUTH-DOC-LIVE-1.md](AUTH-DOC-LIVE-1.md) — **the authentication contract becomes a living document**
+  (2026-08-19). Documentation only; `engine-reach --check` printed for all four changed paths, and
+  nothing was minted. `docs/AUTH.md` is written **from the source**, not from the archived design:
+  the first-admin channel (`x-bootstrap-token` **header, never the body**) is stated in the file's
+  loudest sentence, every environment variable is **named without its value** together with what
+  happens when it is absent, and `/race` behind `ProtectedRoute` gets its own call-out because it has
+  misled tooling twice. The archived draft gains a superseded header and **its body is untouched**.
+  Of its 52 enumerated claims, **31 carried, 12 changed, 9 dropped** — and the dropped list is the
+  finding: nine designed behaviours were never built, including **an admin password reset that does
+  not invalidate that user's sessions**. Also found and left alone: eight source comments cite the old
+  document's section numbers, and a new living document is **invisible to every doc guard until it is
+  staged** (proved by sabotage). Four proposals, incl. the 403 message that cannot say which of its
+  two causes fired.
+
 - [DOCS-CATCH-UP-2.md](DOCS-CATCH-UP-2.md) — **the documents describe the state we actually have**
   (2026-08-19). Documentation only; `engine-reach --check` printed for all three changed paths, and
   nothing was minted. **R14 NO SECOND DEFINITION** enters `VERIFY-RULES.md` in its numbered form,
