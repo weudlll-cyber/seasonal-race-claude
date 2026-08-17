@@ -31,10 +31,16 @@ export const HELD_HOLD_PROGRESS = 0.02;
 // (its home); the caller never repeats the literal. framesOverThresholdShare uses it as the default.
 export const GAP_THRESHOLD_LENGTHS = 3.0;
 
-// RUNAWAY-LEADER thresholds (racer lengths), single-sourced here. LARGE is the primary "too big to
-// catch" cut; the list is the report's share table so the cutoff isn't arbitrary (LARGE must be in it).
+// RUNAWAY-LEADER threshold (racer lengths), single-sourced here. LARGE is the primary "too big to
+// catch" cut, and it is what `sim-fairness.mjs` imports.
+//
+// `RUNAWAY_LEAD_THRESHOLDS_LEN = [3, 4, 6, 8]` stood beside it until DEAD-EXPORTS-1 (2026-08-19) and
+// is DELETED. Its comment described "the report's share table so the cutoff isn't arbitrary (LARGE
+// must be in it)" — a share table that was never built and an invariant nothing enforced. It was
+// referenced by nothing in the repository: not by production, not by a test, not as a string, and
+// not through a namespace import. If the share table is ever wanted, it comes back with the code
+// that reads it.
 export const RUNAWAY_LARGE_LENGTHS = 4.0;
-export const RUNAWAY_LEAD_THRESHOLDS_LEN = [3, 4, 6, 8];
 
 // leaderSnapshot: a ONE-SHOT capture of the front at a boundary crossing — the live leader's identity,
 // whether it is a choreographed hero, and its lead over P2 in RACER LENGTHS (shared arcT × lenScale).

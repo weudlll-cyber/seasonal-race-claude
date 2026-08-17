@@ -38,6 +38,18 @@ is dated and recorded HERE, where a reader on their way to the report will pass 
   [GATE-LINES-1](../night/GATE-LINES-1.md); the fix and the once-per-run control that makes the
   silence impossible to repeat: [GATE-TRUTH-1](../night/GATE-TRUTH-1.md).
 
+- [DEAD-EXPORTS-1.md](DEAD-EXPORTS-1.md) — **one deleted, one kept, and a premise corrected**
+  (2026-08-19). The block was specced to delete TWO exports "referenced nowhere"; **one of them is
+  referenced** — `deleteRacerSprite` is imported and called five times by its own test. The table in
+  SEPARATION-TO-TEST-1 was right (one "ONLY its own test", one "referenced nowhere"); its PROSE
+  flattened the two categories, and the loose sentence is what travelled. Only
+  `RUNAWAY_LEAD_THRESHOLDS_LEN` was dead — verified by six searches over TRACKED files (identifier,
+  string, partial name, namespace imports, importer list, server + docs), after an untracked 1.3 MB
+  test artefact masked the first attempt. It described a report share table that was never built.
+  **WORLD and WORLD-OFF measured** (`pulk-contest.mjs` is in the WORLD closure only, walked not
+  assumed) **and unmoved**; script suite 388/388. Finding reported, not acted on: `DELETE
+  /api/racers/:id/sprite` has no caller from any screen. **Closes the open question — the owner
+  decided 2026-08-19 that the three B2 attackers keep the shared `b2AttackFinalRank` of 7.**
 - [SEPARATION-TO-TEST-1.md](SEPARATION-TO-TEST-1.md) — **the criterion moves to where it is actually
   used** (2026-08-19, the owner's decision). `checkSeparation` was defined once in
   `heroCurveGenerator.js` and referenced 7 times in its own test file and nowhere else — never a
