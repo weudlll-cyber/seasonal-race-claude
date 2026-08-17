@@ -679,7 +679,9 @@ const DynamicsTuningSection = forwardRef(function DynamicsTuningSection(_, ref) 
             >
               <input
                 type="checkbox"
-                checked={dynamicsConfig.gapRerollEnabled ?? false}
+                checked={
+                  dynamicsConfig.gapRerollEnabled ?? DEFAULT_RACE_DYNAMICS_CONFIG.gapRerollEnabled
+                }
                 onChange={(e) => setDynamics('gapRerollEnabled', e.target.checked)}
                 data-testid="gap-reroll-toggle"
               />
@@ -804,7 +806,10 @@ const DynamicsTuningSection = forwardRef(function DynamicsTuningSection(_, ref) 
               min={0.5}
               max={3.0}
               step={0.1}
-              value={dynamicsConfig.racePlanBonusStrengthMultiplier ?? 1.0}
+              value={
+                dynamicsConfig.racePlanBonusStrengthMultiplier ??
+                DEFAULT_RACE_DYNAMICS_CONFIG.racePlanBonusStrengthMultiplier
+              }
               onChange={(e) => {
                 const v = Number(e.target.value);
                 if (v >= 0.5 && v <= 3.0) setDynamics('racePlanBonusStrengthMultiplier', v);
@@ -958,17 +963,31 @@ const DynamicsTuningSection = forwardRef(function DynamicsTuningSection(_, ref) 
         <p style={{ fontSize: '0.82rem', color: 'var(--color-muted)', marginTop: '0.5rem' }}>
           At{' '}
           <strong style={{ color: 'var(--color-accent)' }}>
-            {(dynamicsConfig.racePlanBonusStrengthMultiplier ?? 1.0).toFixed(1)}×
+            {(
+              dynamicsConfig.racePlanBonusStrengthMultiplier ??
+              DEFAULT_RACE_DYNAMICS_CONFIG.racePlanBonusStrengthMultiplier
+            ).toFixed(1)}
+            ×
           </strong>
           {': '}
           B1={' '}
           <strong>
-            {(1.0 + 0.03 * (dynamicsConfig.racePlanBonusStrengthMultiplier ?? 1.0)).toFixed(3)}
+            {(
+              1.0 +
+              0.03 *
+                (dynamicsConfig.racePlanBonusStrengthMultiplier ??
+                  DEFAULT_RACE_DYNAMICS_CONFIG.racePlanBonusStrengthMultiplier)
+            ).toFixed(3)}
           </strong>
           {'  '}
           B5={' '}
           <strong>
-            {(1.0 - 0.01 * (dynamicsConfig.racePlanBonusStrengthMultiplier ?? 1.0)).toFixed(3)}
+            {(
+              1.0 -
+              0.01 *
+                (dynamicsConfig.racePlanBonusStrengthMultiplier ??
+                  DEFAULT_RACE_DYNAMICS_CONFIG.racePlanBonusStrengthMultiplier)
+            ).toFixed(3)}
           </strong>
         </p>
         <p
@@ -1028,7 +1047,10 @@ const DynamicsTuningSection = forwardRef(function DynamicsTuningSection(_, ref) 
             <input
               type="checkbox"
               aria-label="Phase-Split Bonuses Enabled"
-              checked={dynamicsConfig.phaseSplitBonusEnabled ?? false}
+              checked={
+                dynamicsConfig.phaseSplitBonusEnabled ??
+                DEFAULT_RACE_DYNAMICS_CONFIG.phaseSplitBonusEnabled
+              }
               onChange={(e) => setDynamics('phaseSplitBonusEnabled', e.target.checked)}
               style={{ cursor: 'pointer' }}
             />

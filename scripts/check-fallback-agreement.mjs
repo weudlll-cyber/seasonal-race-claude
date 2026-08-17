@@ -207,20 +207,17 @@ export const EXCEPTIONS = [
   // showing the director's real value all along. The defect was real but smaller and differently
   // shaped: three copies of a default, one of which sat in the panel you would read while judging
   // the very number it copied.
-  // ── TIER 5: Dev Screen only. Wrong number under the owner's hand, nothing else. ────────────────
-  ...[
-    ["gapRerollEnabled", true, false],
-    ["phaseSplitBonusEnabled", true, false],
-    ["racePlanBonusStrengthMultiplier", 2, 1],
-  ].map(([k, d, f]) =>
-    D(
-      "client/src/screens/DevScreen/sections/DynamicsTuningSection.jsx",
-      k,
-      d,
-      f,
-      "UNFIREABLE, and the MIN-RACERS-5 comparison is WITHDRAWN (FALLBACK-42-TRIAGE). The section holds loadRaceDynamicsConfig() in state, and that resolves against the defaults, so the control shows the real value and the literal beside it is never used. MIN-RACERS-5 was a genuinely wrong number on screen; this is a wrong number in the source that nobody sees. Still worth pointing at DEFAULT_RACE_DYNAMICS_CONFIG (MIRRORS-BY-REFERENCE), but as hygiene, not a defect.",
-    ),
-  ),
+  // ── TIER 5: Dev Screen — ALSO EMPTY (ONE-HOME-1) ──────────────────────────────────────────────
+  //
+  // `gapRerollEnabled`, `phaseSplitBonusEnabled` and `racePlanBonusStrengthMultiplier` stood here at
+  // six sites, exempt because the section holds `loadRaceDynamicsConfig()` in state and the literal
+  // beside each control was never reached. All six read `DEFAULT_RACE_DYNAMICS_CONFIG` now.
+  //
+  // These were the three the owner could ever have SEEN — a checkbox reading off while the game ran
+  // on, and 1.0x displayed where the game runs 2.0x, at the slider and at three derived readouts
+  // under it. They are also the reason the JSX shape was worth doing rather than deleting: a bare
+  // `checked={undefined}` would flip React from a controlled input to an uncontrolled one, which is
+  // a different defect in a panel he uses. Reading the home has neither failure mode.
 ];
 
 /** Every `DEFAULT_*` object exported by defaults.js and autoSpriteScale.js, flattened to key→value. */

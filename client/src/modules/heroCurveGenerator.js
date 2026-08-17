@@ -88,10 +88,10 @@ export const GENERATOR_CONFIG = {
   // standard B2 0.80 resolve checkpoint — the orchestrated fall may run until b2AttackResolveProgress
   // (hero-privilege), leaving [resolve, 1.0] as the free window. Peak timing jittered in b2AttackProgress.
   b2AttackHeroes: DEFAULT_RACE_DYNAMICS_CONFIG.b2AttackHeroes,
-  b2AttackPeakRank: 5,
+  b2AttackPeakRank: DEFAULT_RACE_DYNAMICS_CONFIG.b2AttackPeakRank,
   b2AttackFinalRank: DEFAULT_RACE_DYNAMICS_CONFIG.b2AttackFinalRank,
   b2AttackProgress: { ...DEFAULT_RACE_DYNAMICS_CONFIG.b2AttackProgress },
-  b2AttackResolveProgress: 0.85,
+  b2AttackResolveProgress: DEFAULT_RACE_DYNAMICS_CONFIG.b2AttackResolveProgress,
 };
 
 // ── Band helpers (derived from the shared BAND_EDGES constant — single source for the edges) ────
