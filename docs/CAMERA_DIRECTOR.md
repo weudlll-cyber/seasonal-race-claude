@@ -608,7 +608,7 @@ a verbatim transcript of one run on one commit, which is a historical record, no
 
 ### The tracking lag, as measured today — and it had drifted
 
-<!-- MEASURED: tracking-lag (median/p95 pp per state) @ 8d75b66b 2026-08-18 depends=client/src/modules/camera/ -->
+<!-- MEASURED: tracking-lag (median/p95 pp per state) @ ac885415 2026-08-18 depends=client/src/modules/camera/ -->
 
 **RE-MEASURED IN FULL FOR START-LEADER-VISIBLE-1, AND EVERY NUMBER IS IDENTICAL.** That block adds
 a `leaderVisible` ceiling to `CameraDirector.js`, which is inside this stamp's `depends=` directory
@@ -621,9 +621,9 @@ frame count, median and p95 comes back digit for digit: BATTLE_ZOOM 9701 / 5.71 
 
 **The reason it cannot move is structural, and the measurement is what turns that into evidence:**
 this table is the TRACKING phase only, and the new ceiling is inert outside the ceremony hold, which
-is entirely inside the ENTRY phase. **The sha names the commit the measurement was run against**
-(master, the branch's parent); the tree measured was that commit plus this block's single change,
-which is the only shape available before the commit exists.
+is entirely inside the ENTRY phase. **The sha names this block's own commit**, which the ship order allows only after it exists: the
+measurement was run on that tree before it was committed, and the stamp was moved onto it in the
+following commit rather than naming a parent the tree did not match.
 
 **RE-STAMPED, NOT RE-MEASURED, FOR FALLBACK-MIRRORS-1 — same corroboration as the entry below.**
 That block deletes four copied defaults from `cameraTimingComputation.js`, which is inside this

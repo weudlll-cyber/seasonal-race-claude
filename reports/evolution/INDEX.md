@@ -38,6 +38,22 @@ is dated and recorded HERE, where a reader on their way to the report will pass 
   [GATE-LINES-1](../night/GATE-LINES-1.md); the fix and the once-per-run control that makes the
   silence impossible to repeat: [GATE-TRUTH-1](../night/GATE-TRUTH-1.md).
 
+- [START-LEADER-VISIBLE-1.md](START-LEADER-VISIBLE-1.md) — **B′ is built, and it does NOT pass**
+  (2026-08-18). **NOT MERGED, NOT MINTED** — `feat/start-leader-visible-1` @ `ac885415`, served on
+  4173 for his eye. One ceiling, `leaderVisible`, among the ceilings already composed by `Math.min`:
+  while the hold is live AND the leader is already outside the drawn frame, the shot may not be
+  tighter than the factor that brings him to the border. **MET: 0 frames fired on all five OPEN
+  tracks** (river-run and mountainstreet byte-identical, so the old defect cannot return) and the old
+  defect's numbers are unmoved. **MISSED: dirt-oval 89 out-frames → 9 and searound 61 → 13, but
+  CITY-CIRCUIT GOES 46 → 124 AND −93 px → −984** — widening re-resolves the pan against the world
+  edge, pushing the leader further out and demanding more widening; zoom runs 4.92 → 1.56 in 600 ms.
+  **Positive feedback, not a tuning matter, and not tuned.** Also found: `guaranteed` is a
+  hand-written `Math.min` list, so the new ceiling was NAMED by `binding` and applied by nothing until
+  fixed. 6 director tests with real geometry, both named cases sabotage-proven; none asserts the
+  outcome, because on city-circuit it is false. CAMERA `8c8070dc14e47919`, RENDER `a75f6bab3846b697`
+  (both expected), WORLD unmoved and measured; tracking-lag re-measured, identical. **Rider shipped:
+  a camera commit must name the tracks its numbers came from.** Three proposals.
+
 - [AIM-TRAIL-1.md](AIM-TRAIL-1.md) — **why does the camera trail its own aim** (2026-08-18).
   **INVESTIGATION ONLY — the code is byte-identical to master**; nothing minted. **THE TRAIL IS NOT A
   DEFECT, and it is OLDER than the commit blamed for it.** `gun-window-truth`'s own `lag` column, run
