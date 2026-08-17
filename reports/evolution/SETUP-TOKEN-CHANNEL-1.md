@@ -202,6 +202,31 @@ reach the race, the camera or the drawing path.
 
 `npm run verify` result and CI run in the merge commit.
 
+### THE FIRST VERIFY RUN FAILED, AND IT IS RECORDED RATHER THAN RE-RUN AWAY
+
+The first `npm run verify` came back **`PASS 10 · FAIL 1 · SKIP 13`**, and verify labelled it
+*"server-suite FAILED (SPAWN FAILURE — a finding, not a flake)"*. That label is the repository's
+standing instruction not to shrug, so it was not shrugged at.
+
+**What it actually was:** `Tests 619 passed (620)` with `Errors 1` —
+`[vitest-pool]: Worker forks emitted error … Worker exited unexpectedly`. **No test asserted and
+failed.** One fork of the server suite's pool died while verify was running its other guards
+concurrently.
+
+**Evidence gathered before accepting it:**
+
+| run | result |
+| --- | --- |
+| server suite alone, ×4 | **620 / 620** every time, no errors |
+| `npm run verify` re-run | **PASS 11 · FAIL 0 · SKIP 13** |
+
+So the crash is contention in the fork pool, not this branch's code and not an assertion. **The
+honest residue is that it is not fully explained** — a worker that dies is a worker that dies, and
+"it passed the second time" is the reasoning this project distrusts everywhere else. It is recorded
+here, with its numbers, so that if it recurs there is a first sighting to point at rather than a
+vague memory. It is **not** offered as a reason the piece is unsound: no test in this branch failed
+on any run.
+
 ---
 
 ## SOURCE HYGIENE
