@@ -3713,6 +3713,24 @@ default from a line that never runs.
 `config?.k ?? DEFAULT_X_CONFIG.k` cannot disagree, because there is only one value. Where a constant
 holds the fallback, define the CONSTANT from the default — the reference then covers every use of it.
 
+**EXTENDED 2026-08-19 — the owner's ruling closed the exception, and closed the question.** This
+lesson used to carry an exception: an OFF-arm switch was not a mirror and kept its literal. **It is
+gone.** He rejected the question the exception rested on — *"should a missing key mean OFF or the
+shipped value"* — because **no key is ever missing**: every loader walks the full key set of its
+defaults, so the fallbacks exist only for callers that pass NO config, and the only such callers are
+tests and harnesses. The rule is now unconditional and lives as [VERIFY-RULES R14](VERIFY-RULES.md).
+
+**Two traps found by walking into them, both the inverse of the original defect:**
+
+- **Deleting a mirror can CREATE a second definition.** Removing `?? false` makes an absent key
+  resolve to `undefined`, which is falsy — so a config-less caller silently runs the feature OFF.
+  A definition by omission is worse than a literal, because nothing names it and no guard counts it.
+- **A copy that AGREES is invisible to every runtime check.** Five keys in `heroCurveGenerator.js`'s
+  `GENERATOR_CONFIG` re-typed shipped values and all five matched, so `check-fallback-agreement` —
+  which reports DISAGREEMENTS — could never have spoken. They were found by hand. **The rule is a
+  property of the SOURCE, not of a value**, which is why the test that catches this one reads the
+  source rather than comparing numbers.
+
 **The one exception, and it must be stated at the site:** a fallback that is deliberately a DIFFERENT
 value from the default — an OFF-arm switch, where an absent key means "the world before this feature"
 — is not a mirror at all. It keeps its literal AND its reason. Nine of the 42 are this shape.
@@ -3778,6 +3796,19 @@ seen RED and what made it red — a deliberate sabotage counts and is the cheape
 new check: who receives its failure, on what schedule, and what breaks it. **A check nobody receives
 is a check nobody has.** Evidence: reports/night/NIGHT-2026-08-17.md.
 
+**FIFTH INSTANCE, 2026-08-19, and the sharpest — a check that CAN fail, DOES fail, and is called by
+nobody.** `checkSeparation` was exported from `heroCurveGenerator.js` and referenced only by its own
+test file: never a gate, never a rejection, never a retry. Measured across 120 generated plans it
+**failed 98 % of bunched-field plans**, and had been doing so for as long as the B2 attackers have
+been on. Nothing was red, because nothing asked. **Two specs in a row were then written on the
+assumption that a `false` did something**, and the assumption was only broken by grepping for its
+callers.
+
+**The addition to the law:** "who receives its failure" has a prior question — **is anything calling
+it at all?** A criterion nobody consults is indistinguishable from a passing one, and it is cheaper
+to answer than any of the others: one search for the identifier. It now lives in the test file, which
+is where its callers are.
+
 ## Lesson 210 — The Blast-Radius Law: Ask Every Test Suite What It RUNS AGAINST, Because Two Different Doors Lead To Production Data
 
 **What happened.** The browser suite reached the owner's real data twice, through two mechanisms
@@ -3796,6 +3827,26 @@ all of them at once**, and it is only as true as the least careful file.
 down: what does this run against, and what would make it point somewhere else? Pin the port and the
 base URL in ONE place the specs read; forbid literals. Prefer a config that fails loudly when the
 expected isolated server is absent over one that helpfully attaches to whatever is listening.
+
+**THIRD DOOR, 2026-08-19 — the UNIT suite, through a component's own loader.** Four screen tests in
+the vitest suite were making real requests to `http://localhost:4000`, and the proof was in the
+output rather than in a config: the suite printed **`HTTP 401`**, which is an ANSWER — the owner's
+dev server was replying to unit tests. Nothing was stubbed; mounting the component was enough,
+because its hook fetches in an effect.
+
+**Two consequences, and the second took a CI run down.** The tests were environment-dependent (with a
+server up they resolved in milliseconds; with none they waited out a 3 s timeout — same assertions,
+different path, decided by what else was running). And the work OUTLIVED the test: `withTimeout` never
+clears its timer, so a request begun in one test logged after that test — and sometimes after the
+whole file — had ended, which is
+`EnvironmentTeardownError: Closing rpc while "onUserConsoleLog" was pending`.
+
+**The addition to the law:** the blast-radius question is not only for end-to-end suites. **Any test
+that MOUNTS a component inherits every address that component can reach.** The enforcement that
+worked is a prohibition rather than a pin: `forbidNetwork()` records and throws on any `fetch`, then
+asserts in `afterAll` that none happened — so a file that completes has PROVED no request was
+started. Throwing alone is not enough; every loader wraps its fetch in a `catch`, so the guard's own
+message went quietly into a warning and the file stayed green.
 
 ## Lesson 211 — The Single-Run Law: One Run Separates Nothing; It Is The REPEAT That Tells A Failure From A Flake
 
@@ -3857,3 +3908,73 @@ same suspicion as the code under test.
 next ten pointing the instrument at a case whose answer is known independently — never on
 constructing a story that reconciles them. A story that reconciles a derivation with a broken
 instrument is the most expensive artefact this project has produced more than once.
+
+## Lesson 214 — The Summary Law: The PROSE Of A Report Is A Claim, And It Is The Part That Travels
+
+**What happened.** `SEPARATION-TO-TEST-1` scanned for exports used only by their own test file and
+published a table with two categories, correctly labelled: one entry **"ONLY racerApi.test.js"** and
+one **"referenced nowhere at all"**. Two paragraphs later its summary flattened them —
+*"the two that look like genuinely unused product code"*. **That sentence is what reached the next
+spec**, which was written to delete both. One of them, `deleteRacerSprite`, is imported and called
+five times by its own test. The table was right for a whole day and the summary was what got acted
+on.
+
+**Insight / the law.** A report's numbers are checked; its prose is not. Nothing in this project
+guards a sentence — `check-doc-facts` and `check-config-claims` read documents for stated VALUES, and
+a summary that merges two categories states no value at all. **The summary is the highest-leverage
+sentence in a report, because it is the only part a reader reliably finishes**, and it is the only
+part with no instrument behind it. Writing "two things look unused" over a table that says one thing
+is unused and one is test-only is not a rounding — it is a different claim.
+
+**Consequence / enforcement.** When a report groups findings into categories, the summary **quotes
+the categories, not the count**: "one referenced only by its test, one referenced nowhere" costs four
+extra words and cannot be flattened. And when a spec arrives citing a prior report, re-establish its
+premise from the tree before acting — the fifth unreachability claim in this repository to need that,
+and the first false one written by the same author who then had to catch it. Evidence:
+reports/evolution/DEAD-EXPORTS-1.md.
+
+## Lesson 215 — The Exclusion-Set Law: A Count Is Defined By What It Leaves OUT, And That Belongs In The Number's Name
+
+**What happened.** A scan for "exports used only by their own test file" reported **153**. It
+excluded the defining file from the list of users — so a helper that a module uses INTERNALLY and
+also exports for a unit test looked identical to one nothing uses at all. Adding a single check —
+does the name appear more than once inside its own module? — took the answer to **19**. The same scan
+run against object-literal defaults first reported **80 hits** that were all `min`/`max` slider
+bounds colliding with real keys of `DEFAULT_BASE_SPEED_CONFIG`; excluding those two names by hand
+took it to **zero**.
+
+**Insight / the law.** Both numbers were produced by working code and both were wrong, in the same
+way: **the exclusion set WAS the definition, and it was in the script rather than in the number.**
+A count is not "how many X" — it is "how many X under these exclusions", and a reader who is given
+only the first half will act on it. This is Lesson 213's suspicion of instruments applied to the
+cheapest instrument there is: a grep is software, and its filter is its specification.
+
+**Consequence / enforcement.** State the exclusions in the same breath as the figure, in the report
+and in the script's own header — "19 exports used by nothing, **including their own module**", not
+"19 unused exports". When a scan produces a number that feels large, the first hypothesis is the
+filter, not the codebase: 153 and 80 both dissolved on the first look. `check-config-claims` already
+carries the mature form of this — it names `min` and `max` as unscannable, by name, with the reason.
+Evidence: reports/evolution/SEPARATION-TO-TEST-1.md, reports/evolution/ONE-HOME-1.md.
+
+## Lesson 216 — The Denominator Law: Narrowing What A FRACTION Measures Is Not Automatically More Permissive
+
+**What happened.** `checkSeparation` failed almost every shipped plan, and the diagnosis was that its
+window ran past the point where heroes stop being steered. Narrowing the window looked like a purely
+relaxing change — measure less, reject less — and the spec was written on that basis. It is not.
+The criterion is *coincident samples ÷ total samples*, and the samples removed were the LATE ones,
+where a diverging pair is far apart. For the documented `battle-collapse` archetype — two curves
+together at the front, splitting at 0.6 — the numerator stayed at 7 while the denominator fell from
+43 to 28, so the fraction went **0.16 → 0.25** and a passing archetype started FAILING.
+
+**Insight / the law.** **A threshold on a ratio has two levers, and changing the window moves both.**
+"Measure a smaller region" is monotone for a COUNT and undetermined for a FRACTION: it relaxes the
+criterion only if the excluded region was, on average, more coincident than the region kept.
+Whether that holds is a property of the data, not of the change — so it must be measured, per case,
+not reasoned about from the direction of the edit.
+
+**Consequence / enforcement.** Before narrowing what any ratio-based criterion measures, evaluate the
+old and new forms on the SAME corpus and report both — for every archetype the criterion is supposed
+to accept, not only the case that prompted the change. If a variant is wanted that is monotone by
+construction, shrink the NUMERATOR alone and keep the denominator fixed; that form was built and
+measured here too, and it is the one whose direction can be argued rather than tested. Evidence:
+reports/evolution/SEPARATION-WINDOW-1.md.

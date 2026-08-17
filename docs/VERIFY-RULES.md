@@ -197,6 +197,13 @@ the push and reports. **Two exceptions, and they are not negotiable:**
 2. **Immediately before an unattended night block.** Master must be provably good, because hours of
    work will be built on it with nobody watching.
 
+**WHAT the merge must contain, and in what order, is not here.**
+[SHIP-CEREMONY.md § THE SHIP ORDER](SHIP-CEREMONY.md) owns it — corrected 2026-08-18 so that
+everything the merge commit must carry is written **on the branch** before the merge, which is what
+makes a ship tag point at a commit that passes `check-tags`. The one step that cannot work that way
+— a commit cannot name its own hash — is settled in a single follow-up commit, and that document
+says which fields it corrects.
+
 **Why it is safe here, and the "here" is load-bearing.** A red master costs this project almost
 nothing: nothing is deployed, the owner's dev server runs from the working tree, there is no second
 developer building on it, and he is notified within minutes either way. Waiting costs three to four
@@ -212,6 +219,32 @@ if any of them stops being true, this rule stops being safe.
   appeared upstream, not because of any commit. Nothing local can anticipate that.
 - **Coverage.** It runs only in CI (see below), so a coverage regression is invisible until after the
   merge.
+
+### R8a — what "CI green for exactly this SHA" means since the docs-only skip
+
+**Rule.** Since CI-DOCS-ONLY-1 (2026-08-18), a push whose changed paths are **all** under `docs/`,
+`reports/` or a repo-root `*.md` skips lint, format-check and both test suites. **All three jobs
+still RUN and still report a conclusion for the SHA** — only the work inside them is conditional, and
+the log names what was skipped and why.
+
+**So green still means "every job examined this commit."** On a documentation-only commit it
+additionally means "and the parts that could not have been affected were not re-run, by name."
+
+**The one thing that genuinely got smaller**, stated rather than glossed: on a docs-only push, a
+failure unrelated to the diff — a flaky test, a dependency resolving differently — is not discovered
+by that push. The next code push finds it.
+
+**What did NOT get smaller:** both security audit gates run on every push in both trees, because
+their result is not decided by the diff; and the whole `docs` job is never skipped in either
+direction, because its guards scan the entire tree rather than `docs/`.
+
+**A workflow-level `paths:` filter is forbidden here** and the reason is this rule: it produces **no
+run at all** for the SHA, so `gh run list --branch master --limit 1` hands back the PREVIOUS commit's
+green run. The rule would not be weakened, it would become unverifiable while looking verified.
+
+**The mechanism is not restated here.** `.github/workflows/ci.yml` owns it, and
+`scripts/ci-docs-only.mjs` owns the predicate — including that every uncertainty (no base, a
+force-pushed base, an empty diff, `workflow_dispatch`) fails OPEN and runs everything.
 
 ## R9 — Do not walk away before the notification has been seen
 
@@ -434,6 +467,45 @@ different guard and the three siblings above are the precedent for saying so.
 checkers" would be the joke this rule exists to prevent — the 30th check, whose entire subject is
 that there are 29. It is a rule for a person to apply with judgement at review time, and the place it
 is enforced is the commit message.
+
+---
+
+## R14 — NO SECOND DEFINITION: a caller without a config reads the ONE HOME
+
+**Rule.** No literal stands beside a shipped default. A function called **without** a config object
+reads `DEFAULT_*` for every value it needs — `config?.k ?? DEFAULT_X_CONFIG.k`, never `?? 5` and
+never `?? false`. This holds whatever the literal's current value is and whoever can reach it.
+
+**The owner's ruling, 2026-08-19**, and it dissolved the question three blocks had been asking. The
+question was *"should a missing setting mean OFF, or the shipped value?"*. He rejected it: **no
+setting is ever missing.** Every loader walks the full key set of its defaults (`resolveFromDefaults`
+iterates the DEFAULT keys), so the running game cannot lack a key. The fallbacks exist so a function
+can be called with **no config at all** — and the only callers that do that are tests and harnesses.
+A test calling a generator bare should get the SHIPPED game, not a quietly disabled one.
+
+**So reachability is not the test.** Three blocks spent their budget on "is this branch reachable?"
+and were answering the wrong question. The rule is about the number of definitions, not the number of
+callers.
+
+**Two traps this rule closes, both of which we walked into first:**
+
+- **Deleting a mirror can CREATE one.** Removing `?? false` makes an absent key resolve to
+  `undefined`, which is falsy — so a config-less caller silently runs the feature OFF. That is a
+  second definition by omission, and it is worse than the literal because nothing names it.
+- **`?? 0` on a number is not the safe form.** Removing it outright yields `NaN` in arithmetic;
+  keeping it yields a stale value. Reading the home is neither.
+
+**Why it is safe.** It removes values rather than changing them: every conversion under this rule has
+left WORLD, WORLD-OFF, CAMERA and RENDER byte-identical, which is what makes it hygiene rather than a
+ship. Where a module genuinely cannot import its defaults, that is a finding to report — not a
+licence to keep the literal quietly.
+
+**It is ENFORCED, and the enforcement is an empty list.** `scripts/check-fallback-agreement.mjs`
+reports `0 disagree, 0 on the exception list`. The exception list is not a worklist any more; a new
+entry means somebody added a second definition and owes a reason. **What it still cannot see** is
+declared in its own `blind` list — an object-literal fallback, and a module-level object that
+*assigns* a shipped value rather than falling back to it. The five copies in `GENERATOR_CONFIG` were
+of the second kind and all AGREED, so no guard could have spoken; they were found by hand.
 
 ---
 

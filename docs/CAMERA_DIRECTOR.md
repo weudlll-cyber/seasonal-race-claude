@@ -573,6 +573,14 @@ more dangerous than one they do not:
 
 - **The rasteriser and the artwork.** Sprites are hashed by IDENTITY, not by pixels. Replace the
   artwork inside `duck.png` and this hash does not move.
+- **The racer types' DRAWING CODE, not just their pixels** — and this is wider than the line above.
+  `client/src/modules/racer-types/` is inside **no instrument's closure at all**: render 55 files,
+  camera 36, and `engine-reach` reports it cannot reach the engine. So a diff confined to a racer
+  type selects no fingerprint and none of the three would run even if it did. **A change to how a
+  racer is drawn is covered by the owner's eye and by nothing else.** The measurement and the
+  reasoning live once, in
+  [SHIP-CEREMONY.md § THE THREE FINGERPRINTS](SHIP-CEREMONY.md); this entry points at it because
+  this is the list a camera reader checks.
 - **Particles and surface trails.** Their draw calls run, but the harness never fills their buffers,
   so both layers are no-ops in it. Found by a sabotage that swapped them and did NOT move the hash.
 - **Anything between two sample frames.** Sixteen frames out of 5600. A flicker lasting less than a
@@ -1033,14 +1041,14 @@ time-constant defaults**, with the reason for each attached to the assertion.
   forward bias moves it.
 - **`targetInnerFramePct`** is live but has no Dev Screen control, against the project's
   everything-is-UI-configurable principle.
-- **Two code fallbacks disagree with the shipped defaults** (`comebackMinStartGap`,
-  `comebackMaxCurrentRankPct`). Only a bare-config caller sees a fallback, so this is latent rather
-  than active. The values are not stated here — `scripts/check-fallback-agreement.mjs` holds both
-  sides of every one of them, and it is the guard that fails when a new one appears.
-  **`outcomePhaseThreshold` left this list on 2026-08-10** (OUTCOME-PHASE-75): the owner decided the
-  value, and its three sites then stopped copying it — two read the default, and the diagnostic HUD
-  carries no fallback at all. That is the shape the other two should follow, and it is why the fix
-  is not "align the literal".
+- **~~Two code fallbacks disagree with the shipped defaults~~ — RESOLVED, and the whole class with
+  it.** This read as an open item naming `comebackMinStartGap` and `comebackMaxCurrentRankPct` until
+  2026-08-19. Both stopped copying their default when MIRRORS-BY-REFERENCE converted
+  `cameraTimingComputation.js`, and `outcomePhaseThreshold` had already left the list on 2026-08-10
+  (OUTCOME-PHASE-75, where the owner decided the value and its three sites stopped copying it).
+  **`scripts/check-fallback-agreement.mjs` now reports `0 disagree, 0 on the exception list`** for
+  the whole repository — see [VERIFY-RULES R14](VERIFY-RULES.md), which owns the rule. The guard is
+  still what fails when a new one appears, and the values are still not stated here.
 - **`START_PHASE_DURATION = 3000`** is a constant, not a control, and CAMERA-TAGS-1 measured it about
   five seconds short of when the field actually spreads.
 
