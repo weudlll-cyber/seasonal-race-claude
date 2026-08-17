@@ -8,6 +8,16 @@ report here could be orphaned, or an index link could dangle, with nothing notic
 `node scripts/check-index.mjs --dir=reports/night --index=reports/night/INDEX.md` now checks both
 directions.
 
+- [CENSUS-CLOSE-2026-08-18.md](CENSUS-CLOSE-2026-08-18.md) — **where the census stands**
+  (2026-08-18, the same day's later blocks). Against NIGHT-2026-08-18's 16 waiting findings: **8
+  closed outright · 2 partly · 5 made visible where a reader meets them · 1 untouched · 2 opened
+  tonight · 8 still his**. Seven merges, each green for its own SHA — and **one went red**
+  (`213136f0`, all 4111 tests passing, a vitest teardown race the new console output had made
+  likelier), fixed at `4cd1876b` with the cause removed at `e04c19e1`. **Nothing touched the race:**
+  all four fingerprints measured at every piece that could reach them and never moved. The biggest
+  new finding is that the screen tests were making **real requests to `localhost:4000`** — the
+  suite's own `HTTP 401` proved a live server was answering unit tests. Verdict unchanged and
+  shorter: the race is not where the problems are, and what is left cannot hurt him today.
 - [NIGHT-2026-08-18.md](NIGHT-2026-08-18.md) — **the census, and the answer to his question**
   (2026-08-18). 24 findings · 6 reach a shipped path · 5 he could ever see · 8 fixed · 16 wait for
   him. **Not one touches the race** — four fingerprints measured six times across two branches and
