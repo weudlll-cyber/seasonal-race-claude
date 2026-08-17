@@ -38,6 +38,43 @@ is dated and recorded HERE, where a reader on their way to the report will pass 
   [GATE-LINES-1](../night/GATE-LINES-1.md); the fix and the once-per-run control that makes the
   silence impossible to repeat: [GATE-TRUTH-1](../night/GATE-TRUTH-1.md).
 
+- [SETUP-TOKEN-CHANNEL-1.md](SETUP-TOKEN-CHANNEL-1.md) — **first-admin setup can succeed again**
+  (2026-08-18). The client sent the bootstrap token in the body; the server reads
+  `x-bootstrap-token` and nowhere else, so **no fresh installation could ever create its first
+  admin** — and it answered 403 with a message naming the wrong cause. **Three suites were green
+  over it**, each honestly: the server test asserts the rejection of exactly what the client sent,
+  the client test mocks `fetch` and cannot see a channel, and e2e POSTs to the endpoint directly.
+  `AUTH.md §5` was read first and does not decide this — it is silent on the channel, so the
+  server's tested choice is the contract. New seam test drives the REAL client function against the
+  REAL handler and is **proved by sabotage** (3 of 5 fail on the old client, both controls hold).
+  The **CORS preflight** the new header provokes was measured against a running server on an
+  ephemeral port — 204, header allowed, and a real admin created — because no test in this
+  repository can see it. Class sweep answered by **enumeration**: the server reads four headers
+  total, three of them browser-set, so there is exactly one piece of application data in a header
+  anywhere and it was the broken one. No fingerprint owed (closure walk: none of the changed files
+  is in any of the three).
+
+## Project audits — another author's records, rescued into the tree
+
+These two were written by a different author and were sitting **UNTRACKED** in the working tree,
+outside every guard's scope: `reports/audit/` and `reports/proposals/` are not among the three
+directories `check-index` scans, so nothing could have noticed them missing. They are moved here
+**unedited — not one word changed** — because a record you did not write is evidence, not a draft.
+The supersession is recorded in the newer document's own front matter rather than by editing the
+older one.
+
+- [PROJECT-AUDIT-2026-08-18.md](PROJECT-AUDIT-2026-08-18.md) — source-first project audit with
+  explicit evidence labels. **This is where the setup bootstrap-token channel mismatch (F1) was
+  first written down**, and it was the only copy — had the file been lost, so was the finding.
+  Independently re-derived from source and confirmed by
+  [SETUP-TOKEN-CHANNEL-1.md](SETUP-TOKEN-CHANNEL-1.md), which fixes it. Its other three findings
+  (F2 contract-test gap, F3 guard cost concentration, F4 CI path-filter risk) stand as written and
+  are not re-judged here.
+- [PROJECT-AUDIT-2026-08-17.md](PROJECT-AUDIT-2026-08-17.md) — the previous day's audit,
+  **SUPERSEDED by PROJECT-AUDIT-2026-08-18**, which says so in its own `Supersedes:` line. Kept
+  because the 08-18 report reasons about and withdraws three of its recommendations, so deleting it
+  would leave that argument with no other side.
+
 ## Ships
 
 - [SHIP-COORD-SYSTEM.md](SHIP-COORD-SYSTEM.md) — **ONE RULER FOR THE WRAPPER, AND NOTHING WAS MINTED** (2026-08-14, tags `v-ship-coord-system` + `pre/ship-coord-system`). The owner judged a production build on 2026-08-14 and accepted it. Anything absolutely positioned inside `.race-canvas-wrapper` is now anchored in PERCENTAGES — `BrandLogoOverlay` and `StateOverlay` came under the rule `WinnerCard` and the opening card already followed; diagnostics HUDs stay the exception, being measured against the browser window rather than the picture. Written as `calc(N / D * 100%)` rather than rounded numbers so no drift creeps in between the test's arithmetic and the browser's. **The visible change he judged**: identical to the old fixed anchors at scale 1.0, and at his 1037×583 the corner clearance is **12.96 CSS px instead of 16** with the state pill dropping the same. **THE BRANCH WAS 82 COMMITS BEHIND** — forked at `5e738dfe` before the finish band, the contender ship, the finish window and glide, and the source clean-up — so master was merged in first and **everything it measured beforehand is NOT carried forward as established**. **ALL THREE FINGERPRINTS RE-RUN FRESH, no `--cheap`, and ALL THREE ARE UNMOVED** (world `dc4647be0f55ebdb`, camera `ff2bc42af377b5cf`, render `0d5854a652c69d87`), so **`docs/fingerprints.json` is untouched — a mint records a movement, and writing one anyway would put a false event in the record**. **A TRAP WORTH KNOWING**: bare `engine-reach --check` on a committed merge reports `none of 0 path(s)` because it reads the WORKING tree, which a merge leaves clean — that is the tool saying it was asked nothing, not a clearance. Given the five real paths it answers properly: **none of 5 can reach the race engine**. **THE BLIND SPOT THIS SHIP EXPOSES, stated rather than glossed: a VISIBLE change shipped and not one of the three fingerprints could see it.** Correct rather than broken — the overlays are DOM, outside the canvas, and the render fingerprint drives the drawing code in node where there is no layout engine — but the regression net has a hole exactly the shape of everything the viewer sees AROUND the picture, and a change that moved the brand logo across the minimap would move no fingerprint and fail no guard. `overlayGeometry.test.js` (three wrapper sizes) is the only thing covering any of it. **PROPOSAL, not built**: a fourth fingerprint over `overlayGeometry`'s boxes at fixed wrapper sizes would close it with the same instrument, and needs no browser since the geometry is a pure function. Tests +1 file, 0 deleted; no default, no key, no Dev Screen control. verify PASS 6 FAIL 0.
