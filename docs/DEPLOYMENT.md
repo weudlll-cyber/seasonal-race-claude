@@ -2,6 +2,8 @@
 
 **Owns:** deploying RaceArena to a public same-origin host, and the environment variables that requires. Local development is [SETUP.md](SETUP.md)'s.
 
+**How authentication BEHAVES — the first-admin channel, sessions, what is protected, and what the auth code does when a variable is absent — is [AUTH.md](AUTH.md)'s.**
+
 ## Public same-origin hosting
 
 In this model the Node.js server serves **both** the built SPA (from `client/dist/`) and
