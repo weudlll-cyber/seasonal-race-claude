@@ -38,6 +38,15 @@ is dated and recorded HERE, where a reader on their way to the report will pass 
   [GATE-LINES-1](../night/GATE-LINES-1.md); the fix and the once-per-run control that makes the
   silence impossible to repeat: [GATE-TRUTH-1](../night/GATE-TRUTH-1.md).
 
+- [NIGHT-2026-08-18-CLOSING.md](NIGHT-2026-08-18-CLOSING.md) — **closing note, night of 2026-08-18**.
+  **One of four pieces done**, and the stop was deliberate: Piece 1 (the change-password rate limit)
+  is merged, green and swept; Pieces 2, 3 and 4 were **not started**, so nothing is half-changed.
+  Piece 3 was NOT taken out of order in place of the expensive Piece 2. Lists what each remaining
+  piece still needs, and names the latent shared-`testadmin` instance that is still live. **Waiting
+  for his eye:** `feat/start-leader-visible-1` @ `21b77415`, unmerged and untouched, with the
+  `ac885415` production build served on 4173 — read that report first; **city-circuit is worse in it,
+  deliberately reported**.
+
 - [CHANGE-PASSWORD-RL-1.md](CHANGE-PASSWORD-RL-1.md) — **a rate limit on changing your own password**
   (2026-08-19). The owner set the number: **FIVE**. Reuses the limiter login and setup already use —
   same factory, same 429 sentence, **no new env key** (the window is the login window, read from the
