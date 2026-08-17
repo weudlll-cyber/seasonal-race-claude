@@ -5,6 +5,15 @@
 # Created:     2026-04-19
 # Description: Full QA pipeline — lint, format-check, tests, security audit, living-doc link check
 #              Runs on every push and pull request to main / master
+#
+# WHAT "GREEN" MEANS HERE, since CI-DOCS-ONLY-1 (2026-08-18) it is worth one sentence:
+#   All three jobs ALWAYS RUN and always report a conclusion for the SHA. On a push where every
+#   changed path is under docs/, reports/ or a root *.md, the client and server jobs skip their
+#   lint/format/test STEPS and say so in the log. The audit gates and the whole docs job still run.
+#   So green still means "every job examined this commit"; on a docs-only commit it additionally
+#   means "and the parts that could not have been affected were not re-run, by name, in the log".
+#   A workflow-level `paths:` filter was deliberately NOT used: it produces NO RUN for the SHA, and
+#   `gh run list --branch master` would then hand the ceremony the PREVIOUS commit's green run.
 # ============================================================
 
 name: CI
@@ -35,7 +44,26 @@ jobs:
       run:
         working-directory: client
     steps:
+      # fetch-depth 0 so the scope step below can diff the push range. Measured at 3 s on this
+      # repository — the same depth the docs job has needed since ONE-TRUTH-2 stage 4.
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      # ── CI-DOCS-ONLY-1 ────────────────────────────────────────────────────────────────────────
+      # THE JOB ALWAYS RUNS AND ALWAYS REPORTS A CONCLUSION FOR THIS SHA. What is conditional is the
+      # WORK INSIDE it. That distinction is the whole design: a workflow-level `paths:` filter would
+      # mean no run exists for the SHA at all, and "CI green for exactly the merge SHA" would stop
+      # being answerable — the ceremony's own `gh run list --branch master` would return the
+      # PREVIOUS commit's run and look green. Skipping steps keeps three job conclusions on a run
+      # that exists.
+      - name: Is this push documentation only?
+        id: scope
+        working-directory: .
+        env:
+          BASE_SHA: ${{ github.event.before || github.event.pull_request.base.sha }}
+          HEAD_SHA: ${{ github.sha }}
+        run: echo "docs_only=$(node scripts/ci-docs-only.mjs)" >> "$GITHUB_OUTPUT"
 
       - uses: actions/setup-node@v4
         with:
@@ -43,17 +71,31 @@ jobs:
           cache: npm
           cache-dependency-path: client/package-lock.json
 
+      # NOT conditional: the audit gate below needs an installed tree, and the audit gate is not
+      # conditional either. Measured at 4 s with a warm cache.
       - name: Install dependencies
         run: npm ci
 
       - name: ESLint
+        if: steps.scope.outputs.docs_only != 'true'
         run: npm run lint
 
       - name: Prettier format check
+        if: steps.scope.outputs.docs_only != 'true'
         run: npm run format:check
 
+      # The expensive one: MEASURED at 2m51s on run 32005715842, which is the whole reason this
+      # piece exists. Nothing under docs/ or reports/ can change its result.
       - name: Run tests with coverage
+        if: steps.scope.outputs.docs_only != 'true'
         run: npm run test:coverage
+
+      - name: Say what was skipped, and why
+        if: steps.scope.outputs.docs_only == 'true'
+        run: |
+          echo "DOCS-ONLY PUSH — lint, format-check and the client test suite were SKIPPED."
+          echo "Every changed path is under docs/, reports/ or a root *.md; none can affect them."
+          echo "The security audit gate below still ran: its result is not decided by the diff."
 
       # Audit policy (HYGIENE-1): FAILS the build on HIGH/CRITICAL, except advisories in the documented
       # ALLOWLIST in scripts/audit-gate.mjs (each with a justification + remove-when condition). MODERATE
@@ -81,6 +123,17 @@ jobs:
         working-directory: server
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      # CI-DOCS-ONLY-1 — same rule, same reasoning as the client job above.
+      - name: Is this push documentation only?
+        id: scope
+        working-directory: .
+        env:
+          BASE_SHA: ${{ github.event.before || github.event.pull_request.base.sha }}
+          HEAD_SHA: ${{ github.sha }}
+        run: echo "docs_only=$(node scripts/ci-docs-only.mjs)" >> "$GITHUB_OUTPUT"
 
       - uses: actions/setup-node@v4
         with:
@@ -88,13 +141,26 @@ jobs:
           cache: npm
           cache-dependency-path: server/package-lock.json
 
+      # NOT conditional, and here that costs real time — MEASURED at 1m26s, the largest single step
+      # in this job. It stays because the audit gate below audits an INSTALLED tree, which is the
+      # property `audit-schedule.yml` relies on to produce the same verdict as this gate. Skipping
+      # the install to save that minute would either break that agreement or silently weaken the
+      # gate, and the gate is the one thing here whose result the diff does not decide.
       - name: Install dependencies
         run: npm ci
 
       # `--no-file-parallelism` comes from the server package's own `npm test`, not from here: the
       # suite writes a real sqlite session store, so files sharing it cannot run concurrently.
       - name: Run server tests
+        if: steps.scope.outputs.docs_only != 'true'
         run: npm test
+
+      - name: Say what was skipped, and why
+        if: steps.scope.outputs.docs_only == 'true'
+        run: |
+          echo "DOCS-ONLY PUSH — the server test suite was SKIPPED."
+          echo "Every changed path is under docs/, reports/ or a root *.md; none can affect it."
+          echo "The security audit gate below still ran: its result is not decided by the diff."
 
       # SERVER-AUDIT-1 wired this as REPORT-ONLY because four un-allowlisted HIGH advisories existed
       # on a tree that had never been audited, and failing master over untriaged dependency bumps is
@@ -114,6 +180,15 @@ jobs:
         run: node ../scripts/audit-gate.mjs --tree=server
 
   # ── Docs ────────────────────────────────────────────────────
+  # THIS JOB IS NEVER SKIPPED, AND THAT IS NOT AN OVERSIGHT (CI-DOCS-ONLY-1).
+  # It looks like the one job a "docs-only" push obviously needs — and it is also the one job that
+  # can never be skipped for a CODE push, because its guards read the WHOLE TREE, not `docs/`:
+  #   check-language-closed  declares dirs client/, server/, scripts/, docs/, .claude/
+  #   check-fingerprints     scans every tracked file for a copied current fingerprint
+  #   check-config-claims    scans docs/ + reports/ AGAINST client/src/modules/storage/defaults.js
+  #   script-suite           runs every scripts/**/*.test.mjs
+  # So it is unconditional in both directions, and it is what guarantees that EVERY push has at
+  # least one job that really examined it. A run always exists and always means something.
   docs:
     name: Living-doc guards + script tests
     runs-on: ubuntu-latest

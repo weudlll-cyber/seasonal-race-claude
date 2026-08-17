@@ -38,6 +38,18 @@ is dated and recorded HERE, where a reader on their way to the report will pass 
   [GATE-LINES-1](../night/GATE-LINES-1.md); the fix and the once-per-run control that makes the
   silence impossible to repeat: [GATE-TRUTH-1](../night/GATE-TRUTH-1.md).
 
+- [CI-DOCS-ONLY-1.md](CI-DOCS-ONLY-1.md) — **CI stops paying for what it cannot affect**
+  (2026-08-18). On a push where every changed path is under `docs/`, `reports/` or a root `*.md`,
+  the client and server jobs skip lint/format/tests. **The jobs themselves always run** — a
+  workflow-level `paths:` filter was rejected because it produces NO RUN for the SHA, and the
+  ceremony's `gh run list --branch master` would then hand back the PREVIOUS commit's green run:
+  the rule would become silently unverifiable while looking verified. **Both audit gates still run
+  on every push** — their result is not decided by the diff — and the `docs` job is never skipped in
+  either direction, because its guards scan the whole tree. **Measured, not estimated:** the client
+  suite is 2m51s and the audit gates are 1s each, but the three jobs run in PARALLEL, so the real
+  saving is **≈1m45s on a docs-only merge (`7c2a27eb`: 3m25s → ≈1m40s) and 0 on a client merge
+  (`0877d523`: 3m36s → 3m36s)** — smaller than the brief assumed, and the report says so and offers
+  the revert.
 - [QUIET-FAILURES-1.md](QUIET-FAILURES-1.md) — **it stops defaulting confidently** (2026-08-18).
   Five places replaced data that failed to arrive with a plausible default and told nobody; four now
   say so and the fifth (the server's route loaders) already did and was left alone. **The refusal is
