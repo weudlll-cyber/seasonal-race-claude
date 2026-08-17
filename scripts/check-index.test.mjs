@@ -144,3 +144,76 @@ test("DIRECTION 2 ignores PATHED links — those belong to check-doc-links, not 
     `pathed links must not be checked here; stderr: ${r.stderr}`,
   );
 });
+
+// ── DIRECTION 3 (INDEX-COVERAGE-1): every directory is accounted for ─────────────────────────────
+//
+// WHAT BREAKS IF THESE TWO TESTS ARE DELETED: the `reports/audit/` incident becomes possible again,
+// silently. That directory held the ONLY copy of the finding that first-admin setup could not
+// succeed, while `check-index` printed "0 unindexed" about three directories elsewhere. Direction 3
+// is the rule that a NEW directory must be decided about rather than merely unwatched, and it is
+// the one direction the `--dir` fixture form cannot exercise — so without these it is checked by
+// nothing at all.
+//
+// They run the guard BARE inside a synthetic repo, because that is the only invocation direction 3
+// takes: with `--dir` it is skipped, which is what lets the fixture tests above stay hermetic.
+import { mkdirSync } from "node:fs";
+import { execFileSync } from "node:child_process";
+
+function repoFixture(files) {
+  const root = mkdtempSync(join(tmpdir(), "check-index-repo-"));
+  execFileSync("git", ["init", "-q"], { cwd: root });
+  for (const [rel, content] of Object.entries(files)) {
+    mkdirSync(join(root, dirname(rel)), { recursive: true });
+    writeFileSync(join(root, rel), content);
+  }
+  execFileSync("git", ["add", "-A"], { cwd: root });
+  return root;
+}
+
+const runBare = (root) =>
+  spawnSync(process.execPath, [GUARD], { cwd: root, encoding: "utf8" });
+
+test("DIRECTION 3 REFUSES a directory that is in neither list — the reports/audit case", () => {
+  const root = repoFixture({
+    "reports/evolution/INDEX.md": "# Index\n- [R1.md](R1.md)\n",
+    "reports/evolution/R1.md": "# R1",
+    "reports/night/INDEX.md": "# Index\n- [N1.md](N1.md)\n",
+    "reports/night/N1.md": "# N1",
+    "reports/parity/INDEX.md": "# Index\n- [P1.md](P1.md)\n",
+    "reports/parity/P1.md": "# P1",
+    "reports/proposals/INDEX.md": "# Index\n- [Q1.md](Q1.md)\n",
+    "reports/proposals/Q1.md": "# Q1",
+    // The offender: tracked reports in a directory nobody decided about.
+    "reports/audit/CRITICAL.md": "# a finding with nothing watching it",
+  });
+  const r = runBare(root);
+  assert.notEqual(r.status, 0, "an undeclared directory must FAIL");
+  assert.match(r.stderr, /reports\/audit\//, "it must name the directory");
+  assert.match(
+    r.stderr,
+    /NEITHER list/,
+    "it must say why, not merely that something is wrong",
+  );
+});
+
+test("DIRECTION 3 ACCEPTS a declared archive — a reason is a decision, and it is honoured", () => {
+  const root = repoFixture({
+    "reports/evolution/INDEX.md": "# Index\n- [R1.md](R1.md)\n",
+    "reports/evolution/R1.md": "# R1",
+    "reports/night/INDEX.md": "# Index\n- [N1.md](N1.md)\n",
+    "reports/night/N1.md": "# N1",
+    "reports/parity/INDEX.md": "# Index\n- [P1.md](P1.md)\n",
+    "reports/parity/P1.md": "# P1",
+    "reports/proposals/INDEX.md": "# Index\n- [Q1.md](Q1.md)\n",
+    "reports/proposals/Q1.md": "# Q1",
+    // `perf` is named in ARCHIVED with a reason, so an unindexed file here is EXPECTED.
+    "reports/perf/frame-trace-2026-01.md": "# raw capture",
+  });
+  const r = runBare(root);
+  assert.equal(
+    r.status,
+    0,
+    `a declared archive must not fail; stderr: ${r.stderr}`,
+  );
+  assert.match(r.stdout, /declared ARCHIVE/, "the roll-up must count it as one");
+});

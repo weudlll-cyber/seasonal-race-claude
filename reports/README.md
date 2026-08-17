@@ -29,12 +29,24 @@ captured tool output kept as evidence.
 | [night/](night/INDEX.md)                 | Unattended work blocks. One file per block, newest first. **Indexed and guarded.**             |
 | [evolution/](evolution/INDEX.md)         | Experiments and gates on the race dynamics — the arc of how the shipped world was arrived at. **Indexed and guarded.** |
 | [parity/](parity/INDEX.md)               | Browser-vs-sim parity work, and the re-baselines. **Indexed and guarded.**                     |
-| `exp-archive/`, `results-salvage/`, `greenfield/`, `phase1-metrics/`, `speed-candidates/`, `perf/`, `proposals/`, `audit/`, `diag-*`, `closed-track-overview/`, `open-track-overlap/`, `standings-leader-mismatch.md` | Result tables, captured output and one-off write-ups from closed investigations. Not indexed, not maintained. |
+| [proposals/](proposals/INDEX.md)         | Concept proposals and their independent reviews. **Indexed and guarded since 2026-08-18** — see below. |
+| `exp-archive/`, `results-salvage/`, `greenfield/`, `phase1-metrics/`, `perf/`, `closed-track-overview/`, `open-track-overlap/` | Result tables and captured output from closed investigations. **Declared ARCHIVE by name in `scripts/check-index.mjs`**, each with a reason: nobody adds to them and nothing links into them. |
+| `diag-*`, `standings-leader-mismatch.md`, `BASELINE-INVALIDATED.md`, this file | Standing notes that belong to no block. They sit directly in `reports/`; their links are covered by `check-doc-links`. |
 | `BASELINE-INVALIDATED.md`                | The standing note about which absolute numbers were retired by a re-baseline, and when.        |
 
-Three of those directories have an `INDEX.md` that `scripts/check-index.mjs` checks in both
-directions — every report is linked, and every link points at a file that exists. The rest have no
-index and no guard, which is the honest state of them.
+**FOUR** of those directories have an `INDEX.md` that `scripts/check-index.mjs` checks in both
+directions — every report is linked, and every link points at a file that exists.
+
+**And since INDEX-COVERAGE-1 (2026-08-18) there is a third direction: every directory holding tracked
+reports must be in one of the two lists.** Before that, the guard walked three directories and
+printed "0 unindexed" — a true sentence about 44% of the tree, in a shape that read as a statement
+about all of it. The other eleven were not a decision, they were silence, and silence is why
+`reports/audit/` came to hold the ONLY copy of a critical finding with nothing watching it.
+
+A directory is now either **registered** (it has an index and is checked) or **named in `ARCHIVED`
+with a reason** (nobody adds to it). A directory in neither FAILS the guard until somebody decides
+which it is. `proposals/` moved into the first group because it is the one archive that still
+receives work — the audit that nearly went missing was written there.
 
 ---
 
