@@ -38,6 +38,21 @@ is dated and recorded HERE, where a reader on their way to the report will pass 
   [GATE-LINES-1](../night/GATE-LINES-1.md); the fix and the once-per-run control that makes the
   silence impossible to repeat: [GATE-TRUTH-1](../night/GATE-TRUTH-1.md).
 
+- [AIM-TRAIL-1.md](AIM-TRAIL-1.md) — **why does the camera trail its own aim** (2026-08-18).
+  **INVESTIGATION ONLY — the code is byte-identical to master**; nothing minted. **THE TRAIL IS NOT A
+  DEFECT, and it is OLDER than the commit blamed for it.** `gun-window-truth`'s own `lag` column, run
+  at all three commits (the tool was added by `ca178cc5`, so no adaptation was needed): the PARENT
+  trails MORE at every sample — 313.7 world px at 1000 ms against 15.8 — and carries **10 racers
+  outside the picture** where the commit and master carry 0. `c3f294d1` cut the lag up to 20×; what it
+  changed is the ZOOM (4.5489 → 8.4602, 1.86× tighter), so a smaller lag lands further out in pixels.
+  The pan is an exponential smoother with **entry TC 1.500 s (90% in 5.18 s) against tracking's
+  0.250 s**, and the whole window is the entry phase — the measured lag never reaches even its own
+  designed steady state (180–240 world px). The aim's jump at ~2.5–3 s is **a step in an INPUT — the
+  subject — not motion of the field** (aim speed spikes to 5555/9920/2692 px/s against a 120–170
+  baseline), and it happens on OPEN tracks too. Closed-vs-open is world lag AND zoom compounding
+  (52 px vs 662 px vs 1585 px of screen trail); **why the world lag differs is NOT ESTABLISHED**.
+  ⇒ **Ship B′ and close the line.** Three proposals.
+
 - [START-SHAPE-1.md](START-SHAPE-1.md) — **the shape of the start, measured before anyone builds**
   (2026-08-19). **MEASUREMENT ONLY — the code is byte-identical to master**; nothing minted. **The
   leader is not out because the shot is tight around him — the camera is not pointed at him yet**: at
