@@ -38,6 +38,17 @@ is dated and recorded HERE, where a reader on their way to the report will pass 
   [GATE-LINES-1](../night/GATE-LINES-1.md); the fix and the once-per-run control that makes the
   silence impossible to repeat: [GATE-TRUTH-1](../night/GATE-TRUTH-1.md).
 
+- [MIRROR-CENSUS-2.md](MIRROR-CENSUS-2.md) — **six mirrors removed, not aligned** (2026-08-18).
+  21 disagreeing copied defaults -> 14: the six OFF-arm BOOLEANS in `raceCore.js` had their
+  `?? false` **deleted outright** rather than pointed at the default — a mirror that cannot drift
+  beats one that currently agrees. **Booleans were the only ones that qualified**: `undefined` is
+  falsy, so removal is safe in the direction the proof covers AND the one it does not, while the
+  `?? 0` neighbours feed arithmetic and would become NaN. Every caller was enumerated first —
+  `DEFAULT_CONFIG_WORLD.raceDynamicsConfig` IS `DEFAULT_RACE_DYNAMICS_CONFIG`, checked by identity —
+  and `sim-fairness.mjs` was checked separately because it does not call `createRaceFromIdentity` at
+  all. All four fingerprints measured and unchanged. **11 left for the owner**, and the report says
+  what each would change if corrected: five `?? 0` physics keys, the B2-attacker trio, and the three
+  Dev Screen controls — the only ones he could ever SEE.
 - [TEARDOWN-INFLIGHT-1.md](TEARDOWN-INFLIGHT-1.md) — **the suite can no longer die at teardown**
   (2026-08-18). The cause was not noisy tests: four screen tests were making **real requests to
   `localhost:4000`**, and the suite's own `HTTP 401` proves a live server answered them. With a
