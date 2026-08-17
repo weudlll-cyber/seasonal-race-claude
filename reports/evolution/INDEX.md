@@ -38,6 +38,19 @@ is dated and recorded HERE, where a reader on their way to the report will pass 
   [GATE-LINES-1](../night/GATE-LINES-1.md); the fix and the once-per-run control that makes the
   silence impossible to repeat: [GATE-TRUTH-1](../night/GATE-TRUTH-1.md).
 
+- [SEPARATION-WINDOW-1.md](SEPARATION-WINDOW-1.md) — **the window is not the problem, and the fix
+  was NOT merged** (2026-08-19). First, the question nobody had answered: **`checkSeparation` is
+  called from nowhere in production** — no rejection, no retry, no fallback; it is an assertion in a
+  test suite, not a gate. It rejects **98% of bunched-field plans** as shipped. The prescribed
+  narrowing was built exactly as specified and measured: **98% → 95%**, and a monotone variant only
+  reaches 85%. **The root cause is not the window** — all three attackers end at exactly rank 7.00,
+  the single shared `b2AttackFinalRank`, reaching it at 0.15–0.63, well before their band release of
+  0.80. Using each curve's ARRIVAL instead does make them pass, **vacuously**: two of three pairs get
+  a ONE-SAMPLE window. **And the prescribed form is not more permissive** — the fraction's
+  denominator shrinks, so the documented `battle-collapse` archetype goes 0.16 → 0.25 and FAILS.
+  WORLD and WORLD-OFF measured with the change in place and unmoved, so the stop condition would
+  have licensed the merge; it was reverted anyway, because it does not do what it was for and would
+  have cost a true test.
 - [ONE-HOME-1.md](ONE-HOME-1.md) — **no second definition, anywhere** (2026-08-19, the owner's
   ruling). He rejected the OFF-or-shipped question: no key is ever missing, because every loader
   walks the full default set — the fallbacks exist only so a function can be called with NO config,
