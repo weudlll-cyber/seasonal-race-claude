@@ -38,6 +38,22 @@ is dated and recorded HERE, where a reader on their way to the report will pass 
   [GATE-LINES-1](../night/GATE-LINES-1.md); the fix and the once-per-run control that makes the
   silence impossible to repeat: [GATE-TRUTH-1](../night/GATE-TRUTH-1.md).
 
+- [SELF-PASSWORD-1.md](SELF-PASSWORD-1.md) — **an operator changes his own password** (2026-08-19).
+  `engine-reach --check` printed for all 13 changed paths; nothing minted. `POST /api/auth/change-password`
+  lives on the AUTH router, not `/api/users`, because that router is admin-only for every method —
+  which is the gap, not an obstacle. **The target is `req.authUser.id` and nothing else**: no id in
+  the path, none in the body, and no parameter for one in the client function, so the route cannot be
+  pointed at another account. The current password is checked with the login path's own
+  `verifyPassword`; the new one goes through `updateUser`, so no password rule or message was
+  invented. **The re-stamp moved to `restampSession.js`** and both routes call it — written inline
+  twice it would have been the second definition R14 forbids. The owner's **rider** sits on
+  `sessionEpoch`: do not build a second mechanism beside it. The form is an `operator`-tier Dev Screen
+  section next to the Log out button, reusing `Auth.module.css`. **23 tests**, the seam driven through
+  the real `authApi.changePassword` with the body asserted by exact equality; **both sabotages red**
+  (target-from-body → 3, no re-stamp → 3). Server 645/645. Also fixed before merge: a bcrypt
+  wall-clock timeout and **a shared-`testadmin` dependency of my own** — nine files share that account
+  in parallel workers. Three proposals.
+
 - [SESSION-INVALIDATE-1.md](SESSION-INVALIDATE-1.md) — **a password change ends the sessions it
   should end** (2026-08-19). `engine-reach --check` printed for all four changed paths; nothing
   minted. **Two of the owner's three clauses were ALREADY BUILT** — invalidation is a `sessionEpoch`

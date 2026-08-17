@@ -159,6 +159,12 @@ export function createUsersStore(filePath = DEFAULT_USERS_PATH) {
         usernameNormalized,                 // uniqueness key (NFC + lowercased)
         passwordHash: await hashPassword(password),
         role,
+        // THE SESSION-INVALIDATION MECHANISM, and the only one. Bumping this ends every session
+        // that predates the bump, because requireAuth (guards.js) compares the session's stamped
+        // copy against this and rejects a mismatch. It is bumped in updateUser inside the same
+        // serialised write as the new hash, so a password can never change without it.
+        // DO NOT BUILD A SECOND ONE beside it — no enumerating the session store, no deleting
+        // rows. A route that must keep the REQUESTING session alive calls restampSession.js.
         sessionEpoch: 0,                    // bumped on password reset; login writes this into session
         createdAt: new Date().toISOString(),
         createdBy: createdBy ?? 'setup',

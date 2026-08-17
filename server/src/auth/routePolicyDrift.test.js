@@ -58,6 +58,9 @@ const OPERATOR_PLUS_ALLOWLIST = [
   { method: 'POST', pathPattern: '/api/auth/setup' },
   { method: 'POST', pathPattern: '/api/auth/login' },
   { method: 'POST', pathPattern: '/api/auth/logout' },
+  // Self-service password change: authenticated, ANY role, and the target is always the
+  // requesting session's own user (never the body) — so operator+ is the correct classification.
+  { method: 'POST', pathPattern: '/api/auth/change-password' },
   // /api/tracks CRUD + background asset (set-default/clear-default are admin via ROUTE_POLICY)
   { method: 'POST',   pathPattern: '/api/tracks' },
   { method: 'PUT',    pathPattern: '/api/tracks' },

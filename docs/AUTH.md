@@ -102,6 +102,15 @@ the server — there is no third tier and no per-user permission set.
 create, change role or reset a password, delete. The first admin comes from §1 and nowhere else —
 **there is no self-service registration and no password reset by email.**
 
+**Anyone can change their OWN password, whatever their role**, at `POST /api/auth/change-password` —
+authenticated but not admin-gated. It takes the current password and the new one and **nothing
+else**: the account it acts on is read from the session, never from the request body, so the route
+cannot be pointed at somebody else's account. A wrong current password answers exactly what a wrong
+login answers, `401 invalid credentials`, and changes nothing. **An admin resetting somebody else's
+password still uses `PUT /api/users/:id`** — that is the only way to change an account that is not
+your own. In the UI the form is the Dev Screen's **Change Password** section, an `operator`-tier
+section, so every signed-in user can reach it.
+
 **A password change ends the sessions it should end, and only those.** The rule is one mechanism, not
 a cleanup step: `updateUser` bumps the record's `sessionEpoch` in the same serialised write that
 stores the new hash, and `requireAuth` rejects any session whose stored epoch differs. So:
@@ -113,8 +122,8 @@ stores the new hash, and `requireAuth` rejects any session whose stored epoch di
   rotating their own password;
 - **no other user is affected**, ever.
 
-**Only an admin can change a password at all**, their own or anyone's, because `/api/users` is
-admin-only and there is no self-service route. An `operator` who wants a new password must ask one.
+**Both routes share one invalidation rule and one re-stamp** (`restampSession.js`), so neither can
+drift from the other.
 
 **The last admin cannot be removed.** Deleting the sole `admin`, or demoting them to `operator`, is
 refused by the store itself rather than by the route (`Cannot delete the last admin` / `Cannot demote
