@@ -177,7 +177,20 @@ declared blind spot, not a second definition.
 | `RaceTuningSection.test.jsx` | mock reads the real defaults; 2 tests rewritten from literals to the rule |
 | `heroCurveGenerator.test.js` | separation test narrowed, with the finding recorded |
 
-Tests added: 8. Tests deleted: 0. Tests rewritten from a literal to a rule: **3**.
+| `check-fallback-agreement.test.mjs` | 3 tests freed from needing a POPULATED exception list |
+
+Tests added: 8. Tests deleted: 0. Tests rewritten from a literal to a rule: **3**. Tests freed from
+depending on the exception list having entries: **3**.
+
+**THE GUARD'S OWN SUITE FOUGHT THE EMPTY LIST, and that is worth recording.** Three of its tests
+assumed `EXCEPTIONS` was non-empty — one asserted `EXCEPTIONS.length > 0` with the message *"the
+list must not be empty while the disagreements exist"*, and two read `EXCEPTIONS[0]`, which became
+`undefined`. That assertion was a reasonable guard against somebody deleting the list to silence the
+tool, and wrong the moment the list emptied **honestly**. The pairing it wanted is already owned by
+test 2b, which runs the guard and asserts `0 new`: an unexplained deletion still fails there,
+because it would leave real disagreements unlisted. The two `EXCEPTIONS[0]` tests now build their
+own synthetic pair, which is the stronger shape anyway — they test the MATCHING RULE rather than
+whatever happens to be on the list today.
 
 ---
 
