@@ -3182,13 +3182,18 @@ export class CameraDirector {
       // others, which is why the shot it hands back at the line is bit-for-bit the state's own.
       // `stateZoom` above IS the run-in's second bound; it needed no code.
       line: _runInCeiling,
+      // START-LEADER-VISIBLE-1: THE ONE TERM THAT IS ABOUT THE PICTURE. Infinity except while the
+      // ceremony hold is live AND the leader is already outside the frame being drawn, so it costs
+      // nothing anywhere else — including every frame after the hold is released.
+      leaderVisible: this._leaderVisibleCeiling(racers, frameSize),
     };
     let guaranteed = Math.min(
       _ceilings.state,
       _ceilings.guarantee,
       _ceilings.company,
       _ceilings.field,
-      _ceilings.line
+      _ceilings.line,
+      _ceilings.leaderVisible
     );
     // ── THE CORRIDOR IS A CEILING ON WIDTH, NOT A FLOOR (CONTENDER-ZOOM-1) ──────────────────────
     //
@@ -3364,6 +3369,67 @@ export class CameraDirector {
   }
 
   /** The per-state zoom setting, in cam.zoom. One lookup, so no state can silently borrow another's. */
+  /**
+   * THE LEADER IS IN THE PICTURE — the visibility requirement read off the DELIVERED frame.
+   *
+   * WHY THIS EXISTS AND WHY IT IS NOT THE FIELD GUARANTEE. `_fieldCeiling` asks `companyGuarantee`
+   * whether every racer would fit in a frame centred on the ANCHOR. That is a true statement about
+   * geometry and it is blind to the picture: measured on dirt-oval at 3000 ms it answers 12.855 —
+   * a very loose ceiling — while the leader is 237 px outside the frame actually being drawn,
+   * because the camera is 875 px away from the anchor it is measuring around (START-SHAPE-1).
+   * Bounding the hold by it was priced and fixes nothing; this asks the question with the right
+   * centre instead.
+   *
+   * WHY THE LEADER ONLY. The same rule over EVERY racer was priced and REJECTED: it widens
+   * river-run 1.38x and space-sprint 2.25x, on tracks whose leader never leaves the picture and
+   * where nothing is wrong. That is a larger departure from the ceremony framing than the 1.07x
+   * drift `c3f294d1` was written to repair — trading one defect for a milder version of the other.
+   *
+   * SCOPE, and it is deliberately the narrowest that closes the defect:
+   *   · only while the ceremony hold is live (`_ceremonyHoldZoom` non-null). After release this
+   *     returns Infinity and the shot is bit-for-bit what it was.
+   *   · only when the leader is ALREADY outside the delivered frame. Inside, Infinity.
+   *   · it can only WIDEN. It is a ceiling among the other ceilings, on the widening side of the
+   *     same `Math.min`, so it can never steer and never tighten (Lesson 192).
+   *
+   * NO NEW NUMBER. The bound is the frame edge and the leader's own position in it: the factor that
+   * brings him back to the border, applied to the zoom that frame was drawn at. There is no key, no
+   * fraction and no margin to tune — at the ceiling exactly returned, he sits ON the edge.
+   *
+   * WHICH FRAME IT READS. The last one fully delivered (`this.zoom` with `this.offsetX/Y`), because
+   * at the moment the zoom target is chosen this frame's offsets do not exist yet — they are
+   * resolved from the zoom this function helps decide. Reading the delivered frame is the only
+   * non-circular reading available, and it is the frame the viewer is actually looking at.
+   *
+   * @returns {number} a zoom ceiling, or Infinity when the rule does not apply
+   */
+  _leaderVisibleCeiling(racers, frameSize) {
+    if (this._ceremonyHoldZoom == null) return Infinity;
+    if (!Array.isArray(racers) || racers.length === 0) return Infinity;
+    if (!(this.zoom > 0)) return Infinity;
+
+    // The leader is the racer furthest along, the same form `_pickNextState` and
+    // `_updateLeaderTracking` already use.
+    let leader = null;
+    for (const r of racers) if (!leader || r.t > leader.t) leader = r;
+    if (!leader) return Infinity;
+
+    const p = this._proj.toScreen(leader, this.zoom, this.offsetX, this.offsetY);
+    if (!Number.isFinite(p?.x) || !Number.isFinite(p?.y)) return Infinity;
+
+    const halfW = frameSize.width / 2;
+    const halfH = frameSize.height / 2;
+    const dx = Math.abs(p.x - halfW);
+    const dy = Math.abs(p.y - halfH);
+
+    let k = 1;
+    if (dx > halfW) k = Math.min(k, halfW / dx);
+    if (dy > halfH) k = Math.min(k, halfH / dy);
+    if (!(k < 1) || !Number.isFinite(k)) return Infinity; // already inside — cost nothing
+
+    return this.zoom * k;
+  }
+
   _stateCamZoom() {
     switch (this.state) {
       case CAM_STATE.OVERVIEW:

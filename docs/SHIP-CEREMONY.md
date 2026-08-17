@@ -120,6 +120,18 @@ time-dependent checks like the security gate, and coverage) is in
 that touches CI, the guards or the verify path itself (the local run would be marking its own
 homework), and the state immediately before an unattended night block.
 
+### A CAMERA COMMIT NAMES THE TRACKS ITS NUMBERS CAME FROM
+
+**One line in the message: which tracks were measured.** Not "run all ten" — that is expensive and
+usually pointless. Naming the sample turns a claim that reads as universal into one a later reader
+can bound.
+
+**Why this rule exists, in one sentence:** `c3f294d1` (2026-08-08) reported _"racers outside the
+picture 0 throughout"_ — true on the two open serpentines it measured, false on three of the five
+closed tracks — and finding that out cost a three-week bisect plus two measurement blocks
+([START-BISECT-1](../reports/evolution/START-BISECT-1.md),
+[START-SHAPE-1](../reports/evolution/START-SHAPE-1.md)).
+
 ### THE THREE FINGERPRINTS — which one a block owes
 
 They are CHANGE DETECTORS, not prohibitions. A block may move one deliberately; what it may not do
@@ -134,10 +146,10 @@ file starts stating a value without being declared. This document still owns the
 minting; [SIM.md](SIM.md) owns the lineage; [REBASELINE.md](../reports/parity/REBASELINE.md) owns the
 baseline statistics behind the current world.
 
-|                                               | covers                                                                          | run it when                                                                                                                                                                                                                                                                                                                                                                                                                                                                                |
-| --------------------------------------------- | ------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `scripts/fingerprint-default.mjs` — **world** | the RACE: physics, plan, outcome                                                | any behaviour change, and per the mint tripwire above                                                                                                                                                                                                                                                                                                                                                                                                                                      |
-| `scripts/camera-fingerprint.mjs` — **camera** | the DIRECTOR's decisions: state, phase, anchor, zoom, offsets, camT, targets    | any block touching `client/src/modules/camera/`                                                                                                                                                                                                                                                                                                                                                                                                                                            |
+|                                               | covers                                                                          | run it when                                                                                                                                                                                                                                                                                                                                                                                                                                                  |
+| --------------------------------------------- | ------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `scripts/fingerprint-default.mjs` — **world** | the RACE: physics, plan, outcome                                                | any behaviour change, and per the mint tripwire above                                                                                                                                                                                                                                                                                                                                                                                                        |
+| `scripts/camera-fingerprint.mjs` — **camera** | the DIRECTOR's decisions: state, phase, anchor, zoom, offsets, camT, targets    | any block touching `client/src/modules/camera/`                                                                                                                                                                                                                                                                                                                                                                                                              |
 | `scripts/render-fingerprint.mjs` — **render** | the DRAW CALL SEQUENCE: sprite placement, text, styles, transforms, layer order | any block touching the drawing path — **`modules/camera/`**, `RaceScreen/renderRaceFrame.js`, `RaceScreen/drawing/`, `nameTagLayout.js`, `Minimap.js`. **Camera counts** (FINISH-COMPANY-1): a camera-only diff moved this hash off `b6591e74102152bd` (**superseded 2026-08-05**), because the director decides the transform on every drawn frame. `scripts/verify.mjs` had copied this list's omission and told a block it could not reach a `ctx.` call. |
 
 **THE RACER TYPES ARE NOT ON THAT LIST ANY MORE, AND NOTHING REPLACES THEM.** This row read "…and
@@ -166,14 +178,14 @@ by `node scripts/gen-ceremony-costs.mjs`. Each guard times ITSELF and prints `[r
 this table quotes those numbers. A duration here that nobody measured is a bug in the generator,
 not a typo. `--check` warns once the block is more than 40 commits old.
 
-| guard | cost |
-|---|---|
+| guard                                         | cost  |
+| --------------------------------------------- | ----- |
 | `scripts/fingerprint-default.mjs` — **world** | 117 s |
-| `scripts/camera-fingerprint.mjs` — **camera** | 57 s |
-| `scripts/render-fingerprint.mjs` — **render** | 54 s |
-| `scripts/check-doc-links.mjs` | 0 s |
-| `scripts/check-index.mjs` | 0 s |
-| `scripts/check-tags.mjs` | 1 s |
+| `scripts/camera-fingerprint.mjs` — **camera** | 57 s  |
+| `scripts/render-fingerprint.mjs` — **render** | 54 s  |
+| `scripts/check-doc-links.mjs`                 | 0 s   |
+| `scripts/check-index.mjs`                     | 0 s   |
+| `scripts/check-tags.mjs`                      | 1 s   |
 
 <!-- END GENERATED: guard costs -->
 
@@ -238,8 +250,8 @@ tooling. Master had to be reset and force-pushed; that state is preserved as
 order points here instead of restating it.
 
 **The contradiction it resolves (found 2026-08-18).** Two of this repository's rules were both right
-and could not both hold: *CI must be green for exactly the merge SHA*, and *a ship tag's `TAGS.md`
-register line goes in the commit after the merge*. Checked out at the tag, `check-tags` saw a tag at
+and could not both hold: _CI must be green for exactly the merge SHA_, and _a ship tag's `TAGS.md`
+register line goes in the commit after the merge_. Checked out at the tag, `check-tags` saw a tag at
 origin that the tree did not register, and failed. `v-ship-runin-hold`, `v-ship-minimap`,
 `v-ship-contender-zoom` and `v-ship-endgame-095` are all in that state. **The rules were fine; the
 order was wrong.**
@@ -279,17 +291,17 @@ used.
 **Corrected 2026-08-18 by ENDGAME-FALLBACK-1, the first ship under this order, which found it by
 doing it.** The first draft of step 6 claimed `check-tags` would now be green on the branch. It
 cannot be: a register line for a tag that has not been pushed yet fails the guard's SECOND direction
-— *every registered tag exists at origin* — for as long as the branch is unmerged. **Commit that
+— _every registered tag exists at origin_ — for as long as the branch is unmerged. **Commit that
 step with `--no-verify` and say so in the commit message**; the guard is green again the moment
 master and the tag are pushed together in step 10.
 
 **This is the inconsistency window moving, and it moves in the right direction:**
 
-| | old order | new order |
-| --- | --- | --- |
-| where the inconsistency lives | **in history, permanently** — the merge commit forever fails `check-tags` | **on an unmerged branch, transiently** |
-| when it ends | never | at the push in step 10 |
-| what a checkout of the tag shows | red | green |
+|                                  | old order                                                                 | new order                              |
+| -------------------------------- | ------------------------------------------------------------------------- | -------------------------------------- |
+| where the inconsistency lives    | **in history, permanently** — the merge commit forever fails `check-tags` | **on an unmerged branch, transiently** |
+| when it ends                     | never                                                                     | at the push in step 10                 |
+| what a checkout of the tag shows | red                                                                       | green                                  |
 
 **A branch is work in progress; history is not.** Trading a permanent inconsistency in the record for
 a temporary one in a branch nobody has merged is the whole of what this reordering buys.
@@ -356,20 +368,21 @@ went missing).
       the line here rather than there is that ruling applied, not an oversight; **do not re-open it.**
 
       **The budget is the owner's, 2026-08-12, and his words are the evidence:** _"3 % ist total ok,
-      das ist ja auch ein möglicher Rennausgang — wenn es nicht zu oft vorkommt, passt das."_ — "3% is
-      totally fine, that is a possible race outcome after all — as long as it doesn't happen too
-      often, that's OK."
+          das ist ja auch ein möglicher Rennausgang — wenn es nicht zu oft vorkommt, passt das."_ — "3% is
+          totally fine, that is a possible race outcome after all — as long as it doesn't happen too
+          often, that's OK."
 
-      **THE BASELINE IS THE MEASUREMENT THAT SET IT** ([GATE-LINES-1](../reports/night/GATE-LINES-1.md),
-      2026-08-12, N=100 per track): **2.8% pooled** over 400 races — searound 7.0%, luger-hill 3.0%,
-      space-sprint 1.0%, seatrack 0.0%. **searound is the known outlier and is recorded as one rather
-      than averaged away**: a pooled number that hides a single track at more than double the budget
-      would be the same kind of silence this line was written to end.
+          **THE BASELINE IS THE MEASUREMENT THAT SET IT** ([GATE-LINES-1](../reports/night/GATE-LINES-1.md),
+          2026-08-12, N=100 per track): **2.8% pooled** over 400 races — searound 7.0%, luger-hill 3.0%,
+          space-sprint 1.0%, seatrack 0.0%. **searound is the known outlier and is recorded as one rather
+          than averaged away**: a pooled number that hides a single track at more than double the budget
+          would be the same kind of silence this line was written to end.
 
-      **Read the once-per-run RUNAWAY CONTROL line the harness prints**, every time. Until 2026-08-12
-      three harnesses read a property that did not exist and reported `0%` on every track of every
-      ship; the control exists so that a rate which is identically zero has to be stated as a result
-      instead of passing as a number.
+          **Read the once-per-run RUNAWAY CONTROL line the harness prints**, every time. Until 2026-08-12
+          three harnesses read a property that did not exist and reported `0%` on every track of every
+          ship; the control exists so that a rate which is identically zero has to be stated as a result
+          instead of passing as a number.
+
 - [ ] **2. Set the default + re-confirm the mechanical gates.** Flip the default in `defaults.js` to
       the chosen value; re-run `eslint` + the parity/golden tests (they will move — see #6).
 - [ ] **3. Mint the fingerprints — ONE measurement per world, on the FINAL committed state.** Mint
@@ -416,23 +429,24 @@ went missing).
       reports **success for that exact SHA**. Read it, and put the run id in the report.
 
       **Why this is a step and not a habit.** Three pushes in one day ended at "pushed" while the red
-      arrived afterwards, and master stayed broken for three hours because nobody was still looking.
-      A push is a request; the run is the answer. Check the HEAD SHA rather than the branch — a
-      branch view can show you a green run for the commit before yours:
+          arrived afterwards, and master stayed broken for three hours because nobody was still looking.
+          A push is a request; the run is the answer. Check the HEAD SHA rather than the branch — a
+          branch view can show you a green run for the commit before yours:
 
-      ```bash
-      gh run list --branch master --limit 1 --json headSha,databaseId,status,conclusion
-      gh run watch <id> --exit-status
-      ```
+          ```bash
+          gh run list --branch master --limit 1 --json headSha,databaseId,status,conclusion
+          gh run watch <id> --exit-status
+          ```
 
-      **A red run is not finished work with a footnote.** Either fix it and push again, or revert.
-      The ceremony has no state in which master is knowingly left red.
+          **A red run is not finished work with a footnote.** Either fix it and push again, or revert.
+          The ceremony has no state in which master is knowingly left red.
 
-      One clear commit; push; confirm with `git log origin/master
+          One clear commit; push; confirm with `git log origin/master
+
 --oneline -3` that the push landed. **Any verification transcript pasted into the report must come
-      from the state ACTUALLY being committed** — re-run the guards after the commit if that is the only
-      way to make it honest, and say that you did. A transcript from an intermediate state (guards still
-      untracked, a doc not yet written) does not prove the state it is filed under, even when it is green.
+from the state ACTUALLY being committed** — re-run the guards after the commit if that is the only
+way to make it honest, and say that you did. A transcript from an intermediate state (guards still
+untracked, a doc not yet written) does not prove the state it is filed under, even when it is green.
 
 ## The ONE CANONICAL HOME rule
 

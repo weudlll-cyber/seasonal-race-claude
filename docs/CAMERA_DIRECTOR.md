@@ -220,7 +220,7 @@ The three things:
 
   **AND THE CORRIDOR RUNS THE OTHER WAY HERE.** Everywhere else in this file the corridor is a
   GUARANTEE — a floor on how much world is in shot, composed with `Math.min` on the zoom. In the
-  photo finish it is also a **CAP**: the shot is never *wider* than the road, composed with
+  photo finish it is also a **CAP**: the shot is never _wider_ than the road, composed with
   `Math.max`. Two opposite senses of one word, which is why the GLOSSARY now carries both.
 
   **The cap ARRIVES rather than appears.** Its scope is `state === PHOTO_FINISH`, and a state change
@@ -244,7 +244,7 @@ The three things:
   **THE CONSEQUENCE IS LARGER THAN THE DIFF AND IS THE THING TO KNOW: the cap no longer moves the
   shot at all before the crossing.** It used to move the delivered zoom on **5019 of 7441**
   photo-finish frames; it now moves it on **0**, because in every one of those frames the line
-  ceiling was the *argmin* — the cap was not adding tightening on top of the tightest constraint, it
+  ceiling was the _argmin_ — the cap was not adding tightening on top of the tightest constraint, it
   was overriding it. The two are structurally exclusive there. **And its own promise barely notices:
   contenders NOT WHOLE 8.8% → 8.7%** on ten tracks × three seeds. Whether a cap that costs the
   finish line and buys a tenth of a point is worth keeping is the owner's call; nothing was removed.
@@ -608,7 +608,22 @@ a verbatim transcript of one run on one commit, which is a historical record, no
 
 ### The tracking lag, as measured today — and it had drifted
 
-<!-- MEASURED: tracking-lag (median/p95 pp per state) @ e31ac4cb 2026-08-18 depends=client/src/modules/camera/ -->
+<!-- MEASURED: tracking-lag (median/p95 pp per state) @ 8d75b66b 2026-08-18 depends=client/src/modules/camera/ -->
+
+**RE-MEASURED IN FULL FOR START-LEADER-VISIBLE-1, AND EVERY NUMBER IS IDENTICAL.** That block adds
+a `leaderVisible` ceiling to `CameraDirector.js`, which is inside this stamp's `depends=` directory
+and inside `tracking-lag.mjs`'s load closure, so the guard tripped as designed — and here the usual
+"nothing could have moved" argument was NOT available: **CAMERA and RENDER both MOVED on that tree**
+(they are the point of the change). It was therefore run rather than argued, all six rows, and every
+frame count, median and p95 comes back digit for digit: BATTLE_ZOOM 9701 / 5.71 / 9.97, COMEBACK_ZOOM
+644 / 14.23 / 16.22, LEADER_ZOOM 17630 / 3.82 / 8.72, LEAD_CHANGE 7786 / 4.42 / 7.12, OVERVIEW
+4303 / 2.65 / 16.00, PHOTO_FINISH 1865 / 3.50 / 35.66.
+
+**The reason it cannot move is structural, and the measurement is what turns that into evidence:**
+this table is the TRACKING phase only, and the new ceiling is inert outside the ceremony hold, which
+is entirely inside the ENTRY phase. **The sha names the commit the measurement was run against**
+(master, the branch's parent); the tree measured was that commit plus this block's single change,
+which is the only shape available before the commit exists.
 
 **RE-STAMPED, NOT RE-MEASURED, FOR FALLBACK-MIRRORS-1 — same corroboration as the entry below.**
 That block deletes four copied defaults from `cameraTimingComputation.js`, which is inside this
