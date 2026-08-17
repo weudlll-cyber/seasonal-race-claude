@@ -75,19 +75,23 @@ export const GENERATOR_CONFIG = {
   // Intensity → drama (each endpoint a monotone function of intensity 0..1).
   reveal: { at0: 0.6, at1: 0.9 }, // resolveProgress: later reveal at higher intensity
   peakDepthFrac: { at0: 0.15, at1: 0.55 }, // comeback/hold depth as a fraction of the field
-  // ── B2-attacker "Attack & Fall". SHIPPED ON at count 3 (DEFAULT_RACE_DYNAMICS_CONFIG, threaded in
-  // per race); the 0 below is only the direct/test-call fallback, not the shipped default. ──────────
+  // ── B2-attacker "Attack & Fall". THESE FOUR READ THE ONE HOME (ONE-HOME-1, 2026-08-19). ─────────
+  // This block used to say "the 0 below is only the direct/test-call fallback, not the shipped
+  // default" — a written decision to keep a SECOND definition beside the first. The owner's ruling
+  // ends it: a caller that passes no config reads the one home, and a direct or test call is exactly
+  // such a caller. A test that calls this generator bare now gets the SHIPPED game rather than a
+  // quietly disabled one, which is the only answer that makes a bare call worth anything.
   // Cast b2AttackHeroes ADDITIONAL heroes (beyond the nHeroes budget) from FRONT-post-chaos B2-finishers.
   // Each climbs to b2AttackPeakRank (mandatory choreography), then the curve steers it DOWN to
   // b2AttackFinalRank (a specific B2 rank = the orchestrated-fall length knob), after which the servo
   // RELEASES it to pack-like free reorder (racePlanner: Track-to-FinalRank, then Free). They bypass the
   // standard B2 0.80 resolve checkpoint — the orchestrated fall may run until b2AttackResolveProgress
   // (hero-privilege), leaving [resolve, 1.0] as the free window. Peak timing jittered in b2AttackProgress.
-  b2AttackHeroes: 0,
-  b2AttackPeakRank: 5,
-  b2AttackFinalRank: 10,
-  b2AttackProgress: { start: 0.4, end: 0.7 },
-  b2AttackResolveProgress: 0.85,
+  b2AttackHeroes: DEFAULT_RACE_DYNAMICS_CONFIG.b2AttackHeroes,
+  b2AttackPeakRank: DEFAULT_RACE_DYNAMICS_CONFIG.b2AttackPeakRank,
+  b2AttackFinalRank: DEFAULT_RACE_DYNAMICS_CONFIG.b2AttackFinalRank,
+  b2AttackProgress: { ...DEFAULT_RACE_DYNAMICS_CONFIG.b2AttackProgress },
+  b2AttackResolveProgress: DEFAULT_RACE_DYNAMICS_CONFIG.b2AttackResolveProgress,
 };
 
 // ── Band helpers (derived from the shared BAND_EDGES constant — single source for the edges) ────
@@ -222,7 +226,7 @@ export function attackerTiming(anchorRank, peakRank, finalRank, maxRankRate, con
   const span1 = (config.minJerkPeakFactor * Math.abs(anchorRank - peakRank)) / maxRankRate;
   const span2 = (config.minJerkPeakFactor * Math.abs(peakRank - finalRank)) / maxRankRate;
   if (ap + span1 + span2 + 0.06 > bc) return null; // climb + orchestrated fall can't fit before checkpoint
-  const win = config.b2AttackProgress ?? { start: 0.4, end: 0.7 };
+  const win = config.b2AttackProgress ?? DEFAULT_RACE_DYNAMICS_CONFIG.b2AttackProgress;
   const j = mulberry32((((seed >>> 0) ^ 0xa77ac4) + idx * 0x9e3779b9) >>> 0)();
   let peakProgress = win.start + (win.end - win.start) * j;
   peakProgress = clamp(
@@ -467,7 +471,7 @@ export function castHeroes(
   // feasible — a mid/back B2 racer can't reach a deep peak and fall back within the runway. attackerTiming
   // + racerFeasibility enforce the full climb+fall feasibility, so infeasible candidates are skipped, not
   // cast unfair. These are cast AFTER (and independently of) the nHeroes cap — a separate attacker budget.
-  const nAttack = config.b2AttackHeroes ?? 0;
+  const nAttack = config.b2AttackHeroes ?? DEFAULT_RACE_DYNAMICS_CONFIG.b2AttackHeroes;
   if (nAttack > 0) {
     const peakRank = clamp(
       Math.round(config.b2AttackPeakRank ?? DEFAULT_RACE_DYNAMICS_CONFIG.b2AttackPeakRank),
@@ -475,7 +479,11 @@ export function castHeroes(
       n
     );
     const [b2Lo, b2Hi] = bandBounds(1); // B2 rank bounds
-    const finalRank = clamp(Math.round(config.b2AttackFinalRank ?? 10), b2Lo, Math.min(b2Hi, n));
+    const finalRank = clamp(
+      Math.round(config.b2AttackFinalRank ?? DEFAULT_RACE_DYNAMICS_CONFIG.b2AttackFinalRank),
+      b2Lo,
+      Math.min(b2Hi, n)
+    );
     const b2Front = postChaos
       .filter((p) => !used.has(p.index) && bandOfRank(finalRanks.get(p.index)) === 1)
       .sort((a, b) => a.rank - b.rank); // front-post-chaos first (smallest, feasible, climb)

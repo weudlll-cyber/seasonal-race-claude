@@ -109,10 +109,16 @@ test("the BAND form is bound to its variable — the false positive that nearly 
 // ── THE EXCEPTION LIST IS A WORKLIST, NOT PERMISSION ────────────────────────────────────────────
 
 test("2. every exception carries BOTH values and a REASON — a bare allowlist rots", () => {
-  assert.ok(
-    EXCEPTIONS.length > 0,
-    "the list must not be empty while the disagreements exist",
-  );
+  // AN EMPTY LIST IS THE GOAL, NOT A FAILURE (ONE-HOME-1). This asserted `length > 0` with the
+  // message "the list must not be empty while the disagreements exist" — a reasonable guard against
+  // somebody deleting the list to silence the tool, and wrong the moment the list emptied HONESTLY,
+  // because every mirror had been removed. The condition it actually wanted is the pairing between
+  // the two, and test 2b already owns that: it runs the guard and asserts `0 new`. So an unexplained
+  // deletion still fails — there it would leave real disagreements unlisted — while an empty list
+  // that matches an empty finding set passes, which is the state this project is aiming at.
+  //
+  // What stays is the anti-rot rule below, which is vacuously true of an empty list and binding on
+  // every entry that ever returns.
   for (const e of EXCEPTIONS) {
     assert.ok(e.file && e.key, "file and key");
     assert.ok(
@@ -144,15 +150,20 @@ test("2b. the guard is GREEN today — every known disagreement is on the list",
 });
 
 test("3. a NEW disagreement in an exception-listed FILE is still found", () => {
-  // The hole this avoids: exempting a FILE rather than a PAIR. `raceCore.js` has ten entries on the
-  // list; an eleventh must not ride in behind them.
-  const listed = EXCEPTIONS.find((e) => e.file.includes("raceCore.js"));
-  assert.ok(
-    listed,
-    "raceCore.js is on the list, so this test is exercising the real case",
-  );
-  const [p] = findPairs(`config.minRacersVisible ?? 3`, listed.file, defaults);
-  const exempt = EXCEPTIONS.some(
+  // The hole this avoids: exempting a FILE rather than a PAIR. An entry for one key in a file must
+  // not carry an unrelated key in the same file with it.
+  //
+  // ONE-HOME-1 EMPTIED THE REAL LIST, so this builds its own entry rather than borrowing one. That
+  // is the stronger shape anyway: it tests the MATCHING RULE, which is the thing that must hold,
+  // instead of depending on the list happening to be non-empty. The list is now the outcome the
+  // whole guard is aiming at — every mirror gone — and a test that needs it populated would fight
+  // its own project.
+  const FILE = "client/src/modules/raceCore.js";
+  const listed = [
+    { file: FILE, key: "someOtherKey", defaultValue: 1, fallbackValue: 2 },
+  ];
+  const [p] = findPairs(`config.minRacersVisible ?? 3`, FILE, defaults);
+  const exempt = listed.some(
     (e) =>
       e.file === p.file &&
       e.key === p.key &&
@@ -165,9 +176,19 @@ test("3. a NEW disagreement in an exception-listed FILE is still found", () => {
 test("3b. changing either VALUE of a listed pair un-exempts it", () => {
   // The exception is keyed on both values, so a pair that moves stops matching and the guard fires.
   // An exception that survived its own values changing would be a hole, not a record.
-  const e = EXCEPTIONS[0];
+  //
+  // Synthetic, for the reason in test 3 above: ONE-HOME-1 emptied EXCEPTIONS, and `EXCEPTIONS[0]`
+  // was `undefined` the moment it did. The rule under test belongs to the matching, not to whatever
+  // happens to be on the list today.
+  const e = {
+    file: "client/src/modules/raceCore.js",
+    key: "someKey",
+    defaultValue: 5,
+    fallbackValue: "the-recorded-value",
+  };
+  const list = [e];
   const stillMatches = (fallback) =>
-    EXCEPTIONS.some(
+    list.some(
       (x) =>
         x.file === e.file &&
         x.key === e.key &&

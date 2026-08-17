@@ -120,20 +120,18 @@ export const EXCEPTIONS = [
   // does not set it, and neither does any other caller of `createRacePlan`; the fallback ran on
   // EVERY race and resolved to 0, which is why removing the floor is byte-identical. Recorded
   // rather than quietly deleted: the entry was right that it could not fire, and wrong about why.
-  D(
-    "client/src/modules/raceBehavior.js",
-    "maxLateralAccelPerStep",
-    0.0005,
-    0,
-    "UNFIREABLE in every shipped path (FALLBACK-42-TRIAGE). `applyRacerBehavior` is called with `{...behaviorConfig, isOpen}` where behaviorConfig is loader-resolved, and the sim merges from DEFAULT_RACE_BEHAVIOR_CONFIG — the key is always present. 0 as the off switch is real, but it is reached by SETTING 0, never by omitting the key. Aligning the literal cannot move the fingerprint, because the branch is not taken.",
-  ),
-  D(
-    "client/src/modules/raceBehavior.js",
-    "softSteeringObstacleMargin",
-    0.5,
-    0,
-    "UNFIREABLE in every shipped path (FALLBACK-42-TRIAGE) — same argument as the line above. Not a decision.",
-  ),
+  // ── TIER 1 IS EMPTY (ONE-HOME-1, the owner's ruling of 2026-08-19) ────────────────────────────
+  //
+  // `raceBehavior.js` / `maxLateralAccelPerStep` and `softSteeringObstacleMargin` used to sit here
+  // with `?? 0`, exempt because the branch was unreachable. THE RULING MAKES REACHABILITY BESIDE
+  // THE POINT: no second definition of a value, whatever its current value and whoever can reach
+  // it. Both now read `DEFAULT_RACE_BEHAVIOR_CONFIG`, so there is nothing left to except.
+  //
+  // The ruling also settles what the OFF-arm question was really about. It was never "should a
+  // missing key mean OFF" — no key is ever missing, because every loader walks the full default
+  // set. The fallbacks exist so a function can be called WITHOUT a config at all, and the only
+  // callers that do that are tests and harnesses. A test calling `applyRacerBehavior({})` should
+  // get the SHIPPED game, not a quietly disabled one.
   // ── TIER 2: the OFF-arm booleans — GONE, and REMOVED rather than aligned (MIRROR-CENSUS-2). ───
   //
   // `chaosSteer` · `bandBias` · `gapRerollEnabled` · `phaseSplitBonusEnabled` · `pulkCeilingCap` ·
@@ -152,19 +150,10 @@ export const EXCEPTIONS = [
   // which IS `DEFAULT_RACE_DYNAMICS_CONFIG` (same object identity, checked); `DiagnoseVerteilung`
   // uses the loader. No test passes a partial config to `createRaceFromIdentity`. WORLD and
   // WORLD-OFF measured either side and byte-identical.
-  ...[
-    ["pulkLeaderBrake", 0.1, 0],
-    ["pulkChallengerBoost", 0.06, 0],
-    ["pulkBoostHeadroom", 0.1, 0],
-  ].map(([k, d, f]) =>
-    D(
-      "client/src/modules/raceCore.js",
-      k,
-      d,
-      f,
-      "UNFIREABLE in every shipped path (FALLBACK-42-TRIAGE) — `dynamicsConfig` is loader-resolved in the browser and defaults-merged in the sim, so 0 is never reached. The OFF arm is the flag that SETS the value, never an absent key. Dead text; a mint to change, but not a decision.",
-    ),
-  ),
+  // The three pulk numbers — `pulkLeaderBrake`, `pulkChallengerBoost`, `pulkBoostHeadroom` — stood
+  // here with `?? 0` and are gone for the same reason: they READ THE HOME now (ONE-HOME-1). On a
+  // value that feeds arithmetic the literal was the worst of both worlds — a stale number if it
+  // fired, and a NaN if it were simply deleted. The home is neither.
   // ── TIER 3: engine numbers whose fallback is a STALE PREVIOUS VALUE, not an off switch. ───────
   //
   // TIER 3 IS EMPTY OF ENGINE NUMBERS AS OF MIRROR-CENSUS-1 (2026-08-18), and the reason it emptied
@@ -183,22 +172,23 @@ export const EXCEPTIONS = [
   // reading the strength when the threshold is null. FALLBACK-42-TRIAGE called it UNFIREABLE and gave
   // a reason that was true of raceCore and not of the sim's own `createRacePlan` call.
   //
-  // WHAT DELIBERATELY STAYS: the `?? false` / `?? 0` shapes above and below. Those say "absent means
-  // OFF", which is a convention rather than a stale value, and changing one is a decision about what
-  // a partial caller should get — not hygiene. L207's exception names exactly that shape.
-  ...[
-    ["client/src/modules/racePlanner.js", "b2AttackHeroes", 3, 0],
-    ["client/src/modules/heroCurveGenerator.js", "b2AttackHeroes", 3, 0],
-    ["client/src/modules/heroCurveGenerator.js", "b2AttackFinalRank", 7, 10],
-  ].map(([file, k, d, f]) =>
-    D(
-      file,
-      k,
-      d,
-      f,
-      "UNFIREABLE (FALLBACK-42-TRIAGE), and LEFT STANDING BY MIRROR-CENSUS-1 with a reason. `?? 0` is an off switch in shape and the key is always present, so neither fires. The two heroCurveGenerator entries are NOT stale text: that module's header states its literals are the direct/test-call default set, deliberately distinct from the shipped default, and GENERATOR_CONFIG carries the same pair. Overriding a written decision that has not expired is the owner's call, not a sweep's — MIRRORS-BY-REFERENCE overrode two such decisions and had to say so; this one was left instead.",
-    ),
-  ),
+  // ── AND THE EXCEPTION LIST IS NOW EMPTY OF ENGINE KEYS (ONE-HOME-1, 2026-08-19) ────────────────
+  //
+  // The paragraph that stood here said the `?? false` / `?? 0` shapes "deliberately stay", because
+  // absent-means-OFF was a convention and changing it was the owner's decision. HE MADE IT, and he
+  // rejected the question rather than answering it:
+  //
+  //   No key is ever missing. Every loader walks the full key set of its defaults, so the running
+  //   game cannot lack one. The fallbacks exist so a function can be called WITHOUT a config at
+  //   all — and the only callers that do that are tests and harnesses. THE RULE IS THEREFORE: no
+  //   second definition of a value. A caller that passes no config reads the ONE HOME.
+  //
+  // So reachability stopped being the question. `racePlanner.js`/`b2AttackHeroes` and
+  // `heroCurveGenerator.js`'s `b2AttackHeroes` / `b2AttackFinalRank` read the home now, along with
+  // TWO OBJECT-LITERAL copies of `b2AttackProgress` that this guard cannot see at all — its NULLISH
+  // pattern matches scalars and SCREAMING_CASE only. A full hand search of the client found exactly
+  // those two live sites and no others; the count is in ONE-HOME-1's report so the next reader does
+  // not have to repeat it.
   // ── TIER 4: camera. Visible, but they cannot move the race. ───────────────────────────────────
   //
   // THE THREE `outcomePhaseThreshold` ENTRIES ARE GONE, 2026-08-10 (OUTCOME-PHASE-75), and not by
@@ -217,20 +207,17 @@ export const EXCEPTIONS = [
   // showing the director's real value all along. The defect was real but smaller and differently
   // shaped: three copies of a default, one of which sat in the panel you would read while judging
   // the very number it copied.
-  // ── TIER 5: Dev Screen only. Wrong number under the owner's hand, nothing else. ────────────────
-  ...[
-    ["gapRerollEnabled", true, false],
-    ["phaseSplitBonusEnabled", true, false],
-    ["racePlanBonusStrengthMultiplier", 2, 1],
-  ].map(([k, d, f]) =>
-    D(
-      "client/src/screens/DevScreen/sections/DynamicsTuningSection.jsx",
-      k,
-      d,
-      f,
-      "UNFIREABLE, and the MIN-RACERS-5 comparison is WITHDRAWN (FALLBACK-42-TRIAGE). The section holds loadRaceDynamicsConfig() in state, and that resolves against the defaults, so the control shows the real value and the literal beside it is never used. MIN-RACERS-5 was a genuinely wrong number on screen; this is a wrong number in the source that nobody sees. Still worth pointing at DEFAULT_RACE_DYNAMICS_CONFIG (MIRRORS-BY-REFERENCE), but as hygiene, not a defect.",
-    ),
-  ),
+  // ── TIER 5: Dev Screen — ALSO EMPTY (ONE-HOME-1) ──────────────────────────────────────────────
+  //
+  // `gapRerollEnabled`, `phaseSplitBonusEnabled` and `racePlanBonusStrengthMultiplier` stood here at
+  // six sites, exempt because the section holds `loadRaceDynamicsConfig()` in state and the literal
+  // beside each control was never reached. All six read `DEFAULT_RACE_DYNAMICS_CONFIG` now.
+  //
+  // These were the three the owner could ever have SEEN — a checkbox reading off while the game ran
+  // on, and 1.0x displayed where the game runs 2.0x, at the slider and at three derived readouts
+  // under it. They are also the reason the JSX shape was worth doing rather than deleting: a bare
+  // `checked={undefined}` would flip React from a controlled input to an uncontrolled one, which is
+  // a different defect in a panel he uses. Reading the home has neither failure mode.
 ];
 
 /** Every `DEFAULT_*` object exported by defaults.js and autoSpriteScale.js, flattened to key→value. */

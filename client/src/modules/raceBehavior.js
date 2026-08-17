@@ -580,7 +580,10 @@ export function applyRacerBehavior(racers, config, priorityExtras) {
   );
   // RACER-MOTION-1: per-tick lateral ACCELERATION cap (bounds the CHANGE in the step, not just the step).
   // 0 = disabled (pre-fix bang-bang, where a saturating dodge snaps velocity 0↔clamp = the visible jerk).
-  const aLatMax = Math.max(0, config.maxLateralAccelPerStep ?? 0);
+  const aLatMax = Math.max(
+    0,
+    config.maxLateralAccelPerStep ?? DEFAULT_RACE_BEHAVIOR_CONFIG.maxLateralAccelPerStep
+  );
   // Brake-to-match: per-frame minimum cap per trailer (most constraining leader wins).
   // Populated in the pair loop; consumed in the apply-deltas loop to update racer state.
   const brakeMatchCaps = _brakeMatchCaps; // trailer.index → lowest requiredBrakeFactor this frame
@@ -950,7 +953,9 @@ export function applyRacerBehavior(racers, config, priorityExtras) {
         // stops the most-constraining winner alternating tick-to-tick between two comparable obstacles —
         // the root of the flapping — while a genuinely-dominant challenger still takes over immediately
         // (switch eased by the shipped lateral clamp). 0 = disabled (pre-fix winner-take-all).
-        const ssMargin = config.softSteeringObstacleMargin ?? 0;
+        const ssMargin =
+          config.softSteeringObstacleMargin ??
+          DEFAULT_RACE_BEHAVIOR_CONFIG.softSteeringObstacleMargin;
         const assignSoftTarget = (self, obstacle) => {
           // The incumbent competes with a (1+margin) bonus, so a challenger must beat it by the margin to
           // take the steer. Only the incumbent is boosted, so the comparison stays a single well-defined max.

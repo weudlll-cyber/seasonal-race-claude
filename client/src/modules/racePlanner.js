@@ -351,7 +351,7 @@ export function createRacePlan(racers, finishT, targetDurationMs, config = {}, s
     // ── B2-attacker "Attack & Fall" (SHIPPED ON at b2AttackHeroes 3; 0 casts none → pre-feature game) ──
     // Threaded into the hero-curve generator (which casts the attackers) AND read by the servo below, which
     // runs the Track-to-FinalRank-then-Free logic for role 'attacker-b2'. See heroCurveGenerator.js.
-    _b2AttackHeroes: config.b2AttackHeroes ?? 0,
+    _b2AttackHeroes: config.b2AttackHeroes ?? DEFAULT_RACE_DYNAMICS_CONFIG.b2AttackHeroes,
     _b2AttackPeakRank: config.b2AttackPeakRank ?? DEFAULT_RACE_DYNAMICS_CONFIG.b2AttackPeakRank,
     _b2AttackFinalRank: config.b2AttackFinalRank ?? DEFAULT_RACE_DYNAMICS_CONFIG.b2AttackFinalRank,
     _b2AttackProgress: config.b2AttackProgress ?? {

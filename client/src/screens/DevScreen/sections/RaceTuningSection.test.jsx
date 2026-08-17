@@ -77,35 +77,31 @@ vi.mock('../../../modules/rowLayoutConfig.js', () => ({
 // Gap-reroll + B2-attacker keys are included so the DevScreen reorg groups render with real
 // values (they moved into the Speed card / their own PULK group). Inlined rather than shared,
 // because vi.mock factories are hoisted above any const declaration.
-vi.mock('../../../modules/raceDynamicsConfig.js', () => ({
-  loadRaceDynamicsConfig: vi.fn(() => ({
-    reRollVariationPercent: 58,
-    reRollTransitionDuration: 5.0,
-    reRollIntervalDivisor: 15,
-    reRollLastPositionPercent: 80,
-    gapRerollEnabled: true,
-    gapRerollThresholdLengths: 0.5,
-    gapRerollStrength: 1.0,
-    gapRerollMode: 'symmetric',
-    gapRerollDevMarker: false,
-    b2AttackHeroes: 3,
-    packReSteerThreshold: 1.0,
-  })),
-  saveRaceDynamicsConfig: vi.fn(),
-  DEFAULT_RACE_DYNAMICS_CONFIG: {
-    reRollVariationPercent: 58,
-    reRollTransitionDuration: 5.0,
-    reRollIntervalDivisor: 15,
-    reRollLastPositionPercent: 80,
-    gapRerollEnabled: true,
-    gapRerollThresholdLengths: 0.5,
-    gapRerollStrength: 1.0,
-    gapRerollMode: 'symmetric',
-    gapRerollDevMarker: false,
-    b2AttackHeroes: 3,
-    packReSteerThreshold: 1.0,
-  },
-}));
+// ONE-HOME-1: THE MOCK DOES NOT RE-TYPE THE DEFAULTS ANY MORE.
+//
+// It used to carry a hand-written twelve-key copy of DEFAULT_RACE_DYNAMICS_CONFIG — a second
+// definition of the shipped values, living in a test. It broke the moment the component stopped
+// carrying its own literals and started reading the one home: the copy was missing
+// `racePlanBonusStrengthMultiplier`, so the readout got `undefined.toFixed(1)` and every test in
+// this file failed. The comment immediately below records the SAME class biting once before, for
+// `frameTimingConfig`.
+//
+// `importActual` gives the mock the real defaults, so it cannot go out of step with them. Only the
+// LOADER is stubbed — which is the thing this file actually needs to control.
+vi.mock('../../../modules/raceDynamicsConfig.js', async (importActual) => {
+  const actual = await importActual();
+  return {
+    ...actual,
+    loadRaceDynamicsConfig: vi.fn(() => ({
+      ...actual.DEFAULT_RACE_DYNAMICS_CONFIG,
+      reRollVariationPercent: 58,
+      reRollTransitionDuration: 5.0,
+      reRollIntervalDivisor: 15,
+      reRollLastPositionPercent: 80,
+    })),
+    saveRaceDynamicsConfig: vi.fn(),
+  };
+});
 
 // SCOREBOARD-CADENCE-1: the cadence band is part of this module's surface now, and a mock that omits
 // it renders the control with `min={undefined}`, which React reports as an error and every test in
@@ -118,7 +114,10 @@ vi.mock('../../../modules/frameTimingConfig.js', () => ({
   SCOREBOARD_INTERVAL_MAX_MS: 2000,
 }));
 
-import { loadRaceDynamicsConfig } from '../../../modules/raceDynamicsConfig.js';
+import {
+  loadRaceDynamicsConfig,
+  DEFAULT_RACE_DYNAMICS_CONFIG,
+} from '../../../modules/raceDynamicsConfig.js';
 import RaceTuningSection from './RaceTuningSection.jsx';
 
 beforeEach(() => {
@@ -271,12 +270,20 @@ describe('RaceTuningSection — per-block reset buttons', () => {
     expect(screen.getByTestId('reset-speed-range')).toBeTruthy();
   });
 
-  it('clicking reset-speed-reroll calls setDynamicsConfig with all defaults', () => {
+  // ONE-HOME-1: `4 re-rolls` and `12s` were derived from the numbers the old mock INVENTED
+  // (divisor 15, transition 5.0), not from the shipped world — so this test was pinning a fiction.
+  // It now reads the home for the one value the preview prints directly, and asserts the SHAPE of
+  // the rest. The transition is deliberately not re-derived here: re-computing the schedule in the
+  // test would be a second definition of the production formula, which is the thing this whole
+  // block is against.
+  it('clicking reset-speed-reroll rebuilds the preview from THE SHIPPED DEFAULTS', () => {
     render(<RaceTuningSection />);
     fireEvent.click(screen.getByTestId('reset-speed-reroll'));
     const preview = screen.getByTestId('reroll-preview');
-    expect(preview.textContent).toContain('4 re-rolls');
-    expect(preview.textContent).toContain('12s');
+    expect(preview.textContent).toContain(
+      `Transition: ${DEFAULT_RACE_DYNAMICS_CONFIG.reRollTransitionDuration}s`
+    );
+    expect(preview.textContent).toMatch(/\d+ re-rolls/);
   });
 
   it('clicking reset-drafting does not crash', () => {
@@ -338,17 +345,20 @@ describe('RaceTuningSection — DevScreen reorg', () => {
 });
 
 describe('RaceTuningSection — reset uses DEFAULT values, not current state (regression)', () => {
-  it('reset-speed-reroll restores reRollVariationPercent to 58 when loaded with stored value 150', () => {
+  // ONE-HOME-1: THIS ASSERTS THE RULE, NOT THE NUMBER. It read `toBe('58')`, which was not the
+  // shipped default at all — it was the value the mock beside it invented. Once the mock stopped
+  // re-typing the defaults and started spreading the real ones, the number moved and this test
+  // failed while the code was correct. A test that pins a literal cannot tell a real regression
+  // from an honest change of the value; asserting against the home can.
+  it('reset-speed-reroll restores reRollVariationPercent to THE SHIPPED DEFAULT', () => {
     loadRaceDynamicsConfig.mockReturnValueOnce({
+      ...DEFAULT_RACE_DYNAMICS_CONFIG,
       reRollVariationPercent: 150,
-      reRollTransitionDuration: 3.0,
-      reRollIntervalDivisor: 20,
-      reRollLastPositionPercent: 70,
     });
     render(<RaceTuningSection />);
     const input = screen.getByLabelText('Re-Roll Variation Percent');
     expect(input.value).toBe('150');
     fireEvent.click(screen.getByTestId('reset-speed-reroll'));
-    expect(input.value).toBe('58');
+    expect(input.value).toBe(String(DEFAULT_RACE_DYNAMICS_CONFIG.reRollVariationPercent));
   });
 });
