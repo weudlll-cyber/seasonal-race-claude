@@ -13,6 +13,7 @@ import { useAuth } from '../../contexts/AuthContext.jsx';
 import { KEYS, storageGet, storageSet } from '../../modules/storage/storage.js';
 import { InfoTooltip } from '../../components/InfoTooltip/index.js';
 import PlayerGroupsManager from './sections/PlayerGroupsManager.jsx';
+import ChangePasswordSection from './sections/ChangePasswordSection.jsx';
 import RacerManager from './sections/RacerManager.jsx';
 import TrackManager from './sections/TrackManager.jsx';
 import BrandingProfiles from './sections/BrandingProfiles.jsx';
@@ -43,6 +44,14 @@ const SECTIONS = [
     label: 'Race Defaults',
     desc: 'Duration, winners, countdown, sound',
     component: RaceDefaults,
+    tier: 'operator',
+  },
+  {
+    id: 'password',
+    icon: '🔑',
+    label: 'Change Password',
+    desc: 'Change the password of the account you are signed in as',
+    component: ChangePasswordSection,
     tier: 'operator',
   },
   {

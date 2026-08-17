@@ -31,6 +31,28 @@ export async function login(username, password) {
   return await res.json();
 }
 
+/**
+ * Change the CURRENT user's own password.
+ *
+ * There is no user id in this call and there must never be one: the server takes the target from
+ * the session cookie (`req.authUser`), never from the body, so this function cannot be pointed at
+ * somebody else's account no matter what it is passed. An admin resetting another user's password
+ * uses `PUT /api/users/:id` instead.
+ *
+ * The current password is required — without it a stolen session would be a permanent takeover
+ * rather than something that expires. A wrong one answers `401 invalid credentials`, exactly as
+ * the login path does.
+ */
+export async function changePassword(currentPassword, newPassword) {
+  const res = await apiCall(`${base}/change-password`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ currentPassword, newPassword }),
+    _skipAuthRedirect: true,
+  });
+  return await res.json();
+}
+
 export async function logout() {
   await apiCall(`${base}/logout`, { method: 'POST', _skipAuthRedirect: true });
 }

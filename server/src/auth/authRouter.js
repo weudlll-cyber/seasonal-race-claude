@@ -12,6 +12,7 @@ import { openSync, closeSync, existsSync, unlinkSync, writeFileSync } from 'node
 import defaultStore, { verifyPassword, toSafeUser } from './usersStore.js';
 import { SETUP_MARKER_PATH } from './paths.js';
 import { resolveCookieSecure, getActiveCookieName } from './session.js';
+import { restampSession } from './restampSession.js';
 
 // Timing-equalization dummy: a real bcrypt hash used in verifyPassword when a username is not
 // found, so that a user-miss takes the same wall time as a password-miss (prevents user enumeration
@@ -169,6 +170,58 @@ export function createAuthRouter({ store, setupMarkerPath, getBootstrapToken } =
       if (active !== 'ra.sid') res.clearCookie('ra.sid', { path: '/' });
       res.json({ ok: true });
     });
+  });
+
+  // POST /change-password — a logged-in user changes THEIR OWN password (SELF-PASSWORD-1,
+  // the owner's decision of 2026-08-19: an admin should not have to know an operator's password).
+  //
+  // WHY IT LIVES HERE AND NOT ON /api/users: `/api/users` is admin-only for every method via
+  // ROUTE_POLICY, so an operator can never reach it — that is exactly the gap this closes. This
+  // route is authenticated but NOT admin-gated, which the global requireAuth gives it for free by
+  // not being on the PUBLIC_PATHS allow-list.
+  //
+  // THE TARGET IS ALWAYS THE SESSION'S OWN USER. It is read from `req.authUser`, which the guard
+  // derived from the session cookie, and NEVER from the request body — a body-named target would
+  // turn this into an unguarded admin reset. An admin resetting somebody else's password keeps
+  // using PUT /api/users/:id.
+  router.post('/change-password', async (req, res) => {
+    const { currentPassword, newPassword } = req.body ?? {};
+
+    // requireAuth has already run (this path is not public), so authUser is present; the guard is
+    // kept for the case of this router being mounted without the stack, e.g. a future unit test.
+    const userId = req.authUser?.id ?? req.session?.userId;
+    if (!userId) return res.status(401).json({ error: 'not authenticated' });
+
+    const record = store.findAuthRecordById(userId);
+    if (!record) {
+      return req.session.destroy(() => res.status(401).json({ error: 'not authenticated' }));
+    }
+
+    // Same comparison the login path uses — one implementation, not a second one.
+    const ok = await verifyPassword(currentPassword, record.passwordHash);
+    if (!ok) {
+      // Say exactly what the login path says to a wrong password, and no more. The server log is
+      // the only place the distinction exists.
+      console.warn(`[auth] change-password rejected: wrong current password for user ${userId}`);
+      return res.status(401).json({ error: 'invalid credentials' });
+    }
+
+    try {
+      // The store validates the new password with the same rule setup uses, hashes it, and bumps
+      // sessionEpoch — which is what ends this user's OTHER sessions. No session code here.
+      await store.updateUser(userId, { password: newPassword });
+    } catch (err) {
+      if (err.code === 'INVALID_PASSWORD' || err.code === 'EMPTY_UPDATE') {
+        return res.status(400).json({ error: 'Password must not be empty' });
+      }
+      console.error('[auth] change-password failed:', err.code ?? err.message);
+      return res.status(500).json({ error: 'internal error' });
+    }
+
+    // Keep THIS session alive across the bump it just caused. Shared with PUT /api/users/:id.
+    await restampSession(req, store, userId);
+
+    res.json({ ok: true });
   });
 
   // GET /me — inline auth

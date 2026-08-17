@@ -96,6 +96,14 @@ export function AuthProvider({ children }) {
     await runRefresh();
   }
 
+  // Self-service password change. No refresh afterwards: the user and role are unchanged, and the
+  // server keeps THIS session alive across the epoch bump (restampSession.js). Errors propagate so
+  // the form can show them — a wrong current password is a 401 the caller must see, which is why
+  // authApi passes _skipAuthRedirect and this does not swallow it.
+  async function changePassword(currentPassword, newPassword) {
+    return authApi.changePassword(currentPassword, newPassword);
+  }
+
   async function logout() {
     try {
       await authApi.logout();
@@ -133,6 +141,7 @@ export function AuthProvider({ children }) {
     login,
     logout,
     setup,
+    changePassword,
     refresh: runRefresh,
     getSetupNeeded: authApi.getSetupNeeded,
   };
