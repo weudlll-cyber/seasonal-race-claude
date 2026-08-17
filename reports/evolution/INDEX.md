@@ -38,6 +38,13 @@ is dated and recorded HERE, where a reader on their way to the report will pass 
   [GATE-LINES-1](../night/GATE-LINES-1.md); the fix and the once-per-run control that makes the
   silence impossible to repeat: [GATE-TRUTH-1](../night/GATE-TRUTH-1.md).
 
+- [OWNER-DECISIONS-2026-08-19.md](OWNER-DECISIONS-2026-08-19.md) — **everything left that needs
+  him**, and nothing on it has been touched. 13 items in 4 batches, ordered by whether he could ever
+  SEE it, each with exactly five lines: what is wrong in plain language, can he see it, what changes
+  if fixed, what it costs in minutes, what happens if left forever. **Batch 2 is ten items and ONE
+  sentence** — "when a setting is missing, should the game run that feature OFF or the shipped
+  value?" — so most of the sheet is a single decision. Only two items are visible to him at all, and
+  only one (racer artwork being covered by no automatic check) is genuinely expensive.
 - [DECLARED-HOLES-1.md](DECLARED-HOLES-1.md) — **two holes closed, one declared permanent with
   evidence** (2026-08-18). `check-measured-stamps` had excluded test files from its COMMITTED query
   since VERIFY-COST-3 but never from `stagedUnder` — the pre-commit position, the one that actually
