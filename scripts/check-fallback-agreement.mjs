@@ -133,23 +133,24 @@ export const EXCEPTIONS = [
     0,
     "UNFIREABLE in every shipped path (FALLBACK-42-TRIAGE) — same argument as the line above. Not a decision.",
   ),
-  // ── TIER 2: the OFF-arm flags. A partial config runs the pre-feature world on purpose. ────────
-  ...[
-    ["chaosSteer", true, false],
-    ["bandBias", true, false],
-    ["gapRerollEnabled", true, false],
-    ["phaseSplitBonusEnabled", true, false],
-    ["pulkCeilingCap", true, false],
-    ["enableRowEnvSmooth", true, false],
-  ].map(([k, d, f]) =>
-    D(
-      "client/src/modules/raceCore.js",
-      k,
-      d,
-      f,
-      "UNFIREABLE in every shipped path, and the world-off claim it used to carry is CORRECTED (FALLBACK-42-TRIAGE). The browser passes `loadRaceDynamicsConfig()`; sim-fairness builds its config with `mergeCfg(..., DEFAULT_RACE_DYNAMICS_CONFIG)`. Both resolve against the defaults, so the key is always present and `?? false` never runs. `world-off` is produced by `--gapRerollEnabled=false`, which SETS the key — it does not depend on the key being absent. The ablation arm is the FLAG, not the fallback. Still exempt (engine file, aligning is a mint) but it is dead text, not a decision.",
-    ),
-  ),
+  // ── TIER 2: the OFF-arm booleans — GONE, and REMOVED rather than aligned (MIRROR-CENSUS-2). ───
+  //
+  // `chaosSteer` · `bandBias` · `gapRerollEnabled` · `phaseSplitBonusEnabled` · `pulkCeilingCap` ·
+  // `enableRowEnvSmooth`, seven sites in `raceCore.js`. Their `?? false` is deleted outright, not
+  // pointed at the default: a mirror that cannot drift beats one that currently agrees, and there
+  // is now no second copy of these six values anywhere.
+  //
+  // WHY REMOVAL WAS SAFE FOR THESE SIX AND NOT FOR THEIR NEIGHBOURS BELOW. They are BOOLEANS, so
+  // the two failure modes coincide: if a caller ever did omit one, `undefined` is falsy and behaves
+  // exactly as the deleted `false` did. The `?? 0` entries that remain are NUMBERS feeding
+  // arithmetic, where an absent key would become NaN instead of 0 — a worse outcome than the mirror,
+  // so removing those would be trading a documentation defect for a behaviour one.
+  //
+  // Every caller was read before the deletion rather than assumed: the browser passes
+  // `loadRaceDynamicsConfig()`; six harness scripts pass `DEFAULT_CONFIG_WORLD.raceDynamicsConfig`,
+  // which IS `DEFAULT_RACE_DYNAMICS_CONFIG` (same object identity, checked); `DiagnoseVerteilung`
+  // uses the loader. No test passes a partial config to `createRaceFromIdentity`. WORLD and
+  // WORLD-OFF measured either side and byte-identical.
   ...[
     ["pulkLeaderBrake", 0.1, 0],
     ["pulkChallengerBoost", 0.06, 0],
