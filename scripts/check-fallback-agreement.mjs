@@ -172,22 +172,23 @@ export const EXCEPTIONS = [
   // reading the strength when the threshold is null. FALLBACK-42-TRIAGE called it UNFIREABLE and gave
   // a reason that was true of raceCore and not of the sim's own `createRacePlan` call.
   //
-  // WHAT DELIBERATELY STAYS: the `?? false` / `?? 0` shapes above and below. Those say "absent means
-  // OFF", which is a convention rather than a stale value, and changing one is a decision about what
-  // a partial caller should get — not hygiene. L207's exception names exactly that shape.
-  ...[
-    ["client/src/modules/racePlanner.js", "b2AttackHeroes", 3, 0],
-    ["client/src/modules/heroCurveGenerator.js", "b2AttackHeroes", 3, 0],
-    ["client/src/modules/heroCurveGenerator.js", "b2AttackFinalRank", 7, 10],
-  ].map(([file, k, d, f]) =>
-    D(
-      file,
-      k,
-      d,
-      f,
-      "UNFIREABLE (FALLBACK-42-TRIAGE), and LEFT STANDING BY MIRROR-CENSUS-1 with a reason. `?? 0` is an off switch in shape and the key is always present, so neither fires. The two heroCurveGenerator entries are NOT stale text: that module's header states its literals are the direct/test-call default set, deliberately distinct from the shipped default, and GENERATOR_CONFIG carries the same pair. Overriding a written decision that has not expired is the owner's call, not a sweep's — MIRRORS-BY-REFERENCE overrode two such decisions and had to say so; this one was left instead.",
-    ),
-  ),
+  // ── AND THE EXCEPTION LIST IS NOW EMPTY OF ENGINE KEYS (ONE-HOME-1, 2026-08-19) ────────────────
+  //
+  // The paragraph that stood here said the `?? false` / `?? 0` shapes "deliberately stay", because
+  // absent-means-OFF was a convention and changing it was the owner's decision. HE MADE IT, and he
+  // rejected the question rather than answering it:
+  //
+  //   No key is ever missing. Every loader walks the full key set of its defaults, so the running
+  //   game cannot lack one. The fallbacks exist so a function can be called WITHOUT a config at
+  //   all — and the only callers that do that are tests and harnesses. THE RULE IS THEREFORE: no
+  //   second definition of a value. A caller that passes no config reads the ONE HOME.
+  //
+  // So reachability stopped being the question. `racePlanner.js`/`b2AttackHeroes` and
+  // `heroCurveGenerator.js`'s `b2AttackHeroes` / `b2AttackFinalRank` read the home now, along with
+  // TWO OBJECT-LITERAL copies of `b2AttackProgress` that this guard cannot see at all — its NULLISH
+  // pattern matches scalars and SCREAMING_CASE only. A full hand search of the client found exactly
+  // those two live sites and no others; the count is in ONE-HOME-1's report so the next reader does
+  // not have to repeat it.
   // ── TIER 4: camera. Visible, but they cannot move the race. ───────────────────────────────────
   //
   // THE THREE `outcomePhaseThreshold` ENTRIES ARE GONE, 2026-08-10 (OUTCOME-PHASE-75), and not by
