@@ -37,7 +37,12 @@ returned by any endpoint, and never logged.
 
 1. **Marker check.** If the setup-complete marker already exists → `409 setup already complete`.
 2. **Token check.** No `RA_BOOTSTRAP_TOKEN` configured, or a token that does not match →
-   `403 setup not available`. **Both cases give the same message** — see §8.
+   `403 setup not available`. **Both cases give the same message** — see §8. **They no longer give
+   the same SERVER LOG, and that is the one place they are told apart** (SETUP-TOKEN-LOG-1): the
+   unconfigured case logs `RA_BOOTSTRAP_TOKEN not set; setup disabled`, the mismatch logs
+   `bootstrap token mismatch; setup refused`. Neither line contains a token, a prefix of one, or a
+   length. The RESPONSE stays identical on purpose — an operator reading his own log may know which
+   of the two it was; a caller may not.
 3. **Body validation.** Missing or blank `username`/`password` → `400 invalid username or password`.
    The message deliberately does not say which field.
 4. **Atomic claim.** The marker file is created with `O_EXCL`, so exactly one request wins even if
@@ -65,7 +70,7 @@ deployment — which values, in what shape, and the minimal start command — is
 | variable             | what it is for               | when it is missing                                                                                                                                                                 |
 | -------------------- | ---------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `RA_SESSION_SECRET`  | signs session cookies        | **production: the server refuses to start** (`SESSION_SECRET_MISSING`). Development: an ephemeral secret is generated and a warning is printed — sessions do not survive a restart |
-| `RA_BOOTSTRAP_TOKEN` | gates `POST /api/auth/setup` | setup is **disabled**: every attempt gets `403 setup not available`, and the server logs `RA_BOOTSTRAP_TOKEN not set; setup disabled`                                              |
+| `RA_BOOTSTRAP_TOKEN` | gates `POST /api/auth/setup` | setup is **disabled**: every attempt gets `403 setup not available`, and the server logs `RA_BOOTSTRAP_TOKEN not set; setup disabled` (a supplied token that does not MATCH gets the same 403 and logs `bootstrap token mismatch; setup refused` — §1)                                              |
 
 **Required for a real deployment:**
 

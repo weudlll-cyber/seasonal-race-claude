@@ -38,6 +38,15 @@ is dated and recorded HERE, where a reader on their way to the report will pass 
   [GATE-LINES-1](../night/GATE-LINES-1.md); the fix and the once-per-run control that makes the
   silence impossible to repeat: [GATE-TRUTH-1](../night/GATE-TRUTH-1.md).
 
+- [SETUP-TOKEN-LOG-1.md](SETUP-TOKEN-LOG-1.md) — **the same 403, and now the log says which one it
+  was** (2026-08-21). `POST /api/auth/setup` answered `403 setup not available` both when no
+  bootstrap token is configured and when one does not match, and only the first wrote a log line —
+  so the two were identical from BOTH ends and the one person entitled to tell them apart could not.
+  **THE RESPONSE IS UNCHANGED and a test now asserts the two 403s are byte-identical**, because that
+  sameness is the security property. One warning added, in the neighbour's shape, **logging no token,
+  no prefix and no length**. Five tests, two sabotage-proven; `docs/AUTH.md` gains the distinction in
+  both places that describe the gate. **Merged.**
+
 - [TEST-ACCOUNTS-1.md](TEST-ACCOUNTS-1.md) — **eight server test files stopped sharing one row**
   (2026-08-21). `authAgent.js` mints a user per call and `env-setup.js` gives each test FILE its own
   users store; the two sole-admin tests now **assert** their precondition instead of inheriting it.

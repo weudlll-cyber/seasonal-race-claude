@@ -59,6 +59,17 @@ export function createAuthRouter({ store, setupMarkerPath, getBootstrapToken } =
       return res.status(403).json({ error: 'setup not available' });
     }
     if (!constantTimeEqual(token, configured)) {
+      // SETUP-TOKEN-LOG-1 — THE RESPONSE IS DELIBERATELY THE SAME AS THE ONE ABOVE, AND STAYS SO.
+      // "Setup is not configured" and "your token is wrong" must be indistinguishable to a caller,
+      // or the endpoint tells an attacker which of the two he is looking at. What was missing is
+      // the OTHER side: the operator reading the server log saw one of the two cases and silence
+      // for the other, so a mistyped token and an unset variable looked identical from BOTH ends
+      // and the log could not tell him which he had.
+      //
+      // NO TOKEN VALUE IS LOGGED — not the supplied one, not the configured one, not a prefix, not
+      // a length, not a hash. A length alone narrows a secret, and a log line is the one place a
+      // secret ends up somewhere nobody is guarding.
+      console.warn('[auth] bootstrap token mismatch; setup refused');
       return res.status(403).json({ error: 'setup not available' });
     }
 
