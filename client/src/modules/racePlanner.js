@@ -237,9 +237,11 @@ export function createRacePlan(racers, finishT, targetDurationMs, config = {}, s
   // x this expression can produce. The removal is byte-identical by construction, and the world
   // fingerprint was re-measured to say so rather than to be reasoned about.
   //
-  // WHY IT IS A REMOVAL AND NOT A REPAIR. `postStartHoldMs` is a CAMERA key with a camera meaning:
-  // how long the director holds LEADER_ZOOM after the 3 s start overview, so the hold ends at
-  // 3000 + the value. Read here as an absolute floor from zero it meant something else — the
+  // WHY IT WAS A REMOVAL AND NOT A REPAIR. `postStartHoldMs` was a CAMERA key with a camera
+  // meaning: how long the director held LEADER_ZOOM after a hard-coded 3 s start overview, so the
+  // hold ended at 3000 + the value. (Both are retired since START-ONE-WINDOW-1, which replaced them
+  // with one `startWindowMs`; this note is kept because the QUESTION below is still open and still
+  // the owner's.) Read here as an absolute floor from zero it meant something else — the
   // earliest the PULK phase may begin — and was 3000 ms out even on its own terms. Wiring it
   // correctly (a floor of 3000 + 7000 = 10000 ms) MOVES THE RACE: it binds on six of the ten
   // fingerprint tracks and changes the outcome on five of them. That is a rebaseline decision and

@@ -51,6 +51,44 @@ is dated and recorded HERE, where a reader on their way to the report will pass 
   [GATE-LINES-1](../night/GATE-LINES-1.md); the fix and the once-per-run control that makes the
   silence impossible to repeat: [GATE-TRUTH-1](../night/GATE-TRUTH-1.md).
 
+- [SHIP-START-ONE-WINDOW.md](SHIP-START-ONE-WINDOW.md) — **the start is one window, one rule, and it
+  is on master** (2026-08-21). **The owner judged it on a production build on 2026-08-21 and ACCEPTED
+  it.** Carries [ZOOM-PIVOT-START-1](ZOOM-PIVOT-START-1.md) too. **CAMERA `f64c2ae531f14253` and
+  RENDER `a8c59ef5002716f1` MINTED; WORLD and WORLD-OFF measured and unmoved** — run rather than
+  argued, because this ship retires a key inside their closure. Contains the **leftover search**, six
+  greps over the whole tracked tree with every hit classified as removed or kept-with-reason, and the
+  dead-path check after the centroid went (**nothing was dead**). `docs/CAMERA_DIRECTOR.md` gains
+  §3a-start and the old description is deleted rather than layered under it; **L213 gains an
+  extension** (the same suspicion is owed when an instrument AGREES) and **Lesson 217, the Follower
+  Law**, is new. Ends with the owner’s **open list of three**, with what each would cost.
+
+- [START-ONE-WINDOW-1.md](START-ONE-WINDOW-1.md) — **one clock, one rule, ten seconds** (2026-08-21).
+  The owner’s design: three stacked clocks in the start become **one key, `startWindowMs` = 10000 —
+  today’s sum written once**. Inside it the shot **opens where it stands and does not pan** (the
+  anchor is the point the ceremony left at the centre, replacing the field CENTROID that moved the
+  instant the race did), and the camera follows the leader the moment he reaches his racing place.
+  **ESTABLISHED BEFORE DELETING: `minStateHold` is GENERAL** — six per-state values, three callers
+  including the phased observer — so it stays, and the window owns the state instead via the existing
+  per-entry override. **HIS CASE IS FIXED: dirt-oval at 40 racers had the leader outside for 55
+  frames and the second man for 14; both are 0.** city-circuit 42 → 0, searound 20 → 0 at twenty.
+  `minOn` identical everywhere; the forward rush is gone on all ten (`ahead` negative at both field
+  sizes, from +177 on river-run). **Worse, named and not tuned:** luger-hill’s second man out for 9
+  frames at twenty, river-run’s field centre 0.486 → 0.565, and on four closed tracks at forty the
+  still phase is ZERO because the ceremony’s framing fits the formation. CAMERA `f64c2ae531f14253`
+  and RENDER `a8c59ef5002716f1` moved; WORLD/WORLD-OFF run and unmoved. **Unmerged, unminted.**
+
+- [ZOOM-PIVOT-START-1.md](ZOOM-PIVOT-START-1.md) — **the zoom-about-the-anchor correction now runs
+  in the group shots too** (2026-08-21). **ONE CONDITION REMOVED** at `CameraDirector.js:1079` — the
+  `_runInActive` scope the source itself called a latent defect everywhere. No key, no fraction; the
+  pivot is the same `_framingProbe.anchorPoint` the run-in already used. **All four acceptance
+  criteria met on the five CLOSED tracks** — the zoom's net pull on the frame centre goes 14.1 → 0.3
+  world px, dirt-oval stops passing its target (142.1 ahead → never ahead), leader-out frames go
+  **46 → 0**, **89 → 0**, **61 → 20**, and city-circuit's min-on-screen **4/20 → 17/20**. **The five
+  OPEN tracks are byte-identical** (their zoom does not move in the window). **Criterion 2 misses on
+  three open tracks and is UNCHANGED there** — the cause is the world-edge clamp (river-run spends
+  184.8 world px on it), not the pivot. CAMERA `ce3475ecaf0926fe` and RENDER `64e413d28c0072f0`
+  moved as expected; WORLD/WORLD-OFF measured and unmoved. **Unmerged, unminted, his eye owed.**
+
 - [START-OVERSHOOT-1.md](START-OVERSHOOT-1.md) — **what carries the camera past its own target at
   the start** (2026-08-21). **THE TERM IS THE ZOOM'S PIVOT:** the camera zooms about the WORLD
   ORIGIN, so the frame centre moves `camX × Δzoom/zoom` even with the offset unchanged — a 15%

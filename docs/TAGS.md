@@ -126,6 +126,27 @@ spot this ship exposed: a visible change that no fingerprint can see.
   after the source clean-up.
 - `v-ship-coord-system` (`f78869bc`, 2026-08-14) — the merge itself.
 
+### START-ONE-WINDOW — the start is one window, one rule (2026-08-21)
+
+**The owner judged the new start on a production build on 2026-08-21 and ACCEPTED it.** Three clocks
+became one: a hard-coded start phase of forced OVERVIEW anchored on the field's centroid, and a
+post-start hold of forced LEADER counted on top of it, are both retired in favour of a single
+`startWindowMs`. Inside it the shot opens where it stands without panning, and the camera begins to
+follow the leader the moment he reaches the place in frame he holds for the rest of the race.
+OVERVIEW's `minStateHold` was established as GENERAL before anything was deleted and therefore kept.
+
+- `v-ship-start-one-window` (`PROVISIONAL`, 2026-08-21) — the merge itself. It carries
+  ZOOM-PIVOT-START-1 as well, which is not separately shipped: CAMERA-SIDEJUMP-1's
+  zoom-about-the-anchor correction lost the `_runInActive` scope its own note called a latent defect
+  everywhere, so it now reaches the group shots. CAMERA and RENDER minted; WORLD and WORLD-OFF
+  measured and unmoved. See [SHIP-START-ONE-WINDOW](../reports/evolution/SHIP-START-ONE-WINDOW.md).
+- `archive/start-handover-mark-1` (`PROVISIONAL2`, 2026-08-21) — the branch this work supersedes,
+  archived before deletion. It computed the same hand-over condition behind a Dev Screen switch while
+  its acceptance gate was still undecided (two of four criteria met). **The condition was
+  transplanted into the ship; the switch deliberately was not**, because a settled behaviour with a
+  toggle beside it is a second live mechanism. Its report and its measurements live in this tag's
+  tree and on master.
+
 ### START-LEADER-VISIBLE — B′, archived rather than merged (2026-08-21)
 
 **The owner judged it on a production build on 2026-08-20 and REJECTED it.** The branch was kept

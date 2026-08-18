@@ -338,15 +338,24 @@ export const DEFAULT_CAMERA_CONFIG = {
   leadChangeDebounceMs: 800, // ms the new leader must hold before change is confirmed
   leadChangeMinDuration: 1.5, // seconds camera stays in LEAD_CHANGE state (1–5)
   // Timing tunables (global — not per-state)
-  // A DURATION, measured from the END of the 3 s start overview — so the hold ends at
-  // 3000 + this value, and at 7000 that is 10 s after the gun. Stated this precisely because the
-  // key used to be read a second time, in `racePlanner.js`, as an ABSOLUTE time from zero; the two
-  // readings differed by exactly the 3 s nobody wrote down. The planner's reading is gone
-  // (POST-START-HOLD-UNIFY) and this is now the only one, but the ambiguity the name still carries
-  // — from the gun, or from the end of the overview? — is answered here rather than left to be
-  // re-derived. The key is deliberately NOT renamed: the camera loader rebuilds the live config key
-  // by key from these defaults, so a rename would silently discard the owner's stored value.
-  postStartHoldMs: 7000, // ms of forced LEADER after the 3s start phase (no BATTLE before 10s total)
+  // ── START-ONE-WINDOW-1 — ONE CLOCK FOR THE START, AND IT IS TODAY'S SUM ──────────────────────
+  //
+  // THE OWNER'S DESIGN, 2026-08-21: the simplest possible start, with as little confusion as
+  // possible, and the start setting on screen for at least ten seconds.
+  //
+  // THIS IS NOT A NEW NUMBER. It replaces two that were always added together and never written
+  // down as one: a hard-coded `START_PHASE_DURATION` of 3000 ms of forced OVERVIEW, and
+  // `postStartHoldMs` of 7000 ms of forced LEADER counted ON TOP of it. The window has always been
+  // ten seconds; only its arithmetic was in two places, one of them unreachable from any slider.
+  // The old key is deliberately RETIRED rather than renamed: the camera loader rebuilds the live
+  // config key by key from these defaults, so a stored `postStartHoldMs` disappears by itself and
+  // cannot shadow this one.
+  //
+  // WHAT THE WINDOW OWNS: the picture. No BATTLE and no other state may take it for this long —
+  // that is exactly what the post-start hold protected, and it still does. What happens INSIDE it
+  // is one rule, not three: the shot opens without panning until the leader reaches the place in
+  // frame he holds for the rest of the race, and from that moment the camera follows him.
+  startWindowMs: 10000,
   battleCooldownMs: 8000, // ms after leaving BATTLE before it can re-trigger
   comebackCooldownMs: 10000, // ms after leaving COMEBACK before it can re-trigger
   leadChangeCooldownMs: 5000, // ms after leaving LEAD_CHANGE before it can re-trigger

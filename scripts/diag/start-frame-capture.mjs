@@ -56,6 +56,8 @@ const ANCHORS = process.argv.includes("--anchors");
 // can move it. It is an IDENTITY, not a model — zoomTerm + panTerm equals the observed step by
 // construction — so what it establishes is which of the two is LARGE, not that the sum is right.
 const DECOMPOSE = process.argv.includes("--decompose");
+// ZOOM-PIVOT-START-1: the ten-track acceptance summary, one row per track.
+const ALL = process.argv.includes("--all");
 const ANCHOR_MS = Number(argOf("ms") ?? 1500);
 const EVERY_MS = Number(argOf("every") ?? 100);
 // THE CONFIG SOURCE, made explicit because it is the first thing START-CONTRADICTION-1 had to
@@ -69,6 +71,116 @@ const CH = 720;
 const CONFIG = CONFIG_PATH
   ? { ...DEFAULT_CAMERA_CONFIG, ...JSON.parse(readFileSync(CONFIG_PATH, "utf8")) }
   : DEFAULT_CAMERA_CONFIG;
+
+const TRACK_ORDER = [
+  "city-circuit", "dirt-oval", "garden-path", "ice-track", "searound",
+  "luger-hill", "mountainstreet", "river-run", "seatrack", "space-sprint",
+];
+
+let prevZ = 0;
+
+if (ALL) {
+  const CWA = 1280;
+  const CHA = 720;
+  // --window lets the SAME harness measure the base branch, where the window is an addition of two
+  // numbers rather than one key. Absent, the config's own value is used.
+  const WINDOW = Number(argOf("window") ?? CONFIG.startWindowMs ?? 10000);
+  const tracks = loadTracks({});
+  const list = TRACK_ORDER.map((id) => tracks.find((t) => (t.id ?? t.name) === id)).filter(Boolean);
+  console.log(
+    `START-ONE-WINDOW-1 acceptance — seed ${SEED}, ${RACERS} racers, startWindowMs=${WINDOW}\n` +
+      `  out / p2out: frames the LEADER / the SECOND-PLACED racer is outside the canvas, inside the window.\n` +
+      `  hand@: ms at which the camera began to follow. drift: the largest fraction along his own\n` +
+      `  heading the leader reached BEFORE it (${CONFIG.leaderForwardFrac} is the mark he is handed over at).\n` +
+      `  pan<1s: camera-centre travel in the first second. owns: ms for which nothing but the start\n` +
+      `  framing held the picture, and the states that took it if any.\n`,
+  );
+  console.log(
+    `${"track".padEnd(15)} ${"kind".padEnd(7)} ${"out".padStart(4)} ${"p2out".padStart(6)} ` +
+      `${"minOn".padStart(7)} ${"hand@".padStart(6)} ${"drift".padStart(6)} ${"pan<1s".padStart(7)} ${"ahead".padStart(7)} ` +
+      `${"owns".padStart(6)} ${"intruders"}`,
+  );
+  for (const g of list) {
+    const id = resolveIdentity({
+      racers: RACERS,
+      raceSeed: SEED,
+      racerType: TRACK_DEFAULT_RACER,
+      roster: resolveNameSet(DEFAULT_NAME_SET),
+      note: "START-ONE-WINDOW-1 acceptance",
+    });
+    const r = buildRace(g, id, CONFIG);
+    let out = 0;
+    let p2out = 0;
+    let minOn = Infinity;
+    let n = 0;
+    let handAt = null;
+    let drift = 0;
+    let first = null;
+    let at1s = null;
+    let owns = 0;
+    let maxAhead = -Infinity;
+    let prevTgt = null;
+    const intruders = new Set();
+    runRace(
+      r,
+      id,
+      CONFIG,
+      ({ cd, st, ts, raceStart }) => {
+        const ms = ts - raceStart;
+        if (ms > WINDOW + 1500) return false;
+        const ordered = [...st.racers].sort((a, b) => b.t - a.t);
+        n = st.racers.length;
+        const inside = (rr) => {
+          const q = cd._proj.toScreen(rr, cd.zoom, cd.offsetX, cd.offsetY);
+          return q.x >= 0 && q.x <= CWA && q.y >= 0 && q.y <= CHA;
+        };
+        const ex = cd._proj.effX(cd.zoom);
+        const ey = cd._proj.effY(cd.zoom);
+        const cam = { x: (CWA / 2 - cd.offsetX) / ex, y: (CHA / 2 - cd.offsetY) / ey };
+        if (first === null) first = { ...cam };
+        if (at1s === null && ms >= 1000) at1s = { ...cam };
+        if (ms >= WINDOW) return;
+        // INSIDE THE WINDOW ONLY, because that is what this block changes.
+        let on = 0;
+        for (const rr of st.racers) if (inside(rr)) on++;
+        if (on < minOn) minOn = on;
+        if (!inside(ordered[0])) out++;
+        if (ordered[1] && !inside(ordered[1])) p2out++;
+        if (handAt === null && cd._startHandoverDone) handAt = cd._startHandoverAtMs ?? ms;
+        if (handAt === null) {
+          const f = cd._leaderFrameFrac ? cd._leaderFrameFrac(ordered[0]) : null;
+          if (f !== null && f > drift) drift = f;
+        }
+        // THE RUSH TEST: is the delivered centre ever AHEAD of the resolved target along that
+        // target's own direction of travel? A follower cannot be; only an added term can put it there.
+        const tgt = cd._framingProbe?.anchorPoint ?? null;
+        if (tgt && prevTgt) {
+          const vx = tgt.x - prevTgt.x;
+          const vy = tgt.y - prevTgt.y;
+          const vlen = Math.hypot(vx, vy);
+          if (vlen > 1e-6) {
+            const ahead = ((cam.x - tgt.x) * vx + (cam.y - tgt.y) * vy) / vlen;
+            if (ahead > maxAhead) maxAhead = ahead;
+          }
+        }
+        prevTgt = tgt ? { ...tgt } : null;
+        // The start framing owns the picture while nothing but its two states is on screen.
+        if (cd.hudState === "OVERVIEW" || cd.hudState === "LEADER_ZOOM") owns = ms;
+        else intruders.add(cd.hudState);
+      },
+      { slowmo: true },
+    );
+    const pan1s = at1s && first ? Math.hypot(at1s.x - first.x, at1s.y - first.y) : 0;
+    console.log(
+      `${(g.id ?? g.name).padEnd(15)} ${(r.shape.isOpen ? "open" : "closed").padEnd(7)} ` +
+        `${String(out).padStart(4)} ${String(p2out).padStart(6)} ${`${minOn}/${n}`.padStart(7)} ` +
+        `${(handAt === null ? "never" : String(Math.round(handAt))).padStart(6)} ` +
+        `${drift.toFixed(3).padStart(6)} ${pan1s.toFixed(1).padStart(7)} ${(maxAhead === -Infinity ? 0 : maxAhead).toFixed(1).padStart(7)} ` +
+        `${String(Math.round(owns)).padStart(6)} ${intruders.size ? [...intruders].join(",") : "none"}`,
+    );
+  }
+  process.exit(0);
+}
 
 const geo = loadTracks({ only: TRACK })[0];
 if (!geo) {
@@ -94,18 +206,17 @@ if (ANCHORS) {
   console.log(
     `CONFIG SOURCE: ${CONFIG_PATH ?? "DEFAULT_CAMERA_CONFIG (no stored config — this harness has no browser storage)"}
 ` +
-      `  start-window keys as RESOLVED: postStartHoldMs=${CONFIG.postStartHoldMs} ` +
+      `  start-window keys as RESOLVED: startWindowMs=${CONFIG.startWindowMs} ` +
       `OVERVIEW.minStateHold=${CONFIG.cameraStateProfiles?.OVERVIEW?.minStateHold} ` +
-      `leaderForwardFrac=${CONFIG.leaderForwardFrac} ` +
-      `startHandoverOnLeaderMark=${CONFIG.startHandoverOnLeaderMark}
+      `leaderForwardFrac=${CONFIG.leaderForwardFrac}
 ` +
-      `  START_PHASE_DURATION is a hard constant in CameraDirector.js and no config key can move it.
+      `  ONE window since START-ONE-WINDOW-1: START_PHASE_DURATION and postStartHoldMs are retired.
 `,
   );
   if (DECOMPOSE) {
     console.log(
       `${"ms".padStart(5)} ${"camX".padStart(7)} ${"tgtX".padStart(7)} ${"cam-tgt".padStart(8)}  ` +
-        `${"dCamX".padStart(8)} ${"zoomTerm".padStart(9)} ${"panTerm".padStart(8)}  ` +
+        `${"dCamX".padStart(8)} ${"zoomPivot".padStart(10)} ${"corrTerm".padStart(9)} ${"zoomNet".padStart(8)} ${"panTerm".padStart(8)}  ` +
         `${"zoom".padStart(7)} ${"dz".padStart(8)} ${"anchor".padStart(7)} ${"corr?".padStart(6)} ${"binding"}`,
     );
   } else {
@@ -169,23 +280,35 @@ if (ANCHORS) {
           prevZoom = lastCeremony.zoom;
           console.log(
             `${"cer".padStart(5)} ${lastCeremony.camX.toFixed(0).padStart(7)} ${"—".padStart(7)} ` +
-              `${"—".padStart(8)}  ${"—".padStart(8)} ${"—".padStart(9)} ${"—".padStart(8)}  ` +
+              `${"—".padStart(8)}  ${"—".padStart(8)} ${"—".padStart(10)} ${"—".padStart(9)} ${"—".padStart(8)} ${"—".padStart(8)}  ` +
               `${lastCeremony.zoom.toFixed(4).padStart(7)} ${"—".padStart(8)} ${"—".padStart(7)} ` +
               `${"—".padStart(6)} (last ceremony frame)`,
           );
         }
         const zoomOnly = prevCamX === null ? camX : (prevCamX * prevEffX) / ex;
+        // ZOOM-PIVOT-START-1 — THREE TERMS, NOT TWO, because the correction also writes the offset
+        // and a two-way split buries it in the follower's bucket.
+        //   zoomPivot  the camera zooms about the WORLD ORIGIN: the centre moves even with the
+        //              offset held. This is the drift.
+        //   corrTerm   CAMERA-SIDEJUMP-1's write, `offsetX -= anchor.x * axisX * dz`, converted
+        //              back to world px at this frame's scale. It exists to cancel zoomPivot.
+        //   panTerm    what is left: the offset lerp, i.e. the follower.
+        const dz = prevZoom === null ? 0 : cd.zoom - prevZoom;
+        const anchorPt = cd._focusAnchorRacer(st.racers) ?? cd._framingProbe?.anchorPoint ?? null;
+        const corrLive = cd._lastPivotAnchorX;
+        const corrTerm =
+          corrLive == null || dz === 0 ? 0 : (corrLive * cd._proj.axisX * dz) / ex;
         const zoomTerm = prevCamX === null ? 0 : zoomOnly - prevCamX;
-        const panTerm = prevCamX === null ? 0 : camX - zoomOnly;
         const dCam = prevCamX === null ? 0 : camX - prevCamX;
+        const panTerm = prevCamX === null ? 0 : dCam - zoomTerm - corrTerm;
         // The zoom-about-the-anchor correction fires only when `_focusAnchorRacer` is non-null.
         const anchorIdx = cd._anchorRacerIndex;
         console.log(
           `${String(Math.round(ms)).padStart(5)} ${camX.toFixed(0).padStart(7)} ` +
             `${(a ? a.x.toFixed(0) : "—").padStart(7)} ${(a ? (camX - a.x).toFixed(0) : "—").padStart(8)}  ` +
-            `${dCam.toFixed(1).padStart(8)} ${zoomTerm.toFixed(1).padStart(9)} ${panTerm.toFixed(1).padStart(8)}  ` +
+            `${dCam.toFixed(1).padStart(8)} ${zoomTerm.toFixed(1).padStart(10)} ${corrTerm.toFixed(1).padStart(9)} ${(zoomTerm + corrTerm).toFixed(1).padStart(8)} ${panTerm.toFixed(1).padStart(8)}  ` +
             `${cd.zoom.toFixed(4).padStart(7)} ${(prevZoom === null ? 0 : cd.zoom - prevZoom).toFixed(4).padStart(8)} ` +
-            `${String(anchorIdx ?? "null").padStart(7)} ${(anchorIdx == null ? "SKIP" : "on").padStart(6)} ${cd._framingProbe?.binding ?? "?"}`,
+            `${String(anchorPt ? "set" : "null").padStart(7)} ${(corrLive == null ? "SKIP" : "on").padStart(6)} ${cd._framingProbe?.binding ?? "?"}`,
         );
         prevCamX = camX;
         prevEffX = ex;
