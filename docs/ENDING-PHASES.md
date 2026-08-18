@@ -39,7 +39,7 @@ the correct response is to say so in this table instead of building one.
 | 3 | **Slow-motion factor** | physics slowed during the photo-finish shot | `photoFinishSlowmoFactor` — a RATE, not a length; it stretches phase 2 rather than adding a phase | defaults.js | yes |
 | 4 | **Hold before the zoom-out** | the winner held before the camera releases | **none — it is the tail of phase 2.** There is no separate hold; FINISH_OVERVIEW begins when the drama duration expires | — | no, and none is needed |
 | 5 | **Zoom-out** | smooth pull back to the overview | `finishOverviewZoomOutDurationMs` | defaults.js | yes |
-| 6 | **The wait for the stragglers** | the rest of the field crosses and freezes on the line | **EVENT-DRIVEN** — ends when `finishedCount >= nRacers` (`RaceScreen/index.jsx`), i.e. when the last racer's `t` reaches `finishT`. **NO SLIDER, EVER.** Two numbers here are UNVERIFIED — see the note below the table | the race | **no — by design** |
+| 6 | **The wait for the stragglers** | the rest of the field crosses and freezes on the line | **EVENT-DRIVEN** — ends when `finishedCount >= nRacers` (`RaceScreen/index.jsx`), i.e. when the last racer's `t` reaches `finishT`. **NO SLIDER, EVER.** Measured — see below the table | the race | **no — by design** |
 | 7 | **Hold on the finish picture** | extra time on the settled shot after the field is home | `finishHoldAfterLastMs` (ENDING-HOLD-1) | defaults.js | yes — **on by default; 0 is the escape hatch** |
 | 8 | **Winner card** | the card naming the winner, over the race picture | `min(winnerCardMs, finishPauseMs)` — a TENANT of phase 9, it cannot extend the ending | defaults.js + `WinnerCard.jsx` (`winnerCardWindowMs`) | yes |
 | 9 | **Pause before the result screen** | the settled picture until the screen changes | `finishPauseMs` | defaults.js | yes |
@@ -47,25 +47,40 @@ the correct response is to say so in this table instead of building one.
 | 11 | **Podium build-up** | 3rd, 2nd, winner (held two beats), then the ranking | `4 x podiumRevealBeatMs`; the classes come off one beat later | defaults.js + `ResultScreen/index.jsx` | yes |
 | 12 | **Result screen settled** | the final screen, identical to the pre-feature DOM | — | — | — |
 
-### Phase 6's two numbers are UNVERIFIED, and they are flagged rather than corrected
+### Phase 6, MEASURED — and both of the old numbers were wrong
 
-**They carry no `MEASURED:` stamp and no provenance**, so a reader has been taking them as
-established when nothing in the repository backs them. Both are removed from the table above rather
-than restated, and the audit that found them (2026-08-14) could not resolve them:
+<!-- MEASURED: straggler-truth (phase 6 duration, zoom-out lead, stragglers in shot) @ PENDING 2026-08-21 depends=client/src/modules/camera/CameraDirector.js -->
 
-- **"~2.9 s at 20 racers"** — plausible but unsourced. No harness in `scripts/` measures the interval
-  between the winner's crossing and the last racer's.
-- **"the zoom-out starts ~1.4 s before it ends"** — **doubtful**, and it is the one that matters,
-  because it is the claim that the ending does not begin before the race is over.
-  the zoom-out's own duration (`finishOverviewZoomOutDurationMs`, in defaults.js) is longer than the
-  1.4 s lead it is claimed to have, so a zoom-out beginning that late would still be running well
-  after the field is home. A separate measurement recorded the zoom-out beginning **4.4–5.9 s**
-  before the last crossing, which contradicts 1.4 s outright.
+The two numbers this section used to carry were flagged as unverified on 2026-08-14, because nothing
+in the repository measured them. `scripts/straggler-truth.mjs` does now. **One CLOSED track and one
+OPEN one, at 20 and at 40 racers, seed 9:**
 
-**Neither was corrected, because correcting a number requires measuring it and the instrument does
-not exist.** Building it is a small job — the race already knows every racer's `finishT` and the
-director already knows when FINISH_OVERVIEW begins — and it is proposed rather than done here, since
-this audit's remit was to check the record against the source, not to add measurements to it.
+| track | n | phase 6 lasts | zoom-out begins BEFORE the last crossing | still running then | of those, off canvas |
+| ----- | - | ------------- | ---------------------------------------- | ------------------ | -------------------- |
+| dirt-oval | 20 | **6.18 s** | **4.57 s** | 11 of 20 | **11** |
+| dirt-oval | 40 | **7.53 s** | **5.75 s** | 29 of 40 | **27** |
+| river-run | 20 | **4.45 s** | **2.30 s** | 7 of 20 | **6** |
+| river-run | 40 | **5.95 s** | **4.38 s** | 33 of 40 | **28** |
+
+**"~2.9 s at 20 racers" was wrong** — it is **4.45 s** on the open track and **6.18 s** on the closed
+one, and it grows with the field: 5.95 s and 7.53 s at 40.
+
+**"the zoom-out starts ~1.4 s before it ends" was wrong, and wrong in the direction the audit
+suspected.** It starts **2.30–5.75 s** before the last crossing. The separate measurement that
+recorded 4.4–5.9 s stands; 1.4 s does not.
+
+**THE ENDING OVERLAPS THE RACE, AND THAT IS NOT THE INTERESTING PART.** The number nobody had asked
+for is the last column. When the zoom-out begins, **half to three-quarters of the field is still
+racing, and almost all of those are already off the canvas** — 11 of 11 on dirt-oval at 20, 27 of 29
+at 40. Across the whole of phase 6, **54–75% of frames have at least one unfinished racer outside the
+picture**, and on three of the four runs there is at least one frame where **not a single unfinished
+racer is in shot at all**.
+
+**The mechanism is not a defect in the zoom-out**: FINISH_OVERVIEW holds a FIXED point
+`finishOverviewLookbackPx` behind the line so later finishers cross in shot, and a racer further back
+than that is outside it by construction. Whether the ending should still be waiting for people it is
+not showing **is the owner's question, and this document does not answer it** — it is recorded in
+[STRAGGLER-TRUTH-1](../reports/evolution/STRAGGLER-TRUTH-1.md) with what a change would cost.
 
 ### The card's own fades
 
