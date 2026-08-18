@@ -51,6 +51,17 @@ is dated and recorded HERE, where a reader on their way to the report will pass 
   [GATE-LINES-1](../night/GATE-LINES-1.md); the fix and the once-per-run control that makes the
   silence impossible to repeat: [GATE-TRUTH-1](../night/GATE-TRUTH-1.md).
 
+- [STRAGGLER-TRUTH-1.md](STRAGGLER-TRUTH-1.md) — **phase 6 of the ending, measured at last, and both
+  of its numbers were wrong** (2026-08-21). MEASUREMENT ONLY. `scripts/straggler-truth.mjs` closes
+  the one phase `ENDING-PHASES.md` described with figures nothing backed. Phase 6 lasts **4.45-7.53 s**,
+  not the recorded ~2.9 s, and it **grows with the field**; the zoom-out begins **2.30-5.75 s** before
+  the last crossing, not ~1.4 s — the doubted number was doubted correctly. **The finding nobody had
+  asked for:** when the zoom-out begins, half to three-quarters of the field is still racing and
+  **almost all of them are already off the canvas** (11 of 11 on dirt-oval at 20), and on three of
+  four runs there is a frame with **no unfinished racer in shot at all**. The mechanism is the fixed
+  lookback point working as designed; whether the ending should wait for people it stopped showing is
+  **the owner's question**. No fingerprint can move.
+
 - [SHIP-START-ONE-WINDOW.md](SHIP-START-ONE-WINDOW.md) — **the start is one window, one rule, and it
   is on master** (2026-08-21). **The owner judged it on a production build on 2026-08-21 and ACCEPTED
   it.** Carries [ZOOM-PIVOT-START-1](ZOOM-PIVOT-START-1.md) too. **CAMERA `f64c2ae531f14253` and
