@@ -51,6 +51,15 @@ is dated and recorded HERE, where a reader on their way to the report will pass 
   [GATE-LINES-1](../night/GATE-LINES-1.md); the fix and the once-per-run control that makes the
   silence impossible to repeat: [GATE-TRUTH-1](../night/GATE-TRUTH-1.md).
 
+- [NIGHT-2026-08-21-CLOSING.md](NIGHT-2026-08-21-CLOSING.md) — **closing note, night of 2026-08-21**.
+  The ship was finished first; **four of five pieces done**, E dropped to budget as the drop order
+  instructed, with what it needs written down. **One decision for the owner and only one: the ending
+  waits 4.45-7.53 s for stragglers it has already stopped showing** — on dirt-oval at 20 racers all
+  11 still-running racers are off the canvas when the zoom-out begins. Not a defect, not changed, and
+  the two ways to change it carry their costs. **Two pieces found the code already correct and the
+  record stale** (the Dev controls, the e2e flakes), which is the closing note's third proposal.
+  Closing state proven: master alone, CI green per merge SHA, all four fingerprints reproducing.
+
 - [HOOK-SELF-CHECK-1.md](HOOK-SELF-CHECK-1.md) — **the pre-commit hook now vouches for itself**
   (2026-08-21). HOOK-TRACKED-1's first proposal, closed: before anything else the hook checks that
   `.githooks/` matches the INDEX and that nothing untracked sits in it. **Index, not HEAD, and that
