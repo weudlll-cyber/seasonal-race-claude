@@ -3,7 +3,10 @@
 **THE OWNER JUDGED THE NEW START ON A PRODUCTION BUILD ON 2026-08-21 AND ACCEPTED IT.** That is the
 fact this ship records; the fingerprints below are that acceptance written down.
 
-**Merge:** `884d0562` · **Tag:** `v-ship-start-one-window` · **CI:** green for exactly that SHA.
+**Merge:** `884d0562` · **Tag:** `v-ship-start-one-window` · **CI:** green for **exactly** that SHA
+— run `32192319823`, `headSha 884d0562`, conclusion `success`. It was hand-cranked on the TAG ref,
+because the merge and the ship order’s step-9 follow-up went in one push and GitHub runs only the
+push’s head; `bd385353` is green too (run `32191450599`), but the SHA the tag names needed its own.
 The design and its ten-track measurement are [START-ONE-WINDOW-1](START-ONE-WINDOW-1.md); the pivot
 repair it carries is [ZOOM-PIVOT-START-1](ZOOM-PIVOT-START-1.md), which ships here rather than
 separately.
