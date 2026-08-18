@@ -23,6 +23,45 @@
 # ============================================================
 set -e
 
+# ── HOOK-SELF-CHECK-1: THE HOOK VOUCHES FOR ITSELF, AND IT RUNS FIRST ────────────────────────────
+#
+# HOOK-TRACKED-1 left this as its first proposal: nothing checked that the hooks in the working tree
+# are the ones the repository TRACKS. A hand-edited or stale local hook enforces less than the
+# repository claims and says nothing about it — the same silence HOOK-SILENT-1 paid for, one level
+# in. `check-hooks-installed.mjs` asks whether hooks are IN EFFECT; it cannot ask whether the one in
+# effect is the right one.
+#
+# THE CIRCULARITY IS REAL AND IS NOT CLOSED HERE, deliberately: a hook that does not run cannot
+# report that it did not run. That case belongs to `core.hooksPath` and to the installed-check. What
+# this covers is the other one — **runs, but is not what the repository tracks** — which nothing
+# covered at all.
+#
+# IT COMPARES AGAINST THE INDEX, NOT HEAD, and that is the whole design. The file that just ran is
+# the WORKING-TREE file; the index is what this commit will record. Equal means the hook that ran is
+# the hook being tracked, which stays true while somebody is legitimately EDITING the hook — they
+# stage it, and the commit records exactly what enforced it. Comparing against HEAD would make every
+# improvement to this file impossible to commit through it.
+if ! git diff --quiet -- .githooks/ 2>/dev/null; then
+  echo ""
+  echo "  FAIL: the hook that just ran is NOT what this commit would record."
+  echo "        .githooks/ differs between your working tree and the index, so the checks being"
+  echo "        enforced are not the ones the repository tracks. Stage the hook change to keep it,"
+  echo "        or 'git checkout -- .githooks/' to go back to the tracked one."
+  echo "        (docs/VERIFY-RULES.md R12a owns this rule.)"
+  echo ""
+  exit 1
+fi
+_untracked_hooks=$(git ls-files --others --exclude-standard -- .githooks/ 2>/dev/null)
+if [ -n "$_untracked_hooks" ]; then
+  echo ""
+  echo "  FAIL: untracked file(s) in .githooks/ — git would run them and the repository does not"
+  echo "        track them:"
+  echo "$_untracked_hooks" | sed 's/^/          /'
+  echo "        (docs/VERIFY-RULES.md R12a owns this rule.)"
+  echo ""
+  exit 1
+fi
+
 # Run lint-staged on the client package before every commit.
 # lint-staged auto-fixes ESLint errors and Prettier formatting on staged files.
 # VERIFY-COST-3: the binary is invoked DIRECTLY. `npx lint-staged` re-resolves the package on every

@@ -398,6 +398,35 @@ the one HOOK-SILENT-1 demonstrated: git resolving `hooksPath` to a missing direc
 prints nothing, and exits 0**. Commits succeed. Every check this repository owns is walked past, and
 the only evidence is its absence.
 
+## R12a — The hook asserts its OWN completeness, and it does it first
+
+**Rule.** Before anything else, the pre-commit hook checks that **`.githooks/` in the working tree
+matches the index** and that **nothing untracked sits in it**. If either fails, the commit is
+refused.
+
+**What it covers, and it is not what R12 covers.** R12 and `check-hooks-installed.mjs` answer *are
+hooks in effect* — is `core.hooksPath` set, does the directory exist. Neither can answer *is the hook
+in effect the one the repository tracks*. A hand-edited or stale local hook enforces less than the
+repository claims and says nothing about it, which is HOOK-SILENT-1's failure one level in.
+HOOK-TRACKED-1 left this as its first proposal.
+
+**THE CIRCULARITY IS NOT CLOSED, deliberately.** A hook that does not run cannot report that it did
+not run; that case belongs to `core.hooksPath` and to the installed-check, which run from outside.
+**This covers the other case — runs, but is out of date — which nothing covered at all.**
+
+**It compares against the INDEX, not HEAD, and that is the whole design.** The file that just ran is
+the WORKING-TREE file; the index is what the commit will record. Equal means the hook that ran is the
+hook being tracked — and it stays true while somebody is legitimately improving the hook, because
+they stage it and the commit records exactly what enforced it. **Comparing against HEAD would make
+every change to the hook impossible to commit through the hook**, which is a rule that would be
+removed within a week.
+
+**Proven both ways** (HOOK-SELF-CHECK-1): the tracked hook commits normally; an unstaged edit to
+`.githooks/pre-commit` refuses the commit and names the file; an untracked file dropped into
+`.githooks/` refuses it too, because git would run that file and the repository does not track it.
+
+**`git commit --no-verify` remains the escape**, as it is for every other check here.
+
 **The absence is now loud.** `scripts/check-hooks-installed.mjs` runs in `npm run verify` as an
 always-on guard and fails when the hooks are not in effect — unset, pointing elsewhere, or pointing
 at a directory whose files are gone.
