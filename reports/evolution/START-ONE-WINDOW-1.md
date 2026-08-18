@@ -3,7 +3,9 @@
 **Branch:** `feat/start-one-window-1`, based on `fix/zoom-pivot-start-1` @ `f20ca387` — the state he is
 judging. **NOT MERGED, NOT MINTED.**
 
-**Served on 4173. Build pill: `<SHA>`, no `+dirty`.** The difference is largest on **dirt-oval at 40
+**Served on 4173, built from this branch’s tip — the pill reads `<tip> · feat/start-one-window-1`
+with no `+dirty`, and the tip is named in the hand-over message rather than here so the two cannot
+drift apart.** The difference is largest on **dirt-oval at 40
 racers**, which is the field size his report came from.
 
 ## THE SHAPE
