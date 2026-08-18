@@ -3,7 +3,7 @@
 **THE OWNER JUDGED THE NEW START ON A PRODUCTION BUILD ON 2026-08-21 AND ACCEPTED IT.** That is the
 fact this ship records; the fingerprints below are that acceptance written down.
 
-**Merge:** `<MERGE>` · **Tag:** `v-ship-start-one-window` · **CI:** green for exactly that SHA.
+**Merge:** `884d0562` · **Tag:** `v-ship-start-one-window` · **CI:** green for exactly that SHA.
 The design and its ten-track measurement are [START-ONE-WINDOW-1](START-ONE-WINDOW-1.md); the pivot
 repair it carries is [ZOOM-PIVOT-START-1](ZOOM-PIVOT-START-1.md), which ships here rather than
 separately.

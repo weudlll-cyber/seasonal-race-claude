@@ -135,12 +135,12 @@ post-start hold of forced LEADER counted on top of it, are both retired in favou
 follow the leader the moment he reaches the place in frame he holds for the rest of the race.
 OVERVIEW's `minStateHold` was established as GENERAL before anything was deleted and therefore kept.
 
-- `v-ship-start-one-window` (`PROVISIONAL`, 2026-08-21) — the merge itself. It carries
+- `v-ship-start-one-window` (`884d0562`, 2026-08-21) — the merge itself. It carries
   ZOOM-PIVOT-START-1 as well, which is not separately shipped: CAMERA-SIDEJUMP-1's
   zoom-about-the-anchor correction lost the `_runInActive` scope its own note called a latent defect
   everywhere, so it now reaches the group shots. CAMERA and RENDER minted; WORLD and WORLD-OFF
   measured and unmoved. See [SHIP-START-ONE-WINDOW](../reports/evolution/SHIP-START-ONE-WINDOW.md).
-- `archive/start-handover-mark-1` (`PROVISIONAL2`, 2026-08-21) — the branch this work supersedes,
+- `archive/start-handover-mark-1` (`6945de32`, 2026-08-21) — the branch this work supersedes,
   archived before deletion. It computed the same hand-over condition behind a Dev Screen switch while
   its acceptance gate was still undecided (two of four criteria met). **The condition was
   transplanted into the ship; the switch deliberately was not**, because a settled behaviour with a
