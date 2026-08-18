@@ -1233,7 +1233,7 @@ describe('CameraDirector — battle trigger tunables (Block X)', () => {
     // resolves this key to the shipped value, which is the property that made the old literal
     // unreachable and therefore invisible for two ships.
     expect(cd._endgameThreshold).toBe(DEFAULT_CAMERA_CONFIG.endgameThreshold);
-    expect(cd._postStartHoldMs).toBe(7000);
+    expect(cd._startWindowMs).toBe(10000);
     expect(cd._battleCooldownMs).toBe(8000);
     expect(cd._battleMaxDurationMs).toBe(6000);
     expect(cd._minStateHoldMs).toBe(5000);
@@ -1379,8 +1379,12 @@ describe('CameraDirector — D1: postStartLeaderHold', () => {
       1280,
       720
     );
-    // P2.1: raceElapsed=9999 < 3000+7000=10000 → forced LEADER, no BATTLE
-    expect(cd.state).toBe(CAM_STATE.LEADER_ZOOM);
+    // START-ONE-WINDOW-1: raceElapsed=9999 < startWindowMs=10000, so the START WINDOW owns the
+    // picture. The suppression this test exists for is unchanged and is asserted twice over — the
+    // state is one of the two the window itself uses, and it is not BATTLE. What changed is WHICH of
+    // the two: before the hand-over the window holds OVERVIEW, where the old post-start hold forced
+    // LEADER from 3000 ms regardless of where the leader was.
+    expect([CAM_STATE.OVERVIEW, CAM_STATE.LEADER_ZOOM]).toContain(cd.state);
     expect(cd.state).not.toBe(CAM_STATE.BATTLE_ZOOM);
   });
 
@@ -1737,11 +1741,14 @@ describe('CameraDirector — D5: Director OVERVIEW Scheduler', () => {
     cd._overviewScheduleNext = null;
     cd.state = CAM_STATE.LEADER_ZOOM;
     cd.stateEnteredAt = 0;
-    // raceElapsed=5000 < 15000ms startDelay → OVERVIEW not eligible
+    // START-ONE-WINDOW-1: PAST the start window (10 s), which is what "after the start" means
+    // now. It used to read 5000 — inside the old post-start hold, which FORCED LEADER_ZOOM there.
+    // One window replaces that, so a mid-race concern has to be tested at a mid-race time.
+    // raceElapsed=12000 < 15000ms startDelay → OVERVIEW not eligible
     cd.update(
       midRaceRacers,
       9000,
-      { raceElapsed: 5000, finishedCount: 0, winner: null, finishT: 1.0 },
+      { raceElapsed: 12000, finishedCount: 0, winner: null, finishT: 1.0 },
       1280,
       720
     );
@@ -3776,8 +3783,10 @@ describe('CameraDirector — leadAheadEnabled toggle', () => {
     const cd = new CameraDirector(1280, 720, false, makeLeadAheadConfig(false), 36, mockShape);
     cd._camT = null;
     const racer = { t: 0.4, x: 512, y: 360, finished: false };
-    // Post-start-hold window → LEADER_ZOOM
-    const raceState = { raceElapsed: 5000, finishedCount: 0, finishT: 1, winner: null };
+    // START-ONE-WINDOW-1: PAST the start window (10 s), which is what "after the start" means
+    // now. It used to read 5000 — inside the old post-start hold, which FORCED LEADER_ZOOM there.
+    // One window replaces that, so a mid-race concern has to be tested at a mid-race time.
+    const raceState = { raceElapsed: 12000, finishedCount: 0, finishT: 1, winner: null };
     cd._transition([racer], 10000, raceState);
     expect(cd.state).toBe(CAM_STATE.LEADER_ZOOM);
     // With lead-ahead OFF, target must equal focusT exactly
@@ -3788,7 +3797,8 @@ describe('CameraDirector — leadAheadEnabled toggle', () => {
     const cd = new CameraDirector(1280, 720, false, makeLeadAheadConfig(true), 36, mockShape);
     cd._camT = null;
     const racer = { t: 0.4, x: 512, y: 360, finished: false };
-    const raceState = { raceElapsed: 5000, finishedCount: 0, finishT: 1, winner: null };
+    // Past the start window, as above.
+    const raceState = { raceElapsed: 12000, finishedCount: 0, finishT: 1, winner: null };
     cd._transition([racer], 10000, raceState);
     expect(cd.state).toBe(CAM_STATE.LEADER_ZOOM);
     // With lead-ahead ON: target = focusT + NOMINAL_T_PER_FRAME × 60 × 0.3
@@ -4998,7 +5008,9 @@ describe('getComebackDiagData — outcomePhaseThreshold / leaderProgress / isOut
 
 describe('CameraDirector — same-state repeat: immediately interruptible', () => {
   const makeRacer = (t, idx) => ({ t, x: t * 1000, y: 360, index: idx, finished: false });
-  const rs = (raceElapsed = 5000) => ({
+  // START-ONE-WINDOW-1: 12000, past the start window. At 5000 the start window owns the state and
+  // these tests — which are about the per-entry hold, a mid-race concern — would be testing it.
+  const rs = (raceElapsed = 12000) => ({
     raceElapsed,
     finishedCount: 0,
     winner: null,
@@ -5022,7 +5034,7 @@ describe('CameraDirector — same-state repeat: immediately interruptible', () =
   });
 
   it('_activeStateMinHoldMs is set to configured value after a different-state transition', () => {
-    // Constructor starts in OVERVIEW; raceElapsed=5000 → priority 2.1 → LEADER_ZOOM (different)
+    // Constructor starts in OVERVIEW; past the start window the ordinary chain picks LEADER_ZOOM
     const cd = new CameraDirector(1280, 720, false, { minStateHoldMs: 10000 });
     const racers = [makeRacer(0.5, 0), makeRacer(0.4, 1), makeRacer(0.3, 2)];
     cd.stateEnteredAt = 0;
@@ -7113,7 +7125,7 @@ describe('the hold keeps the ceremony framing (CEREMONY-HOLD-TARGET-1)', () => {
     const targets = [];
     const arrived = driveGun(cd, racers, 150, () => {
       // 150 frames = 2.5 s: past the hold gate, so the director has committed at least one
-      // OVERVIEW→OVERVIEW entry, and still inside START_PHASE_DURATION.
+      // OVERVIEW→OVERVIEW entry, and still inside the start window.
       targets.push(cd._stateCamZoom());
       expect(cd.state).toBe(CAM_STATE.OVERVIEW);
     });
@@ -7127,15 +7139,26 @@ describe('the hold keeps the ceremony framing (CEREMONY-HOLD-TARGET-1)', () => {
   // the race would inherit the ceremony's framing — a far larger change than the one asked for.
   // WHAT GOES UNNOTICED: on the shipped code the hand-over is never consumed at all, so the first
   // MID-RACE OVERVIEW snaps to the ceremony's zoom minutes after the ceremony ended.
-  it('is released at the first view change, and no later OVERVIEW inherits it', () => {
+  //
+  // START-ONE-WINDOW-1 REPLACED THE TRIGGER, DELIBERATELY, AND THIS TEST SAYS SO RATHER THAN BEING
+  // RELAXED TO FIT. The hold used to end at the FIRST VIEW CHANGE — a clock, since the view changed
+  // when OVERVIEW's minimum display expired. It now ends when the LEADER REACHES HIS PLACE IN FRAME,
+  // which is the owner's design and the only thing that ends it. The property this test protects is
+  // unchanged and still asserted in full: the hold is consumed, and no later OVERVIEW inherits it.
+  it('is consumed by the end of the start window, and no later OVERVIEW inherits it', () => {
     const cd = director();
     const racers = grid(20);
     let releasedAt = null;
-    driveGun(cd, racers, 600, ({ el }) => {
-      if (cd.state !== CAM_STATE.OVERVIEW && releasedAt === null) releasedAt = el;
+    // 700 frames is past the 10 s window on this fixture. WHY THE WINDOW AND NOT THE HAND-OVER:
+    // this grid moves its racers in world x without reference to the shape, so the leader never
+    // advances along his own heading and the mark is unreachable here — a property of the fixture,
+    // not of the rule. The hand-over itself is asserted on geometry-carrying fixtures in
+    // startWindow.test.js; what THIS test owns is that the hold is consumed and never inherited.
+    driveGun(cd, racers, 700, ({ el }) => {
+      if (cd._ceremonyHoldZoom === null && releasedAt === null) releasedAt = el;
       return releasedAt === null;
     });
-    expect(releasedAt).not.toBeNull(); // the view DOES change — otherwise this proves nothing
+    expect(releasedAt).not.toBeNull(); // it IS consumed — otherwise this proves nothing
     expect(cd._ceremonyHoldZoom).toBeNull();
     // And with the hand-over gone, OVERVIEW's zoom is its own setting again.
     cd.state = CAM_STATE.OVERVIEW; // reading a pure lookup, not driving a transition

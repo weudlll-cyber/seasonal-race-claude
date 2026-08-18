@@ -119,7 +119,10 @@ export const OPEN_TRACK_BASE_ZOOM = _PROJ_OPEN_BASE;
 // of them was a second copy of a constant in cameraTimingComputation.js, and not one was read — the
 // director gets its fallbacks by calling computeTimingFromConfig(null). They were the shape a
 // silent divergence takes: two numbers that must agree, and nothing making them.
-const START_PHASE_DURATION = 3000; // ms of forced OVERVIEW at race start
+// START-ONE-WINDOW-1 retired `START_PHASE_DURATION`. It was 3000 ms of forced OVERVIEW, added to
+// `postStartHoldMs` at the one place both were read, so the start window's real length lived in an
+// addition and neither half could be set. It is now ONE key, `startWindowMs`, whose shipped value
+// is that sum. See defaults.js.
 const FRAME_RATE = 60; // reference display frame rate for lerp formula (dt-scaling applied in update)
 // CAMERA-HYGIENE-1: the reference canvas has ONE home, projection.js. It was declared independently
 // here, in zoomUnit.js and in two drawing modules — four constants that must agree and nothing
@@ -342,6 +345,15 @@ export class CameraDirector {
     // gets OVERVIEW's ordinary setting rather than a stale hold, and so does every OVERVIEW after
     // the release.
     this._ceremonyHoldZoom = null;
+    // START-ONE-WINDOW-1: the world point the ceremony left at the centre of the picture, and the
+    // anchor for the whole start window until the hand-over. `null` means no ceremony ran — a test,
+    // a resumed race — and then the start window simply frames the leader like any other shot.
+    this._startFreezePoint = null;
+    // The hand-over happens ONCE per race: the mark is crossed once, and re-arming on a later lap
+    // would put the camera back into a hand-over it has already made.
+    this._startHandoverDone = false;
+    /** ms since the gun at which the mark was reached, for the diagnostics. null = never. */
+    this._startHandoverAtMs = null;
     /** ZOOM-PIVOT-START-1 diagnostic: the pivot's world x this frame, or null if it did not fire. */
     this._lastPivotAnchorX = null;
     // CEREMONY-HANDOVER-1: the ceremony's promise, carried past the gun. ARMED by the countdown, so
@@ -523,7 +535,7 @@ export class CameraDirector {
     };
     this._battleMinDurationMs = t.battleMinDurationMs;
     this._endgameThreshold = t.endgameThreshold;
-    this._postStartHoldMs = t.postStartHoldMs;
+    this._startWindowMs = t.startWindowMs;
     this._ceremonyBrandMs = t.ceremonyBrandMs;
     this._ceremonyVenueMs = t.ceremonyVenueMs;
     this._ceremonyPushMs = t.ceremonyPushMs;
@@ -1143,28 +1155,7 @@ export class CameraDirector {
       const timedOut = elapsedEntryMs >= maxEntryMs;
       if (zoomConverged && xConverged && yConverged && (tConverged || timedOut)) {
         this._diagConvergenceReason = tConverged ? 'threshold' : 'timeout';
-        this._lerpPhase = 'tracking';
-        this._entryStartTs = null;
-        this._transitionTargetT = null; // T-space lerp complete
-        // Start phased observer from current _camT position (already at focusT+leadAhead).
-        // For states without phased observer (OVERVIEW), release _camT so pixel-lerp takes over.
-        const prof = this._phasedByState?.[this.state];
-        const phasedEnabled = prof && (prof.leadInDuration > 0 || prof.leadOutDuration > 0);
-        if (phasedEnabled && this._camT !== null && this._shape) {
-          const _leadAheadOnForState = this._leadAheadEnabledByState?.[this.state] ?? true;
-          if (prof.leadInDuration > 0 && _leadAheadOnForState) {
-            this._observerPhase = 'lead-in';
-            this._leadInStartTs = ts;
-          } else {
-            this._observerPhase = 'follow';
-            this._leadInStartTs = null;
-          }
-        } else {
-          // No phased observer (e.g., OVERVIEW): release _camT, pixel-lerp takes over.
-          this._camT = null;
-          this._observerPhase = 'idle';
-          this._leadInStartTs = null;
-        }
+        this._beginTrackingPhase(ts);
       }
     } else {
       this._entryStartTs = null;
@@ -1210,7 +1201,136 @@ export class CameraDirector {
     const _anchor = this._focusAnchorRacer(racers);
     this._anchorRacerIndex = _anchor?.index ?? null;
     this._anchorRacerLabel = _anchor ? (_anchor.name ?? _anchor.id ?? `#${_anchor.index}`) : null;
+    // START-ONE-WINDOW-1: LAST, because it reads the picture this frame DELIVERED. Every other term
+    // above decides what to aim at; this one asks where the leader ended up, which is only knowable
+    // after the lerp has run. It changes nothing this frame — the hand-over it makes is read by the
+    // next frame's targets, which is what "once, without a jump" looks like in a loop.
+    this._maybeHandOverAtLeaderMark(racers, ts, raceState);
     return { zoom: this.zoom, offsetX: this.offsetX, offsetY: this.offsetY };
+  }
+
+  /**
+   * ENTER THE TRACKING PHASE — the ordinary follow, at the ordinary time constant.
+   *
+   * Extracted from the entry-phase convergence test so the hand-over below reaches tracking by the
+   * SAME route rather than by a second copy of it. A second copy is exactly how the two readings of
+   * `postStartHoldMs` came to differ by 3000 ms, and that one was only a number.
+   *
+   * It moves nothing: `_lerpPhase` selects which lerp FACTOR the next frame uses, so the camera
+   * carries on from where it is at a different rate. There is no position in here to jump.
+   */
+  _beginTrackingPhase(ts) {
+    this._lerpPhase = 'tracking';
+    this._entryStartTs = null;
+    this._transitionTargetT = null; // T-space lerp complete
+    // Start phased observer from current _camT position (already at focusT+leadAhead).
+    // For states without phased observer (OVERVIEW), release _camT so pixel-lerp takes over.
+    const prof = this._phasedByState?.[this.state];
+    const phasedEnabled = prof && (prof.leadInDuration > 0 || prof.leadOutDuration > 0);
+    if (phasedEnabled && this._camT !== null && this._shape) {
+      const _leadAheadOnForState = this._leadAheadEnabledByState?.[this.state] ?? true;
+      if (prof.leadInDuration > 0 && _leadAheadOnForState) {
+        this._observerPhase = 'lead-in';
+        this._leadInStartTs = ts;
+      } else {
+        this._observerPhase = 'follow';
+        this._leadInStartTs = null;
+      }
+    } else {
+      // No phased observer (e.g., OVERVIEW): release _camT, pixel-lerp takes over.
+      this._camT = null;
+      this._observerPhase = 'idle';
+      this._leadInStartTs = null;
+    }
+  }
+
+  /**
+   * WHERE THE LEADER ACTUALLY IS IN THE DELIVERED FRAME, as a fraction along his own heading.
+   *
+   * This is `anchorScreenPoint` read backwards. That function PLACES a subject at `frac` by
+   * displacing it `(frac - 0.5)` of the frame's chord along its screen heading; dividing a delivered
+   * displacement by the same chord gives the fraction back. 0.5 is dead centre, and
+   * `leaderForwardFrac` is where the racing framing asks him to sit.
+   *
+   * It uses the director's OWN projection, heading and chord — not a second geometry — so "where he
+   * is" and "where he is asked to be" cannot come to disagree about what a frame is.
+   *
+   * @returns {number|null} the fraction, or null when the geometry is degenerate or missing
+   */
+  _leaderFrameFrac(leader, canvasW = CANVAS_W, canvasH = CANVAS_H_REF) {
+    if (!leader || !this._shape || leader.t == null) return null;
+    const heading = this._headingAt(leader.t);
+    if (!heading) return null;
+    const hLen = Math.hypot(heading.x, heading.y);
+    if (!(hLen > 0)) return null;
+    // The screen tangent is PER-AXIS, exactly as `_applyLeaderForwardBias` computes it.
+    const sx = (heading.x / hLen) * this._proj.effX(this.zoom);
+    const sy = (heading.y / hLen) * this._proj.effY(this.zoom);
+    const sLen = Math.hypot(sx, sy);
+    if (!(sLen > 0)) return null;
+    const ux = sx / sLen;
+    const uy = sy / sLen;
+    const span = frameExtentAlong(ux, uy, canvasW, canvasH);
+    if (!(span > 0)) return null;
+    const p = this._proj.toScreen(leader, this.zoom, this.offsetX, this.offsetY);
+    const along = (p.x - canvasW / 2) * ux + (p.y - canvasH / 2) * uy;
+    return 0.5 + along / span;
+  }
+
+  /**
+   * THE HAND-OVER: the camera begins to follow when the leader has reached his place in the frame.
+   *
+   * THE OWNER'S DESIGN, 2026-08-21. Until this fires the shot opens where it stands and does not
+   * pan; from it onward the camera follows the leader exactly as it does for the rest of the race.
+   *
+   * IT INVENTS NO FRACTION. The mark is `leaderForwardFrac`, read from the framing the race itself
+   * uses. If the placement is ever re-tuned the hand-over follows it without a second edit, and
+   * there is no way for the two to drift apart.
+   *
+   * IT IS NOT AN OPTION. `feat/start-handover-mark-1` computed the same condition behind a Dev
+   * Screen switch while the gate it was measured against was undecided. The owner has decided; the
+   * switch is deliberately NOT carried over, because a settled behaviour with a toggle beside it is
+   * a second live mechanism and this repository has paid for those.
+   *
+   * IT DOES NOT GLIDE OR CREEP. One frame the shot is frozen, the next it is followed, and the
+   * transition grammar does the moving — this project's own no-jump mechanism. Nothing here writes
+   * a position, so there is nothing that could jump.
+   *
+   * WHY IT CANCELS THE STATE'S MINIMUM DISPLAY, and why that is not a deletion: `minStateHold` is a
+   * GENERAL mechanism — six per-state values, read by the transition gate and by the phased
+   * observer's lead-out for every state in the race — so it stays exactly as it is. What happens
+   * here is that the start window OWNS the state for its duration, and the one transition it needs
+   * is released by the existing per-entry override (`_activeStateMinHoldMs`), the same idiom a
+   * same-state repeat uses. It self-heals: the transition it unblocks is not a repeat, so
+   * `_transition` restores the new state's own hold on the very next frame.
+   */
+  _maybeHandOverAtLeaderMark(racers, ts, raceState) {
+    if (this._startHandoverDone) return;
+    // Only inside the start window. Outside it there is nothing to hand over.
+    if (!raceState || !(raceState.raceElapsed < this._startWindowMs)) return;
+    const mark = this._leaderForwardFrac;
+    if (!Number.isFinite(mark)) return;
+    let leader = null;
+    let leaderT = -Infinity;
+    for (const r of racers ?? []) {
+      if (r?.t != null && r.t > leaderT) {
+        leaderT = r.t;
+        leader = r;
+      }
+    }
+    const frac = this._leaderFrameFrac(leader);
+    if (frac === null || frac < mark) return;
+    this._startHandoverDone = true;
+    this._startHandoverAtMs = raceState.raceElapsed;
+    /** Diagnostic only: the fraction he had actually reached on the frame it fired. */
+    this._lastHandoverFrac = frac;
+    // The ceremony's framing is over: the state's own zoom takes the shot from here.
+    this._ceremonyHoldZoom = null;
+    // Let the ordinary chain decide on the NEXT frame rather than at OVERVIEW's minimum display.
+    this._activeStateMinHoldMs = 0;
+    // The ordinary time constant, in case no transition follows. When one does, the state entry
+    // overwrites this with the grammar's own phase, which is the ordinary route and not a second one.
+    if (this._lerpPhase === 'entry') this._beginTrackingPhase(ts);
   }
 
   /**
@@ -1313,31 +1433,33 @@ export class CameraDirector {
       // FINISH_ACTION.NONE — no finish phase is running; fall through to the normal chain.
     }
 
-    // Priority 2: Start phase — hold OVERVIEW on the full field for 3s
-    if (raceState.raceElapsed < START_PHASE_DURATION) {
+    // ── Priority 2: THE START WINDOW. ONE clock, ONE rule (START-ONE-WINDOW-1) ─────────────────
+    //
+    // What stood here was TWO branches and three clocks: 3000 ms of forced OVERVIEW, then
+    // `postStartHoldMs` of forced LEADER counted on top of it, while OVERVIEW's own minimum display
+    // blocked every transition inside both. The window is the same ten seconds; what changed is
+    // that it is one number, and that what happens inside it is one rule instead of three.
+    //
+    // IT STILL OWNS THE PICTURE, which is the half of the old post-start hold that was load-bearing:
+    // no BATTLE, no COMEBACK, no LEAD_CHANGE for the whole window. That is why this returns a state
+    // on every frame rather than falling through.
+    //
+    // WHICH state is the whole of the rule. Before the hand-over the shot is the ceremony's, opening
+    // where it stands (`_setTargets` freezes the anchor, so the zoom widens and the camera does not
+    // pan). From the hand-over on it is LEADER_ZOOM — the ordinary racing shot, with the ordinary
+    // anchor, the ordinary time constant and `leaderForwardFrac` placing him, which is what "follows
+    // the leader exactly as everywhere else" has to mean.
+    if (raceState.raceElapsed < this._startWindowMs) {
       return {
-        nextState: CAM_STATE.OVERVIEW,
-        reason: 'start-phase: raceElapsed < 3000ms',
-        data: {},
-      };
-    }
-    // Priority 2.1: Post-start hold — force LEADER for postStartHoldMs after start phase.
-    // Prevents BATTLE from firing on natural cluster gaps at race start.
-    // THE ONLY READER of that key, and the one whose meaning is authoritative: it is a DURATION
-    // added to the 3 s overview, so the hold ends at START_PHASE_DURATION + the value. It was not
-    // the only reader until POST-START-HOLD-UNIFY — `racePlanner.js` read the same key as an
-    // absolute time from zero, 3000 ms adrift of this, on a floor no caller ever fed.
-    else if (raceState.raceElapsed < START_PHASE_DURATION + this._postStartHoldMs) {
-      return {
-        nextState: CAM_STATE.LEADER_ZOOM,
-        reason: `post-start-hold: raceElapsed=${(raceState.raceElapsed / 1000).toFixed(1)}s`,
+        nextState: this._startHandoverDone ? CAM_STATE.LEADER_ZOOM : CAM_STATE.OVERVIEW,
+        reason: `start-window: raceElapsed=${(raceState.raceElapsed / 1000).toFixed(1)}s of ${(this._startWindowMs / 1000).toFixed(1)}s${this._startHandoverDone ? ' (handed over)' : ''}`,
         data: {},
       };
     }
     // Priority 2.5: Endgame — leader past threshold → LEADER, bypasses cooldown.
     // Exception: LEAD_CHANGE is allowed through — a lead swap near the finish line
     // is the most dramatic moment and must not be suppressed.
-    else if (leaderProgress > this._endgameThreshold) {
+    if (leaderProgress > this._endgameThreshold) {
       const lcCooledDown = ts - this._lastLeadChangeExitTs >= this._leadChangeCooldownMs;
       // CAMERA-WEIGHTS-1: the endgame exception used to bypass the weight completely, so a
       // leadChangeWeight of 0 still produced LEAD_CHANGE near the line — measured at 1.8% of all
@@ -3109,7 +3231,8 @@ export class CameraDirector {
 
     // OVERVIEW's anchor exceptions, in priority order. Each REPLACES the anchor and then rejoins.
     if (this.state === CAM_STATE.OVERVIEW) {
-      const startPhase = raceState && raceState.raceElapsed < START_PHASE_DURATION;
+      const beforeHandover =
+        raceState && raceState.raceElapsed < this._startWindowMs && !this._startHandoverDone;
       if (this._inFinishMode && this._shape && raceState?.finishT > 0) {
         // Hold a fixed point behind the line so the approach stays visible while the winner runs out.
         const lookbackT = this._finishLookbackT(raceState.finishT);
@@ -3118,15 +3241,28 @@ export class CameraDirector {
           panTarget = target;
           headingT = lookbackT;
         }
-      } else if (startPhase) {
-        // Before a leader exists, hold the whole field so nobody is cropped at the gun. The field
-        // spans the whole corridor here and there is no single subject, so the across-track pin does
-        // not apply — this branch keeps the centroid it always had.
-        panTarget = getPanTarget(
-          CAM_STATE.OVERVIEW,
-          racers.length ? racers : focusRacers,
-          this._shape
-        );
+      } else if (beforeHandover && this._startFreezePoint) {
+        // ── THE SHOT OPENS WHERE IT STANDS. IT DOES NOT PAN (START-ONE-WINDOW-1) ────────────────
+        //
+        // The owner's design: at the gun the camera opens the shot, and it does NOT pan; it begins
+        // to move only when the leader has reached the place in frame he holds for the rest of the
+        // race. So the anchor is a FIXED WORLD POINT — the one the ceremony left at the centre of
+        // the picture — and it stays the anchor until the hand-over.
+        //
+        // WHAT THIS REPLACED, and it is a swap rather than an addition: the field's CENTROID, held
+        // for a hard-coded 3000 ms "before a leader exists, so nobody is cropped at the gun". The
+        // centroid moves the instant the race does, so that branch panned — measured at 187 world px
+        // in the first 400 ms on dirt-oval, which is the motion four blocks in a row tried to
+        // explain (START-OVERSHOOT-1).
+        //
+        // IT COMPOSES WITH THE PIVOT CORRECTION and needs nothing from it: `_framingProbe.anchorPoint`
+        // IS this point, so ZOOM-PIVOT-START-1's correction holds it fixed on screen while the zoom
+        // opens around it. Freezing the anchor without that correction would still have drifted.
+        //
+        // `pinAcross` stays FALSE, as it was for the centroid: this is a point, not a subject on the
+        // racing line, and pinning it across the corridor would move the thing that must not move.
+        panTarget = this._startFreezePoint;
+        headingT = null;
         pinAcross = false;
       }
     }
@@ -3762,6 +3898,14 @@ export class CameraDirector {
     this.offsetY = -camY * effZoomY;
     this.targetOffsetX = this.offsetX;
     this.targetOffsetY = this.offsetY;
+    // START-ONE-WINDOW-1 — THE POINT THE START HOLDS. Captured every countdown frame, so the last
+    // one wins and it is exactly what the ceremony left at the centre of the picture. Read back
+    // through the projection rather than remembered from `cx`/`cy`, because those are the viewport's
+    // top-left and the point that must not move is the centre.
+    this._startFreezePoint = {
+      x: (canvasW / 2 - this.offsetX) / effZoomX,
+      y: (canvasH / 2 - this.offsetY) / effZoomY,
+    };
     // Keep stateEnteredAt current so the first RACING update() sees a small stateAge.
     this.stateEnteredAt = ts;
 

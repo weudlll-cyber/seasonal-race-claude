@@ -608,7 +608,18 @@ a verbatim transcript of one run on one commit, which is a historical record, no
 
 ### The tracking lag, as measured today — and it had drifted
 
-<!-- MEASURED: tracking-lag (median/p95 pp per state) @ 305cc476 2026-08-21 depends=client/src/modules/camera/ -->
+<!-- MEASURED: tracking-lag (median/p95 pp per state) @ PENDING 2026-08-21 depends=client/src/modules/camera/ -->
+
+**RE-MEASURED IN FULL FOR START-ONE-WINDOW-1, AND THE FRAME COUNTS MOVED — which is the point.**
+Every camera block above this one changed FRAMING and left the state sequence alone; this one
+replaces the start’s state rule, so which state is running when is a different answer.
+**BATTLE_ZOOM 9701 → 10935, LEAD_CHANGE 7786 → 9378, COMEBACK_ZOOM 644 → 162, LEADER_ZOOM 17630 →
+17175, OVERVIEW 4303 → 4248**, PHOTO_FINISH unchanged at 1865. The old post-start hold forced
+LEADER_ZOOM for seven seconds regardless of the picture; the window now holds OVERVIEW until the
+leader reaches his place, so the seconds it used to spend in LEADER are spent elsewhere and every
+later state’s cooldown starts from a different moment. **The per-state LAG is steady or better
+everywhere it moved** — BATTLE median 5.65 → 5.30, LEADER 3.82 → 3.73, OVERVIEW 2.43 — so the
+sequence changed and the following did not get worse.
 
 **RE-MEASURED IN FULL FOR ZOOM-PIVOT-START-1, AND EXACTLY THE TWO STATES THAT SHOULD HAVE MOVED DID.** That block removes the `_runInActive` scope from the zoom-about-the-anchor correction, so it now reaches every group shot — the three states where `_focusAnchorRacer` returns null. **Every frame count is unchanged** (BATTLE_ZOOM 9701, COMEBACK_ZOOM 644, LEADER_ZOOM 17630, LEAD_CHANGE 7786, OVERVIEW 4303, PHOTO_FINISH 1865), because this is framing and not state selection. **BATTLE_ZOOM p95 9.97 → 9.56** and **PHOTO_FINISH p95 35.66 → 25.03** (median 3.50 → 3.11); LEADER_ZOOM, LEAD_CHANGE and COMEBACK_ZOOM are identical to the digit, which is the check that the correction did not re-point itself where it already worked. **OVERVIEW is identical too, and that is not a null result**: this table measures the TRACKING phase only, and the start window this block was written for is the ENTRY phase, which it excludes by construction.
 

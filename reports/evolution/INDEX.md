@@ -51,6 +51,21 @@ is dated and recorded HERE, where a reader on their way to the report will pass 
   [GATE-LINES-1](../night/GATE-LINES-1.md); the fix and the once-per-run control that makes the
   silence impossible to repeat: [GATE-TRUTH-1](../night/GATE-TRUTH-1.md).
 
+- [START-ONE-WINDOW-1.md](START-ONE-WINDOW-1.md) — **one clock, one rule, ten seconds** (2026-08-21).
+  The owner’s design: three stacked clocks in the start become **one key, `startWindowMs` = 10000 —
+  today’s sum written once**. Inside it the shot **opens where it stands and does not pan** (the
+  anchor is the point the ceremony left at the centre, replacing the field CENTROID that moved the
+  instant the race did), and the camera follows the leader the moment he reaches his racing place.
+  **ESTABLISHED BEFORE DELETING: `minStateHold` is GENERAL** — six per-state values, three callers
+  including the phased observer — so it stays, and the window owns the state instead via the existing
+  per-entry override. **HIS CASE IS FIXED: dirt-oval at 40 racers had the leader outside for 55
+  frames and the second man for 14; both are 0.** city-circuit 42 → 0, searound 20 → 0 at twenty.
+  `minOn` identical everywhere; the forward rush is gone on all ten (`ahead` negative at both field
+  sizes, from +177 on river-run). **Worse, named and not tuned:** luger-hill’s second man out for 9
+  frames at twenty, river-run’s field centre 0.486 → 0.565, and on four closed tracks at forty the
+  still phase is ZERO because the ceremony’s framing fits the formation. CAMERA `f64c2ae531f14253`
+  and RENDER `a8c59ef5002716f1` moved; WORLD/WORLD-OFF run and unmoved. **Unmerged, unminted.**
+
 - [ZOOM-PIVOT-START-1.md](ZOOM-PIVOT-START-1.md) — **the zoom-about-the-anchor correction now runs
   in the group shots too** (2026-08-21). **ONE CONDITION REMOVED** at `CameraDirector.js:1079` — the
   `_runInActive` scope the source itself called a latent defect everywhere. No key, no fraction; the

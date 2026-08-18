@@ -82,95 +82,101 @@ let prevZ = 0;
 if (ALL) {
   const CWA = 1280;
   const CHA = 720;
+  // --window lets the SAME harness measure the base branch, where the window is an addition of two
+  // numbers rather than one key. Absent, the config's own value is used.
+  const WINDOW = Number(argOf("window") ?? CONFIG.startWindowMs ?? 10000);
   const tracks = loadTracks({});
   const list = TRACK_ORDER.map((id) => tracks.find((t) => (t.id ?? t.name) === id)).filter(Boolean);
   console.log(
-    `ZOOM-PIVOT-START-1 acceptance — seed ${SEED}, ${RACERS} racers, gun to 8000 ms, ` +
-      `config ${CONFIG_PATH ?? "DEFAULT_CAMERA_CONFIG"}
-` +
-      `  maxAhead: the largest distance the delivered centre is AHEAD of the resolved target ALONG
-` +
-      `  that target's own direction of travel, counted only while the target is moving forward.
-` +
-      `  maxZoomNet: the largest per-frame world-px the ZOOM alone still moves the frame centre.
-` +
-      `  BOTH are measured only inside the START WINDOW — while the ceremony's framing is still
-` +
-      `  held — because that is what this block changes. leaderOut and minOn span the whole 8 s.
-`,
+    `START-ONE-WINDOW-1 acceptance — seed ${SEED}, ${RACERS} racers, startWindowMs=${WINDOW}\n` +
+      `  out / p2out: frames the LEADER / the SECOND-PLACED racer is outside the canvas, inside the window.\n` +
+      `  hand@: ms at which the camera began to follow. drift: the largest fraction along his own\n` +
+      `  heading the leader reached BEFORE it (${CONFIG.leaderForwardFrac} is the mark he is handed over at).\n` +
+      `  pan<1s: camera-centre travel in the first second. owns: ms for which nothing but the start\n` +
+      `  framing held the picture, and the states that took it if any.\n`,
   );
   console.log(
-    `${"track".padEnd(15)} ${"kind".padEnd(7)} ${"maxAhead".padStart(9)} ${"maxZoomNet".padStart(11)} ` +
-      `${"leaderOut".padStart(10)} ${"minOn".padStart(7)} ${"travel1s".padStart(9)}`,
+    `${"track".padEnd(15)} ${"kind".padEnd(7)} ${"out".padStart(4)} ${"p2out".padStart(6)} ` +
+      `${"minOn".padStart(7)} ${"hand@".padStart(6)} ${"drift".padStart(6)} ${"pan<1s".padStart(7)} ${"ahead".padStart(7)} ` +
+      `${"owns".padStart(6)} ${"intruders"}`,
   );
   for (const g of list) {
     const id = resolveIdentity({
-      racers: RACERS, raceSeed: SEED, racerType: TRACK_DEFAULT_RACER,
-      roster: resolveNameSet(DEFAULT_NAME_SET), note: "ZOOM-PIVOT-START-1 acceptance",
+      racers: RACERS,
+      raceSeed: SEED,
+      racerType: TRACK_DEFAULT_RACER,
+      roster: resolveNameSet(DEFAULT_NAME_SET),
+      note: "START-ONE-WINDOW-1 acceptance",
     });
     const r = buildRace(g, id, CONFIG);
-    const axisX = r.cd._proj.axisX;
-    const axisY = r.cd._proj.axisY;
-    let maxAhead = -Infinity;
-    let maxZoomNet = 0;
-    let outFrames = 0;
+    let out = 0;
+    let p2out = 0;
     let minOn = Infinity;
     let n = 0;
-    let prevTgt = null;
-    let prevCam = null;
-    let prevEff = null;
+    let handAt = null;
+    let drift = 0;
     let first = null;
     let at1s = null;
-    runRace(r, id, CONFIG, ({ cd, st, ts, raceStart }) => {
-      const ms = ts - raceStart;
-      if (ms > 8000) return false;
-      n = st.racers.length;
-      let on = 0;
-      let leader = st.racers[0];
-      for (const rr of st.racers) {
-        const q = cd._proj.toScreen(rr, cd.zoom, cd.offsetX, cd.offsetY);
-        if (q.x >= 0 && q.x <= CWA && q.y >= 0 && q.y <= CHA) on++;
-        if (rr.t > leader.t) leader = rr;
-      }
-      if (on < minOn) minOn = on;
-      const lp = cd._proj.toScreen(leader, cd.zoom, cd.offsetX, cd.offsetY);
-      if (!(lp.x >= 0 && lp.x <= CWA && lp.y >= 0 && lp.y <= CHA)) outFrames++;
-      const ex = cd._proj.effX(cd.zoom);
-      const ey = cd._proj.effY(cd.zoom);
-      const cam = { x: (CWA / 2 - cd.offsetX) / ex, y: (CHA / 2 - cd.offsetY) / ey };
-      const tgt = cd._framingProbe?.anchorPoint ?? null;
-      if (first === null) first = { ...cam };
-      if (at1s === null && ms >= 1000) at1s = { ...cam };
-      // The start window: while the ceremony hold is live. After it the state chain takes over and
-      // a state change moves the zoom by design, which is not what this block is about.
-      const inStart = cd._ceremonyHoldZoom !== null;
-      if (inStart && tgt && prevTgt) {
-        const vx = tgt.x - prevTgt.x;
-        const vy = tgt.y - prevTgt.y;
-        const vlen = Math.hypot(vx, vy);
-        if (vlen > 1e-6) {
-          // "Ahead" = the component of (cam - tgt) along the target's OWN direction of travel.
-          const ahead = ((cam.x - tgt.x) * vx + (cam.y - tgt.y) * vy) / vlen;
-          if (ahead > maxAhead) maxAhead = ahead;
+    let owns = 0;
+    let maxAhead = -Infinity;
+    let prevTgt = null;
+    const intruders = new Set();
+    runRace(
+      r,
+      id,
+      CONFIG,
+      ({ cd, st, ts, raceStart }) => {
+        const ms = ts - raceStart;
+        if (ms > WINDOW + 1500) return false;
+        const ordered = [...st.racers].sort((a, b) => b.t - a.t);
+        n = st.racers.length;
+        const inside = (rr) => {
+          const q = cd._proj.toScreen(rr, cd.zoom, cd.offsetX, cd.offsetY);
+          return q.x >= 0 && q.x <= CWA && q.y >= 0 && q.y <= CHA;
+        };
+        const ex = cd._proj.effX(cd.zoom);
+        const ey = cd._proj.effY(cd.zoom);
+        const cam = { x: (CWA / 2 - cd.offsetX) / ex, y: (CHA / 2 - cd.offsetY) / ey };
+        if (first === null) first = { ...cam };
+        if (at1s === null && ms >= 1000) at1s = { ...cam };
+        if (ms >= WINDOW) return;
+        // INSIDE THE WINDOW ONLY, because that is what this block changes.
+        let on = 0;
+        for (const rr of st.racers) if (inside(rr)) on++;
+        if (on < minOn) minOn = on;
+        if (!inside(ordered[0])) out++;
+        if (ordered[1] && !inside(ordered[1])) p2out++;
+        if (handAt === null && cd._startHandoverDone) handAt = cd._startHandoverAtMs ?? ms;
+        if (handAt === null) {
+          const f = cd._leaderFrameFrac ? cd._leaderFrameFrac(ordered[0]) : null;
+          if (f !== null && f > drift) drift = f;
         }
-      }
-      if (inStart && prevCam && prevEff) {
-        const zp = (prevCam.x * prevEff) / ex - prevCam.x;
-        const corr =
-          cd._lastPivotAnchorX == null ? 0 : (cd._lastPivotAnchorX * axisX * (cd.zoom - prevZ)) / ex;
-        const net = Math.abs(zp + corr);
-        if (net > maxZoomNet) maxZoomNet = net;
-      }
-      prevZ = cd.zoom;
-      prevTgt = tgt ? { ...tgt } : null;
-      prevCam = { ...cam };
-      prevEff = ex;
-    }, { slowmo: true });
-    const travel1s = at1s && first ? Math.hypot(at1s.x - first.x, at1s.y - first.y) : 0;
+        // THE RUSH TEST: is the delivered centre ever AHEAD of the resolved target along that
+        // target's own direction of travel? A follower cannot be; only an added term can put it there.
+        const tgt = cd._framingProbe?.anchorPoint ?? null;
+        if (tgt && prevTgt) {
+          const vx = tgt.x - prevTgt.x;
+          const vy = tgt.y - prevTgt.y;
+          const vlen = Math.hypot(vx, vy);
+          if (vlen > 1e-6) {
+            const ahead = ((cam.x - tgt.x) * vx + (cam.y - tgt.y) * vy) / vlen;
+            if (ahead > maxAhead) maxAhead = ahead;
+          }
+        }
+        prevTgt = tgt ? { ...tgt } : null;
+        // The start framing owns the picture while nothing but its two states is on screen.
+        if (cd.hudState === "OVERVIEW" || cd.hudState === "LEADER_ZOOM") owns = ms;
+        else intruders.add(cd.hudState);
+      },
+      { slowmo: true },
+    );
+    const pan1s = at1s && first ? Math.hypot(at1s.x - first.x, at1s.y - first.y) : 0;
     console.log(
       `${(g.id ?? g.name).padEnd(15)} ${(r.shape.isOpen ? "open" : "closed").padEnd(7)} ` +
-        `${maxAhead.toFixed(1).padStart(9)} ${maxZoomNet.toFixed(1).padStart(11)} ` +
-        `${String(outFrames).padStart(10)} ${`${minOn}/${n}`.padStart(7)} ${travel1s.toFixed(1).padStart(9)}`,
+        `${String(out).padStart(4)} ${String(p2out).padStart(6)} ${`${minOn}/${n}`.padStart(7)} ` +
+        `${(handAt === null ? "never" : String(Math.round(handAt))).padStart(6)} ` +
+        `${drift.toFixed(3).padStart(6)} ${pan1s.toFixed(1).padStart(7)} ${(maxAhead === -Infinity ? 0 : maxAhead).toFixed(1).padStart(7)} ` +
+        `${String(Math.round(owns)).padStart(6)} ${intruders.size ? [...intruders].join(",") : "none"}`,
     );
   }
   process.exit(0);
@@ -200,12 +206,11 @@ if (ANCHORS) {
   console.log(
     `CONFIG SOURCE: ${CONFIG_PATH ?? "DEFAULT_CAMERA_CONFIG (no stored config — this harness has no browser storage)"}
 ` +
-      `  start-window keys as RESOLVED: postStartHoldMs=${CONFIG.postStartHoldMs} ` +
+      `  start-window keys as RESOLVED: startWindowMs=${CONFIG.startWindowMs} ` +
       `OVERVIEW.minStateHold=${CONFIG.cameraStateProfiles?.OVERVIEW?.minStateHold} ` +
-      `leaderForwardFrac=${CONFIG.leaderForwardFrac} ` +
-      `startHandoverOnLeaderMark=${CONFIG.startHandoverOnLeaderMark}
+      `leaderForwardFrac=${CONFIG.leaderForwardFrac}
 ` +
-      `  START_PHASE_DURATION is a hard constant in CameraDirector.js and no config key can move it.
+      `  ONE window since START-ONE-WINDOW-1: START_PHASE_DURATION and postStartHoldMs are retired.
 `,
   );
   if (DECOMPOSE) {

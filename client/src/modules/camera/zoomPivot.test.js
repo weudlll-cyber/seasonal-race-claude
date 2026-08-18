@@ -24,8 +24,10 @@ import { DEFAULT_CAMERA_CONFIG } from '../storage/defaults.js';
 
 const CW = 1280;
 const CH = 720;
-// Inside the 3 s start phase, so OVERVIEW is forced for the whole fixture.
-const START_MS = 500;
+// PAST the start window (START-ONE-WINDOW-1), so this fixture measures the pivot and not the start
+// window's frozen anchor. OVERVIEW is held by keeping `ts` under its 5000 ms hold gate, so no
+// transition ever fires — see `arrived`.
+const START_MS = 12000;
 
 // A straight track on a diagonal — the axis cases hide per-axis defects, and this correction is
 // per-axis (`axisX`/`axisY` are different on every closed track).

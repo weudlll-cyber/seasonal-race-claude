@@ -410,21 +410,22 @@ function CameraAdvancedSection() {
               className={s.label}
               style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}
             >
-              Post-Start LEADER Hold (ms)
+              Start Window (ms)
               <InfoTooltip
-                text={`After the 3s start overview the camera holds LEADER_ZOOM for this duration before BATTLE can trigger. Currently: ${(config.postStartHoldMs / 1000).toFixed(1)}s.`}
+                text={`How long the START owns the picture: no BATTLE, no COMEBACK, no LEAD_CHANGE until it ends. ONE number now — it replaces a hard-coded 3 s of forced overview PLUS a post-start hold counted on top of it, and its shipped value is that same sum. Inside it the shot opens where it stands without panning, and the camera begins to follow the leader the moment he reaches the place in frame he holds for the rest of the race (Leader Forward Fraction, section 9). Currently: ${((config.startWindowMs ?? DEFAULT_CAMERA_CONFIG.startWindowMs) / 1000).toFixed(1)}s.`}
               />
             </label>
             <input
               type="number"
               className={s.input}
+              data-testid="start-window-ms"
               min={0}
-              max={15000}
+              max={30000}
               step={500}
-              value={config.postStartHoldMs ?? DEFAULT_CAMERA_CONFIG.postStartHoldMs}
+              value={config.startWindowMs ?? DEFAULT_CAMERA_CONFIG.startWindowMs}
               onChange={(e) => {
                 const v = Number(e.target.value);
-                if (v >= 0 && v <= 15000) set('postStartHoldMs', v);
+                if (v >= 0 && v <= 30000) set('startWindowMs', v);
               }}
             />
           </div>

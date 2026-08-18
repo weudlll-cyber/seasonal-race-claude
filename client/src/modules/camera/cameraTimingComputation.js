@@ -101,7 +101,9 @@ export function computeTimingFromConfig(config) {
   // number nobody reaches is still the number a reader finds when they open the file to learn it.
   // Every other top-level key in this function already reads the default; this was the last literal.
   const endgameThreshold = config?.endgameThreshold ?? DEFAULT_CAMERA_CONFIG.endgameThreshold;
-  const postStartHoldMs = config?.postStartHoldMs ?? DEFAULT_CAMERA_CONFIG.postStartHoldMs;
+  // START-ONE-WINDOW-1: one window, one number. Replaces `postStartHoldMs` AND the hard-coded
+  // 3 s start phase that used to be added to it.
+  const startWindowMs = config?.startWindowMs ?? DEFAULT_CAMERA_CONFIG.startWindowMs;
   // Clamped to a sane band so a corrupt stored config cannot produce a ceremony that never ends or
   // one with a negative beat. The easing NAME is not validated here: `ceremonyEasing` resolves an
   // unknown name to the shipped curve, so validating it twice would be a second authority on it.
@@ -396,7 +398,7 @@ export function computeTimingFromConfig(config) {
     battleMaxGroupRankSpan,
     battleMinTopN,
     endgameThreshold,
-    postStartHoldMs,
+    startWindowMs,
     ceremonyBrandMs,
     ceremonyVenueMs,
     ceremonyPushMs,
