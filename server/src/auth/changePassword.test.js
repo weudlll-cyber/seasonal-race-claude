@@ -36,10 +36,11 @@ vi.setConfig({ testTimeout: 30_000 });
 
 const app = createApp();
 
-// DELIBERATELY NO SHARED `testadmin` AGENT. Nine test files log in as that one account against one
-// users store, and vitest runs files in parallel — so an assertion about its session is an
-// assertion about what eight other files happened to be doing. Every user here is created by this
-// file, for one test, and asserted only against users this file created.
+// EVERY USER HERE IS CREATED BY THIS FILE, for one test, and asserted only against users this file
+// created. That was written when eight other files still shared one seeded admin account; it is now
+// what `server/test/authAgent.js` does for all of them, and the users store is per test file
+// (test/env-setup.js). This file needed no change — it was already decoupled, and it says so here
+// because the reasoning is the same one TEST-ACCOUNTS-1 applied everywhere else.
 let seq = 0;
 const uniq = (tag) => `selfpw-${tag}-${Date.now()}-${seq++}`;
 

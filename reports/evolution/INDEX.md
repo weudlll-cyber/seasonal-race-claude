@@ -38,6 +38,17 @@ is dated and recorded HERE, where a reader on their way to the report will pass 
   [GATE-LINES-1](../night/GATE-LINES-1.md); the fix and the once-per-run control that makes the
   silence impossible to repeat: [GATE-TRUTH-1](../night/GATE-TRUTH-1.md).
 
+- [TEST-ACCOUNTS-1.md](TEST-ACCOUNTS-1.md) — **eight server test files stopped sharing one row**
+  (2026-08-21). `authAgent.js` mints a user per call and `env-setup.js` gives each test FILE its own
+  users store; the two sole-admin tests now **assert** their precondition instead of inheriting it.
+  **The latent instance was REPRODUCED, not asserted** — on master, with the invisible per-file
+  delete removed, nine tests go red at `expected 200 to be 409`. **The finding is why it was
+  latent:** the store was isolated by a delete in another file that no reader of the assertion would
+  ever see. Nothing weakened, nothing retried, and `--no-file-parallelism` is **dropped** — it was
+  serialisation standing in for isolation. Proven with **five consecutive full runs (23 files,
+  650 tests) plus three in random file order**. Two remaining order dependencies are NAMED rather
+  than fixed, one of them pre-existing. **Merged.**
+
 - [NIGHT-2026-08-18-CLOSING.md](NIGHT-2026-08-18-CLOSING.md) — **closing note, night of 2026-08-18**.
   **One of four pieces done**, and the stop was deliberate: Piece 1 (the change-password rate limit)
   is merged, green and swept; Pieces 2, 3 and 4 were **not started**, so nothing is half-changed.
