@@ -49,7 +49,7 @@ the correct response is to say so in this table instead of building one.
 
 ### Phase 6, MEASURED — and both of the old numbers were wrong
 
-<!-- MEASURED: straggler-truth (phase 6 duration, zoom-out lead, stragglers in shot) @ PENDING 2026-08-21 depends=client/src/modules/camera/CameraDirector.js -->
+<!-- MEASURED: straggler-truth (phase 6 duration, zoom-out lead, stragglers in shot) @ de524663 2026-08-21 depends=client/src/modules/camera/CameraDirector.js -->
 
 The two numbers this section used to carry were flagged as unverified on 2026-08-14, because nothing
 in the repository measured them. `scripts/straggler-truth.mjs` does now. **One CLOSED track and one
