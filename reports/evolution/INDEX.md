@@ -51,6 +51,18 @@ is dated and recorded HERE, where a reader on their way to the report will pass 
   [GATE-LINES-1](../night/GATE-LINES-1.md); the fix and the once-per-run control that makes the
   silence impossible to repeat: [GATE-TRUTH-1](../night/GATE-TRUTH-1.md).
 
+- [START-OVERSHOOT-1.md](START-OVERSHOOT-1.md) — **what carries the camera past its own target at
+  the start** (2026-08-21). **THE TERM IS THE ZOOM'S PIVOT:** the camera zooms about the WORLD
+  ORIGIN, so the frame centre moves `camX × Δzoom/zoom` even with the offset unchanged — a 15%
+  widening at 1496 world px from the origin is **~225 world px**. **The line that cancels it is
+  `CameraDirector.js:1085`, and it is SKIPPED** because `_focusAnchorRacer` returns null for
+  OVERVIEW — the failure the source itself predicted at `:1062-1080` and deliberately scoped away
+  from. **The switch-on frame is the first racing frame**: the last ceremony frame has the camera ON
+  its target, and one frame later `dCamX +13.8` is `zoomTerm +13.8, panTerm +0.1`, because
+  `updateCountdown` writes the offset absolutely while `update()` lerps it. `panTerm` is negative on
+  every frame 17–1100 ms — **the follower never overshoots.** Six candidates ruled out with numbers,
+  including `Δv: r0-r1`, which is a RACER speed difference the camera never reads.
+
 - [START-CONTRADICTION-1.md](START-CONTRADICTION-1.md) — **the owner's screenshots vs
   OVERVIEW-AIM-1** (2026-08-21). **NEITHER ACCOUNT IS WRONG** — one describes the ANCHOR, the other
   the DELIVERED PICTURE, and in the photographed window they are up to **138 world px apart**.

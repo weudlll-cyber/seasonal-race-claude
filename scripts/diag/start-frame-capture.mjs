@@ -52,6 +52,10 @@ const RACERS = Number(argOf("racers") ?? 20);
 const AT = (argOf("at") ?? "500,1000,1500,2000,3000,5000,8000").split(",").map(Number);
 const VERBOSE = process.argv.includes("--verbose");
 const ANCHORS = process.argv.includes("--anchors");
+// START-OVERSHOOT-1: the exact decomposition of the camera centre's motion into the two terms that
+// can move it. It is an IDENTITY, not a model — zoomTerm + panTerm equals the observed step by
+// construction — so what it establishes is which of the two is LARGE, not that the sum is right.
+const DECOMPOSE = process.argv.includes("--decompose");
 const ANCHOR_MS = Number(argOf("ms") ?? 1500);
 const EVERY_MS = Number(argOf("every") ?? 100);
 // THE CONFIG SOURCE, made explicit because it is the first thing START-CONTRADICTION-1 had to
@@ -98,11 +102,26 @@ if (ANCHORS) {
       `  START_PHASE_DURATION is a hard constant in CameraDirector.js and no config key can move it.
 `,
   );
-  console.log(
-    `${"ms".padStart(5)} ${"anchor path".padEnd(24)} ${"resid".padStart(6)}  ` +
-      `${"field centroid".padStart(15)} ${"pan target".padStart(15)} ${"camera centre".padStart(15)} ` +
-      `${"leader".padStart(15)}  ${"cam-tgt".padStart(9)} ${"lag(px)".padStart(9)} ${"pan%".padStart(5)} ${"panRef".padStart(7)} ${"zoom".padStart(6)} camT`,
-  );
+  if (DECOMPOSE) {
+    console.log(
+      `${"ms".padStart(5)} ${"camX".padStart(7)} ${"tgtX".padStart(7)} ${"cam-tgt".padStart(8)}  ` +
+        `${"dCamX".padStart(8)} ${"zoomTerm".padStart(9)} ${"panTerm".padStart(8)}  ` +
+        `${"zoom".padStart(7)} ${"dz".padStart(8)} ${"anchor".padStart(7)} ${"corr?".padStart(6)} ${"binding"}`,
+    );
+  } else {
+    console.log(
+      `${"ms".padStart(5)} ${"anchor path".padEnd(24)} ${"resid".padStart(6)}  ` +
+        `${"field centroid".padStart(15)} ${"pan target".padStart(15)} ${"camera centre".padStart(15)} ` +
+        `${"leader".padStart(15)}  ${"cam-tgt".padStart(9)} ${"lag(px)".padStart(9)} ${"pan%".padStart(5)} ${"panRef".padStart(7)} ${"zoom".padStart(6)} camT`,
+    );
+  }
+  let prevCamX = null;
+  let prevEffX = null;
+  let prevZoom = null;
+  // THE FRAME BEFORE THE FIRST RACING FRAME. Without it the table cannot show the step INTO frame 0,
+  // and that is exactly the transition this block was asked to find. The countdown runs inside
+  // runRace and is unreachable from outside it, which is what the hook is for.
+  let lastCeremony = null;
   let nextAt = 0;
   runRace(
     race,
@@ -141,6 +160,38 @@ if (ANCHORS) {
       const lagY = cd.targetOffsetY - cd.offsetY;
       const panPct = cd.panProgress;
 
+      if (DECOMPOSE) {
+        // Where the world centre WOULD be if the offset had not changed at all this frame: the
+        // camera zooms about the WORLD ORIGIN, so camX scales with effX_prev / effX_now.
+        if (prevCamX === null && lastCeremony) {
+          prevCamX = lastCeremony.camX;
+          prevEffX = lastCeremony.ex;
+          prevZoom = lastCeremony.zoom;
+          console.log(
+            `${"cer".padStart(5)} ${lastCeremony.camX.toFixed(0).padStart(7)} ${"—".padStart(7)} ` +
+              `${"—".padStart(8)}  ${"—".padStart(8)} ${"—".padStart(9)} ${"—".padStart(8)}  ` +
+              `${lastCeremony.zoom.toFixed(4).padStart(7)} ${"—".padStart(8)} ${"—".padStart(7)} ` +
+              `${"—".padStart(6)} (last ceremony frame)`,
+          );
+        }
+        const zoomOnly = prevCamX === null ? camX : (prevCamX * prevEffX) / ex;
+        const zoomTerm = prevCamX === null ? 0 : zoomOnly - prevCamX;
+        const panTerm = prevCamX === null ? 0 : camX - zoomOnly;
+        const dCam = prevCamX === null ? 0 : camX - prevCamX;
+        // The zoom-about-the-anchor correction fires only when `_focusAnchorRacer` is non-null.
+        const anchorIdx = cd._anchorRacerIndex;
+        console.log(
+          `${String(Math.round(ms)).padStart(5)} ${camX.toFixed(0).padStart(7)} ` +
+            `${(a ? a.x.toFixed(0) : "—").padStart(7)} ${(a ? (camX - a.x).toFixed(0) : "—").padStart(8)}  ` +
+            `${dCam.toFixed(1).padStart(8)} ${zoomTerm.toFixed(1).padStart(9)} ${panTerm.toFixed(1).padStart(8)}  ` +
+            `${cd.zoom.toFixed(4).padStart(7)} ${(prevZoom === null ? 0 : cd.zoom - prevZoom).toFixed(4).padStart(8)} ` +
+            `${String(anchorIdx ?? "null").padStart(7)} ${(anchorIdx == null ? "SKIP" : "on").padStart(6)} ${cd._framingProbe?.binding ?? "?"}`,
+        );
+        prevCamX = camX;
+        prevEffX = ex;
+        prevZoom = cd.zoom;
+        return;
+      }
       console.log(
         `${String(Math.round(ms)).padStart(5)} ${path.padEnd(24)} ${resid.toFixed(1).padStart(6)}  ` +
           `${`(${cx.toFixed(0)},${cy.toFixed(0)})`.padStart(15)} ` +
@@ -152,7 +203,13 @@ if (ANCHORS) {
           `${(panPct * 100).toFixed(0).padStart(4)}% ${cd._transitionStartOffsetX.toFixed(0).padStart(7)} ${cd.zoom.toFixed(3).padStart(6)} ${cd._camT === null ? "null" : cd._camT.toFixed(4)}`,
       );
     },
-    { slowmo: true },
+    {
+      slowmo: true,
+      onCountdownFrame: ({ cd }) => {
+        const ex = cd._proj.effX(cd.zoom);
+        lastCeremony = { camX: (1280 / 2 - cd.offsetX) / ex, zoom: cd.zoom, ex };
+      },
+    },
   );
   process.exit(0);
 }
