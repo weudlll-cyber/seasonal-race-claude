@@ -38,6 +38,17 @@ is dated and recorded HERE, where a reader on their way to the report will pass 
   [GATE-LINES-1](../night/GATE-LINES-1.md); the fix and the once-per-run control that makes the
   silence impossible to repeat: [GATE-TRUTH-1](../night/GATE-TRUTH-1.md).
 
+- [OVERVIEW-AIM-1.md](OVERVIEW-AIM-1.md) — **what the camera aims at between the gun and the
+  hand-over** (2026-08-21). **READING ONLY, and the planner's reading is REFUTED**: it is not the
+  track's centre — for the first **3000 ms** the anchor is **the field's CENTROID**, and at exactly
+  `START_PHASE_DURATION` it switches to **the leader alone**. `worldW/2` was a coincidence of the
+  oval's shape (the target's y is ~594 world px from the world's middle). **The step is at 3 s, not
+  at the gun** — the camera moves 0.1 world px at the gun, and `lag` spikes 5.4× (dirt-oval) and
+  3.5× (river-run) in the frame the subject changes, after which the field walks out of the middle
+  of the picture. **The one mechanism built to smooth an anchor change is inert there** (`_camT` is
+  null until the first committed transition at 4983 ms), and **`leaderForwardFrac` never fires in
+  the window either** (`bias 0.0` on every frame). No proposals, by instruction.
+
 - [NIGHT-2026-08-21-CLOSING.md](NIGHT-2026-08-21-CLOSING.md) — **closing note, night of
   2026-08-21**. **Four of four pieces done**, plus the B′ tidy-up. Opens with what the owner must do
   in the morning: look at the start on the served `bf1912eb` build (**the switch is OFF by default —
