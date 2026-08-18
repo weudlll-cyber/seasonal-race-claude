@@ -126,6 +126,28 @@ spot this ship exposed: a visible change that no fingerprint can see.
   after the source clean-up.
 - `v-ship-coord-system` (`f78869bc`, 2026-08-14) — the merge itself.
 
+### START-LEADER-VISIBLE — B′, archived rather than merged (2026-08-21)
+
+**The owner judged it on a production build on 2026-08-20 and REJECTED it.** The branch was kept
+overnight only so he could look; once he had, it was a bad archive by the rule above — mutable, and
+it says "work in progress" to every reader who lists it. **The evidence moved into the tag FIRST and
+the branch was deleted after.** Its report and its INDEX entry live in this tag’s tree and nowhere
+else on master; the measurements are the record, and [START-SHAPE-1](../reports/evolution/START-SHAPE-1.md)
+on master carries the picture they were measured against.
+
+- `archive/start-leader-visible-1` (`5d3cbf0`, 2026-08-21) — the `leaderVisible` zoom ceiling: while
+  the ceremony hold is live **and** the leader is already outside the frame being drawn, the shot may
+  not be tighter than the factor that brings him back to the border. Widening side of the same
+  `Math.min` as every other ceiling, `Infinity` everywhere else, no new key. **It repaired dirt-oval
+  (89 → 9 out-frames) and searound (61 → 13), and fired zero times on all five OPEN tracks — but
+  city-circuit ran away, 46 → 124 out-frames and the leader’s worst x from −93 px to −984 px.** The
+  mechanism is positive feedback and is the reusable finding: **widening re-resolves the pan**,
+  because `resolveCamera` fits the pan target inside `innerFramePct` AT THE ZOOM and a wider frame is
+  clamped harder against the world edge. On city-circuit the camera is pushed away from the leader
+  faster than the widening brings him back. **No value of anything fixes that sign** — a rule of this
+  family must be expressed against something the pan cannot move, or applied where the pan is
+  resolved rather than before it. Tip `21b77415`; the build he judged was `ac885415`.
+
 ### BRANCH-CLEANUP — two branches archived so the record survives the branch (2026-08-14)
 
 **A branch is a poor archive: it is mutable, it can be deleted by anyone, and it says "work in
