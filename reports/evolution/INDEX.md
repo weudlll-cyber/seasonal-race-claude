@@ -51,6 +51,17 @@ is dated and recorded HERE, where a reader on their way to the report will pass 
   [GATE-LINES-1](../night/GATE-LINES-1.md); the fix and the once-per-run control that makes the
   silence impossible to repeat: [GATE-TRUTH-1](../night/GATE-TRUTH-1.md).
 
+- [SHIP-START-ONE-WINDOW.md](SHIP-START-ONE-WINDOW.md) — **the start is one window, one rule, and it
+  is on master** (2026-08-21). **The owner judged it on a production build on 2026-08-21 and ACCEPTED
+  it.** Carries [ZOOM-PIVOT-START-1](ZOOM-PIVOT-START-1.md) too. **CAMERA `f64c2ae531f14253` and
+  RENDER `a8c59ef5002716f1` MINTED; WORLD and WORLD-OFF measured and unmoved** — run rather than
+  argued, because this ship retires a key inside their closure. Contains the **leftover search**, six
+  greps over the whole tracked tree with every hit classified as removed or kept-with-reason, and the
+  dead-path check after the centroid went (**nothing was dead**). `docs/CAMERA_DIRECTOR.md` gains
+  §3a-start and the old description is deleted rather than layered under it; **L213 gains an
+  extension** (the same suspicion is owed when an instrument AGREES) and **Lesson 217, the Follower
+  Law**, is new. Ends with the owner’s **open list of three**, with what each would cost.
+
 - [START-ONE-WINDOW-1.md](START-ONE-WINDOW-1.md) — **one clock, one rule, ten seconds** (2026-08-21).
   The owner’s design: three stacked clocks in the start become **one key, `startWindowMs` = 10000 —
   today’s sum written once**. Inside it the shot **opens where it stands and does not pan** (the
