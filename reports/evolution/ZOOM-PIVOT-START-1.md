@@ -3,7 +3,7 @@
 **Branch:** `fix/zoom-pivot-start-1`, off master `fe766a26`. **NOT MERGED, NOT MINTED** — this changes
 the picture and the owner judges it first.
 
-**Served on 4173. Build pill: `<SHA>`, no `+dirty`.** Look at **dirt-oval** first — the difference is
+**Served on 4173. Build pill: `f67e7833 · fix/zoom-pivot-start-1`, no `+dirty`.** Look at **dirt-oval** first — the difference is
 largest there.
 
 **His requirement, recorded and NOT acted on:** he wants the camera to **stand still at the start and
