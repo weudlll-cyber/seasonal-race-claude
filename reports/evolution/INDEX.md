@@ -38,6 +38,15 @@ is dated and recorded HERE, where a reader on their way to the report will pass 
   [GATE-LINES-1](../night/GATE-LINES-1.md); the fix and the once-per-run control that makes the
   silence impossible to repeat: [GATE-TRUTH-1](../night/GATE-TRUTH-1.md).
 
+- [NIGHT-2026-08-21-CLOSING.md](NIGHT-2026-08-21-CLOSING.md) — **closing note, night of
+  2026-08-21**. **Four of four pieces done**, plus the B′ tidy-up. Opens with what the owner must do
+  in the morning: look at the start on the served `bf1912eb` build (**the switch is OFF by default —
+  it is a Dev Screen tick box**), and answer three questions. **Waiting for his eye:**
+  `feat/start-handover-mark-1` @ `bf1912eb`, unmerged, **two of four acceptance criteria met**, and
+  its branch is three merges behind master so its INDEX line will conflict by one line. Records that
+  the same widening-re-resolves-the-pan trap was walked into from the opposite direction one week
+  after B′ died of it.
+
 - [SETUP-STATE-PIN-1.md](SETUP-STATE-PIN-1.md) — **what happens when the setup marker and the users
   store disagree** (2026-08-21). **NO BEHAVIOUR CHANGED; the diff is one test file.** `GET
   /setup-needed` reads marker-absent AND zero-users; `POST /setup` reads the marker alone, as its
