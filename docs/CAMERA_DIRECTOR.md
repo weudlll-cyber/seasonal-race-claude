@@ -608,7 +608,7 @@ a verbatim transcript of one run on one commit, which is a historical record, no
 
 ### The tracking lag, as measured today — and it had drifted
 
-<!-- MEASURED: tracking-lag (median/p95 pp per state) @ PENDING 2026-08-21 depends=client/src/modules/camera/ -->
+<!-- MEASURED: tracking-lag (median/p95 pp per state) @ e0150e86 2026-08-21 depends=client/src/modules/camera/ -->
 
 **RE-MEASURED IN FULL FOR START-ONE-WINDOW-1, AND THE FRAME COUNTS MOVED — which is the point.**
 Every camera block above this one changed FRAMING and left the state sequence alone; this one
