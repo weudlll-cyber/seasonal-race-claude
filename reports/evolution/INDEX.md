@@ -38,6 +38,17 @@ is dated and recorded HERE, where a reader on their way to the report will pass 
   [GATE-LINES-1](../night/GATE-LINES-1.md); the fix and the once-per-run control that makes the
   silence impossible to repeat: [GATE-TRUTH-1](../night/GATE-TRUTH-1.md).
 
+- [SETUP-STATE-PIN-1.md](SETUP-STATE-PIN-1.md) — **what happens when the setup marker and the users
+  store disagree** (2026-08-21). **NO BEHAVIOUR CHANGED; the diff is one test file.** `GET
+  /setup-needed` reads marker-absent AND zero-users; `POST /setup` reads the marker alone, as its
+  first act. They agree on the ANSWER in both disagreement states and part company on WHICH check
+  produces it: **marker present + zero users is a LOCK-OUT** (a wrong token gets 409 rather than
+  403, because the marker is read first — there is nobody to log in as and no API route to make
+  one), while **marker absent + users present** refuses correctly from the paranoid post-gate check,
+  **creating and then unlinking the marker on every attempt**. Ten tests including a control; all
+  ten passed on the first run. **Two questions for the owner, in two sentences, at the top of the
+  report.** **Merged.**
+
 - [SETUP-TOKEN-LOG-1.md](SETUP-TOKEN-LOG-1.md) — **the same 403, and now the log says which one it
   was** (2026-08-21). `POST /api/auth/setup` answered `403 setup not available` both when no
   bootstrap token is configured and when one does not match, and only the first wrote a log line —
