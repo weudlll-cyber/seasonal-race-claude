@@ -17,8 +17,18 @@
 // Usage:
 //   node scripts/diag/start-frame-capture.mjs
 //   node scripts/diag/start-frame-capture.mjs --track=luger-hill --seed=9 --at=500,1000,2000
+//
+// START-CONTRADICTION-1 added --anchors: the per-frame table the owner's CAM DIAG cannot show —
+// the field centroid, the pan target the director RESOLVED, the delivered camera centre, the
+// leader, and WHICH CODE PATH supplied the anchor. The path is DERIVED and shown with its residual
+// so the naming is checkable rather than asserted: `_camT` decides the entry-phase branch, and the
+// two candidate anchors are compared against what the framing probe actually recorded.
+//
+//   node scripts/diag/start-frame-capture.mjs --anchors --track=dirt-oval --seed=9 --ms=1500
+//   node scripts/diag/start-frame-capture.mjs --anchors --config=path/to/cameraConfig.json
 // ============================================================
 
+import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { pathToFileURL } from "node:url";
 import {
@@ -41,9 +51,20 @@ const SEED = Number(argOf("seed") ?? 9);
 const RACERS = Number(argOf("racers") ?? 20);
 const AT = (argOf("at") ?? "500,1000,1500,2000,3000,5000,8000").split(",").map(Number);
 const VERBOSE = process.argv.includes("--verbose");
+const ANCHORS = process.argv.includes("--anchors");
+const ANCHOR_MS = Number(argOf("ms") ?? 1500);
+const EVERY_MS = Number(argOf("every") ?? 100);
+// THE CONFIG SOURCE, made explicit because it is the first thing START-CONTRADICTION-1 had to
+// establish. Absent, this harness builds from DEFAULT_CAMERA_CONFIG — NOT from a stored browser
+// config. A JSON file here is merged OVER the defaults, exactly as the browser loader does.
+const CONFIG_PATH = argOf("config") ?? null;
 const fmt = (v) => (v === undefined ? "?" : Number.isFinite(v) ? v.toFixed(3) : "inf");
 const CW = 1280;
 const CH = 720;
+
+const CONFIG = CONFIG_PATH
+  ? { ...DEFAULT_CAMERA_CONFIG, ...JSON.parse(readFileSync(CONFIG_PATH, "utf8")) }
+  : DEFAULT_CAMERA_CONFIG;
 
 const geo = loadTracks({ only: TRACK })[0];
 if (!geo) {
@@ -58,12 +79,84 @@ const identity = resolveIdentity({
   roster: resolveNameSet(DEFAULT_NAME_SET),
   note: "RUNIN-START-1 start-frame capture",
 });
-const race = buildRace(geo, identity, DEFAULT_CAMERA_CONFIG);
+const race = buildRace(geo, identity, CONFIG);
 
 console.log(
   `${TRACK}, seed ${SEED}, ${RACERS} racers — the field on screen shortly after the start\n` +
     `canvas ${CW}x${CH}; "onscreen" counts racers whose centre is inside it\n`,
 );
+// ── START-CONTRADICTION-1: the anchor table ────────────────────────────────────────────────────
+if (ANCHORS) {
+  console.log(
+    `CONFIG SOURCE: ${CONFIG_PATH ?? "DEFAULT_CAMERA_CONFIG (no stored config — this harness has no browser storage)"}
+` +
+      `  start-window keys as RESOLVED: postStartHoldMs=${CONFIG.postStartHoldMs} ` +
+      `OVERVIEW.minStateHold=${CONFIG.cameraStateProfiles?.OVERVIEW?.minStateHold} ` +
+      `leaderForwardFrac=${CONFIG.leaderForwardFrac} ` +
+      `startHandoverOnLeaderMark=${CONFIG.startHandoverOnLeaderMark}
+` +
+      `  START_PHASE_DURATION is a hard constant in CameraDirector.js and no config key can move it.
+`,
+  );
+  console.log(
+    `${"ms".padStart(5)} ${"anchor path".padEnd(24)} ${"resid".padStart(6)}  ` +
+      `${"field centroid".padStart(15)} ${"pan target".padStart(15)} ${"camera centre".padStart(15)} ` +
+      `${"leader".padStart(15)}  ${"cam-tgt".padStart(9)} ${"lag(px)".padStart(9)} ${"pan%".padStart(5)} ${"panRef".padStart(7)} ${"zoom".padStart(6)} camT`,
+  );
+  let nextAt = 0;
+  runRace(
+    race,
+    identity,
+    CONFIG,
+    ({ cd, st, ts, raceStart }) => {
+      const ms = ts - raceStart;
+      if (ms > ANCHOR_MS) return false;
+      if (ms < nextAt) return;
+      nextAt += EVERY_MS;
+
+      // The field's centroid, computed here exactly as getPanTarget('OVERVIEW', …) computes it.
+      const cx = st.racers.reduce((a, r) => a + r.x, 0) / st.racers.length;
+      const cy = st.racers.reduce((a, r) => a + r.y, 0) / st.racers.length;
+      const leader = st.racers.reduce((b, r) => (r.t > b.t ? r : b), st.racers[0]);
+
+      // What the director RESOLVED, read off its own probe — not reconstructed.
+      const a = cd._framingProbe?.anchorPoint ?? null;
+      const dTo = (p) => (a && p ? Math.hypot(a.x - p.x, a.y - p.y) : NaN);
+      // The two candidate paths, DERIVED and then CHECKED against the probe by residual.
+      const dCentroid = dTo({ x: cx, y: cy });
+      const onLine = cd._shape ? cd._shape.getPosition(((leader.t % 1) + 1) % 1, 0) : null;
+      const dLeaderLine = dTo(onLine);
+      let path;
+      if (cd._camT !== null) path = "entry T-space (camT)";
+      else if (ms < 3000) path = "start-phase centroid";
+      else path = "subject: leader on line";
+      const resid = path === "start-phase centroid" ? dCentroid : dLeaderLine;
+
+      // The camera centre in WORLD units, the same arithmetic the CAM DIAG overlay uses.
+      const ex = cd._proj.effX(cd.zoom);
+      const ey = cd._proj.effY(cd.zoom);
+      const camX = (1280 / 2 - cd.offsetX) / ex;
+      const camY = (720 / 2 - cd.offsetY) / ey;
+      const lagX = cd.targetOffsetX - cd.offsetX;
+      const lagY = cd.targetOffsetY - cd.offsetY;
+      const panPct = cd.panProgress;
+
+      console.log(
+        `${String(Math.round(ms)).padStart(5)} ${path.padEnd(24)} ${resid.toFixed(1).padStart(6)}  ` +
+          `${`(${cx.toFixed(0)},${cy.toFixed(0)})`.padStart(15)} ` +
+          `${(a ? `(${a.x.toFixed(0)},${a.y.toFixed(0)})` : "—").padStart(15)} ` +
+          `${`(${camX.toFixed(0)},${camY.toFixed(0)})`.padStart(15)} ` +
+          `${`(${leader.x.toFixed(0)},${leader.y.toFixed(0)})`.padStart(15)}  ` +
+          `${(a ? (camX - a.x).toFixed(0) : "—").padStart(9)} ` +
+          `${`${lagX.toFixed(0)},${lagY.toFixed(0)}`.padStart(9)} ` +
+          `${(panPct * 100).toFixed(0).padStart(4)}% ${cd._transitionStartOffsetX.toFixed(0).padStart(7)} ${cd.zoom.toFixed(3).padStart(6)} ${cd._camT === null ? "null" : cd._camT.toFixed(4)}`,
+      );
+    },
+    { slowmo: true },
+  );
+  process.exit(0);
+}
+
 console.log(
   `${"at ms".padStart(6)}  ${"hud".padEnd(13)} ${"zoom".padStart(7)} ${"offX".padStart(8)} ` +
     `${"field x".padStart(15)}  ${"leader x".padStart(9)} ${"on".padStart(5)}  ${"binding".padEnd(20)} ${"ceilings.line"}`,
@@ -73,7 +166,7 @@ let nextIdx = 0;
 runRace(
   race,
   identity,
-  DEFAULT_CAMERA_CONFIG,
+  CONFIG,
   ({ cd, st, ts, raceStart }) => {
     if (nextIdx >= AT.length) return false; // done — stop the run early
     const ms = ts - raceStart;

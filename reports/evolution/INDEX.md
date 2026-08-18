@@ -6,6 +6,19 @@ and [FAIRNESS.md](../../docs/FAIRNESS.md). Shipped world: **`dc4647be0f55ebdb`**
 
 ## CORRECTIONS — findings that invalidate a number in a report below
 
+- **2026-08-21 — [OVERVIEW-AIM-1.md](OVERVIEW-AIM-1.md)'s ANCHOR findings stand; two of its
+  statements about the CAMERA are WITHDRAWN.** Corrected in
+  [START-CONTRADICTION-1](START-CONTRADICTION-1.md) rather than in the report, which is append-only.
+  (1) **"the camera moves 0.1 world px at the gun"** is true of the FIRST FRAME only and was measured
+  on seed 5601 with `gun-window-truth`, which reports ALONG-track travel since the last ceremony
+  frame — not stillness. **The camera centre travels 187 world px within 400 ms**, which that report
+  never measured and whose absence left the impression that nothing happens at the gun. (2) **"the
+  step is at 3.0 s"** is downgraded from *the* step to *a* step: there are two, and the owner's
+  screenshots are of the earlier one. **Everything that report says about the ANCHOR survives and is
+  now confirmed at residual 0.0 world px on the owner's own seed under two configurations** — the
+  field's centroid until 3000 ms, the leader after it, `_camT` null throughout, `leaderForwardFrac`
+  inert, and the world-centre reading still refuted.
+
 - **2026-08-12 (evening) — [RUNIN-STATE-1.md](RUNIN-STATE-1.md)'s MECHANISM is superseded; its
   MEASUREMENTS and its trace stand.** That report shipped the run-in as a camera STATE and recorded
   the limit itself: the state owned 14.9% / 18.5% of the endgame window. [RUNIN-OWNS-1.md](RUNIN-OWNS-1.md)
@@ -38,8 +51,22 @@ is dated and recorded HERE, where a reader on their way to the report will pass 
   [GATE-LINES-1](../night/GATE-LINES-1.md); the fix and the once-per-run control that makes the
   silence impossible to repeat: [GATE-TRUTH-1](../night/GATE-TRUTH-1.md).
 
+- [START-CONTRADICTION-1.md](START-CONTRADICTION-1.md) — **the owner's screenshots vs
+  OVERVIEW-AIM-1** (2026-08-21). **NEITHER ACCOUNT IS WRONG** — one describes the ANCHOR, the other
+  the DELIVERED PICTURE, and in the photographed window they are up to **138 world px apart**.
+  **`pan 100%` is a mislabel and is why they looked like one statement:** `panProgress` measures
+  travel from the last STATE TRANSITION, and `_transitionStartOffset` is still its constructor `0`
+  because the start window has no state change — so it reads 100% while the real gap is 402 px.
+  The config is NOT the divergence: the harness runs `DEFAULT_CAMERA_CONFIG`, and a config with the
+  thirteen cosmetic keys he named gives a byte-identical table. His CAM DIAG reproduces inside a
+  two-frame window. **Two conclusions WITHDRAWN**: "the camera moves 0.1 world px at the gun" (the
+  centre travels **187 world px within 400 ms**) and "the step is at 3.0 s" (there are two, and his
+  screenshots are of the earlier one). The anchor findings survive, confirmed at residual 0.0.
+
 - [OVERVIEW-AIM-1.md](OVERVIEW-AIM-1.md) — **what the camera aims at between the gun and the
-  hand-over** (2026-08-21). **READING ONLY, and the planner's reading is REFUTED**: it is not the
+  hand-over** (2026-08-21). **TWO OF ITS CONCLUSIONS ARE WITHDRAWN by
+  [START-CONTRADICTION-1](START-CONTRADICTION-1.md) — see the CORRECTIONS block at the top of this
+  file.** **READING ONLY, and the planner's reading is REFUTED**: it is not the
   track's centre — for the first **3000 ms** the anchor is **the field's CENTROID**, and at exactly
   `START_PHASE_DURATION` it switches to **the leader alone**. `worldW/2` was a coincidence of the
   oval's shape (the target's y is ~594 world px from the world's middle). **The step is at 3 s, not
