@@ -3909,6 +3909,17 @@ next ten pointing the instrument at a case whose answer is known independently �
 constructing a story that reconciles them. A story that reconciles a derivation with a broken
 instrument is the most expensive artefact this project has produced more than once.
 
+**EXTENSION (2026-08-21, START-CONTRADICTION-1) — the same suspicion is owed when the instrument
+AGREES.** A contradiction at least starts an inquiry. A mislabelled readout that CONFIRMS what you
+already believe ends one, silently, and nothing points at it afterwards. The camera HUD's `pan`
+showed `100%` while the camera was 402 screen px from its target: `panProgress` measures travel from
+the last STATE TRANSITION, and the start window contains no state change, so its reference was still
+the constructor's zero and the ratio was two large numbers over each other. It read as "arrived". Two
+readers — the owner and the assistant — took it as arrived, and three separate explanations of the
+start were built on top of it before anyone opened the getter. **A readout's NAME is a claim about
+what it measures, and it is the one part of an instrument that is never tested.** When a number
+settles a question cheaply, read its definition before you spend anything on the answer.
+
 ## Lesson 214 — The Summary Law: The PROSE Of A Report Is A Claim, And It Is The Part That Travels
 
 **What happened.** `SEPARATION-TO-TEST-1` scanned for exports used only by their own test file and
@@ -3978,3 +3989,33 @@ to accept, not only the case that prompted the change. If a variant is wanted th
 construction, shrink the NUMERATOR alone and keep the denominator fixed; that form was built and
 measured here too, and it is the one whose direction can be argued rather than tested. Evidence:
 reports/evolution/SEPARATION-WINDOW-1.md.
+
+## Lesson 217 — The Follower Law: A First-Order Follower Cannot Overshoot, So A Camera Ahead Of Its Aim Is Being Pushed By Something Else
+
+**What happened.** The camera left the grid at the gun and ran up the track ahead of the field, and
+four blocks in a row explained it: the entry time constant, the ceremony hold, the anchor changing at
+three seconds, the world-edge clamp. Each was plausible, each was refuted by the owner's own frames.
+The delivered centre was measured **138 world px AHEAD of the point the director had resolved as its
+target**, while that target was moving forward. The pan is `offset += (target − offset) × lf` with
+`lf ∈ (0,1)`: it approaches from behind and mathematically cannot pass. **The overshoot was proof
+that something outside the follower was writing the position** — and it was: the camera zooms about
+the WORLD ORIGIN, so a 15% change in zoom moved the frame's centre by 15% of its 1496 px distance
+from that origin, about 225 world px per second of opening, while `CAMERA-SIDEJUMP-1`'s correction —
+which exists to cancel exactly this — was skipped because `_focusAnchorRacer` returns null for the
+group shots.
+
+**Insight / the law.** **A first-order follower is a one-way mechanism: given a target, it can lag,
+it can be slow, it can never arrive — but it cannot get ahead.** So "the thing is ahead of its
+target" is not a symptom to be explained by tuning the follower; it is a PROOF that a second writer
+exists, and the only useful question is which one. The corollary is the diagnostic: decompose the
+observed motion into the follower's contribution and everything else, and the term with the wrong
+sign names itself. Here `zoomPivot` read +79 world px per frame while `panTerm` read −5.
+
+**Consequence / enforcement.** When a smoothed quantity is observed beyond its target, do not adjust
+the smoothing, the duration or the target — none of them can produce the sign. Enumerate every write
+to the quantity (there were eight in `CameraDirector.js`, and finding them took one grep) and
+decompose per frame. And note the general shape: **a correction that is CONDITIONAL on an anchor is
+absent wherever the anchor is null**, which is precisely where a group shot lives — the source had
+even written that down and scoped the repair away from it. Evidence:
+reports/evolution/START-OVERSHOOT-1.md (the term and its line),
+reports/evolution/ZOOM-PIVOT-START-1.md (the repair and its ten-track measurement).

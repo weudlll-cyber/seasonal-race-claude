@@ -76,7 +76,7 @@ function director() {
  * THREE THINGS MATTER HERE and each was learned by getting it wrong. (1) The camera must be ON its
  * subject before the zoom is moved, or the measurement records the arrival instead of the pivot —
  * a director built at offset 0 starts thousands of px away. (2) `raceElapsed` is held inside the
- * start phase so OVERVIEW stays forced; without it the chain moves to LEADER_ZOOM, which HAS a
+ * start window so OVERVIEW stays forced; without it the chain moves to LEADER_ZOOM, which HAS a
  * focus racer and so tests the branch that already worked. (3) `ts` is kept under OVERVIEW's
  * 5000 ms hold gate so no transition fires and `_camT` stays null — which is what the real start
  * window looks like, and it matters because a non-null `_camT` takes a different branch that

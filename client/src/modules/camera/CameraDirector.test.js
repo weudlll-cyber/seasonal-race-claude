@@ -416,7 +416,7 @@ describe('CameraDirector — §5.3 attention hierarchy', () => {
     expect(cd.state).toBe(CAM_STATE.LEADER_ZOOM);
   });
 
-  it('Priority 1 beats Priority 2 (finish overrides start phase)', () => {
+  it('Priority 1 beats Priority 2 (finish overrides the start window)', () => {
     const cd = new CameraDirector();
     cd.state = CAM_STATE.BATTLE_ZOOM;
     cd.stateEnteredAt = 0;
@@ -425,7 +425,7 @@ describe('CameraDirector — §5.3 attention hierarchy', () => {
     expect(cd.state).toBe(CAM_STATE.LEADER_ZOOM);
   });
 
-  it('Priority 2: raceElapsed < 3000 → OVERVIEW', () => {
+  it('Priority 2: inside the start window, before the hand-over → OVERVIEW', () => {
     const cd = new CameraDirector();
     cd.state = CAM_STATE.BATTLE_ZOOM;
     cd.stateEnteredAt = 0;
@@ -714,7 +714,7 @@ describe('CameraDirector — §5.4 trigger extensions', () => {
     expect(cd.state).not.toBe(CAM_STATE.OVERVIEW); // endgame did not force OVERVIEW
   });
 
-  it('Start-Pulk (raceElapsed < 3000): OVERVIEW state is set', () => {
+  it('Start-Pulk (inside the start window): OVERVIEW state is set', () => {
     const cd = new CameraDirector();
     cd.state = CAM_STATE.BATTLE_ZOOM;
     cd.stateEnteredAt = 0;
@@ -5053,7 +5053,7 @@ describe('CameraDirector — same-state repeat: immediately interruptible', () =
     cd.update(racers, 10001, rs(), 1280, 720); // non-repeat → LEADER_ZOOM
     cd.update(racers, 20002, rs(), 1280, 720); // repeat → LEADER_ZOOM, _activeStateMinHoldMs=0
     expect(cd._activeStateMinHoldMs).toBe(0);
-    cd.update(racers, 20003, rs(500 /* raceElapsed < 3000 = start phase */), 1280, 720);
+    cd.update(racers, 20003, rs(500 /* inside the start window */), 1280, 720);
     expect(cd.state).toBe(CAM_STATE.OVERVIEW);
   });
 
@@ -5575,7 +5575,7 @@ describe('CameraDirector — LEAD_CHANGE pan snap', () => {
 
   it('_camT is snapped to new leader T at LEAD_CHANGE entry (endgame path)', () => {
     // leaderProgress > endgameThreshold (0.9) takes the endgame path, which bypasses the
-    // post-start hold and the random candidate pool. CAMERA-HYGIENE-2: it does NOT bypass the
+    // start window and the random candidate pool. CAMERA-HYGIENE-2: it does NOT bypass the
     // weight — CAMERA-WEIGHTS-1 deliberately removed that exception, because a leadChangeWeight
     // of 0 was still producing LEAD_CHANGE near the line. Determinism comes from ALWAYS_TAKE.
     const cd = makeCD();
@@ -7119,7 +7119,7 @@ describe('the hold keeps the ceremony framing (CEREMONY-HOLD-TARGET-1)', () => {
 
   // WHAT BREAKS IF DELETED: nothing catches a hold that is applied for one frame and then let go.
   // WHAT GOES UNNOTICED: the same glide, starting a frame later.
-  it('holds it for the whole start phase, through the OVERVIEW re-entry the start phase forces', () => {
+  it('holds it for the whole start window, through the OVERVIEW re-entry the window forces', () => {
     const cd = director();
     const racers = grid(20);
     const targets = [];

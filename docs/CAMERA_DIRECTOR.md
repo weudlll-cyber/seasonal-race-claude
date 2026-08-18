@@ -99,13 +99,11 @@ Evaluated in strict order on every `_transition()`:
    finish from the moment its contenders are home. One dial for both; 0 means no held frame at all.
    Then → FINISH_OVERVIEW, which is absolute and admits no further transitions.
 2. **Pre-line photo-finish entry**, a once-only latch evaluated in `update()` and consumed here.
-3. **Start phase** (`raceElapsed < 3000 ms`) → OVERVIEW.
-4. **Post-start hold** (`+ postStartHoldMs`) → LEADER_ZOOM, so BATTLE cannot fire on the natural
-   clustering at the gun. The `+` is the whole point: it is a DURATION added to the 3 s overview
-   above, not a time from the gun, so the hold ends at 3000 ms plus the value. This is the only
-   place that key is read — the race planner read it too, as an absolute time, until
-   POST-START-HOLD-UNIFY removed that reading.
-5. **Endgame** (`leaderProgress > endgameThreshold`) → LEADER_ZOOM, with LEAD_CHANGE allowed
+3. **The start window** (`raceElapsed < startWindowMs`) → the start's own shot, and nothing else.
+   BATTLE, COMEBACK and LEAD_CHANGE cannot fire for its whole length, which is the promise the two
+   clocks it replaced existed to keep. **Which** shot is the start's rule and is §3a-start below:
+   OVERVIEW while the shot is opening, LEADER_ZOOM from the hand-over on.
+4. **Endgame** (`leaderProgress > endgameThreshold`) → LEADER_ZOOM, with LEAD_CHANGE allowed
    through — a lead swap near the line is the most dramatic moment there is.
 
    **THIS LOCK DOES NOT ACTUALLY OWN THE ENDGAME**, and it is worth knowing because it looks as
@@ -117,7 +115,7 @@ Evaluated in strict order on every `_transition()`:
    zoom of whatever state is running instead of trying to be a state**: a state chosen here reaches
    only about a sixth of the endgame, measured.
 
-6. **The weighted pool** — every eligible candidate, one weighted draw.
+5. **The weighted pool** — every eligible candidate, one weighted draw.
 
 ### 2.3 What a weight MEANS, because it is not obvious
 
@@ -310,6 +308,57 @@ The residual trail that the clamp used to hide is the tracking lag. It is measur
 rather than papered over. See §6.
 
 ---
+
+## 3a-start. The start — one window, one rule (START-ONE-WINDOW-1, 2026-08-21)
+
+**The owner judged this on a production build on 2026-08-21 and accepted it.**
+
+**What happens, in the order it happens:**
+
+1. **The formation and its shot.** The ceremony ends with the field framed and the camera at rest on
+   it. Nothing about that changed; §3's framing rule and the ceremony's own beats own it, and the
+   start takes it as given.
+2. **At the gun the shot OPENS and the camera STANDS STILL.** The anchor is a fixed world point — the
+   one the ceremony left at the centre of the picture — so the zoom widens around it and the pan does
+   not move. Measured on dirt-oval: **3 world px of camera travel in the first 200 ms.**
+3. **When the leader reaches his place in frame, the camera follows him** — the ordinary racing shot,
+   the ordinary time constant, and `leaderForwardFrac` placing him, exactly as everywhere else in the
+   race. "His place" is that same `leaderForwardFrac`, read from the framing rule rather than chosen,
+   so the two can never drift apart. It happens **once**.
+4. **The whole of it is ONE window, `startWindowMs`**, and for its full length the start framing owns
+   the picture: **no BATTLE, no COMEBACK, no LEAD_CHANGE.** Measured on all ten tracks: the start
+   framing held it for the whole window, to the last frame, with nothing else on screen. The value
+   lives in `defaults.js` and is not restated here.
+
+### The three clocks that became one, and why the third stayed
+
+| was | now |
+| --- | --- |
+| `START_PHASE_DURATION` — a hard-coded 3 s of forced OVERVIEW, anchored on the field's CENTROID | **gone** |
+| `postStartHoldMs` — forced LEADER, counted ON TOP of that 3 s | **gone** |
+| OVERVIEW's `minStateHold` — blocking every transition inside both | **KEPT, and untouched** |
+| — | **`startWindowMs`, whose shipped value is the sum the first two always produced** |
+
+**WHY `minStateHold` STAYED, and a later reader must not "simplify" it a second time.** It is not a
+start mechanism. It is **general**: six per-state values in `defaults.js`, resolved per state in
+`cameraTimingComputation.js`, and read in **three** places — the transition hold gate for whatever
+state is running, the value stored on each state entry, and the **phased observer's lead-out
+trigger**, which every state uses. Deleting it would change the whole race, not the start.
+
+**So the start window owns the STATE instead of deleting the minimum.** It returns a state on every
+frame of the window, and the one transition it needs — the hand-over — is released through the
+**existing** per-entry override (`_activeStateMinHoldMs = 0`), the same idiom a same-state repeat
+already uses. It self-heals: that transition is not a repeat, so the new state's own minimum is
+restored on the next frame. **Nothing outside the window is affected.**
+
+### What the field centroid was, and why it went
+
+Before this, the first three seconds anchored on the field's CENTROID — "before a leader exists, hold the
+whole field so nobody is cropped at the gun". The centroid moves the instant the race does, so that
+branch **panned**: 187 world px in the first 400 ms on dirt-oval. Four blocks in a row tried to
+explain that motion as smoothing, as a hold, as an anchor change and as the world clamp; it was the
+anchor doing exactly what it was written to do. The fixed point does the same job — nobody is cropped
+— without moving.
 
 ## 3a. The run-in — the endgame's zoom, on top of the framing rule (RUNIN-OWNS-1, 2026-08-12)
 
@@ -608,9 +657,13 @@ a verbatim transcript of one run on one commit, which is a historical record, no
 
 ### The tracking lag, as measured today — and it had drifted
 
-<!-- MEASURED: tracking-lag (median/p95 pp per state) @ e0150e86 2026-08-21 depends=client/src/modules/camera/ -->
+<!-- MEASURED: tracking-lag (median/p95 pp per state) @ PENDING 2026-08-21 depends=client/src/modules/camera/ -->
 
-**RE-MEASURED IN FULL FOR START-ONE-WINDOW-1, AND THE FRAME COUNTS MOVED — which is the point.**
+**RE-MEASURED IN FULL FOR START-ONE-WINDOW-1 — TWICE, and the second run is this one: the block’s
+documentation sweep touched a comment in `CameraDirector.js`, which is inside this stamp’s
+`depends=` directory, so the guard asked again and the answer was measured rather than argued. Every
+figure below is identical to the first run. THE FRAME COUNTS MOVED against the previous ship — which
+is the point.**
 Every camera block above this one changed FRAMING and left the state sequence alone; this one
 replaces the start’s state rule, so which state is running when is a different answer.
 **BATTLE_ZOOM 9701 → 10935, LEAD_CHANGE 7786 → 9378, COMEBACK_ZOOM 644 → 162, LEADER_ZOOM 17630 →
@@ -1062,8 +1115,9 @@ time-constant defaults**, with the reason for each attached to the assertion.
   **`scripts/check-fallback-agreement.mjs` now reports `0 disagree, 0 on the exception list`** for
   the whole repository — see [VERIFY-RULES R14](VERIFY-RULES.md), which owns the rule. The guard is
   still what fails when a new one appears, and the values are still not stated here.
-- **`START_PHASE_DURATION = 3000`** is a constant, not a control, and CAMERA-TAGS-1 measured it about
-  five seconds short of when the field actually spreads.
+- **`START_PHASE_DURATION` is gone** (START-ONE-WINDOW-1, 2026-08-21). It was a constant rather than
+  a control, and CAMERA-TAGS-1 had measured it about five seconds short of when the field actually
+  spreads. The start is one window now, `startWindowMs`, and it IS a control — see §3a-start.
 
 ---
 

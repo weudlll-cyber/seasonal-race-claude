@@ -1595,12 +1595,14 @@ export class CameraDirector {
       this._comebackLockedRacerIndex = data.comebackRacer.index ?? null;
     }
 
-    // CEREMONY-HOLD-TARGET-1 — THE RELEASE, and the only place the hand-over ends. The hold lasts
-    // until the FIRST VIEW CHANGE, so the test is "the state actually changed", NOT "a transition
-    // was committed" and NOT "a state was entered". The start phase forces OVERVIEW, and the
-    // director commits an OVERVIEW→OVERVIEW entry inside it: that is not a view change, and
-    // releasing on it would end the hold seconds before the picture changes — the same shape of
-    // defect as putting the hand-over itself where a race never reaches it.
+    // CEREMONY-HOLD-TARGET-1 — THE BACKSTOP RELEASE. Since START-ONE-WINDOW-1 the hold normally
+    // ends at the HAND-OVER, when the leader reaches his place in frame; this line is what ends it
+    // in a race that never reaches the mark, so the hold can never outlive the start.
+    //
+    // The test is "the state actually changed", NOT "a transition was committed" and NOT "a state
+    // was entered". The start window forces OVERVIEW, and the director commits an OVERVIEW→OVERVIEW
+    // entry inside it: that is not a view change, and releasing on it would end the hold seconds
+    // before the picture changes.
     if (nextState !== prevState) {
       this._ceremonyHoldZoom = null;
     }
