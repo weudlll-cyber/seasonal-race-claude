@@ -76,6 +76,12 @@ if (!geos.length) {
 }
 const geo = geos[0];
 const cameraConfig = structuredClone(DEFAULT_CAMERA_CONFIG);
+// START-HANDOVER-MARK-1: the one override this tool accepts, and only because the question it
+// answers — "does the old defect stay repaired" — has to be asked of BOTH arms of that switch on
+// the identity the old defect was diagnosed on. Absent, the shipped default runs and every number
+// this tool has ever printed is reproduced unchanged.
+const HANDOVER = arg("handover", null);
+if (HANDOVER !== null) cameraConfig.startHandoverOnLeaderMark = HANDOVER === "on";
 const race = buildRace(geo, IDENTITY, cameraConfig);
 const { cd, shape } = race;
 const CW = IDENTITY.canvasW;

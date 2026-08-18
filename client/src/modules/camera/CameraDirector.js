@@ -342,6 +342,12 @@ export class CameraDirector {
     // gets OVERVIEW's ordinary setting rather than a stale hold, and so does every OVERVIEW after
     // the release.
     this._ceremonyHoldZoom = null;
+    // START-HANDOVER-MARK-1: the hand-over happens ONCE per race. `_transition` can commit many
+    // view changes; the mark is crossed once, and re-arming on a later lap would put the camera
+    // back into a hand-over it has already made.
+    this._startHandoverDone = false;
+    /** ms since the gun at which the mark was reached, for the diagnostics. null = never. */
+    this._startHandoverAtMs = null;
     // CEREMONY-HANDOVER-1: the ceremony's promise, carried past the gun. ARMED by the countdown, so
     // a race entered without one (a test, a resumed race) never acquires a guarantee it was never
     // given — and RETIRED, one way, by `_fieldCeiling` when it can no longer be kept.
@@ -581,6 +587,7 @@ export class CameraDirector {
     this._runInShot = t.runInShot;
     this._runInOpenMs = t.runInOpenMs;
     this._contenderZoom = t.contenderZoom;
+    this._startHandoverOnLeaderMark = t.startHandoverOnLeaderMark;
     this._corridorCapArriveMs = t.corridorCapArriveMs;
     this._comebackCooldownMs = t.comebackCooldownMs;
     this._leadChangeCooldownMs = t.leadChangeCooldownMs;
@@ -1113,28 +1120,7 @@ export class CameraDirector {
       const timedOut = elapsedEntryMs >= maxEntryMs;
       if (zoomConverged && xConverged && yConverged && (tConverged || timedOut)) {
         this._diagConvergenceReason = tConverged ? 'threshold' : 'timeout';
-        this._lerpPhase = 'tracking';
-        this._entryStartTs = null;
-        this._transitionTargetT = null; // T-space lerp complete
-        // Start phased observer from current _camT position (already at focusT+leadAhead).
-        // For states without phased observer (OVERVIEW), release _camT so pixel-lerp takes over.
-        const prof = this._phasedByState?.[this.state];
-        const phasedEnabled = prof && (prof.leadInDuration > 0 || prof.leadOutDuration > 0);
-        if (phasedEnabled && this._camT !== null && this._shape) {
-          const _leadAheadOnForState = this._leadAheadEnabledByState?.[this.state] ?? true;
-          if (prof.leadInDuration > 0 && _leadAheadOnForState) {
-            this._observerPhase = 'lead-in';
-            this._leadInStartTs = ts;
-          } else {
-            this._observerPhase = 'follow';
-            this._leadInStartTs = null;
-          }
-        } else {
-          // No phased observer (e.g., OVERVIEW): release _camT, pixel-lerp takes over.
-          this._camT = null;
-          this._observerPhase = 'idle';
-          this._leadInStartTs = null;
-        }
+        this._beginTrackingPhase(ts);
       }
     } else {
       this._entryStartTs = null;
@@ -1180,7 +1166,146 @@ export class CameraDirector {
     const _anchor = this._focusAnchorRacer(racers);
     this._anchorRacerIndex = _anchor?.index ?? null;
     this._anchorRacerLabel = _anchor ? (_anchor.name ?? _anchor.id ?? `#${_anchor.index}`) : null;
+    // START-HANDOVER-MARK-1: LAST, because it reads the picture this frame DELIVERED. Every other
+    // term above decides what to aim at; this one asks where the leader ended up, which is only
+    // knowable after the lerp has run. It changes nothing this frame — the hand-over it makes is
+    // read by the next frame's targets, which is what "once, without a jump" looks like in a loop.
+    this._maybeHandOverAtLeaderMark(racers, ts);
     return { zoom: this.zoom, offsetX: this.offsetX, offsetY: this.offsetY };
+  }
+
+  /**
+   * ENTER THE TRACKING PHASE — the ordinary follow, at the ordinary time constant.
+   *
+   * Extracted from the entry-phase convergence test so the hand-over below reaches tracking by the
+   * SAME route rather than by a second copy of it. A second copy is exactly how the two readings of
+   * `postStartHoldMs` came to differ by 3000 ms, and that one was only a number.
+   *
+   * It moves nothing: `_lerpPhase` selects which lerp FACTOR the next frame uses, so the camera
+   * carries on from where it is at a different rate. There is no position in here to jump.
+   */
+  _beginTrackingPhase(ts) {
+    this._lerpPhase = 'tracking';
+    this._entryStartTs = null;
+    this._transitionTargetT = null; // T-space lerp complete
+    // Start phased observer from current _camT position (already at focusT+leadAhead).
+    // For states without phased observer (OVERVIEW), release _camT so pixel-lerp takes over.
+    const prof = this._phasedByState?.[this.state];
+    const phasedEnabled = prof && (prof.leadInDuration > 0 || prof.leadOutDuration > 0);
+    if (phasedEnabled && this._camT !== null && this._shape) {
+      const _leadAheadOnForState = this._leadAheadEnabledByState?.[this.state] ?? true;
+      if (prof.leadInDuration > 0 && _leadAheadOnForState) {
+        this._observerPhase = 'lead-in';
+        this._leadInStartTs = ts;
+      } else {
+        this._observerPhase = 'follow';
+        this._leadInStartTs = null;
+      }
+    } else {
+      // No phased observer (e.g., OVERVIEW): release _camT, pixel-lerp takes over.
+      this._camT = null;
+      this._observerPhase = 'idle';
+      this._leadInStartTs = null;
+    }
+  }
+
+  /**
+   * WHERE THE LEADER ACTUALLY IS IN THE DELIVERED FRAME, as a fraction along his own heading.
+   *
+   * This is `anchorScreenPoint` read backwards. That function PLACES a subject at `frac` by
+   * displacing it `(frac - 0.5)` of the frame's chord along its screen heading; dividing a delivered
+   * displacement by the same chord gives the fraction back. 0.5 is dead centre, and
+   * `leaderForwardFrac` is where the racing framing asks him to sit.
+   *
+   * It uses the director's OWN projection, heading and chord — not a second geometry — so "where he
+   * is" and "where he is asked to be" cannot come to disagree about what a frame is.
+   *
+   * @returns {number|null} the fraction, or null when the geometry is degenerate or missing
+   */
+  _leaderFrameFrac(leader, canvasW = CANVAS_W, canvasH = CANVAS_H_REF) {
+    if (!leader || !this._shape || leader.t == null) return null;
+    const heading = this._headingAt(leader.t);
+    if (!heading) return null;
+    const hLen = Math.hypot(heading.x, heading.y);
+    if (!(hLen > 0)) return null;
+    // The screen tangent is PER-AXIS, exactly as `_applyLeaderForwardBias` computes it.
+    const sx = (heading.x / hLen) * this._proj.effX(this.zoom);
+    const sy = (heading.y / hLen) * this._proj.effY(this.zoom);
+    const sLen = Math.hypot(sx, sy);
+    if (!(sLen > 0)) return null;
+    const ux = sx / sLen;
+    const uy = sy / sLen;
+    const span = frameExtentAlong(ux, uy, canvasW, canvasH);
+    if (!(span > 0)) return null;
+    const p = this._proj.toScreen(leader, this.zoom, this.offsetX, this.offsetY);
+    const along = (p.x - canvasW / 2) * ux + (p.y - canvasH / 2) * uy;
+    return 0.5 + along / span;
+  }
+
+  /**
+   * THE HAND-OVER, ON A CONDITION RATHER THAN A CLOCK (START-HANDOVER-MARK-1).
+   *
+   * The owner's design, 2026-08-20: keep the ceremony's framing until the leader has reached the
+   * place in frame where he is supposed to sit during the race, and from that moment follow him
+   * exactly as the camera does for the rest of the race.
+   *
+   * ── WHAT IT DOES NOT DO, and each of these is a decision ────────────────────────────────────
+   *
+   * IT INVENTS NO FRACTION. The mark is `leaderForwardFrac`, read from the framing the race itself
+   * uses. If the placement is ever re-tuned, the hand-over follows it without a second edit, and
+   * there is no way for the two to drift apart.
+   *
+   * IT ONLY EVER MAKES THE HAND-OVER EARLIER. It ends a hold; it cannot extend one. If the leader
+   * never reaches the mark, this never fires and the existing release at the first view change
+   * happens exactly as it does today. That is the fallback, and it is the absence of code rather
+   * than a second condition.
+   *
+   * IT DOES NOT GLIDE OR CREEP. There is no blend between the held framing and the followed one —
+   * one frame the hold is live, the next it is not, and the ordinary machinery takes it from there.
+   * Nothing here writes a position, so there is nothing that could jump.
+   *
+   * ── WHAT "HAND OVER" HAD TO MEAN, BECAUSE THE FIRST READING WAS MEASURABLY WRONG ────────────
+   *
+   * The first cut released the hold and left the start phase alone, so OVERVIEW's OWN setting took
+   * the picture for the rest of the start — a 1.5-corridor shot no race ever sits in there today,
+   * because today the hold ends at the same instant the state leaves OVERVIEW. Measured, that is
+   * not a hand-over at all: the camera centre travelled 4815 world px in the first second on
+   * garden-path against 1298 today, and the leader left a picture he has never left. Widening
+   * re-resolves the pan against the world edge — the same coupling B' died of.
+   *
+   * So the hand-over goes where today's hand-over goes: the ORDINARY RACING SHOT. It ends the start
+   * phase's forced OVERVIEW, and the ordinary chain picks LEADER_ZOOM exactly as it does at 4983 ms
+   * now — through the transition grammar, which is this project's own no-jump mechanism. Nothing
+   * here chooses a shot; it only stops holding one.
+   */
+  _maybeHandOverAtLeaderMark(racers, ts) {
+    if (!this._startHandoverOnLeaderMark) return;
+    if (this._startHandoverDone) return;
+    // Only while the ceremony's framing is still being held — outside that there is nothing to hand
+    // over, and a race with no countdown never had a hold to end.
+    if (this._ceremonyHoldZoom === null) return;
+    const mark = this._leaderForwardFrac;
+    if (!Number.isFinite(mark)) return;
+    let leader = null;
+    let leaderT = -Infinity;
+    for (const r of racers ?? []) {
+      if (r?.t != null && r.t > leaderT) {
+        leaderT = r.t;
+        leader = r;
+      }
+    }
+    const frac = this._leaderFrameFrac(leader);
+    if (frac === null || frac < mark) return;
+    this._startHandoverDone = true;
+    this._ceremonyHoldZoom = null;
+    this._startHandoverAtMs = ts;
+    // Let the ordinary chain decide on the NEXT frame rather than at OVERVIEW's 5 s min-hold. This
+    // is the same idiom a same-state repeat uses, and it self-heals: the transition it unblocks is
+    // not a repeat, so `_transition` restores the new state's own hold immediately.
+    this._activeStateMinHoldMs = 0;
+    // The ordinary time constant, in case no transition follows. When one does, the state entry
+    // overwrites this with the grammar's own phase, which is the ordinary route and not a second one.
+    if (this._lerpPhase === 'entry') this._beginTrackingPhase(ts);
   }
 
   /**
@@ -1283,8 +1408,13 @@ export class CameraDirector {
       // FINISH_ACTION.NONE — no finish phase is running; fall through to the normal chain.
     }
 
-    // Priority 2: Start phase — hold OVERVIEW on the full field for 3s
-    if (raceState.raceElapsed < START_PHASE_DURATION) {
+    // Priority 2: Start phase — hold OVERVIEW on the full field for 3s.
+    // START-HANDOVER-MARK-1: unless the hand-over has already happened. The forced OVERVIEW and the
+    // ceremony hold are two halves of one thing — the start being HELD — and ending one while the
+    // other stands leaves the camera in OVERVIEW's own wide setting, which is neither the framing
+    // the ceremony arrived at nor the one the race uses. `_startHandoverDone` is false on every
+    // race with the switch off, so this reads exactly as it did.
+    if (raceState.raceElapsed < START_PHASE_DURATION && !this._startHandoverDone) {
       return {
         nextState: CAM_STATE.OVERVIEW,
         reason: 'start-phase: raceElapsed < 3000ms',

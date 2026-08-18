@@ -347,6 +347,27 @@ export const DEFAULT_CAMERA_CONFIG = {
   // re-derived. The key is deliberately NOT renamed: the camera loader rebuilds the live config key
   // by key from these defaults, so a rename would silently discard the owner's stored value.
   postStartHoldMs: 7000, // ms of forced LEADER after the 3s start phase (no BATTLE before 10s total)
+  // ── START-HANDOVER-MARK-1 — THE HAND-OVER AS A CONDITION, NOT A CLOCK ───────────────────────
+  //
+  // THE OWNER'S DESIGN, 2026-08-20. Keep the ceremony's framing until the leader has reached the
+  // place in frame where he is supposed to sit during the race, and from that moment follow him
+  // exactly as the camera does for the rest of the race.
+  //
+  // TODAY (this key OFF) the hand-over happens on a CLOCK: the ceremony hold ends at the first view
+  // change, which on all ten tracks falls at 4983 ms because OVERVIEW's `minStateHold` is 5000. The
+  // leader can leave the picture long before that and does — measured on three of the five closed
+  // tracks (START-SHAPE-1). Everything built against that defect so far changed the SMOOTHING or
+  // the ZOOM; nobody had made the hand-over depend on where the leader actually IS.
+  //
+  // ON, the hold ends the first frame the leader's position along his own heading reaches
+  // `leaderForwardFrac` — the SAME fraction the racing framing places him at, read rather than
+  // chosen, so this introduces no second opinion about where he belongs. At that instant the camera
+  // also leaves the entry time constant for the ordinary tracking one. It happens ONCE.
+  //
+  // IT CAN ONLY MAKE THE HAND-OVER EARLIER. If the leader never reaches the mark before the first
+  // view change, today's release fires exactly as it does now — so the fallback is not a second
+  // condition, it is the existing behaviour left in place.
+  startHandoverOnLeaderMark: false,
   battleCooldownMs: 8000, // ms after leaving BATTLE before it can re-trigger
   comebackCooldownMs: 10000, // ms after leaving COMEBACK before it can re-trigger
   leadChangeCooldownMs: 5000, // ms after leaving LEAD_CHANGE before it can re-trigger

@@ -404,6 +404,25 @@ function CameraAdvancedSection() {
       {/* ── 1. Start & Post-Start ── */}
       <div className={s.card}>
         <SectionHeading>1 · Start &amp; Post-Start</SectionHeading>
+        <label
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: '0.5rem',
+            marginBottom: '0.6rem',
+          }}
+        >
+          <input
+            type="checkbox"
+            data-testid="start-handover-on-leader-mark"
+            checked={
+              config.startHandoverOnLeaderMark ?? DEFAULT_CAMERA_CONFIG.startHandoverOnLeaderMark
+            }
+            onChange={(e) => set('startHandoverOnLeaderMark', e.target.checked)}
+          />
+          <span style={{ fontWeight: 600 }}>Hand over when the leader reaches his place</span>
+          <InfoTooltip text="Off (default): the ceremony's framing is held until the camera's first view change, which is a clock — on every track it falls just before 5 s, and the leader can leave the picture before it. On: the hold ends the first frame the leader has reached the place in frame he occupies for the rest of the race (the same Leader Forward Fraction the racing shot uses, section 9), and the camera follows him from there at the ordinary tracking rate. It can only end the hold EARLIER — if he never reaches the mark, the existing release fires unchanged." />
+        </label>
         <div className={s.formGrid}>
           <div className={s.formGroup}>
             <label

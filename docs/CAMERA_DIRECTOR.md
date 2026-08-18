@@ -608,7 +608,9 @@ a verbatim transcript of one run on one commit, which is a historical record, no
 
 ### The tracking lag, as measured today — and it had drifted
 
-<!-- MEASURED: tracking-lag (median/p95 pp per state) @ e31ac4cb 2026-08-18 depends=client/src/modules/camera/ -->
+<!-- MEASURED: tracking-lag (median/p95 pp per state) @ START-HANDOVER-MARK-1 2026-08-21 depends=client/src/modules/camera/ -->
+
+**RE-MEASURED IN FULL FOR START-HANDOVER-MARK-1, AND EVERY NUMBER IS WHERE IT WAS.** That block adds a switch to `CameraDirector.js` and `cameraTimingComputation.js`, both inside this stamp's `depends=` directory, so the guard tripped as designed. It was **re-measured rather than re-stamped**, even though the corroboration was already in hand — CAMERA and RENDER were measured on that tree and are byte-identical — because the block adds a method that runs on the **last line of every frame**, and "it returns early when the switch is off" is a reading of the code rather than a measurement of it. Every frame count and every percentile below is unchanged. **The switch's ON arm is deliberately NOT in this table**: it is not the shipped behaviour, and a stamp that mixed two configurations would stop meaning anything.
 
 **RE-STAMPED, NOT RE-MEASURED, FOR FALLBACK-MIRRORS-1 — same corroboration as the entry below.**
 That block deletes four copied defaults from `cameraTimingComputation.js`, which is inside this

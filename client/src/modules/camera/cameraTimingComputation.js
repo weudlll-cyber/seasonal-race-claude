@@ -359,6 +359,10 @@ export function computeTimingFromConfig(config) {
     config?.photoFinishContenderFraming ?? DEFAULT_CAMERA_CONFIG.photoFinishContenderFraming;
   const runInShot = config?.runInShot ?? DEFAULT_CAMERA_CONFIG.runInShot;
   const contenderZoom = config?.contenderZoom ?? DEFAULT_CAMERA_CONFIG.contenderZoom;
+  // START-HANDOVER-MARK-1: the switch, and nothing else — the fraction it compares against is
+  // `leaderForwardFrac`, resolved by framingConfig.js, so this key carries no number of its own.
+  const startHandoverOnLeaderMark =
+    config?.startHandoverOnLeaderMark ?? DEFAULT_CAMERA_CONFIG.startHandoverOnLeaderMark;
   // ZOOM-PACE-5: clamped to a band for the same reason every other duration here is — a corrupt
   // stored config must not be able to make the cap arrive instantly or never.
   const corridorCapArriveMs = Math.max(
@@ -445,6 +449,7 @@ export function computeTimingFromConfig(config) {
     runInShot,
     runInOpenMs,
     contenderZoom,
+    startHandoverOnLeaderMark,
     corridorCapArriveMs,
     comebackCooldownMs,
     leadChangeCooldownMs,
