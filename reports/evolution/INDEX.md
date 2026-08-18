@@ -38,6 +38,22 @@ is dated and recorded HERE, where a reader on their way to the report will pass 
   [GATE-LINES-1](../night/GATE-LINES-1.md); the fix and the once-per-run control that makes the
   silence impossible to repeat: [GATE-TRUTH-1](../night/GATE-TRUTH-1.md).
 
+- [START-HANDOVER-MARK-1.md](START-HANDOVER-MARK-1.md) — **the hand-over as a CONDITION on the
+  leader's place in frame, not as a clock** (2026-08-21). The owner's design of 2026-08-20, built
+  behind `startHandoverOnLeaderMark` whose **default is today's behaviour**. **TWO OF FOUR
+  ACCEPTANCE CRITERIA MET, so it ships OFF and nothing was tuned to make it fit.** MET: the leader
+  is **inside the frame on all ten tracks** (0 out-frames against 46 / 89 / 61 on city-circuit /
+  dirt-oval / searound), and city-circuit's min-on-screen goes 4/20 to 18/20 **at a tighter shot**;
+  the old river-run defect is untouched to the digit on both arms. MISSED: luger-hill's field-centre
+  drift 0.441 → 0.598, and three open tracks move much more camera in the first second — one thing,
+  named: the racing shot arrives up to 4.5 s earlier and it is tighter. **The mark is READ from
+  `leaderForwardFrac`, never chosen**, and the rule can only make the hand-over EARLIER. **The fork
+  is the finding:** ending the hold while leaving the start phase alone hands the picture to
+  OVERVIEW's own wide setting and INTRODUCES the defect on garden-path — the same
+  widening-re-resolves-the-pan coupling B′ died of. **Also answers the infield question: NOT a
+  lateral movement** (7.8 world px across against 823.9 along; the centre never leaves the road).
+  All four fingerprints measured and unmoved. **Unmerged, his eye owed.**
+
 - [NIGHT-2026-08-18-CLOSING.md](NIGHT-2026-08-18-CLOSING.md) — **closing note, night of 2026-08-18**.
   **One of four pieces done**, and the stop was deliberate: Piece 1 (the change-password rate limit)
   is merged, green and swept; Pieces 2, 3 and 4 were **not started**, so nothing is half-changed.
