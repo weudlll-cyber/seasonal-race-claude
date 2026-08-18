@@ -51,6 +51,17 @@ is dated and recorded HERE, where a reader on their way to the report will pass 
   [GATE-LINES-1](../night/GATE-LINES-1.md); the fix and the once-per-run control that makes the
   silence impossible to repeat: [GATE-TRUTH-1](../night/GATE-TRUTH-1.md).
 
+- [E2E-FLAKE-HUNT-1.md](E2E-FLAKE-HUNT-1.md) — **five green e2e runs, one flake reproduced under an
+  artificial load, and the 404 NOT ESTABLISHED** (2026-08-21). **NOTHING WAS CHANGED** — no test
+  edited, weakened, retried or serialised. Five consecutive full runs came back **103/103 every
+  time**, against the 2-per-5 that NIGHT-2026-08-17 measured twice, so there was no dependency to
+  point at and nothing to decouple. `d11:182` DID fail 1-in-7 under `--repeat-each=6`, and it is a
+  **30 s time-budget overrun with the race running fine in the snapshot** — not a 404, and produced
+  only by a contention the real suite does not have. **The 404 was never seen**: a missing sprite is
+  ruled out (all three absent `/assets` paths are referenced from unit tests only), and the
+  background-image loader logs a WARN the test does not filter on. Honest not-established; the test
+  is exactly as it was.
+
 - [DEV-CONTROLS-HONEST-1.md](DEV-CONTROLS-HONEST-1.md) — **the three Dev controls can no longer show
   a number the game is not running** (2026-08-21). OWNER-DECISIONS §1.1 named them and ONE-HOME-1
   fixed the CODE, leaving one thing open in its own hand-back table: the test. **This is that test,
