@@ -51,6 +51,16 @@ is dated and recorded HERE, where a reader on their way to the report will pass 
   [GATE-LINES-1](../night/GATE-LINES-1.md); the fix and the once-per-run control that makes the
   silence impossible to repeat: [GATE-TRUTH-1](../night/GATE-TRUTH-1.md).
 
+- [DEV-CONTROLS-HONEST-1.md](DEV-CONTROLS-HONEST-1.md) — **the three Dev controls can no longer show
+  a number the game is not running** (2026-08-21). OWNER-DECISIONS §1.1 named them and ONE-HOME-1
+  fixed the CODE, leaving one thing open in its own hand-back table: the test. **This is that test,
+  and no control needed changing** — each already reads the one home. **The design is the value:**
+  the storage loader is mocked EMPTY and the DEFAULTS ARE REAL, pulled through `importOriginal`, so
+  no assertion can be satisfied by a number typed into the test file. Four tests including a
+  CONTROL (without it they would pass against a panel that ignored stored settings entirely).
+  **Sabotage-proven with the exact wrong literals the audit named** — `false` for a checkbox the
+  game runs ON, `1.0` for a multiplier the game runs at `2.0`. No key, no component, no fingerprint.
+
 - [STRAGGLER-TRUTH-1.md](STRAGGLER-TRUTH-1.md) — **phase 6 of the ending, measured at last, and both
   of its numbers were wrong** (2026-08-21). MEASUREMENT ONLY. `scripts/straggler-truth.mjs` closes
   the one phase `ENDING-PHASES.md` described with figures nothing backed. Phase 6 lasts **4.45-7.53 s**,
