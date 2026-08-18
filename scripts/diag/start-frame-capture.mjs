@@ -56,6 +56,8 @@ const ANCHORS = process.argv.includes("--anchors");
 // can move it. It is an IDENTITY, not a model — zoomTerm + panTerm equals the observed step by
 // construction — so what it establishes is which of the two is LARGE, not that the sum is right.
 const DECOMPOSE = process.argv.includes("--decompose");
+// ZOOM-PIVOT-START-1: the ten-track acceptance summary, one row per track.
+const ALL = process.argv.includes("--all");
 const ANCHOR_MS = Number(argOf("ms") ?? 1500);
 const EVERY_MS = Number(argOf("every") ?? 100);
 // THE CONFIG SOURCE, made explicit because it is the first thing START-CONTRADICTION-1 had to
@@ -69,6 +71,110 @@ const CH = 720;
 const CONFIG = CONFIG_PATH
   ? { ...DEFAULT_CAMERA_CONFIG, ...JSON.parse(readFileSync(CONFIG_PATH, "utf8")) }
   : DEFAULT_CAMERA_CONFIG;
+
+const TRACK_ORDER = [
+  "city-circuit", "dirt-oval", "garden-path", "ice-track", "searound",
+  "luger-hill", "mountainstreet", "river-run", "seatrack", "space-sprint",
+];
+
+let prevZ = 0;
+
+if (ALL) {
+  const CWA = 1280;
+  const CHA = 720;
+  const tracks = loadTracks({});
+  const list = TRACK_ORDER.map((id) => tracks.find((t) => (t.id ?? t.name) === id)).filter(Boolean);
+  console.log(
+    `ZOOM-PIVOT-START-1 acceptance — seed ${SEED}, ${RACERS} racers, gun to 8000 ms, ` +
+      `config ${CONFIG_PATH ?? "DEFAULT_CAMERA_CONFIG"}
+` +
+      `  maxAhead: the largest distance the delivered centre is AHEAD of the resolved target ALONG
+` +
+      `  that target's own direction of travel, counted only while the target is moving forward.
+` +
+      `  maxZoomNet: the largest per-frame world-px the ZOOM alone still moves the frame centre.
+` +
+      `  BOTH are measured only inside the START WINDOW — while the ceremony's framing is still
+` +
+      `  held — because that is what this block changes. leaderOut and minOn span the whole 8 s.
+`,
+  );
+  console.log(
+    `${"track".padEnd(15)} ${"kind".padEnd(7)} ${"maxAhead".padStart(9)} ${"maxZoomNet".padStart(11)} ` +
+      `${"leaderOut".padStart(10)} ${"minOn".padStart(7)} ${"travel1s".padStart(9)}`,
+  );
+  for (const g of list) {
+    const id = resolveIdentity({
+      racers: RACERS, raceSeed: SEED, racerType: TRACK_DEFAULT_RACER,
+      roster: resolveNameSet(DEFAULT_NAME_SET), note: "ZOOM-PIVOT-START-1 acceptance",
+    });
+    const r = buildRace(g, id, CONFIG);
+    const axisX = r.cd._proj.axisX;
+    const axisY = r.cd._proj.axisY;
+    let maxAhead = -Infinity;
+    let maxZoomNet = 0;
+    let outFrames = 0;
+    let minOn = Infinity;
+    let n = 0;
+    let prevTgt = null;
+    let prevCam = null;
+    let prevEff = null;
+    let first = null;
+    let at1s = null;
+    runRace(r, id, CONFIG, ({ cd, st, ts, raceStart }) => {
+      const ms = ts - raceStart;
+      if (ms > 8000) return false;
+      n = st.racers.length;
+      let on = 0;
+      let leader = st.racers[0];
+      for (const rr of st.racers) {
+        const q = cd._proj.toScreen(rr, cd.zoom, cd.offsetX, cd.offsetY);
+        if (q.x >= 0 && q.x <= CWA && q.y >= 0 && q.y <= CHA) on++;
+        if (rr.t > leader.t) leader = rr;
+      }
+      if (on < minOn) minOn = on;
+      const lp = cd._proj.toScreen(leader, cd.zoom, cd.offsetX, cd.offsetY);
+      if (!(lp.x >= 0 && lp.x <= CWA && lp.y >= 0 && lp.y <= CHA)) outFrames++;
+      const ex = cd._proj.effX(cd.zoom);
+      const ey = cd._proj.effY(cd.zoom);
+      const cam = { x: (CWA / 2 - cd.offsetX) / ex, y: (CHA / 2 - cd.offsetY) / ey };
+      const tgt = cd._framingProbe?.anchorPoint ?? null;
+      if (first === null) first = { ...cam };
+      if (at1s === null && ms >= 1000) at1s = { ...cam };
+      // The start window: while the ceremony hold is live. After it the state chain takes over and
+      // a state change moves the zoom by design, which is not what this block is about.
+      const inStart = cd._ceremonyHoldZoom !== null;
+      if (inStart && tgt && prevTgt) {
+        const vx = tgt.x - prevTgt.x;
+        const vy = tgt.y - prevTgt.y;
+        const vlen = Math.hypot(vx, vy);
+        if (vlen > 1e-6) {
+          // "Ahead" = the component of (cam - tgt) along the target's OWN direction of travel.
+          const ahead = ((cam.x - tgt.x) * vx + (cam.y - tgt.y) * vy) / vlen;
+          if (ahead > maxAhead) maxAhead = ahead;
+        }
+      }
+      if (inStart && prevCam && prevEff) {
+        const zp = (prevCam.x * prevEff) / ex - prevCam.x;
+        const corr =
+          cd._lastPivotAnchorX == null ? 0 : (cd._lastPivotAnchorX * axisX * (cd.zoom - prevZ)) / ex;
+        const net = Math.abs(zp + corr);
+        if (net > maxZoomNet) maxZoomNet = net;
+      }
+      prevZ = cd.zoom;
+      prevTgt = tgt ? { ...tgt } : null;
+      prevCam = { ...cam };
+      prevEff = ex;
+    }, { slowmo: true });
+    const travel1s = at1s && first ? Math.hypot(at1s.x - first.x, at1s.y - first.y) : 0;
+    console.log(
+      `${(g.id ?? g.name).padEnd(15)} ${(r.shape.isOpen ? "open" : "closed").padEnd(7)} ` +
+        `${maxAhead.toFixed(1).padStart(9)} ${maxZoomNet.toFixed(1).padStart(11)} ` +
+        `${String(outFrames).padStart(10)} ${`${minOn}/${n}`.padStart(7)} ${travel1s.toFixed(1).padStart(9)}`,
+    );
+  }
+  process.exit(0);
+}
 
 const geo = loadTracks({ only: TRACK })[0];
 if (!geo) {
@@ -105,7 +211,7 @@ if (ANCHORS) {
   if (DECOMPOSE) {
     console.log(
       `${"ms".padStart(5)} ${"camX".padStart(7)} ${"tgtX".padStart(7)} ${"cam-tgt".padStart(8)}  ` +
-        `${"dCamX".padStart(8)} ${"zoomTerm".padStart(9)} ${"panTerm".padStart(8)}  ` +
+        `${"dCamX".padStart(8)} ${"zoomPivot".padStart(10)} ${"corrTerm".padStart(9)} ${"zoomNet".padStart(8)} ${"panTerm".padStart(8)}  ` +
         `${"zoom".padStart(7)} ${"dz".padStart(8)} ${"anchor".padStart(7)} ${"corr?".padStart(6)} ${"binding"}`,
     );
   } else {
@@ -169,23 +275,35 @@ if (ANCHORS) {
           prevZoom = lastCeremony.zoom;
           console.log(
             `${"cer".padStart(5)} ${lastCeremony.camX.toFixed(0).padStart(7)} ${"—".padStart(7)} ` +
-              `${"—".padStart(8)}  ${"—".padStart(8)} ${"—".padStart(9)} ${"—".padStart(8)}  ` +
+              `${"—".padStart(8)}  ${"—".padStart(8)} ${"—".padStart(10)} ${"—".padStart(9)} ${"—".padStart(8)} ${"—".padStart(8)}  ` +
               `${lastCeremony.zoom.toFixed(4).padStart(7)} ${"—".padStart(8)} ${"—".padStart(7)} ` +
               `${"—".padStart(6)} (last ceremony frame)`,
           );
         }
         const zoomOnly = prevCamX === null ? camX : (prevCamX * prevEffX) / ex;
+        // ZOOM-PIVOT-START-1 — THREE TERMS, NOT TWO, because the correction also writes the offset
+        // and a two-way split buries it in the follower's bucket.
+        //   zoomPivot  the camera zooms about the WORLD ORIGIN: the centre moves even with the
+        //              offset held. This is the drift.
+        //   corrTerm   CAMERA-SIDEJUMP-1's write, `offsetX -= anchor.x * axisX * dz`, converted
+        //              back to world px at this frame's scale. It exists to cancel zoomPivot.
+        //   panTerm    what is left: the offset lerp, i.e. the follower.
+        const dz = prevZoom === null ? 0 : cd.zoom - prevZoom;
+        const anchorPt = cd._focusAnchorRacer(st.racers) ?? cd._framingProbe?.anchorPoint ?? null;
+        const corrLive = cd._lastPivotAnchorX;
+        const corrTerm =
+          corrLive == null || dz === 0 ? 0 : (corrLive * cd._proj.axisX * dz) / ex;
         const zoomTerm = prevCamX === null ? 0 : zoomOnly - prevCamX;
-        const panTerm = prevCamX === null ? 0 : camX - zoomOnly;
         const dCam = prevCamX === null ? 0 : camX - prevCamX;
+        const panTerm = prevCamX === null ? 0 : dCam - zoomTerm - corrTerm;
         // The zoom-about-the-anchor correction fires only when `_focusAnchorRacer` is non-null.
         const anchorIdx = cd._anchorRacerIndex;
         console.log(
           `${String(Math.round(ms)).padStart(5)} ${camX.toFixed(0).padStart(7)} ` +
             `${(a ? a.x.toFixed(0) : "—").padStart(7)} ${(a ? (camX - a.x).toFixed(0) : "—").padStart(8)}  ` +
-            `${dCam.toFixed(1).padStart(8)} ${zoomTerm.toFixed(1).padStart(9)} ${panTerm.toFixed(1).padStart(8)}  ` +
+            `${dCam.toFixed(1).padStart(8)} ${zoomTerm.toFixed(1).padStart(10)} ${corrTerm.toFixed(1).padStart(9)} ${(zoomTerm + corrTerm).toFixed(1).padStart(8)} ${panTerm.toFixed(1).padStart(8)}  ` +
             `${cd.zoom.toFixed(4).padStart(7)} ${(prevZoom === null ? 0 : cd.zoom - prevZoom).toFixed(4).padStart(8)} ` +
-            `${String(anchorIdx ?? "null").padStart(7)} ${(anchorIdx == null ? "SKIP" : "on").padStart(6)} ${cd._framingProbe?.binding ?? "?"}`,
+            `${String(anchorPt ? "set" : "null").padStart(7)} ${(corrLive == null ? "SKIP" : "on").padStart(6)} ${cd._framingProbe?.binding ?? "?"}`,
         );
         prevCamX = camX;
         prevEffX = ex;

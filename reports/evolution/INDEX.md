@@ -51,6 +51,18 @@ is dated and recorded HERE, where a reader on their way to the report will pass 
   [GATE-LINES-1](../night/GATE-LINES-1.md); the fix and the once-per-run control that makes the
   silence impossible to repeat: [GATE-TRUTH-1](../night/GATE-TRUTH-1.md).
 
+- [ZOOM-PIVOT-START-1.md](ZOOM-PIVOT-START-1.md) — **the zoom-about-the-anchor correction now runs
+  in the group shots too** (2026-08-21). **ONE CONDITION REMOVED** at `CameraDirector.js:1079` — the
+  `_runInActive` scope the source itself called a latent defect everywhere. No key, no fraction; the
+  pivot is the same `_framingProbe.anchorPoint` the run-in already used. **All four acceptance
+  criteria met on the five CLOSED tracks** — the zoom's net pull on the frame centre goes 14.1 → 0.3
+  world px, dirt-oval stops passing its target (142.1 ahead → never ahead), leader-out frames go
+  **46 → 0**, **89 → 0**, **61 → 20**, and city-circuit's min-on-screen **4/20 → 17/20**. **The five
+  OPEN tracks are byte-identical** (their zoom does not move in the window). **Criterion 2 misses on
+  three open tracks and is UNCHANGED there** — the cause is the world-edge clamp (river-run spends
+  184.8 world px on it), not the pivot. CAMERA `ce3475ecaf0926fe` and RENDER `64e413d28c0072f0`
+  moved as expected; WORLD/WORLD-OFF measured and unmoved. **Unmerged, unminted, his eye owed.**
+
 - [START-OVERSHOOT-1.md](START-OVERSHOOT-1.md) — **what carries the camera past its own target at
   the start** (2026-08-21). **THE TERM IS THE ZOOM'S PIVOT:** the camera zooms about the WORLD
   ORIGIN, so the frame centre moves `camX × Δzoom/zoom` even with the offset unchanged — a 15%

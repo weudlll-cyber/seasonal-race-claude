@@ -342,6 +342,8 @@ export class CameraDirector {
     // gets OVERVIEW's ordinary setting rather than a stale hold, and so does every OVERVIEW after
     // the release.
     this._ceremonyHoldZoom = null;
+    /** ZOOM-PIVOT-START-1 diagnostic: the pivot's world x this frame, or null if it did not fire. */
+    this._lastPivotAnchorX = null;
     // CEREMONY-HANDOVER-1: the ceremony's promise, carried past the gun. ARMED by the countdown, so
     // a race entered without one (a test, a resumed race) never acquires a guarantee it was never
     // given — and RETIRED, one way, by `_fieldCeiling` when it can no longer be kept.
@@ -1072,15 +1074,43 @@ export class CameraDirector {
         // a world point, and `_framingProbe.anchorPoint` is the one the framing was actually built
         // on. Restoring it took those 51 frames to 0 with nothing else changed.
         //
-        // SCOPED TO THE RUN-IN DELIBERATELY. The null is a latent defect everywhere — any future
-        // mechanism that moves zoom during a group shot will hit it — but repairing it in general
-        // moves both fingerprints with `runInShot` OFF, and "nothing outside the endgame window
-        // moves" is a promise this block has to keep. The general case is written down instead.
-        const _anchor =
-          this._focusAnchorRacer(racers) ??
-          (this._runInActive ? this._framingProbe?.anchorPoint : null) ??
-          null;
+        // ── ZOOM-PIVOT-START-1: THE SCOPE IS GONE, AND THE NOTE THAT SCOPED IT SAID WHY ──────
+        //
+        // What stood here was `this._runInActive ? this._framingProbe?.anchorPoint : null`, under a
+        // comment that called the null "a latent defect everywhere" and scoped the repair to the
+        // run-in for ONE reason: repairing it in general moves both fingerprints with `runInShot`
+        // OFF, and that block had promised nothing outside the endgame window would move. **That
+        // promise belonged to that block.** The defect it named came due at the START, where the
+        // field guarantee widens the shot continuously while OVERVIEW has no focus racer — measured
+        // at 15% of zoom across 1496 world px from the origin, about 225 world px of drift that has
+        // been read as camera movement four times (START-OVERSHOOT-1).
+        //
+        // THE PIVOT IS NOT INVENTED AND IS NOT NEW. It is the same expression the run-in already
+        // used — `_framingProbe.anchorPoint`, the pan target this frame's framing was actually
+        // built on, recorded by `_setTargets` a few lines above. Removing the condition is the whole
+        // change; there is no key, no fraction and no second rule.
+        //
+        // WHY NOT THE FRAME CENTRE, which is the other point the director has to hand: preserving
+        // the centre is a different promise ("do not move the picture") from this correction's own
+        // ("do not let the subject slide"), and it would fight the pan lerp — the pan is trying to
+        // move the centre toward the target, so pivoting on the centre neutralises the zoom while
+        // still letting the subject slide whenever the camera trails. Measured, the two converge
+        // once the drift is gone, because the gap between them IS the drift.
+        //
+        // WHY NOT `afterLateral`, the FINAL pan target: it carries the forward bias, which is large
+        // in the LEADER states where this correction already runs today. Using it would change
+        // behaviour that is not this block's to change.
+        //
+        // WHAT THIS REACHES that the run-in did not: every group shot whose zoom is moving —
+        // OVERVIEW, BATTLE_ZOOM and PHOTO_FINISH — because `_focusAnchorRacer` returns null for all
+        // three. Inside the run-in the expression reduces to exactly what it was, so the run-in is
+        // unchanged by construction rather than by measurement.
+        const _anchor = this._focusAnchorRacer(racers) ?? this._framingProbe?.anchorPoint ?? null;
         const _dz = this.zoom - _zoomAtStart;
+        // Diagnostic only — read by nothing in the camera. It records the world x the pivot
+        // ACTUALLY used this frame (null when the correction did not fire), so a trace can
+        // separate the correction's contribution from the follower's instead of inferring it.
+        this._lastPivotAnchorX = _anchor && _dz !== 0 ? _anchor.x : null;
         if (_anchor && _dz !== 0) {
           this.offsetX -= _anchor.x * this._proj.axisX * _dz;
           this.offsetY -= _anchor.y * this._proj.axisY * _dz;
