@@ -51,6 +51,16 @@ is dated and recorded HERE, where a reader on their way to the report will pass 
   [GATE-LINES-1](../night/GATE-LINES-1.md); the fix and the once-per-run control that makes the
   silence impossible to repeat: [GATE-TRUTH-1](../night/GATE-TRUTH-1.md).
 
+- [HOOK-SELF-CHECK-1.md](HOOK-SELF-CHECK-1.md) — **the pre-commit hook now vouches for itself**
+  (2026-08-21). HOOK-TRACKED-1's first proposal, closed: before anything else the hook checks that
+  `.githooks/` matches the INDEX and that nothing untracked sits in it. **Index, not HEAD, and that
+  is the design** — comparing against HEAD would make every change to the hook impossible to commit
+  through the hook. **The circularity is named, not claimed closed:** a hook that does not run cannot
+  report; this covers the other case, *runs but is out of date*, which nothing covered. **Proven
+  three ways by running it** — the tracked hook lands, an unstaged edit is refused by name, an
+  untracked `pre-push` is refused because git would run it and nothing tracks it. `VERIFY-RULES.md`
+  gains **R12a** beside R12.
+
 - [E2E-FLAKE-HUNT-1.md](E2E-FLAKE-HUNT-1.md) — **five green e2e runs, one flake reproduced under an
   artificial load, and the 404 NOT ESTABLISHED** (2026-08-21). **NOTHING WAS CHANGED** — no test
   edited, weakened, retried or serialised. Five consecutive full runs came back **103/103 every
