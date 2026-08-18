@@ -2,14 +2,14 @@
   "name": "racearena-server",
   "version": "0.1.0",
   "private": true,
-  "description": "RaceArena local backend — Phase L",
+  "description": "RaceArena local backend — Phase L. `test` dropped --no-file-parallelism at TEST-ACCOUNTS-1: that flag was serialisation standing in for isolation, and the isolation is now real (a users store per test file, and no shared account). See server/test/env-setup.js.",
   "type": "module",
   "main": "src/index.js",
   "scripts": {
     "start": "node src/index.js",
     "dev": "node --watch scripts/dev-start.js",
     "restart": "node scripts/restart-dev.js",
-    "test": "vitest run --no-file-parallelism"
+    "test": "vitest run"
   },
   "dependencies": {
     "bcrypt": "^6.0.0",

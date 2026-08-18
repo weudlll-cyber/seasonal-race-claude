@@ -63,9 +63,11 @@ describe('GET /api/users', () => {
     }
   });
 
-  it('admin → list contains testadmin (seeded by beforeAll)', async () => {
+  // TEST-ACCOUNTS-1: the agent's OWN account, asked of the agent rather than named by a literal.
+  // The literal was `testadmin`, one row eight files shared — see server/test/authAgent.js.
+  it('admin → list contains the admin this file logged in as', async () => {
     const res = await adminApi.get('/api/users');
-    expect(res.body.some((u) => u.username === 'testadmin')).toBe(true);
+    expect(res.body.some((u) => u.username === adminApi.raUser.username)).toBe(true);
   });
 });
 
@@ -170,11 +172,21 @@ describe('DELETE /api/users/:id', () => {
     expect(res.status).toBe(404);
   });
 
+  // TEST-ACCOUNTS-1: "the last admin" is a statement about the WHOLE store, and it is this file's
+  // to make only because the store is this file's — one users DB per test file (test/env-setup.js).
+  // Before that it was a claim about what the other seven files sharing `testadmin` had done.
+  //
+  // THE PRECONDITION IS ASSERTED, NOT ASSUMED, and that line is the point of it. It is also this
+  // file's ONE remaining dependency on the harness, named here rather than left to be discovered:
+  // `usersStore.js` reads RA_USERS_DB ONCE, at import, so the per-file store only reaches this test
+  // while vitest gives each file its own module registry (`isolate`, on by default). Under
+  // `--no-isolate` the first file to import the store fixes the path for the whole worker and these
+  // two go red — on the assertion below, naming the cause ("expected 7 to be 1"), where before the
+  // fix they went red on the symptom ("expected 200 to be 409") together with seven others.
   it('admin DELETE last admin → 409', async () => {
-    // testadmin is the only admin in the store
     const listRes = await adminApi.get('/api/users');
-    const testAdmin = listRes.body.find((u) => u.username === 'testadmin');
-    const res = await adminApi.delete(`/api/users/${testAdmin.id}`);
+    expect(listRes.body.filter((u) => u.role === 'admin')).toHaveLength(1);
+    const res = await adminApi.delete(`/api/users/${adminApi.raUser.id}`);
     expect(res.status).toBe(409);
   });
 });
@@ -201,15 +213,18 @@ describe('PUT /api/users/:id', () => {
     expect(res.status).toBe(403);
   });
 
-  it('admin demote last admin → 409 (testadmin is sole admin; no state change)', async () => {
+  // TEST-ACCOUNTS-1: the sole-admin precondition is ASSERTED rather than assumed. It used to be a
+  // comment ("testadmin is sole admin"), and it was false whenever sessionInvalidation.test.js had
+  // run first in the same worker — that file creates three admins and promotes a fourth.
+  it('admin demote last admin → 409 (this file has one admin; no state change)', async () => {
     const listRes = await adminApi.get('/api/users');
-    const testAdmin = listRes.body.find((u) => u.username === 'testadmin');
-    const res = await adminApi.put(`/api/users/${testAdmin.id}`).send({ role: 'operator' });
+    expect(listRes.body.filter((u) => u.role === 'admin')).toHaveLength(1);
+    const res = await adminApi.put(`/api/users/${adminApi.raUser.id}`).send({ role: 'operator' });
     expect(res.status).toBe(409);
   });
 
   it('admin role change → 200 with updated role (no passwordHash, no sessionEpoch)', async () => {
-    // Promote put-target to admin; now testadmin + put-target = 2 admins
+    // Promote put-target to admin; now this file's admin + put-target = 2 admins
     const res = await adminApi.put(`/api/users/${targetId}`).send({ role: 'admin' });
     expect(res.status).toBe(200);
     expect(res.body.role).toBe('admin');
