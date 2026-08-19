@@ -256,9 +256,9 @@ gets built on.
 
 | | |
 | --- | --- |
-| **merge commit** | see the register line in [TAGS.md](../../docs/TAGS.md) |
+| **merge commit** | **`3b87ae99`** — `--no-ff`, seven files |
 | **tag** | **`v-ship-label-overlap`**, annotated, on the merge; return point `v-ship-label-overlap^1` |
-| **CI** | green for exactly the merge SHA — the merge was pushed ALONE with its tag, per the ordering SHIP-CEREMONY-FIX-1 wrote after the last ship paid for getting it wrong |
+| **CI** | run [`32292723628`](https://github.com/weudlll-cyber/seasonal-race-claude/actions/runs/32292723628) — `success`, head **`3b87ae99`**, from the ordinary push and needing NO dispatch. The merge was pushed ALONE with its tag, per the ordering SHIP-CEREMONY-FIX-1 wrote after the last ship paid for getting it wrong; this is that ordering's first clean use. |
 | `npm run verify` | green on the branch tip before the merge |
 | fingerprints | none minted; RENDER measured and unmoved |
 

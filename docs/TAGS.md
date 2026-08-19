@@ -150,7 +150,7 @@ box that never exists. RENDER was measured fresh on the merged tree and is byte-
 WORLD, WORLD-OFF and CAMERA contain none of the seven merged files by `closureOf` and were not run.
 **The change is invisible on the defaults and visible only with names turned on.**
 
-- `v-ship-label-overlap` (`PENDING`, 2026-08-22) — **the ship.** The return point is
+- `v-ship-label-overlap` (`3b87ae99`, 2026-08-22) — **the ship.** The return point is
   `v-ship-label-overlap^1`, which restores a layout where a tenured number may land on an admitted
   name and where the photo finish draws every name regardless of room. No fingerprint value changes
   across it. See [LABEL-OVERLAP-FIX-1](../reports/evolution/LABEL-OVERLAP-FIX-1.md).
