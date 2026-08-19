@@ -6,6 +6,23 @@ and [FAIRNESS.md](../../docs/FAIRNESS.md). Shipped world: **`dc4647be0f55ebdb`**
 
 ## CORRECTIONS — findings that invalidate a number in a report below
 
+- **2026-08-22 — [STRAGGLER-TRUTH-1](STRAGGLER-TRUTH-1.md)'s DURATIONS stand; every statement it
+  makes about VISIBILITY is WITHDRAWN.** Corrected in [STRAGGLER-TRUTH-2](STRAGGLER-TRUTH-2.md)
+  rather than in the report, which is append-only. **The owner tested the ending on 2026-08-22 and it
+  is correct** — it shows as many still-running racers as possible — and the reading was wrong. **Its
+  arithmetic was right on every frame it sampled; it sampled the wrong frames.** The probe counted
+  from the WINNER'S CROSSING and took its headline on the FIRST frame of FINISH_OVERVIEW, both inside
+  the shot that is still closing around the winner. **WITHDRAWN:** "when the zoom-out begins, half to
+  three-quarters of the field is still racing and almost all are off the canvas — 11 of 11 at 20, 27
+  of 29 at 40"; "54–75% of frames of phase 6 have at least one unfinished racer outside the picture";
+  "on three of four runs there is a frame with no unfinished racer in shot"; and the closing note's
+  headline **"the ending waits for people it has stopped showing", which is FALSE as written.**
+  **Measured in the SETTLED shot, every remaining still-running racer is in the picture** — 5/5, 6/6,
+  7/7 — and one hand-reconciled frame holds **34 of 40 racers**. **WHAT STANDS:** phase 6 lasts
+  4.45–7.53 s, the zoom-out leads the last crossing by 2.30–5.75 s, and both numbers
+  `ENDING-PHASES.md` used to carry were wrong. **The instrument is fixed and now agrees with the
+  screen.**
+
 - **2026-08-21 — [OVERVIEW-AIM-1.md](OVERVIEW-AIM-1.md)'s ANCHOR findings stand; two of its
   statements about the CAMERA are WITHDRAWN.** Corrected in
   [START-CONTRADICTION-1](START-CONTRADICTION-1.md) rather than in the report, which is append-only.
@@ -50,6 +67,17 @@ is dated and recorded HERE, where a reader on their way to the report will pass 
   luger-hill 3.0%, space-sprint 1.0%, seatrack 0.0%). Diagnosis and proof:
   [GATE-LINES-1](../night/GATE-LINES-1.md); the fix and the once-per-run control that makes the
   silence impossible to repeat: [GATE-TRUTH-1](../night/GATE-TRUTH-1.md).
+
+- [STRAGGLER-TRUTH-2.md](STRAGGLER-TRUTH-2.md) — **the instrument's window was wrong, and it is the
+  only thing that was** (2026-08-22). INVESTIGATION ONLY; the ending is correct and untouched. Four
+  candidates checked with the value each produced: **who counts as unfinished — clean** (`finishRank`
+  is set on the crossing frame, 1-based; 26 finished / 14 unfinished in the reconciled frame, no
+  misclassification); **the canvas — clean** (1280×720 both sides, no DPR, coordinates internally
+  consistent); **the harness — clean** (real roster, slow motion on); **the phase boundary — THE
+  CAUSE.** One frame reconciled by hand at 40 racers: **26 finished all in shot, 8 of 14 unfinished
+  in, 6 out — the picture holds 34 of 40.** The camera **travels ~300 world px** into the course
+  before settling. Instrument fixed to report the SETTLED shot as a **median** (a minimum only ever
+  finds the degenerate tail — the same error one level down): **5/5, 6/6, 7/7 unfinished in shot.**
 
 - [NIGHT-2026-08-21-CLOSING.md](NIGHT-2026-08-21-CLOSING.md) — **closing note, night of 2026-08-21**.
   The ship was finished first; **four of five pieces done**, E dropped to budget as the drop order
@@ -177,8 +205,10 @@ is dated and recorded HERE, where a reader on their way to the report will pass 
   null until the first committed transition at 4983 ms), and **`leaderForwardFrac` never fires in
   the window either** (`bias 0.0` on every frame). No proposals, by instruction.
 
-- [NIGHT-2026-08-21-CLOSING.md](NIGHT-2026-08-21-CLOSING.md) — **closing note, night of
-  2026-08-21**. **Four of four pieces done**, plus the B′ tidy-up. Opens with what the owner must do
+- [NIGHT-2026-08-21-CLOSING-START.md](NIGHT-2026-08-21-CLOSING-START.md) — **closing note, the
+  START HAND-OVER night of 2026-08-21** (**recovered**: a later block the same day overwrote this
+  path instead of creating a new one; the content is byte-identical to `3e3fbeab`). **Four of four
+  pieces done**, plus the B′ tidy-up. Opens with what the owner must do
   in the morning: look at the start on the served `bf1912eb` build (**the switch is OFF by default —
   it is a Dev Screen tick box**), and answer three questions. **Waiting for his eye:**
   `feat/start-handover-mark-1` @ `bf1912eb`, unmerged, **two of four acceptance criteria met**, and

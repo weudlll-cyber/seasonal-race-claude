@@ -18,7 +18,21 @@
 //
 // AND THE PHASE'S OWN QUESTION, which neither number asks: what does the ending DO about the racers
 // still on the course? A duration says nothing about whether they are in the picture while they run.
-// So this also counts, every frame of phase 6, how many unfinished racers are on the canvas.
+//
+// ── STRAGGLER-TRUTH-2 CORRECTED HOW THAT LAST QUESTION IS ANSWERED, AND IT IS THE WHOLE POINT ────
+//
+// The first version counted from the WINNER'S CROSSING and reported a headline sampled on the FIRST
+// FRAME of FINISH_OVERVIEW. Both are inside the shot that is still CLOSING — the photo-finish /
+// drama shot, which frames the winner by design — so it reported "27 of 29 unfinished racers off the
+// canvas" about the tightest instant of the move and read as though it described the ending. The
+// owner tested the ending on 2026-08-22 and it is correct; the counting was right and the WINDOW
+// was wrong.
+//
+// So the window is now the SETTLED shot: from `zoom-out began + finishOverviewZoomOutDurationMs`,
+// which is the config's own answer for when the move is over, to the last crossing. And it counts
+// EVERY racer in shot, not only the unfinished ones — the screen shows finished racers running out
+// past the line, they are most of the picture, and a count that omits them cannot agree with what a
+// viewer sees.
 //
 // IT MEASURES AND CHANGES NOTHING. No camera value is written; every number is read off the
 // director and the race state the driver already produces. If the numbers say the ending is wrong,
@@ -55,6 +69,11 @@ const { resolveNameSet, DEFAULT_NAME_SET } = await import(u("client/src/modules/
 const argOf = (n) => process.argv.find((a) => a.startsWith(`--${n}=`))?.split("=")[1];
 const SEED = Number(argOf("seed") ?? 9);
 const JSON_OUT = argOf("json") ?? null;
+// ENDING-VISIBILITY-BISECT-1: the SAME measure, printed per frame instead of summarised. The
+// summary path below is untouched — this only exposes what it was already counting, plus the
+// camera centre's distance along the track from the finish line, which the summary never asked for.
+const FRAMES = process.argv.includes("--frames");
+const EVERY_MS = Number(argOf("every") ?? 250);
 const CW = 1280;
 const CH = 720;
 
@@ -68,6 +87,13 @@ const RUNS = argOf("track")
       { track: "river-run", racers: 20 },
       { track: "river-run", racers: 40 },
     ];
+
+/** The median of a list, or null when the list is empty. */
+function med(a) {
+  if (!a.length) return null;
+  const b = [...a].sort((x, y) => x - y);
+  return b[Math.floor(b.length / 2)];
+}
 
 function measure({ track, racers }) {
   const geo = loadTracks({ only: track })[0];
@@ -92,6 +118,22 @@ function measure({ track, racers }) {
   let minUnfinishedOnScreen = Infinity;
   let unfinishedFrames = 0;
   let unfinishedOffFrames = 0;
+  // THE SETTLED SHOT — the window this instrument now reports on. `finishOverviewZoomOutDurationMs`
+  // is the config's own statement of how long the pull-back takes, so the boundary is read and not
+  // chosen.
+  let settledFrom = null;
+  let settledFrames = 0;
+  // A MEDIAN, NOT A MINIMUM, and the reason is the same mistake one level down: the last frames of
+  // the phase are degenerate — one racer left on the course and the finishers already run out past
+  // the frame — so a minimum always finds the tail and describes nothing a viewer watches.
+  const settledUnfinIn = [];
+  const settledUnfinTotal = [];
+  const settledAllIn = [];
+  const frames = [];
+  let nextFrameAt = 0;
+  // The finish line as a WORLD POINT, so "where is the camera relative to the line" is a distance
+  // and not an impression. `finishT` is a track parameter; the shape turns it into a place.
+  const lineAt = (t) => race.shape.getPosition(((t % 1) + 1) % 1, 0);
 
   runRace(
     race,
@@ -124,6 +166,40 @@ function measure({ track, racers }) {
         stillRunningAtZoomOut = unfinished.length;
         offScreenAtZoomOut = unfinished.length - on;
       }
+      // ── THE SETTLED SHOT: what the viewer calls "the ending" ──────────────────────────────
+      if (zoomOutMs !== null && settledFrom === null) {
+        settledFrom = zoomOutMs + (DEFAULT_CAMERA_CONFIG.finishOverviewZoomOutDurationMs ?? 0);
+      }
+      if (settledFrom !== null && ms >= settledFrom) {
+        let allOn = 0;
+        for (const r of st.racers) {
+          const p = cd._proj.toScreen(r, cd.zoom, cd.offsetX, cd.offsetY);
+          if (p.x >= 0 && p.x <= CW && p.y >= 0 && p.y <= CH) allOn++;
+        }
+        settledFrames++;
+        settledUnfinIn.push(on);
+        settledUnfinTotal.push(unfinished.length);
+        settledAllIn.push(allOn);
+      }
+      if (FRAMES && ms >= nextFrameAt) {
+        nextFrameAt = ms + EVERY_MS;
+        const ex = cd._proj.effX(cd.zoom);
+        const ey = cd._proj.effY(cd.zoom);
+        const cam = { x: (CW / 2 - cd.offsetX) / ex, y: (CH / 2 - cd.offsetY) / ey };
+        const line = lineAt(st.finishT);
+        // The rearmost unfinished racer, because "does the camera reach the people still running"
+        // is a question about the BACK of the field, not about the average.
+        const rear = unfinished.reduce((b, r) => (r.t < b.t ? r : b), unfinished[0]);
+        frames.push({
+          ms: Math.round(ms),
+          zoomedOut: zoomOutMs !== null && ms >= zoomOutMs,
+          unfinished: unfinished.length,
+          on,
+          camFromLine: Math.hypot(cam.x - line.x, cam.y - line.y),
+          rearFromLine: Math.hypot(rear.x - line.x, rear.y - line.y),
+          zoom: cd.zoom,
+        });
+      }
     },
     { slowmo: true },
   );
@@ -142,6 +218,12 @@ function measure({ track, racers }) {
     zoomOutLeadMs: zoomOutMs !== null && lastCrossMs !== null ? lastCrossMs - zoomOutMs : null,
     stillRunningAtZoomOut,
     offScreenAtZoomOut,
+    settledFrom,
+    settledFrames,
+    settledUnfinInMed: med(settledUnfinIn),
+    settledUnfinTotMed: med(settledUnfinTotal),
+    settledAllInMed: med(settledAllIn),
+    frames,
     minUnfinishedOnScreen: minUnfinishedOnScreen === Infinity ? null : minUnfinishedOnScreen,
     unfinishedFrames,
     unfinishedOffFrames,
@@ -151,33 +233,48 @@ function measure({ track, racers }) {
 console.log(
   `straggler-truth — phase 6 of the ending, seed ${SEED}\n` +
     `  phase6: winner home -> field home. lead: how long BEFORE the last crossing the zoom-out\n` +
-    `  began (positive = the ending overlapped the race). running/off: unfinished racers, and how\n` +
-    `  many of them were off canvas, on the frame the zoom-out started. offFrames: frames of phase 6\n` +
-    `  with at least one unfinished racer outside the picture.\n`,
+    `  began (positive = the ending overlapped the race).\n` +
+    `  THE SETTLED SHOT is the window that describes the ending — from the pull-back's own\n` +
+    `  duration being up, to the last crossing. Before it the shot is still CLOSING and framing the\n` +
+    `  winner, which is what STRAGGLER-TRUTH-1 sampled and mis-read.\n` +
+    `  unfinMin: the fewest unfinished racers in shot on any settled frame, of how many were left.\n` +
+    `  allMin: the fewest racers of ANY kind in shot — finished racers run out past the line and are\n` +
+    `  most of the picture, so a count that omits them cannot agree with the screen.\n`,
 );
 console.log(
   `${"track".padEnd(12)} ${"n".padStart(3)} ${"kind".padEnd(7)} ${"phase6".padStart(8)} ` +
-    `${"lead".padStart(8)} ${"running".padStart(8)} ${"off".padStart(4)} ${"minOn".padStart(6)} ` +
-    `${"offFrames".padStart(12)}`,
+    `${"lead".padStart(8)} ${"unfin".padStart(9)} ${"inShot".padStart(8)} ${"settled".padStart(8)}`,
 );
 
 const out = [];
 for (const run of RUNS) {
   const r = measure(run);
   out.push(r);
-  const pct = r.unfinishedFrames ? (100 * r.unfinishedOffFrames) / r.unfinishedFrames : 0;
   console.log(
     `${r.track.padEnd(12)} ${String(r.racers).padStart(3)} ${(r.open ? "open" : "closed").padEnd(7)} ` +
       `${`${(r.phase6Ms / 1000).toFixed(2)}s`.padStart(8)} ` +
       `${`${(r.zoomOutLeadMs / 1000).toFixed(2)}s`.padStart(8)} ` +
-      `${String(r.stillRunningAtZoomOut ?? "-").padStart(8)} ` +
-      `${String(r.offScreenAtZoomOut ?? "-").padStart(4)} ` +
-      `${String(r.minUnfinishedOnScreen ?? "-").padStart(6)} ` +
-      `${`${r.unfinishedOffFrames}/${r.unfinishedFrames} (${pct.toFixed(0)}%)`.padStart(12)}`,
+      `${`${r.settledUnfinInMed ?? "-"}/${r.settledUnfinTotMed ?? "-"}`.padStart(9)} ` +
+      `${`${r.settledAllInMed ?? "-"}/${r.racers}`.padStart(8)} ` +
+      `${`${r.settledFrames}f`.padStart(8)}`,
   );
+  if (FRAMES) {
+    console.log(
+      `      ${"ms".padStart(6)} ${"phase".padEnd(9)} ${"unfin".padStart(6)} ${"on".padStart(4)} ` +
+        `${"camFromLine".padStart(12)} ${"rearFromLine".padStart(13)} ${"zoom".padStart(7)}`,
+    );
+    for (const f of r.frames) {
+      console.log(
+        `      ${String(f.ms).padStart(6)} ${(f.zoomedOut ? "zoom-out" : "pre").padEnd(9)} ` +
+          `${String(f.unfinished).padStart(6)} ${String(f.on).padStart(4)} ` +
+          `${f.camFromLine.toFixed(0).padStart(12)} ${f.rearFromLine.toFixed(0).padStart(13)} ` +
+          `${f.zoom.toFixed(4).padStart(7)}`,
+      );
+    }
+  }
 }
 
 if (JSON_OUT) {
-  writeFileSync(JSON_OUT, JSON.stringify(out, null, 1));
+  writeFileSync(JSON_OUT, JSON.stringify(out.map(({ frames, ...r }) => r), null, 1));
   console.log(`\nwrote ${JSON_OUT}`);
 }
