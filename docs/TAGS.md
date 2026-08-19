@@ -155,7 +155,7 @@ run; CAMERA's (38) and RENDER's (58) each contain a changed file, so **both were
 and CAMERA came back byte-identical, so it is deliberately **NOT minted**, because a mint records a
 movement. Values live in [fingerprints.json](fingerprints.json).
 
-- `v-ship-minimap-one-source` (`PENDING`, 2026-08-22) — **the ship.** The return point is
+- `v-ship-minimap-one-source` (`242e6cb3`, 2026-08-22) — **the ship.** The return point is
   `v-ship-minimap-one-source^1`, which restores a minimap whose band is drawn from a second
   parameterisation of its own ribbon — up to 1.886 px of un-washed band beside the tail and 0.919 px
   between a mark's ends and the band edge — and a camera timing module whose state list is short by
