@@ -1181,6 +1181,7 @@ finish shot leave ALONG it.
 
 ## Camera / presentation fixes
 
+- [PAN-LAG-ACCOUNT-1.md](PAN-LAG-ACCOUNT-1.md) — the closed account of the pan lag. **Residual 0.0 px median on all 40 runs: the lag IS the smoother.** Separating pan from zoom **re-attributes LINE-VISIBLE-1's 414-891 px — it is mostly ZOOM (larger on 35 of 36 runs), not pan.** Endgame runs on the TRACKING constant (entry is 0% of run-in frames); garden-path never reaches the window.
 - [LINE-VISIBLE-1.md](LINE-VISIBLE-1.md) — **what "the line is in frame" measures — DEFECT, not
   margin** (2026-08-22, MEASUREMENT ONLY, no camera change, nothing can move). ENDGAME-WIDTH-1's
   number counted the line's centre point **OFF THE SCREEN ENTIRELY**: **17-47 %** of endgame frames
