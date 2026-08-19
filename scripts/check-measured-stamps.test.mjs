@@ -361,3 +361,71 @@ test("--staged is OPT-IN: the same fixture reports PENDING and PASSES without th
     rmSync(dir, { recursive: true, force: true });
   }
 });
+
+// ── SHIP-CEREMONY-FIX-1: AN UNPARSEABLE STAMP MUST FAIL LOUDLY, NOT VANISH ──────────────────────
+//
+// THE DEFECT THESE PIN, and it was paid for rather than imagined. THE SHIP ORDER told the shipper to
+// write `PENDING` in a measured stamp between the measurement and the merge. `STAMP` requires a hex
+// SHA, so that comment matched nothing — and matching nothing meant it was not reported, not
+// counted, and not checked. It was silently dropped from the guarded set. The only thing that went
+// red was the LOUD-FAILURE rule firing on the resulting EMPTY set, which named the wrong problem in
+// the wrong place.
+//
+// The pair below is deliberately a PAIR: the same document, the same line, one token different. That
+// is what makes it a proof rather than two assertions — the only variable is whether the commit
+// field parses.
+
+/** The stamp line's commit field, swapped for `token`. */
+const withStampCommit = (token) => (t) =>
+  t.replace(
+    /(<!--\s*MEASURED:[^@]*@\s+)[0-9a-f]{7,40}(\s+\d{4}-\d{2}-\d{2})/,
+    `$1${token}$2`,
+  );
+
+test("SABOTAGE: an UNPARSEABLE stamp fails, and names the file and the line", () => {
+  const r = onCopy(withStampCommit("PENDING"));
+  assert.equal(r.code, 1, "an unreadable stamp must fail, not be skipped");
+  assert.match(
+    r.err,
+    /cannot parse/,
+    "it must say the stamp could not be parsed",
+  );
+  assert.match(
+    r.err,
+    /DOC\.md:\d+/,
+    "it must name the FILE and the LINE — a guard that cannot point at the defect is why this went unnoticed",
+  );
+  assert.match(
+    r.err,
+    /PENDING/,
+    "it must quote what it found, so the shipper sees their own token",
+  );
+});
+
+test("PROOF THE PAIR IS A PAIR: the same stamp with a real SHA passes", () => {
+  // Without this, the test above could be passing because `--doc` rejects everything. The identity
+  // transform is the control: same file, same line, a hex SHA instead of a word.
+  const real = /@\s+([0-9a-f]{7,40})\s+\d{4}-\d{2}-\d{2}/.exec(
+    readFileSync(DOC, "utf8"),
+  );
+  assert.ok(real, "the document must carry a parseable stamp for this to control anything");
+  const r = onCopy(withStampCommit(real[1]));
+  assert.equal(r.code, 0, r.err);
+  assert.match(r.out, /1 stamp\(s\)/, "the valid stamp must be COUNTED, not merely tolerated");
+  assert.match(r.out, /0 stale/);
+});
+
+test("SABOTAGE: a MEASURED comment with no depends= at all is reported, not skipped", () => {
+  // The other half of the same hole: `PENDING` is one way to be unparseable and there are many. A
+  // stamp missing its `depends=` names no dependency, so it can never go stale — the most
+  // comfortable possible failure, and the one most worth naming out loud.
+  const r = onCopy((t) =>
+    t.replace(
+      /<!--\s*MEASURED:[\s\S]*?-->/,
+      "<!-- MEASURED: a stamp with no dependency @ 30cee205 2026-08-22 -->",
+    ),
+  );
+  assert.equal(r.code, 1, "a stamp naming no dependency must fail");
+  assert.match(r.err, /cannot parse/);
+  assert.match(r.err, /DOC\.md:\d+/);
+});

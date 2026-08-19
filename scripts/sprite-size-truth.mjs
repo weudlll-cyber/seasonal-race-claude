@@ -85,12 +85,23 @@ const ALL = process.argv.includes("--all");
 const NAMES_ARM = process.argv.includes("--names");
 const JSON_OUT = process.argv.includes("--json");
 const EVERY = 30; // sample every 30 frames ~ 0.5 s
+// SHIP-CEREMONY-FIX-1 PART 3: the field size, and the floor sweep.
+//
+// THE SWEEP IS EXACT RATHER THAN SAMPLED, and that is worth stating because it looks too cheap.
+// `minDrawnFrameFrac` is DRAWING-ONLY — CAMERA-MIN-DRAW-1 pins every state zoom byte-identical with
+// the floor off, at the default and at an absurd 0.9 — so changing it cannot change the race, the
+// camera, or where any racer is on screen. `computeRenderDisplayScale` reduces to
+// drawn = clamp(proportional, floor, ceiling). So ONE race per field size gives the exact drawn size
+// and the exact neighbour gaps for EVERY floor value, evaluated afterwards from the same frames.
+// Running one race per floor would produce identical camera output and take four times as long.
+const RACERS = Number((process.argv.find((a) => a.startsWith("--racers=")) ?? "").slice(9)) || 60;
+const FLOOR_SWEEP = process.argv.includes("--floor-sweep");
 
 // THE OWNER'S CONTEXT: space-sprint, seed 9, 60 racers. The ROSTER is passed because a racer's NAME
 // is an engine input — `stablePairBit` hashes it — so a nameless field runs a different race at the
 // same seed, and this is a reproduction of something he watched rather than a self-consistent hash.
 const IDENTITY = resolveIdentity({
-  racers: 60,
+  racers: RACERS,
   raceSeed: 9,
   racerType: TRACK_DEFAULT_RACER,
   seconds: 60,
@@ -228,6 +239,9 @@ function gaps(cam, zx, zy, drawnW) {
     min: sorted[0],
     onScreen: pts.length,
     overlapping: nn.filter((d) => d < 0).length,
+    // The CENTRE-to-centre distances, before the drawn width is subtracted. They depend only on the
+    // camera and the field, so the floor sweep re-uses them for every candidate floor.
+    centres: nn.map((d) => d + drawnW),
   };
 }
 
@@ -294,6 +308,7 @@ runRace(race, IDENTITY, CAM_CFG, ({ ts, raceStart, frame }) => {
     gapMin: +g.min.toFixed(2),
     onScreen: g.onScreen,
     overlapping: g.overlapping,
+    centres: g.centres,
     finishOnScreen,
     labels: shown,
     names,
@@ -304,6 +319,75 @@ runRace(race, IDENTITY, CAM_CFG, ({ ts, raceStart, frame }) => {
     progress: +(st.racers.reduce((m, r) => Math.max(m, r.t), 0) / st.finishT).toFixed(3),
   });
 });
+
+// ── THE FLOOR SWEEP (SHIP-CEREMONY-FIX-1 PART 3) ────────────────────────────────────────────────
+//
+// Two shots, chosen by a RULE rather than by a timestamp so the pair is reproducible:
+//   WIDE   the widest OVERVIEW frame of the race — the most world on screen, where the floor's
+//          over-scale is largest and where the owner's complaint lives.
+//   RACING the MEDIAN LEADER_ZOOM frame by world width — the reference shot, the picture the owner
+//          approved at 0.75 corridors and the one a lowered floor must not spoil.
+if (FLOOR_SWEEP) {
+  const pick = (state, how) => {
+    const rows2 = rows.filter((r) => r.state === state && r.centres && r.centres.length > 1);
+    if (!rows2.length) return null;
+    const byWidth = [...rows2].sort((a, b) => a.worldPx - b.worldPx);
+    return how === "widest" ? byWidth[byWidth.length - 1] : byWidth[byWidth.length >> 1];
+  };
+  // The widest OVERVIEW of the whole race is the START GRID, which is the exact frame
+  // CAMERA-MIN-DRAW-1 calibrated the floor on — at 20 racers. It is reported, and so is the widest
+  // MID-RACE overview separately, because the owner's complaint is about the second and the floor's
+  // number was chosen against the first.
+  const midRace = (() => {
+    const rows2 = rows.filter(
+      (r) => r.state === "OVERVIEW" && r.tSec > 10 && r.centres && r.centres.length > 1
+    );
+    if (!rows2.length) return null;
+    return [...rows2].sort((a, b) => a.worldPx - b.worldPx)[rows2.length - 1];
+  })();
+  const shots = [
+    ["START (widest OVERVIEW of all)", pick("OVERVIEW", "widest")],
+    ["WIDE  (widest OVERVIEW after 10 s)", midRace],
+    ["RACING(median LEADER_ZOOM)", pick("LEADER_ZOOM", "median")],
+  ].filter(([, r]) => r);
+
+  const med = (a) => (a.length ? [...a].sort((x, y) => x - y)[a.length >> 1] : NaN);
+  // 0 turns the floor OFF entirely; the others bracket the shipped 0.045.
+  const FLOORS = [0, 0.015, 0.025, 0.035, 0.045];
+
+  console.log(`FLOOR SWEEP — ${TRACK}, seed ${IDENTITY.raceSeed}, ${RACERS} racers, ${CW}x${CH}`);
+  console.log(`displaySize ${ds} · displaySizeScale ${displaySizeScale.toFixed(5)} · ceiling ${ceilPx} px`);
+  console.log("");
+  for (const [label, r] of shots) {
+    console.log(`${label}  t=${r.tSec}s  zoom ${r.zoom}  world ${r.worldPx} px  ${r.onScreen} racers on screen`);
+    console.log("   floor    floorPx   drawnW   binding    gapMed    gapMin   overlapping   labelFits(num/name)");
+    for (const f of FLOORS) {
+      const fPx = f * CH;
+      const drawn = Math.min(Math.max(r.prop, fPx), ceilPx > 0 ? Math.max(ceilPx, fPx) : Infinity);
+      const gaps2 = r.centres.map((c) => c - drawn);
+      const bind = r.prop < fPx ? "FLOOR" : "none";
+      const gm = med(gaps2);
+      // Does a label fit in the space the sprites leave? The centre-to-centre distance minus the
+      // drawn sprite is what a label has to live in.
+      const room = med(r.centres) - drawn;
+      console.log(
+        [
+          String(f).padStart(8),
+          fPx.toFixed(1).padStart(10),
+          drawn.toFixed(1).padStart(9),
+          bind.padStart(9),
+          gm.toFixed(1).padStart(10),
+          Math.min(...gaps2).toFixed(1).padStart(10),
+          `${gaps2.filter((d) => d < 0).length}/${gaps2.length}`.padStart(14),
+          `   ${room >= r.numberLabelPx ? "num YES" : "num no "} ${room >= r.nameLabelPx ? "name YES" : "name no "}`,
+        ].join("")
+      );
+    }
+    console.log(`   label widths at this zoom: number ${r.numberLabelPx.toFixed(1)} px, name ${r.nameLabelPx.toFixed(1)} px (median)`);
+    console.log("");
+  }
+  process.exit(0);
+}
 
 if (JSON_OUT) {
   console.log(JSON.stringify({ track: TRACK, identity: IDENTITY, rows }, null, 2));

@@ -165,6 +165,25 @@ export const TEST_FILE_EXCLUDE = ":(exclude,glob)**/*.test.*";
 const STAMP =
   /<!--\s*MEASURED:\s*(.+?)\s+@\s+([0-9a-f]{7,40})\s+(\d{4}-\d{2}-\d{2})\s+depends=([^\s]+)\s*-->/g;
 
+// ── A STAMP THAT CANNOT BE PARSED MUST FAIL LOUDLY (SHIP-CEREMONY-FIX-1) ────────────────────────
+//
+// THE DEFECT THIS CLOSES, found by SHIP-MINIMAP-ONE-SOURCE paying for it. `STAMP` requires a hex
+// SHA. THE SHIP ORDER told the shipper to write `PENDING` there between the measurement and the
+// merge — and a comment that says MEASURED but does not match simply did not match. It was not
+// reported, not counted, not checked: it VANISHED from the guarded set. In `CAMERA_DIRECTOR.md`,
+// which carries exactly one stamp, that took the document from one stamp to zero, and the only
+// reason anything went red at all was the LOUD-FAILURE rule below firing on the empty set — which
+// named the wrong problem ("found ZERO stamps") in the wrong place (the guard's own test suite).
+//
+// A GUARD THAT SILENTLY IGNORES WHAT IT CANNOT READ IS NOT A GUARD. That is the same shape as the
+// four other instances this week, and the answer is the same one: the thing that cannot be read is
+// itself the finding. So the document is scanned a SECOND time with a deliberately permissive
+// opener, and anything that announces itself as a stamp and then fails the strict form is reported
+// BY FILE AND LINE rather than skipped.
+//
+// It lives here, in the guard that already owns stamps, rather than in a new script — R13.
+const STAMP_LOOSE = /<!--\s*MEASURED:[\s\S]*?-->/g;
+
 const git = (...args) =>
   execFileSync("git", args, { cwd: ROOT, encoding: "utf8" }).trim();
 
@@ -221,7 +240,31 @@ for (const doc of DOCS) {
   // stamp and go red for saying what the format is — and R11 is explicit that the answer to a guard
   // disagreeing with a true sentence is to fix the GUARD, never to make the sentence vaguer. So
   // fenced blocks are stripped, exactly as check-doc-links strips them for the same reason.
-  text = text.replace(/```[\s\S]*?```/g, "");
+  // The fence is replaced by its OWN NEWLINES rather than by nothing, so every line number below
+  // still refers to the line the reader sees in the file. Collapsing the block would shift every
+  // stamp after it, and this guard now reports line numbers.
+  text = text.replace(/```[\s\S]*?```/g, (block) =>
+    block.replace(new RegExp("[^" + NL + "]", "g"), ""),
+  );
+
+  // Every strict match's start offset, so the permissive sweep below can tell an UNPARSEABLE stamp
+  // from one it has already accounted for.
+  const parsedAt = new Set();
+  for (const m of text.matchAll(STAMP)) parsedAt.add(m.index);
+  for (const m of text.matchAll(STAMP_LOOSE)) {
+    if (parsedAt.has(m.index)) continue;
+    const line = text.slice(0, m.index).split(NL).length;
+    const shown = m[0].replace(/\s+/g, " ").trim();
+    fail(
+      `${doc}:${line} announces a MEASURED stamp that this guard cannot parse, so it was about` +
+        ` to be dropped from the checked set without a word.${NL}` +
+        `      THAT is the failure — not the formatting.${NL}` +
+        `        found:    ${shown}${NL}` +
+        `        expected: <!-- MEASURED: <what> @ <commit> <YYYY-MM-DD> depends=<path>[,...] -->${NL}` +
+        `      <commit> must be a HEX SHA of 7-40 characters. A placeholder such as PENDING does${NL}` +
+        `      not parse — stamp the commit that last changed the dependency, never a word.`,
+    );
+  }
 
   for (const m of text.matchAll(STAMP)) {
     const [, what, stampCommit, date, depends] = m;
