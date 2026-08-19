@@ -60,10 +60,61 @@ const DEFAULT_MAX_ENTRY_DURATION_MS = {
   BATTLE_ZOOM: 5000,
   COMEBACK_ZOOM: 5000,
   LEAD_CHANGE: 5000,
+  PHOTO_FINISH: 5000,
 };
 
 // All camera state names — mirrors CAM_STATE in CameraDirector.js.
-const ALL_STATES = ['OVERVIEW', 'LEADER_ZOOM', 'BATTLE_ZOOM', 'COMEBACK_ZOOM', 'LEAD_CHANGE'];
+//
+// PHOTO-FINISH-STATE-1: THIS LIST WAS SHORT BY ONE FOR AS LONG AS PHOTO_FINISH HAS EXISTED, and
+// every per-state map built from it was short by the same one. A missing key does not fail: each
+// read is written `map[state] ?? fallback`, so the state quietly took another state's number, or a
+// module constant, for its whole life. The `defaults.js` profile that was supposed to supply those
+// numbers was never consulted, and the Dev Screen row that edits it moved nothing.
+//
+// IT CANNOT IMPORT `CAM_STATE`. CameraDirector.js imports this module, so the arrow only runs one
+// way — see the header. What binds the two is a TEST: `cameraTimingComputation.test.js` asserts
+// that every per-state map this function returns carries exactly the keys of `CAM_STATE`, which
+// fails the moment a seventh state is added to the director and not to this line.
+const ALL_STATES = [
+  'OVERVIEW',
+  'LEADER_ZOOM',
+  'BATTLE_ZOOM',
+  'COMEBACK_ZOOM',
+  'LEAD_CHANGE',
+  'PHOTO_FINISH',
+];
+
+// The per-state fallback for `trackingTC` when no profile carries one. LEAD_CHANGE takes LEADER's,
+// which is the borrowing it has always done — written down here now instead of being spelled out at
+// each of the four sites that did it.
+const DEFAULT_TC = {
+  OVERVIEW: TC_OVERVIEW,
+  LEADER_ZOOM: TC_LEADER,
+  BATTLE_ZOOM: TC_BATTLE,
+  COMEBACK_ZOOM: TC_COMEBACK,
+  LEAD_CHANGE: TC_LEADER,
+  PHOTO_FINISH: TC_BATTLE,
+};
+
+// PHOTO_FINISH has borrowed BATTLE's time constant since it was added, and what it borrowed was
+// BATTLE's RESOLVED value — not the module constant sitting beside it. That distinction is the
+// difference between a config that retimes the battle shot retiming the photo finish with it, and
+// one that silently drops it to a default, so it is kept as a BORROW rather than flattened into
+// `DEFAULT_TC` above, which would have changed it. LEAD_CHANGE is deliberately NOT here: its
+// fallback has always been the constant, and making the two agree would be a behaviour change
+// wearing a tidy-up's clothes.
+const TC_BORROWS_FROM = { PHOTO_FINISH: 'BATTLE_ZOOM' };
+
+// The per-state fallback for `maxStateDuration`. BATTLE has always had its own, shorter cap;
+// PHOTO_FINISH takes it for the same reason it takes BATTLE's time constant.
+const DEFAULT_MAX_STATE_DURATION = {
+  OVERVIEW: MAX_STATE_DURATION,
+  LEADER_ZOOM: MAX_STATE_DURATION,
+  BATTLE_ZOOM: BATTLE_MAX_DURATION,
+  COMEBACK_ZOOM: MAX_STATE_DURATION,
+  LEAD_CHANGE: MAX_STATE_DURATION,
+  PHOTO_FINISH: BATTLE_MAX_DURATION,
+};
 
 // Per-frame lerp factor at FRAME_RATE fps. 90% convergence ≈ 3.45 × TC.
 // Formula: 1 − 0.1^(1 / (tc × FRAME_RATE)).
@@ -160,55 +211,45 @@ export function computeTimingFromConfig(config) {
   }
 
   // ── Per-state TC / minHold / maxDuration (profiles path vs legacy path) ───
-  let tcOverview, tcLeader, tcBattle, tcComeback, tcLeadChange;
-  let tcEntryOverview, tcEntryLeader, tcEntryBattle, tcEntryComeback, tcEntryLeadChange;
+  // EVERY MAP BELOW IS BUILT FROM `ALL_STATES`, and that is the point of PHOTO-FINISH-STATE-1
+  // rather than a tidying: the twenty hand-written keys that stood here were the mechanism by which
+  // one state went missing from four maps at once and nobody could see it. A list can be short in
+  // one place; twenty literals can be short in any of twenty.
   let minStateHoldMs, battleMaxDurationMs, maxStateDuration;
   let minStateHoldByState, maxStateDurationByState, phasedByState;
+  let tcByState, tcEntryByState;
 
   if (profiles) {
-    const profTc = (key, fallback) => profiles[key]?.trackingTC ?? fallback;
+    const profTc = (key) =>
+      profiles[key]?.trackingTC ??
+      (TC_BORROWS_FROM[key] ? profTc(TC_BORROWS_FROM[key]) : DEFAULT_TC[key]);
     const profMin = (key) => profiles[key]?.minStateHold ?? MIN_STATE_HOLD_MS;
-    const profMax = (key, fallback) => profiles[key]?.maxStateDuration ?? fallback;
-    const profEntryTc = (key, fallback) => profiles[key]?.entryTC ?? fallback;
+    const profMax = (key) => profiles[key]?.maxStateDuration ?? DEFAULT_MAX_STATE_DURATION[key];
+    const profEntryTc = (key) =>
+      profiles[key]?.entryTC ??
+      (TC_BORROWS_FROM[key] ? profEntryTc(TC_BORROWS_FROM[key]) : profTc(key));
 
-    tcOverview = profTc('OVERVIEW', TC_OVERVIEW);
-    tcLeader = profTc('LEADER_ZOOM', TC_LEADER);
-    tcBattle = profTc('BATTLE_ZOOM', TC_BATTLE);
-    tcComeback = profTc('COMEBACK_ZOOM', TC_COMEBACK);
-    tcLeadChange = profTc('LEAD_CHANGE', TC_LEADER);
-
-    minStateHoldMs = profMin('OVERVIEW');
-    battleMaxDurationMs = profMax('BATTLE_ZOOM', BATTLE_MAX_DURATION);
-    maxStateDuration = profMax('OVERVIEW', MAX_STATE_DURATION);
-
-    minStateHoldByState = {
-      OVERVIEW: profMin('OVERVIEW'),
-      LEADER_ZOOM: profMin('LEADER_ZOOM'),
-      BATTLE_ZOOM: profMin('BATTLE_ZOOM'),
-      COMEBACK_ZOOM: profMin('COMEBACK_ZOOM'),
-      LEAD_CHANGE: profMin('LEAD_CHANGE'),
-    };
-    maxStateDurationByState = {
-      OVERVIEW: profMax('OVERVIEW', MAX_STATE_DURATION),
-      LEADER_ZOOM: profMax('LEADER_ZOOM', MAX_STATE_DURATION),
-      BATTLE_ZOOM: profMax('BATTLE_ZOOM', BATTLE_MAX_DURATION),
-      COMEBACK_ZOOM: profMax('COMEBACK_ZOOM', MAX_STATE_DURATION),
-      LEAD_CHANGE: profMax('LEAD_CHANGE', MAX_STATE_DURATION),
-    };
-
-    tcEntryOverview = profEntryTc('OVERVIEW', tcOverview);
-    tcEntryLeader = profEntryTc('LEADER_ZOOM', tcLeader);
-    tcEntryBattle = profEntryTc('BATTLE_ZOOM', tcBattle);
-    tcEntryComeback = profEntryTc('COMEBACK_ZOOM', tcComeback);
-    tcEntryLeadChange = profEntryTc('LEAD_CHANGE', tcLeadChange);
-
+    tcByState = {};
+    tcEntryByState = {};
+    minStateHoldByState = {};
+    maxStateDurationByState = {};
     phasedByState = {};
     for (const s of ALL_STATES) {
+      tcByState[s] = profTc(s);
+      tcEntryByState[s] = profEntryTc(s);
+      minStateHoldByState[s] = profMin(s);
+      maxStateDurationByState[s] = profMax(s);
       phasedByState[s] = {
         leadInDuration: profiles[s]?.leadInDuration ?? 0,
         leadOutDuration: profiles[s]?.leadOutDuration ?? 0,
       };
     }
+
+    // The three flat scalars the director still reads as its own last-resort fallback. They are
+    // READ OUT of the maps rather than computed a second time, so they cannot disagree with them.
+    minStateHoldMs = minStateHoldByState.OVERVIEW;
+    battleMaxDurationMs = maxStateDurationByState.BATTLE_ZOOM;
+    maxStateDuration = maxStateDurationByState.OVERVIEW;
   } else {
     // Legacy flat-field path.
     // FALLBACK-MIRRORS-1: this is the ONE site where `MAX_STATE_DURATION` was a mirror of the
@@ -220,89 +261,50 @@ export function computeTimingFromConfig(config) {
     battleMaxDurationMs = config?.battleMaxDurationMs ?? DEFAULT_CAMERA_CONFIG.battleMaxDurationMs;
     minStateHoldMs = config?.minStateHoldMs ?? DEFAULT_CAMERA_CONFIG.minStateHoldMs;
 
+    // The legacy flat shape names FOUR states. The two that it never named take the borrowing
+    // `DEFAULT_TC` already writes down — LEAD_CHANGE follows LEADER, PHOTO_FINISH follows BATTLE —
+    // applied AFTER the flat values land, so a legacy config that retimes BATTLE retimes the
+    // photo finish with it, exactly as it did when this was five assignments.
     const rawTc = config?.cameraTransitionSeconds;
+    tcByState = { ...DEFAULT_TC };
     if (rawTc && typeof rawTc === 'object') {
-      tcOverview = rawTc.overview ?? TC_OVERVIEW;
-      tcLeader = rawTc.leader ?? TC_LEADER;
-      tcBattle = rawTc.battle ?? TC_BATTLE;
-      tcComeback = rawTc.comeback ?? TC_COMEBACK;
-    } else {
-      const s = typeof rawTc === 'number' ? rawTc : TC_OVERVIEW;
-      tcOverview = s;
-      tcLeader = TC_LEADER;
-      tcBattle = TC_BATTLE;
-      tcComeback = TC_COMEBACK;
+      tcByState.OVERVIEW = rawTc.overview ?? TC_OVERVIEW;
+      tcByState.LEADER_ZOOM = rawTc.leader ?? TC_LEADER;
+      tcByState.BATTLE_ZOOM = rawTc.battle ?? TC_BATTLE;
+      tcByState.COMEBACK_ZOOM = rawTc.comeback ?? TC_COMEBACK;
+    } else if (typeof rawTc === 'number') {
+      tcByState.OVERVIEW = rawTc;
     }
+    tcByState.LEAD_CHANGE = tcByState.LEADER_ZOOM;
+    tcByState.PHOTO_FINISH = tcByState.BATTLE_ZOOM;
+    // The legacy path has no entry time constant of its own: entry and tracking are the same.
+    tcEntryByState = { ...tcByState };
 
-    minStateHoldByState = {
-      OVERVIEW: minStateHoldMs,
-      LEADER_ZOOM: minStateHoldMs,
-      BATTLE_ZOOM: minStateHoldMs,
-      COMEBACK_ZOOM: minStateHoldMs,
-      LEAD_CHANGE: minStateHoldMs,
-    };
-    maxStateDurationByState = {
-      OVERVIEW: maxStateDuration,
-      LEADER_ZOOM: maxStateDuration,
-      BATTLE_ZOOM: battleMaxDurationMs,
-      COMEBACK_ZOOM: maxStateDuration,
-      LEAD_CHANGE: maxStateDuration,
-    };
-
-    tcLeadChange = tcLeader;
-    tcEntryOverview = tcOverview;
-    tcEntryLeader = tcLeader;
-    tcEntryBattle = tcBattle;
-    tcEntryComeback = tcComeback;
-    tcEntryLeadChange = tcLeader;
-
-    phasedByState = Object.fromEntries(
-      ALL_STATES.map((s) => [s, { leadInDuration: 0, leadOutDuration: 0 }])
-    );
+    minStateHoldByState = {};
+    maxStateDurationByState = {};
+    phasedByState = {};
+    for (const s of ALL_STATES) {
+      minStateHoldByState[s] = minStateHoldMs;
+      maxStateDurationByState[s] = maxStateDuration;
+      phasedByState[s] = { leadInDuration: 0, leadOutDuration: 0 };
+    }
+    // The two tight group shots share the shorter cap here as well.
+    maxStateDurationByState.BATTLE_ZOOM = battleMaxDurationMs;
+    maxStateDurationByState.PHOTO_FINISH = battleMaxDurationMs;
   }
 
   // ── Common: lerp factors and per-state lookup maps ────────────────────────
-  const tcByState = {
-    OVERVIEW: tcOverview,
-    LEADER_ZOOM: tcLeader,
-    BATTLE_ZOOM: tcBattle,
-    COMEBACK_ZOOM: tcComeback,
-    LEAD_CHANGE: tcLeadChange,
-    // Photo-Finish reuses BATTLE framing timing (tight group shot).
-    PHOTO_FINISH: tcBattle,
-  };
-
-  const lfOverview = tcToLerpFactor(tcOverview);
-  const lfLeader = tcToLerpFactor(tcLeader);
-  const lfBattle = tcToLerpFactor(tcBattle);
-  const lfComeback = tcToLerpFactor(tcComeback);
-  const lfLeadChange = tcToLerpFactor(tcLeadChange);
-  const lfByState = {
-    OVERVIEW: lfOverview,
-    LEADER_ZOOM: lfLeader,
-    BATTLE_ZOOM: lfBattle,
-    COMEBACK_ZOOM: lfComeback,
-    LEAD_CHANGE: lfLeadChange,
-    PHOTO_FINISH: lfBattle,
-  };
-
-  const lfEntryOverview = tcToLerpFactor(tcEntryOverview);
-  const lfEntryLeader = tcToLerpFactor(tcEntryLeader);
-  const lfEntryBattle = tcToLerpFactor(tcEntryBattle);
-  const lfEntryComeback = tcToLerpFactor(tcEntryComeback);
-  const lfEntryLeadChange = tcToLerpFactor(tcEntryLeadChange);
-  // CAMERA-HYGIENE-2: the per-state scalars (tcLeader, lfBattle, lfEntryOverview, ...) are locals
-  // now. They used to be returned AND stored on the director alongside these maps — forty data
-  // points that had to agree with twenty. The maps are what the director reads; the scalars were
-  // read only by tests, which is exactly the arrangement where a wrong map goes unnoticed.
-  const lfEntryByState = {
-    OVERVIEW: lfEntryOverview,
-    LEADER_ZOOM: lfEntryLeader,
-    BATTLE_ZOOM: lfEntryBattle,
-    COMEBACK_ZOOM: lfEntryComeback,
-    LEAD_CHANGE: lfEntryLeadChange,
-    PHOTO_FINISH: lfEntryBattle,
-  };
+  // CAMERA-HYGIENE-2: the per-state scalars (tcLeader, lfBattle, lfEntryOverview, ...) became
+  // locals, because they used to be returned AND stored on the director alongside these maps —
+  // forty data points that had to agree with twenty. PHOTO-FINISH-STATE-1 removes the locals too:
+  // they were the last place a per-state number was written one state at a time, and PHOTO_FINISH
+  // took BATTLE's here by a hard-coded line rather than by reading its own profile.
+  const lfByState = {};
+  const lfEntryByState = {};
+  for (const s of ALL_STATES) {
+    lfByState[s] = tcToLerpFactor(tcByState[s]);
+    lfEntryByState[s] = tcToLerpFactor(tcEntryByState[s]);
+  }
 
   const entryConvergenceZoom =
     config?.entryConvergenceZoom ?? DEFAULT_CAMERA_CONFIG.entryConvergenceZoom;

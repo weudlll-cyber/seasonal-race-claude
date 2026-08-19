@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { computeTimingFromConfig } from './cameraTimingComputation.js';
 import { DEFAULT_CAMERA_CONFIG } from '../storage/defaults.js';
+import { CAM_STATE } from './CameraDirector.js';
 
 // Minimal profiles object used across tests.
 function minimalProfiles() {
@@ -79,25 +80,6 @@ describe('computeTimingFromConfig — null config (all defaults)', () => {
   it('uses fallback tcLeader = 0.3', () => expect(t.tcByState.LEADER_ZOOM).toBe(0.3));
   it('uses fallback overviewStartDelay = 15', () => expect(t.overviewStartDelay).toBe(15));
   it('uses fallback overviewTargetCount = 2', () => expect(t.overviewTargetCount).toBe(2));
-  it('all states present in minStateHoldByState', () => {
-    expect(Object.keys(t.minStateHoldByState).sort()).toEqual([
-      'BATTLE_ZOOM',
-      'COMEBACK_ZOOM',
-      'LEADER_ZOOM',
-      'LEAD_CHANGE',
-      'OVERVIEW',
-    ]);
-  });
-  it('all states present in lfByState', () => {
-    expect(Object.keys(t.lfByState).sort()).toEqual([
-      'BATTLE_ZOOM',
-      'COMEBACK_ZOOM',
-      'LEADER_ZOOM',
-      'LEAD_CHANGE',
-      'OVERVIEW',
-      'PHOTO_FINISH',
-    ]);
-  });
   // RUNIN-OWNS-1: the run-in adds no camera state, so it must add no per-state timing either. A
   // RUN_IN key appearing in any of these maps means the state shape has crept back in.
   it('the run-in adds no state to any per-state timing map', () => {
@@ -263,5 +245,79 @@ describe('computeTimingFromConfig — finish sequence', () => {
     expect(
       computeTimingFromConfig({ finishOverviewLookbackPx: 500 }).finishOverviewLookbackPx
     ).toBe(500);
+  });
+});
+
+// ── PHOTO-FINISH-STATE-1: the mirror, and why this is the CLASS and not the instance ────────────
+//
+// `ALL_STATES` in cameraTimingComputation.js says it mirrors `CAM_STATE` in CameraDirector.js. It
+// cannot IMPORT it — the director imports this module, so the arrow runs one way and a second one
+// would be a cycle. For as long as PHOTO_FINISH existed, the mirror was short by it, and nothing
+// noticed: every read of a per-state map is written `map[state] ?? fallback`, so a missing key does
+// not throw, it silently substitutes another state's number.
+//
+// THE TWO TESTS THIS REPLACED WROTE THE KEY LIST OUT BY HAND, once per map. That is the same defect
+// one level up: one of them listed five states and the other six, they disagreed with each other,
+// and the five-state one was GREEN — it was pinning the bug. So neither the state list nor the set
+// of maps is written here. Both are discovered: the states from `CAM_STATE`, the maps from every
+// returned key whose name ends in `ByState`.
+//
+// IF THIS TEST IS DELETED: a seventh camera state can be added to the director, wired into its
+// state machine and given a profile in defaults.js, and every per-state timing map will quietly
+// hand it another state's numbers. Nothing else in the tree compares the two lists — that is the
+// hole PHOTO_FINISH sat in.
+describe('computeTimingFromConfig — every per-state map mirrors CAM_STATE', () => {
+  const EXPECTED = Object.values(CAM_STATE).sort();
+  const perStateMaps = (t) =>
+    Object.entries(t).filter(([k, v]) => k.endsWith('ByState') && v && typeof v === 'object');
+
+  it('CAM_STATE is the six states this module knows about', () => {
+    // Guards the guard: if the director gains a state, EXPECTED grows and the assertions below
+    // start failing — which is the whole point. This line only fails if CAM_STATE stops being a
+    // flat string map, in which case the discovery above needs rewriting rather than extending.
+    expect(EXPECTED.length).toBeGreaterThanOrEqual(6);
+    expect(EXPECTED.every((s) => typeof s === 'string')).toBe(true);
+  });
+
+  for (const [label, config] of [
+    ['null config (fallbacks only)', null],
+    ['profiles path (shipped defaults)', DEFAULT_CAMERA_CONFIG],
+    ['legacy flat path (no cameraStateProfiles)', { cameraTransitionSeconds: 0.9 }],
+  ]) {
+    it(`${label}: every ByState map carries exactly CAM_STATE's keys`, () => {
+      const t = computeTimingFromConfig(config);
+      const maps = perStateMaps(t);
+      // A run that found no maps would pass every assertion below and prove nothing.
+      expect(maps.length).toBeGreaterThanOrEqual(9);
+      for (const [name, map] of maps) {
+        expect([name, Object.keys(map).sort()]).toEqual([name, EXPECTED]);
+      }
+    });
+  }
+
+  it('PHOTO_FINISH reads its OWN profile, not BATTLE_ZOOM\u2019s', () => {
+    // The state that was missing, pinned at the three values it was silently borrowing. Each of
+    // these is a Dev Screen control on the PHOTO_FINISH row that moved nothing before.
+    const t = computeTimingFromConfig(DEFAULT_CAMERA_CONFIG);
+    const p = DEFAULT_CAMERA_CONFIG.cameraStateProfiles.PHOTO_FINISH;
+    expect(t.minStateHoldByState.PHOTO_FINISH).toBe(p.minStateHold);
+    expect(t.maxStateDurationByState.PHOTO_FINISH).toBe(p.maxStateDuration);
+    expect(t.maxEntryDurationByState.PHOTO_FINISH).toBe(p.maxEntryDurationMs);
+    expect(t.leadAheadEnabledByState.PHOTO_FINISH).toBe(p.leadAheadEnabled);
+    expect(t.leadOutEnabledByState.PHOTO_FINISH).toBe(p.leadOutEnabled);
+    expect(t.tcByState.PHOTO_FINISH).toBe(p.trackingTC);
+  });
+
+  it('a PHOTO_FINISH profile the config omits falls back to BATTLE_ZOOM\u2019s timing', () => {
+    // The borrowing this state has always done is now the FALLBACK rather than the behaviour, and
+    // it still has to work: a stored config written before the profile existed must not produce an
+    // undefined time constant.
+    const profiles = structuredClone(DEFAULT_CAMERA_CONFIG.cameraStateProfiles);
+    delete profiles.PHOTO_FINISH;
+    const t = computeTimingFromConfig({ cameraStateProfiles: profiles });
+    expect(t.tcByState.PHOTO_FINISH).toBe(t.tcByState.BATTLE_ZOOM);
+    expect(t.lfByState.PHOTO_FINISH).toBe(t.lfByState.BATTLE_ZOOM);
+    expect(Number.isFinite(t.minStateHoldByState.PHOTO_FINISH)).toBe(true);
+    expect(Number.isFinite(t.maxStateDurationByState.PHOTO_FINISH)).toBe(true);
   });
 });

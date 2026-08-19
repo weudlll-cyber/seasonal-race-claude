@@ -30,15 +30,23 @@ let _n = 0; // frames recorded so far (capped at RING)
 let _last = 0; // rAF timestamp of the previous frame
 let _active = false;
 
-// Numeric encoding for camera states (must match CAM_STATE keys in CameraDirector.js)
+// Numeric encoding for camera states (must match CAM_STATE keys in CameraDirector.js).
+//
+// PHOTO-FINISH-STATE-1: PHOTO_FINISH was missing here too, and it failed the way an unknown key
+// always fails in this file — silently. `recordFrameCamera` writes `_STATE_IDX[state] ?? 255`, so
+// every frame of the closest shot in the race was filed under 255 and read back as 'UNKNOWN', and
+// the per-state table simply had no row for it. The names are DERIVED from the encoding below so
+// the two cannot fall out of step; they were two literals before.
 const _STATE_IDX = {
   OVERVIEW: 0,
   LEADER_ZOOM: 1,
   BATTLE_ZOOM: 2,
   COMEBACK_ZOOM: 3,
   LEAD_CHANGE: 4,
+  PHOTO_FINISH: 5,
 };
-const _STATE_NAME = ['OVERVIEW', 'LEADER_ZOOM', 'BATTLE_ZOOM', 'COMEBACK_ZOOM', 'LEAD_CHANGE'];
+const _STATE_NAME = [];
+for (const [name, idx] of Object.entries(_STATE_IDX)) _STATE_NAME[idx] = name;
 
 // Persist URL flag to sessionStorage so it survives navigate('/race').
 if (typeof window !== 'undefined') {

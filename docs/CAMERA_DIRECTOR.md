@@ -657,7 +657,35 @@ a verbatim transcript of one run on one commit, which is a historical record, no
 
 ### The tracking lag, as measured today — and it had drifted
 
-<!-- MEASURED: tracking-lag (median/p95 pp per state) @ 879d217a 2026-08-21 depends=client/src/modules/camera/ -->
+<!-- MEASURED: tracking-lag (median/p95 pp per state) @ PENDING 2026-08-19 depends=client/src/modules/camera/ -->
+
+**RE-MEASURED IN FULL FOR PHOTO-FINISH-STATE-1, AND EVERY FIGURE IS IDENTICAL TO THE DIGIT.** That
+block adds PHOTO_FINISH to `ALL_STATES` in `cameraTimingComputation.js`, which is inside this
+stamp's `depends=` directory, and it genuinely changes what the director READS: the state's own
+profile in `defaults.js` now supplies its `minStateHold`, its `maxStateDuration` and its
+`maxEntryDurationMs`, where before each of those fell back silently to another state's number
+because the key was absent from the map entirely. So the guard asked, and the answer had to be
+measured rather than argued.
+
+| state         | frames | median pp | p95 pp |
+| ------------- | ------ | --------- | ------ |
+| BATTLE_ZOOM   | 10935  | 5.30      | 9.77   |
+| COMEBACK_ZOOM | 162    | 6.84      | 7.50   |
+| LEADER_ZOOM   | 17175  | 3.73      | 9.06   |
+| LEAD_CHANGE   | 9378   | 4.42      | 7.26   |
+| OVERVIEW      | 4248   | 2.43      | 16.00  |
+| PHOTO_FINISH  | 1865   | 3.11      | 25.39  |
+
+**WHY NOTHING MOVED, WHICH IS THE PART WORTH READING.** Not because the state is rare — it runs
+1865 frames here, and 206-279 frames on nine of the ten fingerprint tracks, held 3.4-4.7 s. Not
+because the new values are unread either: forcing PHOTO_FINISH's cap to 2000 ms changes the
+transition-reason counts on city-circuit (`hold-elapsed` 89 -> 159, `finish-drama-forced` 60 -> 0),
+so the profile is reaching the hold gate. It is because **during PHOTO_FINISH every transition
+resolves back to PHOTO_FINISH**, and `_transition` does its entry work only when the state actually
+changes — so a self-transition is a deliberate no-op and a different hold gate changes only which
+bypass wins the race to produce it. What ends this shot is `finishPhase.js`, not the hold gate.
+The three Dev Screen controls on the PHOTO_FINISH row are now WIRED and still cannot move it.
+CAMERA and RENDER are unmoved for the same reason, and were run rather than reasoned from.
 
 **RE-MEASURED IN FULL FOR START-ONE-WINDOW-1 — TWICE, and the second run is this one: the block’s
 documentation sweep touched a comment in `CameraDirector.js`, which is inside this stamp’s
