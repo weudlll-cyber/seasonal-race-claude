@@ -456,6 +456,38 @@ it was available and deliberately not used — `Minimap.js` is not in `tracking-
 closure, and the unmoved CAMERA hash independently says the director's decisions did not change — but
 both are arguments, and the ship called for a measurement.
 
+## The merge, the tag, CI, and the sweep
+
+| | |
+| --- | --- |
+| **merge commit** | **`242e6cb3`** — `merge(SHIP-MINIMAP-ONE-SOURCE)`, `--no-ff`, nine files |
+| **tag** | **`v-ship-minimap-one-source`**, annotated, on `242e6cb3`; return point `v-ship-minimap-one-source^1` |
+| **CI green for exactly the merge SHA** | run [`32262308114`](https://github.com/weudlll-cyber/seasonal-race-claude/actions/runs/32262308114) — `success`, head `242e6cb3` |
+| CI on the master tip after step 9 | run `32262266068` — `success`, head `0fcb1e97` |
+| `npm run verify` | green on the branch tip before the merge (**PASS 18, FAIL 0**), and green on master for the sweep merge (`--base=0fcb1e97`, **PASS 8, FAIL 0**) |
+| master at origin | `8983c994` |
+
+**CI for the merge SHA had to be asked for.** The push delivered the merge and step 9's follow-up
+together, so GitHub ran CI only for the tip. The merge commit is what the tag points at and what a
+checkout of the tag shows, so it is the SHA the rule is about — `ci.yml`'s `workflow_dispatch` hand
+crank was pointed at the tag ref, which resolves to `242e6cb3` and nothing else. **A ship that pushes
+its step-9 commit in the same push as the merge should expect to do this**; the alternative is two
+pushes, which THE SHIP ORDER forbids for the tag.
+
+### The sweep
+
+- **`feat/minimap-one-source` deleted at origin**, after CI was green for the merge SHA. It was
+  confirmed contained in master first.
+- **No other branch at origin was already contained in master** — before the sweep, origin held only
+  that branch and `master`.
+- **`invest/sprite-size-overview` was MERGED, not archived.** It carried no production file — one
+  report, one read-only instrument (`scripts/sprite-size-truth.mjs`) and an index line — so there was
+  nothing in it for the owner to judge and nothing that could move a fingerprint, while the ship's
+  own open items cite it twice. A report that is not on master is a report nobody will find. Its
+  `INDEX.md` line conflicted with this ship's (both were inserted at the head of the same arc) and
+  **both entries were kept**, ship first.
+- **`git ls-remote --heads origin` now returns `master` alone.**
+
 ## The open items this ship leaves behind — written, not fixed
 
 **1. The three PHOTO_FINISH Dev Screen controls are now wired and still inert.** Min state hold, max
