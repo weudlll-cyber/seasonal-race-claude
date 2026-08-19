@@ -1,7 +1,8 @@
 # LABEL-OVERLAP-FIX-1 — a label that was admitted stays readable
 
-**2026-08-22 · branch `fix/label-overlap` off master `845b97d0` · NOT MERGED, NOTHING MINTED — this
-changes the picture and the owner judges it first**
+**2026-08-22 · branch `fix/label-overlap` off master `845b97d0` · **SHIPPED** as
+`v-ship-label-overlap` after the owner judged it on a production build on 2026-08-22 · **NOTHING
+MINTED**, and that is the finding rather than an omission — see THE SHIP at the foot of this report**
 
 ## The two fixes, in one line each
 
@@ -9,11 +10,16 @@ changes the picture and the owner judges it first**
 `fits` still forgives a tenured label up to `yieldOverlapFrac` of its own area, but any overlap with
 a box holding a name now refuses it outright (`nameTagLayout.js`, inside `fits`).
 
-> **Which shape, and why the other was worse.** The alternative was to re-check every admitted name
-> after the pass and withdraw the ones that got overrun; that is *itself* the churn the budget exists
-> to prevent — a name would appear and vanish within one frame — and it cascades, because freeing a
-> slot changes every later decision. Protecting the name at the point of intrusion is one condition
-> inside the loop that already runs.
+> **Which shape, and why.** It is **one condition inside a loop that already runs**, against a second
+> pass over every placed label — and a second pass cascades, because withdrawing one name frees space
+> and changes every decision made after it, so it has to be repeated until it settles.
+>
+> **CORRECTED AT THE SHIP.** This paragraph first gave a different and FALSE reason: that withdrawing
+> an admitted name would make it flicker. It would not — `labelFormHold` is a dwell lock that already
+> governs when a name may appear at all, and the owner confirms flicker has never been a failure
+> here. The shape shipped is still the right one; the justification was wrong, and it is corrected
+> rather than quietly dropped, because a wrong reason in the record is what the next decision gets
+> built on.
 
 **B — the photo-finish blanket exemption is gone.** `renderRaceFrame.js` passes `exemptAll: false`.
 
@@ -183,3 +189,112 @@ node scripts/label-names-truth.mjs --roster=current --racers=20
 node scripts/render-fingerprint.mjs --quiet                       # 7d553406f41ff176, unmoved
 cd client && npx vitest run src/screens/RaceScreen/nameTagLayout.test.js
 ```
+
+---
+
+# THE SHIP — SHIP-LABEL-OVERLAP, 2026-08-22
+
+**The owner judged this on a production build on 2026-08-22 and accepted it, including the photo
+finish: where there is no room, nothing more can be shown.** That is the fact this section records;
+everything below is what was done on the strength of it.
+
+## What the merge put on master
+
+`git diff --name-only master...fix/label-overlap` — **seven files**, read before merging:
+
+| | file |
+| --- | --- |
+| production (2) | `nameTagLayout.js`, `renderRaceFrame.js` |
+| tests (1) | `nameTagLayout.test.js` |
+| instrument (2) | `scripts/label-names-truth.mjs`, `scripts/fixtures/label-metrics-chrome.json` |
+| report (2) | this file, and its `INDEX.md` line |
+
+`master` was already an ancestor of the branch, so THE SHIP ORDER's catch-up merge was a no-op and
+the branch tip's tree **is** the merged tree.
+
+## The mint: nothing, and the null result is the point
+
+| instrument | closure | contains a merged file? | result |
+| --- | --- | --- | --- |
+| world / world-off | 22 | **no** | cannot move — not run |
+| camera | 38 | **no** | cannot move — not run |
+| **render** | 58 | **yes** — both production files | **`7d553406f41ff176` — MEASURED, UNMOVED** |
+| tracking-lag stamp | `depends=client/src/modules/camera/` | **no** — every changed file is under `screens/RaceScreen/` | not tripped, no re-stamp |
+
+**RENDER was measured fresh on the merged tree and is byte-identical, so nothing is minted.** A mint
+records a movement.
+
+**WHY IT DID NOT MOVE, WRITTEN DOWN SO A LATER READER DOES NOT CONCLUDE THE FIXES DO NOTHING.**
+`labelNamesWhenRoom` ships `false`. `renderRaceFrame` passes `wideLabelOf` only when that key is
+true, so under the shipped configuration `e.wide` is **null for every racer**, no box is ever placed
+holding a name, and **both fixes are structurally unreachable**: fix A protects a box that never
+exists, and fix B's `exemptAll` branch is gated on `e.wide` as well. The render fingerprint runs
+`DEFAULT_CAMERA_CONFIG`, so it exercises neither path — which LABEL-NAMES-2's leave-one-out
+established from the other side, where reverting that single key takes the name count to zero.
+
+**The fixes are invisible on the shipped defaults and visible to anyone who has turned names on.**
+That is the owner's configuration, and it is the picture he judged.
+
+## Two corrections carried by this ship
+
+**1. LABEL-OVERLAP-3's headline number.** Its browser pass built label boxes with `BOX_PAD_X = 10`;
+the module's value is **8**, so every box was 2 px too wide. **"7 of 12" reads 3 of 11.** The
+mechanism, the name-versus-number signature and every PHOTO_FINISH figure stand, and 3 is still
+not 0.
+
+**2. FIX-1's stated reason for choosing this shape was WRONG, and the shape is still right.** It
+claimed that re-checking an admitted name would make it flicker. It would not: `labelFormHold` is a
+dwell lock that already governs when a name may appear at all, and the owner confirms flicker has
+never been a failure here. **Why the shape is right on its own terms:** it is one condition inside a
+loop that already runs, against a second pass over every placed label — and a second pass cascades,
+because withdrawing one name frees space and changes every decision made after it, so it has to be
+repeated until it settles. **The false justification is corrected in the source comment and in the
+report rather than quietly dropped**, because a wrong reason in the record is what the next decision
+gets built on.
+
+## The merge, the tag, CI and the sweep
+
+| | |
+| --- | --- |
+| **merge commit** | see the register line in [TAGS.md](../../docs/TAGS.md) |
+| **tag** | **`v-ship-label-overlap`**, annotated, on the merge; return point `v-ship-label-overlap^1` |
+| **CI** | green for exactly the merge SHA — the merge was pushed ALONE with its tag, per the ordering SHIP-CEREMONY-FIX-1 wrote after the last ship paid for getting it wrong |
+| `npm run verify` | green on the branch tip before the merge |
+| fingerprints | none minted; RENDER measured and unmoved |
+
+## What stays open — his item, not this ship's
+
+**The sprite floor.** `minDrawnFrameFrac` pins the drawn racer at **32.4 px on any shot wider than
+about 285 world px**, and that is the remaining reason his wide shot is crowded — the labels no
+longer overlap, but the sprites still do. It is untouched here and needs his eye. The three field
+sizes are already measured (LABELS-AND-FLOOR-1):
+
+| racers | frames where the floor binds | wide shot at the shipped 0.045 |
+| --- | --- | --- |
+| 20 | 4 of 130 (3 %) | 0 of 2 overlapping |
+| 40 | 18 of 126 (14 %) | 10 of 27 overlapping |
+| 60 | **79 of 125 (63 %)** | **28 of 45 overlapping** |
+
+The number was calibrated at **twenty** racers on the Space Sprint start grid, against an OVERVIEW
+that was 1200 world px under a zoom unit that has since changed twice. **The one question it needs
+is an eye-test:** is a racer drawn at 15–25 px in a wide sixty-racer shot still recognisable? No
+measurement can answer it.
+
+## PROPOSALS
+
+**1. Name the contenders at the photo finish.** The exemption was reaching for "say who is finishing"
+and delivered a smear; the clearance test now delivers one name. The director already knows the
+pinned pair (`_photoFinishContenders`); passing those two indices into `exempt` would give the finish
+its two names with the clearance test intact. **Cost:** one field on `FRAME_CAMERA_FIELDS` and one
+set union. **What he would see:** both contenders named at the line, and nothing else added.
+
+**2. Wire `label-names-truth.mjs` into `npm run verify` as a threshold guard.** It measures one
+number that must stay at zero — non-exempt overlapping names — on the configuration that actually
+exhibits the defect, and it is the only instrument in the tree that would notice this regressing.
+Left unwired, the next label change gets the same hand-measurement this one did. **Cost:** a `GUARD`
+declaration and one assertion. **What it prevents:** a fourth report in this series.
+
+**3. Pin the caller-level flag.** `exemptAll` is decided in `renderRaceFrame`, and only the ten-track
+harness would notice it being flipped back. A focused test that drives one PHOTO_FINISH frame and
+asserts no non-exempt name overlaps would close it. **Cost:** one test on the frame path. **What it
+prevents:** the fix being undone by an edit that looks unrelated.

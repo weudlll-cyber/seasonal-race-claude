@@ -1182,7 +1182,11 @@ finish shot leave ALONG it.
 ## Camera / presentation fixes
 
 - [LABEL-OVERLAP-FIX-1.md](LABEL-OVERLAP-FIX-1.md) — **a label that was admitted stays readable**
-  (2026-08-22, branch `fix/label-overlap`, **NOT MERGED, nothing minted**, his eye owed). Two fixes:
+  (2026-08-22; **SHIPPED as `v-ship-label-overlap`** — he judged it on a production build and
+  accepted it, including the photo finish: where there is no room, nothing more can be shown.
+  **NOTHING MINTED and that is the point** — RENDER measured on the merged tree and byte-identical,
+  because `labelNamesWhenRoom` ships false so both fixes are structurally unreachable on the
+  defaults). Two fixes:
   an admitted NAME is no longer a box the incumbent budget may be spent against (`fits`), and the
   photo-finish blanket exemption is gone (`exemptAll: false`) because its premise — "at that zoom" —
   was refuted at **1951 world px, the widest shot of the race**. **Non-exempt overlapping names go

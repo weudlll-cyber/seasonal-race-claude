@@ -431,11 +431,17 @@ export function computeTagLayout({
     // spent against. A name is expensive to earn — `labelFormHoldMs` of continuously clear geometry
     // — and a label that cost that much must not be overrun by one that cost nothing.
     //
-    // WHY NOT RE-CHECK THE NAME AFTERWARDS, which was the other shape on offer: a second pass that
-    // withdraws an already-granted name is exactly the churn this budget exists to prevent — the
-    // name would appear and vanish inside one frame, cascade (freeing space changes every later
-    // decision), and cost another O(n^2) pass. Protecting the name at the point of intrusion is one
-    // condition in the loop that already runs.
+    // WHY NOT RE-CHECK THE NAME AFTERWARDS, which was the other shape on offer. It is one condition
+    // inside a loop that already runs, against a second pass over every placed label — and a second
+    // pass would cascade, because withdrawing one name frees space and changes every decision made
+    // after it, so the pass has to be repeated until it settles.
+    //
+    // THE FIRST VERSION OF THIS PARAGRAPH GAVE A DIFFERENT AND FALSE REASON — that withdrawing an
+    // admitted name would make it FLICKER. It would not: `labelFormHold` is a dwell lock that
+    // already governs when a name may appear at all, and the owner confirms flicker has never been a
+    // failure here. The shape is still the right one; the justification was wrong and is corrected
+    // rather than quietly dropped, because a wrong reason in the record is what a later reader
+    // builds the next decision on.
     const fits = (box, hasTenure) => {
       const area = Math.max(1, (box.right - box.left) * (box.bottom - box.top));
       const budget = hasTenure ? yieldOverlapFrac * area : 0;
