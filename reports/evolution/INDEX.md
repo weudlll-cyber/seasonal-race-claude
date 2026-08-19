@@ -1181,6 +1181,21 @@ finish shot leave ALONG it.
 
 ## Camera / presentation fixes
 
+- [LINE-VISIBLE-1.md](LINE-VISIBLE-1.md) — **what "the line is in frame" measures — DEFECT, not
+  margin** (2026-08-22, MEASUREMENT ONLY, no camera change, nothing can move). ENDGAME-WIDTH-1's
+  number counted the line's centre point **OFF THE SCREEN ENTIRELY**: **17-47 %** of endgame frames
+  across ten tracks, against a separate margin-only violation of just 2-18 %. **AND THE CAUSE IS NOT
+  THE WIDTH** — on space-sprint the shot is already 1319 px against a line demand of 1341 and the
+  line is still lost 38 % of the time; **the median target-to-delivered lag is 414 px, and 891 px on
+  luger-hill.** The line leaves the picture because the camera is pointed elsewhere. **His definition
+  is answerable and nothing was invented** — the band is `getPosition(ft, ±0.5)`, and his rule is the
+  director's own `pointGuarantee` at `innerFramePct` 1.0; it roughly HALVES the width at mid-endgame,
+  WIDENS the opening on five of nine tracks, and takes over-scale below 1.0 on six of nine. **But it
+  removes a border the lag already exceeds**, so it cannot be built first. **The knock-on: `company`
+  becomes the binding term on every track (55-100 %)** — not the tail — which is what the next block
+  is about. Worst tracks are seatrack and space-sprint, not the ones sampled before; **`garden-path`
+  has NO endgame frames at all and that is not established.**
+
 - [ENDGAME-WIDTH-1.md](ENDGAME-WIDTH-1.md) — **which term actually buys the endgame's width**
   (2026-08-22, MEASUREMENT ONLY, no camera change, nothing can move). **THE TAIL IS NOT PAYING FOR
   IT — the owner's hypothesis is REFUTED.** The `line` term, the run-in's own finish-line bound,
