@@ -69,18 +69,29 @@ one, and it grows with the field: 5.95 s and 7.53 s at 40.
 suspected.** It starts **2.30–5.75 s** before the last crossing. The separate measurement that
 recorded 4.4–5.9 s stands; 1.4 s does not.
 
-**THE ENDING OVERLAPS THE RACE, AND THAT IS NOT THE INTERESTING PART.** The number nobody had asked
-for is the last column. When the zoom-out begins, **half to three-quarters of the field is still
-racing, and almost all of those are already off the canvas** — 11 of 11 on dirt-oval at 20, 27 of 29
-at 40. Across the whole of phase 6, **54–75% of frames have at least one unfinished racer outside the
-picture**, and on three of the four runs there is at least one frame where **not a single unfinished
-racer is in shot at all**.
+**THE ENDING OVERLAPS THE RACE, AND IT SHOWS THE RACERS IT IS WAITING FOR.** The last two columns of
+the table are a snapshot of ONE frame — the first of the pull-back, when the shot is still at its
+tightest — and they must not be read as the state of the ending. **The camera then opens and
+travels.**
 
-**The mechanism is not a defect in the zoom-out**: FINISH_OVERVIEW holds a FIXED point
-`finishOverviewLookbackPx` behind the line so later finishers cross in shot, and a racer further back
-than that is outside it by construction. Whether the ending should still be waiting for people it is
-not showing **is the owner's question, and this document does not answer it** — it is recorded in
-[STRAGGLER-TRUTH-1](../reports/evolution/STRAGGLER-TRUTH-1.md) with what a change would cost.
+**Measured per frame in the SETTLED shot** — from the pull-back's own duration being up to the last
+crossing — **every remaining still-running racer is in the picture**: 5 of 5 on dirt-oval at 20
+racers, 6 of 6 at 40, 7 of 7 on river-run at 40, where the shot holds all 40 racers at once. The
+camera centre moves about **300 world px further into the course** while the zoom opens roughly
+four-fold, and then settles.
+
+**So the lookback point is where the move ENDS, not where the camera sits throughout.**
+`finishOverviewLookbackPx` is a fixed world point and FINISH_OVERVIEW does settle on it — but it
+**goes and gets the field first**, which is why later finishers cross in shot.
+
+**An earlier reading of this section said the ending waits for racers it is not showing. That was
+measured on the wrong frames and is WITHDRAWN** — the owner tested the ending on 2026-08-22 and it is
+correct. The durations above stand; the interpretation was wrong. See
+[STRAGGLER-TRUTH-2](../reports/evolution/STRAGGLER-TRUTH-2.md).
+
+**One structural note the fixed instrument surfaced:** on river-run at 20 racers the zoom-out leads
+the last crossing by less than the pull-back's own length, so **that ending never reaches its settled
+shot before the race is over.** Nothing is wrong with it; it is simply a short phase 6.
 
 ### The card's own fades
 
