@@ -6,6 +6,18 @@ and [FAIRNESS.md](../../docs/FAIRNESS.md). Shipped world: **`dc4647be0f55ebdb`**
 
 ## CORRECTIONS — findings that invalidate a number in a report below
 
+- **2026-08-22 — SPRITE-SIZE-OVERVIEW-1 and LABELS-AND-FLOOR-1 both say `labelNamesWhenRoom: true`
+  yields ZERO names. It yields 670.** Corrected by [LABEL-NAMES-2](LABEL-NAMES-2.md); recorded here
+  because those reports are append-only. It was a HARNESS defect: `scripts/lib/raceDriver.mjs` never
+  assigns `st.phase` or `st.raceStart`, so `showAllTags` is true for the whole race and
+  `computeTagLayout` returns its start-formation roll call — which labels everyone, declutters
+  nothing, and returns `wide` EMPTY. **What STANDS:** every sprite, gap, overlap and floor number in
+  both reports, and the label WIDTHS — none depends on the label layout. **What is WITHDRAWN:** the
+  zero-names claim and the label COUNTS. **What REVERSES:** LABELS-AND-FLOOR-1's closing line that
+  labelling dominates so the floor may not be worth touching — the room test refuses the names that
+  would overlap, so the sprites are what is left unreadable. `render-fingerprint.mjs` is unaffected;
+  it runs its own loop and sets the field.
+
 - **2026-08-22 — three recorded open items are NOT open, verified against the source by
   [OPEN-ITEMS-2026-08-22](OPEN-ITEMS-2026-08-22.md).** Recorded here because the reports that carry
   them are append-only. **ALREADY FIXED:** the three Dev Screen controls that could show a number the
@@ -1144,6 +1156,19 @@ finish shot leave ALONG it.
 - [RACER-FLAPPING-1.md](RACER-FLAPPING-1.md) — racers flip left-right in traffic. **Diagnosed sim-side: `physicalY` oscillates (heading/render ruled out); reproduced with the real roster — Arrow leads, gets caught into traffic at ~18s, flaps 17 reversals/2s because §4a re-picks the most-constraining obstacle every tick with NO commit. STEP-1b fix (fixed 0.4s side-commit) = EARNED KILL: fixed Arrow (17→0) but made the field WORSE (dramatic flappers 1→6) — a synchronized fixed window de-responsivises mutual avoidance. Reverted; nothing shipped; fingerprint `ded0a126` identical. Next = obstacle-choice MARGIN hysteresis (not a timer) + a race-invariant flap metric. New read-only tooling: `--dump-frames` physicalY + `--racer-names` + `exp-flapping-gate.mjs`.**
 
 ## Camera / presentation fixes
+
+- [LABEL-NAMES-2.md](LABEL-NAMES-2.md) — **which of his eleven keys produces the name labels**
+  (2026-08-22, MEASUREMENT ONLY, nothing changed, no fingerprint can move). **`labelNamesWhenRoom`
+  alone — necessary and sufficient**: leave-one-out over all eleven takes names to 0 only there
+  (-670); `minRacersVisible` 8-vs-5 is worth -6 of 670 and the mid-race frame is IDENTICAL at both;
+  `highlightHeroes` draws a RING and touches no label (delta 0). Two of his keys go the OTHER way —
+  reverting `battleWeight` or `outcomePhaseThreshold` ADDS ~140 names, so his settings already
+  suppress names relative to the shipped camera. **THE ROOM TEST IS CORRECT**: of 6 names in his
+  crowded frame exactly 1 overlaps, and it is the LABEL-FOCUS-1 exempt racer drawn regardless by
+  design — **0 of 8 non-exempt names overlap**, and the layout measures the same font and box the
+  renderer draws. **So it is his setting, not a defect** — which turns the wide shot's
+  unreadability back onto the SPRITES (32.4 px drawn into 29.2 px of spacing). Carries a correction
+  to two earlier reports.
 
 - [LABELS-AND-FLOOR-1.md](LABELS-AND-FLOOR-1.md) — **the name labels, and the 32.4 px pin**
   (2026-08-22, MEASUREMENT ONLY, nothing fixed). **The resolution branch is RULED OUT from the
