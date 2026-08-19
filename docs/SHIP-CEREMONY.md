@@ -264,15 +264,89 @@ used.
 5. **On the branch, in one commit: the mint, the register line, the report and its INDEX entry.**
    The `TAGS.md` entry is written in the declaration form the register requires — backticked name,
    backticked short SHA, date — with the SHA **provisional** (see the note below).
+   **A `MEASURED:` stamp is NOT provisional and never carries a placeholder — see TRAP B below.**
 6. **`npm run verify` green on the branch — EXCEPT `check-tags`, which cannot be green here.** See
    the note below; `check-index` and `check-fingerprints` do run against the tree that is about to
    become master, which is most of the value.
 7. **Merge into master** with `--no-ff`. The merge commit's tree is the branch tip's tree.
 8. **Tag the merge commit**, annotated. It registers its own tag, so `check-tags` passes on it.
-9. **One follow-up commit on master corrects the two provisional SHAs** — the register line's and
-   `mintedOn` — to the merge's actual hash.
-10. **Push master and the tag in the SAME push.** A tag pushed ahead of its register turns master
-    red, and this repository has paid for that once.
+9. **Push the merge and the tag, and NOTHING ELSE — `git push origin master v-ship-<name>` with
+   master's tip standing exactly at the merge commit.** This is the step TRAP A below exists for:
+   the merge SHA must be the tip of what you push, or CI never runs for it.
+10. **Wait for CI to go green for the merge SHA** before doing anything else. If no run exists for
+    it, see TRAP A for the dispatch route.
+11. **Only then, the follow-up commit on master correcting the two provisional SHAs** — the register
+    line's and `mintedOn` — to the merge's actual hash, pushed on its own.
+
+### TRAP A — CI DOES NOT RUN FOR A COMMIT THAT IS NOT THE TIP OF A PUSH
+
+**Found 2026-08-22 by SHIP-MINIMAP-ONE-SOURCE, which paid for it.** That ship followed the old steps
+9 and 10 literally: it made the follow-up commit and then pushed master once, so the push carried the
+merge *and* the commit on top of it. **GitHub runs CI for the tip of a push, not for every commit in
+it.** The merge SHA — the one the tag points at, the one a checkout of the tag shows, the one the
+rule "green for exactly the merge SHA" is about — got no run at all.
+
+**THE RULE, in one line: the merge is ALWAYS pushed alone, with the tag, and the follow-up commit
+comes after CI is green.** That is steps 9, 10 and 11 above; there is no second option and nothing
+for the shipper to choose. It costs one extra push and it is the only ordering in which the SHA the
+tag names is a SHA CI has actually seen.
+
+**Pushing the merge alone does not reintroduce the defect THE SHIP ORDER was written against.** That
+defect was a tag arriving at origin before its register line. Under this order the register line is
+already inside the merge commit — step 5 put it there — so the tag and its registration travel
+together and `check-tags` is green. What is left outside is only the *correction* of a provisional
+SHA, which `check-tags` does not read: its own header says it checks names, not shas.
+
+**IF A RUN FOR THE MERGE SHA DOES NOT EXIST** — because the push was already made the wrong way round,
+or because a run was cancelled — do not push an empty commit to provoke one and do not settle for a
+run on a descendant. Dispatch the workflow at the **tag**, which resolves to the merge commit and to
+nothing else:
+
+```
+gh workflow run ci.yml --ref v-ship-<name>
+gh run list --limit 5 --json databaseId,headSha,status,conclusion,workflowName,event
+```
+
+The second line is how you confirm it: the run's `headSha` must be the merge commit's full hash. This
+worked on 2026-08-22 (run `32262308114`, head `242e6cb3`) and is the reason `ci.yml` keeps its
+`workflow_dispatch` trigger — it takes a ref, and a tag is a ref that can only mean one commit.
+**`--ref <sha>` is not a substitute: the dispatch API takes a branch or tag, not an arbitrary SHA.**
+
+### TRAP B — A `MEASURED:` STAMP CANNOT CARRY A PLACEHOLDER
+
+**Found in the same ship, and it cost more than TRAP A because it failed in the wrong place.** The
+paragraph below used to fold `MEASURED:` stamps in with the register line and `mintedOn` as "the same
+case", riding the same provisional-then-corrected path. They are not the same case:
+
+- `check-tags` reads the register line's **name**, not its SHA, so a provisional SHA there is inert.
+- `check-measured-stamps` reads the stamp's **commit field with a strict pattern** — `[0-9a-f]{7,40}`
+  — and, until this was fixed, **anything that did not match was not reported. It was silently
+  dropped from the checked set.** A stamp reading `@ PENDING` did not fail; it ceased to exist.
+
+In `docs/CAMERA_DIRECTOR.md`, which carries exactly one stamp, that took the document from one stamp
+to zero. The only thing that went red was the guard's LOUD-FAILURE rule firing on the empty set — so
+the error named the wrong problem ("found ZERO measured-number stamps") in the wrong place (the
+guard's own test suite, via `script-suite`), and the shipper spent a verify cycle finding out why.
+
+**THE RULE: a `MEASURED:` stamp is stamped at the commit that LAST CHANGED ITS `depends=` PATHS, and
+never at the merge and never at a placeholder.** That commit already exists when the stamp is
+written, so there is nothing provisional about it and **nothing for step 11 to correct**. It is also
+the semantically right answer: the stamp's question is *has this dependency moved since the number
+was measured*, which is a question about the dependency's own history, not about the merge that
+happens to carry the document.
+
+```
+git log -1 --format=%h -- <the stamp's depends= paths>
+```
+
+**THE GUARD WAS ALSO FIXED, because a rule in a document is not a guard (R13).**
+`check-measured-stamps.mjs` now scans a second time with a permissive opener, and anything that
+announces itself as `MEASURED:` and then fails the strict form **fails loudly, naming the file and
+the line and quoting what it found.** Proven in both directions by
+`scripts/check-measured-stamps.test.mjs`: an unparseable stamp fails and names its line, and the same
+stamp with a real SHA passes and is counted. The fenced-example exclusion is unaffected — fences are
+stripped first, and they are now replaced by their own newlines so the reported line numbers are the
+ones a reader sees.
 
 ### `check-tags` IS RED ON THE BRANCH, DELIBERATELY — and that is the window moving, not a defect
 
@@ -299,9 +373,9 @@ a temporary one in a branch nobody has merged is the whole of what this reorderi
 **A commit cannot name its own hash.** The register line's SHA and `mintedOn` both want the merge
 commit's hash, and neither can have it until that commit exists. So step 5 writes them provisionally
 — the branch tip's short SHA is the honest provisional value, because it is the commit the tree
-actually came from — and step 9 corrects them. **Any `MEASURED:` stamp re-pointed by the ship is the
-same case and rides in the same step-9 commit**, so there is exactly one place where provisional
-hashes are settled rather than three.
+actually came from — and step 9 corrects them. **A `MEASURED:` stamp is NOT one of these** — it names the commit that last changed its
+`depends=` paths, which already exists, so it is written once and corrected never. This
+paragraph said the opposite until 2026-08-22 and TRAP B above is what that cost.
 
 **This costs nothing that matters, and it is measured rather than assumed:** `check-tags` declares in
 its own header that it checks **names, not shas** ("whether a tag points where the register SAYS it

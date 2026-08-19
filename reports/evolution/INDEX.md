@@ -1040,6 +1040,20 @@ finish shot leave ALONG it.
 
 ## Repository hygiene (2026-08-14)
 
+- [SHIP-CEREMONY-FIX-1.md](SHIP-CEREMONY-FIX-1.md) — **the two traps the last ship walked into, both
+  in the ceremony's own procedure** (2026-08-22, SHIPPED, nothing minted — no production file, no
+  default, no fingerprint). **TRAP A: CI does not run for a commit that is not the TIP of a push** —
+  the old steps pushed the merge and its follow-up together, so the merge SHA never got a run. The
+  merge is now ALWAYS pushed alone with its tag and the follow-up comes after CI is green; the
+  recovery route is `gh workflow run ci.yml --ref v-ship-<name>`, which resolves to the merge commit
+  and nothing else. **TRAP B: a MEASURED stamp cannot carry the ceremony's `PENDING` placeholder** —
+  the pattern needs a hex SHA, and **an unmatched stamp was not reported, it was SILENTLY DROPPED
+  from the checked set**, taking `CAMERA_DIRECTOR.md` from one stamp to zero and failing in the wrong
+  place. A stamp now names the commit that last changed its `depends=` paths, and **the silent drop
+  itself is fixed inside the guard that owns stamps (R13)**: an unparseable stamp fails loudly with
+  file and line. **Proven both directions and mutation-tested** — removing the fix fails exactly the
+  two sabotage tests and leaves the other sixteen green.
+
 - [IP-ADDRESS-ADVISORY-1.md](IP-ADDRESS-ADVISORY-1.md) — **the one finding with a production path,
   closed, and the server gate armed** (2026-08-16). SERVER-AUDIT-1's four highs are gone and **every
   one was a lockfile-only move**: each fixed version already lay inside the range its dependent
@@ -1130,6 +1144,19 @@ finish shot leave ALONG it.
 - [RACER-FLAPPING-1.md](RACER-FLAPPING-1.md) — racers flip left-right in traffic. **Diagnosed sim-side: `physicalY` oscillates (heading/render ruled out); reproduced with the real roster — Arrow leads, gets caught into traffic at ~18s, flaps 17 reversals/2s because §4a re-picks the most-constraining obstacle every tick with NO commit. STEP-1b fix (fixed 0.4s side-commit) = EARNED KILL: fixed Arrow (17→0) but made the field WORSE (dramatic flappers 1→6) — a synchronized fixed window de-responsivises mutual avoidance. Reverted; nothing shipped; fingerprint `ded0a126` identical. Next = obstacle-choice MARGIN hysteresis (not a timer) + a race-invariant flap metric. New read-only tooling: `--dump-frames` physicalY + `--racer-names` + `exp-flapping-gate.mjs`.**
 
 ## Camera / presentation fixes
+
+- [LABELS-AND-FLOOR-1.md](LABELS-AND-FLOOR-1.md) — **the name labels, and the 32.4 px pin**
+  (2026-08-22, MEASUREMENT ONLY, nothing fixed). **The resolution branch is RULED OUT from the
+  source**: the canvas store is fixed 1280x720, no DPR anywhere, and `renderRaceFrame` is handed the
+  REFERENCE size — so his 1037x583 @ 1.5 scales the finished image and cannot reach the layout. The
+  remaining explanation is his **stored config**, and the console one-liner to read it is in the
+  report — **not guessed, asked for**. **The floor's number was calibrated at TWENTY racers on the
+  Space Sprint START grid** (commit `77a7812d`, 2026-08-03) against an OVERVIEW that was 1200 world
+  px under a zoom unit that has since changed twice. Today it binds on **4/130 frames at 20 racers
+  and 79/125 at 60**. At 60 it makes its OWN calibration frame 60/60 overlapping. **Lowering it costs
+  ZERO in the racing shot at every field size tested.** Which problem he sees depends on his label
+  form: with numbers the sprite dominates, with names the label dominates 6.1x — so **on today's
+  evidence the floor is the smaller problem**. Two owner decisions, stated.
 
 - [MINIMAP-ONE-SOURCE-1.md](MINIMAP-ONE-SOURCE-1.md) — **one ribbon drawn two ways, and a state list
   short by one** (2026-08-19; **SHIPPED 2026-08-22 as `v-ship-minimap-one-source`** — he judged the
