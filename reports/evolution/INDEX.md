@@ -1131,6 +1131,22 @@ finish shot leave ALONG it.
 
 ## Camera / presentation fixes
 
+- [MINIMAP-ONE-SOURCE-1.md](MINIMAP-ONE-SOURCE-1.md) — **one ribbon drawn two ways, and a state list
+  short by one** (2026-08-19; **SHIPPED 2026-08-22 as `v-ship-minimap-one-source`** — he judged the
+  minimap on a production build and accepted it; **RENDER minted, CAMERA measured and NOT minted
+  because it did not move**). Two blocks, one class of defect: something described in two places where the second
+  is allowed to disagree SILENTLY. **The minimap's band and edges walked `getEdgePoints` by index
+  while its marks and tail used `getPosition`** — sliver **1.886 -> 0.000 px**, mark-to-band gap
+  **0.919 -> 0.000 px on all ten tracks**, seam 0.000 either side. Four ribbon walks became one.
+  **But the band OUTLINE genuinely moved up to 2.021 px (space-sprint), over a pixel on three
+  tracks** — onto the true curve, which is the right direction and still a finding, and the 38 px
+  per-vertex figure is a re-parameterisation, not a move. **One source was not enough — one GRID was
+  needed**: sharing the source alone left 1.472 px. `ALL_STATES` was missing PHOTO_FINISH, so SIX
+  per-state maps fell back silently; CAMERA and RENDER both UNMOVED, and that is measured rather
+  than assumed — **the profile IS read (transition-reason counts move) but every PHOTO_FINISH
+  transition is a self-transition, which is a deliberate no-op.** So the three Dev controls are now
+  wired and still cannot move the shot. **3 short lists of 12; the dev HUD's is left for his call.**
+
 - [FALLBACK-MIRRORS-1.md](FALLBACK-MIRRORS-1.md) — **the camera's last three copied defaults, and
   what "unreachable" meant this time** (2026-08-18, SHIPPED, **nothing minted**). Four copies
   REMOVED, none synced. **The two identical wrong copies were the dangerous part**: the Dev Screen

@@ -126,6 +126,42 @@ spot this ship exposed: a visible change that no fingerprint can see.
   after the source clean-up.
 - `v-ship-coord-system` (`f78869bc`, 2026-08-14) — the merge itself.
 
+### MINIMAP-ONE-SOURCE — the minimap's ribbon is one walk, and one grid (2026-08-22)
+
+**The owner judged the minimap on a production build on 2026-08-22 and ACCEPTED it.** Two blocks in
+one merge, one tag, one mint — and only one of them can be seen.
+
+The minimap's band and both edge outlines walked `getEdgePoints` BY INDEX while its start mark,
+finish mark and unraced tail were built from `getPosition`. Two parameterisations of one ribbon, and
+they do not agree: one ROUNDS t to the nearest stored sample, the other INTERPOLATES. **Four ribbon
+walks became one, and one SOURCE was not enough — one GRID was needed**, because two polylines
+through the same curve at different sample points are not the same polyline. The sliver between the
+tail and the band it washes goes to zero, and so does the gap between a mark's ends and the band it
+spans, on all ten tracks. **The band outline itself moved up to 2.021 panel px, onto the true
+curve** — that is the visible change, and it is stated as a movement rather than folded into the
+sliver.
+
+The second block, PHOTO-FINISH-STATE-1, changes no picture at all. The camera state list was short
+by one and six per-state maps were falling back silently, two of them hand-written literals that
+never read the list. **CAMERA did not move, and that null result is load-bearing rather than a sign
+the fix did nothing**: every PHOTO_FINISH transition resolves back to PHOTO_FINISH, and
+`_transition` does its entry work only when the state actually changes, so a self-transition is a
+deliberate no-op.
+
+**RENDER moves; CAMERA, WORLD and WORLD-OFF do not.** Decided by the instruments' own declarations
+rather than asserted: walking `scripts/lib/routing.mjs` `closureOf` from each declared reach entry,
+WORLD's closure (22 files) contains **none** of the nine merged files, so it cannot move and was not
+run; CAMERA's (38) and RENDER's (58) each contain a changed file, so **both were measured fresh** —
+and CAMERA came back byte-identical, so it is deliberately **NOT minted**, because a mint records a
+movement. Values live in [fingerprints.json](fingerprints.json).
+
+- `v-ship-minimap-one-source` (`PENDING`, 2026-08-22) — **the ship.** The return point is
+  `v-ship-minimap-one-source^1`, which restores a minimap whose band is drawn from a second
+  parameterisation of its own ribbon — up to 1.886 px of un-washed band beside the tail and 0.919 px
+  between a mark's ends and the band edge — and a camera timing module whose state list is short by
+  PHOTO_FINISH, with the RENDER value `a8c59ef5002716f1`. See
+  [MINIMAP-ONE-SOURCE-1](../reports/evolution/MINIMAP-ONE-SOURCE-1.md).
+
 ### START-ONE-WINDOW — the start is one window, one rule (2026-08-21)
 
 **The owner judged the new start on a production build on 2026-08-21 and ACCEPTED it.** Three clocks

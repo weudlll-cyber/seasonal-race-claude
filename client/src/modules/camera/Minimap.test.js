@@ -5,21 +5,23 @@ const SAMPLES = 80;
 
 function makeMockShape(closed = true) {
   const bbox = { minX: 100, minY: 100, maxX: 900, maxY: 500 };
-  const outer = Array.from({ length: SAMPLES + 1 }, (_, i) => ({
-    x: 100 + (i / SAMPLES) * 800,
-    y: 100,
-  }));
-  const inner = Array.from({ length: SAMPLES + 1 }, (_, i) => ({
-    x: 100 + (i / SAMPLES) * 800,
-    y: 500,
-  }));
   return {
     isOpen: !closed,
     getBoundingBox: () => bbox,
-    getEdgePoints: () => ({ outer, inner }),
+    // MINIMAP-ONE-SOURCE-1: `getEdgePoints` THROWS, and that is the test. The band fill and both
+    // edge outlines used to be built from it by index while the marks and the tail were built from
+    // `getPosition` — two parameterisations of one ribbon, which is what left a sliver between
+    // them. A mock that merely stopped providing it would let a reintroduced call read `undefined`
+    // and fail somewhere unhelpful; one that throws names the defect at the moment it returns.
+    getEdgePoints: () => {
+      throw new Error(
+        'Minimap must read the track through getPosition only (MINIMAP-ONE-SOURCE-1).'
+      );
+    },
     // A straight band running left to right: t sets x, the lateral offset sets y. Deliberately
     // monotonic in t, so a mark drawn at the WRONG t lands at the wrong x and the tests below see
     // it — a mock that folded t back on itself could not tell start from finish apart.
+    // The offset follows the real EditorShape: -0.5 is the INNER edge, +0.5 the OUTER.
     getPosition: (t, offset) => ({ x: 100 + t * 800, y: 300 + offset * 400, angle: 0 }),
   };
 }
@@ -115,6 +117,10 @@ function startColorFromOpenRender() {
 
 const MARKS_CLOSED = { startT: 0, finishT: 3 };
 const MARKS_OPEN = { startT: 0, finishT: 0.6 };
+// A finish deliberately OFF the 80-step band grid. `MARKS_OPEN`'s 0.6 is exactly 48/80, so a tail
+// that re-divides its own span evenly lands on the grid ANYWAY and a grid-sharing test written
+// against it passes either way — which it did, until this was added. 0.633 is on no step.
+const MARKS_OPEN_OFFGRID = { startT: 0, finishT: 0.633 };
 
 describe('renderMinimap', () => {
   it('does not throw with a valid closed shape and racers', () => {
@@ -231,10 +237,10 @@ describe('renderMinimap', () => {
   });
 
   it('OPEN shape: the tail SEAM is the finish mark itself, to the pixel', () => {
-    // DELETE THIS and the one thing that makes the tail honest is unguarded. The band is built
-    // from getEdgePoints BY INDEX and the marks from getPosition; those two parameterisations
-    // disagree by up to 502 world px on luger-hill. Building the tail from the mark's own source
-    // is what puts the seam under the checker, and only this test says so.
+    // DELETE THIS and the one thing that makes the tail honest is unguarded. The band USED to be
+    // built from getEdgePoints BY INDEX and the marks from getPosition; those two parameterisations
+    // disagree by up to 502 world px on luger-hill. MINIMAP-ONE-SOURCE-1 put all four on one walk,
+    // and this test is what says the seam still lands under the checker rather than near it.
     const ctx = makeCtx();
     renderMinimap(ctx, makeMockShape(false), makeMockRacers(3), 0, 1280, 720, null, MARKS_OPEN);
 
@@ -271,6 +277,146 @@ describe('renderMinimap', () => {
     expect(tailIdx).toBeGreaterThanOrEqual(0);
     expect(tailIdx).toBeLessThan(firstMark);
     expect(tailIdx).toBeLessThan(firstDot);
+  });
+
+  // ── MINIMAP-ONE-SOURCE-1 ───────────────────────────────────────────────────────────────────
+  //
+  // The band, both edges, both marks and the tail are ONE ribbon. Before this block they were two
+  // parameterisations of it — the band and edges from `getEdgePoints` by index, the marks and tail
+  // from `getPosition` — and the two disagree, because `getEdgePoints` rounds t to the nearest
+  // stored sample while `getPosition` interpolates. Measured on all ten shipped tracks by
+  // `scripts/minimap-truth.mjs`: up to 1.886 panel px of un-washed band beside the tail, and up to
+  // 0.919 px between a mark's ends and the band edge it spans. Both are 0.000 now.
+
+  it('reads the track through getPosition ONLY — nothing calls getEdgePoints', () => {
+    // DELETE THIS and the whole block can be undone by one convenient line. The mock's
+    // `getEdgePoints` throws, so any reader of the second parameterisation fails here and names
+    // itself; without it, a reintroduced call would draw a band that is silently 1.9 px off the
+    // tail again — a defect that is visible on the panel and invisible to every other test.
+    for (const closed of [true, false]) {
+      const ctx = makeCtx();
+      expect(() =>
+        renderMinimap(ctx, makeMockShape(closed), makeMockRacers(3), 0, 1280, 720, null, {
+          startT: 0,
+          finishT: closed ? 3 : 0.6,
+        })
+      ).not.toThrow();
+    }
+  });
+
+  it('the band fill and BOTH edge outlines are the same walk, not three', () => {
+    // DELETE THIS and the band could go back to being sampled once per drawing. Three walks of one
+    // ribbon is how the file ended up with two parameterisations in the first place: each drawing
+    // owned its own sampling, so one of them could drift without the others.
+    const ctx = makeCtx();
+    renderMinimap(ctx, makeMockShape(false), makeMockRacers(2), 0, 1280, 720, null, MARKS_OPEN);
+
+    const band = areaFills(ctx)[0].path;
+    const half = band.length / 2;
+    const bandOuter = band.slice(0, half);
+    const bandInner = band.slice(half).reverse();
+
+    const edges = ctx.ops.filter((o) => o.op === 'stroke' && o.path.length > 2);
+    expect(edges).toHaveLength(2);
+    expect(edges[0].path).toEqual(bandOuter);
+    expect(edges[1].path).toEqual(bandInner);
+  });
+
+  it('the band is sampled at TRACK_SAMPLES + 1 cross-sections', () => {
+    // DELETE THIS and the density could change without anyone noticing. It is not a free number:
+    // the tail shares this grid, so halving it would coarsen the tail's outline too.
+    const ctx = makeCtx();
+    renderMinimap(ctx, makeMockShape(false), makeMockRacers(2), 0, 1280, 720, null, MARKS_OPEN);
+    expect(areaFills(ctx)[0].path).toHaveLength((SAMPLES + 1) * 2);
+  });
+
+  it('OPEN shape: every tail vertex after the first IS a band vertex', () => {
+    // DELETE THIS and the tail can go back to re-dividing its own span evenly. That is still ONE
+    // SOURCE and still leaves a sliver — measured at up to 1.472 px — because two polylines through
+    // the same curve at different sample points are not the same polyline: where one's chord cuts a
+    // corner the other's does not. Sharing the band's grid is what takes the sliver to 0.000, and
+    // this is the only test that says the grid is shared.
+    // The finish is OFF the grid on purpose — see MARKS_OPEN_OFFGRID. With an on-grid finish an
+    // evenly re-divided tail lands on the grid by accident and this test cannot fail.
+    const ctx = makeCtx();
+    renderMinimap(
+      ctx,
+      makeMockShape(false),
+      makeMockRacers(2),
+      0,
+      1280,
+      720,
+      null,
+      MARKS_OPEN_OFFGRID
+    );
+
+    const band = areaFills(ctx)[0].path;
+    const tail = areaFills(ctx)[1].path;
+    const key = (p) => `${p.x.toFixed(9)},${p.y.toFixed(9)}`;
+    const bandKeys = new Set(band.map(key));
+
+    const half = tail.length / 2;
+    const tailInner = tail.slice(0, half);
+    const tailOuter = tail.slice(half).reverse();
+    // The FIRST cross-section is the finish, which is an arbitrary t and deliberately not on the
+    // grid — that is the whole reason the tail needs `getPosition` at all.
+    for (const p of tailInner.slice(1)) expect(bandKeys.has(key(p))).toBe(true);
+    for (const p of tailOuter.slice(1)) expect(bandKeys.has(key(p))).toBe(true);
+    expect(tailInner.length).toBeGreaterThan(1);
+  });
+
+  it('OPEN shape: both mark bars land ON the band edges, not near them', () => {
+    // DELETE THIS and a mark could drift off the band it claims to span while every other test
+    // stayed green — the marks were measured at up to 0.919 px off the drawn edge before this
+    // block, and nothing failed. The start bar is at a grid t here, so it must match exactly.
+    const ctx = makeCtx();
+    renderMinimap(ctx, makeMockShape(false), makeMockRacers(2), 0, 1280, 720, null, MARKS_OPEN);
+
+    const band = areaFills(ctx)[0].path;
+    const key = (p) => `${p.x.toFixed(9)},${p.y.toFixed(9)}`;
+    const bandKeys = new Set(band.map(key));
+
+    // startT 0 and finishT 0.6 are both on the 80-step grid, so both bars' ends are band vertices.
+    for (const bucket of marksByPosition(ctx)) {
+      const ends = [bucket.segs[0].path[0], bucket.segs[bucket.segs.length - 1].path[1]];
+      for (const e of ends) expect(bandKeys.has(key(e))).toBe(true);
+    }
+  });
+
+  it('the tail is drawn AFTER the band fill and BEFORE the edge outlines', () => {
+    // DELETE THIS and the layering that makes the tail readable goes unguarded in BOTH directions.
+    // Before the band fill, the wash would be painted over. After the edges, it would dim the cyan
+    // outline and the tail would read as "the track ends here" — the opposite of true, and the one
+    // misreading this addition could cause.
+    const ctx = makeCtx();
+    renderMinimap(ctx, makeMockShape(false), makeMockRacers(2), 0, 1280, 720, null, MARKS_OPEN);
+
+    const fills = areaFills(ctx);
+    const bandIdx = ctx.ops.indexOf(fills[0]);
+    const tailIdx = ctx.ops.indexOf(fills[1]);
+    const firstEdge = ctx.ops.findIndex((o) => o.op === 'stroke' && o.path.length > 2);
+
+    expect(bandIdx).toBeLessThan(tailIdx);
+    expect(tailIdx).toBeLessThan(firstEdge);
+  });
+
+  it('the drawing ORDER is unchanged: panel, band, tail, edges, marks, dots', () => {
+    // DELETE THIS and the one promise this simplification makes — that only the sliver moves — is
+    // unguarded as a whole. Each pair above pins one adjacency; this pins the sequence, which is
+    // what a reader of the panel actually sees.
+    const ctx = makeCtx();
+    renderMinimap(ctx, makeMockShape(false), makeMockRacers(3), 0, 1280, 720, null, MARKS_OPEN);
+
+    const fills = areaFills(ctx);
+    const order = [
+      ctx.ops.indexOf(fills[0]), // band
+      ctx.ops.indexOf(fills[1]), // tail
+      ctx.ops.findIndex((o) => o.op === 'stroke' && o.path.length > 2), // first edge
+      ctx.ops.findIndex((o) => o.op === 'stroke' && o.path.length === 2), // first mark
+      ctx.ops.findIndex((o) => o.op === 'arc'), // first dot
+    ];
+    expect(order.every((v) => v >= 0)).toBe(true);
+    expect(order).toEqual([...order].sort((a, b) => a - b));
   });
 
   it('draws the marks BEFORE the racer dots', () => {
