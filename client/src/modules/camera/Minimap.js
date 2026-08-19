@@ -11,6 +11,40 @@
 //
 // WHAT IT IS NOT FOR: the camera. It is pure render and reads nothing the director owns; it draws
 // in canvas pixels directly and takes no part in the world<->screen projection.
+//
+// ── ONE SOURCE FOR THE RIBBON (MINIMAP-ONE-SOURCE-1) ─────────────────────────────────────────────
+//
+// Everything this file draws that follows the track — the band fill, both edge outlines, the start
+// and finish marks and the unraced tail — is ONE ribbon, and it is sampled in ONE place:
+// `crossSection`, which asks the shape for `getPosition(t, -0.5)` and `getPosition(t, +0.5)`. Four
+// walks of that ribbon became one.
+//
+// IT USED TO BE TWO PARAMETERISATIONS. The band and its edges walked `getEdgePoints(80)` BY INDEX
+// while the marks and the tail were built from `getPosition`, and the two do not agree: inside
+// `EditorShape`, `getEdgePoints` resolves t through `_idx`, which ROUNDS to the nearest stored
+// sample, while `getPosition` INTERPOLATES between the two it lies between. So the same t named two
+// different points, and the tail drawn on one lay up to 1.9 panel px off the band drawn on the
+// other — a bright sliver of un-washed band along the whole unraced stretch, worst on space-sprint.
+//
+// WHY `getPosition` IS THE ONE THAT SURVIVED, and not the other way round:
+//
+//   1. IT IS WHAT THE WORLD USES. The finish gate the racers actually cross is drawn at
+//      `getPosition(ft, 0)` extruded by half the track width. A mark built from anything else can
+//      drift away from the line it claims to be.
+//   2. IT IS THE ONLY ONE THAT CAN SAY WHERE THE TAIL STARTS. The tail begins at `finishT`, which
+//      is an arbitrary t and not a sample index. `getEdgePoints` can only hand back whole samples,
+//      so it could never have drawn the tail's first cross-section at all — that is why the two
+//      parameterisations existed in the first place, rather than by anyone's choice.
+//   3. IT IS THE FINER OF THE TWO. Rounding to the nearest stored sample is a quantisation the
+//      interpolating reader does not have; the sliver IS that quantisation, seen edge-on.
+//
+// WHAT `getEdgePoints` PROVIDED THAT THIS MUST STILL PROVIDE, checked rather than assumed:
+//   - both edges of the whole track at a chosen density. `crossSection` at t = i/TRACK_SAMPLES
+//     gives the same 81 pairs at the same spacing.
+//   - which side is which. `getPosition` clamps its offset to [-0.5, +0.5] and maps -0.5 to the
+//     INNER edge and +0.5 to the OUTER, so the naming carries over exactly.
+//   - the closed-track wrap. At t 1 a closed shape wraps to t 0, so the last pair of the walk IS
+//     the first and `closePath()` still closes on a point rather than across a gap.
 // ============================================================
 
 export const MINIMAP_W = 280;
@@ -21,13 +55,19 @@ const PADDING = 6;
 const TRACK_SAMPLES = 80;
 
 // ── Start and finish marks ────────────────────────────────────────────────────────────────────
-// Both marks are BARS ACROSS THE BAND, from `getPosition(t, ±0.5)` — the SAME segment the world's
-// finish gate spans, since that gate is drawn at `getPosition(ft, 0)` extruded by half the track
-// width. So the mark and the line the racers cross cannot drift apart.
+// Both marks are BARS ACROSS THE BAND — one cross-section of the ribbon, from the same
+// `crossSection` the band itself is drawn with, which is the SAME segment the world's finish gate
+// spans, since that gate is drawn at `getPosition(ft, 0)` extruded by half the track width. So the
+// mark, the band it lies on, and the line the racers cross cannot drift apart.
 //
-// MEASURED on all ten shipped tracks: that bar is 12–22 panel px long, and its ends land within
-// 1.5 panel px of the drawn band edge. Every size below is chosen against those numbers, not
-// against a guess — a mark tuned for a 50 px bar would have been a blob on half the tracks.
+// MEASURED on all ten shipped tracks: that bar is 12–27 panel px long. Every size below is chosen
+// against those numbers, not against a guess — a mark tuned for a 50 px bar would have been a blob
+// on half the tracks.
+//
+// ITS ENDS USED TO LAND WITHIN 1.5 PANEL PX OF THE DRAWN BAND EDGE, and that tolerance was this
+// file's own record of the two-parameterisation defect: the bar was right and the band it was
+// measured against was the rounded one. MINIMAP-ONE-SOURCE-1 makes the two the same walk, and the
+// measured gap is now 0.000 px on all ten tracks. `scripts/minimap-truth.mjs` is what says so.
 //
 // The two are told apart by PATTERN FIRST and colour second — a solid green bar starts, a
 // black/white checker finishes — because a checker still reads where a colour alone, in a 4 px
@@ -57,12 +97,13 @@ const MARK_COINCIDE_PX = 6;
 // down so the extent of the race is obvious. A CLOSED loop is raced in full and has no tail — the
 // same `shape.isOpen` the band already asks about decides it, not a second rule.
 //
-// IT IS BUILT FROM `getPosition(t, ±0.5)`, THE SAME SOURCE THE FINISH MARK USES, which is the
-// whole reason the seam lands on the checker: the tail's first cross-section IS the mark's bar,
-// to the pixel, rather than two parameterisations that have to be trusted to agree. They do not —
-// pairing `getEdgePoints` by index disagrees with `getPosition` by up to 502 world px on
+// IT IS BUILT FROM `crossSection`, THE SAME SOURCE THE FINISH MARK AND THE BAND USE, which is the
+// whole reason the seam lands on the checker: the tail's first cross-section IS the mark's bar, to
+// the pixel, rather than two parameterisations that have to be trusted to agree. They did not —
+// pairing `getEdgePoints` by index disagreed with `getPosition` by up to 502 world px on
 // luger-hill (that is an along-track offset, not a width error), which would have put the seam
-// visibly off the mark on the longest tail in the game.
+// visibly off the mark on the longest tail in the game. The band it washes now comes from the same
+// place, so the tail no longer leaves a sliver of un-washed band along its edge either.
 //
 // A WASH, NOT A COLOUR. The tail keeps the band's own hue and loses its light, so the raced part
 // is what the eye finds first. It is drawn BEFORE the edge outlines, so the cyan edge still runs
@@ -73,7 +114,9 @@ const TAIL_WASH = 'rgba(6,10,14,0.5)';
 /**
  * Renders a picture-in-picture minimap in the bottom-left corner of the canvas.
  * @param {CanvasRenderingContext2D} ctx
- * @param {{ getBoundingBox, getEdgePoints, getPosition, isOpen }} shape
+ * @param {{ getBoundingBox, getPosition, isOpen }} shape  `getEdgePoints` is deliberately NOT in
+ *   this list any more: MINIMAP-ONE-SOURCE-1 made `getPosition` the only reader of the track's
+ *   geometry here, so a caller can hand this function a shape that does not implement the other.
  * @param {Array<{x:number, y:number, color:string, index:number}>} racers
  * @param {number} leaderIndex  Index of the leading racer in the racers array
  * @param {number} canvasW
@@ -125,15 +168,16 @@ export function renderMinimap(
   ctx.lineWidth = 2;
   ctx.strokeRect(bx, by, MINIMAP_W, MINIMAP_H);
 
+  // THE RIBBON, WALKED ONCE. The band fill and both edge outlines are three drawings of these two
+  // polylines; walking the shape again for each of them is what let them disagree with the marks
+  // and the tail, which walk it at their own t values.
+  const band = ribbon(shape, ribbonTs(0), toMx, toMy);
+
   // Track band fill
-  const { outer, inner } = shape.getEdgePoints(TRACK_SAMPLES);
   ctx.beginPath();
-  ctx.moveTo(toMx(outer[0].x), toMy(outer[0].y));
-  for (let i = 1; i <= TRACK_SAMPLES; i++) {
-    ctx.lineTo(toMx(outer[i].x), toMy(outer[i].y));
-  }
-  for (let i = TRACK_SAMPLES; i >= 0; i--) {
-    ctx.lineTo(toMx(inner[i].x), toMy(inner[i].y));
+  tracePolyline(ctx, band.outer);
+  for (let i = band.inner.length - 1; i >= 0; i--) {
+    ctx.lineTo(band.inner[i].x, band.inner[i].y);
   }
   if (!shape.isOpen) ctx.closePath();
   ctx.fillStyle = 'rgba(200,180,120,0.5)';
@@ -147,19 +191,13 @@ export function renderMinimap(
   ctx.strokeStyle = 'rgba(0,220,220,0.9)';
   ctx.lineWidth = 1;
   ctx.beginPath();
-  ctx.moveTo(toMx(outer[0].x), toMy(outer[0].y));
-  for (let i = 1; i <= TRACK_SAMPLES; i++) {
-    ctx.lineTo(toMx(outer[i].x), toMy(outer[i].y));
-  }
+  tracePolyline(ctx, band.outer);
   if (!shape.isOpen) ctx.closePath();
   ctx.stroke();
 
   // Inner edge outline
   ctx.beginPath();
-  ctx.moveTo(toMx(inner[0].x), toMy(inner[0].y));
-  for (let i = 1; i <= TRACK_SAMPLES; i++) {
-    ctx.lineTo(toMx(inner[i].x), toMy(inner[i].y));
-  }
+  tracePolyline(ctx, band.inner);
   if (!shape.isOpen) ctx.closePath();
   ctx.stroke();
 
@@ -206,6 +244,71 @@ function markT(shape, t) {
 }
 
 /**
+ * THE ONE PLACE THIS FILE ASKS THE SHAPE WHERE THE TRACK IS. One cross-section of the ribbon at
+ * `t`, both edges, already in panel pixels.
+ *
+ * `getPosition` clamps its offset to [-0.5, +0.5] and maps -0.5 to the inner edge and +0.5 to the
+ * outer, so this is the full width of the band and the naming is the shape's own.
+ */
+function crossSection(shape, t, toMx, toMy) {
+  const i = shape.getPosition(t, -0.5);
+  const o = shape.getPosition(t, 0.5);
+  return {
+    inner: { x: toMx(i.x), y: toMy(i.y) },
+    outer: { x: toMx(o.x), y: toMy(o.y) },
+  };
+}
+
+/**
+ * The t values a stretch of the ribbon from `t0` to the end of the track is sampled at.
+ *
+ * ONE GRID, NOT JUST ONE SOURCE. The whole band is `TRACK_SAMPLES` even steps; a stretch that
+ * starts partway along takes its own first sample at `t0` — which is the point of it, since `t0` is
+ * a finish position and not a sample index — and then EVERY BAND SAMPLE AFTER IT, rather than
+ * re-dividing its own span evenly.
+ *
+ * That last part is not tidiness, it is the rest of the sliver. Two polylines through the same
+ * curve at different sample points are not the same polyline: each is a run of chords, and where
+ * one track's chord cuts a corner the other does not, they part company. Sampling the same source
+ * at a re-divided span left up to 1.5 panel px between the tail and the band it washes, on top of
+ * the 1.9 px the two different sources cost. Sharing the grid makes every vertex of the stretch
+ * after the first a vertex of the band itself, and the two outlines coincide.
+ *
+ * The DENSITY is unchanged — it is still the band's own, which is what the tail always asked for.
+ * Only the phase is.
+ */
+function ribbonTs(t0) {
+  const ts = [t0];
+  for (let i = Math.ceil(t0 * TRACK_SAMPLES); i <= TRACK_SAMPLES; i++) {
+    const t = i / TRACK_SAMPLES;
+    if (t > t0) ts.push(t);
+  }
+  return ts;
+}
+
+/**
+ * A stretch of the ribbon as two panel-pixel polylines. Every outline this file draws is one of
+ * these — the band is the whole ribbon, the tail is the stretch behind the finish, and a mark is
+ * one cross-section.
+ */
+function ribbon(shape, ts, toMx, toMy) {
+  const inner = [];
+  const outer = [];
+  for (const t of ts) {
+    const c = crossSection(shape, t, toMx, toMy);
+    inner.push(c.inner);
+    outer.push(c.outer);
+  }
+  return { inner, outer };
+}
+
+/** Opens a path on a polyline's first point and runs through the rest. */
+function tracePolyline(ctx, pts) {
+  ctx.moveTo(pts[0].x, pts[0].y);
+  for (let i = 1; i < pts.length; i++) ctx.lineTo(pts[i].x, pts[i].y);
+}
+
+/**
  * Washes down the stretch of band behind the finish, which no racer ever runs.
  *
  * OPEN TRACKS ONLY, and silent when the finish is at or past the end of the geometry — there is
@@ -221,23 +324,12 @@ function drawUnracedTail(ctx, shape, finishT, toMx, toMy) {
   const t0 = markT(shape, finishT);
   if (t0 >= 1) return;
 
-  const span = 1 - t0;
-  const n = Math.max(2, Math.ceil(span * TRACK_SAMPLES));
-  const at = (i, offset) => {
-    const p = shape.getPosition(t0 + (span * i) / n, offset);
-    return { x: toMx(p.x), y: toMy(p.y) };
-  };
+  const tail = ribbon(shape, ribbonTs(t0), toMx, toMy);
 
   ctx.beginPath();
-  let p = at(0, -0.5);
-  ctx.moveTo(p.x, p.y);
-  for (let i = 1; i <= n; i++) {
-    p = at(i, -0.5);
-    ctx.lineTo(p.x, p.y);
-  }
-  for (let i = n; i >= 0; i--) {
-    p = at(i, 0.5);
-    ctx.lineTo(p.x, p.y);
+  tracePolyline(ctx, tail.inner);
+  for (let i = tail.outer.length - 1; i >= 0; i--) {
+    ctx.lineTo(tail.outer[i].x, tail.outer[i].y);
   }
   ctx.closePath();
   ctx.fillStyle = TAIL_WASH;
@@ -246,14 +338,8 @@ function drawUnracedTail(ctx, shape, finishT, toMx, toMy) {
 
 /** The bar across the band at `t`, inner edge to outer edge, already in panel pixels. */
 function bandBarAt(shape, t, toMx, toMy) {
-  const innerPt = shape.getPosition(t, -0.5);
-  const outerPt = shape.getPosition(t, 0.5);
-  return {
-    ax: toMx(innerPt.x),
-    ay: toMy(innerPt.y),
-    bx: toMx(outerPt.x),
-    by: toMy(outerPt.y),
-  };
+  const c = crossSection(shape, t, toMx, toMy);
+  return { ax: c.inner.x, ay: c.inner.y, bx: c.outer.x, by: c.outer.y };
 }
 
 /** The same bar with both ends pushed out by `growPx` along its own direction. */

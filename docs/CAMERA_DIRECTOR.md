@@ -657,7 +657,7 @@ a verbatim transcript of one run on one commit, which is a historical record, no
 
 ### The tracking lag, as measured today — and it had drifted
 
-<!-- MEASURED: tracking-lag (median/p95 pp per state) @ PENDING 2026-08-19 depends=client/src/modules/camera/ -->
+<!-- MEASURED: tracking-lag (median/p95 pp per state) @ 0d61f6f1 2026-08-19 depends=client/src/modules/camera/ -->
 
 **RE-MEASURED IN FULL FOR PHOTO-FINISH-STATE-1, AND EVERY FIGURE IS IDENTICAL TO THE DIGIT.** That
 block adds PHOTO_FINISH to `ALL_STATES` in `cameraTimingComputation.js`, which is inside this
