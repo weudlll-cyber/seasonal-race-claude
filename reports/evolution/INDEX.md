@@ -1181,6 +1181,20 @@ finish shot leave ALONG it.
 
 ## Camera / presentation fixes
 
+- [FLOOR-REACH-1.md](FLOOR-REACH-1.md) — **on how many tracks does the oversized-racer problem
+  actually show?** (2026-08-22, MEASUREMENT ONLY, nothing changed, no fingerprint can move). Ten
+  tracks x 20/40/60 racers x his config AND the shipped defaults. **TWENTY RACERS IS CLEAN ON ALL
+  TEN** — worst over-scale anywhere is 1.92x — **which is why months of watching showed nothing; the
+  field size is the discriminator, not the track.** At his settings it is **1 of 10 at 40 racers and
+  2-3 of 10 at 60**, and every worst moment is in the APPROACH to the finish, where he was looking.
+  **Space-sprint is special for an arithmetic reason**: over-scale is `floor x worldPx / (worldBody x
+  1280)` and it is worst on BOTH terms — the smallest world body (9.50 px) and the widest shot
+  (1951 px); the table IS the formula. **AND THE BRIEF'S ASSUMPTION IS CONTRADICTED**: the SHIPPED
+  defaults reach wider shots and worse over-scale than his config on almost every track
+  (space-sprint 10.66x vs his 5.20x), and two tracks that never bind on his settings do bind on the
+  defaults — his settings damp this, they do not cause it. **A floor change is a large hammer**;
+  bounding the SHOT is proposed as the narrower fix, and the floor may not be the right term at all.
+
 - [LABEL-OVERLAP-FIX-1.md](LABEL-OVERLAP-FIX-1.md) — **a label that was admitted stays readable**
   (2026-08-22; **SHIPPED as `v-ship-label-overlap`** — he judged it on a production build and
   accepted it, including the photo finish: where there is no room, nothing more can be shown.
