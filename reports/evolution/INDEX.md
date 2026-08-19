@@ -1181,6 +1181,21 @@ finish shot leave ALONG it.
 
 ## Camera / presentation fixes
 
+- [ENDGAME-WIDTH-1.md](ENDGAME-WIDTH-1.md) — **which term actually buys the endgame's width**
+  (2026-08-22, MEASUREMENT ONLY, no camera change, nothing can move). **THE TAIL IS NOT PAYING FOR
+  IT — the owner's hypothesis is REFUTED.** The `line` term, the run-in's own finish-line bound,
+  binds **93-99 %** of every endgame frame on all three tracks, and `field` and `company` are
+  `Infinity` at the widest moment on all of them; his config and the shipped defaults agree to the
+  percentage point. **A contender definition already exists and none was invented**:
+  `_abreastContenders`, the rule the run-in uses to pin the photo-finish pair — it selects **2-3
+  racers**. The candidate shot (the director's own `contenderGuarantee` over line+leader+contenders)
+  is **3.2-3.4x narrower at mid-endgame** and **WIDER at the opening**, which is what his
+  specification asks for and today's shot fails. **Over-scale 4.33x -> 1.21x on space-sprint**, so
+  the sprite problem IS downstream of the width. **THE PRICE: 31 racers in frame becomes 4, 20
+  becomes 3.** And a defect found on the way — **today's endgame already loses the finish line on
+  21-42 % of its frames**, including the opening on all three tracks. Whether the candidate holds the
+  line is **not established** (the pan is not modelled).
+
 - [FLOOR-REACH-1.md](FLOOR-REACH-1.md) — **on how many tracks does the oversized-racer problem
   actually show?** (2026-08-22, MEASUREMENT ONLY, nothing changed, no fingerprint can move). Ten
   tracks x 20/40/60 racers x his config AND the shipped defaults. **TWENTY RACERS IS CLEAN ON ALL
