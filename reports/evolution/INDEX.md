@@ -1131,6 +1131,21 @@ finish shot leave ALONG it.
 
 ## Camera / presentation fixes
 
+- [SPRITE-SIZE-OVERVIEW-1.md](SPRITE-SIZE-OVERVIEW-1.md) — **why the racers are bigger in the wider
+  shot** (2026-08-19, INVESTIGATION ONLY, nothing changed, no fingerprint can move). **The sprite
+  size stops following the zoom**: `minDrawnFrameFrac` pins it at 32.4 screen px on every shot wider
+  than ~285 world px, so it is a CONSTANT across that whole range and grows only RELATIVE to the
+  world — 1.75x over-scale at 658 world px, 2.13x at 800. The premise is corrected: the sprite is
+  **identical in canvas px** in both of his frames; the floor binds on 79 of 125 frames. **The 285
+  cap DOES NOT BIND** on space-sprint (effW is exactly 285.0); the single body size is active but
+  constant, so it cannot explain a difference; `_drawnBodyWidthRefPx` at 46.9-57.1% of the drawn
+  sprite is the floor's SHADOW, not a separate defect. **The label answer: numbers 8.0 px fit in the
+  26.9 px available, names 60.3 px do not** — the sprite contributes 5.5 px of overlap and a name
+  would contribute 33.4 px, 6.1x more, so it is predominantly a LABELLING problem. **NOT
+  ESTABLISHED: where his NAMES come from** — `labelNamesWhenRoom` ships false and turning it on
+  still yields zero names; a stored config is the remaining explanation. Found on the way: **the
+  start-formation roll call draws NUMBERS while its own comment says it draws names.**
+
 - [FALLBACK-MIRRORS-1.md](FALLBACK-MIRRORS-1.md) — **the camera's last three copied defaults, and
   what "unreachable" meant this time** (2026-08-18, SHIPPED, **nothing minted**). Four copies
   REMOVED, none synced. **The two identical wrong copies were the dangerous part**: the Dev Screen
