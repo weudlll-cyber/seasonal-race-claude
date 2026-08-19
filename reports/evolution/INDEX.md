@@ -6,6 +6,23 @@ and [FAIRNESS.md](../../docs/FAIRNESS.md). Shipped world: **`dc4647be0f55ebdb`**
 
 ## CORRECTIONS — findings that invalidate a number in a report below
 
+- **2026-08-22 — LABEL-NAMES-2's "the room test is behaving correctly, 0 of 8 non-exempt names
+  overlap" is WRONG. Measured by pixels in his own frame: 7 of 12 overlap.** Corrected by
+  [LABEL-OVERLAP-3](LABEL-OVERLAP-3.md). **The defect is real and named**:
+  `YIELD_OVERLAP_FRAC = 0.35` (`nameTagLayout.js:184`, applied at `:413`) — a name is admitted with
+  ZERO tolerance, then a tenured NUMBER is allowed to land on it with a 35% budget. All seven
+  collisions are name-vs-number and all seven fit inside that budget. Separately,
+  `exemptAll` in PHOTO_FINISH (`renderRaceFrame.js:258`) bypasses the test entirely, and its premise
+  "at that zoom" is false — that shot measured **1951 world px, the widest of the race**, with 40 of
+  41 names overlapping and 9 clipped. **THREE harness defects caused the zero**, all in
+  `label-names-truth.mjs`: the audit shared the layout's own measurement function so it could only
+  confirm it; the wrong ROSTER (mixed, not the default `current` the owner uses — and a name is an
+  engine input); and `assignRaceNumbers` called with an array instead of a count, so every number
+  label was the EMPTY STRING and the layout saw 10 px boxes where the game draws 20-27. **WITHDRAWN:**
+  the overlap verdict and every name/number COUNT. **STANDS:** `labelNamesWhenRoom` as the key
+  (structural), and `highlightHeroes` drawing a ring. **AND LABELS-AND-FLOOR-1's REVERSAL FALLS
+  BACK** — the labels are NOT fine; both the labels and the sprite floor are real defects.
+
 - **2026-08-22 — SPRITE-SIZE-OVERVIEW-1 and LABELS-AND-FLOOR-1 both say `labelNamesWhenRoom: true`
   yields ZERO names. It yields 670.** Corrected by [LABEL-NAMES-2](LABEL-NAMES-2.md); recorded here
   because those reports are append-only. It was a HARNESS defect: `scripts/lib/raceDriver.mjs` never
@@ -1156,6 +1173,18 @@ finish shot leave ALONG it.
 - [RACER-FLAPPING-1.md](RACER-FLAPPING-1.md) — racers flip left-right in traffic. **Diagnosed sim-side: `physicalY` oscillates (heading/render ruled out); reproduced with the real roster — Arrow leads, gets caught into traffic at ~18s, flaps 17 reversals/2s because §4a re-picks the most-constraining obstacle every tick with NO commit. STEP-1b fix (fixed 0.4s side-commit) = EARNED KILL: fixed Arrow (17→0) but made the field WORSE (dramatic flappers 1→6) — a synchronized fixed window de-responsivises mutual avoidance. Reverted; nothing shipped; fingerprint `ded0a126` identical. Next = obstacle-choice MARGIN hysteresis (not a timer) + a race-invariant flap metric. New read-only tooling: `--dump-frames` physicalY + `--racer-names` + `exp-flapping-gate.mjs`.**
 
 ## Camera / presentation fixes
+
+- [LABEL-OVERLAP-3.md](LABEL-OVERLAP-3.md) — **the screen was right and the instrument was wrong
+  three times over** (2026-08-22, INVESTIGATION ONLY, nothing changed, no fingerprint can move).
+  **THE ROOM TEST IS BROKEN**: 7 of 12 names collide in his frame, counted BY PIXELS with real fonts,
+  where the layout claimed 0 — and **every collision is name-vs-NUMBER**, which names the defect:
+  `YIELD_OVERLAP_FRAC = 0.35` lets a tenured number intrude 35% of its area onto a name that was
+  admitted with zero tolerance; all seven intrusions (31-192 px2) sit inside that budget. The code's
+  own justification is inverted from the failure. **PHOTO_FINISH is a second, separate one**:
+  `exemptAll` skips the test on the premise "at that zoom", and that shot is now **1951 world px —
+  the widest of the race** — with 40/41 names overlapping and 9 clipped. Font metrics, coordinate
+  space, box geometry and his DPR all RULED OUT with the measurement that ruled them. Carries a
+  correction to LABEL-NAMES-2 and un-reverses LABELS-AND-FLOOR-1.
 
 - [LABEL-NAMES-2.md](LABEL-NAMES-2.md) — **which of his eleven keys produces the name labels**
   (2026-08-22, MEASUREMENT ONLY, nothing changed, no fingerprint can move). **`labelNamesWhenRoom`

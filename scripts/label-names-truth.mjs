@@ -51,7 +51,7 @@ const { createRecordingContext } = await import(u("client/src/modules/parity/rec
 const { DEFAULT_TRACK_LIGHTS, sampleBoundaryAtInterval, LIGHT_SPACING_PX } = await import(
   u("client/src/modules/trackLights.js")
 );
-const { QUICK_TEST_NAMES_MIXED } = await import(u("client/src/modules/racerNames.js"));
+const { QUICK_TEST_NAME_SETS, DEFAULT_NAME_SET } = await import(u("client/src/modules/racerNames.js"));
 const { assignRaceNumbers, raceNumberLabel } = await import(u("client/src/modules/raceNumbers.js"));
 const { createLabelFormHold } = await import(u("client/src/screens/RaceScreen/labelFormHold.js"));
 const { labelBoxWidth, tagFontScreenPx, labelOffsetAbove, labelBoxHeight } = await import(
@@ -59,6 +59,17 @@ const { labelBoxWidth, tagFontScreenPx, labelOffsetAbove, labelBoxHeight } = awa
 );
 const { computeBodyNarrowRef } = await import(u("client/src/modules/rowLayout.js"));
 const { PHASE } = await import(u("client/src/screens/RaceScreen/racePhase.js"));
+
+// ── THE ROSTER, AND IT IS NOT COSMETIC ──────────────────────────────────────────────────────────
+// A racer's NAME is an engine input — `stablePairBit` hashes it — so a different roster is a
+// DIFFERENT RACE at the same seed. It is also the width the room test is deciding about, which makes
+// it the one input this measurement must not get wrong twice.
+//
+// LABEL-NAMES-2 ran `QUICK_TEST_NAMES_MIXED`. The owner's screenshot names — Crimson, Hawk, Nebula,
+// Pulsar, Garnet — are in `QUICK_TEST_NAMES`, the set `DEFAULT_NAME_SET` resolves to, which is what
+// a Quick Test uses unless he changed it. So that run measured the wrong race.
+const ROSTER_KEY = (process.argv.find((a) => a.startsWith("--roster=")) ?? "").slice(9) || DEFAULT_NAME_SET;
+const ROSTER = QUICK_TEST_NAME_SETS[ROSTER_KEY] ?? QUICK_TEST_NAME_SETS[DEFAULT_NAME_SET];
 
 const CW = 1280;
 const CH = 720;
@@ -111,7 +122,7 @@ const IDENTITY = resolveIdentity({
   seconds: 60,
   canvasW: CW,
   canvasH: CH,
-  roster: QUICK_TEST_NAMES_MIXED,
+  roster: ROSTER,
   note: "LABEL-NAMES-2 — his configuration",
 });
 
@@ -119,11 +130,24 @@ const bsX = CW / (geo.worldWidth || CW);
 const bsY = CH / (geo.worldHeight || CH);
 const trackLightsConfig = { ...DEFAULT_TRACK_LIGHTS };
 
+const DUMP_ARG0 = (process.argv.find((a) => a.startsWith("--dump-at=")) ?? "").slice(10);
+const DUMP_AT = DUMP_ARG0 ? Number(DUMP_ARG0) : null;
+let DUMPED = null;
+
 /** One full race under `cfg`. Returns the per-frame rows. */
 function run(cfg, label) {
   const race = buildRace(geo, IDENTITY, cfg);
   const { shape, trackWidthPx: TW, racerType: rt, displaySize: ds, st, cd, meta } = race;
-  assignRaceNumbers(st.racers);
+  // THE THIRD HARNESS DEFECT IN THIS FILE, and the third of the same kind: a call that looked right
+  // and did nothing. `assignRaceNumbers(count, seed)` takes a COUNT and RETURNS an array — it does
+  // not mutate racers. Called as `assignRaceNumbers(st.racers)` it received an array where it wanted
+  // a number, resolved it to 0, and returned []. So no racer had a `raceNumber`, every NUMBER label
+  // was `raceNumberLabel(undefined)` = the empty string, and the layout reasoned about 10 px boxes
+  // (the padding alone) where the game draws 20-27 px. That gave the room test far more space than
+  // it really has and is why it admitted names without collisions. Every other harness in this repo
+  // already does it the way RaceScreen does (index.jsx:702); this one did not.
+  const numbers = assignRaceNumbers(st.racers.length, SEED);
+  for (const r of st.racers) r.raceNumber = numbers[r.index] ?? null;
   attachRenderState(st);
   attachRacerRenderState(st.racers);
 
@@ -314,6 +338,34 @@ function run(cfg, label) {
       return sx >= 0 && sx <= CW && sy >= 0 && sy <= CH;
     }).length;
 
+    if (DUMP_AT != null && Math.abs((ts - raceStart) / 1000 - DUMP_AT) < 0.01) {
+      DUMPED = {
+        tSec: +((ts - raceStart) / 1000).toFixed(2),
+        state: cd.state,
+        worldPx: Math.round(CW / effZoomX),
+        fontPx,
+        marginPx: cfg.nameTagMarginPx,
+        drawnW: +drawnW.toFixed(3),
+        drawnH: +drawnH.toFixed(3),
+        canvasW: CW,
+        canvasH: CH,
+        focusIdx,
+        bodies: st.racers.map((r) => ({
+          index: r.index,
+          sx: +(cam.offsetX + r.x * effZoomX).toFixed(3),
+          sy: +(cam.offsetY + r.y * effZoomY).toFixed(3),
+        })),
+        labels: st.racers
+          .filter((r) => shown.has(r.index))
+          .map((r) => ({
+            index: r.index,
+            isName: wide.has(r.index),
+            text: wide.has(r.index) ? (r.name ?? "") : raceNumberLabel(r.raceNumber),
+            sx: +(cam.offsetX + r.x * effZoomX).toFixed(3),
+            sy: +(cam.offsetY + r.y * effZoomY).toFixed(3),
+          })),
+      };
+    }
     rows.push({
       arm: label,
       tSec: +((ts - raceStart) / 1000).toFixed(2),
@@ -351,7 +403,7 @@ const f = frames(base);
 const totalNames = base.reduce((s, r) => s + r.names, 0);
 const ovNames = f.allOverview.reduce((s, r) => s + r.names, 0);
 
-console.log(`LABEL-NAMES-2 — ${TRACK}, seed ${SEED}, ${N} racers, ${CW}x${CH}, HIS configuration`);
+console.log(`LABEL-NAMES-2 — ${TRACK}, seed ${SEED}, ${N} racers, ${CW}x${CH}, HIS configuration, roster "${ROSTER_KEY}"`);
 console.log("");
 console.log("THE TWO FRAMES HE PHOTOGRAPHED");
 console.log("  frame                    t(s)   prog   world   drawnW   on   lbl  NAMES  numbers  nn-spacing  overlapNames(of which exempt)");
@@ -369,6 +421,31 @@ for (const [k, r] of [["wide OVERVIEW mid-race", f.mid], ["wide shot before the 
   );
 }
 console.log("");
+// ── THE WHOLE RACE, NOT THE TWO FRAMES I CHOSE ──────────────────────────────────────────────────
+// LABEL-OVERLAP-3: reporting the overlap count of a frame picked by MY rule is exactly the failure
+// mode this repository has paid for three times this week — a window sampled before the shot
+// settled. So every sampled frame is ranked, and the worst is printed whether or not it is one of
+// the two the rule chose.
+{
+  const ranked = [...base].sort((a, b) => b.namesOverlapping - a.namesOverlapping);
+  const worst = ranked[0];
+  console.log("");
+  console.log("WORST FRAMES BY OVERLAPPING NAME LABELS, across every sampled frame");
+  console.log("   t(s)   prog  state          world   on   lbl  NAMES  overlapping(exempt)");
+  for (const r of ranked.slice(0, 6)) {
+    console.log(
+      `  ${String(r.tSec).padStart(5)}${r.progress.toFixed(2).padStart(7)}  ${r.state.padEnd(13)}` +
+        `${String(r.worldPx).padStart(7)}${String(r.onScreen).padStart(5)}${String(r.labels).padStart(6)}` +
+        `${String(r.names).padStart(7)}${String(r.namesOverlapping).padStart(13)}` +
+        ` (${r.namesOverlappingExempt})`
+    );
+  }
+  console.log(
+    `  MAX overlapping name labels anywhere in the race: ${worst.namesOverlapping}` +
+      ` (at t=${worst.tSec}s, ${worst.state}); non-exempt: ${worst.namesOverlapping - worst.namesOverlappingExempt}`
+  );
+  console.log("");
+}
 console.log(`  across the whole race: ${totalNames} name-labels drawn over ${base.length} sampled frames`);
 console.log(`  in OVERVIEW only:      ${ovNames} over ${f.allOverview.length} frames`);
 console.log("");
@@ -395,4 +472,12 @@ if (LOO || ONLY) {
         `${(t - totalNames >= 0 ? "+" : "") + (t - totalNames)}`.padStart(9)
     );
   }
+}
+
+if (DUMP_AT != null) {
+  // The DRAWN geometry of one frame, for an independent pixel count in a real browser. Positions and
+  // strings only — the widths are deliberately NOT included, because measuring them with this
+  // harness's synthetic metric is the very thing the pixel count exists to check.
+  console.log("");
+  console.log("DUMP " + JSON.stringify(DUMPED));
 }
