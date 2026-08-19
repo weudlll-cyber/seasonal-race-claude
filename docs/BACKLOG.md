@@ -153,9 +153,13 @@ Items ranked by urgency within each bucket. ✅ = done, 🔜 = next, ⏳ = waiti
       in isolation — a number alone can be wrong, but it cannot mislead by comparison. In practice: a
       table gets one identity line above it; a table mixing arms gets an identity column. NIGHT-1
       needed the second and did not have it, which is the instance this comes from.
-- [ ] **`check-index` is one-directional.** It walks `reports/evolution/*.md` and asserts each is
-      referenced from `INDEX.md`; **an INDEX line naming a report that does not exist is invisible to
-      it.** Same shape as the `check-tags` gap closed in TAG-GUARD-2/3, and the same corollary
+- [x] **DONE — `check-index` now passes BOTH directions** (verified 2026-08-22 by
+      OPEN-ITEMS-2026-08-22 against the source, not the report). `scripts/check-index.mjs:18` states
+      it, and its run line reports dangling links as well as unindexed reports. The text below is
+      kept because its REASONING — a partial guard is indistinguishable from a complete one while
+      everything is clean — is the general rule, and it is why the fix was worth making.
+      ~~It walks `reports/evolution/*.md` and asserts each is referenced from `INDEX.md`; an INDEX
+      line naming a report that does not exist is invisible to it.~~ Same shape as the `check-tags` gap closed in TAG-GUARD-2/3, and the same corollary
       applies: **until it is closed, the guard should say inside itself which direction it does not
       check** — a partial guard is indistinguishable from a complete one while everything is clean
       (Lesson 201). Note `check-doc-links` already catches a _dangling link_, so the uncovered case is
@@ -165,7 +169,9 @@ Items ranked by urgency within each bucket. ✅ = done, 🔜 = next, ⏳ = waiti
 
 ## Worktree stubs — a helper that cleans up after itself (2026-08-05)
 
-- [ ] **Ten `.git/worktrees` stubs exist and `git worktree prune` cannot remove them** — every one is a
+- [ ] **FORTY-SEVEN `.git/worktrees` stubs exist and `git worktree prune` cannot remove them**
+      (counted 2026-08-22; every one STALE, none live — the "ten" this line carried was the count on
+      2026-08-05 and it has grown by a factor of nearly five since) — every one is a
       OneDrive Files-On-Demand placeholder carrying `ReadOnly`, which blocks the delete. Not a lock, an
       attribute. They are inert metadata pointing at directories that no longer exist.
       **Do not add `prune` to the ship ceremony** — it already fails here, and a ritual that cannot

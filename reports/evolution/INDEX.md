@@ -6,6 +6,16 @@ and [FAIRNESS.md](../../docs/FAIRNESS.md). Shipped world: **`dc4647be0f55ebdb`**
 
 ## CORRECTIONS — findings that invalidate a number in a report below
 
+- **2026-08-22 — three recorded open items are NOT open, verified against the source by
+  [OPEN-ITEMS-2026-08-22](OPEN-ITEMS-2026-08-22.md).** Recorded here because the reports that carry
+  them are append-only. **ALREADY FIXED:** the three Dev Screen controls that could show a number the
+  game is not running (ONE-HOME-1 fixed the code; DEV-CONTROLS-HONEST-1 added the test on
+  2026-08-21), and `check-index` being one-directional (it passes both directions —
+  `scripts/check-index.mjs:18` — and BACKLOG is struck accordingly). **NEVER TRUE:** that
+  `check-doc-links` does not declare its exclusion of `reports/` — it declares it three times, in its
+  header and in its machine-readable `blind` array. **AND ONE RECORDED NUMBER IS STALE:** the
+  worktree stubs are **47, all stale**, not the ten `docs/BACKLOG.md` carried; corrected in place.
+
 - **2026-08-22 — [STRAGGLER-TRUTH-1](STRAGGLER-TRUTH-1.md)'s DURATIONS stand; every statement it
   makes about VISIBILITY is WITHDRAWN.** Corrected in [STRAGGLER-TRUTH-2](STRAGGLER-TRUTH-2.md)
   rather than in the report, which is append-only. **The owner tested the ending on 2026-08-22 and it
@@ -67,6 +77,16 @@ is dated and recorded HERE, where a reader on their way to the report will pass 
   luger-hill 3.0%, space-sprint 1.0%, seatrack 0.0%). Diagnosis and proof:
   [GATE-LINES-1](../night/GATE-LINES-1.md); the fix and the once-per-run control that makes the
   silence impossible to repeat: [GATE-TRUTH-1](../night/GATE-TRUTH-1.md).
+
+- [OPEN-ITEMS-2026-08-22.md](OPEN-ITEMS-2026-08-22.md) — **which of our open items are still true**
+  (2026-08-22). Every item verified against **today's source**, never against the report that
+  recorded it. **Seven STILL TRUE, ordered by what he would see** — headed by **PHOTO_FINISH missing
+  from `ALL_STATES`**, which makes three of its Dev Screen sliders inert and is the only one he could
+  see. **Two ALREADY FIXED** (the Dev controls; `check-index`), **one NEVER TRUE**
+  (`check-doc-links` does declare its `reports/` exclusion, three times), **five CANNOT ESTABLISH**
+  with what stopped each named. The worktree stubs are **47 and all stale**, not the recorded ten.
+  **Nothing was fixed — a one-line fix would have made the sweep's own numbers untrue by the time it
+  shipped.** Closes with how items should get retired in future, since nothing did.
 
 - [STRAGGLER-TRUTH-2.md](STRAGGLER-TRUTH-2.md) — **the instrument's window was wrong, and it is the
   only thing that was** (2026-08-22). INVESTIGATION ONLY; the ending is correct and untouched. Four
