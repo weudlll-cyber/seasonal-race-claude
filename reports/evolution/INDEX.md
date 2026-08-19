@@ -1132,8 +1132,9 @@ finish shot leave ALONG it.
 ## Camera / presentation fixes
 
 - [MINIMAP-ONE-SOURCE-1.md](MINIMAP-ONE-SOURCE-1.md) — **one ribbon drawn two ways, and a state list
-  short by one** (2026-08-19, branch `feat/minimap-one-source`, **nothing minted**, his eye owed on
-  the minimap). Two blocks, one class of defect: something described in two places where the second
+  short by one** (2026-08-19; **SHIPPED 2026-08-22 as `v-ship-minimap-one-source`** — he judged the
+  minimap on a production build and accepted it; **RENDER minted, CAMERA measured and NOT minted
+  because it did not move**). Two blocks, one class of defect: something described in two places where the second
   is allowed to disagree SILENTLY. **The minimap's band and edges walked `getEdgePoints` by index
   while its marks and tail used `getPosition`** — sliver **1.886 -> 0.000 px**, mark-to-band gap
   **0.919 -> 0.000 px on all ten tracks**, seam 0.000 either side. Four ribbon walks became one.

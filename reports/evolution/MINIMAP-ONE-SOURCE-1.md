@@ -382,3 +382,120 @@ node scripts/camera-fingerprint.mjs --quiet           # ~70 s
 node scripts/render-fingerprint.mjs --quiet           # ~70 s
 node scripts/tracking-lag.mjs                         # the re-measured stamp
 ```
+
+---
+
+# THE SHIP — SHIP-MINIMAP-ONE-SOURCE, 2026-08-22
+
+**The owner judged the minimap on a production build on 2026-08-22 and accepted it.** That is the
+fact this section exists to record; everything below is what was done on the strength of it.
+
+## What the merge put on master
+
+`git diff --name-only master...feat/minimap-one-source` — **nine files, read before merging, and
+nothing rode along**:
+
+| | file |
+| --- | --- |
+| production (3) | `client/src/modules/camera/Minimap.js`, `client/src/modules/camera/cameraTimingComputation.js`, `client/src/modules/rAFProbe.js` |
+| tests (2) | `Minimap.test.js`, `cameraTimingComputation.test.js` |
+| doc (1) | `docs/CAMERA_DIRECTOR.md` |
+| report (2) | this file, and its `INDEX.md` line |
+| instrument (1) | `scripts/minimap-truth.mjs` |
+
+**No catch-up merge was needed, and that is worth saying** because THE SHIP ORDER's whole premise
+rests on it: `master` was already an ancestor of the branch, so step 1 was a no-op and the branch
+tip's tree *is* the merged tree — literally, not approximately. Every fingerprint below was measured
+on that tree and then re-measured on the merge commit itself.
+
+## Which instruments could move, and which were measured
+
+Decided by walking `scripts/lib/routing.mjs` `closureOf` from each instrument's own declared reach,
+not by argument:
+
+| instrument | closure | contains a changed file? | action |
+| --- | --- | --- | --- |
+| world | 22 files | **no** | cannot move — not run |
+| world-off | 22 files | **no** | cannot move — not run |
+| camera | 38 files | yes — `cameraTimingComputation.js` | **MEASURED** |
+| render | 58 files | yes — `Minimap.js`, `cameraTimingComputation.js` | **MEASURED** |
+| tracking-lag | 8 files | **no** — but its stamp's `depends=` is the *directory* | **RE-MEASURED** |
+
+`rAFProbe.js`, the third production file, is in no instrument's closure at all — which is why that
+fix was free.
+
+## The fingerprints, before and after
+
+| role | before | after | minted? |
+| --- | --- | --- | --- |
+| **render** | `a8c59ef5002716f1` | **`7d553406f41ff176`** | **YES** |
+| **camera** | `f64c2ae531f14253` | `f64c2ae531f14253` | **no — it did not move** |
+| world | `dc4647be0f55ebdb` | not run (closure) | no |
+| world-off | `854018ee5d3d83e1` | not run (closure) | no |
+
+**CAMERA was measured and NOT minted, and that is the rule rather than an omission: a mint records a
+MOVEMENT.** Writing an unchanged value back into the record with a new `mintedBy` would claim this
+ship moved something it did not, and would overwrite START-ONE-WINDOW-1's account of why that hash is
+what it is.
+
+**The null result is load-bearing, and the mint text says so**, because a later reader finding
+"PHOTO-FINISH-STATE-1 shipped, CAMERA unmoved" could reasonably conclude the fix did nothing. It did
+not do nothing: the state is reached on nine of the ten fingerprint tracks for 206–279 frames, and
+the profile *is* read — forcing its cap moves the transition-reason counts. The picture is identical
+because during PHOTO_FINISH every transition resolves back to PHOTO_FINISH, and `_transition` does
+its entry work only when the state actually changes, so a self-transition is a deliberate no-op.
+
+**The minted RENDER value was measured twice** — on the branch tip and again on the merge commit —
+rather than carried across, which is what the ship asked for.
+
+## Tracking lag: re-measured, not re-stamped
+
+Two merged files sit under the stamp's `depends=` directory, so the guard asks. It was **re-run**:
+every frame count and both percentiles identical to the digit. The argument that would have excused
+it was available and deliberately not used — `Minimap.js` is not in `tracking-lag.mjs`'s 8-file load
+closure, and the unmoved CAMERA hash independently says the director's decisions did not change — but
+both are arguments, and the ship called for a measurement.
+
+## The open items this ship leaves behind — written, not fixed
+
+**1. The three PHOTO_FINISH Dev Screen controls are now wired and still inert.** Min state hold, max
+state duration and max entry duration on that row can now be read — they could not be before — and
+still cannot change the shot. `finishPhase.js` owns when the photo finish ends, and
+`holdGate = Math.max(minHold, stateCap)` means a *lower* minimum can never shorten anything; it only
+matters when it exceeds the cap. **A separate decision the owner has not made**, and the honest
+options are to retire the three fields, to let the hold gate pre-empt `finishPhase`, or to write the
+inertness down. Nothing here presumes which.
+
+**2. Two threads opened by SPRITE-SIZE-OVERVIEW-1, neither touched here.** The owner sees NAME labels
+where the shipped configuration offers none — `labelNamesWhenRoom` ships false, and turning it on
+still yields zero names in a crowded frame — so the room check does not hold at his resolution. And
+the drawn racer is pinned at **32.4 px on any shot wider than about 285 world px**, which is what
+makes the wide shot unreadable. Both are new threads and neither is opened here; see
+[SPRITE-SIZE-OVERVIEW-1](SPRITE-SIZE-OVERVIEW-1.md).
+
+## PROPOSALS
+
+**1. THE SHIP ORDER's `PENDING` placeholder cannot be used on a measured stamp, and this ship found
+it by trying.** The stamp regex requires a hex SHA, so `PENDING` does not match — and an unmatched
+stamp is not reported, it is silently *dropped from the guarded set*. In `CAMERA_DIRECTOR.md` that
+means ZERO parseable stamps, which trips the guard's own loud-failure rule and takes `script-suite`
+down with it. **It was avoided here by stamping `30cee205`** — the commit that actually changed the
+files under `depends=` — which is both parseable and more honest than a merge SHA, since that is the
+tree the numbers were measured on. **The proposal:** either teach the regex to accept the placeholder
+and report it as pending, or say plainly in THE SHIP ORDER that a MEASURED stamp is stamped at the
+commit that moved its dependency and never at the merge. **Cost:** one alternation, or one sentence.
+**What it prevents:** the next ship spending a verify cycle discovering this, as this one did.
+
+**2. Let `minimap-truth.mjs` earn its keep as a guard.** It exists now, it runs in about a second,
+and it measures four numbers that must stay at zero. It is not wired into `npm run verify`, so the
+next minimap change gets the same hand-measurement this one did. **Cost:** a `GUARD` declaration
+block and a threshold assertion. **What it prevents:** the sliver coming back unnoticed — which is
+exactly how it arrived, since MINIMAP-MARKS-1 and MINIMAP-TAIL-1 both measured by hand and both
+recorded a number this ship improved on.
+
+**3. Give the fingerprint record a machine-readable "measured and held" field.** CAMERA was measured
+at this ship and not minted, and the only place that fact survives is prose inside RENDER's
+`mintedBy`. A later reader asking "was CAMERA checked at this ship?" has to read a paragraph about a
+different role. **Cost:** one optional array per role — the ships at which it was measured and held.
+**What it prevents:** the next ship re-deriving the closure walk because it cannot tell whether the
+last one already did.

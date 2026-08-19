@@ -657,7 +657,20 @@ a verbatim transcript of one run on one commit, which is a historical record, no
 
 ### The tracking lag, as measured today — and it had drifted
 
-<!-- MEASURED: tracking-lag (median/p95 pp per state) @ 30cee205 2026-08-19 depends=client/src/modules/camera/ -->
+<!-- MEASURED: tracking-lag (median/p95 pp per state) @ 30cee205 2026-08-22 depends=client/src/modules/camera/ -->
+
+**RE-MEASURED IN FULL FOR SHIP-MINIMAP-ONE-SOURCE, AND EVERY FIGURE IS IDENTICAL TO THE DIGIT.** The
+merge puts two files under this stamp's `depends=` directory, so the guard asks — and it was RE-RUN
+rather than re-stamped, which is the stronger answer and the one the ship called for. **It is stamped
+at `30cee205`, the commit that actually changed those files, and NOT at the merge**: THE SHIP ORDER's
+`PENDING` placeholder cannot be used here, because the regex requires a hex SHA and an unparseable
+stamp is not reported — it is silently dropped, which in this document means ZERO stamps and the
+guard's own loud-failure rule firing. It would have
+been defensible to argue: `Minimap.js` is not in `tracking-lag.mjs`'s load closure (8 files, walked
+rather than remembered), and `cameraTimingComputation.js` changes what the director READS without
+changing what it DOES, which the unmoved CAMERA fingerprint independently says. Both arguments are
+true and neither is a measurement. Frame counts and both percentiles are unchanged from the table
+below.
 
 **RE-STAMPED, NOT RE-MEASURED, FOR MINIMAP-ONE-SOURCE-1 — and the reason is a fact, not a
 judgement.** That block's only source file is `Minimap.js`, which sits inside this stamp's
