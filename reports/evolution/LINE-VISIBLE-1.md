@@ -1,5 +1,16 @@
 # LINE-VISIBLE-1 — what "the line is in frame" measures, and what his definition would cost
 
+> **CORRECTED 2026-08-22 by [PAN-LAG-ACCOUNT-1](PAN-LAG-ACCOUNT-1.md).** The `lag px` column below,
+> and every conclusion drawn from it, name the wrong term. That number is the finish line's screen
+> displacement between the target frame and the delivered frame, and it is the sum of a PAN error and
+> a ZOOM error. **The zoom is the larger of the two on 35 of the 36 runs measured** — often by 3-10x.
+> The magnitudes stand; the attribution does not. **"Fix the lag, not the border" and proposal 1
+> below ("measure and fix the endgame pan lag first") should NOT be acted on as written** — the pan
+> lag is 15-265 px in the endgame, is fully explained by a first-order smoother working correctly,
+> and cannot be reduced without making the motion less smooth. The zoom is where the displacement
+> lives.
+
+
 **2026-08-22 · branch `invest/line-visible` off master `3226ea36` · MEASUREMENT ONLY — no camera
 change, no key, no fix; `CameraDirector.js` untouched and `git diff master -- client/` is empty ·
 nothing changes, so no fingerprint can move and none was run**
