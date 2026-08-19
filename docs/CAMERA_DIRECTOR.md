@@ -657,7 +657,15 @@ a verbatim transcript of one run on one commit, which is a historical record, no
 
 ### The tracking lag, as measured today — and it had drifted
 
-<!-- MEASURED: tracking-lag (median/p95 pp per state) @ 0d61f6f1 2026-08-19 depends=client/src/modules/camera/ -->
+<!-- MEASURED: tracking-lag (median/p95 pp per state) @ 30cee205 2026-08-19 depends=client/src/modules/camera/ -->
+
+**RE-STAMPED, NOT RE-MEASURED, FOR MINIMAP-ONE-SOURCE-1 — and the reason is a fact, not a
+judgement.** That block's only source file is `Minimap.js`, which sits inside this stamp's
+`depends=` directory and so trips the guard, and **is not in `tracking-lag.mjs`'s load closure**:
+that closure is 8 files, and `closureOf` was RUN to say so rather than the claim being carried over
+from the two entries below that say the same thing. The measurement cannot see the minimap — it
+reads the director's framing, and the minimap is pure render that takes no part in the projection.
+The figures below are the PHOTO-FINISH-STATE-1 run, unchanged.
 
 **RE-MEASURED IN FULL FOR PHOTO-FINISH-STATE-1, AND EVERY FIGURE IS IDENTICAL TO THE DIGIT.** That
 block adds PHOTO_FINISH to `ALL_STATES` in `cameraTimingComputation.js`, which is inside this

@@ -1,7 +1,14 @@
 # MINIMAP-ONE-SOURCE-1 + PHOTO-FINISH-STATE-1
 
-**2026-08-19 · branch `feat/minimap-one-source` · two commits, both awaiting the owner's eye on the
-minimap · NOTHING MINTED**
+**2026-08-19 · branch `feat/minimap-one-source` · NOTHING MINTED · awaiting the owner's eye on the
+minimap**
+
+Three commits: `0d61f6f1` PHOTO-FINISH-STATE-1, `30cee205` MINIMAP-ONE-SOURCE-1, and a third,
+docs-only one at the branch tip that resolves the tracking-lag stamp onto `30cee205`. The third
+exists because **a commit cannot name its own SHA** — the stamp goes in as PENDING and is resolved
+afterwards, which is this repo's established two-step, and commit 2 then moved another file under
+the same `depends=` directory. It carries no code, and it is deliberately not named by hash here
+for the same reason it exists.
 
 Two blocks with one shape between them: a list that was short by one, and a ribbon that was drawn
 two different ways. Both defects are the same class — **one thing described in two places, where the
