@@ -6,6 +6,13 @@ and [FAIRNESS.md](../../docs/FAIRNESS.md). Shipped world: **`dc4647be0f55ebdb`**
 
 ## CORRECTIONS — findings that invalidate a number in a report below
 
+- **2026-08-22 — LABEL-OVERLAP-3's "7 of 12 names collide" should read "3 of 11".** Its browser pass
+  built label boxes with `BOX_PAD_X = 10`; the module's value is **8**, so every box was 2 px too
+  wide and the count was inflated. Corrected in [LABEL-OVERLAP-FIX-1](LABEL-OVERLAP-FIX-1.md), which
+  measures with the real `labelBoxWidth` on real Chrome metrics. **THE FINDING IS UNAFFECTED** — the
+  defect, its mechanism, the name-vs-number signature and every PHOTO_FINISH figure stand, and 3 is
+  still not 0.
+
 - **2026-08-22 — LABEL-NAMES-2's "the room test is behaving correctly, 0 of 8 non-exempt names
   overlap" is WRONG. Measured by pixels in his own frame: 7 of 12 overlap.** Corrected by
   [LABEL-OVERLAP-3](LABEL-OVERLAP-3.md). **The defect is real and named**:
@@ -1173,6 +1180,21 @@ finish shot leave ALONG it.
 - [RACER-FLAPPING-1.md](RACER-FLAPPING-1.md) — racers flip left-right in traffic. **Diagnosed sim-side: `physicalY` oscillates (heading/render ruled out); reproduced with the real roster — Arrow leads, gets caught into traffic at ~18s, flaps 17 reversals/2s because §4a re-picks the most-constraining obstacle every tick with NO commit. STEP-1b fix (fixed 0.4s side-commit) = EARNED KILL: fixed Arrow (17→0) but made the field WORSE (dramatic flappers 1→6) — a synchronized fixed window de-responsivises mutual avoidance. Reverted; nothing shipped; fingerprint `ded0a126` identical. Next = obstacle-choice MARGIN hysteresis (not a timer) + a race-invariant flap metric. New read-only tooling: `--dump-frames` physicalY + `--racer-names` + `exp-flapping-gate.mjs`.**
 
 ## Camera / presentation fixes
+
+- [LABEL-OVERLAP-FIX-1.md](LABEL-OVERLAP-FIX-1.md) — **a label that was admitted stays readable**
+  (2026-08-22, branch `fix/label-overlap`, **NOT MERGED, nothing minted**, his eye owed). Two fixes:
+  an admitted NAME is no longer a box the incumbent budget may be spent against (`fits`), and the
+  photo-finish blanket exemption is gone (`exemptAll: false`) because its premise — "at that zoom" —
+  was refuted at **1951 world px, the widest shot of the race**. **Non-exempt overlapping names go
+  40 -> 0 at 60 racers and 10 -> 0 at 20**, measured from the drawn boxes on REAL Chrome font
+  metrics. **THE COST IS STATED**: his frame drops 6 more labels (3 -> 9 of 60 eligible, 51 still
+  drawn) and the photo finish goes 41 names -> 1, 41 labels -> 17 — that is the change to judge. The
+  racing shot at 20 racers is IDENTICAL to the label. **RENDER did NOT move (7d553406f41ff176) and
+  that is the finding**: `labelNamesWhenRoom` ships false, so under shipped defaults no name is ever
+  offered and both fixes are unreachable — the change is visible only to someone who has turned names
+  on. Five tests that do not share a measurement function with the layout; both defects
+  sabotage-proved. Carries a correction to LABEL-OVERLAP-3's headline (BOX_PAD_X is 8, not 10, so
+  "7 of 12" reads 3 of 11 — the finding is unaffected).
 
 - [LABEL-OVERLAP-3.md](LABEL-OVERLAP-3.md) — **the screen was right and the instrument was wrong
   three times over** (2026-08-22, INVESTIGATION ONLY, nothing changed, no fingerprint can move).

@@ -253,9 +253,22 @@ export function renderRaceFrame(ctx, f) {
     // The leader is the fallback there, and that is a choice made here rather than a notion of
     // focus invented inside the director.
     exempt: focusRacerIndex != null ? new Set([focusRacerIndex]) : null,
-    // …and at the photo finish, everyone. At that zoom every racer stays recognisable even when the
-    // labels overlap, so overlap is acceptable there — the owner's reasoning, and it is the design.
-    exemptAll: camera?.state === 'PHOTO_FINISH',
+    // ── THE PHOTO-FINISH BLANKET EXEMPTION IS GONE (LABEL-OVERLAP-FIX-1) ──────────────────────
+    //
+    // It read `exemptAll: camera?.state === 'PHOTO_FINISH'`, and its stated reason was that AT THAT
+    // ZOOM every racer stays recognisable even when the labels overlap. THE PREMISE IS REFUTED, not
+    // the preference: LABEL-OVERLAP-3 measured that shot at 1951 world px — the WIDEST of the entire
+    // race, wider than OVERVIEW's 800 — with 40 of 41 names overlapping and 9 clipped off the canvas
+    // edge. The shot the exemption was written for is not the shot it now fires in; the guarantee
+    // that widens the frame moved it, exactly as the sprite floor's reference moved underneath it.
+    //
+    // NO NEW ZOOM THRESHOLD IS INVENTED HERE, because a second number calibrated against today's
+    // shot would rot the same way the first did. The ordinary clearance test is simply restored, and
+    // what the reason genuinely needs survives without it: the racer the camera is ON still keeps
+    // its name unconditionally, through `exempt` above, which is untouched. Every other name at the
+    // finish is now drawn when it fits and withheld when it does not — which is what the exemption
+    // was trying to buy and, at 1951 px, was not delivering.
+    exemptAll: false,
   });
   ctx.restore();
 

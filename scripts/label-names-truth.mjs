@@ -27,6 +27,7 @@
 //   node scripts/label-names-truth.mjs --only=<key>    # one named arm
 // ============================================================
 
+import { readFileSync } from "node:fs";
 import { join, dirname } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import {
@@ -68,13 +69,34 @@ const { PHASE } = await import(u("client/src/screens/RaceScreen/racePhase.js"));
 // LABEL-NAMES-2 ran `QUICK_TEST_NAMES_MIXED`. The owner's screenshot names — Crimson, Hawk, Nebula,
 // Pulsar, Garnet — are in `QUICK_TEST_NAMES`, the set `DEFAULT_NAME_SET` resolves to, which is what
 // a Quick Test uses unless he changed it. So that run measured the wrong race.
+// ── REAL FONT METRICS, NOT THE SYNTHETIC ONES ───────────────────────────────────────────────────
+// LABEL-OVERLAP-3's first finding: the audit shared the layout's synthetic `length x px x 0.55`, so
+// it could only ever CONFIRM the layout. The fix is not a cleverer audit — it is to stop guessing the
+// widths. `scripts/fixtures/label-metrics-chrome.json` is a table of REAL `ctx.measureText` widths
+// captured from Chrome at `bold 15.84px sans-serif`, the exact font `drawNameTag` draws with, for
+// every name in the roster and every race number. With it the layout decides what the BROWSER'S
+// layout would decide, and the overlap audit measures the boxes the browser would draw.
+//
+// A string the table does not carry falls back to the synthetic estimate and is COUNTED, so a silent
+// gap cannot masquerade as a measurement — the same rule the stamp guard learned this week.
+const METRICS = JSON.parse(
+  readFileSync(join(ROOT, "scripts/fixtures/label-metrics-chrome.json"), "utf8")
+);
+let METRIC_MISSES = 0;
+const realWidth = (text, fontPx) => {
+  const w = METRICS.widths[String(text)];
+  if (w != null) return w;
+  METRIC_MISSES++;
+  return String(text).length * fontPx * 0.55;
+};
+
 const ROSTER_KEY = (process.argv.find((a) => a.startsWith("--roster=")) ?? "").slice(9) || DEFAULT_NAME_SET;
 const ROSTER = QUICK_TEST_NAME_SETS[ROSTER_KEY] ?? QUICK_TEST_NAME_SETS[DEFAULT_NAME_SET];
 
 const CW = 1280;
 const CH = 720;
 const TRACK = "space-sprint";
-const N = 60;
+const N = Number((process.argv.find((a) => a.startsWith("--racers=")) ?? "").slice(9)) || 60;
 const SEED = 9;
 
 // ── HIS ELEVEN DEVIATIONS ───────────────────────────────────────────────────────────────────────
@@ -192,7 +214,16 @@ function run(cfg, label) {
       st.phase = PHASE.RACING;
     }
     const cam = { zoom: cd.zoom, offsetX: cd.offsetX, offsetY: cd.offsetY };
-    const rec = createRecordingContext({ width: CW, height: CH });
+    // The recording context measures text with the REAL table, so `computeTagLayout` inside
+    // `renderRaceFrame` decides on the browser's widths rather than on an estimate.
+    const rec = createRecordingContext({
+      width: CW,
+      height: CH,
+      measureWidth: (text, font) => {
+        const m = /(\d+(?:\.\d+)?)px/.exec(font ?? "");
+        return realWidth(text, m ? parseFloat(m[1]) : 10);
+      },
+    });
     const out = renderRaceFrame(rec, {
       st,
       cam,
@@ -254,7 +285,7 @@ function run(cfg, label) {
     const shown = out.tagShown ?? new Set();
     const wide = out.tagWide ?? new Set();
     const fontPx = tagFontScreenPx(cfg.nameTagFrameFrac, CH);
-    const measure = (t) => labelBoxWidth(String(t).length * fontPx * 0.55);
+    const measure = (t) => labelBoxWidth(realWidth(t, fontPx));
 
     // ── THE AUDIT: does every NAME that was drawn actually have the clearance the rule asks for?
     // Rebuilt from the DRAWN geometry — each label's box where the renderer puts it — and tested
@@ -332,6 +363,15 @@ function run(cfg, label) {
     const nnSorted = [...nn].sort((a, b) => a - b);
     const nnMedian = nnSorted.length ? nnSorted[nnSorted.length >> 1] : NaN;
 
+    // THE COST OF ANY FIX: how many racers were eligible for a label and did not get one. A repair
+    // that empties the picture of labels is not a repair, so this is measured rather than discovered.
+    const eligibleApprox = st.racers.filter((r) => {
+      const sx = cam.offsetX + r.x * effZoomX;
+      const sy = cam.offsetY + r.y * effZoomY;
+      const m = 0.02 * CH;
+      return sx >= m && sx <= CW - m && sy >= m && sy <= CH - m;
+    }).length;
+
     const onScreen = st.racers.filter((r) => {
       const sx = cam.offsetX + r.x * effZoomX;
       const sy = cam.offsetY + r.y * effZoomY;
@@ -379,6 +419,8 @@ function run(cfg, label) {
       numbers: shown.size - wide.size,
       namesOverlapping,
       namesOverlappingExempt,
+      eligibleApprox,
+      dropped: eligibleApprox - shown.size,
       nnMedian: +nnMedian.toFixed(2),
       progress: +(st.racers.reduce((m, r) => Math.max(m, r.t), 0) / st.finishT).toFixed(3),
     });
@@ -392,7 +434,10 @@ function frames(rows) {
   const mid = ov.filter((r) => r.tSec > 10 && r.progress < 0.85);
   const pre = ov.filter((r) => r.progress >= 0.85 && r.progress < 0.95);
   const widest = (a) => (a.length ? [...a].sort((x, y) => x.worldPx - y.worldPx).pop() : null);
-  return { mid: widest(mid), pre: widest(pre), allOverview: ov };
+  // The picture he approved: the median LEADER_ZOOM frame by world width. A fix must not move it.
+  const lz = rows.filter((r) => r.state === "LEADER_ZOOM");
+  const racing = lz.length ? [...lz].sort((a, b) => a.worldPx - b.worldPx)[lz.length >> 1] : null;
+  return { mid: widest(mid), pre: widest(pre), racing, allOverview: ov };
 }
 
 const ONLY = (process.argv.find((a) => a.startsWith("--only=")) ?? "").slice(7);
@@ -406,17 +451,21 @@ const ovNames = f.allOverview.reduce((s, r) => s + r.names, 0);
 console.log(`LABEL-NAMES-2 — ${TRACK}, seed ${SEED}, ${N} racers, ${CW}x${CH}, HIS configuration, roster "${ROSTER_KEY}"`);
 console.log("");
 console.log("THE TWO FRAMES HE PHOTOGRAPHED");
-console.log("  frame                    t(s)   prog   world   drawnW   on   lbl  NAMES  numbers  nn-spacing  overlapNames(of which exempt)");
-for (const [k, r] of [["wide OVERVIEW mid-race", f.mid], ["wide shot before the run-in", f.pre]]) {
+console.log("  frame                    t(s)   prog   world   on  elig   lbl  drop  NAMES  numbers  overlapNames(exempt)");
+for (const [k, r] of [
+  ["wide OVERVIEW mid-race", f.mid],
+  ["wide shot before the run-in", f.pre],
+  ["racing shot (median LEADER_ZOOM)", f.racing],
+]) {
   if (!r) {
     console.log(`  ${k.padEnd(24)} — no such frame in this race`);
     continue;
   }
   console.log(
     `  ${k.padEnd(24)}${String(r.tSec).padStart(5)}${r.progress.toFixed(2).padStart(7)}` +
-      `${String(r.worldPx).padStart(8)}${r.drawnW.toFixed(1).padStart(9)}${String(r.onScreen).padStart(5)}` +
-      `${String(r.labels).padStart(6)}${String(r.names).padStart(7)}${String(r.numbers).padStart(9)}` +
-      `${r.nnMedian.toFixed(1).padStart(12)}` +
+      `${String(r.worldPx).padStart(8)}${String(r.onScreen).padStart(5)}${String(r.eligibleApprox).padStart(6)}` +
+      `${String(r.labels).padStart(6)}${String(r.dropped).padStart(6)}${String(r.names).padStart(7)}` +
+      `${String(r.numbers).padStart(9)}` +
       `${String(r.namesOverlapping).padStart(14)}${(" (" + r.namesOverlappingExempt + ")").padEnd(5)}`
   );
 }
