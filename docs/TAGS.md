@@ -126,6 +126,35 @@ spot this ship exposed: a visible change that no fingerprint can see.
   after the source clean-up.
 - `v-ship-coord-system` (`f78869bc`, 2026-08-14) — the merge itself.
 
+### LABEL-OVERLAP — a label that was admitted stays readable (2026-08-22)
+
+**The owner judged this on a production build on 2026-08-22 and ACCEPTED it, including the photo
+finish: where there is no room, nothing more can be shown.** Two fixes, one merge, one tag, and
+NOTHING MINTED — see below, which is the unusual part.
+
+A name was admitted with ZERO tolerance against the picture as it stood, and a NUMBER with tenure was
+then allowed to land on it, spending up to 35% of its own area; nothing re-examined the name. On the
+owner's own frame that put 3 of 11 names under something, and every collision was name-versus-number.
+**`fits` still forgives a tenured label — numbers yielding to each other is what that budget was
+measured into existence for — but an admitted name is no longer a box it may be spent against.**
+
+**The photo-finish blanket exemption is gone.** Its safety premise was that there is room at that
+zoom; the measurement refuted it at **1951 world px, the widest shot of the race**, where 40 of 41
+names overlapped and 9 ran off the edge. No new zoom threshold replaces it. The camera's own subject
+keeps its name through the existing `exempt` path, untouched.
+
+**NOTHING MOVED, SO NOTHING IS MINTED, AND THAT IS THE POINT RATHER THAN AN OMISSION.**
+`labelNamesWhenRoom` ships `false`, so `wideLabelOf` is never passed, `e.wide` is null for every
+racer, and both fixes are structurally unreachable under the shipped configuration — fix A protects a
+box that never exists. RENDER was measured fresh on the merged tree and is byte-identical;
+WORLD, WORLD-OFF and CAMERA contain none of the seven merged files by `closureOf` and were not run.
+**The change is invisible on the defaults and visible only with names turned on.**
+
+- `v-ship-label-overlap` (`PENDING`, 2026-08-22) — **the ship.** The return point is
+  `v-ship-label-overlap^1`, which restores a layout where a tenured number may land on an admitted
+  name and where the photo finish draws every name regardless of room. No fingerprint value changes
+  across it. See [LABEL-OVERLAP-FIX-1](../reports/evolution/LABEL-OVERLAP-FIX-1.md).
+
 ### MINIMAP-ONE-SOURCE — the minimap's ribbon is one walk, and one grid (2026-08-22)
 
 **The owner judged the minimap on a production build on 2026-08-22 and ACCEPTED it.** Two blocks in

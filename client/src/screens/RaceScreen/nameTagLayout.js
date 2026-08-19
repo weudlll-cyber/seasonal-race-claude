@@ -175,6 +175,9 @@ export function labelBoxWidth(textWidth) {
  *   YIELD_OVERLAP_FRAC how much of its own box an incumbent tolerates before giving up its slot.
  *                      A newcomer must be completely clear; an incumbent has a budget. Asymmetric,
  *                      which is what makes the threshold decisive rather than a coin-flip boundary.
+ *                      LABEL-OVERLAP-FIX-1 narrowed WHAT the budget may be spent on: never on a box
+ *                      that already holds a NAME. The asymmetry between NUMBERS is untouched, which
+ *                      is the part the churn measurement below was made about.
  *
  * Together with incumbency they take the churn to 5.45/s over ~20 labels — about one change per
  * label every 3.7 s. The cost is visible in the measurement rather than hidden: readable labels fall
@@ -231,8 +234,11 @@ export function tagFontScreenPx(frameFrac, canvasH) {
  *        LABEL-OCCLUSION-2 draws the name only if it is ALSO clear in this frame.
  * @param {Set<number>|null} [p.exempt]  LABEL-FOCUS-1: racer indices whose name is drawn regardless
  *        of the criterion and of the hold — the racer the camera is on.
- * @param {boolean} [p.exemptAll=false]  the same for EVERY labelled racer, which is the photo
- *        finish: at that zoom overlap is acceptable and is not a defect.
+ * @param {boolean} [p.exemptAll=false]  the same for EVERY labelled racer. NO SHIPPED CALLER SETS
+ *        IT any more (LABEL-OVERLAP-FIX-1): it was the photo finish's, on the reading that at that
+ *        zoom overlap is acceptable, and the measurement refuted the premise — that shot is now the
+ *        WIDEST of the race. The parameter is kept because the layout should still be able to say
+ *        what "exempt everyone" means, and `nameTagLayout.test.js` pins both arms of it.
  * @param {number} [p.edgeMarginFrac=0]  canvas-edge hysteresis band, as a fraction of frame height
  * @param {number} [p.yieldOverlapFrac=0]  how much of its own box an incumbent tolerates before yielding
  * @param {boolean} [p.showAll=false]  the START-FORMATION exception: label everyone, no decluttering
@@ -410,6 +416,32 @@ export function computeTagLayout({
     // yields only when the intrusion is DECISIVE — more than `yieldOverlapFrac` of its own box.
     // Without the asymmetry two racers drifting past each other trade the same label many times a
     // second; measured, that was two thirds of all remaining churn on the bunched tracks.
+    //
+    // ── AND THE BUDGET IS NOT SPENDABLE ON A NAME (LABEL-OVERLAP-FIX-1) ───────────────────────
+    //
+    // THE DEFECT THIS CLOSES, measured on the owner's own frame in LABEL-OVERLAP-3. A NAME is
+    // admitted by `nameClear` with ZERO tolerance against the picture as it stands. A NUMBER with
+    // tenure was then allowed to land ON that name, spending up to `yieldOverlapFrac` of its own
+    // area — and nothing re-examined the name afterwards. Every collision on that frame was
+    // name-versus-number and every intrusion sat inside the budget.
+    //
+    // THE ASYMMETRY WAS THE POINT AND IT STAYS: two NUMBERS drifting past each other still yield to
+    // one another, which is what the budget was built for and what two thirds of the churn came
+    // from. What changes is only that an admitted NAME is not one of the boxes the budget may be
+    // spent against. A name is expensive to earn — `labelFormHoldMs` of continuously clear geometry
+    // — and a label that cost that much must not be overrun by one that cost nothing.
+    //
+    // WHY NOT RE-CHECK THE NAME AFTERWARDS, which was the other shape on offer. It is one condition
+    // inside a loop that already runs, against a second pass over every placed label — and a second
+    // pass would cascade, because withdrawing one name frees space and changes every decision made
+    // after it, so the pass has to be repeated until it settles.
+    //
+    // THE FIRST VERSION OF THIS PARAGRAPH GAVE A DIFFERENT AND FALSE REASON — that withdrawing an
+    // admitted name would make it FLICKER. It would not: `labelFormHold` is a dwell lock that
+    // already governs when a name may appear at all, and the owner confirms flicker has never been a
+    // failure here. The shape is still the right one; the justification was wrong and is corrected
+    // rather than quietly dropped, because a wrong reason in the record is what a later reader
+    // builds the next decision on.
     const fits = (box, hasTenure) => {
       const area = Math.max(1, (box.right - box.left) * (box.bottom - box.top));
       const budget = hasTenure ? yieldOverlapFrac * area : 0;
@@ -417,7 +449,12 @@ export function computeTagLayout({
       for (const p of placed) {
         const ox = Math.min(box.right, p.right) - Math.max(box.left, p.left);
         const oy = Math.min(box.bottom, p.bottom) - Math.max(box.top, p.top);
-        if (ox > 0 && oy > 0) intrusion += ox * oy;
+        if (ox > 0 && oy > 0) {
+          // An admitted NAME is not a budget line: any overlap with it refuses this box outright,
+          // whatever tenure the newcomer has.
+          if (p.holdsName) return false;
+          intrusion += ox * oy;
+        }
         if (intrusion > budget) return false;
       }
       return true;
@@ -438,7 +475,7 @@ export function computeTagLayout({
     // within it: the name is drawn whatever it covers and whatever the hold says, which is the only
     // way the owner's "for the whole race" can be true when the pack closes up around the leader.
     if (e.wide && (exemptAll || (exempt ? exempt.has(e.index) : false))) {
-      placed.push(e.wide);
+      placed.push({ ...e.wide, holdsName: true });
       claimed.push(e.wide);
       shown.add(e.index);
       wide.add(e.index);
@@ -491,9 +528,14 @@ export function computeTagLayout({
     // stronger: it tests the same box against `claimed`, which contains every placed box at least as
     // large as the one `placed` holds, with ZERO tolerance where `fits` has an incumbent's budget.
     // A name that passes the criterion cannot fail the placement.
+    //
+    // THAT REASONING WAS TRUE AND INCOMPLETE, and LABEL-OVERLAP-3 measured the gap. It is about the
+    // NAME'S OWN ADMISSION and says nothing about what may be placed on the name AFTERWARDS, which
+    // is where every collision on the owner's frame came from. The other half now lives in `fits`
+    // above: an admitted name is not a box the incumbent budget can be spent against.
     const wantsWide = nameClear && (wideForms ? wideForms.has(e.index) : false);
     if (wantsWide) {
-      placed.push(e.wide);
+      placed.push({ ...e.wide, holdsName: true });
       claimed.push(e.wide);
       shown.add(e.index);
       wide.add(e.index);
