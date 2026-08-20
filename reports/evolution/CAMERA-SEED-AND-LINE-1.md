@@ -144,7 +144,29 @@ are looking at.
 
 ---
 
-## 5. State
+## 5. The camera fingerprint did NOT move, and that is a finding
+
+The brief expected it to. Measured on `9454cc41`:
+
+| role | recorded | measured | |
+| --- | --- | --- | --- |
+| world | `dc4647be0f55ebdb` | `dc4647be0f55ebdb` | unmoved |
+| world-off | `854018ee5d3d83e1` | `854018ee5d3d83e1` | unmoved |
+| camera | `6daaf5c090c35385` | `6daaf5c090c35385` | **unmoved** |
+| render | `4a7cfed196e9437d` | `4a7cfed196e9437d` | **unmoved** |
+
+**Why, and it is worth knowing:** `camera-fingerprint.mjs` builds its races through `raceDriver`,
+which sets the camera's seed itself from the run identity (`cameraSeed: 1439767152`). It never goes
+near `RaceScreen`. So the instrument was **already** running a derived, fixed camera seed — the
+change is to where the BROWSER gets its seed, and the fingerprint cannot see that.
+
+**The consequence is that the camera fingerprint does not cover the browser's seed source at all.**
+Nothing in the fingerprint set would have caught the drawn seed, and nothing would catch a return to
+it. `scripts/camera-seed-determinism.test.mjs` is now the only thing that would.
+
+---
+
+## 6. State
 
 `npm run verify` remains red on `check-runin-frame`, which enforces the old "line inside the frame
 throughout" promise. **That guard is closer to your corrected requirement than the build is** — the
