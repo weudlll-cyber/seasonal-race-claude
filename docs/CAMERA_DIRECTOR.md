@@ -657,7 +657,7 @@ a verbatim transcript of one run on one commit, which is a historical record, no
 
 ### The tracking lag, as measured today — and it had drifted
 
-<!-- MEASURED: tracking-lag (median/p95 pp per state) @ 36a0b70d 2026-08-23 depends=client/src/modules/camera/ -->
+<!-- MEASURED: tracking-lag (median/p95 pp per state) @ 415a5e9e 2026-08-23 depends=client/src/modules/camera/ -->
 
 **RE-MEASURED IN FULL FOR ENDGAME-SCHEDULE-2. Only PHOTO_FINISH moved — median 5.59 -> 4.62,
 p95 16.61 -> 21.49** — and it is the only state the endgame's own width authority reaches with
