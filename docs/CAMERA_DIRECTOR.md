@@ -657,7 +657,7 @@ a verbatim transcript of one run on one commit, which is a historical record, no
 
 ### The tracking lag, as measured today — and it had drifted
 
-<!-- MEASURED: tracking-lag (median/p95 pp per state) @ e6b5a0d4 2026-08-23 depends=client/src/modules/camera/ -->
+<!-- MEASURED: tracking-lag (median/p95 pp per state) @ 0a26dff7 2026-08-23 depends=client/src/modules/camera/ -->
 
 **RE-MEASURED IN FULL FOR ENDGAME-SCHEDULE-2, AND EVERY FIGURE IS IDENTICAL TO THE DIGIT.** Worth
 recording HOW that came about, because for one build it was not. ENDGAME-SCHEDULE-2 lets the endgame

@@ -49,7 +49,7 @@ the correct response is to say so in this table instead of building one.
 
 ### Phase 6, MEASURED — and both of the old numbers were wrong
 
-<!-- MEASURED: straggler-truth (phase 6 duration, zoom-out lead, stragglers in shot) @ e6b5a0d4 2026-08-23 depends=client/src/modules/camera/CameraDirector.js -->
+<!-- MEASURED: straggler-truth (phase 6 duration, zoom-out lead, stragglers in shot) @ 0a26dff7 2026-08-23 depends=client/src/modules/camera/CameraDirector.js -->
 
 **RE-MEASURED IN FULL FOR ENDGAME-SCHEDULE-2, AND IDENTICAL TO THE DIGIT AGAIN**, for the reason the
 entry below already gives: the run-in's window closes on the first crossing and phase 6 begins there,
