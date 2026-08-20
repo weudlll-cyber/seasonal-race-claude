@@ -657,7 +657,7 @@ a verbatim transcript of one run on one commit, which is a historical record, no
 
 ### The tracking lag, as measured today — and it had drifted
 
-<!-- MEASURED: tracking-lag (median/p95 pp per state) @ 1e8a9d63 2026-08-24 depends=client/src/modules/camera/ -->
+<!-- MEASURED: tracking-lag (median/p95 pp per state) @ 9454cc41 2026-08-24 depends=client/src/modules/camera/ -->
 
 **RE-STAMPED, NOT RE-MEASURED, FOR CAMERA-SEED-AND-LINE-1 — and the reason is a fact, not a
 judgement.** That block's only file under this stamp's `depends=` directory is the NEW
