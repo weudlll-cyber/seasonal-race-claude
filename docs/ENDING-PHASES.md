@@ -49,7 +49,7 @@ the correct response is to say so in this table instead of building one.
 
 ### Phase 6, MEASURED — and both of the old numbers were wrong
 
-<!-- MEASURED: straggler-truth (phase 6 duration, zoom-out lead, stragglers in shot) @ 182fa3ac 2026-08-23 depends=client/src/modules/camera/CameraDirector.js -->
+<!-- MEASURED: straggler-truth (phase 6 duration, zoom-out lead, stragglers in shot) @ cdd06ab8 2026-08-23 depends=client/src/modules/camera/CameraDirector.js -->
 
 **RE-MEASURED IN FULL FOR ENDGAME-SCHEDULE-1, AND EVERY FIGURE IS IDENTICAL TO THE DIGIT.** That
 block rewrites the endgame's width authority in `CameraDirector.js`, which is this stamp's whole

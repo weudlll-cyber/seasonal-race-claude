@@ -657,7 +657,7 @@ a verbatim transcript of one run on one commit, which is a historical record, no
 
 ### The tracking lag, as measured today — and it had drifted
 
-<!-- MEASURED: tracking-lag (median/p95 pp per state) @ 182fa3ac 2026-08-23 depends=client/src/modules/camera/ -->
+<!-- MEASURED: tracking-lag (median/p95 pp per state) @ cdd06ab8 2026-08-23 depends=client/src/modules/camera/ -->
 
 **RE-MEASURED IN FULL FOR ENDGAME-SCHEDULE-1.** Every frame count and both percentiles moved a
 little, and PHOTO_FINISH moved in both directions at once — p95 **25.39 -> 16.61**, median
