@@ -7479,7 +7479,19 @@ describe('CameraDirector — the corridor caps the width, it does not force it',
   ];
 
   function drive(configOver, racers) {
-    const cd = new CameraDirector(WORLD_W, CANVAS_H, true, configOver, 36, makeShape(), TRACK_W);
+    // ENDGAME-SCHEDULE-2: pinned to the off-arm. This block is about the CORRIDOR CAP's composition
+    // with the contender guarantee, and the scheduled endgame stands both of them down — the
+    // schedule is the sole author of the width there, which is what removed the owner's "the zoom
+    // visibly hops". The composition under test is still live with the key off, and still guarded.
+    const cd = new CameraDirector(
+      WORLD_W,
+      CANVAS_H,
+      true,
+      { runInSchedule: false, ...configOver },
+      36,
+      makeShape(),
+      TRACK_W
+    );
     cd.state = CAM_STATE.PHOTO_FINISH;
     cd._photoFinishContenders = racers.slice(0, 2).map((r) => ({ index: r.index, ref: r }));
     let ts = 1000;

@@ -657,7 +657,17 @@ a verbatim transcript of one run on one commit, which is a historical record, no
 
 ### The tracking lag, as measured today — and it had drifted
 
-<!-- MEASURED: tracking-lag (median/p95 pp per state) @ cdd06ab8 2026-08-23 depends=client/src/modules/camera/ -->
+<!-- MEASURED: tracking-lag (median/p95 pp per state) @ e6b5a0d4 2026-08-23 depends=client/src/modules/camera/ -->
+
+**RE-MEASURED IN FULL FOR ENDGAME-SCHEDULE-2, AND EVERY FIGURE IS IDENTICAL TO THE DIGIT.** Worth
+recording HOW that came about, because for one build it was not. ENDGAME-SCHEDULE-2 lets the endgame
+SCHEDULE author the zoom outright, and the first placement of that assignment was AFTER the follow
+branch — which left `update()`'s zoom-about-the-anchor pivot correcting only the lerp's own small
+delta while the schedule moved the zoom by much more. An unpivoted zoom change is CAMERA-SIDEJUMP-1's
+own defect, and `_focusAnchorRacer` returns null in PHOTO_FINISH, so that is where it landed:
+**PHOTO_FINISH p95 16.61 -> 90.72 pp**, the subject sliding most of a frame from where the framing
+rule puts him. Moving the assignment BEFORE the branch chain, so the pivot sees the whole change,
+returns every figure in this table to the value below.
 
 **RE-MEASURED IN FULL FOR ENDGAME-SCHEDULE-1.** Every frame count and both percentiles moved a
 little, and PHOTO_FINISH moved in both directions at once — p95 **25.39 -> 16.61**, median

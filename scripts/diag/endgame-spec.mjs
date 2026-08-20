@@ -43,6 +43,24 @@
 // engages later score better by measuring fewer of its own bad frames — the exact way the previous
 // block's numbers flattered themselves.
 //
+// ── ENDGAME-SCHEDULE-2: JUDGE BY THE WORST FRAME, NOT BY THE AGGREGATE ───────────────────────
+//
+// The aggregate smoothness figure was GREEN (worst |d2 ln(width)/dt2| 13.1) while the owner's eye
+// reported the zoom HOPPING. So that figure does not measure what he perceives, and an average that
+// disagrees with the eye is the average's problem.
+//
+// The per-frame measures below are taken on the RAW delivered series, never on the smoothed one:
+//   stepMax     the LARGEST SINGLE-FRAME change in ln(width). This is the number his eye reacts to.
+//   stepP99     the same at the 99th percentile, so one outlier cannot hide a rough hundred.
+//   revs        RATE REVERSALS — consecutive PERCEPTIBLE steps of opposite sign. A step counts as
+//               perceptible when it moves a point at the frame edge by at least ONE SCREEN PIXEL,
+//               |step| * 640 >= 1, which is a pixel and not a taste.
+//   panStepMax  the same for the pan, in screen px per frame.
+//   clip%       the share of frames where the DELIVERED width is not what the SCHEDULE asked for.
+//               A clipped schedule is not a smooth one, so this is the structural half of hopping.
+//   backMax     the largest BACKWARD step of the camera along the racing line, in world px. This is
+//               the "camera jumps back" observation, measured rather than described.
+//
 // ── DERIVATIVES ARE TAKEN ON A LIGHTLY SMOOTHED SERIES, AND THAT IS DECLARED ──────────────────
 //
 // The second derivative of a 60 Hz signal is dominated by frame noise. `ln(width)` is smoothed with
@@ -215,6 +233,60 @@ export function scoreTrack(geo, cfg, N) {
       // the picture then sits against whatever bound IS smallest, which is how standstill returns
       // under a design that cannot itself stand still.
       binding: cd._framingProbe?.binding ?? "?",
+      // WHAT THE SCHEDULE ASKED FOR, beside what was delivered. Under `runInSchedule` the director
+      // puts the schedule in the `state` slot, so this is its own value before the other ceilings,
+      // the corridor cap and the two re-clamps have had their say.
+      schedWidth: (() => {
+        const c = cd._framingProbe?.ceilings?.state;
+        return c > 0 && Number.isFinite(c) ? CW / effOf(c) : NaN;
+      })(),
+      guaranteedWidth: (() => {
+        const g = cd._framingProbe?.guaranteed;
+        return g > 0 && Number.isFinite(g) ? CW / effOf(g) : NaN;
+      })(),
+      // WHAT THE STOOD-DOWN AUTHORITIES WOULD HAVE ASKED FOR. The price of letting the schedule
+      // win is paid in racers, and this is how it is counted rather than assumed.
+      wouldWiden: (() => {
+        const w = cd._framingProbe?.wouldHave;
+        const g = cd._framingProbe?.guaranteed;
+        if (!w || !(g > 0)) return false;
+        return ["guarantee", "company", "field"].some((k) => Number.isFinite(w[k]) && w[k] < g - 1e-12);
+      })(),
+      // WHERE THE LEADER SITS ALONG THE FRAME. The run-in deliberately places him BEFORE centre and
+      // walks him back past it (RUNIN-GLIDE-1's mirror), which is the owner's own design and would
+      // look exactly like the camera falling back. Measured so it can be named rather than guessed:
+      // 0.34 is the mirror, 0.66 the ordinary placement.
+      leadFrac: (() => {
+        const h = cd._headingScreen(cd._framingProbe?.t ?? 0);
+        const l = h ? Math.hypot(h.x, h.y) : 0;
+        if (!(l > 0)) return NaN;
+        const ux = h.x / l, uy = h.y / l;
+        const lx = cd.offsetX + lead.x * effX, ly = cd.offsetY + lead.y * effY;
+        const chord = Math.abs(ux) * CW + Math.abs(uy) * CH;
+        return 0.5 + ((lx - CW / 2) * ux + (ly - CH / 2) * uy) / chord;
+      })(),
+      eng: !!cd._runInEngaged,
+      widenStartP: cd._runInWidenStartP,
+      widenFromW: cd._runInWidenFrom > 0 ? CW / effOf(cd._runInWidenFrom) : NaN,
+      afterDL: !!cd._runInAfterDeadline,
+      composing: !!cd._runInComposingNow,
+      lerpPhase: cd._lerpPhase,
+      offX: cd.offsetX,
+      offY: cd.offsetY,
+      // The camera's own world position along the track, so a BACKWARD move can be measured rather
+      // than inferred from the picture. -offset/eff is the world point at the frame's origin.
+      camWorldX: -cd.offsetX / effX,
+      camWorldY: -cd.offsetY / effY,
+      headX: (() => {
+        const h = cd._headingScreen(cd._framingProbe?.t ?? 0);
+        const l = h ? Math.hypot(h.x, h.y) : 0;
+        return l > 0 ? h.x / l : 1;
+      })(),
+      headY: (() => {
+        const h = cd._headingScreen(cd._framingProbe?.t ?? 0);
+        const l = h ? Math.hypot(h.x, h.y) : 0;
+        return l > 0 ? h.y / l : 0;
+      })(),
       // The width the SCHEDULE placed this frame. Under `runInSchedule` the director puts it in the
       // `state` slot (it is the width authority for the phase), so reading `ceilings.line` here —
       // which the schedule retires — reported Infinity on every frame and made the trace unreadable.
@@ -251,8 +323,14 @@ export function scoreTrack(geo, cfg, N) {
     console.log(`
 TRACE ${geo.id} n=${N} — every 10th frame of the window`);
     console.log("  prog   width  corr    rate   binding         line x,y   schedW  (canvas 1280x720)");
+    const TR = (process.argv.find((a) => a.startsWith("--trace-from=")) ?? "").slice(13);
+    const TRTO = (process.argv.find((a) => a.startsWith("--trace-to=")) ?? "").slice(11);
+    const lo = TR ? Number(TR) : -Infinity;
+    const hi = TRTO ? Number(TRTO) : Infinity;
+    const every = TR ? 1 : 10;
     f.forEach((x, i) => {
-      if (i % 10) return;
+      if (x.progress < lo || x.progress > hi) return;
+      if (i % every) return;
       const rate =
         i > 0 && i < f.length - 1 ? ((f[i + 1].lnW - f[i - 1].lnW) * FPS) / 2 : 0;
       console.log(
@@ -262,7 +340,10 @@ TRACE ${geo.id} n=${N} — every 10th frame of the window`);
           (x.width / trackWidthPx).toFixed(2).padStart(6),
           rate.toFixed(3).padStart(8),
           "  " + x.binding.padEnd(15),
-          (Math.round(x.lineX) + "," + Math.round(x.lineY)).padStart(12),
+          (x.eng ? "E" : "-") + (x.composing ? "C" : "-") + (x.afterDL ? "D" : "-"),
+          (x.widenStartP === null || x.widenStartP === undefined ? "  -  " : x.widenStartP.toFixed(3)).padStart(7),
+          (Number.isFinite(x.widenFromW) ? Math.round(x.widenFromW) : "-").toString().padStart(8),
+          x.lerpPhase.padStart(9),
           Math.round(x.stateWidth).toString().padStart(6),
           Math.round(x.demandWidth ?? 0).toString().padStart(9),
         ].join("")
@@ -299,6 +380,63 @@ TRACE ${geo.id} n=${N} — every 10th frame of the window`);
     };
   };
   const specStill = stillOver(S);
+
+  // ── ENDGAME-SCHEDULE-2: THE PER-FRAME MEASURES, ON THE RAW SERIES ───────────────────────────
+  const PERCEPTIBLE = 1 / (CW / 2); // one screen pixel at the frame edge
+  const spec = f.slice(S);
+  const steps = [];
+  for (let i = 1; i < spec.length; i++) steps.push(spec[i].lnW - spec[i - 1].lnW);
+  const absSteps = steps.map(Math.abs);
+  // Rate reversals: consecutive PERCEPTIBLE steps whose sign differs.
+  let revs = 0;
+  let revWorst = 0;
+  let lastSign = 0;
+  for (const st2 of steps) {
+    if (Math.abs(st2) < PERCEPTIBLE) continue;
+    const sg = st2 > 0 ? 1 : -1;
+    if (lastSign !== 0 && sg !== lastSign) {
+      revs++;
+      revWorst = Math.max(revWorst, Math.abs(st2));
+    }
+    lastSign = sg;
+  }
+  // Pan, in screen px per frame.
+  const panSteps = [];
+  for (let i = 1; i < spec.length; i++)
+    panSteps.push(Math.hypot(spec[i].offX - spec[i - 1].offX, spec[i].offY - spec[i - 1].offY));
+  // BACKWARD camera motion along the racing line, in world px. Positive = the camera moved AGAINST
+  // the direction of travel, which is the "jumps back" observation.
+  const backs = [];
+  for (let i = 1; i < spec.length; i++) {
+    const dx = spec[i].camWorldX - spec[i - 1].camWorldX;
+    const dy = spec[i].camWorldY - spec[i - 1].camWorldY;
+    backs.push(-(dx * spec[i].headX + dy * spec[i].headY));
+  }
+  // WHERE the worst frames are, and what was binding there. A maximum without a location is a
+  // number nobody can act on.
+  const worstStepI = absSteps.length ? absSteps.indexOf(Math.max(...absSteps)) : -1;
+  const worstPanI = panSteps.length ? panSteps.indexOf(Math.max(...panSteps)) : -1;
+  const at = (i) => (i >= 0 && spec[i + 1] ? spec[i + 1] : null);
+  const wStep = at(worstStepI);
+  const wPan = at(worstPanI);
+
+  // The FULL window [0.90, crossing] as well: his "camera jumps back" happens while the shot is
+  // opening, which is BEFORE the spec window begins.
+  const wideSteps = [];
+  const widePan = [];
+  for (let i = 1; i < f.length; i++) {
+    wideSteps.push(Math.abs(f[i].lnW - f[i - 1].lnW));
+    widePan.push(Math.hypot(f[i].offX - f[i - 1].offX, f[i].offY - f[i - 1].offY));
+  }
+  const wideStepI = wideSteps.indexOf(Math.max(...wideSteps));
+  const widePanI = widePan.indexOf(Math.max(...widePan));
+
+  // CLIPPING: the delivered width is not the width the schedule asked for.
+  const clipped = spec.filter(
+    (x) => Number.isFinite(x.schedWidth) && Math.abs(x.width / x.schedWidth - 1) > 0.01
+  );
+  const clipBy = {};
+  for (const x of clipped) clipBy[x.binding] = (clipBy[x.binding] ?? 0) + 1;
 
   // ── STANDSTILL ────────────────────────────────────────────────────────────────────────────
   const stillFlags = v.map((x) => Math.abs(x) < STILL);
@@ -343,6 +481,41 @@ TRACE ${geo.id} n=${N} — every 10th frame of the window`);
     specSec: last.tSec - f[S].tSec,
     wideStillPct: (100 * stillFlags.filter(Boolean).length) / stillFlags.length,
     wideStillLongestMs: (1000 * longestStill) / FPS,
+    // ENDGAME-SCHEDULE-2 — the per-frame truth
+    stepMaxLn: absSteps.length ? Math.max(...absSteps) : NaN,
+    stepP99Ln: quant(absSteps, 0.99),
+    stepMedLn: med(absSteps),
+    revs,
+    revWorstLn: revWorst,
+    panStepMax: panSteps.length ? Math.max(...panSteps) : NaN,
+    panStepP99: quant(panSteps, 0.99),
+    backMax: backs.length ? Math.max(...backs) : NaN,
+    backFrames: backs.filter((b) => b > 1).length,
+    clipPct: spec.length ? (100 * clipped.length) / spec.length : NaN,
+    // THE RAMP'S OWN PARAMETER. `u` is driven by the leader's progress, which advances with physics
+    // jitter — a smoothstep of a jittery parameter is a jittery curve. dpMax/dpMed is how uneven it
+    // is; an ideal ramp would have them equal.
+    leadFracFirst: spec.length ? spec[0].leadFrac : NaN,
+    leadFracLast: spec.length ? spec[spec.length - 1].leadFrac : NaN,
+    leadFracStepMax: (() => { let m=0; for(let i=1;i<spec.length;i++){const d=Math.abs(spec[i].leadFrac-spec[i-1].leadFrac); if(Number.isFinite(d)) m=Math.max(m,d);} return m; })(),
+    dpMax: (() => { const d=[]; for(let i=1;i<spec.length;i++) d.push(spec[i].progress-spec[i-1].progress); return Math.max(...d); })(),
+    dpMed: (() => { const d=[]; for(let i=1;i<spec.length;i++) d.push(spec[i].progress-spec[i-1].progress); return med(d); })(),
+    wouldWidenPct: spec.length ? (100 * spec.filter((x) => x.wouldWiden).length) / spec.length : NaN,
+    worstStepAt: wStep ? wStep.progress : NaN,
+    worstStepBinding: wStep ? wStep.binding : "?",
+    worstPanAt: wPan ? wPan.progress : NaN,
+    worstPanBinding: wPan ? wPan.binding : "?",
+    wideStepMax: Math.max(...wideSteps),
+    wideStepAt: f[wideStepI + 1] ? f[wideStepI + 1].progress : NaN,
+    wideStepBinding: f[wideStepI + 1] ? f[wideStepI + 1].binding : "?",
+    widePanMax: Math.max(...widePan),
+    widePanAt: f[widePanI + 1] ? f[widePanI + 1].progress : NaN,
+    widePanBinding: f[widePanI + 1] ? f[widePanI + 1].binding : "?",
+    clipBy: Object.entries(clipBy)
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 3)
+      .map(([k, v]) => `${k} ${Math.round((100 * v) / spec.length)}%`)
+      .join(" "),
     // 6 — smoothness over the SPEC window
     specJerkP99: quant(a.slice(S).map(Math.abs), 0.99),
     specJerkMax: Math.max(...a.slice(S).map(Math.abs)),
@@ -427,7 +600,7 @@ if (import.meta.url === pathToFileURL(process.argv[1]).href) {
     );
     console.log("");
     console.log(
-      "track            n  spec   STILL%  longest    mono  turn@   jerkP99  jerkMax   ARRIVE%  xCorr   maxCorr  %world   1:both  minOn   cut   who placed the shot"
+      "track            n  spec   stepMAX  stepP99   revs  revMax   panMAX  backMAX  clip%  wouldW  dpRatio   STILL%  longest  mono  ARRIVE%  maxCorr  1:both   clipped by"
     );
     for (const r of rows) {
       if (r.notScorable) {
@@ -441,25 +614,56 @@ if (import.meta.url === pathToFileURL(process.argv[1]).href) {
           r.track.padEnd(16),
           String(r.racers).padStart(3),
           String(r.specFrames).padStart(6),
-          r.stillPct.toFixed(0).padStart(8),
+          r.stepMaxLn.toFixed(4).padStart(9),
+          r.stepP99Ln.toFixed(4).padStart(9),
+          String(r.revs).padStart(7),
+          r.revWorstLn.toFixed(4).padStart(8),
+          Math.round(r.panStepMax).toString().padStart(9),
+          Math.round(r.backMax).toString().padStart(9),
+          r.clipPct.toFixed(0).padStart(7),
+          r.wouldWidenPct.toFixed(0).padStart(7),
+          (r.dpMax / r.dpMed).toFixed(1).padStart(7),
+          r.stillPct.toFixed(0).padStart(9),
           (Math.round(r.stillLongestMs) + "ms").padStart(9),
-          (r.reopenFrames === 0 ? "ok" : "FAIL " + r.reopenFrames).padStart(8),
-          r.turnAtProgress.toFixed(3).padStart(7),
-          r.specJerkP99.toFixed(2).padStart(10),
-          r.specJerkMax.toFixed(2).padStart(9),
-          r.arrivalErrPct.toFixed(0).padStart(10),
-          r.crossCorridors.toFixed(2).padStart(7),
-          r.maxCorridors.toFixed(1).padStart(10),
-          r.maxWorldPct.toFixed(0).padStart(8),
+          (r.reopenFrames === 0 ? "ok" : "FAIL" + r.reopenFrames).padStart(6),
+          r.arrivalErrPct.toFixed(0).padStart(9),
+          r.maxCorridors.toFixed(1).padStart(9),
           (r.deadlineBothVisible === null ? "—" : r.deadlineBothVisible ? "yes" : "NO").padStart(8),
-          String(r.minOnScreen).padStart(6),
-          (r.contOffFrames ? "CUT" + r.contOffWorst : "-").padStart(6),
-          "   " + r.bindShare,
+          "   " + (r.clipBy || "-"),
         ].join("")
       );
     }
     const fin = rows.filter((r) => !r.notScorable);
     console.log("");
+    console.log("");
+    console.log("WHERE THE WORST FRAMES ARE — spec window [0.95, cross] and the full window [0.90, cross]");
+    console.log("track            spec stepMAX @prog  binding            spec panMAX @prog  binding        FULL stepMAX @prog  FULL panMAX @prog");
+    for (const r of fin) {
+      console.log(
+        [
+          r.track.padEnd(16),
+          r.stepMaxLn.toFixed(4).padStart(9),
+          r.worstStepAt.toFixed(3).padStart(7),
+          "  " + r.worstStepBinding.padEnd(20),
+          Math.round(r.panStepMax).toString().padStart(8),
+          r.worstPanAt.toFixed(3).padStart(7),
+          "  " + r.worstPanBinding.padEnd(16),
+          r.wideStepMax.toFixed(4).padStart(9),
+          r.wideStepAt.toFixed(3).padStart(7),
+          Math.round(r.widePanMax).toString().padStart(9),
+          r.widePanAt.toFixed(3).padStart(7),
+        ].join("")
+      );
+    }
+    console.log("");
+    console.log(
+      `PER-FRAME  stepMAX ${Math.max(...fin.map((r) => r.stepMaxLn)).toFixed(4)} ln  |  ` +
+        `stepP99 ${med(fin.map((r) => r.stepP99Ln)).toFixed(4)}  |  ` +
+        `reversals ${fin.reduce((a, r) => a + r.revs, 0)} (worst step ${Math.max(...fin.map((r) => r.revWorstLn)).toFixed(4)})  |  ` +
+        `panMAX ${Math.round(Math.max(...fin.map((r) => r.panStepMax)))} px/frame  |  ` +
+        `backMAX ${Math.round(Math.max(...fin.map((r) => r.backMax)))} world px  |  ` +
+        `clipped ${med(fin.map((r) => r.clipPct)).toFixed(0)}% (worst ${Math.max(...fin.map((r) => r.clipPct)).toFixed(0)}%)`
+    );
     console.log(
       `POOLED  STILL ${med(fin.map((r) => r.stillPct)).toFixed(0)}% (worst ${Math.max(...fin.map((r) => r.stillPct)).toFixed(0)}%), ` +
         `longest ${Math.round(Math.max(...fin.map((r) => r.stillLongestMs)))}ms  |  ` +
