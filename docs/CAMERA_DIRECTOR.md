@@ -657,7 +657,15 @@ a verbatim transcript of one run on one commit, which is a historical record, no
 
 ### The tracking lag, as measured today — and it had drifted
 
-<!-- MEASURED: tracking-lag (median/p95 pp per state) @ 9454cc41 2026-08-24 depends=client/src/modules/camera/ -->
+<!-- MEASURED: tracking-lag (median/p95 pp per state) @ 88768c4d 2026-08-25 depends=client/src/modules/camera/ -->
+
+**RE-MEASURED IN FULL FOR ENDGAME-REPAIR-1. Only PHOTO_FINISH moved, and it moved BACK: median
+4.62 -> 4.51, p95 21.49 -> 19.50.** Every other state is identical to the digit, frame counts
+included. PHOTO_FINISH is the one state the endgame's width authority reaches with
+`_focusAnchorRacer` null, so it is the only one any change to that authority can touch — the same
+sentence the two entries below make, and this block moves it in the direction those entries called
+worse. The cause is the same three cuts: the OVERVIEW entry snap, the LEAD_CHANGE entry snap and the
+period-2 strobe all displaced the subject on the frames they fired, and none of them fires now.
 
 **RE-STAMPED, NOT RE-MEASURED, FOR CAMERA-SEED-AND-LINE-1 — and the reason is a fact, not a
 judgement.** That block's only file under this stamp's `depends=` directory is the NEW
@@ -727,7 +735,7 @@ measured rather than argued.
 | LEADER_ZOOM   | 17169  | 3.72      | 9.32   |
 | LEAD_CHANGE   | 9373   | 4.42      | 7.42   |
 | OVERVIEW      | 4323   | 2.48      | 16.00  |
-| PHOTO_FINISH  | 1865   | 4.62      | 21.49  |
+| PHOTO_FINISH  | 1865   | 4.51      | 19.50  |
 
 (ENDGAME-SCHEDULE-1's figures. The PHOTO-FINISH-STATE-1 run the paragraph below describes read
 BATTLE_ZOOM 10935 / 5.30 / 9.77, COMEBACK_ZOOM 162 / 6.84 / 7.50, LEADER_ZOOM 17175 / 3.73 / 9.06,

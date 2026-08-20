@@ -247,6 +247,8 @@ export class CameraDirector {
     this._runInWidenU = 0; // the widen's carried parameter — advances only on frames it can run
     this._runInWidenPrevP = null;
     this._runInWidenInert = false; // the widen could not run last frame; re-anchor when it can
+    this._runInHeldZoom = null; // the width the schedule last placed — held while the widen is inert
+    this._runInWidenState = null; // the camera state the widen's target was last measured under
     this._runInWidenDone = false; // the shot has reached the width the line needs; the close begins
     this._runInEndZoom = null; // the factor the close is easing to; a change re-anchors the ramp
     this._runInCloseFromU = 0; // where the close's ramp was re-anchored, in run-in progress
@@ -1701,8 +1703,27 @@ export class CameraDirector {
         this._leadChangePrevLeaderName = this._prevLeaderName;
         // Hard cut: skip entry lerp — camera snaps to lead-change zoom immediately
         this._lerpPhase = 'tracking';
-        this.zoom = this._leadChangeZoom;
-        this.targetZoom = this._leadChangeZoom;
+        // ── EXCEPT INSIDE THE SCHEDULED ENDGAME (ENDGAME-REPAIR-1) ─────────────────────────
+        //
+        // The hard cut is right for the rest of the race: a lead change IS a cut, and the shot
+        // that follows it is a tight one on the two racers involved. Inside the endgame it is a
+        // second author on the width the schedule owns — the same defect as the OVERVIEW snap
+        // below, in the state the owner himself named as a live candidate.
+        //
+        // MEASURED on space-sprint, seed 21, his config and his roster, at 94.65% of the race
+        // (`scripts/diag/wild-frame.mjs`, which runs the BROWSER's camera seed): the delivered
+        // width collapsed from 5.40 corridors to 1.33 IN ONE FRAME — a factor of four, 1.399 ln —
+        // and the schedule then had to climb the whole way back, reaching 3.88 corridors over the
+        // next eight frames. The picture goes wild, shows a shot with no line in it, and recovers.
+        // That is his report, frame for frame.
+        //
+        // The state change itself is untouched: LEAD_CHANGE still runs, still picks its subject,
+        // still writes the overlay names. Only the ZOOM cut stands down, and only while the
+        // schedule is composing.
+        if (!(this._runInSchedule && this._runInComposingNow)) {
+          this.zoom = this._leadChangeZoom;
+          this.targetZoom = this._leadChangeZoom;
+        }
       }
 
       // OVERVIEW: snap zoom immediately to avoid a slow lerp down from the previous zoom state.
@@ -1721,7 +1742,26 @@ export class CameraDirector {
       if (nextState === CAM_STATE.PHOTO_FINISH && prevState !== CAM_STATE.PHOTO_FINISH) {
         this._photoFinishEnteredTs = ts;
       }
-      if (nextState === CAM_STATE.OVERVIEW && !this._inFinishMode) {
+      // ── THE SNAP STANDS DOWN DURING THE SCHEDULED ENDGAME (ENDGAME-REPAIR-1) ─────────────
+      //
+      // This is a CUT — it moves the zoom in one frame, deliberately, because entering OVERVIEW is
+      // a change of shot. During the scheduled endgame it is a SECOND AUTHOR on the one quantity
+      // the schedule owns, and the same sentence ENDGAME-SCHEDULE-2 wrote about the transition
+      // glide applies to it word for word: two authors on one quantity is what hopping looks like.
+      //
+      // MEASURED on river-run under his config, at 94.25% of the race: LEAD_CHANGE -> OVERVIEW cut
+      // the delivered width from 1.99 to 2.67 corridors in ONE frame, 0.294 ln, the largest step
+      // left anywhere in the endgame. It then did worse than jump — the schedule read the cut width
+      // as "the widen has reached what the line needs", declared the widen done, latched the close
+      // on it, and the close's own parameter is pinned at 0 until the deadline, so the picture stood
+      // ABSOLUTELY STILL from 94.25% to 95%. One cut, and both of the things his eye rejected.
+      //
+      // Nothing about OVERVIEW outside the endgame changes; `_runInComposingNow` is false there.
+      if (
+        nextState === CAM_STATE.OVERVIEW &&
+        !this._inFinishMode &&
+        !(this._runInSchedule && this._runInComposingNow)
+      ) {
         // CAMERA-ZOOM-UNIT-1: OVERVIEW snaps to its TRACK-WIDTHS setting, the same rule the other
         // four states run. What stood here before derived the zoom from a target sprite size
         // divided by `2 x W_ref / racersPerRow`, which made the widest shot in the camera depend
@@ -2893,26 +2933,40 @@ export class CameraDirector {
     // deadline failed on 2 of 3 probe tracks with the line a few pixels outside. The 11% is what
     // buys the deadline, and `_lineCeiling`'s own header records the identical failure for the
     // identical reason.
-    // ── MEASURE THE ROOM FROM WHERE THE SUBJECT ACTUALLY IS (CAMERA-ANCHOR-TRUTH-1's lesson) ──
+    // ── THE TARGET IS MEASURED FROM WHERE THE FRAMING RULE PUTS THE ANCHOR (ENDGAME-REPAIR-1) ──
     //
-    // `anchorScreenPoint` answers where the framing RULE puts the subject. The pan does not always
-    // get him there, and the world-edge clamp is the big one: on an open track the finish sits at
-    // the world's end, which is exactly where that clamp bites hardest. Sizing the shot from the
-    // INTENDED position then leaves the line outside the frame by whatever the pan was displaced by
-    // — measured on mountainstreet, the schedule matched its own demand to the pixel (741 = 741)
-    // and the line still sat 44 px past the right edge at requirement 1's deadline.
+    // It used to be measured from where the anchor ACTUALLY WAS on screen last frame — the pan does
+    // not always reach its intended place, and CAMERA-ANCHOR-TRUTH-1 recorded the cost of assuming
+    // it does. That correction is real, but it may not be applied HERE, and the reason is
+    // arithmetic rather than taste.
     //
-    // So the room is measured from where the anchor IS on screen, under the camera the renderer
-    // last drew with. That is one frame stale and self-correcting, and it introduces no number: it
-    // replaces an assumption with an observation.
-    const atActual = this._proj.toScreen(subjects.point, this.zoom, this.offsetX, this.offsetY);
-    const demand = this._lineCeiling(
-      subjects,
-      frameSize,
-      raceState,
-      COMPANY_FRAME_PCT,
-      atActual && Number.isFinite(atActual.x) && Number.isFinite(atActual.y) ? atActual : null
-    );
+    // `pointGuarantee` divides the ROOM left from the anchor to the region's edge by the DISTANCE
+    // to the line. Measured from a point the pan has pushed toward that edge, the room goes to zero
+    // and the demanded WIDTH goes to infinity; past the edge the function answers Infinity, meaning
+    // "no zoom fixes this". So the schedule's target had a SINGULARITY sitting in the middle of the
+    // one segment whose whole job is to be smooth.
+    //
+    // MEASURED over the widen's own frames, seed 9, all nine scorable tracks, both arms
+    // (`scripts/diag/endgame-demand.mjs`):
+    //
+    //     from the OBSERVED anchor   undefined on 63-84% of frames on six tracks; where it IS
+    //                                defined it reaches 2108 corridors on city-circuit
+    //     from the RULE's anchor     undefined on 0% of frames on every track; median 2.8-7.3
+    //                                corridors, worst 11.6
+    //
+    // The observed anchor was therefore not delivering a correction on those frames — it was
+    // delivering Infinity, which the schedule reads as "no target", which is where the freeze and
+    // the single-frame blow-up came from: on ice-track the widen sat still for 66 frames, took ONE
+    // frame in which the demand was finite, and moved the picture from 1.4 corridors to the
+    // world-sized frame (14.6) between two frames. Both halves are this term.
+    //
+    // The pan's displacement is a TRANSIENT — it shrinks as the shot widens, because the framing
+    // rule the pan converges on is the same one this reads. Sizing a schedule on a transient is
+    // what produced the singularity. Keeping the line in frame DESPITE a displaced pan is a real
+    // requirement, and it is enforced where it belongs: as a term that widens when the line is
+    // actually near the edge, never as a divide-by-nearly-zero in the ramp's endpoint.
+    const demand = this._lineCeiling(subjects, frameSize, raceState, COMPANY_FRAME_PCT);
+
     // REQUIREMENT 2, LITERALLY: "at the crossing the shot is at the zoom factor of the leader view
     // or of the photo finish — whichever, but one of the two; it is not a new value." So the
     // endpoint is one of those two constants and NOT `_stateCamZoom()`. The difference is not
@@ -2960,14 +3014,63 @@ export class CameraDirector {
       // So the ramp RE-ANCHORS whenever it has been unable to run: it starts again from where the
       // camera actually is, aimed at what the line actually needs now. It cannot then arrive
       // anywhere it did not travel to, and an inert stretch costs a later start rather than a jump.
+      // ── A SCHEDULE PLACES EVERY FRAME IT IS COMPOSING (ENDGAME-REPAIR-1) ─────────────────
+      //
+      // Returning Infinity here handed the width back to the STATE for that one frame, and the
+      // state's shot is a different shot: on ice-track 1.2 corridors against the schedule's 7. The
+      // demand flickers finite/Infinity because `pointGuarantee`'s room is measured from where the
+      // anchor ACTUALLY IS on screen — which depends on the width this function just placed. So the
+      // two halves fed each other and the result was a PERIOD-2 LIMIT CYCLE: the wide frame put the
+      // anchor outside the region, which made the demand Infinity, which delivered the tight frame,
+      // which put the anchor back inside, which made the demand finite, which delivered the wide
+      // frame again. Measured on ice-track under the shipped defaults: 60 consecutive frames
+      // alternating between 267 px and 1500 px of width, a full second of the endgame strobing at
+      // 30 Hz — and the same shape on seven of the nine scorable tracks, worth up to 2.51 ln and
+      // 10337 px of pan IN ONE FRAME.
+      //
+      // Neither of this block's earlier attempts touched it. Restarting the ramp on every resume
+      // (`36a0b70d`) cut the strobe's AMPLITUDE and stalled the widen instead — river-run standstill
+      // 55%; carrying it (`415a5e9e`) restored the motion and let the amplitude back in — widest
+      // frame 6.2 -> 15.6 corridors, monotonicity 8/9 -> 4/9. Both were treating a symptom.
+      //
+      // THE SEGMENT THEREFORE HOLDS. On a frame it cannot compute a demand for, it places the width
+      // it last placed. That is requirement 7's permitted pause, it is monotone, it introduces no
+      // number — and it BREAKS THE LOOP AT ITS SOURCE, because a held width does not move the
+      // anchor, so the next frame's demand is computed from the same geometry as this one's.
       if (!Number.isFinite(demand)) {
         this._runInWidenInert = true;
-        return Infinity;
+        return this._runInHeldZoom ?? this.zoom;
       }
       if (this._runInWidenInert) {
         this._runInWidenInert = false;
         this._runInWidenFrom = this.zoom;
       }
+      // ── THE TARGET MOVES WHEN THE STATE DOES, AND IT MAY NOT DO SO AS A STEP (ENDGAME-REPAIR-1) ──
+      //
+      // The widen's target is a piece of GEOMETRY measured under the composition that is running:
+      // `_forwardFracNow` puts the anchor at the mirror of the leader's forward placement while a
+      // FORWARD state is running and at the centre of frame while one that is not is running, and
+      // `subjects.point` is the state's own subject — the leader for one shot, a group's centre for
+      // another. Both change the instant the state changes, so the width the line needs changes with
+      // them, as a STEP.
+      //
+      // MEASURED on river-run, both arms, at 94.25% of the race: LEAD_CHANGE -> BATTLE_ZOOM moved
+      // the anchor's intended place from 0.340 to 0.500 of the frame and the subject 72 world px,
+      // and the delivered width went 1.99 -> 2.81 corridors BETWEEN TWO FRAMES — 0.347 ln, the
+      // largest remaining step anywhere in the endgame on any track.
+      //
+      // So the widen RE-ANCHORS on a state change, which is exactly what the close below already
+      // does when its endpoint factor flips, and for the identical reason: it starts again from
+      // where the camera IS and eases to the new target over what is left of the segment. The
+      // trigger is an equality test on the state, not a threshold — there is no number in it — and
+      // the ramp still reaches 1 at the deadline, because `u` is renormalised against the race that
+      // remains rather than against the span it originally had.
+      if (this._runInWidenState !== null && this._runInWidenState !== this.state) {
+        this._runInWidenFrom = this.zoom;
+        this._runInWidenU = 0;
+        this._runInWidenPrevP = p;
+      }
+      this._runInWidenState = this.state;
       const from = this._runInWidenFrom;
       // ── THE RAMP ADVANCES ON THE FRAMES IT RUNS, AND ONLY THOSE ──────────────────────────
       //
@@ -2991,7 +3094,8 @@ export class CameraDirector {
       const z = Math.exp(Math.log(from) + (Math.log(demand) - Math.log(from)) * e);
       // This segment only ever OPENS: a demand tighter than the shot already is would make the
       // widen a close, and the turn would then happen twice.
-      return Math.min(z, from);
+      this._runInHeldZoom = Math.min(z, from);
+      return this._runInHeldZoom;
     }
 
     // -- CLOSE -----------------------------------------------------------------------------
@@ -3037,7 +3141,37 @@ export class CameraDirector {
     // shot to a WIDE state instead of letting the schedule close through it, which is exactly the
     // standstill this block exists to remove (measured: mountainstreet held 800 px from 94.9% to
     // 97.0%, then dived at -2.3 ln/s the frame the state changed).
-    return Math.exp(Math.log(from) + (Math.log(endZoom) - Math.log(from)) * e);
+    const z = Math.exp(Math.log(from) + (Math.log(endZoom) - Math.log(from)) * e);
+
+    // ── REQUIREMENT 5: THE VIEWER CAN ALWAYS TELL WHERE THE LINE IS (ENDGAME-LINE-1) ───────────
+    //
+    // His requirement, as written: from the START of the endgame until the crossing the viewer can
+    // always tell where the finish line is. It need not be whole — cut at the edge is fine, part of
+    // the band is enough — but it never becomes unfindable.
+    //
+    // THE CONDITION: the line's CENTRE POINT stays inside the frame at `COMPANY_FRAME_PCT`. The
+    // band runs THROUGH that point, so if the point is in shot the band is in shot, cut at its ends
+    // by the frame edge — which is exactly what he allows. It is far looser than the promise the
+    // old `check-runin-frame` held (the point inside the subject's 0.7 box, a 1.43x tax on every
+    // frame) and far stricter than what the schedule did (free to leave after 95%). 1.0 is the
+    // cheaper-looking wrong answer: it puts the point ON the edge, where the pan's own lag takes it
+    // straight back out, and `_lineCeiling`'s header records that failure for the same reason.
+    //
+    // AN EARLIER PERMISSION WAS MINE, NOT HIS. ENDGAME-SCHEDULE-1 read requirement 1 as "the line
+    // need not stay framed after the 95% mark". It does not say that; 95% is where the endgame
+    // BEGINS. The frame he photographed with no line in it is that misreading, correctly built.
+    //
+    // IT IS A FLOOR, SO THE SCHEDULE STAYS THE SOLE AUTHOR. `demand` is the width at which the line
+    // is inside that region; the close may not go tighter than it. It cannot make the shot jump,
+    // because the close STARTS at or wider than the demand — that is the very condition
+    // `_runInWidenDone` tests — and the demand shrinks monotonically as the leader approaches.
+    //
+    // REQUIREMENT 2 IS UNTOUCHED, and by arithmetic rather than by care. `pointGuarantee` returns
+    // Infinity when the distance to the line is zero, so the floor RELEASES exactly at the crossing
+    // and the ramp's own endpoint — the leader view's factor or the photo finish's — is what the
+    // shot arrives at. The same argument RUNIN-HOLD-1 gives for its sweep landing exactly.
+    if (Number.isFinite(demand) && demand < z) return demand;
+    return z;
   }
 
   /**
