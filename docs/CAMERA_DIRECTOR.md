@@ -657,7 +657,17 @@ a verbatim transcript of one run on one commit, which is a historical record, no
 
 ### The tracking lag, as measured today — and it had drifted
 
-<!-- MEASURED: tracking-lag (median/p95 pp per state) @ 30cee205 2026-08-22 depends=client/src/modules/camera/ -->
+<!-- MEASURED: tracking-lag (median/p95 pp per state) @ 182fa3ac 2026-08-23 depends=client/src/modules/camera/ -->
+
+**RE-MEASURED IN FULL FOR ENDGAME-SCHEDULE-1.** Every frame count and both percentiles moved a
+little, and PHOTO_FINISH moved in both directions at once — p95 **25.39 -> 16.61**, median
+**3.11 -> 5.59**. Read that pair together: the endgame's schedule places the shot rather than letting
+it settle against a bound, so the WORST following errors are gone (the p95 is the shot lurching after
+a bound moved) while the TYPICAL error rises, because a shot that is deliberately travelling is never
+exactly where a table that assumes a settled shot says it should be.
+**THIS TABLE CANNOT SAY WHETHER THE ENDGAME FOLLOWS WELL** — `intended` here is the framing table's
+STATIC answer, and the run-in deliberately places the leader away from it (RUNIN-GLIDE-1's mirror).
+The endgame's own following is measured by `scripts/diag/endgame-spec.mjs`.
 
 **RE-MEASURED IN FULL FOR SHIP-MINIMAP-ONE-SOURCE, AND EVERY FIGURE IS IDENTICAL TO THE DIGIT.** The
 merge puts two files under this stamp's `depends=` directory, so the guard asks — and it was RE-RUN
@@ -690,12 +700,16 @@ measured rather than argued.
 
 | state         | frames | median pp | p95 pp |
 | ------------- | ------ | --------- | ------ |
-| BATTLE_ZOOM   | 10935  | 5.30      | 9.77   |
-| COMEBACK_ZOOM | 162    | 6.84      | 7.50   |
-| LEADER_ZOOM   | 17175  | 3.73      | 9.06   |
-| LEAD_CHANGE   | 9378   | 4.42      | 7.26   |
-| OVERVIEW      | 4248   | 2.43      | 16.00  |
-| PHOTO_FINISH  | 1865   | 3.11      | 25.39  |
+| BATTLE_ZOOM   | 10923  | 5.30      | 9.77   |
+| COMEBACK_ZOOM | 159    | 4.84      | 7.40   |
+| LEADER_ZOOM   | 17169  | 3.72      | 9.32   |
+| LEAD_CHANGE   | 9373   | 4.42      | 7.42   |
+| OVERVIEW      | 4323   | 2.48      | 16.00  |
+| PHOTO_FINISH  | 1865   | 5.59      | 16.61  |
+
+(ENDGAME-SCHEDULE-1's figures. The PHOTO-FINISH-STATE-1 run the paragraph below describes read
+BATTLE_ZOOM 10935 / 5.30 / 9.77, COMEBACK_ZOOM 162 / 6.84 / 7.50, LEADER_ZOOM 17175 / 3.73 / 9.06,
+LEAD_CHANGE 9378 / 4.42 / 7.26, OVERVIEW 4248 / 2.43 / 16.00, PHOTO_FINISH 1865 / 3.11 / 25.39.)
 
 **WHY NOTHING MOVED, WHICH IS THE PART WORTH READING.** Not because the state is rare — it runs
 1865 frames here, and 206-279 frames on nine of the ten fingerprint tracks, held 3.4-4.7 s. Not
