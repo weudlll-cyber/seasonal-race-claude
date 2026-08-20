@@ -48,6 +48,7 @@ import { loadAutoScaleConfig } from '../../modules/autoSpriteScale.js';
 import { loadCameraConfig, cameraConfigProvenance } from '../../modules/cameraConfig.js';
 import { configFingerprintBadge, buildWorldConfig } from '../../modules/exportRaceConfig.js';
 import { buildCameraMarker, configDiffWithValues } from '../../modules/camera/cameraMarker.js';
+import { cameraSeedForRace } from '../../modules/camera/cameraSeed.js';
 // BUILD-TRUTH-1: the ONLY import of the virtual module. It is re-read and the page force-reloaded
 // whenever the identity changes, so this value cannot be older than the code around it. It stays
 // out of `modules/` on purpose: scripts/render-fingerprint.mjs drives the renderer directly in node,
@@ -587,12 +588,15 @@ export default function RaceScreen() {
       trackWidthPx
     );
     // CAMERA-REPRO-1: the camera makes its OWN random draws (which state to cut to, when the next
-    // OVERVIEW is due). Unseeded, the same race shows a different camera every time — which is why
-    // "it looked wrong at 40 s" could never be handed to anyone. Draw ONE seed per race from
-    // Math.random, exactly as random as before, and give it to the director: the race stays as
-    // unpredictable as it always was, and the drawn seed travels in the marker so a marked moment
-    // can be stood in again. This mirrors the Quick-Test seed rule (drawn, not fixed, then shown).
-    const cameraRandomSeed = (Math.random() * 0x7fffffff) >>> 0 || 1;
+    // OVERVIEW is due), and it needs a seed for them. That seed used to be DRAWN from Math.random
+    // per race, which made a marked moment replayable but the same race seed irreproducible —
+    // measured at 165 physics steps running a different state between two runs of race seed 9.
+    // CAMERA-SEED-AND-LINE-1 derives it from the race's own seed instead; the marker still carries
+    // the value, so every existing replay path is unchanged.
+    // CAMERA-SEED-AND-LINE-1: DERIVED FROM THE RACE SEED, not drawn. Same race seed, same camera,
+    // shot for shot — so a picture he reports can be stood in again. `cameraSeed.js` states the
+    // trade and the unseeded case; `racePlanSeed` is bound above from `raceData`.
+    const cameraRandomSeed = cameraSeedForRace(racePlanSeed);
     camDirRef.current.setRandomSeed(cameraRandomSeed);
     // CEREMONY-OPENING-1: the ONE place that says whether this race opens on a brand card. The
     // director owns the schedule and cannot know what a branding profile is; this is the only thing

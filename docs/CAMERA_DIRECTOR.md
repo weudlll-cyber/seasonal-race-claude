@@ -657,7 +657,14 @@ a verbatim transcript of one run on one commit, which is a historical record, no
 
 ### The tracking lag, as measured today — and it had drifted
 
-<!-- MEASURED: tracking-lag (median/p95 pp per state) @ 415a5e9e 2026-08-23 depends=client/src/modules/camera/ -->
+<!-- MEASURED: tracking-lag (median/p95 pp per state) @ 1e8a9d63 2026-08-24 depends=client/src/modules/camera/ -->
+
+**RE-STAMPED, NOT RE-MEASURED, FOR CAMERA-SEED-AND-LINE-1 — and the reason is a fact, not a
+judgement.** That block's only file under this stamp's `depends=` directory is the NEW
+`camera/cameraSeed.js`, which derives the camera's random seed from the race's. It is imported by
+`RaceScreen` alone and is **not in `tracking-lag.mjs`'s load closure** — the harness sets the
+camera seed itself, through `raceDriver`'s identity, and never reaches the browser screen. The
+director itself is untouched by that block: its diff is empty.
 
 **RE-MEASURED IN FULL FOR ENDGAME-SCHEDULE-2. Only PHOTO_FINISH moved — median 5.59 -> 4.62,
 p95 16.61 -> 21.49** — and it is the only state the endgame's own width authority reaches with
