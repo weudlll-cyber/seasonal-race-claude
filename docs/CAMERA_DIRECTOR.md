@@ -657,9 +657,14 @@ a verbatim transcript of one run on one commit, which is a historical record, no
 
 ### The tracking lag, as measured today — and it had drifted
 
-<!-- MEASURED: tracking-lag (median/p95 pp per state) @ 0a26dff7 2026-08-23 depends=client/src/modules/camera/ -->
+<!-- MEASURED: tracking-lag (median/p95 pp per state) @ 36a0b70d 2026-08-23 depends=client/src/modules/camera/ -->
 
-**RE-MEASURED IN FULL FOR ENDGAME-SCHEDULE-2, AND EVERY FIGURE IS IDENTICAL TO THE DIGIT.** Worth
+**RE-MEASURED IN FULL FOR ENDGAME-SCHEDULE-2. Only PHOTO_FINISH moved — median 5.59 -> 4.62,
+p95 16.61 -> 21.49** — and it is the only state the endgame's own width authority reaches with
+`_focusAnchorRacer` null. The pair moves in opposite directions because the schedule's carried ramp
+follows the leader's fitted progress rather than his raw one: the TYPICAL frame is better placed,
+while the frames where the fit and the physics disagree most are worse. Every other state is
+identical to the digit. Worth
 recording HOW that came about, because for one build it was not. ENDGAME-SCHEDULE-2 lets the endgame
 SCHEDULE author the zoom outright, and the first placement of that assignment was AFTER the follow
 branch — which left `update()`'s zoom-about-the-anchor pivot correcting only the lerp's own small
@@ -715,7 +720,7 @@ measured rather than argued.
 | LEADER_ZOOM   | 17169  | 3.72      | 9.32   |
 | LEAD_CHANGE   | 9373   | 4.42      | 7.42   |
 | OVERVIEW      | 4323   | 2.48      | 16.00  |
-| PHOTO_FINISH  | 1865   | 5.59      | 16.61  |
+| PHOTO_FINISH  | 1865   | 4.62      | 21.49  |
 
 (ENDGAME-SCHEDULE-1's figures. The PHOTO-FINISH-STATE-1 run the paragraph below describes read
 BATTLE_ZOOM 10935 / 5.30 / 9.77, COMEBACK_ZOOM 162 / 6.84 / 7.50, LEADER_ZOOM 17175 / 3.73 / 9.06,

@@ -244,6 +244,8 @@ export class CameraDirector {
     // window is the same span the move it schedules occupies and no new number is introduced.
     this._progTrail = [];
     this._runInAfterDeadline = false;
+    this._runInWidenU = 0; // the widen's carried parameter — advances only on frames it can run
+    this._runInWidenPrevP = null;
     this._runInWidenInert = false; // the widen could not run last frame; re-anchor when it can
     this._runInWidenDone = false; // the shot has reached the width the line needs; the close begins
     this._runInEndZoom = null; // the factor the close is easing to; a change re-anchors the ramp
@@ -2965,11 +2967,26 @@ export class CameraDirector {
       if (this._runInWidenInert) {
         this._runInWidenInert = false;
         this._runInWidenFrom = this.zoom;
-        this._runInWidenStartP = p;
       }
       const from = this._runInWidenFrom;
-      const span = deadline - this._runInWidenStartP;
-      const u = span > 0 ? Math.min(1, Math.max(0, (p - this._runInWidenStartP) / span)) : 1;
+      // ── THE RAMP ADVANCES ON THE FRAMES IT RUNS, AND ONLY THOSE ──────────────────────────
+      //
+      // Deriving `u` from absolute race progress advanced it on inert frames and produced the jump
+      // this block opened with. RESTARTING it on every resume fixed that and broke the opposite
+      // way: on river-run the demand flickers almost every other frame, so the ramp restarted
+      // continuously and never got anywhere — standstill 13% -> 55% on the shipped defaults.
+      //
+      // So `u` is CARRIED, and each active frame advances it by the share of the remaining
+      // race-to-deadline that this frame consumed. It reaches 1 exactly at the deadline, cannot
+      // advance while the segment is inert, and never restarts — all three at once, and no constant.
+      const prevP = this._runInWidenPrevP ?? this._runInWidenStartP ?? p;
+      const remPrev = deadline - prevP;
+      const remNow = deadline - p;
+      if (remNow <= 0) this._runInWidenU = 1;
+      else if (remPrev > 0 && remNow < remPrev)
+        this._runInWidenU = 1 - (1 - (this._runInWidenU ?? 0)) * (remNow / remPrev);
+      this._runInWidenPrevP = p;
+      const u = Math.min(1, Math.max(0, this._runInWidenU ?? 0));
       const e = u * u * (3 - 2 * u);
       const z = Math.exp(Math.log(from) + (Math.log(demand) - Math.log(from)) * e);
       // This segment only ever OPENS: a demand tighter than the shot already is would make the
