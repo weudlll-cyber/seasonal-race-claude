@@ -376,6 +376,99 @@ export function recordViewerFrame(f) {
         : null,
       errPanX: Math.round(f.offsetX - f.targetOffsetX),
       errPanY: Math.round(f.offsetY - f.targetOffsetY),
+      // ── ENDGAME-WHO-AND-HOWMUCH, question 1 ────────────────────────────────────────────────
+      //
+      // HOW MUCH OF THE BAND THE VIEWER CAN SEE, which is what his requirement is about. The
+      // margin `check-runin-frame` grades is the distance of the band's nearest point from the
+      // region's edge; it says nothing about how much of the band is on screen. The band is a
+      // straight segment across the corridor, so its visible share is the share of a dense uniform
+      // sample that projects inside the canvas — no clipping arithmetic of its own to be wrong.
+      // THE SECOND ARGUMENT OF `getPosition` IS NORMALISED, NOT WORLD PX. raceCore calls it as
+      // `getPosition(t, r.physicalY / 2)` with `physicalY` in [-1, +1], so the corridor edges are
+      // -0.5 and +0.5. Sampling `(k/200 - 0.5) * trackWidthPx` walks a segment 300x too long, and
+      // every sample but a handful lands outside the world — which reads as "1.49% of the band is
+      // visible" on frames where the whole band is in shot. Found by the sanity check: the figure
+      // was IDENTICAL on frames the guard passes and frames it fails, and 1.49% is exactly 3/201.
+      bandPct: (() => {
+        if (!inWindow || !f.shape || !(f.trackWidthPx > 0)) return null;
+        const tAt = f.shape.isOpen ? Math.min(1, f.finishT) : ((f.finishT % 1) + 1) % 1;
+        let on = 0;
+        let n = 0;
+        for (let k = 0; k <= 200; k++) {
+          const w = f.shape.getPosition(tAt, k / 200 - 0.5);
+          if (!w) continue;
+          n++;
+          const X = sx(w);
+          const Y = sy(w);
+          if (X >= 0 && X <= CW && Y >= 0 && Y <= CH) on++;
+        }
+        return n ? +((100 * on) / n).toFixed(2) : null;
+      })(),
+      // ── question 2: IS THE LINE OUT BECAUSE THE SHOT IS TOO TIGHT, OR BECAUSE THE FRAME MOVED?
+      //
+      // Both fit what has been measured so far and nobody has established which. The test is
+      // decisive and needs no threshold: `need` is the screen distance from the ANCHOR to the
+      // nearest point of the band; `room` is the distance from the frame's CENTRE to the canvas
+      // edge along that same direction. If need > room, no placement centred on the anchor could
+      // hold both — the shot is TOO TIGHT. If need <= room, a correctly placed frame would hold
+      // it and the frame has MOVED.
+      tightOrMoved: (() => {
+        if (!inWindow || !f.anchorPoint || !f.shape) return null;
+        const aX = sx(f.anchorPoint);
+        const aY = sy(f.anchorPoint);
+        const tAt = f.shape.isOpen ? Math.min(1, f.finishT) : ((f.finishT % 1) + 1) % 1;
+        let best = Infinity;
+        let bx = 0;
+        let by = 0;
+        for (let k = 0; k <= 200; k++) {
+          const w = f.shape.getPosition(tAt, k / 200 - 0.5);
+          if (!w) continue;
+          const X = sx(w);
+          const Y = sy(w);
+          const d = Math.hypot(X - aX, Y - aY);
+          if (d < best) {
+            best = d;
+            bx = X;
+            by = Y;
+          }
+        }
+        if (!Number.isFinite(best) || best === 0) return null;
+        const ux = (bx - aX) / best;
+        const uy = (by - aY) / best;
+        // Distance from the canvas centre to its edge along that direction.
+        const room = Math.min(
+          ux > 0 ? CW / 2 / ux : ux < 0 ? -(CW / 2) / ux : Infinity,
+          uy > 0 ? CH / 2 / uy : uy < 0 ? -(CH / 2) / uy : Infinity
+        );
+        return { need: Math.round(best), room: Math.round(room), tooTight: best > room };
+      })(),
+      // ── question 2: WHOM the binding rule selects, and the race's own numbers about them ─────
+      //
+      // `f.subjectIndices` is the framing pair the director pinned. For each member: the along-track
+      // gap to the leader in the race's own T units and in world px, and the rank. Whether any of
+      // them can still win is decided OFFLINE from these, against the speeds the race is running.
+      pair: (() => {
+        if (!f.subjectIndices?.length) return null;
+        const ordered = [...f.racers].sort((a, b) => b.t - a.t);
+        const ld = ordered[0];
+        return f.subjectIndices.map((idx) => {
+          const r = f.racers.find((q) => q.index === idx) ?? null;
+          if (!r) return { idx, missing: true };
+          return {
+            idx,
+            t: +r.t.toFixed(6),
+            dT: +(ld.t - r.t).toFixed(6),
+            dWorldPx: Math.round(Math.hypot(ld.x - r.x, ld.y - r.y)),
+            rank: ordered.findIndex((q) => q.index === idx) + 1,
+          };
+        });
+      })(),
+      leaderT: (() => {
+        let m = -Infinity;
+        for (const r of f.racers) if (r.t > m) m = r.t;
+        return +m.toFixed(6);
+      })(),
+      finishT: f.finishT,
       subjects: f.subjectIndices ? f.subjectIndices.join('/') : null,
       courseIn,
     });
