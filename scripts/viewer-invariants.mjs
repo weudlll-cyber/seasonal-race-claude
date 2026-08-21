@@ -115,9 +115,25 @@ function setPath(o, path, v) {
   }
   cur[parts[parts.length - 1]] = v;
 }
+// `--set=key=value`, applied after the arm, so one build can be measured with a switch on and
+// off without rebuilding. Values parse as boolean, number or string, in that order.
+const CLI_SET = process.argv
+  .filter((a) => a.startsWith("--set="))
+  .map((a) => {
+    const i = a.indexOf("=", 6);
+    const k = a.slice(6, i);
+    const raw = a.slice(i + 1);
+    const v =
+      raw === "true" ? true
+      : raw === "false" ? false
+      : raw.trim() !== "" && Number.isFinite(Number(raw)) ? Number(raw)
+      : raw;
+    return [k, v];
+  });
 const configFor = (arm) => {
   const cfg = structuredClone(DEFAULT_CAMERA_CONFIG);
   if (arm === "his") for (const [p, v] of HIS) setPath(cfg, p, v);
+  for (const [p, v] of CLI_SET) setPath(cfg, p, v);
   return cfg;
 };
 
@@ -483,6 +499,7 @@ async function worker() {
       events: p.events.length, byInvariant: p.byInvariant,
       widest: p.widestCorridors, tightest: p.tightestCorridors,
       windowStates: p.windowStates ?? {},
+      contention: p.contention ?? null,
     });
     if (JSON_OUT) flush();
     console.log(
@@ -505,6 +522,36 @@ const secs = ((Date.now() - t0) / 1000).toFixed(0);
 // The exemption for the group-framing states is about the EARLIER RACE, not about those states as
 // such: if a battle or a comeback shot runs after 95%, his rule applies to it there like any other.
 // So this is counted rather than assumed, over every race swept.
+// ── CONTENTION-WATCH-1: how often a racer drops out, and where ───────────────────────────────
+const CON = rows.filter((r) => r.contention).map((r) => ({ ...r.contention, track: r.track, seed: r.seed, arm: r.arm }));
+if (CON.length) {
+  const withDrops = CON.filter((c) => c.released?.length);
+  console.log(`\n── CONTENTION WATCH ──`);
+  console.log(
+    `  races where at least one racer dropped out: ${withDrops.length} of ${CON.length}` +
+      `   |  races with NO change at all: ${CON.length - withDrops.length}`
+  );
+  const all = CON.flatMap((c) => (c.released ?? []).map((r) => ({ ...r, track: c.track, seed: c.seed, arm: c.arm })));
+  console.log(`  racers dropped, total: ${all.length}`);
+  if (all.length) {
+    const ps = all.map((r) => r.p).sort((a, b) => a - b);
+    console.log(
+      `  race progress at the drop: min ${ps[0].toFixed(4)}  median ${ps[ps.length >> 1].toFixed(4)}  max ${ps[ps.length - 1].toFixed(4)}`
+    );
+    const byTrack = {};
+    for (const r of all) byTrack[r.track] = (byTrack[r.track] ?? 0) + 1;
+    console.log(
+      "  by track: " +
+        Object.entries(byTrack)
+          .sort((a, b) => b[1] - a[1])
+          .map(([k, v]) => `${k} ${v}`)
+          .join(", ")
+    );
+  }
+  const checks = CON.map((c) => c.checks ?? 0);
+  console.log(`  checks run per race: min ${Math.min(...checks)}  max ${Math.max(...checks)}`);
+}
+
 const WSTATES = {};
 for (const r of rows) for (const [k, v] of Object.entries(r.windowStates ?? {})) WSTATES[k] = (WSTATES[k] ?? 0) + v;
 const WTOTAL = Object.values(WSTATES).reduce((a, b) => a + b, 0);

@@ -267,6 +267,14 @@ export class CameraDirector {
     // `finishedCount >= 2` by 6–57 frames on every finishing track, because the second racer across
     // the line is frequently not one of the pair.
     this._photoFinishContenders = null;
+    // CONTENTION-WATCH-1. `_contentionOut` is the release set and it only ever GROWS — see
+    // `_updateContentionWatch` for why that is what makes the verdict unable to oscillate.
+    this._contentionOut = new Set();
+    this._contentionReleasedAt = new Map(); // index -> ts the release began, for the gradual shift
+    this._contentionLast = new Map(); // index -> {ts, t} at the previous check, for the rate
+    this._contentionPending = new Set(); // judged out ONCE; a release needs two checks running
+    this._contentionNextTs = null;
+    this._contentionChecks = 0; // diagnostic: how many checks ran this race
     this._inFinishMode = false; // FINISH_OVERVIEW has begun — absolute for state, and read by four framing sites
     this.zoom = this.overviewZoom;
     this.targetZoom = this.overviewZoom;
@@ -611,6 +619,8 @@ export class CameraDirector {
     this._photoFinishContenderFraming = t.photoFinishContenderFraming;
     this._runInShot = t.runInShot;
     this._runInSchedule = t.runInSchedule;
+    this._contentionWatch = t.contentionWatch;
+    this._contentionCheckMs = t.contentionCheckMs;
     this._runInOpenMs = t.runInOpenMs;
     this._contenderZoom = t.contenderZoom;
     this._corridorCapArriveMs = t.corridorCapArriveMs;
@@ -2292,15 +2302,24 @@ export class CameraDirector {
         // branch, so the camera sat on the average of the top three and never received the forward
         // bias — in the state that holds 37.6% of all frames.
         const passed = this._findByIndex(racers, this._prevLeaderIndex, null);
+        // CONTENTION-WATCH-1: the racer who was just passed is a subject only while he can still
+        // take it back. The pan already sits on the leader in this state, so only the GUARANTEE's
+        // subject eases here.
         return {
           point: leader ? { x: leader.x, y: leader.y } : null,
           t: leader?.t ?? null,
-          pair: [leader, passed],
+          pair: [leader, this._contentionEased(passed, leader, this._frameTs)],
         };
       }
       case CAM_STATE.BATTLE_ZOOM: {
         const group = this._findGroupRacers(racers);
-        const contenders = group.length >= 2 ? group : focusRacers;
+        const rawContenders = group.length >= 2 ? group : focusRacers;
+        // CONTENTION-WATCH-1: a battle inside the endgame window is still a fight for the win, so
+        // a member the race has decided eases out of it like any other subject. Outside the window
+        // `_contentionEased` is the identity, so every earlier battle is untouched.
+        const contenders = rawContenders.map((r) =>
+          this._contentionEased(r, rawContenders[0] ?? null, this._frameTs)
+        );
         const a = contenders[0] ?? null;
         const b = contenders[1] ?? null;
         const point =
@@ -2325,7 +2344,15 @@ export class CameraDirector {
         // in defaults.js for the measurement.
         //
         // The pair is looked up LIVE by index every frame: WHO is fixed, WHERE they are is not.
-        const contenders = this._photoFinishFramingPair(racers, focusRacers);
+        const rawPair = this._photoFinishFramingPair(racers, focusRacers);
+        // CONTENTION-WATCH-1: THE PIN STAYS, THE MEMBERSHIP EASES. FINISH-PAIR-1 pinned this set so
+        // the picture could not lurch as the live top two re-sorted, and that is untouched — WHO was
+        // captured is still fixed. What this adds is that a captured racer the race has since
+        // decided eases out of the framing instead of being carried to the line. Measured on
+        // space-sprint seed 9, the second member is FIFTH and about a second down by the crossing.
+        const contenders = rawPair.map((r) =>
+          this._contentionEased(r, rawPair[0] ?? null, this._frameTs)
+        );
         const a = contenders[0];
         const b = contenders[1];
         const point =
@@ -2457,6 +2484,171 @@ export class CameraDirector {
    * @param {object[]} ordered  racers sorted by t, leader first
    * @returns {object[]} the contenders, leader first
    */
+  /**
+   * CONTENTION-WATCH-1 — CAN THIS RACER STILL WIN, JUDGED FROM WHAT IS VISIBLE ON TRACK?
+   *
+   * ── THE ESTIMATE, AND WHERE EVERY QUANTITY IN IT COMES FROM ───────────────────────────────────
+   *
+   * The gap now, plus the speed difference carried forward over the distance that remains:
+   *
+   *     remaining      = (finishT - leader.t) x pathLengthPx          world px the leader has left
+   *     msToLine       = remaining / leaderSpeed                      at the speed he is running
+   *     projectedGap   = gapNow + (leaderSpeed - racerSpeed) x msToLine
+   *     out            <=> projectedGap > one body length
+   *
+   * `pathLengthPx`, `drawnBodyLengthPx` and `t` are all quantities THE RACE puts on a racer, and
+   * "one body length" is `pairContact`'s own along-track touch distance — the identical expression
+   * `_abreastContenders` uses for "nearly level with the leader". No new number enters here; the
+   * only one this feature adds is the cadence, and it is named in defaults.js.
+   *
+   * IT NEVER READS THE RACE PLAN. His instruction, and the reason is not caution: the plan knows
+   * the outcome, and a camera that drops a racer who still looks close on screen would be spoiling
+   * the result. Everything above is visible to the viewer too.
+   *
+   * ── WHY IT CANNOT OSCILLATE, STRUCTURALLY ─────────────────────────────────────────────────────
+   *
+   * THE VERDICT IS ONE-WAY. `_contentionOut` is a Set that is only ever added to, and it is cleared
+   * only when a new race resets the director. So a racer's state can change at most ONCE per race,
+   * from in to out, and "flicker" is not a shape this can take — not because it was measured not to,
+   * but because there is no code path that removes a member. That is what FINISH-PAIR-1's pin was
+   * defending and it is preserved rather than re-litigated: the pair is still pinned, and this only
+   * ever REMOVES from it.
+   *
+   * A RELEASE NEEDS THE VERDICT TWICE RUNNING. One-way means a single bad estimate is permanent, so
+   * a racer judged out is put in `_contentionPending` first and released only if the NEXT check
+   * agrees. Two consecutive checks, not a tuned threshold — and a racer who recovers in between
+   * simply falls out of `_contentionPending`, which is the one place this design is two-way and is
+   * safe because it decides nothing on its own.
+   *
+   * ── WITHOUT GEOMETRY THERE IS NO VERDICT ──────────────────────────────────────────────────────
+   *
+   * The same guard `_abreastContenders` carries, for the same reason: a caller that supplies bare
+   * {t, x, y, index} shapes — every synthetic fixture in this director's own suite — would otherwise
+   * be judged on absent fields. With no geometry nobody is ever released, which is today's picture.
+   *
+   * @returns {void} mutates `_contentionOut`; read through `_contentionWeight`
+   */
+  _updateContentionWatch(racers, raceState, ts) {
+    if (!this._contentionWatch) return;
+    if (!(raceState?.finishT > 0) || (raceState.finishedCount ?? 0) > 0) return;
+    if (!racers?.length) return;
+    // THE WINDOW IS THE RACE'S OWN, and it is the same one requirement 5 is scoped to. Nothing
+    // before 95% is touched by this feature at all.
+    let maxT = 0;
+    let leader = null;
+    for (const r of racers)
+      if (r.t > maxT) {
+        maxT = r.t;
+        leader = r;
+      }
+    if (!leader || maxT / raceState.finishT < this._endgameThreshold) return;
+    if (this._contentionNextTs !== null && ts < this._contentionNextTs) return;
+    this._contentionNextTs = ts + (this._contentionCheckMs ?? 250);
+    this._contentionChecks++;
+
+    const pathLen = leader.pathLengthPx ?? 0;
+    const hasGeometry = pathLen > 0 && (leader.drawnBodyLengthPx ?? 0) > 0;
+    // The rate is measured BETWEEN checks, so the cadence is also the estimator's window — which is
+    // why it is chosen against the estimate's stability rather than against a feeling.
+    const prevLeader = this._contentionLast.get(leader.index);
+    const nextLast = new Map();
+    for (const r of racers) nextLast.set(r.index, { ts, t: r.t });
+    const rateOf = (r) => {
+      const p = this._contentionLast.get(r.index);
+      if (!p || !(ts > p.ts)) return null;
+      return ((r.t - p.t) * pathLen) / (ts - p.ts); // world px per ms
+    };
+    const vLeader = prevLeader ? rateOf(leader) : null;
+    if (!hasGeometry || !(vLeader > 0)) {
+      this._contentionLast = nextLast;
+      return;
+    }
+    const msToLine = ((raceState.finishT - leader.t) * pathLen) / vLeader;
+
+    for (const r of racers) {
+      if (r === leader || r.index === leader.index) continue;
+      if (this._contentionOut.has(r.index)) continue;
+      const vR = rateOf(r);
+      if (vR === null) continue;
+      const gapNow = shortestArcDeltaT(leader.t, r.t) * pathLen;
+      const contactLength = ((leader.drawnBodyLengthPx ?? 0) + (r.drawnBodyLengthPx ?? 0)) / 2;
+      if (!(contactLength > 0)) continue;
+      const projected = gapNow + (vLeader - vR) * msToLine;
+      if (projected > contactLength) {
+        if (this._contentionPending.has(r.index)) {
+          this._contentionOut.add(r.index);
+          this._contentionPending.delete(r.index);
+          this._contentionReleasedAt.set(r.index, ts);
+        } else {
+          this._contentionPending.add(r.index);
+        }
+      } else {
+        this._contentionPending.delete(r.index);
+      }
+    }
+    this._contentionLast = nextLast;
+  }
+
+  /**
+   * How much of a racer the framing still holds: 1 while he is in contention, easing to 0 over the
+   * run-in's own opening span once he is released.
+   *
+   * THE DURATION IS `runInOpenMs`, WHICH ALREADY EXISTS — the owner's own 1-1.5 s, the span the
+   * endgame's opening move occupies. A second duration for "how long a subject takes to leave the
+   * frame" would be a number with no argument behind it.
+   *
+   * THE EASE IS THE SAME SMOOTHSTEP the schedule uses: C1, so the rate is continuous at both ends
+   * and nothing steps. That is his requirement 6 applied to this move rather than restated for it.
+   */
+  _contentionWeight(index, ts) {
+    if (!this._contentionWatch || !this._contentionOut.has(index)) return 1;
+    const at = this._contentionReleasedAt.get(index);
+    const dur = this._runInOpenMs;
+    if (!(at >= 0) || !(dur > 0)) return 0;
+    const u = Math.min(1, Math.max(0, (ts - at) / dur));
+    const e = u * u * (3 - 2 * u);
+    return 1 - e;
+  }
+
+  /**
+   * A released racer, as the FRAMING sees him: his own position while he is in contention, easing
+   * to the leader's as he leaves it.
+   *
+   * ONE BLEND MOVES BOTH THINGS AT ONCE, which is why it is done this way rather than by dropping
+   * him from the set. `subjects.point` is built from the pair and so is `contenderGuarantee`, so
+   * easing his POSITION eases the pan and the width together, on one curve — the same lesson
+   * `_beginRunInGlide` records as "pan and zoom on one ease, or the frame empties between them".
+   * Dropping him from the set instead would step both on the frame he left it.
+   *
+   * At weight 0 he sits exactly on the leader, where he constrains nothing and pulls the anchor
+   * nowhere — the shot is then the leader's own, which is what it would have been had he never been
+   * captured.
+   */
+  _contentionEased(r, leader, ts) {
+    if (!this._contentionWatch || !r || !leader || r.index === leader.index) return r;
+    const w = this._contentionWeight(r.index, ts);
+    if (w >= 1) return r;
+    // ── EVERY FIELD THE FRAMING READS, NOT JUST THE POSITION ──────────────────────────────────
+    //
+    // The first cut eased `x` and `y` alone and moved NOTHING: measured on space-sprint seed 9 the
+    // picture was byte-identical with the watch on. `getPanTarget` computes a pair's midpoint from
+    // `t` — `shape.getPosition((r0.t + r1.t) / 2, 0)`, deliberately, so the point stays on the
+    // racing line instead of cutting across the infield — so the pan never saw the blend at all.
+    //
+    // The blend therefore covers each field the framing actually reads: `t` for the pan target and
+    // the heading, `x`/`y` for the contender guarantee, `physicalY` for the lateral one. At weight
+    // 0 the released racer is the leader in every respect the CAMERA can see, so he constrains
+    // nothing and pulls nothing — while the RACE's own copy of him is untouched, because this is a
+    // shallow copy made for the framing and thrown away with the frame.
+    return {
+      ...r,
+      t: leader.t + (r.t - leader.t) * w,
+      x: leader.x + (r.x - leader.x) * w,
+      y: leader.y + (r.y - leader.y) * w,
+      physicalY: (leader.physicalY ?? 0) + ((r.physicalY ?? 0) - (leader.physicalY ?? 0)) * w,
+    };
+  }
+
   _abreastContenders(ordered) {
     const tw = this._trackWidthPx;
     const leader = ordered[0];
@@ -3861,6 +4053,10 @@ export class CameraDirector {
     // ZOOM-PACE-5: the arrival needs THIS frame's clock. `_lastTs` is not it — `update()` writes
     // that AFTER `_setTargets` returns, so reading it here gives the previous frame's time.
     this._frameTs = ts;
+    // CONTENTION-WATCH-1: ask who can still win BEFORE the framing is built from them. It runs on
+    // its own cadence and returns immediately outside the endgame window, so the cost outside it is
+    // one comparison per frame.
+    this._updateContentionWatch(racers, raceState, ts);
     const focusRacers = this._focusRacers(racers);
     const frameSize = { width: canvasW, height: canvasH };
     const framing = framingFor(this.state);

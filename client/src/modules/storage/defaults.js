@@ -569,6 +569,41 @@ export const DEFAULT_CAMERA_CONFIG = {
   // at 240 frames (4 s), which is longer than the shot itself and therefore this same fix with a
   // knob whose only safe value is "longer than the shot".
   photoFinishContenderFraming: true,
+  // ── CONTENTION-WATCH-1: KEEP ASKING WHO CAN STILL WIN, AND SHIFT SLOWLY ──────────────────────
+  //
+  // HIS DESIGN, 2026-08-24. Rather than deciding the duel partner once and holding him to the line,
+  // the camera keeps asking whether a racer still has a chance to WIN, and as soon as he does not,
+  // moves the framing off him GRADUALLY. It applies to the framing generally, not to the photo
+  // finish alone, and only inside the endgame window.
+  //
+  // WHY IT EXISTS. ENDGAME-WHO-AND-HOWMUCH measured what the pinned pair costs at the crossing: on
+  // space-sprint seed 9 the shot is still framing a racer who is FIFTH, 89 world px and about a
+  // second behind, and slower than the leader — and the frame centred on him is what carries the
+  // finish line off the canvas on 14 frames. The shot was measured WIDE ENOUGH on every one of
+  // them (need 324 px against 360 px of room), so the picture is not too tight; it is pointed at
+  // somebody who has already lost.
+  //
+  // THE JUDGEMENT COMES FROM WHAT IS VISIBLE ON TRACK — the gap and the speed difference carried
+  // forward over the distance that remains — and NEVER from the race plan, even though the plan
+  // knows the outcome. His words: the camera should SHOW the race, not KNOW it. A camera that drops
+  // a racer who still looks close on screen would be spoiling the result, and an estimate that is
+  // occasionally wrong because somebody rallies is the correct trade.
+  //
+  // DEFAULT OFF. Today's behaviour is unchanged until his eye has judged the alternative.
+  contentionWatch: false,
+  // HOW OFTEN THE CHECK RUNS. **THIS IS A NEW NUMBER AND IT IS THE ONLY ONE THIS BLOCK ADDS.**
+  //
+  // It is the interval the speed estimate is measured over as well as the cadence, so it is chosen
+  // against the estimate's own stability rather than against a feeling. Measured on space-sprint
+  // seed 9 over the endgame window, the coefficient of variation of a trailing racer's rate:
+  //
+  //     33 ms  26.5%      200 ms  12.2%      400 ms   6.9%      1067 ms  2.9%
+  //
+  // Below about 200 ms the estimate is dominated by the physics' own per-frame jitter — the same
+  // jitter ENDGAME-SCHEDULE-2 measured at 2.0x the median advance in a single frame. Above about
+  // 500 ms the endgame window (~4-5 s) affords only a handful of checks. 250 ms sits between them
+  // and gives roughly seventeen checks in a window.
+  contentionCheckMs: 250,
   // ── THE RUN-IN IS COMPOSED AROUND THE FINISH LINE (RUNIN-OWNS-1, 2026-08-12) ──────────────────
   // TRUE = from `endgameThreshold` to the first crossing the finish line is a bound on the camera's
   // zoom, whatever shot the director is running. FALSE = the pre-2026-08-12 behaviour, where the

@@ -105,6 +105,7 @@ let _widest = 0;
 let _tightest = Infinity;
 let _crossed = false;
 let _windowStates = {};
+let _contention = null;
 // DIAGNOSIS ONLY. With `_ra_viewerdump` set, every frame's transform is kept so a violation can be
 // traced back through the frames that produced it. Off by default: a sweep keeps only the events.
 let _dump = null;
@@ -125,6 +126,7 @@ export function beginViewerProbe(run) {
   _tightest = Infinity;
   _crossed = false;
   _windowStates = {};
+  _contention = { released: [], checks: 0, on: false };
   _run = run ?? null;
   try {
     _dump = sessionStorage.getItem('_ra_viewerdump') === '1' ? [] : null;
@@ -244,6 +246,13 @@ export function recordViewerFrame(f) {
   // still applies there, because the exemption is about the earlier race and not about those states
   // as such. This is the census that answers it.
   if (inWindow) _windowStates[f.state] = (_windowStates[f.state] ?? 0) + 1;
+  if (_contention && f.contentionOut) {
+    _contention.on = !!f.contentionOn;
+    _contention.checks = f.contentionChecks ?? 0;
+    for (const idx of f.contentionOut)
+      if (!_contention.released.some((r) => r.idx === idx))
+        _contention.released.push({ idx, frame: i, p: prog, ms: Math.round(f.ts) });
+  }
 
   // ── 2 — THE LEADER IS IN THE PICTURE (in the window) ────────────────────────────────────────
   let lead = f.racers[0];
@@ -496,6 +505,9 @@ export function readViewerProbe() {
     // Frames per camera state INSIDE the window, so "does a group shot ever run after 95%" is
     // answered by a count rather than by an argument from the code.
     windowStates: _windowStates,
+    // CONTENTION-WATCH-1: who the watch released and when, so "how often does a racer drop out"
+    // is a count from the run rather than an estimate.
+    contention: _contention,
     dump: _dump,
     events: _events,
     byInvariant,

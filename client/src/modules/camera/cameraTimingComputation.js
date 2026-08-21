@@ -363,6 +363,12 @@ export function computeTimingFromConfig(config) {
     config?.photoFinishContenderFraming ?? DEFAULT_CAMERA_CONFIG.photoFinishContenderFraming;
   const runInShot = config?.runInShot ?? DEFAULT_CAMERA_CONFIG.runInShot;
   const runInSchedule = config?.runInSchedule ?? DEFAULT_CAMERA_CONFIG.runInSchedule;
+  // CONTENTION-WATCH-1. Both are read HERE because this function is the whitelist: a key that is
+  // not picked out by name never reaches the director, whatever defaults.js says or a stored config
+  // carries. The fallback on each is the shipped default, which is what check-fallback-agreement
+  // requires and what makes a stored config missing the key behave like today.
+  const contentionWatch = config?.contentionWatch ?? DEFAULT_CAMERA_CONFIG.contentionWatch;
+  const contentionCheckMs = config?.contentionCheckMs ?? DEFAULT_CAMERA_CONFIG.contentionCheckMs;
   const contenderZoom = config?.contenderZoom ?? DEFAULT_CAMERA_CONFIG.contenderZoom;
   // ZOOM-PACE-5: clamped to a band for the same reason every other duration here is — a corrupt
   // stored config must not be able to make the cap arrive instantly or never.
@@ -449,6 +455,8 @@ export function computeTimingFromConfig(config) {
     photoFinishContenderFraming,
     runInShot,
     runInSchedule,
+    contentionWatch,
+    contentionCheckMs,
     runInOpenMs,
     contenderZoom,
     corridorCapArriveMs,

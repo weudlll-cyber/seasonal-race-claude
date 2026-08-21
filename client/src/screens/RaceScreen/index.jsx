@@ -1602,6 +1602,11 @@ export default function RaceScreen() {
         state: camDirRef.current.state,
         binding: camDirRef.current._framingProbe?.binding ?? '?',
         lerpPhase: camDirRef.current._lerpPhase,
+        contentionOn: !!camDirRef.current._contentionWatch,
+        contentionOut: camDirRef.current._contentionOut
+          ? [...camDirRef.current._contentionOut]
+          : null,
+        contentionChecks: camDirRef.current._contentionChecks ?? 0,
         // WHERE THE PAN WAS AIMED, beside where it got to. The difference is the smoother's own
         // residual, and it is the quantity that decides whether a shot that loses its subject is a
         // FRAMING decision or a DELIVERY one.

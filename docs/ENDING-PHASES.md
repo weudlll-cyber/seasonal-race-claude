@@ -49,7 +49,10 @@ the correct response is to say so in this table instead of building one.
 
 ### Phase 6, MEASURED — and both of the old numbers were wrong
 
-<!-- MEASURED: straggler-truth (phase 6 duration, zoom-out lead, stragglers in shot) @ 5d69d236 2026-08-25 depends=client/src/modules/camera/CameraDirector.js -->
+<!-- MEASURED: straggler-truth (phase 6 duration, zoom-out lead, stragglers in shot) @ 88a0f9e5 2026-08-25 depends=client/src/modules/camera/CameraDirector.js -->
+
+**RE-MEASURED IN FULL FOR CONTENTION-WATCH-1, AND IDENTICAL TO THE DIGIT AGAIN** — same four
+pairs. The switch defaults off, and phase 6 begins at the first crossing in any case.
 
 **RE-MEASURED IN FULL FOR VIEWER-INVARIANTS-2, AND IDENTICAL TO THE DIGIT AGAIN** — same four
 pairs, same standing reason.

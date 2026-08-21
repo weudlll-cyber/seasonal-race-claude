@@ -452,7 +452,20 @@ for (const geo of loadTracks()) {
       let bx = NaN;
       let by = NaN;
       for (let k = 0; k <= BAND_SAMPLES; k++) {
-        const lat = (k / BAND_SAMPLES - 0.5) * race.trackWidthPx;
+        // ── THE LATERAL ARGUMENT IS NORMALISED, NOT WORLD PX (CONTENTION-WATCH-1) ────────────
+        //
+        // `shape.getPosition(t, lateral)` takes a HALF-OFFSET in track-relative units: raceCore
+        // calls it `getPosition(t, r.physicalY / 2)` with `physicalY` in [-1, +1], so the corridor
+        // edges are -0.5 and +0.5. Multiplying by `trackWidthPx` walked a segment 300x too long,
+        // and the OFF-CANVAS column below therefore took the best point of a line that mostly does
+        // not exist — which is far more likely to cross the canvas than the real band, so the
+        // column OVERSTATED how much of the finish is on screen. Every verdict that rested on it
+        // has to be re-read; ENDGAME-WHO-AND-HOWMUCH does that.
+        //
+        // It was found by a sanity check rather than by reading: the first band measurement in that
+        // block reported 1.49% visible on frames this guard PASSES as well as on frames it fails,
+        // and 1.49% is exactly 3 of 201 samples.
+        const lat = k / BAND_SAMPLES - 0.5;
         const w = race.shape.getPosition(tAt, lat) ?? line;
         const q = c._proj.toScreen(w, c.zoom, c.offsetX, c.offsetY);
         const m = Math.min(HX - Math.abs(q.x - CW / 2), HY - Math.abs(q.y - CH / 2));
