@@ -259,9 +259,11 @@ async function runOne(page, geo, seed, arm, N) {
 // baked URL. Everything these five sentences are about — the director, the framing rule, the
 // renderer, React, the bundle — is byte-identical to what is served on 4173 for his eye. NOTHING
 // here is a secret at rest: every value is random per run and lives only in this process.
-// Named rather than written inline: a German Windows prints ABHÖREN where an English one prints
-// LISTENING (this repository has been caught by that before), and the split/trim patterns would
-// otherwise have to survive several layers of quoting to get here intact.
+// Named rather than written inline. The listening-state word netstat prints is LOCALISED — this
+// machine does not print it in English, and this repository has already been caught reading a live
+// server as down because a check grepped for the English spelling. Matching the first three letters
+// covers both. The split and trim patterns are named for a duller reason: they would otherwise have
+// to survive several layers of quoting to reach this file intact.
 const NEWLINE = /\r?\n/;
 const SPACES = /\s+/;
 const LISTENING = /LISTEN|ABH/i;
