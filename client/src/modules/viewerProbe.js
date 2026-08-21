@@ -104,6 +104,12 @@ let _spine = null;
 let _widest = 0;
 let _tightest = Infinity;
 let _crossed = false;
+// WINNER-CROSSING-1. The moment the race is about to be decided, and the frames either side of it.
+// Everything else in this file grades the window BEFORE the crossing; nothing graded the crossing
+// itself, which is how "arrival: 0% error on every track" stayed green while the winner sat in a
+// corner. That figure grades the ZOOM FACTOR and says nothing about what is in the picture.
+let _crossing = null;
+let _crossRing = [];
 let _windowStates = {};
 let _contention = null;
 // DIAGNOSIS ONLY. With `_ra_viewerdump` set, every frame's transform is kept so a violation can be
@@ -125,6 +131,8 @@ export function beginViewerProbe(run) {
   _widest = 0;
   _tightest = Infinity;
   _crossed = false;
+  _crossing = null;
+  _crossRing = [];
   _windowStates = {};
   _contention = { released: [], checks: 0, on: false };
   _run = run ?? null;
@@ -163,7 +171,7 @@ export function recordViewerFrame(f) {
   if (!_active) return;
   if (!f || !(f.effZoomX > 0) || !(f.effZoomY > 0) || !f.shape || !f.racers?.length) return;
   const { canvasW: CW, canvasH: CH } = f;
-  if ((f.finishedCount ?? 0) > 0) _crossed = true;
+
   const i = _frames++;
 
   const sx = (q) => f.offsetX + q.x * f.effZoomX;
@@ -481,7 +489,69 @@ export function recordViewerFrame(f) {
       subjects: f.subjectIndices ? f.subjectIndices.join('/') : null,
       courseIn,
     });
+  // ── THE CROSSING, AND THE FRAMES EITHER SIDE OF IT (WINNER-CROSSING-1) ──────────────────────
+  //
+  // WHO THE WINNER IS: the racer with the greatest `t` on the frame the count first goes above
+  // zero, held by index afterwards so the record follows HIM and not whoever is leading later. A
+  // finished racer coasts on a run-out decay rather than freezing, so "the leader" walks backwards
+  // through the finishing order after the line — FINISH-PAIR-1 records that, and reading the live
+  // leader here would grade the wrong racer within a few frames.
+  const _shotOf = (r) => {
+    const X = sx(r);
+    const Y = sy(r);
+    return {
+      fx: +(X / CW).toFixed(4), // where he sits ACROSS the frame, 0 = left edge, 1 = right
+      fy: +(Y / CH).toFixed(4), // and DOWN it
+      onCanvas: X >= 0 && X <= CW && Y >= 0 && Y <= CH,
+      state: f.state,
+      binding: f.binding,
+      corr: +(width / f.trackWidthPx).toFixed(3),
+      frame: i,
+      ms: Math.round(f.ts),
+      p: prog,
+    };
+  };
+  if (!_crossed) {
+    let ld = f.racers[0];
+    for (const r of f.racers) if (r.t > ld.t) ld = r;
+    _crossRing.push({ idx: ld.index, shot: _shotOf(ld) });
+    if (_crossRing.length > 30) _crossRing.shift();
+  }
+  if ((f.finishedCount ?? 0) > 0 && !_crossed) {
+    let w = f.racers[0];
+    for (const r of f.racers) if (r.t > w.t) w = r;
+    _crossing = {
+      winnerIdx: w.index,
+      at: _shotOf(w),
+      // The band at the crossing, measured the same way as everywhere else in this file.
+      bandPct: _bandPct(f, sx, sy, CW, CH),
+      before: _crossRing.map((q) => q.shot),
+      after: [],
+    };
+  }
+  if (_crossing && (f.finishedCount ?? 0) > 0 && _crossing.after.length < 260) {
+    const w = f.racers.find((r) => r.index === _crossing.winnerIdx);
+    if (w) _crossing.after.push({ ..._shotOf(w), bandPct: _bandPct(f, sx, sy, CW, CH) });
+  }
+  if ((f.finishedCount ?? 0) > 0) _crossed = true;
   _prev = { width, offsetX: f.offsetX, offsetY: f.offsetY };
+}
+
+/** Share of the finish band on the canvas. One definition, used by the window and the crossing. */
+function _bandPct(f, sx, sy, CW, CH) {
+  if (!f.shape || !(f.finishT > 0)) return null;
+  const tAt = f.shape.isOpen ? Math.min(1, f.finishT) : ((f.finishT % 1) + 1) % 1;
+  let on = 0;
+  let n = 0;
+  for (let k = 0; k <= 200; k++) {
+    const w = f.shape.getPosition(tAt, k / 200 - 0.5);
+    if (!w) continue;
+    n++;
+    const X = sx(w);
+    const Y = sy(w);
+    if (X >= 0 && X <= CW && Y >= 0 && Y <= CH) on++;
+  }
+  return n ? +((100 * on) / n).toFixed(2) : null;
 }
 
 function _progressOf(f) {
@@ -502,6 +572,7 @@ export function readViewerProbe() {
     // The driver stops here: after the first crossing the finish ceremony runs, and these five
     // sentences do not govern it — invariant 3's own window closes at the crossing by definition.
     crossed: _crossed,
+    crossing: _crossing,
     // Frames per camera state INSIDE the window, so "does a group shot ever run after 95%" is
     // answered by a count rather than by an argument from the code.
     windowStates: _windowStates,

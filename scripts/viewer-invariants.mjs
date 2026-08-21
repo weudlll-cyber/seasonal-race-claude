@@ -254,7 +254,9 @@ async function runOne(page, geo, seed, arm, N) {
       last = f;
       // Stop once the probe has seen the crossing: it stops recording invariant 3 then, and the
       // rest of the ending is the finish ceremony, which these five sentences do not govern.
-      if (p && p.frames > 60 && p.crossed) break;
+      // WINNER-CROSSING-1: run ON past the crossing, far enough to record how the winner is framed
+      // through it. Stopping AT the crossing is why nothing in this repository ever graded it.
+      if (p && p.frames > 60 && p.crossed && (p.crossing?.after?.length ?? 0) >= 255) break;
     }
     window.__vStop = true;
     return { probe: window.__viewerProbe ? window.__viewerProbe() : null, frames: window.__vFrames };
@@ -499,6 +501,7 @@ async function worker() {
       events: p.events.length, byInvariant: p.byInvariant,
       widest: p.widestCorridors, tightest: p.tightestCorridors,
       windowStates: p.windowStates ?? {},
+      crossing: p.crossing ?? null,
       contention: p.contention ?? null,
     });
     if (JSON_OUT) flush();
@@ -566,6 +569,154 @@ else
     );
   }
 
+// ── INVARIANT 6: THE WINNER'S CROSSING IS FRAMED ON THE WINNER (WINNER-CROSSING-1) ────────────
+//
+// HIS REQUIREMENT: the winner's crossing is the moment of the race and must be presented as such —
+// the camera follows him through it rather than letting him run to the edge.
+//
+// WHY IT IS A NEW INVARIANT AND NOT A COLUMN. "Arrival: 0% error on every track" graded the ZOOM
+// FACTOR at the crossing and nothing else, so it stayed green on a frame he rejected outright. That
+// is the THIRD metric in this thread to be green against his eye — after the 5-frame smoothed
+// smoothness figure and the percentage that hid a black screen. A check that cannot fail on his
+// screenshot is not a check.
+//
+// TWO CONDITIONS, BOTH FROM NUMBERS THAT ALREADY EXIST:
+//
+//   NOT AT THE EDGE   the winner is inside the SUBJECT's own inner-frame region, `innerFramePct`
+//                     (0.7). framingRule.js states what that region is for in as many words — it
+//                     "exists so the SUBJECT does not cling to the edge" — which is his sentence
+//                     already written down. Not `COMPANY_FRAME_PCT` (0.9): that is the region a
+//                     COMPANION may sit near the edge of, and the winner at his own crossing is not
+//                     company. No number is invented here and none is tuned.
+//   THE LINE WITH HIM some part of the finish band is on the canvas, which is the same test
+//                     invariant 3 uses and needs no threshold.
+//
+// SCOPE: the crossing frame, and every frame after it for as long as THE SHOT THAT OWNED THE
+// CROSSING is still running. Once the ending hands over to FINISH_OVERVIEW the shot is deliberately
+// on the LINE rather than on the winner — finishPhase.js calls that phase the AFTERMATH and its job
+// is to frame the stationary point "so later finishers cross in shot". Grading the winner's position
+// there would be grading a different promise, and this file says which one it is measuring.
+const { DEFAULT_INNER_FRAME_PCT } = await import(u("client/src/modules/camera/framingConfig.js"));
+const INNER_FRAME_PCT = DEFAULT_INNER_FRAME_PCT;
+const RUN_IN_OPEN_MS = DEFAULT_CAMERA_CONFIG.runInOpenMs;
+if (!(INNER_FRAME_PCT > 0 && INNER_FRAME_PCT <= 1) || !(RUN_IN_OPEN_MS > 0))
+  throw new Error(
+    `viewer-invariants: innerFramePct=${INNER_FRAME_PCT} runInOpenMs=${RUN_IN_OPEN_MS} — invariant 6 ` +
+      `could not read the constants it grades against, so it would be measuring nothing.`
+  );
+const SAB_CORNER = process.argv.includes("--sabotage-corner");
+const SAB_NOLINE = process.argv.includes("--sabotage-noline");
+const crossEvents = [];
+for (const r of rows) {
+  const c = r.crossing;
+  if (!c) continue;
+  const lo = (1 - INNER_FRAME_PCT) / 2;
+  const hi = 1 - lo;
+  // The crossing frame and the tail of frames the same shot still owns.
+  // THROUGH THE CROSSING, AND THAT IS A BOUNDED WINDOW RATHER THAN THE WHOLE HOLD. The photo
+  // finish keeps its shot for `finishPauseMs` — four seconds on his config — and most of that is
+  // the pause AFTER the moment, which is a different promise. The window is `runInOpenMs`, the
+  // endgame's own span unit and the same duration the contention release eases over; no new number.
+  const graded = [{ ...c.at, bandPct: c.bandPct }];
+  for (const a of c.after) {
+    if (a.state !== c.at.state) break;
+    if (a.ms - c.at.ms > RUN_IN_OPEN_MS) break;
+    graded.push(a);
+  }
+  for (const g of graded) {
+    // The sabotage arms move the WINNER, which is the same thing the defect does to the picture.
+    const fx = SAB_CORNER ? 0.02 : g.fx;
+    const fy = SAB_CORNER ? 0.03 : g.fy;
+    const band = SAB_NOLINE ? 0 : (g.bandPct ?? 0);
+    if (fx < lo || fx > hi || fy < lo || fy > hi) {
+      const byX = Math.max(lo - fx, fx - hi, 0);
+      const byY = Math.max(lo - fy, fy - hi, 0);
+      crossEvents.push({
+        ...r,
+        kind: "edge",
+        frame: g.frame,
+        detail: `the winner is at (${fx.toFixed(3)}, ${fy.toFixed(3)}) of the frame, outside the subject's inner ${INNER_FRAME_PCT} region`,
+        by: +Math.max(byX, byY).toFixed(4),
+        state: g.state,
+      });
+    }
+    // ── THE LINE IS GRADED AT THE MOMENT, NOT FOR A SECOND AFTERWARDS ──────────────────────
+    //
+    // His requirement is that the winner's CROSSING is presented as the moment, with the line with
+    // him. Once he is PAST the line it is behind him, and a shot that follows the winner must lose
+    // it — that is what crossing a line looks like. Held over the whole window this condition asks
+    // the camera to keep a line in shot that the race has already gone past, and it fails a build
+    // for doing the right thing: measured, 14 frames on the arm where the winner is framed
+    // perfectly, every one of them after he was over.
+    //
+    // So "the line with him" is graded on the crossing FRAME. "Not at the edge" is graded through
+    // the window, because that promise does not expire when he crosses — it is the whole of what he
+    // asked for.
+    if (g.frame === c.at.frame && !(band > 0))
+      crossEvents.push({
+        ...r,
+        kind: "noline",
+        frame: g.frame,
+        detail: "no part of the finish band is on the canvas at the winner's crossing",
+        by: 1,
+        state: g.state,
+      });
+  }
+}
+console.log(`\n── INVARIANT 6 — THE WINNER'S CROSSING IS FRAMED ON THE WINNER ──`);
+{
+  const races = new Set(crossEvents.map((e) => `${e.arm}/${e.track}/${e.seed}`));
+  const edge = crossEvents.filter((e) => e.kind === "edge");
+  const noline = crossEvents.filter((e) => e.kind === "noline");
+  console.log(
+    `  ${crossEvents.length} violation(s) in ${races.size} of ${rows.filter((r) => r.crossing).length} race(s)` +
+      `   |  at the edge: ${edge.length}   line not with him: ${noline.length}`
+  );
+  const worst = crossEvents.slice().sort((a, b) => b.by - a.by)[0];
+  if (worst)
+    console.log(
+      `  WORST: ${worst.arm}/${worst.track} seed ${worst.seed}, frame ${worst.frame} (${worst.state}) — ${worst.detail}`
+    );
+}
+
+// ── WINNER-CROSSING-1: THE PICTURE AT THE CROSSING ───────────────────────────────────────────
+//
+// Not the zoom factor — the PICTURE. Which state owns the frame, where the winner sits in it, and
+// whether the finish line is with him. "Arrival: 0% error" graded the factor alone and stayed green
+// on a frame the owner rejected outright.
+const XR = rows.filter((r) => r.crossing);
+if (XR.length) {
+  console.log(`\n── THE WINNER AT THE CROSSING ──`);
+  console.log(
+    "  track            seed arm       state          winner x,y      on canvas   band%   corridors"
+  );
+  for (const r of XR) {
+    const c = r.crossing;
+    console.log(
+      [
+        "  " + r.track.padEnd(16),
+        String(r.seed).padStart(4),
+        " " + r.arm.padEnd(9),
+        c.at.state.padEnd(15),
+        (c.at.fx.toFixed(3) + ", " + c.at.fy.toFixed(3)).padStart(14),
+        (c.at.onCanvas ? "   yes" : "   NO ").padStart(11),
+        String(c.bandPct ?? "-").padStart(8),
+        String(c.at.corr).padStart(11),
+      ].join("")
+    );
+  }
+  const off = XR.filter((r) => !r.crossing.at.onCanvas).length;
+  const byState = {};
+  for (const r of XR) byState[r.crossing.at.state] = (byState[r.crossing.at.state] ?? 0) + 1;
+  console.log(
+    `  winner OFF CANVAS at the crossing: ${off} of ${XR.length}  |  states owning the crossing: ` +
+      Object.entries(byState)
+        .sort((a, b) => b[1] - a[1])
+        .map(([k, v]) => `${k} ${v}`)
+        .join(", ")
+  );
+}
+
 const INV = ["1-course", "2-leader", "3-line", "4-widthstep", "4-panstep", "5-tootight", "5-toowide"];
 console.log(`\n── VIOLATIONS PER INVARIANT ──`);
 for (const k of INV) {
@@ -598,10 +749,10 @@ if (JSON_OUT) {
 
 const dirtyRaces = new Set(allEvents.map((e) => `${e.arm}/${e.track}/${e.seed}`)).size;
 console.log(
-  `\nviewer-invariants: ${rows.length} race(s) in ${secs}s — ${allEvents.length} violation(s) in ${dirtyRaces} race(s)` +
+  `\nviewer-invariants: ${rows.length} race(s) in ${secs}s — ${allEvents.length} window violation(s) in ${dirtyRaces} race(s), ${crossEvents.length} crossing violation(s)` +
     (hardErrors ? `, ${hardErrors} race(s) failed to run` : "")
 );
-if (allEvents.length || hardErrors) {
+if (allEvents.length || crossEvents.length || hardErrors) {
   console.log(
     "A single catastrophic frame fails this guard. That is deliberate: a share cannot say which."
   );
