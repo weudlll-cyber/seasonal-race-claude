@@ -114,7 +114,9 @@
       "Skill(run:*)",
       "Skill(dev-start)",
       "Skill(update-config)",
-      "Skill(update-config:*)"
+      "Skill(update-config:*)",
+      "Bash(powershell -Command 'Get-NetTCPConnection -State Listen -ErrorAction SilentlyContinue | Where-Object { $_.LocalPort -in 4000,4173 } | Select-Object LocalPort | Format-Table -AutoSize | Out-String')",
+      "Bash(powershell -Command \"\\(Get-FileHash -Algorithm SHA256 'server/data/users.json'\\).Hash; \\(Get-Item 'server/data/users.json'\\).Length\")"
     ],
     "deny": [
       "Bash(git push --force*)",

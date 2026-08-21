@@ -257,7 +257,17 @@ export function buildRace(geo, identity, cameraConfig) {
 export function runRace(race, identity, cameraConfig, onFrame, hooks = {}) {
   const { st, raceCfg, cd } = race;
   const { canvasW: CW, canvasH: CH } = identity;
-  const RAW = 1000 / 60;
+  // ── CAMERA-NONDETERMINISM-1: THE FRAME CLOCK IS NOW OPTIONALLY VARIABLE ─────────────────────
+  //
+  // Every instrument on this driver has run at a FIXED 60 Hz since it was written, which makes all
+  // of them blind BY CONSTRUCTION to any dependence on frame rate, dropped frames or wall-clock
+  // time. That is not a small blind spot: the camera runs on wall-clock while the physics runs on a
+  // fixed-step accumulator, so the frame clock decides WHERE IN THE RACE the camera samples.
+  //
+  // `hooks.frameMs(frameIndex)` returns this frame's duration. Omitted, it is 1000/60 on every
+  // frame and every existing caller is byte-identical — which is why no fingerprint moves.
+  const frameMsOf = hooks.frameMs ?? (() => 1000 / 60);
+  const RAW0 = 1000 / 60;
   let ts = 0;
   let accum = 0;
 
@@ -270,7 +280,7 @@ export function runRace(race, identity, cameraConfig, onFrame, hooks = {}) {
   while (ts < cdMs) {
     cd.updateCountdown(st.racers, ts, ts, CW, CH);
     hooks.onCountdownFrame?.({ cd, st, ts, elapsed: ts, countdownMs: cdMs });
-    ts += RAW;
+    ts += RAW0;
   }
 
   const raceStart = ts;
@@ -289,7 +299,9 @@ export function runRace(race, identity, cameraConfig, onFrame, hooks = {}) {
   let slowIsPF = false;
   let slowStart = 0;
   let fadeProg = 0;
+  let physicsSteps = 0;
   while (st.finishedCount < identity.racers && ts - raceStart < 200000) {
+    const RAW = frameMsOf(frame);
     let dilation = 1;
     if (slowmo) {
       // Reads LAST frame's hudState, the same order RaceScreen's block runs in.
@@ -316,6 +328,7 @@ export function runRace(race, identity, cameraConfig, onFrame, hooks = {}) {
     while (accum >= FIXED_DT && steps++ < 2) {
       stepRacePhysics(st, raceCfg);
       accum -= FIXED_DT;
+      physicsSteps++;
     }
     cd.update(
       st.racers,
@@ -332,7 +345,9 @@ export function runRace(race, identity, cameraConfig, onFrame, hooks = {}) {
       CH,
       RAW,
     );
-    const verdict = onFrame({ cd, st, ts, raceStart, frame });
+    // `physicsSteps` is the RACE's own clock. Two runs at different frame rates are comparable at
+    // matched step counts and at nothing else — the frame index means different things in each.
+    const verdict = onFrame({ cd, st, ts, raceStart, frame, physicsSteps, dtMs: RAW });
     frame++;
     ts += RAW;
     if (verdict === false) break;

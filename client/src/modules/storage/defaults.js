@@ -569,6 +569,59 @@ export const DEFAULT_CAMERA_CONFIG = {
   // at 240 frames (4 s), which is longer than the shot itself and therefore this same fix with a
   // knob whose only safe value is "longer than the shot".
   photoFinishContenderFraming: true,
+  // ── CONTENTION-WATCH-1: KEEP ASKING WHO CAN STILL WIN, AND SHIFT SLOWLY ──────────────────────
+  //
+  // HIS DESIGN, 2026-08-24. Rather than deciding the duel partner once and holding him to the line,
+  // the camera keeps asking whether a racer still has a chance to WIN, and as soon as he does not,
+  // moves the framing off him GRADUALLY. It applies to the framing generally, not to the photo
+  // finish alone, and only inside the endgame window.
+  //
+  // WHY IT EXISTS. ENDGAME-WHO-AND-HOWMUCH measured what the pinned pair costs at the crossing: on
+  // space-sprint seed 9 the shot is still framing a racer who is FIFTH, 89 world px and about a
+  // second behind, and slower than the leader — and the frame centred on him is what carries the
+  // finish line off the canvas on 14 frames. The shot was measured WIDE ENOUGH on every one of
+  // them (need 324 px against 360 px of room), so the picture is not too tight; it is pointed at
+  // somebody who has already lost.
+  //
+  // THE JUDGEMENT COMES FROM WHAT IS VISIBLE ON TRACK — the gap and the speed difference carried
+  // forward over the distance that remains — and NEVER from the race plan, even though the plan
+  // knows the outcome. His words: the camera should SHOW the race, not KNOW it. A camera that drops
+  // a racer who still looks close on screen would be spoiling the result, and an estimate that is
+  // occasionally wrong because somebody rallies is the correct trade.
+  //
+  // SHIPPED ON, 2026-08-24. The owner judged a production build with this and `bandFloor` both on
+  // and accepted the picture; the default follows from that acceptance rather than from a
+  // measurement. It stays a KEY, and a Dev Screen toggle, so the previous behaviour is one click
+  // away and the two can still be compared.
+  contentionWatch: true,
+  // ── ENDGAME-COMPLETE-1: THE WIDTH FLOOR IS SIZED ON THE BAND, NOT ON ITS CENTRE ──────────────
+  //
+  // His requirement 5 asks that the viewer can always tell where the line is, with partial
+  // visibility allowed. The endgame's width floor was sized on the finish line's CENTRE point, which
+  // is a different promise: measured, the centre sat inside its region to the pixel on fourteen
+  // frames of space-sprint seed 9 where NO PART of the band was on the canvas.
+  //
+  // With this on, the floor is sized on the NEAREST point of the band instead — the piece of the
+  // finish closest to the shot's own subject. It is what "findable" means, and it asks for LESS
+  // width than the centre did, so requirement 4 moves the same way rather than against it.
+  //
+  // SHIPPED ON, 2026-08-24, on the same acceptance as `contentionWatch`. It costs width — the
+  // acceptance sheet's item 4 against its item 5 — and the report states that trade rather than
+  // hiding it.
+  bandFloor: true,
+  // HOW OFTEN THE CHECK RUNS. **THIS IS A NEW NUMBER AND IT IS THE ONLY ONE THIS BLOCK ADDS.**
+  //
+  // It is the interval the speed estimate is measured over as well as the cadence, so it is chosen
+  // against the estimate's own stability rather than against a feeling. Measured on space-sprint
+  // seed 9 over the endgame window, the coefficient of variation of a trailing racer's rate:
+  //
+  //     33 ms  26.5%      200 ms  12.2%      400 ms   6.9%      1067 ms  2.9%
+  //
+  // Below about 200 ms the estimate is dominated by the physics' own per-frame jitter — the same
+  // jitter ENDGAME-SCHEDULE-2 measured at 2.0x the median advance in a single frame. Above about
+  // 500 ms the endgame window (~4-5 s) affords only a handful of checks. 250 ms sits between them
+  // and gives roughly seventeen checks in a window.
+  contentionCheckMs: 250,
   // ── THE RUN-IN IS COMPOSED AROUND THE FINISH LINE (RUNIN-OWNS-1, 2026-08-12) ──────────────────
   // TRUE = from `endgameThreshold` to the first crossing the finish line is a bound on the camera's
   // zoom, whatever shot the director is running. FALSE = the pre-2026-08-12 behaviour, where the
@@ -632,6 +685,32 @@ export const DEFAULT_CAMERA_CONFIG = {
   // WHAT THIS REPLACED: an OVERVIEW-width cap and a delayed engagement. Both are gone — the run-in
   // composes from the endgame threshold again and the pull-out is whatever the line requires.
   runInShot: true,
+  // ── THE ENDGAME AS A SCHEDULE, NOT A CEILING (ENDGAME-SCHEDULE-1, his spec of 2026-08-23) ─────
+  //
+  // FALSE = TODAY: hold the opening shot, then sweep once. He has rejected that shape twice — the
+  // hold IS the endgame's entire width and it buys standstill rather than motion.
+  //
+  // TRUE = the shot is placed by a SCHEDULE that is moving through the whole phase and arrives
+  // exactly at the crossing. Two smoothstep segments meeting at `endgameThreshold`:
+  //   WIDEN  from the ordinary racing shot to the narrowest width that shows the winner AND the
+  //          line, finishing AT the threshold — which is his requirement 1's deadline.
+  //   CLOSE  from that width to the ACTIVE STATE'S OWN zoom, parameterised by race progress so it
+  //          lands on the state's picture at the crossing — his requirement 2, and no new value.
+  // Requirements 3 and 6 hold by construction: a smoothstep is C1, so the rate is continuous and
+  // zero only at the turn and at the arrival, and the shot never reverses.
+  // TRUE, ENDGAME-SCHEDULE-1, 2026-08-23. NOT MINTED — his eye is owed.
+  //
+  // MEASURED, nine scorable tracks, seed 9, his config -> the shipped defaults:
+  //   STANDSTILL   43% -> 17% of the spec window (26% -> 18% shipped), and the number he actually
+  //                complained about, the LONGEST static run, 2017 ms -> 550 ms on both arms.
+  //   TIMING       winner and line both visible by 95% of the race: 0 of 9 tracks -> 9 of 9
+  //                (8 of 9 shipped).
+  //   ARRIVAL      worst error against the leader-view / photo-finish factor 48% -> 6%.
+  //   WIDTH        widest endgame frame 6.1 -> 4.4 corridors (6.1 -> 5.4 shipped).
+  //   SMOOTHNESS   worst |d2 ln(width)/dt2| 78.3 -> 13.3 (78.3 -> 22.0 shipped).
+  //   MONOTONICITY 9 of 9 tracks, both arms — held by the ratchet in `_setTargets`.
+  //   AND FEWER RACERS ARE CUT than today: contender-off-canvas frames 59 -> 35 (109 -> 33).
+  runInSchedule: true,
   // ── THE CONTENDERS DECIDE THE ZOOM, THE CORRIDOR IS ONLY THE CEILING (CONTENDER-ZOOM-1) ────────
   // The owner's corrected rule for the photo finish, and it is the opposite way round from how a
   // corridor bound was first drafted: in a photo finish ALL of its participants must be visible and

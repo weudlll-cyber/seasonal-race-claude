@@ -657,7 +657,74 @@ a verbatim transcript of one run on one commit, which is a historical record, no
 
 ### The tracking lag, as measured today — and it had drifted
 
-<!-- MEASURED: tracking-lag (median/p95 pp per state) @ 30cee205 2026-08-22 depends=client/src/modules/camera/ -->
+<!-- MEASURED: tracking-lag (median/p95 pp per state) @ 47e83a41 2026-08-25 depends=client/src/modules/camera/ -->
+
+**RE-MEASURED IN FULL FOR ENDGAME-COMPLETE-1, AND EVERY FIGURE IS IDENTICAL TO THE DIGIT** —
+frame counts included. That block adds `bandFloor` beside `contentionWatch`, and BOTH default to
+`false`, so nothing shipped moves with them off. This is the measurement that says so rather than the
+assumption; the switches' effect with them ON is on the acceptance sheet, in the browser, where it
+belongs.
+
+**RE-MEASURED IN FULL FOR CONTENTION-WATCH-1, AND EVERY FIGURE IS IDENTICAL TO THE DIGIT** —
+frame counts included. That block adds the contention watch behind `contentionWatch`, whose default
+is `false`, so no behaviour changes with it off; this is the measurement that says so rather than the
+assumption. The switch's effect with it ON is measured in the report, on the browser, where it
+belongs.
+
+**RE-MEASURED IN FULL FOR VIEWER-INVARIANTS-2, AND PHOTO_FINISH IMPROVED SHARPLY — median
+4.51 -> 3.54, p95 19.50 -> 8.91.** Every other state is identical to the digit, frame counts
+included. This is an INDEPENDENT reading of that block's repair: the pan target was being resolved at
+one zoom and the frame drawn at another, and because an offset is `-camX x effectiveZoom` the error
+was multiplied by the anchor's distance from the world origin. PHOTO_FINISH is where the endgame's
+zoom moves fastest, so it is where the mismatch was largest — and this table, which samples the
+tracking phase and knows nothing about that block's browser measurements, halves its p95 there.
+
+**RE-MEASURED IN FULL FOR VIEWER-INVARIANTS-1, AND EVERY FIGURE IS IDENTICAL TO THE DIGIT** —
+frame counts included. That block adds CAMERA-SIDEJUMP-1's zoom-about-the-anchor pivot to the GLIDE
+branch, scoped to frames where the endgame schedule authors the zoom. This table samples the
+TRACKING phase only, and the change lives entirely inside glide frames, so the two do not overlap by
+a single sample. Worth stating rather than assuming: the browser measurement that motivated the
+change reports the leader running 2806 px off the canvas on frames this table never looks at.
+
+**RE-MEASURED IN FULL FOR ENDGAME-REPAIR-1. Only PHOTO_FINISH moved, and it moved BACK: median
+4.62 -> 4.51, p95 21.49 -> 19.50.** Every other state is identical to the digit, frame counts
+included. PHOTO_FINISH is the one state the endgame's width authority reaches with
+`_focusAnchorRacer` null, so it is the only one any change to that authority can touch — the same
+sentence the two entries below make, and this block moves it in the direction those entries called
+worse. The cause is the same three cuts: the OVERVIEW entry snap, the LEAD_CHANGE entry snap and the
+period-2 strobe all displaced the subject on the frames they fired, and none of them fires now.
+
+**RE-STAMPED, NOT RE-MEASURED, FOR CAMERA-SEED-AND-LINE-1 — and the reason is a fact, not a
+judgement.** That block's only file under this stamp's `depends=` directory is the NEW
+`camera/cameraSeed.js`, which derives the camera's random seed from the race's. It is imported by
+`RaceScreen` alone and is **not in `tracking-lag.mjs`'s load closure** — the harness sets the
+camera seed itself, through `raceDriver`'s identity, and never reaches the browser screen. The
+director itself is untouched by that block: its diff is empty.
+
+**RE-MEASURED IN FULL FOR ENDGAME-SCHEDULE-2. Only PHOTO_FINISH moved — median 5.59 -> 4.62,
+p95 16.61 -> 21.49** — and it is the only state the endgame's own width authority reaches with
+`_focusAnchorRacer` null. The pair moves in opposite directions because the schedule's carried ramp
+follows the leader's fitted progress rather than his raw one: the TYPICAL frame is better placed,
+while the frames where the fit and the physics disagree most are worse. Every other state is
+identical to the digit. Worth
+recording HOW that came about, because for one build it was not. ENDGAME-SCHEDULE-2 lets the endgame
+SCHEDULE author the zoom outright, and the first placement of that assignment was AFTER the follow
+branch — which left `update()`'s zoom-about-the-anchor pivot correcting only the lerp's own small
+delta while the schedule moved the zoom by much more. An unpivoted zoom change is CAMERA-SIDEJUMP-1's
+own defect, and `_focusAnchorRacer` returns null in PHOTO_FINISH, so that is where it landed:
+**PHOTO_FINISH p95 16.61 -> 90.72 pp**, the subject sliding most of a frame from where the framing
+rule puts him. Moving the assignment BEFORE the branch chain, so the pivot sees the whole change,
+returns every figure in this table to the value below.
+
+**RE-MEASURED IN FULL FOR ENDGAME-SCHEDULE-1.** Every frame count and both percentiles moved a
+little, and PHOTO_FINISH moved in both directions at once — p95 **25.39 -> 16.61**, median
+**3.11 -> 5.59**. Read that pair together: the endgame's schedule places the shot rather than letting
+it settle against a bound, so the WORST following errors are gone (the p95 is the shot lurching after
+a bound moved) while the TYPICAL error rises, because a shot that is deliberately travelling is never
+exactly where a table that assumes a settled shot says it should be.
+**THIS TABLE CANNOT SAY WHETHER THE ENDGAME FOLLOWS WELL** — `intended` here is the framing table's
+STATIC answer, and the run-in deliberately places the leader away from it (RUNIN-GLIDE-1's mirror).
+The endgame's own following is measured by `scripts/diag/endgame-spec.mjs`.
 
 **RE-MEASURED IN FULL FOR SHIP-MINIMAP-ONE-SOURCE, AND EVERY FIGURE IS IDENTICAL TO THE DIGIT.** The
 merge puts two files under this stamp's `depends=` directory, so the guard asks — and it was RE-RUN
@@ -690,12 +757,16 @@ measured rather than argued.
 
 | state         | frames | median pp | p95 pp |
 | ------------- | ------ | --------- | ------ |
-| BATTLE_ZOOM   | 10935  | 5.30      | 9.77   |
-| COMEBACK_ZOOM | 162    | 6.84      | 7.50   |
-| LEADER_ZOOM   | 17175  | 3.73      | 9.06   |
-| LEAD_CHANGE   | 9378   | 4.42      | 7.26   |
-| OVERVIEW      | 4248   | 2.43      | 16.00  |
-| PHOTO_FINISH  | 1865   | 3.11      | 25.39  |
+| BATTLE_ZOOM   | 10923  | 5.30      | 9.77   |
+| COMEBACK_ZOOM | 159    | 4.84      | 7.40   |
+| LEADER_ZOOM   | 17169  | 3.72      | 9.32   |
+| LEAD_CHANGE   | 9373   | 4.42      | 7.42   |
+| OVERVIEW      | 4323   | 2.48      | 16.00  |
+| PHOTO_FINISH  | 1865   | 3.54      | 8.91   |
+
+(ENDGAME-SCHEDULE-1's figures. The PHOTO-FINISH-STATE-1 run the paragraph below describes read
+BATTLE_ZOOM 10935 / 5.30 / 9.77, COMEBACK_ZOOM 162 / 6.84 / 7.50, LEADER_ZOOM 17175 / 3.73 / 9.06,
+LEAD_CHANGE 9378 / 4.42 / 7.26, OVERVIEW 4248 / 2.43 / 16.00, PHOTO_FINISH 1865 / 3.11 / 25.39.)
 
 **WHY NOTHING MOVED, WHICH IS THE PART WORTH READING.** Not because the state is rare — it runs
 1865 frames here, and 206-279 frames on nine of the ten fingerprint tracks, held 3.4-4.7 s. Not

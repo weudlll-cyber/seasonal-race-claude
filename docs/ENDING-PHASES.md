@@ -49,7 +49,36 @@ the correct response is to say so in this table instead of building one.
 
 ### Phase 6, MEASURED — and both of the old numbers were wrong
 
-<!-- MEASURED: straggler-truth (phase 6 duration, zoom-out lead, stragglers in shot) @ de524663 2026-08-21 depends=client/src/modules/camera/CameraDirector.js -->
+<!-- MEASURED: straggler-truth (phase 6 duration, zoom-out lead, stragglers in shot) @ 47e83a41 2026-08-25 depends=client/src/modules/camera/CameraDirector.js -->
+
+**RE-MEASURED IN FULL FOR ENDGAME-COMPLETE-1, AND IDENTICAL TO THE DIGIT AGAIN** — same four
+pairs. Both of that block's switches default off, and phase 6 begins at the first crossing in any case.
+
+**RE-MEASURED IN FULL FOR CONTENTION-WATCH-1, AND IDENTICAL TO THE DIGIT AGAIN** — same four
+pairs. The switch defaults off, and phase 6 begins at the first crossing in any case.
+
+**RE-MEASURED IN FULL FOR VIEWER-INVARIANTS-2, AND IDENTICAL TO THE DIGIT AGAIN** — same four
+pairs, same standing reason.
+
+**RE-MEASURED IN FULL FOR VIEWER-INVARIANTS-1, AND IDENTICAL TO THE DIGIT AGAIN** — same four
+pairs, same reason as every entry below it: the run-in's window closes on the first crossing and
+phase 6 begins there.
+
+**RE-MEASURED IN FULL FOR ENDGAME-REPAIR-1, AND IDENTICAL TO THE DIGIT AGAIN** — 6.18/4.57,
+7.53/5.75, 4.45/2.30, 5.95/4.38, the same four pairs as the table below. Same reason as the entry
+that follows, and it is structural rather than lucky: every change that block makes is inside the
+endgame's width authority, whose window CLOSES on the first crossing, and phase 6 BEGINS there.
+
+**RE-MEASURED IN FULL FOR ENDGAME-SCHEDULE-2, AND IDENTICAL TO THE DIGIT AGAIN**, for the reason the
+entry below already gives: the run-in's window closes on the first crossing and phase 6 begins there,
+so nothing this table measures is downstream of a change to the endgame's width authority.
+
+**RE-MEASURED IN FULL FOR ENDGAME-SCHEDULE-1, AND EVERY FIGURE IS IDENTICAL TO THE DIGIT.** That
+block rewrites the endgame's width authority in `CameraDirector.js`, which is this stamp's whole
+`depends=`, so the guard asked and the answer was measured rather than argued. 6.18/4.57, 7.53/5.75,
+4.45/2.30, 5.95/4.38 — the same four pairs as below. Expected, and worth saying why: the run-in's
+window closes on the first crossing (`finishedCount > 0`) and phase 6 BEGINS at that crossing, so
+the two do not overlap by a single frame.
 
 The two numbers this section used to carry were flagged as unverified on 2026-08-14, because nothing
 in the repository measured them. `scripts/straggler-truth.mjs` does now. **One CLOSED track and one
