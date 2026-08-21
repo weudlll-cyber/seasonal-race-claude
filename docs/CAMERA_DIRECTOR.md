@@ -657,7 +657,14 @@ a verbatim transcript of one run on one commit, which is a historical record, no
 
 ### The tracking lag, as measured today — and it had drifted
 
-<!-- MEASURED: tracking-lag (median/p95 pp per state) @ bfe3a6b1 2026-08-25 depends=client/src/modules/camera/ -->
+<!-- MEASURED: tracking-lag (median/p95 pp per state) @ b2cc39da 2026-08-25 depends=client/src/modules/camera/ -->
+
+**RE-MEASURED IN FULL FOR VIEWER-INVARIANTS-1, AND EVERY FIGURE IS IDENTICAL TO THE DIGIT** —
+frame counts included. That block adds CAMERA-SIDEJUMP-1's zoom-about-the-anchor pivot to the GLIDE
+branch, scoped to frames where the endgame schedule authors the zoom. This table samples the
+TRACKING phase only, and the change lives entirely inside glide frames, so the two do not overlap by
+a single sample. Worth stating rather than assuming: the browser measurement that motivated the
+change reports the leader running 2806 px off the canvas on frames this table never looks at.
 
 **RE-MEASURED IN FULL FOR ENDGAME-REPAIR-1. Only PHOTO_FINISH moved, and it moved BACK: median
 4.62 -> 4.51, p95 21.49 -> 19.50.** Every other state is identical to the digit, frame counts

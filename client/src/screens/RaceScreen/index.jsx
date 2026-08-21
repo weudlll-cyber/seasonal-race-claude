@@ -90,6 +90,7 @@ import { resolveTrailEmitter } from '../../modules/surface-effects/trailResolver
 import { getCachedServerSurfaceClasses } from '../../modules/storage/surfaceClassLoader.js';
 import { loadServerClasses } from '../../modules/surface-effects/registry.js';
 import { initProbe, recordFrame, recordFrameCamera } from '../../modules/rAFProbe.js';
+import { beginViewerProbe, recordViewerFrame } from '../../modules/viewerProbe.js';
 import BrandLogoOverlay from './BrandLogoOverlay.jsx';
 import CeremonyBrandCard from './CeremonyBrandCard.jsx';
 import WinnerCard, { WINNER_CARD_FADE_MS, winnerCardWindowMs } from './WinnerCard.jsx';
@@ -597,6 +598,15 @@ export default function RaceScreen() {
     // shot for shot — so a picture he reports can be stood in again. `cameraSeed.js` states the
     // trade and the unseeded case; `racePlanSeed` is bound above from `raceData`.
     const cameraRandomSeed = cameraSeedForRace(racePlanSeed);
+    // VIEWER-INVARIANTS-1: the race's identity, echoed into every violation this run produces so an
+    // event names the race it happened in. Inert unless ?viewerprobe=1.
+    beginViewerProbe({
+      track: raceData.trackId ?? null,
+      seed: racePlanSeed,
+      racers: raceState.racers.length,
+      cameraSeed: cameraRandomSeed,
+      trackWidthPx,
+    });
     camDirRef.current.setRandomSeed(cameraRandomSeed);
     // CEREMONY-OPENING-1: the ONE place that says whether this race opens on a brand card. The
     // director owns the schedule and cannot know what a branding profile is; this is the only thing
@@ -1568,6 +1578,30 @@ export default function RaceScreen() {
       markerFrame.camZoom = cam.zoom;
       markerFrame.offsetX = cam.offsetX;
       markerFrame.offsetY = cam.offsetY;
+
+      // VIEWER-INVARIANTS-1: the five sentences, checked on the transform the frame was DRAWN with.
+      // Placed HERE, beside the marker and for the same reason: these are the renderer's own
+      // reported values, not a second derivation of them. Inert unless ?viewerprobe=1.
+      recordViewerFrame({
+        ts,
+        effZoomX: frame.effZoomX,
+        effZoomY: frame.effZoomY,
+        offsetX: cam.offsetX,
+        offsetY: cam.offsetY,
+        canvasW: CANVAS_W,
+        canvasH: CANVAS_H,
+        shape,
+        trackWidthPx,
+        racers: st.racers,
+        finishT: st.finishT,
+        finishedCount: st.finishedCount,
+        endgameFrom: camDirRef.current._endgameThreshold,
+        tightestNamed:
+          CANVAS_W / (camDirRef.current._photoFinishZoom * (frame.effZoomX / cam.zoom)),
+        worldWidth,
+        state: camDirRef.current.state,
+        binding: camDirRef.current._framingProbe?.binding ?? '?',
+      });
 
       if (bgCanvasRef.current && bgImagePath && bgCanvasReady) {
         const bgScaleX = isOpenTrack ? frame.effZoomX * (worldWidth / CANVAS_W) : cam.zoom;

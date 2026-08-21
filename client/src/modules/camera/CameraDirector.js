@@ -1066,8 +1066,58 @@ export class CameraDirector {
       // ENDGAME-SCHEDULE-2: the schedule owns the zoom during the endgame; the glide keeps the PAN.
       if (!_schedZoom)
         this.zoom = this._glideStartZoom + (this.targetZoom - this._glideStartZoom) * e;
-      this.offsetX = this._glideStartOffsetX + (this.targetOffsetX - this._glideStartOffsetX) * e;
-      this.offsetY = this._glideStartOffsetY + (this.targetOffsetY - this._glideStartOffsetY) * e;
+      // ── THE GLIDE MUST PIVOT TOO, ONCE IT NO LONGER OWNS THE ZOOM (VIEWER-INVARIANTS-1) ───────
+      //
+      // This branch interpolates the pan ABSOLUTELY, from a start captured when the glide began to
+      // the current target. That is correct while the glide owns BOTH quantities, because the two
+      // eases travel together — which is what `_beginRunInGlide`'s own header means by "pan and
+      // zoom on one ease, or the frame empties between them".
+      //
+      // ENDGAME-SCHEDULE-2 took the ZOOM away from it and gave it to the schedule, for good reasons
+      // (two authors on one quantity is what hopping looks like) — and left the pan easing from a
+      // start that was captured at a zoom that no longer applies. Nothing here compensated: the
+      // follow branch below carries CAMERA-SIDEJUMP-1's zoom-about-the-anchor pivot, and the glide
+      // has never had one because it never needed one.
+      //
+      // MEASURED IN THE BROWSER (`scripts/viewer-invariants.mjs`, space-sprint seed 9, shipped
+      // defaults, his roster, Race Plan on) — the frames the owner photographed: over 27 frames from
+      // 92.9% of the race the schedule widened the shot from 1.33 to 2.23 corridors while the pan
+      // eased on its own curve, and the leader's screen position ran from (677, 559) to
+      // (-2454, -915). For 20 of those frames NO POINT OF THE COURSE WAS ON THE CANVAS AT ALL. The
+      // headless director does not produce it: the same seed measures ZERO frames off the course
+      // there, which is why a year of harnesses never saw it.
+      //
+      // THE CORRECTION IS THE ONE THE FOLLOW BRANCH ALREADY USES, in the form this branch needs.
+      // The follow branch applies THIS FRAME's zoom delta incrementally; an absolute interpolation
+      // needs the delta since its OWN start, applied to its own start point. Then the anchor's
+      // screen position is preserved at e = 0 and the glide still lands exactly on its target at
+      // e = 1, so nothing about where it arrives changes. Same anchor expression, same axes, no new
+      // number, and it is inert whenever the zoom has not moved since the glide began.
+      // ── AND ONLY WHERE THE ZOOM IS SOMEONE ELSE'S ────────────────────────────────────────
+      //
+      // When the glide owns BOTH quantities its two eases ARE one move — that is the whole of
+      // `_beginRunInGlide`'s design and there is nothing to compensate for. Pivoting there would be
+      // a second correction on a move that is already correct, and it is measurable: the director's
+      // own SIDEJUMP regression, which drives a min-vis zoom change through an ordinary glide, put
+      // the leader at 13.6% of the frame against its floor of 15%.
+      //
+      // So the correction is scoped to exactly the case that created the defect — the schedule
+      // authoring the zoom while this branch eases the pan. Outside it, this branch is byte-identical
+      // to what it was, which is what the fingerprints and that regression both say.
+      const _gAnchor = _schedZoom
+        ? (this._focusAnchorRacer(racers) ?? this._framingProbe?.anchorPoint ?? null)
+        : null;
+      const _gdz = this.zoom - this._glideStartZoom;
+      const _gsx =
+        _gAnchor && _gdz !== 0
+          ? this._glideStartOffsetX - _gAnchor.x * this._proj.axisX * _gdz
+          : this._glideStartOffsetX;
+      const _gsy =
+        _gAnchor && _gdz !== 0
+          ? this._glideStartOffsetY - _gAnchor.y * this._proj.axisY * _gdz
+          : this._glideStartOffsetY;
+      this.offsetX = _gsx + (this.targetOffsetX - _gsx) * e;
+      this.offsetY = _gsy + (this.targetOffsetY - _gsy) * e;
       this._leadChangeSnapPending = false;
       // CAMERA-FRAMING-1: the containment clamp used to run here, claiming to be a no-op mid-glide.
       // It was measured ACTIVE on 23 of 23 glide frames with corrections to −390 px — it had become
