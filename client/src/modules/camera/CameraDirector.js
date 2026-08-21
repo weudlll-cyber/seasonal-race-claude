@@ -1056,7 +1056,55 @@ export class CameraDirector {
     // IT ALSO SUPPRESSES THE GLIDE'S ZOOM (see the glide branch): a transition glide re-interpolating
     // the zoom is a second author, and two authors on one quantity is what hopping looks like.
     const _schedZoom = this._runInSchedule && this._runInComposingNow && this._runInBinding;
-    if (_schedZoom) this.zoom = this.targetZoom;
+    if (_schedZoom) {
+      this.zoom = this.targetZoom;
+      // ── THE PAN TARGET BELONGS TO THE ZOOM THE FRAME IS DRAWN WITH (VIEWER-INVARIANTS-2) ─────
+      //
+      // `_setTargets` ran a line ago and resolved the pan at `this.zoom` AS IT WAS THEN. The line
+      // above has just moved `this.zoom` to the schedule's value for this frame, so the offsets it
+      // computed belong to a zoom the renderer is not going to use.
+      //
+      // THAT MISMATCH IS NOT SMALL, AND THE REASON IS THE ARITHMETIC RATHER THAN THE SIZE OF THE
+      // ZOOM STEP. An offset is `-camX x effectiveZoom` — a product taken from the WORLD ORIGIN —
+      // so an error in the zoom is multiplied by the anchor's distance from that origin.
+      // update()'s own header records the same hazard for the entry path in the same words:
+      // "targetOffsetX uses the pre-lerp zoom while the renderer uses the post-lerp zoom, creating
+      // a per-frame mismatch (proportional to camX x d zoom)". The entry path was fixed by moving
+      // the lerp above `_setTargets`. The schedule cannot be moved there — `targetZoom` is computed
+      // INSIDE `_setTargets` — so it is corrected here instead.
+      //
+      // MEASURED IN THE BROWSER (`scripts/viewer-invariants.mjs`, space-sprint seed 9, shipped
+      // defaults, his roster), over the last 13 frames before the crossing: the framing error of the
+      // pan TARGET grew to 554 x 382 px while the pan's own residual against that target stayed
+      // under 119 px, and it collapsed to 39 x 27 the instant the zoom stopped moving. A 2.8%
+      // difference in zoom, times an anchor 3400 world px from the origin. The leader and the finish
+      // band went off the canvas with it.
+      //
+      // THE CORRECTION KEEPS `resolveCamera`'s ANSWER AND ONLY RE-EXPRESSES IT. The offset is
+      // `-camX x eff`, so scaling it by `effNow / effResolved` is the SAME camera world position
+      // stated at the drawn zoom. No framing rule is re-run and no placement is re-decided here —
+      // which matters, because re-deriving the placement would quietly replace `resolveCamera`'s
+      // judgement with a centring rule it does not use on every axis.
+      // ── AND NOT DURING A GLIDE, WHICH RESOLVES ITS ENDPOINT ON PURPOSE AT THE DESTINATION ────
+      //
+      // CAMERA-GLIDE-TARGET-1 makes the glide's pan endpoint the DESTINATION framing, resolved at
+      // the zoom the transition LANDS on rather than the live one, because the glide interpolates
+      // toward that endpoint across its whole span — and computing it at the live zoom "made the
+      // endpoint travel ~1150 px during the glide while the camera steered honestly toward a point
+      // that was wrong for the whole journey". Re-expressing it at the drawn zoom would undo exactly
+      // that, for exactly that reason. The mismatch this block repairs belongs to the paths that pin
+      // the pan to its target every frame, which is what the same note says they do.
+      const _e0 = this._lastResolvedPanTarget?.effectiveZoom;
+      const _e1 = this._proj.effX(this.zoom);
+      if (this._lerpPhase !== 'glide' && _e0 > 0 && _e1 > 0 && Math.abs(_e1 - _e0) > 1e-12) {
+        this.targetOffsetX *= _e1 / _e0;
+        // Y carries its own world->screen scale on a non-square closed world, so the ratio is taken
+        // on the Y axis rather than borrowed from X (the CAMERA-FOCUS-5 defect, in one line).
+        const _y0 = this._proj.effY(this._proj.camZoomForEffX(_e0));
+        const _y1 = this._proj.effY(this.zoom);
+        if (_y0 > 0 && _y1 > 0) this.targetOffsetY *= _y1 / _y0;
+      }
+    }
     this._detour?.beginFrame();
     if (this._lerpPhase === 'glide') {
       const dur = this._glideDurationActiveMs ?? this._glideDurationMs;
@@ -2180,6 +2228,10 @@ export class CameraDirector {
     if (offsets.length === 0) return panTarget;
 
     const d = lateralShiftToFit(offsets, roomPlus, roomMinus, scale);
+    // Diagnostic only — read by nothing in the camera. VIEWER-INVARIANTS-2 needed to know whether
+    // the lateral guarantee was the term steering the pan at the end of a race; it was not, and a
+    // reading of the code could not have settled that either way.
+    this._lastLateralShift = Number.isFinite(d) ? d : 0;
     if (!Number.isFinite(d) || d === 0) return panTarget;
     return { x: panTarget.x + perp.x * d, y: panTarget.y + perp.y * d };
   }
@@ -3715,6 +3767,11 @@ export class CameraDirector {
       frameSize.height
     );
     this._lastResolvedPanTarget = panResolved;
+    // Diagnostic only — the WORLD point the pan was aimed at this frame, before the smoother.
+    // Read by nothing in the camera; VIEWER-INVARIANTS-2 needed it to settle which subject the pan
+    // was actually tracking at the end of a race, which reading the framing rule could not.
+    this._lastPanTargetX = target.x;
+    this._lastPanTargetY = target.y;
   }
 
   /**

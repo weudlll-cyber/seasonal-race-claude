@@ -482,6 +482,7 @@ async function worker() {
       track: geo.id, seed, arm, n: N, frames: p.frames,
       events: p.events.length, byInvariant: p.byInvariant,
       widest: p.widestCorridors, tightest: p.tightestCorridors,
+      windowStates: p.windowStates ?? {},
     });
     if (JSON_OUT) flush();
     console.log(
@@ -499,6 +500,25 @@ stack.stop();
 const secs = ((Date.now() - t0) / 1000).toFixed(0);
 
 // ── THE VERDICT: EVENTS ────────────────────────────────────────────────────────────────────────
+// ── WHICH SHOTS RUN INSIDE HIS WINDOW ─────────────────────────────────────────────────────────
+//
+// The exemption for the group-framing states is about the EARLIER RACE, not about those states as
+// such: if a battle or a comeback shot runs after 95%, his rule applies to it there like any other.
+// So this is counted rather than assumed, over every race swept.
+const WSTATES = {};
+for (const r of rows) for (const [k, v] of Object.entries(r.windowStates ?? {})) WSTATES[k] = (WSTATES[k] ?? 0) + v;
+const WTOTAL = Object.values(WSTATES).reduce((a, b) => a + b, 0);
+console.log(`
+── THE SHOTS THAT RUN INSIDE THE WINDOW (from ${(100 * 0.95).toFixed(0)}% to the crossing) ──`);
+if (!WTOTAL) console.log("  no in-window frames were recorded");
+else
+  for (const [k, v] of Object.entries(WSTATES).sort((a, b) => b[1] - a[1])) {
+    const races = rows.filter((r) => (r.windowStates ?? {})[k]).length;
+    console.log(
+      `  ${k.padEnd(16)} ${String(v).padStart(7)} frame(s), ${((100 * v) / WTOTAL).toFixed(1).padStart(5)}% of the window, in ${String(races).padStart(3)} of ${rows.length} race(s)`
+    );
+  }
+
 const INV = ["1-course", "2-leader", "3-line", "4-widthstep", "4-panstep", "5-tootight", "5-toowide"];
 console.log(`\n── VIOLATIONS PER INVARIANT ──`);
 for (const k of INV) {

@@ -104,6 +104,7 @@ let _spine = null;
 let _widest = 0;
 let _tightest = Infinity;
 let _crossed = false;
+let _windowStates = {};
 // DIAGNOSIS ONLY. With `_ra_viewerdump` set, every frame's transform is kept so a violation can be
 // traced back through the frames that produced it. Off by default: a sweep keeps only the events.
 let _dump = null;
@@ -123,6 +124,7 @@ export function beginViewerProbe(run) {
   _widest = 0;
   _tightest = Infinity;
   _crossed = false;
+  _windowStates = {};
   _run = run ?? null;
   try {
     _dump = sessionStorage.getItem('_ra_viewerdump') === '1' ? [] : null;
@@ -219,12 +221,36 @@ export function recordViewerFrame(f) {
     );
   }
 
-  // ── 2 — THE LEADER IS IN THE PICTURE ────────────────────────────────────────────────────────
+  // ── THE WINDOW HIS RULE APPLIES TO (VIEWER-INVARIANTS-2) ────────────────────────────────────
+  //
+  // HIS CLARIFICATION, 2026-08-24: "the leader and the finish line are always visible" applies FROM
+  // 95% OF THE RACE ONWARDS ONLY. Everything before that stays as it is — the group-framing states
+  // frame a group on purpose and are not part of this subject at all.
+  //
+  // So invariants 2 and 3 are SCOPED and invariants 1, 4 and 5 are not: a camera off the course, or
+  // a frame that jumps, is wrong everywhere in the race. That split is his sentence, not a
+  // convenience — VIEWER-INVARIANTS-1 reported 10809 leader-off frames of which 10617 were
+  // COMEBACK_ZOOM and BATTLE_ZOOM doing exactly what they are for, and scoping is what that
+  // measurement was missing rather than a duration rule, which he ruled out.
+  //
+  // THE WINDOW IS THE RACE'S, NOT THE DIRECTOR'S. `endgameFrom` is `endgameThreshold` and the
+  // progress is the leader's own; scoping to `_runInComposingNow` instead would let a candidate
+  // that engages late score better by measuring fewer of its own frames, which is the trap
+  // `endgame-spec.mjs` records in its own header.
+  const prog = _progressOf(f);
+  const inWindow = f.finishT > 0 && (f.finishedCount ?? 0) === 0 && prog >= f.endgameFrom;
+  // WHICH SHOTS RUN INSIDE THE WINDOW, counted whether or not anything is wrong on the frame. The
+  // brief asks a question no violation list can answer: if a group shot runs after 95%, his rule
+  // still applies there, because the exemption is about the earlier race and not about those states
+  // as such. This is the census that answers it.
+  if (inWindow) _windowStates[f.state] = (_windowStates[f.state] ?? 0) + 1;
+
+  // ── 2 — THE LEADER IS IN THE PICTURE (in the window) ────────────────────────────────────────
   let lead = f.racers[0];
   for (const r of f.racers) if (r.t > lead.t) lead = r;
   const LX = sx(lead);
   const LY = sy(lead);
-  if (!onCanvas(LX, LY)) {
+  if (inWindow && !onCanvas(LX, LY)) {
     const dx = LX < 0 ? -LX : LX > CW ? LX - CW : 0;
     const dy = LY < 0 ? -LY : LY > CH ? LY - CH : 0;
     const d = Math.hypot(dx, dy);
@@ -235,9 +261,8 @@ export function recordViewerFrame(f) {
     );
   }
 
-  // ── 3 — WHERE THE FINISH LINE IS, IS FINDABLE ───────────────────────────────────────────────
-  const prog = _progressOf(f);
-  if (f.finishT > 0 && (f.finishedCount ?? 0) === 0 && prog >= f.endgameFrom) {
+  // ── 3 — WHERE THE FINISH LINE IS, IS FINDABLE (in the window) ───────────────────────────────
+  if (inWindow) {
     const HX = (CW * COMPANY_FRAME_PCT) / 2;
     const HY = (CH * COMPANY_FRAME_PCT) / 2;
     const tAt = f.shape.isOpen ? Math.min(1, f.finishT) : ((f.finishT % 1) + 1) % 1;
@@ -301,6 +326,57 @@ export function recordViewerFrame(f) {
       ly: Math.round(LY),
       st: f.state,
       b: f.binding,
+      lerp: f.lerpPhase,
+      // WHO THE FRAMING IS BUILT ON THIS FRAME, and whether the leader is one of them. A guarantee
+      // that is binding while the leader is off screen is a guarantee whose subject set does not
+      // contain him, and that is a different defect from a pan that is merely late.
+      anchorSX: f.anchorPoint ? Math.round(sx(f.anchorPoint)) : null,
+      anchorSY: f.anchorPoint ? Math.round(sy(f.anchorPoint)) : null,
+      leaderIdx: lead.index ?? null,
+      leaderIsSubject: f.subjectIndices ? f.subjectIndices.includes(lead.index) : null,
+      // The pan's residual in screen px, and where the anchor would sit if the pan had arrived.
+      lagX: Number.isFinite(f.targetOffsetX) ? Math.round(f.targetOffsetX - f.offsetX) : null,
+      lagY: Number.isFinite(f.targetOffsetY) ? Math.round(f.targetOffsetY - f.offsetY) : null,
+      // THE TARGET'S OFFSETS BELONG TO THE TARGET'S ZOOM, not to the delivered one. Mixing them
+      // reads a fast-moving zoom as a pan error, which is exactly the wrong diagnosis to reach here.
+      anchorAtTargetX:
+        f.anchorPoint && Number.isFinite(f.targetOffsetX) && f.camZoom > 0
+          ? Math.round(f.targetOffsetX + f.anchorPoint.x * f.effZoomX * (f.targetZoom / f.camZoom))
+          : null,
+      anchorAtTargetY:
+        f.anchorPoint && Number.isFinite(f.targetOffsetY) && f.camZoom > 0
+          ? Math.round(f.targetOffsetY + f.anchorPoint.y * f.effZoomY * (f.targetZoom / f.camZoom))
+          : null,
+      zoomRatio: f.camZoom > 0 ? +(f.targetZoom / f.camZoom).toFixed(4) : null,
+      ff: Number.isFinite(f.forwardFrac) ? +f.forwardFrac.toFixed(3) : null,
+      u: Number.isFinite(f.runInU) ? +f.runInU.toFixed(3) : null,
+      rp: Number.isFinite(f.runInProgress) ? +f.runInProgress.toFixed(3) : null,
+      comp: !!f.composing,
+      // Where the pan is aimed, and the two things it might be aimed at, all in SCREEN px under the
+      // camera actually drawn — so they can be read against each other directly.
+      ptSX: f.panTargetX != null ? Math.round(sx({ x: f.panTargetX, y: f.panTargetY })) : null,
+      ptSY: f.panTargetX != null ? Math.round(sy({ x: f.panTargetX, y: f.panTargetY })) : null,
+      lineSX: f.lineWorld ? Math.round(sx(f.lineWorld)) : null,
+      lineSY: f.lineWorld ? Math.round(sy(f.lineWorld)) : null,
+      lat: Number.isFinite(f.lateralShift) ? Math.round(f.lateralShift) : null,
+      clamped: f.panClamped ?? null,
+      camX: Number.isFinite(f.panCamX) ? Math.round(f.panCamX) : null,
+      wMaxX: Number.isFinite(f.worldMaxX) ? Math.round(f.worldMaxX) : null,
+      wMaxY: Number.isFinite(f.worldMaxY) ? Math.round(f.worldMaxY) : null,
+      // THE FRAMING ERROR, DECOMPOSED AT ONE ZOOM. Everything here uses the zoom the frame was
+      // DRAWN with, so nothing is mixed: `want` is the offset that would put the anchor at the
+      // centre of the canvas, `errTarget` is how far the TARGET offset is from that, and `errPan`
+      // is how far the DELIVERED offset is from the target. Their sum is the whole error, and which
+      // of the two carries it says whether the shot is badly aimed or badly delivered.
+      errTargetX: f.anchorPoint
+        ? Math.round(f.targetOffsetX - (CW / 2 - f.anchorPoint.x * f.effZoomX))
+        : null,
+      errTargetY: f.anchorPoint
+        ? Math.round(f.targetOffsetY - (CH / 2 - f.anchorPoint.y * f.effZoomY))
+        : null,
+      errPanX: Math.round(f.offsetX - f.targetOffsetX),
+      errPanY: Math.round(f.offsetY - f.targetOffsetY),
+      subjects: f.subjectIndices ? f.subjectIndices.join('/') : null,
       courseIn,
     });
   _prev = { width, offsetX: f.offsetX, offsetY: f.offsetY };
@@ -324,6 +400,9 @@ export function readViewerProbe() {
     // The driver stops here: after the first crossing the finish ceremony runs, and these five
     // sentences do not govern it — invariant 3's own window closes at the crossing by definition.
     crossed: _crossed,
+    // Frames per camera state INSIDE the window, so "does a group shot ever run after 95%" is
+    // answered by a count rather than by an argument from the code.
+    windowStates: _windowStates,
     dump: _dump,
     events: _events,
     byInvariant,

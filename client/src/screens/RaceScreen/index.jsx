@@ -1601,6 +1601,35 @@ export default function RaceScreen() {
         worldWidth,
         state: camDirRef.current.state,
         binding: camDirRef.current._framingProbe?.binding ?? '?',
+        lerpPhase: camDirRef.current._lerpPhase,
+        // WHERE THE PAN WAS AIMED, beside where it got to. The difference is the smoother's own
+        // residual, and it is the quantity that decides whether a shot that loses its subject is a
+        // FRAMING decision or a DELIVERY one.
+        targetOffsetX: camDirRef.current.targetOffsetX,
+        targetOffsetY: camDirRef.current.targetOffsetY,
+        targetZoom: camDirRef.current.targetZoom,
+        camZoom: cam.zoom,
+        // WHERE THE FRAMING RULE INTENDS THE SUBJECT, as a fraction along the motion axis, and the
+        // run-in's own travel parameter that drives it.
+        forwardFrac: camDirRef.current._forwardFracNow(),
+        runInU: camDirRef.current._runInSweepU ? camDirRef.current._runInSweepU() : null,
+        runInProgress: camDirRef.current._runInProgress,
+        composing: !!camDirRef.current._runInComposingNow,
+        // WHAT THE PAN IS AIMED AT, in world coordinates, beside the candidates it could be aimed
+        // at. Whichever it tracks is the pan's real subject, which no amount of reading the framing
+        // rule will settle.
+        panTargetX: camDirRef.current._lastPanTargetX ?? null,
+        panTargetY: camDirRef.current._lastPanTargetY ?? null,
+        lineWorld: camDirRef.current._finishLineWorldPoint(st.finishT),
+        lateralShift: camDirRef.current._lastLateralShift ?? null,
+        panClamped: camDirRef.current._lastResolvedPanTarget?.wasClamped ?? null,
+        panCamX: camDirRef.current._lastResolvedPanTarget?.camX ?? null,
+        worldMaxX: camDirRef.current._worldBounds?.maxX ?? null,
+        worldMaxY: camDirRef.current._worldBounds?.maxY ?? null,
+        anchorPoint: camDirRef.current._framingProbe?.point ?? null,
+        // The racers the framing was actually built on this frame, by index. Read from the probe
+        // the director already writes; nothing is re-derived.
+        subjectIndices: camDirRef.current._framingProbe?.pair?.map((r) => r?.index ?? -1) ?? null,
       });
 
       if (bgCanvasRef.current && bgImagePath && bgCanvasReady) {

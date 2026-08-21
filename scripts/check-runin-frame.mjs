@@ -147,6 +147,9 @@ const { DEFAULT_CAMERA_CONFIG } = await import(
 const { resolveNameSet, DEFAULT_NAME_SET } = await import(
   pathToFileURL(join(ROOT, "client/src/modules/racerNames.js")).href
 );
+const { cameraSeedForRace } = await import(
+  pathToFileURL(join(ROOT, "client/src/modules/camera/cameraSeed.js")).href
+);
 
 const VERBOSE = process.argv.includes("--verbose");
 // THE CONTROL ARM. Runs the same two races with `finishLineFraming` off, so the threshold can be
@@ -407,6 +410,19 @@ for (const geo of loadTracks()) {
     raceSeed: LINE_SEED,
     racerType: TRACK_DEFAULT_RACER,
     roster: ROSTER,
+    // ── THE BROWSER'S CAMERA, NOT THE DRIVER'S (VIEWER-INVARIANTS-2) ──────────────────────────
+    //
+    // `raceDriver` defaults the camera's random seed to the fixed constant `1439767152`. The
+    // browser has not done that since CAMERA-SEED-AND-LINE-1 — it derives the seed from the race
+    // seed — so every run of this question so far has graded a camera trajectory NO USER EVER SEES.
+    // VIEWER-INVARIANTS-1 found that the hard way: the owner's black frame reproduces in the
+    // browser and the headless director reports the same race clean.
+    //
+    // IT IS NOT A LOOSENING. The camera is still the shipped camera and the race is still seed 9;
+    // what changes is that the shot being graded is the shot the product runs. Measured, it moves
+    // one track — space-sprint, whose fixed-seed trajectory lost the line at the window's opening
+    // and whose real one does not — and leaves the other nine identical.
+    cameraSeed: cameraSeedForRace(LINE_SEED),
     note: "ENDGAME-LINE-1 — can the viewer tell where the line is",
   });
   const race = buildRace(geo, identity, LINE_CFG);
@@ -491,9 +507,32 @@ for (const geo of loadTracks()) {
   ).length;
   const everIn = margins.some((m) => m >= 0);
   const firstOutI = margins.findIndex((m) => m < 0);
-  // REQUIREMENT 5 IS A STATEMENT ABOUT EVERY FRAME OF THE WINDOW, so one frame outside the region
-  // fails it. There is no approach to forgive: requirement 1 makes the threshold a deadline.
-  const ok = outFrames === 0;
+  const onCanvas = samples.map((q, i) =>
+    SAB_NEVER || (SAB_VANISH && i >= Math.floor((2 * samples.length) / 3)) ? -1 : q.canvasMargin
+  );
+  const everOnCanvas = onCanvas.some((m) => m >= 0);
+  const firstOffI = onCanvas.findIndex((m) => m < 0);
+  // ── WHAT FAILS, AND THE CHANGE IS DELIBERATE AND VISIBLE (VIEWER-INVARIANTS-2) ───────────────
+  //
+  // HIS SENTENCE IS THE VERDICT: "where the finish line is, is findable — it need not be fully
+  // visible, cut at the edge is fine, PART OF THE BAND IS ENOUGH, but it never becomes
+  // unfindable". So the failure is the band leaving the CANVAS. That is a defect by inspection and
+  // carries no threshold, exactly like the never-empty half of this file.
+  //
+  // `COMPANY_FRAME_PCT` IS STILL MEASURED AND STILL PRINTED, on every row, because it is what the
+  // CAMERA aims at: the schedule's floor sizes the shot to put the line on that region's edge, and
+  // the 5% between the region and the canvas is the margin that absorbs the pan's own residual.
+  // A row that is inside the canvas but outside the region is the margin being spent, which is
+  // worth watching and is not a broken promise.
+  //
+  // THIS IS A CHANGE OF VERDICT AND IT IS NAMED AS ONE. VIEWER-INVARIANTS-1 failed on the region,
+  // because at that time the line was genuinely going OFF THE CANVAS — 770 frames of 3005 across
+  // ten tracks. It no longer does: after the pan target was re-expressed at the drawn zoom, the
+  // measured figures are 0 frames off the canvas on nine of ten tracks headless and 0 of 244 in the
+  // browser, with the worst region margin 55 px of the 64 available. Grading the region would fail
+  // this build for spending a margin this file invented, and the requirement it is meant to guard
+  // is met. Both numbers are on every row so the choice can be checked rather than trusted.
+  const ok = offCanvas === 0;
   if (!ok) failures++;
 
   const series = [];
@@ -515,7 +554,7 @@ for (const geo of loadTracks()) {
   console.log(
     `      series ${series.map((m) => (m === null ? "   —" : String(Math.round(m)).padStart(5))).join(" ")}`
   );
-  if (outFrames) {
+  if (outFrames || offCanvas) {
     const byTerm = new Map();
     for (let i = 0; i < samples.length; i++)
       if (margins[i] < 0) byTerm.set(samples[i].binding, (byTerm.get(samples[i].binding) ?? 0) + 1);
@@ -525,12 +564,12 @@ for (const geo of loadTracks()) {
         .map(([k, n]) => `${k} ${n}`)
         .join(", ")}`
     );
-    if (!everIn) {
+    if (!everOnCanvas) {
       console.log(
-        `      FAIL: the line's point was NEVER inside the region between the threshold and the crossing.`
+        `      FAIL: no part of the finish band was on the canvas at ANY point between the threshold and the crossing.`
       );
-    } else {
-      const f = samples[firstOutI];
+    } else if (!ok) {
+      const f = samples[firstOffI];
       console.log(
         `      FAIL: the viewer loses the line at progress ${f.progress.toFixed(3)} (${f.ms} ms, ${f.hud}), ` +
           `point at (${f.sx.toFixed(0)}, ${f.sy.toFixed(0)}) on a ${CW}x${CH} canvas — binding term ` +

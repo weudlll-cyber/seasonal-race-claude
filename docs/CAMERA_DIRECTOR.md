@@ -657,7 +657,15 @@ a verbatim transcript of one run on one commit, which is a historical record, no
 
 ### The tracking lag, as measured today — and it had drifted
 
-<!-- MEASURED: tracking-lag (median/p95 pp per state) @ 2c229397 2026-08-25 depends=client/src/modules/camera/ -->
+<!-- MEASURED: tracking-lag (median/p95 pp per state) @ 63392f51 2026-08-25 depends=client/src/modules/camera/ -->
+
+**RE-MEASURED IN FULL FOR VIEWER-INVARIANTS-2, AND PHOTO_FINISH IMPROVED SHARPLY — median
+4.51 -> 3.54, p95 19.50 -> 8.91.** Every other state is identical to the digit, frame counts
+included. This is an INDEPENDENT reading of that block's repair: the pan target was being resolved at
+one zoom and the frame drawn at another, and because an offset is `-camX x effectiveZoom` the error
+was multiplied by the anchor's distance from the world origin. PHOTO_FINISH is where the endgame's
+zoom moves fastest, so it is where the mismatch was largest — and this table, which samples the
+tracking phase and knows nothing about that block's browser measurements, halves its p95 there.
 
 **RE-MEASURED IN FULL FOR VIEWER-INVARIANTS-1, AND EVERY FIGURE IS IDENTICAL TO THE DIGIT** —
 frame counts included. That block adds CAMERA-SIDEJUMP-1's zoom-about-the-anchor pivot to the GLIDE
@@ -742,7 +750,7 @@ measured rather than argued.
 | LEADER_ZOOM   | 17169  | 3.72      | 9.32   |
 | LEAD_CHANGE   | 9373   | 4.42      | 7.42   |
 | OVERVIEW      | 4323   | 2.48      | 16.00  |
-| PHOTO_FINISH  | 1865   | 4.51      | 19.50  |
+| PHOTO_FINISH  | 1865   | 3.54      | 8.91   |
 
 (ENDGAME-SCHEDULE-1's figures. The PHOTO-FINISH-STATE-1 run the paragraph below describes read
 BATTLE_ZOOM 10935 / 5.30 / 9.77, COMEBACK_ZOOM 162 / 6.84 / 7.50, LEADER_ZOOM 17175 / 3.73 / 9.06,
