@@ -657,7 +657,7 @@ a verbatim transcript of one run on one commit, which is a historical record, no
 
 ### The tracking lag, as measured today — and it had drifted
 
-<!-- MEASURED: tracking-lag (median/p95 pp per state) @ b2cc39da 2026-08-25 depends=client/src/modules/camera/ -->
+<!-- MEASURED: tracking-lag (median/p95 pp per state) @ 2c229397 2026-08-25 depends=client/src/modules/camera/ -->
 
 **RE-MEASURED IN FULL FOR VIEWER-INVARIANTS-1, AND EVERY FIGURE IS IDENTICAL TO THE DIGIT** —
 frame counts included. That block adds CAMERA-SIDEJUMP-1's zoom-about-the-anchor pivot to the GLIDE
