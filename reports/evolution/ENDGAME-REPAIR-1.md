@@ -303,7 +303,19 @@ carry the wild frame; the fixed-seed harness saw none of them.**
   the endgame reaches with `_focusAnchorRacer` null, and the three cuts removed above are what were
   displacing the subject there.
 
-**Camera suite 894 passing.** `npm run verify` red on `check-runin-frame` only — §5.
+**Camera suite 894 passing.** `npm run verify`: **20 PASS, 1 FAIL, 3 SKIP** — the one failure is
+`check-runin-frame`, deliberately, §5.
+
+**AND A SECOND TEST THAT WAS PROVING NOTHING, found by running the suite that owns it.**
+`scripts/camera-seed-determinism.test.mjs` — the file the last block wrote to prove the camera seed
+is derived from the race seed — was written against **vitest**, but `verify`'s `script-suite` spawns
+`node --test` over `scripts/*.test.mjs`, and node's runner cannot resolve vitest from the repository
+root: it is a CLIENT dependency. **The file threw `ERR_MODULE_NOT_FOUND` before its first assertion
+ran** — it appeared in the suite, was counted, and asserted nothing. That is the second time in two
+blocks that this particular test has been green while blind, and the first time is written up in
+CAMERA-SEED-AND-LINE-1 §1. Converted to `node:test`, which is what every other file in that
+directory already uses. **Both tests now run and both PASS on this build**, which is worth having:
+the camera is still reproducible from the race seed after five changes to its width authority.
 
 **Hygiene:** one branch (`exp/endgame-schedule`), working tree clean, **no stashes**, **no untracked
 files**, both temporary worktrees removed, and `git ls-remote --heads origin` returns **`master` and
