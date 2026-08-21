@@ -113,12 +113,13 @@ import {
 export const GUARD = {
   id: "check-runin-frame",
   covers:
-    "that the camera centre stays near the track through the run-in, that at least one racer is on screen on every frame of the race, and that the FINISH LINE stays in frame from the endgame threshold to the crossing on all ten tracks",
+    "that the camera centre stays near the track through the run-in, that at least one racer is on screen on every frame of the race, and that the VIEWER CAN ALWAYS TELL WHERE THE FINISH LINE IS from the endgame threshold to the crossing — some part of the band inside the frame at COMPANY_FRAME_PCT, on all ten tracks at his field sizes",
   blind: [
     "whether the shot is GOOD — one racer at the edge passes",
     "anything the DOM draws; this is the canvas transform only",
     "the centre and never-empty questions run TWO tracks, one open and one closed",
-    "the PAINTED finish band — question 3 grades the spine point the director guarantees, so a margin near zero already means the band is clipping",
+    "WHICH part of the band is visible: question 3 asks whether ANY of it is inside the region, which is the requirement, not whether the part nearest the leader is",
+    "the CHECKERBOARD's own drawing — the band's extent here is the track's width, which is geometry the race owns, not an appearance the renderer chooses",
     "one seed per track; a line that leaves only on some other race is not covered",
   ],
   dirs: ["client/src/modules/camera/"],

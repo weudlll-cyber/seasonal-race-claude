@@ -26,7 +26,16 @@
 // sees as "the camera behaved differently".
 // ============================================================
 
-import { describe, it, expect } from "vitest";
+// ── THE RUNNER IS `node --test`, NOT VITEST (ENDGAME-REPAIR-1) ─────────────────────────────
+//
+// `scripts/` is run by `verify`'s `script-suite`, which spawns `node --test` over every
+// `scripts/*.test.mjs`. Node's own runner cannot resolve `vitest` from the repository root —
+// vitest is a CLIENT dependency and there is no node_modules for it here. Written against vitest,
+// this file threw ERR_MODULE_NOT_FOUND before its first assertion ran: it appeared in the suite,
+// was counted, and PROVED NOTHING. Every other file in this directory uses `node:test`, and this
+// one now does too.
+import { describe, it } from "node:test";
+import assert from "node:assert/strict";
 import { join } from "node:path";
 import { pathToFileURL } from "node:url";
 import {
@@ -83,8 +92,8 @@ describe("CAMERA-SEED-AND-LINE-1 — the same race seed gives the same camera", 
   it("two runs of one race seed produce an IDENTICAL camera trajectory", () => {
     const a = trajectory(cameraSeedForRace(RACE_SEED));
     const b = trajectory(cameraSeedForRace(RACE_SEED));
-    expect(a.frames).toBeGreaterThan(500);
-    expect(b.trace).toBe(a.trace);
+    assert.ok(a.frames > 500, `expected more than 500 frames, got ${a.frames}`);
+    assert.equal(b.trace, a.trace);
     // A real race on the real driver; vitest's 5 s default is not enough for two of them.
   }, 120_000);
 
@@ -93,7 +102,7 @@ describe("CAMERA-SEED-AND-LINE-1 — the same race seed gives the same camera", 
   it("two different race seeds produce a DIFFERENT camera trajectory, including different STATES", () => {
     const a = trajectory(cameraSeedForRace(RACE_SEED));
     const b = trajectory(cameraSeedForRace(RACE_SEED + 1));
-    expect(b.trace).not.toBe(a.trace);
-    expect(b.states).not.toBe(a.states);
+    assert.notEqual(b.trace, a.trace);
+    assert.notEqual(b.states, a.states);
   }, 120_000);
 });
