@@ -620,6 +620,7 @@ export class CameraDirector {
     this._runInShot = t.runInShot;
     this._runInSchedule = t.runInSchedule;
     this._contentionWatch = t.contentionWatch;
+    this._bandFloor = t.bandFloor;
     this._contentionCheckMs = t.contentionCheckMs;
     this._runInOpenMs = t.runInOpenMs;
     this._contenderZoom = t.contenderZoom;
@@ -2919,6 +2920,54 @@ export class CameraDirector {
    *
    * @returns {number} cam.zoom ceiling; Infinity when the run-in is not composing this frame
    */
+  /**
+   * THE POINT OF THE FINISH THE SHOT IS SIZED ON — the NEAREST point of the band, not its centre.
+   *
+   * ── WHY THIS AND NOT `_finishLineWorldPoint` (ENDGAME-COMPLETE-1) ─────────────────────────────
+   *
+   * His requirement 5 is that the viewer can always tell WHERE THE LINE IS, and that partial
+   * visibility counts — "the whole band is not required; findable is". The band runs across the
+   * corridor, so the thing that makes it findable is that SOME of it is in shot. Sizing the shot on
+   * the band's CENTRE guarantees the wrong thing twice over: it asks for more width than the
+   * requirement needs when the centre is the far end, and it permits the band to be entirely off
+   * canvas when the centre is only just inside a region measured from a displaced anchor.
+   *
+   * MEASURED, before this change, on the frames the owner rejected: the centre point sat inside its
+   * region to the pixel while NO PART of the band was on the canvas at all — fourteen frames on
+   * space-sprint seed 9. A bound that is satisfied on a frame with no finish line in it is not
+   * bounding the requirement.
+   *
+   * SO THE POINT IS THE ONE NEAREST THE ANCHOR. Guaranteeing it guarantees that the closest piece of
+   * the finish is in shot, which is exactly "findable", and it asks for LESS width than the centre
+   * did — which serves requirement 4 in the same move rather than trading against it.
+   *
+   * THE BAND'S EXTENT IS THE TRACK'S OWN, and the lateral argument is NORMALISED: `raceCore` calls
+   * `getPosition(t, r.physicalY / 2)` with `physicalY` in [-1, +1], so the corridor edges are -0.5
+   * and +0.5. Multiplying by `trackWidthPx` there walks a segment 300x too long — that error cost
+   * this project two reports before it was found.
+   */
+  _finishBandNearestPoint(anchorPoint, finishT) {
+    if (!this._shape || !(finishT > 0) || !anchorPoint) return null;
+    const t = this._isOpenTrack ? Math.min(1, finishT) : ((finishT % 1) + 1) % 1;
+    let best = null;
+    let bestD = Infinity;
+    // 21 samples across the corridor. The distance along a straight segment is convex, so a uniform
+    // sample cannot miss the minimum by more than the sample's own spacing — a twentieth of a
+    // corridor, which is far below the width any of this decides.
+    for (let k = 0; k <= 20; k++) {
+      const p = this._shape.getPosition(t, k / 20 - 0.5);
+      if (!p) continue;
+      const dx = (p.x - anchorPoint.x) * this._proj.axisX;
+      const dy = (p.y - anchorPoint.y) * this._proj.axisY;
+      const d = dx * dx + dy * dy;
+      if (d < bestD) {
+        bestD = d;
+        best = p;
+      }
+    }
+    return best;
+  }
+
   _lineCeiling(subjects, frameSize, raceState, framePct = null, atOverride = null) {
     if (!subjects?.point) return Infinity;
     const line = this._finishLineWorldPoint(raceState?.finishT ?? 0);
@@ -2958,7 +3007,13 @@ export class CameraDirector {
       // need only be VISIBLE so the viewer knows where it is — it may sit at the edge, and it is
       // not required to stay framed at all after the deadline. The subject's inner-frame region is
       // what the OLD promise needed, and it is the 1.43x this retires.
-      framePct ?? this._innerFramePct ?? DEFAULT_INNER_FRAME_PCT,
+      // ENDGAME-COMPLETE-1: with `bandFloor` on, the line is guaranteed inside the SUBJECT own
+      // region rather than the company margin. A tighter region asks for MORE width, and width is
+      // what puts more of the band on screen — the opposite direction from the first attempt, which
+      // sized on the band nearest point, asked for LESS width and showed LESS of the band.
+      this._bandFloor && framePct === COMPANY_FRAME_PCT
+        ? (this._innerFramePct ?? DEFAULT_INNER_FRAME_PCT)
+        : (framePct ?? this._innerFramePct ?? DEFAULT_INNER_FRAME_PCT),
       at
     );
   }

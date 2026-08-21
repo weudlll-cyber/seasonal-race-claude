@@ -368,6 +368,7 @@ export function computeTimingFromConfig(config) {
   // carries. The fallback on each is the shipped default, which is what check-fallback-agreement
   // requires and what makes a stored config missing the key behave like today.
   const contentionWatch = config?.contentionWatch ?? DEFAULT_CAMERA_CONFIG.contentionWatch;
+  const bandFloor = config?.bandFloor ?? DEFAULT_CAMERA_CONFIG.bandFloor;
   const contentionCheckMs = config?.contentionCheckMs ?? DEFAULT_CAMERA_CONFIG.contentionCheckMs;
   const contenderZoom = config?.contenderZoom ?? DEFAULT_CAMERA_CONFIG.contenderZoom;
   // ZOOM-PACE-5: clamped to a band for the same reason every other duration here is — a corrupt
@@ -456,6 +457,7 @@ export function computeTimingFromConfig(config) {
     runInShot,
     runInSchedule,
     contentionWatch,
+    bandFloor,
     contentionCheckMs,
     runInOpenMs,
     contenderZoom,

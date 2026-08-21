@@ -112,6 +112,17 @@ let _crossing = null;
 let _crossRing = [];
 let _windowStates = {};
 let _contention = null;
+// ── ENDGAME-COMPLETE-1: THE ACCEPTANCE SHEET, ACCUMULATED IN ONE PASS ─────────────────────────
+//
+// Every block in this thread graded the symptom it was repairing and nothing else, so each fix
+// broke or exposed something the previous one had established. This accumulates what ALL TWELVE of
+// his requirements need, on every race, so a change can never again be judged on the item it was
+// aimed at alone.
+//
+// It grades THE PICTURE. Where an item cannot be graded from the picture the field says so rather
+// than carrying an easier number in its place — three figures in this thread were green while his
+// eye disagreed, and each of them was a proxy.
+let _sheet = null;
 // DIAGNOSIS ONLY. With `_ra_viewerdump` set, every frame's transform is kept so a violation can be
 // traced back through the frames that produced it. Off by default: a sweep keeps only the events.
 let _dump = null;
@@ -135,6 +146,13 @@ export function beginViewerProbe(run) {
   _crossRing = [];
   _windowStates = {};
   _contention = { released: [], checks: 0, on: false };
+  _sheet = {
+    win: [], // one row per in-window frame — everything items 1,3,4,5,6,7,8,10,11 are taken from
+    pre: 0, // frames BEFORE the window, for item 12
+    preEvents: 0,
+    deadline: null, // item 1: the first frame at or past the threshold
+    // item 2 is graded from the crossing record, which carries the delivered zoom and the two
+  };
   _run = run ?? null;
   try {
     _dump = sessionStorage.getItem('_ra_viewerdump') === '1' ? [] : null;
@@ -330,6 +348,61 @@ export function recordViewerFrame(f) {
       width - f.worldWidth
     );
 
+  // ── THE SHEET'S ROW FOR THIS FRAME ─────────────────────────────────────────────────────────
+  if (_sheet) {
+    if (!inWindow && !_crossed) _sheet.pre++;
+    if (inWindow) {
+      const band = _bandPct(f, sx, sy, CW, CH);
+      // WHERE THE LEADER SITS ALONG THE DIRECTION OF TRAVEL, as a fraction of the frame's chord in
+      // that direction. This is the quantity items 9 and 10 are both about — his "about 60% of the
+      // frame" and the run-in's deliberate walk from behind centre — and it is the same expression
+      // endgame-spec.mjs already uses, so a row here can be laid beside a row there.
+      const h = f.heading;
+      const hl = h ? Math.hypot(h.x, h.y) : 0;
+      let leadFrac = null;
+      if (hl > 0) {
+        const ux = h.x / hl;
+        const uy = h.y / hl;
+        const LX2 = sx(lead);
+        const LY2 = sy(lead);
+        const chord = Math.abs(ux) * CW + Math.abs(uy) * CH;
+        leadFrac = 0.5 + ((LX2 - CW / 2) * ux + (LY2 - CH / 2) * uy) / chord;
+      }
+      // ITEM 7: the racers still in with a chance, by the director's OWN definition, and whether
+      // each is on the canvas. No rank cut and no threshold is added here.
+      let contOff = 0;
+      if (f.contenderIdx) {
+        for (const idx of f.contenderIdx) {
+          const r = f.racers.find((q) => q.index === idx);
+          if (!r) continue;
+          const X = sx(r);
+          const Y = sy(r);
+          if (!(X >= 0 && X <= CW && Y >= 0 && Y <= CH)) contOff++;
+        }
+      }
+      _sheet.win.push({
+        i,
+        ms: Math.round(f.ts),
+        p: prog,
+        corr: +(width / f.trackWidthPx).toFixed(4),
+        lnW: Math.log(width),
+        band,
+        leaderOn: onCanvas(LX, LY),
+        courseIn,
+        leadFrac: leadFrac === null ? null : +leadFrac.toFixed(4),
+        contOff,
+        contN: f.contenderIdx?.length ?? 0,
+        state: f.state,
+      });
+      if (_sheet.deadline === null)
+        _sheet.deadline = {
+          p: prog,
+          leaderOn: onCanvas(LX, LY),
+          band,
+          corr: +(width / f.trackWidthPx).toFixed(4),
+        };
+    }
+  }
   if (_dump)
     _dump.push({
       i,
@@ -506,6 +579,11 @@ export function recordViewerFrame(f) {
       state: f.state,
       binding: f.binding,
       corr: +(width / f.trackWidthPx).toFixed(3),
+      // ITEM 2 names two factors and no third. These are the director's own values for them, beside
+      // the zoom the frame was drawn with, so the item is graded against exactly what it names.
+      camZoom: f.camZoom,
+      leaderZoom: f.leaderZoom,
+      photoFinishZoom: f.photoFinishZoom,
       frame: i,
       ms: Math.round(f.ts),
       p: prog,
@@ -580,6 +658,7 @@ export function readViewerProbe() {
     // is a count from the run rather than an estimate.
     contention: _contention,
     dump: _dump,
+    sheet: _sheet,
     events: _events,
     byInvariant,
     widestCorridors: _run?.trackWidthPx > 0 ? +(_widest / _run.trackWidthPx).toFixed(3) : null,

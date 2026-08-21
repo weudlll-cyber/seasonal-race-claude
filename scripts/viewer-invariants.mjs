@@ -41,6 +41,7 @@
 import { join, dirname } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { readdirSync, readFileSync, writeFileSync } from "node:fs";
+import { gradeRace, printSheet } from "./endgame-sheet.mjs";
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), "..");
 const u = (p) => pathToFileURL(join(ROOT, p)).href;
@@ -502,6 +503,8 @@ async function worker() {
       widest: p.widestCorridors, tightest: p.tightestCorridors,
       windowStates: p.windowStates ?? {},
       crossing: p.crossing ?? null,
+      // ENDGAME-COMPLETE-1: the twelve, graded from this race's own frames, on every race.
+      sheet: gradeRace(p, { track: geo.id, seed, arm, n: N }),
       contention: p.contention ?? null,
     });
     if (JSON_OUT) flush();
@@ -568,6 +571,12 @@ else
       `  ${k.padEnd(16)} ${String(v).padStart(7)} frame(s), ${((100 * v) / WTOTAL).toFixed(1).padStart(5)}% of the window, in ${String(races).padStart(3)} of ${rows.length} race(s)`
     );
   }
+
+// ── ENDGAME-COMPLETE-1: THE SHEET COMES FIRST, WHATEVER ELSE FOLLOWS ─────────────────────────
+printSheet(
+  rows.filter((r) => r.sheet).map((r) => r.sheet),
+  ARG("label", "today") + " (arms " + ARMS.join("+") + ", seeds " + SEEDS.join(",") + ")"
+);
 
 // ── INVARIANT 6: THE WINNER'S CROSSING IS FRAMED ON THE WINNER (WINNER-CROSSING-1) ────────────
 //

@@ -1607,6 +1607,20 @@ export default function RaceScreen() {
           ? [...camDirRef.current._contentionOut]
           : null,
         contentionChecks: camDirRef.current._contentionChecks ?? 0,
+        // ── ENDGAME-COMPLETE-1: the last quantities the acceptance sheet grades from ───────────
+        // The two factors item 2 names, the heading item 9 and 10 measure along, and the racers
+        // item 7 requires in frame — all read from the director rather than re-derived here.
+        leaderZoom: camDirRef.current._leaderZoom,
+        photoFinishZoom: camDirRef.current._photoFinishZoom,
+        heading: camDirRef.current._headingScreen(camDirRef.current._framingProbe?.t ?? 0),
+        contenderIdx: (() => {
+          try {
+            const ordered = [...st.racers].sort((a, b) => b.t - a.t);
+            return camDirRef.current._abreastContenders(ordered).map((r) => r?.index ?? -1);
+          } catch {
+            return null;
+          }
+        })(),
         // WHERE THE PAN WAS AIMED, beside where it got to. The difference is the smoother's own
         // residual, and it is the quantity that decides whether a shot that loses its subject is a
         // FRAMING decision or a DELIVERY one.

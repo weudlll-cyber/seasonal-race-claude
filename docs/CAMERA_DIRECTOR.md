@@ -657,7 +657,13 @@ a verbatim transcript of one run on one commit, which is a historical record, no
 
 ### The tracking lag, as measured today — and it had drifted
 
-<!-- MEASURED: tracking-lag (median/p95 pp per state) @ 6e3a3b6b 2026-08-25 depends=client/src/modules/camera/ -->
+<!-- MEASURED: tracking-lag (median/p95 pp per state) @ 5386360a 2026-08-25 depends=client/src/modules/camera/ -->
+
+**RE-MEASURED IN FULL FOR ENDGAME-COMPLETE-1, AND EVERY FIGURE IS IDENTICAL TO THE DIGIT** —
+frame counts included. That block adds `bandFloor` beside `contentionWatch`, and BOTH default to
+`false`, so nothing shipped moves with them off. This is the measurement that says so rather than the
+assumption; the switches' effect with them ON is on the acceptance sheet, in the browser, where it
+belongs.
 
 **RE-MEASURED IN FULL FOR CONTENTION-WATCH-1, AND EVERY FIGURE IS IDENTICAL TO THE DIGIT** —
 frame counts included. That block adds the contention watch behind `contentionWatch`, whose default

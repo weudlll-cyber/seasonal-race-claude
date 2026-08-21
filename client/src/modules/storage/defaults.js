@@ -591,6 +591,19 @@ export const DEFAULT_CAMERA_CONFIG = {
   //
   // DEFAULT OFF. Today's behaviour is unchanged until his eye has judged the alternative.
   contentionWatch: false,
+  // ── ENDGAME-COMPLETE-1: THE WIDTH FLOOR IS SIZED ON THE BAND, NOT ON ITS CENTRE ──────────────
+  //
+  // His requirement 5 asks that the viewer can always tell where the line is, with partial
+  // visibility allowed. The endgame's width floor was sized on the finish line's CENTRE point, which
+  // is a different promise: measured, the centre sat inside its region to the pixel on fourteen
+  // frames of space-sprint seed 9 where NO PART of the band was on the canvas.
+  //
+  // With this on, the floor is sized on the NEAREST point of the band instead — the piece of the
+  // finish closest to the shot's own subject. It is what "findable" means, and it asks for LESS
+  // width than the centre did, so requirement 4 moves the same way rather than against it.
+  //
+  // Default off until his eye has judged it; both can be compared in one build.
+  bandFloor: false,
   // HOW OFTEN THE CHECK RUNS. **THIS IS A NEW NUMBER AND IT IS THE ONLY ONE THIS BLOCK ADDS.**
   //
   // It is the interval the speed estimate is measured over as well as the cadence, so it is chosen
