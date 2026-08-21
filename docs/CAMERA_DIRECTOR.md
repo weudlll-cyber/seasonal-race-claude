@@ -657,7 +657,7 @@ a verbatim transcript of one run on one commit, which is a historical record, no
 
 ### The tracking lag, as measured today — and it had drifted
 
-<!-- MEASURED: tracking-lag (median/p95 pp per state) @ 5386360a 2026-08-25 depends=client/src/modules/camera/ -->
+<!-- MEASURED: tracking-lag (median/p95 pp per state) @ 47e83a41 2026-08-25 depends=client/src/modules/camera/ -->
 
 **RE-MEASURED IN FULL FOR ENDGAME-COMPLETE-1, AND EVERY FIGURE IS IDENTICAL TO THE DIGIT** —
 frame counts included. That block adds `bandFloor` beside `contentionWatch`, and BOTH default to
