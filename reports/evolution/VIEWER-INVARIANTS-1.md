@@ -158,9 +158,9 @@ Camera suite **894 passing**.
 
 ## 6. The sweep, and every remaining violation as an event
 
-**54 of 800 races** at the time of writing — ten tracks, both arms, your field sizes, ordered so seed
-9 completes first on every track and arm. **55 s per race wall-clock at 10 at a time; the full 800 is
-a measured 12.3 hours.** That is a nightly, and §8 says which subset is not.
+**58 of 800 races** — all ten tracks, both arms, your field sizes, seeds 1, 2, 3 and 9, ordered so seed
+9 completes first on every track and arm. **57 s per race wall-clock at 10 at a time; the full 800 is
+a measured 12.6 hours.** That is a nightly, and §8 says which subset is not.
 
 | invariant | phase | frames | races | worst |
 | --- | --- | ---: | ---: | ---: |
