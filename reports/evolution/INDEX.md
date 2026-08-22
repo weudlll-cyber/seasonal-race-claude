@@ -128,6 +128,17 @@ is dated and recorded HERE, where a reader on their way to the report will pass 
   [GATE-LINES-1](../night/GATE-LINES-1.md); the fix and the once-per-run control that makes the
   silence impossible to repeat: [GATE-TRUTH-1](../night/GATE-TRUTH-1.md).
 
+- [BACKLOG-HONEST-1.md](BACKLOG-HONEST-1.md) — **the backlog census, its verdicts and its edits**
+  (2026-08-22/23). **105 claims present themselves as open** (the brief expected 90–110; the 26
+  unticked agrees with its one independently stated count). **The enumeration had to be repaired
+  three times and the third failure is the instructive one:** a rule that split lines into
+  sentences fired on the LIST MARKER `1.`, so it caught NONE of the four action-control questions
+  while still printing a plausible 101 — a broken rule returning a believable number. Rule 5 now
+  carries a self-asserting input and exits non-zero if it stops finding them. **DUPLICATE HUNT: 2
+  open-vs-open pairs; ZERO open-vs-done**, and that zero is evidence because the hunt is fed a
+  synthetic open/done pair and asserts it detects it. **The four-minute-per-item ceiling was
+  withdrawn by the owner before this piece began**, so no item here was decided by a clock.
+
 - [REACH-REFUSES-1.md](REACH-REFUSES-1.md) — **`engine-reach --check` refuses instead of answering
   zero** (2026-08-22). DIAGNOSED BEFORE REPAIRING, and the diagnosis corrects an earlier one: the two
   invocations differed in neither cwd, staging nor diff base — **`--check` reads no tree at all.** It
