@@ -4112,3 +4112,37 @@ wired into `docs/SHIP-CEREMONY.md` at step 0a so no camera change ships again wi
 run. **And do not trust one seed:** the sweep exists because the defect lives on three seeds in
 forty. Evidence: reports/evolution/CAMERA-SEED-AND-LINE-1.md §5 (the fingerprint that could not see
 it), reports/evolution/VIEWER-INVARIANTS-1.md §0 and §3 (the divergence, measured).
+
+
+## Lesson 220 — The Self-Referential-Check Law: A Verification Written From The Same Expression As The Thing It Verifies Cannot Fail
+
+**What happened.** A 385-line function was being split into named steps under a hard rule: the
+picture may not change, and the proof is byte equality of two fingerprints. The extraction carved the
+last segment out with a slice that was off by one and **dropped that segment's final `return z;`**.
+The script carried a check for exactly this — every line of each extracted block must survive into
+the output — and the check passed, because it was built from **the same slice expression that had
+made the mistake**. It compared the truncated block against itself and found it complete. The CAMERA
+fingerprint, which knows nothing about the edit, caught it in twenty-five seconds.
+
+The same script then failed its own assertions twice more, and those two failures are the control
+that makes the point: a swap list that expected five call sites found a sixth, and a converter that
+expected three early exits found a fourth. **Both assertions were written against something the
+script did NOT derive — a count taken by reading the file — and both were right where I was wrong.**
+
+**Insight / the law.** A check is only evidence to the extent that it could have come out
+differently. **When the check and the operation share a derivation, they share the mistake, and the
+green is a tautology rather than a result** — the check is not testing the operation, it is testing
+that an expression equals itself. This is Lesson 209 (a check that cannot fail is indistinguishable
+from one that can) sharpened to its commonest cause: not a missing caller or an unexecutable hook,
+but a shared premise. It is also why "I verified the refactor by re-reading the diff" is worth so
+little: a reading uses the same model of the code that produced the edit.
+
+**Consequence / enforcement.** For any mechanical transformation of code, the verification must be
+**independent of the transformation's own arithmetic**. Two shapes work and both are cheap. Take the
+input from the UNTOUCHED source rather than from any intermediate the transformation computed — the
+repaired check reads the whole original function body straight from the file on disk and requires all
+100 of its statement lines to survive, with an explicit list of the two wrapper lines the edit is
+allowed to replace. Or grade the OUTPUT with an instrument that has no idea an edit happened, which
+is what a fingerprint is for. **Prefer the second: a behaviour-preserving change should be proved by
+behaviour, and "algebraically the same" is not the standard when a reordered floating-point
+expression can move a digit.** Evidence: reports/evolution/ENDGAME-REWRITE-1.md §4.

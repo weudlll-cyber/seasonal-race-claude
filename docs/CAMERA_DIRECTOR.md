@@ -517,6 +517,126 @@ here — see RUNIN-PACE-1 §2.
 > set for it, and the two behaviours added to meet them. Nothing here restates §3a; where the two
 > touch, this section points.
 
+### The mechanism, in one page
+
+*Written before the implementation, deliberately. A stranger should be able to follow it without
+reading a line of the director, and it should be possible to say what any frame of the endgame does
+by pointing at a sentence here.*
+
+#### What the endgame IS
+
+**One authored camera move that runs from shortly before the endgame threshold to the winner's
+crossing, and hands back nothing.** It is not a bound the shot settles against; a bound has no
+opinion about motion, and the picture stands still whenever the bound does. It is a POSITION FOR
+EVERY FRAME.
+
+It is a PHASE, not a per-frame test. It latches on once and stays on. Every flicker between a wide
+shot and a tight one this camera has ever produced came from asking a per-frame question about
+something that should have been asked once.
+
+#### When it opens
+
+Two conditions, and it needs both:
+
+1. **The leader is within one opening-span of the threshold** — the widen must FINISH at the
+   threshold, so it must START one span before it. The span is `runInOpenMs`, the key that already
+   paces the opening; the rate is observed over that same span, so the estimator introduces no
+   second number.
+2. **The finish can actually be framed** — the width the line needs is a finite number this frame.
+
+The second condition exists because the first one alone latched the phase on frames where there was
+nothing to widen to: the ramp then ran on the clock while the segment was inert, and arrived
+part-way up a curve it had never travelled.
+
+The opening is a GLIDE, because two quantities change discontinuously at that instant: the width
+opens by whatever the line requires, and the leader's place in frame flips to its mirror. Pan and
+zoom must move on ONE ease or the frame empties between them.
+
+#### What sets the width at each moment
+
+**The SCHEDULE, and nothing else.** For the whole phase the schedule is the sole author of the zoom.
+It is written in log space — a scale change is perceived logarithmically — and eased with a
+smoothstep, which is continuous in rate and bounded in acceleration by construction.
+
+It has two segments that meet at the threshold:
+
+| | from | to | parameterised by |
+| --- | --- | --- | --- |
+| **WIDEN** | the width the camera stands at when the phase latches | the width the finish needs | its own span, carried |
+| **CLOSE** | the width delivered at the turn | the active state's own factor | the leader's progress to the line |
+
+The widen ends either at the threshold or the moment the shot is already as wide as the line needs,
+whichever comes first — waiting for the clock after the shot has arrived is dead time, and it
+compresses the whole close into the last twentieth of the race.
+
+The close is parameterised by progress rather than by wall clock **so that it lands exactly at the
+crossing** however the field paces itself.
+
+#### Who is framed
+
+The active state chooses its subject; the endgame does not take the state's slot. What the endgame
+adds is WHERE that subject sits and WHO counts as present:
+
+- **The leader starts behind frame centre and walks back to his ordinary place**, on the same
+  parameter the zoom closes on — one move, not two. Starting at the mirror of his ordinary position
+  puts two thirds of the frame ahead of him instead of one third, which is most of the width the
+  design saves.
+- **Racers the race has decided are eased out of the framing.** The judgement is made from what is
+  visible on track — the gap and the closing rate — never from the race plan. It is ONE-WAY and
+  needs two consecutive checks, so it cannot flicker; the easing moves every field the framing reads,
+  not just the screen position.
+
+#### What closes it, and where it arrives
+
+**The crossing closes it.** Both the close's parameter and the leader's walk back reach 1 exactly at
+the line, so the endgame arrives rather than being switched off: the shot is at `_leaderZoom` or
+`_photoFinishZoom` — whichever is running — with the leader at his ordinary framing position and the
+state's own composition underneath. **There is no seam and nothing to hand over.**
+
+#### The invariants — what must be true of every frame
+
+1. **ONE AUTHOR.** While the schedule composes, nothing else writes the zoom. Not a state's entry
+   snap, not a stand-down, not a glide, not a hold.
+2. **MONOTONE AND CONTINUOUS.** The width never reverses inside a segment and never steps between
+   frames.
+3. **THE RAMP ADVANCES ONLY ON FRAMES IT CAN RUN.** A frame with no computable target holds the
+   width it last placed; the parameter does not move. A held width does not move the anchor, which
+   is what stops the demand and the delivery feeding each other.
+4. **RE-ANCHOR, NEVER STEP.** When the target moves for a reason outside the schedule — the state
+   changes, the endpoint factor flips, the segment resumes — the ramp starts again from where the
+   camera IS and eases to the new target over what remains. It never jumps to the new curve.
+5. **THE LINE STAYS FINDABLE.** The close may not go tighter than the width at which the finish is
+   inside the subject's own region. It is a FLOOR under the schedule, not a second author: it cannot
+   make the shot jump, because the close starts at or wider than it and it shrinks monotonically,
+   and it releases exactly at the crossing.
+6. **THE PAN IS EXPRESSED AT THE ZOOM THE FRAME IS DRAWN WITH.** An offset is a product taken from
+   the world origin, so a zoom the pan was not resolved at is multiplied by the anchor's distance
+   from that origin. The correction re-expresses the resolved answer; it never re-decides it.
+
+#### What the endgame deliberately does NOT do
+
+It does not choose the state, pick the subject, or steer. The geometric guarantees still widen the
+shot if a subject would be cut — **a guarantee widens, it never steers**. The endgame replaces the
+STATE's width authority for the duration of the phase and nothing else's.
+
+
+**Where each part of that page lives in the code** (ENDGAME-REWRITE-1). Four of the five headings are
+findable by name, which is the point of the rewrite rather than a side effect of it:
+
+| the page says | the code says |
+| --- | --- |
+| when it opens | `_scheduleEngaged` |
+| what sets the width — the widen | `_scheduleWiden` |
+| what sets the width — the close | `_scheduleClose` |
+| the ramp's parameter | `_scheduleFittedProgress` |
+| invariant 1, one author | `_scheduleComposing`, read by all five sites that enforce it |
+| who is framed | `_forwardFracNow` (the walk back) and `_updateContentionWatch` |
+| invariant 5, the line stays findable | `_lineCeiling`, applied as a floor inside `_scheduleClose` |
+
+The sections below state the same design in the terms the OWNER set it in — his window, his twelve
+requirements, the two conflicts and the two keys. The page above is the mechanism; what follows is
+what it is answerable to.
+
 ### The window, and it is his
 
 **The endgame runs from the endgame threshold to the winner's crossing, and NOTHING outside that
@@ -799,7 +919,15 @@ a verbatim transcript of one run on one commit, which is a historical record, no
 
 ### The tracking lag, as measured today — and it had drifted
 
-<!-- MEASURED: tracking-lag (median/p95 pp per state) @ 76742cab 2026-08-22 depends=client/src/modules/camera/ -->
+<!-- MEASURED: tracking-lag \(median/p95 pp per state\) @ 81d49899 2026-08-22 depends=client/src/modules/camera/ -->
+
+**RE-MEASURED IN FULL FOR ENDGAME-REWRITE-1, AND EVERY FIGURE IS IDENTICAL TO THE DIGIT** —
+10923, 159, 17169, 9373, 4323, 1865 frames and both percentiles on every state, PHOTO_FINISH
+included at 3.08 / 8.79. It was RUN rather than argued from the fingerprints, and the distinction
+matters here more than usual: that block RE-WRITES the endgame path — a dead helper removed, five
+inline copies of one predicate replaced by a name, and a 385-line function split into a sequence of
+named steps — so the guard is right to ask, and "CAMERA came back byte-identical" is an argument
+about a different instrument's sampling rather than a measurement of these numbers.
 
 **RE-MEASURED IN FULL FOR ENDGAME-LAND-CLEAN-1, AND THIS IS THE FIRST TIME THE SWITCHES ARE ON.**
 Every entry above this one could rest on the same sentence — the switches default off, so nothing
