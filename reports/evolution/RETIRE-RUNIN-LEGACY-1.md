@@ -181,7 +181,56 @@ than switched off, the full list of what went with it, and the archive tag.
 
 ---
 
-## 5 · A DEFECT OF MY OWN, FOUND AND REPAIRED HERE
+## 5 · WHAT THE BROWSER GATE ACTUALLY COSTS — a second claim that was never measured
+
+`SHIP-CEREMONY.md` step 0a said **"one race, space-sprint seed 9 … ~130 s"**. Both halves were
+wrong, and neither had ever been timed.
+
+**`--gate` has always run TEN races.** It sets `seeds=9` and `arm=shipped` and leaves the track list
+at ALL — so it runs every track, one race each. The "one race, space-sprint" sentence describes the
+MANUAL invocation in the script's own usage header (`--tracks=space-sprint --seeds=9 --arm=shipped`),
+which is a different command. Both numbers were written into the ceremony in the same commit that
+introduced the flag, before either had been run.
+
+**MEASURED — three runs of `--gate`: 671 s, 749 s, 885 s.** Eleven to fifteen minutes, not 130 s. (A
+fourth ten-race run at 811 s is deliberately excluded: same race COUNT, different command — two seeds
+across five tracks at a different concurrency.)
+
+### The trade, with numbers
+
+The fixed cost dominates — a build, two servers and a browser is about 200 s before any race runs:
+
+| scope | wall clock | what it holds |
+| --- | --- | --- |
+| 1 race — space-sprint | **267 s** | the JUMP extreme: the worst single-frame step on any track, 0.0339 ln, twice the next. Also the track the founding defect was found on. |
+| 2 races — + city-circuit | **340 s** | both extremes of every column: the above PLUS the widest frame (10.9 corridors, 4x river-run) and the longest standstill (1050 ms, 5x space-sprint's 200) |
+| 10 races — `--gate` today | **671–885 s** | the eight tracks that sit strictly INSIDE both extremes on every column |
+
+**ONE RACE IS NOT ENOUGH, and the reason is structural rather than statistical.** An open track and a
+closed one are different regimes in the endgame — on a closed track the finish is most of a lap away
+at the threshold, so the shot opens to the whole world. Space-sprint cannot stand in for city-circuit
+on any column that matters: 6.6 corridors against 10.9, and 200 ms of standstill against 1050. So per
+the instruction's own conditional, `--gate` is NOT reduced to one race and the ceremony states the
+real cost instead.
+
+**AND THE EIGHT EXTRA TRACKS HAVE NEVER CAUGHT ANYTHING.** Across both full 80-race sweeps on record,
+the gate's own scope — seed 9, shipped arm, all ten tracks — produced **0 invariant events**. Every
+violation those sweeps found sits at **seed 2**, which `--gate` does not run. They are a regression
+net rather than a detector, and a net that has never caught anything looks exactly like an inert one
+(Lesson 209) — which is why the number is stated rather than the reassurance.
+
+**THE DECISION IS LEFT OPEN AND IS THE OWNER'S:** two races for 340 s hold both extremes of every
+column at 45% of today's cost. `--gate` was NOT changed here; only the document was.
+
+**One of the ten is NOT SCORABLE**: garden-path's race never finishes at seed 9, so it contributes
+nothing to the twelve items, though it still runs the five window invariants.
+
+**Nothing else changed for this.** It is a script's scope and a document: no source file was touched,
+so no fingerprint can move, and none did.
+
+---
+
+## 6 · A DEFECT OF MY OWN, FOUND AND REPAIRED HERE
 
 **Both MEASURED stamp ids on master were corrupted, by me, in the previous block.**
 ENDGAME-REWRITE-1's stamp script took the id as a REGEX SOURCE and then wrote that same escaped

@@ -415,8 +415,20 @@ went missing).
       `eslint` clean, `build` green, the full test suite green on the working tree before you measure.
 - [ ] **0a. THE CAMERA SHIPS ONLY AFTER A REAL BROWSER HAS RUN IT.** If the merge touches
       `client/src/modules/camera/` or `client/src/screens/RaceScreen/`, run
-      **`node scripts/viewer-invariants.mjs --gate`** — one race, space-sprint seed 9, the shipped
-      defaults, on the PRODUCTION BUNDLE in Chromium. **~130 s, and it must be clean.**
+      **`node scripts/viewer-invariants.mjs --gate`** — **TEN races: every track, seed 9, the
+      shipped arm**, on the PRODUCTION BUNDLE in Chromium. **It takes 11-15 minutes and it must be
+      clean.**
+
+      **THE COST WAS WRONG HERE UNTIL 2026-08-22 AND IT WAS NEVER MEASURED.** This step used to read
+      "one race, space-sprint seed 9 … ~130 s". `--gate` has never done that: it sets the seed and
+      the arm and leaves the track list at ALL, so it has always run ten. The 130 s described the
+      MANUAL single-track invocation in the script's own usage header, and both numbers were written
+      into this document in the same commit as the flag, before either had been timed.
+
+      **MEASURED, three runs of `--gate` on this machine: 671 s, 749 s and 885 s** — 11 to 15
+      minutes, and take the top of that as the planning figure. (A fourth 10-race run at 811 s is
+      deliberately NOT counted: it swept two seeds across five tracks at a different concurrency, so
+      it is the same race COUNT and not the same command.)
 
       **Why it is HERE and not in `verify`.** It builds a bundle, starts its own API and app server
       and launches a browser; putting that in `verify` changes what `verify` IS, and `verify` runs on
@@ -450,7 +462,38 @@ went missing).
       once with two single-threaded measurement scripts alongside it (64 of 80 races failed). It is
       the last thing done before the report, with nothing else on the machine.
 
-      **What it costs a ship:** 130 s, plus the one-off `npx playwright install chromium`. It needs
+      **WHY TEN AND NOT ONE — the trade, measured rather than assumed.** The fixed cost dominates:
+      a build, two servers and a browser is about 200 s before any race runs, so the races themselves
+      are cheap at the margin.
+
+      | scope | wall clock | what it holds |
+      | --- | --- | --- |
+      | 1 race — space-sprint | **267 s** | the JUMP extreme: the worst single-frame step on any track (0.0339 ln, twice the next). It is also the track the founding defect was found on. |
+      | 2 races — space-sprint + city-circuit | **340 s** | both extremes of every column: the above, PLUS the widest frame (10.9 corridors, 4x river-run) and the longest standstill (1050 ms, 5x space-sprint's 200) |
+      | 10 races — `--gate` today | **671-885 s** | the eight tracks that sit strictly INSIDE both extremes on every column |
+
+      **ONE RACE IS NOT ENOUGH, and the reason is structural rather than statistical.** An open track
+      and a closed one are different regimes in the endgame — on a closed track the finish is most of
+      a lap away at the threshold, so the shot opens to the whole world — and space-sprint cannot
+      stand in for city-circuit on any column that matters: it is 6.6 corridors against 10.9, and
+      200 ms of standstill against 1050.
+
+      **WHAT THE OTHER EIGHT BUY IS NOT NOTHING, BUT IT IS NOT MUCH EITHER, AND THE NUMBER IS ZERO SO
+      FAR.** Across both full 80-race sweeps on record, the gate's own scope — seed 9, shipped arm,
+      all ten tracks — produced **0 invariant events**. Every violation those sweeps found sits at
+      seed 2, which `--gate` does not run. The eight extra tracks are a regression net, not a
+      detector: they have never caught anything, which is what a clean net looks like and is also
+      what an inert one looks like (Lesson 209).
+
+      **SO THE OPEN DECISION IS THE OWNER'S**, stated with its numbers rather than taken quietly:
+      `--gate` can become **two races for 340 s** and still hold both extremes of every column the
+      sheet reports, at 45% of today's cost — or it stays at ten and this document now says what ten
+      costs. It has not been changed here.
+
+      **One of the ten is also NOT SCORABLE**: garden-path's race never finishes at seed 9, so it
+      contributes nothing to the twelve items, though it still runs the five window invariants.
+
+      **What it costs a ship:** 11-15 minutes, plus the one-off `npx playwright install chromium`. It needs
       no network and touches nothing of the owner's — it builds to `client/dist-sweep`, runs its own
       API on its own port with an empty data directory, and creates its own account, for the reason
       E2E-LOGIN-1 gives. Delete `client/dist-sweep` afterwards; it is gitignored.
