@@ -187,7 +187,9 @@ the ceremony, and never on an agent's own authority.
 
 **engine reach** — the transitive closure of what `raceCore.js` imports. If your change touches a file
 inside it, the race can see your change and the world fingerprint must be run. Ask the repo rather
-than guessing: `node scripts/engine-reach.mjs --check <paths>`.
+than guessing: `node scripts/engine-reach.mjs --check <paths>`. **It answers about the paths you
+GIVE it — it reads no diff of its own** — so exit `2` means it was asked nothing and is never a
+clearance; `1` is the real negative.
 
 **guard** — a script that checks a rule and fails loudly. **verify** — `npm run verify`, which picks
 the guards that can possibly have something to say about your diff. Both owned by
