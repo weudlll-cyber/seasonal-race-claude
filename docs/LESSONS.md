@@ -3146,6 +3146,28 @@ range (the shipped COMBO15 `bandBias`), keeping in-band racers on FREE dice (pil
 reports/evolution/ACTION-FREEBAND-1.md + ACTION-FREEBAND-2.md (the cliff) and reports/evolution/FAIR-ARRIVAL-1.md
 (B-vs-C: aim the dice works, wall the position fails).
 
+**THE SCOPE, SETTLED BY THE OWNER, 2026-08-25 — and the ambiguity that made it necessary.** This lesson's
+TITLE says "Never the Motion After the Dice"; its CONSEQUENCE forbids only a post-dice **positional** force,
+naming wall, spring and authored curve; and **every arm it measured was positional** — ARM C was a literal band
+wall. So it proves a claim about positional forces and asserts a broader one about motion, and the two do not
+agree about a correction applied to SPEED.
+
+**His reading is the NARROW one: what is forbidden is a positional force that DRAGS a racer to a place — a
+wall, a spring, an authored curve — and not a speed correction serving the drawn outcome.** The race plan's
+trajectory controller is therefore not a loophole; it is a mechanism he added deliberately with the director,
+to make the drawn ranks actually reachable and to keep the race exciting. `areaBonusMult` is a second term of
+that kind.
+
+**NOTHING ABOVE IS REWRITTEN and nothing about the evidence changes** — every arm this lesson measured WAS
+positional, and that remains the whole of what it proved. What is added is which reading of its title is
+operative.
+
+**WHY THIS NOTE EXISTS AT ALL.** The ambiguity was not harmless: `docs/FAIRNESS.md` claimed for two months
+that the shipped arrival figure was reached "not by any positional force" and by the draw bias alone, a
+sentence written 70 days AFTER the controller already existed. A lesson whose title and consequence disagree
+in scope is a lesson that can be honestly cited for a claim the code does not support. Evidence:
+reports/evolution/FAIRNESS-PROMISE-1.md.
+
 ## Lesson 185 — The Decidedness Law: The Fight IS the Undecidedness; Sort PARTIALLY, Not FULLY
 
 Action is not a thing you add on top of a plan — it is the plan being _not yet decided_. Every attempt to

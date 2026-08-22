@@ -39,9 +39,28 @@ in the band of their drawn place, per track.** Not a delta versus a previous wor
 absolute share. A world is fairer than another if it lands more racers in their drawn bands.
 
 - Pre-COMBO15 (the servo world) delivered **69–83%** arrival across the standard tracks.
-- **COMBO15 delivers 85–90% / track** (binding N=100 record) — the current shipped headline. It reaches this
-  by biasing the re-roll DRAW toward the drawn band (the Cliff Law's correct sign — correct the draw, never
-  the motion after the dice; [LESSONS.md L184](LESSONS.md)), not by any positional force.
+- **COMBO15 delivers 85–90% / track** (binding N=100 record) — the current shipped headline.
+  **TWO mechanisms produce it, and the split between them has never been measured.**
+
+  1. **The re-roll DRAW is biased toward the drawn band** — the Cliff Law's correct sign, correct the draw
+     rather than drag the racer ([LESSONS.md L184](LESSONS.md)), clamped to the honest tempo range.
+  2. **The DIRECTOR corrects speed toward the drawn outcome.** The race plan's trajectory controller writes
+     `trajectoryMult` every physics step from each racer's rank/band error, eased in over a transition, and
+     `areaBonusMult` is a second planner-written term of the same kind. Both are multipliers on SPEED in
+     `raceCore.js`'s product; neither moves a racer to a place.
+
+  **NO POSITIONAL FORCE IS USED** — no wall, no spring, no authored position curve. That is the class L184's
+  evidence closed, and it stays closed.
+
+  **THE OWNER'S READING, 2026-08-25:** the director's speed correction is INTENDED, not a loophole. Originally
+  there was only the re-roll, the start bonus and the finish bonus; since the director exists, steering by the
+  director is also possible — to make the drawn ranks actually reachable AND to keep the race exciting.
+
+  **THE SPLIT IS NOT ESTABLISHED.** No measurement anywhere attributes the 85–90% between the draw bias and the
+  controller: 47 reports mention `trajectoryMult` and none of them mentions it beside `bandBias`. Deciding
+  whether to spend a sweep on it is the owner's call and has not been taken. **Do not quote either mechanism as
+  the reason for the headline** — the honest statement is that both are present and the shares are unknown
+  (FAIRNESS-PROMISE-1).
 
 Judge a track on its ABSOLUTE arrival, not on the delta: a track already near its structural ceiling (e.g.
 garden-path, below) shows a small delta while sitting at a perfectly good absolute number.
