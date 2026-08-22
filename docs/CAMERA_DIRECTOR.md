@@ -509,6 +509,148 @@ here — see RUNIN-PACE-1 §2.
 
 ---
 
+## 3b. The endgame — the schedule, his twelve requirements, and the two switches (ENDGAME-LAND-CLEAN-1, 2026-08-22)
+
+> **What §3a owns and what this owns.** §3a is the RUN-IN: the mechanism that bounds whatever shot is
+> running so the finish stays framable, and the geometry that makes an even close impossible. This
+> section is the ENDGAME: the last stretch of the race as the OWNER defined it, the requirements he
+> set for it, and the two behaviours added to meet them. Nothing here restates §3a; where the two
+> touch, this section points.
+
+### The window, and it is his
+
+**The endgame runs from the endgame threshold to the winner's crossing, and NOTHING outside that
+window is in scope.** He said so on 2026-08-24 when a gate was failing on frames from the middle of
+a race: his requirements apply from that point onwards only. The threshold is the existing key
+`endgameThreshold`; its value lives in `defaults.js` and nowhere else.
+
+That scoping is not a convenience. Before it, invariant 2 was failing on group-framing states that
+run legitimately in mid-race, and the temptation was to give the invariant a duration rule so those
+frames would pass. **He was explicit that it does not need one — it needs scoping.** A rule loosened
+until the wrong frames pass no longer says anything about the right ones.
+
+### The shape of the move: a widen, then a close, and ONE author
+
+The endgame is a **schedule**, not a ceiling. A ceiling has no opinion about MOTION — it permits any
+path underneath it, including standing still and then jumping — and standing still is what the
+measurements found: 43% of the endgame at a standstill, the longest freeze over two seconds.
+
+The schedule is authored in **log space** with smoothstep easing, because the eye judges width
+multiplicatively: the same number of pixels is a different move at a wide shot than at a tight one.
+It has two parts.
+
+- **The widen**, ending at the threshold. It opens to whatever the finish needs, which by §3a is the
+  line's own ceiling and nothing else.
+- **The close**, from the threshold to the crossing. Along it the schedule is the **SOLE AUTHOR of
+  the zoom**. Not one candidate among several in a `Math.min`, not a floor a state may undercut —
+  the sole author.
+
+**Why sole authorship, and it was measured before it was written.** Five separate places in
+`CameraDirector.js` wrote the zoom inside the window, and the picture strobed because they disagreed
+frame to frame: the state's own entry snap, the OVERVIEW stand-down, the LEAD_CHANGE stand-down, the
+run-in's held zoom, and the glide's pivot. Each was individually reasonable. **A quantity with five
+authors has no design; it has an argument, and the viewer watches the argument.** The repairs are
+listed under "the five authors" below, each with the test that fails without it.
+
+### His twelve requirements, and the sheet that grades them TOGETHER
+
+They were fixed before the work started and were not changed during it. `scripts/endgame-sheet.mjs`
+grades all twelve from one pass of a race's own frames, **in a real browser, on the production build,
+with the browser's own camera seed**, and `scripts/viewer-invariants.mjs` prints the sheet on EVERY
+race it runs. That is the point of the file: before it, each block repaired the one item it was aimed
+at and reported the numbers of that item, and something else broke unwatched every time.
+
+| # | The requirement | How it is graded |
+| --- | --- | --- |
+| 1 | At the deadline, the winner AND the line are on screen | both, from the delivered frame — not a margin |
+| 2 | The crossing sits at one of the two factors the director already carries | `_leaderZoom` or `_photoFinishZoom`, within a tolerance on a comparison |
+| 3 | The close begins early and runs slowly and continuously | **reported, not gated** — where the widest frame falls, the span after it, the rate it then holds |
+| 4 | Never as wide as today's shot | against **today's own measured widest frame**, supplied to the sheet; no invented ceiling |
+| 5 | The viewer can always tell where the line is | the visible SHARE of the band; partial counts; **frames with none of it is the verdict** |
+| 6 | No jump | the **worst SINGLE frame**, never an average. The bound is `ln 2` — halving or doubling the picture between two frames is not a camera move |
+| 7 | The line, the leader and everyone still in with a chance are in frame | frames with any contender off canvas |
+| 8 | A pause is allowed; a long standstill is not | **reported as a cost, not gated** — his requirement says so in as many words |
+| 9 | The finish happens near the middle of the frame, and the winner is never cut | **his own figure** for the placement; "never cut" is the SUBJECT's inner region |
+| 10 | The leader's walk back through the run-in stays | the leader is ever behind centre inside the window |
+| 11 | Never a frame without the course; no reversal of the close | frames with no course on canvas, plus re-openings |
+| 12 | Nothing before the window changes | by comparing two runs, not from one |
+
+**Items 3, 8 and 12 carry no pass/fail on purpose.** Two of them are costs he asked to be SHOWN
+rather than bounded, and the third cannot be answered from a single race. A row that cannot be graded
+from the picture says so rather than carrying an easier number in its place — Lesson 218.
+
+### THE TWO PROVEN CONFLICTS — neither is a bug, and both are his to overturn
+
+**Item 7 against item 9.** "Everyone still in with a chance" is answered geometrically by
+`_abreastContenders` — within one body length NOW — while the contention watch answers it by
+projection. Holding a racer the geometry still calls a contender pulls the frame back off the winner
+and corners him: measured, city-circuit put the winner at `x = 0.105` with 24 cut frames, breaking
+items 9 and 2 together. Releasing him leaves exactly one racer at the frame edge on a minority of
+races. **Item 9 took the win, on his own sentence that the crossing is the moment.**
+
+**Item 4 against item 5.** Keeping the band findable costs width, and width is exactly what item 4
+bounds. Both numbers are reported side by side on every run; no setting maximises both.
+
+### The two keys this added, and what each one IS
+
+Both live in `defaults.js` with every other camera default, and both have a Dev Screen control in
+**7 · Endgame** — this project's rule is that a behaviour the owner might want to compare must be
+flippable without editing anything.
+
+- **`contentionWatch`** — from the threshold on, the camera keeps asking which racers can still WIN,
+  **from what is visible on track** (the gap and the speed difference), never from the race plan; he
+  was emphatic about that. A racer the race has decided is eased out of the framing over the run-in's
+  own opening span, so the shot is not anchored on someone who finished fifth a second down.
+  **The verdict is ONE-WAY and needs two consecutive checks** — that is the no-flicker constraint, and
+  it is why the answer cannot oscillate. The check interval is its own key, `contentionCheckMs`.
+  **The easing must move every field the framing reads.** Its first form eased `x` and `y` only and
+  moved nothing at all, because `getPanTarget` computes a pair's midpoint from `t`.
+- **`bandFloor`** — the endgame's width floor guarantees the finish inside the SUBJECT's own region
+  rather than the companion margin. It is tighter, so it asks for a wider shot; measured, that is what
+  puts the band back on screen where it was leaving it. It buys item 5 and spends item 4, which is the
+  second conflict above. **It introduces no new number** — one existing constant in place of another.
+
+**Both ship on.** That is a decision, not a default that drifted: the owner judged a production build
+with both switched on, on 2026-08-24, and accepted it. Both switches are kept so the two behaviours
+can still be compared.
+
+### The five authors, and the other repairs — each with the test that fails without it
+
+Every item below is an empirical finding, not a preference. Each has a test that fails if the repair
+is removed; that is the standard for anything on this list.
+
+1. **The five zoom authors during the close.** The stand-downs and the entry snaps are guarded so the
+   schedule composes alone, and the run-in's hold no longer abdicates.
+2. **The glide's pan re-expressed at the DRAWN zoom, scoped away from the glide itself.** The pan
+   target and the zoom were computed at different scales; unscoping the pivot regressed the side jump
+   and was reverted on that measurement.
+3. **The carried ramp advances only on RUNNABLE frames.** Advancing it on frames that could not run it
+   is what turned a stagnation into an amplitude.
+4. **The camera seed comes from the RACE seed**, so a race can be stood in; unseeded "Start Race" keeps
+   its variety. Lesson 219 is why every headless harness was blind before this.
+5. **The winner's placement and the leader's walk back** — items 9 and 10, both graded on the picture.
+6. **`check-runin-frame` grades HIS SENTENCE**: the band on the canvas, with the browser's camera seed
+   and a corrected band sampler. The sampler had been walking a segment 300x too long, because
+   `getPosition`'s lateral argument is NORMALISED (see §3.2). **Do not weaken this guard to go green.**
+
+### THE CORRECTION TO `f0cb5179` — the pan lag was NOT why, and that merge message cannot be rewritten
+
+`f0cb5179`'s message says the line goes off screen **"and the pan lag is why"**, and names fixing the
+lag as the thing that must happen first. **That is false, and it was falsified by measurement two days
+later.** `PAN-LAG-ACCOUNT-1` decomposed the endgame frame by frame across forty runs: **the pan's
+residual is 0.0 px on all of them**, and the ZOOM beats the pan on 35 of 36 endgame runs. The
+414–891 px figure the merge message rests on was misnamed — it is not lag in the follower, it is the
+frame being written by the zoom about the world origin while the follower does exactly what a
+first-order follower does and nothing else (Lesson 217).
+
+**The message is in the history, and history is not rewritten here, so the correction lives in the
+documents instead** — in this section, in `docs/DEAD-ENDS.md` §P, and in `PAN-LAG-ACCOUNT-1`'s own
+report. Anyone who reads that merge message and reaches for the smoothing constant will find the
+refutation from any of the three. **The lever is the zoom's schedule, which is what this section
+describes.**
+
+---
+
 ## 4. Battle detection
 
 `battleGroup.js`. A group qualifies when all four hold at once:
@@ -657,7 +799,20 @@ a verbatim transcript of one run on one commit, which is a historical record, no
 
 ### The tracking lag, as measured today — and it had drifted
 
-<!-- MEASURED: tracking-lag (median/p95 pp per state) @ 47e83a41 2026-08-25 depends=client/src/modules/camera/ -->
+<!-- MEASURED: tracking-lag (median/p95 pp per state) @ 76742cab 2026-08-22 depends=client/src/modules/camera/ -->
+
+**RE-MEASURED IN FULL FOR ENDGAME-LAND-CLEAN-1, AND THIS IS THE FIRST TIME THE SWITCHES ARE ON.**
+Every entry above this one could rest on the same sentence — the switches default off, so nothing
+shipped moves — and that sentence is now retired: `contentionWatch` and `bandFloor` SHIP ON, so this
+harness runs the endgame the viewer gets. **Only PHOTO_FINISH moved, and it moved the right way:
+median 3.54 -> 3.08 pp, p95 8.91 -> 8.79 pp.** Every other state is identical to the digit, frame
+counts included — 10923, 159, 17169, 9373, 4323, 1865 — and PHOTO_FINISH's own frame count is
+unchanged too, so the state ran for exactly as long and simply followed a little closer while it did.
+
+**That signature is the design's, and it is the reason to believe the measurement.** The endgame's
+width authority reaches PHOTO_FINISH and no other state, because the window opens at the endgame
+threshold and every other state has left by then; a change that moved BATTLE_ZOOM or OVERVIEW here
+would be evidence of a leak, not of a better shot. The table below carries the new figures.
 
 **RE-MEASURED IN FULL FOR ENDGAME-COMPLETE-1, AND EVERY FIGURE IS IDENTICAL TO THE DIGIT** —
 frame counts included. That block adds `bandFloor` beside `contentionWatch`, and BOTH default to
@@ -762,9 +917,10 @@ measured rather than argued.
 | LEADER_ZOOM   | 17169  | 3.72      | 9.32   |
 | LEAD_CHANGE   | 9373   | 4.42      | 7.42   |
 | OVERVIEW      | 4323   | 2.48      | 16.00  |
-| PHOTO_FINISH  | 1865   | 3.54      | 8.91   |
+| PHOTO_FINISH  | 1865   | 3.08      | 8.79   |
 
-(ENDGAME-SCHEDULE-1's figures. The PHOTO-FINISH-STATE-1 run the paragraph below describes read
+(ENDGAME-LAND-CLEAN-1's run, which differs from ENDGAME-SCHEDULE-1's only in PHOTO_FINISH's two
+percentiles — that run read 3.54 / 8.91. The PHOTO-FINISH-STATE-1 run the paragraph below describes read
 BATTLE_ZOOM 10935 / 5.30 / 9.77, COMEBACK_ZOOM 162 / 6.84 / 7.50, LEADER_ZOOM 17175 / 3.73 / 9.06,
 LEAD_CHANGE 9378 / 4.42 / 7.26, OVERVIEW 4248 / 2.43 / 16.00, PHOTO_FINISH 1865 / 3.11 / 25.39.)
 

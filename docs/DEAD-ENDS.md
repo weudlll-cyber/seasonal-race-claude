@@ -422,6 +422,41 @@ run, no production change, and it is what would have made five of the six shapes
 Both flatten the chord without touching the boundary, and both are the owner's taste rather than
 anything derivable — so they are a question to put to him, not a block to start.
 
+## P. Fixing the PAN LAG to keep the finish line on screen (2026-08-19 … 08-22) — and the correction to a merge message that cannot be rewritten
+
+**THE CLAIM, AND WHERE IT IS WRITTEN.** Merge commit `f0cb5179` says in as many words: *"the line
+goes off screen, and the pan lag is why"*, and concludes that the lag has to be fixed before the
+line's own definition can be adopted. It rests on a measured median target-to-delivered gap of
+414 px, up to 891 px, at the widest endgame frames.
+
+**IT IS FALSE.** `PAN-LAG-ACCOUNT-1` decomposed the endgame per frame across forty runs, ten tracks,
+both arms:
+
+| What was measured | Result |
+| --- | --- |
+| The pan follower's own residual — delivered against its target | **0.0 px on all 40 runs** |
+| Which term moves the frame's centre during the endgame | **the ZOOM, on 35 of 36 endgame runs** |
+| The 414–891 px figure `f0cb5179` names | real, but it is not the follower — it is the zoom pivoting about the world origin |
+
+The mechanism is Lesson 217: `offset += (target − offset) × lf` with `lf ∈ (0,1)` approaches from
+behind and **cannot** overshoot, so a frame ahead of its aim proves a second writer. The camera zooms
+about the WORLD ORIGIN, and the offset is a product `−camX × effectiveZoom`, so a change in zoom moves
+the centre by that fraction of the anchor's distance from the origin — hundreds of world pixels per
+second of opening, with the pan contributing a few.
+
+**SO THE LEVER IS THE ZOOM'S SCHEDULE, NOT THE SMOOTHING.** Do not propose a smoothing constant, a
+lerp factor, a lag budget or a rate limit for this symptom. Two of those were separately built and
+measured out already (`docs/CAMERA_DIRECTOR.md` §3a: a tighten-rate limit costs the crossing shot an
+order of magnitude; a rate limit IS a delay in arriving, and the crossing is where arrival is due).
+What DID work is in §3b: one author for the zoom inside the window, and a floor sized on the band.
+
+**WHY THIS ENTRY EXISTS AT ALL.** The merge message is in the history and this project does not
+rewrite history — so the false sentence stays reachable by anyone running `git log` on the endgame,
+with nothing beside it. **This entry, `docs/CAMERA_DIRECTOR.md` §3b and `PAN-LAG-ACCOUNT-1`'s own
+report are the correction**, and it is findable from all three: the document that owns the camera, the
+document that owns retired approaches, and the report that did the measuring. A correction that lives
+only in a banner at the top of one report is a correction nobody will meet.
+
 ## What this leaves open (not tried, not excluded)
 
 Formats that make a breakaway irrelevant rather than catching it: **elimination** (last-at-call out of

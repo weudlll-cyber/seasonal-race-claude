@@ -49,7 +49,14 @@ the correct response is to say so in this table instead of building one.
 
 ### Phase 6, MEASURED — and both of the old numbers were wrong
 
-<!-- MEASURED: straggler-truth (phase 6 duration, zoom-out lead, stragglers in shot) @ 47e83a41 2026-08-25 depends=client/src/modules/camera/CameraDirector.js -->
+<!-- MEASURED: straggler-truth (phase 6 duration, zoom-out lead, stragglers in shot) @ 76742cab 2026-08-22 depends=client/src/modules/camera/CameraDirector.js -->
+
+**RE-MEASURED IN FULL FOR ENDGAME-LAND-CLEAN-1, WITH THE SWITCHES ON, AND IDENTICAL TO THE DIGIT** —
+6.18/4.57, 7.53/5.75, 4.45/2.30, 5.95/4.38, and the same racers in shot and the same settled-frame
+counts. **Every entry below this one is justified by "the switch defaults off", and that reason has
+just expired:** `contentionWatch` and `bandFloor` ship ON from this block. So the claim rests only on
+the structural one now, and it is the stronger of the two — the endgame's width authority owns a
+window that CLOSES at the first crossing, and phase 6 BEGINS there. The two never overlap by a frame.
 
 **RE-MEASURED IN FULL FOR ENDGAME-COMPLETE-1, AND IDENTICAL TO THE DIGIT AGAIN** — same four
 pairs. Both of that block's switches default off, and phase 6 begins at the first crossing in any case.
