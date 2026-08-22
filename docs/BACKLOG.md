@@ -9,6 +9,62 @@ Items ranked by urgency within each bucket. ✅ = done, 🔜 = next, ⏳ = waiti
 
 ---
 
+## HOW MUCH ACTION — a host-facing control (2026-08-22, the owner's order)
+
+**THE REQUIREMENT, in his terms.** One control over **how much race action a race has**, reachable by
+a **normal host** in the ordinary setup flow — **not a developer knob**. It has been raised before and
+lost each time; this section is its home, and it is the reason the section sits first.
+
+**NOTHING IS DESIGNED HERE.** No mapping, no key, no default, no range, no wiring. What follows is the
+facts a later block would start from, and nothing else.
+
+### The candidates — UNVERIFIED
+
+**Every key below is a CANDIDATE ONLY.** They were gathered by reading `defaults.js` for keys that
+plausibly govern how much action a race has. **No claim is made that any of them belongs on the dial,
+that the list is complete, or that they are independent of one another** — several plainly are not.
+
+**Their VALUES are deliberately absent and the addresses are given instead:** a config value has one
+home, `client/src/modules/storage/defaults.js`, and no document may restate it (CONFIG-TRUTH-1). The
+line numbers are the address; read the value there.
+
+| candidate key | where | what it plausibly governs |
+| --- | --- | --- |
+| `gapRerollEnabled`, `gapRerollStrength`, `gapRerollThresholdLengths`, `gapRerollMode` | `defaults.js:1021-1024` | how hard a gap is closed by re-drawing |
+| `b2AttackHeroes`, `b2AttackPeakRank`, `b2AttackFinalRank` | `defaults.js:996-998` | how many attackers rise, and how far |
+| `reRollVariationPercent`, `reRollIntervalDivisor` | `defaults.js:892-894` | how much and how often tempo is re-drawn |
+| `choreoIntensity`, `choreoPackBandStrictness` | `defaults.js:954-955` | how strongly the plan shapes the field |
+| `pulkFrontPool`, `pulkLeaderBrake`, `pulkChallengerBoost`, `pulkEnvelopeMaxEffect` | `defaults.js:929-1029` | the lead-rotation mechanism's reach and its realism clamp |
+| `chaosSteerGain` | `defaults.js:922` | the steering noise added to the field |
+
+### The two surfaces, with addresses
+
+- **HOST-FACING:** `client/src/screens/SetupScreen/SetupScreen.jsx:930` renders the **Race Settings**
+  panel, which delegates to `client/src/screens/SetupScreen/RaceSettings.jsx`. **That file is 86 lines
+  and carries exactly ONE control today — Race Duration, at `RaceSettings.jsx:32`.** This is the
+  surface the requirement names, and it is nearly empty, which is the useful part of this fact.
+- **DEVELOPER-FACING:** `client/src/screens/DevScreen/sections/DynamicsTuningSection.jsx` and
+  `BehaviorTuningSection.jsx`. Every candidate above is reachable here today, and reaching them
+  requires the Dev Screen — which is exactly what the order says is not enough.
+
+### The open questions — QUESTIONS ONLY, no answers proposed
+
+1. **What does one dial map onto?** The candidates are not independent: `gapReroll*` and the pulk
+   rotation both close gaps, by different means. A single control is a mapping decision, not a
+   selection.
+2. **Is the range discrete or continuous?** Race Duration beside it is discrete (four buttons). Whether
+   action should match that shape is undecided.
+3. **What does the dial do to the band-fairness promise and its gate?** `docs/FAIRNESS.md` binds the
+   shipped world to band arrival with a gate. **A host-movable action control can move a racer off its
+   drawn band, so either the dial is bounded by the gate or the gate becomes a function of the dial.**
+   Neither is chosen here, and this is the question that most needs answering before anything is built.
+4. **What happens to a saved race, a replay, and the fingerprints** when the dial moves? Not
+   investigated.
+
+**NOTHING ABOVE IS A PROPOSAL.** It is the record of an order and the facts a later block starts from.
+
+---
+
 ## Documentation (2026-08-07, from DOC-ORDER-1)
 
 - [ ] **Authentication and authorization — DESIGN EXISTS, nothing is built.** The full v3.2 design
@@ -33,7 +89,10 @@ Items ranked by urgency within each bucket. ✅ = done, 🔜 = next, ⏳ = waiti
 > **His words:** once the camera is finished, all camera defaults get set to his taste **in one
 > sitting**. This section exists so that sitting costs ONE ceremony instead of one per knob.
 
-- [ ] **FIRST ITEM — `minRacersVisible` is already done and waiting.** Branch
+- [x] **CLOSED 2026-08-22 by `46736d81`** — the shipped default is 5 (`defaults.js:883`) and
+      `git ls-remote --heads origin | grep -c min-racers-visible` returns 0, so the branch is gone from
+      the origin. **~~FIRST ITEM — `minRacersVisible` is already done and waiting.~~** The reasoning below
+      is kept because it states a general rule about branches that outlive their decision. Branch
       **`feat/min-racers-visible-5`** (`c57e37d4`) sets the shipped default to the value his own
       recorded verdict names — his words on 2026-08-05, _"`minRacersVisible` stays at 5"_, against a
       source that said 3 ([CAMERA_DIRECTOR.md §8.1](CAMERA_DIRECTOR.md)). It is **committed,
