@@ -457,6 +457,42 @@ report are the correction**, and it is findable from all three: the document tha
 document that owns retired approaches, and the report that did the measuring. A correction that lives
 only in a banner at the top of one report is a correction nobody will meet.
 
+## Q. The ceiling-and-hold run-in — RETIRED, not deprecated (2026-08-22)
+
+**WHAT IT WAS.** The endgame's first accepted shape: open far enough that the finish line sits well
+in frame, HOLD that width, then close in one sweep whose release moment is derived from the observed
+pace. It shipped, it was tuned over several blocks, and it was replaced by the SCHEDULE — a position
+for every frame, moving through the whole phase and arriving at the crossing.
+
+**WHY IT WENT.** Two reasons, and the second is the one that matters.
+
+1. **It was measured worse on every figure in its own justification table** — standstill, the longest
+   static run, the deadline, the arrival error, the widest frame, smoothness, and the number of
+   racers cut. The table is in [CAMERA_DIRECTOR.md](CAMERA_DIRECTOR.md) §3b, beside the design it
+   argues for.
+2. **A held width is a BOUND, and a bound has no opinion about MOTION.** It permits any path
+   underneath it, including standing still and then jumping — which is what the owner saw and
+   rejected twice. That is not a tuning failure; it is what the shape is.
+
+**WHY IT IS GONE RATHER THAN SWITCHED OFF.** It lived behind `runInSchedule`, which shipped ON and
+had **no Dev Screen control** — so the old arm was unreachable in the shipped product and unreachable
+from the UI, while costing a second implementation of the endgame that every later repair had to be
+kept consistent with. A lever nobody can pull is not a choice; it is a maintenance obligation with no
+benefit. The owner's decision, 2026-08-25: retire it fully.
+
+**WHERE IT IS NOW.** The tag **`archive/runin-ceiling-hold`** (`bb1e74df`) is the last commit that
+contains it, with its tests, its two pace diagnostics and its justification comments intact. Check it
+out to read it; do not reintroduce it.
+
+**WHAT WENT WITH IT, so a reader knows the removal was the whole mechanism and not just the switch:**
+`_runInHoldCeiling`, `_runInReleaseProgress`, `_runInShouldRelease`, `_runInStartProgress`,
+`_runInStartTs`, `_runInWindowOpen`, the `line` ceiling's re-clamp in `_setTargets` (which with one
+arm can never fire, because `ceilings.line` is Infinity on every frame), and two diagnostics whose
+subject was the hold and its release — `runin-close-rate.mjs` and `runin-pace-table.mjs`.
+
+**THE PICTURE DID NOT MOVE.** All four fingerprints are byte-identical across the retirement, which
+is the proof that the arm was genuinely unreachable rather than merely believed to be.
+
 ## What this leaves open (not tried, not excluded)
 
 Formats that make a breakaway irrelevant rather than catching it: **elimination** (last-at-call out of

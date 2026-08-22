@@ -637,6 +637,35 @@ The sections below state the same design in the terms the OWNER set it in — hi
 requirements, the two conflicts and the two keys. The page above is the mechanism; what follows is
 what it is answerable to.
 
+### WHY IT IS A SCHEDULE AND NOT A CEILING — the measurements that decided it
+
+**These numbers are the record of why the endgame is as it is.** They lived above the switch that
+chose between the two designs; that switch is retired (RETIRE-RUNIN-LEGACY-1), so they live here,
+beside the mechanism they justify. The comparison is the SCHEDULE against the ceiling-and-hold arm
+that preceded it, on nine scorable tracks at seed 9 — his config first, then the shipped defaults.
+
+| | ceiling-and-hold | the schedule |
+| --- | --- | --- |
+| **STANDSTILL** — share of the spec window with the picture static | 43% (26% shipped) | **17%** (18%) |
+| **THE LONGEST STATIC RUN** — the number he actually complained about | 2017 ms | **550 ms**, both arms |
+| **TIMING** — winner and line both visible by the deadline | 0 of 9 tracks | **9 of 9** (8 of 9 shipped) |
+| **ARRIVAL** — worst error against the leader-view / photo-finish factor | 48% | **6%** |
+| **WIDTH** — widest endgame frame | 6.1 corridors (6.1) | **4.4** (5.4) |
+| **SMOOTHNESS** — worst `\|d²ln(width)/dt²\|` | 78.3 | **13.3** (22.0) |
+| **MONOTONICITY** | — | **9 of 9 tracks, both arms**, held by the ratchet in `_setTargets` |
+| **RACERS CUT** — contender-off-canvas frames | 59 (109) | **35** (33) |
+
+**The last row is the one that settles the argument.** A wider, moving shot was expected to cost
+racers at the edges and it does the opposite: the schedule's shot is wider than the old one through
+the part of the endgame where the field is still spread, so the guarantee it overrides was arguing
+for width the schedule had already provided.
+
+**And the smoothness figure carries a warning that is now a lesson.** 78.3 → 13.3 is a
+SMOOTHED second derivative, and a smoothed metric of this shape is exactly what hid a single-frame
+jump for two blocks running — see Lesson 218. The figure is kept because it is what was measured on
+the day; it is not the reason to believe the endgame is smooth. That reason is the acceptance sheet's
+item 6, which grades the worst SINGLE frame.
+
 ### The window, and it is his
 
 **The endgame runs from the endgame threshold to the winner's crossing, and NOTHING outside that
@@ -919,7 +948,18 @@ a verbatim transcript of one run on one commit, which is a historical record, no
 
 ### The tracking lag, as measured today — and it had drifted
 
-<!-- MEASURED: tracking-lag \(median/p95 pp per state\) @ 81d49899 2026-08-22 depends=client/src/modules/camera/ -->
+<!-- MEASURED: tracking-lag (median/p95 pp per state) @ bb1e74df 2026-08-22 depends=client/src/modules/camera/ -->
+
+**RE-MEASURED IN FULL FOR RETIRE-RUNIN-LEGACY-1, AND EVERY FIGURE IS IDENTICAL TO THE DIGIT** —
+10923, 159, 17169, 9373, 4323, 1865 frames and both percentiles on every state. That block deletes
+the endgame's second implementation outright, so the guard is right to ask; and four byte-identical
+fingerprints are an argument about a different instrument's sampling, not a measurement of these
+numbers.
+
+**This stamp's ID is also repaired here.** ENDGAME-REWRITE-1's stamp script wrote its own regex
+source into the document, so the id has read `tracking-lag \(median/p95 pp per state\)` since that
+block. The guard never noticed because it finds a stamp by its own pattern and never compares the id
+to anything — a corrupted id is a silently accepted one.
 
 **RE-MEASURED IN FULL FOR ENDGAME-REWRITE-1, AND EVERY FIGURE IS IDENTICAL TO THE DIGIT** —
 10923, 159, 17169, 9373, 4323, 1865 frames and both percentiles on every state, PHOTO_FINISH

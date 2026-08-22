@@ -362,7 +362,6 @@ export function computeTimingFromConfig(config) {
   const photoFinishContenderFraming =
     config?.photoFinishContenderFraming ?? DEFAULT_CAMERA_CONFIG.photoFinishContenderFraming;
   const runInShot = config?.runInShot ?? DEFAULT_CAMERA_CONFIG.runInShot;
-  const runInSchedule = config?.runInSchedule ?? DEFAULT_CAMERA_CONFIG.runInSchedule;
   // CONTENTION-WATCH-1. Both are read HERE because this function is the whitelist: a key that is
   // not picked out by name never reaches the director, whatever defaults.js says or a stored config
   // carries. The fallback on each is the shipped default, which is what check-fallback-agreement
@@ -455,7 +454,6 @@ export function computeTimingFromConfig(config) {
     photoFinishLeadProgress,
     photoFinishContenderFraming,
     runInShot,
-    runInSchedule,
     contentionWatch,
     bandFloor,
     contentionCheckMs,

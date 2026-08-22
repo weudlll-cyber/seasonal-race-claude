@@ -233,7 +233,7 @@ export function scoreTrack(geo, cfg, N) {
       // the picture then sits against whatever bound IS smallest, which is how standstill returns
       // under a design that cannot itself stand still.
       binding: cd._framingProbe?.binding ?? "?",
-      // WHAT THE SCHEDULE ASKED FOR, beside what was delivered. Under `runInSchedule` the director
+      // WHAT THE SCHEDULE ASKED FOR, beside what was delivered. The director
       // puts the schedule in the `state` slot, so this is its own value before the other ceilings,
       // the corridor cap and the two re-clamps have had their say.
       schedWidth: (() => {
@@ -287,7 +287,7 @@ export function scoreTrack(geo, cfg, N) {
         const l = h ? Math.hypot(h.x, h.y) : 0;
         return l > 0 ? h.y / l : 0;
       })(),
-      // The width the SCHEDULE placed this frame. Under `runInSchedule` the director puts it in the
+      // The width the SCHEDULE placed this frame. The director puts it in the
       // `state` slot (it is the width authority for the phase), so reading `ceilings.line` here —
       // which the schedule retires — reported Infinity on every frame and made the trace unreadable.
       demandWidth: (() => {

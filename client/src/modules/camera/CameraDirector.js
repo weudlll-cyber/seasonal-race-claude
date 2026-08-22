@@ -235,10 +235,6 @@ export class CameraDirector {
     // RUNIN-HOLD-1: the run-in HOLDS its opening shot and then closes in ONE sweep. Both fields are
     // one-way latches, for the same reason `_runInProgress` is clamped monotone — a close that could
     // restart is not a sweep.
-    //   `_runInHoldCeiling`      the ceiling captured on the engagement frame, held while the hold lasts
-    //   `_runInReleaseProgress`  the run-in progress at which the sweep began; null while holding
-    this._runInHoldCeiling = null;
-    this._runInReleaseProgress = null;
     // ENDGAME-SCHEDULE-1. `_progTrail` is a short ring of {ts, progress} used ONLY to predict how
     // far away requirement 1's deadline is; it looks back exactly `runInOpenMs`, so the estimator's
     // window is the same span the move it schedules occupies and no new number is introduced.
@@ -256,8 +252,6 @@ export class CameraDirector {
     this._runInWidenFrom = null; // cam.zoom the widen began at
     this._runInWidenStartP = null; // race progress it began at
     this._runInDeadlineZoom = null; // the width reached AT the deadline — the close starts here
-    this._runInStartTs = null;
-    this._runInStartProgress = null;
     this._inFinishDrama = false; // the drama window after the crossing (hudState reports 'FINISH')
     this._inPhotoFinish = false; // 15a: true while the PHOTO_FINISH shot holds (kept distinct from _inFinishDrama so hudState reports 'PHOTO_FINISH')
     this._photoFinishGateDone = false; // 15a-predictive: once-only latch — the pre-line close-check fires exactly once
@@ -618,7 +612,6 @@ export class CameraDirector {
     this._photoFinishLeadProgress = t.photoFinishLeadProgress;
     this._photoFinishContenderFraming = t.photoFinishContenderFraming;
     this._runInShot = t.runInShot;
-    this._runInSchedule = t.runInSchedule;
     this._contentionWatch = t.contentionWatch;
     this._bandFloor = t.bandFloor;
     this._contentionCheckMs = t.contentionCheckMs;
@@ -2796,30 +2789,6 @@ export class CameraDirector {
   }
 
   /**
-   * IS THE RUN-IN'S WINDOW OPEN? From the endgame threshold to the crossing — the two ends are read
-   * from things that already exist and neither is new.
-   *
-   * `endgameThreshold` is the value at which the director has always declared the endgame.
-   * `finishedCount === 0` is the crossing: once somebody is home the finish sequence owns the
-   * picture (the drama pulse, the photo finish's own hold, then FINISH_OVERVIEW's authored
-   * zoom-out on a fixed point behind the line), and a bound that kept opening the shot to hold a
-   * line the winner has already crossed would be arguing with an authored move.
-   *
-   * THE WINDOW IS NECESSARY BUT NO LONGER SUFFICIENT — see `_updateRunIn` for the second condition,
-   * which is what makes the run-in start a little later than the window opens.
-   *
-   * @returns {boolean}
-   */
-  _runInWindowOpen(racers, raceState) {
-    if (!this._runInShot) return false;
-    if (!(raceState?.finishT > 0) || (raceState.finishedCount ?? 0) > 0) return false;
-    if (!racers || racers.length === 0) return false;
-    let maxT = 0;
-    for (const r of racers) if (r.t > maxT) maxT = r.t;
-    return maxT / raceState.finishT > this._endgameThreshold;
-  }
-
-  /**
    * WHERE THE SUBJECT SITS ALONG THE FRAME THIS FRAME — the framing rule's POSITION column, with the
    * run-in's TRAVEL folded in. Six call sites read this; they used to read the table directly, and
    * six copies of one question is how the run-in's answer reached five of them and not the sixth.
@@ -3004,57 +2973,6 @@ export class CameraDirector {
    *
    * @returns {number} the cam.zoom ceiling for this frame, or Infinity when the run-in is not on
    */
-  _updateRunIn(subjects, frameSize, racers, raceState, ts) {
-    if (this._runInSchedule)
-      return this._updateRunInScheduled(subjects, frameSize, racers, raceState, ts);
-    this._runInComposingNow = false;
-    if (!this._runInWindowOpen(racers, raceState)) return Infinity;
-    if (!subjects?.point) return Infinity;
-    if (!this._runInEngaged) {
-      this._runInEngaged = true;
-      this._beginRunInGlide(ts);
-      // RUNIN-HOLD-1: the reference the release pace is measured against — the run-in's OWN span,
-      // captured once by the same latch that makes the run-in a phase.
-      this._runInStartTs = ts;
-      this._runInStartProgress = this._runInProgressOf(racers, raceState);
-    }
-    this._runInProgress = this._runInProgressOf(racers, raceState);
-    this._runInComposingNow = true;
-    // ── RUNIN-HOLD-1: HOLD THE OPENING SHOT, THEN CLOSE ONCE ──────────────────────────────────
-    //
-    // `_lineCeiling` shrinks with the distance to the line, so left alone it begins closing on the
-    // frame the window opens. Measured, that made the first seconds a crawl: about 3.6 s of lead-in
-    // at roughly 95 px/s of picture flow, below the rate at which anything reads as movement. The
-    // owner's rule is the opposite shape — open far enough that the line sits well in frame, HOLD
-    // that, then close in ONE sweep.
-    //
-    // Holding is free with respect to the promise the run-in exists for: the held shot is the
-    // WIDEST the run-in ever asks for, and a wider shot keeps the line in frame trivially.
-    const live = this._lineCeiling(subjects, frameSize, raceState);
-    // NOTHING TO HOLD OR SWEEP when the line cannot be framed at all — `_lineCeiling` says so with
-    // Infinity, meaning "no constraint from me". Interpolating on it produced Infinity + (Infinity −
-    // Infinity) × u = **NaN**, which reached `cam.zoom` and took 21 existing tests down with it,
-    // including the plain "update() returns finite values". Returning it unchanged is what the code
-    // did before this block and is the only honest answer: there is no ceiling to ease toward.
-    if (!Number.isFinite(live)) return live;
-    if (this._runInHoldCeiling === null) this._runInHoldCeiling = live;
-
-    if (this._runInReleaseProgress === null) {
-      if (!this._runInShouldRelease(ts)) return this._runInHoldCeiling;
-      this._runInReleaseProgress = this._runInProgress;
-    }
-
-    // THE SWEEP IS PARAMETERISED BY PROGRESS, NOT BY WALL CLOCK, and that is what makes the landing
-    // exact rather than approximate. `u` is 1 when progress is 1 — the line — BY CONSTRUCTION, so
-    // the bound reaches the live geometric value precisely at the crossing and the state's own shot
-    // is what remains. A wall-clock sweep would land early or late by whatever the pace estimate
-    // was wrong by, and landing LATE would leave this term still binding at the crossing, which is
-    // the one thing the design may not do.
-    //
-    // It also cannot stand still or reverse: `_runInProgress` is already clamped monotone.
-    const u = this._runInSweepU();
-    return this._runInHoldCeiling + (live - this._runInHoldCeiling) * u;
-  }
 
   /**
    * THE ENDGAME AS A SCHEDULE (ENDGAME-SCHEDULE-1) — his specification of 2026-08-23.
@@ -3101,7 +3019,7 @@ export class CameraDirector {
    *
    * @returns {number} the cam.zoom the schedule places this frame, or Infinity when it is not on
    */
-  _updateRunInScheduled(subjects, frameSize, racers, raceState, ts) {
+  _updateRunIn(subjects, frameSize, racers, raceState, ts) {
     this._runInComposingNow = false;
     if (!this._runInShot || !subjects?.point) return Infinity;
     if (!(raceState?.finishT > 0) || (raceState.finishedCount ?? 0) > 0) return Infinity;
@@ -3320,7 +3238,6 @@ export class CameraDirector {
       this._beginRunInGlide(ts);
       this._runInWidenFrom = this.zoom;
       this._runInWidenStartP = p;
-      this._runInStartTs = ts;
     }
     return true;
   }
@@ -3617,80 +3534,14 @@ export class CameraDirector {
    * @returns {boolean}
    */
   _scheduleComposing() {
-    return this._runInSchedule && this._runInComposingNow;
+    return this._runInComposingNow;
   }
 
   _runInSweepU() {
-    // ENDGAME-SCHEDULE-1: the schedule has no "release" — it is moving from the moment it engages —
-    // so its travel parameter is the CLOSE's own `u`, 0 through the widen and `_runInProgress`
-    // after the deadline. Without this the scheduled path fell through to the branch below, found
-    // `_runInReleaseProgress` null forever and returned 0 on every frame, which pinned the leader at
-    // the MIRROR of his framing position for the whole endgame — the anchor never travelled back,
-    // so the shot arrived at the crossing correctly sized and pointed in the wrong place.
-    if (this._runInSchedule) {
-      return this._runInAfterDeadline ? (this._runInProgress ?? 0) : 0;
-    }
-    if (this._runInReleaseProgress === null) return 0;
-    const p = this._runInProgress ?? 0;
-    const span = 1 - this._runInReleaseProgress;
-    if (!(span > 0)) return 1; // released at (or past) the line: nothing left to sweep
-    const u = (p - this._runInReleaseProgress) / span;
-    return u < 0 ? 0 : u > 1 ? 1 : u;
-  }
-
-  /**
-   * IS IT TIME TO START THE ONE SWEEP? — derived, not chosen.
-   *
-   * ── THE ARITHMETIC, ONCE ──────────────────────────────────────────────────────────────────────
-   *
-   * The sweep lasts `runInOpenMs`, which is the owner's own 1–1.5 s and already exists as the key
-   * that paces the run-in's opening. So the release moment is simply *the moment from which one
-   * sweep of that length arrives at the line*: release when the leader's REMAINING TIME to the line
-   * has fallen to the sweep's length.
-   *
-   *   rate       =  (progress now - progress at engagement) / (now - engaged at)   ← observed
-   *   remaining  =  (1 - progress now) / rate
-   *   RELEASE WHEN  remaining <= runInOpenMs
-   *
-   * Both halves are things the run-in already knows: the distance still to run — `1 - progress`, in
-   * the very measure `_runInProgressOf` is written in — and the span the shot must close,
-   * `runInOpenMs`. NO FRACTION WAS PICKED and no key was added. The hold is simply whatever is left
-   * of the window before this moment, which is why it is derived rather than configured.
-   *
-   * ── WHY THE PACE IS THE RUN-IN'S OWN AND NOT THE WHOLE RACE'S, MEASURED ───────────────────────
-   *
-   * The first version used the projection idiom `_scheduleNextOverview` already has —
-   * `(finishT / leaderT) x elapsed`, the leader's average pace over the whole race — because reusing
-   * it meant the director had one way of estimating a finish time rather than two. **It was wrong by
-   * about six times and the shape of the error is instructive.** On ice-track it released with a
-   * true 7.4 s still to run while predicting 1.25 s: the field DECELERATES into the finish, so an
-   * average taken over the fast early laps is optimistic about exactly the stretch this needs to be
-   * right about. The sweep came out at 5.7–8.5 s across the ten tracks — most of the crawl this
-   * block exists to remove, still there under a new name.
-   *
-   * Measuring the rate over the RUN-IN's own span fixes that at the source: the endgame window is
-   * the period whose pace is being asked about, so it is the period to measure. It is also stable
-   * without smoothing — a per-frame derivative would be noise, an average since engagement is not.
-   *
-   * ── THE SHORT WINDOW: START IMMEDIATELY AND BE SHORTER ────────────────────────────────────────
-   *
-   * A late-forming endgame or a very fast closer can leave less than `runInOpenMs` in the window at
-   * the moment the run-in engages. Then this is already true on the engagement frame, the sweep
-   * begins at once and is simply compressed. THAT IS CORRECT AND A PAUSE IN THE MIDDLE IS NOT: a
-   * compressed close is still one continuous move, which is the property the owner asked for.
-   *
-   * @returns {boolean}
-   */
-  _runInShouldRelease(ts) {
-    const p = this._runInProgress ?? 0;
-    if (p >= 1) return true; // at or past the line: nothing left to wait for
-    // The pace over the RUN-IN's OWN SPAN — engagement to now. No span to measure yet on the
-    // engagement frame, and no rate before progress advances — hold rather than guess.
-    const dt = ts - (this._runInStartTs ?? ts);
-    const dp = p - (this._runInStartProgress ?? p);
-    if (!(dt > 0) || !(dp > 0)) return false;
-    const remainingMs = ((1 - p) * dt) / dp;
-    return remainingMs <= this._runInOpenMs;
+    // The schedule has no "release": it is moving from the moment it engages, so its travel
+    // parameter is the CLOSE's own `u` — 0 through the widen and `_runInProgress` after the turn.
+    // The leader's walk back and the zoom's close therefore run on ONE parameter and land together.
+    return this._runInAfterDeadline ? (this._runInProgress ?? 0) : 0;
   }
 
   /**
@@ -4416,35 +4267,6 @@ export class CameraDirector {
       }
       if (Number.isFinite(_ceilings.guarantee)) {
         guaranteed = Math.min(guaranteed, _ceilings.guarantee);
-      }
-      // ── RUNIN-LINE-1: THE LINE IS RE-APPLIED HERE FOR THE SAME REASON THE CONTENDERS ARE ──────
-      //
-      // THE LINE USED TO BE DROPPED AT THIS POINT, and that is the whole of the defect the owner
-      // rejected on 2026-08-17: "it closes so far that the finish line is no longer visible."
-      //
-      // `_ceilings.line` is in the `Math.min` above, so the run-in's own bound was honoured — and
-      // then the cap RAISED `guaranteed` past it and only `_ceilings.guarantee` was put back. The
-      // run-in cannot violate its own bound by interpolating (it eases from the held ceiling to the
-      // live one, both of which frame the line); it was overridden AFTER it had decided.
-      //
-      // MEASURED, not read: `check-runin-frame` question 3 loses the line on 9 of 10 tracks, and
-      // 90% of the lost frames are bound by `corridor-cap` or `guarantee-after-cap`. With the cap
-      // turned off (`--no-cap`) four of those tracks hold the line for the whole window and the
-      // rest improve by hundreds of pixels. The cap is the term that was deciding.
-      //
-      // THE ARGUMENT FOR RE-APPLYING IT IS THE ONE THREE LINES ABOVE, VERBATIM. The corridor is the
-      // owner's shortcut for "certainly enough", and a subject that needs more room than a track
-      // width would be CUT by honouring it — which is exactly why the contender guarantee is
-      // re-applied. `_lineCeiling`'s own header calls the finish line "a guaranteed SUBJECT of the
-      // run-in". Same standing, same clamp. This is not a floor, a margin or a safety net bolted
-      // on over the cap: it is the omission of one of the two guaranteed subjects from a re-clamp
-      // that already existed for the other.
-      //
-      // IT COSTS THE CAP NOTHING AFTER THE CROSSING, which is where the corridor shot matters most:
-      // the run-in's window closes on `finishedCount > 0`, so `_ceilings.line` is Infinity from the
-      // first finisher onward and this line is a no-op for the whole of the finish sequence.
-      if (Number.isFinite(_ceilings.line)) {
-        guaranteed = Math.min(guaranteed, _ceilings.line);
       }
     }
     // ── RUNIN-PACE-1 §3: A TIGHTEN-RATE LIMIT WAS BUILT HERE AND MEASURED OUT ───────────────────

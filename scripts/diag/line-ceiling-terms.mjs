@@ -133,16 +133,6 @@ console.log(`  ceiling = room/needed ${ceiling.toFixed(5)}  cam.zoom   <-- what 
 // lasts, so what `_setTargets` receives is not the live value above but the value from the frame the
 // window opened — when the line was at its furthest.
 console.log(
-  `  _runInHoldCeiling     ${cd._runInHoldCeiling === null ? "null (released)" : cd._runInHoldCeiling.toFixed(5)}` +
-    `  <-- what the run-in ACTUALLY asked for, captured at engagement`,
-);
-console.log(`  sweep u               ${cd._runInSweepU().toFixed(4)} (0 = still holding)`);
-if (cd._runInHoldCeiling) {
-  console.log(
-    `  THE SURPLUS           held ${Math.round(proj.visibleWorldW(cd._runInHoldCeiling, CW))} px vs live ` +
-      `${Math.round(proj.visibleWorldW(ceiling, CW))} px = a factor of ${(ceiling / cd._runInHoldCeiling).toFixed(2)}`,
-  );
-}
 console.log(`\nWHAT THAT MEANS FOR THE PICTURE`);
 console.log(
   `  visible world at that zoom   ${Math.round(proj.visibleWorldW(ceiling, CW))} x ` +

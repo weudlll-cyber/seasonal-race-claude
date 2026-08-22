@@ -49,7 +49,12 @@ the correct response is to say so in this table instead of building one.
 
 ### Phase 6, MEASURED — and both of the old numbers were wrong
 
-<!-- MEASURED: straggler-truth \(phase 6 duration, zoom-out lead, stragglers in shot\) @ 81d49899 2026-08-22 depends=client/src/modules/camera/CameraDirector.js -->
+<!-- MEASURED: straggler-truth (phase 6 duration, zoom-out lead, stragglers in shot) @ bb1e74df 2026-08-22 depends=client/src/modules/camera/CameraDirector.js -->
+
+**RE-MEASURED IN FULL FOR RETIRE-RUNIN-LEGACY-1, AND IDENTICAL TO THE DIGIT** — 6.18/4.57,
+7.53/5.75, 4.45/2.30, 5.95/4.38, the same racers in shot and the same settled-frame counts. Run
+rather than argued, for the reason the tracking-lag entry gives. **The stamp's id is repaired here
+too**, for the reason recorded beside that one.
 
 **RE-MEASURED IN FULL FOR ENDGAME-REWRITE-1, AND IDENTICAL TO THE DIGIT** — 6.18/4.57, 7.53/5.75,
 4.45/2.30, 5.95/4.38, the same racers in shot and the same settled-frame counts. Run rather than
