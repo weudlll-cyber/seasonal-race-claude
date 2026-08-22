@@ -23,6 +23,7 @@ import {
   boardAlphaAt,
   ceremonyTotalMs,
   ceremonyScheduleFor,
+  nextBeatStart,
 } from './startCeremony.js';
 import { fieldGuarantee } from './framingRule.js';
 import { projectionForTrack, REFERENCE_CANVAS_W, REFERENCE_CANVAS_H } from './projection.js';
@@ -558,5 +559,77 @@ describe('the board gets its own duration, and the countdown follows it', () => 
     expect(sch.countdownStartMs).toBe(13400); // …4000 ms before the first digit
     expect(sch.countdownStartMs - sch.boardEndMs).toBe(sch.settledMs);
     expect(sch.totalMs - sch.countdownStartMs).toBe(sch.countdownMs);
+  });
+});
+
+// ============================================================================================
+// CEREMONY-SKIP-1 — where a skip lands.
+//
+// The mechanism is one number: the caller moves `countdownStart` backwards so `elapsed` becomes
+// what `nextBeatStart` returns. These tests pin WHERE that is, because everything else in the
+// opening follows from it by construction and would follow a wrong answer just as faithfully.
+// ============================================================================================
+describe('CEREMONY-SKIP-1 — nextBeatStart', () => {
+  // ceremonySchedule is POSITIONAL: (venueMs, pushMs, settledMs, boardMs, countdownMs, brandMs).
+  const sched = ceremonySchedule(2000, 1000, 500, 1500, 3000, 1200);
+
+  // IF DELETED: a skip could land anywhere and every consumer would follow it there without
+  // complaint, because they all derive from the one clock. This is the only assertion that says the
+  // landing is the START of the next beat rather than somewhere inside it.
+  it('from inside each beat, it lands on the first millisecond of the next', () => {
+    expect(nextBeatStart(0, sched)).toBe(sched.brandMs);
+    expect(nextBeatStart(sched.brandMs - 1, sched)).toBe(sched.brandMs);
+    expect(nextBeatStart(sched.brandMs, sched)).toBe(sched.venueEndMs);
+    expect(nextBeatStart(sched.venueEndMs, sched)).toBe(sched.boardStartMs);
+    expect(nextBeatStart(sched.boardStartMs, sched)).toBe(sched.boardEndMs);
+  });
+
+  // IF DELETED: the last click would land short of the gun and the owner's final skip would open a
+  // beat instead of starting the race — the one moment the whole aid exists to reach.
+  it('from the last beat it returns totalMs, so the final click fires the gun', () => {
+    expect(nextBeatStart(sched.boardEndMs, sched)).toBe(sched.totalMs);
+    expect(nextBeatStart(sched.totalMs - 1, sched)).toBe(sched.totalMs);
+  });
+
+  // IF DELETED: nothing would notice a skip landing INSIDE a zero-length beat, and the visible
+  // result is a card on screen for one frame that must not exist at all. It cannot be caught by
+  // reading the code either — the boundaries simply coincide.
+  it('never lands inside a beat of length zero', () => {
+    const noBrand = ceremonySchedule(2000, 1000, 500, 1500, 3000, 0);
+    // With no brand the first boundary is the venue's end, not a zero-length brand boundary.
+    expect(noBrand.brandMs).toBe(0);
+    expect(nextBeatStart(0, noBrand)).toBe(noBrand.venueEndMs);
+    const noBoard = ceremonySchedule(2000, 1000, 500, 0, 3000, 1200);
+    expect(noBoard.boardMs).toBe(0);
+    // From the push, the next beat with length is the settled one — the board is stepped over.
+    expect(nextBeatStart(noBoard.venueEndMs, noBoard)).toBe(noBoard.boardStartMs);
+    expect(nextBeatStart(noBoard.boardStartMs, noBoard)).toBe(noBoard.totalMs);
+  });
+
+  // IF DELETED: the two could drift apart and a skip would land on a boundary the renderer does not
+  // agree is a boundary — which is the exact defect CEREMONY-TRUTH-1 was written about, a second
+  // list of beats beside the first.
+  it('agrees with ceremonyAt: the beat AT the returned elapsed is the next beat', () => {
+    let e = 0;
+    const seen = [];
+    for (let i = 0; i < 8 && e < sched.totalMs; i++) {
+      const beat = ceremonyAt(e, sched).beat;
+      seen.push(beat);
+      const next = nextBeatStart(e, sched);
+      expect(next).toBeGreaterThan(e);
+      if (next < sched.totalMs) expect(ceremonyAt(next, sched).beat).not.toBe(beat);
+      e = next;
+    }
+    expect(seen[0]).toBe(CEREMONY_BEAT.BRAND);
+    expect(seen).toContain(CEREMONY_BEAT.VENUE);
+    expect(e).toBe(sched.totalMs);
+  });
+
+  // IF DELETED: a malformed schedule would return NaN and the caller would set countdownStart to
+  // NaN, which stops the ceremony dead with no error anywhere.
+  it('a nonsense elapsed or an absent schedule still returns a number', () => {
+    expect(nextBeatStart(NaN, sched)).toBe(sched.brandMs);
+    expect(nextBeatStart(-5, sched)).toBe(sched.brandMs);
+    expect(Number.isFinite(nextBeatStart(0, {}))).toBe(true);
   });
 });
