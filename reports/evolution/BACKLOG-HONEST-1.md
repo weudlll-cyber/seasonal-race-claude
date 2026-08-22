@@ -373,3 +373,142 @@ tonight:
 callers; only its DELETE arm does not.** Written into the CORRECTIONS block of
 `reports/evolution/INDEX.md` naming `OPEN-ITEMS-2026-08-22` as the report corrected, which is what
 BACKLOG-TRUTH-1 was forbidden from doing by its own narrower spec.
+
+---
+
+## STEP E — THE SURVIVORS, SORTED INTO THREE BUCKETS
+
+**86 survive** — 83 STILL OPEN plus the 3 CANNOT ESTABLISH, all of which need work that is not a
+verdict. The buckets are reproduced on the morning sheet, which is where they are meant to be read.
+
+### (i) SMALL AND SELF-CONTAINED — no owner decision, no visible product change, one piece each
+
+**Nine.** Ordered smallest first, which is the order PIECE 13 will work them in.
+
+| # | item | why it is bucket (i) | why this size |
+| --- | --- | --- | --- |
+| 1 | **Q-17** — `reader.onerror` in `SystemSettings.jsx` and `BrandingProfiles.jsx` | two error handlers on an existing `FileReader`; no default, no visible change unless a file read fails, which today fails silently | ~6 lines + 2 tests |
+| 2 | **`/api/health` names no build** | add the build identity the client already computes to one JSON payload | one route, one field, one test |
+| 3 | **The `V-` block is four more downstream duplicates** — V-1↔B-1, V-4↔B-4, V-5↔B-5 (V-2 done in STEP D) | pure document edit, the same treatment V-2 just received | ~12 lines |
+| 4 | **Q-29** — shared `RangeSliderSection` | six `type="range"` blocks across four Dev Screen files; a developer surface only | one component, four call sites |
+| 5 | **The two corridor-width comments** (`RaceScreen:427`, `sim-fairness.mjs:4306`) | already measured in PIECE 2; comment-only, cannot move a number | 2 lines — **but see the morning sheet: this is question (a) to him**, so it is bucket (i) only if he says the correction rides along |
+| 6 | **`L317` — `MAX_CAM_ZOOM` is the real limiter at the tight end** | the item asks only that the fact be written down where a tuner will meet it | a documentation edit |
+| 7 | **`L227`/`L218` — the `0xC0000142` pair** | both are "watch for a second occurrence"; neither asks for code | fold into one watch item |
+| 8 | **`L256` — the juxtaposition rule for reports** | a convention to write into `VERIFY-RULES.md`; no code | one rule, one paragraph |
+| 9 | **`L193` — a re-minting block names invariants that must NOT move** | same shape: a convention, and its home is `SHIP-CEREMONY.md` | one rule |
+
+**Items 5 through 9 are conventions and documentation.** They are genuinely small, and they are
+genuinely bucket (i) — but a night that only produced those would be a night that moved nothing, so
+PIECE 13 will take 1 and 2 first even though 3 is cheaper.
+
+### (ii) NEEDS HIS WORD — a decision, a taste question, a deletion with blast radius, or a direction
+
+**Twenty-two.** Never pulled forward, however small they look at 4am. The largest are:
+
+- **`L211` — should `npm run dev` REFUSE to start when the build identity is unreadable?** The item
+  poses it as an owner decision in those words.
+- **`L308` — a Dev Screen change does not reach a running race.** *One line*, and the item itself
+  says it is the highest-leverage line in the file — **which is exactly why it is not bucket (i)**:
+  it changes how every A/B he has ever run behaves. His call.
+- **`L161` — the proposed owner session.** His time. Cannot be scheduled by anyone else.
+- **`L296` — the company guarantee on a spread field**, and **his 5 → 15 recommendation** that rests
+  on the pack-case measurement only.
+- **`L751`/`L755` — the seed for "Start Race", and seed persistence.** Both marked *owner decision*
+  in the file already.
+- **`L733`/`L738` — the audit-gate policy for DEV dependencies, and the body-parser LOW advisory.**
+  Policy, not code.
+- **`L125` — merge ROADMAP into BACKLOG.** He has already said the merge is a separate order.
+- **The four action-control questions 1, 3 and 4** — question 2 is now answered; the rest are design.
+- **`D7d` — 100-racer performance.** Three mechanisms, none built, and the direction is his.
+
+### (iii) TOO LARGE FOR A NIGHT — named, with the one line that makes each large
+
+**Eleven.**
+
+| item | what makes it large |
+| --- | --- |
+| **`L118` auth — the v3.2 design's remainder** | the *design* is archived and the *routes* exist; reconciling which parts of a 400-line design are built is a project, not a task |
+| **`L70` `RaceScreen` is not testable** | 1907 lines, two gating effects and an rAF loop; any real fix is a refactor of the screen |
+| **`L179`'s successor — an event-anchored render sample** | closed as written, but the item's own better idea (sample at "the frame after FINISH_OVERVIEW begins") changes what the fingerprint IS |
+| **`L186` — a whole-race motion-continuity instrument** | a new instrument plus the grammar of deliberate cuts it must not flag |
+| **`L198` Garden Path's 200 s ceiling** | a physics investigation with no bounded end |
+| **`L241` — the three driver copies** | the item argues *against* finishing it, and the argument has to be met before the work starts |
+| **`L249` — the race-identity hash** | it must cover the config, which means canonicalising the config: a design decision with a long tail |
+| **`L326` — `data:export` and the VPS migration** | 247 files / 14.4 MB, and the migration is the project |
+| **`L345` — `deploy.yml.disabled`** | four independent blockers, one of which is a script that does not exist |
+| **`L354` — `RA_PUBLIC_ORIGIN`** | blocked on there being a real host |
+| **Q-30's React 18 → 19 half** | a framework major across 1907-line screens; the router half already shipped separately for good reason |
+
+### WHY THE COUNTS DO NOT SUM TO 86
+
+**42 of the 86 are not sorted, and saying so is the point.** They are the `Q-`/`B-`/`V-`/`T-` bullets
+in *Planned — needs spec* and *Order of Next Steps* — old audit residue whose bucket cannot be
+decided without reading each one against today's tree, which is STEP C's work over again at a depth
+STEP C did not reach for them. **They are recorded as UNSORTED rather than swept into (iii)**, because
+"too large for a night" is a claim about the work and I do not have evidence for it about these.
+Sorting them is itself a bucket-(i)-sized piece, and it is on the morning sheet as such.
+
+---
+
+## VERIFICATION
+
+**Documents only, as the brief directs: no fingerprints, no browser gate, no client suite, no race.**
+R15c covers it — nothing here can change what any of them would answer.
+
+| instrument | ran? |
+| --- | --- |
+| `check-config-claims` | **RAN** — 170 keys, 56 living documents, **0 current claims** |
+| `check-doc-links` | **RAN** — 560 relative links, **0 dangling** |
+| `check-doc-facts`, `check-fingerprints`, `check-index` | **RAN** — pass, 0 stray copies, 0 unindexed |
+| `npm run verify` | **RAN** on the branch — see the merge commit |
+| world / camera / render fingerprints, browser gate, client suite | **NOT RUN, and the answer was already determined:** every file this branch touches is a `.md`. |
+
+**Every `verify:` command written into the file was RUN before it was written down**, which is the
+one way to avoid shipping an item that carries a command that cannot fail.
+
+## BUILD VERSUS SPEC — conformity
+
+| the spec asked | what happened |
+| --- | --- |
+| STEP A — build the evidence index once | done — 1857 commit subjects, 112 tags, 244 report lines, 20 DEAD-ENDS headings, the owner-decisions file |
+| STEP B — the census, **its own commit**, expect 90–110, report a differing count rather than adjusting | done — **105**, committed alone as `f278e0aa`. The rule-5 repairs are reported rather than hidden |
+| duplicate hunt, especially ✅-vs-open | done — 2 open-vs-open pairs, **0 open-vs-done**, and the zero is proved able to match |
+| STEP C — verdicts, evidence-first, leads confirmed at source | done — 105 verdicts; the three closures were each confirmed at source, not taken from the report claiming them |
+| **the four-minute ceiling** | **WITHDRAWN by the owner before this piece began.** No item was decided by a clock; nothing to re-decide; no elapsed-time column exists |
+| STEP D — strike in place, keep the rule, dedupe, `verify:` lines, no restated config values | done — 26 edits |
+| **action-control Q2 replaced by the answer, its date and the reason** | done, first, as NOT OPTIONAL |
+| carry BACKLOG-TRUTH-1's three verify commands and its sprite correction into the INDEX CORRECTIONS block | done, plus a second correction entry it did not ask for — its finish-knob CANNOT ESTABLISH was a glob failure |
+| STEP E — three buckets | done — (i) 9, (ii) 22, (iii) 11, **42 UNSORTED and said so** |
+
+## SOURCE HYGIENE
+
+| | |
+| --- | --- |
+| `docs/BACKLOG.md` | 1509 → 1641 lines; **26 edits**; 11 claims struck, 3 superseded, 2 duplicates pointed, 4 stale counts replaced by commands |
+| `reports/evolution/INDEX.md` | +26 lines — 2 CORRECTIONS entries and the report's own line |
+| shipped source changed | **none** |
+
+**NOTICED BUT LEFT:**
+
+- **`docs/BACKLOG.md` grew by 132 lines while retiring 16 items.** That is the honest cost of striking
+  in place rather than deleting: a struck claim plus what closed it is longer than the claim was. The
+  file will only shrink when someone is authorised to delete history, and that is his call.
+- **The `T-1`…`T-4` bullets** (RaceDefaults / TrackManager / BrandingProfiles / SystemSettings fields)
+  are four lines with no body at all. They may be complete, obsolete or never-written; nothing in the
+  evidence index mentions them. They are among the 42 unsorted.
+- **`ROADMAP.md` was not read.** Its 618 lines half-own the same subject, and several backlog items
+  may be settled there. Out of scope, and it is bucket (ii) item `L125`.
+
+## PROPOSALS — for the owner, nothing done
+
+1. **Make `verify:` a GUARD, not a convention** — BACKLOG-TRUTH-1's own P2, now much cheaper because
+   the items edited here already carry one. A rule inside an existing guard (R13) that fails when an
+   unticked `- [ ]` has no `verify:` line. **Cost, and it is why this is still a proposal:** three of
+   tonight's items legitimately cannot have a mechanical check (they need a measurement), so the
+   guard needs an explicit "no mechanical check, because —" form, and a guard that pressures someone
+   into writing a command that cannot fail is worse than none (R11).
+2. **Sort the 42.** One piece, bucket-(i) sized, mechanical: read each `Q-`/`B-`/`V-`/`T-` bullet
+   against today's tree and assign a bucket. **Value:** it is the difference between a backlog with
+   86 survivors and a backlog with 86 survivors *you can act on*. **Cost:** it is the same per-item
+   reading STEP C did, and STEP C's own experience says the ones that look most stale are the ones
+   most likely to already be closed — four of tonight's eleven closures came from that block.
