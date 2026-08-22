@@ -93,6 +93,52 @@ describe('CEREMONY-SKIP-2 — the click handler’s three guards', () => {
     }
   });
 
+  // ── THE ATTACHMENT IS CHECKED AGAINST THE SOURCE TOO ────────────────────────────────────────
+  //
+  // The test above proves the GUARDS are the shipped guards. This one proves the remaining line —
+  // the architectural claim itself: `RaceScreen` hangs the handler on the WRAPPER, so it is alive
+  // during the brand beat when a DOM card covers the canvas. Test `c` below proves that a press on
+  // the card reaches a handler in that position; nothing until now proved the screen puts it there.
+  //
+  // IF DELETED: the one line the whole design rests on is unwatched, and a refactor that moves the
+  // handler onto `race-canvas` — the obvious-looking simplification — leaves every test in this
+  // file green while the first skip of every event is dead under the brand card.
+  // WHAT WOULD GO UNNOTICED: exactly that move, and a second attachment point (the handler bound
+  // twice would double-skip), and the wrapper losing its handler altogether.
+  it('RaceScreen attaches onCeremonyClick to the WRAPPER — not to a canvas', () => {
+    const src = readFileSync(join(dirname(fileURLToPath(import.meta.url)), 'index.jsx'), 'utf8');
+
+    // 1 — there is exactly ONE element claiming to be the wrapper, so "its opening tag" is a
+    //     well-defined thing to talk about.
+    const CLASS_ATTR = 'className="race-canvas-wrapper"';
+    const occurrences = src.split(CLASS_ATTR).length - 1;
+    expect(occurrences, `expected one ${CLASS_ATTR}, found ${occurrences}`).toBe(1);
+
+    // 2 — read that element's OPENING TAG out of the source and require the handler on it.
+    const at = src.indexOf(CLASS_ATTR);
+    const tag = src.slice(src.lastIndexOf('<', at), src.indexOf('>', at) + 1);
+    expect(tag.startsWith('<div'), `the wrapper is no longer a <div>: ${tag.slice(0, 40)}`).toBe(
+      true
+    );
+    expect(tag, 'the wrapper element no longer carries onMouseDown={onCeremonyClick}').toContain(
+      'onMouseDown={onCeremonyClick}'
+    );
+
+    // 3 — and it is attached in exactly one place. Two mentions and no more: the `const` that
+    //     defines it, and the one attribute above. A third would mean a second attachment point,
+    //     which double-skips; a first-and-only would mean it is defined and never hung anywhere.
+    const mentions = src.split('onCeremonyClick').length - 1;
+    expect(mentions, `onCeremonyClick is mentioned ${mentions}× (want 2: define + attach)`).toBe(2);
+
+    // 4 — no canvas in this screen carries a mouse-down. This is the sabotage the comment above
+    //     names, caught directly rather than by inference.
+    for (const canvasTag of src.match(/<canvas[\s\S]*?\/>/g) ?? []) {
+      expect(canvasTag, 'a <canvas> in RaceScreen carries onMouseDown').not.toContain(
+        'onMouseDown'
+      );
+    }
+  });
+
   // IF DELETED: a stray press on the picture skips a beat in a build where the aid was never turned
   // on. WHAT WOULD GO UNNOTICED: exactly the event case — the owner shows a race, someone touches
   // the screen, and a scene he meant to show is gone. Nothing else in the tree asserts that the

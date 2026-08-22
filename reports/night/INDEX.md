@@ -8,6 +8,14 @@ report here could be orphaned, or an index link could dangle, with nothing notic
 `node scripts/check-index.mjs --dir=reports/night --index=reports/night/INDEX.md` now checks both
 directions.
 
+- [NIGHT-2026-08-22.md](NIGHT-2026-08-22.md) — **the morning sheet for the night of 2026-08-22.**
+  A chain of independent pieces off master `2c1122e2`, each on its own branch, verified, reported
+  and merged before the next begins. **This file is the deliverable even if the night is stopped
+  after one piece**: at any hour it answers what is done and merged, what is running, what is left,
+  and what needs the owner's word — each with the one question he has to answer. **UNLIKE every
+  other entry here it is NOT append-only while the night runs**; it is rewritten after each piece
+  and becomes the record when the night ends.
+
 - [CENSUS-CLOSE-2026-08-18.md](CENSUS-CLOSE-2026-08-18.md) — **where the census stands**
   (2026-08-18, the same day's later blocks). Against NIGHT-2026-08-18's 16 waiting findings: **8
   closed outright · 2 partly · 5 made visible where a reader meets them · 1 untouched · 2 opened

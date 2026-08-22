@@ -114,6 +114,20 @@ is dated and recorded HERE, where a reader on their way to the report will pass 
   [GATE-LINES-1](../night/GATE-LINES-1.md); the fix and the once-per-run control that makes the
   silence impossible to repeat: [GATE-TRUTH-1](../night/GATE-TRUTH-1.md).
 
+- [CEREMONY-SKIP-WRAPPER-1.md](CEREMONY-SKIP-WRAPPER-1.md) — **the last unproven line of
+  CEREMONY-SKIP is proven: `RaceScreen` attaches `onCeremonyClick` to the WRAPPER** (2026-08-22).
+  One source-reading test with FOUR assertions, because the architectural claim has four ways of
+  going wrong and three leave the naive check green — a second element claiming the wrapper class, a
+  handler moved onto a canvas, a SECOND attachment point that would double-skip, and a canvas
+  mouse-down under a different name. **All four proved able to fail by sabotage against the REAL
+  `RaceScreen/index.jsx`**, restored from a byte copy afterwards. **And the reason it had to be a
+  source-reading test is now recorded as a BACKLOG finding: `RaceScreen` is not testable** — 1907
+  lines, first paint gated on `sessionStorage`, race build gated on a canvas and a geometry, an
+  rAF draw loop, and **the two test files that name it both name it to AVOID it** (`App.test.jsx`
+  mocks it to `() => null`; `buildIdentitySource.test.js` reads it as text). No proposal was put in
+  the backlog, as ordered. No fingerprint could move: the only source file touched is a test. 2
+  proposals in the report.
+
 - [OPEN-ITEMS-2026-08-22.md](OPEN-ITEMS-2026-08-22.md) — **which of our open items are still true**
   (2026-08-22). Every item verified against **today's source**, never against the report that
   recorded it. **Seven STILL TRUE, ordered by what he would see** — headed by **PHOTO_FINISH missing
