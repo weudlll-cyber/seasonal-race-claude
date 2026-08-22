@@ -799,7 +799,7 @@ a verbatim transcript of one run on one commit, which is a historical record, no
 
 ### The tracking lag, as measured today — and it had drifted
 
-<!-- MEASURED: tracking-lag \(median/p95 pp per state\) @ 82b4dc3d 2026-08-22 depends=client/src/modules/camera/ -->
+<!-- MEASURED: tracking-lag \(median/p95 pp per state\) @ 81d49899 2026-08-22 depends=client/src/modules/camera/ -->
 
 **RE-MEASURED IN FULL FOR ENDGAME-REWRITE-1, AND EVERY FIGURE IS IDENTICAL TO THE DIGIT** —
 10923, 159, 17169, 9373, 4323, 1865 frames and both percentiles on every state, PHOTO_FINISH
