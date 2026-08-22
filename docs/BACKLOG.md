@@ -65,6 +65,54 @@ line numbers are the address; read the value there.
 
 ---
 
+## `RaceScreen` is not testable (2026-08-22, from CEREMONY-SKIP-WRAPPER-1)
+
+- [ ] **`client/src/screens/RaceScreen/index.jsx` cannot be mounted in a test, so the behaviour that
+      lives inside it can only be proven by READING ITS SOURCE.** This is a finding with evidence, not
+      a proposal — nothing is proposed here, and no rewrite is implied.
+
+  **The evidence, established at source on 2026-08-22:**
+
+  - **One component, 1907 lines.** `wc -l client/src/screens/RaceScreen/index.jsx`.
+  - **One file imports it to USE it, and no test in the tree renders it.**
+    `git grep -n "screens/RaceScreen/index.jsx"` over the whole tree returns exactly one real import
+    — `client/src/App.jsx:13`. **The two test files that name it both name it in order to AVOID it**,
+    and they are the finding rather than a footnote to it:
+    `client/src/App.test.jsx:18` is `vi.mock('./screens/RaceScreen/index.jsx', () => ({ default: () => null }))`
+    — the app's own test replaces the race screen with an empty component — and
+    `client/src/modules/buildIdentitySource.test.js:25` opens it with `readFileSync` and asserts
+    against its TEXT. Every remaining hit names a SIBLING module (`renderRaceFrame.js`,
+    `racePhase.js`, `labelFormHold.js`, `endingSchedule.js`), which is the third shape of the same
+    workaround: what needed testing was moved OUT, one file at a time.
+  - **First paint returns a placeholder.** `index.jsx:1746` — `if (!raceData) return <Loading…>`.
+    `raceData` is null on mount (`:175`) and is filled by an effect that reads
+    `sessionStorage['activeRace']` and throws into an error state when the key is absent (`:381-389`).
+    So a bare mount renders the loading card and nothing under test is ever constructed.
+  - **The race is built inside a second effect that needs a canvas AND a geometry.**
+    `:393` — `if (!raceData || !canvasRef.current) return;` — then `:416` `getTrack(...)`, which reads
+    the geometry out of `localStorage` and returns null when it is not there, setting an error.
+  - **The draw loop is rAF-driven** (`:1684`, `:1687`) and wants a 2D context.
+  - **Six `useEffect`s**, of which the two above gate everything the screen does.
+
+  **What it has already cost, named because it is the reason this entry exists.** CEREMONY-SKIP-2
+  (`608ad5ba`) was ordered to prove three guards on the ceremony-skip handler by mounting the screen.
+  **All three had to be written against a FIXTURE that reproduces the screen's DOM shape plus a
+  TRANSCRIPTION of the handler**, because mounting the real component would have tested the
+  scaffolding and every one of its failure modes would have landed on that file as a flake. The
+  compromise was stated in the report rather than implied — and it forced two further source-reading
+  tests to hold the transcription and the attachment to the real file
+  (`ceremonySkip.test.jsx`, the two `readFileSync` tests). **A source-reading test is a lexical
+  approximation of behaviour**; it catches a rename and a move, and it cannot catch a wrong value at
+  runtime.
+
+  **verify:** `git grep -n "render(<RaceScreen" -- '*.jsx'`. **STILL OPEN while it returns nothing
+  and exits 1** — that is today's output. The day it returns a line, somebody has mounted the screen
+  and the finding is answered. **The empty result is evidence because the pattern can match:**
+  `git grep -ln "render(<" -- '*.test.jsx'` finds it in dozens of files, `App.test.jsx` among them.
+  Size, separately: `git grep -c "" client/src/screens/RaceScreen/index.jsx`.
+
+---
+
 ## Documentation (2026-08-07, from DOC-ORDER-1)
 
 - [ ] **Authentication and authorization — DESIGN EXISTS, nothing is built.** The full v3.2 design
