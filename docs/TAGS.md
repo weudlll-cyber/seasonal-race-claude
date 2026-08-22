@@ -165,6 +165,29 @@ than argued, because `defaults.js` sits inside all four instruments' closures. V
   band floor that asked for LESS width, and holding still-level racers, which put the winner at
   `x = 0.105` with 24 cut frames. Keep it: those are the six answers nobody should have to buy twice.
 
+### RUNIN-CEILING-HOLD — the endgame's first accepted shape, archived on retirement (2026-08-22)
+
+**The ceiling-and-hold run-in**: open far enough that the finish sits well in frame, HOLD that width,
+then close in one sweep whose release moment is derived from the observed pace. It shipped, it was
+tuned over several blocks, and it was replaced by the SCHEDULE — a position for every frame, arriving
+at the crossing.
+
+**It was retired rather than deprecated** (RETIRE-RUNIN-LEGACY-1, the owner's decision of
+2026-08-25). It lived behind `runInSchedule`, which shipped ON and had **no Dev Screen control**, so
+it was unreachable in the shipped product and unreachable from the UI while costing a second
+implementation of the endgame that every later repair had to be kept consistent with.
+
+**NOTHING SHIPPED WITH THE RETIREMENT AND NOTHING WAS MINTED** — all four fingerprints are
+byte-identical across it, which is the proof the arm was genuinely unreachable rather than merely
+believed to be. So this is an ARCHIVE tag, not a return point: there is no behaviour to return to.
+
+- `archive/runin-ceiling-hold` (`bb1e74df`, 2026-08-22) — the last commit that CONTAINS the old arm,
+  with its tests, its two pace diagnostics (`runin-close-rate.mjs`, `runin-pace-table.mjs`) and its
+  justification comments intact. Check it out to read it; do not reintroduce it. The measurements
+  that decided against it are preserved in [CAMERA_DIRECTOR.md](CAMERA_DIRECTOR.md) §3b and the
+  reasoning in [DEAD-ENDS.md](DEAD-ENDS.md) §Q. See
+  [RETIRE-RUNIN-LEGACY-1](../reports/evolution/RETIRE-RUNIN-LEGACY-1.md).
+
 ### LABEL-OVERLAP — a label that was admitted stays readable (2026-08-22)
 
 **The owner judged this on a production build on 2026-08-22 and ACCEPTED it, including the photo

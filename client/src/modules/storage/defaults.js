@@ -685,32 +685,6 @@ export const DEFAULT_CAMERA_CONFIG = {
   // WHAT THIS REPLACED: an OVERVIEW-width cap and a delayed engagement. Both are gone — the run-in
   // composes from the endgame threshold again and the pull-out is whatever the line requires.
   runInShot: true,
-  // ── THE ENDGAME AS A SCHEDULE, NOT A CEILING (ENDGAME-SCHEDULE-1, his spec of 2026-08-23) ─────
-  //
-  // FALSE = TODAY: hold the opening shot, then sweep once. He has rejected that shape twice — the
-  // hold IS the endgame's entire width and it buys standstill rather than motion.
-  //
-  // TRUE = the shot is placed by a SCHEDULE that is moving through the whole phase and arrives
-  // exactly at the crossing. Two smoothstep segments meeting at `endgameThreshold`:
-  //   WIDEN  from the ordinary racing shot to the narrowest width that shows the winner AND the
-  //          line, finishing AT the threshold — which is his requirement 1's deadline.
-  //   CLOSE  from that width to the ACTIVE STATE'S OWN zoom, parameterised by race progress so it
-  //          lands on the state's picture at the crossing — his requirement 2, and no new value.
-  // Requirements 3 and 6 hold by construction: a smoothstep is C1, so the rate is continuous and
-  // zero only at the turn and at the arrival, and the shot never reverses.
-  // TRUE, ENDGAME-SCHEDULE-1, 2026-08-23. NOT MINTED — his eye is owed.
-  //
-  // MEASURED, nine scorable tracks, seed 9, his config -> the shipped defaults:
-  //   STANDSTILL   43% -> 17% of the spec window (26% -> 18% shipped), and the number he actually
-  //                complained about, the LONGEST static run, 2017 ms -> 550 ms on both arms.
-  //   TIMING       winner and line both visible by 95% of the race: 0 of 9 tracks -> 9 of 9
-  //                (8 of 9 shipped).
-  //   ARRIVAL      worst error against the leader-view / photo-finish factor 48% -> 6%.
-  //   WIDTH        widest endgame frame 6.1 -> 4.4 corridors (6.1 -> 5.4 shipped).
-  //   SMOOTHNESS   worst |d2 ln(width)/dt2| 78.3 -> 13.3 (78.3 -> 22.0 shipped).
-  //   MONOTONICITY 9 of 9 tracks, both arms — held by the ratchet in `_setTargets`.
-  //   AND FEWER RACERS ARE CUT than today: contender-off-canvas frames 59 -> 35 (109 -> 33).
-  runInSchedule: true,
   // ── THE CONTENDERS DECIDE THE ZOOM, THE CORRIDOR IS ONLY THE CEILING (CONTENDER-ZOOM-1) ────────
   // The owner's corrected rule for the photo finish, and it is the opposite way round from how a
   // corridor bound was first drafted: in a photo finish ALL of its participants must be visible and

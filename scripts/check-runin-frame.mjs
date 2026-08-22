@@ -346,9 +346,7 @@ for (const c of CASES) {
 // that offset is the whole reason the line leaves the frame sideways.
 
 const LINE_SEED = 9;
-// THE CONTROL ARM. `--no-schedule` turns the scheduled endgame off, which is what authors the width
 // this question grades. A limit nobody has seen both fail and pass is a guess.
-const NO_SCHEDULE = process.argv.includes("--no-schedule");
 // SABOTAGE ARMS, so this file can be shown to go RED on BOTH halves of the requirement rather than
 // merely to be satisfied. They are not a mode anything ships with; they displace the measured point,
 // which is the same thing the defect does to the picture.
@@ -357,8 +355,7 @@ const NO_SCHEDULE = process.argv.includes("--no-schedule");
 //   --sabotage-never   it is outside for the WHOLE window — "it never appears at all".
 const SAB_VANISH = process.argv.includes("--sabotage-vanish");
 const SAB_NEVER = process.argv.includes("--sabotage-never");
-const LINE_CFG =
-  NO_SCHEDULE ? { ...DEFAULT_CAMERA_CONFIG, runInSchedule: false } : DEFAULT_CAMERA_CONFIG;
+const LINE_CFG = DEFAULT_CAMERA_CONFIG;
 /** Deciles of the window, so a row is a SERIES and not one number. */
 const SERIES_STEPS = 10;
 
@@ -386,8 +383,7 @@ console.log(
   `\nrequirement 5 — from the endgame threshold to the crossing, can the viewer tell where the line\n` +
     `is? The line's point inside the frame at ${COMPANY_FRAME_PCT} of the canvas. Margin in px; negative is OUT.` +
     (SAB_VANISH ? "   [SABOTAGE: vanish]" : "") +
-    (SAB_NEVER ? "   [SABOTAGE: never]" : "") +
-    (NO_SCHEDULE ? "   [CONTROL: runInSchedule off]" : "")
+    (SAB_NEVER ? "   [SABOTAGE: never]" : "")
 );
 
 const lineRows = [];
