@@ -36,6 +36,18 @@ edit someone else's report even to correct it.** If an audit is wrong, the answe
   ends in `expect(true).toBe(true)` and therefore cannot fail. It is explicit about what it did NOT
   open, which is the part that makes the rest of it usable.
 
+- [PROJECT-STATE-2026-08-25.md](PROJECT-STATE-2026-08-25.md) — a state-of-the-repository answer
+  sheet: scale, reachability, duplication, and a readability grade, answered question by question
+  with the command behind each figure. **Its most useful property is how much of it says NOT
+  ANSWERED** — A5, B1–B4, B6 and C1–C3 are left open with the reason, so the answered part can be
+  trusted. Grades the codebase 3/5 for maintainability and says NO to "is it ready", naming the
+  camera director's size, RaceScreen's mixed orchestration and the density of the auth paths.
+
+**AND THE THIRD ONE ARRIVED WHILE THIS DIRECTORY WAS BEING REGISTERED**, which is the argument for
+registering it made better than any reasoning could. `PROJECT-STATE-2026-08-25.md` landed untracked
+minutes after the merge, and `check-index` named it immediately — "3 reports checked, 1 unindexed".
+Before the registration it would have sat there silently, exactly as the first two did.
+
 **F2 is this project's own Lesson 209 in someone else's words** — a check that cannot fail is
 indistinguishable from one that passes. It is not fixed here: this block registers the directory and
 commits the audits unedited, and acting on a finding is separate work with its own verdict.
