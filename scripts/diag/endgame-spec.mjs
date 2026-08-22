@@ -96,7 +96,13 @@ const CH = 720;
 const SEED = 9;
 const FPS = 60;
 const WINDOW_FROM = 0.9; // where the measurement window opens, in race progress
-const DEADLINE = 0.95; // requirement 1's deadline
+// REQUIREMENT 1'S DEADLINE IS `endgameThreshold`, NOT A NUMBER THAT HAPPENS TO EQUAL IT.
+// CameraDirector.js:2990 states the identity: the widen ends AT `endgameThreshold`, and
+// his requirement 1 makes that instant a deadline. It was written here as a literal 0.95
+// and in defaults.js as `endgameThreshold: 0.95`; they agreed, so a change to the default
+// would have moved the shipped behaviour while this measurement kept scoring against the
+// old instant — and reported a regression the code had not made.
+const DEADLINE = DEFAULT_CAMERA_CONFIG.endgameThreshold;
 const STILL = 95 / (CW / 2); // 0.1484 ln/s — RUNIN-HOLD-1's own perceptibility figure
 const SMOOTH = 5; // frames in the centred moving average (83 ms)
 const MONO_DEADBAND = 0.005; // 0.5% of width; below this a "re-opening" is numerical, not visible
@@ -106,29 +112,13 @@ const ARM = (process.argv.find((a) => a.startsWith("--arm=")) ?? "--arm=his").sl
 const LABEL = (process.argv.find((a) => a.startsWith("--label=")) ?? "--label=today").slice(8);
 const TRACK_ARG = (process.argv.find((a) => a.startsWith("--tracks=")) ?? "").slice(9);
 
-const HIS = [
-  ["cameraStateProfiles.OVERVIEW.trackingTC", 1.5],
-  ["highlightHeroes", true],
-  ["battlePulkThresholdT", 0.001],
-  ["outcomePhaseThreshold", 0.65],
-  ["battleCooldownMs", 20000],
-  ["battleWeight", 0],
-  ["finishPauseMs", 4000],
-  ["winnerCardMs", 4000],
-  ["corridorCapArriveMs", 5000],
-  ["labelNamesWhenRoom", true],
-  ["minRacersVisible", 8],
-];
+// THE ELEVEN KEYS AND `setPath` LIVE IN ONE HOME (ONE-HOME-THREE-TRUTHS-1).
+// They were written out identically in this file AND in the other harness; both
+// copies agreed, which is the dangerous variant — they would have kept agreeing
+// until one was edited, and the divergence would then have read as a change in HIS
+// NUMBERS rather than as an error.
+import { HIS, setPath } from "../lib/hisArm.mjs";
 
-function setPath(o, path, v) {
-  const parts = path.split(".");
-  let cur = o;
-  for (let i = 0; i < parts.length - 1; i++) {
-    cur[parts[i]] = structuredClone(cur[parts[i]]);
-    cur = cur[parts[i]];
-  }
-  cur[parts[parts.length - 1]] = v;
-}
 
 export function makeConfig(arm, overrides = []) {
   const cfg = structuredClone(DEFAULT_CAMERA_CONFIG);
