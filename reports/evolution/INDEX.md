@@ -154,6 +154,22 @@ is dated and recorded HERE, where a reader on their way to the report will pass 
   [GATE-LINES-1](../night/GATE-LINES-1.md); the fix and the once-per-run control that makes the
   silence impossible to repeat: [GATE-TRUTH-1](../night/GATE-TRUTH-1.md).
 
+- [DEAD-CODE-VERIFIED-1.md](DEAD-CODE-VERIFIED-1.md) — **three candidate dead-code lists turned into
+  numbers you can act on. NOTHING WAS DELETED** (2026-08-23). **The candidate list for default keys
+  was off by a factor of ~16** — ~79 claimed with no reader, **verified: 1 unreferenced (`language`)
+  and 4 test-only** — because a config key is read through `cfg.KEY`, `['KEY']` and `set('KEY',…)`,
+  none of which a static import graph sees. **And "no importer" is not "dead":** of 87 candidate
+  files, 73 have no importer AND no invoker, but **only 8 are named nowhere in any document**, and
+  all eight are one-shot asset generators whose committed output they are the provenance of.
+  **TWO NEAR-MISSES NAME THE STAKES: five shipped visual effects** (bubbles/fireflies/rain/stars/
+  wave) have no static importer and are loaded by `import.meta.glob`, **and `main.jsx`, the app
+  entry, is loaded by a `<script src>` tag.** A tool trusting the import graph deletes all six.
+  **MY OWN METHOD WAS WRONG TWICE and both are recorded**: matching inside comments (biases both
+  ways), and a bare-name search that answered LIST B with a non-credible 0 of 245. Exports: 54
+  unreferenced, of which **six are the `pruneStored*Config` family** — identically shaped across six
+  config modules, none called — and `runRaceHeadless`, exported by `raceCore.js` and called by
+  nothing. 2 proposals; `knip` is already configured here and was deliberately not run.
+
 - [BACKLOG-HONEST-1.md](BACKLOG-HONEST-1.md) — **the backlog census, its verdicts and its edits**
   (2026-08-22/23). **105 claims present themselves as open** (the brief expected 90–110; the 26
   unticked agrees with its one independently stated count). **The enumeration had to be repaired
