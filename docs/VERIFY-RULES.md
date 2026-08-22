@@ -101,6 +101,12 @@ cost the time. Formatting first removes an entire measuring pass with no loss of
 reach. Ask the repo rather than remembering: `node scripts/engine-reach.mjs --check <paths>` exits 0
 if any of them can.
 
+**IT REFUSES RATHER THAN ANSWERING ZERO (REACH-REFUSES-1).** Exit **2** means it examined nothing —
+no paths were given, or `--base=` did not resolve — and it is never a clearance. The rule is the same
+one R0a states for `npm run verify`, for the same reason: a run that checked nothing must not be
+readable as a run that found nothing. **The tool takes the paths you hand it and reads no diff of its
+own**, so the usual cause is a command substitution that expanded empty.
+
 **Why it is safe.** The trigger is the transitive closure of `raceCore.js`'s imports, computed from
 source — 19 files against the 103 the old folder rule fired on. What the core cannot read cannot
 change the race. The closure is guarded by `scripts/engine-reach.test.mjs`, which fails if a new

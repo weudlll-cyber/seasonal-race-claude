@@ -22,7 +22,12 @@
 //
 // Usage:
 //   node scripts/engine-reach.mjs                  # the closure, one path per line
-//   node scripts/engine-reach.mjs --check <paths>  # exit 0 if ANY path is in the closure, else 1
+//   node scripts/engine-reach.mjs --check <paths>  # exit 0 if ANY path carries a reaching change
+//                                                  # exit 1 if none do; exit 2 = REFUSED, see below
+//
+// EXIT 2 IS "I WAS ASKED NOTHING", NOT "NO" (REACH-REFUSES-1). --check refuses rather than answering
+// when it was given no paths, or when --base= does not resolve. Exit 1 is a real negative answer a
+// caller may act on; exit 2 means the question was broken and nothing was examined.
 // ============================================================
 
 import { readFileSync, existsSync } from "node:fs";
@@ -170,14 +175,57 @@ if (
       .slice(checkIdx + 1)
       .filter((p) => !p.startsWith("--"))
       .map((p) => p.replace(/\\/g, "/").replace(/^\.\//, ""));
-    const inHull = wanted.filter((w) => files.includes(w));
+
+    // ── A TOOL THAT CANNOT SEE THE DIFF MUST REFUSE, NOT ANSWER ZERO (REACH-REFUSES-1) ──────────
+    //
+    // Exit 1 means "no path reaches the engine", and a caller reads that as a licence to skip a
+    // fingerprint. Every refusal below exits 2 instead — the code this script already uses for the
+    // empty-closure and dynamic-import cases, and the same convention npm run verify uses in R0a:
+    // 2 is REFUSED, 1 is a real negative answer.
+    //
+    // THE INCIDENT THIS IS WRITTEN FROM. On 2026-08-22 this script answered "none of 0 path(s)"
+    // while the pre-commit hook s own invocation, seconds later on the same tree, correctly named
+    // storage/defaults.js. The two calls differed in ONE thing, and it was never cwd, staging or
+    // the diff base: the hook guards its call with [ -n "$staged" ] so it never invokes with an
+    // empty list, while the hand-typed call substituted an empty path list and handed --check
+    // nothing at all. This script reads no tree of its own for --check; it answers about the paths
+    // it is given, and it was given none.
+    if (wanted.length === 0) {
+      console.error(
+        "REFUSED: --check was given no paths, so this run examined nothing.\n" +
+          "  \"none of 0 path(s)\" is not a clearance — it is the tool saying it was asked nothing.\n" +
+          "  Pass the paths you changed:  node scripts/engine-reach.mjs --check <paths>\n" +
+          "  If they came from a command substitution, it expanded empty.",
+      );
+      process.exit(2);
+    }
+
     // VERIFY-COST-1: a hull file whose edit is comments and whitespace ONLY cannot change what the
     // engine computes, so it does not count as reach. Printed, never silent.
     const baseArg = process.argv.find((a) => a.startsWith("--base="));
-    const { hit, inert } = splitInert(
-      inHull,
-      baseArg ? baseArg.slice(7) : "master",
-    );
+    const base = baseArg ? baseArg.slice(7) : "master";
+
+    // THE BASE MUST RESOLVE. An unresolvable ref used to reach splitInert, where every git show
+    // threw and every path was counted as a hit — the SAFE direction, but for the wrong reason and
+    // indistinguishable from a real one. A ref that is not a ref is a broken question, not an answer.
+    let baseSha = null;
+    try {
+      baseSha = execFileSync(
+        "git",
+        ["rev-parse", "--verify", `${base}^{commit}`],
+        { cwd: ROOT, encoding: "utf8", stdio: ["ignore", "pipe", "ignore"] },
+      ).trim();
+    } catch {
+      console.error(
+        `REFUSED: the base ref "${base}" does not resolve to a commit.\n` +
+          "  The REF is the problem here, not the work. Nothing was examined.",
+      );
+      process.exit(2);
+    }
+
+    const inHull = wanted.filter((w) => files.includes(w));
+    const outOfHull = wanted.filter((w) => !files.includes(w));
+    const { hit, inert } = splitInert(inHull, base);
     for (const i of inert)
       console.log(
         `ENGINE REACH: ${i.path} is in the hull but INERT — ${i.reason}`,
@@ -189,9 +237,20 @@ if (
       for (const h of hit) console.log("  " + h);
       process.exit(0);
     }
+    // NOT IN THE HULL and IN THE HULL BUT UNCHANGED are different facts, and they used to print as
+    // one sentence. defaults.js can absolutely reach the engine; saying it "cannot" because this
+    // diff does not touch it is the sentence that taught a reader the tool was doing something else.
     console.log(
-      `ENGINE REACH: none of ${wanted.length} path(s) can reach the race engine.`,
+      `ENGINE REACH: none of ${wanted.length} path(s) carry a change that can reach the race engine.`,
     );
+    if (outOfHull.length)
+      console.log(
+        `  ${outOfHull.length} outside the hull (cannot reach the engine at all): ${outOfHull.join(", ")}`,
+      );
+    if (inert.length)
+      console.log(
+        `  ${inert.length} IN the hull but inert against ${base} — reachable code, unchanged content.`,
+      );
     process.exit(1);
   }
   // LOUD FAILURE (Lesson 187): a closure that came back empty or unfollowable is not a pass.

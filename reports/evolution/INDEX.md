@@ -6,6 +6,20 @@ and [FAIRNESS.md](../../docs/FAIRNESS.md). Shipped world: **`dc4647be0f55ebdb`**
 
 ## CORRECTIONS — findings that invalidate a number in a report below
 
+- **2026-08-22 — SHIP-COORD-SYSTEM's explanation of the `engine-reach --check` trap names the wrong
+  MECHANISM, while its practical advice is exactly right.** Its line reads: _bare
+  `engine-reach --check` on a committed merge reports `none of 0 path(s)` because **it reads the
+  WORKING tree**, which a merge leaves clean_. Diagnosed at source by
+  [REACH-REFUSES-1](REACH-REFUSES-1.md): **`--check` reads no tree at all.** It answers about the
+  paths handed to it on the command line, and `none of 0` is the literal empty-argument case —
+  `wanted.length === 0`, printed and exited 1. The clean working tree was the reason the CALLER's
+  command substitution expanded to nothing, not something the tool inspected. **WHAT STANDS, and it
+  was the useful half:** _that is the tool saying it was asked nothing, not a clearance_ — correct,
+  and now enforced rather than remembered, since an empty path list exits **2** and prints no answer.
+  **What is WITHDRAWN:** the words "it reads the WORKING tree" as an account of `--check`. (The
+  working tree IS read further down, by `splitInert`, when deciding whether a hull path's change is
+  inert — a different question, reached only after paths exist.)
+
 - **2026-08-22 — LABEL-OVERLAP-3's "7 of 12 names collide" should read "3 of 11".** Its browser pass
   built label boxes with `BOX_PAD_X = 10`; the module's value is **8**, so every box was 2 px too
   wide and the count was inflated. Corrected in [LABEL-OVERLAP-FIX-1](LABEL-OVERLAP-FIX-1.md), which
@@ -113,6 +127,21 @@ is dated and recorded HERE, where a reader on their way to the report will pass 
   luger-hill 3.0%, space-sprint 1.0%, seatrack 0.0%). Diagnosis and proof:
   [GATE-LINES-1](../night/GATE-LINES-1.md); the fix and the once-per-run control that makes the
   silence impossible to repeat: [GATE-TRUTH-1](../night/GATE-TRUTH-1.md).
+
+- [REACH-REFUSES-1.md](REACH-REFUSES-1.md) — **`engine-reach --check` refuses instead of answering
+  zero** (2026-08-22). DIAGNOSED BEFORE REPAIRING, and the diagnosis corrects an earlier one: the two
+  invocations differed in neither cwd, staging nor diff base — **`--check` reads no tree at all.** It
+  answers about the paths on its command line, the pre-commit hook guards its call with
+  `[ -n "$staged" ]` so it can never pass none, and the hand-typed call substituted an empty list.
+  `none of 0 path(s)` was the literal empty-argument case, printed with **exit 1 — which a caller
+  reads as a licence to skip a mint.** Now exit **2** with no answer on stdout, for an empty list and
+  for a `--base=` that does not resolve (which previously counted every path as a hit — the safe
+  direction, for the wrong reason, indistinguishable from a real one). **AND THE NEGATIVE MESSAGE NO
+  LONGER CONFLATES TWO FACTS:** not-in-the-hull and in-the-hull-but-unchanged printed as one
+  sentence, so the tool said `defaults.js` "cannot reach the race engine". **ONE OVER-REACH WAS BUILT,
+  CAUGHT BY PROVING THE OTHER DIRECTION, AND REMOVED** — a base==HEAD refusal that would have gone
+  off for ordinary uncommitted work and silenced the pre-commit tripwire. 5 CLI tests added; the hook
+  re-proved firing. 2 proposals.
 
 - [CI-PERMISSIONS-1.md](CI-PERMISSIONS-1.md) — **`ci.yml` declares its token scope where the jobs
   are** (2026-08-22). `permissions: contents: read` at workflow level, read off the three jobs

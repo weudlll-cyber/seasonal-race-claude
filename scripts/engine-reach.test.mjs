@@ -16,12 +16,26 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import { writeFileSync, mkdtempSync, mkdirSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { join, dirname } from "node:path";
+import { fileURLToPath } from "node:url";
+import { spawnSync } from "node:child_process";
 import {
   engineReach,
   importSpecifiers,
   hasDynamicImport,
 } from "./engine-reach.mjs";
+
+const HERE = dirname(fileURLToPath(import.meta.url));
+const CLI = join(HERE, "engine-reach.mjs");
+
+/** Run the script as a CLI and hand back its exit code and both streams. */
+function runCli(...args) {
+  const r = spawnSync(process.execPath, [CLI, ...args], {
+    encoding: "utf8",
+    cwd: join(HERE, ".."),
+  });
+  return { code: r.status, out: r.stdout ?? "", err: r.stderr ?? "" };
+}
 
 test("the real closure reaches the engine, and reaches it THROUGH a dependency", () => {
   const { files } = engineReach();
@@ -106,4 +120,71 @@ test("the specifier parser ignores bare package imports", () => {
     "import a from 'react';\nimport b from './local.js';\n",
   );
   assert.deepEqual(specs, ["./local.js"]);
+});
+
+
+// ── REACH-REFUSES-1: A TOOL THAT CANNOT SEE THE DIFF MUST REFUSE, NOT ANSWER ZERO ───────────────
+//
+// These four are the guard on the exit-code CONTRACT, which is the part a caller acts on:
+//   0 = at least one path carries a reaching change
+//   1 = a real negative answer
+//   2 = REFUSED, nothing was examined
+//
+// IF DELETED: exit 2 can silently become exit 1 again — the whole defect, restored, and invisible
+// because both are "non-zero" to a shell `if`. WHAT WOULD GO UNNOTICED: a caller that substituted
+// an empty path list being told "nothing can reach the engine" and skipping a mint on that basis.
+
+test("REFUSES when --check is given no paths at all", () => {
+  const r = runCli("--check");
+  assert.equal(r.code, 2, "an empty path list must REFUSE (2), not answer no (1)");
+  assert.match(r.err, /REFUSED/);
+  assert.match(r.err, /no paths/i);
+  // AND IT MUST NOT ANSWER. The old clearance sentence went to stdout with exit 1; a refusal
+  // writes to stderr and leaves stdout empty, so there is nothing for a caller to parse as a
+  // verdict. (The message QUOTES that sentence in order to explain it — hence stdout, not both.)
+  assert.equal(r.out.trim(), "", "a refusal must print no answer on stdout");
+});
+
+test("REFUSES when --check is followed only by flags — the same empty list, wearing a hat", () => {
+  const r = runCli("--check", "--base=master");
+  assert.equal(r.code, 2);
+  assert.match(r.err, /REFUSED/);
+});
+
+test("REFUSES when the --base ref does not resolve, instead of counting every path as a hit", () => {
+  const r = runCli(
+    "--check",
+    "client/src/modules/raceCore.js",
+    "--base=definitely-not-a-ref-fbb01d",
+  );
+  assert.equal(r.code, 2, "an unresolvable base must REFUSE");
+  assert.match(r.err, /REFUSED/);
+  assert.match(r.err, /does not resolve/);
+});
+
+test("a path OUTSIDE the hull still gets a real answer (1), not a refusal", () => {
+  // THE OTHER DIRECTION, and it is the one that matters: making the tool refuse is only an
+  // improvement if it still ANSWERS every question it can actually answer. A doc has no path to
+  // the engine, and saying so is a legitimate negative — exit 1, not exit 2.
+  const r = runCli("--check", "docs/BACKLOG.md");
+  assert.equal(r.code, 1, "an honest negative must stay exit 1");
+  assert.match(r.out, /outside the hull/);
+});
+
+test("the negative message separates NOT-IN-THE-HULL from IN-THE-HULL-BUT-UNCHANGED", () => {
+  // These are different facts and used to print as one sentence: "none of N path(s) can reach the
+  // race engine" was said about `defaults.js`, which can reach the engine from anywhere. That
+  // sentence is what taught a reader the tool was doing something other than what it does.
+  const r = runCli(
+    "--check",
+    "docs/BACKLOG.md",
+    "client/src/modules/storage/defaults.js",
+  );
+  assert.equal(r.code, 1);
+  assert.match(r.out, /carry a change that can reach/);
+  assert.doesNotMatch(
+    r.out,
+    /none of \d+ path\(s\) can reach the race engine/,
+    "the old conflated sentence is back",
+  );
 });

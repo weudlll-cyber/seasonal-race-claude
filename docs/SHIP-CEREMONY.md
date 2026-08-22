@@ -22,6 +22,13 @@ Camera and other presentation work still skips this whole ceremony. But it does 
 > of them can change the race. If it does, run `node scripts/fingerprint-default.mjs`, compare
 > against the shipped fingerprint, and say the result in the report. Its cost is in the generated
 > table below — this sentence deliberately quotes no duration.
+>
+> **AND IT HAS THREE ANSWERS, NOT TWO (REACH-REFUSES-1, 2026-08-22).** `0` = something reaches;
+> `1` = a real negative; **`2` = REFUSED, meaning it examined nothing** — it was given no paths, or a
+> `--base=` that does not resolve. **Exit 2 is never a clearance.** Before that change an empty path
+> list printed `none of 0 path(s) can reach the race engine` and exited 1, which reads exactly like a
+> licence to skip the mint. If you pass the paths from a command substitution, an empty expansion is
+> what produces it.
 
 **The trigger is a computed set, not a folder (VERIFY-COST-1).** What can change the race is the
 transitive closure of `raceCore.js`'s imports. The old rule fired on a FOLDER instead, and minting
