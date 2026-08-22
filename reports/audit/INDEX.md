@@ -43,10 +43,18 @@ edit someone else's report even to correct it.** If an audit is wrong, the answe
   trusted. Grades the codebase 3/5 for maintainability and says NO to "is it ready", naming the
   camera director's size, RaceScreen's mixed orchestration and the density of the auth paths.
 
-**AND THE THIRD ONE ARRIVED WHILE THIS DIRECTORY WAS BEING REGISTERED**, which is the argument for
-registering it made better than any reasoning could. `PROJECT-STATE-2026-08-25.md` landed untracked
-minutes after the merge, and `check-index` named it immediately — "3 reports checked, 1 unindexed".
-Before the registration it would have sat there silently, exactly as the first two did.
+- [OPEN-QUESTIONS-2026-08-25.md](OPEN-QUESTIONS-2026-08-25.md) — the open half of the deep audit,
+  kept as its own file: dead material and redundancy, question by question. **It is almost entirely
+  NOT ANSWERED and that is its value** — 1a-1e and 2a-2c are each left open with the reason (a static
+  import graph cannot settle reachability where dynamic imports and entrypoint execution exist), so
+  nobody re-derives a false clean bill from a partial sweep.
+
+**AND THEY KEEP ARRIVING, WHICH IS THE ARGUMENT FOR REGISTERING THIS DIRECTORY MADE BETTER THAN ANY
+REASONING COULD.** `PROJECT-STATE-2026-08-25.md` landed untracked minutes after the registration
+merged; `OPEN-QUESTIONS-2026-08-25.md` landed during the block after that. Both times `check-index`
+named the file immediately — "1 unindexed" — and both times it would have sat there silently before
+the registration, exactly as the first two did. **Four audits in one day, two of them caught by a
+guard that was installed the same afternoon.**
 
 **F2 is this project's own Lesson 209 in someone else's words** — a check that cannot fail is
 indistinguishable from one that passes. It is not fixed here: this block registers the directory and
