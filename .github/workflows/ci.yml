@@ -35,6 +35,38 @@ on:
   # triggers and not a way to skip CI — it runs the same two jobs on the same ref.
   workflow_dispatch:
 
+# ── LEAST PRIVILEGE (CI-PERMISSIONS-1, 2026-08-22) ──────────────────────────────────────────────
+# WHAT THIS ACTUALLY BUYS, measured rather than assumed. This repository's setting today is
+# `default_workflow_permissions: read` (`gh api repos/:owner/:repo/actions/permissions/workflow`),
+# so the workflow was NOT running with a write token and nothing here was exposed. Two things are
+# still gained, and they are the honest reasons:
+#
+#   1. `read` as a DEFAULT means read on EVERY scope — actions, checks, contents, deployments,
+#      issues, metadata, packages, pages, pull-requests, security-events, statuses. An explicit
+#      block makes every scope not named here `none`. So the reduction is real: read-everything
+#      becomes read-contents, for every step including `npm ci`, which runs third-party code.
+#   2. THE DEFAULT IS A REPOSITORY SETTING, not a fact about this file. Anyone with admin can flip
+#      it to write in the UI and no diff would show it. Declared here, the scope travels with the
+#      workflow, survives a settings change, and is reviewable where the jobs are.
+#
+# READ OFF THE JOBS, NOT COPIED FROM A TEMPLATE. What the three jobs do with the token:
+#   actions/checkout@v4      — clones, and persists the token as a git credential   → contents: read
+#   scripts/check-tags.mjs   — `git ls-remote --tags origin` through that credential → contents: read
+#   everything else          — setup-node, npm ci, npm audit, vitest, node --test: network and
+#                              filesystem only, no GitHub API call at all
+#
+# NOTHING HERE WRITES. No `gh` invocation, no GITHUB_TOKEN reference, no API call in any of the
+# three jobs — searching .github/ and scripts/ for `GITHUB_TOKEN`, `gh api`, `gh issue` and `gh pr`
+# returns hits only in audit-schedule.yml, which opens and closes an issue and declares
+# `issues: write` for exactly that reason. No step posts a comment, cuts a release, publishes a
+# package or requests an OIDC token.
+#
+# SO THE FLOOR IS `contents: read` AND NO JOB NEEDS MORE. If one ever does, scope it at THAT job
+# with its own `permissions:` block rather than raising this one — a workflow-level grant reaches
+# every step of every job, including the install steps that run other people's code.
+permissions:
+  contents: read
+
 jobs:
   # ── Client ──────────────────────────────────────────────────
   client:
