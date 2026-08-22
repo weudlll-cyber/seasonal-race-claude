@@ -49,12 +49,20 @@ edit someone else's report even to correct it.** If an audit is wrong, the answe
   import graph cannot settle reachability where dynamic imports and entrypoint execution exist), so
   nobody re-derives a false clean bill from a partial sweep.
 
+- [GAME-RULES-2026-08-25.md](GAME-RULES-2026-08-25.md) — an audit of the GAME's own rules: what the
+  race promises, where fairness is defined, and whether the shipped gates are mechanically enforced
+  or enforced by process. **It opens with what it did not do** — no fresh fairness run, so it does
+  not re-confirm the shipped per-track arrival claim on the current tree, and no full CI trace, so it
+  cannot prove every documented gate is enforced before release rather than by convention. Those two
+  gaps are worth more than a confident summary would have been.
+
 **AND THEY KEEP ARRIVING, WHICH IS THE ARGUMENT FOR REGISTERING THIS DIRECTORY MADE BETTER THAN ANY
 REASONING COULD.** `PROJECT-STATE-2026-08-25.md` landed untracked minutes after the registration
 merged; `OPEN-QUESTIONS-2026-08-25.md` landed during the block after that. Both times `check-index`
 named the file immediately — "1 unindexed" — and both times it would have sat there silently before
-the registration, exactly as the first two did. **Four audits in one day, two of them caught by a
-guard that was installed the same afternoon.**
+the registration, exactly as the first two did. **Five audits in one day, three of them caught by a
+guard that was installed the same afternoon** — and the fourth was later UPDATED by its author, which
+this index treats the same way: their file, their edit, committed as it stands.
 
 **F2 is this project's own Lesson 209 in someone else's words** — a check that cannot fail is
 indistinguishable from one that passes. It is not fixed here: this block registers the directory and

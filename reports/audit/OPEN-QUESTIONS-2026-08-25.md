@@ -1,5 +1,6 @@
 NOT ANSWERED
-- 1a, 1b, 1c, 1d, 1e: the full dead-material sweep is still incomplete as a rigorously exhaustive workspace enumeration.
+- 1a, 1b, 1c, 1e: the full dead-material sweep is still incomplete as a rigorously exhaustive workspace enumeration.
+- 1d: partially answered with a direct camera-config key/read scan, but still not exhaustive for dynamic/destructured access patterns.
 - 2a, 2b, 2c: redundancy is only partially enumerated across the full tree.
 
 ## 1 · Dead Material
@@ -10,7 +11,7 @@ NOT ANSWERED
 
 1c. NOT ANSWERED. I did not run a scope-aware liveness pass for module-level constants and class fields, so I cannot honestly name the written-but-never-read set.
 
-1d. NOT ANSWERED. A direct-pattern scan over 168 default-path keys and 91 direct reader keys found 79 candidate unused default paths, but destructured reads, computed keys, and dynamic access into camera config make the result incomplete.
+1d. PARTIAL. A direct-pattern scan over `client/src` (248 non-test `.js/.jsx` files) found 168 default camera key-paths in `DEFAULT_CAMERA_CONFIG` and 91 reader key-paths, with 79 default-only candidates and 2 reader-only artifacts (`js`, `js.`). The `js`/`js.` entries are regex artifacts from generic `.set('...')` matching, not real config keys. This is still not exhaustive for destructured reads, object-level profile access (for example `cameraStateProfiles` consumed as a whole object), computed keys, and other dynamic access patterns.
 
 1e. NOT ANSWERED. A static-import scan over `client/src` and `server/src` surfaced 87 candidate production files with no static importers, but dynamic imports and route-level loading make that graph incomplete.
 
