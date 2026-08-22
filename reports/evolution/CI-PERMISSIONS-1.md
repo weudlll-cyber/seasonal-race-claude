@@ -78,7 +78,25 @@ goes.
 ## §4 — CI ON THE BRANCH, BEFORE THE MERGE
 
 **R8 exception 1 applies in full: this change touches CI, so the local verify is marking its own
-homework and CI must be green FIRST.** See VERIFICATION below for the run and its conclusion.
+homework and CI must be green FIRST.**
+
+**A push of the branch alone would NOT have answered it.** `ci.yml` triggers on `push` to
+`[main, master]` and on `pull_request` to `[main, master]` — a feature branch push produces no run.
+So PR **#151** was opened for the purpose, and it is what the exception actually requires.
+
+**Run `32602458551` — all three jobs green, on the branch, before the merge:**
+
+```
+success   Client checks
+success   Server tests
+success   Living-doc guards + script tests
+```
+
+**The docs job is the one that proves the scope is sufficient rather than merely accepted.** It runs
+`scripts/check-tags.mjs`, whose `git ls-remote --tags origin` is the only step in the workflow that
+goes back to GitHub after the checkout. Under `contents: read` it passed, so the tag list was
+readable — which is the single thing that could have gone wrong and would have shown up as a docs-job
+failure rather than as anything obviously about permissions.
 
 **What a failure here would have meant, decided before the run so the result could not be rationalised
 afterwards:** a job failing for want of a permission is information, and the response is to widen
@@ -91,7 +109,7 @@ is a different finding and does not license widening anything.
 
 | instrument | ran? |
 | --- | --- |
-| **CI on the branch** | **REQUIRED AND RUN — R8 exception 1.** See the run recorded in the commit message and §4. |
+| **CI on the branch** | **REQUIRED AND RUN — R8 exception 1.** PR #151, run `32602458551`: Client checks, Server tests and Living-doc guards all `success`. §4. |
 | `npm run verify` | **RAN.** It is not the authority here (R8 exception 1) but it proves the change breaks no guard. |
 | world / camera / render fingerprints | **NOT RUN, answer already determined.** The only file changed is `.github/workflows/ci.yml` and a report. No source, no default, no drawn frame. |
 | client suite, browser gate, 80-race sheet | **NOT RUN** — R15a and R15c. Nothing the suite or the eye can see changed. |
@@ -103,7 +121,7 @@ is a different finding and does not license widening anything.
 | add a least-privilege `permissions:` block at workflow level | done — `contents: read` |
 | establish it by READING the jobs, not copying a template | done — §2, with the token-usage search re-established tree-wide and shown able to match |
 | if one job needs more, scope the extra at job level | **not exercised — no job needs more.** Why, and where a future one would go, is written into the file |
-| CI green on the branch via its PR BEFORE the merge (R8 exception) | done — §4 and VERIFICATION |
+| CI green on the branch via its PR BEFORE the merge (R8 exception) | done — PR #151, run `32602458551`, three jobs green. A branch push alone produces no run here; the PR is what makes the exception answerable (§4) |
 | if a job fails for want of a permission, widen exactly that one and record which needed what | **did not occur.** The decision rule was fixed before the run rather than after it (§4) |
 
 ## SOURCE HYGIENE
