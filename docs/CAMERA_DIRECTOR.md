@@ -799,7 +799,15 @@ a verbatim transcript of one run on one commit, which is a historical record, no
 
 ### The tracking lag, as measured today — and it had drifted
 
-<!-- MEASURED: tracking-lag (median/p95 pp per state) @ 76742cab 2026-08-22 depends=client/src/modules/camera/ -->
+<!-- MEASURED: tracking-lag \(median/p95 pp per state\) @ 82b4dc3d 2026-08-22 depends=client/src/modules/camera/ -->
+
+**RE-MEASURED IN FULL FOR ENDGAME-REWRITE-1, AND EVERY FIGURE IS IDENTICAL TO THE DIGIT** —
+10923, 159, 17169, 9373, 4323, 1865 frames and both percentiles on every state, PHOTO_FINISH
+included at 3.08 / 8.79. It was RUN rather than argued from the fingerprints, and the distinction
+matters here more than usual: that block RE-WRITES the endgame path — a dead helper removed, five
+inline copies of one predicate replaced by a name, and a 385-line function split into a sequence of
+named steps — so the guard is right to ask, and "CAMERA came back byte-identical" is an argument
+about a different instrument's sampling rather than a measurement of these numbers.
 
 **RE-MEASURED IN FULL FOR ENDGAME-LAND-CLEAN-1, AND THIS IS THE FIRST TIME THE SWITCHES ARE ON.**
 Every entry above this one could rest on the same sentence — the switches default off, so nothing
