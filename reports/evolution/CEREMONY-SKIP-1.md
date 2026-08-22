@@ -193,3 +193,123 @@ the mouse and aiming at the picture; a spacebar press does the same job without 
 and it cannot be confused with an accidental drag. **Cost: a key handler needs a focus target and
 must not fire while a Dev Screen input has focus, which is more care than the click needed** — but
 for a test aid used repeatedly it is the better ergonomics. Recorded as an idea, not built.
+
+
+---
+
+# CEREMONY-SKIP-2 — the switch moves to its subject, and the three guards are proven
+
+**2026-08-22 · same branch, on `cd087f78` · one subject, one report.**
+
+## 8 · THE CONTROL MOVED
+
+`ceremonySkipOnClick` rendered under **7 · Endgame**. It now sits at the **TOP of 1 · Start &
+Post-Start**, before the five beat durations it ends — brand screen, track overview, push-in,
+starters board, starting formation. **It changes how you get through them, so it reads first.** The
+owner judged the placement on a production build on 2026-08-22 and asked for the move.
+
+**A placement change in a developer surface and nothing else:** the key, its default, the handler and
+the behaviour are untouched, the tooltip text is unchanged, and no other control was reordered. The
+edit asserts all three: the control matched exactly once before the move, exists exactly once after,
+and lands between section 1's heading and section 2's.
+
+## 9 · THE THREE GUARDS, PROVEN
+
+`client/src/screens/RaceScreen/ceremonySkip.test.jsx` — five tests, all green, **each proved able to
+fail by sabotage**.
+
+| test | what breaks if deleted | what would go unnoticed | sabotage | result |
+| --- | --- | --- | --- | --- |
+| **a — switch OFF, a press changes nothing** | a stray press skips a beat in a build where the aid was never turned on | **the event case exactly**: he shows a race, someone touches the screen, a scene he meant to show is gone. Nothing else in the tree asserts the switch gates the handler at all | removed `if (!enabled) return;` | **RED** |
+| **b — outside COUNTDOWN, a press changes nothing** | a press during the race moves a clock that by then belongs to nothing | that the aid is scoped to the opening at all — the handler would be live for the whole race with the switch on, and the failure would surface far from the click as a wrong countdown or a re-fired gun | removed the `phase !== COUNTDOWN` term | **RED** |
+| **c — a press on the BRAND CARD skips the beat** | nothing proves the handler is reachable during the one beat where a DOM card covers the picture | **a handler moved onto a canvas would pass every other test in this file and in `startCeremony.test.js`** and be dead exactly where the first skip is wanted | moved the handler from the wrapper onto the race canvas | **RED** |
+| the transcription check | `makeHandler` becomes an unwatched second copy of the guards | the guards being removed, reordered or loosened in `RaceScreen` while this file keeps passing against its own copy | removed `if (!ceremonySkipOnClick) return;` **from the real `RaceScreen`** | **RED** |
+| a right-button press does nothing | the other half of "left click only" goes unasserted | a right-click menu press skipping a beat | (covered by a's sabotage class) | — |
+
+**`data-testid="race-canvas-wrapper"` is now earned.** Test c presses the CARD and asserts the event
+reaches a handler on the WRAPPER; the attribute is how it addresses the wrapper. It is no longer dead
+code, which was the alternative the brief allowed.
+
+### The compromise, stated plainly rather than implied
+
+**These are not mounted-`RaceScreen` tests, and the brief asked for those.** The handler is a closure
+inside a 1907-line component whose first paint waits on `raceData` — filled by an effect from storage
+and the track API — and whose draw loop wants a canvas context and rAF. Mounting that would test the
+scaffolding, and each of its failure modes would land on this file as a flake.
+
+So the file mounts **the same DOM shape the screen builds** — a `.race-canvas-wrapper` carrying the
+handler with `CeremonyBrandCard` as a child, exactly as `RaceScreen` renders it — and drives a
+transcription of the handler.
+
+**A transcription is a second statement of one rule, which is the class of defect this project keeps
+paying for.** So it is made self-checking: a fifth test reads `RaceScreen/index.jsx`, extracts the
+handler, and fails if any of its six guard lines stops matching. **That sabotage was run against the
+REAL source and goes red.** The copy is still a copy; it is no longer an unwatched one.
+
+**What remains unproven is one line:** that `RaceScreen` attaches this handler to that element. It is
+visible in the diff and nothing here claims otherwise.
+
+## 10 · VERIFICATION
+
+`npm run verify` routing as the authority: **PASS 8 · FAIL 0 · SKIP 16.** **No fingerprint was
+selected** — `defaults.js` is untouched by this block and no drawn frame changes — which is what the
+brief expected and what verify's own skip lines print. Client suite green.
+
+**Skipped and what determined it:** the browser gate and the race sweep — nothing they answer can have
+changed; and all four fingerprints, because nothing in their reach was touched.
+
+## 11 · THE SHIP TAG DECISION — none, and why
+
+`SHIP-CEREMONY.md`'s tag exists to name a RETURN POINT for a change to the shipped behaviour. **This
+merge moves no fingerprint, mints nothing, and ships a switch that is off**, so `v-ship-…^1` would
+restore a byte-identical picture. **A return point that returns to the same place is noise in the
+register**, and `check-tags` is green either way. **No ship tag.** The same reasoning was applied to
+ENDGAME-REWRITE-1, which also moved nothing.
+
+## 12 · SOURCE HYGIENE
+
+| file | before | after | what changed |
+| --- | --- | --- | --- |
+| `DevScreen/.../CameraAdvancedSection.jsx` | 2083 | 2083 | the control moved; **net zero, nothing added or removed** |
+| `RaceScreen/ceremonySkip.test.jsx` | — | new | the five tests |
+
+**Removed: nothing. Extracted: nothing. Orphaned: nothing** — a placement change orphans no value,
+key, label or tooltip, and the `data-testid` that was dead is now used.
+
+**Noticed but left:** `onMouseDown` stays, per the brief — the owner has seen the press behaviour and
+accepted it.
+
+## 13 · CONFORMITY — the three former NOT DONEs
+
+| the spec asked | CEREMONY-SKIP-1 | now |
+| --- | --- | --- |
+| a click with the switch off does nothing | **NOT TESTED** | **tested, sabotage red** |
+| a click outside COUNTDOWN does nothing | **NOT TESTED** | **tested, sabotage red** |
+| a test that skips the brand beat | **NOT DONE** | **tested, sabotage red** |
+| the control under `1 · Start & Post-Start` | — | **done**, at the top |
+| each test able to fail, proved by sabotage | — | **four sabotages, all red** |
+| do not weaken the handler; keep `onMouseDown` | — | **followed** — the handler is byte-identical |
+| component tests against the mounted RaceScreen | — | **NOT as asked** — a fixture of the same DOM shape plus a transcription check (§9) |
+
+## 14 · PROPOSALS
+
+**P1 — the transcription check is a pattern worth reusing, and it should be a helper.** Reading a
+source file and asserting it still contains the lines a test transcribes turns an unwatched copy into
+a watched one, cheaply. This repo has other transcriptions — harness code that mirrors production
+arithmetic — and each is a place a copy can fall behind silently. **Cost: a small helper
+(`assertSourceContains(file, lines)`) and the discipline of listing the lines; it does not scale to
+logic that is reworded rather than moved, and it should say so in its own header.**
+
+**P2 — RaceScreen should become mountable, and this block is the evidence for it.** Three tests the
+brief asked for could not be written as asked because a 1907-line component cannot be mounted in
+jsdom without mocking storage, the track API, canvas and rAF. **That is a testability defect, not a
+test-writing failure**, and it will block the next person too. **Cost: extracting the render shell
+from the draw loop is a real refactor with a real fingerprint risk, so it is its own block with its
+own identity proof — but it is the difference between "we test the pieces" and "we can test the
+screen".**
+
+**P3 — the aid deserves a visible acknowledgement of the press.** He will click through five beats in
+sequence; with no feedback, a press that lands during a zero-length beat or a press that misses is
+indistinguishable from one that worked. **A one-frame flash, or the beat name in the corner while the
+switch is on, would make a missed press obvious. Cost: it draws something, so it touches the render
+path and would need a fingerprint run — which is exactly why it was not slipped in here.**

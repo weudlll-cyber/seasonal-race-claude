@@ -404,6 +404,23 @@ function CameraAdvancedSection() {
       {/* ── 1. Start & Post-Start ── */}
       <div className={s.card}>
         <SectionHeading>1 · Start &amp; Post-Start</SectionHeading>
+        <label
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: '0.5rem',
+            marginBottom: '0.6rem',
+          }}
+        >
+          <input
+            type="checkbox"
+            data-testid="ceremony-skip-on-click"
+            checked={config.ceremonySkipOnClick ?? DEFAULT_CAMERA_CONFIG.ceremonySkipOnClick}
+            onChange={(e) => set('ceremonySkipOnClick', e.target.checked)}
+          />
+          <span style={{ fontWeight: 600 }}>Click to end the current start beat</span>
+          <InfoTooltip text="A TEST AID, off by default. With this on, a left click anywhere on the race picture during the start sequence ends the beat you are watching and opens the next one — and on the last click the gun fires. It moves the ceremony's single clock backwards by the remainder of the current beat, so nothing is cancelled and every part of the opening follows by itself. It changes no ceremony length: with it off, or on and unclicked, the opening is exactly what it is today." />
+        </label>
         <div className={s.formGrid}>
           <div className={s.formGroup}>
             <label
@@ -1328,23 +1345,6 @@ function CameraAdvancedSection() {
           />
           <span style={{ fontWeight: 600 }}>Frame the finish through the run-in</span>
           <InfoTooltip text="On (default): once the finish line can be framed without opening wider than the OVERVIEW shot, the camera keeps it in frame until the first racer crosses — opening only as far as the line needs and tightening by itself as the leader closes. It does not change WHICH shot is running; it bounds whatever shot is, and never tightens past that shot's own zoom. While it composes, the leader is centred rather than framed forward, because the thing worth seeing is now ahead of him. Off is the pre-2026-08-12 behaviour." />
-        </label>
-        <label
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: '0.5rem',
-            marginBottom: '0.6rem',
-          }}
-        >
-          <input
-            type="checkbox"
-            data-testid="ceremony-skip-on-click"
-            checked={config.ceremonySkipOnClick ?? DEFAULT_CAMERA_CONFIG.ceremonySkipOnClick}
-            onChange={(e) => set('ceremonySkipOnClick', e.target.checked)}
-          />
-          <span style={{ fontWeight: 600 }}>Click to end the current start beat</span>
-          <InfoTooltip text="A TEST AID, off by default. With this on, a left click anywhere on the race picture during the start sequence ends the beat you are watching and opens the next one — and on the last click the gun fires. It moves the ceremony's single clock backwards by the remainder of the current beat, so nothing is cancelled and every part of the opening follows by itself. It changes no ceremony length: with it off, or on and unclicked, the opening is exactly what it is today." />
         </label>
         <label
           style={{
