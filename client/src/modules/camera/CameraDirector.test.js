@@ -30,6 +30,7 @@ import { FINISH_REASON } from './finishPhase.js';
 import { effectiveZoom } from './openTrackCamera.js';
 import { lapProgress, currentLap } from './lapUtils.js';
 import { DEFAULT_CAMERA_CONFIG } from '../cameraConfig.js';
+import { COMPANY_FRAME_PCT } from './framingRule.js';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 
@@ -8162,5 +8163,236 @@ describe('ENDGAME-SCHEDULE-1 — the endgame is a schedule', () => {
       early.trace.some((x) => x.composing),
       'engaged too early'
     ).toBe(false);
+  });
+});
+
+// ============================================================================================
+// ENDGAME-REWRITE-1 — THE EMPIRICAL FIXES, PINNED BEFORE THE REWRITE
+//
+// Several of the endgame's behaviours were FOUND rather than derived: they exist because a
+// measurement in the browser showed the picture doing something the owner rejected, and nothing in
+// the design would have predicted them. A clean re-implementation drops exactly that kind of fix,
+// because it reads like an accident of the old shape.
+//
+// These tests were written BEFORE the rewrite, against the old code, so that they can prove it.
+// Every one of them fails if its fix is removed, and each says how.
+// ============================================================================================
+describe('ENDGAME-REWRITE-1 — the empirical fixes, pinned before the rewrite', () => {
+  const WORLD = 4000;
+  const CANVAS_H = 720;
+  const CANVAS_W = 1280;
+  const FINISH_T = 1;
+  const mkShape = () => ({
+    isOpen: true,
+    getPosition: (t) => ({ x: Math.max(0, Math.min(1, t)) * WORLD, y: 360 }),
+    getActualTrackWidth: () => 300,
+  });
+  const mkRacers = (p) => [
+    { index: 0, t: p * FINISH_T, x: p * WORLD, y: 360 },
+    { index: 1, t: p * FINISH_T - 0.01, x: (p - 0.01) * WORLD, y: 360 },
+  ];
+  const RS = { finishT: FINISH_T, finishedCount: 0, raceElapsed: 60000 };
+
+  /** A director warmed at `fromP` and then walked to `toP`, exactly as the schedule block does. */
+  const drive = (fromP, toP, frames, cfg = {}) => {
+    const cd = new CameraDirector(
+      WORLD,
+      CANVAS_H,
+      true,
+      { ...DEFAULT_CAMERA_CONFIG, runInSchedule: true, contenderZoom: false, ...cfg },
+      36,
+      mkShape(),
+      300
+    );
+    cd.state = cfg.state ?? CAM_STATE.LEADER_ZOOM;
+    let ts = 1000;
+    for (let w = 0; w < 180; w++) {
+      cd.update(mkRacers(fromP), ts, RS, CANVAS_W, CANVAS_H);
+      ts += 1000 / 60;
+    }
+    const trace = [];
+    for (let f = 0; f < frames; f++) {
+      const p = fromP + ((toP - fromP) * f) / (frames - 1);
+      cd.update(mkRacers(p), ts, RS, CANVAS_W, CANVAS_H);
+      trace.push({ p, ts, zoom: cd.zoom, composing: !!cd._runInComposingNow });
+      ts += 1000 / 60;
+    }
+    return { cd, trace, ts };
+  };
+
+  // ── INVARIANT 1 — ONE AUTHOR ───────────────────────────────────────────────────────────────
+  //
+  // IF DELETED: a state's entry snap fires inside the phase and writes the zoom behind the
+  // schedule's back. That is the stroboscope the owner reported — measured at a factor of four in
+  // ONE frame on space-sprint seed 21, the picture going wild and recovering — and it had FIVE
+  // separate authors, of which these two snaps are the ones a state change can reach.
+  //
+  // The state change itself must still happen: only the ZOOM cut stands down. Asserting that
+  // `state` moves and `zoom` does not is what separates "the snap stood down" from "the transition
+  // was suppressed", and the second would be a different and worse bug.
+  it('a state change inside the phase does not snap the zoom — the schedule stays the sole author', () => {
+    const { cd, ts } = drive(0.9, 0.97, 240);
+    expect(cd._runInComposingNow).toBe(true); // the phase is composing, or the test proves nothing
+
+    const zoomBefore = cd.zoom;
+    const stateBefore = cd.state;
+    // Force the two states whose entry snaps are the authors in question.
+    for (const forced of [CAM_STATE.OVERVIEW, CAM_STATE.LEAD_CHANGE]) {
+      cd.zoom = zoomBefore;
+      cd.state = stateBefore;
+      cd.stateEnteredAt = 0;
+      const pick = vi
+        .spyOn(cd, '_pickNextState')
+        .mockReturnValue({ nextState: forced, reason: 'test', data: {} });
+      cd._transition(mkRacers(0.97), ts, RS, CANVAS_W, CANVAS_H);
+      pick.mockRestore();
+      expect(cd.state).toBe(forced); // the state DID change
+      expect(cd.zoom).toBe(zoomBefore); // and the zoom did not move with it
+    }
+  });
+
+  // ── INVARIANT 6 — THE PAN IS EXPRESSED AT THE ZOOM THE FRAME IS DRAWN WITH ─────────────────
+  //
+  // IF DELETED: `_setTargets` resolves the pan at the zoom as it was BEFORE the schedule writes
+  // this frame's value, so the offsets belong to a zoom the renderer will not use. An offset is
+  // `-camX x effectiveZoom`, a product from the WORLD ORIGIN, so the error is multiplied by the
+  // anchor's distance from that origin: measured in the browser on space-sprint seed 9, the pan
+  // target's framing error grew to 554 x 382 px while the pan's own residual stayed under 119 px,
+  // and the leader and the finish band left the canvas with it.
+  //
+  // The property that pins it is the one the correction is derived from: the pan target must
+  // describe the SAME camera world position at the drawn zoom. `offsetX = -camX x eff`, so
+  // `offsetX / eff` is that world position and it must not move when only the zoom does.
+  it('the pan target names the same world position at the zoom the frame is drawn with', () => {
+    const { cd } = drive(0.9, 0.985, 300);
+    expect(cd._runInComposingNow).toBe(true);
+    expect(cd._runInBinding).toBe(true); // the schedule is what set the width, or nothing is proved
+
+    const eResolved = cd._lastResolvedPanTarget?.effectiveZoom;
+    expect(eResolved).toBeGreaterThan(0);
+    const eDrawn = cd._proj.effX(cd.zoom);
+    // The two DO differ — the schedule moved the zoom after the pan was resolved. If they ever stop
+    // differing this test is inert, so it says so rather than passing quietly.
+    expect(Math.abs(eDrawn - eResolved)).toBeGreaterThan(1e-12);
+
+    // `targetOffsetX = -camX x effectiveZoom`, so dividing by the zoom the frame is DRAWN with
+    // must give back the same `-camX` the resolver decided. Without the correction it gives back
+    // `-camX x (eResolved / eDrawn)`, which is the error the browser measured as 554 px.
+    const worldFromTarget = cd.targetOffsetX / eDrawn;
+    const worldAsResolved = -cd._lastResolvedPanTarget.camX;
+    expect(worldAsResolved).not.toBe(0);
+    expect(worldFromTarget).toBeCloseTo(worldAsResolved, 6);
+  });
+
+  // ── INVARIANT 3 — THE RAMP ADVANCES ONLY ON FRAMES IT CAN RUN ─────────────────────────────
+  //
+  // IF DELETED: on a frame where the line cannot be framed at all the widen has no target, and a
+  // parameter driven by race progress advances anyway. When the target came back the segment
+  // resumed part-way up a curve it had never travelled — measured on space-sprint, the schedule's
+  // demand went 800 -> 4834 px between two frames and the pan moved 1817 px. Restarting the ramp
+  // instead stalled it the opposite way (river-run standstill 13% -> 55%).
+  //
+  // So on an inert frame the segment HOLDS the width it last placed and the carried parameter does
+  // not move. A held width is also what breaks the feedback loop, because it does not move the
+  // anchor.
+  it('a frame with no computable target holds the width and does not advance the ramp', () => {
+    const { cd, ts } = drive(0.9, 0.94, 200);
+    expect(cd._runInComposingNow).toBe(true);
+    expect(cd._runInAfterDeadline).toBe(false); // still widening, or this tests the wrong segment
+
+    const uBefore = cd._runInWidenU;
+    const heldBefore = cd._runInHeldZoom;
+    expect(heldBefore).toBeGreaterThan(0); // the widen has placed something to hold
+
+    // Make the line unframeable for one frame, exactly as a turning heading does on a real track,
+    // and drive it through the ordinary update path rather than reaching into the segment.
+    const line = vi.spyOn(cd, '_lineCeiling').mockReturnValue(Infinity);
+    cd.update(mkRacers(0.9401), ts, RS, CANVAS_W, CANVAS_H);
+    line.mockRestore();
+
+    expect(cd._runInHeldZoom).toBe(heldBefore); // it placed the width it last placed
+    expect(cd._runInWidenU).toBe(uBefore); // and the ramp did not advance
+    expect(cd._runInWidenInert).toBe(true); // and it recorded that it must re-anchor on resume
+  });
+
+  // ── contentionWatch — ONE-WAY, AND TWO CONSECUTIVE CHECKS ─────────────────────────────────
+  //
+  // IF DELETED: the framing would follow a racer in and out of contention as the gap wobbled, which
+  // is the flicker the owner's design forbids in as many words. Two properties, and both are the
+  // no-flicker constraint rather than tuning:
+  //   - a racer judged out ONCE is only PENDING; the release needs the NEXT check to agree;
+  //   - once released, the verdict never reverses, however the race then goes.
+  it('a racer is released only on two consecutive checks, and never comes back', () => {
+    const cd = new CameraDirector(
+      WORLD,
+      CANVAS_H,
+      true,
+      { ...DEFAULT_CAMERA_CONFIG, contentionWatch: true },
+      36,
+      mkShape(),
+      300
+    );
+    const CHECK = cd._contentionCheckMs;
+    expect(CHECK).toBeGreaterThan(0);
+
+    // A leader pulling away from a straggler who is losing ground every check. The watch is
+    // scoped to the endgame window, so the LEADER stays past the threshold throughout — a fixture
+    // that starts before it never runs a check at all and would pass for the wrong reason. The
+    // geometry fields are the ones the judgement is made from: it is a length comparison on the
+    // track, not a fraction, so a racer without a body length is skipped by design.
+    const GEO = { pathLengthPx: 40000, drawnBodyLengthPx: 60 };
+    let ts = 10000;
+    const step = (lead, back) => {
+      cd._updateContentionWatch(
+        [
+          { index: 0, t: lead, x: lead * WORLD, y: 360, ...GEO },
+          { index: 1, t: back, x: back * WORLD, y: 360, ...GEO },
+        ],
+        { finishT: FINISH_T, finishedCount: 0 },
+        ts
+      );
+      ts += CHECK + 1;
+    };
+
+    step(0.96, 0.9); // first check: establishes the baseline, no rate yet
+    step(0.97, 0.902); // second: the straggler is losing ground — the first adverse verdict
+    const outAfterFirstVerdict = cd._contentionOut.has(1);
+    step(0.98, 0.904); // third: the same verdict twice running
+    expect(cd._contentionOut.has(1)).toBe(true);
+    // The release took MORE than one adverse check — that is the two-check rule.
+    expect(outAfterFirstVerdict).toBe(false);
+
+    // ONE-WAY: even a straggler who then closes the whole gap stays released.
+    for (let i = 0; i < 6; i++) step(0.985, 0.984);
+    expect(cd._contentionOut.has(1)).toBe(true);
+  });
+
+  // ── bandFloor — THE FINISH IS HELD IN THE SUBJECT'S OWN REGION ────────────────────────────
+  //
+  // IF DELETED: the width floor guarantees the finish inside the COMPANY margin, which is the
+  // region a companion may sit at the edge of. Measured, that is where the band was leaving the
+  // screen; the subject's own region is tighter and therefore asks for a WIDER shot, and width is
+  // what puts the band back on. It is the one trade in this design that spends requirement 4 to
+  // buy requirement 5, and it must be visible in the arithmetic rather than only in a browser run.
+  //
+  // A tighter region asks for more width, and more width is a SMALLER cam.zoom.
+  it('bandFloor holds the line in the subject region, which asks for a wider shot', () => {
+    const frame = { width: CANVAS_W, height: CANVAS_H };
+    const rs = { finishT: FINISH_T, finishedCount: 0 };
+    const ask = (bandFloor) => {
+      const { cd } = drive(0.9, 0.96, 200, { bandFloor });
+      const racers = mkRacers(0.96);
+      // `_framingSubjects` takes the FOCUS list, not the frame — the state's own subject is chosen
+      // from it, and a frame passed here yields a subject with no point and an Infinity ceiling,
+      // which would make this test pass for the wrong reason on both arms.
+      const subjects = cd._framingSubjects(racers, cd._focusRacers(racers));
+      return cd._lineCeiling(subjects, frame, rs, COMPANY_FRAME_PCT);
+    };
+    const withFloor = ask(true);
+    const withoutFloor = ask(false);
+    expect(Number.isFinite(withFloor)).toBe(true);
+    expect(Number.isFinite(withoutFloor)).toBe(true);
+    // Strictly wider, not merely different: the direction is the whole point of the switch.
+    expect(withFloor).toBeLessThan(withoutFloor);
   });
 });
