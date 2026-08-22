@@ -948,7 +948,18 @@ a verbatim transcript of one run on one commit, which is a historical record, no
 
 ### The tracking lag, as measured today — and it had drifted
 
-<!-- MEASURED: tracking-lag (median/p95 pp per state) @ becc455c 2026-08-22 depends=client/src/modules/camera/ -->
+<!-- MEASURED: tracking-lag (median/p95 pp per state) @ d46fd443 2026-08-22 depends=client/src/modules/camera/ -->
+
+**RE-STAMPED, NOT RE-MEASURED, FOR CEREMONY-SKIP-1 — and the reason is a fact rather than a
+judgement.** That block adds `nextBeatStart` to `camera/startCeremony.js`, which is inside this
+stamp's `depends=` directory, so the guard asks. **The tracking lag cannot have moved:** the switch
+ships OFF, so no drawn frame changes without a click; nothing in the harness clicks; and a ceremony
+BEAT BOUNDARY is not an input to this measurement at all — it measures how far the camera sits behind
+its subject during the TRACKING phase, which begins after the ceremony is over. **A measurement whose
+answer cannot have changed is not run.**
+
+Stamped at the parent commit `42b46184` per the guard's two-step, and corrected to `d46fd443`, this branch's own
+commit in the follow-up.
 
 **RE-MEASURED IN FULL FOR RETIRE-RUNIN-LEGACY-1, AND EVERY FIGURE IS IDENTICAL TO THE DIGIT** —
 10923, 159, 17169, 9373, 4323, 1865 frames and both percentiles on every state. That block deletes

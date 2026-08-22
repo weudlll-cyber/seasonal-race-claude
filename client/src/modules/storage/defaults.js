@@ -253,6 +253,21 @@ export const DEFAULT_CAMERA_CONFIG = {
   showTop10SpeedMonitor: false,
   enableFrameLog: false, // frame-by-frame ring buffer for jitter post-analysis (default OFF)
   cameraDetourLog: false, // CAMERA-DETOUR-1: per-transition frame log (3 pre + ~30 post) for the wrong-direction diagnosis; read-only, default OFF
+  // ── CEREMONY-SKIP-1: end the current ceremony beat with a click (TEST AID, default OFF) ─────
+  //
+  // Testing the start sequence means sitting through every beat at full length, every time. With
+  // this on, a left click on the race picture during the countdown phase ends the beat being watched
+  // and opens the next one; the click in the last beat fires the gun.
+  //
+  // IT MOVES ONE NUMBER. The ceremony has a single clock, `st.countdownStart`, and every consumer
+  // derives its elapsed from it. A click moves that origin backwards by the remainder of the current
+  // beat, so every consumer follows by construction — there is no second clock, no skip counter and
+  // no per-beat state. The boundary maths is `nextBeatStart` in `camera/startCeremony.js`, beside
+  // `ceremonyAt`, reading the same schedule fields.
+  //
+  // OFF IS TODAY'S BEHAVIOUR EXACTLY: with this false, or true and unclicked, every drawn frame is
+  // what it is now. The ceremony's lengths, schedule and defaults are untouched by this key.
+  ceremonySkipOnClick: false,
   enablePerfLog: false, // per-frame phase timing (physics/camera/render) for stutter diagnosis (default OFF)
   showBattleDiag: false,
   showComebackDiag: false, // COMEBACK diagnostics overlay: B1 racers, rank history, active comeback // BATTLE diagnostics overlay: detection status, group racers, locked racer

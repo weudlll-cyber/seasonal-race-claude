@@ -404,6 +404,23 @@ function CameraAdvancedSection() {
       {/* ── 1. Start & Post-Start ── */}
       <div className={s.card}>
         <SectionHeading>1 · Start &amp; Post-Start</SectionHeading>
+        <label
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: '0.5rem',
+            marginBottom: '0.6rem',
+          }}
+        >
+          <input
+            type="checkbox"
+            data-testid="ceremony-skip-on-click"
+            checked={config.ceremonySkipOnClick ?? DEFAULT_CAMERA_CONFIG.ceremonySkipOnClick}
+            onChange={(e) => set('ceremonySkipOnClick', e.target.checked)}
+          />
+          <span style={{ fontWeight: 600 }}>Click to end the current start beat</span>
+          <InfoTooltip text="A TEST AID, off by default. With this on, a left click anywhere on the race picture during the start sequence ends the beat you are watching and opens the next one — and on the last click the gun fires. It moves the ceremony's single clock backwards by the remainder of the current beat, so nothing is cancelled and every part of the opening follows by itself. It changes no ceremony length: with it off, or on and unclicked, the opening is exactly what it is today." />
+        </label>
         <div className={s.formGrid}>
           <div className={s.formGroup}>
             <label

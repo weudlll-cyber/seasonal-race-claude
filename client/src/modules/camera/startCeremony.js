@@ -300,6 +300,50 @@ export function ceremonyAt(elapsedMs, schedule) {
 }
 
 /**
+ * WHERE THE NEXT BEAT BEGINS — the elapsed a skip lands on (CEREMONY-SKIP-1).
+ *
+ * ── ONE NUMBER MOVES, AND THIS IS THE NUMBER IT MOVES TO ────────────────────────────────────────
+ *
+ * The ceremony has exactly one clock: `st.countdownStart`, and every consumer derives
+ * `elapsed = ts - countdownStart` — the DOM beats, the gun, the countdown digits, the board alpha,
+ * the drawn beat. So a skip does NOT cancel a beat and never needs to know which beat it is in: the
+ * caller moves that one origin BACKWARDS by the remainder, `elapsed` lands here, and every consumer
+ * follows by construction.
+ *
+ * ── IT READS THE SAME FIELDS `ceremonyAt` READS, and that is the whole reason it lives here ─────
+ *
+ * A second list of beat boundaries anywhere else is the defect CEREMONY-TRUTH-1 was written about.
+ * The boundaries are the cumulative sums `ceremonyAt` walks, in the same order.
+ *
+ * ── ZERO-LENGTH BEATS FALL OUT, they are not special-cased ──────────────────────────────────────
+ *
+ * A brand beat is zero when no brand is active and the board can be zero. A zero-length beat makes
+ * its boundary EQUAL to the previous one, so "the first boundary strictly greater than `e`" steps
+ * straight over it. **A skip therefore cannot land inside a beat of length zero** — which would put
+ * a card on screen for one frame that must not exist at all — and no `switch` over beats is needed
+ * to prevent it.
+ *
+ * ── THE LAST BEAT RETURNS `totalMs`, WHICH FIRES THE GUN. Intended, not an edge case.
+ *
+ * @param {number} elapsedMs  where the ceremony is now
+ * @param {object} schedule   from `ceremonySchedule`
+ * @returns {number} the elapsed at which the next beat with LENGTH begins
+ */
+export function nextBeatStart(elapsedMs, schedule) {
+  const e = Number.isFinite(elapsedMs) && elapsedMs > 0 ? elapsedMs : 0;
+  const { brandMs = 0, venueMs = 0, pushMs = 0, boardMs = 0, totalMs = 0 } = schedule ?? {};
+  // The same walk `ceremonyAt` does, as the cumulative sums it compares against.
+  const brandEnd = brandMs;
+  const venueEnd = brandEnd + venueMs;
+  const pushEnd = venueEnd + pushMs;
+  const boardEnd = pushEnd + boardMs;
+  for (const b of [brandEnd, venueEnd, pushEnd, boardEnd, totalMs]) {
+    if (b > e) return b;
+  }
+  return totalMs;
+}
+
+/**
  * How visible the runners' board is at a moment, 0..1.
  *
  * COMPUTED FROM THE ELAPSED TIME AND THE SCHEDULE, not from a beat and a progress. The board now

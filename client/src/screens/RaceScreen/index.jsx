@@ -93,6 +93,7 @@ import { initProbe, recordFrame, recordFrameCamera } from '../../modules/rAFProb
 import { beginViewerProbe, recordViewerFrame } from '../../modules/viewerProbe.js';
 import BrandLogoOverlay from './BrandLogoOverlay.jsx';
 import CeremonyBrandCard from './CeremonyBrandCard.jsx';
+import { nextBeatStart } from '../../modules/camera/startCeremony.js';
 import WinnerCard, { WINNER_CARD_FADE_MS, winnerCardWindowMs } from './WinnerCard.jsx';
 import { endingOnRaceScreenMs } from './endingSchedule.js';
 import './RaceScreen.css';
@@ -228,6 +229,9 @@ export default function RaceScreen() {
     cameraConfig.showTop10SpeedMonitor ?? DEFAULT_CAMERA_CONFIG.showTop10SpeedMonitor;
   const enableFrameLog = cameraConfig.enableFrameLog ?? DEFAULT_CAMERA_CONFIG.enableFrameLog;
   const enablePerfLog = cameraConfig.enablePerfLog ?? DEFAULT_CAMERA_CONFIG.enablePerfLog;
+  // CEREMONY-SKIP-1: read like its neighbour, and every read needs a default (check-config-keys).
+  const ceremonySkipOnClick =
+    cameraConfig.ceremonySkipOnClick ?? DEFAULT_CAMERA_CONFIG.ceremonySkipOnClick;
   const showBattleDiag = cameraConfig.showBattleDiag ?? DEFAULT_CAMERA_CONFIG.showBattleDiag;
   const showComebackDiag = cameraConfig.showComebackDiag ?? DEFAULT_CAMERA_CONFIG.showComebackDiag;
   const showGovernorDiag = cameraConfig.showGovernorDiag ?? DEFAULT_CAMERA_CONFIG.showGovernorDiag;
@@ -1758,10 +1762,35 @@ export default function RaceScreen() {
     );
   }
 
+  // ── CEREMONY-SKIP-1: end this beat, land on the next ───────────────────────────────────────
+  //
+  // ON THE WRAPPER, NOT ON A CANVAS. During the brand beat a DOM card covers the canvas, so a
+  // handler on the canvas alone would be dead exactly where the first skip is wanted. The card is a
+  // child of `.race-canvas-wrapper`, so one handler there catches both by bubbling.
+  //
+  // IT MOVES THE ONE CLOCK AND NOTHING ELSE. No beat is cancelled and no beat is named here.
+  const onCeremonyClick = (e) => {
+    if (!ceremonySkipOnClick) return;
+    if (e.button !== 0) return; // left click only
+    const st = g.current;
+    if (!st || st.phase !== PHASE.COUNTDOWN || st.countdownStart == null) return;
+    const cam = camDirRef.current;
+    if (!cam) return;
+    const sched = cam.ceremonySchedule(st.racers);
+    const now = performance.now();
+    const next = nextBeatStart(now - st.countdownStart, sched);
+    // Backwards by the remainder: elapsed becomes exactly `next` on the following frame.
+    st.countdownStart = now - next;
+  };
+
   return (
     <div ref={screenRef} className="screen screen--race">
       <div className="race-layout">
-        <div className="race-canvas-wrapper">
+        <div
+          className="race-canvas-wrapper"
+          onMouseDown={onCeremonyClick}
+          data-testid="race-canvas-wrapper"
+        >
           <canvas
             ref={bgCanvasRef}
             style={{
