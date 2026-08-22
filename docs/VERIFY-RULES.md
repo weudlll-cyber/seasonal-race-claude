@@ -538,6 +538,89 @@ of the second kind and all AGREED, so no guard could have spoken; they were foun
 
 ---
 
+## R15 — RUN A CHECK ONLY WHEN THE CHANGE COULD HAVE ALTERED ITS ANSWER
+
+**The owner's complaint, 2026-08-25, and it was justified:** he spent about an hour waiting on runs
+that could not have told him anything. The checks here are good and several have caught defects a
+code reading would have shipped — but their COST is now the dominant cost of a change, and a large
+share of it buys answers that were already determined before the run started.
+
+**A check whose result is already determined is not evidence. It is a delay.** Where the answer IS
+already determined, the report says so and NAMES WHAT DETERMINED IT — see R15e.
+
+This rule is the four cases that are settled, decided once here rather than argued per block. It is
+not a licence to skip anything else: outside these four, run the check.
+
+### R15a — Fingerprints unmoved ⇒ the 80-race sheet is NOT run
+
+Four byte-identical fingerprints say the delivered picture is the same **to the byte**. The twelve
+requirements of the acceptance sheet are properties OF that picture, so **they cannot have changed
+while it did not.** Running the sheet then confirms what the fingerprints already proved, at 45 to 90
+minutes.
+
+The sheet runs in exactly two situations: **a fingerprint MOVED**, or **before a build the owner is
+going to judge**, so his eye and the sheet look at the same thing. And when it runs, it runs **ALONE
+and LAST** — parallel runs destroyed it twice in two blocks (once with `npm run verify` alongside it,
+once with two single-threaded measurement scripts; 10 and 64 races lost respectively).
+
+### R15b — An identical merge tree ⇒ no re-measurement on the merge commit
+
+`git diff --quiet <branch tip> <merge commit>` costs seconds and answers it. **Identical ⇒ quote the
+branch's measurement and say the trees are identical.** Different ⇒ re-measure, because the merge
+produced a tree neither side measured, which is exactly when a measurement is worth taking.
+
+### R15c — A documentation or report-only change pays neither the browser gate nor the client suite
+
+Both are already routed by declaration and skip on such a change; this rule states it so that nobody
+runs them by hand "to be safe".
+
+### R15d — Re-measuring to correct a number in a document is its own block
+
+It is worth doing. It is not worth doing while the owner waits on a merge. Correct the number, or
+carry the correction into the next block that touches the same code — never inside a ship in flight.
+
+### R15e — Every report names its skips
+
+One line, in every report from now on: **WHICH checks were skipped and WHAT determined their answer.**
+A silent skip is indistinguishable from a forgotten one, and this project has paid for that
+distinction more than once (Lesson 209).
+
+### What this rule may NOT do, and it is the whole boundary
+
+**No check is weakened, narrowed in what it asserts, or made unable to fail.** The point is to stop
+paying for answers a change cannot have altered — not to ask less. **Every skip is proved in BOTH
+directions:** the check still runs when the change reaches it, and a sabotage inside its reach still
+turns it red. A skip that cannot be proved is not taken.
+
+### What was MEASURED before this rule was written, because the premise needed checking
+
+The brief that opened this said the four heavy checks "never skip". **They already do**, and the
+declaration-driven routing is why. Across the last ten merges on master, routed through the guards'
+own declarations:
+
+| | |
+| --- | --- |
+| heavy-check time actually spent | 1710 s |
+| heavy-check time the declarations ALREADY skipped | 3690 s |
+| **share of the heavy cost already skipped** | **68%** |
+
+Per check, over those ten merges: client-suite ran 4 times, check-runin-frame 3, camera-fingerprint
+3, render-fingerprint 4, world-fingerprint 2. **Six of the ten merges ran none of them** — they
+touched no product source.
+
+**So the waste was never in `verify`'s routing.** It was in the four things above, which `verify` does
+not control: the 80-race sheet, the browser gate's scope, re-measuring an identical merge tree, and
+re-measuring stamps mid-ship.
+
+**AND ONE ROUTING IMPROVEMENT WAS MEASURED AND THEN NOT BUILT.** `verify` applies `isInertChange` —
+"this edit differs only in comments and whitespace, so it cannot move a hash" — to the WORLD
+fingerprint alone. The argument holds identically for CAMERA, RENDER and `check-runin-frame`, so
+extending it looks obviously right. Measured across the same ten merges it would have saved
+**0 seconds**: every change that reached those three was live code, not comments. It is not built,
+and this paragraph is why, so the next reader does not re-derive it.
+
+---
+
 ## The instruments, and what each costs
 
 Timings on the owner's machine, and they vary with load — treat them as the right order of magnitude,

@@ -415,8 +415,8 @@ went missing).
       `eslint` clean, `build` green, the full test suite green on the working tree before you measure.
 - [ ] **0a. THE CAMERA SHIPS ONLY AFTER A REAL BROWSER HAS RUN IT.** If the merge touches
       `client/src/modules/camera/` or `client/src/screens/RaceScreen/`, run
-      **`node scripts/viewer-invariants.mjs --gate`** — **TEN races: every track, seed 9, the
-      shipped arm**, on the PRODUCTION BUNDLE in Chromium. **It takes 11-15 minutes and it must be
+      **`node scripts/viewer-invariants.mjs --gate`** — **TWO races: space-sprint and city-circuit,
+      seed 9, the shipped arm**, on the PRODUCTION BUNDLE in Chromium. **200-340 s, and it must be
       clean.**
 
       **THE COST WAS WRONG HERE UNTIL 2026-08-22 AND IT WAS NEVER MEASURED.** This step used to read
@@ -485,15 +485,29 @@ went missing).
       detector: they have never caught anything, which is what a clean net looks like and is also
       what an inert one looks like (Lesson 209).
 
-      **SO THE OPEN DECISION IS THE OWNER'S**, stated with its numbers rather than taken quietly:
-      `--gate` can become **two races for 340 s** and still hold both extremes of every column the
-      sheet reports, at 45% of today's cost — or it stays at ten and this document now says what ten
-      costs. It has not been changed here.
+      **THE OWNER TOOK IT, 2026-08-25: `--gate` is now the two-race scope** (CHECK-COST-POLICY-1).
+      Measured after the change: **200 s clean.**
+
+      **PROVED IN BOTH DIRECTIONS, which is what every skip in this project owes.** The reduced gate
+      still passes clean, and it still goes RED on both sabotage arms — `--sabotage-corner` exits 1
+      with 154 crossing violations, `--sabotage-noline` exits 1 with 4. A gate that could not fail
+      would be the cheapest of all and worth nothing.
+
+      **AND THE LIMIT OF THAT PROOF, stated rather than assumed away.** The sabotage arms drive the
+      CROSSING check only. The five WINDOW invariants have no sabotage arm, and in the gate's own
+      scope they have never been observed red — the violations both 80-race sweeps found sit at
+      seed 2, which the gate does not run. So the window half of this gate is a REGRESSION NET whose
+      red has not been demonstrated at this scope, and that is a known gap, not a settled question
+      (Lesson 209).
+
+      **WHAT THE TWO-RACE SCOPE NO LONGER COVERS:** the eight other tracks' own geometry, and any
+      per-track drift that stays WITHIN the envelope these two define. A defect needing one of those
+      curves now reaches the NIGHTLY sweep rather than the pre-merge gate — a day later, not never.
 
       **One of the ten is also NOT SCORABLE**: garden-path's race never finishes at seed 9, so it
       contributes nothing to the twelve items, though it still runs the five window invariants.
 
-      **What it costs a ship:** 11-15 minutes, plus the one-off `npx playwright install chromium`. It needs
+      **What it costs a ship:** 200-340 s, plus the one-off `npx playwright install chromium`. It needs
       no network and touches nothing of the owner's — it builds to `client/dist-sweep`, runs its own
       API on its own port with an empty data directory, and creates its own account, for the reason
       E2E-LOGIN-1 gives. Delete `client/dist-sweep` afterwards; it is gitignored.
