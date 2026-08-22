@@ -154,6 +154,21 @@ is dated and recorded HERE, where a reader on their way to the report will pass 
   [GATE-LINES-1](../night/GATE-LINES-1.md); the fix and the once-per-run control that makes the
   silence impossible to repeat: [GATE-TRUTH-1](../night/GATE-TRUTH-1.md).
 
+- [ONE-HOME-THREE-TRUTHS-1.md](ONE-HOME-THREE-TRUTHS-1.md) — **three quantities that were written
+  twice, and one that was written 27 times** (2026-08-23). The endgame threshold had THREE homes
+  (`defaults.js` plus a bare `0.95` in two harnesses) — and that `DEADLINE` and `endgameThreshold`
+  are the same instant is not an inference: `CameraDirector.js:2990` says so. The HIS arm’s eleven
+  keys and its `setPath` were byte-identical in two harnesses. **The in-frame condition turned out
+  to be 27 copies in 17 files, not two** — so only the 8 sites of exactly the shape the brief named
+  were converted, and the other 19 were LEFT with the reason stated: they sit in instruments whose
+  measured numbers are in the record, where a transcription error changes a number silently.
+  **THE PROOF: CAMERA `0434cd0385eacc7b` and RENDER `57b2eb101d806b22` both BYTE-IDENTICAL, each
+  measured twice — before and after the pre-commit formatter (R0b).** WORLD proved unreachable two
+  independent ways rather than one, because engine-reach’s own trustworthiness was PIECE 4’s
+  subject. Nothing minted; `docs/fingerprints.json` untouched. A `!!p` null guard was written into
+  `inFrame` and REMOVED before commit — it was dead code that would also have changed what a null
+  did in five instruments; only a pure transcription can claim equivalence. 2 proposals.
+
 - [DEAD-CODE-VERIFIED-1.md](DEAD-CODE-VERIFIED-1.md) — **three candidate dead-code lists turned into
   numbers you can act on. NOTHING WAS DELETED** (2026-08-23). **The candidate list for default keys
   was off by a factor of ~16** — ~79 claimed with no reader, **verified: 1 unreferenced (`language`)

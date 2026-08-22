@@ -35,6 +35,7 @@
 
 import { dirname, join } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
+import { inFrame } from "./lib/frameBox.mjs";
 import {
   resolveIdentity,
   formatIdentity,
@@ -262,7 +263,7 @@ for (const geo of loadTracks({ only: ONLY })) {
           po2 = 0;
         for (const r of pinned) {
           const p = proj.toScreen(r, d.zoom, d.offsetX, d.offsetY);
-          const centreIn = p.x >= 0 && p.x <= CW && p.y >= 0 && p.y <= CH;
+          const centreIn = inFrame(p, CW, CH);
           const whole =
             p.x - halfW >= 0 &&
             p.x + halfW <= CW &&
@@ -280,7 +281,7 @@ for (const geo of loadTracks({ only: ONLY })) {
         let onScreen = 0;
         for (const r of participants) {
           const p = proj.toScreen(r, d.zoom, d.offsetX, d.offsetY);
-          const centreIn = p.x >= 0 && p.x <= CW && p.y >= 0 && p.y <= CH;
+          const centreIn = inFrame(p, CW, CH);
           const whole =
             p.x - halfW >= 0 &&
             p.x + halfW <= CW &&
@@ -293,7 +294,7 @@ for (const geo of loadTracks({ only: ONLY })) {
         }
         for (const r of others) {
           const p = proj.toScreen(r, d.zoom, d.offsetX, d.offsetY);
-          if (p.x >= 0 && p.x <= CW && p.y >= 0 && p.y <= CH) {
+          if (inFrame(p, CW, CH)) {
             othersInFrame++;
             break;
           }

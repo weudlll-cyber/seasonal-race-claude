@@ -101,28 +101,12 @@ const SEEDS =
   : seedArg.split(",").map(Number);
 
 // ── HIS CONFIG, the same eleven keys every camera harness in this repository uses ──────────────
-const HIS = [
-  ["cameraStateProfiles.OVERVIEW.trackingTC", 1.5],
-  ["highlightHeroes", true],
-  ["battlePulkThresholdT", 0.001],
-  ["outcomePhaseThreshold", 0.65],
-  ["battleCooldownMs", 20000],
-  ["battleWeight", 0],
-  ["finishPauseMs", 4000],
-  ["winnerCardMs", 4000],
-  ["corridorCapArriveMs", 5000],
-  ["labelNamesWhenRoom", true],
-  ["minRacersVisible", 8],
-];
-function setPath(o, path, v) {
-  const parts = path.split(".");
-  let cur = o;
-  for (let i = 0; i < parts.length - 1; i++) {
-    cur[parts[i]] = structuredClone(cur[parts[i]]);
-    cur = cur[parts[i]];
-  }
-  cur[parts[parts.length - 1]] = v;
-}
+// THE ELEVEN KEYS AND `setPath` LIVE IN ONE HOME (ONE-HOME-THREE-TRUTHS-1).
+// They were written out identically in this file AND in the other harness; both
+// copies agreed, which is the dangerous variant — they would have kept agreeing
+// until one was edited, and the divergence would then have read as a change in HIS
+// NUMBERS rather than as an error.
+import { HIS, setPath } from "./lib/hisArm.mjs";
 // `--set=key=value`, applied after the arm, so one build can be measured with a switch on and
 // off without rebuilding. Values parse as boolean, number or string, in that order.
 const CLI_SET = process.argv

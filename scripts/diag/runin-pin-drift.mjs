@@ -31,6 +31,7 @@
 
 import { join } from "node:path";
 import { pathToFileURL } from "node:url";
+import { inFrame } from "../lib/frameBox.mjs";
 import {
   resolveIdentity,
   loadTracks,
@@ -93,7 +94,7 @@ for (const geo of loadTracks()) {
       let inShot = 0;
       for (const r of st.racers) {
         const p = cd._proj.toScreen(r, cd.zoom, cd.offsetX, cd.offsetY);
-        if (p.x >= 0 && p.x <= CW && p.y >= 0 && p.y <= CH) inShot++;
+        if (inFrame(p, CW, CH)) inShot++;
         if (r.t > leaderT) {
           leaderT = r.t;
           leader = p;

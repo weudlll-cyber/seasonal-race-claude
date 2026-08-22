@@ -57,7 +57,12 @@ const JSON_IN = ARG("json", null);
 if (!JSON_IN) throw new Error("camera-curve: pass --json=<a viewer-invariants --dump file>");
 const CW = 1280;
 const CH = 720;
-const ENDGAME_FROM = 0.95;
+// WHERE THE ENDGAME BEGINS IS `endgameThreshold`, read from its one home rather than
+// restated (ONE-HOME-THREE-TRUTHS-1). It was a literal 0.95 here and 0.95 in defaults.js.
+const { DEFAULT_CAMERA_CONFIG: __CFG } = await import(
+  pathToFileURL(join(ROOT, "client/src/modules/storage/defaults.js")).href,
+);
+const ENDGAME_FROM = __CFG.endgameThreshold;
 
 const doc = JSON.parse(readFileSync(JSON_IN, "utf8"));
 if (!doc.dumps?.length) throw new Error("camera-curve: that file carries no dumps — run with --dump");

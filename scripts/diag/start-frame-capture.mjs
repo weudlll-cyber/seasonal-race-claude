@@ -31,6 +31,7 @@
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { pathToFileURL } from "node:url";
+import { inFrame } from "../lib/frameBox.mjs";
 import {
   resolveIdentity,
   loadTracks,
@@ -360,7 +361,7 @@ runRace(
     let leaderT = -1;
     for (const r of st.racers) {
       const p = cd._proj.toScreen(r, cd.zoom, cd.offsetX, cd.offsetY);
-      if (p.x >= 0 && p.x <= CW && p.y >= 0 && p.y <= CH) onScreen++;
+      if (inFrame(p, CW, CH)) onScreen++;
       if (p.x < minX) minX = p.x;
       if (p.x > maxX) maxX = p.x;
       if (r.t > leaderT) {

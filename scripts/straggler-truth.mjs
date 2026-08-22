@@ -53,6 +53,7 @@
 import { writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { pathToFileURL } from "node:url";
+import { inFrame } from "./lib/frameBox.mjs";
 import {
   resolveIdentity,
   loadTracks,
@@ -157,7 +158,7 @@ function measure({ track, racers }) {
       let on = 0;
       for (const r of unfinished) {
         const p = cd._proj.toScreen(r, cd.zoom, cd.offsetX, cd.offsetY);
-        if (p.x >= 0 && p.x <= CW && p.y >= 0 && p.y <= CH) on++;
+        if (inFrame(p, CW, CH)) on++;
       }
       unfinishedFrames++;
       if (on < unfinished.length) unfinishedOffFrames++;
@@ -174,7 +175,7 @@ function measure({ track, racers }) {
         let allOn = 0;
         for (const r of st.racers) {
           const p = cd._proj.toScreen(r, cd.zoom, cd.offsetX, cd.offsetY);
-          if (p.x >= 0 && p.x <= CW && p.y >= 0 && p.y <= CH) allOn++;
+          if (inFrame(p, CW, CH)) allOn++;
         }
         settledFrames++;
         settledUnfinIn.push(on);
