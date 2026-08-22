@@ -151,7 +151,7 @@ fingerprints reproducing each other, and 960 of 960 sheet verdicts across 80 rac
 than argued, because `defaults.js` sits inside all four instruments' closures. Values live in
 [fingerprints.json](fingerprints.json).
 
-- `v-ship-endgame-land` (`PROVISIONAL`, 2026-08-22) — **the ship.** The return point is
+- `v-ship-endgame-land` (`d4bad558`, 2026-08-22) — **the ship.** The return point is
   `v-ship-endgame-land^1`, which restores an endgame whose zoom has five authors inside the last 5%
   of the race, a camera seed drawn from `Math.random()` rather than the race's, a width floor sized
   on the finish line's centre point rather than on the band, and no contention watch at all — with

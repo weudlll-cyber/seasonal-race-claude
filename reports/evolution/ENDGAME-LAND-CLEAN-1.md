@@ -323,6 +323,11 @@ rather than assuming it**, so none of those has anything to record. Step 10, the
 this whole block is downstream of: he judged `index-BEdanP55.js` on 2026-08-24 and accepted it, and
 §2.1 proves the shipped source is that build.
 
+**The merge, and CI green for exactly that SHA.** The merge commit is `d4bad558`; CI run `32544203979`
+reports `success` with `headSha` `d4bad558190330a190234e8b7fc65b2eb9ece03f`. All four fingerprints
+were re-measured ON THE MERGE COMMIT and reproduce `docs/fingerprints.json` — the minted values are
+what the merged tree produces, not values carried across from a branch.
+
 **The experiment branch is archived, not merged.** `exp/endgame-schedule` carries eight nights of
 excavation and its history is worth keeping and not worth putting on master. It is tagged annotated as
 `archive/exp-endgame-schedule` and deleted at the origin; the tag names what it was and what it
