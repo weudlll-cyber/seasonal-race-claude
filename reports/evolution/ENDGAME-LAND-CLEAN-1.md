@@ -335,6 +335,28 @@ proved.
 
 ---
 
+### The served build, rebuilt from merged master
+
+**`client/dist/assets/index-B1b14xLj.js`, served on 4173.** It is built from merged master, not from
+the branch, so what he loads is what the repository holds. **The bundle was read rather than trusted:**
+
+```
+  contentionWatch      !0        (minified true)
+  bandFloor            !0        (minified true)
+  contentionCheckMs    250
+  endgameThreshold     .95
+  viewer probe present: true
+  camera seed from race seed: true
+```
+
+**The defaults in the source and the defaults in the bundle are now the same thing** — the served
+build needs no override, because both switches ship on. **The seed to watch is 9**, on any track; the
+crossing is the moment, and space-sprint is where the wild frame used to be.
+
+**A stored config still beats a default, per key, forever.** If he has ever opened the Dev Screen's
+camera section, `localStorage['racearena:cameraConfig']` holds a whole object and will shadow both new
+keys. The two toggles in **7 · Endgame** are the fix and the comparison in one.
+
 ## 8 · WHAT IS OPEN, AND IT IS HIS
 
 Two of these were open before this block and are unchanged by it; the third is new and small.
