@@ -114,6 +114,19 @@ is dated and recorded HERE, where a reader on their way to the report will pass 
   [GATE-LINES-1](../night/GATE-LINES-1.md); the fix and the once-per-run control that makes the
   silence impossible to repeat: [GATE-TRUTH-1](../night/GATE-TRUTH-1.md).
 
+- [CI-PERMISSIONS-1.md](CI-PERMISSIONS-1.md) — **`ci.yml` declares its token scope where the jobs
+  are** (2026-08-22). `permissions: contents: read` at workflow level, read off the three jobs
+  rather than copied from a template: `actions/checkout@v4` and `check-tags.mjs`’s
+  `git ls-remote --tags origin` are the only things that touch the token; nothing in the workflow
+  writes. **THE FIRST DRAFT OVERSTATED THE FIX AND WAS CORRECTED BEFORE COMMIT** — this
+  repository's `default_workflow_permissions` is already `read`, so no write token was ever
+  exposed. What the block really buys is stated instead: a `read` DEFAULT means read on **every**
+  scope, and an explicit block makes the eleven it does not name `none`; and the default is a
+  repository SETTING an admin can flip invisibly, while a declared scope travels with the file.
+  No job-level block was needed. **R8 exception 1 honoured: CI green on the branch BEFORE the
+  merge**, with the widen-exactly-one rule fixed before the run rather than after it. 2 proposals;
+  `deploy.yml.disabled` noticed and deliberately left.
+
 - [CORRIDOR-DIAG-ARMED-1.md](CORRIDOR-DIAG-ARMED-1.md) — **the only test in the tree that could not
   fail is armed, and it turned up a width the game never reads** (2026-08-22).
   `trackCorridor.test.js:61` had closed with `expect(true).toBe(true)` since `d6f4d20e`
