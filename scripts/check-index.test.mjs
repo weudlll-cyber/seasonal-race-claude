@@ -173,7 +173,7 @@ function repoFixture(files) {
 const runBare = (root) =>
   spawnSync(process.execPath, [GUARD], { cwd: root, encoding: "utf8" });
 
-test("DIRECTION 3 REFUSES a directory that is in neither list — the reports/audit case", () => {
+test("DIRECTION 3 REFUSES a directory that is in neither list — the case reports/audit was", () => {
   const root = repoFixture({
     "reports/evolution/INDEX.md": "# Index\n- [R1.md](R1.md)\n",
     "reports/evolution/R1.md": "# R1",
@@ -183,12 +183,20 @@ test("DIRECTION 3 REFUSES a directory that is in neither list — the reports/au
     "reports/parity/P1.md": "# P1",
     "reports/proposals/INDEX.md": "# Index\n- [Q1.md](Q1.md)\n",
     "reports/proposals/Q1.md": "# Q1",
+    "reports/audit/INDEX.md": "# Index\n- [A1.md](A1.md)\n",
+    "reports/audit/A1.md": "# A1",
     // The offender: tracked reports in a directory nobody decided about.
-    "reports/audit/CRITICAL.md": "# a finding with nothing watching it",
+    //
+    // AUDIT-REGISTER-1: this used to be `reports/audit/`, which was the real case this test was
+    // written from. That directory is now REGISTERED — it filled up with two outside audits — so
+    // naming it here would test nothing at all. `speed-candidates/` is one of the two directories
+    // the guard's own comment still lists as deliberately undeclared, so the property has a live
+    // subject again rather than a graduated one.
+    "reports/speed-candidates/CRITICAL.md": "# a finding with nothing watching it",
   });
   const r = runBare(root);
   assert.notEqual(r.status, 0, "an undeclared directory must FAIL");
-  assert.match(r.stderr, /reports\/audit\//, "it must name the directory");
+  assert.match(r.stderr, /reports\/speed-candidates\//, "it must name the directory");
   assert.match(
     r.stderr,
     /NEITHER list/,
@@ -206,6 +214,8 @@ test("DIRECTION 3 ACCEPTS a declared archive — a reason is a decision, and it 
     "reports/parity/P1.md": "# P1",
     "reports/proposals/INDEX.md": "# Index\n- [Q1.md](Q1.md)\n",
     "reports/proposals/Q1.md": "# Q1",
+    "reports/audit/INDEX.md": "# Index\n- [A1.md](A1.md)\n",
+    "reports/audit/A1.md": "# A1",
     // `perf` is named in ARCHIVED with a reason, so an unindexed file here is EXPECTED.
     "reports/perf/frame-trace-2026-01.md": "# raw capture",
   });

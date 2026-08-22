@@ -96,6 +96,15 @@ const REGISTERED = [
   // written here, sat untracked and outside every guard, and was the only copy of the finding that
   // first-admin setup could not succeed. A directory new work lands in needs the orphan check.
   { dir: "reports/proposals", index: "reports/proposals/INDEX.md" },
+  // AUDIT-REGISTER-1, 2026-08-22: `audit/` is the case the comment below predicted, and it repeated
+  // exactly as written — two OUTSIDE audits landed there untracked on one day, and a `git add -A`
+  // in an unrelated block swept one of them into a commit before anybody had decided anything.
+  //
+  // REGISTERED rather than ARCHIVED, and the two halves of the archive test are why: an archive is
+  // declared out of scope because nobody adds to it and nothing links into it. Both are false here.
+  // The whole point of an outside audit is that its findings reach the people who can act on them,
+  // so "declared invisible" would have been the wrong answer to the problem it exists to solve.
+  { dir: "reports/audit", index: "reports/audit/INDEX.md" },
 ];
 
 // ── THE ARCHIVES, DECLARED BY NAME (INDEX-COVERAGE-1) ─────────────────────────────────────────
@@ -123,10 +132,15 @@ const ARCHIVED = {
   "phase1-metrics": "the Phase-1 metric dumps; superseded by REBASELINE.md",
 };
 
-// A directory holding tracked reports that is in NEITHER list is the `audit/` case repeating, so it
-// FAILS and forces a decision. Deliberately not pre-declared for the empty ones (`audit/`,
-// `speed-candidates/`, `clean-state-2026-06-04/` hold no tracked *.md today): listing them now would
-// let the next file land in them silently, which is the exact defect this closes.
+// A directory holding tracked reports that is in NEITHER list FAILS and forces a decision. That is
+// not hypothetical: `audit/` was named here as the empty case and it filled up four days later —
+// two outside audits, untracked, one of them swept into an unrelated commit by a `git add -A` before
+// anyone had decided. It is REGISTERED above now, and the prediction is left standing because it was
+// right.
+//
+// Still deliberately not pre-declared for the ones that remain empty (`speed-candidates/`,
+// `clean-state-2026-06-04/` hold no tracked *.md today): listing them now would let the next file
+// land in them silently, which is the exact defect this closes.
 const ROOT_NOTES_REASON =
   "standing notes that belong to no block — README.md is the map, BASELINE-INVALIDATED.md is the retired-numbers note, and two are one-off write-ups. They sit directly in reports/ and are covered by check-doc-links, not by an index.";
 
