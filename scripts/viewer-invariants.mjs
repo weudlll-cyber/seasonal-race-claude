@@ -75,6 +75,13 @@ const ARG = (k, d) => {
 const GATE = process.argv.includes("--gate");
 const HEADED = process.argv.includes("--headed");
 const DUMP = process.argv.includes("--dump");
+// RACE-JUDDER-1: measure DELIVERY instead of framing. Defaults off; the gate and the sweep are
+// unaffected, and the two arms' camera numbers are not comparable — see REAL_CLOCK's header.
+const REAL = process.argv.includes("--real-clock");
+const PACE_OUT = (() => {
+  const a = process.argv.find((x) => x.startsWith("--pace-out="));
+  return a ? a.slice("--pace-out=".length) : null;
+})();
 const JSON_OUT = ARG("json", null);
 const CW = 1280;
 const CH = 720;
@@ -186,6 +193,36 @@ const TRACKS = geometries().filter((g) => (trackArg ? trackArg.split(",").includ
 // One counter drives `performance.now`, `Date.now` and `requestAnimationFrame`. The pump advances
 // it by exactly one 60 Hz frame and then runs whatever rAF callbacks were queued, yielding to the
 // real macrotask queue in between so React's own scheduling still happens.
+// ── THE REAL-CLOCK ARM (RACE-JUDDER-1) — opt-in, and it answers a question the virtual one cannot ──
+//
+// The virtual clock is what makes a sweep reproducible, and it is also why a sweep is STRUCTURALLY
+// BLIND to frame pacing: measured on space-sprint seed 9 its intervals are 16 ms and 17 ms and
+// nothing else, by construction rather than by luck. So "were frames delivered evenly?" cannot be
+// asked of it at all — a flat distribution there is an artefact, not evidence.
+//
+// This arm leaves `requestAnimationFrame` alone and merely COUNTS and TIMES it, presenting the same
+// `__vFrames` / `__vStart` / `__vStop` interface the run loop already drives, so nothing else in this
+// file changes shape. What it costs is determinism: the camera is known to diverge on any
+// frame-timing change, so this arm's CAMERA numbers are not comparable with the virtual arm's and
+// must never be quoted beside them. It exists to measure DELIVERY, not framing.
+const REAL_CLOCK = `
+(() => {
+  const rAF = window.requestAnimationFrame.bind(window);
+  window.__vFrames = 0;
+  window.__pace = [];
+  window.__vStop = false;
+  let last = -1;
+  const tick = (t) => {
+    if (window.__vStop) return;
+    if (last >= 0) window.__pace.push(+(t - last).toFixed(2));
+    last = t;
+    window.__vFrames++;
+    rAF(tick);
+  };
+  window.__vStart = () => rAF(tick);
+})();
+`;
+
 const VIRTUAL_CLOCK = `
 (() => {
   const STEP = 1000 / 60;
@@ -261,7 +298,7 @@ async function runOne(page, geo, seed, arm, N) {
       // eslint-disable-next-line no-eval
       (0, eval)(clock);
     },
-    { geo, activeRace, cfg, clock: VIRTUAL_CLOCK, dump: DUMP }
+    { geo, activeRace, cfg, clock: REAL ? REAL_CLOCK : VIRTUAL_CLOCK, dump: DUMP }
   );
 
   await page.goto(`${BASE}/race`, { waitUntil: "domcontentloaded" });
@@ -289,7 +326,11 @@ async function runOne(page, geo, seed, arm, N) {
       if (p && p.frames > 60 && p.crossed && (p.crossing?.after?.length ?? 0) >= 255) break;
     }
     window.__vStop = true;
-    return { probe: window.__viewerProbe ? window.__viewerProbe() : null, frames: window.__vFrames };
+    return {
+      probe: window.__viewerProbe ? window.__viewerProbe() : null,
+      frames: window.__vFrames,
+      pace: window.__pace ?? null,
+    };
   }, MAX_FRAMES);
 
   return { geo: geo.id, seed, arm, N, ...res };
@@ -525,6 +566,8 @@ async function worker() {
     }
     const p = r.probe ?? { events: [], frames: 0, byInvariant: {} };
     if (p.dump) DUMPS.push({ track: geo.id, seed, arm, frames: p.dump });
+    if (PACE_OUT && r.pace)
+      writeFileSync(PACE_OUT, JSON.stringify({ track: geo.id, seed, arm, pace: r.pace }, null, 1));
     for (const e of p.events) allEvents.push({ ...e, track: geo.id, seed, arm, n: N });
     rows.push({
       track: geo.id, seed, arm, n: N, frames: p.frames,
