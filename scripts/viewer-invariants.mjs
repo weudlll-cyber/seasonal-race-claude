@@ -35,7 +35,7 @@
 // Usage:
 //   node scripts/viewer-invariants.mjs --tracks=space-sprint --seeds=9 --arm=shipped --headed
 //   node scripts/viewer-invariants.mjs --seeds=1-40                    # the nightly sweep
-//   node scripts/viewer-invariants.mjs --gate                          # the verify subset
+//   node scripts/viewer-invariants.mjs --gate                          # the SHIP gate: 2 races, ~340 s
 // ============================================================
 
 import { join, dirname } from "node:path";
@@ -149,7 +149,36 @@ function geometries() {
     .filter((g) => g.id)
     .sort((a, b) => a.id.localeCompare(b.id));
 }
-const trackArg = ARG("tracks", null);
+// ── WHAT `--gate` RUNS, AND WHY IT IS TWO RACES (CHECK-COST-POLICY-1, his decision 2026-08-25) ──
+//
+// It ran TEN — every track at seed 9 — for 671-885 s. Measured, the other eight buy nothing this
+// gate exists for:
+//
+//   THESE TWO HOLD BOTH EXTREMES OF EVERY COLUMN the acceptance sheet reports.
+//     space-sprint  the worst single-frame step on any track, 0.0339 ln — twice the next — and the
+//                   OPEN-track regime. It is also the track the founding defect was found on.
+//     city-circuit  the widest frame, 10.9 corridors against space-sprint's 6.6, and the longest
+//                   standstill, 1050 ms against 200. The CLOSED-track regime, where the finish is
+//                   most of a lap away at the endgame threshold so the shot opens to the world.
+//
+//   THE OTHER EIGHT SIT STRICTLY INSIDE BOTH on every column, and across BOTH full 80-race sweeps
+//   on record the gate's own scope produced ZERO invariant events. Every violation those sweeps
+//   found sits at seed 2, which this gate does not run.
+//
+// ONE RACE WOULD NOT DO. An open track cannot stand in for a closed one here; that is structural,
+// not statistical, and it is why this is two and not one.
+//
+// WHAT THE TWO-RACE SCOPE NO LONGER COVERS, written down rather than assumed away:
+//   - the eight tracks' own geometry: searound's tight corners, luger-hill's gradient, dirt-oval's
+//     and river-run's shapes. A defect that needs one of THOSE curves to appear now reaches the
+//     nightly sweep instead of the gate, i.e. a day later rather than before the merge.
+//   - garden-path entirely — whose race never finishes at seed 9, so it was never scorable anyway.
+//   - any per-track regression that is not an extreme: a track drifting WITHIN the envelope these
+//     two define is invisible here and was visible before.
+// The nightly sweep still runs all ten at forty seeds; this is a question of WHEN a track-specific
+// defect is caught, not whether.
+const GATE_TRACKS = "space-sprint,city-circuit";
+const trackArg = ARG("tracks", GATE ? GATE_TRACKS : null);
 const TRACKS = geometries().filter((g) => (trackArg ? trackArg.split(",").includes(g.id) : true));
 
 // ── THE VIRTUAL CLOCK ──────────────────────────────────────────────────────────────────────────
