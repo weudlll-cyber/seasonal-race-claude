@@ -126,6 +126,45 @@ spot this ship exposed: a visible change that no fingerprint can see.
   after the source clean-up.
 - `v-ship-coord-system` (`f78869bc`, 2026-08-14) — the merge itself.
 
+### ENDGAME-LAND — the endgame is a schedule, and it was written onto master once (2026-08-22)
+
+**The owner judged the served production build with both switches on, on 2026-08-24, and ACCEPTED
+it.** The last stretch of the race is now a SCHEDULE rather than a ceiling — a bound has no opinion
+about motion, and the measurements found the camera standing still for 43% of the endgame with the
+longest freeze over two seconds. A widen ending at the endgame threshold, then a close to the
+crossing, authored in log space; along the close **the schedule is the sole author of the zoom**,
+where five separate places in `CameraDirector.js` used to write it and the picture strobed because
+they disagreed frame to frame.
+
+**Two keys ship ON as a decision rather than as a default that drifted.** `contentionWatch` eases the
+framing off racers the race has decided, judged from what is visible on track and never from the race
+plan, one-way and on two consecutive checks so it cannot flicker. `bandFloor` guarantees the finish
+inside the subject's own region rather than the company margin, and introduces no new number. Both
+keep their switches and both have a Dev Screen control, because he must be able to compare.
+
+**This is a RE-IMPLEMENTATION, not a merge.** The eight-night experiment branch is archived below and
+deleted at the origin; the design was written onto master once, in one commit. The equality with the
+accepted build is proved four ways — byte-identical source but for two comment lines, both arms'
+fingerprints reproducing each other, and 960 of 960 sheet verdicts across 80 races.
+
+**CAMERA and RENDER move; WORLD and WORLD-OFF do not**, and the two world values were MEASURED rather
+than argued, because `defaults.js` sits inside all four instruments' closures. Values live in
+[fingerprints.json](fingerprints.json).
+
+- `v-ship-endgame-land` (`PROVISIONAL`, 2026-08-22) — **the ship.** The return point is
+  `v-ship-endgame-land^1`, which restores an endgame whose zoom has five authors inside the last 5%
+  of the race, a camera seed drawn from `Math.random()` rather than the race's, a width floor sized
+  on the finish line's centre point rather than on the band, and no contention watch at all — with
+  the CAMERA value `f64c2ae531f14253` and the RENDER value `7d553406f41ff176`. See
+  [ENDGAME-LAND-CLEAN-1](../reports/evolution/ENDGAME-LAND-CLEAN-1.md).
+- `archive/exp-endgame-schedule` (`bbc63869`, 2026-08-22) — **the whole experiment branch**, eight
+  nights of it, archived rather than merged and then deleted at the origin. It is the build the owner
+  actually judged (`index-BEdanP55.js`), and it carries the excavation the ship deliberately does not:
+  every rejected shape with the measurement that killed it — the observed-anchor floor, the lag
+  carried in the distance, the lateral-guarantee fallback, the unscoped glide pivot, the nearest-point
+  band floor that asked for LESS width, and holding still-level racers, which put the winner at
+  `x = 0.105` with 24 cut frames. Keep it: those are the six answers nobody should have to buy twice.
+
 ### LABEL-OVERLAP — a label that was admitted stays readable (2026-08-22)
 
 **The owner judged this on a production build on 2026-08-22 and ACCEPTED it, including the photo
