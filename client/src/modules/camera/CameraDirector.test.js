@@ -171,7 +171,10 @@ describe('CameraDirector', () => {
 
   it('OVERVIEW converges to its TRACK-WIDTHS setting (CAMERA-ZOOM-UNIT-1)', () => {
     // The number to assert is the one the owner sets: how many track widths are on screen.
-    const cd = new CameraDirector();
+    // ENDGAME-SCHEDULE-1: `mockRacers` puts the leader at t = 1.0 and `mockRaceState.finishT` is
+    // 1.0, so this fixture sits ON the finish line, where the endgame schedule owns the width by
+    // design. Off, so the test measures what it is about — OVERVIEW's own setting.
+    const cd = new CameraDirector(1280, 720, false, { runInSchedule: false });
     cd.state = CAM_STATE.OVERVIEW;
     for (let i = 0; i < 200; i++) cd.update(mockRacers(4), 1000, mockRaceState, 1280, 720);
     expect(cd.visibleCorridors).toBeCloseTo(1.5, 1); // OVERVIEW default, in standard corridors
@@ -187,21 +190,21 @@ describe('CameraDirector', () => {
       for (let i = 0; i < 300; i++) cd.update(mockRacers(4), 1000, mockRaceState, 1280, 720);
       return cd.visibleCorridors;
     };
-    expect(settle(new CameraDirector(6000, 720, true))).toBeCloseTo(
-      settle(new CameraDirector(1280, 720, false)),
+    expect(settle(new CameraDirector(6000, 720, true, { runInSchedule: false }))).toBeCloseTo(
+      settle(new CameraDirector(1280, 720, false, { runInSchedule: false })),
       1
     );
   });
 
   it('OVERVIEW on a 6000px world converges to the same track widths it targets', () => {
-    const cd = new CameraDirector(6000, 720, true);
+    const cd = new CameraDirector(6000, 720, true, { runInSchedule: false });
     cd.state = CAM_STATE.OVERVIEW;
     for (let i = 0; i < 300; i++) cd.update(mockRacers(4), 1000, mockRaceState, 1280, 720);
     expect(cd.visibleCorridors).toBeCloseTo(1.5, 1); // OVERVIEW default, in standard corridors
   });
 
   it('LEADER_ZOOM converges to zoom > 1', () => {
-    const cd = new CameraDirector(1280, 720, false, {});
+    const cd = new CameraDirector(1280, 720, false, { runInSchedule: false });
     cd.state = CAM_STATE.LEADER_ZOOM;
     for (let i = 0; i < 200; i++) cd.update(mockRacers(4), 1000, mockRaceState, 1280, 720);
     expect(cd.zoom).toBeGreaterThan(1.1);
@@ -265,7 +268,7 @@ describe('CameraDirector — bbox clamping', () => {
   it('BATTLE_ZOOM with racers near right edge (x=1085): no black border on either side', () => {
     // DEFAULT_SPRITE_SCALE.battle = 2.81; bsX=1 → _battleZoom=2.81 on 1280px world.
     // resolveCamera clamps camX to keep world within canvas → no black borders.
-    const cd = new CameraDirector(1280, 720, false, null, 50);
+    const cd = new CameraDirector(1280, 720, false, { ...null, runInSchedule: false }, 50);
     cd.state = CAM_STATE.BATTLE_ZOOM;
     const racers = [
       { t: 0.9, x: 1090, y: 300, finished: false },
@@ -1849,7 +1852,14 @@ describe('CameraDirector — trivial pan centering (closed tracks)', () => {
     const worldCx = 600;
     const worldCy = 300;
     const mockShape = { getPosition: (_t, _offset) => ({ x: worldCx, y: worldCy, angle: 0 }) };
-    const cd = new CameraDirector(worldW, worldH, false, inverseConfig, 36, mockShape);
+    const cd = new CameraDirector(
+      worldW,
+      worldH,
+      false,
+      { ...inverseConfig, runInSchedule: false },
+      36,
+      mockShape
+    );
     cd.state = CAM_STATE.BATTLE_ZOOM;
     cd.stateEnteredAt = 1000;
     const racers = [
@@ -1907,7 +1917,13 @@ describe('CameraDirector — D6: coordinated pan+zoom transition', () => {
   const worldH = 720;
 
   it('transitioning=true immediately after state entry, false after convergence', () => {
-    const cd = new CameraDirector(worldW, worldH, false, inverseConfig, 36);
+    const cd = new CameraDirector(
+      worldW,
+      worldH,
+      false,
+      { ...inverseConfig, runInSchedule: false },
+      36
+    );
     cd.state = CAM_STATE.LEADER_ZOOM;
     cd.stateEnteredAt = 1000;
     const leader = { t: 1, x: 800, y: 360, finished: false };
@@ -1920,7 +1936,13 @@ describe('CameraDirector — D6: coordinated pan+zoom transition', () => {
   });
 
   it('zoomProgress increases from near 0 to 1 as zoom converges', () => {
-    const cd = new CameraDirector(worldW, worldH, false, inverseConfig, 36);
+    const cd = new CameraDirector(
+      worldW,
+      worldH,
+      false,
+      { ...inverseConfig, runInSchedule: false },
+      36
+    );
     // Force start from zoom=1 (overview)
     cd.zoom = 1;
     cd.state = CAM_STATE.LEADER_ZOOM;
@@ -1940,7 +1962,13 @@ describe('CameraDirector — D6: coordinated pan+zoom transition', () => {
     // no pan is needed regardless of leader position. Start at zoom=1.5 instead —
     // at that level the leader near x=1400 is outside the centred view and
     // pan travel is ~640px.
-    const cd = new CameraDirector(worldW, worldH, false, inverseConfig, 36);
+    const cd = new CameraDirector(
+      worldW,
+      worldH,
+      false,
+      { ...inverseConfig, runInSchedule: false },
+      36
+    );
     cd.zoom = 1.5;
     cd.offsetX = 0;
     cd.offsetY = 0;
@@ -2070,7 +2098,7 @@ const profileConfig = {
 
 describe('CameraDirector — Phase 1: dt-scaled lerp', () => {
   it('no dt arg (default 16.67ms): lerp factor equals lf60 (behavior-equivalent)', () => {
-    const cd = new CameraDirector(1280, 720, false, ALWAYS_TAKE, 36);
+    const cd = new CameraDirector(1280, 720, false, { ...ALWAYS_TAKE, runInSchedule: false }, 36);
     cd.state = CAM_STATE.LEADER_ZOOM;
     cd.stateEnteredAt = 0;
     const startZoom = 1.0;
@@ -2084,13 +2112,13 @@ describe('CameraDirector — Phase 1: dt-scaled lerp', () => {
   });
 
   it('double dt (33.33ms) produces larger lerp step than single dt', () => {
-    const cd1 = new CameraDirector(1280, 720, false, ALWAYS_TAKE, 36);
+    const cd1 = new CameraDirector(1280, 720, false, { ...ALWAYS_TAKE, runInSchedule: false }, 36);
     cd1.state = CAM_STATE.LEADER_ZOOM;
     cd1.stateEnteredAt = 0;
     cd1.zoom = 1.0;
     cd1.targetZoom = 3.0;
 
-    const cd2 = new CameraDirector(1280, 720, false, ALWAYS_TAKE, 36);
+    const cd2 = new CameraDirector(1280, 720, false, { ...ALWAYS_TAKE, runInSchedule: false }, 36);
     cd2.state = CAM_STATE.LEADER_ZOOM;
     cd2.stateEnteredAt = 0;
     cd2.zoom = 1.0;
@@ -7246,8 +7274,24 @@ describe('the hold keeps the ceremony framing (CEREMONY-HOLD-TARGET-1)', () => {
 // ============================================================
 describe('RUNIN-GLIDE-1 — wide-and-back, gliding to the ordinary shot', () => {
   // A straight 4000 px track; the line at t=1 is therefore at x=4000, y=360.
+  // ── ENDGAME-SCHEDULE-1: THIS BLOCK GUARDS THE OFF-ARM, DELIBERATELY ──────────────────────────
+  //
+  // These tests describe HOLD-THEN-SWEEP: the ceiling is latched at engagement, held, then released
+  // in one sweep. The shipped endgame is now the SCHEDULE (`runInSchedule: true`), which is a
+  // different shape on purpose — the owner rejected hold-then-sweep twice, for standing still.
+  //
+  // The old path is still in the director and still reachable with the key off, so these tests are
+  // still guarding real code and are pinned to the arm they were written for rather than deleted.
+  // The schedule has its own tests below.
   const runInDirector = (cfg = {}) =>
-    new CameraDirector(4000, 720, true, { ...DEFAULT_CAMERA_CONFIG, ...cfg }, 36, makeShape(4000));
+    new CameraDirector(
+      4000,
+      720,
+      true,
+      { ...DEFAULT_CAMERA_CONFIG, runInSchedule: false, ...cfg },
+      36,
+      makeShape(4000)
+    );
   const FRAME = { width: 1280, height: 720 };
   const subjectsAt = (x) => ({ point: { x, y: 360 }, t: x / 4000, pair: [null, null] });
   const racersAt = (x) => [{ index: 0, t: x / 4000, x, y: 360 }];
@@ -7435,7 +7479,19 @@ describe('CameraDirector — the corridor caps the width, it does not force it',
   ];
 
   function drive(configOver, racers) {
-    const cd = new CameraDirector(WORLD_W, CANVAS_H, true, configOver, 36, makeShape(), TRACK_W);
+    // ENDGAME-SCHEDULE-2: pinned to the off-arm. This block is about the CORRIDOR CAP's composition
+    // with the contender guarantee, and the scheduled endgame stands both of them down — the
+    // schedule is the sole author of the width there, which is what removed the owner's "the zoom
+    // visibly hops". The composition under test is still live with the key off, and still guarded.
+    const cd = new CameraDirector(
+      WORLD_W,
+      CANVAS_H,
+      true,
+      { runInSchedule: false, ...configOver },
+      36,
+      makeShape(),
+      TRACK_W
+    );
     cd.state = CAM_STATE.PHOTO_FINISH;
     cd._photoFinishContenders = racers.slice(0, 2).map((r) => ({ index: r.index, ref: r }));
     let ts = 1000;
@@ -7507,7 +7563,11 @@ describe('CameraDirector — the corridor caps the width, it does not force it',
         WORLD_W,
         CANVAS_H,
         true,
-        { ...DEFAULT_CAMERA_CONFIG, contenderZoom: true, runInShot: true },
+        // ENDGAME-SCHEDULE-1: pinned to the off-arm. This block tests RUNIN-LINE-1's re-clamp of
+        // the LINE ceiling after the corridor cap, and the schedule retires that ceiling outright —
+        // it owns the width instead of joining the Math.min. Same code, still reachable, still
+        // guarded here.
+        { ...DEFAULT_CAMERA_CONFIG, contenderZoom: true, runInShot: true, runInSchedule: false },
         36,
         makeShape(),
         NARROW_TRACK_W
@@ -7698,7 +7758,12 @@ describe('RUNIN-BACK-1 — the leader falls back across the frame', () => {
       WORLD_W,
       CANVAS_H,
       true,
-      { ...DEFAULT_CAMERA_CONFIG, runInShot },
+      // ENDGAME-SCHEDULE-1: pinned to the off-arm. This block states the OWNER'S TRAVEL under
+      // hold-then-sweep — the leader starts at the mirror, holds, then glides back on the sweep.
+      // The schedule keeps the same travel but parameterises it on the close rather than on a
+      // release, so `u` means something different and this fixture's two drive points no longer
+      // straddle it. The travel itself is re-stated for the schedule in its own test below.
+      { ...DEFAULT_CAMERA_CONFIG, runInSchedule: false, runInShot },
       36,
       shape(),
       300
@@ -7753,7 +7818,6 @@ describe('RUNIN-BACK-1 — the leader falls back across the frame', () => {
       arrival[arrival.length - 1].u,
       'the sweep never released in this fixture'
     ).toBeGreaterThan(0.5);
-    const trace = [...opening, ...arrival];
     const first = opening[0];
     const last = arrival[arrival.length - 1];
     expect(first.frac, 'at the opening the leader must sit BEFORE centre').toBeLessThan(0.5);
@@ -7816,8 +7880,24 @@ describe('RUNIN-BACK-1 — the leader falls back across the frame', () => {
 });
 
 describe('RUNIN-HOLD-1 — hold, then one sweep', () => {
+  // ── ENDGAME-SCHEDULE-1: THIS BLOCK GUARDS THE OFF-ARM, DELIBERATELY ──────────────────────────
+  //
+  // These tests describe HOLD-THEN-SWEEP: the ceiling is latched at engagement, held, then released
+  // in one sweep. The shipped endgame is now the SCHEDULE (`runInSchedule: true`), which is a
+  // different shape on purpose — the owner rejected hold-then-sweep twice, for standing still.
+  //
+  // The old path is still in the director and still reachable with the key off, so these tests are
+  // still guarding real code and are pinned to the arm they were written for rather than deleted.
+  // The schedule has its own tests below.
   const runInDirector = (cfg = {}) =>
-    new CameraDirector(4000, 720, true, { ...DEFAULT_CAMERA_CONFIG, ...cfg }, 36, makeShape(4000));
+    new CameraDirector(
+      4000,
+      720,
+      true,
+      { ...DEFAULT_CAMERA_CONFIG, runInSchedule: false, ...cfg },
+      36,
+      makeShape(4000)
+    );
   const FRAME = { width: 1280, height: 720 };
   const subjectsAt = (x) => ({ point: { x, y: 360 }, t: x / 4000, pair: [null, null] });
   const racersAt = (x) => [{ index: 0, t: x / 4000, x, y: 360 }];
@@ -7914,5 +7994,173 @@ describe('RUNIN-HOLD-1 — hold, then one sweep', () => {
     sweepTrace(cd, 3400, 3900, 20);
     // Mirroring dead centre gives dead centre, whatever the sweep is doing.
     expect(cd._forwardFracNow()).toBeCloseTo(0.5, 9);
+  });
+});
+
+// ============================================================
+// ENDGAME-SCHEDULE-1 — THE ENDGAME IS A SCHEDULE, NOT A CEILING.
+//
+// The owner rejected hold-then-sweep twice, both times for the same thing: the wide shot STANDS
+// STILL. A bound has no opinion about motion, so the picture stops whenever the bound does. A
+// schedule has motion as its subject: a position for every frame, moving through the whole phase
+// and arriving at a stated place at a stated moment.
+//
+// These four tests pin the four things that make it a schedule rather than another bound. Each says
+// what breaks if it is deleted, because three of the four were defects found by measurement during
+// the block and would otherwise return silently.
+// ============================================================
+describe('ENDGAME-SCHEDULE-1 — the endgame is a schedule', () => {
+  const WORLD = 4000;
+  const CANVAS_H = 720;
+  const CANVAS_W = 1280;
+  const FINISH_T = 1;
+  const mkShape = () => ({
+    isOpen: true,
+    getPosition: (t) => ({ x: Math.max(0, Math.min(1, t)) * WORLD, y: 360 }),
+    getActualTrackWidth: () => 300,
+  });
+
+  /** Drive a race from `fromP` to `toP` in `frames` steps and record the delivered width. */
+  const run = (fromP, toP, frames, cfg = {}) => {
+    const cd = new CameraDirector(
+      WORLD,
+      CANVAS_H,
+      true,
+      // `contenderZoom` off: the corridor cap is a SECOND width authority with its own tests, and
+      // on a two-racer fixture it closes the shot far past anything the schedule asked for. This
+      // block is about the schedule.
+      { ...DEFAULT_CAMERA_CONFIG, runInSchedule: true, contenderZoom: false, ...cfg },
+      36,
+      mkShape(),
+      300
+    );
+    cd.state = cfg.state ?? CAM_STATE.LEADER_ZOOM;
+    const trace = [];
+    let ts = 1000;
+    // WARM THE CAMERA FIRST. A freshly constructed director sits at its OPENING zoom, which is
+    // wider than any racing shot — recording from frame 1 makes the settle-down look like a
+    // re-opening and the widen that follows like a reversal. Settling at the start progress is what
+    // a real race hands the endgame.
+    for (let w = 0; w < 180; w++) {
+      const racers = [
+        { index: 0, t: fromP * FINISH_T, x: fromP * WORLD, y: 360 },
+        { index: 1, t: fromP * FINISH_T - 0.01, x: (fromP - 0.01) * WORLD, y: 360 },
+      ];
+      cd.update(
+        racers,
+        ts,
+        { finishT: FINISH_T, finishedCount: 0, raceElapsed: 60000 },
+        CANVAS_W,
+        CANVAS_H
+      );
+      ts += 1000 / 60;
+    }
+    for (let f = 0; f < frames; f++) {
+      const p = fromP + ((toP - fromP) * f) / (frames - 1);
+      const racers = [
+        { index: 0, t: p * FINISH_T, x: p * WORLD, y: 360 },
+        { index: 1, t: p * FINISH_T - 0.01, x: (p - 0.01) * WORLD, y: 360 },
+      ];
+      cd.update(
+        racers,
+        ts,
+        { finishT: FINISH_T, finishedCount: 0, raceElapsed: 60000 },
+        CANVAS_W,
+        CANVAS_H
+      );
+      trace.push({
+        p,
+        zoom: cd.zoom,
+        width: CANVAS_W / cd._proj.effX(cd.zoom),
+        composing: !!cd._runInComposingNow,
+        state: cd._framingProbe?.ceilings?.state,
+      });
+      ts += 1000 / 60;
+    }
+    return { cd, trace };
+  };
+
+  // IF DELETED: the schedule could stop moving, or reverse, anywhere in the phase — which is the
+  // entire complaint this block was opened to answer.
+  //
+  // ASSERTED ON THE SCHEDULE'S OWN OUTPUT, not on the delivered width, and that is deliberate. The
+  // delivered width is the schedule composed with every guarantee, the world-edge clamp and the
+  // pan; end-to-end monotonicity is a TEN-TRACK measurement (`scripts/diag/endgame-spec.mjs`,
+  // 9/9 on both arms) and a two-racer fixture cannot stand in for it — it wobbles 0.56% here on
+  // geometry no real track has. What a unit test CAN pin is that the thing being composed is
+  // monotone, so a later edit to the curve cannot quietly introduce a reversal upstream.
+  it('the schedule it places is monotone through the close', () => {
+    const { cd } = run(0.9, 0.999, 400);
+    const frame = { width: CANVAS_W, height: CANVAS_H };
+    const rs = { finishT: FINISH_T, finishedCount: 0 };
+    let prev = null;
+    for (let i = 0; i <= 40; i++) {
+      const p = 0.95 + (0.049 * i) / 40;
+      cd._runInProgress =
+        (p - DEFAULT_CAMERA_CONFIG.endgameThreshold) / (1 - DEFAULT_CAMERA_CONFIG.endgameThreshold);
+      cd._runInAfterDeadline = true;
+      const subjects = { point: { x: p * WORLD, y: 360 }, t: p, pair: [null, null] };
+      const z = cd._updateRunInScheduled(
+        subjects,
+        frame,
+        [{ index: 0, t: p, x: p * WORLD, y: 360 }],
+        rs,
+        2000 + i
+      );
+      if (prev !== null)
+        expect(z, `reversed at p=${p.toFixed(3)}`).toBeGreaterThanOrEqual(prev - 1e-9);
+      prev = z;
+    }
+  });
+
+  // IF DELETED: the arrival could drift to any value, and the shot at the crossing would stop being
+  // the ordinary racing shot — requirement 2, and the property that makes the hand-over seamless.
+  // Asserted on the endpoint the schedule aims at, which is the thing requirement 2 names: ONE of
+  // the two existing factors, never a new one.
+  it('its endpoint is the leader-view factor, or the photo finish, and nothing else', () => {
+    const { cd } = run(0.9, 0.99, 200);
+    const frame = { width: CANVAS_W, height: CANVAS_H };
+    const rs = { finishT: FINISH_T, finishedCount: 0 };
+    const atLine = (pf) => {
+      cd._inPhotoFinish = pf;
+      cd._runInProgress = 1; // u = 1 is the crossing, by construction
+      cd._runInAfterDeadline = true;
+      const subjects = { point: { x: WORLD, y: 360 }, t: 1, pair: [null, null] };
+      return cd._updateRunInScheduled(
+        subjects,
+        frame,
+        [{ index: 0, t: 1, x: WORLD, y: 360 }],
+        rs,
+        9000
+      );
+    };
+    expect(atLine(false)).toBeCloseTo(cd._leaderZoom, 6);
+    expect(atLine(true)).toBeCloseTo(cd._photoFinishZoom, 6);
+  });
+
+  // IF DELETED: the schedule would go back to being one more entry in `_setTargets`'s Math.min, and
+  // a wider state would pin the picture against it. MEASURED before the fix: mountainstreet held
+  // OVERVIEW's 800 px from 94.9% to 97.0% of the race and then dived at -2.3 ln/s the frame the
+  // state changed — standstill and abruptness from one cause.
+  it('a WIDER state does not pin it — the schedule owns the width', () => {
+    const wide = run(0.9, 0.99, 300, { state: CAM_STATE.OVERVIEW });
+    const composing = wide.trace.filter((x) => x.composing);
+    expect(composing.length).toBeGreaterThan(50);
+    const first = composing[0].width;
+    const last = composing[composing.length - 1].width;
+    // It closes: the OVERVIEW setting is far wider than where this ends up.
+    expect(last).toBeLessThan(first);
+  });
+
+  // IF DELETED: the widen could start at any moment. The latch is one-way, so a single early frame
+  // hands the schedule the width authority for the WHOLE race — measured, that took 19 unrelated
+  // tests down, almost none of them about the endgame.
+  it('it does not engage before one close-span ahead of the threshold', () => {
+    const TH = DEFAULT_CAMERA_CONFIG.endgameThreshold;
+    const early = run(0.5, 2 * TH - 1 - 0.01, 120);
+    expect(
+      early.trace.some((x) => x.composing),
+      'engaged too early'
+    ).toBe(false);
   });
 });

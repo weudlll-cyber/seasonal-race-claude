@@ -1329,6 +1329,42 @@ function CameraAdvancedSection() {
           <span style={{ fontWeight: 600 }}>Frame the finish through the run-in</span>
           <InfoTooltip text="On (default): once the finish line can be framed without opening wider than the OVERVIEW shot, the camera keeps it in frame until the first racer crosses — opening only as far as the line needs and tightening by itself as the leader closes. It does not change WHICH shot is running; it bounds whatever shot is, and never tightens past that shot's own zoom. While it composes, the leader is centred rather than framed forward, because the thing worth seeing is now ahead of him. Off is the pre-2026-08-12 behaviour." />
         </label>
+        <label
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: '0.5rem',
+            marginBottom: '0.6rem',
+          }}
+        >
+          <input
+            type="checkbox"
+            data-testid="contention-watch"
+            checked={config.contentionWatch ?? DEFAULT_CAMERA_CONFIG.contentionWatch}
+            onChange={(e) => set('contentionWatch', e.target.checked)}
+          />
+          <span style={{ fontWeight: 600 }}>Drop racers who can no longer win</span>
+          <InfoTooltip text="Off (default) is today's behaviour. On: from the endgame threshold the camera keeps asking whether each racer can still WIN — from the gap and the speed difference visible on track, never from the race plan — and eases the framing off anyone the race has decided, over the run-in's own opening span. The verdict is one-way, so a racer cannot flicker in and out. It is what stops the shot being anchored on a racer who finished fifth, a second down." />
+        </label>
+        <label
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: '0.5rem',
+            marginBottom: '0.6rem',
+          }}
+        >
+          <input
+            type="checkbox"
+            data-testid="band-floor"
+            checked={config.bandFloor ?? DEFAULT_CAMERA_CONFIG.bandFloor}
+            onChange={(e) => set('bandFloor', e.target.checked)}
+          />
+          <span style={{ fontWeight: 600 }}>
+            Hold the finish line in the subject&apos;s own region
+          </span>
+          <InfoTooltip text="Off (default) is today's behaviour: the endgame's width floor keeps the finish inside the COMPANY margin, the region a companion may sit near the edge of. On: it keeps the finish inside the SUBJECT's region instead, which is tighter and therefore asks for a wider shot — measured, that is what puts the band back on screen where it was leaving it. It costs width, so it trades against 'never open as wide as today'." />
+        </label>
         <div className={s.formGrid}>
           <div className={s.formGroup}>
             <label

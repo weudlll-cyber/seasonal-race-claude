@@ -44,8 +44,8 @@ is inside them is arithmetic and nothing else. Regenerate with
 | count | value |
 | ---------------------------------------------------------------------------------------------- | ----- |
 | files in `raceCore.js`'s import closure — `node scripts/engine-reach.mjs` | 36 |
-| tracked non-test files under `client/src/modules/` outside `camera/` — what the old folder rule fired on | 106 |
-| of those, files that CANNOT reach the engine | 85 |
+| tracked non-test files under `client/src/modules/` outside `camera/` — what the old folder rule fired on | 107 |
+| of those, files that CANNOT reach the engine | 86 |
 | closure files the folder rule never covered | `client/src/modules/camera/lapUtils.js`, `client/src/utils/mathUtils.js`, `scripts/sim-fairness.mjs`, `scripts/sim/observers/comeback-reality.mjs`, `scripts/sim/observers/escape-episodes.mjs`, `scripts/sim/observers/fairness-stats.mjs`, `scripts/sim/observers/front-liveliness.mjs`, `scripts/sim/observers/gap-metrics.mjs`, `scripts/sim/observers/hero-adherence.mjs`, `scripts/sim/observers/outcome-front-battle.mjs`, `scripts/sim/observers/physics-tax.mjs`, `scripts/sim/observers/pulk-contest.mjs`, `scripts/sim/observers/release-contest.mjs`, `scripts/sim/observers/report.mjs`, `scripts/sim/observers/runaway-parade.mjs` |
 
 <!-- END GENERATED: engine-reach counts -->
@@ -413,6 +413,26 @@ went missing).
       section above. If anything in that list is not what the block is about, stop.
 - [ ] **0. Pre-flight.** Confirm the change is UI-configurable (a config key, not a hard-coded edit).
       `eslint` clean, `build` green, the full test suite green on the working tree before you measure.
+- [ ] **0a. THE CAMERA SHIPS ONLY AFTER A REAL BROWSER HAS RUN IT.** If the merge touches
+      `client/src/modules/camera/` or `client/src/screens/RaceScreen/`, run
+      **`node scripts/viewer-invariants.mjs --gate`** — one race, space-sprint seed 9, the shipped
+      defaults, on the PRODUCTION BUNDLE in Chromium. **~130 s, and it must be clean.**
+
+      **Why it is HERE and not in `verify`.** It builds a bundle, starts its own API and app server
+      and launches a browser; putting that in `verify` changes what `verify` IS, and `verify` runs on
+      every commit. A ship is the moment the cost is worth paying — it is paid once per ship, and it
+      is the only thing in this repository that grades the camera the OWNER actually sees.
+
+      **Why it is not optional for a camera change.** The headless director and the browser have
+      diverged three times, and every time the headless side was the blind one: the camera's random
+      seed (CAMERA-SEED-AND-LINE-1), the whole draw path (RENDER-FINGERPRINT-1), and a frame with no
+      course on the canvas that `raceDriver` reported clean (VIEWER-INVARIANTS-1). **The owner found
+      all three; no gate did.** This is the gate.
+
+      **What it costs a ship:** 130 s, plus the one-off `npx playwright install chromium`. It needs
+      no network and touches nothing of the owner's — it builds to `client/dist-sweep`, runs its own
+      API on its own port with an empty data directory, and creates its own account, for the reason
+      E2E-LOGIN-1 gives. Delete `client/dist-sweep` afterwards; it is gitignored.
 - [ ] **1. Paired measurement — the gate.** Run the quartet, paired seeds, against the **CURRENT
       shipped world** — `scripts/exp-flapping-gate.mjs --nlist=100`, where the command carries the race
       count so no second copy of it can drift. Paired means the same seed sequence for both arms; the

@@ -3809,6 +3809,20 @@ it at all?** A criterion nobody consults is indistinguishable from a passing one
 to answer than any of the others: one search for the identifier. It now lives in the test file, which
 is where its callers are.
 
+**SIXTH INSTANCE, 2026-08-21 — a check that ran, printed a verdict per track, and compared against
+`undefined`.** `check-runin-frame`'s rewritten line question imported `COMPANY_FRAME_PCT` from the
+wrong module. The constant came back `undefined`, every margin computed to `NaN`, and **`NaN >= 0` is
+false — so every track printed FINDABLE and the guard was green while measuring nothing at all.** It
+was caught not by review but by a SANITY CHECK on the output: the same figure appeared on tracks the
+guard passed and tracks it failed, and the number was exactly 3/201, which is not what a real
+distribution looks like.
+
+**The addition:** a check that reads a constant must ASSERT it read one. Every grader in
+`scripts/` that grades against an imported threshold now throws if that threshold is absent or out of
+range, with a message that says what it would otherwise be measuring — because the failure mode is
+not a crash, it is a plausible green. Evidence: reports/evolution/VIEWER-INVARIANTS-1.md §5,
+reports/evolution/ENDGAME-COMPLETE-1.md §5.
+
 ## Lesson 210 — The Blast-Radius Law: Ask Every Test Suite What It RUNS AGAINST, Because Two Different Doors Lead To Production Data
 
 **What happened.** The browser suite reached the owner's real data twice, through two mechanisms
@@ -4019,3 +4033,82 @@ absent wherever the anchor is null**, which is precisely where a group shot live
 even written that down and scoped the repair away from it. Evidence:
 reports/evolution/START-OVERSHOOT-1.md (the term and its line),
 reports/evolution/ZOOM-PIVOT-START-1.md (the repair and its ten-track measurement).
+
+
+## Lesson 218 — The Proxy Law: A Metric That Is Not The Thing The EYE Judges Will Go Green While The Eye Says No
+
+**What happened.** Three times in one investigation, over eight nights, a green number sat beside an
+owner who was rejecting the picture in front of him. Each metric was correct, cheap and about the
+right subject — and none of them measured what he was looking at.
+
+**(1) The smoothed derivative.** Endgame smoothness was graded as `|d²ln(width)/dt²|` on a **5-frame
+moving average**. It read 13.1 — comfortably green — while he reported the zoom hopping. The average
+existed for a good reason (the second derivative of a 60 Hz signal is dominated by frame noise) and
+it averaged away precisely the events he was seeing: **one frame changed the picture's width by 24.7%,
+141 screen pixels at the frame edge.** An average can be smooth while individual frames jump.
+
+**(2) The share.** "The line is findable in 88.0% of endgame frames" was reported as the residue of a
+repair. He then pointed out that the frame he had photographed contains **no leader and no finish
+line at all** — so the check had not MISSED his black frame, it had COUNTED it, as a twelfth of a
+percentage. A run with one catastrophic frame is worse than a run with fifty near-misses, and no
+share can say which it is looking at.
+
+**(3) The value instead of the picture.** "Arrival: 0% error on every track" graded the **zoom
+factor** at the crossing — the delivered width against the leader-view or photo-finish constant. It
+was green on a frame where the winner sat in the top-left corner, half cut off, with the centre of
+the frame empty. It would have stayed green with the winner off the canvas entirely, because nothing
+in it asks what is IN the picture.
+
+**Insight / the law.** Each of these is the same substitution: **the quantity that is easy to compute
+stood in for the quantity that is judged.** A smoothed series stands in for a frame; a share stands
+in for an event; a parameter stands in for the artefact the parameter was supposed to produce. The
+substitution is invisible from inside the metric — it is correct arithmetic about a real quantity —
+and it is only visible when someone LOOKS at the artefact and disagrees. **The owner's eye is not a
+slower version of the metric; it is the thing the metric is a model of, and when they disagree the
+metric is what is wrong.**
+
+**Consequence / enforcement.** Three rules, each the direct inverse of one failure above.
+**Grade the WORST SINGLE FRAME, never an average or a smoothed series** — publish the maximum and the
+p99 of the RAW delivered series, and if a smoothed figure is also reported, say on the same line that
+it is smoothed and by how much. **Report violations as EVENTS — seed, track, frame index, what broke
+and by how much — never as a share alone**; a share may accompany them as context and may never be
+the verdict. **Grade the ARTEFACT, not a parameter of it**: if the requirement is about what the
+viewer sees, the check reads the delivered picture, and where an item genuinely cannot be graded from
+the artefact the check says so in its own output rather than substituting something easier.
+`scripts/endgame-sheet.mjs` is this lesson built: twelve requirements, each graded on the picture in
+a real browser, printed together on every race so no single item can be optimised while another
+quietly fails. Evidence: reports/evolution/ENDGAME-SCHEDULE-2.md §0 (the smoothed figure),
+reports/evolution/ENDGAME-WHO-AND-HOWMUCH.md §0 (the share),
+reports/evolution/WINNER-CROSSING-1.md §2 (the arrival value),
+reports/evolution/ENDGAME-COMPLETE-1.md (the sheet that replaced all three).
+
+## Lesson 219 — The Fixed-Seed Law: An Instrument Must Run The PRODUCT'S Configuration, Or It Is Measuring A Thing Nobody Ships
+
+**What happened.** Every camera harness in this repository drove the director through
+`scripts/lib/raceDriver.mjs`, whose run identity defaults the camera's random seed to the constant
+`1439767152`. The browser had stopped doing that: it derives the camera seed from the race seed. So
+for the whole life of those harnesses **no instrument had ever run the camera the browser runs**, and
+a picture the owner reported could not be stood in by anyone, including him.
+
+It was not a small gap. On space-sprint seed 9 — his own context, his roster, Race Plan on — the
+BROWSER produces a frame with **no point of the course on the canvas** and, twenty frames later, the
+leader **2806 px outside** it. The same race through `raceDriver` reports the run **clean**. Three of
+forty swept seeds carry the defect at all; seed 9, the seed every table in this project uses, is one
+of the clean ones on the fixed-seed harness.
+
+**Insight / the law.** A harness has a configuration, and every default in it is a claim that the
+default does not matter. **Where the product derives a value and the harness constants it, the
+harness is not a faster version of the product — it is a different product**, and the difference is
+invisible precisely because the harness is deterministic and repeatable, which reads as rigour. This
+is the third proven divergence of the same shape in this repository: the camera's random seed
+(CAMERA-SEED-AND-LINE-1), the whole draw path (RENDER-FINGERPRINT-1) and this one — and each time the
+headless side was the blind one, and each time the OWNER found it and no gate did.
+
+**Consequence / enforcement.** For every harness, list what it CONSTANTS that the product DERIVES,
+and either derive it the same way or write the difference into the harness's own header as a declared
+blind spot. Where the claim is about what the owner SEES, drive the real bundle in a real browser:
+`scripts/viewer-invariants.mjs` does, on a fixed virtual clock so runs stay repeatable, and it is
+wired into `docs/SHIP-CEREMONY.md` at step 0a so no camera change ships again without one real-browser
+run. **And do not trust one seed:** the sweep exists because the defect lives on three seeds in
+forty. Evidence: reports/evolution/CAMERA-SEED-AND-LINE-1.md §5 (the fingerprint that could not see
+it), reports/evolution/VIEWER-INVARIANTS-1.md §0 and §3 (the divergence, measured).

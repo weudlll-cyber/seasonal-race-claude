@@ -48,6 +48,7 @@ import { loadAutoScaleConfig } from '../../modules/autoSpriteScale.js';
 import { loadCameraConfig, cameraConfigProvenance } from '../../modules/cameraConfig.js';
 import { configFingerprintBadge, buildWorldConfig } from '../../modules/exportRaceConfig.js';
 import { buildCameraMarker, configDiffWithValues } from '../../modules/camera/cameraMarker.js';
+import { cameraSeedForRace } from '../../modules/camera/cameraSeed.js';
 // BUILD-TRUTH-1: the ONLY import of the virtual module. It is re-read and the page force-reloaded
 // whenever the identity changes, so this value cannot be older than the code around it. It stays
 // out of `modules/` on purpose: scripts/render-fingerprint.mjs drives the renderer directly in node,
@@ -89,6 +90,7 @@ import { resolveTrailEmitter } from '../../modules/surface-effects/trailResolver
 import { getCachedServerSurfaceClasses } from '../../modules/storage/surfaceClassLoader.js';
 import { loadServerClasses } from '../../modules/surface-effects/registry.js';
 import { initProbe, recordFrame, recordFrameCamera } from '../../modules/rAFProbe.js';
+import { beginViewerProbe, recordViewerFrame } from '../../modules/viewerProbe.js';
 import BrandLogoOverlay from './BrandLogoOverlay.jsx';
 import CeremonyBrandCard from './CeremonyBrandCard.jsx';
 import WinnerCard, { WINNER_CARD_FADE_MS, winnerCardWindowMs } from './WinnerCard.jsx';
@@ -587,12 +589,24 @@ export default function RaceScreen() {
       trackWidthPx
     );
     // CAMERA-REPRO-1: the camera makes its OWN random draws (which state to cut to, when the next
-    // OVERVIEW is due). Unseeded, the same race shows a different camera every time — which is why
-    // "it looked wrong at 40 s" could never be handed to anyone. Draw ONE seed per race from
-    // Math.random, exactly as random as before, and give it to the director: the race stays as
-    // unpredictable as it always was, and the drawn seed travels in the marker so a marked moment
-    // can be stood in again. This mirrors the Quick-Test seed rule (drawn, not fixed, then shown).
-    const cameraRandomSeed = (Math.random() * 0x7fffffff) >>> 0 || 1;
+    // OVERVIEW is due), and it needs a seed for them. That seed used to be DRAWN from Math.random
+    // per race, which made a marked moment replayable but the same race seed irreproducible —
+    // measured at 165 physics steps running a different state between two runs of race seed 9.
+    // CAMERA-SEED-AND-LINE-1 derives it from the race's own seed instead; the marker still carries
+    // the value, so every existing replay path is unchanged.
+    // CAMERA-SEED-AND-LINE-1: DERIVED FROM THE RACE SEED, not drawn. Same race seed, same camera,
+    // shot for shot — so a picture he reports can be stood in again. `cameraSeed.js` states the
+    // trade and the unseeded case; `racePlanSeed` is bound above from `raceData`.
+    const cameraRandomSeed = cameraSeedForRace(racePlanSeed);
+    // VIEWER-INVARIANTS-1: the race's identity, echoed into every violation this run produces so an
+    // event names the race it happened in. Inert unless ?viewerprobe=1.
+    beginViewerProbe({
+      track: raceData.trackId ?? null,
+      seed: racePlanSeed,
+      racers: raceState.racers.length,
+      cameraSeed: cameraRandomSeed,
+      trackWidthPx,
+    });
     camDirRef.current.setRandomSeed(cameraRandomSeed);
     // CEREMONY-OPENING-1: the ONE place that says whether this race opens on a brand card. The
     // director owns the schedule and cannot know what a branding profile is; this is the only thing
@@ -1564,6 +1578,78 @@ export default function RaceScreen() {
       markerFrame.camZoom = cam.zoom;
       markerFrame.offsetX = cam.offsetX;
       markerFrame.offsetY = cam.offsetY;
+
+      // VIEWER-INVARIANTS-1: the five sentences, checked on the transform the frame was DRAWN with.
+      // Placed HERE, beside the marker and for the same reason: these are the renderer's own
+      // reported values, not a second derivation of them. Inert unless ?viewerprobe=1.
+      recordViewerFrame({
+        ts,
+        effZoomX: frame.effZoomX,
+        effZoomY: frame.effZoomY,
+        offsetX: cam.offsetX,
+        offsetY: cam.offsetY,
+        canvasW: CANVAS_W,
+        canvasH: CANVAS_H,
+        shape,
+        trackWidthPx,
+        racers: st.racers,
+        finishT: st.finishT,
+        finishedCount: st.finishedCount,
+        endgameFrom: camDirRef.current._endgameThreshold,
+        tightestNamed:
+          CANVAS_W / (camDirRef.current._photoFinishZoom * (frame.effZoomX / cam.zoom)),
+        worldWidth,
+        state: camDirRef.current.state,
+        binding: camDirRef.current._framingProbe?.binding ?? '?',
+        lerpPhase: camDirRef.current._lerpPhase,
+        contentionOn: !!camDirRef.current._contentionWatch,
+        contentionOut: camDirRef.current._contentionOut
+          ? [...camDirRef.current._contentionOut]
+          : null,
+        contentionChecks: camDirRef.current._contentionChecks ?? 0,
+        // ── ENDGAME-COMPLETE-1: the last quantities the acceptance sheet grades from ───────────
+        // The two factors item 2 names, the heading item 9 and 10 measure along, and the racers
+        // item 7 requires in frame — all read from the director rather than re-derived here.
+        leaderZoom: camDirRef.current._leaderZoom,
+        photoFinishZoom: camDirRef.current._photoFinishZoom,
+        heading: camDirRef.current._headingScreen(camDirRef.current._framingProbe?.t ?? 0),
+        contenderIdx: (() => {
+          try {
+            const ordered = [...st.racers].sort((a, b) => b.t - a.t);
+            return camDirRef.current._abreastContenders(ordered).map((r) => r?.index ?? -1);
+          } catch {
+            return null;
+          }
+        })(),
+        // WHERE THE PAN WAS AIMED, beside where it got to. The difference is the smoother's own
+        // residual, and it is the quantity that decides whether a shot that loses its subject is a
+        // FRAMING decision or a DELIVERY one.
+        targetOffsetX: camDirRef.current.targetOffsetX,
+        targetOffsetY: camDirRef.current.targetOffsetY,
+        targetZoom: camDirRef.current.targetZoom,
+        camZoom: cam.zoom,
+        // WHERE THE FRAMING RULE INTENDS THE SUBJECT, as a fraction along the motion axis, and the
+        // run-in's own travel parameter that drives it.
+        forwardFrac: camDirRef.current._forwardFracNow(),
+        runInU: camDirRef.current._runInSweepU ? camDirRef.current._runInSweepU() : null,
+        runInProgress: camDirRef.current._runInProgress,
+        composing: !!camDirRef.current._runInComposingNow,
+        // WHAT THE PAN IS AIMED AT, in world coordinates, beside the candidates it could be aimed
+        // at. Whichever it tracks is the pan's real subject, which no amount of reading the framing
+        // rule will settle.
+        panTargetX: camDirRef.current._lastPanTargetX ?? null,
+        panTargetY: camDirRef.current._lastPanTargetY ?? null,
+        lineWorld: camDirRef.current._finishLineWorldPoint(st.finishT),
+        lateralShift: camDirRef.current._lastLateralShift ?? null,
+        panClamped: camDirRef.current._lastResolvedPanTarget?.wasClamped ?? null,
+        panCamX: camDirRef.current._lastResolvedPanTarget?.camX ?? null,
+        worldMaxX: camDirRef.current._worldBounds?.maxX ?? null,
+        worldMaxY: camDirRef.current._worldBounds?.maxY ?? null,
+        anchorPoint: camDirRef.current._framingProbe?.point ?? null,
+        // The racers the framing was actually built on this frame, by index. Read from the probe
+        // the director already writes; nothing is re-derived.
+        subjectIndices: camDirRef.current._framingProbe?.pair?.map((r) => r?.index ?? -1) ?? null,
+      });
 
       if (bgCanvasRef.current && bgImagePath && bgCanvasReady) {
         const bgScaleX = isOpenTrack ? frame.effZoomX * (worldWidth / CANVAS_W) : cam.zoom;
