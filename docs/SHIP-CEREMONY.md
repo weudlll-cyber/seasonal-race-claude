@@ -429,6 +429,27 @@ went missing).
       course on the canvas that `raceDriver` reported clean (VIEWER-INVARIANTS-1). **The owner found
       all three; no gate did.** This is the gate.
 
+      **AND WHEN THE 80-RACE SHEET RUNS INSTEAD — the owner's rule, 2026-08-25.** The full
+      `--seeds=1,2,3,9` sweep is 45-90 minutes and it is NOT the ship check. It runs in exactly two
+      situations:
+
+        1. **A FINGERPRINT MOVED.** Then the picture changed, the twelve requirements are back in
+           question, and only the sheet can say which of them moved.
+        2. **BEFORE A BUILD THE OWNER IS GOING TO JUDGE**, so his eye and the sheet are looking at
+           the same thing.
+
+      Otherwise **this one-race gate is the check**. The reasoning is the identity argument: four
+      byte-identical fingerprints already say the delivered picture is the same to the byte, and the
+      twelve requirements are properties OF that picture — they cannot have changed while it did not.
+      Running the sheet to confirm what a fingerprint has already proved buys nothing and costs an
+      hour.
+
+      **AND WHEN IT DOES RUN, IT RUNS ALONE AND LAST.** Parallel runs destroyed it twice in two
+      blocks: once with `npm run verify` alongside it (Chromium killed mid-run, 10 races lost, and
+      vitest's workers timed out under the same saturation, which then read as a test failure), and
+      once with two single-threaded measurement scripts alongside it (64 of 80 races failed). It is
+      the last thing done before the report, with nothing else on the machine.
+
       **What it costs a ship:** 130 s, plus the one-off `npx playwright install chromium`. It needs
       no network and touches nothing of the owner's — it builds to `client/dist-sweep`, runs its own
       API on its own port with an empty data directory, and creates its own account, for the reason
