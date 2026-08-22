@@ -114,6 +114,22 @@ is dated and recorded HERE, where a reader on their way to the report will pass 
   [GATE-LINES-1](../night/GATE-LINES-1.md); the fix and the once-per-run control that makes the
   silence impossible to repeat: [GATE-TRUTH-1](../night/GATE-TRUTH-1.md).
 
+- [CORRIDOR-DIAG-ARMED-1.md](CORRIDOR-DIAG-ARMED-1.md) — **the only test in the tree that could not
+  fail is armed, and it turned up a width the game never reads** (2026-08-22).
+  `trackCorridor.test.js:61` had closed with `expect(true).toBe(true)` since `d6f4d20e`
+  (2026-05-06). **NOT deleted, and the reason is the finding:** `git grep -l "seeds/tracks" --
+  'client/**'` returns this file and one driver script, so **nothing else in the client suite reads
+  the committed track geometries** — a corrupt or width-less seed passes the whole suite, and
+  `computeAutoScaleFactor` answers a zero width with `minScale`, a plausible-looking number. Its
+  two UNITS are covered thoroughly elsewhere (`autoSpriteScale.test.js`, `EditorShape.test.js`);
+  the real geometries are covered nowhere. **AND THE OLD TABLE WAS COMPUTING FROM A WIDTH THE GAME
+  DOES NOT USE** — it called `getActualTrackWidth()` unconditionally while all seventeen shipped
+  call sites, across sixteen files, read `geo.width ?? …`. Measured over all ten tracks, the spline estimate overestimates
+  on **every** one (1.025–1.497), not just the open ones as two shipped comments say, and **the two
+  families do not overlap** — recorded, deliberately NOT asserted, because it is a fact about ten
+  authored geometries and not a theorem. 4 tests replace the printed table, 4 sabotages red. No
+  shipped source touched; no fingerprint could move. 2 proposals.
+
 - [CEREMONY-SKIP-WRAPPER-1.md](CEREMONY-SKIP-WRAPPER-1.md) — **the last unproven line of
   CEREMONY-SKIP is proven: `RaceScreen` attaches `onCeremonyClick` to the WRAPPER** (2026-08-22).
   One source-reading test with FOUR assertions, because the architectural claim has four ways of
