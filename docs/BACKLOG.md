@@ -52,8 +52,13 @@ line numbers are the address; read the value there.
 1. **What does one dial map onto?** The candidates are not independent: `gapReroll*` and the pulk
    rotation both close gaps, by different means. A single control is a mapping decision, not a
    selection.
-2. **Is the range discrete or continuous?** Race Duration beside it is discrete (four buttons). Whether
-   action should match that shape is undecided.
+2. **~~Is the range discrete or continuous?~~ ANSWERED — THREE STAGES: quiet / medium / wild.**
+   On record since **2026-07-06**. **The reason is the gate, and it is why this is settled and the
+   other three are not:** a STAGE can be measured against the fairness gate one stage at a time, so
+   three stages means three gate runs with a verdict each. A continuous dial has no such
+   decomposition — it would have to be sampled, and every value between the samples would ship
+   unmeasured. Race Duration beside it being discrete is a consistency argument; the gate is the
+   reason.
 3. **What does the dial do to the band-fairness promise and its gate?** `docs/FAIRNESS.md` binds the
    shipped world to band arrival with a gate. **A host-movable action control can move a racer off its
    drawn band, so either the dial is bounded by the gate or the gate becomes a function of the dial.**
@@ -115,7 +120,11 @@ line numbers are the address; read the value there.
 
 ## Documentation (2026-08-07, from DOC-ORDER-1)
 
-- [ ] **Authentication and authorization — DESIGN EXISTS, nothing is built.** The full v3.2 design
+- [x] ~~**Authentication and authorization — DESIGN EXISTS, nothing is built.**~~ **NEVER TRUE as
+      written today — established at source 2026-08-23.** `server/src/auth/` holds `authRouter.js`,
+      `csrf.js`, `guards.js`, `paths.js` and their tests, and **37 commits** touch that directory
+      from `d0a57d44` onward. **The POINTER below is why this line is kept**, and it is the useful
+      part: the full v3.2 design
       (route inventory, session model, CSRF posture, the E2E test prerequisites) is
       [archive/AUTH.md](archive/AUTH.md). It was moved to the archive on 2026-08-07 because it
       described a RaceArena that does not exist while sitting among the documents that describe the
@@ -168,18 +177,22 @@ line numbers are the address; read the value there.
 
 ## Dev Screen labels (2026-08-05, from FINISH-COMPANY-1)
 
-- [ ] **The two finish knobs read alike and govern different moments.** `finishDramaDurationMs` is
-      labelled **"Finish pause (ms)"** (the camera HOLD before the zoom-out) and `finishPauseMs` is
-      **"Pause after last finisher"** (the delay before the leaderboard). Both tooltips state which
-      moment they govern; the labels do not distinguish themselves at a glance. FINISH-WINDOW-1
-      introduced the collision by renaming the first from "Drama pulse duration". Rename one.
+- [x] ~~**The two finish knobs read alike and govern different moments.**~~ **CLOSED by
+      `82a03eb7` (ENDING-HOLD-1, 2026-08-12) — confirmed at source 2026-08-23**, not taken from the
+      report that claimed it: both controls are now numbered by ending phase in
+      `CameraAdvancedSection.jsx` (`:1491` and `:1635`), and the two labels this item quoted exist
+      nowhere in the tree. **The rule it stated stands and is why the line is kept:** two controls
+      governing different moments must not be able to read as one control at a glance — a tooltip
+      that explains the difference is not a substitute for a label that shows it.
 
 ## Instrument coverage residuals (2026-08-05, from FINISH-MOTION-1)
 
-- [ ] **THE RENDER FINGERPRINT CANNOT SEE THE FINISH PHASE — it did not confirm "no render change",
-      it could not have.** `render-fingerprint.mjs` drives `RUN_FRAMES = 3400` and samples at
-      `[0, 90, 600, 1500, 2400, 3300]`; the finish occurs at frames **3466–5218** on the tracks
-      measured. So the most authored moment in the game is entirely outside its coverage. The fix
+- [x] ~~**THE RENDER FINGERPRINT CANNOT SEE THE FINISH PHASE.**~~ **CLOSED by `b9579f59`
+      (FINISH-WINDOW-1 A) — confirmed at source 2026-08-23:** `render-fingerprint.mjs` now drives
+      **5600** frames and samples **sixteen** points running past 5450, ten of them beyond the old
+      ceiling, so the 3466–5218 finish window this item named is covered. **The rule it stated
+      stands:** an instrument that cannot reach a phase did not clear that phase — it was silent
+      about it, and silence is not a pass. The fix
       needs a DECISION, not a patch: a second sample set that runs past the finish, or one
       event-anchored sample ("the frame after FINISH_OVERVIEW begins") — which the harness's own
       header argues against on reproducibility grounds ("fixed indices, never events").
@@ -195,7 +208,10 @@ line numbers are the address; read the value there.
       camera fingerprint moved, as intended, so the regression would have been read as intended too.
       **Proposed convention:** any block that re-mints a fingerprint names one or two specific
       invariants that must NOT move, and measures them. Costs a few lines per block.
-- [ ] **Garden Path does not finish** within the shared driver's 200 s ceiling at n=40 / 60 s
+- [ ] **Garden Path does not finish** — **CANNOT ESTABLISH why, 2026-08-23.** That it does not
+      finish is confirmed by three separate reports. *What would decide the WHY:* a driven race on
+      garden-path with the finish accounting instrumented — a measurement, not a grep, so no
+      `verify:` command can stand in for it. Within the shared driver's 200 s ceiling at n=40 / 60 s
       requested (`finishedCount` still 0 at frame 12000), so it is unmeasurable for any finish-phase
       harness — 9 of 10 tracks. Not a camera fault; worth asking why a 60-second race exceeds 200
       seconds of simulation.
@@ -276,9 +292,11 @@ line numbers are the address; read the value there.
 
 ## Worktree stubs — a helper that cleans up after itself (2026-08-05)
 
-- [ ] **FORTY-SEVEN `.git/worktrees` stubs exist and `git worktree prune` cannot remove them**
-      (counted 2026-08-22; every one STALE, none live — the "ten" this line carried was the count on
-      2026-08-05 and it has grown by a factor of nearly five since) — every one is a
+- [ ] **The `.git/worktrees` stubs cannot be removed by `git worktree prune`, and they keep
+      multiplying.** **THE COUNT IS DELIBERATELY NOT WRITTEN HERE ANY MORE** — it has been wrong
+      three times (ten on 2026-08-05, forty-seven on 2026-08-22, **fifty-one on 2026-08-23**), which
+      is what a number restated in prose does. Every one is STALE; none is live.
+      **verify:** `ls .git/worktrees | wc -l` — **still open while it returns more than 0.** — every one is a
       OneDrive Files-On-Demand placeholder carrying `ReadOnly`, which blocks the delete. Not a lock, an
       attribute. They are inert metadata pointing at directories that no longer exist.
       **Do not add `prune` to the ship ceremony** — it already fails here, and a ritual that cannot
@@ -305,7 +323,9 @@ Named rather than fixed. Nothing here is urgent; all of it is cheap.
       CAMERA-COMPANY-ONLY-2 halt a shippable block. The HUD `cfg` fingerprint may already separate
       behaviours — if it does, putting it in the line is the cheap honest fix. **An owner's PASS is
       the most expensive input this project consumes and it is currently recorded nowhere.**
-- [ ] **A Dev Screen change does not reach a running race.** `RaceScreen` reads the camera config
+- [ ] **A Dev Screen change does not reach a running race.** *(**verify:**
+      `git grep -n "loadCameraConfig()" -- client/src/screens/RaceScreen/index.jsx` — **still open
+      while the line is a `useState` with no setter**; re-confirmed at `:220` on 2026-08-23.)* `RaceScreen` reads the camera config
       once at mount (`useState(() => loadCameraConfig())`, no setter), although the director fully
       supports live-apply via `updateConfig`. **Every A/B the owner has ever run has been two races
       when it could have been one race and a toggle.** One line, and it is the highest-leverage
@@ -335,7 +355,12 @@ happens only after development is finished. Every entry below is harmless while 
 becomes a real question the moment it is not. Recorded 2026-08-04 (CAMERA-ANCHOR-TRUTH-1); the
 measurements are from [CI-AUDIT-GREEN-1](../reports/evolution/CI-AUDIT-GREEN-1.md) §10.
 
-- [ ] **`server/` is audited by nothing.** `scripts/audit-gate.mjs` hard-codes `client/`, and no CI
+- [x] ~~**`server/` is audited by nothing.**~~ **CLOSED — confirmed at source 2026-08-23:**
+      `ci.yml:212` runs `audit-gate.mjs --tree=server`, the `Server tests` job (`ci.yml:151`) runs
+      the server suite, and the HIGH advisories below are closed (`ci.yml:205-207`, lockfile-only
+      moves) with the gate now BLOCKING rather than reporting. **The historical text is kept
+      unedited below** because it records what was true when it was written. ORIGINAL:
+      **`server/` is audited by nothing.** `scripts/audit-gate.mjs` hard-codes `client/`, and no CI
       job covers the server at all — its own `vitest` suite runs nowhere either. It currently carries
       **2 highs**: `ip-address` (**runtime**, via `express-rate-limit`, SSRF / trust-boundary bypass
       in IP classification — and the production config enables trust-proxy, so the IP it classifies
@@ -343,7 +368,10 @@ measurements are from [CI-AUDIT-GREEN-1](../reports/evolution/CI-AUDIT-GREEN-1.m
       `npm audit fix` — no `--force`, no breaking change. Not urgent while nothing is reachable; a
       **blocker** before anything is.
 - [ ] **`deploy.yml.disabled` cannot run — four independent blockers, and it is now DE-REGISTERED
-      too** (renamed 2026-08-16; GitHub had listed it as *active* while the header said it could
+      too** *(**verify:** `ls .github/workflows/deploy.yml.disabled && ls scripts/deploy.sh` — **still
+      open while the first succeeds and the second fails**; re-confirmed 2026-08-23, and note it also
+      carries no `permissions:` block, deliberately left by CI-PERMISSIONS-1 because CI can never
+      exercise an edit to a disabled workflow)* (renamed 2026-08-16; GitHub had listed it as *active* while the header said it could
       never run). (1) triggers on `branches: [main]`,
       the only branch at origin is `master`; (2) runs `scripts/deploy.sh`, which is not in the repo;
       (3) all three secrets are absent (`DEPLOY_HOST`, `DEPLOY_USER`, `DEPLOY_KEY`); (4) no
@@ -354,9 +382,15 @@ measurements are from [CI-AUDIT-GREEN-1](../reports/evolution/CI-AUDIT-GREEN-1.m
 - [ ] **`RA_PUBLIC_ORIGIN` exists only as the placeholder `racearena.example.com`.** It is the
       canonical self-origin the CSRF guard compares incoming `Origin` headers against, so it must be
       a real value before the app is reachable.
-- [ ] **The app ships no build identifier.** No `__APP_VERSION__`, no `BUILD_ID`, no build-time
-      constant, and the world fingerprint is not surfaced in the UI — so "which build is live?"
-      cannot be answered from outside. Harmless on one machine; the first question anybody asks about
+- [ ] **The build cannot be read from OUTSIDE the browser.** **NARROWED 2026-08-23: half of this
+      was already done and the item did not know.** The build PILL exists and is drawn in the shipped
+      race picture — `renderRaceFrame.js:500` calls `formatBuildLabel(buildBadge)` from
+      `modules/buildInfo.js`, fed by the `virtual:ra-build` module. What remains is the SERVER half:
+      no `__APP_VERSION__`, no `BUILD_ID`, and **`/api/health` (`server/src/app.js:38`) answers only
+      `{status, timestamp}`** — so "which build is live?"
+      cannot be answered from outside.
+      **verify:** `grep -n "res.json" server/src/app.js` at the `/api/health` route — **still open
+      while the payload names no build.** Harmless on one machine; the first question anybody asks about
       a server. The cheapest fix is a build-time constant surfaced in the HUD or `/api/health`.
 
 ---
@@ -860,10 +894,15 @@ race. Typed values persist for the browser session. Status of the follow-ups:
 - ✅ **D7b** — Lane-free: physicalY replaces lane system (PR #37)
 - ✅ **D7c** — Row start + speed bonus + track capacity (PR #39)
 
-- 🔜 **D7d** — 100-racer performance
+- 🔜 **D7d** — 100-racer performance. **THE LIVE ENTRY** (a status echo of it also sits in
+  *Order of Next Steps*; edit only this one).
   - Spatial grid for O(N) avoidance performance
   - Smarter camera for pack overview
   - LOD or similar strategies for 100 racers
+
+  **verify:** `git grep -lni "spatial grid\|spatialGrid" -- 'client/src/**'` — **still open while it
+  returns nothing.** Checked 2026-08-23: nothing, and `\bLOD\b` over `client/src/**` is also empty,
+  so neither named mechanism exists. The pattern can match; it is ordinary vocabulary.
 - **D8** — Full racer config editor: coats edit UI, all fields, sprite swap UI.
   Builds on override pattern (B-7).
   ⏳ **PARTIAL (2026-07-14 audit):** basic racer editing already shipped — `RacerManager.jsx`
@@ -872,14 +911,21 @@ race. Typed values persist for the browser session. Status of the follow-ups:
 
 ### Phase B (Wiring Gaps + UX Improvements)
 
-- **B-UX1** — Name tag readability (iteration 1, to be implemented in PR-E of the camera phase)
+- **B-UX1** — ~~Name tag readability (iteration 1, to be implemented in PR-E of the camera
+  phase)~~ **SUPERSEDED by the LABEL arc** — `nameTagLayout.js` ships with an occlusion test, and
+  `reports/evolution/INDEX.md` carries LABEL-OVERLAP-3, LABEL-NAMES-2 and LABEL-OVERLAP-FIX-1 among
+  others. **The SUBJECT is live and its defects are real; this line's framing is not** — the PR-E of
+  a camera phase it names has long since closed. Follow the arc, not this line.
   - Spec in `docs/CAMERA_DIRECTOR.md §6.3`
   - Top-N tags visible (N = `tagVisibleCount`, default = lead group = clamp(round(N×0.1), 3, 10))
   - `tagVisibleCount` as dev panel slider
   - No "own player" (project principle 3) — all racers treated equally
   - All other racers without tag
 
-- **B-UX1-Iter2** — Name tags state-dependent strategy (iteration 2, after iteration 1)
+- **B-UX1-Iter2** — ~~Name tags state-dependent strategy (iteration 2, after iteration 1)~~
+  **SUPERSEDED by the same arc.** `labelNamesWhenRoom` and the PHOTO_FINISH `exemptAll` path are
+  exactly a state-dependent strategy, and both carry measured numbers in the CORRECTIONS block of
+  `reports/evolution/INDEX.md`.
   - Spec in `docs/CAMERA_DIRECTOR.md §6.4`
   - OVERVIEW: top-3 only or no tags; LEADER_ZOOM: lead group prominent;
     BATTLE_ZOOM: involved racers prominent; zoom out: anti-overlap when space permits
@@ -936,7 +982,11 @@ race. Typed values persist for the browser session. Status of the follow-ups:
   - Priority: low. Currently not a UX blocker — only visible with deliberate displaySize override + large track.
 
 - **B-2** — TrackSelector: custom track behavior when geometry is missing
-- **B-4** — Apply branding profiles to race/result screen (UI exists, wiring missing)
+- **B-4** ✅ ~~Apply branding profiles to race/result screen (UI exists, wiring missing)~~ —
+  **DONE, confirmed at source 2026-08-23:** `RaceScreen/index.jsx` and `ResultScreen/index.jsx` both
+  resolve the active brand via `resolveActiveBrandProfile`, and the race screen additionally draws
+  `BrandLogoOverlay.jsx` and `CeremonyBrandCard.jsx`. **See V-4 below**, which recorded the opposite
+  and was wrong.
 - **B-5** — System backup/restore/reset: end-to-end verified (UI-only so far)
 
 ### Phase Q (Quality Hygiene)
@@ -946,17 +996,35 @@ race. Typed values persist for the browser session. Status of the follow-ups:
 - ✅ **RaceScreen/index.jsx split** (Q-7) — Done (chore/hygiene-i18n-audit → master squash `e180a6b`, 2026-05-25). Extracted `drawing/` modules: `overlayRendering.js`, `particleRendering.js`, `racerRendering.js`, `priorityModeOverlay.js`, `battleDiagRendering.js`. Camera modules: `CameraDirectorDiag.js`, `cameraTimingComputation.js`.
 - ✅ **TrackEditor.jsx split** (Q-6) — Done (chore/hygiene-i18n-audit → master squash `e180a6b`, 2026-05-25). Extracted: `TrackEditorToolbar.jsx` (224 lines), `TrackEditorSaveBar.jsx` (116 lines), `useViewport.js` (138 lines), `useTrackIO.js` (206 lines).
 - **Dual particle system consolidation** — `dustParticles` (home trail, global pool) + `surfaceParticles` (VRE, per-racer) as separate render paths. Consolidation makes sense after Surface Zones when a third emitter type (zone effects) is added.
-- **Q-19 — TrackEditor.effects.test.jsx flaky** — intermittent in full-suite parallel run. Root cause: global FileReader mock scope conflict. Fix: check spy scope or isolation test. Low priority, not a blocker.
+- **Q-19 — TrackEditor.effects.test.jsx flaky** — **CANNOT ESTABLISH, 2026-08-23, and that is
+  about the evidence and not about effort.** The file passes **11/11 in isolation** and the full
+  client suite ran green **three times** on 2026-08-22/23. **Three green runs cannot settle an
+  intermittent failure.** *What would decide it:* repeated full-suite runs under the parallel
+  configuration, counting failures — a MEASUREMENT, so it is not a verdict item. — intermittent in full-suite parallel run. Root cause: global FileReader mock scope conflict. Fix: check spy scope or isolation test. Low priority, not a blocker.
 
 - ✅ **Q-6** — TrackEditor.jsx split refactor. Done 2026-05-25 (chore/hygiene-i18n-audit, squash `e180a6b`).
 - ✅ **Q-7** — RaceScreen/index.jsx split refactor. Done 2026-05-25 (chore/hygiene-i18n-audit, squash `e180a6b`).
-- **Q-8** — Watch list: TrackManager.jsx (535 LOC) and BrandingProfiles.jsx (330 LOC).
+- **Q-8** — Watch list: TrackManager.jsx and BrandingProfiles.jsx. **THE LOC FIGURES ARE REMOVED
+  RATHER THAN UPDATED.** Recorded as 535 and 330; measured 2026-08-23 as **654** and **559** — both
+  now past the 400-line threshold this watch exists to enforce, having grown while the watch
+  produced no action. **A watch that produces no action is a comment.**
+  **verify:** `git grep -c "" -- <file>` — **still open while either exceeds 400.**
   Consider refactor at next extension.
-- **Q-9** — Watch: `racer-types/index.js` growing to 286 LOC — candidate for splitting
+- **Q-9** — Watch: `racer-types/index.js` — candidate for splitting. Recorded at 286 LOC;
+  **540 on 2026-08-23**, nearly doubled.
+  **verify:** `git grep -c "" -- client/src/modules/racer-types/index.js` — **still open above 400.**
   (override API vs. registry vs. boot logic). Not a problem today, monitor.
-- **Q-10** — Watch: `RacerEditModal.jsx` at 302 LOC — already 75% of the 400-LOC threshold.
+- **Q-10** — Watch: `RacerEditModal.jsx`. Recorded at 302 LOC and described as *already 75% of
+  the 400-LOC threshold*; measured 2026-08-23 at **670 — 68% PAST it**, and the file has moved to
+  `client/src/screens/DevScreen/sections/`.
+  **verify:** `git grep -c "" -- client/src/screens/DevScreen/sections/RacerEditModal.jsx` —
+  **still open above 400.**
   Keep an eye on it at D8 (full config editor).
-- **Q-26** — Default tracks without backgrounds (fresh install)
+- **Q-26** ✅ ~~Default tracks without backgrounds (fresh install)~~ — **DONE, confirmed at
+  source 2026-08-23:** all ten seed geometries carry `backgroundImageFile` and all ten image files
+  exist in `server/seeds/backgrounds/`.
+  **verify:** compare `ls server/seeds/backgrounds/*.jpg | wc -l` against
+  `ls server/seeds/tracks/*.json | wc -l` — **still closed while they are equal.**
 
   Code defaults in `defaults.js` have no `backgroundImage` field. With a running server they are
   automatically migrated to the backend (`migrateDefaultTracks()` runs idempotently on every boot) and
@@ -998,21 +1066,34 @@ race. Typed values persist for the browser session. Status of the follow-ups:
   Deliberately deferred in PR-A2.9 — no acute UX blocker. Fix: compression + git replace of originals. Small standalone PR.
   _(Priority: low)_
 
-- **Q-11** — `reader.onerror` missing in `handleBgUpload` (TrackEditor.jsx)
+- **Q-11** ✅ ~~`reader.onerror` missing in `handleBgUpload` (TrackEditor.jsx)~~ — **DONE, confirmed
+  at source 2026-08-23:** `TrackEditor.jsx` carries one `new FileReader` and **two** `onerror`
+  handlers. **The remaining sites are Q-17 below**, which names one of them and misses another.
   FileReader errors are silently swallowed; only `img.onerror` catches load errors.
   Defensive hygiene, low priority.
 - **Q-20** — Track editor load mode: background upload is now optional (F1-revised fix). But when a load-mode track has no background and the user saves without uploading one, the race engine is left without a background image. Consider: hint text "No background — race will show empty canvas" when a track is saved in load mode without a background.
 - **Q-12** — localStorage quota with large data-URL images
   Tracks now store data-URLs (1–5 MB possible for high-resolution images).
   No quota handling implemented. Info-level, not an acute blocker.
-- **Q-16** — CORS wildcard on all backend endpoints
+- **Q-16** ✅ ~~CORS wildcard on all backend endpoints~~ — **NEVER TRUE as written today,
+  established at source 2026-08-23.** `server/src/auth/csrf.js:26` builds `corsOptions` from an
+  explicit allow-list and **denies** when the list is empty; `app.js:31-36` then stacks
+  `csrfOriginGuard`, `requireAuth` and `requireAdmin` above every route. No `origin: '*'` and no
+  bare `cors()` exist in the tree.
+  **verify:** `git grep -n "origin: '\*'\|cors()" -- 'server/src/**'` — **still closed while it
+  returns nothing**; the pattern can match, it is ordinary Express.
   `app.use(cors())` without origin restriction — any browser tab can access all API write endpoints
   (POST/PUT/DELETE tracks + surface classes). Deliberately accepted for local operation.
   Fix: `cors({ origin: 'http://localhost:5173' })` for dev, env var for VPS.
   **Priority: VPS phase / Phase 5.** Not an acute blocker for single-user local operation.
   _(Deep audit 2026-05-01, Severity: HIGH — accepted for local-only)_
 
-- **Q-17** — Missing `reader.onerror` handlers in SystemSettings.jsx and TrackEditor.jsx
+- **Q-17** — Missing `reader.onerror` handlers — **REWRITTEN 2026-08-23, because half of it was
+  done and it named the wrong second file.** `TrackEditor.jsx` is **DONE** (see Q-11). The sites
+  that remain are **`SystemSettings.jsx`** and **`BrandingProfiles.jsx`** — the latter this item
+  never named — each with one `new FileReader` and zero `onerror` handlers.
+  **verify:** for each of those two files, compare `grep -c "new FileReader"` with `grep -c "onerror"`
+  — **still open while a file reads 1 and 0.**
   `FileReader.onload` handlers are without `onerror` counterpart. Errors when reading (corrupt file,
   permission problem) are silently ignored. Q-11 is specific to TrackEditor background images;
   Q-17 extends to SystemSettings JSON import. Low priority — no data loss, just poor
@@ -1088,7 +1169,13 @@ race. Typed values persist for the browser session. Status of the follow-ups:
   cameraZoomFactor + REFERENCE_CAMERA_ZOOM eliminated. Closed/open track math pipelines unified
   through consistent effZoom-based calculation.
 
-- **Q-28** — Shared HTTP helper for API services _(Post-Phase-4 audit 2026-05-06, Severity: MEDIUM)_
+- **Q-28** ✅ ~~Shared HTTP helper for API services~~ — **DONE, established at source
+  2026-08-23:** `client/src/services/apiClient.js` exports `apiCall` and **all seven** API services
+  import it. **The general rule this closes with:** a negative from the wrong NAME is not a
+  negative — the first search for this looked for `apiFetch`/`httpClient` and found nothing while
+  the helper sat there under a third name.
+  **verify:** `git grep -c "fetch(" -- 'client/src/services/*.js'` — **still closed while exactly
+  one file answers** (`apiClient.js`); a second file means a service has gone around it. _(Post-Phase-4 audit 2026-05-06, Severity: MEDIUM)_
   `client/src/services/surfaceClassApi.js` and `client/src/services/trackApi.js` share 48 lines of
   identical `apiCall`/`withTimeout` infrastructure — both services copied the same HTTP wrapper.
   Fix: extract shared helper (e.g. `services/apiUtils.js`), update both callers.
@@ -1100,7 +1187,10 @@ race. Typed values persist for the browser session. Status of the follow-ups:
   Extract into a shared `RangeSliderSection` component before more Dev-Screen sections are added.
   Estimated effort: ~2h.
 
-- **Q-30** — React 18 → 19 + react-router-dom 6 → 7 migration _(Post-Phase-4 audit 2026-05-06, Severity: MEDIUM)_
+- **Q-30** — ~~React 18 → 19 **+ react-router-dom 6 → 7**~~ **HALF DONE: the ROUTER migration
+  shipped.** `client/package.json` already declares react-router-dom 7 (read the version there, not
+  here). React and react-dom are still on 18, so **this item survives as the React half only**.
+  **verify:** `grep -n '"react"' client/package.json` — **still open while it reads `^18`.** _(Post-Phase-4 audit 2026-05-06, Severity: MEDIUM)_
   Current: `react@18.3.1`, `react-dom@18.3.1`, `react-router-dom@6.30.3`. Latest: `react@19.2.6`,
   `react-router-dom@7.15.0`. Both have breaking API changes — no npm-audit vulnerability, but the
   version gap grows with each feature phase. Recommended: migrate before Phase 6 (Pan-Refactor) to
@@ -1118,7 +1208,9 @@ race. Typed values persist for the browser session. Status of the follow-ups:
 Systematic testing of still-unverified areas:
 
 - **V-1** — PlayerSetup B-1 loading-saved-lists bug
-- **V-2** — TrackSelector B-2 custom track behavior
+- **V-2** — TrackSelector B-2 custom track behavior. **NOT INDEPENDENTLY OPEN — downstream of
+  B-2 above**, which is the work; this is its verification and cannot start until B-2 lands. Track
+  it there. *(The same shape holds for V-1↔B-1, V-4↔B-4 and V-5↔B-5 below.)*
 - **V-3** — Result screen winner count B-3 (configurable?)
 - **V-4** — Branding profiles B-4 (per old ROADMAP done, reality check says open)
 - **V-5** — System backup/restore/reset B-5 (data loss risk)
@@ -1149,7 +1241,9 @@ from D3.5.5.
 6. ✅ **D7a-Plus** per-type sprite minimum size + live preview — PR #35, master `27cba65`
 7. ✅ **D7b** lane-free + physicalY avoidance — PR #37
 8. ✅ **D7c** row start + speed bonus + track capacity — PR #39
-9. 🔜 **D7d** — 100-racer performance
+9. 🔜 **D7d** — 100-racer performance. **DUPLICATE — the live entry is in the Race-Action Arc
+   section above**, which carries the three sub-items (spatial grid, pack-overview camera, LOD).
+   This line is a status echo; do not edit it independently.
 10. ✅ **Visual Racer Effects** (VRE-1 → VRE-2 → VRE-3 → VRE-4) — Master `c857a7e`
 11. ✅ **Quick wins post-VRE** (server vitest v4, backend validation, window.alert, JSON.parse, doc drift)
 12. ✅ **Error boundary** (deep audit HIGH finding addressed — top-level React error boundary, PR #51)

@@ -6,6 +6,32 @@ and [FAIRNESS.md](../../docs/FAIRNESS.md). Shipped world: **`dc4647be0f55ebdb`**
 
 ## CORRECTIONS — findings that invalidate a number in a report below
 
+- **2026-08-23 — the sprite-route reading in
+  [OPEN-ITEMS-2026-08-22](OPEN-ITEMS-2026-08-22.md) is CORRECT, and it is recorded here because the
+  block that was asked to correct it could not.** BACKLOG-TRUTH-1 was forbidden by its own spec from
+  writing to any file but `docs/BACKLOG.md` and its own report, so it filed the correction as
+  **"CANNOT ESTABLISH, not confirmed"** — an absence claim it had not re-established. **Established
+  over the whole tree by [BACKLOG-HONEST-1](BACKLOG-HONEST-1.md):**
+  **GET** `/api/racers/:id/sprite` (`server/src/routes/racers.js:252`) **has a caller** —
+  `client/src/modules/racer-types/index.js` builds `spriteUrl: ${API_BASE_URL}/api/racers/${cfg.id}/sprite`,
+  which the browser fetches as an image source. **POST** (`:272`) **has a caller** —
+  `client/src/services/racerApi.js:66 uploadRacerSprite`, invoked from `racer-types/index.js`.
+  **DELETE** (`:318`) is **TEST-ONLY**: `racerApi.js:80 deleteRacerSprite` is referenced by exactly
+  one other file in the tree, `racerApi.test.js`. **So "the sprite route has no callers" is wrong and
+  "only its DELETE arm has none" is right** — which is what that report says. **The report corrected
+  is OPEN-ITEMS-2026-08-22**, in the sense that its reading is now confirmed rather than pending;
+  nothing in it is withdrawn.
+
+- **2026-08-23 — BACKLOG-TRUTH-1's CANNOT ESTABLISH on the two finish knobs was a GLOB failure, not a
+  tree fact.** It could not confirm the 2026-08-12 relabel because `finishDramaDurationMs` *"returned
+  no match in `client/src/**/*.jsx`"*. **It matches six times** in
+  `client/src/screens/DevScreen/sections/CameraAdvancedSection.jsx` (`:1493`, `:1504`, `:1507` among
+  them), and the two controls are today labelled by ending phase at `:1491` and `:1635`. **Verdict
+  corrected to ALREADY DONE**, closed by `82a03eb7` (ENDING-HOLD-1), and struck in `docs/BACKLOG.md`
+  accordingly. **The general rule, which is why this is worth a correction entry rather than a
+  footnote: a negative from a glob that cannot reach the file is not a negative** — the same shape as
+  the `apiFetch`/`apiCall` miss recorded in BACKLOG-HONEST-1's own STEP C.
+
 - **2026-08-22 — SHIP-COORD-SYSTEM's explanation of the `engine-reach --check` trap names the wrong
   MECHANISM, while its practical advice is exactly right.** Its line reads: _bare
   `engine-reach --check` on a committed merge reports `none of 0 path(s)` because **it reads the
