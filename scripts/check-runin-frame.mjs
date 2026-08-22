@@ -383,7 +383,7 @@ console.log(
   `\nrequirement 5 — from the endgame threshold to the crossing, can the viewer tell where the line\n` +
     `is? The line's point inside the frame at ${COMPANY_FRAME_PCT} of the canvas. Margin in px; negative is OUT.` +
     (SAB_VANISH ? "   [SABOTAGE: vanish]" : "") +
-    (SAB_NEVER ? "   [SABOTAGE: never]" : "") +
+    (SAB_NEVER ? "   [SABOTAGE: never]" : "")
 );
 
 const lineRows = [];
