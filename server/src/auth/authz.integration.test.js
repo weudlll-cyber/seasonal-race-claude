@@ -50,6 +50,20 @@ describe('PUBLIC: anonymous access', () => {
     expect(res.status).toBe(200);
   });
 
+  // BUILD-FROM-OUTSIDE-1. IF DELETED: the endpoint can silently stop naming the build and nobody
+  // notices, because its absence looks exactly like the old payload. WHAT WOULD GO UNNOTICED: the
+  // one question this endpoint was extended to answer — which build is live — becoming unanswerable
+  // from outside the browser again.
+  it('GET /api/health names the BUILD, and says why when it cannot', async () => {
+    const res = await request(app).get('/api/health');
+    expect(res.body.build, '/api/health no longer reports a build').toBeTruthy();
+    expect(res.body.build).toHaveProperty('commit');
+    expect(res.body.build).toHaveProperty('branch');
+    // In the test environment nothing supplies an identity, so it must say so rather than guess.
+    if (res.body.build.commit === 'unknown')
+      expect(res.body.build.reason, 'unknown with no reason is a guess wearing a hat').toBeTruthy();
+  });
+
   it('GET /api/auth/setup-needed → 200', async () => {
     const res = await request(app).get('/api/auth/setup-needed');
     expect(res.status).toBe(200);

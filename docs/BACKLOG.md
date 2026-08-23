@@ -382,16 +382,29 @@ measurements are from [CI-AUDIT-GREEN-1](../reports/evolution/CI-AUDIT-GREEN-1.m
 - [ ] **`RA_PUBLIC_ORIGIN` exists only as the placeholder `racearena.example.com`.** It is the
       canonical self-origin the CSRF guard compares incoming `Origin` headers against, so it must be
       a real value before the app is reachable.
-- [ ] **The build cannot be read from OUTSIDE the browser.** **NARROWED 2026-08-23: half of this
-      was already done and the item did not know.** The build PILL exists and is drawn in the shipped
-      race picture — `renderRaceFrame.js:500` calls `formatBuildLabel(buildBadge)` from
-      `modules/buildInfo.js`, fed by the `virtual:ra-build` module. What remains is the SERVER half:
-      no `__APP_VERSION__`, no `BUILD_ID`, and **`/api/health` (`server/src/app.js:38`) answers only
-      `{status, timestamp}`** — so "which build is live?"
-      cannot be answered from outside.
-      **verify:** `grep -n "res.json" server/src/app.js` at the `/api/health` route — **still open
-      while the payload names no build.** Harmless on one machine; the first question anybody asks about
-      a server. The cheapest fix is a build-time constant surfaced in the HUD or `/api/health`.
+- [x] ~~**The build cannot be read from OUTSIDE the browser.**~~ **CLOSED 2026-08-23
+      (BUILD-FROM-OUTSIDE-1): `/api/health` now names the build.** `server/src/buildIdentity.js`
+      reads `RA_BUILD_COMMIT` / `RA_BUILD_BRANCH` / `RA_BUILD_DIRTY` and the endpoint reports them.
+      **IT NEVER GUESSES, and that rule is borrowed rather than invented** — with nothing supplied it
+      answers `unknown` **and a reason naming the variable**, and `dirty` is OMITTED when it was not
+      determined rather than defaulting to `false`. That is the correction
+      `client/vite-plugin-ra-build.js` already paid for: its first version reported a clean tree it
+      had not been able to look at. **Shelling out to `git` was deliberately NOT done** — it would
+      work in development and quietly report the deploy host's checkout, or nothing, in production.
+      **verify:** `curl -s localhost:4000/api/health` — **still closed while the payload carries a
+      `build` object**; `grep -c "build: buildIdentity()" server/src/app.js` is the offline form.
+
+      **THE ITEM WAS WRONG ABOUT ITS OWN OTHER HALF, and that is worth keeping.** As written it said
+      the app ships no build identifier at all. **It does, and it always did on the client**: the
+      build PILL is drawn into the shipped race picture — `renderRaceFrame.js:500` calls
+      `formatBuildLabel(buildBadge)` from `modules/buildInfo.js`, fed by the `virtual:ra-build`
+      module. **The real gap was never "no identifier", it was "no identifier reachable from
+      outside the browser"**, which is the half now closed. `__APP_VERSION__` and `BUILD_ID` still
+      do not exist and are not needed: the endpoint reports the identity directly.
+
+      **The general rule this closes with:** an instrument that answers a question INSIDE the
+      product does not answer it for anyone holding a URL, and the two are different requirements
+      that read as one.
 
 ---
 
@@ -1066,9 +1079,19 @@ race. Typed values persist for the browser session. Status of the follow-ups:
   Deliberately deferred in PR-A2.9 — no acute UX blocker. Fix: compression + git replace of originals. Small standalone PR.
   _(Priority: low)_
 
-- **Q-11** ✅ ~~`reader.onerror` missing in `handleBgUpload` (TrackEditor.jsx)~~ — **DONE, confirmed
-  at source 2026-08-23:** `TrackEditor.jsx` carries one `new FileReader` and **two** `onerror`
-  handlers. **The remaining sites are Q-17 below**, which names one of them and misses another.
+- **Q-11** ✅ ~~`reader.onerror` missing in `handleBgUpload` (TrackEditor.jsx)~~ — **DONE
+  2026-08-23, and this line was STRUCK WRONGLY EARLIER THE SAME NIGHT — the correction is kept
+  because it is the more useful record.** BACKLOG-HONEST-1 struck it as already done on the evidence
+  that `TrackEditor.jsx` held one `new FileReader` and **two** `onerror` handlers. **It did: both
+  were on `img`, neither on the reader.** Counting `onerror` without checking WHOSE it was is the
+  whole mistake, and a grep that answers the wrong question answers it confidently.
+  **Actually closed by the same block's later piece**, which wired `reader.onerror` in all three
+  sites — this one, `SystemSettings.jsx` and `BrandingProfiles.jsx` — each reporting through the
+  error channel its own file already had, with `client/src/screens/DevScreen/sections/fileReadFailure.test.jsx`
+  guarding them.
+  **verify:** for each of those three files, `grep -c "new FileReader"` and `grep -c "reader\.onerror"`
+  — **still closed while they are EQUAL.** Comparing against a bare `onerror` count is what went
+  wrong the first time.
   FileReader errors are silently swallowed; only `img.onerror` catches load errors.
   Defensive hygiene, low priority.
 - **Q-20** — Track editor load mode: background upload is now optional (F1-revised fix). But when a load-mode track has no background and the user saves without uploading one, the race engine is left without a background image. Consider: hint text "No background — race will show empty canvas" when a track is saved in load mode without a background.
@@ -1088,12 +1111,16 @@ race. Typed values persist for the browser session. Status of the follow-ups:
   **Priority: VPS phase / Phase 5.** Not an acute blocker for single-user local operation.
   _(Deep audit 2026-05-01, Severity: HIGH — accepted for local-only)_
 
-- **Q-17** — Missing `reader.onerror` handlers — **REWRITTEN 2026-08-23, because half of it was
-  done and it named the wrong second file.** `TrackEditor.jsx` is **DONE** (see Q-11). The sites
-  that remain are **`SystemSettings.jsx`** and **`BrandingProfiles.jsx`** — the latter this item
-  never named — each with one `new FileReader` and zero `onerror` handlers.
-  **verify:** for each of those two files, compare `grep -c "new FileReader"` with `grep -c "onerror"`
-  — **still open while a file reads 1 and 0.**
+- **Q-17** ✅ ~~Missing `reader.onerror` handlers in SystemSettings.jsx and TrackEditor.jsx~~ —
+  **DONE 2026-08-23. It was worse than it said and is now closed in full.** Not two sites but
+  **THREE**: `SystemSettings.jsx`, `TrackEditor.jsx`, and **`BrandingProfiles.jsx`, which this item
+  never named**. All three created a `FileReader`, wired `onload`, and wired no `onerror` — so a
+  failed read settled nothing at all: no message, no state change, indistinguishable from a broken
+  button.
+  **The general rule this closes with, and it is why the line is kept:** an upload has TWO failure
+  modes, and they are not the same failure. A file that cannot be READ never reaches the decoder; a
+  file that reads and cannot be DECODED is a different message. TrackEditor reported only the second
+  for as long as this item was open. See **Q-11** above for the mis-strike that happened on the way.
   `FileReader.onload` handlers are without `onerror` counterpart. Errors when reading (corrupt file,
   permission problem) are silently ignored. Q-11 is specific to TrackEditor background images;
   Q-17 extends to SystemSettings JSON import. Low priority — no data loss, just poor
