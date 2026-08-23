@@ -8,6 +8,26 @@ report here could be orphaned, or an index link could dangle, with nothing notic
 `node scripts/check-index.mjs --dir=reports/night --index=reports/night/INDEX.md` now checks both
 directions.
 
+- [ACTION-KEYS-1.md](ACTION-KEYS-1.md) — **which candidate keys actually make action** (2026-08-23,
+  PIECE 3 of that night's chain, plus the owner's addendum). Answers **D10**: the dial's mapping is
+  decided by measurement, and this is the table a design block starts from. **Read-only — no default
+  moved, no key wired, no mapping proposed.** 39 arms × 2 contrasting tracks × 30 paired races.
+  **The candidates split by WHICH WINDOW of the race they act in**, and that split is the finding:
+  `pulkLeaderBrake` dominates the front fight (−62% lead changes on the weaker track at 0, +30% at
+  0.15) with `pulkChallengerBoost` doing visibly the same job; the attacker, tempo, choreography and
+  gap-reroll keys barely touch the front and move the ENDING instead. **The owner's two added
+  candidates were made measurable and are WEAK** — steering more racers, or steering them harder,
+  moves action far less than braking the racer currently leading. Two keys are genuinely inert:
+  `pulkEnvelopeMaxEffect=0.20` produces byte-identical races (the ±12% clamp is never reached, so
+  there is no headroom above the shipped value), and `pulkFrontPool=16` is byte-identical on the
+  closed track.
+  **TWO WAYS IT NEARLY LIED, both recorded because both produce a CONFIDENT FALSE ZERO:** the
+  project's own action measure observes `progress < corridorStart` while gap-reroll fires at
+  `>= corrStartFrac` — the SAME constant, so six arms read exactly 0.0% while plainly changing the
+  race; and three arms were spelled `--b2AttackHeroes` when the harness parses `--b2-attack-heroes`,
+  so they ran the shipped game and reported "no effect". **Nine false zeros in the first version**,
+  now guarded by a flag-name check against the harness source and a per-arm race signature.
+
 - [SEED-REAL-RACE-1.md](SEED-REAL-RACE-1.md) — **a real race gets a real seed** (2026-08-23, PIECE 2
   of that night's chain; branch `feat/race-seed`, **NOT MERGED — it waits for his eye**). The normal
   "Start Race" path wrote `racePlanSeed: 0`, so no race the owner watched was reproducible, including
