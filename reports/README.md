@@ -31,6 +31,7 @@ captured tool output kept as evidence.
 | [parity/](parity/INDEX.md)               | Browser-vs-sim parity work, and the re-baselines. **Indexed and guarded.**                     |
 | [proposals/](proposals/INDEX.md)         | Concept proposals and their independent reviews. **Indexed and guarded since 2026-08-18** — see below. |
 | `exp-archive/`, `results-salvage/`, `greenfield/`, `phase1-metrics/`, `perf/`, `closed-track-overview/`, `open-track-overlap/` | Result tables and captured output from closed investigations. **Declared ARCHIVE by name in `scripts/check-index.mjs`**, each with a reason: nobody adds to them and nothing links into them. |
+| `perf/` — **the one exception, since PERF-CLEAR-1 (2026-08-23)** | It is still ARCHIVE for its raw chains, but it now holds **one indexed write-up**, [`perf/01-tier1-wave1.md`](perf/01-tier1-wave1.md) — the only one of eleven that named a source state which still resolves AND measured something that still exists. The other ten were deleted on the owner's criterion and are listed in [`perf/DELETED.md`](perf/DELETED.md). |
 | `diag-*`, `standings-leader-mismatch.md`, `BASELINE-INVALIDATED.md`, this file | Standing notes that belong to no block. They sit directly in `reports/`; their links are covered by `check-doc-links`. |
 | `BASELINE-INVALIDATED.md`                | The standing note about which absolute numbers were retired by a re-baseline, and when.        |
 

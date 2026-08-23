@@ -1,5 +1,13 @@
 # Perf Fix — Tier-1 Wave 1: Crash Guard + Shadow Blur + Scoreboard Transition
 
+> **KEPT BY THE OWNER'S CRITERION, 2026-08-23 (PERF-CLEAR-1).** This is the only one of the eleven
+> perf write-ups that survives, and this line is why, so the next reader does not re-derive it.
+> **REFERENT:** commit **`3eac3f2`**, which resolves in this history (2026-06-06). The branch and
+> backup ref named below do NOT resolve any more and are historical text.
+> **SUBJECT:** the R4 catch-up guard, which is live today as `_catchupSteps++ < 2` at
+> `client/src/screens/RaceScreen/index.jsx:982`.
+> The other ten were removed; see [DELETED.md](DELETED.md).
+
 **Date:** 2026-06-06
 **Branch:** `feat/open-track-overlap`
 **Commit base:** `3eac3f2` (backup/step1-complete-fair)
