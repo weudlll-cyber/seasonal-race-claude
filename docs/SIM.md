@@ -563,6 +563,37 @@ Exact pinned parameters: **track=searound, racer=manta, seed=1, dur=120, races=1
 
 **How the first block read it:** at progress **0.60 / 0.70 / 0.80 / 0.90**, plus a derived _last-unsettled_ point at 0.01 resolution, and counts of racers entering or leaving the final top five after 0.80 and 0.90. **At N=30 an individual percentage carries a Wilson 95% interval of roughly ±16 points** — the distributions and the trend across checkpoints are what that N supports; a few points between two cells do not exist at it. Baseline figures: [EARLY-DECIDED-1](../reports/evolution/EARLY-DECIDED-1.md).
 
+### Brake depth (`--brake-depth`) — the SLOW side of the naturalness envelope
+
+**Flag:** `--brake-depth` (read-only; **requires `--action-metrics`**). Over that block's own window and
+inside its own racer loop, records per race the **minimum realised speed factor**, the **minimum
+`governorMult`**, and the **share of racer-frames sitting at the brake's own lower bound**, written as
+`brakeDepth` on each race. Unset → zero extra work, byte-identical run (the world fingerprint was
+proved unmoved when it landed, and again when it was merged).
+
+**What it is FOR, and why nothing else answers it.** `amNatMax` is a **maximum** — the tree measured
+how FAST a racer goes, against the 1.20 ceiling, and never how SLOW the leader brake makes one go,
+while the brake is the shipped action lever. This is the counterpart on the other side.
+
+**The bound it reports is NOT the ±12% envelope, and that is why it reports depth rather than clamp
+hits.** `raceGovernor.js` computes the braked floor as `1 − max(maxEffect, leaderBrake)`, so the floor
+**expands with the brake** and the ±`maxEffect` clamp stops binding the moment `leaderBrake` is the
+larger number. The observer computes the floor from that same expression, so **"at the bound" means
+here what it means in the force.** The envelope's two sides are not symmetric in code —
+[ENVELOPE-ONE-SIDED-1](../reports/evolution/ENVELOPE-ONE-SIDED-1.md) establishes which side is
+enforced and which is only described.
+
+**One caution when reading it against a cap.** `minSpeedFactor` is the realised factor —
+`spreadFactor × trajectoryMult × governorMult × areaBonusMult` — while the fast-side ceiling clamps
+only `spreadFactor × governorMult`. **The instrument and the clamp do not cover the same product**, so
+a realised maximum slightly above the computed cap is expected rather than a breach.
+
+**How the blocks read it:** the mean over races of each race's own minimum, plus the count of races
+below the documented 0.80 floor — a mean alone hides the distribution, and at a brake of 0.15 the mean
+sits just inside the floor while half the individual races are already under it. Baselines:
+[BRAKE-CURVE-1](../reports/evolution/BRAKE-CURVE-1.md) (the curve),
+[LADDER-VALIDATION-1](../reports/evolution/LADDER-VALIDATION-1.md) (ten tracks, two field sizes).
+
 ### The Action axis (`--action=<0..1>`) — reserved stub
 
 **Flag:** `--action=<0..1>` (read-only sweep hypothesis — **not** a shipped default). One owner-facing scalar `action` (0 = calm → 1 = wild), intended as the prototype of a future SetupScreen "Action" slider. Unset → no-op (byte-identical run).
