@@ -154,6 +154,30 @@ is dated and recorded HERE, where a reader on their way to the report will pass 
   [GATE-LINES-1](../night/GATE-LINES-1.md); the fix and the once-per-run control that makes the
   silence impossible to repeat: [GATE-TRUTH-1](../night/GATE-TRUTH-1.md).
 
+- [FRONT-ACTION-TRUTH-1.md](FRONT-ACTION-TRUTH-1.md) — **count the fights in the leading group, not
+  only the changes of first place** (2026-08-23). Read-only recomputation over the STORED data of
+  ACTION-KEYS-1 and ACTION-FAIRNESS-1; **no race re-run**, nothing changed, no conclusion of either
+  report edited.
+  **THE MEASURE ASKED FOR ALREADY EXISTED AND WAS ALREADY STORED.** `heldTop5Overtakes`
+  (`makeHeldOvertakeTracker`, `scripts/sim/observers/pulk-contest.mjs`) counts every order flip
+  between two racers **both inside the top 5**, first place not privileged, hold-guarded. It sat in
+  the same JSON as the headline both reports used. Nothing had to be built; it had to be looked at.
+  **THE VERDICT: the ranking is NOT largely an artefact — but ONE candidate of 38 was misjudged.**
+  `chaosSteerGain=0.0` reads −3.8% on leader changes and +2.2% at the top-5 cut, and is **−18.8% on
+  the whole field** (−21.7% at N=300): it stirs the FIELD while barely touching the leading group.
+  `pulkEnvelopeMaxEffect=0.04` was under-read the same way (−7.3% → **−31.2%**).
+  **`pulkLeaderBrake`'s advantage SURVIVES a measure that does not privilege first place** — still
+  1st at the top-5 cut with a ~3× margin — **but at whole-field scope it is SECOND**, behind
+  `pulkChallengerBoost` (−46.4% vs −37.9%). Its additive direction is concentrated at the front:
+  +33.4% on leader changes decaying to **+7.6%** per frame across the field.
+  **THE CUTS DISAGREE and the choice is the owner's:** n=1 and top-5 rank alike, the whole-field cut
+  reorders four of seven places. **TWO OF THE THREE REQUESTED CUTS ARE IMPOSSIBLE** — no per-frame
+  ordering is stored by any artefact, so the top-10 cut and a body-length ORDERING cut cannot be
+  computed without re-racing (the 3-racer-length threshold that exists measures GAPS, not swaps).
+  **Two data-integrity findings:** 16 of ACTION-KEYS-1's 78 observer dumps were silently OVERWRITTEN
+  by label collision (the numbers survived only because its driver had extracted them), and the N=30
+  screen carries no within-group data at all. 4 proposals.
+
 - [ACTION-FAIRNESS-1.md](ACTION-FAIRNESS-1.md) — **the six working levers, measured against the band
   promise** (2026-08-23). Supplies the column [ACTION-KEYS-1](../night/ACTION-KEYS-1.md) could not:
   none of its 78 arms carried a band-arrival figure, so it knew which keys make action and **nothing
