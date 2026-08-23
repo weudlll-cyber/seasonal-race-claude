@@ -478,3 +478,24 @@
 .textInput::placeholder {
   color: var(--color-muted);
 }
+
+/* SEED-REAL-RACE-1: the line under the seed field that offers the last race's seed back. */
+.settingHint {
+  font-size: 0.8rem;
+  color: var(--color-muted);
+}
+
+.linkBtn {
+  background: none;
+  border: none;
+  padding: 0;
+  color: var(--color-primary);
+  font-size: inherit;
+  font-family: inherit;
+  cursor: pointer;
+  text-decoration: underline;
+}
+
+.linkBtn:hover {
+  filter: brightness(1.2);
+}

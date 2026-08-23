@@ -32,9 +32,9 @@ canonical duration model (`client/src/modules/durationModel.js`). The golden har
 
 ---
 
-## What a typed Quick-Test seed determines
+## What a typed seed determines
 
-Quick-Test writes the typed value to `racePlanSeed`
+Both start paths write the typed-or-drawn value to `racePlanSeed`
 ([SetupScreen.jsx](../client/src/screens/SetupScreen/SetupScreen.jsx)); the race-init effect threads it as
 the one explicit physics stream (`makeRaceRng(racePlanSeed)`)
 ([RaceScreen/index.jsx](../client/src/screens/RaceScreen/index.jsx)). Given an identical configuration, the
@@ -50,9 +50,13 @@ seed fixes:
 
 ### Two caveats that still hold
 
-1. **Quick-Test only.** The normal **"Start Race" path passes `racePlanSeed: 0`** (owner decision), which
-   leaves the stream unseeded — those races are **not reproducible**. Reproducibility is a Quick-Test
-   (typed-seed) property.
+1. **~~Quick-Test only.~~ NO LONGER TRUE, and this is the caveat that changed.** Until 2026-08-23 the
+   normal **"Start Race" path passed `racePlanSeed: 0`**, which left the stream unseeded and made those
+   races **not reproducible** — including the ones the owner judged. **Both paths now draw a seed**
+   (SEED-REAL-RACE-1), through the same module and with the same semantics, so reproducibility is a
+   property of a RACE rather than of Quick-Test. **The one case that is still unseeded is a race stored
+   before that date**: `racePlanSeed: 0` keeps its old meaning and is never back-filled, because handing
+   a stored race a seed it never ran with would be a worse lie than "not reproducible".
 2. **The seed is only meaningful together with the full config.** Change the field size, racer type,
    laps/seconds, or any dynamics value and the same seed produces a different race. A seed without its
    configuration is not a reference to anything — this is why an eye-test instruction always states the
@@ -74,7 +78,9 @@ ceiling now bounds only auto-drawn random seeds). A sweep `--seed=1 --races=100`
 ### The rules behind the template
 
 - **Eye-tests judge a CONFIGURATION, not a single race.** Give several seeds and ask for a verdict on the
-  setting.
+  setting. **This is the practical face of [VERIFY-RULES.md R5a](VERIFY-RULES.md) — every acceptance is a
+  sample**: a verdict covers the track, the state AND the seed it was given on, and the same track with
+  another seed can look entirely different.
 - **Always state the full config** alongside the seeds. Seeds are meaningless without it.
 - **You CAN cross-reference a browser observation with the sim CSV row for the same seed** — they are the
   same race now. "Seed 87 showed a duo escape, and the sim row for seed 87 has 5 lead changes" is a valid

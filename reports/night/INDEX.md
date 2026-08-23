@@ -8,6 +8,18 @@ report here could be orphaned, or an index link could dangle, with nothing notic
 `node scripts/check-index.mjs --dir=reports/night --index=reports/night/INDEX.md` now checks both
 directions.
 
+- [SEED-REAL-RACE-1.md](SEED-REAL-RACE-1.md) — **a real race gets a real seed** (2026-08-23, PIECE 2
+  of that night's chain; branch `feat/race-seed`, **NOT MERGED — it waits for his eye**). The normal
+  "Start Race" path wrote `racePlanSeed: 0`, so no race the owner watched was reproducible, including
+  the ones he judged. It now draws through the SAME module Quick Test uses, shows the seed on the
+  **Result screen** he already reads, and keeps it in `localStorage` — both the typed field and the
+  seed the last race actually RAN with, because a drawn seed is never written back into the field and
+  would otherwise have no record. A stored race with no seed keeps the legacy unseeded 0 and is
+  **never back-filled**. **The sabotage run was taken twice and the first was invalid:** reverting
+  each sabotage with `git checkout` against an UNCOMMITTED implementation discarded the feature
+  itself, so three of the four "red" runs proved nothing. Recorded, because it looks exactly like a
+  successful proof.
+
 - [DECISIONS-2026-08-23.md](DECISIONS-2026-08-23.md) — **sixteen owner decisions of 2026-08-23,
   written where they will be found** (PIECE 1 of that night's chain). Recorded as **D10–D24** in
   `docs/BACKLOG.md`; every one of the thirteen rows in PART ONE's "NEEDS HIS WORD" index is now

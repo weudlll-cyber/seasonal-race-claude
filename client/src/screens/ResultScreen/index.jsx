@@ -209,6 +209,11 @@ function ResultScreen() {
       trackId: parsed.race?.trackId,
       duration: parsed.elapsedTime,
       playerCount: order.length,
+      // SEED-REAL-RACE-1: the seed this race ran with, stored WITH the race and in localStorage, so
+      // it outlives the session the way the rest of the entry already does. `null` for a race from
+      // before the seed existed, and for the legacy unseeded value 0 — a race that cannot be
+      // reproduced should say so rather than claim seed zero, which reads like a seed.
+      seed: Number(parsed.race?.racePlanSeed) > 0 ? Number(parsed.race.racePlanSeed) : null,
       winners: order
         .slice(0, parsed.race?.winners ?? DEFAULT_RACE_DEFAULTS.winners)
         .map((r) => r.name),
@@ -228,6 +233,13 @@ function ResultScreen() {
   }
 
   const [first, second, third] = finishOrder;
+
+  // SEED-REAL-RACE-1: the seed shown beside track and time. This is the screen the owner already
+  // looks at after every race, which is the whole reason it is here and not only in the HUD — the
+  // HUD's seed pill is on screen while he is watching the race, not while he is reading the result.
+  // `> 0` rather than `!= null`: 0 is the legacy UNSEEDED value, and printing "Seed 0" would offer
+  // a number that reproduces nothing.
+  const raceSeed = Number(race?.racePlanSeed) > 0 ? Number(race.racePlanSeed) : null;
 
   return (
     <div className="screen screen--result">
@@ -249,6 +261,7 @@ function ResultScreen() {
               <div className="race-info">
                 <span className="race-track">{race.trackName || 'Track'}</span>
                 <span className="race-time">{elapsedTime}s</span>
+                {raceSeed != null && <span className="race-seed">Seed {raceSeed}</span>}
               </div>
             )}
           </div>
@@ -257,6 +270,7 @@ function ResultScreen() {
             <div className="race-info">
               <span className="race-track">{race.trackName || 'Track'}</span>
               <span className="race-time">{elapsedTime}s</span>
+              {raceSeed != null && <span className="race-seed">Seed {raceSeed}</span>}
             </div>
           )
         )}

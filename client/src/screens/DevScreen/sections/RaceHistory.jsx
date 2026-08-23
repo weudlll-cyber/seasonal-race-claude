@@ -29,7 +29,7 @@ function RaceHistory() {
   }, [history, filterTrack, filterDate]);
 
   function handleExportCSV() {
-    const header = 'Date,Track,Duration (s),Players,Winners';
+    const header = 'Date,Track,Duration (s),Players,Seed,Winners';
     const rows = filtered.map((e) => {
       const track = tracks.find((t) => t.id === e.trackId);
       return [
@@ -37,6 +37,9 @@ function RaceHistory() {
         track ? track.name : e.trackId,
         e.duration,
         e.playerCount,
+        // SEED-REAL-RACE-1: null for a race recorded before the seed existed, and for the legacy
+        // unseeded 0. An empty cell says 'not reproducible'; a 0 would read like a seed.
+        e.seed ?? '',
         (e.winners ?? []).join(' / '),
       ]
         .map((cell) => `"${String(cell).replace(/"/g, '""')}"`)
@@ -147,6 +150,7 @@ function RaceHistory() {
                 <th>Track</th>
                 <th>Duration</th>
                 <th>Players</th>
+                <th>Seed</th>
                 <th>Winners</th>
               </tr>
             </thead>
@@ -159,6 +163,7 @@ function RaceHistory() {
                     <td>{track ? `${track.icon} ${track.name}` : entry.trackId}</td>
                     <td>{entry.duration}s</td>
                     <td>{entry.playerCount}</td>
+                    <td>{entry.seed ?? '—'}</td>
                     <td>{(entry.winners ?? []).join(', ')}</td>
                   </tr>
                 );

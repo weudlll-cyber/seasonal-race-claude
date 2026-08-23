@@ -24,6 +24,19 @@ export const KEYS = {
   FRAME_TIMING_CONFIG: 'racearena:frameTimingConfig',
   DEV_PANEL_VIEW: 'racearena:devPanelView',
   SURFACE_CLASSES_CACHE: 'racearena:cache:surfaceClasses',
+  // SEED-REAL-RACE-1. Two keys, and they answer two different questions — which is why one would
+  // not have done.
+  //   RACE_SEED       what the operator TYPED into the Race Settings seed field. Empty means
+  //                   "draw a fresh one per race", which is a real and meaningful state, so this
+  //                   key is REMOVED rather than set to '' when the field is cleared.
+  //   LAST_RACE_SEED  the seed the last race actually RAN with, drawn or typed. Written by the
+  //                   start path, never by the field.
+  // They are here, in localStorage, and not in sessionStorage, because the owner's case is
+  // explicitly "watch a race, close the browser, come back and re-run it". A session store cannot
+  // serve that, and the drawn seed is the one a session store would lose — the field stays empty
+  // by design so the next race draws again.
+  RACE_SEED: 'racearena:raceSeed',
+  LAST_RACE_SEED: 'racearena:lastRaceSeed',
 };
 
 // QUIET-FAILURES-1: which keys have already announced a failed read. NOT app state and not a UI
