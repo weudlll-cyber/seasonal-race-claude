@@ -34,9 +34,12 @@ band) together with zero start-rows flagged unfair by the Holm test; the thresho
 spectacle justifies a race that systematically advantages some racers over others. Fairness is measured, and
 the measurement is the gate for shipping a change.
 
-**Naturalness is sacred.** No racer's speed may exceed a ±20 percent envelope around its natural pace, and
-motion must respect the per-frame slew limit — speed changes ramp smoothly frame to frame, never jerk. A
-racer that teleports, snaps, or visibly rubber-bands has broken naturalness even if the numbers balance.
+**Naturalness is sacred.** No racer's speed should depart from a ±20 percent envelope around its natural
+pace, and motion must respect the per-frame slew limit — speed changes ramp smoothly frame to frame, never
+jerk. A racer that teleports, snaps, or visibly rubber-bands has broken naturalness even if the numbers
+balance. **This is the design promise. The two sides of it are not equally enforced in code — the fast side
+is clamped, the slow side is not** — see [section 6](#6-boost-shape-and-ceiling), which states exactly what
+each side guarantees. Nothing in the shipped configuration approaches the slow bound.
 
 **Action is the goal.** Visible, varied, unpredictable racing is what the system exists to produce — but it
 is the goal, not a sacred property. Action is always pursued _underneath_ fairness and naturalness. If a
@@ -148,10 +151,36 @@ limit**: the applied boost ramps toward its full value a small step at a time, s
 smoothly into the boost rather than jumping to it.
 
 A boost may carry a racer above its natural band maximum, but only through a controlled allowance called
-**boost-headroom**, which is added to the band ceiling. The result is hard-clamped to the naturalness
-ceiling of 1.20 — a racer's boosted speed can never exceed 20 percent above natural, no matter how the
-headroom and band combine. As the band widens, the available headroom under the fixed ceiling automatically
-shrinks, so the ±20 percent guarantee holds across all configurations.
+**boost-headroom**, which is added to the band ceiling. The result is clamped to the naturalness ceiling of
+1.20 by `computeDirectorCeiling` — as the band widens the available headroom under the fixed ceiling
+automatically shrinks, so widening the band cannot buy a higher top speed.
+
+### The envelope has two sides, and only one of them is enforced
+
+**This section replaces an earlier claim that "the ±20 percent guarantee holds across all configurations".
+It does not, and the two sides are not the same kind of thing.** Established at source, 2026-08-23; the
+evidence and the measurements are in
+[ENVELOPE-ONE-SIDED-1](../reports/evolution/ENVELOPE-ONE-SIDED-1.md).
+
+**The FAST side is clamped, with two conditions worth knowing.** `computeDirectorCeiling` returns
+`min(bandMax + boostHeadroom, NATURALNESS_CEILING)` and `NATURALNESS_CEILING` is a code constant no
+configuration can raise. But (1) the clamp is applied only when `pulkCeilingCap` is on — with it off the
+governor passes `0` for the cap and the per-racer clamp is skipped entirely; and (2) what the clamp bounds
+is `spreadFactor × governorMult`. The area bonus and any trajectory multiplier are applied on top of that
+product and are outside its reach. **So the ceiling is a guarantee about the director's contribution, not
+about every multiplier that reaches a racer.**
+
+**The SLOW side has no ceiling of its own at all.** There is no floor on the realised speed factor. The only
+bound is on `governorMult`, and for a braked racer it is `1 − max(pulkEnvelopeMaxEffect, pulkLeaderBrake)` —
+a floor that **EXPANDS as the brake grows**, so the realism envelope stops binding the brake at exactly the
+point the brake becomes the larger number. A configuration may brake a racer far below the −20 percent line
+and nothing in the code objects.
+
+**This is not a live defect, and that is worth stating as plainly as the gap.** At the shipped leader brake
+the floor is never reached — measured at zero racer-frames on both tracks tested, with no race dipping under
+the slow bound. **The gap is in what the code would PERMIT, not in what the shipped game does.** Whether the
+code should gain a floor or this document should keep describing an asymmetric guarantee is an open
+question for the owner; this section only records which one is true today.
 
 The physics is never weakened to force a pass through. If an attacker simply cannot deliver the overtake
 within the envelope — for example against a leader riding a strong draw — a **deadlock timeout** releases the
