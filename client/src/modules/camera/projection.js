@@ -48,6 +48,29 @@ export const REFERENCE_CANVAS_H = 720;
  * class of "the same number means different things on different tracks" this block exists to remove.
  * 24 clears the tightest legal setting on every shipped track (the strictest is Searound's guarantee
  * at 15.63) with headroom, and stays far below anything a person would set on purpose.
+ *
+ * ── BUT IT DOES BIND ON A DIRECTLY-SET LOW CORRIDOR COUNT, AND TRACK-DEPENDENTLY (2026-08-23) ────
+ *
+ * The paragraph above is about the WIDTH GUARANTEE, and it is correct about it. It is not the whole
+ * story for someone tuning the tight end by hand. Asking for **0.25 corridors** needs a cam.zoom
+ * this cap refuses on the NARROW tracks and allows on the wide ones — measured over five:
+ *
+ *     searound      corridor 131   needs 39.1   CLAMPED
+ *     dirt-oval     corridor 178   needs 28.8   CLAMPED
+ *     city-circuit  corridor 197   needs 26.0   CLAMPED
+ *     river-run     corridor 300   needs 17.1   delivered as asked
+ *     space-sprint  corridor 300   needs 17.1   delivered as asked
+ *
+ * So at the tight end the SAME SETTING MEANS DIFFERENT THINGS ON DIFFERENT TRACKS — which is the
+ * exact class of problem CAMERA-ZOOM-UNIT-1 raised this constant from 10 to remove, reappearing
+ * below the range that block was checking. Nothing is wrong with the shipped values; this is a note
+ * for whoever tunes the low end, because the cap will bind before any guarantee does and it will do
+ * so on some tracks and not others.
+ *
+ * THE BACKLOG ITEM THAT RAISED THIS SAID "every track delivers 85.3 world px rather than the
+ * nominal 75". THAT FIGURE DID NOT REPRODUCE and was not chased: the arithmetic above gives a
+ * track-dependent answer rather than one number, and the two are different claims. What is recorded
+ * here is what was re-measured, not what was inherited.
  */
 export const MAX_CAM_ZOOM = 24.0;
 

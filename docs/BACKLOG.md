@@ -334,10 +334,19 @@ Named rather than fixed. Nothing here is urgent; all of it is cheap.
       argument: with the corridor guarantee fully active it was ALREADY out of frame on 45.9% of
       Mountainstreet frames. A guarantee should be judged by whether the thing it guarantees actually
       happens, and this one was never measured that way — only its effect on zoom was.
-- [ ] **`MAX_CAM_ZOOM` (24.0) is the real limiter at the tight end of the control.** At 0.25
-      corridors every track delivers 85.3 world px rather than the nominal 75, because the projection
-      cap binds before any guarantee does. Surfaced while inverting a test; harmless, undocumented
-      until now, and worth knowing before anyone tunes the low end.
+- [x] ~~**`MAX_CAM_ZOOM` is the real limiter at the tight end of the control.**~~ **CLOSED
+      2026-08-23 — the fact is now written on the constant itself** (`camera/projection.js`), which
+      is where anyone tuning the low end will meet it, rather than in a backlog nobody reads while
+      editing. **The value is not restated here; read it there.**
+      **AND THE ITEM'S OWN NUMBER DID NOT REPRODUCE.** It said "every track delivers 85.3 world px
+      rather than the nominal 75". Re-measured, the answer is **track-dependent**: at 0.25 corridors
+      the cap binds on searound, dirt-oval and city-circuit and does NOT bind on river-run or
+      space-sprint. **That is a more useful fact than the one recorded** — the same setting means
+      different things on different tracks at the tight end, which is the exact class of problem
+      CAMERA-ZOOM-UNIT-1 raised this constant to remove, reappearing below the range that block
+      checked. The 85.3 figure was not chased; what is written is what was re-measured.
+      **verify:** `grep -c "BUT IT DOES BIND" client/src/modules/camera/projection.js` — **still
+      closed while it returns 1.**
 
 ---
 

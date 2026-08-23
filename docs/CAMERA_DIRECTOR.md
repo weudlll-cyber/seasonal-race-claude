@@ -948,7 +948,17 @@ a verbatim transcript of one run on one commit, which is a historical record, no
 
 ### The tracking lag, as measured today — and it had drifted
 
-<!-- MEASURED: tracking-lag (median/p95 pp per state) @ d46fd443 2026-08-22 depends=client/src/modules/camera/ -->
+<!-- MEASURED: tracking-lag (median/p95 pp per state) @ a58d911d 2026-08-23 depends=client/src/modules/camera/ -->
+
+**RE-STAMPED, NOT RE-MEASURED, FOR THE MAX_CAM_ZOOM NOTE (2026-08-23) — and this is the strongest
+version of that argument the stamp has carried.** That change adds a COMMENT to
+`camera/projection.js`, which is inside this stamp's `depends=` directory, so the guard asks. **Not
+one executable character changed.** And it was not left as an argument from the diff: `npm run
+verify`'s own routing selected the CAMERA and RENDER fingerprints — `projection.js` is inside both
+closures — and **both came back BYTE-IDENTICAL to the values in
+[fingerprints.json](fingerprints.json)**, which is where they live and where this note deliberately
+does not copy them to. A frame sequence that hashes identically cannot have a different tracking lag,
+so the measurement whose answer cannot have changed is not run.
 
 **RE-STAMPED, NOT RE-MEASURED, FOR CEREMONY-SKIP-1 — and the reason is a fact rather than a
 judgement.** That block adds `nextBeatStart` to `camera/startCeremony.js`, which is inside this
