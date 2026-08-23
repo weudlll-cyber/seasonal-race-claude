@@ -154,6 +154,27 @@ is dated and recorded HERE, where a reader on their way to the report will pass 
   [GATE-LINES-1](../night/GATE-LINES-1.md); the fix and the once-per-run control that makes the
   silence impossible to repeat: [GATE-TRUTH-1](../night/GATE-TRUTH-1.md).
 
+- [EARLY-DECIDED-1.md](EARLY-DECIDED-1.md) — **how early is the top five already the top five?**
+  (2026-08-23). The owner observes that by 50–60% a viewer can tell the racers in front will settle
+  the win; nothing counted it. **This is the baseline, and the answer depends entirely on what "in
+  front" means.**
+  **AT THE LITERAL READING — the top FIVE — THE PREMISE IS FALSE.** At progress 0.60 only **1.1 of 5**
+  (closed) and **1.2 of 5** (open) of the eventual top five are in the top five; the winner is
+  **leading in 0–3%** of races and in the top five in **20%**. The final top five is not settled until
+  a **median progress of 0.96–0.98**, and **29 of 30 races per track are still unsettled after 0.80**.
+  **AT THE FRONT-GROUP READING — top FIFTEEN of forty — IT IS PARTLY TRUE AND TRACK-DEPENDENT:** at
+  0.60 the closed track already holds **3.50 of 5** and the winner **77%** of the time, against
+  **2.63** and **43%** on the open track. **So the five are not identifiable at 0.60, but on a closed
+  oval the pool they come from largely is.**
+  **The owner's two examples ALREADY HAPPEN:** ~**1.7 racers per race enter** the final top five after
+  0.80 and ~**0.9 after 0.90**, with ~1.7 leaving — what is NOT established is whether they are
+  visible. Distributions given in full (the 0.80 mean of 3.33/5 hides that only **2 of 30** races are
+  fully settled). Wilson intervals at N=30 are ±16 points, stated rather than glossed.
+  **The capture was WIDENED from top-5 to top-15 mid-block and both tracks re-run**, because the
+  narrow grid answers the literal question and would have contradicted a reading he may not have
+  meant. **The `--early-decided` observer is NOT on master** — permission covered the report only; it
+  is one commit on `diag/early-decided-1`, world fingerprint proved unmoved. 4 proposals.
+
 - [FRONT-ACTION-TRUTH-1.md](FRONT-ACTION-TRUTH-1.md) — **count the fights in the leading group, not
   only the changes of first place** (2026-08-23). Read-only recomputation over the STORED data of
   ACTION-KEYS-1 and ACTION-FAIRNESS-1; **no race re-run**, nothing changed, no conclusion of either
