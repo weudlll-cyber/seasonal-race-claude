@@ -178,6 +178,17 @@ is dated and recorded HERE, where a reader on their way to the report will pass 
   numbers **reproduce to four decimals**, but that mean STRADDLES 0.80 with half the races already
   below it. Protocol identity **proved, not asserted** — 120 races re-run and compared field-by-field
   against BRAKE-CURVE-1's stored dumps, **IDENTICAL**. World fingerprint unmoved. 5 proposals.
+  **§10 ADDENDUM (2026-08-23) — P1 IS WRONG AND THE REPORT CORRECTS ITSELF.** P1 asked for
+  `brake 0.10 (shipped) + boost 0.12` and called it unmeasured; **arm 3 IS that cell** — it ran with no
+  `--pulkLeaderBrake` flag, which falls back to the shipped 0.10, and **the report's own §4c column
+  already said so** (`loBound` 0.88 = 1 − max(0.12, 0.10), the baseline's floor, against 0.85 for the
+  0.15 arms). Proved by re-running with the brake stated explicitly: **60 races × 8 fields IDENTICAL**,
+  band arrival and watchdog identical. **The cell's plain answer: YES on both halves** — it matches
+  `brake 0.15`'s leading-group action on both tracks (+0.03 ±3.10, −1.77 ±2.44, indistinguishable)
+  with **0/30 races below the 0.80 floor against the brake's 15/30 and 16/30** — **but on the
+  LEADER-CHANGE cut it trails the brake on river-run (−2.00 ±0.93)**, so the two cuts disagree about
+  this cell on the open track. Band arrival UNDECIDED both tracks; watchdog clean where it can speak
+  (river) and silent where it cannot (dirt).
 
 - [BRAKE-CURVE-1.md](BRAKE-CURVE-1.md) — **the leader brake's curve, and where it stops looking
   natural** (2026-08-23). ACTION-FAIRNESS-1 measured `pulkLeaderBrake` at ONE value above shipped and

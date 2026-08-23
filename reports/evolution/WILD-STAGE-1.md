@@ -104,9 +104,10 @@ run rather than dropped. **The measurement confirms the source reading rather th
   arm loses SEVERAL points** — which is what the owner's screen-first instruction asks a first pass to
   decide. **And a 1–2pp cost on these keys is not hypothetical: ACTION-FAIRNESS-1 measured exactly
   that at N=300** (`chaosSteerGain=0` −1.33pp, `pulkChallengerBoost=0` +1.58pp, both dirt-oval).
-  **So "UNDECIDED" here should be read as "smaller than this instrument can see", not as "zero".** **`brake15+steer12` on dirt-oval (+2.00 ±2.65pp) is the one cell close enough to its
-  interval edge to be worth re-reading at N=300 if that arm mattered — and it does not, because it
-  fails on action.**
+  **So "UNDECIDED" here should be read as "smaller than this instrument can see", not as "zero".**
+- **One cell sits close enough to its interval edge to be worth naming.** `brake15+steer12` on
+  dirt-oval (+2.00 ±2.65pp) would be worth re-reading at N=300 **if that arm mattered — and it does
+  not, because it fails on action.**
 - **The start-row watchdog cannot speak on dirt-oval at all.** The shipped baseline itself trips
   (`unfair=true`, minPHolm 0.02) — the pre-existing Layer-1 gradient FAIRNESS.md documented and
   shelved. **Every arm cell on that track is therefore uninformative**, including the four that read
@@ -376,6 +377,10 @@ establish that a saturated clamp is still saturated would be measuring nothing.*
 
 ## 9. Proposals
 
+**P1 — SUPERSEDED BY §10 (2026-08-23). Its request was already satisfied by arm 3 and its claim that
+the arm was unmeasured is FALSE; the numbers it cites are correct. Read §10 instead.** The text is
+left standing rather than edited, because the record is what it is.
+
 **P1 — MEASURE `pulkChallengerBoost` ALONE AS THE TOP STAGE, because it may already be one.** The
 result nobody asked for is that at its ceiling the boost buys **the same leading-group action as the
 brake at its ceiling** (+22.6% vs +22.5% on dirt; indistinguishable on both tracks) while leaving the
@@ -418,3 +423,106 @@ measurement. **This block's result makes it matter more**: brake+boost adds a me
 compose or fight is precisely a question about set membership. **If the reading is right, the depth
 lever (`pulkLeadRotationDropDepthLengths`) is a third candidate for this slot that has never been
 turned up** — and it does not touch the speed envelope at all.
+
+---
+
+## 10. ADDENDUM, 2026-08-23 — the cell P1 called unmeasured had already been measured
+
+**P1 above is WRONG, and this section is the correction.** It asked for a measurement of
+`brake 0.10 (shipped) + boost 0.12` and asserted *"This block did not measure that arm — every
+combined arm here carries brake 0.15."* **The second half of that sentence is true of the arms named
+`brake15-*`. The first half is false.** **Arm 3, reported throughout as `boost 0.12`, IS that cell.**
+
+**Why it is that cell, established twice and then proved.**
+
+1. **At source.** Arm 3 was run as `--pulkChallengerBoost=0.12` with **no `--pulkLeaderBrake` flag**,
+   and `sim-fairness.mjs:619` resolves the key as
+   `Number(argVal("pulkLeaderBrake", String(DEFAULT_RACE_DYNAMICS_CONFIG.pulkLeaderBrake)))` — **an
+   absent flag falls back to the shipped 0.10.**
+2. **In the data already published.** §4c records arm 3's brake floor as **0.88**, which is
+   `1 − max(0.12, 0.10)` — **the same floor as the shipped baseline**, where the two `brake 0.15`
+   arms read **0.85**. **The table on the record already said the brake was at its shipped value; I
+   did not read my own column.**
+3. **Proved by re-running it with the brake stated explicitly.** `--pulkLeaderBrake=0.10
+   --pulkChallengerBoost=0.12`, same seed, same protocol, compared field by field against arm 3's
+   stored dump:
+
+```
+dirt-oval: 30 races x 8 fields — IDENTICAL      band 88.92% / watchdog 0.12 — IDENTICAL
+river-run: 30 races x 8 fields — IDENTICAL      band 89.83% / watchdog 0.44 — IDENTICAL
+```
+
+**So no new measurement was owed and none is reported below.** What follows is arm 3's already-taken
+figures, restated under the cell's true name so it sits beside the other arms without a reader having
+to make the substitution.
+
+### The cell: `pulkLeaderBrake` 0.10 (shipped) + `pulkChallengerBoost` 0.12
+
+**a) Band arrival** — READ from `computeZoneSuccessRate` via `--hero-map`, against the same-N baseline.
+
+| track | **N** | band arrival | shipped, same N | Δ | 95% CI | verdict |
+| --- | --- | --- | --- | --- | --- | --- |
+| dirt-oval | **30** | 88.92% | 88.17% | +0.75pp | ±2.37pp | **UNDECIDED** |
+| river-run | **30** | 89.83% | 89.42% | +0.42pp | ±2.87pp | **UNDECIDED** |
+
+**b) Action — all three cuts FRONT-ACTION-TRUTH-1 uses**, against baseline and against `brake 0.15`.
+
+| track | cut | this cell | vs baseline | vs `brake 0.15` alone |
+| --- | --- | --- | --- | --- |
+| dirt-oval | n=1 · leader changes | 10.033 | **+27.5%** | −0.40 ±1.37 — **indistinguishable** |
+| dirt-oval | **top 5 · pair swaps** | **33.300** | **+22.6%** | **+0.03 ±3.10 — indistinguishable** |
+| dirt-oval | whole field · swaps/frame | 0.7690 | +6.8% (ns) | — |
+| river-run | n=1 · leader changes | 13.167 | **+18.6%** | **−2.00 ±0.93 — brake AHEAD** |
+| river-run | **top 5 · pair swaps** | **41.067** | **+12.7%** | **−1.77 ±2.44 — indistinguishable** |
+| river-run | whole field · swaps/frame | 0.6814 | +10.0% | — |
+
+**c) Naturalness — per-race minimum speed factor and the count below the 0.80 floor.**
+
+| track | brake floor | meanMin ±95% | vs the 0.80 floor | **races < 0.80** | frames at floor | meanMax (ceiling 1.20) |
+| --- | --- | --- | --- | --- | --- | --- |
+| dirt-oval | 0.88 | 0.8466 ±0.0102 | **inside — whole interval above** | **0/30** | 0.0% | 1.1816 |
+| river-run | 0.88 | 0.8416 ±0.0079 | **inside — whole interval above** | **0/30** | 0.0% | 1.1817 |
+
+Against `brake 0.15` alone the cell is **significantly shallower on both tracks** — **+0.0405 ±0.0142**
+(dirt) and **+0.0402 ±0.0113** (river) — and the brake's **15/30 and 16/30 races below the floor
+become 0/30 and 0/30.**
+
+**d) The start-row watchdog, and whether it can speak.**
+
+| track | can it speak? | this cell |
+| --- | --- | --- |
+| dirt-oval | **NO** — the shipped baseline itself trips (`unfair=true`, minPHolm 0.02) | unfair=false (0.12) — **no information** |
+| river-run | **YES** — the baseline is clean (minPHolm 1.00) | unfair=false (**0.44**) — **clean** |
+
+### The plain answer
+
+**YES on both halves of the question, with one caveat that belongs in the answer rather than under it.**
+
+- **It reaches the leading-group action of `brake 0.15` alone.** On the top-5 cut — **the cut that
+  decides the stage question, because BRAKE-CURVE-1 showed the two measures diverging in sign** — the
+  cell is **indistinguishable from the brake on both tracks** (+0.03 ±3.10, −1.77 ±2.44).
+- **And it stays clean on naturalness.** **0 of 30 races below the 0.80 floor on both tracks**, whole
+  interval above the line, **0.0% of racer-frames at the brake's floor** — against the brake's 15/30
+  and 16/30. On the fast side it runs at 1.1817 against a hard 1.20, which is where any boost at 0.12
+  sits and is enforced.
+- **THE CAVEAT: the two cuts disagree again, and on river-run they disagree about this cell.** On
+  leader changes it is indistinguishable from the brake on dirt-oval but **trails it significantly on
+  river-run (−2.00 ±0.93)**. **So "reaches brake 0.15" is TRUE on the leading-group cut on both
+  tracks, and NOT true on the leader-change cut on the open track.** Which cut defines his leading
+  group remains his open question, and it changes this answer on one of the two tracks.
+
+**Nothing is proposed here.** No default moved, no key wired, no dial designed, no mapping suggested.
+
+### What this addendum cost, and what it did not buy
+
+**Two runs, ~95 s wall clock, and they produced no new information by design** — they exist to turn
+"arm 3 is that cell" from an argument into the identity proof quoted above. **The reproduction ran
+against the branch as merged, i.e. WITHOUT `--brake-depth`**, so its dumps carry no `brakeDepth`
+field; that is why the naturalness figures above are arm 3's, taken when the observer was present,
+and why the identity check covers the eight action fields rather than ten. **It also re-proves the
+observer inert from the other side: the same config with the flag absent reproduces the same races.**
+
+**The lesson worth keeping is not about this cell.** **A harness default made an arm's identity
+implicit, the published table recorded the consequence (`loBound` 0.88), and a proposal was still
+written asking for the arm that had just been run.** **The column that would have caught it was
+already in the report.**
