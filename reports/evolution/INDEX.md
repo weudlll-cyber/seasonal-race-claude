@@ -154,6 +154,17 @@ is dated and recorded HERE, where a reader on their way to the report will pass 
   [GATE-LINES-1](../night/GATE-LINES-1.md); the fix and the once-per-run control that makes the
   silence impossible to repeat: [GATE-TRUTH-1](../night/GATE-TRUTH-1.md).
 
+- [LF-ENTRY-EXPLAINED-1.md](LF-ENTRY-EXPLAINED-1.md) — **`_lfEntryByState` is not read at all**
+  (2026-08-23). Driven on two contrasting tracks through the whole race: `_lerpPhase` is `entry` on
+  **ZERO of 5588 and 3862 frames** under the shipped config. It is reachable only under
+  `cameraTransitionGrammar: 'legacy'` — which nothing ships and which `framingConfig.js:119`
+  describes as what a TYPO degrades to; forced to legacy, entry appears on 16.3% and 9.4% of frames.
+  **`_transition` sets `entry` at `:1779` and overwrites it at `:2066` on every shipped transition.**
+  CORRECTS THE BRIEF’S PREMISE: the six values are deliberate (entry is 3.2x slower than tracking,
+  6.0x for OVERVIEW — 2.76 s and 5.18 s to 90% against 0.86 s) **but the map IS vestigial on the
+  shipped path.** Two states would not reach it even under legacy: LEAD_CHANGE hard-cuts, OVERVIEW
+  snaps its zoom. One question for the owner; nothing changed. 2 proposals.
+
 - [ONE-HOME-THREE-TRUTHS-1.md](ONE-HOME-THREE-TRUTHS-1.md) — **three quantities that were written
   twice, and one that was written 27 times** (2026-08-23). The endgame threshold had THREE homes
   (`defaults.js` plus a bare `0.95` in two harnesses) — and that `DEADLINE` and `endgameThreshold`
