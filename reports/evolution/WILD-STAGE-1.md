@@ -33,9 +33,13 @@ measures them **turned up**.
   and **0.7908 ±0.0055** (river) against a floor of **0.80** — **the whole interval below the line on
   both tracks**, and significantly deeper than the brake alone. Neither `brake=0.15` nor `boost=0.12`
   breaches on that statistic by itself.
-- **Fairness never binds. Again.** **All ten arm×track cells are UNDECIDED** at N=30; the largest
-  movement is **+2.00pp**. This is the third block in the family to reach the fairness gate and find
-  it out of reach.
+- **No arm loses several points of band arrival.** **All ten arm×track cells are UNDECIDED** at N=30;
+  the largest movement is **+2.00pp**. **This is NOT "fairness never binds on these keys" — and the
+  distinction matters.** ACTION-FAIRNESS-1 resolved real movement on two of these very levers at
+  N=300, switching them OFF: `chaosSteerGain=0` **−1.33pp (WEAKENS)** and `pulkChallengerBoost=0`
+  **+1.58pp (improves)** on dirt-oval. **Effects of that size are invisible at this N by
+  construction.** What this run establishes is that turning them UP costs nothing LARGE — which is
+  what a screen is for — not that it costs nothing.
 
 **THE FINDING THAT WAS NOT ASKED FOR, AND MAY MATTER MOST.** **`pulkChallengerBoost=0.12` ALONE buys
 the SAME leading-group action as `pulkLeaderBrake=0.15` alone — and costs nothing on the slow side.**
@@ -98,7 +102,9 @@ run rather than dropped. **The measurement confirms the source reading rather th
 - **Every band-arrival cell is UNDECIDED, and that is a result, not a null.** N=30 gives ±2.2 to
   ±3.0pp on the difference, so a 1–2pp cost is invisible here. **What this run establishes is that no
   arm loses SEVERAL points** — which is what the owner's screen-first instruction asks a first pass to
-  decide. **`brake15+steer12` on dirt-oval (+2.00 ±2.65pp) is the one cell close enough to its
+  decide. **And a 1–2pp cost on these keys is not hypothetical: ACTION-FAIRNESS-1 measured exactly
+  that at N=300** (`chaosSteerGain=0` −1.33pp, `pulkChallengerBoost=0` +1.58pp, both dirt-oval).
+  **So "UNDECIDED" here should be read as "smaller than this instrument can see", not as "zero".** **`brake15+steer12` on dirt-oval (+2.00 ±2.65pp) is the one cell close enough to its
   interval edge to be worth re-reading at N=300 if that arm mattered — and it does not, because it
   fails on action.**
 - **The start-row watchdog cannot speak on dirt-oval at all.** The shipped baseline itself trips
