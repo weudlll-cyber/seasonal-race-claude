@@ -49,7 +49,7 @@ the correct response is to say so in this table instead of building one.
 
 ### Phase 6, MEASURED — and both of the old numbers were wrong
 
-<!-- MEASURED: straggler-truth (phase 6 duration, zoom-out lead, stragglers in shot) @ fd9037d5 2026-08-23 depends=client/src/modules/camera/CameraDirector.js -->
+<!-- MEASURED: straggler-truth (phase 6 duration, zoom-out lead, stragglers in shot) @ fa14ca0c 2026-08-23 depends=client/src/modules/camera/CameraDirector.js -->
 **RE-STAMPED, NOT RE-MEASURED, FOR BACKLOG-SORTED-1 (2026-08-23).** That change adds a COMMENT to
 `camera/CameraDirector.js` — the owner's decision to document `_lfEntryByState` in place rather than
 delete it — and **not one executable character changed**. It was not left as an argument from the
@@ -58,8 +58,8 @@ is inside both closures, and **both came back byte-identical to the values in
 [fingerprints.json](fingerprints.json)**. A frame sequence that hashes identically cannot have a
 different phase-6 duration, zoom-out lead or straggler count, so the measurement whose answer cannot have changed is not run.
 
-Stamped at the parent commit `fd9037d5` per the guard's two-step; the SHA is corrected to this
-change's own commit in the follow-up.
+Stamped at the parent commit `fd9037d5` per the guard's two-step, and corrected to `fa14ca0c` —
+the commit that actually carried the comment — in this follow-up.
 
 
 **RE-MEASURED IN FULL FOR RETIRE-RUNIN-LEGACY-1, AND IDENTICAL TO THE DIGIT** — 6.18/4.57,
