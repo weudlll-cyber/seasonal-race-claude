@@ -24,7 +24,8 @@ end.
 **It was a MOVE, not an audit.** No verdict was re-checked and no completion claim was confirmed or
 withdrawn in the move. **If a record here and one in BACKLOG PART ONE disagree, PART ONE is live.**
 
-**For open work, do not read this file — read [BACKLOG.md](BACKLOG.md).**
+**For open work, do not read this file — read [BACKLOG.md](BACKLOG.md) for the evidence, or
+[OPEN.md](OPEN.md) for the short list grouped by what has to happen next.**
 
 ---
 
