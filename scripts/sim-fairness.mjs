@@ -752,6 +752,15 @@ const heroMapRaces = []; // per-race hero observations (filled only when HERO_MA
 // GAP-space metrics are not. Fully flag-gated → a no-flag run does zero extra work and is
 // byte-identical. RAW distributions only — X/Y/Z await the owner's calibration (see gap-metrics.mjs).
 const GAP_METRICS = argv.includes("--gap-metrics");
+// EARLY-DECIDED (read-only, --early-decided): "how early is the top five already the top five?"
+// Records WHICH racers hold the top five on a fixed progress grid, so the final top five can be
+// looked back at. NOTHING ELSE IN THE TREE CAPTURES RACER IDENTITY AT A PROGRESS POINT — gap-metrics
+// samples GAPS at its checkpoints (frontGaps is an array of distances, not indices), action-metrics
+// keeps only first/last/min/max rank per racer. So this is an addition, not a second definition:
+// it RIDES INSIDE the gap-metrics block and reuses that block's own `gmOrder` (the live order by t)
+// and its checkpoint trigger idiom (first frame at or past a grid point). Requires --gap-metrics.
+// Fully flag-gated → a run without it does zero extra work and is byte-identical.
+const EARLY_DECIDED = argv.includes("--early-decided");
 const gmRaces = []; // per-race gap-space observations (filled only when GAP_METRICS)
 // RUNAWAY-PARADE (read-only, --runaway-parade): baseline measurement of two dead-endgame phenomena —
 // RUNAWAY_WINNER (leader >= 3L clear at progress 0.90, wins, never challenged in [0.90,1.0]) and
@@ -1678,6 +1687,12 @@ export function runSingleRace({
     // Seconds kept as a SECONDARY column (needs the leader trace); never a headline / threshold basis.
     const gmTrace = gapMetrics ? [] : null; // ascending {ts, t} leader-position-vs-time trace (SEC)
     const gmCheckpoints = gapMetrics ? [] : null; // snapshots at progress 0.25 / 0.50 / 0.75 / 0.90
+    // EARLY-DECIDED: top-5 identity on a 0.01 progress grid. 100 rows/race, 5 ints each — every
+    // figure the block reports (the four checkpoints, the last-unsettled point, late entries and
+    // late drop-outs) is derived from this ONE array in post-processing, so there is exactly one
+    // definition of "who was in the top five at progress p".
+    const edGrid = EARLY_DECIDED && gapMetrics ? [] : null;
+    let edNext = 0;
     const gmPerRacer = gapMetrics ? new Map() : null; // index → {maxBehindLen, inContentionSteps, totalSteps, maxBehindSec}
     const gmDeadSeries = gapMetrics ? [] : null; // final-third leader→P2 gap, LENGTHS (primary deadRace)
     const gmDeadSeriesSec = gapMetrics ? [] : null; // same, SECONDS (secondary)
@@ -2937,6 +2952,23 @@ export function runSingleRace({
             g.totalSteps++;
           }
         }
+        // EARLY-DECIDED grid capture. Same trigger shape as the checkpoint loop below (first frame
+        // at or past each grid point) and the SAME gmOrder, so "position at progress p" means here
+        // exactly what it means there. Finished racers keep their clamped t and stay at the front,
+        // which is what makes a look-back at the FINAL top five well defined.
+        if (edGrid) {
+          while (edNext <= 100 && raceProgress >= edNext / 100) {
+            edGrid.push({
+              p: +(edNext / 100).toFixed(2),
+              // TOP FIFTEEN, not five. The owner's words are "the racers currently in
+              // front", which need not mean exactly five — storing 15 lets the same grid answer
+              // both the narrow reading (top-5 membership) and the front-GROUP reading without a
+              // second run or a second definition. rank 1 first.
+              top15: gmOrder.slice(0, 15).map((r) => r.index),
+            });
+            edNext++;
+          }
+        }
         // Checkpoint snapshots at 0.25 / 0.50 / 0.75 / 0.90 — leader→P2, leader→P5, field median &
         // p10–p90, PRIMARY lengths + secondary seconds (so lengths-per-second is derivable per sample).
         while (gmNextCp < GM_CPS.length && raceProgress >= GM_CPS[gmNextCp]) {
@@ -3427,6 +3459,9 @@ export function runSingleRace({
         leaderGapToP2LineSec: +line.leaderGapToP2.toFixed(4),
         top5SpreadLineSec: +line.top5Spread.toFixed(4),
         checkpoints: gmCheckpoints,
+        // EARLY-DECIDED: null unless --early-decided. The FINAL top five is not stored here — it is
+        // read from the finishing order in post-processing, so this array stays a pure observation.
+        earlyDecidedGrid: edGrid,
         perRacer,
       };
     }
