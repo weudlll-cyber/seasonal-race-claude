@@ -154,6 +154,30 @@ is dated and recorded HERE, where a reader on their way to the report will pass 
   [GATE-LINES-1](../night/GATE-LINES-1.md); the fix and the once-per-run control that makes the
   silence impossible to repeat: [GATE-TRUTH-1](../night/GATE-TRUTH-1.md).
 
+- [ACTION-FAIRNESS-1.md](ACTION-FAIRNESS-1.md) — **the six working levers, measured against the band
+  promise** (2026-08-23). Supplies the column [ACTION-KEYS-1](../night/ACTION-KEYS-1.md) could not:
+  none of its 78 arms carried a band-arrival figure, so it knew which keys make action and **nothing
+  about what they cost**. Read-only; no default moved, nothing proposed as a change. Band arrival is
+  **read** from `--hero-map`'s `fairness.bandReach`, which resolves through `computeZoneSuccessRate`
+  — the function FAIRNESS.md names as the operational gate.
+  **THE FINDING: two keys ACTION-KEYS called "one lever seen twice" are OPPOSITES on fairness.**
+  `pulkLeaderBrake` moves ±30% of the lead changes for **no measurable cost** (+0.41pp / +0.20pp,
+  both inside interval, Holm clean where the watchdog can speak); `pulkChallengerBoost` costs
+  **1.58pp** on the closed track for −26%. Both close the front gap; only one pushes racers off their
+  bands. **So D11's expected action-vs-fairness trade does not exist on the strongest lever** at the
+  value tested. **OUT: `reRollIntervalDivisor=20`** — −11.82pp and −8.34pp, replicated, landing at
+  76.12% against a 70% floor, for ~5% action. **The shipped B2 attackers cost ~1.1pp** and buy no
+  front action. **`chaosSteerGain` is track-shaped** (−1.33pp closed, nothing open). **One watchdog
+  finding:** `pulkLeaderBrake=0.0` holds band arrival while tripping start-row Holm against a CLEAN
+  baseline (p 1.00 → 0.02).
+  **TWO PRECISIONS IN ONE TABLE** after the owner's screen-first instruction of 2026-08-23: 14 cells
+  at N=300 (±0.60–0.82pp) and 4 at N=30 (±1.39–2.10pp), every cell carrying its own N and compared
+  only against a same-N baseline. An N=30 arm inside its interval is **UNDECIDED**, never
+  "unchanged". **The watchdog is SATURATED on dirt-oval** — its baseline already trips, so no arm
+  there can be told apart by it, and seven cells of watchdog data carry no information. Two
+  survivors need the definitive N; measured cost ~60 min serial, **not started**. 4 proposals, and 4
+  deviations recorded including a mechanism claim made and retracted mid-run.
+
 - [BACKLOG-SORTED-1.md](BACKLOG-SORTED-1.md) — **the backlog is two parts now, and nine owner
   decisions are on the record** (2026-08-23). PART ONE OPEN / PART TWO CLOSED, **proved rather than
   asserted: 234 subjects before and after, 141 open and 93 closed in both, 0 appearing twice, 0
