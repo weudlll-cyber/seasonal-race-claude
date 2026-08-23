@@ -154,6 +154,20 @@ is dated and recorded HERE, where a reader on their way to the report will pass 
   [GATE-LINES-1](../night/GATE-LINES-1.md); the fix and the once-per-run control that makes the
   silence impossible to repeat: [GATE-TRUTH-1](../night/GATE-TRUTH-1.md).
 
+- [ZOOM-RATE-1.md](ZOOM-RATE-1.md) — **`d ln(width)/dt` is a first-class quantity now. INSTRUMENT
+  ONLY, WIRED INTO NOTHING** (2026-08-23). `scripts/zoom-rate-truth.mjs`, on the shared driver, in
+  the `*-truth.mjs` family. **The zoom is stationary about two-thirds of the time**, so the
+  all-frames median is 0.0000 — true and useless as a headline — and the instrument reports the
+  median WHILE IT MOVES beside it: **0.195 ln/s (dirt-oval) and 0.081 (river-run)**, which
+  reconciles with CAMERA-CURVE-1’s quoted p50 of about 0.1 rather than contradicting it. **The two
+  tracks agree on the body and disagree on the tail:** p90 within 3%, share above the perceptibility
+  line within 0.2 points (16.6% / 16.8%), p99 within 4% (2.02 / 1.94 — matching that report’s 2.08
+  peak) **while the maxima differ 2.3x** (7.47 / 3.19). **A RATE IS NOT A JUMP** and the peak line
+  now says so: 7.468 ln/s for one frame at 60 Hz is x1.133 of the width. Both tracks peak in their
+  last decile, which is the endgame schedule. Nothing tuned, no gate, no guard, no verify route; the
+  perceptibility line is BORROWED from RUNIN-HOLD-1 and printed as a reference, never a threshold.
+  2 proposals.
+
 - [CITY-CIRCUIT-BENDS-1.md](CITY-CIRCUIT-BENDS-1.md) — **the three deviating bends are the track’s
   GENTLEST curves. DIAGNOSE ONLY** (2026-08-23). **Geometry is refuted, and decisively, because it
   runs the WRONG WAY:** the three bends CAMERA-CURVE-1 measured at 6.5–17.5% of frame width have
