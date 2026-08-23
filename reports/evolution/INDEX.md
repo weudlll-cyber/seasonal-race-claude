@@ -154,6 +154,21 @@ is dated and recorded HERE, where a reader on their way to the report will pass 
   [GATE-LINES-1](../night/GATE-LINES-1.md); the fix and the once-per-run control that makes the
   silence impossible to repeat: [GATE-TRUTH-1](../night/GATE-TRUTH-1.md).
 
+- [CITY-CIRCUIT-BENDS-1.md](CITY-CIRCUIT-BENDS-1.md) — **the three deviating bends are the track’s
+  GENTLEST curves. DIAGNOSE ONLY** (2026-08-23). **Geometry is refuted, and decisively, because it
+  runs the WRONG WAY:** the three bends CAMERA-CURVE-1 measured at 6.5–17.5% of frame width have
+  radii **4463, 3221 and 796 px** — the 26th, 30th and 53rd percentile of curvature — while the
+  track’s six sharpest corners (radius 359–442 px) are all among the eleven that behave.
+  Corner-cutting scales WITH curvature; this anti-correlates. **Projection is refuted by the control
+  track:** city-circuit and space-sprint share the same stretch to four figures (1.1846 / 1.1852)
+  and space-sprint, whose sharpest curve is radius **199 px**, shows no effect at all. **WHAT THE
+  THREE SHARE IS A MOVING ZOOM** while the whole-race median `d|ln z|/dt` is exactly 0.0000 ln/s —
+  0.088 and 0.220 ln/s sustained in the two early ones, and a state change plus a **36% widening**
+  in the third, whose deviation is also by far the largest. **STATED AS A CORRELATION, NOT A
+  MECHANISM**, and the arms differ: that report measured his config from a browser dump, this one
+  the shipped config headless, and the two disagree on bend 23’s STATE — a possible fourth
+  browser-vs-headless divergence. Named next step; nothing repaired. 2 proposals.
+
 - [PERF-INVENTORY-1.md](PERF-INVENTORY-1.md) — **what is in `reports/perf`, and what a retention
   rule would have to keep. NOTHING DELETED, NOTHING MOVED** (2026-08-23). 326 files, 11.8 MB,
   787,963 lines, spanning 2026-06-06 to 2026-08-10. **99% of the bytes are machine output and 1% is
