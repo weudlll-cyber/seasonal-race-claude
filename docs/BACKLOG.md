@@ -1340,6 +1340,19 @@ one says so with a reason rather than failing quietly.
 **His reasoning, recorded as his: what matters is that the race is fair, not where the fairness
 comes from — and the measurement costs hours for an answer he does not need.**
 
+**A COMPLETE RUN OF THE REACHABLE HALF EXISTED, AND IT WAS DISCARDED ON HIS INSTRUCTION — recorded
+here so nobody re-derives it by accident, thinking it was never taken.** Four arms (shipped and
+`--bandBias=false`, on dirt-oval and river-run, seed 1, 100 races, 40 racers) ran overnight on
+2026-08-23 and **all four completed successfully**: 184 MB across 13 files, finishing 04:59–09:23.
+He cancelled the measurement, the output had no consumer, and it was deleted. **He reaffirmed the
+decision afterwards: D6 stands.**
+
+**It is REPRODUCIBLE, not lost work** — the run is seeded, so the same command yields the same
+numbers if the question is ever reopened:
+`node scripts/sim-fairness.mjs --races=100 --racers=40 --track=<id> --seed=1 [--bandBias=false]`.
+**And note what that half could and could not have answered:** it isolates the biased DRAW only. The
+regulator arm was never runnable, for the reason below.
+
 **THE FINDING IS FILED SO IT IS NOT REDISCOVERED AS AN OPEN QUESTION.** It is not that the
 measurement is hard; it is that **the regulator has no external switch**:
 
