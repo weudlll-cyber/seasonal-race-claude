@@ -154,6 +154,29 @@ is dated and recorded HERE, where a reader on their way to the report will pass 
   [GATE-LINES-1](../night/GATE-LINES-1.md); the fix and the once-per-run control that makes the
   silence impossible to repeat: [GATE-TRUTH-1](../night/GATE-TRUTH-1.md).
 
+- [BRAKE-CURVE-1.md](BRAKE-CURVE-1.md) — **the leader brake's curve, and where it stops looking
+  natural** (2026-08-23). ACTION-FAIRNESS-1 measured `pulkLeaderBrake` at ONE value above shipped and
+  found it free; a three-stage dial needs a curve. 0.15 / 0.30 / 0.50 + baseline, two tracks, N=30.
+  **THE BINDING CONSTRAINT IS NATURALNESS, NOT FAIRNESS — and it arrives at 0.15.**
+  **Fairness never binds anywhere on the curve:** all six arm×track cells are **UNDECIDED**, largest
+  movement +1.92pp. Even a brake of **0.50 — five times shipped — costs no measurable band arrival.**
+  **The ±12% envelope never binds this lever BY CONSTRUCTION:** `raceGovernor.js:357` computes
+  `brakeLoBound = 1 − max(maxEffect, leaderBrake)`, so the floor EXPANDS with the brake. What binds is
+  the documented **±20% naturalness envelope** (floor 0.80): min realised speed factor **0.806/0.801**
+  at 0.15 — right at the line — then **0.655** at 0.30 and **0.471** at 0.50, a racer at 47% of
+  natural pace.
+  **AND THE TWO ACTION CUTS DISAGREE IN SIGN.** Leader changes rise monotonically to **+103%**;
+  within-leading-group overtakes **PEAK AT 0.15 (+22%) then COLLAPSE** to **−18.5%** (closed) and
+  **−31.3%** (open). **A "wild" stage tuned by counting leader changes would pick 0.50 and deliver
+  double the changes of first place with a third less fighting in the leading group.** The naturalness
+  limit and the leading-group action optimum COINCIDE at 0.15.
+  **New finding on the shipped value:** at 0.1 the brake **never reaches its floor at all (0.0% of
+  racer-frames)**, extending ACTION-KEYS-1's "the envelope is never reached at shipped values".
+  **Added `--brake-depth`** because nothing measured the slow side — `amNatMax` is a MAXIMUM, so the
+  project tracked how fast a racer goes and never how slow the brake makes one go. Flag-gated, world
+  fingerprint proved unmoved, NOT merged (permission covered the report). 4 proposals, including that
+  the ±20% envelope is enforced on one side only.
+
 - [EARLY-DECIDED-1.md](EARLY-DECIDED-1.md) — **how early is the top five already the top five?**
   (2026-08-23). The owner observes that by 50–60% a viewer can tell the racers in front will settle
   the win; nothing counted it. **This is the baseline, and the answer depends entirely on what "in
