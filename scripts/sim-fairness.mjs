@@ -761,6 +761,19 @@ const GAP_METRICS = argv.includes("--gap-metrics");
 // and its checkpoint trigger idiom (first frame at or past a grid point). Requires --gap-metrics.
 // Fully flag-gated → a run without it does zero extra work and is byte-identical.
 const EARLY_DECIDED = argv.includes("--early-decided");
+// BRAKE-DEPTH (read-only, --brake-depth): the SLOW side of the naturalness envelope, which nothing
+// measured. `amNatMax` is a MAXIMUM: the project tracks how fast a racer goes (against the 1.20
+// ceiling) and never how slow the leader brake makes one go — while the brake is the shipped action
+// lever. Records, over the same PULK window action-metrics uses: the minimum realised speed factor,
+// the minimum governorMult, and the share of racer-frames sitting AT the brake's lower bound.
+//
+// THE BOUND IS NOT THE ±12% ENVELOPE. raceGovernor.js:357 computes
+// `brakeLoBound = 1 - max(maxEffect, leaderBrake)`, so for a braked racer the floor EXPANDS with
+// leaderBrake and the ±maxEffect clamp never binds it once leaderBrake >= maxEffect. What binds is
+// the brake value itself, which is why this observer reports depth rather than clamp hits.
+// Requires --action-metrics (it rides that block's window and racer loop). Flag-gated → a run
+// without it does zero extra work and is byte-identical.
+const BRAKE_DEPTH = argv.includes("--brake-depth");
 const gmRaces = []; // per-race gap-space observations (filled only when GAP_METRICS)
 // RUNAWAY-PARADE (read-only, --runaway-parade): baseline measurement of two dead-endgame phenomena —
 // RUNAWAY_WINNER (leader >= 3L clear at progress 0.90, wins, never challenged in [0.90,1.0]) and
@@ -1812,6 +1825,18 @@ export function runSingleRace({
     let amSwaps = 0; // adjacent rank-order swaps summed over the window (raw reshuffle volume)
     let amSpreadSum = 0; // sum over frames of the p10→p90 on-track distance (racer-lengths)
     let amNatMax = 1.0; // peak spreadFactor × tool mults in the PULK window (naturalness)
+    // BRAKE-DEPTH state. bdLoBound is the brake's OWN floor for this config, computed from the same
+    // expression raceGovernor uses, so "at the bound" means there what it means in the force.
+    let bdNatMin = Infinity; // slowest realised speed factor in the window
+    let bdGovMin = Infinity; // deepest governorMult in the window
+    let bdAtBound = 0; // racer-frames sitting at the brake floor (within EPS)
+    let bdFrames = 0; // racer-frames observed
+    const bdLoBound =
+      1 -
+      Math.max(
+        dynamicsConfig.pulkEnvelopeMaxEffect ?? 0.12,
+        dynamicsConfig.pulkLeaderBrake ?? 0.1,
+      );
     // NEW (pulk-contest observer): held top-5 overtakes + per-frame max consecutive-link gap (lengths).
     const amHeld = ACTION_METRICS ? makeHeldOvertakeTracker() : null; // held top-5 overtake tracker
     const amLinkGaps = ACTION_METRICS ? [] : null; // per-frame max adjacent-rank gap (racer-lengths)
@@ -2175,6 +2200,13 @@ export function runSingleRace({
                 (r.governorMult ?? 1.0) *
                 (r.areaBonusMult ?? 1.0);
               if (nf > amNatMax) amNatMax = nf;
+              if (BRAKE_DEPTH) {
+                const gm = r.governorMult ?? 1.0;
+                bdFrames++;
+                if (nf < bdNatMin) bdNatMin = nf;
+                if (gm < bdGovMin) bdGovMin = gm;
+                if (gm <= bdLoBound + 1e-6) bdAtBound++;
+              }
             }
         }
       }
@@ -3800,6 +3832,17 @@ export function runSingleRace({
         spreadLenP10P90:
           amFrames > 0 ? +(amSpreadSum / amFrames).toFixed(3) : 0,
         maxSpeedFactor: +amNatMax.toFixed(4),
+        // BRAKE-DEPTH: null unless --brake-depth. minSpeedFactor is the slow-side counterpart of
+        // maxSpeedFactor; atBoundShare is the share of racer-frames at the brake's own floor.
+        brakeDepth: BRAKE_DEPTH
+          ? {
+              loBound: +bdLoBound.toFixed(4),
+              minSpeedFactor: bdNatMin === Infinity ? null : +bdNatMin.toFixed(4),
+              minGovernorMult: bdGovMin === Infinity ? null : +bdGovMin.toFixed(4),
+              atBoundShare: bdFrames > 0 ? +(bdAtBound / bdFrames).toFixed(5) : 0,
+              racerFrames: bdFrames,
+            }
+          : null,
         // NEW (pulk-contest observer): PULK-window front action + density.
         distinctP1Pulk: amP1Steps ? amP1Steps.size : 0, // distinct P1 holders over the window (b)
         leadChangesPulk: amLeadChanges, // raw P1 hand-over count over the window (a)
