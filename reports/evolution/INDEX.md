@@ -154,6 +154,32 @@ is dated and recorded HERE, where a reader on their way to the report will pass 
   [GATE-LINES-1](../night/GATE-LINES-1.md); the fix and the once-per-run control that makes the
   silence impossible to repeat: [GATE-TRUTH-1](../night/GATE-TRUTH-1.md).
 
+- [BACKLOG-SORT-42.md](BACKLOG-SORT-42.md) — **the last unknown mass in the backlog, sorted**
+  (2026-08-23, NIGHT-2026-08-23 piece 2, documents only). BACKLOG-HONEST-1 left **42** `Q-`/`B-`/`V-`/
+  `T-` bullets unsorted and said so; this reads each against today's tree.
+  **EIGHT OF THE 42 WERE NOT OPEN WORK.** **ALREADY DONE:** `B-2` — closed by `5bde5a94`
+  (QUIET-FAILURES-1, 2026-08-17), confirmed at source (`selectedGeometryReady` gates `canStart`, so a
+  missing geometry is REFUSED instead of quietly running an open track as a laps race).
+  **SUPERSEDED:** `Q-12` (the background-cache removal took its premise away — no `data:image` reaches
+  the storage layer), `Q-18` (his decision **D2** declines exactly the work it asks for), `Q-27`
+  (**its premise is stale AND its number understated** — there are **ZERO PNG backgrounds**; the five
+  named tracks are **21.23 MB** of JPEG against a recorded 11.7 MB, the directory **60.45 MB**, so the
+  fix as written cannot be executed while the concern is larger than recorded).
+  **ALREADY ANSWERED:** `V-3` (`winners` is a key with a DevScreen control — and PART TWO already said
+  so), *Background cache*, `D7d`. **NEVER TRUE:** *Order of Next Steps* #18's "wiring missing" — the
+  export/import/reset wiring exists, so `B-5` is an unperformed VERIFICATION, not unbuilt work.
+  **TWO STRUCTURAL DEFECTS FOUND, both worth more than any single item:** **`Q-20` NAMED TWO DIFFERENT
+  ITEMS** for fifteen months (renamed `Q-20a`/`Q-20b`); and the section-wide claim that **no**
+  `verify:` line is possible was **too broad** — a dozen items name a file or a key and are decided by
+  one command, which is how four of the eight closures were found.
+  **Three items got CHEAPER:** `Q-13`'s code half shipped (`maxTargetScreenPx` is live — only an
+  eye-test remains); `V-1` and `V-2` are no longer blocked (B-1 shipped, B-2 closed). **Phase T is
+  three-quarters retrofitted** (8/10/8 tooltips; only `T-4` untouched) and **left open anyway**,
+  because "which fields are still unclear" is his judgment. **14 `verify:` lines added, every one RUN
+  before it was written.** 5 proposals, including a duplicate-id guard and that **Phase V has two
+  homes**. **An absence claim of mine was caught and corrected before commit** and the correction is
+  recorded in the report.
+
 - [ENVELOPE-ONE-SIDED-1.md](ENVELOPE-ONE-SIDED-1.md) — **the ±20% naturalness envelope is enforced on
   one side** (2026-08-23, NIGHT-2026-08-23 piece 5, documents only).
   **THE FAST SIDE IS CLAMPED, THE SLOW SIDE IS NOT — and the fast-side clamp is NARROWER than the

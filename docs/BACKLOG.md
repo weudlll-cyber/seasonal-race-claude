@@ -861,13 +861,25 @@ having no seed at all.
 
 ## Planned — needs spec
 
-**verify (section-wide):** no `verify:` line is possible for this section and that is the section's own name: these items have **no spec**, so there is nothing a command could compare the tree against. An item leaves here by being specified, not by being checked.
+**verify (section-wide):** for an item with **no spec** there is nothing a command could compare the
+tree against, and that is this section's own name — such an item leaves here by being specified, not
+by being checked.
+
+**BUT THAT IS NO LONGER TRUE OF THE WHOLE SECTION, corrected 2026-08-23 (BACKLOG-SORT-42).** Sorting
+the 42 found that a number of these items are not unspecified at all — they name a file, a key or a
+function, and a one-line command decides them. **Those now carry their own `verify:` line and it
+takes precedence over this paragraph.** The section-wide claim covers only the items that still have
+none. **The distinction matters because "no spec" was doing double duty**: it described items nobody
+had thought through *and* items nobody had checked, and the second group turned out to contain four
+already-settled questions.
 
 
 ### Phase D (Racer Design Development)
 
 - **D3.6** — File reorganization: `racer-types/` → `racer-configs/` (39 files).
   Separates configuration from engine code. Small standalone PR.
+  **verify:** `git grep -l "racer-configs" -- client/src` returns nothing and
+  `client/src/modules/racer-types/` still exists (checked 2026-08-23), so **still open**.
 
 - **Surface Zones** (follow-up phase after Visual Racer Effects) — local surface class overrides
   within a track (e.g. puddle on asphalt, mud pit on dirt). Track editor gets a
@@ -875,6 +887,8 @@ having no seed at all.
   once Visual Racer Effects is complete.
   _(Previously tracked as D6 / RTE reservation — `rteDefinitions` placeholder on SpriteRacerType will be
   replaced by Surface Classes; old placeholder cleaned up in VRE-1.)_
+  **verify:** `git grep -l "getZonesAtPosition" -- client/src` returns nothing — the named API
+  exists only in prose (checked 2026-08-23), so **still open**.
 
 - 👁 **D7d** — 100-racer performance. **DOWNGRADED 2026-08-23 FROM A WORK ITEM TO AN OBSERVATION —
   PART TWO D18.** **THE LIVE ENTRY** (a status echo of it also sits in *Order of Next Steps*; edit
@@ -900,6 +914,8 @@ having no seed at all.
   ⏳ **PARTIAL (2026-07-14 audit):** basic racer editing already shipped — `RacerManager.jsx`
   (list / create / delete) + `RacerEditModal.jsx` (per-field tuning overrides → localStorage/server).
   Still open for the "full" editor: the coats-edit UI and the sprite-swap UI.
+  **verify:** `git grep -ni "coat" -- client/src/screens/DevScreen/sections/RacerEditModal.jsx`
+  returns nothing (checked 2026-08-23), so the coats half is **still open**.
 
 ### Phase B (Wiring Gaps + UX Improvements)
 
@@ -938,6 +954,10 @@ having no seed at all.
     Can also be created as a pure documentation sprint before B-UX2, then B-UX2 uses the content.
 
 - **B-UX-MinMax** — Dev panel min/max pairs UX: replace silent rejection with visual warning, consistent for speed range (RaceTuningSection) + overviewCooldownMin/Max (CameraZoomTuningSection) + any future min/max pairs. Currently an invalid value (min > max or max < min) is silently ignored — no feedback for the user. Fix: red border or inline text ("Min must be less than Max") when limit is violated. Small standalone PR.
+  **A PRECEDENT NOW EXISTS TO COPY, found 2026-08-23 (BACKLOG-SORT-42):** `DynamicsTuningSection.jsx`
+  already renders *"Invalid: min must be > 0 and < max."* inline. **Neither section this item names
+  has one** — so the work is to apply an existing pattern in two places, not to invent one.
+  **verify:** `git grep -ni "must be" -- client/src/screens/DevScreen/sections/RaceTuningSection.jsx client/src/screens/DevScreen/sections/CameraZoomTuningSection.jsx` — returns nothing, so **still open**
   _(Arose during Phase 4 slider implementation 2026-05-06, Severity: LOW — currently consistent with existing speed range convention)_
 
 - **B-UX4** — Sprite size system overhaul
@@ -952,9 +972,21 @@ having no seed at all.
   - Arose during D7c diagnosis (2026-04-29). Needs vision discussion before spec is written.
   - Priority: low. Currently not a UX blocker — only visible with deliberate displaySize override + large track.
 
-- **B-2** — TrackSelector: custom track behavior when geometry is missing
+- ~~**B-2** — TrackSelector: custom track behavior when geometry is missing~~ — ✅ **CLOSED
+  2026-08-23 (BACKLOG-SORT-42). Closed by `5bde5a94` (QUIET-FAILURES-1, 2026-08-17)**, confirmed at
+  source: `SetupScreen.jsx` computes `selectedGeometryReady` from `getTrack(geometryId)` — the cache,
+  not the summary — and gates `canStart` on it, so a track whose geometry is missing is **REFUSED**
+  rather than started as the wrong race mode. **The general rule this leaves behind:** a missing
+  geometry used to resolve to `false` = CLOSED, so an OPEN track quietly ran as a laps race; where
+  there is nothing honest to guess, the answer is to refuse rather than to default.
+  **verify:** `git grep -n "selectedGeometryReady" -- client/src/screens/SetupScreen/SetupScreen.jsx`
 
-- **B-5** — System backup/restore/reset: end-to-end verified (UI-only so far)
+- **B-5** — System backup/restore/reset: **end-to-end verification only — THE WIRING EXISTS.**
+  Corrected 2026-08-23 (BACKLOG-SORT-42): `SystemSettings.jsx` imports and calls `exportAllStorage`,
+  `importAllStorage` and `exportDiagnosticSnapshot`, downloads a `racearena-backup-*.json`, and
+  re-seeds defaults after reset. **"Wiring missing" was already false** — see the correction at
+  *Order of Next Steps* item 18. What is open is an end-to-end pass over export → import → reset.
+  **verify:** `git grep -n "importAllStorage\|exportAllStorage" -- client/src/screens/DevScreen/sections/SystemSettings.jsx`
 
 ### Phase Q (Quality Hygiene)
 
@@ -1009,24 +1041,43 @@ having no seed at all.
 
   **Priority:** Not planned (structural impossibility resolved by removal).
 
-- **Q-27** — Background PNG compression _(Audit 2026-05-04, Severity: HIGH — deferred)_
-  The 5 background images (Dirt Oval, River Run, Space Sprint, Garden Path, City Circuit) are together ~11.7 MB uncompressed PNGs. Optimization to ≤500 KB/image possible (pngquant, tinypng, etc.).
-  Deliberately deferred in PR-A2.9 — no acute UX blocker. Fix: compression + git replace of originals. Small standalone PR.
-  _(Priority: low)_
+- **Q-27** — Background image weight. **THE ITEM'S PREMISE IS STALE AND THE NUMBER IS UNDERSTATED —
+  re-measured 2026-08-23 (BACKLOG-SORT-42).** It was written as *"~11.7 MB uncompressed PNGs"* and
+  named pngquant/tinypng. **There are ZERO PNG backgrounds:** `server/data/backgrounds/` holds 13
+  files, all `.jpg`. The five named tracks total **21.23 MB** as JPEGs — nearly double the recorded
+  figure — and the whole directory is **60.45 MB**. **So the fix as written cannot be executed** (there
+  is nothing to run pngquant over) **while the concern it was raised for is larger than recorded.**
+  Re-specifying it is the work; the old plan is not.
+  **verify:** `ls server/data/backgrounds/ | grep -c "\.png$"` returns 0 — **still open while the
+  directory weight is unaddressed and no re-spec exists.**
+  _(Priority: low. Audit 2026-05-04, deferred in PR-A2.9.)_
 
-- **Q-20** — Track editor load mode: background upload is now optional (F1-revised fix). But when a load-mode track has no background and the user saves without uploading one, the race engine is left without a background image. Consider: hint text "No background — race will show empty canvas" when a track is saved in load mode without a background.
+- **Q-20a** — Track editor load mode: background upload is now optional (F1-revised fix). But when a load-mode track has no background and the user saves without uploading one, the race engine is left without a background image. Consider: hint text "No background — race will show empty canvas" when a track is saved in load mode without a background.
 
-- **Q-12** — localStorage quota with large data-URL images
-  Tracks now store data-URLs (1–5 MB possible for high-resolution images).
-  No quota handling implemented. Info-level, not an acute blocker.
+- ~~**Q-12** — localStorage quota with large data-URL images~~ — ✅ **SUPERSEDED 2026-08-23
+  (BACKLOG-SORT-42) by the background-cache removal of 2026-06-18 (L.4-BgCacheRemoved)**, which is
+  recorded in the *Background cache for offline play* entry above. **Its premise no longer holds:**
+  `git grep -n "data:image" -- client/src/modules/storage client/src/modules/track-editor` returns
+  nothing, `trackCache.js` is still deleted, and backgrounds are served as server files
+  (`server/data/backgrounds/`), not persisted as data-URLs. The storage layer also catches a failed
+  write rather than throwing (`storage.js`, covered by a QuotaExceededError test).
+  **The general rule kept:** localStorage is not an image store — 4–10 MB backgrounds cannot fit a
+  5–10 MB total quota, which is why the cache was removed rather than tuned.
 
-- **Q-18** — RaceScreen integration test infrastructure
-  RaceScreen has 0 unit tests despite core game logic (finish detection, phase transitions, storage write).
-  Blocker: canvas + rAF in jsdom requires `vi.stubGlobal` + mock rAF. Suggestion: 3 minimal tests
-  (session load → race init, finish detection, sessionStorage write on race end).
-  _(Deep audit 2026-05-01, Severity: MEDIUM — confirmed in TEST-RaceScreen backlog)_
+- ~~**Q-18** — RaceScreen integration test infrastructure~~ — ✅ **SUPERSEDED 2026-08-23
+  (BACKLOG-SORT-42) by his decision D2 of 2026-08-23** (PART TWO): *"`RaceScreen` is not testable —
+  the finding STAYS, nothing is done."* **Q-18 asks for precisely the work D2 declines.** The finding
+  it rests on is still true and is still recorded in PART ONE; what is closed is whether to act on it.
+  **Not evidence of testing coverage either way:** `client/src/screens/RaceScreen/` does carry unit
+  tests today, but of extracted pieces (HUDs, ceremony, ending schedule, framing inputs) — not the
+  integration tests this item asked for.
+  _(Deep audit 2026-05-01, Severity: MEDIUM.)_
 
-- **Q-20** — Server test backup cleanup not crash-resistant (TLH-1)
+- **Q-20b** — Server test backup cleanup not crash-resistant (TLH-1). **RENAMED FROM `Q-20`
+  2026-08-23 (BACKLOG-SORT-42): the id was used TWICE**, here and for the track-editor hint above
+  (now `Q-20a`). Two different items under one id is a lookup that silently returns the wrong one.
+  **verify:** `git grep -n "process.on" -- server/src/routes/tracks.test.js` — returns nothing, so
+  **still open**
   `afterAll` in `tracks.test.js` cleans up backup files via `rmSync`, but only on normal
   test run end. On Ctrl+C / crash before `afterAll`, all backup files remain in the real
   `server/data/tracks-backups/` directory. During TLH-1 development ~41 orphan files
@@ -1041,6 +1092,9 @@ having no seed at all.
   searches for `endsWith('.json')` and does not find `.json.tmp` — such orphans are never cleaned up.
   Possible approach: server boot routine scans `tracks-backups/` for `*.json.tmp` and deletes them,
   or `findBackupFiles` includes `.json.tmp`.
+  **verify:** `git grep -n "json.tmp" -- server/src` — the only hits are test assertions that a
+  `.tmp` does NOT remain after a normal write; **no boot sweep and no `.json.tmp` branch in the
+  server's own `.json` filter (`tracks.js`), so still open** (checked 2026-08-23).
   _(Discovered TLH-1 2026-05-01, Severity: LOW)_
 
 - **Q-22** — TrackEditor frontend draft snapshot
@@ -1049,10 +1103,15 @@ having no seed at all.
   ~30s, deleted after successful server save. Protects against data loss on silent
   server errors (F3 scenario from TLH-2 browser test) or browser crash. Effort: small (~50 LOC).
   Small standalone PR.
+  **verify:** `git grep -l "trackEditor:draft" -- client/src` returns nothing (checked 2026-08-23),
+  so **still open**.
   _(Arose from TLH-2 browser test 2026-05-02, Severity: MEDIUM)_
 
 - **Q-24** — isDefault immutability via PUT explicitly tested
   Audit found: `PUT /api/tracks/:id` handler explicitly sets `isDefault: existing.isDefault` and thereby overrides any client-sent value — `isDefault` is thus de facto immutable via API. But there is no explicit backend test protecting this behavior. If someone restructures the PUT handler, this protection could silently disappear. Standalone backend test case: "PUT with `isDefault: false` on default track does not change `isDefault`".
+  **verify:** `git grep -n "isDefault" -- server/src/routes/tracks.test.js` — the hits cover DELETE
+  refusal and seed defaults; **no test PUTs `isDefault: false` at a default track**, so **still
+  open** (checked 2026-08-23).
   _(Arose during audit in City Circuit bug fix 2026-05-02, Severity: LOW)_
 
 - **Q-23** — Two-step save: no differentiated error message on background upload failure
@@ -1065,9 +1124,13 @@ having no seed at all.
 
 - **Q-13** — Sprite frame animation stutters with large sprites
   On 6000-tracks sprites become very large — frame changes appear jerky.
-  **Structural solution in PR-E of the camera phase:** `maxTargetScreenPx` as upper camera zoom limit
-  prevents the camera from zooming close enough to make sprites appear "animation-jerky" large.
-  Spec in `docs/CAMERA_DIRECTOR.md §6.2`. Q-13 can be marked done after PR-E + browser verification.
+  **THE STRUCTURAL HALF HAS SHIPPED — confirmed at source 2026-08-23 (BACKLOG-SORT-42).**
+  `maxTargetScreenPx` is live in `client/src/modules/autoSpriteScale.js`, the render-pipeline single
+  source, as the CEILING term (`result = maxTargetScreenPx / (displaySize × frameEffZoom)`). The item's
+  own closing condition was *"after PR-E + browser verification"*; **PR-E is in, the browser check is
+  not evidenced anywhere.** So what remains is an EYE-TEST, not code.
+  **verify:** `git grep -n "maxTargetScreenPx" -- client/src/modules/autoSpriteScale.js` — present, so
+  the code half is done; **still open only until someone watches a 6000-track race and says so.**
   Fallback solutions (basePeriodMs scaling, frame interpolation) only if
   maxTargetScreenPx calibration is insufficient.
 
@@ -1076,15 +1139,27 @@ having no seed at all.
   `NameTagVisibilitySection.jsx`, `SpriteSizeRangeSection.jsx`, `CameraZoomTuningSection.jsx`.
   Extract into a shared `RangeSliderSection` component before more Dev-Screen sections are added.
   Estimated effort: ~2h.
+  **verify:** `git grep -l "RangeSliderSection" -- client/src` returns nothing (checked 2026-08-23),
+  so **still open**.
 
-- **V-1** — PlayerSetup B-1 loading-saved-lists bug. **NOT INDEPENDENTLY OPEN — downstream of
-  B-1**, which is the work; this is its verification and cannot start until B-1 lands.
+- **V-1** — PlayerSetup B-1 loading-saved-lists bug. **ITS BLOCKER IS GONE — B-1 SHIPPED** in the
+  B-Wave (PR #25, master `697e081`), recorded in *Completed Items* above. **So this is no longer
+  "cannot start"; it is an unperformed verification of shipped work**, which is a different and much
+  cheaper thing. Re-sorted 2026-08-23 (BACKLOG-SORT-42).
+  **verify:** none can exist — it is a manual UI check of loading a saved player list.
 
-- **V-2** — TrackSelector B-2 custom track behavior. **NOT INDEPENDENTLY OPEN — downstream of
-  B-2 above**, which is the work; this is its verification and cannot start until B-2 lands. Track
-  it there. *(The same shape holds for V-1↔B-1, V-4↔B-4 and V-5↔B-5 below.)*
+- **V-2** — TrackSelector B-2 custom track behavior. **ITS BLOCKER IS GONE — B-2 IS CLOSED**
+  (`5bde5a94`, QUIET-FAILURES-1); see the struck entry above. **This is now an unperformed
+  verification of shipped work:** select a track whose geometry is missing and confirm Start is
+  refused with a reason rather than starting the wrong race mode. Re-sorted 2026-08-23
+  (BACKLOG-SORT-42). *(The same downstream shape holds for V-1↔B-1 and V-5↔B-5.)*
+  **verify:** none can exist — it is a manual UI check.
 
-- **V-3** — Result screen winner count B-3 (configurable?)
+- ~~**V-3** — Result screen winner count B-3 (configurable?)~~ — ✅ **ALREADY ANSWERED 2026-08-23
+  (BACKLOG-SORT-42): YES, it is configurable.** `winners` is a key in `defaults.js` with a DevScreen
+  control and an InfoTooltip in `RaceDefaults.jsx` (decrement guarded at 1). The question this item
+  asks has an answer at source; there is no work in it.
+  **verify:** `git grep -n "winners" -- client/src/screens/DevScreen/sections/RaceDefaults.jsx`
 
 - **V-5** — System backup/restore/reset B-5 (data loss risk). **NOT INDEPENDENTLY OPEN —
   downstream of B-5** above. *(Its "data loss risk" note still stands as the REASON B-5 is worth
@@ -1103,13 +1178,24 @@ having no seed at all.
 All existing dev screen fields that are unclear without a label. Uses `InfoTooltip` component
 from D3.5.5.
 
-- **T-1** — RaceDefaults fields
+**Measured 2026-08-23 (BACKLOG-SORT-42) — three of the four have been retrofitted in substance and
+one has not been touched.** The count below is `InfoTooltip` occurrences in each section. **A count is
+not a completion test**: this phase's closing condition is *"all fields that are unclear without a
+label"*, and which fields are still unclear is HIS judgment, not a grep's. So the three are left OPEN
+rather than struck, with the evidence attached.
 
-- **T-2** — TrackManager fields
+- **T-1** — RaceDefaults fields. **8 `InfoTooltip` uses present** — retrofitted in substance.
+  **verify:** `git grep -c "InfoTooltip" -- client/src/screens/DevScreen/sections/RaceDefaults.jsx`
 
-- **T-3** — BrandingProfiles fields
+- **T-2** — TrackManager fields. **10 `InfoTooltip` uses present** — retrofitted in substance.
+  **verify:** `git grep -c "InfoTooltip" -- client/src/screens/DevScreen/sections/TrackManager.jsx`
 
-- **T-4** — SystemSettings fields
+- **T-3** — BrandingProfiles fields. **8 `InfoTooltip` uses present** — retrofitted in substance.
+  **verify:** `git grep -c "InfoTooltip" -- client/src/screens/DevScreen/sections/BrandingProfiles.jsx`
+
+- **T-4** — SystemSettings fields. **ZERO `InfoTooltip` uses — genuinely untouched**, and the only
+  one of the four that is.
+  **verify:** `git grep -c "InfoTooltip" -- client/src/screens/DevScreen/sections/SystemSettings.jsx`
 
 ---
 
@@ -1165,7 +1251,10 @@ from D3.5.5.
 
 16. **Surface Zones** — follow-up phase after VRE. Track editor zone tool, `getZonesAtPosition()`.
 17. **B-UX phase** — dev screen cleanup (B-UX2/B-UX3), help modal. Before D8.
-18. **Backup/export** (B-5) — UI exists, wiring missing.
+18. **Backup/export** (B-5) — ~~UI exists, wiring missing~~ — **"wiring missing" IS FALSE, corrected
+    2026-08-23 (BACKLOG-SORT-42):** `SystemSettings.jsx` calls `exportAllStorage` / `importAllStorage`
+    / `exportDiagnosticSnapshot` and re-seeds defaults on reset. **A status echo; the live entry is
+    B-5 under Phase B — edit only that one.** What is open there is end-to-end verification.
 19. **D3.6** file reorganization (`racer-types/` → `racer-configs/`, 39 files)
 20. **D8** — full racer config editor (after B-UX phase)
 21. **Phase V** (verification sprint)
