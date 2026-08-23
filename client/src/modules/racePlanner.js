@@ -354,6 +354,26 @@ export function createRacePlan(racers, finishT, targetDurationMs, config = {}, s
     // Threaded into the hero-curve generator (which casts the attackers) AND read by the servo below, which
     // runs the Track-to-FinalRank-then-Free logic for role 'attacker-b2'. See heroCurveGenerator.js.
     _b2AttackHeroes: config.b2AttackHeroes ?? DEFAULT_RACE_DYNAMICS_CONFIG.b2AttackHeroes,
+    // ── MEASUREMENT PASSTHROUGH (ACTION-KEYS-1, 2026-08-23) — the CHOREOGRAPHED CAST SIZE ──────────
+    //
+    // WHAT IT IS FOR. `nHeroes` — how many racers the director actually steers along authored curves
+    // — is `round(minHeroes + (maxHeroes − minHeroes) × realizedIntensity)`, and `minHeroes` /
+    // `maxHeroes` are MODULE CONSTANTS in `heroCurveGenerator.js`'s GENERATOR_CONFIG. They are not
+    // config keys, they are not in `defaults.js`, and nothing outside that module supplied them. So
+    // the only handle any harness had on the cast SIZE was `choreoIntensity` — which also sets the
+    // curve STRENGTH. Size and strength could not be told apart from outside, which is exactly the
+    // question the owner asked on 2026-08-23.
+    //
+    // WHAT IT IS NOT. NOT a config key, NOT in `defaults.js`, NOT on the Dev Screen, and NOT reachable
+    // from the product: `raceCore.js` never sets `heroBudget`, so the running game cannot take this
+    // branch. `null` ⇒ the generator config is spread exactly as before ⇒ byte-identical. That
+    // byte-identity is the whole permission this line stands on and it is measured, not asserted:
+    // the WORLD fingerprint is unmoved against the record in docs/fingerprints.json (see
+    // reports/night/ACTION-KEYS-1.md).
+    //
+    // DO NOT GENERALISE THIS INTO A CONFIG CHANNEL. If the cast size ever becomes a real control it
+    // gets a real key in the one home, with a ship ceremony — not a widened measurement hook.
+    _heroBudget: config.heroBudget ?? null,
     _b2AttackPeakRank: config.b2AttackPeakRank ?? DEFAULT_RACE_DYNAMICS_CONFIG.b2AttackPeakRank,
     _b2AttackFinalRank: config.b2AttackFinalRank ?? DEFAULT_RACE_DYNAMICS_CONFIG.b2AttackFinalRank,
     _b2AttackProgress: config.b2AttackProgress ?? {
@@ -703,6 +723,9 @@ export function createTrajectoryController(racePlan) {
           // moves the hero curve anchor with it, with no second copy of the value.
           config: {
             ...GENERATOR_CONFIG,
+            // ACTION-KEYS-1 measurement passthrough — see `_heroBudget` above. Null on every
+            // shipped path, so this spread contributes nothing and the object is unchanged.
+            ...(plan._heroBudget ?? {}),
             anchorProgress: pulkStartFrac,
             releaseProgress: plan._choreoReleaseProgress,
             bandResolve: plan._choreoBandResolve,

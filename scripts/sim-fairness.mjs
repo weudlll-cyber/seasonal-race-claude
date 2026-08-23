@@ -202,6 +202,57 @@ function argVal(key, def) {
   return m ? m.slice(key.length + 3) : def;
 }
 
+// ── MEASUREMENT PASSTHROUGHS (ACTION-KEYS-1, 2026-08-23) ─────────────────────────────────────────
+//
+// TWO candidate levers the owner named on 2026-08-23 could not be varied from ANY harness, so they
+// could not be measured — not "measured as no effect", NOT MEASURABLE AT ALL, which is a different
+// and much more dangerous thing for a table to be silent about.
+//
+//   A. HOW MANY racers the director steers. `nHeroes` is
+//      `round(minHeroes + (maxHeroes − minHeroes) × realizedIntensity)`, and minHeroes/maxHeroes are
+//      MODULE CONSTANTS in heroCurveGenerator.js's GENERATOR_CONFIG — not config keys, not in
+//      defaults.js, supplied by nothing outside that module. The only handle on the cast SIZE was
+//      `choreoIntensity`, which also sets curve STRENGTH: the two could not be told apart.
+//   B. HOW the director steers them. DEFAULT_CONTROLLER_PARAMS (gain / maxMult / minMult) is a
+//      module constant in racePlanner.js. `createRacePlan` has ALWAYS accepted
+//      `config.controllerParams` — and the only supplier of it in the entire tree was
+//      `racePlanner.test.js`. The hook existed; nothing production or harness-side ever used it.
+//
+// SO B NEEDED NO PRODUCT CHANGE AT ALL — only this file. A needed two inert lines in racePlanner.js
+// (`_heroBudget`, and a spread of it into the generator config), and the reason they are safe is
+// written beside them there.
+//
+// THE BOUND THIS PERMISSION STANDS ON: a run WITHOUT these arguments must behave exactly as before.
+// Every flag below defaults to `null` and every null is dropped from the config object, so the
+// object handed to createRacePlan is unchanged key-for-key. MEASURED, not asserted: WORLD
+// unmoved against the record in docs/fingerprints.json (reports/night/ACTION-KEYS-1.md).
+//
+// NOT A CONFIG CHANNEL. No new key in defaults.js, no Dev Screen control, no default moved, nothing
+// reachable from the product. If either lever ever becomes a real control it gets a real key in the
+// one home with a ship ceremony — not a widened measurement hook.
+const numOrNull = (k) => {
+  const v = argVal(k, null);
+  return v === null ? null : Number(v);
+};
+const CONTROLLER_GAIN = numOrNull("controllerGain");
+const CONTROLLER_MAX_MULT = numOrNull("controllerMaxMult");
+const CONTROLLER_MIN_MULT = numOrNull("controllerMinMult");
+const CONTROLLER_PARAMS_OVERRIDE = (() => {
+  const o = {};
+  if (CONTROLLER_GAIN !== null) o.gain = CONTROLLER_GAIN;
+  if (CONTROLLER_MAX_MULT !== null) o.maxMult = CONTROLLER_MAX_MULT;
+  if (CONTROLLER_MIN_MULT !== null) o.minMult = CONTROLLER_MIN_MULT;
+  return Object.keys(o).length > 0 ? o : null;
+})();
+const CAST_MIN_HEROES = numOrNull("castMinHeroes");
+const CAST_MAX_HEROES = numOrNull("castMaxHeroes");
+const HERO_BUDGET_OVERRIDE = (() => {
+  const o = {};
+  if (CAST_MIN_HEROES !== null) o.minHeroes = CAST_MIN_HEROES;
+  if (CAST_MAX_HEROES !== null) o.maxHeroes = CAST_MAX_HEROES;
+  return Object.keys(o).length > 0 ? o : null;
+})();
+
 // ── Stage 0: --config world import + FAIL-LOUD (never silently assume) ──────────────────────────
 // `--config=world.json` makes the sim run the OWNER'S actual exported world instead of assumed defaults.
 // Hard rules: (a) a world from an OLD schema (WORLD_SCHEMA_MISMATCH) or one the sim cannot faithfully
@@ -4484,6 +4535,13 @@ if (isMain) {
                 choreoResolveB5: CHOREO_RESOLVE_B5,
                 choreoOutcomeStart: CHOREO_OUTCOME_START,
                 packReSteerThreshold: PACK_RESTEER_THRESHOLD,
+                // ACTION-KEYS-1 measurement passthroughs. Both are null unless their flag was
+                // given, and createRacePlan spreads `config.controllerParams ?? {}` / stores
+                // `config.heroBudget ?? null` — so a flagless run is unchanged key-for-key.
+                ...(CONTROLLER_PARAMS_OVERRIDE
+                  ? { controllerParams: CONTROLLER_PARAMS_OVERRIDE }
+                  : {}),
+                ...(HERO_BUDGET_OVERRIDE ? { heroBudget: HERO_BUDGET_OVERRIDE } : {}),
                 b2AttackHeroes: B2_ATTACK_HEROES,
                 b2AttackPeakRank: B2_ATTACK_PEAK_RANK,
                 b2AttackFinalRank: B2_ATTACK_FINAL_RANK,
