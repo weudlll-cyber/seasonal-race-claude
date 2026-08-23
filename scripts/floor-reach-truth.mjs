@@ -31,6 +31,11 @@
 
 import { join, dirname } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
+// ONE HOME (ONE-HOME-FIVE-MORE-1, 2026-08-23): `HIS` and `setPath` were a PRIVATE COPY here.
+// ONE-HOME-THREE-TRUTHS-1 gave the arm a home in `lib/hisArm.mjs` but recorded the duplication as
+// "exactly two" and converted two files; it was SEVEN. This file was one of the five it missed.
+// The copy removed here was verified byte-identical to the home before it was deleted.
+import { HIS, setPath } from "./lib/hisArm.mjs";
 import {
   resolveIdentity,
   loadTracks,
@@ -65,28 +70,6 @@ const ROSTER = QUICK_TEST_NAME_SETS[DEFAULT_NAME_SET];
 // HIS ELEVEN DEVIATIONS, quoted from the brief that commissioned LABEL-NAMES-2. `battleWeight: 0` is
 // why this arm matters: the camera stays WIDE where the shipped default would cut to a duel, so the
 // shipped defaults understate what HE sees.
-const HIS = [
-  ["cameraStateProfiles.OVERVIEW.trackingTC", 1.5],
-  ["highlightHeroes", true],
-  ["battlePulkThresholdT", 0.001],
-  ["outcomePhaseThreshold", 0.65],
-  ["battleCooldownMs", 20000],
-  ["battleWeight", 0],
-  ["finishPauseMs", 4000],
-  ["winnerCardMs", 4000],
-  ["corridorCapArriveMs", 5000],
-  ["labelNamesWhenRoom", true],
-  ["minRacersVisible", 8],
-];
-function setPath(o, path, v) {
-  const parts = path.split(".");
-  let cur = o;
-  for (let i = 0; i < parts.length - 1; i++) {
-    cur[parts[i]] = structuredClone(cur[parts[i]]);
-    cur = cur[parts[i]];
-  }
-  cur[parts[parts.length - 1]] = v;
-}
 const hisConfig = () => {
   const cfg = structuredClone(DEFAULT_CAMERA_CONFIG);
   for (const [path, v] of HIS) setPath(cfg, path, v);
