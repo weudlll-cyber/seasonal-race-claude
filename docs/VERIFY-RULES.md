@@ -164,6 +164,33 @@ it wastes his time; running the harness and calling the result "good" wastes the
 **Corollary.** He must be able to read the build pill before he judges. A verdict on an unidentifiable
 build has cost this project two days.
 
+## R5a — EVERY ACCEPTANCE IS A SAMPLE
+
+**The owner's principle, 2026-08-23, in his terms: every acceptance is a sample. A verdict covers the
+TRACK, the STATE and THE SEED it was given on. The same track with another seed can look entirely
+different.**
+
+**The rule this puts on a block.** Never write "owner-approved" as if it were a property of the
+CHANGE. It is a property of the change _on the races he was shown_. Where the distinction can matter
+— a claim that a behaviour is good, safe, or finished — say what he actually saw: the track, the
+configuration, and the seed. Where a report has that detail and drops it, it has converted a sample
+into a certificate.
+
+**Why it is a rule and not a caution.** The alternative to stating it is counting, and counting is
+what went wrong: the backlog carried "his eye has covered three of ten tracks" for eighteen days.
+That number came from a documentation COUNT — the tracks that happened to be named in write-ups —
+not from any record of what he watched, and it read as coverage because it was shaped like a
+measurement. **Coverage of a space this size is not buyable by watching more races**, which is why
+the eye-test session it justified was superseded rather than scheduled (BACKLOG.md PART TWO D13).
+
+**What it does NOT do, and this is the boundary.** It does not devalue his verdict — R5 stands
+exactly as written, and the eye still answers the question no harness can. **A sample is evidence.**
+It is simply not a proof about every race, and a block that needs a proof about every race has to
+get it from an instrument.
+
+**Its practical partner is [EYE-TEST-SEEDS.md](EYE-TEST-SEEDS.md)**, which owns what a seed
+guarantees, and whose template already asks for several seeds per verdict for exactly this reason.
+
 ## R6 — The report carries the result; the commits carry the derivation
 
 **Rule.** A report contains what was delivered, the deviations from what was asked, and the numbers.
@@ -624,6 +651,54 @@ fingerprint alone. The argument holds identically for CAMERA, RENDER and `check-
 extending it looks obviously right. Measured across the same ten merges it would have saved
 **0 seconds**: every change that reached those three was live code, not comments. It is not built,
 and this paragraph is why, so the next reader does not re-derive it.
+
+---
+
+## R16 — TWO NUMBERS SIDE BY SIDE SHARE ONE IDENTITY, OR CARRY THEIR OWN
+
+**Rule.** When a report puts two numbers **side by side**, they must either sit under one stated
+identity — the run, the arm, the config, the tree they came from — or each carry its own visibly. In
+practice: a table gets one identity line above it; **a table that mixes arms gets an identity
+column.**
+
+**The narrow form is deliberate, and the wide one is rejected.** "Every number carries its identity"
+is ceremony: most figures sit under a shared header that already covers them, and a rule that fires
+on every figure gets followed by rote and then dropped. **The hazard lives in COMPARISON, not in
+isolation.** A number alone can be wrong; it cannot mislead by comparison. A number beside another
+number is an implicit claim that the two are comparable, and that claim is the thing nothing checks.
+
+**The instance it comes from.** NIGHT-1 needed the identity column and did not have it. The project
+has also been bitten by the same shape at the tool level: `corridor-truth` and
+`corridor-truth --company-only` print the SAME identity line and produce different numbers, so even
+a stated identity can be insufficient when the config is the thing that differs.
+
+**Adopted by the owner, 2026-08-23** (BACKLOG.md PART TWO D19). **There is no guard for it**, and
+that is not an oversight — "are these two numbers from the same run" is a question about meaning,
+not about text. It is enforced at read time, by whoever the comparison is aimed at.
+
+---
+
+## R17 — A BLOCK THAT RE-MINTS A FINGERPRINT NAMES WHAT MUST NOT MOVE
+
+**Rule.** Any block that expects a fingerprint to move, and mints the new value, **names one or two
+specific invariants that must NOT move with it, and measures them.** In the report, beside the mint.
+
+**The failure it closes: a fingerprint expected to move stops guarding what moved with it.** For the
+whole of a re-minting block, the hash that normally says "nothing else changed" says nothing at all
+— it was going to differ either way, so a genuine regression riding along in the same commit is
+indistinguishable from the intended change. **FINISH-MOTION-1 caught a 108 px regression in the
+RESTING frame by ACCIDENT**, while measuring something else. The camera fingerprint had moved as
+intended, so the regression would have read as intended too.
+
+**What counts as an invariant here.** Something specific enough to be measured and to fail: the
+resting-frame position, the zoom at the line, the frame count, a phase boundary's timestamp, the
+world hash when the change is camera-only. Not "the race still looks fine" — an invariant that
+cannot go red is R7's dead test in a new place.
+
+**Cost, stated because it is the objection:** a few lines per block, and one measurement that was
+usually being taken anyway for a different reason. **Adopted by the owner, 2026-08-23**
+(BACKLOG.md PART TWO D20). The mint itself, and everything else it must carry, stays
+[SHIP-CEREMONY.md](SHIP-CEREMONY.md)'s — this rule adds one obligation and restates none of it.
 
 ---
 

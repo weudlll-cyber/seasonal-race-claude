@@ -111,7 +111,7 @@ needs none of it. A contributor about to change RaceArena needs most of it.
 
 | document                                         | what it owns                                                                       |
 | ------------------------------------------------ | ------------------------------------------------------------------------------------ |
-| [VERIFY-RULES.md](VERIFY-RULES.md)               | What to run, when, and how much. The standing rules R0–R11.                        |
+| [VERIFY-RULES.md](VERIFY-RULES.md)               | What to run, when, and how much. The standing rules, R0 onward.                    |
 | [SHIP-CEREMONY.md](SHIP-CEREMONY.md)             | **Canonical.** The checklist for a change that moves shipped behaviour.            |
 | [SIM.md](SIM.md)                                 | The headless simulator: how to run it, and what each metric means.                 |
 | [SWEEP-HARNESS.md](SWEEP-HARNESS.md)             | The measurement stack around the sim: observers, orchestration, determinism.       |
