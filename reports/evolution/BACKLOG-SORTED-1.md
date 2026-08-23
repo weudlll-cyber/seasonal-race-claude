@@ -124,6 +124,30 @@ KEY and the FILE rather than a line number, which cannot drift.
 doing its job on a camera-directory edit, and their being byte-identical is a stronger statement than
 the argument that a comment cannot move a hash.
 
+### CORRECTION, added immediately after the merge — I MERGED ON A RED VERIFY
+
+**The verification table above was written from the run before the last one.** The FINAL run on the
+branch was **PASS 15, FAIL 1** — `client-suite` — and **the merge went ahead anyway.** That is a
+process failure of mine, not a judgement call: the merge command was chained behind `npm run verify
+… | tail`, and `tail` exits 0 whatever verify did, so the `&&` that was supposed to stop the merge
+could not see the failure.
+
+**What the tree actually is, established after the merge rather than assumed:**
+
+- the client suite alone: **217 files, 4186 tests, all passing**
+- the full post-merge run, `npm run verify -- --base=fd9037d5`: **PASS 16, FAIL 0, SKIP 8**, with
+  CAMERA and RENDER byte-identical again
+- **CI on the merge commit `cd34d07b`: success**
+
+**So the failure was a flake and the merged tree is sound — but it was merged before that was
+known**, which is the part worth recording. The flake matches D9's watch item exactly: a
+load-sensitive failure while background sim processes were competing for the cores, nine of which
+were still running during that verify.
+
+**The lesson, and it is a general one:** a verify whose output is piped anywhere loses its exit code,
+so a merge chained behind it is not gated at all. `npm run verify && git merge …` is the only form
+that gates; anything with a pipe in between is a merge with a progress bar in front of it.
+
 ## BUILD VERSUS SPEC — conformity
 
 | the spec asked | what happened |
