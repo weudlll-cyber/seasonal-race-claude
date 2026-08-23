@@ -165,6 +165,52 @@ than argued, because `defaults.js` sits inside all four instruments' closures. V
   band floor that asked for LESS width, and holding still-level racers, which put the winner at
   `x = 0.105` with 24 cut frames. Keep it: those are the six answers nobody should have to buy twice.
 
+### HARNESS-CAST-AND-SERVO — two levers made measurable, archived unmerged (2026-08-23)
+
+**What the passthrough DOES.** It makes two candidate action levers reachable from
+`scripts/sim-fairness.mjs`, and nothing else. **Neither was varyable from any harness before it**, so
+neither could be measured — which is a different and more dangerous thing for a table to be silent
+about than "measured, no effect".
+
+- **How MANY racers the director steers.** `nHeroes` is
+  `round(minHeroes + (maxHeroes − minHeroes) × realizedIntensity)`, and `minHeroes`/`maxHeroes` are
+  **module constants** in `heroCurveGenerator.js`'s `GENERATOR_CONFIG` — not config keys, not in
+  `defaults.js`. The only outside handle on the cast SIZE was `choreoIntensity`, which also sets curve
+  STRENGTH, so size and strength could not be told apart. Cost: two inert lines in `racePlanner.js`
+  (`_heroBudget: config.heroBudget ?? null`, and a spread of it into the generator config).
+- **How the director steers them.** `DEFAULT_CONTROLLER_PARAMS` (`gain`/`maxMult`/`minMult`) is a
+  module constant. `createRacePlan` has **always** accepted `config.controllerParams`, and the only
+  supplier in the entire tree was `racePlanner.test.js`. **This half needed no product change at
+  all** — the hook existed and nothing had ever used it.
+
+**IT IS NOT NEEDED FOR THE FAIRNESS MEASUREMENT, and that is the reason it is archived rather than
+merged.** The fairness gate is band-reach plus the Holm start-row test ([FAIRNESS.md](FAIRNESS.md)),
+and every input those need is already a real config key reachable from the harness today. Nothing in
+this branch is required to run a gate, to reproduce a shipped world, or to measure a stage of a future
+action dial against the gate. It buys exactly one thing: the ability to vary the steered cast size and
+the servo's own parameters while measuring ACTION.
+
+**THE EVIDENCE THIS PRESERVES, which is the other half of why it is kept.** With no flags given the
+world fingerprint is **unmoved** against the record in [fingerprints.json](fingerprints.json) — every
+flag defaults to `null` and every null is dropped, so a flagless run hands `createRacePlan` an object
+unchanged key-for-key. Proved in **both** directions: with `--controllerGain=5.0` and with
+`--castMinHeroes=4 --castMaxHeroes=4` the race demonstrably changes. `npm run verify -- --jobs=1` on
+the branch tip: every guard green, all three fingerprints unmoved.
+
+**It is NOT a config channel** and must not become one: no key in `defaults.js`, no Dev Screen
+control, no default moved, and nothing reachable from the product — `raceCore.js` never sets
+`heroBudget`, so the running game cannot take that branch. If either lever ever becomes a real
+control it gets a real key in the one home, with a ship ceremony.
+
+- `archive/harness-cast-and-servo` (`089f663e`, 2026-08-23) — the measurement passthrough for the
+  steered CAST SIZE and the SERVO parameters, built for [ACTION-KEYS-1](../reports/night/ACTION-KEYS-1.md)
+  and **archived unmerged on the owner's instruction**. The branch was deleted at origin. **The
+  measurement it enabled is already on master as a report; this tag preserves the CODE, which is
+  not.** What it found: both levers are **WEAK** — cast size ≤5% on the weaker of two tracks with its
+  finish effect flipping sign between them, the servo ≤7% on the front window. Steering more racers,
+  or steering them harder, moves action far less than braking the racer currently leading. **Start
+  here rather than from scratch if the action dial's design ever needs either lever varied again.**
+
 ### RUNIN-CEILING-HOLD — the endgame's first accepted shape, archived on retirement (2026-08-22)
 
 **The ceiling-and-hold run-in**: open far enough that the finish sits well in frame, HOLD that width,
