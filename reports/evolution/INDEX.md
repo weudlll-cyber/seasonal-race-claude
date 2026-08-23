@@ -154,6 +154,31 @@ is dated and recorded HERE, where a reader on their way to the report will pass 
   [GATE-LINES-1](../night/GATE-LINES-1.md); the fix and the once-per-run control that makes the
   silence impossible to repeat: [GATE-TRUTH-1](../night/GATE-TRUTH-1.md).
 
+- [WILD-STAGE-1.md](WILD-STAGE-1.md) — **the candidates for the top stage, turned UP rather than off**
+  (2026-08-23). BRAKE-CURVE-1 left the brake exhausted at 0.15, so the top stage needs a SECOND lever;
+  every candidate had only ever been measured switched OFF. Six arms, two tracks, N=30.
+  **THE TWO-LEVER IDEA WORKS, AND THE OWNER'S OWN CANDIDATE IS THE ONE THAT WORKS.**
+  `pulkLeaderBrake=0.15 + pulkChallengerBoost=0.12` delivers **+40.5%** (dirt-oval) and **+23.8%**
+  (river-run) leading-group action against the brake's own +22.5% / +17.6% — **+4.90 ±2.50** and
+  **+2.27 ±2.21** overtakes/race measured against brake-alone, **both outside their intervals**.
+  **THE LEVERS ADD UP: 8 of 8 interaction contrasts inside their intervals**, no interference.
+  **`chaosSteerGain` turned up is INERT and the source said so first** — `racePlanner.js:779` clamps
+  the pull to `[0.85, 1.1]`, so **above gain 0.10 the arrival side is a pure step function**; alone it
+  moves nothing, beside the brake it is ns on dirt and **significantly WORSE on river (−3.17 ±2.28)**.
+  **The fallback for the slot fails.**
+  **BUT THE COMBINATION BREACHES THE NATURALNESS ENVELOPE WHERE NEITHER PART DOES** — mean per-race
+  minimum speed factor **0.7928 / 0.7908**, whole interval below the 0.80 floor, **22 of 30 races**
+  against the brake's 15–16. **Fairness never binds: all ten cells UNDECIDED**, largest move +2.00pp.
+  **THE FINDING NOBODY ASKED FOR:** `pulkChallengerBoost=0.12` **ALONE** buys the **same** leading-group
+  action as `pulkLeaderBrake=0.15` alone (indistinguishable on both tracks) with **0/30 races below the
+  floor** against the brake's 15/30 — **the same action, and only one of them spends the naturalness
+  budget.** **AT SOURCE:** the ±12% envelope **binds the boost absolutely** (`1 + maxEffect`, flat) and
+  **the brake not at all** (`1 − max(maxEffect, leaderBrake)`, expanding) — BRAKE-CURVE-1's finding
+  mirrored. **Qualifies (does not withdraw) BRAKE-CURVE-1's "0.15 is inside the envelope":** its
+  numbers **reproduce to four decimals**, but that mean STRADDLES 0.80 with half the races already
+  below it. Protocol identity **proved, not asserted** — 120 races re-run and compared field-by-field
+  against BRAKE-CURVE-1's stored dumps, **IDENTICAL**. World fingerprint unmoved. 5 proposals.
+
 - [BRAKE-CURVE-1.md](BRAKE-CURVE-1.md) — **the leader brake's curve, and where it stops looking
   natural** (2026-08-23). ACTION-FAIRNESS-1 measured `pulkLeaderBrake` at ONE value above shipped and
   found it free; a three-stage dial needs a curve. 0.15 / 0.30 / 0.50 + baseline, two tracks, N=30.
