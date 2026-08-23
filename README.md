@@ -95,8 +95,9 @@ The reading order it recommends, so you can start without a second click:
    "fair" here means something specific and unobvious, and the race design will not make sense
    without it.
 
-Also useful: [API Reference](docs/API.md) · [Roadmap](docs/ROADMAP.md) ·
-[Backlog](docs/BACKLOG.md) · [Dead ends](docs/DEAD-ENDS.md) (required reading before proposing any
+Also useful: [API Reference](docs/API.md) · [Backlog](docs/BACKLOG.md) — **the open work and the
+phase history, one home since 2026-08-23** · [Phase status](docs/ROADMAP.md) (a table; the detail is
+in the backlog) · [Dead ends](docs/DEAD-ENDS.md) (required reading before proposing any
 race-mechanism change).
 
 `reports/` is the lab journal, not documentation — see [reports/README.md](reports/README.md) for what
@@ -104,7 +105,7 @@ it is and why it may have rotted. `docs/archive/` is history and says so.
 
 ## Status
 
-The core simulation, editors, camera director, and local backend (Phase L) are in place. A race-integrity / leaderboard / multiplayer server is planned for Phase 5 — see the [Roadmap](docs/ROADMAP.md).
+The core simulation, editors, camera director, and local backend (Phase L) are in place. A race-integrity / leaderboard / multiplayer server is planned for Phase 5 — see [BACKLOG.md](docs/BACKLOG.md), PART ONE, *Phases 5–7*.
 
 ## License
 
