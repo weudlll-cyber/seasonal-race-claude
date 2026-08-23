@@ -154,6 +154,24 @@ is dated and recorded HERE, where a reader on their way to the report will pass 
   [GATE-LINES-1](../night/GATE-LINES-1.md); the fix and the once-per-run control that makes the
   silence impossible to repeat: [GATE-TRUTH-1](../night/GATE-TRUTH-1.md).
 
+- [ROADMAP-FOLD-1.md](ROADMAP-FOLD-1.md) — **one home for what is done and what is next**
+  (2026-08-23, NIGHT-2026-08-23 piece 3, documents only). Executes the owner's **D24**: BACKLOG owns
+  both, ROADMAP reduced to a phase-status table.
+  **THE COUNTS ARE THE PROOF, because D24's stated fear was a silently dropped item.** All **35**
+  ROADMAP sections are accounted for by name: **3** to PART ONE (*Phases 5–7* — the unbuilt server /
+  deployment / multi-tenant checklists), **30** to PART TWO (*Phase history*), **2 subsumed** —
+  Phase V and Phase T **were already pointers into BACKLOG**, so copying them would have created the
+  second home the merge exists to end. **0 duplicate headings, 0 broken links.**
+  `ROADMAP.md` **627 → 73 lines** (one section, 35 rows); `BACKLOG.md` 2412 → **3078**.
+  **A MOVE, NOT AN AUDIT** — every section is verbatim, no `[x]` re-tested, no verdict changed; the
+  moved-history preamble says so where a reader meets it first, and **PART ONE stays live where the
+  two disagree**. **ROADMAP was KEPT rather than deleted** — D24's own wording, and it turns five link
+  repairs into zero; two `README.md` links were repaired anyway because they became *misleading*
+  rather than broken, and three dated `AUDIT.md` references were **deliberately left**, since
+  rewriting a history entry falsifies the audit trail. **Net +112 lines: the fold removes a second
+  owner, not text.** 3 proposals, including a one-line guard that fails if ROADMAP ever grows a second
+  section — the failure mode that produced 627 lines the first time.
+
 - [BACKLOG-SORT-42.md](BACKLOG-SORT-42.md) — **the last unknown mass in the backlog, sorted**
   (2026-08-23, NIGHT-2026-08-23 piece 2, documents only). BACKLOG-HONEST-1 left **42** `Q-`/`B-`/`V-`/
   `T-` bullets unsorted and said so; this reads each against today's tree.
