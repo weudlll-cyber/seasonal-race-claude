@@ -154,6 +154,27 @@ is dated and recorded HERE, where a reader on their way to the report will pass 
   [GATE-LINES-1](../night/GATE-LINES-1.md); the fix and the once-per-run control that makes the
   silence impossible to repeat: [GATE-TRUTH-1](../night/GATE-TRUTH-1.md).
 
+- [DEAD-CODE-SHEET-1.md](DEAD-CODE-SHEET-1.md) — **the verified set, re-established, as a sheet he can
+  act on in two minutes** (2026-08-23, NIGHT-2026-08-23 piece 6, documents only).
+  **NOTHING DELETED AND NO DELETION PROPOSED.** DEAD-CODE-VERIFIED-1's nine survivors — 8 files with no
+  importer, 1 default key with no reader — **re-established over the whole tree tonight**, each with
+  what would break and the one command that proves it, **and all nine commands were RUN as written.**
+  **THE COUNT HELD BUT THREE OF THE EIGHT CHANGED THEIR CONSEQUENCE.** The previous test was *"named
+  nowhere in any tracked `.md`"* — **it never looked at `.js`**. `gen-koi-patterns`, `gen-beetle-sprite`
+  and `gen-snowmobile-sprite` are each named in a **provenance comment in shipped source**
+  (`KoiRacerType.js:9`, `BeetleRacerType.js:9`, `SnowmobileRacerType.js:7`), so deleting them leaves a
+  comment pointing at a file that does not exist. **Nothing invokes or imports any of them, so the
+  verdict stands** — only the cost changed.
+  **AND IT IS NOT A DEAD-CODE QUESTION.** All eight are one-shot generators for **committed** assets;
+  `gen-scaled-sprites.mjs` overwrites **in place**, so its recipe cannot be re-derived from its output.
+  **The question is whether to keep the provenance of a committed binary — his call, not a cleanup.**
+  **`language`** is the one true unread key: no dot access, no string-keyed read, no UI since B-13
+  removed the selector — **but it IS still written**, riding inside `RACE_DEFAULTS` in every
+  localStorage and every backup. The standing NO-MIGRATIONS rule already says deleting the line is the
+  whole job. **`git grep language` is mostly false positives** (the `check-language-closed` guard is
+  about the German-text rule, not this key). 3 proposals, including moving the eight to
+  `scripts/asset-provenance/` — which retires the question instead of re-asking it every audit.
+
 - [ROADMAP-OPEN-1.md](ROADMAP-OPEN-1.md) — **`docs/OPEN.md`, the one list he reads** (2026-08-23,
   NIGHT-2026-08-23 piece 4, documents only). **The other half of PIECE 3's trade:** folding ROADMAP in
   left `BACKLOG.md` at 3078 lines — right for one owner of a subject, wrong for a person deciding what
