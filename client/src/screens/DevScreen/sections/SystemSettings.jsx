@@ -48,6 +48,13 @@ function SystemSettings() {
         window.alert('Invalid backup file — could not parse JSON.');
       }
     };
+    // A READ THAT FAILS MUST NOT BE SILENT. Without this the promise simply never resolves: no
+    // alert, no reload, no error — the operator clicks Import and nothing whatever happens, which
+    // is indistinguishable from the button being broken. The message names the READ rather than the
+    // content, because the parse failure above already owns "invalid backup file".
+    reader.onerror = () => {
+      window.alert('Could not read the backup file — the file could not be opened.');
+    };
     reader.readAsText(file);
     // Reset input so the same file can be re-imported if needed
     e.target.value = '';

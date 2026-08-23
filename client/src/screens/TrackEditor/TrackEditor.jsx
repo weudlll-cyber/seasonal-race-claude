@@ -746,6 +746,10 @@ export default function TrackEditor() {
       img.onerror = () => setBgUploadError('Image could not be loaded.');
       img.src = dataUrl;
     };
+    // The IMAGE decode already reports (above); the FILE READ did not. Two different failures —
+    // a file that cannot be opened never reaches the decoder at all — and only one of them was
+    // visible. Same channel, distinguishable message.
+    reader.onerror = () => setBgUploadError('Background file could not be read.');
     reader.readAsDataURL(file);
   }
 

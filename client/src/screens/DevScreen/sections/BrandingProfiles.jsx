@@ -97,6 +97,13 @@ function BrandingProfiles() {
     setLogoRemoved(false);
     const reader = new FileReader();
     reader.onload = (ev) => f('logo', ev.target.result);
+    // Without this a failed read leaves the file NAMED in the form (setLogoFile above already ran)
+    // while `logo` keeps its previous value — so the panel shows a filename that is not the logo it
+    // would save. It reports through `setActionError`, the channel this panel already uses.
+    reader.onerror = () => {
+      setLogoFile(null);
+      setActionError('Could not read that image file.');
+    };
     reader.readAsDataURL(file);
   }
 

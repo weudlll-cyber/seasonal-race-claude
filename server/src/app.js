@@ -19,6 +19,7 @@ import authRouter from './auth/authRouter.js';
 import usersRouter from './auth/usersRouter.js';
 import { requireAuth, requireAdmin } from './auth/guards.js';
 import { corsOptions, csrfOriginGuard } from './auth/csrf.js';
+import { buildIdentity } from './buildIdentity.js';
 import { loginLimiter, setupLimiter, changePasswordLimiter } from './auth/rateLimit.js';
 
 // Created once at module scope so all createApp instances share one store and timer.
@@ -35,8 +36,12 @@ export function createApp() {
   app.use(requireAuth);
   app.use(requireAdmin);
 
+  // BUILD-FROM-OUTSIDE-1: the health endpoint now NAMES THE BUILD. It answered only status and
+  // timestamp, so "which build is live?" could not be asked from outside the browser — the client's
+  // build pill is drawn into the race picture and is no use to anyone holding a URL.
+  // It never guesses: with nothing supplied it reports 'unknown' AND the reason. See buildIdentity.js.
   app.get('/api/health', (_req, res) => {
-    res.json({ status: 'ok', timestamp: new Date().toISOString() });
+    res.json({ status: 'ok', timestamp: new Date().toISOString(), build: buildIdentity() });
   });
 
   app.use('/api/auth/login', loginLimiter);
