@@ -154,6 +154,26 @@ is dated and recorded HERE, where a reader on their way to the report will pass 
   [GATE-LINES-1](../night/GATE-LINES-1.md); the fix and the once-per-run control that makes the
   silence impossible to repeat: [GATE-TRUTH-1](../night/GATE-TRUTH-1.md).
 
+- [ENVELOPE-ONE-SIDED-1.md](ENVELOPE-ONE-SIDED-1.md) — **the ±20% naturalness envelope is enforced on
+  one side** (2026-08-23, NIGHT-2026-08-23 piece 5, documents only).
+  **THE FAST SIDE IS CLAMPED, THE SLOW SIDE IS NOT — and the fast-side clamp is NARROWER than the
+  document claimed.** `computeDirectorCeiling` returns `min(bandMax + boostHeadroom,
+  NATURALNESS_CEILING)` and no configuration can raise 1.20 — **but (1)** the clamp is skipped entirely
+  when `pulkCeilingCap` is off (`ceilingCap: … ? computeDirectorCeiling(…) : 0`, applied behind
+  `if (ceilingCap > 0 …)`), **and (2)** it bounds `spreadFactor × governorMult`, while the realised
+  speed factor also carries `areaBonusMult` and `trajectoryMult` **outside its reach**. That second
+  condition **explains a number already on the record**: WILD-STAGE-1's peak of 1.1816–1.1824 sits
+  *above* the effective cap of ≈1.1813.
+  **The slow side has NO ceiling of its own** — no `NATURALNESS_FLOOR` exists anywhere in the tree
+  (re-established by `git grep`, three spellings, whole repo) and the only bound,
+  `1 − max(maxEffect, leaderBrake)`, **EXPANDS as the brake grows**. BRAKE-CURVE-1 measured 0.471 at a
+  brake of 0.50 with the fairness gate silent throughout.
+  **NOT A LIVE DEFECT, said as plainly as the gap:** at the shipped brake it is **0.0% of racer-frames
+  at the floor and 0/30 races below the slow bound** on both tracks. **The gap is in what the code would
+  PERMIT.** `RACE-ACTION.md` §2 and §6 corrected — the false sentence *"the ±20 percent guarantee holds
+  across all configurations"* removed, its one true clause kept. **No remedy proposed: whether the code
+  gains a floor is his call.** 3 proposals.
+
 - [WILD-STAGE-1.md](WILD-STAGE-1.md) — **the candidates for the top stage, turned UP rather than off**
   (2026-08-23). BRAKE-CURVE-1 left the brake exhausted at 0.15, so the top stage needs a SECOND lever;
   every candidate had only ever been measured switched OFF. Six arms, two tracks, N=30.
